@@ -1,0 +1,11 @@
+﻿---
+BasedOnStyle: LLVM
+AccessModifierOffset: -4
+IndentWidth: 4
+ColumnLimit: 110
+MaxEmptyLinesToKeep: 1
+NamespaceIndentation: All
+SortIncludes: false
+AllowShortIfStatementsOnASingleLine: false
+AllowShortLoopsOnASingleLine: false
+...

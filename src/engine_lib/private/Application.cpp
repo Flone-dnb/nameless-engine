@@ -19,8 +19,8 @@ namespace dxe {
     void Application::run() {
         createMainWindow();
 
-        while (vCreatedWindows.size() != 0) {
-            for (std::vector<std::unique_ptr<Window>>::iterator it = vCreatedWindows.begin();
+        while (!vCreatedWindows.empty()) {
+            for (auto it = vCreatedWindows.begin();
                  vCreatedWindows.size() > 0 && it != vCreatedWindows.end();) {
                 if ((*it)->processNextWindowMessage()) {
                     vCreatedWindows.erase(it);

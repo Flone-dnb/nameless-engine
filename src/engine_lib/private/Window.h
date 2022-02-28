@@ -86,5 +86,8 @@ namespace dxe {
 
         /** Will be 'true' when this window receives 'WM_NCDESTROY' window message. */
         bool bDestroyReceived = false;
+
+        /** Whether the window was successfully created or not. */
+        bool bIsInitialized = false;
     };
 } // namespace dxe

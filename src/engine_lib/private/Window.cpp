@@ -89,6 +89,8 @@ namespace dxe {
 
         SetWindowText(pWindow->hWindow, pWindow->sWindowName.data());
 
+        pWindow->bIsInitialized = true;
+
         // Setup raw input.
         RAWINPUTDEVICE rid[2];
 
@@ -118,7 +120,11 @@ namespace dxe {
         return pWindow;
     }
 
-    Window::~Window() { UnregisterClassA(sWindowName.c_str(), GetModuleHandle(nullptr)); }
+    Window::~Window() {
+        if (bIsInitialized) {
+            UnregisterClassA(sWindowName.c_str(), GetModuleHandle(nullptr));
+        }
+    }
 
     void Window::show(const bool bMaximized) const {
         ShowWindow(hWindow, bMaximized ? SW_SHOWMAXIMIZED : SW_SHOWNORMAL);

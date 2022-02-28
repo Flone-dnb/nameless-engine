@@ -13,13 +13,13 @@ TEST_CASE("create simple window") {
 }
 
 TEST_CASE("fail to create a window with non-unique name") {
-    auto result = dxe::Window::newInstance(800, 600, "window");
-    if (std::holds_alternative<dxe::Error>(result)) {
-        INFO(std::get<dxe::Error>(result).getError())
+    auto result1 = dxe::Window::newInstance(800, 600, "window");
+    if (std::holds_alternative<dxe::Error>(result1)) {
+        INFO(std::get<dxe::Error>(result1).getError())
         REQUIRE(false);
     }
 
-    result = dxe::Window::newInstance(800, 600, "window");
+    auto result2 = dxe::Window::newInstance(800, 600, "window");
     // should hold an error because this window name is not unique
-    REQUIRE(std::holds_alternative<dxe::Error>(result));
+    REQUIRE(std::holds_alternative<dxe::Error>(result2));
 }

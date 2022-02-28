@@ -55,7 +55,7 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     add_executable(tests
         ${PROJECT_SOURCES}
         tests/main.cpp
-        tests/test1.cpp
+        tests/engine_lib/Window.cpp
         # add your test .cpp files here
     )
     target_compile_features(tests PRIVATE cxx_std_${PROJECT_CXX_STANDARD_VERSION})

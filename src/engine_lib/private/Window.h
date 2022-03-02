@@ -62,7 +62,15 @@ namespace dxe {
     private:
         friend class Application;
 
-        Window() = default;
+        /**
+         * Default constructor.
+         *
+         * @param hWindow         Handle of the created window.
+         * @param sWindowName     Name of the created window class.
+         * @param iWindowWidth    Width of the window.
+         * @param iWindowHeight   Height of the window.
+         */
+        Window(HWND hWindow, const std::string &sWindowName, int iWindowWidth, int iWindowHeight);
 
         /**
          * Handles next message to this window.
@@ -86,8 +94,5 @@ namespace dxe {
 
         /** Will be 'true' when this window receives 'WM_NCDESTROY' window message. */
         bool bDestroyReceived = false;
-
-        /** Whether the window was successfully created or not. */
-        bool bIsInitialized = false;
     };
 } // namespace dxe

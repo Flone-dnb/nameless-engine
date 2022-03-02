@@ -34,23 +34,18 @@ namespace dxe {
     std::variant<std::unique_ptr<Window>, Error> Window::newInstance(int iWindowWidth, int iWindowHeight,
                                                                      const std::string &sWindowName,
                                                                      bool bHideTitleBar, bool bShowWindow) {
-        std::unique_ptr<Window> pWindow = std::unique_ptr<Window>(new Window());
+        std::string sNewWindowName = sWindowName;
 
         // Check window name.
         if (sWindowName.empty()) {
-            pWindow->sWindowName = UniqueValueGenerator::get().getUniqueWindowName();
+            sNewWindowName = UniqueValueGenerator::get().getUniqueWindowName();
         } else {
             // Check if this window name is not used.
             if (Application::get().getWindowByName(sWindowName) != nullptr) {
                 // A window with this name already exists.
                 return Error("a window with this name already exists");
             }
-            pWindow->sWindowName = sWindowName;
         }
-
-        // Save window size.
-        pWindow->iWindowWidth = iWindowWidth;
-        pWindow->iWindowHeight = iWindowHeight;
 
         // Register window class.
         WNDCLASSEX wc = {0};
@@ -62,7 +57,7 @@ namespace dxe {
         wc.hCursor = LoadCursor(nullptr, IDC_ARROW);
         wc.hbrBackground = static_cast<HBRUSH>(GetStockObject(NULL_BRUSH));
         wc.lpszMenuName = nullptr;
-        wc.lpszClassName = pWindow->sWindowName.c_str();
+        wc.lpszClassName = sNewWindowName.c_str();
         wc.hIcon = LoadIcon(nullptr, IDI_APPLICATION);
         wc.hIconSm = LoadIcon(nullptr, IDI_APPLICATION);
         wc.cbSize = sizeof(wc);
@@ -77,19 +72,13 @@ namespace dxe {
         const int iWidth = rect.right - rect.left;
         const int iHeight = rect.bottom - rect.top;
 
-        pWindow->hWindow =
-            CreateWindow(pWindow->sWindowName.data(), pWindow->sWindowName.data(),
+        const HWND hNewWindow =
+            CreateWindow(sNewWindowName.data(), sNewWindowName.data(),
                          bHideTitleBar ? WS_POPUP : WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, iWidth,
                          iHeight, nullptr, nullptr, GetModuleHandle(nullptr), nullptr);
-        if (pWindow->hWindow == nullptr) {
+        if (hNewWindow == nullptr) {
             return Error(GetLastError());
         }
-
-        SetWindowLongPtr(pWindow->hWindow, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(pWindow.get()));
-
-        SetWindowText(pWindow->hWindow, pWindow->sWindowName.data());
-
-        pWindow->bIsInitialized = true;
 
         // Setup raw input.
         RAWINPUTDEVICE rid[2];
@@ -98,7 +87,7 @@ namespace dxe {
         rid[0].usUsagePage = 0x01;
         rid[0].usUsage = 0x02;
         rid[0].dwFlags = 0;
-        rid[0].hwndTarget = pWindow->hWindow;
+        rid[0].hwndTarget = hNewWindow;
 
         // ... for keyboard.
         // rid[1].usUsagePage = 0x01;
@@ -109,8 +98,16 @@ namespace dxe {
         if (RegisterRawInputDevices(rid, 1, sizeof(rid[0])) == FALSE)
         // if (RegisterRawInputDevices(Rid, 2, sizeof(Rid[0])) == FALSE)
         {
+            UnregisterClassA(sNewWindowName.c_str(), GetModuleHandle(nullptr));
             return Error(GetLastError());
         }
+
+        // Initialize instance now when we won't fail anymore.
+        std::unique_ptr<Window> pWindow =
+            std::unique_ptr<Window>(new Window(hNewWindow, sNewWindowName, iWindowWidth, iWindowHeight));
+
+        SetWindowLongPtr(hNewWindow, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(pWindow.get()));
+        SetWindowText(hNewWindow, sNewWindowName.data());
 
         // Show window if needed.
         if (bShowWindow) {
@@ -120,11 +117,7 @@ namespace dxe {
         return pWindow;
     }
 
-    Window::~Window() {
-        if (bIsInitialized) {
-            UnregisterClassA(sWindowName.c_str(), GetModuleHandle(nullptr));
-        }
-    }
+    Window::~Window() { UnregisterClassA(sWindowName.c_str(), GetModuleHandle(nullptr)); }
 
     void Window::show(const bool bMaximized) const {
         ShowWindow(hWindow, bMaximized ? SW_SHOWMAXIMIZED : SW_SHOWNORMAL);
@@ -137,6 +130,13 @@ namespace dxe {
     }
 
     std::string Window::getName() const { return sWindowName; }
+
+    Window::Window(HWND hWindow, const std::string &sWindowName, int iWindowWidth, int iWindowHeight) {
+        this->hWindow = hWindow;
+        this->sWindowName = sWindowName;
+        this->iWindowWidth = iWindowWidth;
+        this->iWindowHeight = iWindowHeight;
+    }
 
     LRESULT Window::windowProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
         switch (msg) {

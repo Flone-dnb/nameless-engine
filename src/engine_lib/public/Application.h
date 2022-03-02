@@ -30,8 +30,6 @@ namespace dxe {
          * created windows.
          * After there are no windows (if all windows were closed, for example)
          * this function will return.
-         *
-         * You can call this function again to start the application again.
          */
         void run();
 

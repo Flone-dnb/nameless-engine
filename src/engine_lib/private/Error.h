@@ -7,12 +7,12 @@
 
 namespace dxe {
     /**
-     * @brief Helper class to store error messages.
+     * Helper class to store error messages.
      */
     class Error {
     public:
         /**
-         * @brief Construct a new Error object.
+         * Construct a new Error object.
          *
          * @param sMessage  Error message to show.
          * @param location  Should be empty.
@@ -21,7 +21,7 @@ namespace dxe {
               const std::source_location location = std::source_location::current());
 
         /**
-         * @brief Construct a new Error object.
+         * Construct a new Error object.
          *
          * @param errorCode Error code returned by GetLastError().
          * @param location  Should be empty.
@@ -33,33 +33,47 @@ namespace dxe {
         Error &operator=(const Error &) = delete;
         virtual ~Error() = default;
 
-        Error(Error &&other) noexcept;
-        Error &operator=(Error &&other) noexcept;
+        /**
+         * Move constructor.
+         *
+         * @param other other object.
+         */
+        Error(Error &&other) = default;
+        /**
+         * Move assignment.
+         *
+         * @param other other object.
+         *
+         * @return Result of move assignment.
+         */
+        Error &operator=(Error &&other) = default;
 
         /**
-         * @brief Adds an entry to the error stack.
+         * Adds an entry to the error stack.
          *
          * @param location  Should be empty.
          */
         void addEntry(const std::source_location location = std::source_location::current());
 
         /**
-         * @brief Creates an error string that
+         * Creates an error string that
          * contains an error message and an
          * error stack.
+         *
+         * @return Error message and error stack.
          */
         std::string getError() const;
 
         /**
-         * @brief Creates an error string
+         * Creates an error string
          * and shows it on screen.
          */
         void showError() const;
 
     protected:
-        void swap(Error &&other);
-
+        /** Initial error message. */
         std::string sMessage;
+        /** Error stack. */
         std::vector<std::source_location> stack;
     };
 } // namespace dxe

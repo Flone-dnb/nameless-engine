@@ -11,28 +11,91 @@
 namespace dxe {
     class Error;
 
-    class Window {
+    /**
+     * Parameters needed to build a window.
+     */
+    struct WindowBuilderParameters {
+        /** Width of a window. */
+        int iWindowWidth = 800;
+        /** Height of a window. */
+        int iWindowHeight = 600;
+        /** Name of a window. */
+        std::string sWindowName = "";
+        /** Whether to show window after it was created or not. */
+        bool bShowWindow = true;
+        /** Whether to show window in fullscreen mode. */
+        bool bFullscreen = false;
+    };
+
+    class Window;
+
+    /**
+     * Builder pattern class for Window.
+     */
+    class WindowBuilder {
     public:
+        WindowBuilder() = default;
+
         /**
-         * Creates a new window.
+         * Defines the size of a window that we will create.
          *
-         * @param iWindowWidth   Width of a window.
-         * @param iWindowHeight  Height of a window.
-         * @param sWindowName    Optional parameter that specifies a window name,
-         * if empty the name will be automatically generated.
-         * @param bHideTitleBar  Whether to hide or show window title bar.
-         * @param bShowWindow    Whether to show window after it was created or not.
+         * @param iWidth  Width of the window.
+         * @param iHeight Height of the window.
+         *
+         * @return Builder.
+         */
+        WindowBuilder withSize(int iWidth, int iHeight);
+        /**
+         * Defines the name of a window that we will create.
+         *
+         * @param sWindowName Name of the window.
+         *
+         * @return Builder.
+         */
+        WindowBuilder withName(const std::string &sWindowName);
+        /**
+         * Defines the visibility of a window that we will create.
+         *
+         * @param bShow Visibility of the window.
+         *
+         * @return Builder.
+         */
+        WindowBuilder withVisibility(bool bShow);
+        /**
+         * Whether a window should be shown in the fullscreen mode or not.
+         *
+         * @param bEnableFullscreen Fullscreen mode.
+         *
+         * @return Builder.
+         */
+        WindowBuilder withFullscreenMode(bool bEnableFullscreen);
+        /**
+         * Builds/creates a new window with the configured parameters.
          *
          * @return Returns error if something went wrong or created window otherwise.
          */
-        static std::variant<std::unique_ptr<Window>, Error>
-        newInstance(int iWindowWidth = 800, int iWindowHeight = 600,
-                    const std::string &sWindowName = std::string(), bool bHideTitleBar = false,
-                    bool bShowWindow = false);
+        std::variant<std::unique_ptr<Window>, Error> build() const;
 
+    private:
+        /** Configured window parameters. */
+        WindowBuilderParameters params;
+    };
+
+    /**
+     * Describes a window.
+     */
+    class Window {
+    public:
         /**
          * Function to handle window messages.
          * Should not be called explicitly.
+         *
+         * @param hWnd   Window handle.
+         * @param msg    Window message.
+         * @param wParam wParam.
+         * @param lParam lParam.
+         *
+         * @return LRESULT.
          */
         virtual LRESULT CALLBACK windowProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
@@ -41,11 +104,27 @@ namespace dxe {
         virtual ~Window();
 
         /**
+         * Returns a builder for a new window.
+         * Use can use this static function to receive a \ref WindowBuilder
+         * or create an instance of \ref WindowBuilder manually.
+         *
+         * @return Builder for a new window.
+         */
+        static WindowBuilder getBuilder();
+
+        /**
          * Shows the window on screen.
          *
-         * @param bMaximized  Whether to show window in the maximized state or not.
+         * @param bMaximized  Whether to show window in the maximized state or
+         * in the normal (usual) state.
          */
         void show(bool bMaximized = false) const;
+
+        /**
+         * Minimizes the window.
+         * If the window was hidden, it will be shown.
+         */
+        void minimize() const;
 
         /**
          * Hides the windows (makes it invisible).
@@ -53,14 +132,25 @@ namespace dxe {
         void hide() const;
 
         /**
-         * Returns a name of this window.
+         * Returns the name of this window.
          *
          * @return Name of the window.
          */
         std::string getName() const;
 
     private:
+        friend class WindowBuilder;
         friend class Application;
+
+        /**
+         * Creates a new window.
+         *
+         * @param params Parameters that define initial window state.
+         *
+         * @return Returns error if something went wrong or created window otherwise.
+         */
+        static std::variant<std::unique_ptr<Window>, Error>
+        newInstance(const WindowBuilderParameters &params);
 
         /**
          * Default constructor.
@@ -69,8 +159,10 @@ namespace dxe {
          * @param sWindowName     Name of the created window class.
          * @param iWindowWidth    Width of the window.
          * @param iWindowHeight   Height of the window.
+         * @param bFullscreen     Whether the window should be shown in the fullscreen mode or not.
          */
-        Window(HWND hWindow, const std::string &sWindowName, int iWindowWidth, int iWindowHeight);
+        Window(HWND hWindow, const std::string &sWindowName, int iWindowWidth, int iWindowHeight,
+               bool bFullscreen);
 
         /**
          * Handles next message to this window.
@@ -91,6 +183,9 @@ namespace dxe {
         int iWindowWidth;
         /** Height of the window. */
         int iWindowHeight;
+
+        /** Whether the window should be shown in the fullscreen mode or not. */
+        bool bFullscreen = false;
 
         /** Will be 'true' when this window receives 'WM_NCDESTROY' window message. */
         bool bDestroyReceived = false;

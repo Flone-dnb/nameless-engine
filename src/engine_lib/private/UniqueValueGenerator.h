@@ -14,9 +14,11 @@ namespace dxe {
         virtual ~UniqueValueGenerator();
 
         /**
-         * Returns a pointer to the generator instance.
+         * Returns a reference to the generator instance.
          * If no instance was created yet, this function will create it
          * and return a reference to it.
+         *
+         * @return Reference to the generator instance.
          */
         static UniqueValueGenerator &get();
 

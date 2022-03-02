@@ -31,17 +31,44 @@ namespace dxe {
         return pWindow->windowProc(hWnd, msg, wParam, lParam);
     }
 
-    std::variant<std::unique_ptr<Window>, Error> Window::newInstance(int iWindowWidth, int iWindowHeight,
-                                                                     const std::string &sWindowName,
-                                                                     bool bHideTitleBar, bool bShowWindow) {
-        std::string sNewWindowName = sWindowName;
+    WindowBuilder WindowBuilder::withSize(int iWidth, int iHeight) {
+        params.iWindowWidth = iWidth;
+        params.iWindowHeight = iHeight;
+
+        return *this;
+    }
+
+    WindowBuilder WindowBuilder::withName(const std::string &sWindowName) {
+        params.sWindowName = sWindowName;
+
+        return *this;
+    }
+
+    WindowBuilder WindowBuilder::withVisibility(bool bShow) {
+        params.bShowWindow = bShow;
+
+        return *this;
+    }
+
+    WindowBuilder WindowBuilder::withFullscreenMode(bool bEnableFullscreen) {
+        params.bFullscreen = bEnableFullscreen;
+
+        return *this;
+    }
+
+    std::variant<std::unique_ptr<Window>, Error> WindowBuilder::build() const {
+        return Window::newInstance(params);
+    }
+
+    std::variant<std::unique_ptr<Window>, Error> Window::newInstance(const WindowBuilderParameters &params) {
+        std::string sNewWindowName = params.sWindowName;
 
         // Check window name.
-        if (sWindowName.empty()) {
+        if (params.sWindowName.empty()) {
             sNewWindowName = UniqueValueGenerator::get().getUniqueWindowName();
         } else {
             // Check if this window name is not used.
-            if (Application::get().getWindowByName(sWindowName) != nullptr) {
+            if (Application::get().getWindowByName(params.sWindowName) != nullptr) {
                 // A window with this name already exists.
                 return Error("a window with this name already exists");
             }
@@ -67,21 +94,25 @@ namespace dxe {
         }
 
         // Create window.
-        RECT rect = {0, 0, iWindowWidth, iWindowHeight};
+        RECT rect = {0, 0, params.iWindowWidth, params.iWindowHeight};
         AdjustWindowRect(&rect, WS_OVERLAPPEDWINDOW, false);
         const int iWidth = rect.right - rect.left;
         const int iHeight = rect.bottom - rect.top;
 
         const HWND hNewWindow =
-            CreateWindow(sNewWindowName.data(), sNewWindowName.data(),
-                         bHideTitleBar ? WS_POPUP : WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, iWidth,
-                         iHeight, nullptr, nullptr, GetModuleHandle(nullptr), nullptr);
+            CreateWindow(sNewWindowName.data(), sNewWindowName.data(), WS_OVERLAPPEDWINDOW, CW_USEDEFAULT,
+                         CW_USEDEFAULT, iWidth, iHeight, nullptr, nullptr, GetModuleHandle(nullptr), nullptr);
         if (hNewWindow == nullptr) {
             return Error(GetLastError());
         }
 
+        if (params.bFullscreen) {
+            SetWindowLong(hNewWindow, GWL_STYLE, WS_POPUP);
+        }
+
         // Setup raw input.
-        RAWINPUTDEVICE rid[2];
+        RAWINPUTDEVICE
+        rid[2];
 
         // ... for mouse.
         rid[0].usUsagePage = 0x01;
@@ -103,14 +134,14 @@ namespace dxe {
         }
 
         // Initialize instance now when we won't fail anymore.
-        std::unique_ptr<Window> pWindow =
-            std::unique_ptr<Window>(new Window(hNewWindow, sNewWindowName, iWindowWidth, iWindowHeight));
+        std::unique_ptr<Window> pWindow = std::unique_ptr<Window>(new Window(
+            hNewWindow, sNewWindowName, params.iWindowWidth, params.iWindowHeight, params.bFullscreen));
 
         SetWindowLongPtr(hNewWindow, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(pWindow.get()));
         SetWindowText(hNewWindow, sNewWindowName.data());
 
         // Show window if needed.
-        if (bShowWindow) {
+        if (params.bShowWindow) {
             pWindow->show();
         }
 
@@ -119,8 +150,21 @@ namespace dxe {
 
     Window::~Window() { UnregisterClassA(sWindowName.c_str(), GetModuleHandle(nullptr)); }
 
-    void Window::show(const bool bMaximized) const {
+    WindowBuilder Window::getBuilder() { return WindowBuilder(); }
+
+    void Window::show(bool bMaximized) const {
+        if (bFullscreen) {
+            bMaximized = true;
+        }
         ShowWindow(hWindow, bMaximized ? SW_SHOWMAXIMIZED : SW_SHOWNORMAL);
+        UpdateWindow(hWindow);
+    }
+
+    void Window::minimize() const {
+        if (!IsWindowVisible(hWindow)) {
+            show();
+        }
+        ShowWindow(hWindow, SW_SHOWMINIMIZED);
         UpdateWindow(hWindow);
     }
 
@@ -131,11 +175,13 @@ namespace dxe {
 
     std::string Window::getName() const { return sWindowName; }
 
-    Window::Window(HWND hWindow, const std::string &sWindowName, int iWindowWidth, int iWindowHeight) {
+    Window::Window(HWND hWindow, const std::string &sWindowName, int iWindowWidth, int iWindowHeight,
+                   bool bFullscreen) {
         this->hWindow = hWindow;
         this->sWindowName = sWindowName;
         this->iWindowWidth = iWindowWidth;
         this->iWindowHeight = iWindowHeight;
+        this->bFullscreen = bFullscreen;
     }
 
     LRESULT Window::windowProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {

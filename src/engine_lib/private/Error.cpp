@@ -36,20 +36,6 @@ namespace dxe {
         stack.push_back(location);
     }
 
-    Error::Error(Error &&other) noexcept {
-        if (this != &other) {
-            swap(std::move(other));
-        }
-    }
-
-    Error &Error::operator=(Error &&other) noexcept {
-        if (this != &other) {
-            swap(std::move(other));
-        }
-
-        return *this;
-    }
-
     void Error::addEntry(const std::source_location location) { stack.push_back(location); }
 
     std::string Error::getError() const {
@@ -71,10 +57,5 @@ namespace dxe {
     void Error::showError() const {
         const std::string sErrorMessage = getError();
         MessageBoxA(nullptr, sErrorMessage.c_str(), "Error", 0);
-    }
-
-    void Error::swap(Error &&other) {
-        sMessage = other.sMessage;
-        stack = other.stack;
     }
 } // namespace dxe

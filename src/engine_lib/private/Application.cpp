@@ -43,8 +43,12 @@ namespace dxe {
 
     void Application::createMainWindow() {
         // Create main window.
-        std::variant<std::unique_ptr<Window>, Error> result =
-            Window::newInstance(800, 600, "Main Window", false, true);
+        std::variant<std::unique_ptr<Window>, Error> result = Window::getBuilder()
+                                                                  .withSize(800, 600)
+                                                                  .withName("Main Window")
+                                                                  .withVisibility(true)
+                                                                  .withFullscreenMode(false)
+                                                                  .build();
         if (std::holds_alternative<Error>(result)) {
             Error error = std::get<Error>(std::move(result));
             error.addEntry();

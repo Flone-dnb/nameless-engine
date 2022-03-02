@@ -19,9 +19,11 @@ namespace dxe {
         virtual ~Application();
 
         /**
-         * Returns a pointer to the application instance.
+         * Returns a reference to the application instance.
          * If no instance was created yet, this function will create it
          * and return a reference to it.
+         *
+         * @return Reference to the application instance.
          */
         static Application &get();
 

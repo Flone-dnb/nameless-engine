@@ -34,8 +34,6 @@ namespace dxe {
      */
     class WindowBuilder {
     public:
-        WindowBuilder() = default;
-
         /**
          * Defines the size of a window that we will create.
          *
@@ -44,7 +42,7 @@ namespace dxe {
          *
          * @return Builder.
          */
-        WindowBuilder withSize(int iWidth, int iHeight);
+        WindowBuilder &withSize(int iWidth, int iHeight);
         /**
          * Defines the name of a window that we will create.
          *
@@ -52,7 +50,7 @@ namespace dxe {
          *
          * @return Builder.
          */
-        WindowBuilder withName(const std::string &sWindowName);
+        WindowBuilder &withName(const std::string &sWindowName);
         /**
          * Defines the visibility of a window that we will create.
          *
@@ -60,7 +58,7 @@ namespace dxe {
          *
          * @return Builder.
          */
-        WindowBuilder withVisibility(bool bShow);
+        WindowBuilder &withVisibility(bool bShow);
         /**
          * Whether a window should be shown in the fullscreen mode or not.
          *
@@ -68,7 +66,7 @@ namespace dxe {
          *
          * @return Builder.
          */
-        WindowBuilder withFullscreenMode(bool bEnableFullscreen);
+        WindowBuilder &withFullscreenMode(bool bEnableFullscreen);
         /**
          * Builds/creates a new window with the configured parameters.
          *

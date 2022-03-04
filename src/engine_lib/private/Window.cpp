@@ -31,26 +31,26 @@ namespace dxe {
         return pWindow->windowProc(hWnd, msg, wParam, lParam);
     }
 
-    WindowBuilder WindowBuilder::withSize(int iWidth, int iHeight) {
+    WindowBuilder &WindowBuilder::withSize(int iWidth, int iHeight) {
         params.iWindowWidth = iWidth;
         params.iWindowHeight = iHeight;
 
         return *this;
     }
 
-    WindowBuilder WindowBuilder::withName(const std::string &sWindowName) {
+    WindowBuilder &WindowBuilder::withName(const std::string &sWindowName) {
         params.sWindowName = sWindowName;
 
         return *this;
     }
 
-    WindowBuilder WindowBuilder::withVisibility(bool bShow) {
+    WindowBuilder &WindowBuilder::withVisibility(bool bShow) {
         params.bShowWindow = bShow;
 
         return *this;
     }
 
-    WindowBuilder WindowBuilder::withFullscreenMode(bool bEnableFullscreen) {
+    WindowBuilder &WindowBuilder::withFullscreenMode(bool bEnableFullscreen) {
         params.bFullscreen = bEnableFullscreen;
 
         return *this;

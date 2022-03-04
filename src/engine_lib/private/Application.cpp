@@ -21,7 +21,7 @@ namespace dxe {
 
         while (!vCreatedWindows.empty()) {
             for (auto it = vCreatedWindows.begin();
-                 vCreatedWindows.size() > 0 && it != vCreatedWindows.end();) {
+                 !vCreatedWindows.empty() && it != vCreatedWindows.end();) {
                 if ((*it)->processNextWindowMessage()) {
                     vCreatedWindows.erase(it);
                 } else {

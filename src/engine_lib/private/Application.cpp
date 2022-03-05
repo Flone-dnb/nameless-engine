@@ -33,7 +33,7 @@ namespace dxe {
 
     Window *Application::getWindowByName(const std::string_view sWindowName) const {
         for (const auto &pWindow : vCreatedWindows) {
-            if (pWindow->getName() == sWindowName) {
+            if (pWindow->getTitle() == sWindowName) {
                 return pWindow.get();
             }
         }

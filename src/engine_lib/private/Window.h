@@ -130,11 +130,11 @@ namespace dxe {
         void hide() const;
 
         /**
-         * Returns the name of this window.
+         * Returns the title of this window.
          *
-         * @return Name of the window.
+         * @return Title of the window.
          */
-        std::string getName() const;
+        std::string getTitle() const;
 
     private:
         friend class WindowBuilder;

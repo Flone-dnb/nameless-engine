@@ -173,7 +173,7 @@ namespace dxe {
         UpdateWindow(hWindow);
     }
 
-    std::string Window::getName() const { return sWindowTitle; }
+    std::string Window::getTitle() const { return sWindowTitle; }
 
     Window::Window(HWND hWindow, const std::string &sWindowName, int iWindowWidth, int iWindowHeight,
                    bool bFullscreen) {

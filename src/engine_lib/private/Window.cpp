@@ -38,8 +38,8 @@ namespace dxe {
         return *this;
     }
 
-    WindowBuilder &WindowBuilder::withName(const std::string &sWindowName) {
-        params.sWindowName = sWindowName;
+    WindowBuilder &WindowBuilder::withTitle(const std::string &sWindowTitle) {
+        params.sWindowTitle = sWindowTitle;
 
         return *this;
     }
@@ -61,14 +61,14 @@ namespace dxe {
     }
 
     std::variant<std::unique_ptr<Window>, Error> Window::newInstance(const WindowBuilderParameters &params) {
-        std::string sNewWindowName = params.sWindowName;
+        std::string sNewWindowName = params.sWindowTitle;
 
         // Check window name.
-        if (params.sWindowName.empty()) {
+        if (params.sWindowTitle.empty()) {
             sNewWindowName = UniqueValueGenerator::get().getUniqueWindowName();
         } else {
             // Check if this window name is not used.
-            if (Application::get().getWindowByName(params.sWindowName) != nullptr) {
+            if (Application::get().getWindowByName(params.sWindowTitle) != nullptr) {
                 // A window with this name already exists.
                 return Error("a window with this name already exists");
             }
@@ -148,7 +148,7 @@ namespace dxe {
         return pWindow;
     }
 
-    Window::~Window() { UnregisterClassA(sWindowName.c_str(), GetModuleHandle(nullptr)); }
+    Window::~Window() { UnregisterClassA(sWindowTitle.c_str(), GetModuleHandle(nullptr)); }
 
     WindowBuilder Window::getBuilder() { return WindowBuilder(); }
 
@@ -173,12 +173,12 @@ namespace dxe {
         UpdateWindow(hWindow);
     }
 
-    std::string Window::getName() const { return sWindowName; }
+    std::string Window::getName() const { return sWindowTitle; }
 
     Window::Window(HWND hWindow, const std::string &sWindowName, int iWindowWidth, int iWindowHeight,
                    bool bFullscreen) {
         this->hWindow = hWindow;
-        this->sWindowName = sWindowName;
+        this->sWindowTitle = sWindowName;
         this->iWindowWidth = iWindowWidth;
         this->iWindowHeight = iWindowHeight;
         this->bFullscreen = bFullscreen;

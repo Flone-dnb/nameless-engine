@@ -19,8 +19,8 @@ namespace dxe {
         int iWindowWidth = 800;
         /** Height of a window. */
         int iWindowHeight = 600;
-        /** Name of a window. */
-        std::string sWindowName = "";
+        /** Title of a window. */
+        std::string sWindowTitle = "";
         /** Whether to show window after it was created or not. */
         bool bShowWindow = true;
         /** Whether to show window in fullscreen mode. */
@@ -46,11 +46,11 @@ namespace dxe {
         /**
          * Defines the name of a window that we will create.
          *
-         * @param sWindowName Name of the window.
+         * @param sWindowName Title of the window.
          *
          * @return Builder.
          */
-        WindowBuilder &withName(const std::string &sWindowName);
+        WindowBuilder &withTitle(const std::string &sWindowTitle);
         /**
          * Defines the visibility of a window that we will create.
          *
@@ -154,12 +154,12 @@ namespace dxe {
          * Default constructor.
          *
          * @param hWindow         Handle of the created window.
-         * @param sWindowName     Name of the created window class.
+         * @param sWindowTitle    Title of the created window class.
          * @param iWindowWidth    Width of the window.
          * @param iWindowHeight   Height of the window.
          * @param bFullscreen     Whether the window should be shown in the fullscreen mode or not.
          */
-        Window(HWND hWindow, const std::string &sWindowName, int iWindowWidth, int iWindowHeight,
+        Window(HWND hWindow, const std::string &sWindowTitle, int iWindowWidth, int iWindowHeight,
                bool bFullscreen);
 
         /**
@@ -174,8 +174,8 @@ namespace dxe {
         /** Handle to the window. */
         HWND hWindow;
 
-        /** Name of the window. */
-        std::string sWindowName;
+        /** Title of the window. */
+        std::string sWindowTitle;
 
         /** Width of the window. */
         int iWindowWidth;

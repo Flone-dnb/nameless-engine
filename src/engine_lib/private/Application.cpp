@@ -45,7 +45,7 @@ namespace dxe {
         // Create main window.
         std::variant<std::unique_ptr<Window>, Error> result = Window::getBuilder()
                                                                   .withSize(800, 600)
-                                                                  .withName("Main Window")
+                                                                  .withTitle("Main Window")
                                                                   .withVisibility(true)
                                                                   .withFullscreenMode(false)
                                                                   .build();

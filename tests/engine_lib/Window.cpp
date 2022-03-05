@@ -13,13 +13,13 @@ TEST_CASE("create simple window") {
 }
 
 TEST_CASE("fail to create a window with non-unique name") {
-    auto result1 = dxe::Window::getBuilder().withName("Main Window").withVisibility(false).build();
+    auto result1 = dxe::Window::getBuilder().withTitle("Main Window").withVisibility(false).build();
     if (std::holds_alternative<dxe::Error>(result1)) {
         INFO(std::get<dxe::Error>(result1).getError())
         REQUIRE(false);
     }
 
-    auto result2 = dxe::Window::getBuilder().withName("Main Window").withVisibility(false).build();
+    auto result2 = dxe::Window::getBuilder().withTitle("Main Window").withVisibility(false).build();
     // should hold an error because this window name is not unique
     REQUIRE(std::holds_alternative<dxe::Error>(result2));
 }

@@ -7,7 +7,7 @@ set(ENGINE_LIB_SOURCES
     private/Error.cpp
     private/Error.h
     private/Window.cpp
-    private/Window.h
+    public/Window.h
     private/UniqueValueGenerator.h
     private/UniqueValueGenerator.cpp
     private/IGameInstance.cpp

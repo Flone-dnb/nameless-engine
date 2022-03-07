@@ -5,11 +5,15 @@
 #include <variant>
 #include <memory>
 
+// Custom.
+#include "Error.h"
+
 // OS.
 #include <Windows.h>
 
 namespace dxe {
     class Error;
+    class IGameInstance;
 
     /**
      * Parameters needed to build a window.
@@ -46,7 +50,7 @@ namespace dxe {
         /**
          * Defines the name of a window that we will create.
          *
-         * @param sWindowName Title of the window.
+         * @param sWindowTitle Title of the window.
          *
          * @return Builder.
          */
@@ -111,6 +115,20 @@ namespace dxe {
         static WindowBuilder getBuilder();
 
         /**
+         * Set IGameInstance derived class to react to
+         * user inputs, window events and etc.
+         */
+        template <typename T>
+        requires std::derived_from<T, IGameInstance>
+        void setGameInstance() { pGameInstance = std::make_unique<T>(); }
+
+        /**
+         * Starts the message queue, rendering and game logic.
+         * Will return control after the window was closed.
+         */
+        void processEvents() const;
+
+        /**
          * Shows the window on screen.
          *
          * @param bMaximized  Whether to show window in the maximized state or
@@ -138,7 +156,6 @@ namespace dxe {
 
     private:
         friend class WindowBuilder;
-        friend class Application;
 
         /**
          * Creates a new window.
@@ -155,27 +172,35 @@ namespace dxe {
          *
          * @param hWindow         Handle of the created window.
          * @param sWindowTitle    Title of the created window class.
+         * @param sWindowClass    Class of the created window class.
          * @param iWindowWidth    Width of the window.
          * @param iWindowHeight   Height of the window.
          * @param bFullscreen     Whether the window should be shown in the fullscreen mode or not.
          */
-        Window(HWND hWindow, const std::string &sWindowTitle, int iWindowWidth, int iWindowHeight,
-               bool bFullscreen);
+        Window(HWND hWindow, const std::string &sWindowTitle, const std::string &sWindowClass,
+               int iWindowWidth, int iWindowHeight, bool bFullscreen);
 
         /**
          * Handles next message to this window.
          *
-         * @return 'true' if 'WM_NCDESTROY' message was received, this message indicates that
-         * the window and all of its child windows have been destroyed (closed), returns 'false'
-         * otherwise.
+         * If 'WM_NCDESTROY' message was previously received
+         * (window and all of its child windows have been destroyed (closed)), does nothing.
          */
-        bool processNextWindowMessage() const;
+        void processNextWindowMessage() const;
+
+        /**
+         * Reacts to user inputs, window events and etc.
+         */
+        std::unique_ptr<IGameInstance> pGameInstance;
 
         /** Handle to the window. */
         HWND hWindow;
 
         /** Title of the window. */
         std::string sWindowTitle;
+
+        /** Class of the window. */
+        std::string sWindowClass;
 
         /** Width of the window. */
         int iWindowWidth;

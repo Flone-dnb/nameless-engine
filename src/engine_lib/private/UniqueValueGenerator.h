@@ -23,11 +23,11 @@ namespace dxe {
         static UniqueValueGenerator &get();
 
         /**
-         * Returns a unique window name.
+         * Returns a unique window class name.
          *
-         * @return Unique window name.
+         * @return Unique window class name.
          */
-        [[nodiscard]] std::string getUniqueWindowName();
+        [[nodiscard]] std::string getUniqueWindowClassName();
 
     private:
         UniqueValueGenerator() = default;

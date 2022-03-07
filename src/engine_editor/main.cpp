@@ -8,7 +8,12 @@
 #include <Windows.h>
 #endif
 
-#include "Application.h"
+// Std.
+#include <stdexcept>
+
+// Custom.
+#include "EditorGameInstance.h"
+#include "Window.h"
 
 int main() {
     // Enable run-time memory check for debug builds.
@@ -18,8 +23,20 @@ int main() {
     OutputDebugStringA("Using release build configuration.");
 #endif
 
-    dxe::Application &app = dxe::Application::get();
-    app.run();
+    using namespace dxe;
+
+    std::variant<std::unique_ptr<Window>, Error> result = Window::getBuilder().build();
+    if (std::holds_alternative<Error>(result)) {
+        Error error = std::get<Error>(std::move(result));
+        error.addEntry();
+        error.showError();
+        throw std::runtime_error(error.getError());
+    }
+
+    std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
+
+    pMainWindow->setGameInstance<EditorGameInstance>();
+    pMainWindow->processEvents();
 
     return 0;
 }

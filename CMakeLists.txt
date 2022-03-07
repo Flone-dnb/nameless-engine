@@ -29,7 +29,8 @@ list(TRANSFORM ENGINE_LIB_SOURCES PREPEND "src/engine_lib/")
 # target
 set(PROJECT_SOURCES
     ${ENGINE_LIB_SOURCES}
-    src/engine_editor/foo.h
+    src/engine_editor/EditorGameInstance.h
+    src/engine_editor/EditorGameInstance.cpp
     # add your .h/.cpp files here
 )
 add_executable(${PROJECT_NAME}

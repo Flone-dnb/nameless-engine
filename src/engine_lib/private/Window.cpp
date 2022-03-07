@@ -4,9 +4,8 @@
 #include <stdexcept>
 
 // Custom.
-#include "Application.h"
 #include "UniqueValueGenerator.h"
-#include "Error.h"
+#include "IGameInstance.h"
 
 namespace dxe {
     LRESULT CALLBACK GlobalWindowProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
@@ -61,17 +60,12 @@ namespace dxe {
     }
 
     std::variant<std::unique_ptr<Window>, Error> Window::newInstance(const WindowBuilderParameters &params) {
-        std::string sNewWindowName = params.sWindowTitle;
+        std::string sNewWindowTitle = params.sWindowTitle;
+        const std::string sNewWindowClass = UniqueValueGenerator::get().getUniqueWindowClassName();
 
         // Check window name.
         if (params.sWindowTitle.empty()) {
-            sNewWindowName = UniqueValueGenerator::get().getUniqueWindowName();
-        } else {
-            // Check if this window name is not used.
-            if (Application::get().getWindowByName(params.sWindowTitle) != nullptr) {
-                // A window with this name already exists.
-                return Error("a window with this name already exists");
-            }
+            sNewWindowTitle = sNewWindowClass;
         }
 
         // Register window class.
@@ -84,7 +78,7 @@ namespace dxe {
         wc.hCursor = LoadCursor(nullptr, IDC_ARROW);
         wc.hbrBackground = static_cast<HBRUSH>(GetStockObject(NULL_BRUSH));
         wc.lpszMenuName = nullptr;
-        wc.lpszClassName = sNewWindowName.c_str();
+        wc.lpszClassName = sNewWindowClass.c_str();
         wc.hIcon = LoadIcon(nullptr, IDI_APPLICATION);
         wc.hIconSm = LoadIcon(nullptr, IDI_APPLICATION);
         wc.cbSize = sizeof(wc);
@@ -100,7 +94,7 @@ namespace dxe {
         const int iHeight = rect.bottom - rect.top;
 
         const HWND hNewWindow =
-            CreateWindow(sNewWindowName.data(), sNewWindowName.data(), WS_OVERLAPPEDWINDOW, CW_USEDEFAULT,
+            CreateWindow(sNewWindowClass.data(), sNewWindowTitle.data(), WS_OVERLAPPEDWINDOW, CW_USEDEFAULT,
                          CW_USEDEFAULT, iWidth, iHeight, nullptr, nullptr, GetModuleHandle(nullptr), nullptr);
         if (hNewWindow == nullptr) {
             return Error(GetLastError());
@@ -129,16 +123,17 @@ namespace dxe {
         if (RegisterRawInputDevices(rid, 1, sizeof(rid[0])) == FALSE)
         // if (RegisterRawInputDevices(Rid, 2, sizeof(Rid[0])) == FALSE)
         {
-            UnregisterClassA(sNewWindowName.c_str(), GetModuleHandle(nullptr));
+            UnregisterClassA(sNewWindowClass.c_str(), GetModuleHandle(nullptr));
             return Error(GetLastError());
         }
 
         // Initialize instance now when we won't fail anymore.
-        std::unique_ptr<Window> pWindow = std::unique_ptr<Window>(new Window(
-            hNewWindow, sNewWindowName, params.iWindowWidth, params.iWindowHeight, params.bFullscreen));
+        std::unique_ptr<Window> pWindow = std::unique_ptr<Window>(
+            new Window(hNewWindow, sNewWindowTitle, sNewWindowClass, params.iWindowWidth,
+                       params.iWindowHeight, params.bFullscreen));
 
         SetWindowLongPtr(hNewWindow, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(pWindow.get()));
-        SetWindowText(hNewWindow, sNewWindowName.data());
+        SetWindowText(hNewWindow, sNewWindowClass.data());
 
         // Show window if needed.
         if (params.bShowWindow) {
@@ -148,9 +143,15 @@ namespace dxe {
         return pWindow;
     }
 
-    Window::~Window() { UnregisterClassA(sWindowTitle.c_str(), GetModuleHandle(nullptr)); }
+    Window::~Window() { UnregisterClassA(sWindowClass.c_str(), GetModuleHandle(nullptr)); }
 
     WindowBuilder Window::getBuilder() { return WindowBuilder(); }
+
+    void Window::processEvents() const {
+        do {
+            processNextWindowMessage();
+        } while (!bDestroyReceived);
+    }
 
     void Window::show(bool bMaximized) const {
         if (bFullscreen) {
@@ -175,10 +176,11 @@ namespace dxe {
 
     std::string Window::getTitle() const { return sWindowTitle; }
 
-    Window::Window(HWND hWindow, const std::string &sWindowName, int iWindowWidth, int iWindowHeight,
-                   bool bFullscreen) {
+    Window::Window(HWND hWindow, const std::string &sWindowTitle, const std::string &sWindowClass,
+                   int iWindowWidth, int iWindowHeight, bool bFullscreen) {
         this->hWindow = hWindow;
-        this->sWindowTitle = sWindowName;
+        this->sWindowTitle = sWindowTitle;
+        this->sWindowClass = sWindowClass;
         this->iWindowWidth = iWindowWidth;
         this->iWindowHeight = iWindowHeight;
         this->bFullscreen = bFullscreen;
@@ -196,9 +198,9 @@ namespace dxe {
         return DefWindowProc(hWnd, msg, wParam, lParam);
     }
 
-    bool Window::processNextWindowMessage() const {
+    void Window::processNextWindowMessage() const {
         if (bDestroyReceived) {
-            return true;
+            return;
         }
 
         MSG msg = {};
@@ -207,8 +209,11 @@ namespace dxe {
         if (PeekMessage(&msg, hWindow, 0, 0, PM_REMOVE)) {
             TranslateMessage(&msg);
             DispatchMessage(&msg);
+        } else {
+            // TODO: add delta time here
+            pGameInstance->onBeforeNewFrame(-1.0f);
+            // TODO: update()
+            // TODO: draw()
         }
-
-        return false;
     }
 } // namespace dxe

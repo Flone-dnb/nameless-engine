@@ -8,7 +8,7 @@ namespace dxe {
         return generator;
     }
 
-    std::string UniqueValueGenerator::getUniqueWindowName() {
+    std::string UniqueValueGenerator::getUniqueWindowClassName() {
         iWindowCounter++;
         return std::string("Window~") + std::to_string(iWindowCounter);
     }

@@ -4,6 +4,8 @@
 #include "Error.h"
 
 TEST_CASE("create simple window") {
+    // Check that window creation is working correctly.
+
     auto result = dxe::Window::getBuilder().withVisibility(false).build();
     if (std::holds_alternative<dxe::Error>(result)) {
         INFO(std::get<dxe::Error>(std::move(result)).getError())
@@ -13,6 +15,8 @@ TEST_CASE("create simple window") {
 }
 
 TEST_CASE("create 2 windows") {
+    // Check that window class names are unique.
+
     auto result1 = dxe::Window::getBuilder().withVisibility(false).build();
     if (std::holds_alternative<dxe::Error>(result1)) {
         INFO(std::get<dxe::Error>(std::move(result1)).getError())
@@ -26,17 +30,4 @@ TEST_CASE("create 2 windows") {
     }
 
     REQUIRE(true);
-}
-
-TEST_CASE("start Window::processEvents() without IGameInstance") {
-    auto result = dxe::Window::getBuilder().withVisibility(false).build();
-    if (std::holds_alternative<dxe::Error>(result)) {
-        INFO(std::get<dxe::Error>(std::move(result)).getError())
-        REQUIRE(false);
-    }
-
-    auto pWindow = std::get<std::unique_ptr<dxe::Window>>(std::move(result));
-    auto optional = pWindow->processEvents();
-
-    REQUIRE(optional.has_value());
 }

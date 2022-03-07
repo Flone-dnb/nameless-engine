@@ -35,15 +35,7 @@ int main() {
 
     std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
 
-    pMainWindow->setGameInstance<EditorGameInstance>();
-    auto windowResult = pMainWindow->processEvents();
-
-    if (windowResult.has_value()) {
-        Error error = std::move(windowResult.value());
-        error.addEntry();
-        error.showError();
-        throw std::runtime_error(error.getError());
-    }
+    pMainWindow->processEvents<EditorGameInstance>();
 
     return 0;
 }

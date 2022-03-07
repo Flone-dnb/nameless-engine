@@ -145,19 +145,6 @@ namespace dxe {
 
     WindowBuilder Window::getBuilder() { return WindowBuilder(); }
 
-    std::optional<Error> Window::processEvents() const {
-        if (!pGame->pGameInstance) {
-            return Error("You need to set a IGameInstance derived class to handle game "
-                         "logic using 'setGameInstance()' method before calling 'processEvents()'.");
-        }
-
-        do {
-            processNextWindowMessage();
-        } while (!bDestroyReceived);
-
-        return {};
-    }
-
     void Window::show(bool bMaximized) const {
         if (bFullscreen) {
             bMaximized = true;

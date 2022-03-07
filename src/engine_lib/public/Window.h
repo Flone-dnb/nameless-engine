@@ -4,7 +4,6 @@
 #include <string_view>
 #include <variant>
 #include <memory>
-#include <optional>
 
 // Custom.
 #include "Error.h"
@@ -119,20 +118,19 @@ namespace dxe {
         static WindowBuilder getBuilder();
 
         /**
+         * Starts the message queue, rendering and game logic.
          * Set IGameInstance derived class to react to
          * user inputs, window events and etc.
-         */
-        template <typename T>
-        requires std::derived_from<T, IGameInstance>
-        void setGameInstance() { pGame->setGameInstance<T>(); }
-
-        /**
-         * Starts the message queue, rendering and game logic.
          * Will return control after the window was closed.
-         *
-         * @return Returns error if occurred.
          */
-        std::optional<Error> processEvents() const;
+        template <typename GameInstance>
+        requires std::derived_from<GameInstance, IGameInstance>
+        void processEvents() const {
+            pGame->setGameInstance<GameInstance>();
+            do {
+                processNextWindowMessage();
+            } while (!bDestroyReceived);
+        }
 
         /**
          * Shows the window on screen.

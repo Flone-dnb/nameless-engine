@@ -12,6 +12,8 @@ set(ENGINE_LIB_SOURCES
     private/UniqueValueGenerator.cpp
     private/IGameInstance.cpp
     public/IGameInstance.h
+    private/Game.h
+    private/Game.cpp
     # add your .h/.cpp files here
     PARENT_SCOPE
 )

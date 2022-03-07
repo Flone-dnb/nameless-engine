@@ -4,6 +4,7 @@
 #include <string_view>
 #include <variant>
 #include <memory>
+#include <optional>
 
 // Custom.
 #include "Error.h"
@@ -11,9 +12,12 @@
 // OS.
 #include <Windows.h>
 
+#include "Game.h"
+
 namespace dxe {
     class Error;
     class IGameInstance;
+    class Game;
 
     /**
      * Parameters needed to build a window.
@@ -120,13 +124,15 @@ namespace dxe {
          */
         template <typename T>
         requires std::derived_from<T, IGameInstance>
-        void setGameInstance() { pGameInstance = std::make_unique<T>(); }
+        void setGameInstance() { pGame->setGameInstance<T>(); }
 
         /**
          * Starts the message queue, rendering and game logic.
          * Will return control after the window was closed.
+         *
+         * @return Returns error if occurred.
          */
-        void processEvents() const;
+        std::optional<Error> processEvents() const;
 
         /**
          * Shows the window on screen.
@@ -189,9 +195,9 @@ namespace dxe {
         void processNextWindowMessage() const;
 
         /**
-         * Reacts to user inputs, window events and etc.
+         * Holds main game objects.
          */
-        std::unique_ptr<IGameInstance> pGameInstance;
+        std::unique_ptr<Game> pGame;
 
         /** Handle to the window. */
         HWND hWindow;

@@ -1,11 +1,9 @@
 #include "window.h"
 
-// STL.
-#include <stdexcept>
-
 // Custom.
 #include "UniqueValueGenerator.h"
 #include "IGameInstance.h"
+#include "Game.h"
 
 namespace dxe {
     LRESULT CALLBACK GlobalWindowProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
@@ -147,10 +145,17 @@ namespace dxe {
 
     WindowBuilder Window::getBuilder() { return WindowBuilder(); }
 
-    void Window::processEvents() const {
+    std::optional<Error> Window::processEvents() const {
+        if (!pGame->pGameInstance) {
+            return Error("You need to set a IGameInstance derived class to handle game "
+                         "logic using 'setGameInstance()' method before calling 'processEvents()'.");
+        }
+
         do {
             processNextWindowMessage();
         } while (!bDestroyReceived);
+
+        return {};
     }
 
     void Window::show(bool bMaximized) const {
@@ -184,6 +189,8 @@ namespace dxe {
         this->iWindowWidth = iWindowWidth;
         this->iWindowHeight = iWindowHeight;
         this->bFullscreen = bFullscreen;
+
+        pGame = std::unique_ptr<Game>(new Game());
     }
 
     LRESULT Window::windowProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
@@ -211,7 +218,7 @@ namespace dxe {
             DispatchMessage(&msg);
         } else {
             // TODO: add delta time here
-            pGameInstance->onBeforeNewFrame(-1.0f);
+            pGame->pGameInstance->onBeforeNewFrame(-1.0f);
             // TODO: update()
             // TODO: draw()
         }

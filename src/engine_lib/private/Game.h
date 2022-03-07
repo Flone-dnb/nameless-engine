@@ -5,6 +5,7 @@
 
 namespace dxe {
     class IGameInstance;
+    class IRenderer;
 
     /**
      * Holds main game objects: game instance, renderer,
@@ -14,6 +15,7 @@ namespace dxe {
     public:
         Game(const Game &) = delete;
         Game &operator=(const Game &) = delete;
+
         virtual ~Game() = default;
 
         /**
@@ -28,11 +30,16 @@ namespace dxe {
         // The object should be created by a Window instance.
         friend class Window;
 
-        Game() = default;
+        Game();
 
         /**
          * Reacts to user inputs, window events and etc.
          */
         std::unique_ptr<IGameInstance> pGameInstance;
+
+        /**
+         * Draws the graphics on a window.
+         */
+        std::unique_ptr<IRenderer> pRenderer;
     };
 } // namespace dxe

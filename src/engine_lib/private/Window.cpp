@@ -62,7 +62,7 @@ namespace dxe {
         const std::string sNewWindowClass = UniqueValueGenerator::get().getUniqueWindowClassName();
 
         // Check window name.
-        if (params.sWindowTitle.empty()) {
+        if (sNewWindowTitle.empty()) {
             sNewWindowTitle = sNewWindowClass;
         }
 
@@ -131,7 +131,6 @@ namespace dxe {
                        params.iWindowHeight, params.bFullscreen));
 
         SetWindowLongPtr(hNewWindow, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(pWindow.get()));
-        SetWindowText(hNewWindow, sNewWindowClass.data());
 
         // Show window if needed.
         if (params.bShowWindow) {
@@ -176,8 +175,6 @@ namespace dxe {
         this->iWindowWidth = iWindowWidth;
         this->iWindowHeight = iWindowHeight;
         this->bFullscreen = bFullscreen;
-
-        pGame = std::unique_ptr<Game>(new Game());
     }
 
     LRESULT Window::windowProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {

@@ -7,16 +7,14 @@
 
 // Custom.
 #include "Error.h"
+#include "Game.h"
 
 // OS.
 #include <Windows.h>
 
-#include "Game.h"
-
 namespace dxe {
     class Error;
     class IGameInstance;
-    class Game;
 
     /**
      * Parameters needed to build a window.
@@ -125,7 +123,8 @@ namespace dxe {
          */
         template <typename GameInstance>
         requires std::derived_from<GameInstance, IGameInstance>
-        void processEvents() const {
+        void processEvents() {
+            pGame = std::unique_ptr<Game>(new Game());
             pGame->setGameInstance<GameInstance>();
             do {
                 processNextWindowMessage();

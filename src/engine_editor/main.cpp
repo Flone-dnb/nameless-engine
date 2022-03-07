@@ -25,7 +25,7 @@ int main() {
 
     using namespace dxe;
 
-    std::variant<std::unique_ptr<Window>, Error> result = Window::getBuilder().build();
+    std::variant<std::unique_ptr<Window>, Error> result = Window::getBuilder().withTitle("Editor").build();
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
         error.addEntry();

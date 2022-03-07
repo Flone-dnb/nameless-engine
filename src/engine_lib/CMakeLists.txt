@@ -14,6 +14,10 @@ set(ENGINE_LIB_SOURCES
     public/IGameInstance.h
     private/Game.h
     private/Game.cpp
+    private/IRenderer.h
+    private/IRenderer.cpp
+    private/DirectXRenderer.h
+    private/DirectXRenderer.cpp
     # add your .h/.cpp files here
     PARENT_SCOPE
 )

@@ -160,6 +160,8 @@ namespace ne {
                 // TODO: update()
                 // TODO: drawFrame()
             }
+
+            pGame->pGameInstance->onWindowClose();
         }
 
         /**

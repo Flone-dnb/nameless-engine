@@ -11,4 +11,6 @@ public:
     virtual ~EditorGameInstance() override = default;
 
     virtual void onBeforeNewFrame(float fTimeFromPrevCallInSec) override{};
+
+    virtual void onWindowClose() override{};
 };

@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.12)
 project(engine_editor)
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
-set(DX12_ENGINE_FOLDER "DX12-ENGINE")
+set(ENGINE_FOLDER "NAMELESS-ENGINE")
 
 # build mode
 set(default_build_type "Release")
@@ -37,7 +37,7 @@ add_executable(${PROJECT_NAME}
     src/engine_editor/main.cpp
     ${PROJECT_SOURCES}
 )
-set_target_properties(${PROJECT_NAME} PROPERTIES FOLDER ${DX12_ENGINE_FOLDER})
+set_target_properties(${PROJECT_NAME} PROPERTIES FOLDER ${ENGINE_FOLDER})
 
 # more warnings
 if(MSVC)
@@ -65,7 +65,7 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     include(CTest)
     include(Catch)
     catch_discover_tests(tests)
-    set_target_properties(tests PROPERTIES FOLDER ${DX12_ENGINE_FOLDER})
+    set_target_properties(tests PROPERTIES FOLDER ${ENGINE_FOLDER})
 endif()
 
 include_directories(ext)

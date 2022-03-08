@@ -5,7 +5,7 @@
 #include <vector>
 #include <source_location>
 
-namespace dxe {
+namespace ne {
     /**
      * Helper class to store error messages.
      */
@@ -76,4 +76,4 @@ namespace dxe {
         /** Error stack. */
         std::vector<std::source_location> stack;
     };
-} // namespace dxe
+} // namespace ne

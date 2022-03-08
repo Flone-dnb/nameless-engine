@@ -1,6 +1,6 @@
 ﻿#pragma once
 
-namespace dxe {
+namespace ne {
     class IRenderer {
     public:
         IRenderer() = default;
@@ -13,4 +13,4 @@ namespace dxe {
         virtual void update() = 0;
         virtual void drawFrame() = 0;
     };
-} // namespace dxe
+} // namespace ne

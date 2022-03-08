@@ -3,7 +3,7 @@
 // Custom.
 #include "IRenderer.h"
 
-namespace dxe {
+namespace ne {
     class DirectXRenderer : public IRenderer {
     public:
         DirectXRenderer() = default;
@@ -18,4 +18,4 @@ namespace dxe {
 
     private:
     };
-} // namespace dxe
+} // namespace ne

@@ -12,7 +12,7 @@
 // OS.
 #include <Windows.h>
 
-namespace dxe {
+namespace ne {
     class Error;
     class IGameInstance;
 
@@ -216,4 +216,4 @@ namespace dxe {
         /** Will be 'true' when this window receives 'WM_NCDESTROY' window message. */
         bool bDestroyReceived = false;
     };
-} // namespace dxe
+} // namespace ne

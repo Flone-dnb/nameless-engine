@@ -5,7 +5,7 @@
 #include "IGameInstance.h"
 #include "Game.h"
 
-namespace dxe {
+namespace ne {
     LRESULT CALLBACK GlobalWindowProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
         Window *pWindow = nullptr;
 
@@ -207,4 +207,4 @@ namespace dxe {
             // TODO: draw()
         }
     }
-} // namespace dxe
+} // namespace ne

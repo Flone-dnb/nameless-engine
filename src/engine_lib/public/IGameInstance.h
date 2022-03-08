@@ -1,6 +1,6 @@
 ﻿#pragma once
 
-namespace dxe {
+namespace ne {
     /**
      * Reacts to user inputs, window events and etc.
      */
@@ -16,4 +16,4 @@ namespace dxe {
         virtual void onBeforeNewFrame(float fTimeFromPrevCallInSec) = 0;
     };
 
-} // namespace dxe
+} // namespace ne

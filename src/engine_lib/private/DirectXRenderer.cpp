@@ -1,5 +1,5 @@
 ﻿#include "DirectXRenderer.h"
 
-void dxe::DirectXRenderer::update() {}
+void ne::DirectXRenderer::update() {}
 
-void dxe::DirectXRenderer::drawFrame() {}
+void ne::DirectXRenderer::drawFrame() {}

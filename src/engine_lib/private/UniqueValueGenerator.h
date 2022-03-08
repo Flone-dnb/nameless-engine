@@ -3,7 +3,7 @@
 #include <string>
 #include <memory>
 
-namespace dxe {
+namespace ne {
     /**
      * Used to generate unique values and names.
      */
@@ -37,4 +37,4 @@ namespace dxe {
          */
         unsigned long long iWindowCounter = 0;
     };
-} // namespace dxe
+} // namespace ne

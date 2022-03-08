@@ -1,6 +1,6 @@
 ﻿#include "UniqueValueGenerator.h"
 
-namespace dxe {
+namespace ne {
     UniqueValueGenerator::~UniqueValueGenerator() {}
 
     UniqueValueGenerator &UniqueValueGenerator::get() {
@@ -12,4 +12,4 @@ namespace dxe {
         iWindowCounter++;
         return std::string("Window~") + std::to_string(iWindowCounter);
     }
-} // namespace dxe
+} // namespace ne

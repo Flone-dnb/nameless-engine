@@ -23,7 +23,7 @@ int main() {
     OutputDebugStringA("Using release build configuration.");
 #endif
 
-    using namespace dxe;
+    using namespace ne;
 
     std::variant<std::unique_ptr<Window>, Error> result = Window::getBuilder().withTitle("Editor").build();
     if (std::holds_alternative<Error>(result)) {

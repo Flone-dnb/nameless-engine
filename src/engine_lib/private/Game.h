@@ -3,7 +3,7 @@
 // Std.
 #include <memory>
 
-namespace dxe {
+namespace ne {
     class IGameInstance;
     class IRenderer;
 
@@ -42,4 +42,4 @@ namespace dxe {
          */
         std::unique_ptr<IRenderer> pRenderer;
     };
-} // namespace dxe
+} // namespace ne

@@ -2,7 +2,7 @@
 
 #include "IGameInstance.h"
 
-class EditorGameInstance : public dxe::IGameInstance {
+class EditorGameInstance : public ne::IGameInstance {
 public:
     EditorGameInstance() = default;
     virtual ~EditorGameInstance() override = default;

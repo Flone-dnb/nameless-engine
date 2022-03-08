@@ -7,7 +7,7 @@
 // OS.
 #include <Windows.h>
 
-namespace dxe {
+namespace ne {
     Error::Error(std::string_view sMessage, const std::source_location location) {
         this->sMessage = sMessage;
 
@@ -58,4 +58,4 @@ namespace dxe {
         const std::string sErrorMessage = getError();
         MessageBoxA(nullptr, sErrorMessage.c_str(), "Error", 0);
     }
-} // namespace dxe
+} // namespace ne

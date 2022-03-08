@@ -1,6 +1,9 @@
 ﻿#pragma once
 
 namespace ne {
+    /**
+     * Defines an interface for renderers to implement.
+     */
     class IRenderer {
     public:
         IRenderer() = default;

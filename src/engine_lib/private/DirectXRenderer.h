@@ -4,6 +4,9 @@
 #include "IRenderer.h"
 
 namespace ne {
+    /**
+     * DirectX 12 renderer.
+     */
     class DirectXRenderer : public IRenderer {
     public:
         DirectXRenderer() = default;

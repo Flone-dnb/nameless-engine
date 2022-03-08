@@ -2,8 +2,6 @@
 
 // Custom.
 #include "UniqueValueGenerator.h"
-#include "IGameInstance.h"
-#include "Game.h"
 
 namespace ne {
     WindowBuilder &WindowBuilder::withSize(int iWidth, int iHeight) {

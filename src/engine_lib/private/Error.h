@@ -29,8 +29,10 @@ namespace ne {
         Error(unsigned long errorCode, const std::source_location location = std::source_location::current());
 
         Error() = delete;
+
         Error(const Error &) = delete;
         Error &operator=(const Error &) = delete;
+
         virtual ~Error() = default;
 
         /**

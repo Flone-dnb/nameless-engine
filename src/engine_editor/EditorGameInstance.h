@@ -2,6 +2,9 @@
 
 #include "IGameInstance.h"
 
+/**
+ * Editor logic.
+ */
 class EditorGameInstance : public ne::IGameInstance {
 public:
     EditorGameInstance() = default;

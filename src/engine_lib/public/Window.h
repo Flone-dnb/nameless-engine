@@ -169,6 +169,11 @@ namespace ne {
         void setOpacity(float fOpacity) const;
 
         /**
+         * Sets new window title.
+         */
+        void setTitle(const std::string &sNewTitle);
+
+        /**
          * Minimizes the window.
          */
         void minimize() const;

@@ -105,6 +105,11 @@ namespace ne {
 
     void Window::setOpacity(float fOpacity) const { glfwSetWindowOpacity(pGLFWWindow, fOpacity); }
 
+    void Window::setTitle(const std::string &sNewTitle) {
+        glfwSetWindowTitle(pGLFWWindow, sNewTitle.c_str());
+        sWindowTitle = sNewTitle;
+    }
+
     void Window::minimize() const { glfwIconifyWindow(pGLFWWindow); }
 
     void Window::maximize() const { glfwMaximizeWindow(pGLFWWindow); }

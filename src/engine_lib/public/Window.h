@@ -9,6 +9,7 @@
 #include "Game.h"
 #include "GLFW.hpp"
 #include "IGameInstance.h"
+#include "KeyboardKey.hpp"
 
 namespace ne {
     class Error;
@@ -143,7 +144,7 @@ namespace ne {
 
             // Finally create Game Instance when engine (Game) is fully initialized.
             // So that the user can call engine functions in Game Instance constructor.
-            pGame->setGameInstance<GameInstance>();
+            pGame->setGameInstance<GameInstance>(this);
 
             // Used for tick.
             float fCurrentTimeInSec = 0.0f;
@@ -221,6 +222,11 @@ namespace ne {
          * @return Window opacity.
          */
         float getOpacity() const;
+
+        /**
+         * Used internally, should not be called explicitly.
+         */
+        void onKeyInput(KeyboardKey key, KeyboardModifiers modifiers, KeyboardAction action) const;
 
     private:
         friend class WindowBuilder;

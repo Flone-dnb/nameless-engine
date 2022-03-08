@@ -19,6 +19,7 @@ set(ENGINE_LIB_SOURCES
     private/DirectXRenderer.h
     private/DirectXRenderer.cpp
     private/GLFW.hpp
+    private/KeyboardKey.hpp
     # add your .h/.cpp files here
     PARENT_SCOPE
 )

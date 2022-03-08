@@ -4,6 +4,16 @@
 #include "UniqueValueGenerator.h"
 
 namespace ne {
+    void GLFWWindowKeyCallback(GLFWwindow *pGLFWWindow, int iKey, int iScancode, int iAction, int iMods) {
+        const Window *pWindow = static_cast<Window *>(glfwGetWindowUserPointer(pGLFWWindow));
+        if (!pWindow) {
+            return;
+        }
+
+        pWindow->onKeyInput(static_cast<KeyboardKey>(iKey), KeyboardModifiers(iMods),
+                            static_cast<KeyboardAction>(iAction));
+    }
+
     WindowBuilder &WindowBuilder::withSize(int iWidth, int iHeight) {
         params.iWindowWidth = iWidth;
         params.iWindowHeight = iHeight;
@@ -53,6 +63,10 @@ namespace ne {
 
     float Window::getOpacity() const { return glfwGetWindowOpacity(pGLFWWindow); }
 
+    void Window::onKeyInput(KeyboardKey key, KeyboardModifiers modifiers, KeyboardAction action) const {
+        pGame->pGameInstance->onKeyInput(key, modifiers, action);
+    }
+
     std::variant<std::unique_ptr<Window>, Error> Window::newInstance(const WindowBuilderParameters &params) {
         GLFW::get(); // initialize GLFW
 
@@ -94,7 +108,15 @@ namespace ne {
             return Error("failed to create window");
         }
 
-        return std::unique_ptr<Window>(new Window(pGLFWWindow, sNewWindowTitle));
+        auto pWindow = std::unique_ptr<Window>(new Window(pGLFWWindow, sNewWindowTitle));
+
+        // Add Window pointer.
+        glfwSetWindowUserPointer(pGLFWWindow, pWindow.get());
+
+        // Bind to keyboard input.
+        glfwSetKeyCallback(pGLFWWindow, GLFWWindowKeyCallback);
+
+        return std::move(pWindow);
     }
 
     Window::~Window() { glfwDestroyWindow(pGLFWWindow); }

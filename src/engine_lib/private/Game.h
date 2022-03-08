@@ -3,9 +3,12 @@
 // Std.
 #include <memory>
 
+#include "IGameInstance.h"
+
 namespace ne {
     class IGameInstance;
     class IRenderer;
+    class Window;
 
     /**
      * Holds main game objects: game instance, renderer,
@@ -24,7 +27,9 @@ namespace ne {
          */
         template <typename GameInstance>
         requires std::derived_from<GameInstance, IGameInstance>
-        void setGameInstance() { pGameInstance = std::make_unique<GameInstance>(); }
+        void setGameInstance(Window *pGameWindow) {
+            pGameInstance = std::make_unique<GameInstance>(pGameWindow);
+        }
 
     private:
         // The object should be created by a Window instance.

@@ -33,8 +33,7 @@ int main() {
         throw std::runtime_error(error.getError());
     }
 
-    std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
-
+    const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
     pMainWindow->processEvents<EditorGameInstance>();
 
     return 0;

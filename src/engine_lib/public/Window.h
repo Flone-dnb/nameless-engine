@@ -1,16 +1,14 @@
 #pragma once
 
 // STL.
-#include <string_view>
 #include <variant>
 #include <memory>
 
 // Custom.
 #include "Error.h"
 #include "Game.h"
-
-// OS.
-#include <Windows.h>
+#include "GLFW.hpp"
+#include "IGameInstance.h"
 
 namespace ne {
     class Error;
@@ -28,8 +26,12 @@ namespace ne {
         std::string sWindowTitle = "";
         /** Whether to show window after it was created or not. */
         bool bShowWindow = true;
+        /** Whether the window should be maximized after creation or not. */
+        bool bMaximized = false;
         /** Whether to show window in fullscreen mode. */
         bool bFullscreen = false;
+        /** Whether the window should have window decorations. */
+        bool bIsSplashScreen = false;
     };
 
     class Window;
@@ -39,6 +41,7 @@ namespace ne {
      */
     class WindowBuilder {
     public:
+        WindowBuilder() = default;
         /**
          * Defines the size of a window that we will create.
          *
@@ -58,12 +61,32 @@ namespace ne {
         WindowBuilder &withTitle(const std::string &sWindowTitle);
         /**
          * Defines the visibility of a window that we will create.
+         * Does nothing for fullscreen windows.
          *
          * @param bShow Visibility of the window.
          *
          * @return Builder.
          */
         WindowBuilder &withVisibility(bool bShow);
+        /**
+         * Whether the window should be maximized after creation or not.
+         * Does nothing for fullscreen windows.
+         *
+         * @param bMaximized Should window be maximized or not.
+         *
+         * @return Builder.
+         */
+        WindowBuilder &withMaximizedState(bool bMaximized);
+        /**
+         * Whether the window should look like a splash screen or not
+         * (no border, title, buttons, etc).
+         * Does nothing for fullscreen windows.
+         *
+         * @param bIsSplashScreen Should window look like a splash screen or not.
+         *
+         * @return Builder.
+         */
+        WindowBuilder &withSplashScreenMode(bool bIsSplashScreen);
         /**
          * Whether a window should be shown in the fullscreen mode or not.
          *
@@ -76,6 +99,8 @@ namespace ne {
          * Builds/creates a new window with the configured parameters.
          *
          * @return Returns error if something went wrong or created window otherwise.
+         *
+         * @warning This function should only be called from the main thread.
          */
         std::variant<std::unique_ptr<Window>, Error> build() const;
 
@@ -89,21 +114,9 @@ namespace ne {
      */
     class Window {
     public:
-        /**
-         * Function to handle window messages.
-         * Should not be called explicitly.
-         *
-         * @param hWnd   Window handle.
-         * @param msg    Window message.
-         * @param wParam wParam.
-         * @param lParam lParam.
-         *
-         * @return LRESULT.
-         */
-        virtual LRESULT CALLBACK windowProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
-
         Window(const Window &) = delete;
         Window &operator=(const Window &) = delete;
+
         virtual ~Window();
 
         /**
@@ -125,30 +138,68 @@ namespace ne {
         requires std::derived_from<GameInstance, IGameInstance>
         void processEvents() {
             pGame = std::unique_ptr<Game>(new Game());
+
+            // initialize other Game fields here
+
+            // Finally create Game Instance when engine (Game) is fully initialized.
+            // So that the user can call engine functions in Game Instance constructor.
             pGame->setGameInstance<GameInstance>();
-            do {
-                processNextWindowMessage();
-            } while (!bDestroyReceived);
+
+            // Used for tick.
+            float fCurrentTimeInSec = 0.0f;
+            float fPrevTimeInSec = 0.0f;
+
+            while (!glfwWindowShouldClose(pGLFWWindow)) {
+                glfwPollEvents();
+
+                // Tick.
+                fCurrentTimeInSec = static_cast<float>(glfwGetTime());
+                pGame->pGameInstance->onBeforeNewFrame(fCurrentTimeInSec - fPrevTimeInSec);
+                fPrevTimeInSec = fCurrentTimeInSec;
+
+                // TODO: update()
+                // TODO: drawFrame()
+            }
         }
 
         /**
-         * Shows the window on screen.
-         *
-         * @param bMaximized  Whether to show window in the maximized state or
-         * in the normal (usual) state.
+         * Sets the window opacity (1.0f for opaque, 0.0f for transparent).
+         * Does nothing if the OS does not support transparent windows.
          */
-        void show(bool bMaximized = false) const;
+        void setOpacity(float fOpacity) const;
 
         /**
          * Minimizes the window.
-         * If the window was hidden, it will be shown.
          */
         void minimize() const;
 
         /**
+         * Maximizes the window.
+         */
+        void maximize() const;
+
+        /**
+         * Restores the window (makes it visible with normal size).
+         * Does nothing for fullscreen windows.
+         */
+        void restore() const;
+
+        /**
          * Hides the windows (makes it invisible).
+         * Does nothing for fullscreen windows.
          */
         void hide() const;
+
+        /**
+         * Shows the hidden window on screen.
+         */
+        void show() const;
+
+        /**
+         * Closes this window causing game instance,
+         * audio engine and etc to be destroyed.
+         */
+        void close() const;
 
         /**
          * Returns the title of this window.
@@ -156,6 +207,13 @@ namespace ne {
          * @return Title of the window.
          */
         std::string getTitle() const;
+
+        /**
+         * Returns window opacity.
+         *
+         * @return Window opacity.
+         */
+        float getOpacity() const;
 
     private:
         friend class WindowBuilder;
@@ -173,47 +231,24 @@ namespace ne {
         /**
          * Default constructor.
          *
-         * @param hWindow         Handle of the created window.
-         * @param sWindowTitle    Title of the created window class.
-         * @param sWindowClass    Class of the created window class.
-         * @param iWindowWidth    Width of the window.
-         * @param iWindowHeight   Height of the window.
-         * @param bFullscreen     Whether the window should be shown in the fullscreen mode or not.
+         * @param pGLFWWindow   Created GLFW window.
+         * @param sWindowTitle  Title of this window.
          */
-        Window(HWND hWindow, const std::string &sWindowTitle, const std::string &sWindowClass,
-               int iWindowWidth, int iWindowHeight, bool bFullscreen);
-
-        /**
-         * Handles next message to this window.
-         *
-         * If 'WM_NCDESTROY' message was previously received
-         * (window and all of its child windows have been destroyed (closed)), does nothing.
-         */
-        void processNextWindowMessage() const;
+        Window(GLFWwindow *pGLFWWindow, const std::string &sWindowTitle);
 
         /**
          * Holds main game objects.
          */
         std::unique_ptr<Game> pGame;
 
-        /** Handle to the window. */
-        HWND hWindow;
+        /**
+         * GLFW window.
+         */
+        GLFWwindow *pGLFWWindow;
 
-        /** Title of the window. */
+        /**
+         * Title of the window.
+         */
         std::string sWindowTitle;
-
-        /** Class of the window. */
-        std::string sWindowClass;
-
-        /** Width of the window. */
-        int iWindowWidth;
-        /** Height of the window. */
-        int iWindowHeight;
-
-        /** Whether the window should be shown in the fullscreen mode or not. */
-        bool bFullscreen = false;
-
-        /** Will be 'true' when this window receives 'WM_NCDESTROY' window message. */
-        bool bDestroyReceived = false;
     };
 } // namespace ne

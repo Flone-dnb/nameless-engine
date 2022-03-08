@@ -18,6 +18,7 @@ set(ENGINE_LIB_SOURCES
     private/IRenderer.cpp
     private/DirectXRenderer.h
     private/DirectXRenderer.cpp
+    private/GLFW.hpp
     # add your .h/.cpp files here
     PARENT_SCOPE
 )

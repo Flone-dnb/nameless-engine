@@ -50,9 +50,16 @@ endif()
 set(PROJECT_CXX_STANDARD_VERSION 20)
 target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_${PROJECT_CXX_STANDARD_VERSION})
 
+# glfw
+set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE) # disable docs
+set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE) # disable tests
+set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE) # disable examples
+add_subdirectory(ext/glfw build/glfw) # add GLFW target
+target_link_libraries(${PROJECT_NAME} glfw)
+
 # tests
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-    add_subdirectory(ext/Catch2 build/Catch2)
+    add_subdirectory(ext/Catch2 build/Catch2) # add Catch2 target
     add_executable(tests
         ${PROJECT_SOURCES}
         tests/main.cpp
@@ -61,6 +68,7 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     )
     target_compile_features(tests PRIVATE cxx_std_${PROJECT_CXX_STANDARD_VERSION})
     target_link_libraries(tests PRIVATE Catch2::Catch2)
+    target_link_libraries(tests PRIVATE glfw)
     list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/ext/Catch2/contrib")
     include(CTest)
     include(Catch)
@@ -72,5 +80,3 @@ include_directories(ext)
 include_directories(src/engine_editor)
 include_directories(src/engine_lib/public)
 include_directories(src/engine_lib/private)
-
-#target_link_libraries(${PROJECT_NAME} *-lname1* *-lname2*)

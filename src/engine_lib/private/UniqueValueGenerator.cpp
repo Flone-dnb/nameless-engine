@@ -8,7 +8,7 @@ namespace ne {
         return generator;
     }
 
-    std::string UniqueValueGenerator::getUniqueWindowClassName() {
+    std::string UniqueValueGenerator::getUniqueWindowName() {
         iWindowCounter++;
         return std::string("Window~") + std::to_string(iWindowCounter);
     }

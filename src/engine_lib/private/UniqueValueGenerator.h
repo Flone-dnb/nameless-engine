@@ -23,11 +23,11 @@ namespace ne {
         static UniqueValueGenerator &get();
 
         /**
-         * Returns a unique window class name.
+         * Returns a unique window name.
          *
-         * @return Unique window class name.
+         * @return Unique window name.
          */
-        [[nodiscard]] std::string getUniqueWindowClassName();
+        [[nodiscard]] std::string getUniqueWindowName();
 
     private:
         UniqueValueGenerator() = default;

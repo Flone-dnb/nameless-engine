@@ -37,6 +37,13 @@ namespace ne {
         virtual void onKeyInput(KeyboardKey key, KeyboardModifiers modifiers, KeyboardAction action) = 0;
 
         /**
+         * Called when the window focus was changed.
+         *
+         * @param bIsFocused  Whether the window has gained or lost the focus.
+         */
+        virtual void onWindowFocusChanged(bool bIsFocused) = 0;
+
+        /**
          * Called when the window was requested to close (no new frames will be rendered).
          */
         virtual void onWindowClose() = 0;

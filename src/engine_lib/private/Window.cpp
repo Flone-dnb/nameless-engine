@@ -10,8 +10,17 @@ namespace ne {
             return;
         }
 
-        pWindow->onKeyInput(static_cast<KeyboardKey>(iKey), KeyboardModifiers(iMods),
-                            static_cast<KeyboardAction>(iAction));
+        pWindow->internalOnKeyInput(static_cast<KeyboardKey>(iKey), KeyboardModifiers(iMods),
+                                    static_cast<KeyboardAction>(iAction));
+    }
+
+    void GLFWWindowFocusCallback(GLFWwindow *pGLFWWindow, int iFocused) {
+        const Window *pWindow = static_cast<Window *>(glfwGetWindowUserPointer(pGLFWWindow));
+        if (!pWindow) {
+            return;
+        }
+
+        pWindow->internalOnWindowFocusChanged(static_cast<bool>(iFocused));
     }
 
     WindowBuilder &WindowBuilder::withSize(int iWidth, int iHeight) {
@@ -63,8 +72,19 @@ namespace ne {
 
     float Window::getOpacity() const { return glfwGetWindowOpacity(pGLFWWindow); }
 
-    void Window::onKeyInput(KeyboardKey key, KeyboardModifiers modifiers, KeyboardAction action) const {
+    void Window::internalOnKeyInput(KeyboardKey key, KeyboardModifiers modifiers,
+                                    KeyboardAction action) const {
+        if (!pGame || !pGame->pGameInstance) {
+            return;
+        }
         pGame->pGameInstance->onKeyInput(key, modifiers, action);
+    }
+
+    void Window::internalOnWindowFocusChanged(bool bIsFocused) const {
+        if (!pGame || !pGame->pGameInstance) {
+            return;
+        }
+        pGame->pGameInstance->onWindowFocusChanged(bIsFocused);
     }
 
     std::variant<std::unique_ptr<Window>, Error> Window::newInstance(const WindowBuilderParameters &params) {
@@ -115,6 +135,9 @@ namespace ne {
 
         // Bind to keyboard input.
         glfwSetKeyCallback(pGLFWWindow, GLFWWindowKeyCallback);
+
+        // Bind to focus change event.
+        glfwSetWindowFocusCallback(pGLFWWindow, GLFWWindowFocusCallback);
 
         return std::move(pWindow);
     }

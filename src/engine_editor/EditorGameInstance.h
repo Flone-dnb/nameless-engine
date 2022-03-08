@@ -1,5 +1,5 @@
 ﻿#pragma once
-
+#include <Windows.h>
 // Custom.
 #include "IGameInstance.h"
 #include "Window.h"
@@ -29,6 +29,13 @@ public:
      */
     virtual void onKeyInput(ne::KeyboardKey key, ne::KeyboardModifiers modifiers,
                             ne::KeyboardAction action) override;
+
+    /**
+     * Called when the window focus was changed.
+     *
+     * @param bIsFocused  Whether the window has gained or lost the focus.
+     */
+    virtual void onWindowFocusChanged(bool bIsFocused) override{};
 
     /**
      * Called when the window was requested to close (no new frames will be rendered).

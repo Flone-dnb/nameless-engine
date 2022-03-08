@@ -224,9 +224,22 @@ namespace ne {
         float getOpacity() const;
 
         /**
-         * Used internally, should not be called explicitly.
+         * Used internally, should not be called from user code.
+         * Use IGameInstance::onKeyInput() from user code.
+         *
+         * @param key        Keyboard key.
+         * @param modifiers  Keyboard modifier keys.
+         * @param action     Type of keyboard action.
          */
-        void onKeyInput(KeyboardKey key, KeyboardModifiers modifiers, KeyboardAction action) const;
+        void internalOnKeyInput(KeyboardKey key, KeyboardModifiers modifiers, KeyboardAction action) const;
+
+        /**
+         * Used internally, should not be called from user code.
+         * Use IGameInstance::onWindowFocusChanged() from user code.
+         *
+         * @param bIsFocused  Whether the window has gained or lost the focus.
+         */
+        void internalOnWindowFocusChanged(bool bIsFocused) const;
 
     private:
         friend class WindowBuilder;

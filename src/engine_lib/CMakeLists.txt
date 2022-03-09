@@ -14,10 +14,10 @@ set(ENGINE_LIB_SOURCES
     public/IGameInstance.h
     private/Game.h
     private/Game.cpp
-    private/IRenderer.h
-    private/IRenderer.cpp
-    private/DirectXRenderer.h
-    private/DirectXRenderer.cpp
+    private/render/IRenderer.h
+    private/render/IRenderer.cpp
+    private/render/DirectXRenderer.h
+    private/render/DirectXRenderer.cpp
     private/GLFW.hpp
     private/KeyboardKey.hpp
     # add your .h/.cpp files here

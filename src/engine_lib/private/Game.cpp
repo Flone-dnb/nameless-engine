@@ -1,7 +1,7 @@
 ﻿#include "Game.h"
 
 // Custom.
-#include "DirectXRenderer.h"
+#include "render/DirectXRenderer.h"
 #include "IGameInstance.h"
 
 namespace ne {

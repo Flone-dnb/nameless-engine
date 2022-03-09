@@ -5,7 +5,7 @@
 #include <string>
 
 // Custom.
-#include "Error.h"
+#include "misc/Error.h"
 
 // External.
 #define GLFW_INCLUDE_NONE

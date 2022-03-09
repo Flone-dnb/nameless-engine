@@ -4,12 +4,12 @@ project(engine_lib)
 
 # target
 set(ENGINE_LIB_SOURCES
-    private/Error.cpp
-    private/Error.h
+    private/misc/Error.cpp
+    private/misc/Error.h
     private/Window.cpp
     public/Window.h
-    private/UniqueValueGenerator.h
-    private/UniqueValueGenerator.cpp
+    private/misc/UniqueValueGenerator.h
+    private/misc/UniqueValueGenerator.cpp
     private/IGameInstance.cpp
     public/IGameInstance.h
     private/Game.h

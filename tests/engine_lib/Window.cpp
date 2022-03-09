@@ -1,7 +1,7 @@
 #include "Catch2/catch.hpp"
 
 #include "Window.h"
-#include "Error.h"
+#include "misc/Error.h"
 
 TEST_CASE("create simple window") {
     // Check that window creation is working correctly.

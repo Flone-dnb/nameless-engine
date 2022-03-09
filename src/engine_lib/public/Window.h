@@ -5,7 +5,7 @@
 #include <memory>
 
 // Custom.
-#include "Error.h"
+#include "misc/Error.h"
 #include "Game.h"
 #include "GLFW.hpp"
 #include "IGameInstance.h"

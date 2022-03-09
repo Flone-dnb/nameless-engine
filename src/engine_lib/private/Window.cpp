@@ -1,7 +1,7 @@
 #include "window.h"
 
 // Custom.
-#include "UniqueValueGenerator.h"
+#include "misc/UniqueValueGenerator.h"
 
 namespace ne {
     void GLFWWindowKeyCallback(GLFWwindow *pGLFWWindow, int iKey, int iScancode, int iAction, int iMods) {

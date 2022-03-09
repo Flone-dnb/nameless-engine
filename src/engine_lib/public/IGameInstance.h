@@ -1,7 +1,7 @@
 ﻿#pragma once
 
 // Custom.
-#include "KeyboardKey.hpp"
+#include "input/KeyboardKey.hpp"
 
 namespace ne {
     class Window;

@@ -9,7 +9,7 @@
 #include "game/Game.h"
 #include "window/GLFW.hpp"
 #include "IGameInstance.h"
-#include "KeyboardKey.hpp"
+#include "input/KeyboardKey.hpp"
 
 namespace ne {
     class Error;

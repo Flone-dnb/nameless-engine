@@ -1,7 +1,7 @@
 ﻿#pragma once
 
 // Custom.
-#include "GLFW.hpp"
+#include "window/GLFW.hpp"
 
 namespace ne {
     /**

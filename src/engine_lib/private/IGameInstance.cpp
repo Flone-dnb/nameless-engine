@@ -1,7 +1,7 @@
 ﻿#include "IGameInstance.h"
 
 // Custom.
-#include "GLFW.hpp"
+#include "window/GLFW.hpp"
 
 namespace ne {
     IGameInstance::IGameInstance(Window *pGameWindow) { this->pGameWindow = pGameWindow; }

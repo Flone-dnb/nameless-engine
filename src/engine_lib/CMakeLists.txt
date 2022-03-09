@@ -6,7 +6,7 @@ project(engine_lib)
 set(ENGINE_LIB_SOURCES
     private/misc/Error.cpp
     private/misc/Error.h
-    private/Window.cpp
+    private/window/Window.cpp
     public/Window.h
     private/misc/UniqueValueGenerator.h
     private/misc/UniqueValueGenerator.cpp
@@ -18,7 +18,7 @@ set(ENGINE_LIB_SOURCES
     private/render/IRenderer.cpp
     private/render/DirectXRenderer.h
     private/render/DirectXRenderer.cpp
-    private/GLFW.hpp
+    private/window/GLFW.hpp
     private/KeyboardKey.hpp
     # add your .h/.cpp files here
     PARENT_SCOPE

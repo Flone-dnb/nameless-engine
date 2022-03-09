@@ -10,10 +10,10 @@ set(ENGINE_LIB_SOURCES
     public/Window.h
     private/misc/UniqueValueGenerator.h
     private/misc/UniqueValueGenerator.cpp
-    private/IGameInstance.cpp
+    private/game/IGameInstance.cpp
     public/IGameInstance.h
-    private/Game.h
-    private/Game.cpp
+    private/game/Game.h
+    private/game/Game.cpp
     private/render/IRenderer.h
     private/render/IRenderer.cpp
     private/render/DirectXRenderer.h

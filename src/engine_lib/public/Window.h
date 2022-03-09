@@ -6,7 +6,7 @@
 
 // Custom.
 #include "misc/Error.h"
-#include "Game.h"
+#include "game/Game.h"
 #include "window/GLFW.hpp"
 #include "IGameInstance.h"
 #include "KeyboardKey.hpp"

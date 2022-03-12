@@ -14,6 +14,7 @@
 // Custom.
 #include "EditorGameInstance.h"
 #include "Window.h"
+#include "Logger.h"
 
 int main() {
     // Enable run-time memory check for debug builds.
@@ -24,6 +25,10 @@ int main() {
 #endif
 
     using namespace ne;
+
+    Logger::get().info("Information!");
+    Logger::get().warn("Warning!");
+    Logger::get().error("Error!");
 
     std::variant<std::unique_ptr<Window>, Error> result = Window::getBuilder().withTitle("Editor").build();
     if (std::holds_alternative<Error>(result)) {

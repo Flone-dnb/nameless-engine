@@ -20,6 +20,10 @@ set(ENGINE_LIB_SOURCES
     private/render/DirectXRenderer.cpp
     private/window/GLFW.hpp
     private/input/KeyboardKey.hpp
+    private/misc/Logger.cpp
+    public/Logger.h
+    private/misc/Globals.h
+    private/misc/Globals.cpp
     # add your .h/.cpp files here
     PARENT_SCOPE
 )

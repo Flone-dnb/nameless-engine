@@ -47,7 +47,7 @@ else()
 endif()
 
 # set standard
-set(PROJECT_CXX_STANDARD_VERSION 20)
+set(PROJECT_CXX_STANDARD_VERSION 23)
 target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_${PROJECT_CXX_STANDARD_VERSION})
 
 # glfw
@@ -56,6 +56,10 @@ set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE) # disable tests
 set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE) # disable examples
 add_subdirectory(ext/glfw build/glfw) # add GLFW target
 target_link_libraries(${PROJECT_NAME} glfw)
+
+# spdlog
+add_subdirectory(ext/spdlog build/spdlog)
+target_link_libraries(${PROJECT_NAME} spdlog::spdlog)
 
 # tests
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
@@ -69,6 +73,7 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     target_compile_features(tests PRIVATE cxx_std_${PROJECT_CXX_STANDARD_VERSION})
     target_link_libraries(tests PRIVATE Catch2::Catch2)
     target_link_libraries(tests PRIVATE glfw)
+    target_link_libraries(tests PRIVATE spdlog::spdlog)
     list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/ext/Catch2/contrib")
     include(CTest)
     include(Catch)

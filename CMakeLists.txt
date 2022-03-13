@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.12)
 
-project(engine_editor)
+project(engine_editor CXX)
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 set(ENGINE_FOLDER "NAMELESS-ENGINE")
@@ -20,7 +20,9 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
 endif()
 
 # application type
+if (WIN32)
 set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /SUBSYSTEM:WINDOWS /ENTRY:mainCRTStartup")
+endif(WIN32)
 
 # add engine_lib
 add_subdirectory(src/engine_lib)

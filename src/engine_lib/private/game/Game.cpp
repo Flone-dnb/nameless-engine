@@ -1,14 +1,17 @@
 ﻿#include "Game.h"
 
 // Custom.
+#if defined(WIN32)
 #include "render/DirectXRenderer.h"
-#include "IGameInstance.h"
+#endif
 
 namespace ne {
     Game::Game() {
-        // Currently, we have only 1 renderer, when we will have
-        // more renderers we will automatically pick one here.
+#if defined(WIN32)
         pRenderer = std::make_unique<DirectXRenderer>();
+#elif __linux__
+        static_assert(false, "need to assign renderer here");
+#endif
     }
 
 } // namespace ne

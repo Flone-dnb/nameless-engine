@@ -3,6 +3,7 @@
 // STL.
 #include <variant>
 #include <memory>
+#include <optional>
 
 // Custom.
 #include "misc/Error.h"
@@ -24,7 +25,9 @@ namespace ne {
         /** Height of a window. */
         int iWindowHeight = 600;
         /** Title of a window. */
-        std::string sWindowTitle = "";
+        std::string_view sWindowTitle;
+        /** Icon of a window. */
+        std::string_view sPathToWindowIcon;
         /** Whether to show window after it was created or not. */
         bool bShowWindow = true;
         /** Whether the window should be maximized after creation or not. */
@@ -59,7 +62,15 @@ namespace ne {
          *
          * @return Builder.
          */
-        WindowBuilder &withTitle(const std::string &sWindowTitle);
+        WindowBuilder &withTitle(std::string_view sWindowTitle);
+        /**
+         * Defines the icon of a window that we will create.
+         *
+         * @param sPathToIcon  Path to the image (.png)
+         *
+         * @return Builder.
+         */
+        WindowBuilder &withIcon(std::string_view sPathToIcon);
         /**
          * Defines the visibility of a window that we will create.
          * Does nothing for fullscreen windows.
@@ -175,6 +186,19 @@ namespace ne {
          * Sets new window title.
          */
         void setTitle(const std::string &sNewTitle);
+
+        /**
+         * Sets new window icon.
+         *
+         * @param sPathToIcon Path to the image (.png).
+         * The image data should be 32-bit, little-endian, non-premultiplied RGBA,
+         * i.e. eight bits per channel with the red channel first.
+         *
+         * @warning This function must only be called from the main thread.
+         *
+         * @return Returns error if file not found.
+         */
+        std::optional<Error> setIcon(std::string_view sPathToIcon) const;
 
         /**
          * Minimizes the window.

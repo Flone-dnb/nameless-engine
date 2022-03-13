@@ -1,7 +1,15 @@
 #include "window.h"
 
+// Std.
+#include <filesystem>
+#include <format>
+
 // Custom.
 #include "misc/UniqueValueGenerator.h"
+
+// External.
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb/stb_image.h"
 
 namespace ne {
     void GLFWWindowKeyCallback(GLFWwindow *pGLFWWindow, int iKey, int iScancode, int iAction, int iMods) {
@@ -30,8 +38,14 @@ namespace ne {
         return *this;
     }
 
-    WindowBuilder &WindowBuilder::withTitle(const std::string &sWindowTitle) {
+    WindowBuilder &WindowBuilder::withTitle(std::string_view sWindowTitle) {
         params.sWindowTitle = sWindowTitle;
+
+        return *this;
+    }
+
+    WindowBuilder &WindowBuilder::withIcon(std::string_view sPathToIcon) {
+        params.sPathToWindowIcon = sPathToIcon;
 
         return *this;
     }
@@ -90,7 +104,7 @@ namespace ne {
     std::variant<std::unique_ptr<Window>, Error> Window::newInstance(const WindowBuilderParameters &params) {
         GLFW::get(); // initialize GLFW
 
-        std::string sNewWindowTitle = params.sWindowTitle;
+        std::string sNewWindowTitle(params.sWindowTitle);
 
         // Check window name.
         if (sNewWindowTitle.empty()) {
@@ -130,6 +144,16 @@ namespace ne {
 
         auto pWindow = std::unique_ptr<Window>(new Window(pGLFWWindow, sNewWindowTitle));
 
+        // Set icon.
+        if (!params.sPathToWindowIcon.empty()) {
+            auto error = pWindow->setIcon(params.sPathToWindowIcon);
+            if (error.has_value()) {
+                error->addEntry();
+                error->showError();
+                // don't throw here, not a critical error.
+            }
+        }
+
         // Add Window pointer.
         glfwSetWindowUserPointer(pGLFWWindow, pWindow.get());
 
@@ -153,6 +177,21 @@ namespace ne {
     void Window::setTitle(const std::string &sNewTitle) {
         glfwSetWindowTitle(pGLFWWindow, sNewTitle.c_str());
         sWindowTitle = sNewTitle;
+    }
+
+    std::optional<Error> Window::setIcon(std::string_view sPathToIcon) const {
+        if (!std::filesystem::exists(sPathToIcon)) {
+            return Error(std::format("the specified file \"{}\" does not exist.", sPathToIcon));
+        }
+
+        GLFWimage images[1];
+        images[0].pixels = stbi_load(sPathToIcon.data(), &images[0].width, &images[0].height, nullptr, 4);
+
+        glfwSetWindowIcon(pGLFWWindow, 1, images);
+
+        stbi_image_free(images[0].pixels);
+
+        return {};
     }
 
     void Window::minimize() const { glfwIconifyWindow(pGLFWWindow); }

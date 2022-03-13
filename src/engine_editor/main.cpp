@@ -19,7 +19,8 @@ int main() {
 
     using namespace ne;
 
-    std::variant<std::unique_ptr<Window>, Error> result = Window::getBuilder().withTitle("Editor").build();
+    std::variant<std::unique_ptr<Window>, Error> result =
+        Window::getBuilder().withTitle("Nameless Editor").withIcon("res/nameless_editor_icon.png").build();
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
         error.addEntry();
@@ -28,6 +29,7 @@ int main() {
     }
 
     const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
+
     pMainWindow->processEvents<EditorGameInstance>();
 
     return 0;

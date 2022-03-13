@@ -29,21 +29,29 @@ namespace ne {
 
     Logger::Logger() {
         std::string sLoggerFilePath = getBaseDirectory().string();
-        sLoggerFilePath += getApplicationName() + "-logs";
+        sLoggerFilePath += getApplicationName();
 
+        // Create base directory with application name.
         if (!std::filesystem::exists(sLoggerFilePath)) {
             std::filesystem::create_directory(sLoggerFilePath);
         }
 
-// Check ending.
 #if defined(WIN32)
-        if (!sLoggerFilePath.ends_with("\\")) {
-            sLoggerFilePath += "\\";
-        }
+        sLoggerFilePath += "\\";
 #elif __linux__
-        if (!sLoggerDirectory.ends_with("/")) {
-            sLoggerDirectory += "/";
+        sLoggerFilePath += "/";
+#endif
+
+        // Create directory for logs.
+        sLoggerFilePath += "logs";
+        if (!std::filesystem::exists(sLoggerFilePath)) {
+            std::filesystem::create_directory(sLoggerFilePath);
         }
+
+#if defined(WIN32)
+        sLoggerFilePath += "\\";
+#elif __linux__
+        sLoggerFilePath += "/";
 #endif
 
         sLoggerWorkingDirectory = sLoggerFilePath;

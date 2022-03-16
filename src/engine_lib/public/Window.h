@@ -148,33 +148,7 @@ namespace ne {
          */
         template <typename GameInstance>
         requires std::derived_from<GameInstance, IGameInstance>
-        void processEvents() {
-            pGame = std::unique_ptr<Game>(new Game());
-
-            // initialize other Game fields here
-
-            // Finally create Game Instance when engine (Game) is fully initialized.
-            // So that the user can call engine functions in Game Instance constructor.
-            pGame->setGameInstance<GameInstance>(this);
-
-            // Used for tick.
-            float fCurrentTimeInSec = 0.0f;
-            float fPrevTimeInSec = 0.0f;
-
-            while (!glfwWindowShouldClose(pGLFWWindow)) {
-                glfwPollEvents();
-
-                // Tick.
-                fCurrentTimeInSec = static_cast<float>(glfwGetTime());
-                pGame->pGameInstance->onBeforeNewFrame(fCurrentTimeInSec - fPrevTimeInSec);
-                fPrevTimeInSec = fCurrentTimeInSec;
-
-                // TODO: update()
-                // TODO: drawFrame()
-            }
-
-            pGame->pGameInstance->onWindowClose();
-        }
+        void processEvents();
 
         /**
          * Sets the window opacity (1.0f for opaque, 0.0f for transparent).
@@ -301,4 +275,34 @@ namespace ne {
          */
         std::string sWindowTitle;
     };
+
+    template <typename GameInstance>
+    requires std::derived_from<GameInstance, IGameInstance>
+    void Window::processEvents() {
+        pGame = std::unique_ptr<Game>(new Game());
+
+        // ... initialize other Game fields here ...
+
+        // Finally create Game Instance when engine (Game) is fully initialized.
+        // So that the user can call engine functions in Game Instance constructor.
+        pGame->setGameInstance<GameInstance>(this);
+
+        // Used for tick.
+        float fCurrentTimeInSec = 0.0f;
+        float fPrevTimeInSec = 0.0f;
+
+        while (!glfwWindowShouldClose(pGLFWWindow)) {
+            glfwPollEvents();
+
+            // Tick.
+            fCurrentTimeInSec = static_cast<float>(glfwGetTime());
+            pGame->pGameInstance->onBeforeNewFrame(fCurrentTimeInSec - fPrevTimeInSec);
+            fPrevTimeInSec = fCurrentTimeInSec;
+
+            // TODO: update()
+            // TODO: drawFrame()
+        }
+
+        pGame->pGameInstance->onWindowClose();
+    }
 } // namespace ne

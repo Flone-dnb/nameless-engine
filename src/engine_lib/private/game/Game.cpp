@@ -6,7 +6,9 @@
 #endif
 
 namespace ne {
-    Game::Game() {
+    Game::Game(Window *pWindow) {
+        this->pWindow = pWindow;
+
 #if defined(WIN32)
         pRenderer = std::make_unique<DirectXRenderer>();
 #elif __linux__

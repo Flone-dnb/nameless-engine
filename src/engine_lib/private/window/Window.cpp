@@ -74,7 +74,7 @@ namespace ne {
         return *this;
     }
 
-    std::variant<std::unique_ptr<Window>, Error> WindowBuilder::build() const {
+    std::variant<std::unique_ptr<Window>, Error> WindowBuilder::build() {
         return Window::newInstance(params);
     }
 
@@ -101,7 +101,7 @@ namespace ne {
         pGame->pGameInstance->onWindowFocusChanged(bIsFocused);
     }
 
-    std::variant<std::unique_ptr<Window>, Error> Window::newInstance(const WindowBuilderParameters &params) {
+    std::variant<std::unique_ptr<Window>, Error> Window::newInstance(WindowBuilderParameters &params) {
         GLFW::get(); // initialize GLFW
 
         std::string sNewWindowTitle(params.sWindowTitle);
@@ -121,6 +121,9 @@ namespace ne {
             glfwWindowHint(GLFW_GREEN_BITS, mode->greenBits);
             glfwWindowHint(GLFW_BLUE_BITS, mode->blueBits);
             glfwWindowHint(GLFW_REFRESH_RATE, mode->refreshRate);
+
+            params.iWindowWidth = mode->width;
+            params.iWindowHeight = mode->height;
         } else {
             if (!params.bShowWindow) {
                 glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);

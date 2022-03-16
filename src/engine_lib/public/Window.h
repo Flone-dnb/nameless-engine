@@ -114,7 +114,7 @@ namespace ne {
          *
          * @warning This function should only be called from the main thread.
          */
-        std::variant<std::unique_ptr<Window>, Error> build() const;
+        std::variant<std::unique_ptr<Window>, Error> build();
 
     private:
         /** Configured window parameters. */
@@ -249,8 +249,7 @@ namespace ne {
          *
          * @return Returns error if something went wrong or created window otherwise.
          */
-        static std::variant<std::unique_ptr<Window>, Error>
-        newInstance(const WindowBuilderParameters &params);
+        static std::variant<std::unique_ptr<Window>, Error> newInstance(WindowBuilderParameters &params);
 
         /**
          * Default constructor.
@@ -279,13 +278,13 @@ namespace ne {
     template <typename GameInstance>
     requires std::derived_from<GameInstance, IGameInstance>
     void Window::processEvents() {
-        pGame = std::unique_ptr<Game>(new Game());
+        pGame = std::unique_ptr<Game>(new Game(this));
 
         // ... initialize other Game fields here ...
 
         // Finally create Game Instance when engine (Game) is fully initialized.
         // So that the user can call engine functions in Game Instance constructor.
-        pGame->setGameInstance<GameInstance>(this);
+        pGame->setGameInstance<GameInstance>();
 
         // Used for tick.
         float fCurrentTimeInSec = 0.0f;

@@ -21,6 +21,7 @@ int main() {
 
     auto result = Window::getBuilder()
                       .withTitle("Nameless Editor")
+                      .withMaximizedState(true)
                       .withIcon("res/editor/nameless_editor_icon.png")
                       .build();
     if (std::holds_alternative<Error>(result)) {

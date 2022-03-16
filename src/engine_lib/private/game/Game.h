@@ -27,15 +27,23 @@ namespace ne {
          */
         template <typename GameInstance>
         requires std::derived_from<GameInstance, IGameInstance>
-        void setGameInstance(Window *pGameWindow) {
-            pGameInstance = std::make_unique<GameInstance>(pGameWindow);
-        }
+        void setGameInstance() { pGameInstance = std::make_unique<GameInstance>(pWindow); }
 
     private:
         // The object should be created by a Window instance.
         friend class Window;
 
-        Game();
+        /**
+         * Constructor.
+         *
+         * @param pWindow Window that owns this Game object.
+         */
+        Game(Window *pWindow);
+
+        /**
+         * Window that owns this object, thus raw pointer - do not delete.
+         */
+        Window *pWindow;
 
         /**
          * Reacts to user inputs, window events and etc.

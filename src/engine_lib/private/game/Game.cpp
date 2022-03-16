@@ -1,8 +1,9 @@
 ﻿#include "Game.h"
 
 // Custom.
+#include "render/IRenderer.h"
 #if defined(WIN32)
-#include "render/DirectXRenderer.h"
+#include "render/directx/DirectXRenderer.h"
 #endif
 
 namespace ne {

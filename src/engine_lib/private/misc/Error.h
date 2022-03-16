@@ -5,6 +5,10 @@
 #include <vector>
 #include <source_location>
 
+#if defined(WIN32)
+#include <Windows.h>
+#endif
+
 namespace ne {
     /**
      * Helper class to store error messages.
@@ -20,6 +24,15 @@ namespace ne {
         Error(std::string_view sMessage,
               const std::source_location location = std::source_location::current());
 
+#if defined(WIN32)
+        /**
+         * Construct a new Error object from HRESULT.
+         *
+         * @param hResult   HRESULT that contains an error.
+         * @param location  Should be empty.
+         */
+        Error(const HRESULT hResult, const std::source_location location = std::source_location::current());
+
         /**
          * Construct a new Error object.
          *
@@ -27,6 +40,7 @@ namespace ne {
          * @param location  Should be empty.
          */
         Error(unsigned long errorCode, const std::source_location location = std::source_location::current());
+#endif
 
         Error() = delete;
 

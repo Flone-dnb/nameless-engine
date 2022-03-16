@@ -19,8 +19,8 @@ set(ENGINE_LIB_SOURCES
     private/game/Game.cpp
     private/render/IRenderer.h
     private/render/IRenderer.cpp
-    private/render/DirectXRenderer.h
-    private/render/DirectXRenderer.cpp
+    private/render/directx/DirectXRenderer.h
+    private/render/directx/DirectXRenderer.cpp
     private/window/GLFW.hpp
     private/input/KeyboardKey.hpp
     private/misc/Logger.cpp

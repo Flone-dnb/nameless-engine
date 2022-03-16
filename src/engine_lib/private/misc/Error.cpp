@@ -4,13 +4,33 @@
 #include <string>
 #include <filesystem>
 
-// OS.
-#include <Windows.h>
-
 namespace ne {
     Error::Error(std::string_view sMessage, const std::source_location location) {
         this->sMessage = sMessage;
 
+        stack.push_back(location);
+    }
+
+#if defined(WIN32)
+    Error::Error(const HRESULT hResult, const std::source_location location) {
+        LPSTR errorText = nullptr;
+
+        FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_ALLOCATE_BUFFER |
+                           FORMAT_MESSAGE_IGNORE_INSERTS,
+                       nullptr, hResult, MAKELANGID(LANG_ENGLISH, SUBLANG_ENGLISH_US),
+                       reinterpret_cast<LPSTR>(&errorText), 0, nullptr);
+
+        if (errorText) {
+            this->sMessage = std::string_view(errorText);
+            LocalFree(errorText);
+        } else {
+            this->sMessage = "unknown error";
+        }
+
+        if (hResult == 0x887a0005) { // NOLINT
+            // ?
+            this->sMessage += " (TODO: add device removed reason here)";
+        }
         stack.push_back(location);
     }
 
@@ -28,13 +48,19 @@ namespace ne {
         this->sMessage = std::string("error code: ");
         this->sMessage += std::to_string(errorCode);
         this->sMessage += ", description: ";
-        this->sMessage += std::string(messageBuffer, iSize);
+        if (messageBuffer) {
+            this->sMessage += std::string(messageBuffer, iSize);
+        } else {
+            this->sMessage += "unknown error";
+        }
 
-        // Free the Win32's string's buffer.
-        LocalFree(messageBuffer);
+        if (messageBuffer) {
+            LocalFree(messageBuffer);
+        }
 
         stack.push_back(location);
     }
+#endif
 
     void Error::addEntry(const std::source_location location) { stack.push_back(location); }
 

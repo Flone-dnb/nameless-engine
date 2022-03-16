@@ -8,14 +8,14 @@ set(ENGINE_FOLDER "NAMELESS-ENGINE")
 # build mode
 set(default_build_type "Release")
 if(NOT CMAKE_BUILD_TYPE)
-    message(WARNING "Using build mode '${default_build_type}' as none was specified.")
+    message(STATUS "Using build mode '${default_build_type}' as none was specified.")
     set(CMAKE_BUILD_TYPE "${default_build_type}" CACHE STRING "Choose the type of build." FORCE)
 endif()
-message(WARNING "${PROJECT_NAME}: build type: ${CMAKE_BUILD_TYPE}.")
+message(STATUS "${PROJECT_NAME}: build type: ${CMAKE_BUILD_TYPE}.")
 
 # add DEBUG macro in Debug build
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-    message(WARNING "Adding DEBUG macro for this build type.")
+    message(STATUS "Adding DEBUG macro for this build type.")
     add_compile_definitions(DEBUG)
 endif()
 
@@ -24,13 +24,8 @@ if (WIN32)
 set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /SUBSYSTEM:WINDOWS /ENTRY:mainCRTStartup")
 endif(WIN32)
 
-# add engine_lib
-add_subdirectory(src/engine_lib)
-list(TRANSFORM ENGINE_LIB_SOURCES PREPEND "src/engine_lib/")
-
 # target
 set(PROJECT_SOURCES
-    ${ENGINE_LIB_SOURCES}
     src/engine_editor/EditorGameInstance.h
     src/engine_editor/EditorGameInstance.cpp
     # add your .h/.cpp files here
@@ -39,38 +34,25 @@ add_executable(${PROJECT_NAME}
     src/engine_editor/main.cpp
     ${PROJECT_SOURCES}
 )
+
+# add engine_lib
+add_subdirectory(src/engine_lib)
+target_link_libraries(${PROJECT_NAME} PRIVATE engine_lib)
+
+# set standard
+set(PROJECT_CXX_STANDARD_VERSION 23)
+target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_${PROJECT_CXX_STANDARD_VERSION})
+
 set_target_properties(${PROJECT_NAME} PROPERTIES FOLDER ${ENGINE_FOLDER})
 
 # copy resources to build folder
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
                    COMMAND ${CMAKE_COMMAND} -E copy_directory
-                   ${CMAKE_SOURCE_DIR}/res/ $<TARGET_FILE_DIR:${PROJECT_NAME}>/res)
+                   ${CMAKE_SOURCE_DIR}/res/editor/ $<TARGET_FILE_DIR:${PROJECT_NAME}>/res/editor/)
 # and to the directory above for less hassle
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
                    COMMAND ${CMAKE_COMMAND} -E copy_directory
-                   ${CMAKE_SOURCE_DIR}/res/ $<TARGET_FILE_DIR:${PROJECT_NAME}>/../res)
-
-# more warnings
-if(MSVC)
-    target_compile_options(${PROJECT_NAME} PRIVATE /W3 /WX)
-else()
-    target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -Werror)
-endif()
-
-# set standard
-set(PROJECT_CXX_STANDARD_VERSION 23)
-target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_${PROJECT_CXX_STANDARD_VERSION})
-
-# glfw
-set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE) # disable docs
-set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE) # disable tests
-set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE) # disable examples
-add_subdirectory(ext/glfw build/glfw) # add GLFW target
-target_link_libraries(${PROJECT_NAME} glfw)
-
-# spdlog
-add_subdirectory(ext/spdlog build/spdlog)
-target_link_libraries(${PROJECT_NAME} spdlog::spdlog)
+                   ${CMAKE_SOURCE_DIR}/res/editor/ $<TARGET_FILE_DIR:${PROJECT_NAME}>/../res/editor/)
 
 # tests
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
@@ -81,10 +63,9 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
         tests/engine_lib/Window.cpp
         # add your test .cpp files here
     )
+    target_link_libraries(tests PRIVATE engine_lib)
     target_compile_features(tests PRIVATE cxx_std_${PROJECT_CXX_STANDARD_VERSION})
     target_link_libraries(tests PRIVATE Catch2::Catch2)
-    target_link_libraries(tests PRIVATE glfw)
-    target_link_libraries(tests PRIVATE spdlog::spdlog)
     list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/ext/Catch2/contrib")
     include(CTest)
     include(Catch)

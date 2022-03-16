@@ -19,8 +19,10 @@ int main() {
 
     using namespace ne;
 
-    std::variant<std::unique_ptr<Window>, Error> result =
-        Window::getBuilder().withTitle("Nameless Editor").withIcon("res/nameless_editor_icon.png").build();
+    auto result = Window::getBuilder()
+                      .withTitle("Nameless Editor")
+                      .withIcon("res/editor/nameless_editor_icon.png")
+                      .build();
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
         error.addEntry();

@@ -9,7 +9,7 @@
 
 // External.
 #define GLFW_INCLUDE_NONE
-#include "GLFW/glfw3.h"
+#include "glfw/glfw3.h"
 
 namespace ne {
     inline void GLFWErrorCallback(int iErrorCode, const char *pDescription) {

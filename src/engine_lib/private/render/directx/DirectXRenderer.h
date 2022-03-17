@@ -2,6 +2,8 @@
 
 // STL.
 #include <optional>
+#include <variant>
+#include <vector>
 
 // Custom.
 #include "render/IRenderer.h"
@@ -30,7 +32,29 @@ namespace ne {
         virtual void update() override;
         virtual void drawFrame() override;
 
-    private:
+        /**
+         * Looks for video adapters (GPUs) that support used DirectX version and feature level.
+         *
+         * @return Error if can't find any GPU that supports our DirectX version and feature level,
+         * vector with GPU names if successful.
+         */
+        virtual std::variant<std::vector<std::wstring>, Error> getSupportedVideoAdapters() const override;
+
+        /**
+         * Returns backbuffer resolution.
+         *
+         * @return A pair of X and Y pixels.
+         */
+        virtual std::pair<int, int> getRenderResolution() const override;
+
+        /**
+         * Returns a list of supported render resolution.
+         *
+         * @return Error if something went wrong, otherwise render mode.
+         */
+        virtual std::variant<std::vector<RenderMode>, Error> getSupportedRenderResolutions() const override;
+
+    protected:
         /**
          * Enables DX debug layer.
          *
@@ -41,24 +65,66 @@ namespace ne {
         std::optional<Error> enableDebugLayer() const;
 
         /**
-         * Tries to find a display adapter that supports used D3D version and feature level.
+         * Sets the video adapter to be used.
          *
-         * @param pOutAdapter   Found supported display adapter.
+         * @param sVideoAdapterName Name of the video adapter to use.
+         * You can query supported video adapters by using @ref getSupportedVideoAdapters
          *
-         * @return Error if can't find supported display adapter.
+         * @return Error if something went wrong, for example, if an adapter with the specified
+         * name was not found, or if it was found but does not support used DirectX version
+         * or feature level.
          */
-        std::optional<Error> getFirstSupportedAdapter(IDXGIAdapter3 *&pOutAdapter) const;
+        std::optional<Error> setVideoAdapter(const std::wstring &sVideoAdapterName);
 
+        /**
+         * Sets first found output adapter (monitor).
+         *
+         * @return Error if something went wrong or no output adapter was found.
+         */
+        std::optional<Error> setOutputAdapter();
+
+        /**
+         * Creates and initializes Command Queue, Command List and Command List Allocator.
+         *
+         * @return Error if something went wrong.
+         */
+        std::optional<Error> createCommandObjects();
+
+        /**
+         * Checks if the created device supports MSAA.
+         *
+         * @return Error if something went wrong, for example, if device does not support MSAA.
+         */
         std::optional<Error> checkMsaaSupport();
 
-        // ----------------------------------------------------------------------------------------
+        /**
+         * Returns a vector of display modes that the current output adapter
+         * supports for current back buffer format.
+         *
+         * @return Error if something went wrong, vector of display modes otherwise.
+         */
+        std::variant<std::vector<DXGI_MODE_DESC>, Error> getSupportedDisplayModes() const;
 
+    private:
         // Main DX objects.
+        /* DXGI Factory */
         Microsoft::WRL::ComPtr<IDXGIFactory4> pFactory;
+        /* D3D12 Device */
         Microsoft::WRL::ComPtr<ID3D12Device> pDevice;
-        Microsoft::WRL::ComPtr<IDXGIAdapter3> pAdapter;
-        Microsoft::WRL::ComPtr<IDXGIOutput> pOutput;
+        /* GPU */
+        Microsoft::WRL::ComPtr<IDXGIAdapter3> pVideoAdapter;
+        /* Monitor */
+        Microsoft::WRL::ComPtr<IDXGIOutput> pOutputAdapter;
+        /* Swap chain */
         Microsoft::WRL::ComPtr<IDXGISwapChain1> pSwapChain;
+
+        // Command objects.
+        /* GPU command queue. */
+        Microsoft::WRL::ComPtr<ID3D12CommandQueue> pCommandQueue;
+        /* Command list allocator - stores commands from command list (works like std::vector). */
+        Microsoft::WRL::ComPtr<ID3D12CommandAllocator> pCommandListAllocator;
+        /* CPU command list. */
+        Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> pCommandList;
 
         // Fence.
         Microsoft::WRL::ComPtr<ID3D12Fence> pFence;
@@ -81,6 +147,13 @@ namespace ne {
         bool isMsaaEnabled = true;
         UINT iMsaaSampleCount = 4;
         UINT iMsaaQuality = 0;
+
+        // Display mode.
+        DXGI_MODE_DESC currentDisplayMode;
+
+        // Video Adapters (GPUs).
+        std::vector<std::wstring> vSupportedVideoAdapters;
+        std::wstring sUsedVideoAdapter;
 
         // ----------------------------------------------------------------------------------------
 

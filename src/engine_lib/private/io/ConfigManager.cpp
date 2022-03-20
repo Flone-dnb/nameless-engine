@@ -14,7 +14,12 @@ namespace ne {
 
         sFilePath = std::get<std::filesystem::path>(result);
         if (!std::filesystem::exists(sFilePath)) {
-            return Error("file does not exist (non ASCII characters in path?)");
+            // Check if backup file exists.
+            if (std::filesystem::exists(sFilePath + sBackupFileExtension)) {
+                std::filesystem::copy_file(sFilePath + sBackupFileExtension, sFilePath);
+            } else {
+                return Error("file and backup file do not exist (maybe non ASCII characters in path?)");
+            }
         }
 
         // Load file.
@@ -82,7 +87,7 @@ namespace ne {
         ini.SetLongValue(sSection.data(), sKey.data(), iValue, sFixedComment.c_str());
     }
 
-    std::optional<Error> ConfigManager::saveFile(std::string_view sFileName) {
+    std::optional<Error> ConfigManager::saveFile(std::string_view sFileName, bool bEnableBackup) {
         auto result = ConfigManager::constructFilePath(sFileName);
         if (std::holds_alternative<Error>(result)) {
             auto error = std::get<Error>(std::move(result));
@@ -91,9 +96,25 @@ namespace ne {
         }
         sFilePath = std::get<std::filesystem::path>(result);
 
+        if (bEnableBackup) {
+            if (std::filesystem::exists(sFilePath)) {
+                if (std::filesystem::exists(sFilePath + sBackupFileExtension)) {
+                    std::filesystem::remove(sFilePath + sBackupFileExtension);
+                }
+                std::filesystem::rename(sFilePath, sFilePath + sBackupFileExtension);
+            }
+        }
+
         const SI_Error error = ini.SaveFile(sFilePath.c_str());
         if (error < 0) {
             return Error(std::format("failed to load file, error code: {}", std::to_string(error)));
+        }
+
+        if (bEnableBackup) {
+            // Create backup file if not exists.
+            if (!std::filesystem::exists(sFilePath + sBackupFileExtension)) {
+                std::filesystem::copy_file(sFilePath, sFilePath + sBackupFileExtension);
+            }
         }
 
         return {};

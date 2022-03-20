@@ -26,6 +26,9 @@ namespace ne {
         /**
          * Loads data from INI file.
          * File should exist, otherwise an error will be returned.
+         * If you used @ref saveFile before and enabled a backup file (see @ref saveFile),
+         * if usual file does  not exist this function will look for a backup file and if found,
+         * will copy this backup file with a name of the usual file.
          *
          * @param sFileName Name of the file to load:
          * @arg (preferred option) if only name is specified, we will load it from a predefined directory
@@ -125,15 +128,20 @@ namespace ne {
         /**
          * Saves the current configuration to a file.
          *
-         * @param sFileName Name of the file to load:
+         * @param sFileName      Name of the file to load:
          * @arg (preferred option) if only name is specified, we will save it to a predefined directory
          * that we also use in @ref loadFile (use @ref getFilePath to see full path),
          * the .ini extension will be added if the passed name does not have it.
          * @arg if absolute path is specified we will try to save it using this path.
+         * @param bEnableBackup  If 'true' will also use a backup (copy) file. @ref loadFile can use
+         * backup file if a usual configuration file does not exist. Generally you want to use
+         * a backup file if you are saving important information, such as player progress,
+         * other cases such as player game settings and etc. usually do not need a backup but
+         * you can use a backup if you want.
          *
          * @return Error if something went wrong.
          */
-        std::optional<Error> saveFile(std::string_view sFileName);
+        std::optional<Error> saveFile(std::string_view sFileName, bool bEnableBackup);
 
         /**
          * Returns full path to the file if it was loaded using @loadFile
@@ -162,6 +170,9 @@ namespace ne {
 
         /** Full path to file. */
         std::wstring sFilePath;
+
+        /** File extension used for backup files. */
+        const wchar_t *sBackupFileExtension = L".old";
     };
 
 } // namespace ne

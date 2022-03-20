@@ -155,7 +155,7 @@ namespace ne {
                 // Found supported adapter.
                 DXGI_ADAPTER_DESC desc;
                 pTestAdapter->GetDesc(&desc);
-                vAddedVideoAdapters.emplace_back(desc.Description);
+                vAddedVideoAdapters.push_back(desc.Description);
             }
         }
 

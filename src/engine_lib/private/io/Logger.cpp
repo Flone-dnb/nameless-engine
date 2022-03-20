@@ -1,4 +1,4 @@
-﻿#include "Logger.h"
+﻿#include "io/Logger.h"
 
 // Std.
 #include <ctime>
@@ -6,7 +6,7 @@
 #include <fstream>
 
 // Custom.
-#include "Globals.h"
+#include "misc/Globals.h"
 
 // External.
 #include "spdlog/spdlog.h"
@@ -43,7 +43,7 @@ namespace ne {
 #endif
 
         // Create directory for logs.
-        sLoggerFilePath += "logs";
+        sLoggerFilePath += sLogsDirectory;
         if (!std::filesystem::exists(sLoggerFilePath)) {
             std::filesystem::create_directory(sLoggerFilePath);
         }

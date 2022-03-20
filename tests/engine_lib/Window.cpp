@@ -1,6 +1,6 @@
 #include "Catch2/catch.hpp"
 
-#include "Window.h"
+#include "game/Window.h"
 #include "misc/Error.h"
 
 TEST_CASE("create simple window") {

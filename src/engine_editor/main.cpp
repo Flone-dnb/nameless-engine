@@ -7,7 +7,7 @@
 
 // Custom.
 #include "EditorGameInstance.h"
-#include "Window.h"
+#include "game/Window.h"
 
 int main() {
 // Enable run-time memory check for debug builds.

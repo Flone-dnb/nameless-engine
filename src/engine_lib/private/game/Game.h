@@ -3,7 +3,7 @@
 // Std.
 #include <memory>
 
-#include "IGameInstance.h"
+#include "game/IGameInstance.h"
 
 namespace ne {
     class IGameInstance;

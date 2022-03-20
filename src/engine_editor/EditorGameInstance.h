@@ -1,8 +1,8 @@
 ﻿#pragma once
-#include <Windows.h>
+
 // Custom.
-#include "IGameInstance.h"
-#include "Window.h"
+#include "game/IGameInstance.h"
+#include "game/Window.h"
 
 /**
  * Editor logic.

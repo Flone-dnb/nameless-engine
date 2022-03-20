@@ -1,4 +1,4 @@
-﻿#include "IGameInstance.h"
+﻿#include "game/IGameInstance.h"
 
 // Custom.
 #include "window/GLFW.hpp"

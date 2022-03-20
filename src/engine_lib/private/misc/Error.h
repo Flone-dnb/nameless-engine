@@ -87,7 +87,7 @@ namespace ne {
         void showError() const;
 
     protected:
-        /** Initial error message. */
+        /** Initial error message (string version). */
         std::string sMessage;
         /** Error stack. */
         std::vector<std::source_location> stack;

@@ -61,6 +61,7 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
         ${PROJECT_SOURCES}
         tests/main.cpp
         tests/engine_lib/Window.cpp
+        tests/engine_lib/ConfigManager.cpp
         # add your test .cpp files here
     )
     target_link_libraries(tests PRIVATE engine_lib)

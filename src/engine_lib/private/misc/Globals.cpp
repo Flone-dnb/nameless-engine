@@ -40,7 +40,7 @@ namespace ne {
             basePath += "\\";
         }
 
-        basePath += sEngineDirectoryName;
+        basePath += sBaseEngineDirectoryName;
         basePath += "\\";
 
 #elif __linux__

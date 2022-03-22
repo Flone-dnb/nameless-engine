@@ -21,7 +21,7 @@ TEST_CASE("create simple config file") {
         manager.setDoubleValue(sTestConfigFileSection, "my cool double", 3.14159, "this is a pi value");
         manager.setLongValue(sTestConfigFileSection, "my cool long", 42, "equals to 42");
 
-        auto res = manager.saveFile(sTestConfigFileName, false);
+        auto res = manager.saveFile(ConfigCategory::CONFIG, sTestConfigFileName, false);
         if (res.has_value()) {
             res->addEntry();
             INFO(res->getError())
@@ -35,7 +35,7 @@ TEST_CASE("create simple config file") {
     // Check if everything is correct.
     {
         ConfigManager manager;
-        auto res = manager.loadFile(sTestConfigFileName);
+        auto res = manager.loadFile(ConfigCategory::CONFIG, sTestConfigFileName);
         if (res.has_value()) {
             res->addEntry();
             INFO(res->getError())
@@ -71,7 +71,7 @@ TEST_CASE("test backup file") {
         manager.setValue(sTestConfigFileSection, "my cool string", "this is a cool string",
                          "this is a comment");
 
-        auto res = manager.saveFile(sTestConfigFileName, true);
+        auto res = manager.saveFile(ConfigCategory::CONFIG, sTestConfigFileName, true);
         if (res.has_value()) {
             res->addEntry();
             INFO(res->getError())
@@ -88,7 +88,7 @@ TEST_CASE("test backup file") {
     // Try to load configuration while usual file does not exist.
     {
         ConfigManager manager;
-        auto res = manager.loadFile(sTestConfigFileName);
+        auto res = manager.loadFile(ConfigCategory::CONFIG, sTestConfigFileName);
         if (res.has_value()) {
             res->addEntry();
             INFO(res->getError())
@@ -99,9 +99,9 @@ TEST_CASE("test backup file") {
         REQUIRE(real == "this is a cool string");
 
         REQUIRE(std::filesystem::exists(manager.getFilePath()));
+        std::filesystem::remove(manager.getFilePath());
 
-        if (std::filesystem::exists(manager.getFilePath())) {
-            std::filesystem::remove(manager.getFilePath());
-        }
+        REQUIRE(std::filesystem::exists(manager.getFilePath() + L".old"));
+        std::filesystem::remove(manager.getFilePath() + L".old");
     }
 }

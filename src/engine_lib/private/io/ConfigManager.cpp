@@ -4,8 +4,8 @@
 #include "misc/Globals.h"
 
 namespace ne {
-    std::optional<Error> ConfigManager::loadFile(std::string_view sFileName) {
-        auto result = ConfigManager::constructFilePath(sFileName);
+    std::optional<Error> ConfigManager::loadFile(ConfigCategory category, std::string_view sFileName) {
+        auto result = ConfigManager::constructFilePath(category, sFileName);
         if (std::holds_alternative<Error>(result)) {
             auto error = std::get<Error>(std::move(result));
             error.addEntry();
@@ -87,8 +87,9 @@ namespace ne {
         ini.SetLongValue(sSection.data(), sKey.data(), iValue, sFixedComment.c_str());
     }
 
-    std::optional<Error> ConfigManager::saveFile(std::string_view sFileName, bool bEnableBackup) {
-        auto result = ConfigManager::constructFilePath(sFileName);
+    std::optional<Error> ConfigManager::saveFile(ConfigCategory category, std::string_view sFileName,
+                                                 bool bEnableBackup) {
+        auto result = ConfigManager::constructFilePath(category, sFileName);
         if (std::holds_alternative<Error>(result)) {
             auto error = std::get<Error>(std::move(result));
             error.addEntry();
@@ -122,7 +123,8 @@ namespace ne {
 
     std::wstring ConfigManager::getFilePath() const { return sFilePath; }
 
-    std::variant<std::filesystem::path, Error> ConfigManager::constructFilePath(std::string_view sFileName) {
+    std::variant<std::filesystem::path, Error> ConfigManager::constructFilePath(ConfigCategory category,
+                                                                                std::string_view sFileName) {
         std::filesystem::path basePath;
 
         // Check if absolute path.
@@ -150,7 +152,17 @@ namespace ne {
                 std::filesystem::create_directory(basePath);
             }
 
-            basePath += sSavesDirectory;
+            switch (category) {
+            case ConfigCategory::SAVE:
+                basePath += sSavesDirectoryName;
+                break;
+            case ConfigCategory::CONFIG:
+                basePath += sConfigsDirectoryName;
+                break;
+            case ConfigCategory::ENGINE:
+                basePath += sEngineDirectoryName;
+                break;
+            }
 
 #if defined(WIN32)
             basePath += "\\";

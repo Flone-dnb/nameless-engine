@@ -43,7 +43,7 @@ namespace ne {
 #endif
 
         // Create directory for logs.
-        sLoggerFilePath += sLogsDirectory;
+        sLoggerFilePath += sLogsDirectoryName;
         if (!std::filesystem::exists(sLoggerFilePath)) {
             std::filesystem::create_directory(sLoggerFilePath);
         }

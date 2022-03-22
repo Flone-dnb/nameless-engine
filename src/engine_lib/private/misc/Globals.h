@@ -8,17 +8,27 @@ namespace ne {
     /**
      * Directory name that we append to the result of the base directory.
      */
-    constexpr std::string_view sEngineDirectoryName = "nameless-engine";
+    constexpr std::string_view sBaseEngineDirectoryName = "nameless-engine";
 
     /**
      * Directory name that we append to the result of the base directory.
      */
-    constexpr std::string_view sLogsDirectory = "logs";
+    constexpr std::string_view sLogsDirectoryName = "logs";
 
     /**
      * Directory name that we append to the result of the base directory.
      */
-    constexpr std::string_view sSavesDirectory = "saves";
+    constexpr std::string_view sSavesDirectoryName = "saves";
+
+    /**
+     * Directory name that we append to the result of the base directory.
+     */
+    constexpr std::string_view sConfigsDirectoryName = "configs";
+
+    /**
+     * Directory name that we append to the result of the base directory.
+     */
+    constexpr std::string_view sEngineDirectoryName = "engine";
 
     /**
      * Returns base directory used to store save and log files,

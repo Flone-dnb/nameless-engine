@@ -5,6 +5,20 @@
 
 namespace ne {
     std::vector<std::string> ConfigManager::getAllConfigFiles(ConfigCategory category) {
+        const std::wstring sCategoryFolder = ConfigManager::getFolderForConfigFiles(category);
+
+        std::vector<std::string> vConfigFiles;
+        const auto directoryIterator = std::filesystem::directory_iterator(sCategoryFolder);
+        for (const auto &entry : directoryIterator) {
+            if (entry.is_regular_file() && entry.path().extension().compare(sBackupFileExtension)) {
+                vConfigFiles.push_back(entry.path().stem().string());
+            }
+        }
+
+        return vConfigFiles;
+    }
+
+    std::wstring ConfigManager::getFolderForConfigFiles(ConfigCategory category) {
         std::filesystem::path basePath = getBaseDirectory();
         basePath += getApplicationName();
 
@@ -40,15 +54,7 @@ namespace ne {
             std::filesystem::create_directory(basePath);
         }
 
-        std::vector<std::string> vConfigFiles;
-        const auto directoryIterator = std::filesystem::directory_iterator(basePath);
-        for (const auto &entry : directoryIterator) {
-            if (entry.is_regular_file() && entry.path().extension().compare(sBackupFileExtension)) {
-                vConfigFiles.push_back(entry.path().filename().string());
-            }
-        }
-
-        return vConfigFiles;
+        return basePath;
     }
 
     std::optional<Error> ConfigManager::loadFile(ConfigCategory category, std::string_view sFileName) {
@@ -101,37 +107,57 @@ namespace ne {
     void ConfigManager::setValue(std::string_view sSection, std::string_view sKey, std::string_view sValue,
                                  std::string_view sComment) {
         std::string sFixedComment(sComment);
-        if (!sComment.starts_with('#')) {
-            sFixedComment.insert(0, "#");
+        if (!sComment.empty() && !sComment.starts_with('#')) {
+            sFixedComment.insert(0, "# ");
         }
-        ini.SetValue(sSection.data(), sKey.data(), sValue.data(), sFixedComment.c_str());
+
+        if (sFixedComment.empty()) {
+            ini.SetValue(sSection.data(), sKey.data(), sValue.data());
+        } else {
+            ini.SetValue(sSection.data(), sKey.data(), sValue.data(), sFixedComment.c_str());
+        }
     }
 
     void ConfigManager::setBoolValue(std::string_view sSection, std::string_view sKey, bool bValue,
                                      std::string_view sComment) {
         std::string sFixedComment(sComment);
-        if (!sComment.starts_with('#')) {
-            sFixedComment.insert(0, "#");
+        if (!sComment.empty() && !sComment.starts_with('#')) {
+            sFixedComment.insert(0, "# ");
         }
-        ini.SetBoolValue(sSection.data(), sKey.data(), bValue, sFixedComment.c_str());
+
+        if (sFixedComment.empty()) {
+            ini.SetBoolValue(sSection.data(), sKey.data(), bValue);
+        } else {
+            ini.SetBoolValue(sSection.data(), sKey.data(), bValue, sFixedComment.c_str());
+        }
     }
 
     void ConfigManager::setDoubleValue(std::string_view sSection, std::string_view sKey, double value,
                                        std::string_view sComment) {
         std::string sFixedComment(sComment);
-        if (!sComment.starts_with('#')) {
-            sFixedComment.insert(0, "#");
+        if (!sComment.empty() && !sComment.starts_with('#')) {
+            sFixedComment.insert(0, "# ");
         }
-        ini.SetDoubleValue(sSection.data(), sKey.data(), value, sFixedComment.c_str());
+
+        if (sFixedComment.empty()) {
+            ini.SetDoubleValue(sSection.data(), sKey.data(), value);
+        } else {
+            ini.SetDoubleValue(sSection.data(), sKey.data(), value, sFixedComment.c_str());
+        }
     }
 
     void ConfigManager::setLongValue(std::string_view sSection, std::string_view sKey, long iValue,
                                      std::string_view sComment) {
         std::string sFixedComment(sComment);
-        if (!sComment.starts_with('#')) {
-            sFixedComment.insert(0, "#");
+        if (!sComment.empty() && !sComment.starts_with('#')) {
+            sFixedComment.insert(0, "# ");
         }
-        ini.SetLongValue(sSection.data(), sKey.data(), iValue, sFixedComment.c_str());
+
+        if (sFixedComment.empty()) {
+            ini.SetLongValue(sSection.data(), sKey.data(), iValue);
+        } else {
+            ini.SetLongValue(sSection.data(), sKey.data(), iValue, sFixedComment.c_str());
+        }
     }
 
     std::optional<Error> ConfigManager::saveFile(ConfigCategory category, std::string_view sFileName,

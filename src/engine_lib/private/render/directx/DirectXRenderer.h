@@ -4,6 +4,7 @@
 #include <optional>
 #include <variant>
 #include <vector>
+#include <mutex>
 
 // Custom.
 #include "render/IRenderer.h"
@@ -22,6 +23,9 @@ namespace ne {
      */
     class DirectXRenderer : public IRenderer {
     public:
+        /**
+         * Initializes renderer base entities.
+         */
         DirectXRenderer();
 
         DirectXRenderer(const DirectXRenderer &) = delete;
@@ -53,6 +57,13 @@ namespace ne {
          * @return Error if something went wrong, otherwise render mode.
          */
         virtual std::variant<std::vector<RenderMode>, Error> getSupportedRenderResolutions() const override;
+
+        /**
+         * Returns the name of the GPU that is being currently used.
+         *
+         * @return Name of the GPU.
+         */
+        std::wstring getCurrentlyUsedGpuName() const override;
 
     protected:
         /**
@@ -105,6 +116,16 @@ namespace ne {
          */
         std::variant<std::vector<DXGI_MODE_DESC>, Error> getSupportedDisplayModes() const;
 
+        /**
+         * Writes current renderer configuration to disk.
+         */
+        virtual void writeConfigurationToConfigFile() override;
+
+        /**
+         * Reads renderer configuration from disk.
+         */
+        virtual void readConfigurationFromConfigFile() override;
+
     private:
         // Main DX objects.
         /* DXGI Factory */
@@ -150,10 +171,21 @@ namespace ne {
 
         // Display mode.
         DXGI_MODE_DESC currentDisplayMode;
+        /** Only display modes with this scaling are supported. */
+        DXGI_MODE_SCALING usedScaling = DXGI_MODE_SCALING_UNSPECIFIED;
 
         // Video Adapters (GPUs).
+        long iPreferredGpuIndex = 0;
         std::vector<std::wstring> vSupportedVideoAdapters;
         std::wstring sUsedVideoAdapter;
+
+        /** Will be 'true' if we read the configuration from disk at startup. */
+        bool bStartedWithConfigurationFromDisk = false;
+
+        /**
+         * Used to create a critical section for read/write operation on config file.s
+         */
+        std::mutex mtxRwConfigFile;
 
         // ----------------------------------------------------------------------------------------
 

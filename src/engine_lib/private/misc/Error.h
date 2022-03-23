@@ -81,8 +81,7 @@ namespace ne {
         std::string getError() const;
 
         /**
-         * Creates an error string
-         * and shows it on screen.
+         * Creates an error string, shows it on screen and also writes it to log.
          */
         void showError() const;
 

@@ -3,6 +3,7 @@
 // Std.
 #include <memory>
 #include <filesystem>
+#include <source_location>
 
 namespace spdlog {
     class logger;
@@ -28,25 +29,34 @@ namespace ne {
         static Logger &get();
 
         /**
-         * Write to log file using "info" category.
+         * Add text to console and log file using "info" category.
+         * Text message will be appended with function name it was called from.
          *
-         * @param sText  Text to write to log.
+         * @param sText    Text to write to log.
+         * @param location Should not be passed explicitly.
          */
-        void info(std::string_view sText) const;
+        void info(std::string_view sText,
+                  const std::source_location location = std::source_location::current()) const;
 
         /**
-         * Write to log file using "warning" category.
+         * Add text to console and log file using "warning" category.
+         * Text message will be appended with function name it was called from.
          *
          * @param sText  Text to write to log.
+         * @param location Should not be passed explicitly.
          */
-        void warn(std::string_view sText) const;
+        void warn(std::string_view sText,
+                  const std::source_location location = std::source_location::current()) const;
 
         /**
-         * Write to log file using "error" category.
+         * Add text to console and log file using "error" category.
+         * Text message will be appended with function name it was called from.
          *
          * @param sText  Text to write to log.
+         * @param location Should not be passed explicitly.
          */
-        void error(std::string_view sText) const;
+        void error(std::string_view sText,
+                   const std::source_location location = std::source_location::current()) const;
 
         /**
          * Returns the directory that contains all logs.

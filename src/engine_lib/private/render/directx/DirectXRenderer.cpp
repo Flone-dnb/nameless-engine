@@ -2,6 +2,11 @@
 
 // STL.
 #include <format>
+#include <filesystem>
+
+// Custom.
+#include "io/ConfigManager.h"
+#include "io/Logger.h"
 
 // DirectX.
 #pragma comment(lib, "D3D12.lib")
@@ -18,6 +23,12 @@
 
 namespace ne {
     DirectXRenderer::DirectXRenderer() {
+        if (isConfigurationFileExists()) {
+            Logger::get().info("renderer found configuration file, using configuration from this file");
+            DirectXRenderer::readConfigurationFromConfigFile();
+            bStartedWithConfigurationFromDisk = true;
+        }
+
         DWORD debugFactoryFlags = 0;
 
 #if defined(DEBUG) || defined(_DEBUG)
@@ -49,9 +60,16 @@ namespace ne {
             throw std::runtime_error(error.getError());
         }
         vSupportedVideoAdapters = std::get<std::vector<std::wstring>>(std::move(result));
+        if (iPreferredGpuIndex >= static_cast<long>(vSupportedVideoAdapters.size())) {
+            Error error(std::format("preferred GPU index {} is out of range, supported GPUs in total: {}\n",
+                                    iPreferredGpuIndex, vSupportedVideoAdapters.size()));
+            error.addEntry();
+            error.showError();
+            throw std::runtime_error(error.getError());
+        }
 
-        // Use first video adapter.
-        setVideoAdapter(vSupportedVideoAdapters[0]);
+        // Use video adapter.
+        setVideoAdapter(vSupportedVideoAdapters[iPreferredGpuIndex]);
 
         // Create device.
         hResult = D3D12CreateDevice(pVideoAdapter.Get(), rendererD3dFeatureLevel, IID_PPV_ARGS(&pDevice));
@@ -75,16 +93,18 @@ namespace ne {
         iCbvSrvUavDescriptorSize =
             pDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
-        // Check MSAA support.
-        std::optional<Error> error = checkMsaaSupport();
-        if (error.has_value()) {
-            error->addEntry();
-            error->showError();
-            throw std::runtime_error(error->getError());
+        if (isMsaaEnabled) {
+            // Check MSAA support.
+            std::optional<Error> error = checkMsaaSupport();
+            if (error.has_value()) {
+                error->addEntry();
+                error->showError();
+                throw std::runtime_error(error->getError());
+            }
         }
 
         // Create command queue and command list.
-        error = createCommandObjects();
+        std::optional<Error> error = createCommandObjects();
         if (error.has_value()) {
             error->addEntry();
             error->showError();
@@ -99,6 +119,7 @@ namespace ne {
             throw std::runtime_error(error->getError());
         }
 
+        // Determine display mode.
         auto videoModesResult = getSupportedDisplayModes();
         if (std::holds_alternative<Error>(videoModesResult)) {
             Error error1 = std::get<Error>(std::move(videoModesResult));
@@ -106,7 +127,60 @@ namespace ne {
             error1.showError();
             throw std::runtime_error(error1.getError());
         }
-        currentDisplayMode = std::get<std::vector<DXGI_MODE_DESC>>(std::move(videoModesResult)).back();
+
+        if (bStartedWithConfigurationFromDisk) {
+            // Find specified video mode.
+            const auto vVideoModes = std::get<std::vector<DXGI_MODE_DESC>>(std::move(videoModesResult));
+
+            std::vector<DXGI_MODE_DESC> vFilteredModes;
+
+            for (const auto &mode : vVideoModes) {
+                if (mode.Width == currentDisplayMode.Width && mode.Height == currentDisplayMode.Height &&
+                    mode.RefreshRate.Numerator == currentDisplayMode.RefreshRate.Numerator &&
+                    mode.RefreshRate.Denominator == currentDisplayMode.RefreshRate.Denominator) {
+                    vFilteredModes.push_back(mode);
+                }
+            }
+
+            if (vFilteredModes.empty()) {
+                Error error1(std::format("video mode with resolution ({}x{}) and refresh rate "
+                                         "({}/{}) is not supported",
+                                         currentDisplayMode.Width, currentDisplayMode.Height,
+                                         currentDisplayMode.RefreshRate.Numerator,
+                                         currentDisplayMode.RefreshRate.Denominator));
+                error1.addEntry();
+                error1.showError();
+                throw std::runtime_error(error1.getError());
+            } else if (vFilteredModes.size() == 1) {
+                currentDisplayMode = vFilteredModes[0];
+            } else {
+                std::string sErrorMessage = std::format("video mode with resolution ({}x{}) and refresh rate "
+                                                        "({}/{}) matched multiple supported modes, "
+                                                        "please pick one of the following:\n",
+                                                        currentDisplayMode.Width, currentDisplayMode.Height,
+                                                        currentDisplayMode.RefreshRate.Numerator,
+                                                        currentDisplayMode.RefreshRate.Denominator);
+                for (const auto &mode : vFilteredModes) {
+                    sErrorMessage +=
+                        std::format("- resolution: {}x{}, refresh rate: {}/{}, format: {}, "
+                                    "scanline ordering: {}, scaling: {}",
+                                    mode.Width, mode.Height, mode.RefreshRate.Numerator,
+                                    mode.RefreshRate.Denominator, static_cast<unsigned int>(mode.Format),
+                                    static_cast<int>(mode.ScanlineOrdering), static_cast<int>(mode.Scaling));
+                }
+                Error error1(sErrorMessage);
+                error1.addEntry();
+                error1.showError();
+                throw std::runtime_error(error1.getError());
+            }
+        } else {
+            // use last display mode
+            currentDisplayMode = std::get<std::vector<DXGI_MODE_DESC>>(std::move(videoModesResult)).back();
+        }
+
+        if (!isConfigurationFileExists()) {
+            DirectXRenderer::writeConfigurationToConfigFile();
+        }
     }
 
     void DirectXRenderer::update() {}
@@ -191,6 +265,8 @@ namespace ne {
 
         return vOutRenderModes;
     }
+
+    std::wstring DirectXRenderer::getCurrentlyUsedGpuName() const { return sUsedVideoAdapter; }
 
     std::optional<Error> DirectXRenderer::setVideoAdapter(const std::wstring &sVideoAdapterName) {
         if (pVideoAdapter) {
@@ -293,7 +369,7 @@ namespace ne {
 
         D3D12_FEATURE_DATA_MULTISAMPLE_QUALITY_LEVELS msQualityLevels;
         msQualityLevels.Format = backBufferFormat;
-        msQualityLevels.SampleCount = 4; // check for highest level support
+        msQualityLevels.SampleCount = iMsaaSampleCount;
         msQualityLevels.Flags = D3D12_MULTISAMPLE_QUALITY_LEVELS_FLAG_NONE;
         msQualityLevels.NumQualityLevels = 0;
 
@@ -334,6 +410,130 @@ namespace ne {
             return Error(hResult);
         }
 
-        return vDisplayModes;
+        // Filter some modes.
+        std::vector<DXGI_MODE_DESC> vFilteredModes;
+        for (const auto &mode : vDisplayModes) {
+            if (mode.Scaling != usedScaling) {
+                continue;
+            }
+
+            vFilteredModes.push_back(mode);
+        }
+
+        return vFilteredModes;
+    }
+
+    void DirectXRenderer::writeConfigurationToConfigFile() {
+        std::scoped_lock guard(mtxRwConfigFile);
+
+        ConfigManager manager;
+
+        if (isConfigurationFileExists()) {
+            // Add existing values first.
+            auto error = manager.loadFile(ConfigCategory::ENGINE, getRendererConfigurationFileName());
+            if (error.has_value()) {
+                error->addEntry();
+                // error->showError(); don't show on screen as it's not a critical error
+                Logger::get().error(error->getError());
+                return;
+            }
+        }
+
+        // Write GPU.
+        manager.setLongValue(
+            getConfigurationSectionGpu(), "GPU", 0,
+            "index of the GPU to use, where '0' is GPU with most priority (first found GPU), '1' "
+            "is second found and etc.");
+
+        // Write resolution.
+        manager.setLongValue(getConfigurationSectionResolution(), "x",
+                             static_cast<long>(currentDisplayMode.Width));
+        manager.setLongValue(getConfigurationSectionResolution(), "y",
+                             static_cast<long>(currentDisplayMode.Height));
+
+        // Write refresh rate.
+        manager.setLongValue(getConfigurationSectionRefreshRate(), "numerator",
+                             static_cast<long>(currentDisplayMode.RefreshRate.Numerator));
+        manager.setLongValue(getConfigurationSectionRefreshRate(), "denominator",
+                             static_cast<long>(currentDisplayMode.RefreshRate.Denominator));
+
+        // Write antialiasing.
+        manager.setBoolValue(getConfigurationSectionAntialiasing(), "enabled", isMsaaEnabled);
+        manager.setLongValue(getConfigurationSectionAntialiasing(), "sample count",
+                             static_cast<long>(iMsaaSampleCount), "valid values for MSAA: 2 or 4");
+
+        // !!!
+        // New settings go here!
+        // !!!
+
+        auto error = manager.saveFile(ConfigCategory::ENGINE, getRendererConfigurationFileName(), false);
+        if (error.has_value()) {
+            error->addEntry();
+            // error->showError(); don't show on screen as it's not a critical error
+            Logger::get().error(error->getError());
+        }
+    }
+
+    void DirectXRenderer::readConfigurationFromConfigFile() {
+        std::scoped_lock guard(mtxRwConfigFile);
+
+        if (!isConfigurationFileExists()) {
+            return;
+        }
+
+        ConfigManager manager;
+
+        // Try loading file.
+        auto loadError = manager.loadFile(ConfigCategory::ENGINE, getRendererConfigurationFileName());
+        if (loadError.has_value()) {
+            loadError->addEntry();
+            loadError->showError();
+        }
+
+        // Read GPU.
+        iPreferredGpuIndex = manager.getLongValue(getConfigurationSectionGpu(), "GPU", 0);
+
+        // Read resolution.
+        currentDisplayMode.Width = manager.getLongValue(getConfigurationSectionResolution(), "x", 0);
+        currentDisplayMode.Height = manager.getLongValue(getConfigurationSectionResolution(), "y", 0);
+        if (currentDisplayMode.Width == 0 || currentDisplayMode.Height == 0) {
+            Error error(std::format("failed to read valid resolution values from configuration file, "
+                                    "either fix the values or delete this configuration file: \"{}\"",
+                                    std::filesystem::path(manager.getFilePath()).string()));
+            error.addEntry();
+            error.showError();
+            throw std::runtime_error(error.getError());
+        }
+
+        // Read refresh rate.
+        currentDisplayMode.RefreshRate.Numerator =
+            manager.getLongValue(getConfigurationSectionRefreshRate(), "numerator", 0);
+        currentDisplayMode.RefreshRate.Denominator =
+            manager.getLongValue(getConfigurationSectionRefreshRate(), "denominator", 0);
+        if (currentDisplayMode.RefreshRate.Numerator == 0 ||
+            currentDisplayMode.RefreshRate.Denominator == 0) {
+            Error error(std::format("failed to read valid refresh rate values from configuration file, "
+                                    "either fix the values or delete this configuration file: \"{}\"",
+                                    std::filesystem::path(manager.getFilePath()).string()));
+            error.addEntry();
+            error.showError();
+            throw std::runtime_error(error.getError());
+        }
+
+        // Read antialiasing.
+        isMsaaEnabled = manager.getBoolValue(getConfigurationSectionAntialiasing(), "enabled", false);
+        iMsaaSampleCount = manager.getLongValue(getConfigurationSectionAntialiasing(), "sample count", 0);
+        if (iMsaaSampleCount != 2 && iMsaaSampleCount != 4) {
+            Error error(std::format("failed to read valid antialiasing values from configuration file, "
+                                    "either fix the values or delete this configuration file: \"{}\"",
+                                    std::filesystem::path(manager.getFilePath()).string()));
+            error.addEntry();
+            error.showError();
+            throw std::runtime_error(error.getError());
+        }
+
+        // !!!
+        // New settings go here!
+        // !!!
     }
 } // namespace ne

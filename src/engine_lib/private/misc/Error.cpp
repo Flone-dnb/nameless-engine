@@ -4,6 +4,9 @@
 #include <string>
 #include <filesystem>
 
+// Custom.
+#include "io/Logger.h"
+
 namespace ne {
     Error::Error(std::string_view sMessage, const std::source_location location) {
         this->sMessage = sMessage;
@@ -82,6 +85,7 @@ namespace ne {
 
     void Error::showError() const {
         const std::string sErrorMessage = getError();
+        Logger::get().error(sErrorMessage);
         MessageBoxA(nullptr, sErrorMessage.c_str(), "Error", 0);
     }
 } // namespace ne

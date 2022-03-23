@@ -54,5 +54,72 @@ namespace ne {
          * @return A pair of X and Y pixels.
          */
         virtual std::pair<int, int> getRenderResolution() const = 0;
+
+        /**
+         * Returns the name of the GPU that is being currently used.
+         *
+         * @return Name of the GPU.
+         */
+        virtual std::wstring getCurrentlyUsedGpuName() const = 0;
+
+    protected:
+        /**
+         * Writes current renderer configuration to disk.
+         */
+        virtual void writeConfigurationToConfigFile() = 0;
+
+        /**
+         * Reads renderer configuration from disk.
+         * If at least one key is empty or incorrect the renderer should
+         * throw an error.
+         */
+        virtual void readConfigurationFromConfigFile() = 0;
+
+        /**
+         * Used to determine if the configuration file exists on the disk.
+         */
+        static bool isConfigurationFileExists();
+
+        /**
+         * Returns name of the configuration file used by the renderer.
+         *
+         * @return Configuration file name.
+         */
+        static const char *getRendererConfigurationFileName();
+
+        /**
+         * Returns name of the section used in configuration file.
+         *
+         * @return Section name.
+         */
+        static const char *getConfigurationSectionGpu();
+
+        /**
+         * Returns name of the section used in configuration file.
+         *
+         * @return Section name.
+         */
+        static const char *getConfigurationSectionResolution();
+
+        /**
+         * Returns name of the section used in configuration file.
+         *
+         * @return Section name.
+         */
+        static const char *getConfigurationSectionRefreshRate();
+
+        /**
+         * Returns name of the section used in configuration file.
+         *
+         * @return Section name.
+         */
+        static const char *getConfigurationSectionAntialiasing();
+
+    private:
+        inline static const char *sRendererConfigurationFileName = "render";
+        inline static const char *sConfigurationSectionGpu = "GPU";
+        inline static const char *sConfigurationSectionResolution = "resolution";
+        inline static const char *sConfigurationSectionRefreshRate = "refresh rate";
+        inline static const char *sConfigurationSectionAntialiasing = "anti-aliasing";
     };
 } // namespace ne

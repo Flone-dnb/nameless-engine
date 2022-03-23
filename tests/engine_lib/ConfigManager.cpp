@@ -105,3 +105,58 @@ TEST_CASE("test backup file") {
         std::filesystem::remove(manager.getFilePath() + L".old");
     }
 }
+
+TEST_CASE("get all config files of category") {
+    using namespace ne;
+
+    // Create files.
+    ConfigManager manager;
+    manager.setValue(sTestConfigFileSection, "my cool string", "this is a cool string", "this is a comment");
+
+    auto res = manager.saveFile(ConfigCategory::CONFIG, sTestConfigFileName, true);
+    if (res.has_value()) {
+        res->addEntry();
+        INFO(res->getError())
+        REQUIRE(false);
+    }
+
+    const std::wstring sFirstFilePath = manager.getFilePath();
+
+    // Check that file and backup exist.
+    REQUIRE(std::filesystem::exists(manager.getFilePath()));
+    REQUIRE(std::filesystem::exists(manager.getFilePath() + L".old"));
+
+    const std::string sSecondFileName = std::string(sTestConfigFileName) + "2";
+
+    res = manager.saveFile(ConfigCategory::CONFIG, sSecondFileName, true);
+    if (res.has_value()) {
+        res->addEntry();
+        INFO(res->getError())
+        REQUIRE(false);
+    }
+
+    const std::wstring sSecondFilePath = manager.getFilePath();
+
+    // Check that file and backup exist.
+    REQUIRE(std::filesystem::exists(sFirstFilePath));
+    REQUIRE(std::filesystem::exists(sFirstFilePath + L".old"));
+
+    auto vFiles = ConfigManager::getAllConfigFiles(ConfigCategory::CONFIG);
+    REQUIRE(vFiles.size() == 2);
+
+    // Remove first file without backup.
+    std::filesystem::remove(sFirstFilePath);
+
+    vFiles = ConfigManager::getAllConfigFiles(ConfigCategory::CONFIG);
+    REQUIRE(vFiles.size() == 1);
+
+    // Remove first file backup.
+    std::filesystem::remove(sFirstFilePath + L".old");
+
+    vFiles = ConfigManager::getAllConfigFiles(ConfigCategory::CONFIG);
+    REQUIRE(vFiles.size() == 1);
+
+    // Remove second file with backup.
+    std::filesystem::remove(sSecondFilePath);
+    std::filesystem::remove(sSecondFilePath + L".old");
+}

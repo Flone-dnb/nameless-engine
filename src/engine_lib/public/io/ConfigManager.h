@@ -32,6 +32,15 @@ namespace ne {
         ConfigManager &operator=(const ConfigManager &) = delete;
 
         /**
+         * Returns all files (excluding any backup files) that this category (folder) contains.
+         *
+         * @param category Category or folder in which to look for files.
+         *
+         * @return All files in the specified category (backup files are excluded).
+         */
+        static std::vector<std::string> getAllConfigFiles(ConfigCategory category);
+
+        /**
          * Loads data from INI file.
          * File should exist, otherwise an error will be returned.
          * If you used @ref saveFile before and enabled a backup file (see @ref saveFile),
@@ -191,7 +200,7 @@ namespace ne {
         std::wstring sFilePath;
 
         /** File extension used for backup files. */
-        const wchar_t *sBackupFileExtension = L".old";
+        inline static const wchar_t *sBackupFileExtension = L".old";
     };
 
 } // namespace ne

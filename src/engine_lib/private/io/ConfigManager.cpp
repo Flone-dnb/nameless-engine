@@ -4,6 +4,53 @@
 #include "misc/Globals.h"
 
 namespace ne {
+    std::vector<std::string> ConfigManager::getAllConfigFiles(ConfigCategory category) {
+        std::filesystem::path basePath = getBaseDirectory();
+        basePath += getApplicationName();
+
+#if defined(WIN32)
+        basePath += "\\";
+#elif __linux__
+        basePath += "/";
+#endif
+
+        if (!std::filesystem::exists(basePath)) {
+            std::filesystem::create_directory(basePath);
+        }
+
+        switch (category) {
+        case ConfigCategory::SAVE:
+            basePath += sSavesDirectoryName;
+            break;
+        case ConfigCategory::CONFIG:
+            basePath += sConfigsDirectoryName;
+            break;
+        case ConfigCategory::ENGINE:
+            basePath += sEngineDirectoryName;
+            break;
+        }
+
+#if defined(WIN32)
+        basePath += "\\";
+#elif __linux__
+        basePath += "/";
+#endif
+
+        if (!std::filesystem::exists(basePath)) {
+            std::filesystem::create_directory(basePath);
+        }
+
+        std::vector<std::string> vConfigFiles;
+        const auto directoryIterator = std::filesystem::directory_iterator(basePath);
+        for (const auto &entry : directoryIterator) {
+            if (entry.is_regular_file() && entry.path().extension().compare(sBackupFileExtension)) {
+                vConfigFiles.push_back(entry.path().filename().string());
+            }
+        }
+
+        return vConfigFiles;
+    }
+
     std::optional<Error> ConfigManager::loadFile(ConfigCategory category, std::string_view sFileName) {
         auto result = ConfigManager::constructFilePath(category, sFileName);
         if (std::holds_alternative<Error>(result)) {

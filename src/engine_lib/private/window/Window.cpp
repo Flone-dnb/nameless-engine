@@ -13,13 +13,17 @@
 
 namespace ne {
     void GLFWWindowKeyCallback(GLFWwindow *pGLFWWindow, int iKey, int iScancode, int iAction, int iMods) {
+        if (iAction == GLFW_REPEAT) {
+            return;
+        }
+
         const Window *pWindow = static_cast<Window *>(glfwGetWindowUserPointer(pGLFWWindow));
         if (!pWindow) {
             return;
         }
 
         pWindow->internalOnKeyInput(static_cast<KeyboardKey>(iKey), KeyboardModifiers(iMods),
-                                    static_cast<KeyboardAction>(iAction));
+                                    iAction == GLFW_PRESS ? true : false);
     }
 
     void GLFWWindowFocusCallback(GLFWwindow *pGLFWWindow, int iFocused) {
@@ -94,12 +98,11 @@ namespace ne {
         return nullptr;
     }
 
-    void Window::internalOnKeyInput(KeyboardKey key, KeyboardModifiers modifiers,
-                                    KeyboardAction action) const {
+    void Window::internalOnKeyInput(KeyboardKey key, KeyboardModifiers modifiers, bool bIsPressedDown) const {
         if (!pGame || !pGame->pGameInstance) {
             return;
         }
-        pGame->pGameInstance->onKeyInput(key, modifiers, action);
+        pGame->pGameInstance->onKeyInput(key, modifiers, bIsPressedDown);
     }
 
     void Window::internalOnWindowFocusChanged(bool bIsFocused) const {

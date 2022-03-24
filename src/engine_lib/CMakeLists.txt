@@ -22,7 +22,7 @@ set(ENGINE_LIB_SOURCES
     private/render/directx/DirectXRenderer.h
     private/render/directx/DirectXRenderer.cpp
     private/window/GLFW.hpp
-    private/input/KeyboardKey.hpp
+    public/input/KeyboardKey.hpp
     private/io/Logger.cpp
     public/io/Logger.h
     private/misc/Globals.h

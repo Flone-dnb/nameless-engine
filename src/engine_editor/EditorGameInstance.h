@@ -23,12 +23,12 @@ public:
     /**
      * Called when the window receives keyboard input.
      *
-     * @param key        Keyboard key.
-     * @param modifiers  Keyboard modifier keys.
-     * @param action     Type of keyboard action.
+     * @param key            Keyboard key.
+     * @param modifiers      Keyboard modifier keys.
+     * @param bIsPressedDown Whether the key down event occurred or key up.
      */
     virtual void onKeyInput(ne::KeyboardKey key, ne::KeyboardModifiers modifiers,
-                            ne::KeyboardAction action) override;
+                            bool bIsPressedDown) override;
 
     /**
      * Called when the window focus was changed.

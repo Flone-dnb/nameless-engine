@@ -25,23 +25,23 @@ namespace ne {
          * @param fTimeFromPrevCallInSec   Time in seconds that has passed since the last call
          * to this function.
          */
-        virtual void onBeforeNewFrame(float fTimeFromPrevCallInSec){};
+        virtual void onBeforeNewFrame(float fTimeFromPrevCallInSec) {}
 
         /**
          * Called when the window receives keyboard input.
          *
-         * @param key        Keyboard key.
-         * @param modifiers  Keyboard modifier keys.
-         * @param action     Type of keyboard action.
+         * @param key            Keyboard key.
+         * @param modifiers      Keyboard modifier keys.
+         * @param bIsPressedDown Whether the key down event occurred or key up.
          */
-        virtual void onKeyInput(KeyboardKey key, KeyboardModifiers modifiers, KeyboardAction action){};
+        virtual void onKeyInput(KeyboardKey key, KeyboardModifiers modifiers, bool bIsPressedDown) {}
 
         /**
          * Called when the window focus was changed.
          *
          * @param bIsFocused  Whether the window has gained or lost the focus.
          */
-        virtual void onWindowFocusChanged(bool bIsFocused){};
+        virtual void onWindowFocusChanged(bool bIsFocused) {}
 
         /**
          * Called when the window was requested to close (no new frames will be rendered).

@@ -25,11 +25,7 @@ namespace ne {
     /**
      * Provides a mapping from GLFW keyboard action macros to an enum.
      */
-    enum class KeyboardAction {
-        PRESSED = GLFW_PRESS,
-        RELEASED = GLFW_RELEASE,
-        REPEAT = GLFW_REPEAT,
-    };
+    enum class KeyboardAction { PRESSED = GLFW_PRESS, RELEASED = GLFW_RELEASE };
     /**
      * Provides a mapping from GLFW keyboard key macros to an enum.
      */

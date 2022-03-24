@@ -232,11 +232,11 @@ namespace ne {
          * Used internally, should not be called from user code.
          * Use IGameInstance::onKeyInput() from user code.
          *
-         * @param key        Keyboard key.
-         * @param modifiers  Keyboard modifier keys.
-         * @param action     Type of keyboard action.
+         * @param key            Keyboard key.
+         * @param modifiers      Keyboard modifier keys.
+         * @param bIsPressedDown Whether the key down event occurred or key up.
          */
-        void internalOnKeyInput(KeyboardKey key, KeyboardModifiers modifiers, KeyboardAction action) const;
+        void internalOnKeyInput(KeyboardKey key, KeyboardModifiers modifiers, bool bIsPressedDown) const;
 
         /**
          * Used internally, should not be called from user code.

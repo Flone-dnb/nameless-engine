@@ -202,9 +202,6 @@ namespace ne {
 
         // Check if absolute path.
         if (std::filesystem::path(sFileName).is_absolute()) {
-            if (!is_regular_file(std::filesystem::path(sFileName))) {
-                return Error("the specified absolute path does not point to a regular file");
-            }
             basePath = sFileName;
         } else {
             if (sFileName.contains('/') || sFileName.contains('\\')) {

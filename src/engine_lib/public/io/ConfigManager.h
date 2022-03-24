@@ -17,7 +17,7 @@ namespace ne {
      */
     enum class ConfigCategory {
         SAVE,   // used to store user's game progress
-        CONFIG, // used to store user's game settings
+        CONFIG, // used to store user's game settings like keybindings
         ENGINE, // used by engine to store engine configuration
     };
 
@@ -163,12 +163,16 @@ namespace ne {
          *
          * @param category       Folder in which we will store this file, note that ENGINE
          * category is used by engine internals and should not be used to store game configs.
-         * Use SAVE category to save user's game progress and CONFIG to store user's settings.
+         * Use SAVE category to save user's game progress and CONFIG to store user's settings
+         * such as keybindings, there is no need to save render settings here as
+         * some parts of the engine save their own configs, for example, renderer will save latest
+         * applied settings and restore them on start so you don't need to save them manually.
          * @param sFileName      Name of the file to load:
          * @arg (preferred option) if only name is specified, we will save it to a predefined directory
          * that we also use in @ref loadFile (use @ref getFilePath to see full path),
          * the .ini extension will be added if the passed name does not have it.
-         * @arg if absolute path is specified we will try to save it using this path.
+         * @arg if absolute path is specified we will try to save it using this path, in this case
+         * the category is ignored.
          * @param bEnableBackup  If 'true' will also use a backup (copy) file. @ref loadFile can use
          * backup file if a usual configuration file does not exist. Generally you want to use
          * a backup file if you are saving important information, such as player progress,

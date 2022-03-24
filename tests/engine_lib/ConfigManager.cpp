@@ -106,6 +106,46 @@ TEST_CASE("test backup file") {
     }
 }
 
+TEST_CASE("save and load config using absolute path") {
+    using namespace ne;
+
+    std::string sFilePath = std::filesystem::temp_directory_path().string();
+    sFilePath += sTestConfigFileName;
+
+    // Create file.
+    {
+        ConfigManager manager;
+        manager.setValue(sTestConfigFileSection, "my cool string", "this is a cool string",
+                         "this is a comment");
+
+        auto res = manager.saveFile(ConfigCategory::CONFIG, sFilePath, false);
+        if (res.has_value()) {
+            res->addEntry();
+            INFO(res->getError())
+            REQUIRE(false);
+        }
+
+        // Check that file exists.
+        REQUIRE(std::filesystem::exists(sFilePath));
+    }
+
+    // Try to load configuration.
+    {
+        ConfigManager manager;
+        auto res = manager.loadFile(ConfigCategory::CONFIG, sFilePath);
+        if (res.has_value()) {
+            res->addEntry();
+            INFO(res->getError())
+            REQUIRE(false);
+        }
+
+        auto real = manager.getValue(sTestConfigFileSection, "my cool string", "");
+        REQUIRE(real == "this is a cool string");
+
+        std::filesystem::remove(sFilePath);
+    }
+}
+
 TEST_CASE("get all config files of category") {
     using namespace ne;
 

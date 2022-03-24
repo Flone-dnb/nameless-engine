@@ -93,7 +93,7 @@ namespace ne {
         iCbvSrvUavDescriptorSize =
             pDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
-        if (isMsaaEnabled) {
+        if (bIsMsaaEnabled) {
             // Check MSAA support.
             std::optional<Error> error = checkMsaaSupport();
             if (error.has_value()) {
@@ -267,6 +267,10 @@ namespace ne {
     }
 
     std::wstring DirectXRenderer::getCurrentlyUsedGpuName() const { return sUsedVideoAdapter; }
+
+    Antialiasing DirectXRenderer::getCurrentAntialiasing() const {
+        return Antialiasing{bIsMsaaEnabled, static_cast<int>(iMsaaSampleCount)};
+    }
 
     std::optional<Error> DirectXRenderer::setVideoAdapter(const std::wstring &sVideoAdapterName) {
         if (pVideoAdapter) {
@@ -458,7 +462,7 @@ namespace ne {
                              static_cast<long>(currentDisplayMode.RefreshRate.Denominator));
 
         // Write antialiasing.
-        manager.setBoolValue(getConfigurationSectionAntialiasing(), "enabled", isMsaaEnabled);
+        manager.setBoolValue(getConfigurationSectionAntialiasing(), "enabled", bIsMsaaEnabled);
         manager.setLongValue(getConfigurationSectionAntialiasing(), "sample count",
                              static_cast<long>(iMsaaSampleCount), "valid values for MSAA: 2 or 4");
 
@@ -521,7 +525,7 @@ namespace ne {
         }
 
         // Read antialiasing.
-        isMsaaEnabled = manager.getBoolValue(getConfigurationSectionAntialiasing(), "enabled", false);
+        bIsMsaaEnabled = manager.getBoolValue(getConfigurationSectionAntialiasing(), "enabled", false);
         iMsaaSampleCount = manager.getLongValue(getConfigurationSectionAntialiasing(), "sample count", 0);
         if (iMsaaSampleCount != 2 && iMsaaSampleCount != 4) {
             Error error(std::format("failed to read valid antialiasing values from configuration file, "

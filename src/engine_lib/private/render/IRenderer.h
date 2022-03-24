@@ -13,10 +13,26 @@ namespace ne {
      * Contains width, height and refresh rate.
      */
     struct RenderMode {
+        /** Width in pixels. */
         int iWidth;
+        /** Height in pixels. */
         int iHeight;
+        /** Refresh rate numerator. */
         int iRefreshRateNumerator;
+        /** Refresh rate denominator. */
         int iRefreshRateDenominator;
+    };
+    /**
+     * Describes anti-aliasing settings.
+     */
+    struct Antialiasing {
+        /** Whether the AA is enabled or not. */
+        bool bIsEnabled;
+        /**
+         * Quality of AA, for MSAA valid values are:
+         * 2 (x2 sample count - good quality) or 4 (x4 sample count - best quality).
+         */
+        int iQuality;
     };
     /**
      * Defines an interface for renderers to implement.
@@ -51,7 +67,7 @@ namespace ne {
         /**
          * Returns backbuffer resolution.
          *
-         * @return A pair of X and Y pixels.
+         * @return Width and height.
          */
         virtual std::pair<int, int> getRenderResolution() const = 0;
 
@@ -61,6 +77,13 @@ namespace ne {
          * @return Name of the GPU.
          */
         virtual std::wstring getCurrentlyUsedGpuName() const = 0;
+
+        /**
+         * Returns currently used AA settings.
+         *
+         * @return AA settings.
+         */
+        virtual Antialiasing getCurrentAntialiasing() const = 0;
 
     protected:
         /**

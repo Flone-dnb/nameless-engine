@@ -63,7 +63,14 @@ namespace ne {
          *
          * @return Name of the GPU.
          */
-        std::wstring getCurrentlyUsedGpuName() const override;
+        virtual std::wstring getCurrentlyUsedGpuName() const override;
+
+        /**
+         * Returns currently used AA settings.
+         *
+         * @return AA settings.
+         */
+        virtual Antialiasing getCurrentAntialiasing() const override;
 
     protected:
         /**
@@ -165,7 +172,7 @@ namespace ne {
 
         // MSAA.
         Microsoft::WRL::ComPtr<ID3D12Resource> pMsaaRenderTarget;
-        bool isMsaaEnabled = true;
+        bool bIsMsaaEnabled = true;
         UINT iMsaaSampleCount = 4;
         UINT iMsaaQuality = 0;
 

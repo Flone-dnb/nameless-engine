@@ -86,6 +86,14 @@ namespace ne {
 
     float Window::getOpacity() const { return glfwGetWindowOpacity(pGLFWWindow); }
 
+    IRenderer *Window::getRenderer() const {
+        if (pGame && pGame->pRenderer) {
+            return pGame->pRenderer.get();
+        }
+
+        return nullptr;
+    }
+
     void Window::internalOnKeyInput(KeyboardKey key, KeyboardModifiers modifiers,
                                     KeyboardAction action) const {
         if (!pGame || !pGame->pGameInstance) {

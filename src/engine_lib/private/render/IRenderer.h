@@ -39,7 +39,7 @@ namespace ne {
          * @return Error if can't find any GPU that supports this renderer,
          * vector with GPU names if successful.
          */
-        virtual std::variant<std::vector<std::wstring>, Error> getSupportedVideoAdapters() const = 0;
+        virtual std::variant<std::vector<std::wstring>, Error> getSupportedGpus() const = 0;
 
         /**
          * Returns a list of supported render resolution.

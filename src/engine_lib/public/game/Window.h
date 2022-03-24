@@ -222,6 +222,13 @@ namespace ne {
         float getOpacity() const;
 
         /**
+         * Returns renderer used for this window.
+         *
+         * @return nullptr if renderer was not created yet, valid pointer otherwise.
+         */
+        IRenderer *getRenderer() const;
+
+        /**
          * Used internally, should not be called from user code.
          * Use IGameInstance::onKeyInput() from user code.
          *

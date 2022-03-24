@@ -52,7 +52,7 @@ namespace ne {
         }
 
         // Get supported video adapters.
-        auto result = DirectXRenderer::getSupportedVideoAdapters();
+        auto result = DirectXRenderer::getSupportedGpus();
         if (std::holds_alternative<Error>(result)) {
             Error error = std::get<Error>(std::move(result));
             error.addEntry();
@@ -209,7 +209,7 @@ namespace ne {
         return {};
     }
 
-    std::variant<std::vector<std::wstring>, Error> DirectXRenderer::getSupportedVideoAdapters() const {
+    std::variant<std::vector<std::wstring>, Error> DirectXRenderer::getSupportedGpus() const {
         std::vector<std::wstring> vAddedVideoAdapters;
 
         for (UINT iAdapterIndex = 0;; iAdapterIndex++) {

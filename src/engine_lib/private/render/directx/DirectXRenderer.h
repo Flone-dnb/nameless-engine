@@ -42,7 +42,7 @@ namespace ne {
          * @return Error if can't find any GPU that supports our DirectX version and feature level,
          * vector with GPU names if successful.
          */
-        virtual std::variant<std::vector<std::wstring>, Error> getSupportedVideoAdapters() const override;
+        virtual std::variant<std::vector<std::wstring>, Error> getSupportedGpus() const override;
 
         /**
          * Returns backbuffer resolution.

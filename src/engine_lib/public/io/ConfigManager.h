@@ -21,11 +21,14 @@ namespace ne {
         ENGINE, // used by engine to store engine configuration
     };
 
+    /**
+     * Allows saving and loading configuration in key-value style.
+     */
     class ConfigManager {
     public:
         /**
-         * Constructs an empty configuration, use @loadFile to read configuration from a file
-         * or @setValue and then @saveFile to save a new configuration.
+         * Constructs an empty configuration, use @ref loadFile to read configuration from a file
+         * or @ref setValue and then @ref saveFile to save a new configuration.
          */
         ConfigManager() = default;
         ConfigManager(const ConfigManager &) = delete;
@@ -79,6 +82,9 @@ namespace ne {
          * @param sSection       Name of the section.
          * @param sKey           Name of the key.
          * @param sDefaultValue  Value that will be returned if the specified key was not found.
+         *
+         * @return Default value if the specified section/key was not found,
+         * otherwise value from INI file.
          */
         std::string_view getValue(std::string_view sSection, std::string_view sKey,
                                   std::string_view sDefaultValue) const;
@@ -89,6 +95,9 @@ namespace ne {
          * @param sSection       Name of the section.
          * @param sKey           Name of the key.
          * @param bDefaultValue  Value that will be returned if the specified key was not found.
+         *
+         * @return Default value if the specified section/key was not found,
+         * otherwise value from INI file.
          */
         bool getBoolValue(std::string_view sSection, std::string_view sKey, bool bDefaultValue) const;
 
@@ -98,6 +107,9 @@ namespace ne {
          * @param sSection       Name of the section.
          * @param sKey           Name of the key.
          * @param defaultValue   Value that will be returned if the specified key was not found.
+         *
+         * @return Default value if the specified section/key was not found,
+         * otherwise value from INI file.
          */
         double getDoubleValue(std::string_view sSection, std::string_view sKey, double defaultValue) const;
 
@@ -107,6 +119,9 @@ namespace ne {
          * @param sSection       Name of the section.
          * @param sKey           Name of the key.
          * @param iDefaultValue  Value that will be returned if the specified key was not found.
+         *
+         * @return Default value if the specified section/key was not found,
+         * otherwise value from INI file.
          */
         long getLongValue(std::string_view sSection, std::string_view sKey, long iDefaultValue) const;
 
@@ -185,8 +200,8 @@ namespace ne {
                                       bool bEnableBackup);
 
         /**
-         * Returns full path to the file if it was loaded using @loadFile
-         * or saved using @saveFile.
+         * Returns full path to the file if it was loaded using @ref loadFile
+         * or saved using @ref saveFile.
          *
          * @return Full path to the file.
          */

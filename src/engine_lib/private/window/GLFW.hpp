@@ -33,6 +33,8 @@ namespace ne {
 
         /**
          * Will create a static class instance and return instance if not created before.
+         *
+         * @return Singleton.
          */
         static GLFW &get() {
             static GLFW glfw;

@@ -9,7 +9,18 @@
  */
 class EditorGameInstance : public ne::IGameInstance {
 public:
-    EditorGameInstance(ne::Window *pGameWindow);
+    /**
+     * Constructor.
+     *
+     * @warning There is no need to save window/input manager pointers
+     * in derived classes as the base class already saves these pointers and
+     * provides @ref getGameWindow and @ref getInputManager functions.
+     *
+     * @param pWindow       Window that owns this game instance.
+     * @param pInputManager Input manager of the owner Game object.
+     */
+    EditorGameInstance(ne::Window *pWindow, ne::InputManager *pInputManager)
+        : IGameInstance(pWindow, pInputManager){};
     virtual ~EditorGameInstance() override = default;
 
     /**

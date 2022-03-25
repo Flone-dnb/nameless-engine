@@ -153,11 +153,15 @@ namespace ne {
         /**
          * Sets the window opacity (1.0f for opaque, 0.0f for transparent).
          * Does nothing if the OS does not support transparent windows.
+         *
+         * @param fOpacity Opacity value between 0.0 and 1.0.
          */
         void setOpacity(float fOpacity) const;
 
         /**
          * Sets new window title.
+         *
+         * @param sNewTitle New window title.
          */
         void setTitle(const std::string &sNewTitle);
 

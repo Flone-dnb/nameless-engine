@@ -10,16 +10,58 @@ namespace ne {
     class KeyboardModifiers {
     public:
         KeyboardModifiers() = delete;
-        explicit KeyboardModifiers(int iModifiers) { this->iModifiers = iModifiers; }
 
+        /**
+         * Constructor.
+         *
+         * @param iModifiers GLFW modifiers value.
+         */
+        explicit KeyboardModifiers(const int iModifiers) { this->iModifiers = iModifiers; }
+
+        /**
+         * Whether the Shift key is pressed or not.
+         *
+         * @return 'true' if the Shift key is pressed, 'false' otherwise.
+         */
         bool isShiftPressed() const { return iModifiers & GLFW_MOD_SHIFT; }
+
+        /**
+         * Whether the Control (Ctrl) key is pressed or not.
+         *
+         * @return 'true' if the Control (Ctrl) key is pressed, 'false' otherwise.
+         */
         bool isControlPressed() const { return iModifiers & GLFW_MOD_CONTROL; }
+
+        /**
+         * Whether the Alt key is pressed or not.
+         *
+         * @return 'true' if the Alt key is pressed, 'false' otherwise.
+         */
         bool isAltPressed() const { return iModifiers & GLFW_MOD_ALT; }
+
+        /**
+         * Whether the Super key is pressed or not.
+         *
+         * @return 'true' if the Super key is pressed, 'false' otherwise.
+         */
         bool isSuperPressed() const { return iModifiers & GLFW_MOD_SUPER; }
+
+        /**
+         * Whether the Caps Lock key is pressed or not.
+         *
+         * @return 'true' if the Caps Lock key is pressed, 'false' otherwise.
+         */
         bool isCapsLockPressed() const { return iModifiers & GLFW_MOD_CAPS_LOCK; }
+
+        /**
+         * Whether the Num Lock key is pressed or not.
+         *
+         * @return 'true' if the Num Lock key is pressed, 'false' otherwise.
+         */
         bool isNumLockPressed() const { return iModifiers & GLFW_MOD_NUM_LOCK; }
 
     private:
+        /** GLFW modifiers value. */
         int iModifiers;
     };
     /**

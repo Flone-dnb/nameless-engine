@@ -33,9 +33,6 @@ namespace ne {
 
         virtual ~DirectXRenderer() override {}
 
-        virtual void update() override;
-        virtual void drawFrame() override;
-
         /**
          * Looks for video adapters (GPUs) that support used DirectX version and feature level.
          *
@@ -73,6 +70,12 @@ namespace ne {
         virtual Antialiasing getCurrentAntialiasing() const override;
 
     protected:
+        /** Update internal resources for next frame. */
+        virtual void update() override;
+
+        /** Draw new frame. */
+        virtual void drawFrame() override;
+
         /**
          * Enables DX debug layer.
          *
@@ -86,7 +89,7 @@ namespace ne {
          * Sets the video adapter to be used.
          *
          * @param sVideoAdapterName Name of the video adapter to use.
-         * You can query supported video adapters by using @ref getSupportedVideoAdapters
+         * You can query supported video adapters by using @ref getSupportedGpus
          *
          * @return Error if something went wrong, for example, if an adapter with the specified
          * name was not found, or if it was found but does not support used DirectX version

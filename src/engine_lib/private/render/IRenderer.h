@@ -46,9 +46,6 @@ namespace ne {
 
         virtual ~IRenderer() = default;
 
-        virtual void update() = 0;
-        virtual void drawFrame() = 0;
-
         /**
          * Looks for video adapters (GPUs) that support this renderer.
          *
@@ -86,6 +83,12 @@ namespace ne {
         virtual Antialiasing getCurrentAntialiasing() const = 0;
 
     protected:
+        /** Update internal resources for next frame. */
+        virtual void update() = 0;
+
+        /** Draw new frame. */
+        virtual void drawFrame() = 0;
+
         /**
          * Writes current renderer configuration to disk.
          */
@@ -100,6 +103,8 @@ namespace ne {
 
         /**
          * Used to determine if the configuration file exists on the disk.
+         *
+         * @return 'true' if configuration file exists, 'false' otherwise.
          */
         static bool isConfigurationFileExists();
 
@@ -139,10 +144,19 @@ namespace ne {
         static const char *getConfigurationSectionAntialiasing();
 
     private:
+        /** File name used to store renderer configuration. */
         inline static const char *sRendererConfigurationFileName = "render";
+
+        /** Name of the section (used in configuration) for GPU settings. */
         inline static const char *sConfigurationSectionGpu = "GPU";
+
+        /** Name of the section (used in configuration) for resolution settings. */
         inline static const char *sConfigurationSectionResolution = "resolution";
+
+        /** Name of the section (used in configuration) for refresh rate settings. */
         inline static const char *sConfigurationSectionRefreshRate = "refresh rate";
+
+        /** Name of the section (used in configuration) for anti-aliasing settings. */
         inline static const char *sConfigurationSectionAntialiasing = "anti-aliasing";
     };
 } // namespace ne

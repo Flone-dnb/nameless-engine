@@ -93,7 +93,7 @@ namespace ne {
         [[nodiscard]] inline Window *getGameWindow() const;
 
         /**
-         * Returns a reference to the input manager this Game Instance is using.
+         * Returns a reference to the input manager this game instance is using.
          * Input manager allows binding names with multiple input keys that
          * you can receive in @ref onInputAction.
          *

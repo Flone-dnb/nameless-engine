@@ -29,6 +29,8 @@ set(ENGINE_LIB_SOURCES
     private/misc/Globals.cpp
     private/io/ConfigManager.cpp
     public/io/ConfigManager.h
+    private/input/InputManager.cpp
+    public/input/InputManager.h
     # add your .h/.cpp files here
 )
 

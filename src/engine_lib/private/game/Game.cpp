@@ -7,6 +7,19 @@
 #endif
 
 namespace ne {
+    void Game::onKeyInput(KeyboardKey key, KeyboardModifiers modifiers, bool bIsPressedDown) {
+        pGameInstance->onKeyInput(key, modifiers, bIsPressedDown);
+
+        // Find action by key.
+        for (auto it = inputManager.actions.begin(); it != inputManager.actions.end(); ++it) {
+            for (const auto &actionKey : it->second) {
+                if (actionKey == key) {
+                    pGameInstance->onInputAction(it->first, key, modifiers, bIsPressedDown);
+                }
+            }
+        }
+    }
+
     Game::Game(Window *pWindow) {
         this->pWindow = pWindow;
 

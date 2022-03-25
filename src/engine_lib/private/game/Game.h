@@ -3,7 +3,9 @@
 // Std.
 #include <memory>
 
+// Custom.
 #include "game/IGameInstance.h"
+#include "input/InputManager.h"
 
 namespace ne {
     class IGameInstance;
@@ -11,8 +13,9 @@ namespace ne {
     class Window;
 
     /**
-     * Holds main game objects: game instance, renderer,
+     * Holds main game objects: game instance, input manager, renderer,
      * audio engine, physics engine and etc.
+     * Owned by Window object.
      */
     class Game {
     public:
@@ -29,6 +32,15 @@ namespace ne {
         requires std::derived_from<GameInstance, IGameInstance>
         void setGameInstance() { pGameInstance = std::make_unique<GameInstance>(pWindow); }
 
+        /**
+         * Called when the window (that owns this object) receives keyboard input.
+         *
+         * @param key            Keyboard key.
+         * @param modifiers      Keyboard modifier keys.
+         * @param bIsPressedDown Whether the key down event occurred or key up.
+         */
+        void onKeyInput(KeyboardKey key, KeyboardModifiers modifiers, bool bIsPressedDown);
+
     private:
         // The object should be created by a Window instance.
         friend class Window;
@@ -41,7 +53,8 @@ namespace ne {
         Game(Window *pWindow);
 
         /**
-         * Window that owns this object, thus raw pointer - do not delete.
+         * A reference to a window-owner of this Game.
+         * Should not be deleted.
          */
         Window *pWindow;
 
@@ -54,5 +67,8 @@ namespace ne {
          * Draws the graphics on a window.
          */
         std::unique_ptr<IRenderer> pRenderer;
+
+        /** Binds action names with input. */
+        InputManager inputManager;
     };
 } // namespace ne

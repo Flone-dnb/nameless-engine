@@ -5,14 +5,26 @@
 
 namespace ne {
     class Window;
+    class InputManager;
 
     /**
      * Reacts to user inputs, window events and etc.
+     * Owned by Game object.
      */
     class IGameInstance {
     public:
         IGameInstance() = delete;
-        explicit IGameInstance(Window *pGameWindow);
+        /**
+         * Constructor.
+         *
+         * @warning There is no need to save window/input manager pointers
+         * in derived classes as the base class already saves these pointers and
+         * provides @ref getGameWindow and @ref getInputManager functions.
+         *
+         * @param pGameWindow   Window that owns this game instance.
+         * @param pInputManager Input manager of the owner Game object.
+         */
+        explicit IGameInstance(Window *pGameWindow, InputManager *pInputManager);
 
         IGameInstance(const IGameInstance &) = delete;
         IGameInstance &operator=(const IGameInstance &) = delete;
@@ -20,7 +32,7 @@ namespace ne {
         virtual ~IGameInstance() = default;
 
         /**
-         * Called before a frame is rendered.
+         * Called before a new frame is rendered.
          *
          * @param fTimeFromPrevCallInSec   Time in seconds that has passed since the last call
          * to this function.
@@ -28,7 +40,22 @@ namespace ne {
         virtual void onBeforeNewFrame(float fTimeFromPrevCallInSec) {}
 
         /**
+         * Called when a window that owns this game instance receives user
+         * input and the input key exists as an action in the input manager.
+         * Called after @ref onKeyInput.
+         *
+         * @param sActionName    Name of the input action (from input manager).
+         * @param key            Keyboard key.
+         * @param modifiers      Keyboard modifier keys.
+         * @param bIsPressedDown Whether the key down event occurred or key up.
+         */
+        virtual void onInputAction(const std::string &sActionName, KeyboardKey key,
+                                   KeyboardModifiers modifiers, bool bIsPressedDown) {}
+
+        /**
          * Called when the window receives keyboard input.
+         * Called before @ref onInputAction.
+         * Prefer to use @ref onInputAction instead of this function.
          *
          * @param key            Keyboard key.
          * @param modifiers      Keyboard modifier keys.
@@ -44,9 +71,11 @@ namespace ne {
         virtual void onWindowFocusChanged(bool bIsFocused) {}
 
         /**
-         * Called when the window was requested to close (no new frames will be rendered).
+         * Called when a window that owns this game instance
+         * was requested to close (no new frames will be rendered).
+         * Prefer to do your destructor logic here.
          */
-        virtual void onWindowClose(){};
+        virtual void onWindowClose() {}
 
         /**
          * Returns the time in seconds that has passed
@@ -63,12 +92,25 @@ namespace ne {
          */
         [[nodiscard]] inline Window *getGameWindow() const;
 
+        /**
+         * Returns a reference to the input manager this Game Instance is using.
+         *
+         * @return A pointer to the input manager, should not be deleted.
+         */
+        [[nodiscard]] inline InputManager *getInputManager() const;
+
     private:
         /**
          * A reference to a window-owner of this Game Instance.
          * Should not be deleted.
          */
         Window *pGameWindow = nullptr;
+
+        /**
+         * A reference to a input manager of the owner Game object.
+         * Should not be deleted.
+         */
+        InputManager *pInputManager = nullptr;
     };
 
 } // namespace ne

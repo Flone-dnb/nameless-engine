@@ -99,10 +99,10 @@ namespace ne {
     }
 
     void Window::internalOnKeyInput(KeyboardKey key, KeyboardModifiers modifiers, bool bIsPressedDown) const {
-        if (!pGame || !pGame->pGameInstance) {
+        if (!pGame) {
             return;
         }
-        pGame->pGameInstance->onKeyInput(key, modifiers, bIsPressedDown);
+        pGame->onKeyInput(key, modifiers, bIsPressedDown);
     }
 
     void Window::internalOnWindowFocusChanged(bool bIsFocused) const {

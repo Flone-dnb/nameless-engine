@@ -86,7 +86,7 @@ namespace ne {
         static float getTotalApplicationTimeInSec();
 
         /**
-         * Returns a reference to the window this Game Instance is using.
+         * Returns a reference to the window this game instance is using.
          *
          * @return A pointer to the window, should not be deleted.
          */
@@ -94,6 +94,8 @@ namespace ne {
 
         /**
          * Returns a reference to the input manager this Game Instance is using.
+         * Input manager allows binding names with multiple input keys that
+         * you can receive in @ref onInputAction.
          *
          * @return A pointer to the input manager, should not be deleted.
          */

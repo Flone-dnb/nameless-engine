@@ -12,7 +12,8 @@
 #include "stb/stb_image.h"
 
 namespace ne {
-    void GLFWWindowKeyCallback(GLFWwindow *pGLFWWindow, int iKey, int iScancode, int iAction, int iMods) {
+    void GLFWWindowKeyboardCallback(GLFWwindow *pGLFWWindow, int iKey, int iScancode, int iAction,
+                                    int iMods) {
         if (iAction == GLFW_REPEAT) {
             return;
         }
@@ -24,6 +25,16 @@ namespace ne {
 
         pWindow->internalOnKeyboardInput(static_cast<KeyboardKey>(iKey), KeyboardModifiers(iMods),
                                          iAction == GLFW_PRESS ? true : false);
+    }
+
+    void GLFWWindowMouseCallback(GLFWwindow *pGLFWWindow, int iButton, int iAction, int iMods) {
+        const Window *pWindow = static_cast<Window *>(glfwGetWindowUserPointer(pGLFWWindow));
+        if (!pWindow) {
+            return;
+        }
+
+        pWindow->internalOnMouseInput(static_cast<MouseButton>(iButton), KeyboardModifiers(iMods),
+                                      iAction == GLFW_PRESS ? true : false);
     }
 
     void GLFWWindowFocusCallback(GLFWwindow *pGLFWWindow, int iFocused) {
@@ -103,7 +114,15 @@ namespace ne {
         if (!pGame) {
             return;
         }
-        pGame->onKeyInput(key, modifiers, bIsPressedDown);
+        pGame->onKeyboardInput(key, modifiers, bIsPressedDown);
+    }
+
+    void Window::internalOnMouseInput(MouseButton button, KeyboardModifiers modifiers,
+                                      bool bIsPressedDown) const {
+        if (!pGame) {
+            return;
+        }
+        pGame->onMouseInput(button, modifiers, bIsPressedDown);
     }
 
     void Window::internalOnWindowFocusChanged(bool bIsFocused) const {
@@ -173,7 +192,10 @@ namespace ne {
         glfwSetWindowUserPointer(pGLFWWindow, pWindow.get());
 
         // Bind to keyboard input.
-        glfwSetKeyCallback(pGLFWWindow, GLFWWindowKeyCallback);
+        glfwSetKeyCallback(pGLFWWindow, GLFWWindowKeyboardCallback);
+
+        // Bind to mouse input.
+        glfwSetMouseButtonCallback(pGLFWWindow, GLFWWindowMouseCallback);
 
         // Bind to focus change event.
         glfwSetWindowFocusCallback(pGLFWWindow, GLFWWindowFocusCallback);

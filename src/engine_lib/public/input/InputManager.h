@@ -4,10 +4,12 @@
 #include <unordered_map>
 #include <string>
 #include <vector>
+#include <variant>
 #include <optional>
 
 // Custom.
 #include "input/KeyboardKey.hpp"
+#include "input/MouseButton.hpp"
 
 namespace ne {
     /**
@@ -26,9 +28,10 @@ namespace ne {
          * with the new keys (old keys will be removed).
          *
          * @param sActionName   Name of a new action.
-         * @param vKeys         Keys associated with this action.
+         * @param vKeys         Keyboard/mouse keys/buttons associated with this action.
          */
-        void addAction(const std::string &sActionName, const std::vector<KeyboardKey> &vKeys);
+        void addAction(const std::string &sActionName,
+                       const std::vector<std::variant<KeyboardKey, MouseButton>> &vKeys);
 
         /**
          * Looks for an action with the specified name, if one is found a copy of this action's
@@ -39,7 +42,8 @@ namespace ne {
          *
          * @return Keys associated with the action if one was found.
          */
-        std::optional<std::vector<KeyboardKey>> getAction(const std::string &sActionName) const;
+        std::optional<std::vector<std::variant<KeyboardKey, MouseButton>>>
+        getAction(const std::string &sActionName) const;
 
         /**
          * Removes an action with the specified name.
@@ -55,12 +59,13 @@ namespace ne {
          *
          * @return A copy of all actions.
          */
-        std::unordered_map<std::string, std::vector<KeyboardKey>> getAllActions() const;
+        std::unordered_map<std::string, std::vector<std::variant<KeyboardKey, MouseButton>>>
+        getAllActions() const;
 
     private:
         friend class Game;
 
         /** Map of actions. */
-        std::unordered_map<std::string, std::vector<KeyboardKey>> actions;
+        std::unordered_map<std::string, std::vector<std::variant<KeyboardKey, MouseButton>>> actions;
     };
 } // namespace ne

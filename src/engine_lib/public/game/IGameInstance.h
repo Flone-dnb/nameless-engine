@@ -1,7 +1,11 @@
 ﻿#pragma once
 
+// STL.
+#include <variant>
+
 // Custom.
 #include "input/KeyboardKey.hpp"
+#include "input/MouseButton.hpp"
 
 namespace ne {
     class Window;
@@ -45,11 +49,11 @@ namespace ne {
          * Called after @ref onKeyInput.
          *
          * @param sActionName    Name of the input action (from input manager).
-         * @param key            Keyboard key.
+         * @param key            Keyboard/mouse key/button.
          * @param modifiers      Keyboard modifier keys.
          * @param bIsPressedDown Whether the key down event occurred or key up.
          */
-        virtual void onInputAction(const std::string &sActionName, KeyboardKey key,
+        virtual void onInputAction(const std::string &sActionName, std::variant<KeyboardKey, MouseButton> key,
                                    KeyboardModifiers modifiers, bool bIsPressedDown) {}
 
         /**
@@ -62,6 +66,17 @@ namespace ne {
          * @param bIsPressedDown Whether the key down event occurred or key up.
          */
         virtual void onKeyboardInput(KeyboardKey key, KeyboardModifiers modifiers, bool bIsPressedDown) {}
+
+        /**
+         * Called when the window receives mouse input.
+         * Called before @ref onInputAction.
+         * Prefer to use @ref onInputAction instead of this function.
+         *
+         * @param button         Mouse button.
+         * @param modifiers      Keyboard modifier keys.
+         * @param bIsPressedDown Whether the button down event occurred or button up.
+         */
+        virtual void onMouseInput(MouseButton button, KeyboardModifiers modifiers, bool bIsPressedDown) {}
 
         /**
          * Called when the window focus was changed.

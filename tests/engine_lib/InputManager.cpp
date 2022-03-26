@@ -7,10 +7,11 @@ TEST_CASE("add action") {
     using namespace ne;
 
     const std::string sAction1Name = "test1";
-    const std::vector<KeyboardKey> vAction1Keys = {KeyboardKey::KEY_0, KeyboardKey::KEY_Z};
+    const std::vector<std::variant<KeyboardKey, MouseButton>> vAction1Keys = {KeyboardKey::KEY_0,
+                                                                              KeyboardKey::KEY_Z};
 
     const std::string sAction2Name = "test2";
-    const std::vector<KeyboardKey> vAction2Keys = {KeyboardKey::KEY_A};
+    const std::vector<std::variant<KeyboardKey, MouseButton>> vAction2Keys = {MouseButton::LEFT};
 
     InputManager manager;
     manager.addAction(sAction1Name, vAction1Keys);
@@ -24,10 +25,11 @@ TEST_CASE("remove action") {
     using namespace ne;
 
     const std::string sAction1Name = "test1";
-    const std::vector<KeyboardKey> vAction1Keys = {KeyboardKey::KEY_0, KeyboardKey::KEY_Z};
+    const std::vector<std::variant<KeyboardKey, MouseButton>> vAction1Keys = {KeyboardKey::KEY_0,
+                                                                              KeyboardKey::KEY_Z};
 
     const std::string sAction2Name = "test2";
-    const std::vector<KeyboardKey> vAction2Keys = {KeyboardKey::KEY_A};
+    const std::vector<std::variant<KeyboardKey, MouseButton>> vAction2Keys = {MouseButton::LEFT};
 
     InputManager manager;
     manager.addAction(sAction1Name, vAction1Keys);
@@ -42,9 +44,10 @@ TEST_CASE("modify action") {
     using namespace ne;
 
     const std::string sAction1Name = "test1";
-    const std::vector<KeyboardKey> vAction1Keys = {KeyboardKey::KEY_0, KeyboardKey::KEY_Z};
+    const std::vector<std::variant<KeyboardKey, MouseButton>> vAction1Keys = {KeyboardKey::KEY_0,
+                                                                              KeyboardKey::KEY_Z};
 
-    const std::vector<KeyboardKey> vAction2Keys = {KeyboardKey::KEY_A};
+    const std::vector<std::variant<KeyboardKey, MouseButton>> vAction2Keys = {MouseButton::LEFT};
 
     InputManager manager;
     manager.addAction(sAction1Name, vAction1Keys);

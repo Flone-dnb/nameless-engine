@@ -7,14 +7,29 @@
 #endif
 
 namespace ne {
-    void Game::onKeyInput(KeyboardKey key, KeyboardModifiers modifiers, bool bIsPressedDown) {
+    void Game::onKeyboardInput(KeyboardKey key, KeyboardModifiers modifiers, bool bIsPressedDown) {
         pGameInstance->onKeyboardInput(key, modifiers, bIsPressedDown);
 
         // Find action by key.
         for (auto it = inputManager.actions.begin(); it != inputManager.actions.end(); ++it) {
             for (const auto &actionKey : it->second) {
-                if (actionKey == key) {
+                if (std::holds_alternative<KeyboardKey>(actionKey) &&
+                    std::get<KeyboardKey>(actionKey) == key) {
                     pGameInstance->onInputAction(it->first, key, modifiers, bIsPressedDown);
+                }
+            }
+        }
+    }
+
+    void Game::onMouseInput(MouseButton button, KeyboardModifiers modifiers, bool bIsPressedDown) {
+        pGameInstance->onMouseInput(button, modifiers, bIsPressedDown);
+
+        // Find action by key.
+        for (auto it = inputManager.actions.begin(); it != inputManager.actions.end(); ++it) {
+            for (const auto &actionKey : it->second) {
+                if (std::holds_alternative<MouseButton>(actionKey) &&
+                    std::get<MouseButton>(actionKey) == button) {
+                    pGameInstance->onInputAction(it->first, button, modifiers, bIsPressedDown);
                 }
             }
         }

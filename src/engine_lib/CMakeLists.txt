@@ -31,6 +31,7 @@ set(ENGINE_LIB_SOURCES
     public/io/ConfigManager.h
     private/input/InputManager.cpp
     public/input/InputManager.h
+    public/input/MouseButton.hpp
     # add your .h/.cpp files here
 )
 

@@ -32,6 +32,32 @@ public:
     virtual void onBeforeNewFrame(float fTimeFromPrevCallInSec) override{};
 
     /**
+     * Called when a window that owns this game instance receives user
+     * input and the input key exists as an action in the input manager.
+     * Called after @ref onKeyInput.
+     *
+     * @param sActionName    Name of the input action (from input manager).
+     * @param key            Keyboard/mouse key/button.
+     * @param modifiers      Keyboard modifier keys.
+     * @param bIsPressedDown Whether the key down event occurred or key up.
+     */
+    virtual void onInputAction(const std::string &sActionName,
+                               std::variant<ne::KeyboardKey, ne::MouseButton> key,
+                               ne::KeyboardModifiers modifiers, bool bIsPressedDown) override {}
+
+    /**
+     * Called when the window receives mouse input.
+     * Called before @ref onInputAction.
+     * Prefer to use @ref onInputAction instead of this function.
+     *
+     * @param button         Mouse button.
+     * @param modifiers      Keyboard modifier keys.
+     * @param bIsPressedDown Whether the button down event occurred or button up.
+     */
+    virtual void onMouseInput(ne::MouseButton button, ne::KeyboardModifiers modifiers,
+                              bool bIsPressedDown) override;
+
+    /**
      * Called when the window receives keyboard input.
      *
      * @param key            Keyboard key.
@@ -40,13 +66,6 @@ public:
      */
     virtual void onKeyboardInput(ne::KeyboardKey key, ne::KeyboardModifiers modifiers,
                                  bool bIsPressedDown) override;
-
-    /**
-     * Called when the window focus was changed.
-     *
-     * @param bIsFocused  Whether the window has gained or lost the focus.
-     */
-    virtual void onWindowFocusChanged(bool bIsFocused) override{};
 
     /**
      * Called when the window was requested to close (no new frames will be rendered).

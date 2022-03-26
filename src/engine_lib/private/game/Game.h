@@ -6,6 +6,8 @@
 // Custom.
 #include "game/IGameInstance.h"
 #include "input/InputManager.h"
+#include "input/KeyboardKey.hpp"
+#include "input/MouseButton.hpp"
 
 namespace ne {
     class IGameInstance;
@@ -39,7 +41,16 @@ namespace ne {
          * @param modifiers      Keyboard modifier keys.
          * @param bIsPressedDown Whether the key down event occurred or key up.
          */
-        void onKeyInput(KeyboardKey key, KeyboardModifiers modifiers, bool bIsPressedDown);
+        void onKeyboardInput(KeyboardKey key, KeyboardModifiers modifiers, bool bIsPressedDown);
+
+        /**
+         * Called when the window (that owns this object) receives mouse input.
+         *
+         * @param button         Mouse button.
+         * @param modifiers      Keyboard modifier keys.
+         * @param bIsPressedDown Whether the button down event occurred or button up.
+         */
+        void onMouseInput(MouseButton button, KeyboardModifiers modifiers, bool bIsPressedDown);
 
     private:
         // The object should be created by a Window instance.

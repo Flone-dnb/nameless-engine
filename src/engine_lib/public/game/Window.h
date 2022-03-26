@@ -11,6 +11,7 @@
 #include "window/GLFW.hpp"
 #include "IGameInstance.h"
 #include "input/KeyboardKey.hpp"
+#include "input/MouseButton.hpp"
 
 namespace ne {
     class Error;
@@ -244,6 +245,16 @@ namespace ne {
 
         /**
          * Used internally, should not be called from user code.
+         * Use IGameInstance::onMouseInput() from user code.
+         *
+         * @param button         Mouse button.
+         * @param modifiers      Keyboard modifier keys.
+         * @param bIsPressedDown Whether the button down event occurred or button up.
+         */
+        void internalOnMouseInput(MouseButton button, KeyboardModifiers modifiers, bool bIsPressedDown) const;
+
+        /**
+         * Used internally, should not be called from user code.
          * Use IGameInstance::onWindowFocusChanged() from user code.
          *
          * @param bIsFocused  Whether the window has gained or lost the focus.
@@ -311,6 +322,7 @@ namespace ne {
 
             // TODO: update()
             // TODO: drawFrame()
+            // TODO: put update() into drawFrame()?
         }
 
         pGame->pGameInstance->onWindowClose();

@@ -61,7 +61,7 @@ namespace ne {
          * @param modifiers      Keyboard modifier keys.
          * @param bIsPressedDown Whether the key down event occurred or key up.
          */
-        virtual void onKeyInput(KeyboardKey key, KeyboardModifiers modifiers, bool bIsPressedDown) {}
+        virtual void onKeyboardInput(KeyboardKey key, KeyboardModifiers modifiers, bool bIsPressedDown) {}
 
         /**
          * Called when the window focus was changed.

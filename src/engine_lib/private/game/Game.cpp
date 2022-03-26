@@ -8,7 +8,7 @@
 
 namespace ne {
     void Game::onKeyInput(KeyboardKey key, KeyboardModifiers modifiers, bool bIsPressedDown) {
-        pGameInstance->onKeyInput(key, modifiers, bIsPressedDown);
+        pGameInstance->onKeyboardInput(key, modifiers, bIsPressedDown);
 
         // Find action by key.
         for (auto it = inputManager.actions.begin(); it != inputManager.actions.end(); ++it) {

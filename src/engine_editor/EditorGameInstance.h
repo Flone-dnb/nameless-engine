@@ -38,8 +38,8 @@ public:
      * @param modifiers      Keyboard modifier keys.
      * @param bIsPressedDown Whether the key down event occurred or key up.
      */
-    virtual void onKeyInput(ne::KeyboardKey key, ne::KeyboardModifiers modifiers,
-                            bool bIsPressedDown) override;
+    virtual void onKeyboardInput(ne::KeyboardKey key, ne::KeyboardModifiers modifiers,
+                                 bool bIsPressedDown) override;
 
     /**
      * Called when the window focus was changed.

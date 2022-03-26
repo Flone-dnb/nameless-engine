@@ -30,7 +30,7 @@ namespace ne {
          */
         template <typename GameInstance>
         requires std::derived_from<GameInstance, IGameInstance>
-        void setGameInstance() { pGameInstance = std::make_unique<GameInstance>(pWindow); }
+        void setGameInstance() { pGameInstance = std::make_unique<GameInstance>(pWindow, &inputManager); }
 
         /**
          * Called when the window (that owns this object) receives keyboard input.

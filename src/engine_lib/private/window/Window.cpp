@@ -22,8 +22,8 @@ namespace ne {
             return;
         }
 
-        pWindow->internalOnKeyInput(static_cast<KeyboardKey>(iKey), KeyboardModifiers(iMods),
-                                    iAction == GLFW_PRESS ? true : false);
+        pWindow->internalOnKeyboardInput(static_cast<KeyboardKey>(iKey), KeyboardModifiers(iMods),
+                                         iAction == GLFW_PRESS ? true : false);
     }
 
     void GLFWWindowFocusCallback(GLFWwindow *pGLFWWindow, int iFocused) {
@@ -98,7 +98,8 @@ namespace ne {
         return nullptr;
     }
 
-    void Window::internalOnKeyInput(KeyboardKey key, KeyboardModifiers modifiers, bool bIsPressedDown) const {
+    void Window::internalOnKeyboardInput(KeyboardKey key, KeyboardModifiers modifiers,
+                                         bool bIsPressedDown) const {
         if (!pGame) {
             return;
         }

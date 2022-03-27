@@ -24,7 +24,7 @@ namespace ne {
             return;
         }
 
-        pWindow->internalOnKeyboardInput(static_cast<KeyboardKey>(iKey), KeyboardModifiers(iMods),
+        pWindow->internalOnKeyboardInput(static_cast<KeyboardKey::Value>(iKey), KeyboardModifiers(iMods),
                                          iAction == GLFW_PRESS ? true : false);
     }
 

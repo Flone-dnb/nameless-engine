@@ -23,7 +23,7 @@ namespace ne {
          *
          * @warning There is no need to save window/input manager pointers
          * in derived classes as the base class already saves these pointers and
-         * provides @ref getGameWindow and @ref getInputManager functions.
+         * provides @ref getWindow and @ref getInputManager functions.
          *
          * @param pGameWindow   Window that owns this game instance.
          * @param pInputManager Input manager of the owner Game object.
@@ -46,7 +46,7 @@ namespace ne {
         /**
          * Called when a window that owns this game instance receives user
          * input and the input key exists as an action in the input manager.
-         * Called after @ref onKeyInput.
+         * Called after @ref onKeyboardInput.
          *
          * @param sActionName    Name of the input action (from input manager).
          * @param key            Keyboard/mouse key/button.

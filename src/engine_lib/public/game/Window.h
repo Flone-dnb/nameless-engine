@@ -232,6 +232,16 @@ namespace ne {
         std::pair<int, int> getSize() const;
 
         /**
+         * Returns the current cursor position on window.
+         *
+         * @warning This function must only be called from the main thread.
+         *
+         * @return A pair of X and Y coordinates in range [0.0; 1.0]
+         * relative to the upper-left corner of the window.
+         */
+        std::pair<float, float> getCursorPosition() const;
+
+        /**
          * Returns the title of this window.
          *
          * @return Title of the window.

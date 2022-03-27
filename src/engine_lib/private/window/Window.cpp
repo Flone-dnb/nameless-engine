@@ -106,6 +106,20 @@ namespace ne {
         return std::make_pair(iWidth, iHeight);
     }
 
+    std::pair<float, float> Window::getCursorPosition() const {
+        double xPos, yPos;
+        glfwGetCursorPos(pGlfwWindow, &xPos, &yPos);
+
+        const auto size = getSize();
+        if (size.first == 0 || size.second == 0) {
+            Logger::get().error("getSize() returned 0");
+            return std::make_pair(0.0f, 0.0f);
+        }
+
+        return std::make_pair(static_cast<float>(xPos) / static_cast<float>(size.first),
+                              static_cast<float>(yPos) / static_cast<float>(size.second));
+    }
+
     std::string Window::getTitle() const { return sWindowTitle; }
 
     float Window::getOpacity() const { return glfwGetWindowOpacity(pGlfwWindow); }

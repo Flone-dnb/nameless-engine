@@ -105,7 +105,7 @@ namespace ne {
          *
          * @return A pointer to the window, should not be deleted.
          */
-        [[nodiscard]] inline Window *getGameWindow() const;
+        Window *getWindow() const;
 
         /**
          * Returns a reference to the input manager this game instance is using.
@@ -114,7 +114,7 @@ namespace ne {
          *
          * @return A pointer to the input manager, should not be deleted.
          */
-        [[nodiscard]] inline InputManager *getInputManager() const;
+        InputManager *getInputManager() const;
 
     private:
         /**

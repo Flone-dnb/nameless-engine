@@ -93,13 +93,21 @@ namespace ne {
         return Window::newInstance(params);
     }
 
-    void Window::hide() const { glfwHideWindow(pGLFWWindow); }
+    void Window::hide() const { glfwHideWindow(pGlfwWindow); }
 
-    void Window::close() const { glfwSetWindowShouldClose(pGLFWWindow, 1); }
+    void Window::close() const { glfwSetWindowShouldClose(pGlfwWindow, 1); }
+
+    std::pair<int, int> Window::getSize() const {
+        int iWidth, iHeight;
+
+        glfwGetWindowSize(pGlfwWindow, &iWidth, &iHeight);
+
+        return std::make_pair(iWidth, iHeight);
+    }
 
     std::string Window::getTitle() const { return sWindowTitle; }
 
-    float Window::getOpacity() const { return glfwGetWindowOpacity(pGLFWWindow); }
+    float Window::getOpacity() const { return glfwGetWindowOpacity(pGlfwWindow); }
 
     IRenderer *Window::getRenderer() const {
         if (pGame && pGame->pRenderer) {
@@ -203,16 +211,16 @@ namespace ne {
         return std::move(pWindow);
     }
 
-    Window::~Window() { glfwDestroyWindow(pGLFWWindow); }
+    Window::~Window() { glfwDestroyWindow(pGlfwWindow); }
 
     WindowBuilder Window::getBuilder() { return WindowBuilder(); }
 
-    void Window::show() const { glfwShowWindow(pGLFWWindow); }
+    void Window::show() const { glfwShowWindow(pGlfwWindow); }
 
-    void Window::setOpacity(float fOpacity) const { glfwSetWindowOpacity(pGLFWWindow, fOpacity); }
+    void Window::setOpacity(float fOpacity) const { glfwSetWindowOpacity(pGlfwWindow, fOpacity); }
 
     void Window::setTitle(const std::string &sNewTitle) {
-        glfwSetWindowTitle(pGLFWWindow, sNewTitle.c_str());
+        glfwSetWindowTitle(pGlfwWindow, sNewTitle.c_str());
         sWindowTitle = sNewTitle;
     }
 
@@ -224,21 +232,21 @@ namespace ne {
         GLFWimage images[1];
         images[0].pixels = stbi_load(sPathToIcon.data(), &images[0].width, &images[0].height, nullptr, 4);
 
-        glfwSetWindowIcon(pGLFWWindow, 1, images);
+        glfwSetWindowIcon(pGlfwWindow, 1, images);
 
         stbi_image_free(images[0].pixels);
 
         return {};
     }
 
-    void Window::minimize() const { glfwIconifyWindow(pGLFWWindow); }
+    void Window::minimize() const { glfwIconifyWindow(pGlfwWindow); }
 
-    void Window::maximize() const { glfwMaximizeWindow(pGLFWWindow); }
+    void Window::maximize() const { glfwMaximizeWindow(pGlfwWindow); }
 
-    void Window::restore() const { glfwRestoreWindow(pGLFWWindow); }
+    void Window::restore() const { glfwRestoreWindow(pGlfwWindow); }
 
-    Window::Window(GLFWwindow *pGLFWWindow, const std::string &sWindowTitle) {
-        this->pGLFWWindow = pGLFWWindow;
+    Window::Window(GLFWwindow *pGlfwWindow, const std::string &sWindowTitle) {
+        this->pGlfwWindow = pGlfwWindow;
         this->sWindowTitle = sWindowTitle;
     }
 } // namespace ne

@@ -19,8 +19,7 @@ public:
      * @param pWindow       Window that owns this game instance.
      * @param pInputManager Input manager of the owner Game object.
      */
-    EditorGameInstance(ne::Window *pWindow, ne::InputManager *pInputManager)
-        : IGameInstance(pWindow, pInputManager){};
+    EditorGameInstance(ne::Window *pWindow, ne::InputManager *pInputManager);
     virtual ~EditorGameInstance() override = default;
 
     /**

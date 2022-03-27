@@ -11,7 +11,7 @@ namespace ne {
 
     float IGameInstance::getTotalApplicationTimeInSec() { return static_cast<float>(glfwGetTime()); }
 
-    Window *IGameInstance::getGameWindow() const { return pGameWindow; }
+    Window *IGameInstance::getWindow() const { return pGameWindow; }
 
     InputManager *IGameInstance::getInputManager() const { return pInputManager; }
 } // namespace ne

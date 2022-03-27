@@ -4,6 +4,7 @@
 #include <variant>
 #include <memory>
 #include <optional>
+#include <utility>
 
 // Custom.
 #include "misc/Error.h"
@@ -213,6 +214,15 @@ namespace ne {
         void close() const;
 
         /**
+         * Returns the current window size in pixels.
+         *
+         * @warning This function must only be called from the main thread.
+         *
+         * @return A pair of width and height in pixels.
+         */
+        std::pair<int, int> getSize() const;
+
+        /**
          * Returns the title of this window.
          *
          * @return Title of the window.
@@ -276,10 +286,10 @@ namespace ne {
         /**
          * Default constructor.
          *
-         * @param pGLFWWindow   Created GLFW window.
+         * @param pGlfwWindow   Created GLFW window.
          * @param sWindowTitle  Title of this window.
          */
-        Window(GLFWwindow *pGLFWWindow, const std::string &sWindowTitle);
+        Window(GLFWwindow *pGlfwWindow, const std::string &sWindowTitle);
 
         /**
          * Holds main game objects.
@@ -289,7 +299,7 @@ namespace ne {
         /**
          * GLFW window.
          */
-        GLFWwindow *pGLFWWindow;
+        GLFWwindow *pGlfwWindow;
 
         /**
          * Title of the window.
@@ -312,7 +322,7 @@ namespace ne {
         float fCurrentTimeInSec = 0.0f;
         float fPrevTimeInSec = 0.0f;
 
-        while (!glfwWindowShouldClose(pGLFWWindow)) {
+        while (!glfwWindowShouldClose(pGlfwWindow)) {
             glfwPollEvents();
 
             // Tick.

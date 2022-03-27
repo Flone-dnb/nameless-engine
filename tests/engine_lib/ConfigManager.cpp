@@ -101,48 +101,11 @@ TEST_CASE("test backup file") {
         REQUIRE(std::filesystem::exists(manager.getFilePath()));
         std::filesystem::remove(manager.getFilePath());
 
-        REQUIRE(std::filesystem::exists(manager.getFilePath() + L".old"));
-        std::filesystem::remove(manager.getFilePath() + L".old");
-    }
-}
+        auto backupFile = manager.getFilePath();
+        backupFile += ".old";
 
-TEST_CASE("save and load config using absolute path") {
-    using namespace ne;
-
-    std::string sFilePath = std::filesystem::temp_directory_path().string();
-    sFilePath += sTestConfigFileName;
-
-    // Create file.
-    {
-        ConfigManager manager;
-        manager.setValue(sTestConfigFileSection, "my cool string", "this is a cool string",
-                         "this is a comment");
-
-        auto res = manager.saveFile(ConfigCategory::CONFIG, sFilePath, false);
-        if (res.has_value()) {
-            res->addEntry();
-            INFO(res->getError())
-            REQUIRE(false);
-        }
-
-        // Check that file exists.
-        REQUIRE(std::filesystem::exists(sFilePath));
-    }
-
-    // Try to load configuration.
-    {
-        ConfigManager manager;
-        auto res = manager.loadFile(ConfigCategory::CONFIG, sFilePath);
-        if (res.has_value()) {
-            res->addEntry();
-            INFO(res->getError())
-            REQUIRE(false);
-        }
-
-        auto real = manager.getValue(sTestConfigFileSection, "my cool string", "");
-        REQUIRE(real == "this is a cool string");
-
-        std::filesystem::remove(sFilePath);
+        REQUIRE(std::filesystem::exists(backupFile));
+        std::filesystem::remove(backupFile);
     }
 }
 
@@ -163,8 +126,11 @@ TEST_CASE("get all config files of category") {
     const std::wstring sFirstFilePath = manager.getFilePath();
 
     // Check that file and backup exist.
+    auto backupFile = manager.getFilePath();
+    backupFile += ".old";
+
     REQUIRE(std::filesystem::exists(manager.getFilePath()));
-    REQUIRE(std::filesystem::exists(manager.getFilePath() + L".old"));
+    REQUIRE(std::filesystem::exists(backupFile));
 
     const std::string sSecondFileName = std::string(sTestConfigFileName) + "2";
 

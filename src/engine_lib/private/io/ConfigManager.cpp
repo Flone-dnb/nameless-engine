@@ -5,10 +5,10 @@
 
 namespace ne {
     std::vector<std::string> ConfigManager::getAllConfigFiles(ConfigCategory category) {
-        const std::wstring sCategoryFolder = ConfigManager::getFolderForConfigFiles(category);
+        const auto categoryFolder = ConfigManager::getFolderForConfigFiles(category);
 
         std::vector<std::string> vConfigFiles;
-        const auto directoryIterator = std::filesystem::directory_iterator(sCategoryFolder);
+        const auto directoryIterator = std::filesystem::directory_iterator(categoryFolder);
         for (const auto &entry : directoryIterator) {
             if (entry.is_regular_file() && entry.path().extension().compare(sBackupFileExtension)) {
                 vConfigFiles.push_back(entry.path().stem().string());
@@ -18,7 +18,7 @@ namespace ne {
         return vConfigFiles;
     }
 
-    std::wstring ConfigManager::getFolderForConfigFiles(ConfigCategory category) {
+    std::filesystem::path ConfigManager::getFolderForConfigFiles(ConfigCategory category) {
         std::filesystem::path basePath = getBaseDirectory();
         basePath += getApplicationName();
 
@@ -65,18 +65,21 @@ namespace ne {
             return error;
         }
 
-        sFilePath = std::get<std::filesystem::path>(result);
-        if (!std::filesystem::exists(sFilePath)) {
+        filePath = std::get<std::filesystem::path>(result);
+        std::filesystem::path backupFile = filePath;
+        backupFile += sBackupFileExtension;
+
+        if (!std::filesystem::exists(filePath)) {
             // Check if backup file exists.
-            if (std::filesystem::exists(sFilePath + sBackupFileExtension)) {
-                std::filesystem::copy_file(sFilePath + sBackupFileExtension, sFilePath);
+            if (std::filesystem::exists(backupFile)) {
+                std::filesystem::copy_file(backupFile, filePath);
             } else {
-                return Error("file and backup file do not exist (maybe non ASCII characters in path?)");
+                return Error("file and backup file do not exist");
             }
         }
 
         // Load file.
-        const SI_Error error = ini.LoadFile(sFilePath.c_str());
+        const SI_Error error = ini.LoadFile(filePath.c_str());
         if (error < 0) {
             return Error(std::format("failed to load file, error code: {}", std::to_string(error)));
         }
@@ -168,33 +171,35 @@ namespace ne {
             error.addEntry();
             return error;
         }
-        sFilePath = std::get<std::filesystem::path>(result);
+        filePath = std::get<std::filesystem::path>(result);
+        std::filesystem::path backupFile = filePath;
+        backupFile += sBackupFileExtension;
 
         if (bEnableBackup) {
-            if (std::filesystem::exists(sFilePath)) {
-                if (std::filesystem::exists(sFilePath + sBackupFileExtension)) {
-                    std::filesystem::remove(sFilePath + sBackupFileExtension);
+            if (std::filesystem::exists(filePath)) {
+                if (std::filesystem::exists(backupFile)) {
+                    std::filesystem::remove(backupFile);
                 }
-                std::filesystem::rename(sFilePath, sFilePath + sBackupFileExtension);
+                std::filesystem::rename(filePath, backupFile);
             }
         }
 
-        const SI_Error error = ini.SaveFile(sFilePath.c_str());
+        const SI_Error error = ini.SaveFile(filePath.c_str());
         if (error < 0) {
             return Error(std::format("failed to load file, error code: {}", std::to_string(error)));
         }
 
         if (bEnableBackup) {
             // Create backup file if not exists.
-            if (!std::filesystem::exists(sFilePath + sBackupFileExtension)) {
-                std::filesystem::copy_file(sFilePath, sFilePath + sBackupFileExtension);
+            if (!std::filesystem::exists(backupFile)) {
+                std::filesystem::copy_file(filePath, backupFile);
             }
         }
 
         return {};
     }
 
-    std::wstring ConfigManager::getFilePath() const { return sFilePath; }
+    std::filesystem::path ConfigManager::getFilePath() const { return filePath; }
 
     std::variant<std::filesystem::path, Error> ConfigManager::constructFilePath(ConfigCategory category,
                                                                                 std::string_view sFileName) {
@@ -202,7 +207,7 @@ namespace ne {
 
         // Check if absolute path.
         if (std::filesystem::path(sFileName).is_absolute()) {
-            basePath = sFileName;
+            return Error("received an absolute path as a file name");
         } else {
             if (sFileName.contains('/') || sFileName.contains('\\')) {
                 return Error("either specify an absolute path or a name (in the case don't use slashes");

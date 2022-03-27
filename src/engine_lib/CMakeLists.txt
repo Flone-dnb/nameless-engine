@@ -46,7 +46,7 @@ endif()
 message(STATUS "${PROJECT_NAME}: build type: ${CMAKE_BUILD_TYPE}.")
 
 # add DEBUG macro in Debug build
-if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+if(CMAKE_BUILD_TYPE MATCHES "^[Dd]ebug")
     message(STATUS "Adding DEBUG macro for this build type.")
     add_compile_definitions(DEBUG)
 endif()

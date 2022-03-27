@@ -14,7 +14,7 @@ endif()
 message(STATUS "${PROJECT_NAME}: build type: ${CMAKE_BUILD_TYPE}.")
 
 # add DEBUG macro in Debug build
-if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+if(CMAKE_BUILD_TYPE MATCHES "^[Dd]ebug")
     message(STATUS "Adding DEBUG macro for this build type.")
     add_compile_definitions(DEBUG)
 endif()
@@ -55,7 +55,7 @@ add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
                    ${CMAKE_SOURCE_DIR}/res/editor/ $<TARGET_FILE_DIR:${PROJECT_NAME}>/../res/editor/)
 
 # tests
-if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+if(CMAKE_BUILD_TYPE MATCHES "^[Dd]ebug")
     add_subdirectory(ext/Catch2 build/Catch2) # add Catch2 target
     add_executable(tests
         ${PROJECT_SOURCES}

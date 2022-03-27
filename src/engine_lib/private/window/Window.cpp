@@ -6,6 +6,7 @@
 
 // Custom.
 #include "misc/UniqueValueGenerator.h"
+#include "io/Logger.h"
 
 // External.
 #define STB_IMAGE_IMPLEMENTATION
@@ -237,6 +238,22 @@ namespace ne {
         stbi_image_free(images[0].pixels);
 
         return {};
+    }
+
+    void Window::setCursorVisibility(const bool bIsVisible) const {
+        if (bIsVisible) {
+            if (glfwRawMouseMotionSupported()) {
+                glfwSetInputMode(pGlfwWindow, GLFW_RAW_MOUSE_MOTION, GLFW_FALSE);
+            }
+            glfwSetInputMode(pGlfwWindow, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+        } else {
+            glfwSetInputMode(pGlfwWindow, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+            if (glfwRawMouseMotionSupported()) {
+                glfwSetInputMode(pGlfwWindow, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
+            } else {
+                Logger::get().warn("raw mouse motion is not supported");
+            }
+        }
     }
 
     void Window::minimize() const { glfwIconifyWindow(pGlfwWindow); }

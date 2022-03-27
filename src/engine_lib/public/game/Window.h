@@ -262,36 +262,40 @@ namespace ne {
          */
         IRenderer *getRenderer() const;
 
+    private:
+        friend class WindowBuilder;
+
+        static void glfwWindowKeyboardCallback(GLFWwindow *pGlfwWindow, int iKey, int iScancode, int iAction,
+                                               int iMods);
+
+        static void glfwWindowMouseCallback(GLFWwindow *pGlfwWindow, int iButton, int iAction, int iMods);
+
+        static void glfwWindowFocusCallback(GLFWwindow *pGlfwWindow, int iFocused);
+
         /**
-         * Used internally, should not be called from user code.
-         * Use IGameInstance::onKeyboardInput() from user code.
+         * Called when the window receives keyboard input.
          *
          * @param key            Keyboard key.
          * @param modifiers      Keyboard modifier keys.
          * @param bIsPressedDown Whether the key down event occurred or key up.
          */
-        void internalOnKeyboardInput(KeyboardKey key, KeyboardModifiers modifiers, bool bIsPressedDown) const;
+        void onKeyboardInput(KeyboardKey key, KeyboardModifiers modifiers, bool bIsPressedDown) const;
 
         /**
-         * Used internally, should not be called from user code.
-         * Use IGameInstance::onMouseInput() from user code.
+         * Called when the window receives mouse input.
          *
          * @param button         Mouse button.
          * @param modifiers      Keyboard modifier keys.
          * @param bIsPressedDown Whether the button down event occurred or button up.
          */
-        void internalOnMouseInput(MouseButton button, KeyboardModifiers modifiers, bool bIsPressedDown) const;
+        void onMouseInput(MouseButton button, KeyboardModifiers modifiers, bool bIsPressedDown) const;
 
         /**
-         * Used internally, should not be called from user code.
-         * Use IGameInstance::onWindowFocusChanged() from user code.
+         * Called when the window focus was changed.
          *
          * @param bIsFocused  Whether the window has gained or lost the focus.
          */
-        void internalOnWindowFocusChanged(bool bIsFocused) const;
-
-    private:
-        friend class WindowBuilder;
+        void onWindowFocusChanged(bool bIsFocused) const;
 
         /**
          * Creates a new window.

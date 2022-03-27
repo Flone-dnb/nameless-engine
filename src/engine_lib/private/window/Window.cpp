@@ -13,40 +13,6 @@
 #include "stb/stb_image.h"
 
 namespace ne {
-    void GLFWWindowKeyboardCallback(GLFWwindow *pGLFWWindow, int iKey, int iScancode, int iAction,
-                                    int iMods) {
-        if (iAction == GLFW_REPEAT) {
-            return;
-        }
-
-        const Window *pWindow = static_cast<Window *>(glfwGetWindowUserPointer(pGLFWWindow));
-        if (!pWindow) {
-            return;
-        }
-
-        pWindow->internalOnKeyboardInput(static_cast<KeyboardKey::Value>(iKey), KeyboardModifiers(iMods),
-                                         iAction == GLFW_PRESS ? true : false);
-    }
-
-    void GLFWWindowMouseCallback(GLFWwindow *pGLFWWindow, int iButton, int iAction, int iMods) {
-        const Window *pWindow = static_cast<Window *>(glfwGetWindowUserPointer(pGLFWWindow));
-        if (!pWindow) {
-            return;
-        }
-
-        pWindow->internalOnMouseInput(static_cast<MouseButton>(iButton), KeyboardModifiers(iMods),
-                                      iAction == GLFW_PRESS ? true : false);
-    }
-
-    void GLFWWindowFocusCallback(GLFWwindow *pGLFWWindow, int iFocused) {
-        const Window *pWindow = static_cast<Window *>(glfwGetWindowUserPointer(pGLFWWindow));
-        if (!pWindow) {
-            return;
-        }
-
-        pWindow->internalOnWindowFocusChanged(static_cast<bool>(iFocused));
-    }
-
     WindowBuilder &WindowBuilder::withSize(int iWidth, int iHeight) {
         params.iWindowWidth = iWidth;
         params.iWindowHeight = iHeight;
@@ -132,27 +98,59 @@ namespace ne {
         return nullptr;
     }
 
-    void Window::internalOnKeyboardInput(KeyboardKey key, KeyboardModifiers modifiers,
-                                         bool bIsPressedDown) const {
+    void Window::onKeyboardInput(KeyboardKey key, KeyboardModifiers modifiers, bool bIsPressedDown) const {
         if (!pGame) {
             return;
         }
         pGame->onKeyboardInput(key, modifiers, bIsPressedDown);
     }
 
-    void Window::internalOnMouseInput(MouseButton button, KeyboardModifiers modifiers,
-                                      bool bIsPressedDown) const {
+    void Window::onMouseInput(MouseButton button, KeyboardModifiers modifiers, bool bIsPressedDown) const {
         if (!pGame) {
             return;
         }
         pGame->onMouseInput(button, modifiers, bIsPressedDown);
     }
 
-    void Window::internalOnWindowFocusChanged(bool bIsFocused) const {
+    void Window::onWindowFocusChanged(bool bIsFocused) const {
         if (!pGame || !pGame->pGameInstance) {
             return;
         }
         pGame->pGameInstance->onWindowFocusChanged(bIsFocused);
+    }
+
+    void Window::glfwWindowKeyboardCallback(GLFWwindow *pGlfwWindow, int iKey, int iScancode, int iAction,
+                                            int iMods) {
+        if (iAction == GLFW_REPEAT) {
+            return;
+        }
+
+        const Window *pWindow = static_cast<Window *>(glfwGetWindowUserPointer(pGlfwWindow));
+        if (!pWindow) {
+            return;
+        }
+
+        pWindow->onKeyboardInput(static_cast<KeyboardKey::Value>(iKey), KeyboardModifiers(iMods),
+                                 iAction == GLFW_PRESS ? true : false);
+    }
+
+    void Window::glfwWindowMouseCallback(GLFWwindow *pGlfwWindow, int iButton, int iAction, int iMods) {
+        const Window *pWindow = static_cast<Window *>(glfwGetWindowUserPointer(pGlfwWindow));
+        if (!pWindow) {
+            return;
+        }
+
+        pWindow->onMouseInput(static_cast<MouseButton>(iButton), KeyboardModifiers(iMods),
+                              iAction == GLFW_PRESS ? true : false);
+    }
+
+    void Window::glfwWindowFocusCallback(GLFWwindow *pGlfwWindow, int iFocused) {
+        const Window *pWindow = static_cast<Window *>(glfwGetWindowUserPointer(pGlfwWindow));
+        if (!pWindow) {
+            return;
+        }
+
+        pWindow->onWindowFocusChanged(static_cast<bool>(iFocused));
     }
 
     std::variant<std::unique_ptr<Window>, Error> Window::newInstance(WindowBuilderParameters &params) {
@@ -215,13 +213,13 @@ namespace ne {
         glfwSetWindowUserPointer(pGLFWWindow, pWindow.get());
 
         // Bind to keyboard input.
-        glfwSetKeyCallback(pGLFWWindow, GLFWWindowKeyboardCallback);
+        glfwSetKeyCallback(pGLFWWindow, Window::glfwWindowKeyboardCallback);
 
         // Bind to mouse input.
-        glfwSetMouseButtonCallback(pGLFWWindow, GLFWWindowMouseCallback);
+        glfwSetMouseButtonCallback(pGLFWWindow, Window::glfwWindowMouseCallback);
 
         // Bind to focus change event.
-        glfwSetWindowFocusCallback(pGLFWWindow, GLFWWindowFocusCallback);
+        glfwSetWindowFocusCallback(pGLFWWindow, Window::glfwWindowFocusCallback);
 
         return std::move(pWindow);
     }

@@ -45,6 +45,19 @@ target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_${PROJECT_CXX_STANDARD_VE
 
 set_target_properties(${PROJECT_NAME} PROPERTIES FOLDER ${ENGINE_FOLDER})
 
+# doxygen
+find_package(Doxygen)
+if (DOXYGEN_FOUND)
+    add_custom_target(doc_doxygen ALL
+        COMMAND doxygen
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/docs/
+        COMMENT "Generating API documentation with Doxygen..."
+        VERBATIM )
+    add_dependencies(doc_doxygen ${PROJECT_NAME} engine_lib)
+else (DOXYGEN_FOUND)
+  message(WARNING "Doxygen need to be installed to generate the documentation!")
+endif (DOXYGEN_FOUND)
+
 # copy resources to build folder
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
                    COMMAND ${CMAKE_COMMAND} -E copy_directory

@@ -265,11 +265,20 @@ namespace ne {
     private:
         friend class WindowBuilder;
 
+        /**
+         * GLFW callback.
+         */
         static void glfwWindowKeyboardCallback(GLFWwindow *pGlfwWindow, int iKey, int iScancode, int iAction,
                                                int iMods);
 
+        /**
+         * GLFW callback.
+         */
         static void glfwWindowMouseCallback(GLFWwindow *pGlfwWindow, int iButton, int iAction, int iMods);
 
+        /**
+         * GLFW callback.
+         */
         static void glfwWindowFocusCallback(GLFWwindow *pGlfwWindow, int iFocused);
 
         /**

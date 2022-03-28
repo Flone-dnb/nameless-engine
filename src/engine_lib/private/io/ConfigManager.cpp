@@ -4,6 +4,8 @@
 #include "misc/Globals.h"
 
 namespace ne {
+    ConfigManager::ConfigManager() { ini.SetUnicode(true); }
+
     std::vector<std::string> ConfigManager::getAllConfigFiles(ConfigCategory category) {
         const auto categoryFolder = ConfigManager::getFolderForConfigFiles(category);
 

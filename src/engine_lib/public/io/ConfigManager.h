@@ -30,7 +30,7 @@ namespace ne {
          * Constructs an empty configuration, use @ref loadFile to read configuration from a file
          * or @ref setValue and then @ref saveFile to save a new configuration.
          */
-        ConfigManager() = default;
+        ConfigManager();
         ConfigManager(const ConfigManager &) = delete;
         ConfigManager &operator=(const ConfigManager &) = delete;
 
@@ -78,9 +78,10 @@ namespace ne {
         /**
          * Reads a value from loaded INI file (see @ref loadFile).
          *
-         * @param sSection       Name of the section.
-         * @param sKey           Name of the key.
-         * @param sDefaultValue  Value that will be returned if the specified key was not found.
+         * @param sSection       Name of the section. UTF-8 encoded.
+         * @param sKey           Name of the key. UTF-8 encoded.
+         * @param sDefaultValue  Value that will be returned if the specified key was not found. UTF-8
+         * encoded.
          *
          * @return Default value if the specified section/key was not found,
          * otherwise value from INI file.
@@ -128,10 +129,10 @@ namespace ne {
          * Sets a value. This value will not be written to file until @ref saveFile is called.
          *
          *
-         * @param sSection   Name of the section.
-         * @param sKey       Name of the key.
-         * @param sValue     Value to set.
-         * @param sComment   Comment to add to this value.
+         * @param sSection   Name of the section. UTF-8 encoded.
+         * @param sKey       Name of the key. UTF-8 encoded.
+         * @param sValue     Value to set. UTF-8 encoded.
+         * @param sComment   Comment to add to this value. UTF-8 encoded.
          */
         void setValue(std::string_view sSection, std::string_view sKey, std::string_view sValue,
                       std::string_view sComment = "");
@@ -173,7 +174,7 @@ namespace ne {
                           std::string_view sComment = "");
 
         /**
-         * Saves the current configuration to a file.
+         * Saves the current configuration to a file with a UTF-8 encoding.
          *
          * @param category       Folder in which we will store this file, note that ENGINE
          * category is used by engine internals and should not be used to store game configs.
@@ -181,7 +182,8 @@ namespace ne {
          * such as keybindings, there is no need to save render settings here as
          * some parts of the engine save their own configs, for example, renderer will save latest
          * applied settings and restore them on start so you don't need to save them manually.
-         * @param sFileName      Name of the file to load. We will save it to a predefined directory
+         * @param sFileName      Name of the file to save, prefer to have only ASCII characters in the
+         * file name. We will save it to a predefined directory
          * that we also use in @ref loadFile (use @ref getFilePath to see full path),
          * the .ini extension will be added if the passed name does not have it.
          * @param bEnableBackup  If 'true' will also use a backup (copy) file. @ref loadFile can use

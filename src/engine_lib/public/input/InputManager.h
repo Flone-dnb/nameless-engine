@@ -24,6 +24,7 @@ namespace ne {
         /**
          * Adds a new action event.
          *
+         * @warning This function is not thread safe, it should only be called from the main thread.
          * @warning If an action with this name already exists, it will be overwritten
          * with the new keys (old keys will be removed).
          *
@@ -47,6 +48,8 @@ namespace ne {
 
         /**
          * Removes an action event with the specified name.
+         *
+         * @warning This function is not thread safe, it should only be called from the main thread.
          *
          * @param sActionName   Name of the action to remove.
          *

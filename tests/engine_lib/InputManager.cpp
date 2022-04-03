@@ -38,6 +38,7 @@ TEST_CASE("remove action") {
     REQUIRE(!manager.removeActionEvent(sAction1Name));
 
     REQUIRE(manager.getAllActionEvents().size() == 1);
+    REQUIRE(*manager.getActionEvent(sAction2Name) == vAction2Keys);
 }
 
 TEST_CASE("modify action") {

@@ -49,13 +49,11 @@ namespace ne {
          * Called after @ref onKeyboardInput.
          *
          * @param sActionName    Name of the input action event (from input manager).
-         * @param key            Keyboard/mouse key/button.
          * @param modifiers      Keyboard modifier keys.
          * @param bIsPressedDown Whether the key down event occurred or key up.
          */
-        virtual void onInputActionEvent(const std::string &sActionName,
-                                        std::variant<KeyboardKey, MouseButton> key,
-                                        KeyboardModifiers modifiers, bool bIsPressedDown) {}
+        virtual void onInputActionEvent(const std::string &sActionName, KeyboardModifiers modifiers,
+                                        bool bIsPressedDown) {}
 
         /**
          * Called when the window receives keyboard input.

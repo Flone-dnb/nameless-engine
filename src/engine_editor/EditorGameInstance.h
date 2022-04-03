@@ -36,13 +36,11 @@ public:
      * Called after @ref onKeyboardInput.
      *
      * @param sActionName    Name of the input action event (from input manager).
-     * @param key            Keyboard/mouse key/button.
      * @param modifiers      Keyboard modifier keys.
      * @param bIsPressedDown Whether the key down event occurred or key up.
      */
-    virtual void onInputActionEvent(const std::string &sActionName,
-                                    std::variant<ne::KeyboardKey, ne::MouseButton> key,
-                                    ne::KeyboardModifiers modifiers, bool bIsPressedDown) override {}
+    virtual void onInputActionEvent(const std::string &sActionName, ne::KeyboardModifiers modifiers,
+                                    bool bIsPressedDown) override {}
 
     /**
      * Called when the window receives mouse input.

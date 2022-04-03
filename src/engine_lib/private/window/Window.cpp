@@ -130,7 +130,7 @@ namespace ne {
             return;
         }
 
-        pWindow->onKeyboardInput(static_cast<KeyboardKey::Value>(iKey), KeyboardModifiers(iMods),
+        pWindow->onKeyboardInput(static_cast<KeyboardKey>(iKey), KeyboardModifiers(iMods),
                                  iAction == GLFW_PRESS ? true : false);
     }
 

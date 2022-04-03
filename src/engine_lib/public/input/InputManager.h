@@ -3,9 +3,9 @@
 // STL.
 #include <unordered_map>
 #include <string>
-#include <vector>
 #include <variant>
 #include <optional>
+#include <set>
 
 // Custom.
 #include "input/KeyboardKey.hpp"
@@ -40,7 +40,7 @@ namespace ne {
          *
          * @param sActionName   Name an action to look for.
          *
-         * @return Keys associated with the action if one was found.
+         * @return Keys associated with the action event if one was found.
          */
         std::optional<std::vector<std::variant<KeyboardKey, MouseButton>>>
         getActionEvent(const std::string &sActionName) const;
@@ -66,6 +66,6 @@ namespace ne {
         friend class Game;
 
         /** Map of action events. */
-        std::unordered_map<std::string, std::vector<std::variant<KeyboardKey, MouseButton>>> actionEvents;
+        std::unordered_map<std::variant<KeyboardKey, MouseButton>, std::set<std::string>> actionEvents;
     };
 } // namespace ne

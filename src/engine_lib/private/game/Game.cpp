@@ -10,13 +10,10 @@ namespace ne {
     void Game::onKeyboardInput(KeyboardKey key, KeyboardModifiers modifiers, bool bIsPressedDown) {
         pGameInstance->onKeyboardInput(key, modifiers, bIsPressedDown);
 
-        // Find action by key.
-        for (auto it = inputManager.actionEvents.begin(); it != inputManager.actionEvents.end(); ++it) {
-            for (const auto &actionKey : it->second) {
-                if (std::holds_alternative<KeyboardKey>(actionKey) &&
-                    std::get<KeyboardKey>(actionKey) == key) {
-                    pGameInstance->onInputActionEvent(it->first, key, modifiers, bIsPressedDown);
-                }
+        const auto it = inputManager.actionEvents.find(key);
+        if (it != inputManager.actionEvents.end()) {
+            for (const auto &sActionName : it->second) {
+                pGameInstance->onInputActionEvent(sActionName, modifiers, bIsPressedDown);
             }
         }
     }
@@ -24,13 +21,10 @@ namespace ne {
     void Game::onMouseInput(MouseButton button, KeyboardModifiers modifiers, bool bIsPressedDown) {
         pGameInstance->onMouseInput(button, modifiers, bIsPressedDown);
 
-        // Find action by button.
-        for (auto it = inputManager.actionEvents.begin(); it != inputManager.actionEvents.end(); ++it) {
-            for (const auto &actionKey : it->second) {
-                if (std::holds_alternative<MouseButton>(actionKey) &&
-                    std::get<MouseButton>(actionKey) == button) {
-                    pGameInstance->onInputActionEvent(it->first, button, modifiers, bIsPressedDown);
-                }
+        const auto it = inputManager.actionEvents.find(button);
+        if (it != inputManager.actionEvents.end()) {
+            for (const auto &sActionName : it->second) {
+                pGameInstance->onInputActionEvent(sActionName, modifiers, bIsPressedDown);
             }
         }
     }

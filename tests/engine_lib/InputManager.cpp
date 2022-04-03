@@ -14,11 +14,11 @@ TEST_CASE("add action") {
     const std::vector<std::variant<KeyboardKey, MouseButton>> vAction2Keys = {MouseButton::LEFT};
 
     InputManager manager;
-    manager.addAction(sAction1Name, vAction1Keys);
-    manager.addAction(sAction2Name, vAction2Keys);
+    manager.addActionEvent(sAction1Name, vAction1Keys);
+    manager.addActionEvent(sAction2Name, vAction2Keys);
 
-    REQUIRE(manager.getAction(sAction1Name).has_value());
-    REQUIRE(*manager.getAction(sAction1Name) == vAction1Keys);
+    REQUIRE(manager.getActionEvent(sAction1Name).has_value());
+    REQUIRE(*manager.getActionEvent(sAction1Name) == vAction1Keys);
 }
 
 TEST_CASE("remove action") {
@@ -32,12 +32,12 @@ TEST_CASE("remove action") {
     const std::vector<std::variant<KeyboardKey, MouseButton>> vAction2Keys = {MouseButton::LEFT};
 
     InputManager manager;
-    manager.addAction(sAction1Name, vAction1Keys);
-    manager.addAction(sAction2Name, vAction2Keys);
+    manager.addActionEvent(sAction1Name, vAction1Keys);
+    manager.addActionEvent(sAction2Name, vAction2Keys);
 
-    REQUIRE(!manager.removeAction(sAction1Name));
+    REQUIRE(!manager.removeActionEvent(sAction1Name));
 
-    REQUIRE(manager.getAllActions().size() == 1);
+    REQUIRE(manager.getAllActionEvents().size() == 1);
 }
 
 TEST_CASE("modify action") {
@@ -50,9 +50,9 @@ TEST_CASE("modify action") {
     const std::vector<std::variant<KeyboardKey, MouseButton>> vAction2Keys = {MouseButton::LEFT};
 
     InputManager manager;
-    manager.addAction(sAction1Name, vAction1Keys);
+    manager.addActionEvent(sAction1Name, vAction1Keys);
 
-    manager.addAction(sAction1Name, vAction2Keys);
+    manager.addActionEvent(sAction1Name, vAction2Keys);
 
-    REQUIRE(*manager.getAction(sAction1Name) == vAction2Keys);
+    REQUIRE(*manager.getActionEvent(sAction1Name) == vAction2Keys);
 }

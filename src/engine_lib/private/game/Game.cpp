@@ -11,11 +11,11 @@ namespace ne {
         pGameInstance->onKeyboardInput(key, modifiers, bIsPressedDown);
 
         // Find action by key.
-        for (auto it = inputManager.actions.begin(); it != inputManager.actions.end(); ++it) {
+        for (auto it = inputManager.actionEvents.begin(); it != inputManager.actionEvents.end(); ++it) {
             for (const auto &actionKey : it->second) {
                 if (std::holds_alternative<KeyboardKey>(actionKey) &&
                     std::get<KeyboardKey>(actionKey) == key) {
-                    pGameInstance->onInputAction(it->first, key, modifiers, bIsPressedDown);
+                    pGameInstance->onInputActionEvent(it->first, key, modifiers, bIsPressedDown);
                 }
             }
         }
@@ -24,12 +24,12 @@ namespace ne {
     void Game::onMouseInput(MouseButton button, KeyboardModifiers modifiers, bool bIsPressedDown) {
         pGameInstance->onMouseInput(button, modifiers, bIsPressedDown);
 
-        // Find action by key.
-        for (auto it = inputManager.actions.begin(); it != inputManager.actions.end(); ++it) {
+        // Find action by button.
+        for (auto it = inputManager.actionEvents.begin(); it != inputManager.actionEvents.end(); ++it) {
             for (const auto &actionKey : it->second) {
                 if (std::holds_alternative<MouseButton>(actionKey) &&
                     std::get<MouseButton>(actionKey) == button) {
-                    pGameInstance->onInputAction(it->first, button, modifiers, bIsPressedDown);
+                    pGameInstance->onInputActionEvent(it->first, button, modifiers, bIsPressedDown);
                 }
             }
         }

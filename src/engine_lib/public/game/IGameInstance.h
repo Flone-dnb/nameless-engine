@@ -45,21 +45,22 @@ namespace ne {
 
         /**
          * Called when a window that owns this game instance receives user
-         * input and the input key exists as an action in the input manager.
+         * input and the input key exists as an action event in the input manager.
          * Called after @ref onKeyboardInput.
          *
-         * @param sActionName    Name of the input action (from input manager).
+         * @param sActionName    Name of the input action event (from input manager).
          * @param key            Keyboard/mouse key/button.
          * @param modifiers      Keyboard modifier keys.
          * @param bIsPressedDown Whether the key down event occurred or key up.
          */
-        virtual void onInputAction(const std::string &sActionName, std::variant<KeyboardKey, MouseButton> key,
-                                   KeyboardModifiers modifiers, bool bIsPressedDown) {}
+        virtual void onInputActionEvent(const std::string &sActionName,
+                                        std::variant<KeyboardKey, MouseButton> key,
+                                        KeyboardModifiers modifiers, bool bIsPressedDown) {}
 
         /**
          * Called when the window receives keyboard input.
-         * Called before @ref onInputAction.
-         * Prefer to use @ref onInputAction instead of this function.
+         * Called before @ref onInputActionEvent.
+         * Prefer to use @ref onInputActionEvent instead of this function.
          *
          * @param key            Keyboard key.
          * @param modifiers      Keyboard modifier keys.
@@ -69,8 +70,8 @@ namespace ne {
 
         /**
          * Called when the window receives mouse input.
-         * Called before @ref onInputAction.
-         * Prefer to use @ref onInputAction instead of this function.
+         * Called before @ref onInputActionEvent.
+         * Prefer to use @ref onInputActionEvent instead of this function.
          *
          * @param button         Mouse button.
          * @param modifiers      Keyboard modifier keys.
@@ -110,7 +111,7 @@ namespace ne {
         /**
          * Returns a reference to the input manager this game instance is using.
          * Input manager allows binding names with multiple input keys that
-         * you can receive in @ref onInputAction.
+         * you can receive in @ref onInputActionEvent.
          *
          * @return A pointer to the input manager, should not be deleted.
          */

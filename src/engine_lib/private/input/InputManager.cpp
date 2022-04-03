@@ -1,26 +1,28 @@
 ﻿#include "input/InputManager.h"
 
 namespace ne {
-    void InputManager::addAction(const std::string &sActionName,
-                                 const std::vector<std::variant<KeyboardKey, MouseButton>> &vKeys) {
-        actions[sActionName] = vKeys;
+    void InputManager::addActionEvent(const std::string &sActionName,
+                                      const std::vector<std::variant<KeyboardKey, MouseButton>> &vKeys) {
+        actionEvents[sActionName] = vKeys;
     }
 
     std::optional<std::vector<std::variant<KeyboardKey, MouseButton>>>
-    InputManager::getAction(const std::string &sActionName) const {
-        const auto iterator = actions.find(sActionName);
+    InputManager::getActionEvent(const std::string &sActionName) const {
+        const auto iterator = actionEvents.find(sActionName);
 
-        if (iterator == actions.end()) {
+        if (iterator == actionEvents.end()) {
             return {};
         } else {
             return iterator->second;
         }
     }
 
-    bool InputManager::removeAction(const std::string &sActionName) { return !actions.erase(sActionName); }
+    bool InputManager::removeActionEvent(const std::string &sActionName) {
+        return !actionEvents.erase(sActionName);
+    }
 
     std::unordered_map<std::string, std::vector<std::variant<KeyboardKey, MouseButton>>>
-    InputManager::getAllActions() const {
-        return actions;
+    InputManager::getAllActionEvents() const {
+        return actionEvents;
     }
 } // namespace ne

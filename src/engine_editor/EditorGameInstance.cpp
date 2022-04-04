@@ -6,6 +6,9 @@ EditorGameInstance::EditorGameInstance(ne::Window *pWindow, ne::InputManager *pI
 void EditorGameInstance::onInputActionEvent(const std::string &sActionName, ne::KeyboardModifiers modifiers,
                                             bool bIsPressedDown) {}
 
+void EditorGameInstance::onInputAxisEvent(const std::string &sAxisName, ne::KeyboardModifiers modifiers,
+                                          float fValue) {}
+
 void EditorGameInstance::onMouseInput(ne::MouseButton button, ne::KeyboardModifiers modifiers,
                                       bool bIsPressedDown) {}
 

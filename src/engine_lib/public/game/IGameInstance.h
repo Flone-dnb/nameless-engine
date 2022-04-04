@@ -45,7 +45,7 @@ namespace ne {
 
         /**
          * Called when a window that owns this game instance receives user
-         * input and the input key exists as an action event in the input manager.
+         * input and the input key exists as an action event in the InputManager.
          * Called after @ref onKeyboardInput.
          *
          * @param sActionName    Name of the input action event (from input manager).
@@ -54,6 +54,18 @@ namespace ne {
          */
         virtual void onInputActionEvent(const std::string &sActionName, KeyboardModifiers modifiers,
                                         bool bIsPressedDown) {}
+
+        /**
+         * Called when a window that owns this game instance receives user
+         * input and the input key exists as an axis event in the InputManager.
+         * Called after @ref onKeyboardInput and after @ref onInputActionEvent.
+         *
+         * @param sAxisName      Name of the input axis event (from input manager).
+         * @param modifiers      Keyboard modifier keys.
+         * @param fValue         A value in range [-1.0f; 1.0f] that describes input.
+         */
+        virtual void onInputAxisEvent(const std::string &sAxisName, KeyboardModifiers modifiers,
+                                      float fValue) {}
 
         /**
          * Called when the window receives keyboard input.

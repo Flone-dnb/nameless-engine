@@ -6,6 +6,7 @@
 #include <variant>
 #include <optional>
 #include <set>
+#include <mutex>
 
 // Custom.
 #include "input/KeyboardKey.hpp"
@@ -24,9 +25,14 @@ namespace ne {
         /**
          * Adds a new action event.
          *
-         * @warning This function is not thread safe, it should only be called from the main thread.
          * @warning If an action with this name already exists, it will be overwritten
          * with the new keys (old keys will be removed).
+         * If this action is triggered with an old key right now
+         * (when you call this function), there is a change that this action will be triggered
+         * using old keys for the last time (even if after you removed this action).
+         * This is because when we receive input key we make a copy of all actions
+         * associated with the key and then call these actions, because we operate
+         * on a copy, removed elements will be reflected only on the next user input.
          *
          * @param sActionName   Name of a new action.
          * @param vKeys         Keyboard/mouse keys/buttons associated with this action.
@@ -44,12 +50,17 @@ namespace ne {
          * @return Keys associated with the action event if one was found.
          */
         std::optional<std::vector<std::variant<KeyboardKey, MouseButton>>>
-        getActionEvent(const std::string &sActionName) const;
+        getActionEvent(const std::string &sActionName);
 
         /**
          * Removes an action event with the specified name.
          *
-         * @warning This function is not thread safe, it should only be called from the main thread.
+         * @warning If this action is triggered with an old key right now
+         * (when you call this function), there is a change that this action will be triggered
+         * using old keys for the last time (even if after you removed this action).
+         * This is because when we receive input key we make a copy of all actions
+         * associated with the key and then call these actions, because we operate
+         * on a copy, removed elements will be reflected only on the next user input.
          *
          * @param sActionName   Name of the action to remove.
          *
@@ -63,12 +74,15 @@ namespace ne {
          * @return A copy of all actions.
          */
         std::unordered_map<std::string, std::vector<std::variant<KeyboardKey, MouseButton>>>
-        getAllActionEvents() const;
+        getAllActionEvents();
 
     private:
         friend class Game;
 
         /** Map of action events. */
         std::unordered_map<std::variant<KeyboardKey, MouseButton>, std::set<std::string>> actionEvents;
+
+        /** Mutex for actions editing. */
+        std::recursive_mutex mtxActions;
     };
 } // namespace ne

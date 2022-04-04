@@ -3,6 +3,8 @@
 namespace ne {
     void InputManager::addActionEvent(const std::string &sActionName,
                                       const std::vector<std::variant<KeyboardKey, MouseButton>> &vKeys) {
+        std::scoped_lock<std::recursive_mutex> guard(mtxActions);
+
         // Remove all keys with this action if exists.
         removeActionEvent(sActionName);
 
@@ -17,7 +19,9 @@ namespace ne {
     }
 
     std::optional<std::vector<std::variant<KeyboardKey, MouseButton>>>
-    InputManager::getActionEvent(const std::string &sActionName) const {
+    InputManager::getActionEvent(const std::string &sActionName) {
+        std::scoped_lock<std::recursive_mutex> guard(mtxActions);
+
         std::vector<std::variant<KeyboardKey, MouseButton>> vKeys;
 
         // Look if this action exists get all keys.
@@ -38,6 +42,8 @@ namespace ne {
     }
 
     bool InputManager::removeActionEvent(const std::string &sActionName) {
+        std::scoped_lock<std::recursive_mutex> guard(mtxActions);
+
         bool bFound = false;
 
         // Look if this action exists and remove all entries.
@@ -62,7 +68,9 @@ namespace ne {
     }
 
     std::unordered_map<std::string, std::vector<std::variant<KeyboardKey, MouseButton>>>
-    InputManager::getAllActionEvents() const {
+    InputManager::getAllActionEvents() {
+        std::scoped_lock<std::recursive_mutex> guard(mtxActions);
+
         std::unordered_map<std::string, std::vector<std::variant<KeyboardKey, MouseButton>>> actions;
 
         // Get all action names first.

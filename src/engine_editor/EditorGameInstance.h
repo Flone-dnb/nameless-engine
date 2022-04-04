@@ -40,7 +40,7 @@ public:
      * @param bIsPressedDown Whether the key down event occurred or key up.
      */
     virtual void onInputActionEvent(const std::string &sActionName, ne::KeyboardModifiers modifiers,
-                                    bool bIsPressedDown) override {}
+                                    bool bIsPressedDown) override;
 
     /**
      * Called when the window receives mouse input.
@@ -69,5 +69,5 @@ public:
     /**
      * Called when the window was requested to close (no new frames will be rendered).
      */
-    virtual void onWindowClose() override{};
+    virtual void onWindowClose() override {}
 };

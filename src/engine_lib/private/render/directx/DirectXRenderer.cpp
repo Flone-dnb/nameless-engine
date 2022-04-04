@@ -444,10 +444,9 @@ namespace ne {
         }
 
         // Write GPU.
-        manager.setLongValue(
-            getConfigurationSectionGpu(), "GPU", 0,
-            "index of the GPU to use, where '0' is GPU with most priority (first found GPU), '1' "
-            "is second found and etc.");
+        manager.setLongValue(getConfigurationSectionGpu(), "GPU", 0,
+                             "index of the GPU to use, where '0' is the GPU with the most priority "
+                             "(first found GPU), '1' is the second found and etc.");
 
         // Write resolution.
         manager.setLongValue(getConfigurationSectionResolution(), "x",

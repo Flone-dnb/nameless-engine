@@ -48,14 +48,14 @@ namespace ne {
                     // only one axis associated with it.
                     // + update InputManager documentation.
                     const auto axisCopy = it->second;
-                    for (const auto &[sActionName, iInput] : axisCopy) {
-                        auto stateIt = inputManager.axisState.find(sActionName);
+                    for (const auto &[sAxisName, iInput] : axisCopy) {
+                        auto stateIt = inputManager.axisState.find(sAxisName);
                         if (stateIt == inputManager.axisState.end()) {
                             Logger::get().error(std::format("input manager returned 0 "
                                                             "states for '{}' axis event",
-                                                            sActionName));
+                                                            sAxisName));
                             pGameInstance->onInputAxisEvent(
-                                sActionName, modifiers, bIsPressedDown ? static_cast<float>(iInput) : 0.0f);
+                                sAxisName, modifiers, bIsPressedDown ? static_cast<float>(iInput) : 0.0f);
                             continue;
                         }
 
@@ -78,9 +78,9 @@ namespace ne {
                         if (bSet == false) {
                             Logger::get().error(std::format("could not find key '{}' in key "
                                                             "states for '{}' axis event",
-                                                            getKeyName(key), sActionName));
+                                                            getKeyName(key), sAxisName));
                             pGameInstance->onInputAxisEvent(
-                                sActionName, modifiers, bIsPressedDown ? static_cast<float>(iInput) : 0.0f);
+                                sAxisName, modifiers, bIsPressedDown ? static_cast<float>(iInput) : 0.0f);
                             continue;
                         }
 
@@ -108,7 +108,7 @@ namespace ne {
 
                         if (iInputToPass != statePair.second) {
                             statePair.second = iInputToPass;
-                            pGameInstance->onInputAxisEvent(sActionName, modifiers,
+                            pGameInstance->onInputAxisEvent(sAxisName, modifiers,
                                                             static_cast<float>(iInputToPass));
                         }
                     }

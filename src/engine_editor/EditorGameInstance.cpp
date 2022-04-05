@@ -1,5 +1,8 @@
 ﻿#include "EditorGameInstance.h"
 
+// Custom.
+#include "io/Logger.h"
+
 EditorGameInstance::EditorGameInstance(ne::Window *pWindow, ne::InputManager *pInputManager)
     : IGameInstance(pWindow, pInputManager) {}
 

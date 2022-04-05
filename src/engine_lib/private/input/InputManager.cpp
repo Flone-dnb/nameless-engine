@@ -124,6 +124,17 @@ namespace ne {
         return vAxis;
     }
 
+    float InputManager::getCurrentAxisEventValue(const std::string &sAxisName) {
+        std::scoped_lock<std::recursive_mutex> guard(mtxAxisEvents);
+
+        const auto stateIt = axisState.find(sAxisName);
+        if (stateIt == axisState.end()) {
+            return 0.0f;
+        }
+
+        return static_cast<float>(stateIt->second.second);
+    }
+
     bool InputManager::removeActionEvent(const std::string &sActionName) {
         std::scoped_lock<std::recursive_mutex> guard(mtxActionEvents);
 

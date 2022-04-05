@@ -136,6 +136,16 @@ namespace ne {
         getAxisEvent(const std::string &sAxisName);
 
         /**
+         * Returns the current value of an axis event.
+         * This value is equal to the last value passed to IGameInstance::onInputAxisEvent.
+         *
+         * @param sAxisName Name of the axis event that you used in @ref addAxisEvent.
+         *
+         * @return Zero if axis event with this name does not exist, last input value otherwise.
+         */
+        float getCurrentAxisEventValue(const std::string &sAxisName);
+
+        /**
          * Removes an action event with the specified name.
          *
          * @warning If this action is triggered with an old key right now

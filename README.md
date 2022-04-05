@@ -1,9 +1,9 @@
 # nameless-engine
 
 TODO
-<h3>Supported platforms</h3>
-* Windows
-* Linux (WIP)
+### Supported platforms ###
+* Windows<br>
+* Linux (WIP)<br>
 
 # Features
 

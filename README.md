@@ -2,8 +2,8 @@
 
 TODO
 <h3>Supported platforms</h3>
-- Windows
-- Linux (WIP)
+* Windows
+* Linux (WIP)
 
 # Features
 

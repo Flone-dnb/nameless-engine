@@ -133,10 +133,10 @@ namespace ne {
     }
 
     void Window::onWindowFocusChanged(bool bIsFocused) const {
-        if (!pGame || !pGame->pGameInstance) {
+        if (!pGame) {
             return;
         }
-        pGame->pGameInstance->onWindowFocusChanged(bIsFocused);
+        pGame->onWindowFocusChanged(bIsFocused);
     }
 
     void Window::glfwWindowKeyboardCallback(GLFWwindow *pGlfwWindow, int iKey, int iScancode, int iAction,

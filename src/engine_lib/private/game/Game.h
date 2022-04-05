@@ -35,6 +35,14 @@ namespace ne {
         void setGameInstance() { pGameInstance = std::make_unique<GameInstance>(pWindow, &inputManager); }
 
         /**
+         * Called before a new frame is rendered.
+         *
+         * @param fTimeFromPrevCallInSec   Time in seconds that has passed since the last call
+         * to this function.
+         */
+        void onBeforeNewFrame(float fTimeFromPrevCallInSec) const;
+
+        /**
          * Called when the window (that owns this object) receives keyboard input.
          *
          * @param key            Keyboard key.
@@ -68,6 +76,20 @@ namespace ne {
          * @param iOffset Movement offset.
          */
         void onMouseScrollMove(int iOffset) const;
+
+        /**
+         * Called when the window focus was changed.
+         *
+         * @param bIsFocused  Whether the window has gained or lost the focus.
+         */
+        void onWindowFocusChanged(bool bIsFocused) const;
+
+        /**
+         * Called when a window that owns this game instance
+         * was requested to close (no new frames will be rendered).
+         * Prefer to do your destructor logic here.
+         */
+        void onWindowClose() const;
 
     private:
         // The object should be created by a Window instance.

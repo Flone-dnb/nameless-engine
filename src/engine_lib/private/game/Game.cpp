@@ -8,6 +8,10 @@
 #endif
 
 namespace ne {
+    void Game::onBeforeNewFrame(float fTimeFromPrevCallInSec) const {
+        pGameInstance->onBeforeNewFrame(fTimeFromPrevCallInSec);
+    }
+
     void Game::onKeyboardInput(KeyboardKey key, KeyboardModifiers modifiers, bool bIsPressedDown) {
         pGameInstance->onKeyboardInput(key, modifiers, bIsPressedDown);
 
@@ -139,6 +143,12 @@ namespace ne {
     }
 
     void Game::onMouseScrollMove(int iOffset) const { pGameInstance->onMouseScrollMove(iOffset); }
+
+    void Game::onWindowFocusChanged(bool bIsFocused) const {
+        pGameInstance->onWindowFocusChanged(bIsFocused);
+    }
+
+    void Game::onWindowClose() const { pGameInstance->onWindowClose(); }
 
     Game::Game(Window *pWindow) {
         this->pWindow = pWindow;

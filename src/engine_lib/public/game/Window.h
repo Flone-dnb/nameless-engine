@@ -389,7 +389,7 @@ namespace ne {
 
             // Tick.
             fCurrentTimeInSec = static_cast<float>(glfwGetTime());
-            pGame->pGameInstance->onBeforeNewFrame(fCurrentTimeInSec - fPrevTimeInSec);
+            pGame->onBeforeNewFrame(fCurrentTimeInSec - fPrevTimeInSec);
             fPrevTimeInSec = fCurrentTimeInSec;
 
             // TODO: update()
@@ -397,6 +397,6 @@ namespace ne {
             // TODO: put update() into drawFrame()?
         }
 
-        pGame->pGameInstance->onWindowClose();
+        pGame->onWindowClose();
     }
 } // namespace ne

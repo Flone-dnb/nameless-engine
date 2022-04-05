@@ -90,6 +90,16 @@ namespace ne {
         virtual void onMouseInput(MouseButton button, KeyboardModifiers modifiers, bool bIsPressedDown) {}
 
         /**
+         * Called when the window received mouse movement.
+         *
+         * @param iXDelta  Mouse X movement delta in pixels (plus if moved to the right,
+         * minus if moved to the left).
+         * @param iYDelta  Mouse Y movement delta in pixels (plus if moved up,
+         * minus if moved down).
+         */
+        virtual void onMouseMove(int iXDelta, int iYDelta) {}
+
+        /**
          * Called when the window focus was changed.
          *
          * @param bIsFocused  Whether the window has gained or lost the focus.

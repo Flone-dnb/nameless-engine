@@ -282,6 +282,11 @@ namespace ne {
         static void glfwWindowFocusCallback(GLFWwindow *pGlfwWindow, int iFocused);
 
         /**
+         * GLFW callback.
+         */
+        static void glfwWindowMouseCursorPosCallback(GLFWwindow *pGlfwWindow, double xPos, double yPos);
+
+        /**
          * Called when the window receives keyboard input.
          *
          * @param key            Keyboard key.
@@ -298,6 +303,14 @@ namespace ne {
          * @param bIsPressedDown Whether the button down event occurred or button up.
          */
         void onMouseInput(MouseButton button, KeyboardModifiers modifiers, bool bIsPressedDown) const;
+
+        /**
+         * Called when the window received mouse movement.
+         *
+         * @param iXPos    Mouse X position in pixels.
+         * @param iYPos    Mouse Y position in pixels.
+         */
+        void onMouseMove(int iXPos, int iYPos);
 
         /**
          * Called when the window focus was changed.
@@ -337,6 +350,11 @@ namespace ne {
          * Title of the window.
          */
         std::string sWindowTitle;
+
+        /** Last mouse X position, used for calculating delta movement. */
+        int iLastMouseXPos = 0;
+        /** Last mouse Y position, used for calculating delta movement. */
+        int iLastMouseYPos = 0;
     };
 
     template <typename GameInstance>

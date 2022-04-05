@@ -52,6 +52,16 @@ namespace ne {
          */
         void onMouseInput(MouseButton button, KeyboardModifiers modifiers, bool bIsPressedDown);
 
+        /**
+         * Called when the window received mouse movement.
+         *
+         * @param iXDelta  Mouse X movement delta in pixels (plus if moved to the right,
+         * minus if moved to the left).
+         * @param iYDelta  Mouse Y movement delta in pixels (plus if moved up,
+         * minus if moved down).
+         */
+        void onMouseMove(int iXDelta, int iYDelta) const;
+
     private:
         // The object should be created by a Window instance.
         friend class Window;

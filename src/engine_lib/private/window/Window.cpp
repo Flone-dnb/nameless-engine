@@ -109,7 +109,19 @@ namespace ne {
         if (!pGame) {
             return;
         }
+
         pGame->onMouseInput(button, modifiers, bIsPressedDown);
+    }
+
+    void Window::onMouseMove(int iXPos, int iYPos) {
+        if (pGame) {
+            const int iDeltaX = iXPos - iLastMouseXPos;
+            const int iDeltaY = iLastMouseYPos - iYPos;
+            pGame->onMouseMove(iDeltaX, iDeltaY);
+        }
+
+        iLastMouseXPos = static_cast<int>(iXPos);
+        iLastMouseYPos = static_cast<int>(iYPos);
     }
 
     void Window::onWindowFocusChanged(bool bIsFocused) const {
@@ -151,6 +163,15 @@ namespace ne {
         }
 
         pWindow->onWindowFocusChanged(static_cast<bool>(iFocused));
+    }
+
+    void Window::glfwWindowMouseCursorPosCallback(GLFWwindow *pGlfwWindow, double xPos, double yPos) {
+        Window *pWindow = static_cast<Window *>(glfwGetWindowUserPointer(pGlfwWindow));
+        if (!pWindow) {
+            return;
+        }
+
+        pWindow->onMouseMove(static_cast<int>(xPos), static_cast<int>(yPos));
     }
 
     std::variant<std::unique_ptr<Window>, Error> Window::newInstance(WindowBuilderParameters &params) {
@@ -218,6 +239,9 @@ namespace ne {
         // Bind to mouse input.
         glfwSetMouseButtonCallback(pGLFWWindow, Window::glfwWindowMouseCallback);
 
+        // Bind to mouse move.
+        glfwSetCursorPosCallback(pGLFWWindow, Window::glfwWindowMouseCursorPosCallback);
+
         // Bind to focus change event.
         glfwSetWindowFocusCallback(pGLFWWindow, Window::glfwWindowFocusCallback);
 
@@ -226,7 +250,7 @@ namespace ne {
 
     Window::~Window() { glfwDestroyWindow(pGlfwWindow); }
 
-    WindowBuilder Window::getBuilder() { return WindowBuilder(); }
+    WindowBuilder Window::getBuilder() { return {}; }
 
     void Window::show() const { glfwShowWindow(pGlfwWindow); }
 

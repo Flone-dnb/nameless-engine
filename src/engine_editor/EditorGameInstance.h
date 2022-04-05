@@ -67,6 +67,16 @@ public:
                               bool bIsPressedDown) override;
 
     /**
+     * Called when the window received mouse movement.
+     *
+     * @param iXDelta  Mouse X movement delta in pixels (plus if moved to the right,
+     * minus if moved to the left).
+     * @param iYDelta  Mouse Y movement delta in pixels (plus if moved up,
+     * minus if moved down).
+     */
+    virtual void onMouseMove(int iXDelta, int iYDelta) override;
+
+    /**
      * Called when the window receives keyboard input.
      * Called before @ref onInputActionEvent.
      * Prefer to use @ref onInputActionEvent instead of this function.

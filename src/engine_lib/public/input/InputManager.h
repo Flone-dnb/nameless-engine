@@ -14,6 +14,30 @@
 
 namespace ne {
     /**
+     * Holds current action state.
+     */
+    class ActionState {
+    public:
+        ActionState() = delete;
+
+        /**
+         * Initialize action state.
+         *
+         * @param key  Action key.
+         */
+        ActionState(std::variant<KeyboardKey, MouseButton> key) {
+            this->key = key;
+            bIsPressed = false;
+        }
+
+        /** Whether the key is pressed or not. */
+        bool bIsPressed;
+
+        /** Action key. */
+        std::variant<KeyboardKey, MouseButton> key;
+    };
+
+    /**
      * Holds current axis state.
      */
     class AxisState {
@@ -30,8 +54,8 @@ namespace ne {
             this->plusKey = plusKey;
             this->minusKey = minusKey;
 
-            isPlusKeyPressed = false;
-            isMinusKeyPressed = false;
+            bIsPlusKeyPressed = false;
+            bIsMinusKeyPressed = false;
         }
 
         /** Plus key (input value '+1'). */
@@ -40,9 +64,9 @@ namespace ne {
         KeyboardKey minusKey;
 
         /** Whether the plus key is pressed or not. */
-        bool isPlusKeyPressed;
+        bool bIsPlusKeyPressed;
         /** Whether the minus key is pressed or not. */
-        bool isMinusKeyPressed;
+        bool bIsMinusKeyPressed;
     };
 
     /**
@@ -146,6 +170,17 @@ namespace ne {
         float getCurrentAxisEventValue(const std::string &sAxisName);
 
         /**
+         * Returns the current value of an action event.
+         * This value is equal to the last value passed to IGameInstance::onInputActionEvent.
+         *
+         * @param sActionName Name of the action event that you used in @ref addActionEvent.
+         *
+         * @return Zero if action event with this name does not exist, 'true' if at least one
+         * key/button associated with this action is pressed, 'false' if all released (not pressed).
+         */
+        bool getCurrentActionEventValue(const std::string &sActionName);
+
+        /**
          * Removes an action event with the specified name.
          *
          * @warning If this action is triggered with an old key right now
@@ -203,6 +238,10 @@ namespace ne {
          */
         std::unordered_map<std::variant<KeyboardKey, MouseButton>, std::set<std::string>> actionEvents;
 
+        /** Used to store current action state. TODO: gamepad */
+        std::unordered_map<std::string, std::pair<std::vector<ActionState>, bool /* action state */>>
+            actionState;
+
         /**
          * Map of axis events.
          * A pair of keyboard keys define values for +1 and -1 input.
@@ -212,8 +251,8 @@ namespace ne {
          */
         std::unordered_map<KeyboardKey, std::set<std::pair<std::string, int>>> axisEvents;
 
-        /** Used to store current axis state. */
-        std::unordered_map<std::string, std::pair<std::vector<AxisState>, int /* last input */>> axisState;
+        /** Used to store current axis state. TODO: gamepad */
+        std::unordered_map<std::string, std::pair<std::vector<AxisState>, int /* axis state */>> axisState;
 
         /** Mutex for actions editing. */
         std::recursive_mutex mtxActionEvents;

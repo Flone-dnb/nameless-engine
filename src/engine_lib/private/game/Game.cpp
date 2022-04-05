@@ -15,127 +15,15 @@ namespace ne {
     void Game::onKeyboardInput(KeyboardKey key, KeyboardModifiers modifiers, bool bIsPressedDown) {
         pGameInstance->onKeyboardInput(key, modifiers, bIsPressedDown);
 
-        // Trigger action events.
-        {
-            std::scoped_lock<std::recursive_mutex> guard(inputManager.mtxActionEvents);
-            if (!inputManager.actionEvents.empty()) {
-                const auto it = inputManager.actionEvents.find(key);
-                if (it != inputManager.actionEvents.end()) {
-                    // TODO: find a better approach:
-                    // copying set of actions because it can be modified in onInputActionEvent by user code
-                    // while we are iterating over it (the user should be able to modify it).
-                    // This should not be that bad due to the fact that a key will usually have
-                    // only one action associated with it.
-                    // + update InputManager documentation.
-                    const auto actionsCopy = it->second;
-                    for (const auto &sActionName : actionsCopy) {
-                        pGameInstance->onInputActionEvent(sActionName, modifiers, bIsPressedDown);
-                    }
-                }
-            }
-        }
+        triggerActionEvents(key, modifiers, bIsPressedDown);
 
-        // Trigger axis events.
-        {
-            std::scoped_lock<std::recursive_mutex> guard(inputManager.mtxAxisEvents);
-            if (!inputManager.axisEvents.empty()) {
-                const auto it = inputManager.axisEvents.find(key);
-                if (it != inputManager.axisEvents.end()) {
-                    // TODO: find a better approach:
-                    // copying set of axis because it can be modified in onInputAxisEvent by user code
-                    // while we are iterating over it (the user should be able to modify it).
-                    // This should not be that bad due to the fact that a key will usually have
-                    // only one axis associated with it.
-                    // + update InputManager documentation.
-                    const auto axisCopy = it->second;
-                    for (const auto &[sAxisName, iInput] : axisCopy) {
-                        auto stateIt = inputManager.axisState.find(sAxisName);
-                        if (stateIt == inputManager.axisState.end()) {
-                            Logger::get().error(std::format("input manager returned 0 "
-                                                            "states for '{}' axis event",
-                                                            sAxisName));
-                            pGameInstance->onInputAxisEvent(
-                                sAxisName, modifiers, bIsPressedDown ? static_cast<float>(iInput) : 0.0f);
-                            continue;
-                        }
-
-                        // Mark current state.
-                        bool bSet = false;
-                        std::pair<std::vector<AxisState>, int /* last input */> &statePair = stateIt->second;
-                        for (auto &state : statePair.first) {
-                            if (iInput == 1 && state.plusKey == key) {
-                                // Plus key.
-                                state.isPlusKeyPressed = bIsPressedDown;
-                                bSet = true;
-                                break;
-                            } else if (iInput == -1 && state.minusKey == key) {
-                                // Minus key.
-                                state.isMinusKeyPressed = bIsPressedDown;
-                                bSet = true;
-                                break;
-                            }
-                        }
-                        if (bSet == false) {
-                            Logger::get().error(std::format("could not find key '{}' in key "
-                                                            "states for '{}' axis event",
-                                                            getKeyName(key), sAxisName));
-                            pGameInstance->onInputAxisEvent(
-                                sAxisName, modifiers, bIsPressedDown ? static_cast<float>(iInput) : 0.0f);
-                            continue;
-                        }
-
-                        int iInputToPass = bIsPressedDown ? iInput : 0;
-
-                        if (bIsPressedDown == false) {
-                            // See if we need to pass 0 input value.
-                            // See if other button are pressed.
-                            for (const AxisState &state : statePair.first) {
-                                if (iInput == -1) {
-                                    // Look for plus button.
-                                    if (state.isPlusKeyPressed) {
-                                        iInputToPass = 1;
-                                        break;
-                                    }
-                                } else {
-                                    // Look for minus button.
-                                    if (state.isMinusKeyPressed) {
-                                        iInputToPass = -1;
-                                        break;
-                                    }
-                                }
-                            }
-                        }
-
-                        if (iInputToPass != statePair.second) {
-                            statePair.second = iInputToPass;
-                            pGameInstance->onInputAxisEvent(sAxisName, modifiers,
-                                                            static_cast<float>(iInputToPass));
-                        }
-                    }
-                }
-            }
-        }
+        triggerAxisEvents(key, modifiers, bIsPressedDown);
     }
 
     void Game::onMouseInput(MouseButton button, KeyboardModifiers modifiers, bool bIsPressedDown) {
         pGameInstance->onMouseInput(button, modifiers, bIsPressedDown);
 
-        std::scoped_lock<std::recursive_mutex> guard(inputManager.mtxActionEvents);
-        if (!inputManager.actionEvents.empty()) {
-            const auto it = inputManager.actionEvents.find(button);
-            if (it != inputManager.actionEvents.end()) {
-                // TODO: find a better approach:
-                // copying set of actions because it can be modified in onInputActionEvent by user code
-                // while we are iterating over it (the user should be able to modify it).
-                // This should not be that bad due to the fact that a key will usually have
-                // only one action associated with it.
-                // + update InputManager documentation.
-                const auto actionsCopy = it->second;
-                for (const auto &sActionName : actionsCopy) {
-                    pGameInstance->onInputActionEvent(sActionName, modifiers, bIsPressedDown);
-                }
-            }
-        }
+        triggerActionEvents(button, modifiers, bIsPressedDown);
     }
 
     void Game::onMouseMove(int iXOffset, int iYOffset) const {
@@ -160,4 +48,158 @@ namespace ne {
 #endif
     }
 
+    void Game::triggerActionEvents(std::variant<KeyboardKey, MouseButton> key, KeyboardModifiers modifiers,
+                                   bool bIsPressedDown) {
+        std::scoped_lock<std::recursive_mutex> guard(inputManager.mtxActionEvents);
+        if (inputManager.actionEvents.empty()) {
+            return;
+        }
+
+        const auto it = inputManager.actionEvents.find(key);
+        if (it == inputManager.actionEvents.end()) {
+            return;
+        }
+
+        // TODO: find a better approach:
+        // copying set of actions because it can be modified in onInputActionEvent by user code
+        // while we are iterating over it (the user should be able to modify it).
+        // This should not be that bad due to the fact that a key will usually have
+        // only one action associated with it.
+        // + update InputManager documentation.
+        const auto actionsCopy = it->second;
+        for (const auto &sActionName : actionsCopy) {
+            // Update state.
+            const auto stateIt = inputManager.actionState.find(sActionName);
+            if (stateIt == inputManager.actionState.end()) {
+                Logger::get().error(std::format("input manager returned 0 "
+                                                "states for '{}' action event",
+                                                sActionName));
+            } else {
+                std::pair<std::vector<ActionState>, bool /* action state */> &statePair = stateIt->second;
+
+                // Mark state.
+                bool bSet = false;
+                for (auto &actionKey : statePair.first) {
+                    if (actionKey.key == key) {
+                        actionKey.bIsPressed = bIsPressedDown;
+                        bSet = true;
+                        break;
+                    }
+                }
+
+                if (bSet == false) {
+                    if (std::holds_alternative<KeyboardKey>(key)) {
+                        Logger::get().error(std::format("could not find key '{}' in key "
+                                                        "states for '{}' action event",
+                                                        getKeyName(std::get<KeyboardKey>(key)), sActionName));
+                    } else {
+                        Logger::get().error(std::format("could not find mouse button '{}' in key "
+                                                        "states for '{}' action event",
+                                                        static_cast<int>(std::get<MouseButton>(key)),
+                                                        sActionName));
+                    }
+                }
+
+                bool bNewState = bIsPressedDown;
+
+                if (bIsPressedDown == false) {
+                    // See if other button are pressed.
+                    for (const auto actionKey : statePair.first) {
+                        if (actionKey.bIsPressed) {
+                            bNewState = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (bNewState != statePair.second) {
+                    statePair.second = bNewState;
+                    pGameInstance->onInputActionEvent(sActionName, modifiers, bNewState);
+                }
+            }
+        }
+    }
+
+    void Game::triggerAxisEvents(KeyboardKey key, KeyboardModifiers modifiers, bool bIsPressedDown) {
+        std::scoped_lock<std::recursive_mutex> guard(inputManager.mtxAxisEvents);
+        if (inputManager.axisEvents.empty()) {
+            return;
+        }
+
+        const auto it = inputManager.axisEvents.find(key);
+        if (it == inputManager.axisEvents.end()) {
+            return;
+        }
+
+        // TODO: find a better approach:
+        // copying set of axis because it can be modified in onInputAxisEvent by user code
+        // while we are iterating over it (the user should be able to modify it).
+        // This should not be that bad due to the fact that a key will usually have
+        // only one axis associated with it.
+        // + update InputManager documentation.
+        const auto axisCopy = it->second;
+        for (const auto &[sAxisName, iInput] : axisCopy) {
+            auto stateIt = inputManager.axisState.find(sAxisName);
+            if (stateIt == inputManager.axisState.end()) {
+                Logger::get().error(std::format("input manager returned 0 "
+                                                "states for '{}' axis event",
+                                                sAxisName));
+                pGameInstance->onInputAxisEvent(sAxisName, modifiers,
+                                                bIsPressedDown ? static_cast<float>(iInput) : 0.0f);
+                continue;
+            }
+
+            // Mark current state.
+            bool bSet = false;
+            std::pair<std::vector<AxisState>, int /* last input */> &statePair = stateIt->second;
+            for (auto &state : statePair.first) {
+                if (iInput == 1 && state.plusKey == key) {
+                    // Plus key.
+                    state.bIsPlusKeyPressed = bIsPressedDown;
+                    bSet = true;
+                    break;
+                } else if (iInput == -1 && state.minusKey == key) {
+                    // Minus key.
+                    state.bIsMinusKeyPressed = bIsPressedDown;
+                    bSet = true;
+                    break;
+                }
+            }
+            if (bSet == false) {
+                Logger::get().error(std::format("could not find key '{}' in key "
+                                                "states for '{}' axis event",
+                                                getKeyName(key), sAxisName));
+                pGameInstance->onInputAxisEvent(sAxisName, modifiers,
+                                                bIsPressedDown ? static_cast<float>(iInput) : 0.0f);
+                continue;
+            }
+
+            int iInputToPass = bIsPressedDown ? iInput : 0;
+
+            if (bIsPressedDown == false) {
+                // See if we need to pass 0 input value.
+                // See if other button are pressed.
+                for (const AxisState &state : statePair.first) {
+                    if (iInput == -1) {
+                        // Look for plus button.
+                        if (state.bIsPlusKeyPressed) {
+                            iInputToPass = 1;
+                            break;
+                        }
+                    } else {
+                        // Look for minus button.
+                        if (state.bIsMinusKeyPressed) {
+                            iInputToPass = -1;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if (iInputToPass != statePair.second) {
+                statePair.second = iInputToPass;
+                pGameInstance->onInputAxisEvent(sAxisName, modifiers, static_cast<float>(iInputToPass));
+            }
+        }
+    }
 } // namespace ne

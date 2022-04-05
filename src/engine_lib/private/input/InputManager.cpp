@@ -20,6 +20,14 @@ namespace ne {
                 it->second.insert(sActionName);
             }
         }
+
+        // Add state.
+        std::vector<ActionState> vActionState;
+        for (const auto &action : vKeys) {
+            vActionState.push_back(ActionState(action));
+        }
+        actionState[sActionName] =
+            std::make_pair<std::vector<ActionState>, bool>(std::move(vActionState), false);
     }
 
     void InputManager::addAxisEvent(const std::string &sAxisName,
@@ -135,6 +143,17 @@ namespace ne {
         return static_cast<float>(stateIt->second.second);
     }
 
+    bool InputManager::getCurrentActionEventValue(const std::string &sActionName) {
+        std::scoped_lock<std::recursive_mutex> guard(mtxActionEvents);
+
+        const auto stateIt = actionState.find(sActionName);
+        if (stateIt == actionState.end()) {
+            return false;
+        }
+
+        return stateIt->second.second;
+    }
+
     bool InputManager::removeActionEvent(const std::string &sActionName) {
         std::scoped_lock<std::recursive_mutex> guard(mtxActionEvents);
 
@@ -156,6 +175,12 @@ namespace ne {
             } else {
                 ++it;
             }
+        }
+
+        // Remove action state.
+        const auto it = actionState.find(sActionName);
+        if (it != actionState.end()) {
+            actionState.erase(it);
         }
 
         return !bFound;

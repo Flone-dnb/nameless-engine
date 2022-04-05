@@ -103,6 +103,25 @@ namespace ne {
         Game(Window *pWindow);
 
         /**
+         * Triggers action events from keyboard/mouse input.
+         *
+         * @param key            Keyboard/mouse key.
+         * @param modifiers      Keyboard modifier keys.
+         * @param bIsPressedDown Whether the key down event occurred or key up.
+         */
+        void triggerActionEvents(std::variant<KeyboardKey, MouseButton> key, KeyboardModifiers modifiers,
+                                 bool bIsPressedDown);
+
+        /**
+         * Triggers axis events from keyboard input.
+         *
+         * @param key            Keyboard key.
+         * @param modifiers      Keyboard modifier keys.
+         * @param bIsPressedDown Whether the key down event occurred or key up.
+         */
+        void triggerAxisEvents(KeyboardKey key, KeyboardModifiers modifiers, bool bIsPressedDown);
+
+        /**
          * A reference to a window-owner of this Game.
          * Should not be deleted.
          */

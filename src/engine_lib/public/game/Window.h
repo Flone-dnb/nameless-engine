@@ -287,6 +287,11 @@ namespace ne {
         static void glfwWindowMouseCursorPosCallback(GLFWwindow *pGlfwWindow, double xPos, double yPos);
 
         /**
+         * GLFW callback.
+         */
+        static void glfwWindowMouseScrollCallback(GLFWwindow *pGlfwWindow, double xOffset, double yOffset);
+
+        /**
          * Called when the window receives keyboard input.
          *
          * @param key            Keyboard key.
@@ -305,12 +310,19 @@ namespace ne {
         void onMouseInput(MouseButton button, KeyboardModifiers modifiers, bool bIsPressedDown) const;
 
         /**
-         * Called when the window received mouse movement.
+         * Called when the window receives mouse movement.
          *
          * @param iXPos    Mouse X position in pixels.
          * @param iYPos    Mouse Y position in pixels.
          */
         void onMouseMove(int iXPos, int iYPos);
+
+        /**
+         * Called when the window receives mouse scroll movement.
+         *
+         * @param iOffset Movement offset.
+         */
+        void onMouseScrollMove(int iOffset) const;
 
         /**
          * Called when the window focus was changed.

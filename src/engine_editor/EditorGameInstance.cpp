@@ -12,7 +12,9 @@ void EditorGameInstance::onInputAxisEvent(const std::string &sAxisName, ne::Keyb
 void EditorGameInstance::onMouseInput(ne::MouseButton button, ne::KeyboardModifiers modifiers,
                                       bool bIsPressedDown) {}
 
-void EditorGameInstance::onMouseMove(int iXDelta, int iYDelta) {}
+void EditorGameInstance::onMouseMove(int iXOffset, int iYOffset) {}
+
+void EditorGameInstance::onMouseScrollMove(int iOffset) {}
 
 void EditorGameInstance::onKeyboardInput(ne::KeyboardKey key, ne::KeyboardModifiers modifiers,
                                          bool bIsPressedDown) {}

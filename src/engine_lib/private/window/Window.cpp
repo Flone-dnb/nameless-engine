@@ -124,6 +124,14 @@ namespace ne {
         iLastMouseYPos = static_cast<int>(iYPos);
     }
 
+    void Window::onMouseScrollMove(int iOffset) const {
+        if (!pGame) {
+            return;
+        }
+
+        pGame->onMouseScrollMove(iOffset);
+    }
+
     void Window::onWindowFocusChanged(bool bIsFocused) const {
         if (!pGame || !pGame->pGameInstance) {
             return;
@@ -172,6 +180,15 @@ namespace ne {
         }
 
         pWindow->onMouseMove(static_cast<int>(xPos), static_cast<int>(yPos));
+    }
+
+    void Window::glfwWindowMouseScrollCallback(GLFWwindow *pGlfwWindow, double xOffset, double yOffset) {
+        const Window *pWindow = static_cast<Window *>(glfwGetWindowUserPointer(pGlfwWindow));
+        if (!pWindow) {
+            return;
+        }
+
+        pWindow->onMouseScrollMove(static_cast<int>(yOffset));
     }
 
     std::variant<std::unique_ptr<Window>, Error> Window::newInstance(WindowBuilderParameters &params) {
@@ -241,6 +258,9 @@ namespace ne {
 
         // Bind to mouse move.
         glfwSetCursorPosCallback(pGLFWWindow, Window::glfwWindowMouseCursorPosCallback);
+
+        // Bind to mouse scroll move.
+        glfwSetScrollCallback(pGLFWWindow, Window::glfwWindowMouseScrollCallback);
 
         // Bind to focus change event.
         glfwSetWindowFocusCallback(pGLFWWindow, Window::glfwWindowFocusCallback);

@@ -134,7 +134,11 @@ namespace ne {
         }
     }
 
-    void Game::onMouseMove(int iXDelta, int iYDelta) const { pGameInstance->onMouseMove(iXDelta, iYDelta); }
+    void Game::onMouseMove(int iXOffset, int iYOffset) const {
+        pGameInstance->onMouseMove(iXOffset, iYOffset);
+    }
+
+    void Game::onMouseScrollMove(int iOffset) const { pGameInstance->onMouseScrollMove(iOffset); }
 
     Game::Game(Window *pWindow) {
         this->pWindow = pWindow;

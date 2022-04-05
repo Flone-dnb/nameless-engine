@@ -69,12 +69,19 @@ public:
     /**
      * Called when the window received mouse movement.
      *
-     * @param iXDelta  Mouse X movement delta in pixels (plus if moved to the right,
+     * @param iXOffset  Mouse X movement delta in pixels (plus if moved to the right,
      * minus if moved to the left).
-     * @param iYDelta  Mouse Y movement delta in pixels (plus if moved up,
+     * @param iYOffset  Mouse Y movement delta in pixels (plus if moved up,
      * minus if moved down).
      */
-    virtual void onMouseMove(int iXDelta, int iYDelta) override;
+    virtual void onMouseMove(int iXOffset, int iYOffset) override;
+
+    /**
+     * Called when the window receives mouse scroll movement.
+     *
+     * @param iOffset Movement offset.
+     */
+    virtual void onMouseScrollMove(int iOffset) override;
 
     /**
      * Called when the window receives keyboard input.

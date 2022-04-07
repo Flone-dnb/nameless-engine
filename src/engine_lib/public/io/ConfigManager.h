@@ -60,7 +60,7 @@ namespace ne {
          * File should exist, otherwise an error will be returned (you can use @ref getAllConfigFiles
          * or @ref getFolderForConfigFiles to see if files exist).
          * If you used @ref saveFile before and enabled a backup file (see @ref saveFile),
-         * if usual file does  not exist this function will look for a backup file and if found,
+         * if usual file does not exist this function will look for a backup file and if found,
          * will copy this backup file with a name of the usual file.
          *
          * @param category    Folder in which we will store this file, note that ENGINE
@@ -74,6 +74,18 @@ namespace ne {
          * @return Error if something went wrong.
          */
         std::optional<Error> loadFile(ConfigCategory category, std::string_view sFileName);
+
+        /**
+         * Loads data from INI file.
+         * If you used @ref saveFile before and enabled a backup file (see @ref saveFile),
+         * if usual file does not exist this function will look for a backup file and if found,
+         * will copy this backup file with a name of the usual file.
+         *
+         * @param pathToFile  Path to the file to load (should exist).
+         *
+         * @return Error if something went wrong.
+         */
+        std::optional<Error> loadFile(std::filesystem::path pathToFile);
 
         /**
          * Reads a value from loaded INI file (see @ref loadFile).
@@ -196,6 +208,20 @@ namespace ne {
          */
         std::optional<Error> saveFile(ConfigCategory category, std::string_view sFileName,
                                       bool bEnableBackup);
+
+        /**
+         * Saves the current configuration to a file with a UTF-8 encoding.
+         *
+         * @param pathToFile  Path to the file to save (if file does not exist, it will be created).
+         * @param bEnableBackup  If 'true' will also use a backup (copy) file. @ref loadFile can use
+         * backup file if a usual configuration file does not exist. Generally you want to use
+         * a backup file if you are saving important information, such as player progress,
+         * other cases such as player game settings and etc. usually do not need a backup but
+         * you can use a backup if you want.
+         *
+         * @return Error if something went wrong.
+         */
+        std::optional<Error> saveFile(const std::filesystem::path &pathToFile, bool bEnableBackup);
 
         /**
          * Returns full path to the file if it was loaded using @ref loadFile

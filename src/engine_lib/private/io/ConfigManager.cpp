@@ -67,24 +67,29 @@ namespace ne {
             return error;
         }
 
-        filePath = std::get<std::filesystem::path>(result);
-        std::filesystem::path backupFile = filePath;
+        return loadFile(std::get<std::filesystem::path>(result));
+    }
+
+    std::optional<Error> ConfigManager::loadFile(std::filesystem::path pathToFile) {
+        std::filesystem::path backupFile = pathToFile;
         backupFile += sBackupFileExtension;
 
-        if (!std::filesystem::exists(filePath)) {
+        if (!std::filesystem::exists(pathToFile)) {
             // Check if backup file exists.
             if (std::filesystem::exists(backupFile)) {
-                std::filesystem::copy_file(backupFile, filePath);
+                std::filesystem::copy_file(backupFile, pathToFile);
             } else {
                 return Error("file and backup file do not exist");
             }
         }
 
         // Load file.
-        const SI_Error error = ini.LoadFile(filePath.c_str());
+        const SI_Error error = ini.LoadFile(pathToFile.c_str());
         if (error < 0) {
             return Error(std::format("failed to load file, error code: {}", std::to_string(error)));
         }
+
+        filePath = pathToFile;
 
         return {};
     }
@@ -173,20 +178,29 @@ namespace ne {
             error.addEntry();
             return error;
         }
-        filePath = std::get<std::filesystem::path>(result);
-        std::filesystem::path backupFile = filePath;
+
+        return saveFile(std::get<std::filesystem::path>(result), bEnableBackup);
+    }
+
+    std::optional<Error> ConfigManager::saveFile(const std::filesystem::path &pathToFile,
+                                                 bool bEnableBackup) {
+        if (!std::filesystem::exists(pathToFile.parent_path())) {
+            std::filesystem::create_directories(pathToFile.parent_path());
+        }
+
+        std::filesystem::path backupFile = pathToFile;
         backupFile += sBackupFileExtension;
 
         if (bEnableBackup) {
-            if (std::filesystem::exists(filePath)) {
+            if (std::filesystem::exists(pathToFile)) {
                 if (std::filesystem::exists(backupFile)) {
                     std::filesystem::remove(backupFile);
                 }
-                std::filesystem::rename(filePath, backupFile);
+                std::filesystem::rename(pathToFile, backupFile);
             }
         }
 
-        const SI_Error error = ini.SaveFile(filePath.c_str());
+        const SI_Error error = ini.SaveFile(pathToFile.c_str());
         if (error < 0) {
             return Error(std::format("failed to load file, error code: {}", std::to_string(error)));
         }
@@ -194,9 +208,11 @@ namespace ne {
         if (bEnableBackup) {
             // Create backup file if not exists.
             if (!std::filesystem::exists(backupFile)) {
-                std::filesystem::copy_file(filePath, backupFile);
+                std::filesystem::copy_file(pathToFile, backupFile);
             }
         }
+
+        filePath = pathToFile;
 
         return {};
     }

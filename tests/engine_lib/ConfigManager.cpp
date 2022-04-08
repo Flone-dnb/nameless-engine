@@ -216,8 +216,8 @@ TEST_CASE("get all config files of category") {
     const std::wstring sSecondFilePath = manager.getFilePath();
 
     // Check that file and backup exist.
-    REQUIRE(std::filesystem::exists(sFirstFilePath));
-    REQUIRE(std::filesystem::exists(sFirstFilePath + L".old"));
+    REQUIRE(std::filesystem::exists(sSecondFilePath));
+    REQUIRE(std::filesystem::exists(sSecondFilePath + L".old"));
 
     auto vFiles = ConfigManager::getAllConfigFiles(ConfigCategory::SETTINGS);
     REQUIRE(vFiles.size() == 2);

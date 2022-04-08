@@ -37,7 +37,7 @@ namespace ne {
          * Returns file names (without extension) that this category (folder)
          * contains.
          *
-         * How backup files are handled (for PROGRESS category):
+         * How backup files are handled:
          * Imagine you had a file 'player.ini' and a backup file ('player.ini.old').
          * If, for some reason, 'player.ini' (the original file) does not exist,
          * but its backup file is there, we will copy the backup file (player.ini.old)
@@ -48,7 +48,7 @@ namespace ne {
          *
          * @return All files in the specified category (backup files are excluded).
          */
-        static std::vector<std::string> getAllConfigFiles(ConfigCategory category);
+        static std::vector<std::string> getAllFiles(ConfigCategory category);
 
         /**
          * Returns path to the folder used to store specific category of files.

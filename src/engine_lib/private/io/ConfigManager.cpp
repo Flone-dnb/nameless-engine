@@ -6,7 +6,7 @@
 namespace ne {
     ConfigManager::ConfigManager() { ini.SetUnicode(true); }
 
-    std::vector<std::string> ConfigManager::getAllConfigFiles(ConfigCategory category) {
+    std::vector<std::string> ConfigManager::getAllFiles(ConfigCategory category) {
         const auto categoryFolder = ConfigManager::getFolderForConfigFiles(category);
 
         std::vector<std::string> vConfigFiles;

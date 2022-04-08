@@ -181,6 +181,51 @@ TEST_CASE("test backup file") {
     }
 }
 
+TEST_CASE("remove file") {
+    using namespace ne;
+
+    // Create file.
+    ConfigManager manager;
+    manager.setValue(sTestConfigFileSection, "my cool string", "this is a cool string", "this is a comment");
+
+    auto res = manager.saveFile(ConfigCategory::SETTINGS, sTestConfigFileName, true);
+    if (res.has_value()) {
+        res->addEntry();
+        INFO(res->getError())
+        REQUIRE(false);
+    }
+
+    const auto firstFilePath = manager.getFilePath();
+    const std::string sSecondFileName = std::string(sTestConfigFileName) + "2";
+
+    res = manager.saveFile(ConfigCategory::SETTINGS, sSecondFileName, true);
+    if (res.has_value()) {
+        res->addEntry();
+        INFO(res->getError())
+        REQUIRE(false);
+    }
+
+    const auto secondFilePath = manager.getFilePath();
+
+    // Check that files exists.
+    REQUIRE(std::filesystem::exists(firstFilePath));
+    REQUIRE(std::filesystem::exists(secondFilePath));
+
+    // Remove the first file.
+    res = ConfigManager::removeFile(ConfigCategory::SETTINGS, sTestConfigFileName);
+    if (res.has_value()) {
+        res->addEntry();
+        INFO(res->getError())
+        REQUIRE(false);
+    }
+
+    // See the only second file exists.
+    auto vFiles = ConfigManager::getAllFiles(ConfigCategory::SETTINGS);
+    REQUIRE(vFiles.size() == 1);
+
+    REQUIRE(vFiles[0] == sSecondFileName);
+}
+
 TEST_CASE("get all config files of category (with backup test)") {
     using namespace ne;
 

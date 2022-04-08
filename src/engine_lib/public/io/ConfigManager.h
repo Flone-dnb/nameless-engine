@@ -62,6 +62,23 @@ namespace ne {
         static std::filesystem::path getFolderForConfigFiles(ConfigCategory category);
 
         /**
+         * Removes a file.
+         * File should exist, otherwise an error will be returned (you can use @ref getAllFiles
+         * or @ref getFolderForConfigFiles to see if files exist).
+         * This function will also remove the backup file of this file (if exists).
+         *
+         * @param category    Folder in which we will search for this file.
+         * Use PROGRESS category to search for player's game progress and SETTINGS to search for player's
+         * settings.
+         * @param sFileName   Name of the file to remove. We will search it in a predefined directory
+         * that we also use in @ref saveFile (use @ref getFilePath to see full path),
+         * the .ini extension will be added if the passed name does not have it.
+         *
+         * @return Error if something went wrong.
+         */
+        static std::optional<Error> removeFile(ConfigCategory category, std::string_view sFileName);
+
+        /**
          * Loads data from INI file.
          * File should exist, otherwise an error will be returned (you can use @ref getAllConfigFiles
          * or @ref getFolderForConfigFiles to see if files exist).
@@ -74,7 +91,6 @@ namespace ne {
          * @param sFileName   Name of the file to load. We will load it from a predefined directory
          * that we also use in @ref saveFile (use @ref getFilePath to see full path),
          * the .ini extension will be added if the passed name does not have it.
-         * @arg if absolute path is specified we will try to load it using this path.
          *
          * @return Error if something went wrong.
          */

@@ -76,6 +76,33 @@ namespace ne {
         return basePath;
     }
 
+    std::optional<Error> ConfigManager::removeFile(ConfigCategory category, std::string_view sFileName) {
+        auto result = ConfigManager::constructFilePath(category, sFileName);
+        if (std::holds_alternative<Error>(result)) {
+            auto error = std::get<Error>(std::move(result));
+            error.addEntry();
+            return error;
+        }
+
+        const auto pathToFile = std::get<std::filesystem::path>(result);
+        auto pathToBackupFile = pathToFile;
+        pathToBackupFile += sBackupFileExtension;
+
+        if (!std::filesystem::exists(pathToFile) && !std::filesystem::exists(pathToBackupFile)) {
+            return Error("file(-s) do not exist");
+        }
+
+        if (std::filesystem::exists(pathToFile)) {
+            std::filesystem::remove(pathToFile);
+        }
+
+        if (std::filesystem::exists(pathToBackupFile)) {
+            std::filesystem::remove(pathToBackupFile);
+        }
+
+        return {};
+    }
+
     std::optional<Error> ConfigManager::loadFile(ConfigCategory category, std::string_view sFileName) {
         auto result = ConfigManager::constructFilePath(category, sFileName);
         if (std::holds_alternative<Error>(result)) {

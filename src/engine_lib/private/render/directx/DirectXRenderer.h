@@ -193,7 +193,7 @@ namespace ne {
         bool bStartedWithConfigurationFromDisk = false;
 
         /**
-         * Used to create a critical section for read/write operation on config file.s
+         * Used to create a critical section for read/write operation on config files.
          */
         std::mutex mtxRwConfigFile;
 

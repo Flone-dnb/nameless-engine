@@ -181,7 +181,7 @@ TEST_CASE("test backup file") {
     }
 }
 
-TEST_CASE("get all config files of category") {
+TEST_CASE("get all config files of category (with backup test)") {
     using namespace ne;
 
     // Create files.
@@ -225,16 +225,21 @@ TEST_CASE("get all config files of category") {
     // Remove first file without backup.
     std::filesystem::remove(sFirstFilePath);
 
+    // This function should restore original file from backup.
     vFiles = ConfigManager::getAllConfigFiles(ConfigCategory::SETTINGS);
-    REQUIRE(vFiles.size() == 1);
+    REQUIRE(vFiles.size() == 2);
+    REQUIRE(std::filesystem::exists(sFirstFilePath));
 
     // Remove first file backup.
     std::filesystem::remove(sFirstFilePath + L".old");
 
     vFiles = ConfigManager::getAllConfigFiles(ConfigCategory::SETTINGS);
-    REQUIRE(vFiles.size() == 1);
+    REQUIRE(vFiles.size() == 2);
 
     // Remove second file with backup.
     std::filesystem::remove(sSecondFilePath);
     std::filesystem::remove(sSecondFilePath + L".old");
+
+    // Remove first file.
+    std::filesystem::remove(sFirstFilePath);
 }

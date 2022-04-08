@@ -12,8 +12,28 @@ namespace ne {
         std::vector<std::string> vConfigFiles;
         const auto directoryIterator = std::filesystem::directory_iterator(categoryFolder);
         for (const auto &entry : directoryIterator) {
-            if (entry.is_regular_file() && entry.path().extension().compare(sBackupFileExtension)) {
-                vConfigFiles.push_back(entry.path().stem().string());
+            if (entry.is_regular_file()) {
+                if (entry.path().extension().string() == sBackupFileExtension) {
+                    // Backup file. See if original file exists.
+                    auto originalFilePath = categoryFolder;
+                    originalFilePath += entry.path().stem().string(); // will return 'text.ini'
+                    if (!std::filesystem::exists(originalFilePath)) {
+                        // Backup file exists, but not the original file.
+                        // Copy backup file as the original.
+                        std::filesystem::copy_file(entry, originalFilePath);
+                    }
+
+                    // Check if we already added this file.
+                    if (std::ranges::find(vConfigFiles, originalFilePath.stem().string()) ==
+                        vConfigFiles.end()) {
+                        vConfigFiles.push_back(originalFilePath.stem().string());
+                    }
+                } else {
+                    // Check if we already added this file.
+                    if (std::ranges::find(vConfigFiles, entry.path().stem().string()) == vConfigFiles.end()) {
+                        vConfigFiles.push_back(entry.path().stem().string());
+                    }
+                }
             }
         }
 

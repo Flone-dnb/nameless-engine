@@ -80,7 +80,7 @@ namespace ne {
 
         /**
          * Loads data from INI file.
-         * File should exist, otherwise an error will be returned (you can use @ref getAllConfigFiles
+         * File should exist, otherwise an error will be returned (you can use @ref getAllFiles
          * or @ref getFolderForConfigFiles to see if files exist).
          * If you used @ref saveFile before and enabled a backup file (see @ref saveFile),
          * if usual file does not exist this function will look for a backup file and if found,

@@ -234,7 +234,8 @@ namespace ne {
 
         /**
          * Map of action events.
-         * TODO: add GamepadKey into variant when gamepad will be supported.
+         * TODO: add GamepadKey into variant when gamepad will be supported and save/load them in
+         * TODO: saveToFile/loadFromFile.
          */
         std::unordered_map<std::variant<KeyboardKey, MouseButton>, std::set<std::string>> actionEvents;
 
@@ -247,7 +248,7 @@ namespace ne {
          * A pair of keyboard keys define values for +1 and -1 input.
          * Map's key defines a keyboard key, map's value defines an array of actions with
          * an input value (+1/-1).
-         * TODO: add GamepadAxis when gamepad will be supported.
+         * TODO: add GamepadAxis when gamepad will be supported and save/load them in saveToFile/loadFromFile.
          */
         std::unordered_map<KeyboardKey, std::set<std::pair<std::string, int>>> axisEvents;
 

@@ -16,9 +16,8 @@ namespace ne {
      * Describes different folders in which we can store configuration files.
      */
     enum class ConfigCategory {
-        SAVE,   // used to store user's game progress
-        CONFIG, // used to store user's game settings like keybindings
-        ENGINE, // used by engine to store engine configuration
+        PROGRESS, // used to store player's game progress
+        SETTINGS  // used to store player's game specific settings
     };
 
     /**
@@ -35,8 +34,15 @@ namespace ne {
         ConfigManager &operator=(const ConfigManager &) = delete;
 
         /**
-         * Returns file names (without extension, excluding any backup files) that this category (folder)
+         * Returns file names (without extension) that this category (folder)
          * contains.
+         *
+         * How backup files are handled:
+         * Imagine you had a file 'player.ini' and a backup file ('player.ini.old').
+         * If, for some reason, 'player.ini' (the original file) does not exist,
+         * but its backup file is there, we will copy the backup file (player.ini.old)
+         * as the original file (will copy 'player.ini.old' as 'player.ini') and
+         * return 'player' as an available config file.
          *
          * @param category Category (folder) in which to look for files.
          *
@@ -63,9 +69,8 @@ namespace ne {
          * if usual file does not exist this function will look for a backup file and if found,
          * will copy this backup file with a name of the usual file.
          *
-         * @param category    Folder in which we will store this file, note that ENGINE
-         * category is used by engine internals and should not be used to store game configs.
-         * Use SAVE category to save user's game progress and CONFIG to store user's settings.
+         * @param category    Folder in which we will store this file.
+         * Use PROGRESS category to save player's game progress and SETTINGS to store player's settings.
          * @param sFileName   Name of the file to load. We will load it from a predefined directory
          * that we also use in @ref saveFile (use @ref getFilePath to see full path),
          * the .ini extension will be added if the passed name does not have it.
@@ -188,11 +193,10 @@ namespace ne {
         /**
          * Saves the current configuration to a file with a UTF-8 encoding.
          *
-         * @param category       Folder in which we will store this file, note that ENGINE
-         * category is used by engine internals and should not be used to store game configs.
-         * Use SAVE category to save user's game progress and CONFIG to store user's settings
-         * such as keybindings, there is no need to save render settings here as
-         * some parts of the engine save their own configs, for example, renderer will save latest
+         * @param category       Folder in which we will store this file.
+         * Use PROGRESS category to save player's game progress and SETTINGS to store player's settings.
+         * There is no need to save render settings here as
+         * some parts of the engine save their own configs, for example, renderer will save last
          * applied settings and restore them on start so you don't need to save them manually.
          * @param sFileName      Name of the file to save, prefer to have only ASCII characters in the
          * file name. We will save it to a predefined directory
@@ -235,16 +239,13 @@ namespace ne {
         /**
          * Constructs a file path from file name.
          *
-         * @param category    Folder in which we will store this file, note that ENGINE
-         * category is used by engine internals and should not be used to store game configs.
-         * Use SAVE category to save user's game progress and CONFIG to store user's settings.
-         * @param sFileName   Name of the file:
-         * @arg (preferred option) if only name is specified, a predefined directory
+         * @param category    Folder in which we will store this file.
+         * Use PROGRESS category to save player's game progress and SETTINGS to store player's settings.
+         * @param sFileName   Name of the file, a predefined directory
          * will be appended to the beginning,
          * the .ini extension will be added if the passed name does not have it.
-         * @arg if absolute path is specified we will check if it's pointing to a regular file.
          *
-         * @return Error if something went wrong, ConfigManager if loaded file successfully.
+         * @return Error if something went wrong, valid path otherwise.
          */
         static std::variant<std::filesystem::path, Error> constructFilePath(ConfigCategory category,
                                                                             std::string_view sFileName);

@@ -16,14 +16,14 @@ namespace ne {
     constexpr std::string_view sLogsDirectoryName = "logs";
 
     /**
-     * Directory name that we append to the result of the base directory.
+     * Directory name that is used to store player's progress.
      */
-    constexpr std::string_view sSavesDirectoryName = "saves";
+    constexpr std::string_view sProgressDirectoryName = "progress";
 
     /**
-     * Directory name that we append to the result of the base directory.
+     * Directory name that is used to store player's settings.
      */
-    constexpr std::string_view sConfigsDirectoryName = "configs";
+    constexpr std::string_view sSettingsDirectoryName = "settings";
 
     /**
      * Directory name that we append to the result of the base directory.
@@ -36,7 +36,7 @@ namespace ne {
      *
      * @return Path to base directory that ends with a platform specific slash.
      */
-    std::filesystem::path getBaseDirectory();
+    std::filesystem::path getBaseDirectoryForConfigs();
 
     /**
      * Returns the name of this application.

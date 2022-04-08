@@ -16,7 +16,7 @@
 #endif
 
 namespace ne {
-    std::filesystem::path getBaseDirectory() {
+    std::filesystem::path getBaseDirectoryForConfigs() {
         std::filesystem::path basePath;
 
 #if defined(WIN32)

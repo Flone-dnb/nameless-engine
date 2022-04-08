@@ -34,7 +34,7 @@ namespace ne {
     std::string Logger::getDirectoryWithLogs() const { return sLoggerWorkingDirectory; }
 
     Logger::Logger() {
-        std::string sLoggerFilePath = getBaseDirectory().string();
+        std::string sLoggerFilePath = getBaseDirectoryForConfigs().string();
         sLoggerFilePath += getApplicationName();
 
         // Create base directory with application name.

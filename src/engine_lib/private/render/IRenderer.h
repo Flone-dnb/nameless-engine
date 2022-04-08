@@ -4,6 +4,7 @@
 #include <variant>
 #include <vector>
 #include <string>
+#include <filesystem>
 
 // Custom.
 #include "misc/Error.h"
@@ -109,11 +110,11 @@ namespace ne {
         static bool isConfigurationFileExists();
 
         /**
-         * Returns name of the configuration file used by the renderer.
+         * Returns path of the configuration file used by the renderer.
          *
-         * @return Configuration file name.
+         * @return Configuration file path, file might not exist, but the directories will be created.
          */
-        static const char *getRendererConfigurationFileName();
+        static std::filesystem::path getRendererConfigurationFilePath();
 
         /**
          * Returns name of the section used in configuration file.

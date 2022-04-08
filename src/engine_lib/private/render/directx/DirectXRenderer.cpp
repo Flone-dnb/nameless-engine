@@ -434,7 +434,7 @@ namespace ne {
 
         if (isConfigurationFileExists()) {
             // Add existing values first.
-            auto error = manager.loadFile(ConfigCategory::ENGINE, getRendererConfigurationFileName());
+            auto error = manager.loadFile(getRendererConfigurationFilePath());
             if (error.has_value()) {
                 error->addEntry();
                 // error->showError(); don't show on screen as it's not a critical error
@@ -469,7 +469,7 @@ namespace ne {
         // New settings go here!
         // !!!
 
-        auto error = manager.saveFile(ConfigCategory::ENGINE, getRendererConfigurationFileName(), false);
+        auto error = manager.saveFile(getRendererConfigurationFilePath(), false);
         if (error.has_value()) {
             error->addEntry();
             // error->showError(); don't show on screen as it's not a critical error
@@ -487,7 +487,7 @@ namespace ne {
         ConfigManager manager;
 
         // Try loading file.
-        auto loadError = manager.loadFile(ConfigCategory::ENGINE, getRendererConfigurationFileName());
+        auto loadError = manager.loadFile(getRendererConfigurationFilePath());
         if (loadError.has_value()) {
             loadError->addEntry();
             loadError->showError();

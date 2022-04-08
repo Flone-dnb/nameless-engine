@@ -21,7 +21,7 @@ namespace ne {
     }
 
     std::filesystem::path ConfigManager::getFolderForConfigFiles(ConfigCategory category) {
-        std::filesystem::path basePath = getBaseDirectory();
+        std::filesystem::path basePath = getBaseDirectoryForConfigs();
         basePath += getApplicationName();
 
 #if defined(WIN32)
@@ -35,14 +35,11 @@ namespace ne {
         }
 
         switch (category) {
-        case ConfigCategory::SAVE:
-            basePath += sSavesDirectoryName;
+        case ConfigCategory::PROGRESS:
+            basePath += sProgressDirectoryName;
             break;
-        case ConfigCategory::CONFIG:
-            basePath += sConfigsDirectoryName;
-            break;
-        case ConfigCategory::ENGINE:
-            basePath += sEngineDirectoryName;
+        case ConfigCategory::SETTINGS:
+            basePath += sSettingsDirectoryName;
             break;
         }
 
@@ -232,7 +229,7 @@ namespace ne {
             }
 
             // Prepare directory.
-            basePath = getBaseDirectory();
+            basePath = getBaseDirectoryForConfigs();
             basePath += getApplicationName();
 
 #if defined(WIN32)
@@ -246,14 +243,11 @@ namespace ne {
             }
 
             switch (category) {
-            case ConfigCategory::SAVE:
-                basePath += sSavesDirectoryName;
+            case ConfigCategory::PROGRESS:
+                basePath += sProgressDirectoryName;
                 break;
-            case ConfigCategory::CONFIG:
-                basePath += sConfigsDirectoryName;
-                break;
-            case ConfigCategory::ENGINE:
-                basePath += sEngineDirectoryName;
+            case ConfigCategory::SETTINGS:
+                basePath += sSettingsDirectoryName;
                 break;
             }
 

@@ -7,7 +7,7 @@ namespace ne {
     ConfigManager::ConfigManager() { ini.SetUnicode(true); }
 
     std::vector<std::string> ConfigManager::getAllFiles(ConfigCategory category) {
-        const auto categoryFolder = ConfigManager::getFolderForConfigFiles(category);
+        const auto categoryFolder = ConfigManager::getCategoryDirectory(category);
 
         std::vector<std::string> vConfigFiles;
         const auto directoryIterator = std::filesystem::directory_iterator(categoryFolder);
@@ -40,7 +40,7 @@ namespace ne {
         return vConfigFiles;
     }
 
-    std::filesystem::path ConfigManager::getFolderForConfigFiles(ConfigCategory category) {
+    std::filesystem::path ConfigManager::getCategoryDirectory(ConfigCategory category) {
         std::filesystem::path basePath = getBaseDirectoryForConfigs();
         basePath += getApplicationName();
 

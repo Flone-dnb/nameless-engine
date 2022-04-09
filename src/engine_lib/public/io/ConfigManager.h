@@ -13,7 +13,7 @@
 
 namespace ne {
     /**
-     * Describes different folders in which we can store configuration files.
+     * Describes different directories in which we can store configuration files.
      */
     enum class ConfigCategory {
         PROGRESS, // used to store player's game progress (uses backup files under the hood)
@@ -34,7 +34,7 @@ namespace ne {
         ConfigManager &operator=(const ConfigManager &) = delete;
 
         /**
-         * Returns file names (without extension) that this category (folder)
+         * Returns file names (without extension) that this category (directory)
          * contains.
          *
          * How backup files are handled:
@@ -44,30 +44,30 @@ namespace ne {
          * as the original file (will copy 'player.ini.old' as 'player.ini') and
          * return 'player' as an available config file.
          *
-         * @param category Category (folder) in which to look for files.
+         * @param category Category (directory) in which to look for files.
          *
          * @return All files in the specified category (backup files are excluded).
          */
         static std::vector<std::string> getAllFiles(ConfigCategory category);
 
         /**
-         * Returns path to the folder used to store specific category of files.
+         * Returns path to the directory used to store specific category of files.
          * Returned string ends with the platform specific slash.
          * Path will be created if not existed before.
          *
-         * @param category Category (folder) for which to return path.
+         * @param category Category for which to return path.
          *
-         * @return Path to the folder of the specified category.
+         * @return Path to the directory of the specified category.
          */
-        static std::filesystem::path getFolderForConfigFiles(ConfigCategory category);
+        static std::filesystem::path getCategoryDirectory(ConfigCategory category);
 
         /**
          * Removes a file.
          * File should exist, otherwise an error will be returned (you can use @ref getAllFiles
-         * or @ref getFolderForConfigFiles to see if files exist).
+         * or @ref getCategoryDirectory to see if files exist).
          * This function will also remove the backup file of this file (if exists).
          *
-         * @param category    Folder in which we will search for this file.
+         * @param category    Directory in which we will search for this file.
          * Use PROGRESS category to search for player's game progress and SETTINGS to search for player's
          * settings.
          * @param sFileName   Name of the file to remove. We will search it in a predefined directory
@@ -81,12 +81,12 @@ namespace ne {
         /**
          * Loads data from INI file.
          * File should exist, otherwise an error will be returned (you can use @ref getAllFiles
-         * or @ref getFolderForConfigFiles to see if files exist).
+         * or @ref getCategoryDirectory to see if files exist).
          * If you used @ref saveFile before and enabled a backup file (see @ref saveFile),
          * if usual file does not exist this function will look for a backup file and if found,
          * will copy this backup file with a name of the usual file.
          *
-         * @param category    Folder in which we will store this file.
+         * @param category    Directory in which we will store this file.
          * Use PROGRESS category to save player's game progress and SETTINGS to store player's settings.
          * @param sFileName   Name of the file to load. We will load it from a predefined directory
          * that we also use in @ref saveFile (use @ref getFilePath to see full path),
@@ -215,7 +215,7 @@ namespace ne {
          * some parts of the engine save their own configs, for example, renderer will save last
          * applied settings and restore them on start so you don't need to save them manually.
          *
-         * @param category   Folder in which we will store this file.
+         * @param category   Directory in which we will store this file.
          * Use PROGRESS category to save player's game progress and SETTINGS to store player's settings.
          * The difference is that for PROGRESS category we will use backup files, so that if user's
          * progress was deleted we can use a backup file to restore it. SETTINGS category does
@@ -256,7 +256,7 @@ namespace ne {
         /**
          * Constructs a file path from file name.
          *
-         * @param category    Folder in which we will store this file.
+         * @param category    Directory in which we will store this file.
          * Use PROGRESS category to save player's game progress and SETTINGS to store player's settings.
          * @param sFileName   Name of the file, a predefined directory
          * will be appended to the beginning,

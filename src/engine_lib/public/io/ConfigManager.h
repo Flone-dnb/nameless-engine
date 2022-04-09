@@ -98,6 +98,9 @@ namespace ne {
 
         /**
          * Loads data from INI file.
+         *
+         * Prefer to use the other overload (@ref loadFile) that uses a category instead of a path.
+         *
          * If you used @ref saveFile before with PROGRESS category,
          * if the usual (original) file does not exist this function
          * will look for a backup file and if found,
@@ -232,6 +235,8 @@ namespace ne {
 
         /**
          * Saves the current configuration to a file with a UTF-8 encoding.
+         *
+         * Prefer to use the other overload (@ref saveFile) that uses a category instead of a path.
          *
          * @param pathToFile  Path to the file to save (if file does not exist, it will be created).
          * @param bEnableBackup  If 'true' will also use a backup (copy) file. @ref loadFile can use

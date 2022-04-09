@@ -16,8 +16,8 @@ namespace ne {
      * Describes different folders in which we can store configuration files.
      */
     enum class ConfigCategory {
-        PROGRESS, // used to store player's game progress
-        SETTINGS  // used to store player's game specific settings
+        PROGRESS, // used to store player's game progress (uses backup files under the hood)
+        SETTINGS  // used to store player's game specific settings (no backup files)
     };
 
     /**
@@ -98,9 +98,11 @@ namespace ne {
 
         /**
          * Loads data from INI file.
-         * If you used @ref saveFile before and enabled a backup file (see @ref saveFile),
-         * if usual file does not exist this function will look for a backup file and if found,
-         * will copy this backup file with a name of the usual file.
+         * If you used @ref saveFile before with PROGRESS category,
+         * if the usual (original) file does not exist this function
+         * will look for a backup file and if found,
+         * will copy this backup file with a name of the usual (original) file
+         * (so this function will restore the original file if it was deleted).
          *
          * @param pathToFile  Path to the file to load (should exist).
          *
@@ -209,25 +211,24 @@ namespace ne {
         /**
          * Saves the current configuration to a file with a UTF-8 encoding.
          *
-         * @param category       Folder in which we will store this file.
-         * Use PROGRESS category to save player's game progress and SETTINGS to store player's settings.
-         * There is no need to save render settings here as
+         * There is no need to save render settings as
          * some parts of the engine save their own configs, for example, renderer will save last
          * applied settings and restore them on start so you don't need to save them manually.
-         * @param sFileName      Name of the file to save, prefer to have only ASCII characters in the
+         *
+         * @param category   Folder in which we will store this file.
+         * Use PROGRESS category to save player's game progress and SETTINGS to store player's settings.
+         * The difference is that for PROGRESS category we will use backup files, so that if user's
+         * progress was deleted we can use a backup file to restore it. SETTINGS category does
+         * not use backup files. Backup files handling is used internally so you don't need to worry
+         * about it.
+         * @param sFileName   Name of the file to save, prefer to have only ASCII characters in the
          * file name. We will save it to a predefined directory
          * that we also use in @ref loadFile (use @ref getFilePath to see full path),
          * the .ini extension will be added if the passed name does not have it.
-         * @param bEnableBackup  If 'true' will also use a backup (copy) file. @ref loadFile can use
-         * backup file if a usual configuration file does not exist. Generally you want to use
-         * a backup file if you are saving important information, such as player progress,
-         * other cases such as player game settings and etc. usually do not need a backup but
-         * you can use a backup if you want.
          *
          * @return Error if something went wrong.
          */
-        std::optional<Error> saveFile(ConfigCategory category, std::string_view sFileName,
-                                      bool bEnableBackup);
+        std::optional<Error> saveFile(ConfigCategory category, std::string_view sFileName);
 
         /**
          * Saves the current configuration to a file with a UTF-8 encoding.

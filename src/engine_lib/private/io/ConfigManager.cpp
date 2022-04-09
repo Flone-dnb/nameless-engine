@@ -214,14 +214,15 @@ namespace ne {
         }
     }
 
-    std::optional<Error> ConfigManager::saveFile(ConfigCategory category, std::string_view sFileName,
-                                                 bool bEnableBackup) {
+    std::optional<Error> ConfigManager::saveFile(ConfigCategory category, std::string_view sFileName) {
         auto result = ConfigManager::constructFilePath(category, sFileName);
         if (std::holds_alternative<Error>(result)) {
             auto error = std::get<Error>(std::move(result));
             error.addEntry();
             return error;
         }
+
+        const bool bEnableBackup = category == ConfigCategory::PROGRESS ? true : false;
 
         return saveFile(std::get<std::filesystem::path>(result), bEnableBackup);
     }

@@ -21,7 +21,7 @@ TEST_CASE("create simple config file") {
         manager.setDoubleValue(sTestConfigFileSection, "my cool double", 3.14159, "this is a pi value");
         manager.setLongValue(sTestConfigFileSection, "my cool long", 42, "equals to 42");
 
-        auto res = manager.saveFile(ConfigCategory::SETTINGS, sTestConfigFileName, false);
+        auto res = manager.saveFile(ConfigCategory::SETTINGS, sTestConfigFileName);
         if (res.has_value()) {
             res->addEntry();
             INFO(res->getError())
@@ -143,7 +143,7 @@ TEST_CASE("test backup file") {
         manager.setValue(sTestConfigFileSection, "my cool string", "this is a cool string",
                          "this is a comment");
 
-        auto res = manager.saveFile(ConfigCategory::SETTINGS, sTestConfigFileName, true);
+        auto res = manager.saveFile(ConfigCategory::PROGRESS, sTestConfigFileName);
         if (res.has_value()) {
             res->addEntry();
             INFO(res->getError())
@@ -160,7 +160,7 @@ TEST_CASE("test backup file") {
     // Try to load configuration while usual file does not exist.
     {
         ConfigManager manager;
-        auto res = manager.loadFile(ConfigCategory::SETTINGS, sTestConfigFileName);
+        auto res = manager.loadFile(ConfigCategory::PROGRESS, sTestConfigFileName);
         if (res.has_value()) {
             res->addEntry();
             INFO(res->getError())
@@ -188,7 +188,7 @@ TEST_CASE("remove file") {
     ConfigManager manager;
     manager.setValue(sTestConfigFileSection, "my cool string", "this is a cool string", "this is a comment");
 
-    auto res = manager.saveFile(ConfigCategory::SETTINGS, sTestConfigFileName, true);
+    auto res = manager.saveFile(ConfigCategory::PROGRESS, sTestConfigFileName);
     if (res.has_value()) {
         res->addEntry();
         INFO(res->getError())
@@ -198,7 +198,7 @@ TEST_CASE("remove file") {
     const auto firstFilePath = manager.getFilePath();
     const std::string sSecondFileName = std::string(sTestConfigFileName) + "2";
 
-    res = manager.saveFile(ConfigCategory::SETTINGS, sSecondFileName, true);
+    res = manager.saveFile(ConfigCategory::PROGRESS, sSecondFileName);
     if (res.has_value()) {
         res->addEntry();
         INFO(res->getError())
@@ -212,7 +212,7 @@ TEST_CASE("remove file") {
     REQUIRE(std::filesystem::exists(secondFilePath));
 
     // Remove the first file.
-    res = ConfigManager::removeFile(ConfigCategory::SETTINGS, sTestConfigFileName);
+    res = ConfigManager::removeFile(ConfigCategory::PROGRESS, sTestConfigFileName);
     if (res.has_value()) {
         res->addEntry();
         INFO(res->getError())
@@ -220,7 +220,7 @@ TEST_CASE("remove file") {
     }
 
     // See the only second file exists.
-    auto vFiles = ConfigManager::getAllFiles(ConfigCategory::SETTINGS);
+    auto vFiles = ConfigManager::getAllFiles(ConfigCategory::PROGRESS);
     REQUIRE(vFiles.size() == 1);
 
     REQUIRE(vFiles[0] == sSecondFileName);
@@ -233,7 +233,7 @@ TEST_CASE("get all config files of category (with backup test)") {
     ConfigManager manager;
     manager.setValue(sTestConfigFileSection, "my cool string", "this is a cool string", "this is a comment");
 
-    auto res = manager.saveFile(ConfigCategory::SETTINGS, sTestConfigFileName, true);
+    auto res = manager.saveFile(ConfigCategory::PROGRESS, sTestConfigFileName);
     if (res.has_value()) {
         res->addEntry();
         INFO(res->getError())
@@ -251,7 +251,7 @@ TEST_CASE("get all config files of category (with backup test)") {
 
     const std::string sSecondFileName = std::string(sTestConfigFileName) + "2";
 
-    res = manager.saveFile(ConfigCategory::SETTINGS, sSecondFileName, true);
+    res = manager.saveFile(ConfigCategory::PROGRESS, sSecondFileName);
     if (res.has_value()) {
         res->addEntry();
         INFO(res->getError())
@@ -264,21 +264,21 @@ TEST_CASE("get all config files of category (with backup test)") {
     REQUIRE(std::filesystem::exists(sSecondFilePath));
     REQUIRE(std::filesystem::exists(sSecondFilePath + L".old"));
 
-    auto vFiles = ConfigManager::getAllFiles(ConfigCategory::SETTINGS);
+    auto vFiles = ConfigManager::getAllFiles(ConfigCategory::PROGRESS);
     REQUIRE(vFiles.size() == 2);
 
     // Remove first file without backup.
     std::filesystem::remove(sFirstFilePath);
 
     // This function should restore original file from backup.
-    vFiles = ConfigManager::getAllFiles(ConfigCategory::SETTINGS);
+    vFiles = ConfigManager::getAllFiles(ConfigCategory::PROGRESS);
     REQUIRE(vFiles.size() == 2);
     REQUIRE(std::filesystem::exists(sFirstFilePath));
 
     // Remove first file backup.
     std::filesystem::remove(sFirstFilePath + L".old");
 
-    vFiles = ConfigManager::getAllFiles(ConfigCategory::SETTINGS);
+    vFiles = ConfigManager::getAllFiles(ConfigCategory::PROGRESS);
     REQUIRE(vFiles.size() == 2);
 
     // Remove second file with backup.

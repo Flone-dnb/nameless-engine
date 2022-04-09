@@ -138,8 +138,8 @@ namespace ne {
         return {};
     }
 
-    std::string_view ConfigManager::getValue(std::string_view sSection, std::string_view sKey,
-                                             std::string_view sDefaultValue) const {
+    std::string_view ConfigManager::getStringValue(std::string_view sSection, std::string_view sKey,
+                                                   std::string_view sDefaultValue) const {
         return ini.GetValue(sSection.data(), sKey.data(), sDefaultValue.data());
     }
 
@@ -158,8 +158,8 @@ namespace ne {
         return ini.GetLongValue(sSection.data(), sKey.data(), iDefaultValue);
     }
 
-    void ConfigManager::setValue(std::string_view sSection, std::string_view sKey, std::string_view sValue,
-                                 std::string_view sComment) {
+    void ConfigManager::setStringValue(std::string_view sSection, std::string_view sKey,
+                                       std::string_view sValue, std::string_view sComment) {
         std::string sFixedComment(sComment);
         if (!sComment.empty() && !sComment.starts_with('#')) {
             sFixedComment.insert(0, "# ");

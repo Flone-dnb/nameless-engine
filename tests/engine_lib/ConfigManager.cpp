@@ -15,8 +15,8 @@ TEST_CASE("create simple config file") {
     // Create file.
     {
         ConfigManager manager;
-        manager.setValue(sTestConfigFileSection, "my cool string", "this is a cool string",
-                         "this is a comment");
+        manager.setStringValue(sTestConfigFileSection, "my cool string", "this is a cool string",
+                               "this is a comment");
         manager.setBoolValue(sTestConfigFileSection, "my cool bool", true, "this should be true");
         manager.setDoubleValue(sTestConfigFileSection, "my cool double", 3.14159, "this is a pi value");
         manager.setLongValue(sTestConfigFileSection, "my cool long", 42, "equals to 42");
@@ -42,7 +42,7 @@ TEST_CASE("create simple config file") {
             REQUIRE(false);
         }
 
-        auto real = manager.getValue(sTestConfigFileSection, "my cool string", "");
+        auto real = manager.getStringValue(sTestConfigFileSection, "my cool string", "");
         REQUIRE(real == "this is a cool string");
 
         auto realBool = manager.getBoolValue(sTestConfigFileSection, "my cool bool", false);
@@ -86,8 +86,8 @@ TEST_CASE("create simple config file using path") {
     // Create file.
     {
         ConfigManager manager;
-        manager.setValue(sTestConfigFileSection, "my cool string", "this is a cool string",
-                         "this is a comment");
+        manager.setStringValue(sTestConfigFileSection, "my cool string", "this is a cool string",
+                               "this is a comment");
         manager.setBoolValue(sTestConfigFileSection, "my cool bool", true, "this should be true");
         manager.setDoubleValue(sTestConfigFileSection, "my cool double", 3.14159, "this is a pi value");
         manager.setLongValue(sTestConfigFileSection, "my cool long", 42, "equals to 42");
@@ -114,7 +114,7 @@ TEST_CASE("create simple config file using path") {
             REQUIRE(false);
         }
 
-        auto real = manager.getValue(sTestConfigFileSection, "my cool string", "");
+        auto real = manager.getStringValue(sTestConfigFileSection, "my cool string", "");
         REQUIRE(real == "this is a cool string");
 
         auto realBool = manager.getBoolValue(sTestConfigFileSection, "my cool bool", false);
@@ -140,8 +140,8 @@ TEST_CASE("test backup file") {
     // Create file.
     {
         ConfigManager manager;
-        manager.setValue(sTestConfigFileSection, "my cool string", "this is a cool string",
-                         "this is a comment");
+        manager.setStringValue(sTestConfigFileSection, "my cool string", "this is a cool string",
+                               "this is a comment");
 
         auto res = manager.saveFile(ConfigCategory::PROGRESS, sTestConfigFileName);
         if (res.has_value()) {
@@ -167,7 +167,7 @@ TEST_CASE("test backup file") {
             REQUIRE(false);
         }
 
-        auto real = manager.getValue(sTestConfigFileSection, "my cool string", "");
+        auto real = manager.getStringValue(sTestConfigFileSection, "my cool string", "");
         REQUIRE(real == "this is a cool string");
 
         REQUIRE(std::filesystem::exists(manager.getFilePath()));
@@ -186,7 +186,8 @@ TEST_CASE("remove file") {
 
     // Create file.
     ConfigManager manager;
-    manager.setValue(sTestConfigFileSection, "my cool string", "this is a cool string", "this is a comment");
+    manager.setStringValue(sTestConfigFileSection, "my cool string", "this is a cool string",
+                           "this is a comment");
 
     auto res = manager.saveFile(ConfigCategory::PROGRESS, sTestConfigFileName);
     if (res.has_value()) {
@@ -231,7 +232,8 @@ TEST_CASE("get all config files of category (with backup test)") {
 
     // Create files.
     ConfigManager manager;
-    manager.setValue(sTestConfigFileSection, "my cool string", "this is a cool string", "this is a comment");
+    manager.setStringValue(sTestConfigFileSection, "my cool string", "this is a cool string",
+                           "this is a comment");
 
     auto res = manager.saveFile(ConfigCategory::PROGRESS, sTestConfigFileName);
     if (res.has_value()) {

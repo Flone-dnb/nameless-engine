@@ -27,7 +27,7 @@ namespace ne {
     public:
         /**
          * Constructs an empty configuration, use @ref loadFile to read configuration from a file
-         * or @ref setValue and then @ref saveFile to save a new configuration.
+         * or setValue methods and then @ref saveFile to save a new configuration.
          */
         ConfigManager();
         ConfigManager(const ConfigManager &) = delete;
@@ -124,8 +124,8 @@ namespace ne {
          * @return Default value if the specified section/key was not found,
          * otherwise value from INI file.
          */
-        std::string_view getValue(std::string_view sSection, std::string_view sKey,
-                                  std::string_view sDefaultValue) const;
+        std::string_view getStringValue(std::string_view sSection, std::string_view sKey,
+                                        std::string_view sDefaultValue) const;
 
         /**
          * Reads a value from loaded INI file (see @ref loadFile).
@@ -172,8 +172,8 @@ namespace ne {
          * @param sValue     Value to set. UTF-8 encoded.
          * @param sComment   Comment to add to this value. UTF-8 encoded.
          */
-        void setValue(std::string_view sSection, std::string_view sKey, std::string_view sValue,
-                      std::string_view sComment = "");
+        void setStringValue(std::string_view sSection, std::string_view sKey, std::string_view sValue,
+                            std::string_view sComment = "");
 
         /**
          * Sets a value. This value will not be written to file until @ref saveFile is called.

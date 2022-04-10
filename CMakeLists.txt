@@ -84,7 +84,7 @@ if(CMAKE_BUILD_TYPE MATCHES "^[Dd]ebug")
     list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/ext/Catch2/contrib")
     include(CTest)
     include(Catch)
-    catch_discover_tests(tests)
+    #catch_discover_tests(tests)
     set_target_properties(tests PROPERTIES FOLDER ${ENGINE_FOLDER})
 endif()
 

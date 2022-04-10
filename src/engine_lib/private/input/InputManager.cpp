@@ -53,21 +53,18 @@ namespace ne {
         // Remove all axis with this name if exists.
         removeAxisEvent(sAxisName);
 
-        // Add plus key.
-        for (const auto &pair : vAxis) {
-            auto it = axisEvents.find(pair.first);
+        // Add keys.
+        for (const auto &[plusKey, minusKey] : vAxis) {
+            auto it = axisEvents.find(plusKey);
             if (it == axisEvents.end()) {
-                axisEvents[pair.first] = {std::make_pair<std::string, int>(sAxisName.data(), 1)};
+                axisEvents[plusKey] = {std::make_pair<std::string, int>(sAxisName.data(), 1)};
             } else {
                 it->second.insert(std::make_pair<std::string, int>(sAxisName.data(), 1));
             }
-        }
 
-        // Add minus key.
-        for (const auto &pair : vAxis) {
-            auto it = axisEvents.find(pair.second);
+            it = axisEvents.find(minusKey);
             if (it == axisEvents.end()) {
-                axisEvents[pair.second] = {std::make_pair<std::string, int>(sAxisName.data(), -1)};
+                axisEvents[minusKey] = {std::make_pair<std::string, int>(sAxisName.data(), -1)};
             } else {
                 it->second.insert(std::make_pair<std::string, int>(sAxisName.data(), -1));
             }
@@ -79,6 +76,60 @@ namespace ne {
             vAxisState.push_back(AxisState(axis.first, axis.second));
         }
         axisState[sAxisName] = std::make_pair<std::vector<AxisState>, int>(std::move(vAxisState), 0);
+
+        return {};
+    }
+
+    std::optional<Error> InputManager::modifyActionEventKey(const std::string &sActionName,
+                                                            std::variant<KeyboardKey, MouseButton> oldKey,
+                                                            std::variant<KeyboardKey, MouseButton> newKey) {
+        std::scoped_lock<std::recursive_mutex> guard(mtxActionEvents);
+
+        // See if this action exists.
+        auto actions = getAllActionEvents();
+        const auto it = actions.find(sActionName);
+        if (it == actions.end()) {
+            return Error(std::format("no action with the name '{}' exists", sActionName));
+        }
+
+        auto vActionKeys = getActionEvent(sActionName).value();
+
+        // Replace old key.
+        std::ranges::replace(vActionKeys, oldKey, newKey);
+
+        // Overwrite event with new keys.
+        auto optional = addActionEvent(sActionName, vActionKeys);
+        if (optional.has_value()) {
+            optional->addEntry();
+            return std::move(optional.value());
+        }
+
+        return {};
+    }
+
+    std::optional<Error> InputManager::modifyAxisEventKey(const std::string &sAxisName,
+                                                          std::pair<KeyboardKey, KeyboardKey> oldPair,
+                                                          std::pair<KeyboardKey, KeyboardKey> newPair) {
+        std::scoped_lock<std::recursive_mutex> guard(mtxAxisEvents);
+
+        // See if this axis exists.
+        auto axes = getAllAxisEvents();
+        const auto it = axes.find(sAxisName);
+        if (it == axes.end()) {
+            return Error(std::format("no axis with the name '{}' exists", sAxisName));
+        }
+
+        auto vAxisKeys = getAxisEvent(sAxisName).value();
+
+        // Replace old key.
+        std::ranges::replace(vAxisKeys, oldPair, newPair);
+
+        // Overwrite event with new keys.
+        auto optional = addAxisEvent(sAxisName, vAxisKeys);
+        if (optional.has_value()) {
+            optional->addEntry();
+            return std::move(optional.value());
+        }
 
         return {};
     }
@@ -325,24 +376,34 @@ namespace ne {
 
         std::vector<std::pair<KeyboardKey, KeyboardKey>> vAxis;
 
+        // Find only plus keys.
         std::vector<KeyboardKey> vPlusKeys;
-        std::vector<KeyboardKey> vMinusKeys;
-
-        // Find plus/minus keys.
         for (const auto &pair : axisEvents) {
             auto plusIt = pair.second.find(std::make_pair<std::string, int>(sAxisName.data(), 1));
-            auto minusIt = pair.second.find(std::make_pair<std::string, int>(sAxisName.data(), -1));
 
             if (plusIt != pair.second.end()) {
                 vPlusKeys.push_back(pair.first);
             }
-            if (minusIt != pair.second.end()) {
-                vMinusKeys.push_back(pair.first);
-            }
         }
 
-        if (vPlusKeys.empty() && vMinusKeys.empty()) {
+        if (vPlusKeys.empty()) {
             return {};
+        }
+
+        // Add correct minus pair to each plus key using info from states.
+        std::vector<KeyboardKey> vMinusKeys;
+        const std::pair<std::vector<AxisState>, int> currentState = axisState[sAxisName];
+        std::vector<AxisState> pairs = currentState.first;
+        for (const auto &plusKey : vPlusKeys) {
+            auto it = std::ranges::find_if(pairs.begin(), pairs.end(),
+                                           [&](const AxisState &item) { return item.plusKey == plusKey; });
+            if (it == pairs.end()) {
+                Logger::get().error(
+                    std::format("can't find minus key for plus key in axis event '{}'", sAxisName));
+                return {};
+            }
+
+            vMinusKeys.push_back(it->minusKey);
         }
 
         // Check sizes.
@@ -487,23 +548,17 @@ namespace ne {
 
         std::unordered_map<std::string, std::vector<std::pair<KeyboardKey, KeyboardKey>>> axes;
 
-        // Get all axis names first.
-        for (const auto &axisPair : axisEvents) {
-            for (const std::pair<std::string, int> &pair : axisPair.second) {
-                if (!axes.contains(pair.first)) {
-                    axes[pair.first] = {};
-                }
-            }
-        }
-
-        // Fill input for those axis.
-        for (const auto &axisPair : axisEvents) {
-            for (const std::pair<std::string, int> &pair : axisPair.second) {
-                auto option = getAxisEvent(pair.first);
-                if (option.has_value()) {
-                    axes[pair.first] = std::move(option.value());
-                } else {
-                    return axes;
+        for (const auto &keyAxisNames : axisEvents | std::views::values) {
+            for (const auto &sAxisName : keyAxisNames | std::views::keys) {
+                if (!axes.contains(sAxisName)) {
+                    // Get keys.
+                    auto option = getAxisEvent(sAxisName);
+                    if (option.has_value()) {
+                        axes[sAxisName] = std::move(option.value());
+                    } else {
+                        axes[sAxisName] = {};
+                        Logger::get().error(std::format("no axis event found by name '{}'", sAxisName));
+                    }
                 }
             }
         }

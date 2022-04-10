@@ -88,11 +88,10 @@ namespace ne {
          * This way you can have an action "jump" with a space bar button
          * and can easily change input key space bar to something else if
          * the user wants to. For this, just call this function again with
-         * the same action name "jump" but different buttons.
+         * the same action name "jump" but different buttons or use @ref modifyActionEventKey
+         * to only change one button of the action.
          *
-         * @warning If an action with this name already exists, it will be overwritten
-         * with the new keys (old keys will be removed).
-         * If this action is triggered with an old key right now
+         * @warning If this action is triggered with an old key right now
          * (when you call this function), there is a chance that this action will be triggered
          * using old keys for the last time (even if after you removed this action).
          * This is because when we receive input key we make a copy of all actions
@@ -139,6 +138,32 @@ namespace ne {
          */
         std::optional<Error> addAxisEvent(const std::string &sAxisName,
                                           const std::vector<std::pair<KeyboardKey, KeyboardKey>> &vAxis);
+
+        /**
+         * Change action event's key.
+         *
+         * @param sActionName Name of the action event to modify.
+         * @param oldKey      Key/button of the specified action event that you want to replace.
+         * @param newKey      New key/button that should replace the old key.
+         *
+         * @return Error if something went wrong.
+         */
+        std::optional<Error> modifyActionEventKey(const std::string &sActionName,
+                                                  std::variant<KeyboardKey, MouseButton> oldKey,
+                                                  std::variant<KeyboardKey, MouseButton> newKey);
+
+        /**
+         * Change axis event's key.
+         *
+         * @param sAxisName   Name of the axis event to modify.
+         * @param oldPair     A pair of buttons of the specified axis event that you want to replace.
+         * @param newPair     A new pair of buttons that should replace the old pair.
+         *
+         * @return Error if something went wrong.
+         */
+        std::optional<Error> modifyAxisEventKey(const std::string &sAxisName,
+                                                std::pair<KeyboardKey, KeyboardKey> oldPair,
+                                                std::pair<KeyboardKey, KeyboardKey> newPair);
 
         /**
          * Saves added action/axis events to a file.

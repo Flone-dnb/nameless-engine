@@ -1,11 +1,20 @@
 ﻿#include "input/InputManager.h"
 
+// STL.
+#include <ranges>
+
 // Custom.
 #include "io/Logger.h"
+#include "io/ConfigManager.h"
 
 namespace ne {
-    void InputManager::addActionEvent(const std::string &sActionName,
-                                      const std::vector<std::variant<KeyboardKey, MouseButton>> &vKeys) {
+    std::optional<Error>
+    InputManager::addActionEvent(const std::string &sActionName,
+                                 const std::vector<std::variant<KeyboardKey, MouseButton>> &vKeys) {
+        if (vKeys.empty()) {
+            return Error("vKeys is empty");
+        }
+
         std::scoped_lock<std::recursive_mutex> guard(mtxActionEvents);
 
         // Remove all keys with this action if exists.
@@ -28,10 +37,17 @@ namespace ne {
         }
         actionState[sActionName] =
             std::make_pair<std::vector<ActionState>, bool>(std::move(vActionState), false);
+
+        return {};
     }
 
-    void InputManager::addAxisEvent(const std::string &sAxisName,
-                                    const std::vector<std::pair<KeyboardKey, KeyboardKey>> &vAxis) {
+    std::optional<Error>
+    InputManager::addAxisEvent(const std::string &sAxisName,
+                               const std::vector<std::pair<KeyboardKey, KeyboardKey>> &vAxis) {
+        if (vAxis.empty()) {
+            return Error("vAxis is empty");
+        }
+
         std::scoped_lock<std::recursive_mutex> guard(mtxAxisEvents);
 
         // Remove all axis with this name if exists.
@@ -63,6 +79,221 @@ namespace ne {
             vAxisState.push_back(AxisState(axis.first, axis.second));
         }
         axisState[sAxisName] = std::make_pair<std::vector<AxisState>, int>(std::move(vAxisState), 0);
+
+        return {};
+    }
+
+    std::optional<Error> InputManager::saveToFile(std::string_view sFileName) {
+        const auto allActionEvents = getAllActionEvents();
+        const auto allAxisEvents = getAllAxisEvents();
+
+        ConfigManager manager;
+
+        // Action events.
+        for (const auto &[sActionName, vActionKeys] : allActionEvents) {
+            std::string sActionKeysText;
+
+            // Put all keys in a string.
+            for (const auto &key : vActionKeys) {
+                if (std::holds_alternative<KeyboardKey>(key)) {
+                    sActionKeysText +=
+                        std::format("k{},", std::to_string(static_cast<int>(std::get<KeyboardKey>(key))));
+                } else {
+                    sActionKeysText +=
+                        std::format("m{},", std::to_string(static_cast<int>(std::get<MouseButton>(key))));
+                }
+            }
+
+            sActionKeysText.pop_back(); // pop comma
+
+            manager.setStringValue(sActionEventSectionName, sActionName, sActionKeysText);
+        }
+
+        // Axis events.
+        for (const auto &[sAxisName, vAxisKeys] : allAxisEvents) {
+            std::string sAxisKeysText;
+
+            // Put all keys in a string.
+            for (const auto &pair : vAxisKeys) {
+                sAxisKeysText += std::format("{}-{},", std::to_string(static_cast<int>(pair.first)),
+                                             std::to_string(static_cast<int>(pair.second)));
+            }
+
+            sAxisKeysText.pop_back(); // pop comma
+
+            manager.setStringValue(sAxisEventSectionName, sAxisName, sAxisKeysText);
+        }
+
+        return manager.saveFile(ConfigCategory::SETTINGS, sFileName);
+    }
+
+    std::optional<Error> InputManager::loadFromFile(std::string_view sFileName) {
+        ConfigManager manager;
+        auto result = manager.loadFile(ConfigCategory::SETTINGS, sFileName);
+        if (result.has_value()) {
+            return result;
+        }
+
+        // Read sections.
+        const auto vSections = manager.getAllSections();
+        if (vSections.empty()) {
+            return Error(std::format("the specified file '{}' has no sections", sFileName));
+        }
+
+        // Check that we only have 1 or 2 sections.
+        if (vSections.size() > 2) {
+            return Error(std::format("the specified file '{}' has {} sections, "
+                                     "while expected only 1 or 2 sections",
+                                     sFileName, vSections.size()));
+        }
+
+        // Check section names.
+        bool bHasActionEventsSection = false;
+        bool bHasAxisEventsSection = false;
+        for (const auto &sSectionName : vSections) {
+            if (sSectionName == sActionEventSectionName) {
+                bHasActionEventsSection = true;
+            } else if (sSectionName == sAxisEventSectionName) {
+                bHasAxisEventsSection = true;
+            } else {
+                return Error(std::format("section '{}' has unexpected name", sSectionName));
+            }
+        }
+
+        // Add action events.
+        if (bHasActionEventsSection) {
+            auto variant = manager.getAllKeysOfSection(sActionEventSectionName);
+            if (std::holds_alternative<Error>(variant)) {
+                auto error = std::get<Error>(std::move(variant));
+                error.addEntry();
+                return error;
+            }
+            auto fileActionEvents = std::get<std::vector<std::string>>(std::move(variant));
+            auto currentActionEvents = getAllActionEvents();
+
+            std::scoped_lock<std::recursive_mutex> guard(mtxActionEvents);
+            for (const auto &sActionName : currentActionEvents | std::views::keys) {
+                // Look for this action in file.
+                auto it = std::ranges::find(fileActionEvents, sActionName);
+                if (it == fileActionEvents.end()) {
+                    continue;
+                }
+
+                // Read keys from this action.
+                auto keys = manager.getStringValue(sActionEventSectionName, sActionName, "");
+                if (keys.empty()) {
+                    continue;
+                }
+
+                // Split string and process each key.
+                auto range = keys | std::views::split(',');
+                std::vector<std::string> vActionKeys{range.begin(), range.end()};
+                std::vector<std::variant<KeyboardKey, MouseButton>> vOutActionKeys;
+                for (const auto &key : vActionKeys) {
+                    if (key[0] == 'k') {
+                        // KeyboardKey.
+                        int iKeyboardKey = -1;
+                        auto keyString = key.substr(1);
+                        auto [ptr, ec] = std::from_chars(keyString.data(),
+                                                         keyString.data() + keyString.size(), iKeyboardKey);
+                        if (ec != std::errc()) {
+                            return Error(
+                                std::format("failed to convert '{}' to keyboard key code (error code: {})",
+                                            keyString, static_cast<int>(ec)));
+                        }
+
+                        vOutActionKeys.push_back(static_cast<KeyboardKey>(iKeyboardKey));
+                    } else if (key[0] == 'm') {
+                        // MouseButton.
+                        int iMouseButton = -1;
+                        auto keyString = key.substr(1);
+                        auto [ptr, ec] = std::from_chars(keyString.data(),
+                                                         keyString.data() + keyString.size(), iMouseButton);
+                        if (ec != std::errc()) {
+                            return Error(
+                                std::format("failed to convert '{}' to mouse button code (error code: {})",
+                                            keyString, static_cast<int>(ec)));
+                        }
+
+                        vOutActionKeys.push_back(static_cast<MouseButton>(iMouseButton));
+                    }
+                }
+
+                // Add keys (replace old ones).
+                addActionEvent(sActionName, vOutActionKeys);
+            }
+        }
+
+        // Add axis events.
+        if (bHasAxisEventsSection) {
+            auto variant = manager.getAllKeysOfSection(sAxisEventSectionName);
+            if (std::holds_alternative<Error>(variant)) {
+                auto error = std::get<Error>(std::move(variant));
+                error.addEntry();
+                return error;
+            }
+            auto fileAxisEvents = std::get<std::vector<std::string>>(std::move(variant));
+            auto currentAxisEvents = getAllAxisEvents();
+
+            std::scoped_lock<std::recursive_mutex> guard(mtxAxisEvents);
+            for (const auto &sAxisName : currentAxisEvents | std::views::keys) {
+                // Look for this axis in file.
+                auto it = std::ranges::find(fileAxisEvents, sAxisName);
+                if (it == fileAxisEvents.end()) {
+                    continue;
+                }
+
+                // Read keys from this axis.
+                auto keys = manager.getStringValue(sAxisEventSectionName, sAxisName, "");
+                if (keys.empty()) {
+                    continue;
+                }
+
+                // Split string and process each key.
+                auto range = keys | std::views::split(',');
+                std::vector<std::string> vAxisKeys{range.begin(), range.end()};
+                std::vector<std::pair<KeyboardKey, KeyboardKey>> vOutAxisKeys;
+                for (const auto &key : vAxisKeys) {
+                    auto plusMinusRange = key | std::views::split('-');
+                    std::vector<std::string> vPlusMinusKeys{plusMinusRange.begin(), plusMinusRange.end()};
+
+                    if (vPlusMinusKeys.size() != 2) {
+                        return Error(std::format("axis entry '{}' does not have 2 keys", key));
+                    }
+
+                    // Convert the first one.
+                    int iKeyboardPlusKey = -1;
+                    auto [ptr1, ec1] = std::from_chars(vPlusMinusKeys[0].data(),
+                                                       vPlusMinusKeys[0].data() + vPlusMinusKeys[0].size(),
+                                                       iKeyboardPlusKey);
+                    if (ec1 != std::errc()) {
+                        return Error(std::format("failed to convert the first key of axis entry '{}' "
+                                                 "to keyboard key code (error code: {})",
+                                                 key, static_cast<int>(ec1)));
+                    }
+
+                    // Convert the second one.
+                    int iKeyboardMinusKey = -1;
+                    auto [ptr2, ec2] = std::from_chars(vPlusMinusKeys[1].data(),
+                                                       vPlusMinusKeys[1].data() + vPlusMinusKeys[1].size(),
+                                                       iKeyboardMinusKey);
+                    if (ec2 != std::errc()) {
+                        return Error(std::format("failed to convert the second key of axis entry '{}' "
+                                                 "to keyboard key code (error code: {})",
+                                                 key, static_cast<int>(ec2)));
+                    }
+
+                    vOutAxisKeys.push_back(std::make_pair<KeyboardKey, KeyboardKey>(
+                        static_cast<KeyboardKey>(iKeyboardPlusKey),
+                        static_cast<KeyboardKey>(iKeyboardMinusKey)));
+                }
+
+                // Add keys (replace old ones).
+                addAxisEvent(sAxisName, vOutAxisKeys);
+            }
+        }
+
+        return {};
     }
 
     std::optional<std::vector<std::variant<KeyboardKey, MouseButton>>>

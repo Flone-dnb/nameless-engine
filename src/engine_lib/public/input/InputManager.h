@@ -101,9 +101,12 @@ namespace ne {
          *
          * @param sActionName   Name of a new action.
          * @param vKeys         Keyboard/mouse keys/buttons associated with this action.
+         * If empty, no event will be added.
+         *
+         * @return Returns an error if passed 'vKeys' argument is empty.
          */
-        void addActionEvent(const std::string &sActionName,
-                            const std::vector<std::variant<KeyboardKey, MouseButton>> &vKeys);
+        std::optional<Error> addActionEvent(const std::string &sActionName,
+                                            const std::vector<std::variant<KeyboardKey, MouseButton>> &vKeys);
 
         /**
          * Adds a new axis event.
@@ -131,9 +134,51 @@ namespace ne {
          * @param sAxisName     Name of a new axis.
          * @param vAxis         A pair of keyboard buttons associated with this axis,
          * first button will be associated with '+1' input and the second with '-1' input.
+         *
+         * @return Returns an error if passed 'vAxis' argument is empty.
          */
-        void addAxisEvent(const std::string &sAxisName,
-                          const std::vector<std::pair<KeyboardKey, KeyboardKey>> &vAxis);
+        std::optional<Error> addAxisEvent(const std::string &sAxisName,
+                                          const std::vector<std::pair<KeyboardKey, KeyboardKey>> &vAxis);
+
+        /**
+         * Saves added action/axis events to a file.
+         *
+         * @param sFileName   Name of the file to save, prefer to have only ASCII characters in the
+         * file name. We will save it to a predefined directory using SETTINGS category,
+         * the .ini extension will be added if the passed name does not have it.
+         *
+         * @return Error if something went wrong.
+         */
+        std::optional<Error> saveToFile(std::string_view sFileName);
+
+        /**
+         * Loads action/axis events from a file.
+         *
+         * @warning This function will only read action/axis events that exist
+         * in this InputManager. File's keys for action/axis event will replace
+         * the keys of existing action/axis event.
+         *
+         * The usual workflow goes like this:
+         * - add your action/axis events with some default keys,
+         * - the user may change the keys of action/axis events during game,
+         * - save changed events using @ref saveToFile,
+         * - on next startup add your action/axis events with some default keys,
+         * - use @ref loadFromFile to load previously changed keys.
+         *
+         * We are using this approach because during development you may
+         * rename/remove different events. Imagine today you have an event "goForward",
+         * you test your game and saving, the save file will contain "goForward" event,
+         * tomorrow you decided to rename it to "moveForward" but @ref loadFromFile
+         * will load "goForward" while you would expect "moveForward", this is why
+         * we only read events that were already added to InputManager.
+         *
+         * @param sFileName   Name of the file to load, prefer to have only ASCII characters in the
+         * file name. We will load it from a predefined directory using SETTINGS category,
+         * the .ini extension will be added if the passed name does not have it.
+         *
+         * @return Error if something went wrong, this usually means that the file was corrupted.
+         */
+        std::optional<Error> loadFromFile(std::string_view sFileName);
 
         /**
          * Looks for an action event with the specified name, if one is found a copy of this action's
@@ -235,7 +280,7 @@ namespace ne {
         /**
          * Map of action events.
          * TODO: add GamepadKey into variant when gamepad will be supported and save/load them in
-         * TODO: saveToFile/loadFromFile.
+         * TODO: saveToFile/loadFromFile (+ add tests).
          */
         std::unordered_map<std::variant<KeyboardKey, MouseButton>, std::set<std::string>> actionEvents;
 
@@ -248,7 +293,8 @@ namespace ne {
          * A pair of keyboard keys define values for +1 and -1 input.
          * Map's key defines a keyboard key, map's value defines an array of actions with
          * an input value (+1/-1).
-         * TODO: add GamepadAxis when gamepad will be supported and save/load them in saveToFile/loadFromFile.
+         * TODO: add GamepadAxis when gamepad will be supported and save/load
+         * TODO: them in saveToFile/loadFromFile (+ add tests).
          */
         std::unordered_map<KeyboardKey, std::set<std::pair<std::string, int>>> axisEvents;
 
@@ -260,5 +306,11 @@ namespace ne {
 
         /** Mutex for axis editing. */
         std::recursive_mutex mtxAxisEvents;
+
+        /** Section name to store action events, used in .ini files. */
+        const std::string_view sActionEventSectionName = "action event";
+
+        /** Section name to store axis events, used in .ini files. */
+        const std::string_view sAxisEventSectionName = "axis event";
     };
 } // namespace ne

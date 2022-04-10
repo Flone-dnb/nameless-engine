@@ -124,8 +124,8 @@ namespace ne {
          * @return Default value if the specified section/key was not found,
          * otherwise value from INI file.
          */
-        std::string_view getStringValue(std::string_view sSection, std::string_view sKey,
-                                        std::string_view sDefaultValue) const;
+        std::string getStringValue(std::string_view sSection, std::string_view sKey,
+                                   std::string_view sDefaultValue) const;
 
         /**
          * Reads a value from loaded INI file (see @ref loadFile).
@@ -162,6 +162,23 @@ namespace ne {
          * otherwise value from INI file.
          */
         long getLongValue(std::string_view sSection, std::string_view sKey, long iDefaultValue) const;
+
+        /**
+         * Returns names of all sections.
+         *
+         * @return Names of all sections.
+         */
+        std::vector<std::string> getAllSections();
+
+        /**
+         * Returns all keys of the specified section.
+         *
+         * @param sSection Name of the section to look for keys, use @ref getAllSections to get
+         * names of all sections.
+         *
+         * @return Error if something went wrong, a vector of keys otherwise.
+         */
+        std::variant<std::vector<std::string>, Error> getAllKeysOfSection(std::string_view sSection) const;
 
         /**
          * Sets a value. This value will not be written to file until @ref saveFile is called.
@@ -214,9 +231,13 @@ namespace ne {
         /**
          * Saves the current configuration to a file with a UTF-8 encoding.
          *
-         * There is no need to save render settings as
+         * @warning There is no need to save render settings as
          * some parts of the engine save their own configs, for example, renderer will save last
          * applied settings and restore them on start so you don't need to save them manually.
+         *
+         * @warning Note that you don't need to save player input settings here, use InputManager for this
+         * task, InputManager has save/load functions, for SETTINGS category save settings that InputManager
+         * can't handle, for example: mouse sensitivity.
          *
          * @param category   Directory in which we will store this file.
          * Use PROGRESS category to save player's game progress and SETTINGS to store player's settings.

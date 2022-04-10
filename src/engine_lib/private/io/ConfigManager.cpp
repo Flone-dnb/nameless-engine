@@ -111,7 +111,12 @@ namespace ne {
             return error;
         }
 
-        return loadFile(std::get<std::filesystem::path>(result));
+        auto optional = loadFile(std::get<std::filesystem::path>(result));
+        if (optional.has_value()) {
+            optional->addEntry();
+            return optional;
+        }
+        return {};
     }
 
     std::optional<Error> ConfigManager::loadFile(std::filesystem::path pathToFile) {
@@ -138,8 +143,8 @@ namespace ne {
         return {};
     }
 
-    std::string_view ConfigManager::getStringValue(std::string_view sSection, std::string_view sKey,
-                                                   std::string_view sDefaultValue) const {
+    std::string ConfigManager::getStringValue(std::string_view sSection, std::string_view sKey,
+                                              std::string_view sDefaultValue) const {
         return ini.GetValue(sSection.data(), sKey.data(), sDefaultValue.data());
     }
 
@@ -156,6 +161,33 @@ namespace ne {
     long ConfigManager::getLongValue(std::string_view sSection, std::string_view sKey,
                                      long iDefaultValue) const {
         return ini.GetLongValue(sSection.data(), sKey.data(), iDefaultValue);
+    }
+
+    std::vector<std::string> ConfigManager::getAllSections() {
+        CSimpleIniA::TNamesDepend sections;
+        ini.GetAllSections(sections);
+
+        std::vector<std::string> vSections;
+        for (const auto &sectionEntry : sections) {
+            vSections.push_back(sectionEntry.pItem);
+        }
+
+        return vSections;
+    }
+
+    std::variant<std::vector<std::string>, Error>
+    ConfigManager::getAllKeysOfSection(std::string_view sSection) const {
+        CSimpleIniA::TNamesDepend keys;
+        if (ini.GetAllKeys(sSection.data(), keys) == false) {
+            return Error(std::format("section '{}' was not found", sSection));
+        }
+
+        std::vector<std::string> vKeys;
+        for (const auto &keyEntry : keys) {
+            vKeys.push_back(keyEntry.pItem);
+        }
+
+        return vKeys;
     }
 
     void ConfigManager::setStringValue(std::string_view sSection, std::string_view sKey,
@@ -224,7 +256,12 @@ namespace ne {
 
         const bool bEnableBackup = category == ConfigCategory::PROGRESS ? true : false;
 
-        return saveFile(std::get<std::filesystem::path>(result), bEnableBackup);
+        auto optional = saveFile(std::get<std::filesystem::path>(result), bEnableBackup);
+        if (optional.has_value()) {
+            optional->addEntry();
+            return optional;
+        }
+        return {};
     }
 
     std::optional<Error> ConfigManager::saveFile(const std::filesystem::path &pathToFile,

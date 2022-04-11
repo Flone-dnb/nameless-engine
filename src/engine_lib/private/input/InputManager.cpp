@@ -17,27 +17,19 @@ namespace ne {
 
         std::scoped_lock<std::recursive_mutex> guard(mtxActionEvents);
 
-        // Remove all keys with this action if exists.
-        removeActionEvent(sActionName);
+        // Check if an action with this name already exists.
+        auto vRegisteredActions = getAllActionEvents();
 
-        // Add keys for actions.
-        for (const auto &key : vKeys) {
-            auto it = actionEvents.find(key);
-            if (it == actionEvents.end()) {
-                actionEvents[key] = {sActionName};
-            } else {
-                it->second.insert(sActionName);
-            }
+        const auto action = vRegisteredActions.find(sActionName);
+        if (action != vRegisteredActions.end()) {
+            return Error(std::format("an action with the name '{}' already exists", sActionName));
         }
 
-        // Add state.
-        std::vector<ActionState> vActionState;
-        for (const auto &action : vKeys) {
-            vActionState.push_back(ActionState(action));
+        auto optional = overwriteActionEvent(sActionName, vKeys);
+        if (optional.has_value()) {
+            optional->addEntry();
+            return std::move(optional.value());
         }
-        actionState[sActionName] =
-            std::make_pair<std::vector<ActionState>, bool>(std::move(vActionState), false);
-
         return {};
     }
 
@@ -50,33 +42,19 @@ namespace ne {
 
         std::scoped_lock<std::recursive_mutex> guard(mtxAxisEvents);
 
-        // Remove all axis with this name if exists.
-        removeAxisEvent(sAxisName);
+        // Check if an axis event with this name already exists.
+        auto vRegisteredAxisEvents = getAllAxisEvents();
 
-        // Add keys.
-        for (const auto &[plusKey, minusKey] : vAxis) {
-            auto it = axisEvents.find(plusKey);
-            if (it == axisEvents.end()) {
-                axisEvents[plusKey] = {std::make_pair<std::string, int>(sAxisName.data(), 1)};
-            } else {
-                it->second.insert(std::make_pair<std::string, int>(sAxisName.data(), 1));
-            }
-
-            it = axisEvents.find(minusKey);
-            if (it == axisEvents.end()) {
-                axisEvents[minusKey] = {std::make_pair<std::string, int>(sAxisName.data(), -1)};
-            } else {
-                it->second.insert(std::make_pair<std::string, int>(sAxisName.data(), -1));
-            }
+        const auto action = vRegisteredAxisEvents.find(sAxisName);
+        if (action != vRegisteredAxisEvents.end()) {
+            return Error(std::format("an axis event with the name '{}' already exists", sAxisName));
         }
 
-        // Add state.
-        std::vector<AxisState> vAxisState;
-        for (const auto &axis : vAxis) {
-            vAxisState.push_back(AxisState(axis.first, axis.second));
+        auto optional = overwriteAxisEvent(sAxisName, vAxis);
+        if (optional.has_value()) {
+            optional->addEntry();
+            return std::move(optional.value());
         }
-        axisState[sAxisName] = std::make_pair<std::vector<AxisState>, int>(std::move(vAxisState), 0);
-
         return {};
     }
 
@@ -98,7 +76,7 @@ namespace ne {
         std::ranges::replace(vActionKeys, oldKey, newKey);
 
         // Overwrite event with new keys.
-        auto optional = addActionEvent(sActionName, vActionKeys);
+        auto optional = overwriteActionEvent(sActionName, vActionKeys);
         if (optional.has_value()) {
             optional->addEntry();
             return std::move(optional.value());
@@ -125,7 +103,7 @@ namespace ne {
         std::ranges::replace(vAxisKeys, oldPair, newPair);
 
         // Overwrite event with new keys.
-        auto optional = addAxisEvent(sAxisName, vAxisKeys);
+        auto optional = overwriteAxisEvent(sAxisName, vAxisKeys);
         if (optional.has_value()) {
             optional->addEntry();
             return std::move(optional.value());
@@ -175,14 +153,20 @@ namespace ne {
             manager.setStringValue(sAxisEventSectionName, sAxisName, sAxisKeysText);
         }
 
-        return manager.saveFile(ConfigCategory::SETTINGS, sFileName);
+        auto optional = manager.saveFile(ConfigCategory::SETTINGS, sFileName);
+        if (optional.has_value()) {
+            optional->addEntry();
+            return std::move(optional.value());
+        }
+        return {};
     }
 
     std::optional<Error> InputManager::loadFromFile(std::string_view sFileName) {
         ConfigManager manager;
-        auto result = manager.loadFile(ConfigCategory::SETTINGS, sFileName);
-        if (result.has_value()) {
-            return result;
+        auto optional = manager.loadFile(ConfigCategory::SETTINGS, sFileName);
+        if (optional.has_value()) {
+            optional->addEntry();
+            return optional;
         }
 
         // Read sections.
@@ -271,7 +255,11 @@ namespace ne {
                 }
 
                 // Add keys (replace old ones).
-                addActionEvent(sActionName, vOutActionKeys);
+                optional = overwriteActionEvent(sActionName, vOutActionKeys);
+                if (optional.has_value()) {
+                    optional->addEntry();
+                    return std::move(optional.value());
+                }
             }
         }
 
@@ -340,7 +328,11 @@ namespace ne {
                 }
 
                 // Add keys (replace old ones).
-                addAxisEvent(sAxisName, vOutAxisKeys);
+                optional = overwriteAxisEvent(sAxisName, vOutAxisKeys);
+                if (optional.has_value()) {
+                    optional->addEntry();
+                    return std::move(optional.value());
+                }
             }
         }
 
@@ -564,5 +556,69 @@ namespace ne {
         }
 
         return axes;
+    }
+
+    std::optional<Error>
+    InputManager::overwriteActionEvent(const std::string &sActionName,
+                                       const std::vector<std::variant<KeyboardKey, MouseButton>> &vKeys) {
+        std::scoped_lock<std::recursive_mutex> guard(mtxActionEvents);
+
+        // Remove all keys with this action if exists.
+        removeActionEvent(sActionName);
+
+        // Add keys for actions.
+        for (const auto &key : vKeys) {
+            auto it = actionEvents.find(key);
+            if (it == actionEvents.end()) {
+                actionEvents[key] = {sActionName};
+            } else {
+                it->second.insert(sActionName);
+            }
+        }
+
+        // Add state.
+        std::vector<ActionState> vActionState;
+        for (const auto &action : vKeys) {
+            vActionState.push_back(ActionState(action));
+        }
+        actionState[sActionName] =
+            std::make_pair<std::vector<ActionState>, bool>(std::move(vActionState), false);
+
+        return {};
+    }
+
+    std::optional<Error>
+    InputManager::overwriteAxisEvent(const std::string &sAxisName,
+                                     const std::vector<std::pair<KeyboardKey, KeyboardKey>> &vAxis) {
+        std::scoped_lock<std::recursive_mutex> guard(mtxAxisEvents);
+
+        // Remove all axis with this name if exists.
+        removeAxisEvent(sAxisName);
+
+        // Add keys.
+        for (const auto &[plusKey, minusKey] : vAxis) {
+            auto it = axisEvents.find(plusKey);
+            if (it == axisEvents.end()) {
+                axisEvents[plusKey] = {std::make_pair<std::string, int>(sAxisName.data(), 1)};
+            } else {
+                it->second.insert(std::make_pair<std::string, int>(sAxisName.data(), 1));
+            }
+
+            it = axisEvents.find(minusKey);
+            if (it == axisEvents.end()) {
+                axisEvents[minusKey] = {std::make_pair<std::string, int>(sAxisName.data(), -1)};
+            } else {
+                it->second.insert(std::make_pair<std::string, int>(sAxisName.data(), -1));
+            }
+        }
+
+        // Add state.
+        std::vector<AxisState> vAxisState;
+        for (const auto &axis : vAxis) {
+            vAxisState.push_back(AxisState(axis.first, axis.second));
+        }
+        axisState[sAxisName] = std::make_pair<std::vector<AxisState>, int>(std::move(vAxisState), 0);
+
+        return {};
     }
 } // namespace ne

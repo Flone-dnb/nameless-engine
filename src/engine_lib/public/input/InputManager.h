@@ -87,9 +87,8 @@ namespace ne {
          *
          * This way you can have an action "jump" with a space bar button
          * and can easily change input key space bar to something else if
-         * the user wants to. For this, just call this function again with
-         * the same action name "jump" but different buttons or use @ref modifyActionEventKey
-         * to only change one button of the action.
+         * the user wants to. For this, just call @ref modifyActionEventKey
+         * to change one button of the action.
          *
          * @warning If this action is triggered with an old key right now
          * (when you call this function), there is a chance that this action will be triggered
@@ -102,7 +101,8 @@ namespace ne {
          * @param vKeys         Keyboard/mouse keys/buttons associated with this action.
          * If empty, no event will be added.
          *
-         * @return Returns an error if passed 'vKeys' argument is empty.
+         * @return Returns an error if passed 'vKeys' argument is empty or if an
+         * action with this name is already registered.
          */
         std::optional<Error> addActionEvent(const std::string &sActionName,
                                             const std::vector<std::variant<KeyboardKey, MouseButton>> &vKeys);
@@ -121,9 +121,7 @@ namespace ne {
          *
          * You can specify multiple pairs, for example: W/S buttons and up/down arrow keys.
          *
-         * @warning If an axis event with this name already exists, it will be overwritten
-         * with the new keys (old keys will be removed).
-         * If this axis event is triggered with an old key right now
+         * @warning If this axis event is triggered with an old key right now
          * (when you call this function), there is a chance that this axis event will be triggered
          * using old keys for the last time (even if after you removed this axis event).
          * This is because when we receive input key we make a copy of all axes
@@ -134,7 +132,8 @@ namespace ne {
          * @param vAxis         A pair of keyboard buttons associated with this axis,
          * first button will be associated with '+1' input and the second with '-1' input.
          *
-         * @return Returns an error if passed 'vAxis' argument is empty.
+         * @return Returns an error if passed 'vAxis' argument is empty or if an
+         * axis event with this name is already registered.
          */
         std::optional<Error> addAxisEvent(const std::string &sAxisName,
                                           const std::vector<std::pair<KeyboardKey, KeyboardKey>> &vAxis);
@@ -301,6 +300,49 @@ namespace ne {
 
     private:
         friend class Game;
+
+        /**
+         * Adds a new action event. If an action with this name already exists it will be removed
+         * to register this new action event.
+         *
+         * @warning If this action is triggered with an old key right now
+         * (when you call this function), there is a chance that this action will be triggered
+         * using old keys for the last time (even if after you removed this action).
+         * This is because when we receive input key we make a copy of all actions
+         * associated with the key and then call these actions, because we operate
+         * on a copy, removed elements will be reflected only on the next user input.
+         *
+         * @param sActionName   Name of a new action.
+         * @param vKeys         Keyboard/mouse keys/buttons associated with this action.
+         * If empty, no event will be added.
+         *
+         * @return Returns an error if passed 'vKeys' argument is empty.
+         */
+        std::optional<Error>
+        overwriteActionEvent(const std::string &sActionName,
+                             const std::vector<std::variant<KeyboardKey, MouseButton>> &vKeys);
+
+        /**
+         * Adds a new axis event. If an axis event with this name already exists it will be removed
+         * to register this new axis event.
+         *
+         * @warning If this axis event is triggered with an old key right now
+         * (when you call this function), there is a chance that this axis event will be triggered
+         * using old keys for the last time (even if after you removed this axis event).
+         * This is because when we receive input key we make a copy of all axes
+         * associated with the key and then call these axes, because we operate
+         * on a copy, removed elements will be reflected only on the next user input.
+         *
+         * @param sAxisName     Name of a new axis.
+         * @param vAxis         A pair of keyboard buttons associated with this axis,
+         * first button will be associated with '+1' input and the second with '-1' input.
+         *
+         * @return Returns an error if passed 'vAxis' argument is empty or if an
+         * axis event with this name is already registered.
+         */
+        std::optional<Error>
+        overwriteAxisEvent(const std::string &sAxisName,
+                           const std::vector<std::pair<KeyboardKey, KeyboardKey>> &vAxis);
 
         /**
          * Map of action events.

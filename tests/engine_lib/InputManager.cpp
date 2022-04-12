@@ -411,7 +411,7 @@ TEST_CASE("is key used") {
     // Another test.
     auto [actionEvents2, axisEvents2] = manager.isKeyUsed(KeyboardKey::KEY_0);
     REQUIRE(actionEvents2.size() == 1);
-    REQUIRE(axisEvents2.size() == 0);
+    REQUIRE(axisEvents2.empty());
 
     REQUIRE(actionEvents2.find(sAction1Name) != actionEvents2.end());
 }

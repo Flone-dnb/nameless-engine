@@ -99,6 +99,13 @@ namespace ne {
 
         auto vAxisKeys = getAxisEvent(sAxisName).value();
 
+        // See if old key exists.
+        const auto foundIt =
+            std::ranges::find_if(vAxisKeys, [&](const auto &pair) { return pair == oldPair; });
+        if (foundIt == vAxisKeys.end()) {
+            return Error("the specified old key pair was not found");
+        }
+
         // Replace old key.
         std::ranges::replace(vAxisKeys, oldPair, newPair);
 

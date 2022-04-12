@@ -216,6 +216,46 @@ TEST_CASE("modify axis") {
     }
 }
 
+TEST_CASE("fail modify axis with wrong/flipped keys") {
+    using namespace ne;
+
+    const std::string sAxis1Name = "test1";
+    const std::vector<std::pair<KeyboardKey, KeyboardKey>> vAxes1 = {
+        std::make_pair<KeyboardKey, KeyboardKey>(KeyboardKey::KEY_W, KeyboardKey::KEY_S),
+        std::make_pair<KeyboardKey, KeyboardKey>(KeyboardKey::KEY_UP, KeyboardKey::KEY_DOWN)};
+
+    const std::pair<KeyboardKey, KeyboardKey> oldPair1 = {
+        // flipped keys
+        std::make_pair<KeyboardKey, KeyboardKey>(KeyboardKey::KEY_S, KeyboardKey::KEY_W)};
+    const std::pair<KeyboardKey, KeyboardKey> oldPair2 = {
+        // wrong key
+        std::make_pair<KeyboardKey, KeyboardKey>(KeyboardKey::KEY_W, KeyboardKey::KEY_D)};
+    const std::pair<KeyboardKey, KeyboardKey> newPair = {
+        std::make_pair<KeyboardKey, KeyboardKey>(KeyboardKey::KEY_A, KeyboardKey::KEY_D)};
+
+    InputManager manager;
+    auto optional = manager.addAxisEvent(sAxis1Name, vAxes1);
+    REQUIRE(!optional.has_value());
+
+    // flipped pair
+    optional = manager.modifyAxisEventKey(sAxis1Name, oldPair1, newPair);
+    REQUIRE(optional.has_value()); // should fail
+
+    // wrong key
+    optional = manager.modifyAxisEventKey(sAxis1Name, oldPair2, newPair);
+    REQUIRE(optional.has_value()); // should fail
+
+    const auto eventKeys = manager.getAxisEvent(sAxis1Name);
+    REQUIRE(eventKeys.has_value());
+    auto resultKeys = eventKeys.value();
+
+    // Compare keys (order may be different).
+    REQUIRE(resultKeys.size() == vAxes1.size());
+    for (const auto &wantKey : vAxes1) {
+        REQUIRE(std::ranges::find(resultKeys, wantKey) != resultKeys.end());
+    }
+}
+
 TEST_CASE("test saving and loading") {
     using namespace ne;
 

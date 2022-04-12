@@ -200,7 +200,7 @@ namespace ne {
 
     /**
      * Returns the UTF-8 encoded, layout-specific name of the key
-     * or empty string if the key is non-printable.
+     * or, in some rare cases, "?" string when we can't translate the key.
      *
      * @param key Keyboard key.
      *
@@ -208,9 +208,104 @@ namespace ne {
      */
     inline std::string getKeyName(KeyboardKey key) {
         const auto pName = glfwGetKeyName(static_cast<int>(key), 0);
-        if (!pName)
-            return "";
-        else
+        if (!pName) {
+            switch (key) { // translate some keys
+            case KeyboardKey::KEY_TAB:
+                return "Tab";
+            case KeyboardKey::KEY_CAPS_LOCK:
+                return "Caps Lock";
+            case KeyboardKey::KEY_LEFT_SHIFT:
+                return "Left Shift";
+            case KeyboardKey::KEY_RIGHT_SHIFT:
+                return "Right Shift";
+            case KeyboardKey::KEY_LEFT_CONTROL:
+                return "Left Ctrl";
+            case KeyboardKey::KEY_RIGHT_CONTROL:
+                return "Right Ctrl";
+            case KeyboardKey::KEY_LEFT_SUPER:
+                return "Left Super";
+            case KeyboardKey::KEY_RIGHT_SUPER:
+                return "Right Super";
+            case KeyboardKey::KEY_LEFT_ALT:
+                return "Left Alt";
+            case KeyboardKey::KEY_RIGHT_ALT:
+                return "Right Alt";
+            case KeyboardKey::KEY_BACKSPACE:
+                return "Backspace";
+            case KeyboardKey::KEY_ENTER:
+                return "Enter";
+            case KeyboardKey::KEY_UP:
+                return "Up";
+            case KeyboardKey::KEY_DOWN:
+                return "Down";
+            case KeyboardKey::KEY_LEFT:
+                return "Left";
+            case KeyboardKey::KEY_RIGHT:
+                return "Right";
+            case KeyboardKey::KEY_SPACE:
+                return "Space Bar";
+            case KeyboardKey::KEY_ESCAPE:
+                return "Escape";
+            case KeyboardKey::KEY_F1:
+                return "F1";
+            case KeyboardKey::KEY_F2:
+                return "F2";
+            case KeyboardKey::KEY_F3:
+                return "F3";
+            case KeyboardKey::KEY_F4:
+                return "F4";
+            case KeyboardKey::KEY_F5:
+                return "F5";
+            case KeyboardKey::KEY_F6:
+                return "F6";
+            case KeyboardKey::KEY_F7:
+                return "F7";
+            case KeyboardKey::KEY_F8:
+                return "F8";
+            case KeyboardKey::KEY_F9:
+                return "F9";
+            case KeyboardKey::KEY_F10:
+                return "F10";
+            case KeyboardKey::KEY_F11:
+                return "F11";
+            case KeyboardKey::KEY_F12:
+                return "F12";
+            case KeyboardKey::KEY_F13:
+                return "F13";
+            case KeyboardKey::KEY_F14:
+                return "F14";
+            case KeyboardKey::KEY_F15:
+                return "F15";
+            case KeyboardKey::KEY_F16:
+                return "F16";
+            case KeyboardKey::KEY_F17:
+                return "F17";
+            case KeyboardKey::KEY_F18:
+                return "F18";
+            case KeyboardKey::KEY_F19:
+                return "F19";
+            case KeyboardKey::KEY_F20:
+                return "F20";
+            case KeyboardKey::KEY_F21:
+                return "F21";
+            case KeyboardKey::KEY_F22:
+                return "F22";
+            case KeyboardKey::KEY_F23:
+                return "F23";
+            case KeyboardKey::KEY_F24:
+                return "F24";
+            case KeyboardKey::KEY_F25:
+                return "F25";
+            case KeyboardKey::KEY_PRINT_SCREEN:
+                return "Print Screen";
+            case KeyboardKey::KEY_INSERT:
+                return "Insert";
+            case KeyboardKey::KEY_DELETE:
+                return "Delete";
+            default:
+                return "?";
+            }
+        } else
             return pName;
     }
 } // namespace ne

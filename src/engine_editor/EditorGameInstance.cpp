@@ -20,4 +20,8 @@ void EditorGameInstance::onMouseMove(int iXOffset, int iYOffset) {}
 void EditorGameInstance::onMouseScrollMove(int iOffset) {}
 
 void EditorGameInstance::onKeyboardInput(ne::KeyboardKey key, ne::KeyboardModifiers modifiers,
-                                         bool bIsPressedDown) {}
+                                         bool bIsPressedDown) {
+    if (bIsPressedDown) {
+        ne::Logger::get().info(ne::getKeyName(key));
+    }
+}

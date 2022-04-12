@@ -346,6 +346,30 @@ namespace ne {
         return {};
     }
 
+    std::pair<std::set<std::string>, std::set<std::string>> InputManager::isKeyUsed(KeyboardKey key) {
+        std::scoped_lock<std::recursive_mutex> guard1(mtxActionEvents);
+        std::scoped_lock<std::recursive_mutex> guard2(mtxAxisEvents);
+
+        std::set<std::string> vUsedActionEvents;
+        std::set<std::string> vUsedAxisEvents;
+
+        // Action events.
+        const auto actionIt = actionEvents.find(key);
+        if (actionIt != actionEvents.end()) {
+            vUsedActionEvents = actionIt->second;
+        }
+
+        // Axis events.
+        const auto axisIt = axisEvents.find(key);
+        if (axisIt != axisEvents.end()) {
+            for (const auto &sAxisName : axisIt->second | std::views::keys) {
+                vUsedAxisEvents.insert(sAxisName);
+            }
+        }
+
+        return std::make_pair(vUsedActionEvents, vUsedAxisEvents);
+    }
+
     std::optional<std::vector<std::variant<KeyboardKey, MouseButton>>>
     InputManager::getActionEvent(const std::string &sActionName) {
         std::scoped_lock<std::recursive_mutex> guard(mtxActionEvents);

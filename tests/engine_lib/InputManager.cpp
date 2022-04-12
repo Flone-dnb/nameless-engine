@@ -376,3 +376,42 @@ TEST_CASE("test saving and loading") {
         }
     }
 }
+
+TEST_CASE("is key used") {
+    using namespace ne;
+
+    const std::string sAction1Name = "test1";
+    const std::vector<std::variant<KeyboardKey, MouseButton>> vAction1Keys = {KeyboardKey::KEY_0,
+                                                                              KeyboardKey::KEY_Z};
+
+    const std::string sAction2Name = "test2";
+    const std::vector<std::variant<KeyboardKey, MouseButton>> vAction2Keys = {KeyboardKey::KEY_LEFT};
+
+    const std::string sAxis2Name = "test2";
+    const std::vector<std::pair<KeyboardKey, KeyboardKey>> vAxes2 = {
+        std::make_pair<KeyboardKey, KeyboardKey>(KeyboardKey::KEY_R, KeyboardKey::KEY_A),
+        std::make_pair<KeyboardKey, KeyboardKey>(KeyboardKey::KEY_RIGHT, KeyboardKey::KEY_LEFT)};
+
+    InputManager manager;
+    auto optional = manager.addActionEvent(sAction1Name, vAction1Keys);
+    REQUIRE(!optional.has_value());
+    optional = manager.addActionEvent(sAction2Name, vAction2Keys);
+    REQUIRE(!optional.has_value());
+    optional = manager.addAxisEvent(sAxis2Name, vAxes2);
+    REQUIRE(!optional.has_value());
+
+    // First test.
+    auto [actionEvents, axisEvents] = manager.isKeyUsed(KeyboardKey::KEY_LEFT);
+    REQUIRE(actionEvents.size() == 1);
+    REQUIRE(axisEvents.size() == 1);
+
+    REQUIRE(actionEvents.find(sAction2Name) != actionEvents.end());
+    REQUIRE(axisEvents.find(sAxis2Name) != axisEvents.end());
+
+    // Another test.
+    auto [actionEvents2, axisEvents2] = manager.isKeyUsed(KeyboardKey::KEY_0);
+    REQUIRE(actionEvents2.size() == 1);
+    REQUIRE(axisEvents2.size() == 0);
+
+    REQUIRE(actionEvents2.find(sAction1Name) != actionEvents2.end());
+}

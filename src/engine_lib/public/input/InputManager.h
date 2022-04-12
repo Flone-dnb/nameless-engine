@@ -205,6 +205,15 @@ namespace ne {
         std::optional<Error> loadFromFile(std::string_view sFileName);
 
         /**
+         * Returns action and axis event names that the specified key is used in.
+         *
+         * @param key A key to see where it's used.
+         *
+         * @return A pair of action and axis event names that the specified key is used in.
+         */
+        std::pair<std::set<std::string>, std::set<std::string>> isKeyUsed(KeyboardKey key);
+
+        /**
          * Looks for an action event with the specified name, if one is found a copy of this action's
          * keys will be returned. Changes made to the returned vector will not be applied to the
          * action, use @ref addActionEvent for this purpose.

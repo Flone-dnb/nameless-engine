@@ -207,6 +207,11 @@ namespace ne {
         /**
          * Returns action and axis event names that the specified key is used in.
          *
+         * You can use this function to detect conflicting keys. For example:
+         * when the user wants to modify some event and you receive a 'newKey',
+         * look if this 'newKey' is used somewhere and if it's used somewhere else,
+         * show a message to the user that this 'newKey' is already used somewhere.
+         *
          * @param key A key to see where it's used.
          *
          * @return A pair of action and axis event names that the specified key is used in.

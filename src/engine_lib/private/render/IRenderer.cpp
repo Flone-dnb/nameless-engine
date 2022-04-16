@@ -5,6 +5,12 @@
 #include "misc/Globals.h"
 
 namespace ne {
+    IRenderer::IRenderer(Window *pWindow) { this->pWindow = pWindow; }
+
+    Window *IRenderer::getWindow() const { return pWindow; }
+
+    unsigned IRenderer::getSwapChainBufferCount() { return iSwapChainBufferCount; }
+
     bool IRenderer::isConfigurationFileExists() {
         const auto configsFolder = getRendererConfigurationFilePath().parent_path();
 
@@ -61,4 +67,6 @@ namespace ne {
     const char *IRenderer::getConfigurationSectionRefreshRate() { return sConfigurationSectionRefreshRate; }
 
     const char *IRenderer::getConfigurationSectionAntialiasing() { return sConfigurationSectionAntialiasing; }
+
+    const char *IRenderer::getConfigurationSectionVSync() { return sConfigurationSectionVSync; }
 } // namespace ne

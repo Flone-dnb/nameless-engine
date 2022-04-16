@@ -10,6 +10,7 @@
 #include "misc/Error.h"
 
 namespace ne {
+    class Window;
     /**
      * Contains width, height and refresh rate.
      */
@@ -40,7 +41,13 @@ namespace ne {
      */
     class IRenderer {
     public:
-        IRenderer() = default;
+        /**
+         * Constructor.
+         *
+         * @param pWindow Window that we will render to.
+         */
+        IRenderer(Window *pWindow);
+        IRenderer() = delete;
 
         IRenderer(const IRenderer &) = delete;
         IRenderer &operator=(const IRenderer &) = delete;
@@ -103,6 +110,20 @@ namespace ne {
         virtual void readConfigurationFromConfigFile() = 0;
 
         /**
+         * Returns the window that we render to.
+         *
+         * @return Window we render to.
+         */
+        Window *getWindow() const;
+
+        /**
+         * Returns the amount of buffers the swap chain has.
+         *
+         * @return The amount of buffers the swap chain has.
+         */
+        static unsigned int getSwapChainBufferCount();
+
+        /**
          * Used to determine if the configuration file exists on the disk.
          *
          * @return 'true' if configuration file exists, 'false' otherwise.
@@ -144,6 +165,13 @@ namespace ne {
          */
         static const char *getConfigurationSectionAntialiasing();
 
+        /**
+         * Returns name of the section used in configuration file.
+         *
+         * @return Section name.
+         */
+        static const char *getConfigurationSectionVSync();
+
     private:
         /** File name used to store renderer configuration. */
         inline static const char *sRendererConfigurationFileName = "render";
@@ -159,5 +187,13 @@ namespace ne {
 
         /** Name of the section (used in configuration) for anti-aliasing settings. */
         inline static const char *sConfigurationSectionAntialiasing = "anti-aliasing";
+
+        /** Name of the section (used in configuration) for vsync settings. */
+        inline static const char *sConfigurationSectionVSync = "vsync";
+
+        static constexpr unsigned int iSwapChainBufferCount = 2;
+
+        /** Window that we render to. */
+        Window *pWindow;
     };
 } // namespace ne

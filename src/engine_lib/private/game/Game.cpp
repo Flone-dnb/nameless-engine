@@ -42,7 +42,7 @@ namespace ne {
         this->pWindow = pWindow;
 
 #if defined(WIN32)
-        pRenderer = std::make_unique<DirectXRenderer>();
+        pRenderer = std::make_unique<DirectXRenderer>(pWindow);
 #elif __linux__
         static_assert(false, "need to assign renderer here");
 #endif

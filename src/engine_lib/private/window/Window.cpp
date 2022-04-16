@@ -11,6 +11,10 @@
 // External.
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb/stb_image.h"
+#if defined(WIN32)
+#define GLFW_EXPOSE_NATIVE_WIN32
+#endif
+#include "GLFW/glfw3native.h"
 
 namespace ne {
     WindowBuilder &WindowBuilder::withSize(int iWidth, int iHeight) {
@@ -97,6 +101,10 @@ namespace ne {
 
         return nullptr;
     }
+
+#if defined(WIN32)
+    HWND Window::getWindowHandle() const { return glfwGetWin32Window(pGlfwWindow); }
+#endif
 
     void Window::onKeyboardInput(KeyboardKey key, KeyboardModifiers modifiers, bool bIsPressedDown) const {
         if (!pGame) {

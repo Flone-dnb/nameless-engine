@@ -18,6 +18,7 @@
 #include <wrl.h>
 
 namespace ne {
+    class Window;
     /**
      * DirectX 12 renderer.
      */
@@ -25,9 +26,11 @@ namespace ne {
     public:
         /**
          * Initializes renderer base entities.
+         *
+         * @param pWindow Window that we will render to.
          */
-        DirectXRenderer();
-
+        DirectXRenderer(Window *pWindow);
+        DirectXRenderer() = delete;
         DirectXRenderer(const DirectXRenderer &) = delete;
         DirectXRenderer &operator=(const DirectXRenderer &) = delete;
 
@@ -112,6 +115,20 @@ namespace ne {
         std::optional<Error> createCommandObjects();
 
         /**
+         * Creates and initializes the swap chain.
+         *
+         * @return Error if something went wrong.
+         */
+        std::optional<Error> createSwapChain();
+
+        /**
+         * Creates and initializes the RTV and DSV heaps.
+         *
+         * @return Error if something went wrong.
+         */
+        std::optional<Error> createRtvAndDsvDescriptorHeaps();
+
+        /**
          * Checks if the created device supports MSAA.
          *
          * @return Error if something went wrong, for example, if device does not support MSAA.
@@ -181,8 +198,9 @@ namespace ne {
 
         // Display mode.
         DXGI_MODE_DESC currentDisplayMode;
-        /** Only display modes with this scaling are supported. */
+        /** Use only display modes that use this scaling. */
         DXGI_MODE_SCALING usedScaling = DXGI_MODE_SCALING_UNSPECIFIED;
+        bool bIsVSyncEnabled = false;
 
         // Video Adapters (GPUs).
         long iPreferredGpuIndex = 0;

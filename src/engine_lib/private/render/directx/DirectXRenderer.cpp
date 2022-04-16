@@ -5,6 +5,7 @@
 #include <filesystem>
 
 // Custom.
+#include "game/Window.h"
 #include "io/ConfigManager.h"
 #include "io/Logger.h"
 
@@ -22,15 +23,16 @@
 #endif
 
 namespace ne {
-    DirectXRenderer::DirectXRenderer() {
+    DirectXRenderer::DirectXRenderer(Window *pWindow) : IRenderer(pWindow) {
+        // Read configuration from config file (if exists).
         if (isConfigurationFileExists()) {
             Logger::get().info("renderer found configuration file, using configuration from this file");
             DirectXRenderer::readConfigurationFromConfigFile();
             bStartedWithConfigurationFromDisk = true;
         }
 
+        // Enable debug layer in DEBUG mode.
         DWORD debugFactoryFlags = 0;
-
 #if defined(DEBUG) || defined(_DEBUG)
         {
             std::optional<Error> error = enableDebugLayer();
@@ -93,8 +95,8 @@ namespace ne {
         iCbvSrvUavDescriptorSize =
             pDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
+        // Check MSAA support.
         if (bIsMsaaEnabled) {
-            // Check MSAA support.
             std::optional<Error> error = checkMsaaSupport();
             if (error.has_value()) {
                 error->addEntry();
@@ -129,7 +131,7 @@ namespace ne {
         }
 
         if (bStartedWithConfigurationFromDisk) {
-            // Find specified video mode.
+            // Find the specified video mode.
             const auto vVideoModes = std::get<std::vector<DXGI_MODE_DESC>>(std::move(videoModesResult));
 
             std::vector<DXGI_MODE_DESC> vFilteredModes;
@@ -176,6 +178,30 @@ namespace ne {
         } else {
             // use last display mode
             currentDisplayMode = std::get<std::vector<DXGI_MODE_DESC>>(std::move(videoModesResult)).back();
+        }
+
+        // Create swap chain.
+        error = createSwapChain();
+        if (error.has_value()) {
+            error->addEntry();
+            error->showError();
+            throw std::runtime_error(error->getError());
+        }
+
+        // Create RTV and DSV heaps.
+        error = createRtvAndDsvDescriptorHeaps();
+        if (error.has_value()) {
+            error->addEntry();
+            error->showError();
+            throw std::runtime_error(error->getError());
+        }
+
+        // Disable Alt + Enter.
+        hResult = pFactory->MakeWindowAssociation(getWindow()->getWindowHandle(), DXGI_MWA_NO_ALT_ENTER);
+        if (FAILED(hResult)) {
+            const Error error1(hResult);
+            error1.showError();
+            throw std::runtime_error(error1.getError());
         }
 
         if (!isConfigurationFileExists()) {
@@ -366,6 +392,73 @@ namespace ne {
         return {};
     }
 
+    std::optional<Error> DirectXRenderer::createSwapChain() {
+        DXGI_SWAP_CHAIN_DESC1 desc;
+        desc.Width = currentDisplayMode.Width;
+        desc.Height = currentDisplayMode.Height;
+        desc.Format = backBufferFormat;
+        desc.Stereo = false;
+
+        // Flip model swapchains (DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL and DXGI_SWAP_EFFECT_FLIP_DISCARD)
+        // do not support multisampling.
+        desc.SampleDesc.Count = 1;
+        desc.SampleDesc.Quality = 0;
+
+        desc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+        desc.BufferCount = getSwapChainBufferCount();
+
+        desc.Scaling = DXGI_SCALING_STRETCH;
+        desc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
+        desc.AlphaMode = DXGI_ALPHA_MODE_UNSPECIFIED;
+        if (!bIsVSyncEnabled)
+            desc.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
+
+        DXGI_SWAP_CHAIN_FULLSCREEN_DESC fullscreenDesc;
+        fullscreenDesc.RefreshRate = currentDisplayMode.RefreshRate;
+        fullscreenDesc.Scaling = currentDisplayMode.Scaling;
+        fullscreenDesc.ScanlineOrdering = currentDisplayMode.ScanlineOrdering;
+        fullscreenDesc.Windowed = true;
+
+        const HRESULT hResult = pFactory->CreateSwapChainForHwnd(
+            pCommandQueue.Get(), getWindow()->getWindowHandle(), &desc, &fullscreenDesc, pOutputAdapter.Get(),
+            pSwapChain.ReleaseAndGetAddressOf());
+        if (FAILED(hResult)) {
+            return Error(hResult);
+        }
+
+        return {};
+    }
+
+    std::optional<Error> DirectXRenderer::createRtvAndDsvDescriptorHeaps() {
+        // Create RTV heap.
+        D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc;
+        rtvHeapDesc.NumDescriptors = getSwapChainBufferCount();
+        rtvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
+        rtvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+        rtvHeapDesc.NodeMask = 0;
+
+        HRESULT hResult =
+            pDevice->CreateDescriptorHeap(&rtvHeapDesc, IID_PPV_ARGS(pRtvHeap.ReleaseAndGetAddressOf()));
+        if (FAILED(hResult)) {
+            return Error(hResult);
+        }
+
+        // Create DSV heap.
+        D3D12_DESCRIPTOR_HEAP_DESC dsvHeapDesc;
+        dsvHeapDesc.NumDescriptors = 1 + 1; // '+1' for MSAA render target.
+        dsvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
+        dsvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+        dsvHeapDesc.NodeMask = 0;
+
+        hResult =
+            pDevice->CreateDescriptorHeap(&dsvHeapDesc, IID_PPV_ARGS(pDsvHeap.ReleaseAndGetAddressOf()));
+        if (FAILED(hResult)) {
+            return Error(hResult);
+        }
+
+        return {};
+    }
+
     std::optional<Error> DirectXRenderer::checkMsaaSupport() {
         if (pDevice == nullptr) {
             return Error("device is not created");
@@ -465,6 +558,9 @@ namespace ne {
         manager.setLongValue(getConfigurationSectionAntialiasing(), "sample count",
                              static_cast<long>(iMsaaSampleCount), "valid values for MSAA: 2 or 4");
 
+        // Write VSync.
+        manager.setBoolValue(getConfigurationSectionVSync(), "enabled", bIsVSyncEnabled);
+
         // !!!
         // New settings go here!
         // !!!
@@ -534,6 +630,9 @@ namespace ne {
             error.showError();
             throw std::runtime_error(error.getError());
         }
+
+        // Read VSync.
+        bIsVSyncEnabled = manager.getBoolValue(getConfigurationSectionVSync(), "enabled", false);
 
         // !!!
         // New settings go here!

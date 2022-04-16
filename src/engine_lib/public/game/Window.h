@@ -262,6 +262,15 @@ namespace ne {
          */
         IRenderer *getRenderer() const;
 
+#if defined(WIN32)
+        /**
+         * Returns native Windows handle to this window.
+         *
+         * @return Window handle or NULL if an error occurred.
+         */
+        HWND getWindowHandle() const;
+#endif
+
     private:
         friend class WindowBuilder;
 

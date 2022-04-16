@@ -209,8 +209,9 @@ namespace ne {
          *
          * You can use this function to detect conflicting keys. For example:
          * when the user wants to modify some event and you receive a 'newKey',
-         * look if this 'newKey' is used somewhere and if it's used somewhere else,
-         * show a message to the user that this 'newKey' is already used somewhere.
+         * look if this 'newKey' is already used somewhere and if it's,
+         * show a message to the user like: "this key is already used somewhere else
+         * and cannot be assigned twice".
          *
          * @param key A key to see where it's used.
          *

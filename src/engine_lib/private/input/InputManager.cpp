@@ -81,7 +81,6 @@ namespace ne {
             optional->addEntry();
             return std::move(optional.value());
         }
-
         return {};
     }
 
@@ -346,7 +345,8 @@ namespace ne {
         return {};
     }
 
-    std::pair<std::set<std::string>, std::set<std::string>> InputManager::isKeyUsed(KeyboardKey key) {
+    std::pair<std::set<std::string>, std::set<std::string>>
+    InputManager::isKeyUsed(std::variant<KeyboardKey, MouseButton> key) {
         std::scoped_lock<std::recursive_mutex> guard1(mtxActionEvents);
         std::scoped_lock<std::recursive_mutex> guard2(mtxAxisEvents);
 
@@ -360,10 +360,13 @@ namespace ne {
         }
 
         // Axis events.
-        const auto axisIt = axisEvents.find(key);
-        if (axisIt != axisEvents.end()) {
-            for (const auto &sAxisName : axisIt->second | std::views::keys) {
-                vUsedAxisEvents.insert(sAxisName);
+        if (std::holds_alternative<KeyboardKey>(key)) {
+            const auto keyboardKey = std::get<KeyboardKey>(key);
+            const auto axisIt = axisEvents.find(keyboardKey);
+            if (axisIt != axisEvents.end()) {
+                for (const auto &sAxisName : axisIt->second | std::views::keys) {
+                    vUsedAxisEvents.insert(sAxisName);
+                }
             }
         }
 

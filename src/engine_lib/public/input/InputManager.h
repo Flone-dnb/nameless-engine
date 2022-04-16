@@ -141,9 +141,9 @@ namespace ne {
         /**
          * Change action event's key.
          *
-         * @param sActionName Name of the action event to modify.
-         * @param oldKey      Key/button of the specified action event that you want to replace.
-         * @param newKey      New key/button that should replace the old key.
+         * @param sActionName             Name of the action event to modify.
+         * @param oldKey                  Key/button of the specified action event that you want to replace.
+         * @param newKey                  New key/button that should replace the old key.
          *
          * @return Error if something went wrong.
          */
@@ -211,7 +211,8 @@ namespace ne {
          *
          * @return A pair of action and axis event names that the specified key is used in.
          */
-        std::pair<std::set<std::string>, std::set<std::string>> isKeyUsed(KeyboardKey key);
+        std::pair<std::set<std::string>, std::set<std::string>>
+        isKeyUsed(std::variant<KeyboardKey, MouseButton> key);
 
         /**
          * Looks for an action event with the specified name, if one is found a copy of this action's

@@ -104,6 +104,16 @@ namespace ne {
          */
         virtual size_t getUsedVideoMemoryInMb() const = 0;
 
+        /**
+         * Sets backbuffer color.
+         *
+         * @param fillColor Color that the backbuffer will be filled with before rendering a frame.
+         * 4 values correspond to RGBA parameters.
+         *
+         * @return Error if something went wrong.
+         */
+        virtual std::optional<Error> setBackbufferFillColor(float fillColor[4]) = 0;
+
     protected:
         /** Update internal resources for next frame. */
         virtual void update() = 0;
@@ -135,7 +145,7 @@ namespace ne {
          *
          * @return The amount of buffers the swap chain has.
          */
-        static unsigned int getSwapChainBufferCount();
+        static constexpr unsigned int getSwapChainBufferCount();
 
         /**
          * Used to determine if the configuration file exists on the disk.
@@ -210,4 +220,6 @@ namespace ne {
         /** Window that we render to. */
         Window *pWindow;
     };
+
+    constexpr unsigned IRenderer::getSwapChainBufferCount() { return iSwapChainBufferCount; }
 } // namespace ne

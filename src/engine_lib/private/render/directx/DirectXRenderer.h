@@ -90,6 +90,16 @@ namespace ne {
          */
         virtual size_t getUsedVideoMemoryInMb() const override;
 
+        /**
+         * Sets backbuffer color.
+         *
+         * @param fillColor Color that the backbuffer will be filled with before rendering a frame.
+         * 4 values correspond to RGBA parameters.
+         *
+         * @return Error if something went wrong.
+         */
+        virtual std::optional<Error> setBackbufferFillColor(float fillColor[4]) override;
+
     protected:
         /** Update internal resources for next frame. */
         virtual void update() override;
@@ -161,6 +171,27 @@ namespace ne {
         std::optional<Error> checkMsaaSupport();
 
         /**
+         * Initializes DirectX.
+         *
+         * @return Error if something went wrong.
+         */
+        std::optional<Error> initializeDirectX();
+
+        /**
+         * Recreates all render buffers to match current display mode (width/height).
+         *
+         * @return Error if something went wrong.
+         */
+        std::optional<Error> resizeRenderBuffers();
+
+        /**
+         * Blocks until the GPU finishes executing all queued commands.
+         *
+         * @return Error if something went wrong.
+         */
+        std::optional<Error> flushCommandQueue();
+
+        /**
          * Returns a vector of display modes that the current output adapter
          * supports for current back buffer format.
          *
@@ -204,6 +235,7 @@ namespace ne {
 
         // Fence.
         ComPtr<ID3D12Fence> pFence;
+        std::mutex mtxRwFence;
         UINT64 iCurrentFence = 0;
 
         // Descriptor heaps and descriptor sizes.
@@ -214,21 +246,35 @@ namespace ne {
         UINT iDsvDescriptorSize = 0;
         UINT iCbvSrvUavDescriptorSize = 0;
 
+        // Render/depth buffers.
+        int iCurrentBackBufferIndex = 0;
+        /** Lock when reading or writing to render resources. */
+        std::recursive_mutex mtxRwRenderResources;
+        ComPtr<ID3D12Resource> pSwapChainBuffer[getSwapChainBufferCount()];
+        ComPtr<D3D12MA::Allocation> pDepthStencilBuffer;
+        float backBufferFillColor[4] = {0.0f, 0.0f, 0.0f, 1.0f};
+
         // Buffer formats.
         DXGI_FORMAT backBufferFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
         DXGI_FORMAT depthStencilFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
 
         // MSAA.
-        ComPtr<ID3D12Resource> pMsaaRenderTarget;
+        ComPtr<D3D12MA::Allocation> pMsaaRenderTarget;
         bool bIsMsaaEnabled = true;
         UINT iMsaaSampleCount = 4;
         UINT iMsaaQuality = 0;
 
         // Display mode.
-        DXGI_MODE_DESC currentDisplayMode;
+        DXGI_MODE_DESC currentDisplayMode{};
         /** Use only display modes that use this scaling. */
         DXGI_MODE_SCALING usedScaling = DXGI_MODE_SCALING_UNSPECIFIED;
         bool bIsVSyncEnabled = false;
+
+        // Viewport.
+        D3D12_VIEWPORT screenViewport;
+        D3D12_RECT scissorRect;
+        float fMinDepth = 0.0f;
+        float fMaxDepth = 1.0f;
 
         // Video Adapters (GPUs).
         long iPreferredGpuIndex = 0;

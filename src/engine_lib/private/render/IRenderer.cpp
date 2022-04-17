@@ -9,8 +9,6 @@ namespace ne {
 
     Window *IRenderer::getWindow() const { return pWindow; }
 
-    unsigned IRenderer::getSwapChainBufferCount() { return iSwapChainBufferCount; }
-
     bool IRenderer::isConfigurationFileExists() {
         const auto configsFolder = getRendererConfigurationFilePath().parent_path();
 

@@ -10,6 +10,7 @@
 #include "io/Logger.h"
 
 // DirectX.
+#include "DirectXHelpers/d3dx12.h"
 #pragma comment(lib, "D3D12.lib")
 #pragma comment(lib, "dxgi.lib")
 #pragma comment(lib, "d3dcompiler.lib")
@@ -31,190 +32,35 @@ namespace ne {
             bStartedWithConfigurationFromDisk = true;
         }
 
-        // Enable debug layer in DEBUG mode.
-        DWORD debugFactoryFlags = 0;
-#if defined(DEBUG) || defined(_DEBUG)
-        {
-            std::optional<Error> error = enableDebugLayer();
-            if (error.has_value()) {
-                error->addEntry();
-                error->showError();
-                throw std::runtime_error(error->getError());
-            }
-            debugFactoryFlags = DXGI_CREATE_FACTORY_DEBUG;
-        }
-#endif
-
-        // Create DXGI factory.
-        HRESULT hResult = CreateDXGIFactory2(debugFactoryFlags, IID_PPV_ARGS(&pFactory));
-        if (FAILED(hResult)) {
-            const Error error(hResult);
-            error.showError();
-            throw std::runtime_error(error.getError());
-        }
-
-        // Get supported video adapters.
-        auto result = DirectXRenderer::getSupportedGpus();
-        if (std::holds_alternative<Error>(result)) {
-            Error error = std::get<Error>(std::move(result));
-            error.addEntry();
-            error.showError();
-            throw std::runtime_error(error.getError());
-        }
-        vSupportedVideoAdapters = std::get<std::vector<std::wstring>>(std::move(result));
-        if (iPreferredGpuIndex >= static_cast<long>(vSupportedVideoAdapters.size())) {
-            Error error(std::format("preferred GPU index {} is out of range, supported GPUs in total: {}\n",
-                                    iPreferredGpuIndex, vSupportedVideoAdapters.size()));
-            error.addEntry();
-            error.showError();
-            throw std::runtime_error(error.getError());
-        }
-
-        // Use video adapter.
-        setVideoAdapter(vSupportedVideoAdapters[iPreferredGpuIndex]);
-
-        // Create device.
-        hResult = D3D12CreateDevice(pVideoAdapter.Get(), rendererD3dFeatureLevel, IID_PPV_ARGS(&pDevice));
-        if (FAILED(hResult)) {
-            const Error error(hResult);
-            error.showError();
-            throw std::runtime_error(error.getError());
-        }
-
-        // Create memory allocation (external class).
-        std::optional<Error> error = createMemoryAllocator();
+        std::optional<Error> error = initializeDirectX();
         if (error.has_value()) {
             error->addEntry();
             error->showError();
             throw std::runtime_error(error->getError());
-        }
-
-        // Create fence.
-        hResult = pDevice->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&pFence));
-        if (FAILED(hResult)) {
-            const Error error1(hResult);
-            error1.showError();
-            throw std::runtime_error(error1.getError());
-        }
-
-        // Get descriptor sizes.
-        iRtvDescriptorSize = pDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-        iDsvDescriptorSize = pDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
-        iCbvSrvUavDescriptorSize =
-            pDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-
-        // Check MSAA support.
-        if (bIsMsaaEnabled) {
-            std::optional<Error> error1 = checkMsaaSupport();
-            if (error1.has_value()) {
-                error1->addEntry();
-                error1->showError();
-                throw std::runtime_error(error1->getError());
-            }
-        }
-
-        // Create command queue and command list.
-        error = createCommandObjects();
-        if (error.has_value()) {
-            error->addEntry();
-            error->showError();
-            throw std::runtime_error(error->getError());
-        }
-
-        // Set output adapter (monitor) to use.
-        error = setOutputAdapter();
-        if (error.has_value()) {
-            error->addEntry();
-            error->showError();
-            throw std::runtime_error(error->getError());
-        }
-
-        // Determine display mode.
-        auto videoModesResult = getSupportedDisplayModes();
-        if (std::holds_alternative<Error>(videoModesResult)) {
-            Error error1 = std::get<Error>(std::move(videoModesResult));
-            error1.addEntry();
-            error1.showError();
-            throw std::runtime_error(error1.getError());
-        }
-
-        if (bStartedWithConfigurationFromDisk) {
-            // Find the specified video mode.
-            const auto vVideoModes = std::get<std::vector<DXGI_MODE_DESC>>(std::move(videoModesResult));
-
-            std::vector<DXGI_MODE_DESC> vFilteredModes;
-
-            for (const auto &mode : vVideoModes) {
-                if (mode.Width == currentDisplayMode.Width && mode.Height == currentDisplayMode.Height &&
-                    mode.RefreshRate.Numerator == currentDisplayMode.RefreshRate.Numerator &&
-                    mode.RefreshRate.Denominator == currentDisplayMode.RefreshRate.Denominator) {
-                    vFilteredModes.push_back(mode);
-                }
-            }
-
-            if (vFilteredModes.empty()) {
-                Error error1(std::format("video mode with resolution ({}x{}) and refresh rate "
-                                         "({}/{}) is not supported",
-                                         currentDisplayMode.Width, currentDisplayMode.Height,
-                                         currentDisplayMode.RefreshRate.Numerator,
-                                         currentDisplayMode.RefreshRate.Denominator));
-                error1.addEntry();
-                error1.showError();
-                throw std::runtime_error(error1.getError());
-            } else if (vFilteredModes.size() == 1) {
-                currentDisplayMode = vFilteredModes[0];
-            } else {
-                std::string sErrorMessage = std::format("video mode with resolution ({}x{}) and refresh rate "
-                                                        "({}/{}) matched multiple supported modes, "
-                                                        "please pick one of the following:\n",
-                                                        currentDisplayMode.Width, currentDisplayMode.Height,
-                                                        currentDisplayMode.RefreshRate.Numerator,
-                                                        currentDisplayMode.RefreshRate.Denominator);
-                for (const auto &mode : vFilteredModes) {
-                    sErrorMessage +=
-                        std::format("- resolution: {}x{}, refresh rate: {}/{}, format: {}, "
-                                    "scanline ordering: {}, scaling: {}",
-                                    mode.Width, mode.Height, mode.RefreshRate.Numerator,
-                                    mode.RefreshRate.Denominator, static_cast<unsigned int>(mode.Format),
-                                    static_cast<int>(mode.ScanlineOrdering), static_cast<int>(mode.Scaling));
-                }
-                Error error1(sErrorMessage);
-                error1.addEntry();
-                error1.showError();
-                throw std::runtime_error(error1.getError());
-            }
-        } else {
-            // use last display mode
-            currentDisplayMode = std::get<std::vector<DXGI_MODE_DESC>>(std::move(videoModesResult)).back();
-        }
-
-        // Create swap chain.
-        error = createSwapChain();
-        if (error.has_value()) {
-            error->addEntry();
-            error->showError();
-            throw std::runtime_error(error->getError());
-        }
-
-        // Create RTV and DSV heaps.
-        error = createRtvAndDsvDescriptorHeaps();
-        if (error.has_value()) {
-            error->addEntry();
-            error->showError();
-            throw std::runtime_error(error->getError());
-        }
-
-        // Disable Alt + Enter.
-        hResult = pFactory->MakeWindowAssociation(getWindow()->getWindowHandle(), DXGI_MWA_NO_ALT_ENTER);
-        if (FAILED(hResult)) {
-            const Error error1(hResult);
-            error1.showError();
-            throw std::runtime_error(error1.getError());
         }
 
         if (!isConfigurationFileExists()) {
             DirectXRenderer::writeConfigurationToConfigFile();
         }
+
+        // Disable Alt + Enter.
+        const HRESULT hResult =
+            pFactory->MakeWindowAssociation(getWindow()->getWindowHandle(), DXGI_MWA_NO_ALT_ENTER);
+        if (FAILED(hResult)) {
+            const Error error1(hResult);
+            error1.showError();
+            throw std::runtime_error(error1.getError());
+        }
+
+        // Set initial size for buffers.
+        error = resizeRenderBuffers();
+        if (error.has_value()) {
+            error->addEntry();
+            error->showError();
+            throw std::runtime_error(error->getError());
+        }
+
+        // TODO
     }
 
     void DirectXRenderer::update() {}
@@ -307,17 +153,32 @@ namespace ne {
     }
 
     size_t DirectXRenderer::getTotalVideoMemoryInMb() const {
-        D3D12MA::Budget localBudget;
+        D3D12MA::Budget localBudget{};
         pMemoryAllocator->GetBudget(&localBudget, nullptr);
 
         return localBudget.BudgetBytes / 1024 / 1024;
     }
 
     size_t DirectXRenderer::getUsedVideoMemoryInMb() const {
-        D3D12MA::Budget localBudget;
+        D3D12MA::Budget localBudget{};
         pMemoryAllocator->GetBudget(&localBudget, nullptr);
 
         return localBudget.UsageBytes / 1024 / 1024;
+    }
+
+    std::optional<Error> DirectXRenderer::setBackbufferFillColor(float fillColor[4]) {
+        backBufferFillColor[0] = fillColor[0];
+        backBufferFillColor[1] = fillColor[1];
+        backBufferFillColor[2] = fillColor[2];
+        backBufferFillColor[3] = fillColor[3];
+
+        auto error = resizeRenderBuffers();
+        if (error.has_value()) {
+            error->addEntry();
+            return error;
+        }
+
+        return {};
     }
 
     std::optional<Error> DirectXRenderer::setVideoAdapter(const std::wstring &sVideoAdapterName) {
@@ -468,7 +329,7 @@ namespace ne {
     std::optional<Error> DirectXRenderer::createRtvAndDsvDescriptorHeaps() {
         // Create RTV heap.
         D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc;
-        rtvHeapDesc.NumDescriptors = getSwapChainBufferCount();
+        rtvHeapDesc.NumDescriptors = getSwapChainBufferCount() + 1; // '+1' for MSAA render target.
         rtvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
         rtvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
         rtvHeapDesc.NodeMask = 0;
@@ -481,7 +342,7 @@ namespace ne {
 
         // Create DSV heap.
         D3D12_DESCRIPTOR_HEAP_DESC dsvHeapDesc;
-        dsvHeapDesc.NumDescriptors = 1 + 1; // '+1' for MSAA render target.
+        dsvHeapDesc.NumDescriptors = 1;
         dsvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
         dsvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
         dsvHeapDesc.NodeMask = 0;
@@ -517,6 +378,332 @@ namespace ne {
         }
 
         iMsaaQuality = msQualityLevels.NumQualityLevels;
+
+        return {};
+    }
+
+    std::optional<Error> DirectXRenderer::initializeDirectX() {
+        // Enable debug layer in DEBUG mode.
+        DWORD debugFactoryFlags = 0;
+#if defined(DEBUG) || defined(_DEBUG)
+        {
+            std::optional<Error> error = enableDebugLayer();
+            if (error.has_value()) {
+                error->addEntry();
+                return error;
+            }
+            debugFactoryFlags = DXGI_CREATE_FACTORY_DEBUG;
+        }
+#endif
+
+        // Create DXGI factory.
+        HRESULT hResult = CreateDXGIFactory2(debugFactoryFlags, IID_PPV_ARGS(&pFactory));
+        if (FAILED(hResult)) {
+            return Error(hResult);
+        }
+
+        // Get supported video adapters.
+        auto result = DirectXRenderer::getSupportedGpus();
+        if (std::holds_alternative<Error>(result)) {
+            Error error = std::get<Error>(std::move(result));
+            error.addEntry();
+            return error;
+        }
+        vSupportedVideoAdapters = std::get<std::vector<std::wstring>>(std::move(result));
+        if (iPreferredGpuIndex >= static_cast<long>(vSupportedVideoAdapters.size())) {
+            Error error(std::format("preferred GPU index {} is out of range, supported GPUs in total: {}\n",
+                                    iPreferredGpuIndex, vSupportedVideoAdapters.size()));
+            error.addEntry();
+            return error;
+        }
+
+        // Use video adapter.
+        std::optional<Error> error = setVideoAdapter(vSupportedVideoAdapters[iPreferredGpuIndex]);
+        if (error.has_value()) {
+            error->addEntry();
+            return error;
+        }
+
+        // Create device.
+        hResult = D3D12CreateDevice(pVideoAdapter.Get(), rendererD3dFeatureLevel, IID_PPV_ARGS(&pDevice));
+        if (FAILED(hResult)) {
+            return Error(hResult);
+        }
+
+        // Create memory allocation (external class).
+        error = createMemoryAllocator();
+        if (error.has_value()) {
+            error->addEntry();
+            return error;
+        }
+
+        // Create fence.
+        hResult = pDevice->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&pFence));
+        if (FAILED(hResult)) {
+            return Error(hResult);
+        }
+
+        // Get descriptor sizes.
+        iRtvDescriptorSize = pDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+        iDsvDescriptorSize = pDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
+        iCbvSrvUavDescriptorSize =
+            pDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+
+        // Check MSAA support.
+        if (bIsMsaaEnabled) {
+            std::optional<Error> error1 = checkMsaaSupport();
+            if (error1.has_value()) {
+                error1->addEntry();
+                return error1;
+            }
+        }
+
+        // Create command queue and command list.
+        error = createCommandObjects();
+        if (error.has_value()) {
+            error->addEntry();
+            return error;
+        }
+
+        // Set output adapter (monitor) to use.
+        error = setOutputAdapter();
+        if (error.has_value()) {
+            error->addEntry();
+            return error;
+        }
+
+        // Determine display mode.
+        auto videoModesResult = getSupportedDisplayModes();
+        if (std::holds_alternative<Error>(videoModesResult)) {
+            Error error1 = std::get<Error>(std::move(videoModesResult));
+            error1.addEntry();
+            return error1;
+        }
+
+        if (bStartedWithConfigurationFromDisk) {
+            // Find the specified video mode.
+            const auto vVideoModes = std::get<std::vector<DXGI_MODE_DESC>>(std::move(videoModesResult));
+
+            std::vector<DXGI_MODE_DESC> vFilteredModes;
+
+            for (const auto &mode : vVideoModes) {
+                if (mode.Width == currentDisplayMode.Width && mode.Height == currentDisplayMode.Height &&
+                    mode.RefreshRate.Numerator == currentDisplayMode.RefreshRate.Numerator &&
+                    mode.RefreshRate.Denominator == currentDisplayMode.RefreshRate.Denominator) {
+                    vFilteredModes.push_back(mode);
+                }
+            }
+
+            if (vFilteredModes.empty()) {
+                Error error1(std::format("video mode with resolution ({}x{}) and refresh rate "
+                                         "({}/{}) is not supported",
+                                         currentDisplayMode.Width, currentDisplayMode.Height,
+                                         currentDisplayMode.RefreshRate.Numerator,
+                                         currentDisplayMode.RefreshRate.Denominator));
+                error1.addEntry();
+                return error1;
+            } else if (vFilteredModes.size() == 1) {
+                currentDisplayMode = vFilteredModes[0];
+            } else {
+                std::string sErrorMessage = std::format("video mode with resolution ({}x{}) and refresh rate "
+                                                        "({}/{}) matched multiple supported modes, "
+                                                        "please pick one of the following:\n",
+                                                        currentDisplayMode.Width, currentDisplayMode.Height,
+                                                        currentDisplayMode.RefreshRate.Numerator,
+                                                        currentDisplayMode.RefreshRate.Denominator);
+                for (const auto &mode : vFilteredModes) {
+                    sErrorMessage +=
+                        std::format("- resolution: {}x{}, refresh rate: {}/{}, format: {}, "
+                                    "scanline ordering: {}, scaling: {}",
+                                    mode.Width, mode.Height, mode.RefreshRate.Numerator,
+                                    mode.RefreshRate.Denominator, static_cast<unsigned int>(mode.Format),
+                                    static_cast<int>(mode.ScanlineOrdering), static_cast<int>(mode.Scaling));
+                }
+                Error error1(sErrorMessage);
+                error1.addEntry();
+                return error1;
+            }
+        } else {
+            // use last display mode
+            currentDisplayMode = std::get<std::vector<DXGI_MODE_DESC>>(std::move(videoModesResult)).back();
+        }
+
+        // Create swap chain.
+        error = createSwapChain();
+        if (error.has_value()) {
+            error->addEntry();
+            return error;
+        }
+
+        // Create RTV and DSV heaps.
+        error = createRtvAndDsvDescriptorHeaps();
+        if (error.has_value()) {
+            error->addEntry();
+            return error;
+        }
+
+        return {};
+    }
+
+    std::optional<Error> DirectXRenderer::resizeRenderBuffers() {
+        std::scoped_lock<std::recursive_mutex> guard(mtxRwRenderResources);
+
+        std::optional<Error> error = flushCommandQueue();
+        if (error.has_value()) {
+            error->addEntry();
+            return error;
+        }
+
+        // Release the previous resources because we will be recreating them.
+        for (unsigned int i = 0; i < getSwapChainBufferCount(); i++) {
+            pSwapChainBuffer[i].Reset();
+        }
+        pMsaaRenderTarget.Reset();
+        pDepthStencilBuffer.Reset();
+
+        // Resize the swap chain.
+        HRESULT hResult = S_OK;
+        if (bIsVSyncEnabled) {
+            hResult = pSwapChain->ResizeBuffers(getSwapChainBufferCount(), currentDisplayMode.Width,
+                                                currentDisplayMode.Height, backBufferFormat, 0);
+        } else {
+            hResult = pSwapChain->ResizeBuffers(getSwapChainBufferCount(), currentDisplayMode.Width,
+                                                currentDisplayMode.Height, backBufferFormat,
+                                                DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING);
+        }
+        if (FAILED(hResult)) {
+            return Error(hResult);
+        }
+
+        iCurrentBackBufferIndex = 0;
+
+        // Create RTV to swap chain buffers.
+        CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHeapHandle(pRtvHeap->GetCPUDescriptorHandleForHeapStart());
+        for (unsigned int i = 0; i < getSwapChainBufferCount(); i++) {
+            hResult = pSwapChain->GetBuffer(i, IID_PPV_ARGS(&pSwapChainBuffer[i]));
+            if (FAILED(hResult)) {
+                return Error(hResult);
+            }
+
+            pDevice->CreateRenderTargetView(pSwapChainBuffer[i].Get(), nullptr, rtvHeapHandle);
+            rtvHeapHandle.Offset(1, iRtvDescriptorSize);
+        }
+
+        // Create MSAA render target.
+        D3D12_RESOURCE_DESC msaaRenderTargetDesc;
+        msaaRenderTargetDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+        msaaRenderTargetDesc.Alignment = 0;
+        msaaRenderTargetDesc.Width = currentDisplayMode.Width;
+        msaaRenderTargetDesc.Height = currentDisplayMode.Height;
+        msaaRenderTargetDesc.DepthOrArraySize = 1;
+        msaaRenderTargetDesc.MipLevels = 1;
+        msaaRenderTargetDesc.Format = backBufferFormat;
+        msaaRenderTargetDesc.SampleDesc.Count = bIsMsaaEnabled ? iMsaaSampleCount : 1;
+        msaaRenderTargetDesc.SampleDesc.Quality = bIsMsaaEnabled ? (iMsaaQuality - 1) : 0;
+        msaaRenderTargetDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+        msaaRenderTargetDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
+
+        D3D12_CLEAR_VALUE msaaClear;
+        msaaClear.Format = backBufferFormat;
+        msaaClear.Color[0] = backBufferFillColor[0];
+        msaaClear.Color[1] = backBufferFillColor[1];
+        msaaClear.Color[2] = backBufferFillColor[2];
+        msaaClear.Color[3] = backBufferFillColor[3];
+
+        D3D12MA::ALLOCATION_DESC allocationDesc = {};
+        allocationDesc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
+
+        hResult = pMemoryAllocator->CreateResource(
+            &allocationDesc, &msaaRenderTargetDesc, D3D12_RESOURCE_STATE_COMMON, &msaaClear,
+            pMsaaRenderTarget.ReleaseAndGetAddressOf(), IID_NULL, nullptr);
+        if (FAILED(hResult)) {
+            return Error(hResult);
+        }
+
+        pDevice->CreateRenderTargetView(pMsaaRenderTarget->GetResource(), nullptr, rtvHeapHandle);
+
+        // Create depth/stencil buffer.
+        D3D12_RESOURCE_DESC depthStencilDesc;
+        depthStencilDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+        depthStencilDesc.Alignment = 0;
+        depthStencilDesc.Width = currentDisplayMode.Width;
+        depthStencilDesc.Height = currentDisplayMode.Height;
+        depthStencilDesc.DepthOrArraySize = 1;
+        depthStencilDesc.MipLevels = 1;
+        depthStencilDesc.Format = depthStencilFormat;
+        depthStencilDesc.SampleDesc.Count = bIsMsaaEnabled ? iMsaaSampleCount : 1;
+        depthStencilDesc.SampleDesc.Quality = bIsMsaaEnabled ? (iMsaaQuality - 1) : 0;
+        depthStencilDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+        depthStencilDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
+
+        D3D12_CLEAR_VALUE depthClear;
+        depthClear.Format = depthStencilFormat;
+        depthClear.DepthStencil.Depth = 1.0f;
+        depthClear.DepthStencil.Stencil = 0;
+
+        allocationDesc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
+        hResult = pMemoryAllocator->CreateResource(
+            &allocationDesc, &depthStencilDesc, D3D12_RESOURCE_STATE_DEPTH_WRITE, &depthClear,
+            pDepthStencilBuffer.ReleaseAndGetAddressOf(), IID_NULL, nullptr);
+        if (FAILED(hResult)) {
+            return Error(hResult);
+        }
+
+        // Create DSV.
+        D3D12_DEPTH_STENCIL_VIEW_DESC dsvDesc;
+        dsvDesc.Flags = D3D12_DSV_FLAG_NONE;
+        dsvDesc.ViewDimension =
+            bIsMsaaEnabled ? D3D12_DSV_DIMENSION_TEXTURE2DMS : D3D12_DSV_DIMENSION_TEXTURE2D;
+        dsvDesc.Format = depthStencilFormat;
+        dsvDesc.Texture2D.MipSlice = 0;
+
+        CD3DX12_CPU_DESCRIPTOR_HANDLE dsvHeapHandle(pDsvHeap->GetCPUDescriptorHandleForHeapStart());
+        pDevice->CreateDepthStencilView(pDepthStencilBuffer->GetResource(), &dsvDesc, dsvHeapHandle);
+
+        // Update the viewport transform to cover the new display size.
+        screenViewport.TopLeftX = 0;
+        screenViewport.TopLeftY = 0;
+        screenViewport.Width = static_cast<float>(currentDisplayMode.Width);
+        screenViewport.Height = static_cast<float>(currentDisplayMode.Height);
+        screenViewport.MinDepth = fMinDepth;
+        screenViewport.MaxDepth = fMaxDepth;
+
+        scissorRect = {0, 0, static_cast<LONG>(currentDisplayMode.Width),
+                       static_cast<LONG>(currentDisplayMode.Height)};
+
+        return {};
+    }
+
+    std::optional<Error> DirectXRenderer::flushCommandQueue() {
+        std::scoped_lock<std::recursive_mutex> guardFrame(mtxRwRenderResources);
+
+        HRESULT hResult = S_OK;
+        {
+            std::scoped_lock<std::mutex> guardFence(mtxRwFence);
+            iCurrentFence += 1;
+            hResult = pCommandQueue->Signal(pFence.Get(), iCurrentFence);
+        }
+
+        if (FAILED(hResult)) {
+            return Error(hResult);
+        }
+
+        // Wait until the GPU has completed commands up to this fence point.
+        if (pFence->GetCompletedValue() < iCurrentFence) {
+            const HANDLE hEvent = CreateEventEx(nullptr, nullptr, FALSE, EVENT_ALL_ACCESS);
+            if (hEvent == nullptr) {
+                return Error(GetLastError());
+            }
+
+            // Fire event when the GPU hits current fence.
+            hResult = pFence->SetEventOnCompletion(iCurrentFence, hEvent);
+            if (FAILED(hResult)) {
+                return Error(hResult);
+            }
+
+            WaitForSingleObject(hEvent, INFINITE);
+            CloseHandle(hEvent);
+        }
 
         return {};
     }

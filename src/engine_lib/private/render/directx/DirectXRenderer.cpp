@@ -81,12 +81,20 @@ namespace ne {
             throw std::runtime_error(error.getError());
         }
 
+        // Create memory allocation (external class).
+        std::optional<Error> error = createMemoryAllocator();
+        if (error.has_value()) {
+            error->addEntry();
+            error->showError();
+            throw std::runtime_error(error->getError());
+        }
+
         // Create fence.
         hResult = pDevice->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&pFence));
         if (FAILED(hResult)) {
-            const Error error(hResult);
-            error.showError();
-            throw std::runtime_error(error.getError());
+            const Error error1(hResult);
+            error1.showError();
+            throw std::runtime_error(error1.getError());
         }
 
         // Get descriptor sizes.
@@ -97,16 +105,16 @@ namespace ne {
 
         // Check MSAA support.
         if (bIsMsaaEnabled) {
-            std::optional<Error> error = checkMsaaSupport();
-            if (error.has_value()) {
-                error->addEntry();
-                error->showError();
-                throw std::runtime_error(error->getError());
+            std::optional<Error> error1 = checkMsaaSupport();
+            if (error1.has_value()) {
+                error1->addEntry();
+                error1->showError();
+                throw std::runtime_error(error1->getError());
             }
         }
 
         // Create command queue and command list.
-        std::optional<Error> error = createCommandObjects();
+        error = createCommandObjects();
         if (error.has_value()) {
             error->addEntry();
             error->showError();
@@ -298,6 +306,20 @@ namespace ne {
         return Antialiasing{bIsMsaaEnabled, static_cast<int>(iMsaaSampleCount)};
     }
 
+    size_t DirectXRenderer::getTotalVideoMemoryInMb() const {
+        D3D12MA::Budget localBudget;
+        pMemoryAllocator->GetBudget(&localBudget, nullptr);
+
+        return localBudget.BudgetBytes / 1024 / 1024;
+    }
+
+    size_t DirectXRenderer::getUsedVideoMemoryInMb() const {
+        D3D12MA::Budget localBudget;
+        pMemoryAllocator->GetBudget(&localBudget, nullptr);
+
+        return localBudget.UsageBytes / 1024 / 1024;
+    }
+
     std::optional<Error> DirectXRenderer::setVideoAdapter(const std::wstring &sVideoAdapterName) {
         if (pVideoAdapter) {
             return Error("another video adapter already set");
@@ -388,6 +410,20 @@ namespace ne {
         // to the command list (later) we will Reset() it (put in 'Open' state), and in order
         // for Reset() to work, command list should be in closed state.
         pCommandList->Close();
+
+        return {};
+    }
+
+    std::optional<Error> DirectXRenderer::createMemoryAllocator() {
+        D3D12MA::ALLOCATOR_DESC desc = {};
+        desc.Flags = D3D12MA::ALLOCATOR_FLAG_DEFAULT_POOLS_NOT_ZEROED;
+        desc.pDevice = pDevice.Get();
+        desc.pAdapter = pVideoAdapter.Get();
+
+        const HRESULT hResult = D3D12MA::CreateAllocator(&desc, pMemoryAllocator.ReleaseAndGetAddressOf());
+        if (FAILED(hResult)) {
+            return Error(hResult);
+        }
 
         return {};
     }

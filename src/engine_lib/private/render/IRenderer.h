@@ -90,6 +90,20 @@ namespace ne {
          */
         virtual Antialiasing getCurrentAntialiasing() const = 0;
 
+        /**
+         * Returns total video memory size (VRAM) in megabytes.
+         *
+         * @return Total video memory size in megabytes.
+         */
+        virtual size_t getTotalVideoMemoryInMb() const = 0;
+
+        /**
+         * Returns used video memory size (VRAM) in megabytes.
+         *
+         * @return Used video memory size in megabytes.
+         */
+        virtual size_t getUsedVideoMemoryInMb() const = 0;
+
     protected:
         /** Update internal resources for next frame. */
         virtual void update() = 0;

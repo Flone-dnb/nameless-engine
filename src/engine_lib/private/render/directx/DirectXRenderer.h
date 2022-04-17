@@ -16,6 +16,10 @@
 
 // OS.
 #include <wrl.h>
+using namespace Microsoft::WRL;
+
+// External.
+#include "D3D12MemoryAllocator/D3D12MemAlloc.h"
 
 namespace ne {
     class Window;
@@ -72,6 +76,20 @@ namespace ne {
          */
         virtual Antialiasing getCurrentAntialiasing() const override;
 
+        /**
+         * Returns total video memory size (VRAM) in megabytes.
+         *
+         * @return Total video memory size in megabytes.
+         */
+        virtual size_t getTotalVideoMemoryInMb() const override;
+
+        /**
+         * Returns used video memory size (VRAM) in megabytes.
+         *
+         * @return Used video memory size in megabytes.
+         */
+        virtual size_t getUsedVideoMemoryInMb() const override;
+
     protected:
         /** Update internal resources for next frame. */
         virtual void update() override;
@@ -115,6 +133,13 @@ namespace ne {
         std::optional<Error> createCommandObjects();
 
         /**
+         * Creates memory allocator (external helper class).
+         *
+         * @return Error if something went wrong.
+         */
+        std::optional<Error> createMemoryAllocator();
+
+        /**
          * Creates and initializes the swap chain.
          *
          * @return Error if something went wrong.
@@ -156,32 +181,35 @@ namespace ne {
     private:
         // Main DX objects.
         /* DXGI Factory */
-        Microsoft::WRL::ComPtr<IDXGIFactory4> pFactory;
+        ComPtr<IDXGIFactory4> pFactory;
         /* D3D12 Device */
-        Microsoft::WRL::ComPtr<ID3D12Device> pDevice;
+        ComPtr<ID3D12Device> pDevice;
         /* GPU */
-        Microsoft::WRL::ComPtr<IDXGIAdapter3> pVideoAdapter;
+        ComPtr<IDXGIAdapter3> pVideoAdapter;
         /* Monitor */
-        Microsoft::WRL::ComPtr<IDXGIOutput> pOutputAdapter;
+        ComPtr<IDXGIOutput> pOutputAdapter;
         /* Swap chain */
-        Microsoft::WRL::ComPtr<IDXGISwapChain1> pSwapChain;
+        ComPtr<IDXGISwapChain1> pSwapChain;
 
         // Command objects.
         /* GPU command queue. */
-        Microsoft::WRL::ComPtr<ID3D12CommandQueue> pCommandQueue;
+        ComPtr<ID3D12CommandQueue> pCommandQueue;
         /* Command list allocator - stores commands from command list (works like std::vector). */
-        Microsoft::WRL::ComPtr<ID3D12CommandAllocator> pCommandListAllocator;
+        ComPtr<ID3D12CommandAllocator> pCommandListAllocator;
         /* CPU command list. */
-        Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> pCommandList;
+        ComPtr<ID3D12GraphicsCommandList> pCommandList;
+
+        // Allocator for GPU resources.
+        ComPtr<D3D12MA::Allocator> pMemoryAllocator;
 
         // Fence.
-        Microsoft::WRL::ComPtr<ID3D12Fence> pFence;
+        ComPtr<ID3D12Fence> pFence;
         UINT64 iCurrentFence = 0;
 
         // Descriptor heaps and descriptor sizes.
-        Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> pRtvHeap;
-        Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> pDsvHeap;
-        Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> pCbvSrvUavHeap;
+        ComPtr<ID3D12DescriptorHeap> pRtvHeap;
+        ComPtr<ID3D12DescriptorHeap> pDsvHeap;
+        ComPtr<ID3D12DescriptorHeap> pCbvSrvUavHeap;
         UINT iRtvDescriptorSize = 0;
         UINT iDsvDescriptorSize = 0;
         UINT iCbvSrvUavDescriptorSize = 0;
@@ -191,7 +219,7 @@ namespace ne {
         DXGI_FORMAT depthStencilFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
 
         // MSAA.
-        Microsoft::WRL::ComPtr<ID3D12Resource> pMsaaRenderTarget;
+        ComPtr<ID3D12Resource> pMsaaRenderTarget;
         bool bIsMsaaEnabled = true;
         UINT iMsaaSampleCount = 4;
         UINT iMsaaQuality = 0;

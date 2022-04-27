@@ -44,22 +44,16 @@ namespace ne {
         std::filesystem::path basePath = getBaseDirectoryForConfigs();
         basePath += getApplicationName();
 
-#if defined(WIN32)
-        basePath += "\\";
-#elif __linux__
-        basePath += "/";
-#endif
-
         if (!std::filesystem::exists(basePath)) {
             std::filesystem::create_directory(basePath);
         }
 
         switch (category) {
         case ConfigCategory::PROGRESS:
-            basePath += sProgressDirectoryName;
+            basePath /= sProgressDirectoryName;
             break;
         case ConfigCategory::SETTINGS:
-            basePath += sSettingsDirectoryName;
+            basePath /= sSettingsDirectoryName;
             break;
         }
 

@@ -31,10 +31,10 @@ namespace ne {
         pSpdLogger->error(std::format("[{}] {}", location.function_name(), sText));
     }
 
-    std::string Logger::getDirectoryWithLogs() const { return sLoggerWorkingDirectory; }
+    std::filesystem::path Logger::getDirectoryWithLogs() const { return sLoggerWorkingDirectory; }
 
     Logger::Logger() {
-        std::string sLoggerFilePath = getBaseDirectoryForConfigs().string();
+        auto sLoggerFilePath = getBaseDirectoryForConfigs();
         sLoggerFilePath += getApplicationName();
 
         // Create base directory with application name.
@@ -42,26 +42,14 @@ namespace ne {
             std::filesystem::create_directory(sLoggerFilePath);
         }
 
-#if defined(WIN32)
-        sLoggerFilePath += "\\";
-#elif __linux__
-        sLoggerFilePath += "/";
-#endif
-
         // Create directory for logs.
-        sLoggerFilePath += sLogsDirectoryName;
+        sLoggerFilePath /= sLogsDirectoryName;
         if (!std::filesystem::exists(sLoggerFilePath)) {
             std::filesystem::create_directory(sLoggerFilePath);
         }
 
-#if defined(WIN32)
-        sLoggerFilePath += "\\";
-#elif __linux__
-        sLoggerFilePath += "/";
-#endif
-
         sLoggerWorkingDirectory = sLoggerFilePath;
-        sLoggerFilePath += getApplicationName() + "-" + getDateTime() + ".txt";
+        sLoggerFilePath /= getApplicationName() + "-" + getDateTime() + ".txt";
 
         removeOldestLogFileIfMaxLogFiles(sLoggerWorkingDirectory);
 
@@ -71,7 +59,7 @@ namespace ne {
         }
 
         auto consoleSink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
-        auto fileSink = std::make_shared<spdlog::sinks::basic_file_sink_mt>(sLoggerFilePath, true);
+        auto fileSink = std::make_shared<spdlog::sinks::basic_file_sink_mt>(sLoggerFilePath.string(), true);
 
         pSpdLogger =
             std::unique_ptr<spdlog::logger>(new spdlog::logger("MainLogger", {consoleSink, fileSink}));
@@ -88,7 +76,7 @@ namespace ne {
                            tm.tm_min, tm.tm_sec);                                   // NOLINT
     }
 
-    void Logger::removeOldestLogFileIfMaxLogFiles(const std::string &sLogDirectory) {
+    void Logger::removeOldestLogFileIfMaxLogFiles(const std::filesystem::path &sLogDirectory) {
         const auto directoryIterator = std::filesystem::directory_iterator(sLogDirectory);
 
         size_t iFileCount = 0;

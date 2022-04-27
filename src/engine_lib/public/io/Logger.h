@@ -63,7 +63,7 @@ namespace ne {
          *
          * @return Directory for logs.
          */
-        [[nodiscard]] std::string getDirectoryWithLogs() const;
+        std::filesystem::path getDirectoryWithLogs() const;
 
     private:
         Logger();
@@ -75,7 +75,7 @@ namespace ne {
          */
         static std::string getDateTime();
 
-        static void removeOldestLogFileIfMaxLogFiles(const std::string &sLogDirectory);
+        static void removeOldestLogFileIfMaxLogFiles(const std::filesystem::path &sLogDirectory);
 
         /**
          * Spdlog logger.
@@ -85,7 +85,7 @@ namespace ne {
         /**
          * Directory that is used to create logs.
          */
-        std::string sLoggerWorkingDirectory = "";
+        std::filesystem::path sLoggerWorkingDirectory;
 
         /**
          * Maximum amount of log files in the logger directory.

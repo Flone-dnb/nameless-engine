@@ -26,29 +26,17 @@ namespace ne {
         std::filesystem::path basePath = getBaseDirectoryForConfigs();
         basePath += getApplicationName();
 
-#if defined(WIN32)
-        basePath += "\\";
-#elif __linux__
-        basePath += "/";
-#endif
+        if (!std::filesystem::exists(basePath)) {
+            std::filesystem::create_directory(basePath);
+        }
+
+        basePath /= sEngineDirectoryName;
 
         if (!std::filesystem::exists(basePath)) {
             std::filesystem::create_directory(basePath);
         }
 
-        basePath += sEngineDirectoryName;
-
-#if defined(WIN32)
-        basePath += "\\";
-#elif __linux__
-        basePath += "/";
-#endif
-
-        if (!std::filesystem::exists(basePath)) {
-            std::filesystem::create_directory(basePath);
-        }
-
-        basePath += sRendererConfigurationFileName;
+        basePath /= sRendererConfigurationFileName;
 
         // Check extension.
         if (!std::string_view(sRendererConfigurationFileName).ends_with(".ini")) {

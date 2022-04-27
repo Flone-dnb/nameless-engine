@@ -137,23 +137,23 @@ namespace ne {
         return {};
     }
 
-    std::string ConfigManager::getStringValue(std::string_view sSection, std::string_view sKey,
-                                              std::string_view sDefaultValue) const {
+    std::string ConfigManager::getStringValue(
+        std::string_view sSection, std::string_view sKey, std::string_view sDefaultValue) const {
         return ini.GetValue(sSection.data(), sKey.data(), sDefaultValue.data());
     }
 
-    bool ConfigManager::getBoolValue(std::string_view sSection, std::string_view sKey,
-                                     bool bDefaultValue) const {
+    bool
+    ConfigManager::getBoolValue(std::string_view sSection, std::string_view sKey, bool bDefaultValue) const {
         return ini.GetBoolValue(sSection.data(), sKey.data(), bDefaultValue);
     }
 
-    double ConfigManager::getDoubleValue(std::string_view sSection, std::string_view sKey,
-                                         double defaultValue) const {
+    double ConfigManager::getDoubleValue(
+        std::string_view sSection, std::string_view sKey, double defaultValue) const {
         return ini.GetDoubleValue(sSection.data(), sKey.data(), defaultValue);
     }
 
-    long ConfigManager::getLongValue(std::string_view sSection, std::string_view sKey,
-                                     long iDefaultValue) const {
+    long
+    ConfigManager::getLongValue(std::string_view sSection, std::string_view sKey, long iDefaultValue) const {
         return ini.GetLongValue(sSection.data(), sKey.data(), iDefaultValue);
     }
 
@@ -184,8 +184,11 @@ namespace ne {
         return vKeys;
     }
 
-    void ConfigManager::setStringValue(std::string_view sSection, std::string_view sKey,
-                                       std::string_view sValue, std::string_view sComment) {
+    void ConfigManager::setStringValue(
+        std::string_view sSection,
+        std::string_view sKey,
+        std::string_view sValue,
+        std::string_view sComment) {
         std::string sFixedComment(sComment);
         if (!sComment.empty() && !sComment.starts_with('#')) {
             sFixedComment.insert(0, "# ");
@@ -198,8 +201,8 @@ namespace ne {
         }
     }
 
-    void ConfigManager::setBoolValue(std::string_view sSection, std::string_view sKey, bool bValue,
-                                     std::string_view sComment) {
+    void ConfigManager::setBoolValue(
+        std::string_view sSection, std::string_view sKey, bool bValue, std::string_view sComment) {
         std::string sFixedComment(sComment);
         if (!sComment.empty() && !sComment.starts_with('#')) {
             sFixedComment.insert(0, "# ");
@@ -212,8 +215,8 @@ namespace ne {
         }
     }
 
-    void ConfigManager::setDoubleValue(std::string_view sSection, std::string_view sKey, double value,
-                                       std::string_view sComment) {
+    void ConfigManager::setDoubleValue(
+        std::string_view sSection, std::string_view sKey, double value, std::string_view sComment) {
         std::string sFixedComment(sComment);
         if (!sComment.empty() && !sComment.starts_with('#')) {
             sFixedComment.insert(0, "# ");
@@ -226,8 +229,8 @@ namespace ne {
         }
     }
 
-    void ConfigManager::setLongValue(std::string_view sSection, std::string_view sKey, long iValue,
-                                     std::string_view sComment) {
+    void ConfigManager::setLongValue(
+        std::string_view sSection, std::string_view sKey, long iValue, std::string_view sComment) {
         std::string sFixedComment(sComment);
         if (!sComment.empty() && !sComment.starts_with('#')) {
             sFixedComment.insert(0, "# ");
@@ -258,8 +261,8 @@ namespace ne {
         return {};
     }
 
-    std::optional<Error> ConfigManager::saveFile(const std::filesystem::path &pathToFile,
-                                                 bool bEnableBackup) {
+    std::optional<Error>
+    ConfigManager::saveFile(const std::filesystem::path &pathToFile, bool bEnableBackup) {
         if (!std::filesystem::exists(pathToFile.parent_path())) {
             std::filesystem::create_directories(pathToFile.parent_path());
         }
@@ -295,8 +298,8 @@ namespace ne {
 
     std::filesystem::path ConfigManager::getFilePath() const { return filePath; }
 
-    std::variant<std::filesystem::path, Error> ConfigManager::constructFilePath(ConfigCategory category,
-                                                                                std::string_view sFileName) {
+    std::variant<std::filesystem::path, Error>
+    ConfigManager::constructFilePath(ConfigCategory category, std::string_view sFileName) {
         std::filesystem::path basePath;
 
         // Check if absolute path.

@@ -3,6 +3,7 @@
 // STL.
 #include <format>
 #include <filesystem>
+#include <array>
 
 // Custom.
 #include "game/Window.h"
@@ -10,7 +11,6 @@
 #include "io/Logger.h"
 
 // DirectX.
-#include "DirectXHelpers/d3dx12.h"
 #pragma comment(lib, "D3D12.lib")
 #pragma comment(lib, "dxgi.lib")
 #pragma comment(lib, "d3dcompiler.lib")
@@ -60,6 +60,14 @@ namespace ne {
             throw std::runtime_error(error->getError());
         }
 
+        // Create initial root signature.
+        error = createRootSignature();
+        if (error.has_value()) {
+            error->addEntry();
+            error->showError();
+            throw std::runtime_error(error->getError());
+        }
+
         // TODO
     }
 
@@ -68,7 +76,7 @@ namespace ne {
     void DirectXRenderer::drawFrame() {}
 
     std::optional<Error> DirectXRenderer::enableDebugLayer() const {
-        Microsoft::WRL::ComPtr<ID3D12Debug> pDebugController;
+        ComPtr<ID3D12Debug> pDebugController;
         HRESULT hResult = D3D12GetDebugInterface(IID_PPV_ARGS(&pDebugController));
         if (FAILED(hResult)) {
             return Error(hResult);
@@ -76,7 +84,7 @@ namespace ne {
 
         pDebugController->EnableDebugLayer();
 
-        Microsoft::WRL::ComPtr<IDXGIInfoQueue> pDxgiInfoQueue;
+        ComPtr<IDXGIInfoQueue> pDxgiInfoQueue;
         hResult = DXGIGetDebugInterface1(0, IID_PPV_ARGS(pDxgiInfoQueue.GetAddressOf()));
         if (FAILED(hResult)) {
             return Error(hResult);
@@ -93,18 +101,18 @@ namespace ne {
         std::vector<std::wstring> vAddedVideoAdapters;
 
         for (UINT iAdapterIndex = 0;; iAdapterIndex++) {
-            Microsoft::WRL::ComPtr<IDXGIAdapter3> pTestAdapter;
+            ComPtr<IDXGIAdapter3> pTestAdapter;
 
-            if (pFactory->EnumAdapters(iAdapterIndex,
-                                       reinterpret_cast<IDXGIAdapter **>(pTestAdapter.GetAddressOf())) ==
+            if (pFactory->EnumAdapters(
+                    iAdapterIndex, reinterpret_cast<IDXGIAdapter **>(pTestAdapter.GetAddressOf())) ==
                 DXGI_ERROR_NOT_FOUND) {
                 // No more adapters to enumerate.
                 break;
             }
 
             // Check if the adapter supports used D3D version, but don't create the actual device yet.
-            const HRESULT hResult = D3D12CreateDevice(pTestAdapter.Get(), rendererD3dFeatureLevel,
-                                                      _uuidof(ID3D12Device), nullptr);
+            const HRESULT hResult = D3D12CreateDevice(
+                pTestAdapter.Get(), rendererD3dFeatureLevel, _uuidof(ID3D12Device), nullptr);
             if (SUCCEEDED(hResult)) {
                 // Found supported adapter.
                 DXGI_ADAPTER_DESC desc;
@@ -138,9 +146,11 @@ namespace ne {
 
         std::vector<RenderMode> vOutRenderModes;
         for (const auto &mode : vRenderModes) {
-            vOutRenderModes.push_back(RenderMode{static_cast<int>(mode.Width), static_cast<int>(mode.Height),
-                                                 static_cast<int>(mode.RefreshRate.Numerator),
-                                                 static_cast<int>(mode.RefreshRate.Denominator)});
+            vOutRenderModes.push_back(RenderMode{
+                static_cast<int>(mode.Width),
+                static_cast<int>(mode.Height),
+                static_cast<int>(mode.RefreshRate.Numerator),
+                static_cast<int>(mode.RefreshRate.Denominator)});
         }
 
         return vOutRenderModes;
@@ -187,9 +197,9 @@ namespace ne {
         }
 
         for (UINT iAdapterIndex = 0;; iAdapterIndex++) {
-            Microsoft::WRL::ComPtr<IDXGIAdapter3> pTestAdapter;
-            if (pFactory->EnumAdapters(iAdapterIndex,
-                                       reinterpret_cast<IDXGIAdapter **>(pTestAdapter.GetAddressOf())) ==
+            ComPtr<IDXGIAdapter3> pTestAdapter;
+            if (pFactory->EnumAdapters(
+                    iAdapterIndex, reinterpret_cast<IDXGIAdapter **>(pTestAdapter.GetAddressOf())) ==
                 DXGI_ERROR_NOT_FOUND) {
                 // No more adapters to enumerate.
                 break;
@@ -199,8 +209,8 @@ namespace ne {
             pTestAdapter->GetDesc(&desc);
             if (desc.Description == sVideoAdapterName) {
                 // Check if the adapter supports used D3D version, but don't create the actual device yet.
-                const HRESULT hResult = D3D12CreateDevice(pTestAdapter.Get(), rendererD3dFeatureLevel,
-                                                          _uuidof(ID3D12Device), nullptr);
+                const HRESULT hResult = D3D12CreateDevice(
+                    pTestAdapter.Get(), rendererD3dFeatureLevel, _uuidof(ID3D12Device), nullptr);
                 if (SUCCEEDED(hResult)) {
                     // Found supported adapter.
                     pVideoAdapter = std::move(pTestAdapter);
@@ -222,7 +232,7 @@ namespace ne {
             return Error("output adapter already created");
         }
 
-        Microsoft::WRL::ComPtr<IDXGIOutput> pTestOutput;
+        ComPtr<IDXGIOutput> pTestOutput;
 
         const HRESULT hResult = pVideoAdapter->EnumOutputs(0, pTestOutput.GetAddressOf());
         if (hResult == DXGI_ERROR_NOT_FOUND) {
@@ -251,18 +261,20 @@ namespace ne {
         }
 
         // Create Command Allocator.
-        hResult = pDevice->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT,
-                                                  IID_PPV_ARGS(pCommandListAllocator.GetAddressOf()));
+        hResult = pDevice->CreateCommandAllocator(
+            D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(pCommandListAllocator.GetAddressOf()));
         if (FAILED(hResult)) {
             return Error(hResult);
         }
 
         // Create Command List.
         hResult = pDevice->CreateCommandList(
-            0, // Create list for only one GPU. See pDevice->GetNodeCount() and documentation for more info.
+            0, // Create list for only one GPU. See pDevice->GetNodeCount()
+               // and documentation for more info.
             D3D12_COMMAND_LIST_TYPE_DIRECT,
             pCommandListAllocator.Get(), // Associated command allocator
-            nullptr, IID_PPV_ARGS(pCommandList.GetAddressOf()));
+            nullptr,
+            IID_PPV_ARGS(pCommandList.GetAddressOf()));
         if (FAILED(hResult)) {
             return Error(hResult);
         }
@@ -317,7 +329,11 @@ namespace ne {
         fullscreenDesc.Windowed = true;
 
         const HRESULT hResult = pFactory->CreateSwapChainForHwnd(
-            pCommandQueue.Get(), getWindow()->getWindowHandle(), &desc, &fullscreenDesc, pOutputAdapter.Get(),
+            pCommandQueue.Get(),
+            getWindow()->getWindowHandle(),
+            &desc,
+            &fullscreenDesc,
+            pOutputAdapter.Get(),
             pSwapChain.ReleaseAndGetAddressOf());
         if (FAILED(hResult)) {
             return Error(hResult);
@@ -367,8 +383,8 @@ namespace ne {
         msQualityLevels.Flags = D3D12_MULTISAMPLE_QUALITY_LEVELS_FLAG_NONE;
         msQualityLevels.NumQualityLevels = 0;
 
-        const HRESULT hResult = pDevice->CheckFeatureSupport(D3D12_FEATURE_MULTISAMPLE_QUALITY_LEVELS,
-                                                             &msQualityLevels, sizeof(msQualityLevels));
+        const HRESULT hResult = pDevice->CheckFeatureSupport(
+            D3D12_FEATURE_MULTISAMPLE_QUALITY_LEVELS, &msQualityLevels, sizeof(msQualityLevels));
         if (FAILED(hResult)) {
             return Error(hResult);
         }
@@ -411,8 +427,10 @@ namespace ne {
         }
         vSupportedVideoAdapters = std::get<std::vector<std::wstring>>(std::move(result));
         if (iPreferredGpuIndex >= static_cast<long>(vSupportedVideoAdapters.size())) {
-            Error error(std::format("preferred GPU index {} is out of range, supported GPUs in total: {}\n",
-                                    iPreferredGpuIndex, vSupportedVideoAdapters.size()));
+            Error error(std::format(
+                "preferred GPU index {} is out of range, supported GPUs in total: {}\n",
+                iPreferredGpuIndex,
+                vSupportedVideoAdapters.size()));
             error.addEntry();
             return error;
         }
@@ -450,12 +468,10 @@ namespace ne {
             pDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
         // Check MSAA support.
-        if (bIsMsaaEnabled) {
-            std::optional<Error> error1 = checkMsaaSupport();
-            if (error1.has_value()) {
-                error1->addEntry();
-                return error1;
-            }
+        std::optional<Error> error1 = checkMsaaSupport();
+        if (error1.has_value()) {
+            error1->addEntry();
+            return error1;
         }
 
         // Create command queue and command list.
@@ -475,9 +491,9 @@ namespace ne {
         // Determine display mode.
         auto videoModesResult = getSupportedDisplayModes();
         if (std::holds_alternative<Error>(videoModesResult)) {
-            Error error1 = std::get<Error>(std::move(videoModesResult));
-            error1.addEntry();
-            return error1;
+            Error err = std::get<Error>(std::move(videoModesResult));
+            err.addEntry();
+            return err;
         }
 
         if (bStartedWithConfigurationFromDisk) {
@@ -495,33 +511,41 @@ namespace ne {
             }
 
             if (vFilteredModes.empty()) {
-                Error error1(std::format("video mode with resolution ({}x{}) and refresh rate "
-                                         "({}/{}) is not supported",
-                                         currentDisplayMode.Width, currentDisplayMode.Height,
-                                         currentDisplayMode.RefreshRate.Numerator,
-                                         currentDisplayMode.RefreshRate.Denominator));
-                error1.addEntry();
-                return error1;
+                Error err(std::format(
+                    "video mode with resolution ({}x{}) and refresh rate "
+                    "({}/{}) is not supported",
+                    currentDisplayMode.Width,
+                    currentDisplayMode.Height,
+                    currentDisplayMode.RefreshRate.Numerator,
+                    currentDisplayMode.RefreshRate.Denominator));
+                err.addEntry();
+                return err;
             } else if (vFilteredModes.size() == 1) {
                 currentDisplayMode = vFilteredModes[0];
             } else {
-                std::string sErrorMessage = std::format("video mode with resolution ({}x{}) and refresh rate "
-                                                        "({}/{}) matched multiple supported modes, "
-                                                        "please pick one of the following:\n",
-                                                        currentDisplayMode.Width, currentDisplayMode.Height,
-                                                        currentDisplayMode.RefreshRate.Numerator,
-                                                        currentDisplayMode.RefreshRate.Denominator);
+                std::string sErrorMessage = std::format(
+                    "video mode with resolution ({}x{}) and refresh rate "
+                    "({}/{}) matched multiple supported modes, "
+                    "please pick one of the following:\n",
+                    currentDisplayMode.Width,
+                    currentDisplayMode.Height,
+                    currentDisplayMode.RefreshRate.Numerator,
+                    currentDisplayMode.RefreshRate.Denominator);
                 for (const auto &mode : vFilteredModes) {
-                    sErrorMessage +=
-                        std::format("- resolution: {}x{}, refresh rate: {}/{}, format: {}, "
-                                    "scanline ordering: {}, scaling: {}",
-                                    mode.Width, mode.Height, mode.RefreshRate.Numerator,
-                                    mode.RefreshRate.Denominator, static_cast<unsigned int>(mode.Format),
-                                    static_cast<int>(mode.ScanlineOrdering), static_cast<int>(mode.Scaling));
+                    sErrorMessage += std::format(
+                        "- resolution: {}x{}, refresh rate: {}/{}, format: {}, "
+                        "scanline ordering: {}, scaling: {}",
+                        mode.Width,
+                        mode.Height,
+                        mode.RefreshRate.Numerator,
+                        mode.RefreshRate.Denominator,
+                        static_cast<unsigned int>(mode.Format),
+                        static_cast<int>(mode.ScanlineOrdering),
+                        static_cast<int>(mode.Scaling));
                 }
-                Error error1(sErrorMessage);
-                error1.addEntry();
-                return error1;
+                Error err(sErrorMessage);
+                err.addEntry();
+                return err;
             }
         } else {
             // use last display mode
@@ -545,6 +569,94 @@ namespace ne {
         return {};
     }
 
+    std::optional<Error> DirectXRenderer::createRootSignature() {
+        // Root parameter can be a table, root descriptor or root constants.
+        std::array<CD3DX12_ROOT_PARAMETER, 1> vRootParameters;
+
+        // Performance TIP: Order from most frequent to least frequent.
+        vRootParameters[0].InitAsConstantBufferView(0); // cbRenderPass
+
+        // new stuff goes here
+
+        const auto vStaticSamplers = getStaticTextureSamplers();
+
+        // Create root signature description.
+        // A root signature is an array of root parameters.
+        const CD3DX12_ROOT_SIGNATURE_DESC rootSignatureDesc(
+            static_cast<UINT>(vRootParameters.size()),
+            vRootParameters.data(),
+            static_cast<UINT>(vStaticSamplers.size()),
+            vStaticSamplers.data(),
+            D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+
+        // Serialize root signature in order to create it.
+        ComPtr<ID3DBlob> pSerializedRootSignature = nullptr;
+        ComPtr<ID3DBlob> pSerializerErrorMessage = nullptr;
+
+        HRESULT hResult = D3D12SerializeRootSignature(
+            &rootSignatureDesc,
+            D3D_ROOT_SIGNATURE_VERSION_1,
+            pSerializedRootSignature.GetAddressOf(),
+            pSerializerErrorMessage.GetAddressOf());
+        if (FAILED(hResult)) {
+            return Error(hResult);
+        }
+
+        if (pSerializerErrorMessage) {
+            return Error(std::string(
+                static_cast<char *>(pSerializerErrorMessage->GetBufferPointer()),
+                pSerializerErrorMessage->GetBufferSize()));
+        }
+
+        // Create root signature.
+        hResult = pDevice->CreateRootSignature(
+            0,
+            pSerializedRootSignature->GetBufferPointer(),
+            pSerializedRootSignature->GetBufferSize(),
+            IID_PPV_ARGS(&pRootSignature));
+        if (FAILED(hResult)) {
+            return Error(hResult);
+        }
+
+        return {};
+    }
+
+    std::array<const CD3DX12_STATIC_SAMPLER_DESC, 4> DirectXRenderer::getStaticTextureSamplers() {
+        const CD3DX12_STATIC_SAMPLER_DESC pointWrap(
+            0,
+            D3D12_FILTER_MIN_MAG_MIP_POINT,
+            D3D12_TEXTURE_ADDRESS_MODE_WRAP,
+            D3D12_TEXTURE_ADDRESS_MODE_WRAP,
+            D3D12_TEXTURE_ADDRESS_MODE_WRAP);
+
+        const CD3DX12_STATIC_SAMPLER_DESC linearWrap(
+            1,
+            D3D12_FILTER_MIN_MAG_MIP_LINEAR,
+            D3D12_TEXTURE_ADDRESS_MODE_WRAP,
+            D3D12_TEXTURE_ADDRESS_MODE_WRAP,
+            D3D12_TEXTURE_ADDRESS_MODE_WRAP);
+
+        const CD3DX12_STATIC_SAMPLER_DESC anisotropicWrap(
+            2,
+            D3D12_FILTER_ANISOTROPIC,
+            D3D12_TEXTURE_ADDRESS_MODE_WRAP,
+            D3D12_TEXTURE_ADDRESS_MODE_WRAP,
+            D3D12_TEXTURE_ADDRESS_MODE_WRAP);
+
+        const CD3DX12_STATIC_SAMPLER_DESC shadow(
+            3,
+            D3D12_FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT,
+            D3D12_TEXTURE_ADDRESS_MODE_BORDER,
+            D3D12_TEXTURE_ADDRESS_MODE_BORDER,
+            D3D12_TEXTURE_ADDRESS_MODE_BORDER,
+            0.0f,
+            16,
+            D3D12_COMPARISON_FUNC_LESS_EQUAL,
+            D3D12_STATIC_BORDER_COLOR_OPAQUE_WHITE);
+
+        return {pointWrap, linearWrap, anisotropicWrap, shadow};
+    }
+
     std::optional<Error> DirectXRenderer::resizeRenderBuffers() {
         std::scoped_lock<std::recursive_mutex> guard(mtxRwRenderResources);
 
@@ -564,12 +676,19 @@ namespace ne {
         // Resize the swap chain.
         HRESULT hResult = S_OK;
         if (bIsVSyncEnabled) {
-            hResult = pSwapChain->ResizeBuffers(getSwapChainBufferCount(), currentDisplayMode.Width,
-                                                currentDisplayMode.Height, backBufferFormat, 0);
+            hResult = pSwapChain->ResizeBuffers(
+                getSwapChainBufferCount(),
+                currentDisplayMode.Width,
+                currentDisplayMode.Height,
+                backBufferFormat,
+                0);
         } else {
-            hResult = pSwapChain->ResizeBuffers(getSwapChainBufferCount(), currentDisplayMode.Width,
-                                                currentDisplayMode.Height, backBufferFormat,
-                                                DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING);
+            hResult = pSwapChain->ResizeBuffers(
+                getSwapChainBufferCount(),
+                currentDisplayMode.Width,
+                currentDisplayMode.Height,
+                backBufferFormat,
+                DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING);
         }
         if (FAILED(hResult)) {
             return Error(hResult);
@@ -614,8 +733,13 @@ namespace ne {
         allocationDesc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
 
         hResult = pMemoryAllocator->CreateResource(
-            &allocationDesc, &msaaRenderTargetDesc, D3D12_RESOURCE_STATE_COMMON, &msaaClear,
-            pMsaaRenderTarget.ReleaseAndGetAddressOf(), IID_NULL, nullptr);
+            &allocationDesc,
+            &msaaRenderTargetDesc,
+            D3D12_RESOURCE_STATE_COMMON,
+            &msaaClear,
+            pMsaaRenderTarget.ReleaseAndGetAddressOf(),
+            IID_NULL,
+            nullptr);
         if (FAILED(hResult)) {
             return Error(hResult);
         }
@@ -643,8 +767,13 @@ namespace ne {
 
         allocationDesc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
         hResult = pMemoryAllocator->CreateResource(
-            &allocationDesc, &depthStencilDesc, D3D12_RESOURCE_STATE_DEPTH_WRITE, &depthClear,
-            pDepthStencilBuffer.ReleaseAndGetAddressOf(), IID_NULL, nullptr);
+            &allocationDesc,
+            &depthStencilDesc,
+            D3D12_RESOURCE_STATE_DEPTH_WRITE,
+            &depthClear,
+            pDepthStencilBuffer.ReleaseAndGetAddressOf(),
+            IID_NULL,
+            nullptr);
         if (FAILED(hResult)) {
             return Error(hResult);
         }
@@ -668,8 +797,8 @@ namespace ne {
         screenViewport.MinDepth = fMinDepth;
         screenViewport.MaxDepth = fMaxDepth;
 
-        scissorRect = {0, 0, static_cast<LONG>(currentDisplayMode.Width),
-                       static_cast<LONG>(currentDisplayMode.Height)};
+        scissorRect = {
+            0, 0, static_cast<LONG>(currentDisplayMode.Width), static_cast<LONG>(currentDisplayMode.Height)};
 
         return {};
     }
@@ -760,26 +889,36 @@ namespace ne {
         }
 
         // Write GPU.
-        manager.setLongValue(getConfigurationSectionGpu(), "GPU", 0,
-                             "index of the GPU to use, where '0' is the GPU with the most priority "
-                             "(first found GPU), '1' is the second found and etc.");
+        manager.setLongValue(
+            getConfigurationSectionGpu(),
+            "GPU",
+            0,
+            "index of the GPU to use, where '0' is the GPU with the most priority "
+            "(first found GPU), '1' is the second found and etc.");
 
         // Write resolution.
-        manager.setLongValue(getConfigurationSectionResolution(), "x",
-                             static_cast<long>(currentDisplayMode.Width));
-        manager.setLongValue(getConfigurationSectionResolution(), "y",
-                             static_cast<long>(currentDisplayMode.Height));
+        manager.setLongValue(
+            getConfigurationSectionResolution(), "x", static_cast<long>(currentDisplayMode.Width));
+        manager.setLongValue(
+            getConfigurationSectionResolution(), "y", static_cast<long>(currentDisplayMode.Height));
 
         // Write refresh rate.
-        manager.setLongValue(getConfigurationSectionRefreshRate(), "numerator",
-                             static_cast<long>(currentDisplayMode.RefreshRate.Numerator));
-        manager.setLongValue(getConfigurationSectionRefreshRate(), "denominator",
-                             static_cast<long>(currentDisplayMode.RefreshRate.Denominator));
+        manager.setLongValue(
+            getConfigurationSectionRefreshRate(),
+            "numerator",
+            static_cast<long>(currentDisplayMode.RefreshRate.Numerator));
+        manager.setLongValue(
+            getConfigurationSectionRefreshRate(),
+            "denominator",
+            static_cast<long>(currentDisplayMode.RefreshRate.Denominator));
 
         // Write antialiasing.
         manager.setBoolValue(getConfigurationSectionAntialiasing(), "enabled", bIsMsaaEnabled);
-        manager.setLongValue(getConfigurationSectionAntialiasing(), "sample count",
-                             static_cast<long>(iMsaaSampleCount), "valid values for MSAA: 2 or 4");
+        manager.setLongValue(
+            getConfigurationSectionAntialiasing(),
+            "sample count",
+            static_cast<long>(iMsaaSampleCount),
+            "valid values for MSAA: 2 or 4");
 
         // Write VSync.
         manager.setBoolValue(getConfigurationSectionVSync(), "enabled", bIsVSyncEnabled);
@@ -819,9 +958,10 @@ namespace ne {
         currentDisplayMode.Width = manager.getLongValue(getConfigurationSectionResolution(), "x", 0);
         currentDisplayMode.Height = manager.getLongValue(getConfigurationSectionResolution(), "y", 0);
         if (currentDisplayMode.Width == 0 || currentDisplayMode.Height == 0) {
-            Error error(std::format("failed to read valid resolution values from configuration file, "
-                                    "either fix the values or delete this configuration file: \"{}\"",
-                                    std::filesystem::path(manager.getFilePath()).string()));
+            Error error(std::format(
+                "failed to read valid resolution values from configuration file, "
+                "either fix the values or delete this configuration file: \"{}\"",
+                std::filesystem::path(manager.getFilePath()).string()));
             error.addEntry();
             error.showError();
             throw std::runtime_error(error.getError());
@@ -834,9 +974,10 @@ namespace ne {
             manager.getLongValue(getConfigurationSectionRefreshRate(), "denominator", 0);
         if (currentDisplayMode.RefreshRate.Numerator == 0 ||
             currentDisplayMode.RefreshRate.Denominator == 0) {
-            Error error(std::format("failed to read valid refresh rate values from configuration file, "
-                                    "either fix the values or delete this configuration file: \"{}\"",
-                                    std::filesystem::path(manager.getFilePath()).string()));
+            Error error(std::format(
+                "failed to read valid refresh rate values from configuration file, "
+                "either fix the values or delete this configuration file: \"{}\"",
+                std::filesystem::path(manager.getFilePath()).string()));
             error.addEntry();
             error.showError();
             throw std::runtime_error(error.getError());
@@ -846,9 +987,10 @@ namespace ne {
         bIsMsaaEnabled = manager.getBoolValue(getConfigurationSectionAntialiasing(), "enabled", false);
         iMsaaSampleCount = manager.getLongValue(getConfigurationSectionAntialiasing(), "sample count", 0);
         if (iMsaaSampleCount != 2 && iMsaaSampleCount != 4) {
-            Error error(std::format("failed to read valid antialiasing values from configuration file, "
-                                    "either fix the values or delete this configuration file: \"{}\"",
-                                    std::filesystem::path(manager.getFilePath()).string()));
+            Error error(std::format(
+                "failed to read valid antialiasing values from configuration file, "
+                "either fix the values or delete this configuration file: \"{}\"",
+                std::filesystem::path(manager.getFilePath()).string()));
             error.addEntry();
             error.showError();
             throw std::runtime_error(error.getError());

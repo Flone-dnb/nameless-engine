@@ -13,6 +13,7 @@
 // DirectX.
 #include "d3d12.h"
 #include <dxgi1_4.h>
+#include "DirectXHelpers/d3dx12.h"
 
 // OS.
 #include <wrl.h>
@@ -178,6 +179,20 @@ namespace ne {
         std::optional<Error> initializeDirectX();
 
         /**
+         * Creates root signature (defines the resources the shader programs expect).
+         *
+         * @return Error if something went wrong.
+         */
+        std::optional<Error> createRootSignature();
+
+        /**
+         * Returns static texture samplers, used in texture filtering.
+         *
+         * @return Array of static texture samplers.
+         */
+        static std::array<const CD3DX12_STATIC_SAMPLER_DESC, 4> getStaticTextureSamplers();
+
+        /**
          * Recreates all render buffers to match current display mode (width/height).
          *
          * @return Error if something went wrong.
@@ -232,6 +247,9 @@ namespace ne {
 
         // Allocator for GPU resources.
         ComPtr<D3D12MA::Allocator> pMemoryAllocator;
+
+        // Shader related.
+        ComPtr<ID3D12RootSignature> pRootSignature;
 
         // Fence.
         ComPtr<ID3D12Fence> pFence;

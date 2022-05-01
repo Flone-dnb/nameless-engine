@@ -38,10 +38,10 @@ namespace ne {
         /**
          * Called before a new frame is rendered.
          *
-         * @param fTimeFromPrevCallInSec   Time in seconds that has passed since the last call
+         * @param fTimeSincePrevCallInSec   Time in seconds that has passed since the last call
          * to this function.
          */
-        virtual void onBeforeNewFrame(float fTimeFromPrevCallInSec) {}
+        virtual void onBeforeNewFrame(float fTimeSincePrevCallInSec) {}
 
         /**
          * Called when a window that owns this game instance receives user
@@ -52,8 +52,9 @@ namespace ne {
          * @param modifiers      Keyboard modifier keys.
          * @param bIsPressedDown Whether the key down event occurred or key up.
          */
-        virtual void onInputActionEvent(const std::string &sActionName, KeyboardModifiers modifiers,
-                                        bool bIsPressedDown) {}
+        virtual void
+        onInputActionEvent(const std::string &sActionName, KeyboardModifiers modifiers, bool bIsPressedDown) {
+        }
 
         /**
          * Called when a window that owns this game instance receives user
@@ -64,8 +65,8 @@ namespace ne {
          * @param modifiers      Keyboard modifier keys.
          * @param fValue         A value in range [-1.0f; 1.0f] that describes input.
          */
-        virtual void onInputAxisEvent(const std::string &sAxisName, KeyboardModifiers modifiers,
-                                      float fValue) {}
+        virtual void
+        onInputAxisEvent(const std::string &sAxisName, KeyboardModifiers modifiers, float fValue) {}
 
         /**
          * Called when the window receives keyboard input.

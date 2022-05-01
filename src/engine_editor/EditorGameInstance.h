@@ -25,10 +25,10 @@ public:
     /**
      * Called before a frame is rendered.
      *
-     * @param fTimeFromPrevCallInSec   Time in seconds that has passed since the last call
+     * @param fTimeSincePrevCallInSec   Time in seconds that has passed since the last call
      * to this function.
      */
-    virtual void onBeforeNewFrame(float fTimeFromPrevCallInSec) override{};
+    virtual void onBeforeNewFrame(float fTimeSincePrevCallInSec) override {}
 
     /**
      * Called when a window that owns this game instance receives user
@@ -39,8 +39,8 @@ public:
      * @param modifiers      Keyboard modifier keys.
      * @param bIsPressedDown Whether the key down event occurred or key up.
      */
-    virtual void onInputActionEvent(const std::string &sActionName, ne::KeyboardModifiers modifiers,
-                                    bool bIsPressedDown) override;
+    virtual void onInputActionEvent(
+        const std::string &sActionName, ne::KeyboardModifiers modifiers, bool bIsPressedDown) override;
 
     /**
      * Called when a window that owns this game instance receives user
@@ -51,8 +51,8 @@ public:
      * @param modifiers      Keyboard modifier keys.
      * @param fValue         A value in range [-1.0f; 1.0f] that describes input.
      */
-    virtual void onInputAxisEvent(const std::string &sAxisName, ne::KeyboardModifiers modifiers,
-                                  float fValue) override;
+    virtual void
+    onInputAxisEvent(const std::string &sAxisName, ne::KeyboardModifiers modifiers, float fValue) override;
 
     /**
      * Called when the window receives mouse input.
@@ -63,8 +63,8 @@ public:
      * @param modifiers      Keyboard modifier keys.
      * @param bIsPressedDown Whether the button down event occurred or button up.
      */
-    virtual void onMouseInput(ne::MouseButton button, ne::KeyboardModifiers modifiers,
-                              bool bIsPressedDown) override;
+    virtual void
+    onMouseInput(ne::MouseButton button, ne::KeyboardModifiers modifiers, bool bIsPressedDown) override;
 
     /**
      * Called when the window received mouse movement.
@@ -92,8 +92,8 @@ public:
      * @param modifiers      Keyboard modifier keys.
      * @param bIsPressedDown Whether the key down event occurred or key up.
      */
-    virtual void onKeyboardInput(ne::KeyboardKey key, ne::KeyboardModifiers modifiers,
-                                 bool bIsPressedDown) override;
+    virtual void
+    onKeyboardInput(ne::KeyboardKey key, ne::KeyboardModifiers modifiers, bool bIsPressedDown) override;
 
     /**
      * Called when the window was requested to close (no new frames will be rendered).

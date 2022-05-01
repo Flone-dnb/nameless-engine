@@ -33,6 +33,8 @@ set(ENGINE_LIB_SOURCES
     private/input/InputManager.cpp
     public/input/InputManager.h
     public/input/MouseButton.hpp
+    public/shaders/ShaderManager.h
+    private/shaders/ShaderManager.cpp
     # add your .h/.cpp files here
 )
 

@@ -574,7 +574,7 @@ namespace ne {
         std::array<CD3DX12_ROOT_PARAMETER, 1> vRootParameters;
 
         // Performance TIP: Order from most frequent to least frequent.
-        vRootParameters[0].InitAsConstantBufferView(0); // cbRenderPass
+        vRootParameters[0].InitAsConstantBufferView(0); // frame data
 
         // new stuff goes here
 

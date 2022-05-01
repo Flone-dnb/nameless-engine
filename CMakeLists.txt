@@ -61,11 +61,11 @@ endif (DOXYGEN_FOUND)
 # copy resources to build folder
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
                    COMMAND ${CMAKE_COMMAND} -E copy_directory
-                   ${CMAKE_SOURCE_DIR}/res/editor/ $<TARGET_FILE_DIR:${PROJECT_NAME}>/res/editor/)
+                   ${CMAKE_SOURCE_DIR}/res/ $<TARGET_FILE_DIR:${PROJECT_NAME}>/res/)
 # and to the directory above for less hassle
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
                    COMMAND ${CMAKE_COMMAND} -E copy_directory
-                   ${CMAKE_SOURCE_DIR}/res/editor/ $<TARGET_FILE_DIR:${PROJECT_NAME}>/../res/editor/)
+                   ${CMAKE_SOURCE_DIR}/res/ $<TARGET_FILE_DIR:${PROJECT_NAME}>/../res/)
 
 # tests
 if(CMAKE_BUILD_TYPE MATCHES "^[Dd]ebug")

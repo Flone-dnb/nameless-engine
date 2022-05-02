@@ -35,6 +35,10 @@ set(ENGINE_LIB_SOURCES
     public/input/MouseButton.hpp
     public/shaders/ShaderManager.h
     private/shaders/ShaderManager.cpp
+    private/shaders/IShader.cpp
+    private/shaders/IShader.h
+    private/shaders/HlslShader.h
+    private/shaders/HlslShader.cpp
     # add your .h/.cpp files here
 )
 
@@ -68,6 +72,20 @@ endif()
 set(PROJECT_CXX_STANDARD_VERSION 23)
 target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_${PROJECT_CXX_STANDARD_VERSION})
 
+# copy engine resources
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+                   COMMAND ${CMAKE_COMMAND} -E copy_directory
+                   ${CMAKE_CURRENT_SOURCE_DIR}/../../res/engine/ ${CMAKE_BINARY_DIR}/res/engine/)
+if(CMAKE_BUILD_TYPE MATCHES "^[Dd]ebug")
+    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+                   COMMAND ${CMAKE_COMMAND} -E copy_directory
+                   ${CMAKE_CURRENT_SOURCE_DIR}/../../res/engine/ ${CMAKE_BINARY_DIR}/Debug/res/engine/)
+else()
+    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+                   COMMAND ${CMAKE_COMMAND} -E copy_directory
+                   ${CMAKE_CURRENT_SOURCE_DIR}/../../res/engine/ ${CMAKE_BINARY_DIR}/Release/res/engine/)
+endif()
+
 # glfw
 set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE) # disable docs
 set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE) # disable tests
@@ -78,6 +96,33 @@ target_link_libraries(${PROJECT_NAME} PUBLIC glfw)
 # spdlog
 add_subdirectory(../../ext/spdlog ../../build/spdlog)
 target_link_libraries(${PROJECT_NAME} PUBLIC spdlog::spdlog)
+
+if (WIN32)
+    # dxc
+    # copy dxc dlls
+    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+                   COMMAND ${CMAKE_COMMAND} -E copy
+                   ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/dxc/dxcompiler.dll ${CMAKE_BINARY_DIR}/dxcompiler.dll)
+    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+                   COMMAND ${CMAKE_COMMAND} -E copy
+                   ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/dxc/dxil.dll ${CMAKE_BINARY_DIR}/dxil.dll)
+
+    if(CMAKE_BUILD_TYPE MATCHES "^[Dd]ebug")
+        add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+                   COMMAND ${CMAKE_COMMAND} -E copy
+                   ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/dxc/dxcompiler.dll ${CMAKE_BINARY_DIR}/Debug/dxcompiler.dll)
+        add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+                   COMMAND ${CMAKE_COMMAND} -E copy
+                   ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/dxc/dxil.dll ${CMAKE_BINARY_DIR}/Debug/dxil.dll)
+    else()
+        add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+                   COMMAND ${CMAKE_COMMAND} -E copy
+                   ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/dxc/dxcompiler.dll ${CMAKE_BINARY_DIR}/Release/dxcompiler.dll)
+        add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+                   COMMAND ${CMAKE_COMMAND} -E copy
+                   ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/dxc/dxil.dll ${CMAKE_BINARY_DIR}/Release/dxil.dll)
+    endif()
+endif()
 
 include_directories(../../ext)
 include_directories(public)

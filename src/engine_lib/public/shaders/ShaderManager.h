@@ -8,6 +8,8 @@
 #include <functional>
 #include <mutex>
 #include <optional>
+#include <future>
+#include <atomic>
 
 // Custom.
 #include "misc/Error.h"
@@ -49,11 +51,15 @@ namespace ne {
             this->vDefinedShaderMacros = vDefinedShaderMacros;
         }
 
-    private:
+        /** Array of defined macros for shader. */
         std::vector<std::string> vDefinedShaderMacros;
+        /** Globally unique shader name. */
         std::string sShaderName;
+        /** Path to the shader file. */
         std::filesystem::path pathToShaderFile;
+        /** Type of the shader. */
         ShaderType shaderType;
+        /** Name of the shader's entry function name. */
         std::wstring sShaderEntryFunctionName;
     };
 
@@ -67,7 +73,7 @@ namespace ne {
         ShaderManager(const ShaderManager &) = delete;
         ShaderManager &operator=(const ShaderManager &) = delete;
 
-        virtual ~ShaderManager() = default;
+        virtual ~ShaderManager();
 
         /**
          * Add shaders to be asynchronously compiled.
@@ -90,6 +96,8 @@ namespace ne {
 
     private:
         std::unordered_map<std::string, std::unique_ptr<IShader>> shaders;
+        std::vector<std::promise<bool>> vRunningCompilationThreads;
         std::mutex mtxRwShaders;
+        std::atomic_flag bIsShuttingDown;
     };
 } // namespace ne

@@ -13,7 +13,6 @@ namespace ne {
     class IGameInstance;
     class IRenderer;
     class Window;
-    class ShaderManager;
 
     /**
      * Holds main game objects: game instance, input manager, renderer,
@@ -137,11 +136,6 @@ namespace ne {
          * Draws the graphics on a window.
          */
         std::unique_ptr<IRenderer> pRenderer;
-
-        /**
-         * Controls shader compilation and shader registry.
-         */
-        std::unique_ptr<ShaderManager> pShaderManager;
 
         /** Binds action names with input. */
         InputManager inputManager;

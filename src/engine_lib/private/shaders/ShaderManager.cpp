@@ -1,7 +1,7 @@
 ﻿#include "shaders/ShaderManager.h"
 
 // Custom.
-#include "shaders/Shader.h"
+#include "shaders/IShader.h"
 
 namespace ne {
     std::optional<Error> ShaderManager::compileShaders(
@@ -36,5 +36,7 @@ namespace ne {
         // TODO: - call onProgress (+ write to log with shader name)
         // TODO: - call onCompleted and onProgress (+ write to log with shader name)
         // TODO: - set promise on exit
+
+        return {};
     }
 } // namespace ne

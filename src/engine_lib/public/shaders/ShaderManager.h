@@ -13,7 +13,7 @@
 #include "misc/Error.h"
 
 namespace ne {
-    class Shader;
+    class IShader;
 
     /**
      * Describes the type of a shader.
@@ -34,25 +34,32 @@ namespace ne {
          * For example: if the shader type is vertex shader, then this value should
          * contain name of the function used for vertex processing (from shader's file, "VS" for
          * example).
+         * @param vDefinedShaderMacros     Array of defined macros for shader.
          */
         ShaderDescription(
             const std::string &sShaderName,
             const std::filesystem::path &pathToShaderFile,
             ShaderType shaderType,
-            const std::wstring &sShaderEntryFunctionName) {
+            const std::wstring &sShaderEntryFunctionName,
+            const std::vector<std::string> &vDefinedShaderMacros) {
             this->sShaderName = sShaderName;
             this->pathToShaderFile = pathToShaderFile;
             this->shaderType = shaderType;
             this->sShaderEntryFunctionName = sShaderEntryFunctionName;
+            this->vDefinedShaderMacros = vDefinedShaderMacros;
         }
 
     private:
+        std::vector<std::string> vDefinedShaderMacros;
         std::string sShaderName;
         std::filesystem::path pathToShaderFile;
         ShaderType shaderType;
         std::wstring sShaderEntryFunctionName;
     };
 
+    /**
+     * Controls shader compilation, shader registry.
+     */
     class ShaderManager {
     public:
         ShaderManager() = default;
@@ -82,7 +89,7 @@ namespace ne {
             std::function<void()> onCompleted);
 
     private:
-        std::unordered_map<std::string, std::unique_ptr<Shader>> shaders;
+        std::unordered_map<std::string, std::unique_ptr<IShader>> shaders;
         std::mutex mtxRwShaders;
     };
 } // namespace ne

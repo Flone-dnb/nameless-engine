@@ -54,8 +54,16 @@ message(STATUS "${PROJECT_NAME}: build type: ${CMAKE_BUILD_TYPE}.")
 
 # add DEBUG macro in Debug build
 if(CMAKE_BUILD_TYPE MATCHES "^[Dd]ebug")
+    set(BUILD_MODE_DIRECTORY ${CMAKE_BINARY_DIR}/Debug)
     message(STATUS "Adding DEBUG macro for this build type.")
     add_compile_definitions(DEBUG)
+endif()
+
+# add BUILD_MODE_DIRECTORY variable
+if(CMAKE_BUILD_TYPE MATCHES "^[Dd]ebug")
+    set(BUILD_MODE_DIRECTORY ${CMAKE_BINARY_DIR}/Debug)
+else()
+    set(BUILD_MODE_DIRECTORY ${CMAKE_BINARY_DIR}/Release)
 endif()
 
 # set folder
@@ -76,15 +84,9 @@ target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_${PROJECT_CXX_STANDARD_VE
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
                    COMMAND ${CMAKE_COMMAND} -E copy_directory
                    ${CMAKE_CURRENT_SOURCE_DIR}/../../res/engine/ ${CMAKE_BINARY_DIR}/res/engine/)
-if(CMAKE_BUILD_TYPE MATCHES "^[Dd]ebug")
-    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
                    COMMAND ${CMAKE_COMMAND} -E copy_directory
-                   ${CMAKE_CURRENT_SOURCE_DIR}/../../res/engine/ ${CMAKE_BINARY_DIR}/Debug/res/engine/)
-else()
-    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-                   COMMAND ${CMAKE_COMMAND} -E copy_directory
-                   ${CMAKE_CURRENT_SOURCE_DIR}/../../res/engine/ ${CMAKE_BINARY_DIR}/Release/res/engine/)
-endif()
+                   ${CMAKE_CURRENT_SOURCE_DIR}/../../res/engine/ ${BUILD_MODE_DIRECTORY}/res/engine/)
 
 # glfw
 set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE) # disable docs
@@ -107,22 +109,31 @@ if (WIN32)
                    COMMAND ${CMAKE_COMMAND} -E copy
                    ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/dxc/dxil.dll ${CMAKE_BINARY_DIR}/dxil.dll)
 
-    if(CMAKE_BUILD_TYPE MATCHES "^[Dd]ebug")
-        add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
                    COMMAND ${CMAKE_COMMAND} -E copy
-                   ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/dxc/dxcompiler.dll ${CMAKE_BINARY_DIR}/Debug/dxcompiler.dll)
-        add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+                   ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/dxc/dxcompiler.dll ${BUILD_MODE_DIRECTORY}/dxcompiler.dll)
+    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
                    COMMAND ${CMAKE_COMMAND} -E copy
-                   ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/dxc/dxil.dll ${CMAKE_BINARY_DIR}/Debug/dxil.dll)
-    else()
-        add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-                   COMMAND ${CMAKE_COMMAND} -E copy
-                   ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/dxc/dxcompiler.dll ${CMAKE_BINARY_DIR}/Release/dxcompiler.dll)
-        add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-                   COMMAND ${CMAKE_COMMAND} -E copy
-                   ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/dxc/dxil.dll ${CMAKE_BINARY_DIR}/Release/dxil.dll)
-    endif()
+                   ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/dxc/dxil.dll ${BUILD_MODE_DIRECTORY}/dxil.dll)
 endif()
+
+# copy ext licenses to build directory
+# see if go is installed
+execute_process(
+    COMMAND go version
+    OUTPUT_VARIABLE go_out
+    RESULT_VARIABLE go_error
+    ERROR_VARIABLE go_suppress)
+if (NOT go_error)
+    message(STATUS "Found Go installed: ${go_out}")
+    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+                   COMMAND go run ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/copy_ext_licenses.go
+                   ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/ # arg 1 - working directory
+                   ${BUILD_MODE_DIRECTORY} # arg 2 - build directory
+    )
+else ()
+    message(FATAL_ERROR "\"Go\" programming language needs to be installed!")
+endif ()
 
 include_directories(../../ext)
 include_directories(public)

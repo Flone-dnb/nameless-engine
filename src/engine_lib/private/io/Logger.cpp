@@ -63,7 +63,7 @@ namespace ne {
         sLoggerWorkingDirectory = sLoggerFilePath;
         sLoggerFilePath /= getApplicationName() + "-" + getDateTime() + ".txt";
 
-        removeOldestLogFileIfMaxLogFiles(sLoggerWorkingDirectory);
+        removeOldestLogFiles(sLoggerWorkingDirectory);
 
         if (!std::filesystem::exists(sLoggerFilePath)) {
             std::ofstream logFile(sLoggerFilePath);
@@ -84,16 +84,10 @@ namespace ne {
         tm tm{};
         localtime_s(&tm, &now);
 
-        return std::format(
-            "{}.{}_{}-{}-{}",
-            1 + tm.tm_mon,
-            tm.tm_mday,
-            tm.tm_hour, // NOLINT
-            tm.tm_min,
-            tm.tm_sec); // NOLINT
+        return std::format("{}.{}_{}-{}-{}", 1 + tm.tm_mon, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
     }
 
-    void Logger::removeOldestLogFileIfMaxLogFiles(const std::filesystem::path &sLogDirectory) {
+    void Logger::removeOldestLogFiles(const std::filesystem::path &sLogDirectory) {
         const auto directoryIterator = std::filesystem::directory_iterator(sLogDirectory);
 
         size_t iFileCount = 0;

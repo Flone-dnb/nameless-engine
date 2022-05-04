@@ -78,7 +78,12 @@ namespace ne {
          */
         static std::string getDateTime();
 
-        static void removeOldestLogFileIfMaxLogFiles(const std::filesystem::path &sLogDirectory);
+        /**
+         * Removes oldest log files if the amount of log files exceed a specific limit.
+         *
+         * @param sLogDirectory Directory that contains log files.
+         */
+        static void removeOldestLogFiles(const std::filesystem::path &sLogDirectory);
 
         /**
          * Spdlog logger.

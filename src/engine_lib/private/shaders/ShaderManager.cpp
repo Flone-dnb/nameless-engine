@@ -12,7 +12,7 @@
 #include "shaders/IShader.h"
 
 namespace ne {
-    ShaderManager::ShaderManager(IRenderer *pRenderer) { this->pRenderer = pRenderer; }
+    ShaderManager::ShaderManager(IRenderer* pRenderer) { this->pRenderer = pRenderer; }
 
     ShaderManager::~ShaderManager() {
         bIsShuttingDown.test_and_set();
@@ -26,14 +26,14 @@ namespace ne {
                     "waiting for {} shader compilation thread(-s) to finish early",
                     vRunningCompilationThreads.size()),
                 sShaderManagerLogCategory);
-            for (auto &promise : vRunningCompilationThreads) {
+            for (auto& promise : vRunningCompilationThreads) {
                 promise.get_future().get();
             }
         }
     }
 
     std::optional<Error> ShaderManager::compileShaders(
-        const std::vector<ShaderDescription> &vShadersToCompile,
+        const std::vector<ShaderDescription>& vShadersToCompile,
         std::function<void(size_t, size_t)> onProgress,
         std::function<void()> onCompleted) {
         if (vShadersToCompile.empty()) {
@@ -48,7 +48,7 @@ namespace ne {
         std::scoped_lock<std::mutex> guard(mtxRwShaders);
 
         // Check if we already have a shader with this name.
-        for (const auto &shader : vShadersToCompile) {
+        for (const auto& shader : vShadersToCompile) {
             auto it = shaders.find(shader.sShaderName);
             if (it != shaders.end()) {
                 return Error(std::format(
@@ -59,7 +59,7 @@ namespace ne {
         }
 
         // Remove finished promises.
-        const auto [first, last] = std::ranges::remove_if(vRunningCompilationThreads, [](auto &promise) {
+        const auto [first, last] = std::ranges::remove_if(vRunningCompilationThreads, [](auto& promise) {
             using namespace std::chrono_literals;
             const auto status = promise.get_future().wait_for(1ms);
             return status == std::future_status::ready;
@@ -67,8 +67,8 @@ namespace ne {
         vRunningCompilationThreads.erase(first, last);
 
         { // TODO: in other thread:
-            for (const auto &shaderDescription : vShadersToCompile) {
-                if (dynamic_cast<DirectXRenderer *>(pRenderer)) {
+            for (const auto& shaderDescription : vShadersToCompile) {
+                if (dynamic_cast<DirectXRenderer*>(pRenderer)) {
                     IShader::compileShader<HlslShader>(shaderDescription);
                 } else {
                     const Error err("not implemented shader type");

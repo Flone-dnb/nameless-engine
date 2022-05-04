@@ -31,11 +31,11 @@ namespace ne {
          *
          * @param pRenderer Parent renderer that uses this shader manager.
          */
-        ShaderManager(IRenderer *pRenderer);
+        ShaderManager(IRenderer* pRenderer);
 
         ShaderManager() = delete;
-        ShaderManager(const ShaderManager &) = delete;
-        ShaderManager &operator=(const ShaderManager &) = delete;
+        ShaderManager(const ShaderManager&) = delete;
+        ShaderManager& operator=(const ShaderManager&) = delete;
 
         virtual ~ShaderManager();
 
@@ -52,7 +52,7 @@ namespace ne {
          * @return An error if something went wrong.
          */
         std::optional<Error> compileShaders(
-            const std::vector<ShaderDescription> &vShadersToCompile,
+            const std::vector<ShaderDescription>& vShadersToCompile,
             std::function<void(
                 size_t /** Number of compiled shaders */, size_t /** Total number of shaders to compile */)>
                 onProgress,
@@ -60,7 +60,7 @@ namespace ne {
 
     private:
         /** Do not delete. Parent renderer that uses this shader manager. */
-        IRenderer *pRenderer;
+        IRenderer* pRenderer;
 
         std::unordered_map<std::string, std::unique_ptr<IShader>> shaders;
         std::vector<std::promise<bool>> vRunningCompilationThreads;

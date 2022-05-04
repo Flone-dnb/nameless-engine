@@ -49,11 +49,11 @@ namespace ne {
          *
          * @param pWindow Window that we will render to.
          */
-        IRenderer(Window *pWindow);
+        IRenderer(Window* pWindow);
 
         IRenderer() = delete;
-        IRenderer(const IRenderer &) = delete;
-        IRenderer &operator=(const IRenderer &) = delete;
+        IRenderer(const IRenderer&) = delete;
+        IRenderer& operator=(const IRenderer&) = delete;
 
         virtual ~IRenderer() = default;
 
@@ -141,14 +141,14 @@ namespace ne {
          *
          * @return Window we render to.
          */
-        Window *getWindow() const;
+        Window* getWindow() const;
 
         /**
          * Returns shader manager used to compile shaders.
          *
          * @return Shader manager.
          */
-        std::unique_ptr<ShaderManager> &getShaderManager();
+        std::unique_ptr<ShaderManager>& getShaderManager();
 
         /**
          * Returns the amount of buffers the swap chain has.
@@ -176,35 +176,35 @@ namespace ne {
          *
          * @return Section name.
          */
-        static const char *getConfigurationSectionGpu();
+        static const char* getConfigurationSectionGpu();
 
         /**
          * Returns name of the section used in configuration file.
          *
          * @return Section name.
          */
-        static const char *getConfigurationSectionResolution();
+        static const char* getConfigurationSectionResolution();
 
         /**
          * Returns name of the section used in configuration file.
          *
          * @return Section name.
          */
-        static const char *getConfigurationSectionRefreshRate();
+        static const char* getConfigurationSectionRefreshRate();
 
         /**
          * Returns name of the section used in configuration file.
          *
          * @return Section name.
          */
-        static const char *getConfigurationSectionAntialiasing();
+        static const char* getConfigurationSectionAntialiasing();
 
         /**
          * Returns name of the section used in configuration file.
          *
          * @return Section name.
          */
-        static const char *getConfigurationSectionVSync();
+        static const char* getConfigurationSectionVSync();
 
     private:
         static constexpr unsigned int iSwapChainBufferCount = 2;
@@ -215,25 +215,25 @@ namespace ne {
         std::unique_ptr<ShaderManager> pShaderManager;
 
         /** Window that we render to. */
-        Window *pWindow;
+        Window* pWindow;
 
         /** File name used to store renderer configuration. */
-        inline static const char *sRendererConfigurationFileName = "render";
+        inline static const char* sRendererConfigurationFileName = "render";
 
         /** Name of the section (used in configuration) for GPU settings. */
-        inline static const char *sConfigurationSectionGpu = "GPU";
+        inline static const char* sConfigurationSectionGpu = "GPU";
 
         /** Name of the section (used in configuration) for resolution settings. */
-        inline static const char *sConfigurationSectionResolution = "resolution";
+        inline static const char* sConfigurationSectionResolution = "resolution";
 
         /** Name of the section (used in configuration) for refresh rate settings. */
-        inline static const char *sConfigurationSectionRefreshRate = "refresh rate";
+        inline static const char* sConfigurationSectionRefreshRate = "refresh rate";
 
         /** Name of the section (used in configuration) for anti-aliasing settings. */
-        inline static const char *sConfigurationSectionAntialiasing = "anti-aliasing";
+        inline static const char* sConfigurationSectionAntialiasing = "anti-aliasing";
 
         /** Name of the section (used in configuration) for vsync settings. */
-        inline static const char *sConfigurationSectionVSync = "vsync";
+        inline static const char* sConfigurationSectionVSync = "vsync";
     };
 
     constexpr unsigned IRenderer::getSwapChainBufferCount() { return iSwapChainBufferCount; }

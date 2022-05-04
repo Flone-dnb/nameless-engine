@@ -24,7 +24,7 @@
 #endif
 
 namespace ne {
-    DirectXRenderer::DirectXRenderer(Window *pWindow) : IRenderer(pWindow) {
+    DirectXRenderer::DirectXRenderer(Window* pWindow) : IRenderer(pWindow) {
         // Read configuration from config file (if exists).
         if (isConfigurationFileExists()) {
             Logger::get().info(
@@ -106,7 +106,7 @@ namespace ne {
             ComPtr<IDXGIAdapter3> pTestAdapter;
 
             if (pFactory->EnumAdapters(
-                    iAdapterIndex, reinterpret_cast<IDXGIAdapter **>(pTestAdapter.GetAddressOf())) ==
+                    iAdapterIndex, reinterpret_cast<IDXGIAdapter**>(pTestAdapter.GetAddressOf())) ==
                 DXGI_ERROR_NOT_FOUND) {
                 // No more adapters to enumerate.
                 break;
@@ -147,7 +147,7 @@ namespace ne {
             std::get<std::vector<DXGI_MODE_DESC>>(std::move(result));
 
         std::vector<RenderMode> vOutRenderModes;
-        for (const auto &mode : vRenderModes) {
+        for (const auto& mode : vRenderModes) {
             vOutRenderModes.push_back(RenderMode{
                 static_cast<int>(mode.Width),
                 static_cast<int>(mode.Height),
@@ -193,7 +193,7 @@ namespace ne {
         return {};
     }
 
-    std::optional<Error> DirectXRenderer::setVideoAdapter(const std::wstring &sVideoAdapterName) {
+    std::optional<Error> DirectXRenderer::setVideoAdapter(const std::wstring& sVideoAdapterName) {
         if (pVideoAdapter) {
             return Error("another video adapter already set");
         }
@@ -201,7 +201,7 @@ namespace ne {
         for (UINT iAdapterIndex = 0;; iAdapterIndex++) {
             ComPtr<IDXGIAdapter3> pTestAdapter;
             if (pFactory->EnumAdapters(
-                    iAdapterIndex, reinterpret_cast<IDXGIAdapter **>(pTestAdapter.GetAddressOf())) ==
+                    iAdapterIndex, reinterpret_cast<IDXGIAdapter**>(pTestAdapter.GetAddressOf())) ==
                 DXGI_ERROR_NOT_FOUND) {
                 // No more adapters to enumerate.
                 break;
@@ -504,7 +504,7 @@ namespace ne {
 
             std::vector<DXGI_MODE_DESC> vFilteredModes;
 
-            for (const auto &mode : vVideoModes) {
+            for (const auto& mode : vVideoModes) {
                 if (mode.Width == currentDisplayMode.Width && mode.Height == currentDisplayMode.Height &&
                     mode.RefreshRate.Numerator == currentDisplayMode.RefreshRate.Numerator &&
                     mode.RefreshRate.Denominator == currentDisplayMode.RefreshRate.Denominator) {
@@ -533,7 +533,7 @@ namespace ne {
                     currentDisplayMode.Height,
                     currentDisplayMode.RefreshRate.Numerator,
                     currentDisplayMode.RefreshRate.Denominator);
-                for (const auto &mode : vFilteredModes) {
+                for (const auto& mode : vFilteredModes) {
                     sErrorMessage += std::format(
                         "- resolution: {}x{}, refresh rate: {}/{}, format: {}, "
                         "scanline ordering: {}, scaling: {}",
@@ -606,7 +606,7 @@ namespace ne {
 
         if (pSerializerErrorMessage) {
             return Error(std::string(
-                static_cast<char *>(pSerializerErrorMessage->GetBufferPointer()),
+                static_cast<char*>(pSerializerErrorMessage->GetBufferPointer()),
                 pSerializerErrorMessage->GetBufferSize()));
         }
 
@@ -863,7 +863,7 @@ namespace ne {
 
         // Filter some modes.
         std::vector<DXGI_MODE_DESC> vFilteredModes;
-        for (const auto &mode : vDisplayModes) {
+        for (const auto& mode : vDisplayModes) {
             if (mode.Scaling != usedScaling) {
                 continue;
             }

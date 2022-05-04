@@ -19,7 +19,7 @@ public:
      * @param pWindow       Window that owns this game instance.
      * @param pInputManager Input manager of the owner Game object.
      */
-    EditorGameInstance(ne::Window *pWindow, ne::InputManager *pInputManager);
+    EditorGameInstance(ne::Window* pWindow, ne::InputManager* pInputManager);
     virtual ~EditorGameInstance() override = default;
 
     /**
@@ -40,7 +40,7 @@ public:
      * @param bIsPressedDown Whether the key down event occurred or key up.
      */
     virtual void onInputActionEvent(
-        const std::string &sActionName, ne::KeyboardModifiers modifiers, bool bIsPressedDown) override;
+        const std::string& sActionName, ne::KeyboardModifiers modifiers, bool bIsPressedDown) override;
 
     /**
      * Called when a window that owns this game instance receives user
@@ -52,7 +52,7 @@ public:
      * @param fValue         A value in range [-1.0f; 1.0f] that describes input.
      */
     virtual void
-    onInputAxisEvent(const std::string &sAxisName, ne::KeyboardModifiers modifiers, float fValue) override;
+    onInputAxisEvent(const std::string& sAxisName, ne::KeyboardModifiers modifiers, float fValue) override;
 
     /**
      * Called when the window receives mouse input.

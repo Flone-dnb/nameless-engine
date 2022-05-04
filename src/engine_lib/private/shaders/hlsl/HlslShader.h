@@ -27,8 +27,8 @@ namespace ne {
         HlslShader(std::filesystem::path pathToCompiledShader);
 
         HlslShader() = delete;
-        HlslShader(const HlslShader &) = delete;
-        HlslShader &operator=(const HlslShader &) = delete;
+        HlslShader(const HlslShader&) = delete;
+        HlslShader& operator=(const HlslShader&) = delete;
 
         virtual ~HlslShader() override {}
 

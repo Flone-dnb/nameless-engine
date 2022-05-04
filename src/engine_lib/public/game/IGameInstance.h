@@ -28,10 +28,10 @@ namespace ne {
          * @param pGameWindow   Window that owns this game instance.
          * @param pInputManager Input manager of the owner Game object.
          */
-        explicit IGameInstance(Window *pGameWindow, InputManager *pInputManager);
+        explicit IGameInstance(Window* pGameWindow, InputManager* pInputManager);
 
-        IGameInstance(const IGameInstance &) = delete;
-        IGameInstance &operator=(const IGameInstance &) = delete;
+        IGameInstance(const IGameInstance&) = delete;
+        IGameInstance& operator=(const IGameInstance&) = delete;
 
         virtual ~IGameInstance() = default;
 
@@ -53,7 +53,7 @@ namespace ne {
          * @param bIsPressedDown Whether the key down event occurred or key up.
          */
         virtual void
-        onInputActionEvent(const std::string &sActionName, KeyboardModifiers modifiers, bool bIsPressedDown) {
+        onInputActionEvent(const std::string& sActionName, KeyboardModifiers modifiers, bool bIsPressedDown) {
         }
 
         /**
@@ -66,7 +66,7 @@ namespace ne {
          * @param fValue         A value in range [-1.0f; 1.0f] that describes input.
          */
         virtual void
-        onInputAxisEvent(const std::string &sAxisName, KeyboardModifiers modifiers, float fValue) {}
+        onInputAxisEvent(const std::string& sAxisName, KeyboardModifiers modifiers, float fValue) {}
 
         /**
          * Called when the window receives keyboard input.
@@ -134,7 +134,7 @@ namespace ne {
          *
          * @return A pointer to the window, should not be deleted.
          */
-        Window *getWindow() const;
+        Window* getWindow() const;
 
         /**
          * Returns a reference to the input manager this game instance is using.
@@ -143,20 +143,20 @@ namespace ne {
          *
          * @return A pointer to the input manager, should not be deleted.
          */
-        InputManager *getInputManager() const;
+        InputManager* getInputManager() const;
 
     private:
         /**
          * A reference to a window-owner of this Game Instance.
          * Should not be deleted.
          */
-        Window *pGameWindow = nullptr;
+        Window* pGameWindow = nullptr;
 
         /**
          * A reference to a input manager of the owner Game object.
          * Should not be deleted.
          */
-        InputManager *pInputManager = nullptr;
+        InputManager* pInputManager = nullptr;
     };
 
 } // namespace ne

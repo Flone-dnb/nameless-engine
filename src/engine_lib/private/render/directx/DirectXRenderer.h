@@ -34,10 +34,10 @@ namespace ne {
          *
          * @param pWindow Window that we will render to.
          */
-        DirectXRenderer(Window *pWindow);
+        DirectXRenderer(Window* pWindow);
         DirectXRenderer() = delete;
-        DirectXRenderer(const DirectXRenderer &) = delete;
-        DirectXRenderer &operator=(const DirectXRenderer &) = delete;
+        DirectXRenderer(const DirectXRenderer&) = delete;
+        DirectXRenderer& operator=(const DirectXRenderer&) = delete;
 
         virtual ~DirectXRenderer() override {}
 
@@ -127,7 +127,7 @@ namespace ne {
          * name was not found, or if it was found but does not support used DirectX version
          * or feature level.
          */
-        std::optional<Error> setVideoAdapter(const std::wstring &sVideoAdapterName);
+        std::optional<Error> setVideoAdapter(const std::wstring& sVideoAdapterName);
 
         /**
          * Sets first found output adapter (monitor).

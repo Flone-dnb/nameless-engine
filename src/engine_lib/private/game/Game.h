@@ -23,8 +23,8 @@ namespace ne {
      */
     class Game {
     public:
-        Game(const Game &) = delete;
-        Game &operator=(const Game &) = delete;
+        Game(const Game&) = delete;
+        Game& operator=(const Game&) = delete;
 
         virtual ~Game() = default;
 
@@ -102,7 +102,7 @@ namespace ne {
          *
          * @param pWindow Window that owns this Game object.
          */
-        Game(Window *pWindow);
+        Game(Window* pWindow);
 
         /**
          * Triggers action events from keyboard/mouse input.
@@ -127,7 +127,7 @@ namespace ne {
          * A reference to a window-owner of this Game.
          * Should not be deleted.
          */
-        Window *pWindow;
+        Window* pWindow;
 
         /**
          * Reacts to user inputs, window events and etc.

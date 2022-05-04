@@ -58,7 +58,7 @@ namespace ne {
          *
          * @return Builder.
          */
-        WindowBuilder &withSize(int iWidth, int iHeight);
+        WindowBuilder& withSize(int iWidth, int iHeight);
         /**
          * Defines the name of a window that we will create.
          *
@@ -66,7 +66,7 @@ namespace ne {
          *
          * @return Builder.
          */
-        WindowBuilder &withTitle(std::string_view sWindowTitle);
+        WindowBuilder& withTitle(std::string_view sWindowTitle);
         /**
          * Defines the icon of a window that we will create.
          *
@@ -74,7 +74,7 @@ namespace ne {
          *
          * @return Builder.
          */
-        WindowBuilder &withIcon(std::string_view sPathToIcon);
+        WindowBuilder& withIcon(std::string_view sPathToIcon);
         /**
          * Defines the visibility of a window that we will create.
          * Does nothing for fullscreen windows.
@@ -83,7 +83,7 @@ namespace ne {
          *
          * @return Builder.
          */
-        WindowBuilder &withVisibility(bool bShow);
+        WindowBuilder& withVisibility(bool bShow);
         /**
          * Whether the window should be maximized after creation or not.
          * Does nothing for fullscreen windows.
@@ -92,7 +92,7 @@ namespace ne {
          *
          * @return Builder.
          */
-        WindowBuilder &withMaximizedState(bool bMaximized);
+        WindowBuilder& withMaximizedState(bool bMaximized);
         /**
          * Whether the window should look like a splash screen or not
          * (no border, title, buttons, etc).
@@ -102,7 +102,7 @@ namespace ne {
          *
          * @return Builder.
          */
-        WindowBuilder &withSplashScreenMode(bool bIsSplashScreen);
+        WindowBuilder& withSplashScreenMode(bool bIsSplashScreen);
         /**
          * Whether a window should be shown in the fullscreen mode or not.
          *
@@ -110,7 +110,7 @@ namespace ne {
          *
          * @return Builder.
          */
-        WindowBuilder &withFullscreenMode(bool bEnableFullscreen);
+        WindowBuilder& withFullscreenMode(bool bEnableFullscreen);
         /**
          * Builds/creates a new window with the configured parameters.
          *
@@ -130,8 +130,8 @@ namespace ne {
      */
     class Window {
     public:
-        Window(const Window &) = delete;
-        Window &operator=(const Window &) = delete;
+        Window(const Window&) = delete;
+        Window& operator=(const Window&) = delete;
 
         virtual ~Window();
 
@@ -167,7 +167,7 @@ namespace ne {
          *
          * @param sNewTitle New window title.
          */
-        void setTitle(const std::string &sNewTitle);
+        void setTitle(const std::string& sNewTitle);
 
         /**
          * Sets new window icon.
@@ -262,7 +262,7 @@ namespace ne {
          *
          * @return nullptr if renderer was not created yet, valid pointer otherwise.
          */
-        IRenderer *getRenderer() const;
+        IRenderer* getRenderer() const;
 
 #if defined(WIN32)
         /**
@@ -280,27 +280,27 @@ namespace ne {
          * GLFW callback.
          */
         static void
-        glfwWindowKeyboardCallback(GLFWwindow *pGlfwWindow, int iKey, int iScancode, int iAction, int iMods);
+        glfwWindowKeyboardCallback(GLFWwindow* pGlfwWindow, int iKey, int iScancode, int iAction, int iMods);
 
         /**
          * GLFW callback.
          */
-        static void glfwWindowMouseCallback(GLFWwindow *pGlfwWindow, int iButton, int iAction, int iMods);
+        static void glfwWindowMouseCallback(GLFWwindow* pGlfwWindow, int iButton, int iAction, int iMods);
 
         /**
          * GLFW callback.
          */
-        static void glfwWindowFocusCallback(GLFWwindow *pGlfwWindow, int iFocused);
+        static void glfwWindowFocusCallback(GLFWwindow* pGlfwWindow, int iFocused);
 
         /**
          * GLFW callback.
          */
-        static void glfwWindowMouseCursorPosCallback(GLFWwindow *pGlfwWindow, double xPos, double yPos);
+        static void glfwWindowMouseCursorPosCallback(GLFWwindow* pGlfwWindow, double xPos, double yPos);
 
         /**
          * GLFW callback.
          */
-        static void glfwWindowMouseScrollCallback(GLFWwindow *pGlfwWindow, double xOffset, double yOffset);
+        static void glfwWindowMouseScrollCallback(GLFWwindow* pGlfwWindow, double xOffset, double yOffset);
 
         /**
          * Called when the window receives keyboard input.
@@ -349,7 +349,7 @@ namespace ne {
          *
          * @return Returns error if something went wrong or created window otherwise.
          */
-        static std::variant<std::unique_ptr<Window>, Error> newInstance(WindowBuilderParameters &params);
+        static std::variant<std::unique_ptr<Window>, Error> newInstance(WindowBuilderParameters& params);
 
         /**
          * Default constructor.
@@ -357,7 +357,7 @@ namespace ne {
          * @param pGlfwWindow   Created GLFW window.
          * @param sWindowTitle  Title of this window.
          */
-        Window(GLFWwindow *pGlfwWindow, const std::string &sWindowTitle);
+        Window(GLFWwindow* pGlfwWindow, const std::string& sWindowTitle);
 
         /**
          * Holds main game objects.
@@ -367,7 +367,7 @@ namespace ne {
         /**
          * GLFW window.
          */
-        GLFWwindow *pGlfwWindow;
+        GLFWwindow* pGlfwWindow;
 
         /**
          * Title of the window.

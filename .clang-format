@@ -11,4 +11,6 @@ NamespaceIndentation: All
 SortIncludes: false
 AllowShortIfStatementsOnASingleLine: false
 AllowShortLoopsOnASingleLine: false
+SpaceAroundPointerQualifiers: Default
+PointerAlignment: Left
 ...

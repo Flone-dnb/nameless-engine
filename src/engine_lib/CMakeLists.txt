@@ -37,8 +37,9 @@ set(ENGINE_LIB_SOURCES
     private/shaders/ShaderManager.cpp
     private/shaders/IShader.cpp
     private/shaders/IShader.h
-    private/shaders/HlslShader.h
-    private/shaders/HlslShader.cpp
+    private/shaders/hlsl/HlslShader.h
+    private/shaders/hlsl/HlslShader.cpp
+    public/shaders/ShaderDescription.hpp
     # add your .h/.cpp files here
 )
 
@@ -101,6 +102,7 @@ target_link_libraries(${PROJECT_NAME} PUBLIC spdlog::spdlog)
 
 if (WIN32)
     # dxc
+    link_directories(${CMAKE_CURRENT_SOURCE_DIR}/../../ext/dxc/dxcompiler)
     # copy dxc dlls
     add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
                    COMMAND ${CMAKE_COMMAND} -E copy

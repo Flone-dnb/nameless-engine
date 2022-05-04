@@ -5,9 +5,14 @@
 #include "misc/Globals.h"
 
 namespace ne {
-    IRenderer::IRenderer(Window *pWindow) { this->pWindow = pWindow; }
+    IRenderer::IRenderer(Window *pWindow) {
+        this->pWindow = pWindow;
+        pShaderManager = std::make_unique<ShaderManager>(this);
+    }
 
     Window *IRenderer::getWindow() const { return pWindow; }
+
+    std::unique_ptr<ShaderManager> &IRenderer::getShaderManager() { return pShaderManager; }
 
     bool IRenderer::isConfigurationFileExists() {
         const auto configsFolder = getRendererConfigurationFilePath().parent_path();

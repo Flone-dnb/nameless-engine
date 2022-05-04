@@ -6,10 +6,14 @@
 #include <ranges>
 
 // Custom.
+#include "hlsl/HlslShader.h"
 #include "io/Logger.h"
+#include "render/directx/DirectXRenderer.h"
 #include "shaders/IShader.h"
 
 namespace ne {
+    ShaderManager::ShaderManager(IRenderer *pRenderer) { this->pRenderer = pRenderer; }
+
     ShaderManager::~ShaderManager() {
         bIsShuttingDown.test_and_set();
 
@@ -62,6 +66,17 @@ namespace ne {
         });
         vRunningCompilationThreads.erase(first, last);
 
+        { // TODO: in other thread:
+            for (const auto &shaderDescription : vShadersToCompile) {
+                if (dynamic_cast<DirectXRenderer *>(pRenderer)) {
+                    IShader::compileShader<HlslShader>(shaderDescription);
+                } else {
+                    const Error err("not implemented shader type");
+                    err.showError();
+                    throw std::runtime_error(err.getError());
+                }
+            }
+        }
         // TODO: do all work in another thread
         // TODO: use mutex to sync access to shaders map.
 

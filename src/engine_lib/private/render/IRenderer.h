@@ -8,6 +8,7 @@
 
 // Custom.
 #include "misc/Error.h"
+#include "shaders/ShaderManager.h"
 
 namespace ne {
     const auto sRendererLogCategory = "Renderer";
@@ -49,8 +50,8 @@ namespace ne {
          * @param pWindow Window that we will render to.
          */
         IRenderer(Window *pWindow);
-        IRenderer() = delete;
 
+        IRenderer() = delete;
         IRenderer(const IRenderer &) = delete;
         IRenderer &operator=(const IRenderer &) = delete;
 
@@ -143,6 +144,13 @@ namespace ne {
         Window *getWindow() const;
 
         /**
+         * Returns shader manager used to compile shaders.
+         *
+         * @return Shader manager.
+         */
+        std::unique_ptr<ShaderManager> &getShaderManager();
+
+        /**
          * Returns the amount of buffers the swap chain has.
          *
          * @return The amount of buffers the swap chain has.
@@ -199,6 +207,16 @@ namespace ne {
         static const char *getConfigurationSectionVSync();
 
     private:
+        static constexpr unsigned int iSwapChainBufferCount = 2;
+
+        /**
+         * Shader manager used to compile shaders.
+         */
+        std::unique_ptr<ShaderManager> pShaderManager;
+
+        /** Window that we render to. */
+        Window *pWindow;
+
         /** File name used to store renderer configuration. */
         inline static const char *sRendererConfigurationFileName = "render";
 
@@ -216,11 +234,6 @@ namespace ne {
 
         /** Name of the section (used in configuration) for vsync settings. */
         inline static const char *sConfigurationSectionVSync = "vsync";
-
-        static constexpr unsigned int iSwapChainBufferCount = 2;
-
-        /** Window that we render to. */
-        Window *pWindow;
     };
 
     constexpr unsigned IRenderer::getSwapChainBufferCount() { return iSwapChainBufferCount; }

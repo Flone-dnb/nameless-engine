@@ -48,8 +48,8 @@ namespace ne {
 #endif
     }
 
-    void Game::triggerActionEvents(std::variant<KeyboardKey, MouseButton> key, KeyboardModifiers modifiers,
-                                   bool bIsPressedDown) {
+    void Game::triggerActionEvents(
+        std::variant<KeyboardKey, MouseButton> key, KeyboardModifiers modifiers, bool bIsPressedDown) {
         std::scoped_lock<std::recursive_mutex> guard(inputManager.mtxActionEvents);
         if (inputManager.actionEvents.empty()) {
             return;
@@ -71,9 +71,12 @@ namespace ne {
             // Update state.
             const auto stateIt = inputManager.actionState.find(sActionName);
             if (stateIt == inputManager.actionState.end()) {
-                Logger::get().error(std::format("input manager returned 0 "
-                                                "states for '{}' action event",
-                                                sActionName));
+                Logger::get().error(
+                    std::format(
+                        "input manager returned 0 "
+                        "states for '{}' action event",
+                        sActionName),
+                    sGameLogCategory);
             } else {
                 std::pair<std::vector<ActionState>, bool /* action state */> &statePair = stateIt->second;
 
@@ -89,14 +92,21 @@ namespace ne {
 
                 if (bSet == false) {
                     if (std::holds_alternative<KeyboardKey>(key)) {
-                        Logger::get().error(std::format("could not find key '{}' in key "
-                                                        "states for '{}' action event",
-                                                        getKeyName(std::get<KeyboardKey>(key)), sActionName));
+                        Logger::get().error(
+                            std::format(
+                                "could not find key '{}' in key "
+                                "states for '{}' action event",
+                                getKeyName(std::get<KeyboardKey>(key)),
+                                sActionName),
+                            sGameLogCategory);
                     } else {
-                        Logger::get().error(std::format("could not find mouse button '{}' in key "
-                                                        "states for '{}' action event",
-                                                        static_cast<int>(std::get<MouseButton>(key)),
-                                                        sActionName));
+                        Logger::get().error(
+                            std::format(
+                                "could not find mouse button '{}' in key "
+                                "states for '{}' action event",
+                                static_cast<int>(std::get<MouseButton>(key)),
+                                sActionName),
+                            sGameLogCategory);
                     }
                 }
 
@@ -141,11 +151,14 @@ namespace ne {
         for (const auto &[sAxisName, iInput] : axisCopy) {
             auto stateIt = inputManager.axisState.find(sAxisName);
             if (stateIt == inputManager.axisState.end()) {
-                Logger::get().error(std::format("input manager returned 0 "
-                                                "states for '{}' axis event",
-                                                sAxisName));
-                pGameInstance->onInputAxisEvent(sAxisName, modifiers,
-                                                bIsPressedDown ? static_cast<float>(iInput) : 0.0f);
+                Logger::get().error(
+                    std::format(
+                        "input manager returned 0 "
+                        "states for '{}' axis event",
+                        sAxisName),
+                    sGameLogCategory);
+                pGameInstance->onInputAxisEvent(
+                    sAxisName, modifiers, bIsPressedDown ? static_cast<float>(iInput) : 0.0f);
                 continue;
             }
 
@@ -166,11 +179,15 @@ namespace ne {
                 }
             }
             if (bSet == false) {
-                Logger::get().error(std::format("could not find key '{}' in key "
-                                                "states for '{}' axis event",
-                                                getKeyName(key), sAxisName));
-                pGameInstance->onInputAxisEvent(sAxisName, modifiers,
-                                                bIsPressedDown ? static_cast<float>(iInput) : 0.0f);
+                Logger::get().error(
+                    std::format(
+                        "could not find key '{}' in key "
+                        "states for '{}' axis event",
+                        getKeyName(key),
+                        sAxisName),
+                    sGameLogCategory);
+                pGameInstance->onInputAxisEvent(
+                    sAxisName, modifiers, bIsPressedDown ? static_cast<float>(iInput) : 0.0f);
                 continue;
             }
 

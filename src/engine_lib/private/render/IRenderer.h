@@ -10,6 +10,8 @@
 #include "misc/Error.h"
 
 namespace ne {
+    const auto sRendererLogCategory = "Renderer";
+
     class Window;
     /**
      * Contains width, height and refresh rate.

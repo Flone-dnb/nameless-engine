@@ -82,12 +82,13 @@ namespace ne {
 
         const auto size = getSize();
         if (size.first == 0 || size.second == 0) {
-            Logger::get().error("getSize() returned 0");
+            Logger::get().error("getSize() returned 0", sWindowLogCategory);
             return std::make_pair(0.0f, 0.0f);
         }
 
-        return std::make_pair(static_cast<float>(xPos) / static_cast<float>(size.first),
-                              static_cast<float>(yPos) / static_cast<float>(size.second));
+        return std::make_pair(
+            static_cast<float>(xPos) / static_cast<float>(size.first),
+            static_cast<float>(yPos) / static_cast<float>(size.second));
     }
 
     std::string Window::getTitle() const { return sWindowTitle; }
@@ -147,8 +148,8 @@ namespace ne {
         pGame->onWindowFocusChanged(bIsFocused);
     }
 
-    void Window::glfwWindowKeyboardCallback(GLFWwindow *pGlfwWindow, int iKey, int iScancode, int iAction,
-                                            int iMods) {
+    void Window::glfwWindowKeyboardCallback(
+        GLFWwindow *pGlfwWindow, int iKey, int iScancode, int iAction, int iMods) {
         if (iAction == GLFW_REPEAT) {
             return;
         }
@@ -158,8 +159,8 @@ namespace ne {
             return;
         }
 
-        pWindow->onKeyboardInput(static_cast<KeyboardKey>(iKey), KeyboardModifiers(iMods),
-                                 iAction == GLFW_PRESS ? true : false);
+        pWindow->onKeyboardInput(
+            static_cast<KeyboardKey>(iKey), KeyboardModifiers(iMods), iAction == GLFW_PRESS ? true : false);
     }
 
     void Window::glfwWindowMouseCallback(GLFWwindow *pGlfwWindow, int iButton, int iAction, int iMods) {
@@ -168,8 +169,10 @@ namespace ne {
             return;
         }
 
-        pWindow->onMouseInput(static_cast<MouseButton>(iButton), KeyboardModifiers(iMods),
-                              iAction == GLFW_PRESS ? true : false);
+        pWindow->onMouseInput(
+            static_cast<MouseButton>(iButton),
+            KeyboardModifiers(iMods),
+            iAction == GLFW_PRESS ? true : false);
     }
 
     void Window::glfwWindowFocusCallback(GLFWwindow *pGlfwWindow, int iFocused) {
@@ -237,8 +240,8 @@ namespace ne {
         }
 
         // Create GLFW window.
-        GLFWwindow *pGLFWWindow = glfwCreateWindow(params.iWindowWidth, params.iWindowHeight,
-                                                   sNewWindowTitle.c_str(), pMonitor, nullptr);
+        GLFWwindow *pGLFWWindow = glfwCreateWindow(
+            params.iWindowWidth, params.iWindowHeight, sNewWindowTitle.c_str(), pMonitor, nullptr);
         if (!pGLFWWindow) {
             return Error("failed to create window");
         }
@@ -315,7 +318,7 @@ namespace ne {
             if (glfwRawMouseMotionSupported()) {
                 glfwSetInputMode(pGlfwWindow, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
             } else {
-                Logger::get().warn("raw mouse motion is not supported");
+                Logger::get().warn("raw mouse motion is not supported", sWindowLogCategory);
             }
         }
     }

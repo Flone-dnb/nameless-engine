@@ -10,6 +10,8 @@
 #include "input/MouseButton.hpp"
 
 namespace ne {
+    constexpr auto sGameLogCategory = "Game";
+
     class IGameInstance;
     class IRenderer;
     class Window;

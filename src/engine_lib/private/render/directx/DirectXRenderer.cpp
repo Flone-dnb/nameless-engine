@@ -27,7 +27,9 @@ namespace ne {
     DirectXRenderer::DirectXRenderer(Window *pWindow) : IRenderer(pWindow) {
         // Read configuration from config file (if exists).
         if (isConfigurationFileExists()) {
-            Logger::get().info("renderer found configuration file, using configuration from this file");
+            Logger::get().info(
+                "renderer found configuration file, using configuration from this file",
+                sRendererLogCategory);
             DirectXRenderer::readConfigurationFromConfigFile();
             bStartedWithConfigurationFromDisk = true;
         }
@@ -883,7 +885,7 @@ namespace ne {
             if (error.has_value()) {
                 error->addEntry();
                 // error->showError(); don't show on screen as it's not a critical error
-                Logger::get().error(error->getError());
+                Logger::get().error(error->getError(), sRendererLogCategory);
                 return;
             }
         }
@@ -931,7 +933,7 @@ namespace ne {
         if (error.has_value()) {
             error->addEntry();
             // error->showError(); don't show on screen as it's not a critical error
-            Logger::get().error(error->getError());
+            Logger::get().error(error->getError(), sRendererLogCategory);
         }
     }
 

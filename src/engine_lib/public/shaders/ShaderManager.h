@@ -15,6 +15,8 @@
 #include "misc/Error.h"
 
 namespace ne {
+    constexpr auto sShaderManagerLogCategory = "ShaderManager";
+
     class IShader;
 
     /**

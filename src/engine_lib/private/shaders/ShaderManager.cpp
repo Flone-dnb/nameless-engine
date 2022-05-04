@@ -17,9 +17,11 @@ namespace ne {
 
         // Wait for shader compilation threads to finish early.
         if (!vRunningCompilationThreads.empty()) {
-            Logger::get().info(std::format(
-                "waiting for {} shader compilation thread(-s) to finish early",
-                vRunningCompilationThreads.size()));
+            Logger::get().info(
+                std::format(
+                    "waiting for {} shader compilation thread(-s) to finish early",
+                    vRunningCompilationThreads.size()),
+                sShaderManagerLogCategory);
             for (auto &promise : vRunningCompilationThreads) {
                 promise.get_future().get();
             }

@@ -15,6 +15,8 @@
 #include "input/MouseButton.hpp"
 
 namespace ne {
+    constexpr auto sWindowLogCategory = "Window";
+
     class Error;
     class IGameInstance;
 
@@ -277,8 +279,8 @@ namespace ne {
         /**
          * GLFW callback.
          */
-        static void glfwWindowKeyboardCallback(GLFWwindow *pGlfwWindow, int iKey, int iScancode, int iAction,
-                                               int iMods);
+        static void
+        glfwWindowKeyboardCallback(GLFWwindow *pGlfwWindow, int iKey, int iScancode, int iAction, int iMods);
 
         /**
          * GLFW callback.

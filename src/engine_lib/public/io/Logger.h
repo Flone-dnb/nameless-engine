@@ -10,7 +10,7 @@ namespace spdlog {
 }
 
 namespace ne {
-    constexpr auto sDefaultLogCategory = "LogDefault";
+    constexpr auto sDefaultLogCategory = "Default";
 
     /**
      * Logs to file and console.

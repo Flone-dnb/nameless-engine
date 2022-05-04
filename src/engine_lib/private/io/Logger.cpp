@@ -19,25 +19,31 @@ namespace ne {
         return logger;
     }
 
-    void Logger::info(std::string_view sText, const std::source_location location) const {
+    void Logger::info(
+        std::string_view sText, std::string_view sCategory, const std::source_location location) const {
         pSpdLogger->info(std::format(
-            "[{}:{}] {}",
+            "[{}] [{}:{}] {}",
+            sCategory,
             std::filesystem::path(location.file_name()).filename().string(),
             location.line(),
             sText));
     }
 
-    void Logger::warn(std::string_view sText, const std::source_location location) const {
+    void Logger::warn(
+        std::string_view sText, std::string_view sCategory, const std::source_location location) const {
         pSpdLogger->warn(std::format(
-            "[{}:{}] {}",
+            "[{}] [{}:{}] {}",
+            sCategory,
             std::filesystem::path(location.file_name()).filename().string(),
             location.line(),
             sText));
     }
 
-    void Logger::error(std::string_view sText, const std::source_location location) const {
+    void Logger::error(
+        std::string_view sText, std::string_view sCategory, const std::source_location location) const {
         pSpdLogger->error(std::format(
-            "[{}:{}] {}",
+            "[{}] [{}:{}] {}",
+            sCategory,
             std::filesystem::path(location.file_name()).filename().string(),
             location.line(),
             sText));

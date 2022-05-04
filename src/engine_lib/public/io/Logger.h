@@ -10,6 +10,8 @@ namespace spdlog {
 }
 
 namespace ne {
+    constexpr auto sDefaultLogCategory = "LogDefault";
+
     /**
      * Logs to file and console.
      */
@@ -32,11 +34,14 @@ namespace ne {
          * Add text to console and log file using "info" category.
          * The text message will be appended with the file name and the line it was called from.
          *
-         * @param sText    Text to write to log.
-         * @param location Should not be passed explicitly.
+         * @param sText     Text to write to log.
+         * @param sCategory Category that this log text is related to. This text will be
+         * added to log text to make log reading easier.
+         * @param location  Should not be passed explicitly.
          */
         void info(
             std::string_view sText,
+            std::string_view sCategory = sDefaultLogCategory,
             const std::source_location location = std::source_location::current()) const;
 
         /**
@@ -44,10 +49,13 @@ namespace ne {
          * The text message will be appended with the file name and the line it was called from.
          *
          * @param sText  Text to write to log.
+         * @param sCategory Category that this log text is related to. This text will be
+         * added to log text to make log reading easier.
          * @param location Should not be passed explicitly.
          */
         void warn(
             std::string_view sText,
+            std::string_view sCategory = sDefaultLogCategory,
             const std::source_location location = std::source_location::current()) const;
 
         /**
@@ -55,10 +63,13 @@ namespace ne {
          * The text message will be appended with the file name and the line it was called from.
          *
          * @param sText  Text to write to log.
+         * @param sCategory Category that this log text is related to. This text will be
+         * added to log text to make log reading easier.
          * @param location Should not be passed explicitly.
          */
         void error(
             std::string_view sText,
+            std::string_view sCategory = sDefaultLogCategory,
             const std::source_location location = std::source_location::current()) const;
 
         /**

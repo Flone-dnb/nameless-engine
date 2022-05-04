@@ -20,15 +20,27 @@ namespace ne {
     }
 
     void Logger::info(std::string_view sText, const std::source_location location) const {
-        pSpdLogger->info(std::format("[{}] {}", location.function_name(), sText));
+        pSpdLogger->info(std::format(
+            "[{}:{}] {}",
+            std::filesystem::path(location.file_name()).filename().string(),
+            location.line(),
+            sText));
     }
 
     void Logger::warn(std::string_view sText, const std::source_location location) const {
-        pSpdLogger->warn(std::format("[{}] {}", location.function_name(), sText));
+        pSpdLogger->warn(std::format(
+            "[{}:{}] {}",
+            std::filesystem::path(location.file_name()).filename().string(),
+            location.line(),
+            sText));
     }
 
     void Logger::error(std::string_view sText, const std::source_location location) const {
-        pSpdLogger->error(std::format("[{}] {}", location.function_name(), sText));
+        pSpdLogger->error(std::format(
+            "[{}:{}] {}",
+            std::filesystem::path(location.file_name()).filename().string(),
+            location.line(),
+            sText));
     }
 
     std::filesystem::path Logger::getDirectoryWithLogs() const { return sLoggerWorkingDirectory; }
@@ -72,8 +84,13 @@ namespace ne {
         tm tm{};
         localtime_s(&tm, &now);
 
-        return std::format("{}.{}_{}-{}-{}", 1 + tm.tm_mon, tm.tm_mday, tm.tm_hour, // NOLINT
-                           tm.tm_min, tm.tm_sec);                                   // NOLINT
+        return std::format(
+            "{}.{}_{}-{}-{}",
+            1 + tm.tm_mon,
+            tm.tm_mday,
+            tm.tm_hour, // NOLINT
+            tm.tm_min,
+            tm.tm_sec); // NOLINT
     }
 
     void Logger::removeOldestLogFileIfMaxLogFiles(const std::filesystem::path &sLogDirectory) {

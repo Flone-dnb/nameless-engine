@@ -30,33 +30,36 @@ namespace ne {
 
         /**
          * Add text to console and log file using "info" category.
-         * Text message will be appended with function name it was called from.
+         * The text message will be appended with the file name and the line it was called from.
          *
          * @param sText    Text to write to log.
          * @param location Should not be passed explicitly.
          */
-        void info(std::string_view sText,
-                  const std::source_location location = std::source_location::current()) const;
+        void info(
+            std::string_view sText,
+            const std::source_location location = std::source_location::current()) const;
 
         /**
          * Add text to console and log file using "warning" category.
-         * Text message will be appended with function name it was called from.
+         * The text message will be appended with the file name and the line it was called from.
          *
          * @param sText  Text to write to log.
          * @param location Should not be passed explicitly.
          */
-        void warn(std::string_view sText,
-                  const std::source_location location = std::source_location::current()) const;
+        void warn(
+            std::string_view sText,
+            const std::source_location location = std::source_location::current()) const;
 
         /**
          * Add text to console and log file using "error" category.
-         * Text message will be appended with function name it was called from.
+         * The text message will be appended with the file name and the line it was called from.
          *
          * @param sText  Text to write to log.
          * @param location Should not be passed explicitly.
          */
-        void error(std::string_view sText,
-                   const std::source_location location = std::source_location::current()) const;
+        void error(
+            std::string_view sText,
+            const std::source_location location = std::source_location::current()) const;
 
         /**
          * Returns the directory that contains all logs.

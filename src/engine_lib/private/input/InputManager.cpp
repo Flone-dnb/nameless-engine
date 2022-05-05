@@ -8,9 +8,8 @@
 #include "io/ConfigManager.h"
 
 namespace ne {
-    std::optional<Error>
-    InputManager::addActionEvent(const std::string &sActionName,
-                                 const std::vector<std::variant<KeyboardKey, MouseButton>> &vKeys) {
+    std::optional<Error> InputManager::addActionEvent(
+        const std::string& sActionName, const std::vector<std::variant<KeyboardKey, MouseButton>>& vKeys) {
         if (vKeys.empty()) {
             return Error("vKeys is empty");
         }
@@ -33,9 +32,8 @@ namespace ne {
         return {};
     }
 
-    std::optional<Error>
-    InputManager::addAxisEvent(const std::string &sAxisName,
-                               const std::vector<std::pair<KeyboardKey, KeyboardKey>> &vAxis) {
+    std::optional<Error> InputManager::addAxisEvent(
+        const std::string& sAxisName, const std::vector<std::pair<KeyboardKey, KeyboardKey>>& vAxis) {
         if (vAxis.empty()) {
             return Error("vAxis is empty");
         }
@@ -58,9 +56,10 @@ namespace ne {
         return {};
     }
 
-    std::optional<Error> InputManager::modifyActionEventKey(const std::string &sActionName,
-                                                            std::variant<KeyboardKey, MouseButton> oldKey,
-                                                            std::variant<KeyboardKey, MouseButton> newKey) {
+    std::optional<Error> InputManager::modifyActionEventKey(
+        const std::string& sActionName,
+        std::variant<KeyboardKey, MouseButton> oldKey,
+        std::variant<KeyboardKey, MouseButton> newKey) {
         std::scoped_lock<std::recursive_mutex> guard(mtxActionEvents);
 
         // See if this action exists.
@@ -84,9 +83,10 @@ namespace ne {
         return {};
     }
 
-    std::optional<Error> InputManager::modifyAxisEventKey(const std::string &sAxisName,
-                                                          std::pair<KeyboardKey, KeyboardKey> oldPair,
-                                                          std::pair<KeyboardKey, KeyboardKey> newPair) {
+    std::optional<Error> InputManager::modifyAxisEventKey(
+        const std::string& sAxisName,
+        std::pair<KeyboardKey, KeyboardKey> oldPair,
+        std::pair<KeyboardKey, KeyboardKey> newPair) {
         std::scoped_lock<std::recursive_mutex> guard(mtxAxisEvents);
 
         // See if this axis exists.
@@ -100,7 +100,7 @@ namespace ne {
 
         // See if old key exists.
         const auto foundIt =
-            std::ranges::find_if(vAxisKeys, [&](const auto &pair) { return pair == oldPair; });
+            std::ranges::find_if(vAxisKeys, [&](const auto& pair) { return pair == oldPair; });
         if (foundIt == vAxisKeys.end()) {
             return Error("the specified old key pair was not found");
         }
@@ -125,11 +125,11 @@ namespace ne {
         ConfigManager manager;
 
         // Action events.
-        for (const auto &[sActionName, vActionKeys] : allActionEvents) {
+        for (const auto& [sActionName, vActionKeys] : allActionEvents) {
             std::string sActionKeysText;
 
             // Put all keys in a string.
-            for (const auto &key : vActionKeys) {
+            for (const auto& key : vActionKeys) {
                 if (std::holds_alternative<KeyboardKey>(key)) {
                     sActionKeysText +=
                         std::format("k{},", std::to_string(static_cast<int>(std::get<KeyboardKey>(key))));
@@ -145,13 +145,15 @@ namespace ne {
         }
 
         // Axis events.
-        for (const auto &[sAxisName, vAxisKeys] : allAxisEvents) {
+        for (const auto& [sAxisName, vAxisKeys] : allAxisEvents) {
             std::string sAxisKeysText;
 
             // Put all keys in a string.
-            for (const auto &pair : vAxisKeys) {
-                sAxisKeysText += std::format("{}-{},", std::to_string(static_cast<int>(pair.first)),
-                                             std::to_string(static_cast<int>(pair.second)));
+            for (const auto& pair : vAxisKeys) {
+                sAxisKeysText += std::format(
+                    "{}-{},",
+                    std::to_string(static_cast<int>(pair.first)),
+                    std::to_string(static_cast<int>(pair.second)));
             }
 
             sAxisKeysText.pop_back(); // pop comma
@@ -183,15 +185,17 @@ namespace ne {
 
         // Check that we only have 1 or 2 sections.
         if (vSections.size() > 2) {
-            return Error(std::format("the specified file '{}' has {} sections, "
-                                     "while expected only 1 or 2 sections",
-                                     sFileName, vSections.size()));
+            return Error(std::format(
+                "the specified file '{}' has {} sections, "
+                "while expected only 1 or 2 sections",
+                sFileName,
+                vSections.size()));
         }
 
         // Check section names.
         bool bHasActionEventsSection = false;
         bool bHasAxisEventsSection = false;
-        for (const auto &sSectionName : vSections) {
+        for (const auto& sSectionName : vSections) {
             if (sSectionName == sActionEventSectionName) {
                 bHasActionEventsSection = true;
             } else if (sSectionName == sAxisEventSectionName) {
@@ -213,7 +217,7 @@ namespace ne {
             auto currentActionEvents = getAllActionEvents();
 
             std::scoped_lock<std::recursive_mutex> guard(mtxActionEvents);
-            for (const auto &sActionName : currentActionEvents | std::views::keys) {
+            for (const auto& sActionName : currentActionEvents | std::views::keys) {
                 // Look for this action in file.
                 auto it = std::ranges::find(fileActionEvents, sActionName);
                 if (it == fileActionEvents.end()) {
@@ -230,17 +234,18 @@ namespace ne {
                 auto range = keys | std::views::split(',');
                 std::vector<std::string> vActionKeys{range.begin(), range.end()};
                 std::vector<std::variant<KeyboardKey, MouseButton>> vOutActionKeys;
-                for (const auto &key : vActionKeys) {
+                for (const auto& key : vActionKeys) {
                     if (key[0] == 'k') {
                         // KeyboardKey.
                         int iKeyboardKey = -1;
                         auto keyString = key.substr(1);
-                        auto [ptr, ec] = std::from_chars(keyString.data(),
-                                                         keyString.data() + keyString.size(), iKeyboardKey);
+                        auto [ptr, ec] = std::from_chars(
+                            keyString.data(), keyString.data() + keyString.size(), iKeyboardKey);
                         if (ec != std::errc()) {
-                            return Error(
-                                std::format("failed to convert '{}' to keyboard key code (error code: {})",
-                                            keyString, static_cast<int>(ec)));
+                            return Error(std::format(
+                                "failed to convert '{}' to keyboard key code (error code: {})",
+                                keyString,
+                                static_cast<int>(ec)));
                         }
 
                         vOutActionKeys.push_back(static_cast<KeyboardKey>(iKeyboardKey));
@@ -248,12 +253,13 @@ namespace ne {
                         // MouseButton.
                         int iMouseButton = -1;
                         auto keyString = key.substr(1);
-                        auto [ptr, ec] = std::from_chars(keyString.data(),
-                                                         keyString.data() + keyString.size(), iMouseButton);
+                        auto [ptr, ec] = std::from_chars(
+                            keyString.data(), keyString.data() + keyString.size(), iMouseButton);
                         if (ec != std::errc()) {
-                            return Error(
-                                std::format("failed to convert '{}' to mouse button code (error code: {})",
-                                            keyString, static_cast<int>(ec)));
+                            return Error(std::format(
+                                "failed to convert '{}' to mouse button code (error code: {})",
+                                keyString,
+                                static_cast<int>(ec)));
                         }
 
                         vOutActionKeys.push_back(static_cast<MouseButton>(iMouseButton));
@@ -281,7 +287,7 @@ namespace ne {
             auto currentAxisEvents = getAllAxisEvents();
 
             std::scoped_lock<std::recursive_mutex> guard(mtxAxisEvents);
-            for (const auto &sAxisName : currentAxisEvents | std::views::keys) {
+            for (const auto& sAxisName : currentAxisEvents | std::views::keys) {
                 // Look for this axis in file.
                 auto it = std::ranges::find(fileAxisEvents, sAxisName);
                 if (it == fileAxisEvents.end()) {
@@ -298,7 +304,7 @@ namespace ne {
                 auto range = keys | std::views::split(',');
                 std::vector<std::string> vAxisKeys{range.begin(), range.end()};
                 std::vector<std::pair<KeyboardKey, KeyboardKey>> vOutAxisKeys;
-                for (const auto &key : vAxisKeys) {
+                for (const auto& key : vAxisKeys) {
                     auto plusMinusRange = key | std::views::split('-');
                     std::vector<std::string> vPlusMinusKeys{plusMinusRange.begin(), plusMinusRange.end()};
 
@@ -308,24 +314,30 @@ namespace ne {
 
                     // Convert the first one.
                     int iKeyboardPlusKey = -1;
-                    auto [ptr1, ec1] = std::from_chars(vPlusMinusKeys[0].data(),
-                                                       vPlusMinusKeys[0].data() + vPlusMinusKeys[0].size(),
-                                                       iKeyboardPlusKey);
+                    auto [ptr1, ec1] = std::from_chars(
+                        vPlusMinusKeys[0].data(),
+                        vPlusMinusKeys[0].data() + vPlusMinusKeys[0].size(),
+                        iKeyboardPlusKey);
                     if (ec1 != std::errc()) {
-                        return Error(std::format("failed to convert the first key of axis entry '{}' "
-                                                 "to keyboard key code (error code: {})",
-                                                 key, static_cast<int>(ec1)));
+                        return Error(std::format(
+                            "failed to convert the first key of axis entry '{}' "
+                            "to keyboard key code (error code: {})",
+                            key,
+                            static_cast<int>(ec1)));
                     }
 
                     // Convert the second one.
                     int iKeyboardMinusKey = -1;
-                    auto [ptr2, ec2] = std::from_chars(vPlusMinusKeys[1].data(),
-                                                       vPlusMinusKeys[1].data() + vPlusMinusKeys[1].size(),
-                                                       iKeyboardMinusKey);
+                    auto [ptr2, ec2] = std::from_chars(
+                        vPlusMinusKeys[1].data(),
+                        vPlusMinusKeys[1].data() + vPlusMinusKeys[1].size(),
+                        iKeyboardMinusKey);
                     if (ec2 != std::errc()) {
-                        return Error(std::format("failed to convert the second key of axis entry '{}' "
-                                                 "to keyboard key code (error code: {})",
-                                                 key, static_cast<int>(ec2)));
+                        return Error(std::format(
+                            "failed to convert the second key of axis entry '{}' "
+                            "to keyboard key code (error code: {})",
+                            key,
+                            static_cast<int>(ec2)));
                     }
 
                     vOutAxisKeys.push_back(std::make_pair<KeyboardKey, KeyboardKey>(
@@ -364,7 +376,7 @@ namespace ne {
             const auto keyboardKey = std::get<KeyboardKey>(key);
             const auto axisIt = axisEvents.find(keyboardKey);
             if (axisIt != axisEvents.end()) {
-                for (const auto &sAxisName : axisIt->second | std::views::keys) {
+                for (const auto& sAxisName : axisIt->second | std::views::keys) {
                     vUsedAxisEvents.insert(sAxisName);
                 }
             }
@@ -374,13 +386,13 @@ namespace ne {
     }
 
     std::optional<std::vector<std::variant<KeyboardKey, MouseButton>>>
-    InputManager::getActionEvent(const std::string &sActionName) {
+    InputManager::getActionEvent(const std::string& sActionName) {
         std::scoped_lock<std::recursive_mutex> guard(mtxActionEvents);
 
         std::vector<std::variant<KeyboardKey, MouseButton>> vKeys;
 
         // Look if this action exists, get all keys.
-        for (const auto &pair : actionEvents) {
+        for (const auto& pair : actionEvents) {
             auto foundIt = pair.second.find(sActionName);
             if (foundIt == pair.second.end()) {
                 // Not found.
@@ -397,14 +409,14 @@ namespace ne {
     }
 
     std::optional<std::vector<std::pair<KeyboardKey, KeyboardKey>>>
-    InputManager::getAxisEvent(const std::string &sAxisName) {
+    InputManager::getAxisEvent(const std::string& sAxisName) {
         std::scoped_lock<std::recursive_mutex> guard(mtxAxisEvents);
 
         std::vector<std::pair<KeyboardKey, KeyboardKey>> vAxis;
 
         // Find only plus keys.
         std::vector<KeyboardKey> vPlusKeys;
-        for (const auto &pair : axisEvents) {
+        for (const auto& pair : axisEvents) {
             auto plusIt = pair.second.find(std::make_pair<std::string, int>(sAxisName.data(), 1));
 
             if (plusIt != pair.second.end()) {
@@ -420,12 +432,13 @@ namespace ne {
         std::vector<KeyboardKey> vMinusKeys;
         const std::pair<std::vector<AxisState>, int> currentState = axisState[sAxisName];
         std::vector<AxisState> pairs = currentState.first;
-        for (const auto &plusKey : vPlusKeys) {
-            auto it = std::ranges::find_if(pairs.begin(), pairs.end(),
-                                           [&](const AxisState &item) { return item.plusKey == plusKey; });
+        for (const auto& plusKey : vPlusKeys) {
+            auto it = std::ranges::find_if(
+                pairs.begin(), pairs.end(), [&](const AxisState& item) { return item.plusKey == plusKey; });
             if (it == pairs.end()) {
                 Logger::get().error(
-                    std::format("can't find minus key for plus key in axis event '{}'", sAxisName));
+                    std::format("can't find minus key for plus key in axis event '{}'", sAxisName),
+                    sInputManagerLogCategory);
                 return {};
             }
 
@@ -434,10 +447,14 @@ namespace ne {
 
         // Check sizes.
         if (vPlusKeys.size() != vMinusKeys.size()) {
-            Logger::get().error(std::format(
-                "not equal size of plus and minus keys, found {} plus key(-s) and {} minus(-s) keys "
-                "for axis event {}",
-                vPlusKeys.size(), vMinusKeys.size(), sAxisName));
+            Logger::get().error(
+                std::format(
+                    "not equal size of plus and minus keys, found {} plus key(-s) and {} minus(-s) keys "
+                    "for axis event {}",
+                    vPlusKeys.size(),
+                    vMinusKeys.size(),
+                    sAxisName),
+                sInputManagerLogCategory);
             return {};
         }
 
@@ -450,7 +467,7 @@ namespace ne {
         return vAxis;
     }
 
-    float InputManager::getCurrentAxisEventValue(const std::string &sAxisName) {
+    float InputManager::getCurrentAxisEventValue(const std::string& sAxisName) {
         std::scoped_lock<std::recursive_mutex> guard(mtxAxisEvents);
 
         const auto stateIt = axisState.find(sAxisName);
@@ -461,7 +478,7 @@ namespace ne {
         return static_cast<float>(stateIt->second.second);
     }
 
-    bool InputManager::getCurrentActionEventValue(const std::string &sActionName) {
+    bool InputManager::getCurrentActionEventValue(const std::string& sActionName) {
         std::scoped_lock<std::recursive_mutex> guard(mtxActionEvents);
 
         const auto stateIt = actionState.find(sActionName);
@@ -472,7 +489,7 @@ namespace ne {
         return stateIt->second.second;
     }
 
-    bool InputManager::removeActionEvent(const std::string &sActionName) {
+    bool InputManager::removeActionEvent(const std::string& sActionName) {
         std::scoped_lock<std::recursive_mutex> guard(mtxActionEvents);
 
         bool bFound = false;
@@ -504,7 +521,7 @@ namespace ne {
         return !bFound;
     }
 
-    bool InputManager::removeAxisEvent(const std::string &sAxisName) {
+    bool InputManager::removeAxisEvent(const std::string& sAxisName) {
         std::scoped_lock<std::recursive_mutex> guard(mtxAxisEvents);
 
         bool bFound = false;
@@ -550,8 +567,8 @@ namespace ne {
         std::unordered_map<std::string, std::vector<std::variant<KeyboardKey, MouseButton>>> actions;
 
         // Get all action names first.
-        for (const auto &actionPair : actionEvents) {
-            for (const auto &sName : actionPair.second) {
+        for (const auto& sActionName : actionEvents | std::views::values) {
+            for (const auto& sName : sActionName) {
                 if (!actions.contains(sName)) {
                     actions[sName] = {};
                 }
@@ -559,8 +576,8 @@ namespace ne {
         }
 
         // Fill keys for those actions.
-        for (const auto &actionPair : actionEvents) {
-            for (const auto &actionName : actionPair.second) {
+        for (const auto& actionPair : actionEvents) {
+            for (const auto& actionName : actionPair.second) {
                 actions[actionName].push_back(actionPair.first);
             }
         }
@@ -574,8 +591,8 @@ namespace ne {
 
         std::unordered_map<std::string, std::vector<std::pair<KeyboardKey, KeyboardKey>>> axes;
 
-        for (const auto &keyAxisNames : axisEvents | std::views::values) {
-            for (const auto &sAxisName : keyAxisNames | std::views::keys) {
+        for (const auto& keyAxisNames : axisEvents | std::views::values) {
+            for (const auto& sAxisName : keyAxisNames | std::views::keys) {
                 if (!axes.contains(sAxisName)) {
                     // Get keys.
                     auto option = getAxisEvent(sAxisName);
@@ -583,7 +600,9 @@ namespace ne {
                         axes[sAxisName] = std::move(option.value());
                     } else {
                         axes[sAxisName] = {};
-                        Logger::get().error(std::format("no axis event found by name '{}'", sAxisName));
+                        Logger::get().error(
+                            std::format("no axis event found by name '{}'", sAxisName),
+                            sInputManagerLogCategory);
                     }
                 }
             }
@@ -592,16 +611,15 @@ namespace ne {
         return axes;
     }
 
-    std::optional<Error>
-    InputManager::overwriteActionEvent(const std::string &sActionName,
-                                       const std::vector<std::variant<KeyboardKey, MouseButton>> &vKeys) {
+    std::optional<Error> InputManager::overwriteActionEvent(
+        const std::string& sActionName, const std::vector<std::variant<KeyboardKey, MouseButton>>& vKeys) {
         std::scoped_lock<std::recursive_mutex> guard(mtxActionEvents);
 
         // Remove all keys with this action if exists.
         removeActionEvent(sActionName);
 
         // Add keys for actions.
-        for (const auto &key : vKeys) {
+        for (const auto& key : vKeys) {
             auto it = actionEvents.find(key);
             if (it == actionEvents.end()) {
                 actionEvents[key] = {sActionName};
@@ -612,7 +630,7 @@ namespace ne {
 
         // Add state.
         std::vector<ActionState> vActionState;
-        for (const auto &action : vKeys) {
+        for (const auto& action : vKeys) {
             vActionState.push_back(ActionState(action));
         }
         actionState[sActionName] =
@@ -621,16 +639,15 @@ namespace ne {
         return {};
     }
 
-    std::optional<Error>
-    InputManager::overwriteAxisEvent(const std::string &sAxisName,
-                                     const std::vector<std::pair<KeyboardKey, KeyboardKey>> &vAxis) {
+    std::optional<Error> InputManager::overwriteAxisEvent(
+        const std::string& sAxisName, const std::vector<std::pair<KeyboardKey, KeyboardKey>>& vAxis) {
         std::scoped_lock<std::recursive_mutex> guard(mtxAxisEvents);
 
         // Remove all axis with this name if exists.
         removeAxisEvent(sAxisName);
 
         // Add keys.
-        for (const auto &[plusKey, minusKey] : vAxis) {
+        for (const auto& [plusKey, minusKey] : vAxis) {
             auto it = axisEvents.find(plusKey);
             if (it == axisEvents.end()) {
                 axisEvents[plusKey] = {std::make_pair<std::string, int>(sAxisName.data(), 1)};
@@ -648,7 +665,7 @@ namespace ne {
 
         // Add state.
         std::vector<AxisState> vAxisState;
-        for (const auto &axis : vAxis) {
+        for (const auto& axis : vAxis) {
             vAxisState.push_back(AxisState(axis.first, axis.second));
         }
         axisState[sAxisName] = std::make_pair<std::vector<AxisState>, int>(std::move(vAxisState), 0);

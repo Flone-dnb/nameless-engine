@@ -17,8 +17,8 @@ namespace ne {
      */
     class Logger {
     public:
-        Logger(const Logger &) = delete;
-        Logger &operator=(const Logger &) = delete;
+        Logger(const Logger&) = delete;
+        Logger& operator=(const Logger&) = delete;
         virtual ~Logger() = default;
 
         /**
@@ -28,7 +28,7 @@ namespace ne {
          *
          * @return Reference to the logger instance.
          */
-        static Logger &get();
+        static Logger& get();
 
         /**
          * Add text to console and log file using "info" category.
@@ -36,12 +36,13 @@ namespace ne {
          *
          * @param sText     Text to write to log.
          * @param sCategory Category that this log text is related to. This text will be
-         * added to log text to make log reading easier.
+         * added to log text to make log reading easier. Pass empty string for default
+         * category.
          * @param location  Should not be passed explicitly.
          */
         void info(
             std::string_view sText,
-            std::string_view sCategory = sDefaultLogCategory,
+            std::string_view sCategory,
             const std::source_location location = std::source_location::current()) const;
 
         /**
@@ -50,12 +51,13 @@ namespace ne {
          *
          * @param sText  Text to write to log.
          * @param sCategory Category that this log text is related to. This text will be
-         * added to log text to make log reading easier.
+         * added to log text to make log reading easier. Pass empty string for default
+         * category.
          * @param location Should not be passed explicitly.
          */
         void warn(
             std::string_view sText,
-            std::string_view sCategory = sDefaultLogCategory,
+            std::string_view sCategory,
             const std::source_location location = std::source_location::current()) const;
 
         /**
@@ -64,12 +66,13 @@ namespace ne {
          *
          * @param sText  Text to write to log.
          * @param sCategory Category that this log text is related to. This text will be
-         * added to log text to make log reading easier.
+         * added to log text to make log reading easier. Pass empty string for default
+         * category.
          * @param location Should not be passed explicitly.
          */
         void error(
             std::string_view sText,
-            std::string_view sCategory = sDefaultLogCategory,
+            std::string_view sCategory,
             const std::source_location location = std::source_location::current()) const;
 
         /**
@@ -94,7 +97,7 @@ namespace ne {
          *
          * @param sLogDirectory Directory that contains log files.
          */
-        static void removeOldestLogFiles(const std::filesystem::path &sLogDirectory);
+        static void removeOldestLogFiles(const std::filesystem::path& sLogDirectory);
 
         /**
          * Spdlog logger.

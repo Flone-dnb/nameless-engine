@@ -55,18 +55,6 @@ public:
     onInputAxisEvent(const std::string& sAxisName, ne::KeyboardModifiers modifiers, float fValue) override;
 
     /**
-     * Called when the window receives mouse input.
-     * Called before @ref onInputActionEvent.
-     * Prefer to use @ref onInputActionEvent instead of this function.
-     *
-     * @param button         Mouse button.
-     * @param modifiers      Keyboard modifier keys.
-     * @param bIsPressedDown Whether the button down event occurred or button up.
-     */
-    virtual void
-    onMouseInput(ne::MouseButton button, ne::KeyboardModifiers modifiers, bool bIsPressedDown) override;
-
-    /**
      * Called when the window received mouse movement.
      *
      * @param iXOffset  Mouse X movement delta in pixels (plus if moved to the right,
@@ -82,18 +70,6 @@ public:
      * @param iOffset Movement offset.
      */
     virtual void onMouseScrollMove(int iOffset) override;
-
-    /**
-     * Called when the window receives keyboard input.
-     * Called before @ref onInputActionEvent.
-     * Prefer to use @ref onInputActionEvent instead of this function.
-     *
-     * @param key            Keyboard key.
-     * @param modifiers      Keyboard modifier keys.
-     * @param bIsPressedDown Whether the key down event occurred or key up.
-     */
-    virtual void
-    onKeyboardInput(ne::KeyboardKey key, ne::KeyboardModifiers modifiers, bool bIsPressedDown) override;
 
     /**
      * Called when the window was requested to close (no new frames will be rendered).

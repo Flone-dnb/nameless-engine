@@ -16,7 +16,7 @@
 #include "shaders/ShaderDescription.hpp"
 
 namespace ne {
-    constexpr auto sShaderManagerLogCategory = "ShaderManager";
+    constexpr auto sShaderManagerLogCategory = "Shader Manager";
 
     class IShader;
     class IRenderer;

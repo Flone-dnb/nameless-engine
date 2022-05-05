@@ -18,10 +18,14 @@ namespace ne {
     Error::Error(const HRESULT hResult, const std::source_location location) {
         LPSTR errorText = nullptr;
 
-        FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_ALLOCATE_BUFFER |
-                           FORMAT_MESSAGE_IGNORE_INSERTS,
-                       nullptr, hResult, MAKELANGID(LANG_ENGLISH, SUBLANG_ENGLISH_US),
-                       reinterpret_cast<LPSTR>(&errorText), 0, nullptr);
+        FormatMessageA(
+            FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_IGNORE_INSERTS,
+            nullptr,
+            hResult,
+            MAKELANGID(LANG_ENGLISH, SUBLANG_ENGLISH_US),
+            reinterpret_cast<LPSTR>(&errorText),
+            0,
+            nullptr);
 
         if (errorText) {
             this->sMessage = std::string_view(errorText);
@@ -45,7 +49,12 @@ namespace ne {
         // (because we don't yet know how long the message string will be).
         const size_t iSize = FormatMessageA(
             FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
-            nullptr, errorCode, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPSTR)&messageBuffer, 0, nullptr);
+            nullptr,
+            errorCode,
+            MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+            (LPSTR)&messageBuffer,
+            0,
+            nullptr);
 
         // Copy the error message.
         this->sMessage = std::string("error code: ");
@@ -85,7 +94,7 @@ namespace ne {
 
     void Error::showError() const {
         const std::string sErrorMessage = getError();
-        Logger::get().error(sErrorMessage);
+        Logger::get().error(sErrorMessage, "");
         MessageBoxA(nullptr, sErrorMessage.c_str(), "Error", 0);
     }
 } // namespace ne

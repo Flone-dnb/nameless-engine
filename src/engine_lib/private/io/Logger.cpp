@@ -14,13 +14,16 @@
 #include "spdlog/sinks/stdout_color_sinks.h"
 
 namespace ne {
-    Logger &Logger::get() {
+    Logger& Logger::get() {
         static Logger logger;
         return logger;
     }
 
     void Logger::info(
         std::string_view sText, std::string_view sCategory, const std::source_location location) const {
+        if (sCategory.empty()) {
+            sCategory = sDefaultLogCategory;
+        }
         pSpdLogger->info(std::format(
             "[{}] [{}:{}] {}",
             sCategory,
@@ -31,6 +34,9 @@ namespace ne {
 
     void Logger::warn(
         std::string_view sText, std::string_view sCategory, const std::source_location location) const {
+        if (sCategory.empty()) {
+            sCategory = sDefaultLogCategory;
+        }
         pSpdLogger->warn(std::format(
             "[{}] [{}:{}] {}",
             sCategory,
@@ -41,6 +47,9 @@ namespace ne {
 
     void Logger::error(
         std::string_view sText, std::string_view sCategory, const std::source_location location) const {
+        if (sCategory.empty()) {
+            sCategory = sDefaultLogCategory;
+        }
         pSpdLogger->error(std::format(
             "[{}] [{}:{}] {}",
             sCategory,
@@ -93,7 +102,7 @@ namespace ne {
         return std::format("{}.{}_{}-{}-{}", 1 + tm.tm_mon, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
     }
 
-    void Logger::removeOldestLogFiles(const std::filesystem::path &sLogDirectory) {
+    void Logger::removeOldestLogFiles(const std::filesystem::path& sLogDirectory) {
         const auto directoryIterator = std::filesystem::directory_iterator(sLogDirectory);
 
         size_t iFileCount = 0;
@@ -101,7 +110,7 @@ namespace ne {
         auto oldestTime = std::chrono::file_clock::now();
         std::filesystem::path oldestFilePath = "";
 
-        for (auto const &entry : directoryIterator) {
+        for (auto const& entry : directoryIterator) {
             if (entry.is_regular_file()) {
                 iFileCount += 1;
             }

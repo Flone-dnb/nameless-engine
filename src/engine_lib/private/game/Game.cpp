@@ -8,7 +8,15 @@
 #endif
 
 namespace ne {
-    void Game::onBeforeNewFrame(float fTimeFromPrevCallInSec) const {
+    void Game::onBeforeNewFrame(float fTimeFromPrevCallInSec) {
+        {
+            // Execute deferred tasks.
+            std::scoped_lock<std::mutex> guard(mtxRwDeferredTasks);
+            while (!deferredTasks.empty()) {
+                deferredTasks.front()();
+                deferredTasks.pop();
+            }
+        }
         pGameInstance->onBeforeNewFrame(fTimeFromPrevCallInSec);
     }
 
@@ -38,11 +46,17 @@ namespace ne {
 
     void Game::onWindowClose() const { pGameInstance->onWindowClose(); }
 
-    Game::Game(Window *pWindow) {
+    void Game::addDeferredTask(std::function<void()> task) {
+        std::scoped_lock<std::mutex> guard(mtxRwDeferredTasks);
+
+        deferredTasks.push(task);
+    }
+
+    Game::Game(Window* pWindow) {
         this->pWindow = pWindow;
 
 #if defined(WIN32)
-        pRenderer = std::make_unique<DirectXRenderer>(pWindow);
+        pRenderer = std::make_unique<DirectXRenderer>(pWindow, this);
 #elif __linux__
         static_assert(false, "need to assign renderer here");
 #endif
@@ -67,7 +81,7 @@ namespace ne {
         // only one action associated with it.
         // + update InputManager documentation.
         const auto actionsCopy = it->second;
-        for (const auto &sActionName : actionsCopy) {
+        for (const auto& sActionName : actionsCopy) {
             // Update state.
             const auto stateIt = inputManager.actionState.find(sActionName);
             if (stateIt == inputManager.actionState.end()) {
@@ -78,11 +92,11 @@ namespace ne {
                         sActionName),
                     sGameLogCategory);
             } else {
-                std::pair<std::vector<ActionState>, bool /* action state */> &statePair = stateIt->second;
+                std::pair<std::vector<ActionState>, bool /* action state */>& statePair = stateIt->second;
 
                 // Mark state.
                 bool bSet = false;
-                for (auto &actionKey : statePair.first) {
+                for (auto& actionKey : statePair.first) {
                     if (actionKey.key == key) {
                         actionKey.bIsPressed = bIsPressedDown;
                         bSet = true;
@@ -148,7 +162,7 @@ namespace ne {
         // only one axis associated with it.
         // + update InputManager documentation.
         const auto axisCopy = it->second;
-        for (const auto &[sAxisName, iInput] : axisCopy) {
+        for (const auto& [sAxisName, iInput] : axisCopy) {
             auto stateIt = inputManager.axisState.find(sAxisName);
             if (stateIt == inputManager.axisState.end()) {
                 Logger::get().error(
@@ -164,8 +178,8 @@ namespace ne {
 
             // Mark current state.
             bool bSet = false;
-            std::pair<std::vector<AxisState>, int /* last input */> &statePair = stateIt->second;
-            for (auto &state : statePair.first) {
+            std::pair<std::vector<AxisState>, int /* last input */>& statePair = stateIt->second;
+            for (auto& state : statePair.first) {
                 if (iInput == 1 && state.plusKey == key) {
                     // Plus key.
                     state.bIsPlusKeyPressed = bIsPressedDown;
@@ -196,7 +210,7 @@ namespace ne {
             if (bIsPressedDown == false) {
                 // See if we need to pass 0 input value.
                 // See if other button are pressed.
-                for (const AxisState &state : statePair.first) {
+                for (const AxisState& state : statePair.first) {
                     if (iInput == -1) {
                         // Look for plus button.
                         if (state.bIsPlusKeyPressed) {

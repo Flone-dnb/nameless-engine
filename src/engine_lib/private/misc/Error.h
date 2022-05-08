@@ -21,8 +21,8 @@ namespace ne {
          * @param sMessage  Error message to show.
          * @param location  Should be empty.
          */
-        Error(std::string_view sMessage,
-              const std::source_location location = std::source_location::current());
+        Error(
+            std::string_view sMessage, const std::source_location location = std::source_location::current());
 
 #if defined(WIN32)
         /**
@@ -43,18 +43,31 @@ namespace ne {
 #endif
 
         Error() = delete;
-
-        Error(const Error &) = delete;
-        Error &operator=(const Error &) = delete;
-
         virtual ~Error() = default;
+
+        /**
+         * Copy constructor.
+         *
+         * @param other other object.
+         */
+        Error(const Error& other) = default;
+
+        /**
+         * Copy assignment.
+         *
+         * @param other other object.
+         *
+         * @return Result of copy assignment.
+         */
+        Error& operator=(const Error& other) = default;
 
         /**
          * Move constructor.
          *
          * @param other other object.
          */
-        Error(Error &&other) = default;
+        Error(Error&& other) = default;
+
         /**
          * Move assignment.
          *
@@ -62,7 +75,7 @@ namespace ne {
          *
          * @return Result of move assignment.
          */
-        Error &operator=(Error &&other) = default;
+        Error& operator=(Error&& other) = default;
 
         /**
          * Adds an entry to the error stack.

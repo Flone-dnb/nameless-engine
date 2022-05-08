@@ -24,8 +24,8 @@ namespace ne {
         IShader(std::filesystem::path pathToCompiledShader);
 
         IShader() = delete;
-        IShader(const IShader &) = delete;
-        IShader &operator=(const IShader &) = delete;
+        IShader(const IShader&) = delete;
+        IShader& operator=(const IShader&) = delete;
 
         /**
          * Compiles a shader.
@@ -44,7 +44,7 @@ namespace ne {
             std::unique_ptr<IShader> /** Compiled shader. */,
             std::string /** Compilation error. */,
             Error /** Internal error. */>
-        compileShader(ShaderDescription shaderDescription) {
+        compileShader(const ShaderDescription& shaderDescription) {
             return ShaderFormat::compileShader(std::move(shaderDescription));
         }
 

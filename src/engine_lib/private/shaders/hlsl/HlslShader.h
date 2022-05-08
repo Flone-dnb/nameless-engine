@@ -47,7 +47,7 @@ namespace ne {
             std::unique_ptr<IShader> /** Compiled shader. */,
             std::string /** Compilation error. */,
             Error /** Internal error. */>
-        compileShader(ShaderDescription shaderDescription);
+        compileShader(const ShaderDescription& shaderDescription);
 
         /**
          * Returns compiled shader.

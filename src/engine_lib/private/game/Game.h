@@ -2,6 +2,9 @@
 
 // Std.
 #include <memory>
+#include <functional>
+#include <queue>
+#include <mutex>
 
 // Custom.
 #include "game/IGameInstance.h"
@@ -42,7 +45,7 @@ namespace ne {
          * @param fTimeFromPrevCallInSec   Time in seconds that has passed since the last call
          * to this function.
          */
-        void onBeforeNewFrame(float fTimeFromPrevCallInSec) const;
+        void onBeforeNewFrame(float fTimeFromPrevCallInSec);
 
         /**
          * Called when the window (that owns this object) receives keyboard input.
@@ -93,6 +96,14 @@ namespace ne {
          */
         void onWindowClose() const;
 
+        /**
+         * Adds a function to be executed on the main thread next time @ref onBeforeNewFrame
+         * is called.
+         *
+         * @param task Function to execute.
+         */
+        void addDeferredTask(std::function<void()> task);
+
     private:
         // The object should be created by a Window instance.
         friend class Window;
@@ -138,6 +149,14 @@ namespace ne {
          * Draws the graphics on a window.
          */
         std::unique_ptr<IRenderer> pRenderer;
+
+        /**
+         * Queue of functions to call on the main thread on next tick.
+         */
+        std::queue<std::function<void()>> deferredTasks;
+
+        /** Mutex for read/write operations on @ref vDeferredTasks. */
+        std::mutex mtxRwDeferredTasks;
 
         /** Binds action names with input. */
         InputManager inputManager;

@@ -393,7 +393,7 @@ namespace ne {
 
         // Used for tick.
         float fCurrentTimeInSec = 0.0f;
-        float fPrevTimeInSec = 0.0f;
+        float fPrevTimeInSec = static_cast<float>(glfwGetTime());
 
         while (!glfwWindowShouldClose(pGlfwWindow)) {
             glfwPollEvents();

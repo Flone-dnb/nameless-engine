@@ -13,6 +13,7 @@
 namespace ne {
     const auto sRendererLogCategory = "Renderer";
 
+    class Game;
     class Window;
     /**
      * Contains width, height and refresh rate.
@@ -48,8 +49,9 @@ namespace ne {
          * Constructor.
          *
          * @param pWindow Window that we will render to.
+         * @param pGame   Game object that owns this renderer.
          */
-        IRenderer(Window* pWindow);
+        IRenderer(Window* pWindow, Game* pGame);
 
         IRenderer() = delete;
         IRenderer(const IRenderer&) = delete;
@@ -117,6 +119,31 @@ namespace ne {
          */
         virtual std::optional<Error> setBackbufferFillColor(float fillColor[4]) = 0;
 
+        /**
+         * Returns the window that we render to.
+         *
+         * @warning Do not delete returned pointer.
+         *
+         * @return Window we render to.
+         */
+        Window* getWindow() const;
+
+        /**
+         * Game object that owns this renderer.
+         *
+         * @warning Do not delete returned pointer.
+         *
+         * @return Game object.
+         */
+        Game* getGame() const;
+
+        /**
+         * Returns shader manager used to compile shaders.
+         *
+         * @return Shader manager.
+         */
+        std::unique_ptr<ShaderManager>& getShaderManager();
+
     protected:
         /** Update internal resources for next frame. */
         virtual void update() = 0;
@@ -135,20 +162,6 @@ namespace ne {
          * throw an error.
          */
         virtual void readConfigurationFromConfigFile() = 0;
-
-        /**
-         * Returns the window that we render to.
-         *
-         * @return Window we render to.
-         */
-        Window* getWindow() const;
-
-        /**
-         * Returns shader manager used to compile shaders.
-         *
-         * @return Shader manager.
-         */
-        std::unique_ptr<ShaderManager>& getShaderManager();
 
         /**
          * Returns the amount of buffers the swap chain has.
@@ -214,8 +227,11 @@ namespace ne {
          */
         std::unique_ptr<ShaderManager> pShaderManager;
 
-        /** Window that we render to. */
+        /** Window that we render to. Do not delete this pointer.  */
         Window* pWindow;
+
+        /** Game object that owns this renderer. Do not delete this pointer. */
+        Game* pGame;
 
         /** File name used to store renderer configuration. */
         inline static const char* sRendererConfigurationFileName = "render";

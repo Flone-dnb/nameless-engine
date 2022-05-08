@@ -8,6 +8,7 @@
 // Custom.
 #include "EditorGameInstance.h"
 #include "game/Window.h"
+#include "io/Logger.h"
 
 int main() {
 // Enable run-time memory check for debug builds.
@@ -18,6 +19,9 @@ int main() {
 #endif
 
     using namespace ne;
+
+    const size_t iThreadId = std::hash<std::thread::id>()(std::this_thread::get_id());
+    ne::Logger::get().info(std::format("main thread id: {}", iThreadId), "");
 
     auto result = Window::getBuilder()
                       .withTitle("Nameless Editor")

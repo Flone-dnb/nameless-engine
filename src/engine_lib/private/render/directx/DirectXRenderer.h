@@ -24,6 +24,7 @@ using namespace Microsoft::WRL;
 
 namespace ne {
     class Window;
+    class Game;
     /**
      * DirectX 12 renderer.
      */
@@ -33,8 +34,9 @@ namespace ne {
          * Initializes renderer base entities.
          *
          * @param pWindow Window that we will render to.
+         * @param pGame   Game object that owns this renderer.
          */
-        DirectXRenderer(Window* pWindow);
+        DirectXRenderer(Window* pWindow, Game* pGame);
         DirectXRenderer() = delete;
         DirectXRenderer(const DirectXRenderer&) = delete;
         DirectXRenderer& operator=(const DirectXRenderer&) = delete;

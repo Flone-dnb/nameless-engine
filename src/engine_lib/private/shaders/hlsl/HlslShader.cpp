@@ -5,9 +5,10 @@ namespace ne {
         : IShader(std::move(pathToCompiledShader)) {}
 
     std::variant<std::unique_ptr<IShader>, std::string, Error>
-    HlslShader::compileShader(ShaderDescription shaderDescription) {
+    HlslShader::compileShader(const ShaderDescription& shaderDescription) {
         // TODO
-        return std::string();
+        // TODO: - use "-D" compilation flag to add macro
+        return std::string("fake error");
     }
 
     ComPtr<IDxcBlob> HlslShader::getCompiledBlob() {

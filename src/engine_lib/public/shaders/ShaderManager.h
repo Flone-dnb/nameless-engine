@@ -57,8 +57,11 @@ namespace ne {
          * @param onCompleted       Callback function that will be called once all shaders are compiled.
          *
          * @warning Note that all callback functions will be queued to be executed on the main thread and
-         * will be called from the main thread. So it's safe to call functions that are
-         * marked "should only be called from the main thread" from the callback functions.
+         * will be called later from the main thread before next frame is rendered.
+         * If you are using member functions as callbacks you need to make sure that the owner object
+         * of these member functions will not be deleted until onCompleted is called.
+         * Because callbacks are called from the main thread it's safe to call functions that are
+         * marked as "should only be called from the main thread" from the callback functions.
          *
          * @return An error if something went wrong.
          */

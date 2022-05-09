@@ -101,6 +101,10 @@ namespace ne {
          * is called.
          *
          * @param task Function to execute.
+         *
+         * @warning If you are using member functions as callbacks you need to make
+         * sure that the owner object of these member functions will not be deleted until
+         * this callback is called.
          */
         void addDeferredTask(std::function<void()> task);
 

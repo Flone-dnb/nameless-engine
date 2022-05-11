@@ -50,7 +50,7 @@ namespace ne {
          * shaders to compile.
          * @param onError           Callback function that will be called if an error occurred.
          * This might be one of the two things: shader compilation error/warning (shader contains
-         * error) or internal error (engine failed somewhere).
+         * error) or internal error (engine failed to compile shader).
          * If there was a shader compilation error/warning, this shader will be marked as processed and
          * onProgress will be called (but this shader will not be added to shader manager and will
          * not be available, use will need to fix the error and add this shader again).

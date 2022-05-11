@@ -3,10 +3,8 @@
 // Custom.
 #include "shaders/IShader.h"
 
-// DXC
-#include "dxc/d3d12shader.h"
+// DXC.
 #include "dxc/dxcapi.h"
-#pragma comment(lib, "dxcompiler.lib")
 
 // OS.
 #include <wrl.h>
@@ -58,5 +56,9 @@ namespace ne {
 
     private:
         ComPtr<IDxcBlob> pCompiledBlob;
+
+        static constexpr std::wstring_view sVertexShaderModel = L"vs_6_0";
+        static constexpr std::wstring_view sPixelShaderModel = L"ps_6_0";
+        static constexpr std::wstring_view sComputeShaderModel = L"cs_6_0";
     };
 } // namespace ne

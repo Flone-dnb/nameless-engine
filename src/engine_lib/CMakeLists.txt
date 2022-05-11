@@ -102,7 +102,7 @@ target_link_libraries(${PROJECT_NAME} PUBLIC spdlog::spdlog)
 
 if (WIN32)
     # dxc
-    link_directories(${CMAKE_CURRENT_SOURCE_DIR}/../../ext/dxc/dxcompiler)
+    target_link_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/dxc)
     # copy dxc dlls
     add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
                    COMMAND ${CMAKE_COMMAND} -E copy

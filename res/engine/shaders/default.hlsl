@@ -20,10 +20,21 @@ cbuffer frameData : register(b0)
     int iRenderTargetWidth;
     int iRenderTargetHeight;
 
-    float2 _pad;
+    float2 _framePad;
 
     // remember to add padding to 4 floats
 }
+
+cbuffer objectData : register(b1)
+{
+    float4x4 vWorld; 
+    float4x4 vTexTransform;
+	uint iCustomProperty;
+	
+	float3 _objectPad;
+
+    // remember to add padding to 4 floats
+};
 
 struct VertexIn
 {
@@ -44,10 +55,21 @@ struct VertexOut
 
 VertexOut VS(VertexIn vertexIn)
 {
-    return vertexIn;
+    VertexOut vertexOut;
+
+    vertexOut.vCustomVec4 = vertexIn.vCustomVec4;
+
+    // Apply world matrix.
+    vertexOut.vPosWorldSpace = mul(float4(vertexIn.vPos, 1.0f), vWorld);
+    vertexOut.vNormal = mul(vertexIn.vNormal, (float3x3)vWorld);
+
+    // Transform to homogeneous clip space.
+    vertexOut.vPosViewSpace = mul(vertexOut.vPosWorldSpace, mViewProjection);
+
+    return vertexOut;
 }
 
 float4 PS(VertexOut pin) : SV_Target
 {
-    return float4(1.0f, 1.0f, 1.0f, 1.0f);
+    return float4(1.0f, 0.0f, 0.0f, 1.0f);
 }

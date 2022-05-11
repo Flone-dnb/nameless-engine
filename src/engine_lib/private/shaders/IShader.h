@@ -58,8 +58,18 @@ namespace ne {
          */
         std::filesystem::path getPathToCompiledShader();
 
+        /**
+         * Returns path to the directory used to store shader cache.
+         *
+         * @return Path to shader cache directory.
+         */
+        static std::filesystem::path getPathToShaderCacheDirectory();
+
     private:
         /** Path to compiled shader. */
         std::filesystem::path pathToCompiledShader;
+
+        /** Directory name to store compiled shaders. */
+        const std::string_view sShaderCacheDirectoryName = "shader_cache";
     };
 } // namespace ne

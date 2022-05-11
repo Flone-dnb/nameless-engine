@@ -21,6 +21,24 @@ namespace ne {
 
         std::scoped_lock<std::mutex> guard(mtxRwShaders);
 
+        // Remove finished promises of compilation threads.
+        const auto [first, last] = std::ranges::remove_if(vRunningCompilationThreads, [](auto& promise) {
+            using namespace std::chrono_literals;
+            try {
+                const auto status = promise.get_future().wait_for(1ms);
+                return status == std::future_status::ready;
+            } catch (const std::exception& ex) {
+                Logger::get().error(
+                    std::format(
+                        "one of the shader compilation threads returned "
+                        "an exception: {}",
+                        ex.what()),
+                    sShaderManagerLogCategory);
+                return true;
+            }
+        });
+        vRunningCompilationThreads.erase(first, last);
+
         // Wait for shader compilation threads to finish early.
         if (!vRunningCompilationThreads.empty()) {
             Logger::get().info(

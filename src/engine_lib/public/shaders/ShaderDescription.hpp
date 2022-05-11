@@ -26,11 +26,11 @@ namespace ne {
          * @param vDefinedShaderMacros     Array of defined macros for shader.
          */
         ShaderDescription(
-            const std::string &sShaderName,
-            const std::filesystem::path &pathToShaderFile,
+            const std::string& sShaderName,
+            const std::filesystem::path& pathToShaderFile,
             ShaderType shaderType,
-            const std::wstring &sShaderEntryFunctionName,
-            const std::vector<std::string> &vDefinedShaderMacros) {
+            const std::wstring& sShaderEntryFunctionName,
+            const std::vector<std::wstring>& vDefinedShaderMacros) {
             this->sShaderName = sShaderName;
             this->pathToShaderFile = pathToShaderFile;
             this->shaderType = shaderType;
@@ -39,7 +39,7 @@ namespace ne {
         }
 
         /** Array of defined macros for shader. */
-        std::vector<std::string> vDefinedShaderMacros;
+        std::vector<std::wstring> vDefinedShaderMacros;
         /** Globally unique shader name. */
         std::string sShaderName;
         /** Path to the shader file. */

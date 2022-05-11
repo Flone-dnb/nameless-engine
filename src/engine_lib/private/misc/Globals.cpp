@@ -45,9 +45,8 @@ namespace ne {
 
 #elif __linux__
 
-        std::string base("~/.local/share/");
-        base += sEngineDirectoryName;
-        basePath = std::filesystem::path(base);
+        basePath = "~/.local/share/";
+        basePath += sEngineDirectoryName;
         basePath += "/";
         static_assert(false, "check if this part actually works");
 

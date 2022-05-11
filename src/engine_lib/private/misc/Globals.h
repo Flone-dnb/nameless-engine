@@ -34,6 +34,15 @@ namespace ne {
      * Returns base directory used to store save and log files,
      * also creates a base directory if not exists.
      *
+     * Does not contain application name in path.
+     * Use @ref getApplicationName to append it yourself.
+     *
+     * On Windows, returns something like this:
+     * "C:\Users\user\AppData\Local\nameless-engine\"
+     *
+     * On Linux, returns something like this:
+     * "~/.local/share/nameless-engine/"
+     *
      * @return Path to base directory that ends with a platform specific slash.
      */
     std::filesystem::path getBaseDirectoryForConfigs();

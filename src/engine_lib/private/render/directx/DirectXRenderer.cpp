@@ -573,10 +573,11 @@ namespace ne {
 
     std::optional<Error> DirectXRenderer::createRootSignature() {
         // Root parameter can be a table, root descriptor or root constants.
-        std::array<CD3DX12_ROOT_PARAMETER, 1> vRootParameters;
+        std::array<CD3DX12_ROOT_PARAMETER, 2> vRootParameters;
 
         // Performance TIP: Order from most frequent to least frequent.
         vRootParameters[0].InitAsConstantBufferView(0); // frame data
+        vRootParameters[1].InitAsConstantBufferView(1); // object data
 
         // new stuff goes here
 

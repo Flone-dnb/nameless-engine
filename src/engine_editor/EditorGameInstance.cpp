@@ -11,7 +11,7 @@ EditorGameInstance::EditorGameInstance(ne::Window* pWindow, ne::InputManager* pI
         "res/engine/shaders/default.hlsl",
         ne::ShaderType::VERTEX_SHADER,
         L"VS",
-        std::vector<std::string>());
+        std::vector<std::wstring>());
     size_t iThreadId = std::hash<std::thread::id>()(std::this_thread::get_id());
     auto onProgress = [iThreadId](size_t iCompiledShaderCount, size_t iTotalShadersToCompile) {
         ne::Logger::get().info(
@@ -25,6 +25,11 @@ EditorGameInstance::EditorGameInstance(ne::Window* pWindow, ne::InputManager* pI
     auto onError =
         [iThreadId](ne::ShaderDescription shaderDescription, std::variant<std::string, ne::Error> error) {
             ne::Logger::get().info(std::format("received error on thread {}", iThreadId), "");
+            if (std::holds_alternative<std::string>(error)) {
+                ne::Logger::get().info(std::get<std::string>(error), "");
+            } else {
+                ne::Logger::get().info(std::get<ne::Error>(error).getError(), "");
+            }
         };
     auto onCompleted = [iThreadId]() {
         ne::Logger::get().info(std::format("received completed on thread {}", iThreadId), "");

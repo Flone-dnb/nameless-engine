@@ -126,7 +126,7 @@ namespace ne {
         pResults->GetOutput(DXC_OUT_PDB, IID_PPV_ARGS(&pShaderPdb), &pShaderPdbName);
         if (!pShaderPdb) {
             return Error(
-                std::format("no PDF was generated for {}", shaderDescription.pathToShaderFile.string()));
+                std::format("no PDB was generated for {}", shaderDescription.pathToShaderFile.string()));
         }
 
         std::ofstream shaderPdbFile(shaderPdbPath, std::ios::binary);

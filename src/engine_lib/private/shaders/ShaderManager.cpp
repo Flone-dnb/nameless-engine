@@ -64,6 +64,16 @@ namespace ne {
         }
     }
 
+    std::optional<IShader*> ShaderManager::getShader(const std::string& sShaderName) {
+        std::scoped_lock<std::mutex> guard(mtxRwShaders);
+        const auto it = shaders.find(sShaderName);
+        if (it == shaders.end()) {
+            return {};
+        } else {
+            return it->second.get();
+        }
+    }
+
     std::optional<Error> ShaderManager::compileShaders(
         const std::vector<ShaderDescription>& vShadersToCompile,
         const std::function<void(size_t iCompiledShaderCount, size_t iTotalShadersToCompile)>& onProgress,

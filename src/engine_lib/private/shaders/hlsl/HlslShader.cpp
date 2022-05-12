@@ -2,6 +2,7 @@
 
 // STL.
 #include <fstream>
+#include <climits>
 
 // DXC
 #include "dxc/d3d12shader.h"
@@ -22,8 +23,14 @@ namespace ne {
         // Create compiler and utils.
         ComPtr<IDxcUtils> pUtils;
         ComPtr<IDxcCompiler3> pCompiler;
-        DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(&pUtils));
-        DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&pCompiler));
+        HRESULT hResult = DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(&pUtils));
+        if (FAILED(hResult)) {
+            return Error(hResult);
+        }
+        hResult = DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&pCompiler));
+        if (FAILED(hResult)) {
+            return Error(hResult);
+        }
 
         // Create default include handler.
         ComPtr<IDxcIncludeHandler> pIncludeHandler;
@@ -93,7 +100,6 @@ namespace ne {
         }
 
         // See if the compilation failed.
-        HRESULT hResult = S_OK;
         pResults->GetStatus(&hResult);
         if (FAILED(hResult)) {
             return Error(hResult);
@@ -143,10 +149,44 @@ namespace ne {
         return std::make_unique<HlslShader>(pathToCompiledShader);
     }
 
-    ComPtr<IDxcBlob> HlslShader::getCompiledBlob() {
+    std::variant<ComPtr<IDxcBlob>, Error> HlslShader::getCompiledBlob() {
         if (!pCompiledBlob) {
-            auto pathToCompiledShader = getPathToCompiledShader();
-            // TODO: load from disk
+            // Load cached bytecode from disk.
+            const auto pathToCompiledShader = getPathToCompiledShader();
+
+            std::ifstream shaderBytecodeFile(pathToCompiledShader, std::ios::binary);
+
+            // Get file size.
+            shaderBytecodeFile.seekg(0, std::ios::end);
+            const long long iFileByteCount = shaderBytecodeFile.tellg();
+            shaderBytecodeFile.seekg(0, std::ios::beg);
+
+            if (iFileByteCount > static_cast<long long>(UINT_MAX)) {
+                shaderBytecodeFile.close();
+                return Error("shader cache file is too big");
+            }
+
+            const auto iBlobSize = static_cast<unsigned int>(iFileByteCount);
+
+            // Read file to memory.
+            const auto pBlobData = std::make_unique<char[]>(iBlobSize);
+            shaderBytecodeFile.read(pBlobData.get(), iBlobSize);
+            shaderBytecodeFile.close();
+
+            ComPtr<IDxcUtils> pUtils;
+            HRESULT hResult = DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(&pUtils));
+            if (FAILED(hResult)) {
+                return Error(hResult);
+            }
+
+            hResult = pUtils->CreateBlob(
+                pBlobData.get(),
+                static_cast<unsigned int>(iBlobSize),
+                DXC_CP_ACP,
+                reinterpret_cast<IDxcBlobEncoding**>(pCompiledBlob.GetAddressOf()));
+            if (FAILED(hResult)) {
+                return Error(hResult);
+            }
         }
 
         return pCompiledBlob;

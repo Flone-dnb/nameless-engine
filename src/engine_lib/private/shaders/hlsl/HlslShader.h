@@ -52,7 +52,7 @@ namespace ne {
          *
          * @return Compiled shader blob.
          */
-        ComPtr<IDxcBlob> getCompiledBlob();
+        std::variant<ComPtr<IDxcBlob>, Error> getCompiledBlob();
 
     private:
         ComPtr<IDxcBlob> pCompiledBlob;

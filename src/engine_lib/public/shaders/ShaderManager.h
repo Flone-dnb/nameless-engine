@@ -72,6 +72,19 @@ namespace ne {
                 void(ShaderDescription shaderDescription, std::variant<std::string, Error> error)>& onError,
             const std::function<void()>& onCompleted);
 
+        /**
+         * Returns previously compiled shader (using @ref compileShaders).
+         *
+         * @warning Do not delete returned pointer, shader manager keeps the ownership
+         * of this pointer.
+         *
+         * @param sShaderName Name of this shader.
+         *
+         * @return Empty if a shader with the specified name was not found,
+         * valid pointer otherwise.
+         */
+        std::optional<IShader*> getShader(const std::string& sShaderName);
+
     protected:
         /**
          * Compiles each shader. Usually called in another thread to do this work asynchronously.

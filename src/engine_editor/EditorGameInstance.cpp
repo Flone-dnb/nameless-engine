@@ -3,6 +3,7 @@
 // Custom.
 #include "io/Logger.h"
 #include "render/IRenderer.h"
+#include "shaders/hlsl/HlslShader.h"
 
 EditorGameInstance::EditorGameInstance(ne::Window* pWindow, ne::InputManager* pInputManager)
     : IGameInstance(pWindow, pInputManager) {
@@ -31,11 +32,28 @@ EditorGameInstance::EditorGameInstance(ne::Window* pWindow, ne::InputManager* pI
                 ne::Logger::get().info(std::get<ne::Error>(error).getError(), "");
             }
         };
-    auto onCompleted = [iThreadId]() {
-        ne::Logger::get().info(std::format("received completed on thread {}", iThreadId), "");
-    };
     getWindow()->getRenderer()->getShaderManager()->compileShaders(
-        std::vector{description}, onProgress, onError, onCompleted);
+        std::vector{description}, onProgress, onError, [this]() { onShaderCompilationFinished(); });
+}
+
+void EditorGameInstance::onShaderCompilationFinished() {
+    ne::Logger::get().info("received shader compilation finish", "");
+    const auto shader = getWindow()->getRenderer()->getShaderManager()->getShader("test");
+    if (!shader.has_value()) {
+        ne::Logger::get().error("shader value was not set", "");
+        return;
+    }
+
+    const auto pShader = dynamic_cast<ne::HlslShader*>(shader.value());
+    const auto result = pShader->getCompiledBlob();
+    if (std::holds_alternative<ne::Error>(result)) {
+        auto err = std::get<ne::Error>(result);
+        err.addEntry();
+        err.showError();
+        throw std::runtime_error(err.getError());
+    }
+
+    auto pBlob = std::get<Microsoft::WRL::ComPtr<IDxcBlob>>(result);
 }
 
 void EditorGameInstance::onInputActionEvent(

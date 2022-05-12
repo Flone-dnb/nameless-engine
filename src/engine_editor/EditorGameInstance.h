@@ -22,6 +22,9 @@ public:
     EditorGameInstance(ne::Window* pWindow, ne::InputManager* pInputManager);
     virtual ~EditorGameInstance() override = default;
 
+    /** Called when shader compilation is finished. */
+    void onShaderCompilationFinished();
+
     /**
      * Called before a frame is rendered.
      *

@@ -1,7 +1,9 @@
-#include "Catch2/catch.hpp"
-
+// Custom.
 #include "game/Window.h"
 #include "misc/Error.h"
+
+// External.
+#include "Catch2/catch_test_macros.hpp"
 
 TEST_CASE("create simple window") {
     // Check that window creation is working correctly.
@@ -10,7 +12,7 @@ TEST_CASE("create simple window") {
 
     auto result = Window::getBuilder().withVisibility(false).build();
     if (std::holds_alternative<Error>(result)) {
-        INFO(std::get<Error>(std::move(result)).getError())
+        INFO(std::get<Error>(std::move(result)).getError());
         REQUIRE(false);
     }
     REQUIRE(true);
@@ -23,13 +25,13 @@ TEST_CASE("create 2 windows") {
 
     auto result1 = Window::getBuilder().withVisibility(false).build();
     if (std::holds_alternative<Error>(result1)) {
-        INFO(std::get<Error>(std::move(result1)).getError())
+        INFO(std::get<Error>(std::move(result1)).getError());
         REQUIRE(false);
     }
 
     auto result2 = Window::getBuilder().withVisibility(false).build();
     if (std::holds_alternative<Error>(result2)) {
-        INFO(std::get<Error>(std::move(result2)).getError())
+        INFO(std::get<Error>(std::move(result2)).getError());
         REQUIRE(false);
     }
 

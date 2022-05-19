@@ -1,6 +1,3 @@
-#define CATCH_CONFIG_RUNNER
-#include "Catch2/catch.hpp"
-
 #if defined(DEBUG) && defined(WIN32)
 #include <Windows.h>
 #endif
@@ -9,6 +6,7 @@
 #include <filesystem>
 
 // Custom.
+#include "catch2/catch_session.hpp"
 #include "misc/Globals.h"
 
 int main() {

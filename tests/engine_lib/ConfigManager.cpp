@@ -1,10 +1,11 @@
-﻿#include "Catch2/catch.hpp"
-
-// STL.
+﻿// STL.
 #include <filesystem>
 
 // Custom.
 #include "io/ConfigManager.h"
+
+// External.
+#include "Catch2/catch_test_macros.hpp"
 
 constexpr auto sTestConfigFileName = "engine lib test file";
 constexpr auto sTestConfigFileSection = "test";
@@ -15,8 +16,8 @@ TEST_CASE("create simple config file") {
     // Create file.
     {
         ConfigManager manager;
-        manager.setStringValue(sTestConfigFileSection, "my cool string", "this is a cool string",
-                               "this is a comment");
+        manager.setStringValue(
+            sTestConfigFileSection, "my cool string", "this is a cool string", "this is a comment");
         manager.setBoolValue(sTestConfigFileSection, "my cool bool", true, "this should be true");
         manager.setDoubleValue(sTestConfigFileSection, "my cool double", 3.14159, "this is a pi value");
         manager.setLongValue(sTestConfigFileSection, "my cool long", 42, "equals to 42");
@@ -24,7 +25,7 @@ TEST_CASE("create simple config file") {
         auto res = manager.saveFile(ConfigCategory::SETTINGS, sTestConfigFileName);
         if (res.has_value()) {
             res->addEntry();
-            INFO(res->getError())
+            INFO(res->getError());
             REQUIRE(false);
         }
 
@@ -38,7 +39,7 @@ TEST_CASE("create simple config file") {
         auto res = manager.loadFile(ConfigCategory::SETTINGS, sTestConfigFileName);
         if (res.has_value()) {
             res->addEntry();
-            INFO(res->getError())
+            INFO(res->getError());
             REQUIRE(false);
         }
 
@@ -86,8 +87,8 @@ TEST_CASE("create simple config file using path") {
     // Create file.
     {
         ConfigManager manager;
-        manager.setStringValue(sTestConfigFileSection, "my cool string", "this is a cool string",
-                               "this is a comment");
+        manager.setStringValue(
+            sTestConfigFileSection, "my cool string", "this is a cool string", "this is a comment");
         manager.setBoolValue(sTestConfigFileSection, "my cool bool", true, "this should be true");
         manager.setDoubleValue(sTestConfigFileSection, "my cool double", 3.14159, "this is a pi value");
         manager.setLongValue(sTestConfigFileSection, "my cool long", 42, "equals to 42");
@@ -95,7 +96,7 @@ TEST_CASE("create simple config file using path") {
         auto res = manager.saveFile(testConfigPath, false);
         if (res.has_value()) {
             res->addEntry();
-            INFO(res->getError())
+            INFO(res->getError());
             REQUIRE(false);
         }
 
@@ -110,7 +111,7 @@ TEST_CASE("create simple config file using path") {
         auto res = manager.loadFile(testConfigPath);
         if (res.has_value()) {
             res->addEntry();
-            INFO(res->getError())
+            INFO(res->getError());
             REQUIRE(false);
         }
 
@@ -140,13 +141,13 @@ TEST_CASE("test backup file") {
     // Create file.
     {
         ConfigManager manager;
-        manager.setStringValue(sTestConfigFileSection, "my cool string", "this is a cool string",
-                               "this is a comment");
+        manager.setStringValue(
+            sTestConfigFileSection, "my cool string", "this is a cool string", "this is a comment");
 
         auto res = manager.saveFile(ConfigCategory::PROGRESS, sTestConfigFileName);
         if (res.has_value()) {
             res->addEntry();
-            INFO(res->getError())
+            INFO(res->getError());
             REQUIRE(false);
         }
 
@@ -163,7 +164,7 @@ TEST_CASE("test backup file") {
         auto res = manager.loadFile(ConfigCategory::PROGRESS, sTestConfigFileName);
         if (res.has_value()) {
             res->addEntry();
-            INFO(res->getError())
+            INFO(res->getError());
             REQUIRE(false);
         }
 
@@ -186,13 +187,13 @@ TEST_CASE("remove file") {
 
     // Create file.
     ConfigManager manager;
-    manager.setStringValue(sTestConfigFileSection, "my cool string", "this is a cool string",
-                           "this is a comment");
+    manager.setStringValue(
+        sTestConfigFileSection, "my cool string", "this is a cool string", "this is a comment");
 
     auto res = manager.saveFile(ConfigCategory::PROGRESS, sTestConfigFileName);
     if (res.has_value()) {
         res->addEntry();
-        INFO(res->getError())
+        INFO(res->getError());
         REQUIRE(false);
     }
 
@@ -202,7 +203,7 @@ TEST_CASE("remove file") {
     res = manager.saveFile(ConfigCategory::PROGRESS, sSecondFileName);
     if (res.has_value()) {
         res->addEntry();
-        INFO(res->getError())
+        INFO(res->getError());
         REQUIRE(false);
     }
 
@@ -216,7 +217,7 @@ TEST_CASE("remove file") {
     res = ConfigManager::removeFile(ConfigCategory::PROGRESS, sTestConfigFileName);
     if (res.has_value()) {
         res->addEntry();
-        INFO(res->getError())
+        INFO(res->getError());
         REQUIRE(false);
     }
 
@@ -232,13 +233,13 @@ TEST_CASE("get all config files of category (with backup test)") {
 
     // Create files.
     ConfigManager manager;
-    manager.setStringValue(sTestConfigFileSection, "my cool string", "this is a cool string",
-                           "this is a comment");
+    manager.setStringValue(
+        sTestConfigFileSection, "my cool string", "this is a cool string", "this is a comment");
 
     auto res = manager.saveFile(ConfigCategory::PROGRESS, sTestConfigFileName);
     if (res.has_value()) {
         res->addEntry();
-        INFO(res->getError())
+        INFO(res->getError());
         REQUIRE(false);
     }
 
@@ -256,7 +257,7 @@ TEST_CASE("get all config files of category (with backup test)") {
     res = manager.saveFile(ConfigCategory::PROGRESS, sSecondFileName);
     if (res.has_value()) {
         res->addEntry();
-        INFO(res->getError())
+        INFO(res->getError());
         REQUIRE(false);
     }
 

@@ -1,14 +1,15 @@
-﻿#include "Catch2/catch.hpp"
-
-// Custom.
+﻿// Custom.
 #include "input/InputManager.h"
+
+// External.
+#include "Catch2/catch_test_macros.hpp"
 
 TEST_CASE("add action") {
     using namespace ne;
 
     const std::string sAction1Name = "test1";
-    const std::vector<std::variant<KeyboardKey, MouseButton>> vAction1Keys = {KeyboardKey::KEY_0,
-                                                                              KeyboardKey::KEY_Z};
+    const std::vector<std::variant<KeyboardKey, MouseButton>> vAction1Keys = {
+        KeyboardKey::KEY_0, KeyboardKey::KEY_Z};
 
     const std::string sAction2Name = "test2";
     const std::vector<std::variant<KeyboardKey, MouseButton>> vAction2Keys = {MouseButton::LEFT};
@@ -31,8 +32,8 @@ TEST_CASE("remove action") {
     using namespace ne;
 
     const std::string sAction1Name = "test1";
-    const std::vector<std::variant<KeyboardKey, MouseButton>> vAction1Keys = {KeyboardKey::KEY_0,
-                                                                              KeyboardKey::KEY_Z};
+    const std::vector<std::variant<KeyboardKey, MouseButton>> vAction1Keys = {
+        KeyboardKey::KEY_0, KeyboardKey::KEY_Z};
 
     const std::string sAction2Name = "test2";
     const std::vector<std::variant<KeyboardKey, MouseButton>> vAction2Keys = {MouseButton::LEFT};
@@ -56,8 +57,8 @@ TEST_CASE("fail to add an action event with already used name") {
     using namespace ne;
 
     const std::string sAction1Name = "test1";
-    const std::vector<std::variant<KeyboardKey, MouseButton>> vAction1Keys = {KeyboardKey::KEY_0,
-                                                                              KeyboardKey::KEY_Z};
+    const std::vector<std::variant<KeyboardKey, MouseButton>> vAction1Keys = {
+        KeyboardKey::KEY_0, KeyboardKey::KEY_Z};
 
     const std::vector<std::variant<KeyboardKey, MouseButton>> vAction2Keys = {MouseButton::LEFT};
 
@@ -77,8 +78,8 @@ TEST_CASE("modify action") {
     using namespace ne;
 
     const std::string sAction1Name = "test1";
-    const std::vector<std::variant<KeyboardKey, MouseButton>> vAction1Keys = {KeyboardKey::KEY_0,
-                                                                              KeyboardKey::KEY_Z};
+    const std::vector<std::variant<KeyboardKey, MouseButton>> vAction1Keys = {
+        KeyboardKey::KEY_0, KeyboardKey::KEY_Z};
 
     const std::variant<KeyboardKey, MouseButton> oldKey = KeyboardKey::KEY_Z;
     const std::variant<KeyboardKey, MouseButton> newKey = MouseButton::LEFT;
@@ -90,8 +91,8 @@ TEST_CASE("modify action") {
     optional = manager.modifyActionEventKey(sAction1Name, oldKey, newKey);
     REQUIRE(!optional.has_value());
 
-    const std::vector<std::variant<KeyboardKey, MouseButton>> vExpectedKeys = {KeyboardKey::KEY_0,
-                                                                               MouseButton::LEFT};
+    const std::vector<std::variant<KeyboardKey, MouseButton>> vExpectedKeys = {
+        KeyboardKey::KEY_0, MouseButton::LEFT};
 
     const auto eventKeys = manager.getActionEvent(sAction1Name);
     REQUIRE(eventKeys.has_value());
@@ -100,7 +101,7 @@ TEST_CASE("modify action") {
 
     // Compare keys (order may be different).
     REQUIRE(resultKeys.size() == vExpectedKeys.size());
-    for (const auto &wantKey : vExpectedKeys) {
+    for (const auto& wantKey : vExpectedKeys) {
         REQUIRE(std::ranges::find(resultKeys, wantKey) != resultKeys.end());
     }
 }
@@ -211,7 +212,7 @@ TEST_CASE("modify axis") {
 
     // Compare keys (order may be different).
     REQUIRE(resultKeys.size() == vExpectedKeys.size());
-    for (const auto &wantKey : vExpectedKeys) {
+    for (const auto& wantKey : vExpectedKeys) {
         REQUIRE(std::ranges::find(resultKeys, wantKey) != resultKeys.end());
     }
 }
@@ -251,7 +252,7 @@ TEST_CASE("fail modify axis with wrong/flipped keys") {
 
     // Compare keys (order may be different).
     REQUIRE(resultKeys.size() == vAxes1.size());
-    for (const auto &wantKey : vAxes1) {
+    for (const auto& wantKey : vAxes1) {
         REQUIRE(std::ranges::find(resultKeys, wantKey) != resultKeys.end());
     }
 }
@@ -264,8 +265,8 @@ TEST_CASE("test saving and loading") {
     const std::vector<std::variant<KeyboardKey, MouseButton>> vDefaultAction1Keys = {MouseButton::LEFT};
 
     const std::string sAction2Name = "action2";
-    const std::vector<std::variant<KeyboardKey, MouseButton>> vDefaultAction2Keys = {MouseButton::RIGHT,
-                                                                                     KeyboardKey::KEY_R};
+    const std::vector<std::variant<KeyboardKey, MouseButton>> vDefaultAction2Keys = {
+        MouseButton::RIGHT, KeyboardKey::KEY_R};
 
     const std::string sAxis1Name = "axis1";
     const std::vector<std::pair<KeyboardKey, KeyboardKey>> vDefaultAxis1Keys = {
@@ -284,8 +285,8 @@ TEST_CASE("test saving and loading") {
     // Expected.
     const std::vector<std::variant<KeyboardKey, MouseButton>> vExpectedAction1Keys = {MouseButton::LEFT};
 
-    const std::vector<std::variant<KeyboardKey, MouseButton>> vExpectedAction2Keys = {KeyboardKey::KEY_A,
-                                                                                      KeyboardKey::KEY_R};
+    const std::vector<std::variant<KeyboardKey, MouseButton>> vExpectedAction2Keys = {
+        KeyboardKey::KEY_A, KeyboardKey::KEY_R};
 
     const std::vector<std::pair<KeyboardKey, KeyboardKey>> vExpectedAxis1Keys = {
         std::make_pair<KeyboardKey, KeyboardKey>(KeyboardKey::KEY_A, KeyboardKey::KEY_D),
@@ -313,7 +314,7 @@ TEST_CASE("test saving and loading") {
         auto result = manager.saveToFile(sFileName);
         if (result.has_value()) {
             result->addEntry();
-            INFO(result->getError())
+            INFO(result->getError());
             REQUIRE(false);
         }
     }
@@ -333,7 +334,7 @@ TEST_CASE("test saving and loading") {
         auto result = manager.loadFromFile(sFileName);
         if (result.has_value()) {
             result->addEntry();
-            INFO(result->getError())
+            INFO(result->getError());
             REQUIRE(false);
         }
 
@@ -346,7 +347,7 @@ TEST_CASE("test saving and loading") {
         auto vReadAction = actionOptional.value();
 
         // Compare keys (order may be different).
-        for (const auto &wantAction : vExpectedAction1Keys) {
+        for (const auto& wantAction : vExpectedAction1Keys) {
             auto it = std::ranges::find(vReadAction, wantAction);
             REQUIRE(it != vReadAction.end());
         }
@@ -358,7 +359,7 @@ TEST_CASE("test saving and loading") {
         vReadAction = actionOptional.value();
 
         // Compare keys (order may be different).
-        for (const auto &wantAction : vExpectedAction2Keys) {
+        for (const auto& wantAction : vExpectedAction2Keys) {
             auto it = std::ranges::find(vReadAction, wantAction);
             REQUIRE(it != vReadAction.end());
         }
@@ -370,7 +371,7 @@ TEST_CASE("test saving and loading") {
         auto vReadAxis = axisOptional.value();
 
         // Compare keys (order may be different).
-        for (const auto &wantAxis : vExpectedAxis1Keys) {
+        for (const auto& wantAxis : vExpectedAxis1Keys) {
             auto it = std::ranges::find(vReadAxis, wantAxis);
             REQUIRE(it != vReadAxis.end());
         }
@@ -381,8 +382,8 @@ TEST_CASE("is key used") {
     using namespace ne;
 
     const std::string sAction1Name = "test1";
-    const std::vector<std::variant<KeyboardKey, MouseButton>> vAction1Keys = {KeyboardKey::KEY_0,
-                                                                              KeyboardKey::KEY_Z};
+    const std::vector<std::variant<KeyboardKey, MouseButton>> vAction1Keys = {
+        KeyboardKey::KEY_0, KeyboardKey::KEY_Z};
 
     const std::string sAction2Name = "test2";
     const std::vector<std::variant<KeyboardKey, MouseButton>> vAction2Keys = {KeyboardKey::KEY_LEFT};

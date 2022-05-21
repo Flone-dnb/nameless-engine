@@ -9,14 +9,19 @@
 
 namespace ne {
     void Game::onBeforeNewFrame(float fTimeFromPrevCallInSec) {
+        // Execute deferred tasks.
+        std::queue<std::function<void()>> localTasks;
         {
-            // Execute deferred tasks.
             std::scoped_lock<std::mutex> guard(mtxRwDeferredTasks);
-            while (!deferredTasks.empty()) {
-                deferredTasks.front()();
-                deferredTasks.pop();
-            }
+            localTasks = std::move(deferredTasks);
+            deferredTasks = {};
         }
+        while (!localTasks.empty()) {
+            localTasks.front()();
+            localTasks.pop();
+        }
+
+        // Call game instance.
         pGameInstance->onBeforeNewFrame(fTimeFromPrevCallInSec);
     }
 
@@ -46,7 +51,7 @@ namespace ne {
 
     void Game::onWindowClose() const { pGameInstance->onWindowClose(); }
 
-    void Game::addDeferredTask(std::function<void()> task) {
+    void Game::addDeferredTask(const std::function<void()>& task) {
         std::scoped_lock<std::mutex> guard(mtxRwDeferredTasks);
 
         deferredTasks.push(task);

@@ -106,7 +106,7 @@ namespace ne {
          * sure that the owner object of these member functions will not be deleted until
          * this callback is called.
          */
-        void addDeferredTask(std::function<void()> task);
+        void addDeferredTask(const std::function<void()>& task);
 
     private:
         // The object should be created by a Window instance.

@@ -2,12 +2,13 @@
 
 // STL.
 #include <format>
-#include <fstream>
 
 // Custom.
 #include "io/Logger.h"
 #include "misc/Globals.h"
 #include "misc/Error.h"
+#include "render/IRenderer.h"
+#include "render/directx/DirectXRenderer.h"
 
 namespace ne {
     IShader::IShader(std::filesystem::path pathToCompiledShader) {
@@ -18,6 +19,18 @@ namespace ne {
             throw std::runtime_error(err.getError());
         }
         this->pathToCompiledShader = std::move(pathToCompiledShader);
+    }
+
+    std::variant<std::unique_ptr<IShader>, std::string, Error>
+    IShader::compileShader(const ShaderDescription& shaderDescription, IRenderer* pRenderer) {
+        if (dynamic_cast<DirectXRenderer*>(pRenderer)) {
+            return HlslShader::compileShader(std::move(shaderDescription));
+        } else {
+            const auto err = Error("no shader type is associated with the "
+                                   "current renderer (not implemented)");
+            err.showError();
+            throw std::runtime_error(err.getError());
+        }
     }
 
     std::filesystem::path IShader::getPathToCompiledShader() {
@@ -31,38 +44,14 @@ namespace ne {
     }
 
     std::filesystem::path IShader::getPathToShaderCacheDirectory() {
-        // Check if current directory is writeable.
-        namespace fs = std::filesystem;
+        std::filesystem::path basePath = getBaseDirectoryForConfigs();
+        basePath += getApplicationName();
 
-        fs::path pathToShaderCacheDir(fs::current_path());
+        basePath /= sShaderCacheDirectoryName;
 
-        const auto testFilePath = fs::current_path() / ".~~test~file~~";
-        std::ofstream file(testFilePath);
-        file.close();
-
-        constexpr auto sShaderCacheDirName = "shader_cache";
-
-        if (!fs::exists(testFilePath)) {
-            // Use directory for configs.
-            pathToShaderCacheDir = getBaseDirectoryForConfigs();
-            pathToShaderCacheDir += getApplicationName();
-            pathToShaderCacheDir /= sShaderCacheDirName;
-            Logger::get().info(
-                std::format(
-                    "don't have permissions to write to the current directory "
-                    "({}), using the config directory instead ({})",
-                    fs::current_path().string(),
-                    pathToShaderCacheDir.string()),
-                "");
-        } else {
-            fs::remove(testFilePath);
-            pathToShaderCacheDir /= sShaderCacheDirName;
+        if (!std::filesystem::exists(basePath)) {
+            std::filesystem::create_directories(basePath);
         }
-
-        if (!fs::exists(pathToShaderCacheDir)) {
-            fs::create_directories(pathToShaderCacheDir);
-        }
-
-        return pathToShaderCacheDir;
+        return basePath;
     }
 } // namespace ne

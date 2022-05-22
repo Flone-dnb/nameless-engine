@@ -121,6 +121,10 @@ namespace ne {
         std::unordered_map<std::string, std::unique_ptr<IShader>> shaders;
         std::vector<std::promise<bool>> vRunningCompilationThreads;
 
+        const std::string_view sGlobalShaderCacheParametersFileName = ".shader_cache.ini";
+        const std::string_view sGlobalShaderCacheParametersSectionName = "global shader cache parameters";
+        const std::string_view sGlobalShaderCacheParametersReleaseBuildKeyName = "is_release_build";
+
         std::atomic_flag bIsShuttingDown;
     };
 } // namespace ne

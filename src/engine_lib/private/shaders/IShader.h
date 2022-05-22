@@ -11,6 +11,7 @@
 #include "shaders/ShaderDescription.hpp"
 
 namespace ne {
+    class IRenderer;
     /**
      * Interface class for different types/formats of shaders.
      */
@@ -32,23 +33,27 @@ namespace ne {
          *
          * @param shaderDescription Description that describes the shader and how the shader should be
          * compiled.
+         * @param pRenderer Used renderer.
          *
          * @return Returns one of the three values:
          * @arg compiled shader
          * @arg string containing shader compilation error/warning
          * @arg internal error
          */
-        template <typename ShaderFormat>
-        requires std::derived_from<ShaderFormat, IShader>
         static std::variant<
             std::unique_ptr<IShader> /** Compiled shader. */,
             std::string /** Compilation error. */,
             Error /** Internal error. */>
-        compileShader(const ShaderDescription& shaderDescription) {
-            return ShaderFormat::compileShader(std::move(shaderDescription));
-        }
+        compileShader(const ShaderDescription& shaderDescription, IRenderer* pRenderer);
 
         virtual ~IShader() = default;
+
+        /**
+         * Returns path to the directory used to store shader cache.
+         *
+         * @return Path to shader cache directory.
+         */
+        static std::filesystem::path getPathToShaderCacheDirectory();
 
     protected:
         /**
@@ -58,18 +63,11 @@ namespace ne {
          */
         std::filesystem::path getPathToCompiledShader();
 
-        /**
-         * Returns path to the directory used to store shader cache.
-         *
-         * @return Path to shader cache directory.
-         */
-        static std::filesystem::path getPathToShaderCacheDirectory();
-
     private:
         /** Path to compiled shader. */
         std::filesystem::path pathToCompiledShader;
 
         /** Directory name to store compiled shaders. */
-        const std::string_view sShaderCacheDirectoryName = "shader_cache";
+        static constexpr std::string_view sShaderCacheDirectoryName = "shader_cache";
     };
 } // namespace ne

@@ -30,8 +30,8 @@ namespace ne {
          * or setValue methods and then @ref saveFile to save a new configuration.
          */
         ConfigManager();
-        ConfigManager(const ConfigManager &) = delete;
-        ConfigManager &operator=(const ConfigManager &) = delete;
+        ConfigManager(const ConfigManager&) = delete;
+        ConfigManager& operator=(const ConfigManager&) = delete;
 
         /**
          * Returns file names (without extension) that this category (directory)
@@ -124,8 +124,8 @@ namespace ne {
          * @return Default value if the specified section/key was not found,
          * otherwise value from INI file.
          */
-        std::string getStringValue(std::string_view sSection, std::string_view sKey,
-                                   std::string_view sDefaultValue) const;
+        std::string getStringValue(
+            std::string_view sSection, std::string_view sKey, std::string_view sDefaultValue) const;
 
         /**
          * Reads a value from loaded INI file (see @ref loadFile).
@@ -189,8 +189,11 @@ namespace ne {
          * @param sValue     Value to set. UTF-8 encoded.
          * @param sComment   Comment to add to this value. UTF-8 encoded.
          */
-        void setStringValue(std::string_view sSection, std::string_view sKey, std::string_view sValue,
-                            std::string_view sComment = "");
+        void setStringValue(
+            std::string_view sSection,
+            std::string_view sKey,
+            std::string_view sValue,
+            std::string_view sComment = "");
 
         /**
          * Sets a value. This value will not be written to file until @ref saveFile is called.
@@ -201,8 +204,8 @@ namespace ne {
          * @param bValue     Value to set.
          * @param sComment   Comment to add to this value.
          */
-        void setBoolValue(std::string_view sSection, std::string_view sKey, bool bValue,
-                          std::string_view sComment = "");
+        void setBoolValue(
+            std::string_view sSection, std::string_view sKey, bool bValue, std::string_view sComment = "");
 
         /**
          * Sets a value. This value will not be written to file until @ref saveFile is called.
@@ -213,8 +216,8 @@ namespace ne {
          * @param value      Value to set.
          * @param sComment   Comment to add to this value.
          */
-        void setDoubleValue(std::string_view sSection, std::string_view sKey, double value,
-                            std::string_view sComment = "");
+        void setDoubleValue(
+            std::string_view sSection, std::string_view sKey, double value, std::string_view sComment = "");
 
         /**
          * Sets a value. This value will not be written to file until @ref saveFile is called.
@@ -225,8 +228,8 @@ namespace ne {
          * @param iValue     Value to set.
          * @param sComment   Comment to add to this value.
          */
-        void setLongValue(std::string_view sSection, std::string_view sKey, long iValue,
-                          std::string_view sComment = "");
+        void setLongValue(
+            std::string_view sSection, std::string_view sKey, long iValue, std::string_view sComment = "");
 
         /**
          * Saves the current configuration to a file with a UTF-8 encoding.
@@ -268,7 +271,7 @@ namespace ne {
          *
          * @return Error if something went wrong.
          */
-        std::optional<Error> saveFile(const std::filesystem::path &pathToFile, bool bEnableBackup);
+        std::optional<Error> saveFile(const std::filesystem::path& pathToFile, bool bEnableBackup);
 
         /**
          * Returns full path to the file if it was loaded using @ref loadFile
@@ -290,8 +293,8 @@ namespace ne {
          *
          * @return Error if something went wrong, valid path otherwise.
          */
-        static std::variant<std::filesystem::path, Error> constructFilePath(ConfigCategory category,
-                                                                            std::string_view sFileName);
+        static std::variant<std::filesystem::path, Error>
+        constructFilePath(ConfigCategory category, std::string_view sFileName);
 
         /** Config file structure */
         CSimpleIniA ini;
@@ -300,7 +303,7 @@ namespace ne {
         std::filesystem::path filePath;
 
         /** File extension used for backup files. */
-        inline static const char *sBackupFileExtension = ".old";
+        inline static const char* sBackupFileExtension = ".old";
     };
 
 } // namespace ne

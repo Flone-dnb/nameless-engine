@@ -11,7 +11,7 @@ namespace ne {
 
         std::vector<std::string> vConfigFiles;
         const auto directoryIterator = std::filesystem::directory_iterator(categoryFolder);
-        for (const auto &entry : directoryIterator) {
+        for (const auto& entry : directoryIterator) {
             if (entry.is_regular_file()) {
                 if (entry.path().extension().string() == sBackupFileExtension) {
                     // Backup file. See if original file exists.
@@ -162,7 +162,7 @@ namespace ne {
         ini.GetAllSections(sections);
 
         std::vector<std::string> vSections;
-        for (const auto &sectionEntry : sections) {
+        for (const auto& sectionEntry : sections) {
             vSections.push_back(sectionEntry.pItem);
         }
 
@@ -177,7 +177,7 @@ namespace ne {
         }
 
         std::vector<std::string> vKeys;
-        for (const auto &keyEntry : keys) {
+        for (const auto& keyEntry : keys) {
             vKeys.push_back(keyEntry.pItem);
         }
 
@@ -262,7 +262,7 @@ namespace ne {
     }
 
     std::optional<Error>
-    ConfigManager::saveFile(const std::filesystem::path &pathToFile, bool bEnableBackup) {
+    ConfigManager::saveFile(const std::filesystem::path& pathToFile, bool bEnableBackup) {
         if (!std::filesystem::exists(pathToFile.parent_path())) {
             std::filesystem::create_directories(pathToFile.parent_path());
         }

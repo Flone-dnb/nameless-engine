@@ -17,6 +17,8 @@
 
 // OS.
 #include <wrl.h>
+
+#include "shaders/hlsl/HlslShader.h"
 using namespace Microsoft::WRL;
 
 // External.

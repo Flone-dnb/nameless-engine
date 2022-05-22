@@ -857,7 +857,7 @@ namespace ne {
         // Get display modes.
         std::vector<DXGI_MODE_DESC> vDisplayModes(iDisplayModeCount);
         hResult =
-            pOutputAdapter->GetDisplayModeList(backBufferFormat, 0, &iDisplayModeCount, &vDisplayModes[0]);
+            pOutputAdapter->GetDisplayModeList(backBufferFormat, 0, &iDisplayModeCount, vDisplayModes.data());
         if (FAILED(hResult)) {
             return Error(hResult);
         }
@@ -892,7 +892,7 @@ namespace ne {
         }
 
         // Write GPU.
-        manager.setLongValue(
+        manager.setValue<int>(
             getConfigurationSectionGpu(),
             "GPU",
             0,
@@ -900,31 +900,27 @@ namespace ne {
             "(first found GPU), '1' is the second found and etc.");
 
         // Write resolution.
-        manager.setLongValue(
-            getConfigurationSectionResolution(), "x", static_cast<long>(currentDisplayMode.Width));
-        manager.setLongValue(
-            getConfigurationSectionResolution(), "y", static_cast<long>(currentDisplayMode.Height));
+        manager.setValue<unsigned int>(
+            getConfigurationSectionResolution(), "width", currentDisplayMode.Width);
+        manager.setValue<unsigned int>(
+            getConfigurationSectionResolution(), "height", currentDisplayMode.Height);
 
         // Write refresh rate.
-        manager.setLongValue(
-            getConfigurationSectionRefreshRate(),
-            "numerator",
-            static_cast<long>(currentDisplayMode.RefreshRate.Numerator));
-        manager.setLongValue(
-            getConfigurationSectionRefreshRate(),
-            "denominator",
-            static_cast<long>(currentDisplayMode.RefreshRate.Denominator));
+        manager.setValue<unsigned int>(
+            getConfigurationSectionRefreshRate(), "numerator", currentDisplayMode.RefreshRate.Numerator);
+        manager.setValue<unsigned int>(
+            getConfigurationSectionRefreshRate(), "denominator", currentDisplayMode.RefreshRate.Denominator);
 
         // Write antialiasing.
-        manager.setBoolValue(getConfigurationSectionAntialiasing(), "enabled", bIsMsaaEnabled);
-        manager.setLongValue(
+        manager.setValue<bool>(getConfigurationSectionAntialiasing(), "enabled", bIsMsaaEnabled);
+        manager.setValue<unsigned int>(
             getConfigurationSectionAntialiasing(),
-            "sample count",
-            static_cast<long>(iMsaaSampleCount),
+            "sample_count",
+            iMsaaSampleCount,
             "valid values for MSAA: 2 or 4");
 
         // Write VSync.
-        manager.setBoolValue(getConfigurationSectionVSync(), "enabled", bIsVSyncEnabled);
+        manager.setValue<bool>(getConfigurationSectionVSync(), "enabled", bIsVSyncEnabled);
 
         // !!!
         // New settings go here!
@@ -955,11 +951,13 @@ namespace ne {
         }
 
         // Read GPU.
-        iPreferredGpuIndex = manager.getLongValue(getConfigurationSectionGpu(), "GPU", 0);
+        iPreferredGpuIndex = manager.getValue<long>(getConfigurationSectionGpu(), "GPU", 0);
 
         // Read resolution.
-        currentDisplayMode.Width = manager.getLongValue(getConfigurationSectionResolution(), "x", 0);
-        currentDisplayMode.Height = manager.getLongValue(getConfigurationSectionResolution(), "y", 0);
+        currentDisplayMode.Width =
+            manager.getValue<unsigned int>(getConfigurationSectionResolution(), "width", 0);
+        currentDisplayMode.Height =
+            manager.getValue<unsigned int>(getConfigurationSectionResolution(), "height", 0);
         if (currentDisplayMode.Width == 0 || currentDisplayMode.Height == 0) {
             Error error(std::format(
                 "failed to read valid resolution values from configuration file, "
@@ -972,9 +970,9 @@ namespace ne {
 
         // Read refresh rate.
         currentDisplayMode.RefreshRate.Numerator =
-            manager.getLongValue(getConfigurationSectionRefreshRate(), "numerator", 0);
+            manager.getValue<unsigned int>(getConfigurationSectionRefreshRate(), "numerator", 0);
         currentDisplayMode.RefreshRate.Denominator =
-            manager.getLongValue(getConfigurationSectionRefreshRate(), "denominator", 0);
+            manager.getValue<unsigned int>(getConfigurationSectionRefreshRate(), "denominator", 0);
         if (currentDisplayMode.RefreshRate.Numerator == 0 ||
             currentDisplayMode.RefreshRate.Denominator == 0) {
             Error error(std::format(
@@ -987,8 +985,9 @@ namespace ne {
         }
 
         // Read antialiasing.
-        bIsMsaaEnabled = manager.getBoolValue(getConfigurationSectionAntialiasing(), "enabled", false);
-        iMsaaSampleCount = manager.getLongValue(getConfigurationSectionAntialiasing(), "sample count", 0);
+        bIsMsaaEnabled = manager.getValue<bool>(getConfigurationSectionAntialiasing(), "enabled", false);
+        iMsaaSampleCount =
+            manager.getValue<unsigned int>(getConfigurationSectionAntialiasing(), "sample_count", 0);
         if (iMsaaSampleCount != 2 && iMsaaSampleCount != 4) {
             Error error(std::format(
                 "failed to read valid antialiasing values from configuration file, "
@@ -1000,7 +999,7 @@ namespace ne {
         }
 
         // Read VSync.
-        bIsVSyncEnabled = manager.getBoolValue(getConfigurationSectionVSync(), "enabled", false);
+        bIsVSyncEnabled = manager.getValue<bool>(getConfigurationSectionVSync(), "enabled", false);
 
         // !!!
         // New settings go here!

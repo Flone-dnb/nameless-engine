@@ -93,10 +93,10 @@ namespace ne {
 
         // Check if we already have a shader with this name.
         for (const auto& shader : vShadersToCompile) {
-            if (shader.sShaderName == sGlobalShaderCacheParametersFileName) [[unlikely]] {
+            if (shader.sShaderName.starts_with(".")) [[unlikely]] {
                 return Error(std::format(
-                    "shader name \"{}\" could not be used as "
-                    "it's reserved for internal purposes",
+                    "shader names that start with a dot (\".\") could not be used as "
+                    "these files are reserved for internal purposes",
                     sGlobalShaderCacheParametersFileName));
             }
 
@@ -146,7 +146,7 @@ namespace ne {
                 return result.value();
             }
 
-            auto bOldShaderCacheInRelease = configManager.getBoolValue(
+            const auto bOldShaderCacheInRelease = configManager.getValue<bool>(
                 sGlobalShaderCacheParametersSectionName,
                 sGlobalShaderCacheParametersReleaseBuildKeyName,
                 !bIsReleaseBuild);
@@ -176,7 +176,7 @@ namespace ne {
         }
 
         if (bUpdateShaderCacheConfig) {
-            configManager.setBoolValue(
+            configManager.setValue<bool>(
                 sGlobalShaderCacheParametersSectionName,
                 sGlobalShaderCacheParametersReleaseBuildKeyName,
                 bIsReleaseBuild);

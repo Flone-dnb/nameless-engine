@@ -47,8 +47,8 @@ namespace ne {
         basePath /= sRendererConfigurationFileName;
 
         // Check extension.
-        if (!std::string_view(sRendererConfigurationFileName).ends_with(".ini")) {
-            basePath += ".ini";
+        if (!std::string_view(sRendererConfigurationFileName).ends_with(".toml")) {
+            basePath += ".toml";
         }
 
         return basePath;

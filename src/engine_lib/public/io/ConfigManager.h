@@ -9,7 +9,8 @@
 #include "misc/Error.h"
 
 // External.
-#include "simpleini/SimpleIni.h"
+#define TOML11_PRESERVE_COMMENTS_BY_DEFAULT
+#include "toml11/toml.hpp"
 
 namespace ne {
     /**
@@ -29,7 +30,8 @@ namespace ne {
          * Constructs an empty configuration, use @ref loadFile to read configuration from a file
          * or setValue methods and then @ref saveFile to save a new configuration.
          */
-        ConfigManager();
+        ConfigManager() = default;
+
         ConfigManager(const ConfigManager&) = delete;
         ConfigManager& operator=(const ConfigManager&) = delete;
 
@@ -38,10 +40,10 @@ namespace ne {
          * contains.
          *
          * How backup files are handled:
-         * Imagine you had a file 'player.ini' and a backup file ('player.ini.old').
-         * If, for some reason, 'player.ini' (the original file) does not exist,
-         * but its backup file is there, we will copy the backup file (player.ini.old)
-         * as the original file (will copy 'player.ini.old' as 'player.ini') and
+         * Imagine you had a file 'player.toml' and a backup file ('player.toml.old').
+         * If, for some reason, 'player.toml' (the original file) does not exist,
+         * but its backup file is there, we will copy the backup file (player.toml.old)
+         * as the original file (will copy 'player.toml.old' as 'player.toml') and
          * return 'player' as an available config file.
          *
          * @param category Category (directory) in which to look for files.
@@ -72,14 +74,14 @@ namespace ne {
          * settings.
          * @param sFileName   Name of the file to remove. We will search it in a predefined directory
          * that we also use in @ref saveFile (use @ref getFilePath to see full path),
-         * the .ini extension will be added if the passed name does not have it.
+         * the .toml extension will be added if the passed name does not have it.
          *
          * @return Error if something went wrong.
          */
         static std::optional<Error> removeFile(ConfigCategory category, std::string_view sFileName);
 
         /**
-         * Loads data from INI file.
+         * Loads data from TOML file.
          * File should exist, otherwise an error will be returned (you can use @ref getAllFiles
          * or @ref getCategoryDirectory to see if files exist).
          * If you used @ref saveFile before and enabled a backup file (see @ref saveFile),
@@ -90,14 +92,14 @@ namespace ne {
          * Use PROGRESS category to save player's game progress and SETTINGS to store player's settings.
          * @param sFileName   Name of the file to load. We will load it from a predefined directory
          * that we also use in @ref saveFile (use @ref getFilePath to see full path),
-         * the .ini extension will be added if the passed name does not have it.
+         * the .toml extension will be added if the passed name does not have it.
          *
          * @return Error if something went wrong.
          */
         std::optional<Error> loadFile(ConfigCategory category, std::string_view sFileName);
 
         /**
-         * Loads data from INI file.
+         * Loads data from file.
          *
          * Prefer to use the other overload (@ref loadFile) that uses a category instead of a path.
          *
@@ -107,61 +109,41 @@ namespace ne {
          * will copy this backup file with a name of the usual (original) file
          * (so this function will restore the original file if it was deleted).
          *
-         * @param pathToFile  Path to the file to load (should exist).
+         * @param pathToConfigFile  Path to the file to load (should exist).
+         * The .toml extension will be added if the passed name does not have it.
          *
          * @return Error if something went wrong.
          */
-        std::optional<Error> loadFile(std::filesystem::path pathToFile);
+        std::optional<Error> loadFile(const std::filesystem::path& pathToConfigFile);
 
         /**
-         * Reads a value from loaded INI file (see @ref loadFile).
+         * Reads a value from the loaded file (see @ref loadFile).
          *
-         * @param sSection       Name of the section. UTF-8 encoded.
-         * @param sKey           Name of the key. UTF-8 encoded.
-         * @param sDefaultValue  Value that will be returned if the specified key was not found. UTF-8
-         * encoded.
+         * Example:
+         * @code
+         * // sample.toml:
+         * // pi      = 3.14
+         * // numbers = [1,2,3]
+         * // time    = 1979-05-27T07:32:00Z
+         * // [server]
+         * // port    = 12312
+         * using std::chrono::system_clock;
+         * double pi = manager.getValue<double>("", "pi", 0.0);
+         * std::vector<int> = manager.getValue<std::vector<int>>("", "numbers", std::vector<int>{});
+         * system_clock::time_point time = manager.getValue<time_point>("", "time", system_clock::now());
+         * int port = manager.getValue<int>("server", "port", 0);
+         * @endcode
          *
-         * @return Default value if the specified section/key was not found,
-         * otherwise value from INI file.
-         */
-        std::string getStringValue(
-            std::string_view sSection, std::string_view sKey, std::string_view sDefaultValue) const;
-
-        /**
-         * Reads a value from loaded INI file (see @ref loadFile).
-         *
-         * @param sSection       Name of the section.
-         * @param sKey           Name of the key.
-         * @param bDefaultValue  Value that will be returned if the specified key was not found.
-         *
-         * @return Default value if the specified section/key was not found,
-         * otherwise value from INI file.
-         */
-        bool getBoolValue(std::string_view sSection, std::string_view sKey, bool bDefaultValue) const;
-
-        /**
-         * Reads a value from loaded INI file (see @ref loadFile).
-         *
-         * @param sSection       Name of the section.
+         * @param sSection       Name of the section (can be empty if the key has no section).
          * @param sKey           Name of the key.
          * @param defaultValue   Value that will be returned if the specified key was not found.
          *
-         * @return Default value if the specified section/key was not found,
-         * otherwise value from INI file.
-         */
-        double getDoubleValue(std::string_view sSection, std::string_view sKey, double defaultValue) const;
-
-        /**
-         * Reads a value from loaded INI file (see @ref loadFile).
-         *
-         * @param sSection       Name of the section.
-         * @param sKey           Name of the key.
-         * @param iDefaultValue  Value that will be returned if the specified key was not found.
          *
          * @return Default value if the specified section/key was not found,
-         * otherwise value from INI file.
+         * otherwise value from file.
          */
-        long getLongValue(std::string_view sSection, std::string_view sKey, long iDefaultValue) const;
+        template <typename T>
+        T getValue(std::string_view sSection, std::string_view sKey, T defaultValue) const;
 
         /**
          * Returns names of all sections.
@@ -183,53 +165,29 @@ namespace ne {
         /**
          * Sets a value. This value will not be written to file until @ref saveFile is called.
          *
+         * If the specified key was already set before, this call will overwrite it with the new value
+         * (that can have a different type).
          *
-         * @param sSection   Name of the section. UTF-8 encoded.
-         * @param sKey       Name of the key. UTF-8 encoded.
-         * @param sValue     Value to set. UTF-8 encoded.
-         * @param sComment   Comment to add to this value. UTF-8 encoded.
-         */
-        void setStringValue(
-            std::string_view sSection,
-            std::string_view sKey,
-            std::string_view sValue,
-            std::string_view sComment = "");
-
-        /**
-         * Sets a value. This value will not be written to file until @ref saveFile is called.
+         * The underlying type for integer is std::int64_t, for floating values is double.
          *
+         * Example:
+         * @code
+         * // in order to create this sample.toml:
+         * // foo = 42
+         * // [server]
+         * // port    = 12312
+         * manager.setValue<int>("", "foo", 42);
+         * manager.setValue<int>("server", "port", 12312);
+         * @endcode
          *
-         * @param sSection   Name of the section.
-         * @param sKey       Name of the key.
-         * @param bValue     Value to set.
-         * @param sComment   Comment to add to this value.
-         */
-        void setBoolValue(
-            std::string_view sSection, std::string_view sKey, bool bValue, std::string_view sComment = "");
-
-        /**
-         * Sets a value. This value will not be written to file until @ref saveFile is called.
-         *
-         *
-         * @param sSection   Name of the section.
+         * @param sSection   Name of the section (can be empty if the key has no section).
          * @param sKey       Name of the key.
          * @param value      Value to set.
          * @param sComment   Comment to add to this value.
          */
-        void setDoubleValue(
-            std::string_view sSection, std::string_view sKey, double value, std::string_view sComment = "");
-
-        /**
-         * Sets a value. This value will not be written to file until @ref saveFile is called.
-         *
-         *
-         * @param sSection   Name of the section.
-         * @param sKey       Name of the key.
-         * @param iValue     Value to set.
-         * @param sComment   Comment to add to this value.
-         */
-        void setLongValue(
-            std::string_view sSection, std::string_view sKey, long iValue, std::string_view sComment = "");
+        template <typename T>
+        void
+        setValue(std::string_view sSection, std::string_view sKey, T value, std::string_view sComment = "");
 
         /**
          * Saves the current configuration to a file with a UTF-8 encoding.
@@ -251,7 +209,7 @@ namespace ne {
          * @param sFileName   Name of the file to save, prefer to have only ASCII characters in the
          * file name. We will save it to a predefined directory
          * that we also use in @ref loadFile (use @ref getFilePath to see full path),
-         * the .ini extension will be added if the passed name does not have it.
+         * the .toml extension will be added if the passed name does not have it.
          *
          * @return Error if something went wrong.
          */
@@ -262,8 +220,9 @@ namespace ne {
          *
          * Prefer to use the other overload (@ref saveFile) that uses a category instead of a path.
          *
-         * @param pathToFile  Path to the file to save (if file does not exist, it will be created).
-         * @param bEnableBackup  If 'true' will also use a backup (copy) file. @ref loadFile can use
+         * @param pathToConfigFile  Path to the file to save (if file does not exist, it will be created).
+         * The .toml extension will be added if the passed name does not have it.
+         * @param bEnableBackup     If 'true' will also use a backup (copy) file. @ref loadFile can use
          * backup file if a usual configuration file does not exist. Generally you want to use
          * a backup file if you are saving important information, such as player progress,
          * other cases such as player game settings and etc. usually do not need a backup but
@@ -271,7 +230,7 @@ namespace ne {
          *
          * @return Error if something went wrong.
          */
-        std::optional<Error> saveFile(const std::filesystem::path& pathToFile, bool bEnableBackup);
+        std::optional<Error> saveFile(const std::filesystem::path& pathToConfigFile, bool bEnableBackup);
 
         /**
          * Returns full path to the file if it was loaded using @ref loadFile
@@ -289,7 +248,7 @@ namespace ne {
          * Use PROGRESS category to save player's game progress and SETTINGS to store player's settings.
          * @param sFileName   Name of the file, a predefined directory
          * will be appended to the beginning,
-         * the .ini extension will be added if the passed name does not have it.
+         * the .toml extension will be added if the passed name does not have it.
          *
          * @return Error if something went wrong, valid path otherwise.
          */
@@ -297,7 +256,7 @@ namespace ne {
         constructFilePath(ConfigCategory category, std::string_view sFileName);
 
         /** Config file structure */
-        CSimpleIniA ini;
+        toml::value tomlData;
 
         /** Full path to file. */
         std::filesystem::path filePath;
@@ -306,4 +265,30 @@ namespace ne {
         inline static const char* sBackupFileExtension = ".old";
     };
 
+    template <typename T>
+    T ConfigManager::getValue(std::string_view sSection, std::string_view sKey, T defaultValue) const {
+        if (sSection.empty()) {
+            return toml::find_or(tomlData, sKey.data(), defaultValue);
+        } else {
+            return toml::find_or(tomlData, sSection.data(), sKey.data(), defaultValue);
+        }
+    }
+
+    template <typename T>
+    void ConfigManager::setValue(
+        std::string_view sSection, std::string_view sKey, T value, std::string_view sComment) {
+        if (sSection.empty()) {
+            if (sComment.empty()) {
+                tomlData[sKey.data()] = toml::value(value);
+            } else {
+                tomlData[sKey.data()] = toml::value(value, {sComment.data()});
+            }
+        } else {
+            if (sComment.empty()) {
+                tomlData[sSection.data()][sKey.data()] = toml::value(value);
+            } else {
+                tomlData[sSection.data()][sKey.data()] = toml::value(value, {sComment.data()});
+            }
+        }
+    }
 } // namespace ne

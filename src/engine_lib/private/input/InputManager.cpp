@@ -141,7 +141,7 @@ namespace ne {
 
             sActionKeysText.pop_back(); // pop comma
 
-            manager.setStringValue(sActionEventSectionName, sActionName, sActionKeysText);
+            manager.setValue<std::string>(sActionEventSectionName, sActionName, sActionKeysText);
         }
 
         // Axis events.
@@ -158,7 +158,7 @@ namespace ne {
 
             sAxisKeysText.pop_back(); // pop comma
 
-            manager.setStringValue(sAxisEventSectionName, sAxisName, sAxisKeysText);
+            manager.setValue<std::string>(sAxisEventSectionName, sAxisName, sAxisKeysText);
         }
 
         auto optional = manager.saveFile(ConfigCategory::SETTINGS, sFileName);
@@ -225,7 +225,7 @@ namespace ne {
                 }
 
                 // Read keys from this action.
-                auto keys = manager.getStringValue(sActionEventSectionName, sActionName, "");
+                auto keys = manager.getValue<std::string>(sActionEventSectionName, sActionName, "");
                 if (keys.empty()) {
                     continue;
                 }
@@ -295,7 +295,7 @@ namespace ne {
                 }
 
                 // Read keys from this axis.
-                auto keys = manager.getStringValue(sAxisEventSectionName, sAxisName, "");
+                auto keys = manager.getValue<std::string>(sAxisEventSectionName, sAxisName, "");
                 if (keys.empty()) {
                     continue;
                 }

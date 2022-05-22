@@ -47,6 +47,19 @@ func main() {
 				build_directory, "error:", err)
 			os.Exit(1)
 		}
+	} else {
+		err = os.RemoveAll(build_directory)
+		if err != nil {
+			fmt.Println("ERROR: copy_ext_licenses.go: failed to remove old directory",
+				build_directory, "error:", err)
+			os.Exit(1)
+		}
+		err = os.Mkdir(build_directory, os.ModePerm)
+		if err != nil {
+			fmt.Println("ERROR: copy_ext_licenses.go: failed to create directory",
+				build_directory, "error:", err)
+			os.Exit(1)
+		}
 	}
 
 	var copied_licenses_count = 0

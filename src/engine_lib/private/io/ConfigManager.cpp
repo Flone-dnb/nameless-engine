@@ -1,11 +1,11 @@
 ﻿#include "io/ConfigManager.h"
 
 // Custom.
+#include <ranges>
+
 #include "misc/Globals.h"
 
 namespace ne {
-    ConfigManager::ConfigManager() { ini.SetUnicode(true); }
-
     std::vector<std::string> ConfigManager::getAllFiles(ConfigCategory category) {
         const auto categoryFolder = ConfigManager::getCategoryDirectory(category);
 
@@ -16,7 +16,7 @@ namespace ne {
                 if (entry.path().extension().string() == sBackupFileExtension) {
                     // Backup file. See if original file exists.
                     auto originalFilePath = categoryFolder;
-                    originalFilePath += entry.path().stem().string(); // will return 'text.ini'
+                    originalFilePath += entry.path().stem().string(); // will return 'text.toml'
                     if (!std::filesystem::exists(originalFilePath)) {
                         // Backup file exists, but not the original file.
                         // Copy backup file as the original.
@@ -113,7 +113,14 @@ namespace ne {
         return {};
     }
 
-    std::optional<Error> ConfigManager::loadFile(std::filesystem::path pathToFile) {
+    std::optional<Error> ConfigManager::loadFile(const std::filesystem::path& pathToConfigFile) {
+        auto pathToFile = pathToConfigFile;
+
+        // Check extension.
+        if (!pathToFile.string().ends_with(".toml")) {
+            pathToFile += ".toml";
+        }
+
         std::filesystem::path backupFile = pathToFile;
         backupFile += sBackupFileExtension;
 
@@ -127,9 +134,11 @@ namespace ne {
         }
 
         // Load file.
-        const SI_Error error = ini.LoadFile(pathToFile.c_str());
-        if (error < 0) {
-            return Error(std::format("failed to load file, error code: {}", std::to_string(error)));
+        try {
+            tomlData = toml::parse(pathToFile);
+        } catch (std::exception& exception) {
+            return Error(
+                std::format("failed to load file {}, error: {}", pathToFile.string(), exception.what()));
         }
 
         filePath = pathToFile;
@@ -137,33 +146,14 @@ namespace ne {
         return {};
     }
 
-    std::string ConfigManager::getStringValue(
-        std::string_view sSection, std::string_view sKey, std::string_view sDefaultValue) const {
-        return ini.GetValue(sSection.data(), sKey.data(), sDefaultValue.data());
-    }
-
-    bool
-    ConfigManager::getBoolValue(std::string_view sSection, std::string_view sKey, bool bDefaultValue) const {
-        return ini.GetBoolValue(sSection.data(), sKey.data(), bDefaultValue);
-    }
-
-    double ConfigManager::getDoubleValue(
-        std::string_view sSection, std::string_view sKey, double defaultValue) const {
-        return ini.GetDoubleValue(sSection.data(), sKey.data(), defaultValue);
-    }
-
-    long
-    ConfigManager::getLongValue(std::string_view sSection, std::string_view sKey, long iDefaultValue) const {
-        return ini.GetLongValue(sSection.data(), sKey.data(), iDefaultValue);
-    }
-
     std::vector<std::string> ConfigManager::getAllSections() {
-        CSimpleIniA::TNamesDepend sections;
-        ini.GetAllSections(sections);
-
         std::vector<std::string> vSections;
-        for (const auto& sectionEntry : sections) {
-            vSections.push_back(sectionEntry.pItem);
+
+        const auto table = tomlData.as_table();
+        for (const auto& [key, value] : table) {
+            if (value.is_table()) {
+                vSections.push_back(key);
+            }
         }
 
         return vSections;
@@ -171,76 +161,25 @@ namespace ne {
 
     std::variant<std::vector<std::string>, Error>
     ConfigManager::getAllKeysOfSection(std::string_view sSection) const {
-        CSimpleIniA::TNamesDepend keys;
-        if (ini.GetAllKeys(sSection.data(), keys) == false) {
-            return Error(std::format("section '{}' was not found", sSection));
+        toml::value section;
+        try {
+            section = toml::find(tomlData, sSection.data());
+        } catch (std::exception& ex) {
+            return Error(std::format("no section \"{}\" was found ({})", sSection, ex.what()));
         }
 
+        if (!section.is_table()) {
+            return Error(std::format("found \"{}\" is not a section", sSection));
+        }
+
+        const auto table = section.as_table();
+
         std::vector<std::string> vKeys;
-        for (const auto& keyEntry : keys) {
-            vKeys.push_back(keyEntry.pItem);
+        for (const auto& key : table | std::views::keys) {
+            vKeys.push_back(key);
         }
 
         return vKeys;
-    }
-
-    void ConfigManager::setStringValue(
-        std::string_view sSection,
-        std::string_view sKey,
-        std::string_view sValue,
-        std::string_view sComment) {
-        std::string sFixedComment(sComment);
-        if (!sComment.empty() && !sComment.starts_with('#')) {
-            sFixedComment.insert(0, "# ");
-        }
-
-        if (sFixedComment.empty()) {
-            ini.SetValue(sSection.data(), sKey.data(), sValue.data());
-        } else {
-            ini.SetValue(sSection.data(), sKey.data(), sValue.data(), sFixedComment.c_str());
-        }
-    }
-
-    void ConfigManager::setBoolValue(
-        std::string_view sSection, std::string_view sKey, bool bValue, std::string_view sComment) {
-        std::string sFixedComment(sComment);
-        if (!sComment.empty() && !sComment.starts_with('#')) {
-            sFixedComment.insert(0, "# ");
-        }
-
-        if (sFixedComment.empty()) {
-            ini.SetBoolValue(sSection.data(), sKey.data(), bValue);
-        } else {
-            ini.SetBoolValue(sSection.data(), sKey.data(), bValue, sFixedComment.c_str());
-        }
-    }
-
-    void ConfigManager::setDoubleValue(
-        std::string_view sSection, std::string_view sKey, double value, std::string_view sComment) {
-        std::string sFixedComment(sComment);
-        if (!sComment.empty() && !sComment.starts_with('#')) {
-            sFixedComment.insert(0, "# ");
-        }
-
-        if (sFixedComment.empty()) {
-            ini.SetDoubleValue(sSection.data(), sKey.data(), value);
-        } else {
-            ini.SetDoubleValue(sSection.data(), sKey.data(), value, sFixedComment.c_str());
-        }
-    }
-
-    void ConfigManager::setLongValue(
-        std::string_view sSection, std::string_view sKey, long iValue, std::string_view sComment) {
-        std::string sFixedComment(sComment);
-        if (!sComment.empty() && !sComment.starts_with('#')) {
-            sFixedComment.insert(0, "# ");
-        }
-
-        if (sFixedComment.empty()) {
-            ini.SetLongValue(sSection.data(), sKey.data(), iValue);
-        } else {
-            ini.SetLongValue(sSection.data(), sKey.data(), iValue, sFixedComment.c_str());
-        }
     }
 
     std::optional<Error> ConfigManager::saveFile(ConfigCategory category, std::string_view sFileName) {
@@ -262,7 +201,14 @@ namespace ne {
     }
 
     std::optional<Error>
-    ConfigManager::saveFile(const std::filesystem::path& pathToFile, bool bEnableBackup) {
+    ConfigManager::saveFile(const std::filesystem::path& pathToConfigFile, bool bEnableBackup) {
+        auto pathToFile = pathToConfigFile;
+
+        // Check extension.
+        if (!pathToFile.string().ends_with(".toml")) {
+            pathToFile += ".toml";
+        }
+
         if (!std::filesystem::exists(pathToFile.parent_path())) {
             std::filesystem::create_directories(pathToFile.parent_path());
         }
@@ -279,13 +225,15 @@ namespace ne {
             }
         }
 
-        const SI_Error error = ini.SaveFile(pathToFile.c_str());
-        if (error < 0) {
-            return Error(std::format("failed to load file, error code: {}", std::to_string(error)));
+        std::ofstream outFile(pathToFile, std::ios::binary);
+        if (!outFile.is_open()) {
+            return Error(std::format("failed to open file {} for writing", pathToFile.string()));
         }
+        outFile << tomlData;
+        outFile.close();
 
         if (bEnableBackup) {
-            // Create backup file if not exists.
+            // Create backup file if it does not exist.
             if (!std::filesystem::exists(backupFile)) {
                 std::filesystem::copy_file(pathToFile, backupFile);
             }
@@ -346,8 +294,8 @@ namespace ne {
             basePath += sFileName;
 
             // Check extension.
-            if (!sFileName.ends_with(".ini")) {
-                basePath += ".ini";
+            if (!sFileName.ends_with(".toml")) {
+                basePath += ".toml";
             }
         }
 

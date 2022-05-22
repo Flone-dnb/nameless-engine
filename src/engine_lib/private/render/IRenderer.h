@@ -243,10 +243,10 @@ namespace ne {
         inline static const char* sConfigurationSectionResolution = "resolution";
 
         /** Name of the section (used in configuration) for refresh rate settings. */
-        inline static const char* sConfigurationSectionRefreshRate = "refresh rate";
+        inline static const char* sConfigurationSectionRefreshRate = "refresh_rate";
 
         /** Name of the section (used in configuration) for anti-aliasing settings. */
-        inline static const char* sConfigurationSectionAntialiasing = "anti-aliasing";
+        inline static const char* sConfigurationSectionAntialiasing = "anti_aliasing";
 
         /** Name of the section (used in configuration) for vsync settings. */
         inline static const char* sConfigurationSectionVSync = "vsync";

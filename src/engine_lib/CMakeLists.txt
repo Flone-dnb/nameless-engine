@@ -77,6 +77,10 @@ else()
     target_compile_options(${PROJECT_NAME} PUBLIC -Wall -Wextra -Werror)
 endif()
 
+if(MSVC)
+    target_compile_options(${PROJECT_NAME} PUBLIC /utf-8)
+endif()
+
 # set standard
 set(PROJECT_CXX_STANDARD_VERSION 23)
 target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_${PROJECT_CXX_STANDARD_VERSION})
@@ -99,6 +103,12 @@ target_link_libraries(${PROJECT_NAME} PUBLIC glfw)
 # spdlog
 add_subdirectory(../../ext/spdlog ../../build/spdlog)
 target_link_libraries(${PROJECT_NAME} PUBLIC spdlog::spdlog)
+
+# toml11
+if (MSVC)
+    target_compile_options(${PROJECT_NAME} PUBLIC /Zc:__cplusplus)
+endif()
+add_subdirectory(../../ext/toml11 build/toml11)
 
 if (WIN32)
     # dxc

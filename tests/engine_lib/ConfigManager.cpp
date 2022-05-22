@@ -67,22 +67,8 @@ TEST_CASE("create simple config file using path") {
     using namespace ne;
 
     std::filesystem::path testConfigPath = std::filesystem::temp_directory_path();
-#if WIN32
-    if (!testConfigPath.string().ends_with('\\')) {
-        testConfigPath += '\\';
-    }
-#elif __linux__
-    if (!testConfigPath.string().ends_with('/')) {
-        testConfigPath += '/';
-    }
-#endif
-    testConfigPath += "some folder";
-#if WIN32
-    testConfigPath += '\\';
-#elif __linux__
-    testConfigPath += '/';
-#endif
-    testConfigPath += sTestConfigFileName;
+    testConfigPath /= "some folder";
+    testConfigPath /= sTestConfigFileName;
 
     // Create file.
     {

@@ -138,6 +138,7 @@ namespace ne {
         const auto shaderCacheDir = IShader::getPathToShaderCacheDirectory();
         const auto shaderParamsPath =
             IShader::getPathToShaderCacheDirectory() / sGlobalShaderCacheParametersFileName;
+        bool bUpdateShaderCacheConfig = false;
         if (std::filesystem::exists(shaderParamsPath)) {
             auto result = configManager.loadFile(shaderParamsPath);
             if (result.has_value()) {
@@ -157,16 +158,7 @@ namespace ne {
                 std::filesystem::remove_all(shaderCacheDir);
                 std::filesystem::create_directory(shaderCacheDir);
 
-                configManager.setBoolValue(
-                    sGlobalShaderCacheParametersSectionName,
-                    sGlobalShaderCacheParametersReleaseBuildKeyName,
-                    bIsReleaseBuild);
-
-                result = configManager.saveFile(shaderParamsPath, false);
-                if (result.has_value()) {
-                    result->addEntry();
-                    return result.value();
-                }
+                bUpdateShaderCacheConfig = true;
             }
         } else {
             if (std::filesystem::exists(shaderCacheDir)) {
@@ -179,6 +171,11 @@ namespace ne {
                     "global shader cache parameters file was not found, creating a new {} configuration",
                     bIsReleaseBuild ? "release" : "debug"),
                 sShaderManagerLogCategory);
+
+            bUpdateShaderCacheConfig = true;
+        }
+
+        if (bUpdateShaderCacheConfig) {
             configManager.setBoolValue(
                 sGlobalShaderCacheParametersSectionName,
                 sGlobalShaderCacheParametersReleaseBuildKeyName,

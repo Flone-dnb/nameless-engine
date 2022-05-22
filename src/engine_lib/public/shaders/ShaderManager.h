@@ -124,6 +124,7 @@ namespace ne {
         const std::string_view sGlobalShaderCacheParametersFileName = ".shader_cache.ini";
         const std::string_view sGlobalShaderCacheParametersSectionName = "global shader cache parameters";
         const std::string_view sGlobalShaderCacheParametersReleaseBuildKeyName = "is_release_build";
+        const std::string_view sGlobalShaderCacheParametersGpuKeyName = "gpu";
 
         std::atomic_flag bIsShuttingDown;
     };

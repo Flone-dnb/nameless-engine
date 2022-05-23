@@ -161,6 +161,46 @@ TEST_CASE("create simple config file using non ASCII content") {
     }
 }
 
+TEST_CASE("access field that does not exist") {
+    using namespace ne;
+
+    // Create file.
+    {
+        ConfigManager manager;
+        manager.setValue<std::string>(sTestConfigFileSection, "test", "test", "this is a comment");
+
+        auto res = manager.saveFile(ConfigCategory::SETTINGS, sTestConfigFileName);
+        if (res.has_value()) {
+            res->addEntry();
+            INFO(res->getError());
+            REQUIRE(false);
+        }
+
+        // Check that file exists.
+        REQUIRE(std::filesystem::exists(manager.getFilePath()));
+    }
+
+    // Check if everything is correct.
+    {
+        ConfigManager manager;
+        auto res = manager.loadFile(ConfigCategory::SETTINGS, sTestConfigFileName);
+        if (res.has_value()) {
+            res->addEntry();
+            INFO(res->getError());
+            REQUIRE(false);
+        }
+
+        auto real = manager.getValue<std::string>(sTestConfigFileSection, "test1", "42");
+        REQUIRE(real == "42");
+
+        REQUIRE(std::filesystem::exists(manager.getFilePath()));
+
+        if (std::filesystem::exists(manager.getFilePath())) {
+            std::filesystem::remove(manager.getFilePath());
+        }
+    }
+}
+
 TEST_CASE("test backup file") {
     using namespace ne;
 

@@ -114,6 +114,6 @@ namespace ne {
          * If the logger directory contains this amount of log files,
          * the oldest log file will be removed to create a new one.
          */
-        inline static size_t iMaxLogFiles = 10;
+        inline static size_t iMaxLogFiles = 3;
     };
 } // namespace ne

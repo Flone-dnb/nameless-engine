@@ -201,6 +201,50 @@ TEST_CASE("access field that does not exist") {
     }
 }
 
+TEST_CASE("same keys in different sections") {
+    using namespace ne;
+
+    // Create file.
+    {
+        ConfigManager manager;
+        manager.setValue<std::string>("section1", "test", "test1");
+        manager.setValue<std::string>("section2", "test", "test2");
+
+        auto res = manager.saveFile(ConfigCategory::SETTINGS, sTestConfigFileName);
+        if (res.has_value()) {
+            res->addEntry();
+            INFO(res->getError());
+            REQUIRE(false);
+        }
+
+        // Check that file exists.
+        REQUIRE(std::filesystem::exists(manager.getFilePath()));
+    }
+
+    // Check if everything is correct.
+    {
+        ConfigManager manager;
+        auto res = manager.loadFile(ConfigCategory::SETTINGS, sTestConfigFileName);
+        if (res.has_value()) {
+            res->addEntry();
+            INFO(res->getError());
+            REQUIRE(false);
+        }
+
+        auto real = manager.getValue<std::string>("section1", "test", "");
+        REQUIRE(real == "test1");
+
+        real = manager.getValue<std::string>("section2", "test", "");
+        REQUIRE(real == "test2");
+
+        REQUIRE(std::filesystem::exists(manager.getFilePath()));
+
+        if (std::filesystem::exists(manager.getFilePath())) {
+            std::filesystem::remove(manager.getFilePath());
+        }
+    }
+}
+
 TEST_CASE("test backup file") {
     using namespace ne;
 

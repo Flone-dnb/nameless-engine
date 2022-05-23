@@ -177,8 +177,18 @@ namespace ne {
         /**
          * Sets a value. This value will not be written to file until @ref saveFile is called.
          *
-         * If the specified key was already set before, this call will overwrite it with the new value
-         * (that can have a different type).
+         * If the specified key was already set before (in the specified section),
+         * this call will overwrite it with the new value (that can have a different type).
+         *
+         * Different sections can have keys with the same name (uniqueness per section).
+         * Example:
+         * @code
+         * // sample.toml:
+         * [section1]
+         * test = test1
+         * [section2]
+         * test = test2
+         * @endcode
          *
          * Possible value types:
          * - integer types (underlying type for integer is std::int64_t),

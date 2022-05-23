@@ -32,8 +32,11 @@ EditorGameInstance::EditorGameInstance(ne::Window* pWindow, ne::InputManager* pI
                 ne::Logger::get().info(std::get<ne::Error>(error).getError(), "");
             }
         };
-    getWindow()->getRenderer()->getShaderManager()->compileShaders(
+    auto err = getWindow()->getRenderer()->getShaderManager()->compileShaders(
         std::vector{description}, onProgress, onError, [this]() { onShaderCompilationFinished(); });
+    if (err.has_value()) {
+        ne::Logger::get().error(err->getError(), "");
+    }
 }
 
 void EditorGameInstance::onShaderCompilationFinished() {

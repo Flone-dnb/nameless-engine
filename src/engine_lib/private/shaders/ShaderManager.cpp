@@ -3,7 +3,6 @@
 // STL.
 #include <format>
 #include <chrono>
-#include <ranges>
 #include <thread>
 
 // Custom.
@@ -82,6 +81,24 @@ namespace ne {
         const std::function<void()>& onCompleted) {
         if (vShadersToCompile.empty()) [[unlikely]] {
             return Error("the specified array of shaders to compile is empty");
+        }
+
+        // Check shader name for forbidden characters.
+        for (const auto& shader : vShadersToCompile) {
+            if (shader.sShaderName.ends_with(" ") || shader.sShaderName.ends_with(".")) {
+                return Error(
+                    std::format("shader name \"{}\" must not end with a dot or a space", shader.sShaderName));
+            }
+            for (const auto& character : shader.sShaderName) {
+                auto it = std::ranges::find(vValidCharactersForShaderName, character);
+                if (it == vValidCharactersForShaderName.end()) {
+                    return Error(std::format(
+                        "shader name \"{}\" contains forbidden "
+                        "character ({})",
+                        shader.sShaderName,
+                        character));
+                }
+            }
         }
 
         // Check if shutting down.

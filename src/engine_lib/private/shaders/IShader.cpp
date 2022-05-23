@@ -24,7 +24,13 @@ namespace ne {
     std::variant<std::unique_ptr<IShader>, std::string, Error>
     IShader::compileShader(const ShaderDescription& shaderDescription, IRenderer* pRenderer) {
         if (dynamic_cast<DirectXRenderer*>(pRenderer)) {
-            return HlslShader::compileShader(std::move(shaderDescription));
+            auto result = HlslShader::compileShader(std::move(shaderDescription));
+            if (std::holds_alternative<std::unique_ptr<IShader>>(result)) {
+                // Success. Create shader cache parameters.
+                const auto shaderCacheDir = getPathToShaderCacheDirectory() / shaderDescription.sShaderName;
+                // TODO
+            }
+            return result;
         } else {
             const auto err = Error("no shader type is associated with the "
                                    "current renderer (not implemented)");

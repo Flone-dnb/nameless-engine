@@ -94,6 +94,14 @@ namespace ne {
         std::string getError() const;
 
         /**
+         * Returns initial error message that was
+         * used to create this error.
+         *
+         * @return Initial error message.
+         */
+        std::string getInitialMessage() const;
+
+        /**
          * Creates an error string, shows it on screen and also writes it to log.
          */
         void showError() const;

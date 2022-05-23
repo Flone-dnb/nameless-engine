@@ -41,9 +41,7 @@ namespace ne {
             throw std::runtime_error(error->getError());
         }
 
-        if (!isConfigurationFileExists()) {
-            DirectXRenderer::writeConfigurationToConfigFile();
-        }
+        DirectXRenderer::writeConfigurationToConfigFile();
 
         // Disable Alt + Enter.
         const HRESULT hResult =
@@ -194,10 +192,6 @@ namespace ne {
     }
 
     std::optional<Error> DirectXRenderer::setVideoAdapter(const std::wstring& sVideoAdapterName) {
-        if (pVideoAdapter) {
-            return Error("another video adapter already set");
-        }
-
         for (UINT iAdapterIndex = 0;; iAdapterIndex++) {
             ComPtr<IDXGIAdapter3> pTestAdapter;
             if (pFactory->EnumAdapters(
@@ -429,12 +423,14 @@ namespace ne {
         }
         vSupportedVideoAdapters = std::get<std::vector<std::wstring>>(std::move(result));
         if (iPreferredGpuIndex >= static_cast<long>(vSupportedVideoAdapters.size())) {
-            Error error(std::format(
-                "preferred GPU index {} is out of range, supported GPUs in total: {}\n",
-                iPreferredGpuIndex,
-                vSupportedVideoAdapters.size()));
-            error.addEntry();
-            return error;
+            Logger::get().error(
+                std::format(
+                    "preferred GPU index {} is out of range, supported GPUs in total: {}, using first found "
+                    "GPU",
+                    iPreferredGpuIndex,
+                    vSupportedVideoAdapters.size()),
+                sRendererLogCategory);
+            iPreferredGpuIndex = 0; // use first found GPU
         }
 
         // Use video adapter.
@@ -442,6 +438,32 @@ namespace ne {
         if (error.has_value()) {
             error->addEntry();
             return error;
+        }
+
+        // Set output adapter (monitor) to use.
+        error = setOutputAdapter();
+        if (error.has_value()) {
+            if (iPreferredGpuIndex == 0) {
+                error->addEntry();
+                return error;
+            }
+            Logger::get().error(
+                std::format("{} ({}), using first found GPU", error->getInitialMessage(), iPreferredGpuIndex),
+                sRendererLogCategory);
+
+            // Try first found GPU.
+            iPreferredGpuIndex = 0;
+            error = setVideoAdapter(vSupportedVideoAdapters[iPreferredGpuIndex]);
+            if (error.has_value()) {
+                error->addEntry();
+                return error;
+            }
+
+            error = setOutputAdapter();
+            if (error.has_value()) {
+                error->addEntry();
+                return error;
+            }
         }
 
         // Create device.
@@ -483,13 +505,6 @@ namespace ne {
             return error;
         }
 
-        // Set output adapter (monitor) to use.
-        error = setOutputAdapter();
-        if (error.has_value()) {
-            error->addEntry();
-            return error;
-        }
-
         // Determine display mode.
         auto videoModesResult = getSupportedDisplayModes();
         if (std::holds_alternative<Error>(videoModesResult)) {
@@ -513,22 +528,24 @@ namespace ne {
             }
 
             if (vFilteredModes.empty()) {
-                Error err(std::format(
-                    "video mode with resolution ({}x{}) and refresh rate "
-                    "({}/{}) is not supported",
-                    currentDisplayMode.Width,
-                    currentDisplayMode.Height,
-                    currentDisplayMode.RefreshRate.Numerator,
-                    currentDisplayMode.RefreshRate.Denominator));
-                err.addEntry();
-                return err;
+                Logger::get().error(
+                    std::format(
+                        "video mode with resolution ({}x{}) and refresh rate "
+                        "({}/{}) is not supported, using default video mode",
+                        currentDisplayMode.Width,
+                        currentDisplayMode.Height,
+                        currentDisplayMode.RefreshRate.Numerator,
+                        currentDisplayMode.RefreshRate.Denominator),
+                    sRendererLogCategory);
+                // use last display mode
+                currentDisplayMode = vVideoModes.back();
             } else if (vFilteredModes.size() == 1) {
+                // found specified display mode
                 currentDisplayMode = vFilteredModes[0];
             } else {
                 std::string sErrorMessage = std::format(
                     "video mode with resolution ({}x{}) and refresh rate "
-                    "({}/{}) matched multiple supported modes, "
-                    "please pick one of the following:\n",
+                    "({}/{}) matched multiple supported modes:\n",
                     currentDisplayMode.Width,
                     currentDisplayMode.Height,
                     currentDisplayMode.RefreshRate.Numerator,
@@ -545,9 +562,10 @@ namespace ne {
                         static_cast<int>(mode.ScanlineOrdering),
                         static_cast<int>(mode.Scaling));
                 }
-                Error err(sErrorMessage);
-                err.addEntry();
-                return err;
+                Logger::get().error(
+                    std::format("{}\nusing default video mode", sErrorMessage), sRendererLogCategory);
+                // use last display mode
+                currentDisplayMode = vVideoModes.back();
             }
         } else {
             // use last display mode
@@ -895,7 +913,7 @@ namespace ne {
         manager.setValue<int>(
             getConfigurationSectionGpu(),
             "GPU",
-            0,
+            iPreferredGpuIndex,
             "index of the GPU to use, where '0' is the GPU with the most priority "
             "(first found GPU), '1' is the second found and etc.");
 

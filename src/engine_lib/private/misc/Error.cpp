@@ -92,6 +92,8 @@ namespace ne {
         return sErrorMessage;
     }
 
+    std::string Error::getInitialMessage() const { return sMessage; }
+
     void Error::showError() const {
         const std::string sErrorMessage = getError();
         Logger::get().error(sErrorMessage, "");

@@ -119,6 +119,18 @@ namespace ne {
         /**
          * Reads a value from the loaded file (see @ref loadFile).
          *
+         * Possible value types:
+         * - integer types (underlying type for integer is std::int64_t),
+         * - float/double,
+         * - bool,
+         * - strings,
+         * - date/time,
+         * - array containers (vector, list, deque, etc.),
+         * - map containers (unordered_map, etc.).
+         *
+         * In order to use custom user types see:
+         * https://github.com/ToruNiina/toml11#conversion-between-toml-value-and-arbitrary-types
+         *
          * Example:
          * @code
          * // sample.toml:
@@ -168,15 +180,30 @@ namespace ne {
          * If the specified key was already set before, this call will overwrite it with the new value
          * (that can have a different type).
          *
-         * The underlying type for integer is std::int64_t, for floating values is double.
+         * Possible value types:
+         * - integer types (underlying type for integer is std::int64_t),
+         * - float/double,
+         * - bool,
+         * - strings,
+         * - date/time,
+         * - array containers (vector, list, deque, etc.),
+         * - map containers (unordered_map, etc.).
+         *
+         * In order to use custom user types see:
+         * https://github.com/ToruNiina/toml11#conversion-between-toml-value-and-arbitrary-types
          *
          * Example:
          * @code
          * // in order to create this sample.toml:
-         * // foo = 42
+         * // pi      = 3.14
+         * // numbers = [1,2,3]
+         * // time    = 1979-05-27T07:32:00Z
          * // [server]
          * // port    = 12312
-         * manager.setValue<int>("", "foo", 42);
+         * using std::chrono::system_clock;
+         * manager.setValue<double>("", "pi", 3.14);
+         * manager.setValue<std::vector<int>>("", "numbers", std::vector<int>{1, 2, 3});
+         * manager.setValue<time_point>("", "time", system_clock::now());
          * manager.setValue<int>("server", "port", 12312);
          * @endcode
          *

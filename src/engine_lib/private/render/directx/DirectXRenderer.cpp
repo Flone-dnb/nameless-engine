@@ -375,7 +375,7 @@ namespace ne {
 
         D3D12_FEATURE_DATA_MULTISAMPLE_QUALITY_LEVELS msQualityLevels;
         msQualityLevels.Format = backBufferFormat;
-        msQualityLevels.SampleCount = iMsaaSampleCount;
+        msQualityLevels.SampleCount = 4; // test max quality
         msQualityLevels.Flags = D3D12_MULTISAMPLE_QUALITY_LEVELS_FLAG_NONE;
         msQualityLevels.NumQualityLevels = 0;
 
@@ -386,7 +386,7 @@ namespace ne {
         }
 
         if (msQualityLevels.NumQualityLevels == 0) {
-            return Error("zero quality levels returned for MSAA support");
+            return Error("received zero quality levels for MSAA");
         }
 
         iMsaaQuality = msQualityLevels.NumQualityLevels;

@@ -6,6 +6,8 @@
 #include "misc/Globals.h"
 
 namespace ne {
+    std::string ConfigManager::getConfigFormatExtension() { return ".toml"; }
+
     std::vector<std::string> ConfigManager::getAllFiles(ConfigCategory category) {
         const auto categoryFolder = ConfigManager::getCategoryDirectory(category);
 
@@ -117,8 +119,8 @@ namespace ne {
         auto pathToFile = pathToConfigFile;
 
         // Check extension.
-        if (!pathToFile.string().ends_with(".toml")) {
-            pathToFile += ".toml";
+        if (!pathToFile.string().ends_with(ConfigManager::getConfigFormatExtension())) {
+            pathToFile += ConfigManager::getConfigFormatExtension();
         }
 
         std::filesystem::path backupFile = pathToFile;
@@ -205,8 +207,8 @@ namespace ne {
         auto pathToFile = pathToConfigFile;
 
         // Check extension.
-        if (!pathToFile.string().ends_with(".toml")) {
-            pathToFile += ".toml";
+        if (!pathToFile.string().ends_with(ConfigManager::getConfigFormatExtension())) {
+            pathToFile += ConfigManager::getConfigFormatExtension();
         }
 
         if (!std::filesystem::exists(pathToFile.parent_path())) {
@@ -294,8 +296,8 @@ namespace ne {
             basePath += sFileName;
 
             // Check extension.
-            if (!sFileName.ends_with(".toml")) {
-                basePath += ".toml";
+            if (!sFileName.ends_with(ConfigManager::getConfigFormatExtension())) {
+                basePath += ConfigManager::getConfigFormatExtension();
             }
         }
 

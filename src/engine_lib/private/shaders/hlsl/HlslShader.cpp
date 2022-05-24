@@ -52,11 +52,16 @@ namespace ne {
 
         const auto shaderCacheDir = getPathToShaderCacheDirectory();
 
+        // Convert std::string to std::wstring to be used.
+        std::wstring sShaderEntry(
+            shaderDescription.sShaderEntryFunctionName.begin(),
+            shaderDescription.sShaderEntryFunctionName.end());
+
         // Prepare compilation arguments.
         std::vector<LPCWSTR> vArgs;
         vArgs.push_back(shaderDescription.pathToShaderFile.c_str());
         vArgs.push_back(L"-E");
-        vArgs.push_back(shaderDescription.sShaderEntryFunctionName.c_str());
+        vArgs.push_back(sShaderEntry.c_str());
         vArgs.push_back(L"-T");
         vArgs.push_back(sShaderModel.c_str());
 #if defined(DEBUG)
@@ -71,8 +76,9 @@ namespace ne {
 #endif
 
         for (const auto& macroDefine : shaderDescription.vDefinedShaderMacros) {
+            auto macro = std::wstring(macroDefine.begin(), macroDefine.end());
             vArgs.push_back(L"-D");
-            vArgs.push_back(macroDefine.c_str());
+            vArgs.push_back(macro.c_str());
         }
 
         // Open source file.

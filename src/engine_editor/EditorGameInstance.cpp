@@ -11,8 +11,8 @@ EditorGameInstance::EditorGameInstance(ne::Window* pWindow, ne::InputManager* pI
         "test",
         "res/engine/shaders/default.hlsl",
         ne::ShaderType::VERTEX_SHADER,
-        L"VS",
-        std::vector<std::wstring>());
+        "VS",
+        std::vector<std::string>());
     size_t iThreadId = std::hash<std::thread::id>()(std::this_thread::get_id());
     auto onProgress = [iThreadId](size_t iCompiledShaderCount, size_t iTotalShadersToCompile) {
         ne::Logger::get().info(

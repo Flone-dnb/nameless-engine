@@ -4,6 +4,7 @@
 #include <format>
 
 // Custom.
+#include "io/ConfigManager.h"
 #include "io/Logger.h"
 #include "misc/Globals.h"
 #include "misc/Error.h"
@@ -23,12 +24,30 @@ namespace ne {
 
     std::variant<std::unique_ptr<IShader>, std::string, Error>
     IShader::compileShader(const ShaderDescription& shaderDescription, IRenderer* pRenderer) {
+        const auto shaderCacheFilePath = getPathToShaderCacheDirectory() / shaderDescription.sShaderName;
+        ConfigManager configManager;
+
+        // Check if cached config exists.
+        if (std::filesystem::exists(
+                shaderCacheFilePath.string() + ConfigManager::getConfigFormatExtension())) {
+            // See if we need to recompile or use cache.
+            configManager.loadFile(shaderCacheFilePath);
+            auto cachedShaderDescription =
+                configManager.getValue<ShaderDescription>("", "shader_description", ShaderDescription());
+
+            if (shaderDescription.isSerializableDataEqual(cachedShaderDescription)) {
+                // TODO: use cache.
+            } else {
+                // TODO: recompile and overwrite this cached info.
+            }
+        }
+
         if (dynamic_cast<DirectXRenderer*>(pRenderer)) {
             auto result = HlslShader::compileShader(std::move(shaderDescription));
             if (std::holds_alternative<std::unique_ptr<IShader>>(result)) {
-                // Success. Create shader cache parameters.
-                const auto shaderCacheDir = getPathToShaderCacheDirectory() / shaderDescription.sShaderName;
-                // TODO
+                // Success. Cache configuration.
+                configManager.setValue<ShaderDescription>("", "shader_description", shaderDescription);
+                configManager.saveFile(shaderCacheFilePath, false);
             }
             return result;
         } else {

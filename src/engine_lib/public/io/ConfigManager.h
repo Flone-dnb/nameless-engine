@@ -36,6 +36,13 @@ namespace ne {
         ConfigManager& operator=(const ConfigManager&) = delete;
 
         /**
+         * Returns file format extension used to store config files.
+         *
+         * @return File extension that starts with a dot, for example: ".toml".
+         */
+        static std::string getConfigFormatExtension();
+
+        /**
          * Returns file names (without extension) that this category (directory)
          * contains.
          *
@@ -128,7 +135,8 @@ namespace ne {
          * - array containers (vector, list, deque, etc.),
          * - map containers (unordered_map, etc.).
          *
-         * In order to use custom user types see:
+         * In order to use custom user types include @ref ConfigManager
+         * and see our ShaderDescription class or:
          * https://github.com/ToruNiina/toml11#conversion-between-toml-value-and-arbitrary-types
          *
          * Example:
@@ -199,7 +207,8 @@ namespace ne {
          * - array containers (vector, list, deque, etc.),
          * - map containers (unordered_map, etc.).
          *
-         * In order to use custom user types see:
+         * In order to use custom user types include @ref ConfigManager
+         * and see our ShaderDescription class or:
          * https://github.com/ToruNiina/toml11#conversion-between-toml-value-and-arbitrary-types
          *
          * Example:

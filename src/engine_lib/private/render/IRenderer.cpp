@@ -47,8 +47,9 @@ namespace ne {
         basePath /= sRendererConfigurationFileName;
 
         // Check extension.
-        if (!std::string_view(sRendererConfigurationFileName).ends_with(".toml")) {
-            basePath += ".toml";
+        if (!std::string_view(sRendererConfigurationFileName)
+                 .ends_with(ConfigManager::getConfigFormatExtension())) {
+            basePath += ConfigManager::getConfigFormatExtension();
         }
 
         return basePath;

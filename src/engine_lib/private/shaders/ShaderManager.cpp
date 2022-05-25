@@ -83,8 +83,12 @@ namespace ne {
             return Error("the specified array of shaders to compile is empty");
         }
 
-        // Check shader name for forbidden characters.
+        // Check shader name for forbidden characters and see if source file exists.
         for (const auto& shader : vShadersToCompile) {
+            if (!std::filesystem::exists(shader.pathToShaderFile)) {
+                return Error(std::format(
+                    "shader source file \"{}\" does not exist", shader.pathToShaderFile.string()));
+            }
             if (shader.sShaderName.ends_with(" ") || shader.sShaderName.ends_with(".")) {
                 return Error(
                     std::format("shader name \"{}\" must not end with a dot or a space", shader.sShaderName));
@@ -223,7 +227,7 @@ namespace ne {
 
     void ShaderManager::compileShadersThread(
         std::promise<bool>* pPromiseFinish,
-        const std::vector<ShaderDescription>& vShadersToCompile,
+        std::vector<ShaderDescription> vShadersToCompile,
         const std::function<void(size_t iCompiledShaderCount, size_t iTotalShadersToCompile)>& onProgress,
         const std::function<
             void(ShaderDescription shaderDescription, std::variant<std::string, Error> error)>& onError,

@@ -3,8 +3,12 @@
 // STL.
 #include <filesystem>
 
-// External.
+// Custom.
 #include "io/ConfigManager.h"
+#include "io/Logger.h"
+
+// External.
+#include "xxHash/xxhash.h"
 
 namespace ne {
     /**
@@ -79,6 +83,8 @@ namespace ne {
                 }
             }
 
+            // Compare source file hashes.
+
             return true;
         }
 
@@ -91,6 +97,7 @@ namespace ne {
             vDefinedShaderMacros = toml::find_or<std::vector<std::string>>(
                 data, "defined_shader_macros", std::vector<std::string>{});
             sShaderEntryFunctionName = toml::find_or<std::string>(data, "shader_entry_function_name", "");
+            sSourceFileHash = toml::find_or<std::string>(data, "source_file_hash", "");
             shaderType = static_cast<ShaderType>(toml::find_or<int>(data, "shader_type", 0));
         }
 
@@ -99,12 +106,17 @@ namespace ne {
          *
          * @return Toml value.
          */
-        toml::value into_toml() const // NOLINT
-        {
+        toml::value into_toml() const { // NOLINT
+            if (sSourceFileHash.empty()) {
+                Logger::get().error(
+                    std::format("shader source file hash is not calculated (shader: {})", sShaderName), "");
+            }
+
             return toml::value{
                 {"defined_shader_macros", vDefinedShaderMacros},
                 {"shader_entry_function_name", sShaderEntryFunctionName},
-                {"shader_type", static_cast<int>(shaderType)}};
+                {"shader_type", static_cast<int>(shaderType)},
+                {"source_file_hash", sSourceFileHash}};
         }
 
         // ----------------------------------------------------------------------------------------
@@ -118,12 +130,16 @@ namespace ne {
 
         /** Array of defined macros for shader. */
         std::vector<std::string> vDefinedShaderMacros;
+
         /** Globally unique shader name. */
         std::string sShaderName;
+
         /** Path to the shader file. */
         std::filesystem::path pathToShaderFile;
+
         /** Type of the shader. */
         ShaderType shaderType;
+
         /** Name of the shader's entry function name. */
         std::string sShaderEntryFunctionName;
 
@@ -133,5 +149,46 @@ namespace ne {
         // - if fields should be considered when validating cache,
         // add fields to @ref from_toml, @ref into_toml and @ref isSerializableDataEqual.
         // ----------------------------------------
+
+    private:
+        friend class IShader;
+
+        /**
+         * Calculates hash of shader source file.
+         * Assumes that @ref pathToShaderFile exists.
+         * This should be done before serialization.
+         */
+        void calculateShaderSourceFileHash() {
+            if (pathToShaderFile.empty()) [[unlikely]] {
+                Logger::get().error(
+                    std::format("path to shader file is empty (shader: {})", sShaderName), "");
+                return;
+            }
+            if (!std::filesystem::exists(pathToShaderFile)) [[unlikely]] {
+                Logger::get().error(
+                    std::format(
+                        "shader file does not exist (shader: {}, path: {})",
+                        sShaderName,
+                        pathToShaderFile.string()),
+                    "");
+                return;
+            }
+
+            std::ifstream sourceFile(pathToShaderFile, std::ios::binary);
+
+            sourceFile.seekg(0, std::ios::end);
+            const long long iFileLength = sourceFile.tellg();
+            sourceFile.seekg(0, std::ios::beg);
+
+            std::vector<char> vFileData(iFileLength);
+
+            sourceFile.read(vFileData.data(), iFileLength);
+            sourceFile.close();
+
+            sSourceFileHash = std::to_string(XXH3_64bits(vFileData.data(), iFileLength));
+        }
+
+        /** Shader source file hash, may be empty (not calculated yet). */
+        std::string sSourceFileHash;
     };
 } // namespace ne

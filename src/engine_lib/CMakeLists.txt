@@ -8,6 +8,8 @@ set(ENGINE_FOLDER "NAMELESS-ENGINE")
 # target
 set(ENGINE_LIB_SOURCES
     ../../ext/D3D12MemoryAllocator/D3D12MemAlloc.cpp
+    ../../ext/xxHash/xxhash.c
+    ../../ext/xxHash/xxhash.h
     private/misc/Error.cpp
     private/misc/Error.h
     private/window/Window.cpp

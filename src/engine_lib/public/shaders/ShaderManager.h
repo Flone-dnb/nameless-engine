@@ -106,7 +106,7 @@ namespace ne {
          */
         void compileShadersThread(
             std::promise<bool>* pPromiseFinish,
-            const std::vector<ShaderDescription>& vShadersToCompile,
+            std::vector<ShaderDescription> vShadersToCompile,
             const std::function<void(size_t iCompiledShaderCount, size_t iTotalShadersToCompile)>& onProgress,
             const std::function<
                 void(ShaderDescription shaderDescription, std::variant<std::string, Error> error)>& onError,

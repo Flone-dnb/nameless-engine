@@ -23,9 +23,10 @@ namespace ne {
     }
 
     std::variant<std::unique_ptr<IShader>, std::string, Error>
-    IShader::compileShader(const ShaderDescription& shaderDescription, IRenderer* pRenderer) {
+    IShader::compileShader(ShaderDescription& shaderDescription, IRenderer* pRenderer) {
         const auto shaderCacheFilePath = getPathToShaderCacheDirectory() / shaderDescription.sShaderName;
         ConfigManager configManager;
+        shaderDescription.calculateShaderSourceFileHash();
 
         // Check if cached config exists.
         if (std::filesystem::exists(
@@ -40,6 +41,8 @@ namespace ne {
             } else {
                 // TODO: recompile and overwrite this cached info.
             }
+        } else {
+            // TODO: compile and write cached info.
         }
 
         if (dynamic_cast<DirectXRenderer*>(pRenderer)) {

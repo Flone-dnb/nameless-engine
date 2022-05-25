@@ -44,6 +44,9 @@ namespace ne {
         /**
          * Add shaders to be asynchronously compiled.
          *
+         * Compiled shaders are kept on disk, once a shader is needed it will be
+         * loaded from disk into memory.
+         *
          * @param vShadersToCompile Array of shaders to compile.
          * @param onProgress        Callback function that will be called when each shader is compiled.
          * This will also be called when all shaders are compiled (together with 'onCompleted').
@@ -74,14 +77,14 @@ namespace ne {
             const std::function<void()>& onCompleted);
 
         /**
-         * Returns previously compiled shader (using @ref compileShaders).
+         * Returns compiled shader (compiled using @ref compileShaders).
          *
          * @warning Do not delete returned pointer, shader manager keeps the ownership
          * of this pointer.
          *
          * @param sShaderName Name of this shader.
          *
-         * @return Empty if a shader with the specified name was not found,
+         * @return Empty if the shader with the specified name was not found,
          * valid pointer otherwise.
          */
         std::optional<IShader*> getShader(const std::string& sShaderName);
@@ -125,7 +128,7 @@ namespace ne {
             'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y',
             'z', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '_', '-'};
 
-        std::unordered_map<std::string, std::unique_ptr<IShader>> shaders;
+        std::unordered_map<std::string, std::unique_ptr<IShader>> compiledShaders;
         std::vector<std::promise<bool>> vRunningCompilationThreads;
 
         const std::string_view sGlobalShaderCacheParametersFileName = ".shader_cache.toml";

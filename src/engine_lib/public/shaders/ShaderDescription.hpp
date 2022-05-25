@@ -50,45 +50,6 @@ namespace ne {
         }
 
         /**
-         * Compares this shader description with other to see
-         * if the serializable fields are equal.
-         * This is usually done to check if shader cache is valid or not
-         * (needs to be recompiled or not).
-         *
-         * @param other Other shader description to compare with.
-         *
-         * @return Whether the data is equal or not.
-         */
-        bool isSerializableDataEqual(const ShaderDescription& other) const {
-            // Shader entry.
-            if (sShaderEntryFunctionName != other.sShaderEntryFunctionName) {
-                return false;
-            }
-
-            // Shader type.
-            if (shaderType != other.shaderType) {
-                return false;
-            }
-
-            // Shader macro defines.
-            if (vDefinedShaderMacros.size() != other.vDefinedShaderMacros.size()) {
-                return false;
-            }
-            if (!vDefinedShaderMacros.empty()) {
-                for (const auto& macro : vDefinedShaderMacros) {
-                    auto it = std::ranges::find(other.vDefinedShaderMacros, macro);
-                    if (it == other.vDefinedShaderMacros.end()) {
-                        return false;
-                    }
-                }
-            }
-
-            // Compare source file hashes.
-
-            return true;
-        }
-
-        /**
          * Used to deserialize struct from .toml file.
          *
          * @param data Toml value.
@@ -186,6 +147,49 @@ namespace ne {
             sourceFile.close();
 
             sSourceFileHash = std::to_string(XXH3_64bits(vFileData.data(), iFileLength));
+        }
+
+        /**
+         * Compares this shader description with other to see
+         * if the serializable fields are equal.
+         * This is usually done to check if shader cache is valid or not
+         * (needs to be recompiled or not).
+         *
+         * @param other Other shader description to compare with.
+         *
+         * @return Whether the data is equal or not. If the data is not equal,
+         * also has string that contains reason.
+         */
+        std::pair<bool, std::string> isSerializableDataEqual(const ShaderDescription& other) const {
+            // Shader entry.
+            if (sShaderEntryFunctionName != other.sShaderEntryFunctionName) {
+                return std::make_pair(false, "shader entry function name changed");
+            }
+
+            // Shader type.
+            if (shaderType != other.shaderType) {
+                return std::make_pair(false, "shader type changed");
+            }
+
+            // Shader macro defines.
+            if (vDefinedShaderMacros.size() != other.vDefinedShaderMacros.size()) {
+                return std::make_pair(false, "defined shader macros changed");
+            }
+            if (!vDefinedShaderMacros.empty()) {
+                for (const auto& macro : vDefinedShaderMacros) {
+                    auto it = std::ranges::find(other.vDefinedShaderMacros, macro);
+                    if (it == other.vDefinedShaderMacros.end()) {
+                        return std::make_pair(false, "defined shader macros changed");
+                    }
+                }
+            }
+
+            // Compare source file hashes.
+            if (sSourceFileHash != other.sSourceFileHash) {
+                return std::make_pair(false, "shader source file changed");
+            }
+
+            return std::make_pair(true, "");
         }
 
         /** Shader source file hash, may be empty (not calculated yet). */

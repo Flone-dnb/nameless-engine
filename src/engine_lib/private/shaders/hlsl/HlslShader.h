@@ -48,15 +48,13 @@ namespace ne {
         compileShader(const ShaderDescription& shaderDescription);
 
         /**
-         * Returns compiled shader.
+         * Reads compiled bytecode from disk and returns it.
          *
          * @return Compiled shader blob.
          */
         std::variant<ComPtr<IDxcBlob>, Error> getCompiledBlob();
 
     private:
-        ComPtr<IDxcBlob> pCompiledBlob;
-
         static constexpr std::wstring_view sVertexShaderModel = L"vs_6_0";
         static constexpr std::wstring_view sPixelShaderModel = L"ps_6_0";
         static constexpr std::wstring_view sComputeShaderModel = L"cs_6_0";

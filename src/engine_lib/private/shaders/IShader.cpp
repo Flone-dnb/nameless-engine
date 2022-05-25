@@ -28,6 +28,8 @@ namespace ne {
         ConfigManager configManager;
         shaderDescription.calculateShaderSourceFileHash();
 
+        bool bUseCache = false;
+
         // Check if cached config exists.
         if (std::filesystem::exists(
                 shaderCacheFilePath.string() + ConfigManager::getConfigFormatExtension())) {
@@ -36,23 +38,33 @@ namespace ne {
             auto cachedShaderDescription =
                 configManager.getValue<ShaderDescription>("", "shader_description", ShaderDescription());
 
-            if (shaderDescription.isSerializableDataEqual(cachedShaderDescription)) {
-                // TODO: use cache.
+            auto [bIsEqual, sReason] = shaderDescription.isSerializableDataEqual(cachedShaderDescription);
+            if (bIsEqual) {
+                Logger::get().info(
+                    std::format("found valid cache for shader \"{}\"", shaderDescription.sShaderName), "");
+                bUseCache = true;
             } else {
-                // TODO: recompile and overwrite this cached info.
+                Logger::get().info(
+                    std::format(
+                        "invalidated cache for shader \"{}\" (reason: {})",
+                        shaderDescription.sShaderName,
+                        sReason),
+                    "");
             }
-        } else {
-            // TODO: compile and write cached info.
         }
 
         if (dynamic_cast<DirectXRenderer*>(pRenderer)) {
-            auto result = HlslShader::compileShader(std::move(shaderDescription));
-            if (std::holds_alternative<std::unique_ptr<IShader>>(result)) {
-                // Success. Cache configuration.
-                configManager.setValue<ShaderDescription>("", "shader_description", shaderDescription);
-                configManager.saveFile(shaderCacheFilePath, false);
+            if (bUseCache) {
+                return std::make_unique<HlslShader>(shaderCacheFilePath);
+            } else {
+                auto result = HlslShader::compileShader(std::move(shaderDescription));
+                if (std::holds_alternative<std::unique_ptr<IShader>>(result)) {
+                    // Success. Cache configuration.
+                    configManager.setValue<ShaderDescription>("", "shader_description", shaderDescription);
+                    configManager.saveFile(shaderCacheFilePath, false);
+                }
+                return result;
             }
-            return result;
         } else {
             const auto err = Error("no shader type is associated with the "
                                    "current renderer (not implemented)");
@@ -63,8 +75,8 @@ namespace ne {
 
     std::filesystem::path IShader::getPathToCompiledShader() {
         if (!std::filesystem::exists(pathToCompiledShader)) {
-            const Error err(
-                std::format("path to compiled shader {} no longer exists", pathToCompiledShader.string()));
+            const Error err(std::format(
+                "path to compiled shader \"{}\" no longer exists", pathToCompiledShader.string()));
             err.showError();
             throw std::runtime_error(err.getError());
         }

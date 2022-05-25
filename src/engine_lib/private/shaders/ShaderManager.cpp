@@ -65,8 +65,8 @@ namespace ne {
 
     std::optional<IShader*> ShaderManager::getShader(const std::string& sShaderName) {
         std::scoped_lock<std::mutex> guard(mtxRwShaders);
-        const auto it = shaders.find(sShaderName);
-        if (it == shaders.end()) {
+        const auto it = compiledShaders.find(sShaderName);
+        if (it == compiledShaders.end()) {
             return {};
         } else {
             return it->second.get();
@@ -121,8 +121,8 @@ namespace ne {
                     sGlobalShaderCacheParametersFileName));
             }
 
-            auto it = shaders.find(shader.sShaderName);
-            if (it != shaders.end()) [[unlikely]] {
+            auto it = compiledShaders.find(shader.sShaderName);
+            if (it != compiledShaders.end()) [[unlikely]] {
                 return Error(std::format(
                     "a shader with the name \"{}\" was already added, "
                     "please choose another name for this shader",
@@ -280,15 +280,15 @@ namespace ne {
 
                 auto pShader = std::get<std::unique_ptr<IShader>>(std::move(result));
 
-                auto it = shaders.find(vShadersToCompile[i].sShaderName);
-                if (it != shaders.end()) {
+                auto it = compiledShaders.find(vShadersToCompile[i].sShaderName);
+                if (it != compiledShaders.end()) {
                     Error err(std::format(
                         "shader with the name {} already added", vShadersToCompile[i].sShaderName));
                     err.showError();
                     throw std::runtime_error(err.getError());
                 }
 
-                shaders[vShadersToCompile[i].sShaderName] = std::move(pShader);
+                compiledShaders[vShadersToCompile[i].sShaderName] = std::move(pShader);
             }
 
             // Mark progress.

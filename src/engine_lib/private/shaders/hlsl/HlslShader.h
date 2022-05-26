@@ -55,6 +55,7 @@ namespace ne {
         std::variant<ComPtr<IDxcBlob>, Error> getCompiledBlob();
 
     private:
+        // Clear shader cache if changing shader model.
         static constexpr std::wstring_view sVertexShaderModel = L"vs_6_0";
         static constexpr std::wstring_view sPixelShaderModel = L"ps_6_0";
         static constexpr std::wstring_view sComputeShaderModel = L"cs_6_0";

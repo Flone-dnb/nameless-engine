@@ -68,16 +68,18 @@ namespace ne {
          * @return Toml value.
          */
         toml::value into_toml() const { // NOLINT
+            toml::value outValue;
+            outValue["defined_shader_macros"] = vDefinedShaderMacros;
+            outValue["shader_entry_function_name"] = sShaderEntryFunctionName;
+            outValue["shader_type"] = static_cast<int>(shaderType);
+
             if (sSourceFileHash.empty()) {
-                Logger::get().error(
-                    std::format("shader source file hash is not calculated (shader: {})", sShaderName), "");
+                outValue["source_file_hash"] = getShaderSourceFileHash();
+            } else {
+                outValue["source_file_hash"] = sSourceFileHash;
             }
 
-            return toml::value{
-                {"defined_shader_macros", vDefinedShaderMacros},
-                {"shader_entry_function_name", sShaderEntryFunctionName},
-                {"shader_type", static_cast<int>(shaderType)},
-                {"source_file_hash", sSourceFileHash}};
+            return outValue;
         }
 
         // ----------------------------------------------------------------------------------------
@@ -115,15 +117,23 @@ namespace ne {
         friend class IShader;
 
         /**
-         * Calculates hash of shader source file.
+         * Calculates hash of shader source file and saves it.
          * Assumes that @ref pathToShaderFile exists.
          * This should be done before serialization.
          */
-        void calculateShaderSourceFileHash() {
+        void calculateShaderSourceFileHash() { sSourceFileHash = getShaderSourceFileHash(); }
+
+        /**
+         * Calculates hash of shader source file and returns it.
+         * Assumes that @ref pathToShaderFile exists.
+         *
+         * @return Empty string if something went wrong, source file hash otherwise.
+         */
+        std::string getShaderSourceFileHash() const {
             if (pathToShaderFile.empty()) [[unlikely]] {
                 Logger::get().error(
                     std::format("path to shader file is empty (shader: {})", sShaderName), "");
-                return;
+                return "";
             }
             if (!std::filesystem::exists(pathToShaderFile)) [[unlikely]] {
                 Logger::get().error(
@@ -132,7 +142,7 @@ namespace ne {
                         sShaderName,
                         pathToShaderFile.string()),
                     "");
-                return;
+                return "";
             }
 
             std::ifstream sourceFile(pathToShaderFile, std::ios::binary);
@@ -146,7 +156,7 @@ namespace ne {
             sourceFile.read(vFileData.data(), iFileLength);
             sourceFile.close();
 
-            sSourceFileHash = std::to_string(XXH3_64bits(vFileData.data(), iFileLength));
+            return std::to_string(XXH3_64bits(vFileData.data(), iFileLength));
         }
 
         /**
@@ -194,5 +204,11 @@ namespace ne {
 
         /** Shader source file hash, may be empty (not calculated yet). */
         std::string sSourceFileHash;
+
+        // ----------------------------------------
+        // if adding new fields:
+        // - if fields should be considered when validating cache,
+        // add fields to @ref from_toml, @ref into_toml and @ref isSerializableDataEqual.
+        // ----------------------------------------
     };
 } // namespace ne

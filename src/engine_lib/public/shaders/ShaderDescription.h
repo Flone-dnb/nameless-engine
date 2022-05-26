@@ -7,6 +7,8 @@
 #include "io/ConfigManager.h"
 
 namespace ne {
+    constexpr auto sShaderDescriptionLogCategory = "Shader Description";
+
     /**
      * Describes the type of a shader.
      *
@@ -110,7 +112,20 @@ namespace ne {
          * @return Whether the data is equal or not. If the data is not equal,
          * also has string that contains reason.
          */
-        std::pair<bool, std::string> isSerializableDataEqual(const ShaderDescription& other);
+        std::pair<bool, std::string> isSerializableDataEqual(ShaderDescription& other);
+
+        /**
+         * Scans shader file for "#include" entries and
+         * recursively adds include file hashes.
+         *
+         * @param pathToShaderFile Path to shader source file.
+         * @param sCurrentIncludeChain Current section (in TOML) text.
+         * @param data             TOML structure to write to.
+         */
+        static void serializeShaderIncludes(
+            const std::filesystem::path& pathToShaderFile,
+            std::string& sCurrentIncludeChain,
+            toml::value& data);
 
         // ----------------------------------------------------------------------------------------
 

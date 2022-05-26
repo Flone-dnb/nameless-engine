@@ -40,13 +40,18 @@ namespace ne {
             outValue["source_file_hash"] = sSourceFileHash;
         }
 
+        std::string sIncludeChainText = "includes";
+        serializeShaderIncludes(pathToShaderFile, sIncludeChainText, outValue);
+
         return outValue;
     }
 
     std::string ShaderDescription::getShaderSourceFileHash(
         const std::filesystem::path& pathToShaderSourceFile, const std::string& sShaderName) {
         if (pathToShaderSourceFile.empty()) [[unlikely]] {
-            Logger::get().error(std::format("path to shader file is empty (shader: {})", sShaderName), "");
+            Logger::get().error(
+                std::format("path to shader file is empty (shader: {})", sShaderName),
+                sShaderDescriptionLogCategory);
             return "";
         }
         if (!std::filesystem::exists(pathToShaderSourceFile)) [[unlikely]] {
@@ -55,7 +60,7 @@ namespace ne {
                     "shader file does not exist (shader: {}, path: {})",
                     sShaderName,
                     pathToShaderSourceFile.string()),
-                "");
+                sShaderDescriptionLogCategory);
             return "";
         }
 
@@ -73,9 +78,13 @@ namespace ne {
         return std::to_string(XXH3_64bits(vFileData.data(), iFileLength));
     }
 
-    std::pair<bool, std::string> ShaderDescription::isSerializableDataEqual(const ShaderDescription& other) {
+    std::pair<bool, std::string> ShaderDescription::isSerializableDataEqual(ShaderDescription& other) {
         if (sSourceFileHash.empty()) {
             sSourceFileHash = getShaderSourceFileHash(pathToShaderFile, sShaderName);
+        }
+
+        if (other.sSourceFileHash.empty()) {
+            other.sSourceFileHash = getShaderSourceFileHash(other.pathToShaderFile, other.sShaderName);
         }
 
         // Shader entry.
@@ -107,5 +116,144 @@ namespace ne {
         }
 
         return std::make_pair(true, "");
+    }
+
+    void ShaderDescription::serializeShaderIncludes(
+        const std::filesystem::path& pathToShaderFile, std::string& sCurrentIncludeChain, toml::value& data) {
+        if (!std::filesystem::exists(pathToShaderFile)) {
+            Logger::get().error(
+                std::format("path to shader file \"{}\" does not exist", pathToShaderFile.string()),
+                sShaderDescriptionLogCategory);
+            return;
+        }
+
+        toml::value includesTable;
+
+        std::ifstream shaderFile(pathToShaderFile, std::ios::binary);
+
+        // Get file size.
+        shaderFile.seekg(0, std::ios::end);
+        long long iShaderFileSize = shaderFile.tellg();
+        shaderFile.seekg(0, std::ios::beg);
+
+        // Read file into memory.
+        std::string sShaderFileText;
+        sShaderFileText.resize(iShaderFileSize);
+        shaderFile.read(sShaderFileText.data(), iShaderFileSize);
+        shaderFile.close();
+
+        // Find all "#include" entries.
+        std::vector<std::string> vIncludePaths;
+        constexpr std::string_view sKeyword = "#include";
+        size_t iCurrentReadIndex = 0;
+
+        do {
+            auto iFoundPos = sShaderFileText.find(sKeyword, iCurrentReadIndex);
+            if (iFoundPos == std::string::npos) {
+                break;
+            }
+
+            iCurrentReadIndex = iFoundPos + sKeyword.size();
+
+            if (iCurrentReadIndex >= sShaderFileText.size()) {
+                break;
+            }
+
+            // Find opening '"' character.
+            iFoundPos = sShaderFileText.find('\"', iCurrentReadIndex);
+            if (iFoundPos == std::string::npos) {
+                // See for '<' character then (don't know if you can actually use this character in shader
+                // include but check anyway).
+                iFoundPos = sShaderFileText.find('<', iCurrentReadIndex);
+                if (iFoundPos == std::string::npos) {
+                    Logger::get().error(
+                        std::format(
+                            "found \"{}\" but have not found \" or < character after it in the shader file "
+                            "\"{}\"",
+                            sKeyword,
+                            pathToShaderFile.string()),
+                        sShaderDescriptionLogCategory);
+                    break;
+                }
+            }
+
+            // Save include start index.
+            iCurrentReadIndex = iFoundPos + 1;
+            size_t iIncludeStartIndex = iCurrentReadIndex;
+
+            if (iCurrentReadIndex >= sShaderFileText.size()) {
+                break;
+            }
+
+            // Find closing '"' character.
+            iFoundPos = sShaderFileText.find('\"', iCurrentReadIndex);
+            if (iFoundPos == std::string::npos) {
+                // See for '>' character then (don't know if you can actually use this character in shader
+                // include but check anyway).
+                iFoundPos = sShaderFileText.find('>', iCurrentReadIndex);
+                if (iFoundPos == std::string::npos) {
+                    Logger::get().error(
+                        std::format(
+                            "found \"{}\" but have not found \" or > character after it in the shader file "
+                            "\"{}\"",
+                            sKeyword,
+                            pathToShaderFile.string()),
+                        sShaderDescriptionLogCategory);
+                    break;
+                }
+            }
+
+            // Save include end index.
+            size_t iIncludeEndIndex = iFoundPos;
+            iCurrentReadIndex = iFoundPos + 1;
+
+            // Add include path.
+            vIncludePaths.push_back(
+                sShaderFileText.substr(iIncludeStartIndex, iIncludeEndIndex - iIncludeStartIndex));
+        } while (iCurrentReadIndex < sShaderFileText.size());
+
+        if (vIncludePaths.empty()) {
+            return;
+        }
+
+        // Don't need shader file anymore.
+        sShaderFileText.clear();
+
+        std::vector<std::filesystem::path> vIncludePathsToScan;
+
+        for (const auto& sInclude : vIncludePaths) {
+            const auto pathToIncludeFile =
+                std::filesystem::canonical(pathToShaderFile.parent_path()) / sInclude;
+            if (!std::filesystem::exists(pathToIncludeFile)) {
+                Logger::get().error(
+                    std::format(
+                        "shader ({}) include file ({}) does not exist",
+                        pathToShaderFile.string(),
+                        pathToIncludeFile.string()),
+                    sShaderDescriptionLogCategory);
+                continue;
+            }
+
+            vIncludePathsToScan.push_back(pathToIncludeFile);
+
+            includesTable[sInclude] =
+                getShaderSourceFileHash(pathToIncludeFile, pathToIncludeFile.stem().string());
+        }
+
+        // Don't need include strings anymore.
+        vIncludePaths.clear();
+
+        if (vIncludePathsToScan.empty()) {
+            return;
+        }
+
+        const auto sFilename = pathToShaderFile.stem().string();
+        data[std::format("{}.{}", sCurrentIncludeChain, sFilename)] = includesTable;
+
+        sCurrentIncludeChain += std::format(".{}", sFilename);
+
+        for (const auto& pathToIncludeFile : vIncludePathsToScan) {
+            serializeShaderIncludes(pathToIncludeFile, sCurrentIncludeChain, data);
+        }
     }
 } // namespace ne

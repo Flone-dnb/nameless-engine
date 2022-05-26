@@ -41,7 +41,8 @@ set(ENGINE_LIB_SOURCES
     private/shaders/IShader.h
     private/shaders/hlsl/HlslShader.h
     private/shaders/hlsl/HlslShader.cpp
-    public/shaders/ShaderDescription.hpp
+    public/shaders/ShaderDescription.h
+    private/shaders/ShaderDescription.cpp
     # add your .h/.cpp files here
 )
 

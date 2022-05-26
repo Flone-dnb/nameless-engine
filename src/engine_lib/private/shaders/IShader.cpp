@@ -26,7 +26,6 @@ namespace ne {
     IShader::compileShader(ShaderDescription& shaderDescription, IRenderer* pRenderer) {
         const auto shaderCacheFilePath = getPathToShaderCacheDirectory() / shaderDescription.sShaderName;
         ConfigManager configManager;
-        shaderDescription.calculateShaderSourceFileHash();
 
         bool bUseCache = false;
 

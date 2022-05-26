@@ -8,7 +8,7 @@
 #include <variant>
 
 #include "misc/Error.h"
-#include "shaders/ShaderDescription.hpp"
+#include "shaders/ShaderDescription.h"
 
 namespace ne {
     class IRenderer;

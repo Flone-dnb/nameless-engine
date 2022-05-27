@@ -218,6 +218,7 @@ namespace ne {
 
         // Don't need shader file anymore.
         sShaderFileText.clear();
+        sShaderFileText.shrink_to_fit();
 
         std::vector<std::filesystem::path> vIncludePathsToScan;
 
@@ -242,6 +243,7 @@ namespace ne {
 
         // Don't need include strings anymore.
         vIncludePaths.clear();
+        vIncludePaths.shrink_to_fit();
 
         if (vIncludePathsToScan.empty()) {
             return;

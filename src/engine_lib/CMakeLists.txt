@@ -1,15 +1,18 @@
-cmake_minimum_required(VERSION 3.12)
+cmake_minimum_required(VERSION 3.20)
 
 project(engine_lib CXX)
+
+# relative path to 'ext' directory
+set(RELATIVE_EXT_PATH "../../ext")
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 set(ENGINE_FOLDER "NAMELESS-ENGINE")
 
 # target
 set(ENGINE_LIB_SOURCES
-    ../../ext/D3D12MemoryAllocator/D3D12MemAlloc.cpp
-    ../../ext/xxHash/xxhash.c
-    ../../ext/xxHash/xxhash.h
+    ${RELATIVE_EXT_PATH}/D3D12MemoryAllocator/D3D12MemAlloc.cpp
+    ${RELATIVE_EXT_PATH}/xxHash/xxhash.c
+    ${RELATIVE_EXT_PATH}/xxHash/xxhash.h
     private/misc/Error.cpp
     private/misc/Error.h
     private/window/Window.cpp
@@ -100,18 +103,18 @@ add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
 set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE) # disable docs
 set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE) # disable tests
 set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE) # disable examples
-add_subdirectory(../../ext/glfw ../../build/glfw) # add GLFW target
+add_subdirectory(${RELATIVE_EXT_PATH}/glfw ../../build/glfw) # add GLFW target
 target_link_libraries(${PROJECT_NAME} PUBLIC glfw)
 
 # spdlog
-add_subdirectory(../../ext/spdlog ../../build/spdlog)
+add_subdirectory(${RELATIVE_EXT_PATH}/spdlog ../../build/spdlog)
 target_link_libraries(${PROJECT_NAME} PUBLIC spdlog::spdlog)
 
 # toml11
 if (MSVC)
     target_compile_options(${PROJECT_NAME} PUBLIC /Zc:__cplusplus)
 endif()
-add_subdirectory(../../ext/toml11 build/toml11)
+add_subdirectory(${RELATIVE_EXT_PATH}/toml11 build/toml11)
 
 if (WIN32)
     # dxc
@@ -147,9 +150,9 @@ if (NOT go_error)
                    ${BUILD_MODE_DIRECTORY} # arg 2 - build directory
     )
 else ()
-    message(FATAL_ERROR "\"Go\" programming language needs to be installed!")
+    message(FATAL_ERROR "\"Go\" programming language needs to be installed.")
 endif ()
 
-include_directories(../../ext)
+include_directories(${RELATIVE_EXT_PATH})
 include_directories(public)
 include_directories(private)

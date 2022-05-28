@@ -12,7 +12,7 @@ namespace ne {
     /**
      * Describes the type of a shader.
      *
-     * @warning PLEASE, assign a value to each entry.
+     * @warning Please, assign a value to each entry.
      */
     enum class ShaderType { VERTEX_SHADER = 0, PIXEL_SHADER = 1, COMPUTE_SHADER = 2 };
 
@@ -102,6 +102,25 @@ namespace ne {
             const std::filesystem::path& pathToShaderSourceFile, const std::string& sShaderName);
 
         /**
+         * Uses @ref pathToShaderFile to recursively calculate
+         * hashes of all include files to fill @ref shaderIncludeTree.
+         */
+        void calculateShaderIncludeTreeHashes();
+
+        /**
+         * Converts TOML table into shader include tree hash map.
+         *
+         * @param data TOML data formatted as table.
+         *
+         * @return Map [include chain (i.e. current shader), [relative include path, include file hash]].
+         */
+        static std::unordered_map<
+            std::string /** include chain (i.e. current shader) */,
+            std::
+                unordered_map<std::string /** relative include path */, std::string /** include file hash */>>
+        deserializeShaderIncludeTreeHashes(const toml::value& data);
+
+        /**
          * Compares this shader description with other to see
          * if the serializable fields are equal.
          * This is usually done to check if shader cache is valid or not
@@ -116,13 +135,13 @@ namespace ne {
 
         /**
          * Scans shader file for "#include" entries and
-         * recursively adds include file hashes.
+         * recursively adds included files hashes.
          *
-         * @param pathToShaderFile Path to shader source file.
-         * @param sCurrentIncludeChain Current section (in TOML) text.
-         * @param data             TOML structure to write to.
+         * @param pathToShaderFile      Path to shader source file.
+         * @param sCurrentIncludeChain  Current section (in TOML) text.
+         * @param data                  TOML structure to write to.
          */
-        static void serializeShaderIncludes(
+        static void serializeShaderIncludeTree(
             const std::filesystem::path& pathToShaderFile,
             std::string& sCurrentIncludeChain,
             toml::value& data);
@@ -131,6 +150,33 @@ namespace ne {
 
         /** Shader source file hash, may be empty (not calculated yet). */
         std::string sSourceFileHash;
+
+        /**
+         * Shader include tree hashes, contains relative include paths for each "#include" entry
+         * in shader with included source file hash.
+         * May be empty (not calculated yet).
+         */
+        std::unordered_map<
+            std::string /** include chain (i.e. current shader) */,
+            std::
+                unordered_map<std::string /** relative include path */, std::string /** include file hash */>>
+            shaderIncludeTreeHashes;
+
+        /** Whether @ref shaderIncludeTreeHashes was initialized or not. */
+        bool bIsShaderIncludeTreeHashesInitialized = false;
+
+        /**
+         * Used as initial text for include chain string (beginning
+         * text in serialized form). After serialization
+         * in TOML configuration it might look like this:
+         * @code
+         * "includes.default.post_process"
+         *     ^------ [includes] initial text
+         *              ^------ [default] shader from ShaderDescription (say shader A)
+         *                        ^------ [post_process] shader B that shader A includes
+         * @endcode
+         */
+        static constexpr std::string_view sInitialIncludeChainText = "includes";
 
         // ----------------------------------------
         // if adding new fields:

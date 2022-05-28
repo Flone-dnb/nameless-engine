@@ -23,9 +23,15 @@ namespace ne {
     void ShaderDescription::from_toml(const toml::value& data) { // NOLINT
         vDefinedShaderMacros = toml::find_or<std::vector<std::string>>(
             data, "defined_shader_macros", std::vector<std::string>{});
+
         sShaderEntryFunctionName = toml::find_or<std::string>(data, "shader_entry_function_name", "");
+
         sSourceFileHash = toml::find_or<std::string>(data, "source_file_hash", "");
+
         shaderType = static_cast<ShaderType>(toml::find_or<int>(data, "shader_type", 0));
+
+        shaderIncludeTreeHashes = deserializeShaderIncludeTreeHashes(data);
+        bIsShaderIncludeTreeHashesInitialized = true;
     }
 
     toml::value ShaderDescription::into_toml() const { // NOLINT
@@ -40,8 +46,8 @@ namespace ne {
             outValue["source_file_hash"] = sSourceFileHash;
         }
 
-        std::string sIncludeChainText = "includes";
-        serializeShaderIncludes(pathToShaderFile, sIncludeChainText, outValue);
+        std::string sIncludeChainText(sInitialIncludeChainText);
+        serializeShaderIncludeTree(pathToShaderFile, sIncludeChainText, outValue);
 
         return outValue;
     }
@@ -78,13 +84,80 @@ namespace ne {
         return std::to_string(XXH3_64bits(vFileData.data(), iFileLength));
     }
 
+    void ShaderDescription::calculateShaderIncludeTreeHashes() {
+        toml::value tomlTable;
+        std::string sIncludeChainText(sInitialIncludeChainText);
+        serializeShaderIncludeTree(pathToShaderFile, sIncludeChainText, tomlTable);
+
+        bIsShaderIncludeTreeHashesInitialized = true;
+
+        if (tomlTable.is_uninitialized()) {
+            // Shader source file has no "#include" entries.
+            return;
+        }
+
+        shaderIncludeTreeHashes.clear();
+        const auto& tableData = tomlTable.as_table();
+        for (const auto& [sIncludeChain, table] : tableData) {
+            shaderIncludeTreeHashes[sIncludeChain] =
+                toml::get<std::unordered_map<std::string, std::string>>(table);
+        }
+    }
+
+    std::unordered_map<
+        std::string /** include chain (i.e. current shader) */,
+        std::unordered_map<std::string /** relative include path */, std::string /** include file hash */>>
+    ShaderDescription::deserializeShaderIncludeTreeHashes(const toml::value& data) {
+        std::unordered_map<std::string, std::unordered_map<std::string, std::string>> includeTree;
+
+        if (!data.is_table()) {
+            Logger::get().error("data is not a table", sShaderDescriptionLogCategory);
+            return includeTree;
+        }
+
+        const auto& dataTable = data.as_table();
+        for (const auto& [sSectionName, sectionData] : dataTable) {
+            if (sSectionName.starts_with(sInitialIncludeChainText)) {
+                if (!sectionData.is_table()) {
+                    Logger::get().error("section data is not a table", sShaderDescriptionLogCategory);
+                    return includeTree;
+                }
+                const auto& sectionTable = sectionData.as_table();
+
+                std::unordered_map<std::string, std::string> includes;
+                for (const auto& [sInclude, sIncludeFileHash] : sectionTable) {
+                    if (!sIncludeFileHash.is_string()) {
+                        Logger::get().error(
+                            "include file hash is not a string", sShaderDescriptionLogCategory);
+                        return includeTree;
+                    }
+                    includes[sInclude] = sIncludeFileHash.as_string();
+                }
+
+                includeTree[sSectionName] = includes;
+            }
+        }
+
+        return includeTree;
+    }
+
     std::pair<bool, std::string> ShaderDescription::isSerializableDataEqual(ShaderDescription& other) {
+        // Prepare source file hash.
         if (sSourceFileHash.empty()) {
             sSourceFileHash = getShaderSourceFileHash(pathToShaderFile, sShaderName);
         }
 
         if (other.sSourceFileHash.empty()) {
             other.sSourceFileHash = getShaderSourceFileHash(other.pathToShaderFile, other.sShaderName);
+        }
+
+        // Prepare include tree.
+        if (!bIsShaderIncludeTreeHashesInitialized) {
+            calculateShaderIncludeTreeHashes();
+        }
+
+        if (!other.bIsShaderIncludeTreeHashesInitialized) {
+            other.calculateShaderIncludeTreeHashes();
         }
 
         // Shader entry.
@@ -115,10 +188,15 @@ namespace ne {
             return std::make_pair(false, "shader source file changed");
         }
 
+        // Compare include tree.
+        if (shaderIncludeTreeHashes != other.shaderIncludeTreeHashes) {
+            return std::make_pair(false, "shader include tree content changed");
+        }
+
         return std::make_pair(true, "");
     }
 
-    void ShaderDescription::serializeShaderIncludes(
+    void ShaderDescription::serializeShaderIncludeTree(
         const std::filesystem::path& pathToShaderFile, std::string& sCurrentIncludeChain, toml::value& data) {
         if (!std::filesystem::exists(pathToShaderFile)) {
             Logger::get().error(
@@ -250,12 +328,12 @@ namespace ne {
         }
 
         const auto sFilename = pathToShaderFile.stem().string();
-        data[std::format("{}.{}", sCurrentIncludeChain, sFilename)] = includesTable;
+        sCurrentIncludeChain = std::format("{}.{}", sCurrentIncludeChain, sFilename);
+        data[sCurrentIncludeChain] = includesTable;
 
-        sCurrentIncludeChain += std::format(".{}", sFilename);
-
-        for (const auto& pathToIncludeFile : vIncludePathsToScan) {
-            serializeShaderIncludes(pathToIncludeFile, sCurrentIncludeChain, data);
+        // Recursively do the same for all includes.
+        for (const auto& includePath : vIncludePathsToScan) {
+            serializeShaderIncludeTree(includePath, sCurrentIncludeChain, data);
         }
     }
 } // namespace ne

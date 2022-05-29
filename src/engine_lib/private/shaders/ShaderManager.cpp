@@ -163,7 +163,7 @@ namespace ne {
         using namespace std::chrono;
         const auto iDurationInSec =
             duration_cast<seconds>(system_clock::now() - lastSelfValidationCheckTime).count();
-        if (iDurationInSec < 600) { // NOLINT: do validation every 10 minutes
+        if (iDurationInSec < 900) { // NOLINT: do validation every 15 minutes
             return;
         }
 

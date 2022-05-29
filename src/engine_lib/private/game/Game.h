@@ -42,10 +42,10 @@ namespace ne {
         /**
          * Called before a new frame is rendered.
          *
-         * @param fTimeFromPrevCallInSec   Time in seconds that has passed since the last call
+         * @param fTimeSincePrevCallInSec   Time in seconds that has passed since the last call
          * to this function.
          */
-        void onBeforeNewFrame(float fTimeFromPrevCallInSec);
+        void onBeforeNewFrame(float fTimeSincePrevCallInSec);
 
         /**
          * Called when the window (that owns this object) receives keyboard input.

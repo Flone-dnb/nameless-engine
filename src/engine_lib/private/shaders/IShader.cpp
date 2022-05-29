@@ -22,7 +22,7 @@ namespace ne {
         this->pathToCompiledShader = std::move(pathToCompiledShader);
     }
 
-    std::variant<std::unique_ptr<IShader>, std::string, Error>
+    std::variant<std::shared_ptr<IShader>, std::string, Error>
     IShader::compileShader(ShaderDescription& shaderDescription, IRenderer* pRenderer) {
         const auto shaderCacheFilePath = getPathToShaderCacheDirectory() / shaderDescription.sShaderName;
         ConfigManager configManager;
@@ -57,7 +57,7 @@ namespace ne {
                 return std::make_unique<HlslShader>(shaderCacheFilePath);
             } else {
                 auto result = HlslShader::compileShader(std::move(shaderDescription));
-                if (std::holds_alternative<std::unique_ptr<IShader>>(result)) {
+                if (std::holds_alternative<std::shared_ptr<IShader>>(result)) {
                     // Success. Cache configuration.
                     configManager.setValue<ShaderDescription>("", "shader_description", shaderDescription);
                     configManager.saveFile(shaderCacheFilePath, false);

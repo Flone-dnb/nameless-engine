@@ -42,19 +42,23 @@ namespace ne {
          * @arg internal error
          */
         static std::variant<
-            std::unique_ptr<IShader> /** Compiled shader. */,
+            std::shared_ptr<IShader> /** Compiled shader. */,
             std::string /** Compilation error. */,
             Error /** Internal error. */>
         compileShader(const ShaderDescription& shaderDescription);
 
         /**
-         * Reads compiled bytecode from disk and returns it.
+         * Loads compiled bytecode from disk and stores it in memory.
+         * Subsequent calls to this function will just copy pointer
+         * to bytecode from memory (no disk loading will happen).
          *
          * @return Compiled shader blob.
          */
         std::variant<ComPtr<IDxcBlob>, Error> getCompiledBlob();
 
     private:
+        ComPtr<IDxcBlob> pCompiledBlob;
+
         // Clear shader cache if changing shader model.
         static constexpr std::wstring_view sVertexShaderModel = L"vs_6_0";
         static constexpr std::wstring_view sPixelShaderModel = L"ps_6_0";

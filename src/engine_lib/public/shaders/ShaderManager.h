@@ -47,7 +47,8 @@ namespace ne {
          * Compiled shaders are kept on disk, once a shader is needed it will be
          * loaded from disk into memory.
          *
-         * @param vShadersToCompile Array of shaders to compile.
+         * @param vShadersToCompile Array of shaders to compile. Use @ref isShaderNameCanBeUsed
+         * to check if a shader name is free (unique).
          * @param onProgress        Callback function that will be called when each shader is compiled.
          * This will also be called when all shaders are compiled (together with 'onCompleted').
          * The first argument is number of compiled shaders and the second one is total number of
@@ -79,15 +80,50 @@ namespace ne {
         /**
          * Returns compiled shader (compiled using @ref compileShaders).
          *
-         * @warning Do not delete returned pointer, shader manager keeps the ownership
-         * of this pointer.
-         *
          * @param sShaderName Name of this shader.
          *
          * @return Empty if the shader with the specified name was not found,
          * valid pointer otherwise.
          */
-        std::optional<IShader*> getShader(const std::string& sShaderName);
+        std::optional<std::shared_ptr<IShader>> getShader(const std::string& sShaderName);
+
+        /**
+         * Checks if the shader name is free (unique) to be used in @ref compileShaders.
+         *
+         * @param sShaderName Name to check.
+         *
+         * @return 'true' if can be used, 'false' otherwise.
+         */
+        bool isShaderNameCanBeUsed(const std::string& sShaderName);
+
+        /**
+         * Removes shader if nobody is referencing it, otherwise marks shader to be removed
+         * later.
+         *
+         * Typically you would not use this function as we expect you to do
+         * one call to @ref compileShaders in the beginning of the game to compile
+         * ALL of your shaders (for all levels) and never remove them as compiled shaders
+         * are not stored in memory, they are stored on disk and when actually needed/used
+         * loaded from disk to memory. If some shader was used but no longer needed it will
+         * be released from memory until someone will need it again.
+         *
+         * If somebody is still referencing this shader, the shader will be added to
+         * "to remove" array and will be removed later when nobody
+         * is referencing this shader (specifically when only one
+         * std::shared_ptr<IShader> instance pointing to this shader
+         * will exist (it will exist in @ref ShaderManager as @ref ShaderManager
+         * stores pointer to each shader). Shaders to be removed are usually checked
+         * every minute.
+         *
+         * @param sShaderName Shader's name to be marked for removal.
+         *
+         * @return 'false' if someone is still referencing this shader
+         * and it cannot be removed right now, thus shader's name still
+         * cannot be used in @ref compileShaders. Returns 'true' if
+         * nobody was referencing this shader and it was removed, thus
+         * shader's name can now be used in @ref compileShaders.
+         */
+        bool markShaderToBeRemoved(const std::string& sShaderName);
 
     protected:
         /**
@@ -116,26 +152,67 @@ namespace ne {
             const std::function<void()>& onCompleted);
 
     private:
+        friend class Game;
+
+        /**
+         * Called by Game before a new frame is rendered.
+         *
+         * @param fTimeSincePrevCallInSec   Time in seconds that has passed since the last call
+         * to this function.
+         */
+        void onBeforeNewFrame(float fTimeSincePrevCallInSec);
+
         /** Do not delete. Parent renderer that uses this shader manager. */
         IRenderer* pRenderer;
 
-        /** Use for @ref shader and @ref vRunningCompilationThreads. */
+        /** Use for @ref compiledShaders and @ref vRunningCompilationThreads. */
         std::mutex mtxRwShaders;
 
+        /**
+         * Array of characters that can be used for shader name.
+         * We limit amount of valid characters because we store compiled shaders on disk
+         * and different filesystems have different limitations for file names.
+         */
         const std::array<char, 65> vValidCharactersForShaderName = {
             'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q',
             'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h',
             'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y',
             'z', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '_', '-'};
 
-        std::unordered_map<std::string, std::unique_ptr<IShader>> compiledShaders;
+        /** Map of compiled (added) shaders. */
+        std::unordered_map<std::string, std::shared_ptr<IShader>> compiledShaders;
+
+        /** Array of statuses of running compilation threads (finished or not). */
         std::vector<std::promise<bool>> vRunningCompilationThreads;
 
+        /**
+         * Array of shader names marked to be removed from @ref compiledShaders
+         * when they are no longer used.
+         */
+        std::vector<std::string> vShadersToBeRemoved;
+
+        /**
+         * Name of the file used to store global shader cache information.
+         * Global shader cache information is used to determine if all shader cache is valid
+         * or not (needs to be recompiled or not).
+         */
         const std::string_view sGlobalShaderCacheParametersFileName = ".shader_cache.toml";
+        /** Name of the section used in global shader cache information. */
         const std::string_view sGlobalShaderCacheParametersSectionName = "global shader cache parameters";
+        /** Name of the key for build mode, used in global shader cache information. */
         const std::string_view sGlobalShaderCacheParametersReleaseBuildKeyName = "is_release_build";
+        /** Name of the key for used GPU, used in global shader cache information. */
         const std::string_view sGlobalShaderCacheParametersGpuKeyName = "gpu";
 
+        /** Time in seconds since last time we checked @ref vShadersToBeRemoved. */
+        float fTimeSinceLastCheckForShadersToBeRemovedInSec = 0.0f;
+        /** Time in seconds after which we check @ref vShadersToBeRemoved. */
+        const float fTimeIntervalToCheckForShadersToBeRemovedInSec = 60.0f;
+
+        /**
+         * Atomic flag to set when destructor is called so that running compilation threads
+         * are notified to finish early.
+         */
         std::atomic_flag bIsShuttingDown;
     };
 } // namespace ne

@@ -12,7 +12,7 @@ namespace ne {
     HlslShader::HlslShader(std::filesystem::path pathToCompiledShader)
         : IShader(std::move(pathToCompiledShader)) {}
 
-    std::variant<std::unique_ptr<IShader>, std::string, Error>
+    std::variant<std::shared_ptr<IShader>, std::string, Error>
     HlslShader::compileShader(const ShaderDescription& shaderDescription) {
         // Check that file exists.
         if (!std::filesystem::exists(shaderDescription.pathToShaderFile)) {
@@ -152,46 +152,47 @@ namespace ne {
 #endif
 
         // Return shader instance.
-        return std::make_unique<HlslShader>(pathToCompiledShader);
+        return std::make_shared<HlslShader>(pathToCompiledShader);
     }
 
     std::variant<ComPtr<IDxcBlob>, Error> HlslShader::getCompiledBlob() {
-        // Load cached bytecode from disk.
-        const auto pathToCompiledShader = getPathToCompiledShader();
+        if (!pCompiledBlob) {
+            // Load cached bytecode from disk.
+            const auto pathToCompiledShader = getPathToCompiledShader();
 
-        std::ifstream shaderBytecodeFile(pathToCompiledShader, std::ios::binary);
+            std::ifstream shaderBytecodeFile(pathToCompiledShader, std::ios::binary);
 
-        // Get file size.
-        shaderBytecodeFile.seekg(0, std::ios::end);
-        const long long iFileByteCount = shaderBytecodeFile.tellg();
-        shaderBytecodeFile.seekg(0, std::ios::beg);
+            // Get file size.
+            shaderBytecodeFile.seekg(0, std::ios::end);
+            const long long iFileByteCount = shaderBytecodeFile.tellg();
+            shaderBytecodeFile.seekg(0, std::ios::beg);
 
-        if (iFileByteCount > static_cast<long long>(UINT_MAX)) {
+            if (iFileByteCount > static_cast<long long>(UINT_MAX)) {
+                shaderBytecodeFile.close();
+                return Error("shader cache file is too big");
+            }
+
+            const auto iBlobSize = static_cast<unsigned int>(iFileByteCount);
+
+            // Read file to memory.
+            const auto pBlobData = std::make_unique<char[]>(iBlobSize);
+            shaderBytecodeFile.read(pBlobData.get(), iBlobSize);
             shaderBytecodeFile.close();
-            return Error("shader cache file is too big");
-        }
 
-        const auto iBlobSize = static_cast<unsigned int>(iFileByteCount);
+            ComPtr<IDxcUtils> pUtils;
+            HRESULT hResult = DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(&pUtils));
+            if (FAILED(hResult)) {
+                return Error(hResult);
+            }
 
-        // Read file to memory.
-        const auto pBlobData = std::make_unique<char[]>(iBlobSize);
-        shaderBytecodeFile.read(pBlobData.get(), iBlobSize);
-        shaderBytecodeFile.close();
-
-        ComPtr<IDxcUtils> pUtils;
-        HRESULT hResult = DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(&pUtils));
-        if (FAILED(hResult)) {
-            return Error(hResult);
-        }
-
-        ComPtr<IDxcBlob> pCompiledBlob;
-        hResult = pUtils->CreateBlob(
-            pBlobData.get(),
-            static_cast<unsigned int>(iBlobSize),
-            DXC_CP_ACP,
-            reinterpret_cast<IDxcBlobEncoding**>(pCompiledBlob.GetAddressOf()));
-        if (FAILED(hResult)) {
-            return Error(hResult);
+            hResult = pUtils->CreateBlob(
+                pBlobData.get(),
+                static_cast<unsigned int>(iBlobSize),
+                DXC_CP_ACP,
+                reinterpret_cast<IDxcBlobEncoding**>(pCompiledBlob.GetAddressOf()));
+            if (FAILED(hResult)) {
+                return Error(hResult);
+            }
         }
 
         return pCompiledBlob;

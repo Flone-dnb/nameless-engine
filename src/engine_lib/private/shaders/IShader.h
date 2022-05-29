@@ -41,7 +41,7 @@ namespace ne {
          * @arg internal error
          */
         static std::variant<
-            std::unique_ptr<IShader> /** Compiled shader. */,
+            std::shared_ptr<IShader> /** Compiled shader. */,
             std::string /** Compilation error. */,
             Error /** Internal error. */>
         compileShader(ShaderDescription& shaderDescription, IRenderer* pRenderer);

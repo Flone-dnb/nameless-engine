@@ -8,7 +8,7 @@
 #endif
 
 namespace ne {
-    void Game::onBeforeNewFrame(float fTimeFromPrevCallInSec) {
+    void Game::onBeforeNewFrame(float fTimeSincePrevCallInSec) {
         // Execute deferred tasks.
         std::queue<std::function<void()>> localTasks;
         {
@@ -21,8 +21,11 @@ namespace ne {
             localTasks.pop();
         }
 
-        // Call game instance.
-        pGameInstance->onBeforeNewFrame(fTimeFromPrevCallInSec);
+        // Do shader manager work.
+        pRenderer->getShaderManager()->onBeforeNewFrame(fTimeSincePrevCallInSec);
+
+        // Do game instance work.
+        pGameInstance->onBeforeNewFrame(fTimeSincePrevCallInSec);
     }
 
     void Game::onKeyboardInput(KeyboardKey key, KeyboardModifiers modifiers, bool bIsPressedDown) {

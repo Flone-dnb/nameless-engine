@@ -5,6 +5,9 @@
 #include "render/IRenderer.h"
 #include "shaders/hlsl/HlslShader.h"
 
+#include "render/directx/DirectXRenderer.h"
+#include "render/directx/Pso.h"
+
 EditorGameInstance::EditorGameInstance(ne::Window* pWindow, ne::InputManager* pInputManager)
     : IGameInstance(pWindow, pInputManager) {
     const ne::ShaderDescription description(
@@ -41,6 +44,14 @@ EditorGameInstance::EditorGameInstance(ne::Window* pWindow, ne::InputManager* pI
 
 void EditorGameInstance::onShaderCompilationFinished() {
     ne::Logger::get().info("received shader compilation finish", "");
+
+    ne::Pso pso(dynamic_cast<ne::DirectXRenderer*>(getWindow()->getRenderer()));
+    if (pso.assignShader("test")) {
+        ne::Logger::get().error("not found shader \"test\"", "");
+        return;
+    }
+
+    getWindow()->getRenderer()->getShaderManager()->markShaderToBeRemoved("test");
 }
 
 void EditorGameInstance::onInputActionEvent(

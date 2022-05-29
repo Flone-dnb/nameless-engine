@@ -15,7 +15,7 @@ namespace ne {
 
     Game* IRenderer::getGame() const { return pGame; }
 
-    std::unique_ptr<ShaderManager>& IRenderer::getShaderManager() { return pShaderManager; }
+    ShaderManager* IRenderer::getShaderManager() const { return pShaderManager.get(); }
 
     bool IRenderer::isConfigurationFileExists() {
         const auto configsFolder = getRendererConfigurationFilePath().parent_path();

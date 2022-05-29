@@ -139,9 +139,11 @@ namespace ne {
         /**
          * Returns shader manager used to compile shaders.
          *
+         * @warning Do not delete returned pointer.
+         *
          * @return Shader manager.
          */
-        std::unique_ptr<ShaderManager>& getShaderManager();
+        ShaderManager* getShaderManager() const;
 
     protected:
         /** Update internal resources for next frame. */

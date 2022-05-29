@@ -21,9 +21,6 @@ namespace ne {
             localTasks.pop();
         }
 
-        // Do shader manager work.
-        pRenderer->getShaderManager()->onBeforeNewFrame(fTimeSincePrevCallInSec);
-
         // Do game instance work.
         pGameInstance->onBeforeNewFrame(fTimeSincePrevCallInSec);
     }

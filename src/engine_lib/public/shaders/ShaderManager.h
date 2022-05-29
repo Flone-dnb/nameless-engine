@@ -116,8 +116,8 @@ namespace ne {
         bool markShaderToBeRemoved(const std::string& sShaderName);
 
     protected:
-        friend class Game;
-        friend class Pso;
+        // Only ShaderUser should be able to work with shaders.
+        friend class ShaderUser;
 
         /**
          * Compiles each shader. Usually called in another thread to do this work asynchronously.
@@ -145,8 +145,7 @@ namespace ne {
             const std::function<void()>& onCompleted);
 
         /**
-         * @warning Should only be called by Pso objects (for DirectX renderer) or by TODO (for Vulkan
-         * renderer).
+         * @warning Should only be called by ShaderUser class.
          *
          * Returns compiled shader (compiled using @ref compileShaders).
          *
@@ -158,12 +157,24 @@ namespace ne {
         std::optional<std::shared_ptr<IShader>> getShader(const std::string& sShaderName);
 
         /**
-         * Called by Game before a new frame is rendered.
+         * Returns std::shared_ptr::use_count() value using ShaderManager's mtxRwShaders.
          *
-         * @param fTimeSincePrevCallInSec   Time in seconds that has passed since the last call
-         * to this function.
+         * @param sShaderName Name of the shader to get use count for.
+         *
+         * @return std::shared_ptr::use_count() value.
          */
-        void onBeforeNewFrame(float fTimeSincePrevCallInSec);
+        long getShaderUseCount(const std::string& sShaderName);
+
+        /**
+         * Should be called when you are about to remove shader's std::shared_ptr and @ref getShaderUseCount
+         * returns 2, or if you already removed shader's std::shared_ptr and @ref getShaderUseCount returns 1.
+         *
+         * Looks if this shader was marked "to be removed" and that it's not being used by anyone else,
+         * if this is correct removes the shader.
+         *
+         * @param sShaderName Name of the shader to remove.
+         */
+        void removeShaderIfMarkedToBeRemoved(const std::string& sShaderName);
 
     private:
         /** Do not delete. Parent renderer that uses this shader manager. */
@@ -207,11 +218,6 @@ namespace ne {
         const std::string_view sGlobalShaderCacheParametersReleaseBuildKeyName = "is_release_build";
         /** Name of the key for used GPU, used in global shader cache information. */
         const std::string_view sGlobalShaderCacheParametersGpuKeyName = "gpu";
-
-        /** Time in seconds since last time we checked @ref vShadersToBeRemoved. */
-        float fTimeSinceLastCheckForShadersToBeRemovedInSec = 0.0f;
-        /** Time in seconds after which we check @ref vShadersToBeRemoved. */
-        const float fTimeIntervalToCheckForShadersToBeRemovedInSec = 60.0f;
 
         /**
          * Atomic flag to set when destructor is called so that running compilation threads

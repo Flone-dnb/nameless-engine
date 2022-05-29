@@ -1,11 +1,8 @@
 ﻿#pragma once
 
-// STL.
-#include <unordered_map>
-#include <memory>
-
 // Custom.
 #include "shaders/hlsl/HlslShader.h"
+#include "shaders/ShaderUser.h"
 
 namespace ne {
     using namespace Microsoft::WRL;
@@ -13,7 +10,7 @@ namespace ne {
     class DirectXRenderer;
 
     /** Our DirectX pipeline state object (PSO) wrapper. */
-    class Pso {
+    class Pso : public ShaderUser {
     public:
         /**
          * Constructor.
@@ -25,10 +22,12 @@ namespace ne {
         Pso(const Pso&) = delete;
         Pso& operator=(const Pso&) = delete;
 
-        ~Pso();
+        virtual ~Pso() override {}
 
         /**
          * Assigns a shader to PSO.
+         *
+         * @warning If a shader of this type was already added it will be replaced with the new one.
          *
          * @param sShaderName Name of the compiled shader (see ShaderManager::compileShaders).
          *
@@ -37,9 +36,6 @@ namespace ne {
         bool assignShader(const std::string& sShaderName);
 
     private:
-        /** Shaders used in this PSO. */
-        std::unordered_map<ShaderType, std::shared_ptr<HlslShader>> shaders;
-
         /** Do not delete. Parent renderer that uses this PSO. */
         DirectXRenderer* pRenderer;
 

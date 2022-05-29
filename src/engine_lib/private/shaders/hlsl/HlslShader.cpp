@@ -203,7 +203,7 @@ namespace ne {
         return pCompiledBlob;
     }
 
-    void HlslShader::releaseFromMemory() {
+    void HlslShader::releaseBytecodeFromMemory() {
         const auto iNewRefCount = pCompiledBlob.Reset();
 
         if (iNewRefCount != 0) {

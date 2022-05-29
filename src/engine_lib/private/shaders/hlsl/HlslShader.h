@@ -65,7 +65,7 @@ namespace ne {
          * Releases underlying shader bytecode from memory (this object will not be deleted).
          * Next time this shader will be needed it will be loaded from disk.
          */
-        virtual void releaseFromMemory() override;
+        virtual void releaseBytecodeFromMemory() override;
 
     private:
         ComPtr<IDxcBlob> pCompiledBlob;

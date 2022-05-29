@@ -72,6 +72,54 @@ namespace ne {
         }
     }
 
+    long ShaderManager::getShaderUseCount(const std::string& sShaderName) {
+        std::scoped_lock<std::mutex> guard(mtxRwShaders);
+        const auto it = compiledShaders.find(sShaderName);
+        if (it == compiledShaders.end()) [[unlikely]] {
+            Logger::get().error(
+                std::format("no shader with the name \"{}\" exists", sShaderName), sShaderManagerLogCategory);
+            return 0;
+        }
+
+        return it->second.use_count();
+    }
+
+    void ShaderManager::removeShaderIfMarkedToBeRemoved(const std::string& sShaderName) {
+        std::scoped_lock<std::mutex> guard(mtxRwShaders);
+        const auto it = std::ranges::find(vShadersToBeRemoved, sShaderName);
+        if (it == vShadersToBeRemoved.end()) {
+            // Not marked as "to remove".
+            return;
+        }
+
+        const auto shaderIt = compiledShaders.find(*it);
+        if (shaderIt == compiledShaders.end()) [[unlikely]] {
+            Logger::get().error(
+                std::format("no shader with the name \"{}\" exists", sShaderName), sShaderManagerLogCategory);
+            return;
+        }
+
+        const long iUseCount = shaderIt->second.use_count();
+        if (iUseCount > 1) {
+            Logger::get().error(
+                std::format(
+                    "THIS IS A BUG, REPORT TO DEVELOPERS: requested to remove marked to be removed "
+                    "shader \"{}\" but shader use count is not 1 "
+                    "(actual value: {})",
+                    sShaderName,
+                    iUseCount),
+                sShaderManagerLogCategory);
+            return;
+        }
+
+        compiledShaders.erase(shaderIt);
+        vShadersToBeRemoved.erase(it);
+
+        Logger::get().info(
+            std::format("marked to be removed shader \"{}\" was removed", sShaderName),
+            sShaderManagerLogCategory);
+    }
+
     bool ShaderManager::isShaderNameCanBeUsed(const std::string& sShaderName) {
         std::scoped_lock<std::mutex> guard(mtxRwShaders);
         const auto it = compiledShaders.find(sShaderName);
@@ -97,7 +145,9 @@ namespace ne {
             if (toBeRemovedIt == vShadersToBeRemoved.end()) {
                 Logger::get().info(
                     std::format(
-                        "shader \"{}\" is marked to be removed (use count: {})", sShaderName, iUseCount),
+                        "shader \"{}\" is marked to be removed later (use count: {})",
+                        sShaderName,
+                        iUseCount),
                     sShaderManagerLogCategory);
                 vShadersToBeRemoved.push_back(sShaderName);
             }
@@ -353,41 +403,5 @@ namespace ne {
         pRenderer->getGame()->addDeferredTask(onCompleted);
 
         pPromiseFinish->set_value(true);
-    }
-
-    void ShaderManager::onBeforeNewFrame(float fTimeSincePrevCallInSec) {
-        fTimeSinceLastCheckForShadersToBeRemovedInSec += fTimeSincePrevCallInSec;
-
-        if (fTimeSinceLastCheckForShadersToBeRemovedInSec >= fTimeIntervalToCheckForShadersToBeRemovedInSec) {
-            std::scoped_lock<std::mutex> guard(mtxRwShaders);
-            const auto [first, last] =
-                std::ranges::remove_if(vShadersToBeRemoved, [this](const std::string& sShaderName) {
-                    const auto it = compiledShaders.find(sShaderName);
-                    if (it == compiledShaders.end()) [[unlikely]] {
-                        return true;
-                    }
-
-                    return it->second.use_count() == 1;
-                });
-
-            for (auto it = first; it != last; ++it) {
-                Logger::get().info(
-                    std::format(
-                        "marked to be removed shader \"{}\" is no longer used and being removed", *it),
-                    sShaderManagerLogCategory);
-                const auto shaderIt = compiledShaders.find(*it);
-                if (shaderIt == compiledShaders.end()) [[unlikely]] {
-                    Logger::get().error(
-                        std::format("can't find marked to be removed shader \"{}\" in shader registry", *it),
-                        sShaderManagerLogCategory);
-                    continue;
-                }
-
-                compiledShaders.erase(shaderIt);
-            }
-            vShadersToBeRemoved.erase(first, last);
-
-            fTimeSinceLastCheckForShadersToBeRemovedInSec = 0.0f;
-        }
     }
 } // namespace ne

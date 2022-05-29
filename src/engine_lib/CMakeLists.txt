@@ -48,6 +48,8 @@ set(ENGINE_LIB_SOURCES
     private/shaders/hlsl/HlslShader.cpp
     public/shaders/ShaderDescription.h
     private/shaders/ShaderDescription.cpp
+    private/shaders/ShaderUser.h
+    private/shaders/ShaderUser.cpp
     # add your .h/.cpp files here
 )
 

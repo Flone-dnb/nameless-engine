@@ -8,9 +8,13 @@
 #include "dxc/d3d12shader.h"
 #pragma comment(lib, "dxcompiler.lib")
 
+// Custom.
+#include "io/Logger.h"
+
 namespace ne {
-    HlslShader::HlslShader(std::filesystem::path pathToCompiledShader)
-        : IShader(std::move(pathToCompiledShader)) {}
+    HlslShader::HlslShader(
+        std::filesystem::path pathToCompiledShader, const std::string& sShaderName, ShaderType shaderType)
+        : IShader(std::move(pathToCompiledShader), sShaderName, shaderType) {}
 
     std::variant<std::shared_ptr<IShader>, std::string, Error>
     HlslShader::compileShader(const ShaderDescription& shaderDescription) {
@@ -152,7 +156,8 @@ namespace ne {
 #endif
 
         // Return shader instance.
-        return std::make_shared<HlslShader>(pathToCompiledShader);
+        return std::make_shared<HlslShader>(
+            pathToCompiledShader, shaderDescription.sShaderName, shaderDescription.shaderType);
     }
 
     std::variant<ComPtr<IDxcBlob>, Error> HlslShader::getCompiledBlob() {
@@ -196,5 +201,31 @@ namespace ne {
         }
 
         return pCompiledBlob;
+    }
+
+    void HlslShader::releaseFromMemory() {
+        const auto iNewRefCount = pCompiledBlob.Reset();
+
+        if (iNewRefCount != 0) {
+            Logger::get().error(
+                std::format(
+                    "THIS IS A BUG, REPORT TO DEVELOPERS: shader \"{}\" bytecode was released from "
+                    "memory but it's still being "
+                    "referenced (new "
+                    "ref count: {})",
+                    getShaderName(),
+                    iNewRefCount),
+                "");
+        } else {
+            Logger::get().info(
+                std::format(
+                    "shader \"{}\" bytecode is being released from memory as it's no longer being used "
+                    "(new "
+                    "ref count: "
+                    "{})",
+                    getShaderName(),
+                    iNewRefCount),
+                "");
+        }
     }
 } // namespace ne

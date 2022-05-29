@@ -27,6 +27,8 @@ set(ENGINE_LIB_SOURCES
     private/render/IRenderer.cpp
     private/render/directx/DirectXRenderer.h
     private/render/directx/DirectXRenderer.cpp
+    private/render/directx/Pso.cpp
+    private/render/directx/Pso.h
     private/window/GLFW.hpp
     public/input/KeyboardKey.hpp
     private/io/Logger.cpp

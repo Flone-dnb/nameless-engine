@@ -60,11 +60,13 @@ namespace ne {
         deferredTasks.push(task);
     }
 
+    Window* Game::getWindow() const { return pWindow; }
+
     Game::Game(Window* pWindow) {
         this->pWindow = pWindow;
 
 #if defined(WIN32)
-        pRenderer = std::make_unique<DirectXRenderer>(pWindow, this);
+        pRenderer = std::make_unique<DirectXRenderer>(this);
 #elif __linux__
         static_assert(false, "need to assign renderer here");
 #endif

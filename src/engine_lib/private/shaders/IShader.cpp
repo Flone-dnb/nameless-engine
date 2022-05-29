@@ -10,9 +10,11 @@
 #include "misc/Error.h"
 #include "render/IRenderer.h"
 #include "render/directx/DirectXRenderer.h"
+#include "shaders/hlsl/HlslShader.h"
 
 namespace ne {
-    IShader::IShader(std::filesystem::path pathToCompiledShader) {
+    IShader::IShader(
+        std::filesystem::path pathToCompiledShader, const std::string& sShaderName, ShaderType shaderType) {
         if (!std::filesystem::exists(pathToCompiledShader)) {
             const Error err(
                 std::format("the specified path {} does not exist", pathToCompiledShader.string()));
@@ -20,6 +22,8 @@ namespace ne {
             throw std::runtime_error(err.getError());
         }
         this->pathToCompiledShader = std::move(pathToCompiledShader);
+        this->sShaderName = sShaderName;
+        this->shaderType = shaderType;
     }
 
     std::variant<std::shared_ptr<IShader>, std::string, Error>
@@ -54,7 +58,8 @@ namespace ne {
 
         if (dynamic_cast<DirectXRenderer*>(pRenderer)) {
             if (bUseCache) {
-                return std::make_unique<HlslShader>(shaderCacheFilePath);
+                return std::make_shared<HlslShader>(
+                    shaderCacheFilePath, shaderDescription.sShaderName, shaderDescription.shaderType);
             } else {
                 auto result = HlslShader::compileShader(std::move(shaderDescription));
                 if (std::holds_alternative<std::shared_ptr<IShader>>(result)) {
@@ -71,6 +76,8 @@ namespace ne {
             throw std::runtime_error(err.getError());
         }
     }
+
+    std::string IShader::getShaderName() const { return sShaderName; }
 
     std::filesystem::path IShader::getPathToCompiledShader() {
         if (!std::filesystem::exists(pathToCompiledShader)) {
@@ -93,4 +100,6 @@ namespace ne {
         }
         return basePath;
     }
+
+    ShaderType IShader::getShaderType() const { return shaderType; }
 } // namespace ne

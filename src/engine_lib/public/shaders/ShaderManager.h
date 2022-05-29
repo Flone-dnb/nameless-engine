@@ -78,16 +78,6 @@ namespace ne {
             const std::function<void()>& onCompleted);
 
         /**
-         * Returns compiled shader (compiled using @ref compileShaders).
-         *
-         * @param sShaderName Name of this shader.
-         *
-         * @return Empty if the shader with the specified name was not found,
-         * valid pointer otherwise.
-         */
-        std::optional<std::shared_ptr<IShader>> getShader(const std::string& sShaderName);
-
-        /**
          * Checks if the shader name is free (unique) to be used in @ref compileShaders.
          *
          * @param sShaderName Name to check.
@@ -117,15 +107,18 @@ namespace ne {
          *
          * @param sShaderName Shader's name to be marked for removal.
          *
-         * @return 'false' if someone is still referencing this shader
+         * @return 'true' if someone is still referencing this shader
          * and it cannot be removed right now, thus shader's name still
-         * cannot be used in @ref compileShaders. Returns 'true' if
+         * cannot be used in @ref compileShaders. Returns 'false' if
          * nobody was referencing this shader and it was removed, thus
          * shader's name can now be used in @ref compileShaders.
          */
         bool markShaderToBeRemoved(const std::string& sShaderName);
 
     protected:
+        friend class Game;
+        friend class Pso;
+
         /**
          * Compiles each shader. Usually called in another thread to do this work asynchronously.
          *
@@ -151,8 +144,18 @@ namespace ne {
                 void(ShaderDescription shaderDescription, std::variant<std::string, Error> error)>& onError,
             const std::function<void()>& onCompleted);
 
-    private:
-        friend class Game;
+        /**
+         * @warning Should only be called by Pso objects (for DirectX renderer) or by TODO (for Vulkan
+         * renderer).
+         *
+         * Returns compiled shader (compiled using @ref compileShaders).
+         *
+         * @param sShaderName Name of this shader.
+         *
+         * @return Empty if the shader with the specified name was not found,
+         * valid pointer otherwise.
+         */
+        std::optional<std::shared_ptr<IShader>> getShader(const std::string& sShaderName);
 
         /**
          * Called by Game before a new frame is rendered.
@@ -162,6 +165,7 @@ namespace ne {
          */
         void onBeforeNewFrame(float fTimeSincePrevCallInSec);
 
+    private:
         /** Do not delete. Parent renderer that uses this shader manager. */
         IRenderer* pRenderer;
 

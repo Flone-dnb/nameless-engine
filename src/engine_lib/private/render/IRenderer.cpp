@@ -1,17 +1,17 @@
 ﻿#include "IRenderer.h"
 
 // Custom.
+#include "game/Game.h"
 #include "io/ConfigManager.h"
 #include "misc/Globals.h"
 
 namespace ne {
-    IRenderer::IRenderer(Window* pWindow, Game* pGame) {
-        this->pWindow = pWindow;
+    IRenderer::IRenderer(Game* pGame) {
         this->pGame = pGame;
         pShaderManager = std::make_unique<ShaderManager>(this);
     }
 
-    Window* IRenderer::getWindow() const { return pWindow; }
+    Window* IRenderer::getWindow() const { return pGame->getWindow(); }
 
     Game* IRenderer::getGame() const { return pGame; }
 

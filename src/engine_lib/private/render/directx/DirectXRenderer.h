@@ -15,18 +15,17 @@
 #include <dxgi1_4.h>
 #include "DirectXHelpers/d3dx12.h"
 
-// OS.
-#include <wrl.h>
-
-#include "shaders/hlsl/HlslShader.h"
-using namespace Microsoft::WRL;
-
 // External.
 #include "D3D12MemoryAllocator/D3D12MemAlloc.h"
 
+// OS.
+#include <wrl.h>
+
 namespace ne {
-    class Window;
+    using namespace Microsoft::WRL;
+
     class Game;
+
     /**
      * DirectX 12 renderer.
      */
@@ -35,10 +34,9 @@ namespace ne {
         /**
          * Initializes renderer base entities.
          *
-         * @param pWindow Window that we will render to.
          * @param pGame   Game object that owns this renderer.
          */
-        DirectXRenderer(Window* pWindow, Game* pGame);
+        DirectXRenderer(Game* pGame);
         DirectXRenderer() = delete;
         DirectXRenderer(const DirectXRenderer&) = delete;
         DirectXRenderer& operator=(const DirectXRenderer&) = delete;

@@ -88,7 +88,7 @@ namespace ne {
         if (it == compiledShaders.end()) {
             Logger::get().warn(
                 std::format("no shader with the name \"{}\" exists", sShaderName), sShaderManagerLogCategory);
-            return true;
+            return false;
         }
 
         const long iUseCount = it->second.use_count();
@@ -101,12 +101,12 @@ namespace ne {
                     sShaderManagerLogCategory);
                 vShadersToBeRemoved.push_back(sShaderName);
             }
-            return false;
+            return true;
         }
 
         compiledShaders.erase(it);
 
-        return true;
+        return false;
     }
 
     std::optional<Error> ShaderManager::compileShaders(

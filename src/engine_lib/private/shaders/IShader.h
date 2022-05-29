@@ -3,10 +3,9 @@
 // STL.
 #include <filesystem>
 #include <memory>
-
-// Custom.
 #include <variant>
 
+// Custom.
 #include "misc/Error.h"
 #include "shaders/ShaderDescription.h"
 
@@ -21,12 +20,19 @@ namespace ne {
          * Constructor.
          *
          * @param pathToCompiledShader Path to compiled shader blob on disk.
+         * @param sShaderName          Unique name of this shader.
+         * @param shaderType           Type of this shader.
          */
-        IShader(std::filesystem::path pathToCompiledShader);
+        IShader(
+            std::filesystem::path pathToCompiledShader,
+            const std::string& sShaderName,
+            ShaderType shaderType);
 
         IShader() = delete;
         IShader(const IShader&) = delete;
         IShader& operator=(const IShader&) = delete;
+
+        virtual ~IShader() = default;
 
         /**
          * Compiles a shader.
@@ -46,7 +52,12 @@ namespace ne {
             Error /** Internal error. */>
         compileShader(ShaderDescription& shaderDescription, IRenderer* pRenderer);
 
-        virtual ~IShader() = default;
+        /**
+         * Returns unique name of this shader.
+         *
+         * @return Unique name of this shader.
+         */
+        std::string getShaderName() const;
 
         /**
          * Returns path to the directory used to store shader cache.
@@ -54,6 +65,19 @@ namespace ne {
          * @return Path to shader cache directory.
          */
         static std::filesystem::path getPathToShaderCacheDirectory();
+
+        /**
+         * Returns type of this shader.
+         *
+         * @return Shader type.
+         */
+        ShaderType getShaderType() const;
+
+        /**
+         * Releases underlying shader bytecode from memory (this object will not be deleted).
+         * Next time this shader will be needed it will be loaded from disk.
+         */
+        virtual void releaseFromMemory() = 0;
 
     protected:
         /**
@@ -64,6 +88,12 @@ namespace ne {
         std::filesystem::path getPathToCompiledShader();
 
     private:
+        /** Unique shader name received from ShaderManager. */
+        std::string sShaderName;
+
+        /** Type of this shader. */
+        ShaderType shaderType;
+
         /** Path to compiled shader. */
         std::filesystem::path pathToCompiledShader;
 

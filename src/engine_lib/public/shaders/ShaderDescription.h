@@ -11,10 +11,8 @@ namespace ne {
 
     /**
      * Describes the type of a shader.
-     *
-     * @warning Please, assign a value to each entry.
      */
-    enum class ShaderType { VERTEX_SHADER = 0, PIXEL_SHADER = 1, COMPUTE_SHADER = 2 };
+    enum class ShaderType : int { VERTEX_SHADER = 0, PIXEL_SHADER = 1, COMPUTE_SHADER = 2 };
 
     /**
      * Describes a shader.

@@ -48,10 +48,9 @@ namespace ne {
         /**
          * Constructor.
          *
-         * @param pWindow Window that we will render to.
          * @param pGame   Game object that owns this renderer.
          */
-        IRenderer(Window* pWindow, Game* pGame);
+        IRenderer(Game* pGame);
 
         IRenderer() = delete;
         IRenderer(const IRenderer&) = delete;
@@ -227,10 +226,7 @@ namespace ne {
          */
         std::unique_ptr<ShaderManager> pShaderManager;
 
-        /** Window that we render to. Do not delete this pointer.  */
-        Window* pWindow;
-
-        /** Game object that owns this renderer. Do not delete this pointer. */
+        /** Do not delete this pointer. Game object that owns this renderer. */
         Game* pGame;
 
         /** File name used to store renderer configuration. */

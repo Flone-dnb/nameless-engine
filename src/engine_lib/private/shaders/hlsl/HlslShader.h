@@ -21,8 +21,13 @@ namespace ne {
          * Constructor.
          *
          * @param pathToCompiledShader Path to compiled shader blob on disk.
+         * @param sShaderName          Unique name of this shader.
+         * @param shaderType           Type of this shader.
          */
-        HlslShader(std::filesystem::path pathToCompiledShader);
+        HlslShader(
+            std::filesystem::path pathToCompiledShader,
+            const std::string& sShaderName,
+            ShaderType shaderType);
 
         HlslShader() = delete;
         HlslShader(const HlslShader&) = delete;
@@ -55,6 +60,12 @@ namespace ne {
          * @return Compiled shader blob.
          */
         std::variant<ComPtr<IDxcBlob>, Error> getCompiledBlob();
+
+        /**
+         * Releases underlying shader bytecode from memory (this object will not be deleted).
+         * Next time this shader will be needed it will be loaded from disk.
+         */
+        virtual void releaseFromMemory() override;
 
     private:
         ComPtr<IDxcBlob> pCompiledBlob;

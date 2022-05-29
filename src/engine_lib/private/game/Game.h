@@ -108,6 +108,13 @@ namespace ne {
          */
         void addDeferredTask(const std::function<void()>& task);
 
+        /**
+         * Returns window that owns this object.
+         *
+         * @return Do not delete this pointer. Window that owns this object.
+         */
+        Window* getWindow() const;
+
     private:
         // The object should be created by a Window instance.
         friend class Window;

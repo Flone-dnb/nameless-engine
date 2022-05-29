@@ -67,6 +67,13 @@ namespace ne {
          */
         virtual void releaseBytecodeFromMemory() override;
 
+        /**
+         * Returns whether the shader is currently loaded into memory or not.
+         *
+         * @return Whether the shader is currently loaded into memory or not.
+         */
+        virtual bool isLoadedIntoMemory() override;
+
     private:
         ComPtr<IDxcBlob> pCompiledBlob;
 

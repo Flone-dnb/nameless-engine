@@ -21,6 +21,8 @@ namespace ne {
             localTasks.pop();
         }
 
+        pRenderer->getShaderManager()->performSelfValidation();
+
         // Do game instance work.
         pGameInstance->onBeforeNewFrame(fTimeSincePrevCallInSec);
     }

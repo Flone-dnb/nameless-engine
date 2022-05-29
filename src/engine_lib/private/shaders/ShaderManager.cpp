@@ -20,10 +20,10 @@ namespace ne {
         std::scoped_lock<std::mutex> guard(mtxRwShaders);
 
         // Remove finished promises of compilation threads.
-        const auto [first, last] = std::ranges::remove_if(vRunningCompilationThreads, [](auto& promise) {
+        const auto [first, last] = std::ranges::remove_if(vRunningCompilationThreads, [](auto& future) {
             using namespace std::chrono_literals;
             try {
-                const auto status = promise.get_future().wait_for(1ms);
+                const auto status = future.wait_for(1ms);
                 return status == std::future_status::ready;
             } catch (const std::exception& ex) {
                 Logger::get().error(
@@ -44,9 +44,9 @@ namespace ne {
                     "waiting for {} shader compilation thread(-s) to finish early",
                     vRunningCompilationThreads.size()),
                 sShaderManagerLogCategory);
-            for (auto& promise : vRunningCompilationThreads) {
+            for (auto& future : vRunningCompilationThreads) {
                 try {
-                    promise.get_future().get();
+                    future.get();
                 } catch (const std::exception& ex) {
                     Logger::get().error(
                         std::format(
@@ -159,6 +159,110 @@ namespace ne {
         return false;
     }
 
+    void ShaderManager::performSelfValidation() {
+        using namespace std::chrono;
+        const auto iDurationInSec =
+            duration_cast<seconds>(system_clock::now() - lastSelfValidationCheckTime).count();
+        if (iDurationInSec < 600) { // NOLINT: do validation every 10 minutes
+            return;
+        }
+
+        struct SelfValidationResults {
+            std::vector<std::string> vNotFoundShaders;
+            std::vector<std::string> vCanBeRemovedFromToBeRemoved;
+            std::vector<std::string> vCanBeReleasedShaderBytecode;
+            bool isError() const {
+                return !vNotFoundShaders.empty() || !vCanBeRemovedFromToBeRemoved.empty() ||
+                       !vCanBeReleasedShaderBytecode.empty();
+            }
+            std::string toString() const {
+                std::string sResultText;
+
+                sResultText += "[not found shaders]: ";
+                for (const auto& sShaderName : vNotFoundShaders) {
+                    sResultText += std::format(" \"{}\"", sShaderName);
+                }
+                sResultText += "\n";
+
+                sResultText += "[can be removed from \"to remove\" shaders (use count 1)]: ";
+                for (const auto& sShaderName : vCanBeRemovedFromToBeRemoved) {
+                    sResultText += std::format(" \"{}\"", sShaderName);
+                }
+                sResultText += "\n";
+
+                sResultText += "[can be released shader bytecode]: ";
+                for (const auto& sShaderName : vCanBeReleasedShaderBytecode) {
+                    sResultText += std::format(" \"{}\"", sShaderName);
+                }
+                sResultText += "\n";
+
+                return sResultText;
+            }
+        };
+
+        SelfValidationResults results;
+
+        std::scoped_lock<std::mutex> guard(mtxRwShaders);
+
+        Logger::get().info("starting ShaderManager self validation...", sShaderManagerLogCategory);
+
+        const auto start = steady_clock::now();
+
+        // Check "to remove" shaders.
+        const auto [first, last] =
+            std::ranges::remove_if(vShadersToBeRemoved, [this, &results](const auto& sShaderToRemove) {
+                const auto it = compiledShaders.find(sShaderToRemove);
+                if (it == compiledShaders.end()) [[unlikely]] {
+                    results.vNotFoundShaders.push_back(sShaderToRemove);
+                    return true;
+                }
+
+                if (it->second.use_count() == 1) {
+                    results.vCanBeRemovedFromToBeRemoved.push_back(sShaderToRemove);
+                    return true;
+                }
+
+                return false;
+            });
+        for (auto it = first; it != last; ++it) {
+            auto shaderIt = compiledShaders.find(*it);
+            if (shaderIt != compiledShaders.end()) {
+                compiledShaders.erase(shaderIt);
+            }
+        }
+        vShadersToBeRemoved.erase(first, last);
+
+        // Check shaders that were needed but no longer used.
+        for (const auto& [sShaderName, pShader] : compiledShaders) {
+            if (pShader->isLoadedIntoMemory() && pShader.use_count() == 1) {
+                results.vCanBeReleasedShaderBytecode.push_back(sShaderName);
+                pShader->releaseBytecodeFromMemory();
+            }
+        }
+
+        const auto end = steady_clock::now();
+
+        const auto iTimeTookInMs = duration_cast<milliseconds>(end - start).count();
+
+        if (results.isError()) {
+            Logger::get().error(
+                std::format(
+                    "finished ShaderManager self validation (took {} ms), found and fixed the following "
+                    "errors:\n"
+                    "\n{}",
+                    iTimeTookInMs,
+                    results.toString()),
+                sShaderManagerLogCategory);
+        } else {
+            Logger::get().info(
+                std::format(
+                    "finished ShaderManager self validation (took {} ms): everything is OK!", iTimeTookInMs),
+                sShaderManagerLogCategory);
+        }
+
+        lastSelfValidationCheckTime = system_clock::now();
+    }
+
     std::optional<Error> ShaderManager::compileShaders(
         const std::vector<ShaderDescription>& vShadersToCompile,
         const std::function<void(size_t iCompiledShaderCount, size_t iTotalShadersToCompile)>& onProgress,
@@ -217,10 +321,10 @@ namespace ne {
         }
 
         // Remove finished promises of compilation threads.
-        const auto [first, last] = std::ranges::remove_if(vRunningCompilationThreads, [](auto& promise) {
+        const auto [first, last] = std::ranges::remove_if(vRunningCompilationThreads, [](auto& future) {
             using namespace std::chrono_literals;
             try {
-                const auto status = promise.get_future().wait_for(1ms);
+                const auto status = future.wait_for(1ms);
                 return status == std::future_status::ready;
             } catch (const std::exception& ex) {
                 Logger::get().error(
@@ -296,12 +400,13 @@ namespace ne {
         }
 
         // Add a new promise for this new compilation thread.
-        vRunningCompilationThreads.push_back(std::promise<bool>());
+        std::promise<bool> promise;
+        vRunningCompilationThreads.push_back(promise.get_future());
 
         auto handle = std::thread(
             &ShaderManager::compileShadersThread,
             this,
-            &vRunningCompilationThreads.back(),
+            std::move(promise),
             std::move(vShadersToCompile),
             onProgress,
             onError,
@@ -312,7 +417,7 @@ namespace ne {
     }
 
     void ShaderManager::compileShadersThread(
-        std::promise<bool>* pPromiseFinish,
+        std::promise<bool> promiseFinish,
         std::vector<ShaderDescription> vShadersToCompile,
         const std::function<void(size_t iCompiledShaderCount, size_t iTotalShadersToCompile)>& onProgress,
         const std::function<
@@ -321,18 +426,6 @@ namespace ne {
         size_t iThreadId = std::hash<std::thread::id>()(std::this_thread::get_id());
 
         for (size_t i = 0; i < vShadersToCompile.size(); i++) {
-            // Check if shutting down.
-            if (bIsShuttingDown.test(std::memory_order_seq_cst)) {
-                pPromiseFinish->set_value(true);
-                Logger::get().info(
-                    std::format(
-                        "shader compilation thread {}: finishing early "
-                        "due to shutdown",
-                        iThreadId),
-                    sShaderManagerLogCategory);
-                return;
-            }
-
             // Compile shader.
             auto result = IShader::compileShader(vShadersToCompile[i], pRenderer);
             if (!std::holds_alternative<std::shared_ptr<IShader>>(result)) {
@@ -364,6 +457,17 @@ namespace ne {
                 // Add compiled shader to shader registry.
                 auto pShader = std::get<std::shared_ptr<IShader>>(std::move(result));
 
+                // Check if shutting down before locking mutex (otherwise a deadlock will occur).
+                if (bIsShuttingDown.test(std::memory_order_seq_cst)) {
+                    promiseFinish.set_value(true);
+                    Logger::get().info(
+                        std::format(
+                            "shader compilation thread {}: finishing early "
+                            "due to shutdown",
+                            iThreadId),
+                        sShaderManagerLogCategory);
+                    return;
+                }
                 std::scoped_lock<std::mutex> guard(mtxRwShaders);
 
                 auto it = compiledShaders.find(vShadersToCompile[i].sShaderName);
@@ -402,6 +506,6 @@ namespace ne {
             sShaderManagerLogCategory);
         pRenderer->getGame()->addDeferredTask(onCompleted);
 
-        pPromiseFinish->set_value(true);
+        promiseFinish.set_value(true);
     }
 } // namespace ne

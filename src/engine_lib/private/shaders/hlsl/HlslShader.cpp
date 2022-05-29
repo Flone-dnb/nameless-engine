@@ -228,4 +228,6 @@ namespace ne {
                 "");
         }
     }
+
+    bool HlslShader::isLoadedIntoMemory() { return pCompiledBlob; }
 } // namespace ne

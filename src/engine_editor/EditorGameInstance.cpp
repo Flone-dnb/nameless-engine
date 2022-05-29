@@ -16,6 +16,14 @@ EditorGameInstance::EditorGameInstance(ne::Window* pWindow, ne::InputManager* pI
         ne::ShaderType::VERTEX_SHADER,
         "VS",
         std::vector<std::string>());
+
+    std::vector<ne::ShaderDescription> vShaders{description};
+    // for (size_t i = 1; i < 10000; i++) {
+    //     auto copy = description;
+    //     copy.sShaderName += std::to_string(i);
+    //     vShaders.push_back(copy);
+    // }
+
     size_t iThreadId = std::hash<std::thread::id>()(std::this_thread::get_id());
     auto onProgress = [iThreadId](size_t iCompiledShaderCount, size_t iTotalShadersToCompile) {
         ne::Logger::get().info(
@@ -36,7 +44,7 @@ EditorGameInstance::EditorGameInstance(ne::Window* pWindow, ne::InputManager* pI
             }
         };
     auto err = getWindow()->getRenderer()->getShaderManager()->compileShaders(
-        std::vector{description}, onProgress, onError, [this]() { onShaderCompilationFinished(); });
+        vShaders, onProgress, onError, [this]() { onShaderCompilationFinished(); });
     if (err.has_value()) {
         ne::Logger::get().error(err->getError(), "");
     }

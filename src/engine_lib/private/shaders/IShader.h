@@ -79,6 +79,13 @@ namespace ne {
          */
         virtual void releaseBytecodeFromMemory() = 0;
 
+        /**
+         * Returns whether the shader is currently loaded into memory or not.
+         *
+         * @return Whether the shader is currently loaded into memory or not.
+         */
+        virtual bool isLoadedIntoMemory() = 0;
+
     protected:
         /**
          * Returns path to compiled shader blob on disk.

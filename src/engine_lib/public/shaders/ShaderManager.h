@@ -12,6 +12,7 @@
 #include <atomic>
 #include <variant>
 #include <array>
+#include <chrono>
 
 // Custom.
 #include "misc/Error.h"
@@ -115,6 +116,12 @@ namespace ne {
          */
         bool markShaderToBeRemoved(const std::string& sShaderName);
 
+        /**
+         * Analyzes current state to see if any errors have place.
+         * Fixes errors and reports them in log.
+         */
+        void performSelfValidation();
+
     protected:
         // Only ShaderUser should be able to work with shaders.
         friend class ShaderUser;
@@ -122,7 +129,7 @@ namespace ne {
         /**
          * Compiles each shader. Usually called in another thread to do this work asynchronously.
          *
-         * @param pPromiseFinish    Promise to set when finished or exited. Do not delete this pointer.
+         * @param promiseFinish     Promise to set when finished or exited. Do not delete this pointer.
          * @param vShadersToCompile Array of shaders to compile.
          * @param onProgress        Callback function that will be called when each shader is compiled.
          * This will also be called when all shaders are compiled (together with 'onCompleted').
@@ -137,7 +144,7 @@ namespace ne {
          * @param onCompleted       Callback function that will be called once all shaders are compiled.
          */
         void compileShadersThread(
-            std::promise<bool>* pPromiseFinish,
+            std::promise<bool> promiseFinish,
             std::vector<ShaderDescription> vShadersToCompile,
             const std::function<void(size_t iCompiledShaderCount, size_t iTotalShadersToCompile)>& onProgress,
             const std::function<
@@ -194,14 +201,14 @@ namespace ne {
             'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y',
             'z', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '_', '-'};
 
-        /** Map of compiled (added) shaders. */
+        /** Use with @ref mtxRwShaders. Map of compiled (added) shaders. */
         std::unordered_map<std::string, std::shared_ptr<IShader>> compiledShaders;
 
-        /** Array of statuses of running compilation threads (finished or not). */
-        std::vector<std::promise<bool>> vRunningCompilationThreads;
+        /** Use with @ref mtxRwShaders. Array of statuses of running compilation threads (finished or not). */
+        std::vector<std::future<bool>> vRunningCompilationThreads;
 
         /**
-         * Array of shader names marked to be removed from @ref compiledShaders
+         * Use with @ref mtxRwShaders. Array of shader names marked to be removed from @ref compiledShaders
          * when they are no longer used.
          */
         std::vector<std::string> vShadersToBeRemoved;
@@ -218,6 +225,11 @@ namespace ne {
         const std::string_view sGlobalShaderCacheParametersReleaseBuildKeyName = "is_release_build";
         /** Name of the key for used GPU, used in global shader cache information. */
         const std::string_view sGlobalShaderCacheParametersGpuKeyName = "gpu";
+
+#if defined(DEBUG)
+        /** Last time self validation was performed. */
+        std::chrono::time_point<std::chrono::system_clock> lastSelfValidationCheckTime;
+#endif
 
         /**
          * Atomic flag to set when destructor is called so that running compilation threads

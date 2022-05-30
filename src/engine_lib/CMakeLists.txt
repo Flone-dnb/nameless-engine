@@ -2,15 +2,23 @@ cmake_minimum_required(VERSION 3.20)
 
 project(engine_lib CXX)
 
-# relative path to 'ext' directory
+# Relative path to 'ext' directory.
 set(RELATIVE_EXT_PATH "../../ext")
 
-set_property(GLOBAL PROPERTY USE_FOLDERS ON)
-set(ENGINE_FOLDER "NAMELESS-ENGINE")
-
-# target
-set(ENGINE_LIB_SOURCES
+# Windows specific sources.
+set(ENGINE_WIN32_SOURCES
+    private/shaders/hlsl/HlslShader.h
+    private/shaders/hlsl/HlslShader.cpp
     ${RELATIVE_EXT_PATH}/D3D12MemoryAllocator/D3D12MemAlloc.cpp
+    private/render/directx/DirectXRenderer.h
+    private/render/directx/DirectXRenderer.cpp
+    private/render/directx/Pso.cpp
+    private/render/directx/Pso.h
+    # add Windows specific sources here...
+)
+
+# Engine general sources.
+set(ENGINE_LIB_SOURCES
     ${RELATIVE_EXT_PATH}/xxHash/xxhash.c
     ${RELATIVE_EXT_PATH}/xxHash/xxhash.h
     private/misc/Error.cpp
@@ -25,10 +33,6 @@ set(ENGINE_LIB_SOURCES
     private/game/Game.cpp
     private/render/IRenderer.h
     private/render/IRenderer.cpp
-    private/render/directx/DirectXRenderer.h
-    private/render/directx/DirectXRenderer.cpp
-    private/render/directx/Pso.cpp
-    private/render/directx/Pso.h
     private/window/GLFW.hpp
     public/input/KeyboardKey.hpp
     private/io/Logger.cpp
@@ -44,18 +48,21 @@ set(ENGINE_LIB_SOURCES
     private/shaders/ShaderManager.cpp
     private/shaders/IShader.cpp
     private/shaders/IShader.h
-    private/shaders/hlsl/HlslShader.h
-    private/shaders/hlsl/HlslShader.cpp
     public/shaders/ShaderDescription.h
     private/shaders/ShaderDescription.cpp
     private/shaders/ShaderUser.h
     private/shaders/ShaderUser.cpp
-    # add your .h/.cpp files here
+    # add general (cross-platform) sources here...
 )
 
+if (WIN32)
+    list(APPEND ENGINE_LIB_SOURCES ${ENGINE_WIN32_SOURCES})
+endif()
+
+# Target.
 add_library(${PROJECT_NAME} STATIC ${ENGINE_LIB_SOURCES})
 
-# build mode
+# Set build mode.
 set(default_build_type "Release")
 if(NOT CMAKE_BUILD_TYPE)
     message(STATUS "Using build mode '${default_build_type}' as none was specified.")
@@ -63,24 +70,26 @@ if(NOT CMAKE_BUILD_TYPE)
 endif()
 message(STATUS "${PROJECT_NAME}: build type: ${CMAKE_BUILD_TYPE}.")
 
-# add DEBUG macro in Debug build
+# Add DEBUG macro in Debug build.
 if(CMAKE_BUILD_TYPE MATCHES "^[Dd]ebug")
     set(BUILD_MODE_DIRECTORY ${CMAKE_BINARY_DIR}/Debug)
     message(STATUS "Adding DEBUG macro for this build type.")
     add_compile_definitions(DEBUG)
 endif()
 
-# add BUILD_MODE_DIRECTORY variable
+# Add BUILD_MODE_DIRECTORY variable.
 if(CMAKE_BUILD_TYPE MATCHES "^[Dd]ebug")
     set(BUILD_MODE_DIRECTORY ${CMAKE_BINARY_DIR}/Debug)
 else()
     set(BUILD_MODE_DIRECTORY ${CMAKE_BINARY_DIR}/Release)
 endif()
 
-# set folder
+# Set folder.
+set_property(GLOBAL PROPERTY USE_FOLDERS ON)
+set(ENGINE_FOLDER "NAMELESS-ENGINE")
 set_target_properties(${PROJECT_NAME} PROPERTIES FOLDER ${ENGINE_FOLDER})
 
-# more warnings
+# More warnings.
 if(MSVC)
     target_compile_options(${PROJECT_NAME} PUBLIC /W3 /WX)
 else()
@@ -91,11 +100,11 @@ if(MSVC)
     target_compile_options(${PROJECT_NAME} PUBLIC /utf-8)
 endif()
 
-# set standard
+# Set C++ standard.
 set(PROJECT_CXX_STANDARD_VERSION 23)
 target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_${PROJECT_CXX_STANDARD_VERSION})
 
-# copy engine resources
+# Copy engine resources.
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
                    COMMAND ${CMAKE_COMMAND} -E copy_directory
                    ${CMAKE_CURRENT_SOURCE_DIR}/../../res/engine/ ${CMAKE_BINARY_DIR}/res/engine/)
@@ -103,27 +112,28 @@ add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
                    COMMAND ${CMAKE_COMMAND} -E copy_directory
                    ${CMAKE_CURRENT_SOURCE_DIR}/../../res/engine/ ${BUILD_MODE_DIRECTORY}/res/engine/)
 
-# glfw
+# External: glfw.
 set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE) # disable docs
 set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE) # disable tests
 set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE) # disable examples
 add_subdirectory(${RELATIVE_EXT_PATH}/glfw ../../build/glfw) # add GLFW target
 target_link_libraries(${PROJECT_NAME} PUBLIC glfw)
 
-# spdlog
+# External: spdlog.
 add_subdirectory(${RELATIVE_EXT_PATH}/spdlog ../../build/spdlog)
 target_link_libraries(${PROJECT_NAME} PUBLIC spdlog::spdlog)
 
-# toml11
+# External: toml11.
 if (MSVC)
     target_compile_options(${PROJECT_NAME} PUBLIC /Zc:__cplusplus)
 endif()
 add_subdirectory(${RELATIVE_EXT_PATH}/toml11 build/toml11)
 
 if (WIN32)
-    # dxc
+    # External: DXC.
     target_link_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/dxc)
-    # copy dxc dlls
+
+    # Copy dxc DLLs.
     add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
                    COMMAND ${CMAKE_COMMAND} -E copy
                    ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/dxc/dxcompiler.dll ${CMAKE_BINARY_DIR}/dxcompiler.dll)
@@ -139,8 +149,8 @@ if (WIN32)
                    ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/dxc/dxil.dll ${BUILD_MODE_DIRECTORY}/dxil.dll)
 endif()
 
-# copy ext licenses to build directory
-# see if go is installed
+# Copy external licenses to build directory.
+# See if go is installed.
 execute_process(
     COMMAND go version
     OUTPUT_VARIABLE go_out
@@ -157,6 +167,7 @@ else ()
     message(FATAL_ERROR "\"Go\" programming language needs to be installed.")
 endif ()
 
+# Add includes.
 include_directories(${RELATIVE_EXT_PATH})
 include_directories(public)
 include_directories(private)

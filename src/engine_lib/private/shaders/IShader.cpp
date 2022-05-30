@@ -9,8 +9,10 @@
 #include "misc/Globals.h"
 #include "misc/Error.h"
 #include "render/IRenderer.h"
+#if defined(WIN32)
 #include "render/directx/DirectXRenderer.h"
 #include "shaders/hlsl/HlslShader.h"
+#endif
 
 namespace ne {
     IShader::IShader(
@@ -56,6 +58,7 @@ namespace ne {
             }
         }
 
+#if defined(WIN32)
         if (dynamic_cast<DirectXRenderer*>(pRenderer)) {
             if (bUseCache) {
                 return std::make_shared<HlslShader>(
@@ -69,13 +72,18 @@ namespace ne {
                 }
                 return result;
             }
-        } else {
+        }
+#else
+        if (false) { // TODO: replace this
+        }
+#endif
+        else {
             const auto err = Error("no shader type is associated with the "
                                    "current renderer (not implemented)");
             err.showError();
             throw std::runtime_error(err.getError());
         }
-    }
+    } // namespace ne
 
     std::string IShader::getShaderName() const { return sShaderName; }
 

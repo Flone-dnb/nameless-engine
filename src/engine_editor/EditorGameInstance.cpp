@@ -3,8 +3,9 @@
 // Custom.
 #include "io/Logger.h"
 #include "render/IRenderer.h"
-#include "shaders/hlsl/HlslShader.h"
 
+// TODO: remove (only for testing)
+#include "shaders/hlsl/HlslShader.h"
 #include "render/directx/DirectXRenderer.h"
 #include "render/directx/Pso.h"
 

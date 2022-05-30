@@ -26,8 +26,7 @@ namespace ne {
 
             shaders[shaderType] = std::move(pShader);
 
-            pShaderManager->releaseShaderBytecodeIfNotUsed(sOldShaderName);
-            pShaderManager->removeShaderIfMarkedToBeRemoved(sOldShaderName);
+            releaseShader(sOldShaderName);
         } else {
             shaders[shaderType] = std::move(pShader);
         }
@@ -44,6 +43,11 @@ namespace ne {
         return it->second.get();
     }
 
+    void ShaderUser::releaseShader(const std::string& sShaderName) const {
+        pShaderManager->releaseShaderBytecodeIfNotUsed(sShaderName);
+        pShaderManager->removeShaderIfMarkedToBeRemoved(sShaderName);
+    }
+
     ShaderUser::~ShaderUser() {
         std::vector<std::string> vShaderNamesToRemove;
 
@@ -54,8 +58,7 @@ namespace ne {
         shaders.clear();
 
         for (const auto& sShaderName : vShaderNamesToRemove) {
-            pShaderManager->releaseShaderBytecodeIfNotUsed(sShaderName);
-            pShaderManager->removeShaderIfMarkedToBeRemoved(sShaderName);
+            releaseShader(sShaderName);
         }
     }
 } // namespace ne

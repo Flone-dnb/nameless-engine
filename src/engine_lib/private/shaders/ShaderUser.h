@@ -56,6 +56,14 @@ namespace ne {
         std::optional<IShader*> getShader(ShaderType shaderType) const;
 
     private:
+        /**
+         * Uses ShaderManager to release shader bytecode if needed and removes shader
+         * if it was marked as "to remove".
+         *
+         * @param sShaderName Name of the shader to release.
+         */
+        void releaseShader(const std::string& sShaderName) const;
+
         /** Stored shaders. */
         std::unordered_map<ShaderType, std::shared_ptr<IShader>> shaders;
 

@@ -45,14 +45,15 @@ namespace ne {
         /**
          * Returns previously added shader (@ref addShader) for the specified type.
          *
-         * @warning Returned shader will not be destroyed until this ShaderUser object is not destroyed.
-         * Once this ShaderUser object is destroyed there is no guarantee that the shader will be valid.
+         * @warning Do not delete returned pointer. Returned shader will not be destroyed
+         * until this ShaderUser object is not destroyed. Once this ShaderUser object is destroyed
+         * there is no guarantee that the shader will be valid.
          *
          * @param shaderType Type of the shader to query.
          *
          * @return empty if a shader of this type was not added before, valid pointer otherwise.
          */
-        std::optional<std::weak_ptr<IShader>> getShader(ShaderType shaderType) const;
+        std::optional<IShader*> getShader(ShaderType shaderType) const;
 
     private:
         /** Stored shaders. */

@@ -35,13 +35,13 @@ namespace ne {
         return false;
     }
 
-    std::optional<std::weak_ptr<IShader>> ShaderUser::getShader(ShaderType shaderType) const {
+    std::optional<IShader*> ShaderUser::getShader(ShaderType shaderType) const {
         const auto it = shaders.find(shaderType);
         if (it == shaders.end()) {
             return {};
         }
 
-        return it->second;
+        return it->second.get();
     }
 
     ShaderUser::~ShaderUser() {

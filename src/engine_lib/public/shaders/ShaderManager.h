@@ -186,6 +186,11 @@ namespace ne {
         void removeShaderIfMarkedToBeRemoved(const std::string& sShaderName);
 
         /**
+         * Removes futures of finished compilation threads.
+         */
+        void removeFinishedCompilationThreads();
+
+        /**
          * Reads and applies configuration from disk.
          * If any values from disk configuration were invalid/corrected will
          * override old configuration with new/corrected values.
@@ -211,7 +216,7 @@ namespace ne {
         IRenderer* pRenderer;
 
         /** Use for @ref compiledShaders and @ref vRunningCompilationThreads. */
-        std::mutex mtxRwShaders;
+        std::recursive_mutex mtxRwShaders;
 
         /**
          * Array of characters that can be used for shader name.

@@ -25,25 +25,9 @@ namespace ne {
     ShaderManager::~ShaderManager() {
         bIsShuttingDown.test_and_set();
 
-        std::scoped_lock<std::mutex> guard(mtxRwShaders);
+        std::scoped_lock guard(mtxRwShaders);
 
-        // Remove finished promises of compilation threads.
-        const auto [first, last] = std::ranges::remove_if(vRunningCompilationThreads, [](auto& future) {
-            using namespace std::chrono_literals;
-            try {
-                const auto status = future.wait_for(1ms);
-                return status == std::future_status::ready;
-            } catch (const std::exception& ex) {
-                Logger::get().error(
-                    std::format(
-                        "one of the shader compilation threads returned "
-                        "an exception: {}",
-                        ex.what()),
-                    sShaderManagerLogCategory);
-                return true;
-            }
-        });
-        vRunningCompilationThreads.erase(first, last);
+        removeFinishedCompilationThreads();
 
         // Wait for shader compilation threads to finish early.
         if (!vRunningCompilationThreads.empty()) {
@@ -71,7 +55,7 @@ namespace ne {
     }
 
     std::optional<std::shared_ptr<IShader>> ShaderManager::getShader(const std::string& sShaderName) {
-        std::scoped_lock<std::mutex> guard(mtxRwShaders);
+        std::scoped_lock guard(mtxRwShaders);
         const auto it = compiledShaders.find(sShaderName);
         if (it == compiledShaders.end()) {
             return {};
@@ -81,7 +65,7 @@ namespace ne {
     }
 
     void ShaderManager::releaseShaderBytecodeIfNotUsed(const std::string& sShaderName) {
-        std::scoped_lock<std::mutex> guard(mtxRwShaders);
+        std::scoped_lock guard(mtxRwShaders);
 
         const auto it = compiledShaders.find(sShaderName);
         if (it == compiledShaders.end()) [[unlikely]] {
@@ -98,7 +82,7 @@ namespace ne {
     }
 
     void ShaderManager::removeShaderIfMarkedToBeRemoved(const std::string& sShaderName) {
-        std::scoped_lock<std::mutex> guard(mtxRwShaders);
+        std::scoped_lock guard(mtxRwShaders);
         const auto it = std::ranges::find(vShadersToBeRemoved, sShaderName);
         if (it == vShadersToBeRemoved.end()) {
             // Not marked as "to remove".
@@ -124,6 +108,28 @@ namespace ne {
         Logger::get().info(
             std::format("marked to be removed shader \"{}\" was removed", sShaderName),
             sShaderManagerLogCategory);
+    }
+
+    void ShaderManager::removeFinishedCompilationThreads() {
+        std::scoped_lock guard(mtxRwShaders);
+
+        // Remove finished futures of compilation threads.
+        const auto [first, last] = std::ranges::remove_if(vRunningCompilationThreads, [](auto& future) {
+            using namespace std::chrono_literals;
+            try {
+                const auto status = future.wait_for(1ms);
+                return status == std::future_status::ready;
+            } catch (const std::exception& ex) {
+                Logger::get().error(
+                    std::format(
+                        "one of the shader compilation threads returned "
+                        "an exception: {}",
+                        ex.what()),
+                    sShaderManagerLogCategory);
+                return true;
+            }
+        });
+        vRunningCompilationThreads.erase(first, last);
     }
 
     void ShaderManager::applyConfigurationFromDisk() {
@@ -202,7 +208,7 @@ namespace ne {
     }
 
     bool ShaderManager::isShaderNameCanBeUsed(const std::string& sShaderName) {
-        std::scoped_lock<std::mutex> guard(mtxRwShaders);
+        std::scoped_lock guard(mtxRwShaders);
         const auto it = compiledShaders.find(sShaderName);
         if (it == compiledShaders.end()) {
             return true;
@@ -212,7 +218,7 @@ namespace ne {
     }
 
     bool ShaderManager::markShaderToBeRemoved(const std::string& sShaderName) {
-        std::scoped_lock<std::mutex> guard(mtxRwShaders);
+        std::scoped_lock guard(mtxRwShaders);
         const auto it = compiledShaders.find(sShaderName);
         if (it == compiledShaders.end()) {
             Logger::get().warn(
@@ -289,7 +295,7 @@ namespace ne {
 
         SelfValidationResults results;
 
-        std::scoped_lock<std::mutex> guard(mtxRwShaders);
+        std::scoped_lock guard(mtxRwShaders);
 
         Logger::get().info("starting ShaderManager self validation...", sShaderManagerLogCategory);
 
@@ -389,7 +395,7 @@ namespace ne {
             return {};
         }
 
-        std::scoped_lock<std::mutex> guard(mtxRwShaders);
+        std::scoped_lock guard(mtxRwShaders);
 
         // Check if we already have a shader with this name.
         for (const auto& shader : vShadersToCompile) {
@@ -409,23 +415,7 @@ namespace ne {
             }
         }
 
-        // Remove finished promises of compilation threads.
-        const auto [first, last] = std::ranges::remove_if(vRunningCompilationThreads, [](auto& future) {
-            using namespace std::chrono_literals;
-            try {
-                const auto status = future.wait_for(1ms);
-                return status == std::future_status::ready;
-            } catch (const std::exception& ex) {
-                Logger::get().error(
-                    std::format(
-                        "one of the shader compilation threads returned "
-                        "an exception: {}",
-                        ex.what()),
-                    sShaderManagerLogCategory);
-                return true;
-            }
-        });
-        vRunningCompilationThreads.erase(first, last);
+        removeFinishedCompilationThreads();
 
         // If build mode was changed clear shader cache directory.
 #if defined(DEBUG)
@@ -557,7 +547,7 @@ namespace ne {
                         sShaderManagerLogCategory);
                     return;
                 }
-                std::scoped_lock<std::mutex> guard(mtxRwShaders);
+                std::scoped_lock guard(mtxRwShaders);
 
                 auto it = compiledShaders.find(vShadersToCompile[i].sShaderName);
                 if (it != compiledShaders.end()) {

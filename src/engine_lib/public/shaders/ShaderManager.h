@@ -185,6 +185,27 @@ namespace ne {
          */
         void removeShaderIfMarkedToBeRemoved(const std::string& sShaderName);
 
+        /**
+         * Reads and applies configuration from disk.
+         * If any values from disk configuration were invalid/corrected will
+         * override old configuration with new/corrected values.
+         *
+         * @remark If no configuration file existed will create it.
+         */
+        void applyConfigurationFromDisk();
+
+        /**
+         * Writes current configuration to disk.
+         */
+        void writeConfigurationToDisk() const;
+
+        /**
+         * Returns path to the configuration file.
+         *
+         * @return Path to configuration file.
+         */
+        std::filesystem::path getConfigurationFilePath() const;
+
     private:
         /** Do not delete. Parent renderer that uses this shader manager. */
         IRenderer* pRenderer;
@@ -221,17 +242,27 @@ namespace ne {
          * or not (needs to be recompiled or not).
          */
         const std::string_view sGlobalShaderCacheParametersFileName = ".shader_cache.toml";
+
         /** Name of the section used in global shader cache information. */
-        const std::string_view sGlobalShaderCacheParametersSectionName = "global shader cache parameters";
+        const std::string_view sGlobalShaderCacheParametersSectionName = "global_shader_cache_parameters";
+
         /** Name of the key for build mode, used in global shader cache information. */
         const std::string_view sGlobalShaderCacheParametersReleaseBuildKeyName = "is_release_build";
+
         /** Name of the key for used GPU, used in global shader cache information. */
         const std::string_view sGlobalShaderCacheParametersGpuKeyName = "gpu";
 
-#if defined(DEBUG)
+        /** Name of the file in which we store configurable values. */
+        const std::string_view sConfigurationFileName = "shader_manager";
+
+        /** Name of the key used in configuration file to store self validation interval. */
+        const std::string_view sConfigurationSelfValidationIntervalKeyName = "self_validation_interval_min";
+
         /** Last time self validation was performed. */
-        std::chrono::time_point<std::chrono::system_clock> lastSelfValidationCheckTime;
-#endif
+        std::chrono::time_point<std::chrono::steady_clock> lastSelfValidationCheckTime;
+
+        /** Amount of time after which to perform self validation. */
+        long iSelfValidationIntervalInMin = 30;
 
         /**
          * Atomic flag to set when destructor is called so that running compilation threads

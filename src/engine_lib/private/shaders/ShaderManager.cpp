@@ -3,6 +3,7 @@
 // STL.
 #include <format>
 #include <thread>
+#include <filesystem>
 
 // Custom.
 #include "game/Game.h"
@@ -10,9 +11,16 @@
 #include "shaders/IShader.h"
 #include "render/IRenderer.h"
 #include "io/ConfigManager.h"
+#include "misc/Globals.h"
 
 namespace ne {
-    ShaderManager::ShaderManager(IRenderer* pRenderer) { this->pRenderer = pRenderer; }
+    ShaderManager::ShaderManager(IRenderer* pRenderer) {
+        this->pRenderer = pRenderer;
+
+        applyConfigurationFromDisk();
+
+        lastSelfValidationCheckTime = std::chrono::steady_clock::now();
+    }
 
     ShaderManager::~ShaderManager() {
         bIsShuttingDown.test_and_set();
@@ -118,6 +126,81 @@ namespace ne {
             sShaderManagerLogCategory);
     }
 
+    void ShaderManager::applyConfigurationFromDisk() {
+        const auto configPath = getConfigurationFilePath();
+
+        if (!std::filesystem::exists(configPath)) {
+            writeConfigurationToDisk();
+            return;
+        }
+
+        ConfigManager configManager;
+        auto optional = configManager.loadFile(configPath);
+        if (optional.has_value()) {
+            auto err = std::move(optional.value());
+            err.addEntry();
+            // don't show message as it's not a critical error
+            Logger::get().error(err.getError(), sShaderManagerLogCategory);
+            return;
+        }
+
+        auto iNewSelfValidationIntervalInMin = configManager.getValue<long>(
+            "", sConfigurationSelfValidationIntervalKeyName, iSelfValidationIntervalInMin);
+        if (iNewSelfValidationIntervalInMin < 15) { // NOLINT: don't do self validation too often.
+            iNewSelfValidationIntervalInMin = 15;
+        }
+
+        iSelfValidationIntervalInMin = iNewSelfValidationIntervalInMin;
+
+        // Rewrite configuration on disk because we might correct some values.
+        writeConfigurationToDisk();
+    }
+
+    void ShaderManager::writeConfigurationToDisk() const {
+        const auto configPath = getConfigurationFilePath();
+
+        ConfigManager configManager;
+        configManager.setValue(
+            "",
+            sConfigurationSelfValidationIntervalKeyName,
+            iSelfValidationIntervalInMin,
+            "specified in minutes, interval can't be smaller than 15 minutes, for big games this might cause "
+            "small framerate drop each time self validation is performed but "
+            "this might find errors (if any occurred) and fix them which might result in slightly less RAM "
+            "usage");
+        auto optional = configManager.saveFile(configPath, false);
+        if (optional.has_value()) {
+            auto err = std::move(optional.value());
+            err.addEntry();
+            // don't show message as it's not a critical error
+            Logger::get().error(err.getError(), sShaderManagerLogCategory);
+        }
+    }
+
+    std::filesystem::path ShaderManager::getConfigurationFilePath() const {
+        std::filesystem::path configPath = getBaseDirectoryForConfigs();
+        configPath += getApplicationName();
+
+        if (!std::filesystem::exists(configPath)) {
+            std::filesystem::create_directory(configPath);
+        }
+
+        configPath /= sEngineDirectoryName;
+
+        if (!std::filesystem::exists(configPath)) {
+            std::filesystem::create_directory(configPath);
+        }
+
+        configPath /= sConfigurationFileName;
+
+        // Check extension.
+        if (!std::string_view(sConfigurationFileName).ends_with(ConfigManager::getConfigFormatExtension())) {
+            configPath += ConfigManager::getConfigFormatExtension();
+        }
+
+        return configPath;
+    }
+
     bool ShaderManager::isShaderNameCanBeUsed(const std::string& sShaderName) {
         std::scoped_lock<std::mutex> guard(mtxRwShaders);
         const auto it = compiledShaders.find(sShaderName);
@@ -160,8 +243,8 @@ namespace ne {
     void ShaderManager::performSelfValidation() {
         using namespace std::chrono;
         const auto iDurationInMin =
-            duration_cast<minutes>(system_clock::now() - lastSelfValidationCheckTime).count();
-        if (iDurationInMin < 30) { // NOLINT: do validation every 30 minutes
+            duration_cast<minutes>(steady_clock::now() - lastSelfValidationCheckTime).count();
+        if (iDurationInMin < iSelfValidationIntervalInMin) {
             return;
         }
 
@@ -266,7 +349,7 @@ namespace ne {
                 sShaderManagerLogCategory);
         }
 
-        lastSelfValidationCheckTime = system_clock::now();
+        lastSelfValidationCheckTime = steady_clock::now();
     }
 
     std::optional<Error> ShaderManager::compileShaders(

@@ -262,7 +262,7 @@ namespace ne {
         std::chrono::time_point<std::chrono::steady_clock> lastSelfValidationCheckTime;
 
         /** Amount of time after which to perform self validation. */
-        long iSelfValidationIntervalInMin = 30;
+        long iSelfValidationIntervalInMin = 30; // NOLINT: don't do self validation too often
 
         /**
          * Atomic flag to set when destructor is called so that running compilation threads

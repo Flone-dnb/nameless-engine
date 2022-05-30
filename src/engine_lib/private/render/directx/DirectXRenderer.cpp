@@ -27,9 +27,6 @@ namespace ne {
     DirectXRenderer::DirectXRenderer(Game* pGame) : IRenderer(pGame) {
         // Read configuration from config file (if exists).
         if (isConfigurationFileExists()) {
-            Logger::get().info(
-                "renderer found configuration file, using configuration from this file",
-                sRendererLogCategory);
             DirectXRenderer::readConfigurationFromConfigFile();
             bStartedWithConfigurationFromDisk = true;
         }

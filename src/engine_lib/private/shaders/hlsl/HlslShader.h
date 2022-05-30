@@ -1,5 +1,8 @@
 ﻿#pragma once
 
+// STL.
+#include <mutex>
+
 // Custom.
 #include "shaders/IShader.h"
 
@@ -62,20 +65,23 @@ namespace ne {
         std::variant<ComPtr<IDxcBlob>, Error> getCompiledBlob();
 
         /**
-         * Releases underlying shader bytecode from memory (this object will not be deleted).
+         * Releases underlying shader bytecode from memory (this object will not be deleted)
+         * if the shader bytecode was loaded into memory.
          * Next time this shader will be needed it will be loaded from disk.
-         */
-        virtual void releaseBytecodeFromMemory() override;
-
-        /**
-         * Returns whether the shader is currently loaded into memory or not.
          *
-         * @return Whether the shader is currently loaded into memory or not.
+         * @return 'false' if was released from memory, 'true' if not loaded into memory.
          */
-        virtual bool isLoadedIntoMemory() override;
+        virtual bool releaseBytecodeFromMemoryIfLoaded() override;
 
     private:
+        /**
+         * Use with @ref mtxRwCompiledBlob. Compiled shader bytecode
+         * (may be empty if not stored in memory right now).
+         */
         ComPtr<IDxcBlob> pCompiledBlob;
+
+        /** Used for read/write operations on @ref pCompiledBlob. */
+        std::mutex mtxRwCompiledBlob;
 
         // Clear shader cache if changing shader model.
         static constexpr std::wstring_view sVertexShaderModel = L"vs_6_0";

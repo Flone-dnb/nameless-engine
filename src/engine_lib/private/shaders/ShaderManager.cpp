@@ -72,16 +72,21 @@ namespace ne {
         }
     }
 
-    long ShaderManager::getShaderUseCount(const std::string& sShaderName) {
+    void ShaderManager::releaseShaderBytecodeIfNotUsed(const std::string& sShaderName) {
         std::scoped_lock<std::mutex> guard(mtxRwShaders);
+
         const auto it = compiledShaders.find(sShaderName);
         if (it == compiledShaders.end()) [[unlikely]] {
             Logger::get().error(
                 std::format("no shader with the name \"{}\" exists", sShaderName), sShaderManagerLogCategory);
-            return 0;
+            return;
         }
 
-        return it->second.use_count();
+        if (it->second.use_count() > 1) {
+            return;
+        }
+
+        it->second->releaseBytecodeFromMemoryIfLoaded();
     }
 
     void ShaderManager::removeShaderIfMarkedToBeRemoved(const std::string& sShaderName) {
@@ -101,14 +106,7 @@ namespace ne {
 
         const long iUseCount = shaderIt->second.use_count();
         if (iUseCount > 1) {
-            Logger::get().error(
-                std::format(
-                    "THIS IS A BUG, REPORT TO DEVELOPERS: requested to remove marked to be removed "
-                    "shader \"{}\" but shader use count is not 1 "
-                    "(actual value: {})",
-                    sShaderName,
-                    iUseCount),
-                sShaderManagerLogCategory);
+            // Still used by somebody else.
             return;
         }
 
@@ -161,9 +159,9 @@ namespace ne {
 
     void ShaderManager::performSelfValidation() {
         using namespace std::chrono;
-        const auto iDurationInSec =
-            duration_cast<seconds>(system_clock::now() - lastSelfValidationCheckTime).count();
-        if (iDurationInSec < 900) { // NOLINT: do validation every 15 minutes
+        const auto iDurationInMin =
+            duration_cast<minutes>(system_clock::now() - lastSelfValidationCheckTime).count();
+        if (iDurationInMin < 30) { // NOLINT: do validation every 30 minutes
             return;
         }
 
@@ -178,23 +176,29 @@ namespace ne {
             std::string toString() const {
                 std::string sResultText;
 
-                sResultText += "[not found shaders]: ";
-                for (const auto& sShaderName : vNotFoundShaders) {
-                    sResultText += std::format(" \"{}\"", sShaderName);
+                if (!vNotFoundShaders.empty()) {
+                    sResultText += "[removed not found shaders]: ";
+                    for (const auto& sShaderName : vNotFoundShaders) {
+                        sResultText += std::format(" \"{}\"", sShaderName);
+                    }
+                    sResultText += "\n";
                 }
-                sResultText += "\n";
 
-                sResultText += "[can be removed from \"to remove\" shaders (use count 1)]: ";
-                for (const auto& sShaderName : vCanBeRemovedFromToBeRemoved) {
-                    sResultText += std::format(" \"{}\"", sShaderName);
+                if (!vCanBeRemovedFromToBeRemoved.empty()) {
+                    sResultText += "[removed from \"to remove\" shaders (use count 1)]: ";
+                    for (const auto& sShaderName : vCanBeRemovedFromToBeRemoved) {
+                        sResultText += std::format(" \"{}\"", sShaderName);
+                    }
+                    sResultText += "\n";
                 }
-                sResultText += "\n";
 
-                sResultText += "[can be released shader bytecode]: ";
-                for (const auto& sShaderName : vCanBeReleasedShaderBytecode) {
-                    sResultText += std::format(" \"{}\"", sShaderName);
+                if (!vCanBeReleasedShaderBytecode.empty()) {
+                    sResultText += "[released shader bytecode]: ";
+                    for (const auto& sShaderName : vCanBeReleasedShaderBytecode) {
+                        sResultText += std::format(" \"{}\"", sShaderName);
+                    }
+                    sResultText += "\n";
                 }
-                sResultText += "\n";
 
                 return sResultText;
             }
@@ -234,9 +238,11 @@ namespace ne {
 
         // Check shaders that were needed but no longer used.
         for (const auto& [sShaderName, pShader] : compiledShaders) {
-            if (pShader->isLoadedIntoMemory() && pShader.use_count() == 1) {
-                results.vCanBeReleasedShaderBytecode.push_back(sShaderName);
-                pShader->releaseBytecodeFromMemory();
+            if (pShader.use_count() == 1) {
+                const bool bReleased = !pShader->releaseBytecodeFromMemoryIfLoaded();
+                if (bReleased) {
+                    results.vCanBeReleasedShaderBytecode.push_back(sShaderName);
+                }
             }
         }
 

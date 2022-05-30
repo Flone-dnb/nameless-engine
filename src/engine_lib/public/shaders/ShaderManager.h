@@ -117,8 +117,14 @@ namespace ne {
         bool markShaderToBeRemoved(const std::string& sShaderName);
 
         /**
+         * Automatically called by the Game object and has no point in being
+         * called from user code.
+         *
          * Analyzes current state to see if any errors have place.
          * Fixes errors and reports them in log.
+         *
+         * @remark A call to this function may be ignored by the ShaderManager if
+         * the previous self validation was performed not so long ago.
          */
         void performSelfValidation();
 
@@ -164,18 +170,14 @@ namespace ne {
         std::optional<std::shared_ptr<IShader>> getShader(const std::string& sShaderName);
 
         /**
-         * Returns std::shared_ptr::use_count() value using ShaderManager's mtxRwShaders.
+         * Looks if the specified shader is not used by anyone and releases shader bytecode
+         * from memory if it was previously loaded.
          *
-         * @param sShaderName Name of the shader to get use count for.
-         *
-         * @return std::shared_ptr::use_count() value.
+         * @param sShaderName Name of the shader to release bytecode.
          */
-        long getShaderUseCount(const std::string& sShaderName);
+        void releaseShaderBytecodeIfNotUsed(const std::string& sShaderName);
 
         /**
-         * Should be called when you are about to remove shader's std::shared_ptr and @ref getShaderUseCount
-         * returns 2, or if you already removed shader's std::shared_ptr and @ref getShaderUseCount returns 1.
-         *
          * Looks if this shader was marked "to be removed" and that it's not being used by anyone else,
          * if this is correct removes the shader.
          *

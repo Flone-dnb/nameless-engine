@@ -74,17 +74,13 @@ namespace ne {
         ShaderType getShaderType() const;
 
         /**
-         * Releases underlying shader bytecode from memory (this object will not be deleted).
+         * Releases underlying shader bytecode from memory (this object will not be deleted)
+         * if the shader bytecode was loaded into memory.
          * Next time this shader will be needed it will be loaded from disk.
-         */
-        virtual void releaseBytecodeFromMemory() = 0;
-
-        /**
-         * Returns whether the shader is currently loaded into memory or not.
          *
-         * @return Whether the shader is currently loaded into memory or not.
+         * @return 'false' if was released from memory, 'true' if not loaded into memory.
          */
-        virtual bool isLoadedIntoMemory() = 0;
+        virtual bool releaseBytecodeFromMemoryIfLoaded() = 0;
 
     protected:
         /**

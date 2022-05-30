@@ -161,6 +161,8 @@ namespace ne {
     }
 
     std::variant<ComPtr<IDxcBlob>, Error> HlslShader::getCompiledBlob() {
+        std::scoped_lock<std::mutex> guard(mtxRwCompiledBlob);
+
         if (!pCompiledBlob) {
             // Load cached bytecode from disk.
             const auto pathToCompiledShader = getPathToCompiledShader();
@@ -203,7 +205,13 @@ namespace ne {
         return pCompiledBlob;
     }
 
-    void HlslShader::releaseBytecodeFromMemory() {
+    bool HlslShader::releaseBytecodeFromMemoryIfLoaded() {
+        std::scoped_lock<std::mutex> guard(mtxRwCompiledBlob);
+
+        if (!pCompiledBlob) {
+            return true;
+        }
+
         const auto iNewRefCount = pCompiledBlob.Reset();
 
         if (iNewRefCount != 0) {
@@ -227,7 +235,7 @@ namespace ne {
                     iNewRefCount),
                 "");
         }
-    }
 
-    bool HlslShader::isLoadedIntoMemory() { return pCompiledBlob; }
+        return false;
+    }
 } // namespace ne

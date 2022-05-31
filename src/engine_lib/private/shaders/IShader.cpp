@@ -73,16 +73,12 @@ namespace ne {
                 return result;
             }
         }
-#else
-        if (false) { // TODO: replace this
-        }
 #endif
-        else {
-            const auto err = Error("no shader type is associated with the "
-                                   "current renderer (not implemented)");
-            err.showError();
-            throw std::runtime_error(err.getError());
-        }
+
+        const auto err = Error("no shader type is associated with the "
+                               "current renderer (not implemented)");
+        err.showError();
+        throw std::runtime_error(err.getError());
     } // namespace ne
 
     std::string IShader::getShaderName() const { return sShaderName; }

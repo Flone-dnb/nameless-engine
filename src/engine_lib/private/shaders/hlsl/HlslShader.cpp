@@ -161,9 +161,9 @@ namespace ne {
     }
 
     std::variant<ComPtr<IDxcBlob>, Error> HlslShader::getCompiledBlob() {
-        std::scoped_lock<std::mutex> guard(mtxRwCompiledBlob);
+        std::scoped_lock<std::mutex> guard(mtxCompiledBlob.first);
 
-        if (!pCompiledBlob) {
+        if (!mtxCompiledBlob.second) {
             // Load cached bytecode from disk.
             const auto pathToCompiledShader = getPathToCompiledShader();
 
@@ -196,23 +196,23 @@ namespace ne {
                 pBlobData.get(),
                 static_cast<unsigned int>(iBlobSize),
                 DXC_CP_ACP,
-                reinterpret_cast<IDxcBlobEncoding**>(pCompiledBlob.GetAddressOf()));
+                reinterpret_cast<IDxcBlobEncoding**>(mtxCompiledBlob.second.GetAddressOf()));
             if (FAILED(hResult)) {
                 return Error(hResult);
             }
         }
 
-        return pCompiledBlob;
+        return mtxCompiledBlob.second;
     }
 
     bool HlslShader::releaseBytecodeFromMemoryIfLoaded() {
-        std::scoped_lock<std::mutex> guard(mtxRwCompiledBlob);
+        std::scoped_lock<std::mutex> guard(mtxCompiledBlob.first);
 
-        if (!pCompiledBlob) {
+        if (!mtxCompiledBlob.second) {
             return true;
         }
 
-        const auto iNewRefCount = pCompiledBlob.Reset();
+        const auto iNewRefCount = mtxCompiledBlob.second.Reset();
 
         if (iNewRefCount != 0) {
             Logger::get().error(

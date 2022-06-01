@@ -75,13 +75,10 @@ namespace ne {
 
     private:
         /**
-         * Use with @ref mtxRwCompiledBlob. Compiled shader bytecode
-         * (may be empty if not stored in memory right now).
+         * Mutex for read/write operations on compiled blob.
+         * Compiled shader bytecode (may be empty if not stored in memory right now).
          */
-        ComPtr<IDxcBlob> pCompiledBlob;
-
-        /** Used for read/write operations on @ref pCompiledBlob. */
-        std::mutex mtxRwCompiledBlob;
+        std::pair<std::mutex, ComPtr<IDxcBlob>> mtxCompiledBlob;
 
         // Clear shader cache if changing shader model.
         static constexpr std::wstring_view sVertexShaderModel = L"vs_6_0";

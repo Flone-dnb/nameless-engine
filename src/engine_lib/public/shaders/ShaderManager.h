@@ -215,19 +215,8 @@ namespace ne {
         /** Do not delete. Parent renderer that uses this shader manager. */
         IRenderer* pRenderer;
 
-        /** Use for @ref compiledShaders and @ref vRunningCompilationThreads. */
+        /** Use for @ref compiledShaders, @ref vRunningCompilationThreads and @ref vShadersToBeRemoved. */
         std::recursive_mutex mtxRwShaders;
-
-        /**
-         * Array of characters that can be used for shader name.
-         * We limit amount of valid characters because we store compiled shaders on disk
-         * and different filesystems have different limitations for file names.
-         */
-        const std::array<char, 65> vValidCharactersForShaderName = {
-            'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q',
-            'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h',
-            'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y',
-            'z', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '_', '-'};
 
         /** Use with @ref mtxRwShaders. Map of compiled (added) shaders. */
         std::unordered_map<std::string, std::shared_ptr<IShader>> compiledShaders;
@@ -240,6 +229,18 @@ namespace ne {
          * when they are no longer used.
          */
         std::vector<std::string> vShadersToBeRemoved;
+
+        /** Last time self validation was performed. */
+        std::chrono::time_point<std::chrono::steady_clock> lastSelfValidationCheckTime;
+
+        /** Amount of time after which to perform self validation. */
+        long iSelfValidationIntervalInMin = 30; // NOLINT: don't do self validation too often
+
+        /**
+         * Atomic flag to set when destructor is called so that running compilation threads
+         * are notified to finish early.
+         */
+        std::atomic_flag bIsShuttingDown;
 
         /**
          * Name of the file used to store global shader cache information.
@@ -263,16 +264,15 @@ namespace ne {
         /** Name of the key used in configuration file to store self validation interval. */
         const std::string_view sConfigurationSelfValidationIntervalKeyName = "self_validation_interval_min";
 
-        /** Last time self validation was performed. */
-        std::chrono::time_point<std::chrono::steady_clock> lastSelfValidationCheckTime;
-
-        /** Amount of time after which to perform self validation. */
-        long iSelfValidationIntervalInMin = 30; // NOLINT: don't do self validation too often
-
         /**
-         * Atomic flag to set when destructor is called so that running compilation threads
-         * are notified to finish early.
+         * Array of characters that can be used for shader name.
+         * We limit amount of valid characters because we store compiled shaders on disk
+         * and different filesystems have different limitations for file names.
          */
-        std::atomic_flag bIsShuttingDown;
+        const std::array<char, 65> vValidCharactersForShaderName = {
+            'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q',
+            'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h',
+            'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y',
+            'z', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '_', '-'};
     };
 } // namespace ne

@@ -45,8 +45,9 @@ namespace ne {
         /**
          * Add shaders to be asynchronously compiled.
          *
-         * Compiled shaders are kept on disk, once a shader is needed it will be
-         * loaded from disk into memory.
+         * Compiled shaders are stored on disk, when a shader is needed it will be
+         * automatically loaded from disk into memory and when no longer being used it will be
+         * released from memory (stored on disk again).
          *
          * @param vShadersToCompile Array of shaders to compile. Use @ref isShaderNameCanBeUsed
          * to check if a shader name is free (unique).
@@ -59,15 +60,15 @@ namespace ne {
          * error) or internal error (engine failed to compile shader).
          * If there was a shader compilation error/warning, this shader will be marked as processed and
          * onProgress will be called (but this shader will not be added to shader manager and will
-         * not be available, use will need to fix the error and add this shader again).
+         * not be available, you will need to fix the error and add this shader again).
          * @param onCompleted       Callback function that will be called once all shaders are compiled.
          *
-         * @warning Note that all callback functions will be queued to be executed on the main thread and
+         * @remark Note that all callback functions will be queued to be executed on the main thread and
          * will be called later from the main thread before next frame is rendered.
-         * If you are using member functions as callbacks you need to make sure that the owner object
-         * of these member functions will not be deleted until onCompleted is called.
          * Because callbacks are called from the main thread it's safe to call functions that are
          * marked as "should only be called from the main thread" from the callback functions.
+         * If you are using member functions as callbacks you need to make sure that the owner object
+         * of these member functions will not be deleted until onCompleted is called.
          *
          * @return An error if something went wrong.
          */
@@ -88,10 +89,10 @@ namespace ne {
         bool isShaderNameCanBeUsed(const std::string& sShaderName);
 
         /**
-         * Removes shader if nobody is referencing it, otherwise marks shader to be removed
+         * Removes the shader if nobody is referencing it, otherwise marks shader to be removed
          * later.
          *
-         * Typically you would not use this function as we expect you to do
+         * Typically you would not use this function as we expect you to make
          * one call to @ref compileShaders in the beginning of the game to compile
          * ALL of your shaders (for all levels) and never remove them as compiled shaders
          * are not stored in memory, they are stored on disk and when actually needed/used
@@ -103,10 +104,9 @@ namespace ne {
          * is referencing this shader (specifically when only one
          * std::shared_ptr<IShader> instance pointing to this shader
          * will exist (it will exist in @ref ShaderManager as @ref ShaderManager
-         * stores pointer to each shader). Shaders to be removed are usually checked
-         * every minute.
+         * stores pointer to each shader)).
          *
-         * @param sShaderName Shader's name to be marked for removal.
+         * @param sShaderName Shader name to be marked for removal.
          *
          * @return 'true' if someone is still referencing this shader
          * and it cannot be removed right now, thus shader's name still
@@ -117,10 +117,10 @@ namespace ne {
         bool markShaderToBeRemoved(const std::string& sShaderName);
 
         /**
-         * Automatically called by the Game object and has no point in being
-         * called from user code.
+         * Automatically called by the Game object (object that owns GameInstance) and has no point in being
+         * called from your game's code.
          *
-         * Analyzes current state to see if any errors have place.
+         * Analyzes the current state to see if any errors have place.
          * Fixes errors and reports them in log.
          *
          * @remark A call to this function may be ignored by the ShaderManager if

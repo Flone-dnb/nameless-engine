@@ -90,4 +90,15 @@ namespace ne {
 
 #endif
     }
+
+    std::string wstringToString(const std::wstring& sText) {
+        std::string sOutput;
+        size_t iResultBytes;
+
+        sOutput.resize(sText.length());
+
+        wcstombs_s(&iResultBytes, &sOutput[0], sOutput.size() + 1, sText.c_str(), sText.size());
+
+        return sOutput;
+    }
 } // namespace ne

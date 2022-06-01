@@ -200,6 +200,17 @@ namespace ne {
         void applyConfigurationFromDisk();
 
         /**
+         * Looks if any of the global shader cache parameters changed
+         * (such as build mode, GPU, etc.) and clears shader cache
+         * directory if needed.
+         *
+         * @remark If no global shader cache configuration file existed will create it.
+         *
+         * @return An error if something went wrong.
+         */
+        std::optional<Error> clearShaderCacheIfNeeded();
+
+        /**
          * Writes current configuration to disk.
          */
         void writeConfigurationToDisk() const;
@@ -249,14 +260,11 @@ namespace ne {
          */
         const std::string_view sGlobalShaderCacheParametersFileName = ".shader_cache.toml";
 
-        /** Name of the section used in global shader cache information. */
-        const std::string_view sGlobalShaderCacheParametersSectionName = "global_shader_cache_parameters";
-
         /** Name of the key for build mode, used in global shader cache information. */
-        const std::string_view sGlobalShaderCacheParametersReleaseBuildKeyName = "is_release_build";
+        const std::string_view sGlobalShaderCacheReleaseBuildKeyName = "is_release_build";
 
         /** Name of the key for used GPU, used in global shader cache information. */
-        const std::string_view sGlobalShaderCacheParametersGpuKeyName = "gpu";
+        const std::string_view sGlobalShaderCacheGpuKeyName = "gpu";
 
         /** Name of the file in which we store configurable values. */
         const std::string_view sConfigurationFileName = "shader_manager";

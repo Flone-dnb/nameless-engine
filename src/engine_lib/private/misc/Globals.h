@@ -4,6 +4,9 @@
 #include <filesystem>
 #include <string>
 
+// C.
+#include <cstdlib>
+
 namespace ne {
     /**
      * Directory name that we append to the result of the base directory.
@@ -53,4 +56,13 @@ namespace ne {
      * @return Name of this application.
      */
     std::string getApplicationName();
+
+    /**
+     * Converts wstring to its narrow multibyte representation.
+     *
+     * @param sText String to convert.
+     *
+     * @return Converted string.
+     */
+    std::string wstringToString(const std::wstring& sText);
 } // namespace ne

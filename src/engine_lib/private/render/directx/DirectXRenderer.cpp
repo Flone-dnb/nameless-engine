@@ -9,6 +9,7 @@
 #include "game/Window.h"
 #include "io/ConfigManager.h"
 #include "io/Logger.h"
+#include "misc/Globals.h"
 
 // DirectX.
 #pragma comment(lib, "D3D12.lib")
@@ -94,8 +95,8 @@ namespace ne {
         return {};
     }
 
-    std::variant<std::vector<std::wstring>, Error> DirectXRenderer::getSupportedGpus() const {
-        std::vector<std::wstring> vAddedVideoAdapters;
+    std::variant<std::vector<std::string>, Error> DirectXRenderer::getSupportedGpus() const {
+        std::vector<std::string> vAddedVideoAdapters;
 
         for (UINT iAdapterIndex = 0;; iAdapterIndex++) {
             ComPtr<IDXGIAdapter3> pTestAdapter;
@@ -114,7 +115,7 @@ namespace ne {
                 // Found supported adapter.
                 DXGI_ADAPTER_DESC desc;
                 pTestAdapter->GetDesc(&desc);
-                vAddedVideoAdapters.push_back(desc.Description);
+                vAddedVideoAdapters.push_back(wstringToString(desc.Description));
             }
         }
 
@@ -153,7 +154,7 @@ namespace ne {
         return vOutRenderModes;
     }
 
-    std::wstring DirectXRenderer::getCurrentlyUsedGpuName() const { return sUsedVideoAdapter; }
+    std::string DirectXRenderer::getCurrentlyUsedGpuName() const { return sUsedVideoAdapter; }
 
     Antialiasing DirectXRenderer::getCurrentAntialiasing() const {
         return Antialiasing{bIsMsaaEnabled, static_cast<int>(iMsaaSampleCount)};
@@ -188,7 +189,7 @@ namespace ne {
         return {};
     }
 
-    std::optional<Error> DirectXRenderer::setVideoAdapter(const std::wstring& sVideoAdapterName) {
+    std::optional<Error> DirectXRenderer::setVideoAdapter(const std::string& sVideoAdapterName) {
         for (UINT iAdapterIndex = 0;; iAdapterIndex++) {
             ComPtr<IDXGIAdapter3> pTestAdapter;
             if (pFactory->EnumAdapters(
@@ -200,7 +201,7 @@ namespace ne {
 
             DXGI_ADAPTER_DESC desc;
             pTestAdapter->GetDesc(&desc);
-            if (desc.Description == sVideoAdapterName) {
+            if (wstringToString(desc.Description) == sVideoAdapterName) {
                 // Check if the adapter supports used D3D version, but don't create the actual device yet.
                 const HRESULT hResult = D3D12CreateDevice(
                     pTestAdapter.Get(), rendererD3dFeatureLevel, _uuidof(ID3D12Device), nullptr);
@@ -418,7 +419,7 @@ namespace ne {
             error.addEntry();
             return error;
         }
-        vSupportedVideoAdapters = std::get<std::vector<std::wstring>>(std::move(result));
+        const auto vSupportedVideoAdapters = std::get<std::vector<std::string>>(std::move(result));
         if (iPreferredGpuIndex >= static_cast<long>(vSupportedVideoAdapters.size())) {
             Logger::get().error(
                 std::format(

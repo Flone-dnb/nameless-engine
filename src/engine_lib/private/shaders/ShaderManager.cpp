@@ -162,6 +162,81 @@ namespace ne {
         writeConfigurationToDisk();
     }
 
+    std::optional<Error> ShaderManager::clearShaderCacheIfNeeded() {
+        std::scoped_lock guard(mtxRwShaders);
+
+#if defined(DEBUG)
+        constexpr bool bIsReleaseBuild = false;
+#else
+        constexpr bool bIsReleaseBuild = true;
+#endif
+
+        const std::string sCurrentGpuName = pRenderer->getCurrentlyUsedGpuName();
+
+        ConfigManager configManager;
+
+        const auto shaderCacheDir = IShader::getPathToShaderCacheDirectory();
+        const auto shaderParamsPath =
+            IShader::getPathToShaderCacheDirectory() / sGlobalShaderCacheParametersFileName;
+
+        bool bUpdateShaderCacheConfig = false;
+
+        if (std::filesystem::exists(shaderParamsPath)) {
+            auto result = configManager.loadFile(shaderParamsPath);
+            if (result.has_value()) {
+                result->addEntry();
+                return result.value();
+            }
+
+            const auto bOldShaderCacheInRelease =
+                configManager.getValue<bool>("", sGlobalShaderCacheReleaseBuildKeyName, !bIsReleaseBuild);
+            const auto sOldGpuName =
+                configManager.getValue<std::string>("", sGlobalShaderCacheGpuKeyName, "");
+
+            if (bOldShaderCacheInRelease != bIsReleaseBuild || sOldGpuName != sCurrentGpuName) {
+                if (bOldShaderCacheInRelease != bIsReleaseBuild) {
+                    Logger::get().info(
+                        "clearing shader cache directory because build mode was changed",
+                        sShaderManagerLogCategory);
+                } else {
+                    Logger::get().info(
+                        "clearing shader cache directory because GPU was changed", sShaderManagerLogCategory);
+                }
+
+                std::filesystem::remove_all(shaderCacheDir);
+                std::filesystem::create_directory(shaderCacheDir);
+
+                bUpdateShaderCacheConfig = true;
+            }
+        } else {
+            if (std::filesystem::exists(shaderCacheDir)) {
+                std::filesystem::remove_all(shaderCacheDir);
+                std::filesystem::create_directory(shaderCacheDir);
+            }
+
+            Logger::get().info(
+                std::format(
+                    "global shader cache configuration was not found, creating a new {} configuration",
+                    bIsReleaseBuild ? "release" : "debug"),
+                sShaderManagerLogCategory);
+
+            bUpdateShaderCacheConfig = true;
+        }
+
+        if (bUpdateShaderCacheConfig) {
+            configManager.setValue<bool>("", sGlobalShaderCacheReleaseBuildKeyName, bIsReleaseBuild);
+            configManager.setValue<std::string>("", sGlobalShaderCacheGpuKeyName, sCurrentGpuName);
+
+            auto result = configManager.saveFile(shaderParamsPath, false);
+            if (result.has_value()) {
+                result->addEntry();
+                return result.value();
+            }
+        }
+
+        return {};
+    }
+
     void ShaderManager::writeConfigurationToDisk() const {
         const auto configPath = getConfigurationFilePath();
 
@@ -417,65 +492,9 @@ namespace ne {
 
         removeFinishedCompilationThreads();
 
-        // If build mode was changed clear shader cache directory.
-#if defined(DEBUG)
-        bool bIsReleaseBuild = false;
-#else
-        bool bIsReleaseBuild = true;
-#endif
-        ConfigManager configManager;
-
-        const auto shaderCacheDir = IShader::getPathToShaderCacheDirectory();
-        const auto shaderParamsPath =
-            IShader::getPathToShaderCacheDirectory() / sGlobalShaderCacheParametersFileName;
-        bool bUpdateShaderCacheConfig = false;
-        if (std::filesystem::exists(shaderParamsPath)) {
-            auto result = configManager.loadFile(shaderParamsPath);
-            if (result.has_value()) {
-                result->addEntry();
-                return result.value();
-            }
-
-            const auto bOldShaderCacheInRelease = configManager.getValue<bool>(
-                sGlobalShaderCacheParametersSectionName,
-                sGlobalShaderCacheParametersReleaseBuildKeyName,
-                !bIsReleaseBuild);
-
-            if (bOldShaderCacheInRelease != bIsReleaseBuild) {
-                Logger::get().info(
-                    "clearing shader cache directory because build mode was changed",
-                    sShaderManagerLogCategory);
-                std::filesystem::remove_all(shaderCacheDir);
-                std::filesystem::create_directory(shaderCacheDir);
-
-                bUpdateShaderCacheConfig = true;
-            }
-        } else {
-            if (std::filesystem::exists(shaderCacheDir)) {
-                std::filesystem::remove_all(shaderCacheDir);
-                std::filesystem::create_directory(shaderCacheDir);
-            }
-
-            Logger::get().info(
-                std::format(
-                    "global shader cache parameters file was not found, creating a new {} configuration",
-                    bIsReleaseBuild ? "release" : "debug"),
-                sShaderManagerLogCategory);
-
-            bUpdateShaderCacheConfig = true;
-        }
-
-        if (bUpdateShaderCacheConfig) {
-            configManager.setValue<bool>(
-                sGlobalShaderCacheParametersSectionName,
-                sGlobalShaderCacheParametersReleaseBuildKeyName,
-                bIsReleaseBuild);
-
-            auto result = configManager.saveFile(shaderParamsPath, false);
-            if (result.has_value()) {
-                result->addEntry();
-                return result.value();
-            }
+        const auto optional = clearShaderCacheIfNeeded();
+        if (optional.has_value()) {
+            return optional.value();
         }
 
         // Add a new promise for this new compilation thread.

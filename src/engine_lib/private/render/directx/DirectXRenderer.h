@@ -49,7 +49,7 @@ namespace ne {
          * @return Error if can't find any GPU that supports our DirectX version and feature level,
          * vector with GPU names if successful.
          */
-        virtual std::variant<std::vector<std::wstring>, Error> getSupportedGpus() const override;
+        virtual std::variant<std::vector<std::string>, Error> getSupportedGpus() const override;
 
         /**
          * Returns backbuffer resolution.
@@ -70,7 +70,7 @@ namespace ne {
          *
          * @return Name of the GPU.
          */
-        virtual std::wstring getCurrentlyUsedGpuName() const override;
+        virtual std::string getCurrentlyUsedGpuName() const override;
 
         /**
          * Returns currently used AA settings.
@@ -129,7 +129,7 @@ namespace ne {
          * name was not found, or if it was found but does not support used DirectX version
          * or feature level.
          */
-        std::optional<Error> setVideoAdapter(const std::wstring& sVideoAdapterName);
+        std::optional<Error> setVideoAdapter(const std::string& sVideoAdapterName);
 
         /**
          * Sets first found output adapter (monitor).
@@ -298,8 +298,7 @@ namespace ne {
 
         // Video Adapters (GPUs).
         long iPreferredGpuIndex = 0;
-        std::vector<std::wstring> vSupportedVideoAdapters;
-        std::wstring sUsedVideoAdapter;
+        std::string sUsedVideoAdapter;
 
         /** Will be 'true' if we read the configuration from disk at startup. */
         bool bStartedWithConfigurationFromDisk = false;

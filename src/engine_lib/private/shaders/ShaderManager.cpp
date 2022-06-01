@@ -571,12 +571,18 @@ namespace ne {
                 auto it = compiledShaders.find(vShadersToCompile[i].sShaderName);
                 if (it != compiledShaders.end()) {
                     Error err(std::format(
-                        "shader with the name {} already added", vShadersToCompile[i].sShaderName));
-                    err.showError();
-                    throw std::runtime_error(err.getError());
+                        "shader with the name \"{}\" is already added", vShadersToCompile[i].sShaderName));
+                    Logger::get().error(
+                        std::format("shader compilation thread {}: {}", iThreadId, err.getError()),
+                        sShaderManagerLogCategory);
+                    const ShaderDescription shaderDescription = vShadersToCompile[i]; // NOLINT
+                    pRenderer->getGame()->addDeferredTask(
+                        [onError, shaderDescription = std::move(shaderDescription), err]() mutable {
+                            onError(shaderDescription, err);
+                        });
+                } else {
+                    compiledShaders[vShadersToCompile[i].sShaderName] = std::move(pShader);
                 }
-
-                compiledShaders[vShadersToCompile[i].sShaderName] = std::move(pShader);
             }
 
             // Mark progress.

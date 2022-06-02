@@ -40,6 +40,38 @@ namespace ne {
             const std::vector<std::string>& vDefinedShaderMacros);
 
         /**
+         * Copy constructor.
+         *
+         * @param other Other object.
+         */
+        ShaderDescription(const ShaderDescription& other) noexcept = default;
+
+        /**
+         * Copy assignment.
+         *
+         * @param other other object.
+         *
+         * @return Result of copy assignment.
+         */
+        ShaderDescription& operator=(const ShaderDescription& other) noexcept = default;
+
+        /**
+         * Move constructor.
+         *
+         * @param other Other object.
+         */
+        ShaderDescription(ShaderDescription&& other) noexcept = default;
+
+        /**
+         * Move assignment.
+         *
+         * @param other Other object.
+         *
+         * @return Result of move assignment.
+         */
+        ShaderDescription& operator=(ShaderDescription&& other) noexcept = default;
+
+        /**
          * Used to deserialize struct from .toml file.
          *
          * @param data Toml value.

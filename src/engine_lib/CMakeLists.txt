@@ -52,6 +52,8 @@ set(ENGINE_LIB_SOURCES
     private/shaders/ShaderDescription.cpp
     private/shaders/ShaderUser.h
     private/shaders/ShaderUser.cpp
+    private/misc/ThreadPool.h
+    private/misc/ThreadPool.cpp
     # add general (cross-platform) sources here...
 )
 

@@ -11,6 +11,7 @@
 #include "input/InputManager.h"
 #include "input/KeyboardKey.hpp"
 #include "input/MouseButton.hpp"
+#include "misc/ThreadPool.h"
 
 namespace ne {
     constexpr auto sGameLogCategory = "Game";
@@ -29,7 +30,7 @@ namespace ne {
         Game(const Game&) = delete;
         Game& operator=(const Game&) = delete;
 
-        virtual ~Game() = default;
+        virtual ~Game();
 
         /**
          * Set IGameInstance derived class to react to
@@ -104,9 +105,22 @@ namespace ne {
          *
          * @warning If you are using member functions as callbacks you need to make
          * sure that the owner object of these member functions will not be deleted until
-         * this callback is called.
+         * this task is finished.
          */
         void addDeferredTask(const std::function<void()>& task);
+
+        /**
+         * Adds a function to be executed on the thread pool.
+         *
+         * TODO: std::move_only_function?
+         *
+         * @param task Function to execute.
+         *
+         * @warning If you are using member functions as callbacks you need to make
+         * sure that the owner object of these member functions will not be deleted until
+         * this task is finished.
+         */
+        void addTaskToThreadPool(const std::function<void()>& task);
 
         /**
          * Returns window that owns this object.
@@ -125,6 +139,8 @@ namespace ne {
          * @param pWindow Window that owns this Game object.
          */
         Game(Window* pWindow);
+
+        void executeDeferredTasks();
 
         /**
          * Triggers action events from keyboard/mouse input.
@@ -155,10 +171,11 @@ namespace ne {
          */
         std::unique_ptr<IGameInstance> pGameInstance;
 
-        /**
-         * Draws graphics on window.
-         */
+        /** Draws graphics on window. */
         std::unique_ptr<IRenderer> pRenderer;
+
+        /** Thread pool to execute tasks. */
+        ThreadPool threadPool;
 
         /**
          * Mutex for read/write operations on deferred tasks queue.

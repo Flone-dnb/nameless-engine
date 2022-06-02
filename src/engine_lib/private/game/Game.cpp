@@ -9,10 +9,23 @@
 
 namespace ne {
     void Game::onBeforeNewFrame(float fTimeSincePrevCallInSec) {
-        // Execute deferred tasks.
+        executeDeferredTasks();
+
+        pRenderer->getShaderManager()->performSelfValidation();
+
+        pGameInstance->onBeforeNewFrame(fTimeSincePrevCallInSec);
+    }
+
+    Game::~Game() { threadPool.stop(); }
+
+    void Game::executeDeferredTasks() {
         std::queue<std::function<void()>> localTasks;
         {
             std::scoped_lock<std::mutex> guard(mtxDeferredTasks.first);
+            if (mtxDeferredTasks.second.empty()) {
+                return;
+            }
+
             localTasks = std::move(mtxDeferredTasks.second);
             mtxDeferredTasks.second = {};
         }
@@ -20,12 +33,9 @@ namespace ne {
             localTasks.front()();
             localTasks.pop();
         }
-
-        pRenderer->getShaderManager()->performSelfValidation();
-
-        // Do game instance work.
-        pGameInstance->onBeforeNewFrame(fTimeSincePrevCallInSec);
     }
+
+    void Game::addTaskToThreadPool(const std::function<void()>& task) { threadPool.addTask(task); }
 
     void Game::onKeyboardInput(KeyboardKey key, KeyboardModifiers modifiers, bool bIsPressedDown) {
         pGameInstance->onKeyboardInput(key, modifiers, bIsPressedDown);

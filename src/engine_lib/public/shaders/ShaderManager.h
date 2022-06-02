@@ -73,7 +73,7 @@ namespace ne {
          * @return An error if something went wrong.
          */
         std::optional<Error> compileShaders(
-            const std::vector<ShaderDescription>& vShadersToCompile,
+            std::vector<ShaderDescription>& vShadersToCompile,
             const std::function<void(size_t iCompiledShaderCount, size_t iTotalShadersToCompile)>& onProgress,
             const std::function<
                 void(ShaderDescription shaderDescription, std::variant<std::string, Error> error)>& onError,
@@ -133,9 +133,14 @@ namespace ne {
         friend class ShaderUser;
 
         /**
-         * Compiles each shader. Usually called in another thread to do this work asynchronously.
+         * Compiles each shader. Executed as a thread pooled task to do this work asynchronously.
          *
-         * @param promiseFinish     Promise to set when finished or exited. Do not delete this pointer.
+         * @param pPromiseFinish    Promise to set when finished or exited. Do not delete this pointer.
+         * @param iQueryId          Unique number used to differentiate different calls @ref compileShaders.
+         * @param pCompiledShaderCount Current total number of shaders compiled.
+         * @param iTotalShaderCount Total number of shaders to compile in this query
+         * (might be bigger than the size of the vShadersToCompile argument because the query is
+         * divided in smaller tasks).
          * @param vShadersToCompile Array of shaders to compile.
          * @param onProgress        Callback function that will be called when each shader is compiled.
          * This will also be called when all shaders are compiled (together with 'onCompleted').
@@ -149,8 +154,11 @@ namespace ne {
          * not be available, use will need to fix the error and add this shader again).
          * @param onCompleted       Callback function that will be called once all shaders are compiled.
          */
-        void compileShadersThread(
-            std::promise<bool> promiseFinish,
+        void compileShadersTask(
+            const std::shared_ptr<std::promise<bool>>& pPromiseFinish,
+            size_t iQueryId,
+            const std::shared_ptr<std::atomic<size_t>>& pCompiledShaderCount,
+            size_t iTotalShaderCount,
             std::vector<ShaderDescription> vShadersToCompile,
             const std::function<void(size_t iCompiledShaderCount, size_t iTotalShadersToCompile)>& onProgress,
             const std::function<
@@ -186,9 +194,9 @@ namespace ne {
         void removeShaderIfMarkedToBeRemoved(const std::string& sShaderName);
 
         /**
-         * Removes futures of finished compilation threads.
+         * Removes futures of finished compilation tasks.
          */
-        void removeFinishedCompilationThreads();
+        void removeFinishedCompilationTasks();
 
         /**
          * Reads and applies configuration from disk.
@@ -226,14 +234,14 @@ namespace ne {
         /** Do not delete. Parent renderer that uses this shader manager. */
         IRenderer* pRenderer;
 
-        /** Use for @ref compiledShaders, @ref vRunningCompilationThreads and @ref vShadersToBeRemoved. */
+        /** Use for @ref compiledShaders, @ref vRunningCompilationTasks and @ref vShadersToBeRemoved. */
         std::recursive_mutex mtxRwShaders;
 
         /** Use with @ref mtxRwShaders. Map of compiled (added) shaders. */
         std::unordered_map<std::string, std::shared_ptr<IShader>> compiledShaders;
 
-        /** Use with @ref mtxRwShaders. Array of statuses of running compilation threads (finished or not). */
-        std::vector<std::future<bool>> vRunningCompilationThreads;
+        /** Use with @ref mtxRwShaders. Array of statuses of compilation tasks (finished or not). */
+        std::vector<std::future<bool>> vRunningCompilationTasks;
 
         /**
          * Use with @ref mtxRwShaders. Array of shader names marked to be removed from @ref compiledShaders
@@ -248,10 +256,19 @@ namespace ne {
         long iSelfValidationIntervalInMin = 30; // NOLINT: don't do self validation too often
 
         /**
-         * Atomic flag to set when destructor is called so that running compilation threads
+         * Total number of 'compile shaders' queries.
+         * Used to differentiate calls to @ref compileShadersTask.
+         */
+        std::atomic<size_t> iTotalCompileShadersQueries = 0;
+
+        /**
+         * Atomic flag to set when destructor is called so that running compilation tasks
          * are notified to finish early.
          */
         std::atomic_flag bIsShuttingDown;
+
+        /** Maximum amount of shaders to compile per thread pooled task. */
+        const size_t iMaxShadersToCompilePerTask = 5;
 
         /**
          * Name of the file used to store global shader cache information.

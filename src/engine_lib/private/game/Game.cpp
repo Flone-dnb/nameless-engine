@@ -12,9 +12,9 @@ namespace ne {
         // Execute deferred tasks.
         std::queue<std::function<void()>> localTasks;
         {
-            std::scoped_lock<std::mutex> guard(mtxRwDeferredTasks);
-            localTasks = std::move(deferredTasks);
-            deferredTasks = {};
+            std::scoped_lock<std::mutex> guard(mtxDeferredTasks.first);
+            localTasks = std::move(mtxDeferredTasks.second);
+            mtxDeferredTasks.second = {};
         }
         while (!localTasks.empty()) {
             localTasks.front()();
@@ -54,9 +54,9 @@ namespace ne {
     void Game::onWindowClose() const { pGameInstance->onWindowClose(); }
 
     void Game::addDeferredTask(const std::function<void()>& task) {
-        std::scoped_lock<std::mutex> guard(mtxRwDeferredTasks);
+        std::scoped_lock<std::mutex> guard(mtxDeferredTasks.first);
 
-        deferredTasks.push(task);
+        mtxDeferredTasks.second.push(task);
     }
 
     Window* Game::getWindow() const { return pWindow; }

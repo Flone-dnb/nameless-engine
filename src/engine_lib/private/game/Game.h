@@ -146,30 +146,27 @@ namespace ne {
         void triggerAxisEvents(KeyboardKey key, KeyboardModifiers modifiers, bool bIsPressedDown);
 
         /**
-         * A reference to a window-owner of this Game.
-         * Should not be deleted.
+         * Do not delete this pointer. Window-owner of this Game.
          */
         Window* pWindow;
 
         /**
-         * Reacts to user inputs, window events and etc.
+         * Reacts to user input, window events and etc.
          */
         std::unique_ptr<IGameInstance> pGameInstance;
 
         /**
-         * Draws the graphics on a window.
+         * Draws graphics on window.
          */
         std::unique_ptr<IRenderer> pRenderer;
 
         /**
-         * Queue of functions to call on the main thread on next tick.
+         * Mutex for read/write operations on deferred tasks queue.
+         * Queue of functions to call on the main thread before each frame is rendered.
          */
-        std::queue<std::function<void()>> deferredTasks;
+        std::pair<std::mutex, std::queue<std::function<void()>>> mtxDeferredTasks;
 
-        /** Mutex for read/write operations on @ref vDeferredTasks. */
-        std::mutex mtxRwDeferredTasks;
-
-        /** Binds action names with input. */
+        /** Binds action/axis names with input keys. */
         InputManager inputManager;
     };
 } // namespace ne

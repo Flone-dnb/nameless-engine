@@ -21,38 +21,6 @@ namespace ne {
         lastSelfValidationCheckTime = std::chrono::steady_clock::now();
     }
 
-    ShaderManager::~ShaderManager() {
-        bIsShuttingDown.test_and_set();
-
-        std::scoped_lock guard(mtxRwShaders);
-
-        removeFinishedCompilationTasks();
-
-        // Wait for shader compilation tasks to finish early.
-        if (!vRunningCompilationTasks.empty()) {
-            Logger::get().info(
-                std::format(
-                    "waiting for {} shader compilation task(-s) to finish early",
-                    vRunningCompilationTasks.size()),
-                sShaderManagerLogCategory);
-            for (auto& future : vRunningCompilationTasks) {
-                try {
-                    future.get();
-                } catch (const std::exception& ex) {
-                    Logger::get().error(
-                        std::format(
-                            "one of the shader compilation tasks returned "
-                            "an exception: {}",
-                            ex.what()),
-                        sShaderManagerLogCategory);
-                }
-            }
-            Logger::get().info(
-                std::format("finished {} shader compilation task(-s)", vRunningCompilationTasks.size()),
-                sShaderManagerLogCategory);
-        }
-    }
-
     std::optional<std::shared_ptr<IShader>> ShaderManager::getShader(const std::string& sShaderName) {
         std::scoped_lock guard(mtxRwShaders);
         const auto it = compiledShaders.find(sShaderName);
@@ -107,28 +75,6 @@ namespace ne {
         Logger::get().info(
             std::format("marked to be removed shader \"{}\" was removed", sShaderName),
             sShaderManagerLogCategory);
-    }
-
-    void ShaderManager::removeFinishedCompilationTasks() {
-        std::scoped_lock guard(mtxRwShaders);
-
-        // Remove finished futures of compilation tasks.
-        const auto [first, last] = std::ranges::remove_if(vRunningCompilationTasks, [](auto& future) {
-            using namespace std::chrono_literals;
-            try {
-                const auto status = future.wait_for(1ms);
-                return status == std::future_status::ready;
-            } catch (const std::exception& ex) {
-                Logger::get().error(
-                    std::format(
-                        "one of the shader compilation tasks returned "
-                        "an exception: {}",
-                        ex.what()),
-                    sShaderManagerLogCategory);
-                return true;
-            }
-        });
-        vRunningCompilationTasks.erase(first, last);
     }
 
     void ShaderManager::applyConfigurationFromDisk() {
@@ -464,11 +410,6 @@ namespace ne {
             }
         }
 
-        // Check if shutting down.
-        if (bIsShuttingDown.test(std::memory_order_seq_cst)) {
-            return {};
-        }
-
         std::scoped_lock guard(mtxRwShaders);
 
         // Check if we already have a shader with this name.
@@ -489,49 +430,29 @@ namespace ne {
             }
         }
 
-        removeFinishedCompilationTasks();
-
         const auto optional = clearShaderCacheIfNeeded();
         if (optional.has_value()) {
             return optional.value();
         }
 
         const auto iCurrentQueryId = iTotalCompileShadersQueries.fetch_add(1);
-        const auto iTaskCount = static_cast<size_t>(std::ceil(
-            static_cast<float>(vShadersToCompile.size()) / static_cast<float>(iMaxShadersToCompilePerTask)));
         const auto iTotalShaderCount = vShadersToCompile.size();
-
         std::shared_ptr<std::atomic<size_t>> pCompiledShaderCount = std::make_shared<std::atomic<size_t>>();
 
-        size_t iCurrentShaderIndex = 0;
-
-        for (size_t i = 0; i < iTaskCount; i++) {
-            std::vector<ShaderDescription> vShadersForTask;
-            for (size_t j = 0;
-                 iCurrentShaderIndex < vShadersToCompile.size() && j < iMaxShadersToCompilePerTask;
-                 iCurrentShaderIndex++, j++) {
-                vShadersForTask.push_back(std::move(vShadersToCompile[iCurrentShaderIndex]));
-            }
-
-            // Add a new promise for this new compilation task.
-            std::shared_ptr<std::promise<bool>> pPromise = std::make_shared<std::promise<bool>>();
-            vRunningCompilationTasks.push_back(pPromise->get_future());
-
+        for (size_t i = 0; i < vShadersToCompile.size(); i++) {
             pRenderer->getGame()->addTaskToThreadPool([this,
-                                                       pFinishPromise = pPromise,
                                                        iCurrentQueryId,
                                                        pCompiledShaderCount,
                                                        iTotalShaderCount,
-                                                       vTaskShaders = std::move(vShadersForTask),
+                                                       shaderToCompile = std::move(vShadersToCompile[i]),
                                                        onProgress,
                                                        onError,
                                                        onCompleted]() mutable {
-                compileShadersTask(
-                    pFinishPromise,
+                compileShaderTask(
                     iCurrentQueryId,
                     pCompiledShaderCount,
                     iTotalShaderCount,
-                    std::move(vTaskShaders),
+                    std::move(shaderToCompile),
                     onProgress,
                     onError,
                     onCompleted);
@@ -541,89 +462,72 @@ namespace ne {
         return {};
     }
 
-    void ShaderManager::compileShadersTask(
-        const std::shared_ptr<std::promise<bool>>& pPromiseFinish,
+    void ShaderManager::compileShaderTask(
         size_t iQueryId,
         const std::shared_ptr<std::atomic<size_t>>& pCompiledShaderCount,
         size_t iTotalShaderCount,
-        std::vector<ShaderDescription> vShadersToCompile,
+        ShaderDescription shaderToCompile,
         const std::function<void(size_t iCompiledShaderCount, size_t iTotalShadersToCompile)>& onProgress,
         const std::function<
             void(ShaderDescription shaderDescription, std::variant<std::string, Error> error)>& onError,
         const std::function<void()>& onCompleted) {
-        size_t iLastFetchCompiledShaderCount = 0;
-        for (auto& shaderDescription : vShadersToCompile) {
-            // Compile shader.
-            auto result = IShader::compileShader(shaderDescription, pRenderer);
-            if (!std::holds_alternative<std::shared_ptr<IShader>>(result)) {
-                if (std::holds_alternative<std::string>(result)) {
-                    const auto sShaderError = std::get<std::string>(std::move(result));
-                    pRenderer->getGame()->addDeferredTask(
-                        [onError, shaderDescription, sShaderError = std::move(sShaderError)]() mutable {
-                            onError(std::move(shaderDescription), sShaderError);
-                        });
-                } else {
-                    auto err = std::get<Error>(std::move(result));
-                    err.addEntry();
-                    Logger::get().error(
-                        std::format(
-                            "shader compilation query #{}: "
-                            "an error occurred during shader compilation: {}",
-                            iQueryId,
-                            err.getError()),
-                        sShaderManagerLogCategory);
-                    pRenderer->getGame()->addDeferredTask([onError, shaderDescription, err]() mutable {
-                        onError(std::move(shaderDescription), err);
+        // Compile shader.
+        auto result = IShader::compileShader(shaderToCompile, pRenderer);
+        if (!std::holds_alternative<std::shared_ptr<IShader>>(result)) {
+            if (std::holds_alternative<std::string>(result)) {
+                const auto sShaderError = std::get<std::string>(std::move(result));
+                pRenderer->getGame()->addDeferredTask(
+                    [onError, shaderToCompile, sShaderError = std::move(sShaderError)]() mutable {
+                        onError(std::move(shaderToCompile), sShaderError);
                     });
-                }
             } else {
-                // Add compiled shader to shader registry.
-                auto pShader = std::get<std::shared_ptr<IShader>>(std::move(result));
-
-                // Check if shutting down before locking mutex (otherwise a deadlock will occur).
-                if (bIsShuttingDown.test(std::memory_order_seq_cst)) {
-                    pPromiseFinish->set_value(true);
-                    Logger::get().info(
-                        std::format(
-                            "shader compilation query #{}: finishing early "
-                            "due to shutdown",
-                            iQueryId),
-                        sShaderManagerLogCategory);
-                    return;
-                }
-                std::scoped_lock guard(mtxRwShaders);
-
-                auto it = compiledShaders.find(shaderDescription.sShaderName);
-                if (it != compiledShaders.end()) {
-                    Error err(std::format(
-                        "shader with the name \"{}\" is already added", shaderDescription.sShaderName));
-                    Logger::get().error(
-                        std::format("shader compilation query #{}: {}", iQueryId, err.getError()),
-                        sShaderManagerLogCategory);
-                    pRenderer->getGame()->addDeferredTask([onError, shaderDescription, err]() mutable {
-                        onError(std::move(shaderDescription), err);
-                    });
-                } else {
-                    compiledShaders[shaderDescription.sShaderName] = std::move(pShader);
-                }
+                auto err = std::get<Error>(std::move(result));
+                err.addEntry();
+                Logger::get().error(
+                    std::format(
+                        "shader compilation query #{}: "
+                        "an error occurred during shader compilation: {}",
+                        iQueryId,
+                        err.getError()),
+                    sShaderManagerLogCategory);
+                pRenderer->getGame()->addDeferredTask(
+                    [onError, shaderToCompile, err]() mutable { onError(std::move(shaderToCompile), err); });
             }
+        } else {
+            // Add compiled shader to shader registry.
+            auto pShader = std::get<std::shared_ptr<IShader>>(std::move(result));
 
-            iLastFetchCompiledShaderCount = pCompiledShaderCount->fetch_add(1);
+            std::scoped_lock guard(mtxRwShaders);
 
-            // Mark progress.
-            const auto iCompiledShaderCount = iLastFetchCompiledShaderCount + 1;
-            Logger::get().info(
-                std::format(
-                    "shader compilation query #{}: "
-                    "progress {}/{}",
-                    iQueryId,
-                    iCompiledShaderCount,
-                    iTotalShaderCount),
-                sShaderManagerLogCategory);
-            pRenderer->getGame()->addDeferredTask([onProgress, iCompiledShaderCount, iTotalShaderCount]() {
-                onProgress(iCompiledShaderCount, iTotalShaderCount);
-            });
+            const auto it = compiledShaders.find(shaderToCompile.sShaderName);
+            if (it != compiledShaders.end()) {
+                Error err(
+                    std::format("shader with the name \"{}\" is already added", shaderToCompile.sShaderName));
+                Logger::get().error(
+                    std::format("shader compilation query #{}: {}", iQueryId, err.getError()),
+                    sShaderManagerLogCategory);
+                pRenderer->getGame()->addDeferredTask(
+                    [onError, shaderToCompile, err]() mutable { onError(std::move(shaderToCompile), err); });
+            } else {
+                compiledShaders[shaderToCompile.sShaderName] = std::move(pShader);
+            }
         }
+
+        const size_t iLastFetchCompiledShaderCount = pCompiledShaderCount->fetch_add(1);
+
+        // Mark progress.
+        const auto iCompiledShaderCount = iLastFetchCompiledShaderCount + 1;
+        Logger::get().info(
+            std::format(
+                "shader compilation query #{}: "
+                "progress {}/{}",
+                iQueryId,
+                iCompiledShaderCount,
+                iTotalShaderCount),
+            sShaderManagerLogCategory);
+        pRenderer->getGame()->addDeferredTask([onProgress, iCompiledShaderCount, iTotalShaderCount]() {
+            onProgress(iCompiledShaderCount, iTotalShaderCount);
+        });
 
         // Only one task should call onCompleted.
         if (iLastFetchCompiledShaderCount + 1 == iTotalShaderCount) {
@@ -636,7 +540,5 @@ namespace ne {
                 sShaderManagerLogCategory);
             pRenderer->getGame()->addDeferredTask(onCompleted);
         }
-
-        pPromiseFinish->set_value(true);
     }
 } // namespace ne

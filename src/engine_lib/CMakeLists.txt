@@ -9,7 +9,7 @@ set(RELATIVE_EXT_PATH "../../ext")
 set(ENGINE_WIN32_SOURCES
     private/shaders/hlsl/HlslShader.h
     private/shaders/hlsl/HlslShader.cpp
-    ${RELATIVE_EXT_PATH}/D3D12MemoryAllocator/D3D12MemAlloc.cpp
+    ${RELATIVE_EXT_PATH}/D3D12MemoryAllocator/src/D3D12MemAlloc.cpp
     private/render/directx/DirectXRenderer.h
     private/render/directx/DirectXRenderer.cpp
     private/render/directx/Pso.cpp
@@ -132,6 +132,9 @@ endif()
 add_subdirectory(${RELATIVE_EXT_PATH}/toml11 build/toml11)
 
 if (WIN32)
+    # External: D3D12MemoryAllocator
+    add_subdirectory(${RELATIVE_EXT_PATH}/D3D12MemoryAllocator build/D3D12MemoryAllocator)
+
     # External: DXC.
     target_link_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/dxc)
 

@@ -7,3 +7,6 @@
 [submodule "ext/toml11"]
 	path = ext/toml11
 	url = https://github.com/ToruNiina/toml11
+[submodule "ext/glfw"]
+	path = ext/glfw
+	url = https://github.com/glfw/glfw

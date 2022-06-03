@@ -16,7 +16,7 @@
 #include "DirectXHelpers/d3dx12.h"
 
 // External.
-#include "D3D12MemoryAllocator/D3D12MemAlloc.h"
+#include "D3D12MemoryAllocator/include/D3D12MemAlloc.h"
 
 // OS.
 #include <wrl.h>

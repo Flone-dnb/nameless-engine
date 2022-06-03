@@ -23,9 +23,9 @@ cd nameless-engine
 git submodule update --init
 ```
 
-If you've never used CMake before:
+Then, if you've never used CMake before:
 
-When installed, clone/download this repository and create a `build` directory next to this file, open created `build` directory and type `cmd` in Explorer's address bar. This will open up a console in which you need to type this:
+Create a `build` directory next to this file, open created `build` directory and type `cmd` in Explorer's address bar. This will open up a console in which you need to type this:
 
 ```
 cmake -DCMAKE_BUILD_TYPE=Debug .. // for debug mode

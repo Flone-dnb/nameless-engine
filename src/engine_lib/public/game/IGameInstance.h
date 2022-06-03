@@ -1,7 +1,7 @@
 ﻿#pragma once
 
 // STL.
-#include <variant>
+#include <functional>
 
 // Custom.
 #include "input/KeyboardKey.hpp"
@@ -34,6 +34,14 @@ namespace ne {
         IGameInstance& operator=(const IGameInstance&) = delete;
 
         virtual ~IGameInstance() = default;
+
+        /**
+         * Returns the time in seconds that has passed
+         * since the very first window was created.
+         *
+         * @return Time in seconds.
+         */
+        static float getTotalApplicationTimeInSec();
 
         /**
          * Called before a new frame is rendered.
@@ -122,12 +130,27 @@ namespace ne {
         virtual void onWindowClose() {}
 
         /**
-         * Returns the time in seconds that has passed
-         * since the very first window was created.
+         * Adds a function to be executed on the main thread next time @ref onBeforeNewFrame
+         * is called.
          *
-         * @return Time in seconds.
+         * @param task Function to execute.
+         *
+         * @warning If you are using member functions as tasks you need to make
+         * sure that the owner object of these member functions will not be deleted until
+         * this task is finished. IGameInstance member functions are safe to use.
          */
-        static float getTotalApplicationTimeInSec();
+        void addDeferredTask(const std::function<void()>& task) const;
+
+        /**
+         * Adds a function to be executed on the thread pool.
+         *
+         * @param task Function to execute.
+         *
+         * @warning If you are using member functions as tasks you need to make
+         * sure that the owner object of these member functions will not be deleted until
+         * this task is finished. IGameInstance member functions are safe to use.
+         */
+        void addTaskToThreadPool(const std::function<void()>& task) const;
 
         /**
          * Returns a reference to the window this game instance is using.

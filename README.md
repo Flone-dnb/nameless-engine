@@ -15,6 +15,13 @@ TODO
 
 In order to start using this engine you need [CMake](https://cmake.org/download/) and [Go](https://go.dev/dl/) installed.
 
+Clone repository:
+
+```
+git clone https://github.com/Flone-dnb/nameless-engine
+git submodule update --init
+```
+
 If you've never used CMake before:
 
 When installed, clone/download this repository and create a `build` directory next to this file, open created `build` directory and type `cmd` in Explorer's address bar. This will open up a console in which you need to type this:
@@ -25,6 +32,15 @@ cmake .. // for release mode
 ```
 
 This will generate engine editor project files that you will use for development.
+
+# Update
+
+Update repository:
+
+```
+git pull
+git submodule update
+```
 
 # Documentation
 

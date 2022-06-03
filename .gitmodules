@@ -16,3 +16,6 @@
 [submodule "ext/D3D12MemoryAllocator"]
 	path = ext/D3D12MemoryAllocator
 	url = https://github.com/GPUOpen-LibrariesAndSDKs/D3D12MemoryAllocator
+[submodule "ext/stb"]
+	path = ext/stb
+	url = https://github.com/nothings/stb

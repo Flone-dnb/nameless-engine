@@ -5,7 +5,7 @@
 #include <climits>
 
 // DXC
-#include "dxc/d3d12shader.h"
+#include "DirectXShaderCompiler/inc/d3d12shader.h"
 #pragma comment(lib, "dxcompiler.lib")
 
 // Custom.

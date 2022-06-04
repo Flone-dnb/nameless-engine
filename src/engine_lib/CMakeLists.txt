@@ -2,6 +2,16 @@ cmake_minimum_required(VERSION 3.20)
 
 project(engine_lib CXX)
 
+# See if Go is installed.
+execute_process(
+    COMMAND go version
+    OUTPUT_VARIABLE go_out
+    RESULT_VARIABLE go_error
+    ERROR_VARIABLE go_suppress)
+if (go_error)
+    message(FATAL_ERROR "\"Go\" programming language needs to be installed.")
+endif()
+
 # Relative path to 'ext' directory.
 set(RELATIVE_EXT_PATH "../../ext")
 
@@ -140,41 +150,39 @@ if (WIN32)
     target_link_libraries(${PROJECT_NAME} PUBLIC DirectX-Headers)
 
     # External: DXC.
-    target_link_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/dxc)
+    # Download and unzip DXC.
+    add_custom_command(TARGET ${PROJECT_NAME} PRE_BUILD
+                   COMMAND go run ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/DirectXShaderCompiler/download_dxc.go
+                   ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/DirectXShaderCompiler/ # working directory
+    )
 
-    # Copy dxc DLLs.
+    set(PATH_TO_DXC_DLL_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/DirectXShaderCompiler/bin/x64)
+    set(PATH_TO_DXC_LIB_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/DirectXShaderCompiler/lib/x64)
+    target_link_directories(${PROJECT_NAME} PUBLIC ${PATH_TO_DXC_DLL_DIR})
+    target_link_directories(${PROJECT_NAME} PUBLIC ${PATH_TO_DXC_LIB_DIR})
+
+    # Copy DXC DLLs.
     add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
                    COMMAND ${CMAKE_COMMAND} -E copy
-                   ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/dxc/dxcompiler.dll ${CMAKE_BINARY_DIR}/dxcompiler.dll)
+                   ${PATH_TO_DXC_DLL_DIR}/dxcompiler.dll ${CMAKE_BINARY_DIR}/dxcompiler.dll)
     add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
                    COMMAND ${CMAKE_COMMAND} -E copy
-                   ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/dxc/dxil.dll ${CMAKE_BINARY_DIR}/dxil.dll)
+                   ${PATH_TO_DXC_DLL_DIR}/dxil.dll ${CMAKE_BINARY_DIR}/dxil.dll)
 
     add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
                    COMMAND ${CMAKE_COMMAND} -E copy
-                   ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/dxc/dxcompiler.dll ${BUILD_MODE_DIRECTORY}/dxcompiler.dll)
+                   ${PATH_TO_DXC_DLL_DIR}/dxcompiler.dll ${BUILD_MODE_DIRECTORY}/dxcompiler.dll)
     add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
                    COMMAND ${CMAKE_COMMAND} -E copy
-                   ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/dxc/dxil.dll ${BUILD_MODE_DIRECTORY}/dxil.dll)
+                   ${PATH_TO_DXC_DLL_DIR}/dxil.dll ${BUILD_MODE_DIRECTORY}/dxil.dll)
 endif()
 
 # Copy external licenses to build directory.
-# See if go is installed.
-execute_process(
-    COMMAND go version
-    OUTPUT_VARIABLE go_out
-    RESULT_VARIABLE go_error
-    ERROR_VARIABLE go_suppress)
-if (NOT go_error)
-    message(STATUS "Found Go installed: ${go_out}")
-    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
                    COMMAND go run ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/copy_ext_licenses.go
                    ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/ # arg 1 - working directory
                    ${BUILD_MODE_DIRECTORY} # arg 2 - build directory
-    )
-else ()
-    message(FATAL_ERROR "\"Go\" programming language needs to be installed.")
-endif ()
+)
 
 # Add includes.
 include_directories(${RELATIVE_EXT_PATH})

@@ -7,7 +7,7 @@
 #include "shaders/IShader.h"
 
 // DXC.
-#include "dxc/dxcapi.h"
+#include "DirectXShaderCompiler/inc/dxcapi.h"
 
 // OS.
 #include <wrl.h>

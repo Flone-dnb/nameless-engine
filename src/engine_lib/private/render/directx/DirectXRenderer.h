@@ -11,9 +11,8 @@
 #include "misc/Error.h"
 
 // DirectX.
-#include "d3d12.h"
 #include <dxgi1_4.h>
-#include "DirectXHelpers/d3dx12.h"
+#include "directx/d3dx12.h"
 
 // External.
 #include "D3D12MemoryAllocator/include/D3D12MemAlloc.h"

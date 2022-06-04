@@ -135,6 +135,10 @@ if (WIN32)
     add_subdirectory(${RELATIVE_EXT_PATH}/D3D12MemoryAllocator build/D3D12MemoryAllocator)
     target_link_libraries(${PROJECT_NAME} PUBLIC D3D12MemoryAllocator)
 
+    # External: DirectX-Headers
+    add_subdirectory(${RELATIVE_EXT_PATH}/DirectX-Headers build/DirectX-Headers)
+    target_link_libraries(${PROJECT_NAME} PUBLIC DirectX-Headers)
+
     # External: DXC.
     target_link_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/dxc)
 

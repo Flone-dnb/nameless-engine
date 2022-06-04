@@ -19,3 +19,6 @@
 [submodule "ext/stb"]
 	path = ext/stb
 	url = https://github.com/nothings/stb
+[submodule "ext/DirectX-Headers"]
+	path = ext/DirectX-Headers
+	url = https://github.com/microsoft/DirectX-Headers

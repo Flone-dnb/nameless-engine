@@ -520,10 +520,11 @@ namespace ne {
         Logger::get().info(
             std::format(
                 "shader compilation query #{}: "
-                "progress {}/{}",
+                "progress {}/{} ({})",
                 iQueryId,
                 iCompiledShaderCount,
-                iTotalShaderCount),
+                iTotalShaderCount,
+                shaderToCompile.sShaderName),
             sShaderManagerLogCategory);
         pRenderer->getGame()->addDeferredTask([onProgress, iCompiledShaderCount, iTotalShaderCount]() {
             onProgress(iCompiledShaderCount, iTotalShaderCount);

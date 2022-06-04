@@ -187,6 +187,13 @@ namespace ne {
         std::optional<Error> createRootSignature();
 
         /**
+         * Compiles all essential shaders that the engine will use.
+         *
+         * @return Error if something went wrong.
+         */
+        std::optional<Error> compileEngineShaders() const;
+
+        /**
          * Returns static texture samplers, used in texture filtering.
          *
          * @return Array of static texture samplers.

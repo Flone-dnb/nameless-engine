@@ -66,6 +66,12 @@ namespace ne {
             throw std::runtime_error(error->getError());
         }
 
+        error = compileEngineShaders();
+        if (error.has_value()) {
+            error->addEntry();
+            error->showError();
+            throw std::runtime_error(error->getError());
+        }
         // TODO
     }
 
@@ -589,7 +595,7 @@ namespace ne {
 
     std::optional<Error> DirectXRenderer::createRootSignature() {
         // Root parameter can be a table, root descriptor or root constants.
-        std::array<CD3DX12_ROOT_PARAMETER, 2> vRootParameters;
+        std::array<CD3DX12_ROOT_PARAMETER, 2> vRootParameters = {};
 
         // Performance TIP: Order from most frequent to least frequent.
         vRootParameters[0].InitAsConstantBufferView(0); // frame data
@@ -635,6 +641,55 @@ namespace ne {
             IID_PPV_ARGS(&pRootSignature));
         if (FAILED(hResult)) {
             return Error(hResult);
+        }
+
+        return {};
+    }
+
+    std::optional<Error> DirectXRenderer::compileEngineShaders() const {
+        // Do this synchronously.
+        std::vector vEngineShaders = {ShaderDescription(
+            "engine.default", "res/engine/shaders/default.hlsl", ShaderType::VERTEX_SHADER, "VS", {})};
+
+        std::shared_ptr<std::promise<bool>> pPromiseFinish = std::make_shared<std::promise<bool>>();
+        auto future = pPromiseFinish->get_future();
+
+        auto onProgress = [](size_t iCompiledShaderCount, size_t iTotalShadersToCompile) {};
+        auto onError =
+            [pPromiseFinish](ShaderDescription shaderDescription, std::variant<std::string, Error> error) {
+                if (std::holds_alternative<std::string>(error)) {
+                    const auto sErrorMessage = std::format(
+                        "failed to compile shader \"{}\" due to compilation error:\n{}",
+                        shaderDescription.sShaderName,
+                        std::get<std::string>(std::move(error)));
+                    const Error err(sErrorMessage);
+                    err.showError();
+                    throw std::runtime_error(err.getError());
+                } else {
+                    const auto sErrorMessage = std::format(
+                        "failed to compile shader \"{}\" due to internal error:\n{}",
+                        shaderDescription.sShaderName,
+                        std::get<Error>(std::move(error)).getInitialMessage());
+                    const Error err(sErrorMessage);
+                    err.showError();
+                    throw std::runtime_error(err.getError());
+                }
+            };
+        auto onCompleted = [pPromiseFinish]() { pPromiseFinish->set_value(false); };
+
+        auto error = getShaderManager()->compileShaders(vEngineShaders, onProgress, onError, onCompleted);
+        if (error.has_value()) {
+            error->addEntry();
+            error->showError();
+            throw std::runtime_error(error->getError());
+        }
+
+        try {
+            future.get();
+        } catch (const std::exception& ex) {
+            const Error err(ex.what());
+            err.showError();
+            throw std::runtime_error(err.getInitialMessage());
         }
 
         return {};

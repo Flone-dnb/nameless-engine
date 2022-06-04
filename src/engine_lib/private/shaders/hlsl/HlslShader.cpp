@@ -4,7 +4,7 @@
 #include <fstream>
 #include <climits>
 
-// DXC
+// DXC.
 #include "DirectXShaderCompiler/inc/d3d12shader.h"
 #pragma comment(lib, "dxcompiler.lib")
 

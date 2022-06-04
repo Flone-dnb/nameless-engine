@@ -64,9 +64,16 @@ namespace ne {
     void Game::onWindowClose() const { pGameInstance->onWindowClose(); }
 
     void Game::addDeferredTask(const std::function<void()>& task) {
-        std::scoped_lock<std::mutex> guard(mtxDeferredTasks.first);
+        {
+            std::scoped_lock guard(mtxDeferredTasks.first);
+            mtxDeferredTasks.second.push(task);
+        }
 
-        mtxDeferredTasks.second.push(task);
+        if (!pGameInstance) {
+            // Tick not started yet but we already have some tasks (probably engine internal calls).
+            // Execute them now.
+            executeDeferredTasks();
+        }
     }
 
     Window* Game::getWindow() const { return pWindow; }
@@ -78,6 +85,8 @@ namespace ne {
         pRenderer = std::make_unique<DirectXRenderer>(this);
 #elif __linux__
         static_assert(false, "need to assign renderer here");
+#else
+        static_assert(false, "no renderer here");
 #endif
     }
 

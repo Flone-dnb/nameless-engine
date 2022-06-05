@@ -80,6 +80,7 @@ namespace ne {
     void DirectXRenderer::drawFrame() {}
 
     std::optional<Error> DirectXRenderer::enableDebugLayer() const {
+#if defined(DEBUG)
         ComPtr<ID3D12Debug> pDebugController;
         HRESULT hResult = D3D12GetDebugInterface(IID_PPV_ARGS(&pDebugController));
         if (FAILED(hResult)) {
@@ -97,7 +98,7 @@ namespace ne {
         pDxgiInfoQueue->SetBreakOnSeverity(DXGI_DEBUG_ALL, DXGI_INFO_QUEUE_MESSAGE_SEVERITY_ERROR, true);
         pDxgiInfoQueue->SetBreakOnSeverity(DXGI_DEBUG_ALL, DXGI_INFO_QUEUE_MESSAGE_SEVERITY_CORRUPTION, true);
         pDxgiInfoQueue->SetBreakOnSeverity(DXGI_DEBUG_ALL, DXGI_INFO_QUEUE_MESSAGE_SEVERITY_WARNING, true);
-
+#endif
         return {};
     }
 

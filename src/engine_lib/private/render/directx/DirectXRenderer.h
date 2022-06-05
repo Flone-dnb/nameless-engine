@@ -114,6 +114,8 @@ namespace ne {
          *
          * @warning Should be called before you create DXGI factory or D3D device.
          *
+         * @remark Only enables debug layer if DEBUG macro is defined.
+         *
          * @return Returns an error if something went wrong.
          */
         std::optional<Error> enableDebugLayer() const;

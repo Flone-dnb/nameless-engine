@@ -177,9 +177,9 @@ if (WIN32)
                    ${PATH_TO_DXC_DLL_DIR}/dxil.dll ${BUILD_MODE_DIRECTORY}/dxil.dll)
 endif()
 
-# Copy external licenses to build directory.
+# Execute post build script.
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-                   COMMAND go run ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/copy_ext_licenses.go
+                   COMMAND go run ${CMAKE_CURRENT_SOURCE_DIR}/engine_post_build.go
                    ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/ # arg 1 - working directory
                    ${BUILD_MODE_DIRECTORY} # arg 2 - build directory
 )

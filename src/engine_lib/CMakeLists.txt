@@ -115,14 +115,6 @@ endif()
 set(PROJECT_CXX_STANDARD_VERSION 23)
 target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_${PROJECT_CXX_STANDARD_VERSION})
 
-# Copy engine resources.
-add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-                   COMMAND ${CMAKE_COMMAND} -E copy_directory
-                   ${CMAKE_CURRENT_SOURCE_DIR}/../../res/engine/ ${CMAKE_BINARY_DIR}/res/engine/)
-add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-                   COMMAND ${CMAKE_COMMAND} -E copy_directory
-                   ${CMAKE_CURRENT_SOURCE_DIR}/../../res/engine/ ${BUILD_MODE_DIRECTORY}/res/engine/)
-
 # External: glfw.
 set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE) # disable docs
 set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE) # disable tests
@@ -178,10 +170,19 @@ if (WIN32)
 endif()
 
 # Execute post build script.
+if(CMAKE_BUILD_TYPE MATCHES "^[Dd]ebug")
+    set(IS_RELEASE_BUILD 0)
+else()
+    set(IS_RELEASE_BUILD 1)
+endif()
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-                   COMMAND go run ${CMAKE_CURRENT_SOURCE_DIR}/engine_post_build.go
-                   ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/ # arg 1 - working directory
-                   ${BUILD_MODE_DIRECTORY} # arg 2 - build directory
+                   COMMAND go run ${CMAKE_CURRENT_LIST_DIR}/engine_post_build.go
+                   ${CMAKE_CURRENT_LIST_DIR}/../../res/
+                   ${CMAKE_CURRENT_LIST_DIR}/../../ext/
+                   ${CMAKE_BINARY_DIR}
+                   ${BUILD_MODE_DIRECTORY}
+                   ${IS_RELEASE_BUILD}
+
 )
 
 # Add includes.

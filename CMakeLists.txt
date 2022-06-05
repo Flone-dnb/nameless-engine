@@ -58,20 +58,6 @@ else (DOXYGEN_FOUND)
   message(WARNING "Doxygen need to be installed to generate the documentation!")
 endif (DOXYGEN_FOUND)
 
-# copy editor resources
-add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-                   COMMAND ${CMAKE_COMMAND} -E copy_directory
-                   ${CMAKE_CURRENT_SOURCE_DIR}/res/editor/ ${CMAKE_BINARY_DIR}/res/editor/)
-if(CMAKE_BUILD_TYPE MATCHES "^[Dd]ebug")
-    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-                   COMMAND ${CMAKE_COMMAND} -E copy_directory
-                   ${CMAKE_CURRENT_SOURCE_DIR}/res/editor/ ${CMAKE_BINARY_DIR}/Debug/res/editor/)
-else()
-    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-                   COMMAND ${CMAKE_COMMAND} -E copy_directory
-                   ${CMAKE_CURRENT_SOURCE_DIR}/res/editor/ ${CMAKE_BINARY_DIR}/Release/res/editor/)
-endif()
-
 # tests
 if(CMAKE_BUILD_TYPE MATCHES "^[Dd]ebug")
     add_subdirectory(ext/Catch2 build/Catch2) # add Catch2 target

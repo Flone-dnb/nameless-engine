@@ -881,26 +881,22 @@ namespace ne {
     std::optional<Error> DirectXRenderer::flushCommandQueue() {
         std::scoped_lock<std::recursive_mutex> guardFrame(mtxRwRenderResources);
 
-        HRESULT hResult = S_OK;
-        {
-            std::scoped_lock<std::mutex> guardFence(mtxRwFence);
-            iCurrentFence += 1;
-            hResult = pCommandQueue->Signal(pFence.Get(), iCurrentFence);
-        }
+        const auto iFenceValue = iCurrentFence.fetch_add(1);
+        HRESULT hResult = pCommandQueue->Signal(pFence.Get(), iFenceValue);
 
         if (FAILED(hResult)) {
             return Error(hResult);
         }
 
         // Wait until the GPU has completed commands up to this fence point.
-        if (pFence->GetCompletedValue() < iCurrentFence) {
+        if (pFence->GetCompletedValue() < iFenceValue) {
             const HANDLE hEvent = CreateEventEx(nullptr, nullptr, FALSE, EVENT_ALL_ACCESS);
             if (hEvent == nullptr) {
                 return Error(GetLastError());
             }
 
             // Fire event when the GPU hits current fence.
-            hResult = pFence->SetEventOnCompletion(iCurrentFence, hEvent);
+            hResult = pFence->SetEventOnCompletion(iFenceValue, hEvent);
             if (FAILED(hResult)) {
                 return Error(hResult);
             }

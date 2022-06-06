@@ -247,7 +247,7 @@ namespace ne {
 
         /**
          * Total number of 'compile shaders' queries.
-         * Used to differentiate calls to @ref compileShadersTask.
+         * Used to differentiate calls to @ref compileShaderTask.
          */
         std::atomic<size_t> iTotalCompileShadersQueries = 0;
 

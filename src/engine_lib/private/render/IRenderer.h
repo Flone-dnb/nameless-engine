@@ -221,6 +221,7 @@ namespace ne {
         static const char* getConfigurationSectionVSync();
 
     private:
+        /** Number of buffers in swap chain. */
         static constexpr unsigned int iSwapChainBufferCount = 2;
 
         /**

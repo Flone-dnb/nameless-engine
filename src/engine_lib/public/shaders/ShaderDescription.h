@@ -133,7 +133,7 @@ namespace ne {
 
         /**
          * Uses @ref pathToShaderFile to recursively calculate
-         * hashes of all include files to fill @ref shaderIncludeTree.
+         * hashes of all include files to fill @ref shaderIncludeTreeHashes.
          */
         void calculateShaderIncludeTreeHashes();
 

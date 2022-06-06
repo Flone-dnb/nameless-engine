@@ -80,9 +80,11 @@ namespace ne {
          */
         std::pair<std::mutex, ComPtr<IDxcBlob>> mtxCompiledBlob;
 
-        // Clear shader cache if changing shader model.
+        /** Used vertex shader model. */
         static constexpr std::wstring_view sVertexShaderModel = L"vs_6_0";
+        /** Used pixel shader model. */
         static constexpr std::wstring_view sPixelShaderModel = L"ps_6_0";
+        /** Used compute shader model. */
         static constexpr std::wstring_view sComputeShaderModel = L"cs_6_0";
     };
 } // namespace ne

@@ -140,6 +140,7 @@ namespace ne {
          */
         Game(Window* pWindow);
 
+        /** Executes all deferred tasks from @ref mtxDeferredTasks. */
         void executeDeferredTasks();
 
         /**

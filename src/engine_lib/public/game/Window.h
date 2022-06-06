@@ -278,27 +278,49 @@ namespace ne {
 
         /**
          * GLFW callback.
+         *
+         * @param pGlfwWindow The window that received the event.
+         * @param iKey        The keyboard key that was pressed or released.
+         * @param iScancode   The system-specific scancode of the key.
+         * @param iAction     GLFW_PRESS, GLFW_RELEASE or GLFW_REPEAT.
+         * @param iMods       Bit field describing which modifier keys were held down.
          */
         static void
         glfwWindowKeyboardCallback(GLFWwindow* pGlfwWindow, int iKey, int iScancode, int iAction, int iMods);
 
         /**
          * GLFW callback.
+         *
+         * @param pGlfwWindow The window that received the event.
+         * @param iButton     The mouse button that was pressed or released.
+         * @param iAction     One of GLFW_PRESS or GLFW_RELEASE.
+         * @param iMods 	     Bit field describing which modifier keys were held down.
          */
         static void glfwWindowMouseCallback(GLFWwindow* pGlfwWindow, int iButton, int iAction, int iMods);
 
         /**
          * GLFW callback.
+         *
+         * @param pGlfwWindow The window that received the event.
+         * @param iFocused    GLFW_TRUE if the window was given input focus, or GLFW_FALSE if it lost it.
          */
         static void glfwWindowFocusCallback(GLFWwindow* pGlfwWindow, int iFocused);
 
         /**
          * GLFW callback.
+         *
+         * @param pGlfwWindow The window that received the event.
+         * @param xPos        The new x-coordinate, in screen coordinates, of the cursor.
+         * @param yPos        The new y-coordinate, in screen coordinates, of the cursor.
          */
         static void glfwWindowMouseCursorPosCallback(GLFWwindow* pGlfwWindow, double xPos, double yPos);
 
         /**
          * GLFW callback.
+         *
+         * @param pGlfwWindow The window that received the event.
+         * @param xOffset     The scroll offset along the x-axis.
+         * @param yOffset     The scroll offset along the y-axis.
          */
         static void glfwWindowMouseScrollCallback(GLFWwindow* pGlfwWindow, double xOffset, double yOffset);
 

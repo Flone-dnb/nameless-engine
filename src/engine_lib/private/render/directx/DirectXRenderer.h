@@ -236,91 +236,108 @@ namespace ne {
 
     private:
         // Main DX objects.
-        /* DXGI Factory */
+        /** DXGI Factory. */
         ComPtr<IDXGIFactory4> pFactory;
-        /* D3D12 Device */
+        /** D3D12 Device. */
         ComPtr<ID3D12Device> pDevice;
-        /* GPU */
+        /** GPU. */
         ComPtr<IDXGIAdapter3> pVideoAdapter;
-        /* Monitor */
+        /** Monitor. */
         ComPtr<IDXGIOutput> pOutputAdapter;
-        /* Swap chain */
+        /** Swap chain. */
         ComPtr<IDXGISwapChain1> pSwapChain;
 
         // Command objects.
-        /* GPU command queue. */
+        /** GPU command queue. */
         ComPtr<ID3D12CommandQueue> pCommandQueue;
-        /* Command list allocator - stores commands from command list (works like std::vector). */
+        /** Command list allocator - stores commands from command list (works like std::vector). */
         ComPtr<ID3D12CommandAllocator> pCommandListAllocator;
-        /* CPU command list. */
+        /** CPU command list. */
         ComPtr<ID3D12GraphicsCommandList> pCommandList;
 
-        // Allocator for GPU resources.
+        /** Allocator for GPU resources. */
         ComPtr<D3D12MA::Allocator> pMemoryAllocator;
 
-        // Shader related.
+        /** Root signature. */
         ComPtr<ID3D12RootSignature> pRootSignature;
 
-        // Fence.
+        /** Fence object. */
         ComPtr<ID3D12Fence> pFence;
-        std::mutex mtxRwFence;
-        UINT64 iCurrentFence = 0;
+        /** Fence counter. */
+        std::atomic<UINT64> iCurrentFence{0};
 
-        // Descriptor heaps and descriptor sizes.
+        /** Render target view descriptor heap. */
         ComPtr<ID3D12DescriptorHeap> pRtvHeap;
+        /** Depth stencil view descriptor heap. */
         ComPtr<ID3D12DescriptorHeap> pDsvHeap;
+        /** Constant buffer view, shader resource view and unordered access view descriptor heaps. */
         ComPtr<ID3D12DescriptorHeap> pCbvSrvUavHeap;
+        /** Render target view descriptor size. */
         UINT iRtvDescriptorSize = 0;
+        /** Depth stencil view descriptor size. */
         UINT iDsvDescriptorSize = 0;
+        /** Constant buffer view, shader resource view and unordered access view descriptor size. */
         UINT iCbvSrvUavDescriptorSize = 0;
 
         // Render/depth buffers.
+        /** Index of the current back buffer. */
         int iCurrentBackBufferIndex = 0;
         /** Lock when reading or writing to render resources. */
         std::recursive_mutex mtxRwRenderResources;
+        /** Swap chain buffer. */
         ComPtr<ID3D12Resource> pSwapChainBuffer[getSwapChainBufferCount()];
+        /** Depth stencil buffer. */
         ComPtr<D3D12MA::Allocation> pDepthStencilBuffer;
+        /** Default back buffer fill color. */
         float backBufferFillColor[4] = {0.0f, 0.0f, 0.0f, 1.0f};
 
         // Buffer formats.
+        /** Back buffer format. */
         DXGI_FORMAT backBufferFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
+        /** Depth/stencil format. */
         DXGI_FORMAT depthStencilFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
 
         // MSAA.
+        /** Render target for MSAA rendering. */
         ComPtr<D3D12MA::Allocation> pMsaaRenderTarget;
+        /** Whether the MSAA is currently enabled or not. */
         bool bIsMsaaEnabled = true;
+        /** Current MSAA sample count (quality). */
         UINT iMsaaSampleCount = 4;
+        /** Supported quality level for MSAA. */
         UINT iMsaaQuality = 0;
 
         // Display mode.
+        /** Currently used display mode. */
         DXGI_MODE_DESC currentDisplayMode{};
         /** Use only display modes that use this scaling. */
         DXGI_MODE_SCALING usedScaling = DXGI_MODE_SCALING_UNSPECIFIED;
+        /** Whether the VSync is currently enabled or not. */
         bool bIsVSyncEnabled = false;
 
         // Viewport.
+        /** Screen viewport size and depth range. */
         D3D12_VIEWPORT screenViewport;
+        /** Scissor rectangle for viewport. */
         D3D12_RECT scissorRect;
-        float fMinDepth = 0.0f;
-        float fMaxDepth = 1.0f;
+        /** Minimum value for depth. */
+        const float fMinDepth = 0.0f;
+        /** Maximum value for depth. */
+        const float fMaxDepth = 1.0f;
 
         // Video Adapters (GPUs).
+        /** Preferred GPU to use (for @ref getSupportedGpus). Can be overriden by configuration from disk. */
         long iPreferredGpuIndex = 0;
+        /** Name of the GPU we are currently using. */
         std::string sUsedVideoAdapter;
 
         /** Will be 'true' if we read the configuration from disk at startup. */
         bool bStartedWithConfigurationFromDisk = false;
 
-        /**
-         * Used to create a critical section for read/write operation on config files.
-         */
+        /** Used to create a critical section for read/write operation on config files. */
         std::mutex mtxRwConfigFile;
 
-        // ----------------------------------------------------------------------------------------
-
-        /**
-         * D3D feature level that we use (required feature level).
-         */
+        /** D3D feature level that we use (required feature level). */
         const D3D_FEATURE_LEVEL rendererD3dFeatureLevel = D3D_FEATURE_LEVEL::D3D_FEATURE_LEVEL_12_1;
     };
 } // namespace ne

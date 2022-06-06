@@ -58,11 +58,6 @@ else (DOXYGEN_FOUND)
   message(WARNING "Doxygen need to be installed to generate the documentation!")
 endif (DOXYGEN_FOUND)
 
-# tests
-if(CMAKE_BUILD_TYPE MATCHES "^[Dd]ebug")
-    # TODO
-endif()
-
 include_directories(ext)
 include_directories(src/engine_editor)
 include_directories(src/engine_lib/public)

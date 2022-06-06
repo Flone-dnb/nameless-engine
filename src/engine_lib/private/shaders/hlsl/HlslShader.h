@@ -74,17 +74,25 @@ namespace ne {
         virtual bool releaseBytecodeFromMemoryIfLoaded() override;
 
     private:
+        friend class ShaderManager;
+
         /**
          * Mutex for read/write operations on compiled blob.
          * Compiled shader bytecode (may be empty if not stored in memory right now).
          */
         std::pair<std::mutex, ComPtr<IDxcBlob>> mtxCompiledBlob;
 
+        // -------------------------------------------------------------------------
+        // ! if adding new shader models add them to cache config in ShaderManager !
+        // -------------------------------------------------------------------------
         /** Used vertex shader model. */
-        static constexpr std::wstring_view sVertexShaderModel = L"vs_6_0";
+        static inline std::string sVertexShaderModel = "vs_6_0";
         /** Used pixel shader model. */
-        static constexpr std::wstring_view sPixelShaderModel = L"ps_6_0";
+        static inline std::string sPixelShaderModel = "ps_6_0";
         /** Used compute shader model. */
-        static constexpr std::wstring_view sComputeShaderModel = L"cs_6_0";
+        static inline std::string sComputeShaderModel = "cs_6_0";
+        // -------------------------------------------------------------------------
+        // ! if adding new shader models add them to cache config in ShaderManager !
+        // -------------------------------------------------------------------------
     };
 } // namespace ne

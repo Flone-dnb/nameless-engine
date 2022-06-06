@@ -101,4 +101,15 @@ namespace ne {
 
         return sOutput;
     }
+
+    std::wstring stringToWstring(const std::string& sText) {
+        std::wstring sOutput;
+        size_t iResultBytes;
+
+        sOutput.resize(sText.length());
+
+        mbstowcs_s(&iResultBytes, &sOutput[0], sOutput.size() + 1, sText.c_str(), sText.size());
+
+        return sOutput;
+    }
 } // namespace ne

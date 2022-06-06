@@ -65,4 +65,13 @@ namespace ne {
      * @return Converted string.
      */
     std::string wstringToString(const std::wstring& sText);
+
+    /**
+     * Converts string to wstring.
+     *
+     * @param sText String to convert.
+     *
+     * @return Converted string.
+     */
+    std::wstring stringToWstring(const std::string& sText);
 } // namespace ne

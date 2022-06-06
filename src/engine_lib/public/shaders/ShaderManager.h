@@ -264,6 +264,13 @@ namespace ne {
         /** Name of the key for build mode, used in global shader cache information. */
         const std::string_view sGlobalShaderCacheReleaseBuildKeyName = "is_release_build";
 
+        /** Name of the key for vertex shader model, used in global shader cache information. */
+        const std::string_view sGlobalShaderCacheHlslVsModelKeyName = "hlsl_vs";
+        /** Name of the key for pixel shader model, used in global shader cache information. */
+        const std::string_view sGlobalShaderCacheHlslPsModelKeyName = "hlsl_ps";
+        /** Name of the key for compute shader model, used in global shader cache information. */
+        const std::string_view sGlobalShaderCacheHlslCsModelKeyName = "hlsl_cs";
+
         /** Name of the file in which we store configurable values. */
         const std::string_view sConfigurationFileName = "shader_manager";
 

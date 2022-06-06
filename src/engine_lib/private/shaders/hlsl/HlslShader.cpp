@@ -10,6 +10,7 @@
 
 // Custom.
 #include "io/Logger.h"
+#include "misc/Globals.h"
 
 namespace ne {
     HlslShader::HlslShader(
@@ -44,13 +45,13 @@ namespace ne {
         std::wstring sShaderModel;
         switch (shaderDescription.shaderType) {
         case ShaderType::VERTEX_SHADER:
-            sShaderModel = sVertexShaderModel;
+            sShaderModel = stringToWstring(sVertexShaderModel);
             break;
         case ShaderType::PIXEL_SHADER:
-            sShaderModel = sPixelShaderModel;
+            sShaderModel = stringToWstring(sPixelShaderModel);
             break;
         case ShaderType::COMPUTE_SHADER:
-            sShaderModel = sComputeShaderModel;
+            sShaderModel = stringToWstring(sComputeShaderModel);
             break;
         }
 

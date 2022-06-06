@@ -11,6 +11,10 @@
 #include "render/IRenderer.h"
 #include "io/ConfigManager.h"
 #include "misc/Globals.h"
+#if defined(WIN32)
+#include "render/directx/DirectXRenderer.h"
+#include "hlsl/HlslShader.h"
+#endif
 
 namespace ne {
     ShaderManager::ShaderManager(IRenderer* pRenderer) {
@@ -131,25 +135,55 @@ namespace ne {
                 return result.value();
             }
 
+            // Read parameters from config.
             const auto bOldShaderCacheInRelease =
                 configManager.getValue<bool>("", sGlobalShaderCacheReleaseBuildKeyName, !bIsReleaseBuild);
+            const auto sOldHlslVsModel =
+                configManager.getValue<std::string>("", sGlobalShaderCacheHlslVsModelKeyName, "");
+            const auto sOldHlslPsModel =
+                configManager.getValue<std::string>("", sGlobalShaderCacheHlslPsModelKeyName, "");
+            const auto sOldHlslCsModel =
+                configManager.getValue<std::string>("", sGlobalShaderCacheHlslCsModelKeyName, "");
 
+            // Check if build mode changed.
             if (bOldShaderCacheInRelease != bIsReleaseBuild) {
                 Logger::get().info(
                     "clearing shader cache directory because build mode was changed",
                     sShaderManagerLogCategory);
 
-                std::filesystem::remove_all(shaderCacheDir);
-                std::filesystem::create_directory(shaderCacheDir);
-
                 bUpdateShaderCacheConfig = true;
             }
-        } else {
-            if (std::filesystem::exists(shaderCacheDir)) {
-                std::filesystem::remove_all(shaderCacheDir);
-                std::filesystem::create_directory(shaderCacheDir);
-            }
 
+#if defined(WIN32)
+            if (!bUpdateShaderCacheConfig && dynamic_cast<DirectXRenderer*>(pRenderer)) {
+                // Check if vertex shader model changed.
+                if (!bUpdateShaderCacheConfig && sOldHlslVsModel != HlslShader::sVertexShaderModel) {
+                    Logger::get().info(
+                        "clearing shader cache directory because vertex shader model was changed",
+                        sShaderManagerLogCategory);
+
+                    bUpdateShaderCacheConfig = true;
+                }
+                // Check if pixel shader model changed.
+                if (!bUpdateShaderCacheConfig && sOldHlslPsModel != HlslShader::sPixelShaderModel) {
+                    Logger::get().info(
+                        "clearing shader cache directory because pixel shader model was changed",
+                        sShaderManagerLogCategory);
+
+                    bUpdateShaderCacheConfig = true;
+                }
+                // Check if compute shader model changed.
+                if (!bUpdateShaderCacheConfig && sOldHlslPsModel != HlslShader::sComputeShaderModel) {
+                    Logger::get().info(
+                        "clearing shader cache directory because compute shader model was changed",
+                        sShaderManagerLogCategory);
+
+                    bUpdateShaderCacheConfig = true;
+                }
+            }
+#endif
+            // TODO: if (!bUpdateShaderCacheConfig && dynamic_cast<VulkanRenderer*>(pRenderer)) ...
+        } else {
             Logger::get().info(
                 std::format(
                     "global shader cache configuration was not found, creating a new {} configuration",
@@ -160,6 +194,24 @@ namespace ne {
         }
 
         if (bUpdateShaderCacheConfig) {
+            if (std::filesystem::exists(shaderCacheDir)) {
+                std::filesystem::remove_all(shaderCacheDir);
+                std::filesystem::create_directory(shaderCacheDir);
+            }
+
+#if defined(WIN32)
+            if (dynamic_cast<DirectXRenderer*>(pRenderer)) {
+                configManager.setValue<std::string>(
+                    "", sGlobalShaderCacheHlslVsModelKeyName, HlslShader::sVertexShaderModel);
+                configManager.setValue<std::string>(
+                    "", sGlobalShaderCacheHlslPsModelKeyName, HlslShader::sPixelShaderModel);
+                configManager.setValue<std::string>(
+                    "", sGlobalShaderCacheHlslCsModelKeyName, HlslShader::sComputeShaderModel);
+            }
+#endif
+
+            // TODO: if (dynamic_cast<VulkanRenderer*>(pRenderer)) ...
+
             configManager.setValue<bool>("", sGlobalShaderCacheReleaseBuildKeyName, bIsReleaseBuild);
 
             auto result = configManager.saveFile(shaderParamsPath, false);

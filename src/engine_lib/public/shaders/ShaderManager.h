@@ -264,9 +264,6 @@ namespace ne {
         /** Name of the key for build mode, used in global shader cache information. */
         const std::string_view sGlobalShaderCacheReleaseBuildKeyName = "is_release_build";
 
-        /** Name of the key for used GPU, used in global shader cache information. */
-        const std::string_view sGlobalShaderCacheGpuKeyName = "gpu";
-
         /** Name of the file in which we store configurable values. */
         const std::string_view sConfigurationFileName = "shader_manager";
 

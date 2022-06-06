@@ -87,7 +87,7 @@ namespace ne {
 
         // ----------------------------------------------------------------------------------------
 
-        // ----------------------------------------
+        // ------------------------------- ! if adding new fields ! ------------------------------------
         // if adding new fields:
         // - add to constructor,
         // - if fields should be considered when validating cache,
@@ -109,7 +109,7 @@ namespace ne {
         /** Name of the shader's entry function name. */
         std::string sShaderEntryFunctionName;
 
-        // ----------------------------------------
+        // ------------------------------- ! if adding new fields ! ------------------------------------
         // if adding new fields:
         // - add to constructor,
         // - if fields should be considered when validating cache,
@@ -206,9 +206,9 @@ namespace ne {
          *                        ^------ [post_process] shader B that shader A includes
          * @endcode
          */
-        static constexpr std::string_view sInitialIncludeChainText = "includes";
+        static inline std::string_view sInitialIncludeChainText = "includes";
 
-        // ----------------------------------------
+        // ------------------------------- ! if adding new fields ! ------------------------------------
         // if adding new fields:
         // - if fields should be considered when validating cache,
         // add fields to @ref from_toml, @ref into_toml and @ref isSerializableDataEqual.

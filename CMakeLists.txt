@@ -36,7 +36,7 @@ add_executable(${PROJECT_NAME}
 )
 
 # add engine_lib
-add_subdirectory(src/engine_lib)
+add_subdirectory(src/engine_lib dependency_build/engine_lib)
 target_link_libraries(${PROJECT_NAME} PRIVATE engine_lib)
 
 # set standard
@@ -60,23 +60,7 @@ endif (DOXYGEN_FOUND)
 
 # tests
 if(CMAKE_BUILD_TYPE MATCHES "^[Dd]ebug")
-    add_subdirectory(ext/Catch2 build/Catch2) # add Catch2 target
-    add_executable(tests
-        ${PROJECT_SOURCES}
-        tests/main.cpp
-        tests/engine_lib/Window.cpp
-        tests/engine_lib/ConfigManager.cpp
-        tests/engine_lib/InputManager.cpp
-        # add your test .cpp files here
-    )
-    target_link_libraries(tests PRIVATE engine_lib)
-    target_compile_features(tests PRIVATE cxx_std_${PROJECT_CXX_STANDARD_VERSION})
-    target_link_libraries(tests PRIVATE Catch2::Catch2)
-    list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/ext/Catch2/contrib")
-    include(CTest)
-    include(Catch)
-    #catch_discover_tests(tests)
-    set_target_properties(tests PROPERTIES FOLDER ${ENGINE_FOLDER})
+    # TODO
 endif()
 
 include_directories(ext)

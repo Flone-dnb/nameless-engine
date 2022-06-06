@@ -119,26 +119,26 @@ target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_${PROJECT_CXX_STANDARD_VE
 set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE) # disable docs
 set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE) # disable tests
 set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE) # disable examples
-add_subdirectory(${RELATIVE_EXT_PATH}/glfw ../../build/glfw) # add GLFW target
+add_subdirectory(${RELATIVE_EXT_PATH}/glfw dependency_build/glfw) # add GLFW target
 target_link_libraries(${PROJECT_NAME} PUBLIC glfw)
 
 # External: spdlog.
-add_subdirectory(${RELATIVE_EXT_PATH}/spdlog ../../build/spdlog)
+add_subdirectory(${RELATIVE_EXT_PATH}/spdlog dependency_build/spdlog)
 target_link_libraries(${PROJECT_NAME} PUBLIC spdlog::spdlog)
 
 # External: toml11.
 if (MSVC)
     target_compile_options(${PROJECT_NAME} PUBLIC /Zc:__cplusplus)
 endif()
-add_subdirectory(${RELATIVE_EXT_PATH}/toml11 build/toml11)
+add_subdirectory(${RELATIVE_EXT_PATH}/toml11 dependency_build/toml11)
 
 if (WIN32)
     # External: D3D12MemoryAllocator
-    add_subdirectory(${RELATIVE_EXT_PATH}/D3D12MemoryAllocator build/D3D12MemoryAllocator)
+    add_subdirectory(${RELATIVE_EXT_PATH}/D3D12MemoryAllocator dependency_build/D3D12MemoryAllocator)
     target_link_libraries(${PROJECT_NAME} PUBLIC D3D12MemoryAllocator)
 
     # External: DirectX-Headers
-    add_subdirectory(${RELATIVE_EXT_PATH}/DirectX-Headers build/DirectX-Headers)
+    add_subdirectory(${RELATIVE_EXT_PATH}/DirectX-Headers dependency_build/DirectX-Headers)
     target_link_libraries(${PROJECT_NAME} PUBLIC DirectX-Headers)
 
     # External: DXC.
@@ -148,12 +148,15 @@ if (WIN32)
                    ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/DirectXShaderCompiler/ # working directory
     )
 
+    # Set DXC variables.
     set(PATH_TO_DXC_DLL_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/DirectXShaderCompiler/bin/x64)
     set(PATH_TO_DXC_LIB_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/DirectXShaderCompiler/lib/x64)
+
+    # Link to DXC libraries.
     target_link_directories(${PROJECT_NAME} PUBLIC ${PATH_TO_DXC_DLL_DIR})
     target_link_directories(${PROJECT_NAME} PUBLIC ${PATH_TO_DXC_LIB_DIR})
 
-    # Copy DXC DLLs.
+    # Copy DXC DLLs to the top level binary directory.
     add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
                    COMMAND ${CMAKE_COMMAND} -E copy
                    ${PATH_TO_DXC_DLL_DIR}/dxcompiler.dll ${CMAKE_BINARY_DIR}/dxcompiler.dll)
@@ -161,12 +164,21 @@ if (WIN32)
                    COMMAND ${CMAKE_COMMAND} -E copy
                    ${PATH_TO_DXC_DLL_DIR}/dxil.dll ${CMAKE_BINARY_DIR}/dxil.dll)
 
+    # Copy DXC DLLs to the current top level build directory.
     add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
                    COMMAND ${CMAKE_COMMAND} -E copy
                    ${PATH_TO_DXC_DLL_DIR}/dxcompiler.dll ${BUILD_MODE_DIRECTORY}/dxcompiler.dll)
     add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
                    COMMAND ${CMAKE_COMMAND} -E copy
                    ${PATH_TO_DXC_DLL_DIR}/dxil.dll ${BUILD_MODE_DIRECTORY}/dxil.dll)
+
+    # Copy DXC DLLs to engine_lib binary directory.
+    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+                   COMMAND ${CMAKE_COMMAND} -E copy
+                   ${PATH_TO_DXC_DLL_DIR}/dxcompiler.dll ${CMAKE_CURRENT_BINARY_DIR}/dxcompiler.dll)
+    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+                   COMMAND ${CMAKE_COMMAND} -E copy
+                   ${PATH_TO_DXC_DLL_DIR}/dxil.dll ${CMAKE_CURRENT_BINARY_DIR}/engine_lib/dxil.dll)
 endif()
 
 # Execute post build script.
@@ -182,8 +194,36 @@ add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
                    ${CMAKE_BINARY_DIR}
                    ${BUILD_MODE_DIRECTORY}
                    ${IS_RELEASE_BUILD}
-
 )
+
+# tests
+if(CMAKE_BUILD_TYPE MATCHES "^[Dd]ebug")
+    add_subdirectory(${RELATIVE_EXT_PATH}/Catch2 dependency_build/Catch2) # add Catch2 target
+
+    set(ENGINE_TESTS_NAME engine_tests)
+    set(TESTS_RELATIVE_PATH ../../tests)
+
+    add_executable(${ENGINE_TESTS_NAME}
+        #${PROJECT_SOURCES}
+        ${TESTS_RELATIVE_PATH}/engine_lib.cpp
+        ${TESTS_RELATIVE_PATH}/engine_lib/Window.cpp
+        ${TESTS_RELATIVE_PATH}/engine_lib/ConfigManager.cpp
+        ${TESTS_RELATIVE_PATH}/engine_lib/InputManager.cpp
+        # add test .cpp files here
+    )
+
+    target_compile_features(${ENGINE_TESTS_NAME} PUBLIC cxx_std_${PROJECT_CXX_STANDARD_VERSION})
+
+    target_link_libraries(${ENGINE_TESTS_NAME} PUBLIC engine_lib)
+    target_link_libraries(${ENGINE_TESTS_NAME} PUBLIC Catch2::Catch2)
+
+    set_target_properties(${ENGINE_TESTS_NAME} PROPERTIES FOLDER ${ENGINE_FOLDER})
+
+    list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/ext/Catch2/contrib")
+    include(CTest)
+    include(Catch)
+    #catch_discover_tests(tests)
+endif()
 
 # Add includes.
 include_directories(${RELATIVE_EXT_PATH})

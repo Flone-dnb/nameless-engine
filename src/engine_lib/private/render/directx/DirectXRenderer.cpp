@@ -10,6 +10,7 @@
 #include "io/ConfigManager.h"
 #include "io/Logger.h"
 #include "misc/Globals.h"
+#include "shaders/hlsl/DirectXEngineShaders.hpp"
 
 // DirectX.
 #pragma comment(lib, "D3D12.lib")
@@ -649,8 +650,7 @@ namespace ne {
 
     std::optional<Error> DirectXRenderer::compileEngineShaders() const {
         // Do this synchronously.
-        std::vector vEngineShaders = {ShaderDescription(
-            "engine.default", "res/engine/shaders/default.hlsl", ShaderType::VERTEX_SHADER, "VS", {})};
+        std::vector vEngineShaders = {DirectXEngineShaders::vsDefault};
 
         std::shared_ptr<std::promise<bool>> pPromiseFinish = std::make_shared<std::promise<bool>>();
         auto future = pPromiseFinish->get_future();

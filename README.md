@@ -14,7 +14,11 @@ TODO: screenshot game/editor
 
 # Setup (Build)
 
-In order to start using this engine you need [CMake](https://cmake.org/download/) and [Go](https://go.dev/dl/) installed.
+Prerequisites:
+
+- compiler that supports C++23
+- [CMake](https://cmake.org/download/)
+- [Go](https://go.dev/dl/)
 
 First, clone this repository:
 
@@ -30,7 +34,7 @@ Create a `build` directory next to this file, open created `build` directory and
 
 ```
 cmake -DCMAKE_BUILD_TYPE=Debug .. // for debug mode
-cmake .. // for release mode
+cmake -DCMAKE_BUILD_TYPE=Release .. // for release mode
 ```
 
 This will generate engine editor project files that you will use for development.

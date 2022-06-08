@@ -649,7 +649,7 @@ namespace ne {
     }
 
     std::optional<Error> DirectXRenderer::compileEngineShaders() const {
-        // Do this synchronously.
+        // Do this synchronously (before user can queue his shaders).
         std::vector vEngineShaders = {DirectXEngineShaders::vsDefault};
 
         std::shared_ptr<std::promise<bool>> pPromiseFinish = std::make_shared<std::promise<bool>>();

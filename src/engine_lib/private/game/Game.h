@@ -12,6 +12,7 @@
 #include "input/KeyboardKey.hpp"
 #include "input/MouseButton.hpp"
 #include "misc/ThreadPool.h"
+#include "misc/TimerManager.h"
 
 namespace ne {
     constexpr auto sGameLogCategory = "Game";
@@ -23,6 +24,7 @@ namespace ne {
     /**
      * Holds main game objects: game instance, input manager, renderer,
      * audio engine, physics engine and etc.
+     *
      * Owned by Window object.
      */
     class Game {
@@ -123,6 +125,13 @@ namespace ne {
         void addTaskToThreadPool(const std::function<void()>& task);
 
         /**
+         * Creates a new timer.
+         *
+         * @return New timer.
+         */
+        std::shared_ptr<Timer> createTimer();
+
+        /**
          * Returns window that owns this object.
          *
          * @return Do not delete this pointer. Window that owns this object.
@@ -177,6 +186,9 @@ namespace ne {
 
         /** Thread pool to execute tasks. */
         ThreadPool threadPool;
+
+        /** Controls timers. */
+        TimerManager timerManager;
 
         /**
          * Mutex for read/write operations on deferred tasks queue.

@@ -74,5 +74,9 @@ public:
     /**
      * Called when the window was requested to close (no new frames will be rendered).
      */
-    virtual void onWindowClose() override {}
+    virtual void onWindowClose() override;
+
+private:
+    /** Timer. */
+    std::shared_ptr<ne::Timer> pTimer;
 };

@@ -6,10 +6,12 @@
 // Custom.
 #include "input/KeyboardKey.hpp"
 #include "input/MouseButton.hpp"
+#include "misc/Timer.h"
 
 namespace ne {
     class Window;
     class InputManager;
+    class Game;
 
     /**
      * Reacts to user inputs, window events and etc.
@@ -130,6 +132,13 @@ namespace ne {
         virtual void onWindowClose() {}
 
         /**
+         * Creates a new timer.
+         *
+         * @return New timer.
+         */
+        std::shared_ptr<Timer> createTimer() const;
+
+        /**
          * Adds a function to be executed on the main thread next time @ref onBeforeNewFrame
          * is called.
          *
@@ -169,15 +178,14 @@ namespace ne {
         InputManager* getInputManager() const;
 
     private:
-        /**
-         * A reference to a window-owner of this Game Instance.
-         * Should not be deleted.
-         */
+        /** Do not delete. Owner of @ref pGame object. */
         Window* pGameWindow = nullptr;
 
+        /** Do not delete. Owner of this object. */
+        Game* pGame = nullptr;
+
         /**
-         * A reference to a input manager of the owner Game object.
-         * Should not be deleted.
+         * Do not delete. Input manager of the @ref pGame object.
          */
         InputManager* pInputManager = nullptr;
     };

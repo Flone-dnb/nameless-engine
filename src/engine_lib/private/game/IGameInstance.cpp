@@ -8,6 +8,7 @@
 namespace ne {
     IGameInstance::IGameInstance(Window* pGameWindow, InputManager* pInputManager) {
         this->pGameWindow = pGameWindow;
+        this->pGame = pGameWindow->getRenderer()->getGame();
         this->pInputManager = pInputManager;
     }
 
@@ -17,12 +18,14 @@ namespace ne {
 
     InputManager* IGameInstance::getInputManager() const { return pInputManager; }
 
+    std::shared_ptr<Timer> IGameInstance::createTimer() const { return pGame->createTimer(); }
+
     void IGameInstance::addDeferredTask(const std::function<void()>& task) const {
-        pGameWindow->getRenderer()->getGame()->addDeferredTask(task);
+        pGame->addDeferredTask(task);
     }
 
     void IGameInstance::addTaskToThreadPool(const std::function<void()>& task) const {
-        pGameWindow->getRenderer()->getGame()->addTaskToThreadPool(task);
+        pGame->addTaskToThreadPool(task);
     }
 
 } // namespace ne

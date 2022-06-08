@@ -64,6 +64,10 @@ set(ENGINE_LIB_SOURCES
     private/shaders/ShaderUser.cpp
     private/misc/ThreadPool.h
     private/misc/ThreadPool.cpp
+    private/misc/Timer.cpp
+    public/misc/Timer.h
+    private/misc/TimerManager.cpp
+    private/misc/TimerManager.h
     # add general (cross-platform) sources here...
 )
 

@@ -9,7 +9,7 @@ namespace ne {
     /** Simple timer that can trigger a callback function on a timeout. */
     class Timer {
     public:
-        Timer() = delete;
+        Timer() = default;
 
         /** Destructor. */
         ~Timer();
@@ -30,34 +30,34 @@ namespace ne {
          *
          * @param iTimeToWaitInMs Time this timer should wait (in milliseconds).
          *
-         * @warning If you are have a callback function (class member function) set to this timer,
-         * make sure the timer is stopped (@ref stop) before the callback owner (object that owns member
-         * function) is deleted or if you no longer need this timer.
-         *
          * @note If you want to add a callback function to be
          * executed on timeout see @ref setCallbackForTimeout.
+         *
+         * @note If the timer is currently running it will be stopped
+         * (this might block, see @ref stop), to start a new one.
          */
         void start(long long iTimeToWaitInMs);
 
         /**
-         * Stops the timer.
+         * Stops the timer and blocks until timer thread is finished.
          *
-         * @note If a callback function was set for this timer
-         * and the timer is still running, the timer will be stopped
-         * and the callback function will not be called.
+         * If a callback function was set for this timer
+         * and the timer is still running, there are 2 possible outcomes:
+         * - (if the callback was not started yet) the function will block until timer thread
+         * is finished (without calling callback due to stop request) - should be almost immediate,
+         * - (if the callback is started) the function will block until timer thread
+         * and callback are finished.
          */
         void stop();
 
-    private:
-        friend class TimerManager;
-
         /**
-         * Constructor.
+         * Whether this timer is running (started) or not (finished/not started).
          *
-         * @param pTimerManager Owner.
+         * @return 'true' if currently running, 'false' otherwise.
          */
-        Timer(TimerManager* pTimerManager);
+        bool isRunning();
 
+    private:
         /**
          * Timer thread that waits until a timeout or a shutdown.
          *
@@ -82,8 +82,5 @@ namespace ne {
 
         /** Whether the timer was explicitly stopped or not. */
         std::atomic_flag bIsStopped{};
-
-        /** Do not delete. Owner of this timer. */
-        TimerManager* pTimerManager = nullptr;
     };
 } // namespace ne

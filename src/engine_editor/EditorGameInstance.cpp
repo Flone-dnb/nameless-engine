@@ -4,9 +4,8 @@
 
 EditorGameInstance::EditorGameInstance(ne::Window* pWindow, ne::InputManager* pInputManager)
     : IGameInstance(pWindow, pInputManager) {
-    pTimer = createTimer();
-    pTimer->setCallbackForTimeout([]() { ne::Logger::get().info("Hello World from timer timeout!", ""); });
-    pTimer->start(5000);
+    timer.setCallbackForTimeout([]() { ne::Logger::get().info("Hello World from timer timeout!", ""); });
+    timer.start(5000);
 }
 
 void EditorGameInstance::onInputActionEvent(
@@ -19,8 +18,4 @@ void EditorGameInstance::onMouseMove(int iXOffset, int iYOffset) {}
 
 void EditorGameInstance::onMouseScrollMove(int iOffset) {}
 
-void EditorGameInstance::onWindowClose() {
-    if (pTimer) {
-        pTimer->stop();
-    }
-}
+void EditorGameInstance::onWindowClose() {}

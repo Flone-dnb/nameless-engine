@@ -16,13 +16,7 @@ namespace ne {
         pGameInstance->onBeforeNewFrame(fTimeSincePrevCallInSec);
     }
 
-    Game::~Game() {
-        threadPool.stop();
-
-        // Explicitly delete IGameInstance here, after thread pool stop but before ~TimerManager().
-        // So that all timers will be stopped and will no longer hold references.
-        pGameInstance = nullptr;
-    }
+    Game::~Game() { threadPool.stop(); }
 
     void Game::executeDeferredTasks() {
         std::queue<std::function<void()>> localTasks;
@@ -42,8 +36,6 @@ namespace ne {
     }
 
     void Game::addTaskToThreadPool(const std::function<void()>& task) { threadPool.addTask(task); }
-
-    std::shared_ptr<Timer> Game::createTimer() { return timerManager.createTimer(); }
 
     void Game::onKeyboardInput(KeyboardKey key, KeyboardModifiers modifiers, bool bIsPressedDown) {
         pGameInstance->onKeyboardInput(key, modifiers, bIsPressedDown);

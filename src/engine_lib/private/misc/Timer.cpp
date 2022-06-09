@@ -16,7 +16,9 @@ namespace ne {
         }
 
         try {
-            timerThreadFuture->get();
+            if (timerThreadFuture->valid()) {
+                timerThreadFuture->get();
+            }
         } catch (std::exception& ex) {
             Logger::get().error(
                 std::format("a timer thread has finished with the following exception: {}", ex.what()), "");
@@ -32,6 +34,10 @@ namespace ne {
         if (bIsShuttingDown.test())
             return;
 
+        if (timerThreadFuture.has_value()) {
+            stop();
+        }
+
         std::scoped_lock guard(mtxTerminateTimerThread);
         bIsStopped.clear();
         timerThreadFuture = std::async(
@@ -39,23 +45,54 @@ namespace ne {
     }
 
     void Timer::stop() {
-        std::scoped_lock guard(mtxTerminateTimerThread);
-        if (!timerThreadFuture.has_value())
-            return;
+        {
+            std::scoped_lock guard(mtxTerminateTimerThread);
+            if (!timerThreadFuture.has_value())
+                return;
 
-        // Notify timer thread if it's running.
-        bIsStopped.test_and_set();
-        cvTerminateTimerThread.notify_one();
+            // Notify timer thread if it's running.
+            bIsStopped.test_and_set();
+            cvTerminateTimerThread.notify_one();
+        }
+
+        try {
+            if (timerThreadFuture->valid()) {
+                timerThreadFuture->get();
+            }
+        } catch (std::exception& ex) {
+            Logger::get().error(
+                std::format("a timer thread has finished with the following exception: {}", ex.what()), "");
+        }
     }
 
-    Timer::Timer(TimerManager* pTimerManager) { this->pTimerManager = pTimerManager; }
+    bool Timer::isRunning() {
+        std::scoped_lock guard(mtxTerminateTimerThread);
+        if (!timerThreadFuture.has_value())
+            return false;
+
+        if (!timerThreadFuture->valid()) {
+            return false;
+        }
+
+        const auto status = timerThreadFuture->wait_for(std::chrono::nanoseconds(1));
+
+        return status != std::future_status::ready;
+    }
 
     void Timer::timerThread(std::chrono::milliseconds timeToWaitInMs) {
-        std::unique_lock guard(mtxTerminateTimerThread);
-        cvTerminateTimerThread.wait_for(
-            guard, timeToWaitInMs, [this] { return bIsShuttingDown.test() || bIsStopped.test(); });
+        bool bRunCallback = false;
 
-        if (!bIsShuttingDown.test() && !bIsStopped.test() && callbackForTimeout.has_value()) {
+        {
+            std::unique_lock guard(mtxTerminateTimerThread);
+            cvTerminateTimerThread.wait_for(
+                guard, timeToWaitInMs, [this] { return bIsShuttingDown.test() || bIsStopped.test(); });
+
+            if (!bIsShuttingDown.test() && !bIsStopped.test() && callbackForTimeout.has_value()) {
+                bRunCallback = true;
+            }
+        }
+
+        if (bRunCallback) {
             callbackForTimeout->operator()();
         }
     }

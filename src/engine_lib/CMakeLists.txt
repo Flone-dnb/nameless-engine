@@ -66,8 +66,6 @@ set(ENGINE_LIB_SOURCES
     private/misc/ThreadPool.cpp
     private/misc/Timer.cpp
     public/misc/Timer.h
-    private/misc/TimerManager.cpp
-    private/misc/TimerManager.h
     # add general (cross-platform) sources here...
 )
 

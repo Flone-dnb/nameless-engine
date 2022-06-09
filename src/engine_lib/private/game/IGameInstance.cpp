@@ -18,8 +18,6 @@ namespace ne {
 
     InputManager* IGameInstance::getInputManager() const { return pInputManager; }
 
-    std::shared_ptr<Timer> IGameInstance::createTimer() const { return pGame->createTimer(); }
-
     void IGameInstance::addDeferredTask(const std::function<void()>& task) const {
         pGame->addDeferredTask(task);
     }

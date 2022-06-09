@@ -3,6 +3,7 @@
 // Custom.
 #include "game/IGameInstance.h"
 #include "game/Window.h"
+#include "misc/Timer.h"
 
 /**
  * Editor logic.
@@ -78,5 +79,5 @@ public:
 
 private:
     /** Timer. */
-    std::shared_ptr<ne::Timer> pTimer;
+    ne::Timer timer;
 };

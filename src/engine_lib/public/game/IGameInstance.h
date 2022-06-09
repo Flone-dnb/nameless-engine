@@ -6,7 +6,6 @@
 // Custom.
 #include "input/KeyboardKey.hpp"
 #include "input/MouseButton.hpp"
-#include "misc/Timer.h"
 
 namespace ne {
     class Window;
@@ -130,13 +129,6 @@ namespace ne {
          * Prefer to do your destructor logic here.
          */
         virtual void onWindowClose() {}
-
-        /**
-         * Creates a new timer.
-         *
-         * @return New timer.
-         */
-        std::shared_ptr<Timer> createTimer() const;
 
         /**
          * Adds a function to be executed on the main thread next time @ref onBeforeNewFrame

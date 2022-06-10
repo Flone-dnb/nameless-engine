@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.20)
 
 project(engine_editor CXX)
 
+enable_testing()
+
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 set(ENGINE_FOLDER "NAMELESS-ENGINE")
 

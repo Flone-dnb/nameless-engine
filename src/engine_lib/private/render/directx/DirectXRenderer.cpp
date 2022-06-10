@@ -656,26 +656,25 @@ namespace ne {
         auto future = pPromiseFinish->get_future();
 
         auto onProgress = [](size_t iCompiledShaderCount, size_t iTotalShadersToCompile) {};
-        auto onError =
-            [pPromiseFinish](ShaderDescription shaderDescription, std::variant<std::string, Error> error) {
-                if (std::holds_alternative<std::string>(error)) {
-                    const auto sErrorMessage = std::format(
-                        "failed to compile shader \"{}\" due to compilation error:\n{}",
-                        shaderDescription.sShaderName,
-                        std::get<std::string>(std::move(error)));
-                    const Error err(sErrorMessage);
-                    err.showError();
-                    throw std::runtime_error(err.getError());
-                } else {
-                    const auto sErrorMessage = std::format(
-                        "failed to compile shader \"{}\" due to internal error:\n{}",
-                        shaderDescription.sShaderName,
-                        std::get<Error>(std::move(error)).getInitialMessage());
-                    const Error err(sErrorMessage);
-                    err.showError();
-                    throw std::runtime_error(err.getError());
-                }
-            };
+        auto onError = [](ShaderDescription shaderDescription, std::variant<std::string, Error> error) {
+            if (std::holds_alternative<std::string>(error)) {
+                const auto sErrorMessage = std::format(
+                    "failed to compile shader \"{}\" due to compilation error:\n{}",
+                    shaderDescription.sShaderName,
+                    std::get<std::string>(std::move(error)));
+                const Error err(sErrorMessage);
+                err.showError();
+                throw std::runtime_error(err.getError());
+            } else {
+                const auto sErrorMessage = std::format(
+                    "failed to compile shader \"{}\" due to internal error:\n{}",
+                    shaderDescription.sShaderName,
+                    std::get<Error>(std::move(error)).getInitialMessage());
+                const Error err(sErrorMessage);
+                err.showError();
+                throw std::runtime_error(err.getError());
+            }
+        };
         auto onCompleted = [pPromiseFinish]() { pPromiseFinish->set_value(false); };
 
         auto error = getShaderManager()->compileShaders(vEngineShaders, onProgress, onError, onCompleted);
@@ -686,7 +685,9 @@ namespace ne {
         }
 
         try {
-            future.get();
+            if (future.valid()) {
+                future.get();
+            }
         } catch (const std::exception& ex) {
             const Error err(ex.what());
             err.showError();

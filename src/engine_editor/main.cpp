@@ -1,4 +1,4 @@
-#if defined(DEBUG) && defined(WIN32)
+#if defined(WIN32)
 #include <Windows.h>
 #endif
 

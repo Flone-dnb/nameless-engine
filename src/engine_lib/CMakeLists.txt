@@ -200,32 +200,30 @@ add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
 )
 
 # tests
-if(CMAKE_BUILD_TYPE MATCHES "^[Dd]ebug")
-    add_subdirectory(${RELATIVE_EXT_PATH}/Catch2 dependency_build/Catch2)
+add_subdirectory(${RELATIVE_EXT_PATH}/Catch2 dependency_build/Catch2)
 
-    set(ENGINE_TESTS_NAME engine_tests)
-    set(TESTS_RELATIVE_PATH ../../tests)
+set(ENGINE_TESTS_NAME engine_tests)
+set(TESTS_RELATIVE_PATH ../../tests)
 
-    add_executable(${ENGINE_TESTS_NAME}
-        ${TESTS_RELATIVE_PATH}/engine_lib.cpp
-        ${TESTS_RELATIVE_PATH}/engine_lib/Window.cpp
-        ${TESTS_RELATIVE_PATH}/engine_lib/ConfigManager.cpp
-        ${TESTS_RELATIVE_PATH}/engine_lib/InputManager.cpp
-        # add engine test .cpp files here
-    )
+add_executable(${ENGINE_TESTS_NAME}
+    ${TESTS_RELATIVE_PATH}/engine_lib.cpp
+    ${TESTS_RELATIVE_PATH}/engine_lib/Window.cpp
+    ${TESTS_RELATIVE_PATH}/engine_lib/ConfigManager.cpp
+    ${TESTS_RELATIVE_PATH}/engine_lib/InputManager.cpp
+    # add engine test .cpp files here
+)
 
-    target_compile_features(${ENGINE_TESTS_NAME} PRIVATE cxx_std_${PROJECT_CXX_STANDARD_VERSION})
+target_compile_features(${ENGINE_TESTS_NAME} PRIVATE cxx_std_${PROJECT_CXX_STANDARD_VERSION})
 
-    target_link_libraries(${ENGINE_TESTS_NAME} PRIVATE engine_lib)
-    target_link_libraries(${ENGINE_TESTS_NAME} PRIVATE Catch2::Catch2)
+target_link_libraries(${ENGINE_TESTS_NAME} PRIVATE engine_lib)
+target_link_libraries(${ENGINE_TESTS_NAME} PRIVATE Catch2::Catch2)
 
-    set_target_properties(${ENGINE_TESTS_NAME} PROPERTIES FOLDER ${ENGINE_FOLDER})
+set_target_properties(${ENGINE_TESTS_NAME} PROPERTIES FOLDER ${ENGINE_FOLDER})
 
-    list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/ext/Catch2/contrib")
-    include(CTest)
-    include(Catch)
-    #catch_discover_tests(${ENGINE_TESTS_NAME})
-endif()
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/ext/Catch2/contrib")
+include(CTest)
+include(Catch)
+catch_discover_tests(${ENGINE_TESTS_NAME})
 
 # Add includes.
 include_directories(${RELATIVE_EXT_PATH})

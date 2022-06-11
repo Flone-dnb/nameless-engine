@@ -652,7 +652,7 @@ namespace ne {
         // Do this synchronously (before user can queue his shaders).
         std::vector vEngineShaders = {DirectXEngineShaders::vsDefault};
 
-        std::shared_ptr<std::promise<bool>> pPromiseFinish = std::make_shared<std::promise<bool>>();
+        auto pPromiseFinish = std::make_shared<std::promise<bool>>();
         auto future = pPromiseFinish->get_future();
 
         auto onProgress = [](size_t iCompiledShaderCount, size_t iTotalShadersToCompile) {};

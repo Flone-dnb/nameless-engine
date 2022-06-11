@@ -74,7 +74,7 @@ namespace ne {
             return false;
         }
 
-        const auto status = timerThreadFuture->wait_for(std::chrono::nanoseconds(1));
+        const auto status = timerThreadFuture->wait_for(std::chrono::nanoseconds(0));
 
         return status != std::future_status::ready;
     }

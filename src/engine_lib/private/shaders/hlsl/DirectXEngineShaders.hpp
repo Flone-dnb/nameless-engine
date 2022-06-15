@@ -9,6 +9,6 @@ namespace ne {
     public:
         /** Default vertex shader. */
         static inline ShaderDescription vsDefault = {
-            "engine.default", "res/engine/shaders/default.hlsl", ShaderType::VERTEX_SHADER, "VS", {}};
+            "engine.default", "res/engine/shaders/default.hlsl", ShaderType::VERTEX_SHADER, "vsDefault", {}};
     };
 } // namespace ne

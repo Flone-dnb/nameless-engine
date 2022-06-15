@@ -53,7 +53,7 @@ struct VertexOut
 	float4 vCustomVec4 : CUSTOM;
 };
 
-VertexOut VS(VertexIn vertexIn)
+VertexOut vsDefault(VertexIn vertexIn)
 {
     VertexOut vertexOut;
 
@@ -69,7 +69,7 @@ VertexOut VS(VertexIn vertexIn)
     return vertexOut;
 }
 
-float4 PS(VertexOut pin) : SV_Target
+float4 psDefault(VertexOut pin) : SV_Target
 {
     return float4(1.0f, 0.0f, 0.0f, 1.0f);
 }

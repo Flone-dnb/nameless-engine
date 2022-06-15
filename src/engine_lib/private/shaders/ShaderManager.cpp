@@ -173,7 +173,7 @@ namespace ne {
                     bUpdateShaderCacheConfig = true;
                 }
                 // Check if compute shader model changed.
-                if (!bUpdateShaderCacheConfig && sOldHlslPsModel != HlslShader::sComputeShaderModel) {
+                if (!bUpdateShaderCacheConfig && sOldHlslCsModel != HlslShader::sComputeShaderModel) {
                     Logger::get().info(
                         "clearing shader cache directory because compute shader model was changed",
                         sShaderManagerLogCategory);

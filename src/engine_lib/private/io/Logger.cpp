@@ -25,7 +25,7 @@ namespace ne {
             sCategory = sDefaultLogCategory;
         }
         pSpdLogger->info(std::format(
-            "[{}] [{}:{}] {}",
+            "[{}] [{}, {}] {}",
             sCategory,
             std::filesystem::path(location.file_name()).filename().string(),
             location.line(),

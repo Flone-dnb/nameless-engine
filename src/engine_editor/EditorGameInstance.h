@@ -79,5 +79,5 @@ public:
 
 private:
     /** Timer. */
-    ne::Timer timer;
+    ne::Timer timer{true};
 };

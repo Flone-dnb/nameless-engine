@@ -97,7 +97,10 @@ namespace ne {
         const time_t now = time(nullptr);
 
         tm tm{};
-        localtime_s(&tm, &now);
+        const auto iError = localtime_s(&tm, &now);
+        if (iError != 0) {
+            get().error(std::format("failed to get localtime (error code {})", iError), "");
+        }
 
         return std::format("{}.{}_{}-{}-{}", 1 + tm.tm_mon, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
     }

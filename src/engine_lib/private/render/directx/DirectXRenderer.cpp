@@ -4,6 +4,7 @@
 #include <format>
 #include <filesystem>
 #include <array>
+#include <future>
 
 // Custom.
 #include "game/Window.h"
@@ -18,11 +19,9 @@
 #pragma comment(lib, "d3dcompiler.lib")
 
 #if defined(DEBUG) || defined(_DEBUG)
-
 #include <dxgidebug.h>
 #include <InitGuid.h>
 #pragma comment(lib, "dxguid.lib")
-
 #endif
 
 namespace ne {
@@ -435,7 +434,7 @@ namespace ne {
                     "GPU",
                     iPreferredGpuIndex,
                     vSupportedVideoAdapters.size()),
-                sRendererLogCategory);
+                getLoggingCategory());
             iPreferredGpuIndex = 0; // use first found GPU
         }
 
@@ -455,7 +454,7 @@ namespace ne {
             }
             Logger::get().error(
                 std::format("{} ({}), using first found GPU", error->getInitialMessage(), iPreferredGpuIndex),
-                sRendererLogCategory);
+                getLoggingCategory());
 
             // Try first found GPU.
             iPreferredGpuIndex = 0;
@@ -542,7 +541,7 @@ namespace ne {
                         currentDisplayMode.Height,
                         currentDisplayMode.RefreshRate.Numerator,
                         currentDisplayMode.RefreshRate.Denominator),
-                    sRendererLogCategory);
+                    getLoggingCategory());
                 // use last display mode
                 currentDisplayMode = vVideoModes.back();
             } else if (vFilteredModes.size() == 1) {
@@ -569,7 +568,7 @@ namespace ne {
                         static_cast<int>(mode.Scaling));
                 }
                 Logger::get().error(
-                    std::format("{}\nusing default video mode", sErrorMessage), sRendererLogCategory);
+                    std::format("{}\nusing default video mode", sErrorMessage), getLoggingCategory());
                 // use last display mode
                 currentDisplayMode = vVideoModes.back();
             }
@@ -955,7 +954,7 @@ namespace ne {
             if (error.has_value()) {
                 error->addEntry();
                 // error->showError(); don't show on screen as it's not a critical error
-                Logger::get().error(error->getError(), sRendererLogCategory);
+                Logger::get().error(error->getError(), getLoggingCategory());
                 return;
             }
         }
@@ -999,7 +998,7 @@ namespace ne {
         if (error.has_value()) {
             error->addEntry();
             // error->showError(); don't show on screen as it's not a critical error
-            Logger::get().error(error->getError(), sRendererLogCategory);
+            Logger::get().error(error->getError(), getLoggingCategory());
         }
     }
 

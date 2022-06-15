@@ -17,44 +17,44 @@
 #include "GLFW/glfw3native.h"
 
 namespace ne {
-    WindowBuilder &WindowBuilder::withSize(int iWidth, int iHeight) {
+    WindowBuilder& WindowBuilder::withSize(int iWidth, int iHeight) {
         params.iWindowWidth = iWidth;
         params.iWindowHeight = iHeight;
 
         return *this;
     }
 
-    WindowBuilder &WindowBuilder::withTitle(std::string_view sWindowTitle) {
+    WindowBuilder& WindowBuilder::withTitle(std::string_view sWindowTitle) {
         params.sWindowTitle = sWindowTitle;
 
         return *this;
     }
 
-    WindowBuilder &WindowBuilder::withIcon(std::string_view sPathToIcon) {
+    WindowBuilder& WindowBuilder::withIcon(std::string_view sPathToIcon) {
         params.sPathToWindowIcon = sPathToIcon;
 
         return *this;
     }
 
-    WindowBuilder &WindowBuilder::withVisibility(bool bShow) {
+    WindowBuilder& WindowBuilder::withVisibility(bool bShow) {
         params.bShowWindow = bShow;
 
         return *this;
     }
 
-    WindowBuilder &WindowBuilder::withMaximizedState(bool bMaximized) {
+    WindowBuilder& WindowBuilder::withMaximizedState(bool bMaximized) {
         params.bMaximized = bMaximized;
 
         return *this;
     }
 
-    WindowBuilder &WindowBuilder::withSplashScreenMode(bool bIsSplashScreen) {
+    WindowBuilder& WindowBuilder::withSplashScreenMode(bool bIsSplashScreen) {
         params.bIsSplashScreen = bIsSplashScreen;
 
         return *this;
     }
 
-    WindowBuilder &WindowBuilder::withFullscreenMode(bool bEnableFullscreen) {
+    WindowBuilder& WindowBuilder::withFullscreenMode(bool bEnableFullscreen) {
         params.bFullscreen = bEnableFullscreen;
 
         return *this;
@@ -95,7 +95,7 @@ namespace ne {
 
     float Window::getOpacity() const { return glfwGetWindowOpacity(pGlfwWindow); }
 
-    IRenderer *Window::getRenderer() const {
+    IRenderer* Window::getRenderer() const {
         if (pGame && pGame->pRenderer) {
             return pGame->pRenderer.get();
         }
@@ -149,12 +149,12 @@ namespace ne {
     }
 
     void Window::glfwWindowKeyboardCallback(
-        GLFWwindow *pGlfwWindow, int iKey, int iScancode, int iAction, int iMods) {
+        GLFWwindow* pGlfwWindow, int iKey, int iScancode, int iAction, int iMods) {
         if (iAction == GLFW_REPEAT) {
             return;
         }
 
-        const Window *pWindow = static_cast<Window *>(glfwGetWindowUserPointer(pGlfwWindow));
+        const Window* pWindow = static_cast<Window*>(glfwGetWindowUserPointer(pGlfwWindow));
         if (!pWindow) {
             return;
         }
@@ -163,8 +163,8 @@ namespace ne {
             static_cast<KeyboardKey>(iKey), KeyboardModifiers(iMods), iAction == GLFW_PRESS ? true : false);
     }
 
-    void Window::glfwWindowMouseCallback(GLFWwindow *pGlfwWindow, int iButton, int iAction, int iMods) {
-        const Window *pWindow = static_cast<Window *>(glfwGetWindowUserPointer(pGlfwWindow));
+    void Window::glfwWindowMouseCallback(GLFWwindow* pGlfwWindow, int iButton, int iAction, int iMods) {
+        const Window* pWindow = static_cast<Window*>(glfwGetWindowUserPointer(pGlfwWindow));
         if (!pWindow) {
             return;
         }
@@ -175,8 +175,8 @@ namespace ne {
             iAction == GLFW_PRESS ? true : false);
     }
 
-    void Window::glfwWindowFocusCallback(GLFWwindow *pGlfwWindow, int iFocused) {
-        const Window *pWindow = static_cast<Window *>(glfwGetWindowUserPointer(pGlfwWindow));
+    void Window::glfwWindowFocusCallback(GLFWwindow* pGlfwWindow, int iFocused) {
+        const Window* pWindow = static_cast<Window*>(glfwGetWindowUserPointer(pGlfwWindow));
         if (!pWindow) {
             return;
         }
@@ -184,8 +184,8 @@ namespace ne {
         pWindow->onWindowFocusChanged(static_cast<bool>(iFocused));
     }
 
-    void Window::glfwWindowMouseCursorPosCallback(GLFWwindow *pGlfwWindow, double xPos, double yPos) {
-        Window *pWindow = static_cast<Window *>(glfwGetWindowUserPointer(pGlfwWindow));
+    void Window::glfwWindowMouseCursorPosCallback(GLFWwindow* pGlfwWindow, double xPos, double yPos) {
+        auto* pWindow = static_cast<Window*>(glfwGetWindowUserPointer(pGlfwWindow));
         if (!pWindow) {
             return;
         }
@@ -193,8 +193,8 @@ namespace ne {
         pWindow->onMouseMove(static_cast<int>(xPos), static_cast<int>(yPos));
     }
 
-    void Window::glfwWindowMouseScrollCallback(GLFWwindow *pGlfwWindow, double xOffset, double yOffset) {
-        const Window *pWindow = static_cast<Window *>(glfwGetWindowUserPointer(pGlfwWindow));
+    void Window::glfwWindowMouseScrollCallback(GLFWwindow* pGlfwWindow, double xOffset, double yOffset) {
+        const Window* pWindow = static_cast<Window*>(glfwGetWindowUserPointer(pGlfwWindow));
         if (!pWindow) {
             return;
         }
@@ -202,7 +202,7 @@ namespace ne {
         pWindow->onMouseScrollMove(static_cast<int>(yOffset));
     }
 
-    std::variant<std::unique_ptr<Window>, Error> Window::newInstance(WindowBuilderParameters &params) {
+    std::variant<std::unique_ptr<Window>, Error> Window::newInstance(WindowBuilderParameters& params) {
         GLFW::get(); // initialize GLFW
 
         std::string sNewWindowTitle(params.sWindowTitle);
@@ -213,10 +213,10 @@ namespace ne {
         }
 
         // Check fullscreen mode (windowed fullscreen).
-        GLFWmonitor *pMonitor = nullptr;
+        GLFWmonitor* pMonitor = nullptr;
         if (params.bFullscreen) {
             pMonitor = glfwGetPrimaryMonitor();
-            const GLFWvidmode *mode = glfwGetVideoMode(pMonitor);
+            const GLFWvidmode* mode = glfwGetVideoMode(pMonitor);
 
             glfwWindowHint(GLFW_RED_BITS, mode->redBits);
             glfwWindowHint(GLFW_GREEN_BITS, mode->greenBits);
@@ -240,7 +240,7 @@ namespace ne {
         }
 
         // Create GLFW window.
-        GLFWwindow *pGLFWWindow = glfwCreateWindow(
+        GLFWwindow* pGLFWWindow = glfwCreateWindow(
             params.iWindowWidth, params.iWindowHeight, sNewWindowTitle.c_str(), pMonitor, nullptr);
         if (!pGLFWWindow) {
             return Error("failed to create window");
@@ -287,7 +287,7 @@ namespace ne {
 
     void Window::setOpacity(float fOpacity) const { glfwSetWindowOpacity(pGlfwWindow, fOpacity); }
 
-    void Window::setTitle(const std::string &sNewTitle) {
+    void Window::setTitle(const std::string& sNewTitle) {
         glfwSetWindowTitle(pGlfwWindow, sNewTitle.c_str());
         sWindowTitle = sNewTitle;
     }
@@ -329,7 +329,7 @@ namespace ne {
 
     void Window::restore() const { glfwRestoreWindow(pGlfwWindow); }
 
-    Window::Window(GLFWwindow *pGlfwWindow, const std::string &sWindowTitle) {
+    Window::Window(GLFWwindow* pGlfwWindow, const std::string& sWindowTitle) {
         this->pGlfwWindow = pGlfwWindow;
         this->sWindowTitle = sWindowTitle;
     }

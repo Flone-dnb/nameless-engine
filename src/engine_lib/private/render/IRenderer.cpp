@@ -64,4 +64,6 @@ namespace ne {
     const char* IRenderer::getConfigurationSectionAntialiasing() { return sConfigurationSectionAntialiasing; }
 
     const char* IRenderer::getConfigurationSectionVSync() { return sConfigurationSectionVSync; }
+
+    const char* IRenderer::getLoggingCategory() { return sRendererLogCategory; }
 } // namespace ne

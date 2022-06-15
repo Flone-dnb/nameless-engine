@@ -15,8 +15,6 @@
 #include "input/MouseButton.hpp"
 
 namespace ne {
-    constexpr auto sWindowLogCategory = "Window";
-
     class Error;
     class IGameInstance;
 
@@ -400,6 +398,9 @@ namespace ne {
         int iLastMouseXPos = 0;
         /** Last mouse Y position, used for calculating delta movement. */
         int iLastMouseYPos = 0;
+
+        /** Name of the category used for logging. */
+        inline static const char* sWindowLogCategory = "Window";
     };
 
     template <typename GameInstance>

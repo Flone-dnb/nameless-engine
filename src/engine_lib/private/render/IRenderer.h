@@ -11,8 +11,6 @@
 #include "shaders/ShaderManager.h"
 
 namespace ne {
-    const auto sRendererLogCategory = "Renderer";
-
     class Game;
     class Window;
     /**
@@ -220,6 +218,13 @@ namespace ne {
          */
         static const char* getConfigurationSectionVSync();
 
+        /**
+         * Returns name of the category the renderer uses for logging.
+         *
+         * @return Category name.
+         */
+        static const char* getLoggingCategory();
+
     private:
         /** Number of buffers in swap chain. */
         static constexpr unsigned int iSwapChainBufferCount = 2;
@@ -249,6 +254,9 @@ namespace ne {
 
         /** Name of the section (used in configuration) for vsync settings. */
         inline static const char* sConfigurationSectionVSync = "vsync";
+
+        /** Name of the category used for logging. */
+        inline static const char* sRendererLogCategory = "Renderer";
     };
 
     constexpr unsigned IRenderer::getSwapChainBufferCount() { return iSwapChainBufferCount; }

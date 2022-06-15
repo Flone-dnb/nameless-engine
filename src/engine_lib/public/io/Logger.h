@@ -10,8 +10,6 @@ namespace spdlog {
 }
 
 namespace ne {
-    constexpr auto sDefaultLogCategory = "Default";
-
     /**
      * Logs to file and console.
      */
@@ -115,5 +113,8 @@ namespace ne {
          * the oldest log file will be removed to create a new one.
          */
         inline static size_t iMaxLogFiles = 3;
+
+        /** Name of the category used for logging. */
+        inline static const char* sDefaultLogCategory = "Default";
     };
 } // namespace ne

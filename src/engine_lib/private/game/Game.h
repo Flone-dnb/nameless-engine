@@ -14,8 +14,6 @@
 #include "misc/ThreadPool.h"
 
 namespace ne {
-    constexpr auto sGameLogCategory = "Game";
-
     class IGameInstance;
     class IRenderer;
     class Window;
@@ -187,5 +185,8 @@ namespace ne {
 
         /** Binds action/axis names with input keys. */
         InputManager inputManager;
+
+        /** Name of the category used for logging. */
+        inline static const char* sGameLogCategory = "Game";
     };
 } // namespace ne

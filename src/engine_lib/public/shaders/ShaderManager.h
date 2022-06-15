@@ -8,7 +8,6 @@
 #include <functional>
 #include <mutex>
 #include <optional>
-#include <future>
 #include <atomic>
 #include <variant>
 #include <array>
@@ -19,13 +18,11 @@
 #include "shaders/ShaderDescription.h"
 
 namespace ne {
-    constexpr auto sShaderManagerLogCategory = "Shader Manager";
-
     class IShader;
     class IRenderer;
 
     /**
-     * Controls shader compilation, shader registry.
+     * Handles shader compilation and controls shader registry.
      */
     class ShaderManager {
     public:
@@ -287,5 +284,11 @@ namespace ne {
             'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h',
             'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y',
             'z', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '_', '-'};
+
+        /** Name of the category used for logging. */
+        inline static const char* sShaderManagerLogCategory = "Shader Manager";
+
+        /** Name of the default category (when no category is specified) used for logging. */
+        inline static const char* sDefaultLogCategory = "Default";
     };
 } // namespace ne

@@ -13,7 +13,7 @@ public:
     /**
      * Constructor.
      *
-     * @warning There is no need to save window/input manager pointers
+     * @remark There is no need to save window/input manager pointers
      * in derived classes as the base class already saves these pointers and
      * provides @ref getWindow and @ref getInputManager functions.
      *

@@ -83,7 +83,7 @@ namespace ne {
         std::mutex mtxTerminateTimerThread;
 
         /** Array of futures of started callback threads. */
-        std::vector<std::future<void>> vFuturesForStartedCallbackThreads;
+        std::pair<std::mutex, std::vector<std::future<void>>> mtxFuturesForStartedCallbackThreads;
 
         /** Condition variable for timer thread termination. */
         std::condition_variable cvTerminateTimerThread;

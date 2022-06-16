@@ -28,44 +28,49 @@ namespace ne {
                 std::format("a timer thread has finished with the following exception: {}", ex.what()), "");
         }
 
-        if (bWaitForCallbacksToFinishOnDestruction && !vFuturesForStartedCallbackThreads.empty()) {
-            const auto start = std::chrono::steady_clock::now();
-            for (auto& future : vFuturesForStartedCallbackThreads) {
-                try {
-                    if (future.valid()) {
-                        future.get();
+        {
+            std::scoped_lock guard(mtxFuturesForStartedCallbackThreads.first);
+            if (bWaitForCallbacksToFinishOnDestruction &&
+                !mtxFuturesForStartedCallbackThreads.second.empty()) {
+                const auto start = std::chrono::steady_clock::now();
+                for (auto& future : mtxFuturesForStartedCallbackThreads.second) {
+                    try {
+                        if (future.valid()) {
+                            future.get();
+                        }
+                    } catch (std::exception& ex) {
+                        Logger::get().error(
+                            std::format(
+                                "timer's callback function thread (user code) has finished with the "
+                                "following "
+                                "exception: {}",
+                                ex.what()),
+                            "");
                     }
-                } catch (std::exception& ex) {
-                    Logger::get().error(
+                }
+                const auto end = std::chrono::steady_clock::now();
+                const auto durationInMs =
+                    static_cast<float>(
+                        std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count()) *
+                    0.000001f;
+
+                if (durationInMs < 1.0f) {
+                    // Information.
+                    Logger::get().info(
                         std::format(
-                            "timer's callback function thread (user code) has finished with the following "
-                            "exception: {}",
-                            ex.what()),
+                            "timer has finished waiting for started callback functions to finish, took {} "
+                            "millisecond",
+                            durationInMs),
+                        "");
+                } else {
+                    // Warning.
+                    Logger::get().warn(
+                        std::format(
+                            "timer has finished waiting for started callback functions to finish, took {} "
+                            "millisecond(-s)",
+                            durationInMs),
                         "");
                 }
-            }
-            const auto end = std::chrono::steady_clock::now();
-            const auto durationInMs =
-                static_cast<float>(
-                    std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count()) *
-                0.000001f;
-
-            if (durationInMs < 1.0f) {
-                // Information.
-                Logger::get().info(
-                    std::format(
-                        "timer has finished waiting for started callback functions to finish, took {} "
-                        "millisecond",
-                        durationInMs),
-                    "");
-            } else {
-                // Warning.
-                Logger::get().warn(
-                    std::format(
-                        "timer has finished waiting for started callback functions to finish, took {} "
-                        "millisecond(-s)",
-                        durationInMs),
-                    "");
             }
         }
     }
@@ -132,7 +137,8 @@ namespace ne {
                 guard, timeToWaitInMs, [this] { return bIsShuttingDown.test() || bIsStopRequested.test(); });
 
             if (!bIsShuttingDown.test() && !bIsStopRequested.test() && callbackForTimeout.has_value()) {
-                vFuturesForStartedCallbackThreads.push_back(std::async(
+                std::scoped_lock guard1(mtxFuturesForStartedCallbackThreads.first);
+                mtxFuturesForStartedCallbackThreads.second.push_back(std::async(
                     std::launch::async, [callback = callbackForTimeout.value()]() { callback(); }));
             }
         } while (!bIsShuttingDown.test() && !bIsStopRequested.test() && bIsLooping);

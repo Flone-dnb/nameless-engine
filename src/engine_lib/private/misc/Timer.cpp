@@ -30,8 +30,7 @@ namespace ne {
 
         {
             std::scoped_lock guard(mtxFuturesForStartedCallbackThreads.first);
-            if (bWaitForCallbacksToFinishOnDestruction &&
-                !mtxFuturesForStartedCallbackThreads.second.empty()) {
+            if (!mtxFuturesForStartedCallbackThreads.second.empty()) {
                 const auto start = std::chrono::steady_clock::now();
                 for (auto& future : mtxFuturesForStartedCallbackThreads.second) {
                     try {
@@ -75,12 +74,15 @@ namespace ne {
         }
     }
 
-    void Timer::setCallbackForTimeout(const std::function<void()>& callback) {
+    void Timer::setCallbackForTimeout(
+        long long iTimeToWaitInMs, const std::function<void()>& callback, bool bIsLooping) {
         std::scoped_lock guard(mtxTerminateTimerThread);
         callbackForTimeout = callback;
+        this->iTimeToWaitInMs = iTimeToWaitInMs;
+        this->bIsLooping = bIsLooping;
     }
 
-    void Timer::start(long long iTimeToWaitInMs, bool bIsLooping) { // NOLINT: shadowing member variable
+    void Timer::start() { // NOLINT: shadowing member variable
         if (bIsShuttingDown.test())
             return;
 
@@ -89,7 +91,6 @@ namespace ne {
         }
 
         std::scoped_lock guard(mtxTerminateTimerThread);
-        this->bIsLooping = bIsLooping;
         bIsStopRequested.clear();
         timerThreadFuture = std::async(
             std::launch::async, &Timer::timerThread, this, std::chrono::milliseconds(iTimeToWaitInMs));
@@ -123,7 +124,7 @@ namespace ne {
             return {};
         }
 
-        if (!isRunning()) {
+        if (bIsStopRequested.test()) {
             return {};
         }
 
@@ -157,9 +158,14 @@ namespace ne {
                 guard, timeToWaitInMs, [this] { return bIsShuttingDown.test() || bIsStopRequested.test(); });
 
             if (!bIsShuttingDown.test() && !bIsStopRequested.test() && callbackForTimeout.has_value()) {
-                std::scoped_lock guard1(mtxFuturesForStartedCallbackThreads.first);
-                mtxFuturesForStartedCallbackThreads.second.push_back(std::async(
-                    std::launch::async, [callback = callbackForTimeout.value()]() { callback(); }));
+                if (bWaitForCallbacksToFinishOnDestruction) {
+                    std::scoped_lock guard1(mtxFuturesForStartedCallbackThreads.first);
+                    mtxFuturesForStartedCallbackThreads.second.push_back(std::async(
+                        std::launch::async, [callback = callbackForTimeout.value()]() { callback(); }));
+                } else {
+                    auto handle = std::thread([callback = callbackForTimeout.value()]() { callback(); });
+                    handle.detach();
+                }
             }
         } while (!bIsShuttingDown.test() && !bIsStopRequested.test() && bIsLooping);
     }

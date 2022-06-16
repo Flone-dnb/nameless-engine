@@ -210,6 +210,7 @@ add_executable(${ENGINE_TESTS_NAME}
     ${TESTS_RELATIVE_PATH}/engine_lib/Window.cpp
     ${TESTS_RELATIVE_PATH}/engine_lib/ConfigManager.cpp
     ${TESTS_RELATIVE_PATH}/engine_lib/InputManager.cpp
+    ${TESTS_RELATIVE_PATH}/engine_lib/Timer.cpp
     # add engine test .cpp files here
 )
 
@@ -223,7 +224,7 @@ set_target_properties(${ENGINE_TESTS_NAME} PROPERTIES FOLDER ${ENGINE_FOLDER})
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/ext/Catch2/contrib")
 include(CTest)
 include(Catch)
-catch_discover_tests(${ENGINE_TESTS_NAME})
+#catch_discover_tests(${ENGINE_TESTS_NAME})
 
 # Add includes.
 include_directories(${RELATIVE_EXT_PATH})

@@ -17,6 +17,7 @@ namespace ne {
          * @param bWaitForCallbacksToFinishOnDestruction Whether the timer needs to wait for all started
          * callback functions to finish or not (see @ref setCallbackForTimeout) in timer destructor.
          * Generally should be 'true', unless you're using the timer to call functions from other objects.
+         * If you will not use @ref setCallbackForTimeout this parameter is ignored.
          */
         Timer(bool bWaitForCallbacksToFinishOnDestruction);
 
@@ -30,27 +31,27 @@ namespace ne {
          * Sets a function to be executed when the waiting
          * time is over (timeout).
          *
+         * @param iTimeToWaitInMs Time this timer should wait (in milliseconds) until the callback is called.
          * @param callback Function to execute on timeout.
-         *
-         * @remark If the timer is currently running this call will update the callback to call on timeout.
-         */
-        void setCallbackForTimeout(const std::function<void()>& callback);
-
-        /**
-         * Starts the timer.
-         *
-         * @param iTimeToWaitInMs Time this timer should wait (in milliseconds).
-         * @param bIsLooping      Whether the timer should start again after a timeout or not.
+         * @param bIsLooping  Whether the timer should start again after a timeout or not.
          * If specified 'true', after the waiting time is over (timeout) the timer will automatically
          * restart itself and will start the waiting time again. There are 2 ways to stop a looping timer:
          * call @ref stop or destroy this object (destructor is called).
+         *
+         * @remark If the timer is currently running this call will update the callback to call on timeout.
+         */
+        void setCallbackForTimeout(
+            long long iTimeToWaitInMs, const std::function<void()>& callback, bool bIsLooping = false);
+
+        /**
+         * Starts the timer.
          *
          * @remark If you want to add a callback function to be
          * executed on timeout see @ref setCallbackForTimeout.
          *
          * @remark If the timer is currently running it will be stopped (see @ref stop).
          */
-        void start(long long iTimeToWaitInMs, bool bIsLooping = false);
+        void start();
 
         /**
          * Stops the timer and timer looping (if was specified in @ref start).
@@ -112,6 +113,9 @@ namespace ne {
 
         /** Whether the timer was explicitly stopped or not. */
         std::atomic_flag bIsStopRequested{};
+
+        /** Time to wait until the callback is called. */
+        long long iTimeToWaitInMs = 0;
 
         /** In destructor whether we need to wait for all started callback functions to finish or not. */
         bool bWaitForCallbacksToFinishOnDestruction = true;

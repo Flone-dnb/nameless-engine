@@ -45,11 +45,10 @@ namespace ne {
          * restart itself and will start the waiting time again. There are 2 ways to stop a looping timer:
          * call @ref stop or destroy this object (destructor is called).
          *
-         * @note If you want to add a callback function to be
+         * @remark If you want to add a callback function to be
          * executed on timeout see @ref setCallbackForTimeout.
          *
-         * @note If the timer is currently running it will be stopped
-         * (this might block, see @ref stop), to start a new one.
+         * @remark If the timer is currently running it will be stopped (see @ref stop).
          */
         void start(long long iTimeToWaitInMs, bool bIsLooping = false);
 
@@ -57,6 +56,20 @@ namespace ne {
          * Stops the timer and timer looping (if was specified in @ref start).
          */
         void stop();
+
+        /**
+         * Returns the time that has passed since the timer was started (see @ref start).
+         *
+         * @return Empty if the @ref start was never called before or if the timer was stopped
+         * (see @ref stop), otherwise time in milliseconds since the timer was started.
+         *
+         * @remark For looping timers (see @ref start) returns time since the beginning
+         * of the current loop iteration. Each new loop will reset elapsed time to 0.
+         *
+         * @remark Note that if you call this function right after a call to @ref start
+         * this function may return empty because the timer thread is not started yet.
+         */
+        std::optional<long long> getElapsedTimeInMs();
 
         /**
          * Whether this timer is running (started) or not (finished/not started).
@@ -79,7 +92,13 @@ namespace ne {
         /** Function to call on timeout. */
         std::optional<std::function<void()>> callbackForTimeout;
 
-        /** Mutex for using condition variable @ref cvTerminateTimerThread. */
+        /**
+         * Time when the @ref start was called.
+         * Not empty if @ref start was called.
+         */
+        std::pair<std::mutex, std::optional<std::chrono::steady_clock::time_point>> mtxTimeWhenStarted;
+
+        /** Mutex for read/write operations on data that the timer thread is using. */
         std::mutex mtxTerminateTimerThread;
 
         /** Array of futures of started callback threads. */

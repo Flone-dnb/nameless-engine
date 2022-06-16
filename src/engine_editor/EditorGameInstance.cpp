@@ -5,7 +5,7 @@
 EditorGameInstance::EditorGameInstance(ne::Window* pWindow, ne::InputManager* pInputManager)
     : IGameInstance(pWindow, pInputManager) {
     timer.setCallbackForTimeout([]() { ne::Logger::get().info("Hello World from timer timeout!", ""); });
-    timer.start(1000, true);
+    timer.start(1000, false);
 }
 
 void EditorGameInstance::onInputActionEvent(

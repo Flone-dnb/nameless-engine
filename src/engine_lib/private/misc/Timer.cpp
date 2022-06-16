@@ -116,6 +116,21 @@ namespace ne {
         }
     }
 
+    std::optional<long long> Timer::getElapsedTimeInMs() {
+        std::scoped_lock guard(mtxTimeWhenStarted.first);
+
+        if (!mtxTimeWhenStarted.second.has_value()) {
+            return {};
+        }
+
+        if (!isRunning()) {
+            return {};
+        }
+
+        using namespace std::chrono;
+        return duration_cast<milliseconds>(steady_clock::now() - mtxTimeWhenStarted.second.value()).count();
+    }
+
     bool Timer::isRunning() {
         std::scoped_lock guard(mtxTerminateTimerThread);
         if (!timerThreadFuture.has_value())
@@ -132,6 +147,11 @@ namespace ne {
 
     void Timer::timerThread(std::chrono::milliseconds timeToWaitInMs) {
         do {
+            {
+                // Mark start time.
+                std::scoped_lock timeGuard(mtxTimeWhenStarted.first);
+                mtxTimeWhenStarted.second = std::chrono::steady_clock::now();
+            }
             std::unique_lock guard(mtxTerminateTimerThread);
             cvTerminateTimerThread.wait_for(
                 guard, timeToWaitInMs, [this] { return bIsShuttingDown.test() || bIsStopRequested.test(); });

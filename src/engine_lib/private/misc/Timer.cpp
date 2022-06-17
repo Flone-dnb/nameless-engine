@@ -75,7 +75,9 @@ namespace ne {
     }
 
     void Timer::setCallbackForTimeout(
-        long long iTimeToWaitInMs, const std::function<void()>& callback, bool bIsLooping) {
+        long long iTimeToWaitInMs, // NOLINT: shadowing member variable
+        const std::function<void()>& callback,
+        bool bIsLooping) { // NOLINT: shadowing member variable
         std::scoped_lock guard(mtxTerminateTimerThread);
         callbackForTimeout = callback;
         this->iTimeToWaitInMs = iTimeToWaitInMs;
@@ -92,18 +94,27 @@ namespace ne {
 
         std::scoped_lock guard(mtxTerminateTimerThread);
         bIsStopRequested.clear();
-        timerThreadFuture = std::async(
-            std::launch::async, &Timer::timerThread, this, std::chrono::milliseconds(iTimeToWaitInMs));
+        if (callbackForTimeout.has_value()) {
+            // Use a separate thread to wait for timeout.
+            timerThreadFuture = std::async(
+                std::launch::async, &Timer::timerThread, this, std::chrono::milliseconds(iTimeToWaitInMs));
+        } else {
+            // Mark start time. No need to sleep.
+            std::scoped_lock timeGuard(mtxTimeWhenStarted.first);
+            mtxTimeWhenStarted.second = std::chrono::steady_clock::now();
+        }
     }
 
     void Timer::stop() {
         {
             std::scoped_lock guard(mtxTerminateTimerThread);
+
+            bIsStopRequested.test_and_set();
+
+            // Notify timer thread if it's running.
             if (!timerThreadFuture.has_value())
                 return;
 
-            // Notify timer thread if it's running.
-            bIsStopRequested.test_and_set();
             cvTerminateTimerThread.notify_one();
         }
 
@@ -115,6 +126,8 @@ namespace ne {
             Logger::get().error(
                 std::format("a timer thread has finished with the following exception: {}", ex.what()), "");
         }
+
+        timerThreadFuture = {};
     }
 
     std::optional<long long> Timer::getElapsedTimeInMs() {
@@ -134,8 +147,16 @@ namespace ne {
 
     bool Timer::isRunning() {
         std::scoped_lock guard(mtxTerminateTimerThread);
-        if (!timerThreadFuture.has_value())
-            return false;
+        if (!timerThreadFuture.has_value()) {
+            // Timer thread is not running.
+            if (callbackForTimeout.has_value()) {
+                // Callback was set, so the timer thread is used.
+                return false;
+            } else {
+                // No callback was set, being used as a regular timer.
+                return !bIsStopRequested.test();
+            }
+        }
 
         if (!timerThreadFuture->valid()) {
             return false;

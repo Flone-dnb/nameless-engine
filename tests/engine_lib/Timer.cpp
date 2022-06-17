@@ -44,6 +44,47 @@ TEST_CASE("run callback on timeout") {
     }
 }
 
+TEST_CASE("check that timer is running") {
+    using namespace ne;
+    Timer timer{true};
+
+    SECTION("without callback") {
+        timer.start();
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(5));
+        REQUIRE(timer.isRunning());
+
+        timer.stop();
+        std::this_thread::sleep_for(std::chrono::milliseconds(5));
+        REQUIRE(!timer.isRunning());
+    }
+    SECTION("with callback (force stop)") {
+        constexpr long long iWaitTime = 50;
+        timer.setCallbackForTimeout(
+            iWaitTime, []() {}, false);
+        timer.start();
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(5));
+        REQUIRE(timer.isRunning());
+
+        timer.stop();
+        std::this_thread::sleep_for(std::chrono::milliseconds(5));
+        REQUIRE(!timer.isRunning());
+    }
+    SECTION("with callback") {
+        constexpr long long iWaitTime = 30;
+        timer.setCallbackForTimeout(
+            iWaitTime, []() {}, false);
+        timer.start();
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(5));
+        REQUIRE(timer.isRunning());
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(iWaitTime));
+        REQUIRE(!timer.isRunning());
+    }
+}
+
 TEST_CASE("wait for callback to finish on timer destruction") {
     using namespace ne;
 
@@ -54,7 +95,7 @@ TEST_CASE("wait for callback to finish on timer destruction") {
     auto futureStart = pPromiseStart->get_future();
 
     constexpr auto iCallbackSleepTimeInMs =
-        50; // NOLINT: should be way bigger than iWaitTimeForCallbackToStartInMs
+        30; // NOLINT: should be way bigger than iWaitTimeForCallbackToStartInMs
     constexpr long long iWaitTimeForCallbackToStartInMs =
         1; // should be way lower than iCallbackSleepTimeInMs
 
@@ -89,7 +130,7 @@ TEST_CASE("don't wait for callback to finish on timer destruction") {
     auto futureStart = pPromiseStart->get_future();
 
     constexpr auto iCallbackSleepTimeInMs =
-        50; // NOLINT: should be way bigger than iWaitTimeForCallbackToStartInMs
+        30; // NOLINT: should be way bigger than iWaitTimeForCallbackToStartInMs
     constexpr long long iWaitTimeForCallbackToStartInMs =
         1; // should be way lower than iCallbackSleepTimeInMs
 

@@ -6,6 +6,7 @@
 
 // Custom.
 #include "io/Logger.h"
+#include "misc/MessageBox.h"
 
 namespace ne {
     Error::Error(std::string_view sMessage, const std::source_location location) {
@@ -97,6 +98,14 @@ namespace ne {
     void Error::showError() const {
         const std::string sErrorMessage = getError();
         Logger::get().error(sErrorMessage, "");
-        MessageBoxA(nullptr, sErrorMessage.c_str(), "Error", 0);
+
+#if defined(WIN32)
+#pragma push_macro("MessageBox")
+#undef MessageBox
+#endif
+        MessageBox::error("Error", sErrorMessage);
+#if defined(WIN32)
+#pragma pop_macro("MessageBox")
+#endif
     }
 } // namespace ne

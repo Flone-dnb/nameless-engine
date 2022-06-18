@@ -1,5 +1,7 @@
 #if defined(WIN32)
 #include <Windows.h>
+#undef MessageBox
+#undef IGNORE
 #endif
 
 // STL.

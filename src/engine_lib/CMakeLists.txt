@@ -27,7 +27,7 @@ set(ENGINE_WIN32_SOURCES
     # add Windows specific sources here...
 )
 
-# Engine general sources.
+# Engine general (cross-platform) sources.
 set(ENGINE_LIB_SOURCES
     ${RELATIVE_EXT_PATH}/xxHash/xxhash.c
     ${RELATIVE_EXT_PATH}/xxHash/xxhash.h
@@ -66,6 +66,8 @@ set(ENGINE_LIB_SOURCES
     private/misc/ThreadPool.cpp
     private/misc/Timer.cpp
     public/misc/Timer.h
+    private/misc/MessageBox.cpp
+    public/misc/MessageBox.h
     # add general (cross-platform) sources here...
 )
 
@@ -118,30 +120,36 @@ endif()
 set(PROJECT_CXX_STANDARD_VERSION 23)
 target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_${PROJECT_CXX_STANDARD_VERSION})
 
+set(DEPENDENCY_BUILD_DIR_NAME dependency_build)
+
 # External: glfw.
 set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE) # disable docs
 set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE) # disable tests
 set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE) # disable examples
-add_subdirectory(${RELATIVE_EXT_PATH}/glfw dependency_build/glfw) # add GLFW target
+add_subdirectory(${RELATIVE_EXT_PATH}/glfw ${DEPENDENCY_BUILD_DIR_NAME}/glfw) # add GLFW target
 target_link_libraries(${PROJECT_NAME} PUBLIC glfw)
 
 # External: spdlog.
-add_subdirectory(${RELATIVE_EXT_PATH}/spdlog dependency_build/spdlog)
+add_subdirectory(${RELATIVE_EXT_PATH}/spdlog ${DEPENDENCY_BUILD_DIR_NAME}/spdlog)
 target_link_libraries(${PROJECT_NAME} PUBLIC spdlog::spdlog)
 
 # External: toml11.
 if (MSVC)
     target_compile_options(${PROJECT_NAME} PUBLIC /Zc:__cplusplus)
 endif()
-add_subdirectory(${RELATIVE_EXT_PATH}/toml11 dependency_build/toml11)
+add_subdirectory(${RELATIVE_EXT_PATH}/toml11 ${DEPENDENCY_BUILD_DIR_NAME}/toml11)
+
+# External: portable-file-dialogs
+add_subdirectory(${RELATIVE_EXT_PATH}/portable-file-dialogs ${DEPENDENCY_BUILD_DIR_NAME}/portable-file-dialogs)
+target_link_libraries(${PROJECT_NAME} PUBLIC portable_file_dialogs)
 
 if (WIN32)
     # External: D3D12MemoryAllocator
-    add_subdirectory(${RELATIVE_EXT_PATH}/D3D12MemoryAllocator dependency_build/D3D12MemoryAllocator)
+    add_subdirectory(${RELATIVE_EXT_PATH}/D3D12MemoryAllocator ${DEPENDENCY_BUILD_DIR_NAME}/D3D12MemoryAllocator)
     target_link_libraries(${PROJECT_NAME} PUBLIC D3D12MemoryAllocator)
 
     # External: DirectX-Headers
-    add_subdirectory(${RELATIVE_EXT_PATH}/DirectX-Headers dependency_build/DirectX-Headers)
+    add_subdirectory(${RELATIVE_EXT_PATH}/DirectX-Headers ${DEPENDENCY_BUILD_DIR_NAME}/DirectX-Headers)
     target_link_libraries(${PROJECT_NAME} PUBLIC DirectX-Headers)
 
     # External: DXC.
@@ -200,7 +208,7 @@ add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
 )
 
 # tests
-add_subdirectory(${RELATIVE_EXT_PATH}/Catch2 dependency_build/Catch2)
+add_subdirectory(${RELATIVE_EXT_PATH}/Catch2 ${DEPENDENCY_BUILD_DIR_NAME}/Catch2)
 
 set(ENGINE_TESTS_NAME engine_tests)
 set(TESTS_RELATIVE_PATH ../../tests)

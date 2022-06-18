@@ -10,9 +10,11 @@
 // External.
 #define GLFW_INCLUDE_NONE
 #include "glfw/glfw3.h"
+#undef MessageBox
+#undef IGNORE
 
 namespace ne {
-    inline void GLFWErrorCallback(int iErrorCode, const char *pDescription) {
+    inline void GLFWErrorCallback(int iErrorCode, const char* pDescription) {
         const Error error("GLFW error (" + std::to_string(iErrorCode) + "): " + std::string(pDescription));
         error.showError();
         throw std::runtime_error(error.getError());
@@ -23,8 +25,8 @@ namespace ne {
      */
     class GLFW {
     public:
-        GLFW(const GLFW &) = delete;
-        GLFW &operator=(const GLFW &) = delete;
+        GLFW(const GLFW&) = delete;
+        GLFW& operator=(const GLFW&) = delete;
 
         /**
          * Terminates GLFW.
@@ -36,7 +38,7 @@ namespace ne {
          *
          * @return Singleton.
          */
-        static GLFW &get() {
+        static GLFW& get() {
             static GLFW glfw;
             return glfw;
         }

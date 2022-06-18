@@ -72,6 +72,8 @@ set(ENGINE_LIB_SOURCES
     public/misc/DesktopNotification.h
     private/misc/OpenLinkInBrowser.cpp
     public/misc/OpenLinkInBrowser.h
+    private/misc/FileDialog.cpp
+    public/misc/FileDialog.h
     # add general (cross-platform) sources here...
 )
 

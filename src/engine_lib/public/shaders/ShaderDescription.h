@@ -13,6 +13,48 @@ namespace ne {
     enum class ShaderType : int { VERTEX_SHADER = 0, PIXEL_SHADER = 1, COMPUTE_SHADER = 2 };
 
     /**
+     * Describes different reasons for shader cache invalidation.
+     *
+     * @note Add new entries to @ref ShaderCacheInvalidationReasonDescription.
+     */
+    enum class ShaderCacheInvalidationReason {
+        ENTRY_FUNCTION_NAME_CHANGED,
+        SHADER_TYPE_CHANGED,
+        DEFINED_SHADER_MACROS_CHANGED,
+        SHADER_SOURCE_FILE_CHANGED,
+        SHADER_INCLUDE_TREE_CONTENT_CHANGED,
+    };
+
+    /** Maps ShaderCacheInvalidationReason to text description. */
+    struct ShaderCacheInvalidationReasonDescription {
+        /** Map between ShaderCacheInvalidationReason and text description. */
+        inline static const std::unordered_map<ShaderCacheInvalidationReason, const char*>
+            cacheInvalidationReasons = {
+                {ShaderCacheInvalidationReason::ENTRY_FUNCTION_NAME_CHANGED,
+                 "shader entry function name changed"},
+                {ShaderCacheInvalidationReason::SHADER_TYPE_CHANGED, "shader type changed"},
+                {ShaderCacheInvalidationReason::DEFINED_SHADER_MACROS_CHANGED,
+                 "defined shader macros changed"},
+                {ShaderCacheInvalidationReason::SHADER_SOURCE_FILE_CHANGED, "shader source file changed"},
+                {ShaderCacheInvalidationReason::SHADER_INCLUDE_TREE_CONTENT_CHANGED,
+                 "shader include tree content changed"}};
+        /**
+         * Returns description in form of text for the specified reason.
+         *
+         * @param reason Shader cache invalidation reason.
+         *
+         * @return Reason description.
+         */
+        static const char* getDescription(ShaderCacheInvalidationReason reason) {
+            const auto it = cacheInvalidationReasons.find(reason);
+            if (it == cacheInvalidationReasons.end()) {
+                throw std::runtime_error("no description is provided for this reason");
+            }
+            return it->second;
+        }
+    };
+
+    /**
      * Describes a shader.
      */
     struct ShaderDescription {
@@ -157,9 +199,9 @@ namespace ne {
          * @param other Other shader description to compare with.
          *
          * @return Whether the data is equal or not. If the data is not equal,
-         * also has string that contains reason.
+         * has a value that contains a reason.
          */
-        std::pair<bool, std::string> isSerializableDataEqual(ShaderDescription& other);
+        std::optional<ShaderCacheInvalidationReason> isSerializableDataEqual(ShaderDescription& other);
 
         /**
          * Scans shader file for "#include" entries and

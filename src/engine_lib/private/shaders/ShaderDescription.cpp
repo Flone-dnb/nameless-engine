@@ -141,7 +141,8 @@ namespace ne {
         return includeTree;
     }
 
-    std::pair<bool, std::string> ShaderDescription::isSerializableDataEqual(ShaderDescription& other) {
+    std::optional<ShaderCacheInvalidationReason>
+    ShaderDescription::isSerializableDataEqual(ShaderDescription& other) {
         // Prepare source file hash.
         if (sSourceFileHash.empty()) {
             sSourceFileHash = getShaderSourceFileHash(pathToShaderFile, sShaderName);
@@ -162,38 +163,38 @@ namespace ne {
 
         // Shader entry.
         if (sShaderEntryFunctionName != other.sShaderEntryFunctionName) {
-            return std::make_pair(false, "shader entry function name changed");
+            return ShaderCacheInvalidationReason::ENTRY_FUNCTION_NAME_CHANGED;
         }
 
         // Shader type.
         if (shaderType != other.shaderType) {
-            return std::make_pair(false, "shader type changed");
+            return ShaderCacheInvalidationReason::SHADER_TYPE_CHANGED;
         }
 
         // Shader macro defines.
         if (vDefinedShaderMacros.size() != other.vDefinedShaderMacros.size()) {
-            return std::make_pair(false, "defined shader macros changed");
+            return ShaderCacheInvalidationReason::DEFINED_SHADER_MACROS_CHANGED;
         }
         if (!vDefinedShaderMacros.empty()) {
             for (const auto& macro : vDefinedShaderMacros) {
                 auto it = std::ranges::find(other.vDefinedShaderMacros, macro);
                 if (it == other.vDefinedShaderMacros.end()) {
-                    return std::make_pair(false, "defined shader macros changed");
+                    return ShaderCacheInvalidationReason::DEFINED_SHADER_MACROS_CHANGED;
                 }
             }
         }
 
         // Compare source file hashes.
         if (sSourceFileHash != other.sSourceFileHash) {
-            return std::make_pair(false, "shader source file changed");
+            return ShaderCacheInvalidationReason::SHADER_SOURCE_FILE_CHANGED;
         }
 
         // Compare include tree.
         if (shaderIncludeTreeHashes != other.shaderIncludeTreeHashes) {
-            return std::make_pair(false, "shader include tree content changed");
+            return ShaderCacheInvalidationReason::SHADER_INCLUDE_TREE_CONTENT_CHANGED;
         }
 
-        return std::make_pair(true, "");
+        return {};
     }
 
     void ShaderDescription::serializeShaderIncludeTree(

@@ -53,6 +53,31 @@ namespace ne {
         compileShader(ShaderDescription& shaderDescription, IRenderer* pRenderer);
 
         /**
+         * Compiles a shader.
+         *
+         * This function is another version of @ref compileShader that has additional parameter
+         * of cache invalidation reason. Used for testing purposes.
+         *
+         * @param shaderDescription       Description that describes the shader and how the shader should be
+         * compiled.
+         * @param pRenderer               Used renderer.
+         * @param cacheInvalidationReason If shader cache was invalidated will contain invalidation reason.
+         *
+         * @return Returns one of the three values:
+         * @arg compiled shader
+         * @arg string containing shader compilation error/warning
+         * @arg internal error
+         */
+        static std::variant<
+            std::shared_ptr<IShader> /** Compiled shader. */,
+            std::string /** Compilation error. */,
+            Error /** Internal error. */>
+        compileShader(
+            ShaderDescription& shaderDescription,
+            IRenderer* pRenderer,
+            std::optional<ShaderCacheInvalidationReason>& cacheInvalidationReason);
+
+        /**
          * Returns unique name of this shader.
          *
          * @return Unique name of this shader.

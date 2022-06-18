@@ -30,6 +30,16 @@ namespace ne {
 
     std::variant<std::shared_ptr<IShader>, std::string, Error>
     IShader::compileShader(ShaderDescription& shaderDescription, IRenderer* pRenderer) {
+        std::optional<ShaderCacheInvalidationReason> unused;
+        return compileShader(shaderDescription, pRenderer, unused);
+    }
+
+    std::variant<std::shared_ptr<IShader>, std::string, Error> IShader::compileShader(
+        ShaderDescription& shaderDescription,
+        IRenderer* pRenderer,
+        std::optional<ShaderCacheInvalidationReason>& cacheInvalidationReason) {
+        cacheInvalidationReason = {};
+
         const auto shaderCacheFilePath = getPathToShaderCacheDirectory() / shaderDescription.sShaderName;
         ConfigManager configManager;
 
@@ -43,8 +53,8 @@ namespace ne {
             auto cachedShaderDescription =
                 configManager.getValue<ShaderDescription>("", "shader_description", ShaderDescription());
 
-            auto [bIsEqual, sReason] = shaderDescription.isSerializableDataEqual(cachedShaderDescription);
-            if (bIsEqual) {
+            auto reason = shaderDescription.isSerializableDataEqual(cachedShaderDescription);
+            if (!reason.has_value()) {
                 Logger::get().info(
                     std::format("found valid cache for shader \"{}\"", shaderDescription.sShaderName), "");
                 bUseCache = true;
@@ -53,8 +63,9 @@ namespace ne {
                     std::format(
                         "invalidated cache for shader \"{}\" (reason: {})",
                         shaderDescription.sShaderName,
-                        sReason),
+                        ShaderCacheInvalidationReasonDescription::getDescription(reason.value())),
                     "");
+                cacheInvalidationReason = reason.value();
             }
         }
 
@@ -79,7 +90,7 @@ namespace ne {
                                "current renderer (not implemented)");
         err.showError();
         throw std::runtime_error(err.getError());
-    } // namespace ne
+    }
 
     std::string IShader::getShaderName() const { return sShaderName; }
 

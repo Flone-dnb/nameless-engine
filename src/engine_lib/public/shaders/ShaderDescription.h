@@ -7,8 +7,6 @@
 #include "io/ConfigManager.h"
 
 namespace ne {
-    constexpr auto sShaderDescriptionLogCategory = "Shader Description";
-
     /**
      * Describes the type of a shader.
      */
@@ -195,6 +193,12 @@ namespace ne {
         /** Whether @ref shaderIncludeTreeHashes was initialized or not. */
         bool bIsShaderIncludeTreeHashesInitialized = false;
 
+        // ------------------------------- ! if adding new fields ! ------------------------------------
+        // if adding new fields:
+        // - if fields should be considered when validating cache,
+        // add fields to @ref from_toml, @ref into_toml and @ref isSerializableDataEqual.
+        // ----------------------------------------
+
         /**
          * Used as initial text for include chain string (beginning
          * text in serialized form). After serialization
@@ -208,10 +212,7 @@ namespace ne {
          */
         static inline std::string_view sInitialIncludeChainText = "includes";
 
-        // ------------------------------- ! if adding new fields ! ------------------------------------
-        // if adding new fields:
-        // - if fields should be considered when validating cache,
-        // add fields to @ref from_toml, @ref into_toml and @ref isSerializableDataEqual.
-        // ----------------------------------------
+        /** Name of the category used for logging. */
+        inline static const char* sShaderDescriptionLogCategory = "Shader Description";
     };
 } // namespace ne

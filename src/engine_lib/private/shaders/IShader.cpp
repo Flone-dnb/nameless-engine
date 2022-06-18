@@ -4,8 +4,6 @@
 #include <format>
 
 // Custom.
-#include "io/ConfigManager.h"
-#include "io/Logger.h"
 #include "misc/Globals.h"
 #include "misc/Error.h"
 #include "render/IRenderer.h"
@@ -38,51 +36,9 @@ namespace ne {
         ShaderDescription& shaderDescription,
         IRenderer* pRenderer,
         std::optional<ShaderCacheInvalidationReason>& cacheInvalidationReason) {
-        cacheInvalidationReason = {};
-
-        const auto shaderCacheFilePath = getPathToShaderCacheDirectory() / shaderDescription.sShaderName;
-        ConfigManager configManager;
-
-        bool bUseCache = false;
-
-        // Check if cached config exists.
-        if (std::filesystem::exists(
-                shaderCacheFilePath.string() + ConfigManager::getConfigFormatExtension())) {
-            // See if we need to recompile or use cache.
-            configManager.loadFile(shaderCacheFilePath);
-            auto cachedShaderDescription =
-                configManager.getValue<ShaderDescription>("", "shader_description", ShaderDescription());
-
-            auto reason = shaderDescription.isSerializableDataEqual(cachedShaderDescription);
-            if (!reason.has_value()) {
-                Logger::get().info(
-                    std::format("found valid cache for shader \"{}\"", shaderDescription.sShaderName), "");
-                bUseCache = true;
-            } else {
-                Logger::get().info(
-                    std::format(
-                        "invalidated cache for shader \"{}\" (reason: {})",
-                        shaderDescription.sShaderName,
-                        ShaderCacheInvalidationReasonDescription::getDescription(reason.value())),
-                    "");
-                cacheInvalidationReason = reason.value();
-            }
-        }
-
 #if defined(WIN32)
         if (dynamic_cast<DirectXRenderer*>(pRenderer)) {
-            if (bUseCache) {
-                return std::make_shared<HlslShader>(
-                    shaderCacheFilePath, shaderDescription.sShaderName, shaderDescription.shaderType);
-            } else {
-                auto result = HlslShader::compileShader(std::move(shaderDescription));
-                if (std::holds_alternative<std::shared_ptr<IShader>>(result)) {
-                    // Success. Cache configuration.
-                    configManager.setValue<ShaderDescription>("", "shader_description", shaderDescription);
-                    configManager.saveFile(shaderCacheFilePath, false);
-                }
-                return result;
-            }
+            return compileShader<HlslShader>(shaderDescription, cacheInvalidationReason);
         }
 #endif
 

@@ -181,7 +181,7 @@ if (WIN32)
                    ${PATH_TO_DXC_DLL_DIR}/dxcompiler.dll ${CMAKE_CURRENT_BINARY_DIR}/dxcompiler.dll)
     add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
                    COMMAND ${CMAKE_COMMAND} -E copy
-                   ${PATH_TO_DXC_DLL_DIR}/dxil.dll ${CMAKE_CURRENT_BINARY_DIR}/engine_lib/dxil.dll)
+                   ${PATH_TO_DXC_DLL_DIR}/dxil.dll ${CMAKE_CURRENT_BINARY_DIR}/dxil.dll)
 endif()
 
 # Execute post build script.
@@ -211,6 +211,7 @@ add_executable(${ENGINE_TESTS_NAME}
     ${TESTS_RELATIVE_PATH}/engine_lib/ConfigManager.cpp
     ${TESTS_RELATIVE_PATH}/engine_lib/InputManager.cpp
     ${TESTS_RELATIVE_PATH}/engine_lib/Timer.cpp
+    ${TESTS_RELATIVE_PATH}/engine_lib/IShader.cpp
     # add engine test .cpp files here
 )
 

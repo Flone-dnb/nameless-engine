@@ -10,12 +10,15 @@ namespace ne {
     /**
      * Describes the type of a shader.
      */
-    enum class ShaderType : int { VERTEX_SHADER = 0, PIXEL_SHADER = 1, COMPUTE_SHADER = 2 };
+    enum class ShaderType : int {
+        VERTEX_SHADER = 0,
+        PIXEL_SHADER = 1,
+        COMPUTE_SHADER = 2,
+        // add test for new type...
+    };
 
     /**
      * Describes different reasons for shader cache invalidation.
-     *
-     * @note Add new entries to @ref ShaderCacheInvalidationReasonDescription.
      */
     enum class ShaderCacheInvalidationReason {
         ENTRY_FUNCTION_NAME_CHANGED,
@@ -23,6 +26,8 @@ namespace ne {
         DEFINED_SHADER_MACROS_CHANGED,
         SHADER_SOURCE_FILE_CHANGED,
         SHADER_INCLUDE_TREE_CONTENT_CHANGED,
+        // add new entry to ShaderCacheInvalidationReasonDescription...
+        // add test for new reason...
     };
 
     /** Maps ShaderCacheInvalidationReason to text description. */

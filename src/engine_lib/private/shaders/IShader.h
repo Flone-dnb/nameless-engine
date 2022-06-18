@@ -7,6 +7,7 @@
 
 // Custom.
 #include "misc/Error.h"
+#include "io/Logger.h"
 #include "shaders/ShaderDescription.h"
 
 namespace ne {
@@ -78,6 +79,31 @@ namespace ne {
             std::optional<ShaderCacheInvalidationReason>& cacheInvalidationReason);
 
         /**
+         * Compiles a shader.
+         *
+         * This function is another version of @ref compileShader that has additional parameter
+         * of cache invalidation reason and templated argument. Used for testing purposes.
+         *
+         * @param shaderDescription       Description that describes the shader and how the shader should be
+         * compiled.
+         * @param cacheInvalidationReason If shader cache was invalidated will contain invalidation reason.
+         *
+         * @return Returns one of the three values:
+         * @arg compiled shader
+         * @arg string containing shader compilation error/warning
+         * @arg internal error
+         */
+        template <typename ShaderType>
+        requires std::derived_from<ShaderType, IShader>
+        static std::variant<
+            std::shared_ptr<IShader> /** Compiled shader. */,
+            std::string /** Compilation error. */,
+            Error /** Internal error. */>
+        compileShader(
+            ShaderDescription& shaderDescription,
+            std::optional<ShaderCacheInvalidationReason>& cacheInvalidationReason);
+
+        /**
          * Returns unique name of this shader.
          *
          * @return Unique name of this shader.
@@ -128,4 +154,54 @@ namespace ne {
         /** Directory name to store compiled shaders. */
         static constexpr std::string_view sShaderCacheDirectoryName = "shader_cache";
     };
+
+    template <typename ShaderType>
+    requires std::derived_from<ShaderType, IShader> std::variant<std::shared_ptr<IShader>, std::string, Error>
+    IShader::compileShader(
+        ShaderDescription& shaderDescription,
+        std::optional<ShaderCacheInvalidationReason>& cacheInvalidationReason) {
+        cacheInvalidationReason = {};
+
+        const auto shaderCacheFilePath = getPathToShaderCacheDirectory() / shaderDescription.sShaderName;
+        ConfigManager configManager;
+
+        bool bUseCache = false;
+
+        // Check if cached config exists.
+        if (std::filesystem::exists(
+                shaderCacheFilePath.string() + ConfigManager::getConfigFormatExtension())) {
+            // See if we need to recompile or use cache.
+            configManager.loadFile(shaderCacheFilePath);
+            auto cachedShaderDescription =
+                configManager.getValue<ShaderDescription>("", "shader_description", ShaderDescription());
+
+            auto reason = shaderDescription.isSerializableDataEqual(cachedShaderDescription);
+            if (!reason.has_value()) {
+                Logger::get().info(
+                    std::format("found valid cache for shader \"{}\"", shaderDescription.sShaderName), "");
+                bUseCache = true;
+            } else {
+                Logger::get().info(
+                    std::format(
+                        "invalidated cache for shader \"{}\" (reason: {})",
+                        shaderDescription.sShaderName,
+                        ShaderCacheInvalidationReasonDescription::getDescription(reason.value())),
+                    "");
+                cacheInvalidationReason = reason.value();
+            }
+        }
+
+        if (bUseCache) {
+            return std::make_shared<ShaderType>(
+                shaderCacheFilePath, shaderDescription.sShaderName, shaderDescription.shaderType);
+        } else {
+            auto result = ShaderType::compileShader(std::move(shaderDescription));
+            if (std::holds_alternative<std::shared_ptr<IShader>>(result)) {
+                // Success. Cache configuration.
+                configManager.setValue<ShaderDescription>("", "shader_description", shaderDescription);
+                configManager.saveFile(shaderCacheFilePath, false);
+            }
+            return result;
+        }
+    }
 } // namespace ne

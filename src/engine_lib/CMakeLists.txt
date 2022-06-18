@@ -68,6 +68,8 @@ set(ENGINE_LIB_SOURCES
     public/misc/Timer.h
     private/misc/MessageBox.cpp
     public/misc/MessageBox.h
+    private/misc/DesktopNotification.cpp
+    public/misc/DesktopNotification.h
     # add general (cross-platform) sources here...
 )
 

@@ -70,6 +70,8 @@ set(ENGINE_LIB_SOURCES
     public/misc/MessageBox.h
     private/misc/DesktopNotification.cpp
     public/misc/DesktopNotification.h
+    private/misc/OpenLinkInBrowser.cpp
+    public/misc/OpenLinkInBrowser.h
     # add general (cross-platform) sources here...
 )
 

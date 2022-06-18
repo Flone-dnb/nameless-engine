@@ -31,7 +31,6 @@ namespace ne {
         shaderType = static_cast<ShaderType>(toml::find_or<int>(data, "shader_type", 0));
 
         shaderIncludeTreeHashes = deserializeShaderIncludeTreeHashes(data);
-        bIsShaderIncludeTreeHashesInitialized = true;
     }
 
     toml::value ShaderDescription::into_toml() const { // NOLINT
@@ -89,8 +88,6 @@ namespace ne {
         std::string sIncludeChainText(sInitialIncludeChainText);
         serializeShaderIncludeTree(pathToShaderFile, sIncludeChainText, tomlTable);
 
-        bIsShaderIncludeTreeHashesInitialized = true;
-
         if (tomlTable.is_uninitialized()) {
             // Shader source file has no "#include" entries.
             return;
@@ -144,20 +141,13 @@ namespace ne {
     std::optional<ShaderCacheInvalidationReason>
     ShaderDescription::isSerializableDataEqual(ShaderDescription& other) {
         // Prepare source file hash.
-        if (sSourceFileHash.empty()) {
+        // Recalculate all here anyway because the file might change.
+        if (!pathToShaderFile.empty()) { // data from cache will not have path to shader file
             sSourceFileHash = getShaderSourceFileHash(pathToShaderFile, sShaderName);
-        }
-
-        if (other.sSourceFileHash.empty()) {
-            other.sSourceFileHash = getShaderSourceFileHash(other.pathToShaderFile, other.sShaderName);
-        }
-
-        // Prepare include tree.
-        if (!bIsShaderIncludeTreeHashesInitialized) {
             calculateShaderIncludeTreeHashes();
         }
-
-        if (!other.bIsShaderIncludeTreeHashesInitialized) {
+        if (!other.pathToShaderFile.empty()) { // data from cache will not have path to shader file
+            other.sSourceFileHash = getShaderSourceFileHash(other.pathToShaderFile, other.sShaderName);
             other.calculateShaderIncludeTreeHashes();
         }
 

@@ -237,9 +237,6 @@ namespace ne {
                 unordered_map<std::string /** relative include path */, std::string /** include file hash */>>
             shaderIncludeTreeHashes;
 
-        /** Whether @ref shaderIncludeTreeHashes was initialized or not. */
-        bool bIsShaderIncludeTreeHashesInitialized = false;
-
         // ------------------------------- ! if adding new fields ! ------------------------------------
         // if adding new fields:
         // - if fields should be considered when validating cache,

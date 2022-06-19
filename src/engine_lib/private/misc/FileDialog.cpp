@@ -15,8 +15,8 @@ namespace ne {
         const std::vector<std::pair<std::string, std::string>>& vFileTypeFilters,
         const std::filesystem::path& directory,
         bool bAllowSelectingMultipleFiles) {
+        // Convert filter to the format pfd expects.
         std::vector<std::string> vFilters;
-
         for (const auto& [sName, sTypeFilters] : vFileTypeFilters) {
             vFilters.push_back(std::format("{} ({})", sName, sTypeFilters));
             vFilters.push_back(sTypeFilters);
@@ -35,6 +35,39 @@ namespace ne {
         }
 
         return vSelectedPaths;
+    }
+
+    std::optional<std::filesystem::path> FileDialog::saveFile(
+        const std::string& sTitle,
+        const std::pair<std::string, std::string>& fileType,
+        const std::filesystem::path& directory) {
+        std::string sFileExtension = fileType.second;
+
+        // Convert filter to the format pfd expects.
+        std::vector<std::string> vFilters;
+        if (!fileType.second.starts_with("*")) {
+            if (!fileType.second.starts_with(".")) {
+                sFileExtension.insert(0, ".");
+            }
+            sFileExtension.insert(0, "*");
+        }
+
+        vFilters.push_back(std::format("{} ({})", fileType.first, sFileExtension));
+        vFilters.push_back(sFileExtension);
+
+        auto sResult = pfd::save_file(sTitle, directory.string(), vFilters, pfd::opt::none).result();
+
+        if (sResult.empty()) {
+            return {};
+        } else {
+            if (sFileExtension.size() > 1) {
+                const auto sExtension = sFileExtension.substr(1); // skip "*".
+                if (!sResult.ends_with(sExtension)) {
+                    sResult += sExtension;
+                }
+            }
+            return sResult;
+        }
     }
 } // namespace ne
 

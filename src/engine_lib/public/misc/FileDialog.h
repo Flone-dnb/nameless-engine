@@ -10,7 +10,7 @@ namespace ne {
     class FileDialog {
     public:
         /**
-         * Shows "Open File" dialog window.
+         * Shows "Open File" dialog window to allow the user to select file(-s).
          *
          * Example:
          * @code
@@ -38,5 +38,30 @@ namespace ne {
             const std::vector<std::pair<std::string, std::string>>& vFileTypeFilters = {{"All Files", {"*"}}},
             const std::filesystem::path& directory = std::filesystem::current_path(),
             bool bAllowSelectingMultipleFiles = false);
+
+        /**
+         * Shows "Save File" dialog window to ask the user where to save a file.
+         *
+         * Example:
+         * @code
+         * // 3 versions that provide equal result:
+         * const auto optional = ne::FileDialog::saveFile("Save Configuration", {"Configuration", "*.toml"});
+         * const auto optional = ne::FileDialog::saveFile("Save Configuration", {"Configuration", ".toml"});
+         * const auto optional = ne::FileDialog::saveFile("Save Configuration", {"Configuration", "toml"});
+         * // Possible result on Windows when the user saves a file with the name "123":
+         * "D:\Downloads\123.toml".
+         * @endcode
+         *
+         * @param sTitle      Title of the dialog window.
+         * @param fileType    A pair of "Name of the file type" and "file extension".
+         * @param directory   Starting directory to show.
+         *
+         * @return Empty if the user clicked "Cancel", otherwise path to the file to
+         * save (with added extension if the file type was specified).
+         */
+        static std::optional<std::filesystem::path> saveFile(
+            const std::string& sTitle,
+            const std::pair<std::string, std::string>& fileType = {"All Files", {"*"}},
+            const std::filesystem::path& directory = std::filesystem::current_path());
     };
 } // namespace ne

@@ -69,6 +69,17 @@ namespace ne {
             return sResult;
         }
     }
+
+    std::optional<std::filesystem::path>
+    FileDialog::selectDirectory(const std::string& sTitle, const std::filesystem::path& directory) {
+        const auto sResult = pfd::select_folder(sTitle, directory.string(), pfd::opt::none).result();
+
+        if (sResult.empty()) {
+            return {};
+        } else {
+            return sResult;
+        }
+    }
 } // namespace ne
 
 #if defined(WIN32)

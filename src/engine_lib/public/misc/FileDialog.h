@@ -63,5 +63,17 @@ namespace ne {
             const std::string& sTitle,
             const std::pair<std::string, std::string>& fileType = {"All Files", {"*"}},
             const std::filesystem::path& directory = std::filesystem::current_path());
+
+        /**
+         * Shows "Select Directory" dialog window to ask the user to select a directory.
+         *
+         * @param sTitle      Title of the dialog window.
+         * @param directory   Starting directory to show.
+         *
+         * @return Empty if the user clicked "Cancel", otherwise path to the selected directory.
+         */
+        static std::optional<std::filesystem::path> selectDirectory(
+            const std::string& sTitle,
+            const std::filesystem::path& directory = std::filesystem::current_path());
     };
 } // namespace ne

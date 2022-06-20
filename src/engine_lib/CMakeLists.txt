@@ -20,6 +20,8 @@ set(ENGINE_WIN32_SOURCES
     private/shaders/hlsl/HlslShader.h
     private/shaders/hlsl/HlslShader.cpp
     private/shaders/hlsl/DirectXEngineShaders.hpp
+    private/shaders/hlsl/RootSignatureGenerator.h
+    private/shaders/hlsl/RootSignatureGenerator.cpp
     private/render/directx/DirectXRenderer.h
     private/render/directx/DirectXRenderer.cpp
     private/render/directx/Pso.cpp
@@ -209,6 +211,7 @@ add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
                    ${CMAKE_CURRENT_LIST_DIR}/../../res/
                    ${CMAKE_CURRENT_LIST_DIR}/../../ext/
                    ${CMAKE_BINARY_DIR}
+                   ${CMAKE_CURRENT_BINARY_DIR}
                    ${BUILD_MODE_DIRECTORY}
                    ${IS_RELEASE_BUILD}
 )

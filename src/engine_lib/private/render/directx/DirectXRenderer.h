@@ -102,7 +102,16 @@ namespace ne {
          */
         virtual std::optional<Error> setBackbufferFillColor(float fillColor[4]) override;
 
+        /**
+         * Returns static texture samplers, used in texture filtering.
+         *
+         * @return Array of static texture samplers.
+         */
+        static std::array<const CD3DX12_STATIC_SAMPLER_DESC, 4> getStaticTextureSamplers();
+
     protected:
+        friend class HlslShader;
+
         /** Update internal resources for next frame. */
         virtual void update() override;
 
@@ -194,13 +203,6 @@ namespace ne {
          * @return Error if something went wrong.
          */
         std::optional<Error> compileEngineShaders() const;
-
-        /**
-         * Returns static texture samplers, used in texture filtering.
-         *
-         * @return Array of static texture samplers.
-         */
-        static std::array<const CD3DX12_STATIC_SAMPLER_DESC, 4> getStaticTextureSamplers();
 
         /**
          * Recreates all render buffers to match current display mode (width/height).

@@ -15,14 +15,15 @@ import (
 // 1. Path to the 'resources' directory ('res' directory).
 // 2. Path to the 'external' directory ('ext' directory).
 // 3. Path to the working directory of your IDE.
-// 4. Path to the build directory (where resulting binary will be located).
-// 5. Is release build (0 or 1).
+// 4. Path to the engine_lib working directory.
+// 5. Path to the build directory (where resulting binary will be located).
+// 6. Is release build (0 or 1).
 
 // Does:
 // - copies license files from 'ext' directory to the build directory,
 // - creates a simlink to the 'res' directory in working directory and build directory.
 func main() {
-	var expected_arg_count = 5
+	var expected_arg_count = 6
 	var args_count = len(os.Args[1:])
 	if args_count != expected_arg_count {
 		fmt.Println("ERROR: engine_post_build.go: expected", expected_arg_count, "arguments.")
@@ -32,8 +33,9 @@ func main() {
 	var res_directory = os.Args[1]
 	var ext_directory = os.Args[2]
 	var working_directory = os.Args[3]
-	var build_directory = os.Args[4]
-	var is_release = os.Args[5]
+	var engine_lib_dir = os.Args[4]
+	var build_directory = os.Args[5]
+	var is_release = os.Args[6]
 
 	if is_release == "1" {
 		fmt.Println("INFO: engine_post_build.go: current build mode is RELEASE.")
@@ -45,7 +47,7 @@ func main() {
 	}
 
 	copy_ext_licenses(ext_directory, build_directory)
-	make_simlink_to_res(res_directory, working_directory, build_directory)
+	make_simlink_to_res(res_directory, working_directory, build_directory, engine_lib_dir)
 
 	if runtime.GOOS == "windows" && is_release == "1" {
 		add_redist(build_directory)
@@ -99,7 +101,7 @@ func download_file(URL string, download_directory string) {
 	}
 }
 
-func make_simlink_to_res(res_directory string, working_directory string, build_directory string) {
+func make_simlink_to_res(res_directory string, working_directory string, build_directory string, engine_lib_dir string) {
 	var err error
 	_, err = os.Stat(res_directory)
 	if os.IsNotExist(err) {
@@ -128,6 +130,21 @@ func make_simlink_to_res(res_directory string, working_directory string, build_d
 		err = os.Symlink(res_directory, filepath.Join(working_directory, "res"))
 		if err != nil {
 			fmt.Println("ERROR: engine_post_build.go: failed to create symlink to 'res' in", working_directory, "error:", err)
+			if runtime.GOOS == "windows" {
+				// Maybe not enough privileges.
+				fmt.Println("ERROR: engine_post_build.go: failed to create symlink to 'res' directory. " +
+					"In order to create symlinks on Windows administrator rights are requires (make sure you are running your " +
+					"IDE with administrator rights).")
+			}
+			os.Exit(1)
+		}
+	}
+
+	_, err = os.Stat(filepath.Join(engine_lib_dir, "res"))
+	if os.IsNotExist(err) {
+		err = os.Symlink(res_directory, filepath.Join(engine_lib_dir, "res"))
+		if err != nil {
+			fmt.Println("ERROR: engine_post_build.go: failed to create symlink to 'res' in", engine_lib_dir, "error:", err)
 			if runtime.GOOS == "windows" {
 				// Maybe not enough privileges.
 				fmt.Println("ERROR: engine_post_build.go: failed to create symlink to 'res' directory. " +

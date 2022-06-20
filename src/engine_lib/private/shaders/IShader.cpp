@@ -38,7 +38,7 @@ namespace ne {
         std::optional<ShaderCacheInvalidationReason>& cacheInvalidationReason) {
 #if defined(WIN32)
         if (dynamic_cast<DirectXRenderer*>(pRenderer)) {
-            return compileShader<HlslShader>(shaderDescription, cacheInvalidationReason);
+            return compileShader<HlslShader>(shaderDescription, pRenderer, cacheInvalidationReason);
         }
 #endif
 

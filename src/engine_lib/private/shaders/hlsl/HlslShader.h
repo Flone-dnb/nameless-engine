@@ -5,8 +5,9 @@
 
 // Custom.
 #include "shaders/IShader.h"
+#include "render/IRenderer.h"
 
-// DXC.
+// External.
 #include "DirectXShaderCompiler/inc/dxcapi.h"
 
 // OS.
@@ -41,6 +42,7 @@ namespace ne {
         /**
          * Compiles a shader.
          *
+         * @param pRenderer         DirectX renderer.
          * @param shaderDescription Description that describes the shader and how the shader should be
          * compiled.
          *
@@ -53,7 +55,7 @@ namespace ne {
             std::shared_ptr<IShader> /** Compiled shader. */,
             std::string /** Compilation error. */,
             Error /** Internal error. */>
-        compileShader(const ShaderDescription& shaderDescription);
+        compileShader(IRenderer* pRenderer, const ShaderDescription& shaderDescription);
 
         /**
          * Loads compiled bytecode from disk and stores it in memory.
@@ -81,6 +83,9 @@ namespace ne {
          * Compiled shader bytecode (may be empty if not stored in memory right now).
          */
         std::pair<std::mutex, ComPtr<IDxcBlob>> mtxCompiledBlob;
+
+        /** Shader file encoding. */
+        static inline UINT iShaderFileCodepage = DXC_CP_ACP;
 
         // -------------------------------------------------------------------------
         // ! if adding new shader models add them to cache config in ShaderManager !

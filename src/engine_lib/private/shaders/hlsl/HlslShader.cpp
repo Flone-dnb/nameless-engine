@@ -4,13 +4,16 @@
 #include <fstream>
 #include <climits>
 
-// DXC.
+// External.
+#include "directx/d3dx12.h"
 #include "DirectXShaderCompiler/inc/d3d12shader.h"
 #pragma comment(lib, "dxcompiler.lib")
 
 // Custom.
 #include "io/Logger.h"
+#include "shaders/hlsl/RootSignatureGenerator.h"
 #include "misc/Globals.h"
+#include "render/directx/DirectXRenderer.h"
 
 namespace ne {
     HlslShader::HlslShader(
@@ -18,7 +21,12 @@ namespace ne {
         : IShader(std::move(pathToCompiledShader), sShaderName, shaderType) {}
 
     std::variant<std::shared_ptr<IShader>, std::string, Error>
-    HlslShader::compileShader(const ShaderDescription& shaderDescription) {
+    HlslShader::compileShader(IRenderer* pRenderer, const ShaderDescription& shaderDescription) {
+        // Check that the renderer is DirectX renderer.
+        if (!dynamic_cast<DirectXRenderer*>(pRenderer)) {
+            return Error("the specified renderer is not a DirectX renderer");
+        }
+
         // Check that file exists.
         if (!std::filesystem::exists(shaderDescription.pathToShaderFile)) {
             return Error(std::format(
@@ -39,7 +47,10 @@ namespace ne {
 
         // Create default include handler.
         ComPtr<IDxcIncludeHandler> pIncludeHandler;
-        pUtils->CreateDefaultIncludeHandler(&pIncludeHandler);
+        hResult = pUtils->CreateDefaultIncludeHandler(&pIncludeHandler);
+        if (FAILED(hResult)) {
+            return Error(hResult);
+        }
 
         // Create shader model string.
         std::wstring sShaderModel;
@@ -80,6 +91,7 @@ namespace ne {
         vArgs.push_back(DXC_ARG_OPTIMIZATION_LEVEL3);
 #endif
 
+        // Add macros.
         for (const auto& macroDefine : shaderDescription.vDefinedShaderMacros) {
             auto macro = std::wstring(macroDefine.begin(), macroDefine.end());
             vArgs.push_back(L"-D");
@@ -88,24 +100,34 @@ namespace ne {
 
         // Open source file.
         ComPtr<IDxcBlobEncoding> pSource = nullptr;
-        pUtils->LoadFile(shaderDescription.pathToShaderFile.c_str(), nullptr, &pSource);
+        hResult = pUtils->LoadFile(shaderDescription.pathToShaderFile.c_str(), nullptr, &pSource);
+        if (FAILED(hResult)) {
+            return Error(hResult);
+        }
+
         DxcBuffer sourceShaderBuffer{};
         sourceShaderBuffer.Ptr = pSource->GetBufferPointer();
         sourceShaderBuffer.Size = pSource->GetBufferSize();
-        sourceShaderBuffer.Encoding = DXC_CP_ACP;
+        sourceShaderBuffer.Encoding = iShaderFileCodepage;
 
         // Compile it with specified arguments.
         ComPtr<IDxcResult> pResults;
-        pCompiler->Compile(
+        hResult = pCompiler->Compile(
             &sourceShaderBuffer,
             vArgs.data(),
             static_cast<UINT32>(vArgs.size()),
             pIncludeHandler.Get(),
             IID_PPV_ARGS(&pResults));
+        if (FAILED(hResult)) {
+            return Error(hResult);
+        }
 
         // See if errors occurred.
         ComPtr<IDxcBlobUtf8> pErrors = nullptr;
-        pResults->GetOutput(DXC_OUT_ERRORS, IID_PPV_ARGS(&pErrors), nullptr);
+        hResult = pResults->GetOutput(DXC_OUT_ERRORS, IID_PPV_ARGS(&pErrors), nullptr);
+        if (FAILED(hResult)) {
+            return Error(hResult);
+        }
         if (pErrors && pErrors->GetStringLength()) {
             return std::string{pErrors->GetStringPointer(), pErrors->GetStringLength()};
         }
@@ -115,6 +137,31 @@ namespace ne {
         if (FAILED(hResult)) {
             return Error(hResult);
         }
+
+        // Get reflection.
+        ComPtr<IDxcBlob> pReflectionData;
+        hResult = pResults->GetOutput(DXC_OUT_REFLECTION, IID_PPV_ARGS(&pReflectionData), nullptr);
+        if (FAILED(hResult)) {
+            return Error(hResult);
+        }
+        if (pReflectionData == nullptr) {
+            return Error("failed to get reflection data");
+        }
+
+        // Create reflection interface.
+        DxcBuffer reflectionData{};
+        reflectionData.Encoding = iShaderFileCodepage;
+        reflectionData.Ptr = pReflectionData->GetBufferPointer();
+        reflectionData.Size = pReflectionData->GetBufferSize();
+        ComPtr<ID3D12ShaderReflection> pReflection;
+        hResult = pUtils->CreateReflection(&reflectionData, IID_PPV_ARGS(&pReflection));
+        if (FAILED(hResult)) {
+            return Error(hResult);
+        }
+
+        // Generate root signature.
+        auto result = RootSignatureGenerator::generateRootSignature(
+            dynamic_cast<DirectXRenderer*>(pRenderer)->pDevice, pReflection);
 
         // Save shader binary.
         ComPtr<IDxcBlob> pCompiledShaderBlob = nullptr;
@@ -162,7 +209,7 @@ namespace ne {
     }
 
     std::variant<ComPtr<IDxcBlob>, Error> HlslShader::getCompiledBlob() {
-        std::scoped_lock<std::mutex> guard(mtxCompiledBlob.first);
+        std::scoped_lock guard(mtxCompiledBlob.first);
 
         if (!mtxCompiledBlob.second) {
             // Load cached bytecode from disk.
@@ -196,7 +243,7 @@ namespace ne {
             hResult = pUtils->CreateBlob(
                 pBlobData.get(),
                 static_cast<unsigned int>(iBlobSize),
-                DXC_CP_ACP,
+                iShaderFileCodepage,
                 reinterpret_cast<IDxcBlobEncoding**>(mtxCompiledBlob.second.GetAddressOf()));
             if (FAILED(hResult)) {
                 return Error(hResult);

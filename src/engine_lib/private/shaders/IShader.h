@@ -86,6 +86,7 @@ namespace ne {
          *
          * @param shaderDescription       Description that describes the shader and how the shader should be
          * compiled.
+         * @param pRenderer               Used renderer.
          * @param cacheInvalidationReason If shader cache was invalidated will contain invalidation reason.
          *
          * @return Returns one of the three values:
@@ -101,6 +102,7 @@ namespace ne {
             Error /** Internal error. */>
         compileShader(
             ShaderDescription& shaderDescription,
+            IRenderer* pRenderer,
             std::optional<ShaderCacheInvalidationReason>& cacheInvalidationReason);
 
         /**
@@ -159,6 +161,7 @@ namespace ne {
     requires std::derived_from<ShaderType, IShader> std::variant<std::shared_ptr<IShader>, std::string, Error>
     IShader::compileShader(
         ShaderDescription& shaderDescription,
+        IRenderer* pRenderer,
         std::optional<ShaderCacheInvalidationReason>& cacheInvalidationReason) {
         cacheInvalidationReason = {};
 
@@ -195,7 +198,7 @@ namespace ne {
             return std::make_shared<ShaderType>(
                 shaderCacheFilePath, shaderDescription.sShaderName, shaderDescription.shaderType);
         } else {
-            auto result = ShaderType::compileShader(std::move(shaderDescription));
+            auto result = ShaderType::compileShader(pRenderer, std::move(shaderDescription));
             if (std::holds_alternative<std::shared_ptr<IShader>>(result)) {
                 // Success. Cache configuration.
                 configManager.setValue<ShaderDescription>("", "shader_description", shaderDescription);

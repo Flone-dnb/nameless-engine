@@ -9,8 +9,9 @@
 // Custom.
 #include "misc/Error.h"
 #include "game/Game.h"
+#include "render/IRenderer.h"
 #include "window/GLFW.hpp"
-#include "IGameInstance.h"
+#include "game/IGameInstance.h"
 #include "input/KeyboardKey.hpp"
 #include "input/MouseButton.hpp"
 
@@ -183,9 +184,8 @@ namespace ne {
         /**
          * Whether the cursor is visible or not (locked in this window).
          *
-         * @param bIsVisible
-         * @arg true Shows cursor (normal behavior).
-         * @arg false This will hide the cursor and lock it to the window.
+         * @param bIsVisible 'true' shows cursor (normal behavior),
+         * 'false' will hide the cursor and lock it to the window.
          */
         void setCursorVisibility(bool bIsVisible) const;
 

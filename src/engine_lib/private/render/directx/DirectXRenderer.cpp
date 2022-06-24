@@ -595,6 +595,7 @@ namespace ne {
         // Do this synchronously (before user can queue his shaders).
         std::vector vEngineShaders = {
             DirectXEngineShaders::vsDefault,
+            DirectXEngineShaders::psDefaultNoDiffuseTexture,
             DirectXEngineShaders::psDefaultTextureFilteringPoint,
             DirectXEngineShaders::psDefaultTextureFilteringLinear,
             DirectXEngineShaders::psDefaultTextureFilteringAnisotropic};

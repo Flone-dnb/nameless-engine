@@ -11,6 +11,7 @@ namespace ne {
         std::vector<CD3DX12_ROOT_PARAMETER> vRootParameters;
         std::vector<CD3DX12_STATIC_SAMPLER_DESC> vStaticSamplersToBind;
 
+        // Texture resources.
         struct TextureResourceTable {
             UINT iRegisterSpace = 0;
             UINT iTextureResourceCount = 0;

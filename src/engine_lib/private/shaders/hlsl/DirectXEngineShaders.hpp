@@ -15,13 +15,21 @@ namespace ne {
             "vsDefault",
             {}};
 
+        /** Default pixel shader (no diffuse texture). */
+        static inline ShaderDescription psDefaultNoDiffuseTexture = {
+            "engine.default.ps",
+            "res/engine/shaders/default.hlsl",
+            ShaderType::PIXEL_SHADER,
+            "psDefault",
+            {}};
+
         /** Default pixel shader (point texture filtering). */
         static inline ShaderDescription psDefaultTextureFilteringPoint = {
             "engine.default.ps.tfp",
             "res/engine/shaders/default.hlsl",
             ShaderType::PIXEL_SHADER,
             "psDefault",
-            {"TEXTURE_FILTERING_POINT"}};
+            {"USE_DIFFUSE_TEXTURE", "TEXTURE_FILTERING_POINT"}};
 
         /** Default vertex shader (linear texture filtering). */
         static inline ShaderDescription psDefaultTextureFilteringLinear = {
@@ -29,7 +37,7 @@ namespace ne {
             "res/engine/shaders/default.hlsl",
             ShaderType::PIXEL_SHADER,
             "psDefault",
-            {"TEXTURE_FILTERING_LINEAR"}};
+            {"USE_DIFFUSE_TEXTURE", "TEXTURE_FILTERING_LINEAR"}};
 
         /** Default vertex shader (point texture filtering). */
         static inline ShaderDescription psDefaultTextureFilteringAnisotropic = {
@@ -37,6 +45,6 @@ namespace ne {
             "res/engine/shaders/default.hlsl",
             ShaderType::PIXEL_SHADER,
             "psDefault",
-            {"TEXTURE_FILTERING_ANISOTROPIC"}};
+            {"USE_DIFFUSE_TEXTURE", "TEXTURE_FILTERING_ANISOTROPIC"}};
     };
 } // namespace ne

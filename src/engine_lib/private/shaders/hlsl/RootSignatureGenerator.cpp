@@ -24,8 +24,6 @@ namespace ne {
                 err.showError();
             }
 
-            // TODO: see if finds resources from included HLSL files
-
             if (resourceDesc.Type == D3D_SIT_CBUFFER) {
                 auto newRootParameter = CD3DX12_ROOT_PARAMETER{};
                 newRootParameter.InitAsConstantBufferView(resourceDesc.BindPoint, resourceDesc.Space);

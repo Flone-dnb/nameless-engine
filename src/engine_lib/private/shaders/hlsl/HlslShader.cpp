@@ -228,8 +228,8 @@ namespace ne {
     }
 
     std::variant<ComPtr<IDxcBlob>, Error> HlslShader::getCompiledBlob() {
-        std::scoped_lock guard1(mtxCompiledBlob.first);
-        if (!mtxCompiledBlob.second) {
+        std::scoped_lock guard(mtxCompiledBlobRootSignature.first);
+        if (!mtxCompiledBlobRootSignature.second.first) {
             // Load cached bytecode from disk.
             const auto pathToCompiledShader = getPathToCompiledShader();
 
@@ -240,11 +240,10 @@ namespace ne {
                 return err;
             }
 
-            mtxCompiledBlob.second = std::get<ComPtr<IDxcBlob>>(std::move(result));
+            mtxCompiledBlobRootSignature.second.first = std::get<ComPtr<IDxcBlob>>(std::move(result));
         }
 
-        std::scoped_lock guard2(mtxRootSignature.first);
-        if (!mtxRootSignature.second) {
+        if (!mtxCompiledBlobRootSignature.second.second) {
             // Load shader reflection from disk.
             const auto pathToShaderReflection =
                 getPathToCompiledShader().string() + sShaderReflectionFileExtension;
@@ -285,22 +284,19 @@ namespace ne {
                 return err;
             }
 
-            mtxRootSignature.second = std::get<ComPtr<ID3D12RootSignature>>(std::move(result));
+            mtxCompiledBlobRootSignature.second.second =
+                std::get<ComPtr<ID3D12RootSignature>>(std::move(result));
         }
 
-        return mtxCompiledBlob.second;
+        return mtxCompiledBlobRootSignature.second.first;
     }
 
     bool HlslShader::releaseBytecodeFromMemoryIfLoaded() {
-        {
-            // Release shader bytecode.
-            std::scoped_lock guard(mtxCompiledBlob.first);
+        std::scoped_lock guard(mtxCompiledBlobRootSignature.first);
 
-            if (!mtxCompiledBlob.second) {
-                return true;
-            }
-
-            const auto iNewRefCount = mtxCompiledBlob.second.Reset();
+        // Release shader bytecode.
+        if (mtxCompiledBlobRootSignature.second.first) {
+            const auto iNewRefCount = mtxCompiledBlobRootSignature.second.first.Reset();
             if (iNewRefCount != 0) {
                 Logger::get().error(
                     std::format(
@@ -320,15 +316,9 @@ namespace ne {
             }
         }
 
-        {
-            // Release root signature.
-            std::scoped_lock guard(mtxRootSignature.first);
-
-            if (!mtxRootSignature.second) {
-                return true;
-            }
-
-            const auto iNewRefCount = mtxRootSignature.second.Reset();
+        // Release root signature.
+        if (mtxCompiledBlobRootSignature.second.second) {
+            const auto iNewRefCount = mtxCompiledBlobRootSignature.second.second.Reset();
             if (iNewRefCount != 0) {
                 Logger::get().error(
                     std::format(

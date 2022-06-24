@@ -92,16 +92,11 @@ namespace ne {
         readBlobFromDisk(const std::filesystem::path& pathToFile);
 
         /**
-         * Mutex for read/write operations on compiled blob.
-         * Compiled shader bytecode (may be empty if not stored in memory right now).
+         * Mutex for read/write operations on compiled blob and shader's root signature.
+         * Compiled shader bytecode and root signature (may be empty if not stored in memory right now).
          */
-        std::pair<std::mutex, ComPtr<IDxcBlob>> mtxCompiledBlob;
-
-        /**
-         * Mutex for read/write operations on root signature.
-         * Root signature (may be empty if not stored in memory right now).
-         */
-        std::pair<std::mutex, ComPtr<ID3D12RootSignature>> mtxRootSignature;
+        std::pair<std::mutex, std::pair<ComPtr<IDxcBlob>, ComPtr<ID3D12RootSignature>>>
+            mtxCompiledBlobRootSignature;
 
         /** Shader file encoding. */
         static inline UINT iShaderFileCodepage = DXC_CP_ACP;

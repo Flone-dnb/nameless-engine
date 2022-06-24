@@ -205,7 +205,7 @@ namespace ne {
         std::optional<Error> resizeRenderBuffers();
 
         /**
-         * Blocks until the GPU finishes executing all queued commands.
+         * Blocks the current thread until the GPU finishes executing all queued commands up to this point.
          *
          * @return Error if something went wrong.
          */

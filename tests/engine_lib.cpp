@@ -1,5 +1,6 @@
 #if defined(WIN32)
 #include <Windows.h>
+#include <crtdbg.h>
 #undef MessageBox
 #undef IGNORE
 #endif

@@ -8,6 +8,7 @@
 #include "render/IRenderer.h"
 
 // External.
+#include "directx/d3dx12.h"
 #include "DirectXShaderCompiler/inc/dxcapi.h"
 
 // OS.
@@ -24,11 +25,13 @@ namespace ne {
         /**
          * Constructor.
          *
+         * @param pRenderer            Used renderer.
          * @param pathToCompiledShader Path to compiled shader blob on disk.
          * @param sShaderName          Unique name of this shader.
          * @param shaderType           Type of this shader.
          */
         HlslShader(
+            IRenderer* pRenderer,
             std::filesystem::path pathToCompiledShader,
             const std::string& sShaderName,
             ShaderType shaderType);
@@ -79,13 +82,32 @@ namespace ne {
         friend class ShaderManager;
 
         /**
+         * Reads file and creates a new DXC blob using file's content.
+         *
+         * @param pathToFile Path to the file to create blob from.
+         *
+         * @return Error if something went wrong, otherwise created blob.
+         */
+        static std::variant<ComPtr<IDxcBlob>, Error>
+        readBlobFromDisk(const std::filesystem::path& pathToFile);
+
+        /**
          * Mutex for read/write operations on compiled blob.
          * Compiled shader bytecode (may be empty if not stored in memory right now).
          */
         std::pair<std::mutex, ComPtr<IDxcBlob>> mtxCompiledBlob;
 
+        /**
+         * Mutex for read/write operations on root signature.
+         * Root signature (may be empty if not stored in memory right now).
+         */
+        std::pair<std::mutex, ComPtr<ID3D12RootSignature>> mtxRootSignature;
+
         /** Shader file encoding. */
         static inline UINT iShaderFileCodepage = DXC_CP_ACP;
+
+        /** File extension for saving shader reflection data. */
+        static inline auto sShaderReflectionFileExtension = ".reflection";
 
         // -------------------------------------------------------------------------
         // ! if adding new shader models add them to cache config in ShaderManager !

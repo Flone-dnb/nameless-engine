@@ -20,11 +20,13 @@ namespace ne {
         /**
          * Constructor.
          *
+         * @param pRenderer            Used renderer.
          * @param pathToCompiledShader Path to compiled shader blob on disk.
          * @param sShaderName          Unique name of this shader.
          * @param shaderType           Type of this shader.
          */
         IShader(
+            IRenderer* pRenderer,
             std::filesystem::path pathToCompiledShader,
             const std::string& sShaderName,
             ShaderType shaderType);
@@ -143,6 +145,13 @@ namespace ne {
          */
         std::filesystem::path getPathToCompiledShader();
 
+        /**
+         * Returns used renderer.
+         *
+         * @return Used renderer.
+         */
+        IRenderer* getUsedRenderer() const;
+
     private:
         /** Unique shader name received from ShaderManager. */
         std::string sShaderName;
@@ -152,6 +161,9 @@ namespace ne {
 
         /** Path to compiled shader. */
         std::filesystem::path pathToCompiledShader;
+
+        /** Do not delete. Used renderer. */
+        IRenderer* pUsedRenderer = nullptr;
 
         /** Directory name to store compiled shaders. */
         static constexpr std::string_view sShaderCacheDirectoryName = "shader_cache";
@@ -196,7 +208,7 @@ namespace ne {
 
         if (bUseCache) {
             return std::make_shared<ShaderType>(
-                shaderCacheFilePath, shaderDescription.sShaderName, shaderDescription.shaderType);
+                pRenderer, shaderCacheFilePath, shaderDescription.sShaderName, shaderDescription.shaderType);
         } else {
             auto result = ShaderType::compileShader(pRenderer, std::move(shaderDescription));
             if (std::holds_alternative<std::shared_ptr<IShader>>(result)) {

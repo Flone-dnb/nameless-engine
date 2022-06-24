@@ -5,7 +5,6 @@
 #include <climits>
 
 // External.
-#include "directx/d3dx12.h"
 #include "DirectXShaderCompiler/inc/d3d12shader.h"
 #pragma comment(lib, "dxcompiler.lib")
 
@@ -17,8 +16,11 @@
 
 namespace ne {
     HlslShader::HlslShader(
-        std::filesystem::path pathToCompiledShader, const std::string& sShaderName, ShaderType shaderType)
-        : IShader(std::move(pathToCompiledShader), sShaderName, shaderType) {}
+        IRenderer* pRenderer,
+        std::filesystem::path pathToCompiledShader,
+        const std::string& sShaderName,
+        ShaderType shaderType)
+        : IShader(pRenderer, std::move(pathToCompiledShader), sShaderName, shaderType) {}
 
     std::variant<std::shared_ptr<IShader>, std::string, Error>
     HlslShader::compileShader(IRenderer* pRenderer, const ShaderDescription& shaderDescription) {
@@ -162,8 +164,13 @@ namespace ne {
         // Generate root signature.
         auto result = RootSignatureGenerator::generateRootSignature(
             dynamic_cast<DirectXRenderer*>(pRenderer)->pDevice, pReflection);
+        if (std::holds_alternative<Error>(result)) {
+            auto err = std::get<Error>(std::move(result));
+            err.addEntry();
+            return err;
+        }
 
-        // Save shader binary.
+        // Get compiled shader binary.
         ComPtr<IDxcBlob> pCompiledShaderBlob = nullptr;
         ComPtr<IDxcBlobUtf16> pShaderName = nullptr;
         pResults->GetOutput(DXC_OUT_OBJECT, IID_PPV_ARGS(&pCompiledShaderBlob), &pShaderName);
@@ -172,7 +179,7 @@ namespace ne {
                 "no shader binary was generated for {}", shaderDescription.pathToShaderFile.string()));
         }
 
-        // Write bytecode to file.
+        // Write shader bytecode to file.
         const auto pathToCompiledShader = shaderCacheDir / shaderDescription.sShaderName;
         std::ofstream shaderCacheFile(pathToCompiledShader, std::ios::binary);
         if (!shaderCacheFile.is_open()) {
@@ -182,6 +189,18 @@ namespace ne {
             static_cast<char*>(pCompiledShaderBlob->GetBufferPointer()),
             static_cast<long long>(pCompiledShaderBlob->GetBufferSize()));
         shaderCacheFile.close();
+
+        // Write reflection data to file.
+        const auto pathToShaderReflection =
+            (shaderCacheDir / shaderDescription.sShaderName).string() + sShaderReflectionFileExtension;
+        std::ofstream shaderReflectionFile(pathToShaderReflection, std::ios::binary);
+        if (!shaderReflectionFile.is_open()) {
+            return Error(std::format("failed to save shader reflection data at {}", pathToShaderReflection));
+        }
+        shaderReflectionFile.write(
+            static_cast<char*>(pReflectionData->GetBufferPointer()),
+            static_cast<long long>(pReflectionData->GetBufferSize()));
+        shaderReflectionFile.close();
 
 #if defined(DEBUG)
         // Save pdb file.
@@ -205,85 +224,173 @@ namespace ne {
 
         // Return shader instance.
         return std::make_shared<HlslShader>(
-            pathToCompiledShader, shaderDescription.sShaderName, shaderDescription.shaderType);
+            pRenderer, pathToCompiledShader, shaderDescription.sShaderName, shaderDescription.shaderType);
     }
 
     std::variant<ComPtr<IDxcBlob>, Error> HlslShader::getCompiledBlob() {
-        std::scoped_lock guard(mtxCompiledBlob.first);
-
+        std::scoped_lock guard1(mtxCompiledBlob.first);
         if (!mtxCompiledBlob.second) {
             // Load cached bytecode from disk.
             const auto pathToCompiledShader = getPathToCompiledShader();
 
-            std::ifstream shaderBytecodeFile(pathToCompiledShader, std::ios::binary);
-
-            // Get file size.
-            shaderBytecodeFile.seekg(0, std::ios::end);
-            const long long iFileByteCount = shaderBytecodeFile.tellg();
-            shaderBytecodeFile.seekg(0, std::ios::beg);
-
-            if (iFileByteCount > static_cast<long long>(UINT_MAX)) {
-                shaderBytecodeFile.close();
-                return Error("shader cache file is too big");
+            auto result = readBlobFromDisk(pathToCompiledShader);
+            if (std::holds_alternative<Error>(result)) {
+                auto err = std::get<Error>(std::move(result));
+                err.addEntry();
+                return err;
             }
 
-            const auto iBlobSize = static_cast<unsigned int>(iFileByteCount);
+            mtxCompiledBlob.second = std::get<ComPtr<IDxcBlob>>(std::move(result));
+        }
 
-            // Read file to memory.
-            const auto pBlobData = std::make_unique<char[]>(iBlobSize);
-            shaderBytecodeFile.read(pBlobData.get(), iBlobSize);
-            shaderBytecodeFile.close();
+        std::scoped_lock guard2(mtxRootSignature.first);
+        if (!mtxRootSignature.second) {
+            // Load shader reflection from disk.
+            const auto pathToShaderReflection =
+                getPathToCompiledShader().string() + sShaderReflectionFileExtension;
 
+            auto blobResult = readBlobFromDisk(pathToShaderReflection);
+            if (std::holds_alternative<Error>(blobResult)) {
+                auto err = std::get<Error>(std::move(blobResult));
+                err.addEntry();
+                return err;
+            }
+
+            auto pReflectionData = std::get<ComPtr<IDxcBlob>>(std::move(blobResult));
+
+            // Create utils.
             ComPtr<IDxcUtils> pUtils;
             HRESULT hResult = DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(&pUtils));
             if (FAILED(hResult)) {
                 return Error(hResult);
             }
 
-            hResult = pUtils->CreateBlob(
-                pBlobData.get(),
-                static_cast<unsigned int>(iBlobSize),
-                iShaderFileCodepage,
-                reinterpret_cast<IDxcBlobEncoding**>(mtxCompiledBlob.second.GetAddressOf()));
+            // Create reflection interface.
+            DxcBuffer reflectionData{};
+            reflectionData.Encoding = iShaderFileCodepage;
+            reflectionData.Ptr = pReflectionData->GetBufferPointer();
+            reflectionData.Size = pReflectionData->GetBufferSize();
+            ComPtr<ID3D12ShaderReflection> pReflection;
+            hResult = pUtils->CreateReflection(&reflectionData, IID_PPV_ARGS(&pReflection));
             if (FAILED(hResult)) {
                 return Error(hResult);
             }
+
+            // Generate root signature.
+            auto result = RootSignatureGenerator::generateRootSignature(
+                dynamic_cast<DirectXRenderer*>(getUsedRenderer())->pDevice, pReflection);
+            if (std::holds_alternative<Error>(result)) {
+                auto err = std::get<Error>(std::move(result));
+                err.addEntry();
+                return err;
+            }
+
+            mtxRootSignature.second = std::get<ComPtr<ID3D12RootSignature>>(std::move(result));
         }
 
         return mtxCompiledBlob.second;
     }
 
     bool HlslShader::releaseBytecodeFromMemoryIfLoaded() {
-        std::scoped_lock<std::mutex> guard(mtxCompiledBlob.first);
+        {
+            // Release shader bytecode.
+            std::scoped_lock guard(mtxCompiledBlob.first);
 
-        if (!mtxCompiledBlob.second) {
-            return true;
+            if (!mtxCompiledBlob.second) {
+                return true;
+            }
+
+            const auto iNewRefCount = mtxCompiledBlob.second.Reset();
+            if (iNewRefCount != 0) {
+                Logger::get().error(
+                    std::format(
+                        "THIS IS A BUG, REPORT TO DEVELOPERS: shader \"{}\" bytecode was released from "
+                        "memory but it's still being referenced (new ref count: {})",
+                        getShaderName(),
+                        iNewRefCount),
+                    "");
+            } else {
+                Logger::get().info(
+                    std::format(
+                        "shader \"{}\" bytecode is being released from memory as it's no longer being used "
+                        "(new ref count: {})",
+                        getShaderName(),
+                        iNewRefCount),
+                    "");
+            }
         }
 
-        const auto iNewRefCount = mtxCompiledBlob.second.Reset();
+        {
+            // Release root signature.
+            std::scoped_lock guard(mtxRootSignature.first);
 
-        if (iNewRefCount != 0) {
-            Logger::get().error(
-                std::format(
-                    "THIS IS A BUG, REPORT TO DEVELOPERS: shader \"{}\" bytecode was released from "
-                    "memory but it's still being "
-                    "referenced (new "
-                    "ref count: {})",
-                    getShaderName(),
-                    iNewRefCount),
-                "");
-        } else {
-            Logger::get().info(
-                std::format(
-                    "shader \"{}\" bytecode is being released from memory as it's no longer being used "
-                    "(new "
-                    "ref count: "
-                    "{})",
-                    getShaderName(),
-                    iNewRefCount),
-                "");
+            if (!mtxRootSignature.second) {
+                return true;
+            }
+
+            const auto iNewRefCount = mtxRootSignature.second.Reset();
+            if (iNewRefCount != 0) {
+                Logger::get().error(
+                    std::format(
+                        "THIS IS A BUG, REPORT TO DEVELOPERS: shader \"{}\" root signature was released from "
+                        "memory but it's still being referenced (new ref count: {})",
+                        getShaderName(),
+                        iNewRefCount),
+                    "");
+            } else {
+                Logger::get().info(
+                    std::format(
+                        "shader \"{}\" root signature is being released from memory as it's no longer being "
+                        "used (new ref count: {})",
+                        getShaderName(),
+                        iNewRefCount),
+                    "");
+            }
         }
 
         return false;
+    }
+
+    std::variant<ComPtr<IDxcBlob>, Error>
+    HlslShader::readBlobFromDisk(const std::filesystem::path& pathToFile) {
+        std::ifstream shaderBytecodeFile(pathToFile, std::ios::binary);
+        if (!shaderBytecodeFile.is_open()) {
+            return Error(std::format("failed to open file at {}", pathToFile.string()));
+        }
+
+        // Get file size.
+        shaderBytecodeFile.seekg(0, std::ios::end);
+        const long long iFileByteCount = shaderBytecodeFile.tellg();
+        shaderBytecodeFile.seekg(0, std::ios::beg);
+
+        if (iFileByteCount > static_cast<long long>(UINT_MAX)) {
+            shaderBytecodeFile.close();
+            return Error("blob file is too big");
+        }
+
+        const auto iBlobSize = static_cast<unsigned int>(iFileByteCount);
+
+        // Read file to memory.
+        const auto pBlobData = std::make_unique<char[]>(iBlobSize);
+        shaderBytecodeFile.read(pBlobData.get(), iBlobSize);
+        shaderBytecodeFile.close();
+
+        ComPtr<IDxcUtils> pUtils;
+        HRESULT hResult = DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(&pUtils));
+        if (FAILED(hResult)) {
+            return Error(hResult);
+        }
+
+        ComPtr<IDxcBlob> pBlob;
+        hResult = pUtils->CreateBlob(
+            pBlobData.get(),
+            static_cast<unsigned int>(iBlobSize),
+            iShaderFileCodepage,
+            reinterpret_cast<IDxcBlobEncoding**>(pBlob.GetAddressOf()));
+        if (FAILED(hResult)) {
+            return Error(hResult);
+        }
+
+        return pBlob;
     }
 } // namespace ne

@@ -14,7 +14,10 @@
 
 namespace ne {
     IShader::IShader(
-        std::filesystem::path pathToCompiledShader, const std::string& sShaderName, ShaderType shaderType) {
+        IRenderer* pRenderer,
+        std::filesystem::path pathToCompiledShader,
+        const std::string& sShaderName,
+        ShaderType shaderType) {
         if (!std::filesystem::exists(pathToCompiledShader)) {
             const Error err(
                 std::format("the specified path {} does not exist", pathToCompiledShader.string()));
@@ -24,6 +27,7 @@ namespace ne {
         this->pathToCompiledShader = std::move(pathToCompiledShader);
         this->sShaderName = sShaderName;
         this->shaderType = shaderType;
+        this->pUsedRenderer = pRenderer;
     }
 
     std::variant<std::shared_ptr<IShader>, std::string, Error>
@@ -59,6 +63,8 @@ namespace ne {
         }
         return pathToCompiledShader;
     }
+
+    IRenderer* IShader::getUsedRenderer() const { return pUsedRenderer; }
 
     std::filesystem::path IShader::getPathToShaderCacheDirectory() {
         std::filesystem::path basePath = getBaseDirectoryForConfigs();

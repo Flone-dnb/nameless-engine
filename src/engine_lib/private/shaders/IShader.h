@@ -187,8 +187,8 @@ namespace ne {
                 shaderCacheFilePath.string() + ConfigManager::getConfigFormatExtension())) {
             // See if we need to recompile or use cache.
             configManager.loadFile(shaderCacheFilePath);
-            auto cachedShaderDescription =
-                configManager.getValue<ShaderDescription>("", "shader_description", ShaderDescription());
+            auto cachedShaderDescription = configManager.getValue<ShaderDescription>(
+                "", ShaderDescription::getConfigurationFileSectionName(), ShaderDescription());
 
             auto reason = shaderDescription.isSerializableDataEqual(cachedShaderDescription);
             if (!reason.has_value()) {
@@ -213,7 +213,8 @@ namespace ne {
             auto result = ShaderType::compileShader(pRenderer, std::move(shaderDescription));
             if (std::holds_alternative<std::shared_ptr<IShader>>(result)) {
                 // Success. Cache configuration.
-                configManager.setValue<ShaderDescription>("", "shader_description", shaderDescription);
+                configManager.setValue<ShaderDescription>(
+                    "", ShaderDescription::getConfigurationFileSectionName(), shaderDescription);
                 configManager.saveFile(shaderCacheFilePath, false);
             }
             return result;

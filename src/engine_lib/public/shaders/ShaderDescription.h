@@ -63,6 +63,13 @@ namespace ne {
      * Describes a shader.
      */
     struct ShaderDescription {
+        /**
+         * Returns name of the section that is used to store ShaderDescription in configuration (on disk).
+         *
+         * @return Section name.
+         */
+        static const char* getConfigurationFileSectionName() { return sConfigurationFileSectionName; }
+
         ShaderDescription() = default;
 
         /**
@@ -257,6 +264,9 @@ namespace ne {
         static inline std::string_view sInitialIncludeChainText = "includes";
 
         /** Name of the category used for logging. */
-        inline static const char* sShaderDescriptionLogCategory = "Shader Description";
+        inline static auto sShaderDescriptionLogCategory = "Shader Description";
+
+        /** Name of the section that is used to store ShaderDescription in configuration (on disk). */
+        inline static auto sConfigurationFileSectionName = "shader_description";
     };
 } // namespace ne

@@ -11,14 +11,19 @@ namespace ne {
         std::vector<CD3DX12_ROOT_PARAMETER> vRootParameters;
         std::vector<CD3DX12_STATIC_SAMPLER_DESC> vStaticSamplersToBind;
 
+        // Get shader description.
+        D3D12_SHADER_DESC shaderDesc;
+        HRESULT hResult = pShaderReflection->GetDesc(&shaderDesc);
+        if (FAILED(hResult)) {
+            const Error err(hResult);
+            err.showError();
+        }
+
         // Iterate over all shader resources.
-        for (UINT iCurrentResourceIndex = 0;; iCurrentResourceIndex++) {
+        for (UINT iCurrentResourceIndex = 0; iCurrentResourceIndex < shaderDesc.BoundResources;
+             iCurrentResourceIndex++) {
             D3D12_SHADER_INPUT_BIND_DESC resourceDesc;
-            const HRESULT hResult =
-                pShaderReflection->GetResourceBindingDesc(iCurrentResourceIndex, &resourceDesc);
-            if (hResult == E_INVALIDARG) {
-                break; // no more resources
-            }
+            hResult = pShaderReflection->GetResourceBindingDesc(iCurrentResourceIndex, &resourceDesc);
             if (FAILED(hResult)) {
                 const Error err(hResult);
                 err.showError();
@@ -57,7 +62,7 @@ namespace ne {
         ComPtr<ID3DBlob> pSerializedRootSignature = nullptr;
         ComPtr<ID3DBlob> pSerializerErrorMessage = nullptr;
 
-        HRESULT hResult = D3D12SerializeRootSignature(
+        hResult = D3D12SerializeRootSignature(
             &rootSignatureDesc,
             D3D_ROOT_SIGNATURE_VERSION_1,
             pSerializedRootSignature.GetAddressOf(),

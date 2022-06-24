@@ -12,6 +12,7 @@
 #include "io/Logger.h"
 #include "misc/Globals.h"
 #include "shaders/hlsl/DirectXEngineShaders.hpp"
+#include "misc/MessageBox.h"
 
 // DirectX.
 #pragma comment(lib, "D3D12.lib")
@@ -668,9 +669,11 @@ namespace ne {
                 const auto sErrorMessage = std::format(
                     "failed to compile shader \"{}\" due to internal error:\n{}",
                     shaderDescription.sShaderName,
-                    std::get<Error>(std::move(error)).getInitialMessage());
+                    std::get<Error>(std::move(error)).getError());
                 const Error err(sErrorMessage);
                 err.showError();
+                MessageBox::info(
+                    "Info", "Try restarting the application, if this will not help contact the developers.");
                 throw std::runtime_error(err.getError());
             }
         };

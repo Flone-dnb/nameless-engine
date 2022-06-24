@@ -49,7 +49,7 @@ namespace ne {
             return;
         }
 
-        it->second->releaseBytecodeFromMemoryIfLoaded();
+        it->second->releaseShaderDataFromMemoryIfLoaded();
     }
 
     void ShaderManager::removeShaderIfMarkedToBeRemoved(const std::string& sShaderName) {
@@ -390,7 +390,7 @@ namespace ne {
         // Check shaders that were needed but no longer used.
         for (const auto& [sShaderName, pShader] : compiledShaders) {
             if (pShader.use_count() == 1) {
-                const bool bReleased = !pShader->releaseBytecodeFromMemoryIfLoaded();
+                const bool bReleased = !pShader->releaseShaderDataFromMemoryIfLoaded();
                 if (bReleased) {
                     results.vCanBeReleasedShaderBytecode.push_back(sShaderName);
                 }

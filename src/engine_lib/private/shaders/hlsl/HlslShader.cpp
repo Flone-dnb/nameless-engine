@@ -22,6 +22,19 @@ namespace ne {
         ShaderType shaderType)
         : IShader(pRenderer, std::move(pathToCompiledShader), sShaderName, shaderType) {}
 
+    std::optional<Error> HlslShader::testIfShaderCacheIsCorrupted() {
+        std::scoped_lock guard(mtxCompiledBlobRootSignature.first);
+        auto optionalError = loadShaderDataFromDiskIfNotLoaded();
+        if (optionalError.has_value()) {
+            optionalError->addEntry();
+            return optionalError.value();
+        }
+
+        releaseShaderDataFromMemoryIfLoaded();
+
+        return {};
+    }
+
     std::variant<std::shared_ptr<IShader>, std::string, Error>
     HlslShader::compileShader(IRenderer* pRenderer, const ShaderDescription& shaderDescription) {
         // Check that the renderer is DirectX renderer.
@@ -229,69 +242,17 @@ namespace ne {
 
     std::variant<ComPtr<IDxcBlob>, Error> HlslShader::getCompiledBlob() {
         std::scoped_lock guard(mtxCompiledBlobRootSignature.first);
-        if (!mtxCompiledBlobRootSignature.second.first) {
-            // Load cached bytecode from disk.
-            const auto pathToCompiledShader = getPathToCompiledShader();
 
-            auto result = readBlobFromDisk(pathToCompiledShader);
-            if (std::holds_alternative<Error>(result)) {
-                auto err = std::get<Error>(std::move(result));
-                err.addEntry();
-                return err;
-            }
-
-            mtxCompiledBlobRootSignature.second.first = std::get<ComPtr<IDxcBlob>>(std::move(result));
-        }
-
-        if (!mtxCompiledBlobRootSignature.second.second) {
-            // Load shader reflection from disk.
-            const auto pathToShaderReflection =
-                getPathToCompiledShader().string() + sShaderReflectionFileExtension;
-
-            auto blobResult = readBlobFromDisk(pathToShaderReflection);
-            if (std::holds_alternative<Error>(blobResult)) {
-                auto err = std::get<Error>(std::move(blobResult));
-                err.addEntry();
-                return err;
-            }
-
-            auto pReflectionData = std::get<ComPtr<IDxcBlob>>(std::move(blobResult));
-
-            // Create utils.
-            ComPtr<IDxcUtils> pUtils;
-            HRESULT hResult = DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(&pUtils));
-            if (FAILED(hResult)) {
-                return Error(hResult);
-            }
-
-            // Create reflection interface.
-            DxcBuffer reflectionData{};
-            reflectionData.Encoding = iShaderFileCodepage;
-            reflectionData.Ptr = pReflectionData->GetBufferPointer();
-            reflectionData.Size = pReflectionData->GetBufferSize();
-            ComPtr<ID3D12ShaderReflection> pReflection;
-            hResult = pUtils->CreateReflection(&reflectionData, IID_PPV_ARGS(&pReflection));
-            if (FAILED(hResult)) {
-                return Error(hResult);
-            }
-
-            // Generate root signature.
-            auto result = RootSignatureGenerator::generateRootSignature(
-                dynamic_cast<DirectXRenderer*>(getUsedRenderer())->pDevice, pReflection);
-            if (std::holds_alternative<Error>(result)) {
-                auto err = std::get<Error>(std::move(result));
-                err.addEntry();
-                return err;
-            }
-
-            mtxCompiledBlobRootSignature.second.second =
-                std::get<ComPtr<ID3D12RootSignature>>(std::move(result));
+        auto optionalError = loadShaderDataFromDiskIfNotLoaded();
+        if (optionalError.has_value()) {
+            optionalError->addEntry();
+            return optionalError.value();
         }
 
         return mtxCompiledBlobRootSignature.second.first;
     }
 
-    bool HlslShader::releaseBytecodeFromMemoryIfLoaded() {
+    bool HlslShader::releaseShaderDataFromMemoryIfLoaded() {
         std::scoped_lock guard(mtxCompiledBlobRootSignature.first);
 
         // Release shader bytecode.
@@ -382,5 +343,69 @@ namespace ne {
         }
 
         return pBlob;
+    }
+
+    std::optional<Error> HlslShader::loadShaderDataFromDiskIfNotLoaded() {
+        std::scoped_lock guard(mtxCompiledBlobRootSignature.first);
+        if (!mtxCompiledBlobRootSignature.second.first) {
+            // Load cached bytecode from disk.
+            const auto pathToCompiledShader = getPathToCompiledShader();
+
+            auto result = readBlobFromDisk(pathToCompiledShader);
+            if (std::holds_alternative<Error>(result)) {
+                auto err = std::get<Error>(std::move(result));
+                err.addEntry();
+                return err;
+            }
+
+            mtxCompiledBlobRootSignature.second.first = std::get<ComPtr<IDxcBlob>>(std::move(result));
+        }
+
+        if (!mtxCompiledBlobRootSignature.second.second) {
+            // Load shader reflection from disk.
+            const auto pathToShaderReflection =
+                getPathToCompiledShader().string() + sShaderReflectionFileExtension;
+
+            auto blobResult = readBlobFromDisk(pathToShaderReflection);
+            if (std::holds_alternative<Error>(blobResult)) {
+                auto err = std::get<Error>(std::move(blobResult));
+                err.addEntry();
+                return err;
+            }
+
+            auto pReflectionData = std::get<ComPtr<IDxcBlob>>(std::move(blobResult));
+
+            // Create utils.
+            ComPtr<IDxcUtils> pUtils;
+            HRESULT hResult = DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(&pUtils));
+            if (FAILED(hResult)) {
+                return Error(hResult);
+            }
+
+            // Create reflection interface.
+            DxcBuffer reflectionData{};
+            reflectionData.Encoding = iShaderFileCodepage;
+            reflectionData.Ptr = pReflectionData->GetBufferPointer();
+            reflectionData.Size = pReflectionData->GetBufferSize();
+            ComPtr<ID3D12ShaderReflection> pReflection;
+            hResult = pUtils->CreateReflection(&reflectionData, IID_PPV_ARGS(&pReflection));
+            if (FAILED(hResult)) {
+                return Error(hResult);
+            }
+
+            // Generate root signature.
+            auto result = RootSignatureGenerator::generateRootSignature(
+                dynamic_cast<DirectXRenderer*>(getUsedRenderer())->pDevice, pReflection);
+            if (std::holds_alternative<Error>(result)) {
+                auto err = std::get<Error>(std::move(result));
+                err.addEntry();
+                return err;
+            }
+
+            mtxCompiledBlobRootSignature.second.second =
+                std::get<ComPtr<ID3D12RootSignature>>(std::move(result));
+        }
+
+        return {};
     }
 } // namespace ne

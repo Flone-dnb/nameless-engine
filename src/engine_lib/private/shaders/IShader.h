@@ -38,6 +38,16 @@ namespace ne {
         virtual ~IShader() = default;
 
         /**
+         * Tests if shader cache for this shader is corrupted or not
+         * and deletes the cache if it's corrupted.
+         *
+         * @remark This function should be used if you want to use shader cache.
+         *
+         * @return Error if shader cache is corrupted and was deleted.
+         */
+        virtual std::optional<Error> testIfShaderCacheIsCorrupted() = 0;
+
+        /**
          * Compiles a shader.
          *
          * @param shaderDescription Description that describes the shader and how the shader should be
@@ -135,7 +145,7 @@ namespace ne {
          *
          * @return 'false' if was released from memory, 'true' if not loaded into memory.
          */
-        virtual bool releaseBytecodeFromMemoryIfLoaded() = 0;
+        virtual bool releaseShaderDataFromMemoryIfLoaded() = 0;
 
     protected:
         /**
@@ -178,13 +188,14 @@ namespace ne {
         cacheInvalidationReason = {};
 
         const auto shaderCacheFilePath = getPathToShaderCacheDirectory() / shaderDescription.sShaderName;
+        const auto shaderCacheConfigurationPath =
+            shaderCacheFilePath.string() + ConfigManager::getConfigFormatExtension();
         ConfigManager configManager;
 
         bool bUseCache = false;
 
         // Check if cached config exists.
-        if (std::filesystem::exists(
-                shaderCacheFilePath.string() + ConfigManager::getConfigFormatExtension())) {
+        if (std::filesystem::exists(shaderCacheConfigurationPath)) {
             // See if we need to recompile or use cache.
             configManager.loadFile(shaderCacheFilePath);
             auto cachedShaderDescription = configManager.getValue<ShaderDescription>(
@@ -207,8 +218,30 @@ namespace ne {
         }
 
         if (bUseCache) {
-            return std::make_shared<ShaderType>(
+            auto pShader = std::make_shared<ShaderType>(
                 pRenderer, shaderCacheFilePath, shaderDescription.sShaderName, shaderDescription.shaderType);
+
+            Logger::get().info(
+                std::format(
+                    "checking if shader \"{}\" cache files are corrupted or not",
+                    shaderDescription.sShaderName),
+                "");
+            std::optional<Error> optionalError = pShader->testIfShaderCacheIsCorrupted();
+            if (optionalError.has_value()) {
+                Logger::get().error(
+                    std::format(
+                        "shader \"{}\" cache files are corrupted, removing corrupted cache file",
+                        shaderDescription.sShaderName),
+                    "");
+
+                // It's enough to delete shader cache configuration file, everything else will be overwritten
+                // next time.
+                std::filesystem::remove(shaderCacheConfigurationPath);
+
+                optionalError->addEntry();
+                return optionalError.value();
+            }
+            return pShader;
         } else {
             auto result = ShaderType::compileShader(pRenderer, std::move(shaderDescription));
             if (std::holds_alternative<std::shared_ptr<IShader>>(result)) {

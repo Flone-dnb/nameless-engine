@@ -43,6 +43,15 @@ namespace ne {
         virtual ~HlslShader() override {}
 
         /**
+         * Tests if shader cache for this shader is corrupted or not.
+         *
+         * @remark This function should be used if you want to use shader cache.
+         *
+         * @return Error if shader cache is corrupted, empty is OK.
+         */
+        virtual std::optional<Error> testIfShaderCacheIsCorrupted() override;
+
+        /**
          * Compiles a shader.
          *
          * @param pRenderer         DirectX renderer.
@@ -70,13 +79,13 @@ namespace ne {
         std::variant<ComPtr<IDxcBlob>, Error> getCompiledBlob();
 
         /**
-         * Releases underlying shader bytecode from memory (this object will not be deleted)
-         * if the shader bytecode was loaded into memory.
-         * Next time this shader will be needed it will be loaded from disk.
+         * Releases underlying shader data (bytecode, root signature, etc.) from memory (this object will not
+         * be deleted) if the shader data was loaded into memory. Next time this shader will be needed the
+         * data will be loaded from disk.
          *
          * @return 'false' if was released from memory, 'true' if not loaded into memory.
          */
-        virtual bool releaseBytecodeFromMemoryIfLoaded() override;
+        virtual bool releaseShaderDataFromMemoryIfLoaded() override;
 
     private:
         friend class ShaderManager;
@@ -92,10 +101,18 @@ namespace ne {
         readBlobFromDisk(const std::filesystem::path& pathToFile);
 
         /**
+         * Loads shader data (bytecode, root signature, etc.) from disk cache to @ref
+         * mtxCompiledBlobRootSignature (if something is not loaded).
+         *
+         * @return Error if something went wrong.
+         */
+        std::optional<Error> loadShaderDataFromDiskIfNotLoaded();
+
+        /**
          * Mutex for read/write operations on compiled blob and shader's root signature.
          * Compiled shader bytecode and root signature (may be empty if not stored in memory right now).
          */
-        std::pair<std::mutex, std::pair<ComPtr<IDxcBlob>, ComPtr<ID3D12RootSignature>>>
+        std::pair<std::recursive_mutex, std::pair<ComPtr<IDxcBlob>, ComPtr<ID3D12RootSignature>>>
             mtxCompiledBlobRootSignature;
 
         /** Shader file encoding. */

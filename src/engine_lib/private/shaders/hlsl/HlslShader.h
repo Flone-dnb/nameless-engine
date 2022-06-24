@@ -83,9 +83,13 @@ namespace ne {
          * be deleted) if the shader data was loaded into memory. Next time this shader will be needed the
          * data will be loaded from disk.
          *
+         * @param bLogOnlyErrors Specify 'true' to only log errors, 'false' to log errors and info.
+         * Specifying 'true' is useful when we are testing if shader cache is corrupted or not,
+         * to make log slightly cleaner.
+         *
          * @return 'false' if was released from memory, 'true' if not loaded into memory.
          */
-        virtual bool releaseShaderDataFromMemoryIfLoaded() override;
+        virtual bool releaseShaderDataFromMemoryIfLoaded(bool bLogOnlyErrors = false) override;
 
     private:
         friend class ShaderManager;

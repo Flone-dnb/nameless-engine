@@ -30,7 +30,7 @@ namespace ne {
             return optionalError.value();
         }
 
-        releaseShaderDataFromMemoryIfLoaded();
+        releaseShaderDataFromMemoryIfLoaded(true);
 
         return {};
     }
@@ -255,7 +255,7 @@ namespace ne {
         return mtxCompiledBlobRootSignature.second.first;
     }
 
-    bool HlslShader::releaseShaderDataFromMemoryIfLoaded() {
+    bool HlslShader::releaseShaderDataFromMemoryIfLoaded(bool bLogOnlyErrors) {
         std::scoped_lock guard(mtxCompiledBlobRootSignature.first);
 
         // Release shader bytecode.
@@ -269,7 +269,7 @@ namespace ne {
                         getShaderName(),
                         iNewRefCount),
                     "");
-            } else {
+            } else if (!bLogOnlyErrors) {
                 Logger::get().info(
                     std::format(
                         "shader \"{}\" bytecode is being released from memory as it's no longer being used "
@@ -291,7 +291,7 @@ namespace ne {
                         getShaderName(),
                         iNewRefCount),
                     "");
-            } else {
+            } else if (!bLogOnlyErrors) {
                 Logger::get().info(
                     std::format(
                         "shader \"{}\" root signature is being released from memory as it's no longer being "

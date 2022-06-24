@@ -143,9 +143,13 @@ namespace ne {
          * if the shader bytecode was loaded into memory.
          * Next time this shader will be needed it will be loaded from disk.
          *
+         * @param bLogOnlyErrors Specify 'true' to only log errors, 'false' to log errors and info.
+         * Specifying 'true' is useful when we are testing if shader cache is corrupted or not,
+         * to make log slightly cleaner.
+         *
          * @return 'false' if was released from memory, 'true' if not loaded into memory.
          */
-        virtual bool releaseShaderDataFromMemoryIfLoaded() = 0;
+        virtual bool releaseShaderDataFromMemoryIfLoaded(bool bLogOnlyErrors = false) = 0;
 
     protected:
         /**
@@ -221,11 +225,6 @@ namespace ne {
             auto pShader = std::make_shared<ShaderType>(
                 pRenderer, shaderCacheFilePath, shaderDescription.sShaderName, shaderDescription.shaderType);
 
-            Logger::get().info(
-                std::format(
-                    "checking if shader \"{}\" cache files are corrupted or not",
-                    shaderDescription.sShaderName),
-                "");
             std::optional<Error> optionalError = pShader->testIfShaderCacheIsCorrupted();
             if (optionalError.has_value()) {
                 Logger::get().error(

@@ -593,7 +593,11 @@ namespace ne {
 
     std::optional<Error> DirectXRenderer::compileEngineShaders() const {
         // Do this synchronously (before user can queue his shaders).
-        std::vector vEngineShaders = {DirectXEngineShaders::vsDefault};
+        std::vector vEngineShaders = {
+            DirectXEngineShaders::vsDefault,
+            DirectXEngineShaders::psDefaultTextureFilteringPoint,
+            DirectXEngineShaders::psDefaultTextureFilteringLinear,
+            DirectXEngineShaders::psDefaultTextureFilteringAnisotropic};
 
         auto pPromiseFinish = std::make_shared<std::promise<bool>>();
         auto future = pPromiseFinish->get_future();
@@ -651,21 +655,21 @@ namespace ne {
             D3D12_TEXTURE_ADDRESS_MODE_WRAP);
 
         const CD3DX12_STATIC_SAMPLER_DESC linearWrap(
-            1,
+            0,
             D3D12_FILTER_MIN_MAG_MIP_LINEAR,
             D3D12_TEXTURE_ADDRESS_MODE_WRAP,
             D3D12_TEXTURE_ADDRESS_MODE_WRAP,
             D3D12_TEXTURE_ADDRESS_MODE_WRAP);
 
         const CD3DX12_STATIC_SAMPLER_DESC anisotropicWrap(
-            2,
+            0,
             D3D12_FILTER_ANISOTROPIC,
             D3D12_TEXTURE_ADDRESS_MODE_WRAP,
             D3D12_TEXTURE_ADDRESS_MODE_WRAP,
             D3D12_TEXTURE_ADDRESS_MODE_WRAP);
 
         const CD3DX12_STATIC_SAMPLER_DESC shadow(
-            3,
+            1,
             D3D12_FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT,
             D3D12_TEXTURE_ADDRESS_MODE_BORDER,
             D3D12_TEXTURE_ADDRESS_MODE_BORDER,

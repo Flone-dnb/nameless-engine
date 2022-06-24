@@ -1,7 +1,15 @@
-SamplerState samplerPointWrap       : register(s0);
-SamplerState samplerLinearWrap      : register(s1);
-SamplerState samplerAnisotropicWrap : register(s2);
-SamplerComparisonState samplerShadowMap : register(s3);
+#ifdef TEXTURE_FILTERING_POINT
+    SamplerState samplerPointWrap       : register(s0);
+#elif TEXTURE_FILTERING_LINEAR
+    SamplerState samplerLinearWrap      : register(s0);
+#elif TEXTURE_FILTERING_ANISOTROPIC
+    SamplerState samplerAnisotropicWrap : register(s0);
+#endif
+
+SamplerComparisonState samplerShadowMap : register(s1);
+
+// TODO: wrap with #ifdef if not used?
+Texture2D diffuseTexture : register(t0);
 
 cbuffer frameData : register(b0)
 {
@@ -71,5 +79,19 @@ VertexOut vsDefault(VertexIn vertexIn)
 
 float4 psDefault(VertexOut pin) : SV_Target
 {
-    return float4(1.0f, 0.0f, 0.0f, 1.0f);
+    float4 vDiffuse = float4(1.0f, 1.0f, 1.0f, 1.0f);
+
+    // Apply texture filtering.
+    // TODO: wrap with #ifdef if texture is not used?
+#ifdef TEXTURE_FILTERING_POINT
+    vDiffuse = diffuseTexture.Sample(samplerPointWrap, pin.vUV);
+#elif TEXTURE_FILTERING_LINEAR
+    vDiffuse = diffuseTexture.Sample(samplerLinearWrap, pin.vUV);
+#elif TEXTURE_FILTERING_ANISOTROPIC
+    vDiffuse = diffuseTexture.Sample(samplerAnisotropicWrap, pin.vUV);
+#endif
+
+    // TODO: should we filter other textures?
+
+    return vDiffuse;
 }

@@ -95,22 +95,25 @@ namespace ne {
         vArgs.push_back(sShaderEntry.c_str());
         vArgs.push_back(L"-T");
         vArgs.push_back(sShaderModel.c_str());
+        vArgs.push_back(L"-WX"); // Treat warnings as errors.
 #if defined(DEBUG)
         vArgs.push_back(DXC_ARG_DEBUG);
         vArgs.push_back(DXC_ARG_SKIP_OPTIMIZATIONS);
         vArgs.push_back(L"-Fd");
         auto shaderPdbPath = shaderCacheDir / shaderDescription.sShaderName;
         shaderPdbPath += ".pdb";
-        vArgs.push_back(shaderPdbPath.wstring().c_str());
+        auto shaderPdbPathString = shaderPdbPath.wstring();
+        vArgs.push_back(shaderPdbPathString.c_str());
 #else
         vArgs.push_back(DXC_ARG_OPTIMIZATION_LEVEL3);
 #endif
 
         // Add macros.
+        std::vector<std::wstring> vMacroNames;
         for (const auto& macroDefine : shaderDescription.vDefinedShaderMacros) {
-            auto macro = std::wstring(macroDefine.begin(), macroDefine.end());
+            vMacroNames.push_back(std::wstring(macroDefine.begin(), macroDefine.end()));
             vArgs.push_back(L"-D");
-            vArgs.push_back(macro.c_str());
+            vArgs.push_back(vMacroNames.back().c_str());
         }
 
         // Open source file.

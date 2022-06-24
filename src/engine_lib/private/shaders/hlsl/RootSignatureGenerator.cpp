@@ -11,6 +11,13 @@ namespace ne {
         std::vector<CD3DX12_ROOT_PARAMETER> vRootParameters;
         std::vector<CD3DX12_STATIC_SAMPLER_DESC> vStaticSamplersToBind;
 
+        struct TextureResourceTable {
+            UINT iRegisterSpace = 0;
+            UINT iTextureResourceCount = 0;
+            UINT iTexturesBaseShaderRegister = UINT_MAX;
+        };
+        std::vector<TextureResourceTable> vTextureResources;
+
         // Get shader description.
         D3D12_SHADER_DESC shaderDesc;
         HRESULT hResult = pShaderReflection->GetDesc(&shaderDesc);
@@ -42,11 +49,55 @@ namespace ne {
                 }
 
                 vStaticSamplersToBind.push_back(std::get<CD3DX12_STATIC_SAMPLER_DESC>(std::move(result)));
+            } else if (resourceDesc.Type == D3D_SIT_TEXTURE) {
+                auto texIt = std::ranges::find_if(vTextureResources, [&](const TextureResourceTable& table) {
+                    return table.iRegisterSpace == resourceDesc.Space;
+                });
+                if (texIt == vTextureResources.end()) {
+                    TextureResourceTable newTextureTable;
+                    newTextureTable.iRegisterSpace = resourceDesc.Space;
+                    newTextureTable.iTextureResourceCount = 1;
+                    newTextureTable.iTexturesBaseShaderRegister = resourceDesc.BindPoint;
+                    vTextureResources.push_back(newTextureTable);
+                } else {
+                    texIt->iTextureResourceCount += 1;
+                    if (resourceDesc.BindPoint < texIt->iTexturesBaseShaderRegister) {
+                        texIt->iTexturesBaseShaderRegister = resourceDesc.BindPoint;
+                    } else if (
+                        resourceDesc.BindPoint >=
+                        texIt->iTexturesBaseShaderRegister + texIt->iTextureResourceCount) {
+                        return Error(std::format(
+                            "invalid texture register {} on texture resource \"{}\", "
+                            "expected to find a contiguous range of texture registers (1, 2, 3..., "
+                            "not 1, 2, 4...) in the same register space",
+                            resourceDesc.BindPoint,
+                            resourceDesc.Name));
+                    }
+                }
             } else {
                 return Error(std::format(
                     "encountered unhandled resource type {} (not implemented)",
                     static_cast<int>(resourceDesc.Type)));
             }
+        }
+
+        // Create descriptor table for texture resources.
+        std::vector<CD3DX12_DESCRIPTOR_RANGE> vTextureDescriptorRanges;
+        for (const auto& textureTable : vTextureResources) {
+            CD3DX12_DESCRIPTOR_RANGE textureResourceDescriptors;
+            textureResourceDescriptors.Init(
+                D3D12_DESCRIPTOR_RANGE_TYPE_SRV,
+                textureTable.iTextureResourceCount,
+                textureTable.iTexturesBaseShaderRegister,
+                textureTable.iRegisterSpace,
+                D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND); // auto increment total count
+            vTextureDescriptorRanges.push_back(textureResourceDescriptors);
+        }
+        if (!vTextureDescriptorRanges.empty()) {
+            auto newRootParameter = CD3DX12_ROOT_PARAMETER{};
+            newRootParameter.InitAsDescriptorTable(
+                static_cast<UINT>(vTextureDescriptorRanges.size()), vTextureDescriptorRanges.data());
+            vRootParameters.push_back(newRootParameter);
         }
 
         // Create root signature description.

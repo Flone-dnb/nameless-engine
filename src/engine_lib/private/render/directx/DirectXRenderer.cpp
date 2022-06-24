@@ -33,6 +33,7 @@ namespace ne {
             bStartedWithConfigurationFromDisk = true;
         }
 
+        // Initialize DirectX.
         std::optional<Error> error = initializeDirectX();
         if (error.has_value()) {
             error->addEntry();
@@ -40,6 +41,7 @@ namespace ne {
             throw std::runtime_error(error->getError());
         }
 
+        // Save configuration (possibly was corrected).
         DirectXRenderer::writeConfigurationToConfigFile();
 
         // Disable Alt + Enter.
@@ -59,20 +61,14 @@ namespace ne {
             throw std::runtime_error(error->getError());
         }
 
-        // Create initial root signature.
-        error = createRootSignature();
-        if (error.has_value()) {
-            error->addEntry();
-            error->showError();
-            throw std::runtime_error(error->getError());
-        }
-
+        // Compile engine shaders.
         error = compileEngineShaders();
         if (error.has_value()) {
             error->addEntry();
             error->showError();
             throw std::runtime_error(error->getError());
         }
+
         // TODO
     }
 
@@ -590,59 +586,6 @@ namespace ne {
         if (error.has_value()) {
             error->addEntry();
             return error;
-        }
-
-        return {};
-    }
-
-    std::optional<Error> DirectXRenderer::createRootSignature() {
-        // Root parameter can be a table, root descriptor or root constants.
-        std::array<CD3DX12_ROOT_PARAMETER, 2> vRootParameters = {};
-
-        // Performance TIP: Order from most frequent to least frequent.
-        vRootParameters[0].InitAsConstantBufferView(0); // frame data
-        vRootParameters[1].InitAsConstantBufferView(1); // object data
-
-        // new stuff goes here
-
-        const auto vStaticSamplers = getStaticTextureSamplers();
-
-        // Create root signature description.
-        // A root signature is an array of root parameters.
-        const CD3DX12_ROOT_SIGNATURE_DESC rootSignatureDesc(
-            static_cast<UINT>(vRootParameters.size()),
-            vRootParameters.data(),
-            static_cast<UINT>(vStaticSamplers.size()),
-            vStaticSamplers.data(),
-            D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
-
-        // Serialize root signature in order to create it.
-        ComPtr<ID3DBlob> pSerializedRootSignature = nullptr;
-        ComPtr<ID3DBlob> pSerializerErrorMessage = nullptr;
-
-        HRESULT hResult = D3D12SerializeRootSignature(
-            &rootSignatureDesc,
-            D3D_ROOT_SIGNATURE_VERSION_1,
-            pSerializedRootSignature.GetAddressOf(),
-            pSerializerErrorMessage.GetAddressOf());
-        if (FAILED(hResult)) {
-            return Error(hResult);
-        }
-
-        if (pSerializerErrorMessage) {
-            return Error(std::string(
-                static_cast<char*>(pSerializerErrorMessage->GetBufferPointer()),
-                pSerializerErrorMessage->GetBufferSize()));
-        }
-
-        // Create root signature.
-        hResult = pDevice->CreateRootSignature(
-            0,
-            pSerializedRootSignature->GetBufferPointer(),
-            pSerializedRootSignature->GetBufferSize(),
-            IID_PPV_ARGS(&pRootSignature));
-        if (FAILED(hResult)) {
-            return Error(hResult);
         }
 
         return {};

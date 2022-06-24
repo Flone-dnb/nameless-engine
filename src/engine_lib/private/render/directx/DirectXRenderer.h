@@ -191,13 +191,6 @@ namespace ne {
         std::optional<Error> initializeDirectX();
 
         /**
-         * Creates root signature (defines the resources the shader programs expect).
-         *
-         * @return Error if something went wrong.
-         */
-        std::optional<Error> createRootSignature();
-
-        /**
          * Compiles all essential shaders that the engine will use.
          *
          * @return Error if something went wrong.
@@ -259,9 +252,6 @@ namespace ne {
 
         /** Allocator for GPU resources. */
         ComPtr<D3D12MA::Allocator> pMemoryAllocator;
-
-        /** Root signature. */
-        ComPtr<ID3D12RootSignature> pRootSignature;
 
         /** Fence object. */
         ComPtr<ID3D12Fence> pFence;

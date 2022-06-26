@@ -4,7 +4,7 @@
 #include "game/Window.h"
 #if defined(WIN32)
 #include "render/directx/DirectXRenderer.h"
-#include "shaders/hlsl/HlslShader.h"
+#include "shaders/hlsl/HlslShaderPack.h"
 #endif
 
 // STL.
@@ -37,10 +37,10 @@ TEST_CASE("compile HLSL vertex shader") {
 
             ShaderDescription description{"test shader", shaderPath, ShaderType::VERTEX_SHADER, "vs", {}};
             std::optional<ShaderCacheInvalidationReason> cacheInvalidationReason;
-            auto result = IShader::compileShader<HlslShader>(
+            auto result = IShader::compileShader<HlslShaderPack>(
                 description, pGameWindow->getRenderer(), cacheInvalidationReason);
 
-            if (!std::holds_alternative<std::shared_ptr<IShader>>(result)) {
+            if (!std::holds_alternative<std::shared_ptr<IShaderPack>>(result)) {
                 std::string sErrorMessage;
                 if (std::holds_alternative<std::string>(result)) {
                     sErrorMessage = std::get<std::string>(result);
@@ -48,7 +48,7 @@ TEST_CASE("compile HLSL vertex shader") {
                     sErrorMessage = std::get<Error>(result).getError();
                 }
                 INFO(sErrorMessage);
-                REQUIRE(std::holds_alternative<std::shared_ptr<IShader>>(result));
+                REQUIRE(std::holds_alternative<std::shared_ptr<IShaderPack>>(result));
             }
 
             // Cleanup.
@@ -94,10 +94,10 @@ TEST_CASE("compile HLSL pixel shader") {
 
             ShaderDescription description{"test shader", shaderPath, ShaderType::PIXEL_SHADER, "ps", {}};
             std::optional<ShaderCacheInvalidationReason> cacheInvalidationReason;
-            auto result = IShader::compileShader<HlslShader>(
+            auto result = IShader::compileShader<HlslShaderPack>(
                 description, pGameWindow->getRenderer(), cacheInvalidationReason);
 
-            if (!std::holds_alternative<std::shared_ptr<IShader>>(result)) {
+            if (!std::holds_alternative<std::shared_ptr<IShaderPack>>(result)) {
                 std::string sErrorMessage;
                 if (std::holds_alternative<std::string>(result)) {
                     sErrorMessage = std::get<std::string>(result);
@@ -105,7 +105,7 @@ TEST_CASE("compile HLSL pixel shader") {
                     sErrorMessage = std::get<Error>(result).getError();
                 }
                 INFO(sErrorMessage);
-                REQUIRE(std::holds_alternative<std::shared_ptr<IShader>>(result));
+                REQUIRE(std::holds_alternative<std::shared_ptr<IShaderPack>>(result));
             }
 
             // Cleanup.
@@ -149,10 +149,10 @@ TEST_CASE("compile HLSL compute shader") {
 
             ShaderDescription description{"test shader", shaderPath, ShaderType::COMPUTE_SHADER, "cs", {}};
             std::optional<ShaderCacheInvalidationReason> cacheInvalidationReason;
-            auto result = IShader::compileShader<HlslShader>(
+            auto result = IShader::compileShader<HlslShaderPack>(
                 description, pGameWindow->getRenderer(), cacheInvalidationReason);
 
-            if (!std::holds_alternative<std::shared_ptr<IShader>>(result)) {
+            if (!std::holds_alternative<std::shared_ptr<IShaderPack>>(result)) {
                 std::string sErrorMessage;
                 if (std::holds_alternative<std::string>(result)) {
                     sErrorMessage = std::get<std::string>(result);
@@ -160,7 +160,7 @@ TEST_CASE("compile HLSL compute shader") {
                     sErrorMessage = std::get<Error>(result).getError();
                 }
                 INFO(sErrorMessage);
-                REQUIRE(std::holds_alternative<std::shared_ptr<IShader>>(result));
+                REQUIRE(std::holds_alternative<std::shared_ptr<IShaderPack>>(result));
             }
 
             // Cleanup.
@@ -206,10 +206,10 @@ TEST_CASE("find valid HLSL shader cache") {
 
             ShaderDescription description{"test shader", shaderPath, ShaderType::PIXEL_SHADER, "ps", {}};
             std::optional<ShaderCacheInvalidationReason> cacheInvalidationReason;
-            auto result = IShader::compileShader<HlslShader>(
+            auto result = IShader::compileShader<HlslShaderPack>(
                 description, pGameWindow->getRenderer(), cacheInvalidationReason);
 
-            if (!std::holds_alternative<std::shared_ptr<IShader>>(result)) {
+            if (!std::holds_alternative<std::shared_ptr<IShaderPack>>(result)) {
                 std::string sErrorMessage;
                 if (std::holds_alternative<std::string>(result)) {
                     sErrorMessage = std::get<std::string>(result);
@@ -217,14 +217,14 @@ TEST_CASE("find valid HLSL shader cache") {
                     sErrorMessage = std::get<Error>(result).getError();
                 }
                 INFO(sErrorMessage);
-                REQUIRE(std::holds_alternative<std::shared_ptr<IShader>>(result));
+                REQUIRE(std::holds_alternative<std::shared_ptr<IShaderPack>>(result));
             }
 
             // Compile again (should find valid cache).
-            result = IShader::compileShader<HlslShader>(
+            result = IShader::compileShader<HlslShaderPack>(
                 description, pGameWindow->getRenderer(), cacheInvalidationReason);
 
-            if (!std::holds_alternative<std::shared_ptr<IShader>>(result)) {
+            if (!std::holds_alternative<std::shared_ptr<IShaderPack>>(result)) {
                 std::string sErrorMessage;
                 if (std::holds_alternative<std::string>(result)) {
                     sErrorMessage = std::get<std::string>(result);
@@ -232,7 +232,7 @@ TEST_CASE("find valid HLSL shader cache") {
                     sErrorMessage = std::get<Error>(result).getError();
                 }
                 INFO(sErrorMessage);
-                REQUIRE(std::holds_alternative<std::shared_ptr<IShader>>(result));
+                REQUIRE(std::holds_alternative<std::shared_ptr<IShaderPack>>(result));
             }
 
             REQUIRE(!cacheInvalidationReason.has_value());
@@ -280,10 +280,10 @@ TEST_CASE("invalidate HLSL shader cache - ENTRY_FUNCTION_NAME_CHANGED") {
 
             ShaderDescription description{"test shader", shaderPath, ShaderType::PIXEL_SHADER, "ps", {}};
             std::optional<ShaderCacheInvalidationReason> cacheInvalidationReason;
-            auto result = IShader::compileShader<HlslShader>(
+            auto result = IShader::compileShader<HlslShaderPack>(
                 description, pGameWindow->getRenderer(), cacheInvalidationReason);
 
-            if (!std::holds_alternative<std::shared_ptr<IShader>>(result)) {
+            if (!std::holds_alternative<std::shared_ptr<IShaderPack>>(result)) {
                 std::string sErrorMessage;
                 if (std::holds_alternative<std::string>(result)) {
                     sErrorMessage = std::get<std::string>(result);
@@ -291,7 +291,7 @@ TEST_CASE("invalidate HLSL shader cache - ENTRY_FUNCTION_NAME_CHANGED") {
                     sErrorMessage = std::get<Error>(result).getError();
                 }
                 INFO(sErrorMessage);
-                REQUIRE(std::holds_alternative<std::shared_ptr<IShader>>(result));
+                REQUIRE(std::holds_alternative<std::shared_ptr<IShaderPack>>(result));
             }
 
             // Compile again (should invalidate cache).
@@ -304,10 +304,10 @@ TEST_CASE("invalidate HLSL shader cache - ENTRY_FUNCTION_NAME_CHANGED") {
                           "}\n";
             shaderFile.close();
             description.sShaderEntryFunctionName = "pss";
-            result = IShader::compileShader<HlslShader>(
+            result = IShader::compileShader<HlslShaderPack>(
                 description, pGameWindow->getRenderer(), cacheInvalidationReason);
 
-            if (!std::holds_alternative<std::shared_ptr<IShader>>(result)) {
+            if (!std::holds_alternative<std::shared_ptr<IShaderPack>>(result)) {
                 std::string sErrorMessage;
                 if (std::holds_alternative<std::string>(result)) {
                     sErrorMessage = std::get<std::string>(result);
@@ -315,7 +315,7 @@ TEST_CASE("invalidate HLSL shader cache - ENTRY_FUNCTION_NAME_CHANGED") {
                     sErrorMessage = std::get<Error>(result).getError();
                 }
                 INFO(sErrorMessage);
-                REQUIRE(std::holds_alternative<std::shared_ptr<IShader>>(result));
+                REQUIRE(std::holds_alternative<std::shared_ptr<IShaderPack>>(result));
             }
 
             REQUIRE(cacheInvalidationReason.has_value());
@@ -366,10 +366,10 @@ TEST_CASE("invalidate HLSL shader cache - SHADER_TYPE_CHANGED") {
 
             ShaderDescription description{"test shader", shaderPath, ShaderType::PIXEL_SHADER, "ps", {}};
             std::optional<ShaderCacheInvalidationReason> cacheInvalidationReason;
-            auto result = IShader::compileShader<HlslShader>(
+            auto result = IShader::compileShader<HlslShaderPack>(
                 description, pGameWindow->getRenderer(), cacheInvalidationReason);
 
-            if (!std::holds_alternative<std::shared_ptr<IShader>>(result)) {
+            if (!std::holds_alternative<std::shared_ptr<IShaderPack>>(result)) {
                 std::string sErrorMessage;
                 if (std::holds_alternative<std::string>(result)) {
                     sErrorMessage = std::get<std::string>(result);
@@ -377,7 +377,7 @@ TEST_CASE("invalidate HLSL shader cache - SHADER_TYPE_CHANGED") {
                     sErrorMessage = std::get<Error>(result).getError();
                 }
                 INFO(sErrorMessage);
-                REQUIRE(std::holds_alternative<std::shared_ptr<IShader>>(result));
+                REQUIRE(std::holds_alternative<std::shared_ptr<IShaderPack>>(result));
             }
 
             // Compile again (should invalidate cache).
@@ -390,10 +390,10 @@ TEST_CASE("invalidate HLSL shader cache - SHADER_TYPE_CHANGED") {
                           "}\n";
             shaderFile.close();
             description.shaderType = ShaderType::VERTEX_SHADER;
-            result = IShader::compileShader<HlslShader>(
+            result = IShader::compileShader<HlslShaderPack>(
                 description, pGameWindow->getRenderer(), cacheInvalidationReason);
 
-            if (!std::holds_alternative<std::shared_ptr<IShader>>(result)) {
+            if (!std::holds_alternative<std::shared_ptr<IShaderPack>>(result)) {
                 std::string sErrorMessage;
                 if (std::holds_alternative<std::string>(result)) {
                     sErrorMessage = std::get<std::string>(result);
@@ -401,7 +401,7 @@ TEST_CASE("invalidate HLSL shader cache - SHADER_TYPE_CHANGED") {
                     sErrorMessage = std::get<Error>(result).getError();
                 }
                 INFO(sErrorMessage);
-                REQUIRE(std::holds_alternative<std::shared_ptr<IShader>>(result));
+                REQUIRE(std::holds_alternative<std::shared_ptr<IShaderPack>>(result));
             }
 
             REQUIRE(cacheInvalidationReason.has_value());
@@ -450,10 +450,10 @@ TEST_CASE("invalidate HLSL shader cache - DEFINED_SHADER_MACROS_CHANGED") {
 
             ShaderDescription description{"test shader", shaderPath, ShaderType::PIXEL_SHADER, "ps", {}};
             std::optional<ShaderCacheInvalidationReason> cacheInvalidationReason;
-            auto result = IShader::compileShader<HlslShader>(
+            auto result = IShader::compileShader<HlslShaderPack>(
                 description, pGameWindow->getRenderer(), cacheInvalidationReason);
 
-            if (!std::holds_alternative<std::shared_ptr<IShader>>(result)) {
+            if (!std::holds_alternative<std::shared_ptr<IShaderPack>>(result)) {
                 std::string sErrorMessage;
                 if (std::holds_alternative<std::string>(result)) {
                     sErrorMessage = std::get<std::string>(result);
@@ -461,16 +461,16 @@ TEST_CASE("invalidate HLSL shader cache - DEFINED_SHADER_MACROS_CHANGED") {
                     sErrorMessage = std::get<Error>(result).getError();
                 }
                 INFO(sErrorMessage);
-                REQUIRE(std::holds_alternative<std::shared_ptr<IShader>>(result));
+                REQUIRE(std::holds_alternative<std::shared_ptr<IShaderPack>>(result));
             }
 
             // Compile again (should invalidate cache).
             // Add some defines.
             description.vDefinedShaderMacros = {"test1", "test2"};
-            result = IShader::compileShader<HlslShader>(
+            result = IShader::compileShader<HlslShaderPack>(
                 description, pGameWindow->getRenderer(), cacheInvalidationReason);
 
-            if (!std::holds_alternative<std::shared_ptr<IShader>>(result)) {
+            if (!std::holds_alternative<std::shared_ptr<IShaderPack>>(result)) {
                 std::string sErrorMessage;
                 if (std::holds_alternative<std::string>(result)) {
                     sErrorMessage = std::get<std::string>(result);
@@ -478,7 +478,7 @@ TEST_CASE("invalidate HLSL shader cache - DEFINED_SHADER_MACROS_CHANGED") {
                     sErrorMessage = std::get<Error>(result).getError();
                 }
                 INFO(sErrorMessage);
-                REQUIRE(std::holds_alternative<std::shared_ptr<IShader>>(result));
+                REQUIRE(std::holds_alternative<std::shared_ptr<IShaderPack>>(result));
             }
 
             REQUIRE(cacheInvalidationReason.has_value());
@@ -489,10 +489,10 @@ TEST_CASE("invalidate HLSL shader cache - DEFINED_SHADER_MACROS_CHANGED") {
             // Compile again (should find valid cache).
             // Reorder defines.
             description.vDefinedShaderMacros = {"test2", "test1"};
-            result = IShader::compileShader<HlslShader>(
+            result = IShader::compileShader<HlslShaderPack>(
                 description, pGameWindow->getRenderer(), cacheInvalidationReason);
 
-            if (!std::holds_alternative<std::shared_ptr<IShader>>(result)) {
+            if (!std::holds_alternative<std::shared_ptr<IShaderPack>>(result)) {
                 std::string sErrorMessage;
                 if (std::holds_alternative<std::string>(result)) {
                     sErrorMessage = std::get<std::string>(result);
@@ -500,7 +500,7 @@ TEST_CASE("invalidate HLSL shader cache - DEFINED_SHADER_MACROS_CHANGED") {
                     sErrorMessage = std::get<Error>(result).getError();
                 }
                 INFO(sErrorMessage);
-                REQUIRE(std::holds_alternative<std::shared_ptr<IShader>>(result));
+                REQUIRE(std::holds_alternative<std::shared_ptr<IShaderPack>>(result));
             }
 
             REQUIRE(!cacheInvalidationReason.has_value());
@@ -548,10 +548,10 @@ TEST_CASE("invalidate HLSL shader cache - SHADER_SOURCE_FILE_CHANGED") {
 
             ShaderDescription description{"test shader", shaderPath, ShaderType::PIXEL_SHADER, "ps", {}};
             std::optional<ShaderCacheInvalidationReason> cacheInvalidationReason;
-            auto result = IShader::compileShader<HlslShader>(
+            auto result = IShader::compileShader<HlslShaderPack>(
                 description, pGameWindow->getRenderer(), cacheInvalidationReason);
 
-            if (!std::holds_alternative<std::shared_ptr<IShader>>(result)) {
+            if (!std::holds_alternative<std::shared_ptr<IShaderPack>>(result)) {
                 std::string sErrorMessage;
                 if (std::holds_alternative<std::string>(result)) {
                     sErrorMessage = std::get<std::string>(result);
@@ -559,7 +559,7 @@ TEST_CASE("invalidate HLSL shader cache - SHADER_SOURCE_FILE_CHANGED") {
                     sErrorMessage = std::get<Error>(result).getError();
                 }
                 INFO(sErrorMessage);
-                REQUIRE(std::holds_alternative<std::shared_ptr<IShader>>(result));
+                REQUIRE(std::holds_alternative<std::shared_ptr<IShaderPack>>(result));
             }
 
             // Compile again (should invalidate cache).
@@ -571,10 +571,10 @@ TEST_CASE("invalidate HLSL shader cache - SHADER_SOURCE_FILE_CHANGED") {
                           "return float4(0.0f, 1.0f, 1.0f, 1.0f);\n"
                           "}\n";
             shaderFile.close();
-            result = IShader::compileShader<HlslShader>(
+            result = IShader::compileShader<HlslShaderPack>(
                 description, pGameWindow->getRenderer(), cacheInvalidationReason);
 
-            if (!std::holds_alternative<std::shared_ptr<IShader>>(result)) {
+            if (!std::holds_alternative<std::shared_ptr<IShaderPack>>(result)) {
                 std::string sErrorMessage;
                 if (std::holds_alternative<std::string>(result)) {
                     sErrorMessage = std::get<std::string>(result);
@@ -582,7 +582,7 @@ TEST_CASE("invalidate HLSL shader cache - SHADER_SOURCE_FILE_CHANGED") {
                     sErrorMessage = std::get<Error>(result).getError();
                 }
                 INFO(sErrorMessage);
-                REQUIRE(std::holds_alternative<std::shared_ptr<IShader>>(result));
+                REQUIRE(std::holds_alternative<std::shared_ptr<IShaderPack>>(result));
             }
 
             REQUIRE(cacheInvalidationReason.has_value());
@@ -664,10 +664,10 @@ TEST_CASE("invalidate HLSL shader cache - SHADER_INCLUDE_TREE_CONTENT_CHANGED") 
 
             ShaderDescription description{"test shader", shaderPath, ShaderType::PIXEL_SHADER, "ps", {}};
             std::optional<ShaderCacheInvalidationReason> cacheInvalidationReason;
-            auto result = IShader::compileShader<HlslShader>(
+            auto result = IShader::compileShader<HlslShaderPack>(
                 description, pGameWindow->getRenderer(), cacheInvalidationReason);
 
-            if (!std::holds_alternative<std::shared_ptr<IShader>>(result)) {
+            if (!std::holds_alternative<std::shared_ptr<IShaderPack>>(result)) {
                 std::string sErrorMessage;
                 if (std::holds_alternative<std::string>(result)) {
                     sErrorMessage = std::get<std::string>(result);
@@ -675,14 +675,14 @@ TEST_CASE("invalidate HLSL shader cache - SHADER_INCLUDE_TREE_CONTENT_CHANGED") 
                     sErrorMessage = std::get<Error>(result).getError();
                 }
                 INFO(sErrorMessage);
-                REQUIRE(std::holds_alternative<std::shared_ptr<IShader>>(result));
+                REQUIRE(std::holds_alternative<std::shared_ptr<IShaderPack>>(result));
             }
 
             // Compile again (should find valid cache).
-            result = IShader::compileShader<HlslShader>(
+            result = IShader::compileShader<HlslShaderPack>(
                 description, pGameWindow->getRenderer(), cacheInvalidationReason);
 
-            if (!std::holds_alternative<std::shared_ptr<IShader>>(result)) {
+            if (!std::holds_alternative<std::shared_ptr<IShaderPack>>(result)) {
                 std::string sErrorMessage;
                 if (std::holds_alternative<std::string>(result)) {
                     sErrorMessage = std::get<std::string>(result);
@@ -690,7 +690,7 @@ TEST_CASE("invalidate HLSL shader cache - SHADER_INCLUDE_TREE_CONTENT_CHANGED") 
                     sErrorMessage = std::get<Error>(result).getError();
                 }
                 INFO(sErrorMessage);
-                REQUIRE(std::holds_alternative<std::shared_ptr<IShader>>(result));
+                REQUIRE(std::holds_alternative<std::shared_ptr<IShaderPack>>(result));
             }
 
             REQUIRE(!cacheInvalidationReason.has_value());
@@ -700,10 +700,10 @@ TEST_CASE("invalidate HLSL shader cache - SHADER_INCLUDE_TREE_CONTENT_CHANGED") 
             REQUIRE(shaderFile.is_open());
             shaderFile << "void foo2(){ };\n";
             shaderFile.close();
-            result = IShader::compileShader<HlslShader>(
+            result = IShader::compileShader<HlslShaderPack>(
                 description, pGameWindow->getRenderer(), cacheInvalidationReason);
 
-            if (!std::holds_alternative<std::shared_ptr<IShader>>(result)) {
+            if (!std::holds_alternative<std::shared_ptr<IShaderPack>>(result)) {
                 std::string sErrorMessage;
                 if (std::holds_alternative<std::string>(result)) {
                     sErrorMessage = std::get<std::string>(result);
@@ -711,7 +711,7 @@ TEST_CASE("invalidate HLSL shader cache - SHADER_INCLUDE_TREE_CONTENT_CHANGED") 
                     sErrorMessage = std::get<Error>(result).getError();
                 }
                 INFO(sErrorMessage);
-                REQUIRE(std::holds_alternative<std::shared_ptr<IShader>>(result));
+                REQUIRE(std::holds_alternative<std::shared_ptr<IShaderPack>>(result));
             }
 
             REQUIRE(cacheInvalidationReason.has_value());
@@ -725,10 +725,10 @@ TEST_CASE("invalidate HLSL shader cache - SHADER_INCLUDE_TREE_CONTENT_CHANGED") 
             shaderFile << "#include \"foo.hlsl\"\n"
                           "void bar(){ };\n";
             shaderFile.close();
-            result = IShader::compileShader<HlslShader>(
+            result = IShader::compileShader<HlslShaderPack>(
                 description, pGameWindow->getRenderer(), cacheInvalidationReason);
 
-            if (!std::holds_alternative<std::shared_ptr<IShader>>(result)) {
+            if (!std::holds_alternative<std::shared_ptr<IShaderPack>>(result)) {
                 std::string sErrorMessage;
                 if (std::holds_alternative<std::string>(result)) {
                     sErrorMessage = std::get<std::string>(result);
@@ -736,7 +736,7 @@ TEST_CASE("invalidate HLSL shader cache - SHADER_INCLUDE_TREE_CONTENT_CHANGED") 
                     sErrorMessage = std::get<Error>(result).getError();
                 }
                 INFO(sErrorMessage);
-                REQUIRE(std::holds_alternative<std::shared_ptr<IShader>>(result));
+                REQUIRE(std::holds_alternative<std::shared_ptr<IShaderPack>>(result));
             }
 
             REQUIRE(cacheInvalidationReason.has_value());
@@ -749,10 +749,10 @@ TEST_CASE("invalidate HLSL shader cache - SHADER_INCLUDE_TREE_CONTENT_CHANGED") 
             REQUIRE(shaderFile.is_open());
             shaderFile << "void bar(){ };\n";
             shaderFile.close();
-            result = IShader::compileShader<HlslShader>(
+            result = IShader::compileShader<HlslShaderPack>(
                 description, pGameWindow->getRenderer(), cacheInvalidationReason);
 
-            if (!std::holds_alternative<std::shared_ptr<IShader>>(result)) {
+            if (!std::holds_alternative<std::shared_ptr<IShaderPack>>(result)) {
                 std::string sErrorMessage;
                 if (std::holds_alternative<std::string>(result)) {
                     sErrorMessage = std::get<std::string>(result);
@@ -760,7 +760,7 @@ TEST_CASE("invalidate HLSL shader cache - SHADER_INCLUDE_TREE_CONTENT_CHANGED") 
                     sErrorMessage = std::get<Error>(result).getError();
                 }
                 INFO(sErrorMessage);
-                REQUIRE(std::holds_alternative<std::shared_ptr<IShader>>(result));
+                REQUIRE(std::holds_alternative<std::shared_ptr<IShaderPack>>(result));
             }
 
             REQUIRE(cacheInvalidationReason.has_value());

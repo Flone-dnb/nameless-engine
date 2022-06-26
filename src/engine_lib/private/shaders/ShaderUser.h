@@ -4,6 +4,7 @@
 #include <unordered_map>
 
 // Custom.
+#include "shaders/IShaderPack.h"
 #include "shaders/ShaderDescription.h"
 
 namespace ne {
@@ -53,7 +54,7 @@ namespace ne {
          *
          * @return empty if a shader of this type was not added before, valid pointer otherwise.
          */
-        std::optional<IShader*> getShader(ShaderType shaderType) const;
+        std::optional<IShaderPack*> getShader(ShaderType shaderType) const;
 
     private:
         /**
@@ -65,7 +66,7 @@ namespace ne {
         void releaseShader(const std::string& sShaderName) const;
 
         /** Stored shaders. */
-        std::unordered_map<ShaderType, std::shared_ptr<IShader>> shaders;
+        std::unordered_map<ShaderType, std::shared_ptr<IShaderPack>> shaders;
 
         /** Shader manager to work with shaders. */
         ShaderManager* pShaderManager;

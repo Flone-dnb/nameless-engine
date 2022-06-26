@@ -25,7 +25,7 @@ namespace ne {
         lastSelfValidationCheckTime = std::chrono::steady_clock::now();
     }
 
-    std::optional<std::shared_ptr<IShader>> ShaderManager::getShader(const std::string& sShaderName) {
+    std::optional<std::shared_ptr<IShaderPack>> ShaderManager::getShader(const std::string& sShaderName) {
         std::scoped_lock guard(mtxRwShaders);
         const auto it = compiledShaders.find(sShaderName);
         if (it == compiledShaders.end()) {
@@ -432,6 +432,12 @@ namespace ne {
 
         // Check shader name for forbidden characters and see if source file exists.
         for (const auto& shader : vShadersToCompile) {
+            if (shader.sShaderName.size() > iMaximumShaderNameLength) {
+                return Error(std::format(
+                    "shader name \"{}\" is too long (only {} characters allowed)",
+                    shader.sShaderName,
+                    iMaximumShaderNameLength));
+            }
             if (!std::filesystem::exists(shader.pathToShaderFile)) {
                 return Error(std::format(
                     "shader source file \"{}\" does not exist", shader.pathToShaderFile.string()));
@@ -515,7 +521,7 @@ namespace ne {
         const std::function<void()>& onCompleted) {
         // Compile shader.
         auto result = IShader::compileShader(shaderToCompile, pRenderer);
-        if (!std::holds_alternative<std::shared_ptr<IShader>>(result)) {
+        if (!std::holds_alternative<std::shared_ptr<IShaderPack>>(result)) {
             if (std::holds_alternative<std::string>(result)) {
                 const auto sShaderError = std::get<std::string>(std::move(result));
                 pRenderer->getGame()->addDeferredTask(
@@ -537,7 +543,7 @@ namespace ne {
             }
         } else {
             // Add compiled shader to shader registry.
-            auto pShader = std::get<std::shared_ptr<IShader>>(std::move(result));
+            auto pShaderPack = std::get<std::shared_ptr<IShaderPack>>(std::move(result));
 
             std::scoped_lock guard(mtxRwShaders);
 
@@ -551,7 +557,7 @@ namespace ne {
                 pRenderer->getGame()->addDeferredTask(
                     [onError, shaderToCompile, err]() mutable { onError(std::move(shaderToCompile), err); });
             } else {
-                compiledShaders[shaderToCompile.sShaderName] = std::move(pShader);
+                compiledShaders[shaderToCompile.sShaderName] = std::move(pShaderPack);
             }
         }
 

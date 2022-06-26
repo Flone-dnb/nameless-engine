@@ -5,7 +5,6 @@
 
 // Custom.
 #include "shaders/ShaderManager.h"
-#include "shaders/IShader.h"
 
 namespace ne {
     ShaderUser::ShaderUser(ShaderManager* pShaderManager) { this->pShaderManager = pShaderManager; }
@@ -34,7 +33,7 @@ namespace ne {
         return false;
     }
 
-    std::optional<IShader*> ShaderUser::getShader(ShaderType shaderType) const {
+    std::optional<IShaderPack*> ShaderUser::getShader(ShaderType shaderType) const {
         const auto it = shaders.find(shaderType);
         if (it == shaders.end()) {
             return {};

@@ -10,12 +10,10 @@
 #include "render/IRenderer.h"
 #include "misc/Error.h"
 
-// DirectX.
-#include <dxgi1_4.h>
-#include "directx/d3dx12.h"
-
 // External.
+#include "directx/d3dx12.h"
 #include "D3D12MemoryAllocator/include/D3D12MemAlloc.h"
+#include <dxgi1_4.h>
 
 // OS.
 #include <wrl.h>

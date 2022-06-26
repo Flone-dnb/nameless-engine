@@ -593,12 +593,7 @@ namespace ne {
 
     std::optional<Error> DirectXRenderer::compileEngineShaders() const {
         // Do this synchronously (before user can queue his shaders).
-        std::vector vEngineShaders = {
-            DirectXEngineShaders::vsDefault,
-            DirectXEngineShaders::psDefaultNoDiffuseTexture,
-            DirectXEngineShaders::psDefaultTextureFilteringPoint,
-            DirectXEngineShaders::psDefaultTextureFilteringLinear,
-            DirectXEngineShaders::psDefaultTextureFilteringAnisotropic};
+        std::vector vEngineShaders = {DirectXEngineShaders::vertexShader, DirectXEngineShaders::pixelShader};
 
         auto pPromiseFinish = std::make_shared<std::promise<bool>>();
         auto future = pPromiseFinish->get_future();

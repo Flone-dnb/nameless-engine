@@ -16,6 +16,7 @@
 // Custom.
 #include "misc/Error.h"
 #include "shaders/ShaderDescription.h"
+#include "shaders/IShaderPack.h"
 
 namespace ne {
     class IShader;
@@ -170,7 +171,7 @@ namespace ne {
          * @return Empty if the shader with the specified name was not found,
          * valid pointer otherwise.
          */
-        std::optional<std::shared_ptr<IShader>> getShader(const std::string& sShaderName);
+        std::optional<std::shared_ptr<IShaderPack>> getShader(const std::string& sShaderName);
 
         /**
          * Looks if the specified shader is not used by anyone and releases shader bytecode
@@ -228,7 +229,7 @@ namespace ne {
         std::recursive_mutex mtxRwShaders;
 
         /** Use with @ref mtxRwShaders. Map of compiled (added) shaders. */
-        std::unordered_map<std::string, std::shared_ptr<IShader>> compiledShaders;
+        std::unordered_map<std::string, std::shared_ptr<IShaderPack>> compiledShaders;
 
         /**
          * Use with @ref mtxRwShaders. Array of shader names marked to be removed from @ref compiledShaders
@@ -284,6 +285,9 @@ namespace ne {
             'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h',
             'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y',
             'z', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '_', '-'};
+
+        /** Maximum length of a shader name. */
+        const size_t iMaximumShaderNameLength = 50;
 
         /** Name of the category used for logging. */
         inline static const char* sShaderManagerLogCategory = "Shader Manager";

@@ -9,6 +9,7 @@
 #include "misc/Error.h"
 #include "io/Logger.h"
 #include "shaders/ShaderDescription.h"
+#include "shaders/IShaderPack.h"
 
 namespace ne {
     class IRenderer;
@@ -43,7 +44,7 @@ namespace ne {
          *
          * @remark This function should be used if you want to use shader cache.
          *
-         * @return Error if shader cache is corrupted and was deleted.
+         * @return Error if shader cache is corrupted.
          */
         virtual std::optional<Error> testIfShaderCacheIsCorrupted() = 0;
 
@@ -60,7 +61,7 @@ namespace ne {
          * @arg internal error
          */
         static std::variant<
-            std::shared_ptr<IShader> /** Compiled shader. */,
+            std::shared_ptr<IShaderPack> /** Compiled shader pack. */,
             std::string /** Compilation error. */,
             Error /** Internal error. */>
         compileShader(ShaderDescription& shaderDescription, IRenderer* pRenderer);
@@ -82,7 +83,7 @@ namespace ne {
          * @arg internal error
          */
         static std::variant<
-            std::shared_ptr<IShader> /** Compiled shader. */,
+            std::shared_ptr<IShaderPack> /** Compiled shader pack. */,
             std::string /** Compilation error. */,
             Error /** Internal error. */>
         compileShader(
@@ -106,10 +107,10 @@ namespace ne {
          * @arg string containing shader compilation error/warning
          * @arg internal error
          */
-        template <typename ShaderType>
-        requires std::derived_from<ShaderType, IShader>
+        template <typename ShaderPackType>
+        requires std::derived_from<ShaderPackType, IShaderPack>
         static std::variant<
-            std::shared_ptr<IShader> /** Compiled shader. */,
+            std::shared_ptr<IShaderPack> /** Compiled shader pack. */,
             std::string /** Compilation error. */,
             Error /** Internal error. */>
         compileShader(
@@ -125,11 +126,22 @@ namespace ne {
         std::string getShaderName() const;
 
         /**
-         * Returns path to the directory used to store shader cache.
+         * Returns path to the directory used to store shader cache, for example:
+         * ".../nameless-engine/<project_name>/shader_cache/".
          *
-         * @return Path to shader cache directory.
+         * @return Path to shader cache directory (created if not existed before).
          */
         static std::filesystem::path getPathToShaderCacheDirectory();
+
+        /**
+         * Returns base file name used in shader cache. This name
+         * is used within a shader specific directory (like ".../shader_cache/engine.default"),
+         * to name different files using different extensions (like "shader", "shader.pdb",
+         * "shader.reflection" and etc.).
+         *
+         * @return Base file name.
+         */
+        static std::string getShaderCacheBaseFileName();
 
         /**
          * Returns type of this shader.
@@ -180,20 +192,30 @@ namespace ne {
         IRenderer* pUsedRenderer = nullptr;
 
         /** Directory name to store compiled shaders. */
-        static constexpr std::string_view sShaderCacheDirectoryName = "shader_cache";
+        static constexpr auto sShaderCacheDirectoryName = "shader_cache";
+
+        /** Base name of the file used to store shader cache. */
+        static constexpr auto sShaderCacheBaseFileName = "shader";
     };
 
-    template <typename ShaderType>
-    requires std::derived_from<ShaderType, IShader> std::variant<std::shared_ptr<IShader>, std::string, Error>
-    IShader::compileShader(
-        ShaderDescription& shaderDescription,
-        IRenderer* pRenderer,
-        std::optional<ShaderCacheInvalidationReason>& cacheInvalidationReason) {
+    template <typename ShaderPackType>
+    requires std::derived_from<ShaderPackType, IShaderPack>
+        std::variant<std::shared_ptr<IShaderPack>, std::string, Error> IShader::compileShader(
+            ShaderDescription& shaderDescription,
+            IRenderer* pRenderer,
+            std::optional<ShaderCacheInvalidationReason>& cacheInvalidationReason) {
         cacheInvalidationReason = {};
+        const auto shaderCacheDirectory = getPathToShaderCacheDirectory() / shaderDescription.sShaderName;
 
-        const auto shaderCacheFilePath = getPathToShaderCacheDirectory() / shaderDescription.sShaderName;
+        // Create shader directory if needed.
+        if (!std::filesystem::exists(shaderCacheDirectory)) {
+            std::filesystem::create_directory(shaderCacheDirectory);
+        }
+
+        const auto compiledShaderCacheFilePath =
+            getPathToShaderCacheDirectory() / shaderDescription.sShaderName / sShaderCacheBaseFileName;
         const auto shaderCacheConfigurationPath =
-            shaderCacheFilePath.string() + ConfigManager::getConfigFormatExtension();
+            compiledShaderCacheFilePath.string() + ConfigManager::getConfigFormatExtension();
         ConfigManager configManager;
 
         bool bUseCache = false;
@@ -201,7 +223,7 @@ namespace ne {
         // Check if cached config exists.
         if (std::filesystem::exists(shaderCacheConfigurationPath)) {
             // See if we need to recompile or use cache.
-            configManager.loadFile(shaderCacheFilePath);
+            configManager.loadFile(shaderCacheConfigurationPath);
             auto cachedShaderDescription = configManager.getValue<ShaderDescription>(
                 "", ShaderDescription::getConfigurationFileSectionName(), ShaderDescription());
 
@@ -222,34 +244,35 @@ namespace ne {
         }
 
         if (bUseCache) {
-            auto pShader = std::make_shared<ShaderType>(
-                pRenderer, shaderCacheFilePath, shaderDescription.sShaderName, shaderDescription.shaderType);
+            auto pShaderPack = std::make_shared<ShaderPackType>(
+                pRenderer,
+                compiledShaderCacheFilePath,
+                shaderDescription.sShaderName,
+                shaderDescription.shaderType);
 
-            std::optional<Error> optionalError = pShader->testIfShaderCacheIsCorrupted();
+            std::optional<Error> optionalError = pShaderPack->testIfShaderCacheIsCorrupted();
             if (optionalError.has_value()) {
+                optionalError->addEntry();
                 Logger::get().error(
                     std::format(
-                        "shader \"{}\" cache files are corrupted, removing corrupted cache file",
-                        shaderDescription.sShaderName),
+                        "shader \"{}\" cache files are corrupted, error:\n{}\nattempting to recompile the "
+                        "shader",
+                        shaderDescription.sShaderName,
+                        optionalError->getError()),
                     "");
-
-                // It's enough to delete shader cache configuration file, everything else will be overwritten
-                // next time.
-                std::filesystem::remove(shaderCacheConfigurationPath);
-
-                optionalError->addEntry();
-                return optionalError.value();
+                // Try to compile.
+            } else {
+                return pShaderPack;
             }
-            return pShader;
-        } else {
-            auto result = ShaderType::compileShader(pRenderer, std::move(shaderDescription));
-            if (std::holds_alternative<std::shared_ptr<IShader>>(result)) {
-                // Success. Cache configuration.
-                configManager.setValue<ShaderDescription>(
-                    "", ShaderDescription::getConfigurationFileSectionName(), shaderDescription);
-                configManager.saveFile(shaderCacheFilePath, false);
-            }
-            return result;
         }
+
+        auto result = ShaderPackType::compileShader(pRenderer, std::move(shaderDescription));
+        if (std::holds_alternative<std::shared_ptr<IShaderPack>>(result)) {
+            // Success. Cache configuration.
+            configManager.setValue<ShaderDescription>(
+                "", ShaderDescription::getConfigurationFileSectionName(), shaderDescription);
+            configManager.saveFile(shaderCacheConfigurationPath, false);
+        }
+        return result;
     }
 } // namespace ne

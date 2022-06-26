@@ -5,6 +5,7 @@
 
 // Custom.
 #include "shaders/IShader.h"
+#include "shaders/IShaderPack.h"
 #include "render/IRenderer.h"
 
 // External.
@@ -55,6 +56,9 @@ namespace ne {
          * Compiles a shader.
          *
          * @param pRenderer         DirectX renderer.
+         * @param cacheDirectory    Directory to store this shader's cache,
+         * for example: ".../shader_cache/engine.default".
+         * @param sConfiguration    Shader configuration text that will be added to the name.
          * @param shaderDescription Description that describes the shader and how the shader should be
          * compiled.
          *
@@ -64,10 +68,14 @@ namespace ne {
          * @arg internal error
          */
         static std::variant<
-            std::shared_ptr<IShader> /** Compiled shader. */,
+            std::shared_ptr<IShader> /** Compiled shader pack. */,
             std::string /** Compilation error. */,
             Error /** Internal error. */>
-        compileShader(IRenderer* pRenderer, const ShaderDescription& shaderDescription);
+        compileShader(
+            IRenderer* pRenderer,
+            const std::filesystem::path& cacheDirectory,
+            const std::string& sConfiguration,
+            const ShaderDescription& shaderDescription);
 
         /**
          * Loads compiled bytecode from disk and stores it in memory.

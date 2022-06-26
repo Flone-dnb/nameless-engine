@@ -9,7 +9,7 @@
 #include "render/IRenderer.h"
 #if defined(WIN32)
 #include "render/directx/DirectXRenderer.h"
-#include "shaders/hlsl/HlslShader.h"
+#include "shaders/hlsl/HlslShaderPack.h"
 #endif
 
 namespace ne {
@@ -30,19 +30,19 @@ namespace ne {
         this->pUsedRenderer = pRenderer;
     }
 
-    std::variant<std::shared_ptr<IShader>, std::string, Error>
+    std::variant<std::shared_ptr<IShaderPack>, std::string, Error>
     IShader::compileShader(ShaderDescription& shaderDescription, IRenderer* pRenderer) {
         std::optional<ShaderCacheInvalidationReason> unused;
         return compileShader(shaderDescription, pRenderer, unused);
     }
 
-    std::variant<std::shared_ptr<IShader>, std::string, Error> IShader::compileShader(
+    std::variant<std::shared_ptr<IShaderPack>, std::string, Error> IShader::compileShader(
         ShaderDescription& shaderDescription,
         IRenderer* pRenderer,
         std::optional<ShaderCacheInvalidationReason>& cacheInvalidationReason) {
 #if defined(WIN32)
         if (dynamic_cast<DirectXRenderer*>(pRenderer)) {
-            return compileShader<HlslShader>(shaderDescription, pRenderer, cacheInvalidationReason);
+            return compileShader<HlslShaderPack>(shaderDescription, pRenderer, cacheInvalidationReason);
         }
 #endif
 
@@ -77,6 +77,8 @@ namespace ne {
         }
         return basePath;
     }
+
+    std::string IShader::getShaderCacheBaseFileName() { return sShaderCacheBaseFileName; }
 
     ShaderType IShader::getShaderType() const { return shaderType; }
 } // namespace ne

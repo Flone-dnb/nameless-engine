@@ -8,6 +8,9 @@
 #include "DirectXShaderCompiler/inc/d3d12shader.h"
 #pragma comment(lib, "dxcompiler.lib")
 
+// STL.
+#include <filesystem>
+
 // Custom.
 #include "io/Logger.h"
 #include "shaders/hlsl/RootSignatureGenerator.h"
@@ -35,8 +38,11 @@ namespace ne {
         return {};
     }
 
-    std::variant<std::shared_ptr<IShader>, std::string, Error>
-    HlslShader::compileShader(IRenderer* pRenderer, const ShaderDescription& shaderDescription) {
+    std::variant<std::shared_ptr<IShader>, std::string, Error> HlslShader::compileShader(
+        IRenderer* pRenderer,
+        const std::filesystem::path& cacheDirectory,
+        const std::string& sConfiguration,
+        const ShaderDescription& shaderDescription) {
         // Check that the renderer is DirectX renderer.
         if (!dynamic_cast<DirectXRenderer*>(pRenderer)) {
             return Error("the specified renderer is not a DirectX renderer");
@@ -81,7 +87,10 @@ namespace ne {
             break;
         }
 
-        const auto shaderCacheDir = getPathToShaderCacheDirectory();
+        // Create shader cache directory if needed.
+        if (!std::filesystem::exists(cacheDirectory)) {
+            std::filesystem::create_directory(cacheDirectory);
+        }
 
         // Convert std::string to std::wstring to be used.
         std::wstring sShaderEntry(
@@ -89,31 +98,29 @@ namespace ne {
             shaderDescription.sShaderEntryFunctionName.end());
 
         // Prepare compilation arguments.
-        std::vector<LPCWSTR> vArgs;
-        vArgs.push_back(shaderDescription.pathToShaderFile.c_str());
+        std::vector<std::wstring> vArgs;
+        vArgs.push_back(shaderDescription.pathToShaderFile);
         vArgs.push_back(L"-E");
-        vArgs.push_back(sShaderEntry.c_str());
+        vArgs.push_back(sShaderEntry);
         vArgs.push_back(L"-T");
-        vArgs.push_back(sShaderModel.c_str());
+        vArgs.push_back(sShaderModel);
         vArgs.push_back(L"-WX"); // Treat warnings as errors.
 #if defined(DEBUG)
         vArgs.push_back(DXC_ARG_DEBUG);
         vArgs.push_back(DXC_ARG_SKIP_OPTIMIZATIONS);
         vArgs.push_back(L"-Fd");
-        auto shaderPdbPath = shaderCacheDir / shaderDescription.sShaderName;
+        auto shaderPdbPath = cacheDirectory / getShaderCacheBaseFileName();
+        shaderPdbPath += sConfiguration;
         shaderPdbPath += ".pdb";
-        auto shaderPdbPathString = shaderPdbPath.wstring();
-        vArgs.push_back(shaderPdbPathString.c_str());
+        vArgs.push_back(shaderPdbPath);
 #else
         vArgs.push_back(DXC_ARG_OPTIMIZATION_LEVEL3);
 #endif
 
         // Add macros.
-        std::vector<std::wstring> vMacroNames;
         for (const auto& macroDefine : shaderDescription.vDefinedShaderMacros) {
-            vMacroNames.push_back(std::wstring(macroDefine.begin(), macroDefine.end()));
             vArgs.push_back(L"-D");
-            vArgs.push_back(vMacroNames.back().c_str());
+            vArgs.push_back(stringToWstring(macroDefine));
         }
 
         // Open source file.
@@ -128,11 +135,17 @@ namespace ne {
         sourceShaderBuffer.Size = pSource->GetBufferSize();
         sourceShaderBuffer.Encoding = iShaderFileCodepage;
 
+        // Convert arguments.
+        std::vector<LPCWSTR> vFixedArguments;
+        for (const auto& arg : vArgs) {
+            vFixedArguments.push_back(arg.c_str());
+        }
+
         // Compile it with specified arguments.
         ComPtr<IDxcResult> pResults;
         hResult = pCompiler->Compile(
             &sourceShaderBuffer,
-            vArgs.data(),
+            vFixedArguments.data(),
             static_cast<UINT32>(vArgs.size()),
             pIncludeHandler.Get(),
             IID_PPV_ARGS(&pResults));
@@ -196,7 +209,8 @@ namespace ne {
         }
 
         // Write shader bytecode to file.
-        const auto pathToCompiledShader = shaderCacheDir / shaderDescription.sShaderName;
+        auto pathToCompiledShader = cacheDirectory / getShaderCacheBaseFileName();
+        pathToCompiledShader += sConfiguration;
         std::ofstream shaderCacheFile(pathToCompiledShader, std::ios::binary);
         if (!shaderCacheFile.is_open()) {
             return Error(std::format("failed to save shader bytecode at {}", pathToCompiledShader.string()));
@@ -207,8 +221,8 @@ namespace ne {
         shaderCacheFile.close();
 
         // Write reflection data to file.
-        const auto pathToShaderReflection =
-            (shaderCacheDir / shaderDescription.sShaderName).string() + sShaderReflectionFileExtension;
+        const auto pathToShaderReflection = (cacheDirectory / getShaderCacheBaseFileName()).string() +
+                                            sConfiguration + sShaderReflectionFileExtension;
         std::ofstream shaderReflectionFile(pathToShaderReflection, std::ios::binary);
         if (!shaderReflectionFile.is_open()) {
             return Error(std::format("failed to save shader reflection data at {}", pathToShaderReflection));

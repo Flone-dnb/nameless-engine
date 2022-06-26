@@ -21,6 +21,9 @@ namespace ne {
             case (DirectXShaderParameter::USE_DIFFUSE_TEXTURE):
                 vParameterNames.push_back("USE_DIFFUSE_TEXTURE");
                 break;
+            case (DirectXShaderParameter::USE_NORMAL_TEXTURE):
+                vParameterNames.push_back("USE_NORMAL_TEXTURE");
+                break;
             }
         }
 

@@ -26,6 +26,18 @@
 
 namespace ne {
     DirectXRenderer::DirectXRenderer(Game* pGame) : IRenderer(pGame) {
+        // Log amount of shader variants per shader pack.
+        Logger::get().info(
+            std::format(
+                "using {} shader(-s) per pixel shader pack",
+                DirectXEngineShaders::validPixelShaderParameterCombinations.size()),
+            getLoggingCategory());
+        Logger::get().info(
+            std::format(
+                "using {} shader(-s) per vertex shader pack",
+                DirectXEngineShaders::validVertexShaderParameterCombinations.size()),
+            getLoggingCategory());
+
         // Read configuration from config file (if exists).
         if (isConfigurationFileExists()) {
             DirectXRenderer::readConfigurationFromConfigFile();

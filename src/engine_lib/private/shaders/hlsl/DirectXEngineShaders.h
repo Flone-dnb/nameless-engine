@@ -12,6 +12,7 @@ namespace ne {
         TEXTURE_FILTERING_LINEAR,
         TEXTURE_FILTERING_ANISOTROPIC,
         USE_DIFFUSE_TEXTURE,
+        USE_NORMAL_TEXTURE,
         // add new entries here...
         // also add new entries to @ref shaderParametersToText
     };
@@ -60,6 +61,39 @@ namespace ne {
 
     /** Stores engine shader definitions used in DirectX renderer. */
     class DirectXEngineShaders {
+    private:
+        /**
+         * Combines the specified parameter sets with parameters to append.
+         *
+         * @param appendToEachSet Each parameter from this set will be added to each set of the
+         * second parameter.
+         * @param parameterSets   Sets to append parameters to.
+         * @param bIncludeEmptyConfiguration Whether to add empty configuration to resulting sets.
+         *
+         * @return Resulting sets (modified parameterSets argument).
+         */
+        static std::set<std::set<DirectXShaderParameter>> combineConfigurations(
+            const std::set<DirectXShaderParameter>& appendToEachSet,
+            const std::set<std::set<DirectXShaderParameter>>& parameterSets,
+            bool bIncludeEmptyConfiguration) {
+            std::set<std::set<DirectXShaderParameter>> configurations;
+            if (bIncludeEmptyConfiguration) {
+                configurations.insert(std::set<DirectXShaderParameter>{});
+            }
+
+            for (const auto& appendParam : appendToEachSet) {
+                configurations.insert({appendParam});
+
+                for (const auto& set : parameterSets) {
+                    auto setCopy = set;
+                    setCopy.insert(appendParam);
+                    configurations.insert(setCopy);
+                }
+            }
+
+            return configurations;
+        }
+
     public:
         DirectXEngineShaders() = delete;
         DirectXEngineShaders(const DirectXEngineShaders&) = delete;
@@ -87,16 +121,36 @@ namespace ne {
 
         /** Valid combinations of pixel shader macros (settings). */
         static inline const std::set<std::set<DirectXShaderParameter>> validPixelShaderParameterCombinations =
-            {{
-                {DirectXShaderParameter::TEXTURE_FILTERING_POINT},
-                {DirectXShaderParameter::TEXTURE_FILTERING_LINEAR},
-                {DirectXShaderParameter::TEXTURE_FILTERING_ANISOTROPIC},
+            combineConfigurations(
                 {DirectXShaderParameter::TEXTURE_FILTERING_POINT,
-                 DirectXShaderParameter::USE_DIFFUSE_TEXTURE},
-                {DirectXShaderParameter::TEXTURE_FILTERING_LINEAR,
-                 DirectXShaderParameter::USE_DIFFUSE_TEXTURE},
-                {DirectXShaderParameter::TEXTURE_FILTERING_ANISOTROPIC,
-                 DirectXShaderParameter::USE_DIFFUSE_TEXTURE},
-            }};
+                 DirectXShaderParameter::TEXTURE_FILTERING_LINEAR,
+                 DirectXShaderParameter::TEXTURE_FILTERING_ANISOTROPIC},
+                {std::set<DirectXShaderParameter>{},
+                 {DirectXShaderParameter::USE_DIFFUSE_TEXTURE},
+                 {DirectXShaderParameter::USE_DIFFUSE_TEXTURE, DirectXShaderParameter::USE_NORMAL_TEXTURE}},
+                false);
+        // /** Valid combinations of pixel shader macros (settings). */
+        // static inline const std::set<std::set<DirectXShaderParameter>>
+        // validPixelShaderParameterCombinations =
+        //     {{
+        //         {DirectXShaderParameter::TEXTURE_FILTERING_POINT},
+        //         {DirectXShaderParameter::TEXTURE_FILTERING_LINEAR},
+        //         {DirectXShaderParameter::TEXTURE_FILTERING_ANISOTROPIC}, // 3 configs ------------
+        //         {DirectXShaderParameter::TEXTURE_FILTERING_POINT,
+        //          DirectXShaderParameter::USE_DIFFUSE_TEXTURE},
+        //         {DirectXShaderParameter::TEXTURE_FILTERING_LINEAR,
+        //          DirectXShaderParameter::USE_DIFFUSE_TEXTURE},
+        //         {DirectXShaderParameter::TEXTURE_FILTERING_ANISOTROPIC,
+        //          DirectXShaderParameter::USE_DIFFUSE_TEXTURE}, // 6 configs ------------
+        //         {DirectXShaderParameter::TEXTURE_FILTERING_POINT,
+        //          DirectXShaderParameter::USE_DIFFUSE_TEXTURE,
+        //          DirectXShaderParameter::USE_NORMAL_TEXTURE},
+        //         {DirectXShaderParameter::TEXTURE_FILTERING_LINEAR,
+        //          DirectXShaderParameter::USE_DIFFUSE_TEXTURE,
+        //          DirectXShaderParameter::USE_NORMAL_TEXTURE},
+        //         {DirectXShaderParameter::TEXTURE_FILTERING_ANISOTROPIC,
+        //          DirectXShaderParameter::USE_DIFFUSE_TEXTURE,
+        //          DirectXShaderParameter::USE_NORMAL_TEXTURE}, // 9 configs ------------
+        //     }};
     };
 } // namespace ne

@@ -10,8 +10,6 @@ TODO: screenshot game/editor
 # Features
 
 - Automatic shader caching and cache invalidation.
-- DirectX
-  - Automatic root signature generation based on HLSL code.
 - TODO.
 
 # Setup (Build)

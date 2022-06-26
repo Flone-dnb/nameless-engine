@@ -49,7 +49,7 @@ namespace ne {
             return;
         }
 
-        it->second->releaseShaderDataFromMemoryIfLoaded();
+        it->second->releaseShaderPackDataFromMemoryIfLoaded();
     }
 
     void ShaderManager::removeShaderIfMarkedToBeRemoved(const std::string& sShaderName) {
@@ -318,34 +318,34 @@ namespace ne {
 
         struct SelfValidationResults {
             std::vector<std::string> vNotFoundShaders;
-            std::vector<std::string> vCanBeRemovedFromToBeRemoved;
-            std::vector<std::string> vCanBeReleasedShaderBytecode;
+            std::vector<std::string> vRemovedFromToBeRemoved;
+            std::vector<std::string> vReleasedShaderBytecode;
             bool isError() const {
-                return !vNotFoundShaders.empty() || !vCanBeRemovedFromToBeRemoved.empty() ||
-                       !vCanBeReleasedShaderBytecode.empty();
+                return !vNotFoundShaders.empty() || !vRemovedFromToBeRemoved.empty() ||
+                       !vReleasedShaderBytecode.empty();
             }
             std::string toString() const {
                 std::string sResultText;
 
                 if (!vNotFoundShaders.empty()) {
-                    sResultText += "[removed not found shaders]: ";
+                    sResultText += "[removed not found shaders from \"to remove\" array]: ";
                     for (const auto& sShaderName : vNotFoundShaders) {
                         sResultText += std::format(" \"{}\"", sShaderName);
                     }
                     sResultText += "\n";
                 }
 
-                if (!vCanBeRemovedFromToBeRemoved.empty()) {
+                if (!vRemovedFromToBeRemoved.empty()) {
                     sResultText += "[removed from \"to remove\" shaders (use count 1)]: ";
-                    for (const auto& sShaderName : vCanBeRemovedFromToBeRemoved) {
+                    for (const auto& sShaderName : vRemovedFromToBeRemoved) {
                         sResultText += std::format(" \"{}\"", sShaderName);
                     }
                     sResultText += "\n";
                 }
 
-                if (!vCanBeReleasedShaderBytecode.empty()) {
+                if (!vReleasedShaderBytecode.empty()) {
                     sResultText += "[released shader bytecode]: ";
-                    for (const auto& sShaderName : vCanBeReleasedShaderBytecode) {
+                    for (const auto& sShaderName : vReleasedShaderBytecode) {
                         sResultText += std::format(" \"{}\"", sShaderName);
                     }
                     sResultText += "\n";
@@ -359,7 +359,7 @@ namespace ne {
 
         std::scoped_lock guard(mtxRwShaders);
 
-        Logger::get().info("starting ShaderManager self validation...", sShaderManagerLogCategory);
+        Logger::get().info("starting self validation...", sShaderManagerLogCategory);
 
         const auto start = steady_clock::now();
 
@@ -373,7 +373,7 @@ namespace ne {
                 }
 
                 if (it->second.use_count() == 1) {
-                    results.vCanBeRemovedFromToBeRemoved.push_back(sShaderToRemove);
+                    results.vRemovedFromToBeRemoved.push_back(sShaderToRemove);
                     return true;
                 }
 
@@ -388,11 +388,11 @@ namespace ne {
         vShadersToBeRemoved.erase(first, last);
 
         // Check shaders that were needed but no longer used.
-        for (const auto& [sShaderName, pShader] : compiledShaders) {
-            if (pShader.use_count() == 1) {
-                const bool bReleased = !pShader->releaseShaderDataFromMemoryIfLoaded();
+        for (const auto& [sShaderName, pShaderPack] : compiledShaders) {
+            if (pShaderPack.use_count() == 1) {
+                const bool bReleased = !pShaderPack->releaseShaderPackDataFromMemoryIfLoaded();
                 if (bReleased) {
-                    results.vCanBeReleasedShaderBytecode.push_back(sShaderName);
+                    results.vReleasedShaderBytecode.push_back(sShaderName);
                 }
             }
         }
@@ -404,7 +404,7 @@ namespace ne {
         if (results.isError()) {
             Logger::get().error(
                 std::format(
-                    "finished ShaderManager self validation (took {} ms), found and fixed the following "
+                    "finished self validation (took {} ms), found and fixed the following "
                     "errors:\n"
                     "\n{}",
                     iTimeTookInMs,
@@ -412,8 +412,7 @@ namespace ne {
                 sShaderManagerLogCategory);
         } else {
             Logger::get().info(
-                std::format(
-                    "finished ShaderManager self validation (took {} ms): everything is OK!", iTimeTookInMs),
+                std::format("finished self validation (took {} ms): everything is OK", iTimeTookInMs),
                 sShaderManagerLogCategory);
         }
 

@@ -5,10 +5,12 @@
 #include <variant>
 #include <vector>
 #include <mutex>
+#include <atomic>
 
 // Custom.
 #include "render/IRenderer.h"
 #include "misc/Error.h"
+#include "shaders/hlsl/DirectXEngineShaders.h"
 
 // External.
 #include "directx/d3dx12.h"
@@ -320,6 +322,18 @@ namespace ne {
         long iPreferredGpuIndex = 0;
         /** Name of the GPU we are currently using. */
         std::string sUsedVideoAdapter;
+
+        // Shaders.
+        /**
+         * Combination of vertex shader parameters and a flag to specify if the configuration was
+         * changed or not.
+         */
+        std::pair<std::atomic_flag, std::set<DirectXShaderParameter>> currentVertexShaderConfiguration;
+        /**
+         * Combination of pixel shader parameters and a flag to specify if the configuration was
+         * changed or not.
+         */
+        std::pair<std::atomic_flag, std::set<DirectXShaderParameter>> currentPixelShaderConfiguration;
 
         /** Will be 'true' if we read the configuration from disk at startup. */
         bool bStartedWithConfigurationFromDisk = false;

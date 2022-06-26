@@ -82,12 +82,12 @@ namespace ne {
             {});
 
         /** Valid combinations of vertex shader macros (settings). */
-        static inline const std::set<std::set<DirectXShaderParameter>, std::greater<>>
+        static inline const std::set<std::set<DirectXShaderParameter>>
             validVertexShaderParameterCombinations = {{}};
 
         /** Valid combinations of pixel shader macros (settings). */
-        static inline const std::set<std::set<DirectXShaderParameter>, std::greater<>>
-            validPixelShaderParameterCombinations = {{
+        static inline const std::set<std::set<DirectXShaderParameter>> validPixelShaderParameterCombinations =
+            {{
                 {DirectXShaderParameter::TEXTURE_FILTERING_POINT},
                 {DirectXShaderParameter::TEXTURE_FILTERING_LINEAR},
                 {DirectXShaderParameter::TEXTURE_FILTERING_ANISOTROPIC},

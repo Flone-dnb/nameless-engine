@@ -54,6 +54,8 @@ namespace ne {
             vShaderNamesToRemove.push_back(shader->getShaderName());
         }
 
+        // Clear shaders so that we don't hold any references now
+        // and ShaderManager can release those shaders as no one is referencing them.
         shaders.clear();
 
         for (const auto& sShaderName : vShaderNamesToRemove) {

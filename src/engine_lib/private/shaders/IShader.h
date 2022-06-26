@@ -151,7 +151,7 @@ namespace ne {
         ShaderType getShaderType() const;
 
         /**
-         * Releases underlying shader bytecode from memory (this object will not be deleted)
+         * Releases underlying shader bytecode for each shader from memory (this object will not be deleted)
          * if the shader bytecode was loaded into memory.
          * Next time this shader will be needed it will be loaded from disk.
          *
@@ -159,7 +159,8 @@ namespace ne {
          * Specifying 'true' is useful when we are testing if shader cache is corrupted or not,
          * to make log slightly cleaner.
          *
-         * @return 'false' if was released from memory, 'true' if not loaded into memory.
+         * @return 'false' if at least one shader variant was released from memory,
+         * 'true' if all variants were not loaded into memory.
          */
         virtual bool releaseShaderDataFromMemoryIfLoaded(bool bLogOnlyErrors = false) = 0;
 

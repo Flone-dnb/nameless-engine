@@ -3,6 +3,7 @@
 // STL.
 #include <unordered_map>
 #include <set>
+#include <mutex>
 
 // Custom.
 #include "shaders/hlsl/DirectXEngineShaders.h"
@@ -52,11 +53,26 @@ namespace ne {
         compileShader(IRenderer* pRenderer, const ShaderDescription& shaderDescription);
 
         /**
+         * Looks for a shader that matches the specified configuration and returns it.
+         *
+         * @warning If you are calling this function not the first time,
+         * make sure you are not holding any references to the old shader
+         * as we will try to release old shader's resources from memory.
+         *
+         * @param configuration New configuration.
+         *
+         * @return Empty if the shader for this configuration was not found, otherwise
+         * shader that matches this configuration.
+         */
+        std::optional<std::shared_ptr<IShader>>
+        changeConfiguration(const std::set<DirectXShaderParameter>& configuration);
+
+        /**
          * Returns type of this shader.
          *
          * @return Shader type.
          */
-        virtual ShaderType getShaderType() const override;
+        virtual ShaderType getShaderType() override;
 
         /**
          * Tests if shader cache for this shader pack is corrupted or not
@@ -69,7 +85,7 @@ namespace ne {
         virtual std::optional<Error> testIfShaderCacheIsCorrupted() override;
 
         /**
-         * Releases underlying shader bytecode from memory (this object will not be deleted)
+         * Releases underlying shader bytecode for each shader from memory (this object will not be deleted)
          * if the shader bytecode was loaded into memory.
          * Next time this shader will be needed it will be loaded from disk.
          *
@@ -80,7 +96,7 @@ namespace ne {
          * @return 'false' if at least one shader variant was released from memory,
          * 'true' if all variants were not loaded into memory.
          */
-        virtual bool releaseShaderDataFromMemoryIfLoaded(bool bLogOnlyErrors = false) override;
+        virtual bool releaseShaderPackDataFromMemoryIfLoaded(bool bLogOnlyErrors = false) override;
 
     private:
         /**
@@ -89,6 +105,12 @@ namespace ne {
          * @param sShaderName Name of the shader.
          */
         HlslShaderPack(const std::string& sShaderName);
+
+        /** Mutex for working with shaders. */
+        std::mutex mtxShaders;
+
+        /** A shader that was requested in the last call to @ref changeConfiguration. */
+        std::optional<std::shared_ptr<IShader>*> previouslyRequestedShader;
 
         /** Map of shaders in this pack. */
         std::unordered_map<

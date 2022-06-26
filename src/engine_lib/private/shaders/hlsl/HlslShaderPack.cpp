@@ -67,9 +67,32 @@ namespace ne {
         return pShaderPack;
     }
 
-    ShaderType HlslShaderPack::getShaderType() const { return shaders.begin()->second->getShaderType(); }
+    std::optional<std::shared_ptr<IShader>>
+    HlslShaderPack::changeConfiguration(const std::set<DirectXShaderParameter>& configuration) {
+        std::scoped_lock guard(mtxShaders);
+
+        if (previouslyRequestedShader.has_value()) {
+            previouslyRequestedShader.value()->get()->releaseShaderDataFromMemoryIfLoaded();
+            previouslyRequestedShader = {};
+        }
+
+        const auto it = shaders.find(configuration);
+        if (it == shaders.end()) {
+            return {};
+        }
+
+        previouslyRequestedShader = &it->second;
+        return it->second;
+    }
+
+    ShaderType HlslShaderPack::getShaderType() {
+        std::scoped_lock guard(mtxShaders);
+        return shaders.begin()->second->getShaderType();
+    }
 
     std::optional<Error> HlslShaderPack::testIfShaderCacheIsCorrupted() {
+        std::scoped_lock guard(mtxShaders);
+
         std::optional<Error> err = {};
         for (const auto& shader : shaders | std::views::values) {
             auto result = shader->testIfShaderCacheIsCorrupted();
@@ -82,7 +105,9 @@ namespace ne {
         return err;
     }
 
-    bool HlslShaderPack::releaseShaderDataFromMemoryIfLoaded(bool bLogOnlyErrors) {
+    bool HlslShaderPack::releaseShaderPackDataFromMemoryIfLoaded(bool bLogOnlyErrors) {
+        std::scoped_lock guard(mtxShaders);
+
         bool bResult = true;
         for (const auto& shader : shaders | std::views::values) {
             if (shader->releaseShaderDataFromMemoryIfLoaded(bLogOnlyErrors) == false) {

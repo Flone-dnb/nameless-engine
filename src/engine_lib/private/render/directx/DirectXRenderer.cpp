@@ -11,7 +11,6 @@
 #include "io/ConfigManager.h"
 #include "io/Logger.h"
 #include "misc/Globals.h"
-#include "shaders/hlsl/DirectXEngineShaders.hpp"
 #include "misc/MessageBox.h"
 
 // DirectX.

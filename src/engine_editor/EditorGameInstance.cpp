@@ -1,13 +1,7 @@
 ﻿#include "EditorGameInstance.h"
 
-#include "io/Logger.h"
-
 EditorGameInstance::EditorGameInstance(ne::Window* pWindow, ne::InputManager* pInputManager)
-    : IGameInstance(pWindow, pInputManager) {
-    timer.setCallbackForTimeout(
-        1000, []() { ne::Logger::get().info("Hello World from timer timeout!", ""); });
-    timer.start();
-}
+    : IGameInstance(pWindow, pInputManager) {}
 
 void EditorGameInstance::onInputActionEvent(
     const std::string& sActionName, ne::KeyboardModifiers modifiers, bool bIsPressedDown) {}

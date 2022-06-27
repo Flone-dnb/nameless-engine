@@ -3,7 +3,6 @@
 // Custom.
 #include "game/IGameInstance.h"
 #include "game/Window.h"
-#include "misc/Timer.h"
 
 /**
  * Editor logic.
@@ -76,8 +75,4 @@ public:
      * Called when the window was requested to close (no new frames will be rendered).
      */
     virtual void onWindowClose() override;
-
-private:
-    /** Timer. */
-    ne::Timer timer{true};
 };

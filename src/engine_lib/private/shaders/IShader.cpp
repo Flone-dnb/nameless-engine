@@ -18,12 +18,6 @@ namespace ne {
         std::filesystem::path pathToCompiledShader,
         const std::string& sShaderName,
         ShaderType shaderType) {
-        if (!std::filesystem::exists(pathToCompiledShader)) {
-            const Error err(
-                std::format("the specified path {} does not exist", pathToCompiledShader.string()));
-            err.showError();
-            throw std::runtime_error(err.getError());
-        }
         this->pathToCompiledShader = std::move(pathToCompiledShader);
         this->sShaderName = sShaderName;
         this->shaderType = shaderType;
@@ -54,12 +48,11 @@ namespace ne {
 
     std::string IShader::getShaderName() const { return sShaderName; }
 
-    std::filesystem::path IShader::getPathToCompiledShader() {
+    std::variant<std::filesystem::path, Error> IShader::getPathToCompiledShader() {
         if (!std::filesystem::exists(pathToCompiledShader)) {
             const Error err(std::format(
                 "path to compiled shader \"{}\" no longer exists", pathToCompiledShader.string()));
-            err.showError();
-            throw std::runtime_error(err.getError());
+            return err;
         }
         return pathToCompiledShader;
     }

@@ -364,10 +364,18 @@ namespace ne {
 
     std::optional<Error> HlslShader::loadShaderDataFromDiskIfNotLoaded() {
         std::scoped_lock guard(mtxCompiledBlobRootSignature.first);
+
+        const auto pathResult = getPathToCompiledShader();
+        if (std::holds_alternative<Error>(pathResult)) {
+            auto err = std::get<Error>(std::move(pathResult));
+            err.addEntry();
+            return err;
+        }
+
+        const auto pathToCompiledShader = std::get<std::filesystem::path>(pathResult);
+
         if (!mtxCompiledBlobRootSignature.second.first) {
             // Load cached bytecode from disk.
-            const auto pathToCompiledShader = getPathToCompiledShader();
-
             auto result = readBlobFromDisk(pathToCompiledShader);
             if (std::holds_alternative<Error>(result)) {
                 auto err = std::get<Error>(std::move(result));
@@ -381,7 +389,7 @@ namespace ne {
         if (!mtxCompiledBlobRootSignature.second.second) {
             // Load shader reflection from disk.
             const auto pathToShaderReflection =
-                getPathToCompiledShader().string() + sShaderReflectionFileExtension;
+                pathToCompiledShader.string() + sShaderReflectionFileExtension;
 
             auto blobResult = readBlobFromDisk(pathToShaderReflection);
             if (std::holds_alternative<Error>(blobResult)) {

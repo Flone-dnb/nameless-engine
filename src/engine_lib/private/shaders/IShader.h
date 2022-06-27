@@ -168,9 +168,9 @@ namespace ne {
         /**
          * Returns path to compiled shader blob on disk.
          *
-         * @return Path to compiled shader.
+         * @return Error if the compiled shader does not exist, otherwise path to compiled shader.
          */
-        std::filesystem::path getPathToCompiledShader();
+        std::variant<std::filesystem::path, Error> getPathToCompiledShader();
 
         /**
          * Returns used renderer.

@@ -40,7 +40,7 @@ namespace ne {
         DirectXRenderer(const DirectXRenderer&) = delete;
         DirectXRenderer& operator=(const DirectXRenderer&) = delete;
 
-        virtual ~DirectXRenderer() override {}
+        virtual ~DirectXRenderer() override = default;
 
         /**
          * Looks for video adapters (GPUs) that support used DirectX version and feature level.

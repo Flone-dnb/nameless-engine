@@ -200,7 +200,7 @@ namespace ne {
 
         /**
          * Looks if any of the global shader cache parameters changed
-         * (such as build mode, GPU, etc.) and clears shader cache
+         * (such as build mode, shader model, etc.) and clears shader cache
          * directory if needed.
          *
          * @remark If no global shader cache configuration file existed will create it.
@@ -249,13 +249,12 @@ namespace ne {
          */
         std::atomic<size_t> iTotalCompileShadersQueries = 0;
 
-        /** Maximum amount of shaders to compile per thread pooled task. */
-        const size_t iMaxShadersToCompilePerTask = 5;
-
         /**
          * Name of the file used to store global shader cache information.
          * Global shader cache information is used to determine if all shader cache is valid
          * or not (needs to be recompiled or not).
+         *
+         * Starts with a dot on purpose (because no shader can start with a dot - reserved for internal use).
          */
         const std::string_view sGlobalShaderCacheParametersFileName = ".shader_cache.toml";
 
@@ -291,8 +290,5 @@ namespace ne {
 
         /** Name of the category used for logging. */
         inline static const char* sShaderManagerLogCategory = "Shader Manager";
-
-        /** Name of the default category (when no category is specified) used for logging. */
-        inline static const char* sDefaultLogCategory = "Default";
     };
 } // namespace ne

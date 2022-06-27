@@ -6,7 +6,7 @@
 #include <mutex>
 
 // Custom.
-#include "shaders/hlsl/DirectXEngineShaders.h"
+#include "shaders/ShaderParameter.h"
 #include "shaders/hlsl/HlslShader.h"
 #include "shaders/IShaderPack.h"
 
@@ -65,7 +65,7 @@ namespace ne {
          * shader that matches this configuration.
          */
         std::optional<std::shared_ptr<IShader>>
-        changeConfiguration(const std::set<DirectXShaderParameter>& configuration);
+        changeConfiguration(const std::set<ShaderParameter>& configuration);
 
         /**
          * Returns type of this shader.
@@ -113,10 +113,7 @@ namespace ne {
         std::optional<std::shared_ptr<IShader>*> previouslyRequestedShader;
 
         /** Map of shaders in this pack. */
-        std::unordered_map<
-            std::set<DirectXShaderParameter>,
-            std::shared_ptr<IShader>,
-            DirectXShaderParameterSetHash>
+        std::unordered_map<std::set<ShaderParameter>, std::shared_ptr<IShader>, ShaderParameterSetHash>
             shaders;
     };
 } // namespace ne

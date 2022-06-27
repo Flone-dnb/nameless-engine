@@ -19,8 +19,7 @@ set(RELATIVE_EXT_PATH "../../ext")
 set(ENGINE_WIN32_SOURCES
     private/shaders/hlsl/HlslShader.h
     private/shaders/hlsl/HlslShader.cpp
-    private/shaders/hlsl/DirectXEngineShaders.h
-    private/shaders/hlsl/DirectXEngineShaders.cpp
+    private/shaders/hlsl/DirectXEngineShaders.hpp
     private/shaders/hlsl/RootSignatureGenerator.h
     private/shaders/hlsl/RootSignatureGenerator.cpp
     private/shaders/hlsl/HlslShaderPack.h
@@ -81,6 +80,8 @@ set(ENGINE_LIB_SOURCES
     public/misc/FileDialog.h
     private/shaders/IShaderPack.h
     private/shaders/IShaderPack.cpp
+    private/shaders/ShaderParameter.h
+    private/shaders/ShaderParameter.cpp
     # add general (cross-platform) sources here...
 )
 

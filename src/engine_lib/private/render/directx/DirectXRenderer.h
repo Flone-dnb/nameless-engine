@@ -10,7 +10,7 @@
 // Custom.
 #include "render/IRenderer.h"
 #include "misc/Error.h"
-#include "shaders/hlsl/DirectXEngineShaders.h"
+#include "shaders/hlsl/DirectXEngineShaders.hpp"
 
 // External.
 #include "directx/d3dx12.h"
@@ -328,12 +328,12 @@ namespace ne {
          * Combination of vertex shader parameters and a flag to specify if the configuration was
          * changed or not.
          */
-        std::pair<std::atomic_flag, std::set<DirectXShaderParameter>> currentVertexShaderConfiguration;
+        std::pair<std::atomic_flag, std::set<ShaderParameter>> currentVertexShaderConfiguration;
         /**
          * Combination of pixel shader parameters and a flag to specify if the configuration was
          * changed or not.
          */
-        std::pair<std::atomic_flag, std::set<DirectXShaderParameter>> currentPixelShaderConfiguration;
+        std::pair<std::atomic_flag, std::set<ShaderParameter>> currentPixelShaderConfiguration;
 
         /** Will be 'true' if we read the configuration from disk at startup. */
         bool bStartedWithConfigurationFromDisk = false;

@@ -3,12 +3,26 @@
 // Custom.
 #include "game/Game.h"
 #include "io/ConfigManager.h"
+#include "io/Logger.h"
 #include "misc/Globals.h"
+#include "shaders/ShaderParameter.h"
 
 namespace ne {
     IRenderer::IRenderer(Game* pGame) {
         this->pGame = pGame;
         pShaderManager = std::make_unique<ShaderManager>(this);
+
+        // Log amount of shader variants per shader pack.
+        Logger::get().info(
+            std::format(
+                "using {} shader(-s) per pixel shader pack",
+                ShaderParameterConfigurations::validPixelShaderParameterConfigurations.size()),
+            getLoggingCategory());
+        Logger::get().info(
+            std::format(
+                "using {} shader(-s) per vertex shader pack",
+                ShaderParameterConfigurations::validVertexShaderParameterConfigurations.size()),
+            getLoggingCategory());
     }
 
     Window* IRenderer::getWindow() const { return pGame->getWindow(); }

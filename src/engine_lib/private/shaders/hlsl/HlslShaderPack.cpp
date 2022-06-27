@@ -10,11 +10,13 @@ namespace ne {
         const std::string& sShaderName,
         ShaderType shaderType)
         : IShaderPack(sShaderName) {
-        const auto& parameterCombinations = shaderType == ShaderType::VERTEX_SHADER
-                                                ? DirectXEngineShaders::validVertexShaderParameterCombinations
-                                                : DirectXEngineShaders::validPixelShaderParameterCombinations;
+        const auto& parameterCombinations =
+            shaderType == ShaderType::VERTEX_SHADER
+                ? ShaderParameterConfigurations::validVertexShaderParameterConfigurations
+                : ShaderParameterConfigurations::validPixelShaderParameterConfigurations;
         for (const auto& parameters : parameterCombinations) {
-            const auto sConfigurationText = convertConfigurationToText(parameters);
+            const auto sConfigurationText =
+                ShaderParameterConfigurations::convertConfigurationToText(parameters);
             const auto sCurrentShaderName =
                 sShaderName + sConfigurationText; // add configuration to name for logging
 
@@ -30,9 +32,10 @@ namespace ne {
 
     std::variant<std::shared_ptr<IShaderPack>, std::string, Error>
     HlslShaderPack::compileShader(IRenderer* pRenderer, const ShaderDescription& shaderDescription) {
-        const auto& parameterCombinations = shaderDescription.shaderType == ShaderType::VERTEX_SHADER
-                                                ? DirectXEngineShaders::validVertexShaderParameterCombinations
-                                                : DirectXEngineShaders::validPixelShaderParameterCombinations;
+        const auto& parameterCombinations =
+            shaderDescription.shaderType == ShaderType::VERTEX_SHADER
+                ? ShaderParameterConfigurations::validVertexShaderParameterConfigurations
+                : ShaderParameterConfigurations::validPixelShaderParameterConfigurations;
 
         auto pShaderPack = std::shared_ptr<HlslShaderPack>(new HlslShaderPack(shaderDescription.sShaderName));
         for (const auto& parameters : parameterCombinations) {
@@ -44,7 +47,8 @@ namespace ne {
                 currentShaderDescription.vDefinedShaderMacros.push_back(sParameter);
             }
 
-            const auto sConfigurationText = convertConfigurationToText(parameters);
+            const auto sConfigurationText =
+                ShaderParameterConfigurations::convertConfigurationToText(parameters);
             currentShaderDescription.sShaderName +=
                 sConfigurationText; // add configuration to name for logging
 
@@ -68,7 +72,7 @@ namespace ne {
     }
 
     std::optional<std::shared_ptr<IShader>>
-    HlslShaderPack::changeConfiguration(const std::set<DirectXShaderParameter>& configuration) {
+    HlslShaderPack::changeConfiguration(const std::set<ShaderParameter>& configuration) {
         std::scoped_lock guard(mtxShaders);
 
         if (previouslyRequestedShader.has_value()) {

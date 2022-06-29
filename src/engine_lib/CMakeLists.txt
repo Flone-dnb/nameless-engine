@@ -22,8 +22,6 @@ set(ENGINE_WIN32_SOURCES
     private/shaders/hlsl/DirectXEngineShaders.hpp
     private/shaders/hlsl/RootSignatureGenerator.h
     private/shaders/hlsl/RootSignatureGenerator.cpp
-    private/shaders/hlsl/HlslShaderPack.h
-    private/shaders/hlsl/HlslShaderPack.cpp
     private/render/directx/DirectXRenderer.h
     private/render/directx/DirectXRenderer.cpp
     private/render/directx/Pso.cpp
@@ -78,10 +76,11 @@ set(ENGINE_LIB_SOURCES
     public/misc/OpenLinkInBrowser.h
     private/misc/FileDialog.cpp
     public/misc/FileDialog.h
-    private/shaders/IShaderPack.h
-    private/shaders/IShaderPack.cpp
+    private/shaders/ShaderPack.h
+    private/shaders/ShaderPack.cpp
     private/shaders/ShaderParameter.h
     private/shaders/ShaderParameter.cpp
+    private/shaders/ShaderFilesystemPaths.hpp
     # add general (cross-platform) sources here...
 )
 
@@ -234,7 +233,7 @@ add_executable(${ENGINE_TESTS_NAME}
     ${TESTS_RELATIVE_PATH}/engine_lib/ConfigManager.cpp
     ${TESTS_RELATIVE_PATH}/engine_lib/InputManager.cpp
     ${TESTS_RELATIVE_PATH}/engine_lib/Timer.cpp
-    ${TESTS_RELATIVE_PATH}/engine_lib/IShader.cpp
+    ${TESTS_RELATIVE_PATH}/engine_lib/ShaderPack.cpp
     # add engine test .cpp files here
 )
 

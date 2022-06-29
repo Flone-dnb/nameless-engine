@@ -16,7 +16,7 @@
 // Custom.
 #include "misc/Error.h"
 #include "shaders/ShaderDescription.h"
-#include "shaders/IShaderPack.h"
+#include "shaders/ShaderPack.h"
 
 namespace ne {
     class IShader;
@@ -171,7 +171,7 @@ namespace ne {
          * @return Empty if the shader with the specified name was not found,
          * valid pointer otherwise.
          */
-        std::optional<std::shared_ptr<IShaderPack>> getShader(const std::string& sShaderName);
+        std::optional<std::shared_ptr<ShaderPack>> getShader(const std::string& sShaderName);
 
         /**
          * Looks if the specified shader is not used by anyone and releases shader bytecode
@@ -229,7 +229,7 @@ namespace ne {
         std::recursive_mutex mtxRwShaders;
 
         /** Use with @ref mtxRwShaders. Map of compiled (added) shaders. */
-        std::unordered_map<std::string, std::shared_ptr<IShaderPack>> compiledShaders;
+        std::unordered_map<std::string, std::shared_ptr<ShaderPack>> compiledShaders;
 
         /**
          * Use with @ref mtxRwShaders. Array of shader names marked to be removed from @ref compiledShaders

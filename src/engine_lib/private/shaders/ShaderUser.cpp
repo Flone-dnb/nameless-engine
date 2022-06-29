@@ -33,7 +33,7 @@ namespace ne {
         return false;
     }
 
-    std::optional<IShaderPack*> ShaderUser::getShader(ShaderType shaderType) const {
+    std::optional<ShaderPack*> ShaderUser::getShader(ShaderType shaderType) const {
         const auto it = shaders.find(shaderType);
         if (it == shaders.end()) {
             return {};

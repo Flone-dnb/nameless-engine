@@ -5,7 +5,7 @@
 
 // Custom.
 #include "shaders/IShader.h"
-#include "shaders/IShaderPack.h"
+#include "shaders/ShaderPack.h"
 #include "render/IRenderer.h"
 
 // External.
@@ -24,7 +24,7 @@ namespace ne {
     class HlslShader : public IShader {
     public:
         /**
-         * Constructor.
+         * Constructor. Used to create shader using cache.
          *
          * @param pRenderer            Used renderer.
          * @param pathToCompiledShader Path to compiled shader blob on disk.

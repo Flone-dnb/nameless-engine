@@ -11,6 +11,7 @@
 #include "render/IRenderer.h"
 #include "io/ConfigManager.h"
 #include "misc/Globals.h"
+#include "shaders/ShaderFilesystemPaths.hpp"
 #if defined(WIN32)
 #include "render/directx/DirectXRenderer.h"
 #include "hlsl/HlslShader.h"
@@ -25,7 +26,7 @@ namespace ne {
         lastSelfValidationCheckTime = std::chrono::steady_clock::now();
     }
 
-    std::optional<std::shared_ptr<IShaderPack>> ShaderManager::getShader(const std::string& sShaderName) {
+    std::optional<std::shared_ptr<ShaderPack>> ShaderManager::getShader(const std::string& sShaderName) {
         std::scoped_lock guard(mtxRwShaders);
         const auto it = compiledShaders.find(sShaderName);
         if (it == compiledShaders.end()) {
@@ -122,9 +123,9 @@ namespace ne {
 
         ConfigManager configManager;
 
-        const auto shaderCacheDir = IShader::getPathToShaderCacheDirectory();
+        const auto shaderCacheDir = ShaderFilesystemPaths::getPathToShaderCacheDirectory();
         const auto shaderParamsPath =
-            IShader::getPathToShaderCacheDirectory() / sGlobalShaderCacheParametersFileName;
+            ShaderFilesystemPaths::getPathToShaderCacheDirectory() / sGlobalShaderCacheParametersFileName;
 
         bool bUpdateShaderCacheConfig = false;
 
@@ -518,32 +519,66 @@ namespace ne {
         const std::function<
             void(ShaderDescription shaderDescription, std::variant<std::string, Error> error)>& onError,
         const std::function<void()>& onCompleted) {
-        // Compile shader.
-        auto result = IShader::compileShader(shaderToCompile, pRenderer);
-        if (!std::holds_alternative<std::shared_ptr<IShaderPack>>(result)) {
-            if (std::holds_alternative<std::string>(result)) {
-                const auto sShaderError = std::get<std::string>(std::move(result));
-                pRenderer->getGame()->addDeferredTask(
-                    [onError, shaderToCompile, sShaderError = std::move(sShaderError)]() mutable {
-                        onError(std::move(shaderToCompile), sShaderError);
-                    });
-            } else {
+        std::shared_ptr<ShaderPack> pShaderPack = nullptr;
+
+        // See if we compiled this shader before (cache).
+        if (std::filesystem::exists(
+                ShaderFilesystemPaths::getPathToShaderCacheDirectory() / shaderToCompile.sShaderName)) {
+            // Try to use cache.
+            std::optional<ShaderCacheInvalidationReason> cacheInvalidationReason;
+            auto result = ShaderPack::createFromCache(pRenderer, shaderToCompile, cacheInvalidationReason);
+            if (std::holds_alternative<Error>(result)) {
                 auto err = std::get<Error>(std::move(result));
                 err.addEntry();
-                Logger::get().error(
-                    std::format(
-                        "shader compilation query #{}: "
-                        "an error occurred during shader compilation: {}",
-                        iQueryId,
-                        err.getError()),
-                    sShaderManagerLogCategory);
-                pRenderer->getGame()->addDeferredTask(
-                    [onError, shaderToCompile, err]() mutable { onError(std::move(shaderToCompile), err); });
-            }
-        } else {
-            // Add compiled shader to shader registry.
-            auto pShaderPack = std::get<std::shared_ptr<IShaderPack>>(std::move(result));
 
+                // Not a critical error.
+                if (cacheInvalidationReason.has_value()) {
+                    // Invalidated cache.
+                    Logger::get().info(err.getInitialMessage(), sShaderManagerLogCategory);
+                } else {
+                    // Cache files are corrupted.
+                    Logger::get().info(
+                        std::format(
+                            "shader \"{}\" cache files are corrupted, attempting to recompile",
+                            shaderToCompile.sShaderName),
+                        sShaderManagerLogCategory);
+                }
+            } else {
+                pShaderPack = std::get<std::shared_ptr<ShaderPack>>(result);
+            }
+        }
+
+        if (!pShaderPack) {
+            // Compile shader.
+            auto result = ShaderPack::compileShaderPack(pRenderer, shaderToCompile);
+            if (!std::holds_alternative<std::shared_ptr<ShaderPack>>(result)) {
+                if (std::holds_alternative<std::string>(result)) {
+                    const auto sShaderError = std::get<std::string>(std::move(result));
+                    pRenderer->getGame()->addDeferredTask(
+                        [onError, shaderToCompile, sShaderError = std::move(sShaderError)]() mutable {
+                            onError(std::move(shaderToCompile), sShaderError);
+                        });
+                } else {
+                    auto err = std::get<Error>(std::move(result));
+                    err.addEntry();
+                    Logger::get().error(
+                        std::format(
+                            "shader compilation query #{}: "
+                            "an error occurred during shader compilation: {}",
+                            iQueryId,
+                            err.getError()),
+                        sShaderManagerLogCategory);
+                    pRenderer->getGame()->addDeferredTask([onError, shaderToCompile, err]() mutable {
+                        onError(std::move(shaderToCompile), err);
+                    });
+                }
+            } else {
+                pShaderPack = std::get<std::shared_ptr<ShaderPack>>(std::move(result));
+            }
+        }
+
+        if (pShaderPack) {
+            // Add shader to shader registry.
             std::scoped_lock guard(mtxRwShaders);
 
             const auto it = compiledShaders.find(shaderToCompile.sShaderName);
@@ -560,9 +595,9 @@ namespace ne {
             }
         }
 
+        // Mark progress.
         const size_t iLastFetchCompiledShaderCount = pCompiledShaderCount->fetch_add(1);
 
-        // Mark progress.
         const auto iCompiledShaderCount = iLastFetchCompiledShaderCount + 1;
         Logger::get().info(
             std::format(

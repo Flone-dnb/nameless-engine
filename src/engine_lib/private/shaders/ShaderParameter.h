@@ -87,6 +87,10 @@ namespace ne {
                  {ShaderParameter::USE_DIFFUSE_TEXTURE},
                  {ShaderParameter::USE_DIFFUSE_TEXTURE, ShaderParameter::USE_NORMAL_TEXTURE}},
                 false);
+
+        /** Valid combinations of compute shader macros (settings). */
+        static inline const std::set<std::set<ShaderParameter>> validComputeShaderParameterConfigurations = {
+            {}};
     };
 
     /** Provides hash operator() for std::set<ShaderParameter>. */

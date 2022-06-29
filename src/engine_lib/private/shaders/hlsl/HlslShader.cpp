@@ -16,6 +16,7 @@
 #include "shaders/hlsl/RootSignatureGenerator.h"
 #include "misc/Globals.h"
 #include "render/directx/DirectXRenderer.h"
+#include "shaders/ShaderFilesystemPaths.hpp"
 
 namespace ne {
     HlslShader::HlslShader(
@@ -109,7 +110,7 @@ namespace ne {
         vArgs.push_back(DXC_ARG_DEBUG);
         vArgs.push_back(DXC_ARG_SKIP_OPTIMIZATIONS);
         vArgs.push_back(L"-Fd");
-        auto shaderPdbPath = cacheDirectory / getShaderCacheBaseFileName();
+        auto shaderPdbPath = cacheDirectory / ShaderFilesystemPaths::getShaderCacheBaseFileName();
         shaderPdbPath += sConfiguration;
         shaderPdbPath += ".pdb";
         vArgs.push_back(shaderPdbPath);
@@ -209,7 +210,7 @@ namespace ne {
         }
 
         // Write shader bytecode to file.
-        auto pathToCompiledShader = cacheDirectory / getShaderCacheBaseFileName();
+        auto pathToCompiledShader = cacheDirectory / ShaderFilesystemPaths::getShaderCacheBaseFileName();
         pathToCompiledShader += sConfiguration;
         std::ofstream shaderCacheFile(pathToCompiledShader, std::ios::binary);
         if (!shaderCacheFile.is_open()) {
@@ -221,8 +222,9 @@ namespace ne {
         shaderCacheFile.close();
 
         // Write reflection data to file.
-        const auto pathToShaderReflection = (cacheDirectory / getShaderCacheBaseFileName()).string() +
-                                            sConfiguration + sShaderReflectionFileExtension;
+        const auto pathToShaderReflection =
+            (cacheDirectory / ShaderFilesystemPaths::getShaderCacheBaseFileName()).string() + sConfiguration +
+            sShaderReflectionFileExtension;
         std::ofstream shaderReflectionFile(pathToShaderReflection, std::ios::binary);
         if (!shaderReflectionFile.is_open()) {
             return Error(std::format("failed to save shader reflection data at {}", pathToShaderReflection));

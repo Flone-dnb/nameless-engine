@@ -1,38 +1,28 @@
 ﻿#pragma once
 
 // STL.
-#include <unordered_map>
-#include <set>
 #include <mutex>
+#include <unordered_map>
+#include <memory>
+#include <optional>
+#include <string>
 
 // Custom.
+#include "shaders/ShaderDescription.h"
 #include "shaders/ShaderParameter.h"
-#include "shaders/hlsl/HlslShader.h"
-#include "shaders/IShaderPack.h"
 
 namespace ne {
-    /** Represents a group of different variants of one HLSL shader. */
-    class HlslShaderPack : public IShaderPack {
+    class IRenderer;
+    class IShader;
+
+    /** Represents a group of different variants of one shader. */
+    class ShaderPack {
     public:
-        /**
-         * Creates a new shader pack using shader cache.
-         *
-         * @param pRenderer            Used renderer.
-         * @param pathToCompiledShader Path to compiled shader bytecode on disk.
-         * @param sShaderName          Unique name of this shader.
-         * @param shaderType           Type of this shader.
-         */
-        HlslShaderPack(
-            IRenderer* pRenderer,
-            const std::filesystem::path& pathToCompiledShader,
-            const std::string& sShaderName,
-            ShaderType shaderType);
+        ShaderPack() = delete;
+        ShaderPack(const ShaderPack&) = delete;
+        ShaderPack& operator=(const ShaderPack&) = delete;
 
-        HlslShaderPack() = delete;
-        HlslShaderPack(const HlslShaderPack&) = delete;
-        HlslShaderPack& operator=(const HlslShaderPack&) = delete;
-
-        virtual ~HlslShaderPack() override = default;
+        virtual ~ShaderPack() = default;
 
         /**
          * Compiles a shader pack.
@@ -47,10 +37,26 @@ namespace ne {
          * @arg internal error
          */
         static std::variant<
-            std::shared_ptr<IShaderPack> /** Compiled shader pack. */,
+            std::shared_ptr<ShaderPack> /** Compiled shader pack. */,
             std::string /** Compilation error. */,
             Error /** Internal error. */>
-        compileShader(IRenderer* pRenderer, const ShaderDescription& shaderDescription);
+        compileShaderPack(IRenderer* pRenderer, const ShaderDescription& shaderDescription);
+
+        /**
+         * Creates a new shader pack using shader cache.
+         *
+         * @param pRenderer             Used renderer.
+         * @param shaderDescription     Description that describes the shader and how the shader should be
+         * compiled. Used for cache invalidation.
+         * @param cacheInvalidationReason Will be not empty if cache was invalidated. Used for testing.
+         *
+         * @return Returns error if shader cache is corrupted or was invalidated,
+         * otherwise a shader pack created using cache.
+         */
+        static std::variant<std::shared_ptr<ShaderPack>, Error> createFromCache(
+            IRenderer* pRenderer,
+            const ShaderDescription& shaderDescription,
+            std::optional<ShaderCacheInvalidationReason>& cacheInvalidationReason);
 
         /**
          * Looks for a shader that matches the specified configuration and returns it.
@@ -68,23 +74,6 @@ namespace ne {
         changeConfiguration(const std::set<ShaderParameter>& configuration);
 
         /**
-         * Returns type of this shader.
-         *
-         * @return Shader type.
-         */
-        virtual ShaderType getShaderType() override;
-
-        /**
-         * Tests if shader cache for this shader pack is corrupted or not
-         * and deletes the cache if it's corrupted.
-         *
-         * @remark This function should be used if you want to use shader cache.
-         *
-         * @return Error if at least one shader cache is corrupted.
-         */
-        virtual std::optional<Error> testIfShaderCacheIsCorrupted() override;
-
-        /**
          * Releases underlying shader bytecode for each shader from memory (this object will not be deleted)
          * if the shader bytecode was loaded into memory.
          * Next time this shader will be needed it will be loaded from disk.
@@ -96,15 +85,32 @@ namespace ne {
          * @return 'false' if at least one shader variant was released from memory,
          * 'true' if all variants were not loaded into memory.
          */
-        virtual bool releaseShaderPackDataFromMemoryIfLoaded(bool bLogOnlyErrors = false) override;
+        bool releaseShaderPackDataFromMemoryIfLoaded(bool bLogOnlyErrors = false);
+
+        /**
+         * Returns unique name of this shader.
+         *
+         * @return Unique name of this shader.
+         */
+        std::string getShaderName() const;
+
+        /**
+         * Returns type of this shader.
+         *
+         * @return Shader type.
+         */
+        ShaderType getShaderType();
 
     private:
         /**
-         * Constructor.
+         * Constructor to create an empty shader pack.
          *
-         * @param sShaderName Name of the shader.
+         * @param sShaderName Initial name of the shader.
          */
-        HlslShaderPack(const std::string& sShaderName);
+        ShaderPack(const std::string& sShaderName);
+
+        /** Initial shader name (without configuration text). */
+        std::string sShaderName;
 
         /** Mutex for working with shaders. */
         std::mutex mtxShaders;

@@ -133,6 +133,19 @@ namespace ne {
         /** File extension for saving shader reflection data. */
         static inline auto sShaderReflectionFileExtension = ".reflection";
 
+        /** Shader input element description. */
+        static inline std::vector<D3D12_INPUT_ELEMENT_DESC> vShaderVertexDescription = {
+            {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
+            {"NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
+            {"UV", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 24, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
+            {"CUSTOM",
+             0,
+             DXGI_FORMAT_R32G32B32A32_FLOAT,
+             0,
+             32,
+             D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,
+             0}};
+
         // -------------------------------------------------------------------------
         // ! if adding new shader models add them to cache config in ShaderManager !
         // -------------------------------------------------------------------------

@@ -12,7 +12,7 @@ namespace ne {
      *
      * A combination of shader parameters is called a configuration,
      * one shader will have different variants for different configurations.
-     * A group of different shader variants is stored in IShaderPack.
+     * A group of different shader variants is stored in a shader pack.
      */
     enum class ShaderParameter : int {
         TEXTURE_FILTERING_POINT = 0,

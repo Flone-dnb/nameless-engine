@@ -228,7 +228,14 @@ namespace ne {
         /** Use for @ref compiledShaders and @ref vShadersToBeRemoved. */
         std::recursive_mutex mtxRwShaders;
 
-        /** Use with @ref mtxRwShaders. Map of compiled (added) shaders. */
+        /**
+         * Map of compiled (added) shaders.
+         * Use with @ref mtxRwShaders.
+         *
+         * Storing shared pointer for each pack here instead of just reading from disk, creating
+         * a new shared pointer, giving shared pointer and forgetting about it to make sure
+         * there's not going to be multiple copies of one shader.
+         */
         std::unordered_map<std::string, std::shared_ptr<ShaderPack>> compiledShaders;
 
         /**

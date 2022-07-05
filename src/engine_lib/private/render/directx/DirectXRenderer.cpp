@@ -12,6 +12,9 @@
 #include "io/Logger.h"
 #include "misc/Globals.h"
 #include "misc/MessageBox.h"
+#include "render/directx/descriptors/DirectXDescriptorHeapManager.h"
+#include "render/directx/resources/DirectXResource.h"
+#include "render/directx/resources/DirectXResourceManager.h"
 
 // DirectX.
 #pragma comment(lib, "D3D12.lib")
@@ -53,7 +56,7 @@ namespace ne {
         }
 
         // Set initial size for buffers.
-        error = resizeRenderBuffers();
+        error = resizeRenderBuffersToCurrentDisplayMode();
         if (error.has_value()) {
             error->addEntry();
             error->showError();
@@ -164,17 +167,11 @@ namespace ne {
     }
 
     size_t DirectXRenderer::getTotalVideoMemoryInMb() const {
-        D3D12MA::Budget localBudget{};
-        pMemoryAllocator->GetBudget(&localBudget, nullptr);
-
-        return localBudget.BudgetBytes / 1024 / 1024;
+        return pResourceManager->getTotalVideoMemoryInMb();
     }
 
     size_t DirectXRenderer::getUsedVideoMemoryInMb() const {
-        D3D12MA::Budget localBudget{};
-        pMemoryAllocator->GetBudget(&localBudget, nullptr);
-
-        return localBudget.UsageBytes / 1024 / 1024;
+        return pResourceManager->getUsedVideoMemoryInMb();
     }
 
     std::optional<Error> DirectXRenderer::setBackbufferFillColor(float fillColor[4]) {
@@ -183,7 +180,7 @@ namespace ne {
         backBufferFillColor[2] = fillColor[2];
         backBufferFillColor[3] = fillColor[3];
 
-        auto error = resizeRenderBuffers();
+        auto error = resizeRenderBuffersToCurrentDisplayMode();
         if (error.has_value()) {
             error->addEntry();
             return error;
@@ -284,16 +281,15 @@ namespace ne {
         return {};
     }
 
-    std::optional<Error> DirectXRenderer::createMemoryAllocator() {
-        D3D12MA::ALLOCATOR_DESC desc = {};
-        desc.Flags = D3D12MA::ALLOCATOR_FLAG_DEFAULT_POOLS_NOT_ZEROED;
-        desc.pDevice = pDevice.Get();
-        desc.pAdapter = pVideoAdapter.Get();
-
-        const HRESULT hResult = D3D12MA::CreateAllocator(&desc, pMemoryAllocator.ReleaseAndGetAddressOf());
-        if (FAILED(hResult)) {
-            return Error(hResult);
+    std::optional<Error> DirectXRenderer::createResourceManager() {
+        auto result = DirectXResourceManager::create(this, pDevice.Get(), pVideoAdapter.Get());
+        if (std::holds_alternative<Error>(result)) {
+            auto err = std::get<Error>(std::move(result));
+            err.addEntry();
+            return err;
         }
+
+        pResourceManager = std::get<std::unique_ptr<DirectXResourceManager>>(std::move(result));
 
         return {};
     }
@@ -331,37 +327,7 @@ namespace ne {
             &desc,
             &fullscreenDesc,
             pOutputAdapter.Get(),
-            pSwapChain.ReleaseAndGetAddressOf());
-        if (FAILED(hResult)) {
-            return Error(hResult);
-        }
-
-        return {};
-    }
-
-    std::optional<Error> DirectXRenderer::createRtvAndDsvDescriptorHeaps() {
-        // Create RTV heap.
-        D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc;
-        rtvHeapDesc.NumDescriptors = getSwapChainBufferCount() + 1; // '+1' for MSAA render target.
-        rtvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
-        rtvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
-        rtvHeapDesc.NodeMask = 0;
-
-        HRESULT hResult =
-            pDevice->CreateDescriptorHeap(&rtvHeapDesc, IID_PPV_ARGS(pRtvHeap.ReleaseAndGetAddressOf()));
-        if (FAILED(hResult)) {
-            return Error(hResult);
-        }
-
-        // Create DSV heap.
-        D3D12_DESCRIPTOR_HEAP_DESC dsvHeapDesc;
-        dsvHeapDesc.NumDescriptors = 1;
-        dsvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
-        dsvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
-        dsvHeapDesc.NodeMask = 0;
-
-        hResult =
-            pDevice->CreateDescriptorHeap(&dsvHeapDesc, IID_PPV_ARGS(pDsvHeap.ReleaseAndGetAddressOf()));
+            reinterpret_cast<IDXGISwapChain1**>(pSwapChain.ReleaseAndGetAddressOf()));
         if (FAILED(hResult)) {
             return Error(hResult);
         }
@@ -473,24 +439,11 @@ namespace ne {
             return Error(hResult);
         }
 
-        // Create memory allocation (external class).
-        error = createMemoryAllocator();
-        if (error.has_value()) {
-            error->addEntry();
-            return error;
-        }
-
         // Create fence.
         hResult = pDevice->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&pFence));
         if (FAILED(hResult)) {
             return Error(hResult);
         }
-
-        // Get descriptor sizes.
-        iRtvDescriptorSize = pDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-        iDsvDescriptorSize = pDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
-        iCbvSrvUavDescriptorSize =
-            pDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
         // Check MSAA support.
         std::optional<Error> error1 = checkMsaaSupport();
@@ -573,15 +526,15 @@ namespace ne {
             currentDisplayMode = std::get<std::vector<DXGI_MODE_DESC>>(std::move(videoModesResult)).back();
         }
 
-        // Create swap chain.
-        error = createSwapChain();
+        // Create resource manager.
+        error = createResourceManager();
         if (error.has_value()) {
             error->addEntry();
             return error;
         }
 
-        // Create RTV and DSV heaps.
-        error = createRtvAndDsvDescriptorHeaps();
+        // Create swap chain.
+        error = createSwapChain();
         if (error.has_value()) {
             error->addEntry();
             return error;
@@ -677,8 +630,8 @@ namespace ne {
         return {pointWrap, linearWrap, anisotropicWrap, shadow};
     }
 
-    std::optional<Error> DirectXRenderer::resizeRenderBuffers() {
-        std::scoped_lock<std::recursive_mutex> guard(mtxRwRenderResources);
+    std::optional<Error> DirectXRenderer::resizeRenderBuffersToCurrentDisplayMode() {
+        std::scoped_lock guard(mtxRwRenderResources);
 
         std::optional<Error> error = flushCommandQueue();
         if (error.has_value()) {
@@ -686,47 +639,31 @@ namespace ne {
             return error;
         }
 
-        // Release the previous resources because we will be recreating them.
-        for (unsigned int i = 0; i < getSwapChainBufferCount(); i++) {
-            pSwapChainBuffer[i].Reset();
-        }
-        pMsaaRenderTarget.Reset();
-        pDepthStencilBuffer.Reset();
+        // Swapchain cannot be resized unless all outstanding buffer references have been released.
+        vSwapChainBuffers.clear();
+        vSwapChainBuffers.resize(getSwapChainBufferCount());
 
         // Resize the swap chain.
-        HRESULT hResult = S_OK;
-        if (bIsVSyncEnabled) {
-            hResult = pSwapChain->ResizeBuffers(
-                getSwapChainBufferCount(),
-                currentDisplayMode.Width,
-                currentDisplayMode.Height,
-                backBufferFormat,
-                0);
-        } else {
-            hResult = pSwapChain->ResizeBuffers(
-                getSwapChainBufferCount(),
-                currentDisplayMode.Width,
-                currentDisplayMode.Height,
-                backBufferFormat,
-                DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING);
-        }
+        HRESULT hResult = pSwapChain->ResizeBuffers(
+            getSwapChainBufferCount(),
+            currentDisplayMode.Width,
+            currentDisplayMode.Height,
+            backBufferFormat,
+            bIsVSyncEnabled ? 0 : DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING);
         if (FAILED(hResult)) {
             return Error(hResult);
         }
 
-        iCurrentBackBufferIndex = 0;
-
         // Create RTV to swap chain buffers.
-        CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHeapHandle(pRtvHeap->GetCPUDescriptorHandleForHeapStart());
-        for (unsigned int i = 0; i < getSwapChainBufferCount(); i++) {
-            hResult = pSwapChain->GetBuffer(i, IID_PPV_ARGS(&pSwapChainBuffer[i]));
-            if (FAILED(hResult)) {
-                return Error(hResult);
-            }
-
-            pDevice->CreateRenderTargetView(pSwapChainBuffer[i].Get(), nullptr, rtvHeapHandle);
-            rtvHeapHandle.Offset(1, iRtvDescriptorSize);
+        auto swapChainResult = pResourceManager->makeRtvResourcesFromSwapChainBuffer(
+            pSwapChain.Get(), getSwapChainBufferCount());
+        if (std::holds_alternative<Error>(swapChainResult)) {
+            auto err = std::get<Error>(std::move(swapChainResult));
+            err.addEntry();
+            return err;
         }
+        vSwapChainBuffers =
+            std::get<std::vector<std::unique_ptr<DirectXResource>>>(std::move(swapChainResult));
 
         // Create MSAA render target.
         D3D12_RESOURCE_DESC msaaRenderTargetDesc;
@@ -752,19 +689,14 @@ namespace ne {
         D3D12MA::ALLOCATION_DESC allocationDesc = {};
         allocationDesc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
 
-        hResult = pMemoryAllocator->CreateResource(
-            &allocationDesc,
-            &msaaRenderTargetDesc,
-            D3D12_RESOURCE_STATE_COMMON,
-            &msaaClear,
-            pMsaaRenderTarget.ReleaseAndGetAddressOf(),
-            IID_NULL,
-            nullptr);
-        if (FAILED(hResult)) {
-            return Error(hResult);
+        auto result = pResourceManager->createRtvResource(
+            allocationDesc, msaaRenderTargetDesc, D3D12_RESOURCE_STATE_COMMON, msaaClear);
+        if (std::holds_alternative<Error>(result)) {
+            auto err = std::get<Error>(std::move(result));
+            err.addEntry();
+            return err;
         }
-
-        pDevice->CreateRenderTargetView(pMsaaRenderTarget->GetResource(), nullptr, rtvHeapHandle);
+        pMsaaRenderBuffer = std::get<std::unique_ptr<DirectXResource>>(std::move(result));
 
         // Create depth/stencil buffer.
         D3D12_RESOURCE_DESC depthStencilDesc;
@@ -786,28 +718,15 @@ namespace ne {
         depthClear.DepthStencil.Stencil = 0;
 
         allocationDesc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
-        hResult = pMemoryAllocator->CreateResource(
-            &allocationDesc,
-            &depthStencilDesc,
-            D3D12_RESOURCE_STATE_DEPTH_WRITE,
-            &depthClear,
-            pDepthStencilBuffer.ReleaseAndGetAddressOf(),
-            IID_NULL,
-            nullptr);
-        if (FAILED(hResult)) {
-            return Error(hResult);
+
+        result = pResourceManager->createDsvResource(
+            allocationDesc, depthStencilDesc, D3D12_RESOURCE_STATE_DEPTH_WRITE, depthClear);
+        if (std::holds_alternative<Error>(result)) {
+            auto err = std::get<Error>(std::move(result));
+            err.addEntry();
+            return err;
         }
-
-        // Create DSV.
-        D3D12_DEPTH_STENCIL_VIEW_DESC dsvDesc;
-        dsvDesc.Flags = D3D12_DSV_FLAG_NONE;
-        dsvDesc.ViewDimension =
-            bIsMsaaEnabled ? D3D12_DSV_DIMENSION_TEXTURE2DMS : D3D12_DSV_DIMENSION_TEXTURE2D;
-        dsvDesc.Format = depthStencilFormat;
-        dsvDesc.Texture2D.MipSlice = 0;
-
-        CD3DX12_CPU_DESCRIPTOR_HANDLE dsvHeapHandle(pDsvHeap->GetCPUDescriptorHandleForHeapStart());
-        pDevice->CreateDepthStencilView(pDepthStencilBuffer->GetResource(), &dsvDesc, dsvHeapHandle);
+        pDepthStencilBuffer = std::get<std::unique_ptr<DirectXResource>>(std::move(result));
 
         // Update the viewport transform to cover the new display size.
         screenViewport.TopLeftX = 0;
@@ -824,7 +743,7 @@ namespace ne {
     }
 
     std::optional<Error> DirectXRenderer::flushCommandQueue() {
-        std::scoped_lock<std::recursive_mutex> guardFrame(mtxRwRenderResources);
+        std::scoped_lock guardFrame(mtxRwRenderResources);
 
         const auto iFenceValue = iCurrentFence.fetch_add(1);
         HRESULT hResult = pCommandQueue->Signal(pFence.Get(), iFenceValue);

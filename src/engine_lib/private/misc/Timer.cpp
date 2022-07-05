@@ -66,7 +66,7 @@ namespace ne {
                     Logger::get().warn(
                         std::format(
                             "timer has finished waiting for started callback functions to finish, took {} "
-                            "millisecond(-s)",
+                            "millisecond(s)",
                             durationInMs),
                         "");
                 }

@@ -617,7 +617,7 @@ namespace ne {
             Logger::get().info(
                 std::format(
                     "shader compilation query #{}: "
-                    "finished compiling {} shader(-s)",
+                    "finished compiling {} shader(s)",
                     iQueryId,
                     iTotalShaderCount),
                 sShaderManagerLogCategory);

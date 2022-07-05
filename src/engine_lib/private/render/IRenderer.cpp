@@ -15,12 +15,12 @@ namespace ne {
         // Log amount of shader variants per shader pack.
         Logger::get().info(
             std::format(
-                "using {} shader(-s) per pixel shader pack",
+                "using {} shader(s) per pixel shader pack",
                 ShaderParameterConfigurations::validPixelShaderParameterConfigurations.size()),
             getLoggingCategory());
         Logger::get().info(
             std::format(
-                "using {} shader(-s) per vertex shader pack",
+                "using {} shader(s) per vertex shader pack",
                 ShaderParameterConfigurations::validVertexShaderParameterConfigurations.size()),
             getLoggingCategory());
     }

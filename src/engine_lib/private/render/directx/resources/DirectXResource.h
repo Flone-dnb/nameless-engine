@@ -1,0 +1,94 @@
+﻿#pragma once
+
+// STL.
+#include <variant>
+#include <memory>
+#include <optional>
+
+// Custom.
+#include "misc/Error.h"
+#include "render/directx/descriptors/DirectXDescriptor.h"
+
+// External.
+#include "directx/d3dx12.h"
+#include "D3D12MemoryAllocator/include/D3D12MemAlloc.h"
+
+// OS.
+#include <wrl.h>
+
+namespace ne {
+    using namespace Microsoft::WRL;
+
+    class DirectXRenderer;
+    class DirectXDescriptorHeapManager;
+
+    /**
+     * D3D resource wrapper with automatic descriptor binding.
+     */
+    class DirectXResource {
+    public:
+        DirectXResource(const DirectXResource&) = delete;
+        DirectXResource& operator=(const DirectXResource&) = delete;
+
+        /**
+         * Creates a new resource.
+         *
+         * @param pHeap                Heap to store descriptor to this resource.
+         * @param pMemoryAllocator     Allocator to create resource.
+         * @param allocationDesc       Allocation description.
+         * @param resourceDesc         Resource description.
+         * @param initialResourceState Initial resource state.
+         * @param resourceClearValue   Optimized clear value.
+         *
+         * @return Error if something went wrong, otherwise created resource.
+         */
+        static std::variant<std::unique_ptr<DirectXResource>, Error> create(
+            DirectXDescriptorHeapManager* pHeap,
+            D3D12MA::Allocator* pMemoryAllocator,
+            D3D12MA::ALLOCATION_DESC allocationDesc,
+            D3D12_RESOURCE_DESC resourceDesc,
+            D3D12_RESOURCE_STATES initialResourceState,
+            D3D12_CLEAR_VALUE resourceClearValue);
+
+        /**
+         * Creates a new resource instance by wrapping existing swap chain buffer,
+         * also binds RTV to the specified resource.
+         *
+         * @param pRtvHeap Render target view heap manager.
+         * @param pSwapChainBuffer Swap chain buffer to wrap.
+         *
+         * @return Error if something went wrong, otherwise created resource.
+         */
+        static std::variant<std::unique_ptr<DirectXResource>, Error> makeResourceFromSwapChainBuffer(
+            DirectXDescriptorHeapManager* pRtvHeap, const ComPtr<ID3D12Resource>& pSwapChainBuffer);
+
+        /**
+         * Returns internal D3D resource.
+         *
+         * @return D3D resource.
+         */
+        ID3D12Resource* getResource() const;
+
+    private:
+        // Heap manager may update @ref heapDescriptor
+        // if the heap that this resource resides in was recreated.
+        friend class DirectXDescriptorHeapManager;
+
+        /**
+         * Constructor. Creates an empty resource.
+         */
+        DirectXResource() = default;
+
+        /** Created descriptor for this resource. */
+        std::optional<DirectXDescriptor> heapDescriptor;
+
+        /** Created resource (can be empty if @ref pSwapChainBuffer is used). */
+        ComPtr<D3D12MA::Allocation> pAllocatedResource;
+
+        /**
+         * Used when resource was created from swap chain buffer (can be empty if @ref pAllocatedResource is
+         * used).
+         */
+        ComPtr<ID3D12Resource> pSwapChainBuffer;
+    };
+} // namespace ne

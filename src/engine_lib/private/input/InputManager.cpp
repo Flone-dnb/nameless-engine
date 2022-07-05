@@ -449,7 +449,7 @@ namespace ne {
         if (vPlusKeys.size() != vMinusKeys.size()) {
             Logger::get().error(
                 std::format(
-                    "not equal size of plus and minus keys, found {} plus key(-s) and {} minus(-s) keys "
+                    "not equal size of plus and minus keys, found {} plus key(s) and {} minus(s) keys "
                     "for axis event {}",
                     vPlusKeys.size(),
                     vMinusKeys.size(),

@@ -85,7 +85,7 @@ namespace ne {
         pathToBackupFile += sBackupFileExtension;
 
         if (!std::filesystem::exists(pathToFile) && !std::filesystem::exists(pathToBackupFile)) {
-            return Error("file(-s) do not exist");
+            return Error("file(s) do not exist");
         }
 
         if (std::filesystem::exists(pathToFile)) {

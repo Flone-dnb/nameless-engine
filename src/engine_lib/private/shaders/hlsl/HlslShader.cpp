@@ -280,7 +280,7 @@ namespace ne {
             if (iNewRefCount != 0) {
                 Logger::get().error(
                     std::format(
-                        "THIS IS A BUG, REPORT TO DEVELOPERS: shader \"{}\" bytecode was released from "
+                        "shader \"{}\" bytecode was released from "
                         "memory but it's still being referenced (new ref count: {})",
                         getShaderName(),
                         iNewRefCount),
@@ -302,7 +302,7 @@ namespace ne {
             if (iNewRefCount != 0) {
                 Logger::get().error(
                     std::format(
-                        "THIS IS A BUG, REPORT TO DEVELOPERS: shader \"{}\" root signature was released from "
+                        "shader \"{}\" root signature was released from "
                         "memory but it's still being referenced (new ref count: {})",
                         getShaderName(),
                         iNewRefCount),

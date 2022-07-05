@@ -6,6 +6,7 @@
 #include <vector>
 #include <mutex>
 #include <atomic>
+#include <memory>
 
 // Custom.
 #include "render/IRenderer.h"
@@ -14,7 +15,6 @@
 
 // External.
 #include "directx/d3dx12.h"
-#include "D3D12MemoryAllocator/include/D3D12MemAlloc.h"
 #include <dxgi1_4.h>
 
 // OS.
@@ -24,6 +24,8 @@ namespace ne {
     using namespace Microsoft::WRL;
 
     class Game;
+    class DirectXResource;
+    class DirectXResourceManager;
 
     /**
      * DirectX 12 renderer.
@@ -111,6 +113,7 @@ namespace ne {
 
     protected:
         friend class HlslShader;
+        friend class DirectXDescriptorHeapManager;
 
         /** Update internal resources for next frame. */
         virtual void update() override;
@@ -156,11 +159,11 @@ namespace ne {
         std::optional<Error> createCommandObjects();
 
         /**
-         * Creates memory allocator (external helper class).
+         * Creates resource manager.
          *
          * @return Error if something went wrong.
          */
-        std::optional<Error> createMemoryAllocator();
+        std::optional<Error> createResourceManager();
 
         /**
          * Creates and initializes the swap chain.
@@ -168,13 +171,6 @@ namespace ne {
          * @return Error if something went wrong.
          */
         std::optional<Error> createSwapChain();
-
-        /**
-         * Creates and initializes the RTV and DSV heaps.
-         *
-         * @return Error if something went wrong.
-         */
-        std::optional<Error> createRtvAndDsvDescriptorHeaps();
 
         /**
          * Checks if the created device supports MSAA.
@@ -202,7 +198,7 @@ namespace ne {
          *
          * @return Error if something went wrong.
          */
-        std::optional<Error> resizeRenderBuffers();
+        std::optional<Error> resizeRenderBuffersToCurrentDisplayMode();
 
         /**
          * Blocks the current thread until the GPU finishes executing all queued commands up to this point.
@@ -240,7 +236,7 @@ namespace ne {
         /** Monitor. */
         ComPtr<IDXGIOutput> pOutputAdapter;
         /** Swap chain. */
-        ComPtr<IDXGISwapChain1> pSwapChain;
+        ComPtr<IDXGISwapChain3> pSwapChain;
 
         // Command objects.
         /** GPU command queue. */
@@ -250,48 +246,33 @@ namespace ne {
         /** CPU command list. */
         ComPtr<ID3D12GraphicsCommandList> pCommandList;
 
-        /** Allocator for GPU resources. */
-        ComPtr<D3D12MA::Allocator> pMemoryAllocator;
-
         /** Fence object. */
         ComPtr<ID3D12Fence> pFence;
         /** Fence counter. */
         std::atomic<UINT64> iCurrentFence{0};
 
-        /** Render target view descriptor heap. */
-        ComPtr<ID3D12DescriptorHeap> pRtvHeap;
-        /** Depth stencil view descriptor heap. */
-        ComPtr<ID3D12DescriptorHeap> pDsvHeap;
-        /** Constant buffer view, shader resource view and unordered access view descriptor heaps. */
-        ComPtr<ID3D12DescriptorHeap> pCbvSrvUavHeap;
-        /** Render target view descriptor size. */
-        UINT iRtvDescriptorSize = 0;
-        /** Depth stencil view descriptor size. */
-        UINT iDsvDescriptorSize = 0;
-        /** Constant buffer view, shader resource view and unordered access view descriptor size. */
-        UINT iCbvSrvUavDescriptorSize = 0;
+        /** Resource manager. */
+        std::unique_ptr<DirectXResourceManager> pResourceManager;
 
         // Render/depth buffers.
-        /** Index of the current back buffer. */
-        int iCurrentBackBufferIndex = 0;
         /** Lock when reading or writing to render resources. */
         std::recursive_mutex mtxRwRenderResources;
         /** Swap chain buffer. */
-        ComPtr<ID3D12Resource> pSwapChainBuffer[getSwapChainBufferCount()];
+        std::vector<std::unique_ptr<DirectXResource>> vSwapChainBuffers;
         /** Depth stencil buffer. */
-        ComPtr<D3D12MA::Allocation> pDepthStencilBuffer;
+        std::unique_ptr<DirectXResource> pDepthStencilBuffer;
         /** Default back buffer fill color. */
         float backBufferFillColor[4] = {0.0f, 0.0f, 0.0f, 1.0f};
 
         // Buffer formats.
         /** Back buffer format. */
-        DXGI_FORMAT backBufferFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
+        const DXGI_FORMAT backBufferFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
         /** Depth/stencil format. */
-        DXGI_FORMAT depthStencilFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
+        const DXGI_FORMAT depthStencilFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
 
         // MSAA.
         /** Render target for MSAA rendering. */
-        ComPtr<D3D12MA::Allocation> pMsaaRenderTarget;
+        std::unique_ptr<DirectXResource> pMsaaRenderBuffer;
         /** Whether the MSAA is currently enabled or not. */
         bool bIsMsaaEnabled = true;
         /** Current MSAA sample count (quality). */

@@ -81,7 +81,7 @@ namespace ne {
         /**
          * Adds a new action event.
          *
-         * Action event allows binding mouse button(-s) and/or keyboard key(-s)
+         * Action event allows binding mouse button(s) and/or keyboard key(s)
          * with a name. When one if the specified buttons is pressed you will receive
          * an action event with the specified name.
          *

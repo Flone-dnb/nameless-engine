@@ -24,8 +24,16 @@ set(ENGINE_WIN32_SOURCES
     private/shaders/hlsl/RootSignatureGenerator.cpp
     private/render/directx/DirectXRenderer.h
     private/render/directx/DirectXRenderer.cpp
-    private/render/directx/Pso.cpp
-    private/render/directx/Pso.h
+    private/render/directx/DirectXPso.cpp
+    private/render/directx/DirectXPso.h
+    private/render/directx/descriptors/DirectXDescriptorHeapManager.h
+    private/render/directx/descriptors/DirectXDescriptorHeapManager.cpp
+    private/render/directx/descriptors/DirectXDescriptor.h
+    private/render/directx/descriptors/DirectXDescriptor.cpp
+    private/render/directx/resources/DirectXResource.h
+    private/render/directx/resources/DirectXResource.cpp
+    private/render/directx/resources/DirectXResourceManager.h
+    private/render/directx/resources/DirectXResourceManager.cpp
     # add Windows specific sources here...
 )
 

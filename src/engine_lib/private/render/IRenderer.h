@@ -167,7 +167,7 @@ namespace ne {
          *
          * @return The amount of buffers the swap chain has.
          */
-        static constexpr unsigned int getSwapChainBufferCount();
+        static consteval unsigned int getSwapChainBufferCount();
 
         /**
          * Used to determine if the configuration file exists on the disk.
@@ -259,5 +259,5 @@ namespace ne {
         inline static const char* sRendererLogCategory = "Renderer";
     };
 
-    constexpr unsigned IRenderer::getSwapChainBufferCount() { return iSwapChainBufferCount; }
+    consteval unsigned IRenderer::getSwapChainBufferCount() { return iSwapChainBufferCount; }
 } // namespace ne

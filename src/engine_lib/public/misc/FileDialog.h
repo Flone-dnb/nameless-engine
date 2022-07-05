@@ -10,7 +10,7 @@ namespace ne {
     class FileDialog {
     public:
         /**
-         * Shows "Open File" dialog window to allow the user to select file(-s).
+         * Shows "Open File" dialog window to allow the user to select file(s).
          *
          * Example:
          * @code

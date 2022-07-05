@@ -10,19 +10,19 @@ namespace ne {
     class DirectXRenderer;
 
     /** Our DirectX pipeline state object (PSO) wrapper. */
-    class Pso : public ShaderUser {
+    class DirectXPso : public ShaderUser {
     public:
         /**
          * Constructor.
          *
          * @param pRenderer Parent renderer that owns this PSO.
          */
-        Pso(DirectXRenderer* pRenderer);
-        Pso() = delete;
-        Pso(const Pso&) = delete;
-        Pso& operator=(const Pso&) = delete;
+        DirectXPso(DirectXRenderer* pRenderer);
+        DirectXPso() = delete;
+        DirectXPso(const DirectXPso&) = delete;
+        DirectXPso& operator=(const DirectXPso&) = delete;
 
-        virtual ~Pso() override {}
+        virtual ~DirectXPso() override {}
 
         /**
          * Assigns a shader to PSO.

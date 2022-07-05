@@ -38,17 +38,18 @@ namespace ne {
          * @param allocationDesc       Allocation description.
          * @param resourceDesc         Resource description.
          * @param initialResourceState Initial resource state.
-         * @param resourceClearValue   Optimized clear value.
+         * @param resourceClearValue   Optimized clear value. Pass empty if creating
+         * CBV/SRV/UAV resource.
          *
          * @return Error if something went wrong, otherwise created resource.
          */
         static std::variant<std::unique_ptr<DirectXResource>, Error> create(
             DirectXDescriptorHeapManager* pHeap,
             D3D12MA::Allocator* pMemoryAllocator,
-            D3D12MA::ALLOCATION_DESC allocationDesc,
-            D3D12_RESOURCE_DESC resourceDesc,
-            D3D12_RESOURCE_STATES initialResourceState,
-            D3D12_CLEAR_VALUE resourceClearValue);
+            const D3D12MA::ALLOCATION_DESC& allocationDesc,
+            const D3D12_RESOURCE_DESC& resourceDesc,
+            const D3D12_RESOURCE_STATES& initialResourceState,
+            std::optional<D3D12_CLEAR_VALUE> resourceClearValue);
 
         /**
          * Creates a new resource instance by wrapping existing swap chain buffer,

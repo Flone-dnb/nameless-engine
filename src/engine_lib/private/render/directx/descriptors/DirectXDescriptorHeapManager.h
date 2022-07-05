@@ -3,7 +3,7 @@
 // STL.
 #include <variant>
 #include <memory>
-#include <unordered_map>
+#include <unordered_set>
 #include <mutex>
 #include <atomic>
 #include <queue>
@@ -62,6 +62,26 @@ namespace ne {
          */
         std::optional<Error> assignDescriptor(DirectXResource* pResource);
 
+        /**
+         * Returns current heap capacity (allocated heap size).
+         *
+         * This function is used for engine testing and generally should not be used
+         * outside of testing.
+         *
+         * @return Heap capacity.
+         */
+        INT getHeapCapacity();
+
+        /**
+         * Returns current heap size (actually used heap size).
+         *
+         * This function is used for engine testing and generally should not be used
+         * outside of testing.
+         *
+         * @return Heap size.
+         */
+        INT getHeapSize();
+
     protected:
         friend class DirectXDescriptor;
 
@@ -83,14 +103,14 @@ namespace ne {
         DirectXDescriptorHeapManager(DirectXRenderer* pRenderer, DescriptorHeapType heapType);
 
         /**
-         * Marks descriptor as no longer being used
-         * so it can be reused by some other resource.
+         * Marks resource descriptor(s) as no longer being used
+         * so they can be reused by some other resource.
          *
          * Called from DirectXDescriptor destructor.
          *
-         * @param iDescriptor Descriptor that is no longer being used.
+         * @param pResource Resource that is using descriptors.
          */
-        void markDescriptorAsNoLongerBeingUsed(INT iDescriptor);
+        void markDescriptorAsNoLongerBeingUsed(DirectXResource* pResource);
 
         /**
          * Creates a new view using the specified descriptor handle that will point to
@@ -131,7 +151,7 @@ namespace ne {
          * Recreates views for created descriptors
          * to be binded to the current heap.
          */
-        void recreateOldViews();
+        void recreateOldViews() const;
 
     private:
         /** Do not delete. Owner renderer. */
@@ -153,7 +173,7 @@ namespace ne {
         INT iHeapCapacity = 0;
 
         /**
-         * Index of the next free descriptor that can be used in @ref createdDescriptors.
+         * Index of the next free descriptor that can be used in @ref bindedResources.
          * Each created descriptor will fetch this value (to be used) and increment it.
          * Once this value is equal to @ref iHeapCapacity we will use @ref noLongerUsedDescriptorIndexes
          * to see if any old descriptors were released and no longer being used.
@@ -167,18 +187,15 @@ namespace ne {
         std::recursive_mutex mtxRwHeap;
 
         /**
-         * Map of created descriptors that are actually being used
+         * Set of resources that use created descriptors
          * (size might not be equal to the actual heap size).
          *
          * Storing a raw pointer here because it's only used to update
          * view if the heap was recreated (no resource ownership). Once resource
          * is destroyed the descriptor will also be destroyed
-         * and thus it will be removed from this map.
-         *
-         * size_t here is the offset of a view from the heap start (offset is specified
-         * in descriptors, not an actual index).
+         * and thus it will be removed from this set.
          */
-        std::unordered_map<INT, DirectXResource*> createdDescriptors;
+        std::unordered_set<DirectXResource*> bindedResources;
 
         /** Direct3D type of this heap. */
         D3D12_DESCRIPTOR_HEAP_TYPE d3dHeapType;

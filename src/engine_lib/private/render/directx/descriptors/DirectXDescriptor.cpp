@@ -6,7 +6,7 @@
 namespace ne {
     DirectXDescriptor::~DirectXDescriptor() {
         if (iDescriptorOffsetInDescriptors.has_value()) {
-            pHeap->markDescriptorAsNoLongerBeingUsed(iDescriptorOffsetInDescriptors.value());
+            pHeap->markDescriptorAsNoLongerBeingUsed(pResource);
         }
     }
 

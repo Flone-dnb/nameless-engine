@@ -72,10 +72,10 @@ namespace ne {
     }
 
     std::variant<std::unique_ptr<DirectXResource>, Error> DirectXResourceManager::createRtvResource(
-        D3D12MA::ALLOCATION_DESC allocationDesc,
-        D3D12_RESOURCE_DESC resourceDesc,
-        D3D12_RESOURCE_STATES initialResourceState,
-        D3D12_CLEAR_VALUE resourceClearValue) const {
+        const D3D12MA::ALLOCATION_DESC& allocationDesc,
+        const D3D12_RESOURCE_DESC& resourceDesc,
+        const D3D12_RESOURCE_STATES& initialResourceState,
+        const D3D12_CLEAR_VALUE& resourceClearValue) const {
         auto result = DirectXResource::create(
             pRtvHeapManager.get(),
             pMemoryAllocator.Get(),
@@ -93,10 +93,10 @@ namespace ne {
     }
 
     std::variant<std::unique_ptr<DirectXResource>, Error> DirectXResourceManager::createDsvResource(
-        D3D12MA::ALLOCATION_DESC allocationDesc,
-        D3D12_RESOURCE_DESC resourceDesc,
-        D3D12_RESOURCE_STATES initialResourceState,
-        D3D12_CLEAR_VALUE resourceClearValue) const {
+        const D3D12MA::ALLOCATION_DESC& allocationDesc,
+        const D3D12_RESOURCE_DESC& resourceDesc,
+        const D3D12_RESOURCE_STATES& initialResourceState,
+        const D3D12_CLEAR_VALUE& resourceClearValue) const {
         auto result = DirectXResource::create(
             pDsvHeapManager.get(),
             pMemoryAllocator.Get(),
@@ -114,17 +114,16 @@ namespace ne {
     }
 
     std::variant<std::unique_ptr<DirectXResource>, Error> DirectXResourceManager::createCbvSrvUavResource(
-        D3D12MA::ALLOCATION_DESC allocationDesc,
-        D3D12_RESOURCE_DESC resourceDesc,
-        D3D12_RESOURCE_STATES initialResourceState,
-        D3D12_CLEAR_VALUE resourceClearValue) const {
+        const D3D12MA::ALLOCATION_DESC& allocationDesc,
+        const D3D12_RESOURCE_DESC& resourceDesc,
+        const D3D12_RESOURCE_STATES& initialResourceState) const {
         auto result = DirectXResource::create(
             pCbvSrvUavHeapManager.get(),
             pMemoryAllocator.Get(),
             allocationDesc,
             resourceDesc,
             initialResourceState,
-            resourceClearValue);
+            {});
         if (std::holds_alternative<Error>(result)) {
             auto err = std::get<Error>(std::move(result));
             err.addEntry();
@@ -156,6 +155,14 @@ namespace ne {
         }
 
         return vCreatedResources;
+    }
+
+    DirectXDescriptorHeapManager* DirectXResourceManager::getRtvHeap() const { return pRtvHeapManager.get(); }
+
+    DirectXDescriptorHeapManager* DirectXResourceManager::getDsvHeap() const { return pDsvHeapManager.get(); }
+
+    DirectXDescriptorHeapManager* DirectXResourceManager::getCbvSrvUavHeap() const {
+        return pCbvSrvUavHeapManager.get();
     }
 
     DirectXResourceManager::DirectXResourceManager(

@@ -67,10 +67,10 @@ namespace ne {
          * @return Error if something went wrong, otherwise created resource.
          */
         std::variant<std::unique_ptr<DirectXResource>, Error> createRtvResource(
-            D3D12MA::ALLOCATION_DESC allocationDesc,
-            D3D12_RESOURCE_DESC resourceDesc,
-            D3D12_RESOURCE_STATES initialResourceState,
-            D3D12_CLEAR_VALUE resourceClearValue) const;
+            const D3D12MA::ALLOCATION_DESC& allocationDesc,
+            const D3D12_RESOURCE_DESC& resourceDesc,
+            const D3D12_RESOURCE_STATES& initialResourceState,
+            const D3D12_CLEAR_VALUE& resourceClearValue) const;
 
         /**
          * Creates a new resource and binds a depth stencil view descriptor to it.
@@ -83,10 +83,10 @@ namespace ne {
          * @return Error if something went wrong, otherwise created resource.
          */
         std::variant<std::unique_ptr<DirectXResource>, Error> createDsvResource(
-            D3D12MA::ALLOCATION_DESC allocationDesc,
-            D3D12_RESOURCE_DESC resourceDesc,
-            D3D12_RESOURCE_STATES initialResourceState,
-            D3D12_CLEAR_VALUE resourceClearValue) const;
+            const D3D12MA::ALLOCATION_DESC& allocationDesc,
+            const D3D12_RESOURCE_DESC& resourceDesc,
+            const D3D12_RESOURCE_STATES& initialResourceState,
+            const D3D12_CLEAR_VALUE& resourceClearValue) const;
 
         /**
          * Creates a new resource and binds a constant buffer view / shader resource view /
@@ -95,15 +95,13 @@ namespace ne {
          * @param allocationDesc       Allocation description.
          * @param resourceDesc         Resource description.
          * @param initialResourceState Initial resource state.
-         * @param resourceClearValue   Optimized clear value.
          *
          * @return Error if something went wrong, otherwise created resource.
          */
         std::variant<std::unique_ptr<DirectXResource>, Error> createCbvSrvUavResource(
-            D3D12MA::ALLOCATION_DESC allocationDesc,
-            D3D12_RESOURCE_DESC resourceDesc,
-            D3D12_RESOURCE_STATES initialResourceState,
-            D3D12_CLEAR_VALUE resourceClearValue) const;
+            const D3D12MA::ALLOCATION_DESC& allocationDesc,
+            const D3D12_RESOURCE_DESC& resourceDesc,
+            const D3D12_RESOURCE_STATES& initialResourceState) const;
 
         /**
          * Creates new resources by wrapping swap chain buffers and binding
@@ -117,6 +115,36 @@ namespace ne {
         std::variant<std::vector<std::unique_ptr<DirectXResource>>, Error>
         makeRtvResourcesFromSwapChainBuffer(
             IDXGISwapChain3* pSwapChain, unsigned int iSwapChainBufferCount) const;
+
+        /**
+         * Returns RTV heap manager.
+         *
+         * This function is used for engine testing and generally should not be used
+         * outside of testing.
+         *
+         * @return RTV heap manager. Do not delete returned pointer.
+         */
+        DirectXDescriptorHeapManager* getRtvHeap() const;
+
+        /**
+         * Returns DSV heap manager.
+         *
+         * This function is used for engine testing and generally should not be used
+         * outside of testing.
+         *
+         * @return DSV heap manager. Do not delete returned pointer.
+         */
+        DirectXDescriptorHeapManager* getDsvHeap() const;
+
+        /**
+         * Returns CBV/SRV/UAV heap manager.
+         *
+         * This function is used for engine testing and generally should not be used
+         * outside of testing.
+         *
+         * @return CBV/SRV/UAV heap manager. Do not delete returned pointer.
+         */
+        DirectXDescriptorHeapManager* getCbvSrvUavHeap() const;
 
     private:
         /**

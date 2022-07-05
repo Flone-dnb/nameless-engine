@@ -1,8 +1,5 @@
 ﻿#include "DirectXDescriptorHeapManager.h"
 
-// STL.
-#include <ranges>
-
 // Custom.
 #include "render/directx/DirectXRenderer.h"
 #include "io/Logger.h"
@@ -26,7 +23,7 @@ namespace ne {
     std::optional<Error> DirectXDescriptorHeapManager::assignDescriptor(DirectXResource* pResource) {
         std::scoped_lock guard(mtxRwHeap);
 
-        if (createdDescriptors.size() == static_cast<size_t>(iHeapCapacity)) {
+        if (bindedResources.size() == static_cast<size_t>(iHeapCapacity)) {
             auto optionalError = expandHeap();
             if (optionalError.has_value()) {
                 optionalError->addEntry();
@@ -47,10 +44,20 @@ namespace ne {
 
         createView(heapHandle, pResource);
 
-        createdDescriptors[iDescriptorIndex] = pResource;
+        bindedResources.insert(pResource);
         pResource->heapDescriptor = DirectXDescriptor(this, pResource, iDescriptorIndex);
 
         return {};
+    }
+
+    INT DirectXDescriptorHeapManager::getHeapCapacity() {
+        std::scoped_lock guard(mtxRwHeap);
+        return iHeapCapacity;
+    }
+
+    INT DirectXDescriptorHeapManager::getHeapSize() {
+        std::scoped_lock guard(mtxRwHeap);
+        return static_cast<INT>(bindedResources.size());
     }
 
     std::string DirectXDescriptorHeapManager::convertHeapTypeToString(DescriptorHeapType heapType) {
@@ -95,22 +102,22 @@ namespace ne {
         sHeapType = convertHeapTypeToString(heapType);
     }
 
-    void DirectXDescriptorHeapManager::markDescriptorAsNoLongerBeingUsed(INT iDescriptor) {
+    void DirectXDescriptorHeapManager::markDescriptorAsNoLongerBeingUsed(DirectXResource* pResource) {
         std::scoped_lock guard(mtxRwHeap);
 
-        const auto it = createdDescriptors.find(iDescriptor);
-        if (it == createdDescriptors.end()) [[unlikely]] {
+        const auto it = bindedResources.find(pResource);
+        if (it == bindedResources.end()) [[unlikely]] {
             Logger::get().error(
-                std::format("the specified descriptor {} was not found", iDescriptor),
+                std::format("the specified resource {} was not found", reinterpret_cast<void*>(pResource)),
                 sDescriptorHeapLogCategory);
             return;
         }
 
-        createdDescriptors.erase(it);
-        noLongerUsedDescriptorIndexes.push(iDescriptor);
+        bindedResources.erase(it);
+        noLongerUsedDescriptorIndexes.push(pResource->heapDescriptor->iDescriptorOffsetInDescriptors.value());
 
-        if (iHeapCapacity >= iHeapGrowSize * 2 && static_cast<INT>(createdDescriptors.size()) <=
-                                                      (iHeapCapacity - iHeapGrowSize - iHeapGrowSize / 2)) {
+        if (iHeapCapacity >= iHeapGrowSize * 2 &&
+            static_cast<INT>(bindedResources.size()) <= (iHeapCapacity - iHeapGrowSize - iHeapGrowSize / 2)) {
             auto optionalError = shrinkHeap();
             if (optionalError.has_value()) {
                 optionalError->addEntry();
@@ -122,13 +129,13 @@ namespace ne {
     std::optional<Error> DirectXDescriptorHeapManager::expandHeap() {
         std::scoped_lock guard(mtxRwHeap);
 
-        if (createdDescriptors.size() != static_cast<size_t>(iHeapCapacity)) [[unlikely]] {
+        if (bindedResources.size() != static_cast<size_t>(iHeapCapacity)) [[unlikely]] {
             Logger::get().error(
                 std::format(
                     "requested to expand {} heap of capacity {} while the actual size is {}",
                     sHeapType,
                     iHeapCapacity,
-                    createdDescriptors.size()),
+                    bindedResources.size()),
                 sDescriptorHeapLogCategory);
         }
 
@@ -140,7 +147,7 @@ namespace ne {
                     sHeapType,
                     iHeapCapacity,
                     noLongerUsedDescriptorIndexes.size(),
-                    createdDescriptors.size()),
+                    bindedResources.size()),
                 sDescriptorHeapLogCategory);
         }
 
@@ -178,19 +185,19 @@ namespace ne {
                 "expected at least size of {}",
                 sHeapType,
                 iHeapCapacity,
-                createdDescriptors.size(),
+                bindedResources.size(),
                 iHeapGrowSize * 2));
         }
 
-        if (static_cast<INT>(createdDescriptors.size()) > iHeapCapacity - iHeapGrowSize - iHeapGrowSize / 2)
+        if (static_cast<INT>(bindedResources.size()) > iHeapCapacity - iHeapGrowSize - iHeapGrowSize / 2)
             [[unlikely]] {
             return Error(std::format(
                 "a request to shrink {} heap of capacity {} with the actual size of {} was rejected, reason: "
                 "shrink condition is not met (size {} < {} is false)",
                 sHeapType,
                 iHeapCapacity,
-                createdDescriptors.size(),
-                createdDescriptors.size(),
+                bindedResources.size(),
+                bindedResources.size(),
                 iHeapCapacity - iHeapGrowSize - iHeapGrowSize / 2));
         }
 
@@ -270,13 +277,13 @@ namespace ne {
         return {};
     }
 
-    void DirectXDescriptorHeapManager::recreateOldViews() {
+    void DirectXDescriptorHeapManager::recreateOldViews() const {
         // Start from 0 heap index, increment and update old offsets
         // to "shrink" heap usage (needed for heap shrinking).
         auto heapHandle = CD3DX12_CPU_DESCRIPTOR_HANDLE(pHeap->GetCPUDescriptorHandleForHeapStart());
         INT iCurrentHeapIndex = 0;
 
-        for (const auto& pResource : createdDescriptors | std::views::values) {
+        for (const auto& pResource : bindedResources) {
             createView(heapHandle, pResource);
             pResource->heapDescriptor->iDescriptorOffsetInDescriptors = iCurrentHeapIndex;
 

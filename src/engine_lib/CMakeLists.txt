@@ -235,7 +235,12 @@ add_subdirectory(${RELATIVE_EXT_PATH}/Catch2 ${DEPENDENCY_BUILD_DIR_NAME}/Catch2
 set(ENGINE_TESTS_NAME engine_tests)
 set(TESTS_RELATIVE_PATH ../../tests)
 
-add_executable(${ENGINE_TESTS_NAME}
+set(ENGINE_TEST_WIN32_SOURCES
+    ${TESTS_RELATIVE_PATH}/engine_lib/directx/DirectXResourceManager.cpp
+    # add Windows specific test sources here...
+)
+
+set(ENGINE_TEST_SOURCES
     ${TESTS_RELATIVE_PATH}/engine_lib.cpp
     ${TESTS_RELATIVE_PATH}/engine_lib/Window.cpp
     ${TESTS_RELATIVE_PATH}/engine_lib/ConfigManager.cpp
@@ -244,6 +249,12 @@ add_executable(${ENGINE_TESTS_NAME}
     ${TESTS_RELATIVE_PATH}/engine_lib/ShaderPack.cpp
     # add engine test .cpp files here
 )
+
+if (WIN32)
+    list(APPEND ENGINE_TEST_SOURCES ${ENGINE_TEST_WIN32_SOURCES})
+endif()
+
+add_executable(${ENGINE_TESTS_NAME} ${ENGINE_TEST_SOURCES})
 
 target_compile_features(${ENGINE_TESTS_NAME} PRIVATE cxx_std_${PROJECT_CXX_STANDARD_VERSION})
 

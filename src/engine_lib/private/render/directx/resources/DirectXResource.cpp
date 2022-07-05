@@ -7,17 +7,22 @@ namespace ne {
     std::variant<std::unique_ptr<DirectXResource>, Error> DirectXResource::create(
         DirectXDescriptorHeapManager* pHeap,
         D3D12MA::Allocator* pMemoryAllocator,
-        D3D12MA::ALLOCATION_DESC allocationDesc,
-        D3D12_RESOURCE_DESC resourceDesc,
-        D3D12_RESOURCE_STATES initialResourceState,
-        D3D12_CLEAR_VALUE resourceClearValue) {
+        const D3D12MA::ALLOCATION_DESC& allocationDesc,
+        const D3D12_RESOURCE_DESC& resourceDesc,
+        const D3D12_RESOURCE_STATES& initialResourceState,
+        std::optional<D3D12_CLEAR_VALUE> resourceClearValue) {
         auto pCreatedResource = std::unique_ptr<DirectXResource>(new DirectXResource());
+
+        const D3D12_CLEAR_VALUE* pClearValue = nullptr;
+        if (resourceClearValue.has_value()) {
+            pClearValue = &resourceClearValue.value();
+        }
 
         const HRESULT hResult = pMemoryAllocator->CreateResource(
             &allocationDesc,
             &resourceDesc,
             initialResourceState,
-            &resourceClearValue,
+            pClearValue,
             pCreatedResource->pAllocatedResource.ReleaseAndGetAddressOf(),
             IID_NULL,
             nullptr);

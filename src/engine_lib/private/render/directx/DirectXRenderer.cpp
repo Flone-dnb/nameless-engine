@@ -630,6 +630,8 @@ namespace ne {
         return {pointWrap, linearWrap, anisotropicWrap, shadow};
     }
 
+    DirectXResourceManager* DirectXRenderer::getResourceManager() const { return pResourceManager.get(); }
+
     std::optional<Error> DirectXRenderer::resizeRenderBuffersToCurrentDisplayMode() {
         std::scoped_lock guard(mtxRwRenderResources);
 

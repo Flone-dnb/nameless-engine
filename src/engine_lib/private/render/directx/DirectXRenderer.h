@@ -111,6 +111,17 @@ namespace ne {
          */
         static std::array<const CD3DX12_STATIC_SAMPLER_DESC, 4> getStaticTextureSamplers();
 
+        /**
+         * Returns resource manager.
+         * Resource manager handles resource allocation and descriptor binding.
+         *
+         * This function is used for engine testing and generally should not be used
+         * outside of testing.
+         *
+         * @return Resource manager. Do not delete returned pointer.
+         */
+        DirectXResourceManager* getResourceManager() const;
+
     protected:
         friend class HlslShader;
         friend class DirectXDescriptorHeapManager;

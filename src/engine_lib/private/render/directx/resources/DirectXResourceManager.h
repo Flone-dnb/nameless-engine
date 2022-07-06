@@ -119,9 +119,6 @@ namespace ne {
         /**
          * Returns RTV heap manager.
          *
-         * This function is used for engine testing and generally should not be used
-         * outside of testing.
-         *
          * @return RTV heap manager. Do not delete returned pointer.
          */
         DirectXDescriptorHeapManager* getRtvHeap() const;
@@ -129,18 +126,12 @@ namespace ne {
         /**
          * Returns DSV heap manager.
          *
-         * This function is used for engine testing and generally should not be used
-         * outside of testing.
-         *
          * @return DSV heap manager. Do not delete returned pointer.
          */
         DirectXDescriptorHeapManager* getDsvHeap() const;
 
         /**
          * Returns CBV/SRV/UAV heap manager.
-         *
-         * This function is used for engine testing and generally should not be used
-         * outside of testing.
          *
          * @return CBV/SRV/UAV heap manager. Do not delete returned pointer.
          */

@@ -66,6 +66,8 @@ TEST_CASE("create multiple CBV resources to make the heap expand") {
             REQUIRE(pHeapManager->getHeapCapacity() > iInitialHeapCapacity);
             REQUIRE(pHeapManager->getHeapSize() == iInitialHeapCapacity + 1);
 
+            // TODO: check that resources and views are valid
+
             pGameWindow->close();
         }
         virtual ~TestGameInstance() override {}

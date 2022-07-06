@@ -21,6 +21,11 @@ namespace ne {
     }
 
     std::optional<Error> DirectXDescriptorHeapManager::assignDescriptor(DirectXResource* pResource) {
+        if (pResource->vHeapDescriptors[static_cast<int>(heapType)].has_value()) {
+            return Error(std::format(
+                "resource already has {} descriptor assigned", convertHeapTypeToString(heapType)));
+        }
+
         std::scoped_lock guard(mtxRwHeap);
 
         if (bindedResources.size() == static_cast<size_t>(iHeapCapacity)) {
@@ -45,7 +50,8 @@ namespace ne {
         createView(heapHandle, pResource);
 
         bindedResources.insert(pResource);
-        pResource->heapDescriptor = DirectXDescriptor(this, pResource, iDescriptorIndex);
+        pResource->vHeapDescriptors[static_cast<int>(heapType)] =
+            DirectXDescriptor(this, pResource, iDescriptorIndex);
 
         return {};
     }
@@ -68,6 +74,11 @@ namespace ne {
             return "DSV";
         case (DescriptorHeapType::CBV_SRV_UAV):
             return "CBV/SRV/UAV";
+        case (DescriptorHeapType::END): {
+            const Error err("invalid heap type");
+            err.showError();
+            throw std::runtime_error(err.getError());
+        }
         }
 
         const Error err("not handled heap type");
@@ -82,21 +93,26 @@ namespace ne {
 
         // Get descriptor size and heap type.
         switch (heapType) {
-        case (DescriptorHeapType::RTV):
+        case (DescriptorHeapType::RTV): {
             iDescriptorSize =
                 pRenderer->pDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
             d3dHeapType = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
-            break;
-        case (DescriptorHeapType::DSV):
+        } break;
+        case (DescriptorHeapType::DSV): {
             iDescriptorSize =
                 pRenderer->pDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
             d3dHeapType = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
-            break;
-        case (DescriptorHeapType::CBV_SRV_UAV):
+        } break;
+        case (DescriptorHeapType::CBV_SRV_UAV): {
             iDescriptorSize =
                 pRenderer->pDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
             d3dHeapType = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-            break;
+        } break;
+        case (DescriptorHeapType::END): {
+            const Error err("invalid heap type");
+            err.showError();
+            throw std::runtime_error(err.getError());
+        }
         }
 
         sHeapType = convertHeapTypeToString(heapType);
@@ -114,7 +130,8 @@ namespace ne {
         }
 
         bindedResources.erase(it);
-        noLongerUsedDescriptorIndexes.push(pResource->heapDescriptor->iDescriptorOffsetInDescriptors.value());
+        noLongerUsedDescriptorIndexes.push(
+            pResource->vHeapDescriptors[static_cast<int>(heapType)]->iDescriptorOffsetInDescriptors.value());
 
         if (iHeapCapacity >= iHeapGrowSize * 2 &&
             static_cast<INT>(bindedResources.size()) <= (iHeapCapacity - iHeapGrowSize - iHeapGrowSize / 2)) {
@@ -218,10 +235,10 @@ namespace ne {
     void DirectXDescriptorHeapManager::createView(
         CD3DX12_CPU_DESCRIPTOR_HANDLE heapHandle, const DirectXResource* pResource) const {
         switch (heapType) {
-        case (DescriptorHeapType::RTV):
+        case (DescriptorHeapType::RTV): {
             pRenderer->pDevice->CreateRenderTargetView(pResource->getResource(), nullptr, heapHandle);
-            break;
-        case (DescriptorHeapType::DSV):
+        } break;
+        case (DescriptorHeapType::DSV): {
             D3D12_DEPTH_STENCIL_VIEW_DESC dsvDesc;
             dsvDesc.Flags = D3D12_DSV_FLAG_NONE;
             dsvDesc.ViewDimension =
@@ -230,8 +247,8 @@ namespace ne {
             dsvDesc.Texture2D.MipSlice = 0;
 
             pRenderer->pDevice->CreateDepthStencilView(pResource->getResource(), &dsvDesc, heapHandle);
-            break;
-        case (DescriptorHeapType::CBV_SRV_UAV):
+        } break;
+        case (DescriptorHeapType::CBV_SRV_UAV): {
             const auto resourceGpuVirtualAddress = pResource->getResource()->GetGPUVirtualAddress();
 
             D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc;
@@ -239,7 +256,12 @@ namespace ne {
             cbvDesc.SizeInBytes = static_cast<UINT>(pResource->getResource()->GetDesc().Width);
 
             pRenderer->pDevice->CreateConstantBufferView(&cbvDesc, heapHandle);
-            break;
+        } break;
+        case (DescriptorHeapType::END): {
+            const Error err("invalid heap type");
+            err.showError();
+            throw std::runtime_error(err.getError());
+        }
         }
     }
 
@@ -285,7 +307,8 @@ namespace ne {
 
         for (const auto& pResource : bindedResources) {
             createView(heapHandle, pResource);
-            pResource->heapDescriptor->iDescriptorOffsetInDescriptors = iCurrentHeapIndex;
+            pResource->vHeapDescriptors[static_cast<int>(heapType)]->iDescriptorOffsetInDescriptors =
+                iCurrentHeapIndex;
 
             heapHandle.Offset(1, iDescriptorSize);
             iCurrentHeapIndex += 1;

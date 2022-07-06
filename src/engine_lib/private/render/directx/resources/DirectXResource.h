@@ -78,10 +78,13 @@ namespace ne {
         /**
          * Constructor. Creates an empty resource.
          */
-        DirectXResource() = default;
+        DirectXResource();
 
-        /** Created descriptor for this resource. */
-        std::optional<DirectXDescriptor> heapDescriptor;
+        /**
+         * Will have size of DescriptorHeapType enum elements.
+         * Access elements like this: "vHeapDescriptors[DescriptorHeapType::RTV]".
+         */
+        std::vector<std::optional<DirectXDescriptor>> vHeapDescriptors;
 
         /** Created resource (can be empty if @ref pSwapChainBuffer is used). */
         ComPtr<D3D12MA::Allocation> pAllocatedResource;

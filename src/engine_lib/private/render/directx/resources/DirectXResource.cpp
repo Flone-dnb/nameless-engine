@@ -61,4 +61,6 @@ namespace ne {
             return pSwapChainBuffer.Get();
         }
     }
+
+    DirectXResource::DirectXResource() { vHeapDescriptors.resize(static_cast<int>(DescriptorHeapType::END)); }
 } // namespace ne

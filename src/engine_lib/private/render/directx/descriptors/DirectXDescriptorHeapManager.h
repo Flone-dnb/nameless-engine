@@ -25,13 +25,12 @@ namespace ne {
     class DirectXResource;
 
     /** Defines types of different descriptor heaps. */
-    enum class DescriptorHeapType {
-        RTV,
+    enum class DescriptorHeapType : int {
+        RTV = 0,
         DSV,
         CBV_SRV_UAV,
-        // if adding new types add them
-        // in DirectXDescriptorHeapManager constructor and
-        // in 'DirectXDescriptorHeapManager::heapTypeToString' function.
+        // add new entries here
+        END, // marks the size of this enum
     };
 
     /** Controls and holds RTV, DSV and CBV/SRV/UAV descriptor heaps. */

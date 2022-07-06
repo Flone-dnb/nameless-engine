@@ -4,6 +4,7 @@
 #include "render/directx/descriptors/DirectXDescriptorHeapManager.h"
 
 namespace ne {
+
     std::variant<std::unique_ptr<DirectXResource>, Error> DirectXResource::create(
         DirectXDescriptorHeapManager* pHeap,
         D3D12MA::Allocator* pMemoryAllocator,

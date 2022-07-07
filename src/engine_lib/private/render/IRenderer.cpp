@@ -32,16 +32,8 @@ namespace ne {
     ShaderManager* IRenderer::getShaderManager() const { return pShaderManager.get(); }
 
     bool IRenderer::isConfigurationFileExists() {
-        const auto configsFolder = getRendererConfigurationFilePath().parent_path();
-
-        const auto directoryIterator = std::filesystem::directory_iterator(configsFolder);
-        for (const auto& entry : directoryIterator) {
-            if (entry.is_regular_file() && entry.path().stem().string() == sRendererConfigurationFileName) {
-                return true;
-            }
-        }
-
-        return false;
+        const auto configPath = getRendererConfigurationFilePath();
+        return std::filesystem::exists(configPath);
     }
 
     std::filesystem::path IRenderer::getRendererConfigurationFilePath() {

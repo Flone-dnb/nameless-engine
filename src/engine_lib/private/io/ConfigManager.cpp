@@ -1,8 +1,10 @@
 ﻿#include "io/ConfigManager.h"
 
-// Custom.
+// STL.
 #include <ranges>
 
+// Custom.
+#include "io/Logger.h"
 #include "misc/Globals.h"
 
 namespace ne {
@@ -206,6 +208,27 @@ namespace ne {
     ConfigManager::saveFile(const std::filesystem::path& pathToConfigFile, bool bEnableBackup) {
         auto pathToFile = pathToConfigFile;
 
+#if defined(WIN32)
+        // Check if the path length is too long.
+        constexpr auto iMaxPathLimit = MAX_PATH - 15;
+        const auto iFilePathLength = pathToConfigFile.string().length();
+        if (iFilePathLength > iMaxPathLimit - 30 && iFilePathLength < iMaxPathLimit) {
+            Logger::get().warn(
+                std::format(
+                    "file path length {} is close to the platform limit of {} characters (path: {})",
+                    iFilePathLength,
+                    iMaxPathLimit,
+                    pathToConfigFile.string()),
+                "");
+        } else if (iFilePathLength >= iMaxPathLimit) {
+            return Error(std::format(
+                "file path length {} exceeds the platform limit of {} characters (path: {})",
+                iFilePathLength,
+                iMaxPathLimit,
+                pathToConfigFile.string()));
+        }
+#endif
+
         // Check extension.
         if (!pathToFile.string().ends_with(ConfigManager::getConfigFormatExtension())) {
             pathToFile += ConfigManager::getConfigFormatExtension();
@@ -257,7 +280,7 @@ namespace ne {
             return Error("received an absolute path as a file name");
         } else {
             if (sFileName.contains('/') || sFileName.contains('\\')) {
-                return Error("either specify an absolute path or a name (in the case don't use slashes");
+                return Error("don't use slashes in file name");
             }
 
             // Prepare directory.

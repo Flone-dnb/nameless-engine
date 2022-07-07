@@ -293,7 +293,7 @@ namespace ne {
             'z', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '_', '-'};
 
         /** Maximum length of a shader name. */
-        const size_t iMaximumShaderNameLength = 50;
+        const size_t iMaximumShaderNameLength = 40;
 
         /** Name of the category used for logging. */
         inline static const char* sShaderManagerLogCategory = "Shader Manager";

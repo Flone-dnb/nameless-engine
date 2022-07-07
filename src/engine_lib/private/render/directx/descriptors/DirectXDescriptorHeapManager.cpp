@@ -268,10 +268,12 @@ namespace ne {
     std::optional<Error> DirectXDescriptorHeapManager::createHeap(INT iCapacity) {
         Logger::get().info(
             std::format(
-                "flushing the command queue to (re)create {} descriptor heap (from capacity {} to {})",
+                "flushing the command queue to (re)create {} descriptor heap (from capacity {} to {}) "
+                "(size: {})",
                 sHeapType,
                 iHeapCapacity,
-                iCapacity),
+                iCapacity,
+                bindedResources.size()),
             sDescriptorHeapLogCategory);
 
         // Make sure we don't render anything.

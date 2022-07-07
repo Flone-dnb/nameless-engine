@@ -57,6 +57,25 @@ namespace ne {
         virtual ~IRenderer() = default;
 
         /**
+         * Sets antialiasing settings.
+         *
+         * @param settings Antialiasing settings.
+         *
+         * @return Error if something went wrong.
+         */
+        virtual std::optional<Error> setAntialiasing(const Antialiasing& settings) = 0;
+
+        /**
+         * Sets backbuffer color.
+         *
+         * @param fillColor Color that the backbuffer will be filled with before rendering a frame.
+         * 4 values correspond to RGBA parameters.
+         *
+         * @return Error if something went wrong.
+         */
+        virtual std::optional<Error> setBackbufferFillColor(float fillColor[4]) = 0;
+
+        /**
          * Looks for video adapters (GPUs) that support this renderer.
          *
          * @return Error if can't find any GPU that supports this renderer,
@@ -90,7 +109,7 @@ namespace ne {
          *
          * @return AA settings.
          */
-        virtual Antialiasing getCurrentAntialiasing() const = 0;
+        virtual Antialiasing getAntialiasing() const = 0;
 
         /**
          * Returns total video memory size (VRAM) in megabytes.
@@ -105,16 +124,6 @@ namespace ne {
          * @return Used video memory size in megabytes.
          */
         virtual size_t getUsedVideoMemoryInMb() const = 0;
-
-        /**
-         * Sets backbuffer color.
-         *
-         * @param fillColor Color that the backbuffer will be filled with before rendering a frame.
-         * 4 values correspond to RGBA parameters.
-         *
-         * @return Error if something went wrong.
-         */
-        virtual std::optional<Error> setBackbufferFillColor(float fillColor[4]) = 0;
 
         /**
          * Returns the window that we render to.

@@ -45,6 +45,15 @@ namespace ne {
         virtual ~DirectXRenderer() override = default;
 
         /**
+         * Sets antialiasing settings.
+         *
+         * @param settings Antialiasing settings.
+         *
+         * @return Error if something went wrong.
+         */
+        virtual std::optional<Error> setAntialiasing(const Antialiasing& settings) override;
+
+        /**
          * Looks for video adapters (GPUs) that support used DirectX version and feature level.
          *
          * @return Error if can't find any GPU that supports our DirectX version and feature level,
@@ -78,7 +87,7 @@ namespace ne {
          *
          * @return AA settings.
          */
-        virtual Antialiasing getCurrentAntialiasing() const override;
+        virtual Antialiasing getAntialiasing() const override;
 
         /**
          * Returns total video memory size (VRAM) in megabytes.
@@ -142,6 +151,15 @@ namespace ne {
          * @return Returns an error if something went wrong.
          */
         std::optional<Error> enableDebugLayer() const;
+
+        /**
+         * (Re)creates depth/stencil buffer @ref pDepthStencilBuffer.
+         *
+         * @return Error if something went wrong.
+         *
+         * @remark Make sure that old depth/stencil buffer (if was) is not used by the GPU.
+         */
+        std::optional<Error> createDepthStencilBuffer();
 
         /**
          * Sets the video adapter to be used.

@@ -101,6 +101,64 @@ namespace ne {
         return {};
     }
 
+    std::optional<Error> DirectXRenderer::createDepthStencilBuffer() {
+        D3D12_RESOURCE_DESC depthStencilDesc;
+        depthStencilDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+        depthStencilDesc.Alignment = 0;
+        depthStencilDesc.Width = currentDisplayMode.Width;
+        depthStencilDesc.Height = currentDisplayMode.Height;
+        depthStencilDesc.DepthOrArraySize = 1;
+        depthStencilDesc.MipLevels = 1;
+        depthStencilDesc.Format = depthStencilFormat;
+        depthStencilDesc.SampleDesc.Count = bIsMsaaEnabled ? iMsaaSampleCount : 1;
+        depthStencilDesc.SampleDesc.Quality = bIsMsaaEnabled ? (iMsaaQuality - 1) : 0;
+        depthStencilDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+        depthStencilDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
+
+        D3D12_CLEAR_VALUE depthClear;
+        depthClear.Format = depthStencilFormat;
+        depthClear.DepthStencil.Depth = 1.0f;
+        depthClear.DepthStencil.Stencil = 0;
+
+        D3D12MA::ALLOCATION_DESC allocationDesc = {};
+        allocationDesc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
+
+        auto result = pResourceManager->createDsvResource(
+            allocationDesc, depthStencilDesc, D3D12_RESOURCE_STATE_DEPTH_WRITE, depthClear);
+        if (std::holds_alternative<Error>(result)) {
+            auto err = std::get<Error>(std::move(result));
+            err.addEntry();
+            return err;
+        }
+        pDepthStencilBuffer = std::get<std::unique_ptr<DirectXResource>>(std::move(result));
+
+        return {};
+    }
+
+    std::optional<Error> DirectXRenderer::setAntialiasing(const Antialiasing& settings) {
+        std::scoped_lock guard(mtxRwRenderResources);
+        flushCommandQueue();
+
+        bIsMsaaEnabled = settings.bIsEnabled;
+
+        if (bIsMsaaEnabled && settings.iQuality != 2 && settings.iQuality != 4) {
+            return Error(std::format(
+                "{} is not a valid quality parameter, valid quality values for MSAA are 2 and 4",
+                settings.iQuality));
+        }
+
+        iMsaaSampleCount = settings.iQuality;
+
+        // Recreate depth/stencil buffer with(out) multisampling.
+        auto optionalError = createDepthStencilBuffer();
+        if (optionalError.has_value()) {
+            optionalError->addEntry();
+            return optionalError.value();
+        }
+
+        return {};
+    }
+
     std::variant<std::vector<std::string>, Error> DirectXRenderer::getSupportedGpus() const {
         std::vector<std::string> vAddedVideoAdapters;
 
@@ -162,7 +220,7 @@ namespace ne {
 
     std::string DirectXRenderer::getCurrentlyUsedGpuName() const { return sUsedVideoAdapter; }
 
-    Antialiasing DirectXRenderer::getCurrentAntialiasing() const {
+    Antialiasing DirectXRenderer::getAntialiasing() const {
         return Antialiasing{bIsMsaaEnabled, static_cast<int>(iMsaaSampleCount)};
     }
 
@@ -701,34 +759,11 @@ namespace ne {
         pMsaaRenderBuffer = std::get<std::unique_ptr<DirectXResource>>(std::move(result));
 
         // Create depth/stencil buffer.
-        D3D12_RESOURCE_DESC depthStencilDesc;
-        depthStencilDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
-        depthStencilDesc.Alignment = 0;
-        depthStencilDesc.Width = currentDisplayMode.Width;
-        depthStencilDesc.Height = currentDisplayMode.Height;
-        depthStencilDesc.DepthOrArraySize = 1;
-        depthStencilDesc.MipLevels = 1;
-        depthStencilDesc.Format = depthStencilFormat;
-        depthStencilDesc.SampleDesc.Count = bIsMsaaEnabled ? iMsaaSampleCount : 1;
-        depthStencilDesc.SampleDesc.Quality = bIsMsaaEnabled ? (iMsaaQuality - 1) : 0;
-        depthStencilDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
-        depthStencilDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
-
-        D3D12_CLEAR_VALUE depthClear;
-        depthClear.Format = depthStencilFormat;
-        depthClear.DepthStencil.Depth = 1.0f;
-        depthClear.DepthStencil.Stencil = 0;
-
-        allocationDesc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
-
-        result = pResourceManager->createDsvResource(
-            allocationDesc, depthStencilDesc, D3D12_RESOURCE_STATE_DEPTH_WRITE, depthClear);
-        if (std::holds_alternative<Error>(result)) {
-            auto err = std::get<Error>(std::move(result));
-            err.addEntry();
-            return err;
+        auto optionalError = createDepthStencilBuffer();
+        if (optionalError.has_value()) {
+            optionalError->addEntry();
+            return optionalError.value();
         }
-        pDepthStencilBuffer = std::get<std::unique_ptr<DirectXResource>>(std::move(result));
 
         // Update the viewport transform to cover the new display size.
         screenViewport.TopLeftX = 0;

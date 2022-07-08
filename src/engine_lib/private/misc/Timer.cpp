@@ -53,13 +53,17 @@ namespace ne {
                         std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count()) *
                     0.000001f;
 
+                // Limit precision to 1 digit.
+                std::stringstream durationStream;
+                durationStream << std::fixed << std::setprecision(1) << durationInMs;
+
                 if (durationInMs < 1.0f) {
                     // Information.
                     Logger::get().info(
                         std::format(
                             "timer has finished waiting for started callback functions to finish, took {} "
                             "millisecond",
-                            durationInMs),
+                            durationStream.str()),
                         "");
                 } else {
                     // Warning.
@@ -67,7 +71,7 @@ namespace ne {
                         std::format(
                             "timer has finished waiting for started callback functions to finish, took {} "
                             "millisecond(s)",
-                            durationInMs),
+                            durationStream.str()),
                         "");
                 }
             }

@@ -17,12 +17,12 @@ namespace ne {
             std::format(
                 "using {} shader(s) per pixel shader pack",
                 ShaderParameterConfigurations::validPixelShaderParameterConfigurations.size()),
-            getLoggingCategory());
+            getRendererLoggingCategory());
         Logger::get().info(
             std::format(
                 "using {} shader(s) per vertex shader pack",
                 ShaderParameterConfigurations::validVertexShaderParameterConfigurations.size()),
-            getLoggingCategory());
+            getRendererLoggingCategory());
     }
 
     Window* IRenderer::getWindow() const { return pGame->getWindow(); }
@@ -71,5 +71,5 @@ namespace ne {
 
     const char* IRenderer::getConfigurationSectionVSync() { return sConfigurationSectionVSync; }
 
-    const char* IRenderer::getLoggingCategory() { return sRendererLogCategory; }
+    const char* IRenderer::getRendererLoggingCategory() { return sRendererLogCategory; }
 } // namespace ne

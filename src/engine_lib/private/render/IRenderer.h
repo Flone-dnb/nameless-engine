@@ -232,7 +232,7 @@ namespace ne {
          *
          * @return Category name.
          */
-        static const char* getLoggingCategory();
+        static const char* getRendererLoggingCategory();
 
     private:
         /** Number of buffers in swap chain. */

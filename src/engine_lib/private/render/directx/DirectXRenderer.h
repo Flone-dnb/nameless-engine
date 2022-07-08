@@ -345,8 +345,8 @@ namespace ne {
          */
         std::pair<std::atomic_flag, std::set<ShaderParameter>> currentPixelShaderConfiguration;
 
-        /** Will be 'true' if we read the configuration from disk at startup. */
-        bool bStartedWithConfigurationFromDisk = false;
+        /** Will be 'true' if we read the configuration from disk at startup and it's valid. */
+        bool bDisplayModeInitializedFromDiskConfig = false;
 
         /** Used to create a critical section for read/write operation on config files. */
         std::mutex mtxRwConfigFile;

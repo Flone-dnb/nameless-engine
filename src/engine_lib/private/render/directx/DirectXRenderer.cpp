@@ -32,7 +32,6 @@ namespace ne {
         // Read configuration from config file (if exists).
         if (isConfigurationFileExists()) {
             DirectXRenderer::readConfigurationFromConfigFile();
-            bStartedWithConfigurationFromDisk = true;
         }
 
         // Initialize DirectX.
@@ -454,7 +453,7 @@ namespace ne {
                     "GPU",
                     iPreferredGpuIndex,
                     vSupportedVideoAdapters.size()),
-                getLoggingCategory());
+                getRendererLoggingCategory());
             iPreferredGpuIndex = 0; // use first found GPU
         }
 
@@ -474,7 +473,7 @@ namespace ne {
             }
             Logger::get().error(
                 std::format("{} ({}), using first found GPU", error->getInitialMessage(), iPreferredGpuIndex),
-                getLoggingCategory());
+                getRendererLoggingCategory());
 
             // Try first found GPU.
             iPreferredGpuIndex = 0;
@@ -525,7 +524,7 @@ namespace ne {
             return err;
         }
 
-        if (bStartedWithConfigurationFromDisk) {
+        if (bDisplayModeInitializedFromDiskConfig) {
             // Find the specified video mode.
             const auto vVideoModes = std::get<std::vector<DXGI_MODE_DESC>>(std::move(videoModesResult));
 
@@ -548,7 +547,7 @@ namespace ne {
                         currentDisplayMode.Height,
                         currentDisplayMode.RefreshRate.Numerator,
                         currentDisplayMode.RefreshRate.Denominator),
-                    getLoggingCategory());
+                    getRendererLoggingCategory());
                 // use last display mode
                 currentDisplayMode = vVideoModes.back();
             } else if (vFilteredModes.size() == 1) {
@@ -575,7 +574,7 @@ namespace ne {
                         static_cast<int>(mode.Scaling));
                 }
                 Logger::get().error(
-                    std::format("{}\nusing default video mode", sErrorMessage), getLoggingCategory());
+                    std::format("{}\nusing default video mode", sErrorMessage), getRendererLoggingCategory());
                 // use last display mode
                 currentDisplayMode = vVideoModes.back();
             }
@@ -855,7 +854,7 @@ namespace ne {
             if (error.has_value()) {
                 error->addEntry();
                 // error->showError(); don't show on screen as it's not a critical error
-                Logger::get().error(error->getError(), getLoggingCategory());
+                Logger::get().error(error->getError(), getRendererLoggingCategory());
                 return;
             }
         }
@@ -899,7 +898,7 @@ namespace ne {
         if (error.has_value()) {
             error->addEntry();
             // error->showError(); don't show on screen as it's not a critical error
-            Logger::get().error(error->getError(), getLoggingCategory());
+            Logger::get().error(error->getError(), getRendererLoggingCategory());
         }
     }
 
@@ -916,7 +915,8 @@ namespace ne {
         auto loadError = manager.loadFile(getRendererConfigurationFilePath());
         if (loadError.has_value()) {
             loadError->addEntry();
-            loadError->showError();
+            Logger::get().error(loadError->getError(), getRendererLoggingCategory());
+            return;
         }
 
         // Read GPU.
@@ -928,13 +928,11 @@ namespace ne {
         currentDisplayMode.Height =
             manager.getValue<unsigned int>(getConfigurationSectionResolution(), "height", 0);
         if (currentDisplayMode.Width == 0 || currentDisplayMode.Height == 0) {
-            Error error(std::format(
-                "failed to read valid resolution values from configuration file, "
-                "either fix the values or delete this configuration file: \"{}\"",
+            const Error error(std::format(
+                "failed to read valid resolution values from configuration file \"{}\"",
                 std::filesystem::path(manager.getFilePath()).string()));
-            error.addEntry();
-            error.showError();
-            throw std::runtime_error(error.getError());
+            Logger::get().error(error.getError(), getRendererLoggingCategory());
+            return;
         }
 
         // Read refresh rate.
@@ -944,31 +942,31 @@ namespace ne {
             manager.getValue<unsigned int>(getConfigurationSectionRefreshRate(), "denominator", 0);
         if (currentDisplayMode.RefreshRate.Numerator == 0 ||
             currentDisplayMode.RefreshRate.Denominator == 0) {
-            Error error(std::format(
-                "failed to read valid refresh rate values from configuration file, "
-                "either fix the values or delete this configuration file: \"{}\"",
+            const Error error(std::format(
+                "failed to read valid refresh rate values from configuration file \"{}\"",
                 std::filesystem::path(manager.getFilePath()).string()));
-            error.addEntry();
-            error.showError();
-            throw std::runtime_error(error.getError());
+            Logger::get().error(error.getError(), getRendererLoggingCategory());
+            return;
         }
 
+        bDisplayModeInitializedFromDiskConfig = true;
+
         // Read antialiasing.
-        bIsMsaaEnabled = manager.getValue<bool>(getConfigurationSectionAntialiasing(), "enabled", false);
-        iMsaaSampleCount =
-            manager.getValue<unsigned int>(getConfigurationSectionAntialiasing(), "sample_count", 0);
+        bIsMsaaEnabled =
+            manager.getValue<bool>(getConfigurationSectionAntialiasing(), "enabled", bIsMsaaEnabled);
+        iMsaaSampleCount = manager.getValue<unsigned int>(
+            getConfigurationSectionAntialiasing(), "sample_count", iMsaaSampleCount);
         if (iMsaaSampleCount != 2 && iMsaaSampleCount != 4) {
-            Error error(std::format(
-                "failed to read valid antialiasing values from configuration file, "
-                "either fix the values or delete this configuration file: \"{}\"",
+            iMsaaSampleCount = 4;
+            const Error error(std::format(
+                "failed to read valid antialiasing values from configuration file \"{}\"",
                 std::filesystem::path(manager.getFilePath()).string()));
-            error.addEntry();
-            error.showError();
-            throw std::runtime_error(error.getError());
+            Logger::get().error(error.getError(), getRendererLoggingCategory());
+            return;
         }
 
         // Read VSync.
-        bIsVSyncEnabled = manager.getValue<bool>(getConfigurationSectionVSync(), "enabled", false);
+        bIsVSyncEnabled = manager.getValue<bool>(getConfigurationSectionVSync(), "enabled", bIsVSyncEnabled);
 
         // !!!
         // New settings go here!

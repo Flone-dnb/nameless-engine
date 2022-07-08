@@ -71,5 +71,9 @@ namespace ne {
 
     const char* IRenderer::getConfigurationSectionVSync() { return sConfigurationSectionVSync; }
 
+    const char* IRenderer::getConfigurationSectionTextureFiltering() {
+        return sConfigurationSectionTextureFiltering;
+    }
+
     const char* IRenderer::getRendererLoggingCategory() { return sRendererLogCategory; }
 } // namespace ne

@@ -134,6 +134,24 @@ namespace ne {
         return {};
     }
 
+    std::optional<Error> DirectXRenderer::setTextureFiltering(const TextureFilteringMode& settings) {
+        std::scoped_lock guard(mtxRwRenderResources);
+        flushCommandQueue();
+
+        textureFilteringMode = settings;
+
+        auto optionalError = refreshShaderParameters();
+        if (optionalError.has_value()) {
+            optionalError->addEntry();
+            return optionalError.value();
+        }
+
+        // Write new configuration to disk.
+        writeConfigurationToConfigFile();
+
+        return {};
+    }
+
     std::optional<Error> DirectXRenderer::setAntialiasing(const Antialiasing& settings) {
         std::scoped_lock guard(mtxRwRenderResources);
         flushCommandQueue();
@@ -154,6 +172,16 @@ namespace ne {
             optionalError->addEntry();
             return optionalError.value();
         }
+
+        // Recreate PSO with(out) multisampling.
+        optionalError = createPso();
+        if (optionalError.has_value()) {
+            optionalError->addEntry();
+            return optionalError.value();
+        }
+
+        // Write new configuration to disk.
+        writeConfigurationToConfigFile();
 
         return {};
     }
@@ -222,6 +250,8 @@ namespace ne {
     Antialiasing DirectXRenderer::getAntialiasing() const {
         return Antialiasing{bIsMsaaEnabled, static_cast<int>(iMsaaSampleCount)};
     }
+
+    TextureFilteringMode DirectXRenderer::getTextureFiltering() const { return textureFilteringMode; }
 
     size_t DirectXRenderer::getTotalVideoMemoryInMb() const {
         return pResourceManager->getTotalVideoMemoryInMb();
@@ -392,8 +422,14 @@ namespace ne {
         return {};
     }
 
+    std::optional<Error> DirectXRenderer::createPso() {
+        // TODO
+
+        return {};
+    }
+
     std::optional<Error> DirectXRenderer::checkMsaaSupport() {
-        if (pDevice == nullptr) {
+        if (!pDevice) {
             return Error("device is not created");
         }
 
@@ -503,10 +539,10 @@ namespace ne {
         }
 
         // Check MSAA support.
-        std::optional<Error> error1 = checkMsaaSupport();
-        if (error1.has_value()) {
-            error1->addEntry();
-            return error1;
+        error = checkMsaaSupport();
+        if (error.has_value()) {
+            error->addEntry();
+            return error;
         }
 
         // Create command queue and command list.
@@ -843,6 +879,38 @@ namespace ne {
         return vFilteredModes;
     }
 
+    std::optional<Error> DirectXRenderer::refreshShaderParameters() {
+        std::scoped_lock guard(mtxRwRenderResources);
+        flushCommandQueue();
+
+        // Clear old settings.
+        currentVertexShaderConfiguration.clear();
+        currentPixelShaderConfiguration.clear();
+
+        // Pixel shader settings.
+        // Texture filtering.
+        switch (textureFilteringMode) {
+        case (TextureFilteringMode::POINT):
+            currentPixelShaderConfiguration.insert(ShaderParameter::TEXTURE_FILTERING_POINT);
+            break;
+        case (TextureFilteringMode::LINEAR):
+            currentPixelShaderConfiguration.insert(ShaderParameter::TEXTURE_FILTERING_LINEAR);
+            break;
+        case (TextureFilteringMode::ANISOTROPIC):
+            currentPixelShaderConfiguration.insert(ShaderParameter::TEXTURE_FILTERING_ANISOTROPIC);
+            break;
+        }
+
+        /** Use a new shader with new shader settings. */
+        auto optionalError = createPso();
+        if (optionalError.has_value()) {
+            optionalError->addEntry();
+            return optionalError.value();
+        }
+
+        return {};
+    }
+
     void DirectXRenderer::writeConfigurationToConfigFile() {
         std::scoped_lock guard(mtxRwConfigFile);
 
@@ -889,6 +957,10 @@ namespace ne {
 
         // Write VSync.
         manager.setValue<bool>(getConfigurationSectionVSync(), "enabled", bIsVSyncEnabled);
+
+        // Write texture filtering.
+        manager.setValue<int>(
+            getConfigurationSectionTextureFiltering(), "mode", static_cast<int>(textureFilteringMode));
 
         // !!!
         // New settings go here!
@@ -967,6 +1039,10 @@ namespace ne {
 
         // Read VSync.
         bIsVSyncEnabled = manager.getValue<bool>(getConfigurationSectionVSync(), "enabled", bIsVSyncEnabled);
+
+        // Read texture filtering.
+        textureFilteringMode = static_cast<TextureFilteringMode>(manager.getValue<int>(
+            getConfigurationSectionTextureFiltering(), "mode", static_cast<int>(textureFilteringMode)));
 
         // !!!
         // New settings go here!

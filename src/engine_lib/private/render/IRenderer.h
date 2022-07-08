@@ -13,6 +13,12 @@
 namespace ne {
     class Game;
     class Window;
+
+    /**
+     * Describes texture filtering mode.
+     */
+    enum class TextureFilteringMode : int { POINT = 0, LINEAR = 1, ANISOTROPIC = 2 };
+
     /**
      * Contains width, height and refresh rate.
      */
@@ -26,6 +32,7 @@ namespace ne {
         /** Refresh rate denominator. */
         int iRefreshRateDenominator;
     };
+
     /**
      * Describes anti-aliasing settings.
      */
@@ -38,6 +45,7 @@ namespace ne {
          */
         int iQuality;
     };
+
     /**
      * Defines an interface for renderers to implement.
      */
@@ -55,6 +63,15 @@ namespace ne {
         IRenderer& operator=(const IRenderer&) = delete;
 
         virtual ~IRenderer() = default;
+
+        /**
+         * Sets texture filtering.
+         *
+         * @param settings Texture filtering mode.
+         *
+         * @return Error if something went wrong.
+         */
+        virtual std::optional<Error> setTextureFiltering(const TextureFilteringMode& settings) = 0;
 
         /**
          * Sets antialiasing settings.
@@ -105,11 +122,18 @@ namespace ne {
         virtual std::string getCurrentlyUsedGpuName() const = 0;
 
         /**
-         * Returns currently used AA settings.
+         * Returns currently used antialiasing settings.
          *
-         * @return AA settings.
+         * @return Antialiasing settings.
          */
         virtual Antialiasing getAntialiasing() const = 0;
+
+        /**
+         * Returns currently used texture filtering mode.
+         *
+         * @return Texture filtering mode.
+         */
+        virtual TextureFilteringMode getTextureFiltering() const = 0;
 
         /**
          * Returns total video memory size (VRAM) in megabytes.
@@ -228,6 +252,13 @@ namespace ne {
         static const char* getConfigurationSectionVSync();
 
         /**
+         * Returns name of the section used in configuration file.
+         *
+         * @return Section name.
+         */
+        static const char* getConfigurationSectionTextureFiltering();
+
+        /**
          * Returns name of the category the renderer uses for logging.
          *
          * @return Category name.
@@ -263,6 +294,9 @@ namespace ne {
 
         /** Name of the section (used in configuration) for vsync settings. */
         inline static const char* sConfigurationSectionVSync = "vsync";
+
+        /** Name of the section (used in configuration) for texture filtering settings. */
+        inline static const char* sConfigurationSectionTextureFiltering = "texture_filtering";
 
         /** Name of the category used for logging. */
         inline static const char* sRendererLogCategory = "Renderer";

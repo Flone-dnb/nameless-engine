@@ -45,6 +45,15 @@ namespace ne {
         virtual ~DirectXRenderer() override = default;
 
         /**
+         * Sets texture filtering.
+         *
+         * @param settings Texture filtering mode.
+         *
+         * @return Error if something went wrong.
+         */
+        virtual std::optional<Error> setTextureFiltering(const TextureFilteringMode& settings) override;
+
+        /**
          * Sets antialiasing settings.
          *
          * @param settings Antialiasing settings.
@@ -88,6 +97,13 @@ namespace ne {
          * @return AA settings.
          */
         virtual Antialiasing getAntialiasing() const override;
+
+        /**
+         * Returns currently used texture filtering mode.
+         *
+         * @return Texture filtering mode.
+         */
+        virtual TextureFilteringMode getTextureFiltering() const override;
 
         /**
          * Returns total video memory size (VRAM) in megabytes.
@@ -202,6 +218,13 @@ namespace ne {
         std::optional<Error> createSwapChain();
 
         /**
+         * Creates and initializes the pipeline state object.
+         *
+         * @return Error if something went wrong.
+         */
+        std::optional<Error> createPso();
+
+        /**
          * Checks if the created device supports MSAA.
          *
          * @return Error if something went wrong, for example, if device does not support MSAA.
@@ -243,6 +266,15 @@ namespace ne {
          * @return Error if something went wrong, vector of display modes otherwise.
          */
         std::variant<std::vector<DXGI_MODE_DESC>, Error> getSupportedDisplayModes() const;
+
+        /**
+         * Updates @ref currentVertexShaderConfiguration and @ref currentPixelShaderConfiguration to match the
+         * current state (settings). Additionally recreates the PSO to match the current vertex/pixel shader
+         * settings.
+         *
+         * @return Error if something went wrong.
+         */
+        std::optional<Error> refreshShaderParameters();
 
         /**
          * Writes current renderer configuration to disk.
@@ -334,16 +366,13 @@ namespace ne {
         std::string sUsedVideoAdapter;
 
         // Shaders.
-        /**
-         * Combination of vertex shader parameters and a flag to specify if the configuration was
-         * changed or not.
-         */
-        std::pair<std::atomic_flag, std::set<ShaderParameter>> currentVertexShaderConfiguration;
-        /**
-         * Combination of pixel shader parameters and a flag to specify if the configuration was
-         * changed or not.
-         */
-        std::pair<std::atomic_flag, std::set<ShaderParameter>> currentPixelShaderConfiguration;
+        /** Vertex shader parameters. */
+        std::set<ShaderParameter> currentVertexShaderConfiguration;
+        /** Pixel shader parameters. */
+        std::set<ShaderParameter> currentPixelShaderConfiguration;
+
+        /** Texture filtering mode. */
+        TextureFilteringMode textureFilteringMode = TextureFilteringMode::ANISOTROPIC;
 
         /** Will be 'true' if we read the configuration from disk at startup and it's valid. */
         bool bDisplayModeInitializedFromDiskConfig = false;

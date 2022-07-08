@@ -28,17 +28,18 @@ namespace ne {
             0,
             nullptr);
 
+        // Add error code to the beginning of the message.
+        std::stringstream hexStream;
+        hexStream << std::hex << hResult;
+        sMessage = std::format("0x{}: ", hexStream.str());
+
         if (errorText) {
-            this->sMessage = std::string_view(errorText);
+            sMessage += std::string_view(errorText);
             LocalFree(errorText);
         } else {
-            this->sMessage = "unknown error";
+            sMessage += "unknown error";
         }
 
-        if (hResult == 0x887a0005) { // NOLINT
-            // ?
-            this->sMessage += " (TODO: add device removed reason here)";
-        }
         stack.push_back(location);
     }
 

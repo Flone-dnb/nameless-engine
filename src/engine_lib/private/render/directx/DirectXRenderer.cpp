@@ -173,6 +173,8 @@ namespace ne {
             return optionalError.value();
         }
 
+        // TODO: recreate all other depth/stencil buffers and PSOs
+
         // Recreate PSO with(out) multisampling.
         optionalError = createPso();
         if (optionalError.has_value()) {
@@ -907,6 +909,8 @@ namespace ne {
             optionalError->addEntry();
             return optionalError.value();
         }
+
+        // TODO: recreate other PSOs
 
         return {};
     }

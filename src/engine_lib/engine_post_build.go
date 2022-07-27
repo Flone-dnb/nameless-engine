@@ -11,7 +11,7 @@ import (
 	"strings"
 )
 
-// Expects 4 arguments:
+// Expects the following arguments:
 // 1. Path to the 'resources' directory ('res' directory).
 // 2. Path to the 'external' directory ('ext' directory).
 // 3. Path to the working directory of your IDE.

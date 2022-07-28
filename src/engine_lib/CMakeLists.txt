@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.20)
 
-project(engine_lib CXX)
+project(engine_lib)
 
 # See if Go is installed.
 execute_process(

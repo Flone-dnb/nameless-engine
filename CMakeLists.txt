@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.20)
 
-project(engine_editor CXX)
+project(engine_editor)
 
 enable_testing()
 

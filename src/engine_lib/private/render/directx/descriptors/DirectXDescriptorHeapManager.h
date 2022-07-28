@@ -29,8 +29,6 @@ namespace ne {
         RTV = 0,
         DSV,
         CBV_SRV_UAV,
-        // add new entries here
-        END, // marks the size of this enum
     };
 
     /** Controls and holds RTV, DSV and CBV/SRV/UAV descriptor heaps. */
@@ -55,11 +53,16 @@ namespace ne {
          * Creates a new descriptor that points to the given resource,
          * the descriptor is saved in the resource.
          *
-         * @param pResource Resource to point new descriptor to.
+         * @param pResource      Resource to point new descriptor to.
+         * @param descriptorType Type of the new descriptor.
+         *
+         * @remark You can use this function to assign a different descriptor to already created resource.
+         * For example: create SRV resource using resource manager and use RTV heap to assign
+         * a RTV descriptor to this resource so it will have 2 different descriptors.
          *
          * @return Error if something went wrong.
          */
-        std::optional<Error> assignDescriptor(DirectXResource* pResource);
+        std::optional<Error> assignDescriptor(DirectXResource* pResource, DescriptorType descriptorType);
 
         /**
          * Returns current heap capacity (allocated heap size).
@@ -117,8 +120,12 @@ namespace ne {
          *
          * @param heapHandle A place in the heap to create view.
          * @param pResource  Resource to bind to the new view.
+         * @param descriptorType Descriptor type.
          */
-        void createView(CD3DX12_CPU_DESCRIPTOR_HANDLE heapHandle, const DirectXResource* pResource) const;
+        void createView(
+            CD3DX12_CPU_DESCRIPTOR_HANDLE heapHandle,
+            const DirectXResource* pResource,
+            DescriptorType descriptorType) const;
 
         /**
          * Recreates the heap to expand it to another @ref iHeapGrowSize descriptors.
@@ -147,6 +154,15 @@ namespace ne {
         std::optional<Error> createHeap(INT iCapacity);
 
         /**
+         * Returns an array of descriptor types that this heap handles.
+         * For example: for RTV heap it will only be RTV descriptor type,
+         * for DSV - DSV, for CBV/UAV/SRV heap it will be CBV, UAV and SRV (3 types).
+         *
+         * @return Descriptor types that this heap handles.
+         */
+        std::vector<DescriptorType> getDescriptorTypesHandledByThisHeap() const;
+
+        /**
          * Recreates views for created descriptors
          * to be binded to the current heap.
          */
@@ -168,8 +184,11 @@ namespace ne {
         /** Size of one descriptor. */
         UINT iDescriptorSize = 0;
 
-        /** Current heap size. */
-        INT iHeapCapacity = 0;
+        /** Current heap capacity. */
+        std::atomic<INT> iHeapCapacity{0};
+
+        /** Current heap size (actually used size). */
+        std::atomic<INT> iHeapSize{0};
 
         /**
          * Index of the next free descriptor that can be used in @ref bindedResources.

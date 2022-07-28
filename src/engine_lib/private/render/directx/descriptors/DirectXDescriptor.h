@@ -3,9 +3,21 @@
 // STL.
 #include <optional>
 
+#include "render/directx/resources/DirectXResourceManager.h"
+
 namespace ne {
     class DirectXDescriptorHeapManager;
     class DirectXResource;
+
+    /** Defines types of different descriptors. */
+    enum class DescriptorType : int {
+        RTV = 0,
+        DSV,
+        CBV,
+        SRV,
+        UAV,
+        END // marks the end of the enum
+    };
 
     /** Represents a descriptor (to a resource) that is stored in a descriptor heap. */
     class DirectXDescriptor {
@@ -38,13 +50,15 @@ namespace ne {
         /**
          * Constructor.
          *
-         * @param pHeap                          Owner object of this descriptor.
+         * @param pHeap                          Heap of this descriptor.
+         * @param descriptorType                 Type of this descriptor.
          * @param pResource                      Owner resource of this descriptor.
          * @param iDescriptorOffsetInDescriptors Offset of this descriptor from the heap start
          * (offset is specified in descriptors, not an actual index).
          */
         DirectXDescriptor(
             DirectXDescriptorHeapManager* pHeap,
+            DescriptorType descriptorType,
             DirectXResource* pResource,
             int iDescriptorOffsetInDescriptors);
 
@@ -56,17 +70,20 @@ namespace ne {
         DirectXResource* getOwnerResource() const;
 
     private:
-        /** Do not delete. Owner heap. */
-        DirectXDescriptorHeapManager* pHeap{};
-
         /** Do not delete. Owner resource of this descriptor. */
-        DirectXResource* pResource{};
+        DirectXResource* pResource = nullptr;
+
+        /** Do not delete. Heap of this descriptor. */
+        DirectXDescriptorHeapManager* pHeap = nullptr;
 
         /**
          * Offset of this descriptor from the heap start (offset is specified in descriptors, not an actual
          * index).
          */
         std::optional<int> iDescriptorOffsetInDescriptors;
+
+        /** Type of this descriptor. */
+        DescriptorType descriptorType;
 
         // !!!
         // if adding new fields consider adding them to move assignment operator

@@ -2,6 +2,7 @@
 
 // Custom.
 #include "render/directx/descriptors/DirectXDescriptorHeapManager.h"
+#include "render/directx/resources/DirectXResource.h"
 
 namespace ne {
     DirectXDescriptor::~DirectXDescriptor() {
@@ -19,18 +20,23 @@ namespace ne {
                 other.iDescriptorOffsetInDescriptors = {};
             }
 
-            pHeap = other.pHeap;
             pResource = other.pResource;
+            pHeap = other.pHeap;
+            descriptorType = other.descriptorType;
         }
 
         return *this;
     }
 
     DirectXDescriptor::DirectXDescriptor(
-        DirectXDescriptorHeapManager* pHeap, DirectXResource* pResource, int iDescriptorOffsetInDescriptors) {
+        DirectXDescriptorHeapManager* pHeap,
+        DescriptorType descriptorType,
+        DirectXResource* pResource,
+        int iDescriptorOffsetInDescriptors) {
         this->iDescriptorOffsetInDescriptors = iDescriptorOffsetInDescriptors;
-        this->pHeap = pHeap;
         this->pResource = pResource;
+        this->descriptorType = descriptorType;
+        this->pHeap = pHeap;
     }
 
     DirectXResource* DirectXDescriptor::getOwnerResource() const { return pResource; }

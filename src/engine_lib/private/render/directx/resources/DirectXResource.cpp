@@ -6,13 +6,15 @@
 namespace ne {
 
     std::variant<std::unique_ptr<DirectXResource>, Error> DirectXResource::create(
+        const DirectXResourceManager* pResourceManager,
         DirectXDescriptorHeapManager* pHeap,
+        DescriptorType descriptorType,
         D3D12MA::Allocator* pMemoryAllocator,
         const D3D12MA::ALLOCATION_DESC& allocationDesc,
         const D3D12_RESOURCE_DESC& resourceDesc,
         const D3D12_RESOURCE_STATES& initialResourceState,
         std::optional<D3D12_CLEAR_VALUE> resourceClearValue) {
-        auto pCreatedResource = std::unique_ptr<DirectXResource>(new DirectXResource());
+        auto pCreatedResource = std::unique_ptr<DirectXResource>(new DirectXResource(pResourceManager));
 
         const D3D12_CLEAR_VALUE* pClearValue = nullptr;
         if (resourceClearValue.has_value()) {
@@ -31,7 +33,7 @@ namespace ne {
             return Error(hResult);
         }
 
-        auto optionalError = pHeap->assignDescriptor(pCreatedResource.get());
+        auto optionalError = pHeap->assignDescriptor(pCreatedResource.get(), descriptorType);
         if (optionalError.has_value()) {
             optionalError->addEntry();
             return optionalError.value();
@@ -41,12 +43,14 @@ namespace ne {
     }
 
     std::variant<std::unique_ptr<DirectXResource>, Error> DirectXResource::makeResourceFromSwapChainBuffer(
-        DirectXDescriptorHeapManager* pRtvHeap, const ComPtr<ID3D12Resource>& pSwapChainBuffer) {
-        auto pCreatedResource = std::unique_ptr<DirectXResource>(new DirectXResource());
+        const DirectXResourceManager* pResourceManager,
+        DirectXDescriptorHeapManager* pRtvHeap,
+        const ComPtr<ID3D12Resource>& pSwapChainBuffer) {
+        auto pCreatedResource = std::unique_ptr<DirectXResource>(new DirectXResource(pResourceManager));
 
         pCreatedResource->pSwapChainBuffer = pSwapChainBuffer;
 
-        auto optionalError = pRtvHeap->assignDescriptor(pCreatedResource.get());
+        auto optionalError = pRtvHeap->assignDescriptor(pCreatedResource.get(), DescriptorType::RTV);
         if (optionalError.has_value()) {
             optionalError->addEntry();
             return optionalError.value();
@@ -63,5 +67,8 @@ namespace ne {
         }
     }
 
-    DirectXResource::DirectXResource() { vHeapDescriptors.resize(static_cast<int>(DescriptorHeapType::END)); }
+    DirectXResource::DirectXResource(const DirectXResourceManager* pResourceManager) {
+        this->pResourceManager = pResourceManager;
+        vHeapDescriptors.resize(static_cast<int>(DescriptorType::END));
+    }
 } // namespace ne

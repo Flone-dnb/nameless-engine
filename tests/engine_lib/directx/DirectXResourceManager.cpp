@@ -40,7 +40,7 @@ TEST_CASE("make the CBV heap expand") {
             std::vector<std::unique_ptr<DirectXResource>> vCreatedResources(iResourcesTilExpand);
 
             for (int i = 0; i < iResourcesTilExpand; i++) {
-                auto result = pResourceManager->createCbvSrvUavResource(
+                auto result = pResourceManager->createCbvResource(
                     allocationDesc, resourceDesc, D3D12_RESOURCE_STATE_GENERIC_READ);
                 if (std::holds_alternative<Error>(result)) {
                     auto err = std::get<Error>(std::move(result));
@@ -55,7 +55,7 @@ TEST_CASE("make the CBV heap expand") {
             REQUIRE(pHeapManager->getHeapCapacity() == iInitialHeapCapacity);
 
             // Create one more resource so that the heap will expand.
-            auto result = pResourceManager->createCbvSrvUavResource(
+            auto result = pResourceManager->createCbvResource(
                 allocationDesc, resourceDesc, D3D12_RESOURCE_STATE_GENERIC_READ);
             if (std::holds_alternative<Error>(result)) {
                 auto err = std::get<Error>(std::move(result));
@@ -113,7 +113,7 @@ TEST_CASE("make the CBV heap shrink") {
             std::vector<std::unique_ptr<DirectXResource>> vCreatedResources(iResourcesTilExpand);
 
             for (int i = 0; i < iResourcesTilExpand; i++) {
-                auto result = pResourceManager->createCbvSrvUavResource(
+                auto result = pResourceManager->createCbvResource(
                     allocationDesc, resourceDesc, D3D12_RESOURCE_STATE_GENERIC_READ);
                 if (std::holds_alternative<Error>(result)) {
                     auto err = std::get<Error>(std::move(result));
@@ -142,6 +142,77 @@ TEST_CASE("make the CBV heap shrink") {
             REQUIRE(pHeapManager->getHeapCapacity() == iInitialHeapCapacity);
 
             // TODO: check that resources and views are valid
+
+            pGameWindow->close();
+        }
+        virtual ~TestGameInstance() override {}
+    };
+
+    auto result = Window::getBuilder().withVisibility(false).build();
+    if (std::holds_alternative<Error>(result)) {
+        Error error = std::get<Error>(std::move(result));
+        error.addEntry();
+        INFO(error.getError());
+        REQUIRE(false);
+    }
+
+    const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
+    pMainWindow->processEvents<TestGameInstance>();
+}
+
+TEST_CASE("assign multiple descriptors to one resource") {
+    using namespace ne;
+
+    class TestGameInstance : public IGameInstance {
+    public:
+        TestGameInstance(Window* pGameWindow, InputManager* pInputManager)
+            : IGameInstance(pGameWindow, pInputManager) {
+            auto pRenderer = dynamic_cast<DirectXRenderer*>(pGameWindow->getRenderer());
+            REQUIRE(pRenderer);
+
+            const auto pResourceManager = pRenderer->getResourceManager();
+
+            // Prepare data for resource creation.
+            D3D12MA::ALLOCATION_DESC allocationDesc = {};
+            allocationDesc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
+            const auto resourceDesc = CD3DX12_RESOURCE_DESC(
+                D3D12_RESOURCE_DIMENSION_TEXTURE2D,
+                0,
+                1024,
+                1024,
+                1,
+                1,
+                DXGI_FORMAT_R8G8B8A8_UNORM,
+                1,
+                0,
+                D3D12_TEXTURE_LAYOUT_UNKNOWN,
+                D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
+
+            // Create SRV resource.
+            auto result = pResourceManager->createSrvResource(
+                allocationDesc, resourceDesc, D3D12_RESOURCE_STATE_COMMON);
+            if (std::holds_alternative<Error>(result)) {
+                auto err = std::get<Error>(std::move(result));
+                err.addEntry();
+                INFO(err.getError());
+                REQUIRE(false);
+            }
+            auto pResource = std::get<std::unique_ptr<DirectXResource>>(std::move(result));
+
+            // Assign a UAV descriptor to this resource.
+            auto optionalError = pRenderer->getResourceManager()->getCbvSrvUavHeap()->assignDescriptor(
+                pResource.get(), DescriptorType::UAV);
+            if (optionalError.has_value()) {
+                optionalError->addEntry();
+                INFO(optionalError->getError());
+                REQUIRE(false);
+            }
+
+            // Assign a SRV descriptor to this resource (again).
+            // (should fail because descriptor of this type is already added)
+            optionalError = pRenderer->getResourceManager()->getCbvSrvUavHeap()->assignDescriptor(
+                pResource.get(), DescriptorType::SRV);
+            REQUIRE(optionalError.has_value());
 
             pGameWindow->close();
         }

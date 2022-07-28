@@ -33,7 +33,9 @@ namespace ne {
         /**
          * Creates a new resource.
          *
+         * @param pResourceManager     Owner resource manager.
          * @param pHeap                Heap to store descriptor to this resource.
+         * @param descriptorType       Type of new descriptor.
          * @param pMemoryAllocator     Allocator to create resource.
          * @param allocationDesc       Allocation description.
          * @param resourceDesc         Resource description.
@@ -44,7 +46,9 @@ namespace ne {
          * @return Error if something went wrong, otherwise created resource.
          */
         static std::variant<std::unique_ptr<DirectXResource>, Error> create(
+            const DirectXResourceManager* pResourceManager,
             DirectXDescriptorHeapManager* pHeap,
+            DescriptorType descriptorType,
             D3D12MA::Allocator* pMemoryAllocator,
             const D3D12MA::ALLOCATION_DESC& allocationDesc,
             const D3D12_RESOURCE_DESC& resourceDesc,
@@ -55,13 +59,16 @@ namespace ne {
          * Creates a new resource instance by wrapping existing swap chain buffer,
          * also binds RTV to the specified resource.
          *
-         * @param pRtvHeap Render target view heap manager.
+         * @param pResourceManager Owner resource manager.
+         * @param pRtvHeap         Render target view heap manager.
          * @param pSwapChainBuffer Swap chain buffer to wrap.
          *
          * @return Error if something went wrong, otherwise created resource.
          */
         static std::variant<std::unique_ptr<DirectXResource>, Error> makeResourceFromSwapChainBuffer(
-            DirectXDescriptorHeapManager* pRtvHeap, const ComPtr<ID3D12Resource>& pSwapChainBuffer);
+            const DirectXResourceManager* pResourceManager,
+            DirectXDescriptorHeapManager* pRtvHeap,
+            const ComPtr<ID3D12Resource>& pSwapChainBuffer);
 
         /**
          * Returns internal D3D resource.
@@ -77,12 +84,17 @@ namespace ne {
 
         /**
          * Constructor. Creates an empty resource.
+         *
+         * @param pResourceManager Owner resource manager.
          */
-        DirectXResource();
+        DirectXResource(const DirectXResourceManager* pResourceManager);
+
+        /** Do not delete. Owner resource manager. */
+        const DirectXResourceManager* pResourceManager = nullptr;
 
         /**
-         * Will have size of DescriptorHeapType enum elements.
-         * Access elements like this: "vHeapDescriptors[DescriptorHeapType::RTV]".
+         * Will have size of DescriptorType enum elements.
+         * Access elements like this: "vHeapDescriptors[DescriptorType::SRV]".
          */
         std::vector<std::optional<DirectXDescriptor>> vHeapDescriptors;
 

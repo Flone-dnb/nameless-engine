@@ -42,7 +42,7 @@ namespace ne {
         return pCreatedResource;
     }
 
-    std::variant<std::unique_ptr<DirectXResource>, Error> DirectXResource::makeResourceFromSwapChainBuffer(
+    std::variant<std::unique_ptr<DirectXResource>, Error> DirectXResource::createResourceFromSwapChainBuffer(
         const DirectXResourceManager* pResourceManager,
         DirectXDescriptorHeapManager* pRtvHeap,
         const ComPtr<ID3D12Resource>& pSwapChainBuffer) {
@@ -59,7 +59,60 @@ namespace ne {
         return pCreatedResource;
     }
 
-    ID3D12Resource* DirectXResource::getResource() const {
+    std::optional<Error> DirectXResource::addRtv() {
+        auto optionalError = pResourceManager->getRtvHeap()->assignDescriptor(this, DescriptorType::RTV);
+        if (optionalError.has_value()) {
+            optionalError->addEntry();
+            return optionalError;
+        }
+
+        return {};
+    }
+
+    std::optional<Error> DirectXResource::addDsv() {
+        auto optionalError = pResourceManager->getDsvHeap()->assignDescriptor(this, DescriptorType::DSV);
+        if (optionalError.has_value()) {
+            optionalError->addEntry();
+            return optionalError;
+        }
+
+        return {};
+    }
+
+    std::optional<Error> DirectXResource::addCbv() {
+        auto optionalError =
+            pResourceManager->getCbvSrvUavHeap()->assignDescriptor(this, DescriptorType::CBV);
+        if (optionalError.has_value()) {
+            optionalError->addEntry();
+            return optionalError;
+        }
+
+        return {};
+    }
+
+    std::optional<Error> DirectXResource::addSrv() {
+        auto optionalError =
+            pResourceManager->getCbvSrvUavHeap()->assignDescriptor(this, DescriptorType::SRV);
+        if (optionalError.has_value()) {
+            optionalError->addEntry();
+            return optionalError;
+        }
+
+        return {};
+    }
+
+    std::optional<Error> DirectXResource::addUav() {
+        auto optionalError =
+            pResourceManager->getCbvSrvUavHeap()->assignDescriptor(this, DescriptorType::UAV);
+        if (optionalError.has_value()) {
+            optionalError->addEntry();
+            return optionalError;
+        }
+
+        return {};
+    }
+
+    ID3D12Resource* DirectXResource::getD3DResource() const {
         if (pAllocatedResource) {
             return pAllocatedResource->GetResource();
         } else {

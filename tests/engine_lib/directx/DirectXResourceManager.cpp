@@ -200,8 +200,7 @@ TEST_CASE("assign multiple descriptors to one resource") {
             auto pResource = std::get<std::unique_ptr<DirectXResource>>(std::move(result));
 
             // Assign a UAV descriptor to this resource.
-            auto optionalError = pRenderer->getResourceManager()->getCbvSrvUavHeap()->assignDescriptor(
-                pResource.get(), DescriptorType::UAV);
+            auto optionalError = pResource->addUav();
             if (optionalError.has_value()) {
                 optionalError->addEntry();
                 INFO(optionalError->getError());
@@ -210,8 +209,7 @@ TEST_CASE("assign multiple descriptors to one resource") {
 
             // Assign a SRV descriptor to this resource (again).
             // (should fail because descriptor of this type is already added)
-            optionalError = pRenderer->getResourceManager()->getCbvSrvUavHeap()->assignDescriptor(
-                pResource.get(), DescriptorType::SRV);
+            optionalError = pResource->addSrv();
             REQUIRE(optionalError.has_value());
 
             pGameWindow->close();

@@ -56,6 +56,8 @@ namespace ne {
          * @param pResource      Resource to point new descriptor to.
          * @param descriptorType Type of the new descriptor.
          *
+         * @remark Prefer to use DirectXResource's "addRtv", "addDsv" and other functions instead of this one.
+         *
          * @remark You can use this function to assign a different descriptor to already created resource.
          * For example: create SRV resource using resource manager and use RTV heap to assign
          * a RTV descriptor to this resource so it will have 2 different descriptors.

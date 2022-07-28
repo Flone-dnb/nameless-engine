@@ -195,7 +195,7 @@ namespace ne {
             }
 
             auto result =
-                DirectXResource::makeResourceFromSwapChainBuffer(this, pRtvHeapManager.get(), pBuffer);
+                DirectXResource::createResourceFromSwapChainBuffer(this, pRtvHeapManager.get(), pBuffer);
             if (std::holds_alternative<Error>(result)) {
                 auto err = std::get<Error>(std::move(result));
                 err.addEntry();

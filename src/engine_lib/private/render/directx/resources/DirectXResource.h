@@ -65,21 +65,56 @@ namespace ne {
          *
          * @return Error if something went wrong, otherwise created resource.
          */
-        static std::variant<std::unique_ptr<DirectXResource>, Error> makeResourceFromSwapChainBuffer(
+        static std::variant<std::unique_ptr<DirectXResource>, Error> createResourceFromSwapChainBuffer(
             const DirectXResourceManager* pResourceManager,
             DirectXDescriptorHeapManager* pRtvHeap,
             const ComPtr<ID3D12Resource>& pSwapChainBuffer);
 
         /**
-         * Returns internal D3D resource.
+         * Creates a new render target view descriptor that points to this resource.
          *
-         * @return D3D resource.
+         * @return Error if something went wrong.
          */
-        ID3D12Resource* getResource() const;
+        std::optional<Error> addRtv();
+
+        /**
+         * Creates a new depth stencil view descriptor that points to this resource.
+         *
+         * @return Error if something went wrong.
+         */
+        std::optional<Error> addDsv();
+
+        /**
+         * Creates a new constant buffer view descriptor that points to this resource.
+         *
+         * @return Error if something went wrong.
+         */
+        std::optional<Error> addCbv();
+
+        /**
+         * Creates a new shader resource view descriptor that points to this resource.
+         *
+         * @return Error if something went wrong.
+         */
+        std::optional<Error> addSrv();
+
+        /**
+         * Creates a new unordered access view descriptor that points to this resource.
+         *
+         * @return Error if something went wrong.
+         */
+        std::optional<Error> addUav();
+
+        /**
+         * Returns internal Direct 3D resource.
+         *
+         * @return Direct 3D resource.
+         */
+        ID3D12Resource* getD3DResource() const;
 
     private:
-        // Heap manager may update @ref heapDescriptor
-        // if the heap that this resource resides in was recreated.
+        // Heap manager may update heap descriptors
+        // if the heap of used descriptor was recreated.
         friend class DirectXDescriptorHeapManager;
 
         /**

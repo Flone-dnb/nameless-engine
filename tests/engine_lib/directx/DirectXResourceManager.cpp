@@ -230,3 +230,281 @@ TEST_CASE("assign multiple descriptors to one resource") {
     const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
     pMainWindow->processEvents<TestGameInstance>();
 }
+
+TEST_CASE("create CBV resource") {
+    using namespace ne;
+
+    class TestGameInstance : public IGameInstance {
+    public:
+        TestGameInstance(Window* pGameWindow, InputManager* pInputManager)
+            : IGameInstance(pGameWindow, pInputManager) {
+            auto pRenderer = dynamic_cast<DirectXRenderer*>(pGameWindow->getRenderer());
+            REQUIRE(pRenderer);
+
+            const auto pResourceManager = pRenderer->getResourceManager();
+
+            D3D12MA::ALLOCATION_DESC allocationDesc = {};
+            allocationDesc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
+            const CD3DX12_RESOURCE_DESC resourceDesc = CD3DX12_RESOURCE_DESC::Buffer(iResourceSizeInBytes);
+
+            // Create CBV resource.
+            auto result = pResourceManager->createCbvResource(
+                allocationDesc, resourceDesc, D3D12_RESOURCE_STATE_GENERIC_READ);
+            if (std::holds_alternative<Error>(result)) {
+                auto err = std::get<Error>(std::move(result));
+                err.addEntry();
+                INFO(err.getError());
+                REQUIRE(false);
+            }
+            auto pResource = std::get<std::unique_ptr<DirectXResource>>(std::move(result));
+
+            pGameWindow->close();
+        }
+        virtual ~TestGameInstance() override {}
+    };
+
+    auto result = Window::getBuilder().withVisibility(false).build();
+    if (std::holds_alternative<Error>(result)) {
+        Error error = std::get<Error>(std::move(result));
+        error.addEntry();
+        INFO(error.getError());
+        REQUIRE(false);
+    }
+
+    const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
+    pMainWindow->processEvents<TestGameInstance>();
+}
+
+TEST_CASE("create SRV resource") {
+    using namespace ne;
+
+    class TestGameInstance : public IGameInstance {
+    public:
+        TestGameInstance(Window* pGameWindow, InputManager* pInputManager)
+            : IGameInstance(pGameWindow, pInputManager) {
+            auto pRenderer = dynamic_cast<DirectXRenderer*>(pGameWindow->getRenderer());
+            REQUIRE(pRenderer);
+
+            const auto pResourceManager = pRenderer->getResourceManager();
+
+            // Prepare data for resource creation.
+            D3D12MA::ALLOCATION_DESC allocationDesc = {};
+            allocationDesc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
+            const auto resourceDesc = CD3DX12_RESOURCE_DESC(
+                D3D12_RESOURCE_DIMENSION_TEXTURE2D,
+                0,
+                1024,
+                1024,
+                1,
+                1,
+                DXGI_FORMAT_R8G8B8A8_UNORM,
+                1,
+                0,
+                D3D12_TEXTURE_LAYOUT_UNKNOWN,
+                D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
+
+            // Create SRV resource.
+            auto result = pResourceManager->createSrvResource(
+                allocationDesc, resourceDesc, D3D12_RESOURCE_STATE_COMMON);
+            if (std::holds_alternative<Error>(result)) {
+                auto err = std::get<Error>(std::move(result));
+                err.addEntry();
+                INFO(err.getError());
+                REQUIRE(false);
+            }
+            auto pResource = std::get<std::unique_ptr<DirectXResource>>(std::move(result));
+
+            pGameWindow->close();
+        }
+        virtual ~TestGameInstance() override {}
+    };
+
+    auto result = Window::getBuilder().withVisibility(false).build();
+    if (std::holds_alternative<Error>(result)) {
+        Error error = std::get<Error>(std::move(result));
+        error.addEntry();
+        INFO(error.getError());
+        REQUIRE(false);
+    }
+
+    const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
+    pMainWindow->processEvents<TestGameInstance>();
+}
+
+TEST_CASE("create UAV resource") {
+    using namespace ne;
+
+    class TestGameInstance : public IGameInstance {
+    public:
+        TestGameInstance(Window* pGameWindow, InputManager* pInputManager)
+            : IGameInstance(pGameWindow, pInputManager) {
+            auto pRenderer = dynamic_cast<DirectXRenderer*>(pGameWindow->getRenderer());
+            REQUIRE(pRenderer);
+
+            const auto pResourceManager = pRenderer->getResourceManager();
+
+            // Prepare data for resource creation.
+            D3D12MA::ALLOCATION_DESC allocationDesc = {};
+            allocationDesc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
+            const auto resourceDesc = CD3DX12_RESOURCE_DESC(
+                D3D12_RESOURCE_DIMENSION_TEXTURE2D,
+                0,
+                1024,
+                1024,
+                1,
+                1,
+                DXGI_FORMAT_R8G8B8A8_UNORM,
+                1,
+                0,
+                D3D12_TEXTURE_LAYOUT_UNKNOWN,
+                D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
+
+            // Create UAV resource.
+            auto result = pResourceManager->createUavResource(
+                allocationDesc, resourceDesc, D3D12_RESOURCE_STATE_COMMON);
+            if (std::holds_alternative<Error>(result)) {
+                auto err = std::get<Error>(std::move(result));
+                err.addEntry();
+                INFO(err.getError());
+                REQUIRE(false);
+            }
+            auto pResource = std::get<std::unique_ptr<DirectXResource>>(std::move(result));
+
+            pGameWindow->close();
+        }
+        virtual ~TestGameInstance() override {}
+    };
+
+    auto result = Window::getBuilder().withVisibility(false).build();
+    if (std::holds_alternative<Error>(result)) {
+        Error error = std::get<Error>(std::move(result));
+        error.addEntry();
+        INFO(error.getError());
+        REQUIRE(false);
+    }
+
+    const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
+    pMainWindow->processEvents<TestGameInstance>();
+}
+
+TEST_CASE("create RTV resource") {
+    using namespace ne;
+
+    class TestGameInstance : public IGameInstance {
+    public:
+        TestGameInstance(Window* pGameWindow, InputManager* pInputManager)
+            : IGameInstance(pGameWindow, pInputManager) {
+            auto pRenderer = dynamic_cast<DirectXRenderer*>(pGameWindow->getRenderer());
+            REQUIRE(pRenderer);
+
+            const auto pResourceManager = pRenderer->getResourceManager();
+
+            // Prepare data for resource creation.
+            const auto resourceDesc = CD3DX12_RESOURCE_DESC(
+                D3D12_RESOURCE_DIMENSION_TEXTURE2D,
+                0,
+                1024,
+                1024,
+                1,
+                1,
+                DXGI_FORMAT_R8G8B8A8_UNORM,
+                1,
+                0,
+                D3D12_TEXTURE_LAYOUT_UNKNOWN,
+                D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET);
+
+            D3D12_CLEAR_VALUE clearValue;
+            clearValue.Format = resourceDesc.Format;
+
+            D3D12MA::ALLOCATION_DESC allocationDesc = {};
+            allocationDesc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
+
+            // Create RTV resource.
+            auto result = pResourceManager->createRtvResource(
+                allocationDesc, resourceDesc, D3D12_RESOURCE_STATE_COMMON, clearValue);
+            if (std::holds_alternative<Error>(result)) {
+                auto err = std::get<Error>(std::move(result));
+                err.addEntry();
+                INFO(err.getError());
+                REQUIRE(false);
+            }
+            auto pResource = std::get<std::unique_ptr<DirectXResource>>(std::move(result));
+
+            pGameWindow->close();
+        }
+        virtual ~TestGameInstance() override {}
+    };
+
+    auto result = Window::getBuilder().withVisibility(false).build();
+    if (std::holds_alternative<Error>(result)) {
+        Error error = std::get<Error>(std::move(result));
+        error.addEntry();
+        INFO(error.getError());
+        REQUIRE(false);
+    }
+
+    const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
+    pMainWindow->processEvents<TestGameInstance>();
+}
+
+TEST_CASE("create DSV resource") {
+    using namespace ne;
+
+    class TestGameInstance : public IGameInstance {
+    public:
+        TestGameInstance(Window* pGameWindow, InputManager* pInputManager)
+            : IGameInstance(pGameWindow, pInputManager) {
+            auto pRenderer = dynamic_cast<DirectXRenderer*>(pGameWindow->getRenderer());
+            REQUIRE(pRenderer);
+
+            const auto pResourceManager = pRenderer->getResourceManager();
+
+            // Prepare data for resource creation.
+            D3D12_RESOURCE_DESC depthStencilDesc = CD3DX12_RESOURCE_DESC(
+                D3D12_RESOURCE_DIMENSION_TEXTURE2D,
+                0,
+                1024,
+                1024,
+                1,
+                1,
+                DXGI_FORMAT_D24_UNORM_S8_UINT,
+                1,
+                0,
+                D3D12_TEXTURE_LAYOUT_UNKNOWN,
+                D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL);
+
+            D3D12_CLEAR_VALUE depthClear;
+            depthClear.Format = depthStencilDesc.Format;
+            depthClear.DepthStencil.Depth = 1.0f;
+            depthClear.DepthStencil.Stencil = 0;
+
+            D3D12MA::ALLOCATION_DESC allocationDesc = {};
+            allocationDesc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
+
+            // Create DSV resource.
+            auto result = pResourceManager->createDsvResource(
+                allocationDesc, depthStencilDesc, D3D12_RESOURCE_STATE_DEPTH_WRITE, depthClear);
+            if (std::holds_alternative<Error>(result)) {
+                auto err = std::get<Error>(std::move(result));
+                err.addEntry();
+                INFO(err.getError());
+                REQUIRE(false);
+            }
+            auto pResource = std::get<std::unique_ptr<DirectXResource>>(std::move(result));
+
+            pGameWindow->close();
+        }
+        virtual ~TestGameInstance() override {}
+    };
+
+    auto result = Window::getBuilder().withVisibility(false).build();
+    if (std::holds_alternative<Error>(result)) {
+        Error error = std::get<Error>(std::move(result));
+        error.addEntry();
+        INFO(error.getError());
+        REQUIRE(false);
+    }
+
+    const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
+    pMainWindow->processEvents<TestGameInstance>();
+}

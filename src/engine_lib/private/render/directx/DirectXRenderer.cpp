@@ -101,18 +101,18 @@ namespace ne {
     }
 
     std::optional<Error> DirectXRenderer::createDepthStencilBuffer() {
-        D3D12_RESOURCE_DESC depthStencilDesc;
-        depthStencilDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
-        depthStencilDesc.Alignment = 0;
-        depthStencilDesc.Width = currentDisplayMode.Width;
-        depthStencilDesc.Height = currentDisplayMode.Height;
-        depthStencilDesc.DepthOrArraySize = 1;
-        depthStencilDesc.MipLevels = 1;
-        depthStencilDesc.Format = depthStencilFormat;
-        depthStencilDesc.SampleDesc.Count = bIsMsaaEnabled ? iMsaaSampleCount : 1;
-        depthStencilDesc.SampleDesc.Quality = bIsMsaaEnabled ? (iMsaaQuality - 1) : 0;
-        depthStencilDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
-        depthStencilDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
+        D3D12_RESOURCE_DESC depthStencilDesc = CD3DX12_RESOURCE_DESC(
+            D3D12_RESOURCE_DIMENSION_TEXTURE2D,
+            0,
+            currentDisplayMode.Width,
+            currentDisplayMode.Height,
+            1,
+            1,
+            depthStencilFormat,
+            bIsMsaaEnabled ? iMsaaSampleCount : 1,
+            bIsMsaaEnabled ? (iMsaaQuality - 1) : 0,
+            D3D12_TEXTURE_LAYOUT_UNKNOWN,
+            D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL);
 
         D3D12_CLEAR_VALUE depthClear;
         depthClear.Format = depthStencilFormat;
@@ -763,18 +763,18 @@ namespace ne {
             std::get<std::vector<std::unique_ptr<DirectXResource>>>(std::move(swapChainResult));
 
         // Create MSAA render target.
-        D3D12_RESOURCE_DESC msaaRenderTargetDesc;
-        msaaRenderTargetDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
-        msaaRenderTargetDesc.Alignment = 0;
-        msaaRenderTargetDesc.Width = currentDisplayMode.Width;
-        msaaRenderTargetDesc.Height = currentDisplayMode.Height;
-        msaaRenderTargetDesc.DepthOrArraySize = 1;
-        msaaRenderTargetDesc.MipLevels = 1;
-        msaaRenderTargetDesc.Format = backBufferFormat;
-        msaaRenderTargetDesc.SampleDesc.Count = bIsMsaaEnabled ? iMsaaSampleCount : 1;
-        msaaRenderTargetDesc.SampleDesc.Quality = bIsMsaaEnabled ? (iMsaaQuality - 1) : 0;
-        msaaRenderTargetDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
-        msaaRenderTargetDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
+        const auto msaaRenderTargetDesc = CD3DX12_RESOURCE_DESC(
+            D3D12_RESOURCE_DIMENSION_TEXTURE2D,
+            0,
+            currentDisplayMode.Width,
+            currentDisplayMode.Height,
+            1,
+            1,
+            backBufferFormat,
+            bIsMsaaEnabled ? iMsaaSampleCount : 1,
+            bIsMsaaEnabled ? (iMsaaQuality - 1) : 0,
+            D3D12_TEXTURE_LAYOUT_UNKNOWN,
+            D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET);
 
         D3D12_CLEAR_VALUE msaaClear;
         msaaClear.Format = backBufferFormat;

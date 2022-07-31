@@ -86,6 +86,13 @@ namespace ne {
          */
         INT getHeapSize();
 
+        /**
+         * Returns amount of descriptors that were created but no longer being used.
+         *
+         * @return Descriptor count.
+         */
+        size_t getNoLongerUsedDescriptorCount();
+
     protected:
         friend class DirectXDescriptor;
 

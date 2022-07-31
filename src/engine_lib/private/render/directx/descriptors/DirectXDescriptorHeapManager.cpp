@@ -83,6 +83,11 @@ namespace ne {
         return iHeapSize.load();
     }
 
+    size_t DirectXDescriptorHeapManager::getNoLongerUsedDescriptorCount() {
+        std::scoped_lock guard(mtxRwHeap);
+        return noLongerUsedDescriptorIndexes.size();
+    }
+
     std::string DirectXDescriptorHeapManager::convertHeapTypeToString(DescriptorHeapType heapType) {
         switch (heapType) {
         case (DescriptorHeapType::RTV):

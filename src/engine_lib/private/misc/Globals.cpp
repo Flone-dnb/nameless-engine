@@ -36,24 +36,23 @@ namespace ne {
 
         CoTaskMemFree(pathTmp);
 
-        if (!basePath.string().ends_with("\\")) {
-            basePath += "\\";
-        }
-
-        basePath += sBaseEngineDirectoryName;
-        basePath += "\\";
-
 #elif __linux__
 
-        basePath = "~/.local/share/";
-        basePath += sEngineDirectoryName;
-        basePath += "/";
+        basePath = std::format("/home/{}/.local/share/", getlogin());
         static_assert(false, "check if this part actually works");
 
 #endif
 
+        basePath /= sBaseEngineDirectoryName;
+
+#if defined(WIN32)
+        basePath += "\\";
+#elif __linux__
+        basePath += "/";
+#endif
+
         if (!std::filesystem::exists(basePath)) {
-            std::filesystem::create_directory(basePath);
+            std::filesystem::create_directories(basePath);
         }
 
         return basePath;

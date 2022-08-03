@@ -18,49 +18,6 @@
 #endif
 
 namespace ne {
-    std::filesystem::path getBaseDirectoryForConfigs() {
-        std::filesystem::path basePath;
-
-#if defined(WIN32)
-
-        // Try to get AppData folder.
-        PWSTR pathTmp;
-        const HRESULT resultPath = SHGetKnownFolderPath(FOLDERID_LocalAppData, 0, nullptr, &pathTmp);
-        if (resultPath != S_OK) {
-            CoTaskMemFree(pathTmp);
-
-            const Error err("failed to initialize base logger directory");
-            err.showError();
-            throw std::runtime_error(err.getError());
-        }
-
-        basePath = pathTmp;
-
-        CoTaskMemFree(pathTmp);
-
-#elif __linux__
-
-        struct passwd* pw = getpwuid_r(getuid());
-        basePath = std::format("{}/.local/share/", pw->pw_dir);
-        static_assert(false, "check if this part actually works");
-
-#endif
-
-        basePath /= sBaseEngineDirectoryName;
-
-#if defined(WIN32)
-        basePath += "\\";
-#elif __linux__
-        basePath += "/";
-#endif
-
-        if (!std::filesystem::exists(basePath)) {
-            std::filesystem::create_directories(basePath);
-        }
-
-        return basePath;
-    }
-
     std::string getApplicationName() {
 #if defined(WIN32)
 
@@ -91,6 +48,43 @@ namespace ne {
         return std::filesystem::path(buffer).stem().string();
 
 #endif
+    }
+
+    std::filesystem::path getBaseDirectoryForConfigs() {
+        std::filesystem::path basePath;
+
+#if defined(WIN32)
+
+        // Try to get AppData folder.
+        PWSTR pathTmp;
+        const HRESULT resultPath = SHGetKnownFolderPath(FOLDERID_LocalAppData, 0, nullptr, &pathTmp);
+        if (resultPath != S_OK) {
+            CoTaskMemFree(pathTmp);
+
+            const Error err("failed to initialize base logger directory");
+            err.showError();
+            throw std::runtime_error(err.getError());
+        }
+
+        basePath = pathTmp;
+
+        CoTaskMemFree(pathTmp);
+
+#elif __linux__
+
+        struct passwd* pw = getpwuid_r(getuid());
+        basePath = std::format("{}/.config/", pw->pw_dir);
+        static_assert(false, "check if this part actually works");
+
+#endif
+
+        basePath /= sBaseEngineDirectoryName;
+
+        if (!std::filesystem::exists(basePath)) {
+            std::filesystem::create_directories(basePath);
+        }
+
+        return basePath;
     }
 
     std::string wstringToString(const std::wstring& sText) {

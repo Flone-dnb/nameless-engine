@@ -21,14 +21,7 @@ int main() {
 #endif
 
     // Clear any config files.
-    std::filesystem::path basePath = ne::getBaseDirectoryForConfigs();
-    basePath += ne::getApplicationName();
-
-#if defined(WIN32)
-    basePath += "\\";
-#elif __linux__
-    basePath += "/";
-#endif
+    const std::filesystem::path basePath = ne::getBaseDirectoryForConfigs() / ne::getApplicationName();
 
     if (std::filesystem::exists(basePath)) {
         std::filesystem::remove_all(basePath);

@@ -4,7 +4,7 @@
 #include <filesystem>
 
 // Custom.
-#include "misc/Globals.h"
+#include "misc/ProjectPaths.h"
 
 namespace ne {
     /** Provides a set of static function related to filesystem paths to store shaders. */
@@ -21,10 +21,7 @@ namespace ne {
          * @return Path to shader cache directory (created if not existed before).
          */
         static std::filesystem::path getPathToShaderCacheDirectory() {
-            std::filesystem::path basePath = getBaseDirectoryForConfigs();
-            basePath += getApplicationName();
-
-            basePath /= sShaderCacheDirectoryName;
+            std::filesystem::path basePath = ProjectPaths::getDirectoryForCompiledShaders();
 
             if (!std::filesystem::exists(basePath)) {
                 std::filesystem::create_directories(basePath);
@@ -43,9 +40,6 @@ namespace ne {
         static std::string getShaderCacheBaseFileName() { return sShaderCacheBaseFileName; }
 
     private:
-        /** Directory name to store compiled shaders. */
-        static constexpr auto sShaderCacheDirectoryName = "shader_cache";
-
         /** Base name of the file used to store shader cache. */
         static constexpr auto sShaderCacheBaseFileName = "shader";
     };

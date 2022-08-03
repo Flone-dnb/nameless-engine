@@ -7,6 +7,7 @@
 
 // Custom.
 #include "misc/Globals.h"
+#include "misc/ProjectPaths.h"
 
 // External.
 #include "spdlog/spdlog.h"
@@ -61,18 +62,10 @@ namespace ne {
     std::filesystem::path Logger::getDirectoryWithLogs() const { return sLoggerWorkingDirectory; }
 
     Logger::Logger() {
-        auto sLoggerFilePath = getBaseDirectoryForConfigs();
-        sLoggerFilePath += getApplicationName();
+        auto sLoggerFilePath = ProjectPaths::getDirectoryForLogFiles();
 
-        // Create base directory with application name.
         if (!std::filesystem::exists(sLoggerFilePath)) {
-            std::filesystem::create_directory(sLoggerFilePath);
-        }
-
-        // Create directory for logs.
-        sLoggerFilePath /= sLogsDirectoryName;
-        if (!std::filesystem::exists(sLoggerFilePath)) {
-            std::filesystem::create_directory(sLoggerFilePath);
+            std::filesystem::create_directories(sLoggerFilePath);
         }
 
         sLoggerWorkingDirectory = sLoggerFilePath;

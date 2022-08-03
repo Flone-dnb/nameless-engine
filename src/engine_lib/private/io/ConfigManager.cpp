@@ -5,22 +5,22 @@
 
 // Custom.
 #include "io/Logger.h"
-#include "misc/Globals.h"
+#include "misc/ProjectPaths.h"
 
 namespace ne {
     std::string ConfigManager::getConfigFormatExtension() { return ".toml"; }
 
     std::vector<std::string> ConfigManager::getAllFiles(ConfigCategory category) {
-        const auto categoryFolder = ConfigManager::getCategoryDirectory(category);
+        const auto categoryDirectory = getCategoryDirectory(category);
 
         std::vector<std::string> vConfigFiles;
-        const auto directoryIterator = std::filesystem::directory_iterator(categoryFolder);
+        const auto directoryIterator = std::filesystem::directory_iterator(categoryDirectory);
         for (const auto& entry : directoryIterator) {
             if (entry.is_regular_file()) {
                 if (entry.path().extension().string() == sBackupFileExtension) {
                     // Backup file. See if original file exists.
-                    auto originalFilePath = categoryFolder;
-                    originalFilePath += entry.path().stem().string(); // will return 'text.toml'
+                    auto originalFilePath = categoryDirectory;
+                    originalFilePath /= entry.path().stem().string(); // will return 'text.toml'
                     if (!std::filesystem::exists(originalFilePath)) {
                         // Backup file exists, but not the original file.
                         // Copy backup file as the original.
@@ -45,37 +45,26 @@ namespace ne {
     }
 
     std::filesystem::path ConfigManager::getCategoryDirectory(ConfigCategory category) {
-        std::filesystem::path basePath = getBaseDirectoryForConfigs();
-        basePath += getApplicationName();
-
-        if (!std::filesystem::exists(basePath)) {
-            std::filesystem::create_directory(basePath);
-        }
+        std::filesystem::path basePath;
 
         switch (category) {
         case ConfigCategory::PROGRESS:
-            basePath /= sProgressDirectoryName;
+            basePath = ProjectPaths::getDirectoryForPlayerProgress();
             break;
         case ConfigCategory::SETTINGS:
-            basePath /= sSettingsDirectoryName;
+            basePath = ProjectPaths::getDirectoryForPlayerSettings();
             break;
         }
 
-#if defined(WIN32)
-        basePath += "\\";
-#elif __linux__
-        basePath += "/";
-#endif
-
         if (!std::filesystem::exists(basePath)) {
-            std::filesystem::create_directory(basePath);
+            std::filesystem::create_directories(basePath);
         }
 
         return basePath;
     }
 
     std::optional<Error> ConfigManager::removeFile(ConfigCategory category, std::string_view sFileName) {
-        auto result = ConfigManager::constructFilePath(category, sFileName);
+        auto result = constructFilePath(category, sFileName);
         if (std::holds_alternative<Error>(result)) {
             auto error = std::get<Error>(std::move(result));
             error.addEntry();
@@ -278,50 +267,30 @@ namespace ne {
         // Check if absolute path.
         if (std::filesystem::path(sFileName).is_absolute()) {
             return Error("received an absolute path as a file name");
-        } else {
-            if (sFileName.contains('/') || sFileName.contains('\\')) {
-                return Error("don't use slashes in file name");
-            }
+        }
 
-            // Prepare directory.
-            basePath = getBaseDirectoryForConfigs();
-            basePath += getApplicationName();
+        if (sFileName.contains('/') || sFileName.contains('\\')) {
+            return Error("don't use slashes in file name");
+        }
 
-#if defined(WIN32)
-            basePath += "\\";
-#elif __linux__
-            basePath += "/";
-#endif
+        switch (category) {
+        case ConfigCategory::PROGRESS:
+            basePath = ProjectPaths::getDirectoryForPlayerProgress();
+            break;
+        case ConfigCategory::SETTINGS:
+            basePath = ProjectPaths::getDirectoryForPlayerSettings();
+            break;
+        }
 
-            if (!std::filesystem::exists(basePath)) {
-                std::filesystem::create_directory(basePath);
-            }
+        if (!std::filesystem::exists(basePath)) {
+            std::filesystem::create_directories(basePath);
+        }
 
-            switch (category) {
-            case ConfigCategory::PROGRESS:
-                basePath += sProgressDirectoryName;
-                break;
-            case ConfigCategory::SETTINGS:
-                basePath += sSettingsDirectoryName;
-                break;
-            }
+        basePath /= sFileName;
 
-#if defined(WIN32)
-            basePath += "\\";
-#elif __linux__
-            basePath += "/";
-#endif
-
-            if (!std::filesystem::exists(basePath)) {
-                std::filesystem::create_directory(basePath);
-            }
-
-            basePath += sFileName;
-
-            // Check extension.
-            if (!sFileName.ends_with(ConfigManager::getConfigFormatExtension())) {
-                basePath += ConfigManager::getConfigFormatExtension();
-            }
+        // Check extension.
+        if (!sFileName.ends_with(ConfigManager::getConfigFormatExtension())) {
+            basePath += ConfigManager::getConfigFormatExtension();
         }
 
         return basePath;

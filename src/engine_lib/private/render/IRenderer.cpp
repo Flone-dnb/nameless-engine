@@ -4,7 +4,7 @@
 #include "game/Game.h"
 #include "io/ConfigManager.h"
 #include "io/Logger.h"
-#include "misc/Globals.h"
+#include "misc/ProjectPaths.h"
 #include "shaders/ShaderParameter.h"
 
 namespace ne {
@@ -37,17 +37,10 @@ namespace ne {
     }
 
     std::filesystem::path IRenderer::getRendererConfigurationFilePath() {
-        std::filesystem::path basePath = getBaseDirectoryForConfigs();
-        basePath += getApplicationName();
+        std::filesystem::path basePath = ProjectPaths::getDirectoryForEngineConfigurationFiles();
 
         if (!std::filesystem::exists(basePath)) {
-            std::filesystem::create_directory(basePath);
-        }
-
-        basePath /= sEngineDirectoryName;
-
-        if (!std::filesystem::exists(basePath)) {
-            std::filesystem::create_directory(basePath);
+            std::filesystem::create_directories(basePath);
         }
 
         basePath /= sRendererConfigurationFileName;

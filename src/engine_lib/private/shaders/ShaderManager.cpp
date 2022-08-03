@@ -10,11 +10,14 @@
 #include "shaders/IShader.h"
 #include "render/IRenderer.h"
 #include "io/ConfigManager.h"
-#include "misc/Globals.h"
+#include "misc/ProjectPaths.h"
 #include "shaders/ShaderFilesystemPaths.hpp"
+
 #if defined(WIN32)
+
 #include "render/directx/DirectXRenderer.h"
 #include "hlsl/HlslShader.h"
+
 #endif
 
 namespace ne {
@@ -247,19 +250,7 @@ namespace ne {
     }
 
     std::filesystem::path ShaderManager::getConfigurationFilePath() const {
-        std::filesystem::path configPath = getBaseDirectoryForConfigs();
-        configPath += getApplicationName();
-
-        if (!std::filesystem::exists(configPath)) {
-            std::filesystem::create_directory(configPath);
-        }
-
-        configPath /= sEngineDirectoryName;
-
-        if (!std::filesystem::exists(configPath)) {
-            std::filesystem::create_directory(configPath);
-        }
-
+        std::filesystem::path configPath = ProjectPaths::getDirectoryForEngineConfigurationFiles();
         configPath /= sConfigurationFileName;
 
         // Check extension.

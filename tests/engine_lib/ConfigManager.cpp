@@ -310,6 +310,7 @@ TEST_CASE("remove file") {
     const auto firstFilePath = manager.getFilePath();
     const std::string sSecondFileName = std::string(sTestConfigFileName) + "2";
 
+    // Create another file.
     res = manager.saveFile(ConfigCategory::PROGRESS, sSecondFileName);
     if (res.has_value()) {
         res->addEntry();

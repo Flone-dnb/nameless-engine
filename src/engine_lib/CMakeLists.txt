@@ -89,6 +89,8 @@ set(ENGINE_LIB_SOURCES
     private/shaders/ShaderParameter.h
     private/shaders/ShaderParameter.cpp
     private/shaders/ShaderFilesystemPaths.hpp
+    public/misc/ProjectPaths.h
+    private/misc/ProjectPaths.cpp
     # add general (cross-platform) sources here...
 )
 

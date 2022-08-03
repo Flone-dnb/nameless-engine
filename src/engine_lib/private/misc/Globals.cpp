@@ -12,6 +12,8 @@
 #elif __linux__
 
 #include <unistd.h>
+#include <sys/types.h>
+#include <pwd.h>
 
 #endif
 
@@ -38,7 +40,8 @@ namespace ne {
 
 #elif __linux__
 
-        basePath = std::format("/home/{}/.local/share/", getlogin());
+        struct passwd* pw = getpwuid_r(getuid());
+        basePath = std::format("{}/.local/share/", pw->pw_dir);
         static_assert(false, "check if this part actually works");
 
 #endif

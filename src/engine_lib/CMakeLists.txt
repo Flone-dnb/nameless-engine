@@ -26,8 +26,8 @@ set(ENGINE_WIN32_SOURCES
     private/render/directx/DirectXRenderer.cpp
     private/render/directx/DirectXPso.cpp
     private/render/directx/DirectXPso.h
-    private/render/directx/descriptors/DirectXDescriptorHeapManager.h
-    private/render/directx/descriptors/DirectXDescriptorHeapManager.cpp
+    private/render/directx/descriptors/DirectXDescriptorHeap.h
+    private/render/directx/descriptors/DirectXDescriptorHeap.cpp
     private/render/directx/descriptors/DirectXDescriptor.h
     private/render/directx/descriptors/DirectXDescriptor.cpp
     private/render/directx/resources/DirectXResource.h

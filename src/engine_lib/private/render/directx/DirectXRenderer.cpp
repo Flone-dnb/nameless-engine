@@ -12,7 +12,7 @@
 #include "io/Logger.h"
 #include "misc/Globals.h"
 #include "misc/MessageBox.h"
-#include "render/directx/descriptors/DirectXDescriptorHeapManager.h"
+#include "render/directx/descriptors/DirectXDescriptorHeap.h"
 #include "render/directx/resources/DirectXResource.h"
 #include "render/directx/resources/DirectXResourceManager.h"
 

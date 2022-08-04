@@ -1,4 +1,4 @@
-﻿#include "DirectXDescriptorHeapManager.h"
+﻿#include "DirectXDescriptorHeap.h"
 
 // Custom.
 #include "render/directx/DirectXRenderer.h"
@@ -6,10 +6,10 @@
 #include "render/directx/resources/DirectXResource.h"
 
 namespace ne {
-    std::variant<std::unique_ptr<DirectXDescriptorHeapManager>, Error>
-    DirectXDescriptorHeapManager::create(DirectXRenderer* pRenderer, DescriptorHeapType heapType) {
-        auto pManager = std::unique_ptr<DirectXDescriptorHeapManager>(
-            new DirectXDescriptorHeapManager(pRenderer, heapType));
+    std::variant<std::unique_ptr<DirectXDescriptorHeap>, Error>
+    DirectXDescriptorHeap::create(DirectXRenderer* pRenderer, DescriptorHeapType heapType) {
+        auto pManager =
+            std::unique_ptr<DirectXDescriptorHeap>(new DirectXDescriptorHeap(pRenderer, heapType));
 
         auto optionalError = pManager->createHeap(iHeapGrowSize);
         if (optionalError.has_value()) {
@@ -20,8 +20,8 @@ namespace ne {
         return pManager;
     }
 
-    std::optional<Error> DirectXDescriptorHeapManager::assignDescriptor(
-        DirectXResource* pResource, DescriptorType descriptorType) {
+    std::optional<Error>
+    DirectXDescriptorHeap::assignDescriptor(DirectXResource* pResource, DescriptorType descriptorType) {
         // Check if this heap handles the specified descriptor type.
         const auto vHandledDescriptorTypes = getDescriptorTypesHandledByThisHeap();
         const auto descriptorIt = std::ranges::find_if(
@@ -73,22 +73,22 @@ namespace ne {
         return {};
     }
 
-    INT DirectXDescriptorHeapManager::getHeapCapacity() {
+    INT DirectXDescriptorHeap::getHeapCapacity() {
         std::scoped_lock guard(mtxRwHeap);
         return iHeapCapacity.load();
     }
 
-    INT DirectXDescriptorHeapManager::getHeapSize() {
+    INT DirectXDescriptorHeap::getHeapSize() {
         std::scoped_lock guard(mtxRwHeap);
         return iHeapSize.load();
     }
 
-    size_t DirectXDescriptorHeapManager::getNoLongerUsedDescriptorCount() {
+    size_t DirectXDescriptorHeap::getNoLongerUsedDescriptorCount() {
         std::scoped_lock guard(mtxRwHeap);
         return noLongerUsedDescriptorIndexes.size();
     }
 
-    std::string DirectXDescriptorHeapManager::convertHeapTypeToString(DescriptorHeapType heapType) {
+    std::string DirectXDescriptorHeap::convertHeapTypeToString(DescriptorHeapType heapType) {
         switch (heapType) {
         case (DescriptorHeapType::RTV):
             return "RTV";
@@ -103,8 +103,7 @@ namespace ne {
         throw std::runtime_error(err.getError());
     }
 
-    DirectXDescriptorHeapManager::DirectXDescriptorHeapManager(
-        DirectXRenderer* pRenderer, DescriptorHeapType heapType) {
+    DirectXDescriptorHeap::DirectXDescriptorHeap(DirectXRenderer* pRenderer, DescriptorHeapType heapType) {
         this->pRenderer = pRenderer;
         this->heapType = heapType;
 
@@ -135,7 +134,7 @@ namespace ne {
         sHeapType = convertHeapTypeToString(heapType);
     }
 
-    void DirectXDescriptorHeapManager::markDescriptorAsNoLongerBeingUsed(DirectXResource* pResource) {
+    void DirectXDescriptorHeap::markDescriptorAsNoLongerBeingUsed(DirectXResource* pResource) {
         std::scoped_lock guard(mtxRwHeap);
 
         const auto it = bindedResources.find(pResource);
@@ -175,7 +174,7 @@ namespace ne {
         }
     }
 
-    std::optional<Error> DirectXDescriptorHeapManager::expandHeap() {
+    std::optional<Error> DirectXDescriptorHeap::expandHeap() {
         std::scoped_lock guard(mtxRwHeap);
 
         if (iHeapSize.load() != iHeapCapacity.load()) [[unlikely]] {
@@ -225,7 +224,7 @@ namespace ne {
         return {};
     }
 
-    std::optional<Error> DirectXDescriptorHeapManager::shrinkHeap() {
+    std::optional<Error> DirectXDescriptorHeap::shrinkHeap() {
         std::scoped_lock guard(mtxRwHeap);
 
         if (iHeapCapacity.load() < iHeapGrowSize * 2) [[unlikely]] {
@@ -263,7 +262,7 @@ namespace ne {
         return {};
     }
 
-    void DirectXDescriptorHeapManager::createView(
+    void DirectXDescriptorHeap::createView(
         CD3DX12_CPU_DESCRIPTOR_HANDLE heapHandle,
         const DirectXResource* pResource,
         DescriptorType descriptorType) const {
@@ -361,7 +360,7 @@ namespace ne {
         }
     }
 
-    std::optional<Error> DirectXDescriptorHeapManager::createHeap(INT iCapacity) {
+    std::optional<Error> DirectXDescriptorHeap::createHeap(INT iCapacity) {
         Logger::get().info(
             std::format(
                 "flushing the command queue to (re)create {} descriptor heap (from capacity {} to {}) "
@@ -397,7 +396,7 @@ namespace ne {
         return {};
     }
 
-    std::vector<DescriptorType> DirectXDescriptorHeapManager::getDescriptorTypesHandledByThisHeap() const {
+    std::vector<DescriptorType> DirectXDescriptorHeap::getDescriptorTypesHandledByThisHeap() const {
         switch (heapType) {
         case (DescriptorHeapType::RTV):
             return {DescriptorType::RTV};
@@ -412,7 +411,7 @@ namespace ne {
         throw std::runtime_error(err.getError());
     }
 
-    void DirectXDescriptorHeapManager::recreateOldViews() const {
+    void DirectXDescriptorHeap::recreateOldViews() const {
         // Start from 0 heap index, increment and update old offsets
         // to "shrink" heap usage (needed for heap shrinking).
         auto heapHandle = CD3DX12_CPU_DESCRIPTOR_HANDLE(pHeap->GetCPUDescriptorHandleForHeapStart());

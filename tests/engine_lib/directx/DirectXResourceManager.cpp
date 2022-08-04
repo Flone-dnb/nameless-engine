@@ -6,7 +6,7 @@
 #include "game/IGameInstance.h"
 #include "render/directx/DirectXRenderer.h"
 #include "game/window.h"
-#include "render/directx/descriptors/DirectXDescriptorHeapManager.h"
+#include "render/directx/descriptors/DirectXDescriptorHeap.h"
 #include "render/directx/resources/DirectXResource.h"
 
 // External.

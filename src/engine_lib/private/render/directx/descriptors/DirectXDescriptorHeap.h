@@ -31,12 +31,12 @@ namespace ne {
         CBV_SRV_UAV,
     };
 
-    /** Controls and holds RTV, DSV and CBV/SRV/UAV descriptor heaps. */
-    class DirectXDescriptorHeapManager {
+    /** Represents a descriptor heap. */
+    class DirectXDescriptorHeap {
     public:
-        DirectXDescriptorHeapManager() = delete;
-        DirectXDescriptorHeapManager(const DirectXDescriptorHeapManager&) = delete;
-        DirectXDescriptorHeapManager& operator=(const DirectXDescriptorHeapManager&) = delete;
+        DirectXDescriptorHeap() = delete;
+        DirectXDescriptorHeap(const DirectXDescriptorHeap&) = delete;
+        DirectXDescriptorHeap& operator=(const DirectXDescriptorHeap&) = delete;
 
         /**
          * Creates a new manager that controls a specific heap.
@@ -46,7 +46,7 @@ namespace ne {
          *
          * @return Error if something went wrong, otherwise pointer to the manager.
          */
-        static std::variant<std::unique_ptr<DirectXDescriptorHeapManager>, Error>
+        static std::variant<std::unique_ptr<DirectXDescriptorHeap>, Error>
         create(DirectXRenderer* pRenderer, DescriptorHeapType heapType);
 
         /**
@@ -111,7 +111,7 @@ namespace ne {
          * @param pRenderer DirectX renderer that owns this manager.
          * @param heapType  Type of the heap.
          */
-        DirectXDescriptorHeapManager(DirectXRenderer* pRenderer, DescriptorHeapType heapType);
+        DirectXDescriptorHeap(DirectXRenderer* pRenderer, DescriptorHeapType heapType);
 
         /**
          * Marks resource descriptor(s) as no longer being used

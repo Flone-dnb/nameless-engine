@@ -18,7 +18,7 @@ namespace ne {
     using namespace Microsoft::WRL;
 
     class DirectXResource;
-    class DirectXDescriptorHeapManager;
+    class DirectXDescriptorHeap;
     class DirectXRenderer;
 
     /**
@@ -144,49 +144,49 @@ namespace ne {
             IDXGISwapChain3* pSwapChain, unsigned int iSwapChainBufferCount) const;
 
         /**
-         * Returns RTV heap manager.
+         * Returns RTV heap.
          *
-         * @return RTV heap manager. Do not delete returned pointer.
+         * @return RTV heap. Do not delete returned pointer.
          */
-        DirectXDescriptorHeapManager* getRtvHeap() const;
+        DirectXDescriptorHeap* getRtvHeap() const;
 
         /**
-         * Returns DSV heap manager.
+         * Returns DSV heap.
          *
-         * @return DSV heap manager. Do not delete returned pointer.
+         * @return DSV heap. Do not delete returned pointer.
          */
-        DirectXDescriptorHeapManager* getDsvHeap() const;
+        DirectXDescriptorHeap* getDsvHeap() const;
 
         /**
-         * Returns CBV/SRV/UAV heap manager.
+         * Returns CBV/SRV/UAV heap.
          *
-         * @return CBV/SRV/UAV heap manager. Do not delete returned pointer.
+         * @return CBV/SRV/UAV heap. Do not delete returned pointer.
          */
-        DirectXDescriptorHeapManager* getCbvSrvUavHeap() const;
+        DirectXDescriptorHeap* getCbvSrvUavHeap() const;
 
     private:
         /**
          * Constructor.
          *
-         * @param pMemoryAllocator      Created memory allocator to use.
-         * @param pRtvHeapManager       Created RTV heap manager.
-         * @param pDsvHeapManager       Created DSV heap manager.
-         * @param pCbvSrvUavHeapManager Created CBV/SRV/UAV heap manager.
+         * @param pMemoryAllocator Created memory allocator to use.
+         * @param pRtvHeap         Created RTV heap manager.
+         * @param pDsvHeap         Created DSV heap manager.
+         * @param pCbvSrvUavHeap   Created CBV/SRV/UAV heap.
          */
         DirectXResourceManager(
             ComPtr<D3D12MA::Allocator>&& pMemoryAllocator,
-            std::unique_ptr<DirectXDescriptorHeapManager>&& pRtvHeapManager,
-            std::unique_ptr<DirectXDescriptorHeapManager>&& pDsvHeapManager,
-            std::unique_ptr<DirectXDescriptorHeapManager>&& pCbvSrvUavHeapManager);
+            std::unique_ptr<DirectXDescriptorHeap>&& pRtvHeap,
+            std::unique_ptr<DirectXDescriptorHeap>&& pDsvHeap,
+            std::unique_ptr<DirectXDescriptorHeap>&& pCbvSrvUavHeap);
 
         /** Allocator for GPU resources. */
         ComPtr<D3D12MA::Allocator> pMemoryAllocator;
 
         /** RTV heap manager. */
-        std::unique_ptr<DirectXDescriptorHeapManager> pRtvHeapManager;
+        std::unique_ptr<DirectXDescriptorHeap> pRtvHeap;
         /** DSV heap manager. */
-        std::unique_ptr<DirectXDescriptorHeapManager> pDsvHeapManager;
+        std::unique_ptr<DirectXDescriptorHeap> pDsvHeap;
         /** CBV/SRV/UAV heap manager. */
-        std::unique_ptr<DirectXDescriptorHeapManager> pCbvSrvUavHeapManager;
+        std::unique_ptr<DirectXDescriptorHeap> pCbvSrvUavHeap;
     };
 } // namespace ne

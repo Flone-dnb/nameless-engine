@@ -6,7 +6,7 @@
 #include "render/directx/resources/DirectXResourceManager.h"
 
 namespace ne {
-    class DirectXDescriptorHeapManager;
+    class DirectXDescriptorHeap;
     class DirectXResource;
 
     /** Defines types of different descriptors. */
@@ -16,7 +16,7 @@ namespace ne {
         CBV,
         SRV,
         UAV,
-        END // marks the end of the enum
+        END // marks the end of this enum
     };
 
     /** Represents a descriptor (to a resource) that is stored in a descriptor heap. */
@@ -45,7 +45,9 @@ namespace ne {
         DirectXDescriptor& operator=(DirectXDescriptor&& other) noexcept;
 
     protected:
-        friend class DirectXDescriptorHeapManager;
+        // We notify the heap about descriptor being no longer used
+        // in destructor.
+        friend class DirectXDescriptorHeap;
 
         /**
          * Constructor.
@@ -57,7 +59,7 @@ namespace ne {
          * (offset is specified in descriptors, not an actual index).
          */
         DirectXDescriptor(
-            DirectXDescriptorHeapManager* pHeap,
+            DirectXDescriptorHeap* pHeap,
             DescriptorType descriptorType,
             DirectXResource* pResource,
             int iDescriptorOffsetInDescriptors);
@@ -70,11 +72,15 @@ namespace ne {
         DirectXResource* getOwnerResource() const;
 
     private:
+        // !!!
+        // if adding new fields consider adding them to move assignment operator
+        // !!!
+
         /** Do not delete. Owner resource of this descriptor. */
         DirectXResource* pResource = nullptr;
 
         /** Do not delete. Heap of this descriptor. */
-        DirectXDescriptorHeapManager* pHeap = nullptr;
+        DirectXDescriptorHeap* pHeap = nullptr;
 
         /**
          * Offset of this descriptor from the heap start (offset is specified in descriptors, not an actual

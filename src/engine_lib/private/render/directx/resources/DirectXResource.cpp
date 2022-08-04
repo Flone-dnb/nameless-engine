@@ -1,13 +1,13 @@
 ﻿#include "DirectXResource.h"
 
 // Custom.
-#include "render/directx/descriptors/DirectXDescriptorHeapManager.h"
+#include "render/directx/descriptors/DirectXDescriptorHeap.h"
 
 namespace ne {
 
     std::variant<std::unique_ptr<DirectXResource>, Error> DirectXResource::create(
         const DirectXResourceManager* pResourceManager,
-        DirectXDescriptorHeapManager* pHeap,
+        DirectXDescriptorHeap* pHeap,
         DescriptorType descriptorType,
         D3D12MA::Allocator* pMemoryAllocator,
         const D3D12MA::ALLOCATION_DESC& allocationDesc,
@@ -44,7 +44,7 @@ namespace ne {
 
     std::variant<std::unique_ptr<DirectXResource>, Error> DirectXResource::createResourceFromSwapChainBuffer(
         const DirectXResourceManager* pResourceManager,
-        DirectXDescriptorHeapManager* pRtvHeap,
+        DirectXDescriptorHeap* pRtvHeap,
         const ComPtr<ID3D12Resource>& pSwapChainBuffer) {
         auto pCreatedResource = std::unique_ptr<DirectXResource>(new DirectXResource(pResourceManager));
 

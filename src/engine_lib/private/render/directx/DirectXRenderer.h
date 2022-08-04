@@ -149,7 +149,7 @@ namespace ne {
 
     protected:
         friend class HlslShader;
-        friend class DirectXDescriptorHeapManager;
+        friend class DirectXDescriptorHeap;
 
         /** Update internal resources for next frame. */
         virtual void update() override;

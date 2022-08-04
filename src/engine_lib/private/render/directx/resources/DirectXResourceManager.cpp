@@ -1,7 +1,7 @@
 ﻿#include "DirectXResourceManager.h"
 
 // Custom.
-#include "render/directx/descriptors/DirectXDescriptorHeapManager.h"
+#include "render/directx/descriptors/DirectXDescriptorHeap.h"
 #include "render/directx/resources/DirectXResource.h"
 
 namespace ne {
@@ -21,34 +21,32 @@ namespace ne {
         }
 
         // Create RTV heap manager.
-        auto heapManagerResult = DirectXDescriptorHeapManager::create(pRenderer, DescriptorHeapType::RTV);
+        auto heapManagerResult = DirectXDescriptorHeap::create(pRenderer, DescriptorHeapType::RTV);
         if (std::holds_alternative<Error>(heapManagerResult)) {
             Error err = std::get<Error>(std::move(heapManagerResult));
             err.addEntry();
             return err;
         }
-        auto pRtvHeapManager =
-            std::get<std::unique_ptr<DirectXDescriptorHeapManager>>(std::move(heapManagerResult));
+        auto pRtvHeapManager = std::get<std::unique_ptr<DirectXDescriptorHeap>>(std::move(heapManagerResult));
 
         // Create DSV heap manager.
-        heapManagerResult = DirectXDescriptorHeapManager::create(pRenderer, DescriptorHeapType::DSV);
+        heapManagerResult = DirectXDescriptorHeap::create(pRenderer, DescriptorHeapType::DSV);
         if (std::holds_alternative<Error>(heapManagerResult)) {
             Error err = std::get<Error>(std::move(heapManagerResult));
             err.addEntry();
             return err;
         }
-        auto pDsvHeapManager =
-            std::get<std::unique_ptr<DirectXDescriptorHeapManager>>(std::move(heapManagerResult));
+        auto pDsvHeapManager = std::get<std::unique_ptr<DirectXDescriptorHeap>>(std::move(heapManagerResult));
 
         // Create CBV/SRV/UAV heap manager.
-        heapManagerResult = DirectXDescriptorHeapManager::create(pRenderer, DescriptorHeapType::CBV_SRV_UAV);
+        heapManagerResult = DirectXDescriptorHeap::create(pRenderer, DescriptorHeapType::CBV_SRV_UAV);
         if (std::holds_alternative<Error>(heapManagerResult)) {
             Error err = std::get<Error>(std::move(heapManagerResult));
             err.addEntry();
             return err;
         }
         auto pCbvSrvUavHeapManager =
-            std::get<std::unique_ptr<DirectXDescriptorHeapManager>>(std::move(heapManagerResult));
+            std::get<std::unique_ptr<DirectXDescriptorHeap>>(std::move(heapManagerResult));
 
         return std::unique_ptr<DirectXResourceManager>(new DirectXResourceManager(
             std::move(pMemoryAllocator),
@@ -78,7 +76,7 @@ namespace ne {
         const D3D12_CLEAR_VALUE& resourceClearValue) const {
         auto result = DirectXResource::create(
             this,
-            pRtvHeapManager.get(),
+            pRtvHeap.get(),
             DescriptorType::RTV,
             pMemoryAllocator.Get(),
             allocationDesc,
@@ -101,7 +99,7 @@ namespace ne {
         const D3D12_CLEAR_VALUE& resourceClearValue) const {
         auto result = DirectXResource::create(
             this,
-            pDsvHeapManager.get(),
+            pDsvHeap.get(),
             DescriptorType::DSV,
             pMemoryAllocator.Get(),
             allocationDesc,
@@ -123,7 +121,7 @@ namespace ne {
         const D3D12_RESOURCE_STATES& initialResourceState) const {
         auto result = DirectXResource::create(
             this,
-            pCbvSrvUavHeapManager.get(),
+            pCbvSrvUavHeap.get(),
             DescriptorType::CBV,
             pMemoryAllocator.Get(),
             allocationDesc,
@@ -145,7 +143,7 @@ namespace ne {
         const D3D12_RESOURCE_STATES& initialResourceState) const {
         auto result = DirectXResource::create(
             this,
-            pCbvSrvUavHeapManager.get(),
+            pCbvSrvUavHeap.get(),
             DescriptorType::SRV,
             pMemoryAllocator.Get(),
             allocationDesc,
@@ -167,7 +165,7 @@ namespace ne {
         const D3D12_RESOURCE_STATES& initialResourceState) const {
         auto result = DirectXResource::create(
             this,
-            pCbvSrvUavHeapManager.get(),
+            pCbvSrvUavHeap.get(),
             DescriptorType::UAV,
             pMemoryAllocator.Get(),
             allocationDesc,
@@ -194,8 +192,7 @@ namespace ne {
                 return Error(hResult);
             }
 
-            auto result =
-                DirectXResource::createResourceFromSwapChainBuffer(this, pRtvHeapManager.get(), pBuffer);
+            auto result = DirectXResource::createResourceFromSwapChainBuffer(this, pRtvHeap.get(), pBuffer);
             if (std::holds_alternative<Error>(result)) {
                 auto err = std::get<Error>(std::move(result));
                 err.addEntry();
@@ -208,22 +205,20 @@ namespace ne {
         return vCreatedResources;
     }
 
-    DirectXDescriptorHeapManager* DirectXResourceManager::getRtvHeap() const { return pRtvHeapManager.get(); }
+    DirectXDescriptorHeap* DirectXResourceManager::getRtvHeap() const { return pRtvHeap.get(); }
 
-    DirectXDescriptorHeapManager* DirectXResourceManager::getDsvHeap() const { return pDsvHeapManager.get(); }
+    DirectXDescriptorHeap* DirectXResourceManager::getDsvHeap() const { return pDsvHeap.get(); }
 
-    DirectXDescriptorHeapManager* DirectXResourceManager::getCbvSrvUavHeap() const {
-        return pCbvSrvUavHeapManager.get();
-    }
+    DirectXDescriptorHeap* DirectXResourceManager::getCbvSrvUavHeap() const { return pCbvSrvUavHeap.get(); }
 
     DirectXResourceManager::DirectXResourceManager(
         ComPtr<D3D12MA::Allocator>&& pMemoryAllocator,
-        std::unique_ptr<DirectXDescriptorHeapManager>&& pRtvHeapManager,
-        std::unique_ptr<DirectXDescriptorHeapManager>&& pDsvHeapManager,
-        std::unique_ptr<DirectXDescriptorHeapManager>&& pCbvSrvUavHeapManager) {
+        std::unique_ptr<DirectXDescriptorHeap>&& pRtvHeap,
+        std::unique_ptr<DirectXDescriptorHeap>&& pDsvHeap,
+        std::unique_ptr<DirectXDescriptorHeap>&& pCbvSrvUavHeap) {
         this->pMemoryAllocator = std::move(pMemoryAllocator);
-        this->pRtvHeapManager = std::move(pRtvHeapManager);
-        this->pDsvHeapManager = std::move(pDsvHeapManager);
-        this->pCbvSrvUavHeapManager = std::move(pCbvSrvUavHeapManager);
+        this->pRtvHeap = std::move(pRtvHeap);
+        this->pDsvHeap = std::move(pDsvHeap);
+        this->pCbvSrvUavHeap = std::move(pCbvSrvUavHeap);
     }
 } // namespace ne

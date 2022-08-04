@@ -20,7 +20,7 @@ namespace ne {
     using namespace Microsoft::WRL;
 
     class DirectXRenderer;
-    class DirectXDescriptorHeapManager;
+    class DirectXDescriptorHeap;
 
     /**
      * D3D resource wrapper with automatic descriptor binding.
@@ -47,7 +47,7 @@ namespace ne {
          */
         static std::variant<std::unique_ptr<DirectXResource>, Error> create(
             const DirectXResourceManager* pResourceManager,
-            DirectXDescriptorHeapManager* pHeap,
+            DirectXDescriptorHeap* pHeap,
             DescriptorType descriptorType,
             D3D12MA::Allocator* pMemoryAllocator,
             const D3D12MA::ALLOCATION_DESC& allocationDesc,
@@ -67,7 +67,7 @@ namespace ne {
          */
         static std::variant<std::unique_ptr<DirectXResource>, Error> createResourceFromSwapChainBuffer(
             const DirectXResourceManager* pResourceManager,
-            DirectXDescriptorHeapManager* pRtvHeap,
+            DirectXDescriptorHeap* pRtvHeap,
             const ComPtr<ID3D12Resource>& pSwapChainBuffer);
 
         /**
@@ -113,9 +113,9 @@ namespace ne {
         ID3D12Resource* getD3DResource() const;
 
     private:
-        // Heap manager may update heap descriptors
-        // if the heap of used descriptor was recreated.
-        friend class DirectXDescriptorHeapManager;
+        // If descriptor heap of a used descriptor (see field of this class) was recreated
+        // then descriptor heap will update our descriptors with new descriptor information.
+        friend class DirectXDescriptorHeap;
 
         /**
          * Constructor. Creates an empty resource.

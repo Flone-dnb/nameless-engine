@@ -1,7 +1,7 @@
 ﻿#include "DirectXDescriptor.h"
 
 // Custom.
-#include "render/directx/descriptors/DirectXDescriptorHeapManager.h"
+#include "render/directx/descriptors/DirectXDescriptorHeap.h"
 #include "render/directx/resources/DirectXResource.h"
 
 namespace ne {
@@ -29,7 +29,7 @@ namespace ne {
     }
 
     DirectXDescriptor::DirectXDescriptor(
-        DirectXDescriptorHeapManager* pHeap,
+        DirectXDescriptorHeap* pHeap,
         DescriptorType descriptorType,
         DirectXResource* pResource,
         int iDescriptorOffsetInDescriptors) {

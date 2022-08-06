@@ -111,17 +111,17 @@ namespace ne {
         switch (heapType) {
         case (DescriptorHeapType::RTV): {
             iDescriptorSize =
-                pRenderer->pDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+                pRenderer->getDevice()->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
             d3dHeapType = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
         } break;
         case (DescriptorHeapType::DSV): {
             iDescriptorSize =
-                pRenderer->pDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
+                pRenderer->getDevice()->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
             d3dHeapType = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
         } break;
         case (DescriptorHeapType::CBV_SRV_UAV): {
-            iDescriptorSize =
-                pRenderer->pDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+            iDescriptorSize = pRenderer->getDevice()->GetDescriptorHandleIncrementSize(
+                D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
             d3dHeapType = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
         } break;
         default: {
@@ -268,17 +268,17 @@ namespace ne {
         DescriptorType descriptorType) const {
         switch (descriptorType) {
         case (DescriptorType::RTV): {
-            pRenderer->pDevice->CreateRenderTargetView(pResource->getD3DResource(), nullptr, heapHandle);
+            pRenderer->getDevice()->CreateRenderTargetView(pResource->getD3DResource(), nullptr, heapHandle);
         } break;
         case (DescriptorType::DSV): {
             D3D12_DEPTH_STENCIL_VIEW_DESC dsvDesc;
             dsvDesc.Flags = D3D12_DSV_FLAG_NONE;
             dsvDesc.ViewDimension =
                 pRenderer->bIsMsaaEnabled ? D3D12_DSV_DIMENSION_TEXTURE2DMS : D3D12_DSV_DIMENSION_TEXTURE2D;
-            dsvDesc.Format = pRenderer->depthStencilFormat;
+            dsvDesc.Format = pRenderer->depthStencilBufferFormat;
             dsvDesc.Texture2D.MipSlice = 0;
 
-            pRenderer->pDevice->CreateDepthStencilView(pResource->getD3DResource(), &dsvDesc, heapHandle);
+            pRenderer->getDevice()->CreateDepthStencilView(pResource->getD3DResource(), &dsvDesc, heapHandle);
         } break;
         case (DescriptorType::CBV): {
             const auto resourceGpuVirtualAddress = pResource->getD3DResource()->GetGPUVirtualAddress();
@@ -287,7 +287,7 @@ namespace ne {
             cbvDesc.BufferLocation = resourceGpuVirtualAddress;
             cbvDesc.SizeInBytes = static_cast<UINT>(pResource->getD3DResource()->GetDesc().Width);
 
-            pRenderer->pDevice->CreateConstantBufferView(&cbvDesc, heapHandle);
+            pRenderer->getDevice()->CreateConstantBufferView(&cbvDesc, heapHandle);
         } break;
         case (DescriptorType::SRV): {
             const auto resourceDesc = pResource->getD3DResource()->GetDesc();
@@ -319,7 +319,8 @@ namespace ne {
             srvDesc.Texture2D.MostDetailedMip = 0;
             srvDesc.Texture2D.MipLevels = resourceDesc.MipLevels;
 
-            pRenderer->pDevice->CreateShaderResourceView(pResource->getD3DResource(), &srvDesc, heapHandle);
+            pRenderer->getDevice()->CreateShaderResourceView(
+                pResource->getD3DResource(), &srvDesc, heapHandle);
         } break;
         case (DescriptorType::UAV): {
             const auto resourceDesc = pResource->getD3DResource()->GetDesc();
@@ -349,7 +350,7 @@ namespace ne {
             uavDesc.ViewDimension = uavDimension;
             uavDesc.Texture2D.MipSlice = 0;
 
-            pRenderer->pDevice->CreateUnorderedAccessView(
+            pRenderer->getDevice()->CreateUnorderedAccessView(
                 pResource->getD3DResource(), nullptr, &uavDesc, heapHandle);
         } break;
         case (DescriptorType::END): {
@@ -382,8 +383,8 @@ namespace ne {
         heapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
         heapDesc.NodeMask = 0;
 
-        const HRESULT hResult =
-            pRenderer->pDevice->CreateDescriptorHeap(&heapDesc, IID_PPV_ARGS(pHeap.ReleaseAndGetAddressOf()));
+        const HRESULT hResult = pRenderer->getDevice()->CreateDescriptorHeap(
+            &heapDesc, IID_PPV_ARGS(pHeap.ReleaseAndGetAddressOf()));
         if (FAILED(hResult)) {
             return Error(hResult);
         }

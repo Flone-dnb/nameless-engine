@@ -14,6 +14,8 @@
 #include <DirectXShaderCompiler/inc/d3d12shader.h>
 
 namespace ne {
+    class HlslShader;
+
     using namespace Microsoft::WRL;
 
     /**
@@ -26,15 +28,35 @@ namespace ne {
         RootSignatureGenerator& operator=(const RootSignatureGenerator&) = delete;
 
         /**
-         * Generates Root Signature based on HLSL code.
+         * Generates root signature based on HLSL code reflection.
          *
          * @param pDevice           DirectX device.
          * @param pShaderReflection Reflection from compiled HLSL shader.
          *
-         * @return Error if something was wrong, otherwise generated root signature.
+         * @return Error if something was wrong, otherwise generated root signature with used parameters.
          */
-        static std::variant<ComPtr<ID3D12RootSignature>, Error> generateRootSignature(
-            ComPtr<ID3D12Device>& pDevice, const ComPtr<ID3D12ShaderReflection>& pShaderReflection);
+        static std::variant<
+            std::tuple<
+                ComPtr<ID3D12RootSignature>,
+                std::vector<CD3DX12_ROOT_PARAMETER>,
+                std::vector<CD3DX12_STATIC_SAMPLER_DESC>>,
+            Error>
+        generate(ID3D12Device* pDevice, const ComPtr<ID3D12ShaderReflection>& pShaderReflection);
+
+        /**
+         * Merges vertex and pixel shader root signatures into one new root signature
+         * that can be used in pipeline state object.
+         *
+         * @param pDevice       DirectX device.
+         * @param pVertexShader Vertex shader.
+         * @param pPixelShader  Pixel shader.
+         *
+         * @remark Shaders must be compiled from one shader source file.
+         *
+         * @return Error if something went wrong, otherwise generated root signature.
+         */
+        static std::variant<ComPtr<ID3D12RootSignature>, Error>
+        merge(ID3D12Device* pDevice, const HlslShader* pVertexShader, const HlslShader* pPixelShader);
 
     private:
         /**

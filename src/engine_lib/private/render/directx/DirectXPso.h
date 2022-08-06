@@ -22,23 +22,41 @@ namespace ne {
         DirectXPso(const DirectXPso&) = delete;
         DirectXPso& operator=(const DirectXPso&) = delete;
 
-        virtual ~DirectXPso() override {}
+        virtual ~DirectXPso() override = default;
 
         /**
-         * Assigns a shader to PSO.
+         * Assigns vertex and pixel shaders to create a graphics PSO (for usual rendering).
          *
-         * @warning If a shader of this type was already added it will be replaced with the new one.
+         * @warning If a shader of some type was already added it will be replaced with the new one.
+         * When shader is replaced the old shader gets freed from the memory and
+         * a new PSO is immediately generated. Make sure the GPU is not using old shader/PSO.
          *
-         * @param sShaderName Name of the compiled shader (see ShaderManager::compileShaders).
+         * @param sVertexShaderName Name of the compiled vertex shader (see ShaderManager::compileShaders).
+         * @param sPixelShaderName  Name of the compiled pixel shader (see ShaderManager::compileShaders).
          *
-         * @return 'false' if shader was assigned successfully, 'true' if it was not found in ShaderManager.
+         * @return Error if one or both were not found in ShaderManager or if failed to generate PSO.
          */
-        bool assignShader(const std::string& sShaderName);
+        std::optional<Error>
+        setupGraphicsPso(const std::string& sVertexShaderName, const std::string& sPixelShaderName);
 
     private:
+        /**
+         * (Re)generates DirectX graphics pipeline state object for assigned shaders.
+         * Called by @ref setupGraphicsPso.
+         *
+         * @warning This function assumes that vertex and pixel shaders are already assigned.
+         *
+         * @return Error if unable to generate PSO.
+         */
+        std::optional<Error> generateGraphicsPsoForShaders();
+
         /** Do not delete. Parent renderer that uses this PSO. */
         DirectXRenderer* pRenderer;
 
-        // TODO: add actual PSO here and provide a getter.
+        /** Root signature, used in PSO. */
+        ComPtr<ID3D12RootSignature> pRootSignature;
+
+        /** Graphics PSO, created using @ref setupGraphicsPso. */
+        ComPtr<ID3D12PipelineState> pGraphicsPso;
     };
 } // namespace ne

@@ -30,18 +30,28 @@ namespace ne {
          * @param pathToCompiledShader Path to compiled shader blob on disk.
          * @param sShaderName          Unique name of this shader.
          * @param shaderType           Type of this shader.
+         * @param sSourceFileHash      Shader source file hash, used to tell what shaders were compiled from
+         * the same file.
          */
         HlslShader(
             IRenderer* pRenderer,
             std::filesystem::path pathToCompiledShader,
             const std::string& sShaderName,
-            ShaderType shaderType);
+            ShaderType shaderType,
+            std::string sSourceFileHash);
 
         HlslShader() = delete;
         HlslShader(const HlslShader&) = delete;
         HlslShader& operator=(const HlslShader&) = delete;
 
         virtual ~HlslShader() override {}
+
+        /**
+         * Returns shader input layout description (@ref vShaderVertexDescription).
+         *
+         * @return Input layout description.
+         */
+        static std::vector<D3D12_INPUT_ELEMENT_DESC> getShaderInputElementDescription();
 
         /**
          * Tests if shader cache for this shader is corrupted or not.
@@ -87,6 +97,20 @@ namespace ne {
         std::variant<ComPtr<IDxcBlob>, Error> getCompiledBlob();
 
         /**
+         * Returns root parameters that were used for generating shader's root signature.
+         *
+         * @return Root parameters.
+         */
+        std::vector<CD3DX12_ROOT_PARAMETER> getShaderRootParameters() const;
+
+        /**
+         * Returns static samplers that were used for generating shader's root signature.
+         *
+         * @return Static samplers.
+         */
+        std::vector<CD3DX12_STATIC_SAMPLER_DESC> getShaderStaticSamplers() const;
+
+        /**
          * Releases underlying shader data (bytecode, root signature, etc.) from memory (this object will not
          * be deleted) if the shader data was loaded into memory. Next time this shader will be needed the
          * data will be loaded from disk.
@@ -126,6 +150,12 @@ namespace ne {
          */
         std::pair<std::recursive_mutex, std::pair<ComPtr<IDxcBlob>, ComPtr<ID3D12RootSignature>>>
             mtxCompiledBlobRootSignature;
+
+        /** Root parameters that were used for generating @ref mtxCompiledBlobRootSignature. */
+        std::vector<CD3DX12_ROOT_PARAMETER> vRootParameters;
+
+        /** Static samplers that were used for generating @ref mtxCompiledBlobRootSignature. */
+        std::vector<CD3DX12_STATIC_SAMPLER_DESC> vStaticSamplers;
 
         /** Shader file encoding. */
         static inline UINT iShaderFileCodepage = DXC_CP_ACP;

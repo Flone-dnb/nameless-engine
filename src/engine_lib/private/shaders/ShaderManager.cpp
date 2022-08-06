@@ -50,6 +50,7 @@ namespace ne {
         }
 
         if (it->second.use_count() > 1) {
+            // Still used by somebody else.
             return;
         }
 

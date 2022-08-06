@@ -40,10 +40,10 @@ namespace ne {
         /** Whether the AA is enabled or not. */
         bool bIsEnabled;
         /**
-         * Quality of AA, for MSAA valid values are:
+         * Sample count of AA, for MSAA valid values are:
          * 2 (x2 sample count - good quality) or 4 (x4 sample count - best quality).
          */
-        int iQuality;
+        int iSampleCount;
     };
 
     /**

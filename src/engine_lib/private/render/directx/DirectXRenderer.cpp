@@ -70,7 +70,15 @@ namespace ne {
             throw std::runtime_error(error->getError());
         }
 
-        // TODO
+        // Create pipeline state objects.
+        error = createPipelineStateObjects();
+        if (error.has_value()) {
+            error->addEntry();
+            error->showError();
+            throw std::runtime_error(error->getError());
+        }
+
+        // TODO: create frame resources.
     }
 
     void DirectXRenderer::update() {}
@@ -101,21 +109,21 @@ namespace ne {
     }
 
     std::optional<Error> DirectXRenderer::createDepthStencilBuffer() {
-        D3D12_RESOURCE_DESC depthStencilDesc = CD3DX12_RESOURCE_DESC(
+        const D3D12_RESOURCE_DESC depthStencilDesc = CD3DX12_RESOURCE_DESC(
             D3D12_RESOURCE_DIMENSION_TEXTURE2D,
             0,
             currentDisplayMode.Width,
             currentDisplayMode.Height,
             1,
             1,
-            depthStencilFormat,
+            depthStencilBufferFormat,
             bIsMsaaEnabled ? iMsaaSampleCount : 1,
             bIsMsaaEnabled ? (iMsaaQuality - 1) : 0,
             D3D12_TEXTURE_LAYOUT_UNKNOWN,
             D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL);
 
         D3D12_CLEAR_VALUE depthClear;
-        depthClear.Format = depthStencilFormat;
+        depthClear.Format = depthStencilBufferFormat;
         depthClear.DepthStencil.Depth = 1.0f;
         depthClear.DepthStencil.Stencil = 0;
 
@@ -158,13 +166,13 @@ namespace ne {
 
         bIsMsaaEnabled = settings.bIsEnabled;
 
-        if (bIsMsaaEnabled && settings.iQuality != 2 && settings.iQuality != 4) {
+        if (bIsMsaaEnabled && settings.iSampleCount != 2 && settings.iSampleCount != 4) {
             return Error(std::format(
                 "{} is not a valid quality parameter, valid quality values for MSAA are 2 and 4",
-                settings.iQuality));
+                settings.iSampleCount));
         }
 
-        iMsaaSampleCount = settings.iQuality;
+        iMsaaSampleCount = settings.iSampleCount;
 
         // Recreate depth/stencil buffer with(out) multisampling.
         auto optionalError = createDepthStencilBuffer();
@@ -176,7 +184,7 @@ namespace ne {
         // TODO: recreate all other depth/stencil buffers and PSOs
 
         // Recreate PSO with(out) multisampling.
-        optionalError = createPso();
+        optionalError = createPipelineStateObjects();
         if (optionalError.has_value()) {
             optionalError->addEntry();
             return optionalError.value();
@@ -250,7 +258,10 @@ namespace ne {
     std::string DirectXRenderer::getCurrentlyUsedGpuName() const { return sUsedVideoAdapter; }
 
     Antialiasing DirectXRenderer::getAntialiasing() const {
-        return Antialiasing{bIsMsaaEnabled, static_cast<int>(iMsaaSampleCount)};
+        Antialiasing aa;
+        aa.bIsEnabled = bIsMsaaEnabled;
+        aa.iSampleCount = static_cast<int>(iMsaaSampleCount);
+        return aa;
     }
 
     TextureFilteringMode DirectXRenderer::getTextureFiltering() const { return textureFilteringMode; }
@@ -424,8 +435,8 @@ namespace ne {
         return {};
     }
 
-    std::optional<Error> DirectXRenderer::createPso() {
-        // TODO
+    std::optional<Error> DirectXRenderer::createPipelineStateObjects() {
+        // TODO: setup manager (rename this function)
 
         return {};
     }
@@ -727,6 +738,22 @@ namespace ne {
 
     DirectXResourceManager* DirectXRenderer::getResourceManager() const { return pResourceManager.get(); }
 
+    std::set<ShaderParameter> DirectXRenderer::getVertexShaderConfiguration() const {
+        return currentVertexShaderConfiguration;
+    }
+
+    std::set<ShaderParameter> DirectXRenderer::getPixelShaderConfiguration() const {
+        return currentPixelShaderConfiguration;
+    }
+
+    ID3D12Device* DirectXRenderer::getDevice() const { return pDevice.Get(); }
+
+    DXGI_FORMAT DirectXRenderer::getBackBufferFormat() const { return backBufferFormat; }
+
+    DXGI_FORMAT DirectXRenderer::getDepthStencilBufferFormat() const { return depthStencilBufferFormat; }
+
+    UINT DirectXRenderer::getMsaaQualityLevel() const { return iMsaaQuality; }
+
     std::optional<Error> DirectXRenderer::resizeRenderBuffersToCurrentDisplayMode() {
         std::scoped_lock guard(mtxRwRenderResources);
 
@@ -904,7 +931,7 @@ namespace ne {
         }
 
         /** Use a new shader with new shader settings. */
-        auto optionalError = createPso();
+        auto optionalError = createPipelineStateObjects();
         if (optionalError.has_value()) {
             optionalError->addEntry();
             return optionalError.value();

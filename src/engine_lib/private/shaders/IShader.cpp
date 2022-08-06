@@ -18,11 +18,13 @@ namespace ne {
         IRenderer* pRenderer,
         std::filesystem::path pathToCompiledShader,
         const std::string& sShaderName,
-        ShaderType shaderType) {
+        ShaderType shaderType,
+        const std::string& sSourceFileHash) {
         this->pathToCompiledShader = std::move(pathToCompiledShader);
         this->sShaderName = sShaderName;
         this->shaderType = shaderType;
         this->pUsedRenderer = pRenderer;
+        this->sSourceFileHash = sSourceFileHash;
     }
 
     std::variant<std::shared_ptr<IShader>, std::string, Error> IShader::compileShader(
@@ -60,7 +62,7 @@ namespace ne {
                 shaderCacheDirectory / ShaderFilesystemPaths::getShaderCacheBaseFileName();
             shaderCacheConfigurationPath += sConfiguration;
 
-            // Success. Cache configuration.
+            // Success. Cache the configuration on disk.
             ConfigManager configManager;
             configManager.setValue<ShaderDescription>(
                 "", ShaderDescription::getConfigurationFileSectionName(), shaderDescription);
@@ -104,17 +106,30 @@ namespace ne {
             }
         }
 
+        // Calculate source file hash.
+        const auto sSourceFileHash = ShaderDescription::getShaderSourceFileHash(
+            shaderDescription.pathToShaderFile, shaderDescription.sShaderName);
+        if (sSourceFileHash.empty()) {
+            return Error(std::format(
+                "unable to calculate shader source file hash (shader path: \"{}\")",
+                shaderDescription.pathToShaderFile.string()));
+        }
+
         std::shared_ptr<IShader> pShader;
 #if defined(WIN32)
         if (dynamic_cast<DirectXRenderer*>(pRenderer)) {
             pShader = std::make_shared<HlslShader>(
-                pRenderer, pathToCompiledShader, shaderDescription.sShaderName, shaderDescription.shaderType);
+                pRenderer,
+                pathToCompiledShader,
+                shaderDescription.sShaderName,
+                shaderDescription.shaderType,
+                sSourceFileHash);
         }
 #endif
         // TODO:
         // else if (dynamic_cast<VulkanRenderer*>(pRender)) {
         //     pShader = std::make_shared<GlslShader>(
-        //         pRenderer, currentPathToCompiledShader, sCurrentShaderName, shaderType);
+        //         pRenderer, currentPathToCompiledShader, sCurrentShaderName, shaderType, sSourceFileHash);
         // }
         else {
             const auto err = Error("no shader type is associated with the "
@@ -145,6 +160,8 @@ namespace ne {
     }
 
     IRenderer* IShader::getUsedRenderer() const { return pUsedRenderer; }
+
+    std::string IShader::getShaderSourceFileHash() const { return sSourceFileHash; }
 
     ShaderType IShader::getShaderType() const { return shaderType; }
 } // namespace ne

@@ -124,6 +124,17 @@ namespace ne {
         ShaderDescription& operator=(ShaderDescription&& other) noexcept = default;
 
         /**
+         * Calculates hash of shader source file and returns it.
+         *
+         * @param pathToShaderSourceFile Path to shader source file. Assumes that this path exists.
+         * @param sShaderName            Unique name of this shader (used for logging).
+         *
+         * @return Empty string if something went wrong, source file hash otherwise.
+         */
+        static std::string getShaderSourceFileHash(
+            const std::filesystem::path& pathToShaderSourceFile, const std::string& sShaderName);
+
+        /**
          * Used to deserialize struct from .toml file.
          *
          * @param data Toml value.
@@ -170,18 +181,6 @@ namespace ne {
 
     private:
         friend class IShader;
-
-        /**
-         * Calculates hash of shader source file and returns it.
-         * Assumes that @ref pathToShaderFile exists.
-         *
-         * @param pathToShaderSourceFile Path to shader source file.
-         * @param sShaderName            Unique name of this shader (used for logging).
-         *
-         * @return Empty string if something went wrong, source file hash otherwise.
-         */
-        static std::string getShaderSourceFileHash(
-            const std::filesystem::path& pathToShaderSourceFile, const std::string& sShaderName);
 
         /**
          * Uses @ref pathToShaderFile to recursively calculate

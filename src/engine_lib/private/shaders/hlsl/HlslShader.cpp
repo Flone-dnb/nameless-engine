@@ -23,8 +23,13 @@ namespace ne {
         IRenderer* pRenderer,
         std::filesystem::path pathToCompiledShader,
         const std::string& sShaderName,
-        ShaderType shaderType)
-        : IShader(pRenderer, std::move(pathToCompiledShader), sShaderName, shaderType) {}
+        ShaderType shaderType,
+        std::string sSourceFileHash)
+        : IShader(pRenderer, std::move(pathToCompiledShader), sShaderName, shaderType, sSourceFileHash) {}
+
+    std::vector<D3D12_INPUT_ELEMENT_DESC> HlslShader::getShaderInputElementDescription() {
+        return vShaderVertexDescription;
+    }
 
     std::optional<Error> HlslShader::testIfShaderCacheIsCorrupted() {
         std::scoped_lock guard(mtxCompiledBlobRootSignature.first);
@@ -53,6 +58,15 @@ namespace ne {
         if (!std::filesystem::exists(shaderDescription.pathToShaderFile)) {
             return Error(std::format(
                 "the specified shader file {} does not exist", shaderDescription.pathToShaderFile.string()));
+        }
+
+        // Calculate source file hash.
+        const auto sSourceFileHash = ShaderDescription::getShaderSourceFileHash(
+            shaderDescription.pathToShaderFile, shaderDescription.sShaderName);
+        if (sSourceFileHash.empty()) {
+            return Error(std::format(
+                "unable to calculate shader source file hash (shader path: \"{}\")",
+                shaderDescription.pathToShaderFile.string()));
         }
 
         // Create compiler and utils.
@@ -192,13 +206,18 @@ namespace ne {
         }
 
         // Generate root signature.
-        auto result = RootSignatureGenerator::generateRootSignature(
-            dynamic_cast<DirectXRenderer*>(pRenderer)->pDevice, pReflection);
+        auto result = RootSignatureGenerator::generate(
+            dynamic_cast<DirectXRenderer*>(pRenderer)->getDevice(), pReflection);
         if (std::holds_alternative<Error>(result)) {
             auto err = std::get<Error>(std::move(result));
             err.addEntry();
             return err;
         }
+        // Ignore root signature (will be later used from cache), but use other results.
+        auto [rootSignature, vUsedRootParameters, vUsedStaticSamplers] = std::get<std::tuple<
+            ComPtr<ID3D12RootSignature>,
+            std::vector<CD3DX12_ROOT_PARAMETER>,
+            std::vector<CD3DX12_STATIC_SAMPLER_DESC>>>(std::move(result));
 
         // Get compiled shader binary.
         ComPtr<IDxcBlob> pCompiledShaderBlob = nullptr;
@@ -255,8 +274,15 @@ namespace ne {
 #endif
 
         // Return shader instance.
-        return std::make_shared<HlslShader>(
-            pRenderer, pathToCompiledShader, shaderDescription.sShaderName, shaderDescription.shaderType);
+        auto pShader = std::make_shared<HlslShader>(
+            pRenderer,
+            pathToCompiledShader,
+            shaderDescription.sShaderName,
+            shaderDescription.shaderType,
+            sSourceFileHash);
+        pShader->vRootParameters = vUsedRootParameters;
+        pShader->vStaticSamplers = vUsedStaticSamplers;
+        return pShader;
     }
 
     std::variant<ComPtr<IDxcBlob>, Error> HlslShader::getCompiledBlob() {
@@ -269,6 +295,14 @@ namespace ne {
         }
 
         return mtxCompiledBlobRootSignature.second.first;
+    }
+
+    std::vector<CD3DX12_ROOT_PARAMETER> HlslShader::getShaderRootParameters() const {
+        return vRootParameters;
+    }
+
+    std::vector<CD3DX12_STATIC_SAMPLER_DESC> HlslShader::getShaderStaticSamplers() const {
+        return vStaticSamplers;
     }
 
     bool HlslShader::releaseShaderDataFromMemoryIfLoaded(bool bLogOnlyErrors) {
@@ -421,16 +455,21 @@ namespace ne {
             }
 
             // Generate root signature.
-            auto result = RootSignatureGenerator::generateRootSignature(
-                dynamic_cast<DirectXRenderer*>(getUsedRenderer())->pDevice, pReflection);
+            auto result = RootSignatureGenerator::generate(
+                dynamic_cast<DirectXRenderer*>(getUsedRenderer())->getDevice(), pReflection);
             if (std::holds_alternative<Error>(result)) {
                 auto err = std::get<Error>(std::move(result));
                 err.addEntry();
                 return err;
             }
 
-            mtxCompiledBlobRootSignature.second.second =
-                std::get<ComPtr<ID3D12RootSignature>>(std::move(result));
+            auto [rootSignature, vUsedRootParameters, vUsedStaticSamplers] = std::get<std::tuple<
+                ComPtr<ID3D12RootSignature>,
+                std::vector<CD3DX12_ROOT_PARAMETER>,
+                std::vector<CD3DX12_STATIC_SAMPLER_DESC>>>(std::move(result));
+
+            mtxCompiledBlobRootSignature.second.second = rootSignature;
+            // Root parameters and static samplers were already set (when compiling).
         }
 
         return {};

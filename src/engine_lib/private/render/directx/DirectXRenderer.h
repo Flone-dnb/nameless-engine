@@ -45,6 +45,13 @@ namespace ne {
         virtual ~DirectXRenderer() override = default;
 
         /**
+         * Returns static texture samplers, used in texture filtering.
+         *
+         * @return Array of static texture samplers.
+         */
+        static std::array<const CD3DX12_STATIC_SAMPLER_DESC, 4> getStaticTextureSamplers();
+
+        /**
          * Sets texture filtering.
          *
          * @param settings Texture filtering mode.
@@ -130,13 +137,6 @@ namespace ne {
         virtual std::optional<Error> setBackbufferFillColor(float fillColor[4]) override;
 
         /**
-         * Returns static texture samplers, used in texture filtering.
-         *
-         * @return Array of static texture samplers.
-         */
-        static std::array<const CD3DX12_STATIC_SAMPLER_DESC, 4> getStaticTextureSamplers();
-
-        /**
          * Returns resource manager.
          * Resource manager handles resource allocation and descriptor binding.
          *
@@ -147,8 +147,50 @@ namespace ne {
          */
         DirectXResourceManager* getResourceManager() const;
 
+        /**
+         * Returns current vertex shader configuration (settings).
+         *
+         * @return Vertex shader configuration.
+         */
+        std::set<ShaderParameter> getVertexShaderConfiguration() const;
+
+        /**
+         * Returns current pixel shader configuration (settings).
+         *
+         * @return Pixel shader configuration.
+         */
+        std::set<ShaderParameter> getPixelShaderConfiguration() const;
+
+        /**
+         * Returns DirectX device.
+         *
+         * @return Device. Do not delete this pointer.
+         */
+        ID3D12Device* getDevice() const;
+
+        /**
+         * Returns used back buffer format.
+         *
+         * @return Back buffer format.
+         */
+        DXGI_FORMAT getBackBufferFormat() const;
+
+        /**
+         * Returns used depth/stencil buffer format.
+         *
+         * @return Depth/stencil buffer format.
+         */
+        DXGI_FORMAT getDepthStencilBufferFormat() const;
+
+        /**
+         * Returns supported quality level for MSAA.
+         *
+         * @return MSAA quality level.
+         */
+        UINT getMsaaQualityLevel() const;
+
     protected:
-        friend class HlslShader;
+        // Heap will flush the GPU command queue before (re)creating a heap.
         friend class DirectXDescriptorHeap;
 
         /** Update internal resources for next frame. */
@@ -218,11 +260,11 @@ namespace ne {
         std::optional<Error> createSwapChain();
 
         /**
-         * Creates and initializes the pipeline state object.
+         * Creates and initializes the pipeline state objects.
          *
          * @return Error if something went wrong.
          */
-        std::optional<Error> createPso();
+        std::optional<Error> createPipelineStateObjects();
 
         /**
          * Checks if the created device supports MSAA.
@@ -328,8 +370,8 @@ namespace ne {
         // Buffer formats.
         /** Back buffer format. */
         const DXGI_FORMAT backBufferFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
-        /** Depth/stencil format. */
-        const DXGI_FORMAT depthStencilFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
+        /** Depth/stencil buffer format. */
+        const DXGI_FORMAT depthStencilBufferFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
 
         // MSAA.
         /** Render target for MSAA rendering. */

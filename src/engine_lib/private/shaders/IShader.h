@@ -95,6 +95,14 @@ namespace ne {
         ShaderType getShaderType() const;
 
         /**
+         * Returns a hash that was calculated from the shader source file that was used to
+         * compile this shader.
+         *
+         * @return Shader source file hash.
+         */
+        std::string getShaderSourceFileHash() const;
+
+        /**
          * Releases underlying shader bytecode for each shader from memory (this object will not be deleted)
          * if the shader bytecode was loaded into memory.
          * Next time this shader will be needed it will be loaded from disk.
@@ -116,12 +124,15 @@ namespace ne {
          * @param pathToCompiledShader Path to compiled shader blob on disk.
          * @param sShaderName          Unique name of this shader.
          * @param shaderType           Type of this shader.
+         * @param sSourceFileHash      Shader source file hash, used to tell what shaders were compiled from
+         * the same file.
          */
         IShader(
             IRenderer* pRenderer,
             std::filesystem::path pathToCompiledShader,
             const std::string& sShaderName,
-            ShaderType shaderType);
+            ShaderType shaderType,
+            const std::string& sSourceFileHash);
 
         /**
          * Returns path to compiled shader blob on disk.
@@ -138,6 +149,9 @@ namespace ne {
         IRenderer* getUsedRenderer() const;
 
     private:
+        /** Do not delete. Used renderer. */
+        IRenderer* pUsedRenderer = nullptr;
+
         /** Unique shader name received from ShaderManager. */
         std::string sShaderName;
 
@@ -147,7 +161,7 @@ namespace ne {
         /** Path to compiled shader. */
         std::filesystem::path pathToCompiledShader;
 
-        /** Do not delete. Used renderer. */
-        IRenderer* pUsedRenderer = nullptr;
+        /** Shader source file hash, used to tell what shaders were compiled from the same file. */
+        std::string sSourceFileHash;
     };
 } // namespace ne

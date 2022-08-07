@@ -18,6 +18,7 @@ namespace ne {
          * @param pRenderer Parent renderer that owns this PSO.
          */
         DirectXPso(DirectXRenderer* pRenderer);
+
         DirectXPso() = delete;
         DirectXPso(const DirectXPso&) = delete;
         DirectXPso& operator=(const DirectXPso&) = delete;

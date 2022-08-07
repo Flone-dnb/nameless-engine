@@ -24,8 +24,10 @@ set(ENGINE_WIN32_SOURCES
     private/shaders/hlsl/RootSignatureGenerator.cpp
     private/render/directx/DirectXRenderer.h
     private/render/directx/DirectXRenderer.cpp
-    private/render/directx/DirectXPso.cpp
-    private/render/directx/DirectXPso.h
+    private/render/directx/pso/DirectXPso.cpp
+    private/render/directx/pso/DirectXPso.h
+    private/render/directx/pso/DirectXPsoManager.cpp
+    private/render/directx/pso/DirectXPsoManager.h
     private/render/directx/descriptors/DirectXDescriptorHeap.h
     private/render/directx/descriptors/DirectXDescriptorHeap.cpp
     private/render/directx/descriptors/DirectXDescriptor.h

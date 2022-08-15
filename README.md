@@ -25,7 +25,7 @@ First, clone this repository:
 ```
 git clone https://github.com/Flone-dnb/nameless-engine
 cd nameless-engine
-git submodule update --init
+git submodule update --init --recursive
 ```
 
 Then, if you've never used CMake before:
@@ -45,7 +45,7 @@ To update this repository:
 
 ```
 git pull
-git submodule update
+git submodule update --recursive
 ```
 
 # Documentation

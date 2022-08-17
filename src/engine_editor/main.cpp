@@ -12,6 +12,8 @@
 #include "EditorGameInstance.h"
 #include "game/Window.h"
 
+#include "game/nodes/Node.h"
+
 int main() {
 // Enable run-time memory check for debug builds.
 #if defined(DEBUG) && defined(WIN32)
@@ -19,6 +21,27 @@ int main() {
 #elif defined(WIN32) && !defined(DEBUG)
     OutputDebugStringA("Using release build configuration, memory checks are disabled.");
 #endif
+
+    // Test code for serialization and deserialization.
+    const std::filesystem::path pathToFile = "MyCoolNode.toml";
+
+    // Serialize.
+    ne::Node node("My cool node");
+    node.serialize(pathToFile);
+
+    // Deserialize.
+    auto deserializeResult = ne::Serializable::deserialize(pathToFile);
+    if (std::holds_alternative<ne::Error>(deserializeResult)) {
+        ne::Error error = std::get<ne::Error>(std::move(deserializeResult));
+        error.addEntry();
+        error.showError();
+        throw std::runtime_error(error.getError());
+    }
+    const auto pDeserializedObject =
+        std::get<std::unique_ptr<ne::Serializable>>(std::move(deserializeResult));
+    const ne::Node* pNode = dynamic_cast<ne::Node*>(pDeserializedObject.get());
+
+    // End.
 
     using namespace ne;
 

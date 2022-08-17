@@ -93,6 +93,10 @@ set(ENGINE_LIB_SOURCES
     private/shaders/ShaderFilesystemPaths.hpp
     public/misc/ProjectPaths.h
     private/misc/ProjectPaths.cpp
+    private/io/Serializable.cpp
+    public/io/Serializable.h
+    private/game/nodes/Node.cpp
+    public/game/nodes/Node.h
     # add general (cross-platform) sources here...
 )
 
@@ -145,6 +149,7 @@ endif()
 set(PROJECT_CXX_STANDARD_VERSION 23)
 target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_${PROJECT_CXX_STANDARD_VERSION})
 
+# Set directory name for dependencies.
 set(DEPENDENCY_BUILD_DIR_NAME dependency_build)
 
 # External: glfw.
@@ -168,6 +173,37 @@ add_subdirectory(${RELATIVE_EXT_PATH}/toml11 ${DEPENDENCY_BUILD_DIR_NAME}/toml11
 add_subdirectory(${RELATIVE_EXT_PATH}/portable-file-dialogs ${DEPENDENCY_BUILD_DIR_NAME}/portable-file-dialogs)
 target_link_libraries(${PROJECT_NAME} PUBLIC portable_file_dialogs)
 
+# External: Refureku
+set(REFUREKU_INCLUDE_DIRECTORIES "\"${CMAKE_CURRENT_SOURCE_DIR}/../../ext/|${CMAKE_CURRENT_SOURCE_DIR}/public/|${CMAKE_CURRENT_SOURCE_DIR}/private|${CMAKE_CURRENT_SOURCE_DIR}/../../ext/Refureku/build/Include/\"")
+add_custom_command(TARGET ${PROJECT_NAME} PRE_BUILD
+                WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/Refureku/
+                COMMAND go run ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/Refureku/download_and_setup_refureku.go
+                ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/Refureku/ # working directory
+                ${CMAKE_CURRENT_SOURCE_DIR}/../ # source directory (where to put Refureku settings file)
+                ${REFUREKU_INCLUDE_DIRECTORIES} # project include directories
+                ${CMAKE_CXX_COMPILER_ID} # used compiler
+                ${PROJECT_CXX_STANDARD_VERSION} # used C++ standard
+)
+target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/Refureku/build/Include/)
+# Link static library.
+target_link_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/Refureku/build/Lib)
+target_link_libraries(${PROJECT_NAME} PUBLIC Refureku)
+# Add a pre build step to run reflection code generator.
+add_custom_command(TARGET ${PROJECT_NAME} PRE_BUILD
+	WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+	COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/Refureku/build/Bin/RefurekuGenerator ${CMAKE_CURRENT_SOURCE_DIR}/../RefurekuSettings.toml)
+# Add generated headers to include directories.
+target_include_directories(${PROJECT_NAME} PUBLIC ../.generated)
+# Copy Refureku DLL to the top level binary directory.
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E copy
+                ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/Refureku/build/Bin/Refureku.dll ${CMAKE_BINARY_DIR}/Refureku.dll)
+# Copy Refureku DLL to the current top level build directory.
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E copy
+                ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/Refureku/build/Bin/Refureku.dll ${BUILD_MODE_DIRECTORY}/Refureku.dll)
+
+# Win32 specific dependencies:
 if (WIN32)
     # External: D3D12MemoryAllocator
     add_subdirectory(${RELATIVE_EXT_PATH}/D3D12MemoryAllocator ${DEPENDENCY_BUILD_DIR_NAME}/D3D12MemoryAllocator)
@@ -273,6 +309,6 @@ include(Catch)
 #catch_discover_tests(${ENGINE_TESTS_NAME})
 
 # Add includes.
-include_directories(${RELATIVE_EXT_PATH})
-include_directories(public)
-include_directories(private)
+target_include_directories(${PROJECT_NAME} PUBLIC ${RELATIVE_EXT_PATH})
+target_include_directories(${PROJECT_NAME} PUBLIC public)
+target_include_directories(${PROJECT_NAME} PUBLIC private)

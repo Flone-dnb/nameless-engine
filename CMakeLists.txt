@@ -23,23 +23,34 @@ endif()
 
 # application type
 if (WIN32)
-set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /SUBSYSTEM:WINDOWS /ENTRY:mainCRTStartup")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /SUBSYSTEM:WINDOWS /ENTRY:mainCRTStartup")
 endif(WIN32)
+
+# path variables
+set(EDITOR_SRC_RELATIVE_PATH src/engine_editor)
+set(EDITOR_SRC_ABSOLUTE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/${EDITOR_SRC_RELATIVE_PATH})
+set(PATH_TO_EXT ${CMAKE_CURRENT_SOURCE_DIR}/ext)
 
 # target
 set(PROJECT_SOURCES
-    src/engine_editor/EditorGameInstance.h
-    src/engine_editor/EditorGameInstance.cpp
+    ${EDITOR_SRC_RELATIVE_PATH}/EditorGameInstance.h
+    ${EDITOR_SRC_RELATIVE_PATH}/EditorGameInstance.cpp
     # add your .h/.cpp files here
 )
 add_executable(${PROJECT_NAME}
-    src/engine_editor/main.cpp
+    ${EDITOR_SRC_RELATIVE_PATH}/main.cpp
     ${PROJECT_SOURCES}
 )
+target_include_directories(${PROJECT_NAME} PRIVATE ${EDITOR_SRC_RELATIVE_PATH})
 
 # add engine_lib
 add_subdirectory(src/engine_lib dependency_build/engine_lib)
 target_link_libraries(${PROJECT_NAME} PRIVATE engine_lib)
+add_dependencies(${PROJECT_NAME} engine_lib)
+# Add a pre build step to run reflection code generator.
+add_custom_command(TARGET ${PROJECT_NAME} PRE_BUILD
+    WORKING_DIRECTORY ${EDITOR_SRC_ABSOLUTE_PATH}/../
+	COMMAND ${PATH_TO_EXT}/Refureku/build/Bin/RefurekuGenerator ${EDITOR_SRC_ABSOLUTE_PATH}/../RefurekuSettings.toml)
 
 # set standard
 set(PROJECT_CXX_STANDARD_VERSION 23)
@@ -59,8 +70,3 @@ if (DOXYGEN_FOUND)
 else (DOXYGEN_FOUND)
   message(WARNING "Doxygen need to be installed to generate the documentation!")
 endif (DOXYGEN_FOUND)
-
-include_directories(ext)
-include_directories(src/engine_editor)
-include_directories(src/engine_lib/public)
-include_directories(src/engine_lib/private)

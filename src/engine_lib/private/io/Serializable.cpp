@@ -53,10 +53,16 @@ namespace ne {
             &loopData,
             true);
 
+        // Add TOML extension to file.
+        auto fixedPath = pathToFile;
+        if (!fixedPath.string().ends_with(".toml")) {
+            fixedPath += ".toml";
+        }
+
         // Save TOML data to file.
-        std::ofstream file(pathToFile, std::ios::binary);
+        std::ofstream file(fixedPath, std::ios::binary);
         if (!file.is_open()) {
-            Logger::get().error(std::format("failed to open file \"{}\"", pathToFile.string()), "");
+            Logger::get().error(std::format("failed to open file \"{}\"", fixedPath.string()), "");
         }
         file << tomlData;
         file.close();
@@ -64,13 +70,19 @@ namespace ne {
 
     std::variant<std::unique_ptr<Serializable>, Error>
     Serializable::deserialize(const std::filesystem::path& pathToFile) {
+        // Add TOML extension to file.
+        auto fixedPath = pathToFile;
+        if (!fixedPath.string().ends_with(".toml")) {
+            fixedPath += ".toml";
+        }
+
         // Load file.
         toml::value tomlData;
         try {
-            tomlData = toml::parse(pathToFile);
+            tomlData = toml::parse(fixedPath);
         } catch (std::exception& exception) {
             return Error(
-                std::format("failed to load file \"{}\", error: {}", pathToFile.string(), exception.what()));
+                std::format("failed to load file \"{}\", error: {}", fixedPath.string(), exception.what()));
         }
 
         // Read all sections.
@@ -86,7 +98,7 @@ namespace ne {
         if (vSections.size() != 1) {
             return Error(std::format(
                 "file \"{}\", has {} sections while expected 1 section",
-                pathToFile.string(),
+                fixedPath.string(),
                 vSections.size()));
         }
 
@@ -101,7 +113,7 @@ namespace ne {
 
         if (!section.is_table()) {
             return Error(
-                std::format("found \"{}\" is not a section in file \"{}\"", sSection, pathToFile.string()));
+                std::format("found \"{}\" is not a section in file \"{}\"", sSection, fixedPath.string()));
         }
 
         const auto sectionTable = section.as_table();

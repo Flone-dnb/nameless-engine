@@ -28,14 +28,21 @@ namespace ne NENAMESPACE() {
         /**
          * Serializes the type and all reflected fields (including inherited) into a file.
          *
-         * @param pathToFile File to write reflected data to.
+         * @param pathToFile File to write reflected data to. The ".toml" extension will be added
+         * automatically if not specified in the path. If the specified file already exists it will be
+         * overwritten.
+         *
+         * @remark Note that not all reflected fields can be serialized, only specific types can be
+         * serialized. If a reflected field has unsupported type it will be ignored
+         * and an error will be added to the log.
          */
         void serialize(const std::filesystem::path& pathToFile);
 
         /**
          * Deserializes the type and all reflected fields (including inherited) into a file.
          *
-         * @param pathToFile File to read reflected data from.
+         * @param pathToFile File to read reflected data from. The ".toml" extension will be added
+         * automatically if not specified in the path.
          *
          * @return Error if something went wrong, a unique pointer to deserialized entity.
          * Use a dynamic_cast to cast to wanted type.

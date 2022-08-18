@@ -46,6 +46,9 @@ namespace ne {
                 } else if (fieldType.match(rfk::getType<int>())) {
                     pData->pTomlData->operator[](sEntityId).operator[](field.getName()) =
                         field.getUnsafe<int>(pData->self);
+                } else if (fieldType.match(rfk::getType<long long>())) {
+                    pData->pTomlData->operator[](sEntityId).operator[](field.getName()) =
+                        field.getUnsafe<long long>(pData->self);
                 } else if (fieldType.match(rfk::getType<float>())) {
                     pData->pTomlData->operator[](sEntityId).operator[](field.getName()) =
                         field.getUnsafe<float>(pData->self);
@@ -150,8 +153,14 @@ namespace ne {
                 auto fieldValue = value.as_boolean();
                 pField->setUnsafe<bool>(pInstance.get(), std::move(fieldValue));
             } else if (value.is_integer()) {
-                auto fieldValue = static_cast<int>(value.as_integer());
-                pField->setUnsafe<int>(pInstance.get(), std::move(fieldValue));
+                if (pField->getType().match(rfk::getType<int>())) {
+                    auto fieldValue = static_cast<int>(value.as_integer());
+                    pField->setUnsafe<int>(pInstance.get(), std::move(fieldValue));
+                } else // long long
+                {
+                    auto fieldValue = static_cast<long long>(value.as_integer());
+                    pField->setUnsafe<long long>(pInstance.get(), std::move(fieldValue));
+                }
             } else if (value.is_floating()) {
                 auto fieldValue = static_cast<float>(value.as_floating());
                 pField->setUnsafe<float>(pInstance.get(), std::move(fieldValue));

@@ -36,10 +36,10 @@ namespace ne NENAMESPACE() {
          * serialized. If a reflected field has unsupported type it will be ignored and an error will be added
          * to the log. Const fields, pointer fields, lvalue references, rvalue references and C-arrays will
          * always be ignored and will not be serialized (no errors in the log in this case).
-         *
-         * @remark Supported for serialization types are:
+         * Supported for serialization types are:
          * - bool
          * - int
+         * - long long
          * - float
          * - std::string
          */

@@ -33,8 +33,9 @@ namespace ne NENAMESPACE() {
          * overwritten.
          *
          * @remark Note that not all reflected fields can be serialized, only specific types can be
-         * serialized. If a reflected field has unsupported type it will be ignored
-         * and an error will be added to the log.
+         * serialized. If a reflected field has unsupported type it will be ignored and an error will be added
+         * to the log. Const fields, pointer fields, lvalue references, rvalue references and C-arrays will
+         * always be ignored and will not be serialized (no errors in the log in this case).
          */
         void serialize(const std::filesystem::path& pathToFile);
 

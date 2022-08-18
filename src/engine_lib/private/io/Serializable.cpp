@@ -29,18 +29,22 @@ namespace ne {
 
         selfArchetype.foreachField(
             [](rfk::Field const& field, void* userData) -> bool {
+                const auto& fieldType = field.getType();
+
+                // Don't serialize specific types.
+                if (fieldType.isConst() || fieldType.isPointer() || fieldType.isLValueReference() ||
+                    fieldType.isRValueReference() || fieldType.isCArray())
+                    return true;
+
                 const Data* pData = static_cast<Data*>(userData);
-
-                // TODO: don't serialize const values
-
-                const auto sEntityInfo = std::to_string(pData->selfArchetype->getId());
+                const auto sEntityId = std::to_string(pData->selfArchetype->getId());
 
                 // Look at field type and save it in TOML data.
-                if (field.getType().match(rfk::getType<int>())) {
-                    pData->pTomlData->operator[](sEntityInfo).operator[](field.getName()) =
+                if (fieldType.match(rfk::getType<int>())) {
+                    pData->pTomlData->operator[](sEntityId).operator[](field.getName()) =
                         field.getUnsafe<int>(pData->self);
-                } else if (field.getType().match(rfk::getType<std::string>())) {
-                    pData->pTomlData->operator[](sEntityInfo).operator[](field.getName()) =
+                } else if (fieldType.match(rfk::getType<std::string>())) {
+                    pData->pTomlData->operator[](sEntityId).operator[](field.getName()) =
                         field.getUnsafe<std::string>(pData->self);
                 } else {
                     Logger::get().error(

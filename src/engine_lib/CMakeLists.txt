@@ -97,6 +97,8 @@ set(ENGINE_LIB_SOURCES
     public/io/Serializable.h
     private/game/nodes/Node.cpp
     public/game/nodes/Node.h
+    public/io/DontSerializeProperty.h
+    private/io/DontSerializeProperty.cpp
     # add general (cross-platform) sources here...
 )
 

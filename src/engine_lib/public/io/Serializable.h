@@ -7,6 +7,7 @@
 
 // Custom.
 #include "misc/Error.h"
+#include "io/DontSerializeProperty.h"
 
 // External.
 #include "Refureku/Object.h"
@@ -43,6 +44,14 @@ namespace ne NENAMESPACE() {
          * - float
          * - double
          * - std::string
+         *
+         * @remark You can mark reflected property as DontSerialize so it will be ignored in the serialization
+         * process. Note that you don't need to mark fields of types that are always ignored (const, pointers,
+         * etc.) because they will be ignored anyway. Example:
+         * @code
+         * NEPROPERTY(DontSerialize)
+         * int iKey = 42; // will be ignored and not serialized
+         * @endcode
          */
         void serialize(const std::filesystem::path& pathToFile);
 

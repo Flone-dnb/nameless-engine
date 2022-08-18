@@ -36,6 +36,10 @@ namespace ne {
                     fieldType.isRValueReference() || fieldType.isCArray())
                     return true;
 
+                // Ignore this field if marked as DontSerialize.
+                if (field.getProperty<DontSerialize>())
+                    return true;
+
                 const Data* pData = static_cast<Data*>(userData);
                 const auto sEntityId = std::to_string(pData->selfArchetype->getId());
 

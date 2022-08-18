@@ -146,6 +146,9 @@ namespace ne {
             if (iDotPos == std::string::npos) [[unlikely]] {
                 return Error("provided toml value does not contain entity ID");
             }
+            if (iDotPos + 1 == sSectionName.size()) [[unlikely]] {
+                return Error("provided toml value does not contain class ID");
+            }
 
             const auto iSectionEntityId = std::stoull(sSectionName.substr(0, iDotPos));
             if (iSectionEntityId == iEntityUniqueId) {

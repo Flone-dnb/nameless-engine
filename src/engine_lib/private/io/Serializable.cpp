@@ -52,6 +52,10 @@ namespace ne {
                 } else if (fieldType.match(rfk::getType<float>())) {
                     pData->pTomlData->operator[](sEntityId).operator[](field.getName()) =
                         field.getUnsafe<float>(pData->self);
+                } else if (fieldType.match(rfk::getType<double>())) {
+                    // Store double as string for better precision.
+                    pData->pTomlData->operator[](sEntityId).operator[](field.getName()) =
+                        toml::format(toml::value(field.getUnsafe<double>(pData->self)));
                 } else if (fieldType.match(rfk::getType<std::string>())) {
                     pData->pTomlData->operator[](sEntityId).operator[](field.getName()) =
                         field.getUnsafe<std::string>(pData->self);
@@ -163,6 +167,10 @@ namespace ne {
             } else if (fieldType.match(rfk::getType<float>())) {
                 auto fieldValue = static_cast<float>(value.as_floating());
                 pField->setUnsafe<float>(pInstance.get(), std::move(fieldValue));
+            } else if (fieldType.match(rfk::getType<double>())) {
+                // Double is stored as a string for better precision.
+                double fieldValue = std::stod(value.as_string().str);
+                pField->setUnsafe<double>(pInstance.get(), std::move(fieldValue));
             } else if (fieldType.match(rfk::getType<std::string>())) {
                 auto fieldValue = value.as_string().str;
                 pField->setUnsafe<std::string>(pInstance.get(), std::move(fieldValue));

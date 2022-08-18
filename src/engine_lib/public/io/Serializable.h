@@ -41,6 +41,7 @@ namespace ne NENAMESPACE() {
          * - int
          * - long long
          * - float
+         * - double
          * - std::string
          */
         void serialize(const std::filesystem::path& pathToFile);

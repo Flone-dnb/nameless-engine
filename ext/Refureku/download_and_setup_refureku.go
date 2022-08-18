@@ -331,6 +331,7 @@ func initialize_refureku_settings(
 	cfg.ParsingSettings.ProjectIncludeDirectories = include_directories
 	cfg.ParsingSettings.CompilerExeName = compiler_binary_name
 	cfg.ParsingSettings.CppVersion = cpp_standard
+	// WARNING: if changing macro names also change them in Doxyfile in PREDEFINED section
 	cfg.ParsingSettings.NamespaceMacroName = "NENAMESPACE"
 	cfg.ParsingSettings.ClassMacroName = "NECLASS"
 	cfg.ParsingSettings.StructMacroName = "NESTRUCT"

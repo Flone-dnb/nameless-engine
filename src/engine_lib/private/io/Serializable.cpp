@@ -40,9 +40,15 @@ namespace ne {
                 const auto sEntityId = std::to_string(pData->selfArchetype->getId());
 
                 // Look at field type and save it in TOML data.
-                if (fieldType.match(rfk::getType<int>())) {
+                if (fieldType.match(rfk::getType<bool>())) {
+                    pData->pTomlData->operator[](sEntityId).operator[](field.getName()) =
+                        field.getUnsafe<bool>(pData->self);
+                } else if (fieldType.match(rfk::getType<int>())) {
                     pData->pTomlData->operator[](sEntityId).operator[](field.getName()) =
                         field.getUnsafe<int>(pData->self);
+                } else if (fieldType.match(rfk::getType<float>())) {
+                    pData->pTomlData->operator[](sEntityId).operator[](field.getName()) =
+                        field.getUnsafe<float>(pData->self);
                 } else if (fieldType.match(rfk::getType<std::string>())) {
                     pData->pTomlData->operator[](sEntityId).operator[](field.getName()) =
                         field.getUnsafe<std::string>(pData->self);
@@ -140,12 +146,18 @@ namespace ne {
                 continue;
             }
 
-            if (value.is_integer()) {
-                int iValue = static_cast<int>(value.as_integer());
-                pField->setUnsafe<int>(pInstance.get(), std::move(iValue));
+            if (value.is_boolean()) {
+                auto fieldValue = value.as_boolean();
+                pField->setUnsafe<bool>(pInstance.get(), std::move(fieldValue));
+            } else if (value.is_integer()) {
+                auto fieldValue = static_cast<int>(value.as_integer());
+                pField->setUnsafe<int>(pInstance.get(), std::move(fieldValue));
+            } else if (value.is_floating()) {
+                auto fieldValue = static_cast<float>(value.as_floating());
+                pField->setUnsafe<float>(pInstance.get(), std::move(fieldValue));
             } else if (value.is_string()) {
-                auto sValue = value.as_string().str;
-                pField->setUnsafe<std::string>(pInstance.get(), std::move(sValue));
+                auto fieldValue = value.as_string().str;
+                pField->setUnsafe<std::string>(pInstance.get(), std::move(fieldValue));
             } else {
                 Logger::get().error(
                     std::format("field \"{}\" has unknown type and was not deserialized", sFieldName), "");

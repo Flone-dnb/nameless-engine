@@ -11,6 +11,8 @@
 
 // External.
 #include "Refureku/Object.h"
+#define TOML11_PRESERVE_COMMENTS_BY_DEFAULT
+#include "toml11/toml.hpp"
 
 #include "Serializable.generated.h"
 
@@ -56,7 +58,18 @@ namespace ne NENAMESPACE() {
         void serialize(const std::filesystem::path& pathToFile);
 
         /**
-         * Deserializes the type and all reflected fields (including inherited) into a file.
+         * Serializes the type and all reflected fields (including inherited) into a toml value.
+         *
+         * This is an overloaded function. See full documentation for other overload.
+         *
+         * @param tomlData        Toml value to append this object to.
+         * @param iEntityUniqueId Unique ID of this object. When serializing multiple objects into
+         * one toml value provide different IDs for each object so they could be differentiated.
+         */
+        void serialize(toml::value& tomlData, size_t iEntityUniqueId = 0);
+
+        /**
+         * Deserializes the type and all reflected fields (including inherited) from a file.
          *
          * @param pathToFile File to read reflected data from. The ".toml" extension will be added
          * automatically if not specified in the path.
@@ -66,6 +79,19 @@ namespace ne NENAMESPACE() {
          */
         static std::variant<std::unique_ptr<Serializable>, Error>
         deserialize(const std::filesystem::path& pathToFile);
+
+        /**
+         * Deserializes the type and all reflected fields (including inherited) from a toml value.
+         *
+         * @param tomlData        Toml value to retrieve an object from.
+         * @param iEntityUniqueId Unique ID of this object. When serializing multiple objects into
+         * one toml value provide different IDs for each object so they could be differentiated.
+         *
+         * @return Error if something went wrong, a unique pointer to deserialized entity.
+         * Use a dynamic_cast to cast to wanted type.
+         */
+        static std::variant<std::unique_ptr<Serializable>, Error>
+        deserialize(toml::value& tomlData, size_t iEntityUniqueId = 0);
 
         ne_Serializable_GENERATED
     };

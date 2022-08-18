@@ -59,26 +59,27 @@ namespace ne {
                 const Data* pData = static_cast<Data*>(userData);
                 const auto sEntityId = std::format(
                     "{}.{}", pData->iEntityUniqueId, std::to_string(pData->selfArchetype->getId()));
+                const auto sFieldName = field.getName();
 
                 // Look at field type and save it in TOML data.
                 if (fieldType.match(rfk::getType<bool>())) {
-                    pData->pTomlData->operator[](sEntityId).operator[](field.getName()) =
+                    pData->pTomlData->operator[](sEntityId).operator[](sFieldName) =
                         field.getUnsafe<bool>(pData->self);
                 } else if (fieldType.match(rfk::getType<int>())) {
-                    pData->pTomlData->operator[](sEntityId).operator[](field.getName()) =
+                    pData->pTomlData->operator[](sEntityId).operator[](sFieldName) =
                         field.getUnsafe<int>(pData->self);
                 } else if (fieldType.match(rfk::getType<long long>())) {
-                    pData->pTomlData->operator[](sEntityId).operator[](field.getName()) =
+                    pData->pTomlData->operator[](sEntityId).operator[](sFieldName) =
                         field.getUnsafe<long long>(pData->self);
                 } else if (fieldType.match(rfk::getType<float>())) {
-                    pData->pTomlData->operator[](sEntityId).operator[](field.getName()) =
+                    pData->pTomlData->operator[](sEntityId).operator[](sFieldName) =
                         field.getUnsafe<float>(pData->self);
                 } else if (fieldType.match(rfk::getType<double>())) {
                     // Store double as string for better precision.
-                    pData->pTomlData->operator[](sEntityId).operator[](field.getName()) =
+                    pData->pTomlData->operator[](sEntityId).operator[](sFieldName) =
                         toml::format(toml::value(field.getUnsafe<double>(pData->self)));
                 } else if (fieldType.match(rfk::getType<std::string>())) {
-                    pData->pTomlData->operator[](sEntityId).operator[](field.getName()) =
+                    pData->pTomlData->operator[](sEntityId).operator[](sFieldName) =
                         field.getUnsafe<std::string>(pData->self);
                 } else {
                     Logger::get().error(
@@ -158,6 +159,11 @@ namespace ne {
                 iClassId = std::stoull(sSectionName.substr(iDotPos + 1));
                 break;
             }
+        }
+
+        // Check if anything was found.
+        if (sTargetSection.empty()) {
+            return Error(std::format("could not find entity with ID \"{}\"", iEntityUniqueId));
         }
 
         // Get all keys (field names) from this section.

@@ -148,23 +148,22 @@ namespace ne {
                 Logger::get().error(std::format("field \"{}\" is not found", sFieldName), "");
                 continue;
             }
+            const auto& fieldType = pField->getType();
 
-            if (value.is_boolean()) {
+            // Set field value depending on field type.
+            if (fieldType.match(rfk::getType<bool>())) {
                 auto fieldValue = value.as_boolean();
                 pField->setUnsafe<bool>(pInstance.get(), std::move(fieldValue));
-            } else if (value.is_integer()) {
-                if (pField->getType().match(rfk::getType<int>())) {
-                    auto fieldValue = static_cast<int>(value.as_integer());
-                    pField->setUnsafe<int>(pInstance.get(), std::move(fieldValue));
-                } else // long long
-                {
-                    auto fieldValue = static_cast<long long>(value.as_integer());
-                    pField->setUnsafe<long long>(pInstance.get(), std::move(fieldValue));
-                }
-            } else if (value.is_floating()) {
+            } else if (fieldType.match(rfk::getType<int>())) {
+                auto fieldValue = static_cast<int>(value.as_integer());
+                pField->setUnsafe<int>(pInstance.get(), std::move(fieldValue));
+            } else if (fieldType.match(rfk::getType<long long>())) {
+                long long fieldValue = value.as_integer();
+                pField->setUnsafe<long long>(pInstance.get(), std::move(fieldValue));
+            } else if (fieldType.match(rfk::getType<float>())) {
                 auto fieldValue = static_cast<float>(value.as_floating());
                 pField->setUnsafe<float>(pInstance.get(), std::move(fieldValue));
-            } else if (value.is_string()) {
+            } else if (fieldType.match(rfk::getType<std::string>())) {
                 auto fieldValue = value.as_string().str;
                 pField->setUnsafe<std::string>(pInstance.get(), std::move(fieldValue));
             } else {

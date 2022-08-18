@@ -28,19 +28,20 @@ namespace ne NENAMESPACE() {
         /**
          * Serializes the type and all reflected fields (including inherited) into a file.
          *
-         * @param pathToFile File to write reflected fields to.
+         * @param pathToFile File to write reflected data to.
          */
-        NEFUNCTION()
         void serialize(const std::filesystem::path& pathToFile);
 
-        NEFUNCTION()
+        /**
+         * Deserializes the type and all reflected fields (including inherited) into a file.
+         *
+         * @param pathToFile File to read reflected data from.
+         *
+         * @return Error if something went wrong, a unique pointer to deserialized entity.
+         * Use a dynamic_cast to cast to wanted type.
+         */
         static std::variant<std::unique_ptr<Serializable>, Error>
         deserialize(const std::filesystem::path& pathToFile);
-
-    private:
-        /** test property */
-        NEPROPERTY()
-        int iMyCoolField = 42;
 
         ne_Serializable_GENERATED
     };

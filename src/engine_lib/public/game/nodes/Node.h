@@ -27,12 +27,11 @@ namespace ne NENAMESPACE() {
          *
          * @return Node name.
          */
+        NEFUNCTION()
         std::string getNodeName() const;
 
     private:
-        NEPROPERTY()
-        int iNodeProperty = 43;
-
+        /** Node name. */
         NEPROPERTY()
         std::string sNodeName;
 

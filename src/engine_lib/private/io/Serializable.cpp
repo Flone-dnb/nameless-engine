@@ -144,6 +144,7 @@ namespace ne {
         rfk::UniquePtr<Serializable> pInstance = pClass->makeUniqueInstance<Serializable>();
 
         for (const auto& sFieldName : vKeys) {
+            // Read value from TOML.
             toml::value value;
             try {
                 value = toml::find(section, sFieldName);
@@ -158,10 +159,16 @@ namespace ne {
                 continue;
             }
 
+            // Get field by name.
             rfk::Field const* pField =
                 pClass->getFieldByName(sFieldName.c_str(), rfk::EFieldFlags::Default, true);
             if (!pField) {
-                Logger::get().error(std::format("field \"{}\" is not found", sFieldName), "");
+                Logger::get().warn(
+                    std::format(
+                        "field name \"{}\" exists in the file \"{}\" but not in the actual object",
+                        sFieldName,
+                        fixedPath.string()),
+                    "");
                 continue;
             }
             const auto& fieldType = pField->getType();

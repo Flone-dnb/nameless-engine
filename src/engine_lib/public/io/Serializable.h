@@ -22,6 +22,11 @@ namespace ne NENAMESPACE() {
      *
      * Inherit your class from this type to add a 'serialize' function which will
      * serialize the type and all reflected fields (even inherited) into a file.
+     *
+     * @warning Note that class name and the namespace it's located in (if exists) are used for serialization,
+     * if you change your class name or namespace its located in this will change class ID and make all
+     * previously serialized versions of your class reference old class ID which will break deserialization
+     * for all previously serialized versions of your class.
      */
     class NECLASS() Serializable : public rfk::Object {
     public:

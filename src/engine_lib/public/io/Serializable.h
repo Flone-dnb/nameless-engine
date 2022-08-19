@@ -35,6 +35,9 @@ namespace ne NENAMESPACE() {
          * automatically if not specified in the path. If the specified file already exists it will be
          * overwritten.
          *
+         * @remark Type will be serialized as a class ID which will change if you change your class
+         * name or if your class is defined in a namespace if you change your namespace name.
+         *
          * @remark Note that not all reflected fields can be serialized, only specific types can be
          * serialized. Const fields, pointer fields, lvalue references, rvalue references and C-arrays will
          * always be ignored and will not be serialized (no error returned).

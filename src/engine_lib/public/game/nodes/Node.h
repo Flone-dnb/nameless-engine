@@ -7,6 +7,10 @@
 namespace ne NENAMESPACE() {
     /**
      * Base Node class, allows attaching child nodes or being attached to some parent node.
+     *
+     * @warning If changing the class name class ID (of this class) will change and will make all previously
+     * serialized instances of this class reference old (invalid) class ID. Include a backwards compatibility
+     * in this case.
      */
     class NECLASS() Node : public Serializable {
     public:

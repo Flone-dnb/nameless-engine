@@ -36,9 +36,8 @@ namespace ne NENAMESPACE() {
          * overwritten.
          *
          * @remark Note that not all reflected fields can be serialized, only specific types can be
-         * serialized. If a reflected field has unsupported type it will be ignored and an error will be added
-         * to the log. Const fields, pointer fields, lvalue references, rvalue references and C-arrays will
-         * always be ignored and will not be serialized (no errors in the log in this case).
+         * serialized. Const fields, pointer fields, lvalue references, rvalue references and C-arrays will
+         * always be ignored and will not be serialized (no error returned).
          * Supported for serialization types are:
          * - bool
          * - int
@@ -54,8 +53,11 @@ namespace ne NENAMESPACE() {
          * NEPROPERTY(DontSerialize)
          * int iKey = 42; // will be ignored and not serialized
          * @endcode
+         *
+         * @return Error if something went wrong, for example when found an unsupported for
+         * serialization reflected field.
          */
-        void serialize(const std::filesystem::path& pathToFile);
+        std::optional<Error> serialize(const std::filesystem::path& pathToFile);
 
         /**
          * Serializes the type and all reflected fields (including inherited) into a toml value.
@@ -65,8 +67,11 @@ namespace ne NENAMESPACE() {
          * @param tomlData        Toml value to append this object to.
          * @param iEntityUniqueId Unique ID of this object. When serializing multiple objects into
          * one toml value provide different IDs for each object so they could be differentiated.
+         *
+         * @return Error if something went wrong, for example when found an unsupported for
+         * serialization reflected field.
          */
-        void serialize(toml::value& tomlData, size_t iEntityUniqueId = 0);
+        std::optional<Error> serialize(toml::value& tomlData, size_t iEntityUniqueId = 0);
 
         /**
          * Deserializes the type and all reflected fields (including inherited) from a file.

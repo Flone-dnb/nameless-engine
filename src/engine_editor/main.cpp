@@ -27,7 +27,13 @@ int main() {
 
     // Serialize.
     ne::Node node("My cool node");
-    node.serialize(pathToFile);
+    auto optionalError = node.serialize(pathToFile);
+    if (optionalError.has_value()) {
+        auto err = optionalError.value();
+        err.addEntry();
+        err.showError();
+        throw std::runtime_error(err.getError());
+    }
 
     // Deserialize.
     auto deserializeResult = ne::Serializable::deserialize(pathToFile);

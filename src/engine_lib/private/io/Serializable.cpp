@@ -12,9 +12,14 @@
 #include "Serializable.generated_impl.h"
 
 namespace ne {
-    void Serializable::serialize(const std::filesystem::path& pathToFile) {
+    std::optional<Error> Serializable::serialize(const std::filesystem::path& pathToFile) {
         toml::value tomlData;
-        serialize(tomlData);
+        auto optionalError = serialize(tomlData);
+        if (optionalError.has_value()) {
+            auto err = std::move(optionalError.value());
+            err.addEntry();
+            return err;
+        }
 
         // Add TOML extension to file.
         auto fixedPath = pathToFile;
@@ -25,13 +30,15 @@ namespace ne {
         // Save TOML data to file.
         std::ofstream file(fixedPath, std::ios::binary);
         if (!file.is_open()) {
-            Logger::get().error(std::format("failed to open file \"{}\"", fixedPath.string()), "");
+            return Error(std::format("failed to open file \"{}\"", fixedPath.string()));
         }
         file << tomlData;
         file.close();
+
+        return {};
     }
 
-    void Serializable::serialize(toml::value& tomlData, size_t iEntityUniqueId) {
+    std::optional<Error> Serializable::serialize(toml::value& tomlData, size_t iEntityUniqueId) {
         rfk::Class const& selfArchetype = getArchetype();
 
         struct Data {
@@ -39,9 +46,10 @@ namespace ne {
             rfk::Class const* selfArchetype;
             toml::value* pTomlData;
             size_t iEntityUniqueId;
+            std::optional<Error> error;
         };
 
-        Data loopData{this, &selfArchetype, &tomlData, iEntityUniqueId};
+        Data loopData{this, &selfArchetype, &tomlData, iEntityUniqueId, {}};
 
         selfArchetype.foreachField(
             [](rfk::Field const& field, void* userData) -> bool {
@@ -56,41 +64,70 @@ namespace ne {
                 if (field.getProperty<DontSerialize>())
                     return true;
 
-                const Data* pData = static_cast<Data*>(userData);
+                Data* pData = static_cast<Data*>(userData);
                 const auto sEntityId = std::format(
                     "{}.{}", pData->iEntityUniqueId, std::to_string(pData->selfArchetype->getId()));
                 const auto sFieldName = field.getName();
 
-                // Look at field type and save it in TOML data.
-                if (fieldType.match(rfk::getType<bool>())) {
-                    pData->pTomlData->operator[](sEntityId).operator[](sFieldName) =
-                        field.getUnsafe<bool>(pData->self);
-                } else if (fieldType.match(rfk::getType<int>())) {
-                    pData->pTomlData->operator[](sEntityId).operator[](sFieldName) =
-                        field.getUnsafe<int>(pData->self);
-                } else if (fieldType.match(rfk::getType<long long>())) {
-                    pData->pTomlData->operator[](sEntityId).operator[](sFieldName) =
-                        field.getUnsafe<long long>(pData->self);
-                } else if (fieldType.match(rfk::getType<float>())) {
-                    pData->pTomlData->operator[](sEntityId).operator[](sFieldName) =
-                        field.getUnsafe<float>(pData->self);
-                } else if (fieldType.match(rfk::getType<double>())) {
-                    // Store double as string for better precision.
-                    pData->pTomlData->operator[](sEntityId).operator[](sFieldName) =
-                        toml::format(toml::value(field.getUnsafe<double>(pData->self)));
-                } else if (fieldType.match(rfk::getType<std::string>())) {
-                    pData->pTomlData->operator[](sEntityId).operator[](sFieldName) =
-                        field.getUnsafe<std::string>(pData->self);
-                } else {
-                    Logger::get().error(
-                        std::format("field \"{}\" has unknown type and was not serialized", field.getName()),
-                        "");
+                try {
+                    // Throws if not found.
+                    toml::find(*pData->pTomlData, sEntityId, sFieldName);
+                } catch (...) {
+                    // No field exists with this name in this section - OK.
+                    // Look at field type and save it in TOML data.
+                    if (fieldType.match(rfk::getType<bool>())) {
+                        pData->pTomlData->operator[](sEntityId).operator[](sFieldName) =
+                            field.getUnsafe<bool>(pData->self);
+                    } else if (fieldType.match(rfk::getType<int>())) {
+                        pData->pTomlData->operator[](sEntityId).operator[](sFieldName) =
+                            field.getUnsafe<int>(pData->self);
+                    } else if (fieldType.match(rfk::getType<long long>())) {
+                        pData->pTomlData->operator[](sEntityId).operator[](sFieldName) =
+                            field.getUnsafe<long long>(pData->self);
+                    } else if (fieldType.match(rfk::getType<float>())) {
+                        pData->pTomlData->operator[](sEntityId).operator[](sFieldName) =
+                            field.getUnsafe<float>(pData->self);
+                    } else if (fieldType.match(rfk::getType<double>())) {
+                        // Store double as string for better precision.
+                        pData->pTomlData->operator[](sEntityId).operator[](sFieldName) =
+                            toml::format(toml::value(field.getUnsafe<double>(pData->self)));
+                    } else if (fieldType.match(rfk::getType<std::string>())) {
+                        pData->pTomlData->operator[](sEntityId).operator[](sFieldName) =
+                            field.getUnsafe<std::string>(pData->self);
+                    } else {
+                        pData->error = Error(std::format(
+                            "field \"{}\" (maybe inherited) of class \"{}\" has unsupported for "
+                            "serialization type",
+                            field.getName(),
+                            pData->selfArchetype->getName()));
+                        return false;
+                    }
+
+                    return true;
                 }
 
-                return true;
+                // A field with this name in this section was found.
+                // If we continue it will get overwritten.
+                // This should never happen because Refureku fails the compilation when we have 2 reflected
+                // fields with the same name. Adding this if something in Refureku will change and it will
+                // compile without any issues.
+                pData->error = Error(std::format(
+                    "found two fields with the same name \"{}\" in class \"{}\" (maybe inherited)",
+                    sFieldName,
+                    pData->selfArchetype->getName()));
+
+                return false;
             },
             &loopData,
             true);
+
+        if (loopData.error.has_value()) {
+            auto err = std::move(loopData.error.value());
+            err.addEntry();
+            return err;
+        }
+
+        return {};
     }
 
     std::variant<std::unique_ptr<Serializable>, Error>
@@ -185,7 +222,14 @@ namespace ne {
         }
 
         rfk::Class const* pClass = rfk::getDatabase().getClassById(iClassId);
+        if (!pClass) {
+            return Error(std::format("no class found in the reflection database by ID {}", iClassId));
+        }
         rfk::UniquePtr<Serializable> pInstance = pClass->makeUniqueInstance<Serializable>();
+        if (!pInstance) {
+            return Error(
+                std::format("unable to make a Serializable object from class \"{}\"", pClass->getName()));
+        }
 
         for (const auto& sFieldName : vKeys) {
             // Read value from TOML.
@@ -218,23 +262,23 @@ namespace ne {
             const auto& fieldType = pField->getType();
 
             // Set field value depending on field type.
-            if (fieldType.match(rfk::getType<bool>())) {
+            if (fieldType.match(rfk::getType<bool>()) && value.is_boolean()) {
                 auto fieldValue = value.as_boolean();
                 pField->setUnsafe<bool>(pInstance.get(), std::move(fieldValue));
-            } else if (fieldType.match(rfk::getType<int>())) {
+            } else if (fieldType.match(rfk::getType<int>()) && value.is_integer()) {
                 auto fieldValue = static_cast<int>(value.as_integer());
                 pField->setUnsafe<int>(pInstance.get(), std::move(fieldValue));
-            } else if (fieldType.match(rfk::getType<long long>())) {
+            } else if (fieldType.match(rfk::getType<long long>()) && value.is_integer()) {
                 long long fieldValue = value.as_integer();
                 pField->setUnsafe<long long>(pInstance.get(), std::move(fieldValue));
-            } else if (fieldType.match(rfk::getType<float>())) {
+            } else if (fieldType.match(rfk::getType<float>()) && value.is_floating()) {
                 auto fieldValue = static_cast<float>(value.as_floating());
                 pField->setUnsafe<float>(pInstance.get(), std::move(fieldValue));
-            } else if (fieldType.match(rfk::getType<double>())) {
+            } else if (fieldType.match(rfk::getType<double>()) && value.is_string()) {
                 // Double is stored as a string for better precision.
                 double fieldValue = std::stod(value.as_string().str);
                 pField->setUnsafe<double>(pInstance.get(), std::move(fieldValue));
-            } else if (fieldType.match(rfk::getType<std::string>())) {
+            } else if (fieldType.match(rfk::getType<std::string>()) && value.is_string()) {
                 auto fieldValue = value.as_string().str;
                 pField->setUnsafe<std::string>(pInstance.get(), std::move(fieldValue));
             } else {

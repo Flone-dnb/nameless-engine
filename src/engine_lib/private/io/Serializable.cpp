@@ -14,9 +14,9 @@
 namespace ne {
     std::optional<Error> Serializable::serialize(const std::filesystem::path& pathToFile) {
         toml::value tomlData;
-        auto optionalError = serialize(tomlData);
-        if (optionalError.has_value()) {
-            auto err = std::move(optionalError.value());
+        auto result = serialize(tomlData);
+        if (std::holds_alternative<Error>(result)) {
+            auto err = std::get<Error>(std::move(result));
             err.addEntry();
             return err;
         }
@@ -38,62 +38,88 @@ namespace ne {
         return {};
     }
 
-    std::optional<Error> Serializable::serialize(toml::value& tomlData, size_t iEntityUniqueId) {
+    std::variant<std::string, Error> Serializable::serialize(toml::value& tomlData, std::string sEntityId) {
         rfk::Class const& selfArchetype = getArchetype();
+        if (sEntityId.empty()) {
+            // Put something as entity ID so it would not look weird.
+            sEntityId = "0";
+        }
+
+        const auto sSectionName = std::format("{}.{}", sEntityId, std::to_string(selfArchetype.getId()));
 
         struct Data {
-            Serializable* self;
-            rfk::Class const* selfArchetype;
-            toml::value* pTomlData;
-            size_t iEntityUniqueId;
-            std::optional<Error> error;
+            Serializable* self = nullptr;
+            rfk::Class const* selfArchetype = nullptr;
+            toml::value* pTomlData = nullptr;
+            std::string sSectionName;
+            std::optional<Error> error = {};
+            std::string sEntityId;
+            size_t iSubEntityId = 0;
         };
 
-        Data loopData{this, &selfArchetype, &tomlData, iEntityUniqueId, {}};
+        Data loopData{this, &selfArchetype, &tomlData, sSectionName, {}, sEntityId};
 
         selfArchetype.foreachField(
             [](rfk::Field const& field, void* userData) -> bool {
                 const auto& fieldType = field.getType();
 
-                // Don't serialize specific types.
-                if (fieldType.isConst() || fieldType.isPointer() || fieldType.isLValueReference() ||
-                    fieldType.isRValueReference() || fieldType.isCArray())
-                    return true;
-
-                // Ignore this field if marked as DontSerialize.
-                if (field.getProperty<DontSerialize>())
+                if (!isFieldSerializable(field))
                     return true;
 
                 Data* pData = static_cast<Data*>(userData);
-                const auto sEntityId = std::format(
-                    "{}.{}", pData->iEntityUniqueId, std::to_string(pData->selfArchetype->getId()));
                 const auto sFieldName = field.getName();
 
                 try {
                     // Throws if not found.
-                    toml::find(*pData->pTomlData, sEntityId, sFieldName);
+                    toml::find(*pData->pTomlData, pData->sSectionName, sFieldName);
                 } catch (...) {
                     // No field exists with this name in this section - OK.
                     // Look at field type and save it in TOML data.
                     if (fieldType.match(rfk::getType<bool>())) {
-                        pData->pTomlData->operator[](sEntityId).operator[](sFieldName) =
+                        pData->pTomlData->operator[](pData->sSectionName).operator[](sFieldName) =
                             field.getUnsafe<bool>(pData->self);
                     } else if (fieldType.match(rfk::getType<int>())) {
-                        pData->pTomlData->operator[](sEntityId).operator[](sFieldName) =
+                        pData->pTomlData->operator[](pData->sSectionName).operator[](sFieldName) =
                             field.getUnsafe<int>(pData->self);
                     } else if (fieldType.match(rfk::getType<long long>())) {
-                        pData->pTomlData->operator[](sEntityId).operator[](sFieldName) =
+                        pData->pTomlData->operator[](pData->sSectionName).operator[](sFieldName) =
                             field.getUnsafe<long long>(pData->self);
                     } else if (fieldType.match(rfk::getType<float>())) {
-                        pData->pTomlData->operator[](sEntityId).operator[](sFieldName) =
+                        pData->pTomlData->operator[](pData->sSectionName).operator[](sFieldName) =
                             field.getUnsafe<float>(pData->self);
                     } else if (fieldType.match(rfk::getType<double>())) {
                         // Store double as string for better precision.
-                        pData->pTomlData->operator[](sEntityId).operator[](sFieldName) =
+                        pData->pTomlData->operator[](pData->sSectionName).operator[](sFieldName) =
                             toml::format(toml::value(field.getUnsafe<double>(pData->self)));
                     } else if (fieldType.match(rfk::getType<std::string>())) {
-                        pData->pTomlData->operator[](sEntityId).operator[](sFieldName) =
+                        pData->pTomlData->operator[](pData->sSectionName).operator[](sFieldName) =
                             field.getUnsafe<std::string>(pData->self);
+                    } else if (fieldType.getArchetype()) {
+                        // Field with a reflected type.
+                        // TODO: check if field type is derived from Serializable, return Error if not
+
+                        // Add a key to specify that this value has a reflected type.
+                        pData->pTomlData->operator[](pData->sSectionName).operator[](sFieldName) =
+                            "reflected type, see other sub-section";
+
+                        // Serialize this field "under our ID".
+                        const std::string sSubEntityIdSectionName =
+                            std::format("{}.{}", pData->sEntityId, pData->iSubEntityId);
+                        const auto pSubEntity = static_cast<Serializable*>(field.getPtrUnsafe(pData->self));
+                        auto result = pSubEntity->serialize(*pData->pTomlData, sSubEntityIdSectionName);
+                        if (std::holds_alternative<Error>(result)) {
+                            pData->error = std::get<Error>(std::move(result));
+                            pData->error->addEntry();
+                            return true;
+                        }
+                        const auto sSubEntityFinalSectionName = std::get<std::string>(result);
+                        pData->iSubEntityId += 1;
+
+                        // Add a new key ".field_name" to this sub entity so that we will know to which
+                        // field this entity should be assigned.
+                        pData->pTomlData->operator[](sSubEntityFinalSectionName)
+                            .
+                            operator[](sSubEntityFieldNameKey) = sFieldName;
                     } else {
                         pData->error = Error(std::format(
                             "field \"{}\" (maybe inherited) of class \"{}\" has unsupported for "
@@ -127,7 +153,7 @@ namespace ne {
             return err;
         }
 
-        return {};
+        return sSectionName;
     }
 
     std::variant<std::unique_ptr<Serializable>, Error>
@@ -159,7 +185,12 @@ namespace ne {
     }
 
     std::variant<std::unique_ptr<Serializable>, Error>
-    Serializable::deserialize(toml::value& tomlData, size_t iEntityUniqueId) {
+    Serializable::deserialize(toml::value& tomlData, std::string sEntityId) {
+        if (sEntityId.empty()) {
+            // Put something as entity ID so it would not look weird.
+            sEntityId = "0";
+        }
+
         // Read all sections.
         std::vector<std::string> vSections;
         const auto fileTable = tomlData.as_table();
@@ -175,32 +206,47 @@ namespace ne {
         }
 
         // Find a section that starts with the specified entity ID.
+        // Look for a value between dots.
+        // We can't just use sSectionName.starts_with(sEntityId) because we might make a mistake in the
+        // following situation: [100.10.1014674670888563010] with entity ID equal to "10".
         std::string sTargetSection;
         size_t iClassId = 0;
-        std::string sEntityId = std::to_string(iEntityUniqueId);
         // Each entity section has the following format: [entityId.classId]
+        // For sub entities (field with reflected type) format: [parentEntityId.childEntityId.childClassId]
         for (const auto& sSectionName : vSections) {
-            const auto iDotPos = sSectionName.find('.');
-            if (iDotPos == std::string::npos) [[unlikely]] {
+            const auto iIdEndDotPos = sSectionName.rfind('.');
+            if (iIdEndDotPos == std::string::npos) [[unlikely]] {
                 return Error("provided toml value does not contain entity ID");
             }
-            if (iDotPos + 1 == sSectionName.size()) [[unlikely]] {
-                return Error("provided toml value does not contain class ID");
+            if (iIdEndDotPos + 1 == sSectionName.size()) [[unlikely]] {
+                return Error(std::format("section name \"{}\" does not have a class ID", sSectionName));
+            }
+            if (iIdEndDotPos == 0) [[unlikely]] {
+                return Error(std::format("section \"{}\" is not full", sSectionName));
             }
 
-            const auto iSectionEntityId = std::stoull(sSectionName.substr(0, iDotPos));
-            if (iSectionEntityId == iEntityUniqueId) {
+            // Get ID chain (either entity ID or something like "parentEntityId.childEntityId").
+            const auto sIdChain = sSectionName.substr(0, iIdEndDotPos);
+            if (sIdChain == sEntityId) {
                 sTargetSection = sSectionName;
 
-                // Get class ID.
-                iClassId = std::stoull(sSectionName.substr(iDotPos + 1));
+                // Get this entity's class ID.
+                try {
+                    iClassId = std::stoull(sSectionName.substr(iIdEndDotPos + 1));
+                } catch (std::exception& ex) {
+                    return Error(std::format(
+                        "failed to convert string to unsigned long long when retrieving class ID for section "
+                        "\"{}\": {}",
+                        sSectionName,
+                        ex.what()));
+                }
                 break;
             }
         }
 
         // Check if anything was found.
         if (sTargetSection.empty()) {
-            return Error(std::format("could not find entity with ID \"{}\"", iEntityUniqueId));
+            return Error(std::format("could not find entity with ID \"{}\"", sEntityId));
         }
 
         // Get all keys (field names) from this section.
@@ -225,25 +271,29 @@ namespace ne {
         if (!pClass) {
             return Error(std::format("no class found in the reflection database by ID {}", iClassId));
         }
+        // TODO: check that class is derived from Serializable
         rfk::UniquePtr<Serializable> pInstance = pClass->makeUniqueInstance<Serializable>();
         if (!pInstance) {
             return Error(
                 std::format("unable to make a Serializable object from class \"{}\"", pClass->getName()));
         }
 
-        for (const auto& sFieldName : vKeys) {
+        for (auto& sFieldName : vKeys) {
+            if (sFieldName == sSubEntityFieldNameKey) {
+                // This field is used as section metadata and tells us what field of parent entity
+                // this section describes.
+                continue;
+            }
+
             // Read value from TOML.
             toml::value value;
             try {
                 value = toml::find(section, sFieldName);
             } catch (std::exception& exception) {
-                Logger::get().error(
-                    std::format(
-                        "field \"{}\" was not found in the specified toml value: {}",
-                        sFieldName,
-                        exception.what()),
-                    "");
-                continue;
+                return Error(std::format(
+                    "field \"{}\" was not found in the specified toml value: {}",
+                    sFieldName,
+                    exception.what()));
             }
 
             // Get field by name.
@@ -261,6 +311,9 @@ namespace ne {
             }
             const auto& fieldType = pField->getType();
 
+            if (!isFieldSerializable(*pField))
+                continue;
+
             // Set field value depending on field type.
             if (fieldType.match(rfk::getType<bool>()) && value.is_boolean()) {
                 auto fieldValue = value.as_boolean();
@@ -276,17 +329,219 @@ namespace ne {
                 pField->setUnsafe<float>(pInstance.get(), std::move(fieldValue));
             } else if (fieldType.match(rfk::getType<double>()) && value.is_string()) {
                 // Double is stored as a string for better precision.
-                double fieldValue = std::stod(value.as_string().str);
-                pField->setUnsafe<double>(pInstance.get(), std::move(fieldValue));
+                try {
+                    double fieldValue = std::stod(value.as_string().str);
+                    pField->setUnsafe<double>(pInstance.get(), std::move(fieldValue));
+                } catch (std::exception& ex) {
+                    return Error(std::format(
+                        "failed to convert string to double for field \"{}\": {}", sFieldName, ex.what()));
+                }
             } else if (fieldType.match(rfk::getType<std::string>()) && value.is_string()) {
                 auto fieldValue = value.as_string().str;
                 pField->setUnsafe<std::string>(pInstance.get(), std::move(fieldValue));
+            } else if (fieldType.getArchetype()) {
+                // Field with a reflected type.
+                // Find a section that has the key ".field_name = *our field name*".
+                std::string sSectionNameForField;
+                // This will have minimum value of 1 where the dot separates IDs from class ID.
+                const auto iNumberOfDotsInTargetSectionName =
+                    std::ranges::count(sTargetSection.begin(), sTargetSection.end(), '.');
+                for (const auto& sSectionName : vSections) {
+                    if (sSectionName == sTargetSection)
+                        continue; // skip self
+
+                    const auto iNumberOfDotsInSectionName =
+                        std::ranges::count(sSectionName.begin(), sSectionName.end(), '.');
+
+                    // Look for a section that has 1 more dot than our section. Example:
+                    // Our section: ["0.3056171360419407975"]
+                    // Child section that we are looking for: ["0.1.4321359943817265529"]
+                    if (iNumberOfDotsInSectionName != iNumberOfDotsInTargetSectionName + 1) {
+                        continue;
+                    }
+
+                    // Here we might get into the following situation:
+                    // Our section: "0.3056171360419407975"
+                    // Current section: "1.0.3056171360419407975" - first field of some OTHER entity.
+
+                    // Get entity ID chain.
+                    auto iLastDotPos = sSectionName.rfind('.');
+                    if (iLastDotPos == std::string::npos) {
+                        return Error(std::format("section name \"{}\" is corrupted", sSectionName));
+                    }
+                    // Will be something like: "entityId.subEntityId", "entityId.subEntityId.subSubEntityId"
+                    // or etc.
+                    auto sEntityIdChain = sSectionName.substr(0, iLastDotPos);
+
+                    // Remove last entity id from chain because we don't know it.
+                    iLastDotPos = sEntityIdChain.rfind('.');
+                    if (iLastDotPos == std::string::npos) {
+                        return Error(std::format("section name \"{}\" is corrupted", sSectionName));
+                    }
+                    sEntityIdChain = sEntityIdChain.substr(0, iLastDotPos);
+
+                    // Check that this is indeed our sub entity.
+                    if (sEntityIdChain != sEntityId) {
+                        continue;
+                    }
+
+                    // Get this section.
+                    toml::value entitySection;
+                    try {
+                        entitySection = toml::find(tomlData, sSectionName);
+                    } catch (std::exception& ex) {
+                        return Error(
+                            std::format("no section \"{}\" was found ({})", sTargetSection, ex.what()));
+                    }
+
+                    if (!section.is_table()) {
+                        return Error(std::format("found \"{}\" section is not a section", sTargetSection));
+                    }
+
+                    // Look for a key that holds field name.
+                    toml::value fieldKey;
+                    try {
+                        fieldKey = toml::find(entitySection, sSubEntityFieldNameKey);
+                    } catch (...) {
+                        // Not found, go to next section.
+                        continue;
+                    }
+
+                    if (!fieldKey.is_string()) {
+                        return Error(std::format(
+                            "found field name key \"{}\" is not a string", sSubEntityFieldNameKey));
+                    }
+
+                    if (fieldKey.as_string() == sFieldName) {
+                        sSectionNameForField = sSectionName;
+                        break;
+                    }
+                }
+
+                if (sSectionNameForField.empty()) {
+                    return Error(
+                        std::format("could not find a section that represents field \"{}\"", sFieldName));
+                }
+
+                // Cut field's class ID from the section name.
+                // The section name could look something like this: [entityId.subEntityId.subEntityClassId].
+                const auto iSubEntityClassIdDotPos = sSectionNameForField.rfind('.');
+                if (iSubEntityClassIdDotPos == std::string::npos) [[unlikely]] {
+                    return Error(std::format(
+                        "sub entity does not have a class ID (section: \"{}\")", sSectionNameForField));
+                }
+                if (iSubEntityClassIdDotPos + 1 == sSectionNameForField.size()) [[unlikely]] {
+                    return Error(
+                        std::format("section name \"{}\" does not have a class ID", sSectionNameForField));
+                }
+                if (iSubEntityClassIdDotPos == 0) [[unlikely]] {
+                    return Error(std::format("section \"{}\" is not full", sSectionNameForField));
+                }
+                const auto sSubEntityId = sSectionNameForField.substr(0, iSubEntityClassIdDotPos);
+
+                // Deserialize section into an object.
+                auto result = deserialize(tomlData, sSubEntityId);
+                if (std::holds_alternative<Error>(result)) {
+                    auto err = std::get<Error>(std::move(result));
+                    err.addEntry();
+                    return err;
+                }
+                auto pSubEntity = std::get<std::unique_ptr<Serializable>>(std::move(result));
+
+                // Move object to field.
+                cloneSerializableObject(
+                    pSubEntity.get(), static_cast<Serializable*>(pField->getPtrUnsafe(pInstance.get())));
             } else {
-                Logger::get().error(
-                    std::format("field \"{}\" has unknown type and was not deserialized", sFieldName), "");
+                return Error(std::format("field \"{}\" has unknown type", sFieldName));
             }
         }
 
         return pInstance;
+    }
+
+    bool Serializable::isFieldSerializable(rfk::Field const& field) {
+        const auto& fieldType = field.getType();
+
+        // Don't serialize specific types.
+        if (fieldType.isConst() || fieldType.isPointer() || fieldType.isLValueReference() ||
+            fieldType.isRValueReference() || fieldType.isCArray())
+            return false;
+
+        // Ignore this field if marked as DontSerialize.
+        if (field.getProperty<DontSerialize>())
+            return false;
+
+        return true;
+    }
+
+    std::optional<Error> Serializable::cloneSerializableObject(Serializable* pFrom, Serializable* pTo) {
+        rfk::Class const& fromArchetype = pFrom->getArchetype();
+        rfk::Class const& toArchetype = pTo->getArchetype();
+
+        if (fromArchetype.getId() != toArchetype.getId()) {
+            return Error(std::format(
+                "classes \"{}\" and \"{}\" are not the same",
+                fromArchetype.getName(),
+                toArchetype.getName()));
+        }
+
+        struct Data {
+            Serializable* pFrom;
+            Serializable* pTo;
+            std::optional<Error> error;
+        };
+
+        Data loopData{pFrom, pTo, std::optional<Error>{}};
+
+        fromArchetype.foreachField(
+            [](rfk::Field const& field, void* userData) -> bool {
+                if (!isFieldSerializable(field))
+                    return true;
+
+                const auto& fieldType = field.getType();
+                Data* pData = static_cast<Data*>(userData);
+                const auto sFieldName = field.getName();
+
+                const auto* pFieldTo =
+                    pData->pTo->getArchetype().getFieldByName(sFieldName, rfk::EFieldFlags::Default, true);
+
+                if (cloneFieldIfMatchesType<bool>(pData->pFrom, field, pData->pTo, pFieldTo))
+                    return true;
+                if (cloneFieldIfMatchesType<int>(pData->pFrom, field, pData->pTo, pFieldTo))
+                    return true;
+                if (cloneFieldIfMatchesType<long long>(pData->pFrom, field, pData->pTo, pFieldTo))
+                    return true;
+                if (cloneFieldIfMatchesType<float>(pData->pFrom, field, pData->pTo, pFieldTo))
+                    return true;
+                if (cloneFieldIfMatchesType<double>(pData->pFrom, field, pData->pTo, pFieldTo))
+                    return true;
+                if (cloneFieldIfMatchesType<std::string>(pData->pFrom, field, pData->pTo, pFieldTo))
+                    return true;
+
+                if (fieldType.getArchetype()) {
+                    // TODO: check if field type is derived from Serializable if not return Error
+
+                    auto optionalError = cloneSerializableObject(
+                        static_cast<Serializable*>(field.getPtrUnsafe(pData->pFrom)),
+                        static_cast<Serializable*>(pFieldTo->getPtrUnsafe(pData->pTo)));
+                    if (optionalError.has_value()) {
+                        auto err = std::move(optionalError.value());
+                        err.addEntry();
+                        pData->error = err;
+                        return false;
+                    }
+                }
+
+                return true;
+            },
+            &loopData,
+            true);
+
+        if (loopData.error.has_value()) {
+            auto err = std::move(loopData.error.value());
+            err.addEntry();
+            return err;
+        }
+        return {};
     }
 } // namespace ne

@@ -13,6 +13,7 @@
 #include "game/Window.h"
 
 #include "game/nodes/Node.h"
+#include "TestNode.h"
 
 int main() {
 // Enable run-time memory check for debug builds.
@@ -26,7 +27,10 @@ int main() {
     const std::filesystem::path pathToFile = "MyCoolNode.toml";
 
     // Serialize.
-    ne::Node node("My cool node");
+    TestNode node;
+    node.specialField.iAnswer = 77;
+    node.myNode.iAnswer = 50;
+    node.myNode.specialField.iAnswer = 102;
     auto optionalError = node.serialize(pathToFile);
     if (optionalError.has_value()) {
         auto err = optionalError.value();
@@ -45,7 +49,7 @@ int main() {
     }
     const auto pDeserializedObject =
         std::get<std::unique_ptr<ne::Serializable>>(std::move(deserializeResult));
-    const ne::Node* pNode = dynamic_cast<ne::Node*>(pDeserializedObject.get());
+    const auto pNode = dynamic_cast<TestNode*>(pDeserializedObject.get());
 
     // End.
 

@@ -34,6 +34,10 @@ namespace ne NENAMESPACE() {
         NEFUNCTION()
         std::string getNodeName() const;
 
+        /** test */
+        NEPROPERTY()
+        Serializable specialField;
+
     private:
         /** Node name. */
         NEPROPERTY()

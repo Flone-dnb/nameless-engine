@@ -53,6 +53,7 @@ namespace ne NENAMESPACE() {
          * - float
          * - double
          * - std::string
+         * - T (where T is any type that derives from Serializable class)
          *
          * @remark You can mark reflected property as DontSerialize so it will be ignored in the serialization
          * process. Note that you don't need to mark fields of types that are always ignored (const, pointers,
@@ -73,13 +74,17 @@ namespace ne NENAMESPACE() {
          * This is an overloaded function. See full documentation for other overload.
          *
          * @param tomlData        Toml value to append this object to.
-         * @param iEntityUniqueId Unique ID of this object. When serializing multiple objects into
+         * @param sEntityId       Unique ID of this object. When serializing multiple objects into
          * one toml value provide different IDs for each object so they could be differentiated.
          *
+         * @warning Don't use dots in the entity ID, dots are used
+         * in recursion when this function is called from this function to process reflected field (sub
+         * entity).
+         *
          * @return Error if something went wrong, for example when found an unsupported for
-         * serialization reflected field.
+         * serialization reflected field, otherwise name of the section that was used to store this entity.
          */
-        std::optional<Error> serialize(toml::value& tomlData, size_t iEntityUniqueId = 0);
+        std::variant<std::string, Error> serialize(toml::value& tomlData, std::string sEntityId = "");
 
         /**
          * Deserializes the type and all reflected fields (including inherited) from a file.
@@ -97,14 +102,68 @@ namespace ne NENAMESPACE() {
          * Deserializes the type and all reflected fields (including inherited) from a toml value.
          *
          * @param tomlData        Toml value to retrieve an object from.
-         * @param iEntityUniqueId Unique ID of this object. When serializing multiple objects into
+         * @param sEntityId       Unique ID of this object. When serializing multiple objects into
          * one toml value provide different IDs for each object so they could be differentiated.
+         *
+         * @warning Don't use dots in the entity ID, dots are used
+         * in recursion when this function is called from this function to process reflected field (sub
+         * entity).
          *
          * @return Error if something went wrong, a unique pointer to deserialized entity.
          * Use a dynamic_cast to cast to wanted type.
          */
         static std::variant<std::unique_ptr<Serializable>, Error>
-        deserialize(toml::value& tomlData, size_t iEntityUniqueId = 0);
+        deserialize(toml::value& tomlData, std::string sEntityId = "");
+
+        /** test */
+        NEPROPERTY()
+        int iAnswer = 42;
+
+    private:
+        /**
+         * Returns whether the specified field can be serialized or not.
+         *
+         * @param field Field to test.
+         *
+         * @return Whether the field can be serialized or not.
+         */
+        static bool isFieldSerializable(rfk::Field const& field);
+
+        /**
+         * Clones reflected serializable fields of one object to another.
+         *
+         * @param pFrom Object to clone fields from.
+         * @param pTo   Object to clone fields to.
+         *
+         * @return Error if something went wrong.
+         */
+        static std::optional<Error> cloneSerializableObject(Serializable* pFrom, Serializable* pTo);
+
+        /**
+         * Clones field's data from one field to another if fields' types (specified by the template argument)
+         * are the same.
+         *
+         * @param pFrom     Object to clone field's data from.
+         * @param fieldFrom Field to clone data from.
+         * @param pTo       Object to clone field's data to.
+         * @param fieldTo   Field to clone data to.
+         *
+         * @return 'true' if data was moved, 'false' if fields have different types.
+         */
+        template <typename T>
+        static bool cloneFieldIfMatchesType(
+            Serializable* pFrom, rfk::Field const& fieldFrom, Serializable* pTo, rfk::Field const* fieldTo) {
+            if (fieldFrom.getType().match(rfk::getType<T>())) {
+                auto value = fieldFrom.getUnsafe<T>(pFrom);
+                fieldTo->setUnsafe<T>(pTo, std::move(value));
+                return true;
+            } else {
+                return false;
+            }
+        }
+
+        /** Name of the key in which to store name of the field a section represents. */
+        static inline auto const sSubEntityFieldNameKey = ".field_name";
 
         ne_Serializable_GENERATED
     };

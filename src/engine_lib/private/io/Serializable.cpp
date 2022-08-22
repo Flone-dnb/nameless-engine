@@ -134,9 +134,6 @@ namespace ne {
 
                 // A field with this name in this section was found.
                 // If we continue it will get overwritten.
-                // This should never happen because Refureku fails the compilation when we have 2 reflected
-                // fields with the same name. Adding this if something in Refureku will change and it will
-                // compile without any issues.
                 pData->error = Error(std::format(
                     "found two fields with the same name \"{}\" in class \"{}\" (maybe inherited)",
                     sFieldName,

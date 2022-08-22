@@ -93,7 +93,7 @@ namespace ne NENAMESPACE() {
          * automatically if not specified in the path.
          *
          * @return Error if something went wrong, a unique pointer to deserialized entity.
-         * Use a dynamic_cast to cast to wanted type.
+         * Use a dynamic_cast to cast to a wanted type.
          */
         static std::variant<std::unique_ptr<Serializable>, Error>
         deserialize(const std::filesystem::path& pathToFile);

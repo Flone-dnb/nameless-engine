@@ -61,7 +61,6 @@ namespace ne {
 
         /**
          * Returns path to the directory used to store specific category of files.
-         * Returned string ends with the platform specific slash.
          * Path will be created if not existed before.
          *
          * @param category Category for which to return path.

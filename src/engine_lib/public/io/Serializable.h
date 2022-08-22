@@ -130,6 +130,16 @@ namespace ne NENAMESPACE() {
         static bool isFieldSerializable(rfk::Field const& field);
 
         /**
+         * Tests whether the specified archetype is Serializable or derives at some point from Serializable
+         * class.
+         *
+         * @param pArchetype Archetype to test.
+         *
+         * @return Whether the specified archetype is derived from Serializable or not.
+         */
+        static bool isDerivedFromSerializable(rfk::Archetype const* pArchetype);
+
+        /**
          * Clones reflected serializable fields of one object to another.
          *
          * @param pFrom Object to clone fields from.

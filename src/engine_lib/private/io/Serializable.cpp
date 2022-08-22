@@ -94,10 +94,9 @@ namespace ne {
                     } else if (fieldType.match(rfk::getType<std::string>())) {
                         pData->pTomlData->operator[](pData->sSectionName).operator[](sFieldName) =
                             field.getUnsafe<std::string>(pData->self);
-                    } else if (fieldType.getArchetype()) {
+                    } else if (
+                        fieldType.getArchetype() && isDerivedFromSerializable(fieldType.getArchetype())) {
                         // Field with a reflected type.
-                        // TODO: check if field type is derived from Serializable, return Error if not
-
                         // Add a key to specify that this value has a reflected type.
                         pData->pTomlData->operator[](pData->sSectionName).operator[](sFieldName) =
                             "reflected type, see other sub-section";
@@ -268,7 +267,13 @@ namespace ne {
         if (!pClass) {
             return Error(std::format("no class found in the reflection database by ID {}", iClassId));
         }
-        // TODO: check that class is derived from Serializable
+        if (!isDerivedFromSerializable(pClass)) {
+            return Error(std::format(
+                "deserialized class with ID {} does not derive from {}",
+                iClassId,
+                staticGetArchetype().getName()));
+        }
+
         rfk::UniquePtr<Serializable> pInstance = pClass->makeUniqueInstance<Serializable>();
         if (!pInstance) {
             return Error(
@@ -471,6 +476,28 @@ namespace ne {
         return true;
     }
 
+    bool Serializable::isDerivedFromSerializable(rfk::Archetype const* pArchetype) {
+        if (rfk::Class const* pClass = rfk::classCast(pArchetype)) {
+            // Check parents.
+            if (pClass->isSubclassOf(Serializable::staticGetArchetype()))
+                return true;
+
+            // Check if Serializable.
+            if (pClass->getId() == Serializable::staticGetArchetype().getId())
+                return true;
+
+            return false;
+        } else if (rfk::Struct const* pStruct = rfk::structCast(pArchetype)) {
+            // Check parents.
+            if (pStruct->isSubclassOf(Serializable::staticGetArchetype()))
+                return true;
+
+            return false;
+        } else {
+            return false;
+        }
+    }
+
     std::optional<Error> Serializable::cloneSerializableObject(Serializable* pFrom, Serializable* pTo) {
         rfk::Class const& fromArchetype = pFrom->getArchetype();
         rfk::Class const& toArchetype = pTo->getArchetype();
@@ -515,9 +542,7 @@ namespace ne {
                 if (cloneFieldIfMatchesType<std::string>(pData->pFrom, field, pData->pTo, pFieldTo))
                     return true;
 
-                if (fieldType.getArchetype()) {
-                    // TODO: check if field type is derived from Serializable if not return Error
-
+                if (fieldType.getArchetype() && isDerivedFromSerializable(fieldType.getArchetype())) {
                     auto optionalError = cloneSerializableObject(
                         static_cast<Serializable*>(field.getPtrUnsafe(pData->pFrom)),
                         static_cast<Serializable*>(pFieldTo->getPtrUnsafe(pData->pTo)));
@@ -527,6 +552,10 @@ namespace ne {
                         pData->error = err;
                         return false;
                     }
+                } else {
+                    Error err(
+                        std::format("field \"{}\" has unsupported for serialization type", field.getName()));
+                    return false;
                 }
 
                 return true;

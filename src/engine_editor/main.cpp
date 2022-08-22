@@ -26,8 +26,7 @@ int main() {
     const std::filesystem::path pathToFile = "MyCoolNode.toml";
 
     // Serialize.
-    ne::Node node;
-    node.specialField.iAnswer = 77;
+    ne::Node node("My Cool Node");
     auto optionalError = node.serialize(pathToFile);
     if (optionalError.has_value()) {
         auto err = optionalError.value();

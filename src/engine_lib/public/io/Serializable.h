@@ -115,10 +115,6 @@ namespace ne NENAMESPACE() {
         static std::variant<std::unique_ptr<Serializable>, Error>
         deserialize(toml::value& tomlData, std::string sEntityId = "");
 
-        /** test */
-        NEPROPERTY()
-        int iAnswer = 42;
-
     private:
         /**
          * Returns whether the specified field can be serialized or not.

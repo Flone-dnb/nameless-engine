@@ -26,15 +26,15 @@ int main() {
     const std::filesystem::path pathToFile = "MyCoolNode.toml";
 
     // Serialize.
-    ne::Node node("My Cool Node");
-    node.setNodeName("My Very Cool Node!");
-    auto optionalError = node.serialize(pathToFile, true);
-    if (optionalError.has_value()) {
-        auto err = optionalError.value();
-        err.addEntry();
-        err.showError();
-        throw std::runtime_error(err.getError());
-    }
+    // ne::Node node("My Cool Node");
+    // node.setNodeName("My Very Cool Node!");
+    // auto optionalError = node.serialize(pathToFile, true);
+    // if (optionalError.has_value()) {
+    //     auto err = optionalError.value();
+    //     err.addEntry();
+    //     err.showError();
+    //     throw std::runtime_error(err.getError());
+    // }
 
     // Deserialize.
     auto deserializeResult = ne::Serializable::deserialize(pathToFile);

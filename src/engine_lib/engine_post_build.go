@@ -216,7 +216,11 @@ func copy_ext_licenses(ext_directory string, build_directory string) {
 
 	var copied_licenses_count = 0
 
-	items, _ := ioutil.ReadDir(ext_directory)
+	items, err := ioutil.ReadDir(ext_directory)
+	if err != nil {
+		fmt.Println("ERROR: engine_post_build.go:", err)
+		os.Exit(1)
+	}
 	for _, item := range items {
 		if !item.IsDir() {
 			continue

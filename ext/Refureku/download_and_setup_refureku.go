@@ -222,7 +222,7 @@ func initialize_refureku_settings(
 		os.Exit(1)
 	}
 
-	var out_settings_file = filepath.Join(src_directory, "RefurekuSettings.toml")
+	var out_settings_file = filepath.Join(src_directory, ".reflection", "RefurekuSettings.toml")
 	// Don't check if settings file already exists to skip this step.
 	// Otherwrite with new settings (maybe this script changed due to git updates).
 

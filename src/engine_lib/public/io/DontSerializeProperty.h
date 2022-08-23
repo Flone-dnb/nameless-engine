@@ -3,7 +3,7 @@
 // External.
 #include "Refureku/Properties/PropertySettings.h"
 
-#include "DontSerializeProperty.generated.h"
+#include "Reflection.h"
 
 /**
  * Add this property to your reflected field to ignore it when serializing an object.

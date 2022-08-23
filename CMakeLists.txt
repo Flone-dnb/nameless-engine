@@ -47,10 +47,12 @@ target_include_directories(${PROJECT_NAME} PRIVATE ${EDITOR_SRC_RELATIVE_PATH})
 add_subdirectory(src/engine_lib dependency_build/engine_lib)
 target_link_libraries(${PROJECT_NAME} PRIVATE engine_lib)
 add_dependencies(${PROJECT_NAME} engine_lib)
+# ----------------------------------------------------------------------------------------------------------
 # Add a pre build step to run reflection code generator.
 add_custom_command(TARGET ${PROJECT_NAME} PRE_BUILD
-    WORKING_DIRECTORY ${EDITOR_SRC_ABSOLUTE_PATH}/../
-	COMMAND ${PATH_TO_EXT}/Refureku/build/Bin/RefurekuGenerator ${EDITOR_SRC_ABSOLUTE_PATH}/../RefurekuSettings.toml)
+	WORKING_DIRECTORY ${EDITOR_SRC_ABSOLUTE_PATH}/../
+	COMMAND ${PATH_TO_EXT}/Refureku/build/Bin/RefurekuGenerator ${EDITOR_SRC_ABSOLUTE_PATH}/../.reflection/RefurekuSettings.toml && go run ${EDITOR_SRC_ABSOLUTE_PATH}/../.reflection/merge_generated_reflection/merge_generated_reflection.go ${EDITOR_SRC_ABSOLUTE_PATH}/../.generated ${REFLECTION_FILE_NAME})
+# ----------------------------------------------------------------------------------------------------------
 
 # set standard
 set(PROJECT_CXX_STANDARD_VERSION 23)

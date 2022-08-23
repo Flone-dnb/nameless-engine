@@ -1,7 +1,5 @@
 ﻿#include "game/nodes/Node.h"
 
-#include "Node.generated_impl.h"
-
 namespace ne {
     Node::Node() { sNodeName = "Node"; }
 

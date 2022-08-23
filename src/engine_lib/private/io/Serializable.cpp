@@ -10,8 +10,6 @@
 // External.
 #include "Refureku/Refureku.h"
 
-#include "Serializable.generated_impl.h"
-
 namespace ne {
     std::optional<Error>
     Serializable::serialize(const std::filesystem::path& pathToFile, bool bEnableBackup) {

@@ -2,7 +2,7 @@
 
 #include "io/Serializable.h"
 
-#include "Node.generated.h"
+#include "Reflection.h"
 
 namespace ne NENAMESPACE() {
     /**

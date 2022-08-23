@@ -5,6 +5,7 @@
 
 // Custom.
 #include "io/Logger.h"
+#include "io/ConfigManager.h"
 
 // External.
 #include "Refureku/Refureku.h"
@@ -12,7 +13,8 @@
 #include "Serializable.generated_impl.h"
 
 namespace ne {
-    std::optional<Error> Serializable::serialize(const std::filesystem::path& pathToFile) {
+    std::optional<Error>
+    Serializable::serialize(const std::filesystem::path& pathToFile, bool bEnableBackup) {
         toml::value tomlData;
         auto result = serialize(tomlData);
         if (std::holds_alternative<Error>(result)) {
@@ -27,13 +29,33 @@ namespace ne {
             fixedPath += ".toml";
         }
 
+        std::filesystem::path backupFile = fixedPath;
+        backupFile += ConfigManager::getBackupFileExtension();
+
+        if (bEnableBackup) {
+            // Check if we already have a file from previous serialization.
+            if (std::filesystem::exists(fixedPath)) {
+                if (std::filesystem::exists(backupFile)) {
+                    std::filesystem::remove(backupFile);
+                }
+                std::filesystem::rename(fixedPath, backupFile);
+            }
+        }
+
         // Save TOML data to file.
         std::ofstream file(fixedPath, std::ios::binary);
         if (!file.is_open()) {
-            return Error(std::format("failed to open file \"{}\"", fixedPath.string()));
+            return Error(std::format("failed to open the file \"{}\"", fixedPath.string()));
         }
         file << tomlData;
         file.close();
+
+        if (bEnableBackup) {
+            // Create backup file if it does not exist.
+            if (!std::filesystem::exists(backupFile)) {
+                std::filesystem::copy_file(fixedPath, backupFile);
+            }
+        }
 
         return {};
     }
@@ -158,6 +180,18 @@ namespace ne {
         auto fixedPath = pathToFile;
         if (!fixedPath.string().ends_with(".toml")) {
             fixedPath += ".toml";
+        }
+
+        std::filesystem::path backupFile = fixedPath;
+        backupFile += ConfigManager::getBackupFileExtension();
+
+        if (!std::filesystem::exists(fixedPath)) {
+            // Check if backup file exists.
+            if (std::filesystem::exists(backupFile)) {
+                std::filesystem::copy_file(backupFile, fixedPath);
+            } else {
+                return Error("file or backup file do not exist");
+            }
         }
 
         // Load file.

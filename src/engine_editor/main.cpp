@@ -27,7 +27,8 @@ int main() {
 
     // Serialize.
     ne::Node node("My Cool Node");
-    auto optionalError = node.serialize(pathToFile);
+    node.setNodeName("My Very Cool Node!");
+    auto optionalError = node.serialize(pathToFile, true);
     if (optionalError.has_value()) {
         auto err = optionalError.value();
         err.addEntry();

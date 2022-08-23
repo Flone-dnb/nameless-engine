@@ -10,6 +10,8 @@
 namespace ne {
     std::string ConfigManager::getConfigFormatExtension() { return ".toml"; }
 
+    std::string ConfigManager::getBackupFileExtension() { return sBackupFileExtension; }
+
     std::vector<std::string> ConfigManager::getAllFiles(ConfigCategory category) {
         const auto categoryDirectory = getCategoryDirectory(category);
 
@@ -122,7 +124,7 @@ namespace ne {
             if (std::filesystem::exists(backupFile)) {
                 std::filesystem::copy_file(backupFile, pathToFile);
             } else {
-                return Error("file and backup file do not exist");
+                return Error("file or backup file do not exist");
             }
         }
 
@@ -231,6 +233,7 @@ namespace ne {
         backupFile += sBackupFileExtension;
 
         if (bEnableBackup) {
+            // Check if we already had this file saved.
             if (std::filesystem::exists(pathToFile)) {
                 if (std::filesystem::exists(backupFile)) {
                     std::filesystem::remove(backupFile);

@@ -36,12 +36,20 @@ namespace ne NENAMESPACE() {
         /**
          * Serializes the type and all reflected fields (including inherited) into a file.
          *
-         * @param pathToFile File to write reflected data to. The ".toml" extension will be added
+         * @param pathToFile    File to write reflected data to. The ".toml" extension will be added
          * automatically if not specified in the path. If the specified file already exists it will be
          * overwritten.
+         * @param bEnableBackup If 'true' will also use a backup (copy) file. @ref deserialize can use
+         * backup file if the original file does not exist. Generally you want to use
+         * a backup file if you are saving important information, such as player progress,
+         * other cases such as player game settings and etc. usually do not need a backup but
+         * you can use it if you want.
          *
-         * @remark Type will be serialized as a class ID which will change if you change your class
-         * name or if your class is defined in a namespace if you change your namespace name.
+         * @warning Type will be serialized as a class ID which will change if you change your class
+         * name or if your class is defined in a namespace if you change your namespace name. If your class ID
+         * was changed this means that all previously serialized files will reference invalid class ID and you
+         * won't be able to deserialize them (unless you manually change class ID in previously serialized
+         * files).
          *
          * @remark Note that not all reflected fields can be serialized, only specific types can be
          * serialized. Const fields, pointer fields, lvalue references, rvalue references and C-arrays will
@@ -66,7 +74,7 @@ namespace ne NENAMESPACE() {
          * @return Error if something went wrong, for example when found an unsupported for
          * serialization reflected field.
          */
-        std::optional<Error> serialize(const std::filesystem::path& pathToFile);
+        std::optional<Error> serialize(const std::filesystem::path& pathToFile, bool bEnableBackup);
 
         /**
          * Serializes the type and all reflected fields (including inherited) into a toml value.

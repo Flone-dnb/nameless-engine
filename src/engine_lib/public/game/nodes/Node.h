@@ -27,6 +27,14 @@ namespace ne NENAMESPACE() {
         virtual ~Node() override = default;
 
         /**
+         * Sets node's name.
+         *
+         * @param sNodeName New name of this node.
+         */
+        NEFUNCTION()
+        void setNodeName(const std::string& sNodeName);
+
+        /**
          * Returns node's name.
          *
          * @return Node name.

@@ -43,6 +43,13 @@ namespace ne {
         static std::string getConfigFormatExtension();
 
         /**
+         * Returns file extension used to store backup files, for example: ".old".
+         *
+         * @return File extension used to store backup files.
+         */
+        static std::string getBackupFileExtension();
+
+        /**
          * Returns file names (without extension) that this category (directory)
          * contains.
          *
@@ -271,7 +278,7 @@ namespace ne {
          * backup file if a usual configuration file does not exist. Generally you want to use
          * a backup file if you are saving important information, such as player progress,
          * other cases such as player game settings and etc. usually do not need a backup but
-         * you can use a backup if you want.
+         * you can use it if you want.
          *
          * @return Error if something went wrong.
          */

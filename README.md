@@ -42,6 +42,7 @@ auto onCompleted = []() {
     // do final logic here
 };
 
+// shader compilation is done using multiple threads via a thread pool
 getWindow()->getRenderer()->getShaderManager()->compileShaders(
     vShaders,
     onProgress,

@@ -5,9 +5,8 @@
 #include <filesystem>
 #include <source_location>
 
-namespace spdlog {
-    class logger;
-}
+// External.
+#include "spdlog/spdlog.h"
 
 namespace ne {
     /**

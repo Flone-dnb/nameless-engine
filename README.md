@@ -10,6 +10,54 @@ TODO: screenshot game/editor
 # Features
 
 - Automatic shader caching and cache invalidation.
+
+```C++
+const auto vertexShader = ShaderDescription(
+    "engine.default.vs",               // shader name
+    "res/engine/shaders/default.hlsl", // path to shader file
+    ShaderType::VERTEX_SHADER,         // shader type
+    "vsDefault",                       // shader entry function name
+    {});                               // defined shader macros
+
+const auto pixelShader = ShaderDescription(
+    "engine.default.ps",               // shader name
+    "res/engine/shaders/default.hlsl", // path to shader file
+    ShaderType::PIXEL_SHADER,          // shader type
+    "psDefault",                       // shader entry function name
+    {});                               // defined shader macros
+
+std::vector vShaders = {vertexShader, pixelShader};
+
+auto onProgress = [](size_t iCompiledShaderCount, size_t iTotalShadersToCompile) {
+    // show progress here
+};
+auto onError = [](ShaderDescription shaderDescription, std::variant<std::string, Error> error) {
+    if (std::holds_alternative<std::string>(error)){
+        // shader compilation error
+    }else{
+        // internal error
+    }
+}
+auto onCompleted = []() {
+    // do final logic here
+};
+
+getWindow()->getRenderer()->getShaderManager()->compileShaders(
+    vShaders,
+    onProgress,
+    onError,
+    onCompleted
+);
+
+// you can now reference these shaders by their name
+
+// ... on the next program start ...
+// once requested to compile these shaders again (re-run the same code from above)
+// they will be retrieved from the cache
+// if shader's .hlsl/.glsl code or any of shader's included files were not changed
+// otherwise it will be recompiled
+```
+
 - TODO.
 
 # Setup (Build)
@@ -45,7 +93,7 @@ To update this repository:
 
 ```
 git pull
-git submodule update --recursive
+git submodule update --init --recursive
 ```
 
 # Documentation

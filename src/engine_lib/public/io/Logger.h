@@ -16,7 +16,7 @@ namespace ne {
     public:
         Logger(const Logger&) = delete;
         Logger& operator=(const Logger&) = delete;
-        virtual ~Logger() = default;
+        ~Logger();
 
         /**
          * Returns a reference to the logger instance.
@@ -106,12 +106,18 @@ namespace ne {
          */
         std::filesystem::path sLoggerWorkingDirectory;
 
+        /** Total amount of warnings produced. */
+        inline static size_t iTotalWarningsProduced = 0;
+
+        /** Total amount of errors produced. */
+        inline static size_t iTotalErrorsProduced = 0;
+
         /**
          * Maximum amount of log files in the logger directory.
          * If the logger directory contains this amount of log files,
          * the oldest log file will be removed to create a new one.
          */
-        inline static size_t iMaxLogFiles = 3;
+        inline static constexpr size_t iMaxLogFiles = 3;
 
         /** Name of the category used for logging. */
         inline static const char* sDefaultLogCategory = "Default";

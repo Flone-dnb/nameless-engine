@@ -14,6 +14,18 @@
 #include "spdlog/sinks/stdout_color_sinks.h"
 
 namespace ne {
+    Logger::~Logger() {
+        if (iTotalWarningsProduced || iTotalErrorsProduced) {
+            info(
+                std::format(
+                    "\n---------------------------------------------------\nTotal warnings produced: "
+                    "{}.\nTotal errors produced: {}.",
+                    iTotalWarningsProduced,
+                    iTotalErrorsProduced),
+                "");
+        }
+    }
+
     Logger& Logger::get() {
         static Logger logger;
         return logger;
@@ -43,6 +55,7 @@ namespace ne {
             std::filesystem::path(location.file_name()).filename().string(),
             location.line(),
             sText));
+        iTotalWarningsProduced += 1;
     }
 
     void Logger::error(
@@ -56,6 +69,7 @@ namespace ne {
             std::filesystem::path(location.file_name()).filename().string(),
             location.line(),
             sText));
+        iTotalErrorsProduced += 1;
     }
 
     std::filesystem::path Logger::getDirectoryWithLogs() const { return sLoggerWorkingDirectory; }

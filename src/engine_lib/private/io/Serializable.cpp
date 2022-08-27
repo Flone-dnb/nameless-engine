@@ -1,5 +1,7 @@
 ﻿#include "io/Serializable.h"
 
+#include "Reflection_impl.hpp"
+
 namespace ne {
     std::optional<Error>
     Serializable::serialize(const std::filesystem::path& pathToFile, bool bEnableBackup) {

@@ -12,7 +12,7 @@
 #include "EditorGameInstance.h"
 #include "game/Window.h"
 
-#include "game/nodes/Node.h"
+#include "io/Serializable.h"
 
 int main() {
 // Enable run-time memory check for debug builds.
@@ -26,24 +26,25 @@ int main() {
     const std::filesystem::path pathToFile = "MyCoolNode.toml";
 
     // Serialize.
-    ne::Node node("My Cool Node");
-    auto optionalError = node.serialize(pathToFile, true);
-    if (optionalError.has_value()) {
-        auto err = optionalError.value();
-        err.addEntry();
-        err.showError();
-        throw std::runtime_error(err.getError());
-    }
+    // ne::Node node("My Cool Node");
+    // auto optionalError = node.serialize(pathToFile, true);
+    // if (optionalError.has_value()) {
+    //     auto err = optionalError.value();
+    //     err.addEntry();
+    //     err.showError();
+    //     throw std::runtime_error(err.getError());
+    // }
 
     // Deserialize.
-    auto deserializeResult = ne::Serializable::deserialize<ne::Node>(pathToFile);
+    auto deserializeResult = ne::Serializable::deserialize<ne::Serializable>(pathToFile);
     if (std::holds_alternative<ne::Error>(deserializeResult)) {
         ne::Error error = std::get<ne::Error>(std::move(deserializeResult));
         error.addEntry();
         error.showError();
         throw std::runtime_error(error.getError());
     }
-    const auto pDeserializedObject = std::get<std::unique_ptr<ne::Node>>(std::move(deserializeResult));
+    const auto pDeserializedObject =
+        std::get<std::unique_ptr<ne::Serializable>>(std::move(deserializeResult));
 
     // End.
 

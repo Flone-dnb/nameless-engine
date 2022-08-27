@@ -18,7 +18,7 @@
 #define TOML11_PRESERVE_COMMENTS_BY_DEFAULT
 #include "toml11/toml.hpp"
 
-#include "Reflection.h"
+#include "Serializable.generated.h"
 
 namespace ne NENAMESPACE() {
     /**

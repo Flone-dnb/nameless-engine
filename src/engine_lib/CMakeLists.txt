@@ -40,12 +40,10 @@ set(ENGINE_WIN32_SOURCES
 )
 
 # Prepare engine general (cross-platform) sources.
-set(REFLECTION_FILE_NAME Reflection)
+set(REFLECTION_FILE_NAME Reflection_impl.hpp)
 set(REFLECTION_FILE_NAME ${REFLECTION_FILE_NAME} PARENT_SCOPE)
-file(REMOVE_RECURSE ${CMAKE_CURRENT_SOURCE_DIR}/../.generated)
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../.generated)
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/../.reflection/${REFLECTION_FILE_NAME}.h ${CMAKE_CURRENT_SOURCE_DIR}/../.generated/${REFLECTION_FILE_NAME}.h COPYONLY)
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/../.reflection/${REFLECTION_FILE_NAME}.cpp ${CMAKE_CURRENT_SOURCE_DIR}/../.generated/${REFLECTION_FILE_NAME}.cpp COPYONLY)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/../.reflection/${REFLECTION_FILE_NAME} ${CMAKE_CURRENT_SOURCE_DIR}/../.generated/${REFLECTION_FILE_NAME} COPYONLY)
 # Engine general (cross-platform) sources.
 set(ENGINE_LIB_SOURCES
     ${RELATIVE_EXT_PATH}/xxHash/xxhash.c
@@ -106,8 +104,7 @@ set(ENGINE_LIB_SOURCES
     public/game/nodes/Node.h
     public/io/DontSerializeProperty.h
     private/io/DontSerializeProperty.cpp
-    ../.generated/${REFLECTION_FILE_NAME}.h
-    ../.generated/${REFLECTION_FILE_NAME}.cpp
+    ../.generated/${REFLECTION_FILE_NAME}
     # add general (cross-platform) sources here...
 )
 
@@ -206,7 +203,7 @@ target_link_libraries(${PROJECT_NAME} PUBLIC Refureku)
 # Add a pre build step to run reflection code generator.
 add_custom_command(TARGET ${PROJECT_NAME} PRE_BUILD
 	WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
-	COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/Refureku/build/Bin/RefurekuGenerator ${CMAKE_CURRENT_SOURCE_DIR}/../.reflection/RefurekuSettings.toml && cd ${CMAKE_CURRENT_SOURCE_DIR}/../.reflection/merge_generated_reflection/ && go run ${CMAKE_CURRENT_SOURCE_DIR}/../.reflection/merge_generated_reflection/merge_generated_reflection.go ${CMAKE_CURRENT_SOURCE_DIR}/../.generated ${REFLECTION_FILE_NAME})
+	COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/Refureku/build/Bin/RefurekuGenerator ${CMAKE_CURRENT_SOURCE_DIR}/../.reflection/RefurekuSettings.toml && go run ${CMAKE_CURRENT_SOURCE_DIR}/../.reflection/merge_generated_reflection/merge_generated_reflection.go ${CMAKE_CURRENT_SOURCE_DIR}/../.generated ${REFLECTION_FILE_NAME})
 # ----------------------------------------------------------------------------------------------------------
 # Add generated headers to include directories.
 target_include_directories(${PROJECT_NAME} PUBLIC ../.generated)

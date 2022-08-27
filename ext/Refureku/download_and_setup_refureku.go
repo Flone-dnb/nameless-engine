@@ -299,6 +299,7 @@ func initialize_refureku_settings(
 
 	// Prepare variables for config.
 	var generated_dir_path = filepath.Join(src_directory, ".generated")
+	var reflection_dir_path = filepath.Join(src_directory, ".reflection")
 
 	compiler_id = strings.ToLower(compiler_id)
 	var compiler_binary_name = ""
@@ -324,7 +325,7 @@ func initialize_refureku_settings(
 
 	// Configure Refureku settings.
 	cfg.CodeGenManagerSettings.ToProcessDirectories = []string{src_directory}
-	cfg.CodeGenManagerSettings.IgnoredDirectories = []string{generated_dir_path}
+	cfg.CodeGenManagerSettings.IgnoredDirectories = []string{generated_dir_path, reflection_dir_path}
 	cfg.CodeGenUnitSettings.OutputDirectory = generated_dir_path
 	cfg.CodeGenUnitSettings.GeneratedHeaderFileNamePattern = "##FILENAME##.generated.h"
 	cfg.CodeGenUnitSettings.GeneratedSourceFileNamePattern = "##FILENAME##.generated_impl.h"

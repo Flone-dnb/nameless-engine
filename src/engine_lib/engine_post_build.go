@@ -175,15 +175,25 @@ func make_simlink_to_res(res_directory string, working_directory string, build_d
 
 func copy_ext_licenses(ext_directory string, build_directory string) {
 	var err error
+	// Check that 'ext' directory exists.
 	_, err = os.Stat(ext_directory)
 	if os.IsNotExist(err) {
 		fmt.Println("ERROR: engine_post_build.go: ext directory", ext_directory, "does not exist")
 		os.Exit(1)
 	}
 
+	// Check that build directory exists.
 	_, err = os.Stat(build_directory)
 	if os.IsNotExist(err) {
 		fmt.Println("ERROR: engine_post_build.go: build directory", build_directory, "does not exist")
+		os.Exit(1)
+	}
+
+	var engine_license_file_path = filepath.Join(ext_directory, "..", "LICENSE")
+	// Check that engine license file exists.
+	_, err = os.Stat(build_directory)
+	if os.IsNotExist(err) {
+		fmt.Println("ERROR: engine_post_build.go: engine license file", engine_license_file_path, "does not exist")
 		os.Exit(1)
 	}
 
@@ -271,6 +281,11 @@ func copy_ext_licenses(ext_directory string, build_directory string) {
 			}
 		}
 	}
+
+	// Copy engine license file.
+	fmt.Println("INFO: engine_post_build.go: copying engine license file")
+	copy(engine_license_file_path, filepath.Join(build_directory, "nameless-engine.txt"))
+	copied_licenses_count += 1
 
 	fmt.Println("SUCCESS: engine_post_build.go: copied", copied_licenses_count, "license file(-s)")
 }

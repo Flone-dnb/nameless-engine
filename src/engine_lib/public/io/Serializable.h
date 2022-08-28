@@ -343,8 +343,11 @@ namespace ne NENAMESPACE() {
 
         auto pInstance = pClass->makeSharedInstance<T>();
         if (!pInstance) {
-            return Error(
-                std::format("unable to make a Serializable object from class \"{}\"", pClass->getName()));
+            return Error(std::format(
+                "unable to make an object of type \"{}\" using type's default constructor "
+                "(does type \"{}\" has a default constructor?)",
+                pClass->getName(),
+                pClass->getName()));
         }
 
         for (auto& sFieldName : vKeys) {

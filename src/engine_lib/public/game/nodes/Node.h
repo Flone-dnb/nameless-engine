@@ -14,7 +14,7 @@ namespace ne NENAMESPACE() {
      */
     class NECLASS() Node : public Serializable {
     public:
-        /** Creates a node with a name "Node". */
+        /** Creates a node with the name "Node". */
         Node();
 
         /**

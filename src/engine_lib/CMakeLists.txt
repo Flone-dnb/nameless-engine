@@ -199,12 +199,10 @@ set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} /ignore:4006")
 set(CMAKE_STATIC_LINKER_FLAGS "${CMAKE_STATIC_LINKER_FLAGS} /ignore:4006")
 target_link_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/Refureku/build/Lib)
 target_link_libraries(${PROJECT_NAME} PUBLIC Refureku)
-# ----------------------------------------------------------------------------------------------------------
 # Add a pre build step to run reflection code generator.
 add_custom_command(TARGET ${PROJECT_NAME} PRE_BUILD
 	WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
 	COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/Refureku/build/Bin/RefurekuGenerator ${CMAKE_CURRENT_SOURCE_DIR}/../.reflection/RefurekuSettings.toml && go run ${CMAKE_CURRENT_SOURCE_DIR}/../.reflection/merge_generated_reflection/merge_generated_reflection.go ${CMAKE_CURRENT_SOURCE_DIR}/../.generated ${REFLECTION_FILE_NAME})
-# ----------------------------------------------------------------------------------------------------------
 # Add generated headers to include directories.
 target_include_directories(${PROJECT_NAME} PUBLIC ../.generated)
 # Copy Refureku DLL to the top level binary directory.

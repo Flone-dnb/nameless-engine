@@ -113,7 +113,7 @@ namespace ne NENAMESPACE() {
          * if (std::holds_alternative<ne::Error>(result)){
          *     // process error here
          * }
-         * auto pMyCoolNode = std::get<std::unique_ptr<ne::Node>>(std::move(result));
+         * auto pMyCoolNode = std::get<std::shared_ptr<ne::Node>>(std::move(result));
          * @endcode
          *
          * @param pathToFile File to read reflected data from. The ".toml" extension will be added
@@ -123,7 +123,7 @@ namespace ne NENAMESPACE() {
          */
         template <typename T>
         requires std::derived_from<T, Serializable>
-        static std::variant<std::unique_ptr<T>, Error> deserialize(const std::filesystem::path& pathToFile);
+        static std::variant<std::shared_ptr<T>, Error> deserialize(const std::filesystem::path& pathToFile);
 
         /**
          * Deserializes the type and all reflected fields (including inherited) from a toml value.
@@ -143,7 +143,7 @@ namespace ne NENAMESPACE() {
          */
         template <typename T>
         requires std::derived_from<T, Serializable>
-        static std::variant<std::unique_ptr<T>, Error>
+        static std::variant<std::shared_ptr<T>, Error>
         deserialize(toml::value& tomlData, std::string sEntityId = "");
 
     private:
@@ -206,7 +206,7 @@ namespace ne NENAMESPACE() {
     };
 
     template <typename T>
-    requires std::derived_from<T, Serializable> std::variant<std::unique_ptr<T>, Error>
+    requires std::derived_from<T, Serializable> std::variant<std::shared_ptr<T>, Error>
     Serializable::deserialize(const std::filesystem::path& pathToFile) {
         // Add TOML extension to file.
         auto fixedPath = pathToFile;
@@ -247,7 +247,7 @@ namespace ne NENAMESPACE() {
     }
 
     template <typename T>
-    requires std::derived_from<T, Serializable> std::variant<std::unique_ptr<T>, Error>
+    requires std::derived_from<T, Serializable> std::variant<std::shared_ptr<T>, Error>
     Serializable::deserialize(toml::value & tomlData, std::string sEntityId) {
         if (sEntityId.empty()) {
             // Put something as entity ID so it would not look weird.
@@ -341,7 +341,7 @@ namespace ne NENAMESPACE() {
                 staticGetArchetype().getName()));
         }
 
-        auto pInstance = pClass->makeUniqueInstance<T>();
+        auto pInstance = pClass->makeSharedInstance<T>();
         if (!pInstance) {
             return Error(
                 std::format("unable to make a Serializable object from class \"{}\"", pClass->getName()));
@@ -515,7 +515,7 @@ namespace ne NENAMESPACE() {
                     err.addEntry();
                     return err;
                 }
-                auto pSubEntity = std::get<std::unique_ptr<Serializable>>(std::move(result));
+                auto pSubEntity = std::get<std::shared_ptr<Serializable>>(std::move(result));
 
                 // Move object to field.
                 cloneSerializableObject(

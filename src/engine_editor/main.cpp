@@ -43,7 +43,7 @@ int main() {
         error.showError();
         throw std::runtime_error(error.getError());
     }
-    const auto pDeserializedObject = std::get<std::unique_ptr<ne::Node>>(std::move(deserializeResult));
+    const auto pDeserializedObject = std::get<std::shared_ptr<ne::Node>>(std::move(deserializeResult));
 
     // End.
 

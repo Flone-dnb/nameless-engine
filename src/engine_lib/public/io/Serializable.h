@@ -8,7 +8,6 @@
 
 // Custom.
 #include "misc/Error.h"
-#include "io/DontSerializeProperty.h"
 #include "io/Logger.h"
 #include "io/ConfigManager.h"
 
@@ -122,7 +121,7 @@ namespace ne NENAMESPACE() {
          * @return Error if something went wrong, a unique pointer to deserialized entity.
          */
         template <typename T>
-        requires std::derived_from<T, Serializable>
+            requires std::derived_from<T, Serializable>
         static std::variant<std::shared_ptr<T>, Error> deserialize(const std::filesystem::path& pathToFile);
 
         /**
@@ -142,7 +141,7 @@ namespace ne NENAMESPACE() {
          * Use a dynamic_cast to cast to wanted type.
          */
         template <typename T>
-        requires std::derived_from<T, Serializable>
+            requires std::derived_from<T, Serializable>
         static std::variant<std::shared_ptr<T>, Error>
         deserialize(toml::value& tomlData, std::string sEntityId = "");
 
@@ -206,7 +205,8 @@ namespace ne NENAMESPACE() {
     };
 
     template <typename T>
-    requires std::derived_from<T, Serializable> std::variant<std::shared_ptr<T>, Error>
+        requires std::derived_from<T, Serializable>
+    std::variant<std::shared_ptr<T>, Error>
     Serializable::deserialize(const std::filesystem::path& pathToFile) {
         // Add TOML extension to file.
         auto fixedPath = pathToFile;
@@ -247,8 +247,9 @@ namespace ne NENAMESPACE() {
     }
 
     template <typename T>
-    requires std::derived_from<T, Serializable> std::variant<std::shared_ptr<T>, Error>
-    Serializable::deserialize(toml::value & tomlData, std::string sEntityId) {
+        requires std::derived_from<T, Serializable>
+    std::variant<std::shared_ptr<T>, Error>
+    Serializable::deserialize(toml::value& tomlData, std::string sEntityId) {
         if (sEntityId.empty()) {
             // Put something as entity ID so it would not look weird.
             sEntityId = "0";
@@ -530,6 +531,6 @@ namespace ne NENAMESPACE() {
 
         return pInstance;
     }
-}; // namespace )
+}; // namespace ne NENAMESPACE()
 
 File_Serializable_GENERATED

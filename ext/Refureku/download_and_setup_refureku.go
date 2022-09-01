@@ -245,6 +245,7 @@ func initialize_refureku_settings(
 			CppVersion                     int      `toml:"cppVersion"`
 			ProjectIncludeDirectories      []string `toml:"projectIncludeDirectories"`
 			CompilerExeName                string   `toml:"compilerExeName"`
+			AdditionalClangArguments       string   `toml:"additionalClangArguments"`
 			ShouldAbortParsingOnFirstError bool     `toml:"shouldAbortParsingOnFirstError"`
 			ShouldParseAllNamespaces       bool     `toml:"shouldParseAllNamespaces"`
 			ShouldParseAllClasses          bool     `toml:"shouldParseAllClasses"`
@@ -331,6 +332,7 @@ func initialize_refureku_settings(
 	cfg.CodeGenUnitSettings.GeneratedSourceFileNamePattern = "##FILENAME##.generated_impl.h"
 	cfg.ParsingSettings.ProjectIncludeDirectories = include_directories
 	cfg.ParsingSettings.CompilerExeName = compiler_binary_name
+	cfg.ParsingSettings.AdditionalClangArguments = "-Wno-ignored-attributes"
 	cfg.ParsingSettings.CppVersion = cpp_standard
 	// WARNING: if changing macro names also change them in Doxyfile in PREDEFINED section
 	cfg.ParsingSettings.NamespaceMacroName = "NENAMESPACE"

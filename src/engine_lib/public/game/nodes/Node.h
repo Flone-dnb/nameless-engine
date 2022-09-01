@@ -1,5 +1,6 @@
 ﻿#pragma once
 
+// Custom.
 #include "io/Serializable.h"
 
 #include "Node.generated.h"
@@ -49,6 +50,6 @@ namespace ne NENAMESPACE() {
 
         ne_Node_GENERATED
     };
-} // namespace )
+} // namespace ne NENAMESPACE()
 
 File_Node_GENERATED

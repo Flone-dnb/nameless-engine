@@ -185,7 +185,15 @@ add_subdirectory(${RELATIVE_EXT_PATH}/portable-file-dialogs ${DEPENDENCY_BUILD_D
 target_link_libraries(${PROJECT_NAME} PUBLIC portable_file_dialogs)
 
 # External: Refureku
-set(REFUREKU_INCLUDE_DIRECTORIES "\"${CMAKE_CURRENT_SOURCE_DIR}/../../ext/|${CMAKE_CURRENT_SOURCE_DIR}/public/|${CMAKE_CURRENT_SOURCE_DIR}/private|${CMAKE_CURRENT_SOURCE_DIR}/../../ext/Refureku/build/Include/\"")
+set(REFUREKU_INCLUDE_DIRECTORIES 
+    "\"${CMAKE_CURRENT_SOURCE_DIR}/../../ext/|\
+${CMAKE_CURRENT_SOURCE_DIR}/../../ext/glfw/include|\
+${CMAKE_CURRENT_SOURCE_DIR}/../../ext/DirectX-Headers/include|\
+${CMAKE_CURRENT_SOURCE_DIR}/../../ext/spdlog/include|\
+${CMAKE_CURRENT_SOURCE_DIR}/../../ext/source_location/include|\
+${CMAKE_CURRENT_SOURCE_DIR}/../.generated|\
+${CMAKE_CURRENT_SOURCE_DIR}/public/|\
+${CMAKE_CURRENT_SOURCE_DIR}/private|${CMAKE_CURRENT_SOURCE_DIR}/../../ext/Refureku/build/Include/\"")
 add_custom_command(TARGET ${PROJECT_NAME} PRE_BUILD
                 WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/Refureku/
                 COMMAND go run ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/Refureku/download_and_setup_refureku.go
@@ -205,7 +213,8 @@ target_link_libraries(${PROJECT_NAME} PUBLIC Refureku)
 # Add a pre build step to run reflection code generator.
 add_custom_command(TARGET ${PROJECT_NAME} PRE_BUILD
 	WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
-	COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/Refureku/build/Bin/RefurekuGenerator ${CMAKE_CURRENT_SOURCE_DIR}/../.reflection/RefurekuSettings.toml && go run ${CMAKE_CURRENT_SOURCE_DIR}/../.reflection/merge_generated_reflection/merge_generated_reflection.go ${CMAKE_CURRENT_SOURCE_DIR}/../.generated ${REFLECTION_FILE_NAME})
+	COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/Refureku/build/Bin/RefurekuGenerator ${CMAKE_CURRENT_SOURCE_DIR}/../.reflection/RefurekuSettings.toml
+    COMMAND go run ${CMAKE_CURRENT_SOURCE_DIR}/../.reflection/merge_generated_reflection/merge_generated_reflection.go ${CMAKE_CURRENT_SOURCE_DIR}/../.generated ${REFLECTION_FILE_NAME})
 # Add generated headers to include directories.
 target_include_directories(${PROJECT_NAME} PUBLIC ../.generated)
 # Copy Refureku DLL to the top level binary directory.
@@ -324,5 +333,6 @@ include(Catch)
 
 # Add includes.
 target_include_directories(${PROJECT_NAME} PUBLIC ${RELATIVE_EXT_PATH})
+target_include_directories(${PROJECT_NAME} PUBLIC ${RELATIVE_EXT_PATH}/source_location/include)
 target_include_directories(${PROJECT_NAME} PUBLIC public)
 target_include_directories(${PROJECT_NAME} PUBLIC private)

@@ -9,14 +9,14 @@
 #include "misc/MessageBox.h"
 
 namespace ne {
-    Error::Error(std::string_view sMessage, const std::source_location location) {
+    Error::Error(std::string_view sMessage, const nostd::source_location location) {
         this->sMessage = sMessage;
 
-        stack.push_back(location);
+        stack.push_back(sourceLocationToInfo(location));
     }
 
 #if defined(WIN32)
-    Error::Error(const HRESULT hResult, const std::source_location location) {
+    Error::Error(const HRESULT hResult, const nostd::source_location location) {
         LPSTR errorText = nullptr;
 
         FormatMessageA(
@@ -40,10 +40,10 @@ namespace ne {
             sMessage += "unknown error";
         }
 
-        stack.push_back(location);
+        stack.push_back(sourceLocationToInfo(location));
     }
 
-    Error::Error(unsigned long errorCode, const std::source_location location) {
+    Error::Error(unsigned long errorCode, const nostd::source_location location) {
         LPSTR messageBuffer = nullptr;
 
         // Ask Win32 to give us the string version of that message ID.
@@ -72,11 +72,13 @@ namespace ne {
             LocalFree(messageBuffer);
         }
 
-        stack.push_back(location);
+        stack.push_back(sourceLocationToInfo(location));
     }
 #endif
 
-    void Error::addEntry(const std::source_location location) { stack.push_back(location); }
+    void Error::addEntry(const nostd::source_location location) {
+        stack.push_back(sourceLocationToInfo(location));
+    }
 
     std::string Error::getError() const {
         std::string sErrorMessage = "An error occurred: ";
@@ -85,9 +87,9 @@ namespace ne {
 
         for (const auto entry : stack) {
             sErrorMessage += "- at ";
-            sErrorMessage += std::filesystem::path(entry.file_name()).filename().string();
+            sErrorMessage += entry.sFilename;
             sErrorMessage += ", ";
-            sErrorMessage += std::to_string(entry.line());
+            sErrorMessage += entry.sLine;
             sErrorMessage += "\n";
         }
 
@@ -108,5 +110,13 @@ namespace ne {
 #if defined(WIN32)
 #pragma pop_macro("MessageBox")
 #endif
+    }
+
+    SourceLocationInfo Error::sourceLocationToInfo(const nostd::source_location& location) {
+        SourceLocationInfo info;
+        info.sFilename = std::filesystem::path(location.file_name()).filename().string();
+        info.sLine = std::to_string(location.line());
+
+        return info;
     }
 } // namespace ne

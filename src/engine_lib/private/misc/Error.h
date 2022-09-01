@@ -3,13 +3,21 @@
 // STL.
 #include <string_view>
 #include <vector>
-#include <source_location>
+#include "source_location.hpp" // TODO: remove when Clang or GCC will have support for std::source_location
 
 #if defined(WIN32)
 #include <Windows.h>
 #endif
 
 namespace ne {
+    /** Information of a specific source code location. */
+    struct SourceLocationInfo {
+        /** Filename. */
+        std::string sFilename;
+        /** Line number. */
+        std::string sLine;
+    };
+
     /**
      * Helper class to store error messages.
      */
@@ -22,7 +30,8 @@ namespace ne {
          * @param location  Should be empty.
          */
         Error(
-            std::string_view sMessage, const std::source_location location = std::source_location::current());
+            std::string_view sMessage,
+            const nostd::source_location location = nostd::source_location::current());
 
 #if defined(WIN32)
         /**
@@ -31,7 +40,8 @@ namespace ne {
          * @param hResult   HRESULT that contains an error.
          * @param location  Should be empty.
          */
-        Error(const HRESULT hResult, const std::source_location location = std::source_location::current());
+        Error(
+            const HRESULT hResult, const nostd::source_location location = nostd::source_location::current());
 
         /**
          * Construct a new Error object.
@@ -39,7 +49,9 @@ namespace ne {
          * @param errorCode Error code returned by GetLastError().
          * @param location  Should be empty.
          */
-        Error(unsigned long errorCode, const std::source_location location = std::source_location::current());
+        Error(
+            unsigned long errorCode,
+            const nostd::source_location location = nostd::source_location::current());
 #endif
 
         Error() = delete;
@@ -82,7 +94,7 @@ namespace ne {
          *
          * @param location  Should be empty.
          */
-        void addEntry(const std::source_location location = std::source_location::current());
+        void addEntry(const nostd::source_location location = nostd::source_location::current());
 
         /**
          * Creates an error string that
@@ -107,9 +119,20 @@ namespace ne {
         void showError() const;
 
     protected:
+        /**
+         * Converts source_location instance to location information.
+         *
+         * @param location Source location instance.
+         *
+         * @return Location information.
+         */
+        static SourceLocationInfo sourceLocationToInfo(const nostd::source_location& location);
+
+    private:
         /** Initial error message (string version). */
         std::string sMessage;
+
         /** Error stack. */
-        std::vector<std::source_location> stack;
+        std::vector<SourceLocationInfo> stack;
     };
 } // namespace ne

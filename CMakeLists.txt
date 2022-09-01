@@ -50,7 +50,8 @@ add_dependencies(${PROJECT_NAME} engine_lib)
 # Add a pre build step to run reflection code generator.
 add_custom_command(TARGET ${PROJECT_NAME} PRE_BUILD
 	WORKING_DIRECTORY ${EDITOR_SRC_ABSOLUTE_PATH}/../
-	COMMAND ${PATH_TO_EXT}/Refureku/build/Bin/RefurekuGenerator ${EDITOR_SRC_ABSOLUTE_PATH}/../.reflection/RefurekuSettings.toml && go run ${EDITOR_SRC_ABSOLUTE_PATH}/../.reflection/merge_generated_reflection/merge_generated_reflection.go ${EDITOR_SRC_ABSOLUTE_PATH}/../.generated ${REFLECTION_FILE_NAME})
+	COMMAND ${PATH_TO_EXT}/Refureku/build/Bin/RefurekuGenerator ${EDITOR_SRC_ABSOLUTE_PATH}/../.reflection/RefurekuSettings.toml
+    COMMAND go run ${EDITOR_SRC_ABSOLUTE_PATH}/../.reflection/merge_generated_reflection/merge_generated_reflection.go ${EDITOR_SRC_ABSOLUTE_PATH}/../.generated ${REFLECTION_FILE_NAME})
 
 # set standard
 set(PROJECT_CXX_STANDARD_VERSION 23)

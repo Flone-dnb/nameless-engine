@@ -32,7 +32,7 @@ namespace ne {
     }
 
     void Logger::info(
-        std::string_view sText, std::string_view sCategory, const std::source_location location) const {
+        std::string_view sText, std::string_view sCategory, const nostd::source_location location) const {
         if (sCategory.empty()) {
             sCategory = sDefaultLogCategory;
         }
@@ -45,7 +45,7 @@ namespace ne {
     }
 
     void Logger::warn(
-        std::string_view sText, std::string_view sCategory, const std::source_location location) const {
+        std::string_view sText, std::string_view sCategory, const nostd::source_location location) const {
         if (sCategory.empty()) {
             sCategory = sDefaultLogCategory;
         }
@@ -59,7 +59,7 @@ namespace ne {
     }
 
     void Logger::error(
-        std::string_view sText, std::string_view sCategory, const std::source_location location) const {
+        std::string_view sText, std::string_view sCategory, const nostd::source_location location) const {
         if (sCategory.empty()) {
             sCategory = sDefaultLogCategory;
         }

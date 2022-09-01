@@ -3,7 +3,7 @@
 // Std.
 #include <memory>
 #include <filesystem>
-#include <source_location>
+#include "source_location.hpp" // TODO: remove when Clang or GCC will have support for std::source_location
 
 // External.
 #include "spdlog/spdlog.h"
@@ -40,7 +40,7 @@ namespace ne {
         void info(
             std::string_view sText,
             std::string_view sCategory,
-            const std::source_location location = std::source_location::current()) const;
+            const nostd::source_location location = nostd::source_location::current()) const;
 
         /**
          * Add text to console and log file using "warning" category.
@@ -55,7 +55,7 @@ namespace ne {
         void warn(
             std::string_view sText,
             std::string_view sCategory,
-            const std::source_location location = std::source_location::current()) const;
+            const nostd::source_location location = nostd::source_location::current()) const;
 
         /**
          * Add text to console and log file using "error" category.
@@ -70,7 +70,7 @@ namespace ne {
         void error(
             std::string_view sText,
             std::string_view sCategory,
-            const std::source_location location = std::source_location::current()) const;
+            const nostd::source_location location = nostd::source_location::current()) const;
 
         /**
          * Returns the directory that contains all logs.

@@ -201,6 +201,9 @@ namespace ne NENAMESPACE() {
         /** Name of the key in which to store name of the field a section represents. */
         static inline auto const sSubEntityFieldNameKey = ".field_name";
 
+        /** Name of the key which we use when there is nothing to serialize. */
+        static inline auto const sNothingToSerializeKey = ".none";
+
         ne_Serializable_GENERATED
     };
 
@@ -328,6 +331,8 @@ namespace ne NENAMESPACE() {
         const auto sectionTable = section.as_table();
         std::vector<std::string> vKeys;
         for (const auto& key : sectionTable | std::views::keys) {
+            if (key == sNothingToSerializeKey)
+                continue;
             vKeys.push_back(key);
         }
 

@@ -58,6 +58,7 @@ namespace ne {
             sEntityId = "0";
         }
 
+        // Create section.
         const auto sSectionName = std::format("{}.{}", sEntityId, std::to_string(selfArchetype.getId()));
 
         struct Data {
@@ -68,6 +69,7 @@ namespace ne {
             std::optional<Error> error = {};
             std::string sEntityId;
             size_t iSubEntityId = 0;
+            size_t iTotalFieldsSerialized = 0;
         };
 
         Data loopData{this, &selfArchetype, &tomlData, sSectionName, {}, sEntityId};
@@ -141,6 +143,7 @@ namespace ne {
                         return false;
                     }
 
+                    pData->iTotalFieldsSerialized += 1;
                     return true;
                 }
 
@@ -160,6 +163,11 @@ namespace ne {
             auto err = std::move(loopData.error.value());
             err.addEntry();
             return err;
+        }
+
+        // Add at least one value to be valid TOML data.
+        if (loopData.iTotalFieldsSerialized == 0) {
+            tomlData[sSectionName][sNothingToSerializeKey] = "nothing to serialize here";
         }
 
         return sSectionName;

@@ -67,6 +67,7 @@ Prerequisites:
 
 - compiler that supports C++23
 - [CMake](https://cmake.org/download/)
+- [Doxygen](https://doxygen.nl/download.html)
 - [Go](https://go.dev/dl/)
 
 First, clone this repository:

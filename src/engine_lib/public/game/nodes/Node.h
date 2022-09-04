@@ -50,6 +50,6 @@ namespace ne NENAMESPACE() {
 
         ne_Node_GENERATED
     };
-} // namespace ne NENAMESPACE()
+} // namespace )
 
 File_Node_GENERATED

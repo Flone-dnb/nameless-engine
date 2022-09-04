@@ -242,34 +242,35 @@ func initialize_refureku_settings(
 			HeaderFileFooterMacroPattern   string `toml:"headerFileFooterMacroPattern"`
 		}
 		ParsingSettings struct {
-			CppVersion                     int      `toml:"cppVersion"`
-			ProjectIncludeDirectories      []string `toml:"projectIncludeDirectories"`
-			CompilerExeName                string   `toml:"compilerExeName"`
-			AdditionalClangArguments       string   `toml:"additionalClangArguments"`
-			ShouldAbortParsingOnFirstError bool     `toml:"shouldAbortParsingOnFirstError"`
-			ShouldParseAllNamespaces       bool     `toml:"shouldParseAllNamespaces"`
-			ShouldParseAllClasses          bool     `toml:"shouldParseAllClasses"`
-			ShouldParseAllStructs          bool     `toml:"shouldParseAllStructs"`
-			ShouldParseAllVariables        bool     `toml:"shouldParseAllVariables"`
-			ShouldParseAllFields           bool     `toml:"shouldParseAllFields"`
-			ShouldParseAllFunctions        bool     `toml:"shouldParseAllFunctions"`
-			ShouldParseAllMethods          bool     `toml:"shouldParseAllMethods"`
-			ShouldParseAllEnums            bool     `toml:"shouldParseAllEnums"`
-			ShouldParseAllEnumValues       bool     `toml:"shouldParseAllEnumValues"`
-			ShouldLogDiagnostic            bool     `toml:"shouldLogDiagnostic"`
-			PropertySeparator              string   `toml:"propertySeparator"`
-			SubPropertySeparator           string   `toml:"subPropertySeparator"`
-			SubPropertyStartEncloser       string   `toml:"subPropertyStartEncloser"`
-			SubPropertyEndEncloser         string   `toml:"subPropertyEndEncloser"`
-			NamespaceMacroName             string   `toml:"namespaceMacroName"`
-			ClassMacroName                 string   `toml:"classMacroName"`
-			StructMacroName                string   `toml:"structMacroName"`
-			VariableMacroName              string   `toml:"variableMacroName"`
-			FieldMacroName                 string   `toml:"fieldMacroName"`
-			FunctionMacroName              string   `toml:"functionMacroName"`
-			MethodMacroName                string   `toml:"methodMacroName"`
-			EnumMacroName                  string   `toml:"enumMacroName"`
-			EnumValueMacroName             string   `toml:"enumValueMacroName"`
+			CppVersion                            int      `toml:"cppVersion"`
+			ProjectIncludeDirectories             []string `toml:"projectIncludeDirectories"`
+			CompilerExeName                       string   `toml:"compilerExeName"`
+			AdditionalClangArguments              string   `toml:"additionalClangArguments"`
+			ShouldFailCodeGenerationOnClangErrors bool     `toml:"shouldFailCodeGenerationOnClangErrors"`
+			ShouldAbortParsingOnFirstError        bool     `toml:"shouldAbortParsingOnFirstError"`
+			ShouldParseAllNamespaces              bool     `toml:"shouldParseAllNamespaces"`
+			ShouldParseAllClasses                 bool     `toml:"shouldParseAllClasses"`
+			ShouldParseAllStructs                 bool     `toml:"shouldParseAllStructs"`
+			ShouldParseAllVariables               bool     `toml:"shouldParseAllVariables"`
+			ShouldParseAllFields                  bool     `toml:"shouldParseAllFields"`
+			ShouldParseAllFunctions               bool     `toml:"shouldParseAllFunctions"`
+			ShouldParseAllMethods                 bool     `toml:"shouldParseAllMethods"`
+			ShouldParseAllEnums                   bool     `toml:"shouldParseAllEnums"`
+			ShouldParseAllEnumValues              bool     `toml:"shouldParseAllEnumValues"`
+			ShouldLogDiagnostic                   bool     `toml:"shouldLogDiagnostic"`
+			PropertySeparator                     string   `toml:"propertySeparator"`
+			SubPropertySeparator                  string   `toml:"subPropertySeparator"`
+			SubPropertyStartEncloser              string   `toml:"subPropertyStartEncloser"`
+			SubPropertyEndEncloser                string   `toml:"subPropertyEndEncloser"`
+			NamespaceMacroName                    string   `toml:"namespaceMacroName"`
+			ClassMacroName                        string   `toml:"classMacroName"`
+			StructMacroName                       string   `toml:"structMacroName"`
+			VariableMacroName                     string   `toml:"variableMacroName"`
+			FieldMacroName                        string   `toml:"fieldMacroName"`
+			FunctionMacroName                     string   `toml:"functionMacroName"`
+			MethodMacroName                       string   `toml:"methodMacroName"`
+			EnumMacroName                         string   `toml:"enumMacroName"`
+			EnumValueMacroName                    string   `toml:"enumValueMacroName"`
 		}
 	}
 
@@ -334,6 +335,7 @@ func initialize_refureku_settings(
 	cfg.ParsingSettings.CompilerExeName = compiler_binary_name
 	cfg.ParsingSettings.AdditionalClangArguments = "-Wno-ignored-attributes"
 	cfg.ParsingSettings.CppVersion = cpp_standard
+	cfg.ParsingSettings.ShouldFailCodeGenerationOnClangErrors = true
 	// WARNING: if changing macro names also change them in Doxyfile in PREDEFINED section
 	cfg.ParsingSettings.NamespaceMacroName = "NENAMESPACE"
 	cfg.ParsingSettings.ClassMacroName = "NECLASS"

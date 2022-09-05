@@ -57,7 +57,39 @@ add_custom_command(TARGET ${PROJECT_NAME} PRE_BUILD
 set(PROJECT_CXX_STANDARD_VERSION 23)
 target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_${PROJECT_CXX_STANDARD_VERSION})
 
+# set folder
 set_target_properties(${PROJECT_NAME} PROPERTIES FOLDER ${ENGINE_FOLDER})
+
+# clang-tidy
+find_program (CLANG_TIDY NAMES "clang-tidy")
+if(CLANG_TIDY)
+    message(STATUS "Found clang-tidy at ${CLANG_TIDY}")
+    set(CMAKE_CXX_CLANG_TIDY "clang-tidy;--config-file=${CMAKE_CURRENT_LIST_DIR}/.clang-tidy")
+    # because standard version is not exported with -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+    if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+        target_compile_options(${PROJECT_NAME} PUBLIC /std:c++${PROJECT_CXX_STANDARD_VERSION})
+    elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+        target_compile_options(${PROJECT_NAME} PUBLIC --std=c++${PROJECT_CXX_STANDARD_VERSION})
+    elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+        if(${PROJECT_CXX_STANDARD_VERSION} == 23)
+            target_compile_options(${PROJECT_NAME} PUBLIC -std=c++2b)
+        else()
+            target_compile_options(${PROJECT_NAME} PUBLIC -std=c++${PROJECT_CXX_STANDARD_VERSION})
+        endif()
+    endif()
+else()
+    message(FATAL "clang-tidy not found")
+    set(CMAKE_CXX_CLANG_TIDY "" CACHE STRING "" FORCE)
+endif()
+
+# asan
+if(CMAKE_BUILD_TYPE MATCHES "^[Dd]ebug")
+    if(NOT CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+        message(STATUS "Adding ASan flags.")
+        set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fno-omit-frame-pointer -fsanitize=address")
+        set (CMAKE_LINKER_FLAGS_DEBUG "${CMAKE_LINKER_FLAGS_DEBUG} -fno-omit-frame-pointer -fsanitize=address")
+    endif()
+endif()
 
 # doxygen
 find_package(Doxygen)

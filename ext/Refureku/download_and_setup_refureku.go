@@ -1,7 +1,7 @@
 package main
 
 import (
-	"archive/zip"
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -13,6 +13,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/codeclysm/extract/v3"
 	"github.com/pelletier/go-toml/v2"
 )
 
@@ -43,13 +44,11 @@ func main() {
 		archive_url = "https://github.com/jsoysouvanh/Refureku/releases/download/" +
 			refureku_version_tag + "/rfk_" + refureku_version_tag + "_windows.zip"
 	} else if runtime.GOOS == "linux" {
-		// TODO: there is a different archive (tar)
-		fmt.Println("ERROR: download_and_setup_refureku.go: not implemented for Linux.")
-		os.Exit(1)
+		archive_url = "https://github.com/jsoysouvanh/Refureku/releases/download/" +
+			refureku_version_tag + "/rfk_" + refureku_version_tag + "_linux.tar.gz"
 	} else if runtime.GOOS == "macos" {
-		// TODO: there is a different archive (tar)
-		fmt.Println("ERROR: download_and_setup_refureku.go: not implemented for MacOS.")
-		os.Exit(1)
+		archive_url = "https://github.com/jsoysouvanh/Refureku/releases/download/" +
+			refureku_version_tag + "/rfk_" + refureku_version_tag + "_macos.tar.gz"
 	}
 
 	// Setup directory "build" to unzip archive there.
@@ -135,68 +134,21 @@ func remove_old_refureku_build(working_directory string) {
 }
 
 func unzip(src string, dest string) {
-	r, err := zip.OpenReader(src)
+	var archive, err = os.Open(src)
 	if err != nil {
-		fmt.Println("ERROR: download_and_setup_refureku.go: open zip reader, error:", err)
+		fmt.Println("ERROR: download_and_setup_refureku.go: failed to read archive file, error:", err)
 		os.Exit(1)
 	}
-	defer func() {
-		if err := r.Close(); err != nil {
-			fmt.Println("ERROR: download_and_setup_refureku.go: error:", err)
-			os.Exit(1)
-		}
-	}()
 
-	os.MkdirAll(dest, 0755)
-
-	// Closure to address file descriptors issue with all the deferred .Close() methods
-	extractAndWriteFile := func(f *zip.File) {
-		rc, err := f.Open()
-		if err != nil {
-			fmt.Println("ERROR: download_and_setup_refureku.go: error:", err)
-			os.Exit(1)
-		}
-		defer func() {
-			if err := rc.Close(); err != nil {
-				fmt.Println("ERROR: download_and_setup_refureku.go: error:", err)
-				os.Exit(1)
-			}
-		}()
-
-		path := filepath.Join(dest, f.Name)
-
-		// Check for ZipSlip (Directory traversal)
-		if !strings.HasPrefix(path, filepath.Clean(dest)+string(os.PathSeparator)) {
-			fmt.Println("ERROR: download_and_setup_refureku.go: illegal file path:", path)
-			os.Exit(1)
-		}
-
-		if f.FileInfo().IsDir() {
-			os.MkdirAll(path, f.Mode())
-		} else {
-			os.MkdirAll(filepath.Dir(path), f.Mode())
-			f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, f.Mode())
-			if err != nil {
-				fmt.Println("ERROR: download_and_setup_refureku.go: error:", err)
-				os.Exit(1)
-			}
-			defer func() {
-				if err := f.Close(); err != nil {
-					fmt.Println("ERROR: download_and_setup_refureku.go: error:", err)
-					os.Exit(1)
-				}
-			}()
-
-			_, err = io.Copy(f, rc)
-			if err != nil {
-				fmt.Println("ERROR: download_and_setup_refureku.go: error:", err)
-				os.Exit(1)
-			}
-		}
-	}
-
-	for _, f := range r.File {
-		extractAndWriteFile(f)
+	if strings.HasSuffix(src, ".zip") {
+		ctx := context.TODO()
+		extract.Zip(ctx, archive, dest, nil)
+	} else if strings.HasSuffix(src, "tar.gz") {
+		ctx := context.TODO()
+		extract.Gz(ctx, archive, dest, nil)
+	} else {
+		fmt.Println("ERROR: download_and_setup_refureku.go: unknown archive extension", src)
+		os.Exit(1)
 	}
 }
 

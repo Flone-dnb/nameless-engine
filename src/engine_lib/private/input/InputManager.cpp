@@ -1,11 +1,17 @@
 ﻿#include "input/InputManager.h"
 
 // STL.
+#include <charconv>
 #include <ranges>
+#include <string>
+#include <vector>
 
 // Custom.
 #include "io/Logger.h"
 #include "io/ConfigManager.h"
+
+// External.
+#include "fmt/core.h"
 
 namespace ne {
     std::optional<Error> InputManager::addActionEvent(
@@ -21,7 +27,7 @@ namespace ne {
 
         const auto action = vRegisteredActions.find(sActionName);
         if (action != vRegisteredActions.end()) {
-            return Error(std::format("an action with the name '{}' already exists", sActionName));
+            return Error(fmt::format("an action with the name '{}' already exists", sActionName));
         }
 
         auto optional = overwriteActionEvent(sActionName, vKeys);
@@ -45,7 +51,7 @@ namespace ne {
 
         const auto action = vRegisteredAxisEvents.find(sAxisName);
         if (action != vRegisteredAxisEvents.end()) {
-            return Error(std::format("an axis event with the name '{}' already exists", sAxisName));
+            return Error(fmt::format("an axis event with the name '{}' already exists", sAxisName));
         }
 
         auto optional = overwriteAxisEvent(sAxisName, vAxis);
@@ -66,7 +72,7 @@ namespace ne {
         auto actions = getAllActionEvents();
         const auto it = actions.find(sActionName);
         if (it == actions.end()) {
-            return Error(std::format("no action with the name '{}' exists", sActionName));
+            return Error(fmt::format("no action with the name '{}' exists", sActionName));
         }
 
         auto vActionKeys = getActionEvent(sActionName).value();
@@ -93,7 +99,7 @@ namespace ne {
         auto axes = getAllAxisEvents();
         const auto it = axes.find(sAxisName);
         if (it == axes.end()) {
-            return Error(std::format("no axis with the name '{}' exists", sAxisName));
+            return Error(fmt::format("no axis with the name '{}' exists", sAxisName));
         }
 
         auto vAxisKeys = getAxisEvent(sAxisName).value();
@@ -132,10 +138,10 @@ namespace ne {
             for (const auto& key : vActionKeys) {
                 if (std::holds_alternative<KeyboardKey>(key)) {
                     sActionKeysText +=
-                        std::format("k{},", std::to_string(static_cast<int>(std::get<KeyboardKey>(key))));
+                        fmt::format("k{},", std::to_string(static_cast<int>(std::get<KeyboardKey>(key))));
                 } else {
                     sActionKeysText +=
-                        std::format("m{},", std::to_string(static_cast<int>(std::get<MouseButton>(key))));
+                        fmt::format("m{},", std::to_string(static_cast<int>(std::get<MouseButton>(key))));
                 }
             }
 
@@ -150,7 +156,7 @@ namespace ne {
 
             // Put all keys in a string.
             for (const auto& pair : vAxisKeys) {
-                sAxisKeysText += std::format(
+                sAxisKeysText += fmt::format(
                     "{}-{},",
                     std::to_string(static_cast<int>(pair.first)),
                     std::to_string(static_cast<int>(pair.second)));
@@ -180,12 +186,12 @@ namespace ne {
         // Read sections.
         const auto vSections = manager.getAllSections();
         if (vSections.empty()) {
-            return Error(std::format("the specified file '{}' has no sections", sFileName));
+            return Error(fmt::format("the specified file '{}' has no sections", sFileName));
         }
 
         // Check that we only have 1 or 2 sections.
         if (vSections.size() > 2) {
-            return Error(std::format(
+            return Error(fmt::format(
                 "the specified file '{}' has {} sections, "
                 "while expected only 1 or 2 sections",
                 sFileName,
@@ -201,7 +207,7 @@ namespace ne {
             } else if (sSectionName == sAxisEventSectionName) {
                 bHasAxisEventsSection = true;
             } else {
-                return Error(std::format("section '{}' has unexpected name", sSectionName));
+                return Error(fmt::format("section '{}' has unexpected name", sSectionName));
             }
         }
 
@@ -225,14 +231,16 @@ namespace ne {
                 }
 
                 // Read keys from this action.
-                auto keys = manager.getValue<std::string>(sActionEventSectionName, sActionName, "");
+                std::string keys = manager.getValue<std::string>(sActionEventSectionName, sActionName, "");
                 if (keys.empty()) {
                     continue;
                 }
 
                 // Split string and process each key.
-                auto range = keys | std::views::split(',');
-                std::vector<std::string> vActionKeys{range.begin(), range.end()};
+                std::vector<std::string> vActionKeys;
+                for (const auto value : std::views::split(keys, ',')) {
+                    vActionKeys.push_back(std::string(value.begin(), value.end()));
+                }
                 std::vector<std::variant<KeyboardKey, MouseButton>> vOutActionKeys;
                 for (const auto& key : vActionKeys) {
                     if (key[0] == 'k') {
@@ -242,7 +250,7 @@ namespace ne {
                         auto [ptr, ec] = std::from_chars(
                             keyString.data(), keyString.data() + keyString.size(), iKeyboardKey);
                         if (ec != std::errc()) {
-                            return Error(std::format(
+                            return Error(fmt::format(
                                 "failed to convert '{}' to keyboard key code (error code: {})",
                                 keyString,
                                 static_cast<int>(ec)));
@@ -256,7 +264,7 @@ namespace ne {
                         auto [ptr, ec] = std::from_chars(
                             keyString.data(), keyString.data() + keyString.size(), iMouseButton);
                         if (ec != std::errc()) {
-                            return Error(std::format(
+                            return Error(fmt::format(
                                 "failed to convert '{}' to mouse button code (error code: {})",
                                 keyString,
                                 static_cast<int>(ec)));
@@ -301,15 +309,19 @@ namespace ne {
                 }
 
                 // Split string and process each key.
-                auto range = keys | std::views::split(',');
-                std::vector<std::string> vAxisKeys{range.begin(), range.end()};
+                std::vector<std::string> vAxisKeys;
+                for (const auto value : std::views::split(keys, ',')) {
+                    vAxisKeys.push_back(std::string(value.begin(), value.end()));
+                }
                 std::vector<std::pair<KeyboardKey, KeyboardKey>> vOutAxisKeys;
                 for (const auto& key : vAxisKeys) {
-                    auto plusMinusRange = key | std::views::split('-');
-                    std::vector<std::string> vPlusMinusKeys{plusMinusRange.begin(), plusMinusRange.end()};
+                    std::vector<std::string> vPlusMinusKeys;
+                    for (const auto value : std::views::split(keys, '-')) {
+                        vPlusMinusKeys.push_back(std::string(value.begin(), value.end()));
+                    }
 
                     if (vPlusMinusKeys.size() != 2) {
-                        return Error(std::format("axis entry '{}' does not have 2 keys", key));
+                        return Error(fmt::format("axis entry '{}' does not have 2 keys", key));
                     }
 
                     // Convert the first one.
@@ -319,7 +331,7 @@ namespace ne {
                         vPlusMinusKeys[0].data() + vPlusMinusKeys[0].size(),
                         iKeyboardPlusKey);
                     if (ec1 != std::errc()) {
-                        return Error(std::format(
+                        return Error(fmt::format(
                             "failed to convert the first key of axis entry '{}' "
                             "to keyboard key code (error code: {})",
                             key,
@@ -333,7 +345,7 @@ namespace ne {
                         vPlusMinusKeys[1].data() + vPlusMinusKeys[1].size(),
                         iKeyboardMinusKey);
                     if (ec2 != std::errc()) {
-                        return Error(std::format(
+                        return Error(fmt::format(
                             "failed to convert the second key of axis entry '{}' "
                             "to keyboard key code (error code: {})",
                             key,
@@ -437,7 +449,7 @@ namespace ne {
                 pairs.begin(), pairs.end(), [&](const AxisState& item) { return item.plusKey == plusKey; });
             if (it == pairs.end()) {
                 Logger::get().error(
-                    std::format("can't find minus key for plus key in axis event '{}'", sAxisName),
+                    fmt::format("can't find minus key for plus key in axis event '{}'", sAxisName),
                     sInputManagerLogCategory);
                 return {};
             }
@@ -448,7 +460,7 @@ namespace ne {
         // Check sizes.
         if (vPlusKeys.size() != vMinusKeys.size()) {
             Logger::get().error(
-                std::format(
+                fmt::format(
                     "not equal size of plus and minus keys, found {} plus key(s) and {} minus(s) keys "
                     "for axis event {}",
                     vPlusKeys.size(),
@@ -601,7 +613,7 @@ namespace ne {
                     } else {
                         axes[sAxisName] = {};
                         Logger::get().error(
-                            std::format("no axis event found by name '{}'", sAxisName),
+                            fmt::format("no axis event found by name '{}'", sAxisName),
                             sInputManagerLogCategory);
                     }
                 }

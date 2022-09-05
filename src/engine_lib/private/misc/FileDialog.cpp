@@ -8,6 +8,7 @@
 #pragma push_macro("IGNORE")
 #undef IGNORE
 #endif
+#include "fmt/core.h"
 
 namespace ne {
     std::vector<std::filesystem::path> FileDialog::openFile(
@@ -18,7 +19,7 @@ namespace ne {
         // Convert filter to the format pfd expects.
         std::vector<std::string> vFilters;
         for (const auto& [sName, sTypeFilters] : vFileTypeFilters) {
-            vFilters.push_back(std::format("{} ({})", sName, sTypeFilters));
+            vFilters.push_back(fmt::format("{} ({})", sName, sTypeFilters));
             vFilters.push_back(sTypeFilters);
         }
 
@@ -52,7 +53,7 @@ namespace ne {
             sFileExtension.insert(0, "*");
         }
 
-        vFilters.push_back(std::format("{} ({})", fileType.first, sFileExtension));
+        vFilters.push_back(fmt::format("{} ({})", fileType.first, sFileExtension));
         vFilters.push_back(sFileExtension);
 
         auto sResult = pfd::save_file(sTitle, directory.string(), vFilters, pfd::opt::none).result();

@@ -5,10 +5,15 @@
 
 // Custom.
 #include "io/Logger.h"
-#include "shaders/hlsl/HlslShader.h"
-#include "render/directx/DirectXRenderer.h"
 #include "shaders/IShader.h"
 #include "shaders/ShaderFilesystemPaths.hpp"
+#if defined(WIN32)
+#include "shaders/hlsl/HlslShader.h"
+#include "render/directx/DirectXRenderer.h"
+#endif
+
+// External.
+#include "fmt/core.h"
 
 namespace ne {
     std::variant<std::shared_ptr<ShaderPack>, Error> ShaderPack::createFromCache(
@@ -76,7 +81,7 @@ namespace ne {
         }
 
         Logger::get().info(
-            std::format("successfully loaded shader \"{}\" from cache", shaderDescription.sShaderName), "");
+            fmt::format("successfully loaded shader \"{}\" from cache", shaderDescription.sShaderName), "");
 
         return pShaderPack;
     }

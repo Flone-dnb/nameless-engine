@@ -1,17 +1,17 @@
 ﻿#include "IShader.h"
 
-// STL.
-#include <format>
-
 // Custom.
-#include "hlsl/HlslShader.h"
 #include "misc/Error.h"
 #include "render/IRenderer.h"
 #include "io/Logger.h"
 #include "shaders/ShaderFilesystemPaths.hpp"
 #if defined(WIN32)
+#include "hlsl/HlslShader.h"
 #include "render/directx/DirectXRenderer.h"
 #endif
+
+// External.
+#include "fmt/core.h"
 
 namespace ne {
     IShader::IShader(
@@ -44,18 +44,16 @@ namespace ne {
             result =
                 HlslShader::compileShader(pRenderer, shaderCacheDirectory, sConfiguration, shaderDescription);
         }
-#endif
+#else
+        Error err("no renderer for this platform");
+        err.showError();
+        throw std::runtime_error(err.getError());
         // TODO:
-        // else if (dynamic_cast<VulkanRenderer*>(pRender)) {
-        //     pShader = std::make_shared<GlslShader>(
-        //         pRenderer, currentPathToCompiledShader, sCurrentShaderName, shaderType);
-        // }
-        else {
-            const auto err = Error("no shader type is associated with the "
-                                   "current renderer (not implemented)");
-            err.showError();
-            throw std::runtime_error(err.getError());
-        }
+//        if (dynamic_cast<VulkanRenderer*>(pRender)) {
+//            pShader = std::make_shared<GlslShader>(
+//                pRenderer, currentPathToCompiledShader, sCurrentShaderName, shaderType);
+//        }
+#endif
 
         if (std::holds_alternative<std::shared_ptr<IShader>>(result)) {
             auto shaderCacheConfigurationPath =
@@ -97,7 +95,7 @@ namespace ne {
 
             auto reason = shaderDescription.isSerializableDataEqual(cachedShaderDescription);
             if (reason.has_value()) {
-                Error err(std::format(
+                Error err(fmt::format(
                     "invalidated cache for shader \"{}\" (reason: {})",
                     sShaderNameWithoutConfiguration,
                     ShaderCacheInvalidationReasonDescription::getDescription(reason.value())));
@@ -110,7 +108,7 @@ namespace ne {
         const auto sSourceFileHash = ShaderDescription::getShaderSourceFileHash(
             shaderDescription.pathToShaderFile, shaderDescription.sShaderName);
         if (sSourceFileHash.empty()) {
-            return Error(std::format(
+            return Error(fmt::format(
                 "unable to calculate shader source file hash (shader path: \"{}\")",
                 shaderDescription.pathToShaderFile.string()));
         }
@@ -125,18 +123,17 @@ namespace ne {
                 shaderDescription.shaderType,
                 sSourceFileHash);
         }
-#endif
+#else
+        const auto err = Error("no shader type is associated with the "
+                               "current renderer (not implemented)");
+        err.showError();
+        throw std::runtime_error(err.getError());
         // TODO:
-        // else if (dynamic_cast<VulkanRenderer*>(pRender)) {
-        //     pShader = std::make_shared<GlslShader>(
-        //         pRenderer, currentPathToCompiledShader, sCurrentShaderName, shaderType, sSourceFileHash);
-        // }
-        else {
-            const auto err = Error("no shader type is associated with the "
-                                   "current renderer (not implemented)");
-            err.showError();
-            throw std::runtime_error(err.getError());
-        }
+//        if (dynamic_cast<VulkanRenderer*>(pRender)) {
+//            pShader = std::make_shared<GlslShader>(
+//                pRenderer, currentPathToCompiledShader, sCurrentShaderName, shaderType, sSourceFileHash);
+//        }
+#endif
 
         auto result = pShader->testIfShaderCacheIsCorrupted();
         if (result.has_value()) {
@@ -152,7 +149,7 @@ namespace ne {
 
     std::variant<std::filesystem::path, Error> IShader::getPathToCompiledShader() {
         if (!std::filesystem::exists(pathToCompiledShader)) {
-            const Error err(std::format(
+            const Error err(fmt::format(
                 "path to compiled shader \"{}\" no longer exists", pathToCompiledShader.string()));
             return err;
         }

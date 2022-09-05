@@ -112,7 +112,10 @@ set(ENGINE_LIB_SOURCES
 )
 
 if (WIN32)
+    message(STATUS "Appending Windows specific source files.")
     list(APPEND ENGINE_LIB_SOURCES ${ENGINE_WIN32_SOURCES})
+else()
+    message(STATUS "Windows specific source files are excluded.")
 endif()
 
 # Target.
@@ -149,7 +152,7 @@ set_target_properties(${PROJECT_NAME} PROPERTIES FOLDER ${ENGINE_FOLDER})
 if(MSVC)
     target_compile_options(${PROJECT_NAME} PUBLIC /W3 /WX)
 else()
-    target_compile_options(${PROJECT_NAME} PUBLIC -Wall -Wextra -Werror)
+    target_compile_options(${PROJECT_NAME} PUBLIC -Wall -Wextra -Werror -Wno-unused-parameter)
 endif()
 
 if(MSVC)
@@ -184,6 +187,10 @@ add_subdirectory(${RELATIVE_EXT_PATH}/toml11 ${DEPENDENCY_BUILD_DIR_NAME}/toml11
 add_subdirectory(${RELATIVE_EXT_PATH}/portable-file-dialogs ${DEPENDENCY_BUILD_DIR_NAME}/portable-file-dialogs)
 target_link_libraries(${PROJECT_NAME} PUBLIC portable_file_dialogs)
 
+# External: fmt
+add_subdirectory(${RELATIVE_EXT_PATH}/fmt ${DEPENDENCY_BUILD_DIR_NAME}/fmt)
+target_link_libraries(${PROJECT_NAME} PUBLIC fmt)
+
 # External: Refureku
 set(REFUREKU_INCLUDE_DIRECTORIES 
     "\"${CMAKE_CURRENT_SOURCE_DIR}/../../ext/|\
@@ -191,6 +198,7 @@ ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/glfw/include|\
 ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/DirectX-Headers/include|\
 ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/spdlog/include|\
 ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/source_location/include|\
+${CMAKE_CURRENT_SOURCE_DIR}/../../ext/fmt/include|\
 ${CMAKE_CURRENT_SOURCE_DIR}/../.generated|\
 ${CMAKE_CURRENT_SOURCE_DIR}/public/|\
 ${CMAKE_CURRENT_SOURCE_DIR}/private|${CMAKE_CURRENT_SOURCE_DIR}/../../ext/Refureku/build/Include/\"")

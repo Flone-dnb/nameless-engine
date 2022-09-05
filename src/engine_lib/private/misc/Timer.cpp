@@ -3,6 +3,9 @@
 // Custom.
 #include "io/Logger.h"
 
+// External.
+#include "fmt/core.h"
+
 namespace ne {
     Timer::Timer(bool bWaitForCallbacksToFinishOnDestruction) {
         this->bWaitForCallbacksToFinishOnDestruction = bWaitForCallbacksToFinishOnDestruction;
@@ -25,7 +28,7 @@ namespace ne {
             }
         } catch (std::exception& ex) {
             Logger::get().error(
-                std::format("a timer thread has finished with the following exception: {}", ex.what()), "");
+                fmt::format("a timer thread has finished with the following exception: {}", ex.what()), "");
         }
 
         {
@@ -39,7 +42,7 @@ namespace ne {
                         }
                     } catch (std::exception& ex) {
                         Logger::get().error(
-                            std::format(
+                            fmt::format(
                                 "timer's callback function thread (user code) has finished with the "
                                 "following "
                                 "exception: {}",
@@ -60,7 +63,7 @@ namespace ne {
                 if (durationInMs < 1.0f) {
                     // Information.
                     Logger::get().info(
-                        std::format(
+                        fmt::format(
                             "timer has finished waiting for started callback functions to finish, took {} "
                             "millisecond",
                             durationStream.str()),
@@ -68,7 +71,7 @@ namespace ne {
                 } else {
                     // Warning.
                     Logger::get().warn(
-                        std::format(
+                        fmt::format(
                             "timer has finished waiting for started callback functions to finish, took {} "
                             "millisecond(s)",
                             durationStream.str()),
@@ -128,7 +131,7 @@ namespace ne {
             }
         } catch (std::exception& ex) {
             Logger::get().error(
-                std::format("a timer thread has finished with the following exception: {}", ex.what()), "");
+                fmt::format("a timer thread has finished with the following exception: {}", ex.what()), "");
         }
 
         timerThreadFuture = {};

@@ -4,6 +4,7 @@
 #include <filesystem>
 #include <vector>
 #include <string>
+#include <optional>
 
 namespace ne {
     /** Various file dialog windows: open file, save file, select directory and etc. */

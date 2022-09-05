@@ -1,7 +1,6 @@
 ﻿#include "shaders/ShaderManager.h"
 
 // STL.
-#include <format>
 #include <filesystem>
 
 // Custom.
@@ -12,13 +11,13 @@
 #include "io/ConfigManager.h"
 #include "misc/ProjectPaths.h"
 #include "shaders/ShaderFilesystemPaths.hpp"
-
 #if defined(WIN32)
-
 #include "render/directx/DirectXRenderer.h"
 #include "hlsl/HlslShader.h"
-
 #endif
+
+// External.
+#include "fmt/core.h"
 
 namespace ne {
     ShaderManager::ShaderManager(IRenderer* pRenderer) {
@@ -45,7 +44,7 @@ namespace ne {
         const auto it = compiledShaders.find(sShaderName);
         if (it == compiledShaders.end()) [[unlikely]] {
             Logger::get().error(
-                std::format("no shader with the name \"{}\" exists", sShaderName), sShaderManagerLogCategory);
+                fmt::format("no shader with the name \"{}\" exists", sShaderName), sShaderManagerLogCategory);
             return;
         }
 
@@ -68,7 +67,7 @@ namespace ne {
         const auto shaderIt = compiledShaders.find(*it);
         if (shaderIt == compiledShaders.end()) [[unlikely]] {
             Logger::get().error(
-                std::format("no shader with the name \"{}\" exists", sShaderName), sShaderManagerLogCategory);
+                fmt::format("no shader with the name \"{}\" exists", sShaderName), sShaderManagerLogCategory);
             return;
         }
 
@@ -82,7 +81,7 @@ namespace ne {
         vShadersToBeRemoved.erase(it);
 
         Logger::get().info(
-            std::format("marked to be removed shader \"{}\" was removed", sShaderName),
+            fmt::format("marked to be removed shader \"{}\" was removed", sShaderName),
             sShaderManagerLogCategory);
     }
 
@@ -190,7 +189,7 @@ namespace ne {
             // TODO: if (!bUpdateShaderCacheConfig && dynamic_cast<VulkanRenderer*>(pRenderer)) ...
         } else {
             Logger::get().info(
-                std::format(
+                fmt::format(
                     "global shader cache configuration was not found, creating a new {} configuration",
                     bIsReleaseBuild ? "release" : "debug"),
                 sShaderManagerLogCategory);
@@ -277,7 +276,7 @@ namespace ne {
         const auto it = compiledShaders.find(sShaderName);
         if (it == compiledShaders.end()) {
             Logger::get().warn(
-                std::format("no shader with the name \"{}\" exists", sShaderName), sShaderManagerLogCategory);
+                fmt::format("no shader with the name \"{}\" exists", sShaderName), sShaderManagerLogCategory);
             return false;
         }
 
@@ -286,7 +285,7 @@ namespace ne {
             const auto toBeRemovedIt = std::ranges::find(vShadersToBeRemoved, sShaderName);
             if (toBeRemovedIt == vShadersToBeRemoved.end()) {
                 Logger::get().info(
-                    std::format(
+                    fmt::format(
                         "shader \"{}\" is marked to be removed later (use count: {})",
                         sShaderName,
                         iUseCount),
@@ -323,7 +322,7 @@ namespace ne {
                 if (!vNotFoundShaders.empty()) {
                     sResultText += "[removed not found shaders from \"to remove\" array]: ";
                     for (const auto& sShaderName : vNotFoundShaders) {
-                        sResultText += std::format(" \"{}\"", sShaderName);
+                        sResultText += fmt::format(" \"{}\"", sShaderName);
                     }
                     sResultText += "\n";
                 }
@@ -331,7 +330,7 @@ namespace ne {
                 if (!vRemovedFromToBeRemoved.empty()) {
                     sResultText += "[removed from \"to remove\" shaders (use count 1)]: ";
                     for (const auto& sShaderName : vRemovedFromToBeRemoved) {
-                        sResultText += std::format(" \"{}\"", sShaderName);
+                        sResultText += fmt::format(" \"{}\"", sShaderName);
                     }
                     sResultText += "\n";
                 }
@@ -339,7 +338,7 @@ namespace ne {
                 if (!vReleasedShaderBytecode.empty()) {
                     sResultText += "[released shader bytecode]: ";
                     for (const auto& sShaderName : vReleasedShaderBytecode) {
-                        sResultText += std::format(" \"{}\"", sShaderName);
+                        sResultText += fmt::format(" \"{}\"", sShaderName);
                     }
                     sResultText += "\n";
                 }
@@ -396,7 +395,7 @@ namespace ne {
 
         if (results.isError()) {
             Logger::get().error(
-                std::format(
+                fmt::format(
                     "finished self validation (took {} ms), found and fixed the following "
                     "errors:\n"
                     "\n{}",
@@ -405,7 +404,7 @@ namespace ne {
                 sShaderManagerLogCategory);
         } else {
             Logger::get().info(
-                std::format("finished self validation (took {} ms): everything is OK", iTimeTookInMs),
+                fmt::format("finished self validation (took {} ms): everything is OK", iTimeTookInMs),
                 sShaderManagerLogCategory);
         }
 
@@ -425,23 +424,23 @@ namespace ne {
         // Check shader name for forbidden characters and see if source file exists.
         for (const auto& shader : vShadersToCompile) {
             if (shader.sShaderName.size() > iMaximumShaderNameLength) {
-                return Error(std::format(
+                return Error(fmt::format(
                     "shader name \"{}\" is too long (only {} characters allowed)",
                     shader.sShaderName,
                     iMaximumShaderNameLength));
             }
             if (!std::filesystem::exists(shader.pathToShaderFile)) {
-                return Error(std::format(
+                return Error(fmt::format(
                     "shader source file \"{}\" does not exist", shader.pathToShaderFile.string()));
             }
             if (shader.sShaderName.ends_with(" ") || shader.sShaderName.ends_with(".")) {
                 return Error(
-                    std::format("shader name \"{}\" must not end with a dot or a space", shader.sShaderName));
+                    fmt::format("shader name \"{}\" must not end with a dot or a space", shader.sShaderName));
             }
             for (const auto& character : shader.sShaderName) {
                 auto it = std::ranges::find(vValidCharactersForShaderName, character);
                 if (it == vValidCharactersForShaderName.end()) {
-                    return Error(std::format(
+                    return Error(fmt::format(
                         "shader name \"{}\" contains forbidden "
                         "character ({})",
                         shader.sShaderName,
@@ -455,7 +454,7 @@ namespace ne {
         // Check if we already have a shader with this name.
         for (const auto& shader : vShadersToCompile) {
             if (shader.sShaderName.starts_with(".")) [[unlikely]] {
-                return Error(std::format(
+                return Error(fmt::format(
                     "shader names that start with a dot (\".\") could not be used as "
                     "these files are reserved for internal purposes",
                     sGlobalShaderCacheParametersFileName));
@@ -463,7 +462,7 @@ namespace ne {
 
             auto it = compiledShaders.find(shader.sShaderName);
             if (it != compiledShaders.end()) [[unlikely]] {
-                return Error(std::format(
+                return Error(fmt::format(
                     "a shader with the name \"{}\" was already added, "
                     "please choose another name for this shader",
                     shader.sShaderName));
@@ -530,7 +529,7 @@ namespace ne {
                 } else {
                     // Cache files are corrupted.
                     Logger::get().info(
-                        std::format(
+                        fmt::format(
                             "shader \"{}\" cache files are corrupted, attempting to recompile",
                             shaderToCompile.sShaderName),
                         sShaderManagerLogCategory);
@@ -554,7 +553,7 @@ namespace ne {
                     auto err = std::get<Error>(std::move(result));
                     err.addEntry();
                     Logger::get().error(
-                        std::format(
+                        fmt::format(
                             "shader compilation query #{}: "
                             "an error occurred during shader compilation: {}",
                             iQueryId,
@@ -576,9 +575,9 @@ namespace ne {
             const auto it = compiledShaders.find(shaderToCompile.sShaderName);
             if (it != compiledShaders.end()) {
                 Error err(
-                    std::format("shader with the name \"{}\" is already added", shaderToCompile.sShaderName));
+                    fmt::format("shader with the name \"{}\" is already added", shaderToCompile.sShaderName));
                 Logger::get().error(
-                    std::format("shader compilation query #{}: {}", iQueryId, err.getError()),
+                    fmt::format("shader compilation query #{}: {}", iQueryId, err.getError()),
                     sShaderManagerLogCategory);
                 pRenderer->getGame()->addDeferredTask(
                     [onError, shaderToCompile, err]() mutable { onError(std::move(shaderToCompile), err); });
@@ -592,7 +591,7 @@ namespace ne {
 
         const auto iCompiledShaderCount = iLastFetchCompiledShaderCount + 1;
         Logger::get().info(
-            std::format(
+            fmt::format(
                 "shader compilation query #{}: "
                 "progress {}/{} ({})",
                 iQueryId,
@@ -607,7 +606,7 @@ namespace ne {
         // Only one task should call onCompleted.
         if (iLastFetchCompiledShaderCount + 1 == iTotalShaderCount) {
             Logger::get().info(
-                std::format(
+                fmt::format(
                     "shader compilation query #{}: "
                     "finished compiling {} shader(s)",
                     iQueryId,

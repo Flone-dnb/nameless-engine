@@ -11,7 +11,6 @@ namespace ne {
 #if defined(WIN32)
         ShellExecuteA(nullptr, "open", sLink.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
 #elif __linux__
-        static_assert(false, "check if this part actually works");
         system((std::string("open ") + sLink).c_str());
 #endif
     }

@@ -5,6 +5,7 @@
 
 // External.
 #include "xxHash/xxhash.h"
+#include "fmt/core.h"
 
 namespace ne {
     ShaderDescription::ShaderDescription(
@@ -55,13 +56,13 @@ namespace ne {
         const std::filesystem::path& pathToShaderSourceFile, const std::string& sShaderName) {
         if (pathToShaderSourceFile.empty()) [[unlikely]] {
             Logger::get().error(
-                std::format("path to shader file is empty (shader: {})", sShaderName),
+                fmt::format("path to shader file is empty (shader: {})", sShaderName),
                 sShaderDescriptionLogCategory);
             return "";
         }
         if (!std::filesystem::exists(pathToShaderSourceFile)) [[unlikely]] {
             Logger::get().error(
-                std::format(
+                fmt::format(
                     "shader file does not exist (shader: {}, path: {})",
                     sShaderName,
                     pathToShaderSourceFile.string()),
@@ -191,7 +192,7 @@ namespace ne {
         const std::filesystem::path& pathToShaderFile, std::string& sCurrentIncludeChain, toml::value& data) {
         if (!std::filesystem::exists(pathToShaderFile)) {
             Logger::get().error(
-                std::format("path to shader file \"{}\" does not exist", pathToShaderFile.string()),
+                fmt::format("path to shader file \"{}\" does not exist", pathToShaderFile.string()),
                 sShaderDescriptionLogCategory);
             return;
         }
@@ -236,7 +237,7 @@ namespace ne {
                 iFoundPos = sShaderFileText.find('<', iCurrentReadIndex);
                 if (iFoundPos == std::string::npos) {
                     Logger::get().error(
-                        std::format(
+                        fmt::format(
                             "found \"{}\" but have not found \" or < character after it in the shader file "
                             "\"{}\"",
                             sKeyword,
@@ -262,7 +263,7 @@ namespace ne {
                 iFoundPos = sShaderFileText.find('>', iCurrentReadIndex);
                 if (iFoundPos == std::string::npos) {
                     Logger::get().error(
-                        std::format(
+                        fmt::format(
                             "found \"{}\" but have not found \" or > character after it in the shader file "
                             "\"{}\"",
                             sKeyword,
@@ -296,7 +297,7 @@ namespace ne {
                 std::filesystem::canonical(pathToShaderFile.parent_path()) / sInclude;
             if (!std::filesystem::exists(pathToIncludeFile)) {
                 Logger::get().error(
-                    std::format(
+                    fmt::format(
                         "shader ({}) include file ({}) does not exist",
                         pathToShaderFile.string(),
                         pathToIncludeFile.string()),
@@ -319,7 +320,7 @@ namespace ne {
         }
 
         const auto sFilename = pathToShaderFile.stem().string();
-        sCurrentIncludeChain = std::format("{}.{}", sCurrentIncludeChain, sFilename);
+        sCurrentIncludeChain = fmt::format("{}.{}", sCurrentIncludeChain, sFilename);
         data[sCurrentIncludeChain] = includesTable;
 
         // Recursively do the same for all includes.

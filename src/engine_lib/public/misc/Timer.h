@@ -4,6 +4,7 @@
 #include <future>
 #include <optional>
 #include <chrono>
+#include <vector>
 
 namespace ne {
     /** Simple timer that can trigger a callback function on a timeout. */

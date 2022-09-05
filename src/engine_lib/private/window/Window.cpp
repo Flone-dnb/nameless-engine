@@ -1,14 +1,14 @@
-#include "game/window.h"
+#include "game/Window.h"
 
 // Std.
 #include <filesystem>
-#include <format>
 
 // Custom.
 #include "misc/UniqueValueGenerator.h"
 #include "io/Logger.h"
 
 // External.
+#include "fmt/core.h"
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb/stb_image.h"
 #if defined(WIN32)
@@ -276,7 +276,7 @@ namespace ne {
         // Bind to focus change event.
         glfwSetWindowFocusCallback(pGLFWWindow, Window::glfwWindowFocusCallback);
 
-        return std::move(pWindow);
+        return pWindow;
     }
 
     Window::~Window() { glfwDestroyWindow(pGlfwWindow); }
@@ -294,7 +294,7 @@ namespace ne {
 
     std::optional<Error> Window::setIcon(std::string_view sPathToIcon) const {
         if (!std::filesystem::exists(sPathToIcon)) {
-            return Error(std::format("the specified file \"{}\" does not exist.", sPathToIcon));
+            return Error(fmt::format("the specified file \"{}\" does not exist.", sPathToIcon));
         }
 
         GLFWimage images[1];

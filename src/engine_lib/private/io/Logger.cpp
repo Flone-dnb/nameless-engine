@@ -2,7 +2,6 @@
 
 // Std.
 #include <ctime>
-#include <format>
 #include <fstream>
 
 // Custom.
@@ -12,12 +11,13 @@
 // External.
 #include "spdlog/sinks/basic_file_sink.h"
 #include "spdlog/sinks/stdout_color_sinks.h"
+#include "fmt/core.h"
 
 namespace ne {
     Logger::~Logger() {
         if (iTotalWarningsProduced || iTotalErrorsProduced) {
             info(
-                std::format(
+                fmt::format(
                     "\n---------------------------------------------------\nTotal warnings produced: "
                     "{}.\nTotal errors produced: {}.",
                     iTotalWarningsProduced,
@@ -36,7 +36,7 @@ namespace ne {
         if (sCategory.empty()) {
             sCategory = sDefaultLogCategory;
         }
-        pSpdLogger->info(std::format(
+        pSpdLogger->info(fmt::format(
             "[{}] [{}, {}] {}",
             sCategory,
             std::filesystem::path(location.file_name()).filename().string(),
@@ -49,7 +49,7 @@ namespace ne {
         if (sCategory.empty()) {
             sCategory = sDefaultLogCategory;
         }
-        pSpdLogger->warn(std::format(
+        pSpdLogger->warn(fmt::format(
             "[{}] [{}:{}] {}",
             sCategory,
             std::filesystem::path(location.file_name()).filename().string(),
@@ -63,7 +63,7 @@ namespace ne {
         if (sCategory.empty()) {
             sCategory = sDefaultLogCategory;
         }
-        pSpdLogger->error(std::format(
+        pSpdLogger->error(fmt::format(
             "[{}] [{}:{}] {}",
             sCategory,
             std::filesystem::path(location.file_name()).filename().string(),
@@ -103,12 +103,18 @@ namespace ne {
         const time_t now = time(nullptr);
 
         tm tm{};
+#if defined(WIN32)
         const auto iError = localtime_s(&tm, &now);
         if (iError != 0) {
-            get().error(std::format("failed to get localtime (error code {})", iError), "");
+            get().error(fmt::format("failed to get localtime (error code {})", iError), "");
         }
+#elif __linux__
+        localtime_r(&now, &tm);
+#else
+        static_assert(false, "not implemented");
+#endif
 
-        return std::format("{}.{}_{}-{}-{}", 1 + tm.tm_mon, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
+        return fmt::format("{}.{}_{}-{}-{}", 1 + tm.tm_mon, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
     }
 
     void Logger::removeOldestLogFiles(const std::filesystem::path& sLogDirectory) {

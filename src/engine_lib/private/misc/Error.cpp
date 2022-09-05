@@ -1,4 +1,4 @@
-#include "error.h"
+#include "Error.h"
 
 // STL.
 #include <string>
@@ -85,7 +85,7 @@ namespace ne {
         sErrorMessage += sMessage;
         sErrorMessage += "\nError stack:\n";
 
-        for (const auto entry : stack) {
+        for (const auto& entry : stack) {
             sErrorMessage += "- at ";
             sErrorMessage += entry.sFilename;
             sErrorMessage += ", ";

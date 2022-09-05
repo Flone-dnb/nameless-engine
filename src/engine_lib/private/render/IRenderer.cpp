@@ -7,6 +7,9 @@
 #include "misc/ProjectPaths.h"
 #include "shaders/ShaderParameter.h"
 
+// External.
+#include "fmt/core.h"
+
 namespace ne {
     IRenderer::IRenderer(Game* pGame) {
         this->pGame = pGame;
@@ -14,12 +17,12 @@ namespace ne {
 
         // Log amount of shader variants per shader pack.
         Logger::get().info(
-            std::format(
+            fmt::format(
                 "using {} shader(s) per pixel shader pack",
                 ShaderParameterConfigurations::validPixelShaderParameterConfigurations.size()),
             getRendererLoggingCategory());
         Logger::get().info(
-            std::format(
+            fmt::format(
                 "using {} shader(s) per vertex shader pack",
                 ShaderParameterConfigurations::validVertexShaderParameterConfigurations.size()),
             getRendererLoggingCategory());

@@ -7,6 +7,9 @@
 #include "render/directx/DirectXRenderer.h"
 #endif
 
+// External.
+#include "fmt/core.h"
+
 namespace ne {
     void Game::onBeforeNewFrame(float fTimeSincePrevCallInSec) {
         executeDeferredTasks();
@@ -84,7 +87,7 @@ namespace ne {
 #if defined(WIN32)
         pRenderer = std::make_unique<DirectXRenderer>(this);
 #elif __linux__
-        static_assert(false, "need to assign renderer here");
+        throw std::runtime_error("No renderer for this platform.");
 #else
         static_assert(false, "no renderer here");
 #endif
@@ -114,7 +117,7 @@ namespace ne {
             const auto stateIt = inputManager.actionState.find(sActionName);
             if (stateIt == inputManager.actionState.end()) {
                 Logger::get().error(
-                    std::format(
+                    fmt::format(
                         "input manager returned 0 "
                         "states for '{}' action event",
                         sActionName),
@@ -135,7 +138,7 @@ namespace ne {
                 if (bSet == false) {
                     if (std::holds_alternative<KeyboardKey>(key)) {
                         Logger::get().error(
-                            std::format(
+                            fmt::format(
                                 "could not find key '{}' in key "
                                 "states for '{}' action event",
                                 getKeyName(std::get<KeyboardKey>(key)),
@@ -143,7 +146,7 @@ namespace ne {
                             sGameLogCategory);
                     } else {
                         Logger::get().error(
-                            std::format(
+                            fmt::format(
                                 "could not find mouse button '{}' in key "
                                 "states for '{}' action event",
                                 static_cast<int>(std::get<MouseButton>(key)),
@@ -194,7 +197,7 @@ namespace ne {
             auto stateIt = inputManager.axisState.find(sAxisName);
             if (stateIt == inputManager.axisState.end()) {
                 Logger::get().error(
-                    std::format(
+                    fmt::format(
                         "input manager returned 0 "
                         "states for '{}' axis event",
                         sAxisName),
@@ -222,7 +225,7 @@ namespace ne {
             }
             if (bSet == false) {
                 Logger::get().error(
-                    std::format(
+                    fmt::format(
                         "could not find key '{}' in key "
                         "states for '{}' axis event",
                         getKeyName(key),

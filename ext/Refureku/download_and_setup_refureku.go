@@ -14,6 +14,7 @@ import (
 	"strings"
 
 	"github.com/codeclysm/extract/v3"
+	"github.com/codeskyblue/go-sh"
 	"github.com/pelletier/go-toml/v2"
 )
 
@@ -29,6 +30,8 @@ func main() {
 		fmt.Println("ERROR: download_and_setup_refureku.go: not enough arguments.")
 		os.Exit(1)
 	}
+
+	fmt.Println("Setting up Refureku...")
 
 	// Save command line arguments.
 	var working_directory = os.Args[1]
@@ -149,6 +152,29 @@ func unzip(src string, dest string) {
 	} else {
 		fmt.Println("ERROR: download_and_setup_refureku.go: unknown archive extension", src)
 		os.Exit(1)
+	}
+
+	if runtime.GOOS == "linux" {
+		var session = sh.NewSession()
+		session.PipeFail = true
+		session.PipeStdErrors = true
+
+		// Check that generator exists.
+		var refureku_generator_path = filepath.Join(dest, "Bin", "RefurekuGenerator")
+		_, err = os.Stat(refureku_generator_path)
+		if os.IsNotExist(err) {
+			fmt.Println("ERROR: download_and_setup_refureku.go: Refureku generator does not exist at",
+				refureku_generator_path)
+			os.Exit(1)
+		}
+
+		// Allow executing the generator.
+		var err = session.Command("chmod", "+x", refureku_generator_path).Run()
+		if err != nil {
+			fmt.Println("ERROR: download_and_setup_refureku.go: failed to add 'execute' permission on file",
+				refureku_generator_path)
+			os.Exit(1)
+		}
 	}
 }
 

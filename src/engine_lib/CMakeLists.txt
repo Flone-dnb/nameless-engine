@@ -203,7 +203,8 @@ ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/fmt/include|\
 ${CMAKE_CURRENT_SOURCE_DIR}/../.generated|\
 ${CMAKE_CURRENT_SOURCE_DIR}/public/|\
 ${CMAKE_CURRENT_SOURCE_DIR}/private|${CMAKE_CURRENT_SOURCE_DIR}/../../ext/Refureku/build/Include/\"")
-add_custom_command(TARGET ${PROJECT_NAME} PRE_BUILD
+set(SETUP_REFUREKU_TARGET SetupRefureku)
+add_custom_target(${SETUP_REFUREKU_TARGET}
                 WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/Refureku/
                 COMMAND go run ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/Refureku/download_and_setup_refureku.go
                 ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/Refureku/ # working directory
@@ -212,6 +213,7 @@ add_custom_command(TARGET ${PROJECT_NAME} PRE_BUILD
                 ${CMAKE_CXX_COMPILER_ID} # used compiler
                 ${PROJECT_CXX_STANDARD_VERSION} # used C++ standard
 )
+add_dependencies(${PROJECT_NAME} ${SETUP_REFUREKU_TARGET})
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/Refureku/build/Include/)
 # Link static library.
 set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /ignore:4006")
@@ -220,10 +222,14 @@ set(CMAKE_STATIC_LINKER_FLAGS "${CMAKE_STATIC_LINKER_FLAGS} /ignore:4006")
 target_link_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/Refureku/build/Lib)
 target_link_libraries(${PROJECT_NAME} PUBLIC Refureku)
 # Add a pre build step to run reflection code generator.
-add_custom_command(TARGET ${PROJECT_NAME} PRE_BUILD
+set(REFUREKU_GENERATOR_TARGET RunRefurekuGeneratorEngine)
+add_custom_target(${REFUREKU_GENERATOR_TARGET}
 	WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
 	COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/Refureku/build/Bin/RefurekuGenerator ${CMAKE_CURRENT_SOURCE_DIR}/../.reflection/RefurekuSettings.toml
-    COMMAND go run ${CMAKE_CURRENT_SOURCE_DIR}/../.reflection/merge_generated_reflection/merge_generated_reflection.go ${CMAKE_CURRENT_SOURCE_DIR}/../.generated ${REFLECTION_FILE_NAME})
+        COMMAND go run ${CMAKE_CURRENT_SOURCE_DIR}/../.reflection/merge_generated_reflection/merge_generated_reflection.go ${CMAKE_CURRENT_SOURCE_DIR}/../.generated ${REFLECTION_FILE_NAME}
+)
+add_dependencies(${REFUREKU_GENERATOR_TARGET} ${SETUP_REFUREKU_TARGET})
+add_dependencies(${PROJECT_NAME} ${REFUREKU_GENERATOR_TARGET})
 # Add generated headers to include directories.
 target_include_directories(${PROJECT_NAME} PUBLIC ../.generated)
 # Copy Refureku DLL to the top level binary directory.
@@ -247,10 +253,12 @@ if (WIN32)
 
     # External: DXC.
     # Download and unzip DXC.
-    add_custom_command(TARGET ${PROJECT_NAME} PRE_BUILD
+    set(SETUP_DXT_TARGET SetupDirectXShaderCompiler)
+    add_custom_target(${SETUP_DXT_TARGET}
                    COMMAND go run ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/DirectXShaderCompiler/download_dxc.go
                    ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/DirectXShaderCompiler/ # working directory
     )
+    add_dependencies(${PROJECT_NAME} ${SETUP_DXT_TARGET})
 
     # Set DXC variables.
     set(PATH_TO_DXC_DLL_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/DirectXShaderCompiler/bin/x64)

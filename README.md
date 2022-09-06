@@ -5,7 +5,7 @@ TODO: screenshot game/editor
 ### Supported platforms
 
 * Windows
-* Linux (WIP)
+* Linux
 
 # Features
 
@@ -69,6 +69,8 @@ Prerequisites:
 - [CMake](https://cmake.org/download/)
 - [Doxygen](https://doxygen.nl/download.html)
 - [Go](https://go.dev/dl/)
+- prerequisites for Linux:
+    - `libtinfo.so` might not be installed but is required (on Archlinux can be found in [ncurses5-compat-libs](https://aur.archlinux.org/packages/ncurses5-compat-libs) AUR package)
 
 First, clone this repository:
 

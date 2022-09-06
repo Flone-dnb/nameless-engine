@@ -43,10 +43,20 @@ add_executable(${PROJECT_NAME}
 )
 target_include_directories(${PROJECT_NAME} PRIVATE ${EDITOR_SRC_RELATIVE_PATH})
 
-# add engine_lib
-add_subdirectory(src/engine_lib dependency_build/engine_lib)
-target_link_libraries(${PROJECT_NAME} PRIVATE engine_lib)
-add_dependencies(${PROJECT_NAME} engine_lib)
+# Add engine.
+set(ENGINE_TARGET engine_lib)
+add_subdirectory(src/${ENGINE_TARGET} dependency_build/${ENGINE_TARGET})
+target_link_libraries(${PROJECT_NAME} PRIVATE ${ENGINE_TARGET})
+add_dependencies(${PROJECT_NAME} ${ENGINE_TARGET})
+# Add a pre build step to run reflection code generator.
+set(REFUREKU_GENERATOR_TARGET RunRefurekuGeneratorEditor)
+add_custom_target(${REFUREKU_GENERATOR_TARGET}
+        WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+        COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/Refureku/build/Bin/RefurekuGenerator ${CMAKE_CURRENT_SOURCE_DIR}/../.reflection/RefurekuSettings.toml
+        COMMAND go run ${CMAKE_CURRENT_SOURCE_DIR}/../.reflection/merge_generated_reflection/merge_generated_reflection.go ${CMAKE_CURRENT_SOURCE_DIR}/../.generated ${REFLECTION_FILE_NAME}
+)
+add_dependencies(${REFUREKU_GENERATOR_TARGET} ${ENGINE_TARGET})
+add_dependencies(${PROJECT_NAME} ${REFUREKU_GENERATOR_TARGET})
 # Add a pre build step to run reflection code generator.
 add_custom_command(TARGET ${PROJECT_NAME} PRE_BUILD
 	WORKING_DIRECTORY ${EDITOR_SRC_ABSOLUTE_PATH}/../
@@ -55,6 +65,7 @@ add_custom_command(TARGET ${PROJECT_NAME} PRE_BUILD
 
 # set standard
 set(PROJECT_CXX_STANDARD_VERSION 23)
+set(CMAKE_CXX_STANDARD ${PROJECT_CXX_STANDARD_VERSION})
 target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_${PROJECT_CXX_STANDARD_VERSION})
 
 # set folder
@@ -71,7 +82,7 @@ if(CLANG_TIDY)
     elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
         target_compile_options(${PROJECT_NAME} PUBLIC --std=c++${PROJECT_CXX_STANDARD_VERSION})
     elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-        if(${PROJECT_CXX_STANDARD_VERSION} == 23)
+        if("${PROJECT_CXX_STANDARD_VERSION}" STREQUAL "23")
             target_compile_options(${PROJECT_NAME} PUBLIC -std=c++2b)
         else()
             target_compile_options(${PROJECT_NAME} PUBLIC -std=c++${PROJECT_CXX_STANDARD_VERSION})
@@ -103,3 +114,5 @@ if (DOXYGEN_FOUND)
 else (DOXYGEN_FOUND)
   message(WARNING "Doxygen need to be installed to generate the documentation, please install Doxygen.")
 endif (DOXYGEN_FOUND)
+
+message(STATUS "${PROJECT_NAME} is configured to use the following C++ standard: ${CMAKE_CXX_STANDARD}")

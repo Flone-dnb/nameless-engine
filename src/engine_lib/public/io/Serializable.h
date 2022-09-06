@@ -16,6 +16,7 @@
 #include "Refureku/Object.h"
 #define TOML11_PRESERVE_COMMENTS_BY_DEFAULT
 #include "toml11/toml.hpp"
+#include "fmt/core.h"
 
 #include "Serializable.generated.h"
 
@@ -234,7 +235,7 @@ namespace ne NENAMESPACE() {
             tomlData = toml::parse(fixedPath);
         } catch (std::exception& exception) {
             return Error(
-                std::format("failed to load file \"{}\", error: {}", fixedPath.string(), exception.what()));
+                fmt::format("failed to load file \"{}\", error: {}", fixedPath.string(), exception.what()));
         }
 
         // Deserialize.
@@ -284,10 +285,10 @@ namespace ne NENAMESPACE() {
                 return Error("provided toml value does not contain entity ID");
             }
             if (iIdEndDotPos + 1 == sSectionName.size()) [[unlikely]] {
-                return Error(std::format("section name \"{}\" does not have a class ID", sSectionName));
+                return Error(fmt::format("section name \"{}\" does not have a class ID", sSectionName));
             }
             if (iIdEndDotPos == 0) [[unlikely]] {
-                return Error(std::format("section \"{}\" is not full", sSectionName));
+                return Error(fmt::format("section \"{}\" is not full", sSectionName));
             }
 
             // Get ID chain (either entity ID or something like "parentEntityId.childEntityId").
@@ -299,7 +300,7 @@ namespace ne NENAMESPACE() {
                 try {
                     iClassId = std::stoull(sSectionName.substr(iIdEndDotPos + 1));
                 } catch (std::exception& ex) {
-                    return Error(std::format(
+                    return Error(fmt::format(
                         "failed to convert string to unsigned long long when retrieving class ID for section "
                         "\"{}\": {}",
                         sSectionName,
@@ -311,7 +312,7 @@ namespace ne NENAMESPACE() {
 
         // Check if anything was found.
         if (sTargetSection.empty()) {
-            return Error(std::format("could not find entity with ID \"{}\"", sEntityId));
+            return Error(fmt::format("could not find entity with ID \"{}\"", sEntityId));
         }
 
         // Get all keys (field names) from this section.
@@ -319,16 +320,16 @@ namespace ne NENAMESPACE() {
         try {
             section = toml::find(tomlData, sTargetSection);
         } catch (std::exception& ex) {
-            return Error(std::format("no section \"{}\" was found ({})", sTargetSection, ex.what()));
+            return Error(fmt::format("no section \"{}\" was found ({})", sTargetSection, ex.what()));
         }
 
         if (!section.is_table()) {
-            return Error(std::format("found \"{}\" section is not a section", sTargetSection));
+            return Error(fmt::format("found \"{}\" section is not a section", sTargetSection));
         }
 
         const auto sectionTable = section.as_table();
         std::vector<std::string> vKeys;
-        for (const auto& key : sectionTable | std::views::keys) {
+        for (const auto& [key, value] : sectionTable) {
             if (key == sNothingToSerializeKey)
                 continue;
             vKeys.push_back(key);
@@ -336,10 +337,10 @@ namespace ne NENAMESPACE() {
 
         rfk::Class const* pClass = rfk::getDatabase().getClassById(iClassId);
         if (!pClass) {
-            return Error(std::format("no class found in the reflection database by ID {}", iClassId));
+            return Error(fmt::format("no class found in the reflection database by ID {}", iClassId));
         }
         if (!isDerivedFromSerializable(pClass)) {
-            return Error(std::format(
+            return Error(fmt::format(
                 "deserialized class with ID {} does not derive from {}",
                 iClassId,
                 staticGetArchetype().getName()));
@@ -347,7 +348,7 @@ namespace ne NENAMESPACE() {
 
         auto pInstance = pClass->makeSharedInstance<T>();
         if (!pInstance) {
-            return Error(std::format(
+            return Error(fmt::format(
                 "unable to make an object of type \"{}\" using type's default constructor "
                 "(does type \"{}\" has a default constructor?)",
                 pClass->getName(),
@@ -366,7 +367,7 @@ namespace ne NENAMESPACE() {
             try {
                 value = toml::find(section, sFieldName);
             } catch (std::exception& exception) {
-                return Error(std::format(
+                return Error(fmt::format(
                     "field \"{}\" was not found in the specified toml value: {}",
                     sFieldName,
                     exception.what()));
@@ -377,7 +378,7 @@ namespace ne NENAMESPACE() {
                 pClass->getFieldByName(sFieldName.c_str(), rfk::EFieldFlags::Default, true);
             if (!pField) {
                 Logger::get().warn(
-                    std::format(
+                    fmt::format(
                         "field name \"{}\" exists in the specified toml value but does not exist in the "
                         "actual object (if you removed this reflected field from your "
                         "class - ignore this warning)",
@@ -409,7 +410,7 @@ namespace ne NENAMESPACE() {
                     double fieldValue = std::stod(value.as_string().str);
                     pField->setUnsafe<double>(pInstance.get(), std::move(fieldValue));
                 } catch (std::exception& ex) {
-                    return Error(std::format(
+                    return Error(fmt::format(
                         "failed to convert string to double for field \"{}\": {}", sFieldName, ex.what()));
                 }
             } else if (fieldType.match(rfk::getType<std::string>()) && value.is_string()) {
@@ -443,7 +444,7 @@ namespace ne NENAMESPACE() {
                     // Get entity ID chain.
                     auto iLastDotPos = sSectionName.rfind('.');
                     if (iLastDotPos == std::string::npos) {
-                        return Error(std::format("section name \"{}\" is corrupted", sSectionName));
+                        return Error(fmt::format("section name \"{}\" is corrupted", sSectionName));
                     }
                     // Will be something like: "entityId.subEntityId", "entityId.subEntityId.subSubEntityId"
                     // or etc.
@@ -452,7 +453,7 @@ namespace ne NENAMESPACE() {
                     // Remove last entity id from chain because we don't know it.
                     iLastDotPos = sEntityIdChain.rfind('.');
                     if (iLastDotPos == std::string::npos) {
-                        return Error(std::format("section name \"{}\" is corrupted", sSectionName));
+                        return Error(fmt::format("section name \"{}\" is corrupted", sSectionName));
                     }
                     sEntityIdChain = sEntityIdChain.substr(0, iLastDotPos);
 
@@ -467,11 +468,11 @@ namespace ne NENAMESPACE() {
                         entitySection = toml::find(tomlData, sSectionName);
                     } catch (std::exception& ex) {
                         return Error(
-                            std::format("no section \"{}\" was found ({})", sTargetSection, ex.what()));
+                            fmt::format("no section \"{}\" was found ({})", sTargetSection, ex.what()));
                     }
 
                     if (!section.is_table()) {
-                        return Error(std::format("found \"{}\" section is not a section", sTargetSection));
+                        return Error(fmt::format("found \"{}\" section is not a section", sTargetSection));
                     }
 
                     // Look for a key that holds field name.
@@ -484,7 +485,7 @@ namespace ne NENAMESPACE() {
                     }
 
                     if (!fieldKey.is_string()) {
-                        return Error(std::format(
+                        return Error(fmt::format(
                             "found field name key \"{}\" is not a string", sSubEntityFieldNameKey));
                     }
 
@@ -496,22 +497,22 @@ namespace ne NENAMESPACE() {
 
                 if (sSectionNameForField.empty()) {
                     return Error(
-                        std::format("could not find a section that represents field \"{}\"", sFieldName));
+                        fmt::format("could not find a section that represents field \"{}\"", sFieldName));
                 }
 
                 // Cut field's class ID from the section name.
                 // The section name could look something like this: [entityId.subEntityId.subEntityClassId].
                 const auto iSubEntityClassIdDotPos = sSectionNameForField.rfind('.');
                 if (iSubEntityClassIdDotPos == std::string::npos) [[unlikely]] {
-                    return Error(std::format(
+                    return Error(fmt::format(
                         "sub entity does not have a class ID (section: \"{}\")", sSectionNameForField));
                 }
                 if (iSubEntityClassIdDotPos + 1 == sSectionNameForField.size()) [[unlikely]] {
                     return Error(
-                        std::format("section name \"{}\" does not have a class ID", sSectionNameForField));
+                        fmt::format("section name \"{}\" does not have a class ID", sSectionNameForField));
                 }
                 if (iSubEntityClassIdDotPos == 0) [[unlikely]] {
-                    return Error(std::format("section \"{}\" is not full", sSectionNameForField));
+                    return Error(fmt::format("section \"{}\" is not full", sSectionNameForField));
                 }
                 const auto sSubEntityId = sSectionNameForField.substr(0, iSubEntityClassIdDotPos);
 
@@ -528,7 +529,7 @@ namespace ne NENAMESPACE() {
                 cloneSerializableObject(
                     pSubEntity.get(), static_cast<Serializable*>(pField->getPtrUnsafe(pInstance.get())));
             } else {
-                return Error(std::format("field \"{}\" has unknown type", sFieldName));
+                return Error(fmt::format("field \"{}\" has unknown type", sFieldName));
             }
         }
 

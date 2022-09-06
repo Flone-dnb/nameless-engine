@@ -36,7 +36,7 @@ namespace ne {
         // Save TOML data to file.
         std::ofstream file(fixedPath, std::ios::binary);
         if (!file.is_open()) {
-            return Error(std::format("failed to open the file \"{}\"", fixedPath.string()));
+            return Error(fmt::format("failed to open the file \"{}\"", fixedPath.string()));
         }
         file << tomlData;
         file.close();
@@ -59,7 +59,7 @@ namespace ne {
         }
 
         // Create section.
-        const auto sSectionName = std::format("{}.{}", sEntityId, std::to_string(selfArchetype.getId()));
+        const auto sSectionName = fmt::format("{}.{}", sEntityId, std::to_string(selfArchetype.getId()));
 
         struct Data {
             Serializable* self = nullptr;
@@ -118,7 +118,7 @@ namespace ne {
 
                         // Serialize this field "under our ID".
                         const std::string sSubEntityIdSectionName =
-                            std::format("{}.{}", pData->sEntityId, pData->iSubEntityId);
+                            fmt::format("{}.{}", pData->sEntityId, pData->iSubEntityId);
                         const auto pSubEntity = static_cast<Serializable*>(field.getPtrUnsafe(pData->self));
                         auto result = pSubEntity->serialize(*pData->pTomlData, sSubEntityIdSectionName);
                         if (std::holds_alternative<Error>(result)) {
@@ -135,7 +135,7 @@ namespace ne {
                             .
                             operator[](sSubEntityFieldNameKey) = sFieldName;
                     } else {
-                        pData->error = Error(std::format(
+                        pData->error = Error(fmt::format(
                             "field \"{}\" (maybe inherited) of class \"{}\" has unsupported for "
                             "serialization type",
                             field.getName(),
@@ -149,7 +149,7 @@ namespace ne {
 
                 // A field with this name in this section was found.
                 // If we continue it will get overwritten.
-                pData->error = Error(std::format(
+                pData->error = Error(fmt::format(
                     "found two fields with the same name \"{}\" in class \"{}\" (maybe inherited)",
                     sFieldName,
                     pData->selfArchetype->getName()));
@@ -215,7 +215,7 @@ namespace ne {
         rfk::Class const& toArchetype = pTo->getArchetype();
 
         if (fromArchetype.getId() != toArchetype.getId()) {
-            return Error(std::format(
+            return Error(fmt::format(
                 "classes \"{}\" and \"{}\" are not the same",
                 fromArchetype.getName(),
                 toArchetype.getName()));
@@ -266,7 +266,7 @@ namespace ne {
                     }
                 } else {
                     Error err(
-                        std::format("field \"{}\" has unsupported for serialization type", field.getName()));
+                        fmt::format("field \"{}\" has unsupported for serialization type", field.getName()));
                     return false;
                 }
 

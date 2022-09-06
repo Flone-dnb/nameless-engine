@@ -2,8 +2,8 @@
 
 // STL.
 #include <charconv>
-#include <ranges>
 #include <string>
+#include <ranges>
 #include <vector>
 
 // Custom.
@@ -223,7 +223,7 @@ namespace ne {
             auto currentActionEvents = getAllActionEvents();
 
             std::scoped_lock<std::recursive_mutex> guard(mtxActionEvents);
-            for (const auto& sActionName : currentActionEvents | std::views::keys) {
+            for (const auto& [sActionName, value] : currentActionEvents) {
                 // Look for this action in file.
                 auto it = std::ranges::find(fileActionEvents, sActionName);
                 if (it == fileActionEvents.end()) {
@@ -237,10 +237,7 @@ namespace ne {
                 }
 
                 // Split string and process each key.
-                std::vector<std::string> vActionKeys;
-                for (const auto value : std::views::split(keys, ',')) {
-                    vActionKeys.push_back(std::string(value.begin(), value.end()));
-                }
+                std::vector<std::string> vActionKeys = splitString(keys, ",");
                 std::vector<std::variant<KeyboardKey, MouseButton>> vOutActionKeys;
                 for (const auto& key : vActionKeys) {
                     if (key[0] == 'k') {
@@ -295,7 +292,7 @@ namespace ne {
             auto currentAxisEvents = getAllAxisEvents();
 
             std::scoped_lock<std::recursive_mutex> guard(mtxAxisEvents);
-            for (const auto& sAxisName : currentAxisEvents | std::views::keys) {
+            for (const auto& [sAxisName, value] : currentAxisEvents) {
                 // Look for this axis in file.
                 auto it = std::ranges::find(fileAxisEvents, sAxisName);
                 if (it == fileAxisEvents.end()) {
@@ -303,22 +300,16 @@ namespace ne {
                 }
 
                 // Read keys from this axis.
-                auto keys = manager.getValue<std::string>(sAxisEventSectionName, sAxisName, "");
+                std::string keys = manager.getValue<std::string>(sAxisEventSectionName, sAxisName, "");
                 if (keys.empty()) {
                     continue;
                 }
 
                 // Split string and process each key.
-                std::vector<std::string> vAxisKeys;
-                for (const auto value : std::views::split(keys, ',')) {
-                    vAxisKeys.push_back(std::string(value.begin(), value.end()));
-                }
+                std::vector<std::string> vAxisKeys = splitString(keys, ",");
                 std::vector<std::pair<KeyboardKey, KeyboardKey>> vOutAxisKeys;
                 for (const auto& key : vAxisKeys) {
-                    std::vector<std::string> vPlusMinusKeys;
-                    for (const auto value : std::views::split(keys, '-')) {
-                        vPlusMinusKeys.push_back(std::string(value.begin(), value.end()));
-                    }
+                    std::vector<std::string> vPlusMinusKeys = splitString(keys, "-");
 
                     if (vPlusMinusKeys.size() != 2) {
                         return Error(fmt::format("axis entry '{}' does not have 2 keys", key));
@@ -388,7 +379,7 @@ namespace ne {
             const auto keyboardKey = std::get<KeyboardKey>(key);
             const auto axisIt = axisEvents.find(keyboardKey);
             if (axisIt != axisEvents.end()) {
-                for (const auto& sAxisName : axisIt->second | std::views::keys) {
+                for (const auto& [sAxisName, value] : axisIt->second) {
                     vUsedAxisEvents.insert(sAxisName);
                 }
             }
@@ -579,7 +570,7 @@ namespace ne {
         std::unordered_map<std::string, std::vector<std::variant<KeyboardKey, MouseButton>>> actions;
 
         // Get all action names first.
-        for (const auto& sActionName : actionEvents | std::views::values) {
+        for (const auto& [key, sActionName] : actionEvents) {
             for (const auto& sName : sActionName) {
                 if (!actions.contains(sName)) {
                     actions[sName] = {};
@@ -603,8 +594,8 @@ namespace ne {
 
         std::unordered_map<std::string, std::vector<std::pair<KeyboardKey, KeyboardKey>>> axes;
 
-        for (const auto& keyAxisNames : axisEvents | std::views::values) {
-            for (const auto& sAxisName : keyAxisNames | std::views::keys) {
+        for (const auto& [key, keyAxisNames] : axisEvents) {
+            for (const auto& [sAxisName, value] : keyAxisNames) {
                 if (!axes.contains(sAxisName)) {
                     // Get keys.
                     auto option = getAxisEvent(sAxisName);
@@ -621,6 +612,21 @@ namespace ne {
         }
 
         return axes;
+    }
+
+    std::vector<std::string>
+    InputManager::splitString(const std::string& sStringToSplit, const std::string& sDelimiter) {
+        std::vector<std::string> vResult;
+        size_t last = 0;
+        size_t next = 0;
+
+        while ((next = sStringToSplit.find(sDelimiter, last)) != std::string::npos) {
+            vResult.push_back(sStringToSplit.substr(last, next - last));
+            last = next + 1;
+        }
+
+        vResult.push_back(sStringToSplit.substr(last));
+        return vResult;
     }
 
     std::optional<Error> InputManager::overwriteActionEvent(

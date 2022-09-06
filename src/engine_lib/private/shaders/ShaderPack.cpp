@@ -158,7 +158,7 @@ namespace ne {
         std::scoped_lock guard(mtxShaders);
 
         bool bResult = true;
-        for (const auto& shader : shaders | std::views::values) {
+        for (const auto& [key, shader] : shaders) {
             if (shader->releaseShaderDataFromMemoryIfLoaded(bLogOnlyErrors) == false) {
                 bResult = false;
             }

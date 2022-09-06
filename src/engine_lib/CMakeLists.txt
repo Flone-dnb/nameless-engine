@@ -161,6 +161,7 @@ endif()
 
 # Set C++ standard.
 set(PROJECT_CXX_STANDARD_VERSION 23)
+set(CMAKE_CXX_STANDARD ${PROJECT_CXX_STANDARD_VERSION})
 target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_${PROJECT_CXX_STANDARD_VERSION})
 
 # Set directory name for dependencies.
@@ -344,3 +345,5 @@ target_include_directories(${PROJECT_NAME} PUBLIC ${RELATIVE_EXT_PATH})
 target_include_directories(${PROJECT_NAME} PUBLIC ${RELATIVE_EXT_PATH}/source_location/include)
 target_include_directories(${PROJECT_NAME} PUBLIC public)
 target_include_directories(${PROJECT_NAME} PUBLIC private)
+
+message(STATUS "${PROJECT_NAME} is configured to use the following C++ standard: ${CMAKE_CXX_STANDARD}")

@@ -173,7 +173,7 @@ namespace ne {
         const auto table = section.as_table();
 
         std::vector<std::string> vKeys;
-        for (const auto& key : table | std::views::keys) {
+        for (const auto& [key, value] : table) {
             vKeys.push_back(key);
         }
 

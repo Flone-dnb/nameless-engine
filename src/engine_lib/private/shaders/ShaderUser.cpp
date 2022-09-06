@@ -50,7 +50,7 @@ namespace ne {
     ShaderUser::~ShaderUser() {
         std::vector<std::string> vShaderNamesToRemove;
 
-        for (const auto& shader : shaders | std::views::values) {
+        for (const auto& [key, shader] : shaders) {
             vShaderNamesToRemove.push_back(shader->getShaderName());
         }
 

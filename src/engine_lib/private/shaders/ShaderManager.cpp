@@ -355,29 +355,42 @@ namespace ne {
 
         const auto start = steady_clock::now();
 
-        // Check "to remove" shaders.
-        const auto [first, last] =
-            std::ranges::remove_if(vShadersToBeRemoved, [this, &results](const auto& sShaderToRemove) {
-                const auto it = compiledShaders.find(sShaderToRemove);
-                if (it == compiledShaders.end()) [[unlikely]] {
-                    results.vNotFoundShaders.push_back(sShaderToRemove);
-                    return true;
-                }
-
-                if (it->second.use_count() == 1) {
-                    results.vRemovedFromToBeRemoved.push_back(sShaderToRemove);
-                    return true;
-                }
-
-                return false;
-            });
-        for (auto it = first; it != last; ++it) {
-            auto shaderIt = compiledShaders.find(*it);
-            if (shaderIt != compiledShaders.end()) {
-                compiledShaders.erase(shaderIt);
+        // Look what shaders can be removed.
+        for (const auto& sShaderToRemove : vShadersToBeRemoved) {
+            const auto it = compiledShaders.find(sShaderToRemove);
+            if (it == compiledShaders.end()) [[unlikely]] {
+                results.vNotFoundShaders.push_back(sShaderToRemove);
+            } else if (it->second.use_count() == 1) {
+                results.vRemovedFromToBeRemoved.push_back(sShaderToRemove);
             }
         }
-        vShadersToBeRemoved.erase(first, last);
+
+        // Erase shaders that were marked to be removed and not referenced by anyone else
+        // from compiled shaders array.
+        for (const auto& sShaderName : results.vRemovedFromToBeRemoved) {
+            auto it = compiledShaders.find(sShaderName);
+            if (it != compiledShaders.end()) {
+                compiledShaders.erase(it);
+            }
+        }
+        // Remove them from "to be removed" array.
+        for (const auto& sShaderNameToRemove : results.vRemovedFromToBeRemoved) {
+            for (auto it = vShadersToBeRemoved.begin(); it != vShadersToBeRemoved.end(); ++it) {
+                if (*it == sShaderNameToRemove) {
+                    vShadersToBeRemoved.erase(it);
+                    break;
+                }
+            }
+        }
+        // Remove not found shaders from "to be removed" array.
+        for (const auto& sShaderNameToRemove : results.vNotFoundShaders) {
+            for (auto it = vShadersToBeRemoved.begin(); it != vShadersToBeRemoved.end(); ++it) {
+                if (*it == sShaderNameToRemove) {
+                    vShadersToBeRemoved.erase(it);
+                    break;
+                }
+            }
+        }
 
         // Check shaders that were needed but no longer used.
         for (const auto& [sShaderName, pShaderPack] : compiledShaders) {

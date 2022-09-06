@@ -316,6 +316,17 @@ namespace ne {
          */
         std::unordered_map<std::string, std::vector<std::pair<KeyboardKey, KeyboardKey>>> getAllAxisEvents();
 
+        /**
+         * Splits the string using a delimiter.
+         *
+         * @param sStringToSplit String to split.
+         * @param sDelimiter     Delimiter.
+         *
+         * @return Splitted string.
+         */
+        static std::vector<std::string>
+        splitString(const std::string& sStringToSplit, const std::string& sDelimiter);
+
     private:
         friend class Game;
 

@@ -22,11 +22,12 @@ import (
 // 1. Working directory (the directory where this script is located).
 // 2. Directory where source code is located.
 // 3. Array of included directories that the project uses separated by pipe ('|') sign.
-// 4. Used compiler ID (from CMake).
-// 5. Used C++ standard (only number, for example: 20, 23).
+// 4. Array of files to exclude from analyzing.
+// 5. Used compiler ID (from CMake).
+// 6. Used C++ standard (only number, for example: 20, 23).
 func main() {
 	var args_count = len(os.Args[1:])
-	if args_count < 5 {
+	if args_count < 6 {
 		fmt.Println("ERROR: download_and_setup_refureku.go: not enough arguments.")
 		os.Exit(1)
 	}
@@ -37,8 +38,9 @@ func main() {
 	var working_directory = os.Args[1]
 	var src_dir = os.Args[2]
 	var include_directories = strings.Split(os.Args[3], "|")
-	var compiler_id = os.Args[4]
-	var cpp_standard_number = os.Args[5]
+	var exclude_files = strings.Split(os.Args[4], "|")
+	var compiler_id = os.Args[5]
+	var cpp_standard_number = os.Args[6]
 
 	// INFO: change this to update used Refureku version.
 	var refureku_version_tag = "v2.2.0"
@@ -61,6 +63,7 @@ func main() {
 		filepath.Join(unzip_dir, "RefurekuSettings.toml"),
 		src_dir,
 		include_directories,
+		exclude_files,
 		compiler_id,
 		cpp_standard_number)
 }
@@ -182,6 +185,7 @@ func initialize_refureku_settings(
 	template_settings_file_path string,
 	src_directory string,
 	include_directories []string,
+	exclude_files []string,
 	compiler_id string,
 	cpp_standard_number string) {
 	// Check that template file exists.
@@ -306,6 +310,7 @@ func initialize_refureku_settings(
 	// Configure Refureku settings.
 	cfg.CodeGenManagerSettings.ToProcessDirectories = []string{src_directory}
 	cfg.CodeGenManagerSettings.IgnoredDirectories = []string{generated_dir_path, reflection_dir_path}
+	cfg.CodeGenManagerSettings.IgnoredFiles = exclude_files
 	cfg.CodeGenUnitSettings.OutputDirectory = generated_dir_path
 	cfg.CodeGenUnitSettings.GeneratedHeaderFileNamePattern = "##FILENAME##.generated.h"
 	cfg.CodeGenUnitSettings.GeneratedSourceFileNamePattern = "##FILENAME##.generated_impl.h"

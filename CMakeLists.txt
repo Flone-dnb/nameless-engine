@@ -52,8 +52,8 @@ add_dependencies(${PROJECT_NAME} ${ENGINE_TARGET})
 set(REFUREKU_GENERATOR_TARGET RunRefurekuGeneratorEditor)
 add_custom_target(${REFUREKU_GENERATOR_TARGET}
         WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
-        COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/Refureku/build/Bin/RefurekuGenerator ${CMAKE_CURRENT_SOURCE_DIR}/../.reflection/RefurekuSettings.toml
-        COMMAND go run ${CMAKE_CURRENT_SOURCE_DIR}/../.reflection/merge_generated_reflection/merge_generated_reflection.go ${CMAKE_CURRENT_SOURCE_DIR}/../.generated ${REFLECTION_FILE_NAME}
+        COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/ext/Refureku/build/Bin/RefurekuGenerator ${CMAKE_CURRENT_SOURCE_DIR}/src/.reflection/RefurekuSettings.toml
+        COMMAND go run ${CMAKE_CURRENT_SOURCE_DIR}/src/.reflection/merge_generated_reflection/merge_generated_reflection.go ${CMAKE_CURRENT_SOURCE_DIR}/src/.generated ${REFLECTION_FILE_NAME}
 )
 add_dependencies(${REFUREKU_GENERATOR_TARGET} ${ENGINE_TARGET})
 add_dependencies(${PROJECT_NAME} ${REFUREKU_GENERATOR_TARGET})

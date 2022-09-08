@@ -193,8 +193,14 @@ add_subdirectory(${RELATIVE_EXT_PATH}/fmt ${DEPENDENCY_BUILD_DIR_NAME}/fmt)
 target_link_libraries(${PROJECT_NAME} PUBLIC fmt)
 
 # External: Refureku
+# Check that path does not have pipe character because we use it to separate paths.
+string(FIND ${CMAKE_CURRENT_SOURCE_DIR} "|" PIPE_POS)
+if (NOT ${PIPE_POS} STREQUAL "-1")
+    message(FATAL_ERROR "Path ${CMAKE_CURRENT_SOURCE_DIR} contains forbidden character '|'.")
+endif()
+# Write project include directories for Refureku.
 set(REFUREKU_INCLUDE_DIRECTORIES 
-    "\"${CMAKE_CURRENT_SOURCE_DIR}/../../ext/|\
+    "${CMAKE_CURRENT_SOURCE_DIR}/../../ext/|\
 ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/glfw/include|\
 ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/DirectX-Headers/include|\
 ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/spdlog/include|\
@@ -202,24 +208,53 @@ ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/source_location/include|\
 ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/fmt/include|\
 ${CMAKE_CURRENT_SOURCE_DIR}/../.generated|\
 ${CMAKE_CURRENT_SOURCE_DIR}/public/|\
-${CMAKE_CURRENT_SOURCE_DIR}/private|${CMAKE_CURRENT_SOURCE_DIR}/../../ext/Refureku/build/Include/\"")
+${CMAKE_CURRENT_SOURCE_DIR}/private|${CMAKE_CURRENT_SOURCE_DIR}/../../ext/Refureku/build/Include/")
+foreach(SRC_PATH IN LISTS ENGINE_WIN32_SOURCES)
+    set(SRC_PATH ${CMAKE_CURRENT_SOURCE_DIR}/${SRC_PATH})
+    string(FIND ${SRC_PATH} "|" PIPE_POS)
+    if (NOT ${PIPE_POS} STREQUAL "-1")
+        message(FATAL_ERROR "Path ${SRC_PATH} contains forbidden character '|'.")
+    endif()
+    set(REFUREKU_EXCLUDE_FILES ${SRC_PATH}|${REFUREKU_EXCLUDE_FILES})
+endforeach()
+set(REFUREKU_EXCLUDE_FILES "")
+if (NOT WIN32)
+    # Add Windows sources to be excluded from analyzing.
+    foreach(SRC_PATH IN LISTS ENGINE_WIN32_SOURCES)
+        set(SRC_PATH ${CMAKE_CURRENT_SOURCE_DIR}/${SRC_PATH})
+        string(FIND ${SRC_PATH} "|" PIPE_POS)
+        if (NOT ${PIPE_POS} STREQUAL "-1")
+            message(FATAL_ERROR "Path ${SRC_PATH} contains forbidden character '|'.")
+        endif()
+        set(REFUREKU_EXCLUDE_FILES ${SRC_PATH}|${REFUREKU_EXCLUDE_FILES})
+    endforeach()
+endif()
 set(SETUP_REFUREKU_TARGET SetupRefureku)
 add_custom_target(${SETUP_REFUREKU_TARGET}
                 WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/Refureku/
                 COMMAND go run ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/Refureku/download_and_setup_refureku.go
                 ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/Refureku/ # working directory
                 ${CMAKE_CURRENT_SOURCE_DIR}/../ # source directory (where to put Refureku settings file)
-                ${REFUREKU_INCLUDE_DIRECTORIES} # project include directories
+                "\"${REFUREKU_INCLUDE_DIRECTORIES}\"" # project include directories
+                "\"${REFUREKU_EXCLUDE_FILES}\"" # files to exclude from analyzing
                 ${CMAKE_CXX_COMPILER_ID} # used compiler
                 ${PROJECT_CXX_STANDARD_VERSION} # used C++ standard
 )
 add_dependencies(${PROJECT_NAME} ${SETUP_REFUREKU_TARGET})
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/Refureku/build/Include/)
 # Link static library.
-set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /ignore:4006")
-set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} /ignore:4006")
-set(CMAKE_STATIC_LINKER_FLAGS "${CMAKE_STATIC_LINKER_FLAGS} /ignore:4006")
-target_link_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/Refureku/build/Lib)
+if (MSVC)
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /ignore:4006")
+    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} /ignore:4006")
+    set(CMAKE_STATIC_LINKER_FLAGS "${CMAKE_STATIC_LINKER_FLAGS} /ignore:4006")
+endif()
+if (WIN32)
+    target_link_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/Refureku/build/Lib)
+elseif(APPLE) # test macos before unix
+    message(FATAL_ERROR "Put Refureku dynamic library directory here.")
+elseif(UNIX)
+    target_link_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/Refureku/build/Bin)
+endif()
 target_link_libraries(${PROJECT_NAME} PUBLIC Refureku)
 # Add a pre build step to run reflection code generator.
 set(REFUREKU_GENERATOR_TARGET RunRefurekuGeneratorEngine)
@@ -232,14 +267,22 @@ add_dependencies(${REFUREKU_GENERATOR_TARGET} ${SETUP_REFUREKU_TARGET})
 add_dependencies(${PROJECT_NAME} ${REFUREKU_GENERATOR_TARGET})
 # Add generated headers to include directories.
 target_include_directories(${PROJECT_NAME} PUBLIC ../.generated)
-# Copy Refureku DLL to the top level binary directory.
+# Copy Refureku dynamic library to the top level binary directory.
+set(REFUREKU_DYN_LIB Refureku.dll)
+if (NOT WIN32)
+    if(APPLE) # test macos before unix
+        message(FATAL_ERROR "Put Refureku dynamic library name here.")
+    elseif(UNIX)
+        set(REFUREKU_DYN_LIB libRefureku.so)
+    endif()
+endif()
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
                 COMMAND ${CMAKE_COMMAND} -E copy
-                ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/Refureku/build/Bin/Refureku.dll ${CMAKE_BINARY_DIR}/Refureku.dll)
-# Copy Refureku DLL to the current top level build directory.
+                ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/Refureku/build/Bin/${REFUREKU_DYN_LIB} ${CMAKE_BINARY_DIR}/${REFUREKU_DYN_LIB})
+# Copy Refureku dynamic library to the current top level build directory.
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
                 COMMAND ${CMAKE_COMMAND} -E copy
-                ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/Refureku/build/Bin/Refureku.dll ${BUILD_MODE_DIRECTORY}/Refureku.dll)
+                ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/Refureku/build/Bin/${REFUREKU_DYN_LIB} ${BUILD_MODE_DIRECTORY}/${REFUREKU_DYN_LIB})
 
 # Win32 specific dependencies:
 if (WIN32)

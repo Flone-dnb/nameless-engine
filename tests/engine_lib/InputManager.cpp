@@ -2,7 +2,7 @@
 #include "input/InputManager.h"
 
 // External.
-#include "Catch2/catch_test_macros.hpp"
+#include "catch2/catch_test_macros.hpp"
 
 TEST_CASE("add action") {
     using namespace ne;
@@ -102,7 +102,14 @@ TEST_CASE("modify action") {
     // Compare keys (order may be different).
     REQUIRE(resultKeys.size() == vExpectedKeys.size());
     for (const auto& wantKey : vExpectedKeys) {
-        REQUIRE(std::ranges::find(resultKeys, wantKey) != resultKeys.end());
+        bool bFound = false;
+        for (const auto& foundKey : resultKeys) {
+            if (foundKey == wantKey) {
+                bFound = true;
+                break;
+            }
+        }
+        REQUIRE(bFound);
     }
 }
 
@@ -213,7 +220,14 @@ TEST_CASE("modify axis") {
     // Compare keys (order may be different).
     REQUIRE(resultKeys.size() == vExpectedKeys.size());
     for (const auto& wantKey : vExpectedKeys) {
-        REQUIRE(std::ranges::find(resultKeys, wantKey) != resultKeys.end());
+        bool bFound = false;
+        for (const auto& foundKey : resultKeys) {
+            if (foundKey == wantKey) {
+                bFound = true;
+                break;
+            }
+        }
+        REQUIRE(bFound);
     }
 }
 
@@ -253,7 +267,14 @@ TEST_CASE("fail modify axis with wrong/flipped keys") {
     // Compare keys (order may be different).
     REQUIRE(resultKeys.size() == vAxes1.size());
     for (const auto& wantKey : vAxes1) {
-        REQUIRE(std::ranges::find(resultKeys, wantKey) != resultKeys.end());
+        bool bFound = false;
+        for (const auto& foundKey : resultKeys) {
+            if (foundKey == wantKey) {
+                bFound = true;
+                break;
+            }
+        }
+        REQUIRE(bFound);
     }
 }
 
@@ -348,8 +369,14 @@ TEST_CASE("test saving and loading") {
 
         // Compare keys (order may be different).
         for (const auto& wantAction : vExpectedAction1Keys) {
-            auto it = std::ranges::find(vReadAction, wantAction);
-            REQUIRE(it != vReadAction.end());
+            bool bFound = false;
+            for (const auto& foundAction : vReadAction) {
+                if (foundAction == wantAction) {
+                    bFound = true;
+                    break;
+                }
+            }
+            REQUIRE(bFound);
         }
 
         // Action 2.
@@ -360,8 +387,14 @@ TEST_CASE("test saving and loading") {
 
         // Compare keys (order may be different).
         for (const auto& wantAction : vExpectedAction2Keys) {
-            auto it = std::ranges::find(vReadAction, wantAction);
-            REQUIRE(it != vReadAction.end());
+            bool bFound = false;
+            for (const auto& foundAction : vReadAction) {
+                if (foundAction == wantAction) {
+                    bFound = true;
+                    break;
+                }
+            }
+            REQUIRE(bFound);
         }
 
         // Axis 1.
@@ -372,8 +405,14 @@ TEST_CASE("test saving and loading") {
 
         // Compare keys (order may be different).
         for (const auto& wantAxis : vExpectedAxis1Keys) {
-            auto it = std::ranges::find(vReadAxis, wantAxis);
-            REQUIRE(it != vReadAxis.end());
+            bool bFound = false;
+            for (const auto& foundAxis : vReadAxis) {
+                if (foundAxis == wantAxis) {
+                    bFound = true;
+                    break;
+                }
+            }
+            REQUIRE(bFound);
         }
     }
 }

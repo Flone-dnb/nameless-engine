@@ -10,7 +10,7 @@
 #include "render/directx/resources/DirectXResource.h"
 
 // External.
-#include "Catch2/catch_test_macros.hpp"
+#include "catch2/catch_test_macros.hpp"
 #include "directx/d3dx12.h"
 #include "D3D12MemoryAllocator/include/D3D12MemAlloc.h"
 

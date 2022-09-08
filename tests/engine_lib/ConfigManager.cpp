@@ -5,7 +5,7 @@
 #include "io/ConfigManager.h"
 
 // External.
-#include "Catch2/catch_test_macros.hpp"
+#include "catch2/catch_test_macros.hpp"
 
 constexpr auto sTestConfigFileName = "engine lib test file.toml";
 constexpr auto sTestConfigFileSection = "test";
@@ -354,7 +354,7 @@ TEST_CASE("get all config files of category (with backup test)") {
         REQUIRE(false);
     }
 
-    const std::wstring sFirstFilePath = manager.getFilePath();
+    const auto firstFilePath = manager.getFilePath();
 
     // Check that file and backup exist.
     auto backupFile = manager.getFilePath();
@@ -372,33 +372,33 @@ TEST_CASE("get all config files of category (with backup test)") {
         REQUIRE(false);
     }
 
-    const std::wstring sSecondFilePath = manager.getFilePath();
+    const auto secondFilePath = manager.getFilePath();
 
     // Check that file and backup exist.
-    REQUIRE(std::filesystem::exists(sSecondFilePath));
-    REQUIRE(std::filesystem::exists(sSecondFilePath + L".old"));
+    REQUIRE(std::filesystem::exists(secondFilePath));
+    REQUIRE(std::filesystem::exists(secondFilePath.string() + ".old"));
 
     auto vFiles = ConfigManager::getAllFiles(ConfigCategory::PROGRESS);
     REQUIRE(vFiles.size() == 2);
 
     // Remove first file without backup.
-    std::filesystem::remove(sFirstFilePath);
+    std::filesystem::remove(firstFilePath);
 
     // This function should restore original file from backup.
     vFiles = ConfigManager::getAllFiles(ConfigCategory::PROGRESS);
     REQUIRE(vFiles.size() == 2);
-    REQUIRE(std::filesystem::exists(sFirstFilePath));
+    REQUIRE(std::filesystem::exists(firstFilePath));
 
     // Remove first file backup.
-    std::filesystem::remove(sFirstFilePath + L".old");
+    std::filesystem::remove(firstFilePath.string() + ".old");
 
     vFiles = ConfigManager::getAllFiles(ConfigCategory::PROGRESS);
     REQUIRE(vFiles.size() == 2);
 
     // Remove second file with backup.
-    std::filesystem::remove(sSecondFilePath);
-    std::filesystem::remove(sSecondFilePath + L".old");
+    std::filesystem::remove(secondFilePath);
+    std::filesystem::remove(secondFilePath.string() + ".old");
 
     // Remove first file.
-    std::filesystem::remove(sFirstFilePath);
+    std::filesystem::remove(firstFilePath);
 }

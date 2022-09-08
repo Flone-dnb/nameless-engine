@@ -3,7 +3,7 @@
 #include "misc/Error.h"
 
 // External.
-#include "Catch2/catch_test_macros.hpp"
+#include "catch2/catch_test_macros.hpp"
 
 TEST_CASE("create simple window") {
     // Check that window creation is working correctly.

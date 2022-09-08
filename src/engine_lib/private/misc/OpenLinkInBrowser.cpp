@@ -11,7 +11,7 @@ namespace ne {
 #if defined(WIN32)
         ShellExecuteA(nullptr, "open", sLink.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
 #elif __linux__
-        system((std::string("open ") + sLink).c_str());
+        system((std::string("xdg-open ") + sLink).c_str());
 #endif
     }
 } // namespace ne

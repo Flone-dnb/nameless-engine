@@ -24,8 +24,32 @@ TEST_CASE("add action") {
     auto result2 = manager.getActionEvent(sAction2Name);
     REQUIRE(result1.has_value());
     REQUIRE(result2.has_value());
-    REQUIRE(result1.value() == vAction1Keys);
-    REQUIRE(result2.value() == vAction2Keys);
+    // Compare keys (order may be different).
+    const auto vEvent1 = result1.value();
+    REQUIRE(vEvent1.size() == vAction1Keys.size());
+    for (const auto& wantKey : vAction1Keys) {
+        bool bFound = false;
+        for (const auto& foundKey : vEvent1) {
+            if (foundKey == wantKey) {
+                bFound = true;
+                break;
+            }
+        }
+        REQUIRE(bFound);
+    }
+    // Compare keys (order may be different).
+    const auto vEvent2 = result2.value();
+    REQUIRE(vEvent2.size() == vAction2Keys.size());
+    for (const auto& wantKey : vAction2Keys) {
+        bool bFound = false;
+        for (const auto& foundKey : vEvent2) {
+            if (foundKey == wantKey) {
+                bFound = true;
+                break;
+            }
+        }
+        REQUIRE(bFound);
+    }
 }
 
 TEST_CASE("remove action") {
@@ -71,7 +95,19 @@ TEST_CASE("fail to add an action event with already used name") {
 
     const auto eventKeys = manager.getActionEvent(sAction1Name);
     REQUIRE(eventKeys.has_value());
-    REQUIRE(eventKeys.value() == vAction1Keys);
+    // Compare keys (order may be different).
+    const auto vEvent = eventKeys.value();
+    REQUIRE(vEvent.size() == vAction1Keys.size());
+    for (const auto& wantKey : vAction1Keys) {
+        bool bFound = false;
+        for (const auto& foundKey : vEvent) {
+            if (foundKey == wantKey) {
+                bFound = true;
+                break;
+            }
+        }
+        REQUIRE(bFound);
+    }
 }
 
 TEST_CASE("modify action") {
@@ -136,7 +172,19 @@ TEST_CASE("add axis") {
     REQUIRE(firstEvents.has_value());
     REQUIRE(secondEvents.has_value());
     REQUIRE(firstEvents.value() == vAxes1);
-    REQUIRE(secondEvents.value() == vAxes2);
+    // Compare keys (order may be different).
+    const auto vEvent2 = secondEvents.value();
+    REQUIRE(vEvent2.size() == vAxes2.size());
+    for (const auto& wantAxis : vAxes2) {
+        bool bFound = false;
+        for (const auto& foundAxis : vEvent2) {
+            if (foundAxis == wantAxis) {
+                bFound = true;
+                break;
+            }
+        }
+        REQUIRE(bFound);
+    }
 }
 
 TEST_CASE("remove axis") {
@@ -163,7 +211,19 @@ TEST_CASE("remove axis") {
 
     auto result = manager.getAxisEvent(sAxis2Name);
     REQUIRE(result.has_value());
-    REQUIRE(result.value() == vAxes2);
+    // Compare keys (order may be different).
+    const auto vEvent = result.value();
+    REQUIRE(vEvent.size() == vAxes2.size());
+    for (const auto& wantAxis : vAxes2) {
+        bool bFound = false;
+        for (const auto& foundAxis : vEvent) {
+            if (foundAxis == wantAxis) {
+                bFound = true;
+                break;
+            }
+        }
+        REQUIRE(bFound);
+    }
 }
 
 TEST_CASE("fail to add an axis event with already used name") {

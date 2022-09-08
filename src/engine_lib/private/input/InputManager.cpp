@@ -309,7 +309,7 @@ namespace ne {
                 std::vector<std::string> vAxisKeys = splitString(keys, ",");
                 std::vector<std::pair<KeyboardKey, KeyboardKey>> vOutAxisKeys;
                 for (const auto& key : vAxisKeys) {
-                    std::vector<std::string> vPlusMinusKeys = splitString(keys, "-");
+                    std::vector<std::string> vPlusMinusKeys = splitString(key, "-");
 
                     if (vPlusMinusKeys.size() != 2) {
                         return Error(fmt::format("axis entry '{}' does not have 2 keys", key));

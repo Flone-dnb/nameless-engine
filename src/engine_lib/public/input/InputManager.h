@@ -82,20 +82,13 @@ namespace ne {
          * Adds a new action event.
          *
          * Action event allows binding mouse button(s) and/or keyboard key(s)
-         * with a name. When one if the specified buttons is pressed you will receive
+         * with a name. When one of the specified buttons is pressed you will receive
          * an action event with the specified name.
          *
          * This way you can have an action "jump" with a space bar button
          * and can easily change input key space bar to something else if
          * the user wants to. For this, just call @ref modifyActionEventKey
          * to change one button of the action.
-         *
-         * @warning If this action is triggered with an old key right now
-         * (when you call this function), there is a chance that this action will be triggered
-         * using old keys for the last time (even if after you removed this action).
-         * This is because when we receive input key we make a copy of all actions
-         * associated with the key and then call these actions, because we operate
-         * on a copy, removed elements will be reflected only on the next user input.
          *
          * @param sActionName   Name of a new action.
          * @param vKeys         Keyboard/mouse keys/buttons associated with this action.
@@ -120,13 +113,6 @@ namespace ne {
          * the first button was pressed last, '-1' if the second button was pressed last).
          *
          * You can specify multiple pairs, for example: W/S buttons and up/down arrow keys.
-         *
-         * @warning If this axis event is triggered with an old key right now
-         * (when you call this function), there is a chance that this axis event will be triggered
-         * using old keys for the last time (even if after you removed this axis event).
-         * This is because when we receive input key we make a copy of all axes
-         * associated with the key and then call these axes, because we operate
-         * on a copy, removed elements will be reflected only on the next user input.
          *
          * @param sAxisName     Name of a new axis.
          * @param vAxis         A pair of keyboard buttons associated with this axis,
@@ -270,13 +256,6 @@ namespace ne {
         /**
          * Removes an action event with the specified name.
          *
-         * @warning If this action is triggered with an old key right now
-         * (when you call this function), there is a chance that this action will be triggered
-         * using old keys for the last time (even if after you removed this action).
-         * This is because when we receive input key we make a copy of all actions
-         * associated with the key and then call these actions, because we operate
-         * on a copy, removed elements will be reflected only on the next user input.
-         *
          * @param sActionName   Name of the action to remove.
          *
          * @return 'false' if the action was found and removed, 'true' if not.
@@ -285,15 +264,6 @@ namespace ne {
 
         /**
          * Removes an axis event with the specified name.
-         *
-         * @warning If an axis event with this name already exists, it will be overwritten
-         * with the new keys (old keys will be removed).
-         * If this axis event is triggered with an old key right now
-         * (when you call this function), there is a chance that this axis event will be triggered
-         * using old keys for the last time (even if after you removed this axis event).
-         * This is because when we receive input key we make a copy of all axes
-         * associated with the key and then call these axes, because we operate
-         * on a copy, removed elements will be reflected only on the next user input.
          *
          * @param sAxisName   Name of the axis to remove.
          *

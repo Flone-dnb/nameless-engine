@@ -91,11 +91,16 @@ namespace ne {
             logFile.close();
         }
 
-        auto consoleSink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
         auto fileSink = std::make_shared<spdlog::sinks::basic_file_sink_mt>(sLoggerFilePath.string(), true);
-
+#if defined(DEBUG)
+        // Only write to console if we are in the debug build, there's no need to do this in release builds.
+        auto consoleSink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
         pSpdLogger =
             std::unique_ptr<spdlog::logger>(new spdlog::logger("MainLogger", {consoleSink, fileSink}));
+#else
+        pSpdLogger = std::unique_ptr<spdlog::logger>(new spdlog::logger("MainLogger", fileSink));
+#endif
+
         pSpdLogger->set_pattern("[%H:%M:%S] [%^%l%$] %v");
     }
 

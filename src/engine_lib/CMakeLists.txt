@@ -107,6 +107,8 @@ set(ENGINE_LIB_SOURCES
     public/game/nodes/Node.h
     public/io/DontSerializeProperty.h
     private/io/DontSerializeProperty.cpp
+    private/io/GuidProperty.cpp
+    public/io/GuidProperty.h
     ../.generated/${REFLECTION_FILE_NAME}
     # add general (cross-platform) sources here...
 )

@@ -30,6 +30,16 @@ namespace ne {
             err.showError();
             throw std::runtime_error(err.getError());
         }
+
+        // Make sure we don't have dots in the GUID as we use them internally in serialized format.
+        if (sGuid.contains('.')) {
+            const Error err(fmt::format(
+                "The specified GUID \"{}\" is invalid because it has dots in it.\n{}",
+                sGuid,
+                sGuidInformation));
+            err.showError();
+            throw std::runtime_error(err.getError());
+        }
 #endif
     }
 

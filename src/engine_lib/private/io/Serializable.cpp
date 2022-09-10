@@ -1,5 +1,8 @@
 ﻿#include "io/Serializable.h"
 
+// External.
+#include "fmt/format.h"
+
 #include "Reflection_impl.hpp"
 
 namespace ne {
@@ -58,8 +61,16 @@ namespace ne {
             sEntityId = "0";
         }
 
+        // Check that this type has GUID.
+        const auto pGuid = selfArchetype.getProperty<Guid>(false);
+        if (!pGuid) {
+            const Error err(
+                fmt::format("type {} does not have a GUID assigned to it", selfArchetype.getName()));
+            return err;
+        }
+
         // Create section.
-        const auto sSectionName = fmt::format("{}.{}", sEntityId, std::to_string(selfArchetype.getId()));
+        const auto sSectionName = fmt::format("{}.{}", sEntityId, pGuid->getGuid());
 
         struct Data {
             Serializable* self = nullptr;
@@ -112,6 +123,15 @@ namespace ne {
                     } else if (
                         fieldType.getArchetype() && isDerivedFromSerializable(fieldType.getArchetype())) {
                         // Field with a reflected type.
+                        // Check that this type has GUID.
+                        if (!fieldType.getArchetype()->getProperty<Guid>(false)) {
+                            const Error err(fmt::format(
+                                "type {} does not have a GUID assigned to it",
+                                fieldType.getArchetype()->getName()));
+                            pData->error = std::move(err);
+                            return true;
+                        }
+
                         // Add a key to specify that this value has a reflected type.
                         pData->pTomlData->operator[](pData->sSectionName).operator[](sFieldName) =
                             "reflected type, see other sub-section";
@@ -173,6 +193,87 @@ namespace ne {
         return sSectionName;
     }
 
+#if defined(DEBUG)
+    void Serializable::checkGuidUniqueness() {
+        // Record start time.
+        const auto startTime = std::chrono::steady_clock::now();
+
+        // Map of GUIDs (key) and type names (value).
+        std::unordered_map<std::string, std::string> vGuids;
+
+        // Get GUID of this class.
+        const auto& selfArchetype = staticGetArchetype();
+        const auto pSelfGuid = selfArchetype.getProperty<Guid>(false);
+        if (!pSelfGuid) {
+            const Error err(
+                fmt::format("Type {} does not have a GUID assigned to it.", selfArchetype.getName()));
+            err.showError();
+            throw std::runtime_error(err.getError());
+        }
+        vGuids[pSelfGuid->getGuid()] = selfArchetype.getName();
+
+        collectGuids(&selfArchetype, vGuids);
+
+        // Calculate time it took for us to do all this.
+        const auto endTime = std::chrono::steady_clock::now();
+        const auto durationInMs =
+            std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime).count();
+        const float timeTookInSec = static_cast<float>(durationInMs) / 1000.0f;
+
+        // Limit precision to 1 digit.
+        std::stringstream durationStream;
+        durationStream << std::fixed << std::setprecision(1) << timeTookInSec;
+
+        Logger::get().info(
+            fmt::format(
+                "[DEBUG ONLY] Finished checking all GUID uniqueness, took: {} sec.", durationStream.str()),
+            "");
+    }
+
+    void Serializable::collectGuids(
+        const rfk::Class* pArchetypeToAnalyze, std::unordered_map<std::string, std::string>& vAllGuids) {
+        const auto vDirectSubclasses = pArchetypeToAnalyze->getDirectSubclasses();
+        for (const auto& pDerivedEntity : vDirectSubclasses) {
+            const auto pClass = rfk::classCast(pDerivedEntity);
+            if (!pClass) {
+                const Error err(fmt::format("Class cast failed for type {}.", pDerivedEntity->getName()));
+                err.showError();
+                throw std::runtime_error(err.getError());
+            }
+
+            const auto pGuid = pClass->getProperty<Guid>(false);
+            if (!pGuid) {
+                const Error err(fmt::format(
+                    "Type {} does not have a GUID assigned to it.\n\n"
+                    "Here is an example of how to assign a GUID to your type:\n"
+                    "class NECLASS(Guid(\"00000000-0000-0000-0000-000000000000\")) MyCoolClass "
+                    ": public ne::Serializable",
+                    pClass->getName()));
+                err.showError();
+                throw std::runtime_error(err.getError());
+            }
+
+            // Look if this GUID is already used.
+            const auto it = vAllGuids.find(pGuid->getGuid());
+            if (it != vAllGuids.end()) [[unlikely]] {
+                const Error err(fmt::format(
+                    "GUID of type {} is already used by type {}, please generate another "
+                    "GUID.",
+                    pClass->getName(),
+                    it->second));
+                err.showError();
+                throw std::runtime_error(err.getError());
+            }
+
+            // Add this GUID.
+            vAllGuids[pGuid->getGuid()] = pClass->getName();
+
+            // Go though all children.
+            collectGuids(pClass, vAllGuids);
+        }
+    }
+#endif
+
     bool Serializable::isFieldSerializable(rfk::Field const& field) {
         const auto& fieldType = field.getType();
 
@@ -195,7 +296,11 @@ namespace ne {
                 return true;
 
             // Check if Serializable.
-            if (pClass->getId() == Serializable::staticGetArchetype().getId())
+            const auto pGuid = pClass->getProperty<Guid>(false);
+            if (!pGuid)
+                return false;
+
+            if (pGuid->getGuid() == Serializable::staticGetArchetype().getProperty<Guid>(false)->getGuid())
                 return true;
 
             return false;
@@ -214,11 +319,23 @@ namespace ne {
         rfk::Class const& fromArchetype = pFrom->getArchetype();
         rfk::Class const& toArchetype = pTo->getArchetype();
 
-        if (fromArchetype.getId() != toArchetype.getId()) {
+        // Check if types are equal.
+        const auto pFromGuid = fromArchetype.getProperty<Guid>(false);
+        const auto pToGuid = toArchetype.getProperty<Guid>(false);
+        if (!pFromGuid) {
+            const Error err(
+                fmt::format("type {} does not have a GUID assigned to it", fromArchetype.getName()));
+            return err;
+        }
+        if (!pToGuid) {
+            const Error err(
+                fmt::format("type {} does not have a GUID assigned to it", toArchetype.getName()));
+            return err;
+        }
+
+        if (pFromGuid->getGuid() != pToGuid->getGuid()) {
             return Error(fmt::format(
-                "classes \"{}\" and \"{}\" are not the same",
-                fromArchetype.getName(),
-                toArchetype.getName()));
+                "types \"{}\" and \"{}\" are not the same", fromArchetype.getName(), toArchetype.getName()));
         }
 
         struct Data {
@@ -282,4 +399,62 @@ namespace ne {
         }
         return {};
     }
+
+    const rfk::Class*
+    Serializable::getClassForGuid(const rfk::Class* pArchetypeToAnalyze, const std::string& sGuid) {
+        const auto vDirectSubclasses = pArchetypeToAnalyze->getDirectSubclasses();
+        for (const auto& pDerivedEntity : vDirectSubclasses) {
+            const auto pClass = rfk::classCast(pDerivedEntity);
+            if (!pClass) {
+                const Error err(fmt::format("Class cast failed for type {}.", pDerivedEntity->getName()));
+                err.showError();
+                throw std::runtime_error(err.getError());
+            }
+
+            // Get GUID property.
+            const auto pGuid = pClass->getProperty<Guid>(false);
+            if (!pGuid) {
+                const Error err(fmt::format(
+                    "Type {} does not have a GUID assigned to it.\n\n"
+                    "Here is an example of how to assign a GUID to your type:\n"
+                    "class NECLASS(Guid(\"00000000-0000-0000-0000-000000000000\")) MyCoolClass "
+                    ": public ne::Serializable",
+                    pClass->getName()));
+                err.showError();
+                throw std::runtime_error(err.getError());
+            }
+
+            if (pGuid->getGuid() == sGuid) {
+                return pClass;
+            } else {
+                const auto pResult = getClassForGuid(pClass, sGuid);
+                if (pResult) {
+                    return pResult;
+                } else {
+                    continue;
+                }
+            }
+        }
+
+        return nullptr;
+    }
+
+    const rfk::Class* Serializable::getClassForGuid(const std::string& sGuid) {
+        // Get GUID of this class.
+        const auto& selfArchetype = Serializable::staticGetArchetype();
+        const auto pSelfGuid = selfArchetype.getProperty<Guid>(false);
+        if (!pSelfGuid) {
+            const Error err(
+                fmt::format("Type {} does not have a GUID assigned to it.", selfArchetype.getName()));
+            err.showError();
+            throw std::runtime_error(err.getError());
+        }
+
+        if (pSelfGuid->getGuid() == sGuid) {
+            return &selfArchetype;
+        }
+
+        return getClassForGuid(&selfArchetype, sGuid);
+    }
+
 } // namespace ne

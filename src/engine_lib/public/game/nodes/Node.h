@@ -13,7 +13,7 @@ namespace ne NENAMESPACE() {
      * serialized instances of this class reference old (invalid) class ID. Include a backwards compatibility
      * in this case.
      */
-    class NECLASS() Node : public Serializable {
+    class NECLASS(Guid("2a721c37-3c22-450c-8dad-7b6985cbbd61")) Node : public Serializable {
     public:
         /** Creates a node with the name "Node". */
         Node();
@@ -44,6 +44,10 @@ namespace ne NENAMESPACE() {
         std::string getNodeName() const;
 
     private:
+        /** Test. */
+        NEPROPERTY()
+        Serializable specialField;
+
         /** Node name. */
         NEPROPERTY()
         std::string sNodeName;

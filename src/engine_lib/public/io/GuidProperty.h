@@ -20,16 +20,18 @@ namespace ne NENAMESPACE() {
      * class NECLASS(ne::Guid("00000000-0000-0000-0000-000000000000")) MyCoolClass : public ne::Serializable
      * @endcode
      *
-     * You can generate a random GUID by just googling "generate GUID". Fun fact: if you search
-     * "generate GUID" in DuckDuckGo it will show you a randomly generated GUID on top of all search results.
+     * You can generate a random GUID by just googling "generate GUID" and using any site/tool to generate it.
      *
      * Uniqueness of all GUIDs is checked by the engine on startup in DEBUG builds, so you don't need to check
      * if all of your GUIDs are unique or not, this is done automatically and if something is not unique
      * you will get a message box with an error on engine startup saying where and what is not unique.
      */
-    class NECLASS(rfk::PropertySettings(rfk::EEntityKind::Class | rfk::EEntityKind::Struct, false, true)) Guid
-        : public rfk::Property {
+    class NECLASS(rfk::PropertySettings(rfk::EEntityKind::Class | rfk::EEntityKind::Struct, false, false))
+        Guid : public rfk::Property {
     public:
+        Guid() = default;
+        virtual ~Guid() override = default;
+
         /**
          * Initializes the GUID of the entity.
          *

@@ -2,6 +2,7 @@
 
 // Custom.
 #include "io/Logger.h"
+#include "io/Serializable.h"
 #include "render/IRenderer.h"
 #if defined(WIN32)
 #include "render/directx/DirectXRenderer.h"
@@ -11,6 +12,24 @@
 #include "fmt/core.h"
 
 namespace ne {
+    Game::Game(Window* pWindow) {
+        this->pWindow = pWindow;
+
+#if defined(DEBUG)
+        Serializable::checkGuidUniqueness();
+#endif
+
+#if defined(WIN32)
+        pRenderer = std::make_unique<DirectXRenderer>(this);
+#elif __linux__
+        throw std::runtime_error("No renderer for this platform.");
+#else
+        static_assert(false, "no renderer here");
+#endif
+    }
+
+    Game::~Game() { threadPool.stop(); }
+
     void Game::onBeforeNewFrame(float fTimeSincePrevCallInSec) {
         executeDeferredTasks();
 
@@ -18,8 +37,6 @@ namespace ne {
 
         pGameInstance->onBeforeNewFrame(fTimeSincePrevCallInSec);
     }
-
-    Game::~Game() { threadPool.stop(); }
 
     void Game::executeDeferredTasks() {
         std::queue<std::function<void()>> localTasks;
@@ -80,18 +97,6 @@ namespace ne {
     }
 
     Window* Game::getWindow() const { return pWindow; }
-
-    Game::Game(Window* pWindow) {
-        this->pWindow = pWindow;
-
-#if defined(WIN32)
-        pRenderer = std::make_unique<DirectXRenderer>(this);
-#elif __linux__
-        throw std::runtime_error("No renderer for this platform.");
-#else
-        static_assert(false, "no renderer here");
-#endif
-    }
 
     void Game::triggerActionEvents(
         std::variant<KeyboardKey, MouseButton> key, KeyboardModifiers modifiers, bool bIsPressedDown) {

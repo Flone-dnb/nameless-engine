@@ -10,6 +10,7 @@
 #include "misc/Error.h"
 #include "io/Logger.h"
 #include "io/ConfigManager.h"
+#include "io/GuidProperty.h"
 
 // External.
 #include "Refureku/Refureku.h"
@@ -26,13 +27,8 @@ namespace ne NENAMESPACE() {
      *
      * Inherit your class from this type to add a 'serialize' function which will
      * serialize the type and all reflected fields (even inherited) into a file.
-     *
-     * @warning Note that class name and the namespace it's located in (if exists) are used for serialization,
-     * if you change your class name or namespace its located in this will change class ID and make all
-     * previously serialized versions of your class reference old class ID which will break deserialization
-     * for all previously serialized versions of your class.
      */
-    class NECLASS() Serializable : public rfk::Object {
+    class NECLASS(Guid("f5a59b47-ead8-4da4-892e-cf05abb2f3cc")) Serializable : public rfk::Object {
     public:
         Serializable() = default;
         virtual ~Serializable() override = default;
@@ -49,12 +45,6 @@ namespace ne NENAMESPACE() {
          * a backup file if you are saving important information, such as player progress,
          * other cases such as player game settings and etc. usually do not need a backup but
          * you can use it if you want.
-         *
-         * @warning Type will be serialized as a class ID which will change if you change your class
-         * name or if your class is defined in a namespace if you change your namespace name. If your class ID
-         * was changed this means that all previously serialized files will reference invalid class ID and you
-         * won't be able to deserialize them (unless you manually change class ID in previously serialized
-         * files).
          *
          * @remark Note that not all reflected fields can be serialized, only specific types can be
          * serialized. Const fields, pointer fields, lvalue references, rvalue references and C-arrays will
@@ -146,7 +136,27 @@ namespace ne NENAMESPACE() {
         static std::variant<std::shared_ptr<T>, Error>
         deserialize(toml::value& tomlData, std::string sEntityId = "");
 
+#if defined(DEBUG)
+        /**
+         * Checks that all classes/structs that inherit from Serializable have correct and unique GUIDs.
+         *
+         * Automatically called by the Game object (object that owns GameInstance) and has no point in being
+         * called from your game's code.
+         */
+        static void checkGuidUniqueness();
+#endif
+
     private:
+#if defined(DEBUG)
+        /**
+         * Collects GUIDs of children of the specified type.
+         *
+         * @param pArchetypeToAnalyze Type which children to analyze.
+         * @param vAllGuids           Map of already collected GUIDs to check for uniqueness.
+         */
+        static void collectGuids(
+            const rfk::Class* pArchetypeToAnalyze, std::unordered_map<std::string, std::string>& vAllGuids);
+#endif
         /**
          * Returns whether the specified field can be serialized or not.
          *
@@ -165,6 +175,27 @@ namespace ne NENAMESPACE() {
          * @return Whether the specified archetype is derived from Serializable or not.
          */
         static bool isDerivedFromSerializable(rfk::Archetype const* pArchetype);
+
+        /**
+         * Returns archetype for the specified GUID.
+         *
+         * @param sGuid GUID to look for.
+         *
+         * @return nullptr if not found, otherwise valid pointer.
+         */
+        static const rfk::Class* getClassForGuid(const std::string& sGuid);
+
+        /**
+         * Looks for all childred of the specified archetype to find a type that
+         * has the specified GUID.
+         *
+         * @param pArchetypeToAnalyze Type which children to analyze.
+         * @param sGuid               GUID to look for.
+         *
+         * @return nullptr if not found, otherwise valid pointer.
+         */
+        static const rfk::Class*
+        getClassForGuid(const rfk::Class* pArchetypeToAnalyze, const std::string& sGuid);
 
         /**
          * Clones reflected serializable fields of one object to another.
@@ -276,16 +307,16 @@ namespace ne NENAMESPACE() {
         // We can't just use sSectionName.starts_with(sEntityId) because we might make a mistake in the
         // following situation: [100.10.1014674670888563010] with entity ID equal to "10".
         std::string sTargetSection;
-        size_t iClassId = 0;
-        // Each entity section has the following format: [entityId.classId]
-        // For sub entities (field with reflected type) format: [parentEntityId.childEntityId.childClassId]
+        std::string sTypeGuid;
+        // Each entity section has the following format: [entityId.GUID]
+        // For sub entities (field with reflected type) format: [parentEntityId.childEntityId.childGUID]
         for (const auto& sSectionName : vSections) {
             const auto iIdEndDotPos = sSectionName.rfind('.');
             if (iIdEndDotPos == std::string::npos) [[unlikely]] {
                 return Error("provided toml value does not contain entity ID");
             }
             if (iIdEndDotPos + 1 == sSectionName.size()) [[unlikely]] {
-                return Error(fmt::format("section name \"{}\" does not have a class ID", sSectionName));
+                return Error(fmt::format("section name \"{}\" does not have a GUID", sSectionName));
             }
             if (iIdEndDotPos == 0) [[unlikely]] {
                 return Error(fmt::format("section \"{}\" is not full", sSectionName));
@@ -296,16 +327,8 @@ namespace ne NENAMESPACE() {
             if (sIdChain == sEntityId) {
                 sTargetSection = sSectionName;
 
-                // Get this entity's class ID.
-                try {
-                    iClassId = std::stoull(sSectionName.substr(iIdEndDotPos + 1));
-                } catch (std::exception& ex) {
-                    return Error(fmt::format(
-                        "failed to convert string to unsigned long long when retrieving class ID for section "
-                        "\"{}\": {}",
-                        sSectionName,
-                        ex.what()));
-                }
+                // Get this entity's GUID.
+                sTypeGuid = sSectionName.substr(iIdEndDotPos + 1);
                 break;
             }
         }
@@ -335,17 +358,19 @@ namespace ne NENAMESPACE() {
             vKeys.push_back(key);
         }
 
-        rfk::Class const* pClass = rfk::getDatabase().getClassById(iClassId);
+        // Get archetype for found GUID.
+        auto pClass = getClassForGuid(sTypeGuid);
         if (!pClass) {
-            return Error(fmt::format("no class found in the reflection database by ID {}", iClassId));
+            return Error(fmt::format("no type found for GUID {}", sTypeGuid));
         }
         if (!isDerivedFromSerializable(pClass)) {
             return Error(fmt::format(
-                "deserialized class with ID {} does not derive from {}",
-                iClassId,
+                "deserialized class with GUID {} does not derive from {}",
+                sTypeGuid,
                 staticGetArchetype().getName()));
         }
 
+        // Create instance.
         auto pInstance = pClass->makeSharedInstance<T>();
         if (!pInstance) {
             return Error(fmt::format(
@@ -355,6 +380,7 @@ namespace ne NENAMESPACE() {
                 pClass->getName()));
         }
 
+        // Deserialize fields.
         for (auto& sFieldName : vKeys) {
             if (sFieldName == sSubEntityFieldNameKey) {
                 // This field is used as section metadata and tells us what field of parent entity
@@ -420,7 +446,7 @@ namespace ne NENAMESPACE() {
                 // Field with a reflected type.
                 // Find a section that has the key ".field_name = *our field name*".
                 std::string sSectionNameForField;
-                // This will have minimum value of 1 where the dot separates IDs from class ID.
+                // This will have minimum value of 1 where the dot separates IDs from GUID.
                 const auto iNumberOfDotsInTargetSectionName =
                     std::ranges::count(sTargetSection.begin(), sTargetSection.end(), '.');
                 for (const auto& sSectionName : vSections) {
@@ -500,21 +526,21 @@ namespace ne NENAMESPACE() {
                         fmt::format("could not find a section that represents field \"{}\"", sFieldName));
                 }
 
-                // Cut field's class ID from the section name.
-                // The section name could look something like this: [entityId.subEntityId.subEntityClassId].
-                const auto iSubEntityClassIdDotPos = sSectionNameForField.rfind('.');
-                if (iSubEntityClassIdDotPos == std::string::npos) [[unlikely]] {
+                // Cut field's GUID from the section name.
+                // The section name could look something like this: [entityId.subEntityId.subEntityGUID].
+                const auto iSubEntityGuidDotPos = sSectionNameForField.rfind('.');
+                if (iSubEntityGuidDotPos == std::string::npos) [[unlikely]] {
                     return Error(fmt::format(
-                        "sub entity does not have a class ID (section: \"{}\")", sSectionNameForField));
+                        "sub entity does not have a GUID (section: \"{}\")", sSectionNameForField));
                 }
-                if (iSubEntityClassIdDotPos + 1 == sSectionNameForField.size()) [[unlikely]] {
+                if (iSubEntityGuidDotPos + 1 == sSectionNameForField.size()) [[unlikely]] {
                     return Error(
-                        fmt::format("section name \"{}\" does not have a class ID", sSectionNameForField));
+                        fmt::format("section name \"{}\" does not have a GUID", sSectionNameForField));
                 }
-                if (iSubEntityClassIdDotPos == 0) [[unlikely]] {
+                if (iSubEntityGuidDotPos == 0) [[unlikely]] {
                     return Error(fmt::format("section \"{}\" is not full", sSectionNameForField));
                 }
-                const auto sSubEntityId = sSectionNameForField.substr(0, iSubEntityClassIdDotPos);
+                const auto sSubEntityId = sSectionNameForField.substr(0, iSubEntityGuidDotPos);
 
                 // Deserialize section into an object.
                 auto result = deserialize<Serializable>(tomlData, sSubEntityId);

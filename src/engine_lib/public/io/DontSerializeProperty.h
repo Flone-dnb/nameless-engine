@@ -17,11 +17,14 @@ namespace ne NENAMESPACE() {
      * int iKey = 42; // will be ignored and not serialized
      * @endcode
      */
-    class NECLASS(rfk::PropertySettings(rfk::EEntityKind::Field, false, true)) DontSerialize
+    class NECLASS(rfk::PropertySettings(rfk::EEntityKind::Field, false, false)) DontSerialize
         : public rfk::Property {
     public:
+        DontSerialize() = default;
+        virtual ~DontSerialize() override = default;
+
         ne_DontSerialize_GENERATED
     };
-} // namespace ne NENAMESPACE()
+} // namespace )
 
 File_DontSerializeProperty_GENERATED

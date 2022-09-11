@@ -470,7 +470,7 @@ namespace ne {
         return vAxis;
     }
 
-    float InputManager::getCurrentAxisEventValue(const std::string& sAxisName) {
+    float InputManager::getCurrentAxisEventState(const std::string& sAxisName) {
         std::scoped_lock<std::recursive_mutex> guard(mtxAxisEvents);
 
         const auto stateIt = axisState.find(sAxisName);
@@ -481,16 +481,16 @@ namespace ne {
         return static_cast<float>(stateIt->second.second);
     }
 
-    bool InputManager::getCurrentActionEventValue(const std::string& sActionName) {
-        std::scoped_lock<std::recursive_mutex> guard(mtxActionEvents);
+    //    bool InputManager::getCurrentActionEventState(const std::string& sActionName) {
+    //        std::scoped_lock<std::recursive_mutex> guard(mtxActionEvents);
 
-        const auto stateIt = actionState.find(sActionName);
-        if (stateIt == actionState.end()) {
-            return false;
-        }
+    //        const auto stateIt = actionState.find(sActionName);
+    //        if (stateIt == actionState.end()) {
+    //            return false;
+    //        }
 
-        return stateIt->second.second;
-    }
+    //        return stateIt->second.second;
+    //    }
 
     bool InputManager::removeActionEvent(const std::string& sActionName) {
         std::scoped_lock<std::recursive_mutex> guard(mtxActionEvents);

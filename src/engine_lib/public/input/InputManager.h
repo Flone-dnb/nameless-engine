@@ -240,18 +240,19 @@ namespace ne {
          *
          * @return Zero if axis event with this name does not exist, last input value otherwise.
          */
-        float getCurrentAxisEventValue(const std::string& sAxisName);
+        float getCurrentAxisEventState(const std::string& sAxisName);
 
-        /**
-         * Returns the current value of an action event.
-         * This value is equal to the last value passed to IGameInstance::onInputActionEvent.
-         *
-         * @param sActionName Name of the action event that you used in @ref addActionEvent.
-         *
-         * @return Zero if action event with this name does not exist, 'true' if at least one
-         * key/button associated with this action is pressed, 'false' if all released (not pressed).
-         */
-        bool getCurrentActionEventValue(const std::string& sActionName);
+        // Use `isActionJust...` functions instead.
+        //        /**
+        //         * Returns the current value of an action event.
+        //         * This value is equal to the last value passed to IGameInstance::onInputActionEvent.
+        //         *
+        //         * @param sActionName Name of the action event that you used in @ref addActionEvent.
+        //         *
+        //         * @return 'false' if action event with this name does not exist, 'true' if at least one
+        //         * key/button associated with this action is pressed, 'false' if all released (not pressed).
+        //         */
+        //        bool getCurrentActionEventState(const std::string& sActionName);
 
         /**
          * Removes an action event with the specified name.

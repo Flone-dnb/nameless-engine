@@ -57,11 +57,7 @@ add_custom_target(${REFUREKU_GENERATOR_TARGET}
 )
 add_dependencies(${REFUREKU_GENERATOR_TARGET} ${ENGINE_TARGET})
 add_dependencies(${PROJECT_NAME} ${REFUREKU_GENERATOR_TARGET})
-# Add a pre build step to run reflection code generator.
-add_custom_command(TARGET ${PROJECT_NAME} PRE_BUILD
-	WORKING_DIRECTORY ${EDITOR_SRC_ABSOLUTE_PATH}/../
-	COMMAND ${PATH_TO_EXT}/Refureku/build/Bin/RefurekuGenerator ${EDITOR_SRC_ABSOLUTE_PATH}/../.reflection/RefurekuSettings.toml
-    COMMAND go run ${EDITOR_SRC_ABSOLUTE_PATH}/../.reflection/merge_generated_reflection/merge_generated_reflection.go ${EDITOR_SRC_ABSOLUTE_PATH}/../.generated ${REFLECTION_FILE_NAME})
+set_target_properties(${REFUREKU_GENERATOR_TARGET} PROPERTIES FOLDER ${EXTERNAL_FOLDER})
 
 # set standard
 set(PROJECT_CXX_STANDARD_VERSION 23)
@@ -109,12 +105,14 @@ endif()
 # doxygen
 find_package(Doxygen)
 if (DOXYGEN_FOUND)
-    add_custom_target(doc_doxygen ALL
+    set(DOXYGEN_TARGET doc_doxygen)
+    add_custom_target(${DOXYGEN_TARGET} ALL
         COMMAND doxygen
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/docs/
         COMMENT "Generating API documentation with Doxygen..."
         VERBATIM )
-    add_dependencies(doc_doxygen ${PROJECT_NAME} engine_lib)
+    add_dependencies(${DOXYGEN_TARGET} ${PROJECT_NAME} engine_lib)
+    set_target_properties(${DOXYGEN_TARGET} PROPERTIES FOLDER ${EXTERNAL_FOLDER})
 else (DOXYGEN_FOUND)
   message(WARNING "Doxygen need to be installed to generate the documentation, please install Doxygen.")
 endif (DOXYGEN_FOUND)

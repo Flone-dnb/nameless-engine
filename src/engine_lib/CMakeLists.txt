@@ -148,6 +148,8 @@ endif()
 # Set folder.
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 set(ENGINE_FOLDER "NAMELESS-ENGINE")
+set(EXTERNAL_FOLDER "EXTERNAL")
+set(EXTERNAL_FOLDER ${EXTERNAL_FOLDER} PARENT_SCOPE)
 set_target_properties(${PROJECT_NAME} PROPERTIES FOLDER ${ENGINE_FOLDER})
 
 # More warnings.
@@ -175,24 +177,29 @@ set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE) # disable tests
 set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE) # disable examples
 add_subdirectory(${RELATIVE_EXT_PATH}/glfw ${DEPENDENCY_BUILD_DIR_NAME}/glfw) # add GLFW target
 target_link_libraries(${PROJECT_NAME} PUBLIC glfw)
+set_target_properties(glfw PROPERTIES FOLDER ${EXTERNAL_FOLDER})
 
 # External: spdlog.
 add_subdirectory(${RELATIVE_EXT_PATH}/spdlog ${DEPENDENCY_BUILD_DIR_NAME}/spdlog)
 target_link_libraries(${PROJECT_NAME} PUBLIC spdlog::spdlog)
+set_target_properties(spdlog PROPERTIES FOLDER ${EXTERNAL_FOLDER})
 
 # External: toml11.
 if (MSVC)
     target_compile_options(${PROJECT_NAME} PUBLIC /Zc:__cplusplus)
 endif()
 add_subdirectory(${RELATIVE_EXT_PATH}/toml11 ${DEPENDENCY_BUILD_DIR_NAME}/toml11)
+set_target_properties(toml11 PROPERTIES FOLDER ${EXTERNAL_FOLDER})
 
 # External: portable-file-dialogs
 add_subdirectory(${RELATIVE_EXT_PATH}/portable-file-dialogs ${DEPENDENCY_BUILD_DIR_NAME}/portable-file-dialogs)
 target_link_libraries(${PROJECT_NAME} PUBLIC portable_file_dialogs)
+set_target_properties(portable_file_dialogs PROPERTIES FOLDER ${EXTERNAL_FOLDER})
 
 # External: fmt
 add_subdirectory(${RELATIVE_EXT_PATH}/fmt ${DEPENDENCY_BUILD_DIR_NAME}/fmt)
 target_link_libraries(${PROJECT_NAME} PUBLIC fmt)
+set_target_properties(fmt PROPERTIES FOLDER ${EXTERNAL_FOLDER})
 
 # External: Refureku (start) --------------------------------------------------------------------------
 # Check that path does not have pipe character because we use it to separate paths.
@@ -241,6 +248,7 @@ add_custom_target(${SETUP_REFUREKU_TARGET}
 )
 add_dependencies(${PROJECT_NAME} ${SETUP_REFUREKU_TARGET})
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/Refureku/build/Include/)
+set_target_properties(${SETUP_REFUREKU_TARGET} PROPERTIES FOLDER ${EXTERNAL_FOLDER})
 
 # Link Refureku library.
 if (MSVC)
@@ -266,6 +274,7 @@ add_custom_target(${REFUREKU_GENERATOR_TARGET}
 )
 add_dependencies(${REFUREKU_GENERATOR_TARGET} ${SETUP_REFUREKU_TARGET})
 add_dependencies(${PROJECT_NAME} ${REFUREKU_GENERATOR_TARGET})
+set_target_properties(${REFUREKU_GENERATOR_TARGET} PROPERTIES FOLDER ${EXTERNAL_FOLDER})
 
 # Add generated headers to include directories.
 target_include_directories(${PROJECT_NAME} PUBLIC ../.generated)
@@ -294,10 +303,13 @@ if (WIN32)
     # External: D3D12MemoryAllocator
     add_subdirectory(${RELATIVE_EXT_PATH}/D3D12MemoryAllocator ${DEPENDENCY_BUILD_DIR_NAME}/D3D12MemoryAllocator)
     target_link_libraries(${PROJECT_NAME} PUBLIC D3D12MemoryAllocator)
+    set_target_properties(D3D12MemoryAllocator PROPERTIES FOLDER ${EXTERNAL_FOLDER})
 
     # External: DirectX-Headers
     add_subdirectory(${RELATIVE_EXT_PATH}/DirectX-Headers ${DEPENDENCY_BUILD_DIR_NAME}/DirectX-Headers)
     target_link_libraries(${PROJECT_NAME} PUBLIC DirectX-Headers)
+    set_target_properties(DirectX-Headers PROPERTIES FOLDER ${EXTERNAL_FOLDER})
+    set_target_properties(DirectX-Guids PROPERTIES FOLDER ${EXTERNAL_FOLDER})
 
     # External: DXC.
     # Download and unzip DXC.
@@ -307,6 +319,7 @@ if (WIN32)
                    ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/DirectXShaderCompiler/ # working directory
     )
     add_dependencies(${PROJECT_NAME} ${SETUP_DXT_TARGET})
+    set_target_properties(${SETUP_DXT_TARGET} PROPERTIES FOLDER ${EXTERNAL_FOLDER})
 
     # Set DXC variables.
     set(PATH_TO_DXC_DLL_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/DirectXShaderCompiler/bin/x64)
@@ -359,6 +372,8 @@ add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
 
 # tests
 add_subdirectory(${RELATIVE_EXT_PATH}/Catch2 ${DEPENDENCY_BUILD_DIR_NAME}/Catch2)
+set_target_properties(Catch2 PROPERTIES FOLDER ${EXTERNAL_FOLDER})
+set_target_properties(Catch2WithMain PROPERTIES FOLDER ${EXTERNAL_FOLDER})
 
 set(ENGINE_TESTS_NAME engine_tests)
 set(TESTS_RELATIVE_PATH ../../tests)

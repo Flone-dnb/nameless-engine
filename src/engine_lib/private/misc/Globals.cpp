@@ -54,11 +54,11 @@ namespace ne {
 
         // Try to get AppData folder.
         PWSTR pathTmp;
-        const HRESULT resultPath = SHGetKnownFolderPath(FOLDERID_LocalAppData, 0, nullptr, &pathTmp);
-        if (resultPath != S_OK) {
+        const HRESULT result = SHGetKnownFolderPath(FOLDERID_LocalAppData, 0, nullptr, &pathTmp);
+        if (result != S_OK) {
             CoTaskMemFree(pathTmp);
 
-            const Error err("failed to initialize base logger directory");
+            const Error err(result);
             err.showError();
             throw std::runtime_error(err.getError());
         }

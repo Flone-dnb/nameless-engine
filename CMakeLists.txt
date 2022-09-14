@@ -49,15 +49,15 @@ add_subdirectory(src/${ENGINE_TARGET} dependency_build/${ENGINE_TARGET})
 target_link_libraries(${PROJECT_NAME} PRIVATE ${ENGINE_TARGET})
 add_dependencies(${PROJECT_NAME} ${ENGINE_TARGET})
 # Add a pre build step to run reflection code generator.
-set(REFUREKU_GENERATOR_TARGET RunRefurekuGeneratorEditor)
-add_custom_target(${REFUREKU_GENERATOR_TARGET}
-        WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
-        COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/ext/Refureku/build/Bin/RefurekuGenerator ${CMAKE_CURRENT_SOURCE_DIR}/src/.reflection/RefurekuSettings.toml
-        COMMAND go run ${CMAKE_CURRENT_SOURCE_DIR}/src/.reflection/merge_generated_reflection/merge_generated_reflection.go ${CMAKE_CURRENT_SOURCE_DIR}/src/.generated ${REFLECTION_FILE_NAME}
-)
-add_dependencies(${REFUREKU_GENERATOR_TARGET} ${ENGINE_TARGET})
-add_dependencies(${PROJECT_NAME} ${REFUREKU_GENERATOR_TARGET})
-set_target_properties(${REFUREKU_GENERATOR_TARGET} PROPERTIES FOLDER ${EXTERNAL_FOLDER})
+# set(REFUREKU_GENERATOR_TARGET RunRefurekuGeneratorEditor)
+# add_custom_target(${REFUREKU_GENERATOR_TARGET}
+#         WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+#         COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/ext/Refureku/build/Bin/RefurekuGenerator ${CMAKE_CURRENT_SOURCE_DIR}/src/.reflection/RefurekuSettings.toml
+#         COMMAND go run ${CMAKE_CURRENT_SOURCE_DIR}/src/.reflection/merge_generated_reflection/merge_generated_reflection.go ${CMAKE_CURRENT_SOURCE_DIR}/src/.generated ${REFLECTION_FILE_NAME}
+# )
+# add_dependencies(${REFUREKU_GENERATOR_TARGET} ${ENGINE_TARGET})
+# add_dependencies(${PROJECT_NAME} ${REFUREKU_GENERATOR_TARGET})
+# set_target_properties(${REFUREKU_GENERATOR_TARGET} PROPERTIES FOLDER ${EXTERNAL_FOLDER})
 
 # set standard
 set(PROJECT_CXX_STANDARD_VERSION 23)

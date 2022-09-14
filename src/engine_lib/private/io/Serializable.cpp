@@ -231,24 +231,17 @@ namespace ne {
     }
 
     void Serializable::collectGuids(
-        const rfk::Class* pArchetypeToAnalyze, std::unordered_map<std::string, std::string>& vAllGuids) {
+        const rfk::Struct* pArchetypeToAnalyze, std::unordered_map<std::string, std::string>& vAllGuids) {
         const auto vDirectSubclasses = pArchetypeToAnalyze->getDirectSubclasses();
         for (const auto& pDerivedEntity : vDirectSubclasses) {
-            const auto pClass = rfk::classCast(pDerivedEntity);
-            if (!pClass) {
-                const Error err(fmt::format("Class cast failed for type {}.", pDerivedEntity->getName()));
-                err.showError();
-                throw std::runtime_error(err.getError());
-            }
-
-            const auto pGuid = pClass->getProperty<Guid>(false);
+            const auto pGuid = pDerivedEntity->getProperty<Guid>(false);
             if (!pGuid) {
                 const Error err(fmt::format(
                     "Type {} does not have a GUID assigned to it.\n\n"
                     "Here is an example of how to assign a GUID to your type:\n"
                     "class NECLASS(Guid(\"00000000-0000-0000-0000-000000000000\")) MyCoolClass "
                     ": public ne::Serializable",
-                    pClass->getName()));
+                    pDerivedEntity->getName()));
                 err.showError();
                 throw std::runtime_error(err.getError());
             }
@@ -259,17 +252,17 @@ namespace ne {
                 const Error err(fmt::format(
                     "GUID of type {} is already used by type {}, please generate another "
                     "GUID.",
-                    pClass->getName(),
+                    pDerivedEntity->getName(),
                     it->second));
                 err.showError();
                 throw std::runtime_error(err.getError());
             }
 
             // Add this GUID.
-            vAllGuids[pGuid->getGuid()] = pClass->getName();
+            vAllGuids[pGuid->getGuid()] = pDerivedEntity->getName();
 
             // Go though all children.
-            collectGuids(pClass, vAllGuids);
+            collectGuids(pDerivedEntity, vAllGuids);
         }
     }
 #endif
@@ -400,34 +393,27 @@ namespace ne {
         return {};
     }
 
-    const rfk::Class*
-    Serializable::getClassForGuid(const rfk::Class* pArchetypeToAnalyze, const std::string& sGuid) {
+    const rfk::Struct*
+    Serializable::getClassForGuid(const rfk::Struct* pArchetypeToAnalyze, const std::string& sGuid) {
         const auto vDirectSubclasses = pArchetypeToAnalyze->getDirectSubclasses();
         for (const auto& pDerivedEntity : vDirectSubclasses) {
-            const auto pClass = rfk::classCast(pDerivedEntity);
-            if (!pClass) {
-                const Error err(fmt::format("Class cast failed for type {}.", pDerivedEntity->getName()));
-                err.showError();
-                throw std::runtime_error(err.getError());
-            }
-
             // Get GUID property.
-            const auto pGuid = pClass->getProperty<Guid>(false);
+            const auto pGuid = pDerivedEntity->getProperty<Guid>(false);
             if (!pGuid) {
                 const Error err(fmt::format(
                     "Type {} does not have a GUID assigned to it.\n\n"
                     "Here is an example of how to assign a GUID to your type:\n"
                     "class NECLASS(Guid(\"00000000-0000-0000-0000-000000000000\")) MyCoolClass "
                     ": public ne::Serializable",
-                    pClass->getName()));
+                    pDerivedEntity->getName()));
                 err.showError();
                 throw std::runtime_error(err.getError());
             }
 
             if (pGuid->getGuid() == sGuid) {
-                return pClass;
+                return pDerivedEntity;
             } else {
-                const auto pResult = getClassForGuid(pClass, sGuid);
+                const auto pResult = getClassForGuid(pDerivedEntity, sGuid);
                 if (pResult) {
                     return pResult;
                 } else {

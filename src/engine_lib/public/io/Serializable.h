@@ -155,7 +155,7 @@ namespace ne NENAMESPACE() {
          * @param vAllGuids           Map of already collected GUIDs to check for uniqueness.
          */
         static void collectGuids(
-            const rfk::Class* pArchetypeToAnalyze, std::unordered_map<std::string, std::string>& vAllGuids);
+            const rfk::Struct* pArchetypeToAnalyze, std::unordered_map<std::string, std::string>& vAllGuids);
 #endif
         /**
          * Returns whether the specified field can be serialized or not.
@@ -194,8 +194,8 @@ namespace ne NENAMESPACE() {
          *
          * @return nullptr if not found, otherwise valid pointer.
          */
-        static const rfk::Class*
-        getClassForGuid(const rfk::Class* pArchetypeToAnalyze, const std::string& sGuid);
+        static const rfk::Struct*
+        getClassForGuid(const rfk::Struct* pArchetypeToAnalyze, const std::string& sGuid);
 
         /**
          * Clones reflected serializable fields of one object to another.

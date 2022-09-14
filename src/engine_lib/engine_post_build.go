@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"time"
 )
 
 // Expects the following arguments:
@@ -23,6 +24,8 @@ import (
 // - copies license files from 'ext' directory to the build directory,
 // - creates a simlink to the 'res' directory in working directory and build directory.
 func main() {
+	var time_start = time.Now()
+
 	var expected_arg_count = 6
 	var args_count = len(os.Args[1:])
 	if args_count != expected_arg_count {
@@ -46,12 +49,21 @@ func main() {
 		os.Exit(1)
 	}
 
-	copy_ext_licenses(ext_directory, build_directory)
+	if is_release == "1" {
+		fmt.Println("INFO: engine_post_build.go: copy external licenses...")
+		copy_ext_licenses(ext_directory, build_directory)
+	} else {
+		fmt.Println("INFO: engine_post_build.go: skip copy external licenses step " +
+			"because running DEBUG build.")
+	}
 	make_simlink_to_res(res_directory, working_directory, build_directory, engine_lib_dir)
 
 	if runtime.GOOS == "windows" && is_release == "1" {
 		add_redist(build_directory)
 	}
+
+	var time_elapsed = time.Since(time_start)
+	fmt.Println("SUCCESS: engine_post_build.go: took", time_elapsed.Milliseconds(), "ms")
 }
 
 func add_redist(build_directory string) {
@@ -121,9 +133,9 @@ func make_simlink_to_res(res_directory string, working_directory string, build_d
 		os.Exit(1)
 	}
 
-	fmt.Println("engine_post_build.go: using res directory:", res_directory)
-	fmt.Println("engine_post_build.go: using working directory:", working_directory)
-	fmt.Println("engine_post_build.go: using build directory:", build_directory)
+	fmt.Println("INFO: engine_post_build.go: using res directory:", res_directory)
+	fmt.Println("INFO: engine_post_build.go: using working directory:", working_directory)
+	fmt.Println("INFO: engine_post_build.go: using build directory:", build_directory)
 
 	_, err = os.Stat(filepath.Join(working_directory, "res"))
 	if os.IsNotExist(err) {

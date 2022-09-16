@@ -350,7 +350,7 @@ namespace ne NENAMESPACE() {
             return Error(fmt::format("found \"{}\" section is not a section", sTargetSection));
         }
 
-        const auto sectionTable = section.as_table();
+        const auto& sectionTable = section.as_table();
         std::vector<std::string> vKeys;
         for (const auto& [key, value] : sectionTable) {
             if (key == sNothingToSerializeKey)

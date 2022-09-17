@@ -15,14 +15,13 @@
 
 namespace ne {
     Logger::~Logger() {
-        if (iTotalWarningsProduced || iTotalErrorsProduced) {
-            info(
-                fmt::format(
-                    "\n---------------------------------------------------\nTotal warnings produced: "
-                    "{}.\nTotal errors produced: {}.",
-                    iTotalWarningsProduced,
-                    iTotalErrorsProduced),
-                "");
+        if (iTotalWarningsProduced > 0 || iTotalErrorsProduced > 0) {
+            pSpdLogger->info(fmt::format(
+                "\n---------------------------------------------------\n"
+                "Total warnings produced: {}.\n"
+                "Total errors produced: {}.",
+                iTotalWarningsProduced,
+                iTotalErrorsProduced));
         }
     }
 

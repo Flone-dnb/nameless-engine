@@ -256,11 +256,6 @@ namespace ne {
                 error->showError();
                 // don't throw here, not a critical error.
             }
-        } else {
-            Logger::get().warn(
-                fmt::format(
-                    "path to the window icon \"{}\" does not exist", params.pathToWindowIcon.string()),
-                sWindowLogCategory);
         }
 
         // Add Window pointer.

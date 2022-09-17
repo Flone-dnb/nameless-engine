@@ -35,8 +35,8 @@ namespace ne NENAMESPACE() {
         virtual ~Serializable() override = default;
 
         /**
-         * Serializes the type and all reflected fields (including inherited) into a file.
-         * Serialized entity can later be deserialized using @ref deserialize.
+         * Serializes the object and all reflected fields (including inherited) into a file.
+         * Serialized object can later be deserialized using @ref deserialize.
          *
          * @param pathToFile    File to write reflected data to. The ".toml" extension will be added
          * automatically if not specified in the path. If the specified file already exists it will be
@@ -74,7 +74,7 @@ namespace ne NENAMESPACE() {
 
         /**
          * Serializes multiple objects and their reflected fields (including inherited) into a file.
-         * Serialized entities can later be deserialized using @ref deserialize.
+         * Serialized objects can later be deserialized using @ref deserialize.
          *
          * This is an overloaded function. See full documentation for other overload.
          *
@@ -111,8 +111,8 @@ namespace ne NENAMESPACE() {
         getIdsFromFile(const std::filesystem::path& pathToFile);
 
         /**
-         * Deserializes the type and all reflected fields (including inherited) from a file.
-         * Specify the type of the entity (that is located in the file) as the T template parameter, which
+         * Deserializes an object and all reflected fields (including inherited) from a file.
+         * Specify the type of an object (that is located in the file) as the T template parameter, which
          * can be entity's actual type or entity's parent (up to Serializable).
          *
          * Example:
@@ -130,7 +130,7 @@ namespace ne NENAMESPACE() {
          * @param pathToFile File to read reflected data from. The ".toml" extension will be added
          * automatically if not specified in the path.
          *
-         * @return Error if something went wrong, otherwise a pointer to deserialized entity.
+         * @return Error if something went wrong, otherwise a pointer to deserialized object.
          */
         template <typename T>
         requires std::derived_from<T, Serializable>
@@ -144,7 +144,7 @@ namespace ne NENAMESPACE() {
          * @param ids        Array of object IDs (that you specified in @ref serialize) to deserialize
          * and return. Don't use dots in the entity ID, dots are used internally.
          *
-         * @return Error if something went wrong, otherwise an array of pointers to deserialized entities.
+         * @return Error if something went wrong, otherwise an array of pointers to deserialized objects.
          */
         static std::variant<std::vector<std::shared_ptr<Serializable>>, Error>
         deserialize(const std::filesystem::path& pathToFile, std::set<std::string> ids);
@@ -172,7 +172,7 @@ namespace ne NENAMESPACE() {
 #endif
 
         /**
-         * Serializes the type and all reflected fields (including inherited) into a toml value.
+         * Serializes the object and all reflected fields (including inherited) into a toml value.
          *
          * This is an overloaded function. See full documentation for other overload.
          *
@@ -188,8 +188,8 @@ namespace ne NENAMESPACE() {
         std::variant<std::string, Error> serialize(toml::value& tomlData, std::string sEntityId = "");
 
         /**
-         * Deserializes the type and all reflected fields (including inherited) from a toml value.
-         * Specify the type of the entity (that is located in the file) as the T template parameter, which
+         * Deserializes an object and all reflected fields (including inherited) from a toml value.
+         * Specify the type of an object (that is located in the file) as the T template parameter, which
          * can be entity's actual type or entity's parent (up to Serializable).
          *
          * @param tomlData        Toml value to retrieve an object from.
@@ -200,7 +200,7 @@ namespace ne NENAMESPACE() {
          * in recursion when this function is called from this function to process reflected field (sub
          * entity).
          *
-         * @return Error if something went wrong, otherwise a pointer to deserialized entity.
+         * @return Error if something went wrong, otherwise a pointer to deserialized object.
          */
         template <typename T>
         requires std::derived_from<T, Serializable>

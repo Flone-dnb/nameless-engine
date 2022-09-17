@@ -131,7 +131,11 @@ namespace ne {
         allocationDesc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
 
         auto result = pResourceManager->createDsvResource(
-            allocationDesc, depthStencilDesc, D3D12_RESOURCE_STATE_DEPTH_WRITE, depthClear);
+            "Renderer depth/stencil buffer",
+            allocationDesc,
+            depthStencilDesc,
+            D3D12_RESOURCE_STATE_DEPTH_WRITE,
+            depthClear);
         if (std::holds_alternative<Error>(result)) {
             auto err = std::get<Error>(std::move(result));
             err.addEntry();
@@ -814,7 +818,11 @@ namespace ne {
         allocationDesc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
 
         auto result = pResourceManager->createRtvResource(
-            allocationDesc, msaaRenderTargetDesc, D3D12_RESOURCE_STATE_COMMON, msaaClear);
+            "Renderer render target buffer",
+            allocationDesc,
+            msaaRenderTargetDesc,
+            D3D12_RESOURCE_STATE_COMMON,
+            msaaClear);
         if (std::holds_alternative<Error>(result)) {
             auto err = std::get<Error>(std::move(result));
             err.addEntry();

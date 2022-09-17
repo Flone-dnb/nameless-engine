@@ -70,12 +70,14 @@ namespace ne {
     }
 
     std::variant<std::unique_ptr<DirectXResource>, Error> DirectXResourceManager::createRtvResource(
+        const std::string& sResourceName,
         const D3D12MA::ALLOCATION_DESC& allocationDesc,
         const D3D12_RESOURCE_DESC& resourceDesc,
         const D3D12_RESOURCE_STATES& initialResourceState,
         const D3D12_CLEAR_VALUE& resourceClearValue) const {
         auto result = DirectXResource::create(
             this,
+            sResourceName,
             pRtvHeap.get(),
             DescriptorType::RTV,
             pMemoryAllocator.Get(),
@@ -93,12 +95,14 @@ namespace ne {
     }
 
     std::variant<std::unique_ptr<DirectXResource>, Error> DirectXResourceManager::createDsvResource(
+        const std::string& sResourceName,
         const D3D12MA::ALLOCATION_DESC& allocationDesc,
         const D3D12_RESOURCE_DESC& resourceDesc,
         const D3D12_RESOURCE_STATES& initialResourceState,
         const D3D12_CLEAR_VALUE& resourceClearValue) const {
         auto result = DirectXResource::create(
             this,
+            sResourceName,
             pDsvHeap.get(),
             DescriptorType::DSV,
             pMemoryAllocator.Get(),
@@ -116,11 +120,13 @@ namespace ne {
     }
 
     std::variant<std::unique_ptr<DirectXResource>, Error> DirectXResourceManager::createCbvResource(
+        const std::string& sResourceName,
         const D3D12MA::ALLOCATION_DESC& allocationDesc,
         const D3D12_RESOURCE_DESC& resourceDesc,
         const D3D12_RESOURCE_STATES& initialResourceState) const {
         auto result = DirectXResource::create(
             this,
+            sResourceName,
             pCbvSrvUavHeap.get(),
             DescriptorType::CBV,
             pMemoryAllocator.Get(),
@@ -138,11 +144,13 @@ namespace ne {
     }
 
     std::variant<std::unique_ptr<DirectXResource>, Error> DirectXResourceManager::createSrvResource(
+        const std::string& sResourceName,
         const D3D12MA::ALLOCATION_DESC& allocationDesc,
         const D3D12_RESOURCE_DESC& resourceDesc,
         const D3D12_RESOURCE_STATES& initialResourceState) const {
         auto result = DirectXResource::create(
             this,
+            sResourceName,
             pCbvSrvUavHeap.get(),
             DescriptorType::SRV,
             pMemoryAllocator.Get(),
@@ -160,11 +168,13 @@ namespace ne {
     }
 
     std::variant<std::unique_ptr<DirectXResource>, Error> DirectXResourceManager::createUavResource(
+        const std::string& sResourceName,
         const D3D12MA::ALLOCATION_DESC& allocationDesc,
         const D3D12_RESOURCE_DESC& resourceDesc,
         const D3D12_RESOURCE_STATES& initialResourceState) const {
         auto result = DirectXResource::create(
             this,
+            sResourceName,
             pCbvSrvUavHeap.get(),
             DescriptorType::UAV,
             pMemoryAllocator.Get(),

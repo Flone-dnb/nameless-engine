@@ -59,6 +59,7 @@ namespace ne {
         /**
          * Creates a new resource and binds a render target view descriptor to it.
          *
+         * @param sResourceName        Resource name, used for logging.
          * @param allocationDesc       Allocation description.
          * @param resourceDesc         Resource description.
          * @param initialResourceState Initial resource state.
@@ -67,6 +68,7 @@ namespace ne {
          * @return Error if something went wrong, otherwise created resource.
          */
         std::variant<std::unique_ptr<DirectXResource>, Error> createRtvResource(
+            const std::string& sResourceName,
             const D3D12MA::ALLOCATION_DESC& allocationDesc,
             const D3D12_RESOURCE_DESC& resourceDesc,
             const D3D12_RESOURCE_STATES& initialResourceState,
@@ -75,6 +77,7 @@ namespace ne {
         /**
          * Creates a new resource and binds a depth stencil view descriptor to it.
          *
+         * @param sResourceName        Resource name, used for logging.
          * @param allocationDesc       Allocation description.
          * @param resourceDesc         Resource description.
          * @param initialResourceState Initial resource state.
@@ -83,6 +86,7 @@ namespace ne {
          * @return Error if something went wrong, otherwise created resource.
          */
         std::variant<std::unique_ptr<DirectXResource>, Error> createDsvResource(
+            const std::string& sResourceName,
             const D3D12MA::ALLOCATION_DESC& allocationDesc,
             const D3D12_RESOURCE_DESC& resourceDesc,
             const D3D12_RESOURCE_STATES& initialResourceState,
@@ -91,6 +95,7 @@ namespace ne {
         /**
          * Creates a new resource and binds a constant buffer view descriptor to it.
          *
+         * @param sResourceName        Resource name, used for logging.
          * @param allocationDesc       Allocation description.
          * @param resourceDesc         Resource description.
          * @param initialResourceState Initial resource state.
@@ -98,6 +103,7 @@ namespace ne {
          * @return Error if something went wrong, otherwise created resource.
          */
         std::variant<std::unique_ptr<DirectXResource>, Error> createCbvResource(
+            const std::string& sResourceName,
             const D3D12MA::ALLOCATION_DESC& allocationDesc,
             const D3D12_RESOURCE_DESC& resourceDesc,
             const D3D12_RESOURCE_STATES& initialResourceState) const;
@@ -105,6 +111,7 @@ namespace ne {
         /**
          * Creates a new resource and binds a shader resource view descriptor to it.
          *
+         * @param sResourceName        Resource name, used for logging.
          * @param allocationDesc       Allocation description.
          * @param resourceDesc         Resource description.
          * @param initialResourceState Initial resource state.
@@ -112,6 +119,7 @@ namespace ne {
          * @return Error if something went wrong, otherwise created resource.
          */
         std::variant<std::unique_ptr<DirectXResource>, Error> createSrvResource(
+            const std::string& sResourceName,
             const D3D12MA::ALLOCATION_DESC& allocationDesc,
             const D3D12_RESOURCE_DESC& resourceDesc,
             const D3D12_RESOURCE_STATES& initialResourceState) const;
@@ -119,6 +127,7 @@ namespace ne {
         /**
          * Creates a new resource and binds an unordered access view descriptor to it.
          *
+         * @param sResourceName        Resource name, used for logging.
          * @param allocationDesc       Allocation description.
          * @param resourceDesc         Resource description.
          * @param initialResourceState Initial resource state.
@@ -126,6 +135,7 @@ namespace ne {
          * @return Error if something went wrong, otherwise created resource.
          */
         std::variant<std::unique_ptr<DirectXResource>, Error> createUavResource(
+            const std::string& sResourceName,
             const D3D12MA::ALLOCATION_DESC& allocationDesc,
             const D3D12_RESOURCE_DESC& resourceDesc,
             const D3D12_RESOURCE_STATES& initialResourceState) const;

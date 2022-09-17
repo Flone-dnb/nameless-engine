@@ -2,11 +2,13 @@
 
 // Custom.
 #include "render/directx/descriptors/DirectXDescriptorHeap.h"
+#include "misc/Globals.h"
 
 namespace ne {
 
     std::variant<std::unique_ptr<DirectXResource>, Error> DirectXResource::create(
         const DirectXResourceManager* pResourceManager,
+        const std::string& sResourceName,
         DirectXDescriptorHeap* pHeap,
         DescriptorType descriptorType,
         D3D12MA::Allocator* pMemoryAllocator,
@@ -21,6 +23,7 @@ namespace ne {
             pClearValue = &resourceClearValue.value();
         }
 
+        // Allocate resource.
         const HRESULT hResult = pMemoryAllocator->CreateResource(
             &allocationDesc,
             &resourceDesc,
@@ -33,6 +36,10 @@ namespace ne {
             return Error(hResult);
         }
 
+        // Assign resource name.
+        pCreatedResource->pAllocatedResource->SetName(stringToWstring(sResourceName).c_str());
+
+        // Assign descriptor.
         auto optionalError = pHeap->assignDescriptor(pCreatedResource.get(), descriptorType);
         if (optionalError.has_value()) {
             optionalError->addEntry();
@@ -50,6 +57,7 @@ namespace ne {
 
         pCreatedResource->pSwapChainBuffer = pSwapChainBuffer;
 
+        // Assign descriptor.
         auto optionalError = pRtvHeap->assignDescriptor(pCreatedResource.get(), DescriptorType::RTV);
         if (optionalError.has_value()) {
             optionalError->addEntry();
@@ -117,6 +125,14 @@ namespace ne {
             return pAllocatedResource->GetResource();
         } else {
             return pSwapChainBuffer.Get();
+        }
+    }
+
+    std::string DirectXResource::getResourceName() const {
+        if (pAllocatedResource) {
+            return wstringToString(std::wstring(pAllocatedResource->GetName()));
+        } else {
+            return "Swap chain buffer resource";
         }
     }
 

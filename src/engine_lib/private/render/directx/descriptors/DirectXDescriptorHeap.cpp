@@ -140,7 +140,7 @@ namespace ne {
         const auto it = bindedResources.find(pResource);
         if (it == bindedResources.end()) {
             Logger::get().error(
-                std::format("the specified resource {} was not found", reinterpret_cast<void*>(pResource)),
+                std::format("the specified resource \"{}\" is not found", pResource->getResourceName()),
                 sDescriptorHeapLogCategory);
             return;
         }

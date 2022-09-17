@@ -34,6 +34,7 @@ namespace ne {
          * Creates a new resource.
          *
          * @param pResourceManager     Owner resource manager.
+         * @param sResourceName        Resource name, used for logging.
          * @param pHeap                Heap to store descriptor to this resource.
          * @param descriptorType       Type of new descriptor.
          * @param pMemoryAllocator     Allocator to create resource.
@@ -47,6 +48,7 @@ namespace ne {
          */
         static std::variant<std::unique_ptr<DirectXResource>, Error> create(
             const DirectXResourceManager* pResourceManager,
+            const std::string& sResourceName,
             DirectXDescriptorHeap* pHeap,
             DescriptorType descriptorType,
             D3D12MA::Allocator* pMemoryAllocator,
@@ -111,6 +113,13 @@ namespace ne {
          * @return Direct 3D resource.
          */
         ID3D12Resource* getD3DResource() const;
+
+        /**
+         * Returns resource name.
+         *
+         * @return Resource name.
+         */
+        std::string getResourceName() const;
 
     private:
         // If descriptor heap of a used descriptor (see field of this class) was recreated

@@ -5,7 +5,7 @@
 #include "render/directx/resources/DirectXResourceManager.h"
 #include "game/IGameInstance.h"
 #include "render/directx/DirectXRenderer.h"
-#include "game/window.h"
+#include "game/Window.h"
 #include "render/directx/descriptors/DirectXDescriptorHeap.h"
 #include "render/directx/resources/DirectXResource.h"
 
@@ -41,7 +41,7 @@ TEST_CASE("make the CBV heap expand") {
 
             for (int i = 0; i < iResourcesTilExpand; i++) {
                 auto result = pResourceManager->createCbvResource(
-                    allocationDesc, resourceDesc, D3D12_RESOURCE_STATE_GENERIC_READ);
+                    "Test CBV resource", allocationDesc, resourceDesc, D3D12_RESOURCE_STATE_GENERIC_READ);
                 if (std::holds_alternative<Error>(result)) {
                     auto err = std::get<Error>(std::move(result));
                     err.addEntry();
@@ -56,7 +56,7 @@ TEST_CASE("make the CBV heap expand") {
 
             // Create one more resource so that the heap will expand.
             auto result = pResourceManager->createCbvResource(
-                allocationDesc, resourceDesc, D3D12_RESOURCE_STATE_GENERIC_READ);
+                "Test CBV resource", allocationDesc, resourceDesc, D3D12_RESOURCE_STATE_GENERIC_READ);
             if (std::holds_alternative<Error>(result)) {
                 auto err = std::get<Error>(std::move(result));
                 err.addEntry();
@@ -114,7 +114,7 @@ TEST_CASE("make the CBV heap shrink") {
 
             for (int i = 0; i < iResourcesTilExpand; i++) {
                 auto result = pResourceManager->createCbvResource(
-                    allocationDesc, resourceDesc, D3D12_RESOURCE_STATE_GENERIC_READ);
+                    "Test CBV resource", allocationDesc, resourceDesc, D3D12_RESOURCE_STATE_GENERIC_READ);
                 if (std::holds_alternative<Error>(result)) {
                     auto err = std::get<Error>(std::move(result));
                     err.addEntry();
@@ -190,7 +190,7 @@ TEST_CASE("assign multiple descriptors to one resource") {
 
             // Create SRV resource.
             auto result = pResourceManager->createSrvResource(
-                allocationDesc, resourceDesc, D3D12_RESOURCE_STATE_COMMON);
+                "Test SRV resource", allocationDesc, resourceDesc, D3D12_RESOURCE_STATE_COMMON);
             if (std::holds_alternative<Error>(result)) {
                 auto err = std::get<Error>(std::move(result));
                 err.addEntry();
@@ -264,7 +264,7 @@ TEST_CASE("all assigned descriptors are freed when resource is destroyed") {
 
                 // Create SRV resource.
                 auto result = pResourceManager->createSrvResource(
-                    allocationDesc, resourceDesc, D3D12_RESOURCE_STATE_COMMON);
+                    "Test SRV resource", allocationDesc, resourceDesc, D3D12_RESOURCE_STATE_COMMON);
                 if (std::holds_alternative<Error>(result)) {
                     auto err = std::get<Error>(std::move(result));
                     err.addEntry();
@@ -321,7 +321,7 @@ TEST_CASE("create CBV resource") {
 
             // Create CBV resource.
             auto result = pResourceManager->createCbvResource(
-                allocationDesc, resourceDesc, D3D12_RESOURCE_STATE_GENERIC_READ);
+                "Test CBV resource", allocationDesc, resourceDesc, D3D12_RESOURCE_STATE_GENERIC_READ);
             if (std::holds_alternative<Error>(result)) {
                 auto err = std::get<Error>(std::move(result));
                 err.addEntry();
@@ -377,7 +377,7 @@ TEST_CASE("create SRV resource") {
 
             // Create SRV resource.
             auto result = pResourceManager->createSrvResource(
-                allocationDesc, resourceDesc, D3D12_RESOURCE_STATE_COMMON);
+                "Test SRV resource", allocationDesc, resourceDesc, D3D12_RESOURCE_STATE_COMMON);
             if (std::holds_alternative<Error>(result)) {
                 auto err = std::get<Error>(std::move(result));
                 err.addEntry();
@@ -433,7 +433,7 @@ TEST_CASE("create UAV resource") {
 
             // Create UAV resource.
             auto result = pResourceManager->createUavResource(
-                allocationDesc, resourceDesc, D3D12_RESOURCE_STATE_COMMON);
+                "Test UAV resource", allocationDesc, resourceDesc, D3D12_RESOURCE_STATE_COMMON);
             if (std::holds_alternative<Error>(result)) {
                 auto err = std::get<Error>(std::move(result));
                 err.addEntry();
@@ -493,7 +493,7 @@ TEST_CASE("create RTV resource") {
 
             // Create RTV resource.
             auto result = pResourceManager->createRtvResource(
-                allocationDesc, resourceDesc, D3D12_RESOURCE_STATE_COMMON, clearValue);
+                "Test RTV resource", allocationDesc, resourceDesc, D3D12_RESOURCE_STATE_COMMON, clearValue);
             if (std::holds_alternative<Error>(result)) {
                 auto err = std::get<Error>(std::move(result));
                 err.addEntry();
@@ -555,7 +555,11 @@ TEST_CASE("create DSV resource") {
 
             // Create DSV resource.
             auto result = pResourceManager->createDsvResource(
-                allocationDesc, depthStencilDesc, D3D12_RESOURCE_STATE_DEPTH_WRITE, depthClear);
+                "Test DSV resource",
+                allocationDesc,
+                depthStencilDesc,
+                D3D12_RESOURCE_STATE_DEPTH_WRITE,
+                depthClear);
             if (std::holds_alternative<Error>(result)) {
                 auto err = std::get<Error>(std::move(result));
                 err.addEntry();

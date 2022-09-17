@@ -141,13 +141,13 @@ namespace ne NENAMESPACE() {
          *
          * @param pathToFile File to read reflected data from. The ".toml" extension will be added
          * automatically if not specified in the path.
-         * @param vIds       Array of object IDs (that you specified in @ref serialize) to deserialize
+         * @param ids        Array of object IDs (that you specified in @ref serialize) to deserialize
          * and return. Don't use dots in the entity ID, dots are used internally.
          *
          * @return Error if something went wrong, otherwise an array of pointers to deserialized entities.
          */
         static std::variant<std::vector<std::shared_ptr<Serializable>>, Error>
-        deserialize(const std::filesystem::path& pathToFile, std::set<std::string> vIds);
+        deserialize(const std::filesystem::path& pathToFile, std::set<std::string> ids);
 
 #if defined(DEBUG)
         /**

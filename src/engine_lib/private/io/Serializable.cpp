@@ -519,9 +519,9 @@ namespace ne {
     }
 
     std::variant<std::vector<std::shared_ptr<Serializable>>, Error>
-    Serializable::deserialize(const std::filesystem::path& pathToFile, std::set<std::string> vIds) {
+    Serializable::deserialize(const std::filesystem::path& pathToFile, std::set<std::string> ids) {
         // Check that specified IDs don't have dots in them.
-        for (const auto& sId : vIds) {
+        for (const auto& sId : ids) {
             if (sId.contains('.')) [[unlikely]] {
                 return Error(
                     fmt::format("the specified object ID \"{}\" is not allowed to have dots in it", sId));
@@ -557,7 +557,7 @@ namespace ne {
 
         // Deserialize.
         std::vector<std::shared_ptr<Serializable>> vObjects;
-        for (const auto& sId : vIds) {
+        for (const auto& sId : ids) {
             auto result = deserialize<Serializable>(tomlData, sId);
             if (std::holds_alternative<Error>(result)) {
                 auto err = std::get<Error>(std::move(result));

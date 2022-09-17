@@ -99,6 +99,18 @@ namespace ne NENAMESPACE() {
             bool bEnableBackup);
 
         /**
+         * Analyzes the file for serialized objects, gathers and returns unique IDs of those objects.
+         *
+         * @param pathToFile File to read serialized data from. The ".toml" extension will be added
+         * automatically if not specified in the path.
+         *
+         * @return Error if something went wrong, otherwise array of unique IDs of objects that exist
+         * in the specified file.
+         */
+        static std::variant<std::set<std::string>, Error>
+        getIdsFromFile(const std::filesystem::path& pathToFile);
+
+        /**
          * Deserializes the type and all reflected fields (including inherited) from a file.
          * Specify the type of the entity (that is located in the file) as the T template parameter, which
          * can be entity's actual type or entity's parent (up to Serializable).
@@ -337,7 +349,7 @@ namespace ne NENAMESPACE() {
 
         // Check that we have at least one section.
         if (vSections.empty()) {
-            return Error("provided toml value has zero sections while expected at least one section");
+            return Error("provided toml value has 0 sections while expected at least 1 section");
         }
 
         // Find a section that starts with the specified entity ID.

@@ -572,4 +572,66 @@ namespace ne {
         return vObjects;
     }
 
+    std::variant<std::set<std::string>, Error>
+    Serializable::getIdsFromFile(const std::filesystem::path& pathToFile) {
+        // Add TOML extension to file.
+        auto fixedPath = pathToFile;
+        if (!fixedPath.string().ends_with(".toml")) {
+            fixedPath += ".toml";
+        }
+
+        // Handle backup file.
+        std::filesystem::path backupFile = fixedPath;
+        backupFile += ConfigManager::getBackupFileExtension();
+
+        if (!std::filesystem::exists(fixedPath)) {
+            // Check if backup file exists.
+            if (std::filesystem::exists(backupFile)) {
+                std::filesystem::copy_file(backupFile, fixedPath);
+            } else {
+                return Error("file or backup file do not exist");
+            }
+        }
+
+        // Load file.
+        toml::value tomlData;
+        try {
+            tomlData = toml::parse(fixedPath);
+        } catch (std::exception& exception) {
+            return Error(
+                fmt::format("failed to load file \"{}\", error: {}", fixedPath.string(), exception.what()));
+        }
+
+        // Read all sections.
+        std::vector<std::string> vSections;
+        const auto fileTable = tomlData.as_table();
+        for (const auto& [key, value] : fileTable) {
+            if (value.is_table()) {
+                vSections.push_back(key);
+            }
+        }
+
+        // Check that we have at least one section.
+        if (vSections.empty()) {
+            return Error(fmt::format(
+                "the specified file \"{}\" has 0 sections while expected at least 1 section",
+                fixedPath.string()));
+        }
+
+        // Cycle over each section and get string before first dot.
+        std::set<std::string> vIds;
+        for (const auto& sSectionName : vSections) {
+            const auto iFirstDotPos = sSectionName.find('.');
+            if (iFirstDotPos == std::string::npos) {
+                return Error(fmt::format(
+                    "the specified file \"{}\" does not have dots in section names (corrupted file)",
+                    fixedPath.string()));
+            }
+
+            vIds.insert(sSectionName.substr(0, iFirstDotPos));
+        }
+
+        return vIds;
+    }
+
 } // namespace ne

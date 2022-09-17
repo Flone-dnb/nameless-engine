@@ -139,9 +139,12 @@ namespace ne {
 
         const auto it = bindedResources.find(pResource);
         if (it == bindedResources.end()) {
-            Logger::get().error(
-                std::format("the specified resource \"{}\" is not found", pResource->getResourceName()),
-                sDescriptorHeapLogCategory);
+            // Don't log error here as it's not an error.
+            // Imagine this situation: this is a CBV/SRV/UAV heap and a resource has SRV and UAV,
+            // first, SRV will be marked as no longer being used, but both SRV and UAV will be
+            // counted (see code below) and the resource will be removed
+            // from binded resources array, then UAV will be marked as no longer being used and
+            // we are here.
             return;
         }
 

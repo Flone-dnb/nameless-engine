@@ -19,7 +19,10 @@ namespace ne {
         END // marks the end of this enum
     };
 
-    /** Represents a descriptor (to a resource) that is stored in a descriptor heap. */
+    /**
+     * Represents a descriptor (to a resource) that is stored in a descriptor heap.
+     * Automatically marked as unused in destructor.
+     */
     class DirectXDescriptor {
     public:
         /** Destructor. */

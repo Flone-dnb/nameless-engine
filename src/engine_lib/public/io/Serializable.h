@@ -4,6 +4,7 @@
 #include <filesystem>
 #include <memory>
 #include <variant>
+#include <set>
 #include <ranges>
 
 // Custom.
@@ -72,22 +73,30 @@ namespace ne NENAMESPACE() {
         std::optional<Error> serialize(const std::filesystem::path& pathToFile, bool bEnableBackup);
 
         /**
-         * Serializes the type and all reflected fields (including inherited) into a toml value.
+         * Serializes multiple objects and their reflected fields (including inherited) into a file.
+         * Serialized entities can later be deserialized using @ref deserialize.
          *
          * This is an overloaded function. See full documentation for other overload.
          *
-         * @param tomlData        Toml value to append this object to.
-         * @param sEntityId       Unique ID of this object. When serializing multiple objects into
-         * one toml value provide different IDs for each object so they could be differentiated.
-         *
-         * @warning Don't use dots in the entity ID, dots are used
-         * in recursion when this function is called from this function to process reflected field (sub
-         * entity).
+         * @param pathToFile    File to write reflected data to. The ".toml" extension will be added
+         * automatically if not specified in the path. If the specified file already exists it will be
+         * overwritten.
+         * @param vObjects      Array of pairs of objects to serialize and their unique IDs
+         * (so they could be differentiated in the file). Don't use
+         * dots in the entity ID, dots are used internally.
+         * @param bEnableBackup If 'true' will also use a backup (copy) file. @ref deserialize can use
+         * backup file if the original file does not exist. Generally you want to use
+         * a backup file if you are saving important information, such as player progress,
+         * other cases such as player game settings and etc. usually do not need a backup but
+         * you can use it if you want.
          *
          * @return Error if something went wrong, for example when found an unsupported for
-         * serialization reflected field, otherwise name of the section that was used to store this entity.
+         * serialization reflected field.
          */
-        std::variant<std::string, Error> serialize(toml::value& tomlData, std::string sEntityId = "");
+        static std::optional<Error> serialize(
+            const std::filesystem::path& pathToFile,
+            std::vector<std::pair<Serializable*, std::string>> vObjects,
+            bool bEnableBackup);
 
         /**
          * Deserializes the type and all reflected fields (including inherited) from a file.
@@ -109,32 +118,24 @@ namespace ne NENAMESPACE() {
          * @param pathToFile File to read reflected data from. The ".toml" extension will be added
          * automatically if not specified in the path.
          *
-         * @return Error if something went wrong, a unique pointer to deserialized entity.
+         * @return Error if something went wrong, otherwise a pointer to deserialized entity.
          */
         template <typename T>
         requires std::derived_from<T, Serializable>
         static std::variant<std::shared_ptr<T>, Error> deserialize(const std::filesystem::path& pathToFile);
 
         /**
-         * Deserializes the type and all reflected fields (including inherited) from a toml value.
-         * Specify the type of the entity (that is located in the file) as the T template parameter, which
-         * can be entity's actual type or entity's parent (up to Serializable).
+         * Deserializes multiple objects and their reflected fields (including inherited) from a file.
          *
-         * @param tomlData        Toml value to retrieve an object from.
-         * @param sEntityId       Unique ID of this object. When serializing multiple objects into
-         * one toml value provide different IDs for each object so they could be differentiated.
+         * @param pathToFile File to read reflected data from. The ".toml" extension will be added
+         * automatically if not specified in the path.
+         * @param vIds       Array of object IDs (that you specified in @ref serialize) to deserialize
+         * and return. Don't use dots in the entity ID, dots are used internally.
          *
-         * @warning Don't use dots in the entity ID, dots are used
-         * in recursion when this function is called from this function to process reflected field (sub
-         * entity).
-         *
-         * @return Error if something went wrong, a unique pointer to deserialized entity.
-         * Use a dynamic_cast to cast to wanted type.
+         * @return Error if something went wrong, otherwise an array of pointers to deserialized entities.
          */
-        template <typename T>
-        requires std::derived_from<T, Serializable>
-        static std::variant<std::shared_ptr<T>, Error>
-        deserialize(toml::value& tomlData, std::string sEntityId = "");
+        static std::variant<std::vector<std::shared_ptr<Serializable>>, Error>
+        deserialize(const std::filesystem::path& pathToFile, std::set<std::string> vIds);
 
 #if defined(DEBUG)
         /**
@@ -157,6 +158,43 @@ namespace ne NENAMESPACE() {
         static void collectGuids(
             const rfk::Struct* pArchetypeToAnalyze, std::unordered_map<std::string, std::string>& vAllGuids);
 #endif
+
+        /**
+         * Serializes the type and all reflected fields (including inherited) into a toml value.
+         *
+         * This is an overloaded function. See full documentation for other overload.
+         *
+         * @param tomlData        Toml value to append this object to.
+         * @param sEntityId       Unique ID of this object. When serializing multiple objects into
+         * one toml value provide different IDs for each object so they could be differentiated. Don't use
+         * dots in the entity ID, dots are used in recursion when this function is called from this
+         * function to process reflected field (sub entity).
+         *
+         * @return Error if something went wrong, for example when found an unsupported for
+         * serialization reflected field, otherwise name of the section that was used to store this entity.
+         */
+        std::variant<std::string, Error> serialize(toml::value& tomlData, std::string sEntityId = "");
+
+        /**
+         * Deserializes the type and all reflected fields (including inherited) from a toml value.
+         * Specify the type of the entity (that is located in the file) as the T template parameter, which
+         * can be entity's actual type or entity's parent (up to Serializable).
+         *
+         * @param tomlData        Toml value to retrieve an object from.
+         * @param sEntityId       Unique ID of this object. When serializing multiple objects into
+         * one toml value provide different IDs for each object so they could be differentiated.
+         *
+         * @warning Don't use dots in the entity ID, dots are used
+         * in recursion when this function is called from this function to process reflected field (sub
+         * entity).
+         *
+         * @return Error if something went wrong, otherwise a pointer to deserialized entity.
+         */
+        template <typename T>
+        requires std::derived_from<T, Serializable>
+        static std::variant<std::shared_ptr<T>, Error>
+        deserialize(toml::value& tomlData, std::string sEntityId = "");
+
         /**
          * Returns whether the specified field can be serialized or not.
          *

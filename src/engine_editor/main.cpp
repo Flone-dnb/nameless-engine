@@ -26,8 +26,9 @@ int main() {
     const std::filesystem::path pathToFile = "MyCoolNode.toml";
 
     // Serialize.
-    ne::Node node("My Cool Node");
-    auto optionalError = node.serialize(pathToFile, true);
+    ne::Node node1("My Cool Node 1");
+    ne::Node node2("My Cool Node 2");
+    auto optionalError = ne::Serializable::serialize(pathToFile, {{&node1, "0"}, {&node2, "1"}}, true);
     if (optionalError.has_value()) {
         auto err = optionalError.value();
         err.addEntry();
@@ -36,14 +37,15 @@ int main() {
     }
 
     // Deserialize.
-    auto deserializeResult = ne::Serializable::deserialize<ne::Node>(pathToFile);
+    auto deserializeResult = ne::Serializable::deserialize(pathToFile, {"0", "1"});
     if (std::holds_alternative<ne::Error>(deserializeResult)) {
         ne::Error error = std::get<ne::Error>(std::move(deserializeResult));
         error.addEntry();
         error.showError();
         throw std::runtime_error(error.getError());
     }
-    const auto pDeserializedObject = std::get<std::shared_ptr<ne::Node>>(std::move(deserializeResult));
+    const auto vObjects =
+        std::get<std::vector<std::shared_ptr<ne::Serializable>>>(std::move(deserializeResult));
 
     // End.
 

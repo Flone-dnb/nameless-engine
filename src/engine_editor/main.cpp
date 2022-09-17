@@ -12,8 +12,6 @@
 #include "EditorGameInstance.h"
 #include "game/Window.h"
 
-#include "game/nodes/Node.h"
-
 int main() {
 // Enable run-time memory check for debug builds.
 #if defined(DEBUG) && defined(WIN32)
@@ -21,34 +19,6 @@ int main() {
 #elif defined(WIN32) && !defined(DEBUG)
     OutputDebugStringA("Using release build configuration, memory checks are disabled.");
 #endif
-
-    // Test code for serialization and deserialization.
-    const std::filesystem::path pathToFile = "MyCoolNode.toml";
-
-    // Serialize.
-    ne::Node node1("My Cool Node 1");
-    ne::Node node2("My Cool Node 2");
-    auto optionalError = ne::Serializable::serialize(pathToFile, {{&node1, "0"}, {&node2, "1"}}, true);
-    if (optionalError.has_value()) {
-        auto err = optionalError.value();
-        err.addEntry();
-        err.showError();
-        throw std::runtime_error(err.getError());
-    }
-
-    // Deserialize.
-    auto deserializeResult = ne::Serializable::deserialize(pathToFile, {"0", "1"});
-    if (std::holds_alternative<ne::Error>(deserializeResult)) {
-        ne::Error error = std::get<ne::Error>(std::move(deserializeResult));
-        error.addEntry();
-        error.showError();
-        throw std::runtime_error(error.getError());
-    }
-    const auto vObjects =
-        std::get<std::vector<std::shared_ptr<ne::Serializable>>>(std::move(deserializeResult));
-
-    // End.
-
     using namespace ne;
 
     auto result = Window::getBuilder()

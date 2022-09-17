@@ -30,10 +30,10 @@ namespace ne NENAMESPACE() {
         /**
          * Sets node's name.
          *
-         * @param sNodeName New name of this node.
+         * @param sName New name of this node.
          */
         NEFUNCTION()
-        void setNodeName(const std::string& sNodeName);
+        void setName(const std::string& sName);
 
         /**
          * Returns node's name.
@@ -41,16 +41,12 @@ namespace ne NENAMESPACE() {
          * @return Node name.
          */
         NEFUNCTION()
-        std::string getNodeName() const;
+        std::string getName() const;
 
     private:
-        /** Test. */
-        NEPROPERTY()
-        Serializable specialField;
-
         /** Node name. */
         NEPROPERTY()
-        std::string sNodeName;
+        std::string sName;
 
         ne_Node_GENERATED
     };

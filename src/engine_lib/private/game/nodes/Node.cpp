@@ -1,14 +1,11 @@
 ﻿#include "game/nodes/Node.h"
 
 namespace ne {
-    Node::Node() { sNodeName = "Node"; }
+    Node::Node() { sName = "Node"; }
 
-    Node::Node(const std::string& sNodeName) { this->sNodeName = sNodeName; }
+    Node::Node(const std::string& sName) { this->sName = sName; }
 
-    void Node::setNodeName(const std::string& sNodeName) {
-        this->sNodeName = sNodeName;
-        // TODO
-    }
+    void Node::setName(const std::string& sName) { this->sName = sName; }
 
-    std::string Node::getNodeName() const { return sNodeName; }
+    std::string Node::getName() const { return sName; }
 } // namespace ne

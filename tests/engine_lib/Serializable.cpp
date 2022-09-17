@@ -44,7 +44,7 @@ TEST_CASE("serialize and deserialize node") {
     const auto pDeserializedNode = std::get<std::shared_ptr<Node>>(std::move(result));
 
     // Check that name is the same.
-    REQUIRE(pDeserializedNode->getNodeName() == node.getNodeName());
+    REQUIRE(pDeserializedNode->getName() == node.getName());
 
     // Cleanup.
     std::filesystem::remove(fullPathToFile);
@@ -97,8 +97,8 @@ TEST_CASE("serialize and deserialize multiple nodes") {
 
     REQUIRE(pNode1 != nullptr);
     REQUIRE(pNode2 != nullptr);
-    REQUIRE(pNode1->getNodeName() == node1.getNodeName());
-    REQUIRE(pNode2->getNodeName() == node2.getNodeName());
+    REQUIRE(pNode1->getName() == node1.getName());
+    REQUIRE(pNode2->getName() == node2.getName());
 
     // Cleanup.
     std::filesystem::remove(fullPathToFile);

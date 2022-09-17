@@ -226,7 +226,7 @@ namespace ne {
 
         Logger::get().info(
             fmt::format(
-                "[DEBUG ONLY] Finished checking all GUID uniqueness, took: {} sec.", durationStream.str()),
+                "[DEBUG ONLY] finished checking all GUID uniqueness, took: {} sec.", durationStream.str()),
             "");
     }
 

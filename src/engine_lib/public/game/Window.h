@@ -30,7 +30,7 @@ namespace ne {
         /** Title of a window. */
         std::string_view sWindowTitle;
         /** Icon of a window. */
-        std::string_view sPathToWindowIcon;
+        std::filesystem::path pathToWindowIcon;
         /** Whether to show window after it was created or not. */
         bool bShowWindow = true;
         /** Whether the window should be maximized after creation or not. */
@@ -69,11 +69,11 @@ namespace ne {
         /**
          * Defines the icon of a window that we will create.
          *
-         * @param sPathToIcon  Path to the image (.png)
+         * @param pathToIcon Path to the image (.png).
          *
          * @return Builder.
          */
-        WindowBuilder& withIcon(std::string_view sPathToIcon);
+        WindowBuilder& withIcon(std::filesystem::path pathToIcon);
         /**
          * Defines the visibility of a window that we will create.
          * Does nothing for fullscreen windows.
@@ -171,7 +171,7 @@ namespace ne {
         /**
          * Sets new window icon.
          *
-         * @param sPathToIcon Path to the image (.png).
+         * @param pathToIcon Path to the image (.png).
          * The image data should be 32-bit, little-endian, non-premultiplied RGBA,
          * i.e. eight bits per channel with the red channel first.
          *
@@ -179,7 +179,7 @@ namespace ne {
          *
          * @return Returns error if file not found.
          */
-        std::optional<Error> setIcon(std::string_view sPathToIcon) const;
+        std::optional<Error> setIcon(std::filesystem::path pathToIcon) const;
 
         /**
          * Whether the cursor is visible or not (locked in this window).

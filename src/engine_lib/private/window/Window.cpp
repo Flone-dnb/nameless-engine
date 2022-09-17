@@ -30,8 +30,8 @@ namespace ne {
         return *this;
     }
 
-    WindowBuilder& WindowBuilder::withIcon(std::string_view sPathToIcon) {
-        params.sPathToWindowIcon = sPathToIcon;
+    WindowBuilder& WindowBuilder::withIcon(std::filesystem::path pathToIcon) {
+        params.pathToWindowIcon = pathToIcon;
 
         return *this;
     }
@@ -249,13 +249,18 @@ namespace ne {
         auto pWindow = std::unique_ptr<Window>(new Window(pGLFWWindow, sNewWindowTitle));
 
         // Set icon.
-        if (!params.sPathToWindowIcon.empty()) {
-            auto error = pWindow->setIcon(params.sPathToWindowIcon);
+        if (std::filesystem::exists(params.pathToWindowIcon)) {
+            auto error = pWindow->setIcon(params.pathToWindowIcon);
             if (error.has_value()) {
                 error->addEntry();
                 error->showError();
                 // don't throw here, not a critical error.
             }
+        } else {
+            Logger::get().warn(
+                fmt::format(
+                    "path to the window icon \"{}\" does not exist", params.pathToWindowIcon.string()),
+                sWindowLogCategory);
         }
 
         // Add Window pointer.
@@ -292,13 +297,14 @@ namespace ne {
         sWindowTitle = sNewTitle;
     }
 
-    std::optional<Error> Window::setIcon(std::string_view sPathToIcon) const {
-        if (!std::filesystem::exists(sPathToIcon)) {
-            return Error(fmt::format("the specified file \"{}\" does not exist.", sPathToIcon));
+    std::optional<Error> Window::setIcon(std::filesystem::path pathToIcon) const {
+        if (!std::filesystem::exists(pathToIcon)) {
+            return Error(fmt::format("the specified file \"{}\" does not exist.", pathToIcon.string()));
         }
 
         GLFWimage images[1];
-        images[0].pixels = stbi_load(sPathToIcon.data(), &images[0].width, &images[0].height, nullptr, 4);
+        images[0].pixels =
+            stbi_load(pathToIcon.string().data(), &images[0].width, &images[0].height, nullptr, 4);
 
         glfwSetWindowIcon(pGlfwWindow, 1, images);
 

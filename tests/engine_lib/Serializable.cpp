@@ -79,6 +79,19 @@ TEST_CASE("serialize and deserialize multiple nodes") {
 
     REQUIRE(std::filesystem::exists(fullPathToFile));
 
+    // Check IDs.
+    const auto idResult = Serializable::getIdsFromFile(pathToFile);
+    if (std::holds_alternative<Error>(idResult)) {
+        auto err = std::get<Error>(std::move(idResult));
+        err.addEntry();
+        INFO(err.getError());
+        REQUIRE(false);
+    }
+    const auto ids = std::get<std::set<std::string>>(idResult);
+    REQUIRE(ids.size() == 2);
+    REQUIRE(ids.find("0") != ids.end());
+    REQUIRE(ids.find("1") != ids.end());
+
     // Deserialize.
     const auto result = Serializable::deserialize(pathToFile, {"0", "1"});
     if (std::holds_alternative<Error>(result)) {

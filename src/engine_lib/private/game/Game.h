@@ -12,6 +12,7 @@
 #include "input/KeyboardKey.hpp"
 #include "input/MouseButton.hpp"
 #include "misc/ThreadPool.h"
+#include "game/World.h"
 
 namespace ne {
     class IGameInstance;
@@ -122,6 +123,19 @@ namespace ne {
         void addTaskToThreadPool(const std::function<void()>& task);
 
         /**
+         * Creates a new world with a root node to store world's node tree.
+         * Replaces the old world (if existed).
+         *
+         * @param iWorldSize    Size of the world in game units. Must be power of 2
+         * (128, 256, 512, 1024, 2048, etc.). World size needs to be specified for
+         * internal purposes such as Directional Light shadow map size, maybe for the size
+         * of correct physics calculations and etc. You don't need to care why we need this
+         * information, you only need to know that if you leave world bounds lighting
+         * or physics may be incorrect (the editor and logs should help you identify this case).
+         */
+        void createWorld(size_t iWorldSize = 1024);
+
+        /**
          * Returns window that owns this object.
          *
          * @return Do not delete this pointer. Window that owns this object.
@@ -161,15 +175,14 @@ namespace ne {
          */
         void triggerAxisEvents(KeyboardKey key, KeyboardModifiers modifiers, bool bIsPressedDown);
 
-        /**
-         * Do not delete this pointer. Window-owner of this Game.
-         */
+        /** Do not delete this pointer. Window-owner of this Game. */
         Window* pWindow;
 
-        /**
-         * Reacts to user input, window events and etc.
-         */
+        /** Reacts to user input, window events and etc. */
         std::unique_ptr<IGameInstance> pGameInstance;
+
+        /** Game world, stores world's node tree. */
+        std::unique_ptr<World> pGameWorld;
 
         /** Draws graphics on window. */
         std::unique_ptr<IRenderer> pRenderer;

@@ -6,6 +6,7 @@
 // Custom.
 #include "input/KeyboardKey.hpp"
 #include "input/MouseButton.hpp"
+#include "game/nodes/Node.h"
 
 namespace ne {
     class Window;
@@ -154,6 +155,20 @@ namespace ne {
         void addTaskToThreadPool(const std::function<void()>& task) const;
 
         /**
+         * Creates a new world with a root node to store world's node tree.
+         * If old world existed, causes the old world to be removed by deleting
+         * old world's root node.
+         *
+         * @param iWorldSize    Size of the world in game units. Must be power of 2
+         * (128, 256, 512, 1024, 2048, etc.). World size needs to be specified for
+         * internal purposes such as Directional Light shadow map size, maybe for the size
+         * of correct physics calculations and etc. You don't need to care why we need this
+         * information, you only need to know that if you leave world bounds lighting
+         * or physics may be incorrect (the editor and logs should help you identify this case).
+         */
+        void createWorld(size_t iWorldSize = 1024);
+
+        /**
          * Returns a reference to the window this game instance is using.
          *
          * @return A pointer to the window, should not be deleted.
@@ -181,5 +196,4 @@ namespace ne {
          */
         InputManager* pInputManager = nullptr;
     };
-
 } // namespace ne

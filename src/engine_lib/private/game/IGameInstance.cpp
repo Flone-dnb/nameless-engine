@@ -26,4 +26,6 @@ namespace ne {
         pGame->addTaskToThreadPool(task);
     }
 
+    void IGameInstance::createWorld(size_t iWorldSize) { pGame->createWorld(iWorldSize); }
+
 } // namespace ne

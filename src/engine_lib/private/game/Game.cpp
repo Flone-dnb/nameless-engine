@@ -57,6 +57,8 @@ namespace ne {
 
     void Game::addTaskToThreadPool(const std::function<void()>& task) { threadPool.addTask(task); }
 
+    void Game::createWorld(size_t iWorldSize) { pGameWorld = World::createWorld(iWorldSize); }
+
     void Game::onKeyboardInput(KeyboardKey key, KeyboardModifiers modifiers, bool bIsPressedDown) {
         pGameInstance->onKeyboardInput(key, modifiers, bIsPressedDown);
 

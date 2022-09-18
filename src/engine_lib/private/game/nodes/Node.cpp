@@ -9,8 +9,6 @@ static std::atomic<size_t> iTotalNodeCount{0};
 #endif
 
 namespace ne {
-    Node::Node() : Node("Node") {}
-
     Node::Node(const std::string& sName) {
         this->sName = sName;
         mtxParentNode.second = nullptr;

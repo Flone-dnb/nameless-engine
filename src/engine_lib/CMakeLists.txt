@@ -49,6 +49,7 @@ if (NOT EXISTS ${GENERATED_REFLECTION_FILE_PATH})
 endif()
 # Engine general (cross-platform) sources.
 set(ENGINE_LIB_SOURCES
+    ../.generated/${REFLECTION_FILE_NAME}
     ${RELATIVE_EXT_PATH}/xxHash/xxhash.c
     ${RELATIVE_EXT_PATH}/xxHash/xxhash.h
     private/misc/Error.cpp
@@ -109,7 +110,8 @@ set(ENGINE_LIB_SOURCES
     private/io/DontSerializeProperty.cpp
     private/io/GuidProperty.cpp
     public/io/GuidProperty.h
-    ../.generated/${REFLECTION_FILE_NAME}
+    private/game/World.h
+    private/game/World.cpp
     # add general (cross-platform) sources here...
 )
 

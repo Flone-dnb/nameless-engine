@@ -22,9 +22,6 @@ namespace ne NENAMESPACE() {
      */
     class NECLASS(Guid("2a721c37-3c22-450c-8dad-7b6985cbbd61")) Node : public Serializable {
     public:
-        /** Creates a node with the name "Node". */
-        Node();
-
         /**
          * Creates a node with the specified name.
          *
@@ -32,6 +29,7 @@ namespace ne NENAMESPACE() {
          */
         Node(const std::string& sNodeName);
 
+        Node() = delete;
         Node(const Node&) = delete;
         Node& operator=(const Node&) = delete;
         Node(Node&&) = delete;

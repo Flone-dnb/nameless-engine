@@ -236,7 +236,7 @@ namespace ne NENAMESPACE() {
         static const rfk::Class* getClassForGuid(const std::string& sGuid);
 
         /**
-         * Looks for all childred of the specified archetype to find a type that
+         * Looks for all children of the specified archetype to find a type that
          * has the specified GUID.
          *
          * @param pArchetypeToAnalyze Type which children to analyze.

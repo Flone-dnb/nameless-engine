@@ -139,12 +139,9 @@ namespace ne {
 
         const auto it = bindedResources.find(pResource);
         if (it == bindedResources.end()) {
-            // Don't log error here as it's not an error.
-            // Imagine this situation: this is a CBV/SRV/UAV heap and a resource has SRV and UAV,
-            // first, SRV will be marked as no longer being used, but both SRV and UAV will be
-            // counted (see code below) and the resource will be removed
-            // from binded resources array, then UAV will be marked as no longer being used and
-            // we are here.
+            Logger::get().error(
+                fmt::format("the specified resource \"{}\" is not found", pResource->getResourceName()),
+                sDescriptorHeapLogCategory);
             return;
         }
 
@@ -152,7 +149,7 @@ namespace ne {
 
         // Save indexes of no longer used descriptors.
         const auto vHandledDescriptorTypes = getDescriptorTypesHandledByThisHeap();
-        for (const auto& descriptor : pResource->vHeapDescriptors) {
+        for (auto& descriptor : pResource->vHeapDescriptors) {
             if (!descriptor.has_value())
                 continue;
 
@@ -164,6 +161,7 @@ namespace ne {
                 continue; // this descriptor type is not handled in this heap
 
             noLongerUsedDescriptorIndexes.push(descriptor->iDescriptorOffsetInDescriptors.value());
+            descriptor->iDescriptorOffsetInDescriptors = {}; // mark descriptor as cleared
             iHeapSize.fetch_sub(1);
         }
 

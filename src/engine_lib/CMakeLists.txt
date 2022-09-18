@@ -170,6 +170,15 @@ set(PROJECT_CXX_STANDARD_VERSION 23)
 set(CMAKE_CXX_STANDARD ${PROJECT_CXX_STANDARD_VERSION})
 target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_${PROJECT_CXX_STANDARD_VERSION})
 
+# Enable Address Sanitizer.
+if(CMAKE_BUILD_TYPE MATCHES "^[Dd]ebug")
+    if(NOT CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+        message(STATUS "Adding Address Sanitizer flags.")
+        set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fno-omit-frame-pointer -fsanitize=address")
+        set (CMAKE_LINKER_FLAGS_DEBUG "${CMAKE_LINKER_FLAGS_DEBUG} -fno-omit-frame-pointer -fsanitize=address")
+    endif()
+endif()
+
 # Set directory name for dependencies.
 set(DEPENDENCY_BUILD_DIR_NAME dependency_build)
 

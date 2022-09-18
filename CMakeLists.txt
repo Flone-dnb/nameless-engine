@@ -93,10 +93,10 @@ else()
     set(CMAKE_CXX_CLANG_TIDY "" CACHE STRING "" FORCE)
 endif()
 
-# asan
+# Enable Address Sanitizer.
 if(CMAKE_BUILD_TYPE MATCHES "^[Dd]ebug")
     if(NOT CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
-        message(STATUS "Adding ASan flags.")
+        message(STATUS "Adding Address Sanitizer flags.")
         set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fno-omit-frame-pointer -fsanitize=address")
         set (CMAKE_LINKER_FLAGS_DEBUG "${CMAKE_LINKER_FLAGS_DEBUG} -fno-omit-frame-pointer -fsanitize=address")
     endif()

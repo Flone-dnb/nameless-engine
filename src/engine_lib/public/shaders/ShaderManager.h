@@ -68,6 +68,9 @@ namespace ne {
          * If you are using member functions as callbacks you need to make sure that the owner object
          * of these member functions will not be deleted until onCompleted is called.
          *
+         * @remark If a shader was already compiled previously (valid shader cache exists on disk),
+         * its compilation will be skipped.
+         *
          * @return An error if something went wrong.
          */
         std::optional<Error> compileShaders(

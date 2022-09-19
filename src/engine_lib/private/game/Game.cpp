@@ -59,6 +59,13 @@ namespace ne {
 
     void Game::createWorld(size_t iWorldSize) { pGameWorld = World::createWorld(iWorldSize); }
 
+    Node* Game::getWorldRootNode() const {
+        if (!pGameWorld)
+            return nullptr;
+
+        return pGameWorld->getRootNode();
+    }
+
     void Game::onKeyboardInput(KeyboardKey key, KeyboardModifiers modifiers, bool bIsPressedDown) {
         pGameInstance->onKeyboardInput(key, modifiers, bIsPressedDown);
 

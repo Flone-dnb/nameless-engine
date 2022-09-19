@@ -169,6 +169,14 @@ namespace ne {
         void createWorld(size_t iWorldSize = 1024);
 
         /**
+         * Returns a non owning pointer to world's root node.
+         *
+         * @return nullptr if world is not created (see @ref createWorld), otherwise world's root node.
+         * Do not delete returned pointer.
+         */
+        Node* getWorldRootNode() const;
+
+        /**
          * Returns a reference to the window this game instance is using.
          *
          * @return A pointer to the window, should not be deleted.

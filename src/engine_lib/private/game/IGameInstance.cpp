@@ -28,4 +28,6 @@ namespace ne {
 
     void IGameInstance::createWorld(size_t iWorldSize) { pGame->createWorld(iWorldSize); }
 
+    Node* IGameInstance::getWorldRootNode() const { return pGame->getWorldRootNode(); }
+
 } // namespace ne

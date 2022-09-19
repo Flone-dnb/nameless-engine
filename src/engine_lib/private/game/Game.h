@@ -136,6 +136,14 @@ namespace ne {
         void createWorld(size_t iWorldSize = 1024);
 
         /**
+         * Returns a non owning pointer to world's root node.
+         *
+         * @return nullptr if world is not created (see @ref createWorld), otherwise world's root node.
+         * Do not delete returned pointer.
+         */
+        Node* getWorldRootNode() const;
+
+        /**
          * Returns window that owns this object.
          *
          * @return Do not delete this pointer. Window that owns this object.

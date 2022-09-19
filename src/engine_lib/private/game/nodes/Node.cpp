@@ -26,6 +26,11 @@ namespace ne {
     }
 
     Node::~Node() {
+        std::scoped_lock guard(mtxIsSpawned.first);
+        if (mtxIsSpawned.second) {
+            despawn();
+        }
+
 #if defined(DEBUG)
         const size_t iNodesLeft = iTotalNodeCount.fetch_sub(1);
         Logger::get().info(
@@ -82,18 +87,18 @@ namespace ne {
         }
 
         // Check if this node is already attached to some node.
-        {
-            std::scoped_lock parentGuard(pNode->mtxParentNode.first);
-            if (pNode->mtxParentNode.second != nullptr) {
-                // Change node parent.
-                pNode->onBeforeDetachedFromNode(pNode->mtxParentNode.second);
+        std::scoped_lock parentGuard(pNode->mtxParentNode.first);
+        if (pNode->mtxParentNode.second != nullptr) {
+            // Change node parent.
+            pNode->onBeforeDetachedFromNode(pNode->mtxParentNode.second);
 
-                pNode->mtxParentNode.second = this;
-                mtxChildNodes.second.push_back(pNode);
+            pNode->mtxParentNode.second = this;
+            mtxChildNodes.second.push_back(pNode);
 
-                pNode->onAfterAttachedToNode(mtxParentNode.second);
-            }
+            pNode->onAfterAttachedToNode(mtxParentNode.second);
         }
+
+        // don't unlock node's parent lock here yet, still doing some logic based on new parent
 
         // Spawn/despawn node if needed.
         if (isSpawned() && !pNode->isSpawned()) {
@@ -152,6 +157,13 @@ namespace ne {
             return;
         }
 
+        // Spawn self first and only then child nodes.
+        // This spawn order is required for some nodes to work correctly.
+        // With this spawn order we will not make "holes" in world's node tree
+        // (i.e. when node is spawned, node's parent is not spawned but parent's parent node is spawned).
+        mtxIsSpawned.second = true;
+        onSpawn();
+
         // Spawn children.
         {
             std::scoped_lock childGuard(mtxChildNodes.first);
@@ -160,10 +172,6 @@ namespace ne {
                 pChildNode->spawn();
             }
         }
-
-        // Spawn self.
-        mtxIsSpawned.second = true;
-        onSpawn();
     }
 
     void Node::despawn() {
@@ -178,11 +186,10 @@ namespace ne {
             return;
         }
 
-        // Despawn self.
-        onDespawn();
-        mtxIsSpawned.second = false;
-
-        // Despawn children.
+        // Despawn children first.
+        // This despawn order is required for some nodes to work correctly.
+        // With this despawn order we will not make "holes" in world's node tree
+        // (i.e. when node is spawned, node's parent is not spawned but parent's parent node is spawned).
         {
             std::scoped_lock childGuard(mtxChildNodes.first);
 
@@ -190,6 +197,10 @@ namespace ne {
                 pChildNode->despawn();
             }
         }
+
+        // Despawn self.
+        onDespawn();
+        mtxIsSpawned.second = false;
     }
 
     Node* Node::getParent() {

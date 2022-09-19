@@ -125,11 +125,11 @@ namespace ne NENAMESPACE() {
         virtual void onAfterAttachedToNode(Node* pAttachedToThis){};
 
         /**
-         * Called when this node was not spawned and was attached to a parent node that is spawned
+         * Called when this node was not spawned and it was attached to a parent node that is spawned
          * to execute custom spawn logic.
          *
          * @remark This node will be marked as spawned before this function is called.
-         * @remark This function is called only after all child nodes were spawned.
+         * @remark This function is called before any of the child nodes are spawned.
          *
          * @warning It's better to call parent's version first (before executing your logic).
          */
@@ -139,7 +139,8 @@ namespace ne NENAMESPACE() {
          * Called before this node is despawned from the world to execute custom despawn logic.
          *
          * @remark This node will be marked as despawned after this function is called.
-         * @remark This function is called before child nodes are despawned.
+         * @remark This function is called after all child nodes were despawned.
+         * @remark If node's destructor is called but node is still spawned it will be despawned.
          *
          * @warning It's better to call parent's version first (before executing your logic).
          */

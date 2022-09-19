@@ -177,6 +177,14 @@ namespace ne {
         Node* getWorldRootNode() const;
 
         /**
+         * Returns time since world creation (in seconds).
+         *
+         * @return Zero if world is not created (see @ref createWorld), otherwise time since
+         * world creation (in seconds).
+         */
+        float getWorldTimeInSeconds() const;
+
+        /**
          * Returns a reference to the window this game instance is using.
          *
          * @return A pointer to the window, should not be deleted.

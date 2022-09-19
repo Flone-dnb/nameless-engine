@@ -66,6 +66,13 @@ namespace ne {
         return pGameWorld->getRootNode();
     }
 
+    float Game::getWorldTimeInSeconds() const {
+        if (!pGameWorld)
+            return 0.0f;
+
+        return pGameWorld->getWorldTimeInSeconds();
+    }
+
     void Game::onKeyboardInput(KeyboardKey key, KeyboardModifiers modifiers, bool bIsPressedDown) {
         pGameInstance->onKeyboardInput(key, modifiers, bIsPressedDown);
 

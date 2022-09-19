@@ -30,4 +30,6 @@ namespace ne {
 
     Node* IGameInstance::getWorldRootNode() const { return pGame->getWorldRootNode(); }
 
+    float IGameInstance::getWorldTimeInSeconds() const { return pGame->getWorldTimeInSeconds(); }
+
 } // namespace ne

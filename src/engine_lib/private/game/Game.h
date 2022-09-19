@@ -144,6 +144,14 @@ namespace ne {
         Node* getWorldRootNode() const;
 
         /**
+         * Returns time since world creation (in seconds).
+         *
+         * @return Zero if world is not created (see @ref createWorld), otherwise time since
+         * world creation (in seconds).
+         */
+        float getWorldTimeInSeconds() const;
+
+        /**
          * Returns window that owns this object.
          *
          * @return Do not delete this pointer. Window that owns this object.

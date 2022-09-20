@@ -88,13 +88,6 @@ namespace ne NENAMESPACE() {
         void detachFromParentAndDespawn();
 
         /**
-         * Returns a copy of the array of child nodes.
-         *
-         * @return A copy of the array of child nodes.
-         */
-        std::vector<std::shared_ptr<Node>> getChildNodes();
-
-        /**
          * Attaches a node as a child of this node.
          *
          * @remark If attached node had a parent it will be changed.
@@ -146,6 +139,43 @@ namespace ne NENAMESPACE() {
          */
         virtual void onDespawn(){};
 
+        /**
+         * Goes up the parent node chain (up to the world's root node if needed) to find
+         * a first node that matches the specified node type and optionally node name.
+         *
+         * Template parameter NodeType specifies node type to look for. Note that
+         * this means that we will use dynamic_cast to determine whether the node matches
+         * the specified type or not. So if you are looking for a node with the type `Node`
+         * this means that every node will match the type.
+         *
+         * @param sParentNodeName If not empty, nodes that match the specified node type will
+         * also be checked to see if their name exactly matches the specified name.
+         *
+         * @return nullptr if not found, otherwise a non owning pointer to the node.
+         * Do not delete returned pointer.
+         */
+        template <typename NodeType>
+        requires std::derived_from<NodeType, Node> Node*
+        getParentNodeOfType(const std::string& sParentNodeName = "");
+
+        /**
+         * Goes down the child node chain to find a first node that matches the specified node type and
+         * optionally node name.
+         *
+         * Template parameter NodeType specifies node type to look for. Note that
+         * this means that we will use dynamic_cast to determine whether the node matches
+         * the specified type or not. So if you are looking for a node with the type `Node`
+         * this means that every node will match the type.
+         *
+         * @param sChildNodeName If not empty, nodes that match the specified node type will
+         * also be checked to see if their name exactly matches the specified name.
+         *
+         * @return nullptr if not found, otherwise a valid pointer to the node.
+         */
+        template <typename NodeType>
+        requires std::derived_from<NodeType, Node> std::shared_ptr<Node>
+        getChildNodeOfType(const std::string& sChildNodeName = "");
+
     private:
         // World is able to spawn root node.
         friend class World;
@@ -180,6 +210,46 @@ namespace ne NENAMESPACE() {
 
         ne_Node_GENERATED
     };
+
+    template <typename NodeType>
+    requires std::derived_from<NodeType, Node> Node* Node::getParentNodeOfType(
+        const std::string& sParentNodeName) {
+        std::scoped_lock guard(mtxParentNode.first);
+
+        // Check if have parent.
+        if (!mtxParentNode.second)
+            return nullptr;
+
+        // Check parent's type and optionally name.
+        if (dynamic_cast<NodeType>(mtxParentNode.second) &&
+            (sParentNodeName.empty() || mtxParentNode.second->getName() == sParentNodeName)) {
+            return mtxParentNode.second;
+        }
+
+        return mtxParentNode.second->getParentNodeOfType<NodeType>(sParentNodeName);
+    }
+
+    template <typename NodeType>
+    requires std::derived_from<NodeType, Node> std::shared_ptr<Node> Node::getChildNodeOfType(
+        const std::string& sChildNodeName) {
+        std::scoped_lock guard(mtxChildNodes.first);
+
+        for (const auto& pChildNode : mtxChildNodes.second) {
+            if (dynamic_cast<NodeType>(pChildNode.get()) &&
+                (sChildNodeName.empty() || pChildNode->getName() == sChildNodeName)) {
+                return pChildNode;
+            }
+
+            const auto pNode = pChildNode->getChildNodeOfType<NodeType>(sChildNodeName);
+            if (!pNode) {
+                continue;
+            } else {
+                return pNode;
+            }
+        }
+
+        return nullptr;
+    }
 } // namespace )
 
 File_Node_GENERATED

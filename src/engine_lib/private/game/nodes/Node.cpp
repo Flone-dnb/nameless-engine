@@ -89,6 +89,16 @@ namespace ne {
         // Check if this node is already attached to some node.
         std::scoped_lock parentGuard(pNode->mtxParentNode.first);
         if (pNode->mtxParentNode.second != nullptr) {
+            Logger::get().warn(
+                fmt::format(
+                    "node \"{}\" is changing its parent node from node \"{}\" to node \"{}\", "
+                    "changing parent node is dangerous and can cause cyclic references, "
+                    "make sure you know what you are doing",
+                    pNode->getName(),
+                    pNode->mtxParentNode.second->getName(),
+                    getName()),
+                sNodeLogCategory);
+
             // Change node parent.
             pNode->onBeforeDetachedFromNode(pNode->mtxParentNode.second);
 
@@ -206,11 +216,6 @@ namespace ne {
     Node* Node::getParent() {
         std::scoped_lock guard(mtxParentNode.first);
         return mtxParentNode.second;
-    }
-
-    std::vector<std::shared_ptr<Node>> Node::getChildNodes() {
-        std::scoped_lock guard(mtxChildNodes.first);
-        return mtxChildNodes.second;
     }
 
 } // namespace ne

@@ -16,7 +16,8 @@ namespace ne {
         }
 
         this->iWorldSize = iWorldSize;
-        this->pRootNode = std::make_unique<Node>("World Root Node");
+        pRootNode = std::make_unique<Node>("World Root Node");
+        pRootNode->spawn();
 
         timeWhenWorldCreated = std::chrono::steady_clock::now();
 

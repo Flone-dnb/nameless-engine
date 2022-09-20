@@ -147,6 +147,9 @@ namespace ne NENAMESPACE() {
         virtual void onDespawn(){};
 
     private:
+        // World is able to spawn root node.
+        friend class World;
+
         /** Calls @ref onSpawn on this node and all of its child nodes. */
         void spawn();
 

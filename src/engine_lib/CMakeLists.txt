@@ -53,7 +53,7 @@ set(ENGINE_LIB_SOURCES
     ${RELATIVE_EXT_PATH}/xxHash/xxhash.c
     ${RELATIVE_EXT_PATH}/xxHash/xxhash.h
     private/misc/Error.cpp
-    private/misc/Error.h
+    public/misc/Error.h
     private/window/Window.cpp
     public/game/Window.h
     private/misc/UniqueValueGenerator.h

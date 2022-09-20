@@ -13,14 +13,14 @@
 namespace ne {
     /** Information of a specific source code location. */
     struct SourceLocationInfo {
-        /** Filename. */
+        /** File name. */
         std::string sFilename;
         /** Line number. */
         std::string sLine;
     };
 
     /**
-     * Helper class to store error messages.
+     * Helper class for storing and showing error messages.
      */
     class Error {
     public:

@@ -1,7 +1,7 @@
 ﻿#include "Globals.h"
 
 // Custom.
-#include "Error.h"
+#include "misc/Error.h"
 #if defined(WIN32)
 #include <ShlObj.h>
 #include <Shlwapi.h>

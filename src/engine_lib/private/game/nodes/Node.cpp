@@ -89,23 +89,41 @@ namespace ne {
         // Check if this node is already attached to some node.
         std::scoped_lock parentGuard(pNode->mtxParentNode.first);
         if (pNode->mtxParentNode.second != nullptr) {
-            Logger::get().warn(
-                fmt::format(
-                    "node \"{}\" is changing its parent node from node \"{}\" to node \"{}\", "
-                    "changing parent node is dangerous and can cause cyclic references, "
-                    "make sure you know what you are doing",
-                    pNode->getName(),
-                    pNode->mtxParentNode.second->getName(),
-                    getName()),
-                sNodeLogCategory);
+            Error err(fmt::format(
+                "Node \"{}\" attempts to change its parent node from node \"{}\" to node \"{}\". "
+                "Changing node's parent is not supported yet. If you need to attach your node to another "
+                "parent, right now you have 2 ways of implementing this:\n"
+                "1. Create a new duplicate node and attach it instead, remove old node.\n"
+                "2. Have 2 nodes, one is attached but hidden, while other is visible. When you "
+                "need to change node's parent, hide old node and show the hidden (attached) one.",
+                pNode->getName(),
+                pNode->mtxParentNode.second->getName(),
+                getName()));
+            err.showError();
+            throw std::runtime_error(err.getError());
+            // TODO: show error until we will find a way to solve cyclic reference that may
+            // TODO: occur when changing parent, example: node A is parent of B and B is parent
+            // TODO: if C, B additionally stores a shared pointer to C but C decided to change
+            // TODO: parent from B to A, after changing parent we have A - C - B hierarchy but B
+            // TODO: stores a shared pointer to C and C stores shared pointer to B (because nodes
+            // TODO: (store shared pointers to children) - cyclic reference.
+            //            Logger::get().warn(
+            //                fmt::format(
+            //                    "node \"{}\" is changing its parent node from node \"{}\" to node \"{}\", "
+            //                    "changing parent node is dangerous and can cause cyclic references, "
+            //                    "make sure you know what you are doing",
+            //                    pNode->getName(),
+            //                    pNode->mtxParentNode.second->getName(),
+            //                    getName()),
+            //                sNodeLogCategory);
 
-            // Change node parent.
-            pNode->onBeforeDetachedFromNode(pNode->mtxParentNode.second);
+            //            // Change node parent.
+            //            pNode->onBeforeDetachedFromNode(pNode->mtxParentNode.second);
 
-            pNode->mtxParentNode.second = this;
-            mtxChildNodes.second.push_back(pNode);
+            //            pNode->mtxParentNode.second = this;
+            //            mtxChildNodes.second.push_back(pNode);
 
-            pNode->onAfterAttachedToNode(mtxParentNode.second);
+            //            pNode->onAfterAttachedToNode(mtxParentNode.second);
         }
 
         // don't unlock node's parent lock here yet, still doing some logic based on new parent

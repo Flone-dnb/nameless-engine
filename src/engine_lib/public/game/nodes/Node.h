@@ -90,33 +90,11 @@ namespace ne NENAMESPACE() {
         /**
          * Attaches a node as a child of this node.
          *
-         * @remark If attached node had a parent it will be changed.
-         *
          * @param pNode Node to attach as a child.
          */
         void addChildNode(std::shared_ptr<Node> pNode);
 
     protected:
-        /**
-         * Called right before this node will be detached from its current parent node.
-         *
-         * @remark Not called if node has no parent.
-         *
-         * @param pDetachingFromThis Current parent node that we will be detached from.
-         *
-         * @warning It's better to call parent's version first (before executing your logic).
-         */
-        virtual void onBeforeDetachedFromNode(Node* pDetachingFromThis){};
-
-        /**
-         * Called right after this node was attached to a new parent node.
-         *
-         * @param pAttachedToThis New parent node that we are attached to.
-         *
-         * @warning It's better to call parent's version first (before executing your logic).
-         */
-        virtual void onAfterAttachedToNode(Node* pAttachedToThis){};
-
         /**
          * Called when this node was not spawned and it was attached to a parent node that is spawned
          * to execute custom spawn logic.

@@ -66,11 +66,14 @@ TEST_CASE("serialize and deserialize node") {
 TEST_CASE("serialize and deserialize multiple nodes") {
     using namespace ne;
 
+    // Prepare data.
     const std::filesystem::path pathToFile =
         std::filesystem::temp_directory_path() /
         "TESTING_MyCoolNode_TESTING"; // not specifying ".toml" on purpose
     const std::filesystem::path fullPathToFile =
         std::filesystem::temp_directory_path() / "TESTING_MyCoolNode_TESTING.toml";
+    const auto sNode1CustomAttributeName = "node1_attribute";
+    const auto sNode2CustomAttributeName = "node2_attribute";
 
     // Remove this file if exists.
     if (std::filesystem::exists(fullPathToFile)) {
@@ -82,7 +85,9 @@ TEST_CASE("serialize and deserialize multiple nodes") {
     // Serialize.
     Node node1("My Cool Node 1");
     Node node2("My Cool Node 2");
-    const auto optionalError = Serializable::serialize(pathToFile, {{&node1, "0"}, {&node2, "1"}}, false);
+    SerializableObjectInformation node1Info(&node1, "0", {{sNode1CustomAttributeName, "1"}});
+    SerializableObjectInformation node2Info(&node2, "1", {{sNode2CustomAttributeName, "2"}});
+    const auto optionalError = Serializable::serialize(pathToFile, {node1Info, node2Info}, false);
     if (optionalError.has_value()) {
         auto err = optionalError.value();
         err.addEntry();
@@ -126,6 +131,18 @@ TEST_CASE("serialize and deserialize multiple nodes") {
     REQUIRE(pNode2 != nullptr);
     REQUIRE(pNode1->getName() == node1.getName());
     REQUIRE(pNode2->getName() == node2.getName());
+
+    // Check custom attributes.
+    REQUIRE(vDeserializedObjects[0].customAttributes.size() == 1);
+    REQUIRE(vDeserializedObjects[1].customAttributes.size() == 1);
+    REQUIRE(
+        vDeserializedObjects[0].customAttributes.find(sNode1CustomAttributeName) !=
+        vDeserializedObjects[0].customAttributes.end());
+    REQUIRE(
+        vDeserializedObjects[1].customAttributes.find(sNode2CustomAttributeName) !=
+        vDeserializedObjects[1].customAttributes.end());
+    REQUIRE(vDeserializedObjects[0].customAttributes[sNode1CustomAttributeName] == "1");
+    REQUIRE(vDeserializedObjects[1].customAttributes[sNode2CustomAttributeName] == "2");
 
     // Cleanup.
     std::filesystem::remove(fullPathToFile);

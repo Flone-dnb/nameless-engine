@@ -23,6 +23,70 @@
 #include "Serializable.generated.h"
 
 namespace ne NENAMESPACE() {
+    class Serializable;
+
+    /** Information about an object to be serialized. */
+    struct SerializableObjectInformation {
+    public:
+        SerializableObjectInformation() = delete;
+
+        /**
+         * Initialized object information for serialization.
+         *
+         * @param pObject          Object to serialize.
+         * @param sObjectUniqueId  Object's unique ID. Don't use dots in IDs.
+         * @param customAttributes Optional. Pairs of values to serialize with this object.
+         */
+        SerializableObjectInformation(
+            Serializable* pObject,
+            const std::string& sObjectUniqueId,
+            const std::unordered_map<std::string, std::string>& customAttributes = {}) {
+            this->pObject = pObject;
+            this->sObjectUniqueId = sObjectUniqueId;
+            this->customAttributes = customAttributes;
+        }
+
+        /** Object to serialize. */
+        Serializable* pObject;
+
+        /** Unique object ID. Don't use dots in it. */
+        std::string sObjectUniqueId;
+
+        /** Map of object attributes (custom information) that will be also serialized/deserialized. */
+        std::unordered_map<std::string, std::string> customAttributes;
+    };
+
+    /** Information about an object that was deserialized. */
+    struct DeserializedObjectInformation {
+    public:
+        DeserializedObjectInformation() = delete;
+
+        /**
+         * Initialized object information after deserialization.
+         *
+         * @param pObject          Deserialized object.
+         * @param sObjectUniqueId  Object's unique ID.
+         * @param customAttributes Object's custom attributes.
+         */
+        DeserializedObjectInformation(
+            std::shared_ptr<Serializable> pObject,
+            std::string sObjectUniqueId,
+            std::unordered_map<std::string, std::string> customAttributes) {
+            this->pObject = pObject;
+            this->sObjectUniqueId = sObjectUniqueId;
+            this->customAttributes = customAttributes;
+        }
+
+        /** Object to serialize. */
+        std::shared_ptr<Serializable> pObject;
+
+        /** Unique object ID. */
+        std::string sObjectUniqueId;
+
+        /** Map of object attributes (custom information) that were deserialized. */
+        std::unordered_map<std::string, std::string> customAttributes;
+    };
+
     /**
      * Base class for making a serializable type.
      *
@@ -38,14 +102,16 @@ namespace ne NENAMESPACE() {
          * Serializes the object and all reflected fields (including inherited) into a file.
          * Serialized object can later be deserialized using @ref deserialize.
          *
-         * @param pathToFile    File to write reflected data to. The ".toml" extension will be added
+         * @param pathToFile       File to write reflected data to. The ".toml" extension will be added
          * automatically if not specified in the path. If the specified file already exists it will be
          * overwritten.
-         * @param bEnableBackup If 'true' will also use a backup (copy) file. @ref deserialize can use
+         * @param bEnableBackup    If 'true' will also use a backup (copy) file. @ref deserialize can use
          * backup file if the original file does not exist. Generally you want to use
          * a backup file if you are saving important information, such as player progress,
          * other cases such as player game settings and etc. usually do not need a backup but
          * you can use it if you want.
+         * @param customAttributes Optional. Custom pairs of values that will be saved as this object's
+         * additional information and could be later retrieved in @ref deserialize.
          *
          * @remark Note that not all reflected fields can be serialized, only specific types can be
          * serialized. Const fields, pointer fields, lvalue references, rvalue references and C-arrays will
@@ -70,10 +136,14 @@ namespace ne NENAMESPACE() {
          * @return Error if something went wrong, for example when found an unsupported for
          * serialization reflected field.
          */
-        std::optional<Error> serialize(const std::filesystem::path& pathToFile, bool bEnableBackup);
+        std::optional<Error> serialize(
+            const std::filesystem::path& pathToFile,
+            bool bEnableBackup,
+            const std::unordered_map<std::string, std::string>& customAttributes = {});
 
         /**
-         * Serializes multiple objects and their reflected fields (including inherited) into a file.
+         * Serializes multiple objects, their reflected fields (including inherited) and provided
+         * custom attributes (if any) into a file.
          * Serialized objects can later be deserialized using @ref deserialize.
          *
          * This is an overloaded function. See full documentation for other overload.
@@ -81,9 +151,9 @@ namespace ne NENAMESPACE() {
          * @param pathToFile    File to write reflected data to. The ".toml" extension will be added
          * automatically if not specified in the path. If the specified file already exists it will be
          * overwritten.
-         * @param vObjects      Array of pairs of objects to serialize and their unique IDs
-         * (so they could be differentiated in the file). Don't use
-         * dots in the entity ID, dots are used internally.
+         * @param vObjects      Array of objects to serialize, their unique IDs
+         * (so they could be differentiated in the file) and custom attributes (if any). Don't use
+         * dots in the entity IDs, dots are used internally.
          * @param bEnableBackup If 'true' will also use a backup (copy) file. @ref deserialize can use
          * backup file if the original file does not exist. Generally you want to use
          * a backup file if you are saving important information, such as player progress,
@@ -95,7 +165,7 @@ namespace ne NENAMESPACE() {
          */
         static std::optional<Error> serialize(
             const std::filesystem::path& pathToFile,
-            std::vector<std::pair<Serializable*, std::string>> vObjects,
+            std::vector<SerializableObjectInformation> vObjects,
             bool bEnableBackup);
 
         /**
@@ -129,12 +199,15 @@ namespace ne NENAMESPACE() {
          *
          * @param pathToFile File to read reflected data from. The ".toml" extension will be added
          * automatically if not specified in the path.
+         * @param customAttributes Pairs of values that were associated with this object.
          *
          * @return Error if something went wrong, otherwise a pointer to deserialized object.
          */
         template <typename T>
         requires std::derived_from<T, Serializable>
-        static std::variant<std::shared_ptr<T>, Error> deserialize(const std::filesystem::path& pathToFile);
+        static std::variant<std::shared_ptr<T>, Error> deserialize(
+            const std::filesystem::path& pathToFile,
+            std::unordered_map<std::string, std::string>& customAttributes);
 
         /**
          * Deserializes multiple objects and their reflected fields (including inherited) from a file.
@@ -142,12 +215,12 @@ namespace ne NENAMESPACE() {
          * @param pathToFile File to read reflected data from. The ".toml" extension will be added
          * automatically if not specified in the path.
          * @param ids        Array of object IDs (that you specified in @ref serialize) to deserialize
-         * and return. Don't use dots in the entity ID, dots are used internally.
+         * and return. You can use @ref getIdsFromFile to get IDs of all objects in the file.
          *
          * @return Error if something went wrong, otherwise an array of pointers to deserialized objects.
          */
-        static std::variant<std::vector<std::shared_ptr<Serializable>>, Error>
-        deserialize(const std::filesystem::path& pathToFile, std::set<std::string> ids);
+        static std::variant<std::vector<DeserializedObjectInformation>, Error>
+        deserialize(const std::filesystem::path& pathToFile, const std::set<std::string>& ids);
 
 #if defined(DEBUG)
         /**
@@ -176,24 +249,30 @@ namespace ne NENAMESPACE() {
          *
          * This is an overloaded function. See full documentation for other overload.
          *
-         * @param tomlData        Toml value to append this object to.
-         * @param sEntityId       Unique ID of this object. When serializing multiple objects into
+         * @param tomlData          Toml value to append this object to.
+         * @param sEntityId         Unique ID of this object. When serializing multiple objects into
          * one toml value provide different IDs for each object so they could be differentiated. Don't use
          * dots in the entity ID, dots are used in recursion when this function is called from this
          * function to process reflected field (sub entity).
+         * @param customAttributes  Optional. Custom pairs of values that will be saved as this object's
+         * additional information and could be later retrieved in @ref deserialize.
          *
          * @return Error if something went wrong, for example when found an unsupported for
          * serialization reflected field, otherwise name of the section that was used to store this entity.
          */
-        std::variant<std::string, Error> serialize(toml::value& tomlData, std::string sEntityId = "");
+        std::variant<std::string, Error> serialize(
+            toml::value& tomlData,
+            std::string sEntityId = "",
+            const std::unordered_map<std::string, std::string>& customAttributes = {});
 
         /**
          * Deserializes an object and all reflected fields (including inherited) from a toml value.
          * Specify the type of an object (that is located in the file) as the T template parameter, which
          * can be entity's actual type or entity's parent (up to Serializable).
          *
-         * @param tomlData        Toml value to retrieve an object from.
-         * @param sEntityId       Unique ID of this object. When serializing multiple objects into
+         * @param tomlData         Toml value to retrieve an object from.
+         * @param customAttributes Pairs of values that were associated with this object.
+         * @param sEntityId        Unique ID of this object. When serializing multiple objects into
          * one toml value provide different IDs for each object so they could be differentiated.
          *
          * @warning Don't use dots in the entity ID, dots are used
@@ -204,8 +283,10 @@ namespace ne NENAMESPACE() {
          */
         template <typename T>
         requires std::derived_from<T, Serializable>
-        static std::variant<std::shared_ptr<T>, Error>
-        deserialize(toml::value& tomlData, std::string sEntityId = "");
+        static std::variant<std::shared_ptr<T>, Error> deserialize(
+            toml::value& tomlData,
+            std::unordered_map<std::string, std::string>& customAttributes,
+            std::string sEntityId = "");
 
         /**
          * Returns whether the specified field can be serialized or not.
@@ -291,7 +372,9 @@ namespace ne NENAMESPACE() {
 
     template <typename T>
     requires std::derived_from<T, Serializable> std::variant<std::shared_ptr<T>, Error>
-    Serializable::deserialize(const std::filesystem::path& pathToFile) {
+    Serializable::deserialize(
+        const std::filesystem::path& pathToFile,
+        std::unordered_map<std::string, std::string>& customAttributes) {
         // Add TOML extension to file.
         auto fixedPath = pathToFile;
         if (!fixedPath.string().ends_with(".toml")) {
@@ -320,7 +403,7 @@ namespace ne NENAMESPACE() {
         }
 
         // Deserialize.
-        auto result = deserialize<T>(tomlData);
+        auto result = deserialize<T>(tomlData, customAttributes);
         if (std::holds_alternative<Error>(result)) {
             auto err = std::get<Error>(std::move(result));
             err.addEntry();
@@ -332,7 +415,10 @@ namespace ne NENAMESPACE() {
 
     template <typename T>
     requires std::derived_from<T, Serializable> std::variant<std::shared_ptr<T>, Error>
-    Serializable::deserialize(toml::value & tomlData, std::string sEntityId) {
+    Serializable::deserialize(
+        toml::value & tomlData,
+        std::unordered_map<std::string, std::string> & customAttributes,
+        std::string sEntityId) {
         if (sEntityId.empty()) {
             // Put something as entity ID so it would not look weird.
             sEntityId = "0";
@@ -400,20 +486,29 @@ namespace ne NENAMESPACE() {
             return Error(fmt::format("found \"{}\" section is not a section", sTargetSection));
         }
 
+        // Collect keys.
         const auto& sectionTable = section.as_table();
         std::vector<std::string> vKeys;
         for (const auto& [key, value] : sectionTable) {
-            if (key == sNothingToSerializeKey)
+            if (key == sNothingToSerializeKey) {
                 continue;
-            vKeys.push_back(key);
+            } else if (key.starts_with("..")) {
+                // Custom attribute.
+                if (!value.is_string()) {
+                    return Error(fmt::format("found custom attribute \"{}\" is not a string", key));
+                }
+                customAttributes[key.substr(2)] = value.as_string().str;
+            } else {
+                vKeys.push_back(key);
+            }
         }
 
         // Get archetype for found GUID.
-        auto pClass = getClassForGuid(sTypeGuid);
-        if (!pClass) {
+        auto pType = getClassForGuid(sTypeGuid);
+        if (!pType) {
             return Error(fmt::format("no type found for GUID {}", sTypeGuid));
         }
-        if (!isDerivedFromSerializable(pClass)) {
+        if (!isDerivedFromSerializable(pType)) {
             return Error(fmt::format(
                 "deserialized class with GUID {} does not derive from {}",
                 sTypeGuid,
@@ -421,13 +516,14 @@ namespace ne NENAMESPACE() {
         }
 
         // Create instance.
-        auto pInstance = pClass->makeSharedInstance<T>();
+
+        std::shared_ptr<T> pInstance = pType->makeSharedInstance<T>();
         if (!pInstance) {
             return Error(fmt::format(
                 "unable to make an object of type \"{}\" using type's default constructor "
                 "(does type \"{}\" has a default constructor?)",
-                pClass->getName(),
-                pClass->getName()));
+                pType->getName(),
+                pType->getName()));
         }
 
         // Deserialize fields.
@@ -451,7 +547,7 @@ namespace ne NENAMESPACE() {
 
             // Get field by name.
             rfk::Field const* pField =
-                pClass->getFieldByName(sFieldName.c_str(), rfk::EFieldFlags::Default, true);
+                pType->getFieldByName(sFieldName.c_str(), rfk::EFieldFlags::Default, true);
             if (!pField) {
                 Logger::get().warn(
                     fmt::format(
@@ -593,7 +689,8 @@ namespace ne NENAMESPACE() {
                 const auto sSubEntityId = sSectionNameForField.substr(0, iSubEntityGuidDotPos);
 
                 // Deserialize section into an object.
-                auto result = deserialize<Serializable>(tomlData, sSubEntityId);
+                std::unordered_map<std::string, std::string> subAttributes;
+                auto result = deserialize<Serializable>(tomlData, subAttributes, sSubEntityId);
                 if (std::holds_alternative<Error>(result)) {
                     auto err = std::get<Error>(std::move(result));
                     err.addEntry();

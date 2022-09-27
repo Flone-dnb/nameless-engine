@@ -6,10 +6,12 @@
 #include "Reflection_impl.hpp"
 
 namespace ne {
-    std::optional<Error>
-    Serializable::serialize(const std::filesystem::path& pathToFile, bool bEnableBackup) {
+    std::optional<Error> Serializable::serialize(
+        const std::filesystem::path& pathToFile,
+        bool bEnableBackup,
+        const std::unordered_map<std::string, std::string>& customAttributes) {
         toml::value tomlData;
-        auto result = serialize(tomlData);
+        auto result = serialize(tomlData, "", customAttributes);
         if (std::holds_alternative<Error>(result)) {
             auto err = std::get<Error>(std::move(result));
             err.addEntry();
@@ -54,7 +56,10 @@ namespace ne {
         return {};
     }
 
-    std::variant<std::string, Error> Serializable::serialize(toml::value& tomlData, std::string sEntityId) {
+    std::variant<std::string, Error> Serializable::serialize(
+        toml::value& tomlData,
+        std::string sEntityId,
+        const std::unordered_map<std::string, std::string>& customAttributes) {
         rfk::Class const& selfArchetype = getArchetype();
         if (sEntityId.empty()) {
             // Put something as entity ID so it would not look weird.
@@ -186,8 +191,13 @@ namespace ne {
         }
 
         // Add at least one value to be valid TOML data.
-        if (loopData.iTotalFieldsSerialized == 0) {
+        if (customAttributes.empty() && loopData.iTotalFieldsSerialized == 0) {
             tomlData[sSectionName][sNothingToSerializeKey] = "nothing to serialize here";
+        }
+
+        // Write custom attributes, they will be written with two dots in the beginning.
+        for (const auto& [key, value] : customAttributes) {
+            tomlData[sSectionName][fmt::format("..{}", key)] = value;
         }
 
         return sSectionName;
@@ -443,83 +453,8 @@ namespace ne {
         return getClassForGuid(&selfArchetype, sGuid);
     }
 
-    std::optional<Error> Serializable::serialize(
-        const std::filesystem::path& pathToFile,
-        std::vector<std::pair<Serializable*, std::string>> vObjects,
-        bool bEnableBackup) {
-        // Check that all objects are unique.
-        for (size_t i = 0; i < vObjects.size(); i++) {
-            for (size_t j = 0; j < vObjects.size(); j++) {
-                if (i != j && vObjects[i].first == vObjects[j].first) [[unlikely]] {
-                    return Error("the specified array of objects has doubles");
-                }
-            }
-        }
-
-        // Check that IDs are unique and don't have dots in them.
-        for (const auto& [pObject, sId] : vObjects) {
-            if (sId.contains('.')) [[unlikely]] {
-                return Error(
-                    fmt::format("the specified object ID \"{}\" is not allowed to have dots in it", sId));
-            }
-            for (const auto& [pCompareObject, sCompareId] : vObjects) {
-                if (pObject != pCompareObject && sId == sCompareId) [[unlikely]] {
-                    return Error("object IDs are not unique");
-                }
-            }
-        }
-
-        // Serialize.
-        toml::value tomlData;
-        for (const auto& [pObject, sId] : vObjects) {
-            auto result = pObject->serialize(tomlData, sId);
-            if (std::holds_alternative<Error>(result)) {
-                auto err = std::get<Error>(std::move(result));
-                err.addEntry();
-                return err;
-            }
-        }
-
-        // Add TOML extension to file.
-        auto fixedPath = pathToFile;
-        if (!fixedPath.string().ends_with(".toml")) {
-            fixedPath += ".toml";
-        }
-
-        std::filesystem::path backupFile = fixedPath;
-        backupFile += ConfigManager::getBackupFileExtension();
-
-        if (bEnableBackup) {
-            // Check if we already have a file from previous serialization.
-            if (std::filesystem::exists(fixedPath)) {
-                // Make this old file a backup file.
-                if (std::filesystem::exists(backupFile)) {
-                    std::filesystem::remove(backupFile);
-                }
-                std::filesystem::rename(fixedPath, backupFile);
-            }
-        }
-
-        // Save TOML data to file.
-        std::ofstream file(fixedPath, std::ios::binary);
-        if (!file.is_open()) {
-            return Error(fmt::format("failed to open the file \"{}\"", fixedPath.string()));
-        }
-        file << tomlData;
-        file.close();
-
-        if (bEnableBackup) {
-            // Create backup file if it does not exist.
-            if (!std::filesystem::exists(backupFile)) {
-                std::filesystem::copy_file(fixedPath, backupFile);
-            }
-        }
-
-        return {};
-    }
-
-    std::variant<std::vector<std::shared_ptr<Serializable>>, Error>
-    Serializable::deserialize(const std::filesystem::path& pathToFile, std::set<std::string> ids) {
+    std::variant<std::vector<DeserializedObjectInformation>, Error>
+    Serializable::deserialize(const std::filesystem::path& pathToFile, const std::set<std::string>& ids) {
         // Check that specified IDs don't have dots in them.
         for (const auto& sId : ids) {
             if (sId.contains('.')) [[unlikely]] {
@@ -556,9 +491,10 @@ namespace ne {
         }
 
         // Deserialize.
-        std::vector<std::shared_ptr<Serializable>> vObjects;
+        std::vector<DeserializedObjectInformation> deserializedObjects;
         for (const auto& sId : ids) {
-            auto result = deserialize<Serializable>(tomlData, sId);
+            std::unordered_map<std::string, std::string> customAttributes;
+            auto result = deserialize<Serializable>(tomlData, customAttributes, sId);
             if (std::holds_alternative<Error>(result)) {
                 auto err = std::get<Error>(std::move(result));
                 err.addEntry();
@@ -566,10 +502,11 @@ namespace ne {
             }
 
             const auto pObject = std::get<std::shared_ptr<Serializable>>(std::move(result));
-            vObjects.push_back(std::move(pObject));
+            DeserializedObjectInformation objectInfo(pObject, sId, customAttributes);
+            deserializedObjects.push_back(std::move(objectInfo));
         }
 
-        return vObjects;
+        return deserializedObjects;
     }
 
     std::variant<std::set<std::string>, Error>
@@ -632,6 +569,84 @@ namespace ne {
         }
 
         return vIds;
+    }
+
+    std::optional<Error> Serializable::serialize(
+        const std::filesystem::path& pathToFile,
+        std::vector<SerializableObjectInformation> vObjects,
+        bool bEnableBackup) {
+        // Check that all objects are unique.
+        for (size_t i = 0; i < vObjects.size(); i++) {
+            for (size_t j = 0; j < vObjects.size(); j++) {
+                if (i != j && vObjects[i].pObject == vObjects[j].pObject) [[unlikely]] {
+                    return Error("the specified array of objects has doubles");
+                }
+            }
+        }
+
+        // Check that IDs are unique and don't have dots in them.
+        for (const auto& objectData : vObjects) {
+            if (objectData.sObjectUniqueId.contains('.')) [[unlikely]] {
+                return Error(fmt::format(
+                    "the specified object ID \"{}\" is not allowed to have dots in it",
+                    objectData.sObjectUniqueId));
+            }
+            for (const auto& compareObject : vObjects) {
+                if (objectData.pObject != compareObject.pObject &&
+                    objectData.sObjectUniqueId == compareObject.sObjectUniqueId) [[unlikely]] {
+                    return Error("object IDs are not unique");
+                }
+            }
+        }
+
+        // Serialize.
+        toml::value tomlData;
+        for (const auto& objectData : vObjects) {
+            auto result = objectData.pObject->serialize(
+                tomlData, objectData.sObjectUniqueId, objectData.customAttributes);
+            if (std::holds_alternative<Error>(result)) {
+                auto err = std::get<Error>(std::move(result));
+                err.addEntry();
+                return err;
+            }
+        }
+
+        // Add TOML extension to file.
+        auto fixedPath = pathToFile;
+        if (!fixedPath.string().ends_with(".toml")) {
+            fixedPath += ".toml";
+        }
+
+        std::filesystem::path backupFile = fixedPath;
+        backupFile += ConfigManager::getBackupFileExtension();
+
+        if (bEnableBackup) {
+            // Check if we already have a file from previous serialization.
+            if (std::filesystem::exists(fixedPath)) {
+                // Make this old file a backup file.
+                if (std::filesystem::exists(backupFile)) {
+                    std::filesystem::remove(backupFile);
+                }
+                std::filesystem::rename(fixedPath, backupFile);
+            }
+        }
+
+        // Save TOML data to file.
+        std::ofstream file(fixedPath, std::ios::binary);
+        if (!file.is_open()) {
+            return Error(fmt::format("failed to open the file \"{}\"", fixedPath.string()));
+        }
+        file << tomlData;
+        file.close();
+
+        if (bEnableBackup) {
+            // Create backup file if it does not exist.
+            if (!std::filesystem::exists(backupFile)) {
+                std::filesystem::copy_file(fixedPath, backupFile);
+            }
+        }
+
+        return {};
     }
 
 } // namespace ne

@@ -8,11 +8,14 @@
 TEST_CASE("serialize and deserialize node") {
     using namespace ne;
 
+    // Prepare data.
     const std::filesystem::path pathToFile =
         std::filesystem::temp_directory_path() /
         "TESTING_MyCoolNode_TESTING"; // not specifying ".toml" on purpose
     const std::filesystem::path fullPathToFile =
         std::filesystem::temp_directory_path() / "TESTING_MyCoolNode_TESTING.toml";
+    const auto sCustomAttributeName = "Test Attribute";
+    const auto sCustomAttributeValue = "142";
 
     // Remove this file if exists.
     if (std::filesystem::exists(fullPathToFile)) {
@@ -23,7 +26,9 @@ TEST_CASE("serialize and deserialize node") {
 
     // Serialize.
     Node node("My Cool Node");
-    const auto optionalError = node.serialize(pathToFile, false);
+    std::unordered_map<std::string, std::string> serializeCustomAttributes = {
+        {sCustomAttributeName, sCustomAttributeValue}};
+    const auto optionalError = node.serialize(pathToFile, false, serializeCustomAttributes);
     if (optionalError.has_value()) {
         auto err = optionalError.value();
         err.addEntry();
@@ -34,7 +39,8 @@ TEST_CASE("serialize and deserialize node") {
     REQUIRE(std::filesystem::exists(fullPathToFile));
 
     // Deserialize.
-    const auto result = Serializable::deserialize<Node>(pathToFile);
+    std::unordered_map<std::string, std::string> deserializeCustomAttributes;
+    const auto result = Serializable::deserialize<Node>(pathToFile, deserializeCustomAttributes);
     if (std::holds_alternative<Error>(result)) {
         auto err = std::get<Error>(std::move(result));
         err.addEntry();
@@ -45,6 +51,13 @@ TEST_CASE("serialize and deserialize node") {
 
     // Check that name is the same.
     REQUIRE(pDeserializedNode->getName() == node.getName());
+
+    // Check custom attributes.
+    REQUIRE(deserializeCustomAttributes.size() == serializeCustomAttributes.size());
+    REQUIRE(deserializeCustomAttributes.find(sCustomAttributeName) != deserializeCustomAttributes.end());
+    REQUIRE(deserializeCustomAttributes[sCustomAttributeName] == sCustomAttributeValue);
+    REQUIRE(
+        deserializeCustomAttributes[sCustomAttributeName] == serializeCustomAttributes[sCustomAttributeName]);
 
     // Cleanup.
     std::filesystem::remove(fullPathToFile);
@@ -100,13 +113,14 @@ TEST_CASE("serialize and deserialize multiple nodes") {
         INFO(err.getError());
         REQUIRE(false);
     }
-    const auto vDeserializedObjects = std::get<std::vector<std::shared_ptr<Serializable>>>(std::move(result));
+    std::vector<DeserializedObjectInformation> vDeserializedObjects =
+        std::get<std::vector<DeserializedObjectInformation>>(std::move(result));
 
     // Check results.
     REQUIRE(vDeserializedObjects.size() == 2);
 
-    const auto pNode1 = std::dynamic_pointer_cast<Node>(vDeserializedObjects[0]);
-    const auto pNode2 = std::dynamic_pointer_cast<Node>(vDeserializedObjects[1]);
+    const auto pNode1 = std::dynamic_pointer_cast<Node>(vDeserializedObjects[0].pObject);
+    const auto pNode2 = std::dynamic_pointer_cast<Node>(vDeserializedObjects[1].pObject);
 
     REQUIRE(pNode1 != nullptr);
     REQUIRE(pNode2 != nullptr);

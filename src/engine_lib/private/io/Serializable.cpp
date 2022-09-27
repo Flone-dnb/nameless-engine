@@ -66,7 +66,13 @@ namespace ne {
             sEntityId = "0";
         }
 
-        // Check that this type has GUID.
+        // Check that custom attribute key names are not empty.
+        if (!customAttributes.empty() && customAttributes.find("") != customAttributes.end()) {
+            const Error err("empty attributes are not allowed");
+            return err;
+        }
+
+        // Check that this type has a GUID.
         const auto pGuid = selfArchetype.getProperty<Guid>(false);
         if (!pGuid) {
             const Error err(
@@ -586,6 +592,10 @@ namespace ne {
 
         // Check that IDs are unique and don't have dots in them.
         for (const auto& objectData : vObjects) {
+            if (objectData.sObjectUniqueId.empty()) [[unlikely]] {
+                return Error("specified an empty object ID");
+            }
+
             if (objectData.sObjectUniqueId.contains('.')) [[unlikely]] {
                 return Error(fmt::format(
                     "the specified object ID \"{}\" is not allowed to have dots in it",

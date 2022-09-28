@@ -1,5 +1,8 @@
 ﻿#include "game/nodes/Node.h"
 
+// STL.
+#include <ranges>
+
 // Custom.
 #include "io/Logger.h"
 
@@ -103,6 +106,7 @@ namespace ne {
                 getName()));
             err.showError();
             throw std::runtime_error(err.getError());
+
             // TODO: show error until we will find a way to solve cyclic reference that may
             // TODO: occur when changing parent, example: node A is parent of B and B is parent
             // TODO: if C, B additionally stores a shared pointer to C but C decided to change
@@ -122,10 +126,26 @@ namespace ne {
             //            // Change node parent.
             //            pNode->onBeforeDetachedFromNode(pNode->mtxParentNode.second);
 
+            //            // Remove node from parent's children.
+            //            std::scoped_lock
+            //            parentsChildrenGuard(pNode->mtxParentNode.second->mtxChildNodes.first); const auto
+            //            pParentsChildren = &pNode->mtxParentNode.second->mtxChildNodes.second; for (auto it
+            //            = pParentsChildren->begin(); it != pParentsChildren->end(); ++it) {
+            //                if (*it == pNode) {
+            //                    pParentsChildren->erase(it);
+            //                    break;
+            //                }
+            //            }
+
+            //            // Add node.
             //            pNode->mtxParentNode.second = this;
             //            mtxChildNodes.second.push_back(pNode);
 
             //            pNode->onAfterAttachedToNode(mtxParentNode.second);
+        } else {
+            // Add node.
+            pNode->mtxParentNode.second = this;
+            mtxChildNodes.second.push_back(pNode);
         }
 
         // don't unlock node's parent lock here yet, still doing some logic based on new parent
@@ -236,6 +256,174 @@ namespace ne {
     Node* Node::getParent() {
         std::scoped_lock guard(mtxParentNode.first);
         return mtxParentNode.second;
+    }
+
+    std::optional<Error>
+    Node::serializeNodeTree(const std::filesystem::path& pathToFile, bool bEnableBackup) {
+        lockChildren(); // make sure nothing is deleted while we are serializing
+        {
+            // Collect information for serialization.
+            size_t iId = 0;
+            const auto vNodesInfo = getInformationForSerialization(iId, {});
+
+            // Serialize.
+            const auto optionalError =
+                Serializable::serialize(pathToFile, std::move(vNodesInfo), bEnableBackup);
+            if (optionalError.has_value()) {
+                auto err = optionalError.value();
+                err.addEntry();
+                return err;
+            }
+        }
+        unlockChildren();
+
+        return {};
+    }
+
+    std::vector<SerializableObjectInformation>
+    Node::getInformationForSerialization(size_t& iId, std::optional<size_t> iParentId) {
+        // Prepare information about nodes.
+        // Use custom attributes for storing hierarchy information.
+        std::vector<SerializableObjectInformation> vNodesInfo;
+
+        // Add self first.
+        const size_t iMyId = iId;
+        SerializableObjectInformation selfInfo(this, std::to_string(iId));
+        if (iParentId.has_value()) {
+            selfInfo.customAttributes[sParentNodeAttributeName] = std::to_string(iParentId.value());
+        }
+        vNodesInfo.push_back(std::move(selfInfo));
+        iId += 1;
+
+        // Add child information.
+        std::scoped_lock guard(mtxChildNodes.first);
+        for (const auto& pChildNode : mtxChildNodes.second) {
+            std::ranges::move(
+                pChildNode->getInformationForSerialization(iId, iMyId), std::back_inserter(vNodesInfo));
+        }
+
+        return vNodesInfo;
+    }
+
+    void Node::lockChildren() {
+        mtxChildNodes.first.lock();
+        for (const auto& pChildNode : mtxChildNodes.second) {
+            pChildNode->lockChildren();
+        }
+    }
+
+    void Node::unlockChildren() {
+        mtxChildNodes.first.unlock();
+        for (const auto& pChildNode : mtxChildNodes.second) {
+            pChildNode->unlockChildren();
+        }
+    }
+
+    std::variant<std::shared_ptr<Node>, Error>
+    Node::deserializeNodeTree(const std::filesystem::path& pathToFile) {
+        // Get all IDs from this file.
+        const auto idResult = Serializable::getIdsFromFile(pathToFile);
+        if (std::holds_alternative<Error>(idResult)) {
+            auto err = std::get<Error>(idResult);
+            err.addEntry();
+            return err;
+        }
+        const auto ids = std::get<std::set<std::string>>(idResult);
+
+        // Deserialize all nodes.
+        const auto deserializeResult = Serializable::deserialize(pathToFile, ids);
+        if (std::holds_alternative<Error>(deserializeResult)) {
+            auto err = std::get<Error>(deserializeResult);
+            err.addEntry();
+            return err;
+        }
+        const auto vNodesInfo = std::get<std::vector<DeserializedObjectInformation>>(deserializeResult);
+
+        // Sort all nodes by their ID.
+        std::shared_ptr<Node> pRootNode;
+        // Prepare array of pairs: Node - Parent index.
+        std::vector<std::pair<std::shared_ptr<Node>, std::optional<size_t>>> vNodes(vNodesInfo.size());
+        for (const auto& nodeInfo : vNodesInfo) {
+            // Try to cast this object to Node.
+            const auto pNode = std::dynamic_pointer_cast<Node>(nodeInfo.pObject);
+            if (!pNode) [[unlikely]] {
+                return Error("Deserialized object is not a node.");
+            }
+
+            // Check that this object has required attribute about parent ID.
+            std::optional<size_t> iParentNodeId = {};
+            const auto parentNodeAttributeIt = nodeInfo.customAttributes.find(sParentNodeAttributeName);
+            if (parentNodeAttributeIt == nodeInfo.customAttributes.end()) {
+                if (!pRootNode) {
+                    pRootNode = pNode;
+                } else {
+                    return Error(fmt::format(
+                        "Found non root node \"{}\" that does not have a parent.", pNode->getName()));
+                }
+            } else {
+                try {
+                    iParentNodeId = std::stoull(parentNodeAttributeIt->second);
+                } catch (std::exception& exception) {
+                    return Error(fmt::format(
+                        "Failed to convert attribute \"{}\" with value \"{}\" to integer, error: {}.",
+                        sParentNodeAttributeName,
+                        parentNodeAttributeIt->second,
+                        exception.what()));
+                }
+
+                // Check if this parent ID is outside of out array bounds.
+                if (iParentNodeId.value() >= vNodes.size()) [[unlikely]] {
+                    return Error(fmt::format(
+                        "Parsed parent node ID is outside of bounds: {} >= {}.",
+                        iParentNodeId.value(),
+                        vNodes.size()));
+                }
+            }
+
+            // Try to convert this node's ID to size_t.
+            size_t iNodeId = 0;
+            try {
+                iNodeId = std::stoull(nodeInfo.sObjectUniqueId);
+            } catch (std::exception& exception) {
+                return Error(fmt::format(
+                    "Failed to convert ID \"{}\" to integer, error: {}.",
+                    nodeInfo.sObjectUniqueId,
+                    exception.what()));
+            }
+
+            // Check if this ID is outside of out array bounds.
+            if (iNodeId >= vNodes.size()) [[unlikely]] {
+                return Error(
+                    fmt::format("Parsed ID is outside of bounds: {} >= {}.", iNodeId, vNodes.size()));
+            }
+
+            // Check if we already set a node in this index position.
+            if (vNodes[iNodeId].first) [[unlikely]] {
+                return Error(fmt::format("Parsed ID {} was already used by some other node.", iNodeId));
+            }
+
+            // Save node.
+            vNodes[iNodeId] = {pNode, iParentNodeId};
+        }
+
+        // See if we found root node.
+        if (!pRootNode) [[unlikely]] {
+            return Error("Root node was not found.");
+        }
+
+        // Build hierarchy using value from attribute.
+        for (const auto& node : vNodes) {
+            if (node.second.has_value()) {
+                vNodes[node.second.value()].first->addChildNode(node.first);
+            }
+        }
+
+        return pRootNode;
+    }
+
+    std::vector<std::shared_ptr<Node>> Node::getChildNodes() {
+        std::scoped_lock guard(mtxChildNodes.first);
+        return mtxChildNodes.second;
     }
 
 } // namespace ne

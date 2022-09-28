@@ -402,6 +402,7 @@ set(ENGINE_TEST_SOURCES
     ${TESTS_RELATIVE_PATH}/engine_lib/Timer.cpp
     ${TESTS_RELATIVE_PATH}/engine_lib/ShaderPack.cpp
     ${TESTS_RELATIVE_PATH}/engine_lib/Serializable.cpp
+    ${TESTS_RELATIVE_PATH}/engine_lib/Node.cpp
     # add engine test .cpp files here
 )
 

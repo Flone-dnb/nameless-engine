@@ -43,37 +43,22 @@ namespace ne NENAMESPACE() {
         virtual ~Node() override;
 
         /**
+         * Deserializes a node and all its child nodes (hierarchy information) from a file.
+         *
+         * @param pathToFile    File to read a node tree from. The ".toml" extension will be added
+         * automatically if not specified in the path.
+         *
+         * @return Error if something went wrong, otherwise pointer to the root node.
+         */
+        static std::variant<std::shared_ptr<Node>, Error>
+        deserializeNodeTree(const std::filesystem::path& pathToFile);
+
+        /**
          * Sets node's name.
          *
          * @param sName New name of this node.
          */
-        NEFUNCTION()
         void setName(const std::string& sName);
-
-        /**
-         * Returns node's name.
-         *
-         * @return Node name.
-         */
-        NEFUNCTION()
-        std::string getName() const;
-
-        /**
-         * Returns whether this node is spawned in the world or not.
-         *
-         * @return Whether this node is spawned in the world or not.
-         */
-        NEFUNCTION()
-        bool isSpawned();
-
-        /**
-         * Returns parent node if this node.
-         *
-         * @return Do not delete returned pointer.
-         * nullptr if there is no parent node, otherwise valid pointer.
-         */
-        NEFUNCTION()
-        Node* getParent();
 
         /**
          * Detaches this node from the parent and despawns this node and
@@ -88,7 +73,6 @@ namespace ne NENAMESPACE() {
          * should cause all nodes to be deleted, unless you are holding a shared pointer to a
          * node outside of the Node class (in IGameInstance for example or in some other class).
          */
-        NEFUNCTION()
         void detachFromParentAndDespawn();
 
         /**
@@ -97,6 +81,53 @@ namespace ne NENAMESPACE() {
          * @param pNode Node to attach as a child.
          */
         void addChildNode(std::shared_ptr<Node> pNode);
+
+        /**
+         * Returns node's name.
+         *
+         * @return Node name.
+         */
+        std::string getName() const;
+
+        /**
+         * Returns whether this node is spawned in the world or not.
+         *
+         * @return Whether this node is spawned in the world or not.
+         */
+        bool isSpawned();
+
+        /**
+         * Returns parent node if this node.
+         *
+         * @return Do not delete returned pointer.
+         * nullptr if there is no parent node, otherwise valid pointer.
+         */
+        Node* getParent();
+
+        /**
+         * Returns a copy of the array of child nodes.
+         *
+         * @return Copy of the array of child nodes.
+         */
+        std::vector<std::shared_ptr<Node>> getChildNodes();
+
+        /**
+         * Serializes the node and all child nodes (hierarchy information will also be saved) into a file.
+         * Node tree can later be deserialized using @ref deserializeNodeTree.
+         *
+         * @param pathToFile    File to write the node tree to. The ".toml" extension will be added
+         * automatically if not specified in the path. If the specified file already exists it will be
+         * overwritten.
+         * @param bEnableBackup If 'true' will also use a backup (copy) file. @ref deserializeNodeTree can use
+         * backup file if the original file does not exist. Generally you want to use
+         * a backup file if you are saving important information, such as player progress,
+         * other cases such as player game settings and etc. usually do not need a backup but
+         * you can use it if you want.
+         *
+         * @return Error if something went wrong, for example when found an unsupported for
+         * serialization reflected field.
+         */
+        std::optional<Error> serializeNodeTree(const std::filesystem::path& pathToFile, bool bEnableBackup);
 
     protected:
         /**
@@ -168,6 +199,36 @@ namespace ne NENAMESPACE() {
         /** Calls @ref onDespawn on this node and all of its child nodes. */
         void despawn();
 
+        /**
+         * Collects and returns information for serialization for self and all child nodes.
+         *
+         * @param iId       ID for serialization to use (will be incremented).
+         * @param iParentId Parent's serialization ID (if this node has a parent and it will also
+         * be serialized).
+         *
+         * @return Array of collected information that can be serialized.
+         */
+        std::vector<SerializableObjectInformation>
+        getInformationForSerialization(size_t& iId, std::optional<size_t> iParentId);
+
+        /**
+         * Locks @ref mtxChildNodes mutex for self and recursively for all children.
+         *
+         * After a node with children was locked this makes the whole node tree to be
+         * frozen (hierarchy can't be changed).
+         *
+         * Use @ref unlockChildren for unlocking the tree.
+         */
+        void lockChildren();
+
+        /**
+         * Unlocks @ref mtxChildNodes mutex for self and recursively for all children.
+         *
+         * After a node with children was unlocked this makes the whole node tree to be
+         * unfrozen (hierarchy can be changed as usual).
+         */
+        void unlockChildren();
+
         /** Node name. */
         NEPROPERTY()
         std::string sName;
@@ -186,6 +247,9 @@ namespace ne NENAMESPACE() {
          * Should be used under the mutex when spawning/despawning.
          */
         std::pair<std::recursive_mutex, bool> mtxIsSpawned;
+
+        /** Name of the attribute we use to serialize information about parent node. */
+        static inline const auto sParentNodeAttributeName = "parent_node";
 
         /** Name of the category used for logging. */
         static inline const auto sNodeLogCategory = "Node";

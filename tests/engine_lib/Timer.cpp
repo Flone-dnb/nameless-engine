@@ -46,16 +46,18 @@ TEST_CASE("run callback on timeout") {
 
 TEST_CASE("check that timer is running") {
     using namespace ne;
+
+    constexpr size_t iCheckIntervalTimeInMs = 10;
     Timer timer{true};
 
     SECTION("without callback") {
         timer.start();
 
-        std::this_thread::sleep_for(std::chrono::milliseconds(5));
+        std::this_thread::sleep_for(std::chrono::milliseconds(iCheckIntervalTimeInMs));
         REQUIRE(timer.isRunning());
 
         timer.stop();
-        std::this_thread::sleep_for(std::chrono::milliseconds(5));
+        std::this_thread::sleep_for(std::chrono::milliseconds(iCheckIntervalTimeInMs));
         REQUIRE(!timer.isRunning());
     }
     SECTION("with callback (force stop)") {
@@ -64,11 +66,11 @@ TEST_CASE("check that timer is running") {
             iWaitTime, []() {}, false);
         timer.start();
 
-        std::this_thread::sleep_for(std::chrono::milliseconds(5));
+        std::this_thread::sleep_for(std::chrono::milliseconds(iCheckIntervalTimeInMs));
         REQUIRE(timer.isRunning());
 
         timer.stop();
-        std::this_thread::sleep_for(std::chrono::milliseconds(5));
+        std::this_thread::sleep_for(std::chrono::milliseconds(iCheckIntervalTimeInMs));
         REQUIRE(!timer.isRunning());
     }
     SECTION("with callback") {
@@ -77,7 +79,7 @@ TEST_CASE("check that timer is running") {
             iWaitTime, []() {}, false);
         timer.start();
 
-        std::this_thread::sleep_for(std::chrono::milliseconds(5));
+        std::this_thread::sleep_for(std::chrono::milliseconds(iCheckIntervalTimeInMs));
         REQUIRE(timer.isRunning());
 
         std::this_thread::sleep_for(std::chrono::milliseconds(iWaitTime));

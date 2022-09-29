@@ -4,6 +4,18 @@
 // External.
 #include "catch2/catch_test_macros.hpp"
 
+TEST_CASE("node names should not be unique") {
+    using namespace ne;
+
+    const auto sNodeName = "Test Node Name";
+
+    const auto pNode1 = std::make_shared<Node>(sNodeName);
+    const auto pNode2 = std::make_shared<Node>(sNodeName);
+
+    REQUIRE(pNode1->getName() == sNodeName);
+    REQUIRE(pNode2->getName() == sNodeName);
+}
+
 TEST_CASE("serialize and deserialize node tree") {
     using namespace ne;
 

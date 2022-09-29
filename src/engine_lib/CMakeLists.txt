@@ -58,8 +58,8 @@ set(ENGINE_LIB_SOURCES
     public/game/Window.h
     private/misc/UniqueValueGenerator.h
     private/misc/UniqueValueGenerator.cpp
-    private/game/IGameInstance.cpp
-    public/game/IGameInstance.h
+    private/game/GameInstance.cpp
+    public/game/GameInstance.h
     private/game/Game.h
     private/game/Game.cpp
     private/render/IRenderer.h

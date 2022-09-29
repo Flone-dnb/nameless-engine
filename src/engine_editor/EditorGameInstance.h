@@ -1,13 +1,13 @@
 ﻿#pragma once
 
 // Custom.
-#include "game/IGameInstance.h"
+#include "game/GameInstance.h"
 #include "game/Window.h"
 
 /**
  * Editor logic.
  */
-class EditorGameInstance : public ne::IGameInstance {
+class EditorGameInstance : public ne::GameInstance {
 public:
     /**
      * Constructor.

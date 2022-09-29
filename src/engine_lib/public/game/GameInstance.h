@@ -14,12 +14,15 @@ namespace ne {
     class Game;
 
     /**
+     * Main game class, exists while the game window is not closed
+     * (i.e. while the game is not closed).
+     *
      * Reacts to user inputs, window events and etc.
      * Owned by Game object.
      */
-    class IGameInstance {
+    class GameInstance {
     public:
-        IGameInstance() = delete;
+        GameInstance() = delete;
         /**
          * Constructor.
          *
@@ -30,12 +33,12 @@ namespace ne {
          * @param pGameWindow   Window that owns this game instance.
          * @param pInputManager Input manager of the owner Game object.
          */
-        explicit IGameInstance(Window* pGameWindow, InputManager* pInputManager);
+        explicit GameInstance(Window* pGameWindow, InputManager* pInputManager);
 
-        IGameInstance(const IGameInstance&) = delete;
-        IGameInstance& operator=(const IGameInstance&) = delete;
+        GameInstance(const GameInstance&) = delete;
+        GameInstance& operator=(const GameInstance&) = delete;
 
-        virtual ~IGameInstance() = default;
+        virtual ~GameInstance() = default;
 
         /**
          * Returns the time in seconds that has passed

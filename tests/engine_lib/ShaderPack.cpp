@@ -1,6 +1,6 @@
 ﻿// Custom.
 #include "shaders/ShaderPack.h"
-#include "game/IGameInstance.h"
+#include "game/GameInstance.h"
 #include "game/Window.h"
 
 // STL.
@@ -14,10 +14,10 @@ constexpr auto sTopLevelShaderName = "test_shader";
 TEST_CASE("compile HLSL vertex shader") {
     using namespace ne;
 
-    class TestGameInstance : public IGameInstance {
+    class TestGameInstance : public GameInstance {
     public:
         TestGameInstance(Window* pGameWindow, InputManager* pInputManager)
-            : IGameInstance(pGameWindow, pInputManager) {
+            : GameInstance(pGameWindow, pInputManager) {
             auto shaderPath = std::filesystem::temp_directory_path() / sTopLevelShaderName;
             shaderPath += ".hlsl";
 
@@ -67,10 +67,10 @@ TEST_CASE("compile HLSL vertex shader") {
 TEST_CASE("compile HLSL pixel shader") {
     using namespace ne;
 
-    class TestGameInstance : public IGameInstance {
+    class TestGameInstance : public GameInstance {
     public:
         TestGameInstance(Window* pGameWindow, InputManager* pInputManager)
-            : IGameInstance(pGameWindow, pInputManager) {
+            : GameInstance(pGameWindow, pInputManager) {
             auto shaderPath = std::filesystem::temp_directory_path() / sTopLevelShaderName;
             shaderPath += ".hlsl";
 
@@ -120,10 +120,10 @@ TEST_CASE("compile HLSL pixel shader") {
 TEST_CASE("compile HLSL compute shader") {
     using namespace ne;
 
-    class TestGameInstance : public IGameInstance {
+    class TestGameInstance : public GameInstance {
     public:
         TestGameInstance(Window* pGameWindow, InputManager* pInputManager)
-            : IGameInstance(pGameWindow, pInputManager) {
+            : GameInstance(pGameWindow, pInputManager) {
             auto shaderPath = std::filesystem::temp_directory_path() / sTopLevelShaderName;
             shaderPath += ".hlsl";
 
@@ -171,10 +171,10 @@ TEST_CASE("compile HLSL compute shader") {
 TEST_CASE("find valid HLSL shader cache") {
     using namespace ne;
 
-    class TestGameInstance : public IGameInstance {
+    class TestGameInstance : public GameInstance {
     public:
         TestGameInstance(Window* pGameWindow, InputManager* pInputManager)
-            : IGameInstance(pGameWindow, pInputManager) {
+            : GameInstance(pGameWindow, pInputManager) {
             auto shaderPath = std::filesystem::temp_directory_path() / sTopLevelShaderName;
             shaderPath += ".hlsl";
 
@@ -237,10 +237,10 @@ TEST_CASE("find valid HLSL shader cache") {
 TEST_CASE("invalidate HLSL shader cache - ENTRY_FUNCTION_NAME_CHANGED") {
     using namespace ne;
 
-    class TestGameInstance : public IGameInstance {
+    class TestGameInstance : public GameInstance {
     public:
         TestGameInstance(Window* pGameWindow, InputManager* pInputManager)
-            : IGameInstance(pGameWindow, pInputManager) {
+            : GameInstance(pGameWindow, pInputManager) {
             auto shaderPath = std::filesystem::temp_directory_path() / sTopLevelShaderName;
             shaderPath += ".hlsl";
 
@@ -312,10 +312,10 @@ TEST_CASE("invalidate HLSL shader cache - ENTRY_FUNCTION_NAME_CHANGED") {
 TEST_CASE("invalidate HLSL shader cache - SHADER_TYPE_CHANGED") {
     using namespace ne;
 
-    class TestGameInstance : public IGameInstance {
+    class TestGameInstance : public GameInstance {
     public:
         TestGameInstance(Window* pGameWindow, InputManager* pInputManager)
-            : IGameInstance(pGameWindow, pInputManager) {
+            : GameInstance(pGameWindow, pInputManager) {
             auto shaderPath = std::filesystem::temp_directory_path() / sTopLevelShaderName;
             shaderPath += ".hlsl";
 
@@ -384,10 +384,10 @@ TEST_CASE("invalidate HLSL shader cache - SHADER_TYPE_CHANGED") {
 TEST_CASE("invalidate HLSL shader cache - DEFINED_SHADER_MACROS_CHANGED") {
     using namespace ne;
 
-    class TestGameInstance : public IGameInstance {
+    class TestGameInstance : public GameInstance {
     public:
         TestGameInstance(Window* pGameWindow, InputManager* pInputManager)
-            : IGameInstance(pGameWindow, pInputManager) {
+            : GameInstance(pGameWindow, pInputManager) {
             auto shaderPath = std::filesystem::temp_directory_path() / sTopLevelShaderName;
             shaderPath += ".hlsl";
 
@@ -477,10 +477,10 @@ TEST_CASE("invalidate HLSL shader cache - DEFINED_SHADER_MACROS_CHANGED") {
 TEST_CASE("invalidate HLSL shader cache - SHADER_SOURCE_FILE_CHANGED") {
     using namespace ne;
 
-    class TestGameInstance : public IGameInstance {
+    class TestGameInstance : public GameInstance {
     public:
         TestGameInstance(Window* pGameWindow, InputManager* pInputManager)
-            : IGameInstance(pGameWindow, pInputManager) {
+            : GameInstance(pGameWindow, pInputManager) {
             auto shaderPath = std::filesystem::temp_directory_path() / sTopLevelShaderName;
             shaderPath += ".hlsl";
 
@@ -550,10 +550,10 @@ TEST_CASE("invalidate HLSL shader cache - SHADER_SOURCE_FILE_CHANGED") {
 TEST_CASE("invalidate HLSL shader cache - SHADER_INCLUDE_TREE_CONTENT_CHANGED") {
     using namespace ne;
 
-    class TestGameInstance : public IGameInstance {
+    class TestGameInstance : public GameInstance {
     public:
         TestGameInstance(Window* pGameWindow, InputManager* pInputManager)
-            : IGameInstance(pGameWindow, pInputManager) {
+            : GameInstance(pGameWindow, pInputManager) {
             auto shaderPath = std::filesystem::temp_directory_path() / sTopLevelShaderName;
             shaderPath += ".hlsl";
 

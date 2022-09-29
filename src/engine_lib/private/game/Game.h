@@ -7,7 +7,7 @@
 #include <mutex>
 
 // Custom.
-#include "game/IGameInstance.h"
+#include "game/GameInstance.h"
 #include "input/InputManager.h"
 #include "input/KeyboardKey.hpp"
 #include "input/MouseButton.hpp"
@@ -15,7 +15,7 @@
 #include "game/World.h"
 
 namespace ne {
-    class IGameInstance;
+    class GameInstance;
     class IRenderer;
     class Window;
 
@@ -33,12 +33,12 @@ namespace ne {
         virtual ~Game();
 
         /**
-         * Set IGameInstance derived class to react to
+         * Set GameInstance derived class to react to
          * user inputs, window events and etc.
          */
-        template <typename GameInstance>
-        requires std::derived_from<GameInstance, IGameInstance>
-        void setGameInstance() { pGameInstance = std::make_unique<GameInstance>(pWindow, &inputManager); }
+        template <typename MyGameInstance>
+        requires std::derived_from<MyGameInstance, GameInstance>
+        void setGameInstance() { pGameInstance = std::make_unique<MyGameInstance>(pWindow, &inputManager); }
 
         /**
          * Called before a new frame is rendered.
@@ -195,7 +195,7 @@ namespace ne {
         Window* pWindow;
 
         /** Reacts to user input, window events and etc. */
-        std::unique_ptr<IGameInstance> pGameInstance;
+        std::unique_ptr<GameInstance> pGameInstance;
 
         /** Game world, stores world's node tree. */
         std::unique_ptr<World> pGameWorld;

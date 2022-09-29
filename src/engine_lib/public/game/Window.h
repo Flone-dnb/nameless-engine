@@ -11,13 +11,13 @@
 #include "game/Game.h"
 #include "render/IRenderer.h"
 #include "window/GLFW.hpp"
-#include "game/IGameInstance.h"
+#include "game/GameInstance.h"
 #include "input/KeyboardKey.hpp"
 #include "input/MouseButton.hpp"
 
 namespace ne {
     class Error;
-    class IGameInstance;
+    class GameInstance;
 
     /**
      * Parameters needed to build a window.
@@ -145,12 +145,13 @@ namespace ne {
 
         /**
          * Starts the message queue, rendering and game logic.
-         * Set IGameInstance derived class to react to
+         * Set GameInstance derived class to react to
          * user inputs, window events and etc.
+         *
          * Will return control after the window was closed.
          */
-        template <typename GameInstance>
-        requires std::derived_from<GameInstance, IGameInstance>
+        template <typename MyGameInstance>
+        requires std::derived_from<MyGameInstance, GameInstance>
         void processEvents();
 
         /**
@@ -403,8 +404,8 @@ namespace ne {
         inline static const char* sWindowLogCategory = "Window";
     };
 
-    template <typename GameInstance>
-    requires std::derived_from<GameInstance, IGameInstance>
+    template <typename MyGameInstance>
+    requires std::derived_from<MyGameInstance, GameInstance>
     void Window::processEvents() {
         pGame = std::unique_ptr<Game>(new Game(this));
 
@@ -412,7 +413,7 @@ namespace ne {
 
         // Finally create Game Instance when engine (Game) is fully initialized.
         // So that the user can call engine functions in Game Instance constructor.
-        pGame->setGameInstance<GameInstance>();
+        pGame->setGameInstance<MyGameInstance>();
 
         // Used for tick.
         float fCurrentTimeInSec = 0.0f;

@@ -1,7 +1,7 @@
 ﻿#include "EditorGameInstance.h"
 
 EditorGameInstance::EditorGameInstance(ne::Window* pWindow, ne::InputManager* pInputManager)
-    : IGameInstance(pWindow, pInputManager) {}
+    : GameInstance(pWindow, pInputManager) {}
 
 void EditorGameInstance::onInputActionEvent(
     const std::string& sActionName, ne::KeyboardModifiers modifiers, bool bIsPressedDown) {}

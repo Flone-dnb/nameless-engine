@@ -20,7 +20,7 @@ namespace ne {
         mtxIsSpawned.second = false;
 
 #if defined(DEBUG)
-        const size_t iNodeCount = iTotalNodeCount.fetch_add(1);
+        const size_t iNodeCount = iTotalNodeCount.fetch_add(1) + 1;
         Logger::get().info(
             fmt::format(
                 "[DEBUG ONLY] constructor for node \"{}\" is called (alive nodes now: {})",
@@ -37,7 +37,7 @@ namespace ne {
         }
 
 #if defined(DEBUG)
-        const size_t iNodesLeft = iTotalNodeCount.fetch_sub(1);
+        const size_t iNodesLeft = iTotalNodeCount.fetch_sub(1) - 1;
         Logger::get().info(
             fmt::format(
                 "[DEBUG ONLY] destructor for node \"{}\" is called (alive nodes left: {})",

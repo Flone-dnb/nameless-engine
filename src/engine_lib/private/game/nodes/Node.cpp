@@ -5,6 +5,7 @@
 
 // Custom.
 #include "io/Logger.h"
+#include "misc/Globals.h"
 
 #if defined(DEBUG)
 /** Total amount of created nodes. */
@@ -23,7 +24,8 @@ namespace ne {
         const size_t iNodeCount = iTotalNodeCount.fetch_add(1) + 1;
         Logger::get().info(
             fmt::format(
-                "[DEBUG ONLY] constructor for node \"{}\" is called (alive nodes now: {})",
+                "[{}] constructor for node \"{}\" is called (alive nodes now: {})",
+                sDebugOnlyLoggingSubCategory,
                 sName,
                 iNodeCount),
             sNodeLogCategory);
@@ -40,7 +42,8 @@ namespace ne {
         const size_t iNodesLeft = iTotalNodeCount.fetch_sub(1) - 1;
         Logger::get().info(
             fmt::format(
-                "[DEBUG ONLY] destructor for node \"{}\" is called (alive nodes left: {})",
+                "[{}] destructor for node \"{}\" is called (alive nodes left: {})",
+                sDebugOnlyLoggingSubCategory,
                 sName,
                 iNodesLeft),
             sNodeLogCategory);

@@ -49,4 +49,7 @@ namespace ne {
 
     /** Name of the root (base) engine directory. */
     constexpr std::string_view sBaseEngineDirectoryName = "nameless-engine";
+
+    /** Name of the root (base) engine directory. */
+    constexpr auto sDebugOnlyLoggingSubCategory = "Debug mode only";
 } // namespace ne

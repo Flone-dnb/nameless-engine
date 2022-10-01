@@ -47,7 +47,7 @@ TEST_CASE("serialize and deserialize node") {
         INFO(err.getError());
         REQUIRE(false);
     }
-    const auto pDeserializedNode = std::get<std::shared_ptr<Node>>(std::move(result));
+    const auto pDeserializedNode = std::get<gc<Node>>(std::move(result));
 
     // Check that name is the same.
     REQUIRE(pDeserializedNode->getName() == node.getName());
@@ -124,8 +124,8 @@ TEST_CASE("serialize and deserialize multiple nodes") {
     // Check results.
     REQUIRE(vDeserializedObjects.size() == 2);
 
-    const auto pNode1 = std::dynamic_pointer_cast<Node>(vDeserializedObjects[0].pObject);
-    const auto pNode2 = std::dynamic_pointer_cast<Node>(vDeserializedObjects[1].pObject);
+    const auto pNode1 = gc<Node>(dynamic_cast<Node*>(&*vDeserializedObjects[0].pObject));
+    const auto pNode2 = gc<Node>(dynamic_cast<Node*>(&*vDeserializedObjects[1].pObject));
 
     REQUIRE(pNode1 != nullptr);
     REQUIRE(pNode2 != nullptr);

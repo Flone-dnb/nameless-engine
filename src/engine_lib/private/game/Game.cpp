@@ -3,6 +3,7 @@
 // Custom.
 #include "io/Logger.h"
 #include "io/Serializable.h"
+#include "misc/GC.hpp"
 #include "render/IRenderer.h"
 #if defined(WIN32)
 #include "render/directx/DirectXRenderer.h"
@@ -15,6 +16,10 @@ namespace ne {
     Game::Game(Window* pWindow) {
         this->pWindow = pWindow;
 
+        // Mark start time.
+        gc_collector()->collect(); // run for the first time to setup things (I guess)
+        lastGcRunTime = std::chrono::steady_clock::now();
+
 #if defined(DEBUG)
         Serializable::checkGuidUniqueness();
 #endif
@@ -26,6 +31,47 @@ namespace ne {
 #else
         static_assert(false, "no renderer here");
 #endif
+    }
+
+    void Game::onTickFinished() {
+        // Run GC if needed.
+        const auto iTimeSinceLastGcInSec =
+            std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - lastGcRunTime)
+                .count();
+        if (iTimeSinceLastGcInSec < 10) { // TODO: replace magic number
+            return;
+        }
+
+        // Run GC.
+        Logger::get().info("running garbage collector...", sGameLogCategory);
+
+        const auto start = std::chrono::steady_clock::now();
+        gc_collect();
+        const auto end = std::chrono::steady_clock::now();
+        const auto durationInMs =
+            static_cast<float>(std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count()) *
+            0.000001f;
+
+        // Limit precision to 1 digit.
+        std::stringstream durationStream;
+        durationStream << std::fixed << std::setprecision(1) << durationInMs;
+
+        // Log results.
+        Logger::get().info(gc_collector()->getStats(), sGameLogCategory);
+
+        if (durationInMs < 1.0f) {
+            // Information.
+            Logger::get().info(
+                fmt::format("garbage collector has finished, took {} millisecond", durationStream.str()),
+                sGameLogCategory);
+        } else {
+            // Warning.
+            Logger::get().warn(
+                fmt::format("garbage collector has finished, took {} millisecond(s)", durationStream.str()),
+                sGameLogCategory);
+        }
+
+        lastGcRunTime = std::chrono::steady_clock::now();
     }
 
     Game::~Game() { threadPool.stop(); }

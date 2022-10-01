@@ -14,6 +14,7 @@
 #include "game/GameInstance.h"
 #include "input/KeyboardKey.hpp"
 #include "input/MouseButton.hpp"
+#include "misc/GC.hpp"
 
 namespace ne {
     class Error;
@@ -430,8 +431,27 @@ namespace ne {
             // TODO: update()
             // TODO: drawFrame()
             // TODO: put update() into drawFrame()?
+
+            pGame->onTickFinished();
         }
 
         pGame->onWindowClose();
+        pGame = nullptr; // destroy game
+
+        // Run GC after game is destroyed.
+        Logger::get().info("game is destroyed, running garbage collector...", sWindowLogCategory);
+        gc_collector()->fullCollect();
+        Logger::get().info(gc_collector()->getStats(), sWindowLogCategory);
+
+        // See if there are any nodes alive.
+        const auto iNodesAlive = Node::getAliveNodeCount();
+        if (iNodesAlive != 0) {
+            Logger::get().error(
+                fmt::format(
+                    "the game was destroyed and a full garbage collection was run but there are still "
+                    "{} node(s) alive",
+                    iNodesAlive),
+                sWindowLogCategory);
+        }
     }
 } // namespace ne

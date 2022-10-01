@@ -12,6 +12,7 @@
 #include "io/Logger.h"
 #include "io/ConfigManager.h"
 #include "io/GuidProperty.h"
+#include "misc/GC.hpp"
 
 // External.
 #include "Refureku/Refureku.h"
@@ -69,16 +70,16 @@ namespace ne NENAMESPACE() {
          * @param customAttributes Object's custom attributes.
          */
         DeserializedObjectInformation(
-            std::shared_ptr<Serializable> pObject,
+            gc<Serializable> pObject,
             std::string sObjectUniqueId,
             std::unordered_map<std::string, std::string> customAttributes) {
-            this->pObject = pObject;
+            this->pObject = std::move(pObject);
             this->sObjectUniqueId = sObjectUniqueId;
             this->customAttributes = customAttributes;
         }
 
         /** Object to serialize. */
-        std::shared_ptr<Serializable> pObject;
+        gc<Serializable> pObject;
 
         /** Unique object ID. */
         std::string sObjectUniqueId;
@@ -205,7 +206,7 @@ namespace ne NENAMESPACE() {
          */
         template <typename T>
         requires std::derived_from<T, Serializable>
-        static std::variant<std::shared_ptr<T>, Error> deserialize(
+        static std::variant<gc<T>, Error> deserialize(
             const std::filesystem::path& pathToFile,
             std::unordered_map<std::string, std::string>& customAttributes);
 
@@ -283,7 +284,7 @@ namespace ne NENAMESPACE() {
          */
         template <typename T>
         requires std::derived_from<T, Serializable>
-        static std::variant<std::shared_ptr<T>, Error> deserialize(
+        static std::variant<gc<T>, Error> deserialize(
             toml::value& tomlData,
             std::unordered_map<std::string, std::string>& customAttributes,
             std::string sEntityId = "");
@@ -371,8 +372,7 @@ namespace ne NENAMESPACE() {
     };
 
     template <typename T>
-    requires std::derived_from<T, Serializable> std::variant<std::shared_ptr<T>, Error>
-    Serializable::deserialize(
+    requires std::derived_from<T, Serializable> std::variant<gc<T>, Error> Serializable::deserialize(
         const std::filesystem::path& pathToFile,
         std::unordered_map<std::string, std::string>& customAttributes) {
         // Add TOML extension to file.
@@ -414,8 +414,7 @@ namespace ne NENAMESPACE() {
     }
 
     template <typename T>
-    requires std::derived_from<T, Serializable> std::variant<std::shared_ptr<T>, Error>
-    Serializable::deserialize(
+    requires std::derived_from<T, Serializable> std::variant<gc<T>, Error> Serializable::deserialize(
         toml::value & tomlData,
         std::unordered_map<std::string, std::string> & customAttributes,
         std::string sEntityId) {
@@ -516,14 +515,20 @@ namespace ne NENAMESPACE() {
         }
 
         // Create instance.
-
-        std::shared_ptr<T> pInstance = pType->makeSharedInstance<T>();
-        if (!pInstance) {
-            return Error(fmt::format(
-                "unable to make an object of type \"{}\" using type's default constructor "
-                "(does type \"{}\" has a default constructor?)",
-                pType->getName(),
-                pType->getName()));
+        gc<T> pGcInstance;
+        {
+            // this section is a temporary solution until we will add a `gc_new` method
+            // to `rfk::Struct`
+            std::unique_ptr<T> pInstance = pType->makeUniqueInstance<T>();
+            if (!pInstance) {
+                return Error(fmt::format(
+                    "unable to make an object of type \"{}\" using type's default constructor "
+                    "(does type \"{}\" has a default constructor?)",
+                    pType->getName(),
+                    pType->getName()));
+            }
+            gc<rfk::Object> pParentGcInstance = pInstance->gc_new();
+            pGcInstance = gc_dynamic_pointer_cast<T>(pParentGcInstance);
         }
 
         // Deserialize fields.
@@ -566,28 +571,28 @@ namespace ne NENAMESPACE() {
             // Set field value depending on field type.
             if (fieldType.match(rfk::getType<bool>()) && value.is_boolean()) {
                 auto fieldValue = value.as_boolean();
-                pField->setUnsafe<bool>(pInstance.get(), std::move(fieldValue));
+                pField->setUnsafe<bool>(&*pGcInstance, std::move(fieldValue));
             } else if (fieldType.match(rfk::getType<int>()) && value.is_integer()) {
                 auto fieldValue = static_cast<int>(value.as_integer());
-                pField->setUnsafe<int>(pInstance.get(), std::move(fieldValue));
+                pField->setUnsafe<int>(&*pGcInstance, std::move(fieldValue));
             } else if (fieldType.match(rfk::getType<long long>()) && value.is_integer()) {
                 long long fieldValue = value.as_integer();
-                pField->setUnsafe<long long>(pInstance.get(), std::move(fieldValue));
+                pField->setUnsafe<long long>(&*pGcInstance, std::move(fieldValue));
             } else if (fieldType.match(rfk::getType<float>()) && value.is_floating()) {
                 auto fieldValue = static_cast<float>(value.as_floating());
-                pField->setUnsafe<float>(pInstance.get(), std::move(fieldValue));
+                pField->setUnsafe<float>(&*pGcInstance, std::move(fieldValue));
             } else if (fieldType.match(rfk::getType<double>()) && value.is_string()) {
                 // Double is stored as a string for better precision.
                 try {
                     double fieldValue = std::stod(value.as_string().str);
-                    pField->setUnsafe<double>(pInstance.get(), std::move(fieldValue));
+                    pField->setUnsafe<double>(&*pGcInstance, std::move(fieldValue));
                 } catch (std::exception& ex) {
                     return Error(fmt::format(
                         "failed to convert string to double for field \"{}\": {}", sFieldName, ex.what()));
                 }
             } else if (fieldType.match(rfk::getType<std::string>()) && value.is_string()) {
                 auto fieldValue = value.as_string().str;
-                pField->setUnsafe<std::string>(pInstance.get(), std::move(fieldValue));
+                pField->setUnsafe<std::string>(&*pGcInstance, std::move(fieldValue));
             } else if (fieldType.getArchetype()) {
                 // Field with a reflected type.
                 // Find a section that has the key ".field_name = *our field name*".
@@ -696,17 +701,17 @@ namespace ne NENAMESPACE() {
                     err.addEntry();
                     return err;
                 }
-                auto pSubEntity = std::get<std::shared_ptr<Serializable>>(std::move(result));
+                auto pSubEntity = std::get<gc<Serializable>>(std::move(result));
 
                 // Move object to field.
                 cloneSerializableObject(
-                    pSubEntity.get(), static_cast<Serializable*>(pField->getPtrUnsafe(pInstance.get())));
+                    &*pSubEntity, static_cast<Serializable*>(pField->getPtrUnsafe(&*pGcInstance)));
             } else {
                 return Error(fmt::format("field \"{}\" has unknown type", sFieldName));
             }
         }
 
-        return pInstance;
+        return pGcInstance;
     }
 }; // namespace )
 

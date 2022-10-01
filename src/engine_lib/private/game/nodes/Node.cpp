@@ -13,12 +13,15 @@ static std::atomic<size_t> iTotalNodeCount{0};
 #endif
 
 namespace ne {
+    size_t Node::getAliveNodeCount() { return iTotalNodeCount.load(); }
+
     Node::Node() : Node("Node") {}
 
     Node::Node(const std::string& sName) {
         this->sName = sName;
         mtxParentNode.second = nullptr;
         mtxIsSpawned.second = false;
+        mtxChildNodes.second = gc_new_vector<Node>();
 
 #if defined(DEBUG)
         const size_t iNodeCount = iTotalNodeCount.fetch_add(1) + 1;
@@ -54,7 +57,7 @@ namespace ne {
 
     std::string Node::getName() const { return sName; }
 
-    void Node::addChildNode(std::shared_ptr<Node> pNode) {
+    void Node::addChildNode(gc<Node> pNode) {
         // Check if this node is valid.
         if (pNode == nullptr) [[unlikely]] {
             Logger::get().warn(
@@ -67,7 +70,7 @@ namespace ne {
         }
 
         // Check if this node is this.
-        if (pNode.get() == this) [[unlikely]] {
+        if (&*pNode == this) [[unlikely]] {
             Logger::get().warn(
                 fmt::format(
                     "an attempt was made to attach the \"{}\" node to itself, aborting this "
@@ -80,7 +83,7 @@ namespace ne {
         std::scoped_lock guard(mtxChildNodes.first);
 
         // Check if this node is already our child.
-        for (const auto& pChildNode : mtxChildNodes.second) {
+        for (const auto& pChildNode : *mtxChildNodes.second) {
             if (pChildNode == pNode) [[unlikely]] {
                 Logger::get().warn(
                     fmt::format(
@@ -147,8 +150,8 @@ namespace ne {
             //            pNode->onAfterAttachedToNode(mtxParentNode.second);
         } else {
             // Add node.
-            pNode->mtxParentNode.second = this;
-            mtxChildNodes.second.push_back(pNode);
+            pNode->mtxParentNode.second = gc<Node>(this);
+            mtxChildNodes.second->push_back(pNode);
         }
 
         // don't unlock node's parent lock here yet, still doing some logic based on new parent
@@ -171,18 +174,29 @@ namespace ne {
 
         // Detach from parent.
         std::scoped_lock parentGuard(mtxParentNode.first);
-        std::shared_ptr<Node> pSelf;
+        gc<Node> pSelf;
 
         if (mtxParentNode.second != nullptr) {
             // Remove this node from parent's children array.
             std::scoped_lock parentChildGuard(mtxParentNode.second->mtxChildNodes.first);
             auto pParentChildren = &mtxParentNode.second->mtxChildNodes.second;
-            for (auto it = pParentChildren->begin(); it != pParentChildren->end(); ++it) {
-                if (it->get() == this) {
-                    pSelf = *it; // keep a shared pointer to self until we are not finished
-                    pParentChildren->erase(it);
+            bool bFound = false;
+            for (auto it = (*pParentChildren)->begin(); it != (*pParentChildren)->end(); ++it) {
+                if (&**it == this) {
+                    pSelf = *it; // make sure we are not going to be deleted while in this function
+                    (*pParentChildren)->erase(it);
+                    bFound = true;
                     break;
                 }
+            }
+
+            if (!bFound) [[unlikely]] {
+                Logger::get().error(
+                    fmt::format(
+                        "Node \"{}\" has a parent node but parent's children array "
+                        "does not contain this node.",
+                        getName()),
+                    sNodeLogCategory);
             }
 
             // Remove parent.
@@ -221,7 +235,7 @@ namespace ne {
         {
             std::scoped_lock childGuard(mtxChildNodes.first);
 
-            for (const auto& pChildNode : mtxChildNodes.second) {
+            for (const auto& pChildNode : *mtxChildNodes.second) {
                 pChildNode->spawn();
             }
         }
@@ -246,7 +260,7 @@ namespace ne {
         {
             std::scoped_lock childGuard(mtxChildNodes.first);
 
-            for (const auto& pChildNode : mtxChildNodes.second) {
+            for (const auto& pChildNode : *mtxChildNodes.second) {
                 pChildNode->despawn();
             }
         }
@@ -256,7 +270,7 @@ namespace ne {
         mtxIsSpawned.second = false;
     }
 
-    Node* Node::getParent() {
+    gc<Node> Node::getParent() {
         std::scoped_lock guard(mtxParentNode.first);
         return mtxParentNode.second;
     }
@@ -300,7 +314,7 @@ namespace ne {
 
         // Add child information.
         std::scoped_lock guard(mtxChildNodes.first);
-        for (const auto& pChildNode : mtxChildNodes.second) {
+        for (const auto& pChildNode : *mtxChildNodes.second) {
             std::ranges::move(
                 pChildNode->getInformationForSerialization(iId, iMyId), std::back_inserter(vNodesInfo));
         }
@@ -310,20 +324,19 @@ namespace ne {
 
     void Node::lockChildren() {
         mtxChildNodes.first.lock();
-        for (const auto& pChildNode : mtxChildNodes.second) {
+        for (const auto& pChildNode : *mtxChildNodes.second) {
             pChildNode->lockChildren();
         }
     }
 
     void Node::unlockChildren() {
         mtxChildNodes.first.unlock();
-        for (const auto& pChildNode : mtxChildNodes.second) {
+        for (const auto& pChildNode : *mtxChildNodes.second) {
             pChildNode->unlockChildren();
         }
     }
 
-    std::variant<std::shared_ptr<Node>, Error>
-    Node::deserializeNodeTree(const std::filesystem::path& pathToFile) {
+    std::variant<gc<Node>, Error> Node::deserializeNodeTree(const std::filesystem::path& pathToFile) {
         // Get all IDs from this file.
         const auto idResult = Serializable::getIdsFromFile(pathToFile);
         if (std::holds_alternative<Error>(idResult)) {
@@ -340,15 +353,16 @@ namespace ne {
             err.addEntry();
             return err;
         }
-        const auto vNodesInfo = std::get<std::vector<DeserializedObjectInformation>>(deserializeResult);
+        const auto vNodesInfo =
+            std::get<std::vector<DeserializedObjectInformation>>(std::move(deserializeResult));
 
         // Sort all nodes by their ID.
-        std::shared_ptr<Node> pRootNode;
+        gc<Node> pRootNode;
         // Prepare array of pairs: Node - Parent index.
-        std::vector<std::pair<std::shared_ptr<Node>, std::optional<size_t>>> vNodes(vNodesInfo.size());
+        std::vector<std::pair<Node*, std::optional<size_t>>> vNodes(vNodesInfo.size());
         for (const auto& nodeInfo : vNodesInfo) {
             // Try to cast this object to Node.
-            const auto pNode = std::dynamic_pointer_cast<Node>(nodeInfo.pObject);
+            const auto pNode = dynamic_cast<Node*>(&*nodeInfo.pObject);
             if (!pNode) [[unlikely]] {
                 return Error("Deserialized object is not a node.");
             }
@@ -358,7 +372,7 @@ namespace ne {
             const auto parentNodeAttributeIt = nodeInfo.customAttributes.find(sParentNodeAttributeName);
             if (parentNodeAttributeIt == nodeInfo.customAttributes.end()) {
                 if (!pRootNode) {
-                    pRootNode = pNode;
+                    pRootNode = gc<Node>(pNode);
                 } else {
                     return Error(fmt::format(
                         "Found non root node \"{}\" that does not have a parent.", pNode->getName()));
@@ -417,14 +431,14 @@ namespace ne {
         // Build hierarchy using value from attribute.
         for (const auto& node : vNodes) {
             if (node.second.has_value()) {
-                vNodes[node.second.value()].first->addChildNode(node.first);
+                vNodes[node.second.value()].first->addChildNode(gc<Node>(node.first));
             }
         }
 
         return pRootNode;
     }
 
-    std::vector<std::shared_ptr<Node>> Node::getChildNodes() {
+    gc_vector<Node> Node::getChildNodes() {
         std::scoped_lock guard(mtxChildNodes.first);
         return mtxChildNodes.second;
     }

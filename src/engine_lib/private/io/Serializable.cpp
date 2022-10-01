@@ -509,7 +509,7 @@ namespace ne {
                 return err;
             }
 
-            const auto pObject = std::get<std::shared_ptr<Serializable>>(std::move(result));
+            const auto pObject = std::get<gc<Serializable>>(std::move(result));
             DeserializedObjectInformation objectInfo(pObject, sId, customAttributes);
             deserializedObjects.push_back(std::move(objectInfo));
         }

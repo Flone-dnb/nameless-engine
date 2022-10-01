@@ -8,6 +8,7 @@
 
 // Custom.
 #include "io/Serializable.h"
+#include "misc/GC.hpp"
 
 #include "Node.generated.h"
 
@@ -22,6 +23,13 @@ namespace ne NENAMESPACE() {
      */
     class NECLASS(Guid("2a721c37-3c22-450c-8dad-7b6985cbbd61")) Node : public Serializable {
     public:
+        /**
+         * Returns the total amount of currently alive (allocated) nodes.
+         *
+         * @return Number of alive nodes right now.
+         */
+        static size_t getAliveNodeCount();
+
         /**
          * Creates a node with a default name.
          */
@@ -50,8 +58,7 @@ namespace ne NENAMESPACE() {
          *
          * @return Error if something went wrong, otherwise pointer to the root node.
          */
-        static std::variant<std::shared_ptr<Node>, Error>
-        deserializeNodeTree(const std::filesystem::path& pathToFile);
+        static std::variant<gc<Node>, Error> deserializeNodeTree(const std::filesystem::path& pathToFile);
 
         /**
          * Sets node's name.
@@ -65,13 +72,7 @@ namespace ne NENAMESPACE() {
          * all of its child nodes.
          *
          * The node and its child nodes are not guaranteed to be deleted after this
-         * function is finished. Deletion is handled automatically by shared pointers
-         * (when nobody will reference a node). If you consider the node as no longer needed
-         * you can clear any shared pointers to this node that you hold. Once the world
-         * is changed (world's root node changed) old root node will be deleted and so
-         * references to all nodes in the world should be automatically cleaned up which
-         * should cause all nodes to be deleted, unless you are holding a shared pointer to a
-         * node outside of the Node class (in IGameInstance for example or in some other class).
+         * function is finished. Deletion is handled automatically by gc pointers.
          */
         void detachFromParentAndDespawn();
 
@@ -80,7 +81,7 @@ namespace ne NENAMESPACE() {
          *
          * @param pNode Node to attach as a child.
          */
-        void addChildNode(std::shared_ptr<Node> pNode);
+        void addChildNode(gc<Node> pNode);
 
         /**
          * Returns node's name.
@@ -102,14 +103,14 @@ namespace ne NENAMESPACE() {
          * @return Do not delete returned pointer.
          * nullptr if there is no parent node, otherwise valid pointer.
          */
-        Node* getParent();
+        gc<Node> getParent();
 
         /**
          * Returns a copy of the array of child nodes.
          *
          * @return Copy of the array of child nodes.
          */
-        std::vector<std::shared_ptr<Node>> getChildNodes();
+        gc_vector<Node> getChildNodes();
 
         /**
          * Serializes the node and all child nodes (hierarchy information will also be saved) into a file.
@@ -168,7 +169,7 @@ namespace ne NENAMESPACE() {
          * Do not delete returned pointer.
          */
         template <typename NodeType>
-        requires std::derived_from<NodeType, Node> Node*
+        requires std::derived_from<NodeType, Node> gc<Node>
         getParentNodeOfType(const std::string& sParentNodeName = "");
 
         /**
@@ -186,7 +187,7 @@ namespace ne NENAMESPACE() {
          * @return nullptr if not found, otherwise a valid pointer to the node.
          */
         template <typename NodeType>
-        requires std::derived_from<NodeType, Node> std::shared_ptr<Node>
+        requires std::derived_from<NodeType, Node> gc<Node>
         getChildNodeOfType(const std::string& sChildNodeName = "");
 
     private:
@@ -234,13 +235,12 @@ namespace ne NENAMESPACE() {
         std::string sName;
 
         /** Attached child nodes. Should be used under the mutex when changing children. */
-        std::pair<std::recursive_mutex, std::vector<std::shared_ptr<Node>>> mtxChildNodes;
+        std::pair<std::recursive_mutex, gc_vector<Node>> mtxChildNodes;
 
         /**
-         * Do not delete. Attached parent node. Using a raw pointer because it's a non-owning reference,
-         * and parent holds a shared_ptr to us. Should be used under the mutex when changing parent.
+         * Do not delete. Attached parent node.
          */
-        std::pair<std::recursive_mutex, Node*> mtxParentNode;
+        std::pair<std::recursive_mutex, gc<Node>> mtxParentNode;
 
         /**
          * Whether this node is spawned in the world or not.
@@ -258,7 +258,7 @@ namespace ne NENAMESPACE() {
     };
 
     template <typename NodeType>
-    requires std::derived_from<NodeType, Node> Node* Node::getParentNodeOfType(
+    requires std::derived_from<NodeType, Node> gc<Node> Node::getParentNodeOfType(
         const std::string& sParentNodeName) {
         std::scoped_lock guard(mtxParentNode.first);
 
@@ -267,7 +267,7 @@ namespace ne NENAMESPACE() {
             return nullptr;
 
         // Check parent's type and optionally name.
-        if (dynamic_cast<NodeType>(mtxParentNode.second) &&
+        if (dynamic_cast<NodeType>(&*mtxParentNode.second) &&
             (sParentNodeName.empty() || mtxParentNode.second->getName() == sParentNodeName)) {
             return mtxParentNode.second;
         }
@@ -276,12 +276,12 @@ namespace ne NENAMESPACE() {
     }
 
     template <typename NodeType>
-    requires std::derived_from<NodeType, Node> std::shared_ptr<Node> Node::getChildNodeOfType(
+    requires std::derived_from<NodeType, Node> gc<Node> Node::getChildNodeOfType(
         const std::string& sChildNodeName) {
         std::scoped_lock guard(mtxChildNodes.first);
 
-        for (const auto& pChildNode : mtxChildNodes.second) {
-            if (dynamic_cast<NodeType>(pChildNode.get()) &&
+        for (const auto& pChildNode : *mtxChildNodes.second) {
+            if (dynamic_cast<NodeType>(&*pChildNode) &&
                 (sChildNodeName.empty() || pChildNode->getName() == sChildNodeName)) {
                 return pChildNode;
             }

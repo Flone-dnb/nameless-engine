@@ -23,6 +23,13 @@ namespace ne {
                 iTotalWarningsProduced,
                 iTotalErrorsProduced));
         }
+        // Explicitly destroy spdlogger here, why:
+        // if you would try to write to log in destructor of your class while using `gc` pointer
+        // to store your class' instance, if it happens that your instance is destroyed when the program
+        // is finished (almost, i. e. when exited main) because of `gc` or some other magic (don't know the
+        // actual reason to be honest) we would try to write to log but spdlogger is already destroyed
+        // so we would crash. This is why I clear logger here and use checks in logging functions.
+        pSpdLogger = nullptr;
     }
 
     Logger& Logger::get() {
@@ -32,6 +39,9 @@ namespace ne {
 
     void Logger::info(
         std::string_view sText, std::string_view sCategory, const nostd::source_location location) const {
+        if (!pSpdLogger)
+            return;
+
         if (sCategory.empty()) {
             sCategory = sDefaultLogCategory;
         }
@@ -45,6 +55,9 @@ namespace ne {
 
     void Logger::warn(
         std::string_view sText, std::string_view sCategory, const nostd::source_location location) const {
+        if (!pSpdLogger)
+            return;
+
         if (sCategory.empty()) {
             sCategory = sDefaultLogCategory;
         }
@@ -59,6 +72,9 @@ namespace ne {
 
     void Logger::error(
         std::string_view sText, std::string_view sCategory, const nostd::source_location location) const {
+        if (!pSpdLogger)
+            return;
+
         if (sCategory.empty()) {
             sCategory = sDefaultLogCategory;
         }

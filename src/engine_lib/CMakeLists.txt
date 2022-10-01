@@ -112,6 +112,7 @@ set(ENGINE_LIB_SOURCES
     public/io/GuidProperty.h
     private/game/World.h
     private/game/World.cpp
+    public/misc/GC.hpp
     # add general (cross-platform) sources here...
 )
 
@@ -211,6 +212,9 @@ set_target_properties(portable_file_dialogs PROPERTIES FOLDER ${EXTERNAL_FOLDER}
 add_subdirectory(${RELATIVE_EXT_PATH}/fmt ${DEPENDENCY_BUILD_DIR_NAME}/fmt)
 target_link_libraries(${PROJECT_NAME} PUBLIC fmt)
 set_target_properties(fmt PROPERTIES FOLDER ${EXTERNAL_FOLDER})
+
+# [temporary solution]: External: tgc
+target_sources(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/Refureku/build/Include/tgc2/src/tgc2.cpp)
 
 # External: Refureku (start) --------------------------------------------------------------------------
 # Check that path does not have pipe character because we use it to separate paths.

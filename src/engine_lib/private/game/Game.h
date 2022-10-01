@@ -169,6 +169,11 @@ namespace ne {
          */
         Game(Window* pWindow);
 
+        /**
+         * Called by owner when tick is fully finished.
+         */
+        void onTickFinished();
+
         /** Executes all deferred tasks from @ref mtxDeferredTasks. */
         void executeDeferredTasks();
 
@@ -214,6 +219,9 @@ namespace ne {
 
         /** Binds action/axis names with input keys. */
         InputManager inputManager;
+
+        /** Last time we run garbage collector. */
+        std::chrono::steady_clock::time_point lastGcRunTime;
 
         /** Name of the category used for logging. */
         inline static const char* sGameLogCategory = "Game";

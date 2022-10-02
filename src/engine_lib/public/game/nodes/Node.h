@@ -267,7 +267,7 @@ namespace ne NENAMESPACE() {
             return nullptr;
 
         // Check parent's type and optionally name.
-        if (dynamic_cast<NodeType>(&*mtxParentNode.second) &&
+        if (dynamic_cast<NodeType*>(&*mtxParentNode.second) &&
             (sParentNodeName.empty() || mtxParentNode.second->getName() == sParentNodeName)) {
             return mtxParentNode.second;
         }
@@ -281,7 +281,7 @@ namespace ne NENAMESPACE() {
         std::scoped_lock guard(mtxChildNodes.first);
 
         for (const auto& pChildNode : *mtxChildNodes.second) {
-            if (dynamic_cast<NodeType>(&*pChildNode) &&
+            if (dynamic_cast<NodeType*>(&*pChildNode) &&
                 (sChildNodeName.empty() || pChildNode->getName() == sChildNodeName)) {
                 return pChildNode;
             }

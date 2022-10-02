@@ -33,6 +33,95 @@ namespace ne {
         virtual ~Game();
 
         /**
+         * Modifies the interval after which we need to run garbage collector again.
+         * The current value can be retrieved using @ref getGarbageCollectorRunIntervalInSec.
+         *
+         * @remark Interval should be in range [30; 300] seconds (otherwise it will be clamped).
+         *
+         * @param iGcRunIntervalInSec Interval in seconds.
+         */
+        void setGarbageCollectorRunInterval(long long iGcRunIntervalInSec);
+
+        /**
+         * Adds a function to be executed on the main thread next time @ref onBeforeNewFrame
+         * is called.
+         *
+         * @param task Function to execute.
+         *
+         * @warning If you are using member functions as callbacks you need to make
+         * sure that the owner object of these member functions will not be deleted until
+         * this task is finished.
+         */
+        void addDeferredTask(const std::function<void()>& task);
+
+        /**
+         * Adds a function to be executed on the thread pool.
+         *
+         * TODO: std::move_only_function?
+         *
+         * @param task Function to execute.
+         *
+         * @warning If you are using member functions as callbacks you need to make
+         * sure that the owner object of these member functions will not be deleted until
+         * this task is finished.
+         */
+        void addTaskToThreadPool(const std::function<void()>& task);
+
+        /**
+         * Creates a new world with a root node to store world's node tree.
+         * Replaces the old world (if existed).
+         *
+         * @param iWorldSize    Size of the world in game units. Must be power of 2
+         * (128, 256, 512, 1024, 2048, etc.). World size needs to be specified for
+         * internal purposes such as Directional Light shadow map size, maybe for the size
+         * of correct physics calculations and etc. You don't need to care why we need this
+         * information, you only need to know that if you leave world bounds lighting
+         * or physics may be incorrect (the editor and logs should help you identify this case).
+         */
+        void createWorld(size_t iWorldSize = 1024);
+
+        /**
+         * Returns a non owning pointer to world's root node.
+         *
+         * @return nullptr if world is not created (see @ref createWorld), otherwise world's root node.
+         * Do not delete returned pointer.
+         */
+        Node* getWorldRootNode() const;
+
+        /**
+         * Returns time since world creation (in seconds).
+         *
+         * @return Zero if world is not created (see @ref createWorld), otherwise time since
+         * world creation (in seconds).
+         */
+        float getWorldTimeInSeconds() const;
+
+        /**
+         * Returns window that owns this object.
+         *
+         * @return Do not delete this pointer. Window that owns this object.
+         */
+        Window* getWindow() const;
+
+        /**
+         * Returns the current interval after which we need to run garbage collector again.
+         *
+         * @return Interval in seconds.
+         */
+        long long getGarbageCollectorRunIntervalInSec();
+
+    private:
+        // The object should be created by a Window instance.
+        friend class Window;
+
+        /**
+         * Constructor.
+         *
+         * @param pWindow Window that owns this Game object.
+         */
+        Game(Window* pWindow);
+
+        /**
          * Set GameInstance derived class to react to
          * user inputs, window events and etc.
          */
@@ -98,79 +187,9 @@ namespace ne {
         void onWindowClose() const;
 
         /**
-         * Adds a function to be executed on the main thread next time @ref onBeforeNewFrame
-         * is called.
+         * Called by the owner when a tick is fully finished.
          *
-         * @param task Function to execute.
-         *
-         * @warning If you are using member functions as callbacks you need to make
-         * sure that the owner object of these member functions will not be deleted until
-         * this task is finished.
-         */
-        void addDeferredTask(const std::function<void()>& task);
-
-        /**
-         * Adds a function to be executed on the thread pool.
-         *
-         * TODO: std::move_only_function?
-         *
-         * @param task Function to execute.
-         *
-         * @warning If you are using member functions as callbacks you need to make
-         * sure that the owner object of these member functions will not be deleted until
-         * this task is finished.
-         */
-        void addTaskToThreadPool(const std::function<void()>& task);
-
-        /**
-         * Creates a new world with a root node to store world's node tree.
-         * Replaces the old world (if existed).
-         *
-         * @param iWorldSize    Size of the world in game units. Must be power of 2
-         * (128, 256, 512, 1024, 2048, etc.). World size needs to be specified for
-         * internal purposes such as Directional Light shadow map size, maybe for the size
-         * of correct physics calculations and etc. You don't need to care why we need this
-         * information, you only need to know that if you leave world bounds lighting
-         * or physics may be incorrect (the editor and logs should help you identify this case).
-         */
-        void createWorld(size_t iWorldSize = 1024);
-
-        /**
-         * Returns a non owning pointer to world's root node.
-         *
-         * @return nullptr if world is not created (see @ref createWorld), otherwise world's root node.
-         * Do not delete returned pointer.
-         */
-        Node* getWorldRootNode() const;
-
-        /**
-         * Returns time since world creation (in seconds).
-         *
-         * @return Zero if world is not created (see @ref createWorld), otherwise time since
-         * world creation (in seconds).
-         */
-        float getWorldTimeInSeconds() const;
-
-        /**
-         * Returns window that owns this object.
-         *
-         * @return Do not delete this pointer. Window that owns this object.
-         */
-        Window* getWindow() const;
-
-    private:
-        // The object should be created by a Window instance.
-        friend class Window;
-
-        /**
-         * Constructor.
-         *
-         * @param pWindow Window that owns this Game object.
-         */
-        Game(Window* pWindow);
-
-        /**
-         * Called by owner when tick is fully finished.
+         * @warning This function should be called on the main thread.
          */
         void onTickFinished();
 
@@ -222,6 +241,9 @@ namespace ne {
 
         /** Last time we run garbage collector. */
         std::chrono::steady_clock::time_point lastGcRunTime;
+
+        /** Interval in seconds after which we need to run garbage collector again. */
+        long long iGcRunIntervalInSec = 120;
 
         /** Name of the category used for logging. */
         inline static const char* sGameLogCategory = "Game";

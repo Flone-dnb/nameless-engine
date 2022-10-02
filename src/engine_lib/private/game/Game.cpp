@@ -19,6 +19,9 @@ namespace ne {
         // Mark start time.
         gc_collector()->collect(); // run for the first time to setup things (I guess)
         lastGcRunTime = std::chrono::steady_clock::now();
+        Logger::get().info(
+            fmt::format("garbage collector run interval is set to {} seconds", iGcRunIntervalInSec),
+            sGameLogCategory);
 
 #if defined(DEBUG)
         Serializable::checkGuidUniqueness();
@@ -34,19 +37,20 @@ namespace ne {
     }
 
     void Game::onTickFinished() {
-        // Run GC if needed.
+        // Check if we need to run garbage collector.
         const auto iTimeSinceLastGcInSec =
             std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - lastGcRunTime)
                 .count();
-        if (iTimeSinceLastGcInSec < 10) { // TODO: replace magic number
+        if (iTimeSinceLastGcInSec < iGcRunIntervalInSec) {
             return;
         }
 
-        // Run GC.
+        // Run garbage collector.
         Logger::get().info("running garbage collector...", sGameLogCategory);
 
+        // Measure the time it takes to run garbage collector.
         const auto start = std::chrono::steady_clock::now();
-        gc_collect();
+        gc_collector()->collect();
         const auto end = std::chrono::steady_clock::now();
         const auto durationInMs =
             static_cast<float>(std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count()) *
@@ -55,6 +59,8 @@ namespace ne {
         // Limit precision to 1 digit.
         std::stringstream durationStream;
         durationStream << std::fixed << std::setprecision(1) << durationInMs;
+
+        // TODO: merge results and time into one log command
 
         // Log results.
         Logger::get().info(gc_collector()->getStats(), sGameLogCategory);
@@ -75,6 +81,10 @@ namespace ne {
     }
 
     Game::~Game() { threadPool.stop(); }
+
+    void Game::setGarbageCollectorRunInterval(long long iGcRunIntervalInSec) {
+        this->iGcRunIntervalInSec = std::clamp<long long>(iGcRunIntervalInSec, 30, 300);
+    }
 
     void Game::onBeforeNewFrame(float fTimeSincePrevCallInSec) {
         executeDeferredTasks();
@@ -159,6 +169,8 @@ namespace ne {
     }
 
     Window* Game::getWindow() const { return pWindow; }
+
+    long long Game::getGarbageCollectorRunIntervalInSec() { return iGcRunIntervalInSec; }
 
     void Game::triggerActionEvents(
         std::variant<KeyboardKey, MouseButton> key, KeyboardModifiers modifiers, bool bIsPressedDown) {

@@ -38,9 +38,23 @@ namespace ne {
          *
          * @remark Interval should be in range [30; 300] seconds (otherwise it will be clamped).
          *
+         * @remark Note that garbage collection will also be executed additionally in some special cases,
+         * such as when World is being destructed or some nodes are being detached and despawned.
+         *
          * @param iGcRunIntervalInSec Interval in seconds.
          */
         void setGarbageCollectorRunInterval(long long iGcRunIntervalInSec);
+
+        /**
+         * Queues a request to run a full garbage collection as a deferred task on the main thread
+         * using @ref addDeferredTask.
+         *
+         * @remark Typically you don't need to call this function as garbage collection is executed
+         * regularly (see @ref setGarbageCollectorRunInterval) but you can still call it anyway.
+         *
+         * @param onFinished Optional callback that will be triggered when garbage collection is finished.
+         */
+        void queueGarbageCollection(std::optional<std::function<void()>> onFinished);
 
         /**
          * Adds a function to be executed on the main thread next time @ref onBeforeNewFrame
@@ -71,6 +85,9 @@ namespace ne {
          * Creates a new world with a root node to store world's node tree.
          * Replaces the old world (if existed).
          *
+         * @warning This function should be called from the main thread.
+         * Use @ref addDeferredTask if you are not sure.
+         *
          * @param iWorldSize    Size of the world in game units. Must be power of 2
          * (128, 256, 512, 1024, 2048, etc.). World size needs to be specified for
          * internal purposes such as Directional Light shadow map size, maybe for the size
@@ -81,12 +98,11 @@ namespace ne {
         void createWorld(size_t iWorldSize = 1024);
 
         /**
-         * Returns a non owning pointer to world's root node.
+         * Returns a pointer to world's root node.
          *
          * @return nullptr if world is not created (see @ref createWorld), otherwise world's root node.
-         * Do not delete returned pointer.
          */
-        Node* getWorldRootNode() const;
+        gc<Node> getWorldRootNode();
 
         /**
          * Returns time since world creation (in seconds).
@@ -94,7 +110,7 @@ namespace ne {
          * @return Zero if world is not created (see @ref createWorld), otherwise time since
          * world creation (in seconds).
          */
-        float getWorldTimeInSeconds() const;
+        float getWorldTimeInSeconds();
 
         /**
          * Returns window that owns this object.
@@ -102,6 +118,13 @@ namespace ne {
          * @return Do not delete this pointer. Window that owns this object.
          */
         Window* getWindow() const;
+
+        /**
+         * Returns game instance that this game is using (Game owns GameInstance).
+         *
+         * @return Do not delete this pointer. Used game instance.
+         */
+        GameInstance* getGameInstance() const;
 
         /**
          * Returns the current interval after which we need to run garbage collector again.
@@ -127,7 +150,10 @@ namespace ne {
          */
         template <typename MyGameInstance>
         requires std::derived_from<MyGameInstance, GameInstance>
-        void setGameInstance() { pGameInstance = std::make_unique<MyGameInstance>(pWindow, &inputManager); }
+        void setGameInstance() {
+            pGameInstance = std::make_unique<MyGameInstance>(pWindow, &inputManager);
+            pGameInstance->onGameStarted();
+        }
 
         /**
          * Called before a new frame is rendered.
@@ -193,6 +219,17 @@ namespace ne {
          */
         void onTickFinished();
 
+        /**
+         * Runs garbage collection if enough time has passed since the last garbage collection
+         * (see @ref setGarbageCollectorRunInterval).
+         *
+         * @param bForce Force run garbage collection even if the last garbage collection was run
+         * not so long ago.
+         *
+         * @warning This function should be called on the main thread.
+         */
+        void runGarbageCollection(bool bForce = false);
+
         /** Executes all deferred tasks from @ref mtxDeferredTasks. */
         void executeDeferredTasks();
 
@@ -222,7 +259,7 @@ namespace ne {
         std::unique_ptr<GameInstance> pGameInstance;
 
         /** Game world, stores world's node tree. */
-        std::unique_ptr<World> pGameWorld;
+        std::pair<std::recursive_mutex, std::unique_ptr<World>> mtxWorld;
 
         /** Draws graphics on window. */
         std::unique_ptr<IRenderer> pRenderer;
@@ -243,7 +280,10 @@ namespace ne {
         std::chrono::steady_clock::time_point lastGcRunTime;
 
         /** Interval in seconds after which we need to run garbage collector again. */
-        long long iGcRunIntervalInSec = 120;
+        long long iGcRunIntervalInSec = 60;
+
+        /** ID of the main thread. */
+        std::thread::id mainThreadId;
 
         /** Name of the category used for logging. */
         inline static const char* sGameLogCategory = "Game";

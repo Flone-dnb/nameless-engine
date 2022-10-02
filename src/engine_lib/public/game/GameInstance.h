@@ -49,6 +49,14 @@ namespace ne {
         static float getTotalApplicationTimeInSec();
 
         /**
+         * Called after GameInstance's constructor is finished and created
+         * GameInstance object was saved in Game object (that owns GameInstance).
+         *
+         * At this point you can create and interact with the game world and etc.
+         */
+        virtual void onGameStarted() {}
+
+        /**
          * Called before a new frame is rendered.
          *
          * @param fTimeSincePrevCallInSec   Time in seconds that has passed since the last call
@@ -162,6 +170,12 @@ namespace ne {
          * If old world existed, causes the old world to be removed by deleting
          * old world's root node.
          *
+         * @warning This function should be called from the main thread.
+         * Use @ref addDeferredTask if you are not sure.
+         *
+         * @warning If you are holding any `gc` pointers to nodes in game instance,
+         * make sure you set `nullptr` to them before calling this function.
+         *
          * @param iWorldSize    Size of the world in game units. Must be power of 2
          * (128, 256, 512, 1024, 2048, etc.). World size needs to be specified for
          * internal purposes such as Directional Light shadow map size, maybe for the size
@@ -172,12 +186,36 @@ namespace ne {
         void createWorld(size_t iWorldSize = 1024);
 
         /**
-         * Returns a non owning pointer to world's root node.
+         * Queues a request to run a full garbage collection as a deferred task on the main thread
+         * using @ref addDeferredTask.
          *
-         * @return nullptr if world is not created (see @ref createWorld), otherwise world's root node.
-         * Do not delete returned pointer.
+         * @remark Typically you don't need to call this function as garbage collection is executed
+         * regularly (see @ref setGarbageCollectorRunInterval) but you can still call it anyway.
+         *
+         * @param onFinished Optional callback that will be triggered when garbage collection is finished.
          */
-        Node* getWorldRootNode() const;
+        void queueGarbageCollection(std::optional<std::function<void()>> onFinished);
+
+        /**
+         * Modifies the interval after which we need to run garbage collector again.
+         * The current value can be retrieved using @ref getGarbageCollectorRunIntervalInSec.
+         *
+         * @remark Interval should be in range [30; 300] seconds (otherwise it will be clamped).
+         *
+         * @remark Note that garbage collection will also be executed additionally in some special cases,
+         * such as when World is being destructed or some nodes are being detached and despawned.
+         *
+         * @param iGcRunIntervalInSec Interval in seconds.
+         */
+        void setGarbageCollectorRunInterval(long long iGcRunIntervalInSec);
+
+        /**
+         * Returns a pointer to world's root node.
+         *
+         * @return nullptr if world is not created or was destroyed (see @ref createWorld), otherwise world's
+         * root node.
+         */
+        gc<Node> getWorldRootNode() const;
 
         /**
          * Returns time since world creation (in seconds).
@@ -202,6 +240,13 @@ namespace ne {
          * @return A pointer to the input manager, should not be deleted.
          */
         InputManager* getInputManager() const;
+
+        /**
+         * Returns the current interval after which we need to run garbage collector again.
+         *
+         * @return Interval in seconds.
+         */
+        long long getGarbageCollectorRunIntervalInSec();
 
     private:
         /** Do not delete. Owner of @ref pGame object. */

@@ -18,6 +18,10 @@ namespace ne {
 
     InputManager* GameInstance::getInputManager() const { return pInputManager; }
 
+    long long GameInstance::getGarbageCollectorRunIntervalInSec() {
+        return pGame->getGarbageCollectorRunIntervalInSec();
+    }
+
     void GameInstance::addDeferredTask(const std::function<void()>& task) const {
         pGame->addDeferredTask(task);
     }
@@ -28,7 +32,15 @@ namespace ne {
 
     void GameInstance::createWorld(size_t iWorldSize) { pGame->createWorld(iWorldSize); }
 
-    Node* GameInstance::getWorldRootNode() const { return pGame->getWorldRootNode(); }
+    void GameInstance::queueGarbageCollection(std::optional<std::function<void()>> onFinished) {
+        pGame->queueGarbageCollection(onFinished);
+    }
+
+    void GameInstance::setGarbageCollectorRunInterval(long long iGcRunIntervalInSec) {
+        pGame->setGarbageCollectorRunInterval(iGcRunIntervalInSec);
+    }
+
+    gc<Node> GameInstance::getWorldRootNode() const { return pGame->getWorldRootNode(); }
 
     float GameInstance::getWorldTimeInSeconds() const { return pGame->getWorldTimeInSeconds(); }
 

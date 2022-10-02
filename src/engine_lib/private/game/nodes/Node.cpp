@@ -6,6 +6,7 @@
 // Custom.
 #include "io/Logger.h"
 #include "misc/Globals.h"
+#include "game/GameInstance.h"
 
 #if defined(DEBUG)
 /** Total amount of created nodes. */
@@ -20,37 +21,27 @@ namespace ne {
     Node::Node(const std::string& sName) {
         this->sName = sName;
         mtxParentNode.second = nullptr;
-        mtxIsSpawned.second = false;
+        bIsSpawned = false;
         mtxChildNodes.second = gc_new_vector<Node>();
 
-#if defined(DEBUG)
+        // Log construction.
         const size_t iNodeCount = iTotalNodeCount.fetch_add(1) + 1;
         Logger::get().info(
-            fmt::format(
-                "[{}] constructor for node \"{}\" is called (alive nodes now: {})",
-                sDebugOnlyLoggingSubCategory,
-                sName,
-                iNodeCount),
+            fmt::format("constructor for node \"{}\" is called (alive nodes now: {})", sName, iNodeCount),
             sNodeLogCategory);
-#endif
     }
 
     Node::~Node() {
-        std::scoped_lock guard(mtxIsSpawned.first);
-        if (mtxIsSpawned.second) {
+        std::scoped_lock guard(mtxSpawning);
+        if (bIsSpawned) {
             despawn();
         }
 
-#if defined(DEBUG)
+        // Log destruction.
         const size_t iNodesLeft = iTotalNodeCount.fetch_sub(1) - 1;
         Logger::get().info(
-            fmt::format(
-                "[{}] destructor for node \"{}\" is called (alive nodes left: {})",
-                sDebugOnlyLoggingSubCategory,
-                sName,
-                iNodesLeft),
+            fmt::format("destructor for node \"{}\" is called (alive nodes left: {})", sName, iNodesLeft),
             sNodeLogCategory);
-#endif
     }
 
     void Node::setName(const std::string& sName) { this->sName = sName; }
@@ -58,6 +49,8 @@ namespace ne {
     std::string Node::getName() const { return sName; }
 
     void Node::addChildNode(gc<Node> pNode) {
+        std::scoped_lock spawnGuard(mtxSpawning);
+
         // Check if this node is valid.
         if (pNode == nullptr) [[unlikely]] {
             Logger::get().warn(
@@ -168,8 +161,8 @@ namespace ne {
 
     void Node::detachFromParentAndDespawn() {
         // Check if this node is spawned.
-        std::scoped_lock spawnGuard(mtxIsSpawned.first);
-        if (mtxIsSpawned.second == false)
+        std::scoped_lock guard(mtxSpawning);
+        if (bIsSpawned == false)
             return;
 
         // Detach from parent.
@@ -205,17 +198,41 @@ namespace ne {
 
         // Despawn.
         despawn();
+
+        // Queue garbage collection.
+        pSelf = nullptr;
+        pGameInstance->queueGarbageCollection({});
     }
 
     bool Node::isSpawned() {
-        std::scoped_lock guard(mtxIsSpawned.first);
-        return mtxIsSpawned.second;
+        std::scoped_lock guard(mtxSpawning);
+        return bIsSpawned;
+    }
+
+    GameInstance* Node::findValidGameInstance() {
+        std::scoped_lock guard(mtxSpawning);
+
+        if (pGameInstance)
+            return pGameInstance;
+
+        // Ask parents for the valid game instance pointer.
+        std::scoped_lock parentGuard(mtxParentNode.first);
+        if (!mtxParentNode.second) [[unlikely]] {
+            Error err(fmt::format(
+                "node \"{}\" can't get a pointer to the valid game instance because "
+                "there is no parent node",
+                getName()));
+            err.showError();
+            throw std::runtime_error(err.getError());
+        }
+
+        return mtxParentNode.second->findValidGameInstance();
     }
 
     void Node::spawn() {
-        std::scoped_lock guard(mtxIsSpawned.first);
+        std::scoped_lock guard(mtxSpawning);
 
-        if (mtxIsSpawned.second) [[unlikely]] {
+        if (bIsSpawned) [[unlikely]] {
             Logger::get().warn(
                 fmt::format(
                     "an attempt was made to spawn already spawned node \"{}\", aborting this operation",
@@ -224,11 +241,15 @@ namespace ne {
             return;
         }
 
+        if (!pGameInstance) {
+            pGameInstance = findValidGameInstance();
+        }
+
         // Spawn self first and only then child nodes.
         // This spawn order is required for some nodes to work correctly.
         // With this spawn order we will not make "holes" in world's node tree
         // (i.e. when node is spawned, node's parent is not spawned but parent's parent node is spawned).
-        mtxIsSpawned.second = true;
+        bIsSpawned = true;
         onSpawn();
 
         // Spawn children.
@@ -242,9 +263,9 @@ namespace ne {
     }
 
     void Node::despawn() {
-        std::scoped_lock guard(mtxIsSpawned.first);
+        std::scoped_lock guard(mtxSpawning);
 
-        if (!mtxIsSpawned.second) [[unlikely]] {
+        if (!bIsSpawned) [[unlikely]] {
             Logger::get().warn(
                 fmt::format(
                     "an attempt was made to despawn already despawned node \"{}\", aborting this operation",
@@ -267,7 +288,8 @@ namespace ne {
 
         // Despawn self.
         onDespawn();
-        mtxIsSpawned.second = false;
+        bIsSpawned = false;
+        pGameInstance = nullptr; // don't allow accessing game instance or world at this point
     }
 
     gc<Node> Node::getParent() {
@@ -441,6 +463,20 @@ namespace ne {
     gc_vector<Node> Node::getChildNodes() {
         std::scoped_lock guard(mtxChildNodes.first);
         return mtxChildNodes.second;
+    }
+
+    GameInstance* Node::getGameInstance() {
+        std::scoped_lock guard(mtxSpawning);
+        return pGameInstance;
+    }
+
+    gc<Node> Node::getWorldRootNode() {
+        std::scoped_lock guard(mtxSpawning);
+
+        if (!pGameInstance)
+            return nullptr;
+
+        return pGameInstance->getWorldRootNode();
     }
 
 } // namespace ne

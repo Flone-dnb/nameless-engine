@@ -214,7 +214,7 @@ target_link_libraries(${PROJECT_NAME} PUBLIC fmt)
 set_target_properties(fmt PROPERTIES FOLDER ${EXTERNAL_FOLDER})
 
 # [temporary solution]: External: tgc
-target_sources(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/Refureku/build/Include/tgc2/src/tgc2.cpp)
+target_sources(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/Refureku/build/Include/tgc2/include/tgc2.cpp)
 
 # External: Refureku (start) --------------------------------------------------------------------------
 # Check that path does not have pipe character because we use it to separate paths.
@@ -407,6 +407,7 @@ set(ENGINE_TEST_SOURCES
     ${TESTS_RELATIVE_PATH}/engine_lib/ShaderPack.cpp
     ${TESTS_RELATIVE_PATH}/engine_lib/Serializable.cpp
     ${TESTS_RELATIVE_PATH}/engine_lib/Node.cpp
+    ${TESTS_RELATIVE_PATH}/engine_lib/World.cpp
     # add engine test .cpp files here
 )
 

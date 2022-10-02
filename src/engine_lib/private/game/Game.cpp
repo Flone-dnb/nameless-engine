@@ -16,11 +16,14 @@ namespace ne {
     Game::Game(Window* pWindow) {
         this->pWindow = pWindow;
 
+        // Save ID to this thread (should be main thread).
+        mainThreadId = std::this_thread::get_id();
+
         // Mark start time.
         gc_collector()->collect(); // run for the first time to setup things (I guess)
         lastGcRunTime = std::chrono::steady_clock::now();
         Logger::get().info(
-            fmt::format("garbage collector run interval is set to {} seconds", iGcRunIntervalInSec),
+            fmt::format("garbage collector will run every {} seconds", iGcRunIntervalInSec),
             sGameLogCategory);
 
 #if defined(DEBUG)
@@ -36,17 +39,21 @@ namespace ne {
 #endif
     }
 
-    void Game::onTickFinished() {
-        // Check if we need to run garbage collector.
-        const auto iTimeSinceLastGcInSec =
-            std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - lastGcRunTime)
-                .count();
-        if (iTimeSinceLastGcInSec < iGcRunIntervalInSec) {
-            return;
+    void Game::onTickFinished() { runGarbageCollection(); }
+
+    void Game::runGarbageCollection(bool bForce) {
+        if (!bForce) {
+            // Check if we need to run garbage collector.
+            const auto iTimeSinceLastGcInSec = std::chrono::duration_cast<std::chrono::seconds>(
+                                                   std::chrono::steady_clock::now() - lastGcRunTime)
+                                                   .count();
+            if (iTimeSinceLastGcInSec < iGcRunIntervalInSec) {
+                return;
+            }
         }
 
         // Run garbage collector.
-        Logger::get().info("running garbage collector...", sGameLogCategory);
+        Logger::get().info("running garbage collector...", sGarbageCollectorLogCategory);
 
         // Measure the time it takes to run garbage collector.
         const auto start = std::chrono::steady_clock::now();
@@ -60,30 +67,88 @@ namespace ne {
         std::stringstream durationStream;
         durationStream << std::fixed << std::setprecision(1) << durationInMs;
 
-        // TODO: merge results and time into one log command
-
         // Log results.
-        Logger::get().info(gc_collector()->getStats(), sGameLogCategory);
-
-        if (durationInMs < 1.0f) {
-            // Information.
-            Logger::get().info(
-                fmt::format("garbage collector has finished, took {} millisecond", durationStream.str()),
-                sGameLogCategory);
-        } else {
-            // Warning.
-            Logger::get().warn(
-                fmt::format("garbage collector has finished, took {} millisecond(s)", durationStream.str()),
-                sGameLogCategory);
-        }
+        Logger::get().info(
+            fmt::format(
+                "garbage collector has finished, took {} millisecond(s): "
+                "freed {} object(s) ({} left alive)",
+                durationStream.str(),
+                gc_collector()->getLastFreedObjectsCount(),
+                gc_collector()->getAliveObjectsCount()),
+            sGarbageCollectorLogCategory);
 
         lastGcRunTime = std::chrono::steady_clock::now();
     }
 
-    Game::~Game() { threadPool.stop(); }
+    Game::~Game() {
+        threadPool.stop();
+
+        {
+            std::scoped_lock guard(mtxWorld.first);
+
+            if (mtxWorld.second) {
+                // Explicitly destroy world before game instance, so that no node
+                // will reference game instance.
+                mtxWorld.second->destroyWorld(); // despawns all nodes and removes pointer to root node
+
+                // At this point (when no node is spawned) nodes will not be able to
+                // access game instance or world so we can safely destroy world.
+                mtxWorld.second = nullptr;
+            }
+        }
+
+        // Run GC for the last time.
+        Logger::get().info("game is destroyed, running garbage collector...", sGarbageCollectorLogCategory);
+        gc_collector()->fullCollect();
+
+        // Log results.
+        Logger::get().info(
+            fmt::format(
+                "garbage collector has finished: "
+                "freed {} object(s) ({} left alive)",
+                gc_collector()->getLastFreedObjectsCount(),
+                gc_collector()->getAliveObjectsCount()),
+            sGarbageCollectorLogCategory);
+
+        // See if there are any nodes alive.
+        const auto iNodesAlive = Node::getAliveNodeCount();
+        if (iNodesAlive != 0) {
+            Logger::get().error(
+                fmt::format(
+                    "the game was destroyed and a full garbage collection was run but there are still "
+                    "{} node(s) alive, here are a few reasons why this may happen:\n"
+                    "1. you are storing some `gc` pointers to nodes "
+                    "in your game instance (you should have cleared them in `onWindowClose`),\n"
+                    "2. you are not using STL container wrappers for gc "
+                    "pointers (i.e. you need to use `gc_vector<T>` instead of `std::vector<gc<T>>`, "
+                    "and other `gc_*` containers when storing gc pointers).",
+                    iNodesAlive),
+                sGameLogCategory);
+        }
+
+        // See if there are any gc objects left.
+        const auto iGcObjectsLeft = gc_collector()->getAliveObjectsCount();
+        if (iGcObjectsLeft != 0) {
+            Logger::get().error(
+                fmt::format(
+                    "the game was destroyed and a full garbage collection was run but there are still "
+                    "{} gc object(s) alive",
+                    iGcObjectsLeft),
+                sGameLogCategory);
+        }
+    }
 
     void Game::setGarbageCollectorRunInterval(long long iGcRunIntervalInSec) {
         this->iGcRunIntervalInSec = std::clamp<long long>(iGcRunIntervalInSec, 30, 300);
+    }
+
+    void Game::queueGarbageCollection(std::optional<std::function<void()>> onFinished) {
+        addDeferredTask([this, onFinished]() {
+            runGarbageCollection(true);
+            if (onFinished.has_value()) {
+                onFinished->operator()();
+            }
+        });
     }
 
     void Game::onBeforeNewFrame(float fTimeSincePrevCallInSec) {
@@ -113,20 +178,73 @@ namespace ne {
 
     void Game::addTaskToThreadPool(const std::function<void()>& task) { threadPool.addTask(task); }
 
-    void Game::createWorld(size_t iWorldSize) { pGameWorld = World::createWorld(iWorldSize); }
+    void Game::createWorld(size_t iWorldSize) {
+        const auto currentThreadId = std::this_thread::get_id();
+        if (currentThreadId != mainThreadId) {
+            std::stringstream currentThreadIdString;
+            currentThreadIdString << currentThreadId;
 
-    Node* Game::getWorldRootNode() const {
-        if (!pGameWorld)
-            return nullptr;
+            std::stringstream mainThreadIdString;
+            mainThreadIdString << mainThreadId;
 
-        return pGameWorld->getRootNode();
+            Error err(fmt::format(
+                "An attempt was made to create a world in a non main thread "
+                "(main thread ID: {}, current thread ID: {})",
+                mainThreadIdString.str(),
+                currentThreadIdString.str()));
+            err.showError();
+            throw std::runtime_error(err.getError());
+        }
+
+        std::scoped_lock guard(mtxWorld.first);
+
+        if (mtxWorld.second) {
+            // Explicitly destroy world before setting nullptr, so that no node will reference the world.
+            mtxWorld.second->destroyWorld();
+
+            // At this point (when no node is spawned) nodes will not be able to
+            // access game instance or world so we can safely destroy world.
+            mtxWorld.second = nullptr;
+
+            // Force run GC to destroy all nodes.
+            runGarbageCollection(true);
+
+            // Check that all nodes were destroyed.
+            const auto iAliveNodeCount = Node::getAliveNodeCount();
+            if (iAliveNodeCount != 0) {
+                Logger::get().error(
+                    fmt::format(
+                        "the world was destroyed and garbage collection was finished but there are still "
+                        "{} node(s) alive, here are a few reasons why this may happen:\n"
+                        "1. you are storing some `gc` pointers to nodes "
+                        "in your game instance (you should have cleared them before calling `createWorld`),\n"
+                        "2. you are not using STL container wrappers for gc "
+                        "pointers (i.e. you need to use `gc_vector<T>` instead of `std::vector<gc<T>>`, "
+                        "and other `gc_*` containers when storing gc pointers).",
+                        iAliveNodeCount),
+                    sGameLogCategory);
+            }
+        }
+
+        mtxWorld.second = World::createWorld(this, iWorldSize);
     }
 
-    float Game::getWorldTimeInSeconds() const {
-        if (!pGameWorld)
+    gc<Node> Game::getWorldRootNode() {
+        std::scoped_lock guard(mtxWorld.first);
+
+        if (!mtxWorld.second)
+            return nullptr;
+
+        return mtxWorld.second->getRootNode();
+    }
+
+    float Game::getWorldTimeInSeconds() {
+        std::scoped_lock guard(mtxWorld.first);
+
+        if (!mtxWorld.second)
             return 0.0f;
 
-        return pGameWorld->getWorldTimeInSeconds();
+        return mtxWorld.second->getWorldTimeInSeconds();
     }
 
     void Game::onKeyboardInput(KeyboardKey key, KeyboardModifiers modifiers, bool bIsPressedDown) {
@@ -169,6 +287,8 @@ namespace ne {
     }
 
     Window* Game::getWindow() const { return pWindow; }
+
+    GameInstance* Game::getGameInstance() const { return pGameInstance.get(); }
 
     long long Game::getGarbageCollectorRunIntervalInSec() { return iGcRunIntervalInSec; }
 

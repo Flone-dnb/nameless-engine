@@ -7,8 +7,11 @@
 
 // Custom.
 #include "game/nodes/Node.h"
+#include "misc/GC.hpp"
 
 namespace ne {
+    class Game;
+
     /** Owns world's root node. */
     class World {
     public:
@@ -23,7 +26,8 @@ namespace ne {
         /**
          * Creates a new world with a root node to store world's node tree.
          *
-         * @param iWorldSize    Size of the world in game units. Must be power of 2
+         * @param pGame       Game object that owns this world.
+         * @param iWorldSize  Size of the world in game units. Must be power of 2
          * (128, 256, 512, 1024, 2048, etc.). World size needs to be specified for
          * internal purposes such as Directional Light shadow map size, maybe for the size
          * of correct physics calculations and etc. You don't need to care why we need this
@@ -32,14 +36,14 @@ namespace ne {
          *
          * @return New world instance.
          */
-        static std::unique_ptr<World> createWorld(size_t iWorldSize = 1024);
+        static std::unique_ptr<World> createWorld(Game* pGame, size_t iWorldSize = 1024);
 
         /**
-         * Returns a non owning pointer to world's root node.
+         * Returns a pointer to world's root node.
          *
-         * @return Do not delete returned pointer. World's root node.
+         * @return World's root node.
          */
-        Node* getRootNode() const;
+        gc<Node> getRootNode();
 
         /**
          * Returns time since world creation (in seconds).
@@ -48,22 +52,37 @@ namespace ne {
          */
         float getWorldTimeInSeconds() const;
 
+        /**
+         * Clears pointer to the root node which should cause the world
+         * to recursively be despawned and destroyed.
+         *
+         * @remark This function will be called in destructor but you can also call it explicitly.
+         */
+        void destroyWorld();
+
     private:
         /**
          * Creates a new world with the specified root node.
          *
-         * @param iWorldSize World size in game units. Must be power of 2
+         * @param pGame       Game object that owns this world.
+         * @param iWorldSize  World size in game units. Must be power of 2
          * (128, 256, 512, 1024, 2048, etc.).
          */
-        World(size_t iWorldSize);
+        World(Game* pGame, size_t iWorldSize);
+
+        /** Do not delete. Owner game object. */
+        Game* pGame;
 
         /** World's root node. */
-        std::unique_ptr<Node> pRootNode;
+        std::pair<std::mutex, gc<Node>> mtxRootNode;
 
         /** World size in game units. */
         size_t iWorldSize = 0;
 
         /** Time when world was created. */
         std::chrono::steady_clock::time_point timeWhenWorldCreated;
+
+        /** Name of the category used for logging. */
+        inline static const char* sWorldLogCategory = "World";
     };
 } // namespace ne

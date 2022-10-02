@@ -13,6 +13,8 @@
 #include "Node.generated.h"
 
 namespace ne NENAMESPACE() {
+    class GameInstance;
+
     /**
      * Base class for nodes, allows being spawned in the world, attaching child nodes
      * or being attached to some parent node.
@@ -98,21 +100,6 @@ namespace ne NENAMESPACE() {
         bool isSpawned();
 
         /**
-         * Returns parent node if this node.
-         *
-         * @return Do not delete returned pointer.
-         * nullptr if there is no parent node, otherwise valid pointer.
-         */
-        gc<Node> getParent();
-
-        /**
-         * Returns a copy of the array of child nodes.
-         *
-         * @return Copy of the array of child nodes.
-         */
-        gc_vector<Node> getChildNodes();
-
-        /**
          * Serializes the node and all child nodes (hierarchy information will also be saved) into a file.
          * Node tree can later be deserialized using @ref deserializeNodeTree.
          *
@@ -129,6 +116,28 @@ namespace ne NENAMESPACE() {
          * serialization reflected field.
          */
         std::optional<Error> serializeNodeTree(const std::filesystem::path& pathToFile, bool bEnableBackup);
+
+        /**
+         * Returns world's root node.
+         *
+         * @return nullptr if this node is not spawned or was despawned (always check
+         * returned pointer before doing something), otherwise valid pointer.
+         */
+        gc<Node> getWorldRootNode();
+
+        /**
+         * Returns parent node if this node.
+         *
+         * @return nullptr if there is no parent node, otherwise valid pointer.
+         */
+        gc<Node> getParent();
+
+        /**
+         * Returns a copy of the array of child nodes.
+         *
+         * @return Copy of the array of child nodes.
+         */
+        gc_vector<Node> getChildNodes();
 
         /**
          * Goes up the parent node chain (up to the world's root node if needed) to find
@@ -167,6 +176,15 @@ namespace ne NENAMESPACE() {
         requires std::derived_from<NodeType, Node> gc<Node>
         getChildNodeOfType(const std::string& sChildNodeName = "");
 
+        /**
+         * Returns game instance that the world, in which the node is spawned, is using.
+         *
+         * @return nullptr if the node is not spawned or was despawned (always check this pointer
+         * before doing something), otherwise pointer to game instance that this world is using.
+         * Do not delete returned pointer.
+         */
+        GameInstance* getGameInstance();
+
     protected:
         /**
          * Called when this node was not spawned and it was attached to a parent node that is spawned
@@ -190,6 +208,9 @@ namespace ne NENAMESPACE() {
          */
         virtual void onDespawn(){};
 
+        /** Mutex that will be used when spawning/despawning node. */
+        std::recursive_mutex mtxSpawning;
+
     private:
         // World is able to spawn root node.
         friend class World;
@@ -199,6 +220,15 @@ namespace ne NENAMESPACE() {
 
         /** Calls @ref onDespawn on this node and all of its child nodes. */
         void despawn();
+
+        /**
+         * Checks if this node has a valid game instance pointer and returns it if it's
+         * valid, otherwise asks this node's parent and goes up the node hierarchy
+         * up to the root node if needed.
+         *
+         * @return Valid game instance pointer.
+         */
+        GameInstance* findValidGameInstance();
 
         /**
          * Collects and returns information for serialization for self and all child nodes.
@@ -238,15 +268,22 @@ namespace ne NENAMESPACE() {
         std::pair<std::recursive_mutex, gc_vector<Node>> mtxChildNodes;
 
         /**
-         * Do not delete. Attached parent node.
+         * Attached parent node.
          */
         std::pair<std::recursive_mutex, gc<Node>> mtxParentNode;
 
         /**
          * Whether this node is spawned in the world or not.
-         * Should be used under the mutex when spawning/despawning.
+         * Should be used with @ref mtxSpawning when spawning/despawning.
          */
-        std::pair<std::recursive_mutex, bool> mtxIsSpawned;
+        bool bIsSpawned = false;
+
+        /**
+         * Do not delete. Game instance object that is used for this world.
+         *
+         * @warning Will be initialized after the node is spawned.
+         */
+        GameInstance* pGameInstance = nullptr;
 
         /** Name of the attribute we use to serialize information about parent node. */
         static inline const auto sParentNodeAttributeName = "parent_node";

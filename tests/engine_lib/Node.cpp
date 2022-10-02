@@ -50,7 +50,6 @@ TEST_CASE("serialize and deserialize node tree") {
     }
 
     gc_collector()->fullCollect();
-    Logger::get().info(gc_collector()->getStats(), "");
     REQUIRE(Node::getAliveNodeCount() == 0); // cyclic references should be freed
 
     {
@@ -91,6 +90,5 @@ TEST_CASE("serialize and deserialize node tree") {
     }
 
     gc_collector()->fullCollect();
-    Logger::get().info(gc_collector()->getStats(), "");
     REQUIRE(Node::getAliveNodeCount() == 0); // cyclic references should be freed
 }

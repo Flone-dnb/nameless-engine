@@ -130,29 +130,6 @@ namespace ne NENAMESPACE() {
          */
         std::optional<Error> serializeNodeTree(const std::filesystem::path& pathToFile, bool bEnableBackup);
 
-    protected:
-        /**
-         * Called when this node was not spawned and it was attached to a parent node that is spawned
-         * to execute custom spawn logic.
-         *
-         * @remark This node will be marked as spawned before this function is called.
-         * @remark This function is called before any of the child nodes are spawned.
-         *
-         * @warning It's better to call parent's version first (before executing your logic).
-         */
-        virtual void onSpawn(){};
-
-        /**
-         * Called before this node is despawned from the world to execute custom despawn logic.
-         *
-         * @remark This node will be marked as despawned after this function is called.
-         * @remark This function is called after all child nodes were despawned.
-         * @remark If node's destructor is called but node is still spawned it will be despawned.
-         *
-         * @warning It's better to call parent's version first (before executing your logic).
-         */
-        virtual void onDespawn(){};
-
         /**
          * Goes up the parent node chain (up to the world's root node if needed) to find
          * a first node that matches the specified node type and optionally node name.
@@ -189,6 +166,29 @@ namespace ne NENAMESPACE() {
         template <typename NodeType>
         requires std::derived_from<NodeType, Node> gc<Node>
         getChildNodeOfType(const std::string& sChildNodeName = "");
+
+    protected:
+        /**
+         * Called when this node was not spawned and it was attached to a parent node that is spawned
+         * to execute custom spawn logic.
+         *
+         * @remark This node will be marked as spawned before this function is called.
+         * @remark This function is called before any of the child nodes are spawned.
+         *
+         * @warning It's better to call parent's version first (before executing your logic).
+         */
+        virtual void onSpawn(){};
+
+        /**
+         * Called before this node is despawned from the world to execute custom despawn logic.
+         *
+         * @remark This node will be marked as despawned after this function is called.
+         * @remark This function is called after all child nodes were despawned.
+         * @remark If node's destructor is called but node is still spawned it will be despawned.
+         *
+         * @warning It's better to call parent's version first (before executing your logic).
+         */
+        virtual void onDespawn(){};
 
     private:
         // World is able to spawn root node.

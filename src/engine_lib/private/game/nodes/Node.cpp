@@ -9,12 +9,12 @@
 #include "game/GameInstance.h"
 
 #if defined(DEBUG)
-/** Total amount of created nodes. */
-static std::atomic<size_t> iTotalNodeCount{0};
+/** Total amount of alive nodes. */
+static std::atomic<size_t> iTotalAliveNodeCount{0};
 #endif
 
 namespace ne {
-    size_t Node::getAliveNodeCount() { return iTotalNodeCount.load(); }
+    size_t Node::getAliveNodeCount() { return iTotalAliveNodeCount.load(); }
 
     Node::Node() : Node("Node") {}
 
@@ -25,7 +25,7 @@ namespace ne {
         mtxChildNodes.second = gc_new_vector<Node>();
 
         // Log construction.
-        const size_t iNodeCount = iTotalNodeCount.fetch_add(1) + 1;
+        const size_t iNodeCount = iTotalAliveNodeCount.fetch_add(1) + 1;
         Logger::get().info(
             fmt::format("constructor for node \"{}\" is called (alive nodes now: {})", sName, iNodeCount),
             sNodeLogCategory);
@@ -38,7 +38,7 @@ namespace ne {
         }
 
         // Log destruction.
-        const size_t iNodesLeft = iTotalNodeCount.fetch_sub(1) - 1;
+        const size_t iNodesLeft = iTotalAliveNodeCount.fetch_sub(1) - 1;
         Logger::get().info(
             fmt::format("destructor for node \"{}\" is called (alive nodes left: {})", sName, iNodesLeft),
             sNodeLogCategory);

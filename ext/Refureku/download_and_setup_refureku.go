@@ -42,18 +42,19 @@ func main() {
 	var compiler_id = os.Args[5]
 	var cpp_standard_number = os.Args[6]
 
-	// INFO: change this to update used Refureku version.
-	var refureku_version_tag = "v2.2.0"
+	// Change this to update used Refureku version.
+	var refureku_version_tag = "v2.3.0a"
 	var archive_url = ""
+	var base_archive_url = "https://github.com/Flone-dnb/Refureku/releases/download/"
 	if runtime.GOOS == "windows" {
-		archive_url = "https://github.com/jsoysouvanh/Refureku/releases/download/" +
-			refureku_version_tag + "/rfk_" + refureku_version_tag + "_windows.zip"
+		archive_url = base_archive_url + refureku_version_tag + "/rfk_" +
+			refureku_version_tag + "_windows.zip"
 	} else if runtime.GOOS == "linux" {
-		archive_url = "https://github.com/jsoysouvanh/Refureku/releases/download/" +
-			refureku_version_tag + "/rfk_" + refureku_version_tag + "_linux.tar.gz"
+		archive_url = base_archive_url + refureku_version_tag + "/rfk_" +
+			refureku_version_tag + "_linux.tar.gz"
 	} else if runtime.GOOS == "macos" {
-		archive_url = "https://github.com/jsoysouvanh/Refureku/releases/download/" +
-			refureku_version_tag + "/rfk_" + refureku_version_tag + "_macos.tar.gz"
+		archive_url = base_archive_url + refureku_version_tag + "/rfk_" +
+			refureku_version_tag + "_macos.tar.gz"
 	}
 
 	// Setup directory "build" to unzip archive there.

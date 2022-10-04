@@ -1,5 +1,9 @@
 ﻿#include "Game.h"
 
+// STL.
+#include <thread>
+#include <sstream>
+
 // Custom.
 #include "io/Logger.h"
 #include "io/Serializable.h"

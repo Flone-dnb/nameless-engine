@@ -39,14 +39,21 @@ set(ENGINE_WIN32_SOURCES
     # add Windows specific sources here...
 )
 
-# Prepare engine general (cross-platform) sources.
+# Prepare file that will include all generated reflection.
 set(REFLECTION_FILE_NAME Reflection_impl.hpp)
 set(REFLECTION_FILE_NAME ${REFLECTION_FILE_NAME} PARENT_SCOPE)
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../.generated)
 set(GENERATED_REFLECTION_FILE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../.generated/${REFLECTION_FILE_NAME})
 if (NOT EXISTS ${GENERATED_REFLECTION_FILE_PATH})
-    configure_file(${CMAKE_CURRENT_SOURCE_DIR}/../.reflection/${REFLECTION_FILE_NAME} ${GENERATED_REFLECTION_FILE_PATH} COPYONLY)
+    file(WRITE ${GENERATED_REFLECTION_FILE_PATH} "")
 endif()
+
+# Temporary solution for `tgc2` in `Refureku` (because we use it below).
+set(TGC_CPP_FILE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/Refureku/build/Include/tgc2/include/tgc2.cpp)
+if (NOT EXISTS ${TGC_CPP_FILE_PATH})
+    file(WRITE ${TGC_CPP_FILE_PATH} "")
+endif()
+
 # Engine general (cross-platform) sources.
 set(ENGINE_LIB_SOURCES
     ../.generated/${REFLECTION_FILE_NAME}
@@ -214,7 +221,8 @@ target_link_libraries(${PROJECT_NAME} PUBLIC fmt)
 set_target_properties(fmt PROPERTIES FOLDER ${EXTERNAL_FOLDER})
 
 # [temporary solution]: External: tgc
-target_sources(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/Refureku/build/Include/tgc2/include/tgc2.cpp)
+target_sources(${PROJECT_NAME} PUBLIC ${TGC_CPP_FILE_PATH})
+set_source_files_properties(${TGC_CPP_FILE_PATH} PROPERTIES COMPILE_FLAGS -Wno-unused-parameter)
 
 # External: Refureku (start) --------------------------------------------------------------------------
 # Check that path does not have pipe character because we use it to separate paths.

@@ -222,7 +222,9 @@ set_target_properties(fmt PROPERTIES FOLDER ${EXTERNAL_FOLDER})
 
 # [temporary solution]: External: tgc
 target_sources(${PROJECT_NAME} PUBLIC ${TGC_CPP_FILE_PATH})
-set_source_files_properties(${TGC_CPP_FILE_PATH} PROPERTIES COMPILE_FLAGS -Wno-unused-parameter)
+if(Clang)
+    set_source_files_properties(${TGC_CPP_FILE_PATH} PROPERTIES COMPILE_FLAGS -Wno-unused-parameter)
+endif()
 
 # External: Refureku (start) --------------------------------------------------------------------------
 # Check that path does not have pipe character because we use it to separate paths.

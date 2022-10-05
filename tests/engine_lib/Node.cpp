@@ -1,5 +1,7 @@
 // Custom.
 #include "game/nodes/Node.h"
+#include "game/GameInstance.h"
+#include "game/Window.h"
 
 // External.
 #include "catch2/catch_test_macros.hpp"
@@ -91,4 +93,51 @@ TEST_CASE("serialize and deserialize node tree") {
 
     gc_collector()->fullCollect();
     REQUIRE(Node::getAliveNodeCount() == 0); // cyclic references should be freed
+}
+
+TEST_CASE("test GC performance and stability") {
+    using namespace ne;
+
+    class TestGameInstance : public GameInstance {
+    public:
+        TestGameInstance(Window* pGameWindow, InputManager* pInputManager)
+            : GameInstance(pGameWindow, pInputManager) {}
+        virtual void onGameStarted() override { createWorld(); }
+        virtual void onBeforeNewFrame(float fTimeSincePrevCallInSec) override {
+            if (Node::getAliveNodeCount() == 10000) {
+                getWindow()->close();
+                return;
+            }
+
+            const auto pNewNode = gc_new<Node>();
+            addChildNodes(100, pNewNode);
+            getWorldRootNode()->addChildNode(pNewNode);
+        }
+        virtual ~TestGameInstance() override {}
+
+    private:
+        void addChildNodes(size_t iChildrenCount, gc<Node> pNode) {
+            using namespace ne;
+
+            if (iChildrenCount == 0)
+                return;
+
+            const auto pNewNode = gc_new<Node>();
+            addChildNodes(iChildrenCount - 1, pNewNode);
+            pNode->addChildNode(pNewNode);
+        }
+    };
+
+    auto result = Window::getBuilder().withVisibility(false).build();
+    if (std::holds_alternative<Error>(result)) {
+        Error error = std::get<Error>(std::move(result));
+        error.addEntry();
+        INFO(error.getError());
+        REQUIRE(false);
+    }
+
+    const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
+    pMainWindow->processEvents<TestGameInstance>();
+
+    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
 }

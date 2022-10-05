@@ -435,5 +435,6 @@ namespace ne {
         }
 
         pGame->onWindowClose();
+        pGame = nullptr; // explicitly destroy here to run GC for the last time
     }
 } // namespace ne

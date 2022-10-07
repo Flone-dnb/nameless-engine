@@ -10,7 +10,7 @@ TODO: screenshot game/editor
 # Features
 
 <details>
-  <summary>Automatic shader caching and cache invalidation</summary>
+  <summary>Automatic shader caching and cache invalidation (click to show example)</summary>
   
 ```C++
 const auto vertexShader = ShaderDescription(

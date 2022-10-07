@@ -74,7 +74,7 @@ namespace ne NENAMESPACE() {
          * all of its child nodes.
          *
          * The node and its child nodes are not guaranteed to be deleted after this
-         * function is finished. Deletion is handled automatically by gc pointers.
+         * function is finished. Deletion is handled automatically by `gc` pointers.
          */
         void detachFromParentAndDespawn();
 
@@ -84,20 +84,6 @@ namespace ne NENAMESPACE() {
          * @param pNode Node to attach as a child.
          */
         void addChildNode(gc<Node> pNode);
-
-        /**
-         * Returns node's name.
-         *
-         * @return Node name.
-         */
-        std::string getName() const;
-
-        /**
-         * Returns whether this node is spawned in the world or not.
-         *
-         * @return Whether this node is spawned in the world or not.
-         */
-        bool isSpawned();
 
         /**
          * Serializes the node and all child nodes (hierarchy information will also be saved) into a file.
@@ -116,6 +102,40 @@ namespace ne NENAMESPACE() {
          * serialization reflected field.
          */
         std::optional<Error> serializeNodeTree(const std::filesystem::path& pathToFile, bool bEnableBackup);
+
+        /**
+         * Returns node's name.
+         *
+         * @return Node name.
+         */
+        std::string getName() const;
+
+        /**
+         * Returns whether this node is spawned in the world or not.
+         *
+         * @return Whether this node is spawned in the world or not.
+         */
+        bool isSpawned();
+
+        /**
+         * Checks if the specified node is a child of this node (somewhere in the child hierarchy,
+         * not only as a direct child node).
+         *
+         * @param pNode Node to check.
+         *
+         * @return `true` if the specified node was found as a child of this node, `false` otherwise.
+         */
+        bool isParentOf(Node* pNode);
+
+        /**
+         * Checks if the specified node is a parent of this node (somewhere in the parent hierarchy,
+         * not only as a direct parent node).
+         *
+         * @param pNode Node to check.
+         *
+         * @return `true` if the specified node was found as a parent of this node, `false` otherwise.
+         */
+        bool isChildOf(Node* pNode);
 
         /**
          * Returns world's root node.
@@ -195,7 +215,7 @@ namespace ne NENAMESPACE() {
          *
          * @warning It's better to call parent's version first (before executing your logic).
          */
-        virtual void onSpawn(){};
+        virtual void onSpawn() {}
 
         /**
          * Called before this node is despawned from the world to execute custom despawn logic.
@@ -206,7 +226,17 @@ namespace ne NENAMESPACE() {
          *
          * @warning It's better to call parent's version first (before executing your logic).
          */
-        virtual void onDespawn(){};
+        virtual void onDespawn() {}
+
+        /**
+         * Called before this node is detached from its current parent node.
+         */
+        virtual void onBeforeDetachedFromParent() {}
+
+        /**
+         * Called after this node was attached to a new parent node.
+         */
+        virtual void onAfterAttachedToNewParent() {}
 
         /** Mutex that will be used when spawning/despawning node. */
         std::recursive_mutex mtxSpawning;
@@ -299,7 +329,7 @@ namespace ne NENAMESPACE() {
         const std::string& sParentNodeName) {
         std::scoped_lock guard(mtxParentNode.first);
 
-        // Check if have parent.
+        // Check if have a parent.
         if (!mtxParentNode.second)
             return nullptr;
 

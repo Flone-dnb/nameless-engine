@@ -18,6 +18,54 @@ TEST_CASE("node names should not be unique") {
     REQUIRE(pNode2->getName() == sNodeName);
 }
 
+TEST_CASE("build and check node hierarchy") {
+    using namespace ne;
+
+    {
+        // Create nodes.
+        const auto pParentNode = gc_new<Node>();
+        const auto pChildNode = gc_new<Node>();
+
+        const auto pChildChildNode1 = gc_new<Node>();
+        const auto pChildChildNode2 = gc_new<Node>();
+
+        // Build hierarchy.
+        pChildNode->addChildNode(pChildChildNode1);
+        pChildNode->addChildNode(pChildChildNode2);
+        pParentNode->addChildNode(pChildNode);
+
+        // Check that everything is correct.
+        REQUIRE(pParentNode->getChildNodes()->size() == 1);
+        REQUIRE(&*pParentNode->getChildNodes()->operator[](0) == &*pChildNode);
+
+        REQUIRE(pChildNode->getChildNodes()->size() == 2);
+        REQUIRE(&*pChildNode->getChildNodes()->operator[](0) == &*pChildChildNode1);
+        REQUIRE(&*pChildNode->getChildNodes()->operator[](1) == &*pChildChildNode2);
+
+        REQUIRE(pChildNode->getParent() == pParentNode);
+        REQUIRE(pChildChildNode1->getParent() == pChildNode);
+        REQUIRE(pChildChildNode2->getParent() == pChildNode);
+
+        REQUIRE(pParentNode->isParentOf(&*pChildNode));
+        REQUIRE(pParentNode->isParentOf(&*pChildChildNode1));
+        REQUIRE(pParentNode->isParentOf(&*pChildChildNode2));
+
+        REQUIRE(pChildNode->isChildOf(&*pParentNode));
+        REQUIRE(pChildChildNode1->isChildOf(&*pParentNode));
+        REQUIRE(pChildChildNode1->isChildOf(&*pChildNode));
+        REQUIRE(pChildChildNode2->isChildOf(&*pParentNode));
+        REQUIRE(pChildChildNode2->isChildOf(&*pChildNode));
+
+        REQUIRE(!pChildChildNode1->isChildOf(&*pChildChildNode2));
+        REQUIRE(!pChildChildNode1->isParentOf(&*pChildChildNode2));
+    }
+
+    // Cleanup.
+    gc_collector()->collect();
+    REQUIRE(Node::getAliveNodeCount() == 0);
+    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+}
+
 TEST_CASE("serialize and deserialize node tree") {
     using namespace ne;
 

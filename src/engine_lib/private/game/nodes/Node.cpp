@@ -62,7 +62,7 @@ namespace ne {
             return;
         }
 
-        // Check if this node is this.
+        // Check if this node is `this`.
         if (&*pNode == this) [[unlikely]] {
             Logger::get().warn(
                 fmt::format(
@@ -93,61 +93,40 @@ namespace ne {
         // Check if this node is already attached to some node.
         std::scoped_lock parentGuard(pNode->mtxParentNode.first);
         if (pNode->mtxParentNode.second != nullptr) {
-            Error err(fmt::format(
-                "Node \"{}\" attempts to change its parent node from node \"{}\" to node \"{}\". "
-                "Changing node's parent is not supported yet. If you need to attach your node to another "
-                "parent, right now you have 2 ways of implementing this:\n"
-                "1. Create a new duplicate node and attach it instead, remove old node.\n"
-                "2. Have 2 nodes, one is attached but hidden, while other is visible. When you "
-                "need to change node's parent, hide old node and show the hidden (attached) one.",
-                pNode->getName(),
-                pNode->mtxParentNode.second->getName(),
-                getName()));
-            err.showError();
-            throw std::runtime_error(err.getError());
+            // Check if we are already this node's parent.
+            if (&*pNode->mtxParentNode.second == this) {
+                Logger::get().warn(
+                    fmt::format(
+                        "an attempt was made to attach the \"{}\" node to its parent again, "
+                        "aborting this operation",
+                        pNode->getName()),
+                    sNodeLogCategory);
+                return;
+            }
 
-            // TODO: show error until we will find a way to solve cyclic reference that may
-            // TODO: occur when changing parent, example: node A is parent of B and B is parent
-            // TODO: if C, B additionally stores a shared pointer to C but C decided to change
-            // TODO: parent from B to A, after changing parent we have A - C - B hierarchy but B
-            // TODO: stores a shared pointer to C and C stores shared pointer to B (because nodes
-            // TODO: (store shared pointers to children) - cyclic reference.
-            //            Logger::get().warn(
-            //                fmt::format(
-            //                    "node \"{}\" is changing its parent node from node \"{}\" to node \"{}\", "
-            //                    "changing parent node is dangerous and can cause cyclic references, "
-            //                    "make sure you know what you are doing",
-            //                    pNode->getName(),
-            //                    pNode->mtxParentNode.second->getName(),
-            //                    getName()),
-            //                sNodeLogCategory);
+            // Notify start of detachment.
+            pNode->onBeforeDetachedFromParent();
 
-            //            // Change node parent.
-            //            pNode->onBeforeDetachedFromNode(pNode->mtxParentNode.second);
+            // Remove node from parent's children array.
+            std::scoped_lock parentsChildrenGuard(pNode->mtxParentNode.second->mtxChildNodes.first);
 
-            //            // Remove node from parent's children.
-            //            std::scoped_lock
-            //            parentsChildrenGuard(pNode->mtxParentNode.second->mtxChildNodes.first); const auto
-            //            pParentsChildren = &pNode->mtxParentNode.second->mtxChildNodes.second; for (auto it
-            //            = pParentsChildren->begin(); it != pParentsChildren->end(); ++it) {
-            //                if (*it == pNode) {
-            //                    pParentsChildren->erase(it);
-            //                    break;
-            //                }
-            //            }
-
-            //            // Add node.
-            //            pNode->mtxParentNode.second = this;
-            //            mtxChildNodes.second.push_back(pNode);
-
-            //            pNode->onAfterAttachedToNode(mtxParentNode.second);
-        } else {
-            // Add node.
-            pNode->mtxParentNode.second = gc<Node>(this);
-            mtxChildNodes.second->push_back(pNode);
+            const auto pParentsChildren = &pNode->mtxParentNode.second->mtxChildNodes.second;
+            for (auto it = (*pParentsChildren)->begin(); it != (*pParentsChildren)->end(); ++it) {
+                if (*it == pNode) {
+                    (*pParentsChildren)->erase(it);
+                    break;
+                }
+            }
         }
 
-        // don't unlock node's parent lock here yet, still doing some logic based on new parent
+        // Add node to our children array.
+        pNode->mtxParentNode.second = gc<Node>(this);
+        mtxChildNodes.second->push_back(pNode);
+
+        // Notify.
+        pNode->onAfterAttachedToNewParent();
+
+        // don't unlock node's parent lock here yet, still doing some logic based on the new parent
 
         // Spawn/despawn node if needed.
         if (isSpawned() && !pNode->isSpawned()) {
@@ -170,6 +149,9 @@ namespace ne {
         gc<Node> pSelf;
 
         if (mtxParentNode.second != nullptr) {
+            // Notify.
+            onBeforeDetachedFromParent();
+
             // Remove this node from parent's children array.
             std::scoped_lock parentChildGuard(mtxParentNode.second->mtxChildNodes.first);
             auto pParentChildren = &mtxParentNode.second->mtxChildNodes.second;
@@ -462,11 +444,13 @@ namespace ne {
 
     gc_vector<Node> Node::getChildNodes() {
         std::scoped_lock guard(mtxChildNodes.first);
+
         return mtxChildNodes.second;
     }
 
     GameInstance* Node::getGameInstance() {
         std::scoped_lock guard(mtxSpawning);
+
         return pGameInstance;
     }
 
@@ -477,6 +461,39 @@ namespace ne {
             return nullptr;
 
         return pGameInstance->getWorldRootNode();
+    }
+
+    bool Node::isParentOf(Node* pNode) {
+        std::scoped_lock guard(mtxChildNodes.first);
+
+        for (const auto& pChildNode : *mtxChildNodes.second) {
+            if (&*pChildNode == pNode) {
+                return true;
+            }
+
+            const auto bIsChild = pChildNode->isParentOf(pNode);
+            if (!bIsChild) {
+                continue;
+            } else {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    bool Node::isChildOf(Node* pNode) {
+        std::scoped_lock guard(mtxParentNode.first);
+
+        // Check if have a parent.
+        if (!mtxParentNode.second)
+            return false;
+
+        if (&*mtxParentNode.second == pNode) {
+            return true;
+        }
+
+        return mtxParentNode.second->isChildOf(pNode);
     }
 
 } // namespace ne

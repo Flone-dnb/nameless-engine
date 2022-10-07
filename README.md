@@ -9,8 +9,9 @@ TODO: screenshot game/editor
 
 # Features
 
-- Automatic shader caching and cache invalidation.
-
+<details>
+  <summary>Automatic shader caching and cache invalidation</summary>
+  
 ```C++
 const auto vertexShader = ShaderDescription(
     "engine.default.vs",               // shader name
@@ -58,6 +59,8 @@ getWindow()->getRenderer()->getShaderManager()->compileShaders(
 // if shader's .hlsl/.glsl code or any of shader's included files were not changed
 // otherwise it will be recompiled
 ```
+  
+</details>
 
 - TODO.
 

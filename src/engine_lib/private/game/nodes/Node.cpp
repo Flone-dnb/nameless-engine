@@ -8,10 +8,8 @@
 #include "misc/Globals.h"
 #include "game/GameInstance.h"
 
-#if defined(DEBUG)
 /** Total amount of alive nodes. */
 static std::atomic<size_t> iTotalAliveNodeCount{0};
-#endif
 
 namespace ne {
     size_t Node::getAliveNodeCount() { return iTotalAliveNodeCount.load(); }

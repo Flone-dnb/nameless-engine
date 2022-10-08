@@ -81,7 +81,12 @@ namespace ne NENAMESPACE() {
         /**
          * Attaches a node as a child of this node.
          *
-         * @param pNode Node to attach as a child.
+         * If the specified node already has a parent it will change its parent to be
+         * a child of this node. This way you can change to which node you are attached.
+         *
+         * @param pNode Node to attach as a child. If the specified node is a parent of this node the
+         * operation will fail and log an error. Thanks to this you can't make world's root node a child
+         * of some other node (for example).
          */
         void addChildNode(gc<Node> pNode);
 
@@ -213,7 +218,7 @@ namespace ne NENAMESPACE() {
          * @remark This node will be marked as spawned before this function is called.
          * @remark This function is called before any of the child nodes are spawned.
          *
-         * @warning It's better to call parent's version first (before executing your logic).
+         * @warning It's recommended to call parent's version first (before executing your logic).
          */
         virtual void onSpawn() {}
 
@@ -224,17 +229,21 @@ namespace ne NENAMESPACE() {
          * @remark This function is called after all child nodes were despawned.
          * @remark If node's destructor is called but node is still spawned it will be despawned.
          *
-         * @warning It's better to call parent's version first (before executing your logic).
+         * @warning It's recommended to call parent's version first (before executing your logic).
          */
         virtual void onDespawn() {}
 
         /**
          * Called before this node is detached from its current parent node.
+         *
+         * @warning It's recommended to call parent's version first (before executing your logic).
          */
         virtual void onBeforeDetachedFromParent() {}
 
         /**
          * Called after this node was attached to a new parent node.
+         *
+         * @warning It's recommended to call parent's version first (before executing your logic).
          */
         virtual void onAfterAttachedToNewParent() {}
 
@@ -250,6 +259,9 @@ namespace ne NENAMESPACE() {
 
         /** Calls @ref onDespawn on this node and all of its child nodes. */
         void despawn();
+
+        /** Calls @ref onAfterAttachedToNewParent on this node and all of its child nodes. */
+        void notifyAboutAttachedToNewParent();
 
         /**
          * Checks if this node has a valid game instance pointer and returns it if it's

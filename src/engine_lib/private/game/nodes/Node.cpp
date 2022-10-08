@@ -79,13 +79,26 @@ namespace ne {
                 Logger::get().warn(
                     fmt::format(
                         "an attempt was made to attach the \"{}\" node to the \"{}\" node but it's already "
-                        "a child node of \"{}\", aborting this operation",
+                        "a direct child node of \"{}\", aborting this operation",
                         pNode->getName(),
                         getName(),
                         getName()),
                     sNodeLogCategory);
                 return;
             }
+        }
+
+        // Check that we don't add our parent as our child.
+        if (pNode->isParentOf(this)) {
+            Logger::get().error(
+                fmt::format(
+                    "an attempt was made to attach the \"{}\" node to the node \"{}\", "
+                    "but the first node is a parent of the second node, "
+                    "aborting this operation",
+                    pNode->getName(),
+                    getName()),
+                sNodeLogCategory);
+            return;
         }
 
         // Check if this node is already attached to some node.
@@ -122,7 +135,7 @@ namespace ne {
         mtxChildNodes.second->push_back(pNode);
 
         // Notify.
-        pNode->onAfterAttachedToNewParent();
+        pNode->notifyAboutAttachedToNewParent();
 
         // don't unlock node's parent lock here yet, still doing some logic based on the new parent
 
@@ -492,6 +505,16 @@ namespace ne {
         }
 
         return mtxParentNode.second->isChildOf(pNode);
+    }
+
+    void Node::notifyAboutAttachedToNewParent() {
+        std::scoped_lock guard(mtxParentNode.first, mtxChildNodes.first);
+
+        onAfterAttachedToNewParent();
+
+        for (const auto& pChildNode : *mtxChildNodes.second) {
+            pChildNode->notifyAboutAttachedToNewParent();
+        }
     }
 
 } // namespace ne

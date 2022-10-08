@@ -66,6 +66,47 @@ TEST_CASE("build and check node hierarchy") {
     REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
 }
 
+TEST_CASE("move nodes in the hierarchy") {
+    using namespace ne;
+
+    {
+        // Create nodes.
+        const auto pParentNode = gc_new<Node>();
+        const auto pCharacterNode = gc_new<Node>();
+        const auto pCarNode = gc_new<Node>();
+
+        const auto pCharacterChildNode1 = gc_new<Node>();
+        const auto pCharacterChildNode2 = gc_new<Node>();
+
+        // Build hierarchy.
+        pCharacterNode->addChildNode(pCharacterChildNode1);
+        pCharacterNode->addChildNode(pCharacterChildNode2);
+        pParentNode->addChildNode(pCharacterNode);
+        pParentNode->addChildNode(pCarNode);
+
+        // Attach the character to the car.
+        pCarNode->addChildNode(pCharacterNode);
+
+        // See that everything is correct.
+        REQUIRE(&*pCharacterNode->getParent() == &*pCarNode);
+        REQUIRE(pCharacterNode->getChildNodes()->size() == 2);
+        REQUIRE(pCharacterChildNode1->isChildOf(&*pCharacterNode));
+        REQUIRE(pCharacterChildNode2->isChildOf(&*pCharacterNode));
+
+        // Detach the character from the car.
+        pParentNode->addChildNode(pCharacterNode);
+        REQUIRE(&*pCharacterNode->getParent() == &*pParentNode);
+        REQUIRE(pCharacterNode->getChildNodes()->size() == 2);
+        REQUIRE(pCharacterChildNode1->isChildOf(&*pCharacterNode));
+        REQUIRE(pCharacterChildNode2->isChildOf(&*pCharacterNode));
+    }
+
+    // Cleanup.
+    gc_collector()->collect();
+    REQUIRE(Node::getAliveNodeCount() == 0);
+    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+}
+
 TEST_CASE("serialize and deserialize node tree") {
     using namespace ne;
 

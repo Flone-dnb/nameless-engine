@@ -52,6 +52,9 @@ namespace ne {
          * @remark Typically you don't need to call this function as garbage collection is executed
          * regularly (see @ref setGarbageCollectorRunInterval) but you can still call it anyway.
          *
+         * @remark Note that garbage collection will also be executed additionally in some special cases,
+         * such as when World is being destructed or some nodes are being detached and despawned.
+         *
          * @param onFinished Optional callback that will be triggered when garbage collection is finished.
          */
         void queueGarbageCollection(std::optional<std::function<void()>> onFinished);

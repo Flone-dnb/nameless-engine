@@ -205,6 +205,8 @@ TEST_CASE("get parent node of type") {
         virtual void onSpawn() override {
             MyDerivedNode::onSpawn();
 
+            bSpawnCalled = true;
+
             // Get parent without name.
             auto pNode = getParentNodeOfType<MyDerivedNode>();
             REQUIRE(&*pNode == &*getParentNode());
@@ -214,6 +216,7 @@ TEST_CASE("get parent node of type") {
             pNode = getParentNodeOfType<MyDerivedNode>("MyDerivedNode");
             REQUIRE(pNode->iAnswer == 42);
         }
+        bool bSpawnCalled = false;
     };
 
     class TestGameInstance : public GameInstance {
@@ -235,6 +238,8 @@ TEST_CASE("get parent node of type") {
             pDerivedNodeChild->addChildNode(pDerivedDerivedNode);
             pDerivedNodeParent->addChildNode(pDerivedNodeChild);
             getWorldRootNode()->addChildNode(pDerivedNodeParent);
+
+            REQUIRE(pDerivedDerivedNode->bSpawnCalled);
 
             getWindow()->close();
         }

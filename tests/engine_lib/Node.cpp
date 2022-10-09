@@ -260,6 +260,80 @@ TEST_CASE("get parent node of type") {
     REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
 }
 
+TEST_CASE("get child node of type") {
+    using namespace ne;
+
+    class MyDerivedNode : public Node {
+    public:
+        MyDerivedNode() = default;
+        MyDerivedNode(const std::string& sName) : Node(sName) {}
+        virtual ~MyDerivedNode() override = default;
+        int iAnswer = 0;
+    };
+
+    class MyDerivedDerivedNode : public MyDerivedNode {
+    public:
+        MyDerivedDerivedNode() = default;
+        MyDerivedDerivedNode(const std::string& sName) : MyDerivedNode(sName) {}
+        virtual ~MyDerivedDerivedNode() override = default;
+        virtual void onSpawn() override {
+            MyDerivedNode::onSpawn();
+
+            bSpawnCalled = true;
+
+            // Get child without name.
+            auto pNode = getChildNodeOfType<MyDerivedNode>();
+            REQUIRE(&*pNode == &*getChildNodes()->operator[](0));
+            REQUIRE(pNode->iAnswer == 0);
+
+            // Get child with name.
+            pNode = getChildNodeOfType<MyDerivedNode>("MyDerivedNode");
+            REQUIRE(pNode->iAnswer == 42);
+        }
+        bool bSpawnCalled = false;
+    };
+
+    class TestGameInstance : public GameInstance {
+    public:
+        TestGameInstance(Window* pGameWindow, InputManager* pInputManager)
+            : GameInstance(pGameWindow, pInputManager) {}
+        virtual void onGameStarted() override {
+            createWorld();
+
+            // Create nodes.
+            auto pDerivedDerivedNode = gc_new<MyDerivedDerivedNode>();
+
+            auto pDerivedNodeParent = gc_new<MyDerivedNode>();
+
+            const auto pDerivedNodeChild = gc_new<MyDerivedNode>("MyDerivedNode");
+            pDerivedNodeChild->iAnswer = 42;
+
+            // Build node hierarchy.
+            pDerivedNodeParent->addChildNode(pDerivedNodeChild);
+            pDerivedDerivedNode->addChildNode(pDerivedNodeParent);
+            getWorldRootNode()->addChildNode(pDerivedDerivedNode);
+
+            REQUIRE(pDerivedDerivedNode->bSpawnCalled);
+
+            getWindow()->close();
+        }
+        virtual ~TestGameInstance() override {}
+    };
+
+    auto result = Window::getBuilder().withVisibility(false).build();
+    if (std::holds_alternative<Error>(result)) {
+        Error error = std::get<Error>(std::move(result));
+        error.addEntry();
+        INFO(error.getError());
+        REQUIRE(false);
+    }
+
+    const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
+    pMainWindow->processEvents<TestGameInstance>();
+
+    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+}
+
 TEST_CASE("test GC performance and stability with nodes") {
     using namespace ne;
 

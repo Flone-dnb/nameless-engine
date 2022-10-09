@@ -404,20 +404,20 @@ set(ENGINE_TESTS_NAME engine_tests)
 set(TESTS_RELATIVE_PATH ../../tests)
 
 set(ENGINE_TEST_WIN32_SOURCES
-    ${TESTS_RELATIVE_PATH}/engine_lib/directx/DirectXResourceManager.cpp
+    ${TESTS_RELATIVE_PATH}/engine_lib/renderer/directx/DirectXResourceManager.cpp
     # add Windows specific test sources here...
 )
 
 set(ENGINE_TEST_SOURCES
     ${TESTS_RELATIVE_PATH}/engine_lib.cpp
-    ${TESTS_RELATIVE_PATH}/engine_lib/Window.cpp
-    ${TESTS_RELATIVE_PATH}/engine_lib/ConfigManager.cpp
-    ${TESTS_RELATIVE_PATH}/engine_lib/InputManager.cpp
-    ${TESTS_RELATIVE_PATH}/engine_lib/Timer.cpp
-    ${TESTS_RELATIVE_PATH}/engine_lib/ShaderPack.cpp
-    ${TESTS_RELATIVE_PATH}/engine_lib/Serializable.cpp
-    ${TESTS_RELATIVE_PATH}/engine_lib/Node.cpp
-    ${TESTS_RELATIVE_PATH}/engine_lib/World.cpp
+    ${TESTS_RELATIVE_PATH}/engine_lib/game/Window.cpp
+    ${TESTS_RELATIVE_PATH}/engine_lib/io/ConfigManager.cpp
+    ${TESTS_RELATIVE_PATH}/engine_lib/input/InputManager.cpp
+    ${TESTS_RELATIVE_PATH}/engine_lib/misc/Timer.cpp
+    ${TESTS_RELATIVE_PATH}/engine_lib/shaders/ShaderPack.cpp
+    ${TESTS_RELATIVE_PATH}/engine_lib/io/Serializable.cpp
+    ${TESTS_RELATIVE_PATH}/engine_lib/game/nodes/Node.cpp
+    ${TESTS_RELATIVE_PATH}/engine_lib/game/World.cpp
     # add engine test .cpp files here
 )
 

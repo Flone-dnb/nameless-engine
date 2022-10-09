@@ -46,7 +46,7 @@ namespace ne {
         void setGarbageCollectorRunInterval(long long iGcRunIntervalInSec);
 
         /**
-         * Queues a request to run a full garbage collection as a deferred task on the main thread
+         * Queues a request to run a garbage collection as a deferred task on the main thread
          * using @ref addDeferredTask.
          *
          * @remark Typically you don't need to call this function as garbage collection is executed

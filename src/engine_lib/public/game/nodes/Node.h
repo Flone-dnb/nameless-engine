@@ -234,14 +234,17 @@ namespace ne NENAMESPACE() {
         virtual void onDespawn() {}
 
         /**
-         * Called before this node is detached from its current parent node.
+         * Called before this node or one of the node's parents (in the parent hierarchy)
+         * are about to be detached from a node.
          *
          * @warning It's recommended to call parent's version first (before executing your logic).
          */
         virtual void onBeforeDetachedFromParent() {}
 
         /**
-         * Called after this node was attached to a new parent node.
+         * Called after this node or one of the node's parents (in the parent hierarchy)
+         * were attached to a new parent node (i.e. this node or any of its parents were attached
+         * to a new node).
          *
          * @warning It's recommended to call parent's version first (before executing your logic).
          */
@@ -262,6 +265,9 @@ namespace ne NENAMESPACE() {
 
         /** Calls @ref onAfterAttachedToNewParent on this node and all of its child nodes. */
         void notifyAboutAttachedToNewParent();
+
+        /** Calls @ref onBeforeDetachedFromParent on this node and all of its child nodes. */
+        void notifyAboutDetachingFromParent();
 
         /**
          * Checks if this node has a valid game instance pointer and returns it if it's

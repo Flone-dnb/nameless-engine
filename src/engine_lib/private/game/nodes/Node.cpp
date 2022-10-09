@@ -116,7 +116,7 @@ namespace ne {
             }
 
             // Notify start of detachment.
-            pNode->onBeforeDetachedFromParent();
+            pNode->notifyAboutDetachingFromParent();
 
             // Remove node from parent's children array.
             std::scoped_lock parentsChildrenGuard(pNode->mtxParentNode.second->mtxChildNodes.first);
@@ -161,7 +161,7 @@ namespace ne {
 
         if (mtxParentNode.second != nullptr) {
             // Notify.
-            onBeforeDetachedFromParent();
+            notifyAboutDetachingFromParent();
 
             // Remove this node from parent's children array.
             std::scoped_lock parentChildGuard(mtxParentNode.second->mtxChildNodes.first);
@@ -514,6 +514,16 @@ namespace ne {
 
         for (const auto& pChildNode : *mtxChildNodes.second) {
             pChildNode->notifyAboutAttachedToNewParent();
+        }
+    }
+
+    void Node::notifyAboutDetachingFromParent() {
+        std::scoped_lock guard(mtxParentNode.first, mtxChildNodes.first);
+
+        onBeforeDetachedFromParent();
+
+        for (const auto& pChildNode : *mtxChildNodes.second) {
+            pChildNode->notifyAboutDetachingFromParent();
         }
     }
 

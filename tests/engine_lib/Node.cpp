@@ -42,9 +42,9 @@ TEST_CASE("build and check node hierarchy") {
         REQUIRE(&*pChildNode->getChildNodes()->operator[](0) == &*pChildChildNode1);
         REQUIRE(&*pChildNode->getChildNodes()->operator[](1) == &*pChildChildNode2);
 
-        REQUIRE(pChildNode->getParent() == pParentNode);
-        REQUIRE(pChildChildNode1->getParent() == pChildNode);
-        REQUIRE(pChildChildNode2->getParent() == pChildNode);
+        REQUIRE(pChildNode->getParentNode() == pParentNode);
+        REQUIRE(pChildChildNode1->getParentNode() == pChildNode);
+        REQUIRE(pChildChildNode2->getParentNode() == pChildNode);
 
         REQUIRE(pParentNode->isParentOf(&*pChildNode));
         REQUIRE(pParentNode->isParentOf(&*pChildChildNode1));
@@ -87,15 +87,17 @@ TEST_CASE("move nodes in the hierarchy") {
         // Attach the character to the car.
         pCarNode->addChildNode(pCharacterNode);
 
-        // See that everything is correct.
-        REQUIRE(&*pCharacterNode->getParent() == &*pCarNode);
+        // Check that everything is correct.
+        REQUIRE(&*pCharacterNode->getParentNode() == &*pCarNode);
         REQUIRE(pCharacterNode->getChildNodes()->size() == 2);
         REQUIRE(pCharacterChildNode1->isChildOf(&*pCharacterNode));
         REQUIRE(pCharacterChildNode2->isChildOf(&*pCharacterNode));
 
         // Detach the character from the car.
         pParentNode->addChildNode(pCharacterNode);
-        REQUIRE(&*pCharacterNode->getParent() == &*pParentNode);
+
+        // Check that everything is correct.
+        REQUIRE(&*pCharacterNode->getParentNode() == &*pParentNode);
         REQUIRE(pCharacterNode->getChildNodes()->size() == 2);
         REQUIRE(pCharacterChildNode1->isChildOf(&*pCharacterNode));
         REQUIRE(pCharacterChildNode2->isChildOf(&*pCharacterNode));
@@ -184,7 +186,76 @@ TEST_CASE("serialize and deserialize node tree") {
     REQUIRE(Node::getAliveNodeCount() == 0); // cyclic references should be freed
 }
 
-TEST_CASE("test GC performance and stability") {
+TEST_CASE("get parent node of type") {
+    using namespace ne;
+
+    class MyDerivedNode : public Node {
+    public:
+        MyDerivedNode() = default;
+        MyDerivedNode(const std::string& sName) : Node(sName) {}
+        virtual ~MyDerivedNode() override = default;
+        int iAnswer = 0;
+    };
+
+    class MyDerivedDerivedNode : public MyDerivedNode {
+    public:
+        MyDerivedDerivedNode() = default;
+        MyDerivedDerivedNode(const std::string& sName) : MyDerivedNode(sName) {}
+        virtual ~MyDerivedDerivedNode() override = default;
+        virtual void onSpawn() override {
+            MyDerivedNode::onSpawn();
+
+            // Get parent without name.
+            auto pNode = getParentNodeOfType<MyDerivedNode>();
+            REQUIRE(&*pNode == &*getParentNode());
+            REQUIRE(pNode->iAnswer == 0);
+
+            // Get parent with name.
+            pNode = getParentNodeOfType<MyDerivedNode>("MyDerivedNode");
+            REQUIRE(pNode->iAnswer == 42);
+        }
+    };
+
+    class TestGameInstance : public GameInstance {
+    public:
+        TestGameInstance(Window* pGameWindow, InputManager* pInputManager)
+            : GameInstance(pGameWindow, pInputManager) {}
+        virtual void onGameStarted() override {
+            createWorld();
+
+            // Create nodes.
+            auto pDerivedNodeParent = gc_new<MyDerivedNode>("MyDerivedNode");
+            pDerivedNodeParent->iAnswer = 42;
+
+            const auto pDerivedNodeChild = gc_new<MyDerivedNode>();
+
+            auto pDerivedDerivedNode = gc_new<MyDerivedDerivedNode>();
+
+            // Build node hierarchy.
+            pDerivedNodeChild->addChildNode(pDerivedDerivedNode);
+            pDerivedNodeParent->addChildNode(pDerivedNodeChild);
+            getWorldRootNode()->addChildNode(pDerivedNodeParent);
+
+            getWindow()->close();
+        }
+        virtual ~TestGameInstance() override {}
+    };
+
+    auto result = Window::getBuilder().withVisibility(false).build();
+    if (std::holds_alternative<Error>(result)) {
+        Error error = std::get<Error>(std::move(result));
+        error.addEntry();
+        INFO(error.getError());
+        REQUIRE(false);
+    }
+
+    const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
+    pMainWindow->processEvents<TestGameInstance>();
+
+    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+}
+
+TEST_CASE("test GC performance and stability with nodes") {
     using namespace ne;
 
     class TestGameInstance : public GameInstance {

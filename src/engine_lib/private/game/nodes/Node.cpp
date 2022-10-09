@@ -285,7 +285,7 @@ namespace ne {
         pGameInstance = nullptr; // don't allow accessing game instance or world at this point
     }
 
-    gc<Node> Node::getParent() {
+    gc<Node> Node::getParentNode() {
         std::scoped_lock guard(mtxParentNode.first);
         return mtxParentNode.second;
     }

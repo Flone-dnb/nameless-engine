@@ -155,7 +155,7 @@ namespace ne NENAMESPACE() {
          *
          * @return nullptr if there is no parent node, otherwise valid pointer.
          */
-        gc<Node> getParent();
+        gc<Node> getParentNode();
 
         /**
          * Returns a copy of the array of child nodes.
@@ -180,7 +180,7 @@ namespace ne NENAMESPACE() {
          * Do not delete returned pointer.
          */
         template <typename NodeType>
-        requires std::derived_from<NodeType, Node> gc<Node>
+        requires std::derived_from<NodeType, Node> gc<NodeType>
         getParentNodeOfType(const std::string& sParentNodeName = "");
 
         /**
@@ -198,7 +198,7 @@ namespace ne NENAMESPACE() {
          * @return nullptr if not found, otherwise a valid pointer to the node.
          */
         template <typename NodeType>
-        requires std::derived_from<NodeType, Node> gc<Node>
+        requires std::derived_from<NodeType, Node> gc<NodeType>
         getChildNodeOfType(const std::string& sChildNodeName = "");
 
         /**
@@ -343,7 +343,7 @@ namespace ne NENAMESPACE() {
     };
 
     template <typename NodeType>
-    requires std::derived_from<NodeType, Node> gc<Node> Node::getParentNodeOfType(
+    requires std::derived_from<NodeType, Node> gc<NodeType> Node::getParentNodeOfType(
         const std::string& sParentNodeName) {
         std::scoped_lock guard(mtxParentNode.first);
 
@@ -354,21 +354,21 @@ namespace ne NENAMESPACE() {
         // Check parent's type and optionally name.
         if (dynamic_cast<NodeType*>(&*mtxParentNode.second) &&
             (sParentNodeName.empty() || mtxParentNode.second->getName() == sParentNodeName)) {
-            return mtxParentNode.second;
+            return gc_dynamic_pointer_cast<NodeType>(mtxParentNode.second);
         }
 
         return mtxParentNode.second->getParentNodeOfType<NodeType>(sParentNodeName);
     }
 
     template <typename NodeType>
-    requires std::derived_from<NodeType, Node> gc<Node> Node::getChildNodeOfType(
+    requires std::derived_from<NodeType, Node> gc<NodeType> Node::getChildNodeOfType(
         const std::string& sChildNodeName) {
         std::scoped_lock guard(mtxChildNodes.first);
 
-        for (const auto& pChildNode : *mtxChildNodes.second) {
+        for (auto& pChildNode : *mtxChildNodes.second) {
             if (dynamic_cast<NodeType*>(&*pChildNode) &&
                 (sChildNodeName.empty() || pChildNode->getName() == sChildNodeName)) {
-                return pChildNode;
+                return gc_dynamic_pointer_cast<NodeType>(pChildNode);
             }
 
             const auto pNode = pChildNode->getChildNodeOfType<NodeType>(sChildNodeName);

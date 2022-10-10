@@ -12,7 +12,7 @@
 
 #include "Node.generated.h"
 
-namespace ne NENAMESPACE() {
+namespace ne RNAMESPACE() {
     class GameInstance;
 
     /**
@@ -23,7 +23,7 @@ namespace ne NENAMESPACE() {
      * serialized instances of this class reference old (invalid) class ID. Include a backwards compatibility
      * in this case.
      */
-    class NECLASS(Guid("2a721c37-3c22-450c-8dad-7b6985cbbd61")) Node : public Serializable {
+    class RCLASS(Guid("2a721c37-3c22-450c-8dad-7b6985cbbd61")) Node : public Serializable {
     public:
         /**
          * Returns the total amount of currently alive (allocated) nodes.
@@ -309,7 +309,7 @@ namespace ne NENAMESPACE() {
         void unlockChildren();
 
         /** Node name. */
-        NEPROPERTY()
+        RPROPERTY()
         std::string sName;
 
         /** Attached child nodes. Should be used under the mutex when changing children. */

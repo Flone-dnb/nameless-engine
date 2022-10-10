@@ -321,15 +321,15 @@ func initialize_refureku_settings(
 	cfg.ParsingSettings.CppVersion = cpp_standard
 	cfg.ParsingSettings.ShouldFailCodeGenerationOnClangErrors = true
 	// WARNING: if changing macro names also change them in Doxyfile in PREDEFINED section
-	cfg.ParsingSettings.NamespaceMacroName = "NENAMESPACE"
-	cfg.ParsingSettings.ClassMacroName = "NECLASS"
-	cfg.ParsingSettings.StructMacroName = "NESTRUCT"
-	cfg.ParsingSettings.VariableMacroName = "NEGLOBALVARIABLE"
-	cfg.ParsingSettings.FieldMacroName = "NEPROPERTY"
-	cfg.ParsingSettings.FunctionMacroName = "NEGLOBALFUNCTION"
-	cfg.ParsingSettings.MethodMacroName = "NEFUNCTION"
-	cfg.ParsingSettings.EnumMacroName = "NEENUM"
-	cfg.ParsingSettings.EnumValueMacroName = "NEENUMVALUE"
+	cfg.ParsingSettings.NamespaceMacroName = "RNAMESPACE"
+	cfg.ParsingSettings.ClassMacroName = "RCLASS"
+	cfg.ParsingSettings.StructMacroName = "RSTRUCT"
+	cfg.ParsingSettings.VariableMacroName = "RGLOBALVARIABLE"
+	cfg.ParsingSettings.FieldMacroName = "RPROPERTY"
+	cfg.ParsingSettings.FunctionMacroName = "RGLOBALFUNCTION"
+	cfg.ParsingSettings.MethodMacroName = "RFUNCTION"
+	cfg.ParsingSettings.EnumMacroName = "RENUM"
+	cfg.ParsingSettings.EnumValueMacroName = "RENUMVALUE"
 
 	// Save new configuration.
 	out_file, err := os.Create(out_settings_file)

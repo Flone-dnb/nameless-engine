@@ -257,7 +257,7 @@ namespace ne {
                 const Error err(fmt::format(
                     "Type {} does not have a GUID assigned to it.\n\n"
                     "Here is an example of how to assign a GUID to your type:\n"
-                    "class NECLASS(Guid(\"00000000-0000-0000-0000-000000000000\")) MyCoolClass "
+                    "class RCLASS(Guid(\"00000000-0000-0000-0000-000000000000\")) MyCoolClass "
                     ": public ne::Serializable",
                     pDerivedEntity->getName()));
                 err.showError();
@@ -421,7 +421,7 @@ namespace ne {
                 const Error err(fmt::format(
                     "Type {} does not have a GUID assigned to it.\n\n"
                     "Here is an example of how to assign a GUID to your type:\n"
-                    "class NECLASS(Guid(\"00000000-0000-0000-0000-000000000000\")) MyCoolClass "
+                    "class RCLASS(Guid(\"00000000-0000-0000-0000-000000000000\")) MyCoolClass "
                     ": public ne::Serializable",
                     pDerivedEntity->getName()));
                 err.showError();

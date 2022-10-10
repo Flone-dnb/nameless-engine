@@ -9,7 +9,7 @@
 
 #include "GuidProperty.generated.h"
 
-namespace ne NENAMESPACE() {
+namespace ne RNAMESPACE() {
     /**
      * GUID property for classes and structs that inherit Serializable class.
      * This property is required for all derived classes/structs of Serializable class.
@@ -17,7 +17,7 @@ namespace ne NENAMESPACE() {
      *
      * Usage example:
      * @code
-     * class NECLASS(ne::Guid("00000000-0000-0000-0000-000000000000")) MyCoolClass : public ne::Serializable
+     * class RCLASS(ne::Guid("00000000-0000-0000-0000-000000000000")) MyCoolClass : public ne::Serializable
      * @endcode
      *
      * You can generate a random GUID by just googling "generate GUID" and using any site/tool to generate it.
@@ -26,8 +26,8 @@ namespace ne NENAMESPACE() {
      * if all of your GUIDs are unique or not, this is done automatically and if something is not unique
      * you will get a message box with an error on engine startup saying where and what is not unique.
      */
-    class NECLASS(rfk::PropertySettings(rfk::EEntityKind::Class | rfk::EEntityKind::Struct, false, false))
-        Guid : public rfk::Property {
+    class RCLASS(rfk::PropertySettings(rfk::EEntityKind::Class | rfk::EEntityKind::Struct, false, false)) Guid
+        : public rfk::Property {
     public:
         Guid() = default;
         virtual ~Guid() override = default;

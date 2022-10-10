@@ -5,7 +5,7 @@
 
 #include "DontSerializeProperty.generated.h"
 
-namespace ne NENAMESPACE() {
+namespace ne RNAMESPACE() {
     /**
      * Add this property to your reflected field to ignore it when serializing an object.
      *
@@ -13,11 +13,11 @@ namespace ne NENAMESPACE() {
      * @code
      * // #include here
      * // ...
-     * NEPROPERTY(ne::DontSerialize)
+     * RPROPERTY(ne::DontSerialize)
      * int iKey = 42; // will be ignored and not serialized
      * @endcode
      */
-    class NECLASS(rfk::PropertySettings(rfk::EEntityKind::Field, false, false)) DontSerialize
+    class RCLASS(rfk::PropertySettings(rfk::EEntityKind::Field, false, false)) DontSerialize
         : public rfk::Property {
     public:
         DontSerialize() = default;

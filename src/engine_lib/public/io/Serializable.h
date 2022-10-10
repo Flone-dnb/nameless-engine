@@ -23,7 +23,7 @@
 
 #include "Serializable.generated.h"
 
-namespace ne NENAMESPACE() {
+namespace ne RNAMESPACE() {
     class Serializable;
 
     /** Information about an object to be serialized. */
@@ -94,7 +94,7 @@ namespace ne NENAMESPACE() {
      * Inherit your class from this type to add a 'serialize' function which will
      * serialize the type and all reflected fields (even inherited) into a file.
      */
-    class NECLASS(Guid("f5a59b47-ead8-4da4-892e-cf05abb2f3cc")) Serializable : public rfk::Object {
+    class RCLASS(Guid("f5a59b47-ead8-4da4-892e-cf05abb2f3cc")) Serializable : public rfk::Object {
     public:
         Serializable() = default;
         virtual ~Serializable() override = default;
@@ -130,7 +130,7 @@ namespace ne NENAMESPACE() {
          * process. Note that you don't need to mark fields of types that are always ignored (const, pointers,
          * etc.) because they will be ignored anyway. Example:
          * @code
-         * NEPROPERTY(DontSerialize)
+         * RPROPERTY(DontSerialize)
          * int iKey = 42; // will be ignored and not serialized
          * @endcode
          *

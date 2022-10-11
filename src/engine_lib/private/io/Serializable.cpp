@@ -105,6 +105,7 @@ namespace ne {
 
                 Data* pData = static_cast<Data*>(userData);
                 const auto sFieldName = field.getName();
+                const auto sFieldCanonicalTypeName = field.getCanonicalTypeName();
 
                 try {
                     // Throws if not found.
@@ -128,7 +129,12 @@ namespace ne {
                         // Store double as string for better precision.
                         pData->pTomlData->operator[](pData->sSectionName).operator[](sFieldName) =
                             toml::format(toml::value(field.getUnsafe<double>(pData->self)));
-                    } else if (fieldType.match(rfk::getType<std::string>())) {
+                    }
+                    // non-reflected STL types have equal types in Refureku
+                    // thus add additional checks
+                    else if (
+                        fieldType.match(rfk::getType<std::string>()) &&
+                        (sFieldCanonicalTypeName == sStringCanonicalTypeName)) {
                         pData->pTomlData->operator[](pData->sSectionName).operator[](sFieldName) =
                             field.getUnsafe<std::string>(pData->self);
                     } else if (

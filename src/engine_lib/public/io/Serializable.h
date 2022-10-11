@@ -363,10 +363,13 @@ namespace ne RNAMESPACE() {
         }
 
         /** Name of the key in which to store name of the field a section represents. */
-        static inline auto const sSubEntityFieldNameKey = ".field_name";
+        static inline const auto sSubEntityFieldNameKey = ".field_name";
 
         /** Name of the key which we use when there is nothing to serialize. */
-        static inline auto const sNothingToSerializeKey = ".none";
+        static inline const auto sNothingToSerializeKey = ".none";
+
+        /** Canonical type name for `std::string` fields. */
+        static inline const std::string sStringCanonicalTypeName = "std::basic_string<char>";
 
         ne_Serializable_GENERATED
     };
@@ -564,6 +567,7 @@ namespace ne RNAMESPACE() {
                 continue;
             }
             const auto& fieldType = pField->getType();
+            const auto sFieldCanonicalTypeName = pField->getCanonicalTypeName();
 
             if (!isFieldSerializable(*pField))
                 continue;
@@ -590,7 +594,12 @@ namespace ne RNAMESPACE() {
                     return Error(fmt::format(
                         "failed to convert string to double for field \"{}\": {}", sFieldName, ex.what()));
                 }
-            } else if (fieldType.match(rfk::getType<std::string>()) && value.is_string()) {
+            }
+            // non-reflected STL types have equal types in Refureku
+            // thus add additional checks
+            else if (
+                fieldType.match(rfk::getType<std::string>()) && value.is_string() &&
+                (sFieldCanonicalTypeName == sStringCanonicalTypeName)) {
                 auto fieldValue = value.as_string().str;
                 pField->setUnsafe<std::string>(&*pGcInstance, std::move(fieldValue));
             } else if (fieldType.getArchetype()) {

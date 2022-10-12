@@ -105,14 +105,17 @@ namespace ne {
 
                 Data* pData = static_cast<Data*>(userData);
                 const auto sFieldName = field.getName();
-                const auto sFieldCanonicalTypeName = field.getCanonicalTypeName();
 
                 try {
                     // Throws if not found.
                     toml::find(*pData->pTomlData, pData->sSectionName, sFieldName);
                 } catch (...) {
+                    // ----------------------------------------------------------------------------
                     // No field exists with this name in this section - OK.
                     // Look at field type and save it in TOML data.
+                    // ----------------------------------------------------------------------------
+                    // Primitive types.
+                    // ----------------------------------------------------------------------------
                     if (fieldType.match(rfk::getType<bool>())) {
                         pData->pTomlData->operator[](pData->sSectionName).operator[](sFieldName) =
                             field.getUnsafe<bool>(pData->self);
@@ -130,14 +133,50 @@ namespace ne {
                         pData->pTomlData->operator[](pData->sSectionName).operator[](sFieldName) =
                             toml::format(toml::value(field.getUnsafe<double>(pData->self)));
                     }
+                    // ----------------------------------------------------------------------------
+                    // STL types.
+                    // ----------------------------------------------------------------------------
                     // non-reflected STL types have equal types in Refureku
                     // thus add additional checks
-                    else if (
-                        fieldType.match(rfk::getType<std::string>()) &&
-                        (sFieldCanonicalTypeName == sStringCanonicalTypeName)) {
+                    // ----------------------------------------------------------------------------
+                    else if (field.getCanonicalTypeName() == sStringCanonicalTypeName) {
+                        // Field type is `std::string`.
                         pData->pTomlData->operator[](pData->sSectionName).operator[](sFieldName) =
                             field.getUnsafe<std::string>(pData->self);
-                    } else if (
+                    } else if (field.getCanonicalTypeName() == sVectorBoolCanonicalTypeName) {
+                        // Field type is `std::vector<bool>`.
+                        pData->pTomlData->operator[](pData->sSectionName).operator[](sFieldName) =
+                            field.getUnsafe<std::vector<bool>>(pData->self);
+                    } else if (field.getCanonicalTypeName() == sVectorIntCanonicalTypeName) {
+                        // Field type is `std::vector<int>`.
+                        pData->pTomlData->operator[](pData->sSectionName).operator[](sFieldName) =
+                            field.getUnsafe<std::vector<int>>(pData->self);
+                    } else if (field.getCanonicalTypeName() == sVectorLongLongCanonicalTypeName) {
+                        // Field type is `std::vector<long long>`.
+                        pData->pTomlData->operator[](pData->sSectionName).operator[](sFieldName) =
+                            field.getUnsafe<std::vector<long long>>(pData->self);
+                    } else if (field.getCanonicalTypeName() == sVectorFloatCanonicalTypeName) {
+                        // Field type is `std::vector<float>`.
+                        pData->pTomlData->operator[](pData->sSectionName).operator[](sFieldName) =
+                            field.getUnsafe<std::vector<float>>(pData->self);
+                    } else if (field.getCanonicalTypeName() == sVectorDoubleCanonicalTypeName) {
+                        // Field type is `std::vector<double>`.
+                        const std::vector<double> vArray = field.getUnsafe<std::vector<double>>(pData->self);
+                        // Store double as string for better precision.
+                        std::vector<std::string> vStrArray;
+                        for (const auto& item : vArray) {
+                            vStrArray.push_back(toml::format(toml::value(item)));
+                        }
+                        pData->pTomlData->operator[](pData->sSectionName).operator[](sFieldName) = vStrArray;
+                    } else if (field.getCanonicalTypeName() == sVectorStringCanonicalTypeName) {
+                        // Field type is `std::vector<std::string>`.
+                        pData->pTomlData->operator[](pData->sSectionName).operator[](sFieldName) =
+                            field.getUnsafe<std::vector<std::string>>(pData->self);
+                    }
+                    // ----------------------------------------------------------------------------
+                    // Custom reflected types.
+                    // ----------------------------------------------------------------------------
+                    else if (
                         fieldType.getArchetype() && isDerivedFromSerializable(fieldType.getArchetype())) {
                         // Field with a reflected type.
                         // Check that this type has GUID.
@@ -171,7 +210,11 @@ namespace ne {
                         pData->pTomlData->operator[](sSubEntityFinalSectionName)
                             .
                             operator[](sSubEntityFieldNameKey) = sFieldName;
-                    } else {
+                    }
+                    // ----------------------------------------------------------------------------
+                    // Other.
+                    // ----------------------------------------------------------------------------
+                    else {
                         pData->error = Error(fmt::format(
                             "field \"{}\" (maybe inherited) of class \"{}\" has unsupported for "
                             "serialization type",
@@ -375,20 +418,56 @@ namespace ne {
                 const auto* pFieldTo =
                     pData->pTo->getArchetype().getFieldByName(sFieldName, rfk::EFieldFlags::Default, true);
 
-                if (cloneFieldIfMatchesType<bool>(pData->pFrom, field, pData->pTo, pFieldTo))
+                if (cloneFieldIfMatchesPrimitiveType<bool>(pData->pFrom, field, pData->pTo, pFieldTo))
                     return true;
-                if (cloneFieldIfMatchesType<int>(pData->pFrom, field, pData->pTo, pFieldTo))
+                if (cloneFieldIfMatchesPrimitiveType<int>(pData->pFrom, field, pData->pTo, pFieldTo))
                     return true;
-                if (cloneFieldIfMatchesType<long long>(pData->pFrom, field, pData->pTo, pFieldTo))
+                if (cloneFieldIfMatchesPrimitiveType<long long>(pData->pFrom, field, pData->pTo, pFieldTo))
                     return true;
-                if (cloneFieldIfMatchesType<float>(pData->pFrom, field, pData->pTo, pFieldTo))
+                if (cloneFieldIfMatchesPrimitiveType<float>(pData->pFrom, field, pData->pTo, pFieldTo))
                     return true;
-                if (cloneFieldIfMatchesType<double>(pData->pFrom, field, pData->pTo, pFieldTo))
-                    return true;
-                if (cloneFieldIfMatchesType<std::string>(pData->pFrom, field, pData->pTo, pFieldTo))
+                if (cloneFieldIfMatchesPrimitiveType<double>(pData->pFrom, field, pData->pTo, pFieldTo))
                     return true;
 
-                if (fieldType.getArchetype() && isDerivedFromSerializable(fieldType.getArchetype())) {
+                // ----------------------------------------------------------------------------
+                // STL types.
+                // ----------------------------------------------------------------------------
+                // non-reflected STL types have equal types in Refureku
+                // thus add additional checks
+                // ----------------------------------------------------------------------------
+                if (field.getCanonicalTypeName() == sStringCanonicalTypeName) {
+                    // Field type is `std::string`.
+                    auto value = field.getUnsafe<std::string>(pData->pFrom);
+                    pFieldTo->setUnsafe<std::string>(pData->pTo, std::move(value));
+                } else if (field.getCanonicalTypeName() == sVectorBoolCanonicalTypeName) {
+                    // Field type is `std::vector<bool>`.
+                    auto value = field.getUnsafe<std::vector<bool>>(pData->pFrom);
+                    pFieldTo->setUnsafe<std::vector<bool>>(pData->pTo, std::move(value));
+                } else if (field.getCanonicalTypeName() == sVectorIntCanonicalTypeName) {
+                    // Field type is `std::vector<int>`.
+                    auto value = field.getUnsafe<std::vector<int>>(pData->pFrom);
+                    pFieldTo->setUnsafe<std::vector<int>>(pData->pTo, std::move(value));
+                } else if (field.getCanonicalTypeName() == sVectorLongLongCanonicalTypeName) {
+                    // Field type is `std::vector<long long>`.
+                    auto value = field.getUnsafe<std::vector<long long>>(pData->pFrom);
+                    pFieldTo->setUnsafe<std::vector<long long>>(pData->pTo, std::move(value));
+                } else if (field.getCanonicalTypeName() == sVectorFloatCanonicalTypeName) {
+                    // Field type is `std::vector<float>`.
+                    auto value = field.getUnsafe<std::vector<float>>(pData->pFrom);
+                    pFieldTo->setUnsafe<std::vector<float>>(pData->pTo, std::move(value));
+                } else if (field.getCanonicalTypeName() == sVectorDoubleCanonicalTypeName) {
+                    // Field type is `std::vector<double>`.
+                    auto value = field.getUnsafe<std::vector<double>>(pData->pFrom);
+                    pFieldTo->setUnsafe<std::vector<double>>(pData->pTo, std::move(value));
+                } else if (field.getCanonicalTypeName() == sVectorStringCanonicalTypeName) {
+                    // Field type is `std::vector<std::string>`.
+                    auto value = field.getUnsafe<std::vector<std::string>>(pData->pFrom);
+                    pFieldTo->setUnsafe<std::vector<std::string>>(pData->pTo, std::move(value));
+                }
+                // ----------------------------------------------------------------------------
+                // Custom reflected types.
+                // ----------------------------------------------------------------------------
+                else if (fieldType.getArchetype() && isDerivedFromSerializable(fieldType.getArchetype())) {
                     auto optionalError = cloneSerializableObject(
                         static_cast<Serializable*>(field.getPtrUnsafe(pData->pFrom)),
                         static_cast<Serializable*>(pFieldTo->getPtrUnsafe(pData->pTo)));

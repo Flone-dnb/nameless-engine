@@ -412,6 +412,7 @@ set(ENGINE_TEST_SOURCES
     ${TESTS_RELATIVE_PATH}/engine_lib.cpp
     ${TESTS_RELATIVE_PATH}/engine_lib/game/Window.cpp
     ${TESTS_RELATIVE_PATH}/engine_lib/io/ConfigManager.cpp
+    ${TESTS_RELATIVE_PATH}/engine_lib/io/ReflectionTest.h
     ${TESTS_RELATIVE_PATH}/engine_lib/input/InputManager.cpp
     ${TESTS_RELATIVE_PATH}/engine_lib/misc/Timer.cpp
     ${TESTS_RELATIVE_PATH}/engine_lib/shaders/ShaderPack.cpp

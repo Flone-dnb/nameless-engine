@@ -19,6 +19,7 @@ TEST_CASE("serialize and deserialize fields of different types") {
     // Create test instance with some fields.
     ReflectionOuterTestClass outerTestObj;
     outerTestObj.bBoolValue = true;
+    outerTestObj.iIntNotSerialized = 42;
     {
         ReflectionTestClass testObj;
         testObj.bBoolValue = true;
@@ -63,6 +64,8 @@ TEST_CASE("serialize and deserialize fields of different types") {
     // Compare results.
 
     // Primitive types + std::string.
+    REQUIRE(outerTestObj.iIntNotSerialized != 0);
+    REQUIRE(pDeserialized->iIntNotSerialized == 0);
     REQUIRE(outerTestObj.bBoolValue == pDeserialized->bBoolValue);
     REQUIRE(outerTestObj.entity.bBoolValue == pDeserialized->entity.bBoolValue);
     REQUIRE(outerTestObj.entity.iIntValue == pDeserialized->entity.iIntValue);

@@ -2,6 +2,7 @@
 
 // Custom.
 #include "io/Serializable.h"
+#include "io/DontSerializeProperty.h"
 
 #include "ReflectionTest.generated.h"
 
@@ -55,6 +56,9 @@ class RCLASS(Guid("550ea9f9-dd8a-4089-a717-0fe4e351a689")) ReflectionOuterTestCl
 public:
     ReflectionOuterTestClass() = default;
     virtual ~ReflectionOuterTestClass() override = default;
+
+    RPROPERTY(DontSerialize)
+    int iIntNotSerialized = 0;
 
     RPROPERTY()
     bool bBoolValue = false;

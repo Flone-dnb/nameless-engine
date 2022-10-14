@@ -139,7 +139,7 @@ namespace ne {
          * - strings,
          * - date/time,
          * - array containers (vector, list, deque, etc.),
-         * - map containers (unordered_map, etc.).
+         * - map containers (std::unordered_map<std::string, T>, etc.) (key should be `std::string`).
          *
          * In order to use custom user types include @ref ConfigManager
          * and see our ShaderDescription class or:

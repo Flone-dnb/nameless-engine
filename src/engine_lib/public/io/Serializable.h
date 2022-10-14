@@ -124,8 +124,10 @@ namespace ne RNAMESPACE() {
          * - `float`
          * - `double`
          * - `std::string`
+         * - `std::vector<T>` and `std::unordered_map<T, T>` (where T is any type from above)
          * - `T` (where T is any type that derives from Serializable)
-         * - `std::vector<T>` (where T is any type from above)
+         * Note that `std::vector<T>` and `std::unordered_map<T, T>` where T is any type derives from
+         * Serializable is not supported.
          *
          * @remark You can mark reflected property as DontSerialize so it will be ignored in the serialization
          * process. Note that you don't need to mark fields of types that are always ignored (const, pointers,
@@ -310,6 +312,50 @@ namespace ne RNAMESPACE() {
         static bool isDerivedFromSerializable(rfk::Archetype const* pArchetype);
 
         /**
+         * Serializes vector field into TOML value.
+         *
+         * @param pTomlData     TOML value to serialize field to.
+         * @param pFieldOwner   Field owner.
+         * @param pField        Field to serialize.
+         * @param sSectionName  Section to use for this field.
+         *
+         * @return `true` if vector's inner type is not supported for serialization, `false` otherwise.
+         */
+        static bool serializeVectorField(
+            toml::value* pTomlData,
+            Serializable* pFieldOwner,
+            const rfk::Field* pField,
+            const std::string& sSectionName);
+
+        /**
+         * Deserializes a TOML array into a field.
+         *
+         * @param pTomlData     TOML value to deserialize field from.
+         * @param pFieldOwner   Field owner.
+         * @param pField        Field to deserialize.
+         *
+         * @return `true` if failed, `false` otherwise.
+         */
+        static bool
+        deserializeVectorField(toml::value* pTomlData, Serializable* pFieldOwner, const rfk::Field* pField);
+
+        /**
+         * Clones vector field.
+         *
+         * @param pFromInstance Owner instance to copy field from.
+         * @param pFromField    Field to copy from.
+         * @param pToInstance   Instance to copy to.
+         * @param pToField      Field instance to copy to.
+         *
+         * @return `true` vector's inner type is not supported for serialization, `false` otherwise.
+         */
+        static bool cloneVectorField(
+            Serializable* pFromInstance,
+            const rfk::Field* pFromField,
+            Serializable* pToInstance,
+            const rfk::Field* pToField);
+
+        /**
          * Returns archetype for the specified GUID.
          *
          * @param sGuid GUID to look for.
@@ -375,25 +421,6 @@ namespace ne RNAMESPACE() {
 
         /** Canonical type name for `std::string` fields. */
         static inline const std::string sStringCanonicalTypeName = "std::basic_string<char>";
-
-        /** Canonical type name for `std::vector<bool>` fields. */
-        static inline const std::string sVectorBoolCanonicalTypeName = "std::vector<bool>";
-
-        /** Canonical type name for `std::vector<int>` fields. */
-        static inline const std::string sVectorIntCanonicalTypeName = "std::vector<int>";
-
-        /** Canonical type name for `std::vector<long long>` fields. */
-        static inline const std::string sVectorLongLongCanonicalTypeName = "std::vector<long long>";
-
-        /** Canonical type name for `std::vector<float>` fields. */
-        static inline const std::string sVectorFloatCanonicalTypeName = "std::vector<float>";
-
-        /** Canonical type name for `std::vector<double>` fields. */
-        static inline const std::string sVectorDoubleCanonicalTypeName = "std::vector<double>";
-
-        /** Canonical type name for `std::vector<std::string>` fields. */
-        static inline const std::string sVectorStringCanonicalTypeName =
-            "std::vector<std::basic_string<char>>";
 
         ne_Serializable_GENERATED
     };
@@ -597,6 +624,7 @@ namespace ne RNAMESPACE() {
                 continue;
             }
             const auto& fieldType = pField->getType();
+            const auto sFieldCanonicalTypeName = std::string(pField->getCanonicalTypeName());
 
             if (!isFieldSerializable(*pField))
                 continue;
@@ -633,90 +661,14 @@ namespace ne RNAMESPACE() {
             // non-reflected STL types have equal types in Refureku
             // thus add additional checks
             // ----------------------------------------------------------------------------
-            else if (pField->getCanonicalTypeName() == sStringCanonicalTypeName && value.is_string()) {
+            else if (sFieldCanonicalTypeName == sStringCanonicalTypeName && value.is_string()) {
                 // Field type is `std::string`.
                 auto fieldValue = value.as_string().str;
                 pField->setUnsafe<std::string>(&*pGcInstance, std::move(fieldValue));
-            } else if (pField->getCanonicalTypeName() == sVectorBoolCanonicalTypeName && value.is_array()) {
-                // Field type is `std::vector<bool>`.
-                auto fieldValue = value.as_array();
-                std::vector<bool> vArray;
-                for (const auto& item : fieldValue) {
-                    if (!item.is_boolean()) {
-                        return Error(fmt::format(
-                            "stored field \"{}\" array does not contain `bool` values", sFieldName));
-                    }
-                    vArray.push_back(item.as_boolean());
+            } else if (sFieldCanonicalTypeName.starts_with("std::vector<") && value.is_array()) {
+                if (deserializeVectorField(&value, &*pGcInstance, pField)) {
+                    return Error(fmt::format("unable to deserialize field \"{}\"", sFieldName));
                 }
-                pField->setUnsafe<std::vector<bool>>(&*pGcInstance, std::move(vArray));
-            } else if (pField->getCanonicalTypeName() == sVectorIntCanonicalTypeName) {
-                // Field type is `std::vector<int>`.
-                auto fieldValue = value.as_array();
-                std::vector<int> vArray;
-                for (const auto& item : fieldValue) {
-                    if (!item.is_integer()) {
-                        return Error(fmt::format(
-                            "stored field \"{}\" array does not contain `int` values", sFieldName));
-                    }
-                    vArray.push_back(static_cast<int>(item.as_integer()));
-                }
-                pField->setUnsafe<std::vector<int>>(&*pGcInstance, std::move(vArray));
-            } else if (pField->getCanonicalTypeName() == sVectorLongLongCanonicalTypeName) {
-                // Field type is `std::vector<long long>`.
-                auto fieldValue = value.as_array();
-                std::vector<long long> vArray;
-                for (const auto& item : fieldValue) {
-                    if (!item.is_integer()) {
-                        return Error(fmt::format(
-                            "stored field \"{}\" array does not contain `long long` values", sFieldName));
-                    }
-                    vArray.push_back(item.as_integer());
-                }
-                pField->setUnsafe<std::vector<long long>>(&*pGcInstance, std::move(vArray));
-            } else if (pField->getCanonicalTypeName() == sVectorFloatCanonicalTypeName) {
-                // Field type is `std::vector<float>`.
-                auto fieldValue = value.as_array();
-                std::vector<float> vArray;
-                for (const auto& item : fieldValue) {
-                    if (!item.is_floating()) {
-                        return Error(fmt::format(
-                            "stored field \"{}\" array does not contain `float` values", sFieldName));
-                    }
-                    vArray.push_back(static_cast<float>(item.as_floating()));
-                }
-                pField->setUnsafe<std::vector<float>>(&*pGcInstance, std::move(vArray));
-            } else if (pField->getCanonicalTypeName() == sVectorDoubleCanonicalTypeName) {
-                // Field type is `std::vector<double>`.
-                // Double is stored as a string for better precision.
-                auto fieldValue = value.as_array();
-                std::vector<double> vArray;
-                for (const auto& item : fieldValue) {
-                    if (!item.is_string()) {
-                        return Error(fmt::format(
-                            "stored field \"{}\" array does not contain `string` values", sFieldName));
-                    }
-                    try {
-                        vArray.push_back(std::stod(item.as_string().str));
-                    } catch (std::exception& ex) {
-                        return Error(fmt::format(
-                            "failed to convert string to double for field \"{}\": {}",
-                            sFieldName,
-                            ex.what()));
-                    }
-                }
-                pField->setUnsafe<std::vector<double>>(&*pGcInstance, std::move(vArray));
-            } else if (pField->getCanonicalTypeName() == sVectorStringCanonicalTypeName) {
-                // Field type is `std::vector<std::string>`.
-                auto fieldValue = value.as_array();
-                std::vector<std::string> vArray;
-                for (const auto& item : fieldValue) {
-                    if (!item.is_string()) {
-                        return Error(fmt::format(
-                            "stored field \"{}\" array does not contain `string` values", sFieldName));
-                    }
-                    vArray.push_back(item.as_string());
-                }
-                pField->setUnsafe<std::vector<std::string>>(&*pGcInstance, std::move(vArray));
             }
             // ----------------------------------------------------------------------------
             // Custom reflected types.

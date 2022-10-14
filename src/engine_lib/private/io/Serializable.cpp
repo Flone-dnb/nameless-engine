@@ -105,6 +105,7 @@ namespace ne {
 
                 Data* pData = static_cast<Data*>(userData);
                 const auto sFieldName = field.getName();
+                const auto sFieldCanonicalTypeName = std::string(field.getCanonicalTypeName());
 
                 try {
                     // Throws if not found.
@@ -139,39 +140,20 @@ namespace ne {
                     // non-reflected STL types have equal types in Refureku
                     // thus add additional checks
                     // ----------------------------------------------------------------------------
-                    else if (field.getCanonicalTypeName() == sStringCanonicalTypeName) {
+                    else if (sFieldCanonicalTypeName == sStringCanonicalTypeName) {
                         // Field type is `std::string`.
                         pData->pTomlData->operator[](pData->sSectionName).operator[](sFieldName) =
                             field.getUnsafe<std::string>(pData->self);
-                    } else if (field.getCanonicalTypeName() == sVectorBoolCanonicalTypeName) {
-                        // Field type is `std::vector<bool>`.
-                        pData->pTomlData->operator[](pData->sSectionName).operator[](sFieldName) =
-                            field.getUnsafe<std::vector<bool>>(pData->self);
-                    } else if (field.getCanonicalTypeName() == sVectorIntCanonicalTypeName) {
-                        // Field type is `std::vector<int>`.
-                        pData->pTomlData->operator[](pData->sSectionName).operator[](sFieldName) =
-                            field.getUnsafe<std::vector<int>>(pData->self);
-                    } else if (field.getCanonicalTypeName() == sVectorLongLongCanonicalTypeName) {
-                        // Field type is `std::vector<long long>`.
-                        pData->pTomlData->operator[](pData->sSectionName).operator[](sFieldName) =
-                            field.getUnsafe<std::vector<long long>>(pData->self);
-                    } else if (field.getCanonicalTypeName() == sVectorFloatCanonicalTypeName) {
-                        // Field type is `std::vector<float>`.
-                        pData->pTomlData->operator[](pData->sSectionName).operator[](sFieldName) =
-                            field.getUnsafe<std::vector<float>>(pData->self);
-                    } else if (field.getCanonicalTypeName() == sVectorDoubleCanonicalTypeName) {
-                        // Field type is `std::vector<double>`.
-                        const std::vector<double> vArray = field.getUnsafe<std::vector<double>>(pData->self);
-                        // Store double as string for better precision.
-                        std::vector<std::string> vStrArray;
-                        for (const auto& item : vArray) {
-                            vStrArray.push_back(toml::format(toml::value(item)));
+                    } else if (sFieldCanonicalTypeName.starts_with("std::vector<")) {
+                        if (serializeVectorField(
+                                pData->pTomlData, pData->self, &field, pData->sSectionName)) {
+                            pData->error = Error(fmt::format(
+                                "vector field \"{}\" (maybe inherited) of class \"{}\" has unsupported for "
+                                "serialization inner type",
+                                field.getName(),
+                                pData->selfArchetype->getName()));
+                            return false;
                         }
-                        pData->pTomlData->operator[](pData->sSectionName).operator[](sFieldName) = vStrArray;
-                    } else if (field.getCanonicalTypeName() == sVectorStringCanonicalTypeName) {
-                        // Field type is `std::vector<std::string>`.
-                        pData->pTomlData->operator[](pData->sSectionName).operator[](sFieldName) =
-                            field.getUnsafe<std::vector<std::string>>(pData->self);
                     }
                     // ----------------------------------------------------------------------------
                     // Custom reflected types.
@@ -414,6 +396,7 @@ namespace ne {
                 const auto& fieldType = field.getType();
                 Data* pData = static_cast<Data*>(userData);
                 const auto sFieldName = field.getName();
+                const auto sFieldCanonicalTypeName = std::string(field.getCanonicalTypeName());
 
                 const auto* pFieldTo =
                     pData->pTo->getArchetype().getFieldByName(sFieldName, rfk::EFieldFlags::Default, true);
@@ -435,34 +418,19 @@ namespace ne {
                 // non-reflected STL types have equal types in Refureku
                 // thus add additional checks
                 // ----------------------------------------------------------------------------
-                if (field.getCanonicalTypeName() == sStringCanonicalTypeName) {
+                if (sFieldCanonicalTypeName == sStringCanonicalTypeName) {
                     // Field type is `std::string`.
                     auto value = field.getUnsafe<std::string>(pData->pFrom);
                     pFieldTo->setUnsafe<std::string>(pData->pTo, std::move(value));
-                } else if (field.getCanonicalTypeName() == sVectorBoolCanonicalTypeName) {
-                    // Field type is `std::vector<bool>`.
-                    auto value = field.getUnsafe<std::vector<bool>>(pData->pFrom);
-                    pFieldTo->setUnsafe<std::vector<bool>>(pData->pTo, std::move(value));
-                } else if (field.getCanonicalTypeName() == sVectorIntCanonicalTypeName) {
-                    // Field type is `std::vector<int>`.
-                    auto value = field.getUnsafe<std::vector<int>>(pData->pFrom);
-                    pFieldTo->setUnsafe<std::vector<int>>(pData->pTo, std::move(value));
-                } else if (field.getCanonicalTypeName() == sVectorLongLongCanonicalTypeName) {
-                    // Field type is `std::vector<long long>`.
-                    auto value = field.getUnsafe<std::vector<long long>>(pData->pFrom);
-                    pFieldTo->setUnsafe<std::vector<long long>>(pData->pTo, std::move(value));
-                } else if (field.getCanonicalTypeName() == sVectorFloatCanonicalTypeName) {
-                    // Field type is `std::vector<float>`.
-                    auto value = field.getUnsafe<std::vector<float>>(pData->pFrom);
-                    pFieldTo->setUnsafe<std::vector<float>>(pData->pTo, std::move(value));
-                } else if (field.getCanonicalTypeName() == sVectorDoubleCanonicalTypeName) {
-                    // Field type is `std::vector<double>`.
-                    auto value = field.getUnsafe<std::vector<double>>(pData->pFrom);
-                    pFieldTo->setUnsafe<std::vector<double>>(pData->pTo, std::move(value));
-                } else if (field.getCanonicalTypeName() == sVectorStringCanonicalTypeName) {
-                    // Field type is `std::vector<std::string>`.
-                    auto value = field.getUnsafe<std::vector<std::string>>(pData->pFrom);
-                    pFieldTo->setUnsafe<std::vector<std::string>>(pData->pTo, std::move(value));
+                } else if (sFieldCanonicalTypeName.starts_with("std::vector<")) {
+                    if (cloneVectorField(pData->pFrom, &field, pData->pTo, pFieldTo)) {
+                        Error err(fmt::format(
+                            "vector field \"{}\" has unsupported for serialization inner type",
+                            field.getName()));
+                        return false;
+                    }
+                } else if (sFieldCanonicalTypeName.starts_with("std::unordered_map")) {
+                    // TODO
                 }
                 // ----------------------------------------------------------------------------
                 // Custom reflected types.
@@ -744,6 +712,198 @@ namespace ne {
         }
 
         return {};
+    }
+
+    bool Serializable::cloneVectorField(
+        Serializable* pFromInstance,
+        const rfk::Field* pFromField,
+        Serializable* pToInstance,
+        const rfk::Field* pToField) {
+        const auto sFieldCanonicalTypeName = std::string(pFromField->getCanonicalTypeName());
+
+        if (sFieldCanonicalTypeName == "std::vector<bool>") {
+            // Field type is `std::vector<bool>`.
+            auto value = pFromField->getUnsafe<std::vector<bool>>(pFromInstance);
+            pToField->setUnsafe<std::vector<bool>>(pToInstance, std::move(value));
+            return false;
+        } else if (sFieldCanonicalTypeName == "std::vector<int>") {
+            // Field type is `std::vector<int>`.
+            auto value = pFromField->getUnsafe<std::vector<int>>(pFromInstance);
+            pToField->setUnsafe<std::vector<int>>(pToInstance, std::move(value));
+            return false;
+        } else if (sFieldCanonicalTypeName == "std::vector<long long>") {
+            // Field type is `std::vector<long long>`.
+            auto value = pFromField->getUnsafe<std::vector<long long>>(pFromInstance);
+            pToField->setUnsafe<std::vector<long long>>(pToInstance, std::move(value));
+            return false;
+        } else if (sFieldCanonicalTypeName == "std::vector<float>") {
+            // Field type is `std::vector<float>`.
+            auto value = pFromField->getUnsafe<std::vector<float>>(pFromInstance);
+            pToField->setUnsafe<std::vector<float>>(pToInstance, std::move(value));
+            return false;
+        } else if (sFieldCanonicalTypeName == "std::vector<double>") {
+            // Field type is `std::vector<double>`.
+            auto value = pFromField->getUnsafe<std::vector<double>>(pFromInstance);
+            pToField->setUnsafe<std::vector<double>>(pToInstance, std::move(value));
+            return false;
+        } else if (sFieldCanonicalTypeName == fmt::format("std::vector<{}>", sStringCanonicalTypeName)) {
+            // Field type is `std::vector<std::string>`.
+            auto value = pFromField->getUnsafe<std::vector<std::string>>(pFromInstance);
+            pToField->setUnsafe<std::vector<std::string>>(pToInstance, std::move(value));
+            return false;
+        }
+
+        return true;
+    }
+
+    bool Serializable::serializeVectorField(
+        toml::value* pTomlData,
+        Serializable* pFieldOwner,
+        const rfk::Field* pField,
+        const std::string& sSectionName) {
+        const auto sFieldCanonicalTypeName = std::string(pField->getCanonicalTypeName());
+        const auto sFieldName = pField->getName();
+
+        if (sFieldCanonicalTypeName == "std::vector<bool>") {
+            // Field type is `std::vector<bool>`.
+            pTomlData->operator[](sSectionName).operator[](sFieldName) =
+                pField->getUnsafe<std::vector<bool>>(pFieldOwner);
+
+            return false;
+        } else if (sFieldCanonicalTypeName == "std::vector<int>") {
+            // Field type is `std::vector<int>`.
+            pTomlData->operator[](sSectionName).operator[](sFieldName) =
+                pField->getUnsafe<std::vector<int>>(pFieldOwner);
+
+            return false;
+        } else if (sFieldCanonicalTypeName == "std::vector<long long>") {
+            // Field type is `std::vector<long long>`.
+            pTomlData->operator[](sSectionName).operator[](sFieldName) =
+                pField->getUnsafe<std::vector<long long>>(pFieldOwner);
+
+            return false;
+        } else if (sFieldCanonicalTypeName == "std::vector<float>") {
+            // Field type is `std::vector<float>`.
+            pTomlData->operator[](sSectionName).operator[](sFieldName) =
+                pField->getUnsafe<std::vector<float>>(pFieldOwner);
+
+            return false;
+        } else if (sFieldCanonicalTypeName == "std::vector<double>") {
+            // Field type is `std::vector<double>`.
+            const std::vector<double> vArray = pField->getUnsafe<std::vector<double>>(pFieldOwner);
+            // Store double as string for better precision.
+            std::vector<std::string> vStrArray;
+            for (const auto& item : vArray) {
+                vStrArray.push_back(toml::format(toml::value(item)));
+            }
+            pTomlData->operator[](sSectionName).operator[](sFieldName) = vStrArray;
+
+            return false;
+        } else if (sFieldCanonicalTypeName == fmt::format("std::vector<{}>", sStringCanonicalTypeName)) {
+            // Field type is `std::vector<std::string>`.
+            pTomlData->operator[](sSectionName).operator[](sFieldName) =
+                pField->getUnsafe<std::vector<std::string>>(pFieldOwner);
+
+            return false;
+        }
+
+        return true;
+    }
+
+    bool Serializable::deserializeVectorField(
+        toml::value* pTomlData, Serializable* pFieldOwner, const rfk::Field* pField) {
+        if (!pTomlData->is_array()) {
+            return true;
+        }
+
+        const auto sFieldCanonicalTypeName = std::string(pField->getCanonicalTypeName());
+
+        if (sFieldCanonicalTypeName == "std::vector<bool>") {
+            // Field type is `std::vector<bool>`.
+            auto fieldValue = pTomlData->as_array();
+            std::vector<bool> vArray;
+            for (const auto& item : fieldValue) {
+                if (!item.is_boolean()) {
+                    return true;
+                }
+                vArray.push_back(item.as_boolean());
+            }
+            pField->setUnsafe<std::vector<bool>>(pFieldOwner, std::move(vArray));
+
+            return false;
+        } else if (sFieldCanonicalTypeName == "std::vector<int>") {
+            // Field type is `std::vector<int>`.
+            auto fieldValue = pTomlData->as_array();
+            std::vector<int> vArray;
+            for (const auto& item : fieldValue) {
+                if (!item.is_integer()) {
+                    return true;
+                }
+                vArray.push_back(static_cast<int>(item.as_integer()));
+            }
+            pField->setUnsafe<std::vector<int>>(pFieldOwner, std::move(vArray));
+
+            return false;
+        } else if (sFieldCanonicalTypeName == "std::vector<long long>") {
+            // Field type is `std::vector<long long>`.
+            auto fieldValue = pTomlData->as_array();
+            std::vector<long long> vArray;
+            for (const auto& item : fieldValue) {
+                if (!item.is_integer()) {
+                    return true;
+                }
+                vArray.push_back(item.as_integer());
+            }
+            pField->setUnsafe<std::vector<long long>>(pFieldOwner, std::move(vArray));
+
+            return false;
+        } else if (sFieldCanonicalTypeName == "std::vector<float>") {
+            // Field type is `std::vector<float>`.
+            auto fieldValue = pTomlData->as_array();
+            std::vector<float> vArray;
+            for (const auto& item : fieldValue) {
+                if (!item.is_floating()) {
+                    return true;
+                }
+                vArray.push_back(static_cast<float>(item.as_floating()));
+            }
+            pField->setUnsafe<std::vector<float>>(pFieldOwner, std::move(vArray));
+
+            return false;
+        } else if (sFieldCanonicalTypeName == "std::vector<double>") {
+            // Field type is `std::vector<double>`.
+            // Double is stored as a string for better precision.
+            auto fieldValue = pTomlData->as_array();
+            std::vector<double> vArray;
+            for (const auto& item : fieldValue) {
+                if (!item.is_string()) {
+                    return true;
+                }
+                try {
+                    vArray.push_back(std::stod(item.as_string().str));
+                } catch (...) {
+                    return true;
+                }
+            }
+            pField->setUnsafe<std::vector<double>>(pFieldOwner, std::move(vArray));
+
+            return false;
+        } else if (sFieldCanonicalTypeName == fmt::format("std::vector<{}>", sStringCanonicalTypeName)) {
+            // Field type is `std::vector<std::string>`.
+            auto fieldValue = pTomlData->as_array();
+            std::vector<std::string> vArray;
+            for (const auto& item : fieldValue) {
+                if (!item.is_string()) {
+                    return true;
+                }
+                vArray.push_back(item.as_string());
+            }
+            pField->setUnsafe<std::vector<std::string>>(pFieldOwner, std::move(vArray));
+
+            return false;
+        }
+
+        return true;
     }
 
 } // namespace ne

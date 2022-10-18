@@ -123,11 +123,17 @@ set(ENGINE_LIB_SOURCES
     # add general (cross-platform) sources here...
 )
 
+# Append Window specific sources.
 if (WIN32)
     message(STATUS "Appending Windows specific source files.")
     list(APPEND ENGINE_LIB_SOURCES ${ENGINE_WIN32_SOURCES})
 else()
     message(STATUS "Windows specific source files are excluded.")
+endif()
+
+# Add `/bigobj` on MSVC for Serializable.
+if (MSVC)
+    set_source_files_properties(private/io/Serializable.cpp PROPERTIES COMPILE_FLAGS /bigobj)
 endif()
 
 # Target.

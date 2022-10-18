@@ -31,6 +31,8 @@ public:
     RPROPERTY()
     std::string sStringValue;
 
+    // vectors
+
     RPROPERTY()
     std::vector<bool> vBoolVector;
 
@@ -48,6 +50,26 @@ public:
 
     RPROPERTY()
     std::vector<std::string> vStringVector;
+
+    // maps
+
+    RPROPERTY()
+    std::unordered_map<bool, bool> mapBoolBool;
+
+    RPROPERTY()
+    std::unordered_map<bool, int> mapBoolInt;
+
+    RPROPERTY()
+    std::unordered_map<bool, long long> mapBoolLongLong;
+
+    RPROPERTY()
+    std::unordered_map<bool, float> mapBoolFloat;
+
+    RPROPERTY()
+    std::unordered_map<bool, double> mapBoolDouble;
+
+    RPROPERTY()
+    std::unordered_map<bool, std::string> mapBoolString;
 
     ReflectionTestClass_GENERATED
 };

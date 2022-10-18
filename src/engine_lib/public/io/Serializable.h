@@ -328,6 +328,22 @@ namespace ne RNAMESPACE() {
             const std::string& sSectionName);
 
         /**
+         * Serializes `std::unordered_map` field into TOML value.
+         *
+         * @param pTomlData     TOML value to serialize field to.
+         * @param pFieldOwner   Field owner.
+         * @param pField        Field to serialize.
+         * @param sSectionName  Section to use for this field.
+         *
+         * @return `true` if map's inner type is not supported for serialization, `false` otherwise.
+         */
+        static bool serializeUnorderedMapField(
+            toml::value* pTomlData,
+            Serializable* pFieldOwner,
+            const rfk::Field* pField,
+            const std::string& sSectionName);
+
+        /**
          * Deserializes a TOML array into a field.
          *
          * @param pTomlData     TOML value to deserialize field from.
@@ -340,6 +356,18 @@ namespace ne RNAMESPACE() {
         deserializeVectorField(toml::value* pTomlData, Serializable* pFieldOwner, const rfk::Field* pField);
 
         /**
+         * Deserializes a TOML array into a field.
+         *
+         * @param pTomlData     TOML value to deserialize field from.
+         * @param pFieldOwner   Field owner.
+         * @param pField        Field to deserialize.
+         *
+         * @return `true` if failed, `false` otherwise.
+         */
+        static bool deserializeUnorderedMapField(
+            toml::value* pTomlData, Serializable* pFieldOwner, const rfk::Field* pField);
+
+        /**
          * Clones vector field.
          *
          * @param pFromInstance Owner instance to copy field from.
@@ -350,6 +378,22 @@ namespace ne RNAMESPACE() {
          * @return `true` vector's inner type is not supported for serialization, `false` otherwise.
          */
         static bool cloneVectorField(
+            Serializable* pFromInstance,
+            const rfk::Field* pFromField,
+            Serializable* pToInstance,
+            const rfk::Field* pToField);
+
+        /**
+         * Clones unordered_map field.
+         *
+         * @param pFromInstance Owner instance to copy field from.
+         * @param pFromField    Field to copy from.
+         * @param pToInstance   Instance to copy to.
+         * @param pToField      Field instance to copy to.
+         *
+         * @return `true` map's inner type is not supported for serialization, `false` otherwise.
+         */
+        static bool cloneUnorderedMapField(
             Serializable* pFromInstance,
             const rfk::Field* pFromField,
             Serializable* pToInstance,
@@ -667,6 +711,10 @@ namespace ne RNAMESPACE() {
                 pField->setUnsafe<std::string>(&*pGcInstance, std::move(fieldValue));
             } else if (sFieldCanonicalTypeName.starts_with("std::vector<") && value.is_array()) {
                 if (deserializeVectorField(&value, &*pGcInstance, pField)) {
+                    return Error(fmt::format("unable to deserialize field \"{}\"", sFieldName));
+                }
+            } else if (sFieldCanonicalTypeName.starts_with("std::unordered_map<")) {
+                if (deserializeUnorderedMapField(&value, &*pGcInstance, pField)) {
                     return Error(fmt::format("unable to deserialize field \"{}\"", sFieldName));
                 }
             }

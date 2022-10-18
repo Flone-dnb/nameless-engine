@@ -27,13 +27,19 @@ TEST_CASE("serialize and deserialize fields of different types") {
         testObj.iLongLongValue = INT_MAX * 10ll;
         testObj.floatValue = 3.14159f;
         testObj.doubleValue = 3.14159265358979;
-        testObj.sStringValue = "Привет мир"; // using non-ASCII on purpose
+        testObj.sStringValue = "Привет \"мир\""; // using non-ASCII on purpose
         testObj.vBoolVector = {true, true, false};
         testObj.vIntVector = {42, -42, 43, -43};
-        testObj.vLongLongVector = {INT_MAX * 10ll, INT_MAX * -10ll};
+        testObj.vLongLongVector = {INT_MAX * 10ll, INT_MIN * 10ll};
         testObj.vFloatVector = {3.14159f, -3.14159f};
         testObj.vDoubleVector = {3.14159265358979, -3.14159265358979};
-        testObj.vStringVector = {"Привет мир", "Hello world"};
+        testObj.vStringVector = {"Привет \"мир\"", "Hello \"world\""};
+        testObj.mapBoolBool = {{false, false}, {true, true}};
+        testObj.mapBoolInt = {{false, -1}, {true, 42}};
+        testObj.mapBoolLongLong = {{false, INT_MIN * 10ll}, {true, INT_MAX * 10ll}};
+        testObj.mapBoolFloat = {{false, -3.14159f}, {true, 3.14159f}};
+        testObj.mapBoolDouble = {{false, -3.14159265358979}, {true, 3.14159265358979}};
+        testObj.mapBoolString = {{false, "Привет \"мир\""}, {true, "Hello \"world\""}};
 
         outerTestObj.entity = testObj;
     }
@@ -49,6 +55,18 @@ TEST_CASE("serialize and deserialize fields of different types") {
 
     REQUIRE(std::filesystem::exists(fullPathToFile));
 
+    // Check IDs.
+    const auto idResult = Serializable::getIdsFromFile(pathToFile);
+    if (std::holds_alternative<Error>(idResult)) {
+        auto err = std::get<Error>(std::move(idResult));
+        err.addEntry();
+        INFO(err.getError());
+        REQUIRE(false);
+    }
+    const auto ids = std::get<std::set<std::string>>(idResult);
+    REQUIRE(ids.size() == 1);
+    REQUIRE(ids.find("0") != ids.end());
+
     // Deserialize.
     std::unordered_map<std::string, std::string> customAttributes;
     auto result = Serializable::deserialize<ReflectionOuterTestClass>(pathToFile, customAttributes);
@@ -63,6 +81,9 @@ TEST_CASE("serialize and deserialize fields of different types") {
 
     // Compare results.
 
+    constexpr auto floatDelta = 0.00001f;
+    constexpr auto doubleDelta = 0.0000000000001;
+
     // Primitive types + std::string.
     REQUIRE(outerTestObj.iIntNotSerialized != 0);
     REQUIRE(pDeserialized->iIntNotSerialized == 0);
@@ -70,8 +91,8 @@ TEST_CASE("serialize and deserialize fields of different types") {
     REQUIRE(outerTestObj.entity.bBoolValue == pDeserialized->entity.bBoolValue);
     REQUIRE(outerTestObj.entity.iIntValue == pDeserialized->entity.iIntValue);
     REQUIRE(outerTestObj.entity.iLongLongValue == pDeserialized->entity.iLongLongValue);
-    REQUIRE(fabs(outerTestObj.entity.floatValue - pDeserialized->entity.floatValue) < 0.00001f);
-    REQUIRE(fabs(outerTestObj.entity.doubleValue - pDeserialized->entity.doubleValue) < 0.0000000000001);
+    REQUIRE(fabs(outerTestObj.entity.floatValue - pDeserialized->entity.floatValue) < floatDelta);
+    REQUIRE(fabs(outerTestObj.entity.doubleValue - pDeserialized->entity.doubleValue) < doubleDelta);
     REQUIRE(outerTestObj.entity.sStringValue == pDeserialized->entity.sStringValue);
 
     // Vectors.
@@ -80,13 +101,34 @@ TEST_CASE("serialize and deserialize fields of different types") {
     REQUIRE(outerTestObj.entity.vLongLongVector == pDeserialized->entity.vLongLongVector);
     REQUIRE(outerTestObj.entity.vFloatVector.size() == pDeserialized->entity.vFloatVector.size());
     for (size_t i = 0; i < outerTestObj.entity.vFloatVector.size(); i++)
-        REQUIRE(fabs(outerTestObj.entity.vFloatVector[i] - pDeserialized->entity.vFloatVector[i]) < 0.00001f);
+        REQUIRE(
+            fabs(outerTestObj.entity.vFloatVector[i] - pDeserialized->entity.vFloatVector[i]) < floatDelta);
     REQUIRE(outerTestObj.entity.vDoubleVector.size() == pDeserialized->entity.vDoubleVector.size());
     for (size_t i = 0; i < outerTestObj.entity.vDoubleVector.size(); i++)
         REQUIRE(
             fabs(outerTestObj.entity.vDoubleVector[i] - pDeserialized->entity.vDoubleVector[i]) <
-            0.0000000000001);
+            doubleDelta);
     REQUIRE(outerTestObj.entity.vStringVector == pDeserialized->entity.vStringVector);
+
+    // Unordered maps.
+    REQUIRE(outerTestObj.entity.mapBoolBool == pDeserialized->entity.mapBoolBool);
+    REQUIRE(outerTestObj.entity.mapBoolInt == pDeserialized->entity.mapBoolInt);
+    REQUIRE(outerTestObj.entity.mapBoolLongLong == pDeserialized->entity.mapBoolLongLong);
+    REQUIRE(outerTestObj.entity.mapBoolFloat.size() == pDeserialized->entity.mapBoolFloat.size());
+    for (const auto& [key, value] : outerTestObj.entity.mapBoolFloat) {
+        const auto it = pDeserialized->entity.mapBoolFloat.find(key);
+        REQUIRE(it != pDeserialized->entity.mapBoolFloat.end());
+        REQUIRE(key == it->first);
+        REQUIRE(fabs(value - it->second) < floatDelta);
+    }
+    REQUIRE(outerTestObj.entity.mapBoolDouble.size() == pDeserialized->entity.mapBoolDouble.size());
+    for (const auto& [key, value] : outerTestObj.entity.mapBoolDouble) {
+        const auto it = pDeserialized->entity.mapBoolDouble.find(key);
+        REQUIRE(it != pDeserialized->entity.mapBoolDouble.end());
+        REQUIRE(key == it->first);
+        REQUIRE(fabs(value - it->second) < doubleDelta);
+    }
+    REQUIRE(outerTestObj.entity.mapBoolString == pDeserialized->entity.mapBoolString);
 
     // Cleanup.
     std::filesystem::remove(fullPathToFile);

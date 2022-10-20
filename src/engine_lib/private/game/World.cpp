@@ -63,8 +63,7 @@ namespace ne {
         if (!mtxRootNode.second)
             return;
 
-        Logger::get().info(
-            "world's destructor is being called, destroying the root node...", sWorldLogCategory);
+        Logger::get().info("world is being destroyed, destroying the root node...", sWorldLogCategory);
 
         // Mark root node as not used explicitly.
         mtxRootNode.second->despawn(); // explicitly despawn root to despawn all nodes.

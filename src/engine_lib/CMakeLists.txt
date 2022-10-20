@@ -120,6 +120,17 @@ set(ENGINE_LIB_SOURCES
     private/game/World.h
     private/game/World.cpp
     public/misc/GC.hpp
+    public/io/IFieldSerializer.hpp
+    public/io/serializers/PrimitiveFieldSerializer.h
+    private/io/serializers/PrimitiveFieldSerializer.cpp
+    public/io/serializers/StringFieldSerializer.h
+    private/io/serializers/StringFieldSerializer.cpp
+    public/io/serializers/VectorFieldSerializer.h
+    private/io/serializers/VectorFieldSerializer.cpp
+    private/io/serializers/UnorderedMapFieldSerializer.cpp
+    public/io/serializers/UnorderedMapFieldSerializer.h
+    private/io/serializers/SerializableObjectFieldSerializer.cpp
+    public/io/serializers/SerializableObjectFieldSerializer.h
     # add general (cross-platform) sources here...
 )
 
@@ -129,11 +140,6 @@ if (WIN32)
     list(APPEND ENGINE_LIB_SOURCES ${ENGINE_WIN32_SOURCES})
 else()
     message(STATUS "Windows specific source files are excluded.")
-endif()
-
-# Add `/bigobj` on MSVC for Serializable.
-if (MSVC)
-    set_source_files_properties(private/io/Serializable.cpp PROPERTIES COMPILE_FLAGS /bigobj)
 endif()
 
 # Target.

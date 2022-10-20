@@ -12,6 +12,11 @@
 #if defined(WIN32)
 #include "render/directx/DirectXRenderer.h"
 #endif
+#include "io/serializers/PrimitiveFieldSerializer.h"
+#include "io/serializers/StringFieldSerializer.h"
+#include "io/serializers/VectorFieldSerializer.h"
+#include "io/serializers/UnorderedMapFieldSerializer.h"
+#include "io/serializers/SerializableObjectFieldSerializer.h"
 
 // External.
 #include "fmt/core.h"
@@ -22,6 +27,13 @@ namespace ne {
 
         // Save ID to this thread (should be main thread).
         mainThreadId = std::this_thread::get_id();
+
+        // Add engine serializers.
+        Serializable::addFieldSerializer(std::make_unique<PrimitiveFieldSerializer>());
+        Serializable::addFieldSerializer(std::make_unique<StringFieldSerializer>());
+        Serializable::addFieldSerializer(std::make_unique<VectorFieldSerializer>());
+        Serializable::addFieldSerializer(std::make_unique<UnorderedMapFieldSerializer>());
+        Serializable::addFieldSerializer(std::make_unique<SerializableObjectFieldSerializer>());
 
         // Mark start time.
         gc_collector()->collect(); // run for the first time to setup things (I guess)

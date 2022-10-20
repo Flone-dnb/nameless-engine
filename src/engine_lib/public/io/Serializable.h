@@ -4,6 +4,7 @@
 #include <filesystem>
 #include <memory>
 #include <variant>
+#include <optional>
 #include <set>
 #include <ranges>
 
@@ -13,6 +14,7 @@
 #include "io/ConfigManager.h"
 #include "io/GuidProperty.h"
 #include "misc/GC.hpp"
+#include "io/IFieldSerializer.hpp"
 
 // External.
 #include "Refureku/Refureku.h"
@@ -226,27 +228,25 @@ namespace ne RNAMESPACE() {
         static std::variant<std::vector<DeserializedObjectInformation>, Error>
         deserialize(const std::filesystem::path& pathToFile, const std::set<std::string>& ids);
 
-#if defined(DEBUG)
         /**
-         * Checks that all classes/structs that inherit from Serializable have correct and unique GUIDs.
+         * Adds a field serializer that will be automatically used in serialization/deserialization
+         * to support specific field types. Use @ref getFieldSerializers to get array of added serializers.
          *
-         * Automatically called by the Game object (object that owns GameInstance) and has no point in being
-         * called from your game's code.
+         * @remark If the serializer of the specified type was already added previously it will not be
+         * added again.
+         *
+         * @param pFieldSerializer Field serializer to add.
          */
-        static void checkGuidUniqueness();
-#endif
+        static void addFieldSerializer(std::unique_ptr<IFieldSerializer> pFieldSerializer);
 
-    private:
-#if defined(DEBUG)
         /**
-         * Collects GUIDs of children of the specified type.
+         * Returns available field serializers that will be automatically used in
+         * serialization/deserialization.
          *
-         * @param pArchetypeToAnalyze Type which children to analyze.
-         * @param vAllGuids           Map of already collected GUIDs to check for uniqueness.
+         * @return Array of available field serializers. Do not delete serializers, they are owned by the
+         * Serializable object.
          */
-        static void collectGuids(
-            const rfk::Struct* pArchetypeToAnalyze, std::unordered_map<std::string, std::string>& vAllGuids);
-#endif
+        static std::vector<IFieldSerializer*> getFieldSerializers();
 
         /**
          * Serializes the object and all reflected fields (including inherited) into a toml value.
@@ -311,93 +311,27 @@ namespace ne RNAMESPACE() {
          */
         static bool isDerivedFromSerializable(rfk::Archetype const* pArchetype);
 
+#if defined(DEBUG)
         /**
-         * Serializes vector field into TOML value.
+         * Checks that all classes/structs that inherit from Serializable have correct and unique GUIDs.
          *
-         * @param pTomlData     TOML value to serialize field to.
-         * @param pFieldOwner   Field owner.
-         * @param pField        Field to serialize.
-         * @param sSectionName  Section to use for this field.
-         *
-         * @return `true` if vector's inner type is not supported for serialization, `false` otherwise.
+         * Automatically called by the Game object (object that owns GameInstance) and has no point in being
+         * called from your game's code.
          */
-        static bool serializeVectorField(
-            toml::value* pTomlData,
-            Serializable* pFieldOwner,
-            const rfk::Field* pField,
-            const std::string& sSectionName);
+        static void checkGuidUniqueness();
+#endif
 
+    private:
+#if defined(DEBUG)
         /**
-         * Serializes `std::unordered_map` field into TOML value.
+         * Collects GUIDs of children of the specified type.
          *
-         * @param pTomlData     TOML value to serialize field to.
-         * @param pFieldOwner   Field owner.
-         * @param pField        Field to serialize.
-         * @param sSectionName  Section to use for this field.
-         *
-         * @return `true` if map's inner type is not supported for serialization, `false` otherwise.
+         * @param pArchetypeToAnalyze Type which children to analyze.
+         * @param vAllGuids           Map of already collected GUIDs to check for uniqueness.
          */
-        static bool serializeUnorderedMapField(
-            toml::value* pTomlData,
-            Serializable* pFieldOwner,
-            const rfk::Field* pField,
-            const std::string& sSectionName);
-
-        /**
-         * Deserializes a TOML array into a field.
-         *
-         * @param pTomlData     TOML value to deserialize field from.
-         * @param pFieldOwner   Field owner.
-         * @param pField        Field to deserialize.
-         *
-         * @return `true` if failed, `false` otherwise.
-         */
-        static bool
-        deserializeVectorField(toml::value* pTomlData, Serializable* pFieldOwner, const rfk::Field* pField);
-
-        /**
-         * Deserializes a TOML array into a field.
-         *
-         * @param pTomlData     TOML value to deserialize field from.
-         * @param pFieldOwner   Field owner.
-         * @param pField        Field to deserialize.
-         *
-         * @return `true` if failed, `false` otherwise.
-         */
-        static bool deserializeUnorderedMapField(
-            toml::value* pTomlData, Serializable* pFieldOwner, const rfk::Field* pField);
-
-        /**
-         * Clones vector field.
-         *
-         * @param pFromInstance Owner instance to copy field from.
-         * @param pFromField    Field to copy from.
-         * @param pToInstance   Instance to copy to.
-         * @param pToField      Field instance to copy to.
-         *
-         * @return `true` vector's inner type is not supported for serialization, `false` otherwise.
-         */
-        static bool cloneVectorField(
-            Serializable* pFromInstance,
-            const rfk::Field* pFromField,
-            Serializable* pToInstance,
-            const rfk::Field* pToField);
-
-        /**
-         * Clones unordered_map field.
-         *
-         * @param pFromInstance Owner instance to copy field from.
-         * @param pFromField    Field to copy from.
-         * @param pToInstance   Instance to copy to.
-         * @param pToField      Field instance to copy to.
-         *
-         * @return `true` map's inner type is not supported for serialization, `false` otherwise.
-         */
-        static bool cloneUnorderedMapField(
-            Serializable* pFromInstance,
-            const rfk::Field* pFromField,
-            Serializable* pToInstance,
-            const rfk::Field* pToField);
+        static void collectGuids(
+            const rfk::Struct* pArchetypeToAnalyze, std::unordered_map<std::string, std::string>& vAllGuids);
+#endif
 
         /**
          * Returns archetype for the specified GUID.
@@ -420,51 +354,15 @@ namespace ne RNAMESPACE() {
         static const rfk::Struct*
         getClassForGuid(const rfk::Struct* pArchetypeToAnalyze, const std::string& sGuid);
 
-        /**
-         * Clones reflected serializable fields of one object to another.
-         *
-         * @param pFrom Object to clone fields from.
-         * @param pTo   Object to clone fields to.
-         *
-         * @return Error if something went wrong.
-         */
-        static std::optional<Error> cloneSerializableObject(Serializable* pFrom, Serializable* pTo);
-
-        /**
-         * Clones field's data from one field to another if fields' types (specified by the template argument)
-         * are the same (only for primitive types).
-         *
-         * @param pFrom     Object to clone field's data from.
-         * @param fieldFrom Field to clone data from.
-         * @param pTo       Object to clone field's data to.
-         * @param fieldTo   Field to clone data to.
-         *
-         * @warning This function should only be used with primitive types.
-         *
-         * @return 'true' if data was moved, 'false' if fields have different types.
-         */
-        template <typename PrimitiveType>
-        static bool cloneFieldIfMatchesPrimitiveType(
-            Serializable* pFrom, rfk::Field const& fieldFrom, Serializable* pTo, rfk::Field const* fieldTo) {
-            static_assert(
-                std::is_fundamental_v<PrimitiveType>, "only primitive types are allowed in this function");
-            if (fieldFrom.getType().match(rfk::getType<PrimitiveType>())) {
-                auto value = fieldFrom.getUnsafe<PrimitiveType>(pFrom);
-                fieldTo->setUnsafe<PrimitiveType>(pTo, std::move(value));
-                return true;
-            } else {
-                return false;
-            }
-        }
+        /** Serializers used to serialize/deserialize fields. */
+        static inline std::pair<std::mutex, std::vector<std::unique_ptr<IFieldSerializer>>>
+            mtxFieldSerializers;
 
         /** Name of the key in which to store name of the field a section represents. */
         static inline const auto sSubEntityFieldNameKey = ".field_name";
 
         /** Name of the key which we use when there is nothing to serialize. */
         static inline const auto sNothingToSerializeKey = ".none";
-
-        /** Canonical type name for `std::string` fields. */
-        static inline const std::string sStringCanonicalTypeName = "std::basic_string<char>";
 
         ne_Serializable_GENERATED
     };
@@ -635,6 +533,8 @@ namespace ne RNAMESPACE() {
             }
         }
 
+        const auto vFieldSerializers = getFieldSerializers();
+
         // Deserialize fields.
         for (auto& sFieldName : vKeys) {
             if (sFieldName == sSubEntityFieldNameKey) {
@@ -667,179 +567,28 @@ namespace ne RNAMESPACE() {
                     "");
                 continue;
             }
-            const auto& fieldType = pField->getType();
             const auto sFieldCanonicalTypeName = std::string(pField->getCanonicalTypeName());
 
             if (!isFieldSerializable(*pField))
                 continue;
 
-            // Set field value depending on field type.
-            // ----------------------------------------------------------------------------
-            // Primitive types.
-            // ----------------------------------------------------------------------------
-            if (fieldType.match(rfk::getType<bool>()) && value.is_boolean()) {
-                auto fieldValue = value.as_boolean();
-                pField->setUnsafe<bool>(&*pGcInstance, std::move(fieldValue));
-            } else if (fieldType.match(rfk::getType<int>()) && value.is_integer()) {
-                auto fieldValue = static_cast<int>(value.as_integer());
-                pField->setUnsafe<int>(&*pGcInstance, std::move(fieldValue));
-            } else if (fieldType.match(rfk::getType<long long>()) && value.is_integer()) {
-                long long fieldValue = value.as_integer();
-                pField->setUnsafe<long long>(&*pGcInstance, std::move(fieldValue));
-            } else if (fieldType.match(rfk::getType<float>()) && value.is_floating()) {
-                auto fieldValue = static_cast<float>(value.as_floating());
-                pField->setUnsafe<float>(&*pGcInstance, std::move(fieldValue));
-            } else if (fieldType.match(rfk::getType<double>()) && value.is_string()) {
-                // Double is stored as a string for better precision.
-                try {
-                    double fieldValue = std::stod(value.as_string().str);
-                    pField->setUnsafe<double>(&*pGcInstance, std::move(fieldValue));
-                } catch (std::exception& ex) {
-                    return Error(fmt::format(
-                        "failed to convert string to double for field \"{}\": {}", sFieldName, ex.what()));
-                }
-            }
-            // ----------------------------------------------------------------------------
-            // STL types.
-            // ----------------------------------------------------------------------------
-            // non-reflected STL types have equal types in Refureku
-            // thus add additional checks
-            // ----------------------------------------------------------------------------
-            else if (sFieldCanonicalTypeName == sStringCanonicalTypeName && value.is_string()) {
-                // Field type is `std::string`.
-                auto fieldValue = value.as_string().str;
-                pField->setUnsafe<std::string>(&*pGcInstance, std::move(fieldValue));
-            } else if (sFieldCanonicalTypeName.starts_with("std::vector<") && value.is_array()) {
-                if (deserializeVectorField(&value, &*pGcInstance, pField)) {
-                    return Error(fmt::format("unable to deserialize field \"{}\"", sFieldName));
-                }
-            } else if (sFieldCanonicalTypeName.starts_with("std::unordered_map<")) {
-                if (deserializeUnorderedMapField(&value, &*pGcInstance, pField)) {
-                    return Error(fmt::format("unable to deserialize field \"{}\"", sFieldName));
-                }
-            }
-            // ----------------------------------------------------------------------------
-            // Custom reflected types.
-            // ----------------------------------------------------------------------------
-            else if (fieldType.getArchetype()) {
-                // Field with a reflected type.
-                // Find a section that has the key ".field_name = *our field name*".
-                std::string sSectionNameForField;
-                // This will have minimum value of 1 where the dot separates IDs from GUID.
-                const auto iNumberOfDotsInTargetSectionName =
-                    std::ranges::count(sTargetSection.begin(), sTargetSection.end(), '.');
-                for (const auto& sSectionName : vSections) {
-                    if (sSectionName == sTargetSection)
-                        continue; // skip self
-
-                    const auto iNumberOfDotsInSectionName =
-                        std::ranges::count(sSectionName.begin(), sSectionName.end(), '.');
-
-                    // Look for a section that has 1 more dot than our section. Example:
-                    // Our section: ["0.3056171360419407975"]
-                    // Child section that we are looking for: ["0.1.4321359943817265529"]
-                    if (iNumberOfDotsInSectionName != iNumberOfDotsInTargetSectionName + 1) {
-                        continue;
-                    }
-
-                    // Here we might get into the following situation:
-                    // Our section: "0.3056171360419407975"
-                    // Current section: "1.0.3056171360419407975" - first field of some OTHER entity.
-
-                    // Get entity ID chain.
-                    auto iLastDotPos = sSectionName.rfind('.');
-                    if (iLastDotPos == std::string::npos) {
-                        return Error(fmt::format("section name \"{}\" is corrupted", sSectionName));
-                    }
-                    // Will be something like: "entityId.subEntityId", "entityId.subEntityId.subSubEntityId"
-                    // or etc.
-                    auto sEntityIdChain = sSectionName.substr(0, iLastDotPos);
-
-                    // Remove last entity id from chain because we don't know it.
-                    iLastDotPos = sEntityIdChain.rfind('.');
-                    if (iLastDotPos == std::string::npos) {
-                        return Error(fmt::format("section name \"{}\" is corrupted", sSectionName));
-                    }
-                    sEntityIdChain = sEntityIdChain.substr(0, iLastDotPos);
-
-                    // Check that this is indeed our sub entity.
-                    if (sEntityIdChain != sEntityId) {
-                        continue;
-                    }
-
-                    // Get this section.
-                    toml::value entitySection;
-                    try {
-                        entitySection = toml::find(tomlData, sSectionName);
-                    } catch (std::exception& ex) {
-                        return Error(
-                            fmt::format("no section \"{}\" was found ({})", sTargetSection, ex.what()));
-                    }
-
-                    if (!section.is_table()) {
-                        return Error(fmt::format("found \"{}\" section is not a section", sTargetSection));
-                    }
-
-                    // Look for a key that holds field name.
-                    toml::value fieldKey;
-                    try {
-                        fieldKey = toml::find(entitySection, sSubEntityFieldNameKey);
-                    } catch (...) {
-                        // Not found, go to next section.
-                        continue;
-                    }
-
-                    if (!fieldKey.is_string()) {
-                        return Error(fmt::format(
-                            "found field name key \"{}\" is not a string", sSubEntityFieldNameKey));
-                    }
-
-                    if (fieldKey.as_string() == sFieldName) {
-                        sSectionNameForField = sSectionName;
-                        break;
+            // Deserialize field value.
+            for (const auto& pSerializer : vFieldSerializers) {
+                if (pSerializer->isFieldTypeSupported(pField)) {
+                    auto optionalError = pSerializer->deserializeField(
+                        &tomlData,
+                        &value,
+                        &*pGcInstance,
+                        pField,
+                        sTargetSection,
+                        sEntityId,
+                        customAttributes);
+                    if (optionalError.has_value()) {
+                        auto error = optionalError.value();
+                        error.addEntry();
+                        return error;
                     }
                 }
-
-                if (sSectionNameForField.empty()) {
-                    return Error(
-                        fmt::format("could not find a section that represents field \"{}\"", sFieldName));
-                }
-
-                // Cut field's GUID from the section name.
-                // The section name could look something like this: [entityId.subEntityId.subEntityGUID].
-                const auto iSubEntityGuidDotPos = sSectionNameForField.rfind('.');
-                if (iSubEntityGuidDotPos == std::string::npos) [[unlikely]] {
-                    return Error(fmt::format(
-                        "sub entity does not have a GUID (section: \"{}\")", sSectionNameForField));
-                }
-                if (iSubEntityGuidDotPos + 1 == sSectionNameForField.size()) [[unlikely]] {
-                    return Error(
-                        fmt::format("section name \"{}\" does not have a GUID", sSectionNameForField));
-                }
-                if (iSubEntityGuidDotPos == 0) [[unlikely]] {
-                    return Error(fmt::format("section \"{}\" is not full", sSectionNameForField));
-                }
-                const auto sSubEntityId = sSectionNameForField.substr(0, iSubEntityGuidDotPos);
-
-                // Deserialize section into an object.
-                std::unordered_map<std::string, std::string> subAttributes;
-                auto result = deserialize<Serializable>(tomlData, subAttributes, sSubEntityId);
-                if (std::holds_alternative<Error>(result)) {
-                    auto err = std::get<Error>(std::move(result));
-                    err.addEntry();
-                    return err;
-                }
-                auto pSubEntity = std::get<gc<Serializable>>(std::move(result));
-
-                // Move object to field.
-                cloneSerializableObject(
-                    &*pSubEntity, static_cast<Serializable*>(pField->getPtrUnsafe(&*pGcInstance)));
-            }
-            // ----------------------------------------------------------------------------
-            // Other.
-            // ----------------------------------------------------------------------------
-            else {
-                return Error(fmt::format("field \"{}\" has unknown type", sFieldName));
             }
         }
 

@@ -1,5 +1,11 @@
 ﻿#include "io/Serializable.h"
 
+// STL.
+#include <typeinfo>
+
+// Custom.
+#include "io/IFieldSerializer.hpp"
+
 // External.
 #include "fmt/format.h"
 
@@ -88,141 +94,61 @@ namespace ne {
             rfk::Class const* selfArchetype = nullptr;
             toml::value* pTomlData = nullptr;
             std::string sSectionName;
+            std::vector<IFieldSerializer*> vFieldSerializers;
             std::optional<Error> error = {};
             std::string sEntityId;
             size_t iSubEntityId = 0;
             size_t iTotalFieldsSerialized = 0;
         };
 
-        Data loopData{this, &selfArchetype, &tomlData, sSectionName, {}, sEntityId};
+        Data loopData{this, &selfArchetype, &tomlData, sSectionName, getFieldSerializers(), {}, sEntityId};
 
         selfArchetype.foreachField(
             [](rfk::Field const& field, void* userData) -> bool {
-                const auto& fieldType = field.getType();
-
                 if (!isFieldSerializable(field))
                     return true;
 
                 Data* pData = static_cast<Data*>(userData);
                 const auto sFieldName = field.getName();
-                const auto sFieldCanonicalTypeName = std::string(field.getCanonicalTypeName());
 
                 try {
                     // Throws if not found.
                     toml::find(*pData->pTomlData, pData->sSectionName, sFieldName);
                 } catch (...) {
-                    // ----------------------------------------------------------------------------
                     // No field exists with this name in this section - OK.
-                    // Look at field type and save it in TOML data.
-                    // ----------------------------------------------------------------------------
-                    // Primitive types.
-                    // ----------------------------------------------------------------------------
-                    if (fieldType.match(rfk::getType<bool>())) {
-                        pData->pTomlData->operator[](pData->sSectionName).operator[](sFieldName) =
-                            field.getUnsafe<bool>(pData->self);
-                    } else if (fieldType.match(rfk::getType<int>())) {
-                        pData->pTomlData->operator[](pData->sSectionName).operator[](sFieldName) =
-                            field.getUnsafe<int>(pData->self);
-                    } else if (fieldType.match(rfk::getType<long long>())) {
-                        pData->pTomlData->operator[](pData->sSectionName).operator[](sFieldName) =
-                            field.getUnsafe<long long>(pData->self);
-                    } else if (fieldType.match(rfk::getType<float>())) {
-                        pData->pTomlData->operator[](pData->sSectionName).operator[](sFieldName) =
-                            field.getUnsafe<float>(pData->self);
-                    } else if (fieldType.match(rfk::getType<double>())) {
-                        // Store double as string for better precision.
-                        pData->pTomlData->operator[](pData->sSectionName).operator[](sFieldName) =
-                            toml::format(toml::value(field.getUnsafe<double>(pData->self)));
-                    }
-                    // ----------------------------------------------------------------------------
-                    // STL types.
-                    // ----------------------------------------------------------------------------
-                    // non-reflected STL types have equal types in Refureku
-                    // thus add additional checks
-                    // ----------------------------------------------------------------------------
-                    else if (sFieldCanonicalTypeName == sStringCanonicalTypeName) {
-                        // Field type is `std::string`.
-                        pData->pTomlData->operator[](pData->sSectionName).operator[](sFieldName) =
-                            field.getUnsafe<std::string>(pData->self);
-                    } else if (sFieldCanonicalTypeName.starts_with("std::vector<")) {
-                        if (serializeVectorField(
-                                pData->pTomlData, pData->self, &field, pData->sSectionName)) {
-                            pData->error = Error(fmt::format(
-                                "vector field \"{}\" (maybe inherited) of class \"{}\" has unsupported for "
-                                "serialization inner type",
-                                field.getName(),
-                                pData->selfArchetype->getName()));
-                            return false;
-                        }
-                    } else if (sFieldCanonicalTypeName.starts_with("std::unordered_map<")) {
-                        if (serializeUnorderedMapField(
-                                pData->pTomlData, pData->self, &field, pData->sSectionName)) {
-                            pData->error = Error(fmt::format(
-                                "unordered map field \"{}\" (maybe inherited) of class \"{}\" has "
-                                "unsupported for serialization inner type",
-                                field.getName(),
-                                pData->selfArchetype->getName()));
-                            return false;
-                        }
-                    }
-                    // ----------------------------------------------------------------------------
-                    // Custom reflected types.
-                    // ----------------------------------------------------------------------------
-                    else if (
-                        fieldType.getArchetype() && isDerivedFromSerializable(fieldType.getArchetype())) {
-                        // Field with a reflected type.
-                        // Check that this type has GUID.
-                        if (!fieldType.getArchetype()->getProperty<Guid>(false)) {
-                            const Error err(fmt::format(
-                                "type {} does not have a GUID assigned to it",
-                                fieldType.getArchetype()->getName()));
-                            pData->error = std::move(err);
+                    // Save field data in TOML.
+                    for (const auto& pSerializer : pData->vFieldSerializers) {
+                        if (pSerializer->isFieldTypeSupported(&field)) {
+                            auto optionalError = pSerializer->serializeField(
+                                pData->pTomlData,
+                                pData->self,
+                                &field,
+                                pData->sSectionName,
+                                pData->sEntityId,
+                                pData->iSubEntityId);
+                            if (optionalError.has_value()) {
+                                pData->error = optionalError.value();
+                                pData->error->addEntry();
+                                return false;
+                            }
+
+                            pData->iTotalFieldsSerialized += 1;
                             return true;
                         }
-
-                        // Add a key to specify that this value has a reflected type.
-                        pData->pTomlData->operator[](pData->sSectionName).operator[](sFieldName) =
-                            "reflected type, see other sub-section";
-
-                        // Serialize this field "under our ID".
-                        const std::string sSubEntityIdSectionName =
-                            fmt::format("{}.{}", pData->sEntityId, pData->iSubEntityId);
-                        const auto pSubEntity = static_cast<Serializable*>(field.getPtrUnsafe(pData->self));
-                        auto result = pSubEntity->serialize(*pData->pTomlData, sSubEntityIdSectionName);
-                        if (std::holds_alternative<Error>(result)) {
-                            pData->error = std::get<Error>(std::move(result));
-                            pData->error->addEntry();
-                            return true;
-                        }
-                        const auto sSubEntityFinalSectionName = std::get<std::string>(result);
-                        pData->iSubEntityId += 1;
-
-                        // Add a new key ".field_name" to this sub entity so that we will know to which
-                        // field this entity should be assigned.
-                        pData->pTomlData->operator[](sSubEntityFinalSectionName)
-                            .
-                            operator[](sSubEntityFieldNameKey) = sFieldName;
-                    }
-                    // ----------------------------------------------------------------------------
-                    // Other.
-                    // ----------------------------------------------------------------------------
-                    else {
-                        pData->error = Error(fmt::format(
-                            "field \"{}\" (maybe inherited) of class \"{}\" has unsupported for "
-                            "serialization type",
-                            field.getName(),
-                            pData->selfArchetype->getName()));
-                        return false;
                     }
 
-                    pData->iTotalFieldsSerialized += 1;
-                    return true;
+                    pData->error = Error(fmt::format(
+                        "The field \"{}\" (maybe inherited) of type \"{}\" has unsupported for "
+                        "serialization type.",
+                        field.getName(),
+                        pData->selfArchetype->getName()));
+                    return false;
                 }
 
                 // A field with this name in this section was found.
                 // If we continue it will get overwritten.
                 pData->error = Error(fmt::format(
-                    "found two fields with the same name \"{}\" in class \"{}\" (maybe inherited)",
+                    "Found two fields with the same name \"{}\" in type \"{}\" (maybe inherited)",
                     sFieldName,
                     pData->selfArchetype->getName()));
 
@@ -339,144 +265,6 @@ namespace ne {
             return false;
 
         return true;
-    }
-
-    bool Serializable::isDerivedFromSerializable(rfk::Archetype const* pArchetype) {
-        if (rfk::Class const* pClass = rfk::classCast(pArchetype)) {
-            // Check parents.
-            if (pClass->isSubclassOf(Serializable::staticGetArchetype()))
-                return true;
-
-            // Check if Serializable.
-            const auto pGuid = pClass->getProperty<Guid>(false);
-            if (!pGuid)
-                return false;
-
-            if (pGuid->getGuid() == Serializable::staticGetArchetype().getProperty<Guid>(false)->getGuid())
-                return true;
-
-            return false;
-        } else if (rfk::Struct const* pStruct = rfk::structCast(pArchetype)) {
-            // Check parents.
-            if (pStruct->isSubclassOf(Serializable::staticGetArchetype()))
-                return true;
-
-            return false;
-        } else {
-            return false;
-        }
-    }
-
-    std::optional<Error> Serializable::cloneSerializableObject(Serializable* pFrom, Serializable* pTo) {
-        rfk::Class const& fromArchetype = pFrom->getArchetype();
-        rfk::Class const& toArchetype = pTo->getArchetype();
-
-        // Check if types are equal.
-        const auto pFromGuid = fromArchetype.getProperty<Guid>(false);
-        const auto pToGuid = toArchetype.getProperty<Guid>(false);
-        if (!pFromGuid) {
-            const Error err(
-                fmt::format("type {} does not have a GUID assigned to it", fromArchetype.getName()));
-            return err;
-        }
-        if (!pToGuid) {
-            const Error err(
-                fmt::format("type {} does not have a GUID assigned to it", toArchetype.getName()));
-            return err;
-        }
-
-        if (pFromGuid->getGuid() != pToGuid->getGuid()) {
-            return Error(fmt::format(
-                "types \"{}\" and \"{}\" are not the same", fromArchetype.getName(), toArchetype.getName()));
-        }
-
-        struct Data {
-            Serializable* pFrom;
-            Serializable* pTo;
-            std::optional<Error> error;
-        };
-
-        Data loopData{pFrom, pTo, std::optional<Error>{}};
-
-        fromArchetype.foreachField(
-            [](rfk::Field const& field, void* userData) -> bool {
-                if (!isFieldSerializable(field))
-                    return true;
-
-                const auto& fieldType = field.getType();
-                Data* pData = static_cast<Data*>(userData);
-                const auto sFieldName = field.getName();
-                const auto sFieldCanonicalTypeName = std::string(field.getCanonicalTypeName());
-
-                const auto* pFieldTo =
-                    pData->pTo->getArchetype().getFieldByName(sFieldName, rfk::EFieldFlags::Default, true);
-
-                if (cloneFieldIfMatchesPrimitiveType<bool>(pData->pFrom, field, pData->pTo, pFieldTo))
-                    return true;
-                if (cloneFieldIfMatchesPrimitiveType<int>(pData->pFrom, field, pData->pTo, pFieldTo))
-                    return true;
-                if (cloneFieldIfMatchesPrimitiveType<long long>(pData->pFrom, field, pData->pTo, pFieldTo))
-                    return true;
-                if (cloneFieldIfMatchesPrimitiveType<float>(pData->pFrom, field, pData->pTo, pFieldTo))
-                    return true;
-                if (cloneFieldIfMatchesPrimitiveType<double>(pData->pFrom, field, pData->pTo, pFieldTo))
-                    return true;
-
-                // ----------------------------------------------------------------------------
-                // STL types.
-                // ----------------------------------------------------------------------------
-                // non-reflected STL types have equal types in Refureku
-                // thus add additional checks
-                // ----------------------------------------------------------------------------
-                if (sFieldCanonicalTypeName == sStringCanonicalTypeName) {
-                    // Field type is `std::string`.
-                    auto value = field.getUnsafe<std::string>(pData->pFrom);
-                    pFieldTo->setUnsafe<std::string>(pData->pTo, std::move(value));
-                } else if (sFieldCanonicalTypeName.starts_with("std::vector<")) {
-                    if (cloneVectorField(pData->pFrom, &field, pData->pTo, pFieldTo)) {
-                        Error err(fmt::format(
-                            "vector field \"{}\" has unsupported for serialization inner type",
-                            field.getName()));
-                        return false;
-                    }
-                } else if (sFieldCanonicalTypeName.starts_with("std::unordered_map")) {
-                    if (cloneUnorderedMapField(pData->pFrom, &field, pData->pTo, pFieldTo)) {
-                        Error err(fmt::format(
-                            "unordered map field \"{}\" has unsupported for serialization inner type",
-                            field.getName()));
-                        return false;
-                    }
-                }
-                // ----------------------------------------------------------------------------
-                // Custom reflected types.
-                // ----------------------------------------------------------------------------
-                else if (fieldType.getArchetype() && isDerivedFromSerializable(fieldType.getArchetype())) {
-                    auto optionalError = cloneSerializableObject(
-                        static_cast<Serializable*>(field.getPtrUnsafe(pData->pFrom)),
-                        static_cast<Serializable*>(pFieldTo->getPtrUnsafe(pData->pTo)));
-                    if (optionalError.has_value()) {
-                        auto err = std::move(optionalError.value());
-                        err.addEntry();
-                        pData->error = err;
-                        return false;
-                    }
-                } else {
-                    Error err(
-                        fmt::format("field \"{}\" has unsupported for serialization type", field.getName()));
-                    return false;
-                }
-
-                return true;
-            },
-            &loopData,
-            true);
-
-        if (loopData.error.has_value()) {
-            auto err = std::move(loopData.error.value());
-            err.addEntry();
-            return err;
-        }
-        return {};
     }
 
     const rfk::Struct*
@@ -729,412 +517,55 @@ namespace ne {
         return {};
     }
 
-    bool Serializable::cloneVectorField(
-        Serializable* pFromInstance,
-        const rfk::Field* pFromField,
-        Serializable* pToInstance,
-        const rfk::Field* pToField) {
-        const auto sFieldCanonicalTypeName = std::string(pFromField->getCanonicalTypeName());
+    void Serializable::addFieldSerializer(std::unique_ptr<IFieldSerializer> pFieldSerializer) {
+        std::scoped_lock guard(mtxFieldSerializers.first);
 
-        if (sFieldCanonicalTypeName == "std::vector<bool>") {
-            // Field type is `std::vector<bool>`.
-            auto value = pFromField->getUnsafe<std::vector<bool>>(pFromInstance);
-            pToField->setUnsafe<std::vector<bool>>(pToInstance, std::move(value));
-            return false;
-        } else if (sFieldCanonicalTypeName == "std::vector<int>") {
-            // Field type is `std::vector<int>`.
-            auto value = pFromField->getUnsafe<std::vector<int>>(pFromInstance);
-            pToField->setUnsafe<std::vector<int>>(pToInstance, std::move(value));
-            return false;
-        } else if (sFieldCanonicalTypeName == "std::vector<long long>") {
-            // Field type is `std::vector<long long>`.
-            auto value = pFromField->getUnsafe<std::vector<long long>>(pFromInstance);
-            pToField->setUnsafe<std::vector<long long>>(pToInstance, std::move(value));
-            return false;
-        } else if (sFieldCanonicalTypeName == "std::vector<float>") {
-            // Field type is `std::vector<float>`.
-            auto value = pFromField->getUnsafe<std::vector<float>>(pFromInstance);
-            pToField->setUnsafe<std::vector<float>>(pToInstance, std::move(value));
-            return false;
-        } else if (sFieldCanonicalTypeName == "std::vector<double>") {
-            // Field type is `std::vector<double>`.
-            auto value = pFromField->getUnsafe<std::vector<double>>(pFromInstance);
-            pToField->setUnsafe<std::vector<double>>(pToInstance, std::move(value));
-            return false;
-        } else if (sFieldCanonicalTypeName == fmt::format("std::vector<{}>", sStringCanonicalTypeName)) {
-            // Field type is `std::vector<std::string>`.
-            auto value = pFromField->getUnsafe<std::vector<std::string>>(pFromInstance);
-            pToField->setUnsafe<std::vector<std::string>>(pToInstance, std::move(value));
-            return false;
-        }
-
-        return true;
-    }
-
-    bool Serializable::serializeVectorField(
-        toml::value* pTomlData,
-        Serializable* pFieldOwner,
-        const rfk::Field* pField,
-        const std::string& sSectionName) {
-        const auto sFieldCanonicalTypeName = std::string(pField->getCanonicalTypeName());
-        const auto sFieldName = pField->getName();
-
-        if (sFieldCanonicalTypeName == "std::vector<bool>") {
-            // Field type is `std::vector<bool>`.
-            pTomlData->operator[](sSectionName).operator[](sFieldName) =
-                pField->getUnsafe<std::vector<bool>>(pFieldOwner);
-
-            return false;
-        } else if (sFieldCanonicalTypeName == "std::vector<int>") {
-            // Field type is `std::vector<int>`.
-            pTomlData->operator[](sSectionName).operator[](sFieldName) =
-                pField->getUnsafe<std::vector<int>>(pFieldOwner);
-
-            return false;
-        } else if (sFieldCanonicalTypeName == "std::vector<long long>") {
-            // Field type is `std::vector<long long>`.
-            pTomlData->operator[](sSectionName).operator[](sFieldName) =
-                pField->getUnsafe<std::vector<long long>>(pFieldOwner);
-
-            return false;
-        } else if (sFieldCanonicalTypeName == "std::vector<float>") {
-            // Field type is `std::vector<float>`.
-            pTomlData->operator[](sSectionName).operator[](sFieldName) =
-                pField->getUnsafe<std::vector<float>>(pFieldOwner);
-
-            return false;
-        } else if (sFieldCanonicalTypeName == "std::vector<double>") {
-            // Field type is `std::vector<double>`.
-            const std::vector<double> vArray = pField->getUnsafe<std::vector<double>>(pFieldOwner);
-            // Store double as string for better precision.
-            std::vector<std::string> vStrArray;
-            for (const auto& item : vArray) {
-                vStrArray.push_back(toml::format(toml::value(item)));
+        for (const auto& pSerializer : mtxFieldSerializers.second) {
+            auto& addedSerializer = *pSerializer.get();
+            auto& newSerializer = *pFieldSerializer.get();
+            if (typeid(addedSerializer) == typeid(newSerializer)) {
+                return;
             }
-            pTomlData->operator[](sSectionName).operator[](sFieldName) = vStrArray;
+        }
+
+        mtxFieldSerializers.second.push_back(std::move(pFieldSerializer));
+    }
+
+    std::vector<IFieldSerializer*> Serializable::getFieldSerializers() {
+        std::scoped_lock guard(mtxFieldSerializers.first);
+
+        std::vector<IFieldSerializer*> vSerializers;
+        for (const auto& pSerializer : mtxFieldSerializers.second) {
+            vSerializers.push_back(pSerializer.get());
+        }
+
+        return vSerializers;
+    }
+
+    bool Serializable::isDerivedFromSerializable(const rfk::Archetype* pArchetype) {
+        if (rfk::Class const* pClass = rfk::classCast(pArchetype)) {
+            // Check parents.
+            if (pClass->isSubclassOf(Serializable::staticGetArchetype()))
+                return true;
+
+            // Check if Serializable.
+            const auto pGuid = pClass->getProperty<Guid>(false);
+            if (!pGuid)
+                return false;
+
+            if (pGuid->getGuid() == Serializable::staticGetArchetype().getProperty<Guid>(false)->getGuid())
+                return true;
 
             return false;
-        } else if (sFieldCanonicalTypeName == fmt::format("std::vector<{}>", sStringCanonicalTypeName)) {
-            // Field type is `std::vector<std::string>`.
-            pTomlData->operator[](sSectionName).operator[](sFieldName) =
-                pField->getUnsafe<std::vector<std::string>>(pFieldOwner);
+        } else if (rfk::Struct const* pStruct = rfk::structCast(pArchetype)) {
+            // Check parents.
+            if (pStruct->isSubclassOf(Serializable::staticGetArchetype()))
+                return true;
 
             return false;
-        }
-
-        return true;
-    }
-
-    bool Serializable::deserializeVectorField(
-        toml::value* pTomlData, Serializable* pFieldOwner, const rfk::Field* pField) {
-        if (!pTomlData->is_array()) {
-            return true;
-        }
-
-        const auto sFieldCanonicalTypeName = std::string(pField->getCanonicalTypeName());
-
-        if (sFieldCanonicalTypeName == "std::vector<bool>") {
-            // Field type is `std::vector<bool>`.
-            auto fieldValue = pTomlData->as_array();
-            std::vector<bool> vArray;
-            for (const auto& item : fieldValue) {
-                if (!item.is_boolean()) {
-                    return true;
-                }
-                vArray.push_back(item.as_boolean());
-            }
-            pField->setUnsafe<std::vector<bool>>(pFieldOwner, std::move(vArray));
-
-            return false;
-        } else if (sFieldCanonicalTypeName == "std::vector<int>") {
-            // Field type is `std::vector<int>`.
-            auto fieldValue = pTomlData->as_array();
-            std::vector<int> vArray;
-            for (const auto& item : fieldValue) {
-                if (!item.is_integer()) {
-                    return true;
-                }
-                vArray.push_back(static_cast<int>(item.as_integer()));
-            }
-            pField->setUnsafe<std::vector<int>>(pFieldOwner, std::move(vArray));
-
-            return false;
-        } else if (sFieldCanonicalTypeName == "std::vector<long long>") {
-            // Field type is `std::vector<long long>`.
-            auto fieldValue = pTomlData->as_array();
-            std::vector<long long> vArray;
-            for (const auto& item : fieldValue) {
-                if (!item.is_integer()) {
-                    return true;
-                }
-                vArray.push_back(item.as_integer());
-            }
-            pField->setUnsafe<std::vector<long long>>(pFieldOwner, std::move(vArray));
-
-            return false;
-        } else if (sFieldCanonicalTypeName == "std::vector<float>") {
-            // Field type is `std::vector<float>`.
-            auto fieldValue = pTomlData->as_array();
-            std::vector<float> vArray;
-            for (const auto& item : fieldValue) {
-                if (!item.is_floating()) {
-                    return true;
-                }
-                vArray.push_back(static_cast<float>(item.as_floating()));
-            }
-            pField->setUnsafe<std::vector<float>>(pFieldOwner, std::move(vArray));
-
-            return false;
-        } else if (sFieldCanonicalTypeName == "std::vector<double>") {
-            // Field type is `std::vector<double>`.
-            // Double is stored as a string for better precision.
-            auto fieldValue = pTomlData->as_array();
-            std::vector<double> vArray;
-            for (const auto& item : fieldValue) {
-                if (!item.is_string()) {
-                    return true;
-                }
-                try {
-                    vArray.push_back(std::stod(item.as_string().str));
-                } catch (...) {
-                    return true;
-                }
-            }
-            pField->setUnsafe<std::vector<double>>(pFieldOwner, std::move(vArray));
-
-            return false;
-        } else if (sFieldCanonicalTypeName == fmt::format("std::vector<{}>", sStringCanonicalTypeName)) {
-            // Field type is `std::vector<std::string>`.
-            auto fieldValue = pTomlData->as_array();
-            std::vector<std::string> vArray;
-            for (const auto& item : fieldValue) {
-                if (!item.is_string()) {
-                    return true;
-                }
-                vArray.push_back(item.as_string());
-            }
-            pField->setUnsafe<std::vector<std::string>>(pFieldOwner, std::move(vArray));
-
+        } else {
             return false;
         }
-
-        return true;
-    }
-
-    bool Serializable::serializeUnorderedMapField(
-        toml::value* pTomlData,
-        Serializable* pFieldOwner,
-        const rfk::Field* pField,
-        const std::string& sSectionName) {
-        // Define a helper macro...
-#define SERIALIZE_UNORDERED_MAP_TYPE(TYPEA, TYPEB)                                                           \
-    if (sFieldCanonicalTypeName == fmt::format("std::unordered_map<{}, {}>", #TYPEA, #TYPEB)) {              \
-        const auto originalMap = pField->getUnsafe<std::unordered_map<TYPEA, TYPEB>>(pFieldOwner);           \
-        std::unordered_map<std::string, TYPEB> map;                                                          \
-        for (const auto& [key, value] : originalMap) {                                                       \
-            map[fmt::format("{}", key)] = value;                                                             \
-        }                                                                                                    \
-        pTomlData->operator[](sSectionName).operator[](sFieldName) = map;                                    \
-        return false;                                                                                        \
-    }
-        // and another helper macro.
-#define SERIALIZE_UNORDERED_MAP_TYPES(TYPE)                                                                  \
-    SERIALIZE_UNORDERED_MAP_TYPE(TYPE, bool)                                                                 \
-    SERIALIZE_UNORDERED_MAP_TYPE(TYPE, int)                                                                  \
-    SERIALIZE_UNORDERED_MAP_TYPE(TYPE, long long)                                                            \
-    SERIALIZE_UNORDERED_MAP_TYPE(TYPE, float)                                                                \
-    SERIALIZE_UNORDERED_MAP_TYPE(TYPE, double)                                                               \
-    SERIALIZE_UNORDERED_MAP_TYPE(TYPE, std::basic_string<char>)
-
-        const auto sFieldName = pField->getName();
-        const auto sFieldCanonicalTypeName = std::string(pField->getCanonicalTypeName());
-
-        SERIALIZE_UNORDERED_MAP_TYPES(bool)
-        SERIALIZE_UNORDERED_MAP_TYPES(int)
-        SERIALIZE_UNORDERED_MAP_TYPES(long long)
-        SERIALIZE_UNORDERED_MAP_TYPES(float)
-        SERIALIZE_UNORDERED_MAP_TYPES(double)
-        SERIALIZE_UNORDERED_MAP_TYPES(std::basic_string<char>)
-
-        return true;
-    }
-
-    // ------------------------------------------------------------------------------------------------
-
-    template <typename T> std::optional<T> convertStringToType(const std::string& sText) { return {}; }
-
-    template <> std::optional<bool> convertStringToType<bool>(const std::string& sText) {
-        if (sText == "true")
-            return true;
-        else
-            return false;
-    }
-
-    template <> std::optional<int> convertStringToType<int>(const std::string& sText) {
-        try {
-            return std::stoi(sText);
-        } catch (...) {
-            return {};
-        }
-    }
-
-    template <> std::optional<long long> convertStringToType<long long>(const std::string& sText) {
-        try {
-            return std::stoll(sText);
-        } catch (...) {
-            return {};
-        }
-    }
-
-    template <> std::optional<float> convertStringToType<float>(const std::string& sText) {
-        try {
-            return std::stof(sText);
-        } catch (...) {
-            return {};
-        }
-    }
-
-    template <> std::optional<double> convertStringToType<double>(const std::string& sText) {
-        try {
-            return std::stod(sText);
-        } catch (...) {
-            return {};
-        }
-    }
-
-    template <> std::optional<std::string> convertStringToType<std::string>(const std::string& sText) {
-        return sText;
-    }
-
-    // ------------------------------------------------------------------------------------------------
-
-    template <typename T> std::optional<T> convertTomlValueToType(const toml::value& value) { return {}; }
-
-    template <> std::optional<bool> convertTomlValueToType<bool>(const toml::value& value) {
-        if (!value.is_boolean()) {
-            return {};
-        }
-        return value.as_boolean();
-    }
-
-    template <> std::optional<int> convertTomlValueToType<int>(const toml::value& value) {
-        if (!value.is_integer()) {
-            return {};
-        }
-        return static_cast<int>(value.as_integer());
-    }
-
-    template <> std::optional<long long> convertTomlValueToType<long long>(const toml::value& value) {
-        if (!value.is_integer()) {
-            return {};
-        }
-        return value.as_integer();
-    }
-
-    template <> std::optional<float> convertTomlValueToType<float>(const toml::value& value) {
-        if (!value.is_floating()) {
-            return {};
-        }
-        return static_cast<float>(value.as_floating());
-    }
-
-    template <> std::optional<double> convertTomlValueToType<double>(const toml::value& value) {
-        if (!value.is_floating()) {
-            return {};
-        }
-        return value.as_floating();
-    }
-
-    template <> std::optional<std::string> convertTomlValueToType<std::string>(const toml::value& value) {
-        if (!value.is_string()) {
-            return {};
-        }
-        return value.as_string().str;
-    }
-
-    // ------------------------------------------------------------------------------------------------
-
-    bool Serializable::deserializeUnorderedMapField(
-        toml::value* pTomlData, Serializable* pFieldOwner, const rfk::Field* pField) {
-        if (!pTomlData->is_table()) {
-            return true;
-        }
-
-// Define another helper macro...
-#define DESERIALIZE_UNORDERED_MAP_TYPE(TYPEA, TYPEB)                                                         \
-    if (sFieldCanonicalTypeName == fmt::format("std::unordered_map<{}, {}>", #TYPEA, #TYPEB)) {              \
-        auto fieldValue = pTomlData->as_table();                                                             \
-        std::unordered_map<TYPEA, TYPEB> map;                                                                \
-        for (const auto& [sKey, value] : fieldValue) {                                                       \
-            TYPEA castedKey;                                                                                 \
-            const auto optionalKey = convertStringToType<TYPEA>(sKey);                                       \
-            if (!optionalKey.has_value())                                                                    \
-                return true;                                                                                 \
-            castedKey = optionalKey.value();                                                                 \
-            TYPEB castedValue;                                                                               \
-            const auto optionalValue = convertTomlValueToType<TYPEB>(value);                                 \
-            if (!optionalValue.has_value())                                                                  \
-                return true;                                                                                 \
-            castedValue = optionalValue.value();                                                             \
-            map[castedKey] = castedValue;                                                                    \
-        }                                                                                                    \
-        pField->setUnsafe<std::unordered_map<TYPEA, TYPEB>>(pFieldOwner, std::move(map));                    \
-        return false;                                                                                        \
-    }
-
-// and another helper macro.
-#define DESERIALIZE_UNORDERED_MAP_TYPES(TYPE)                                                                \
-    DESERIALIZE_UNORDERED_MAP_TYPE(TYPE, bool)                                                               \
-    DESERIALIZE_UNORDERED_MAP_TYPE(TYPE, int)                                                                \
-    DESERIALIZE_UNORDERED_MAP_TYPE(TYPE, long long)                                                          \
-    DESERIALIZE_UNORDERED_MAP_TYPE(TYPE, float)                                                              \
-    DESERIALIZE_UNORDERED_MAP_TYPE(TYPE, double)                                                             \
-    DESERIALIZE_UNORDERED_MAP_TYPE(TYPE, std::basic_string<char>)
-
-        const auto sFieldCanonicalTypeName = std::string(pField->getCanonicalTypeName());
-
-        DESERIALIZE_UNORDERED_MAP_TYPES(bool)
-        DESERIALIZE_UNORDERED_MAP_TYPES(int)
-        DESERIALIZE_UNORDERED_MAP_TYPES(long long)
-        DESERIALIZE_UNORDERED_MAP_TYPES(float)
-        DESERIALIZE_UNORDERED_MAP_TYPES(double)
-        DESERIALIZE_UNORDERED_MAP_TYPES(std::basic_string<char>)
-
-        return true;
-    }
-
-    bool Serializable::cloneUnorderedMapField(
-        Serializable* pFromInstance,
-        const rfk::Field* pFromField,
-        Serializable* pToInstance,
-        const rfk::Field* pToField) {
-        const auto sFieldCanonicalTypeName = std::string(pFromField->getCanonicalTypeName());
-
-// Define another helper macro...
-#define CLONE_UNORDERED_MAP_TYPE(TYPEA, TYPEB)                                                               \
-    if (sFieldCanonicalTypeName == fmt::format("std::unordered_map<{}, {}>", #TYPEA, #TYPEB)) {              \
-        auto value = pFromField->getUnsafe<std::unordered_map<TYPEA, TYPEB>>(pFromInstance);                 \
-        pToField->setUnsafe<std::unordered_map<TYPEA, TYPEB>>(pToInstance, std::move(value));                \
-        return false;                                                                                        \
-    }
-
-// and another helper macro.
-#define CLONE_UNORDERED_MAP_TYPES(TYPE)                                                                      \
-    CLONE_UNORDERED_MAP_TYPE(TYPE, bool)                                                                     \
-    CLONE_UNORDERED_MAP_TYPE(TYPE, int)                                                                      \
-    CLONE_UNORDERED_MAP_TYPE(TYPE, long long)                                                                \
-    CLONE_UNORDERED_MAP_TYPE(TYPE, float)                                                                    \
-    CLONE_UNORDERED_MAP_TYPE(TYPE, double)                                                                   \
-    CLONE_UNORDERED_MAP_TYPE(TYPE, std::basic_string<char>)
-
-        CLONE_UNORDERED_MAP_TYPES(bool)
-        CLONE_UNORDERED_MAP_TYPES(int)
-        CLONE_UNORDERED_MAP_TYPES(long long)
-        CLONE_UNORDERED_MAP_TYPES(float)
-        CLONE_UNORDERED_MAP_TYPES(double)
-        CLONE_UNORDERED_MAP_TYPES(std::basic_string<char>)
-
-        return true;
     }
 
 } // namespace ne

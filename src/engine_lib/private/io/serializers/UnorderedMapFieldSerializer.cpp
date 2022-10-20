@@ -46,11 +46,19 @@ namespace ne {
 #define SERIALIZE_UNORDERED_MAP_TYPE(TYPEA, TYPEB)                                                           \
     if (sFieldCanonicalTypeName == fmt::format("std::unordered_map<{}, {}>", #TYPEA, #TYPEB)) {              \
         const auto originalMap = pField->getUnsafe<std::unordered_map<TYPEA, TYPEB>>(pFieldOwner);           \
-        std::unordered_map<std::string, TYPEB> map;                                                          \
-        for (const auto& [key, value] : originalMap) {                                                       \
-            map[fmt::format("{}", key)] = value;                                                             \
+        if (std::string(#TYPEB) != "double") {                                                               \
+            std::unordered_map<std::string, TYPEB> map;                                                      \
+            for (const auto& [key, value] : originalMap) {                                                   \
+                map[fmt::format("{}", key)] = value;                                                         \
+            }                                                                                                \
+            pTomlData->operator[](sSectionName).operator[](sFieldName) = map;                                \
+        } else {                                                                                             \
+            std::unordered_map<std::string, std::string> map;                                                \
+            for (const auto& [key, value] : originalMap) {                                                   \
+                map[fmt::format("{}", key)] = fmt::format("{}", value);                                      \
+            }                                                                                                \
+            pTomlData->operator[](sSectionName).operator[](sFieldName) = map;                                \
         }                                                                                                    \
-        pTomlData->operator[](sSectionName).operator[](sFieldName) = map;                                    \
         return {};                                                                                           \
     }
         // and another helper macro.
@@ -73,7 +81,7 @@ namespace ne {
             "The type \"{}\" of the specified field \"{}\" is not supported by this serializer.",
             sFieldCanonicalTypeName,
             sFieldName));
-    }
+    } // namespace ne
 
     // ------------------------------------------------------------------------------------------------
 
@@ -155,10 +163,16 @@ namespace ne {
     }
 
     template <> std::optional<double> convertTomlValueToType<double>(const toml::value& value) {
-        if (!value.is_floating()) {
-            return {};
-        }
-        return value.as_floating();
+        if (value.is_floating())
+            return value.as_floating();
+        else if (value.is_string())
+            try {
+                return std::stod(value.as_string());
+            } catch (...) {
+                return {};
+            }
+
+        return {};
     }
 
     template <> std::optional<std::string> convertTomlValueToType<std::string>(const toml::value& value) {

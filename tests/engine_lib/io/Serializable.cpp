@@ -49,6 +49,11 @@ TEST_CASE("serialize and deserialize fields of different types") {
         testObj.mapBoolFloat = {{false, -3.14159f}, {true, 3.14159f}};
         testObj.mapBoolDouble = {{false, -3.14159265358979}, {true, 3.14159265358979}};
         testObj.mapBoolString = {{false, "Привет \"мир\""}, {true, "Hello \"world\""}};
+        testObj.mapIntBool = {{-1, false}, {42, true}};
+        testObj.mapLongLongBool = {{INT_MIN * 10ll, false}, {INT_MAX * 10ll, true}};
+        testObj.mapFloatBool = {{-3.14159f, false}, {3.14159f, true}};
+        testObj.mapDoubleBool = {{-3.14159265358979, false}, {3.14159265358979, true}};
+        testObj.mapStringBool = {{"Привет \"мир\"", false}, {"Hello \"world\"", true}};
 
         outerTestObj.entity = testObj;
     }
@@ -130,14 +135,40 @@ TEST_CASE("serialize and deserialize fields of different types") {
         REQUIRE(key == it->first);
         REQUIRE(fabs(value - it->second) < floatDelta);
     }
-    //    REQUIRE(outerTestObj.entity.mapBoolDouble.size() == pDeserialized->entity.mapBoolDouble.size());
-    //    for (const auto& [key, value] : outerTestObj.entity.mapBoolDouble) {
-    //        const auto it = pDeserialized->entity.mapBoolDouble.find(key);
-    //        REQUIRE(it != pDeserialized->entity.mapBoolDouble.end());
-    //        REQUIRE(key == it->first);
-    //        REQUIRE(fabs(value - it->second) < doubleDelta);
-    //    }
+    REQUIRE(outerTestObj.entity.mapBoolDouble.size() == pDeserialized->entity.mapBoolDouble.size());
+    for (const auto& [key, value] : outerTestObj.entity.mapBoolDouble) {
+        const auto it = pDeserialized->entity.mapBoolDouble.find(key);
+        REQUIRE(it != pDeserialized->entity.mapBoolDouble.end());
+        REQUIRE(key == it->first);
+        REQUIRE(fabs(value - it->second) < doubleDelta);
+    }
     REQUIRE(outerTestObj.entity.mapBoolString == pDeserialized->entity.mapBoolString);
+
+    REQUIRE(outerTestObj.entity.mapIntBool == pDeserialized->entity.mapIntBool);
+    REQUIRE(outerTestObj.entity.mapLongLongBool == pDeserialized->entity.mapLongLongBool);
+    REQUIRE(outerTestObj.entity.mapFloatBool.size() == pDeserialized->entity.mapFloatBool.size());
+    for (const auto& [key, value] : outerTestObj.entity.mapFloatBool) {
+        bool bFound = false;
+        for (const auto& [otherKey, otherValue] : pDeserialized->entity.mapFloatBool) {
+            if (fabs(key - otherKey) < floatDelta) {
+                bFound = true;
+                break;
+            }
+        }
+        REQUIRE(bFound);
+    }
+    REQUIRE(outerTestObj.entity.mapDoubleBool.size() == pDeserialized->entity.mapDoubleBool.size());
+    for (const auto& [key, value] : outerTestObj.entity.mapDoubleBool) {
+        bool bFound = false;
+        for (const auto& [otherKey, otherValue] : pDeserialized->entity.mapDoubleBool) {
+            if (fabs(key - otherKey) < doubleDelta) {
+                bFound = true;
+                break;
+            }
+        }
+        REQUIRE(bFound);
+    }
+    REQUIRE(outerTestObj.entity.mapStringBool == pDeserialized->entity.mapStringBool);
 
     // Cleanup.
     std::filesystem::remove(fullPathToFile);

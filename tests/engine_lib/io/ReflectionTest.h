@@ -71,6 +71,21 @@ public:
     RPROPERTY()
     std::unordered_map<bool, std::string> mapBoolString;
 
+    RPROPERTY()
+    std::unordered_map<int, bool> mapIntBool;
+
+    RPROPERTY()
+    std::unordered_map<long long, bool> mapLongLongBool;
+
+    RPROPERTY()
+    std::unordered_map<float, bool> mapFloatBool;
+
+    RPROPERTY()
+    std::unordered_map<double, bool> mapDoubleBool;
+
+    RPROPERTY()
+    std::unordered_map<std::string, bool> mapStringBool;
+
     ReflectionTestClass_GENERATED
 };
 

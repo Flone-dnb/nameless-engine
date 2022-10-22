@@ -36,6 +36,7 @@ TEST_CASE("serialize and deserialize fields of different types") {
         testObj.iIntValue = 42;
         testObj.iUnsignedIntValue = UINT_MAX;
         testObj.iLongLongValue = INT_MAX * 10ll;
+        testObj.iUnsignedLongLongValue = ULLONG_MAX;
         testObj.floatValue = 3.14159f;
         testObj.doubleValue = 3.14159265358979;
 
@@ -45,6 +46,7 @@ TEST_CASE("serialize and deserialize fields of different types") {
         testObj.vIntVector = {42, -42, 43, -43};
         testObj.vUnsignedIntVector = {UINT_MAX, INT_MAX + 1u};
         testObj.vLongLongVector = {INT_MAX * 10ll, INT_MIN * 10ll};
+        testObj.vUnsignedLongLongVector = {ULLONG_MAX, ULLONG_MAX - 1};
         testObj.vFloatVector = {3.14159f, -3.14159f};
         testObj.vDoubleVector = {3.14159265358979, -3.14159265358979};
         testObj.vStringVector = {"Привет \"мир\"", "Hello \"world\""};
@@ -53,12 +55,14 @@ TEST_CASE("serialize and deserialize fields of different types") {
         testObj.mapBoolInt = {{false, -1}, {true, 42}};
         testObj.mapBoolUnsignedInt = {{false, UINT_MAX}, {true, INT_MAX + 1u}};
         testObj.mapBoolLongLong = {{false, INT_MIN * 10ll}, {true, INT_MAX * 10ll}};
+        testObj.mapBoolUnsignedLongLong = {{false, ULLONG_MAX}, {true, ULLONG_MAX - 1}};
         testObj.mapBoolFloat = {{false, -3.14159f}, {true, 3.14159f}};
         testObj.mapBoolDouble = {{false, -3.14159265358979}, {true, 3.14159265358979}};
         testObj.mapBoolString = {{false, "Привет \"мир\""}, {true, "Hello \"world\""}};
         testObj.mapIntBool = {{-1, false}, {42, true}};
         testObj.mapUnsignedIntBool = {{UINT_MAX, false}, {INT_MAX + 1u, true}};
         testObj.mapLongLongBool = {{INT_MIN * 10ll, false}, {INT_MAX * 10ll, true}};
+        testObj.mapUnsignedLongLongBool = {{ULLONG_MAX, false}, {ULLONG_MAX - 1, true}};
         testObj.mapFloatBool = {{-3.14159f, false}, {3.14159f, true}};
         testObj.mapDoubleBool = {{-3.14159265358979, false}, {3.14159265358979, true}};
         testObj.mapStringBool = {{"Привет \"мир\"", false}, {"Hello \"world\"", true}};
@@ -114,32 +118,63 @@ TEST_CASE("serialize and deserialize fields of different types") {
     REQUIRE(outerTestObj.entity.iIntValue == pDeserialized->entity.iIntValue);
     REQUIRE(outerTestObj.entity.iUnsignedIntValue == pDeserialized->entity.iUnsignedIntValue);
     REQUIRE(outerTestObj.entity.iLongLongValue == pDeserialized->entity.iLongLongValue);
+    REQUIRE(outerTestObj.entity.iUnsignedLongLongValue == pDeserialized->entity.iUnsignedLongLongValue);
     REQUIRE(fabs(outerTestObj.entity.floatValue - pDeserialized->entity.floatValue) < floatDelta);
     REQUIRE(fabs(outerTestObj.entity.doubleValue - pDeserialized->entity.doubleValue) < doubleDelta);
     REQUIRE(outerTestObj.entity.sStringValue == pDeserialized->entity.sStringValue);
 
     // Vectors.
+    REQUIRE(!outerTestObj.entity.vBoolVector.empty());
     REQUIRE(outerTestObj.entity.vBoolVector == pDeserialized->entity.vBoolVector);
+
+    REQUIRE(!outerTestObj.entity.vIntVector.empty());
     REQUIRE(outerTestObj.entity.vIntVector == pDeserialized->entity.vIntVector);
+
+    REQUIRE(!outerTestObj.entity.vUnsignedIntVector.empty());
     REQUIRE(outerTestObj.entity.vUnsignedIntVector == pDeserialized->entity.vUnsignedIntVector);
+
+    REQUIRE(!outerTestObj.entity.vLongLongVector.empty());
     REQUIRE(outerTestObj.entity.vLongLongVector == pDeserialized->entity.vLongLongVector);
+
+    REQUIRE(!outerTestObj.entity.vUnsignedLongLongVector.empty());
+    REQUIRE(outerTestObj.entity.vUnsignedLongLongVector == pDeserialized->entity.vUnsignedLongLongVector);
+
+    REQUIRE(!outerTestObj.entity.vFloatVector.empty());
     REQUIRE(outerTestObj.entity.vFloatVector.size() == pDeserialized->entity.vFloatVector.size());
     for (size_t i = 0; i < outerTestObj.entity.vFloatVector.size(); i++)
         REQUIRE(
             fabs(outerTestObj.entity.vFloatVector[i] - pDeserialized->entity.vFloatVector[i]) < floatDelta);
+
+    REQUIRE(!outerTestObj.entity.vDoubleVector.empty());
     REQUIRE(outerTestObj.entity.vDoubleVector.size() == pDeserialized->entity.vDoubleVector.size());
     for (size_t i = 0; i < outerTestObj.entity.vDoubleVector.size(); i++)
         REQUIRE(
             fabs(outerTestObj.entity.vDoubleVector[i] - pDeserialized->entity.vDoubleVector[i]) <
             doubleDelta);
+
+    REQUIRE(!outerTestObj.entity.vStringVector.empty());
     REQUIRE(outerTestObj.entity.vStringVector == pDeserialized->entity.vStringVector);
+
+    REQUIRE(outerTestObj.entity.vEmpty.empty());
     REQUIRE(outerTestObj.entity.vEmpty == pDeserialized->entity.vEmpty);
 
     // Unordered maps.
+    REQUIRE(!outerTestObj.entity.mapBoolBool.empty());
     REQUIRE(outerTestObj.entity.mapBoolBool == pDeserialized->entity.mapBoolBool);
+
+    REQUIRE(!outerTestObj.entity.mapBoolInt.empty());
     REQUIRE(outerTestObj.entity.mapBoolInt == pDeserialized->entity.mapBoolInt);
+
+    REQUIRE(!outerTestObj.entity.mapBoolUnsignedInt.empty());
     REQUIRE(outerTestObj.entity.mapBoolUnsignedInt == pDeserialized->entity.mapBoolUnsignedInt);
+
+    REQUIRE(!outerTestObj.entity.mapBoolLongLong.empty());
     REQUIRE(outerTestObj.entity.mapBoolLongLong == pDeserialized->entity.mapBoolLongLong);
+
+    REQUIRE(!outerTestObj.entity.mapBoolUnsignedLongLong.empty());
+    REQUIRE(outerTestObj.entity.mapBoolUnsignedLongLong == pDeserialized->entity.mapBoolUnsignedLongLong);
+
+    REQUIRE(!outerTestObj.entity.mapBoolFloat.empty());
     REQUIRE(outerTestObj.entity.mapBoolFloat.size() == pDeserialized->entity.mapBoolFloat.size());
     for (const auto& [key, value] : outerTestObj.entity.mapBoolFloat) {
         const auto it = pDeserialized->entity.mapBoolFloat.find(key);
@@ -147,6 +182,8 @@ TEST_CASE("serialize and deserialize fields of different types") {
         REQUIRE(key == it->first);
         REQUIRE(fabs(value - it->second) < floatDelta);
     }
+
+    REQUIRE(!outerTestObj.entity.mapBoolDouble.empty());
     REQUIRE(outerTestObj.entity.mapBoolDouble.size() == pDeserialized->entity.mapBoolDouble.size());
     for (const auto& [key, value] : outerTestObj.entity.mapBoolDouble) {
         const auto it = pDeserialized->entity.mapBoolDouble.find(key);
@@ -154,11 +191,23 @@ TEST_CASE("serialize and deserialize fields of different types") {
         REQUIRE(key == it->first);
         REQUIRE(fabs(value - it->second) < doubleDelta);
     }
+
+    REQUIRE(!outerTestObj.entity.mapBoolString.empty());
     REQUIRE(outerTestObj.entity.mapBoolString == pDeserialized->entity.mapBoolString);
 
+    REQUIRE(!outerTestObj.entity.mapIntBool.empty());
     REQUIRE(outerTestObj.entity.mapIntBool == pDeserialized->entity.mapIntBool);
+
+    REQUIRE(!outerTestObj.entity.mapUnsignedIntBool.empty());
     REQUIRE(outerTestObj.entity.mapUnsignedIntBool == pDeserialized->entity.mapUnsignedIntBool);
+
+    REQUIRE(!outerTestObj.entity.mapLongLongBool.empty());
     REQUIRE(outerTestObj.entity.mapLongLongBool == pDeserialized->entity.mapLongLongBool);
+
+    REQUIRE(!outerTestObj.entity.mapUnsignedLongLongBool.empty());
+    REQUIRE(outerTestObj.entity.mapUnsignedLongLongBool == pDeserialized->entity.mapUnsignedLongLongBool);
+
+    REQUIRE(!outerTestObj.entity.mapFloatBool.empty());
     REQUIRE(outerTestObj.entity.mapFloatBool.size() == pDeserialized->entity.mapFloatBool.size());
     for (const auto& [key, value] : outerTestObj.entity.mapFloatBool) {
         bool bFound = false;
@@ -170,6 +219,8 @@ TEST_CASE("serialize and deserialize fields of different types") {
         }
         REQUIRE(bFound);
     }
+
+    REQUIRE(!outerTestObj.entity.mapDoubleBool.empty());
     REQUIRE(outerTestObj.entity.mapDoubleBool.size() == pDeserialized->entity.mapDoubleBool.size());
     for (const auto& [key, value] : outerTestObj.entity.mapDoubleBool) {
         bool bFound = false;
@@ -181,7 +232,11 @@ TEST_CASE("serialize and deserialize fields of different types") {
         }
         REQUIRE(bFound);
     }
+
+    REQUIRE(!outerTestObj.entity.mapStringBool.empty());
     REQUIRE(outerTestObj.entity.mapStringBool == pDeserialized->entity.mapStringBool);
+
+    REQUIRE(outerTestObj.entity.mapEmpty.empty());
     REQUIRE(outerTestObj.entity.mapEmpty == pDeserialized->entity.mapEmpty);
 
     // Cleanup.

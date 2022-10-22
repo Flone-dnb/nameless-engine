@@ -26,6 +26,9 @@ public:
     long long iLongLongValue = 0;
 
     RPROPERTY()
+    unsigned long long iUnsignedLongLongValue = 0;
+
+    RPROPERTY()
     float floatValue = 0.0f;
 
     RPROPERTY()
@@ -47,6 +50,9 @@ public:
 
     RPROPERTY()
     std::vector<long long> vLongLongVector;
+
+    RPROPERTY()
+    std::vector<unsigned long long> vUnsignedLongLongVector;
 
     RPROPERTY()
     std::vector<float> vFloatVector;
@@ -75,6 +81,9 @@ public:
     std::unordered_map<bool, long long> mapBoolLongLong;
 
     RPROPERTY()
+    std::unordered_map<bool, unsigned long long> mapBoolUnsignedLongLong;
+
+    RPROPERTY()
     std::unordered_map<bool, float> mapBoolFloat;
 
     RPROPERTY()
@@ -91,6 +100,9 @@ public:
 
     RPROPERTY()
     std::unordered_map<long long, bool> mapLongLongBool;
+
+    RPROPERTY()
+    std::unordered_map<unsigned long long, bool> mapUnsignedLongLongBool;
 
     RPROPERTY()
     std::unordered_map<float, bool> mapFloatBool;

@@ -16,6 +16,8 @@ namespace ne {
             return true;
         } else if (fieldType.match(rfk::getType<long long>())) {
             return true;
+        } else if (fieldType.match(rfk::getType<unsigned long long>())) {
+            return true;
         } else if (fieldType.match(rfk::getType<float>())) {
             return true;
         } else if (fieldType.match(rfk::getType<double>())) {
@@ -46,6 +48,12 @@ namespace ne {
         } else if (fieldType.match(rfk::getType<long long>())) {
             pTomlData->operator[](sSectionName).operator[](sFieldName) =
                 pField->getUnsafe<long long>(pFieldOwner);
+        } else if (fieldType.match(rfk::getType<unsigned long long>())) {
+            const auto iValue = pField->getUnsafe<unsigned long long>(pFieldOwner);
+            // Since toml11 (library that we use) uses `long long` for integers,
+            // store this type as a string.
+            const std::string sValue = std::to_string(iValue);
+            pTomlData->operator[](sSectionName).operator[](sFieldName) = sValue;
         } else if (fieldType.match(rfk::getType<float>())) {
             pTomlData->operator[](sSectionName).operator[](sFieldName) =
                 pField->getUnsafe<float>(pFieldOwner);
@@ -93,6 +101,18 @@ namespace ne {
         } else if (fieldType.match(rfk::getType<long long>()) && pTomlValue->is_integer()) {
             long long fieldValue = pTomlValue->as_integer();
             pField->setUnsafe<long long>(pFieldOwner, std::move(fieldValue));
+        } else if (fieldType.match(rfk::getType<unsigned long long>()) && pTomlValue->is_string()) {
+            // Stored as a string.
+            const auto sValue = pTomlValue->as_string();
+            try {
+                unsigned long long iValue = std::stoull(sValue);
+                pField->setUnsafe<unsigned long long>(pFieldOwner, std::move(iValue));
+            } catch (std::exception& ex) {
+                return Error(fmt::format(
+                    "Failed to convert string to unsigned long long for field \"{}\": {}",
+                    sFieldName,
+                    ex.what()));
+            }
         } else if (fieldType.match(rfk::getType<float>()) && pTomlValue->is_floating()) {
             auto fieldValue = static_cast<float>(pTomlValue->as_floating());
             pField->setUnsafe<float>(pFieldOwner, std::move(fieldValue));
@@ -133,6 +153,9 @@ namespace ne {
         } else if (pFromField->getType().match(rfk::getType<long long>())) {
             auto value = pFromField->getUnsafe<long long>(pFromInstance);
             pToField->setUnsafe<long long>(pToInstance, std::move(value));
+        } else if (pFromField->getType().match(rfk::getType<unsigned long long>())) {
+            auto value = pFromField->getUnsafe<unsigned long long>(pFromInstance);
+            pToField->setUnsafe<unsigned long long>(pToInstance, std::move(value));
         } else if (pFromField->getType().match(rfk::getType<float>())) {
             auto value = pFromField->getUnsafe<float>(pFromInstance);
             pToField->setUnsafe<float>(pToInstance, std::move(value));

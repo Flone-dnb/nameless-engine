@@ -124,6 +124,7 @@ namespace ne RNAMESPACE() {
          * - `int`
          * - `unsigned int`
          * - `long long`
+         * - `unsigned long long`
          * - `float`
          * - `double`
          * - `std::string`

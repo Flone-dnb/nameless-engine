@@ -15,6 +15,8 @@ namespace ne {
             return true;
         } else if (sFieldCanonicalTypeName == "std::vector<long long>") {
             return true;
+        } else if (sFieldCanonicalTypeName == "std::vector<unsigned long long>") {
+            return true;
         } else if (sFieldCanonicalTypeName == "std::vector<float>") {
             return true;
         } else if (sFieldCanonicalTypeName == "std::vector<double>") {
@@ -48,6 +50,16 @@ namespace ne {
         } else if (sFieldCanonicalTypeName == "std::vector<long long>") {
             pTomlData->operator[](sSectionName).operator[](sFieldName) =
                 pField->getUnsafe<std::vector<long long>>(pFieldOwner);
+        } else if (sFieldCanonicalTypeName == "std::vector<unsigned long long>") {
+            const auto vOriginalArray = pField->getUnsafe<std::vector<unsigned long long>>(pFieldOwner);
+            std::vector<std::string> vArray;
+            for (const auto& iItem : vOriginalArray) {
+                // Since toml11 (library that we use) uses `long long` for integers,
+                // store this type as a string.
+                const std::string sValue = std::to_string(iItem);
+                vArray.push_back(sValue);
+            }
+            pTomlData->operator[](sSectionName).operator[](sFieldName) = vArray;
         } else if (sFieldCanonicalTypeName == "std::vector<float>") {
             pTomlData->operator[](sSectionName).operator[](sFieldName) =
                 pField->getUnsafe<std::vector<float>>(pFieldOwner);
@@ -152,6 +164,28 @@ namespace ne {
                 vArray.push_back(item.as_integer());
             }
             pField->setUnsafe<std::vector<long long>>(pFieldOwner, std::move(vArray));
+        } else if (sFieldCanonicalTypeName == "std::vector<unsigned long long>") {
+            std::vector<unsigned long long> vArray;
+            for (const auto& item : fieldValue) {
+                // Stored as string.
+                if (!item.is_string()) {
+                    return Error(fmt::format(
+                        "The type \"{}\" of the specified field \"{}\" is supported by this serializer, "
+                        "but the TOML value is not string.",
+                        sFieldCanonicalTypeName,
+                        sFieldName));
+                }
+                try {
+                    unsigned long long iValue = std::stoull(item.as_string());
+                    vArray.push_back(iValue);
+                } catch (std::exception& ex) {
+                    return Error(fmt::format(
+                        "Failed to convert string to unsigned long long for field \"{}\": {}",
+                        sFieldName,
+                        ex.what()));
+                }
+            }
+            pField->setUnsafe<std::vector<unsigned long long>>(pFieldOwner, std::move(vArray));
         } else if (sFieldCanonicalTypeName == "std::vector<float>") {
             std::vector<float> vArray;
             for (const auto& item : fieldValue) {
@@ -231,6 +265,9 @@ namespace ne {
         } else if (sFieldCanonicalTypeName == "std::vector<long long>") {
             auto value = pFromField->getUnsafe<std::vector<long long>>(pFromInstance);
             pToField->setUnsafe<std::vector<long long>>(pToInstance, std::move(value));
+        } else if (sFieldCanonicalTypeName == "std::vector<unsigned long long>") {
+            auto value = pFromField->getUnsafe<std::vector<unsigned long long>>(pFromInstance);
+            pToField->setUnsafe<std::vector<unsigned long long>>(pToInstance, std::move(value));
         } else if (sFieldCanonicalTypeName == "std::vector<float>") {
             auto value = pFromField->getUnsafe<std::vector<float>>(pFromInstance);
             pToField->setUnsafe<std::vector<float>>(pToInstance, std::move(value));

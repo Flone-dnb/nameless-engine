@@ -19,6 +19,7 @@ namespace ne {
     SUPPORTED_UNORDERED_MAP_TYPES(TYPE, int)                                                                 \
     SUPPORTED_UNORDERED_MAP_TYPES(TYPE, unsigned int)                                                        \
     SUPPORTED_UNORDERED_MAP_TYPES(TYPE, long long)                                                           \
+    SUPPORTED_UNORDERED_MAP_TYPES(TYPE, unsigned long long)                                                  \
     SUPPORTED_UNORDERED_MAP_TYPES(TYPE, float)                                                               \
     SUPPORTED_UNORDERED_MAP_TYPES(TYPE, double)                                                              \
     SUPPORTED_UNORDERED_MAP_TYPES(TYPE, std::basic_string<char>)
@@ -27,6 +28,7 @@ namespace ne {
         SUPPORTED_UNORDERED_MAP_TYPE(int)
         SUPPORTED_UNORDERED_MAP_TYPE(unsigned int)
         SUPPORTED_UNORDERED_MAP_TYPE(long long)
+        SUPPORTED_UNORDERED_MAP_TYPE(unsigned long long)
         SUPPORTED_UNORDERED_MAP_TYPE(float)
         SUPPORTED_UNORDERED_MAP_TYPE(double)
         SUPPORTED_UNORDERED_MAP_TYPE(std::basic_string<char>)
@@ -48,16 +50,16 @@ namespace ne {
 #define SERIALIZE_UNORDERED_MAP_TYPE(TYPEA, TYPEB)                                                           \
     if (sFieldCanonicalTypeName == fmt::format("std::unordered_map<{}, {}>", #TYPEA, #TYPEB)) {              \
         const auto originalMap = pField->getUnsafe<std::unordered_map<TYPEA, TYPEB>>(pFieldOwner);           \
-        if (std::string(#TYPEB) != "double") {                                                               \
-            std::unordered_map<std::string, TYPEB> map;                                                      \
-            for (const auto& [key, value] : originalMap) {                                                   \
-                map[fmt::format("{}", key)] = value;                                                         \
-            }                                                                                                \
-            pTomlData->operator[](sSectionName).operator[](sFieldName) = map;                                \
-        } else {                                                                                             \
+        if (std::string(#TYPEB) == "double" || std::string(#TYPEB) == "unsigned long long") {                \
             std::unordered_map<std::string, std::string> map;                                                \
             for (const auto& [key, value] : originalMap) {                                                   \
                 map[fmt::format("{}", key)] = fmt::format("{}", value);                                      \
+            }                                                                                                \
+            pTomlData->operator[](sSectionName).operator[](sFieldName) = map;                                \
+        } else {                                                                                             \
+            std::unordered_map<std::string, TYPEB> map;                                                      \
+            for (const auto& [key, value] : originalMap) {                                                   \
+                map[fmt::format("{}", key)] = value;                                                         \
             }                                                                                                \
             pTomlData->operator[](sSectionName).operator[](sFieldName) = map;                                \
         }                                                                                                    \
@@ -69,6 +71,7 @@ namespace ne {
     SERIALIZE_UNORDERED_MAP_TYPE(TYPE, int)                                                                  \
     SERIALIZE_UNORDERED_MAP_TYPE(TYPE, unsigned int)                                                         \
     SERIALIZE_UNORDERED_MAP_TYPE(TYPE, long long)                                                            \
+    SERIALIZE_UNORDERED_MAP_TYPE(TYPE, unsigned long long)                                                   \
     SERIALIZE_UNORDERED_MAP_TYPE(TYPE, float)                                                                \
     SERIALIZE_UNORDERED_MAP_TYPE(TYPE, double)                                                               \
     SERIALIZE_UNORDERED_MAP_TYPE(TYPE, std::basic_string<char>)
@@ -77,6 +80,7 @@ namespace ne {
         SERIALIZE_UNORDERED_MAP_TYPES(int)
         SERIALIZE_UNORDERED_MAP_TYPES(unsigned int)
         SERIALIZE_UNORDERED_MAP_TYPES(long long)
+        SERIALIZE_UNORDERED_MAP_TYPES(unsigned long long)
         SERIALIZE_UNORDERED_MAP_TYPES(float)
         SERIALIZE_UNORDERED_MAP_TYPES(double)
         SERIALIZE_UNORDERED_MAP_TYPES(std::basic_string<char>)
@@ -124,6 +128,15 @@ namespace ne {
     template <> std::optional<long long> convertStringToType<long long>(const std::string& sText) {
         try {
             return std::stoll(sText);
+        } catch (...) {
+            return {};
+        }
+    }
+
+    template <>
+    std::optional<unsigned long long> convertStringToType<unsigned long long>(const std::string& sText) {
+        try {
+            return std::stoull(sText);
         } catch (...) {
             return {};
         }
@@ -186,6 +199,21 @@ namespace ne {
             return {};
         }
         return value.as_integer();
+    }
+
+    template <>
+    std::optional<unsigned long long> convertTomlValueToType<unsigned long long>(const toml::value& value) {
+        // Stored as a string.
+        if (!value.is_string()) {
+            return {};
+        }
+        const auto sValue = value.as_string();
+        try {
+            unsigned long long iValue = std::stoull(sValue);
+            return iValue;
+        } catch (...) {
+            return {};
+        }
     }
 
     template <> std::optional<float> convertTomlValueToType<float>(const toml::value& value) {
@@ -276,6 +304,7 @@ namespace ne {
     DESERIALIZE_UNORDERED_MAP_TYPE(TYPE, int)                                                                \
     DESERIALIZE_UNORDERED_MAP_TYPE(TYPE, unsigned int)                                                       \
     DESERIALIZE_UNORDERED_MAP_TYPE(TYPE, long long)                                                          \
+    DESERIALIZE_UNORDERED_MAP_TYPE(TYPE, unsigned long long)                                                 \
     DESERIALIZE_UNORDERED_MAP_TYPE(TYPE, float)                                                              \
     DESERIALIZE_UNORDERED_MAP_TYPE(TYPE, double)                                                             \
     DESERIALIZE_UNORDERED_MAP_TYPE(TYPE, std::basic_string<char>)
@@ -284,6 +313,7 @@ namespace ne {
         DESERIALIZE_UNORDERED_MAP_TYPES(int)
         DESERIALIZE_UNORDERED_MAP_TYPES(unsigned int)
         DESERIALIZE_UNORDERED_MAP_TYPES(long long)
+        DESERIALIZE_UNORDERED_MAP_TYPES(unsigned long long)
         DESERIALIZE_UNORDERED_MAP_TYPES(float)
         DESERIALIZE_UNORDERED_MAP_TYPES(double)
         DESERIALIZE_UNORDERED_MAP_TYPES(std::basic_string<char>)
@@ -316,6 +346,7 @@ namespace ne {
     CLONE_UNORDERED_MAP_TYPE(TYPE, int)                                                                      \
     CLONE_UNORDERED_MAP_TYPE(TYPE, unsigned int)                                                             \
     CLONE_UNORDERED_MAP_TYPE(TYPE, long long)                                                                \
+    CLONE_UNORDERED_MAP_TYPE(TYPE, unsigned long long)                                                       \
     CLONE_UNORDERED_MAP_TYPE(TYPE, float)                                                                    \
     CLONE_UNORDERED_MAP_TYPE(TYPE, double)                                                                   \
     CLONE_UNORDERED_MAP_TYPE(TYPE, std::basic_string<char>)
@@ -324,6 +355,7 @@ namespace ne {
         CLONE_UNORDERED_MAP_TYPES(int)
         CLONE_UNORDERED_MAP_TYPES(unsigned int)
         CLONE_UNORDERED_MAP_TYPES(long long)
+        CLONE_UNORDERED_MAP_TYPES(unsigned long long)
         CLONE_UNORDERED_MAP_TYPES(float)
         CLONE_UNORDERED_MAP_TYPES(double)
         CLONE_UNORDERED_MAP_TYPES(std::basic_string<char>)

@@ -1,5 +1,10 @@
 #pragma once
 
+// STL.
+#include <string>
+#include <vector>
+#include <unordered_map>
+
 // Custom.
 #include "io/Serializable.h"
 #include "io/DontSerializeProperty.h"
@@ -134,6 +139,78 @@ public:
     ReflectionTestStruct entity;
 
     ReflectionOuterTestClass_GENERATED
+};
+
+class RCLASS(Guid("a34a8047-d7b4-4c70-bb9a-429875a8cd26")) InventorySaveData : public ne::Serializable {
+public:
+    InventorySaveData() = default;
+    virtual ~InventorySaveData() override = default;
+
+    /// Adds a specific item instance to the inventory.
+    void addOneItem(unsigned long long iItemId) {
+        const auto it = items.find(iItemId);
+
+        if (it == items.end()) {
+            items[iItemId] = 1;
+            return;
+        }
+
+        it->second += 1;
+    }
+
+    /// Removes a specific item instance from the inventory.
+    void removeOneItem(unsigned long long iItemId) {
+        const auto it = items.find(iItemId);
+        if (it == items.end())
+            return;
+
+        if (it->second <= 1) {
+            items.erase(it);
+            return;
+        }
+
+        it->second -= 1;
+    }
+
+    /// Returns amount of specific items in the inventory.
+    unsigned long long getItemAmount(unsigned long long iItemId) {
+        const auto it = items.find(iItemId);
+        if (it == items.end())
+            return 0;
+
+        return it->second;
+    }
+
+private:
+    /// Contains item ID as a key and item amount (in the inventory) as a value.
+    RPROPERTY()
+    std::unordered_map<unsigned long long, unsigned long long> items;
+
+    InventorySaveData_GENERATED
+};
+
+class RCLASS(Guid("36063853-79b1-41e6-afa6-6923c8b24815")) PlayerSaveData : public ne::Serializable {
+public:
+    PlayerSaveData() = default;
+    virtual ~PlayerSaveData() override = default;
+
+    RPROPERTY()
+    std::string sCharacterName;
+
+    RPROPERTY()
+    unsigned long long iCharacterLevel = 0;
+
+    RPROPERTY()
+    unsigned long long iExperiencePoints = 0;
+
+    RPROPERTY()
+    InventorySaveData inventory;
+
+    /// Stores IDs of player abilities.
+    RPROPERTY()
+    std::vector<unsigned long long> vAbilities;
+
+    PlayerSaveData_GENERATED
 };
 
 File_ReflectionTest_GENERATED

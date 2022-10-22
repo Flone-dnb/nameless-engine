@@ -1,3 +1,6 @@
+// STL.
+#include <random>
+
 // Custom.
 #include "io/Serializable.h"
 #include "game/nodes/Node.h"
@@ -241,6 +244,86 @@ TEST_CASE("serialize and deserialize fields of different types") {
 
     // Cleanup.
     std::filesystem::remove(fullPathToFile);
+}
+
+TEST_CASE("serialize and deserialize sample player save data") {
+    {
+        // Somewhere in the game code.
+        gc<PlayerSaveData> pPlayerSaveData;
+
+        // ... if the user creates a new player profile ...
+        pPlayerSaveData = gc_new<PlayerSaveData>();
+
+        // Fill save data with some information.
+        pPlayerSaveData->sCharacterName = "Player 1";
+        pPlayerSaveData->iCharacterLevel = 42;
+        pPlayerSaveData->iExperiencePoints = 200;
+        pPlayerSaveData->vAbilities = {241, 3122, 22};
+        pPlayerSaveData->inventory.addOneItem(42);
+        pPlayerSaveData->inventory.addOneItem(42); // now have two items with ID "42"
+        pPlayerSaveData->inventory.addOneItem(102);
+
+        // Prepare new profile file name.
+        std::random_device rd;
+        std::mt19937 gen(rd());
+        std::uniform_int_distribution<unsigned int> uid(0, UINT_MAX);
+        std::string sNewProfileFilename;
+        const auto vExistingProfiles = ConfigManager::getAllFiles(ConfigCategory::PROGRESS);
+        bool bContinue = true;
+        do {
+            sNewProfileFilename = std::to_string(uid(gen));
+            for (const auto& sProfile : vExistingProfiles) {
+                if (sProfile == sNewProfileFilename) {
+                    continue;
+                }
+            }
+            bContinue = false;
+        } while (bContinue);
+
+        // Serialize.
+        const auto pathToFile =
+            ConfigManager::getCategoryDirectory(ConfigCategory::PROGRESS) / sNewProfileFilename;
+        const auto optionalError = pPlayerSaveData->serialize(pathToFile, true);
+        if (optionalError.has_value()) {
+            auto err = optionalError.value();
+            err.addEntry();
+            INFO(err.getError());
+            REQUIRE(false);
+        }
+
+        REQUIRE(std::filesystem::exists(pathToFile.string() + ".toml"));
+    }
+
+    // ... when the game is started next time ...
+
+    {
+        // Get all save files.
+        const auto vProfiles = ConfigManager::getAllFiles(ConfigCategory::PROGRESS);
+        REQUIRE(!vProfiles.empty());
+
+        // ... say the user picks the first profile ...
+        const auto sProfileName = vProfiles[0];
+
+        // Deserialize.
+        const auto pathToFile = ConfigManager::getCategoryDirectory(ConfigCategory::PROGRESS) / sProfileName;
+        std::unordered_map<std::string, std::string> foundCustomAttributes;
+        const auto result = Serializable::deserialize<PlayerSaveData>(pathToFile, foundCustomAttributes);
+        if (std::holds_alternative<Error>(result)) {
+            auto error = std::get<Error>(result);
+            error.addEntry();
+            INFO(error.getError());
+            REQUIRE(false);
+        }
+
+        gc<PlayerSaveData> pPlayerSaveData = std::get<gc<PlayerSaveData>>(result);
+
+        REQUIRE(pPlayerSaveData->sCharacterName == "Player 1");
+        REQUIRE(pPlayerSaveData->iCharacterLevel == 42);
+        REQUIRE(pPlayerSaveData->iExperiencePoints == 200);
+        REQUIRE(pPlayerSaveData->vAbilities == std::vector<unsigned long long>{241, 3122, 22});
+        REQUIRE(pPlayerSaveData->inventory.getItemAmount(42) == 2);
+        REQUIRE(pPlayerSaveData->inventory.getItemAmount(102) == 1);
+    }
 }
 
 TEST_CASE("serialize and deserialize node") {

@@ -30,7 +30,7 @@ TEST_CASE("serialize and deserialize fields of different types") {
     outerTestObj.bBoolValue = true;
     outerTestObj.iIntNotSerialized = 42;
     {
-        ReflectionTestClass testObj;
+        ReflectionTestStruct testObj;
         testObj.bBoolValue = true;
         testObj.iIntValue = 42;
         testObj.iLongLongValue = INT_MAX * 10ll;

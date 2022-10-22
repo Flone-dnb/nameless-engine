@@ -8,10 +8,10 @@
 
 using namespace ne;
 
-class RCLASS(Guid("550ea9f9-dd8a-4089-a717-0fe4e351a688")) ReflectionTestClass : public Serializable {
+struct RSTRUCT(Guid("550ea9f9-dd8a-4089-a717-0fe4e351a688")) ReflectionTestStruct : public Serializable {
 public:
-    ReflectionTestClass() = default;
-    virtual ~ReflectionTestClass() override = default;
+    ReflectionTestStruct() = default;
+    virtual ~ReflectionTestStruct() override = default;
 
     RPROPERTY()
     bool bBoolValue = false;
@@ -86,7 +86,7 @@ public:
     RPROPERTY()
     std::unordered_map<std::string, bool> mapStringBool;
 
-    ReflectionTestClass_GENERATED
+    ReflectionTestStruct_GENERATED
 };
 
 class RCLASS(Guid("550ea9f9-dd8a-4089-a717-0fe4e351a689")) ReflectionOuterTestClass : public Serializable {
@@ -101,7 +101,7 @@ public:
     bool bBoolValue = false;
 
     RPROPERTY()
-    ReflectionTestClass entity;
+    ReflectionTestStruct entity;
 
     ReflectionOuterTestClass_GENERATED
 };

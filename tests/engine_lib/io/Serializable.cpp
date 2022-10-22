@@ -123,6 +123,7 @@ TEST_CASE("serialize and deserialize fields of different types") {
             fabs(outerTestObj.entity.vDoubleVector[i] - pDeserialized->entity.vDoubleVector[i]) <
             doubleDelta);
     REQUIRE(outerTestObj.entity.vStringVector == pDeserialized->entity.vStringVector);
+    REQUIRE(outerTestObj.entity.vEmpty == pDeserialized->entity.vEmpty);
 
     // Unordered maps.
     REQUIRE(outerTestObj.entity.mapBoolBool == pDeserialized->entity.mapBoolBool);
@@ -169,6 +170,7 @@ TEST_CASE("serialize and deserialize fields of different types") {
         REQUIRE(bFound);
     }
     REQUIRE(outerTestObj.entity.mapStringBool == pDeserialized->entity.mapStringBool);
+    REQUIRE(outerTestObj.entity.mapEmpty == pDeserialized->entity.mapEmpty);
 
     // Cleanup.
     std::filesystem::remove(fullPathToFile);

@@ -51,6 +51,9 @@ public:
     RPROPERTY()
     std::vector<std::string> vStringVector;
 
+    RPROPERTY()
+    std::vector<int> vEmpty;
+
     // maps
 
     RPROPERTY()
@@ -85,6 +88,9 @@ public:
 
     RPROPERTY()
     std::unordered_map<std::string, bool> mapStringBool;
+
+    RPROPERTY()
+    std::unordered_map<bool, bool> mapEmpty;
 
     ReflectionTestStruct_GENERATED
 };

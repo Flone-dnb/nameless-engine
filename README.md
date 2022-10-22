@@ -9,8 +9,10 @@ TODO: screenshot game/editor
 
 # Features
 
+Click on any line below to show an example:
+
 <details>
-<summary>Unreal Engine-like reflection via code generation (click to show an example)</summary>
+<summary>Unreal Engine-like reflection via code generation</summary>
   
 ```C++
 // MyClass.h
@@ -39,7 +41,7 @@ File_MyClass_GENERATED
 </details>
 
 <details>
-<summary>Garbage collector for resolving cyclic references (click to show an example)</summary>
+<summary>Garbage collector for resolving cyclic references</summary>
   
 ```C++
 class Foo;
@@ -70,7 +72,7 @@ gc_collector()->collect(); // this will be run regularly somewhere in the engine
 </details>
 
 <details>
-<summary>Easy to use serialization and deserialization for custom user types (click to show an example)</summary>
+<summary>Easy to use serialization and deserialization for custom user types</summary>
   
 ```C++
 // PlayerSaveData.h
@@ -233,7 +235,7 @@ File_PlayerSaveData_GENERATED
 </details>
 
 <details>
-<summary>Automatic shader caching and cache invalidation (click to show an example)</summary>
+<summary>Automatic shader caching and cache invalidation</summary>
   
 ```C++
 const auto vertexShader = ShaderDescription(
@@ -283,8 +285,6 @@ getWindow()->getRenderer()->getShaderManager()->compileShaders(
 // otherwise it will be recompiled
 ```
 </details>
-
-- TODO.
 
 # Setup (Build)
 

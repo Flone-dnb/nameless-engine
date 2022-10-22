@@ -31,25 +31,33 @@ TEST_CASE("serialize and deserialize fields of different types") {
     outerTestObj.iIntNotSerialized = 42;
     {
         ReflectionTestStruct testObj;
+
         testObj.bBoolValue = true;
         testObj.iIntValue = 42;
+        testObj.iUnsignedIntValue = UINT_MAX;
         testObj.iLongLongValue = INT_MAX * 10ll;
         testObj.floatValue = 3.14159f;
         testObj.doubleValue = 3.14159265358979;
+
         testObj.sStringValue = "Привет \"мир\""; // using non-ASCII on purpose
+
         testObj.vBoolVector = {true, true, false};
         testObj.vIntVector = {42, -42, 43, -43};
+        testObj.vUnsignedIntVector = {UINT_MAX, INT_MAX + 1u};
         testObj.vLongLongVector = {INT_MAX * 10ll, INT_MIN * 10ll};
         testObj.vFloatVector = {3.14159f, -3.14159f};
         testObj.vDoubleVector = {3.14159265358979, -3.14159265358979};
         testObj.vStringVector = {"Привет \"мир\"", "Hello \"world\""};
+
         testObj.mapBoolBool = {{false, false}, {true, true}};
         testObj.mapBoolInt = {{false, -1}, {true, 42}};
+        testObj.mapBoolUnsignedInt = {{false, UINT_MAX}, {true, INT_MAX + 1u}};
         testObj.mapBoolLongLong = {{false, INT_MIN * 10ll}, {true, INT_MAX * 10ll}};
         testObj.mapBoolFloat = {{false, -3.14159f}, {true, 3.14159f}};
         testObj.mapBoolDouble = {{false, -3.14159265358979}, {true, 3.14159265358979}};
         testObj.mapBoolString = {{false, "Привет \"мир\""}, {true, "Hello \"world\""}};
         testObj.mapIntBool = {{-1, false}, {42, true}};
+        testObj.mapUnsignedIntBool = {{UINT_MAX, false}, {INT_MAX + 1u, true}};
         testObj.mapLongLongBool = {{INT_MIN * 10ll, false}, {INT_MAX * 10ll, true}};
         testObj.mapFloatBool = {{-3.14159f, false}, {3.14159f, true}};
         testObj.mapDoubleBool = {{-3.14159265358979, false}, {3.14159265358979, true}};
@@ -104,6 +112,7 @@ TEST_CASE("serialize and deserialize fields of different types") {
     REQUIRE(outerTestObj.bBoolValue == pDeserialized->bBoolValue);
     REQUIRE(outerTestObj.entity.bBoolValue == pDeserialized->entity.bBoolValue);
     REQUIRE(outerTestObj.entity.iIntValue == pDeserialized->entity.iIntValue);
+    REQUIRE(outerTestObj.entity.iUnsignedIntValue == pDeserialized->entity.iUnsignedIntValue);
     REQUIRE(outerTestObj.entity.iLongLongValue == pDeserialized->entity.iLongLongValue);
     REQUIRE(fabs(outerTestObj.entity.floatValue - pDeserialized->entity.floatValue) < floatDelta);
     REQUIRE(fabs(outerTestObj.entity.doubleValue - pDeserialized->entity.doubleValue) < doubleDelta);
@@ -112,6 +121,7 @@ TEST_CASE("serialize and deserialize fields of different types") {
     // Vectors.
     REQUIRE(outerTestObj.entity.vBoolVector == pDeserialized->entity.vBoolVector);
     REQUIRE(outerTestObj.entity.vIntVector == pDeserialized->entity.vIntVector);
+    REQUIRE(outerTestObj.entity.vUnsignedIntVector == pDeserialized->entity.vUnsignedIntVector);
     REQUIRE(outerTestObj.entity.vLongLongVector == pDeserialized->entity.vLongLongVector);
     REQUIRE(outerTestObj.entity.vFloatVector.size() == pDeserialized->entity.vFloatVector.size());
     for (size_t i = 0; i < outerTestObj.entity.vFloatVector.size(); i++)
@@ -128,6 +138,7 @@ TEST_CASE("serialize and deserialize fields of different types") {
     // Unordered maps.
     REQUIRE(outerTestObj.entity.mapBoolBool == pDeserialized->entity.mapBoolBool);
     REQUIRE(outerTestObj.entity.mapBoolInt == pDeserialized->entity.mapBoolInt);
+    REQUIRE(outerTestObj.entity.mapBoolUnsignedInt == pDeserialized->entity.mapBoolUnsignedInt);
     REQUIRE(outerTestObj.entity.mapBoolLongLong == pDeserialized->entity.mapBoolLongLong);
     REQUIRE(outerTestObj.entity.mapBoolFloat.size() == pDeserialized->entity.mapBoolFloat.size());
     for (const auto& [key, value] : outerTestObj.entity.mapBoolFloat) {
@@ -146,6 +157,7 @@ TEST_CASE("serialize and deserialize fields of different types") {
     REQUIRE(outerTestObj.entity.mapBoolString == pDeserialized->entity.mapBoolString);
 
     REQUIRE(outerTestObj.entity.mapIntBool == pDeserialized->entity.mapIntBool);
+    REQUIRE(outerTestObj.entity.mapUnsignedIntBool == pDeserialized->entity.mapUnsignedIntBool);
     REQUIRE(outerTestObj.entity.mapLongLongBool == pDeserialized->entity.mapLongLongBool);
     REQUIRE(outerTestObj.entity.mapFloatBool.size() == pDeserialized->entity.mapFloatBool.size());
     for (const auto& [key, value] : outerTestObj.entity.mapFloatBool) {

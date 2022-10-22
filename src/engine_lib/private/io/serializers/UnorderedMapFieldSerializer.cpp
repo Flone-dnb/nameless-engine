@@ -17,6 +17,7 @@ namespace ne {
 #define SUPPORTED_UNORDERED_MAP_TYPE(TYPE)                                                                   \
     SUPPORTED_UNORDERED_MAP_TYPES(TYPE, bool)                                                                \
     SUPPORTED_UNORDERED_MAP_TYPES(TYPE, int)                                                                 \
+    SUPPORTED_UNORDERED_MAP_TYPES(TYPE, unsigned int)                                                        \
     SUPPORTED_UNORDERED_MAP_TYPES(TYPE, long long)                                                           \
     SUPPORTED_UNORDERED_MAP_TYPES(TYPE, float)                                                               \
     SUPPORTED_UNORDERED_MAP_TYPES(TYPE, double)                                                              \
@@ -24,6 +25,7 @@ namespace ne {
 
         SUPPORTED_UNORDERED_MAP_TYPE(bool)
         SUPPORTED_UNORDERED_MAP_TYPE(int)
+        SUPPORTED_UNORDERED_MAP_TYPE(unsigned int)
         SUPPORTED_UNORDERED_MAP_TYPE(long long)
         SUPPORTED_UNORDERED_MAP_TYPE(float)
         SUPPORTED_UNORDERED_MAP_TYPE(double)
@@ -65,6 +67,7 @@ namespace ne {
 #define SERIALIZE_UNORDERED_MAP_TYPES(TYPE)                                                                  \
     SERIALIZE_UNORDERED_MAP_TYPE(TYPE, bool)                                                                 \
     SERIALIZE_UNORDERED_MAP_TYPE(TYPE, int)                                                                  \
+    SERIALIZE_UNORDERED_MAP_TYPE(TYPE, unsigned int)                                                         \
     SERIALIZE_UNORDERED_MAP_TYPE(TYPE, long long)                                                            \
     SERIALIZE_UNORDERED_MAP_TYPE(TYPE, float)                                                                \
     SERIALIZE_UNORDERED_MAP_TYPE(TYPE, double)                                                               \
@@ -72,6 +75,7 @@ namespace ne {
 
         SERIALIZE_UNORDERED_MAP_TYPES(bool)
         SERIALIZE_UNORDERED_MAP_TYPES(int)
+        SERIALIZE_UNORDERED_MAP_TYPES(unsigned int)
         SERIALIZE_UNORDERED_MAP_TYPES(long long)
         SERIALIZE_UNORDERED_MAP_TYPES(float)
         SERIALIZE_UNORDERED_MAP_TYPES(double)
@@ -97,6 +101,21 @@ namespace ne {
     template <> std::optional<int> convertStringToType<int>(const std::string& sText) {
         try {
             return std::stoi(sText);
+        } catch (...) {
+            return {};
+        }
+    }
+
+    template <> std::optional<unsigned int> convertStringToType<unsigned int>(const std::string& sText) {
+        try {
+            const auto iOriginalValue = std::stoll(sText);
+            unsigned int iResult = static_cast<unsigned int>(iOriginalValue);
+            if (iOriginalValue < 0) {
+                // Since integers are stored as `long long` in toml11 library that we use,
+                // we add this check.
+                iResult = 0;
+            }
+            return iResult;
         } catch (...) {
             return {};
         }
@@ -146,6 +165,20 @@ namespace ne {
             return {};
         }
         return static_cast<int>(value.as_integer());
+    }
+
+    template <> std::optional<unsigned int> convertTomlValueToType<unsigned int>(const toml::value& value) {
+        if (!value.is_integer()) {
+            return {};
+        }
+        const auto iOriginalValue = value.as_integer();
+        auto iValue = static_cast<unsigned int>(iOriginalValue);
+        if (iOriginalValue < 0) {
+            // Since integers are stored as `long long` in toml11 library that we use,
+            // we add this check.
+            iValue = 0;
+        }
+        return iValue;
     }
 
     template <> std::optional<long long> convertTomlValueToType<long long>(const toml::value& value) {
@@ -241,6 +274,7 @@ namespace ne {
 #define DESERIALIZE_UNORDERED_MAP_TYPES(TYPE)                                                                \
     DESERIALIZE_UNORDERED_MAP_TYPE(TYPE, bool)                                                               \
     DESERIALIZE_UNORDERED_MAP_TYPE(TYPE, int)                                                                \
+    DESERIALIZE_UNORDERED_MAP_TYPE(TYPE, unsigned int)                                                       \
     DESERIALIZE_UNORDERED_MAP_TYPE(TYPE, long long)                                                          \
     DESERIALIZE_UNORDERED_MAP_TYPE(TYPE, float)                                                              \
     DESERIALIZE_UNORDERED_MAP_TYPE(TYPE, double)                                                             \
@@ -248,6 +282,7 @@ namespace ne {
 
         DESERIALIZE_UNORDERED_MAP_TYPES(bool)
         DESERIALIZE_UNORDERED_MAP_TYPES(int)
+        DESERIALIZE_UNORDERED_MAP_TYPES(unsigned int)
         DESERIALIZE_UNORDERED_MAP_TYPES(long long)
         DESERIALIZE_UNORDERED_MAP_TYPES(float)
         DESERIALIZE_UNORDERED_MAP_TYPES(double)
@@ -279,6 +314,7 @@ namespace ne {
 #define CLONE_UNORDERED_MAP_TYPES(TYPE)                                                                      \
     CLONE_UNORDERED_MAP_TYPE(TYPE, bool)                                                                     \
     CLONE_UNORDERED_MAP_TYPE(TYPE, int)                                                                      \
+    CLONE_UNORDERED_MAP_TYPE(TYPE, unsigned int)                                                             \
     CLONE_UNORDERED_MAP_TYPE(TYPE, long long)                                                                \
     CLONE_UNORDERED_MAP_TYPE(TYPE, float)                                                                    \
     CLONE_UNORDERED_MAP_TYPE(TYPE, double)                                                                   \
@@ -286,6 +322,7 @@ namespace ne {
 
         CLONE_UNORDERED_MAP_TYPES(bool)
         CLONE_UNORDERED_MAP_TYPES(int)
+        CLONE_UNORDERED_MAP_TYPES(unsigned int)
         CLONE_UNORDERED_MAP_TYPES(long long)
         CLONE_UNORDERED_MAP_TYPES(float)
         CLONE_UNORDERED_MAP_TYPES(double)

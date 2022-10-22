@@ -12,6 +12,8 @@ namespace ne {
             return true;
         } else if (fieldType.match(rfk::getType<int>())) {
             return true;
+        } else if (fieldType.match(rfk::getType<unsigned int>())) {
+            return true;
         } else if (fieldType.match(rfk::getType<long long>())) {
             return true;
         } else if (fieldType.match(rfk::getType<float>())) {
@@ -38,6 +40,9 @@ namespace ne {
             pTomlData->operator[](sSectionName).operator[](sFieldName) = pField->getUnsafe<bool>(pFieldOwner);
         } else if (fieldType.match(rfk::getType<int>())) {
             pTomlData->operator[](sSectionName).operator[](sFieldName) = pField->getUnsafe<int>(pFieldOwner);
+        } else if (fieldType.match(rfk::getType<unsigned int>())) {
+            pTomlData->operator[](sSectionName).operator[](sFieldName) =
+                pField->getUnsafe<unsigned int>(pFieldOwner);
         } else if (fieldType.match(rfk::getType<long long>())) {
             pTomlData->operator[](sSectionName).operator[](sFieldName) =
                 pField->getUnsafe<long long>(pFieldOwner);
@@ -76,6 +81,15 @@ namespace ne {
         } else if (fieldType.match(rfk::getType<int>()) && pTomlValue->is_integer()) {
             auto fieldValue = static_cast<int>(pTomlValue->as_integer());
             pField->setUnsafe<int>(pFieldOwner, std::move(fieldValue));
+        } else if (fieldType.match(rfk::getType<unsigned int>()) && pTomlValue->is_integer()) {
+            const auto iOriginalValue = pTomlValue->as_integer();
+            auto fieldValue = static_cast<unsigned int>(iOriginalValue);
+            if (iOriginalValue < 0) {
+                // Since integers are stored as `long long` in toml11 library that we use,
+                // we add this check.
+                fieldValue = 0;
+            }
+            pField->setUnsafe<unsigned int>(pFieldOwner, std::move(fieldValue));
         } else if (fieldType.match(rfk::getType<long long>()) && pTomlValue->is_integer()) {
             long long fieldValue = pTomlValue->as_integer();
             pField->setUnsafe<long long>(pFieldOwner, std::move(fieldValue));
@@ -113,6 +127,9 @@ namespace ne {
         } else if (pFromField->getType().match(rfk::getType<int>())) {
             auto value = pFromField->getUnsafe<int>(pFromInstance);
             pToField->setUnsafe<int>(pToInstance, std::move(value));
+        } else if (pFromField->getType().match(rfk::getType<unsigned int>())) {
+            auto value = pFromField->getUnsafe<unsigned int>(pFromInstance);
+            pToField->setUnsafe<unsigned int>(pToInstance, std::move(value));
         } else if (pFromField->getType().match(rfk::getType<long long>())) {
             auto value = pFromField->getUnsafe<long long>(pFromInstance);
             pToField->setUnsafe<long long>(pToInstance, std::move(value));

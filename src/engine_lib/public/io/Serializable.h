@@ -122,6 +122,7 @@ namespace ne RNAMESPACE() {
          * Supported for serialization types are:
          * - `bool`
          * - `int`
+         * - `unsigned int`
          * - `long long`
          * - `float`
          * - `double`

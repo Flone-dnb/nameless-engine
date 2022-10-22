@@ -11,6 +11,8 @@ namespace ne {
             return true;
         } else if (sFieldCanonicalTypeName == "std::vector<int>") {
             return true;
+        } else if (sFieldCanonicalTypeName == "std::vector<unsigned int>") {
+            return true;
         } else if (sFieldCanonicalTypeName == "std::vector<long long>") {
             return true;
         } else if (sFieldCanonicalTypeName == "std::vector<float>") {
@@ -40,6 +42,9 @@ namespace ne {
         } else if (sFieldCanonicalTypeName == "std::vector<int>") {
             pTomlData->operator[](sSectionName).operator[](sFieldName) =
                 pField->getUnsafe<std::vector<int>>(pFieldOwner);
+        } else if (sFieldCanonicalTypeName == "std::vector<unsigned int>") {
+            pTomlData->operator[](sSectionName).operator[](sFieldName) =
+                pField->getUnsafe<std::vector<unsigned int>>(pFieldOwner);
         } else if (sFieldCanonicalTypeName == "std::vector<long long>") {
             pTomlData->operator[](sSectionName).operator[](sFieldName) =
                 pField->getUnsafe<std::vector<long long>>(pFieldOwner);
@@ -114,6 +119,26 @@ namespace ne {
                 vArray.push_back(static_cast<int>(item.as_integer()));
             }
             pField->setUnsafe<std::vector<int>>(pFieldOwner, std::move(vArray));
+        } else if (sFieldCanonicalTypeName == "std::vector<unsigned int>") {
+            std::vector<unsigned int> vArray;
+            for (const auto& item : fieldValue) {
+                if (!item.is_integer()) {
+                    return Error(fmt::format(
+                        "The type \"{}\" of the specified field \"{}\" is supported by this serializer, "
+                        "but the TOML value is not integer.",
+                        sFieldCanonicalTypeName,
+                        sFieldName));
+                }
+                const auto iOriginalValue = item.as_integer();
+                auto fieldValue = static_cast<unsigned int>(iOriginalValue);
+                if (iOriginalValue < 0) {
+                    // Since integers are stored as `long long` in toml11 library that we use,
+                    // we add this check.
+                    fieldValue = 0;
+                }
+                vArray.push_back(fieldValue);
+            }
+            pField->setUnsafe<std::vector<unsigned int>>(pFieldOwner, std::move(vArray));
         } else if (sFieldCanonicalTypeName == "std::vector<long long>") {
             std::vector<long long> vArray;
             for (const auto& item : fieldValue) {
@@ -200,6 +225,9 @@ namespace ne {
         } else if (sFieldCanonicalTypeName == "std::vector<int>") {
             auto value = pFromField->getUnsafe<std::vector<int>>(pFromInstance);
             pToField->setUnsafe<std::vector<int>>(pToInstance, std::move(value));
+        } else if (sFieldCanonicalTypeName == "std::vector<unsigned int>") {
+            auto value = pFromField->getUnsafe<std::vector<unsigned int>>(pFromInstance);
+            pToField->setUnsafe<std::vector<unsigned int>>(pToInstance, std::move(value));
         } else if (sFieldCanonicalTypeName == "std::vector<long long>") {
             auto value = pFromField->getUnsafe<std::vector<long long>>(pFromInstance);
             pToField->setUnsafe<std::vector<long long>>(pToInstance, std::move(value));

@@ -20,6 +20,9 @@ public:
     int iIntValue = 0;
 
     RPROPERTY()
+    unsigned int iUnsignedIntValue = 0;
+
+    RPROPERTY()
     long long iLongLongValue = 0;
 
     RPROPERTY()
@@ -38,6 +41,9 @@ public:
 
     RPROPERTY()
     std::vector<int> vIntVector;
+
+    RPROPERTY()
+    std::vector<unsigned int> vUnsignedIntVector;
 
     RPROPERTY()
     std::vector<long long> vLongLongVector;
@@ -63,6 +69,9 @@ public:
     std::unordered_map<bool, int> mapBoolInt;
 
     RPROPERTY()
+    std::unordered_map<bool, unsigned int> mapBoolUnsignedInt;
+
+    RPROPERTY()
     std::unordered_map<bool, long long> mapBoolLongLong;
 
     RPROPERTY()
@@ -76,6 +85,9 @@ public:
 
     RPROPERTY()
     std::unordered_map<int, bool> mapIntBool;
+
+    RPROPERTY()
+    std::unordered_map<unsigned int, bool> mapUnsignedIntBool;
 
     RPROPERTY()
     std::unordered_map<long long, bool> mapLongLongBool;

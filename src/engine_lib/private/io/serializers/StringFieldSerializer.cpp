@@ -38,8 +38,8 @@ namespace ne {
     }
 
     std::optional<Error> StringFieldSerializer::deserializeField(
-        toml::value* pTomlDocument,
-        toml::value* pTomlValue,
+        const toml::value* pTomlDocument,
+        const toml::value* pTomlValue,
         Serializable* pFieldOwner,
         const rfk::Field* pField,
         const std::string& sOwnerSectionName,

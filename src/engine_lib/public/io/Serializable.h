@@ -288,7 +288,7 @@ namespace ne RNAMESPACE() {
         template <typename T>
         requires std::derived_from<T, Serializable>
         static std::variant<gc<T>, Error> deserialize(
-            toml::value& tomlData,
+            const toml::value& tomlData,
             std::unordered_map<std::string, std::string>& customAttributes,
             std::string sEntityId = "");
 
@@ -411,8 +411,8 @@ namespace ne RNAMESPACE() {
 
     template <typename T>
     requires std::derived_from<T, Serializable> std::variant<gc<T>, Error> Serializable::deserialize(
-        toml::value & tomlData,
-        std::unordered_map<std::string, std::string> & customAttributes,
+        const toml::value& tomlData,
+        std::unordered_map<std::string, std::string>& customAttributes,
         std::string sEntityId) {
         if (sEntityId.empty()) {
             // Put something as entity ID so it would not look weird.

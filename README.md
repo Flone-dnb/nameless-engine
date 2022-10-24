@@ -76,6 +76,9 @@ gc_collector()->collect(); // this will be run regularly somewhere in the engine
   
 ```C++
 // PlayerSaveData.h
+// ---------------------------------------------------------------------------------
+// Example below shows a sample code for saving/loading player's data (such as name, level, inventory).
+// ---------------------------------------------------------------------------------
 
 #pragma once
 
@@ -86,6 +89,7 @@ gc_collector()->collect(); // this will be run regularly somewhere in the engine
 
 #include "PlayerSaveData.generated.h"
 
+/// Holds information about player's inventory.
 class RCLASS(Guid("a34a8047-d7b4-4c70-bb9a-429875a8cd26")) InventorySaveData : public ne::Serializable {
 public:
     InventorySaveData() = default;
@@ -134,6 +138,7 @@ private:
     InventorySaveData_GENERATED
 };
 
+/// Holds information about player's data.
 class RCLASS(Guid("36063853-79b1-41e6-afa6-6923c8b24815")) PlayerSaveData : public ne::Serializable {
 public:
     PlayerSaveData() = default;

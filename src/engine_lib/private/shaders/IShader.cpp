@@ -2,7 +2,7 @@
 
 // Custom.
 #include "misc/Error.h"
-#include "render/IRenderer.h"
+#include "render/Renderer.h"
 #include "io/Logger.h"
 #include "shaders/ShaderFilesystemPaths.hpp"
 #if defined(WIN32)
@@ -15,7 +15,7 @@
 
 namespace ne {
     IShader::IShader(
-        IRenderer* pRenderer,
+        Renderer* pRenderer,
         std::filesystem::path pathToCompiledShader,
         const std::string& sShaderName,
         ShaderType shaderType,
@@ -28,7 +28,7 @@ namespace ne {
     }
 
     std::variant<std::shared_ptr<IShader>, std::string, Error> IShader::compileShader(
-        IRenderer* pRenderer,
+        Renderer* pRenderer,
         const std::filesystem::path& shaderCacheDirectory,
         const std::string& sConfiguration,
         const ShaderDescription& shaderDescription) {
@@ -70,7 +70,7 @@ namespace ne {
     }
 
     std::variant<std::shared_ptr<IShader>, Error> IShader::createFromCache(
-        IRenderer* pRenderer,
+        Renderer* pRenderer,
         const std::filesystem::path& pathToCompiledShader,
         ShaderDescription& shaderDescription,
         const std::string& sShaderNameWithoutConfiguration,
@@ -156,7 +156,7 @@ namespace ne {
         return pathToCompiledShader;
     }
 
-    IRenderer* IShader::getUsedRenderer() const { return pUsedRenderer; }
+    Renderer* IShader::getUsedRenderer() const { return pUsedRenderer; }
 
     std::string IShader::getShaderSourceFileHash() const { return sSourceFileHash; }
 

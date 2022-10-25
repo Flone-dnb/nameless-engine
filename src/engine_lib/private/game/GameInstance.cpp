@@ -2,7 +2,7 @@
 
 // Custom.
 #include "game/Window.h"
-#include "render/IRenderer.h"
+#include "render/Renderer.h"
 #include "window/GLFW.hpp"
 
 namespace ne {

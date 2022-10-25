@@ -1,4 +1,4 @@
-﻿#include "IRenderer.h"
+﻿#include "Renderer.h"
 
 // Custom.
 #include "game/Game.h"
@@ -11,7 +11,7 @@
 #include "fmt/core.h"
 
 namespace ne {
-    IRenderer::IRenderer(Game* pGame) {
+    Renderer::Renderer(Game* pGame) {
         this->pGame = pGame;
         pShaderManager = std::make_unique<ShaderManager>(this);
 
@@ -28,18 +28,18 @@ namespace ne {
             getRendererLoggingCategory());
     }
 
-    Window* IRenderer::getWindow() const { return pGame->getWindow(); }
+    Window* Renderer::getWindow() const { return pGame->getWindow(); }
 
-    Game* IRenderer::getGame() const { return pGame; }
+    Game* Renderer::getGame() const { return pGame; }
 
-    ShaderManager* IRenderer::getShaderManager() const { return pShaderManager.get(); }
+    ShaderManager* Renderer::getShaderManager() const { return pShaderManager.get(); }
 
-    bool IRenderer::isConfigurationFileExists() {
+    bool Renderer::isConfigurationFileExists() {
         const auto configPath = getRendererConfigurationFilePath();
         return std::filesystem::exists(configPath);
     }
 
-    std::filesystem::path IRenderer::getRendererConfigurationFilePath() {
+    std::filesystem::path Renderer::getRendererConfigurationFilePath() {
         std::filesystem::path basePath = ProjectPaths::getDirectoryForEngineConfigurationFiles();
 
         if (!std::filesystem::exists(basePath)) {
@@ -57,19 +57,19 @@ namespace ne {
         return basePath;
     }
 
-    const char* IRenderer::getConfigurationSectionGpu() { return sConfigurationSectionGpu; }
+    const char* Renderer::getConfigurationSectionGpu() { return sConfigurationSectionGpu; }
 
-    const char* IRenderer::getConfigurationSectionResolution() { return sConfigurationSectionResolution; }
+    const char* Renderer::getConfigurationSectionResolution() { return sConfigurationSectionResolution; }
 
-    const char* IRenderer::getConfigurationSectionRefreshRate() { return sConfigurationSectionRefreshRate; }
+    const char* Renderer::getConfigurationSectionRefreshRate() { return sConfigurationSectionRefreshRate; }
 
-    const char* IRenderer::getConfigurationSectionAntialiasing() { return sConfigurationSectionAntialiasing; }
+    const char* Renderer::getConfigurationSectionAntialiasing() { return sConfigurationSectionAntialiasing; }
 
-    const char* IRenderer::getConfigurationSectionVSync() { return sConfigurationSectionVSync; }
+    const char* Renderer::getConfigurationSectionVSync() { return sConfigurationSectionVSync; }
 
-    const char* IRenderer::getConfigurationSectionTextureFiltering() {
+    const char* Renderer::getConfigurationSectionTextureFiltering() {
         return sConfigurationSectionTextureFiltering;
     }
 
-    const char* IRenderer::getRendererLoggingCategory() { return sRendererLogCategory; }
+    const char* Renderer::getRendererLoggingCategory() { return sRendererLogCategory; }
 } // namespace ne

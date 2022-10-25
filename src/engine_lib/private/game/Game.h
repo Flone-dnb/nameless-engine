@@ -16,7 +16,7 @@
 
 namespace ne {
     class GameInstance;
-    class IRenderer;
+    class Renderer;
     class Window;
 
     /**
@@ -265,7 +265,7 @@ namespace ne {
         std::pair<std::recursive_mutex, std::unique_ptr<World>> mtxWorld;
 
         /** Draws graphics on window. */
-        std::unique_ptr<IRenderer> pRenderer;
+        std::unique_ptr<Renderer> pRenderer;
 
         /** Thread pool to execute tasks. */
         ThreadPool threadPool;

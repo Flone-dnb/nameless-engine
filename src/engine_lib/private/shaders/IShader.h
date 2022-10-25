@@ -11,7 +11,7 @@
 #include "shaders/ShaderPack.h"
 
 namespace ne {
-    class IRenderer;
+    class Renderer;
     /**
      * Interface class for different types/formats of shaders.
      */
@@ -53,7 +53,7 @@ namespace ne {
             std::string /** Compilation error. */,
             Error /** Internal error. */>
         compileShader(
-            IRenderer* pRenderer,
+            Renderer* pRenderer,
             const std::filesystem::path& shaderCacheDirectory,
             const std::string& sConfiguration,
             const ShaderDescription& shaderDescription);
@@ -74,7 +74,7 @@ namespace ne {
          * otherwise a shader created using shader cache.
          */
         static std::variant<std::shared_ptr<IShader>, Error> createFromCache(
-            IRenderer* pRenderer,
+            Renderer* pRenderer,
             const std::filesystem::path& pathToCompiledShader,
             ShaderDescription& shaderDescription,
             const std::string& sShaderNameWithoutConfiguration,
@@ -128,7 +128,7 @@ namespace ne {
          * the same file.
          */
         IShader(
-            IRenderer* pRenderer,
+            Renderer* pRenderer,
             std::filesystem::path pathToCompiledShader,
             const std::string& sShaderName,
             ShaderType shaderType,
@@ -146,11 +146,11 @@ namespace ne {
          *
          * @return Used renderer.
          */
-        IRenderer* getUsedRenderer() const;
+        Renderer* getUsedRenderer() const;
 
     private:
         /** Do not delete. Used renderer. */
-        IRenderer* pUsedRenderer = nullptr;
+        Renderer* pUsedRenderer = nullptr;
 
         /** Unique shader name received from ShaderManager. */
         std::string sShaderName;

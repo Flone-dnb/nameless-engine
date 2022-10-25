@@ -9,7 +9,7 @@
 #include <memory>
 
 // Custom.
-#include "render/IRenderer.h"
+#include "render/Renderer.h"
 #include "misc/Error.h"
 #include "shaders/hlsl/DirectXEngineShaders.hpp"
 
@@ -30,7 +30,7 @@ namespace ne {
     /**
      * DirectX 12 renderer.
      */
-    class DirectXRenderer : public IRenderer {
+    class DirectXRenderer : public Renderer {
     public:
         /**
          * Initializes renderer base entities.

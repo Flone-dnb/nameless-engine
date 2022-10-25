@@ -17,7 +17,7 @@
 
 namespace ne {
     std::variant<std::shared_ptr<ShaderPack>, Error> ShaderPack::createFromCache(
-        IRenderer* pRenderer,
+        Renderer* pRenderer,
         const ShaderDescription& shaderDescription,
         std::optional<ShaderCacheInvalidationReason>& cacheInvalidationReason) {
         cacheInvalidationReason = {};
@@ -87,7 +87,7 @@ namespace ne {
     }
 
     std::variant<std::shared_ptr<ShaderPack>, std::string, Error>
-    ShaderPack::compileShaderPack(IRenderer* pRenderer, const ShaderDescription& shaderDescription) {
+    ShaderPack::compileShaderPack(Renderer* pRenderer, const ShaderDescription& shaderDescription) {
         // Configurations.
         const std::set<std::set<ShaderParameter>>* parameterCombinations;
         switch (shaderDescription.shaderType) {

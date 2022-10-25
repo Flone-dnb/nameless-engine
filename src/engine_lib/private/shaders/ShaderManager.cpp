@@ -7,7 +7,7 @@
 #include "game/Game.h"
 #include "io/Logger.h"
 #include "shaders/IShader.h"
-#include "render/IRenderer.h"
+#include "render/Renderer.h"
 #include "io/ConfigManager.h"
 #include "misc/ProjectPaths.h"
 #include "shaders/ShaderFilesystemPaths.hpp"
@@ -20,7 +20,7 @@
 #include "fmt/core.h"
 
 namespace ne {
-    ShaderManager::ShaderManager(IRenderer* pRenderer) {
+    ShaderManager::ShaderManager(Renderer* pRenderer) {
         this->pRenderer = pRenderer;
 
         applyConfigurationFromDisk();

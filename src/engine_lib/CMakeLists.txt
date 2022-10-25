@@ -69,8 +69,8 @@ set(ENGINE_LIB_SOURCES
     public/game/GameInstance.h
     private/game/Game.h
     private/game/Game.cpp
-    private/render/IRenderer.h
-    private/render/IRenderer.cpp
+    private/render/Renderer.h
+    private/render/Renderer.cpp
     private/window/GLFW.hpp
     public/input/KeyboardKey.hpp
     private/io/Logger.cpp

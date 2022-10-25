@@ -9,7 +9,7 @@
 // Custom.
 #include "misc/Error.h"
 #include "game/Game.h"
-#include "render/IRenderer.h"
+#include "render/Renderer.h"
 #include "window/GLFW.hpp"
 #include "game/GameInstance.h"
 #include "input/KeyboardKey.hpp"
@@ -261,7 +261,7 @@ namespace ne {
          *
          * @return nullptr if renderer was not created yet, valid pointer otherwise.
          */
-        IRenderer* getRenderer() const;
+        Renderer* getRenderer() const;
 
 #if defined(WIN32)
         /**

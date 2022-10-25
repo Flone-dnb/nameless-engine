@@ -47,22 +47,22 @@ namespace ne {
     };
 
     /**
-     * Defines an interface for renderers to implement.
+     * Defines a base class for renderers to implement.
      */
-    class IRenderer {
+    class Renderer {
     public:
         /**
          * Constructor.
          *
          * @param pGame   Game object that owns this renderer.
          */
-        IRenderer(Game* pGame);
+        Renderer(Game* pGame);
 
-        IRenderer() = delete;
-        IRenderer(const IRenderer&) = delete;
-        IRenderer& operator=(const IRenderer&) = delete;
+        Renderer() = delete;
+        Renderer(const Renderer&) = delete;
+        Renderer& operator=(const Renderer&) = delete;
 
-        virtual ~IRenderer() = default;
+        virtual ~Renderer() = default;
 
         /**
          * Sets texture filtering.
@@ -302,5 +302,5 @@ namespace ne {
         inline static const char* sRendererLogCategory = "Renderer";
     };
 
-    consteval unsigned IRenderer::getSwapChainBufferCount() { return iSwapChainBufferCount; }
+    consteval unsigned Renderer::getSwapChainBufferCount() { return iSwapChainBufferCount; }
 } // namespace ne

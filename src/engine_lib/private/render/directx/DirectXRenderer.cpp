@@ -28,7 +28,7 @@
 #endif
 
 namespace ne {
-    DirectXRenderer::DirectXRenderer(Game* pGame) : IRenderer(pGame) {
+    DirectXRenderer::DirectXRenderer(Game* pGame) : Renderer(pGame) {
         // Read configuration from config file (if exists).
         if (isConfigurationFileExists()) {
             DirectXRenderer::readConfigurationFromConfigFile();

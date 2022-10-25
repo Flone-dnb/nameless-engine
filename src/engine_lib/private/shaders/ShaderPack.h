@@ -12,7 +12,7 @@
 #include "shaders/ShaderParameter.h"
 
 namespace ne {
-    class IRenderer;
+    class Renderer;
     class IShader;
 
     /** Represents a group of different variants of one shader. */
@@ -40,7 +40,7 @@ namespace ne {
             std::shared_ptr<ShaderPack> /** Compiled shader pack. */,
             std::string /** Compilation error. */,
             Error /** Internal error. */>
-        compileShaderPack(IRenderer* pRenderer, const ShaderDescription& shaderDescription);
+        compileShaderPack(Renderer* pRenderer, const ShaderDescription& shaderDescription);
 
         /**
          * Creates a new shader pack using shader cache.
@@ -54,7 +54,7 @@ namespace ne {
          * otherwise a shader pack created using cache.
          */
         static std::variant<std::shared_ptr<ShaderPack>, Error> createFromCache(
-            IRenderer* pRenderer,
+            Renderer* pRenderer,
             const ShaderDescription& shaderDescription,
             std::optional<ShaderCacheInvalidationReason>& cacheInvalidationReason);
 

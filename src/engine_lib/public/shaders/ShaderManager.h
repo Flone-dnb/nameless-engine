@@ -20,7 +20,7 @@
 
 namespace ne {
     class IShader;
-    class IRenderer;
+    class Renderer;
 
     /**
      * Handles shader compilation and controls shader registry.
@@ -32,7 +32,7 @@ namespace ne {
          *
          * @param pRenderer Parent renderer that uses this shader manager.
          */
-        ShaderManager(IRenderer* pRenderer);
+        ShaderManager(Renderer* pRenderer);
 
         ShaderManager() = delete;
         ShaderManager(const ShaderManager&) = delete;
@@ -226,7 +226,7 @@ namespace ne {
 
     private:
         /** Do not delete. Parent renderer that uses this shader manager. */
-        IRenderer* pRenderer;
+        Renderer* pRenderer;
 
         /** Use for @ref compiledShaders and @ref vShadersToBeRemoved. */
         std::recursive_mutex mtxRwShaders;

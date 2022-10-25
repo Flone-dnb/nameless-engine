@@ -8,7 +8,7 @@
 #include "io/Logger.h"
 #include "io/Serializable.h"
 #include "misc/GC.hpp"
-#include "render/IRenderer.h"
+#include "render/Renderer.h"
 #if defined(WIN32)
 #include "render/directx/DirectXRenderer.h"
 #endif

@@ -95,7 +95,7 @@ namespace ne {
 
     float Window::getOpacity() const { return glfwGetWindowOpacity(pGlfwWindow); }
 
-    IRenderer* Window::getRenderer() const {
+    Renderer* Window::getRenderer() const {
         if (pGame && pGame->pRenderer) {
             return pGame->pRenderer.get();
         }

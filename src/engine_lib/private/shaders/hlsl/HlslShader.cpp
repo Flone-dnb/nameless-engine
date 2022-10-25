@@ -20,7 +20,7 @@
 
 namespace ne {
     HlslShader::HlslShader(
-        IRenderer* pRenderer,
+        Renderer* pRenderer,
         std::filesystem::path pathToCompiledShader,
         const std::string& sShaderName,
         ShaderType shaderType,
@@ -45,7 +45,7 @@ namespace ne {
     }
 
     std::variant<std::shared_ptr<IShader>, std::string, Error> HlslShader::compileShader(
-        IRenderer* pRenderer,
+        Renderer* pRenderer,
         const std::filesystem::path& cacheDirectory,
         const std::string& sConfiguration,
         const ShaderDescription& shaderDescription) {

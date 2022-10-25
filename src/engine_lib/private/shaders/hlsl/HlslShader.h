@@ -6,7 +6,7 @@
 // Custom.
 #include "shaders/IShader.h"
 #include "shaders/ShaderPack.h"
-#include "render/IRenderer.h"
+#include "render/Renderer.h"
 
 // External.
 #include "directx/d3dx12.h"
@@ -34,7 +34,7 @@ namespace ne {
          * the same file.
          */
         HlslShader(
-            IRenderer* pRenderer,
+            Renderer* pRenderer,
             std::filesystem::path pathToCompiledShader,
             const std::string& sShaderName,
             ShaderType shaderType,
@@ -82,7 +82,7 @@ namespace ne {
             std::string /** Compilation error. */,
             Error /** Internal error. */>
         compileShader(
-            IRenderer* pRenderer,
+            Renderer* pRenderer,
             const std::filesystem::path& cacheDirectory,
             const std::string& sConfiguration,
             const ShaderDescription& shaderDescription);

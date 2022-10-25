@@ -10,6 +10,49 @@
 // External.
 #include "catch2/catch_test_macros.hpp"
 
+TEST_CASE("serialize and deserialize with a backup file") {
+    using namespace ne;
+
+    const std::filesystem::path fullPathToFile =
+        std::filesystem::temp_directory_path() / "TESTING_ReflectionTest_TESTING.toml";
+
+    // Serialize to file with a backup.
+    {
+        InventorySaveData data;
+        data.addOneItem(42);
+        auto optionalError = data.serialize(fullPathToFile, true);
+        if (optionalError.has_value()) {
+            optionalError->addEntry();
+            INFO(optionalError->getError());
+            REQUIRE(false);
+        }
+
+        // Check that file exists.
+        REQUIRE(std::filesystem::exists(fullPathToFile));
+
+        // Remove the usual file.
+        std::filesystem::remove(fullPathToFile);
+    }
+
+    // Try to load using the backup.
+    {
+        std::unordered_map<std::string, std::string> customAttributes;
+        auto result = Serializable::deserialize<InventorySaveData>(fullPathToFile, customAttributes);
+        if (std::holds_alternative<Error>(result)) {
+            auto error = std::get<Error>(result);
+            error.addEntry();
+            INFO(error.getError());
+            REQUIRE(false);
+        }
+
+        auto pDeserialized = std::get<gc<InventorySaveData>>(result);
+        REQUIRE(pDeserialized->getItemAmount(42) == 1);
+
+        // Check that original file was restored.
+        REQUIRE(std::filesystem::exists(fullPathToFile));
+    }
+}
+
 TEST_CASE("attempting to add a serializer that was previously added does nothing") {
     const auto iFieldSerializers = Serializable::getFieldSerializers().size();
 

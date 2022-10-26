@@ -307,6 +307,9 @@ TEST_CASE("remove file") {
         REQUIRE(false);
     }
 
+    const auto pathToFirstFileBackup =
+        std::filesystem::path(manager.getFilePath().string() + ConfigManager::getBackupFileExtension());
+
     const auto firstFilePath = manager.getFilePath();
     const std::string sSecondFileName = std::string(sTestConfigFileName) + "2";
 
@@ -319,10 +322,14 @@ TEST_CASE("remove file") {
     }
 
     const auto secondFilePath = manager.getFilePath();
+    const auto pathToSecondFileBackup =
+        std::filesystem::path(manager.getFilePath().string() + ConfigManager::getBackupFileExtension());
 
     // Check that files exists.
     REQUIRE(std::filesystem::exists(firstFilePath));
+    REQUIRE(std::filesystem::exists(pathToFirstFileBackup));
     REQUIRE(std::filesystem::exists(secondFilePath));
+    REQUIRE(std::filesystem::exists(pathToSecondFileBackup));
 
     // Remove the first file.
     res = ConfigManager::removeFile(ConfigCategory::PROGRESS, sTestConfigFileName);
@@ -332,11 +339,20 @@ TEST_CASE("remove file") {
         REQUIRE(false);
     }
 
+    // Make sure there the backup file was deleted.
+    REQUIRE(!std::filesystem::exists(pathToFirstFileBackup));
+
     // See the only second file exists.
     auto vFiles = ConfigManager::getAllFiles(ConfigCategory::PROGRESS);
     REQUIRE(vFiles.size() == 1);
-
     REQUIRE(vFiles[0] == sSecondFileName);
+
+    // Remove the second file using absolute path.
+    ConfigManager::removeFile(secondFilePath);
+
+    // Make sure the second file was deleted.
+    REQUIRE(!std::filesystem::exists(secondFilePath));
+    REQUIRE(!std::filesystem::exists(pathToSecondFileBackup));
 }
 
 TEST_CASE("get all config files of category (with backup test)") {

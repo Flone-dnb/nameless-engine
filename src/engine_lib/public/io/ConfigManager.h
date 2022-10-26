@@ -78,9 +78,8 @@ namespace ne {
 
         /**
          * Removes a file.
-         * File should exist, otherwise an error will be returned (you can use @ref getAllFiles
-         * or @ref getCategoryDirectory to see if files exist).
-         * This function will also remove the backup file of this file (if exists).
+         *
+         * @remark This function will also remove the backup file of this file (if exists).
          *
          * @param category    Directory in which we will search for this file.
          * Use PROGRESS category to search for player's game progress and SETTINGS to search for player's
@@ -89,9 +88,21 @@ namespace ne {
          * that we also use in @ref saveFile (use @ref getFilePath to see full path),
          * the .toml extension will be added if the passed name does not have it.
          *
-         * @return Error if something went wrong.
+         * @return Error if something went wrong. No error will be returned if the file does not exist.
          */
         static std::optional<Error> removeFile(ConfigCategory category, std::string_view sFileName);
+
+        /**
+         * Removes a file.
+         *
+         * @remark This function will also remove the backup file of this file (if exists).
+         *
+         * @param pathToConfigFile Path to the file to remove.
+         * The .toml extension will be added if the passed path does not have it.
+         *
+         * @return Error if something went wrong. No error will be returned if the file does not exist.
+         */
+        static void removeFile(const std::filesystem::path& pathToConfigFile);
 
         /**
          * Loads data from TOML file.
@@ -123,7 +134,7 @@ namespace ne {
          * (so this function will restore the original file if it was deleted).
          *
          * @param pathToConfigFile  Path to the file to load (should exist).
-         * The .toml extension will be added if the passed name does not have it.
+         * The .toml extension will be added if the passed path does not have it.
          *
          * @return Error if something went wrong.
          */

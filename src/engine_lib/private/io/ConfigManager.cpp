@@ -80,10 +80,6 @@ namespace ne {
         auto pathToBackupFile = pathToFile;
         pathToBackupFile += sBackupFileExtension;
 
-        if (!std::filesystem::exists(pathToFile) && !std::filesystem::exists(pathToBackupFile)) {
-            return Error("file(s) do not exist");
-        }
-
         if (std::filesystem::exists(pathToFile)) {
             std::filesystem::remove(pathToFile);
         }
@@ -93,6 +89,26 @@ namespace ne {
         }
 
         return {};
+    }
+
+    void ConfigManager::removeFile(const std::filesystem::path& pathToConfigFile) {
+        auto pathToFile = pathToConfigFile;
+
+        // Check extension.
+        if (!pathToFile.string().ends_with(ConfigManager::getConfigFormatExtension())) {
+            pathToFile += ConfigManager::getConfigFormatExtension();
+        }
+
+        auto pathToBackupFile = pathToFile;
+        pathToBackupFile += sBackupFileExtension;
+
+        if (std::filesystem::exists(pathToFile)) {
+            std::filesystem::remove(pathToFile);
+        }
+
+        if (std::filesystem::exists(pathToBackupFile)) {
+            std::filesystem::remove(pathToBackupFile);
+        }
     }
 
     std::optional<Error> ConfigManager::loadFile(ConfigCategory category, std::string_view sFileName) {

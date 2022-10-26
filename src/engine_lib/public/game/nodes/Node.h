@@ -103,6 +103,9 @@ namespace ne RNAMESPACE() {
          * other cases such as player game settings and etc. usually do not need a backup but
          * you can use it if you want.
          *
+         * @remark Custom attributes, like in Serializable::serialize, are not available here
+         * because they are used internally to store hierarchy and other information.
+         *
          * @return Error if something went wrong, for example when found an unsupported for
          * serialization reflected field.
          */

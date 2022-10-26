@@ -13,6 +13,15 @@ namespace ne {
     std::string getApplicationName();
 
     /**
+     * Returns path to the `res` directory that is located next to the executable.
+     *
+     * @remark Shows an error and throws an exception if path to the `res` directory does not exist.
+     *
+     * @return Path to the `res` directory.
+     */
+    std::filesystem::path getPathToResDirectory();
+
+    /**
      * Converts wstring to its narrow multibyte representation.
      *
      * @param sText String to convert.
@@ -52,4 +61,7 @@ namespace ne {
 
     /** Name of the root (base) engine directory. */
     constexpr auto sDebugOnlyLoggingSubCategory = "Debug mode only";
+
+    /** Name of the `res` directory. */
+    constexpr auto sResDirectoryName = "res";
 } // namespace ne

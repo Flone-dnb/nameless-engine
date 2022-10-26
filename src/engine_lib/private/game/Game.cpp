@@ -25,6 +25,10 @@ namespace ne {
     Game::Game(Window* pWindow) {
         this->pWindow = pWindow;
 
+        // Make sure that `res` directory is set and exists.
+        // (intentionally ignore result, will show an error if not exists)
+        Serializable::getPathToResDirectory();
+
         // Save ID to this thread (should be main thread).
         mainThreadId = std::this_thread::get_id();
 

@@ -568,4 +568,6 @@ namespace ne {
         }
     }
 
+    std::filesystem::path Serializable::getPathToResDirectory() { return ne::getPathToResDirectory(); }
+
 } // namespace ne

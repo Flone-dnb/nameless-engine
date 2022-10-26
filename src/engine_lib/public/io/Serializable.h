@@ -102,6 +102,15 @@ namespace ne RNAMESPACE() {
         virtual ~Serializable() override = default;
 
         /**
+         * Returns path to the `res` directory that is located next to the executable.
+         *
+         * @remark Shows an error and throws an exception if path to the `res` directory does not exist.
+         *
+         * @return Path to the `res` directory.
+         */
+        static std::filesystem::path getPathToResDirectory();
+
+        /**
          * Serializes the object and all reflected fields (including inherited) into a file.
          * Serialized object can later be deserialized using @ref deserialize.
          *
@@ -369,6 +378,18 @@ namespace ne RNAMESPACE() {
          */
         static const rfk::Struct*
         getClassForGuid(const rfk::Struct* pArchetypeToAnalyze, const std::string& sGuid);
+
+        /**
+         * If this object was deserialized from a file that is located in the `res` directory
+         * of this project, this field will contain a path to this file relative to the `res` directory.
+         *
+         * This path will never point to a backup file and will always point to the original file
+         * (even if the backup file was used in deserialization).
+         *
+         * Example: say this object is deserialized from the file located at `.../res/game/test.toml`,
+         * this value will be equal to `game/test.toml`.
+         */
+        std::optional<std::string> pathDeserializedFromRelativeToRes;
 
         /** Serializers used to serialize/deserialize fields. */
         static inline std::pair<std::mutex, std::vector<std::unique_ptr<IFieldSerializer>>>

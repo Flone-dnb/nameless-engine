@@ -34,7 +34,7 @@ namespace ne {
 
 #elif __linux__
 
-        constexpr size_t bufSize = 512; // NOLINT
+        constexpr size_t bufSize = 1024; // NOLINT: should be more that enough
         char buf[bufSize] = {0};
         if (readlink("/proc/self/exe", &buf[0], bufSize) == -1) {
             const Error err("failed to get path to the application");
@@ -122,4 +122,47 @@ namespace ne {
 
         return sOutput;
     }
+
+    std::filesystem::path getPathToResDirectory() {
+        std::filesystem::path pathToExecutable;
+
+#if defined(WIN32)
+
+        TCHAR buffer[MAX_PATH] = {0};
+        constexpr auto bufSize = static_cast<DWORD>(std::size(buffer));
+
+        // Get the fully-qualified path of the executable.
+        if (GetModuleFileName(nullptr, buffer, bufSize) == bufSize) {
+            const Error err("failed to get path to the application, path is too long");
+            err.showError();
+            throw std::runtime_error(err.getError());
+        }
+
+        pathToExecutable = std::filesystem::path(buffer);
+
+#elif __linux__
+
+        constexpr size_t bufSize = 1024; // NOLINT: should be more that enough
+        char buf[bufSize] = {0};
+        if (readlink("/proc/self/exe", &buf[0], bufSize) == -1) {
+            const Error err("failed to get path to the application");
+            err.showError();
+            throw std::runtime_error(err.getError());
+        }
+
+        pathToExecutable = std::filesystem::path(buf);
+
+#endif
+
+        // Construct path to the `res` directory.
+        auto pathToRes = pathToExecutable.parent_path() / sResDirectoryName;
+        if (!std::filesystem::exists(pathToRes)) {
+            const Error err(fmt::format("`res` directory does not exist at \"{}\"", pathToRes.string()));
+            err.showError();
+            throw std::runtime_error(err.getError());
+        }
+
+        return pathToRes;
+    }
+
 } // namespace ne

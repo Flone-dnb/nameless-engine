@@ -177,6 +177,27 @@ namespace ne RNAMESPACE() {
             bool bEnableBackup);
 
         /**
+         * Serializes the object and all reflected fields (including inherited) into a toml value.
+         *
+         * This is an overloaded function. See full documentation for other overload.
+         *
+         * @param tomlData          Toml value to append this object to.
+         * @param sEntityId         Unique ID of this object. When serializing multiple objects into
+         * one toml value provide different IDs for each object so they could be differentiated. Don't use
+         * dots in the entity ID, dots are used in recursion when this function is called from this
+         * function to process reflected field (sub entity).
+         * @param customAttributes  Optional. Custom pairs of values that will be saved as this object's
+         * additional information and could be later retrieved in @ref deserialize.
+         *
+         * @return Error if something went wrong, for example when found an unsupported for
+         * serialization reflected field, otherwise name of the section that was used to store this entity.
+         */
+        std::variant<std::string, Error> serialize(
+            toml::value& tomlData,
+            std::string sEntityId = "",
+            const std::unordered_map<std::string, std::string>& customAttributes = {});
+
+        /**
          * Analyzes the file for serialized objects, gathers and returns unique IDs of those objects.
          *
          * @param pathToFile File to read serialized data from. The ".toml" extension will be added
@@ -204,6 +225,20 @@ namespace ne RNAMESPACE() {
          * }
          * auto pMyCoolNode = std::get<std::shared_ptr<ne::Node>>(std::move(result));
          * @endcode
+         *
+         * @param pathToFile File to read reflected data from. The ".toml" extension will be added
+         * automatically if not specified in the path.
+         *
+         * @return Error if something went wrong, otherwise a pointer to deserialized object.
+         */
+        template <typename T>
+        requires std::derived_from<T, Serializable>
+        static std::variant<gc<T>, Error> deserialize(const std::filesystem::path& pathToFile);
+
+        /**
+         * Deserializes an object and all reflected fields (including inherited) from a file.
+         * Specify the type of an object (that is located in the file) as the T template parameter, which
+         * can be entity's actual type or entity's parent (up to Serializable).
          *
          * @param pathToFile File to read reflected data from. The ".toml" extension will be added
          * automatically if not specified in the path.
@@ -249,27 +284,6 @@ namespace ne RNAMESPACE() {
          * Serializable object.
          */
         static std::vector<IFieldSerializer*> getFieldSerializers();
-
-        /**
-         * Serializes the object and all reflected fields (including inherited) into a toml value.
-         *
-         * This is an overloaded function. See full documentation for other overload.
-         *
-         * @param tomlData          Toml value to append this object to.
-         * @param sEntityId         Unique ID of this object. When serializing multiple objects into
-         * one toml value provide different IDs for each object so they could be differentiated. Don't use
-         * dots in the entity ID, dots are used in recursion when this function is called from this
-         * function to process reflected field (sub entity).
-         * @param customAttributes  Optional. Custom pairs of values that will be saved as this object's
-         * additional information and could be later retrieved in @ref deserialize.
-         *
-         * @return Error if something went wrong, for example when found an unsupported for
-         * serialization reflected field, otherwise name of the section that was used to store this entity.
-         */
-        std::variant<std::string, Error> serialize(
-            toml::value& tomlData,
-            std::string sEntityId = "",
-            const std::unordered_map<std::string, std::string>& customAttributes = {});
 
         /**
          * Deserializes an object and all reflected fields (including inherited) from a toml value.
@@ -368,6 +382,13 @@ namespace ne RNAMESPACE() {
 
         ne_Serializable_GENERATED
     };
+
+    template <typename T>
+    requires std::derived_from<T, Serializable> std::variant<gc<T>, Error> Serializable::deserialize(
+        const std::filesystem::path& pathToFile) {
+        std::unordered_map<std::string, std::string> foundCustomAttributes;
+        return deserialize<T>(pathToFile, foundCustomAttributes);
+    }
 
     template <typename T>
     requires std::derived_from<T, Serializable> std::variant<gc<T>, Error> Serializable::deserialize(

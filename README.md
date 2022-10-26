@@ -78,6 +78,7 @@ gc_collector()->collect(); // this will be run regularly somewhere in the engine
 // PlayerSaveData.h
 // ---------------------------------------------------------------------------------
 // Example below shows a sample code for saving/loading player's data (such as name, level, inventory).
+// Reflected fields will be serialized to file and deserialized from file.
 // ---------------------------------------------------------------------------------
 
 #pragma once
@@ -220,8 +221,7 @@ File_PlayerSaveData_GENERATED
 
     // Deserialize.
     const auto pathToFile = ConfigManager::getCategoryDirectory(ConfigCategory::PROGRESS) / sProfileName;
-    std::unordered_map<std::string, std::string> foundCustomAttributes;
-    const auto result = Serializable::deserialize<PlayerSaveData>(pathToFile, foundCustomAttributes);
+    const auto result = Serializable::deserialize<PlayerSaveData>(pathToFile);
     if (std::holds_alternative<Error>(result)) {
         // process error
     }

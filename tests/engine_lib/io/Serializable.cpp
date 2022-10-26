@@ -36,8 +36,7 @@ TEST_CASE("serialize and deserialize with a backup file") {
 
     // Try to load using the backup.
     {
-        std::unordered_map<std::string, std::string> customAttributes;
-        auto result = Serializable::deserialize<InventorySaveData>(fullPathToFile, customAttributes);
+        auto result = Serializable::deserialize<InventorySaveData>(fullPathToFile);
         if (std::holds_alternative<Error>(result)) {
             auto error = std::get<Error>(result);
             error.addEntry();
@@ -140,8 +139,7 @@ TEST_CASE("serialize and deserialize fields of different types") {
     REQUIRE(ids.find("0") != ids.end());
 
     // Deserialize.
-    std::unordered_map<std::string, std::string> customAttributes;
-    auto result = Serializable::deserialize<ReflectionOuterTestClass>(pathToFile, customAttributes);
+    auto result = Serializable::deserialize<ReflectionOuterTestClass>(pathToFile);
     if (std::holds_alternative<Error>(result)) {
         auto err = std::get<Error>(std::move(result));
         err.addEntry();

@@ -127,7 +127,7 @@ namespace ne {
         CD3DX12_RASTERIZER_DESC rasterizerDesc(D3D12_DEFAULT);
         rasterizerDesc.CullMode = D3D12_CULL_MODE_BACK;
         rasterizerDesc.FillMode = D3D12_FILL_MODE_SOLID;
-        rasterizerDesc.MultisampleEnable = antialiasingSettings.bIsEnabled;
+        rasterizerDesc.MultisampleEnable = static_cast<int>(antialiasingSettings.bIsEnabled);
 
         psoDesc.RasterizerState = rasterizerDesc;
         psoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);

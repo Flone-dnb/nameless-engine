@@ -1,5 +1,5 @@
 ---
-Checks:          '-*,clang-analyzer-*,clang-diagnostic-*,concurrency-*,performance-*,readability-*'
+Checks:          '-*,clang-analyzer-*,clang-diagnostic-*,concurrency-*,performance-*,readability-*,-readability-qualified-auto'
 WarningsAsErrors: '*'
 HeaderFilterRegex: '^(src)'
 AnalyzeTemporaryDtors: false
@@ -148,8 +148,6 @@ CheckOptions:
     value:           'false'
   - key:             modernize-pass-by-value.IncludeStyle
     value:           llvm
-  - key:             readability-qualified-auto.AddConstToQualified
-    value:           'true'
   - key:             readability-suspicious-call-argument.DiceSimilarAbove
     value:           '70'
   - key:             readability-suspicious-call-argument.Dice

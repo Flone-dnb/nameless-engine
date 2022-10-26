@@ -1,8 +1,8 @@
 ﻿#include "DirectXPso.h"
 
 // Custom.
+#include "shaders/hlsl/HlslShader.h"
 #include "render/directx/DirectXRenderer.h"
-#include "io/Logger.h"
 #include "shaders/hlsl/RootSignatureGenerator.h"
 
 namespace ne {
@@ -10,8 +10,25 @@ namespace ne {
         this->pRenderer = pRenderer;
     }
 
-    std::optional<Error>
-    DirectXPso::setupGraphicsPso(const std::string& sVertexShaderName, const std::string& sPixelShaderName) {
+    std::variant<std::unique_ptr<DirectXPso>, Error> DirectXPso::createGraphicsPso(
+        DirectXRenderer* pRenderer,
+        const std::string& sVertexShaderName,
+        const std::string& sPixelShaderName) {
+        // Create PSO.
+        auto pPso = std::unique_ptr<DirectXPso>(new DirectXPso(pRenderer));
+
+        // Generate DirectX PSO.
+        auto optionalError = pPso->generateGraphicsPsoForShaders(sVertexShaderName, sPixelShaderName);
+        if (optionalError.has_value()) {
+            optionalError->addEntry();
+            return optionalError.value();
+        }
+
+        return {};
+    }
+
+    std::optional<Error> DirectXPso::generateGraphicsPsoForShaders(
+        const std::string& sVertexShaderName, const std::string& sPixelShaderName) {
         // Assign new shaders.
         const bool bVertexShaderNotFound = addShader(sVertexShaderName);
         const bool bPixelShaderNotFound = addShader(sPixelShaderName);
@@ -26,26 +43,14 @@ namespace ne {
                 !bPixelShaderNotFound));
         }
 
-        // Generate DirectX PSO.
-        auto optionalError = generateGraphicsPsoForShaders();
-        if (optionalError.has_value()) {
-            optionalError->addEntry();
-            return optionalError.value();
-        }
-
-        return {};
-    }
-
-    std::optional<Error> DirectXPso::generateGraphicsPsoForShaders() {
         // Get assigned shader packs.
         const auto pVertexShaderPack = getShader(ShaderType::VERTEX_SHADER).value();
         const auto pPixelShaderPack = getShader(ShaderType::PIXEL_SHADER).value();
 
         // Prepare lambda to generate error if occurred.
-        auto generateErrorMessage = [this](
-                                        const std::string& sShaderType,
-                                        const std::string& sShaderName,
-                                        const std::set<ShaderParameter>& configuration) -> std::string {
+        auto generateErrorMessage = [](const std::string& sShaderType,
+                                       const std::string& sShaderName,
+                                       const std::set<ShaderParameter>& configuration) -> std::string {
             const auto vShaderParameterNames = shaderParametersToText(configuration);
             std::string sShaderConfigurationText;
             if (vShaderParameterNames.empty()) {
@@ -64,19 +69,20 @@ namespace ne {
         };
 
         // Get vertex shader for current configuration.
-        auto optionalShader =
-            pVertexShaderPack->changeConfiguration(pRenderer->getVertexShaderConfiguration());
+        const auto vertexShaderConfiguration = pRenderer->getVertexShaderConfiguration();
+        auto optionalShader = pVertexShaderPack->changeConfiguration(vertexShaderConfiguration);
         if (!optionalShader.has_value()) [[unlikely]] {
             return Error(generateErrorMessage(
-                "vertex", pVertexShaderPack->getShaderName(), pRenderer->getVertexShaderConfiguration()));
+                "vertex", pVertexShaderPack->getShaderName(), vertexShaderConfiguration));
         }
         const auto pVertexShader = std::dynamic_pointer_cast<HlslShader>(optionalShader.value());
 
         // Get pixel shader for current configuration.
-        optionalShader = pPixelShaderPack->changeConfiguration(pRenderer->getPixelShaderConfiguration());
+        const auto pixelShaderConfiguration = pRenderer->getPixelShaderConfiguration();
+        optionalShader = pPixelShaderPack->changeConfiguration(pixelShaderConfiguration);
         if (!optionalShader.has_value()) [[unlikely]] {
-            return Error(generateErrorMessage(
-                "pixel", pPixelShaderPack->getShaderName(), pRenderer->getPixelShaderConfiguration()));
+            return Error(
+                generateErrorMessage("pixel", pPixelShaderPack->getShaderName(), pixelShaderConfiguration));
         }
         const auto pPixelShader = std::dynamic_pointer_cast<HlslShader>(optionalShader.value());
 

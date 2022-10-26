@@ -44,6 +44,11 @@ namespace ne {
             }
         }
 
+        // Make sure file directories exist.
+        if (!std::filesystem::exists(fixedPath.parent_path())) {
+            std::filesystem::create_directories(fixedPath.parent_path());
+        }
+
         // Save TOML data to file.
         std::ofstream file(fixedPath, std::ios::binary);
         if (!file.is_open()) {
@@ -569,5 +574,9 @@ namespace ne {
     }
 
     std::filesystem::path Serializable::getPathToResDirectory() { return ne::getPathToResDirectory(); }
+
+    std::optional<std::string> Serializable::getPathDeserializedFromRelativeToRes() const {
+        return pathDeserializedFromRelativeToRes;
+    }
 
 } // namespace ne

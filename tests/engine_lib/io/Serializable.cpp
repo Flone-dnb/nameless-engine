@@ -10,6 +10,81 @@
 // External.
 #include "catch2/catch_test_macros.hpp"
 
+TEST_CASE("make sure relative path to the file that object was deserialized from is valid") {
+    const std::string sRelativePathToFile = "test/test.toml";
+
+    // Prepare paths to the file.
+    const auto pathToFileInRes = Serializable::getPathToResDirectory() / sRelativePathToFile;
+    const std::filesystem::path pathToFileInTemp =
+        std::filesystem::temp_directory_path() / "TESTING_ReflectionTest_TESTING.toml";
+
+    // Serialize into the `res` directory.
+    InventorySaveData data;
+    data.addOneItem(42);
+    auto optionalError = data.serialize(pathToFileInRes, true);
+    if (optionalError.has_value()) {
+        optionalError->addEntry();
+        INFO(optionalError->getError());
+        REQUIRE(false);
+    }
+
+    // Additionally serialize outside of the `res` directory.
+    optionalError = data.serialize(pathToFileInTemp, false);
+    if (optionalError.has_value()) {
+        optionalError->addEntry();
+        INFO(optionalError->getError());
+        REQUIRE(false);
+    }
+
+    // Check that file exists.
+    REQUIRE(std::filesystem::exists(pathToFileInRes));
+
+    // Remove the usual file to check that resulting relative path will point to the original file
+    // and not the backup file.
+    std::filesystem::remove(pathToFileInRes);
+
+    // Try to load using the backup file.
+    auto result = Serializable::deserialize<InventorySaveData>(pathToFileInRes);
+    if (std::holds_alternative<Error>(result)) {
+        auto error = std::get<Error>(result);
+        error.addEntry();
+        INFO(error.getError());
+        REQUIRE(false);
+    }
+
+    // Check that original file was restored.
+    REQUIRE(std::filesystem::exists(pathToFileInRes));
+
+    // Make sure that deserialized data is correct.
+    auto pDeserialized = std::get<gc<InventorySaveData>>(result);
+    REQUIRE(pDeserialized->getItemAmount(42) == 1);
+
+    // Check that relative path exists and correct.
+    const auto optionalRelativePath = pDeserialized->getPathDeserializedFromRelativeToRes();
+    REQUIRE(optionalRelativePath.has_value());
+    REQUIRE(optionalRelativePath.value() == sRelativePathToFile);
+
+    // Load the data from the temp directory.
+    result = Serializable::deserialize<InventorySaveData>(pathToFileInTemp);
+    if (std::holds_alternative<Error>(result)) {
+        auto error = std::get<Error>(result);
+        error.addEntry();
+        INFO(error.getError());
+        REQUIRE(false);
+    }
+
+    // Make sure that deserialized data is correct.
+    pDeserialized = std::get<gc<InventorySaveData>>(result);
+    REQUIRE(pDeserialized->getItemAmount(42) == 1);
+
+    // Check that relative path is empty.
+    REQUIRE(!pDeserialized->getPathDeserializedFromRelativeToRes().has_value());
+
+    // Cleanup.
+    std::filesystem::remove_all(Serializable::getPathToResDirectory() / "test");
+    std::filesystem::remove(pathToFileInTemp);
+}
+
 TEST_CASE("serialize and deserialize with a backup file") {
     using namespace ne;
 

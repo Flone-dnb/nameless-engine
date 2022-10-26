@@ -91,10 +91,10 @@ namespace ne RNAMESPACE() {
     };
 
     /**
-     * Base class for making a serializable type.
+     * Class that adds support for serialization/deserialization for your type.
      *
-     * Inherit your class from this type to add a 'serialize' function which will
-     * serialize the type and all reflected fields (even inherited) into a file.
+     * Inherit your class/struct from this class to add functions which will
+     * serialize the type and all reflected fields (even inherited).
      */
     class RCLASS(Guid("f5a59b47-ead8-4da4-892e-cf05abb2f3cc")) Serializable : public rfk::Object {
     public:
@@ -116,7 +116,8 @@ namespace ne RNAMESPACE() {
          *
          * @param pathToFile       File to write reflected data to. The ".toml" extension will be added
          * automatically if not specified in the path. If the specified file already exists it will be
-         * overwritten.
+         * overwritten. If the directories of the specified file do not exist they will be recursively
+         * created.
          * @param bEnableBackup    If 'true' will also use a backup (copy) file. @ref deserialize can use
          * backup file if the original file does not exist. Generally you want to use
          * a backup file if you are saving important information, such as player progress,
@@ -318,6 +319,21 @@ namespace ne RNAMESPACE() {
             std::string sEntityId = "");
 
         /**
+         * If this object was deserialized from a file that is located in the `res` directory
+         * of this project, returns a path to this file relative to the `res` directory.
+         *
+         * This path will never point to a backup file and will always point to the original file
+         * (even if the backup file was used in deserialization).
+         *
+         * Example: say this object is deserialized from the file located at `.../res/game/test.toml`,
+         * this value will be equal to `game/test.toml`.
+         *
+         * @return Empty if this object was not deserialized previously, otherwise path to the file
+         * that was used in deserialization relative to the `res` directory.
+         */
+        std::optional<std::string> getPathDeserializedFromRelativeToRes() const;
+
+        /**
          * Returns whether the specified field can be serialized or not.
          *
          * @param field Field to test.
@@ -425,11 +441,11 @@ namespace ne RNAMESPACE() {
         backupFile += ConfigManager::getBackupFileExtension();
 
         if (!std::filesystem::exists(fixedPath)) {
-            // Check if backup file exists.
+            // Check if a backup file exists.
             if (std::filesystem::exists(backupFile)) {
                 std::filesystem::copy_file(backupFile, fixedPath);
             } else {
-                return Error("file or backup file do not exist");
+                return Error("requested file or a backup file do not exist");
             }
         }
 
@@ -438,8 +454,8 @@ namespace ne RNAMESPACE() {
         try {
             tomlData = toml::parse(fixedPath);
         } catch (std::exception& exception) {
-            return Error(
-                fmt::format("failed to load file \"{}\", error: {}", fixedPath.string(), exception.what()));
+            return Error(fmt::format(
+                "failed to parse TOML file at \"{}\", error: {}", fixedPath.string(), exception.what()));
         }
 
         // Deserialize.
@@ -448,9 +464,33 @@ namespace ne RNAMESPACE() {
             auto err = std::get<Error>(std::move(result));
             err.addEntry();
             return err;
-        } else {
-            return result;
+        } else if (fixedPath.string().starts_with(getPathToResDirectory().string())) {
+            // File is located in the `res` directory, save a relative path to the `res` directory.
+            auto sRelativePath = std::filesystem::relative(fixedPath, getPathToResDirectory()).string();
+
+            // Replace all '\' characters with '/' just to be consistent.
+            std::replace(sRelativePath.begin(), sRelativePath.end(), '\\', '/');
+
+            // Remove the forward slash at the beginning (if exists).
+            if (sRelativePath.starts_with('/')) {
+                sRelativePath = sRelativePath.substr(1);
+            }
+
+            // Double check that everything is correct.
+            const auto pathToOriginalFile = getPathToResDirectory() / sRelativePath;
+            if (!std::filesystem::exists(pathToOriginalFile)) {
+                return Error(fmt::format(
+                    "failed to save the relative path to the `res` directory for the file at \"{}\", "
+                    "reason: constructed path \"{}\" does not exist",
+                    fixedPath.string(),
+                    pathToOriginalFile.string()));
+            }
+
+            gc<Serializable> pDeserialized = std::get<gc<T>>(result);
+            pDeserialized->pathDeserializedFromRelativeToRes = sRelativePath;
         }
+
+        return result;
     }
 
     template <typename T>

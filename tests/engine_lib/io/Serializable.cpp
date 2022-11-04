@@ -368,7 +368,7 @@ TEST_CASE("deserialize a node tree that references external node tree") {
 
     {
         // Say we have a custom node tree.
-        gc<Node> pRootNode = gc_new<Node>();
+        gc<ReflectionTestNode1> pRootNode = gc_new<ReflectionTestNode1>();
         auto pChildNode = gc_new<ReflectionTestNode1>();
 
         // Build node tree.
@@ -404,7 +404,8 @@ TEST_CASE("deserialize a node tree that references external node tree") {
             REQUIRE(false);
         }
 
-        auto pDeserializedRootNode = std::get<gc<Node>>(result);
+        auto pDeserializedRootNode = gc_dynamic_pointer_cast<ReflectionTestNode1>(std::get<gc<Node>>(result));
+        REQUIRE(pDeserializedRootNode);
 
         // Check that deserialized object now has a path relative to the `res` directory.
         REQUIRE(pDeserializedRootNode->getPathDeserializedFromRelativeToRes().has_value());
@@ -428,14 +429,15 @@ TEST_CASE("deserialize a node tree that references external node tree") {
         gc<Node> pParentNode = gc_new<Node>();
         pParentNode->addChildNode(pDeserializedRootNode);
 
-        // Change some fields, we will not see them in the TOML file because
+        // Change some child node fields, we will not see them in the TOML file because
         // when referencing a node tree, only root node will save it's changed values.
         pChildNode->bBoolValue2 = true;
         pChildNode->entity.iIntValue2 = 42;
         pChildNode->entity.vVectorValue2 = {"Hello", "World"};
 
-        // Change external root node's name (we will see this in the TOML file).
+        // Change external root node's fields (we will see this in the TOML file).
         pDeserializedRootNode->setName("External Root Node");
+        pDeserializedRootNode->entity.iIntValue1 = 42;
 
         // Now serialize this node tree.
         auto optionalError = pParentNode->serializeNodeTree(pathToNodeTreeFileInRes, false);
@@ -465,12 +467,14 @@ TEST_CASE("deserialize a node tree that references external node tree") {
         REQUIRE(
             pRootNode->getPathDeserializedFromRelativeToRes().value().first == sNodeTreeRelativePathToFile);
 
-        auto pChildNode = pRootNode->getChildNodes()[0];
+        auto pChildNode = gc_dynamic_pointer_cast<ReflectionTestNode1>(pRootNode->getChildNodes()[0]);
+        REQUIRE(pChildNode);
         REQUIRE(pChildNode->getPathDeserializedFromRelativeToRes().has_value());
         REQUIRE(
             pChildNode->getPathDeserializedFromRelativeToRes().value().first == sNodeTreeRelativePathToFile);
         REQUIRE(!pChildNode->getPathDeserializedFromRelativeToRes().value().second.starts_with("0."));
         REQUIRE(pChildNode->getName() == "External Root Node");
+        REQUIRE(pChildNode->entity.iIntValue1 == 42);
 
         // Get child child nodes.
         REQUIRE(pChildNode->getChildNodes()->size() == 1);

@@ -190,15 +190,17 @@ File_PlayerSaveData_GENERATED
     std::uniform_int_distribution<unsigned int> uid(0, UINT_MAX);
     std::string sNewProfileFilename;
     const auto vExistingProfiles = ConfigManager::getAllFiles(ConfigCategory::PROGRESS);
-    bool bContinue = true;
+    bool bContinue = false;
     do {
+        bContinue = false;
         sNewProfileFilename = std::to_string(uid(gen));
         for (const auto& sProfile : vExistingProfiles) {
             if (sProfile == sNewProfileFilename) {
-                continue;
+                // This profile name is already used, generate another one.
+                bContinue = true;
+                break;
             }
         }
-        bContinue = false;
     } while (bContinue);
 
     // Serialize.

@@ -2,6 +2,7 @@
 #include "game/nodes/Node.h"
 #include "game/GameInstance.h"
 #include "game/Window.h"
+#include "misc/Timer.h"
 
 // External.
 #include "catch2/catch_test_macros.hpp"
@@ -368,6 +369,85 @@ TEST_CASE("test GC performance and stability with nodes") {
             addChildNodes(iChildrenCount - 1, pNewNode);
             pNode->addChildNode(pNewNode);
         }
+    };
+
+    auto result = Window::getBuilder().withVisibility(false).build();
+    if (std::holds_alternative<Error>(result)) {
+        Error error = std::get<Error>(std::move(result));
+        error.addEntry();
+        INFO(error.getError());
+        REQUIRE(false);
+    }
+
+    const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
+    pMainWindow->processEvents<TestGameInstance>();
+
+    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+}
+
+TEST_CASE("capture a `gc` pointer in `std::function`") {
+    using namespace ne;
+
+    class MyDerivedNode : public Node {
+    public:
+        MyDerivedNode() = default;
+        virtual ~MyDerivedNode() override = default;
+
+        void startTimer() {
+            // seems like a typical timer usage
+            timer.setCallbackForTimeout(1, [&]() { myCallback(); });
+            timer.start();
+        }
+
+        std::function<void()> callback;
+
+        bool bTimerFinished = false;
+        int iAnswer = 0;
+
+    protected:
+        Timer timer{true};
+        void myCallback() { bTimerFinished = true; }
+    };
+
+    class TestGameInstance : public GameInstance {
+    public:
+        TestGameInstance(Window* pGameWindow, InputManager* pInputManager)
+            : GameInstance(pGameWindow, pInputManager) {}
+        virtual ~TestGameInstance() override {}
+        virtual void onGameStarted() override {
+            pMyNode = gc_new<MyDerivedNode>();
+            auto pNode = gc_new<Node>();
+            pMyNode->addChildNode(pNode);
+
+            std::function<void()> function = [pNode]() {};
+            // pMyNode->callback = [pMyNode]() {};         // not OK, leaks
+
+            pMyNode->startTimer();
+
+            // Test some engine functions.
+            addDeferredTask([&, pNode]() {
+                pNode->setName("deferred task finished");
+                bDeferredTaskFinished = true;
+            });
+            addTaskToThreadPool([&, pNode] {
+                pNode->setName("thread pool task finished");
+                bThreadPoolTaskFinished = true;
+            });
+        }
+        virtual void onBeforeNewFrame(float fTimeSincePrevCallInSec) override {
+            if (bDeferredTaskFinished && bThreadPoolTaskFinished && pMyNode->bTimerFinished) {
+                getWindow()->close();
+            }
+        }
+        virtual void onWindowClose() override {
+            // have to clear `gc` pointers here, we also tell about this if we found leaks
+            pMyNode = nullptr;
+        }
+
+    private:
+        gc<MyDerivedNode> pMyNode;
+        bool bDeferredTaskFinished = false;
+        bool bThreadPoolTaskFinished = false;
     };
 
     auto result = Window::getBuilder().withVisibility(false).build();

@@ -64,24 +64,25 @@ namespace ne {
          * Adds a function to be executed on the main thread next time @ref onBeforeNewFrame
          * is called.
          *
-         * @param task Function to execute.
-         *
          * @warning If you are using member functions as callbacks you need to make
          * sure that the owner object of these member functions will not be deleted until
          * this task is finished.
+         *
+         * @param task Function to execute.
+         *
          */
         void addDeferredTask(const std::function<void()>& task);
 
         /**
          * Adds a function to be executed on the thread pool.
          *
-         * TODO: std::move_only_function?
-         *
-         * @param task Function to execute.
+         * TODO: introduce a `std::move_only_function` overload?
          *
          * @warning If you are using member functions as callbacks you need to make
          * sure that the owner object of these member functions will not be deleted until
          * this task is finished.
+         *
+         * @param task Function to execute.
          */
         void addTaskToThreadPool(const std::function<void()>& task);
 
@@ -291,5 +292,17 @@ namespace ne {
 
         /** Name of the category used for logging. */
         inline static const char* sGameLogCategory = "Game";
+
+        /** Description of reasons why a leak may occur. */
+        inline static const char* sGcLeakReasons =
+            "1. you are storing `gc` pointers in your game instance (you should have cleared them in "
+            "`onWindowClose`),\n"
+            "2. you are not using STL container wrappers for gc "
+            "pointers (for example, you need to use `gc_vector<T>` instead of `std::vector<gc<T>>`, "
+            "and other `gc_*` containers when storing gc pointers),\n"
+            "3. you are capturing `gc` pointer(s) in `std::function` (this might leak in some special "
+            "cases, such as when you have a class `MyClass` with a `std::function` member in it "
+            "and you capture a `gc<MyClass>` in this `std::function` member which creates a non-resolvable "
+            "cycle, for such cases use `gc_function` instead of `std::function` as a member of your class).";
     };
 } // namespace ne

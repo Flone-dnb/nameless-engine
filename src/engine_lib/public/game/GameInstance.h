@@ -146,22 +146,23 @@ namespace ne {
          * Adds a function to be executed on the main thread next time @ref onBeforeNewFrame
          * is called.
          *
-         * @param task Function to execute.
-         *
          * @warning If you are using member functions as tasks you need to make
          * sure that the owner object of these member functions will not be deleted until
          * this task is finished. IGameInstance member functions are safe to use.
+         *
+         * @param task Function to execute.
+         *
          */
         void addDeferredTask(const std::function<void()>& task) const;
 
         /**
          * Adds a function to be executed on the thread pool.
          *
-         * @param task Function to execute.
-         *
          * @warning If you are using member functions as tasks you need to make
          * sure that the owner object of these member functions will not be deleted until
          * this task is finished. IGameInstance member functions are safe to use.
+         *
+         * @param task Function to execute.
          */
         void addTaskToThreadPool(const std::function<void()>& task) const;
 

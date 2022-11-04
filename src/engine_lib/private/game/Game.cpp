@@ -137,13 +137,9 @@ namespace ne {
             Logger::get().error(
                 fmt::format(
                     "the game was destroyed and a full garbage collection was run but there are still "
-                    "{} node(s) alive, here are a few reasons why this may happen:\n"
-                    "1. you are storing some `gc` pointers to nodes "
-                    "in your game instance (you should have cleared them in `onWindowClose`),\n"
-                    "2. you are not using STL container wrappers for gc "
-                    "pointers (i.e. you need to use `gc_vector<T>` instead of `std::vector<gc<T>>`, "
-                    "and other `gc_*` containers when storing gc pointers).",
-                    iNodesAlive),
+                    "{} node(s) alive, here are a few reasons why this may happen:\n{}",
+                    iNodesAlive,
+                    sGcLeakReasons),
                 sGameLogCategory);
         }
 
@@ -153,8 +149,9 @@ namespace ne {
             Logger::get().error(
                 fmt::format(
                     "the game was destroyed and a full garbage collection was run but there are still "
-                    "{} gc object(s) alive",
-                    iGcObjectsLeft),
+                    "{} gc object(s) alive, here are a few reasons why this may happen:\n{}",
+                    iGcObjectsLeft,
+                    sGcLeakReasons),
                 sGameLogCategory);
         }
     }
@@ -236,13 +233,9 @@ namespace ne {
                 Logger::get().error(
                     fmt::format(
                         "the world was destroyed and garbage collection was finished but there are still "
-                        "{} node(s) alive, here are a few reasons why this may happen:\n"
-                        "1. you are storing some `gc` pointers to nodes "
-                        "in your game instance (you should have cleared them before calling `createWorld`),\n"
-                        "2. you are not using STL container wrappers for gc "
-                        "pointers (i.e. you need to use `gc_vector<T>` instead of `std::vector<gc<T>>`, "
-                        "and other `gc_*` containers when storing gc pointers).",
-                        iAliveNodeCount),
+                        "{} node(s) alive, here are a few reasons why this may happen:\n{}",
+                        iAliveNodeCount,
+                        sGcLeakReasons),
                     sGameLogCategory);
             }
         }

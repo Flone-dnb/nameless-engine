@@ -84,9 +84,8 @@ namespace ne RNAMESPACE() {
          * If the specified node already has a parent it will change its parent to be
          * a child of this node. This way you can change to which node you are attached.
          *
-         * @param pNode Node to attach as a child. If the specified node is a parent of this node the
-         * operation will fail and log an error. Thanks to this you can't make world's root node a child
-         * of some other node (for example).
+         * @param pNode Node to attach as a child. If the specified node is a parent of `this` node the
+         * operation will fail and log an error.
          */
         void addChildNode(gc<Node> pNode);
 
@@ -260,6 +259,33 @@ namespace ne RNAMESPACE() {
         // World is able to spawn root node.
         friend class World;
 
+        /** Small helper struct to temporary hold a GC pointer for @ref serializeNodeTree. */
+        struct SerializableObjectInformationWithGcPointer : public SerializableObjectInformation {
+            /**
+             * Initialized object information for serialization.
+             *
+             * @param pObject          Object to serialize.
+             * @param sObjectUniqueId  Object's unique ID. Don't use dots in IDs.
+             * @param customAttributes Optional. Pairs of values to serialize with this object.
+             * @param pOriginalObject  Optional. Use if the object was previously deserialized and
+             * you now want to only serialize changed fields of this object and additionally store
+             * the path to the original file (to deserialize unchanged fields).
+             * @param pDeserializedOriginalObject Optional. GC pointer to original object.
+             */
+            SerializableObjectInformationWithGcPointer(
+                Serializable* pObject,
+                const std::string& sObjectUniqueId,
+                const std::unordered_map<std::string, std::string>& customAttributes = {},
+                Serializable* pOriginalObject = nullptr,
+                gc<Node> pDeserializedOriginalObject = nullptr)
+                : SerializableObjectInformation(pObject, sObjectUniqueId, customAttributes, pOriginalObject) {
+                this->pDeserializedOriginalObject = pDeserializedOriginalObject;
+            }
+
+            /** GC pointer to the deserialized original object. */
+            gc<Node> pDeserializedOriginalObject = nullptr;
+        };
+
         /** Calls @ref onSpawn on this node and all of its child nodes. */
         void spawn();
 
@@ -288,10 +314,23 @@ namespace ne RNAMESPACE() {
          * @param iParentId Parent's serialization ID (if this node has a parent and it will also
          * be serialized).
          *
-         * @return Array of collected information that can be serialized.
+         * @return Error if something went wrong, otherwise an array of collected information
+         * that can be serialized.
          */
-        std::vector<SerializableObjectInformation>
+        std::variant<std::vector<SerializableObjectInformationWithGcPointer>, Error>
         getInformationForSerialization(size_t& iId, std::optional<size_t> iParentId);
+
+        /**
+         * Checks if this node and all child nodes were deserialized from the same file
+         * (i.e. checks if this node tree is located in one file).
+         *
+         * @param sPathRelativeToRes Path relative to the `res` directory to the file to check,
+         * example: `game/test.toml`.
+         *
+         * @return `false` if this node or some child node(s) were deserialized from other file
+         * or if some nodes we not deserialized previously, otherwise `true`.
+         */
+        bool isTreeDeserializedFromOneFile(const std::string& sPathRelativeToRes);
 
         /**
          * Locks @ref mtxChildNodes mutex for self and recursively for all children.
@@ -337,7 +376,11 @@ namespace ne RNAMESPACE() {
         GameInstance* pGameInstance = nullptr;
 
         /** Name of the attribute we use to serialize information about parent node. */
-        static inline const auto sParentNodeAttributeName = "parent_node";
+        static inline const auto sParentNodeIdAttributeName = "parent_node_id";
+
+        /** Name of the attribute we use to store a path to an external node tree. */
+        static inline const auto sExternalNodeTreePathAttributeName =
+            "external_node_tree_path_relative_to_res";
 
         /** Name of the category used for logging. */
         static inline const auto sNodeLogCategory = "Node";

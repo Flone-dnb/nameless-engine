@@ -7,11 +7,49 @@
 
 // Custom.
 #include "io/Serializable.h"
+#include "game/nodes/Node.h"
 #include "io/DontSerializeProperty.h"
 
 #include "ReflectionTest.generated.h"
 
 using namespace ne;
+
+class RCLASS(Guid("550ea9f9-dd8a-4089-a717-0fe4e351a686")) ReflectionTestEntity : public Serializable {
+public:
+    ReflectionTestEntity() = default;
+    virtual ~ReflectionTestEntity() override = default;
+
+    RPROPERTY()
+    int iIntValue1 = 0;
+
+    RPROPERTY()
+    int iIntValue2 = 0;
+
+    RPROPERTY()
+    std::vector<std::string> vVectorValue1;
+
+    RPROPERTY()
+    std::vector<std::string> vVectorValue2;
+
+    ReflectionTestEntity_GENERATED
+};
+
+class RCLASS(Guid("550ea9f9-dd8a-4089-a717-0fe4e351a687")) ReflectionTestNode1 : public Node {
+public:
+    ReflectionTestNode1() = default;
+    virtual ~ReflectionTestNode1() override = default;
+
+    RPROPERTY()
+    bool bBoolValue1 = false;
+
+    RPROPERTY()
+    bool bBoolValue2 = false;
+
+    RPROPERTY()
+    ReflectionTestEntity entity;
+
+    ReflectionTestNode1_GENERATED
+};
 
 struct RSTRUCT(Guid("550ea9f9-dd8a-4089-a717-0fe4e351a688")) ReflectionTestStruct : public Serializable {
 public:

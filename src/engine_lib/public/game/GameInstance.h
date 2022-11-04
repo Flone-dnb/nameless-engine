@@ -192,7 +192,8 @@ namespace ne {
          * @remark Typically you don't need to call this function as garbage collection is executed
          * regularly (see @ref setGarbageCollectorRunInterval) but you can still call it anyway.
          *
-         * @param onFinished Optional callback that will be triggered when garbage collection is finished.
+         * @param onFinished Optional callback that will be triggered on the main thread
+         * when garbage collection is finished.
          */
         void queueGarbageCollection(std::optional<std::function<void()>> onFinished);
 

@@ -46,6 +46,10 @@ namespace ne {
          * Only used when serializing a field of type that derives from Serializable.
          * @param iSubEntityId     Current ID of the sub entity (sub entity of the field owner).
          * Only used when serializing a field of type that derives from Serializable.
+         * @param pOriginalObject  Optional. Original object of the same type as the object being
+         * serialized, this object is a deserialized version of the object being serialized,
+         * used to compare serializable fields' values and only serialize changed values.
+         * Only used when serializing a field of type that derives from Serializable.
          *
          * @return Error if something went wrong, empty otherwise.
          */
@@ -55,7 +59,8 @@ namespace ne {
             const rfk::Field* pField,
             const std::string& sSectionName,
             const std::string& sEntityId,
-            size_t& iSubEntityId) = 0;
+            size_t& iSubEntityId,
+            Serializable* pOriginalObject = nullptr) = 0;
 
         /**
          * Deserializes field from a TOML value.
@@ -96,5 +101,22 @@ namespace ne {
             const rfk::Field* pFromField,
             Serializable* pToInstance,
             const rfk::Field* pToField) = 0;
+
+        /**
+         * Checks if the specified fields' values are equal or not.
+         *
+         * @param pFieldAOwner Owner of the field A.
+         * @param pFieldA      Field A to compare.
+         * @param pFieldBOwner Owner of the field B.
+         * @param pFieldB      Field B to compare.
+         *
+         * @return `false` if some field is unsupported by this serializer or if fields' values
+         * are not equal, `true` otherwise.
+         */
+        virtual bool isFieldValueEqual(
+            Serializable* pFieldAOwner,
+            const rfk::Field* pFieldA,
+            Serializable* pFieldBOwner,
+            const rfk::Field* pFieldB) = 0;
     };
 } // namespace ne

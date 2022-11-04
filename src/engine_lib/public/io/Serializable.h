@@ -11,6 +11,7 @@
 // Custom.
 #include "misc/Error.h"
 #include "io/Logger.h"
+#include "misc/ProjectPaths.h"
 #include "io/ConfigManager.h"
 #include "io/GuidProperty.h"
 #include "misc/GC.hpp"
@@ -39,18 +40,30 @@ namespace ne RNAMESPACE() {
          * @param pObject          Object to serialize.
          * @param sObjectUniqueId  Object's unique ID. Don't use dots in IDs.
          * @param customAttributes Optional. Pairs of values to serialize with this object.
+         * @param pOriginalObject  Optional. Use if the object was previously deserialized and
+         * you now want to only serialize changed fields of this object and additionally store
+         * the path to the original file (to deserialize unchanged fields).
          */
         SerializableObjectInformation(
             Serializable* pObject,
             const std::string& sObjectUniqueId,
-            const std::unordered_map<std::string, std::string>& customAttributes = {}) {
+            const std::unordered_map<std::string, std::string>& customAttributes = {},
+            Serializable* pOriginalObject = nullptr) {
             this->pObject = pObject;
             this->sObjectUniqueId = sObjectUniqueId;
             this->customAttributes = customAttributes;
+            this->pOriginalObject = pOriginalObject;
         }
 
         /** Object to serialize. */
-        Serializable* pObject;
+        Serializable* pObject = nullptr;
+
+        /**
+         * Use if @ref pObject was previously deserialized and you now want to only serialize
+         * changed fields of this object and additionally store the path to the original file
+         * (to deserialize unchanged fields).
+         */
+        Serializable* pOriginalObject = nullptr;
 
         /** Unique object ID. Don't use dots in it. */
         std::string sObjectUniqueId;
@@ -100,15 +113,6 @@ namespace ne RNAMESPACE() {
     public:
         Serializable() = default;
         virtual ~Serializable() override = default;
-
-        /**
-         * Returns path to the `res` directory that is located next to the executable.
-         *
-         * @remark Shows an error and throws an exception if path to the `res` directory does not exist.
-         *
-         * @return Path to the `res` directory.
-         */
-        static std::filesystem::path getPathToResDirectory();
 
         /**
          * Serializes the object and all reflected fields (including inherited) into a file.
@@ -208,6 +212,32 @@ namespace ne RNAMESPACE() {
             const std::unordered_map<std::string, std::string>& customAttributes = {});
 
         /**
+         * Serializes the object and all reflected fields (including inherited) into a toml value.
+         *
+         * This is an overloaded function that takes an original object to serialize only changed
+         * values. See full documentation for other overload.
+         *
+         * @param tomlData          Toml value to append this object to.
+         * @param pOriginalObject   Optional. Original object of the same type as the object being
+         * serialized, this object is a deserialized version of the object being serialized,
+         * used to compare serializable fields' values and only serialize changed values.
+         * @param sEntityId         Unique ID of this object. When serializing multiple objects into
+         * one toml value provide different IDs for each object so they could be differentiated. Don't use
+         * dots in the entity ID, dots are used in recursion when this function is called from this
+         * function to process reflected field (sub entity).
+         * @param customAttributes  Optional. Custom pairs of values that will be saved as this object's
+         * additional information and could be later retrieved in @ref deserialize.
+         *
+         * @return Error if something went wrong, for example when found an unsupported for
+         * serialization reflected field, otherwise name of the section that was used to store this entity.
+         */
+        std::variant<std::string, Error> serialize(
+            toml::value& tomlData,
+            Serializable* pOriginalObject,
+            std::string sEntityId = "",
+            const std::unordered_map<std::string, std::string>& customAttributes = {});
+
+        /**
          * Analyzes the file for serialized objects, gathers and returns unique IDs of those objects.
          *
          * @param pathToFile File to read serialized data from. The ".toml" extension will be added
@@ -263,6 +293,43 @@ namespace ne RNAMESPACE() {
             std::unordered_map<std::string, std::string>& customAttributes);
 
         /**
+         * Deserializes an object and all reflected fields (including inherited) from a file.
+         * Specify the type of an object (that is located in the file) as the T template parameter, which
+         * can be entity's actual type or entity's parent (up to Serializable).
+         *
+         * @param pathToFile File to read reflected data from. The ".toml" extension will be added
+         * automatically if not specified in the path.
+         * @param customAttributes Pairs of values that were associated with this object.
+         * @param sEntityId        Unique ID of this object. When serializing multiple objects into
+         * one toml value provide different IDs for each object so they could be differentiated.
+         *
+         * @return Error if something went wrong, otherwise a pointer to deserialized object.
+         */
+        template <typename T>
+        requires std::derived_from<T, Serializable>
+        static std::variant<gc<T>, Error> deserialize(
+            const std::filesystem::path& pathToFile,
+            std::unordered_map<std::string, std::string>& customAttributes,
+            const std::string& sEntityId);
+
+        /**
+         * Deserializes an object and all reflected fields (including inherited) from a file.
+         * Specify the type of an object (that is located in the file) as the T template parameter, which
+         * can be entity's actual type or entity's parent (up to Serializable).
+         *
+         * @param pathToFile File to read reflected data from. The ".toml" extension will be added
+         * automatically if not specified in the path.
+         * @param sEntityId        Unique ID of this object. When serializing multiple objects into
+         * one toml value provide different IDs for each object so they could be differentiated.
+         *
+         * @return Error if something went wrong, otherwise a pointer to deserialized object.
+         */
+        template <typename T>
+        requires std::derived_from<T, Serializable>
+        static std::variant<gc<T>, Error>
+        deserialize(const std::filesystem::path& pathToFile, const std::string& sEntityId);
+
+        /**
          * Deserializes multiple objects and their reflected fields (including inherited) from a file.
          *
          * @param pathToFile File to read reflected data from. The ".toml" extension will be added
@@ -274,26 +341,6 @@ namespace ne RNAMESPACE() {
          */
         static std::variant<std::vector<DeserializedObjectInformation>, Error>
         deserialize(const std::filesystem::path& pathToFile, const std::set<std::string>& ids);
-
-        /**
-         * Adds a field serializer that will be automatically used in serialization/deserialization
-         * to support specific field types. Use @ref getFieldSerializers to get array of added serializers.
-         *
-         * @remark If the serializer of the specified type was already added previously it will not be
-         * added again.
-         *
-         * @param pFieldSerializer Field serializer to add.
-         */
-        static void addFieldSerializer(std::unique_ptr<IFieldSerializer> pFieldSerializer);
-
-        /**
-         * Returns available field serializers that will be automatically used in
-         * serialization/deserialization.
-         *
-         * @return Array of available field serializers. Do not delete serializers, they are owned by the
-         * Serializable object.
-         */
-        static std::vector<IFieldSerializer*> getFieldSerializers();
 
         /**
          * Deserializes an object and all reflected fields (including inherited) from a toml value.
@@ -319,19 +366,41 @@ namespace ne RNAMESPACE() {
             std::string sEntityId = "");
 
         /**
+         * Adds a field serializer that will be automatically used in serialization/deserialization
+         * to support specific field types. Use @ref getFieldSerializers to get array of added serializers.
+         *
+         * @remark If the serializer of the specified type was already added previously it will not be
+         * added again.
+         *
+         * @param pFieldSerializer Field serializer to add.
+         */
+        static void addFieldSerializer(std::unique_ptr<IFieldSerializer> pFieldSerializer);
+
+        /**
+         * Returns available field serializers that will be automatically used in
+         * serialization/deserialization.
+         *
+         * @return Array of available field serializers. Do not delete serializers, they are owned by the
+         * Serializable object.
+         */
+        static std::vector<IFieldSerializer*> getFieldSerializers();
+
+        /**
          * If this object was deserialized from a file that is located in the `res` directory
-         * of this project, returns a path to this file relative to the `res` directory.
+         * of this project, returns a pair of values:
+         * - path to this file relative to the `res` directory,
+         * - unique ID of this object in this file.
          *
          * This path will never point to a backup file and will always point to the original file
          * (even if the backup file was used in deserialization).
          *
          * Example: say this object is deserialized from the file located at `.../res/game/test.toml`,
-         * this value will be equal to `game/test.toml`.
+         * this value will be equal to the following pair: {`game/test.toml`, `some.id`}.
          *
          * @return Empty if this object was not deserialized previously, otherwise path to the file
          * that was used in deserialization relative to the `res` directory.
          */
-        std::optional<std::string> getPathDeserializedFromRelativeToRes() const;
+        std::optional<std::pair<std::string, std::string>> getPathDeserializedFromRelativeToRes() const;
 
         /**
          * Returns whether the specified field can be serialized or not.
@@ -397,7 +466,9 @@ namespace ne RNAMESPACE() {
 
         /**
          * If this object was deserialized from a file that is located in the `res` directory
-         * of this project, this field will contain a path to this file relative to the `res` directory.
+         * of this project, this field will contain a pair of values:
+         * - path to this file relative to the `res` directory,
+         * - unique ID of this object in this file.
          *
          * This path will never point to a backup file and will always point to the original file
          * (even if the backup file was used in deserialization).
@@ -405,7 +476,7 @@ namespace ne RNAMESPACE() {
          * Example: say this object is deserialized from the file located at `.../res/game/test.toml`,
          * this value will be equal to `game/test.toml`.
          */
-        std::optional<std::string> pathDeserializedFromRelativeToRes;
+        std::optional<std::pair<std::string, std::string>> pathDeserializedFromRelativeToRes;
 
         /** Serializers used to serialize/deserialize fields. */
         static inline std::pair<std::mutex, std::vector<std::unique_ptr<IFieldSerializer>>>
@@ -413,6 +484,12 @@ namespace ne RNAMESPACE() {
 
         /** Name of the key in which to store name of the field a section represents. */
         static inline const auto sSubEntityFieldNameKey = ".field_name";
+
+        /**
+         * Name of the key which we use when we serialize an object that was previously
+         * deserialized from the `res` directory.
+         */
+        static inline const auto sPathRelativeToResKey = ".path_relative_to_res";
 
         /** Name of the key which we use when there is nothing to serialize. */
         static inline const auto sNothingToSerializeKey = ".none";
@@ -431,66 +508,14 @@ namespace ne RNAMESPACE() {
     requires std::derived_from<T, Serializable> std::variant<gc<T>, Error> Serializable::deserialize(
         const std::filesystem::path& pathToFile,
         std::unordered_map<std::string, std::string>& customAttributes) {
-        // Add TOML extension to file.
-        auto fixedPath = pathToFile;
-        if (!fixedPath.string().ends_with(".toml")) {
-            fixedPath += ".toml";
-        }
+        return deserialize<T>(pathToFile, customAttributes, "");
+    }
 
-        std::filesystem::path backupFile = fixedPath;
-        backupFile += ConfigManager::getBackupFileExtension();
-
-        if (!std::filesystem::exists(fixedPath)) {
-            // Check if a backup file exists.
-            if (std::filesystem::exists(backupFile)) {
-                std::filesystem::copy_file(backupFile, fixedPath);
-            } else {
-                return Error("requested file or a backup file do not exist");
-            }
-        }
-
-        // Load file.
-        toml::value tomlData;
-        try {
-            tomlData = toml::parse(fixedPath);
-        } catch (std::exception& exception) {
-            return Error(fmt::format(
-                "failed to parse TOML file at \"{}\", error: {}", fixedPath.string(), exception.what()));
-        }
-
-        // Deserialize.
-        auto result = deserialize<T>(tomlData, customAttributes);
-        if (std::holds_alternative<Error>(result)) {
-            auto err = std::get<Error>(std::move(result));
-            err.addEntry();
-            return err;
-        } else if (fixedPath.string().starts_with(getPathToResDirectory().string())) {
-            // File is located in the `res` directory, save a relative path to the `res` directory.
-            auto sRelativePath = std::filesystem::relative(fixedPath, getPathToResDirectory()).string();
-
-            // Replace all '\' characters with '/' just to be consistent.
-            std::replace(sRelativePath.begin(), sRelativePath.end(), '\\', '/');
-
-            // Remove the forward slash at the beginning (if exists).
-            if (sRelativePath.starts_with('/')) {
-                sRelativePath = sRelativePath.substr(1);
-            }
-
-            // Double check that everything is correct.
-            const auto pathToOriginalFile = getPathToResDirectory() / sRelativePath;
-            if (!std::filesystem::exists(pathToOriginalFile)) {
-                return Error(fmt::format(
-                    "failed to save the relative path to the `res` directory for the file at \"{}\", "
-                    "reason: constructed path \"{}\" does not exist",
-                    fixedPath.string(),
-                    pathToOriginalFile.string()));
-            }
-
-            gc<Serializable> pDeserialized = std::get<gc<T>>(result);
-            pDeserialized->pathDeserializedFromRelativeToRes = sRelativePath;
-        }
-
-        return result;
+    template <typename T>
+    requires std::derived_from<T, Serializable> std::variant<gc<T>, Error> Serializable::deserialize(
+        const std::filesystem::path& pathToFile, const std::string& sEntityId) {
+        std::unordered_map<std::string, std::string> foundCustomAttributes;
+        return deserialize<T>(pathToFile, foundCustomAttributes, sEntityId);
     }
 
     template <typename T>
@@ -568,9 +593,26 @@ namespace ne RNAMESPACE() {
         // Collect keys.
         const auto& sectionTable = section.as_table();
         std::vector<std::string> vKeys;
+        gc<Serializable> pOriginalEntity = nullptr;
         for (const auto& [key, value] : sectionTable) {
             if (key == sNothingToSerializeKey) {
                 continue;
+            } else if (key == sPathRelativeToResKey) {
+                // Make sure the value is string.
+                if (!value.is_string()) {
+                    Error error(fmt::format("found \"{}\" key's value is not string", sPathRelativeToResKey));
+                    return error;
+                }
+
+                // Deserialize original entity.
+                const auto deserializeResult = Serializable::deserialize<Serializable>(
+                    ProjectPaths::getDirectoryForResources(ResourceDirectory::ROOT) / value.as_string().str);
+                if (std::holds_alternative<Error>(deserializeResult)) {
+                    auto err = std::get<Error>(deserializeResult);
+                    err.addEntry();
+                    return err;
+                }
+                pOriginalEntity = std::get<gc<Serializable>>(deserializeResult);
             } else if (key.starts_with("..")) {
                 // Custom attribute.
                 if (!value.is_string()) {
@@ -582,21 +624,64 @@ namespace ne RNAMESPACE() {
             }
         }
 
+        // Try to cast to the requested type.
+        if (pOriginalEntity) {
+            if (!gc_dynamic_pointer_cast<T>(pOriginalEntity)) {
+                pOriginalEntity = nullptr;
+                Logger::get().error(
+                    fmt::format(
+                        "failed to cast original object from \"{}\" (ID \"{}\") of type \"{}\" to "
+                        "the requested type, some fields will be not deserialized",
+                        pOriginalEntity->getPathDeserializedFromRelativeToRes().value().first,
+                        pOriginalEntity->getPathDeserializedFromRelativeToRes().value().second,
+                        pOriginalEntity->getArchetype().getName()),
+                    "");
+            }
+        }
+
         // Get archetype for found GUID.
         auto pType = getClassForGuid(sTypeGuid);
         if (!pType) {
-            return Error(fmt::format("no type found for GUID {}", sTypeGuid));
+            if (pOriginalEntity) {
+                Logger::get().warn(
+                    fmt::format(
+                        "GUID \"{}\" was not found in the database, but "
+                        "the original object at \"{}\" (ID \"{}\") was deserialized and used instead",
+                        sTypeGuid,
+                        pOriginalEntity->getPathDeserializedFromRelativeToRes().value().first,
+                        pOriginalEntity->getPathDeserializedFromRelativeToRes().value().second),
+                    "");
+                return gc_dynamic_pointer_cast<T>(pOriginalEntity);
+            } else {
+                return Error(fmt::format("no type found for GUID \"{}\"", sTypeGuid));
+            }
         }
         if (!isDerivedFromSerializable(pType)) {
-            return Error(fmt::format(
-                "deserialized class with GUID {} does not derive from {}",
-                sTypeGuid,
-                staticGetArchetype().getName()));
+            if (pOriginalEntity) {
+                Logger::get().warn(
+                    fmt::format(
+                        "deserialized type for \"{}\" does not derive from {}, but "
+                        "the original object at \"{}\" (ID \"{}\") was deserialized and used instead",
+                        sTypeGuid,
+                        staticGetArchetype().getName(),
+                        pOriginalEntity->getPathDeserializedFromRelativeToRes().value().first,
+                        pOriginalEntity->getPathDeserializedFromRelativeToRes().value().second),
+                    "");
+                return gc_dynamic_pointer_cast<T>(pOriginalEntity);
+            } else {
+                return Error(fmt::format(
+                    "deserialized type with GUID \"{}\" does not derive from {}",
+                    sTypeGuid,
+                    staticGetArchetype().getName()));
+            }
         }
 
         // Create instance.
-        gc<T> pGcInstance;
-        {
+        gc<T> pGcInstance = nullptr;
+        if (pOriginalEntity) {
+            pGcInstance = gc_dynamic_pointer_cast<T>(pOriginalEntity);
+        }
+        if (!pGcInstance) {
             // this section is a temporary solution until we will add a `gc_new` method
             // to `rfk::Struct`
             std::unique_ptr<T> pInstance = pType->makeUniqueInstance<T>();
@@ -645,8 +730,8 @@ namespace ne RNAMESPACE() {
                 Logger::get().warn(
                     fmt::format(
                         "field name \"{}\" exists in the specified toml value but does not exist in the "
-                        "actual object (if you removed this reflected field from your "
-                        "class - ignore this warning)",
+                        "actual object (if you removed/renamed this reflected field from your "
+                        "class/struct - ignore this warning)",
                         sFieldName),
                     "");
                 continue;
@@ -657,8 +742,10 @@ namespace ne RNAMESPACE() {
                 continue;
 
             // Deserialize field value.
+            bool bFoundSerializer = false;
             for (const auto& pSerializer : vFieldSerializers) {
                 if (pSerializer->isFieldTypeSupported(pField)) {
+                    bFoundSerializer = true;
                     auto optionalError = pSerializer->deserializeField(
                         &tomlData,
                         &value,
@@ -670,13 +757,99 @@ namespace ne RNAMESPACE() {
                     if (optionalError.has_value()) {
                         auto error = optionalError.value();
                         error.addEntry();
-                        return error;
+                        if (pOriginalEntity) {
+                            Logger::get().error(
+                                fmt::format(
+                                    "an error occurred while deserializing "
+                                    "changed field (this field was not deserialized), error: {}",
+                                    error.getError()),
+                                "");
+                        } else {
+                            return error;
+                        }
                     }
                 }
+            }
+
+            if (!bFoundSerializer) {
+                Logger::get().warn(
+                    fmt::format("unable to find a deserializer that supports field \"{}\"", sFieldName), "");
             }
         }
 
         return pGcInstance;
+    }
+
+    template <typename T>
+    requires std::derived_from<T, Serializable> std::variant<gc<T>, Error> Serializable::deserialize(
+        const std::filesystem::path& pathToFile,
+        std::unordered_map<std::string, std::string>& customAttributes,
+        const std::string& sEntityId) {
+        // Add TOML extension to file.
+        auto fixedPath = pathToFile;
+        if (!fixedPath.string().ends_with(".toml")) {
+            fixedPath += ".toml";
+        }
+
+        std::filesystem::path backupFile = fixedPath;
+        backupFile += ConfigManager::getBackupFileExtension();
+
+        if (!std::filesystem::exists(fixedPath)) {
+            // Check if a backup file exists.
+            if (std::filesystem::exists(backupFile)) {
+                std::filesystem::copy_file(backupFile, fixedPath);
+            } else {
+                return Error("requested file or a backup file do not exist");
+            }
+        }
+
+        // Load file.
+        toml::value tomlData;
+        try {
+            tomlData = toml::parse(fixedPath);
+        } catch (std::exception& exception) {
+            return Error(fmt::format(
+                "failed to parse TOML file at \"{}\", error: {}", fixedPath.string(), exception.what()));
+        }
+
+        // Deserialize.
+        auto result = deserialize<T>(tomlData, customAttributes, sEntityId);
+        if (std::holds_alternative<Error>(result)) {
+            auto err = std::get<Error>(std::move(result));
+            err.addEntry();
+            return err;
+        } else if (fixedPath.string().starts_with(
+                       ProjectPaths::getDirectoryForResources(ResourceDirectory::ROOT).string())) {
+            // File is located in the `res` directory, save a relative path to the `res` directory.
+            auto sRelativePath =
+                std::filesystem::relative(
+                    fixedPath, ProjectPaths::getDirectoryForResources(ResourceDirectory::ROOT))
+                    .string();
+
+            // Replace all '\' characters with '/' just to be consistent.
+            std::replace(sRelativePath.begin(), sRelativePath.end(), '\\', '/');
+
+            // Remove the forward slash at the beginning (if exists).
+            if (sRelativePath.starts_with('/')) {
+                sRelativePath = sRelativePath.substr(1);
+            }
+
+            // Double check that everything is correct.
+            const auto pathToOriginalFile =
+                ProjectPaths::getDirectoryForResources(ResourceDirectory::ROOT) / sRelativePath;
+            if (!std::filesystem::exists(pathToOriginalFile)) {
+                return Error(fmt::format(
+                    "failed to save the relative path to the `res` directory for the file at \"{}\", "
+                    "reason: constructed path \"{}\" does not exist",
+                    fixedPath.string(),
+                    pathToOriginalFile.string()));
+            }
+
+            gc<Serializable> pDeserialized = std::get<gc<T>>(result);
+            pDeserialized->pathDeserializedFromRelativeToRes = {sRelativePath, sEntityId};
+        }
+
+        return result;
     }
 }; // namespace )
 

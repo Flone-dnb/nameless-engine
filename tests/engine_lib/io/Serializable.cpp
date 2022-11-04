@@ -2,19 +2,22 @@
 #include <random>
 
 // Custom.
+#include "misc/ProjectPaths.h"
 #include "io/Serializable.h"
 #include "game/nodes/Node.h"
+#include "io/ConfigManager.h"
 #include "ReflectionTest.h"
 #include "io/serializers/PrimitiveFieldSerializer.h"
 
 // External.
 #include "catch2/catch_test_macros.hpp"
 
-TEST_CASE("make sure relative path to the file that object was deserialized from is valid") {
+TEST_CASE("make sure relative path to the file the object was deserialized from is valid") {
     const std::string sRelativePathToFile = "test/test.toml";
 
     // Prepare paths to the file.
-    const auto pathToFileInRes = Serializable::getPathToResDirectory() / sRelativePathToFile;
+    const auto pathToFileInRes =
+        ProjectPaths::getDirectoryForResources(ResourceDirectory::ROOT) / sRelativePathToFile;
     const std::filesystem::path pathToFileInTemp =
         std::filesystem::temp_directory_path() / "TESTING_ReflectionTest_TESTING.toml";
 
@@ -62,7 +65,7 @@ TEST_CASE("make sure relative path to the file that object was deserialized from
     // Check that relative path exists and correct.
     const auto optionalRelativePath = pDeserialized->getPathDeserializedFromRelativeToRes();
     REQUIRE(optionalRelativePath.has_value());
-    REQUIRE(optionalRelativePath.value() == sRelativePathToFile);
+    REQUIRE(optionalRelativePath.value().first == sRelativePathToFile);
 
     // Load the data from the temp directory.
     result = Serializable::deserialize<InventorySaveData>(pathToFileInTemp);
@@ -81,7 +84,7 @@ TEST_CASE("make sure relative path to the file that object was deserialized from
     REQUIRE(!pDeserialized->getPathDeserializedFromRelativeToRes().has_value());
 
     // Cleanup.
-    std::filesystem::remove_all(Serializable::getPathToResDirectory() / "test");
+    std::filesystem::remove_all(ProjectPaths::getDirectoryForResources(ResourceDirectory::ROOT) / "test");
     std::filesystem::remove(pathToFileInTemp);
 }
 
@@ -125,6 +128,369 @@ TEST_CASE("serialize and deserialize with a backup file") {
         // Check that original file was restored.
         REQUIRE(std::filesystem::exists(fullPathToFile));
     }
+}
+
+TEST_CASE("deserialize a node tree that references external node") {
+    // Prepare paths.
+    const std::string sNodeTreeRelativePathToFile = "test/node_tree.toml";
+    const auto pathToNodeTreeFileInRes =
+        ProjectPaths::getDirectoryForResources(ResourceDirectory::ROOT) / sNodeTreeRelativePathToFile;
+    const std::string sCustomNodeRelativePathToFile = "test/custom_node.toml";
+    const auto pathToCustomNodeFileInRes =
+        ProjectPaths::getDirectoryForResources(ResourceDirectory::ROOT) / sCustomNodeRelativePathToFile;
+
+    if (!std::filesystem::exists(ProjectPaths::getDirectoryForResources(ResourceDirectory::ROOT) / "test")) {
+        std::filesystem::create_directory(
+            ProjectPaths::getDirectoryForResources(ResourceDirectory::ROOT) / "test");
+    }
+
+    {
+        // Say we have a custom node.
+        ReflectionTestNode1 embedableNode;
+
+        REQUIRE(!embedableNode.bBoolValue1);
+        REQUIRE(!embedableNode.bBoolValue2);
+        REQUIRE(!embedableNode.entity.iIntValue1);
+        REQUIRE(!embedableNode.entity.iIntValue2);
+        REQUIRE(embedableNode.entity.vVectorValue1.empty());
+
+        embedableNode.bBoolValue1 = true; // change 1 field
+        auto optionalError = embedableNode.serialize(pathToCustomNodeFileInRes, false);
+        if (optionalError.has_value()) {
+            optionalError->addEntry();
+            INFO(optionalError->getError());
+            REQUIRE(false);
+        }
+
+        // Check that file exists.
+        REQUIRE(std::filesystem::exists(pathToCustomNodeFileInRes));
+    }
+
+    {
+        // Now let's say we are building a new node tree and want to use this custom node.
+        // Deserialize this custom node.
+        auto result = Serializable::deserialize<ReflectionTestNode1>(pathToCustomNodeFileInRes);
+        if (std::holds_alternative<Error>(result)) {
+            auto error = std::get<Error>(result);
+            error.addEntry();
+            INFO(error.getError());
+            REQUIRE(false);
+        }
+
+        auto pDeserializedNode = std::get<gc<ReflectionTestNode1>>(result);
+
+        // Check that deserialized object now has a path relative to the `res` directory.
+        REQUIRE(pDeserializedNode->getPathDeserializedFromRelativeToRes().has_value());
+        REQUIRE(
+            pDeserializedNode->getPathDeserializedFromRelativeToRes().value().first ==
+            sCustomNodeRelativePathToFile);
+
+        // Build a node tree.
+        gc<Node> pParentNode = gc_new<Node>();
+        pParentNode->addChildNode(pDeserializedNode);
+
+        // Change some fields so that we will see it in the TOML file as changed.
+        pDeserializedNode->bBoolValue2 = true;
+        pDeserializedNode->entity.iIntValue2 = 42;
+        pDeserializedNode->entity.vVectorValue2 = {"Hello", "World"};
+
+        // Now serialize this node tree.
+        auto optionalError = pParentNode->serializeNodeTree(pathToNodeTreeFileInRes, false);
+        if (optionalError.has_value()) {
+            optionalError->addEntry();
+            INFO(optionalError->getError());
+            REQUIRE(false);
+        }
+    }
+
+    {
+        // In node tree's TOML file our custom node should be referenced as a path to the file.
+        // Deserialize our node tree.
+        auto result = Node::deserializeNodeTree(pathToNodeTreeFileInRes);
+        if (std::holds_alternative<Error>(result)) {
+            auto error = std::get<Error>(result);
+            error.addEntry();
+            INFO(error.getError());
+            REQUIRE(false);
+        }
+
+        const auto pRootNode = std::get<gc<Node>>(result);
+
+        // Check that deserialized object now has a path relative to the `res` directory.
+        REQUIRE(pRootNode->getPathDeserializedFromRelativeToRes().has_value());
+        REQUIRE(
+            pRootNode->getPathDeserializedFromRelativeToRes().value().first == sNodeTreeRelativePathToFile);
+
+        // Get our child node.
+        REQUIRE(pRootNode->getChildNodes()->size() == 1);
+        auto pChildNode = gc_dynamic_pointer_cast<ReflectionTestNode1>(pRootNode->getChildNodes()[0]);
+        REQUIRE(pChildNode);
+
+        // Check that everything is deserialized correctly.
+        REQUIRE(pChildNode->bBoolValue1);
+        REQUIRE(pChildNode->bBoolValue2);
+        REQUIRE(pChildNode->entity.iIntValue1 == 0);
+        REQUIRE(pChildNode->entity.iIntValue2 == 42);
+        REQUIRE(pChildNode->entity.vVectorValue1.empty());
+        REQUIRE(pChildNode->entity.vVectorValue2 == std::vector<std::string>{"Hello", "World"});
+
+        // Now look at the TOML file of our node tree and make sure that only changed
+        // fields were written in it.
+        ConfigManager configManager;
+        auto optionalError = configManager.loadFile(pathToNodeTreeFileInRes);
+        if (optionalError.has_value()) {
+            auto error = optionalError.value();
+            error.addEntry();
+            INFO(error.getError());
+            REQUIRE(false);
+        }
+
+        // Find a section that starts with "1."
+        const auto vSectionNames = configManager.getAllSections();
+        REQUIRE(vSectionNames.size() == 3);
+        std::string sTargetSectionName;
+        for (const auto& sSectionName : vSectionNames) {
+            if (sSectionName.starts_with("1.")) {
+                sTargetSectionName = sSectionName;
+                break;
+            }
+        }
+
+        REQUIRE(!sTargetSectionName.empty());
+
+        // Check that this section has changed field.
+        constexpr auto sFirstFieldName = "bBoolValue1";
+        constexpr auto sSecondFieldName = "bBoolValue2";
+        constexpr auto sPathKeyName = ".path_relative_to_res";
+
+        const auto bBoolValue2 = configManager.getValue(sTargetSectionName, sSecondFieldName, false);
+        REQUIRE(bBoolValue2);
+
+        // And check that this section does not have unchanged field.
+        const auto bBoolValue1 = configManager.getValue(sTargetSectionName, sFirstFieldName, false);
+        REQUIRE(!bBoolValue1);
+
+        // Double check this and check that path to original node is there.
+        auto keysResult = configManager.getAllKeysOfSection(sTargetSectionName);
+        if (std::holds_alternative<Error>(keysResult)) {
+            auto error = std::get<Error>(keysResult);
+            error.addEntry();
+            INFO(error.getError());
+            REQUIRE(false);
+        }
+        auto vKeys = std::get<std::vector<std::string>>(std::move(keysResult));
+
+        bool bFoundFirstField = false;
+        bool bFoundSecondField = false;
+        bool bFoundPathToNode = false;
+        for (const auto& sKey : vKeys) {
+            if (sKey == sFirstFieldName) {
+                bFoundFirstField = true;
+            } else if (sKey == sSecondFieldName) {
+                bFoundSecondField = true;
+            } else if (sKey == sPathKeyName) {
+                bFoundPathToNode = true;
+            }
+        }
+
+        REQUIRE(bFoundSecondField);
+        REQUIRE(!bFoundFirstField);
+        REQUIRE(bFoundPathToNode);
+
+        // Compare path to original node.
+        const auto sPathToNodeRelativeToRes =
+            configManager.getValue<std::string>(sTargetSectionName, sPathKeyName, "");
+        REQUIRE(sCustomNodeRelativePathToFile == sPathToNodeRelativeToRes);
+
+        // Find section that starts with "1.0.".
+        sTargetSectionName = "";
+        for (const auto& sSectionName : vSectionNames) {
+            if (sSectionName.starts_with("1.0.")) {
+                sTargetSectionName = sSectionName;
+                break;
+            }
+        }
+
+        REQUIRE(!sTargetSectionName.empty());
+
+        // Check changed fields.
+        constexpr auto sIntValue2FieldName = "iIntValue2";
+        constexpr auto sVectorValue2FieldName = "vVectorValue2";
+
+        const auto iIntValue2 = configManager.getValue(sTargetSectionName, sIntValue2FieldName, 0);
+        REQUIRE(iIntValue2 == 42);
+
+        const auto vVectorValue2 =
+            configManager.getValue<std::vector<std::string>>(sTargetSectionName, sVectorValue2FieldName, {});
+        REQUIRE(vVectorValue2 == std::vector<std::string>{"Hello", "World"});
+
+        // Check changed field count.
+        keysResult = configManager.getAllKeysOfSection(sTargetSectionName);
+        if (std::holds_alternative<Error>(keysResult)) {
+            auto error = std::get<Error>(keysResult);
+            error.addEntry();
+            INFO(error.getError());
+            REQUIRE(false);
+        }
+        vKeys = std::get<std::vector<std::string>>(std::move(keysResult));
+
+        size_t iChangedFieldsCount = 0;
+        for (const auto& sKeyName : vKeys) {
+            if (sKeyName.starts_with("."))
+                continue;
+
+            iChangedFieldsCount += 1;
+        }
+
+        REQUIRE(iChangedFieldsCount == 2);
+    }
+
+    // Cleanup.
+    std::filesystem::remove_all(ProjectPaths::getDirectoryForResources(ResourceDirectory::ROOT) / "test");
+    gc_collector()->collect();
+    REQUIRE(Node::getAliveNodeCount() == 0);
+    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+}
+
+TEST_CASE("deserialize a node tree that references external node tree") {
+    // Prepare paths.
+    const std::string sNodeTreeRelativePathToFile = "test/node_tree.toml";
+    const auto pathToNodeTreeFileInRes =
+        ProjectPaths::getDirectoryForResources(ResourceDirectory::ROOT) / sNodeTreeRelativePathToFile;
+    const std::string sCustomNodeTreeRelativePathToFile = "test/custom_node_tree.toml";
+    const auto pathToCustomNodeTreeFileInRes =
+        ProjectPaths::getDirectoryForResources(ResourceDirectory::ROOT) / sCustomNodeTreeRelativePathToFile;
+
+    if (!std::filesystem::exists(ProjectPaths::getDirectoryForResources(ResourceDirectory::ROOT) / "test")) {
+        std::filesystem::create_directory(
+            ProjectPaths::getDirectoryForResources(ResourceDirectory::ROOT) / "test");
+    }
+
+    {
+        // Say we have a custom node tree.
+        gc<Node> pRootNode = gc_new<Node>();
+        auto pChildNode = gc_new<ReflectionTestNode1>();
+
+        // Build node tree.
+        pRootNode->addChildNode(pChildNode);
+
+        REQUIRE(!pChildNode->bBoolValue1);
+        REQUIRE(!pChildNode->bBoolValue2);
+        REQUIRE(!pChildNode->entity.iIntValue1);
+        REQUIRE(!pChildNode->entity.iIntValue2);
+        REQUIRE(pChildNode->entity.vVectorValue1.empty());
+
+        pChildNode->bBoolValue1 = true; // change 1 field
+
+        auto optionalError = pRootNode->serializeNodeTree(pathToCustomNodeTreeFileInRes, false);
+        if (optionalError.has_value()) {
+            optionalError->addEntry();
+            INFO(optionalError->getError());
+            REQUIRE(false);
+        }
+
+        // Check that file exists.
+        REQUIRE(std::filesystem::exists(pathToCustomNodeTreeFileInRes));
+    }
+
+    {
+        // Now let's say we are building a new node tree and want to use this custom node tree.
+        // Deserialize this custom node tree.
+        auto result = Node::deserializeNodeTree(pathToCustomNodeTreeFileInRes);
+        if (std::holds_alternative<Error>(result)) {
+            auto error = std::get<Error>(result);
+            error.addEntry();
+            INFO(error.getError());
+            REQUIRE(false);
+        }
+
+        auto pDeserializedRootNode = std::get<gc<Node>>(result);
+
+        // Check that deserialized object now has a path relative to the `res` directory.
+        REQUIRE(pDeserializedRootNode->getPathDeserializedFromRelativeToRes().has_value());
+        REQUIRE(
+            pDeserializedRootNode->getPathDeserializedFromRelativeToRes().value().first ==
+            sCustomNodeTreeRelativePathToFile);
+
+        // Check children.
+        REQUIRE(pDeserializedRootNode->getChildNodes()->size() == 1);
+        const auto pChildNode =
+            gc_dynamic_pointer_cast<ReflectionTestNode1>(pDeserializedRootNode->getChildNodes()[0]);
+        REQUIRE(pChildNode);
+        REQUIRE(pChildNode->bBoolValue1);
+        REQUIRE(!pChildNode->bBoolValue2);
+        REQUIRE(pChildNode->getPathDeserializedFromRelativeToRes().has_value());
+        REQUIRE(
+            pChildNode->getPathDeserializedFromRelativeToRes().value().first ==
+            sCustomNodeTreeRelativePathToFile);
+
+        // Build a new node tree and reference our custom node tree.
+        gc<Node> pParentNode = gc_new<Node>();
+        pParentNode->addChildNode(pDeserializedRootNode);
+
+        // Change some fields, we will not see them in the TOML file because
+        // when referencing a node tree, only root node will save it's changed values.
+        pChildNode->bBoolValue2 = true;
+        pChildNode->entity.iIntValue2 = 42;
+        pChildNode->entity.vVectorValue2 = {"Hello", "World"};
+
+        // Change external root node's name (we will see this in the TOML file).
+        pDeserializedRootNode->setName("External Root Node");
+
+        // Now serialize this node tree.
+        auto optionalError = pParentNode->serializeNodeTree(pathToNodeTreeFileInRes, false);
+        if (optionalError.has_value()) {
+            optionalError->addEntry();
+            INFO(optionalError->getError());
+            REQUIRE(false);
+        }
+    }
+
+    {
+        // In node tree's TOML file our custom node tree should be referenced as a path to the file.
+        // Deserialize our node tree.
+        auto result = Node::deserializeNodeTree(pathToNodeTreeFileInRes);
+        if (std::holds_alternative<Error>(result)) {
+            auto error = std::get<Error>(result);
+            error.addEntry();
+            INFO(error.getError());
+            REQUIRE(false);
+        }
+
+        const auto pRootNode = std::get<gc<Node>>(result);
+
+        // Get our child node.
+        REQUIRE(pRootNode->getChildNodes()->size() == 1);
+        REQUIRE(pRootNode->getPathDeserializedFromRelativeToRes().has_value());
+        REQUIRE(
+            pRootNode->getPathDeserializedFromRelativeToRes().value().first == sNodeTreeRelativePathToFile);
+
+        auto pChildNode = pRootNode->getChildNodes()[0];
+        REQUIRE(pChildNode->getPathDeserializedFromRelativeToRes().has_value());
+        REQUIRE(
+            pChildNode->getPathDeserializedFromRelativeToRes().value().first == sNodeTreeRelativePathToFile);
+        REQUIRE(!pChildNode->getPathDeserializedFromRelativeToRes().value().second.starts_with("0."));
+        REQUIRE(pChildNode->getName() == "External Root Node");
+
+        // Get child child nodes.
+        REQUIRE(pChildNode->getChildNodes()->size() == 1);
+        auto pChildChildNode = gc_dynamic_pointer_cast<ReflectionTestNode1>(pChildNode->getChildNodes()[0]);
+        REQUIRE(pChildChildNode);
+
+        // Check that everything is deserialized correctly.
+        REQUIRE(pChildChildNode->bBoolValue1);
+        REQUIRE(pChildChildNode->bBoolValue2 == false);
+        REQUIRE(pChildChildNode->entity.iIntValue1 == 0);
+        REQUIRE(pChildChildNode->entity.iIntValue2 == 0);
+        REQUIRE(pChildChildNode->entity.vVectorValue1.empty());
+        REQUIRE(pChildChildNode->entity.vVectorValue2.empty());
+    }
+
+    // Cleanup.
+    std::filesystem::remove_all(ProjectPaths::getDirectoryForResources(ResourceDirectory::ROOT) / "test");
+    gc_collector()->collect();
+    REQUIRE(Node::getAliveNodeCount() == 0);
+    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
 }
 
 TEST_CASE("attempting to add a serializer that was previously added does nothing") {
@@ -385,15 +751,17 @@ TEST_CASE("serialize and deserialize sample player save data") {
         std::uniform_int_distribution<unsigned int> uid(0, UINT_MAX);
         std::string sNewProfileFilename;
         const auto vExistingProfiles = ConfigManager::getAllFiles(ConfigCategory::PROGRESS);
-        bool bContinue = true;
+        bool bContinue = false;
         do {
+            bContinue = false;
             sNewProfileFilename = std::to_string(uid(gen));
             for (const auto& sProfile : vExistingProfiles) {
                 if (sProfile == sNewProfileFilename) {
-                    continue;
+                    // This profile name is already used, generate another one.
+                    bContinue = true;
+                    break;
                 }
             }
-            bContinue = false;
         } while (bContinue);
 
         // Serialize.

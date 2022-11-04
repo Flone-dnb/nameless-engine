@@ -34,7 +34,8 @@ namespace ne {
         const rfk::Field* pField,
         const std::string& sSectionName,
         const std::string& sEntityId,
-        size_t& iSubEntityId) {
+        size_t& iSubEntityId,
+        Serializable* pOriginalObject) {
         const auto sFieldCanonicalTypeName = std::string(pField->getCanonicalTypeName());
         const auto sFieldName = pField->getName();
 
@@ -285,5 +286,41 @@ namespace ne {
         }
 
         return {};
+    }
+
+    bool VectorFieldSerializer::isFieldValueEqual(
+        Serializable* pFieldAOwner,
+        const rfk::Field* pFieldA,
+        Serializable* pFieldBOwner,
+        const rfk::Field* pFieldB) {
+        if (!isFieldTypeSupported(pFieldA))
+            return false;
+        if (!isFieldTypeSupported(pFieldB))
+            return false;
+
+        // Check that types are equal.
+        const std::string sFieldACanonicalTypeName = pFieldA->getCanonicalTypeName();
+        const std::string sFieldBCanonicalTypeName = pFieldB->getCanonicalTypeName();
+        if (sFieldACanonicalTypeName != sFieldBCanonicalTypeName) {
+            return false;
+        }
+
+#define COMPARE_VECTOR_FIELDS(INNERTYPE)                                                                     \
+    if (sFieldACanonicalTypeName == fmt::format("std::vector<{}>", #INNERTYPE)) {                            \
+        const auto vA = pFieldA->getUnsafe<std::vector<INNERTYPE>>(pFieldAOwner);                            \
+        const auto vB = pFieldB->getUnsafe<std::vector<INNERTYPE>>(pFieldBOwner);                            \
+        return vA == vB;                                                                                     \
+    }
+
+        COMPARE_VECTOR_FIELDS(bool)
+        COMPARE_VECTOR_FIELDS(int)
+        COMPARE_VECTOR_FIELDS(unsigned int)
+        COMPARE_VECTOR_FIELDS(long long)
+        COMPARE_VECTOR_FIELDS(unsigned long long)
+        COMPARE_VECTOR_FIELDS(float)
+        COMPARE_VECTOR_FIELDS(double)
+        COMPARE_VECTOR_FIELDS(std::basic_string<char>)
+
+        return false;
     }
 } // namespace ne

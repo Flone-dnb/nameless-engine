@@ -20,7 +20,8 @@ namespace ne {
         const rfk::Field* pField,
         const std::string& sSectionName,
         const std::string& sEntityId,
-        size_t& iSubEntityId) {
+        size_t& iSubEntityId,
+        Serializable* pOriginalObject) {
         const auto sFieldCanonicalTypeName = std::string(pField->getCanonicalTypeName());
         const auto sFieldName = pField->getName();
 
@@ -85,5 +86,21 @@ namespace ne {
         }
 
         return {};
+    }
+
+    bool StringFieldSerializer::isFieldValueEqual(
+        Serializable* pFieldAOwner,
+        const rfk::Field* pFieldA,
+        Serializable* pFieldBOwner,
+        const rfk::Field* pFieldB) {
+        if (!isFieldTypeSupported(pFieldA))
+            return false;
+        if (!isFieldTypeSupported(pFieldB))
+            return false;
+
+        const auto sValueA = pFieldA->getUnsafe<std::string>(pFieldAOwner);
+        const auto sValueB = pFieldB->getUnsafe<std::string>(pFieldBOwner);
+
+        return sValueA == sValueB;
     }
 } // namespace ne

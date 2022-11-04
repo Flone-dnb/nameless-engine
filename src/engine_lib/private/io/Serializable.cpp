@@ -71,114 +71,7 @@ namespace ne {
         toml::value& tomlData,
         std::string sEntityId,
         const std::unordered_map<std::string, std::string>& customAttributes) {
-        rfk::Class const& selfArchetype = getArchetype();
-        if (sEntityId.empty()) {
-            // Put something as entity ID so it would not look weird.
-            sEntityId = "0";
-        }
-
-        // Check that custom attribute key names are not empty.
-        if (!customAttributes.empty() && customAttributes.find("") != customAttributes.end()) {
-            const Error err("empty attributes are not allowed");
-            return err;
-        }
-
-        // Check that this type has a GUID.
-        const auto pGuid = selfArchetype.getProperty<Guid>(false);
-        if (!pGuid) {
-            const Error err(
-                fmt::format("type {} does not have a GUID assigned to it", selfArchetype.getName()));
-            return err;
-        }
-
-        // Create section.
-        const auto sSectionName = fmt::format("{}.{}", sEntityId, pGuid->getGuid());
-
-        struct Data {
-            Serializable* self = nullptr;
-            rfk::Class const* selfArchetype = nullptr;
-            toml::value* pTomlData = nullptr;
-            std::string sSectionName;
-            std::vector<IFieldSerializer*> vFieldSerializers;
-            std::optional<Error> error = {};
-            std::string sEntityId;
-            size_t iSubEntityId = 0;
-            size_t iTotalFieldsSerialized = 0;
-        };
-
-        Data loopData{this, &selfArchetype, &tomlData, sSectionName, getFieldSerializers(), {}, sEntityId};
-
-        selfArchetype.foreachField(
-            [](rfk::Field const& field, void* userData) -> bool {
-                if (!isFieldSerializable(field))
-                    return true;
-
-                Data* pData = static_cast<Data*>(userData);
-                const auto sFieldName = field.getName();
-
-                try {
-                    // Throws if not found.
-                    toml::find(*pData->pTomlData, pData->sSectionName, sFieldName);
-                } catch (...) {
-                    // No field exists with this name in this section - OK.
-                    // Save field data in TOML.
-                    for (const auto& pSerializer : pData->vFieldSerializers) {
-                        if (pSerializer->isFieldTypeSupported(&field)) {
-                            auto optionalError = pSerializer->serializeField(
-                                pData->pTomlData,
-                                pData->self,
-                                &field,
-                                pData->sSectionName,
-                                pData->sEntityId,
-                                pData->iSubEntityId);
-                            if (optionalError.has_value()) {
-                                pData->error = optionalError.value();
-                                pData->error->addEntry();
-                                return false;
-                            }
-
-                            pData->iTotalFieldsSerialized += 1;
-                            return true;
-                        }
-                    }
-
-                    pData->error = Error(fmt::format(
-                        "The field \"{}\" (maybe inherited) of type \"{}\" has unsupported for "
-                        "serialization type.",
-                        field.getName(),
-                        pData->selfArchetype->getName()));
-                    return false;
-                }
-
-                // A field with this name in this section was found.
-                // If we continue it will get overwritten.
-                pData->error = Error(fmt::format(
-                    "Found two fields with the same name \"{}\" in type \"{}\" (maybe inherited)",
-                    sFieldName,
-                    pData->selfArchetype->getName()));
-
-                return false;
-            },
-            &loopData,
-            true);
-
-        if (loopData.error.has_value()) {
-            auto err = std::move(loopData.error.value());
-            err.addEntry();
-            return err;
-        }
-
-        // Add at least one value to be valid TOML data.
-        if (customAttributes.empty() && loopData.iTotalFieldsSerialized == 0) {
-            tomlData[sSectionName][sNothingToSerializeKey] = "nothing to serialize here";
-        }
-
-        // Write custom attributes, they will be written with two dots in the beginning.
-        for (const auto& [key, value] : customAttributes) {
-            tomlData[sSectionName][fmt::format("..{}", key)] = value;
-        }
-
-        return sSectionName;
+        return serialize(tomlData, nullptr, sEntityId, customAttributes);
     }
 
 #if defined(DEBUG)
@@ -332,38 +225,11 @@ namespace ne {
             }
         }
 
-        // Add TOML extension to file.
-        auto fixedPath = pathToFile;
-        if (!fixedPath.string().ends_with(".toml")) {
-            fixedPath += ".toml";
-        }
-
-        std::filesystem::path backupFile = fixedPath;
-        backupFile += ConfigManager::getBackupFileExtension();
-
-        if (!std::filesystem::exists(fixedPath)) {
-            // Check if backup file exists.
-            if (std::filesystem::exists(backupFile)) {
-                std::filesystem::copy_file(backupFile, fixedPath);
-            } else {
-                return Error("file or backup file do not exist");
-            }
-        }
-
-        // Load file.
-        toml::value tomlData;
-        try {
-            tomlData = toml::parse(fixedPath);
-        } catch (std::exception& exception) {
-            return Error(
-                fmt::format("failed to load file \"{}\", error: {}", fixedPath.string(), exception.what()));
-        }
-
         // Deserialize.
         std::vector<DeserializedObjectInformation> deserializedObjects;
         for (const auto& sId : ids) {
             std::unordered_map<std::string, std::string> customAttributes;
-            auto result = deserialize<Serializable>(tomlData, customAttributes, sId);
+            auto result = deserialize<Serializable>(pathToFile, customAttributes, sId);
             if (std::holds_alternative<Error>(result)) {
                 auto err = std::get<Error>(std::move(result));
                 err.addEntry();
@@ -476,7 +342,10 @@ namespace ne {
         toml::value tomlData;
         for (const auto& objectData : vObjects) {
             auto result = objectData.pObject->serialize(
-                tomlData, objectData.sObjectUniqueId, objectData.customAttributes);
+                tomlData,
+                objectData.pOriginalObject,
+                objectData.sObjectUniqueId,
+                objectData.customAttributes);
             if (std::holds_alternative<Error>(result)) {
                 auto err = std::get<Error>(std::move(result));
                 err.addEntry();
@@ -573,10 +442,198 @@ namespace ne {
         }
     }
 
-    std::filesystem::path Serializable::getPathToResDirectory() { return ne::getPathToResDirectory(); }
-
-    std::optional<std::string> Serializable::getPathDeserializedFromRelativeToRes() const {
+    std::optional<std::pair<std::string, std::string>>
+    Serializable::getPathDeserializedFromRelativeToRes() const {
         return pathDeserializedFromRelativeToRes;
+    }
+
+    std::variant<std::string, Error> Serializable::serialize(
+        toml::value& tomlData,
+        Serializable* pOriginalObject,
+        std::string sEntityId,
+        const std::unordered_map<std::string, std::string>& customAttributes) {
+        rfk::Class const& selfArchetype = getArchetype();
+        if (sEntityId.empty()) {
+            // Put something as entity ID so it would not look weird.
+            sEntityId = "0";
+        }
+
+        // Check that custom attribute key names are not empty.
+        if (!customAttributes.empty() && customAttributes.find("") != customAttributes.end()) {
+            const Error err("empty attributes are not allowed");
+            return err;
+        }
+
+        // Check that this type has a GUID.
+        const auto pGuid = selfArchetype.getProperty<Guid>(false);
+        if (!pGuid) {
+            const Error err(
+                fmt::format("type {} does not have a GUID assigned to it", selfArchetype.getName()));
+            return err;
+        }
+
+        // Create section.
+        const auto sSectionName = fmt::format("{}.{}", sEntityId, pGuid->getGuid());
+
+        // Prepare data.
+        struct Data {
+            Serializable* self = nullptr;
+            rfk::Class const* selfArchetype = nullptr;
+            toml::value* pTomlData = nullptr;
+            std::string sSectionName;
+            std::vector<IFieldSerializer*> vFieldSerializers;
+            std::optional<Error> error;
+            std::string sEntityId;
+            Serializable* pOriginalEntity = nullptr;
+            gc<Serializable> pGcOriginalEntity = nullptr;
+            size_t iSubEntityId = 0;
+            size_t iTotalFieldsSerialized = 0;
+        };
+
+        Data loopData{
+            this,
+            &selfArchetype,
+            &tomlData,
+            sSectionName,
+            getFieldSerializers(),
+            {},
+            sEntityId,
+            pOriginalObject};
+
+        selfArchetype.foreachField(
+            [](rfk::Field const& field, void* userData) -> bool {
+                if (!isFieldSerializable(field))
+                    return true;
+
+                Data* pData = static_cast<Data*>(userData);
+                const auto sFieldName = field.getName();
+
+                // We require all reflected field names to be unique (not only here,
+                // but this is also required for some serializers).
+                try {
+                    // Throws if not found.
+                    toml::find(*pData->pTomlData, pData->sSectionName, sFieldName);
+                } catch (...) {
+                    // No field exists with this name in this section - OK.
+                    // Save field data in TOML.
+
+                    Serializable* pOriginalFieldObject = nullptr;
+                    if (pData->pOriginalEntity) {
+                        // Check if this field's value was changed compared to the value
+                        // in the original file.
+                        const auto pOriginalField = pData->pOriginalEntity->getArchetype().getFieldByName(
+                            sFieldName, rfk::EFieldFlags::Default, true);
+                        if (!pOriginalField) {
+                            pData->error = Error(fmt::format(
+                                "the field \"{}\" (maybe inherited) of type \"{}\" was not found "
+                                "in the original entity",
+                                field.getName(),
+                                pData->selfArchetype->getName()));
+                            return false;
+                        }
+
+                        // Save a pointer to the field if it's serializable.
+                        if (isDerivedFromSerializable(pOriginalField->getType().getArchetype())) {
+                            pOriginalFieldObject = static_cast<Serializable*>(
+                                pOriginalField->getPtrUnsafe(&*pData->pOriginalEntity));
+                        }
+
+                        // Check if value was not changed.
+                        bool bIsFoundSerializer = false;
+                        for (const auto& pSerializer : pData->vFieldSerializers) {
+                            if (pSerializer->isFieldTypeSupported(pOriginalField) &&
+                                pSerializer->isFieldTypeSupported(&field)) {
+                                bIsFoundSerializer = true;
+                                if (pSerializer->isFieldValueEqual(
+                                        pData->self, &field, pData->pOriginalEntity, pOriginalField)) {
+                                    // Field value was not changed, skip it.
+                                    return true;
+                                } else {
+                                    // Field value was changed, serialize it.
+                                    break;
+                                }
+                            }
+                        }
+
+                        if (!bIsFoundSerializer) {
+                            pData->error = Error(fmt::format(
+                                "failed to compare a value of the field \"{}\" of type \"{}\" "
+                                "with the field from the original file at \"{}\" (ID \"{}\"), reason: no "
+                                "serializer supports both field types (maybe we took the wrong field from "
+                                "the original file)",
+                                field.getName(),
+                                pData->selfArchetype->getName(),
+                                pData->self->getPathDeserializedFromRelativeToRes().value().first,
+                                pData->self->getPathDeserializedFromRelativeToRes().value().second));
+                            return false;
+                        }
+                    }
+
+                    // Serialize field.
+                    for (const auto& pSerializer : pData->vFieldSerializers) {
+                        if (pSerializer->isFieldTypeSupported(&field)) {
+                            auto optionalError = pSerializer->serializeField(
+                                pData->pTomlData,
+                                pData->self,
+                                &field,
+                                pData->sSectionName,
+                                pData->sEntityId,
+                                pData->iSubEntityId,
+                                pOriginalFieldObject);
+                            if (optionalError.has_value()) {
+                                pData->error = optionalError.value();
+                                pData->error->addEntry();
+                                return false;
+                            }
+
+                            pData->iTotalFieldsSerialized += 1;
+                            return true;
+                        }
+                    }
+
+                    pData->error = Error(fmt::format(
+                        "the field \"{}\" (maybe inherited) of type \"{}\" has unsupported for "
+                        "serialization type",
+                        field.getName(),
+                        pData->selfArchetype->getName()));
+                    return false;
+                }
+
+                // A field with this name in this section was found.
+                // If we continue it will get overwritten.
+                pData->error = Error(fmt::format(
+                    "found two fields with the same name \"{}\" in type \"{}\" (maybe inherited)",
+                    sFieldName,
+                    pData->selfArchetype->getName()));
+
+                return false;
+            },
+            &loopData,
+            true);
+
+        if (loopData.error.has_value()) {
+            auto err = std::move(loopData.error.value());
+            err.addEntry();
+            return err;
+        }
+
+        // Add a note to specify that there's nothing to serialize.
+        if (customAttributes.empty() && loopData.iTotalFieldsSerialized == 0) {
+            tomlData[sSectionName][sNothingToSerializeKey] = "nothing to serialize here";
+        }
+
+        if (loopData.pOriginalEntity && getPathDeserializedFromRelativeToRes().has_value()) {
+            // Write path to the original entity.
+            tomlData[sSectionName][sPathRelativeToResKey] =
+                getPathDeserializedFromRelativeToRes().value().first;
+        }
+
+        // Write custom attributes, they will be written with two dots in the beginning.
+        for (const auto& [key, value] : customAttributes) {
+            tomlData[sSectionName][fmt::format("..{}", key)] = value;
+        }
+
+        return sSectionName;
     }
 
 } // namespace ne

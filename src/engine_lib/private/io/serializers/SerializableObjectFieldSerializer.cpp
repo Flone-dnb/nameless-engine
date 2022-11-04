@@ -3,6 +3,7 @@
 // Custom.
 #include "io/Serializable.h"
 #include "io/GuidProperty.h"
+#include "io/Logger.h"
 
 // External.
 #include "fmt/format.h"
@@ -24,7 +25,8 @@ namespace ne {
         const rfk::Field* pField,
         const std::string& sSectionName,
         const std::string& sEntityId,
-        size_t& iSubEntityId) {
+        size_t& iSubEntityId,
+        Serializable* pOriginalObject) {
         const auto sFieldCanonicalTypeName = std::string(pField->getCanonicalTypeName());
         const auto sFieldName = pField->getName();
 
@@ -50,7 +52,7 @@ namespace ne {
         // Serialize this field "under our ID".
         const std::string sSubEntityIdSectionName = fmt::format("{}.{}", sEntityId, iSubEntityId);
         const auto pSubEntity = static_cast<Serializable*>(pField->getPtrUnsafe(pFieldOwner));
-        auto result = pSubEntity->serialize(*pTomlData, sSubEntityIdSectionName);
+        auto result = pSubEntity->serialize(*pTomlData, pOriginalObject, sSubEntityIdSectionName);
         if (std::holds_alternative<Error>(result)) {
             auto error = std::get<Error>(std::move(result));
             error.addEntry();
@@ -319,5 +321,99 @@ namespace ne {
         }
 
         return {};
+    }
+
+    bool SerializableObjectFieldSerializer::isFieldValueEqual(
+        Serializable* pFieldAOwner,
+        const rfk::Field* pFieldA,
+        Serializable* pFieldBOwner,
+        const rfk::Field* pFieldB) {
+        if (!isFieldTypeSupported(pFieldA))
+            return false;
+        if (!isFieldTypeSupported(pFieldB))
+            return false;
+
+        // Check that types are equal.
+        const std::string sFieldACanonicalTypeName = pFieldA->getCanonicalTypeName();
+        const std::string sFieldBCanonicalTypeName = pFieldB->getCanonicalTypeName();
+        if (sFieldACanonicalTypeName != sFieldBCanonicalTypeName) {
+            return false;
+        }
+
+        const auto pEntityA = static_cast<Serializable*>(pFieldA->getPtrUnsafe(pFieldAOwner));
+        const auto pEntityB = static_cast<Serializable*>(pFieldB->getPtrUnsafe(pFieldBOwner));
+
+        rfk::Class const& entityAArchetype = pEntityA->getArchetype();
+
+        // Prepare data.
+        struct Data {
+            Serializable* pSelf = nullptr;
+            Serializable* pOtherEntity = nullptr;
+            std::vector<IFieldSerializer*> vFieldSerializers;
+            bool bIsEqual = true;
+            std::optional<Error> error = {};
+        };
+
+        Data loopData{pEntityA, pEntityB, Serializable::getFieldSerializers()};
+
+        entityAArchetype.foreachField(
+            [](rfk::Field const& field, void* userData) -> bool {
+                if (!Serializable::isFieldSerializable(field))
+                    return true;
+
+                Data* pData = static_cast<Data*>(userData);
+                const auto sFieldName = field.getName();
+
+                // Check if this field's value is equal.
+                // Reflected field names are unique (this is checked in Serializable).
+                const auto pOtherField = pData->pOtherEntity->getArchetype().getFieldByName(
+                    sFieldName, rfk::EFieldFlags::Default, true);
+                if (!pOtherField) {
+                    // Probably will never happen but still add a check.
+                    Logger::get().error(
+                        fmt::format(
+                            "the field \"{}\" (maybe inherited) of type \"{}\" was not found "
+                            "in the other entity of type \"{}\" (this is strange because "
+                            "entities have equal canonical type name)",
+                            field.getName(),
+                            pData->pSelf->getArchetype().getName(),
+                            pData->pOtherEntity->getArchetype().getName()),
+                        "");
+                    pData->bIsEqual = false;
+                    return false;
+                }
+
+                // Check if the field values are equal.
+                for (const auto& pSerializer : pData->vFieldSerializers) {
+                    if (pSerializer->isFieldTypeSupported(pOtherField) &&
+                        pSerializer->isFieldTypeSupported(&field)) {
+                        if (pSerializer->isFieldValueEqual(
+                                pData->pSelf, &field, pData->pOtherEntity, pOtherField)) {
+                            // Field values are equal, continue.
+                            return true;
+                        } else {
+                            // Field values are different, stop.
+                            pData->bIsEqual = false;
+                            return false;
+                        }
+                    }
+                }
+
+                Logger::get().error(
+                    fmt::format(
+                        "failed to compare value of the field \"{}\" of type \"{}\" "
+                        "with the field from other entity, reason: no serializer "
+                        "supports both field types (maybe we took the wrong field from the "
+                        "original file",
+                        field.getName(),
+                        pData->pSelf->getArchetype().getName()),
+                    "");
+                pData->bIsEqual = false;
+                return false;
+            },
+            &loopData,
+            true);
+
+        return loopData.bIsEqual;
     }
 } // namespace ne

@@ -55,7 +55,8 @@ namespace ne {
          * @remark Note that garbage collection will also be executed additionally in some special cases,
          * such as when World is being destructed or some nodes are being detached and despawned.
          *
-         * @param onFinished Optional callback that will be triggered when garbage collection is finished.
+         * @param onFinished Optional callback that will be triggered on the main thread
+         * when garbage collection is finished.
          */
         void queueGarbageCollection(std::optional<std::function<void()>> onFinished);
 

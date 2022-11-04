@@ -335,6 +335,9 @@ TEST_CASE("get child node of type") {
 }
 
 TEST_CASE("test GC performance and stability with nodes") {
+    // This test is needed because the original version of our garbage collector
+    // had a bug (that I fixed) that was crashing the program when we had
+    // around 6000-8000 nodes.
     using namespace ne;
 
     class TestGameInstance : public GameInstance {

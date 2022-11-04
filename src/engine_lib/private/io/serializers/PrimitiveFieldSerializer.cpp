@@ -33,7 +33,8 @@ namespace ne {
         const rfk::Field* pField,
         const std::string& sSectionName,
         const std::string& sEntityId,
-        size_t& iSubEntityId) {
+        size_t& iSubEntityId,
+        Serializable* pOriginalObject) {
         const auto& fieldType = pField->getType();
         const auto sFieldName = pField->getName();
 
@@ -170,5 +171,60 @@ namespace ne {
         }
 
         return {};
+    }
+
+    bool PrimitiveFieldSerializer::isFieldValueEqual(
+        Serializable* pFieldAOwner,
+        const rfk::Field* pFieldA,
+        Serializable* pFieldBOwner,
+        const rfk::Field* pFieldB) {
+        if (!isFieldTypeSupported(pFieldA))
+            return false;
+        if (!isFieldTypeSupported(pFieldB))
+            return false;
+
+        // Check that types are equal.
+        const std::string sFieldACanonicalTypeName = pFieldA->getCanonicalTypeName();
+        const std::string sFieldBCanonicalTypeName = pFieldB->getCanonicalTypeName();
+        if (sFieldACanonicalTypeName != sFieldBCanonicalTypeName) {
+            return false;
+        }
+
+        const auto& fieldAType = pFieldA->getType();
+
+        // The `match` function can only be used with the primitive types.
+        if (fieldAType.match(rfk::getType<bool>())) {
+            const auto fieldAValue = pFieldA->getUnsafe<bool>(pFieldAOwner);
+            const auto fieldBValue = pFieldB->getUnsafe<bool>(pFieldBOwner);
+            return fieldAValue == fieldBValue;
+        } else if (fieldAType.match(rfk::getType<int>())) {
+            const auto fieldAValue = pFieldA->getUnsafe<int>(pFieldAOwner);
+            const auto fieldBValue = pFieldB->getUnsafe<int>(pFieldBOwner);
+            return fieldAValue == fieldBValue;
+        } else if (fieldAType.match(rfk::getType<unsigned int>())) {
+            const auto fieldAValue = pFieldA->getUnsafe<unsigned int>(pFieldAOwner);
+            const auto fieldBValue = pFieldB->getUnsafe<unsigned int>(pFieldBOwner);
+            return fieldAValue == fieldBValue;
+        } else if (fieldAType.match(rfk::getType<long long>())) {
+            const auto fieldAValue = pFieldA->getUnsafe<long long>(pFieldAOwner);
+            const auto fieldBValue = pFieldB->getUnsafe<long long>(pFieldBOwner);
+            return fieldAValue == fieldBValue;
+        } else if (fieldAType.match(rfk::getType<unsigned long long>())) {
+            const auto fieldAValue = pFieldA->getUnsafe<unsigned long long>(pFieldAOwner);
+            const auto fieldBValue = pFieldB->getUnsafe<unsigned long long>(pFieldBOwner);
+            return fieldAValue == fieldBValue;
+        } else if (fieldAType.match(rfk::getType<float>())) {
+            constexpr auto floatDelta = 0.00001f;
+            const auto fieldAValue = pFieldA->getUnsafe<float>(pFieldAOwner);
+            const auto fieldBValue = pFieldB->getUnsafe<float>(pFieldBOwner);
+            return fabs(fieldAValue - fieldBValue) < floatDelta;
+        } else if (fieldAType.match(rfk::getType<double>())) {
+            constexpr auto doubleDelta = 0.0000000000001;
+            const auto fieldAValue = pFieldA->getUnsafe<double>(pFieldAOwner);
+            const auto fieldBValue = pFieldB->getUnsafe<double>(pFieldBOwner);
+            return fabs(fieldAValue - fieldBValue) < doubleDelta;
+        }
+
+        return false;
     }
 } // namespace ne

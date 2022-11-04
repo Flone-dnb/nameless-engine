@@ -296,7 +296,21 @@ namespace ne {
         {
             // Collect information for serialization.
             size_t iId = 0;
-            const auto vNodesInfo = getInformationForSerialization(iId, {});
+            auto result = getInformationForSerialization(iId, {});
+            if (std::holds_alternative<Error>(result)) {
+                auto error = std::get<Error>(result);
+                error.addEntry();
+                return error;
+            }
+            const auto vOriginalNodesInfo =
+                std::get<std::vector<SerializableObjectInformationWithGcPointer>>(result);
+
+            // Convert information array.
+            std::vector<SerializableObjectInformation> vNodesInfo;
+            for (const auto& info : vOriginalNodesInfo) {
+                vNodesInfo.push_back(SerializableObjectInformation(
+                    info.pObject, info.sObjectUniqueId, info.customAttributes, info.pOriginalObject));
+            }
 
             // Serialize.
             const auto optionalError =
@@ -312,26 +326,85 @@ namespace ne {
         return {};
     }
 
-    std::vector<SerializableObjectInformation>
+    std::variant<std::vector<Node::SerializableObjectInformationWithGcPointer>, Error>
     Node::getInformationForSerialization(size_t& iId, std::optional<size_t> iParentId) {
         // Prepare information about nodes.
         // Use custom attributes for storing hierarchy information.
-        std::vector<SerializableObjectInformation> vNodesInfo;
+        std::vector<SerializableObjectInformationWithGcPointer> vNodesInfo;
 
         // Add self first.
         const size_t iMyId = iId;
-        SerializableObjectInformation selfInfo(this, std::to_string(iId));
+
+        SerializableObjectInformationWithGcPointer selfInfo(this, std::to_string(iId));
+
+        // Add parent ID.
         if (iParentId.has_value()) {
-            selfInfo.customAttributes[sParentNodeAttributeName] = std::to_string(iParentId.value());
+            selfInfo.customAttributes[sParentNodeIdAttributeName] = std::to_string(iParentId.value());
+        }
+
+        // Add original object.
+        bool bIncludeInformationAboutChildNodes = true;
+        if (getPathDeserializedFromRelativeToRes().has_value()) {
+            // This entity was deserialized from the `res` directory.
+            // We should only serialize fields with changed values and additionally serialize
+            // the path to the original file so that the rest
+            // of the fields can be deserialized from that file.
+
+            // Check that entity file exists.
+            const auto pathToOriginalFile =
+                getPathToResDirectory() / getPathDeserializedFromRelativeToRes().value().first;
+            if (!std::filesystem::exists(pathToOriginalFile)) {
+                const Error error(fmt::format(
+                    "object of type \"{}\" has the path it was deserialized from ({}, ID {}) but this "
+                    "file \"{}\" does not exist",
+                    getArchetype().getName(),
+                    getPathDeserializedFromRelativeToRes().value().first,
+                    getPathDeserializedFromRelativeToRes().value().second,
+                    pathToOriginalFile.string()));
+                return error;
+            }
+
+            // Deserialize the original entity.
+            auto result =
+                deserialize<Node>(pathToOriginalFile, getPathDeserializedFromRelativeToRes().value().second);
+            if (std::holds_alternative<Error>(result)) {
+                auto error = std::get<Error>(result);
+                error.addEntry();
+                return error;
+            }
+            selfInfo.pDeserializedOriginalObject = std::get<gc<Node>>(result);
+            selfInfo.pOriginalObject = &*selfInfo.pDeserializedOriginalObject;
+
+            // Check if child nodes are located in the same file
+            // (i.e. check if this node is a root of some external node tree).
+            if (!mtxChildNodes.second->empty() &&
+                isTreeDeserializedFromOneFile(getPathDeserializedFromRelativeToRes().value().first)) {
+                // Don't serialize information about child nodes,
+                // when referencing an external node tree, we should only
+                // allow modifying the root node, thus, because only root node
+                // can have changed fields, we don't include child nodes here.
+                bIncludeInformationAboutChildNodes = false;
+                selfInfo.customAttributes[sExternalNodeTreePathAttributeName] =
+                    getPathDeserializedFromRelativeToRes().value().first;
+            }
         }
         vNodesInfo.push_back(std::move(selfInfo));
+
         iId += 1;
 
-        // Add child information.
-        std::scoped_lock guard(mtxChildNodes.first);
-        for (const auto& pChildNode : *mtxChildNodes.second) {
-            std::ranges::move(
-                pChildNode->getInformationForSerialization(iId, iMyId), std::back_inserter(vNodesInfo));
+        if (bIncludeInformationAboutChildNodes) {
+            // Add child information.
+            std::scoped_lock guard(mtxChildNodes.first);
+            for (const auto& pChildNode : *mtxChildNodes.second) {
+                auto result = pChildNode->getInformationForSerialization(iId, iMyId);
+                if (std::holds_alternative<Error>(result)) {
+                    auto error = std::get<Error>(result);
+                    return error;
+                }
+                auto vChildArray =
+                    std::get<std::vector<SerializableObjectInformationWithGcPointer>>(std::move(result));
+                std::ranges::move(vChildArray, std::back_inserter(vNodesInfo));
+            }
         }
 
         return vNodesInfo;
@@ -368,8 +441,46 @@ namespace ne {
             err.addEntry();
             return err;
         }
-        const auto vNodesInfo =
-            std::get<std::vector<DeserializedObjectInformation>>(std::move(deserializeResult));
+        auto vNodesInfo = std::get<std::vector<DeserializedObjectInformation>>(std::move(deserializeResult));
+
+        // See if some node is external node tree.
+        for (auto& nodeInfo : vNodesInfo) {
+            // Try to cast this object to Node.
+            if (!dynamic_cast<Node*>(&*nodeInfo.pObject)) [[unlikely]] {
+                return Error("deserialized object is not a node");
+            }
+
+            auto it = nodeInfo.customAttributes.find(sExternalNodeTreePathAttributeName);
+            if (it == nodeInfo.customAttributes.end())
+                continue;
+
+            // Construct path to this external node tree.
+            const auto pathToExternalNodeTree =
+                ProjectPaths::getDirectoryForResources(ResourceDirectory::ROOT) / it->second;
+            if (!std::filesystem::exists(pathToExternalNodeTree)) {
+                Error error(fmt::format(
+                    "file storing external node tree \"{}\" does not exist",
+                    pathToExternalNodeTree.string()));
+                return error;
+            }
+
+            // Deserialize external node tree.
+            auto result = deserializeNodeTree(pathToExternalNodeTree);
+            if (std::holds_alternative<Error>(result)) {
+                auto error = std::get<Error>(result);
+                error.addEntry();
+                return error;
+            }
+            gc<Node> pExternalRootNode = std::get<gc<Node>>(result);
+
+            gc<Node> pNode = gc_dynamic_pointer_cast<Node>(nodeInfo.pObject);
+
+            // Attach child nodes of this external root node to our node that has changed fields.
+            const auto vChildNodes = pExternalRootNode->getChildNodes();
+            for (const auto& pChildNode : *vChildNodes) {
+                pNode->addChildNode(pChildNode);
+            }
+        }
 
         // Sort all nodes by their ID.
         gc<Node> pRootNode;
@@ -379,26 +490,26 @@ namespace ne {
             // Try to cast this object to Node.
             const auto pNode = dynamic_cast<Node*>(&*nodeInfo.pObject);
             if (!pNode) [[unlikely]] {
-                return Error("Deserialized object is not a node.");
+                return Error("deserialized object is not a node");
             }
 
             // Check that this object has required attribute about parent ID.
             std::optional<size_t> iParentNodeId = {};
-            const auto parentNodeAttributeIt = nodeInfo.customAttributes.find(sParentNodeAttributeName);
+            const auto parentNodeAttributeIt = nodeInfo.customAttributes.find(sParentNodeIdAttributeName);
             if (parentNodeAttributeIt == nodeInfo.customAttributes.end()) {
                 if (!pRootNode) {
                     pRootNode = gc<Node>(pNode);
                 } else {
                     return Error(fmt::format(
-                        "Found non root node \"{}\" that does not have a parent.", pNode->getName()));
+                        "found non root node \"{}\" that does not have a parent", pNode->getName()));
                 }
             } else {
                 try {
                     iParentNodeId = std::stoull(parentNodeAttributeIt->second);
                 } catch (std::exception& exception) {
                     return Error(fmt::format(
-                        "Failed to convert attribute \"{}\" with value \"{}\" to integer, error: {}.",
-                        sParentNodeAttributeName,
+                        "failed to convert attribute \"{}\" with value \"{}\" to integer, error: {}",
+                        sParentNodeIdAttributeName,
                         parentNodeAttributeIt->second,
                         exception.what()));
                 }
@@ -406,7 +517,7 @@ namespace ne {
                 // Check if this parent ID is outside of out array bounds.
                 if (iParentNodeId.value() >= vNodes.size()) [[unlikely]] {
                     return Error(fmt::format(
-                        "Parsed parent node ID is outside of bounds: {} >= {}.",
+                        "parsed parent node ID is outside of bounds: {} >= {}",
                         iParentNodeId.value(),
                         vNodes.size()));
                 }
@@ -418,20 +529,19 @@ namespace ne {
                 iNodeId = std::stoull(nodeInfo.sObjectUniqueId);
             } catch (std::exception& exception) {
                 return Error(fmt::format(
-                    "Failed to convert ID \"{}\" to integer, error: {}.",
+                    "failed to convert ID \"{}\" to integer, error: {}",
                     nodeInfo.sObjectUniqueId,
                     exception.what()));
             }
 
             // Check if this ID is outside of out array bounds.
             if (iNodeId >= vNodes.size()) [[unlikely]] {
-                return Error(
-                    fmt::format("Parsed ID is outside of bounds: {} >= {}.", iNodeId, vNodes.size()));
+                return Error(fmt::format("parsed ID is outside of bounds: {} >= {}", iNodeId, vNodes.size()));
             }
 
             // Check if we already set a node in this index position.
             if (vNodes[iNodeId].first) [[unlikely]] {
-                return Error(fmt::format("Parsed ID {} was already used by some other node.", iNodeId));
+                return Error(fmt::format("parsed ID {} was already used by some other node", iNodeId));
             }
 
             // Save node.
@@ -440,7 +550,7 @@ namespace ne {
 
         // See if we found root node.
         if (!pRootNode) [[unlikely]] {
-            return Error("Root node was not found.");
+            return Error("root node was not found");
         }
 
         // Build hierarchy using value from attribute.
@@ -525,6 +635,30 @@ namespace ne {
         for (const auto& pChildNode : *mtxChildNodes.second) {
             pChildNode->notifyAboutDetachingFromParent();
         }
+    }
+
+    bool Node::isTreeDeserializedFromOneFile(const std::string& sPathRelativeToRes) {
+        if (!getPathDeserializedFromRelativeToRes().has_value()) {
+            return false;
+        }
+
+        if (getPathDeserializedFromRelativeToRes().value().first != sPathRelativeToRes) {
+            return false;
+        }
+
+        bool bPathEqual = true;
+        lockChildren();
+        {
+            for (const auto& pChildNode : *mtxChildNodes.second) {
+                if (!pChildNode->isTreeDeserializedFromOneFile(sPathRelativeToRes)) {
+                    bPathEqual = false;
+                    break;
+                }
+            }
+        }
+        unlockChildren();
+
+        return bPathEqual;
     }
 
 } // namespace ne

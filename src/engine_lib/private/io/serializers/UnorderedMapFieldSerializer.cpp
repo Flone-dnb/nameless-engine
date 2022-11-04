@@ -42,7 +42,8 @@ namespace ne {
         const rfk::Field* pField,
         const std::string& sSectionName,
         const std::string& sEntityId,
-        size_t& iSubEntityId) {
+        size_t& iSubEntityId,
+        Serializable* pOriginalObject) {
         const auto sFieldCanonicalTypeName = std::string(pField->getCanonicalTypeName());
         const auto sFieldName = pField->getName();
 
@@ -364,5 +365,59 @@ namespace ne {
             "The type \"{}\" of the specified field \"{}\" is not supported by this serializer.",
             sFieldCanonicalTypeName,
             sFieldName));
+    }
+
+    bool UnorderedMapFieldSerializer::isFieldValueEqual(
+        Serializable* pFieldAOwner,
+        const rfk::Field* pFieldA,
+        Serializable* pFieldBOwner,
+        const rfk::Field* pFieldB) {
+        if (!isFieldTypeSupported(pFieldA))
+            return false;
+        if (!isFieldTypeSupported(pFieldB))
+            return false;
+
+        // Check that types are equal.
+        const std::string sFieldACanonicalTypeName = pFieldA->getCanonicalTypeName();
+        const std::string sFieldBCanonicalTypeName = pFieldB->getCanonicalTypeName();
+        if (sFieldACanonicalTypeName != sFieldBCanonicalTypeName) {
+            return false;
+        }
+
+        constexpr auto floatDelta = 0.00001f;
+        constexpr auto doubleDelta = 0.0000000000001;
+
+#define COMPARE_UNORDERED_MAPS(TYPEA, TYPEB)                                                                 \
+    if (sFieldACanonicalTypeName == fmt::format("std::unordered_map<{}, {}>", #TYPEA, #TYPEB)) {             \
+        if (std::string_view(#TYPEA) == "float" || std::string_view(#TYPEA) == "double") {                   \
+            Error error("`float` or `double` should not be used as map keys");                               \
+            error.showError();                                                                               \
+            throw std::runtime_error(error.getError());                                                      \
+        }                                                                                                    \
+        const auto mapA = pFieldA->getUnsafe<std::unordered_map<TYPEA, TYPEB>>(pFieldAOwner);                \
+        const auto mapB = pFieldB->getUnsafe<std::unordered_map<TYPEA, TYPEB>>(pFieldBOwner);                \
+        return mapA == mapB;                                                                                 \
+    }
+
+#define COMPARE_UNORDERED_MAP_TYPES(TYPE)                                                                    \
+    COMPARE_UNORDERED_MAPS(TYPE, bool)                                                                       \
+    COMPARE_UNORDERED_MAPS(TYPE, int)                                                                        \
+    COMPARE_UNORDERED_MAPS(TYPE, unsigned int)                                                               \
+    COMPARE_UNORDERED_MAPS(TYPE, long long)                                                                  \
+    COMPARE_UNORDERED_MAPS(TYPE, unsigned long long)                                                         \
+    COMPARE_UNORDERED_MAPS(TYPE, float)                                                                      \
+    COMPARE_UNORDERED_MAPS(TYPE, double)                                                                     \
+    COMPARE_UNORDERED_MAPS(TYPE, std::basic_string<char>)
+
+        COMPARE_UNORDERED_MAP_TYPES(bool)
+        COMPARE_UNORDERED_MAP_TYPES(int)
+        COMPARE_UNORDERED_MAP_TYPES(unsigned int)
+        COMPARE_UNORDERED_MAP_TYPES(long long)
+        COMPARE_UNORDERED_MAP_TYPES(unsigned long long)
+        COMPARE_UNORDERED_MAP_TYPES(float)
+        COMPARE_UNORDERED_MAP_TYPES(double)
+        COMPARE_UNORDERED_MAP_TYPES(std::basic_string<char>)
+
+        return false;
     }
 } // namespace ne

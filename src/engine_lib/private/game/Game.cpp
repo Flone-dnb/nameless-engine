@@ -7,6 +7,7 @@
 // Custom.
 #include "io/Logger.h"
 #include "io/Serializable.h"
+#include "misc/ProjectPaths.h"
 #include "misc/GC.hpp"
 #include "render/Renderer.h"
 #if defined(WIN32)
@@ -27,7 +28,7 @@ namespace ne {
 
         // Make sure that `res` directory is set and exists.
         // (intentionally ignore result, will show an error if not exists)
-        Serializable::getPathToResDirectory();
+        ProjectPaths::getDirectoryForResources(ResourceDirectory::ROOT);
 
         // Save ID to this thread (should be main thread).
         mainThreadId = std::this_thread::get_id();
@@ -55,7 +56,7 @@ namespace ne {
 #elif __linux__
         throw std::runtime_error("No renderer for this platform.");
 #else
-        static_assert(false, "no renderer here");
+        throw std::runtime_error("No renderer for this platform.");
 #endif
     }
 

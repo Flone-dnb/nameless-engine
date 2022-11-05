@@ -107,6 +107,7 @@ namespace ne {
     class WindowBuilder {
     public:
         WindowBuilder() = default;
+
         /**
          * Defines the size of a window that we will create.
          *
@@ -116,6 +117,7 @@ namespace ne {
          * @return Builder.
          */
         WindowBuilder& withSize(int iWidth, int iHeight);
+
         /**
          * Defines the name of a window that we will create.
          *
@@ -124,6 +126,7 @@ namespace ne {
          * @return Builder.
          */
         WindowBuilder& withTitle(std::string_view sWindowTitle);
+
         /**
          * Defines the icon of a window that we will create.
          *
@@ -132,6 +135,7 @@ namespace ne {
          * @return Builder.
          */
         WindowBuilder& withIcon(std::filesystem::path pathToIcon);
+
         /**
          * Defines the visibility of a window that we will create.
          * Does nothing for fullscreen windows.
@@ -141,6 +145,7 @@ namespace ne {
          * @return Builder.
          */
         WindowBuilder& withVisibility(bool bShow);
+
         /**
          * Whether the window should be maximized after creation or not.
          * Does nothing for fullscreen windows.
@@ -150,6 +155,7 @@ namespace ne {
          * @return Builder.
          */
         WindowBuilder& withMaximizedState(bool bMaximized);
+
         /**
          * Whether the window should look like a splash screen or not
          * (no border, title, buttons, etc).
@@ -160,6 +166,7 @@ namespace ne {
          * @return Builder.
          */
         WindowBuilder& withSplashScreenMode(bool bIsSplashScreen);
+
         /**
          * Whether a window should be shown in the fullscreen mode or not.
          *
@@ -168,6 +175,7 @@ namespace ne {
          * @return Builder.
          */
         WindowBuilder& withFullscreenMode(bool bEnableFullscreen);
+
         /**
          * Builds/creates a new window with the configured parameters.
          *
@@ -230,7 +238,8 @@ namespace ne {
         /**
          * Sets new window icon.
          *
-         * @warning This function must only be called from the main thread.
+         * @warning This function must only be called from the main thread. If this function is called
+         * outside of the main thread an error will be shown.
          *
          * @param pathToIcon Path to the image (.png).
          * The image data should be 32-bit, little-endian, non-premultiplied RGBA,
@@ -244,7 +253,8 @@ namespace ne {
          * Loads the image and creates a new cursor, note that in order for this new
          * cursor to be visible you have to call @ref setCursor.
          *
-         * @warning This function must only be called from the main thread.
+         * @warning This function must only be called from the main thread. If this function is called
+         * outside of the main thread an error will be shown.
          *
          * @param pathToIcon Path to the image (.png).
          * The image data should be 32-bit, little-endian, non-premultiplied RGBA,
@@ -261,7 +271,8 @@ namespace ne {
          *
          * Use @ref createCursor to create a new cursor.
          *
-         * @warning This function must only be called from the main thread.
+         * @warning This function must only be called from the main thread. If this function is called
+         * outside of the main thread an error will be shown.
          *
          * @param pCursor Cursor to use.
          */
@@ -318,7 +329,8 @@ namespace ne {
         /**
          * Returns the current window size in pixels.
          *
-         * @warning This function must only be called from the main thread.
+         * @warning This function must only be called from the main thread. If this function is called
+         * outside of the main thread an error will be shown.
          *
          * @return A pair of width and height in pixels.
          */
@@ -327,7 +339,8 @@ namespace ne {
         /**
          * Returns the current cursor position on window.
          *
-         * @warning This function must only be called from the main thread.
+         * @warning This function must only be called from the main thread. If this function is called
+         * outside of the main thread an error will be shown.
          *
          * @return A pair of X and Y coordinates in range [0.0; 1.0]
          * relative to the upper-left corner of the window.
@@ -416,6 +429,12 @@ namespace ne {
         static void glfwWindowMouseScrollCallback(GLFWwindow* pGlfwWindow, double xOffset, double yOffset);
 
         /**
+         * Checks whether the current thread is the main thread or not and if not
+         * shows an error.
+         */
+        void showErrorIfNotOnMainThread() const;
+
+        /**
          * Called when the window receives keyboard input.
          *
          * @param key            Keyboard key.
@@ -480,6 +499,9 @@ namespace ne {
 
         /** Array of created cursors using @ref createCursor. Should be used with the mutex. */
         std::vector<std::unique_ptr<WindowCursor>> vCreatedCursors;
+
+        /** ID of the main thread. */
+        std::thread::id mainThreadId;
 
         /** Title of the window. */
         std::string sWindowTitle;

@@ -69,6 +69,8 @@ namespace ne {
     void Window::close() const { glfwSetWindowShouldClose(pGlfwWindow, 1); }
 
     std::pair<int, int> Window::getSize() const {
+        showErrorIfNotOnMainThread();
+
         int iWidth, iHeight;
 
         glfwGetWindowSize(pGlfwWindow, &iWidth, &iHeight);
@@ -77,12 +79,14 @@ namespace ne {
     }
 
     std::pair<float, float> Window::getCursorPosition() const {
+        showErrorIfNotOnMainThread();
+
         double xPos, yPos;
         glfwGetCursorPos(pGlfwWindow, &xPos, &yPos);
 
         const auto size = getSize();
         if (size.first == 0 || size.second == 0) {
-            Logger::get().error("getSize() returned 0", sWindowLogCategory);
+            Logger::get().error("failed to get window size", sWindowLogCategory);
             return std::make_pair(0.0f, 0.0f);
         }
 
@@ -202,6 +206,25 @@ namespace ne {
         pWindow->onMouseScrollMove(static_cast<int>(yOffset));
     }
 
+    void Window::showErrorIfNotOnMainThread() const {
+        const auto currentThreadId = std::this_thread::get_id();
+        if (currentThreadId != mainThreadId) {
+            std::stringstream currentThreadIdString;
+            currentThreadIdString << currentThreadId;
+
+            std::stringstream mainThreadIdString;
+            mainThreadIdString << mainThreadId;
+
+            Error err(fmt::format(
+                "an attempt was made to call a function that should only be called on the main thread "
+                "in a non main thread (main thread ID: {}, current thread ID: {})",
+                mainThreadIdString.str(),
+                currentThreadIdString.str()));
+            err.showError();
+            throw std::runtime_error(err.getError());
+        }
+    }
+
     std::variant<std::unique_ptr<Window>, Error> Window::newInstance(WindowBuilderParameters& params) {
         GLFW::get(); // initialize GLFW
 
@@ -302,6 +325,8 @@ namespace ne {
     }
 
     std::optional<Error> Window::setIcon(std::filesystem::path pathToIcon) const {
+        showErrorIfNotOnMainThread();
+
         if (!std::filesystem::exists(pathToIcon)) {
             return Error(fmt::format("the specified file \"{}\" does not exist.", pathToIcon.string()));
         }
@@ -321,6 +346,8 @@ namespace ne {
     }
 
     std::variant<WindowCursor*, Error> Window::createCursor(std::filesystem::path pathToIcon) {
+        showErrorIfNotOnMainThread();
+
         // Create new cursor.
         auto result = WindowCursor::create(pathToIcon);
         if (std::holds_alternative<Error>(result)) {
@@ -337,7 +364,11 @@ namespace ne {
         return pRawCursor;
     }
 
-    void Window::setCursor(WindowCursor* pCursor) { glfwSetCursor(pGlfwWindow, pCursor->getCursor()); }
+    void Window::setCursor(WindowCursor* pCursor) {
+        showErrorIfNotOnMainThread();
+
+        glfwSetCursor(pGlfwWindow, pCursor->getCursor());
+    }
 
     void Window::setDefaultCursor() { glfwSetCursor(pGlfwWindow, nullptr); }
 
@@ -366,6 +397,9 @@ namespace ne {
     Window::Window(GLFWwindow* pGlfwWindow, const std::string& sWindowTitle) {
         this->pGlfwWindow = pGlfwWindow;
         this->sWindowTitle = sWindowTitle;
+
+        // Save ID of this thread (should be main thread).
+        mainThreadId = std::this_thread::get_id();
     }
 
     WindowCursor::~WindowCursor() {

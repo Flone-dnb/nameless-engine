@@ -30,7 +30,7 @@ namespace ne {
         // (intentionally ignore result, will show an error if not exists)
         ProjectPaths::getDirectoryForResources(ResourceDirectory::ROOT);
 
-        // Save ID to this thread (should be main thread).
+        // Save ID of this thread (should be main thread).
         mainThreadId = std::this_thread::get_id();
 
         // Add engine serializers.
@@ -206,7 +206,7 @@ namespace ne {
             mainThreadIdString << mainThreadId;
 
             Error err(fmt::format(
-                "An attempt was made to create a world in a non main thread "
+                "an attempt was made to create a world in a non main thread "
                 "(main thread ID: {}, current thread ID: {})",
                 mainThreadIdString.str(),
                 currentThreadIdString.str()));

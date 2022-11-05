@@ -20,6 +20,64 @@ namespace ne {
     class GameInstance;
 
     /**
+     * Represents a custom window cursor.
+     */
+    class WindowCursor {
+    public:
+        WindowCursor() = delete;
+        WindowCursor(const WindowCursor&) = delete;
+        WindowCursor& operator=(const WindowCursor&) = delete;
+
+        /** Checks if the created cursor was released and if not, logs an error. */
+        ~WindowCursor();
+
+    protected:
+        // Only Window can directly create instances of this class.
+        // For users we provide a separate function.
+        friend class Window;
+
+        /**
+         * Loads image and creates a new cursor.
+         *
+         * @warning This function must only be called from the main thread.
+         *
+         * @remark You should call @ref releaseCursor when you no longer need this cursor.
+         *
+         * @param pathToIcon  Path to the image (.png).
+         * The image data should be 32-bit, little-endian, non-premultiplied RGBA,
+         * i.e. eight bits per channel with the red channel first.
+         *
+         * @return Error if something went wrong, otherwise created cursor.
+         */
+        static std::variant<std::unique_ptr<WindowCursor>, Error> create(std::filesystem::path pathToIcon);
+
+        /**
+         * Releases existing cursor.
+         *
+         * @warning This function must only be called from the main thread.
+         */
+        void releaseCursor();
+
+        /**
+         * Returns internal GLFW cursor.
+         *
+         * @return Internal GLFW cursor.
+         */
+        GLFWcursor* getCursor() const;
+
+    private:
+        /**
+         * Initializes window cursor.
+         *
+         * @param pCursor Created GLFW cursor.
+         */
+        WindowCursor(GLFWcursor* pCursor);
+
+        /** Created GLFW cursor. */
+        GLFWcursor* pCursor = nullptr;
+    };
+
+    /**
      * Parameters needed to build a window.
      */
     struct WindowBuilderParameters {
@@ -172,15 +230,49 @@ namespace ne {
         /**
          * Sets new window icon.
          *
+         * @warning This function must only be called from the main thread.
+         *
          * @param pathToIcon Path to the image (.png).
          * The image data should be 32-bit, little-endian, non-premultiplied RGBA,
          * i.e. eight bits per channel with the red channel first.
          *
-         * @warning This function must only be called from the main thread.
-         *
-         * @return Returns error if file not found.
+         * @return Error if file not found.
          */
         std::optional<Error> setIcon(std::filesystem::path pathToIcon) const;
+
+        /**
+         * Loads the image and creates a new cursor, note that in order for this new
+         * cursor to be visible you have to call @ref setCursor.
+         *
+         * @warning This function must only be called from the main thread.
+         *
+         * @param pathToIcon Path to the image (.png).
+         * The image data should be 32-bit, little-endian, non-premultiplied RGBA,
+         * i.e. eight bits per channel with the red channel first.
+         *
+         * @return Error if something went wrong, otherwise a non-owning pointer to
+         * the created cursor that is managed by the window. Do not delete returned pointer,
+         * the window owns this cursor and will automatically delete it when the window is closed.
+         */
+        std::variant<WindowCursor*, Error> createCursor(std::filesystem::path pathToIcon);
+
+        /**
+         * Changes the cursor.
+         *
+         * Use @ref createCursor to create a new cursor.
+         *
+         * @warning This function must only be called from the main thread.
+         *
+         * @param pCursor Cursor to use.
+         */
+        void setCursor(WindowCursor* pCursor);
+
+        /**
+         * Changes the cursor icon to be system default cursor icon.
+         *
+         * This function can be used to revert changes made by @ref setCursor function.
+         */
+        void setDefaultCursor();
 
         /**
          * Whether the cursor is visible or not (locked in this window).
@@ -380,19 +472,16 @@ namespace ne {
          */
         Window(GLFWwindow* pGlfwWindow, const std::string& sWindowTitle);
 
-        /**
-         * Holds main game objects.
-         */
+        /** Holds main game objects. */
         std::unique_ptr<Game> pGame;
 
-        /**
-         * GLFW window.
-         */
-        GLFWwindow* pGlfwWindow;
+        /** GLFW window. */
+        GLFWwindow* pGlfwWindow = nullptr;
 
-        /**
-         * Title of the window.
-         */
+        /** Array of created cursors using @ref createCursor. Should be used with the mutex. */
+        std::vector<std::unique_ptr<WindowCursor>> vCreatedCursors;
+
+        /** Title of the window. */
         std::string sWindowTitle;
 
         /** Last mouse X position, used for calculating delta movement. */

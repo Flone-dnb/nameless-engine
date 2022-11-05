@@ -279,7 +279,16 @@ namespace ne {
         return pWindow;
     }
 
-    Window::~Window() { glfwDestroyWindow(pGlfwWindow); }
+    Window::~Window() {
+        // Destroy created cursors.
+        for (const auto& pCursor : vCreatedCursors) {
+            pCursor->releaseCursor();
+        }
+        vCreatedCursors.clear();
+
+        // Destroy window.
+        glfwDestroyWindow(pGlfwWindow);
+    }
 
     WindowBuilder Window::getBuilder() { return {}; }
 
@@ -297,16 +306,40 @@ namespace ne {
             return Error(fmt::format("the specified file \"{}\" does not exist.", pathToIcon.string()));
         }
 
+        // Load image.
         GLFWimage images[1];
         images[0].pixels =
             stbi_load(pathToIcon.string().data(), &images[0].width, &images[0].height, nullptr, 4);
 
+        // Set icon.
         glfwSetWindowIcon(pGlfwWindow, 1, images);
 
+        // Free loaded image.
         stbi_image_free(images[0].pixels);
 
         return {};
     }
+
+    std::variant<WindowCursor*, Error> Window::createCursor(std::filesystem::path pathToIcon) {
+        // Create new cursor.
+        auto result = WindowCursor::create(pathToIcon);
+        if (std::holds_alternative<Error>(result)) {
+            auto error = std::get<Error>(result);
+            error.addEntry();
+            return error;
+        }
+
+        // Save cursor.
+        auto pCursor = std::get<std::unique_ptr<WindowCursor>>(std::move(result));
+        auto pRawCursor = pCursor.get();
+        vCreatedCursors.push_back(std::move(pCursor));
+
+        return pRawCursor;
+    }
+
+    void Window::setCursor(WindowCursor* pCursor) { glfwSetCursor(pGlfwWindow, pCursor->getCursor()); }
+
+    void Window::setDefaultCursor() { glfwSetCursor(pGlfwWindow, nullptr); }
 
     void Window::setCursorVisibility(const bool bIsVisible) const {
         if (bIsVisible) {
@@ -334,4 +367,47 @@ namespace ne {
         this->pGlfwWindow = pGlfwWindow;
         this->sWindowTitle = sWindowTitle;
     }
+
+    WindowCursor::~WindowCursor() {
+        if (pCursor) {
+            Logger::get().error(
+                "previously created window cursor is being destroyed but internal GLFW cursor object was not "
+                "released (you should release it manually)",
+                "");
+        }
+    }
+
+    std::variant<std::unique_ptr<WindowCursor>, Error>
+    WindowCursor::create(std::filesystem::path pathToIcon) {
+        if (!std::filesystem::exists(pathToIcon)) {
+            return Error(fmt::format("the specified file \"{}\" does not exist.", pathToIcon.string()));
+        }
+
+        // Load image.
+        GLFWimage image;
+        image.pixels = stbi_load(pathToIcon.string().data(), &image.width, &image.height, nullptr, 4);
+
+        // Create cursor.
+        auto pGlfwCursor = glfwCreateCursor(&image, 0, 0);
+        if (!pGlfwCursor) {
+            return Error("failed to create a cursor object");
+        }
+
+        auto pCursor = std::unique_ptr<WindowCursor>(new WindowCursor(pGlfwCursor));
+
+        // Free loaded image.
+        stbi_image_free(image.pixels);
+
+        return pCursor;
+    }
+
+    void WindowCursor::releaseCursor() {
+        glfwDestroyCursor(pCursor);
+        pCursor = nullptr;
+    }
+
+    GLFWcursor* WindowCursor::getCursor() const { return pCursor; }
+
+    WindowCursor::WindowCursor(GLFWcursor* pCursor) { this->pCursor = pCursor; }
+
 } // namespace ne

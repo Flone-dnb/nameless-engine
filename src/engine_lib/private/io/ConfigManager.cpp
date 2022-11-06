@@ -91,19 +91,17 @@ namespace ne {
         return {};
     }
 
-    void ConfigManager::removeFile(const std::filesystem::path& pathToConfigFile) {
-        auto pathToFile = pathToConfigFile;
-
+    void ConfigManager::removeFile(std::filesystem::path pathToConfigFile) {
         // Check extension.
-        if (!pathToFile.string().ends_with(ConfigManager::getConfigFormatExtension())) {
-            pathToFile += ConfigManager::getConfigFormatExtension();
+        if (!pathToConfigFile.string().ends_with(ConfigManager::getConfigFormatExtension())) {
+            pathToConfigFile += ConfigManager::getConfigFormatExtension();
         }
 
-        auto pathToBackupFile = pathToFile;
+        auto pathToBackupFile = pathToConfigFile;
         pathToBackupFile += sBackupFileExtension;
 
-        if (std::filesystem::exists(pathToFile)) {
-            std::filesystem::remove(pathToFile);
+        if (std::filesystem::exists(pathToConfigFile)) {
+            std::filesystem::remove(pathToConfigFile);
         }
 
         if (std::filesystem::exists(pathToBackupFile)) {
@@ -127,21 +125,19 @@ namespace ne {
         return {};
     }
 
-    std::optional<Error> ConfigManager::loadFile(const std::filesystem::path& pathToConfigFile) {
-        auto pathToFile = pathToConfigFile;
-
+    std::optional<Error> ConfigManager::loadFile(std::filesystem::path pathToConfigFile) {
         // Check extension.
-        if (!pathToFile.string().ends_with(ConfigManager::getConfigFormatExtension())) {
-            pathToFile += ConfigManager::getConfigFormatExtension();
+        if (!pathToConfigFile.string().ends_with(ConfigManager::getConfigFormatExtension())) {
+            pathToConfigFile += ConfigManager::getConfigFormatExtension();
         }
 
-        std::filesystem::path backupFile = pathToFile;
+        std::filesystem::path backupFile = pathToConfigFile;
         backupFile += sBackupFileExtension;
 
-        if (!std::filesystem::exists(pathToFile)) {
+        if (!std::filesystem::exists(pathToConfigFile)) {
             // Check if backup file exists.
             if (std::filesystem::exists(backupFile)) {
-                std::filesystem::copy_file(backupFile, pathToFile);
+                std::filesystem::copy_file(backupFile, pathToConfigFile);
             } else {
                 return Error("file or backup file do not exist");
             }
@@ -149,13 +145,13 @@ namespace ne {
 
         // Load file.
         try {
-            tomlData = toml::parse(pathToFile);
+            tomlData = toml::parse(pathToConfigFile);
         } catch (std::exception& exception) {
-            return Error(
-                fmt::format("failed to load file {}, error: {}", pathToFile.string(), exception.what()));
+            return Error(fmt::format(
+                "failed to load file {}, error: {}", pathToConfigFile.string(), exception.what()));
         }
 
-        filePath = pathToFile;
+        filePath = pathToConfigFile;
 
         return {};
     }
@@ -204,7 +200,7 @@ namespace ne {
             return error;
         }
 
-        const bool bEnableBackup = category == ConfigCategory::PROGRESS ? true : false;
+        const bool bEnableBackup = category == ConfigCategory::PROGRESS;
 
         auto optional = saveFile(std::get<std::filesystem::path>(result), bEnableBackup);
         if (optional.has_value()) {
@@ -214,15 +210,23 @@ namespace ne {
         return {};
     }
 
-    std::optional<Error>
-    ConfigManager::saveFile(const std::filesystem::path& pathToConfigFile, bool bEnableBackup) {
-        auto pathToFile = pathToConfigFile;
+    std::optional<Error> ConfigManager::saveFile(std::filesystem::path pathToConfigFile, bool bEnableBackup) {
+        // Check extension.
+        if (!pathToConfigFile.string().ends_with(ConfigManager::getConfigFormatExtension())) {
+            pathToConfigFile += ConfigManager::getConfigFormatExtension();
+        }
+
+        // Make sure the path exists.
+        if (!std::filesystem::exists(pathToConfigFile.parent_path())) {
+            std::filesystem::create_directories(pathToConfigFile.parent_path());
+        }
 
 #if defined(WIN32)
         // Check if the path length is too long.
-        constexpr auto iMaxPathLimit = MAX_PATH - 15;
+        constexpr auto iMaxPathLimitBound = 15;
+        constexpr auto iMaxPathLimit = MAX_PATH - iMaxPathLimitBound;
         const auto iFilePathLength = pathToConfigFile.string().length();
-        if (iFilePathLength > iMaxPathLimit - 30 && iFilePathLength < iMaxPathLimit) {
+        if (iFilePathLength > iMaxPathLimit - (iMaxPathLimitBound * 2) && iFilePathLength < iMaxPathLimit) {
             Logger::get().warn(
                 fmt::format(
                     "file path length {} is close to the platform limit of {} characters (path: {})",
@@ -239,31 +243,22 @@ namespace ne {
         }
 #endif
 
-        // Check extension.
-        if (!pathToFile.string().ends_with(ConfigManager::getConfigFormatExtension())) {
-            pathToFile += ConfigManager::getConfigFormatExtension();
-        }
-
-        if (!std::filesystem::exists(pathToFile.parent_path())) {
-            std::filesystem::create_directories(pathToFile.parent_path());
-        }
-
-        std::filesystem::path backupFile = pathToFile;
+        std::filesystem::path backupFile = pathToConfigFile;
         backupFile += sBackupFileExtension;
 
         if (bEnableBackup) {
             // Check if we already had this file saved.
-            if (std::filesystem::exists(pathToFile)) {
+            if (std::filesystem::exists(pathToConfigFile)) {
                 if (std::filesystem::exists(backupFile)) {
                     std::filesystem::remove(backupFile);
                 }
-                std::filesystem::rename(pathToFile, backupFile);
+                std::filesystem::rename(pathToConfigFile, backupFile);
             }
         }
 
-        std::ofstream outFile(pathToFile, std::ios::binary);
+        std::ofstream outFile(pathToConfigFile, std::ios::binary);
         if (!outFile.is_open()) {
-            return Error(fmt::format("failed to open file {} for writing", pathToFile.string()));
+            return Error(fmt::format("failed to open file {} for writing", pathToConfigFile.string()));
         }
         outFile << tomlData;
         outFile.close();
@@ -271,11 +266,11 @@ namespace ne {
         if (bEnableBackup) {
             // Create backup file if it does not exist.
             if (!std::filesystem::exists(backupFile)) {
-                std::filesystem::copy_file(pathToFile, backupFile);
+                std::filesystem::copy_file(pathToConfigFile, backupFile);
             }
         }
 
-        filePath = pathToFile;
+        filePath = pathToConfigFile;
 
         return {};
     }

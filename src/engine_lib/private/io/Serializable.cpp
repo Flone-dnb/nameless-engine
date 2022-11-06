@@ -13,9 +13,42 @@
 
 namespace ne {
     std::optional<Error> Serializable::serialize(
-        const std::filesystem::path& pathToFile,
+        std::filesystem::path pathToFile,
         bool bEnableBackup,
         const std::unordered_map<std::string, std::string>& customAttributes) {
+        // Add TOML extension to file.
+        if (!pathToFile.string().ends_with(".toml")) {
+            pathToFile += ".toml";
+        }
+
+        // Make sure file directories exist.
+        if (!std::filesystem::exists(pathToFile.parent_path())) {
+            std::filesystem::create_directories(pathToFile.parent_path());
+        }
+
+#if defined(WIN32)
+        // Check if the path length is too long.
+        constexpr auto iMaxPathLimitBound = 15;
+        constexpr auto iMaxPathLimit = MAX_PATH - iMaxPathLimitBound;
+        const auto iFilePathLength = pathToFile.string().length();
+        if (iFilePathLength > iMaxPathLimit - (iMaxPathLimitBound * 2) && iFilePathLength < iMaxPathLimit) {
+            Logger::get().warn(
+                fmt::format(
+                    "file path length {} is close to the platform limit of {} characters (path: {})",
+                    iFilePathLength,
+                    iMaxPathLimit,
+                    pathToFile.string()),
+                "");
+        } else if (iFilePathLength >= iMaxPathLimit) {
+            return Error(fmt::format(
+                "file path length {} exceeds the platform limit of {} characters (path: {})",
+                iFilePathLength,
+                iMaxPathLimit,
+                pathToFile.string()));
+        }
+#endif
+
+        // Serialize data to TOML value.
         toml::value tomlData;
         auto result = serialize(tomlData, "", customAttributes);
         if (std::holds_alternative<Error>(result)) {
@@ -24,35 +57,25 @@ namespace ne {
             return err;
         }
 
-        // Add TOML extension to file.
-        auto fixedPath = pathToFile;
-        if (!fixedPath.string().ends_with(".toml")) {
-            fixedPath += ".toml";
-        }
-
-        std::filesystem::path backupFile = fixedPath;
+        // Handle backup file.
+        std::filesystem::path backupFile = pathToFile;
         backupFile += ConfigManager::getBackupFileExtension();
 
         if (bEnableBackup) {
             // Check if we already have a file from previous serialization.
-            if (std::filesystem::exists(fixedPath)) {
+            if (std::filesystem::exists(pathToFile)) {
                 // Make this old file a backup file.
                 if (std::filesystem::exists(backupFile)) {
                     std::filesystem::remove(backupFile);
                 }
-                std::filesystem::rename(fixedPath, backupFile);
+                std::filesystem::rename(pathToFile, backupFile);
             }
         }
 
-        // Make sure file directories exist.
-        if (!std::filesystem::exists(fixedPath.parent_path())) {
-            std::filesystem::create_directories(fixedPath.parent_path());
-        }
-
         // Save TOML data to file.
-        std::ofstream file(fixedPath, std::ios::binary);
+        std::ofstream file(pathToFile, std::ios::binary);
         if (!file.is_open()) {
-            return Error(fmt::format("failed to open the file \"{}\"", fixedPath.string()));
+            return Error(fmt::format("failed to open the file \"{}\"", pathToFile.string()));
         }
         file << tomlData;
         file.close();
@@ -60,7 +83,7 @@ namespace ne {
         if (bEnableBackup) {
             // Create backup file if it does not exist.
             if (!std::filesystem::exists(backupFile)) {
-                std::filesystem::copy_file(fixedPath, backupFile);
+                std::filesystem::copy_file(pathToFile, backupFile);
             }
         }
 
@@ -245,21 +268,20 @@ namespace ne {
     }
 
     std::variant<std::set<std::string>, Error>
-    Serializable::getIdsFromFile(const std::filesystem::path& pathToFile) {
+    Serializable::getIdsFromFile(std::filesystem::path pathToFile) {
         // Add TOML extension to file.
-        auto fixedPath = pathToFile;
-        if (!fixedPath.string().ends_with(".toml")) {
-            fixedPath += ".toml";
+        if (!pathToFile.string().ends_with(".toml")) {
+            pathToFile += ".toml";
         }
 
         // Handle backup file.
-        std::filesystem::path backupFile = fixedPath;
+        std::filesystem::path backupFile = pathToFile;
         backupFile += ConfigManager::getBackupFileExtension();
 
-        if (!std::filesystem::exists(fixedPath)) {
+        if (!std::filesystem::exists(pathToFile)) {
             // Check if backup file exists.
             if (std::filesystem::exists(backupFile)) {
-                std::filesystem::copy_file(backupFile, fixedPath);
+                std::filesystem::copy_file(backupFile, pathToFile);
             } else {
                 return Error("file or backup file do not exist");
             }
@@ -268,10 +290,10 @@ namespace ne {
         // Load file.
         toml::value tomlData;
         try {
-            tomlData = toml::parse(fixedPath);
+            tomlData = toml::parse(pathToFile);
         } catch (std::exception& exception) {
             return Error(
-                fmt::format("failed to load file \"{}\", error: {}", fixedPath.string(), exception.what()));
+                fmt::format("failed to load file \"{}\", error: {}", pathToFile.string(), exception.what()));
         }
 
         // Read all sections.
@@ -287,7 +309,7 @@ namespace ne {
         if (vSections.empty()) {
             return Error(fmt::format(
                 "the specified file \"{}\" has 0 sections while expected at least 1 section",
-                fixedPath.string()));
+                pathToFile.string()));
         }
 
         // Cycle over each section and get string before first dot.
@@ -297,7 +319,7 @@ namespace ne {
             if (iFirstDotPos == std::string::npos) {
                 return Error(fmt::format(
                     "the specified file \"{}\" does not have dots in section names (corrupted file)",
-                    fixedPath.string()));
+                    pathToFile.string()));
             }
 
             vIds.insert(sSectionName.substr(0, iFirstDotPos));
@@ -307,7 +329,7 @@ namespace ne {
     }
 
     std::optional<Error> Serializable::serialize(
-        const std::filesystem::path& pathToFile,
+        std::filesystem::path pathToFile,
         std::vector<SerializableObjectInformation> vObjects,
         bool bEnableBackup) {
         // Check that all objects are unique.
@@ -338,6 +360,53 @@ namespace ne {
             }
         }
 
+        // Add TOML extension to file.
+        if (!pathToFile.string().ends_with(".toml")) {
+            pathToFile += ".toml";
+        }
+
+        // Make sure file directories exist.
+        if (!std::filesystem::exists(pathToFile.parent_path())) {
+            std::filesystem::create_directories(pathToFile.parent_path());
+        }
+
+        // Handle backup.
+        std::filesystem::path backupFile = pathToFile;
+        backupFile += ConfigManager::getBackupFileExtension();
+
+        if (bEnableBackup) {
+            // Check if we already have a file from previous serialization.
+            if (std::filesystem::exists(pathToFile)) {
+                // Make this old file a backup file.
+                if (std::filesystem::exists(backupFile)) {
+                    std::filesystem::remove(backupFile);
+                }
+                std::filesystem::rename(pathToFile, backupFile);
+            }
+        }
+
+#if defined(WIN32)
+        // Check if the path length is too long.
+        constexpr auto iMaxPathLimitBound = 15;
+        constexpr auto iMaxPathLimit = MAX_PATH - iMaxPathLimitBound;
+        const auto iFilePathLength = pathToFile.string().length();
+        if (iFilePathLength > iMaxPathLimit - (iMaxPathLimitBound * 2) && iFilePathLength < iMaxPathLimit) {
+            Logger::get().warn(
+                fmt::format(
+                    "file path length {} is close to the platform limit of {} characters (path: {})",
+                    iFilePathLength,
+                    iMaxPathLimit,
+                    pathToFile.string()),
+                "");
+        } else if (iFilePathLength >= iMaxPathLimit) {
+            return Error(fmt::format(
+                "file path length {} exceeds the platform limit of {} characters (path: {})",
+                iFilePathLength,
+                iMaxPathLimit,
+                pathToFile.string()));
+        }
+#endif
+
         // Serialize.
         toml::value tomlData;
         for (const auto& objectData : vObjects) {
@@ -353,30 +422,10 @@ namespace ne {
             }
         }
 
-        // Add TOML extension to file.
-        auto fixedPath = pathToFile;
-        if (!fixedPath.string().ends_with(".toml")) {
-            fixedPath += ".toml";
-        }
-
-        std::filesystem::path backupFile = fixedPath;
-        backupFile += ConfigManager::getBackupFileExtension();
-
-        if (bEnableBackup) {
-            // Check if we already have a file from previous serialization.
-            if (std::filesystem::exists(fixedPath)) {
-                // Make this old file a backup file.
-                if (std::filesystem::exists(backupFile)) {
-                    std::filesystem::remove(backupFile);
-                }
-                std::filesystem::rename(fixedPath, backupFile);
-            }
-        }
-
         // Save TOML data to file.
-        std::ofstream file(fixedPath, std::ios::binary);
+        std::ofstream file(pathToFile, std::ios::binary);
         if (!file.is_open()) {
-            return Error(fmt::format("failed to open the file \"{}\"", fixedPath.string()));
+            return Error(fmt::format("failed to open the file \"{}\"", pathToFile.string()));
         }
         file << tomlData;
         file.close();
@@ -384,7 +433,7 @@ namespace ne {
         if (bEnableBackup) {
             // Create backup file if it does not exist.
             if (!std::filesystem::exists(backupFile)) {
-                std::filesystem::copy_file(fixedPath, backupFile);
+                std::filesystem::copy_file(pathToFile, backupFile);
             }
         }
 

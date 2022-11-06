@@ -159,7 +159,7 @@ namespace ne RNAMESPACE() {
          * serialization reflected field.
          */
         std::optional<Error> serialize(
-            const std::filesystem::path& pathToFile,
+            std::filesystem::path pathToFile,
             bool bEnableBackup,
             const std::unordered_map<std::string, std::string>& customAttributes = {});
 
@@ -186,7 +186,7 @@ namespace ne RNAMESPACE() {
          * serialization reflected field.
          */
         static std::optional<Error> serialize(
-            const std::filesystem::path& pathToFile,
+            std::filesystem::path pathToFile,
             std::vector<SerializableObjectInformation> vObjects,
             bool bEnableBackup);
 
@@ -246,8 +246,7 @@ namespace ne RNAMESPACE() {
          * @return Error if something went wrong, otherwise array of unique IDs of objects that exist
          * in the specified file.
          */
-        static std::variant<std::set<std::string>, Error>
-        getIdsFromFile(const std::filesystem::path& pathToFile);
+        static std::variant<std::set<std::string>, Error> getIdsFromFile(std::filesystem::path pathToFile);
 
         /**
          * Deserializes an object and all reflected fields (including inherited) from a file.

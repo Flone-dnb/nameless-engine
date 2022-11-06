@@ -102,7 +102,7 @@ namespace ne {
          *
          * @return Error if something went wrong. No error will be returned if the file does not exist.
          */
-        static void removeFile(const std::filesystem::path& pathToConfigFile);
+        static void removeFile(std::filesystem::path pathToConfigFile);
 
         /**
          * Loads data from TOML file.
@@ -138,7 +138,7 @@ namespace ne {
          *
          * @return Error if something went wrong.
          */
-        std::optional<Error> loadFile(const std::filesystem::path& pathToConfigFile);
+        std::optional<Error> loadFile(std::filesystem::path pathToConfigFile);
 
         /**
          * Reads a value from the loaded file (see @ref loadFile).
@@ -293,7 +293,7 @@ namespace ne {
          *
          * @return Error if something went wrong.
          */
-        std::optional<Error> saveFile(const std::filesystem::path& pathToConfigFile, bool bEnableBackup);
+        std::optional<Error> saveFile(std::filesystem::path pathToConfigFile, bool bEnableBackup);
 
         /**
          * Returns full path to the file if it was loaded using @ref loadFile

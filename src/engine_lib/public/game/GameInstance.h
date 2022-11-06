@@ -168,8 +168,7 @@ namespace ne {
 
         /**
          * Creates a new world with a root node to store world's node tree.
-         * If old world existed, causes the old world to be removed by deleting
-         * old world's root node.
+         * Replaces the old world (if existed).
          *
          * @warning This function should be called from the main thread.
          * Use @ref addDeferredTask if you are not sure.

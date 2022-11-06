@@ -335,6 +335,59 @@ TEST_CASE("get child node of type") {
     REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
 }
 
+TEST_CASE("saving pointer to the root node does not prevent correct world destruction") {
+    using namespace ne;
+
+    class MyDerivedNode : public Node {
+    public:
+        MyDerivedNode() = default;
+        virtual ~MyDerivedNode() override = default;
+
+        gc<Node> pRootNode = nullptr;
+    };
+
+    class TestGameInstance : public GameInstance {
+    public:
+        TestGameInstance(Window* pGameWindow, InputManager* pInputManager)
+            : GameInstance(pGameWindow, pInputManager) {}
+        virtual void onGameStarted() override {
+            createWorld();
+
+            {
+                // Create our custom node.
+                auto pNode = gc_new<MyDerivedNode>();
+                pNode->pRootNode = getWorldRootNode();
+                REQUIRE(pNode->pRootNode);
+
+                // At this point the pointer to the root node is stored in two places:
+                // - in World object,
+                // - in our custom node.
+                getWorldRootNode()->addChildNode(pNode);
+            }
+
+            // Change world to see if GC will collect everything.
+            createWorld();
+
+            getWindow()->close();
+        }
+        virtual ~TestGameInstance() override {}
+    };
+
+    auto result = Window::getBuilder().withVisibility(false).build();
+    if (std::holds_alternative<Error>(result)) {
+        Error error = std::get<Error>(std::move(result));
+        error.addEntry();
+        INFO(error.getError());
+        REQUIRE(false);
+    }
+
+    const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
+    pMainWindow->processEvents<TestGameInstance>();
+
+    // Make sure everything is collected correctly.
+    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+}
+
 TEST_CASE("test GC performance and stability with nodes") {
     // This test is needed because the original version of our garbage collector
     // had a bug (that I fixed) that was crashing the program when we had

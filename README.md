@@ -187,7 +187,7 @@ File_PlayerSaveData_GENERATED
     // Prepare new profile file name.
     std::random_device rd;
     std::mt19937 gen(rd());
-    std::uniform_int_distribution<unsigned int> uid(0, UINT_MAX);
+    std::uniform_int_distribution<unsigned short int> uid(0, USHRT_MAX);
     std::string sNewProfileFilename;
     const auto vExistingProfiles = ConfigManager::getAllFiles(ConfigCategory::PROGRESS);
     bool bContinue = false;

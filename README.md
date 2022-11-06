@@ -303,25 +303,25 @@ Here is the list of base features that needs to be implemented in order for you 
 - [X] Serialization/Deserialization for game assets
 - [X] Garbage collector
 - [X] Handling user input events
-- [] Profiler 
-- [] Rendering (at least Forward+ rendering)
-    - [] DirectX 12
-        - [] GUI
-        - [] Post-processing effects
-        - [] PBR (Physically based rendering)
-        - [] HDR (High dynamic range)
-    - [] Vulkan
-        - [] GUI
-        - [] Post-processing effects
-        - [] PBR (Physically based rendering)
-        - [] HDR (High dynamic range)
-- [] Editor
-- [] Scripting
-- [] Audio Engine
-- [] Physics Engine
-- [] Skeletal Animations
-- [] AI and pathfinding
-- [] Particle Effects
+- [ ] Profiler 
+- [ ] Rendering (at least Forward+ rendering)
+    - [ ] DirectX 12
+        - [ ] GUI
+        - [ ] Post-processing effects
+        - [ ] PBR (Physically based rendering)
+        - [ ] HDR (High dynamic range)
+    - [ ] Vulkan
+        - [ ] GUI
+        - [ ] Post-processing effects
+        - [ ] PBR (Physically based rendering)
+        - [ ] HDR (High dynamic range)
+- [ ] Editor
+- [ ] Scripting
+- [ ] Audio Engine
+- [ ] Physics Engine
+- [ ] Skeletal Animations
+- [ ] AI and pathfinding
+- [ ] Particle Effects
 
 Once these base features will be implemented I will create a separate repository for examples and add a link to it here.
 

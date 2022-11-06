@@ -303,14 +303,20 @@ Here is the list of base features that needs to be implemented in order for you 
 - [X] Serialization/Deserialization for game assets
 - [X] Garbage collector
 - [X] Handling user input events
-- [ ] Profiler 
-- [ ] Rendering (at least Forward+ rendering)
+- [ ] Profiler
+- [ ] Rendering
     - [ ] DirectX 12
+        - [ ] Forward rendering
+        - [ ] Forward+ rendering
+        - [ ] Deferred rendering
         - [ ] GUI
         - [ ] Post-processing effects
         - [ ] PBR (Physically based rendering)
         - [ ] HDR (High dynamic range)
     - [ ] Vulkan
+        - [ ] Forward rendering
+        - [ ] Forward+ rendering
+        - [ ] Deferred rendering
         - [ ] GUI
         - [ ] Post-processing effects
         - [ ] PBR (Physically based rendering)

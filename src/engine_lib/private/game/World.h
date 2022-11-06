@@ -20,23 +20,45 @@ namespace ne {
         World(World&&) = delete;
         World& operator=(World&&) = delete;
 
-        /** Logs destruction. */
+        /** Destroys the world (if @ref destroyWorld was not called before) and logs about destruction. */
         ~World();
 
         /**
-         * Creates a new world with a root node to store world's node tree.
+         * Creates a new world that contains only one node - root node.
          *
          * @param pGame       Game object that owns this world.
          * @param iWorldSize  Size of the world in game units. Must be power of 2
          * (128, 256, 512, 1024, 2048, etc.). World size needs to be specified for
-         * internal purposes such as Directional Light shadow map size, maybe for the size
-         * of correct physics calculations and etc. You don't need to care why we need this
-         * information, you only need to know that if you leave world bounds lighting
-         * or physics may be incorrect (the editor and logs should help you identify this case).
+         * internal purposes such as Directional Light shadow map size.
+         * You don't need to care why we need this information, you only need to know that if
+         * you leave world bounds lighting or physics may be incorrect
+         * (the editor or engine will warn you if something is leaving world bounds, pay attention
+         * to the logs).
          *
-         * @return New world instance.
+         * @return Pointer to the new world instance.
          */
         static std::unique_ptr<World> createWorld(Game* pGame, size_t iWorldSize = 1024);
+
+        /**
+         * Loads and deserializes a node tree to be used as a new world.
+         *
+         * Node tree's root node will be used as world's root node.
+         *
+         * @param pGame          Game object that owns this world.
+         * @param pathToNodeTree Path to the file that contains a node tree to load, the ".toml"
+         * extension will be automatically added if not specified.
+         * @param iWorldSize     Size of the world in game units. Must be power of 2
+         * (128, 256, 512, 1024, 2048, etc.). World size needs to be specified for
+         * internal purposes such as Directional Light shadow map size.
+         * You don't need to care why we need this information, you only need to know that if
+         * you leave world bounds lighting or physics may be incorrect
+         * (the editor or engine will warn you if something is leaving world bounds, pay attention
+         * to the logs).
+         *
+         * @return Error if failed to deserialize the node tree, otherwise pointer to the new world instance.
+         */
+        static std::variant<std::unique_ptr<World>, Error> loadNodeTreeAsWorld(
+            Game* pGame, const std::filesystem::path& pathToNodeTree, size_t iWorldSize = 1024);
 
         /**
          * Returns a pointer to world's root node.
@@ -65,10 +87,11 @@ namespace ne {
          * Creates a new world with the specified root node.
          *
          * @param pGame       Game object that owns this world.
+         * @param pRootNode   World's root node.
          * @param iWorldSize  World size in game units. Must be power of 2
          * (128, 256, 512, 1024, 2048, etc.).
          */
-        World(Game* pGame, size_t iWorldSize);
+        World(Game* pGame, gc<Node> pRootNode, size_t iWorldSize);
 
         /** Do not delete. Owner game object. */
         Game* pGame;

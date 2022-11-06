@@ -32,6 +32,18 @@ namespace ne {
 
     void GameInstance::createWorld(size_t iWorldSize) { pGame->createWorld(iWorldSize); }
 
+    std::optional<Error>
+    GameInstance::loadNodeTreeAsWorld(const std::filesystem::path& pathToNodeTree, size_t iWorldSize) {
+        auto optionalError = pGame->loadNodeTreeAsWorld(pathToNodeTree, iWorldSize);
+        if (optionalError.has_value()) {
+            auto error = optionalError.value();
+            error.addEntry();
+            return error;
+        }
+
+        return {};
+    }
+
     void GameInstance::queueGarbageCollection(std::optional<std::function<void()>> onFinished) {
         pGame->queueGarbageCollection(onFinished);
     }

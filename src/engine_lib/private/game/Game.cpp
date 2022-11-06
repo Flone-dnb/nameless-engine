@@ -63,6 +63,24 @@ namespace ne {
     void Game::onTickFinished() { runGarbageCollection(); }
 
     void Game::runGarbageCollection(bool bForce) {
+        // Make sure this function is being executed on the main thread.
+        const auto currentThreadId = std::this_thread::get_id();
+        if (currentThreadId != mainThreadId) {
+            std::stringstream currentThreadIdString;
+            currentThreadIdString << currentThreadId;
+
+            std::stringstream mainThreadIdString;
+            mainThreadIdString << mainThreadId;
+
+            Error err(fmt::format(
+                "an attempt was made to call a function that should only be called on the main thread "
+                "in a non main thread (main thread ID: {}, current thread ID: {})",
+                mainThreadIdString.str(),
+                currentThreadIdString.str()));
+            err.showError();
+            throw std::runtime_error(err.getError());
+        }
+
         if (!bForce) {
             // Check if we need to run garbage collector.
             const auto iTimeSinceLastGcInSec = std::chrono::duration_cast<std::chrono::seconds>(
@@ -194,50 +212,30 @@ namespace ne {
     void Game::addTaskToThreadPool(const std::function<void()>& task) { threadPool.addTask(task); }
 
     void Game::createWorld(size_t iWorldSize) {
-        // Make sure this function is being executed on the main thread.
-        const auto currentThreadId = std::this_thread::get_id();
-        if (currentThreadId != mainThreadId) {
-            std::stringstream currentThreadIdString;
-            currentThreadIdString << currentThreadId;
-
-            std::stringstream mainThreadIdString;
-            mainThreadIdString << mainThreadId;
-
-            Error err(fmt::format(
-                "an attempt was made to create a world in a non main thread "
-                "(main thread ID: {}, current thread ID: {})",
-                mainThreadIdString.str(),
-                currentThreadIdString.str()));
-            err.showError();
-            throw std::runtime_error(err.getError());
-        }
-
         std::scoped_lock guard(mtxWorld.first);
 
-        if (mtxWorld.second) {
-            // Explicitly destroy the world, so that no node will reference the world.
-            mtxWorld.second = nullptr;
-
-            // At this point (when no node is spawned) nodes will not be able to
-            // access game instance or world so we can safely destroy the world.
-
-            // Force run GC to destroy all nodes.
-            runGarbageCollection(true);
-
-            // Check that all nodes were destroyed.
-            const auto iAliveNodeCount = Node::getAliveNodeCount();
-            if (iAliveNodeCount != 0) {
-                Logger::get().error(
-                    fmt::format(
-                        "the world was destroyed and garbage collection was finished but there are still "
-                        "{} node(s) alive, here are a few reasons why this may happen:\n{}",
-                        iAliveNodeCount,
-                        sGcLeakReasons),
-                    sGameLogCategory);
-            }
-        }
+        destroyAndCleanExistingWorld();
 
         mtxWorld.second = World::createWorld(this, iWorldSize);
+    }
+
+    std::optional<Error>
+    Game::loadNodeTreeAsWorld(const std::filesystem::path& pathToNodeTree, size_t iWorldSize) {
+        std::scoped_lock guard(mtxWorld.first);
+
+        destroyAndCleanExistingWorld();
+
+        // Load new world.
+        auto result = World::loadNodeTreeAsWorld(this, pathToNodeTree, iWorldSize);
+        if (std::holds_alternative<Error>(result)) {
+            auto error = std::get<Error>(result);
+            error.addEntry();
+            return error;
+        }
+
+        mtxWorld.second = std::get<std::unique_ptr<World>>(std::move(result));
+
+        return {};
     }
 
     gc<Node> Game::getWorldRootNode() {
@@ -471,6 +469,33 @@ namespace ne {
             if (iInputToPass != statePair.second) {
                 statePair.second = iInputToPass;
                 pGameInstance->onInputAxisEvent(sAxisName, modifiers, static_cast<float>(iInputToPass));
+            }
+        }
+    }
+
+    void Game::destroyAndCleanExistingWorld() {
+        std::scoped_lock guard(mtxWorld.first);
+
+        if (mtxWorld.second) {
+            // Explicitly destroy the world, so that no node will reference the world.
+            mtxWorld.second = nullptr;
+
+            // At this point (when no node is spawned) nodes will not be able to
+            // access game instance or world so we can safely destroy the world.
+
+            // Force run GC to destroy all nodes.
+            runGarbageCollection(true);
+
+            // Check that all nodes were destroyed.
+            const auto iAliveNodeCount = Node::getAliveNodeCount();
+            if (iAliveNodeCount != 0) {
+                Logger::get().error(
+                    fmt::format(
+                        "the world was destroyed and garbage collection was finished but there are still "
+                        "{} node(s) alive, here are a few reasons why this may happen:\n{}",
+                        iAliveNodeCount,
+                        sGcLeakReasons),
+                    sGameLogCategory);
             }
         }
     }

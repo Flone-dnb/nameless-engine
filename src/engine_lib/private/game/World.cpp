@@ -7,11 +7,11 @@
 
 namespace ne {
 
-    World::World(Game* pGame, size_t iWorldSize) {
+    World::World(Game* pGame, gc<Node> pRootNode, size_t iWorldSize) {
         // Check that world size is power of 2.
         if (!std::has_single_bit(iWorldSize)) {
             Error err(fmt::format(
-                "World size {} should be power of 2 (128, 256, 512, 1024, 2048, etc.).", iWorldSize));
+                "world size {} should be power of 2 (128, 256, 512, 1024, 2048, etc.).", iWorldSize));
             err.showError();
             throw std::runtime_error(err.getError());
         }
@@ -19,7 +19,7 @@ namespace ne {
         // Check if the game instance exists.
         const auto pGameInstance = pGame->getGameInstance();
         if (!pGameInstance) {
-            Error err("An attempt was made to create a new world while GameInstance is not created. "
+            Error err("an attempt was made to create a new world while GameInstance is not created. "
                       "Are you trying to create a new world in GameInstance's constructor? Use "
                       "`GameInstance::onGameStarted` instead.");
             err.showError();
@@ -28,7 +28,7 @@ namespace ne {
 
         this->pGame = pGame;
         this->iWorldSize = iWorldSize;
-        mtxRootNode.second = gc_new<Node>("World Root Node");
+        mtxRootNode.second = pRootNode;
         mtxRootNode.second->pGameInstance = pGameInstance;
         mtxRootNode.second->spawn();
 
@@ -40,7 +40,22 @@ namespace ne {
     World::~World() { destroyWorld(); }
 
     std::unique_ptr<World> World::createWorld(Game* pGame, size_t iWorldSize) {
-        return std::unique_ptr<World>(new World(pGame, iWorldSize));
+        return std::unique_ptr<World>(new World(pGame, gc_new<Node>("Root"), iWorldSize));
+    }
+
+    std::variant<std::unique_ptr<World>, Error>
+    World::loadNodeTreeAsWorld(Game* pGame, const std::filesystem::path& pathToNodeTree, size_t iWorldSize) {
+        // Deserialize node tree.
+        auto result = Node::deserializeNodeTree(pathToNodeTree);
+        if (std::holds_alternative<Error>(result)) {
+            auto error = std::get<Error>(result);
+            error.addEntry();
+            return error;
+        }
+
+        auto pRootNode = std::get<gc<Node>>(result);
+
+        return std::unique_ptr<World>(new World(pGame, pRootNode, iWorldSize));
     }
 
     gc<Node> World::getRootNode() {

@@ -71,6 +71,8 @@ namespace ne {
 
     /**
      * Allows binding names with multiple input keys.
+     *
+     * Stored in GameInstance object.
      */
     class InputManager {
     public:

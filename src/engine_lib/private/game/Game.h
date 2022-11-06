@@ -87,20 +87,46 @@ namespace ne {
         void addTaskToThreadPool(const std::function<void()>& task);
 
         /**
-         * Creates a new world with a root node to store world's node tree.
+         * Creates a new world that contains only one node - root node.
          * Replaces the old world (if existed).
          *
-         * @warning This function should be called from the main thread.
+         * @warning This function should be called from the main thread. If this function is called
+         * outside of the main thread an error will be shown.
          * Use @ref addDeferredTask if you are not sure.
          *
-         * @param iWorldSize    Size of the world in game units. Must be power of 2
+         * @param iWorldSize     Size of the world in game units. Must be power of 2
          * (128, 256, 512, 1024, 2048, etc.). World size needs to be specified for
-         * internal purposes such as Directional Light shadow map size, maybe for the size
-         * of correct physics calculations and etc. You don't need to care why we need this
-         * information, you only need to know that if you leave world bounds lighting
-         * or physics may be incorrect (the editor and logs should help you identify this case).
+         * internal purposes such as Directional Light shadow map size.
+         * You don't need to care why we need this information, you only need to know that if
+         * you leave world bounds lighting or physics may be incorrect
+         * (the editor or engine will warn you if something is leaving world bounds, pay attention
+         * to the logs).
          */
         void createWorld(size_t iWorldSize = 1024);
+
+        /**
+         * Loads and deserializes a node tree to be used as a new world.
+         *
+         * Node tree's root node will be used as world's root node.
+         *
+         * @warning This function should be called from the main thread. If this function is called
+         * outside of the main thread an error will be shown.
+         * Use @ref addDeferredTask if you are not sure.
+         *
+         * @param pathToNodeTree Path to the file that contains a node tree to load, the ".toml"
+         * extension will be automatically added if not specified.
+         * @param iWorldSize     Size of the world in game units. Must be power of 2
+         * (128, 256, 512, 1024, 2048, etc.). World size needs to be specified for
+         * internal purposes such as Directional Light shadow map size.
+         * You don't need to care why we need this information, you only need to know that if
+         * you leave world bounds lighting or physics may be incorrect
+         * (the editor or engine will warn you if something is leaving world bounds, pay attention
+         * to the logs).
+         *
+         * @return Error if failed to deserialize the node tree.
+         */
+        std::optional<Error>
+        loadNodeTreeAsWorld(const std::filesystem::path& pathToNodeTree, size_t iWorldSize = 1024);
 
         /**
          * Returns a pointer to world's root node.
@@ -228,10 +254,12 @@ namespace ne {
          * Runs garbage collection if enough time has passed since the last garbage collection
          * (see @ref setGarbageCollectorRunInterval).
          *
+         * @warning This function should be called from the main thread. If this function is called
+         * outside of the main thread an error will be shown.
+         *
          * @param bForce Force run garbage collection even if the last garbage collection was run
          * not so long ago.
          *
-         * @warning This function should be called on the main thread.
          */
         void runGarbageCollection(bool bForce = false);
 
@@ -256,6 +284,14 @@ namespace ne {
          * @param bIsPressedDown Whether the key down event occurred or key up.
          */
         void triggerAxisEvents(KeyboardKey key, KeyboardModifiers modifiers, bool bIsPressedDown);
+
+        /**
+         * Destroys the current world (if exists) and runs GC to clean everything up.
+         *
+         * @warning This function should be called from the main thread. If this function is called
+         * outside of the main thread an error will be shown.
+         */
+        void destroyAndCleanExistingWorld();
 
         /** Do not delete this pointer. Window-owner of this Game. */
         Window* pWindow;
@@ -296,7 +332,7 @@ namespace ne {
         /** Description of reasons why a leak may occur. */
         inline static const char* sGcLeakReasons =
             "1. you are storing `gc` pointers in your game instance (you should have cleared them in "
-            "`onWindowClose`),\n"
+            "`onWindowClose` or before creating a new world),\n"
             "2. you are not using STL container wrappers for gc "
             "pointers (for example, you need to use `gc_vector<T>` instead of `std::vector<gc<T>>`, "
             "and other `gc_*` containers when storing gc pointers),\n"

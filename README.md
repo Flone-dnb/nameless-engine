@@ -293,6 +293,38 @@ getWindow()->getRenderer()->getShaderManager()->compileShaders(
 ```
 </details>
 
+# Current Development Status
+
+Currently the engine is in a very early development state and right now it's still impossible to make games with this engine.
+
+Here is the list of base features that needs to be implemented in order for you to be able to make games:
+
+- [X] Reflection system
+- [X] Serialization/Deserialization for game assets
+- [X] Garbage collector
+- [X] Handling user input events
+- [] Profiler 
+- [] Rendering (at least Forward+ rendering)
+    - [] DirectX 12
+        - [] GUI
+        - [] Post-processing effects
+        - [] PBR (Physically based rendering)
+        - [] HDR (High dynamic range)
+    - [] Vulkan
+        - [] GUI
+        - [] Post-processing effects
+        - [] PBR (Physically based rendering)
+        - [] HDR (High dynamic range)
+- [] Editor
+- [] Scripting
+- [] Audio Engine
+- [] Physics Engine
+- [] Skeletal Animations
+- [] AI and pathfinding
+- [] Particle Effects
+
+Once these base features will be implemented I will create a separate repository for examples and add a link to it here.
+
 # Setup (Build)
 
 Prerequisites:

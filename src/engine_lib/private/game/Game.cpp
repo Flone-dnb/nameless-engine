@@ -104,16 +104,13 @@ namespace ne {
     Game::~Game() {
         threadPool.stop();
 
+        // Destroy world if needed.
         {
             std::scoped_lock guard(mtxWorld.first);
 
             if (mtxWorld.second) {
                 // Explicitly destroy world before game instance, so that no node
                 // will reference game instance.
-                mtxWorld.second->destroyWorld(); // despawns all nodes and removes pointer to root node
-
-                // At this point (when no node is spawned) nodes will not be able to
-                // access game instance or world so we can safely destroy world.
                 mtxWorld.second = nullptr;
             }
         }
@@ -197,6 +194,7 @@ namespace ne {
     void Game::addTaskToThreadPool(const std::function<void()>& task) { threadPool.addTask(task); }
 
     void Game::createWorld(size_t iWorldSize) {
+        // Make sure this function is being executed on the main thread.
         const auto currentThreadId = std::this_thread::get_id();
         if (currentThreadId != mainThreadId) {
             std::stringstream currentThreadIdString;
@@ -217,12 +215,11 @@ namespace ne {
         std::scoped_lock guard(mtxWorld.first);
 
         if (mtxWorld.second) {
-            // Explicitly destroy world before setting nullptr, so that no node will reference the world.
-            mtxWorld.second->destroyWorld();
+            // Explicitly destroy the world, so that no node will reference the world.
+            mtxWorld.second = nullptr;
 
             // At this point (when no node is spawned) nodes will not be able to
-            // access game instance or world so we can safely destroy world.
-            mtxWorld.second = nullptr;
+            // access game instance or world so we can safely destroy the world.
 
             // Force run GC to destroy all nodes.
             runGarbageCollection(true);

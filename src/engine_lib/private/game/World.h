@@ -4,6 +4,7 @@
 #include <memory>
 #include <chrono>
 #include <string>
+#include <shared_mutex>
 
 // Custom.
 #include "game/nodes/Node.h"
@@ -61,11 +62,41 @@ namespace ne {
             Game* pGame, const std::filesystem::path& pathToNodeTree, size_t iWorldSize = 1024);
 
         /**
+         * Clears pointer to the root node which should cause the world
+         * to recursively be despawned and destroyed.
+         *
+         * @remark This function will be called in destructor but you can also call it explicitly.
+         */
+        void destroyWorld();
+
+        /**
+         * Returns locked read-only array of nodes that should be called every frame.
+         *
+         * @remark Don't forget to call @ref unlockCalledEveryFrameNodes when you finished working
+         * with the resource.
+         *
+         * @return Locked read-only array of nodes that should be called every frame.
+         */
+        gc_vector<Node>* lockCalledEveryFrameNodesReadOnly();
+
+        /**
+         * Unlocks read-only mutex that was locked using @ref lockCalledEveryFrameNodesReadOnly.
+         */
+        void unlockCalledEveryFrameNodes();
+
+        /**
          * Returns a pointer to world's root node.
          *
          * @return World's root node.
          */
         gc<Node> getRootNode();
+
+        /**
+         * Returns the current amount of spawned nodes that are marked as "should be called every frame".
+         *
+         * @return Amount of spawned nodes that should be called every frame.
+         */
+        size_t getCalledEveryFrameNodeCount();
 
         /**
          * Returns time since world creation (in seconds).
@@ -75,12 +106,18 @@ namespace ne {
         float getWorldTimeInSeconds() const;
 
         /**
-         * Clears pointer to the root node which should cause the world
-         * to recursively be despawned and destroyed.
+         * Called from Node to notify the World about a new node being spawned.
          *
-         * @remark This function will be called in destructor but you can also call it explicitly.
+         * @param pNode Node that is being spawned.
          */
-        void destroyWorld();
+        void onNodeSpawned(gc<Node> pNode);
+
+        /**
+         * Called from Node to notify the World about a node being despawned.
+         *
+         * @param pNode Node that is being despawned.
+         */
+        void onNodeDespawned(gc<Node> pNode);
 
     private:
         /**
@@ -94,10 +131,16 @@ namespace ne {
         World(Game* pGame, gc<Node> pRootNode, size_t iWorldSize);
 
         /** Do not delete. Owner game object. */
-        Game* pGame;
+        Game* pGame = nullptr;
+
+        /** Whether the world is destroyed (or being destroyed) and should not be used or not. */
+        std::pair<std::recursive_mutex, bool> mtxIsDestroyed;
 
         /** World's root node. */
         std::pair<std::mutex, gc<Node>> mtxRootNode;
+
+        /** Array of currently spawned nodes that are marked as "should be called every frame". */
+        std::pair<std::shared_mutex, gc_vector<Node>> mtxCalledEveryFrameNodes;
 
         /** World size in game units. */
         size_t iWorldSize = 0;

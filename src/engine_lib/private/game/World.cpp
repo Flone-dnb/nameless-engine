@@ -28,8 +28,13 @@ namespace ne {
 
         this->pGame = pGame;
         this->iWorldSize = iWorldSize;
+        mtxIsDestroyed.second = false;
+        mtxCalledEveryFrameNodes.second = gc_new_vector<Node>();
+
+        // Spawn root node.
         mtxRootNode.second = pRootNode;
         mtxRootNode.second->pGameInstance = pGameInstance;
+        mtxRootNode.second->pWorld = this;
         mtxRootNode.second->spawn();
 
         timeWhenWorldCreated = std::chrono::steady_clock::now();
@@ -63,6 +68,11 @@ namespace ne {
         return mtxRootNode.second;
     }
 
+    size_t World::getCalledEveryFrameNodeCount() {
+        std::shared_lock readOnlyGuard(mtxCalledEveryFrameNodes.first);
+        return mtxCalledEveryFrameNodes.second->size();
+    }
+
     float World::getWorldTimeInSeconds() const {
         const auto durationInMs =
             static_cast<float>(std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -73,19 +83,83 @@ namespace ne {
     }
 
     void World::destroyWorld() {
-        std::scoped_lock guard(mtxRootNode.first);
-
-        if (!mtxRootNode.second)
+        // Mark world as being destroyed.
+        std::scoped_lock isDestroyedGuard(mtxIsDestroyed.first);
+        if (mtxIsDestroyed.second) {
             return;
+        }
+        mtxIsDestroyed.second = true;
 
-        Logger::get().info("world is being destroyed, destroying the root node...", sWorldLogCategory);
+        Logger::get().info("world is being destroyed, despawning the root node...", sWorldLogCategory);
+
+        // Clear array of nodes that should be called every frame.
+        {
+            std::scoped_lock guard(mtxCalledEveryFrameNodes.first);
+            mtxCalledEveryFrameNodes.second->clear();
+        }
 
         // Mark root node as not used explicitly.
-        mtxRootNode.second->despawn(); // explicitly despawn root to despawn all nodes.
-        mtxRootNode.second = nullptr;
+        {
+            std::scoped_lock guard(mtxRootNode.first);
+            mtxRootNode.second->despawn(); // explicitly despawn root to despawn all nodes.
+            mtxRootNode.second = nullptr;
+        }
 
         // Run GC.
         pGame->queueGarbageCollection({});
+    }
+
+    gc_vector<Node>* World::lockCalledEveryFrameNodesReadOnly() {
+        mtxCalledEveryFrameNodes.first.lock_shared();
+        return &mtxCalledEveryFrameNodes.second;
+    }
+
+    void World::unlockCalledEveryFrameNodes() { mtxCalledEveryFrameNodes.first.unlock_shared(); }
+
+    void World::onNodeSpawned(gc<Node> pNode) {
+        // Exit if world is being destroyed.
+        std::scoped_lock isDestroyedGuard(mtxIsDestroyed.first);
+        if (mtxIsDestroyed.second) {
+            return;
+        }
+
+        if (pNode->isCalledEveryFrame()) {
+            // Add node to array of nodes that should be called every frame.
+            std::scoped_lock guard(mtxCalledEveryFrameNodes.first);
+            mtxCalledEveryFrameNodes.second->push_back(pNode);
+        }
+    }
+
+    void World::onNodeDespawned(gc<Node> pNode) {
+        // Exit if world is being destroyed.
+        std::scoped_lock isDestroyedGuard(mtxIsDestroyed.first);
+        if (mtxIsDestroyed.second) {
+            return;
+        }
+
+        if (pNode->isCalledEveryFrame()) {
+            // Remove node from array of nodes that should be called every frame.
+            std::scoped_lock guard(mtxCalledEveryFrameNodes.first);
+            bool bFound = false;
+            for (auto it = mtxCalledEveryFrameNodes.second->begin();
+                 it != mtxCalledEveryFrameNodes.second->end();
+                 ++it) {
+                if (&*(*it) == &*pNode) {
+                    mtxCalledEveryFrameNodes.second->erase(it);
+                    bFound = true;
+                    break;
+                }
+            }
+
+            if (!bFound) {
+                Logger::get().error(
+                    fmt::format(
+                        "node \"{}\" is marked as \"should be called every frame\" but it does not exist "
+                        "in the array of nodes that should be called every frame",
+                        pNode->getName()),
+                    sWorldLogCategory);
+            }
+        }
     }
 
 } // namespace ne

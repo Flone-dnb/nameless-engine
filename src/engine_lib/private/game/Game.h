@@ -144,6 +144,13 @@ namespace ne {
         float getWorldTimeInSeconds();
 
         /**
+         * Returns the current amount of spawned nodes that are marked as "should be called every frame".
+         *
+         * @return Amount of spawned nodes that should be called every frame.
+         */
+        size_t getCalledEveryFrameNodeCount();
+
+        /**
          * Returns window that owns this object.
          *
          * @return Do not delete this pointer. Window that owns this object.

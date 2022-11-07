@@ -59,7 +59,7 @@ namespace ne {
         /**
          * Called before a new frame is rendered.
          *
-         * @param fTimeSincePrevCallInSec   Time in seconds that has passed since the last call
+         * @param fTimeSincePrevCallInSec Time in seconds that has passed since the last call
          * to this function.
          */
         virtual void onBeforeNewFrame(float fTimeSincePrevCallInSec) {}
@@ -254,6 +254,13 @@ namespace ne {
          * world creation (in seconds).
          */
         float getWorldTimeInSeconds() const;
+
+        /**
+         * Returns the current amount of spawned nodes that are marked as "should be called every frame".
+         *
+         * @return Amount of spawned nodes that should be called every frame.
+         */
+        size_t getCalledEveryFrameNodeCount();
 
         /**
          * Returns a reference to the window this game instance is using.

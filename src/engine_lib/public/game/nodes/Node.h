@@ -212,7 +212,31 @@ namespace ne RNAMESPACE() {
          */
         GameInstance* getGameInstance();
 
+        /**
+         * Returns whether the @ref onBeforeNewFrame should be called each frame or not.
+         *
+         * @return Whether the @ref onBeforeNewFrame should be called each frame or not.
+         */
+        bool isCalledEveryFrame();
+
     protected:
+        // Game will propagate functions to all nodes in the world such as onBeforeNewFrame.
+        friend class Game;
+        // World is able to spawn root node.
+        friend class World;
+
+        /**
+         * Called before a new frame is rendered.
+         *
+         * @remark This function is disabled by default, use @ref setIsCalledEveryFrame to enable it.
+         *
+         * @warning It's recommended to call parent's version first (before executing your logic).
+         *
+         * @param fTimeSincePrevCallInSec Time in seconds that has passed since the last call
+         * to this function.
+         */
+        virtual void onBeforeNewFrame(float fTimeSincePrevCallInSec) {}
+
         /**
          * Called when this node was not spawned and it was attached to a parent node that is spawned
          * to execute custom spawn logic.
@@ -252,13 +276,23 @@ namespace ne RNAMESPACE() {
          */
         virtual void onAfterAttachedToNewParent() {}
 
-        /** Mutex that will be used when spawning/despawning node. */
+        /**
+         * Determines if the @ref onBeforeNewFrame should be called each frame or not
+         * (disabled by default).
+         *
+         * @remark Typically you should call this function in your node's constructor to determine
+         * if this node should "tick" each frame or not.
+         *
+         * @warning Calling this function while the node is spawned will cause an error to be shown.
+         *
+         * @param bEnable `true` to enable @ref onBeforeNewFrame, `false` to disable.
+         */
+        void setIsCalledEveryFrame(bool bEnable);
+
+        /** Mutex that will be used when spawning/despawning node (i.e. when changing @ref bIsSpawned). */
         std::recursive_mutex mtxSpawning;
 
     private:
-        // World is able to spawn root node.
-        friend class World;
-
         /** Small helper struct to temporary hold a GC pointer for @ref serializeNodeTree. */
         struct SerializableObjectInformationWithGcPointer : public SerializableObjectInformation {
             /**
@@ -299,13 +333,13 @@ namespace ne RNAMESPACE() {
         void notifyAboutDetachingFromParent();
 
         /**
-         * Checks if this node has a valid game instance pointer and returns it if it's
-         * valid, otherwise asks this node's parent and goes up the node hierarchy
-         * up to the root node if needed.
+         * Checks if this node has a valid game instance and world pointers and if not
+         * asks this node's parent and goes up the node hierarchy
+         * up to the root node if needed to find valid pointers to game instance and world.
          *
-         * @return Valid game instance pointer.
+         * @return Valid game instance and world pointers.
          */
-        GameInstance* findValidGameInstance();
+        std::pair<GameInstance*, World*> findValidGameInstanceAndWorld();
 
         /**
          * Collects and returns information for serialization for self and all child nodes.
@@ -363,17 +397,27 @@ namespace ne RNAMESPACE() {
         std::pair<std::recursive_mutex, gc<Node>> mtxParentNode;
 
         /**
+         * Do not delete this pointer. Game instance object that is used for this world.
+         *
+         * @warning Will be initialized after the node is spawned and reset when despawned.
+         */
+        GameInstance* pGameInstance = nullptr;
+
+        /**
+         * Do not delete this pointer. World object that owns this node.
+         *
+         * @warning Will be initialized after the node is spawned and reset when despawned.
+         */
+        World* pWorld = nullptr;
+
+        /**
          * Whether this node is spawned in the world or not.
          * Should be used with @ref mtxSpawning when spawning/despawning.
          */
         bool bIsSpawned = false;
 
-        /**
-         * Do not delete. Game instance object that is used for this world.
-         *
-         * @warning Will be initialized after the node is spawned.
-         */
-        GameInstance* pGameInstance = nullptr;
+        /** Determines if the @ref onBeforeNewFrame should be called each frame or not. */
+        bool bIsCalledEveryFrame = false;
 
         /** Name of the attribute we use to serialize information about parent node. */
         static inline const auto sParentNodeIdAttributeName = "parent_node_id";

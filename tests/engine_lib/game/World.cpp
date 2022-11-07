@@ -78,6 +78,74 @@ TEST_CASE("create and destroy world") {
     pMainWindow->processEvents<TestGameInstance>();
 }
 
+TEST_CASE("onBeforeNewFrame is called only on marked nodes") {
+    using namespace ne;
+
+    class MyNode : public Node {
+    public:
+        MyNode(bool bEnableTick) { setIsCalledEveryFrame(bEnableTick); }
+
+        bool bTickCalled = false;
+
+    protected:
+        virtual void onBeforeNewFrame(float fTimeSincePrevCallInSec) override {
+            Node::onBeforeNewFrame(fTimeSincePrevCallInSec);
+
+            bTickCalled = true;
+        }
+    };
+
+    class TestGameInstance : public GameInstance {
+    public:
+        TestGameInstance(Window* pGameWindow, InputManager* pInputManager)
+            : GameInstance(pGameWindow, pInputManager) {}
+        virtual void onGameStarted() override {
+            createWorld();
+            REQUIRE(getWorldRootNode());
+
+            pNotCalledtNode = gc_new<MyNode>(false);
+            getWorldRootNode()->addChildNode(pNotCalledtNode);
+            REQUIRE(getCalledEveryFrameNodeCount() == 0);
+
+            pCalledNode = gc_new<MyNode>(true);
+            getWorldRootNode()->addChildNode(pCalledNode);
+            REQUIRE(getCalledEveryFrameNodeCount() == 1);
+        }
+        virtual ~TestGameInstance() override {}
+
+        virtual void onBeforeNewFrame(float fTimeSincePrevCallInSec) override {
+            iTicks += 1;
+
+            if (iTicks == 2) {
+                REQUIRE(pCalledNode->bTickCalled);
+                REQUIRE(!pNotCalledtNode->bTickCalled);
+                getWindow()->close();
+            }
+        }
+
+        virtual void onWindowClose() override {
+            pCalledNode = nullptr;
+            pNotCalledtNode = nullptr;
+        }
+
+    private:
+        size_t iTicks = 0;
+        gc<MyNode> pCalledNode;
+        gc<MyNode> pNotCalledtNode;
+    };
+
+    auto result = Window::getBuilder().withVisibility(false).build();
+    if (std::holds_alternative<Error>(result)) {
+        Error error = std::get<Error>(std::move(result));
+        error.addEntry();
+        INFO(error.getError());
+        REQUIRE(false);
+    }
+
+    const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
+    pMainWindow->processEvents<TestGameInstance>();
+}
+
 TEST_CASE("create world and switch to another world") {
     using namespace ne;
 

@@ -56,4 +56,6 @@ namespace ne {
 
     float GameInstance::getWorldTimeInSeconds() const { return pGame->getWorldTimeInSeconds(); }
 
+    size_t GameInstance::getCalledEveryFrameNodeCount() { return pGame->getCalledEveryFrameNodeCount(); }
+
 } // namespace ne

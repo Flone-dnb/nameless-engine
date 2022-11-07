@@ -7,6 +7,7 @@
 #include "io/Logger.h"
 #include "misc/Globals.h"
 #include "game/GameInstance.h"
+#include "game/World.h"
 
 /** Total amount of alive nodes. */
 static std::atomic<size_t> iTotalAliveNodeCount{0};
@@ -202,24 +203,25 @@ namespace ne {
         return bIsSpawned;
     }
 
-    GameInstance* Node::findValidGameInstance() {
+    std::pair<GameInstance*, World*> Node::findValidGameInstanceAndWorld() {
         std::scoped_lock guard(mtxSpawning);
 
-        if (pGameInstance)
-            return pGameInstance;
+        if (pGameInstance && pWorld)
+            return {pGameInstance, pWorld};
 
-        // Ask parents for the valid game instance pointer.
+        // Ask parent node for the valid game instance and world pointers.
         std::scoped_lock parentGuard(mtxParentNode.first);
         if (!mtxParentNode.second) [[unlikely]] {
             Error err(fmt::format(
-                "node \"{}\" can't get a pointer to the valid game instance because "
+                "node \"{}\" can't get pointers to valid game instance and world because "
                 "there is no parent node",
                 getName()));
             err.showError();
             throw std::runtime_error(err.getError());
         }
 
-        return mtxParentNode.second->findValidGameInstance();
+        auto pointers = mtxParentNode.second->findValidGameInstanceAndWorld();
+        return pointers;
     }
 
     void Node::spawn() {
@@ -234,9 +236,10 @@ namespace ne {
             return;
         }
 
-        if (!pGameInstance) {
-            pGameInstance = findValidGameInstance();
-        }
+        // Initialize pointers to owner objects.
+        const auto pointers = findValidGameInstanceAndWorld();
+        pGameInstance = pointers.first;
+        pWorld = pointers.second;
 
         // Spawn self first and only then child nodes.
         // This spawn order is required for some nodes to work correctly.
@@ -244,6 +247,9 @@ namespace ne {
         // (i.e. when node is spawned, node's parent is not spawned but parent's parent node is spawned).
         bIsSpawned = true;
         onSpawn();
+
+        // Notify world.
+        pWorld->onNodeSpawned(gc<Node>(this));
 
         // Spawn children.
         {
@@ -279,10 +285,14 @@ namespace ne {
             }
         }
 
+        // Notify world.
+        pWorld->onNodeDespawned(gc<Node>(this));
+
         // Despawn self.
         onDespawn();
         bIsSpawned = false;
-        pGameInstance = nullptr; // don't allow accessing game instance or world at this point
+        pGameInstance = nullptr; // don't allow accessing game instance at this point
+        pWorld = nullptr;        // don't allow accessing world at this point
     }
 
     gc<Node> Node::getParentNode() {
@@ -659,6 +669,19 @@ namespace ne {
         unlockChildren();
 
         return bPathEqual;
+    }
+
+    bool Node::isCalledEveryFrame() { return bIsCalledEveryFrame; }
+
+    void Node::setIsCalledEveryFrame(bool bEnable) {
+        std::scoped_lock guard(mtxSpawning);
+        if (bIsSpawned) {
+            Error error("this function should not be called while the node is spawned");
+            error.showError();
+            throw std::runtime_error(error.getError());
+        }
+
+        bIsCalledEveryFrame = bEnable;
     }
 
 } // namespace ne

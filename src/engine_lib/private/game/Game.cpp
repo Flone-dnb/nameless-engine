@@ -189,7 +189,22 @@ namespace ne {
 
         pRenderer->getShaderManager()->performSelfValidation();
 
+        // Call on game instance.
         pGameInstance->onBeforeNewFrame(fTimeSincePrevCallInSec);
+
+        {
+            // Call on all tickable nodes.
+            std::scoped_lock guard(mtxWorld.first);
+            if (mtxWorld.second) {
+                const gc_vector<Node>* pNodes = mtxWorld.second->lockCalledEveryFrameNodesReadOnly();
+
+                for (auto it = (*pNodes)->begin(); it != (*pNodes)->end(); ++it) {
+                    (*it)->onBeforeNewFrame(fTimeSincePrevCallInSec);
+                }
+
+                mtxWorld.second->unlockCalledEveryFrameNodes();
+            }
+        }
     }
 
     void Game::executeDeferredTasks() {
@@ -254,6 +269,15 @@ namespace ne {
             return 0.0f;
 
         return mtxWorld.second->getWorldTimeInSeconds();
+    }
+
+    size_t Game::getCalledEveryFrameNodeCount() {
+        std::scoped_lock guard(mtxWorld.first);
+
+        if (!mtxWorld.second)
+            return 0;
+
+        return mtxWorld.second->getCalledEveryFrameNodeCount();
     }
 
     void Game::onKeyboardInput(KeyboardKey key, KeyboardModifiers modifiers, bool bIsPressedDown) {

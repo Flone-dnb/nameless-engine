@@ -303,31 +303,128 @@ Here is the list of base features that needs to be implemented in order for you 
 - [X] Serialization/Deserialization for game assets
 - [X] Garbage collector
 - [X] Handling user input events
+- [X] Config management (progress, settings, etc.)
+- [X] Node system (Godot-like ECS alternative)
 - [ ] Profiler
 - [ ] Rendering
     - [ ] DirectX 12
         - [ ] Forward rendering
+            - [ ] Transparent materials
+            - [ ] MSAA (Multisample anti-aliasing)
+            - [ ] Frustum culling
+            - [ ] Instancing
+            - [ ] Light sources
+                - [ ] Point light
+                - [ ] Spot light
+                - [ ] Directional light
+                - [ ] Rectangular light
+            - [ ] Shadow mapping (for all light sources)
+            - [ ] Cascading shadow maps
+            - [ ] SSAO (Screen space ambient occlusion)
+            - [ ] Post-processing effects
+            - [ ] PBR (Physically based rendering)
+            - [ ] HDR (High dynamic range)
         - [ ] Forward+ rendering
+            - [ ] Transparent materials
+            - [ ] AA (Anti-aliasing)
+            - [ ] Frustum culling
+            - [ ] Instancing
+            - [ ] Light sources
+                - [ ] Point light
+                - [ ] Spot light
+                - [ ] Directional light
+                - [ ] Rectangular light
+            - [ ] Shadow mapping (for all light sources)
+            - [ ] Cascading shadow maps
+            - [ ] SSAO (Screen space ambient occlusion)
+            - [ ] Post-processing effects
+            - [ ] PBR (Physically based rendering)
+            - [ ] HDR (High dynamic range)
         - [ ] Deferred rendering
+            - [ ] Transparent materials
+            - [ ] AA (Anti-aliasing)
+            - [ ] Frustum culling
+            - [ ] Instancing
+            - [ ] Light sources
+                - [ ] Point light
+                - [ ] Spot light
+                - [ ] Directional light
+                - [ ] Rectangular light
+            - [ ] Shadow mapping (for all light sources)
+            - [ ] Cascading shadow maps
+            - [ ] SSAO (Screen space ambient occlusion)
+            - [ ] Post-processing effects
+            - [ ] PBR (Physically based rendering)
+            - [ ] HDR (High dynamic range)
         - [ ] GUI
-        - [ ] Post-processing effects
-        - [ ] PBR (Physically based rendering)
-        - [ ] HDR (High dynamic range)
     - [ ] Vulkan
         - [ ] Forward rendering
+            - [ ] Transparent materials
+            - [ ] MSAA (Multisample anti-aliasing)
+            - [ ] Frustum culling
+            - [ ] Instancing
+            - [ ] Light sources
+                - [ ] Point light
+                - [ ] Spot light
+                - [ ] Directional light
+                - [ ] Rectangular light
+            - [ ] Shadow mapping (for all light sources)
+            - [ ] Cascading shadow maps
+            - [ ] SSAO (Screen space ambient occlusion)
+            - [ ] Post-processing effects
+            - [ ] PBR (Physically based rendering)
+            - [ ] HDR (High dynamic range)
         - [ ] Forward+ rendering
+            - [ ] Transparent materials
+            - [ ] AA (Anti-aliasing)
+            - [ ] Frustum culling
+            - [ ] Instancing
+            - [ ] Light sources
+                - [ ] Point light
+                - [ ] Spot light
+                - [ ] Directional light
+                - [ ] Rectangular light
+            - [ ] Shadow mapping (for all light sources)
+            - [ ] Cascading shadow maps
+            - [ ] SSAO (Screen space ambient occlusion)
+            - [ ] Post-processing effects
+            - [ ] PBR (Physically based rendering)
+            - [ ] HDR (High dynamic range)
         - [ ] Deferred rendering
+            - [ ] Transparent materials
+            - [ ] AA (Anti-aliasing)
+            - [ ] Frustum culling
+            - [ ] Instancing
+            - [ ] Light sources
+                - [ ] Point light
+                - [ ] Spot light
+                - [ ] Directional light
+                - [ ] Rectangular light
+            - [ ] Shadow mapping (for all light sources)
+            - [ ] Cascading shadow maps
+            - [ ] SSAO (Screen space ambient occlusion)
+            - [ ] Post-processing effects
+            - [ ] PBR (Physically based rendering)
+            - [ ] HDR (High dynamic range)
         - [ ] GUI
-        - [ ] Post-processing effects
-        - [ ] PBR (Physically based rendering)
-        - [ ] HDR (High dynamic range)
 - [ ] Editor
+    - [ ] Content management
+    - [ ] Script debugging
+    - [ ] Script syntax highlighting, scripting helpers
 - [ ] Scripting
-- [ ] Audio Engine
-- [ ] Physics Engine
-- [ ] Skeletal Animations
+- [ ] Audio engine
+    - [ ] 2D audio
+    - [ ] 3D audio
+    - [ ] Audio streaming
+    - [ ] Sound effects
+- [ ] Physics engine
+    - [ ] Rigid body
+    - [ ] Ragdoll
+    - [ ] Soft body
+    - [ ] Joints
+- [ ] Skeletal animations
 - [ ] AI and pathfinding
-- [ ] Particle Effects
+- [ ] Particle effects
 
 Once these base features will be implemented I will create a separate repository for examples and add a link to it here.
 

@@ -70,19 +70,11 @@ namespace ne {
         void destroyWorld();
 
         /**
-         * Returns locked read-only array of nodes that should be called every frame.
+         * Returns pointer to array of nodes that should be called every frame (use with mutex).
          *
-         * @remark Don't forget to call @ref unlockCalledEveryFrameNodes when you finished working
-         * with the resource.
-         *
-         * @return Locked read-only array of nodes that should be called every frame.
+         * @return Pointer to array of nodes (use with mutex).
          */
-        gc_vector<Node>* lockCalledEveryFrameNodesReadOnly();
-
-        /**
-         * Unlocks read-only mutex that was locked using @ref lockCalledEveryFrameNodesReadOnly.
-         */
-        void unlockCalledEveryFrameNodes();
+        std::pair<std::shared_mutex, gc_vector<Node>>* getCalledEveryFrameNodes();
 
         /**
          * Returns a pointer to world's root node.

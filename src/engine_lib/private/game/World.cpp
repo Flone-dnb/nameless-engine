@@ -109,12 +109,9 @@ namespace ne {
         pGame->queueGarbageCollection({});
     }
 
-    gc_vector<Node>* World::lockCalledEveryFrameNodesReadOnly() {
-        mtxCalledEveryFrameNodes.first.lock_shared();
-        return &mtxCalledEveryFrameNodes.second;
+    std::pair<std::shared_mutex, gc_vector<Node>>* World::getCalledEveryFrameNodes() {
+        return &mtxCalledEveryFrameNodes;
     }
-
-    void World::unlockCalledEveryFrameNodes() { mtxCalledEveryFrameNodes.first.unlock_shared(); }
 
     void World::onNodeSpawned(gc<Node> pNode) {
         // Exit if world is being destroyed.

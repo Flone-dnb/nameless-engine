@@ -196,13 +196,15 @@ namespace ne {
             // Call on all tickable nodes.
             std::scoped_lock guard(mtxWorld.first);
             if (mtxWorld.second) {
-                const gc_vector<Node>* pNodes = mtxWorld.second->lockCalledEveryFrameNodesReadOnly();
+                auto pMtxNodes = mtxWorld.second->getCalledEveryFrameNodes();
+
+                std::shared_lock nodesGuard(pMtxNodes->first); // read-only lock
+
+                const gc_vector<Node>* pNodes = &pMtxNodes->second;
 
                 for (auto it = (*pNodes)->begin(); it != (*pNodes)->end(); ++it) {
                     (*it)->onBeforeNewFrame(fTimeSincePrevCallInSec);
                 }
-
-                mtxWorld.second->unlockCalledEveryFrameNodes();
             }
         }
     }

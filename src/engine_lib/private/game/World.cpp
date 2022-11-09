@@ -29,7 +29,6 @@ namespace ne {
         this->pGame = pGame;
         this->iWorldSize = iWorldSize;
         mtxIsDestroyed.second = false;
-        mtxCalledEveryFrameNodes.second = gc_new_vector<Node>();
 
         // Spawn root node.
         mtxRootNode.second = pRootNode;
@@ -69,8 +68,10 @@ namespace ne {
     }
 
     size_t World::getCalledEveryFrameNodeCount() {
-        std::shared_lock readOnlyGuard(mtxCalledEveryFrameNodes.first);
-        return mtxCalledEveryFrameNodes.second->size();
+        std::shared_lock readOnlyGroup1Guard(calledEveryFrameNodes.mtxFirstTickGroup.first);
+        std::shared_lock readOnlyGroup2Guard(calledEveryFrameNodes.mtxSecondTickGroup.first);
+        return calledEveryFrameNodes.mtxFirstTickGroup.second->size() +
+               calledEveryFrameNodes.mtxSecondTickGroup.second->size();
     }
 
     float World::getWorldTimeInSeconds() const {
@@ -94,8 +95,11 @@ namespace ne {
 
         // Clear array of nodes that should be called every frame.
         {
-            std::scoped_lock guard(mtxCalledEveryFrameNodes.first);
-            mtxCalledEveryFrameNodes.second->clear();
+            std::scoped_lock guard(
+                calledEveryFrameNodes.mtxFirstTickGroup.first,
+                calledEveryFrameNodes.mtxSecondTickGroup.first);
+            calledEveryFrameNodes.mtxFirstTickGroup.second->clear();
+            calledEveryFrameNodes.mtxSecondTickGroup.second->clear();
         }
 
         // Mark root node as not used explicitly.
@@ -109,9 +113,7 @@ namespace ne {
         pGame->queueGarbageCollection({});
     }
 
-    std::pair<std::shared_mutex, gc_vector<Node>>* World::getCalledEveryFrameNodes() {
-        return &mtxCalledEveryFrameNodes;
-    }
+    CalledEveryFrameNodes* World::getCalledEveryFrameNodes() { return &calledEveryFrameNodes; }
 
     void World::onNodeSpawned(gc<Node> pNode) {
         // Exit if world is being destroyed.
@@ -122,8 +124,13 @@ namespace ne {
 
         if (pNode->isCalledEveryFrame()) {
             // Add node to array of nodes that should be called every frame.
-            std::scoped_lock guard(mtxCalledEveryFrameNodes.first);
-            mtxCalledEveryFrameNodes.second->push_back(pNode);
+            if (pNode->getTickGroup() == TickGroup::FIRST) {
+                std::scoped_lock guard(calledEveryFrameNodes.mtxFirstTickGroup.first);
+                calledEveryFrameNodes.mtxFirstTickGroup.second->push_back(pNode);
+            } else {
+                std::scoped_lock guard(calledEveryFrameNodes.mtxSecondTickGroup.first);
+                calledEveryFrameNodes.mtxSecondTickGroup.second->push_back(pNode);
+            }
         }
     }
 
@@ -136,13 +143,19 @@ namespace ne {
 
         if (pNode->isCalledEveryFrame()) {
             // Remove node from array of nodes that should be called every frame.
-            std::scoped_lock guard(mtxCalledEveryFrameNodes.first);
             bool bFound = false;
-            for (auto it = mtxCalledEveryFrameNodes.second->begin();
-                 it != mtxCalledEveryFrameNodes.second->end();
-                 ++it) {
+
+            std::pair<std::shared_mutex, gc_vector<Node>>* pPairToUse = nullptr;
+            if (pNode->getTickGroup() == TickGroup::FIRST) {
+                pPairToUse = &calledEveryFrameNodes.mtxFirstTickGroup;
+            } else {
+                pPairToUse = &calledEveryFrameNodes.mtxSecondTickGroup;
+            }
+
+            std::scoped_lock guard(pPairToUse->first);
+            for (auto it = pPairToUse->second->begin(); it != pPairToUse->second->end(); ++it) {
                 if (&*(*it) == &*pNode) {
-                    mtxCalledEveryFrameNodes.second->erase(it);
+                    pPairToUse->second->erase(it);
                     bFound = true;
                     break;
                 }

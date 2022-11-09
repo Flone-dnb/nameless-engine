@@ -13,6 +13,21 @@
 namespace ne {
     class Game;
 
+    /** Represents arrays of nodes that are marked as "should be called every frame". */
+    struct CalledEveryFrameNodes {
+        CalledEveryFrameNodes() {
+            mtxFirstTickGroup.second = gc_new_vector<Node>();
+            mtxSecondTickGroup.second = gc_new_vector<Node>();
+        }
+        CalledEveryFrameNodes(const CalledEveryFrameNodes&) = delete;
+        CalledEveryFrameNodes& operator=(const CalledEveryFrameNodes&) = delete;
+
+        /** Nodes of the first tick group. */
+        std::pair<std::shared_mutex, gc_vector<Node>> mtxFirstTickGroup;
+        /** Nodes of the second tick group. */
+        std::pair<std::shared_mutex, gc_vector<Node>> mtxSecondTickGroup;
+    };
+
     /** Owns world's root node. */
     class World {
     public:
@@ -74,7 +89,7 @@ namespace ne {
          *
          * @return Pointer to array of nodes (use with mutex).
          */
-        std::pair<std::shared_mutex, gc_vector<Node>>* getCalledEveryFrameNodes();
+        CalledEveryFrameNodes* getCalledEveryFrameNodes();
 
         /**
          * Returns a pointer to world's root node.
@@ -132,7 +147,7 @@ namespace ne {
         std::pair<std::mutex, gc<Node>> mtxRootNode;
 
         /** Array of currently spawned nodes that are marked as "should be called every frame". */
-        std::pair<std::shared_mutex, gc_vector<Node>> mtxCalledEveryFrameNodes;
+        CalledEveryFrameNodes calledEveryFrameNodes;
 
         /** World size in game units. */
         size_t iWorldSize = 0;

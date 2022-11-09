@@ -196,14 +196,24 @@ namespace ne {
             // Call on all tickable nodes.
             std::scoped_lock guard(mtxWorld.first);
             if (mtxWorld.second) {
-                auto pMtxNodes = mtxWorld.second->getCalledEveryFrameNodes();
+                const auto pCalledEveryFrameNodes = mtxWorld.second->getCalledEveryFrameNodes();
 
-                std::shared_lock nodesGuard(pMtxNodes->first); // read-only lock
+                {
+                    // Read-only lock for the first tick group.
+                    std::shared_lock nodesGuard(pCalledEveryFrameNodes->mtxFirstTickGroup.first);
+                    const gc_vector<Node>* pNodes = &pCalledEveryFrameNodes->mtxFirstTickGroup.second;
+                    for (auto it = (*pNodes)->begin(); it != (*pNodes)->end(); ++it) {
+                        (*it)->onBeforeNewFrame(fTimeSincePrevCallInSec);
+                    }
+                }
 
-                const gc_vector<Node>* pNodes = &pMtxNodes->second;
-
-                for (auto it = (*pNodes)->begin(); it != (*pNodes)->end(); ++it) {
-                    (*it)->onBeforeNewFrame(fTimeSincePrevCallInSec);
+                {
+                    // Read-only lock for the second tick group.
+                    std::shared_lock nodesGuard(pCalledEveryFrameNodes->mtxSecondTickGroup.first);
+                    const gc_vector<Node>* pNodes = &pCalledEveryFrameNodes->mtxSecondTickGroup.second;
+                    for (auto it = (*pNodes)->begin(); it != (*pNodes)->end(); ++it) {
+                        (*it)->onBeforeNewFrame(fTimeSincePrevCallInSec);
+                    }
                 }
             }
         }

@@ -516,3 +516,151 @@ TEST_CASE("capture a `gc` pointer in `std::function`") {
 
     REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
 }
+
+TEST_CASE("onBeforeNewFrame is called only on marked nodes") {
+    using namespace ne;
+
+    class MyNode : public Node {
+    public:
+        MyNode(bool bEnableTick) { setIsCalledEveryFrame(bEnableTick); }
+
+        bool bTickCalled = false;
+
+    protected:
+        virtual void onBeforeNewFrame(float fTimeSincePrevCallInSec) override {
+            Node::onBeforeNewFrame(fTimeSincePrevCallInSec);
+
+            bTickCalled = true;
+        }
+    };
+
+    class TestGameInstance : public GameInstance {
+    public:
+        TestGameInstance(Window* pGameWindow, InputManager* pInputManager)
+            : GameInstance(pGameWindow, pInputManager) {}
+        virtual void onGameStarted() override {
+            createWorld();
+            REQUIRE(getWorldRootNode());
+
+            pNotCalledtNode = gc_new<MyNode>(false);
+            getWorldRootNode()->addChildNode(pNotCalledtNode);
+            REQUIRE(getCalledEveryFrameNodeCount() == 0);
+
+            pCalledNode = gc_new<MyNode>(true);
+            getWorldRootNode()->addChildNode(pCalledNode);
+            REQUIRE(getCalledEveryFrameNodeCount() == 1);
+        }
+        virtual ~TestGameInstance() override {}
+
+        virtual void onBeforeNewFrame(float fTimeSincePrevCallInSec) override {
+            iTicks += 1;
+
+            if (iTicks == 2) {
+                REQUIRE(pCalledNode->bTickCalled);
+                REQUIRE(!pNotCalledtNode->bTickCalled);
+                getWindow()->close();
+            }
+        }
+
+        virtual void onWindowClose() override {
+            pCalledNode = nullptr;
+            pNotCalledtNode = nullptr;
+        }
+
+    private:
+        size_t iTicks = 0;
+        gc<MyNode> pCalledNode;
+        gc<MyNode> pNotCalledtNode;
+    };
+
+    auto result = Window::getBuilder().withVisibility(false).build();
+    if (std::holds_alternative<Error>(result)) {
+        Error error = std::get<Error>(std::move(result));
+        error.addEntry();
+        INFO(error.getError());
+        REQUIRE(false);
+    }
+
+    const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
+    pMainWindow->processEvents<TestGameInstance>();
+}
+
+TEST_CASE("tick groups order is correct") {
+    using namespace ne;
+
+    class MyFirstNode;
+    class MySecondNode;
+
+    class TestGameInstance : public GameInstance {
+    public:
+        TestGameInstance(Window* pGameWindow, InputManager* pInputManager)
+            : GameInstance(pGameWindow, pInputManager) {}
+        virtual void onGameStarted() override {
+            createWorld();
+            REQUIRE(getWorldRootNode());
+
+            getWorldRootNode()->addChildNode(gc_new<MyFirstNode>());
+            getWorldRootNode()->addChildNode(gc_new<MySecondNode>());
+        }
+        virtual ~TestGameInstance() override {}
+
+        void onFirstNodeTick() {
+            bFirstNodeCalled = true;
+            REQUIRE(!bSecondNodeCalled);
+        }
+
+        void onSecondNodeTick() {
+            bSecondNodeCalled = true;
+            REQUIRE(bFirstNodeCalled);
+
+            getWindow()->close();
+        }
+
+        virtual void onWindowClose() override {
+            REQUIRE(bFirstNodeCalled);
+            REQUIRE(bSecondNodeCalled);
+        }
+
+    private:
+        bool bFirstNodeCalled = false;
+        bool bSecondNodeCalled = false;
+    };
+
+    class MyFirstNode : public Node {
+    public:
+        MyFirstNode() { setIsCalledEveryFrame(true); }
+
+    protected:
+        virtual void onBeforeNewFrame(float fTimeSincePrevCallInSec) override {
+            Node::onBeforeNewFrame(fTimeSincePrevCallInSec);
+
+            dynamic_cast<TestGameInstance*>(getGameInstance())->onFirstNodeTick();
+        }
+    };
+
+    class MySecondNode : public Node {
+    public:
+        MySecondNode() {
+            setIsCalledEveryFrame(true);
+            setTickGroup(TickGroup::SECOND);
+        }
+
+    protected:
+        virtual void onBeforeNewFrame(float fTimeSincePrevCallInSec) override {
+            Node::onBeforeNewFrame(fTimeSincePrevCallInSec);
+
+            dynamic_cast<TestGameInstance*>(getGameInstance())->onSecondNodeTick();
+        }
+    };
+
+    auto result = Window::getBuilder().withVisibility(false).build();
+    if (std::holds_alternative<Error>(result)) {
+        Error error = std::get<Error>(std::move(result));
+        error.addEntry();
+        INFO(error.getError());
+        REQUIRE(false);
+    }
+
+    const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
+    pMainWindow->processEvents<TestGameInstance>();
+}

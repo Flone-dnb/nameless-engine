@@ -671,7 +671,7 @@ namespace ne {
         return bPathEqual;
     }
 
-    bool Node::isCalledEveryFrame() { return bIsCalledEveryFrame; }
+    bool Node::isCalledEveryFrame() const { return bIsCalledEveryFrame; }
 
     void Node::setIsCalledEveryFrame(bool bEnable) {
         std::scoped_lock guard(mtxSpawning);
@@ -683,5 +683,18 @@ namespace ne {
 
         bIsCalledEveryFrame = bEnable;
     }
+
+    void Node::setTickGroup(TickGroup tickGroup) {
+        std::scoped_lock guard(mtxSpawning);
+        if (bIsSpawned) {
+            Error error("this function should not be called while the node is spawned");
+            error.showError();
+            throw std::runtime_error(error.getError());
+        }
+
+        this->tickGroup = tickGroup;
+    }
+
+    TickGroup Node::getTickGroup() const { return tickGroup; }
 
 } // namespace ne

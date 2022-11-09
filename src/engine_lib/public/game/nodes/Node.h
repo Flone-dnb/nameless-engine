@@ -16,6 +16,15 @@ namespace ne RNAMESPACE() {
     class GameInstance;
 
     /**
+     * Describes the order of ticking. Every object of the first tick group will tick first
+     * then objects of the second tick group will tick and etc. This allows defining a special
+     * order of ticking if some tick functions depend on another or should be executed first/last.
+     *
+     * Here, "ticking" means calling a function that should be called every frame.
+     */
+    enum class TickGroup { FIRST, SECOND };
+
+    /**
      * Base class for nodes, allows being spawned in the world, attaching child nodes
      * or being attached to some parent node.
      *
@@ -111,38 +120,34 @@ namespace ne RNAMESPACE() {
         std::optional<Error> serializeNodeTree(const std::filesystem::path& pathToFile, bool bEnableBackup);
 
         /**
+         * Sets the tick group in which the node will reside.
+         *
+         * Tick groups determine the order in which the @ref onBeforeNewFrame functions will be called
+         * on nodes. Each frame, @ref onBeforeNewFrame will be called first on the nodes that use
+         * the first tick group, then on the nodes that use the second group and etc. This allows
+         * defining a special order in which @ref onBeforeNewFrame functions will be called on nodes,
+         * thus if you want some nodes to execute their @ref onBeforeNewFrame function only after
+         * some other nodes do so, you can define this with tick groups.
+         *
+         * @param tickGroup Tick group the node will reside in.
+         *
+         * @remark Tick group is ignored if @ref setIsCalledEveryFrame was not enabled.
+         *
+         * @remark Typically you should call this function in your node's constructor to determine
+         * in which tick group the node will reside.
+         *
+         * @remark All nodes use the first tick group by default.
+         *
+         * @warning Calling this function while the node is spawned will cause an error to be shown.
+         */
+        void setTickGroup(TickGroup tickGroup);
+
+        /**
          * Returns node's name.
          *
          * @return Node name.
          */
         std::string getName() const;
-
-        /**
-         * Returns whether this node is spawned in the world or not.
-         *
-         * @return Whether this node is spawned in the world or not.
-         */
-        bool isSpawned();
-
-        /**
-         * Checks if the specified node is a child of this node (somewhere in the child hierarchy,
-         * not only as a direct child node).
-         *
-         * @param pNode Node to check.
-         *
-         * @return `true` if the specified node was found as a child of this node, `false` otherwise.
-         */
-        bool isParentOf(Node* pNode);
-
-        /**
-         * Checks if the specified node is a parent of this node (somewhere in the parent hierarchy,
-         * not only as a direct parent node).
-         *
-         * @param pNode Node to check.
-         *
-         * @return `true` if the specified node was found as a parent of this node, `false` otherwise.
-         */
-        bool isChildOf(Node* pNode);
 
         /**
          * Returns world's root node.
@@ -213,11 +218,45 @@ namespace ne RNAMESPACE() {
         GameInstance* getGameInstance();
 
         /**
+         * Returns the tick group this node resides in.
+         *
+         * @return Tick group the node is using.
+         */
+        TickGroup getTickGroup() const;
+
+        /**
          * Returns whether the @ref onBeforeNewFrame should be called each frame or not.
          *
          * @return Whether the @ref onBeforeNewFrame should be called each frame or not.
          */
-        bool isCalledEveryFrame();
+        bool isCalledEveryFrame() const;
+
+        /**
+         * Returns whether this node is spawned in the world or not.
+         *
+         * @return Whether this node is spawned in the world or not.
+         */
+        bool isSpawned();
+
+        /**
+         * Checks if the specified node is a child of this node (somewhere in the child hierarchy,
+         * not only as a direct child node).
+         *
+         * @param pNode Node to check.
+         *
+         * @return `true` if the specified node was found as a child of this node, `false` otherwise.
+         */
+        bool isParentOf(Node* pNode);
+
+        /**
+         * Checks if the specified node is a parent of this node (somewhere in the parent hierarchy,
+         * not only as a direct parent node).
+         *
+         * @param pNode Node to check.
+         *
+         * @return `true` if the specified node was found as a parent of this node, `false` otherwise.
+         */
+        bool isChildOf(Node* pNode);
 
     protected:
         // Game will propagate functions to all nodes in the world such as onBeforeNewFrame.
@@ -409,6 +448,9 @@ namespace ne RNAMESPACE() {
          * @warning Will be initialized after the node is spawned and reset when despawned.
          */
         World* pWorld = nullptr;
+
+        /** Tick group used by this node. */
+        TickGroup tickGroup = TickGroup::FIRST;
 
         /**
          * Whether this node is spawned in the world or not.

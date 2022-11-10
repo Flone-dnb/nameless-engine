@@ -199,7 +199,7 @@ namespace ne {
                 const auto pCalledEveryFrameNodes = mtxWorld.second->getCalledEveryFrameNodes();
 
                 {
-                    // Read-only lock for the first tick group.
+                    // First tick group.
                     std::shared_lock nodesGuard(pCalledEveryFrameNodes->mtxFirstTickGroup.first);
                     const gc_vector<Node>* pNodes = &pCalledEveryFrameNodes->mtxFirstTickGroup.second;
                     for (auto it = (*pNodes)->begin(); it != (*pNodes)->end(); ++it) {
@@ -208,7 +208,7 @@ namespace ne {
                 }
 
                 {
-                    // Read-only lock for the second tick group.
+                    // Second tick group.
                     std::shared_lock nodesGuard(pCalledEveryFrameNodes->mtxSecondTickGroup.first);
                     const gc_vector<Node>* pNodes = &pCalledEveryFrameNodes->mtxSecondTickGroup.second;
                     for (auto it = (*pNodes)->begin(); it != (*pNodes)->end(); ++it) {
@@ -306,11 +306,37 @@ namespace ne {
         triggerActionEvents(button, modifiers, bIsPressedDown);
     }
 
-    void Game::onMouseMove(int iXOffset, int iYOffset) const {
+    void Game::onMouseMove(int iXOffset, int iYOffset) {
         pGameInstance->onMouseMove(iXOffset, iYOffset);
+
+        // Call on nodes that receive input.
+        std::scoped_lock guard(mtxWorld.first);
+        if (mtxWorld.second) {
+            const auto pReceivingInputNodes = mtxWorld.second->getReceivingInputNodes();
+
+            std::shared_lock nodesGuard(pReceivingInputNodes->first);
+            const gc_vector<Node>* pNodes = &pReceivingInputNodes->second;
+            for (auto it = (*pNodes)->begin(); it != (*pNodes)->end(); ++it) {
+                (*it)->onMouseMove(iXOffset, iYOffset);
+            }
+        }
     }
 
-    void Game::onMouseScrollMove(int iOffset) const { pGameInstance->onMouseScrollMove(iOffset); }
+    void Game::onMouseScrollMove(int iOffset) {
+        pGameInstance->onMouseScrollMove(iOffset);
+
+        // Call on nodes that receive input.
+        std::scoped_lock guard(mtxWorld.first);
+        if (mtxWorld.second) {
+            const auto pReceivingInputNodes = mtxWorld.second->getReceivingInputNodes();
+
+            std::shared_lock nodesGuard(pReceivingInputNodes->first);
+            const gc_vector<Node>* pNodes = &pReceivingInputNodes->second;
+            for (auto it = (*pNodes)->begin(); it != (*pNodes)->end(); ++it) {
+                (*it)->onMouseScrollMove(iOffset);
+            }
+        }
+    }
 
     void Game::onWindowFocusChanged(bool bIsFocused) const {
         pGameInstance->onWindowFocusChanged(bIsFocused);
@@ -414,6 +440,18 @@ namespace ne {
                 if (bNewState != statePair.second) {
                     statePair.second = bNewState;
                     pGameInstance->onInputActionEvent(sActionName, modifiers, bNewState);
+
+                    // Call on nodes that receive input.
+                    std::scoped_lock guard(mtxWorld.first);
+                    if (mtxWorld.second) {
+                        const auto pReceivingInputNodes = mtxWorld.second->getReceivingInputNodes();
+
+                        std::shared_lock nodesGuard(pReceivingInputNodes->first);
+                        const gc_vector<Node>* pNodes = &pReceivingInputNodes->second;
+                        for (auto it = (*pNodes)->begin(); it != (*pNodes)->end(); ++it) {
+                            (*it)->onInputActionEvent(sActionName, modifiers, bNewState);
+                        }
+                    }
                 }
             }
         }
@@ -448,6 +486,20 @@ namespace ne {
                     sGameLogCategory);
                 pGameInstance->onInputAxisEvent(
                     sAxisName, modifiers, bIsPressedDown ? static_cast<float>(iInput) : 0.0f);
+
+                // Call on nodes that receive input.
+                std::scoped_lock guard(mtxWorld.first);
+                if (mtxWorld.second) {
+                    const auto pReceivingInputNodes = mtxWorld.second->getReceivingInputNodes();
+
+                    std::shared_lock nodesGuard(pReceivingInputNodes->first);
+                    const gc_vector<Node>* pNodes = &pReceivingInputNodes->second;
+                    for (auto it = (*pNodes)->begin(); it != (*pNodes)->end(); ++it) {
+                        (*it)->onInputAxisEvent(
+                            sAxisName, modifiers, bIsPressedDown ? static_cast<float>(iInput) : 0.0f);
+                    }
+                }
+
                 continue;
             }
 
@@ -477,12 +529,26 @@ namespace ne {
                     sGameLogCategory);
                 pGameInstance->onInputAxisEvent(
                     sAxisName, modifiers, bIsPressedDown ? static_cast<float>(iInput) : 0.0f);
+
+                // Call on nodes that receive input.
+                std::scoped_lock guard(mtxWorld.first);
+                if (mtxWorld.second) {
+                    const auto pReceivingInputNodes = mtxWorld.second->getReceivingInputNodes();
+
+                    std::shared_lock nodesGuard(pReceivingInputNodes->first);
+                    const gc_vector<Node>* pNodes = &pReceivingInputNodes->second;
+                    for (auto it = (*pNodes)->begin(); it != (*pNodes)->end(); ++it) {
+                        (*it)->onInputAxisEvent(
+                            sAxisName, modifiers, bIsPressedDown ? static_cast<float>(iInput) : 0.0f);
+                    }
+                }
+
                 continue;
             }
 
             int iInputToPass = bIsPressedDown ? iInput : 0;
 
-            if (bIsPressedDown == false) {
+            if (!bIsPressedDown) {
                 // See if we need to pass 0 input value.
                 // See if other button are pressed.
                 for (const AxisState& state : statePair.first) {
@@ -505,6 +571,18 @@ namespace ne {
             if (iInputToPass != statePair.second) {
                 statePair.second = iInputToPass;
                 pGameInstance->onInputAxisEvent(sAxisName, modifiers, static_cast<float>(iInputToPass));
+
+                // Call on nodes that receive input.
+                std::scoped_lock guard(mtxWorld.first);
+                if (mtxWorld.second) {
+                    const auto pReceivingInputNodes = mtxWorld.second->getReceivingInputNodes();
+
+                    std::shared_lock nodesGuard(pReceivingInputNodes->first);
+                    const gc_vector<Node>* pNodes = &pReceivingInputNodes->second;
+                    for (auto it = (*pNodes)->begin(); it != (*pNodes)->end(); ++it) {
+                        (*it)->onInputAxisEvent(sAxisName, modifiers, static_cast<float>(iInputToPass));
+                    }
+                }
             }
         }
     }

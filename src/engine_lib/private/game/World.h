@@ -85,11 +85,18 @@ namespace ne {
         void destroyWorld();
 
         /**
-         * Returns pointer to array of nodes that should be called every frame (use with mutex).
+         * Returns a pointer to array of nodes that should be called every frame (use with mutex).
          *
          * @return Pointer to array of nodes (use with mutex).
          */
         CalledEveryFrameNodes* getCalledEveryFrameNodes();
+
+        /**
+         * Returns a pointer to array of nodes that receive input (use with mutex).
+         *
+         * @return Pointer to array of nodes (use with mutex).
+         */
+        std::pair<std::shared_mutex, gc_vector<Node>>* getReceivingInputNodes();
 
         /**
          * Returns a pointer to world's root node.
@@ -148,6 +155,9 @@ namespace ne {
 
         /** Array of currently spawned nodes that are marked as "should be called every frame". */
         CalledEveryFrameNodes calledEveryFrameNodes;
+
+        /** Array of currently spawned nodes that receive input. */
+        std::pair<std::shared_mutex, gc_vector<Node>> mtxReceivingInputNodes;
 
         /** World size in game units. */
         size_t iWorldSize = 0;

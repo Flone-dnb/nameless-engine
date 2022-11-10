@@ -227,14 +227,14 @@ namespace ne {
          * @param iYOffset  Mouse Y movement delta in pixels (plus if moved up,
          * minus if moved down).
          */
-        void onMouseMove(int iXOffset, int iYOffset) const;
+        void onMouseMove(int iXOffset, int iYOffset);
 
         /**
          * Called when the window receives mouse scroll movement.
          *
          * @param iOffset Movement offset.
          */
-        void onMouseScrollMove(int iOffset) const;
+        void onMouseScrollMove(int iOffset);
 
         /**
          * Called when the window focus was changed.

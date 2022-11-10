@@ -115,6 +115,10 @@ namespace ne {
 
     CalledEveryFrameNodes* World::getCalledEveryFrameNodes() { return &calledEveryFrameNodes; }
 
+    std::pair<std::shared_mutex, gc_vector<Node>>* World::getReceivingInputNodes() {
+        return &mtxReceivingInputNodes;
+    }
+
     void World::onNodeSpawned(gc<Node> pNode) {
         // Exit if world is being destroyed.
         std::scoped_lock isDestroyedGuard(mtxIsDestroyed.first);
@@ -131,6 +135,12 @@ namespace ne {
                 std::scoped_lock guard(calledEveryFrameNodes.mtxSecondTickGroup.first);
                 calledEveryFrameNodes.mtxSecondTickGroup.second->push_back(pNode);
             }
+        }
+
+        if (pNode->receivesInput()) {
+            // Add node to array of nodes that receive input.
+            std::scoped_lock guard(mtxReceivingInputNodes.first);
+            mtxReceivingInputNodes.second->push_back(pNode);
         }
     }
 
@@ -161,11 +171,35 @@ namespace ne {
                 }
             }
 
-            if (!bFound) {
+            if (!bFound) [[unlikely]] {
                 Logger::get().error(
                     fmt::format(
                         "node \"{}\" is marked as \"should be called every frame\" but it does not exist "
                         "in the array of nodes that should be called every frame",
+                        pNode->getName()),
+                    sWorldLogCategory);
+            }
+        }
+
+        if (pNode->receivesInput()) {
+            // Remove node from array of nodes that receive input.
+            bool bFound = false;
+
+            std::scoped_lock guard(mtxReceivingInputNodes.first);
+            for (auto it = mtxReceivingInputNodes.second->begin(); it != mtxReceivingInputNodes.second->end();
+                 ++it) {
+                if (&*(*it) == &*pNode) {
+                    mtxReceivingInputNodes.second->erase(it);
+                    bFound = true;
+                    break;
+                }
+            }
+
+            if (!bFound) [[unlikely]] {
+                Logger::get().error(
+                    fmt::format(
+                        "node \"{}\" receives input but it does not exist "
+                        "in the array of nodes that receive input",
                         pNode->getName()),
                     sWorldLogCategory);
             }

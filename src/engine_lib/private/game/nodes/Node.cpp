@@ -697,4 +697,16 @@ namespace ne {
 
     TickGroup Node::getTickGroup() const { return tickGroup; }
 
+    void Node::setReceiveInput(bool bEnable) {
+        std::scoped_lock guard(mtxSpawning);
+        if (bIsSpawned) {
+            Error error("this function should not be called while the node is spawned");
+            error.showError();
+            throw std::runtime_error(error.getError());
+        }
+
+        this->bReceiveInput = bEnable;
+    }
+
+    bool Node::receivesInput() const { return bReceiveInput; }
 } // namespace ne

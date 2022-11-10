@@ -9,6 +9,7 @@
 // Custom.
 #include "io/Serializable.h"
 #include "misc/GC.hpp"
+#include "input/KeyboardKey.hpp"
 
 #include "Node.generated.h"
 
@@ -120,29 +121,6 @@ namespace ne RNAMESPACE() {
         std::optional<Error> serializeNodeTree(const std::filesystem::path& pathToFile, bool bEnableBackup);
 
         /**
-         * Sets the tick group in which the node will reside.
-         *
-         * Tick groups determine the order in which the @ref onBeforeNewFrame functions will be called
-         * on nodes. Each frame, @ref onBeforeNewFrame will be called first on the nodes that use
-         * the first tick group, then on the nodes that use the second group and etc. This allows
-         * defining a special order in which @ref onBeforeNewFrame functions will be called on nodes,
-         * thus if you want some nodes to execute their @ref onBeforeNewFrame function only after
-         * some other nodes do so, you can define this with tick groups.
-         *
-         * @param tickGroup Tick group the node will reside in.
-         *
-         * @remark Tick group is ignored if @ref setIsCalledEveryFrame was not enabled.
-         *
-         * @remark Typically you should call this function in your node's constructor to determine
-         * in which tick group the node will reside.
-         *
-         * @remark All nodes use the first tick group by default.
-         *
-         * @warning Calling this function while the node is spawned will cause an error to be shown.
-         */
-        void setTickGroup(TickGroup tickGroup);
-
-        /**
          * Returns node's name.
          *
          * @return Node name.
@@ -232,6 +210,13 @@ namespace ne RNAMESPACE() {
         bool isCalledEveryFrame() const;
 
         /**
+         * Returns whether this node receives input or not.
+         *
+         * @return Whether this node receives input or not.
+         */
+        bool receivesInput() const;
+
+        /**
          * Returns whether this node is spawned in the world or not.
          *
          * @return Whether this node is spawned in the world or not.
@@ -263,6 +248,105 @@ namespace ne RNAMESPACE() {
         friend class Game;
         // World is able to spawn root node.
         friend class World;
+
+        /**
+         * Determines if the @ref onBeforeNewFrame should be called each frame or not
+         * (disabled by default).
+         *
+         * @remark Typically you should call this function in your node's constructor to determine
+         * if this node should "tick" each frame or not.
+         *
+         * @warning Calling this function while the node is spawned will cause an error to be shown.
+         *
+         * @param bEnable `true` to enable @ref onBeforeNewFrame, `false` to disable.
+         */
+        void setIsCalledEveryFrame(bool bEnable);
+
+        /**
+         * Sets the tick group in which the node will reside.
+         *
+         * Tick groups determine the order in which the @ref onBeforeNewFrame functions will be called
+         * on nodes. Each frame, @ref onBeforeNewFrame will be called first on the nodes that use
+         * the first tick group, then on the nodes that use the second group and etc. This allows
+         * defining a special order in which @ref onBeforeNewFrame functions will be called on nodes,
+         * thus if you want some nodes to execute their @ref onBeforeNewFrame function only after
+         * some other nodes do so, you can define this with tick groups.
+         *
+         * @remark Tick group is ignored if @ref setIsCalledEveryFrame was not enabled.
+         *
+         * @remark Typically you should call this function in your node's constructor to determine
+         * in which tick group the node will reside.
+         *
+         * @remark Nodes use the first tick group by default.
+         *
+         * @warning Calling this function while the node is spawned will cause an error to be shown.
+         *
+         * @param tickGroup Tick group the node will reside in.
+         */
+        void setTickGroup(TickGroup tickGroup);
+
+        /**
+         * Determines if the input related functions, such as @ref onMouseMove, @ref onMouseScrollMove,
+         * @ref onInputActionEvent and @ref onInputAxisEvent will be called or not.
+         *
+         * @remark Typically you should call this function in your node's constructor to determine
+         * if this node should receive input or not.
+         *
+         * @remark Nodes do not receive input by default.
+         *
+         * @warning Calling this function while the node is spawned will cause an error to be shown.
+         *
+         * @param bEnable Whether the input function should be enabled or not.
+         */
+        void setReceiveInput(bool bEnable);
+
+        /**
+         * Called when the window received mouse movement.
+         *
+         * @remark This function will not be called if @ref setReceiveInput was not enabled.
+         *
+         * @param iXOffset  Mouse X movement delta in pixels (plus if moved to the right,
+         * minus if moved to the left).
+         * @param iYOffset  Mouse Y movement delta in pixels (plus if moved up,
+         * minus if moved down).
+         */
+        virtual void onMouseMove(int iXOffset, int iYOffset) {}
+
+        /**
+         * Called when the window receives mouse scroll movement.
+         *
+         * @remark This function will not be called if @ref setReceiveInput was not enabled.
+         *
+         * @param iOffset Movement offset.
+         */
+        virtual void onMouseScrollMove(int iOffset) {}
+
+        /**
+         * Called when a window that owns this game instance receives user
+         * input and the input key exists as an action event in the InputManager.
+         *
+         * @remark This function will not be called if @ref setReceiveInput was not enabled.
+         *
+         * @param sActionName    Name of the input action event (from input manager).
+         * @param modifiers      Keyboard modifier keys.
+         * @param bIsPressedDown Whether the key down event occurred or key up.
+         */
+        virtual void
+        onInputActionEvent(const std::string& sActionName, KeyboardModifiers modifiers, bool bIsPressedDown) {
+        }
+
+        /**
+         * Called when a window that owns this game instance receives user
+         * input and the input key exists as an axis event in the InputManager.
+         *
+         * @remark This function will not be called if @ref setReceiveInput was not enabled.
+         *
+         * @param sAxisName      Name of the input axis event (from input manager).
+         * @param modifiers      Keyboard modifier keys.
+         * @param fValue         A value in range [-1.0f; 1.0f] that describes input.
+         */
+        virtual void
+        onInputAxisEvent(const std::string& sAxisName, KeyboardModifiers modifiers, float fValue) {}
 
         /**
          * Called before a new frame is rendered.
@@ -314,19 +398,6 @@ namespace ne RNAMESPACE() {
          * @warning It's recommended to call parent's version first (before executing your logic).
          */
         virtual void onAfterAttachedToNewParent() {}
-
-        /**
-         * Determines if the @ref onBeforeNewFrame should be called each frame or not
-         * (disabled by default).
-         *
-         * @remark Typically you should call this function in your node's constructor to determine
-         * if this node should "tick" each frame or not.
-         *
-         * @warning Calling this function while the node is spawned will cause an error to be shown.
-         *
-         * @param bEnable `true` to enable @ref onBeforeNewFrame, `false` to disable.
-         */
-        void setIsCalledEveryFrame(bool bEnable);
 
         /** Mutex that will be used when spawning/despawning node (i.e. when changing @ref bIsSpawned). */
         std::recursive_mutex mtxSpawning;
@@ -460,6 +531,12 @@ namespace ne RNAMESPACE() {
 
         /** Determines if the @ref onBeforeNewFrame should be called each frame or not. */
         bool bIsCalledEveryFrame = false;
+
+        /**
+         * Determines if the input related functions, such as @ref onMouseMove, @ref onMouseScrollMove,
+         * @ref onInputActionEvent and @ref onInputAxisEvent will be called or not.
+         */
+        bool bReceiveInput = false;
 
         /** Name of the attribute we use to serialize information about parent node. */
         static inline const auto sParentNodeIdAttributeName = "parent_node_id";

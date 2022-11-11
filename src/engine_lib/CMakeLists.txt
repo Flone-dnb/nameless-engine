@@ -113,8 +113,8 @@ set(ENGINE_LIB_SOURCES
     public/io/Serializable.h
     private/game/nodes/Node.cpp
     public/game/nodes/Node.h
-    public/io/DontSerializeProperty.h
-    private/io/DontSerializeProperty.cpp
+    public/io/SerializeProperty.h
+    private/io/SerializeProperty.cpp
     private/io/GuidProperty.cpp
     public/io/GuidProperty.h
     private/game/World.h

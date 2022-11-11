@@ -90,8 +90,10 @@ gc_collector()->collect(); // this will be run regularly somewhere in the engine
 
 #include "PlayerSaveData.generated.h"
 
+using namespace ne;
+
 /// Holds information about player's inventory.
-class RCLASS(Guid("a34a8047-d7b4-4c70-bb9a-429875a8cd26")) InventorySaveData : public ne::Serializable {
+class RCLASS(Guid("a34a8047-d7b4-4c70-bb9a-429875a8cd26")) InventorySaveData : public Serializable {
 public:
     InventorySaveData() = default;
     virtual ~InventorySaveData() override = default;
@@ -133,7 +135,7 @@ public:
 
 private:
     /// Contains item ID as a key and item amount (in the inventory) as a value.
-    RPROPERTY()
+    RPROPERTY(Serialize)
     std::unordered_map<unsigned long long, unsigned long long> items;
 
     InventorySaveData_GENERATED
@@ -145,20 +147,20 @@ public:
     PlayerSaveData() = default;
     virtual ~PlayerSaveData() override = default;
 
-    RPROPERTY()
+    RPROPERTY(Serialize)
     std::string sCharacterName;
 
-    RPROPERTY()
+    RPROPERTY(Serialize)
     unsigned long long iCharacterLevel = 0;
 
-    RPROPERTY()
+    RPROPERTY(Serialize)
     unsigned long long iExperiencePoints = 0;
 
-    RPROPERTY()
+    RPROPERTY(Serialize)
     InventorySaveData inventory;
 
     /// Stores IDs of player abilities.
-    RPROPERTY()
+    RPROPERTY(Serialize)
     std::vector<unsigned long long> vAbilities;
 
     PlayerSaveData_GENERATED

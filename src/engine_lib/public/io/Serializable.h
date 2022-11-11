@@ -16,6 +16,7 @@
 #include "io/GuidProperty.h"
 #include "misc/GC.hpp"
 #include "io/IFieldSerializer.hpp"
+#include "io/SerializeProperty.h"
 
 // External.
 #include "Refureku/Refureku.h"
@@ -115,7 +116,8 @@ namespace ne RNAMESPACE() {
         virtual ~Serializable() override = default;
 
         /**
-         * Serializes the object and all reflected fields (including inherited) into a file.
+         * Serializes the object and all reflected fields (including inherited) that
+         * are marked with `ne::Serialize` property into a file.
          * Serialized object can later be deserialized using @ref deserialize.
          *
          * @param pathToFile       File to write reflected data to. The ".toml" extension will be added
@@ -130,7 +132,14 @@ namespace ne RNAMESPACE() {
          * @param customAttributes Optional. Custom pairs of values that will be saved as this object's
          * additional information and could be later retrieved in @ref deserialize.
          *
-         * @remark Note that not all reflected fields can be serialized, only specific types can be
+         * @remark In order for a field to be serialized with the object, you need to mark it with
+         * `ne::Serialize` property like so:
+         * @code
+         * using namespace ne;
+         * RPROPERTY(Serialize)
+         * int iMyValue = 0;
+         * @endcode
+         * Note that not all reflected fields can be serialized, only specific types can be
          * serialized. Const fields, pointer fields, lvalue references, rvalue references and C-arrays will
          * always be ignored and will not be serialized (no error returned).
          * Supported for serialization types are:
@@ -146,14 +155,6 @@ namespace ne RNAMESPACE() {
          * - `T` (where T is any type that derives from Serializable)
          * Note that `std::vector<T>` and `std::unordered_map<T, T>` where T is any type derives from
          * Serializable is not supported.
-         *
-         * @remark You can mark reflected property as DontSerialize so it will be ignored in the serialization
-         * process. Note that you don't need to mark fields of types that are always ignored (const, pointers,
-         * etc.) because they will be ignored anyway. Example:
-         * @code
-         * RPROPERTY(DontSerialize)
-         * int iKey = 42; // will be ignored and not serialized
-         * @endcode
          *
          * @return Error if something went wrong, for example when found an unsupported for
          * serialization reflected field.

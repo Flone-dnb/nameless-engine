@@ -497,7 +497,7 @@ namespace ne RNAMESPACE() {
         void unlockChildren();
 
         /** Node name. */
-        RPROPERTY()
+        RPROPERTY(Serialize)
         std::string sName;
 
         /** Attached child nodes. Should be used under the mutex when changing children. */

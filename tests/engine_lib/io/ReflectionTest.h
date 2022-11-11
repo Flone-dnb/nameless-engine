@@ -8,7 +8,7 @@
 // Custom.
 #include "io/Serializable.h"
 #include "game/nodes/Node.h"
-#include "io/DontSerializeProperty.h"
+#include "io/SerializeProperty.h"
 
 #include "ReflectionTest.generated.h"
 
@@ -19,16 +19,16 @@ public:
     ReflectionTestEntity() = default;
     virtual ~ReflectionTestEntity() override = default;
 
-    RPROPERTY()
+    RPROPERTY(Serialize)
     int iIntValue1 = 0;
 
-    RPROPERTY()
+    RPROPERTY(Serialize)
     int iIntValue2 = 0;
 
-    RPROPERTY()
+    RPROPERTY(Serialize)
     std::vector<std::string> vVectorValue1;
 
-    RPROPERTY()
+    RPROPERTY(Serialize)
     std::vector<std::string> vVectorValue2;
 
     ReflectionTestEntity_GENERATED
@@ -39,13 +39,13 @@ public:
     ReflectionTestNode1() = default;
     virtual ~ReflectionTestNode1() override = default;
 
-    RPROPERTY()
+    RPROPERTY(Serialize)
     bool bBoolValue1 = false;
 
-    RPROPERTY()
+    RPROPERTY(Serialize)
     bool bBoolValue2 = false;
 
-    RPROPERTY()
+    RPROPERTY(Serialize)
     ReflectionTestEntity entity;
 
     ReflectionTestNode1_GENERATED
@@ -56,107 +56,107 @@ public:
     ReflectionTestStruct() = default;
     virtual ~ReflectionTestStruct() override = default;
 
-    RPROPERTY()
+    RPROPERTY(Serialize)
     bool bBoolValue = false;
 
-    RPROPERTY()
+    RPROPERTY(Serialize)
     int iIntValue = 0;
 
-    RPROPERTY()
+    RPROPERTY(Serialize)
     unsigned int iUnsignedIntValue = 0;
 
-    RPROPERTY()
+    RPROPERTY(Serialize)
     long long iLongLongValue = 0;
 
-    RPROPERTY()
+    RPROPERTY(Serialize)
     unsigned long long iUnsignedLongLongValue = 0;
 
-    RPROPERTY()
+    RPROPERTY(Serialize)
     float floatValue = 0.0f;
 
-    RPROPERTY()
+    RPROPERTY(Serialize)
     double doubleValue = 0.0;
 
-    RPROPERTY()
+    RPROPERTY(Serialize)
     std::string sStringValue;
 
     // vectors
 
-    RPROPERTY()
+    RPROPERTY(Serialize)
     std::vector<bool> vBoolVector;
 
-    RPROPERTY()
+    RPROPERTY(Serialize)
     std::vector<int> vIntVector;
 
-    RPROPERTY()
+    RPROPERTY(Serialize)
     std::vector<unsigned int> vUnsignedIntVector;
 
-    RPROPERTY()
+    RPROPERTY(Serialize)
     std::vector<long long> vLongLongVector;
 
-    RPROPERTY()
+    RPROPERTY(Serialize)
     std::vector<unsigned long long> vUnsignedLongLongVector;
 
-    RPROPERTY()
+    RPROPERTY(Serialize)
     std::vector<float> vFloatVector;
 
-    RPROPERTY()
+    RPROPERTY(Serialize)
     std::vector<double> vDoubleVector;
 
-    RPROPERTY()
+    RPROPERTY(Serialize)
     std::vector<std::string> vStringVector;
 
-    RPROPERTY()
+    RPROPERTY(Serialize)
     std::vector<int> vEmpty;
 
     // maps
 
-    RPROPERTY()
+    RPROPERTY(Serialize)
     std::unordered_map<bool, bool> mapBoolBool;
 
-    RPROPERTY()
+    RPROPERTY(Serialize)
     std::unordered_map<bool, int> mapBoolInt;
 
-    RPROPERTY()
+    RPROPERTY(Serialize)
     std::unordered_map<bool, unsigned int> mapBoolUnsignedInt;
 
-    RPROPERTY()
+    RPROPERTY(Serialize)
     std::unordered_map<bool, long long> mapBoolLongLong;
 
-    RPROPERTY()
+    RPROPERTY(Serialize)
     std::unordered_map<bool, unsigned long long> mapBoolUnsignedLongLong;
 
-    RPROPERTY()
+    RPROPERTY(Serialize)
     std::unordered_map<bool, float> mapBoolFloat;
 
-    RPROPERTY()
+    RPROPERTY(Serialize)
     std::unordered_map<bool, double> mapBoolDouble;
 
-    RPROPERTY()
+    RPROPERTY(Serialize)
     std::unordered_map<bool, std::string> mapBoolString;
 
-    RPROPERTY()
+    RPROPERTY(Serialize)
     std::unordered_map<int, bool> mapIntBool;
 
-    RPROPERTY()
+    RPROPERTY(Serialize)
     std::unordered_map<unsigned int, bool> mapUnsignedIntBool;
 
-    RPROPERTY()
+    RPROPERTY(Serialize)
     std::unordered_map<long long, bool> mapLongLongBool;
 
-    RPROPERTY()
+    RPROPERTY(Serialize)
     std::unordered_map<unsigned long long, bool> mapUnsignedLongLongBool;
 
-    RPROPERTY()
+    RPROPERTY(Serialize)
     std::unordered_map<float, bool> mapFloatBool;
 
-    RPROPERTY()
+    RPROPERTY(Serialize)
     std::unordered_map<double, bool> mapDoubleBool;
 
-    RPROPERTY()
+    RPROPERTY(Serialize)
     std::unordered_map<std::string, bool> mapStringBool;
 
-    RPROPERTY()
+    RPROPERTY(Serialize)
     std::unordered_map<bool, bool> mapEmpty;
 
     ReflectionTestStruct_GENERATED
@@ -167,13 +167,13 @@ public:
     ReflectionOuterTestClass() = default;
     virtual ~ReflectionOuterTestClass() override = default;
 
-    RPROPERTY(DontSerialize)
+    RPROPERTY()
     int iIntNotSerialized = 0;
 
-    RPROPERTY()
+    RPROPERTY(Serialize)
     bool bBoolValue = false;
 
-    RPROPERTY()
+    RPROPERTY(Serialize)
     ReflectionTestStruct entity;
 
     ReflectionOuterTestClass_GENERATED
@@ -221,7 +221,7 @@ public:
 
 private:
     /// Contains item ID as a key and item amount (in the inventory) as a value.
-    RPROPERTY()
+    RPROPERTY(Serialize)
     std::unordered_map<unsigned long long, unsigned long long> items;
 
     InventorySaveData_GENERATED
@@ -232,20 +232,20 @@ public:
     PlayerSaveData() = default;
     virtual ~PlayerSaveData() override = default;
 
-    RPROPERTY()
+    RPROPERTY(Serialize)
     std::string sCharacterName;
 
-    RPROPERTY()
+    RPROPERTY(Serialize)
     unsigned long long iCharacterLevel = 0;
 
-    RPROPERTY()
+    RPROPERTY(Serialize)
     unsigned long long iExperiencePoints = 0;
 
-    RPROPERTY()
+    RPROPERTY(Serialize)
     InventorySaveData inventory;
 
     /// Stores IDs of player abilities.
-    RPROPERTY()
+    RPROPERTY(Serialize)
     std::vector<unsigned long long> vAbilities;
 
     PlayerSaveData_GENERATED

@@ -176,13 +176,13 @@ namespace ne {
     bool Serializable::isFieldSerializable(rfk::Field const& field) {
         const auto& fieldType = field.getType();
 
+        // Ignore this field if not marked as Serialize.
+        if (!field.getProperty<Serialize>())
+            return false;
+
         // Don't serialize specific types.
         if (fieldType.isConst() || fieldType.isPointer() || fieldType.isLValueReference() ||
             fieldType.isRValueReference() || fieldType.isCArray())
-            return false;
-
-        // Ignore this field if marked as DontSerialize.
-        if (field.getProperty<DontSerialize>())
             return false;
 
         return true;

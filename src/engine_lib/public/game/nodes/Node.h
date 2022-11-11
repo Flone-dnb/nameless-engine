@@ -273,10 +273,8 @@ namespace ne RNAMESPACE() {
          * some other nodes do so, you can define this with tick groups.
          *
          * @remark Tick group is ignored if @ref setIsCalledEveryFrame was not enabled.
-         *
          * @remark Typically you should call this function in your node's constructor to determine
          * in which tick group the node will reside.
-         *
          * @remark Nodes use the first tick group by default.
          *
          * @warning Calling this function while the node is spawned will cause an error to be shown.
@@ -291,7 +289,6 @@ namespace ne RNAMESPACE() {
          *
          * @remark Typically you should call this function in your node's constructor to determine
          * if this node should receive input or not.
-         *
          * @remark Nodes do not receive input by default.
          *
          * @warning Calling this function while the node is spawned will cause an error to be shown.
@@ -304,6 +301,7 @@ namespace ne RNAMESPACE() {
          * Called when the window received mouse movement.
          *
          * @remark This function will not be called if @ref setReceiveInput was not enabled.
+         * @remark This function will only be called while this node is spawned.
          *
          * @param iXOffset  Mouse X movement delta in pixels (plus if moved to the right,
          * minus if moved to the left).
@@ -316,6 +314,7 @@ namespace ne RNAMESPACE() {
          * Called when the window receives mouse scroll movement.
          *
          * @remark This function will not be called if @ref setReceiveInput was not enabled.
+         * @remark This function will only be called while this node is spawned.
          *
          * @param iOffset Movement offset.
          */
@@ -326,6 +325,7 @@ namespace ne RNAMESPACE() {
          * input and the input key exists as an action event in the InputManager.
          *
          * @remark This function will not be called if @ref setReceiveInput was not enabled.
+         * @remark This function will only be called while this node is spawned.
          *
          * @param sActionName    Name of the input action event (from input manager).
          * @param modifiers      Keyboard modifier keys.
@@ -340,6 +340,7 @@ namespace ne RNAMESPACE() {
          * input and the input key exists as an axis event in the InputManager.
          *
          * @remark This function will not be called if @ref setReceiveInput was not enabled.
+         * @remark This function will only be called while this node is spawned.
          *
          * @param sAxisName      Name of the input axis event (from input manager).
          * @param modifiers      Keyboard modifier keys.
@@ -352,6 +353,7 @@ namespace ne RNAMESPACE() {
          * Called before a new frame is rendered.
          *
          * @remark This function is disabled by default, use @ref setIsCalledEveryFrame to enable it.
+         * @remark This function will only be called while this node is spawned.
          *
          * @warning It's recommended to call parent's version first (before executing your logic).
          *

@@ -200,7 +200,7 @@ namespace ne {
 
                 {
                     // First tick group.
-                    std::shared_lock nodesGuard(pCalledEveryFrameNodes->mtxFirstTickGroup.first);
+                    std::scoped_lock nodesGuard(pCalledEveryFrameNodes->mtxFirstTickGroup.first);
                     const gc_vector<Node>* pNodes = &pCalledEveryFrameNodes->mtxFirstTickGroup.second;
                     for (auto it = (*pNodes)->begin(); it != (*pNodes)->end(); ++it) {
                         (*it)->onBeforeNewFrame(fTimeSincePrevCallInSec);
@@ -209,7 +209,7 @@ namespace ne {
 
                 {
                     // Second tick group.
-                    std::shared_lock nodesGuard(pCalledEveryFrameNodes->mtxSecondTickGroup.first);
+                    std::scoped_lock nodesGuard(pCalledEveryFrameNodes->mtxSecondTickGroup.first);
                     const gc_vector<Node>* pNodes = &pCalledEveryFrameNodes->mtxSecondTickGroup.second;
                     for (auto it = (*pNodes)->begin(); it != (*pNodes)->end(); ++it) {
                         (*it)->onBeforeNewFrame(fTimeSincePrevCallInSec);
@@ -314,7 +314,7 @@ namespace ne {
         if (mtxWorld.second) {
             const auto pReceivingInputNodes = mtxWorld.second->getReceivingInputNodes();
 
-            std::shared_lock nodesGuard(pReceivingInputNodes->first);
+            std::scoped_lock nodesGuard(pReceivingInputNodes->first);
             const gc_vector<Node>* pNodes = &pReceivingInputNodes->second;
             for (auto it = (*pNodes)->begin(); it != (*pNodes)->end(); ++it) {
                 (*it)->onMouseMove(iXOffset, iYOffset);
@@ -330,7 +330,7 @@ namespace ne {
         if (mtxWorld.second) {
             const auto pReceivingInputNodes = mtxWorld.second->getReceivingInputNodes();
 
-            std::shared_lock nodesGuard(pReceivingInputNodes->first);
+            std::scoped_lock nodesGuard(pReceivingInputNodes->first);
             const gc_vector<Node>* pNodes = &pReceivingInputNodes->second;
             for (auto it = (*pNodes)->begin(); it != (*pNodes)->end(); ++it) {
                 (*it)->onMouseScrollMove(iOffset);
@@ -446,7 +446,7 @@ namespace ne {
                     if (mtxWorld.second) {
                         const auto pReceivingInputNodes = mtxWorld.second->getReceivingInputNodes();
 
-                        std::shared_lock nodesGuard(pReceivingInputNodes->first);
+                        std::scoped_lock nodesGuard(pReceivingInputNodes->first);
                         const gc_vector<Node>* pNodes = &pReceivingInputNodes->second;
                         for (auto it = (*pNodes)->begin(); it != (*pNodes)->end(); ++it) {
                             (*it)->onInputActionEvent(sActionName, modifiers, bNewState);
@@ -492,7 +492,7 @@ namespace ne {
                 if (mtxWorld.second) {
                     const auto pReceivingInputNodes = mtxWorld.second->getReceivingInputNodes();
 
-                    std::shared_lock nodesGuard(pReceivingInputNodes->first);
+                    std::scoped_lock nodesGuard(pReceivingInputNodes->first);
                     const gc_vector<Node>* pNodes = &pReceivingInputNodes->second;
                     for (auto it = (*pNodes)->begin(); it != (*pNodes)->end(); ++it) {
                         (*it)->onInputAxisEvent(
@@ -535,7 +535,7 @@ namespace ne {
                 if (mtxWorld.second) {
                     const auto pReceivingInputNodes = mtxWorld.second->getReceivingInputNodes();
 
-                    std::shared_lock nodesGuard(pReceivingInputNodes->first);
+                    std::scoped_lock nodesGuard(pReceivingInputNodes->first);
                     const gc_vector<Node>* pNodes = &pReceivingInputNodes->second;
                     for (auto it = (*pNodes)->begin(); it != (*pNodes)->end(); ++it) {
                         (*it)->onInputAxisEvent(
@@ -577,7 +577,7 @@ namespace ne {
                 if (mtxWorld.second) {
                     const auto pReceivingInputNodes = mtxWorld.second->getReceivingInputNodes();
 
-                    std::shared_lock nodesGuard(pReceivingInputNodes->first);
+                    std::scoped_lock nodesGuard(pReceivingInputNodes->first);
                     const gc_vector<Node>* pNodes = &pReceivingInputNodes->second;
                     for (auto it = (*pNodes)->begin(); it != (*pNodes)->end(); ++it) {
                         (*it)->onInputAxisEvent(sAxisName, modifiers, static_cast<float>(iInputToPass));

@@ -4,7 +4,6 @@
 #include <memory>
 #include <chrono>
 #include <string>
-#include <shared_mutex>
 
 // Custom.
 #include "game/nodes/Node.h"
@@ -23,9 +22,9 @@ namespace ne {
         CalledEveryFrameNodes& operator=(const CalledEveryFrameNodes&) = delete;
 
         /** Nodes of the first tick group. */
-        std::pair<std::shared_mutex, gc_vector<Node>> mtxFirstTickGroup;
+        std::pair<std::recursive_mutex, gc_vector<Node>> mtxFirstTickGroup;
         /** Nodes of the second tick group. */
-        std::pair<std::shared_mutex, gc_vector<Node>> mtxSecondTickGroup;
+        std::pair<std::recursive_mutex, gc_vector<Node>> mtxSecondTickGroup;
     };
 
     /** Owns world's root node. */
@@ -96,7 +95,7 @@ namespace ne {
          *
          * @return Pointer to array of nodes (use with mutex).
          */
-        std::pair<std::shared_mutex, gc_vector<Node>>* getReceivingInputNodes();
+        std::pair<std::recursive_mutex, gc_vector<Node>>* getReceivingInputNodes();
 
         /**
          * Returns a pointer to world's root node.
@@ -157,7 +156,7 @@ namespace ne {
         CalledEveryFrameNodes calledEveryFrameNodes;
 
         /** Array of currently spawned nodes that receive input. */
-        std::pair<std::shared_mutex, gc_vector<Node>> mtxReceivingInputNodes;
+        std::pair<std::recursive_mutex, gc_vector<Node>> mtxReceivingInputNodes;
 
         /** World size in game units. */
         size_t iWorldSize = 0;

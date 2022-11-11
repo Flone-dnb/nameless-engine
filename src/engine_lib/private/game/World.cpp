@@ -68,8 +68,8 @@ namespace ne {
     }
 
     size_t World::getCalledEveryFrameNodeCount() {
-        std::shared_lock readOnlyGroup1Guard(calledEveryFrameNodes.mtxFirstTickGroup.first);
-        std::shared_lock readOnlyGroup2Guard(calledEveryFrameNodes.mtxSecondTickGroup.first);
+        std::scoped_lock guard(
+            calledEveryFrameNodes.mtxFirstTickGroup.first, calledEveryFrameNodes.mtxSecondTickGroup.first);
         return calledEveryFrameNodes.mtxFirstTickGroup.second->size() +
                calledEveryFrameNodes.mtxSecondTickGroup.second->size();
     }
@@ -115,7 +115,7 @@ namespace ne {
 
     CalledEveryFrameNodes* World::getCalledEveryFrameNodes() { return &calledEveryFrameNodes; }
 
-    std::pair<std::shared_mutex, gc_vector<Node>>* World::getReceivingInputNodes() {
+    std::pair<std::recursive_mutex, gc_vector<Node>>* World::getReceivingInputNodes() {
         return &mtxReceivingInputNodes;
     }
 
@@ -155,7 +155,7 @@ namespace ne {
             // Remove node from array of nodes that should be called every frame.
             bool bFound = false;
 
-            std::pair<std::shared_mutex, gc_vector<Node>>* pPairToUse = nullptr;
+            std::pair<std::recursive_mutex, gc_vector<Node>>* pPairToUse = nullptr;
             if (pNode->getTickGroup() == TickGroup::FIRST) {
                 pPairToUse = &calledEveryFrameNodes.mtxFirstTickGroup;
             } else {

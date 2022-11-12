@@ -409,11 +409,11 @@ Here is the list of base features that needs to be implemented in order for you 
             - [ ] PBR (Physically based rendering)
             - [ ] HDR (High dynamic range)
         - [ ] GUI
+- [ ] Scripting
 - [ ] Editor
     - [ ] Content management
     - [ ] Script debugging
     - [ ] Script syntax highlighting, scripting helpers
-- [ ] Scripting
 - [ ] Audio engine
     - [ ] 2D audio
     - [ ] 3D audio
@@ -425,6 +425,7 @@ Here is the list of base features that needs to be implemented in order for you 
     - [ ] Soft body
     - [ ] Joints
 - [ ] Skeletal animations
+- [ ] LODs (Level of details)
 - [ ] AI and pathfinding
 - [ ] Particle effects
 

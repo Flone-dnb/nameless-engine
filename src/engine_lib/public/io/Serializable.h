@@ -153,8 +153,7 @@ namespace ne RNAMESPACE() {
          * - `std::string`
          * - `std::vector<T>` and `std::unordered_map<T, T>` (where T is any type from above)
          * - `T` (where T is any type that derives from Serializable)
-         * Note that `std::vector<T>` and `std::unordered_map<T, T>` where T is any type derives from
-         * Serializable is not supported.
+         * - and more, see `io/serializers` directory for available field serializers.
          *
          * @return Error if something went wrong, for example when found an unsupported for
          * serialization reflected field.

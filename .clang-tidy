@@ -36,6 +36,8 @@ CheckOptions:
     value:           '25'
   - key:             readability-inconsistent-declaration-parameter-name.Strict
     value:           'false'
+  - key:             readability-identifier-length.IgnoredVariableNames
+    value:           'it'
   - key:             readability-identifier-naming.GetConfigPerFile
     value:           'true'
   - key:             cppcoreguidelines-explicit-virtual-functions.IgnoreDestructors

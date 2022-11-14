@@ -181,8 +181,11 @@ else()
     target_compile_options(${PROJECT_NAME} PUBLIC -Wall -Wextra -Werror -Wno-unused-parameter)
 endif()
 
+# Compiler specific flags.
 if(MSVC)
     target_compile_options(${PROJECT_NAME} PUBLIC /utf-8)
+else()
+    target_compile_options(${PROJECT_NAME} PUBLIC -Wno-unused-variable)
 endif()
 
 # Set C++ standard.

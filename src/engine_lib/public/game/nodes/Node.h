@@ -15,6 +15,7 @@
 
 namespace ne RNAMESPACE() {
     class GameInstance;
+    class World;
 
     /**
      * Describes the order of ticking. Every object of the first tick group will tick first

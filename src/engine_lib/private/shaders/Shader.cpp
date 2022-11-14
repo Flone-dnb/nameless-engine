@@ -39,7 +39,7 @@ namespace ne {
         // Compile shader.
         std::variant<std::shared_ptr<Shader>, std::string, Error> result;
 #if defined(WIN32)
-        if (dynamic_cast<DirectXRenderer*>(pRenderer)) {
+        if (dynamic_cast<DirectXRenderer*>(pRenderer) != nullptr) {
             result =
                 HlslShader::compileShader(pRenderer, shaderCacheDirectory, sConfiguration, shaderDescription);
         }
@@ -114,7 +114,7 @@ namespace ne {
 
         std::shared_ptr<Shader> pShader;
 #if defined(WIN32)
-        if (dynamic_cast<DirectXRenderer*>(pRenderer)) {
+        if (dynamic_cast<DirectXRenderer*>(pRenderer) != nullptr) {
             pShader = std::make_shared<HlslShader>(
                 pRenderer,
                 pathToCompiledShader,

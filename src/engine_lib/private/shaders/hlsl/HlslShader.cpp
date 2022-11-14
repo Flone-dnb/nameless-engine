@@ -151,9 +151,9 @@ namespace ne {
         sourceShaderBuffer.Encoding = iShaderFileCodepage;
 
         // Convert arguments.
-        std::vector<LPCWSTR> vFixedArguments;
-        for (const auto& arg : vArgs) {
-            vFixedArguments.push_back(arg.c_str());
+        std::vector<LPCWSTR> vFixedArguments(vArgs.size());
+        for (size_t i = 0; i < vArgs.size(); i++) {
+            vFixedArguments[i] = vArgs[i].c_str();
         }
 
         // Compile it with specified arguments.
@@ -223,7 +223,7 @@ namespace ne {
         ComPtr<IDxcBlob> pCompiledShaderBlob = nullptr;
         ComPtr<IDxcBlobUtf16> pShaderName = nullptr;
         pResults->GetOutput(DXC_OUT_OBJECT, IID_PPV_ARGS(&pCompiledShaderBlob), &pShaderName);
-        if (!pCompiledShaderBlob) {
+        if (pCompiledShaderBlob == nullptr) {
             return Error(std::format(
                 "no shader binary was generated for {}", shaderDescription.pathToShaderFile.string()));
         }
@@ -258,7 +258,7 @@ namespace ne {
         ComPtr<IDxcBlob> pShaderPdb = nullptr;
         ComPtr<IDxcBlobUtf16> pShaderPdbName = nullptr;
         pResults->GetOutput(DXC_OUT_PDB, IID_PPV_ARGS(&pShaderPdb), &pShaderPdbName);
-        if (!pShaderPdb) {
+        if (pShaderPdb == nullptr) {
             return Error(
                 std::format("no PDB was generated for {}", shaderDescription.pathToShaderFile.string()));
         }
@@ -309,7 +309,7 @@ namespace ne {
         std::scoped_lock guard(mtxCompiledBlobRootSignature.first);
 
         // Release shader bytecode.
-        if (mtxCompiledBlobRootSignature.second.first) {
+        if (mtxCompiledBlobRootSignature.second.first != nullptr) {
             const auto iNewRefCount = mtxCompiledBlobRootSignature.second.first.Reset();
             if (iNewRefCount != 0) {
                 Logger::get().error(
@@ -328,10 +328,12 @@ namespace ne {
                         iNewRefCount),
                     "");
             }
+
+            notifyShaderBytecodeReleasedFromMemory();
         }
 
         // Release root signature.
-        if (mtxCompiledBlobRootSignature.second.second) {
+        if (mtxCompiledBlobRootSignature.second.second != nullptr) {
             const auto iNewRefCount = mtxCompiledBlobRootSignature.second.second.Reset();
             if (iNewRefCount != 0) {
                 Logger::get().error(
@@ -401,7 +403,7 @@ namespace ne {
     std::optional<Error> HlslShader::loadShaderDataFromDiskIfNotLoaded() {
         std::scoped_lock guard(mtxCompiledBlobRootSignature.first);
 
-        const auto pathResult = getPathToCompiledShader();
+        auto pathResult = getPathToCompiledShader();
         if (std::holds_alternative<Error>(pathResult)) {
             auto err = std::get<Error>(std::move(pathResult));
             err.addEntry();
@@ -410,7 +412,7 @@ namespace ne {
 
         const auto pathToCompiledShader = std::get<std::filesystem::path>(pathResult);
 
-        if (!mtxCompiledBlobRootSignature.second.first) {
+        if (mtxCompiledBlobRootSignature.second.first == nullptr) {
             // Load cached bytecode from disk.
             auto result = readBlobFromDisk(pathToCompiledShader);
             if (std::holds_alternative<Error>(result)) {
@@ -420,9 +422,11 @@ namespace ne {
             }
 
             mtxCompiledBlobRootSignature.second.first = std::get<ComPtr<IDxcBlob>>(std::move(result));
+
+            notifyShaderBytecodeLoadedIntoMemory();
         }
 
-        if (!mtxCompiledBlobRootSignature.second.second) {
+        if (mtxCompiledBlobRootSignature.second.second == nullptr) {
             // Load shader reflection from disk.
             const auto pathToShaderReflection =
                 pathToCompiledShader.string() + sShaderReflectionFileExtension;

@@ -24,6 +24,13 @@ namespace ne {
         virtual ~Shader() = default;
 
         /**
+         * Returns the total amount of loaded into the memory shaders.
+         *
+         * @return Total amount of loaded into the memory shaders.
+         */
+        static size_t getTotalAmountOfLoadedShaders();
+
+        /**
          * Tests if shader cache for this shader is corrupted or not
          * and deletes the cache if it's corrupted.
          *
@@ -135,6 +142,18 @@ namespace ne {
             const std::string& sSourceFileHash);
 
         /**
+         * Derived shader classes should call this function once they load shader bytecode
+         * into the memory from the disk.
+         */
+        void notifyShaderBytecodeLoadedIntoMemory();
+
+        /**
+         * Derived shader classes should call this function once they release shader bytecode
+         * from the memory.
+         */
+        void notifyShaderBytecodeReleasedFromMemory();
+
+        /**
          * Returns path to compiled shader blob on disk.
          *
          * @return Error if the compiled shader does not exist, otherwise path to compiled shader.
@@ -163,5 +182,8 @@ namespace ne {
 
         /** Shader source file hash, used to tell what shaders were compiled from the same file. */
         std::string sSourceFileHash;
+
+        /** Name of the category used for logging. */
+        static inline const auto sShaderLogCategory = "Shader";
     };
 } // namespace ne

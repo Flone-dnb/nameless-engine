@@ -4,6 +4,7 @@
 #include "misc/Error.h"
 #include "render/Renderer.h"
 #include "shaders/ShaderFilesystemPaths.hpp"
+#include "io/Logger.h"
 #if defined(WIN32)
 #include "hlsl/HlslShader.h"
 #include "render/directx/DirectXRenderer.h"
@@ -11,6 +12,9 @@
 
 // External.
 #include "fmt/core.h"
+
+/** Total amount of shader blobs loaded into the memory. */
+static std::atomic<size_t> iTotalShaderInMemoryCount{0};
 
 namespace ne {
     Shader::Shader(
@@ -25,6 +29,12 @@ namespace ne {
         this->pUsedRenderer = pRenderer;
         this->sSourceFileHash = sSourceFileHash;
     }
+
+    size_t Shader::getTotalAmountOfLoadedShaders() { return iTotalShaderInMemoryCount.load(); }
+
+    void Shader::notifyShaderBytecodeLoadedIntoMemory() { iTotalShaderInMemoryCount.fetch_add(1); }
+
+    void Shader::notifyShaderBytecodeReleasedFromMemory() { iTotalShaderInMemoryCount.fetch_sub(1); }
 
     std::variant<std::shared_ptr<Shader>, std::string, Error> Shader::compileShader(
         Renderer* pRenderer,

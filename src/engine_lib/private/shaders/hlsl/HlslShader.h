@@ -44,7 +44,7 @@ namespace ne {
         HlslShader(const HlslShader&) = delete;
         HlslShader& operator=(const HlslShader&) = delete;
 
-        virtual ~HlslShader() override {}
+        virtual ~HlslShader() override = default;
 
         /**
          * Returns shader input layout description (@ref vShaderVertexDescription).
@@ -89,8 +89,8 @@ namespace ne {
 
         /**
          * Loads compiled bytecode from disk and stores it in memory.
-         * Subsequent calls to this function will just copy pointer
-         * to bytecode from memory (no disk loading will happen).
+         * Subsequent calls to this function will just copy the bytecode pointer
+         * (no disk loading will happen).
          *
          * @return Compiled shader blob.
          */
@@ -115,11 +115,11 @@ namespace ne {
          * be deleted) if the shader data was loaded into memory. Next time this shader will be needed the
          * data will be loaded from disk.
          *
-         * @param bLogOnlyErrors Specify 'true' to only log errors, 'false' to log errors and info.
-         * Specifying 'true' is useful when we are testing if shader cache is corrupted or not,
-         * to make log slightly cleaner.
+         * @param bLogOnlyErrors Specify `true` to only log errors, `false` to log errors and info.
+         * Specifying `true` is useful when we are testing if shader cache is corrupted or not,
+         * to make the log slightly cleaner.
          *
-         * @return 'false' if was released from memory, 'true' if not loaded into memory.
+         * @return `false` if was released from memory, `true` if was not loaded in memory previously.
          */
         virtual bool releaseShaderDataFromMemoryIfLoaded(bool bLogOnlyErrors = false) override;
 

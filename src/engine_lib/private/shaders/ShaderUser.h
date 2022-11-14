@@ -30,6 +30,8 @@ namespace ne {
          * @param pShaderManager Shader manager to use.
          */
         ShaderUser(ShaderManager* pShaderManager);
+
+        /** Destructor. */
         virtual ~ShaderUser();
 
         /**

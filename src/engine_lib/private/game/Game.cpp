@@ -10,6 +10,7 @@
 #include "misc/ProjectPaths.h"
 #include "misc/GC.hpp"
 #include "render/Renderer.h"
+#include "shaders/Shader.h"
 #if defined(WIN32)
 #include "render/directx/DirectXRenderer.h"
 #endif
@@ -167,6 +168,17 @@ namespace ne {
                     "{} gc object(s) alive, here are a few reasons why this may happen:\n{}",
                     iGcObjectsLeft,
                     sGcLeakReasons),
+                sGameLogCategory);
+        }
+
+        // Explicitly destroy the renderer to check how much shaders left in the memory.
+        pRenderer = nullptr;
+        const auto iTotalShadersInMemory = Shader::getTotalAmountOfLoadedShaders();
+        if (iTotalShadersInMemory != 0) {
+            Logger::get().error(
+                fmt::format(
+                    "the renderer was destroyed but there are still {} shaders left in the memory",
+                    iTotalShadersInMemory),
                 sGameLogCategory);
         }
     }

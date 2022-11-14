@@ -25,7 +25,7 @@ namespace ne {
         const std::string& sShaderName,
         ShaderType shaderType,
         std::string sSourceFileHash)
-        : IShader(pRenderer, std::move(pathToCompiledShader), sShaderName, shaderType, sSourceFileHash) {}
+        : Shader(pRenderer, std::move(pathToCompiledShader), sShaderName, shaderType, sSourceFileHash) {}
 
     std::vector<D3D12_INPUT_ELEMENT_DESC> HlslShader::getShaderInputElementDescription() {
         return vShaderVertexDescription;
@@ -44,7 +44,7 @@ namespace ne {
         return {};
     }
 
-    std::variant<std::shared_ptr<IShader>, std::string, Error> HlslShader::compileShader(
+    std::variant<std::shared_ptr<Shader>, std::string, Error> HlslShader::compileShader(
         Renderer* pRenderer,
         const std::filesystem::path& cacheDirectory,
         const std::string& sConfiguration,

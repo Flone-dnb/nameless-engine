@@ -1,9 +1,8 @@
-﻿#include "IShader.h"
+﻿#include "Shader.h"
 
 // Custom.
 #include "misc/Error.h"
 #include "render/Renderer.h"
-#include "io/Logger.h"
 #include "shaders/ShaderFilesystemPaths.hpp"
 #if defined(WIN32)
 #include "hlsl/HlslShader.h"
@@ -14,7 +13,7 @@
 #include "fmt/core.h"
 
 namespace ne {
-    IShader::IShader(
+    Shader::Shader(
         Renderer* pRenderer,
         std::filesystem::path pathToCompiledShader,
         const std::string& sShaderName,
@@ -27,7 +26,7 @@ namespace ne {
         this->sSourceFileHash = sSourceFileHash;
     }
 
-    std::variant<std::shared_ptr<IShader>, std::string, Error> IShader::compileShader(
+    std::variant<std::shared_ptr<Shader>, std::string, Error> Shader::compileShader(
         Renderer* pRenderer,
         const std::filesystem::path& shaderCacheDirectory,
         const std::string& sConfiguration,
@@ -38,7 +37,7 @@ namespace ne {
         }
 
         // Compile shader.
-        std::variant<std::shared_ptr<IShader>, std::string, Error> result;
+        std::variant<std::shared_ptr<Shader>, std::string, Error> result;
 #if defined(WIN32)
         if (dynamic_cast<DirectXRenderer*>(pRenderer)) {
             result =
@@ -55,7 +54,7 @@ namespace ne {
 //        }
 #endif
 
-        if (std::holds_alternative<std::shared_ptr<IShader>>(result)) {
+        if (std::holds_alternative<std::shared_ptr<Shader>>(result)) {
             auto shaderCacheConfigurationPath =
                 shaderCacheDirectory / ShaderFilesystemPaths::getShaderCacheBaseFileName();
             shaderCacheConfigurationPath += sConfiguration;
@@ -69,7 +68,7 @@ namespace ne {
         return result;
     }
 
-    std::variant<std::shared_ptr<IShader>, Error> IShader::createFromCache(
+    std::variant<std::shared_ptr<Shader>, Error> Shader::createFromCache(
         Renderer* pRenderer,
         const std::filesystem::path& pathToCompiledShader,
         ShaderDescription& shaderDescription,
@@ -113,7 +112,7 @@ namespace ne {
                 shaderDescription.pathToShaderFile.string()));
         }
 
-        std::shared_ptr<IShader> pShader;
+        std::shared_ptr<Shader> pShader;
 #if defined(WIN32)
         if (dynamic_cast<DirectXRenderer*>(pRenderer)) {
             pShader = std::make_shared<HlslShader>(
@@ -145,9 +144,9 @@ namespace ne {
         return pShader;
     }
 
-    std::string IShader::getShaderName() const { return sShaderName; }
+    std::string Shader::getShaderName() const { return sShaderName; }
 
-    std::variant<std::filesystem::path, Error> IShader::getPathToCompiledShader() {
+    std::variant<std::filesystem::path, Error> Shader::getPathToCompiledShader() {
         if (!std::filesystem::exists(pathToCompiledShader)) {
             const Error err(fmt::format(
                 "path to compiled shader \"{}\" no longer exists", pathToCompiledShader.string()));
@@ -156,9 +155,9 @@ namespace ne {
         return pathToCompiledShader;
     }
 
-    Renderer* IShader::getUsedRenderer() const { return pUsedRenderer; }
+    Renderer* Shader::getUsedRenderer() const { return pUsedRenderer; }
 
-    std::string IShader::getShaderSourceFileHash() const { return sSourceFileHash; }
+    std::string Shader::getShaderSourceFileHash() const { return sSourceFileHash; }
 
-    ShaderType IShader::getShaderType() const { return shaderType; }
+    ShaderType Shader::getShaderType() const { return shaderType; }
 } // namespace ne

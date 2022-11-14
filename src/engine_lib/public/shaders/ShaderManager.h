@@ -19,7 +19,7 @@
 #include "shaders/ShaderPack.h"
 
 namespace ne {
-    class IShader;
+    class Shader;
     class Renderer;
 
     /**
@@ -103,7 +103,7 @@ namespace ne {
          * If somebody is still referencing this shader, the shader will be added to
          * "to remove" array and will be removed later when nobody
          * is referencing this shader (specifically when only one
-         * std::shared_ptr<IShader> instance pointing to this shader
+         * std::shared_ptr<Shader> instance pointing to this shader
          * will exist (it will exist in @ref ShaderManager as @ref ShaderManager
          * stores pointer to each shader)).
          *

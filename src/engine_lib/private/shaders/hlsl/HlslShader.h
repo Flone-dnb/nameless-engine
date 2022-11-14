@@ -4,7 +4,7 @@
 #include <mutex>
 
 // Custom.
-#include "shaders/IShader.h"
+#include "shaders/Shader.h"
 #include "shaders/ShaderPack.h"
 #include "render/Renderer.h"
 
@@ -21,7 +21,7 @@ namespace ne {
     /**
      * Represents compiled HLSL shader.
      */
-    class HlslShader : public IShader {
+    class HlslShader : public Shader {
     public:
         /**
          * Constructor. Used to create shader using cache.
@@ -78,7 +78,7 @@ namespace ne {
          * @arg internal error
          */
         static std::variant<
-            std::shared_ptr<IShader> /** Compiled shader pack. */,
+            std::shared_ptr<Shader> /** Compiled shader pack. */,
             std::string /** Compilation error. */,
             Error /** Internal error. */>
         compileShader(

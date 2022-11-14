@@ -8,20 +8,20 @@
 // Custom.
 #include "misc/Error.h"
 #include "shaders/ShaderDescription.h"
-#include "shaders/ShaderPack.h"
 
 namespace ne {
     class Renderer;
-    /**
-     * Interface class for different types/formats of shaders.
-     */
-    class IShader {
-    public:
-        IShader() = delete;
-        IShader(const IShader&) = delete;
-        IShader& operator=(const IShader&) = delete;
 
-        virtual ~IShader() = default;
+    /**
+     * Base class for different types/formats of shaders to implement.
+     */
+    class Shader {
+    public:
+        Shader() = delete;
+        Shader(const Shader&) = delete;
+        Shader& operator=(const Shader&) = delete;
+
+        virtual ~Shader() = default;
 
         /**
          * Tests if shader cache for this shader is corrupted or not
@@ -49,7 +49,7 @@ namespace ne {
          * @arg internal error
          */
         static std::variant<
-            std::shared_ptr<IShader> /** Compiled shader pack. */,
+            std::shared_ptr<Shader> /** Compiled shader pack. */,
             std::string /** Compilation error. */,
             Error /** Internal error. */>
         compileShader(
@@ -73,7 +73,7 @@ namespace ne {
          * @return Returns error if the shader cache is corrupted or was invalidated,
          * otherwise a shader created using shader cache.
          */
-        static std::variant<std::shared_ptr<IShader>, Error> createFromCache(
+        static std::variant<std::shared_ptr<Shader>, Error> createFromCache(
             Renderer* pRenderer,
             const std::filesystem::path& pathToCompiledShader,
             ShaderDescription& shaderDescription,
@@ -127,7 +127,7 @@ namespace ne {
          * @param sSourceFileHash      Shader source file hash, used to tell what shaders were compiled from
          * the same file.
          */
-        IShader(
+        Shader(
             Renderer* pRenderer,
             std::filesystem::path pathToCompiledShader,
             const std::string& sShaderName,

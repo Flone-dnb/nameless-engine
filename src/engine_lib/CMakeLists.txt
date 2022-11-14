@@ -84,8 +84,8 @@ set(ENGINE_LIB_SOURCES
     public/input/MouseButton.hpp
     public/shaders/ShaderManager.h
     private/shaders/ShaderManager.cpp
-    private/shaders/IShader.cpp
-    private/shaders/IShader.h
+    private/shaders/Shader.cpp
+    private/shaders/Shader.h
     public/shaders/ShaderDescription.h
     private/shaders/ShaderDescription.cpp
     private/shaders/ShaderUser.h

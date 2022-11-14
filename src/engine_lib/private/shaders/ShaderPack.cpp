@@ -5,7 +5,7 @@
 
 // Custom.
 #include "io/Logger.h"
-#include "shaders/IShader.h"
+#include "shaders/Shader.h"
 #include "shaders/ShaderFilesystemPaths.hpp"
 #if defined(WIN32)
 #include "shaders/hlsl/HlslShader.h"
@@ -61,7 +61,7 @@ namespace ne {
             auto currentPathToCompiledShader = pathToCompiledShader;
             currentPathToCompiledShader += sConfigurationText;
 
-            auto result = IShader::createFromCache(
+            auto result = Shader::createFromCache(
                 pRenderer,
                 currentPathToCompiledShader,
                 currentShaderDescription,
@@ -77,7 +77,7 @@ namespace ne {
                 return err;
             }
 
-            pShaderPack->shaders[parameters] = std::get<std::shared_ptr<IShader>>(result);
+            pShaderPack->shaders[parameters] = std::get<std::shared_ptr<Shader>>(result);
         }
 
         Logger::get().info(
@@ -122,10 +122,10 @@ namespace ne {
                                                shaderDescription.sShaderName; // use non modified name here
 
             // Compile shader for this configuration.
-            const auto result = IShader::compileShader(
+            const auto result = Shader::compileShader(
                 pRenderer, currentPathToCompiledShader, sConfigurationText, currentShaderDescription);
-            if (std::holds_alternative<std::shared_ptr<IShader>>(result)) {
-                pShaderPack->shaders[parameters] = std::get<std::shared_ptr<IShader>>(result);
+            if (std::holds_alternative<std::shared_ptr<Shader>>(result)) {
+                pShaderPack->shaders[parameters] = std::get<std::shared_ptr<Shader>>(result);
             } else if (std::holds_alternative<std::string>(result)) {
                 return std::get<std::string>(result);
             } else {
@@ -136,21 +136,20 @@ namespace ne {
         return pShaderPack;
     }
 
-    std::optional<std::shared_ptr<IShader>>
-    ShaderPack::changeConfiguration(const std::set<ShaderParameter>& configuration) {
+    std::shared_ptr<Shader> ShaderPack::changeConfiguration(const std::set<ShaderParameter>& configuration) {
         std::scoped_lock guard(mtxShaders);
 
-        if (previouslyRequestedShader.has_value()) {
-            previouslyRequestedShader.value()->get()->releaseShaderDataFromMemoryIfLoaded();
-            previouslyRequestedShader = {};
+        if (pPreviouslyRequestedShader) {
+            pPreviouslyRequestedShader->get()->releaseShaderDataFromMemoryIfLoaded();
+            pPreviouslyRequestedShader = nullptr;
         }
 
         const auto it = shaders.find(configuration);
         if (it == shaders.end()) {
-            return {};
+            return nullptr;
         }
 
-        previouslyRequestedShader = &it->second;
+        pPreviouslyRequestedShader = &it->second;
         return it->second;
     }
 

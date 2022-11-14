@@ -6,7 +6,7 @@
 // Custom.
 #include "game/Game.h"
 #include "io/Logger.h"
-#include "shaders/IShader.h"
+#include "shaders/Shader.h"
 #include "render/Renderer.h"
 #include "io/ConfigManager.h"
 #include "misc/ProjectPaths.h"

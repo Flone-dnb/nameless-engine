@@ -70,21 +70,21 @@ namespace ne {
 
         // Get vertex shader for current configuration.
         const auto vertexShaderConfiguration = pRenderer->getVertexShaderConfiguration();
-        auto optionalShader = pVertexShaderPack->changeConfiguration(vertexShaderConfiguration);
-        if (!optionalShader.has_value()) [[unlikely]] {
+        auto pShader = pVertexShaderPack->changeConfiguration(vertexShaderConfiguration);
+        if (!pShader) [[unlikely]] {
             return Error(generateErrorMessage(
                 "vertex", pVertexShaderPack->getShaderName(), vertexShaderConfiguration));
         }
-        const auto pVertexShader = std::dynamic_pointer_cast<HlslShader>(optionalShader.value());
+        const auto pVertexShader = std::dynamic_pointer_cast<HlslShader>(pShader);
 
         // Get pixel shader for current configuration.
         const auto pixelShaderConfiguration = pRenderer->getPixelShaderConfiguration();
-        optionalShader = pPixelShaderPack->changeConfiguration(pixelShaderConfiguration);
-        if (!optionalShader.has_value()) [[unlikely]] {
+        pShader = pPixelShaderPack->changeConfiguration(pixelShaderConfiguration);
+        if (!pShader) [[unlikely]] {
             return Error(
                 generateErrorMessage("pixel", pPixelShaderPack->getShaderName(), pixelShaderConfiguration));
         }
-        const auto pPixelShader = std::dynamic_pointer_cast<HlslShader>(optionalShader.value());
+        const auto pPixelShader = std::dynamic_pointer_cast<HlslShader>(pShader);
 
         // Generate root signature for both shaders.
         auto result =

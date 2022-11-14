@@ -135,6 +135,19 @@ namespace ne {
             const std::filesystem::path& pathToShaderSourceFile, const std::string& sShaderName);
 
         /**
+         * Compares this shader description with other to see
+         * if the serializable fields are equal.
+         * This is usually done to check if shader cache is valid or not
+         * (needs to be recompiled or not).
+         *
+         * @param other Other shader description to compare with.
+         *
+         * @return Whether the data is equal or not. If the data is not equal,
+         * has a value that contains a reason.
+         */
+        std::optional<ShaderCacheInvalidationReason> isSerializableDataEqual(ShaderDescription& other);
+
+        /**
          * Used to deserialize struct from .toml file.
          *
          * @param data Toml value.
@@ -180,8 +193,6 @@ namespace ne {
         // ----------------------------------------
 
     private:
-        friend class IShader;
-
         /**
          * Uses @ref pathToShaderFile to recursively calculate
          * hashes of all include files to fill @ref shaderIncludeTreeHashes.
@@ -200,19 +211,6 @@ namespace ne {
             std::
                 unordered_map<std::string /** relative include path */, std::string /** include file hash */>>
         deserializeShaderIncludeTreeHashes(const toml::value& data);
-
-        /**
-         * Compares this shader description with other to see
-         * if the serializable fields are equal.
-         * This is usually done to check if shader cache is valid or not
-         * (needs to be recompiled or not).
-         *
-         * @param other Other shader description to compare with.
-         *
-         * @return Whether the data is equal or not. If the data is not equal,
-         * has a value that contains a reason.
-         */
-        std::optional<ShaderCacheInvalidationReason> isSerializableDataEqual(ShaderDescription& other);
 
         /**
          * Scans shader file for "#include" entries and

@@ -13,9 +13,12 @@
 
 namespace ne {
     class Renderer;
-    class IShader;
+    class Shader;
 
-    /** Represents a group of different variants of one shader. */
+    /**
+     * Represents a group of different variants of one shader
+     * (typically this means one shader compiled with different combinations of predefined macros).
+     */
     class ShaderPack {
     public:
         ShaderPack() = delete;
@@ -27,7 +30,7 @@ namespace ne {
         /**
          * Compiles a shader pack.
          *
-         * @param pRenderer         DirectX renderer.
+         * @param pRenderer         Used renderer.
          * @param shaderDescription Description that describes the shader and how the shader should be
          * compiled.
          *
@@ -67,11 +70,10 @@ namespace ne {
          *
          * @param configuration New configuration.
          *
-         * @return Empty if the shader for this configuration was not found, otherwise
+         * @return `nullptr` if the shader for this configuration was not found, otherwise
          * shader that matches this configuration.
          */
-        std::optional<std::shared_ptr<IShader>>
-        changeConfiguration(const std::set<ShaderParameter>& configuration);
+        std::shared_ptr<Shader> changeConfiguration(const std::set<ShaderParameter>& configuration);
 
         /**
          * Releases underlying shader bytecode for each shader from memory (this object will not be deleted)
@@ -116,10 +118,10 @@ namespace ne {
         std::mutex mtxShaders;
 
         /** A shader that was requested in the last call to @ref changeConfiguration. */
-        std::optional<std::shared_ptr<IShader>*> previouslyRequestedShader;
+        std::shared_ptr<Shader>* pPreviouslyRequestedShader = nullptr;
 
         /** Map of shaders in this pack. */
-        std::unordered_map<std::set<ShaderParameter>, std::shared_ptr<IShader>, ShaderParameterSetHash>
+        std::unordered_map<std::set<ShaderParameter>, std::shared_ptr<Shader>, ShaderParameterSetHash>
             shaders;
     };
 } // namespace ne

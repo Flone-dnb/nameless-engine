@@ -50,6 +50,7 @@ endif()
 
 # Temporary solution for `tgc2` in `Refureku` (because we use it below).
 set(TGC_CPP_FILE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/Refureku/build/Include/tgc2/include/tgc2.cpp)
+set(TGC_H_FILE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/Refureku/build/Include/tgc2/include/tgc2.h)
 if (NOT EXISTS ${TGC_CPP_FILE_PATH})
     file(WRITE ${TGC_CPP_FILE_PATH} "")
 endif()
@@ -237,8 +238,31 @@ set_target_properties(fmt PROPERTIES FOLDER ${EXTERNAL_FOLDER})
 
 # [temporary solution]: External: tgc
 target_sources(${PROJECT_NAME} PUBLIC ${TGC_CPP_FILE_PATH})
-if(Clang)
-    set_source_files_properties(${TGC_CPP_FILE_PATH} PROPERTIES COMPILE_FLAGS -Wno-unused-parameter)
+if(NOT MSVC)
+    message(STATUS "Adding flags to ignore some warnings in external dependency `tgc2`.")
+    set_source_files_properties(${TGC_CPP_FILE_PATH} PROPERTIES COMPILE_FLAGS "-Wno-unused-parameter -Wno-error=extra")
+    set_source_files_properties(${TGC_H_FILE_PATH} PROPERTIES COMPILE_FLAGS "-Wno-unused-parameter -Wno-error=extra")
+endif()
+
+# Doxygen
+option(ENABLE_DOXYGEN "Enables doxygen for controling and generating the documentation." ON)
+if (ENABLE_DOXYGEN)
+    find_package(Doxygen)
+    if (DOXYGEN_FOUND)
+        set(DOXYGEN_TARGET doc_doxygen)
+        add_custom_target(${DOXYGEN_TARGET}
+            COMMAND doxygen
+            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../../docs/
+            COMMENT "Generating API documentation using Doxygen..."
+            VERBATIM )
+        set_target_properties(${DOXYGEN_TARGET} PROPERTIES FOLDER ${EXTERNAL_FOLDER})
+        add_dependencies(${PROJECT_NAME} ${DOXYGEN_TARGET})
+        message("Doxygen is enabled.")
+    else()
+        message(FATAL "Doxygen need to be installed to control the documentation, please install Doxygen.")
+    endif()
+else()
+    message(WARNING "Doxygen is disabled.")
 endif()
 
 # External: Refureku (start) --------------------------------------------------------------------------
@@ -249,7 +273,7 @@ if (NOT ${PIPE_POS} STREQUAL "-1")
 endif()
 
 # Write project include directories for Refureku.
-set(REFUREKU_INCLUDE_DIRECTORIES 
+set(REFUREKU_INCLUDE_DIRECTORIES
     "${CMAKE_CURRENT_SOURCE_DIR}/../../ext/|\
 ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/glfw/include|\
 ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/DirectX-Headers/include|\
@@ -284,7 +308,6 @@ add_custom_target(${SETUP_REFUREKU_TARGET}
                 "\"${REFUREKU_INCLUDE_DIRECTORIES}\"" # project include directories
                 "\"${REFUREKU_EXCLUDE_FILES}\"" # files to exclude from analyzing
                 ${CMAKE_CXX_COMPILER_ID} # used compiler
-                ${PROJECT_CXX_STANDARD_VERSION} # used C++ standard
 )
 add_dependencies(${PROJECT_NAME} ${SETUP_REFUREKU_TARGET})
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/Refureku/build/Include/)
@@ -308,8 +331,8 @@ target_link_libraries(${PROJECT_NAME} PUBLIC Refureku)
 # Add a pre build step to run reflection code generator.
 set(REFUREKU_GENERATOR_TARGET RunRefurekuGeneratorEngine)
 add_custom_target(${REFUREKU_GENERATOR_TARGET}
-	WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
-	COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/Refureku/build/Bin/RefurekuGenerator ${CMAKE_CURRENT_SOURCE_DIR}/../.reflection/RefurekuSettings.toml
+        WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+        COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/Refureku/build/Bin/RefurekuGenerator ${CMAKE_CURRENT_SOURCE_DIR}/../.reflection/RefurekuSettings.toml
         COMMAND go run ${CMAKE_CURRENT_SOURCE_DIR}/../.reflection/merge_generated_reflection/merge_generated_reflection.go ${CMAKE_CURRENT_SOURCE_DIR}/../.generated ${REFLECTION_FILE_NAME}
 )
 add_dependencies(${REFUREKU_GENERATOR_TARGET} ${SETUP_REFUREKU_TARGET})

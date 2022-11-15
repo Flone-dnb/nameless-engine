@@ -99,8 +99,6 @@ namespace ne {
          *
          * @param pathToConfigFile Path to the file to remove.
          * The .toml extension will be added if the passed path does not have it.
-         *
-         * @return Error if something went wrong. No error will be returned if the file does not exist.
          */
         static void removeFile(std::filesystem::path pathToConfigFile);
 

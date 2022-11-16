@@ -30,12 +30,18 @@ namespace ne {
         switch (directory) {
         case ResourceDirectory::ROOT:
             return path;
-        case ResourceDirectory::GAME:
+        case ResourceDirectory::GAME: {
             path /= sGameResourcesDirectoryName;
-        case ResourceDirectory::ENGINE:
+            break;
+        }
+        case ResourceDirectory::ENGINE: {
             path /= sEngineResourcesDirectoryName;
-        case ResourceDirectory::EDITOR:
+            break;
+        }
+        case ResourceDirectory::EDITOR: {
             path /= sEditorResourcesDirectoryName;
+            break;
+        }
         };
 
         if (!std::filesystem::exists(path)) {

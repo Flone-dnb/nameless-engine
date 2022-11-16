@@ -10,7 +10,6 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
-	"strconv"
 	"strings"
 
 	"github.com/codeclysm/extract/v3"
@@ -24,10 +23,9 @@ import (
 // 3. Array of included directories that the project uses separated by pipe ('|') sign.
 // 4. Array of files to exclude from analyzing.
 // 5. Used compiler ID (from CMake).
-// 6. Used C++ standard (only number, for example: 20, 23).
 func main() {
 	var args_count = len(os.Args[1:])
-	if args_count < 6 {
+	if args_count < 5 {
 		fmt.Println("ERROR: download_and_setup_refureku.go: not enough arguments.")
 		os.Exit(1)
 	}
@@ -40,7 +38,6 @@ func main() {
 	var include_directories = strings.Split(os.Args[3], "|")
 	var exclude_files = strings.Split(os.Args[4], "|")
 	var compiler_id = os.Args[5]
-	var cpp_standard_number = os.Args[6]
 
 	// Change this to update used Refureku version.
 	var refureku_version_tag = "v2.3.0c"
@@ -65,8 +62,7 @@ func main() {
 		src_dir,
 		include_directories,
 		exclude_files,
-		compiler_id,
-		cpp_standard_number)
+		compiler_id)
 }
 
 func get_archive_name(archive_url string) string {
@@ -187,8 +183,7 @@ func initialize_refureku_settings(
 	src_directory string,
 	include_directories []string,
 	exclude_files []string,
-	compiler_id string,
-	cpp_standard_number string) {
+	compiler_id string) {
 	// Check that template file exists.
 	var _, err = os.Stat(template_settings_file_path)
 	if os.IsNotExist(err) {
@@ -298,16 +293,6 @@ func initialize_refureku_settings(
 		fmt.Println("ERROR: download_and_setup_refureku.go: unknown compiler name", compiler_id)
 		os.Exit(1)
 	}
-	cpp_standard, err := strconv.Atoi(cpp_standard_number)
-	if err != nil {
-		fmt.Println("ERROR: download_and_setup_refureku.go: failed to convert the specified "+
-			"C++ standard", cpp_standard_number, "to integer:", err)
-		os.Exit(1)
-	}
-	if cpp_standard > 20 {
-		cpp_standard = 20 // clamp otherwise Refureku complains
-	}
-
 	// Prepare tests files.
 	var reflection_test_path = filepath.Join(src_directory, "..", "tests", "engine_lib", "io", "ReflectionTest.h")
 
@@ -322,7 +307,7 @@ func initialize_refureku_settings(
 	cfg.ParsingSettings.ProjectIncludeDirectories = include_directories
 	cfg.ParsingSettings.CompilerExeName = compiler_binary_name
 	cfg.ParsingSettings.AdditionalClangArguments = "-Wno-ignored-attributes"
-	cfg.ParsingSettings.CppVersion = cpp_standard
+	cfg.ParsingSettings.CppVersion = 20
 	cfg.ParsingSettings.ShouldFailCodeGenerationOnClangErrors = true
 	// WARNING: if changing macro names also change them in Doxyfile in PREDEFINED section
 	cfg.ParsingSettings.NamespaceMacroName = "RNAMESPACE"

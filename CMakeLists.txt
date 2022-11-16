@@ -102,19 +102,4 @@ if(CMAKE_BUILD_TYPE MATCHES "^[Dd]ebug")
     endif()
 endif()
 
-# doxygen
-find_package(Doxygen)
-if (DOXYGEN_FOUND)
-    set(DOXYGEN_TARGET doc_doxygen)
-    add_custom_target(${DOXYGEN_TARGET} ALL
-        COMMAND doxygen
-        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/docs/
-        COMMENT "Generating API documentation with Doxygen..."
-        VERBATIM )
-    add_dependencies(${DOXYGEN_TARGET} ${PROJECT_NAME} engine_lib)
-    set_target_properties(${DOXYGEN_TARGET} PROPERTIES FOLDER ${EXTERNAL_FOLDER})
-else (DOXYGEN_FOUND)
-  message(WARNING "Doxygen need to be installed to generate the documentation, please install Doxygen.")
-endif (DOXYGEN_FOUND)
-
 message(STATUS "${PROJECT_NAME} is configured to use the following C++ standard: ${CMAKE_CXX_STANDARD}")

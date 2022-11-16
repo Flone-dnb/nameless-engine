@@ -28,3 +28,6 @@
 [submodule "ext/fmt"]
 	path = ext/fmt
 	url = https://github.com/fmtlib/fmt.git
+[submodule "ext/DirectXMath"]
+	path = ext/DirectXMath
+	url = https://github.com/microsoft/DirectXMath.git

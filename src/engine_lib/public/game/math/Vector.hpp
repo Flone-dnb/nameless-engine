@@ -43,6 +43,38 @@ namespace ne {
         inline void setZ(float z); // NOLINT
 
         /**
+         * Normalizes the vector.
+         */
+        inline void normalize();
+
+        /**
+         * Returns the result of the dot product between this vector and another one.
+         *
+         * @param other Other vector for the dot product.
+         *
+         * @return Result of the dot product.
+         */
+        inline float dotProduct(const Vector& other) const;
+
+        /**
+         * Calculates the cross product between this vector and another one.
+         *
+         * @param other Other vector.
+         *
+         * @return Result of the cross product.
+         */
+        inline Vector crossProduct(const Vector& other) const;
+
+        /**
+         * Calculates the projection of this vector onto another vector.
+         *
+         * @param other Vector to project onto.
+         *
+         * @return Projected vector.
+         */
+        inline Vector projectOnto(const Vector& other) const;
+
+        /**
          * Returns the X component of the vector.
          *
          * @return X component of the vector.
@@ -62,6 +94,13 @@ namespace ne {
          * @return Z component of the vector.
          */
         inline float getZ() const;
+
+        /**
+         * Returns the length of the vector.
+         *
+         * @return Length of the vector.
+         */
+        inline float getLength() const;
 
         /**
          * Vector addition operator.
@@ -174,6 +213,44 @@ namespace ne {
 
     void Vector::setZ(float z) { // NOLINT
         vector.z = z;
+    }
+
+    void Vector::normalize() {
+        const auto result = DirectX::XMVector3Normalize(DirectX::XMLoadFloat3(&vector));
+        DirectX::XMStoreFloat3(&vector, result);
+    }
+
+    float Vector::getLength() const {
+        const auto result = DirectX::XMVector3Length(DirectX::XMLoadFloat3(&vector));
+        DirectX::XMFLOAT3 output;
+        DirectX::XMStoreFloat3(&output, result);
+
+        return output.x;
+    }
+
+    float Vector::dotProduct(const Vector& other) const {
+        const auto result =
+            DirectX::XMVector3Dot(DirectX::XMLoadFloat3(&vector), DirectX::XMLoadFloat3(&other.vector));
+
+        DirectX::XMFLOAT3 output;
+        DirectX::XMStoreFloat3(&output, result);
+
+        return output.x;
+    }
+
+    Vector Vector::crossProduct(const Vector& other) const {
+        const auto result =
+            DirectX::XMVector3Cross(DirectX::XMLoadFloat3(&vector), DirectX::XMLoadFloat3(&other.vector));
+
+        Vector output;
+        DirectX::XMStoreFloat3(&output.vector, result);
+
+        return output;
+    }
+
+    Vector Vector::projectOnto(const Vector& other) const {
+        const float otherLength = other.getLength();
+        return other * (dotProduct(other) / (otherLength * otherLength));
     }
 
     Vector Vector::operator+(const Vector& other) const {

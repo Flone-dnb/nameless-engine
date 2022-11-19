@@ -134,6 +134,7 @@ set(ENGINE_LIB_SOURCES
     public/io/serializers/SerializableObjectFieldSerializer.h
     public/math/Vector.hpp
     public/math/MathHelpers.hpp
+    private/math/glmengine.hpp
     # add general (cross-platform) sources here...
 )
 
@@ -422,6 +423,11 @@ if (WIN32)
     add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
                    COMMAND ${CMAKE_COMMAND} -E copy
                    ${PATH_TO_DXC_DLL_DIR}/dxil.dll ${CMAKE_CURRENT_BINARY_DIR}/dxil.dll)
+else() # Non-Win32 specific dependencies:
+    # External: GLM
+    add_subdirectory(${RELATIVE_EXT_PATH}/glm ${DEPENDENCY_BUILD_DIR_NAME}/glm)
+    target_link_libraries(${PROJECT_NAME} PUBLIC glm)
+    set_target_properties(glm PROPERTIES FOLDER ${EXTERNAL_FOLDER})
 endif()
 
 # Execute post build script.

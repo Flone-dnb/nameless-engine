@@ -1,11 +1,16 @@
 #pragma once
 
+// STL.
+#include <cmath>
+
 // Custom.
 #include "math/Vector.hpp"
 
 // External.
 #if defined(WIN32)
 #include "DirectXMath.h"
+#else
+#include "math/glmengine.hpp"
 #endif
 
 namespace ne {
@@ -60,5 +65,13 @@ namespace ne {
     float MathHelpers::convertRadiansToDegrees(float radians) { return DirectX::XMConvertToDegrees(radians); }
 
     float MathHelpers::convertDegreesToRadians(float degrees) { return DirectX::XMConvertToRadians(degrees); }
+#else
+    // --------------------------------------------------------------------------------------------
+    // GLM implementation.
+    // --------------------------------------------------------------------------------------------
+
+    float MathHelpers::convertRadiansToDegrees(float radians) { return glm::degrees(radians); }
+
+    float MathHelpers::convertDegreesToRadians(float degrees) { return glm::radians(degrees); }
 #endif
 } // namespace ne

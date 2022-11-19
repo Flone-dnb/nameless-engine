@@ -31,3 +31,6 @@
 [submodule "ext/DirectXMath"]
 	path = ext/DirectXMath
 	url = https://github.com/microsoft/DirectXMath.git
+[submodule "ext/glm"]
+	path = ext/glm
+	url = https://github.com/g-truc/glm

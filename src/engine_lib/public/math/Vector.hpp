@@ -3,6 +3,8 @@
 // External.
 #if defined(WIN32)
 #include "DirectXMath.h"
+#else
+#include "math/glmengine.hpp"
 #endif
 
 namespace ne {
@@ -26,21 +28,21 @@ namespace ne {
          *
          * @param x X component of the vector.
          */
-        inline void setX(float x); // NOLINT
+        constexpr inline void setX(float x); // NOLINT
 
         /**
          * Sets the Y component of the vector.
          *
          * @param y Y component of the vector.
          */
-        inline void setY(float y); // NOLINT
+        constexpr inline void setY(float y); // NOLINT
 
         /**
          * Sets the Z component of the vector.
          *
          * @param z Z component of the vector.
          */
-        inline void setZ(float z); // NOLINT
+        constexpr inline void setZ(float z); // NOLINT
 
         /**
          * Normalizes the vector.
@@ -108,21 +110,21 @@ namespace ne {
          *
          * @return X component of the vector.
          */
-        inline float getX() const;
+        constexpr inline float getX() const;
 
         /**
          * Returns the Y component of the vector.
          *
          * @return Y component of the vector.
          */
-        inline float getY() const;
+        constexpr inline float getY() const;
 
         /**
          * Returns the Z component of the vector.
          *
          * @return Z component of the vector.
          */
-        inline float getZ() const;
+        constexpr inline float getZ() const;
 
         /**
          * Returns the length of the vector.
@@ -207,11 +209,23 @@ namespace ne {
 #if defined(WIN32)
         /** Internal vector data. */
         DirectX::XMFLOAT3 vector;
-#endif
+#else
+        /**
+         * Constructor, initializes internal vector with GLM vector.
+         *
+         * @param vector GLM vector.
+         */
+        inline Vector(glm::vec3 vector) { this->vector = vector; }
 
-        /** Float comparison delta/tolerance. */
-        static inline constexpr float floatEpsilon = 0.00001F;
+        /** Internal vector data. */
+        glm::vec3 vector;
+#endif
     };
+
+    Vector Vector::projectOnto(const Vector& other) const {
+        const float otherLength = other.getLength();
+        return other * (dotProduct(other) / (otherLength * otherLength));
+    }
 
 #if defined(WIN32)
     // --------------------------------------------------------------------------------------------
@@ -226,21 +240,21 @@ namespace ne {
         vector.z = z;
     }
 
-    float Vector::getX() const { return vector.x; }
+    constexpr float Vector::getX() const { return vector.x; }
 
-    float Vector::getY() const { return vector.y; }
+    constexpr float Vector::getY() const { return vector.y; }
 
-    float Vector::getZ() const { return vector.z; }
+    constexpr float Vector::getZ() const { return vector.z; }
 
-    void Vector::setX(float x) { // NOLINT
+    constexpr void Vector::setX(float x) { // NOLINT
         vector.x = x;
     }
 
-    void Vector::setY(float y) { // NOLINT
+    constexpr void Vector::setY(float y) { // NOLINT
         vector.y = y;
     }
 
-    void Vector::setZ(float z) { // NOLINT
+    constexpr void Vector::setZ(float z) { // NOLINT
         vector.z = z;
     }
 
@@ -275,11 +289,6 @@ namespace ne {
         DirectX::XMStoreFloat3(&output.vector, result);
 
         return output;
-    }
-
-    Vector Vector::projectOnto(const Vector& other) const {
-        const float otherLength = other.getLength();
-        return other * (dotProduct(other) / (otherLength * otherLength));
     }
 
     float Vector::getAngleBetweenVectorsInRad(const Vector& other) const {
@@ -371,5 +380,77 @@ namespace ne {
         DirectX::XMStoreFloat3(&output.vector, result);
         return output;
     }
+#else
+    // --------------------------------------------------------------------------------------------
+    // GLM implementation.
+    // --------------------------------------------------------------------------------------------
+
+    Vector::Vector() { vector = glm::vec3(0.0f, 0.0f, 0.0f); }
+
+    Vector::Vector(float x, float y, float z) { // NOLINT
+        vector.x = x;
+        vector.y = y;
+        vector.z = z;
+    }
+
+    constexpr float Vector::getX() const { return vector.x; }
+
+    constexpr float Vector::getY() const { return vector.y; }
+
+    constexpr float Vector::getZ() const { return vector.z; }
+
+    constexpr void Vector::setX(float x) { // NOLINT
+        vector.x = x;
+    }
+
+    constexpr void Vector::setY(float y) { // NOLINT
+        vector.y = y;
+    }
+
+    constexpr void Vector::setZ(float z) { // NOLINT
+        vector.z = z;
+    }
+
+    void Vector::normalize() { vector = glm::normalize(vector); }
+
+    float Vector::getLength() const { return glm::length(vector); }
+
+    float Vector::dotProduct(const Vector& other) const { return glm::dot(vector, other.vector); }
+
+    Vector Vector::crossProduct(const Vector& other) const {
+        Vector output;
+        output.vector = glm::cross(vector, other.vector);
+
+        return output;
+    }
+
+    float Vector::getAngleBetweenVectorsInRad(const Vector& other) const {
+        return glm::angle(glm::normalize(vector), glm::normalize(other.vector));
+    }
+
+    float Vector::getAngleBetweenNormalizedVectorsInRad(const Vector& other) const {
+        return glm::angle(vector, other.vector);
+    }
+
+    void Vector::rotateAroundAxis(const Vector& axis, float angleInRad) {
+        const glm::mat4 rotationMatrix = glm::rotate(angleInRad, axis.vector);
+        vector = glm::vec4(vector.x, vector.y, vector.z, 0.0f) * rotationMatrix;
+    }
+
+    Vector Vector::operator+(const Vector& other) const { return Vector(vector + other.vector); }
+
+    Vector Vector::operator-(const Vector& other) const { return Vector(vector - other.vector); }
+
+    Vector Vector::operator*(const Vector& other) const { return Vector(vector * other.vector); }
+
+    Vector Vector::operator/(const Vector& other) const { return Vector(vector / other.vector); }
+
+    Vector Vector::operator+(float other) const { return Vector(vector + other); }
+
+    Vector Vector::operator-(float other) const { return Vector(vector - other); }
+
+    Vector Vector::operator*(float other) const { return Vector(vector * other); }
+
+    Vector Vector::operator/(float other) const { return Vector(vector / other); }
 #endif
 } // namespace ne

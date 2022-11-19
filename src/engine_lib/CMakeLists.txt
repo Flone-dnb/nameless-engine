@@ -132,7 +132,7 @@ set(ENGINE_LIB_SOURCES
     public/io/serializers/UnorderedMapFieldSerializer.h
     private/io/serializers/SerializableObjectFieldSerializer.cpp
     public/io/serializers/SerializableObjectFieldSerializer.h
-    public/game/math/Vector.hpp
+    public/math/Vector.hpp
     # add general (cross-platform) sources here...
 )
 

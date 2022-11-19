@@ -48,6 +48,14 @@ namespace ne {
         inline void normalize();
 
         /**
+         * Rotates this vector around the given axis.
+         *
+         * @param axis       Axis to rotate the vector around.
+         * @param angleInRad Angle of rotation in radians.
+         */
+        inline void rotateAroundAxis(const Vector& axis, float angleInRad);
+
+        /**
          * Returns the result of the dot product between this vector and another one.
          *
          * @param other Other vector for the dot product.
@@ -73,6 +81,27 @@ namespace ne {
          * @return Projected vector.
          */
         inline Vector projectOnto(const Vector& other) const;
+
+        /**
+         * Calculates the angle in radians between this vector and the given vector.
+         *
+         * @param other Other vector.
+         *
+         * @return Angle in radians between this vector and the given vector.
+         */
+        inline float getAngleBetweenVectorsInRad(const Vector& other) const;
+
+        /**
+         * Calculates the angle in radians between two normalized vectors: this vector and the given vector.
+         *
+         * @remark Assumes both this and the other vector are normalized, otherwise
+         * use @ref getAngleBetweenVectorsInRad.
+         *
+         * @param other Other vector.
+         *
+         * @return Angle in radians between this vector and the given vector.
+         */
+        inline float getAngleBetweenNormalizedVectorsInRad(const Vector& other) const;
 
         /**
          * Returns the X component of the vector.
@@ -251,6 +280,32 @@ namespace ne {
     Vector Vector::projectOnto(const Vector& other) const {
         const float otherLength = other.getLength();
         return other * (dotProduct(other) / (otherLength * otherLength));
+    }
+
+    float Vector::getAngleBetweenVectorsInRad(const Vector& other) const {
+        const auto result = DirectX::XMVector3AngleBetweenVectors(
+            DirectX::XMLoadFloat3(&vector), DirectX::XMLoadFloat3(&other.vector));
+        DirectX::XMFLOAT3 output;
+        DirectX::XMStoreFloat3(&output, result);
+
+        return output.x;
+    }
+
+    float Vector::getAngleBetweenNormalizedVectorsInRad(const Vector& other) const {
+        const auto result = DirectX::XMVector3AngleBetweenNormals(
+            DirectX::XMLoadFloat3(&vector), DirectX::XMLoadFloat3(&other.vector));
+        DirectX::XMFLOAT3 output;
+        DirectX::XMStoreFloat3(&output, result);
+
+        return output.x;
+    }
+
+    void Vector::rotateAroundAxis(const Vector& axis, float angleInRad) {
+        const auto rotationMatrix =
+            DirectX::XMMatrixRotationAxis(DirectX::XMLoadFloat3(&axis.vector), angleInRad);
+        const auto result = DirectX::XMVector3Transform(DirectX::XMLoadFloat3(&vector), rotationMatrix);
+
+        DirectX::XMStoreFloat3(&vector, result);
     }
 
     Vector Vector::operator+(const Vector& other) const {

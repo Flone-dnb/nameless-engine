@@ -133,6 +133,7 @@ set(ENGINE_LIB_SOURCES
     private/io/serializers/SerializableObjectFieldSerializer.cpp
     public/io/serializers/SerializableObjectFieldSerializer.h
     public/math/Vector.hpp
+    public/math/MathHelpers.hpp
     # add general (cross-platform) sources here...
 )
 

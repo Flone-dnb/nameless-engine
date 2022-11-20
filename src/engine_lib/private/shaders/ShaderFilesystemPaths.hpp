@@ -7,7 +7,7 @@
 #include "misc/ProjectPaths.h"
 
 namespace ne {
-    /** Provides a set of static function related to filesystem paths to store shaders. */
+    /** Provides a set of static functions related to the filesystem paths to store shaders. */
     class ShaderFilesystemPaths {
     public:
         ShaderFilesystemPaths() = delete;
@@ -41,6 +41,6 @@ namespace ne {
 
     private:
         /** Base name of the file used to store shader cache. */
-        static constexpr auto sShaderCacheBaseFileName = "shader";
+        static inline constexpr auto sShaderCacheBaseFileName = "shader";
     };
 } // namespace ne

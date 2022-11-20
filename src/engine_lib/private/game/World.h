@@ -1,6 +1,6 @@
 #pragma once
 
-// STL.
+// Standard.
 #include <memory>
 #include <chrono>
 #include <string>

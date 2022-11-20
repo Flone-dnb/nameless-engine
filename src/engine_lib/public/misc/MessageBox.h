@@ -1,6 +1,6 @@
 ﻿#pragma once
 
-// STL.
+// Standard.
 #include <string>
 
 #if defined(WIN32)

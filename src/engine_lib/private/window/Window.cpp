@@ -1,6 +1,6 @@
 #include "game/Window.h"
 
-// Std.
+// Standard.
 #include <filesystem>
 
 // Custom.

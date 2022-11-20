@@ -1,5 +1,6 @@
 ﻿#pragma once
 
+// Standard.
 #include <string>
 #include <memory>
 
@@ -9,8 +10,8 @@ namespace ne {
      */
     class UniqueValueGenerator {
     public:
-        UniqueValueGenerator(const UniqueValueGenerator &) = delete;
-        UniqueValueGenerator &operator=(const UniqueValueGenerator &) = delete;
+        UniqueValueGenerator(const UniqueValueGenerator&) = delete;
+        UniqueValueGenerator& operator=(const UniqueValueGenerator&) = delete;
         virtual ~UniqueValueGenerator();
 
         /**
@@ -20,7 +21,7 @@ namespace ne {
          *
          * @return Reference to the generator instance.
          */
-        static UniqueValueGenerator &get();
+        static UniqueValueGenerator& get();
 
         /**
          * Returns a unique window name.

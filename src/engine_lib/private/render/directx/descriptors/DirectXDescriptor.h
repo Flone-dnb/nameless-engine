@@ -1,8 +1,9 @@
 ﻿#pragma once
 
-// STL.
+// Standard.
 #include <optional>
 
+// Custom.
 #include "render/directx/resources/DirectXResourceManager.h"
 
 namespace ne {

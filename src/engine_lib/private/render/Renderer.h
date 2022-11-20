@@ -1,6 +1,6 @@
 ﻿#pragma once
 
-// STL.
+// Standard.
 #include <variant>
 #include <vector>
 #include <string>

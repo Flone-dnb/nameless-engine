@@ -1,9 +1,9 @@
 ﻿#pragma once
 
-// Std.
+// Standard.
 #include <memory>
 #include <filesystem>
-#include "source_location.hpp" // TODO: remove when Clang or GCC will have support for std::source_location
+#include "source_location.hpp" // TODO: replace when Clang or GCC will have support for std::source_location
 
 // External.
 #include "spdlog/spdlog.h"

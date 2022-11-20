@@ -1,6 +1,6 @@
 ﻿#include "Game.h"
 
-// STL.
+// Standard.
 #include <thread>
 #include <sstream>
 

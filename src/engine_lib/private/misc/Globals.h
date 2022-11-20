@@ -1,6 +1,6 @@
 ﻿#pragma once
 
-// Std.
+// Standard.
 #include <filesystem>
 #include <string>
 

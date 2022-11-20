@@ -1,6 +1,6 @@
 ﻿#include "shaders/ShaderManager.h"
 
-// STL.
+// Standard.
 #include <filesystem>
 
 // Custom.

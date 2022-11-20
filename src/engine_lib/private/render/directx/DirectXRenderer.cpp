@@ -1,6 +1,6 @@
 ﻿#include "DirectXRenderer.h"
 
-// STL.
+// Standard.
 #include <format>
 #include <filesystem>
 #include <array>

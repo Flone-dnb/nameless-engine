@@ -1,6 +1,6 @@
 ﻿#include "io/ConfigManager.h"
 
-// STL.
+// Standard.
 #include <ranges>
 
 // Custom.

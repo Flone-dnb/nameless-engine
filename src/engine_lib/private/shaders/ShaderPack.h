@@ -1,6 +1,6 @@
 ﻿#pragma once
 
-// STL.
+// Standard.
 #include <mutex>
 #include <unordered_map>
 #include <memory>

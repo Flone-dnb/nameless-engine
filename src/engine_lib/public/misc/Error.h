@@ -1,11 +1,12 @@
 #pragma once
 
-// STL.
+// Standard.
 #include <string_view>
 #include <vector>
 #include <string>
-#include "source_location.hpp" // TODO: remove when Clang or GCC will have support for std::source_location
+#include "source_location.hpp" // TODO: replace when Clang or GCC will have support for std::source_location
 
+// OS.
 #if defined(WIN32)
 #include <Windows.h>
 #endif

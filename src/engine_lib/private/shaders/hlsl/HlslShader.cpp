@@ -1,14 +1,8 @@
 ﻿#include "shaders/hlsl/HlslShader.h"
 
-// STL.
+// Standard.
 #include <fstream>
 #include <climits>
-
-// External.
-#include "DirectXShaderCompiler/inc/d3d12shader.h"
-#pragma comment(lib, "dxcompiler.lib")
-
-// STL.
 #include <filesystem>
 
 // Custom.
@@ -17,6 +11,10 @@
 #include "misc/Globals.h"
 #include "render/directx/DirectXRenderer.h"
 #include "shaders/ShaderFilesystemPaths.hpp"
+
+// External.
+#include "DirectXShaderCompiler/inc/d3d12shader.h"
+#pragma comment(lib, "dxcompiler.lib")
 
 namespace ne {
     HlslShader::HlslShader(

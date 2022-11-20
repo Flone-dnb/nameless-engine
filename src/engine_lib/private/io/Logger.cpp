@@ -1,6 +1,6 @@
 ﻿#include "io/Logger.h"
 
-// Std.
+// Standard.
 #include <ctime>
 #include <fstream>
 

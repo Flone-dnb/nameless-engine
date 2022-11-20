@@ -1,6 +1,6 @@
 ﻿#include "io/Serializable.h"
 
-// STL.
+// Standard.
 #include <typeinfo>
 
 // Custom.

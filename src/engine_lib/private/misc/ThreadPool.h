@@ -1,6 +1,6 @@
 ﻿#pragma once
 
-// STL.
+// Standard.
 #include <atomic>
 #include <functional>
 #include <mutex>

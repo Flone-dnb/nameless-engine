@@ -1,6 +1,6 @@
 ﻿#include "ShaderPack.h"
 
-// STL.
+// Standard.
 #include <ranges>
 
 // Custom.

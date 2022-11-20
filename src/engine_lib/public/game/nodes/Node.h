@@ -1,6 +1,6 @@
 ﻿#pragma once
 
-// STL.
+// Standard.
 #include <vector>
 #include <memory>
 #include <mutex>

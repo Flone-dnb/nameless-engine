@@ -1,6 +1,6 @@
 ﻿#include "game/nodes/Node.h"
 
-// STL.
+// Standard.
 #include <ranges>
 
 // Custom.

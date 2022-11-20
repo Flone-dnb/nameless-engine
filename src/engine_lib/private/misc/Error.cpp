@@ -1,6 +1,6 @@
 #include "misc/Error.h"
 
-// STL.
+// Standard.
 #include <string>
 #include <filesystem>
 

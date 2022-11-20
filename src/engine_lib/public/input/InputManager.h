@@ -1,6 +1,6 @@
 ﻿#pragma once
 
-// STL.
+// Standard.
 #include <unordered_map>
 #include <string>
 #include <variant>

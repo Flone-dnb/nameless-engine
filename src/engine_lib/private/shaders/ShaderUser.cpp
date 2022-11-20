@@ -1,6 +1,6 @@
 ﻿#include "ShaderUser.h"
 
-// STL.
+// Standard.
 #include <ranges>
 
 // Custom.

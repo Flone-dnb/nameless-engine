@@ -1,6 +1,6 @@
 ﻿#pragma once
 
-// STL.
+// Standard.
 #include <filesystem>
 #include <memory>
 #include <variant>

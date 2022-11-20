@@ -1,6 +1,6 @@
 ﻿#include "ThreadPool.h"
 
-// STL.
+// Standard.
 #include <thread>
 
 namespace ne {

@@ -1,17 +1,17 @@
 ﻿#pragma once
 
-// STL.
+// Standard.
 #include <variant>
 
 // Custom.
 #include "misc/Error.h"
 
-// OS.
-#include <wrl/client.h>
-
-// DXC.
+// External.
 #include "directx/d3dx12.h"
 #include <DirectXShaderCompiler/inc/d3d12shader.h>
+
+// OS.
+#include <wrl/client.h>
 
 namespace ne {
     class HlslShader;

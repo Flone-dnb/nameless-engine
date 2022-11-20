@@ -1,6 +1,6 @@
 ﻿#include "input/InputManager.h"
 
-// STL.
+// Standard.
 #include <charconv>
 #include <string>
 #include <ranges>

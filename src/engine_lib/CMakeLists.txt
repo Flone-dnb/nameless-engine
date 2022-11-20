@@ -135,6 +135,7 @@ set(ENGINE_LIB_SOURCES
     public/math/Vector.hpp
     public/math/MathHelpers.hpp
     public/math/GLMath.hpp
+    public/math/Matrix.hpp
     # add general (cross-platform) sources here...
 )
 

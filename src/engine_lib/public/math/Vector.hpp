@@ -15,6 +15,18 @@ namespace ne {
         inline Vector();
 
         /**
+         * Copy constructor.
+         */
+        inline Vector(const Vector&) = default;
+
+        /**
+         * Copy assignment operator.
+         *
+         * @return Vector.
+         */
+        inline Vector& operator=(const Vector&) = default;
+
+        /**
          * Initializes the vector with the given components.
          *
          * @param x X component of the vector.
@@ -206,6 +218,8 @@ namespace ne {
         inline Vector operator/(float other) const;
 
     private:
+        friend class Matrix;
+
 #if defined(WIN32)
         /** Internal vector data. */
         DirectX::XMFLOAT3 vector;

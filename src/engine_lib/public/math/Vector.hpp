@@ -4,7 +4,7 @@
 #if defined(WIN32)
 #include "DirectXMath.h"
 #else
-#include "math/glmengine.hpp"
+#include "math/GLMath.hpp"
 #endif
 
 namespace ne {

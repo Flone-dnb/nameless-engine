@@ -134,7 +134,7 @@ set(ENGINE_LIB_SOURCES
     public/io/serializers/SerializableObjectFieldSerializer.h
     public/math/Vector.hpp
     public/math/MathHelpers.hpp
-    private/math/glmengine.hpp
+    public/math/GLMath.hpp
     # add general (cross-platform) sources here...
 )
 
@@ -239,6 +239,11 @@ add_subdirectory(${RELATIVE_EXT_PATH}/fmt ${DEPENDENCY_BUILD_DIR_NAME}/fmt)
 target_link_libraries(${PROJECT_NAME} PUBLIC fmt)
 set_target_properties(fmt PROPERTIES FOLDER ${EXTERNAL_FOLDER})
 
+# External: GLM
+add_subdirectory(${RELATIVE_EXT_PATH}/glm ${DEPENDENCY_BUILD_DIR_NAME}/glm)
+target_link_libraries(${PROJECT_NAME} PUBLIC glm)
+set_target_properties(glm PROPERTIES FOLDER ${EXTERNAL_FOLDER})
+
 # [temporary solution]: External: tgc
 target_sources(${PROJECT_NAME} PUBLIC ${TGC_CPP_FILE_PATH})
 if(NOT MSVC)
@@ -283,6 +288,7 @@ ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/DirectX-Headers/include|\
 ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/spdlog/include|\
 ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/source_location/include|\
 ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/fmt/include|\
+${CMAKE_CURRENT_SOURCE_DIR}/../../ext/glm|\
 ${CMAKE_CURRENT_SOURCE_DIR}/../.generated|\
 ${CMAKE_CURRENT_SOURCE_DIR}/public/|\
 ${CMAKE_CURRENT_SOURCE_DIR}/private|${CMAKE_CURRENT_SOURCE_DIR}/../../ext/Refureku/build/Include/")
@@ -423,11 +429,6 @@ if (WIN32)
     add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
                    COMMAND ${CMAKE_COMMAND} -E copy
                    ${PATH_TO_DXC_DLL_DIR}/dxil.dll ${CMAKE_CURRENT_BINARY_DIR}/dxil.dll)
-else() # Non-Win32 specific dependencies:
-    # External: GLM
-    add_subdirectory(${RELATIVE_EXT_PATH}/glm ${DEPENDENCY_BUILD_DIR_NAME}/glm)
-    target_link_libraries(${PROJECT_NAME} PUBLIC glm)
-    set_target_properties(glm PROPERTIES FOLDER ${EXTERNAL_FOLDER})
 endif()
 
 # Execute post build script.

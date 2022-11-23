@@ -143,7 +143,7 @@ namespace ne {
          *
          * @param matrix Matrix to set.
          */
-        Matrix(DirectX::XMFLOAT4X4 matrix) { this->matrix = matrix; }
+        Matrix(const DirectX::XMFLOAT4X4& matrix) { this->matrix = matrix; }
 
         /** Internal matrix data. */
         DirectX::XMFLOAT4X4 matrix;

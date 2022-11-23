@@ -229,7 +229,7 @@ namespace ne {
          *
          * @param vector GLM vector.
          */
-        inline Vector(glm::vec3 vector) { this->vector = vector; }
+        inline Vector(const glm::vec3& vector) { this->vector = vector; }
 
         /** Internal vector data. */
         glm::vec3 vector;

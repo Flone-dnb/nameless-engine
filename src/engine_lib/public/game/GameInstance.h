@@ -148,7 +148,7 @@ namespace ne {
          *
          * @warning If you are using member functions as tasks you need to make
          * sure that the owner object of these member functions will not be deleted until
-         * this task is finished. IGameInstance member functions are safe to use.
+         * this task is finished. GameInstance member functions are safe to use.
          *
          * @param task Function to execute.
          *
@@ -160,7 +160,7 @@ namespace ne {
          *
          * @warning If you are using member functions as tasks you need to make
          * sure that the owner object of these member functions will not be deleted until
-         * this task is finished. IGameInstance member functions are safe to use.
+         * this task is finished. GameInstance member functions are safe to use.
          *
          * @param task Function to execute.
          */

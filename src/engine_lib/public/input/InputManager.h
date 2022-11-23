@@ -236,7 +236,7 @@ namespace ne {
 
         /**
          * Returns the current value of an axis event.
-         * This value is equal to the last value passed to IGameInstance::onInputAxisEvent.
+         * This value is equal to the last value passed to GameInstance::onInputAxisEvent.
          *
          * @param sAxisName Name of the axis event that you used in @ref addAxisEvent.
          *
@@ -244,10 +244,10 @@ namespace ne {
          */
         float getCurrentAxisEventState(const std::string& sAxisName);
 
-        // Use `isActionJust...` functions instead.
+        // Will use `isActionJust...` functions instead.
         //        /**
         //         * Returns the current value of an action event.
-        //         * This value is equal to the last value passed to IGameInstance::onInputActionEvent.
+        //         * This value is equal to the last value passed to GameInstance::onInputActionEvent.
         //         *
         //         * @param sActionName Name of the action event that you used in @ref addActionEvent.
         //         *

@@ -361,7 +361,7 @@ namespace ne {
     }
 
     std::pair<std::set<std::string>, std::set<std::string>>
-    InputManager::isKeyUsed(std::variant<KeyboardKey, MouseButton> key) {
+    InputManager::isKeyUsed(const std::variant<KeyboardKey, MouseButton>& key) {
         std::scoped_lock<std::recursive_mutex> guard1(mtxActionEvents);
         std::scoped_lock<std::recursive_mutex> guard2(mtxAxisEvents);
 

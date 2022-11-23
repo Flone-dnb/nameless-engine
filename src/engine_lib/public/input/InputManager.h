@@ -208,7 +208,7 @@ namespace ne {
          * @return A pair of action and axis event names that the specified key is used in.
          */
         std::pair<std::set<std::string>, std::set<std::string>>
-        isKeyUsed(std::variant<KeyboardKey, MouseButton> key);
+        isKeyUsed(const std::variant<KeyboardKey, MouseButton>& key);
 
         /**
          * Looks for an action event with the specified name, if one is found a copy of this action's

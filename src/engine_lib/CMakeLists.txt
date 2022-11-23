@@ -132,10 +132,8 @@ set(ENGINE_LIB_SOURCES
     public/io/serializers/UnorderedMapFieldSerializer.h
     private/io/serializers/SerializableObjectFieldSerializer.cpp
     public/io/serializers/SerializableObjectFieldSerializer.h
-    public/math/Vector.hpp
     public/math/MathHelpers.hpp
     public/math/GLMath.hpp
-    public/math/Matrix.hpp
     # add general (cross-platform) sources here...
 )
 
@@ -383,11 +381,6 @@ if (WIN32)
     target_link_libraries(${PROJECT_NAME} PUBLIC DirectX-Headers)
     set_target_properties(DirectX-Headers PROPERTIES FOLDER ${EXTERNAL_FOLDER})
     set_target_properties(DirectX-Guids PROPERTIES FOLDER ${EXTERNAL_FOLDER})
-
-    # External: DirectXMath
-    add_subdirectory(${RELATIVE_EXT_PATH}/DirectXMath ${DEPENDENCY_BUILD_DIR_NAME}/DirectXMath)
-    target_link_libraries(${PROJECT_NAME} PUBLIC DirectXMath)
-    set_target_properties(DirectXMath PROPERTIES FOLDER ${EXTERNAL_FOLDER})
 
     # External: DXC.
     # Download and unzip DXC.

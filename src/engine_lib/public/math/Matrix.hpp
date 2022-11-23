@@ -102,6 +102,72 @@ namespace ne {
         static inline Matrix createScalingMatrix(float xScale, float yScale, float zScale);
 
         /**
+         * Creates a "look at" view matrix for a left-handed coordinate system
+         * using a point in space to look at.
+         *
+         * @param cameraLocation      Camera location in the world.
+         * @param focusPointLocation  Location of the point in space to look at.
+         * @param upDirection         Up direction of the camera.
+         *
+         * @return View matrix.
+         */
+        static inline Matrix createLookAtViewMatrix(
+            const Vector& cameraLocation, const Vector& focusPointLocation, const Vector& upDirection);
+
+        /**
+         * Creates a "look to" view matrix for a left-handed coordinate system
+         * using a direction to look to.
+         *
+         * @param cameraLocation   Camera location in the world.
+         * @param lookToDirection  Direction of the camera.
+         * @param upDirection      Up direction of the camera.
+         *
+         * @return View matrix.
+         */
+        static inline Matrix createLookToViewMatrix(
+            const Vector& cameraLocation, const Vector& lookToDirection, const Vector& upDirection);
+
+        /**
+         * Creates an orthogonal projection matrix for a left-handed coordinate system.
+         *
+         * @param viewWidth   Width of the frustum at the near clipping plane.
+         * @param viewHeight  Height of the frustum at the near clipping plane.
+         * @param nearZ       Distance to the near clipping plane.
+         * @param farZ        Distance to the far clipping plane.
+         *
+         * @return Projection matrix.
+         */
+        static inline Matrix
+        createOrthographicProjectionMatrix(float viewWidth, float viewHeight, float nearZ, float farZ);
+
+        /**
+         * Creates a left-handed perspective projection matrix based on a field of view.
+         *
+         * @remark For typical usage, NearZ is less than FarZ.
+         * However, if you flip these values so FarZ is less than NearZ, the result is
+         * an inverted z buffer (also known as a "reverse z buffer") which can provide
+         * increased floating-point precision.
+         *
+         * @param fovY         Top-down field-of-view angle in radians.
+         * @param aspectRatio  Aspect ratio of view-space X:Y.
+         * @param nearZ        Distance to the near clipping plane.
+         * @param farZ         Distance to the far clipping plane.
+         *
+         * @return
+         */
+        static inline Matrix
+        createPerspectiveProjectionMatrix(float fovY, float aspectRatio, float nearZ, float farZ);
+
+        /**
+         * Computes the transpose of a matrix.
+         *
+         * @param matrix Matrix to transpose.
+         *
+         * @return Transposed matrix.
+         */
+        static inline Matrix transpose(const Matrix& matrix);
+
+        /**
          * Sets a value into a specific matrix cell.
          *
          * @param iRow    Cell's row.
@@ -235,6 +301,50 @@ namespace ne {
         DirectX::XMFLOAT3 output;
         DirectX::XMStoreFloat3(&output, result);
         return output.x;
+    }
+
+    Matrix Matrix::transpose(const Matrix& matrix) {
+        const auto result = DirectX::XMMatrixTranspose(DirectX::XMLoadFloat4x4(&matrix.matrix));
+        DirectX::XMFLOAT4X4 output;
+        DirectX::XMStoreFloat4x4(&output, result);
+        return Matrix(output);
+    }
+
+    Matrix Matrix::createLookAtViewMatrix(
+        const Vector& cameraLocation, const Vector& focusPointLocation, const Vector& upDirection) {
+        const auto result = DirectX::XMMatrixLookAtLH(
+            DirectX::XMLoadFloat3(&cameraLocation.vector),
+            DirectX::XMLoadFloat3(&focusPointLocation.vector),
+            DirectX::XMLoadFloat3(&upDirection.vector));
+        DirectX::XMFLOAT4X4 output;
+        DirectX::XMStoreFloat4x4(&output, result);
+        return Matrix(output);
+    }
+
+    Matrix Matrix::createLookToViewMatrix(
+        const Vector& cameraLocation, const Vector& lookToDirection, const Vector& upDirection) {
+        const auto result = DirectX::XMMatrixLookToLH(
+            DirectX::XMLoadFloat3(&cameraLocation.vector),
+            DirectX::XMLoadFloat3(&lookToDirection.vector),
+            DirectX::XMLoadFloat3(&upDirection.vector));
+        DirectX::XMFLOAT4X4 output;
+        DirectX::XMStoreFloat4x4(&output, result);
+        return Matrix(output);
+    }
+
+    Matrix
+    Matrix::createOrthographicProjectionMatrix(float viewWidth, float viewHeight, float nearZ, float farZ) {
+        const auto result = DirectX::XMMatrixOrthographicLH(viewWidth, viewHeight, nearZ, farZ);
+        DirectX::XMFLOAT4X4 output;
+        DirectX::XMStoreFloat4x4(&output, result);
+        return Matrix(output);
+    }
+
+    Matrix Matrix::createPerspectiveProjectionMatrix(float fovY, float aspectRatio, float nearZ, float farZ) {
+        const auto result = DirectX::XMMatrixPerspectiveFovLH(fovY, aspectRatio, nearZ, farZ);
+        DirectX::XMFLOAT4X4 output;
+        DirectX::XMStoreFloat4x4(&output, result);
+        return Matrix(output);
     }
 
 #else

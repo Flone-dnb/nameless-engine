@@ -492,10 +492,6 @@ TEST_CASE("capture a `gc` pointer in `std::function`") {
                 getWindow()->close();
             }
         }
-        virtual void onWindowClose() override {
-            // have to clear `gc` pointers here, we also tell about this if we found leaks
-            pMyNode = nullptr;
-        }
 
     private:
         gc<MyDerivedNode> pMyNode;
@@ -560,11 +556,6 @@ TEST_CASE("onBeforeNewFrame is called only on marked nodes") {
                 REQUIRE(!pNotCalledtNode->bTickCalled);
                 getWindow()->close();
             }
-        }
-
-        virtual void onWindowClose() override {
-            pCalledNode = nullptr;
-            pNotCalledtNode = nullptr;
         }
 
     private:

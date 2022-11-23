@@ -134,6 +134,10 @@ namespace ne {
             }
         }
 
+        // Explicitly destroy game instance before running GC so that if game instance holds any GC
+        // pointers they will be cleared.
+        pGameInstance = nullptr;
+
         // Run GC for the last time.
         Logger::get().info("game is destroyed, running garbage collector...", sGarbageCollectorLogCategory);
         gc_collector()->fullCollect();

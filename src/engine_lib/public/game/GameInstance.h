@@ -136,9 +136,11 @@ namespace ne {
         virtual void onWindowFocusChanged(bool bIsFocused) {}
 
         /**
-         * Called when a window that owns this game instance
+         * Called when the window that owns this game instance
          * was requested to close (no new frames will be rendered).
-         * Prefer to do your destructor logic here.
+         *
+         * Prefer to have your destructor logic here, because after this function is finished
+         * the world will be destroyed and will be inaccessible (`nullptr`).
          */
         virtual void onWindowClose() {}
 

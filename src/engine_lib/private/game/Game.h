@@ -338,12 +338,10 @@ namespace ne {
 
         /** Description of reasons why a leak may occur. */
         inline static const char* sGcLeakReasons =
-            "1. you are storing `gc` pointers in your game instance (you should have cleared them in "
-            "`onWindowClose` or before creating a new world),\n"
-            "2. you are not using STL container wrappers for gc "
+            "1. you are not using STL container wrappers for gc "
             "pointers (for example, you need to use `gc_vector<T>` instead of `std::vector<gc<T>>`, "
             "and other `gc_*` containers when storing gc pointers),\n"
-            "3. you are capturing `gc` pointer(s) in `std::function` (this might leak in some special "
+            "2. you are capturing `gc` pointer(s) in `std::function` (this might leak in some special "
             "cases, such as when you have a class `MyClass` with a `std::function` member in it "
             "and you capture a `gc<MyClass>` in this `std::function` member which creates a non-resolvable "
             "cycle, for such cases use `gc_function` instead of `std::function` as a member of your class).";

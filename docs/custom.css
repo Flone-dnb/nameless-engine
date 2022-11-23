@@ -1,0 +1,8 @@
+@media (prefers-color-scheme: dark) {
+    html:not(.light-mode) {
+        --primary-color: #d27219;
+        --primary-dark-color: #e29d5c;
+        --primary-light-color: rgb(172, 122, 71);
+        --page-background-color: #181818;
+    }
+}

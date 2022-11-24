@@ -22,7 +22,8 @@ import (
 
 // Does:
 // - copies license files from 'ext' directory to the build directory,
-// - creates a simlink to the 'res' directory in working directory and build directory.
+// - creates a simlink to the 'res' directory in working directory and build directory,
+// - (if building in release on windows) adds MSVC redist to the build directory
 func main() {
 	var time_start = time.Now()
 
@@ -257,7 +258,9 @@ func copy_ext_licenses(ext_directory string, build_directory string) {
 				continue
 			}
 
-			if strings.Contains(subitem.Name(), "LICENSE") {
+			var filename = strings.ToUpper(subitem.Name())
+			if strings.Contains(filename, "LICENSE") ||
+				strings.Contains(filename, "COPYING") {
 				fmt.Println("INFO: engine_post_build.go: found", dir_name, "license file")
 				var src = filepath.Join(ext_directory, dir_name, subitem.Name())
 				var dst = filepath.Join(build_directory, dir_name+".txt")
@@ -269,28 +272,9 @@ func copy_ext_licenses(ext_directory string, build_directory string) {
 		}
 
 		if !found_license {
-			// Look for "COPYING" file.
-			for _, subitem := range subitems {
-				if subitem.IsDir() {
-					continue
-				}
-
-				if strings.Contains(subitem.Name(), "COPYING") {
-					fmt.Println("INFO: engine_post_build.go: found", dir_name, "license file")
-					var src = filepath.Join(ext_directory, dir_name, subitem.Name())
-					var dst = filepath.Join(build_directory, dir_name+".txt")
-					copy(src, dst)
-					copied_licenses_count += 1
-					found_license = true
-					break
-				}
-			}
-
-			if !found_license {
-				fmt.Println("ERROR: engine_post_build.go: could not find a license "+
-					"file for dependency", dir_name)
-				os.Exit(1)
-			}
+			fmt.Println("ERROR: engine_post_build.go: could not find a license "+
+				"file for dependency", dir_name)
+			os.Exit(1)
 		}
 	}
 

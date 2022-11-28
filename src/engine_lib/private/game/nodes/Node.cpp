@@ -117,7 +117,7 @@ namespace ne {
             }
 
             // Notify start of detachment.
-            pNode->notifyAboutDetachingFromParent();
+            pNode->notifyAboutDetachingFromParent(true);
 
             // Remove node from parent's children array.
             std::scoped_lock parentsChildrenGuard(pNode->mtxParentNode.second->mtxChildNodes.first);
@@ -136,7 +136,7 @@ namespace ne {
         mtxChildNodes.second->push_back(pNode);
 
         // Notify.
-        pNode->notifyAboutAttachedToNewParent();
+        pNode->notifyAboutAttachedToNewParent(true);
 
         // don't unlock node's parent lock here yet, still doing some logic based on the new parent
 
@@ -162,7 +162,7 @@ namespace ne {
 
         if (mtxParentNode.second != nullptr) {
             // Notify.
-            notifyAboutDetachingFromParent();
+            notifyAboutDetachingFromParent(true);
 
             // Remove this node from parent's children array.
             std::scoped_lock parentChildGuard(mtxParentNode.second->mtxChildNodes.first);
@@ -170,7 +170,7 @@ namespace ne {
             bool bFound = false;
             for (auto it = (*pParentChildren)->begin(); it != (*pParentChildren)->end(); ++it) {
                 if (&**it == this) {
-                    pSelf = *it; // make sure we are not going to be deleted while in this function
+                    pSelf = *it; // make sure we won't be deleted while being in this function
                     (*pParentChildren)->erase(it);
                     bFound = true;
                     break;
@@ -186,7 +186,7 @@ namespace ne {
                     sNodeLogCategory);
             }
 
-            // Remove parent.
+            // Clear parent.
             mtxParentNode.second = nullptr;
         }
 
@@ -575,13 +575,11 @@ namespace ne {
 
     gc_vector<Node> Node::getChildNodes() {
         std::scoped_lock guard(mtxChildNodes.first);
-
         return mtxChildNodes.second;
     }
 
     GameInstance* Node::getGameInstance() {
         std::scoped_lock guard(mtxSpawning);
-
         return pGameInstance;
     }
 
@@ -627,23 +625,23 @@ namespace ne {
         return mtxParentNode.second->isChildOf(pNode);
     }
 
-    void Node::notifyAboutAttachedToNewParent() {
+    void Node::notifyAboutAttachedToNewParent(bool bThisNodeBeingDetached) {
         std::scoped_lock guard(mtxParentNode.first, mtxChildNodes.first);
 
-        onAfterAttachedToNewParent();
+        onAfterAttachedToNewParent(bThisNodeBeingDetached);
 
         for (const auto& pChildNode : *mtxChildNodes.second) {
-            pChildNode->notifyAboutAttachedToNewParent();
+            pChildNode->notifyAboutAttachedToNewParent(false);
         }
     }
 
-    void Node::notifyAboutDetachingFromParent() {
+    void Node::notifyAboutDetachingFromParent(bool bThisNodeBeingDetached) {
         std::scoped_lock guard(mtxParentNode.first, mtxChildNodes.first);
 
-        onBeforeDetachedFromParent();
+        onBeforeDetachedFromParent(bThisNodeBeingDetached);
 
         for (const auto& pChildNode : *mtxChildNodes.second) {
-            pChildNode->notifyAboutDetachingFromParent();
+            pChildNode->notifyAboutDetachingFromParent(false);
         }
     }
 

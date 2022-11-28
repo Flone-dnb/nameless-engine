@@ -13,3 +13,4 @@
 #include "glm/glm.hpp"
 #define GLM_ENABLE_EXPERIMENTAL
 #include "glm/gtx/vector_angle.hpp"
+#include "glm/gtx/matrix_decompose.hpp"

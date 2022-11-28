@@ -29,10 +29,6 @@ namespace ne RNAMESPACE() {
     /**
      * Base class for nodes, allows being spawned in the world, attaching child nodes
      * or being attached to some parent node.
-     *
-     * @warning If changing the class name class ID (of this class) will change and will make all previously
-     * serialized instances of this class reference old (invalid) class ID. Include a backwards compatibility
-     * in this case.
      */
     class RCLASS(Guid("2a721c37-3c22-450c-8dad-7b6985cbbd61")) Node : public Serializable {
     public:
@@ -131,7 +127,7 @@ namespace ne RNAMESPACE() {
         /**
          * Returns world's root node.
          *
-         * @return nullptr if this node is not spawned or was despawned (always check
+         * @return `nullptr` if this node is not spawned or was despawned (always check
          * returned pointer before doing something), otherwise valid pointer.
          */
         gc<Node> getWorldRootNode();
@@ -139,14 +135,15 @@ namespace ne RNAMESPACE() {
         /**
          * Returns parent node if this node.
          *
-         * @return nullptr if there is no parent node, otherwise valid pointer.
+         * @return `nullptr` if this node has no parent (could only happen when the node is not spawned),
+         * otherwise valid pointer.
          */
         gc<Node> getParentNode();
 
         /**
          * Returns a copy of the array of child nodes.
          *
-         * @return Copy of the array of child nodes.
+         * @return Array of child nodes.
          */
         gc_vector<Node> getChildNodes();
 
@@ -162,8 +159,7 @@ namespace ne RNAMESPACE() {
          * @param sParentNodeName If not empty, nodes that match the specified node type will
          * also be checked to see if their name exactly matches the specified name.
          *
-         * @return nullptr if not found, otherwise a non owning pointer to the node.
-         * Do not delete returned pointer.
+         * @return nullptr if not found, otherwise a valid pointer to the node.
          */
         template <typename NodeType>
         requires std::derived_from<NodeType, Node> gc<NodeType>
@@ -356,7 +352,8 @@ namespace ne RNAMESPACE() {
          * @remark This function is disabled by default, use @ref setIsCalledEveryFrame to enable it.
          * @remark This function will only be called while this node is spawned.
          *
-         * @warning It's recommended to call parent's version first (before executing your logic).
+         * @warning If overriding you must call the parent's version of this function first
+         * (before executing your login) to execute parent's logic.
          *
          * @param fTimeSincePrevCallInSec Time in seconds that has passed since the last call
          * to this function.
@@ -364,13 +361,14 @@ namespace ne RNAMESPACE() {
         virtual void onBeforeNewFrame(float fTimeSincePrevCallInSec) {}
 
         /**
-         * Called when this node was not spawned and it was attached to a parent node that is spawned
-         * to execute custom spawn logic.
+         * Called when this node was not spawned previously and it was either attached to a parent node
+         * that is spawned or set as world's root node to execute custom spawn logic.
          *
          * @remark This node will be marked as spawned before this function is called.
          * @remark This function is called before any of the child nodes are spawned.
          *
-         * @warning It's recommended to call parent's version first (before executing your logic).
+         * @warning If overriding you must call the parent's version of this function first
+         * (before executing your login) to execute parent's logic.
          */
         virtual void onSpawn() {}
 
@@ -381,26 +379,37 @@ namespace ne RNAMESPACE() {
          * @remark This function is called after all child nodes were despawned.
          * @remark If node's destructor is called but node is still spawned it will be despawned.
          *
-         * @warning It's recommended to call parent's version first (before executing your logic).
+         * @warning If overriding you must call the parent's version of this function first
+         * (before executing your login) to execute parent's logic.
          */
         virtual void onDespawn() {}
 
         /**
          * Called before this node or one of the node's parents (in the parent hierarchy)
-         * are about to be detached from a node.
+         * is about to be detached from the current parent node.
          *
-         * @warning It's recommended to call parent's version first (before executing your logic).
+         * @remark If this node is being detached from its parent @ref getParentNode will return
+         * `nullptr` after this function is finished.
+         *
+         * @warning If overriding you must call the parent's version of this function first
+         * (before executing your login) to execute parent's logic.
+         *
+         * @param bThisNodeBeingDetached `true` if this node is being detached from its parent,
+         * `false` if some node in the parent hierarchy is being detached from its parent.
          */
-        virtual void onBeforeDetachedFromParent() {}
+        virtual void onBeforeDetachedFromParent(bool bThisNodeBeingDetached) {}
 
         /**
          * Called after this node or one of the node's parents (in the parent hierarchy)
-         * were attached to a new parent node (i.e. this node or any of its parents were attached
-         * to a new node).
+         * was attached to a new parent node.
          *
-         * @warning It's recommended to call parent's version first (before executing your logic).
+         * @warning If overriding you must call the parent's version of this function first
+         * (before executing your login) to execute parent's logic.
+         *
+         * @param bThisNodeBeingDetached `true` if this node is being detached from its parent,
+         * `false` if some node in the parent hierarchy is being detached from its parent.
          */
-        virtual void onAfterAttachedToNewParent() {}
+        virtual void onAfterAttachedToNewParent(bool bThisNodeBeingDetached) {}
 
         /** Mutex that will be used when spawning/despawning node (i.e. when changing @ref bIsSpawned). */
         std::recursive_mutex mtxSpawning;
@@ -439,11 +448,21 @@ namespace ne RNAMESPACE() {
         /** Calls @ref onDespawn on this node and all of its child nodes. */
         void despawn();
 
-        /** Calls @ref onAfterAttachedToNewParent on this node and all of its child nodes. */
-        void notifyAboutAttachedToNewParent();
+        /**
+         * Calls @ref onAfterAttachedToNewParent on this node and all of its child nodes.
+         *
+         * @param bThisNodeBeingDetached `true` if this node is being detached from its parent,
+         * `false` if some node in the parent hierarchy is being detached from its parent.
+         */
+        void notifyAboutAttachedToNewParent(bool bThisNodeBeingDetached);
 
-        /** Calls @ref onBeforeDetachedFromParent on this node and all of its child nodes. */
-        void notifyAboutDetachingFromParent();
+        /**
+         * Calls @ref onBeforeDetachedFromParent on this node and all of its child nodes.
+         *
+         * @param bThisNodeBeingDetached `true` if this node is being detached from its parent,
+         * `false` if some node in the parent hierarchy is being detached from its parent.
+         */
+        void notifyAboutDetachingFromParent(bool bThisNodeBeingDetached);
 
         /**
          * Checks if this node has a valid game instance and world pointers and if not

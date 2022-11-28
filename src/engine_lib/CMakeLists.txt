@@ -114,6 +114,8 @@ set(ENGINE_LIB_SOURCES
     public/io/Serializable.h
     private/game/nodes/Node.cpp
     public/game/nodes/Node.h
+    private/game/nodes/SpatialNode.cpp
+    public/game/nodes/SpatialNode.h
     public/io/SerializeProperty.h
     private/io/SerializeProperty.cpp
     private/io/GuidProperty.cpp

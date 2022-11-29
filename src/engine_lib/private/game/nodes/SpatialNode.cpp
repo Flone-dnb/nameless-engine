@@ -80,12 +80,12 @@ namespace ne {
         }
 
         // Calculate world matrix without counting the parent.
-        glm::mat4x4 myWorldMatrix =
-            glm::scale(relativeScale) *
-            glm::rotate(glm::radians(relativeRotation.x), glm::vec3(1.0f, 0.0f, 0.0f)) *
-            glm::rotate(glm::radians(relativeRotation.y), glm::vec3(0.0f, 1.0f, 0.0f)) *
+        const auto myWorldMatrix =
+            glm::translate(glm::identity<glm::mat4x4>(), relativeLocation) *
             glm::rotate(glm::radians(relativeRotation.z), glm::vec3(0.0f, 0.0f, 1.0f)) *
-            glm::translate(relativeLocation);
+            glm::rotate(glm::radians(relativeRotation.y), glm::vec3(0.0f, 1.0f, 0.0f)) *
+            glm::rotate(glm::radians(relativeRotation.x), glm::vec3(1.0f, 0.0f, 0.0f)) *
+            glm::scale(glm::identity<glm::mat4x4>(), relativeScale);
 
         // Recalculate world matrix.
         mtxWorldMatrix.second.worldMatrix = myWorldMatrix * parentWorldMatrix;

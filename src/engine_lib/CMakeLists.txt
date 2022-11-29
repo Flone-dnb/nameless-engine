@@ -443,7 +443,7 @@ add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
                    ${IS_RELEASE_BUILD}
 )
 
-# tests
+# Tests.
 add_subdirectory(${RELATIVE_EXT_PATH}/Catch2 ${DEPENDENCY_BUILD_DIR_NAME}/Catch2)
 set_target_properties(Catch2 PROPERTIES FOLDER ${EXTERNAL_FOLDER})
 set_target_properties(Catch2WithMain PROPERTIES FOLDER ${EXTERNAL_FOLDER})
@@ -466,6 +466,7 @@ set(ENGINE_TEST_SOURCES
     ${TESTS_RELATIVE_PATH}/engine_lib/shaders/ShaderPack.cpp
     ${TESTS_RELATIVE_PATH}/engine_lib/io/Serializable.cpp
     ${TESTS_RELATIVE_PATH}/engine_lib/game/nodes/Node.cpp
+    ${TESTS_RELATIVE_PATH}/engine_lib/game/nodes/SpatialNode.cpp
     ${TESTS_RELATIVE_PATH}/engine_lib/game/World.cpp
     # add engine test .cpp files here
 )

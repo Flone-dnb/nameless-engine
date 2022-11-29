@@ -16,6 +16,13 @@ namespace ne RNAMESPACE() {
         virtual ~SpatialNode() override = default;
 
         /**
+         * Creates a new node with the specified name.
+         *
+         * @param sNodeName Name of this node.
+         */
+        SpatialNode(const std::string& sNodeName) : Node(sNodeName) {}
+
+        /**
          * Sets node's relative location, if there is another SpatialNode in the parent chain then this
          * location is relative to the first SpatialNode in the parent chain, otherwise if there is no
          * SpatialNode in the parent chain, this location is relative to the world.

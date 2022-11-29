@@ -40,12 +40,12 @@ namespace ne RNAMESPACE() {
         static size_t getAliveNodeCount();
 
         /**
-         * Creates a node with a default name.
+         * Creates a new node with a default name.
          */
         Node();
 
         /**
-         * Creates a node with the specified name.
+         * Creates a new node with the specified name.
          *
          * @param sNodeName Name of this node.
          */

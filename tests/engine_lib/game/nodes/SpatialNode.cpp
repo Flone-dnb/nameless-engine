@@ -59,3 +59,49 @@ TEST_CASE("world location, rotation and scale are calculated correctly (with par
 
     gc_collector()->collect();
 }
+
+TEST_CASE(
+    "world location, rotation and scale are calculated correctly (with non spatial nodes in the hierarchy)") {
+    using namespace ne;
+
+    constexpr float floatEpsilon = 0.00001f;
+
+    {
+        const auto pParentSpatialNode = gc_new<SpatialNode>("My Cool Parent Spatial Node");
+        pParentSpatialNode->setRelativeLocation(glm::vec3(5.0f, 0.0f, 0.0f));
+        pParentSpatialNode->setRelativeScale(glm::vec3(5.0f, 1.0f, 1.0f));
+
+        const auto pUsualNode1 = gc_new<Node>("Usual Node 1");
+
+        const auto pSpatialNode = gc_new<SpatialNode>("My Cool Child Spatial Node");
+
+        const auto pUsualNode2 = gc_new<Node>("Usual Node 2");
+
+        const auto pChildSpatialNode = gc_new<SpatialNode>("My Cool Child Spatial Node 1");
+        pChildSpatialNode->setRelativeLocation(glm::vec3(5.0f, 0.0f, 0.0f));
+        pChildSpatialNode->setRelativeScale(glm::vec3(1.0f, 1.0f, 5.0f));
+
+        const auto pUsualNode3 = gc_new<Node>("Usual Node 3");
+
+        const auto pChildChildSpatialNode = gc_new<SpatialNode>("My Cool Child Spatial Node 2");
+        pChildChildSpatialNode->setRelativeLocation(glm::vec3(5.0f, 0.0f, 0.0f));
+        pChildChildSpatialNode->setRelativeScale(glm::vec3(1.0f, 1.0f, 5.0f));
+
+        pParentSpatialNode->addChildNode(pUsualNode1);
+        pUsualNode1->addChildNode(pSpatialNode);
+        pSpatialNode->addChildNode(pUsualNode2);
+        pUsualNode2->addChildNode(pChildSpatialNode);
+        pChildSpatialNode->addChildNode(pUsualNode3);
+        pUsualNode3->addChildNode(pChildChildSpatialNode);
+
+        const auto worldLocation = pChildChildSpatialNode->getWorldLocation();
+        const auto worldRotation = pChildChildSpatialNode->getWorldRotation();
+        const auto worldScale = pChildChildSpatialNode->getWorldScale();
+
+        REQUIRE(glm::all(glm::epsilonEqual(worldLocation, glm::vec3(15.0f, 0.0f, 0.0f), floatEpsilon)));
+        REQUIRE(glm::all(glm::epsilonEqual(worldRotation, glm::vec3(0.0f, 0.0f, 0.0f), floatEpsilon)));
+        REQUIRE(glm::all(glm::epsilonEqual(worldScale, glm::vec3(5.0f, 1.0f, 25.0f), floatEpsilon)));
+    }
+
+    gc_collector()->collect();
+}

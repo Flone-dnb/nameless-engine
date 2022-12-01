@@ -53,6 +53,9 @@ namespace ne RNAMESPACE() {
          * Sets relative location in the way that the resulting node's location in the world
          * would match the specified location.
          *
+         * @remark Calling this function while the node is not spawned will have no effect
+         * and will produce a warning.
+         *
          * @param location Location that the node should take in the world.
          */
         void setWorldLocation(const glm::vec3& location);
@@ -61,6 +64,9 @@ namespace ne RNAMESPACE() {
          * Sets relative rotation in the way that the resulting node's rotation in the world
          * would match the specified rotation.
          *
+         * @remark Calling this function while the node is not spawned will have no effect
+         * and will produce a warning.
+         *
          * @param rotation Rotation that the node should take in the world.
          */
         void setWorldRotation(const glm::vec3& rotation);
@@ -68,6 +74,9 @@ namespace ne RNAMESPACE() {
         /**
          * Sets relative scale in the way that the resulting node's scale in the world
          * would match the specified scale.
+         *
+         * @remark Calling this function while the node is not spawned will have no effect
+         * and will produce a warning.
          *
          * @param scale Scale that the node should take in the world.
          */
@@ -78,21 +87,21 @@ namespace ne RNAMESPACE() {
          *
          * @return Relative location.
          */
-        inline glm::vec3 getRelativeLocation() const;
+        inline glm::vec3 getRelativeLocation() const { return relativeLocation; }
 
         /**
          * Returns node's relative rotation in degrees (see @ref setRelativeRotation).
          *
          * @return Relative rotation.
          */
-        inline glm::vec3 getRelativeRotation() const;
+        inline glm::vec3 getRelativeRotation() const { return relativeRotation; }
 
         /**
          * Returns node's relative scale (see @ref setRelativeScale).
          *
          * @return Relative scale.
          */
-        inline glm::vec3 getRelativeScale() const;
+        inline glm::vec3 getRelativeScale() const { return relativeScale; }
 
         /**
          * Returns node's world location (see @ref setWorldLocation).

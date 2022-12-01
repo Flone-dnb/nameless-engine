@@ -16,12 +16,6 @@ namespace ne {
         recalculateWorldMatrix();
     }
 
-    glm::vec3 SpatialNode::getRelativeLocation() const { return relativeLocation; }
-
-    glm::vec3 SpatialNode::getRelativeRotation() const { return relativeRotation; }
-
-    glm::vec3 SpatialNode::getRelativeScale() const { return relativeScale; }
-
     glm::vec3 SpatialNode::getWorldLocation() {
         std::scoped_lock guard(mtxWorldMatrix.first);
         return mtxWorldMatrix.second.worldLocation;
@@ -38,18 +32,48 @@ namespace ne {
     }
 
     void SpatialNode::setWorldLocation(const glm::vec3& location) {
+        if (!isSpawned()) [[unlikely]] {
+            Logger::get().warn(
+                fmt::format(
+                    "setting world location for node \"{}\" has no effect "
+                    "because the node is not spawned in the world",
+                    getName()),
+                "");
+            return;
+        }
+
         std::scoped_lock guard(mtxWorldMatrix.first);
         relativeLocation = location - mtxWorldMatrix.second.worldLocation;
         recalculateWorldMatrix();
     }
 
     void SpatialNode::setWorldRotation(const glm::vec3& rotation) {
+        if (!isSpawned()) [[unlikely]] {
+            Logger::get().warn(
+                fmt::format(
+                    "setting world rotation for node \"{}\" has no effect "
+                    "because the node is not spawned in the world",
+                    getName()),
+                "");
+            return;
+        }
+
         std::scoped_lock guard(mtxWorldMatrix.first);
         relativeRotation = rotation - mtxWorldMatrix.second.worldRotation;
         recalculateWorldMatrix();
     }
 
     void SpatialNode::setWorldScale(const glm::vec3& scale) {
+        if (!isSpawned()) [[unlikely]] {
+            Logger::get().warn(
+                fmt::format(
+                    "setting world scale for node \"{}\" has no effect "
+                    "because the node is not spawned in the world",
+                    getName()),
+                "");
+            return;
+        }
+
         std::scoped_lock guard(mtxWorldMatrix.first);
         relativeScale = scale - mtxWorldMatrix.second.worldScale;
         recalculateWorldMatrix();

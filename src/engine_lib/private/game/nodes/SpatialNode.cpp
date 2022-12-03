@@ -1,6 +1,10 @@
 #include "game/nodes/SpatialNode.h"
 
 namespace ne {
+    SpatialNode::SpatialNode() : SpatialNode("Spatial Node") {}
+
+    SpatialNode::SpatialNode(const std::string& sNodeName) : Node(sNodeName) {}
+
     void SpatialNode::setRelativeLocation(const glm::vec3& location) {
         relativeLocation = location;
         recalculateWorldMatrix();
@@ -8,6 +12,18 @@ namespace ne {
 
     void SpatialNode::setRelativeRotation(const glm::vec3& rotation) {
         relativeRotation = rotation;
+
+        {
+            // Recalculate basis vectors.
+            std::scoped_lock guard(mtxLocalMatrix.first);
+
+            mtxLocalMatrix.second.localMatrix =
+                glm::rotate(glm::radians(rotation.x), glm::vec3(1.0f, 0.0f, 0.0f)) *
+                glm::rotate(glm::radians(rotation.y), glm::vec3(0.0f, 1.0f, 0.0f)) *
+                glm::rotate(glm::radians(rotation.z), glm::vec3(0.0f, 0.0f, 1.0f));
+            mtxLocalMatrix.second.localMatrixIncludingParents = mtxLocalMatrix.second.localMatrix;
+        }
+
         recalculateWorldMatrix();
     }
 
@@ -94,22 +110,30 @@ namespace ne {
 
     void SpatialNode::recalculateWorldMatrix(bool bNotifyChildren) {
         glm::mat4x4 parentWorldMatrix = glm::identity<glm::mat4x4>();
+        glm::vec3 locationRelativeToParentLocalSpace = relativeLocation;
 
-        std::scoped_lock guard(mtxWorldMatrix.first);
+        std::scoped_lock guard(mtxWorldMatrix.first, mtxLocalMatrix.first);
 
         // See if there is a spatial node in the parent chain.
         const auto pSpatialParent = getParentNodeOfType<SpatialNode>();
         if (pSpatialParent != nullptr) {
             parentWorldMatrix = pSpatialParent->getWorldMatrix();
+
+            const auto parentLocalMatrixIncludingParents = pSpatialParent->getLocalMatrixIncludingParents();
+            locationRelativeToParentLocalSpace =
+                glm::vec4(locationRelativeToParentLocalSpace, 0.0f) * parentLocalMatrixIncludingParents;
+
+            mtxLocalMatrix.second.localMatrixIncludingParents =
+                mtxLocalMatrix.second.localMatrix * parentLocalMatrixIncludingParents;
         }
 
         // Calculate world matrix without counting the parent.
         const auto myWorldMatrix =
-            glm::translate(glm::identity<glm::mat4x4>(), relativeLocation) *
+            glm::translate(locationRelativeToParentLocalSpace) *
             glm::rotate(glm::radians(relativeRotation.z), glm::vec3(0.0f, 0.0f, 1.0f)) *
             glm::rotate(glm::radians(relativeRotation.y), glm::vec3(0.0f, 1.0f, 0.0f)) *
             glm::rotate(glm::radians(relativeRotation.x), glm::vec3(1.0f, 0.0f, 0.0f)) *
-            glm::scale(glm::identity<glm::mat4x4>(), relativeScale);
+            glm::scale(relativeScale);
 
         // Recalculate world matrix.
         mtxWorldMatrix.second.worldMatrix = myWorldMatrix * parentWorldMatrix;
@@ -158,6 +182,16 @@ namespace ne {
         // No need to notify child nodes since this function (on after attached)
         // will be also called on all child nodes.
         recalculateWorldMatrix(false);
+    }
+
+    glm::mat4x4 SpatialNode::getLocalMatrix() {
+        std::scoped_lock guard(mtxLocalMatrix.first);
+        return mtxLocalMatrix.second.localMatrix;
+    }
+
+    glm::mat4x4 SpatialNode::getLocalMatrixIncludingParents() {
+        std::scoped_lock guard(mtxLocalMatrix.first);
+        return mtxLocalMatrix.second.localMatrixIncludingParents;
     }
 
 } // namespace ne

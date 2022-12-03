@@ -451,10 +451,10 @@ namespace ne RNAMESPACE() {
         /**
          * Calls @ref onAfterAttachedToNewParent on this node and all of its child nodes.
          *
-         * @param bThisNodeBeingDetached `true` if this node is being detached from its parent,
-         * `false` if some node in the parent hierarchy is being detached from its parent.
+         * @param bThisNodeBeingAttached `true` if this node is being attached from its parent,
+         * `false` if some node in the parent hierarchy is being attached to its parent.
          */
-        void notifyAboutAttachedToNewParent(bool bThisNodeBeingDetached);
+        void notifyAboutAttachedToNewParent(bool bThisNodeBeingAttached);
 
         /**
          * Calls @ref onBeforeDetachedFromParent on this node and all of its child nodes.

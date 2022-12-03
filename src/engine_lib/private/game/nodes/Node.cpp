@@ -625,10 +625,10 @@ namespace ne {
         return mtxParentNode.second->isChildOf(pNode);
     }
 
-    void Node::notifyAboutAttachedToNewParent(bool bThisNodeBeingDetached) {
+    void Node::notifyAboutAttachedToNewParent(bool bThisNodeBeingAttached) {
         std::scoped_lock guard(mtxParentNode.first, mtxChildNodes.first);
 
-        onAfterAttachedToNewParent(bThisNodeBeingDetached);
+        onAfterAttachedToNewParent(bThisNodeBeingAttached);
 
         for (const auto& pChildNode : *mtxChildNodes.second) {
             pChildNode->notifyAboutAttachedToNewParent(false);

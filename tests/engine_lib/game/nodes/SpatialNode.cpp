@@ -109,6 +109,71 @@ TEST_CASE(
     gc_collector()->collect();
 }
 
+TEST_CASE("world location with parent rotation is correct") {
+    using namespace ne;
+
+    class TestGameInstance : public GameInstance {
+    public:
+        TestGameInstance(Window* pGameWindow, InputManager* pInputManager)
+            : GameInstance(pGameWindow, pInputManager) {}
+        virtual void onGameStarted() override {
+            createWorld();
+
+            float floatEpsilon = 0.00001f;
+
+            // Create nodes.
+            const auto pParentSpatialNode = gc_new<SpatialNode>();
+            pParentSpatialNode->setRelativeRotation(glm::vec3(0.0f, 0.0f, 45.0f));
+
+            const auto pSpatialNodeA = gc_new<SpatialNode>();
+            pSpatialNodeA->setRelativeRotation(glm::vec3(0.0f, 0.0f, 45.0f));
+            pSpatialNodeA->setRelativeLocation(glm::vec3(10.0f, 0.0f, 0.0f));
+
+            const auto pSpatialNodeB = gc_new<SpatialNode>();
+            pSpatialNodeB->setRelativeRotation(glm::vec3(0.0f, 0.0f, 45.0f));
+
+            const auto pChildSpatialNodeA = gc_new<SpatialNode>();
+            const auto pChildSpatialNodeB = gc_new<SpatialNode>();
+            pChildSpatialNodeB->setRelativeLocation(glm::vec3(10.0f, 0.0f, 0.0f));
+
+            // Build hierarchy.
+            pParentSpatialNode->addChildNode(pSpatialNodeA);
+            pParentSpatialNode->addChildNode(pSpatialNodeB);
+            pSpatialNodeA->addChildNode(pChildSpatialNodeA);
+            pSpatialNodeB->addChildNode(pChildSpatialNodeB);
+            getWorldRootNode()->addChildNode(pParentSpatialNode);
+
+            // Check location.
+            const auto middleANodeWorldLocation = pSpatialNodeA->getWorldLocation();
+            const auto childANodeWorldLocation = pChildSpatialNodeA->getWorldLocation();
+            const auto childBNodeWorldLocation = pChildSpatialNodeB->getWorldLocation();
+            REQUIRE(glm::all(glm::epsilonEqual(
+                middleANodeWorldLocation, glm::vec3(7.07106f, -7.07106f, 0.0f), floatEpsilon)));
+            REQUIRE(glm::all(glm::epsilonEqual(
+                childANodeWorldLocation, glm::vec3(7.07106f, -7.07106f, 0.0f), floatEpsilon)));
+            REQUIRE(glm::all(
+                glm::epsilonEqual(childBNodeWorldLocation, glm::vec3(0.0f, -10.0f, 0.0f), floatEpsilon)));
+
+            getWindow()->close();
+        }
+        virtual ~TestGameInstance() override {}
+    };
+
+    auto result = Window::getBuilder().withVisibility(false).build();
+    if (std::holds_alternative<Error>(result)) {
+        Error error = std::get<Error>(std::move(result));
+        error.addEntry();
+        INFO(error.getError());
+        REQUIRE(false);
+    }
+
+    const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
+    pMainWindow->processEvents<TestGameInstance>();
+
+    // Make sure everything is collected correctly.
+    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+}
+
 TEST_CASE("set world location with parent is correct") {
     using namespace ne;
 
@@ -144,6 +209,65 @@ TEST_CASE("set world location with parent is correct") {
                 pChildSpatialNode->getRelativeLocation(), glm::vec3(-10.0f, -10.0f, -10.0f), floatEpsilon)));
             REQUIRE(glm::all(glm::epsilonEqual(
                 pChildSpatialNode->getWorldLocation(), glm::vec3(-5.0f, -5.0f, -5.0f), floatEpsilon)));
+
+            getWindow()->close();
+        }
+        virtual ~TestGameInstance() override {}
+    };
+
+    auto result = Window::getBuilder().withVisibility(false).build();
+    if (std::holds_alternative<Error>(result)) {
+        Error error = std::get<Error>(std::move(result));
+        error.addEntry();
+        INFO(error.getError());
+        REQUIRE(false);
+    }
+
+    const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
+    pMainWindow->processEvents<TestGameInstance>();
+
+    // Make sure everything is collected correctly.
+    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+}
+
+TEST_CASE("set world rotation with parent is correct") {
+    using namespace ne;
+
+    class TestGameInstance : public GameInstance {
+    public:
+        TestGameInstance(Window* pGameWindow, InputManager* pInputManager)
+            : GameInstance(pGameWindow, pInputManager) {}
+        virtual void onGameStarted() override {
+            createWorld();
+
+            float floatEpsilon = 0.00001f;
+
+            // Create nodes.
+            const auto pParentSpatialNode = gc_new<SpatialNode>("My Cool Spatial Node");
+            pParentSpatialNode->setRelativeRotation(glm::vec3(1.0f, 5.0f, 10.0f));
+
+            const auto pUsualNode = gc_new<Node>("Usual Node");
+
+            const auto pChildSpatialNode = gc_new<SpatialNode>("My Cool Spatial Node");
+
+            // Build hierarchy.
+            getWorldRootNode()->addChildNode(pParentSpatialNode);
+            pParentSpatialNode->addChildNode(pUsualNode);
+            pUsualNode->addChildNode(pChildSpatialNode);
+
+            // Set world rotation.
+            pChildSpatialNode->setWorldRotation(glm::vec3(-1.0f, -5.0f, -10.0f));
+
+            // Check rotations.
+            REQUIRE(glm::all(glm::epsilonEqual(
+                pParentSpatialNode->getWorldRotation(), glm::vec3(1.0f, 5.0f, 10.0f), floatEpsilon)));
+            REQUIRE(glm::all(glm::epsilonEqual(
+                pChildSpatialNode->getRelativeRotation(), glm::vec3(-2.0f, -10.0f, -20.0f), floatEpsilon)));
+
+            floatEpsilon = 3.0f; // degrees
+            const auto worldRotation = pChildSpatialNode->getWorldRotation();
+            REQUIRE(
+                glm::all(glm::epsilonEqual(worldRotation, glm::vec3(-1.0f, -5.0f, -10.0f), floatEpsilon)));
 
             getWindow()->close();
         }

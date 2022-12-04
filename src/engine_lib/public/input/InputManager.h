@@ -159,7 +159,7 @@ namespace ne {
          *
          * @param sFileName   Name of the file to save, prefer to have only ASCII characters in the
          * file name. We will save it to a predefined directory using SETTINGS category,
-         * the .ini extension will be added if the passed name does not have it.
+         * the .toml extension will be added if the passed name does not have it.
          *
          * @return Error if something went wrong.
          */
@@ -181,7 +181,7 @@ namespace ne {
          *
          * @param sFileName   Name of the file to load, prefer to have only ASCII characters in the
          * file name. We will load it from a predefined directory using SETTINGS category,
-         * the .ini extension will be added if the passed name does not have it.
+         * the .toml extension will be added if the passed name does not have it.
          *
          * @return Error if something went wrong, this usually means that the file was corrupted.
          */
@@ -367,10 +367,10 @@ namespace ne {
         /** Mutex for axis editing. */
         std::recursive_mutex mtxAxisEvents;
 
-        /** Section name to store action events, used in .ini files. */
+        /** Section name to store action events, used in .toml files. */
         const std::string_view sActionEventSectionName = "action event";
 
-        /** Section name to store axis events, used in .ini files. */
+        /** Section name to store axis events, used in .toml files. */
         const std::string_view sAxisEventSectionName = "axis event";
 
         /** Name of the category used for logging. */

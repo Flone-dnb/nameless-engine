@@ -253,11 +253,11 @@ namespace ne {
         /**
          * Saves the current configuration to a file with a UTF-8 encoding.
          *
-         * @warning There is no need to save render settings as
+         * @remark There is no need to save render settings as
          * some parts of the engine save their own configs, for example, renderer will save last
          * applied settings and restore them on start so you don't need to save them manually.
          *
-         * @warning Note that you don't need to save player input settings here, use InputManager for this
+         * @remark Note that you don't need to save player input settings here, use InputManager for this
          * task, InputManager has save/load functions, for SETTINGS category save settings that InputManager
          * can't handle, for example: mouse sensitivity.
          *

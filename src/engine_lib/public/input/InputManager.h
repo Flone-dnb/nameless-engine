@@ -172,19 +172,12 @@ namespace ne {
          * in this InputManager. File's keys for action/axis event will replace
          * the keys of existing action/axis event.
          *
-         * The usual workflow goes like this:
+         * The usual workflow for working with input goes like this:
          * - add your action/axis events with some default keys,
          * - the user may change the keys of action/axis events during game,
          * - save changed events using @ref saveToFile,
          * - on next startup add your action/axis events with some default keys,
          * - use @ref loadFromFile to load previously changed keys.
-         *
-         * We are using this approach because during development you may
-         * rename/remove different events. Imagine today you have an event "goForward",
-         * you test your game and saving, the save file will contain "goForward" event,
-         * tomorrow you decided to rename it to "moveForward" but @ref loadFromFile
-         * will load "goForward" while you would expect "moveForward", this is why
-         * we only read events that were already added to InputManager.
          *
          * @param sFileName   Name of the file to load, prefer to have only ASCII characters in the
          * file name. We will load it from a predefined directory using SETTINGS category,

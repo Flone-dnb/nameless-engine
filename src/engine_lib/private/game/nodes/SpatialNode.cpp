@@ -176,8 +176,8 @@ namespace ne {
         }
     }
 
-    void SpatialNode::onAfterAttachedToNewParent(bool bThisNodeBeingDetached) {
-        Node::onAfterAttachedToNewParent(bThisNodeBeingDetached);
+    void SpatialNode::onAfterAttachedToNewParent(bool bThisNodeBeingAttached) {
+        Node::onAfterAttachedToNewParent(bThisNodeBeingAttached);
 
         // No need to notify child nodes since this function (on after attached)
         // will be also called on all child nodes.

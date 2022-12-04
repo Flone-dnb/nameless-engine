@@ -388,11 +388,14 @@ namespace ne RNAMESPACE() {
          * Called before this node or one of the node's parents (in the parent hierarchy)
          * is about to be detached from the current parent node.
          *
+         * @warning If overriding you must call the parent's version of this function first
+         * (before executing your login) to execute parent's logic.
+         *
          * @remark If this node is being detached from its parent @ref getParentNode will return
          * `nullptr` after this function is finished.
          *
-         * @warning If overriding you must call the parent's version of this function first
-         * (before executing your login) to execute parent's logic.
+         * @remark This function will also be called on all child nodes after this function
+         * is finished.
          *
          * @param bThisNodeBeingDetached `true` if this node is being detached from its parent,
          * `false` if some node in the parent hierarchy is being detached from its parent.
@@ -406,10 +409,13 @@ namespace ne RNAMESPACE() {
          * @warning If overriding you must call the parent's version of this function first
          * (before executing your login) to execute parent's logic.
          *
-         * @param bThisNodeBeingDetached `true` if this node is being detached from its parent,
-         * `false` if some node in the parent hierarchy is being detached from its parent.
+         * @remark This function will also be called on all child nodes after this function
+         * is finished.
+         *
+         * @param bThisNodeBeingAttached `true` if this node was attached to a parent,
+         * `false` if some node in the parent hierarchy was attached to a parent.
          */
-        virtual void onAfterAttachedToNewParent(bool bThisNodeBeingDetached) {}
+        virtual void onAfterAttachedToNewParent(bool bThisNodeBeingAttached) {}
 
         /** Mutex that will be used when spawning/despawning node (i.e. when changing @ref bIsSpawned). */
         std::recursive_mutex mtxSpawning;
@@ -451,8 +457,8 @@ namespace ne RNAMESPACE() {
         /**
          * Calls @ref onAfterAttachedToNewParent on this node and all of its child nodes.
          *
-         * @param bThisNodeBeingAttached `true` if this node is being attached from its parent,
-         * `false` if some node in the parent hierarchy is being attached to its parent.
+         * @param bThisNodeBeingAttached `true` if this node was attached to a parent,
+         * `false` if some node in the parent hierarchy was attached to a parent.
          */
         void notifyAboutAttachedToNewParent(bool bThisNodeBeingAttached);
 

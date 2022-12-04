@@ -122,8 +122,11 @@ TEST_CASE("world location with parent rotation is correct") {
             float floatEpsilon = 0.00001f;
 
             // Create nodes.
-            const auto pParentSpatialNode = gc_new<SpatialNode>();
-            pParentSpatialNode->setRelativeRotation(glm::vec3(0.0f, 0.0f, 45.0f));
+            const auto pParentSpatialNodeA = gc_new<SpatialNode>();
+            pParentSpatialNodeA->setRelativeRotation(glm::vec3(0.0f, 0.0f, 45.0f));
+
+            const auto pParentSpatialNodeB = gc_new<SpatialNode>();
+            pParentSpatialNodeB->setRelativeRotation(glm::vec3(90.0f, 0.0f, 0.0f));
 
             const auto pSpatialNodeA = gc_new<SpatialNode>();
             pSpatialNodeA->setRelativeRotation(glm::vec3(0.0f, 0.0f, 45.0f));
@@ -132,27 +135,39 @@ TEST_CASE("world location with parent rotation is correct") {
             const auto pSpatialNodeB = gc_new<SpatialNode>();
             pSpatialNodeB->setRelativeRotation(glm::vec3(0.0f, 0.0f, 45.0f));
 
+            const auto pSpatialNodeC = gc_new<SpatialNode>();
+            pSpatialNodeC->setRelativeRotation(glm::vec3(0.0f, 0.0f, 90.0f));
+
             const auto pChildSpatialNodeA = gc_new<SpatialNode>();
             const auto pChildSpatialNodeB = gc_new<SpatialNode>();
             pChildSpatialNodeB->setRelativeLocation(glm::vec3(10.0f, 0.0f, 0.0f));
 
+            const auto pChildSpatialNodeC = gc_new<SpatialNode>();
+            pChildSpatialNodeC->setRelativeLocation(glm::vec3(0.0f, 10.0f, 0.0f));
+
             // Build hierarchy.
-            pParentSpatialNode->addChildNode(pSpatialNodeA);
-            pParentSpatialNode->addChildNode(pSpatialNodeB);
+            pParentSpatialNodeA->addChildNode(pSpatialNodeA);
+            pParentSpatialNodeA->addChildNode(pSpatialNodeB);
+            pParentSpatialNodeB->addChildNode(pSpatialNodeC);
             pSpatialNodeA->addChildNode(pChildSpatialNodeA);
             pSpatialNodeB->addChildNode(pChildSpatialNodeB);
-            getWorldRootNode()->addChildNode(pParentSpatialNode);
+            pSpatialNodeC->addChildNode(pChildSpatialNodeC);
+            getWorldRootNode()->addChildNode(pParentSpatialNodeA);
+            getWorldRootNode()->addChildNode(pParentSpatialNodeB);
 
             // Check location.
             const auto middleANodeWorldLocation = pSpatialNodeA->getWorldLocation();
             const auto childANodeWorldLocation = pChildSpatialNodeA->getWorldLocation();
             const auto childBNodeWorldLocation = pChildSpatialNodeB->getWorldLocation();
+            const auto childCNodeWorldLocation = pChildSpatialNodeC->getWorldLocation();
             REQUIRE(glm::all(glm::epsilonEqual(
                 middleANodeWorldLocation, glm::vec3(7.07106f, -7.07106f, 0.0f), floatEpsilon)));
             REQUIRE(glm::all(glm::epsilonEqual(
                 childANodeWorldLocation, glm::vec3(7.07106f, -7.07106f, 0.0f), floatEpsilon)));
             REQUIRE(glm::all(
                 glm::epsilonEqual(childBNodeWorldLocation, glm::vec3(0.0f, -10.0f, 0.0f), floatEpsilon)));
+            REQUIRE(glm::all(
+                glm::epsilonEqual(childCNodeWorldLocation, glm::vec3(10.0f, 0.0f, 0.0f), floatEpsilon)));
 
             getWindow()->close();
         }

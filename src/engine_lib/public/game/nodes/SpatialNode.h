@@ -160,10 +160,13 @@ namespace ne RNAMESPACE() {
          * @warning If overriding you must call the parent's version of this function first
          * (before executing your login) to execute parent's logic.
          *
-         * @param bThisNodeBeingDetached `true` if this node is being detached from its parent,
-         * `false` if some node in the parent hierarchy is being detached from its parent.
+         * @remark This function will also be called on all child nodes after this function
+         * is finished.
+         *
+         * @param bThisNodeBeingAttached `true` if this node was attached to a parent,
+         * `false` if some node in the parent hierarchy was attached to a parent.
          */
-        virtual void onAfterAttachedToNewParent(bool bThisNodeBeingDetached) override;
+        virtual void onAfterAttachedToNewParent(bool bThisNodeBeingAttached) override;
 
     private:
         /**

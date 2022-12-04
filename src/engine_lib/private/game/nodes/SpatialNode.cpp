@@ -1,5 +1,8 @@
 #include "game/nodes/SpatialNode.h"
 
+// Custom.
+#include "game/GameInstance.h"
+
 namespace ne {
     SpatialNode::SpatialNode() : SpatialNode("Spatial Node") {}
 
@@ -153,6 +156,8 @@ namespace ne {
             glm::degrees(rotationRadians.z));
         mtxWorldMatrix.second.worldScale = scale;
 
+        warnIfExceedingWorldBounds();
+
         if (bNotifyChildren) {
             // Notify spatial child nodes.
             // (don't unlock our world matrix yet)
@@ -192,6 +197,32 @@ namespace ne {
     glm::mat4x4 SpatialNode::getLocalMatrixIncludingParents() {
         std::scoped_lock guard(mtxLocalMatrix.first);
         return mtxLocalMatrix.second.localMatrixIncludingParents;
+    }
+
+    void SpatialNode::warnIfExceedingWorldBounds() {
+        std::scoped_lock guard(mtxSpawning, mtxWorldMatrix.first);
+
+        const auto pGameInstance = getGameInstance();
+        if (pGameInstance == nullptr) {
+            return;
+        }
+
+        const float iWorldSize = static_cast<float>(pGameInstance->getWorldSize());
+
+        if (mtxWorldMatrix.second.worldLocation.x >= iWorldSize ||
+            mtxWorldMatrix.second.worldLocation.y >= iWorldSize ||
+            mtxWorldMatrix.second.worldLocation.z >= iWorldSize) [[unlikely]] {
+            Logger::get().warn(
+                fmt::format(
+                    "spatial node \"{}\" is exceeding world bounds, node's world location: "
+                    "({}, {}, {}), world size: {}",
+                    getName(),
+                    mtxWorldMatrix.second.worldLocation.x,
+                    mtxWorldMatrix.second.worldLocation.y,
+                    mtxWorldMatrix.second.worldLocation.z,
+                    iWorldSize),
+                sSpatialNodeLogCategory);
+        }
     }
 
 } // namespace ne

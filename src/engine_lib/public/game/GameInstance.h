@@ -258,6 +258,13 @@ namespace ne {
         float getWorldTimeInSeconds() const;
 
         /**
+         * Returns world size in game units.
+         *
+         * @return World size.
+         */
+        size_t getWorldSize() const;
+
+        /**
          * Returns the current amount of spawned nodes that are marked as "should be called every frame".
          *
          * @return Amount of spawned nodes that should be called every frame.

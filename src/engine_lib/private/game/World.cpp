@@ -83,6 +83,8 @@ namespace ne {
         return durationInMs / 1000.0f;
     }
 
+    size_t World::getWorldSize() const { return iWorldSize; }
+
     void World::destroyWorld() {
         // Mark world as being destroyed.
         std::scoped_lock isDestroyedGuard(mtxIsDestroyed.first);

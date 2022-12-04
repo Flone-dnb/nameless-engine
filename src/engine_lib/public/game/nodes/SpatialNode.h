@@ -186,6 +186,9 @@ namespace ne RNAMESPACE() {
          */
         void recalculateWorldMatrixForNodeAndNotifyChildren(gc<Node> pNode);
 
+        /** Logs a warning if node's world location exceeds world bounds. */
+        void warnIfExceedingWorldBounds();
+
         /**
          * Returns @ref getLocalMatrix multiplied by local matrices of parent spatial nodes.
          *
@@ -255,6 +258,9 @@ namespace ne RNAMESPACE() {
 
         /** World related information, must be used with mutex. */
         std::pair<std::recursive_mutex, WorldMatrixInformation> mtxWorldMatrix;
+
+        /** Name of the category used for logging. */
+        static inline const auto sSpatialNodeLogCategory = "Spatial Node";
 
         ne_SpatialNode_GENERATED
     };

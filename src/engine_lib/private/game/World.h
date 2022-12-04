@@ -119,6 +119,13 @@ namespace ne {
         float getWorldTimeInSeconds() const;
 
         /**
+         * Returns world size in game units.
+         *
+         * @return World size.
+         */
+        size_t getWorldSize() const;
+
+        /**
          * Called from Node to notify the World about a new node being spawned.
          *
          * @param pNode Node that is being spawned.

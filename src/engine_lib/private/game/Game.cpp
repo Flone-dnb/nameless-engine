@@ -299,6 +299,15 @@ namespace ne {
         return mtxWorld.second->getWorldTimeInSeconds();
     }
 
+    size_t Game::getWorldSize() {
+        std::scoped_lock guard(mtxWorld.first);
+
+        if (!mtxWorld.second)
+            return 0;
+
+        return mtxWorld.second->getWorldSize();
+    }
+
     size_t Game::getCalledEveryFrameNodeCount() {
         std::scoped_lock guard(mtxWorld.first);
 

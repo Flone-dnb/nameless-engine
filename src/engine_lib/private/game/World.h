@@ -30,8 +30,11 @@ namespace ne {
     /** Owns world's root node. */
     class World {
     public:
+        World() = delete;
+
         World(const World&) = delete;
         World& operator=(const World&) = delete;
+
         World(World&&) = delete;
         World& operator=(World&&) = delete;
 

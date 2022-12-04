@@ -707,4 +707,40 @@ namespace ne {
     }
 
     bool Node::receivesInput() const { return bReceiveInput; }
+
+    void Node::onInputActionEvent(
+        const std::string& sActionName, KeyboardModifiers modifiers, bool bIsPressedDown) {
+        std::scoped_lock guard(mtxBindedActionEvents.first);
+
+        const auto it = mtxBindedActionEvents.second.find(sActionName);
+        if (it == mtxBindedActionEvents.second.end())
+            return;
+
+        it->second(modifiers, bIsPressedDown);
+    }
+
+    void Node::onInputAxisEvent(const std::string& sAxisName, KeyboardModifiers modifiers, float input) {
+        std::scoped_lock guard(mtxBindedAxisEvents.first);
+
+        const auto it = mtxBindedAxisEvents.second.find(sAxisName);
+        if (it == mtxBindedAxisEvents.second.end())
+            return;
+
+        it->second(modifiers, input);
+    }
+
+    std::pair<
+        std::recursive_mutex,
+        std::unordered_map<std::string, std::function<void(KeyboardModifiers, bool)>>>*
+    Node::getActionEventBindings() {
+        return &mtxBindedActionEvents;
+    }
+
+    std::pair<
+        std::recursive_mutex,
+        std::unordered_map<std::string, std::function<void(KeyboardModifiers, float)>>>*
+    Node::getAxisEventBindings() {
+        return &mtxBindedAxisEvents;
+    }
+
 } // namespace ne

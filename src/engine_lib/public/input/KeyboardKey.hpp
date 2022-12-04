@@ -16,7 +16,7 @@ namespace ne {
          *
          * @param iModifiers GLFW modifiers value.
          */
-        explicit KeyboardModifiers(const int iModifiers) { this->iModifiers = iModifiers; }
+        explicit KeyboardModifiers(int iModifiers) { this->iModifiers = iModifiers; }
 
         /**
          * Whether the Shift key is pressed or not.

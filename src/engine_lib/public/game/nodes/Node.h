@@ -5,6 +5,7 @@
 #include <memory>
 #include <mutex>
 #include <atomic>
+#include <unordered_map>
 
 // Custom.
 #include "io/Serializable.h"
@@ -295,6 +296,62 @@ namespace ne RNAMESPACE() {
         void setReceiveInput(bool bEnable);
 
         /**
+         * Returns map of action events that this node is binded to (must be used with mutex).
+         * Binded callbacks will be automatically called when an action event is triggered.
+         *
+         * @remark Input events will be only triggered if the node is spawned.
+         * @remark Input events will not be called if @ref setReceiveInput was not enabled.
+         * @remark Only events in GameInstance's InputManager (GameInstance::getInputManager)
+         * will be considered to trigger events in the node.
+         *
+         * Example:
+         * @code
+         * const auto sForwardActionName = "forward";
+         * const auto pActionEvents = getActionEventBindings();
+         *
+         * std::scoped_lock guard(pActionEvents->first);
+         * pActionEvents->second[sForwardActionName] = [&](KeyboardModifiers modifiers, bool bIsPressedDown) {
+         *     moveForward(modifiers, bIsPressedDown);
+         * };
+         * @endcode
+         *
+         * @return Binded action events.
+         */
+        std::pair<
+            std::recursive_mutex,
+            std::unordered_map<std::string, std::function<void(KeyboardModifiers, bool)>>>*
+        getActionEventBindings();
+
+        /**
+         * Returns map of axis events that this node is binded to (must be used with mutex).
+         * Binded callbacks will be automatically called when an axis event is triggered.
+         *
+         * @remark Input events will be only triggered if the node is spawned.
+         * @remark Input events will not be called if @ref setReceiveInput was not enabled.
+         * @remark Only events in GameInstance's InputManager (GameInstance::getInputManager)
+         * will be considered to trigger events in the node.
+         *
+         * Example:
+         * @code
+         * const auto sForwardAxisName = "forward";
+         * const auto pAxisEvents = getAxisEventBindings();
+         *
+         * std::scoped_lock guard(pAxisEvents->first);
+         * pAxisEvents->second[sForwardAxisName] = [&](KeyboardModifiers modifiers, float input) {
+         *     moveForward(modifiers, input);
+         * };
+         * @endcode
+         *
+         * @remark Input parameter is a value in range [-1.0f; 1.0f] that describes input.
+         *
+         * @return Binded action events.
+         */
+        std::pair<
+            std::recursive_mutex,
+            std::unordered_map<std::string, std::function<void(KeyboardModifiers, float)>>>*
+        getAxisEventBindings();
+
+        /**
          * Called when the window received mouse movement.
          *
          * @remark This function will not be called if @ref setReceiveInput was not enabled.
@@ -316,35 +373,6 @@ namespace ne RNAMESPACE() {
          * @param iOffset Movement offset.
          */
         virtual void onMouseScrollMove(int iOffset) {}
-
-        /**
-         * Called when a window that owns this game instance receives user
-         * input and the input key exists as an action event in the InputManager.
-         *
-         * @remark This function will not be called if @ref setReceiveInput was not enabled.
-         * @remark This function will only be called while this node is spawned.
-         *
-         * @param sActionName    Name of the input action event (from input manager).
-         * @param modifiers      Keyboard modifier keys.
-         * @param bIsPressedDown Whether the key down event occurred or key up.
-         */
-        virtual void
-        onInputActionEvent(const std::string& sActionName, KeyboardModifiers modifiers, bool bIsPressedDown) {
-        }
-
-        /**
-         * Called when a window that owns this game instance receives user
-         * input and the input key exists as an axis event in the InputManager.
-         *
-         * @remark This function will not be called if @ref setReceiveInput was not enabled.
-         * @remark This function will only be called while this node is spawned.
-         *
-         * @param sAxisName      Name of the input axis event (from input manager).
-         * @param modifiers      Keyboard modifier keys.
-         * @param fValue         A value in range [-1.0f; 1.0f] that describes input.
-         */
-        virtual void
-        onInputAxisEvent(const std::string& sAxisName, KeyboardModifiers modifiers, float fValue) {}
 
         /**
          * Called before a new frame is rendered.
@@ -448,6 +476,33 @@ namespace ne RNAMESPACE() {
             gc<Node> pDeserializedOriginalObject = nullptr;
         };
 
+        /**
+         * Called when a window that owns this game instance receives user
+         * input and the input key exists as an action event in the InputManager.
+         *
+         * @remark This function will not be called if @ref setReceiveInput was not enabled.
+         * @remark This function will only be called while this node is spawned.
+         *
+         * @param sActionName    Name of the input action event (from input manager).
+         * @param modifiers      Keyboard modifier keys.
+         * @param bIsPressedDown Whether the key down event occurred or key up.
+         */
+        void
+        onInputActionEvent(const std::string& sActionName, KeyboardModifiers modifiers, bool bIsPressedDown);
+
+        /**
+         * Called when a window that owns this game instance receives user
+         * input and the input key exists as an axis event in the InputManager.
+         *
+         * @remark This function will not be called if @ref setReceiveInput was not enabled.
+         * @remark This function will only be called while this node is spawned.
+         *
+         * @param sAxisName      Name of the input axis event (from input manager).
+         * @param modifiers      Keyboard modifier keys.
+         * @param input          A value in range [-1.0f; 1.0f] that describes input.
+         */
+        void onInputAxisEvent(const std::string& sAxisName, KeyboardModifiers modifiers, float input);
+
         /** Calls @ref onSpawn on this node and all of its child nodes. */
         void spawn();
 
@@ -529,10 +584,20 @@ namespace ne RNAMESPACE() {
         /** Attached child nodes. Should be used under the mutex when changing children. */
         std::pair<std::recursive_mutex, gc_vector<Node>> mtxChildNodes;
 
-        /**
-         * Attached parent node.
-         */
+        /** Attached parent node. */
         std::pair<std::recursive_mutex, gc<Node>> mtxParentNode;
+
+        /** Map of action events that this node is binded to. Must be used with mutex. */
+        std::pair<
+            std::recursive_mutex,
+            std::unordered_map<std::string, std::function<void(KeyboardModifiers, bool)>>>
+            mtxBindedActionEvents;
+
+        /** Map of axis events that this node is binded to. Must be used with mutex. */
+        std::pair<
+            std::recursive_mutex,
+            std::unordered_map<std::string, std::function<void(KeyboardModifiers, float)>>>
+            mtxBindedAxisEvents;
 
         /**
          * Do not delete this pointer. Game instance object that is used for this world.

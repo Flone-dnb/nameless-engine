@@ -26,9 +26,11 @@ namespace ne {
             throw std::runtime_error(err.getError());
         }
 
+        // Initialize self.
         this->pGame = pGame;
         this->iWorldSize = iWorldSize;
         mtxIsDestroyed.second = false;
+        mtxReceivingInputNodes.second = gc_new_vector<Node>();
 
         // Spawn root node.
         mtxRootNode.second = pRootNode;

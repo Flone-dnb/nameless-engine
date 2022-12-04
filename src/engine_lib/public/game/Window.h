@@ -377,6 +377,37 @@ namespace ne {
         HWND getWindowHandle() const;
 #endif
 
+        /**
+         * Called when the window receives keyboard input.
+         *
+         * @remark Made public so you can simulate input in your tests.
+         *
+         * @param key            Keyboard key.
+         * @param modifiers      Keyboard modifier keys.
+         * @param bIsPressedDown Whether the key down event occurred or key up.
+         */
+        void onKeyboardInput(KeyboardKey key, KeyboardModifiers modifiers, bool bIsPressedDown) const;
+
+        /**
+         * Called when the window receives mouse input.
+         *
+         * @remark Made public so you can simulate input in your tests.
+         *
+         * @param button         Mouse button.
+         * @param modifiers      Keyboard modifier keys.
+         * @param bIsPressedDown Whether the button down event occurred or button up.
+         */
+        void onMouseInput(MouseButton button, KeyboardModifiers modifiers, bool bIsPressedDown) const;
+
+        /**
+         * Called when the window receives mouse scroll movement.
+         *
+         * @remark Made public so you can simulate input in your tests.
+         *
+         * @param iOffset Movement offset.
+         */
+        void onMouseScrollMove(int iOffset) const;
+
     private:
         friend class WindowBuilder;
 
@@ -435,37 +466,12 @@ namespace ne {
         void showErrorIfNotOnMainThread() const;
 
         /**
-         * Called when the window receives keyboard input.
-         *
-         * @param key            Keyboard key.
-         * @param modifiers      Keyboard modifier keys.
-         * @param bIsPressedDown Whether the key down event occurred or key up.
-         */
-        void onKeyboardInput(KeyboardKey key, KeyboardModifiers modifiers, bool bIsPressedDown) const;
-
-        /**
-         * Called when the window receives mouse input.
-         *
-         * @param button         Mouse button.
-         * @param modifiers      Keyboard modifier keys.
-         * @param bIsPressedDown Whether the button down event occurred or button up.
-         */
-        void onMouseInput(MouseButton button, KeyboardModifiers modifiers, bool bIsPressedDown) const;
-
-        /**
          * Called when the window receives mouse movement.
          *
          * @param iXPos    Mouse X position in pixels.
          * @param iYPos    Mouse Y position in pixels.
          */
         void onMouseMove(int iXPos, int iYPos);
-
-        /**
-         * Called when the window receives mouse scroll movement.
-         *
-         * @param iOffset Movement offset.
-         */
-        void onMouseScrollMove(int iOffset) const;
 
         /**
          * Called when the window focus was changed.

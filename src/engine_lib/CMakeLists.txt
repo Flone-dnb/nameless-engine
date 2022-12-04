@@ -468,6 +468,7 @@ set(ENGINE_TEST_SOURCES
     ${TESTS_RELATIVE_PATH}/engine_lib/game/nodes/Node.cpp
     ${TESTS_RELATIVE_PATH}/engine_lib/game/nodes/SpatialNode.cpp
     ${TESTS_RELATIVE_PATH}/engine_lib/game/World.cpp
+    ${TESTS_RELATIVE_PATH}/engine_lib/game/GameInstance.cpp
     # add engine test .cpp files here
 )
 

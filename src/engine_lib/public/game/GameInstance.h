@@ -65,31 +65,6 @@ namespace ne {
         virtual void onBeforeNewFrame(float fTimeSincePrevCallInSec) {}
 
         /**
-         * Called when a window that owns this game instance receives user
-         * input and the input key exists as an action event in the InputManager.
-         * Called after @ref onKeyboardInput.
-         *
-         * @param sActionName    Name of the input action event (from input manager).
-         * @param modifiers      Keyboard modifier keys.
-         * @param bIsPressedDown Whether the key down event occurred or key up.
-         */
-        virtual void
-        onInputActionEvent(const std::string& sActionName, KeyboardModifiers modifiers, bool bIsPressedDown) {
-        }
-
-        /**
-         * Called when a window that owns this game instance receives user
-         * input and the input key exists as an axis event in the InputManager.
-         * Called after @ref onKeyboardInput and after @ref onInputActionEvent.
-         *
-         * @param sAxisName      Name of the input axis event (from input manager).
-         * @param modifiers      Keyboard modifier keys.
-         * @param fValue         A value in range [-1.0f; 1.0f] that describes input.
-         */
-        virtual void
-        onInputAxisEvent(const std::string& sAxisName, KeyboardModifiers modifiers, float fValue) {}
-
-        /**
          * Called when the window receives keyboard input.
          * Called before @ref onInputActionEvent.
          * Prefer to use @ref onInputActionEvent instead of this function.
@@ -242,6 +217,64 @@ namespace ne {
         void setGarbageCollectorRunInterval(long long iGcRunIntervalInSec);
 
         /**
+         * Returns map of action events that this GameInstance is binded to (must be used with mutex).
+         * Binded callbacks will be automatically called when an action event is triggered.
+         *
+         * @remark Note that nodes can also have their input event bindings and you may prefer
+         * to bind to input in specific nodes instead of binding to them in GameInstance.
+         * @remark Only events in GameInstance's InputManager (GameInstance::getInputManager)
+         * will be considered to trigger events in the node.
+         * @remark Called after @ref onKeyboardInput.
+         *
+         * Example:
+         * @code
+         * const auto sForwardActionName = "forward";
+         * const auto pActionEvents = getActionEventBindings();
+         *
+         * std::scoped_lock guard(pActionEvents->first);
+         * pActionEvents->second[sForwardActionName] = [&](KeyboardModifiers modifiers, bool bIsPressedDown) {
+         *     moveForward(modifiers, bIsPressedDown);
+         * };
+         * @endcode
+         *
+         * @return Binded action events.
+         */
+        std::pair<
+            std::recursive_mutex,
+            std::unordered_map<std::string, std::function<void(KeyboardModifiers, bool)>>>*
+        getActionEventBindings();
+
+        /**
+         * Returns map of axis events that this GameInstance is binded to (must be used with mutex).
+         * Binded callbacks will be automatically called when an axis event is triggered.
+         *
+         * @remark Note that nodes can also have their input event bindings and you may prefer
+         * to bind to input in specific nodes instead of binding to them in GameInstance.
+         * @remark Only events in GameInstance's InputManager (GameInstance::getInputManager)
+         * will be considered to trigger events in the node.
+         * @remark Called after @ref onKeyboardInput.
+         *
+         * Example:
+         * @code
+         * const auto sForwardAxisName = "forward";
+         * const auto pAxisEvents = getAxisEventBindings();
+         *
+         * std::scoped_lock guard(pAxisEvents->first);
+         * pAxisEvents->second[sForwardAxisName] = [&](KeyboardModifiers modifiers, float input) {
+         *     moveForward(modifiers, input);
+         * };
+         * @endcode
+         *
+         * @remark Input parameter is a value in range [-1.0f; 1.0f] that describes input.
+         *
+         * @return Binded action events.
+         */
+        std::pair<
+            std::recursive_mutex,
+            std::unordered_map<std::string, std::function<void(KeyboardModifiers, float)>>>*
+        getAxisEventBindings();
+
+        /**
          * Returns a pointer to world's root node.
          *
          * @return nullptr if world is not created or was destroyed (see @ref createWorld), otherwise world's
@@ -295,6 +328,44 @@ namespace ne {
         long long getGarbageCollectorRunIntervalInSec();
 
     private:
+        // Game will trigger input events.
+        friend class Game;
+
+        /**
+         * Called when a window that owns this game instance receives user
+         * input and the input key exists as an action event in the InputManager.
+         * Called after @ref onKeyboardInput.
+         *
+         * @param sActionName    Name of the input action event (from input manager).
+         * @param modifiers      Keyboard modifier keys.
+         * @param bIsPressedDown Whether the key down event occurred or key up.
+         */
+        void
+        onInputActionEvent(const std::string& sActionName, KeyboardModifiers modifiers, bool bIsPressedDown);
+
+        /**
+         * Called when a window that owns this game instance receives user
+         * input and the input key exists as an axis event in the InputManager.
+         * Called after @ref onKeyboardInput and after @ref onInputActionEvent.
+         *
+         * @param sAxisName      Name of the input axis event (from input manager).
+         * @param modifiers      Keyboard modifier keys.
+         * @param input          A value in range [-1.0f; 1.0f] that describes input.
+         */
+        void onInputAxisEvent(const std::string& sAxisName, KeyboardModifiers modifiers, float input);
+
+        /** Map of action events that this GameInstance  is binded to. Must be used with mutex. */
+        std::pair<
+            std::recursive_mutex,
+            std::unordered_map<std::string, std::function<void(KeyboardModifiers, bool)>>>
+            mtxBindedActionEvents;
+
+        /** Map of axis events that this GameInstance is binded to. Must be used with mutex. */
+        std::pair<
+            std::recursive_mutex,
+            std::unordered_map<std::string, std::function<void(KeyboardModifiers, float)>>>
+            mtxBindedAxisEvents;
+
         /** Do not delete. Owner of @ref pGame object. */
         Window* pGameWindow = nullptr;
 

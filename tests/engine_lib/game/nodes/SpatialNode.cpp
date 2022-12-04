@@ -303,3 +303,59 @@ TEST_CASE("set world rotation with parent is correct") {
     // Make sure everything is collected correctly.
     REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
 }
+
+TEST_CASE("set world scale with parent is correct") {
+    using namespace ne;
+
+    class TestGameInstance : public GameInstance {
+    public:
+        TestGameInstance(Window* pGameWindow, InputManager* pInputManager)
+            : GameInstance(pGameWindow, pInputManager) {}
+        virtual void onGameStarted() override {
+            createWorld();
+
+            constexpr float floatEpsilon = 0.00001f;
+
+            // Create nodes.
+            const auto pParentSpatialNode = gc_new<SpatialNode>("My Cool Spatial Node");
+            pParentSpatialNode->setRelativeScale(glm::vec3(5.0f, 5.0f, 5.0f));
+
+            const auto pUsualNode = gc_new<Node>("Usual Node");
+
+            const auto pChildSpatialNode = gc_new<SpatialNode>("My Cool Spatial Node");
+
+            // Build hierarchy.
+            getWorldRootNode()->addChildNode(pParentSpatialNode);
+            pParentSpatialNode->addChildNode(pUsualNode);
+            pUsualNode->addChildNode(pChildSpatialNode);
+
+            // Set world scale.
+            pChildSpatialNode->setWorldScale(glm::vec3(2.0f, 2.0f, 2.0f));
+
+            // Check scale.
+            REQUIRE(glm::all(glm::epsilonEqual(
+                pParentSpatialNode->getWorldScale(), glm::vec3(5.0f, 5.0f, 5.0f), floatEpsilon)));
+            REQUIRE(glm::all(glm::epsilonEqual(
+                pChildSpatialNode->getRelativeScale(), glm::vec3(0.4f, 0.4f, 0.4f), floatEpsilon)));
+            REQUIRE(glm::all(glm::epsilonEqual(
+                pChildSpatialNode->getWorldScale(), glm::vec3(2.0f, 2.0f, 2.0f), floatEpsilon)));
+
+            getWindow()->close();
+        }
+        virtual ~TestGameInstance() override {}
+    };
+
+    auto result = Window::getBuilder().withVisibility(false).build();
+    if (std::holds_alternative<Error>(result)) {
+        Error error = std::get<Error>(std::move(result));
+        error.addEntry();
+        INFO(error.getError());
+        REQUIRE(false);
+    }
+
+    const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
+    pMainWindow->processEvents<TestGameInstance>();
+
+    // Make sure everything is collected correctly.
+    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+}

@@ -91,7 +91,7 @@ namespace ne {
         }
 
         std::scoped_lock guard(mtxWorldMatrix.first);
-        relativeScale = scale - mtxWorldMatrix.second.worldScale;
+        relativeScale = scale / mtxWorldMatrix.second.worldScale;
         recalculateWorldMatrix();
     }
 

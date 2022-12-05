@@ -366,7 +366,7 @@ namespace ne {
         Logger::get().info(
             std::format(
                 "flushing the command queue to (re)create {} descriptor heap (from capacity {} to {}) "
-                "(size: {})",
+                "(current actual heap size: {})",
                 sHeapType,
                 iHeapCapacity.load(),
                 iCapacity,

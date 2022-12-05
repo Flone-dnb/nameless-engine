@@ -2,20 +2,20 @@
 
 // Custom.
 #include "shaders/ShaderDescription.h"
-#include "shaders/ShaderParameter.h"
+#include "misc/ProjectPaths.h"
 
 namespace ne {
     /** Stores engine shader definitions used in DirectX renderer. */
-    class DirectXEngineShaders {
+    class HlslEngineShaders {
     public:
-        DirectXEngineShaders() = delete;
-        DirectXEngineShaders(const DirectXEngineShaders&) = delete;
-        DirectXEngineShaders& operator=(const DirectXEngineShaders&) = delete;
+        HlslEngineShaders() = delete;
+        HlslEngineShaders(const HlslEngineShaders&) = delete;
+        HlslEngineShaders& operator=(const HlslEngineShaders&) = delete;
 
         /** Default vertex shader. */
         static inline const auto vertexShader = ShaderDescription(
             "engine.default.vs",
-            "res/engine/shaders/default.hlsl",
+            ProjectPaths::getDirectoryForResources(ResourceDirectory::ENGINE) / "shaders/default.hlsl",
             ShaderType::VERTEX_SHADER,
             "vsDefault",
             {});
@@ -23,7 +23,7 @@ namespace ne {
         /** Default pixel shader. */
         static inline const auto pixelShader = ShaderDescription(
             "engine.default.ps",
-            "res/engine/shaders/default.hlsl",
+            ProjectPaths::getDirectoryForResources(ResourceDirectory::ENGINE) / "shaders/default.hlsl",
             ShaderType::PIXEL_SHADER,
             "psDefault",
             {});

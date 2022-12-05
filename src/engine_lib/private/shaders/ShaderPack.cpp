@@ -7,10 +7,7 @@
 #include "io/Logger.h"
 #include "shaders/Shader.h"
 #include "shaders/ShaderFilesystemPaths.hpp"
-#if defined(WIN32)
-#include "shaders/hlsl/HlslShader.h"
-#include "render/directx/DirectXRenderer.h"
-#endif
+#include "render/Renderer.h"
 
 // External.
 #include "fmt/core.h"
@@ -30,20 +27,21 @@ namespace ne {
         const auto pShaderPack = std::shared_ptr<ShaderPack>(new ShaderPack(shaderDescription.sShaderName));
 
         // Configurations.
-        const std::set<std::set<ShaderParameter>>* parameterCombinations;
+        const std::set<std::set<ShaderParameter>>* pParameterCombinations;
         switch (shaderDescription.shaderType) {
         case (ShaderType::VERTEX_SHADER):
-            parameterCombinations = &ShaderParameterConfigurations::validVertexShaderParameterConfigurations;
+            pParameterCombinations = &ShaderParameterConfigurations::validVertexShaderParameterConfigurations;
             break;
         case (ShaderType::PIXEL_SHADER):
-            parameterCombinations = &ShaderParameterConfigurations::validPixelShaderParameterConfigurations;
+            pParameterCombinations = &ShaderParameterConfigurations::validPixelShaderParameterConfigurations;
             break;
         case (ShaderType::COMPUTE_SHADER):
-            parameterCombinations = &ShaderParameterConfigurations::validComputeShaderParameterConfigurations;
+            pParameterCombinations =
+                &ShaderParameterConfigurations::validComputeShaderParameterConfigurations;
             break;
         }
 
-        for (const auto& parameters : *parameterCombinations) {
+        for (const auto& parameters : *pParameterCombinations) {
             auto currentShaderDescription = shaderDescription;
 
             // Add configuration macros.
@@ -89,21 +87,22 @@ namespace ne {
     std::variant<std::shared_ptr<ShaderPack>, std::string, Error>
     ShaderPack::compileShaderPack(Renderer* pRenderer, const ShaderDescription& shaderDescription) {
         // Configurations.
-        const std::set<std::set<ShaderParameter>>* parameterCombinations;
+        const std::set<std::set<ShaderParameter>>* pParameterCombinations;
         switch (shaderDescription.shaderType) {
         case (ShaderType::VERTEX_SHADER):
-            parameterCombinations = &ShaderParameterConfigurations::validVertexShaderParameterConfigurations;
+            pParameterCombinations = &ShaderParameterConfigurations::validVertexShaderParameterConfigurations;
             break;
         case (ShaderType::PIXEL_SHADER):
-            parameterCombinations = &ShaderParameterConfigurations::validPixelShaderParameterConfigurations;
+            pParameterCombinations = &ShaderParameterConfigurations::validPixelShaderParameterConfigurations;
             break;
         case (ShaderType::COMPUTE_SHADER):
-            parameterCombinations = &ShaderParameterConfigurations::validComputeShaderParameterConfigurations;
+            pParameterCombinations =
+                &ShaderParameterConfigurations::validComputeShaderParameterConfigurations;
             break;
         }
 
         auto pShaderPack = std::shared_ptr<ShaderPack>(new ShaderPack(shaderDescription.sShaderName));
-        for (const auto& parameters : *parameterCombinations) {
+        for (const auto& parameters : *pParameterCombinations) {
             auto currentShaderDescription = shaderDescription;
 
             // Add configuration macros.
@@ -139,7 +138,7 @@ namespace ne {
     std::shared_ptr<Shader> ShaderPack::changeConfiguration(const std::set<ShaderParameter>& configuration) {
         std::scoped_lock guard(mtxShaders);
 
-        if (pPreviouslyRequestedShader) {
+        if (pPreviouslyRequestedShader != nullptr) {
             pPreviouslyRequestedShader->get()->releaseShaderDataFromMemoryIfLoaded();
             pPreviouslyRequestedShader = nullptr;
         }
@@ -158,7 +157,7 @@ namespace ne {
 
         bool bResult = true;
         for (const auto& [key, shader] : shaders) {
-            if (shader->releaseShaderDataFromMemoryIfLoaded(bLogOnlyErrors) == false) {
+            if (!shader->releaseShaderDataFromMemoryIfLoaded(bLogOnlyErrors)) {
                 bResult = false;
             }
         }

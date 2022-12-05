@@ -11,7 +11,6 @@
 // Custom.
 #include "render/Renderer.h"
 #include "misc/Error.h"
-#include "shaders/hlsl/DirectXEngineShaders.hpp"
 
 // External.
 #include "directx/d3dx12.h"

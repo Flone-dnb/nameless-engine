@@ -15,12 +15,12 @@
 #include "render/directx/descriptors/DirectXDescriptorHeap.h"
 #include "render/directx/resources/DirectXResource.h"
 #include "render/directx/resources/DirectXResourceManager.h"
+#include "shaders/hlsl/HlslEngineShaders.hpp"
 
 // DirectX.
 #pragma comment(lib, "D3D12.lib")
 #pragma comment(lib, "dxgi.lib")
 #pragma comment(lib, "d3dcompiler.lib")
-
 #if defined(DEBUG) || defined(_DEBUG)
 #include <dxgidebug.h>
 #include <InitGuid.h>
@@ -655,7 +655,7 @@ namespace ne {
 
     std::optional<Error> DirectXRenderer::compileEngineShaders() const {
         // Do this synchronously (before user can queue his shaders).
-        std::vector vEngineShaders = {DirectXEngineShaders::vertexShader, DirectXEngineShaders::pixelShader};
+        std::vector vEngineShaders = {HlslEngineShaders::vertexShader, HlslEngineShaders::pixelShader};
 
         auto pPromiseFinish = std::make_shared<std::promise<bool>>();
         auto future = pPromiseFinish->get_future();

@@ -19,7 +19,7 @@ set(RELATIVE_EXT_PATH "../../ext")
 set(ENGINE_WIN32_SOURCES
     private/shaders/hlsl/HlslShader.h
     private/shaders/hlsl/HlslShader.cpp
-    private/shaders/hlsl/DirectXEngineShaders.hpp
+    private/shaders/hlsl/HlslEngineShaders.hpp
     private/shaders/hlsl/RootSignatureGenerator.h
     private/shaders/hlsl/RootSignatureGenerator.cpp
     private/render/directx/DirectXRenderer.h

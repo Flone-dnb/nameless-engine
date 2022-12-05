@@ -22,16 +22,17 @@ namespace ne {
         USE_NORMAL_TEXTURE,
         // add new entries here...
         // !! also add new entries to @ref shaderParametersToText !!
+        // !! also add new entries to valid configuration combinations below !!
     };
 
     /**
      * Converts shader parameters to array of text.
      *
-     * @param vParams Shader parameters.
+     * @param params Shader parameters.
      *
      * @return Array of shader parameters in text form.
      */
-    std::vector<std::string> shaderParametersToText(const std::set<ShaderParameter>& vParams);
+    std::vector<std::string> shaderParametersToText(const std::set<ShaderParameter>& params);
 
     /**
      * Defines valid shader parameter combinations (configurations), plus some helper functions.
@@ -98,12 +99,12 @@ namespace ne {
         /**
          * operator() that calculates hash from std::set<ShaderParameter>,
          *
-         * @param in Set of shader parameters.
+         * @param item Set of shader parameters.
          *
          * @return Hash.
          */
-        size_t operator()(std::set<ShaderParameter> const& in) const {
-            return ShaderParameterConfigurations::convertConfigurationToHash(in);
+        size_t operator()(std::set<ShaderParameter> const& item) const {
+            return ShaderParameterConfigurations::convertConfigurationToHash(item);
         }
     };
 } // namespace ne

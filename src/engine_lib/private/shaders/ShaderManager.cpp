@@ -525,7 +525,7 @@ namespace ne {
         const std::function<void()>& onCompleted) {
         std::shared_ptr<ShaderPack> pShaderPack = nullptr;
 
-        // See if we compiled this shader before (cache).
+        // See if we compiled this shader before (check cache).
         if (std::filesystem::exists(
                 ShaderFilesystemPaths::getPathToShaderCacheDirectory() / shaderToCompile.sShaderName)) {
             // Try to use cache.
@@ -552,7 +552,7 @@ namespace ne {
             }
         }
 
-        if (!pShaderPack) {
+        if (pShaderPack == nullptr) {
             // Compile shader.
             auto result = ShaderPack::compileShaderPack(pRenderer, shaderToCompile);
             if (!std::holds_alternative<std::shared_ptr<ShaderPack>>(result)) {
@@ -581,7 +581,7 @@ namespace ne {
             }
         }
 
-        if (pShaderPack) {
+        if (pShaderPack != nullptr) {
             // Add shader to shader registry.
             std::scoped_lock guard(mtxRwShaders);
 

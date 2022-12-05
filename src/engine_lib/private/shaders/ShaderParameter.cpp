@@ -4,10 +4,10 @@
 #include "xxHash/xxhash.h"
 
 namespace ne {
-    std::vector<std::string> shaderParametersToText(const std::set<ShaderParameter>& vParams) {
+    std::vector<std::string> shaderParametersToText(const std::set<ShaderParameter>& params) {
         std::vector<std::string> vParameterNames;
 
-        for (const auto& parameter : vParams) {
+        for (const auto& parameter : params) {
             switch (parameter) {
             case (ShaderParameter::TEXTURE_FILTERING_POINT):
                 vParameterNames.push_back("TEXTURE_FILTERING_POINT");
@@ -54,8 +54,9 @@ namespace ne {
 
     unsigned long long ShaderParameterConfigurations::convertConfigurationToHash(
         const std::set<ShaderParameter>& configuration) {
-        if (configuration.empty())
+        if (configuration.empty()) {
             return 0;
+        }
 
         // Convert configuration numbers to string.
         std::string sConfiguration;
@@ -68,8 +69,9 @@ namespace ne {
 
     std::string ShaderParameterConfigurations::convertConfigurationToText(
         const std::set<ShaderParameter>& configuration) {
-        if (configuration.empty())
+        if (configuration.empty()) {
             return "";
+        }
 
         // Calculate hash.
         return std::to_string(convertConfigurationToHash(configuration));

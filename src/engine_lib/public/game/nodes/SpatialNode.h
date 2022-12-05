@@ -168,6 +168,14 @@ namespace ne RNAMESPACE() {
          */
         virtual void onAfterAttachedToNewParent(bool bThisNodeBeingAttached) override;
 
+        /**
+         * Called after node's world location/rotation/scale was changed.
+         *
+         * @warning If overriding you must call the parent's version of this function first
+         * (before executing your login) to execute parent's logic.
+         */
+        virtual void onWorldLocationRotationScaleChanged(){};
+
     private:
         /**
          * Recalculates node's world matrix based on the parent world matrix (can be identity

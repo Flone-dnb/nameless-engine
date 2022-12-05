@@ -157,6 +157,7 @@ namespace ne {
         mtxWorldMatrix.second.worldScale = scale;
 
         warnIfExceedingWorldBounds();
+        onWorldLocationRotationScaleChanged();
 
         if (bNotifyChildren) {
             // Notify spatial child nodes.

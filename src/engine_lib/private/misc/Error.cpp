@@ -43,7 +43,7 @@ namespace ne {
         stack.push_back(sourceLocationToInfo(location));
     }
 
-    Error::Error(unsigned long errorCode, const nostd::source_location location) {
+    Error::Error(unsigned long iErrorCode, const nostd::source_location location) {
         LPSTR messageBuffer = nullptr;
 
         // Ask Win32 to give us the string version of that message ID.
@@ -52,7 +52,7 @@ namespace ne {
         const size_t iSize = FormatMessageA(
             FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
             nullptr,
-            errorCode,
+            iErrorCode,
             MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
             (LPSTR)&messageBuffer,
             0,
@@ -60,7 +60,7 @@ namespace ne {
 
         // Copy the error message.
         this->sMessage = std::string("error code: ");
-        this->sMessage += std::to_string(errorCode);
+        this->sMessage += std::to_string(iErrorCode);
         this->sMessage += ", description: ";
         if (messageBuffer) {
             this->sMessage += std::string(messageBuffer, iSize);

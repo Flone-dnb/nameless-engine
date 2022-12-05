@@ -26,10 +26,10 @@ namespace ne {
     class Error {
     public:
         /**
-         * Construct a new Error object.
+         * Constructs a new Error object.
          *
          * @param sMessage  Error message to show.
-         * @param location  Should be empty.
+         * @param location  Should not be specified explicitly (use default value).
          */
         Error(
             std::string_view sMessage,
@@ -37,22 +37,22 @@ namespace ne {
 
 #if defined(WIN32)
         /**
-         * Construct a new Error object from HRESULT.
+         * Constructs a new Error object from `HRESULT`.
          *
-         * @param hResult   HRESULT that contains an error.
-         * @param location  Should be empty.
+         * @param hResult   `HRESULT` that contains an error.
+         * @param location  Should not be specified explicitly (use default value).
          */
         Error(
             const HRESULT hResult, const nostd::source_location location = nostd::source_location::current());
 
         /**
-         * Construct a new Error object.
+         * Constructs a new Error object.
          *
-         * @param errorCode Error code returned by GetLastError().
-         * @param location  Should be empty.
+         * @param errorCode Error code returned by `GetLastError()`.
+         * @param location  Should not be specified explicitly (use default value).
          */
         Error(
-            unsigned long errorCode,
+            unsigned long iErrorCode,
             const nostd::source_location location = nostd::source_location::current());
 #endif
 
@@ -92,24 +92,21 @@ namespace ne {
         Error& operator=(Error&& other) = default;
 
         /**
-         * Adds an entry to the error stack.
+         * Adds an entry to the error location stack.
          *
-         * @param location  Should be empty.
+         * @param location  Should not be specified explicitly (use default value).
          */
         void addEntry(const nostd::source_location location = nostd::source_location::current());
 
         /**
-         * Creates an error string that
-         * contains an error message and an
-         * error stack.
+         * Creates an error string that contains an error message and an error location stack.
          *
          * @return Error message and error stack.
          */
         std::string getError() const;
 
         /**
-         * Returns initial error message that was
-         * used to create this error.
+         * Returns initial error message that was used to create this error.
          *
          * @return Initial error message.
          */

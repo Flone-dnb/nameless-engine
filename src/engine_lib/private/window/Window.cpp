@@ -60,9 +60,7 @@ namespace ne {
         return *this;
     }
 
-    std::variant<std::unique_ptr<Window>, Error> WindowBuilder::build() {
-        return Window::newInstance(params);
-    }
+    std::variant<std::unique_ptr<Window>, Error> WindowBuilder::build() { return Window::create(params); }
 
     void Window::hide() const { glfwHideWindow(pGlfwWindow); }
 
@@ -225,7 +223,7 @@ namespace ne {
         }
     }
 
-    std::variant<std::unique_ptr<Window>, Error> Window::newInstance(WindowBuilderParameters& params) {
+    std::variant<std::unique_ptr<Window>, Error> Window::create(WindowBuilderParameters& params) {
         GLFW::get(); // initialize GLFW
 
         std::string sNewWindowTitle(params.sWindowTitle);

@@ -409,6 +409,7 @@ namespace ne {
         void onMouseScrollMove(int iOffset) const;
 
     private:
+        // Builder will create new instances.
         friend class WindowBuilder;
 
         /**
@@ -487,7 +488,7 @@ namespace ne {
          *
          * @return Returns error if something went wrong or created window otherwise.
          */
-        static std::variant<std::unique_ptr<Window>, Error> newInstance(WindowBuilderParameters& params);
+        static std::variant<std::unique_ptr<Window>, Error> create(WindowBuilderParameters& params);
 
         /**
          * Default constructor.

@@ -1,11 +1,12 @@
-﻿#include "Renderer.h"
+﻿#include "render/Renderer.h"
 
 // Custom.
 #include "game/Game.h"
 #include "io/ConfigManager.h"
 #include "io/Logger.h"
 #include "misc/ProjectPaths.h"
-#include "shaders/ShaderParameter.h"
+#include "materials/ShaderParameter.h"
+#include "render/pso/PsoManager.h"
 
 // External.
 #include "fmt/core.h"
@@ -14,6 +15,7 @@ namespace ne {
     Renderer::Renderer(Game* pGame) {
         this->pGame = pGame;
         pShaderManager = std::make_unique<ShaderManager>(this);
+        pPsoManager = std::make_unique<PsoManager>(this);
 
         // Log amount of shader variants per shader pack.
         Logger::get().info(
@@ -28,11 +30,31 @@ namespace ne {
             getRendererLoggingCategory());
     }
 
+    std::set<ShaderParameter> Renderer::getVertexShaderConfiguration() const {
+        return currentVertexShaderConfiguration;
+    }
+
+    std::set<ShaderParameter> Renderer::getPixelShaderConfiguration() const {
+        return currentPixelShaderConfiguration;
+    }
+
+    void Renderer::setVertexShaderConfiguration(const std::set<ShaderParameter>& vertexShaderConfiguration) {
+        currentVertexShaderConfiguration = vertexShaderConfiguration;
+    }
+
+    void Renderer::setPixelShaderConfiguration(const std::set<ShaderParameter>& pixelShaderConfiguration) {
+        currentPixelShaderConfiguration = pixelShaderConfiguration;
+    }
+
     Window* Renderer::getWindow() const { return pGame->getWindow(); }
 
     Game* Renderer::getGame() const { return pGame; }
 
     ShaderManager* Renderer::getShaderManager() const { return pShaderManager.get(); }
+
+    PsoManager* Renderer::getPsoManager() const { return pPsoManager.get(); }
+
+    std::recursive_mutex* Renderer::getRenderResourcesMutex() { return &mtxRwRenderResources; }
 
     bool Renderer::isConfigurationFileExists() {
         const auto configPath = getRendererConfigurationFilePath();

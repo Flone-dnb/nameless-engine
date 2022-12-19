@@ -4,8 +4,8 @@
 #include <mutex>
 
 // Custom.
-#include "shaders/Shader.h"
-#include "shaders/ShaderPack.h"
+#include "materials/Shader.h"
+#include "materials/ShaderPack.h"
 #include "render/Renderer.h"
 
 // External.
@@ -38,7 +38,7 @@ namespace ne {
             std::filesystem::path pathToCompiledShader,
             const std::string& sShaderName,
             ShaderType shaderType,
-            std::string sSourceFileHash);
+            const std::string& sSourceFileHash);
 
         HlslShader() = delete;
         HlslShader(const HlslShader&) = delete;

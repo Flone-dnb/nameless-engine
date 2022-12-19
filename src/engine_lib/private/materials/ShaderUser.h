@@ -4,8 +4,8 @@
 #include <unordered_map>
 
 // Custom.
-#include "shaders/ShaderPack.h"
-#include "shaders/ShaderDescription.h"
+#include "materials/ShaderPack.h"
+#include "materials/ShaderDescription.h"
 
 namespace ne {
     class ShaderManager;
@@ -35,7 +35,7 @@ namespace ne {
         virtual ~ShaderUser();
 
         /**
-         * Adds a shader to be stored.
+         * Adds a shader to be stored (for usage).
          *
          * @warning If a shader of this type was already added it will be replaced with the new one.
          *
@@ -46,7 +46,7 @@ namespace ne {
         bool addShader(const std::string& sShaderName);
 
         /**
-         * Returns previously added shader (@ref addShader) for the specified type.
+         * Returns previously added shader (see @ref addShader) for the specified type.
          *
          * @warning Do not delete returned pointer. Returned shader will not be destroyed
          * until this ShaderUser object is not destroyed. Once this ShaderUser object is destroyed
@@ -54,7 +54,7 @@ namespace ne {
          *
          * @param shaderType Type of the shader to query.
          *
-         * @return empty if a shader of this type was not added before, valid pointer otherwise.
+         * @return Empty if a shader of this type was not added before, valid pointer otherwise.
          */
         std::optional<ShaderPack*> getShader(ShaderType shaderType) const;
 

@@ -2,7 +2,7 @@
 #include "misc/Timer.h"
 #include "io/Logger.h"
 
-// STL.
+// Standard.
 #include <future>
 
 // External.

@@ -1,4 +1,4 @@
-﻿// STL.
+﻿// Standard.
 #include <random>
 
 // Custom.

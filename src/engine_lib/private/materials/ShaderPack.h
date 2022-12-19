@@ -8,8 +8,8 @@
 #include <string>
 
 // Custom.
-#include "shaders/ShaderDescription.h"
-#include "shaders/ShaderParameter.h"
+#include "materials/ShaderDescription.h"
+#include "materials/ShaderParameter.h"
 
 namespace ne {
     class Renderer;

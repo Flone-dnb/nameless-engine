@@ -17,17 +17,15 @@ set(RELATIVE_EXT_PATH "../../ext")
 
 # Windows specific sources.
 set(ENGINE_WIN32_SOURCES
-    private/shaders/hlsl/HlslShader.h
-    private/shaders/hlsl/HlslShader.cpp
-    private/shaders/hlsl/HlslEngineShaders.hpp
-    private/shaders/hlsl/RootSignatureGenerator.h
-    private/shaders/hlsl/RootSignatureGenerator.cpp
+    private/materials/hlsl/HlslShader.h
+    private/materials/hlsl/HlslShader.cpp
+    private/materials/hlsl/HlslEngineShaders.hpp
+    private/materials/hlsl/RootSignatureGenerator.h
+    private/materials/hlsl/RootSignatureGenerator.cpp
     private/render/directx/DirectXRenderer.h
     private/render/directx/DirectXRenderer.cpp
     private/render/directx/pso/DirectXPso.cpp
     private/render/directx/pso/DirectXPso.h
-    private/render/directx/pso/DirectXPsoManager.cpp
-    private/render/directx/pso/DirectXPsoManager.h
     private/render/directx/descriptors/DirectXDescriptorHeap.h
     private/render/directx/descriptors/DirectXDescriptorHeap.cpp
     private/render/directx/descriptors/DirectXDescriptor.h
@@ -62,16 +60,20 @@ set(ENGINE_LIB_SOURCES
     ${RELATIVE_EXT_PATH}/xxHash/xxhash.h
     private/misc/Error.cpp
     public/misc/Error.h
-    private/window/Window.cpp
-    public/game/Window.h
     private/misc/UniqueValueGenerator.h
     private/misc/UniqueValueGenerator.cpp
+    private/window/Window.cpp
+    public/game/Window.h
     private/game/GameInstance.cpp
     public/game/GameInstance.h
     private/game/Game.h
     private/game/Game.cpp
-    private/render/Renderer.h
+    public/render/Renderer.h
     private/render/Renderer.cpp
+    private/render/pso/PsoManager.h
+    private/render/pso/PsoManager.cpp
+    private/render/pso/Pso.h
+    private/render/pso/Pso.cpp
     private/window/GLFW.hpp
     public/input/KeyboardKey.hpp
     private/io/Logger.cpp
@@ -83,14 +85,17 @@ set(ENGINE_LIB_SOURCES
     private/input/InputManager.cpp
     public/input/InputManager.h
     public/input/MouseButton.hpp
-    public/shaders/ShaderManager.h
-    private/shaders/ShaderManager.cpp
-    private/shaders/Shader.cpp
-    private/shaders/Shader.h
-    public/shaders/ShaderDescription.h
-    private/shaders/ShaderDescription.cpp
-    private/shaders/ShaderUser.h
-    private/shaders/ShaderUser.cpp
+    public/materials/ShaderManager.h
+    private/materials/ShaderManager.cpp
+    private/materials/Shader.cpp
+    private/materials/Shader.h
+    public/materials/ShaderDescription.h
+    private/materials/ShaderDescription.cpp
+    private/materials/ShaderUser.h
+    private/materials/ShaderUser.cpp
+    private/materials/Material.cpp
+    public/materials/Material.h
+    private/materials/EngineShaderNames.hpp
     private/misc/ThreadPool.h
     private/misc/ThreadPool.cpp
     private/misc/Timer.cpp
@@ -103,11 +108,11 @@ set(ENGINE_LIB_SOURCES
     public/misc/OpenLinkInBrowser.h
     private/misc/FileDialog.cpp
     public/misc/FileDialog.h
-    private/shaders/ShaderPack.h
-    private/shaders/ShaderPack.cpp
-    private/shaders/ShaderParameter.h
-    private/shaders/ShaderParameter.cpp
-    private/shaders/ShaderFilesystemPaths.hpp
+    private/materials/ShaderPack.h
+    private/materials/ShaderPack.cpp
+    private/materials/ShaderParameter.h
+    private/materials/ShaderParameter.cpp
+    private/materials/ShaderFilesystemPaths.hpp
     public/misc/ProjectPaths.h
     private/misc/ProjectPaths.cpp
     private/io/Serializable.cpp
@@ -116,6 +121,8 @@ set(ENGINE_LIB_SOURCES
     public/game/nodes/Node.h
     private/game/nodes/SpatialNode.cpp
     public/game/nodes/SpatialNode.h
+    private/game/nodes/MeshNode.cpp
+    public/game/nodes/MeshNode.h
     public/io/SerializeProperty.h
     private/io/SerializeProperty.cpp
     private/io/GuidProperty.cpp
@@ -452,7 +459,7 @@ set(ENGINE_TESTS_NAME engine_tests)
 set(TESTS_RELATIVE_PATH ../../tests)
 
 set(ENGINE_TEST_WIN32_SOURCES
-    ${TESTS_RELATIVE_PATH}/engine_lib/renderer/directx/DirectXResourceManager.cpp
+    ${TESTS_RELATIVE_PATH}/engine_lib/render/directx/DirectXResourceManager.cpp
     # add Windows specific test sources here...
 )
 
@@ -463,7 +470,7 @@ set(ENGINE_TEST_SOURCES
     ${TESTS_RELATIVE_PATH}/engine_lib/io/ReflectionTest.h
     ${TESTS_RELATIVE_PATH}/engine_lib/input/InputManager.cpp
     ${TESTS_RELATIVE_PATH}/engine_lib/misc/Timer.cpp
-    ${TESTS_RELATIVE_PATH}/engine_lib/shaders/ShaderPack.cpp
+    ${TESTS_RELATIVE_PATH}/engine_lib/materials/ShaderPack.cpp
     ${TESTS_RELATIVE_PATH}/engine_lib/io/Serializable.cpp
     ${TESTS_RELATIVE_PATH}/engine_lib/game/nodes/Node.cpp
     ${TESTS_RELATIVE_PATH}/engine_lib/game/nodes/SpatialNode.cpp

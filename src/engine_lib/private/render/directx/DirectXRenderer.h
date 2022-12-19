@@ -135,6 +135,16 @@ namespace ne {
          */
         virtual std::optional<Error> setBackbufferFillColor(float fillColor[4]) override;
 
+        /** Draw new frame. */
+        virtual void drawNextFrame() override;
+
+        /**
+         * Blocks the current thread until the GPU finishes executing all queued commands up to this point.
+         *
+         * @return Error if something went wrong.
+         */
+        virtual void flushCommandQueue() override;
+
         /**
          * Returns resource manager.
          * Resource manager handles resource allocation and descriptor binding.
@@ -145,20 +155,6 @@ namespace ne {
          * @return Resource manager. Do not delete returned pointer.
          */
         DirectXResourceManager* getResourceManager() const;
-
-        /**
-         * Returns current vertex shader configuration (settings).
-         *
-         * @return Vertex shader configuration.
-         */
-        std::set<ShaderParameter> getVertexShaderConfiguration() const;
-
-        /**
-         * Returns current pixel shader configuration (settings).
-         *
-         * @return Pixel shader configuration.
-         */
-        std::set<ShaderParameter> getPixelShaderConfiguration() const;
 
         /**
          * Returns DirectX device.
@@ -189,14 +185,11 @@ namespace ne {
         UINT getMsaaQualityLevel() const;
 
     protected:
-        // Heap will flush the GPU command queue before (re)creating a heap.
+        // Heap needs to know buffer formats that the renderer uses.
         friend class DirectXDescriptorHeap;
 
-        /** Update internal resources for next frame. */
-        virtual void update() override;
-
-        /** Draw new frame. */
-        virtual void drawFrame() override;
+        /** Update internal resources for the next frame. */
+        virtual void updateResourcesForNextFrame() override;
 
         /**
          * Enables DX debug layer.
@@ -294,13 +287,6 @@ namespace ne {
         std::optional<Error> resizeRenderBuffersToCurrentDisplayMode();
 
         /**
-         * Blocks the current thread until the GPU finishes executing all queued commands up to this point.
-         *
-         * @return Error if something went wrong.
-         */
-        std::optional<Error> flushCommandQueue();
-
-        /**
          * Returns a vector of display modes that the current output adapter
          * supports for current back buffer format.
          *
@@ -357,14 +343,12 @@ namespace ne {
         std::unique_ptr<DirectXResourceManager> pResourceManager;
 
         // Render/depth buffers.
-        /** Lock when reading or writing to render resources. */
-        std::recursive_mutex mtxRwRenderResources;
         /** Swap chain buffer. */
         std::vector<std::unique_ptr<DirectXResource>> vSwapChainBuffers;
         /** Depth stencil buffer. */
         std::unique_ptr<DirectXResource> pDepthStencilBuffer;
         /** Default back buffer fill color. */
-        float backBufferFillColor[4] = {0.0f, 0.0f, 0.0f, 1.0f};
+        float backBufferFillColor[4] = {0.0F, 0.0F, 0.0F, 1.0F};
 
         // Buffer formats.
         /** Back buffer format. */
@@ -396,21 +380,15 @@ namespace ne {
         /** Scissor rectangle for viewport. */
         D3D12_RECT scissorRect;
         /** Minimum value for depth. */
-        const float fMinDepth = 0.0f;
+        const float fMinDepth = 0.0F;
         /** Maximum value for depth. */
-        const float fMaxDepth = 1.0f;
+        const float fMaxDepth = 1.0F;
 
         // Video Adapters (GPUs).
         /** Preferred GPU to use (for @ref getSupportedGpus). Can be overriden by configuration from disk. */
         long iPreferredGpuIndex = 0;
         /** Name of the GPU we are currently using. */
         std::string sUsedVideoAdapter;
-
-        // Shaders.
-        /** Vertex shader parameters. */
-        std::set<ShaderParameter> currentVertexShaderConfiguration;
-        /** Pixel shader parameters. */
-        std::set<ShaderParameter> currentPixelShaderConfiguration;
 
         /** Texture filtering mode. */
         TextureFilteringMode textureFilteringMode = TextureFilteringMode::ANISOTROPIC;

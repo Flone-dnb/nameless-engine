@@ -8,6 +8,7 @@
 #include "misc/Globals.h"
 #include "game/GameInstance.h"
 #include "game/World.h"
+#include "game/Game.h"
 
 /** Total amount of alive nodes. */
 static std::atomic<size_t> iTotalAliveNodeCount{0};
@@ -195,7 +196,7 @@ namespace ne {
 
         // Queue garbage collection.
         pSelf = nullptr;
-        pGameInstance->queueGarbageCollection({});
+        getGameInstance()->queueGarbageCollection({});
     }
 
     bool Node::isSpawned() {
@@ -203,25 +204,24 @@ namespace ne {
         return bIsSpawned;
     }
 
-    std::pair<GameInstance*, World*> Node::findValidGameInstanceAndWorld() {
+    World* Node::findValidWorld() {
         std::scoped_lock guard(mtxSpawning);
 
-        if (pGameInstance && pWorld)
-            return {pGameInstance, pWorld};
+        if (pWorld)
+            return pWorld;
 
         // Ask parent node for the valid game instance and world pointers.
         std::scoped_lock parentGuard(mtxParentNode.first);
         if (!mtxParentNode.second) [[unlikely]] {
             Error err(fmt::format(
-                "node \"{}\" can't get pointers to valid game instance and world because "
+                "node \"{}\" can't find a pointer to a valid world instance because "
                 "there is no parent node",
                 getName()));
             err.showError();
             throw std::runtime_error(err.getError());
         }
 
-        auto pointers = mtxParentNode.second->findValidGameInstanceAndWorld();
-        return pointers;
+        return mtxParentNode.second->findValidWorld();
     }
 
     void Node::spawn() {
@@ -236,10 +236,8 @@ namespace ne {
             return;
         }
 
-        // Initialize pointers to owner objects.
-        const auto pointers = findValidGameInstanceAndWorld();
-        pGameInstance = pointers.first;
-        pWorld = pointers.second;
+        // Initialize world.
+        pWorld = findValidWorld();
 
         // Spawn self first and only then child nodes.
         // This spawn order is required for some nodes to work correctly.
@@ -291,8 +289,7 @@ namespace ne {
         // Despawn self.
         onDespawn();
         bIsSpawned = false;
-        pGameInstance = nullptr; // don't allow accessing game instance at this point
-        pWorld = nullptr;        // don't allow accessing world at this point
+        pWorld = nullptr; // don't allow accessing world at this point
     }
 
     gc<Node> Node::getParentNode() {
@@ -578,18 +575,15 @@ namespace ne {
         return mtxChildNodes.second;
     }
 
-    GameInstance* Node::getGameInstance() {
-        std::scoped_lock guard(mtxSpawning);
-        return pGameInstance;
-    }
+    GameInstance* Node::getGameInstance() { return Game::get()->getGameInstance(); }
 
     gc<Node> Node::getWorldRootNode() {
         std::scoped_lock guard(mtxSpawning);
 
-        if (!pGameInstance)
+        if (pWorld == nullptr)
             return nullptr;
 
-        return pGameInstance->getWorldRootNode();
+        return pWorld->getRootNode();
     }
 
     bool Node::isParentOf(Node* pNode) {

@@ -1,4 +1,4 @@
-﻿#include "shaders/hlsl/HlslShader.h"
+﻿#include "materials/hlsl/HlslShader.h"
 
 // Standard.
 #include <fstream>
@@ -7,10 +7,10 @@
 
 // Custom.
 #include "io/Logger.h"
-#include "shaders/hlsl/RootSignatureGenerator.h"
+#include "materials/hlsl/RootSignatureGenerator.h"
 #include "misc/Globals.h"
 #include "render/directx/DirectXRenderer.h"
-#include "shaders/ShaderFilesystemPaths.hpp"
+#include "materials/ShaderFilesystemPaths.hpp"
 
 // External.
 #include "DirectXShaderCompiler/inc/d3d12shader.h"
@@ -22,7 +22,7 @@ namespace ne {
         std::filesystem::path pathToCompiledShader,
         const std::string& sShaderName,
         ShaderType shaderType,
-        std::string sSourceFileHash)
+        const std::string& sSourceFileHash)
         : Shader(pRenderer, std::move(pathToCompiledShader), sShaderName, shaderType, sSourceFileHash) {}
 
     std::vector<D3D12_INPUT_ELEMENT_DESC> HlslShader::getShaderInputElementDescription() {

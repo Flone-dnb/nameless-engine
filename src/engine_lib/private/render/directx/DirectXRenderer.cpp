@@ -15,7 +15,9 @@
 #include "render/directx/descriptors/DirectXDescriptorHeap.h"
 #include "render/directx/resources/DirectXResource.h"
 #include "render/directx/resources/DirectXResourceManager.h"
-#include "shaders/hlsl/HlslEngineShaders.hpp"
+#include "materials/hlsl/HlslEngineShaders.hpp"
+#include "render/pso/PsoManager.h"
+#include "materials/Material.h"
 
 // DirectX.
 #pragma comment(lib, "D3D12.lib")
@@ -81,10 +83,6 @@ namespace ne {
         // TODO: create frame resources.
     }
 
-    void DirectXRenderer::update() {}
-
-    void DirectXRenderer::drawFrame() {}
-
     std::optional<Error> DirectXRenderer::enableDebugLayer() const {
 #if defined(DEBUG)
         ComPtr<ID3D12Debug> pDebugController;
@@ -147,7 +145,7 @@ namespace ne {
     }
 
     std::optional<Error> DirectXRenderer::setTextureFiltering(const TextureFilteringMode& settings) {
-        std::scoped_lock guard(mtxRwRenderResources);
+        std::scoped_lock guard(*getRenderResourcesMutex());
         flushCommandQueue();
 
         textureFilteringMode = settings;
@@ -165,7 +163,7 @@ namespace ne {
     }
 
     std::optional<Error> DirectXRenderer::setAntialiasing(const Antialiasing& settings) {
-        std::scoped_lock guard(mtxRwRenderResources);
+        std::scoped_lock guard(*getRenderResourcesMutex());
         flushCommandQueue();
 
         bIsMsaaEnabled = settings.bIsEnabled;
@@ -293,6 +291,39 @@ namespace ne {
         return {};
     }
 
+    void DirectXRenderer::drawNextFrame() {
+        updateResourcesForNextFrame();
+
+        std::scoped_lock frameGuard(*getRenderResourcesMutex());
+
+        // TODO: draw start logic
+
+        const auto pCreatedGraphicsPsos = getPsoManager()->getGraphicsPsos();
+        for (auto& [mtx, map] : *pCreatedGraphicsPsos) {
+            std::scoped_lock psoGuard(mtx);
+
+            for (const auto& [sPsoId, pPso] : map) {
+                // TODO: set PSO
+
+                const auto pMtxMaterials = pPso->getMaterialsThatUseThisPso();
+
+                std::scoped_lock materialsGuard(pMtxMaterials->first);
+                for (const auto& pMaterial : pMtxMaterials->second) {
+                    // TODO: set material
+
+                    const auto pMtxMeshNodes = pMaterial->getSpawnedMeshNodesThatUseThisMaterial();
+
+                    std::scoped_lock meshNodesGuard(pMtxMeshNodes->first);
+                    for (const auto& pMeshNodes : pMtxMeshNodes->second) {
+                        // TODO: draw mesh
+                    }
+                }
+            }
+        }
+
+        // TODO: draw end logic
+    }
+
     std::optional<Error> DirectXRenderer::setVideoAdapter(const std::string& sVideoAdapterName) {
         for (UINT iAdapterIndex = 0;; iAdapterIndex++) {
             ComPtr<IDXGIAdapter3> pTestAdapter;
@@ -416,8 +447,11 @@ namespace ne {
         desc.Scaling = DXGI_SCALING_STRETCH;
         desc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
         desc.AlphaMode = DXGI_ALPHA_MODE_UNSPECIFIED;
-        if (!bIsVSyncEnabled)
-            desc.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
+        if (bIsVSyncEnabled) {
+            desc.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
+        } else {
+            desc.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH | DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
+        }
 
         DXGI_SWAP_CHAIN_FULLSCREEN_DESC fullscreenDesc;
         fullscreenDesc.RefreshRate = currentDisplayMode.RefreshRate;
@@ -742,14 +776,6 @@ namespace ne {
 
     DirectXResourceManager* DirectXRenderer::getResourceManager() const { return pResourceManager.get(); }
 
-    std::set<ShaderParameter> DirectXRenderer::getVertexShaderConfiguration() const {
-        return currentVertexShaderConfiguration;
-    }
-
-    std::set<ShaderParameter> DirectXRenderer::getPixelShaderConfiguration() const {
-        return currentPixelShaderConfiguration;
-    }
-
     ID3D12Device* DirectXRenderer::getDevice() const { return pDevice.Get(); }
 
     DXGI_FORMAT DirectXRenderer::getBackBufferFormat() const { return backBufferFormat; }
@@ -758,14 +784,19 @@ namespace ne {
 
     UINT DirectXRenderer::getMsaaQualityLevel() const { return iMsaaQuality; }
 
-    std::optional<Error> DirectXRenderer::resizeRenderBuffersToCurrentDisplayMode() {
-        std::scoped_lock guard(mtxRwRenderResources);
+    void DirectXRenderer::updateResourcesForNextFrame() {
+        // TODO: wait for frame resource to be free
 
-        std::optional<Error> error = flushCommandQueue();
-        if (error.has_value()) {
-            error->addEntry();
-            return error;
-        }
+        // TODO: updateMaterialConstantBuffersForNextFrame()
+        // TODO: updateMeshConstantBuffersForNextFrame()
+        // TODO: updateShadowMapConstantBuffersForNextFrame()
+        // TODO: updateMainPassConstantBuffersForNextFrame()
+    }
+
+    std::optional<Error> DirectXRenderer::resizeRenderBuffersToCurrentDisplayMode() {
+        std::scoped_lock guard(*getRenderResourcesMutex());
+
+        flushCommandQueue();
 
         // Swapchain cannot be resized unless all outstanding buffer references have been released.
         vSwapChainBuffers.clear();
@@ -851,34 +882,38 @@ namespace ne {
         return {};
     }
 
-    std::optional<Error> DirectXRenderer::flushCommandQueue() {
-        std::scoped_lock guardFrame(mtxRwRenderResources);
+    void DirectXRenderer::flushCommandQueue() {
+        std::scoped_lock guardFrame(*getRenderResourcesMutex());
 
         const auto iFenceValue = iCurrentFence.fetch_add(1);
         HRESULT hResult = pCommandQueue->Signal(pFence.Get(), iFenceValue);
 
         if (FAILED(hResult)) {
-            return Error(hResult);
+            auto error = Error(hResult);
+            error.showError();
+            throw std::runtime_error(error.getError());
         }
 
         // Wait until the GPU has completed commands up to this fence point.
         if (pFence->GetCompletedValue() < iFenceValue) {
             const HANDLE hEvent = CreateEventEx(nullptr, nullptr, FALSE, EVENT_ALL_ACCESS);
             if (hEvent == nullptr) {
-                return Error(GetLastError());
+                auto error = Error(GetLastError());
+                error.showError();
+                throw std::runtime_error(error.getError());
             }
 
             // Fire event when the GPU hits current fence.
             hResult = pFence->SetEventOnCompletion(iFenceValue, hEvent);
             if (FAILED(hResult)) {
-                return Error(hResult);
+                auto error = Error(hResult);
+                error.showError();
+                throw std::runtime_error(error.getError());
             }
 
             WaitForSingleObject(hEvent, INFINITE);
             CloseHandle(hEvent);
         }
-
-        return {};
     }
 
     std::variant<std::vector<DXGI_MODE_DESC>, Error> DirectXRenderer::getSupportedDisplayModes() const {
@@ -917,35 +952,38 @@ namespace ne {
     }
 
     std::optional<Error> DirectXRenderer::refreshShaderParameters() {
-        std::scoped_lock guard(mtxRwRenderResources);
+        std::scoped_lock guard(*getRenderResourcesMutex());
         flushCommandQueue();
 
-        // Clear old settings.
-        currentVertexShaderConfiguration.clear();
-        currentPixelShaderConfiguration.clear();
+        std::set<ShaderParameter> pixelShaderConfiguration;
 
         // Pixel shader settings.
         // Texture filtering.
         switch (textureFilteringMode) {
         case (TextureFilteringMode::POINT):
-            currentPixelShaderConfiguration.insert(ShaderParameter::TEXTURE_FILTERING_POINT);
+            pixelShaderConfiguration.insert(ShaderParameter::TEXTURE_FILTERING_POINT);
             break;
         case (TextureFilteringMode::LINEAR):
-            currentPixelShaderConfiguration.insert(ShaderParameter::TEXTURE_FILTERING_LINEAR);
+            pixelShaderConfiguration.insert(ShaderParameter::TEXTURE_FILTERING_LINEAR);
             break;
         case (TextureFilteringMode::ANISOTROPIC):
-            currentPixelShaderConfiguration.insert(ShaderParameter::TEXTURE_FILTERING_ANISOTROPIC);
+            pixelShaderConfiguration.insert(ShaderParameter::TEXTURE_FILTERING_ANISOTROPIC);
             break;
         }
 
-        /** Use a new shader with new shader settings. */
+        // !!! other shader settings go here !!!
+
+        // Set configuration.
+        setPixelShaderConfiguration(pixelShaderConfiguration);
+
+        // Recreate PSOs to use correct shaders (according to the new configuration).
         auto optionalError = createPipelineStateObjects();
         if (optionalError.has_value()) {
             optionalError->addEntry();
             return optionalError.value();
         }
 
-        // TODO: recreate other PSOs
+        // TODO: recreate PSOs
 
         return {};
     }

@@ -185,11 +185,9 @@ namespace ne RNAMESPACE() {
         getChildNodeOfType(const std::string& sChildNodeName = "");
 
         /**
-         * Returns game instance that the world, in which the node is spawned, is using.
+         * Returns last created game instance.
          *
-         * @return nullptr if the node is not spawned or was despawned (always check this pointer
-         * before doing something), otherwise pointer to game instance that this world is using.
-         * Do not delete returned pointer.
+         * @return Game instance.
          */
         GameInstance* getGameInstance();
 
@@ -526,13 +524,13 @@ namespace ne RNAMESPACE() {
         void notifyAboutDetachingFromParent(bool bThisNodeBeingDetached);
 
         /**
-         * Checks if this node has a valid game instance and world pointers and if not
+         * Checks if this node has a valid world pointer and if not
          * asks this node's parent and goes up the node hierarchy
-         * up to the root node if needed to find valid pointers to game instance and world.
+         * up to the root node if needed to find valid pointer to world.
          *
-         * @return Valid game instance and world pointers.
+         * @return World.
          */
-        std::pair<GameInstance*, World*> findValidGameInstanceAndWorld();
+        World* findValidWorld();
 
         /**
          * Collects and returns information for serialization for self and all child nodes.
@@ -598,13 +596,6 @@ namespace ne RNAMESPACE() {
             std::recursive_mutex,
             std::unordered_map<std::string, std::function<void(KeyboardModifiers, float)>>>
             mtxBindedAxisEvents;
-
-        /**
-         * Do not delete this pointer. Game instance object that is used for this world.
-         *
-         * @warning Will be initialized after the node is spawned and reset when despawned.
-         */
-        GameInstance* pGameInstance = nullptr;
 
         /**
          * Do not delete this pointer. World object that owns this node.

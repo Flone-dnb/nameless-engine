@@ -5,8 +5,8 @@
 
 // Custom.
 #include "io/Logger.h"
-#include "shaders/Shader.h"
-#include "shaders/ShaderFilesystemPaths.hpp"
+#include "materials/Shader.h"
+#include "materials/ShaderFilesystemPaths.hpp"
 #include "render/Renderer.h"
 
 // External.

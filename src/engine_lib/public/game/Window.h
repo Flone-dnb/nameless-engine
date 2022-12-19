@@ -537,6 +537,7 @@ namespace ne {
         float fPrevTimeInSec = static_cast<float>(glfwGetTime());
 
         while (!glfwWindowShouldClose(pGlfwWindow)) {
+            // Process window events.
             glfwPollEvents();
 
             // Tick.
@@ -544,14 +545,15 @@ namespace ne {
             pGame->onBeforeNewFrame(fCurrentTimeInSec - fPrevTimeInSec);
             fPrevTimeInSec = fCurrentTimeInSec;
 
-            // TODO: update()
-            // TODO: drawFrame()
-            // TODO: put update() into drawFrame()?
+            // Draw next frame.
+            getRenderer()->drawNextFrame();
 
+            // Notify finish.
             pGame->onTickFinished();
         }
 
         pGame->onWindowClose();
-        pGame = nullptr; // explicitly destroy here to run GC for the last time
+        pGame = nullptr; // explicitly destroy here to run GC for the last time (before everything else is
+                         // destroyed)
     }
 } // namespace ne

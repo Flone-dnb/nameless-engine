@@ -1,4 +1,4 @@
-﻿#include "shaders/ShaderManager.h"
+﻿#include "materials/ShaderManager.h"
 
 // Standard.
 #include <filesystem>
@@ -6,11 +6,11 @@
 // Custom.
 #include "game/Game.h"
 #include "io/Logger.h"
-#include "shaders/Shader.h"
+#include "materials/Shader.h"
 #include "render/Renderer.h"
 #include "io/ConfigManager.h"
 #include "misc/ProjectPaths.h"
-#include "shaders/ShaderFilesystemPaths.hpp"
+#include "materials/ShaderFilesystemPaths.hpp"
 #if defined(WIN32)
 #include "render/directx/DirectXRenderer.h"
 #include "hlsl/HlslShader.h"
@@ -79,10 +79,6 @@ namespace ne {
 
         compiledShaders.erase(shaderIt);
         vShadersToBeRemoved.erase(it);
-
-        Logger::get().info(
-            fmt::format("marked to be removed shader \"{}\" was removed", sShaderName),
-            sShaderManagerLogCategory);
     }
 
     void ShaderManager::applyConfigurationFromDisk() {

@@ -3,9 +3,22 @@
 // Standard.
 #include <thread>
 
+// Custom.
+#include "io/Logger.h"
+
 namespace ne {
     ThreadPool::ThreadPool() {
-        const auto iThreadCount = std::thread::hardware_concurrency();
+        auto iThreadCount = std::thread::hardware_concurrency();
+        if (iThreadCount == 0) {
+            iThreadCount = iMinThreadCount;
+            Logger::get().error(
+                fmt::format(
+                    "hardware concurrency information is not available, as a fallback creating {} thread(s) "
+                    "for the thread pool",
+                    iThreadCount),
+                sThreadPoolLogCategory);
+        }
+
         vRunningThreads.resize(iThreadCount);
         for (unsigned int i = 0; i < iThreadCount; i++) {
             vRunningThreads[i] = std::thread(&ThreadPool::processTasksThread, this);

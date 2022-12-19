@@ -5,14 +5,16 @@
 #include <vector>
 #include <string>
 #include <filesystem>
+#include <memory>
 
 // Custom.
 #include "misc/Error.h"
-#include "shaders/ShaderManager.h"
+#include "materials/ShaderManager.h"
 
 namespace ne {
     class Game;
     class Window;
+    class PsoManager;
 
     /**
      * Describes texture filtering mode.
@@ -150,9 +152,33 @@ namespace ne {
         virtual size_t getUsedVideoMemoryInMb() const = 0;
 
         /**
+         * Blocks the current thread until the GPU finishes executing all queued commands up to this point.
+         */
+        virtual void flushCommandQueue() = 0;
+
+        /** Draw new frame. */
+        virtual void drawNextFrame() = 0;
+
+        /**
+         * Returns the current vertex shader configuration (shader settings,
+         * represented by a bunch of predefined macros).
+         *
+         * @return Vertex shader configuration.
+         */
+        std::set<ShaderParameter> getVertexShaderConfiguration() const;
+
+        /**
+         * Returns the current pixel shader configuration (shader settings,
+         * represented by a bunch of predefined macros).
+         *
+         * @return Pixel shader configuration.
+         */
+        std::set<ShaderParameter> getPixelShaderConfiguration() const;
+
+        /**
          * Returns the window that we render to.
          *
-         * @warning Do not delete returned pointer.
+         * @warning Do not delete (free) returned pointer.
          *
          * @return Window we render to.
          */
@@ -161,7 +187,7 @@ namespace ne {
         /**
          * Game object that owns this renderer.
          *
-         * @warning Do not delete returned pointer.
+         * @warning Do not delete (free) returned pointer.
          *
          * @return Game object.
          */
@@ -170,18 +196,32 @@ namespace ne {
         /**
          * Returns shader manager used to compile shaders.
          *
-         * @warning Do not delete returned pointer.
+         * @warning Do not delete (free) returned pointer.
          *
          * @return Shader manager.
          */
         ShaderManager* getShaderManager() const;
 
-    protected:
-        /** Update internal resources for next frame. */
-        virtual void update() = 0;
+        /**
+         * Returns PSO manager used to store graphics and compute PSOs.
+         *
+         * @warning Do not delete (free) returned pointer.
+         *
+         * @return PSO manager.
+         */
+        PsoManager* getPsoManager() const;
 
-        /** Draw new frame. */
-        virtual void drawFrame() = 0;
+        /**
+         * Returns mutex used when reading or writing to render resources.
+         * Usually used with @ref flushCommandQueue.
+         *
+         * @return Mutex.
+         */
+        std::recursive_mutex* getRenderResourcesMutex();
+
+    protected:
+        /** Update internal resources for the next frame. */
+        virtual void updateResourcesForNextFrame() = 0;
 
         /**
          * Writes current renderer configuration to disk.
@@ -215,6 +255,20 @@ namespace ne {
          * @return Configuration file path, file might not exist, but the directories will be created.
          */
         static std::filesystem::path getRendererConfigurationFilePath();
+
+        /**
+         * Sets the current vertex shader configuration (settings).
+         *
+         * @param vertexShaderConfiguration Vertex shader configuration.
+         */
+        void setVertexShaderConfiguration(const std::set<ShaderParameter>& vertexShaderConfiguration);
+
+        /**
+         * Sets the current pixel shader configuration (settings).
+         *
+         * @param pixelShaderConfiguration Pixel shader configuration.
+         */
+        void setPixelShaderConfiguration(const std::set<ShaderParameter>& pixelShaderConfiguration);
 
         /**
          * Returns name of the section used in configuration file.
@@ -266,16 +320,26 @@ namespace ne {
         static const char* getRendererLoggingCategory();
 
     private:
-        /** Number of buffers in swap chain. */
-        static constexpr unsigned int iSwapChainBufferCount = 2;
+        /** Lock when reading or writing to render resources. Usually used with @ref flushCommandQueue. */
+        std::recursive_mutex mtxRwRenderResources;
 
-        /**
-         * Shader manager used to compile shaders.
-         */
+        /** Used to compile shaders. */
         std::unique_ptr<ShaderManager> pShaderManager;
 
-        /** Do not delete this pointer. Game object that owns this renderer. */
-        Game* pGame;
+        /** Used to store various graphics and compute PSOs. */
+        std::unique_ptr<PsoManager> pPsoManager;
+
+        /** Vertex shader parameters. */
+        std::set<ShaderParameter> currentVertexShaderConfiguration;
+
+        /** Pixel shader parameters. */
+        std::set<ShaderParameter> currentPixelShaderConfiguration;
+
+        /** Do not delete (free) this pointer. Game object that owns this renderer. */
+        Game* pGame = nullptr;
+
+        /** Number of buffers in swap chain. */
+        static constexpr unsigned int iSwapChainBufferCount = 2;
 
         /** File name used to store renderer configuration. */
         inline static const char* sRendererConfigurationFileName = "render";

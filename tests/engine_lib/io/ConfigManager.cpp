@@ -1,4 +1,4 @@
-﻿// STL.
+﻿// Standard.
 #include <filesystem>
 
 // Custom.

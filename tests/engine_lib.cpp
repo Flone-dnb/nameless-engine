@@ -5,7 +5,7 @@
 #undef IGNORE
 #endif
 
-// STL.
+// Standard.
 #include <filesystem>
 
 // Custom.

@@ -1,9 +1,9 @@
 ﻿// Custom.
-#include "shaders/ShaderPack.h"
+#include "materials/ShaderPack.h"
 #include "game/GameInstance.h"
 #include "game/Window.h"
 
-// STL.
+// Standard.
 #include <fstream>
 
 // External.

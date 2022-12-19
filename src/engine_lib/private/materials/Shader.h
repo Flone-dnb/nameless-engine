@@ -7,7 +7,7 @@
 
 // Custom.
 #include "misc/Error.h"
-#include "shaders/ShaderDescription.h"
+#include "materials/ShaderDescription.h"
 
 namespace ne {
     class Renderer;

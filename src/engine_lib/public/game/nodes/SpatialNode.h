@@ -7,9 +7,7 @@
 #include "SpatialNode.generated.h"
 
 namespace ne RNAMESPACE() {
-    /**
-     * Represents a node that can have a location, rotation and a scale in a 3D space.
-     */
+    /** Represents a node that can have a location, rotation and a scale in a 3D space. */
     class RCLASS(Guid("150d647c-f385-4a11-b585-d059d2be88aa")) SpatialNode : public Node {
     public:
         SpatialNode();

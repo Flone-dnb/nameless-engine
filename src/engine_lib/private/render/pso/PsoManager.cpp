@@ -1,0 +1,134 @@
+#include "PsoManager.h"
+
+// Custom.
+#include "io/Logger.h"
+
+namespace ne {
+    PsoManager::PsoManager(Renderer* pRenderer) { this->pRenderer = pRenderer; }
+
+    std::variant<PsoSharedPtr, Error> PsoManager::getGraphicsPsoForMaterial(
+        const std::string& sVertexShaderName,
+        const std::string& sPixelShaderName,
+        bool bUsePixelBlending,
+        Material* pMaterial) {
+        const size_t iIndex = bUsePixelBlending ? static_cast<size_t>(PsoType::PT_TRANSPARENT)
+                                                : static_cast<size_t>(PsoType::PT_OPAQUE);
+
+        std::scoped_lock guard(vGraphicsPsos[iIndex].first);
+
+        const auto it = vGraphicsPsos[iIndex].second.find(
+            Pso::constructUniquePsoIdentifier(sVertexShaderName, sPixelShaderName, bUsePixelBlending));
+
+        if (it == vGraphicsPsos[iIndex].second.end()) {
+            return createGraphicsPsoForMaterial(
+                sVertexShaderName, sPixelShaderName, bUsePixelBlending, pMaterial);
+        } else {
+            return PsoSharedPtr(it->second, pMaterial);
+        }
+    }
+
+    std::array<
+        std::pair<std::recursive_mutex, std::unordered_map<std::string, std::shared_ptr<Pso>>>,
+        static_cast<size_t>(PsoType::SIZE)>*
+    PsoManager::getGraphicsPsos() {
+        return &vGraphicsPsos;
+    }
+
+    PsoManager::~PsoManager() {
+        // Make sure all graphics PSOs were destroyed.
+        const auto iCreatedGraphicsPsoCount = getCreatedGraphicsPsoCount();
+        if (iCreatedGraphicsPsoCount != 0) [[unlikely]] {
+            Logger::get().error(
+                fmt::format(
+                    "PSO manager is being destroyed but there are still {} graphics PSO(s) exist",
+                    iCreatedGraphicsPsoCount),
+                sPsoManagerLogCategory);
+        }
+
+        // Make sure all compute PSOs were destroyed.
+        const auto iCreatedComputePsoCount = getCreatedComputePsoCount();
+        if (iCreatedComputePsoCount != 0) [[unlikely]] {
+            Logger::get().error(
+                fmt::format(
+                    "PSO manager is being destroyed but there are still {} compute PSO(s) exist",
+                    iCreatedComputePsoCount),
+                sPsoManagerLogCategory);
+        }
+    }
+
+    std::variant<PsoSharedPtr, Error> PsoManager::createGraphicsPsoForMaterial(
+        const std::string& sVertexShaderName,
+        const std::string& sPixelShaderName,
+        bool bUsePixelBlending,
+        Material* pMaterial) {
+        // Create PSO.
+        auto result =
+            Pso::createGraphicsPso(pRenderer, this, sVertexShaderName, sPixelShaderName, bUsePixelBlending);
+        if (std::holds_alternative<Error>(result)) {
+            auto error = std::get<Error>(std::move(result));
+            error.addEntry();
+            return error;
+        }
+
+        auto pPso = std::get<std::shared_ptr<Pso>>(std::move(result));
+
+        // Add to array of created PSOs.
+        const size_t iIndex = bUsePixelBlending ? static_cast<size_t>(PsoType::PT_TRANSPARENT)
+                                                : static_cast<size_t>(PsoType::PT_OPAQUE);
+
+        const auto sUniquePsoIdentifier = pPso->getUniquePsoIdentifier();
+        std::scoped_lock guard(vGraphicsPsos[iIndex].first);
+
+        const auto it = vGraphicsPsos[iIndex].second.find(sUniquePsoIdentifier);
+        if (it != vGraphicsPsos[iIndex].second.end()) [[unlikely]] {
+            Logger::get().error(
+                fmt::format(
+                    "created a PSO with combined shader name \"{}\" but another PSO already existed with "
+                    "this combined shader name in the array of created PSO",
+                    sUniquePsoIdentifier),
+                sPsoManagerLogCategory);
+        }
+
+        vGraphicsPsos[iIndex].second[sUniquePsoIdentifier] = pPso;
+
+        return PsoSharedPtr(pPso, pMaterial);
+    }
+
+    size_t PsoManager::getCreatedGraphicsPsoCount() {
+        size_t iTotalCount = 0;
+
+        for (auto& [mutex, map] : vGraphicsPsos) {
+            std::scoped_lock guard(mutex);
+
+            iTotalCount += map.size();
+        }
+
+        return iTotalCount;
+    }
+
+    size_t PsoManager::getCreatedComputePsoCount() {
+        std::scoped_lock guard(mtxComputePsos.first);
+        return mtxComputePsos.second.size();
+    }
+
+    Renderer* PsoManager::getRenderer() const { return pRenderer; }
+
+    void PsoManager::onPsoNoLongerUsedByMaterial(const std::string& sUniquePsoIdentifier) {
+        // Find this PSO.
+        for (auto& [mutex, map] : vGraphicsPsos) {
+            std::scoped_lock guard(mutex);
+
+            const auto it = map.find(sUniquePsoIdentifier);
+            if (it == map.end())
+                continue;
+
+            if (it->second.use_count() > 1) {
+                // Still used by somebody else.
+                return;
+            }
+
+            map.erase(it);
+            break;
+        }
+    }
+} // namespace ne

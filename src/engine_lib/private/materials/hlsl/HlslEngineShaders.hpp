@@ -1,8 +1,9 @@
 ﻿#pragma once
 
 // Custom.
-#include "shaders/ShaderDescription.h"
+#include "materials/ShaderDescription.h"
 #include "misc/ProjectPaths.h"
+#include "materials/EngineShaderNames.hpp"
 
 namespace ne {
     /** Stores engine shader definitions used in DirectX renderer. */
@@ -14,7 +15,7 @@ namespace ne {
 
         /** Default vertex shader. */
         static inline const auto vertexShader = ShaderDescription(
-            "engine.default.vs",
+            EngineShaderNames::sVertexShaderName,
             ProjectPaths::getDirectoryForResources(ResourceDirectory::ENGINE) / "shaders/default.hlsl",
             ShaderType::VERTEX_SHADER,
             "vsDefault",
@@ -22,7 +23,7 @@ namespace ne {
 
         /** Default pixel shader. */
         static inline const auto pixelShader = ShaderDescription(
-            "engine.default.ps",
+            EngineShaderNames::sPixelShaderName,
             ProjectPaths::getDirectoryForResources(ResourceDirectory::ENGINE) / "shaders/default.hlsl",
             ShaderType::PIXEL_SHADER,
             "psDefault",

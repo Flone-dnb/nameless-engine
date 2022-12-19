@@ -3,8 +3,7 @@
 // Custom.
 #include "misc/Error.h"
 #include "render/Renderer.h"
-#include "shaders/ShaderFilesystemPaths.hpp"
-#include "io/Logger.h"
+#include "materials/ShaderFilesystemPaths.hpp"
 #if defined(WIN32)
 #include "hlsl/HlslShader.h"
 #include "render/directx/DirectXRenderer.h"

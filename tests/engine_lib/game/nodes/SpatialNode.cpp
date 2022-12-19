@@ -7,106 +7,173 @@
 #include "catch2/catch_test_macros.hpp"
 
 TEST_CASE("world location, rotation and scale are calculated correctly (no parent)") {
+
     using namespace ne;
 
-    constexpr float floatEpsilon = 0.00001f;
+    class TestGameInstance : public GameInstance {
+    public:
+        TestGameInstance(Window* pGameWindow, InputManager* pInputManager)
+            : GameInstance(pGameWindow, pInputManager) {}
+        virtual void onGameStarted() override {
+            createWorld();
 
-    {
-        const auto targetWorldLocation = glm::vec3(1.0f, 2.0f, 3.0f);
-        const auto targetWorldRotation = glm::vec3(10.0f, 20.0f, 30.0f);
-        const auto targetWorldScale = glm::vec3(5.0f, 6.0f, 7.0f);
+            constexpr float floatEpsilon = 0.00001f;
 
-        const auto pSpatialNode = gc_new<SpatialNode>("My Cool Spatial Node");
-        pSpatialNode->setRelativeLocation(targetWorldLocation);
-        pSpatialNode->setRelativeRotation(targetWorldRotation);
-        pSpatialNode->setRelativeScale(targetWorldScale);
+            const auto targetWorldLocation = glm::vec3(1.0f, 2.0f, 3.0f);
+            const auto targetWorldRotation = glm::vec3(10.0f, 20.0f, 30.0f);
+            const auto targetWorldScale = glm::vec3(5.0f, 6.0f, 7.0f);
 
-        const auto worldLocation = pSpatialNode->getWorldLocation();
-        const auto worldRotation = pSpatialNode->getWorldRotation();
-        const auto worldScale = pSpatialNode->getWorldScale();
+            const auto pSpatialNode = gc_new<SpatialNode>("My Cool Spatial Node");
+            pSpatialNode->setRelativeLocation(targetWorldLocation);
+            pSpatialNode->setRelativeRotation(targetWorldRotation);
+            pSpatialNode->setRelativeScale(targetWorldScale);
 
-        REQUIRE(glm::all(glm::epsilonEqual(worldLocation, targetWorldLocation, floatEpsilon)));
-        REQUIRE(glm::all(glm::epsilonEqual(worldRotation, targetWorldRotation, floatEpsilon)));
-        REQUIRE(glm::all(glm::epsilonEqual(worldScale, targetWorldScale, floatEpsilon)));
+            const auto worldLocation = pSpatialNode->getWorldLocation();
+            const auto worldRotation = pSpatialNode->getWorldRotation();
+            const auto worldScale = pSpatialNode->getWorldScale();
+
+            REQUIRE(glm::all(glm::epsilonEqual(worldLocation, targetWorldLocation, floatEpsilon)));
+            REQUIRE(glm::all(glm::epsilonEqual(worldRotation, targetWorldRotation, floatEpsilon)));
+            REQUIRE(glm::all(glm::epsilonEqual(worldScale, targetWorldScale, floatEpsilon)));
+
+            getWindow()->close();
+        }
+        virtual ~TestGameInstance() override {}
+    };
+
+    auto result = Window::getBuilder().withVisibility(false).build();
+    if (std::holds_alternative<Error>(result)) {
+        Error error = std::get<Error>(std::move(result));
+        error.addEntry();
+        INFO(error.getError());
+        REQUIRE(false);
     }
 
-    gc_collector()->collect();
+    const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
+    pMainWindow->processEvents<TestGameInstance>();
+
+    // Make sure everything is collected correctly.
+    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
 }
 
 TEST_CASE("world location, rotation and scale are calculated correctly (with parent)") {
     using namespace ne;
 
-    constexpr float floatEpsilon = 0.00001f;
+    class TestGameInstance : public GameInstance {
+    public:
+        TestGameInstance(Window* pGameWindow, InputManager* pInputManager)
+            : GameInstance(pGameWindow, pInputManager) {}
+        virtual void onGameStarted() override {
+            createWorld();
 
-    {
-        const auto pParentSpatialNode = gc_new<SpatialNode>("My Cool Parent Spatial Node");
-        pParentSpatialNode->setRelativeLocation(glm::vec3(5.0f, 0.0f, 0.0f));
-        pParentSpatialNode->setRelativeScale(glm::vec3(5.0f, 1.0f, 1.0f));
+            constexpr float floatEpsilon = 0.00001f;
 
-        const auto pChildSpatialNode = gc_new<SpatialNode>("My Cool Child Spatial Node");
-        pParentSpatialNode->addChildNode(pChildSpatialNode);
-        pChildSpatialNode->setRelativeLocation(glm::vec3(5.0f, 0.0f, 0.0f));
-        pChildSpatialNode->setRelativeScale(glm::vec3(1.0f, 1.0f, 5.0f));
+            const auto pParentSpatialNode = gc_new<SpatialNode>("My Cool Parent Spatial Node");
+            pParentSpatialNode->setRelativeLocation(glm::vec3(5.0f, 0.0f, 0.0f));
+            pParentSpatialNode->setRelativeScale(glm::vec3(5.0f, 1.0f, 1.0f));
 
-        const auto worldLocation = pChildSpatialNode->getWorldLocation();
-        const auto worldRotation = pChildSpatialNode->getWorldRotation();
-        const auto worldScale = pChildSpatialNode->getWorldScale();
+            const auto pChildSpatialNode = gc_new<SpatialNode>("My Cool Child Spatial Node");
+            pParentSpatialNode->addChildNode(pChildSpatialNode);
+            pChildSpatialNode->setRelativeLocation(glm::vec3(5.0f, 0.0f, 0.0f));
+            pChildSpatialNode->setRelativeScale(glm::vec3(1.0f, 1.0f, 5.0f));
 
-        REQUIRE(glm::all(glm::epsilonEqual(worldLocation, glm::vec3(10.0f, 0.0f, 0.0f), floatEpsilon)));
-        REQUIRE(glm::all(glm::epsilonEqual(worldRotation, glm::vec3(0.0f, 0.0f, 0.0f), floatEpsilon)));
-        REQUIRE(glm::all(glm::epsilonEqual(worldScale, glm::vec3(5.0f, 1.0f, 5.0f), floatEpsilon)));
+            const auto worldLocation = pChildSpatialNode->getWorldLocation();
+            const auto worldRotation = pChildSpatialNode->getWorldRotation();
+            const auto worldScale = pChildSpatialNode->getWorldScale();
+
+            REQUIRE(glm::all(glm::epsilonEqual(worldLocation, glm::vec3(10.0f, 0.0f, 0.0f), floatEpsilon)));
+            REQUIRE(glm::all(glm::epsilonEqual(worldRotation, glm::vec3(0.0f, 0.0f, 0.0f), floatEpsilon)));
+            REQUIRE(glm::all(glm::epsilonEqual(worldScale, glm::vec3(5.0f, 1.0f, 5.0f), floatEpsilon)));
+
+            getWindow()->close();
+        }
+        virtual ~TestGameInstance() override {}
+    };
+
+    auto result = Window::getBuilder().withVisibility(false).build();
+    if (std::holds_alternative<Error>(result)) {
+        Error error = std::get<Error>(std::move(result));
+        error.addEntry();
+        INFO(error.getError());
+        REQUIRE(false);
     }
 
-    gc_collector()->collect();
+    const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
+    pMainWindow->processEvents<TestGameInstance>();
+
+    // Make sure everything is collected correctly.
+    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
 }
 
 TEST_CASE(
     "world location, rotation and scale are calculated correctly (with non spatial nodes in the hierarchy)") {
     using namespace ne;
 
-    constexpr float floatEpsilon = 0.00001f;
+    class TestGameInstance : public GameInstance {
+    public:
+        TestGameInstance(Window* pGameWindow, InputManager* pInputManager)
+            : GameInstance(pGameWindow, pInputManager) {}
+        virtual void onGameStarted() override {
+            createWorld();
 
-    {
-        // Create nodes.
-        const auto pParentSpatialNode = gc_new<SpatialNode>("My Cool Parent Spatial Node");
-        pParentSpatialNode->setRelativeLocation(glm::vec3(5.0f, 0.0f, 0.0f));
-        pParentSpatialNode->setRelativeScale(glm::vec3(5.0f, 1.0f, 1.0f));
+            constexpr float floatEpsilon = 0.00001f;
 
-        const auto pUsualNode1 = gc_new<Node>("Usual Node 1");
+            // Create nodes.
+            const auto pParentSpatialNode = gc_new<SpatialNode>("My Cool Parent Spatial Node");
+            pParentSpatialNode->setRelativeLocation(glm::vec3(5.0f, 0.0f, 0.0f));
+            pParentSpatialNode->setRelativeScale(glm::vec3(5.0f, 1.0f, 1.0f));
 
-        const auto pSpatialNode = gc_new<SpatialNode>("My Cool Child Spatial Node");
+            const auto pUsualNode1 = gc_new<Node>("Usual Node 1");
 
-        const auto pUsualNode2 = gc_new<Node>("Usual Node 2");
+            const auto pSpatialNode = gc_new<SpatialNode>("My Cool Child Spatial Node");
 
-        const auto pChildSpatialNode = gc_new<SpatialNode>("My Cool Child Spatial Node 1");
-        pChildSpatialNode->setRelativeLocation(glm::vec3(5.0f, 0.0f, 0.0f));
-        pChildSpatialNode->setRelativeScale(glm::vec3(1.0f, 1.0f, 5.0f));
+            const auto pUsualNode2 = gc_new<Node>("Usual Node 2");
 
-        const auto pUsualNode3 = gc_new<Node>("Usual Node 3");
+            const auto pChildSpatialNode = gc_new<SpatialNode>("My Cool Child Spatial Node 1");
+            pChildSpatialNode->setRelativeLocation(glm::vec3(5.0f, 0.0f, 0.0f));
+            pChildSpatialNode->setRelativeScale(glm::vec3(1.0f, 1.0f, 5.0f));
 
-        const auto pChildChildSpatialNode = gc_new<SpatialNode>("My Cool Child Spatial Node 2");
-        pChildChildSpatialNode->setRelativeLocation(glm::vec3(5.0f, 0.0f, 0.0f));
-        pChildChildSpatialNode->setRelativeScale(glm::vec3(1.0f, 1.0f, 5.0f));
+            const auto pUsualNode3 = gc_new<Node>("Usual Node 3");
 
-        // Build hierarchy.
-        pParentSpatialNode->addChildNode(pUsualNode1);
-        pUsualNode1->addChildNode(pSpatialNode);
-        pSpatialNode->addChildNode(pUsualNode2);
-        pUsualNode2->addChildNode(pChildSpatialNode);
-        pChildSpatialNode->addChildNode(pUsualNode3);
-        pUsualNode3->addChildNode(pChildChildSpatialNode);
+            const auto pChildChildSpatialNode = gc_new<SpatialNode>("My Cool Child Spatial Node 2");
+            pChildChildSpatialNode->setRelativeLocation(glm::vec3(5.0f, 0.0f, 0.0f));
+            pChildChildSpatialNode->setRelativeScale(glm::vec3(1.0f, 1.0f, 5.0f));
 
-        // Check locations.
-        const auto worldLocation = pChildChildSpatialNode->getWorldLocation();
-        const auto worldRotation = pChildChildSpatialNode->getWorldRotation();
-        const auto worldScale = pChildChildSpatialNode->getWorldScale();
+            // Build hierarchy.
+            pParentSpatialNode->addChildNode(pUsualNode1);
+            pUsualNode1->addChildNode(pSpatialNode);
+            pSpatialNode->addChildNode(pUsualNode2);
+            pUsualNode2->addChildNode(pChildSpatialNode);
+            pChildSpatialNode->addChildNode(pUsualNode3);
+            pUsualNode3->addChildNode(pChildChildSpatialNode);
 
-        REQUIRE(glm::all(glm::epsilonEqual(worldLocation, glm::vec3(15.0f, 0.0f, 0.0f), floatEpsilon)));
-        REQUIRE(glm::all(glm::epsilonEqual(worldRotation, glm::vec3(0.0f, 0.0f, 0.0f), floatEpsilon)));
-        REQUIRE(glm::all(glm::epsilonEqual(worldScale, glm::vec3(5.0f, 1.0f, 25.0f), floatEpsilon)));
+            // Check locations.
+            const auto worldLocation = pChildChildSpatialNode->getWorldLocation();
+            const auto worldRotation = pChildChildSpatialNode->getWorldRotation();
+            const auto worldScale = pChildChildSpatialNode->getWorldScale();
+
+            REQUIRE(glm::all(glm::epsilonEqual(worldLocation, glm::vec3(15.0f, 0.0f, 0.0f), floatEpsilon)));
+            REQUIRE(glm::all(glm::epsilonEqual(worldRotation, glm::vec3(0.0f, 0.0f, 0.0f), floatEpsilon)));
+            REQUIRE(glm::all(glm::epsilonEqual(worldScale, glm::vec3(5.0f, 1.0f, 25.0f), floatEpsilon)));
+
+            getWindow()->close();
+        }
+        virtual ~TestGameInstance() override {}
+    };
+
+    auto result = Window::getBuilder().withVisibility(false).build();
+    if (std::holds_alternative<Error>(result)) {
+        Error error = std::get<Error>(std::move(result));
+        error.addEntry();
+        INFO(error.getError());
+        REQUIRE(false);
     }
 
-    gc_collector()->collect();
+    const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
+    pMainWindow->processEvents<TestGameInstance>();
+
+    // Make sure everything is collected correctly.
+    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
 }
 
 TEST_CASE("world location with parent rotation is correct") {

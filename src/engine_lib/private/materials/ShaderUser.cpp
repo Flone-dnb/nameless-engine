@@ -4,7 +4,7 @@
 #include <ranges>
 
 // Custom.
-#include "shaders/ShaderManager.h"
+#include "materials/ShaderManager.h"
 
 namespace ne {
     ShaderUser::ShaderUser(ShaderManager* pShaderManager) { this->pShaderManager = pShaderManager; }

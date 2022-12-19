@@ -33,6 +33,13 @@ namespace ne {
         virtual ~Game();
 
         /**
+         * Returns last created Game object.
+         *
+         * @return `nullptr` if no Game object was created yet, otherwise pointer to game object.
+         */
+        static Game* get();
+
+        /**
          * Modifies the interval after which we need to run garbage collector again.
          * The current value can be retrieved using @ref getGarbageCollectorRunIntervalInSec.
          *

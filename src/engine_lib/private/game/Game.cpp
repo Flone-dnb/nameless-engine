@@ -10,7 +10,8 @@
 #include "misc/ProjectPaths.h"
 #include "misc/GC.hpp"
 #include "render/Renderer.h"
-#include "shaders/Shader.h"
+#include "materials/Shader.h"
+#include "render/pso/PsoManager.h"
 #if defined(WIN32)
 #include "render/directx/DirectXRenderer.h"
 #endif
@@ -24,8 +25,15 @@
 #include "fmt/core.h"
 
 namespace ne {
+    // Static pointer for accessing last created game.
+    static Game* pLastCreatedGame = nullptr;
+
     Game::Game(Window* pWindow) {
         this->pWindow = pWindow;
+
+        // Update static pointer.
+        Logger::get().info("new Game is created, updating static Game pointer", sGameLogCategory);
+        pLastCreatedGame = this;
 
         // Make sure that `res` directory is set and exists.
         // (intentionally ignore result, will show an error if not exists)
@@ -52,6 +60,7 @@ namespace ne {
         Serializable::checkGuidUniqueness();
 #endif
 
+        // Create renderer.
 #if defined(WIN32)
         pRenderer = std::make_unique<DirectXRenderer>(this);
 #elif __linux__
@@ -181,11 +190,13 @@ namespace ne {
         if (iTotalShadersInMemory != 0) {
             Logger::get().error(
                 fmt::format(
-                    "the renderer was destroyed but there are still {} shaders left in the memory",
+                    "the renderer was destroyed but there are still {} shader(s) left in the memory",
                     iTotalShadersInMemory),
                 sGameLogCategory);
         }
     }
+
+    Game* Game::get() { return pLastCreatedGame; }
 
     void Game::setGarbageCollectorRunInterval(long long iGcRunIntervalInSec) {
         this->iGcRunIntervalInSec = std::clamp<long long>(iGcRunIntervalInSec, 30, 300);
@@ -619,13 +630,10 @@ namespace ne {
             // Explicitly destroy the world, so that no node will reference the world.
             mtxWorld.second = nullptr;
 
-            // At this point (when no node is spawned) nodes will not be able to
-            // access game instance or world so we can safely destroy the world.
-
             // Force run GC to destroy all nodes.
             runGarbageCollection(true);
 
-            // Check that all nodes were destroyed.
+            // Make sure that all nodes were destroyed.
             const auto iAliveNodeCount = Node::getAliveNodeCount();
             if (iAliveNodeCount != 0) {
                 Logger::get().error(
@@ -634,6 +642,26 @@ namespace ne {
                         "{} node(s) alive, here are a few reasons why this may happen:\n{}",
                         iAliveNodeCount,
                         sGcLeakReasons),
+                    sGameLogCategory);
+            }
+
+            // Make sure all PSOs were destroyed.
+            const auto iGraphicsPsoCount = pRenderer->getPsoManager()->getCreatedGraphicsPsoCount();
+            const auto iComputePsoCount = pRenderer->getPsoManager()->getCreatedComputePsoCount();
+            if (iGraphicsPsoCount != 0) {
+                Logger::get().error(
+                    fmt::format(
+                        "the world was destroyed and garbage collection was finished but there are still "
+                        "{} graphics PSO(s) exist",
+                        iGraphicsPsoCount),
+                    sGameLogCategory);
+            }
+            if (iComputePsoCount != 0) {
+                Logger::get().error(
+                    fmt::format(
+                        "the world was destroyed and garbage collection was finished but there are still "
+                        "{} compute PSO(s) exist",
+                        iComputePsoCount),
                     sGameLogCategory);
             }
         }

@@ -59,14 +59,14 @@ namespace ne {
         D3D12MA::Budget localBudget{};
         pMemoryAllocator->GetBudget(&localBudget, nullptr);
 
-        return localBudget.BudgetBytes / 1024 / 1024;
+        return localBudget.BudgetBytes / 1024 / 1024; // NOLINT
     }
 
     size_t DirectXResourceManager::getUsedVideoMemoryInMb() const {
         D3D12MA::Budget localBudget{};
         pMemoryAllocator->GetBudget(&localBudget, nullptr);
 
-        return localBudget.UsageBytes / 1024 / 1024;
+        return localBudget.UsageBytes / 1024 / 1024; // NOLINT
     }
 
     std::variant<std::unique_ptr<DirectXResource>, Error> DirectXResourceManager::createRtvResource(

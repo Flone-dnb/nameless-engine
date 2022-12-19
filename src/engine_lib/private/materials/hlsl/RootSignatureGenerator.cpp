@@ -2,7 +2,7 @@
 
 // Custom.
 #include "io/Logger.h"
-#include "shaders/hlsl/HlslShader.h"
+#include "materials/hlsl/HlslShader.h"
 #include "misc/Error.h"
 #include "render/directx/DirectXRenderer.h"
 

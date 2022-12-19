@@ -15,8 +15,8 @@
 
 // Custom.
 #include "misc/Error.h"
-#include "shaders/ShaderDescription.h"
-#include "shaders/ShaderPack.h"
+#include "materials/ShaderDescription.h"
+#include "materials/ShaderPack.h"
 
 namespace ne {
     class Shader;
@@ -81,11 +81,12 @@ namespace ne {
             const std::function<void()>& onCompleted);
 
         /**
-         * Checks if the shader name is free (unique) to be used in @ref compileShaders.
+         * Checks if the shader name is free (no shader with this name found) to be used
+         * in @ref compileShaders.
          *
          * @param sShaderName Name to check.
          *
-         * @return 'true' if can be used, 'false' otherwise.
+         * @return `true` if can be used (no shader with this name found), `false` otherwise.
          */
         bool isShaderNameCanBeUsed(const std::string& sShaderName);
 

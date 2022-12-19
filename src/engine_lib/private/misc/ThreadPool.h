@@ -61,5 +61,11 @@ namespace ne {
          * are notified to finish.
          */
         std::atomic_flag bIsShuttingDown;
+
+        /** Minimum amount of threads to create when hardware concurrency information is not available. */
+        const unsigned int iMinThreadCount = 4;
+
+        /** Name of the category used for logging. */
+        inline static const char* sThreadPoolLogCategory = "Thread Pool";
     };
 } // namespace ne

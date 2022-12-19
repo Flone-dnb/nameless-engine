@@ -34,7 +34,6 @@ namespace ne {
 
         // Spawn root node.
         mtxRootNode.second = pRootNode;
-        mtxRootNode.second->pGameInstance = pGameInstance;
         mtxRootNode.second->pWorld = this;
         mtxRootNode.second->spawn();
 

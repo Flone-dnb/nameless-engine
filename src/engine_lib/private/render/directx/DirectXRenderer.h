@@ -188,6 +188,13 @@ namespace ne {
         // Heap needs to know buffer formats that the renderer uses.
         friend class DirectXDescriptorHeap;
 
+        /**
+         * Initialize vertex/pixel shader configuration by using @ref setPixelShaderConfiguration and
+         * @ref setVertexShaderConfiguration for the current render settings,
+         * after the initialization (constructor) is finished.
+         */
+        virtual void initializeShaderConfiguration() override;
+
         /** Update internal resources for the next frame. */
         virtual void updateResourcesForNextFrame() override;
 

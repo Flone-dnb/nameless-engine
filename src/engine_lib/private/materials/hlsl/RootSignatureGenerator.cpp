@@ -169,7 +169,7 @@ namespace ne {
         if (pVertexShader->getShaderSourceFileHash() != pPixelShader->getShaderSourceFileHash())
             [[unlikely]] {
             return Error(std::format(
-                "the vertex shader \"{}\" and the pixel shader \"{}\" were not compiled from one shader "
+                "the vertex shader \"{}\" and the pixel shader \"{}\" were not compiled from the same shader "
                 "source file (source file hash is not equal: {} != {})",
                 pVertexShader->getShaderName(),
                 pPixelShader->getShaderName(),
@@ -240,8 +240,9 @@ namespace ne {
                                 }
                             }
 
-                            if (!bFound)
+                            if (!bFound) {
                                 return false;
+                            }
                         }
 
                         return true;
@@ -284,7 +285,7 @@ namespace ne {
             return Error(hResult);
         }
 
-        if (pSerializerErrorMessage) {
+        if (pSerializerErrorMessage != nullptr) {
             return Error(std::string(
                 static_cast<char*>(pSerializerErrorMessage->GetBufferPointer()),
                 pSerializerErrorMessage->GetBufferSize()));

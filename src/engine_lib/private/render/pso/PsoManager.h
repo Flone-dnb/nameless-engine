@@ -113,6 +113,7 @@ namespace ne {
          */
         void initialize(std::shared_ptr<Pso> pPso, Material* pMaterialThatUsesPso) {
             this->pPso = std::move(pPso);
+            this->pMaterialThatUsesPso = pMaterialThatUsesPso;
             this->pPso->onMaterialUsingPso(pMaterialThatUsesPso);
         }
 

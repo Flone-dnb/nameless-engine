@@ -7,6 +7,9 @@
 #include "game/nodes/MeshNode.h"
 #include "materials/EngineShaderNames.hpp"
 
+/** Total amount of created materials. */
+static std::atomic<size_t> iTotalMaterialCount{0};
+
 namespace ne {
 
     Material::Material(
@@ -20,6 +23,8 @@ namespace ne {
         this->bUseTransparency = bUseTransparency;
         this->pPsoManager = pPsoManager;
         this->sName = sMaterialName;
+
+        iTotalMaterialCount.fetch_add(1);
     }
 
     Material::~Material() {
@@ -43,7 +48,11 @@ namespace ne {
                 sMaterialLogCategory);
             pUsedPso.clear();
         }
+
+        iTotalMaterialCount.fetch_sub(1);
     }
+
+    size_t Material::getTotalMaterialCount() { return iTotalMaterialCount.load(); }
 
     void Material::onMeshNodeSpawned(MeshNode* pMeshNode) {
         std::scoped_lock guard(mtxSpawnedMeshNodesThatUseThisMaterial.first);

@@ -6,7 +6,7 @@
     SamplerState samplerAnisotropicWrap : register(s0);
 #endif
 
-// TODO: wrap with something
+// TODO: wrap with something like RECEIVE_SHADOWS
 SamplerComparisonState samplerShadowMap : register(s1);
 
 #ifdef USE_DIFFUSE_TEXTURE

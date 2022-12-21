@@ -32,7 +32,7 @@ namespace ne {
             return optionalError.value();
         }
 
-        return {};
+        return pPso;
     }
 
     std::optional<Error> DirectXPso::generateGraphicsPsoForShaders(
@@ -135,8 +135,6 @@ namespace ne {
 
         const auto antialiasingSettings = getRenderer()->getAntialiasing();
 
-        // TODO: handle transparency
-
         CD3DX12_RASTERIZER_DESC rasterizerDesc(D3D12_DEFAULT);
         rasterizerDesc.CullMode = bUsePixelBlending ? D3D12_CULL_MODE_NONE : D3D12_CULL_MODE_BACK;
         rasterizerDesc.FillMode = D3D12_FILL_MODE_SOLID;
@@ -145,8 +143,8 @@ namespace ne {
         psoDesc.RasterizerState = rasterizerDesc;
         if (bUsePixelBlending) {
             D3D12_RENDER_TARGET_BLEND_DESC blendDesc;
-            blendDesc.BlendEnable = true;
-            blendDesc.LogicOpEnable = false;
+            blendDesc.BlendEnable = 1;
+            blendDesc.LogicOpEnable = 0;
             blendDesc.SrcBlend = D3D12_BLEND_SRC_ALPHA;
             blendDesc.DestBlend = D3D12_BLEND_INV_SRC_ALPHA;
             blendDesc.BlendOp = D3D12_BLEND_OP_ADD;
@@ -156,7 +154,8 @@ namespace ne {
             blendDesc.LogicOp = D3D12_LOGIC_OP_NOOP;
             blendDesc.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
             psoDesc.BlendState.RenderTarget[0] = blendDesc;
-            psoDesc.BlendState.AlphaToCoverageEnable = getRenderer()->getAntialiasing().bIsEnabled;
+            psoDesc.BlendState.AlphaToCoverageEnable =
+                static_cast<int>(getRenderer()->getAntialiasing().bIsEnabled);
         } else {
             psoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
         }

@@ -21,6 +21,13 @@ namespace ne {
         ~Material();
 
         /**
+         * Returns total amount of currently created materials.
+         *
+         * @return Total amount of materials.
+         */
+        static size_t getTotalMaterialCount();
+
+        /**
          * Creates a new material that uses default engine shaders.
          *
          * @param bUseTransparency Whether this material will use transparency or not.

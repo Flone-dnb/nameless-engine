@@ -81,6 +81,9 @@ namespace ne {
         }
 
         // TODO: create frame resources.
+
+        // Finally, setup shader configuration.
+        initializeShaderConfiguration();
     }
 
     std::optional<Error> DirectXRenderer::enableDebugLayer() const {
@@ -783,6 +786,8 @@ namespace ne {
     DXGI_FORMAT DirectXRenderer::getDepthStencilBufferFormat() const { return depthStencilBufferFormat; }
 
     UINT DirectXRenderer::getMsaaQualityLevel() const { return iMsaaQuality; }
+
+    void DirectXRenderer::initializeShaderConfiguration() { refreshShaderParameters(); }
 
     void DirectXRenderer::updateResourcesForNextFrame() {
         // TODO: wait for frame resource to be free

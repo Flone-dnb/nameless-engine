@@ -152,6 +152,13 @@ namespace ne {
     }
 
     void Node::detachFromParentAndDespawn() {
+        if (&*getWorldRootNode() == this) [[unlikely]] {
+            Error error("Instead of despawning world's root node, create/replace world using GameInstance "
+                        "functions, this would destroy the previous world with all nodes.");
+            error.showError();
+            throw std::runtime_error(error.getError());
+        }
+
         // Check if this node is spawned.
         std::scoped_lock guard(mtxSpawning);
         if (bIsSpawned == false)

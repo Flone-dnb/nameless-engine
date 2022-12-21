@@ -220,6 +220,13 @@ namespace ne {
         std::recursive_mutex* getRenderResourcesMutex();
 
     protected:
+        /**
+         * Initialize vertex/pixel shader configuration by using @ref setPixelShaderConfiguration and
+         * @ref setVertexShaderConfiguration for the current render settings,
+         * after the initialization (constructor) is finished.
+         */
+        virtual void initializeShaderConfiguration() = 0;
+
         /** Update internal resources for the next frame. */
         virtual void updateResourcesForNextFrame() = 0;
 

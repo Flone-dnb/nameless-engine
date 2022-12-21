@@ -471,7 +471,8 @@ namespace ne {
                 std::vector<CD3DX12_STATIC_SAMPLER_DESC>>>(std::move(result));
 
             mtxCompiledBlobRootSignature.second.second = rootSignature;
-            // Root parameters and static samplers were already set (when compiling).
+            vRootParameters = vUsedRootParameters;
+            vStaticSamplers = vUsedStaticSamplers;
         }
 
         return {};

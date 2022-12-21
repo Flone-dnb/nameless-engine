@@ -13,10 +13,10 @@
 #include "io/Logger.h"
 #include "misc/ProjectPaths.h"
 #include "io/ConfigManager.h"
-#include "io/GuidProperty.h"
+#include "io/properties/GuidProperty.h"
 #include "misc/GC.hpp"
-#include "io/IFieldSerializer.hpp"
-#include "io/SerializeProperty.h"
+#include "io/serializers/IFieldSerializer.hpp"
+#include "io/properties/SerializeProperty.h"
 
 // External.
 #include "Refureku/Refureku.h"

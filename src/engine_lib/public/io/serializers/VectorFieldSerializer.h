@@ -1,7 +1,7 @@
 #pragma once
 
 // Custom.
-#include "io/IFieldSerializer.hpp"
+#include "io/serializers/IFieldSerializer.hpp"
 
 namespace ne {
     /**

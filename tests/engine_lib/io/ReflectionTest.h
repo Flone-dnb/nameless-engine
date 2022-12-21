@@ -8,7 +8,7 @@
 // Custom.
 #include "io/Serializable.h"
 #include "game/nodes/Node.h"
-#include "io/SerializeProperty.h"
+#include "io/properties/SerializeProperty.h"
 
 #include "ReflectionTest.generated.h"
 

@@ -1,4 +1,4 @@
-﻿#include "io/GuidProperty.h"
+﻿#include "io/properties/GuidProperty.h"
 
 // Custom.
 #include "misc/Error.h"

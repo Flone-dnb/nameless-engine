@@ -4,7 +4,7 @@
 #include <typeinfo>
 
 // Custom.
-#include "io/IFieldSerializer.hpp"
+#include "io/serializers/IFieldSerializer.hpp"
 
 // External.
 #include "fmt/format.h"

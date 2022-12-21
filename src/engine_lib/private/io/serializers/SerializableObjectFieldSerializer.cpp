@@ -2,7 +2,7 @@
 
 // Custom.
 #include "io/Serializable.h"
-#include "io/GuidProperty.h"
+#include "io/properties/GuidProperty.h"
 #include "io/Logger.h"
 
 // External.

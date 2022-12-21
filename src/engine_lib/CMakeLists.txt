@@ -123,14 +123,14 @@ set(ENGINE_LIB_SOURCES
     public/game/nodes/SpatialNode.h
     private/game/nodes/MeshNode.cpp
     public/game/nodes/MeshNode.h
-    public/io/SerializeProperty.h
-    private/io/SerializeProperty.cpp
-    private/io/GuidProperty.cpp
-    public/io/GuidProperty.h
+    public/io/properties/SerializeProperty.h
+    private/io/properties/SerializeProperty.cpp
+    private/io/properties/GuidProperty.cpp
+    public/io/properties/GuidProperty.h
     private/game/World.h
     private/game/World.cpp
     public/misc/GC.hpp
-    public/io/IFieldSerializer.hpp
+    public/io/serializers/IFieldSerializer.hpp
     public/io/serializers/PrimitiveFieldSerializer.h
     private/io/serializers/PrimitiveFieldSerializer.cpp
     public/io/serializers/StringFieldSerializer.h

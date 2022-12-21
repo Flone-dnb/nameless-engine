@@ -5,20 +5,25 @@
 
 // Custom.
 #include "render/pso/PsoManager.h"
+#include "io/Serializable.h"
 
-namespace ne {
+#include "Material.generated.h"
+
+namespace ne RNAMESPACE() {
     class MeshNode;
 
     /**
      * Defines visual aspects of a mesh.
      */
-    class Material {
+    class RCLASS(Guid("a603fa3a-e9c2-4c38-bb4c-76384ef001f4")) Material : Serializable {
     public:
-        Material() = delete;
+        /** Creates uninitialized material, only used for deserialization. */
+        Material() = default;
+
         Material(const Material&) = delete;
         Material& operator=(const Material&) = delete;
 
-        ~Material();
+        virtual ~Material() override;
 
         /**
          * Returns total amount of currently created materials.
@@ -139,20 +144,28 @@ namespace ne {
         /**
          * Name of the vertex shader that this material is using.
          */
+        RPROPERTY(Serialize)
         std::string sVertexShaderName;
 
         /**
          * Name of the pixel shader that this material is using.
          */
+        RPROPERTY(Serialize)
         std::string sPixelShaderName;
 
         /** Name of this material. */
+        RPROPERTY(Serialize)
         std::string sName;
 
         /** Whether this material will use transparency or not. */
+        RPROPERTY(Serialize)
         bool bUseTransparency = false;
 
         /** Name of the category used for logging. */
         inline static const char* sMaterialLogCategory = "Material";
+
+        ne_Material_GENERATED
     };
-} // namespace ne
+} // namespace )
+
+File_Material_GENERATED

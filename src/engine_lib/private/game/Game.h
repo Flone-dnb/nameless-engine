@@ -342,7 +342,7 @@ namespace ne {
         std::chrono::steady_clock::time_point lastGcRunTime;
 
         /** Interval in seconds after which we need to run garbage collector again. */
-        long long iGcRunIntervalInSec = 90;
+        long long iGcRunIntervalInSec = 120;
 
         /** ID of the main thread. */
         std::thread::id mainThreadId;

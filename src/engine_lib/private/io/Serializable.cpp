@@ -8,6 +8,8 @@
 
 // External.
 #include "fmt/format.h"
+#define TOML11_PRESERVE_COMMENTS_BY_DEFAULT
+#include "toml11/toml.hpp"
 
 #include "Reflection_impl.hpp"
 

@@ -226,4 +226,14 @@ namespace ne {
         }
     }
 
+    void SpatialNode::onAfterDeserialized() {
+        Node::onAfterDeserialized();
+
+        // No need to notify children here because:
+        // 1. If this is a node tree that is being deserialized, child nodes will be added
+        // after this function is finished, once a child node is added it will recalculate its matrix.
+        // 2. If this is a single node that is being deserialized, there are no children.
+        recalculateWorldMatrix(false);
+    }
+
 } // namespace ne

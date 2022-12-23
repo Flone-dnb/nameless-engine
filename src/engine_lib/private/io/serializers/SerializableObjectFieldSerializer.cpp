@@ -291,7 +291,11 @@ namespace ne {
         auto pSubEntity = std::get<gc<Serializable>>(std::move(result));
 
         // Move object to field.
-        cloneSerializableObject(&*pSubEntity, static_cast<Serializable*>(pField->getPtrUnsafe(pFieldOwner)));
+        Serializable* pTarget = static_cast<Serializable*>(pField->getPtrUnsafe(pFieldOwner));
+        cloneSerializableObject(&*pSubEntity, pTarget);
+
+        // Notify.
+        pTarget->onAfterDeserialized();
 
         return {};
     }

@@ -141,6 +141,8 @@ set(ENGINE_LIB_SOURCES
     public/io/serializers/UnorderedMapFieldSerializer.h
     private/io/serializers/SerializableObjectFieldSerializer.cpp
     public/io/serializers/SerializableObjectFieldSerializer.h
+    private/io/serializers/GlmVecFieldSerializer.cpp
+    public/io/serializers/GlmVecFieldSerializer.h
     public/math/MathHelpers.hpp
     public/math/GLMath.hpp
     # add general (cross-platform) sources here...

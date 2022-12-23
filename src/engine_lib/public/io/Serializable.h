@@ -21,8 +21,6 @@
 // External.
 #include "Refureku/Refureku.h"
 #include "Refureku/Object.h"
-#define TOML11_PRESERVE_COMMENTS_BY_DEFAULT
-#include "toml11/toml.hpp"
 #include "fmt/core.h"
 
 #include "Serializable.generated.h"
@@ -430,6 +428,19 @@ namespace ne RNAMESPACE() {
         static void checkGuidUniqueness();
 #endif
 
+    protected:
+        // This field serializer will call `onAfterDeserialized` after deserialization.
+        friend class SerializableObjectFieldSerializer;
+
+        /**
+         * Called after the object was successfully deserialized.
+         * Used to execute post-deserialization logic.
+         *
+         * @warning If overriding you must call the parent's version of this function first
+         * (before executing your login) to execute parent's logic.
+         */
+        virtual void onAfterDeserialized() {}
+
     private:
 #if defined(DEBUG)
         /**
@@ -775,6 +786,10 @@ namespace ne RNAMESPACE() {
                     fmt::format("unable to find a deserializer that supports field \"{}\"", sFieldName), "");
             }
         }
+
+        // Notify.
+        Serializable* pTarget = dynamic_cast<Serializable*>(&*pGcInstance);
+        pTarget->onAfterDeserialized();
 
         return pGcInstance;
     }

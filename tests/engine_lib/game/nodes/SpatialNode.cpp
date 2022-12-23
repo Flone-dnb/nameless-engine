@@ -426,3 +426,89 @@ TEST_CASE("set world scale with parent is correct") {
     // Make sure everything is collected correctly.
     REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
 }
+
+TEST_CASE("serialize and deserialize SpatialNode") {
+    using namespace ne;
+
+    class TestGameInstance : public GameInstance {
+    public:
+        TestGameInstance(Window* pGameWindow, InputManager* pInputManager)
+            : GameInstance(pGameWindow, pInputManager) {}
+        virtual void onGameStarted() override {
+            createWorld();
+
+            const std::filesystem::path pathToFileInTemp =
+                std::filesystem::temp_directory_path() / "TESTING_SpatialNodeSerialization_TESTING.toml";
+
+            const auto location = glm::vec3(1.0f, -2.0f, 3.0f);
+            const auto rotation = glm::vec3(-5.0f, 15.0f, -30.0f);
+            const auto scale = glm::vec3(10.0f, 20.0f, 30.0f);
+
+            {
+                // Setup.
+                const auto pSpatialNode = gc_new<SpatialNode>();
+                pSpatialNode->setRelativeLocation(location);
+                pSpatialNode->setRelativeRotation(rotation);
+                pSpatialNode->setRelativeScale(scale);
+
+                // Serialize.
+                const auto optionalError = pSpatialNode->serialize(pathToFileInTemp, false);
+                if (optionalError.has_value()) {
+                    auto error = optionalError.value();
+                    error.addEntry();
+                    INFO(error.getError());
+                    REQUIRE(false);
+                }
+            }
+
+            {
+                // Deserialize.
+                auto result = Serializable::deserialize<SpatialNode>(pathToFileInTemp);
+                if (std::holds_alternative<Error>(result)) {
+                    Error error = std::get<Error>(std::move(result));
+                    error.addEntry();
+                    INFO(error.getError());
+                    REQUIRE(false);
+                }
+                const auto pSpatialNode = std::get<gc<SpatialNode>>(std::move(result));
+
+                constexpr float floatEpsilon = 0.00001f;
+
+                const auto relativeLocation = pSpatialNode->getRelativeLocation();
+                const auto relativeRotation = pSpatialNode->getRelativeRotation();
+                const auto relativeScale = pSpatialNode->getRelativeScale();
+                const auto worldLocation = pSpatialNode->getWorldLocation();
+                const auto worldRotation = pSpatialNode->getWorldRotation();
+                const auto worldScale = pSpatialNode->getWorldScale();
+
+                REQUIRE(glm::all(glm::epsilonEqual(relativeLocation, location, floatEpsilon)));
+                REQUIRE(glm::all(glm::epsilonEqual(relativeRotation, rotation, floatEpsilon)));
+                REQUIRE(glm::all(glm::epsilonEqual(relativeScale, scale, floatEpsilon)));
+                REQUIRE(glm::all(glm::epsilonEqual(worldLocation, location, floatEpsilon)));
+                REQUIRE(glm::all(glm::epsilonEqual(worldRotation, rotation, floatEpsilon)));
+                REQUIRE(glm::all(glm::epsilonEqual(worldScale, scale, floatEpsilon)));
+            }
+
+            if (std::filesystem::exists(pathToFileInTemp)) {
+                std::filesystem::remove(pathToFileInTemp);
+            }
+
+            getWindow()->close();
+        }
+        virtual ~TestGameInstance() override {}
+    };
+
+    auto result = Window::getBuilder().withVisibility(false).build();
+    if (std::holds_alternative<Error>(result)) {
+        Error error = std::get<Error>(std::move(result));
+        error.addEntry();
+        INFO(error.getError());
+        REQUIRE(false);
+    }
+
+    const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
+    pMainWindow->processEvents<TestGameInstance>();
+
+    // Make sure everything is collected correctly.
+    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+}

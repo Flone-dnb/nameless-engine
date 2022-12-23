@@ -140,6 +140,15 @@ namespace ne RNAMESPACE() {
 
     protected:
         /**
+         * Called after the object was successfully deserialized.
+         * Used to execute post-deserialization logic.
+         *
+         * @warning If overriding you must call the parent's version of this function first
+         * (before executing your login) to execute parent's logic.
+         */
+        virtual void onAfterDeserialized() override;
+
+        /**
          * Called when this node was not spawned previously and it was either attached to a parent node
          * that is spawned or set as world's root node to execute custom spawn logic.
          *
@@ -243,6 +252,7 @@ namespace ne RNAMESPACE() {
          * relative to the first SpatialNode in the parent chain, otherwise if there is no SpatialNode
          * in the parent chain, relative to the world.
          */
+        RPROPERTY(Serialize)
         glm::vec3 relativeLocation = glm::vec3(0.0f, 0.0f, 0.0f);
 
         /**
@@ -250,6 +260,7 @@ namespace ne RNAMESPACE() {
          * this rotation is relative to the first SpatialNode in the parent chain, otherwise if there
          * is no SpatialNode in the parent chain, relative to the world.
          */
+        RPROPERTY(Serialize)
         glm::vec3 relativeRotation = glm::vec3(0.0f, 0.0f, 0.0f);
 
         /**
@@ -257,6 +268,7 @@ namespace ne RNAMESPACE() {
          * relative to the first SpatialNode in the parent chain, otherwise if there is no SpatialNode
          * in the parent chain, relative to the world.
          */
+        RPROPERTY(Serialize)
         glm::vec3 relativeScale = glm::vec3(1.0f, 1.0f, 1.0f);
 
         /** Matrix that describes basis vectors that define node's local space. */

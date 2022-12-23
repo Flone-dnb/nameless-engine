@@ -20,6 +20,7 @@
 #include "io/serializers/VectorFieldSerializer.h"
 #include "io/serializers/UnorderedMapFieldSerializer.h"
 #include "io/serializers/SerializableObjectFieldSerializer.h"
+#include "io/serializers/GlmVecFieldSerializer.h"
 
 // External.
 #include "fmt/core.h"
@@ -48,6 +49,7 @@ namespace ne {
         Serializable::addFieldSerializer(std::make_unique<VectorFieldSerializer>());
         Serializable::addFieldSerializer(std::make_unique<UnorderedMapFieldSerializer>());
         Serializable::addFieldSerializer(std::make_unique<SerializableObjectFieldSerializer>());
+        Serializable::addFieldSerializer(std::make_unique<GlmVecFieldSerializer>());
 
         // Mark start time.
         gc_collector()->collect(); // run for the first time to setup things (I guess)

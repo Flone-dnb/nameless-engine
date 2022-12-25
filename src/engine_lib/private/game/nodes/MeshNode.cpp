@@ -15,10 +15,10 @@ namespace ne {
             error.showError();
             throw std::runtime_error(error.getError());
         }
-        pMaterial = std::get<std::shared_ptr<Material>>(std::move(result));
+        pMaterial = std::get<gc<Material>>(std::move(result));
     }
 
-    void MeshNode::setMaterial(std::shared_ptr<Material> pMaterial) {
+    void MeshNode::setMaterial(gc<Material> pMaterial) {
         if (pMaterial == nullptr) [[unlikely]] {
             auto error = Error("cannot use `nullptr` as a material");
             error.showError();

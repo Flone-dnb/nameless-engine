@@ -36,11 +36,10 @@ TEST_CASE("create engine default materials") {
 
                 // Create nodes.
                 auto pMeshNodeOpaque = gc_new<MeshNode>("Opaque material node");
-                pMeshNodeOpaque->setMaterial(std::get<std::shared_ptr<Material>>(std::move(resultOpaque)));
+                pMeshNodeOpaque->setMaterial(std::get<gc<Material>>(std::move(resultOpaque)));
 
                 auto pMeshNodeTransparent = gc_new<MeshNode>("Transparent material node");
-                pMeshNodeTransparent->setMaterial(
-                    std::get<std::shared_ptr<Material>>(std::move(resultTransparent)));
+                pMeshNodeTransparent->setMaterial(std::get<gc<Material>>(std::move(resultTransparent)));
 
                 // There should be no PSOs created since no material is spawned.
                 REQUIRE(getWindow()->getRenderer()->getPsoManager()->getCreatedGraphicsPsoCount() == 0);
@@ -48,6 +47,8 @@ TEST_CASE("create engine default materials") {
                 // Spawn.
                 getWorldRootNode()->addChildNode(pMeshNodeOpaque);
                 getWorldRootNode()->addChildNode(pMeshNodeTransparent);
+
+                gc_collect();
 
                 // Check everything.
                 REQUIRE(Material::getTotalMaterialCount() == 2);

@@ -689,6 +689,7 @@ namespace ne RNAMESPACE() {
         // Create instance.
         gc<T> pGcInstance = nullptr;
         if (pOriginalEntity) {
+            // Use the original entity instead of creating a new one.
             pGcInstance = gc_dynamic_pointer_cast<T>(pOriginalEntity);
         }
         if (!pGcInstance) {

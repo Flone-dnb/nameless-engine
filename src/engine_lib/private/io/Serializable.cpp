@@ -77,7 +77,9 @@ namespace ne {
         // Save TOML data to file.
         std::ofstream file(pathToFile, std::ios::binary);
         if (!file.is_open()) {
-            return Error(fmt::format("failed to open the file \"{}\"", pathToFile.string()));
+            return Error(fmt::format(
+                "failed to open the file \"{}\" (maybe because it's marked as read-only)",
+                pathToFile.string()));
         }
         file << tomlData;
         file.close();
@@ -427,7 +429,9 @@ namespace ne {
         // Save TOML data to file.
         std::ofstream file(pathToFile, std::ios::binary);
         if (!file.is_open()) {
-            return Error(fmt::format("failed to open the file \"{}\"", pathToFile.string()));
+            return Error(fmt::format(
+                "failed to open the file \"{}\" (maybe because it's marked as read-only)",
+                pathToFile.string()));
         }
         file << tomlData;
         file.close();
@@ -621,6 +625,12 @@ namespace ne {
                     }
 
                     // Serialize field.
+                    if (pData->vFieldSerializers.empty()) {
+                        pData->error =
+                            Error("unable to serialize an entity because there are no field serializers "
+                                  "registered yet (most likely because no game object was created yet)");
+                        return false;
+                    }
                     for (const auto& pSerializer : pData->vFieldSerializers) {
                         if (pSerializer->isFieldTypeSupported(&field)) {
                             auto optionalError = pSerializer->serializeField(

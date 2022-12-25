@@ -103,7 +103,7 @@ namespace ne RNAMESPACE() {
     };
 
     /**
-     * Class that adds support for serialization/deserialization for your type.
+     * Adds support for serialization/deserialization for your reflected type.
      *
      * Inherit your class/struct from this class to add functions which will
      * serialize the type and all reflected fields (even inherited).

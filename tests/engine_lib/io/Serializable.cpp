@@ -47,7 +47,7 @@ TEST_CASE("make sure relative path to the file the object was deserialized from 
     std::filesystem::remove(pathToFileInRes);
 
     // Try to load using the backup file.
-    auto result = Serializable::deserialize<InventorySaveData>(pathToFileInRes);
+    auto result = Serializable::deserialize<InventorySaveData, gc>(pathToFileInRes);
     if (std::holds_alternative<Error>(result)) {
         auto error = std::get<Error>(result);
         error.addEntry();
@@ -68,7 +68,7 @@ TEST_CASE("make sure relative path to the file the object was deserialized from 
     REQUIRE(optionalRelativePath.value().first == sRelativePathToFile);
 
     // Load the data from the temp directory.
-    result = Serializable::deserialize<InventorySaveData>(pathToFileInTemp);
+    result = Serializable::deserialize<InventorySaveData, gc>(pathToFileInTemp);
     if (std::holds_alternative<Error>(result)) {
         auto error = std::get<Error>(result);
         error.addEntry();
@@ -114,7 +114,7 @@ TEST_CASE("serialize and deserialize with a backup file") {
 
     // Try to load using the backup.
     {
-        auto result = Serializable::deserialize<InventorySaveData>(fullPathToFile);
+        auto result = Serializable::deserialize<InventorySaveData, gc>(fullPathToFile);
         if (std::holds_alternative<Error>(result)) {
             auto error = std::get<Error>(result);
             error.addEntry();
@@ -169,7 +169,7 @@ TEST_CASE("deserialize a node tree that references external node") {
     {
         // Now let's say we are building a new node tree and want to use this custom node.
         // Deserialize this custom node.
-        auto result = Serializable::deserialize<ReflectionTestNode1>(pathToCustomNodeFileInRes);
+        auto result = Serializable::deserialize<ReflectionTestNode1, gc>(pathToCustomNodeFileInRes);
         if (std::holds_alternative<Error>(result)) {
             auto error = std::get<Error>(result);
             error.addEntry();
@@ -584,7 +584,7 @@ TEST_CASE("serialize and deserialize fields of different types") {
     REQUIRE(ids.find("0") != ids.end());
 
     // Deserialize.
-    auto result = Serializable::deserialize<ReflectionOuterTestClass>(pathToFile);
+    auto result = Serializable::deserialize<ReflectionOuterTestClass, gc>(pathToFile);
     if (std::holds_alternative<Error>(result)) {
         auto err = std::get<Error>(std::move(result));
         err.addEntry();
@@ -795,7 +795,7 @@ TEST_CASE("serialize and deserialize sample player save data") {
         // Deserialize.
         const auto pathToFile = ConfigManager::getCategoryDirectory(ConfigCategory::PROGRESS) / sProfileName;
         std::unordered_map<std::string, std::string> foundCustomAttributes;
-        const auto result = Serializable::deserialize<PlayerSaveData>(pathToFile, foundCustomAttributes);
+        const auto result = Serializable::deserialize<PlayerSaveData, gc>(pathToFile, foundCustomAttributes);
         if (std::holds_alternative<Error>(result)) {
             auto error = std::get<Error>(result);
             error.addEntry();
@@ -849,7 +849,7 @@ TEST_CASE("serialize and deserialize node") {
 
     // Deserialize.
     std::unordered_map<std::string, std::string> deserializeCustomAttributes;
-    const auto result = Serializable::deserialize<Node>(pathToFile, deserializeCustomAttributes);
+    const auto result = Serializable::deserialize<Node, gc>(pathToFile, deserializeCustomAttributes);
     if (std::holds_alternative<Error>(result)) {
         auto err = std::get<Error>(std::move(result));
         err.addEntry();

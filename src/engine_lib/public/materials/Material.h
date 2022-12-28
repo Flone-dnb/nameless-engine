@@ -6,7 +6,6 @@
 // Custom.
 #include "render/pso/PsoManager.h"
 #include "io/Serializable.h"
-#include "misc/GC.hpp"
 
 #include "Material.generated.h"
 
@@ -16,29 +15,10 @@ namespace ne RNAMESPACE() {
     /**
      * Defines visual aspects of a mesh.
      */
-    class RCLASS(Guid("a603fa3a-e9c2-4c38-bb4c-76384ef001f4")) Material : Serializable {
+    class RCLASS(Guid("a603fa3a-e9c2-4c38-bb4c-76384ef001f4")) Material : public Serializable {
     public:
         /** Creates uninitialized material, only used for deserialization. */
         Material() = default;
-
-        /**
-         * Creates a new material with the specified name.
-         *
-         * @remark This constructor should only be used internally (only by this class), use @ref
-         * create instead.
-         *
-         * @param sVertexShaderName Name of the vertex shader that this material is using.
-         * @param sPixelShaderName  Name of the pixel shader that this material is using.
-         * @param bUseTransparency  Whether this material will use transparency or not.
-         * @param pPsoManager       PSO manager that the renderer owns.
-         * @param sMaterialName     Name of this material.
-         */
-        Material(
-            const std::string& sVertexShaderName,
-            const std::string& sPixelShaderName,
-            bool bUseTransparency,
-            PsoManager* pPsoManager,
-            const std::string& sMaterialName = "Material");
 
         Material(const Material&) = delete;
         Material& operator=(const Material&) = delete;
@@ -60,7 +40,7 @@ namespace ne RNAMESPACE() {
          *
          * @return Error if something went wrong, otherwise created material.
          */
-        static std::variant<gc<Material>, Error>
+        static std::variant<std::shared_ptr<Material>, Error>
         create(bool bUseTransparency, const std::string& sMaterialName = "Material");
 
         /**
@@ -75,7 +55,7 @@ namespace ne RNAMESPACE() {
          *
          * @return Error if something went wrong, otherwise created material.
          */
-        static std::variant<gc<Material>, Error> create(
+        static std::variant<std::shared_ptr<Material>, Error> create(
             const std::string& sVertexShaderName,
             const std::string& sPixelShaderName,
             bool bUseTransparency,
@@ -96,9 +76,35 @@ namespace ne RNAMESPACE() {
          */
         std::string getName() const;
 
+        /**
+         * Tells whether this material uses transparency or not.
+         *
+         * @return Whether this material uses transparency or not.
+         */
+        bool isUsingTransparency() const;
+
     private:
         // Mesh node will notify the material when it's spawned/despawned.
         friend class MeshNode;
+
+        /**
+         * Creates a new material with the specified name.
+         *
+         * @remark This constructor should only be used internally (only by this class), use @ref
+         * create instead.
+         *
+         * @param sVertexShaderName Name of the vertex shader that this material is using.
+         * @param sPixelShaderName  Name of the pixel shader that this material is using.
+         * @param bUseTransparency  Whether this material will use transparency or not.
+         * @param pPsoManager       PSO manager that the renderer owns.
+         * @param sMaterialName     Name of this material.
+         */
+        Material(
+            const std::string& sVertexShaderName,
+            const std::string& sPixelShaderName,
+            bool bUseTransparency,
+            PsoManager* pPsoManager,
+            const std::string& sMaterialName = "Material");
 
         /**
          * Called from MeshNode when a mesh node that uses this material is being spawned.

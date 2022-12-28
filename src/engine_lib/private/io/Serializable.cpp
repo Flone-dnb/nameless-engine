@@ -256,7 +256,7 @@ namespace ne {
         std::vector<DeserializedObjectInformation> deserializedObjects;
         for (const auto& sId : ids) {
             std::unordered_map<std::string, std::string> customAttributes;
-            auto result = deserialize<Serializable>(pathToFile, customAttributes, sId);
+            auto result = deserialize<Serializable, gc>(pathToFile, customAttributes, sId);
             if (std::holds_alternative<Error>(result)) {
                 auto err = std::get<Error>(std::move(result));
                 err.addEntry();

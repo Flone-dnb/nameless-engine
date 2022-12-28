@@ -138,17 +138,23 @@ namespace ne {
     std::shared_ptr<Shader> ShaderPack::changeConfiguration(const std::set<ShaderParameter>& configuration) {
         std::scoped_lock guard(mtxShaders);
 
-        if (pPreviouslyRequestedShader != nullptr) {
-            pPreviouslyRequestedShader->get()->releaseShaderDataFromMemoryIfLoaded();
-            pPreviouslyRequestedShader = nullptr;
+        if (pCurrentConfigurationShader != nullptr) {
+            if (this->configuration == configuration) {
+                return *pCurrentConfigurationShader;
+            }
+
+            pCurrentConfigurationShader->get()->releaseShaderDataFromMemoryIfLoaded();
+            pCurrentConfigurationShader = nullptr;
         }
+
+        this->configuration = configuration;
 
         const auto it = shaders.find(configuration);
         if (it == shaders.end()) {
             return nullptr;
         }
 
-        pPreviouslyRequestedShader = &it->second;
+        pCurrentConfigurationShader = &it->second;
         return it->second;
     }
 

@@ -379,8 +379,8 @@ namespace ne {
             }
 
             // Deserialize the original entity.
-            auto result =
-                deserialize<Node>(pathToOriginalFile, getPathDeserializedFromRelativeToRes().value().second);
+            auto result = deserialize<Node, gc>(
+                pathToOriginalFile, getPathDeserializedFromRelativeToRes().value().second);
             if (std::holds_alternative<Error>(result)) {
                 auto error = std::get<Error>(result);
                 error.addEntry();

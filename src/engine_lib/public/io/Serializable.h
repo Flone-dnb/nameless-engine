@@ -268,9 +268,9 @@ namespace ne RNAMESPACE() {
          *
          * @return Error if something went wrong, otherwise a pointer to deserialized object.
          */
-        template <typename T>
+        template <typename T, template <typename> class SmartPointer>
         requires std::derived_from<T, Serializable>
-        static std::variant<gc<T>, Error> deserialize(const std::filesystem::path& pathToFile);
+        static std::variant<SmartPointer<T>, Error> deserialize(const std::filesystem::path& pathToFile);
 
         /**
          * Deserializes an object and all reflected fields (including inherited) from a file.
@@ -283,9 +283,9 @@ namespace ne RNAMESPACE() {
          *
          * @return Error if something went wrong, otherwise a pointer to deserialized object.
          */
-        template <typename T>
+        template <typename T, template <typename> class SmartPointer>
         requires std::derived_from<T, Serializable>
-        static std::variant<gc<T>, Error> deserialize(
+        static std::variant<SmartPointer<T>, Error> deserialize(
             const std::filesystem::path& pathToFile,
             std::unordered_map<std::string, std::string>& customAttributes);
 
@@ -302,9 +302,9 @@ namespace ne RNAMESPACE() {
          *
          * @return Error if something went wrong, otherwise a pointer to deserialized object.
          */
-        template <typename T>
+        template <typename T, template <typename> class SmartPointer>
         requires std::derived_from<T, Serializable>
-        static std::variant<gc<T>, Error> deserialize(
+        static std::variant<SmartPointer<T>, Error> deserialize(
             const std::filesystem::path& pathToFile,
             std::unordered_map<std::string, std::string>& customAttributes,
             const std::string& sEntityId);
@@ -321,9 +321,9 @@ namespace ne RNAMESPACE() {
          *
          * @return Error if something went wrong, otherwise a pointer to deserialized object.
          */
-        template <typename T>
+        template <typename T, template <typename> class SmartPointer>
         requires std::derived_from<T, Serializable>
-        static std::variant<gc<T>, Error>
+        static std::variant<SmartPointer<T>, Error>
         deserialize(const std::filesystem::path& pathToFile, const std::string& sEntityId);
 
         /**
@@ -355,9 +355,9 @@ namespace ne RNAMESPACE() {
          *
          * @return Error if something went wrong, otherwise a pointer to deserialized object.
          */
-        template <typename T>
+        template <typename T, template <typename> class SmartPointer>
         requires std::derived_from<T, Serializable>
-        static std::variant<gc<T>, Error> deserialize(
+        static std::variant<SmartPointer<T>, Error> deserialize(
             const toml::value& tomlData,
             std::unordered_map<std::string, std::string>& customAttributes,
             std::string sEntityId = "");
@@ -507,29 +507,31 @@ namespace ne RNAMESPACE() {
         ne_Serializable_GENERATED
     };
 
-    template <typename T>
-    requires std::derived_from<T, Serializable> std::variant<gc<T>, Error> Serializable::deserialize(
-        const std::filesystem::path& pathToFile) {
+    template <typename T, template <typename> class SmartPointer>
+    requires std::derived_from<T, Serializable> std::variant<SmartPointer<T>, Error>
+    Serializable::deserialize(const std::filesystem::path& pathToFile) {
         std::unordered_map<std::string, std::string> foundCustomAttributes;
-        return deserialize<T>(pathToFile, foundCustomAttributes);
+        return deserialize<T, SmartPointer>(pathToFile, foundCustomAttributes);
     }
 
-    template <typename T>
-    requires std::derived_from<T, Serializable> std::variant<gc<T>, Error> Serializable::deserialize(
+    template <typename T, template <typename> class SmartPointer>
+    requires std::derived_from<T, Serializable> std::variant<SmartPointer<T>, Error>
+    Serializable::deserialize(
         const std::filesystem::path& pathToFile,
         std::unordered_map<std::string, std::string>& customAttributes) {
-        return deserialize<T>(pathToFile, customAttributes, "");
+        return deserialize<T, SmartPointer>(pathToFile, customAttributes, "");
     }
 
-    template <typename T>
-    requires std::derived_from<T, Serializable> std::variant<gc<T>, Error> Serializable::deserialize(
-        const std::filesystem::path& pathToFile, const std::string& sEntityId) {
+    template <typename T, template <typename> class SmartPointer>
+    requires std::derived_from<T, Serializable> std::variant<SmartPointer<T>, Error>
+    Serializable::deserialize(const std::filesystem::path& pathToFile, const std::string& sEntityId) {
         std::unordered_map<std::string, std::string> foundCustomAttributes;
-        return deserialize<T>(pathToFile, foundCustomAttributes, sEntityId);
+        return deserialize<T, SmartPointer>(pathToFile, foundCustomAttributes, sEntityId);
     }
 
-    template <typename T>
-    requires std::derived_from<T, Serializable> std::variant<gc<T>, Error> Serializable::deserialize(
+    template <typename T, template <typename> class SmartPointer>
+    requires std::derived_from<T, Serializable> std::variant<SmartPointer<T>, Error>
+    Serializable::deserialize(
         const toml::value& tomlData,
         std::unordered_map<std::string, std::string>& customAttributes,
         std::string sEntityId) {
@@ -603,7 +605,7 @@ namespace ne RNAMESPACE() {
         // Collect keys.
         const auto& sectionTable = section.as_table();
         std::vector<std::string> vKeys;
-        gc<Serializable> pOriginalEntity = nullptr;
+        SmartPointer<T> pOriginalEntity = nullptr;
         for (const auto& [key, value] : sectionTable) {
             if (key == sNothingToSerializeKey) {
                 continue;
@@ -615,14 +617,14 @@ namespace ne RNAMESPACE() {
                 }
 
                 // Deserialize original entity.
-                const auto deserializeResult = Serializable::deserialize<Serializable>(
+                const auto deserializeResult = Serializable::deserialize<T, SmartPointer>(
                     ProjectPaths::getDirectoryForResources(ResourceDirectory::ROOT) / value.as_string().str);
                 if (std::holds_alternative<Error>(deserializeResult)) {
                     auto err = std::get<Error>(deserializeResult);
                     err.addEntry();
                     return err;
                 }
-                pOriginalEntity = std::get<gc<Serializable>>(deserializeResult);
+                pOriginalEntity = std::get<SmartPointer<T>>(deserializeResult);
             } else if (key.starts_with("..")) {
                 // Custom attribute.
                 if (!value.is_string()) {
@@ -634,50 +636,29 @@ namespace ne RNAMESPACE() {
             }
         }
 
-        // Try to cast to the requested type.
-        if (pOriginalEntity) {
-            if (!gc_dynamic_pointer_cast<T>(pOriginalEntity)) {
-                pOriginalEntity = nullptr;
-                Logger::get().error(
-                    fmt::format(
-                        "failed to cast original object from \"{}\" (ID \"{}\") of type \"{}\" to "
-                        "the requested type, some fields will be not deserialized",
-                        pOriginalEntity->getPathDeserializedFromRelativeToRes().value().first,
-                        pOriginalEntity->getPathDeserializedFromRelativeToRes().value().second,
-                        pOriginalEntity->getArchetype().getName()),
-                    "");
-            }
-        }
-
         // Get archetype for found GUID.
         auto pType = getClassForGuid(sTypeGuid);
         if (!pType) {
             if (pOriginalEntity) {
-                Logger::get().warn(
-                    fmt::format(
-                        "GUID \"{}\" was not found in the database, but "
-                        "the original object at \"{}\" (ID \"{}\") was deserialized and used instead",
-                        sTypeGuid,
-                        pOriginalEntity->getPathDeserializedFromRelativeToRes().value().first,
-                        pOriginalEntity->getPathDeserializedFromRelativeToRes().value().second),
-                    "");
-                return gc_dynamic_pointer_cast<T>(pOriginalEntity);
+                return Error(fmt::format(
+                    "GUID \"{}\" was not found in the database, but "
+                    "the original object at \"{}\" (ID \"{}\") was deserialized",
+                    sTypeGuid,
+                    pOriginalEntity->getPathDeserializedFromRelativeToRes().value().first,
+                    pOriginalEntity->getPathDeserializedFromRelativeToRes().value().second));
             } else {
                 return Error(fmt::format("no type found for GUID \"{}\"", sTypeGuid));
             }
         }
         if (!isDerivedFromSerializable(pType)) {
             if (pOriginalEntity) {
-                Logger::get().warn(
-                    fmt::format(
-                        "deserialized type for \"{}\" does not derive from {}, but "
-                        "the original object at \"{}\" (ID \"{}\") was deserialized and used instead",
-                        sTypeGuid,
-                        staticGetArchetype().getName(),
-                        pOriginalEntity->getPathDeserializedFromRelativeToRes().value().first,
-                        pOriginalEntity->getPathDeserializedFromRelativeToRes().value().second),
-                    "");
-                return gc_dynamic_pointer_cast<T>(pOriginalEntity);
+                return Error(fmt::format(
+                    "deserialized type for \"{}\" does not derive from {}, but "
+                    "the original object at \"{}\" (ID \"{}\") was deserialized",
+                    sTypeGuid,
+                    staticGetArchetype().getName(),
+                    pOriginalEntity->getPathDeserializedFromRelativeToRes().value().first,
+                    pOriginalEntity->getPathDeserializedFromRelativeToRes().value().second));
             } else {
                 return Error(fmt::format(
                     "deserialized type with GUID \"{}\" does not derive from {}",
@@ -687,29 +668,42 @@ namespace ne RNAMESPACE() {
         }
 
         // Create instance.
-        gc<T> pGcInstance = nullptr;
-        if (pOriginalEntity) {
+        SmartPointer<T> pSmartPointerInstance = nullptr;
+        if (pOriginalEntity != nullptr) {
             // Use the original entity instead of creating a new one.
-            pGcInstance = gc_dynamic_pointer_cast<T>(pOriginalEntity);
+            pSmartPointerInstance = std::move(pOriginalEntity);
         }
-        if (!pGcInstance) {
-            // this section is a temporary solution until we will add a `gc_new` method
-            // to `rfk::Struct`
-            std::unique_ptr<T> pInstance = pType->makeUniqueInstance<T>();
-            if (!pInstance) {
-                return Error(fmt::format(
-                    "unable to make an object of type \"{}\" using type's default constructor "
-                    "(does type \"{}\" has a default constructor?)",
-                    pType->getName(),
-                    pType->getName()));
-            }
-            gc<rfk::Object> pParentGcInstance = pInstance->gc_new();
-            pGcInstance = gc_dynamic_pointer_cast<T>(pParentGcInstance);
-            if (!pGcInstance) {
-                return Error(fmt::format(
-                    "dynamic cast failed to cast the type \"{}\" to the specified template argument "
-                    "(are you trying to deserialize into a wrong type?)",
-                    pParentGcInstance->getArchetype().getName()));
+        if (pSmartPointerInstance == nullptr) {
+            if constexpr (std::is_same_v<SmartPointer<T>, std::shared_ptr<T>>) {
+                pSmartPointerInstance = pType->makeSharedInstance<T>();
+                if (pSmartPointerInstance == nullptr) {
+                    return Error(fmt::format(
+                        "unable to make an object of type \"{}\" using type's default constructor "
+                        "(does type \"{}\" has a default constructor?)",
+                        pType->getName(),
+                        pType->getName()));
+                }
+            } else if (std::is_same_v<SmartPointer<T>, gc<T>>) {
+                // this section is a temporary solution until we will add a `gc_new` method
+                // to `rfk::Struct`
+                std::unique_ptr<T> pInstance = pType->makeUniqueInstance<T>();
+                if (!pInstance) {
+                    return Error(fmt::format(
+                        "unable to make an object of type \"{}\" using type's default constructor "
+                        "(does type \"{}\" has a default constructor?)",
+                        pType->getName(),
+                        pType->getName()));
+                }
+                gc<rfk::Object> pParentGcInstance = pInstance->gc_new();
+                pSmartPointerInstance = gc_dynamic_pointer_cast<T>(pParentGcInstance);
+                if (!pSmartPointerInstance) {
+                    return Error(fmt::format(
+                        "dynamic cast failed to cast the type \"{}\" to the specified template argument "
+                        "(are you trying to deserialize into a wrong type?)",
+                        pParentGcInstance->getArchetype().getName()));
+                }
+            } else {
+                return Error("unexpected smart pointer type received");
             }
         }
 
@@ -760,7 +754,7 @@ namespace ne RNAMESPACE() {
                     auto optionalError = pSerializer->deserializeField(
                         &tomlData,
                         &value,
-                        &*pGcInstance,
+                        &*pSmartPointerInstance,
                         pField,
                         sTargetSection,
                         sEntityId,
@@ -789,14 +783,15 @@ namespace ne RNAMESPACE() {
         }
 
         // Notify.
-        Serializable* pTarget = dynamic_cast<Serializable*>(&*pGcInstance);
+        Serializable* pTarget = dynamic_cast<Serializable*>(&*pSmartPointerInstance);
         pTarget->onAfterDeserialized();
 
-        return pGcInstance;
+        return pSmartPointerInstance;
     }
 
-    template <typename T>
-    requires std::derived_from<T, Serializable> std::variant<gc<T>, Error> Serializable::deserialize(
+    template <typename T, template <typename> class SmartPointer>
+    requires std::derived_from<T, Serializable> std::variant<SmartPointer<T>, Error>
+    Serializable::deserialize(
         const std::filesystem::path& pathToFile,
         std::unordered_map<std::string, std::string>& customAttributes,
         const std::string& sEntityId) {
@@ -828,7 +823,7 @@ namespace ne RNAMESPACE() {
         }
 
         // Deserialize.
-        auto result = deserialize<T>(tomlData, customAttributes, sEntityId);
+        auto result = deserialize<T, SmartPointer>(tomlData, customAttributes, sEntityId);
         if (std::holds_alternative<Error>(result)) {
             auto err = std::get<Error>(std::move(result));
             err.addEntry();
@@ -860,7 +855,7 @@ namespace ne RNAMESPACE() {
                     pathToOriginalFile.string()));
             }
 
-            gc<Serializable> pDeserialized = std::get<gc<T>>(result);
+            SmartPointer<Serializable> pDeserialized = std::get<SmartPointer<T>>(result);
             pDeserialized->pathDeserializedFromRelativeToRes = {sRelativePath, sEntityId};
         }
 

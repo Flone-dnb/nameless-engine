@@ -143,6 +143,8 @@ set(ENGINE_LIB_SOURCES
     public/io/serializers/SerializableObjectFieldSerializer.h
     private/io/serializers/GlmVecFieldSerializer.cpp
     public/io/serializers/GlmVecFieldSerializer.h
+    private/io/serializers/MaterialFieldSerializer.cpp
+    public/io/serializers/MaterialFieldSerializer.h
     public/math/MathHelpers.hpp
     public/math/GLMath.hpp
     # add general (cross-platform) sources here...
@@ -477,6 +479,7 @@ set(ENGINE_TEST_SOURCES
     ${TESTS_RELATIVE_PATH}/engine_lib/io/Serializable.cpp
     ${TESTS_RELATIVE_PATH}/engine_lib/game/nodes/Node.cpp
     ${TESTS_RELATIVE_PATH}/engine_lib/game/nodes/SpatialNode.cpp
+    ${TESTS_RELATIVE_PATH}/engine_lib/game/nodes/MeshNode.cpp
     ${TESTS_RELATIVE_PATH}/engine_lib/game/World.cpp
     ${TESTS_RELATIVE_PATH}/engine_lib/game/GameInstance.cpp
     # add engine test .cpp files here

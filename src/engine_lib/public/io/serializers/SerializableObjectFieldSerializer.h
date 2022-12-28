@@ -1,7 +1,11 @@
 #pragma once
 
+// Standard.
+#include <variant>
+
 // Custom.
 #include "io/serializers/IFieldSerializer.hpp"
+#include "misc/GC.hpp"
 
 namespace ne {
     /**
@@ -11,6 +15,93 @@ namespace ne {
     public:
         SerializableObjectFieldSerializer() = default;
         virtual ~SerializableObjectFieldSerializer() override = default;
+
+        /**
+         * Serializes field's object (serializable object wrapped into a container, such as `gc`)
+         * into a TOML value.
+         *
+         * @remark This function can be used by other serializers.
+         *
+         * @param pObject          Object to serialize.
+         * @param pTomlData        TOML value to serialize the field to.
+         * @param sFieldName       Name of the field to serialize.
+         * @param sSectionName     Name of the section (for TOML value) to use for this field.
+         * @param sEntityId        Current ID string of the entity (field owner) that we are serializing.
+         * Only used when serializing a field of type that derives from Serializable.
+         * @param iSubEntityId     Current ID of the sub entity (sub entity of the field owner).
+         * Only used when serializing a field of type that derives from Serializable.
+         * @param pOriginalObject  Optional. Original object of the same type as the object being
+         * serialized, this object is a deserialized version of the object being serialized,
+         * used to compare serializable fields' values and only serialize changed values.
+         * Only used when serializing a field of type that derives from Serializable.
+         *
+         * @return Error if something went wrong, empty otherwise.
+         */
+        static std::optional<Error> serializeFieldObject(
+            Serializable* pObject,
+            toml::value* pTomlData,
+            const std::string& sFieldName,
+            const std::string& sSectionName,
+            const std::string& sEntityId,
+            size_t& iSubEntityId,
+            Serializable* pOriginalObject = nullptr);
+
+        /**
+         * Clones reflected serializable fields of one object to another.
+         *
+         * @remark This function can be used by other serializers.
+         *
+         * @param pFrom                    Object to clone fields from.
+         * @param pTo                      Object to clone fields to.
+         * @param bNotifyAboutDeserialized Whether to notify the object we cloned fields to about
+         * it being finally deserialized or not. This should be `true` if use are calling this function
+         * as the last step of your `deserialize` function, otherwise `false`.
+         *
+         * @return Error if something went wrong.
+         */
+        static std::optional<Error>
+        cloneSerializableObject(Serializable* pFrom, Serializable* pTo, bool bNotifyAboutDeserialized);
+
+        /**
+         * Deserializes field's object from a TOML value.
+         *
+         * @remark This function can be used by other serializers.
+         *
+         * @param pTomlDocument     TOML document that contains a value to deserialize.
+         * @param pTomlValue        TOML value to deserialize the field from.
+         * @param sFieldName        Name of the field to deserialize to.
+         * @param pTarget           Field's object to deserialize the value to.
+         * @param sOwnerSectionName Name of the TOML section where is field was found.
+         * @param sEntityId         Current ID string of the entity (field owner) that we
+         * are deserializing.
+         * @param customAttributes  Pairs of values that were found with this object in TOML data.
+         * Only found when deserializing a field of type that derives from Serializable.
+         *
+         * @return Error if something went wrong, otherwise deserialized object.
+         */
+        static std::variant<std::shared_ptr<Serializable>, Error> deserializeSerializableObject(
+            const toml::value* pTomlDocument,
+            const toml::value* pTomlValue,
+            const std::string& sFieldName,
+            Serializable* pTarget,
+            const std::string& sOwnerSectionName,
+            const std::string& sEntityId,
+            std::unordered_map<std::string, std::string>& customAttributes);
+
+        /**
+         * Checks if the specified fields' values are equal or not.
+         *
+         * @remark Uses all registered field serializers to compare each field.
+         *
+         * @remark This function can be used by other serializers.
+         *
+         * @param pObjectA Object to compare with B.
+         * @param pObjectB Object to compare with A.
+         *
+         * @return `false` if some field is unsupported by this serializer or if fields' values
+         * are not equal, `true` otherwise.
+         */
+        static bool isSerializableObjectValueEqual(Serializable* pObjectA, Serializable* pObjectB);
 
         /**
          * Tests if this serializer supports serialization/deserialization of this field.
@@ -106,16 +197,6 @@ namespace ne {
             const rfk::Field* pFieldB) override;
 
     private:
-        /**
-         * Clones reflected serializable fields of one object to another.
-         *
-         * @param pFrom Object to clone fields from.
-         * @param pTo   Object to clone fields to.
-         *
-         * @return Error if something went wrong.
-         */
-        static std::optional<Error> cloneSerializableObject(Serializable* pFrom, Serializable* pTo);
-
         /** Name of the key in which to store name of the field a section represents. */
         static inline const auto sSubEntityFieldNameKey = ".field_name";
     };

@@ -179,6 +179,10 @@ namespace ne {
 
         iMsaaSampleCount = settings.iSampleCount;
 
+        // TODO: log what setting was changed, also log from/to setting values
+
+        // TODO: change vertex/pixel shader configuration
+
         // Recreate depth/stencil buffer with(out) multisampling.
         auto optionalError = createDepthStencilBuffer();
         if (optionalError.has_value()) {
@@ -186,14 +190,9 @@ namespace ne {
             return optionalError.value();
         }
 
-        // TODO: recreate all other depth/stencil buffers and PSOs
+        // TODO: recreate all other depth/stencil buffers
 
-        // Recreate PSO with(out) multisampling.
-        optionalError = createPipelineStateObjects();
-        if (optionalError.has_value()) {
-            optionalError->addEntry();
-            return optionalError.value();
-        }
+        // TODO: recreate all PSOs
 
         // Write new configuration to disk.
         writeConfigurationToConfigFile();

@@ -29,7 +29,7 @@ namespace ne RNAMESPACE() {
          *
          * @param pMaterial Material to use.
          */
-        void setMaterial(gc<Material> pMaterial);
+        void setMaterial(std::shared_ptr<Material> pMaterial);
 
     protected:
         /**
@@ -58,7 +58,8 @@ namespace ne RNAMESPACE() {
 
     private:
         /** Used material. Always contains a valid pointer. */
-        gc<Material> pMaterial;
+        RPROPERTY(Serialize)
+        std::shared_ptr<Material> pMaterial;
 
         ne_MeshNode_GENERATED
     };

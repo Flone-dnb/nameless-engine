@@ -37,39 +37,21 @@ namespace ne {
                 sFieldName));
         }
 
-        const auto& fieldType = pField->getType();
-
-        // Check that this type has GUID.
-        if (!fieldType.getArchetype()->getProperty<Guid>(false)) {
-            return Error(fmt::format(
-                "The type \"{}\" is serializable but it does not have a GUID assigned to it.",
-                fieldType.getArchetype()->getName()));
-        }
-
-        // Add a key to specify that this value has a reflected type.
-        pTomlData->operator[](sSectionName).operator[](sFieldName) = "reflected type, see other sub-section";
-
-        // Serialize this field "under our ID".
-        const std::string sSubEntityIdSectionName = fmt::format("{}.{}", sEntityId, iSubEntityId);
         const auto pSubEntity = static_cast<Serializable*>(pField->getPtrUnsafe(pFieldOwner));
-        auto result = pSubEntity->serialize(*pTomlData, pOriginalObject, sSubEntityIdSectionName);
-        if (std::holds_alternative<Error>(result)) {
-            auto error = std::get<Error>(std::move(result));
+
+        const auto optionalError = serializeFieldObject(
+            pSubEntity, pTomlData, sFieldName, sSectionName, sEntityId, iSubEntityId, pOriginalObject);
+        if (optionalError.has_value()) {
+            Error error = optionalError.value();
             error.addEntry();
             return error;
         }
-        const auto sSubEntityFinalSectionName = std::get<std::string>(result);
-        iSubEntityId += 1;
-
-        // Add a new key ".field_name" to this sub entity so that we will know to which
-        // field this entity should be assigned.
-        pTomlData->operator[](sSubEntityFinalSectionName).operator[](sSubEntityFieldNameKey) = sFieldName;
 
         return {};
     }
 
-    std::optional<Error>
-    SerializableObjectFieldSerializer::cloneSerializableObject(Serializable* pFrom, Serializable* pTo) {
+    std::optional<Error> SerializableObjectFieldSerializer::cloneSerializableObject(
+        Serializable* pFrom, Serializable* pTo, bool bNotifyAboutDeserialized) {
         rfk::Class const& fromArchetype = pFrom->getArchetype();
         rfk::Class const& toArchetype = pTo->getArchetype();
 
@@ -147,32 +129,26 @@ namespace ne {
             return err;
         }
 
+        if (bNotifyAboutDeserialized) {
+            pTo->onAfterDeserialized();
+        }
+
         return {};
     }
 
-    std::optional<Error> SerializableObjectFieldSerializer::deserializeField(
+    std::variant<std::shared_ptr<Serializable>, Error>
+    SerializableObjectFieldSerializer::deserializeSerializableObject(
         const toml::value* pTomlDocument,
         const toml::value* pTomlValue,
-        Serializable* pFieldOwner,
-        const rfk::Field* pField,
+        const std::string& sFieldName,
+        Serializable* pTarget,
         const std::string& sOwnerSectionName,
         const std::string& sEntityId,
         std::unordered_map<std::string, std::string>& customAttributes) {
-        const auto sFieldCanonicalTypeName = std::string(pField->getCanonicalTypeName());
-        const auto sFieldName = pField->getName();
-
-        if (!isFieldTypeSupported(pField)) {
-            return Error(fmt::format(
-                "The type \"{}\" of the specified field \"{}\" is not supported by this serializer.",
-                sFieldCanonicalTypeName,
-                sFieldName));
-        }
-
         if (!pTomlDocument->is_table()) {
             return Error(fmt::format(
-                "The type \"{}\" of the specified field \"{}\" is supported by this serializer, "
+                "The type of the specified field \"{}\" is supported by this serializer, "
                 "but the TOML document is not a table.",
-                sFieldCanonicalTypeName,
                 sFieldName));
         }
 
@@ -282,72 +258,20 @@ namespace ne {
 
         // Deserialize section into an object.
         std::unordered_map<std::string, std::string> subAttributes;
-        auto result = Serializable::deserialize<Serializable>(*pTomlDocument, subAttributes, sSubEntityId);
+        auto result = Serializable::deserialize<Serializable, std::shared_ptr>(
+            *pTomlDocument, subAttributes, sSubEntityId);
         if (std::holds_alternative<Error>(result)) {
             auto err = std::get<Error>(std::move(result));
             err.addEntry();
             return err;
         }
-        auto pSubEntity = std::get<gc<Serializable>>(std::move(result));
 
-        // Move object to field.
-        Serializable* pTarget = static_cast<Serializable*>(pField->getPtrUnsafe(pFieldOwner));
-        cloneSerializableObject(&*pSubEntity, pTarget);
-
-        // Notify.
-        pTarget->onAfterDeserialized();
-
-        return {};
+        return std::get<std::shared_ptr<Serializable>>(std::move(result));
     }
 
-    std::optional<Error> SerializableObjectFieldSerializer::cloneField(
-        Serializable* pFromInstance,
-        const rfk::Field* pFromField,
-        Serializable* pToInstance,
-        const rfk::Field* pToField) {
-        const auto sFieldCanonicalTypeName = std::string(pFromField->getCanonicalTypeName());
-        const auto sFieldName = pFromField->getName();
-
-        if (!isFieldTypeSupported(pFromField)) {
-            return Error(fmt::format(
-                "The type \"{}\" of the specified field \"{}\" is not supported by this serializer.",
-                sFieldCanonicalTypeName,
-                sFieldName));
-        }
-
-        auto optionalError = cloneSerializableObject(
-            static_cast<Serializable*>(pFromField->getPtrUnsafe(pFromInstance)),
-            static_cast<Serializable*>(pToField->getPtrUnsafe(pToInstance)));
-        if (optionalError.has_value()) {
-            auto error = std::move(optionalError.value());
-            error.addEntry();
-            return error;
-        }
-
-        return {};
-    }
-
-    bool SerializableObjectFieldSerializer::isFieldValueEqual(
-        Serializable* pFieldAOwner,
-        const rfk::Field* pFieldA,
-        Serializable* pFieldBOwner,
-        const rfk::Field* pFieldB) {
-        if (!isFieldTypeSupported(pFieldA))
-            return false;
-        if (!isFieldTypeSupported(pFieldB))
-            return false;
-
-        // Check that types are equal.
-        const std::string sFieldACanonicalTypeName = pFieldA->getCanonicalTypeName();
-        const std::string sFieldBCanonicalTypeName = pFieldB->getCanonicalTypeName();
-        if (sFieldACanonicalTypeName != sFieldBCanonicalTypeName) {
-            return false;
-        }
-
-        const auto pEntityA = static_cast<Serializable*>(pFieldA->getPtrUnsafe(pFieldAOwner));
-        const auto pEntityB = static_cast<Serializable*>(pFieldB->getPtrUnsafe(pFieldBOwner));
-
-        rfk::Class const& entityAArchetype = pEntityA->getArchetype();
+    bool SerializableObjectFieldSerializer::isSerializableObjectValueEqual(
+        Serializable* pObjectA, Serializable* pObjectB) {
+        rfk::Class const& entityAArchetype = pObjectA->getArchetype();
 
         // Prepare data.
         struct Data {
@@ -358,7 +282,7 @@ namespace ne {
             std::optional<Error> error = {};
         };
 
-        Data loopData{pEntityA, pEntityB, Serializable::getFieldSerializers()};
+        Data loopData{pObjectA, pObjectB, Serializable::getFieldSerializers()};
 
         entityAArchetype.foreachField(
             [](rfk::Field const& field, void* userData) -> bool {
@@ -419,5 +343,122 @@ namespace ne {
             true);
 
         return loopData.bIsEqual;
+    }
+
+    std::optional<Error> SerializableObjectFieldSerializer::deserializeField(
+        const toml::value* pTomlDocument,
+        const toml::value* pTomlValue,
+        Serializable* pFieldOwner,
+        const rfk::Field* pField,
+        const std::string& sOwnerSectionName,
+        const std::string& sEntityId,
+        std::unordered_map<std::string, std::string>& customAttributes) {
+        const auto sFieldCanonicalTypeName = std::string(pField->getCanonicalTypeName());
+        const auto sFieldName = pField->getName();
+
+        if (!isFieldTypeSupported(pField)) {
+            return Error(fmt::format(
+                "The type \"{}\" of the specified field \"{}\" is not supported by this serializer.",
+                sFieldCanonicalTypeName,
+                sFieldName));
+        }
+
+        Serializable* pTarget = static_cast<Serializable*>(pField->getPtrUnsafe(pFieldOwner));
+
+        // Deserialize object.
+        auto result = deserializeSerializableObject(
+            pTomlDocument, pTomlValue, sFieldName, pTarget, sOwnerSectionName, sEntityId, customAttributes);
+        if (std::holds_alternative<Error>(result)) {
+            auto error = std::get<Error>(std::move(result));
+            error.addEntry();
+            return error;
+        }
+        auto pDeserializedObject = std::get<std::shared_ptr<Serializable>>(std::move(result));
+
+        // Safely clone to target.
+        cloneSerializableObject(&*pDeserializedObject, pTarget, true);
+
+        return {};
+    }
+
+    std::optional<Error> SerializableObjectFieldSerializer::cloneField(
+        Serializable* pFromInstance,
+        const rfk::Field* pFromField,
+        Serializable* pToInstance,
+        const rfk::Field* pToField) {
+        const auto sFieldCanonicalTypeName = std::string(pFromField->getCanonicalTypeName());
+        const auto sFieldName = pFromField->getName();
+
+        if (!isFieldTypeSupported(pFromField)) {
+            return Error(fmt::format(
+                "The type \"{}\" of the specified field \"{}\" is not supported by this serializer.",
+                sFieldCanonicalTypeName,
+                sFieldName));
+        }
+
+        auto optionalError = cloneSerializableObject(
+            static_cast<Serializable*>(pFromField->getPtrUnsafe(pFromInstance)),
+            static_cast<Serializable*>(pToField->getPtrUnsafe(pToInstance)),
+            false);
+        if (optionalError.has_value()) {
+            auto error = std::move(optionalError.value());
+            error.addEntry();
+            return error;
+        }
+
+        return {};
+    }
+
+    bool SerializableObjectFieldSerializer::isFieldValueEqual(
+        Serializable* pFieldAOwner,
+        const rfk::Field* pFieldA,
+        Serializable* pFieldBOwner,
+        const rfk::Field* pFieldB) {
+        if (!isFieldTypeSupported(pFieldA))
+            return false;
+        if (!isFieldTypeSupported(pFieldB))
+            return false;
+
+        // Check that types are equal.
+        const std::string sFieldACanonicalTypeName = pFieldA->getCanonicalTypeName();
+        const std::string sFieldBCanonicalTypeName = pFieldB->getCanonicalTypeName();
+        if (sFieldACanonicalTypeName != sFieldBCanonicalTypeName) {
+            return false;
+        }
+
+        const auto pEntityA = static_cast<Serializable*>(pFieldA->getPtrUnsafe(pFieldAOwner));
+        const auto pEntityB = static_cast<Serializable*>(pFieldB->getPtrUnsafe(pFieldBOwner));
+
+        return isSerializableObjectValueEqual(pEntityA, pEntityB);
+    }
+
+    std::optional<Error> SerializableObjectFieldSerializer::serializeFieldObject(
+        Serializable* pObject,
+        toml::value* pTomlData,
+        const std::string& sFieldName,
+        const std::string& sSectionName,
+        const std::string& sEntityId,
+        size_t& iSubEntityId,
+        Serializable* pOriginalObject) {
+        // Add a key to specify that this value has a reflected type.
+        pTomlData->operator[](sSectionName).operator[](sFieldName) = "reflected type, see other sub-section";
+
+        // Serialize this field "under our ID".
+        const std::string sSubEntityIdSectionName = fmt::format("{}.{}", sEntityId, iSubEntityId);
+
+        auto result = pObject->serialize(*pTomlData, pOriginalObject, sSubEntityIdSectionName);
+        if (std::holds_alternative<Error>(result)) {
+            auto error = std::get<Error>(std::move(result));
+            error.addEntry();
+            return error;
+        }
+        const auto sSubEntityFinalSectionName = std::get<std::string>(result);
+        iSubEntityId += 1;
+
+        // Add a new key ".field_name" to this sub entity so that we will know to which
+        // field this entity should be assigned.
+        pTomlData->operator[](sSubEntityFinalSectionName).operator[](sSubEntityFieldNameKey) = sFieldName;
+
+        return {};
     }
 } // namespace ne

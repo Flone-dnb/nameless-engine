@@ -463,7 +463,7 @@ TEST_CASE("serialize and deserialize SpatialNode") {
 
             {
                 // Deserialize.
-                auto result = Serializable::deserialize<SpatialNode>(pathToFileInTemp);
+                auto result = Serializable::deserialize<SpatialNode, gc>(pathToFileInTemp);
                 if (std::holds_alternative<Error>(result)) {
                     Error error = std::get<Error>(std::move(result));
                     error.addEntry();

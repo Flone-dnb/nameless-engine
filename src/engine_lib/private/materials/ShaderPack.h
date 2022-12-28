@@ -64,8 +64,11 @@ namespace ne {
         /**
          * Looks for a shader that matches the specified configuration and returns it.
          *
-         * @warning If you are calling this function not the first time,
-         * make sure you are not holding any references to the old shader
+         * This is a getter-like function that will just return shader if the specified
+         * configuration is the same as previously specified.
+         *
+         * @warning If the configuration is changed and you are calling this function not the first
+         * time, make sure you are not holding any references to the old shader
          * as we will try to release old shader's resources from memory.
          *
          * @param configuration New configuration.
@@ -111,14 +114,17 @@ namespace ne {
          */
         ShaderPack(const std::string& sShaderName);
 
+        /** Last configuration that was set in @ref changeConfiguration. */
+        std::set<ShaderParameter> configuration;
+
         /** Initial shader name (without configuration text). */
         std::string sShaderName;
 
         /** Mutex for working with shaders. */
         std::mutex mtxShaders;
 
-        /** A shader that was requested in the last call to @ref changeConfiguration. */
-        std::shared_ptr<Shader>* pPreviouslyRequestedShader = nullptr;
+        /** A shader that matched a requested configuration in the last call to @ref changeConfiguration. */
+        std::shared_ptr<Shader>* pCurrentConfigurationShader = nullptr;
 
         /** Map of shaders in this pack. */
         std::unordered_map<std::set<ShaderParameter>, std::shared_ptr<Shader>, ShaderParameterSetHash>

@@ -162,7 +162,7 @@ namespace ne {
         }
     }
 
-    std::variant<gc<Material>, Error>
+    std::variant<std::shared_ptr<Material>, Error>
     Material::create(bool bUseTransparency, const std::string& sMaterialName) {
         const auto pGame = Game::get();
         if (pGame == nullptr) {
@@ -174,15 +174,15 @@ namespace ne {
             return Error("Unable to create material when renderer is not created.");
         }
 
-        return tgc2::gc_new<Material>(
+        return std::shared_ptr<Material>(new Material(
             EngineShaderNames::sVertexShaderName,
             EngineShaderNames::sPixelShaderName,
             bUseTransparency,
             pRenderer->getPsoManager(),
-            sMaterialName);
+            sMaterialName));
     }
 
-    std::variant<gc<Material>, Error> Material::create(
+    std::variant<std::shared_ptr<Material>, Error> Material::create(
         const std::string& sCustomVertexShaderName,
         const std::string& sCustomPixelShaderName,
         bool bUseTransparency,
@@ -213,12 +213,12 @@ namespace ne {
         }
 
         // Create material.
-        return tgc2::gc_new<Material>(
+        return std::shared_ptr<Material>(new Material(
             sCustomVertexShaderName,
             sCustomPixelShaderName,
             bUseTransparency,
             pRenderer->getPsoManager(),
-            sMaterialName);
+            sMaterialName));
     }
 
     std::pair<std::mutex, std::set<MeshNode*>>* Material::getSpawnedMeshNodesThatUseThisMaterial() {
@@ -226,5 +226,7 @@ namespace ne {
     }
 
     std::string Material::getName() const { return sName; }
+
+    bool Material::isUsingTransparency() const { return bUseTransparency; }
 
 } // namespace ne

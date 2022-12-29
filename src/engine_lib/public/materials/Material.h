@@ -18,7 +18,7 @@ namespace ne RNAMESPACE() {
     class RCLASS(Guid("a603fa3a-e9c2-4c38-bb4c-76384ef001f4")) Material : public Serializable {
     public:
         /** Creates uninitialized material, only used for deserialization. */
-        Material() = default;
+        Material();
 
         Material(const Material&) = delete;
         Material& operator=(const Material&) = delete;

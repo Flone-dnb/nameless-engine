@@ -12,19 +12,20 @@ static std::atomic<size_t> iTotalMaterialCount{0};
 
 namespace ne {
 
+    Material::Material() { iTotalMaterialCount.fetch_add(1); }
+
     Material::Material(
         const std::string& sVertexShaderName,
         const std::string& sPixelShaderName,
         bool bUseTransparency,
         PsoManager* pPsoManager,
-        const std::string& sMaterialName) {
+        const std::string& sMaterialName)
+        : Material() {
         this->sVertexShaderName = sVertexShaderName;
         this->sPixelShaderName = sPixelShaderName;
         this->bUseTransparency = bUseTransparency;
         this->pPsoManager = pPsoManager;
         this->sName = sMaterialName;
-
-        iTotalMaterialCount.fetch_add(1);
     }
 
     Material::~Material() {

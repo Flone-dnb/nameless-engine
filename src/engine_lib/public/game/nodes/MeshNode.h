@@ -31,6 +31,13 @@ namespace ne RNAMESPACE() {
          */
         void setMaterial(std::shared_ptr<Material> pMaterial);
 
+        /**
+         * Returns material used by this name.
+         *
+         * @return Material.
+         */
+        std::shared_ptr<Material> getMaterial() const;
+
     protected:
         /**
          * Called when this node was not spawned previously and it was either attached to a parent node

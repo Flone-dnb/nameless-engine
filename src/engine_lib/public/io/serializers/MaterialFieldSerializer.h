@@ -5,7 +5,7 @@
 
 namespace ne {
     /**
-     * Serializer for `gc<Material>` type.
+     * Serializer for `std::shared_ptr<Material>` type.
      */
     class MaterialFieldSerializer : public IFieldSerializer {
     public:
@@ -106,7 +106,7 @@ namespace ne {
             const rfk::Field* pFieldB) override;
 
     private:
-        /** Canonical type name for `gc<Material>` fields. */
-        static inline const std::string sGcMaterialCanonicalTypeName = "tgc2::details::gc<ne::Material>";
+        /** Canonical type name for `std::shared_ptr<Material>` fields. */
+        static inline const std::string sSharedPtrMaterialCanonicalTypeName = "std::shared_ptr<ne::Material>";
     };
 } // namespace ne

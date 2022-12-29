@@ -32,7 +32,7 @@ namespace ne {
             pMaterial->onSpawnedMeshNodeStartedUsingMaterial(this);
         }
 
-        this->pMaterial = pMaterial;
+        this->pMaterial = std::move(pMaterial);
     }
 
     void MeshNode::onSpawn() {
@@ -44,5 +44,7 @@ namespace ne {
         SpatialNode::onDespawn();
         pMaterial->onMeshNodeDespawned(this);
     }
+
+    std::shared_ptr<Material> MeshNode::getMaterial() const { return pMaterial; }
 
 } // namespace ne

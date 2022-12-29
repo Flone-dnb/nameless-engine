@@ -12,7 +12,7 @@ namespace ne {
     bool MaterialFieldSerializer::isFieldTypeSupported(const rfk::Field* pField) {
         const auto sFieldCanonicalTypeName = std::string(pField->getCanonicalTypeName());
 
-        if (sFieldCanonicalTypeName == sGcMaterialCanonicalTypeName) {
+        if (sFieldCanonicalTypeName == sSharedPtrMaterialCanonicalTypeName) {
             return true;
         }
 
@@ -37,11 +37,11 @@ namespace ne {
                 sFieldName));
         }
 
-        const auto pSubEntity = static_cast<gc<Material>*>(pField->getPtrUnsafe(pFieldOwner));
-        if ((*pSubEntity) == nullptr)
+        const auto pSubEntity = static_cast<std::shared_ptr<Material>*>(pField->getPtrUnsafe(pFieldOwner));
+        if (*pSubEntity == nullptr)
             return {};
 
-        Material* pRawMaterial = &*pSubEntity->operator->();
+        Material* pRawMaterial = (*pSubEntity).get();
 
         const auto optionalError = SerializableObjectFieldSerializer::serializeFieldObject(
             pRawMaterial, pTomlData, sFieldName, sSectionName, sEntityId, iSubEntityId, pOriginalObject);
@@ -72,8 +72,8 @@ namespace ne {
                 sFieldName));
         }
 
-        const auto pSubEntity = static_cast<gc<Material>*>(pField->getPtrUnsafe(pFieldOwner));
-        Serializable* pTarget = &*pSubEntity->operator->();
+        const auto pSubEntity = static_cast<std::shared_ptr<Material>*>(pField->getPtrUnsafe(pFieldOwner));
+        Serializable* pTarget = (*pSubEntity).get();
 
         // Deserialize object.
         auto result = SerializableObjectFieldSerializer::deserializeSerializableObject(
@@ -86,7 +86,7 @@ namespace ne {
         auto pDeserializedObject = std::get<std::shared_ptr<Serializable>>(std::move(result));
 
         // Safely clone to target.
-        SerializableObjectFieldSerializer::cloneSerializableObject(&*pDeserializedObject, pTarget, true);
+        SerializableObjectFieldSerializer::cloneSerializableObject(pDeserializedObject.get(), pTarget, true);
 
         return {};
     }
@@ -106,14 +106,14 @@ namespace ne {
                 sFieldName));
         }
 
-        const auto pFrom = static_cast<gc<Material>*>(pFromField->getPtrUnsafe(pFromInstance));
-        const auto pTo = static_cast<gc<Material>*>(pToField->getPtrUnsafe(pToInstance));
+        const auto pFrom = static_cast<std::shared_ptr<Material>*>(pFromField->getPtrUnsafe(pFromInstance));
+        const auto pTo = static_cast<std::shared_ptr<Material>*>(pToField->getPtrUnsafe(pToInstance));
 
         if ((*pFrom) == nullptr || (*pTo) == nullptr)
             return Error("One of the fields is `nullptr`.");
 
-        auto optionalError = SerializableObjectFieldSerializer::cloneSerializableObject(
-            &*pFrom->operator->(), &*pTo->operator->(), false);
+        auto optionalError =
+            SerializableObjectFieldSerializer::cloneSerializableObject((*pFrom).get(), (*pTo).get(), false);
         if (optionalError.has_value()) {
             auto error = std::move(optionalError.value());
             error.addEntry();
@@ -140,8 +140,8 @@ namespace ne {
             return false;
         }
 
-        const auto pEntityA = static_cast<gc<Material>*>(pFieldA->getPtrUnsafe(pFieldAOwner));
-        const auto pEntityB = static_cast<gc<Material>*>(pFieldB->getPtrUnsafe(pFieldBOwner));
+        const auto pEntityA = static_cast<std::shared_ptr<Material>*>(pFieldA->getPtrUnsafe(pFieldAOwner));
+        const auto pEntityB = static_cast<std::shared_ptr<Material>*>(pFieldB->getPtrUnsafe(pFieldBOwner));
 
         if ((*pEntityA) == nullptr && (*pEntityB) == nullptr)
             return true;
@@ -150,6 +150,6 @@ namespace ne {
             return false;
 
         return SerializableObjectFieldSerializer::isSerializableObjectValueEqual(
-            &*pEntityA->operator->(), &*pEntityB->operator->());
+            (*pEntityA).get(), (*pEntityB).get());
     }
 } // namespace ne

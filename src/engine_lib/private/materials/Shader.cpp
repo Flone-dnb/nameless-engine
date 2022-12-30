@@ -52,15 +52,15 @@ namespace ne {
             result =
                 HlslShader::compileShader(pRenderer, shaderCacheDirectory, sConfiguration, shaderDescription);
         }
-#else
-        Error err("no renderer for this platform");
-        err.showError();
-        throw std::runtime_error(err.getError());
+#elif __linux__
+        static_assert(false, "not implemented");
         // TODO:
 //        if (dynamic_cast<VulkanRenderer*>(pRender)) {
 //            pShader = std::make_shared<GlslShader>(
 //                pRenderer, currentPathToCompiledShader, sCurrentShaderName, shaderType);
 //        }
+#else
+        static_assert(false, "not implemented");
 #endif
 
         if (std::holds_alternative<std::shared_ptr<Shader>>(result)) {
@@ -131,16 +131,15 @@ namespace ne {
                 shaderDescription.shaderType,
                 sSourceFileHash);
         }
-#else
-        const auto err = Error("no shader type is associated with the "
-                               "current renderer (not implemented)");
-        err.showError();
-        throw std::runtime_error(err.getError());
+#elif __linux__
+        static_assert(false, "not implemented");
         // TODO:
 //        if (dynamic_cast<VulkanRenderer*>(pRender)) {
 //            pShader = std::make_shared<GlslShader>(
 //                pRenderer, currentPathToCompiledShader, sCurrentShaderName, shaderType, sSourceFileHash);
 //        }
+#else
+        static_assert(false, "not implemented");
 #endif
 
         auto result = pShader->testIfShaderCacheIsCorrupted();

@@ -181,8 +181,12 @@ namespace ne {
                     bUpdateShaderCacheConfig = true;
                 }
             }
-#endif
+#elif __linux__
+            static_assert(false, "not implemented");
             // TODO: if (!bUpdateShaderCacheConfig && dynamic_cast<VulkanRenderer*>(pRenderer)) ...
+#else
+            static_assert(false, "not implemented");
+#endif
         } else {
             Logger::get().info(
                 fmt::format(
@@ -208,9 +212,12 @@ namespace ne {
                 configManager.setValue<std::string>(
                     "", sGlobalShaderCacheHlslCsModelKeyName, HlslShader::sComputeShaderModel);
             }
+#elif __linux__
+            static_assert(false, "not implemented");
+            // TODO: if (!bUpdateShaderCacheConfig && dynamic_cast<VulkanRenderer*>(pRenderer)) ...
+#else
+            static_assert(false, "not implemented");
 #endif
-
-            // TODO: if (dynamic_cast<VulkanRenderer*>(pRenderer)) ...
 
             configManager.setValue<bool>("", sGlobalShaderCacheReleaseBuildKeyName, bIsReleaseBuild);
 

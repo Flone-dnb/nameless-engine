@@ -66,9 +66,8 @@ namespace ne {
             return std::dynamic_pointer_cast<Pso>(std::get<std::shared_ptr<DirectXPso>>(result));
         }
 #elif __linux__
-        Error err("no renderer for this platform");
-        err.showError();
-        throw std::runtime_error(err.getError());
+
+        static_assert(false, "not implemented");
         if (dynamic_cast<VulkanRenderer*>(pRenderer) != nullptr) {
             // TODO
         }

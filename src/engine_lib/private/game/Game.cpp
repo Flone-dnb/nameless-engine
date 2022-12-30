@@ -13,6 +13,7 @@
 #include "materials/Shader.h"
 #include "render/pso/PsoManager.h"
 #if defined(WIN32)
+#include "render/directx/resources/DirectXResourceManager.h"
 #include "render/directx/DirectXRenderer.h"
 #endif
 #include "io/serializers/PrimitiveFieldSerializer.h"
@@ -68,9 +69,9 @@ namespace ne {
 #if defined(WIN32)
         pRenderer = std::make_unique<DirectXRenderer>(this);
 #elif __linux__
-        throw std::runtime_error("No renderer for this platform.");
+        static_assert(false, "not implemented");
 #else
-        throw std::runtime_error("No renderer for this platform.");
+        static_assert(false, "not implemented");
 #endif
     }
 

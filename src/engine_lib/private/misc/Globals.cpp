@@ -44,6 +44,8 @@ namespace ne {
 
         return std::filesystem::path(buf).stem().string();
 
+#else
+        static_assert(false, "not implemented");
 #endif
     }
 
@@ -78,6 +80,8 @@ namespace ne {
 
         basePath = fmt::format("{}/.config/", sHomePath);
 
+#else
+        static_assert(false, "not implemented");
 #endif
 
         basePath /= sBaseEngineDirectoryName;
@@ -152,6 +156,8 @@ namespace ne {
 
         pathToExecutable = std::filesystem::path(buf);
 
+#else
+        static_assert(false, "not implemented");
 #endif
 
         // Construct path to the `res` directory.

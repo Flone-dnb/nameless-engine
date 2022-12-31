@@ -117,7 +117,7 @@ namespace ne {
         vArgs.push_back(sShaderEntry);
         vArgs.push_back(L"-T");
         vArgs.push_back(sShaderModel);
-        vArgs.push_back(L"-WX"); // Treat warnings as errors.
+        vArgs.push_back(DXC_ARG_WARNINGS_ARE_ERRORS);
 #if defined(DEBUG)
         vArgs.push_back(DXC_ARG_DEBUG);
         vArgs.push_back(DXC_ARG_SKIP_OPTIMIZATIONS);

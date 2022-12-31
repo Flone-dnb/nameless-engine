@@ -166,7 +166,7 @@ namespace ne RNAMESPACE() {
          * custom attributes (if any) into a file.
          * Serialized objects can later be deserialized using @ref deserialize.
          *
-         * This is an overloaded function. See full documentation for other overload.
+         * @remark This is an overloaded function. See full documentation for other overload.
          *
          * @param pathToFile    File to write reflected data to. The ".toml" extension will be added
          * automatically if not specified in the path. If the specified file already exists it will be
@@ -191,7 +191,7 @@ namespace ne RNAMESPACE() {
         /**
          * Serializes the object and all reflected fields (including inherited) into a toml value.
          *
-         * This is an overloaded function. See full documentation for other overload.
+         * @remark This is an overloaded function. See full documentation for other overload.
          *
          * @param tomlData          Toml value to append this object to.
          * @param sEntityId         Unique ID of this object. When serializing multiple objects into
@@ -212,7 +212,7 @@ namespace ne RNAMESPACE() {
         /**
          * Serializes the object and all reflected fields (including inherited) into a toml value.
          *
-         * This is an overloaded function that takes an original object to serialize only changed
+         * @remark This is an overloaded function that takes an original object to serialize only changed
          * values. See full documentation for other overload.
          *
          * @param tomlData          Toml value to append this object to.
@@ -253,14 +253,15 @@ namespace ne RNAMESPACE() {
          *
          * Example:
          * @code
-         * ne::Node myCoolNode("My Cool Node");
-         * auto optionalError = myCoolNode.serialize(pathToFile, false);
+         * const auto pMyCoolNode = gc_new<ne::Node>("My Cool Node");
+         * // ... do some changes to the node ...
+         * auto optionalError = pMyCoolNode->serialize(pathToFile, false);
          * // ...
          * auto result = Serializable::deserialize<gc, ne::Node>(pathToFile);
          * if (std::holds_alternative<ne::Error>(result)){
          *     // process error here
          * }
-         * auto pMyCoolNode = std::get<std::shared_ptr<ne::Node>>(std::move(result));
+         * auto pMyCoolDeserializedNode = std::get<gc<ne::Node>>(std::move(result));
          * @endcode
          *
          * @param pathToFile File to read reflected data from. The ".toml" extension will be added
@@ -276,6 +277,8 @@ namespace ne RNAMESPACE() {
          * Deserializes an object and all reflected fields (including inherited) from a file.
          * Specify the type of an object (that is located in the file) as the T template parameter, which
          * can be entity's actual type or entity's parent (up to Serializable).
+         *
+         * @remark This is an overloaded function, see a more detailed documentation for the other overload.
          *
          * @param pathToFile File to read reflected data from. The ".toml" extension will be added
          * automatically if not specified in the path.
@@ -293,6 +296,8 @@ namespace ne RNAMESPACE() {
          * Deserializes an object and all reflected fields (including inherited) from a file.
          * Specify the type of an object (that is located in the file) as the T template parameter, which
          * can be entity's actual type or entity's parent (up to Serializable).
+         *
+         * @remark This is an overloaded function, see a more detailed documentation for the other overload.
          *
          * @param pathToFile File to read reflected data from. The ".toml" extension will be added
          * automatically if not specified in the path.
@@ -313,6 +318,8 @@ namespace ne RNAMESPACE() {
          * Deserializes an object and all reflected fields (including inherited) from a file.
          * Specify the type of an object (that is located in the file) as the T template parameter, which
          * can be entity's actual type or entity's parent (up to Serializable).
+         *
+         * @remark This is an overloaded function, see a more detailed documentation for the other overload.
          *
          * @param pathToFile File to read reflected data from. The ".toml" extension will be added
          * automatically if not specified in the path.
@@ -343,6 +350,8 @@ namespace ne RNAMESPACE() {
          * Deserializes an object and all reflected fields (including inherited) from a toml value.
          * Specify the type of an object (that is located in the file) as the T template parameter, which
          * can be entity's actual type or entity's parent (up to Serializable).
+         *
+         * @remark This is an overloaded function, see a more detailed documentation for the other overload.
          *
          * @param tomlData         Toml value to retrieve an object from.
          * @param customAttributes Pairs of values that were associated with this object.

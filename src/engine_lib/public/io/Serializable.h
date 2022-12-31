@@ -251,6 +251,8 @@ namespace ne RNAMESPACE() {
          * Specify the type of an object (that is located in the file) as the T template parameter, which
          * can be entity's actual type or entity's parent (up to Serializable).
          *
+         * @remark You can use either `gc` or `std::shared_ptr` as a smart pointer for deserialized object.
+         *
          * Example:
          * @code
          * const auto pMyCoolNode = gc_new<ne::Node>("My Cool Node");
@@ -270,8 +272,10 @@ namespace ne RNAMESPACE() {
          * @return Error if something went wrong, otherwise a pointer to deserialized object.
          */
         template <template <typename> class SmartPointer, typename T>
-        requires std::derived_from<T, Serializable>
-        static std::variant<SmartPointer<T>, Error> deserialize(const std::filesystem::path& pathToFile);
+        requires std::derived_from<T, Serializable> &&
+            (std::same_as<SmartPointer<T>, std::shared_ptr<T>> ||
+             std::same_as<SmartPointer<T>, gc<T>>)static std::
+                variant<SmartPointer<T>, Error> deserialize(const std::filesystem::path& pathToFile);
 
         /**
          * Deserializes an object and all reflected fields (including inherited) from a file.
@@ -287,10 +291,12 @@ namespace ne RNAMESPACE() {
          * @return Error if something went wrong, otherwise a pointer to deserialized object.
          */
         template <template <typename> class SmartPointer, typename T>
-        requires std::derived_from<T, Serializable>
-        static std::variant<SmartPointer<T>, Error> deserialize(
-            const std::filesystem::path& pathToFile,
-            std::unordered_map<std::string, std::string>& customAttributes);
+        requires std::derived_from<T, Serializable> &&
+            (std::same_as<SmartPointer<T>, std::shared_ptr<T>> ||
+             std::same_as<SmartPointer<T>, gc<T>>)static std::
+                variant<SmartPointer<T>, Error> deserialize(
+                    const std::filesystem::path& pathToFile,
+                    std::unordered_map<std::string, std::string>& customAttributes);
 
         /**
          * Deserializes an object and all reflected fields (including inherited) from a file.
@@ -308,11 +314,13 @@ namespace ne RNAMESPACE() {
          * @return Error if something went wrong, otherwise a pointer to deserialized object.
          */
         template <template <typename> class SmartPointer, typename T>
-        requires std::derived_from<T, Serializable>
-        static std::variant<SmartPointer<T>, Error> deserialize(
-            const std::filesystem::path& pathToFile,
-            std::unordered_map<std::string, std::string>& customAttributes,
-            const std::string& sEntityId);
+        requires std::derived_from<T, Serializable> &&
+            (std::same_as<SmartPointer<T>, std::shared_ptr<T>> ||
+             std::same_as<SmartPointer<T>, gc<T>>)static std::
+                variant<SmartPointer<T>, Error> deserialize(
+                    const std::filesystem::path& pathToFile,
+                    std::unordered_map<std::string, std::string>& customAttributes,
+                    const std::string& sEntityId);
 
         /**
          * Deserializes an object and all reflected fields (including inherited) from a file.
@@ -329,9 +337,11 @@ namespace ne RNAMESPACE() {
          * @return Error if something went wrong, otherwise a pointer to deserialized object.
          */
         template <template <typename> class SmartPointer, typename T>
-        requires std::derived_from<T, Serializable>
-        static std::variant<SmartPointer<T>, Error>
-        deserialize(const std::filesystem::path& pathToFile, const std::string& sEntityId);
+        requires std::derived_from<T, Serializable> &&
+            (std::same_as<SmartPointer<T>, std::shared_ptr<T>> ||
+             std::same_as<SmartPointer<T>, gc<T>>)static std::
+                variant<SmartPointer<T>, Error> deserialize(
+                    const std::filesystem::path& pathToFile, const std::string& sEntityId);
 
         /**
          * Deserializes multiple objects and their reflected fields (including inherited) from a file.
@@ -365,11 +375,13 @@ namespace ne RNAMESPACE() {
          * @return Error if something went wrong, otherwise a pointer to deserialized object.
          */
         template <template <typename> class SmartPointer, typename T>
-        requires std::derived_from<T, Serializable>
-        static std::variant<SmartPointer<T>, Error> deserialize(
-            const toml::value& tomlData,
-            std::unordered_map<std::string, std::string>& customAttributes,
-            std::string sEntityId = "");
+        requires std::derived_from<T, Serializable> &&
+            (std::same_as<SmartPointer<T>, std::shared_ptr<T>> ||
+             std::same_as<SmartPointer<T>, gc<T>>)static std::
+                variant<SmartPointer<T>, Error> deserialize(
+                    const toml::value& tomlData,
+                    std::unordered_map<std::string, std::string>& customAttributes,
+                    std::string sEntityId = "");
 
         /**
          * Adds a field serializer that will be automatically used in serialization/deserialization
@@ -517,33 +529,41 @@ namespace ne RNAMESPACE() {
     };
 
     template <template <typename> class SmartPointer, typename T>
-    requires std::derived_from<T, Serializable> std::variant<SmartPointer<T>, Error>
-    Serializable::deserialize(const std::filesystem::path& pathToFile) {
+    requires std::derived_from<T, Serializable> &&
+        (std::same_as<SmartPointer<T>, std::shared_ptr<T>> ||
+         std::same_as<SmartPointer<T>, gc<T>>)std::variant<SmartPointer<T>, Error>
+        Serializable::deserialize(const std::filesystem::path& pathToFile) {
         std::unordered_map<std::string, std::string> foundCustomAttributes;
         return deserialize<SmartPointer, T>(pathToFile, foundCustomAttributes);
     }
 
     template <template <typename> class SmartPointer, typename T>
-    requires std::derived_from<T, Serializable> std::variant<SmartPointer<T>, Error>
-    Serializable::deserialize(
-        const std::filesystem::path& pathToFile,
-        std::unordered_map<std::string, std::string>& customAttributes) {
+    requires std::derived_from<T, Serializable> &&
+        (std::same_as<SmartPointer<T>, std::shared_ptr<T>> ||
+         std::same_as<SmartPointer<T>, gc<T>>)std::variant<SmartPointer<T>, Error>
+        Serializable::deserialize(
+            const std::filesystem::path& pathToFile,
+            std::unordered_map<std::string, std::string>& customAttributes) {
         return deserialize<SmartPointer, T>(pathToFile, customAttributes, "");
     }
 
     template <template <typename> class SmartPointer, typename T>
-    requires std::derived_from<T, Serializable> std::variant<SmartPointer<T>, Error>
-    Serializable::deserialize(const std::filesystem::path& pathToFile, const std::string& sEntityId) {
+    requires std::derived_from<T, Serializable> &&
+        (std::same_as<SmartPointer<T>, std::shared_ptr<T>> ||
+         std::same_as<SmartPointer<T>, gc<T>>)std::variant<SmartPointer<T>, Error>
+        Serializable::deserialize(const std::filesystem::path& pathToFile, const std::string& sEntityId) {
         std::unordered_map<std::string, std::string> foundCustomAttributes;
         return deserialize<SmartPointer, T>(pathToFile, foundCustomAttributes, sEntityId);
     }
 
     template <template <typename> class SmartPointer, typename T>
-    requires std::derived_from<T, Serializable> std::variant<SmartPointer<T>, Error>
-    Serializable::deserialize(
-        const toml::value& tomlData,
-        std::unordered_map<std::string, std::string>& customAttributes,
-        std::string sEntityId) {
+    requires std::derived_from<T, Serializable> &&
+        (std::same_as<SmartPointer<T>, std::shared_ptr<T>> ||
+         std::same_as<SmartPointer<T>, gc<T>>)std::variant<SmartPointer<T>, Error>
+        Serializable::deserialize(
+            const toml::value& tomlData,
+            std::unordered_map<std::string, std::string>& customAttributes,
+            std::string sEntityId) {
         if (sEntityId.empty()) {
             // Put something as entity ID so it would not look weird.
             sEntityId = "0";
@@ -799,11 +819,13 @@ namespace ne RNAMESPACE() {
     }
 
     template <template <typename> class SmartPointer, typename T>
-    requires std::derived_from<T, Serializable> std::variant<SmartPointer<T>, Error>
-    Serializable::deserialize(
-        const std::filesystem::path& pathToFile,
-        std::unordered_map<std::string, std::string>& customAttributes,
-        const std::string& sEntityId) {
+    requires std::derived_from<T, Serializable> &&
+        (std::same_as<SmartPointer<T>, std::shared_ptr<T>> ||
+         std::same_as<SmartPointer<T>, gc<T>>)std::variant<SmartPointer<T>, Error>
+        Serializable::deserialize(
+            const std::filesystem::path& pathToFile,
+            std::unordered_map<std::string, std::string>& customAttributes,
+            const std::string& sEntityId) {
         // Add TOML extension to file.
         auto fixedPath = pathToFile;
         if (!fixedPath.string().ends_with(".toml")) {

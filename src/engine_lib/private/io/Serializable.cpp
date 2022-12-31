@@ -515,17 +515,21 @@ namespace ne {
 
         // Check that custom attribute key names are not empty.
         if (!customAttributes.empty() && customAttributes.find("") != customAttributes.end()) {
-            const Error err("empty attributes are not allowed");
+            Error err("empty attributes are not allowed");
             return err;
         }
 
         // Check that this type has a GUID.
         const auto pGuid = selfArchetype.getProperty<Guid>(false);
         if (!pGuid) {
-            const Error err(
-                fmt::format("type {} does not have a GUID assigned to it", selfArchetype.getName()));
+            Error err(fmt::format("type {} does not have a GUID assigned to it", selfArchetype.getName()));
             return err;
         }
+
+        // Don't require the original object to have a path it was deserialized from (if original object is
+        // specified). This is because `serialize` can be called for a `Serializable` field which could
+        // have an original object (if field's owner has original object) but fields don't have path
+        // to the file they were deserialized from.
 
         // Create section.
         const auto sSectionName = fmt::format("{}.{}", sEntityId, pGuid->getGuid());
@@ -618,8 +622,10 @@ namespace ne {
                                 "the original file)",
                                 field.getName(),
                                 pData->selfArchetype->getName(),
-                                pData->self->getPathDeserializedFromRelativeToRes().value().first,
-                                pData->self->getPathDeserializedFromRelativeToRes().value().second));
+                                pData->pOriginalEntity->getPathDeserializedFromRelativeToRes().value().first,
+                                pData->pOriginalEntity->getPathDeserializedFromRelativeToRes()
+                                    .value()
+                                    .second));
                             return false;
                         }
                     }
@@ -683,10 +689,11 @@ namespace ne {
             tomlData[sSectionName][sNothingToSerializeKey] = "nothing to serialize here";
         }
 
-        if (loopData.pOriginalEntity && getPathDeserializedFromRelativeToRes().has_value()) {
+        if (loopData.pOriginalEntity != nullptr &&
+            loopData.pOriginalEntity->getPathDeserializedFromRelativeToRes().has_value()) {
             // Write path to the original entity.
             tomlData[sSectionName][sPathRelativeToResKey] =
-                getPathDeserializedFromRelativeToRes().value().first;
+                loopData.pOriginalEntity->getPathDeserializedFromRelativeToRes().value().first;
         }
 
         // Write custom attributes, they will be written with two dots in the beginning.

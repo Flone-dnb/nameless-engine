@@ -1,0 +1,18 @@
+
+["0.2a721c37-3c22-450c-8dad-7b6985cbbd61"]
+sName = "Node"
+
+["1.550ea9f9-dd8a-4089-a717-0fe4e351a687"]
+bBoolValue2 = true
+"..parent_node_id" = "0"
+entity = "reflected type, see other sub-section"
+".path_relative_to_res" = "test/custom_node.toml"
+
+["1.0.550ea9f9-dd8a-4089-a717-0fe4e351a686"]
+iIntValue2 = 42
+".field_name" = "entity"
+vVectorValue2 = [
+"Hello",
+"World",
+]
+

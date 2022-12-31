@@ -386,6 +386,7 @@ namespace ne {
                 error.addEntry();
                 return error;
             }
+            // Save original object to only save changed fields later.
             selfInfo.pDeserializedOriginalObject = std::get<gc<Node>>(result);
             selfInfo.pOriginalObject = &*selfInfo.pDeserializedOriginalObject;
 

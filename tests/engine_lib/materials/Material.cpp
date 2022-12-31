@@ -124,7 +124,7 @@ TEST_CASE("serialize and deserialize Material") {
 
             {
                 // Deserialize.
-                auto result = Serializable::deserialize<Material, std::shared_ptr>(pathToFileInTemp);
+                auto result = Serializable::deserialize<std::shared_ptr, Material>(pathToFileInTemp);
                 if (std::holds_alternative<Error>(result)) {
                     Error error = std::get<Error>(std::move(result));
                     error.addEntry();

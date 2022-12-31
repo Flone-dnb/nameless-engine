@@ -256,7 +256,7 @@ namespace ne RNAMESPACE() {
          * ne::Node myCoolNode("My Cool Node");
          * auto optionalError = myCoolNode.serialize(pathToFile, false);
          * // ...
-         * auto result = Serializable::deserialize<ne::Node>(pathToFile);
+         * auto result = Serializable::deserialize<gc, ne::Node>(pathToFile);
          * if (std::holds_alternative<ne::Error>(result)){
          *     // process error here
          * }
@@ -268,7 +268,7 @@ namespace ne RNAMESPACE() {
          *
          * @return Error if something went wrong, otherwise a pointer to deserialized object.
          */
-        template <typename T, template <typename> class SmartPointer>
+        template <template <typename> class SmartPointer, typename T>
         requires std::derived_from<T, Serializable>
         static std::variant<SmartPointer<T>, Error> deserialize(const std::filesystem::path& pathToFile);
 
@@ -283,7 +283,7 @@ namespace ne RNAMESPACE() {
          *
          * @return Error if something went wrong, otherwise a pointer to deserialized object.
          */
-        template <typename T, template <typename> class SmartPointer>
+        template <template <typename> class SmartPointer, typename T>
         requires std::derived_from<T, Serializable>
         static std::variant<SmartPointer<T>, Error> deserialize(
             const std::filesystem::path& pathToFile,
@@ -302,7 +302,7 @@ namespace ne RNAMESPACE() {
          *
          * @return Error if something went wrong, otherwise a pointer to deserialized object.
          */
-        template <typename T, template <typename> class SmartPointer>
+        template <template <typename> class SmartPointer, typename T>
         requires std::derived_from<T, Serializable>
         static std::variant<SmartPointer<T>, Error> deserialize(
             const std::filesystem::path& pathToFile,
@@ -321,7 +321,7 @@ namespace ne RNAMESPACE() {
          *
          * @return Error if something went wrong, otherwise a pointer to deserialized object.
          */
-        template <typename T, template <typename> class SmartPointer>
+        template <template <typename> class SmartPointer, typename T>
         requires std::derived_from<T, Serializable>
         static std::variant<SmartPointer<T>, Error>
         deserialize(const std::filesystem::path& pathToFile, const std::string& sEntityId);
@@ -355,7 +355,7 @@ namespace ne RNAMESPACE() {
          *
          * @return Error if something went wrong, otherwise a pointer to deserialized object.
          */
-        template <typename T, template <typename> class SmartPointer>
+        template <template <typename> class SmartPointer, typename T>
         requires std::derived_from<T, Serializable>
         static std::variant<SmartPointer<T>, Error> deserialize(
             const toml::value& tomlData,
@@ -507,29 +507,29 @@ namespace ne RNAMESPACE() {
         ne_Serializable_GENERATED
     };
 
-    template <typename T, template <typename> class SmartPointer>
+    template <template <typename> class SmartPointer, typename T>
     requires std::derived_from<T, Serializable> std::variant<SmartPointer<T>, Error>
     Serializable::deserialize(const std::filesystem::path& pathToFile) {
         std::unordered_map<std::string, std::string> foundCustomAttributes;
-        return deserialize<T, SmartPointer>(pathToFile, foundCustomAttributes);
+        return deserialize<SmartPointer, T>(pathToFile, foundCustomAttributes);
     }
 
-    template <typename T, template <typename> class SmartPointer>
+    template <template <typename> class SmartPointer, typename T>
     requires std::derived_from<T, Serializable> std::variant<SmartPointer<T>, Error>
     Serializable::deserialize(
         const std::filesystem::path& pathToFile,
         std::unordered_map<std::string, std::string>& customAttributes) {
-        return deserialize<T, SmartPointer>(pathToFile, customAttributes, "");
+        return deserialize<SmartPointer, T>(pathToFile, customAttributes, "");
     }
 
-    template <typename T, template <typename> class SmartPointer>
+    template <template <typename> class SmartPointer, typename T>
     requires std::derived_from<T, Serializable> std::variant<SmartPointer<T>, Error>
     Serializable::deserialize(const std::filesystem::path& pathToFile, const std::string& sEntityId) {
         std::unordered_map<std::string, std::string> foundCustomAttributes;
-        return deserialize<T, SmartPointer>(pathToFile, foundCustomAttributes, sEntityId);
+        return deserialize<SmartPointer, T>(pathToFile, foundCustomAttributes, sEntityId);
     }
 
-    template <typename T, template <typename> class SmartPointer>
+    template <template <typename> class SmartPointer, typename T>
     requires std::derived_from<T, Serializable> std::variant<SmartPointer<T>, Error>
     Serializable::deserialize(
         const toml::value& tomlData,
@@ -617,7 +617,7 @@ namespace ne RNAMESPACE() {
                 }
 
                 // Deserialize original entity.
-                const auto deserializeResult = Serializable::deserialize<T, SmartPointer>(
+                const auto deserializeResult = Serializable::deserialize<SmartPointer, T>(
                     ProjectPaths::getDirectoryForResources(ResourceDirectory::ROOT) / value.as_string().str);
                 if (std::holds_alternative<Error>(deserializeResult)) {
                     auto err = std::get<Error>(deserializeResult);
@@ -789,7 +789,7 @@ namespace ne RNAMESPACE() {
         return pSmartPointerInstance;
     }
 
-    template <typename T, template <typename> class SmartPointer>
+    template <template <typename> class SmartPointer, typename T>
     requires std::derived_from<T, Serializable> std::variant<SmartPointer<T>, Error>
     Serializable::deserialize(
         const std::filesystem::path& pathToFile,
@@ -823,7 +823,7 @@ namespace ne RNAMESPACE() {
         }
 
         // Deserialize.
-        auto result = deserialize<T, SmartPointer>(tomlData, customAttributes, sEntityId);
+        auto result = deserialize<SmartPointer, T>(tomlData, customAttributes, sEntityId);
         if (std::holds_alternative<Error>(result)) {
             auto err = std::get<Error>(std::move(result));
             err.addEntry();

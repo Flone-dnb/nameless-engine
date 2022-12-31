@@ -258,7 +258,7 @@ namespace ne {
 
         // Deserialize section into an object.
         std::unordered_map<std::string, std::string> subAttributes;
-        auto result = Serializable::deserialize<Serializable, std::shared_ptr>(
+        auto result = Serializable::deserialize<std::shared_ptr, Serializable>(
             *pTomlDocument, subAttributes, sSubEntityId);
         if (std::holds_alternative<Error>(result)) {
             auto err = std::get<Error>(std::move(result));

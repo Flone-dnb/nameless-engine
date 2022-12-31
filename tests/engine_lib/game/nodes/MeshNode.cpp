@@ -49,7 +49,7 @@ TEST_CASE("serialize and deserialize MeshNode") {
 
             {
                 // Deserialize.
-                auto result = Serializable::deserialize<MeshNode, gc>(pathToFileInTemp);
+                auto result = Serializable::deserialize<gc, MeshNode>(pathToFileInTemp);
                 if (std::holds_alternative<Error>(result)) {
                     Error error = std::get<Error>(std::move(result));
                     error.addEntry();

@@ -735,10 +735,10 @@ TEST_CASE("serialize and deserialize fields of different types") {
 TEST_CASE("serialize and deserialize sample player save data") {
     {
         // Somewhere in the game code.
-        gc<PlayerSaveData> pPlayerSaveData;
+        std::shared_ptr<PlayerSaveData> pPlayerSaveData = nullptr;
 
         // ... if the user creates a new player profile ...
-        pPlayerSaveData = gc_new<PlayerSaveData>();
+        pPlayerSaveData = std::make_shared<PlayerSaveData>();
 
         // Fill save data with some information.
         pPlayerSaveData->sCharacterName = "Player 1";
@@ -795,7 +795,8 @@ TEST_CASE("serialize and deserialize sample player save data") {
         // Deserialize.
         const auto pathToFile = ConfigManager::getCategoryDirectory(ConfigCategory::PROGRESS) / sProfileName;
         std::unordered_map<std::string, std::string> foundCustomAttributes;
-        const auto result = Serializable::deserialize<gc, PlayerSaveData>(pathToFile, foundCustomAttributes);
+        const auto result =
+            Serializable::deserialize<std::shared_ptr, PlayerSaveData>(pathToFile, foundCustomAttributes);
         if (std::holds_alternative<Error>(result)) {
             auto error = std::get<Error>(result);
             error.addEntry();
@@ -803,7 +804,7 @@ TEST_CASE("serialize and deserialize sample player save data") {
             REQUIRE(false);
         }
 
-        gc<PlayerSaveData> pPlayerSaveData = std::get<gc<PlayerSaveData>>(result);
+        const auto pPlayerSaveData = std::get<std::shared_ptr<PlayerSaveData>>(result);
 
         REQUIRE(pPlayerSaveData->sCharacterName == "Player 1");
         REQUIRE(pPlayerSaveData->iCharacterLevel == 42);

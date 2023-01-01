@@ -30,8 +30,11 @@ public:
     void Foo();
 
 private:
+    RPROPERTY(Serialize)
+    int iAnswer = 42;
+
     RPROPERTY()
-    bool bBoolValue = false;
+    bool bValue = false;
 
     MyClass_GENERATED
 };
@@ -172,10 +175,10 @@ File_PlayerSaveData_GENERATED
 
 {
     // Somewhere in the game code.
-    gc<PlayerSaveData> pPlayerSaveData;
+    std::shared_ptr<PlayerSaveData> pPlayerSaveData;
 
     // ... if the user creates a new player profile ...
-    pPlayerSaveData = gc_new<PlayerSaveData>();
+    pPlayerSaveData = std::make_shared<PlayerSaveData>();
 
     // Fill save data with some information.
     pPlayerSaveData->sCharacterName = "Player 1";
@@ -225,12 +228,12 @@ File_PlayerSaveData_GENERATED
 
     // Deserialize.
     const auto pathToFile = ConfigManager::getCategoryDirectory(ConfigCategory::PROGRESS) / sProfileName;
-    const auto result = Serializable::deserialize<PlayerSaveData>(pathToFile);
+    const auto result = Serializable::deserialize<std::shared_ptr, PlayerSaveData>(pathToFile);
     if (std::holds_alternative<Error>(result)) {
         // process error
     }
 
-    gc<PlayerSaveData> pPlayerSaveData = std::get<gc<PlayerSaveData>>(result);
+    const auto pPlayerSaveData = std::get<std::shared_ptr<PlayerSaveData>>(result);
 
     // Everything is loaded:
     assert(pPlayerSaveData->sCharacterName == "Player 1");

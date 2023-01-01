@@ -328,7 +328,7 @@ namespace ne {
 
             // Serialize.
             const auto optionalError =
-                Serializable::serialize(pathToFile, std::move(vNodesInfo), bEnableBackup);
+                Serializable::serializeMultiple(pathToFile, std::move(vNodesInfo), bEnableBackup);
             if (optionalError.has_value()) {
                 auto err = optionalError.value();
                 err.addEntry();
@@ -450,13 +450,14 @@ namespace ne {
         const auto ids = std::get<std::set<std::string>>(idResult);
 
         // Deserialize all nodes.
-        const auto deserializeResult = Serializable::deserialize(pathToFile, ids);
+        const auto deserializeResult = Serializable::deserializeMultiple<gc>(pathToFile, ids);
         if (std::holds_alternative<Error>(deserializeResult)) {
             auto err = std::get<Error>(deserializeResult);
             err.addEntry();
             return err;
         }
-        auto vNodesInfo = std::get<std::vector<DeserializedObjectInformation>>(std::move(deserializeResult));
+        auto vNodesInfo =
+            std::get<std::vector<DeserializedObjectInformation<gc>>>(std::move(deserializeResult));
 
         // See if some node is external node tree.
         for (auto& nodeInfo : vNodesInfo) {

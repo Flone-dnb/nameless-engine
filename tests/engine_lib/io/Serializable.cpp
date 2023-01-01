@@ -896,7 +896,7 @@ TEST_CASE("serialize and deserialize multiple nodes") {
     Node node2("My Cool Node 2");
     SerializableObjectInformation node1Info(&node1, "0", {{sNode1CustomAttributeName, "1"}});
     SerializableObjectInformation node2Info(&node2, "1", {{sNode2CustomAttributeName, "2"}});
-    const auto optionalError = Serializable::serialize(pathToFile, {node1Info, node2Info}, false);
+    const auto optionalError = Serializable::serializeMultiple(pathToFile, {node1Info, node2Info}, false);
     if (optionalError.has_value()) {
         auto err = optionalError.value();
         err.addEntry();
@@ -920,15 +920,14 @@ TEST_CASE("serialize and deserialize multiple nodes") {
     REQUIRE(ids.find("1") != ids.end());
 
     // Deserialize.
-    const auto result = Serializable::deserialize(pathToFile, {"0", "1"});
+    const auto result = Serializable::deserializeMultiple<gc>(pathToFile, {"0", "1"});
     if (std::holds_alternative<Error>(result)) {
         auto err = std::get<Error>(std::move(result));
         err.addEntry();
         INFO(err.getError());
         REQUIRE(false);
     }
-    std::vector<DeserializedObjectInformation> vDeserializedObjects =
-        std::get<std::vector<DeserializedObjectInformation>>(std::move(result));
+    auto vDeserializedObjects = std::get<std::vector<DeserializedObjectInformation<gc>>>(std::move(result));
 
     // Check results.
     REQUIRE(vDeserializedObjects.size() == 2);

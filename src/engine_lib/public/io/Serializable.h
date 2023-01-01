@@ -72,6 +72,9 @@ namespace ne RNAMESPACE() {
     };
 
     /** Information about an object that was deserialized. */
+    template <template <typename> class SmartPointer>
+    requires std::same_as<SmartPointer<Serializable>, std::shared_ptr<Serializable>> ||
+        std::same_as<SmartPointer<Serializable>, gc<Serializable>>
     struct DeserializedObjectInformation {
     public:
         DeserializedObjectInformation() = delete;
@@ -84,7 +87,7 @@ namespace ne RNAMESPACE() {
          * @param customAttributes Object's custom attributes.
          */
         DeserializedObjectInformation(
-            gc<Serializable> pObject,
+            SmartPointer<Serializable> pObject,
             std::string sObjectUniqueId,
             std::unordered_map<std::string, std::string> customAttributes) {
             this->pObject = std::move(pObject);
@@ -93,7 +96,7 @@ namespace ne RNAMESPACE() {
         }
 
         /** Object to serialize. */
-        gc<Serializable> pObject;
+        SmartPointer<Serializable> pObject;
 
         /** Unique object ID. */
         std::string sObjectUniqueId;
@@ -164,9 +167,6 @@ namespace ne RNAMESPACE() {
         /**
          * Serializes multiple objects, their reflected fields (including inherited) and provided
          * custom attributes (if any) into a file.
-         * Serialized objects can later be deserialized using @ref deserialize.
-         *
-         * @remark This is an overloaded function. See full documentation for other overload.
          *
          * @param pathToFile    File to write reflected data to. The ".toml" extension will be added
          * automatically if not specified in the path. If the specified file already exists it will be
@@ -183,7 +183,7 @@ namespace ne RNAMESPACE() {
          * @return Error if something went wrong, for example when found an unsupported for
          * serialization reflected field.
          */
-        static std::optional<Error> serialize(
+        static std::optional<Error> serializeMultiple(
             std::filesystem::path pathToFile,
             std::vector<SerializableObjectInformation> vObjects,
             bool bEnableBackup);
@@ -353,8 +353,11 @@ namespace ne RNAMESPACE() {
          *
          * @return Error if something went wrong, otherwise an array of pointers to deserialized objects.
          */
-        static std::variant<std::vector<DeserializedObjectInformation>, Error>
-        deserialize(const std::filesystem::path& pathToFile, const std::set<std::string>& ids);
+        template <template <typename> class SmartPointer>
+        requires std::same_as<SmartPointer<Serializable>, std::shared_ptr<Serializable>> ||
+            std::same_as<SmartPointer<Serializable>, gc<Serializable>>
+        static std::variant<std::vector<DeserializedObjectInformation<SmartPointer>>, Error>
+        deserializeMultiple(const std::filesystem::path& pathToFile, const std::set<std::string>& ids);
 
         /**
          * Deserializes an object and all reflected fields (including inherited) from a toml value.
@@ -891,6 +894,39 @@ namespace ne RNAMESPACE() {
         }
 
         return result;
+    }
+
+    template <template <typename> class SmartPointer>
+    requires std::same_as<SmartPointer<Serializable>, std::shared_ptr<Serializable>> ||
+        std::same_as<SmartPointer<Serializable>, gc<Serializable>>
+            std::variant<std::vector<DeserializedObjectInformation<SmartPointer>>, Error>
+            Serializable::deserializeMultiple(
+                const std::filesystem::path& pathToFile, const std::set<std::string>& ids) {
+        // Check that specified IDs don't have dots in them.
+        for (const auto& sId : ids) {
+            if (sId.contains('.')) [[unlikely]] {
+                return Error(
+                    fmt::format("the specified object ID \"{}\" is not allowed to have dots in it", sId));
+            }
+        }
+
+        // Deserialize.
+        std::vector<DeserializedObjectInformation<SmartPointer>> deserializedObjects;
+        for (const auto& sId : ids) {
+            std::unordered_map<std::string, std::string> customAttributes;
+            auto result = deserialize<SmartPointer, Serializable>(pathToFile, customAttributes, sId);
+            if (std::holds_alternative<Error>(result)) {
+                auto err = std::get<Error>(std::move(result));
+                err.addEntry();
+                return err;
+            }
+
+            const auto pObject = std::get<SmartPointer<Serializable>>(std::move(result));
+            DeserializedObjectInformation objectInfo(pObject, sId, customAttributes);
+            deserializedObjects.push_back(std::move(objectInfo));
+        }
+
+        return deserializedObjects;
     }
 }; // namespace )
 

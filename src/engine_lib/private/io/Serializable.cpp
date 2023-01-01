@@ -242,35 +242,6 @@ namespace ne {
         return getClassForGuid(&selfArchetype, sGuid);
     }
 
-    std::variant<std::vector<DeserializedObjectInformation>, Error>
-    Serializable::deserialize(const std::filesystem::path& pathToFile, const std::set<std::string>& ids) {
-        // Check that specified IDs don't have dots in them.
-        for (const auto& sId : ids) {
-            if (sId.contains('.')) [[unlikely]] {
-                return Error(
-                    fmt::format("the specified object ID \"{}\" is not allowed to have dots in it", sId));
-            }
-        }
-
-        // Deserialize.
-        std::vector<DeserializedObjectInformation> deserializedObjects;
-        for (const auto& sId : ids) {
-            std::unordered_map<std::string, std::string> customAttributes;
-            auto result = deserialize<gc, Serializable>(pathToFile, customAttributes, sId);
-            if (std::holds_alternative<Error>(result)) {
-                auto err = std::get<Error>(std::move(result));
-                err.addEntry();
-                return err;
-            }
-
-            const auto pObject = std::get<gc<Serializable>>(std::move(result));
-            DeserializedObjectInformation objectInfo(pObject, sId, customAttributes);
-            deserializedObjects.push_back(std::move(objectInfo));
-        }
-
-        return deserializedObjects;
-    }
-
     std::variant<std::set<std::string>, Error>
     Serializable::getIdsFromFile(std::filesystem::path pathToFile) {
         // Add TOML extension to file.
@@ -332,7 +303,7 @@ namespace ne {
         return vIds;
     }
 
-    std::optional<Error> Serializable::serialize(
+    std::optional<Error> Serializable::serializeMultiple(
         std::filesystem::path pathToFile,
         std::vector<SerializableObjectInformation> vObjects,
         bool bEnableBackup) {

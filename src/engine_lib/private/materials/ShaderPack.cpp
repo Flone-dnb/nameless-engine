@@ -8,6 +8,8 @@
 #include "materials/Shader.h"
 #include "materials/ShaderFilesystemPaths.hpp"
 #include "render/Renderer.h"
+#include "game/Game.h"
+#include "game/Window.h"
 
 // External.
 #include "fmt/core.h"
@@ -24,7 +26,8 @@ namespace ne {
         const auto pathToCompiledShader =
             pathToShaderDirectory / ShaderFilesystemPaths::getShaderCacheBaseFileName();
 
-        const auto pShaderPack = std::shared_ptr<ShaderPack>(new ShaderPack(shaderDescription.sShaderName));
+        const auto pShaderPack = std::shared_ptr<ShaderPack>(
+            new ShaderPack(shaderDescription.sShaderName, shaderDescription.shaderType));
 
         // Configurations.
         const std::set<std::set<ShaderParameter>>* pParameterCombinations;
@@ -75,11 +78,12 @@ namespace ne {
                 return err;
             }
 
-            pShaderPack->shaders[parameters] = std::get<std::shared_ptr<Shader>>(result);
+            pShaderPack->mtxShadersInPack.second[parameters] = std::get<std::shared_ptr<Shader>>(result);
         }
 
         Logger::get().info(
-            fmt::format("successfully loaded shader \"{}\" from cache", shaderDescription.sShaderName), "");
+            fmt::format("successfully loaded shader \"{}\" from cache", shaderDescription.sShaderName),
+            sShaderPackLogCategory);
 
         return pShaderPack;
     }
@@ -101,7 +105,8 @@ namespace ne {
             break;
         }
 
-        auto pShaderPack = std::shared_ptr<ShaderPack>(new ShaderPack(shaderDescription.sShaderName));
+        auto pShaderPack = std::shared_ptr<ShaderPack>(
+            new ShaderPack(shaderDescription.sShaderName, shaderDescription.shaderType));
         for (const auto& parameters : *pParameterCombinations) {
             auto currentShaderDescription = shaderDescription;
 
@@ -124,7 +129,7 @@ namespace ne {
             const auto result = Shader::compileShader(
                 pRenderer, currentPathToCompiledShader, sConfigurationText, currentShaderDescription);
             if (std::holds_alternative<std::shared_ptr<Shader>>(result)) {
-                pShaderPack->shaders[parameters] = std::get<std::shared_ptr<Shader>>(result);
+                pShaderPack->mtxShadersInPack.second[parameters] = std::get<std::shared_ptr<Shader>>(result);
             } else if (std::holds_alternative<std::string>(result)) {
                 return std::get<std::string>(result);
             } else {
@@ -135,34 +140,38 @@ namespace ne {
         return pShaderPack;
     }
 
-    std::shared_ptr<Shader> ShaderPack::changeConfiguration(const std::set<ShaderParameter>& configuration) {
-        std::scoped_lock guard(mtxShaders);
+    bool ShaderPack::setConfiguration(const std::set<ShaderParameter>& configuration) {
+        std::scoped_lock guard(mtxShadersInPack.first, mtxCurrentConfigurationShader.first);
 
-        if (pCurrentConfigurationShader != nullptr) {
+        if (mtxCurrentConfigurationShader.second != nullptr) {
             if (this->configuration == configuration) {
-                return *pCurrentConfigurationShader;
+                return false; // do nothing
             }
 
-            pCurrentConfigurationShader->get()->releaseShaderDataFromMemoryIfLoaded();
-            pCurrentConfigurationShader = nullptr;
+            // Try to release the old shader.
+            mtxCurrentConfigurationShader.second->get()->releaseShaderDataFromMemoryIfLoaded();
+            mtxCurrentConfigurationShader.second = nullptr;
         }
 
         this->configuration = configuration;
 
-        const auto it = shaders.find(configuration);
-        if (it == shaders.end()) {
-            return nullptr;
+        // Find shader for the specified configuration.
+        const auto it = mtxShadersInPack.second.find(configuration);
+        if (it == mtxShadersInPack.second.end()) [[unlikely]] {
+            return true; // failed to find
         }
 
-        pCurrentConfigurationShader = &it->second;
-        return it->second;
+        // Save found shader.
+        mtxCurrentConfigurationShader.second = &it->second;
+
+        return false;
     }
 
     bool ShaderPack::releaseShaderPackDataFromMemoryIfLoaded(bool bLogOnlyErrors) {
-        std::scoped_lock guard(mtxShaders);
+        std::scoped_lock guard(mtxShadersInPack.first);
 
         bool bResult = true;
-        for (const auto& [key, shader] : shaders) {
+        for (const auto& [key, shader] : mtxShadersInPack.second) {
             if (!shader->releaseShaderDataFromMemoryIfLoaded(bLogOnlyErrors)) {
                 bResult = false;
             }
@@ -171,12 +180,40 @@ namespace ne {
         return bResult;
     }
 
-    std::string ShaderPack::getShaderName() const { return sShaderName; }
+    std::shared_ptr<Shader> ShaderPack::getShader() {
+        std::scoped_lock guard(mtxCurrentConfigurationShader.first);
 
-    ShaderType ShaderPack::getShaderType() {
-        std::scoped_lock guard(mtxShaders);
-        return shaders.begin()->second->getShaderType();
+        // Make sure the configuration was set.
+        if (mtxCurrentConfigurationShader.second == nullptr) [[unlikely]] {
+            Error error(fmt::format(
+                "configuration for the shader \"{}\" was not set yet but the shader is already requested",
+                sShaderName));
+            error.showError();
+            throw std::runtime_error(error.getError());
+        }
+
+        // Make sure our current configuration matches the renderer's shader configuration.
+        const auto pRenderer = Game::get()->getWindow()->getRenderer();
+        if (*pRenderer->getShaderConfiguration(shaderType) != configuration) [[unlikely]] {
+            Error error(fmt::format(
+                "configuration for the shader \"{}\" does not match current renderer's shader "
+                "configuration",
+                sShaderName));
+            error.showError();
+            throw std::runtime_error(error.getError());
+        }
+
+        return *mtxCurrentConfigurationShader.second;
     }
 
-    ShaderPack::ShaderPack(const std::string& sShaderName) { this->sShaderName = sShaderName; }
+    std::string ShaderPack::getShaderName() const { return sShaderName; }
+
+    ShaderType ShaderPack::getShaderType() { return shaderType; }
+
+    ShaderPack::ShaderPack(const std::string& sShaderName, ShaderType shaderType) {
+        this->sShaderName = sShaderName;
+        this->shaderType = shaderType;
+
+        mtxCurrentConfigurationShader.second = nullptr;
+    }
 } // namespace ne

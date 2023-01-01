@@ -134,6 +134,23 @@ namespace ne {
         // Only ShaderUser should be able to work with shaders.
         friend class ShaderUser;
 
+        // Renderer sets shaders' configuration.
+        friend class Renderer;
+
+        /**
+         * Sets shader configuration for specific types of shaders.
+         *
+         * @warning If the configuration is changed we will try to release
+         * old shader resources from the memory.
+         * Make sure no object is holding shared pointers to old shaders (with old configuration),
+         * otherwise there would be an error printed in the logs.
+         *
+         * @param configuration Configuration to set.
+         * @param shaderType    Types of shaders to set the configuration to.
+         */
+        void
+        setConfigurationForShaders(const std::set<ShaderParameter>& configuration, ShaderType shaderType);
+
         /**
          * Compiles each shader. Executed as a thread pooled task to do this work asynchronously.
          *

@@ -153,6 +153,8 @@ namespace ne {
 
         /**
          * Blocks the current thread until the GPU finishes executing all queued commands up to this point.
+         *
+         * @remark Typically used with @ref getRenderResourcesMutex.
          */
         virtual void flushCommandQueue() = 0;
 
@@ -160,20 +162,16 @@ namespace ne {
         virtual void drawNextFrame() = 0;
 
         /**
-         * Returns the current vertex shader configuration (shader settings,
+         * Returns the current shader configuration (shader settings,
          * represented by a bunch of predefined macros).
+         *
+         * @remark Do not delete (free) returned pointer, returning a pointer to avoid copy.
+         *
+         * @param shaderType Type of shader configuration to get.
          *
          * @return Vertex shader configuration.
          */
-        std::set<ShaderParameter> getVertexShaderConfiguration() const;
-
-        /**
-         * Returns the current pixel shader configuration (shader settings,
-         * represented by a bunch of predefined macros).
-         *
-         * @return Pixel shader configuration.
-         */
-        std::set<ShaderParameter> getPixelShaderConfiguration() const;
+        std::set<ShaderParameter>* getShaderConfiguration(ShaderType shaderType);
 
         /**
          * Returns the window that we render to.
@@ -220,13 +218,6 @@ namespace ne {
         std::recursive_mutex* getRenderResourcesMutex();
 
     protected:
-        /**
-         * Initialize vertex/pixel shader configuration by using @ref setPixelShaderConfiguration and
-         * @ref setVertexShaderConfiguration for the current render settings,
-         * after the initialization (constructor) is finished.
-         */
-        virtual void initializeShaderConfiguration() = 0;
-
         /** Update internal resources for the next frame. */
         virtual void updateResourcesForNextFrame() = 0;
 
@@ -264,18 +255,16 @@ namespace ne {
         static std::filesystem::path getRendererConfigurationFilePath();
 
         /**
-         * Sets the current vertex shader configuration (settings).
+         * Sets the current shader configuration (settings).
          *
-         * @param vertexShaderConfiguration Vertex shader configuration.
-         */
-        void setVertexShaderConfiguration(const std::set<ShaderParameter>& vertexShaderConfiguration);
-
-        /**
-         * Sets the current pixel shader configuration (settings).
+         * @remark Flushes the command queue and recreates PSOs' internal resources so that they
+         * will use new shader configuration.
          *
-         * @param pixelShaderConfiguration Pixel shader configuration.
+         * @param shaderConfiguration Shader configuration.
+         * @param shaderType          Type of shaders that should apply this configuration.
          */
-        void setPixelShaderConfiguration(const std::set<ShaderParameter>& pixelShaderConfiguration);
+        void
+        setShaderConfiguration(const std::set<ShaderParameter>& shaderConfiguration, ShaderType shaderType);
 
         /**
          * Returns name of the section used in configuration file.

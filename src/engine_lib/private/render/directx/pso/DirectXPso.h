@@ -43,7 +43,42 @@ namespace ne {
             const std::string& sPixelShaderName,
             bool bUsePixelBlending);
 
+        /**
+         * Releases internal resources such as root signature, internal PSO, etc.
+         *
+         * @warning Expects that the GPU is not referencing this PSO (command queue is empty) and
+         * that no drawing will occur until @ref restoreInternalResources is called.
+         *
+         * @remark Typically used before changing something (for ex. shader configuration), so that no PSO
+         * will reference old resources, to later call @ref restoreInternalResources.
+         *
+         * @return Error if something went wrong.
+         */
+        [[nodiscard]] virtual std::optional<Error> releaseInternalResources() override;
+
+        /**
+         * Creates internal resources using the current configuration.
+         *
+         * @remark Called after @ref releaseInternalResources to create resources that will now reference
+         * changed (new) resources.
+         *
+         * @return Error if something went wrong.
+         */
+        [[nodiscard]] virtual std::optional<Error> restoreInternalResources() override;
+
     private:
+        /** Stores internal resources. */
+        struct InternalDirectXPsoResources {
+            /** Root signature, used in PSO. */
+            ComPtr<ID3D12RootSignature> pRootSignature;
+
+            /** Graphics PSO, created using @ref createGraphicsPso. */
+            ComPtr<ID3D12PipelineState> pGraphicsPso;
+
+            // !!! new internal resources go here !!!
+            // !!! don't forget to update @ref releaseInternalResources !!!
+        };
+
         /**
          * Constructor.
          *
@@ -79,10 +114,7 @@ namespace ne {
             const std::string& sPixelShaderName,
             bool bUsePixelBlending);
 
-        /** Root signature, used in PSO. */
-        ComPtr<ID3D12RootSignature> pRootSignature;
-
-        /** Graphics PSO, created using @ref createGraphicsPso. */
-        ComPtr<ID3D12PipelineState> pGraphicsPso;
+        /** Internal resources. */
+        InternalDirectXPsoResources internalResources;
     };
 } // namespace ne

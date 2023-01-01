@@ -2,9 +2,14 @@
 
 // Custom.
 #include "io/Logger.h"
+#include "render/Renderer.h"
 
 namespace ne {
     PsoManager::PsoManager(Renderer* pRenderer) { this->pRenderer = pRenderer; }
+
+    DelayedPsoResourcesCreation PsoManager::clearGraphicsPsosInternalResourcesAndDelayRestoring() {
+        return DelayedPsoResourcesCreation(this);
+    }
 
     std::variant<PsoSharedPtr, Error> PsoManager::getGraphicsPsoForMaterial(
         const std::string& sVertexShaderName,
@@ -22,9 +27,9 @@ namespace ne {
         if (it == vGraphicsPsos[iIndex].second.end()) {
             return createGraphicsPsoForMaterial(
                 sVertexShaderName, sPixelShaderName, bUsePixelBlending, pMaterial);
-        } else {
-            return PsoSharedPtr(it->second, pMaterial);
         }
+
+        return PsoSharedPtr(it->second, pMaterial);
     }
 
     std::array<
@@ -113,6 +118,40 @@ namespace ne {
 
     Renderer* PsoManager::getRenderer() const { return pRenderer; }
 
+    std::optional<Error> PsoManager::releaseInternalGraphicsPsosResources() {
+        for (auto& [mutex, map] : vGraphicsPsos) {
+            std::scoped_lock guard(mutex);
+
+            for (const auto& [sUniqueId, pGraphicsPso] : map) {
+                auto optionalError = pGraphicsPso->releaseInternalResources();
+                if (optionalError.has_value()) {
+                    auto error = optionalError.value();
+                    error.addEntry();
+                    return error;
+                }
+            }
+        }
+
+        return {};
+    }
+
+    std::optional<Error> PsoManager::restoreInternalGraphicsPsosResources() {
+        for (auto& [mutex, map] : vGraphicsPsos) {
+            std::scoped_lock guard(mutex);
+
+            for (const auto& [sUniqueId, pGraphicsPso] : map) {
+                auto optionalError = pGraphicsPso->restoreInternalResources();
+                if (optionalError.has_value()) {
+                    auto error = optionalError.value();
+                    error.addEntry();
+                    return error;
+                }
+            }
+        }
+
+        return {};
+    }
+
     void PsoManager::onPsoNoLongerUsedByMaterial(const std::string& sUniquePsoIdentifier) {
         // Find this PSO.
         for (auto& [mutex, map] : vGraphicsPsos) {
@@ -131,4 +170,36 @@ namespace ne {
             break;
         }
     }
+
+    void DelayedPsoResourcesCreation::initialize() {
+        const auto pRenderer = pPsoManager->getRenderer();
+
+        // Make sure no drawing is happening and the GPU is not referencing any resources.
+        std::scoped_lock guard(*pRenderer->getRenderResourcesMutex());
+        pRenderer->flushCommandQueue();
+
+        // Release resources.
+        auto optionalError = pPsoManager->releaseInternalGraphicsPsosResources();
+        if (optionalError.has_value()) {
+            auto error = optionalError.value();
+            error.addEntry();
+            error.showError();
+            throw std::runtime_error(error.getError());
+        }
+    }
+
+    void DelayedPsoResourcesCreation::destroy() {
+        if (!bIsValid)
+            return;
+
+        // Restore resources.
+        auto optionalError = pPsoManager->restoreInternalGraphicsPsosResources();
+        if (optionalError.has_value()) {
+            auto error = optionalError.value();
+            error.addEntry();
+            error.showError();
+            throw std::runtime_error(error.getError());
+        }
+    }
+
 } // namespace ne

@@ -140,8 +140,6 @@ namespace ne {
 
         /**
          * Blocks the current thread until the GPU finishes executing all queued commands up to this point.
-         *
-         * @return Error if something went wrong.
          */
         virtual void flushCommandQueue() override;
 
@@ -188,15 +186,24 @@ namespace ne {
         // Heap needs to know buffer formats that the renderer uses.
         friend class DirectXDescriptorHeap;
 
-        /**
-         * Initialize vertex/pixel shader configuration by using @ref setPixelShaderConfiguration and
-         * @ref setVertexShaderConfiguration for the current render settings,
-         * after the initialization (constructor) is finished.
-         */
-        virtual void initializeShaderConfiguration() override;
-
         /** Update internal resources for the next frame. */
         virtual void updateResourcesForNextFrame() override;
+
+        /**
+         * Writes current renderer configuration to disk.
+         */
+        virtual void writeConfigurationToConfigFile() override;
+
+        /**
+         * Reads renderer configuration from disk.
+         */
+        virtual void readConfigurationFromConfigFile() override;
+
+    private:
+        /**
+         * Sets initial shader configuration, typically used before compiling engine shaders.
+         */
+        void setInitialShaderConfiguration();
 
         /**
          * Enables DX debug layer.
@@ -301,26 +308,6 @@ namespace ne {
          */
         std::variant<std::vector<DXGI_MODE_DESC>, Error> getSupportedDisplayModes() const;
 
-        /**
-         * Updates @ref currentVertexShaderConfiguration and @ref currentPixelShaderConfiguration to match the
-         * current state (settings). Additionally recreates the PSO to match the current vertex/pixel shader
-         * settings.
-         *
-         * @return Error if something went wrong.
-         */
-        std::optional<Error> refreshShaderParameters();
-
-        /**
-         * Writes current renderer configuration to disk.
-         */
-        virtual void writeConfigurationToConfigFile() override;
-
-        /**
-         * Reads renderer configuration from disk.
-         */
-        virtual void readConfigurationFromConfigFile() override;
-
-    private:
         // Main DX objects.
         /** DXGI Factory. */
         ComPtr<IDXGIFactory4> pFactory;

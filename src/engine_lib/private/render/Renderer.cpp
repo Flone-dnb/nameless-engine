@@ -30,20 +30,27 @@ namespace ne {
             getRendererLoggingCategory());
     }
 
-    std::set<ShaderParameter> Renderer::getVertexShaderConfiguration() const {
-        return currentVertexShaderConfiguration;
-    }
+    std::set<ShaderParameter>* Renderer::getShaderConfiguration(ShaderType shaderType) {
+        switch (shaderType) {
+        case (ShaderType::VERTEX_SHADER): {
+            return &currentVertexShaderConfiguration;
+            break;
+        }
+        case (ShaderType::PIXEL_SHADER): {
+            return &currentPixelShaderConfiguration;
+            break;
+        }
+        case (ShaderType::COMPUTE_SHADER): {
+            Error error("unexpected case");
+            error.showError();
+            throw std::runtime_error(error.getError());
+            break;
+        }
+        }
 
-    std::set<ShaderParameter> Renderer::getPixelShaderConfiguration() const {
-        return currentPixelShaderConfiguration;
-    }
-
-    void Renderer::setVertexShaderConfiguration(const std::set<ShaderParameter>& vertexShaderConfiguration) {
-        currentVertexShaderConfiguration = vertexShaderConfiguration;
-    }
-
-    void Renderer::setPixelShaderConfiguration(const std::set<ShaderParameter>& pixelShaderConfiguration) {
-        currentPixelShaderConfiguration = pixelShaderConfiguration;
+        Error error("unexpected case");
+        error.showError();
+        throw std::runtime_error(error.getError());
     }
 
     Window* Renderer::getWindow() const { return pGame->getWindow(); }
@@ -77,6 +84,39 @@ namespace ne {
         }
 
         return basePath;
+    }
+
+    void Renderer::setShaderConfiguration(
+        const std::set<ShaderParameter>& shaderConfiguration, ShaderType shaderType) {
+        Logger::get().info(
+            "renderer's current shader configuration was changed, flushing the command queue and recreating "
+            "all PSOs' internal resources",
+            sRendererLogCategory);
+
+        {
+            const auto psoGuard = pPsoManager->clearGraphicsPsosInternalResourcesAndDelayRestoring();
+
+            // Change configuration.
+            switch (shaderType) {
+            case (ShaderType::VERTEX_SHADER): {
+                currentVertexShaderConfiguration = shaderConfiguration;
+                break;
+            }
+            case (ShaderType::PIXEL_SHADER): {
+                currentPixelShaderConfiguration = shaderConfiguration;
+                break;
+            }
+            case (ShaderType::COMPUTE_SHADER): {
+                Error error("unexpected case");
+                error.showError();
+                throw std::runtime_error(error.getError());
+                break;
+            }
+            }
+
+            // Update shaders.
+            pShaderManager->setConfigurationForShaders(shaderConfiguration, shaderType);
+        }
     }
 
     const char* Renderer::getConfigurationSectionGpu() { return sConfigurationSectionGpu; }

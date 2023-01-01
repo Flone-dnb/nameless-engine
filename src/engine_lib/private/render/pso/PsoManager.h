@@ -124,6 +124,69 @@ namespace ne {
         Material* pMaterialThatUsesPso = nullptr;
     };
 
+    /**
+     * RAII class that once acquired flushed the command queue, pauses the rendering and releases
+     * all internal resources from all graphics PSOs, and restores them in destructor.
+     */
+    class DelayedPsoResourcesCreation {
+    public:
+        DelayedPsoResourcesCreation() = delete;
+
+        DelayedPsoResourcesCreation(const DelayedPsoResourcesCreation&) = delete;
+        DelayedPsoResourcesCreation& operator=(const DelayedPsoResourcesCreation&) = delete;
+
+        /**
+         * Constructor.
+         *
+         * @param pPsoManager PSO manager to use.
+         */
+        DelayedPsoResourcesCreation(PsoManager* pPsoManager) {
+            this->pPsoManager = pPsoManager;
+            initialize();
+        }
+        ~DelayedPsoResourcesCreation() { destroy(); }
+
+        /**
+         * Move constructor.
+         *
+         * @param other Other object.
+         */
+        DelayedPsoResourcesCreation(DelayedPsoResourcesCreation&& other) noexcept {
+            *this = std::move(other);
+        }
+
+        /**
+         * Move assignment operator.
+         *
+         * @param other Other object.
+         *
+         * @return Resulting object.
+         */
+        DelayedPsoResourcesCreation& operator=(DelayedPsoResourcesCreation&& other) noexcept {
+            if (this != &other) {
+                other.bIsValid = false;
+            }
+
+            return *this;
+        }
+
+    private:
+        /** Does initialization logic. */
+        void initialize();
+
+        /** Does destruction logic. */
+        void destroy();
+
+        /** Do not delete (free) this pointer. Non-owning reference to PSO manager. */
+        PsoManager* pPsoManager = nullptr;
+
+        /**
+         * Marks the object as valid (not moved) or invalid (moved).
+         * Determines whether @ref destroy logic should be called on destruction or not.
+         */
+        bool bIsValid = true;
+    };
+
     /** Base class for managing render specific Pipeline State Objects (PSOs). */
     class PsoManager {
     public:
@@ -140,6 +203,14 @@ namespace ne {
         PsoManager() = delete;
         PsoManager(const PsoManager&) = delete;
         PsoManager& operator=(const PsoManager&) = delete;
+
+        /**
+         * Returns a RAII object that once acquired flushed the command queue, pauses the rendering and
+         * releases all internal resources from all graphics PSOs, and restores them in destructor.
+         *
+         * @return RAII object.
+         */
+        DelayedPsoResourcesCreation clearGraphicsPsosInternalResourcesAndDelayRestoring();
 
         /**
          * Look for already created PSO that uses the specified shaders and settings and returns it,
@@ -193,6 +264,9 @@ namespace ne {
         // PSO notifies the manager when a material stops referencing it.
         friend class Pso;
 
+        // Releases/restores internal PSOs' resources.
+        friend class DelayedPsoResourcesCreation;
+
         /**
          * Returns renderer that owns this PSO manager.
          *
@@ -201,6 +275,30 @@ namespace ne {
         Renderer* getRenderer() const;
 
     private:
+        /**
+         * Releases internal resources (such as root signature, internal PSO, etc.) from all
+         * created graphics PSOs.
+         *
+         * @warning Expects that the GPU is not referencing graphics PSOs (command queue is empty) and
+         * that no drawing will occur until @ref restoreInternalGraphicsPsosResources is called.
+         *
+         * @remark Typically used before changing something (for ex. shader configuration), so that no PSO
+         * will reference old resources, to later call @ref restoreInternalGraphicsPsosResources.
+         *
+         * @return Error if something went wrong.
+         */
+        [[nodiscard]] std::optional<Error> releaseInternalGraphicsPsosResources();
+
+        /**
+         * Creates internal resources for all created graphics PSOs using their current configuration.
+         *
+         * @remark Called after @ref releaseInternalGraphicsPsosResources to create resources that will now
+         * reference changed (new) resources.
+         *
+         * @return Error if something went wrong.
+         */
+        [[nodiscard]] std::optional<Error> restoreInternalGraphicsPsosResources();
+
         /**
          * Assigns vertex and pixel shaders to create a render specific graphics PSO (for usual rendering).
          *

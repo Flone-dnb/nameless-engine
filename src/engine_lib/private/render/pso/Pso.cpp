@@ -21,6 +21,12 @@ namespace ne {
         : ShaderUser(pRenderer->getShaderManager()) {
         this->pRenderer = pRenderer;
         this->pPsoManager = pPsoManager;
+
+        this->sVertexShaderName = sVertexShaderName;
+        this->sPixelShaderName = sPixelShaderName;
+
+        bIsUsingPixelBlending = bUsePixelBlending;
+
         sUniquePsoIdentifier =
             constructUniquePsoIdentifier(sVertexShaderName, sPixelShaderName, bUsePixelBlending);
     }
@@ -43,8 +49,14 @@ namespace ne {
         return sUniqueId;
     }
 
+    std::string Pso::getVertexShaderName() { return sVertexShaderName; }
+
+    std::string Pso::getPixelShaderName() { return sPixelShaderName; }
+
+    bool Pso::isUsingPixelBlending() const { return bIsUsingPixelBlending; }
+
     std::pair<std::mutex, std::set<Material*>>* Pso::getMaterialsThatUseThisPso() {
-        return &materialsThatUseThisPso;
+        return &mtxMaterialsThatUseThisPso;
     }
 
     std::variant<std::shared_ptr<Pso>, Error> Pso::createGraphicsPso(
@@ -82,11 +94,11 @@ namespace ne {
 
     void Pso::onMaterialUsingPso(Material* pMaterial) {
         {
-            std::scoped_lock guard(materialsThatUseThisPso.first);
+            std::scoped_lock guard(mtxMaterialsThatUseThisPso.first);
 
             // Check if this material was already added previously.
-            const auto it = materialsThatUseThisPso.second.find(pMaterial);
-            if (it != materialsThatUseThisPso.second.end()) [[unlikely]] {
+            const auto it = mtxMaterialsThatUseThisPso.second.find(pMaterial);
+            if (it != mtxMaterialsThatUseThisPso.second.end()) [[unlikely]] {
                 Logger::get().error(
                     fmt::format(
                         "material \"{}\" notified the PSO with ID \"{}\" of being used but this "
@@ -97,17 +109,17 @@ namespace ne {
                 return;
             }
 
-            materialsThatUseThisPso.second.insert(pMaterial);
+            mtxMaterialsThatUseThisPso.second.insert(pMaterial);
         }
     }
 
     void Pso::onMaterialNoLongerUsingPso(Material* pMaterial) {
         {
-            std::scoped_lock guard(materialsThatUseThisPso.first);
+            std::scoped_lock guard(mtxMaterialsThatUseThisPso.first);
 
             // Make sure this material was previously added to our array of materials.
-            const auto it = materialsThatUseThisPso.second.find(pMaterial);
-            if (it == materialsThatUseThisPso.second.end()) [[unlikely]] {
+            const auto it = mtxMaterialsThatUseThisPso.second.find(pMaterial);
+            if (it == mtxMaterialsThatUseThisPso.second.end()) [[unlikely]] {
                 Logger::get().error(
                     fmt::format(
                         "material \"{}\" notified the PSO with ID \"{}\" of no longer being used but this "

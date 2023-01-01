@@ -312,19 +312,19 @@ namespace ne {
             if (iNewRefCount != 0) {
                 Logger::get().error(
                     std::format(
-                        "shader \"{}\" bytecode was released from "
+                        "shader \"{}\" bytecode was requested to be released from the "
                         "memory but it's still being referenced (new ref count: {})",
                         getShaderName(),
                         iNewRefCount),
-                    "");
+                    sHlslShaderLogCategory);
             } else if (!bLogOnlyErrors) {
                 Logger::get().info(
                     std::format(
-                        "shader \"{}\" bytecode is being released from memory as it's no longer being used "
-                        "(new ref count: {})",
+                        "shader \"{}\" bytecode is being released from the memory as it's no longer being "
+                        "used (new ref count: {})",
                         getShaderName(),
                         iNewRefCount),
-                    "");
+                    sHlslShaderLogCategory);
             }
 
             notifyShaderBytecodeReleasedFromMemory();
@@ -336,19 +336,19 @@ namespace ne {
             if (iNewRefCount != 0) {
                 Logger::get().error(
                     std::format(
-                        "shader \"{}\" root signature was released from "
+                        "shader \"{}\" root signature was requested to be released from the "
                         "memory but it's still being referenced (new ref count: {})",
                         getShaderName(),
                         iNewRefCount),
-                    "");
+                    sHlslShaderLogCategory);
             } else if (!bLogOnlyErrors) {
                 Logger::get().info(
                     std::format(
-                        "shader \"{}\" root signature is being released from memory as it's no longer being "
-                        "used (new ref count: {})",
+                        "shader \"{}\" root signature is being released from the memory as it's no longer "
+                        "being used (new ref count: {})",
                         getShaderName(),
                         iNewRefCount),
-                    "");
+                    sHlslShaderLogCategory);
             }
         }
 

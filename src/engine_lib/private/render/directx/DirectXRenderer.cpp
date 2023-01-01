@@ -17,6 +17,7 @@
 #include "render/directx/resources/DirectXResourceManager.h"
 #include "materials/hlsl/HlslEngineShaders.hpp"
 #include "render/pso/PsoManager.h"
+#include "materials/ShaderFilesystemPaths.hpp"
 #include "materials/Material.h"
 
 // DirectX.
@@ -64,6 +65,8 @@ namespace ne {
             throw std::runtime_error(error->getError());
         }
 
+        setInitialShaderConfiguration();
+
         // Compile engine shaders.
         error = compileEngineShaders();
         if (error.has_value()) {
@@ -81,9 +84,6 @@ namespace ne {
         }
 
         // TODO: create frame resources.
-
-        // Finally, setup shader configuration.
-        initializeShaderConfiguration();
     }
 
     std::optional<Error> DirectXRenderer::enableDebugLayer() const {
@@ -148,15 +148,34 @@ namespace ne {
     }
 
     std::optional<Error> DirectXRenderer::setTextureFiltering(const TextureFilteringMode& settings) {
+        // Make sure no drawing is happening and the GPU is not referencing any resources.
         std::scoped_lock guard(*getRenderResourcesMutex());
         flushCommandQueue();
 
-        textureFilteringMode = settings;
+        {
+            // TODO: move this section to a separate class/struct
+            // TODO: log what setting was changed, also log from/to setting values
+            textureFilteringMode = settings;
 
-        auto optionalError = refreshShaderParameters();
-        if (optionalError.has_value()) {
-            optionalError->addEntry();
-            return optionalError.value();
+            // Update shader configuration.
+            auto configuration = *getShaderConfiguration(ShaderType::PIXEL_SHADER);
+
+            switch (textureFilteringMode) {
+            case (TextureFilteringMode::POINT): {
+                configuration.insert(ShaderParameter::TEXTURE_FILTERING_POINT);
+                break;
+            }
+            case (TextureFilteringMode::LINEAR): {
+                configuration.insert(ShaderParameter::TEXTURE_FILTERING_LINEAR);
+                break;
+            }
+            case (TextureFilteringMode::ANISOTROPIC): {
+                configuration.insert(ShaderParameter::TEXTURE_FILTERING_ANISOTROPIC);
+                break;
+            }
+            }
+
+            setShaderConfiguration(configuration, ShaderType::PIXEL_SHADER);
         }
 
         // Write new configuration to disk.
@@ -166,22 +185,23 @@ namespace ne {
     }
 
     std::optional<Error> DirectXRenderer::setAntialiasing(const Antialiasing& settings) {
+        // Make sure no drawing is happening and the GPU is not referencing any resources.
         std::scoped_lock guard(*getRenderResourcesMutex());
         flushCommandQueue();
 
-        bIsMsaaEnabled = settings.bIsEnabled;
+        {
+            // TODO: move this section to a separate class/struct
+            // TODO: log what setting was changed, also log from/to setting values
+            bIsMsaaEnabled = settings.bIsEnabled;
 
-        if (bIsMsaaEnabled && settings.iSampleCount != 2 && settings.iSampleCount != 4) {
-            return Error(std::format(
-                "{} is not a valid quality parameter, valid quality values for MSAA are 2 and 4",
-                settings.iSampleCount));
+            if (bIsMsaaEnabled && settings.iSampleCount != 2 && settings.iSampleCount != 4) {
+                return Error(std::format(
+                    "{} is not a valid quality parameter, valid quality values for MSAA are 2 and 4",
+                    settings.iSampleCount));
+            }
+
+            iMsaaSampleCount = settings.iSampleCount;
         }
-
-        iMsaaSampleCount = settings.iSampleCount;
-
-        // TODO: log what setting was changed, also log from/to setting values
-
-        // TODO: change vertex/pixel shader configuration
 
         // Recreate depth/stencil buffer with(out) multisampling.
         auto optionalError = createDepthStencilBuffer();
@@ -190,9 +210,8 @@ namespace ne {
             return optionalError.value();
         }
 
-        // TODO: recreate all other depth/stencil buffers
-
-        // TODO: recreate all PSOs
+        // Recreate all PSOs' internal resources so they will now use new multisampling settings.
+        { const auto psoGuard = getPsoManager()->clearGraphicsPsosInternalResourcesAndDelayRestoring(); }
 
         // Write new configuration to disk.
         writeConfigurationToConfigFile();
@@ -714,7 +733,11 @@ namespace ne {
                 const Error err(sErrorMessage);
                 err.showError();
                 MessageBox::info(
-                    "Info", "Try restarting the application, if this will not help contact the developers.");
+                    "Info",
+                    fmt::format(
+                        "Try restarting the application or deleting the directory \"{}\", if this "
+                        "does not help contact the developers.",
+                        ShaderFilesystemPaths::getPathToShaderCacheDirectory().string()));
                 throw std::runtime_error(err.getError());
             }
         };
@@ -785,8 +808,6 @@ namespace ne {
     DXGI_FORMAT DirectXRenderer::getDepthStencilBufferFormat() const { return depthStencilBufferFormat; }
 
     UINT DirectXRenderer::getMsaaQualityLevel() const { return iMsaaQuality; }
-
-    void DirectXRenderer::initializeShaderConfiguration() { refreshShaderParameters(); }
 
     void DirectXRenderer::updateResourcesForNextFrame() {
         // TODO: wait for frame resource to be free
@@ -889,6 +910,10 @@ namespace ne {
     void DirectXRenderer::flushCommandQueue() {
         std::scoped_lock guardFrame(*getRenderResourcesMutex());
 
+        if (pCommandQueue == nullptr) {
+            return;
+        }
+
         const auto iFenceValue = iCurrentFence.fetch_add(1);
         HRESULT hResult = pCommandQueue->Signal(pFence.Get(), iFenceValue);
 
@@ -953,43 +978,6 @@ namespace ne {
         }
 
         return vFilteredModes;
-    }
-
-    std::optional<Error> DirectXRenderer::refreshShaderParameters() {
-        std::scoped_lock guard(*getRenderResourcesMutex());
-        flushCommandQueue();
-
-        std::set<ShaderParameter> pixelShaderConfiguration;
-
-        // Pixel shader settings.
-        // Texture filtering.
-        switch (textureFilteringMode) {
-        case (TextureFilteringMode::POINT):
-            pixelShaderConfiguration.insert(ShaderParameter::TEXTURE_FILTERING_POINT);
-            break;
-        case (TextureFilteringMode::LINEAR):
-            pixelShaderConfiguration.insert(ShaderParameter::TEXTURE_FILTERING_LINEAR);
-            break;
-        case (TextureFilteringMode::ANISOTROPIC):
-            pixelShaderConfiguration.insert(ShaderParameter::TEXTURE_FILTERING_ANISOTROPIC);
-            break;
-        }
-
-        // !!! other shader settings go here !!!
-
-        // Set configuration.
-        setPixelShaderConfiguration(pixelShaderConfiguration);
-
-        // Recreate PSOs to use correct shaders (according to the new configuration).
-        auto optionalError = createPipelineStateObjects();
-        if (optionalError.has_value()) {
-            optionalError->addEntry();
-            return optionalError.value();
-        }
-
-        // TODO: recreate PSOs
-
-        return {};
     }
 
     void DirectXRenderer::writeConfigurationToConfigFile() {
@@ -1062,6 +1050,8 @@ namespace ne {
             return;
         }
 
+        std::set<ShaderParameter> pixelShaderConfiguration;
+
         ConfigManager manager;
 
         // Try loading file.
@@ -1124,9 +1114,31 @@ namespace ne {
         // Read texture filtering.
         textureFilteringMode = static_cast<TextureFilteringMode>(manager.getValue<int>(
             getConfigurationSectionTextureFiltering(), "mode", static_cast<int>(textureFilteringMode)));
+        switch (textureFilteringMode) {
+        case (TextureFilteringMode::POINT): {
+            pixelShaderConfiguration.insert(ShaderParameter::TEXTURE_FILTERING_POINT);
+            break;
+        }
+        case (TextureFilteringMode::LINEAR): {
+            pixelShaderConfiguration.insert(ShaderParameter::TEXTURE_FILTERING_LINEAR);
+            break;
+        }
+        case (TextureFilteringMode::ANISOTROPIC): {
+            pixelShaderConfiguration.insert(ShaderParameter::TEXTURE_FILTERING_ANISOTROPIC);
+            break;
+        }
+        }
 
         // !!!
         // New settings go here!
         // !!!
+
+        setShaderConfiguration(pixelShaderConfiguration, ShaderType::PIXEL_SHADER);
+    }
+
+    void DirectXRenderer::setInitialShaderConfiguration() {
+        std::set<ShaderParameter> parameters;
+        parameters.insert(ShaderParameter::TEXTURE_FILTERING_ANISOTROPIC);
+        setShaderConfiguration(parameters, ShaderType::PIXEL_SHADER);
     }
 } // namespace ne

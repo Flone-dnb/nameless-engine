@@ -427,6 +427,23 @@ namespace ne {
         lastSelfValidationCheckTime = steady_clock::now();
     }
 
+    void ShaderManager::setConfigurationForShaders(
+        const std::set<ShaderParameter>& configuration, ShaderType shaderType) {
+        std::scoped_lock guard(mtxRwShaders);
+
+        for (const auto& [sShaderName, pShader] : compiledShaders) {
+            if (pShader->getShaderType() == shaderType) {
+                if (pShader->setConfiguration(configuration)) [[unlikely]] {
+                    Error error(fmt::format(
+                        "failed to set the shader configuration for the shader \"{}\"",
+                        pShader->getShaderName()));
+                    error.showError();
+                    throw std::runtime_error(error.getError());
+                }
+            }
+        }
+    }
+
     std::optional<Error> ShaderManager::compileShaders(
         std::vector<ShaderDescription>& vShadersToCompile,
         const std::function<void(size_t iCompiledShaderCount, size_t iTotalShadersToCompile)>& onProgress,
@@ -521,7 +538,7 @@ namespace ne {
         size_t iQueryId,
         const std::shared_ptr<std::atomic<size_t>>& pCompiledShaderCount,
         size_t iTotalShaderCount,
-        ShaderDescription shaderToCompile,
+        ShaderDescription shaderDescription,
         const std::function<void(size_t iCompiledShaderCount, size_t iTotalShadersToCompile)>& onProgress,
         const std::function<
             void(ShaderDescription shaderDescription, std::variant<std::string, Error> error)>& onError,
@@ -530,10 +547,10 @@ namespace ne {
 
         // See if we compiled this shader before (check cache).
         if (std::filesystem::exists(
-                ShaderFilesystemPaths::getPathToShaderCacheDirectory() / shaderToCompile.sShaderName)) {
+                ShaderFilesystemPaths::getPathToShaderCacheDirectory() / shaderDescription.sShaderName)) {
             // Try to use cache.
             std::optional<ShaderCacheInvalidationReason> cacheInvalidationReason;
-            auto result = ShaderPack::createFromCache(pRenderer, shaderToCompile, cacheInvalidationReason);
+            auto result = ShaderPack::createFromCache(pRenderer, shaderDescription, cacheInvalidationReason);
             if (std::holds_alternative<Error>(result)) {
                 auto err = std::get<Error>(std::move(result));
                 err.addEntry();
@@ -547,7 +564,7 @@ namespace ne {
                     Logger::get().info(
                         fmt::format(
                             "shader \"{}\" cache files are corrupted, attempting to recompile",
-                            shaderToCompile.sShaderName),
+                            shaderDescription.sShaderName),
                         sShaderManagerLogCategory);
                 }
             } else {
@@ -557,13 +574,13 @@ namespace ne {
 
         if (pShaderPack == nullptr) {
             // Compile shader.
-            auto result = ShaderPack::compileShaderPack(pRenderer, shaderToCompile);
+            auto result = ShaderPack::compileShaderPack(pRenderer, shaderDescription);
             if (!std::holds_alternative<std::shared_ptr<ShaderPack>>(result)) {
                 if (std::holds_alternative<std::string>(result)) {
                     const auto sShaderError = std::get<std::string>(std::move(result));
                     pRenderer->getGame()->addDeferredTask(
-                        [onError, shaderToCompile, sShaderError = std::move(sShaderError)]() mutable {
-                            onError(std::move(shaderToCompile), sShaderError);
+                        [onError, shaderDescription, sShaderError = std::move(sShaderError)]() mutable {
+                            onError(std::move(shaderDescription), sShaderError);
                         });
                 } else {
                     auto err = std::get<Error>(std::move(result));
@@ -575,8 +592,8 @@ namespace ne {
                             iQueryId,
                             err.getError()),
                         sShaderManagerLogCategory);
-                    pRenderer->getGame()->addDeferredTask([onError, shaderToCompile, err]() mutable {
-                        onError(std::move(shaderToCompile), err);
+                    pRenderer->getGame()->addDeferredTask([onError, shaderDescription, err]() mutable {
+                        onError(std::move(shaderDescription), err);
                     });
                 }
             } else {
@@ -588,17 +605,44 @@ namespace ne {
             // Add shader to shader registry.
             std::scoped_lock guard(mtxRwShaders);
 
-            const auto it = compiledShaders.find(shaderToCompile.sShaderName);
-            if (it != compiledShaders.end()) {
-                Error err(
-                    fmt::format("shader with the name \"{}\" is already added", shaderToCompile.sShaderName));
+            const auto it = compiledShaders.find(shaderDescription.sShaderName);
+            if (it != compiledShaders.end()) [[unlikely]] {
+                Error err(fmt::format(
+                    "shader with the name \"{}\" is already added", shaderDescription.sShaderName));
                 Logger::get().error(
                     fmt::format("shader compilation query #{}: {}", iQueryId, err.getError()),
                     sShaderManagerLogCategory);
-                pRenderer->getGame()->addDeferredTask(
-                    [onError, shaderToCompile, err]() mutable { onError(std::move(shaderToCompile), err); });
+                pRenderer->getGame()->addDeferredTask([onError, shaderDescription, err]() mutable {
+                    onError(std::move(shaderDescription), err);
+                });
             } else {
-                compiledShaders[shaderToCompile.sShaderName] = std::move(pShaderPack);
+                // Set initial shader configuration.
+                const auto configuration = *pRenderer->getShaderConfiguration(shaderDescription.shaderType);
+                const auto bFailed = pShaderPack->setConfiguration(configuration);
+                if (bFailed) [[unlikely]] {
+                    const auto shaderParameters = shaderParametersToText(configuration);
+                    std::string sParameters;
+                    for (const auto& sParameter : shaderParameters) {
+                        sParameters += sParameter + " ";
+                    }
+                    if (!sParameters.empty()) {
+                        sParameters.pop_back();
+                    }
+                    Error err(fmt::format(
+                        "failed to set the initial shader configuration for the shader \"{}\" "
+                        "(configuration parameters: {})",
+                        shaderDescription.sShaderName,
+                        sParameters));
+                    Logger::get().error(
+                        fmt::format("shader compilation query #{}: {}", iQueryId, err.getError()),
+                        sShaderManagerLogCategory);
+                    pRenderer->getGame()->addDeferredTask([onError, shaderDescription, err]() mutable {
+                        onError(std::move(shaderDescription), err);
+                    });
+                }
+
+                // Save shader.
+                compiledShaders[shaderDescription.sShaderName] = std::move(pShaderPack);
             }
         }
 
@@ -613,13 +657,13 @@ namespace ne {
                 iQueryId,
                 iCompiledShaderCount,
                 iTotalShaderCount,
-                shaderToCompile.sShaderName),
+                shaderDescription.sShaderName),
             sShaderManagerLogCategory);
         pRenderer->getGame()->addDeferredTask([onProgress, iCompiledShaderCount, iTotalShaderCount]() {
             onProgress(iCompiledShaderCount, iTotalShaderCount);
         });
 
-        // Only one task should call onCompleted.
+        // Make sure that only one task should call onCompleted.
         if (iLastFetchCompiledShaderCount + 1 == iTotalShaderCount) {
             Logger::get().info(
                 fmt::format(

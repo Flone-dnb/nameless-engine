@@ -39,9 +39,11 @@ namespace ne {
          *
          * @warning If a shader of this type was already added it will be replaced with the new one.
          *
+         * @remark Adding the same shader that was already added is safe as this will do nothing.
+         *
          * @param sShaderName Name of the compiled shader (see ShaderManager::compileShaders).
          *
-         * @return 'false' if shader was added successfully, 'true' if it was not found in ShaderManager.
+         * @return `false` if shader was added successfully, `true` if it was not found in ShaderManager.
          */
         bool addShader(const std::string& sShaderName);
 
@@ -56,7 +58,7 @@ namespace ne {
          *
          * @return Empty if a shader of this type was not added before, valid pointer otherwise.
          */
-        std::optional<ShaderPack*> getShader(ShaderType shaderType) const;
+        std::optional<ShaderPack*> getShader(ShaderType shaderType);
 
     private:
         /**
@@ -67,8 +69,11 @@ namespace ne {
          */
         void releaseShader(const std::string& sShaderName) const;
 
-        /** Stored shaders. */
-        std::unordered_map<ShaderType, std::shared_ptr<ShaderPack>> shaders;
+        /**
+         * Assigned shaders (see @ref addShader).
+         * Must be used with mutex.
+         */
+        std::pair<std::mutex, std::unordered_map<ShaderType, std::shared_ptr<ShaderPack>>> mtxAssignedShaders;
 
         /** Shader manager to work with shaders. */
         ShaderManager* pShaderManager;

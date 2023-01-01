@@ -157,6 +157,9 @@ namespace ne {
         /** Static samplers that were used for generating @ref mtxCompiledBlobRootSignature. */
         std::vector<CD3DX12_STATIC_SAMPLER_DESC> vStaticSamplers;
 
+        /** Name of the category used for logging. */
+        inline static const char* sHlslShaderLogCategory = "HLSL Shader";
+
         /** Shader file encoding. */
         static inline UINT iShaderFileCodepage = DXC_CP_ACP;
 

@@ -172,7 +172,7 @@ namespace ne {
         if (FAILED(hResult)) {
             return Error(hResult);
         }
-        if (pErrors && pErrors->GetStringLength()) {
+        if (pErrors != nullptr && pErrors->GetStringLength() > 0) {
             return std::string{pErrors->GetStringPointer(), pErrors->GetStringLength()};
         }
 

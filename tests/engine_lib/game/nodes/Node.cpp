@@ -703,8 +703,21 @@ TEST_CASE("input event callbacks in Node are triggered") {
             getWorldRootNode()->addChildNode(pMyNode);
 
             // Register events.
-            getInputManager()->addActionEvent("action1", {KeyboardKey::KEY_W});
-            getInputManager()->addAxisEvent("axis1", {{KeyboardKey::KEY_A, KeyboardKey::KEY_B}});
+            auto optionalError = getInputManager()->addActionEvent("action1", {KeyboardKey::KEY_W});
+            if (optionalError.has_value()) {
+                auto error = optionalError.value();
+                error.addEntry();
+                INFO(error.getError());
+                REQUIRE(false);
+            }
+            optionalError =
+                getInputManager()->addAxisEvent("axis1", {{KeyboardKey::KEY_A, KeyboardKey::KEY_B}});
+            if (optionalError.has_value()) {
+                auto error = optionalError.value();
+                error.addEntry();
+                INFO(error.getError());
+                REQUIRE(false);
+            }
 
             // Simulate input.
             getWindow()->onKeyboardInput(KeyboardKey::KEY_A, KeyboardModifiers(0), true);

@@ -120,7 +120,7 @@ namespace ne {
         return {};
     }
 
-    ID3D12Resource* DirectXResource::getD3DResource() const {
+    ID3D12Resource* DirectXResource::getInternalResource() const {
         if (pAllocatedResource) {
             return pAllocatedResource->GetResource();
         } else {

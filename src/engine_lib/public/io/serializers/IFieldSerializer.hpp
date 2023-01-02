@@ -53,7 +53,7 @@ namespace ne {
          *
          * @return Error if something went wrong, empty otherwise.
          */
-        virtual std::optional<Error> serializeField(
+        [[nodiscard]] virtual std::optional<Error> serializeField(
             toml::value* pTomlData,
             Serializable* pFieldOwner,
             const rfk::Field* pField,
@@ -77,7 +77,7 @@ namespace ne {
          *
          * @return Error if something went wrong, empty otherwise.
          */
-        virtual std::optional<Error> deserializeField(
+        [[nodiscard]] virtual std::optional<Error> deserializeField(
             const toml::value* pTomlDocument,
             const toml::value* pTomlValue,
             Serializable* pFieldOwner,
@@ -96,7 +96,7 @@ namespace ne {
          *
          * @return Error if something went wrong, empty otherwise.
          */
-        virtual std::optional<Error> cloneField(
+        [[nodiscard]] virtual std::optional<Error> cloneField(
             Serializable* pFromInstance,
             const rfk::Field* pFromField,
             Serializable* pToInstance,

@@ -64,7 +64,8 @@ namespace ne {
          *
          * @return Error if something went wrong.
          */
-        std::optional<Error> assignDescriptor(DirectXResource* pResource, DescriptorType descriptorType);
+        [[nodiscard]] std::optional<Error>
+        assignDescriptor(DirectXResource* pResource, DescriptorType descriptorType);
 
         /**
          * Returns current heap capacity (allocated heap size).
@@ -94,6 +95,7 @@ namespace ne {
         size_t getNoLongerUsedDescriptorCount();
 
     protected:
+        // Notifies the heap about descriptor being destroyed.
         friend class DirectXDescriptor;
 
         /**
@@ -142,7 +144,7 @@ namespace ne {
          *
          * @return Error if something went wrong.
          */
-        std::optional<Error> expandHeap();
+        [[nodiscard]] std::optional<Error> expandHeap();
 
         /**
          * Recreates the heap to expand it to another @ref iHeapGrowSize descriptors.
@@ -150,7 +152,7 @@ namespace ne {
          *
          * @return Error if something went wrong.
          */
-        std::optional<Error> shrinkHeap();
+        [[nodiscard]] std::optional<Error> shrinkHeap();
 
         /**
          * (Re)creates the heap with the specified capacity.
@@ -160,7 +162,7 @@ namespace ne {
          *
          * @return Error if something went wrong.
          */
-        std::optional<Error> createHeap(INT iCapacity);
+        [[nodiscard]] std::optional<Error> createHeap(INT iCapacity);
 
         /**
          * Returns an array of descriptor types that this heap handles.

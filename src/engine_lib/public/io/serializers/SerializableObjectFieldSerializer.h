@@ -37,7 +37,7 @@ namespace ne {
          *
          * @return Error if something went wrong, empty otherwise.
          */
-        static std::optional<Error> serializeFieldObject(
+        [[nodiscard]] static std::optional<Error> serializeFieldObject(
             Serializable* pObject,
             toml::value* pTomlData,
             const std::string& sFieldName,
@@ -59,7 +59,7 @@ namespace ne {
          *
          * @return Error if something went wrong.
          */
-        static std::optional<Error>
+        [[nodiscard]] static std::optional<Error>
         cloneSerializableObject(Serializable* pFrom, Serializable* pTo, bool bNotifyAboutDeserialized);
 
         /**
@@ -130,7 +130,7 @@ namespace ne {
          *
          * @return Error if something went wrong, empty otherwise.
          */
-        virtual std::optional<Error> serializeField(
+        [[nodiscard]] virtual std::optional<Error> serializeField(
             toml::value* pTomlData,
             Serializable* pFieldOwner,
             const rfk::Field* pField,
@@ -154,7 +154,7 @@ namespace ne {
          *
          * @return Error if something went wrong, empty otherwise.
          */
-        virtual std::optional<Error> deserializeField(
+        [[nodiscard]] virtual std::optional<Error> deserializeField(
             const toml::value* pTomlDocument,
             const toml::value* pTomlValue,
             Serializable* pFieldOwner,
@@ -173,7 +173,7 @@ namespace ne {
          *
          * @return Error if something went wrong, empty otherwise.
          */
-        virtual std::optional<Error> cloneField(
+        [[nodiscard]] virtual std::optional<Error> cloneField(
             Serializable* pFromInstance,
             const rfk::Field* pFromField,
             Serializable* pToInstance,

@@ -77,42 +77,42 @@ namespace ne {
          *
          * @return Error if something went wrong.
          */
-        std::optional<Error> addRtv();
+        [[nodiscard]] std::optional<Error> addRtv();
 
         /**
          * Creates a new depth stencil view descriptor that points to this resource.
          *
          * @return Error if something went wrong.
          */
-        std::optional<Error> addDsv();
+        [[nodiscard]] std::optional<Error> addDsv();
 
         /**
          * Creates a new constant buffer view descriptor that points to this resource.
          *
          * @return Error if something went wrong.
          */
-        std::optional<Error> addCbv();
+        [[nodiscard]] std::optional<Error> addCbv();
 
         /**
          * Creates a new shader resource view descriptor that points to this resource.
          *
          * @return Error if something went wrong.
          */
-        std::optional<Error> addSrv();
+        [[nodiscard]] std::optional<Error> addSrv();
 
         /**
          * Creates a new unordered access view descriptor that points to this resource.
          *
          * @return Error if something went wrong.
          */
-        std::optional<Error> addUav();
+        [[nodiscard]] std::optional<Error> addUav();
 
         /**
-         * Returns internal Direct 3D resource.
+         * Returns internal resource.
          *
-         * @return Direct 3D resource.
+         * @return Do not delete (free) this pointer. Internal resource.
          */
-        ID3D12Resource* getD3DResource() const;
+        ID3D12Resource* getInternalResource() const;
 
         /**
          * Returns resource name.

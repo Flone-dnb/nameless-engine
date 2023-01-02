@@ -90,7 +90,8 @@ namespace ne {
          *
          * @return Error if something went wrong. No error will be returned if the file does not exist.
          */
-        static std::optional<Error> removeFile(ConfigCategory category, std::string_view sFileName);
+        [[nodiscard]] static std::optional<Error>
+        removeFile(ConfigCategory category, std::string_view sFileName);
 
         /**
          * Removes a file.
@@ -118,7 +119,7 @@ namespace ne {
          *
          * @return Error if something went wrong.
          */
-        std::optional<Error> loadFile(ConfigCategory category, std::string_view sFileName);
+        [[nodiscard]] std::optional<Error> loadFile(ConfigCategory category, std::string_view sFileName);
 
         /**
          * Loads data from file.
@@ -136,7 +137,7 @@ namespace ne {
          *
          * @return Error if something went wrong.
          */
-        std::optional<Error> loadFile(std::filesystem::path pathToConfigFile);
+        [[nodiscard]] std::optional<Error> loadFile(std::filesystem::path pathToConfigFile);
 
         /**
          * Reads a value from the loaded file (see @ref loadFile).
@@ -274,7 +275,7 @@ namespace ne {
          *
          * @return Error if something went wrong.
          */
-        std::optional<Error> saveFile(ConfigCategory category, std::string_view sFileName);
+        [[nodiscard]] std::optional<Error> saveFile(ConfigCategory category, std::string_view sFileName);
 
         /**
          * Saves the current configuration to a file with a UTF-8 encoding.
@@ -291,7 +292,8 @@ namespace ne {
          *
          * @return Error if something went wrong.
          */
-        std::optional<Error> saveFile(std::filesystem::path pathToConfigFile, bool bEnableBackup);
+        [[nodiscard]] std::optional<Error>
+        saveFile(std::filesystem::path pathToConfigFile, bool bEnableBackup);
 
         /**
          * Returns full path to the file if it was loaded using @ref loadFile

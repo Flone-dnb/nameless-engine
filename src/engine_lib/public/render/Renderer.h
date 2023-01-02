@@ -73,7 +73,8 @@ namespace ne {
          *
          * @return Error if something went wrong.
          */
-        virtual std::optional<Error> setTextureFiltering(const TextureFilteringMode& settings) = 0;
+        [[nodiscard]] virtual std::optional<Error>
+        setTextureFiltering(const TextureFilteringMode& settings) = 0;
 
         /**
          * Sets antialiasing settings.
@@ -82,7 +83,7 @@ namespace ne {
          *
          * @return Error if something went wrong.
          */
-        virtual std::optional<Error> setAntialiasing(const Antialiasing& settings) = 0;
+        [[nodiscard]] virtual std::optional<Error> setAntialiasing(const Antialiasing& settings) = 0;
 
         /**
          * Sets backbuffer color.
@@ -92,7 +93,7 @@ namespace ne {
          *
          * @return Error if something went wrong.
          */
-        virtual std::optional<Error> setBackbufferFillColor(float fillColor[4]) = 0;
+        [[nodiscard]] virtual std::optional<Error> setBackbufferFillColor(float fillColor[4]) = 0;
 
         /**
          * Looks for video adapters (GPUs) that support this renderer.
@@ -158,9 +159,6 @@ namespace ne {
          */
         virtual void flushCommandQueue() = 0;
 
-        /** Draw new frame. */
-        virtual void drawNextFrame() = 0;
-
         /**
          * Returns the current shader configuration (shader settings,
          * represented by a bunch of predefined macros).
@@ -218,8 +216,14 @@ namespace ne {
         std::recursive_mutex* getRenderResourcesMutex();
 
     protected:
+        // Only window should be able to request new frames to be drawn.
+        friend class Window;
+
         /** Update internal resources for the next frame. */
         virtual void updateResourcesForNextFrame() = 0;
+
+        /** Draw new frame. */
+        virtual void drawNextFrame() = 0;
 
         /**
          * Writes current renderer configuration to disk.

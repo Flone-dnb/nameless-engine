@@ -109,7 +109,7 @@ namespace ne {
          *
          * @return Error if failed to generate PSO.
          */
-        std::optional<Error> generateGraphicsPsoForShaders(
+        [[nodiscard]] std::optional<Error> generateGraphicsPsoForShaders(
             const std::string& sVertexShaderName,
             const std::string& sPixelShaderName,
             bool bUsePixelBlending);

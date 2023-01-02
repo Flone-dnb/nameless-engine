@@ -31,14 +31,13 @@ namespace ne {
         static size_t getTotalAmountOfLoadedShaders();
 
         /**
-         * Tests if shader cache for this shader is corrupted or not
-         * and deletes the cache if it's corrupted.
+         * Tests if the shader cache for this shader is corrupted or not.
          *
-         * @remark This function should be used if you want to use shader cache.
+         * @remark This function should be used before you want to use the shader cache.
          *
          * @return Error if shader cache is corrupted.
          */
-        virtual std::optional<Error> testIfShaderCacheIsCorrupted() = 0;
+        [[nodiscard]] virtual std::optional<Error> testIfShaderCacheIsCorrupted() = 0;
 
         /**
          * Compiles a shader.
@@ -145,13 +144,13 @@ namespace ne {
          * Derived shader classes should call this function once they load shader bytecode
          * into the memory from the disk.
          */
-        void notifyShaderBytecodeLoadedIntoMemory();
+        static void notifyShaderBytecodeLoadedIntoMemory();
 
         /**
          * Derived shader classes should call this function once they release shader bytecode
          * from the memory.
          */
-        void notifyShaderBytecodeReleasedFromMemory();
+        static void notifyShaderBytecodeReleasedFromMemory();
 
         /**
          * Returns path to compiled shader blob on disk.

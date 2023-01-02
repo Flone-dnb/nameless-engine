@@ -64,16 +64,24 @@ namespace ne {
 #endif
 
         if (std::holds_alternative<std::shared_ptr<Shader>>(result)) {
+            // Success. Cache shader's description on disk.
+            // Prepare path to the file.
             auto shaderCacheConfigurationPath =
                 shaderCacheDirectory / ShaderFilesystemPaths::getShaderCacheBaseFileName();
             shaderCacheConfigurationPath += sConfiguration;
 
-            // Success. Cache the configuration on disk.
+            // Save to file.
             ConfigManager configManager;
             configManager.setValue<ShaderDescription>(
                 "", ShaderDescription::getConfigurationFileSectionName(), shaderDescription);
-            configManager.saveFile(shaderCacheConfigurationPath, false);
+            auto optionalError = configManager.saveFile(shaderCacheConfigurationPath, false);
+            if (optionalError.has_value()) {
+                auto error = optionalError.value();
+                error.addEntry();
+                return error;
+            }
         }
+
         return result;
     }
 
@@ -97,7 +105,13 @@ namespace ne {
         // Check if cached config exists.
         if (std::filesystem::exists(shaderCacheConfigurationPath)) {
             // Check if cache is valid.
-            configManager.loadFile(shaderCacheConfigurationPath);
+            auto optionalError = configManager.loadFile(shaderCacheConfigurationPath);
+            if (optionalError.has_value()) {
+                auto error = optionalError.value();
+                error.addEntry();
+                return error;
+            }
+
             auto cachedShaderDescription = configManager.getValue<ShaderDescription>(
                 "", ShaderDescription::getConfigurationFileSectionName(), ShaderDescription());
 

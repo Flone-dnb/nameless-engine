@@ -247,7 +247,7 @@ namespace ne {
          *
          * @return Error if file not found.
          */
-        std::optional<Error> setIcon(std::filesystem::path pathToIcon) const;
+        [[nodiscard]] std::optional<Error> setIcon(std::filesystem::path pathToIcon) const;
 
         /**
          * Loads the image and creates a new cursor, note that in order for this new

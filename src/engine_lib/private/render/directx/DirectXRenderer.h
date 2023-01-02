@@ -57,7 +57,8 @@ namespace ne {
          *
          * @return Error if something went wrong.
          */
-        virtual std::optional<Error> setTextureFiltering(const TextureFilteringMode& settings) override;
+        [[nodiscard]] virtual std::optional<Error>
+        setTextureFiltering(const TextureFilteringMode& settings) override;
 
         /**
          * Sets antialiasing settings.
@@ -66,7 +67,7 @@ namespace ne {
          *
          * @return Error if something went wrong.
          */
-        virtual std::optional<Error> setAntialiasing(const Antialiasing& settings) override;
+        [[nodiscard]] virtual std::optional<Error> setAntialiasing(const Antialiasing& settings) override;
 
         /**
          * Looks for video adapters (GPUs) that support used DirectX version and feature level.
@@ -133,10 +134,7 @@ namespace ne {
          *
          * @return Error if something went wrong.
          */
-        virtual std::optional<Error> setBackbufferFillColor(float fillColor[4]) override;
-
-        /** Draw new frame. */
-        virtual void drawNextFrame() override;
+        [[nodiscard]] virtual std::optional<Error> setBackbufferFillColor(float fillColor[4]) override;
 
         /**
          * Blocks the current thread until the GPU finishes executing all queued commands up to this point.
@@ -199,6 +197,9 @@ namespace ne {
          */
         virtual void readConfigurationFromConfigFile() override;
 
+        /** Draw new frame. */
+        virtual void drawNextFrame() override;
+
     private:
         /**
          * Sets initial shader configuration, typically used before compiling engine shaders.
@@ -214,7 +215,7 @@ namespace ne {
          *
          * @return Returns an error if something went wrong.
          */
-        std::optional<Error> enableDebugLayer() const;
+        [[nodiscard]] std::optional<Error> enableDebugLayer() const;
 
         /**
          * (Re)creates depth/stencil buffer @ref pDepthStencilBuffer.
@@ -223,7 +224,7 @@ namespace ne {
          *
          * @remark Make sure that old depth/stencil buffer (if was) is not used by the GPU.
          */
-        std::optional<Error> createDepthStencilBuffer();
+        [[nodiscard]] std::optional<Error> createDepthStencilBuffer();
 
         /**
          * Sets the video adapter to be used.
@@ -235,70 +236,70 @@ namespace ne {
          * name was not found, or if it was found but does not support used DirectX version
          * or feature level.
          */
-        std::optional<Error> setVideoAdapter(const std::string& sVideoAdapterName);
+        [[nodiscard]] std::optional<Error> setVideoAdapter(const std::string& sVideoAdapterName);
 
         /**
          * Sets first found output adapter (monitor).
          *
          * @return Error if something went wrong or no output adapter was found.
          */
-        std::optional<Error> setOutputAdapter();
+        [[nodiscard]] std::optional<Error> setOutputAdapter();
 
         /**
          * Creates and initializes Command Queue, Command List and Command List Allocator.
          *
          * @return Error if something went wrong.
          */
-        std::optional<Error> createCommandObjects();
+        [[nodiscard]] std::optional<Error> createCommandObjects();
 
         /**
          * Creates resource manager.
          *
          * @return Error if something went wrong.
          */
-        std::optional<Error> createResourceManager();
+        [[nodiscard]] std::optional<Error> createResourceManager();
 
         /**
          * Creates and initializes the swap chain.
          *
          * @return Error if something went wrong.
          */
-        std::optional<Error> createSwapChain();
+        [[nodiscard]] std::optional<Error> createSwapChain();
 
         /**
          * Creates and initializes the pipeline state objects.
          *
          * @return Error if something went wrong.
          */
-        std::optional<Error> createPipelineStateObjects();
+        [[nodiscard]] std::optional<Error> createPipelineStateObjects();
 
         /**
          * Checks if the created device supports MSAA.
          *
          * @return Error if something went wrong, for example, if device does not support MSAA.
          */
-        std::optional<Error> checkMsaaSupport();
+        [[nodiscard]] std::optional<Error> checkMsaaSupport();
 
         /**
          * Initializes DirectX.
          *
          * @return Error if something went wrong.
          */
-        std::optional<Error> initializeDirectX();
+        [[nodiscard]] std::optional<Error> initializeDirectX();
 
         /**
          * Compiles all essential shaders that the engine will use.
          *
          * @return Error if something went wrong.
          */
-        std::optional<Error> compileEngineShaders() const;
+        [[nodiscard]] std::optional<Error> compileEngineShaders() const;
 
         /**
          * Recreates all render buffers to match current display mode (width/height).
          *
          * @return Error if something went wrong.
          */
-        std::optional<Error> resizeRenderBuffersToCurrentDisplayMode();
+        [[nodiscard]] std::optional<Error> resizeRenderBuffersToCurrentDisplayMode();
 
         /**
          * Returns a vector of display modes that the current output adapter

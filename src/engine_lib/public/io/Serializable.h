@@ -159,7 +159,7 @@ namespace ne RNAMESPACE() {
          * @return Error if something went wrong, for example when found an unsupported for
          * serialization reflected field.
          */
-        std::optional<Error> serialize(
+        [[nodiscard]] std::optional<Error> serialize(
             std::filesystem::path pathToFile,
             bool bEnableBackup,
             const std::unordered_map<std::string, std::string>& customAttributes = {});
@@ -183,7 +183,7 @@ namespace ne RNAMESPACE() {
          * @return Error if something went wrong, for example when found an unsupported for
          * serialization reflected field.
          */
-        static std::optional<Error> serializeMultiple(
+        [[nodiscard]] static std::optional<Error> serializeMultiple(
             std::filesystem::path pathToFile,
             std::vector<SerializableObjectInformation> vObjects,
             bool bEnableBackup);
@@ -204,7 +204,7 @@ namespace ne RNAMESPACE() {
          * @return Error if something went wrong, for example when found an unsupported for
          * serialization reflected field, otherwise name of the section that was used to store this entity.
          */
-        std::variant<std::string, Error> serialize(
+        [[nodiscard]] std::variant<std::string, Error> serialize(
             toml::value& tomlData,
             std::string sEntityId = "",
             const std::unordered_map<std::string, std::string>& customAttributes = {});
@@ -229,7 +229,7 @@ namespace ne RNAMESPACE() {
          * @return Error if something went wrong, for example when found an unsupported for
          * serialization reflected field, otherwise name of the section that was used to store this entity.
          */
-        std::variant<std::string, Error> serialize(
+        [[nodiscard]] std::variant<std::string, Error> serialize(
             toml::value& tomlData,
             Serializable* pOriginalObject,
             std::string sEntityId = "",

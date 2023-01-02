@@ -116,7 +116,8 @@ namespace ne RNAMESPACE() {
          * @return Error if something went wrong, for example when found an unsupported for
          * serialization reflected field.
          */
-        std::optional<Error> serializeNodeTree(const std::filesystem::path& pathToFile, bool bEnableBackup);
+        [[nodiscard]] std::optional<Error>
+        serializeNodeTree(const std::filesystem::path& pathToFile, bool bEnableBackup);
 
         /**
          * Returns node's name.

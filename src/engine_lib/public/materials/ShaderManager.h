@@ -73,7 +73,7 @@ namespace ne {
          *
          * @return An error if something went wrong.
          */
-        std::optional<Error> compileShaders(
+        [[nodiscard]] std::optional<Error> compileShaders(
             std::vector<ShaderDescription>& vShadersToCompile,
             const std::function<void(size_t iCompiledShaderCount, size_t iTotalShadersToCompile)>& onProgress,
             const std::function<
@@ -228,7 +228,7 @@ namespace ne {
          *
          * @return An error if something went wrong.
          */
-        std::optional<Error> clearShaderCacheIfNeeded();
+        [[nodiscard]] std::optional<Error> clearShaderCacheIfNeeded();
 
         /**
          * Writes current configuration to disk.

@@ -376,7 +376,12 @@ namespace ne {
         auto pDeserializedObject = std::get<std::shared_ptr<Serializable>>(std::move(result));
 
         // Safely clone to target.
-        cloneSerializableObject(&*pDeserializedObject, pTarget, true);
+        auto optionalError = cloneSerializableObject(&*pDeserializedObject, pTarget, true);
+        if (optionalError.has_value()) {
+            auto error = optionalError.value();
+            error.addEntry();
+            return error;
+        }
 
         return {};
     }
@@ -401,7 +406,7 @@ namespace ne {
             static_cast<Serializable*>(pToField->getPtrUnsafe(pToInstance)),
             false);
         if (optionalError.has_value()) {
-            auto error = std::move(optionalError.value());
+            auto error = optionalError.value();
             error.addEntry();
             return error;
         }

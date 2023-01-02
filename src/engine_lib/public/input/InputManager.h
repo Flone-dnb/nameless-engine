@@ -99,7 +99,7 @@ namespace ne {
          * @return Returns an error if passed 'vKeys' argument is empty or if an
          * action with this name is already registered.
          */
-        std::optional<Error> addActionEvent(
+        [[nodiscard]] std::optional<Error> addActionEvent(
             const std::string& sActionName, const std::vector<std::variant<KeyboardKey, MouseButton>>& vKeys);
 
         /**
@@ -123,7 +123,7 @@ namespace ne {
          * @return Returns an error if passed 'vAxis' argument is empty or if an
          * axis event with this name is already registered.
          */
-        std::optional<Error> addAxisEvent(
+        [[nodiscard]] std::optional<Error> addAxisEvent(
             const std::string& sAxisName, const std::vector<std::pair<KeyboardKey, KeyboardKey>>& vAxis);
 
         /**
@@ -135,7 +135,7 @@ namespace ne {
          *
          * @return Error if something went wrong.
          */
-        std::optional<Error> modifyActionEventKey(
+        [[nodiscard]] std::optional<Error> modifyActionEventKey(
             const std::string& sActionName,
             std::variant<KeyboardKey, MouseButton> oldKey,
             std::variant<KeyboardKey, MouseButton> newKey);
@@ -149,7 +149,7 @@ namespace ne {
          *
          * @return Error if something went wrong.
          */
-        std::optional<Error> modifyAxisEventKey(
+        [[nodiscard]] std::optional<Error> modifyAxisEventKey(
             const std::string& sAxisName,
             std::pair<KeyboardKey, KeyboardKey> oldPair,
             std::pair<KeyboardKey, KeyboardKey> newPair);
@@ -163,7 +163,7 @@ namespace ne {
          *
          * @return Error if something went wrong.
          */
-        std::optional<Error> saveToFile(std::string_view sFileName);
+        [[nodiscard]] std::optional<Error> saveToFile(std::string_view sFileName);
 
         /**
          * Loads action/axis events from a file.
@@ -185,7 +185,7 @@ namespace ne {
          *
          * @return Error if something went wrong, this usually means that the file was corrupted.
          */
-        std::optional<Error> loadFromFile(std::string_view sFileName);
+        [[nodiscard]] std::optional<Error> loadFromFile(std::string_view sFileName);
 
         /**
          * Returns action and axis event names that the specified key is used in.
@@ -254,7 +254,7 @@ namespace ne {
          *
          * @param sActionName   Name of the action to remove.
          *
-         * @return 'false' if the action was found and removed, 'true' if not.
+         * @return `false` if the action was found and removed, `true` if not.
          */
         bool removeActionEvent(const std::string& sActionName);
 
@@ -263,7 +263,7 @@ namespace ne {
          *
          * @param sAxisName   Name of the axis to remove.
          *
-         * @return 'false' if the axis was found and removed, 'true' if not.
+         * @return `false` if the axis was found and removed, `true` if not.
          */
         bool removeAxisEvent(const std::string& sAxisName);
 
@@ -313,7 +313,7 @@ namespace ne {
          *
          * @return Returns an error if passed 'vKeys' argument is empty.
          */
-        std::optional<Error> overwriteActionEvent(
+        [[nodiscard]] std::optional<Error> overwriteActionEvent(
             const std::string& sActionName, const std::vector<std::variant<KeyboardKey, MouseButton>>& vKeys);
 
         /**
@@ -334,7 +334,7 @@ namespace ne {
          * @return Returns an error if passed 'vAxis' argument is empty or if an
          * axis event with this name is already registered.
          */
-        std::optional<Error> overwriteAxisEvent(
+        [[nodiscard]] std::optional<Error> overwriteAxisEvent(
             const std::string& sAxisName, const std::vector<std::pair<KeyboardKey, KeyboardKey>>& vAxis);
 
         /**

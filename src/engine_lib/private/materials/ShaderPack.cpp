@@ -69,7 +69,7 @@ namespace ne {
                 shaderDescription.sShaderName,
                 cacheInvalidationReason);
             if (std::holds_alternative<Error>(result)) {
-                // Clear invalid cache.
+                // Delete invalid cache.
                 std::filesystem::remove_all(
                     ShaderFilesystemPaths::getPathToShaderCacheDirectory() / shaderDescription.sShaderName);
 

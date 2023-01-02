@@ -54,13 +54,13 @@ namespace ne {
         static std::vector<D3D12_INPUT_ELEMENT_DESC> getShaderInputElementDescription();
 
         /**
-         * Tests if shader cache for this shader is corrupted or not.
+         * Tests if the shader cache for this shader is corrupted or not.
          *
-         * @remark This function should be used if you want to use shader cache.
+         * @remark This function should be used before you want to use the shader cache.
          *
-         * @return Error if shader cache is corrupted, empty is OK.
+         * @return Error if shader cache is corrupted.
          */
-        virtual std::optional<Error> testIfShaderCacheIsCorrupted() override;
+        [[nodiscard]] virtual std::optional<Error> testIfShaderCacheIsCorrupted() override;
 
         /**
          * Compiles a shader.

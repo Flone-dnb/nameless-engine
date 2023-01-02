@@ -269,7 +269,7 @@ namespace ne {
         DescriptorType descriptorType) const {
         switch (descriptorType) {
         case (DescriptorType::RTV): {
-            pRenderer->getDevice()->CreateRenderTargetView(pResource->getD3DResource(), nullptr, heapHandle);
+            pRenderer->getDevice()->CreateRenderTargetView(pResource->getInternalResource(), nullptr, heapHandle);
         } break;
         case (DescriptorType::DSV): {
             D3D12_DEPTH_STENCIL_VIEW_DESC dsvDesc;
@@ -279,19 +279,19 @@ namespace ne {
             dsvDesc.Format = pRenderer->depthStencilBufferFormat;
             dsvDesc.Texture2D.MipSlice = 0;
 
-            pRenderer->getDevice()->CreateDepthStencilView(pResource->getD3DResource(), &dsvDesc, heapHandle);
+            pRenderer->getDevice()->CreateDepthStencilView(pResource->getInternalResource(), &dsvDesc, heapHandle);
         } break;
         case (DescriptorType::CBV): {
-            const auto resourceGpuVirtualAddress = pResource->getD3DResource()->GetGPUVirtualAddress();
+            const auto resourceGpuVirtualAddress = pResource->getInternalResource()->GetGPUVirtualAddress();
 
             D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc;
             cbvDesc.BufferLocation = resourceGpuVirtualAddress;
-            cbvDesc.SizeInBytes = static_cast<UINT>(pResource->getD3DResource()->GetDesc().Width);
+            cbvDesc.SizeInBytes = static_cast<UINT>(pResource->getInternalResource()->GetDesc().Width);
 
             pRenderer->getDevice()->CreateConstantBufferView(&cbvDesc, heapHandle);
         } break;
         case (DescriptorType::SRV): {
-            const auto resourceDesc = pResource->getD3DResource()->GetDesc();
+            const auto resourceDesc = pResource->getInternalResource()->GetDesc();
 
             // Determine SRV dimension.
             D3D12_SRV_DIMENSION srvDimension = D3D12_SRV_DIMENSION_UNKNOWN;
@@ -321,10 +321,10 @@ namespace ne {
             srvDesc.Texture2D.MipLevels = resourceDesc.MipLevels;
 
             pRenderer->getDevice()->CreateShaderResourceView(
-                pResource->getD3DResource(), &srvDesc, heapHandle);
+                pResource->getInternalResource(), &srvDesc, heapHandle);
         } break;
         case (DescriptorType::UAV): {
-            const auto resourceDesc = pResource->getD3DResource()->GetDesc();
+            const auto resourceDesc = pResource->getInternalResource()->GetDesc();
 
             // Determine UAV dimension.
             D3D12_UAV_DIMENSION uavDimension = D3D12_UAV_DIMENSION_UNKNOWN;
@@ -352,7 +352,7 @@ namespace ne {
             uavDesc.Texture2D.MipSlice = 0;
 
             pRenderer->getDevice()->CreateUnorderedAccessView(
-                pResource->getD3DResource(), nullptr, &uavDesc, heapHandle);
+                pResource->getInternalResource(), nullptr, &uavDesc, heapHandle);
         } break;
         case (DescriptorType::END): {
             const Error err("invalid heap type");

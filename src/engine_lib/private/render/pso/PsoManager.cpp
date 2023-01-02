@@ -158,8 +158,9 @@ namespace ne {
             std::scoped_lock guard(mutex);
 
             const auto it = map.find(sUniquePsoIdentifier);
-            if (it == map.end())
+            if (it == map.end()) {
                 continue;
+            }
 
             if (it->second.use_count() > 1) {
                 // Still used by somebody else.
@@ -189,8 +190,9 @@ namespace ne {
     }
 
     void DelayedPsoResourcesCreation::destroy() {
-        if (!bIsValid)
+        if (!bIsValid) {
             return;
+        }
 
         // Restore resources.
         auto optionalError = pPsoManager->restoreInternalGraphicsPsosResources();

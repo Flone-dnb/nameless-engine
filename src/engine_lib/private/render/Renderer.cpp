@@ -22,12 +22,12 @@ namespace ne {
             fmt::format(
                 "using {} shader(s) per pixel shader pack",
                 ShaderParameterConfigurations::validPixelShaderParameterConfigurations.size()),
-            getRendererLoggingCategory());
+            sRendererLogCategory);
         Logger::get().info(
             fmt::format(
                 "using {} shader(s) per vertex shader pack",
                 ShaderParameterConfigurations::validVertexShaderParameterConfigurations.size()),
-            getRendererLoggingCategory());
+            sRendererLogCategory);
     }
 
     std::set<ShaderParameter>* Renderer::getShaderConfiguration(ShaderType shaderType) {
@@ -132,6 +132,4 @@ namespace ne {
     const char* Renderer::getConfigurationSectionTextureFiltering() {
         return sConfigurationSectionTextureFiltering;
     }
-
-    const char* Renderer::getRendererLoggingCategory() { return sRendererLogCategory; }
 } // namespace ne

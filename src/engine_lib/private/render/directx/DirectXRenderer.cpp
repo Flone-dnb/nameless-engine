@@ -48,6 +48,11 @@ namespace ne {
         // Save configuration (possibly was corrected).
         DirectXRenderer::writeConfigurationToConfigFile();
 
+        // Log used GPU name.
+        Logger::get().info(
+            fmt::format("using the following GPU: \"{}\"", getCurrentlyUsedGpuName()),
+            sDirectXRendererLogCategory);
+
         // Disable Alt + Enter.
         const HRESULT hResult =
             pFactory->MakeWindowAssociation(getWindow()->getWindowHandle(), DXGI_MWA_NO_ALT_ENTER);
@@ -65,6 +70,7 @@ namespace ne {
             throw std::runtime_error(error->getError());
         }
 
+        // Determine initial shader that will be used by each shader pack.
         setInitialShaderConfiguration();
 
         // Compile engine shaders.
@@ -561,7 +567,7 @@ namespace ne {
                     "GPU",
                     iPreferredGpuIndex,
                     vSupportedVideoAdapters.size()),
-                getRendererLoggingCategory());
+                sDirectXRendererLogCategory);
             iPreferredGpuIndex = 0; // use first found GPU
         }
 
@@ -581,7 +587,7 @@ namespace ne {
             }
             Logger::get().error(
                 std::format("{} ({}), using first found GPU", error->getInitialMessage(), iPreferredGpuIndex),
-                getRendererLoggingCategory());
+                sDirectXRendererLogCategory);
 
             // Try first found GPU.
             iPreferredGpuIndex = 0;
@@ -655,7 +661,7 @@ namespace ne {
                         currentDisplayMode.Height,
                         currentDisplayMode.RefreshRate.Numerator,
                         currentDisplayMode.RefreshRate.Denominator),
-                    getRendererLoggingCategory());
+                    sDirectXRendererLogCategory);
                 // use last display mode
                 currentDisplayMode = vVideoModes.back();
             } else if (vFilteredModes.size() == 1) {
@@ -682,7 +688,7 @@ namespace ne {
                         static_cast<int>(mode.Scaling));
                 }
                 Logger::get().error(
-                    std::format("{}\nusing default video mode", sErrorMessage), getRendererLoggingCategory());
+                    std::format("{}\nusing default video mode", sErrorMessage), sDirectXRendererLogCategory);
                 // use last display mode
                 currentDisplayMode = vVideoModes.back();
             }
@@ -991,7 +997,7 @@ namespace ne {
             if (error.has_value()) {
                 error->addEntry();
                 // error->showError(); don't show on screen as it's not a critical error
-                Logger::get().error(error->getError(), getRendererLoggingCategory());
+                Logger::get().error(error->getError(), sDirectXRendererLogCategory);
                 return;
             }
         }
@@ -1039,7 +1045,7 @@ namespace ne {
         if (error.has_value()) {
             error->addEntry();
             // error->showError(); don't show on screen as it's not a critical error
-            Logger::get().error(error->getError(), getRendererLoggingCategory());
+            Logger::get().error(error->getError(), sDirectXRendererLogCategory);
         }
     }
 
@@ -1058,7 +1064,7 @@ namespace ne {
         auto loadError = manager.loadFile(getRendererConfigurationFilePath());
         if (loadError.has_value()) {
             loadError->addEntry();
-            Logger::get().error(loadError->getError(), getRendererLoggingCategory());
+            Logger::get().error(loadError->getError(), sDirectXRendererLogCategory);
             return;
         }
 
@@ -1074,7 +1080,7 @@ namespace ne {
             const Error error(std::format(
                 "failed to read valid resolution values from configuration file \"{}\"",
                 std::filesystem::path(manager.getFilePath()).string()));
-            Logger::get().error(error.getError(), getRendererLoggingCategory());
+            Logger::get().error(error.getError(), sDirectXRendererLogCategory);
             return;
         }
 
@@ -1088,7 +1094,7 @@ namespace ne {
             const Error error(std::format(
                 "failed to read valid refresh rate values from configuration file \"{}\"",
                 std::filesystem::path(manager.getFilePath()).string()));
-            Logger::get().error(error.getError(), getRendererLoggingCategory());
+            Logger::get().error(error.getError(), sDirectXRendererLogCategory);
             return;
         }
 
@@ -1104,7 +1110,7 @@ namespace ne {
             const Error error(std::format(
                 "failed to read valid antialiasing values from configuration file \"{}\"",
                 std::filesystem::path(manager.getFilePath()).string()));
-            Logger::get().error(error.getError(), getRendererLoggingCategory());
+            Logger::get().error(error.getError(), sDirectXRendererLogCategory);
             return;
         }
 

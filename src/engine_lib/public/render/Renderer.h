@@ -312,13 +312,6 @@ namespace ne {
          */
         static const char* getConfigurationSectionTextureFiltering();
 
-        /**
-         * Returns name of the category the renderer uses for logging.
-         *
-         * @return Category name.
-         */
-        static const char* getRendererLoggingCategory();
-
     private:
         /** Lock when reading or writing to render resources. Usually used with @ref flushCommandQueue. */
         std::recursive_mutex mtxRwRenderResources;

@@ -317,6 +317,7 @@ namespace ne {
             const auto pathToConfigFile = pathToConfigDirectory / T::getConfigurationFileName(true);
 
             std::shared_ptr<T> pRenderSetting;
+            bool bDeserializedWithoutIssues = false;
 
             // See if config file exists.
             if (std::filesystem::exists(pathToConfigFile)) {
@@ -338,15 +339,30 @@ namespace ne {
                 } else {
                     // Use the deserialized object.
                     pRenderSetting = std::get<std::shared_ptr<T>>(std::move(result));
+                    bDeserializedWithoutIssues = true;
                 }
             } else {
                 // Just create a new object with default settings.
                 pRenderSetting = std::make_shared<T>();
             }
 
-            // Apply the configuration.
+            // Initialize the setting.
             const auto pParentSettings = dynamic_cast<RenderSetting*>(pRenderSetting.get());
             pParentSettings->setRenderer(pRenderer);
+
+            // Save if no config existed.
+            if (!bDeserializedWithoutIssues) {
+                auto optionalError = pParentSettings->saveConfigurationToDisk();
+                if (optionalError.has_value()) {
+                    auto error = optionalError.value();
+                    error.addEntry();
+                    Logger::get().error(
+                        fmt::format("failed to save new render settings, error: \"{}\"", error.getError()),
+                        sRenderSettingsLogCategory);
+                }
+            }
+
+            // Apply the configuration.
             pParentSettings->updateRendererConfiguration();
 
             return pRenderSetting;

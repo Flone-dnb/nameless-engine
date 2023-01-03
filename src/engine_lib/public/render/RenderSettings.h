@@ -47,6 +47,15 @@ namespace ne RNAMESPACE() {
         virtual void updateRendererConfiguration() { throw std::runtime_error("not implemented"); };
 
         /**
+         * Saves the current configuration to disk.
+         *
+         * @return Error if something went wrong.
+         */
+        [[nodiscard]] virtual std::optional<Error> saveConfigurationToDisk() {
+            throw std::runtime_error("not implemented");
+        };
+
+        /**
          * Returns name of the category used for logging.
          *
          * @return Name of the category used for logging.
@@ -158,7 +167,7 @@ namespace ne RNAMESPACE() {
          *
          * @return Error if something went wrong.
          */
-        [[nodiscard]] std::optional<Error> saveConfigurationToDisk();
+        [[nodiscard]] virtual std::optional<Error> saveConfigurationToDisk() override;
 
     private:
         /** Whether AA is enabled or not. */
@@ -233,7 +242,7 @@ namespace ne RNAMESPACE() {
          *
          * @return Error if something went wrong.
          */
-        [[nodiscard]] std::optional<Error> saveConfigurationToDisk();
+        [[nodiscard]] virtual std::optional<Error> saveConfigurationToDisk() override;
 
     private:
         /** Texture filtering mode. */
@@ -348,7 +357,7 @@ namespace ne RNAMESPACE() {
          *
          * @return Error if something went wrong.
          */
-        [[nodiscard]] std::optional<Error> saveConfigurationToDisk();
+        [[nodiscard]] virtual std::optional<Error> saveConfigurationToDisk() override;
 
         /** Changes renderer settings/state to match the current settings. */
         virtual void updateRendererConfiguration() override;

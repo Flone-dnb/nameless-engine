@@ -16,17 +16,19 @@ namespace ne RNAMESPACE() {
      * @remark In order to create an object of this class you need to make sure that both game and renderer
      * objects exist.
      */
-    class RenderSetting {
+    class RCLASS(Guid("eb477c6d-cdc4-4b7a-9349-296fb38e6bfc")) RenderSetting : public Serializable {
     public:
         RenderSetting() = default;
-        virtual ~RenderSetting() = default;
+        virtual ~RenderSetting() override = default;
 
         /**
          * Returns path to the file that is used to store setting configuration.
          *
          * @return Path to file.
          */
-        virtual std::filesystem::path getPathToConfigurationFile() = 0;
+        virtual std::filesystem::path getPathToConfigurationFile() {
+            throw std::runtime_error("not implemented");
+        };
 
     protected:
         // "Manager" might request the configuration to be updated.
@@ -42,7 +44,7 @@ namespace ne RNAMESPACE() {
         void setRenderer(Renderer* pRenderer);
 
         /** Changes renderer settings/state to match the current settings. */
-        virtual void updateRendererConfiguration() = 0;
+        virtual void updateRendererConfiguration() { throw std::runtime_error("not implemented"); };
 
         /**
          * Returns name of the category used for logging.
@@ -50,13 +52,6 @@ namespace ne RNAMESPACE() {
          * @return Name of the category used for logging.
          */
         static const char* getRenderSettingLogCategory();
-
-        /**
-         * Saves the current configuration to disk.
-         *
-         * @return Error if something went wrong.
-         */
-        [[nodiscard]] virtual std::optional<Error> saveConfigurationToDisk() = 0;
 
         /**
          * Recreates all render buffers to match current settings.
@@ -87,6 +82,8 @@ namespace ne RNAMESPACE() {
 
         /** Name of the category used for logging. */
         static inline const char* sRenderSettingLogCategory = "Render Setting";
+
+        ne_RenderSetting_GENERATED
     };
 
     /** Describes the quality (sample count) of MSAA. */
@@ -94,8 +91,7 @@ namespace ne RNAMESPACE() {
 
     /** Controls anti-aliasing settings. */
     class RCLASS(Guid("9a9f58a6-fcea-4906-bb23-9aac508e6ea0")) AntialiasingRenderSetting
-        : public Serializable, // derive from Serializable first, otherwise reflection breaks
-          public RenderSetting {
+        : public RenderSetting {
     public:
         AntialiasingRenderSetting() = default;
         virtual ~AntialiasingRenderSetting() override = default;
@@ -162,7 +158,7 @@ namespace ne RNAMESPACE() {
          *
          * @return Error if something went wrong.
          */
-        [[nodiscard]] virtual std::optional<Error> saveConfigurationToDisk() override;
+        [[nodiscard]] std::optional<Error> saveConfigurationToDisk();
 
     private:
         /** Whether AA is enabled or not. */
@@ -184,8 +180,7 @@ namespace ne RNAMESPACE() {
 
     /** Controls texture filtering settings. */
     class RCLASS(Guid("071d0acb-3da1-408c-bf44-41653192d568")) TextureFilteringRenderSetting
-        : public Serializable, // derive from Serializable first, otherwise reflection breaks
-          public RenderSetting {
+        : public RenderSetting {
     public:
         TextureFilteringRenderSetting() = default;
         virtual ~TextureFilteringRenderSetting() override = default;
@@ -238,7 +233,7 @@ namespace ne RNAMESPACE() {
          *
          * @return Error if something went wrong.
          */
-        [[nodiscard]] virtual std::optional<Error> saveConfigurationToDisk() override;
+        [[nodiscard]] std::optional<Error> saveConfigurationToDisk();
 
     private:
         /** Texture filtering mode. */
@@ -252,9 +247,7 @@ namespace ne RNAMESPACE() {
     };
 
     /** Controls various screen related settings such as render resolution, refresh rate, vsync, etc. */
-    class RCLASS(Guid("168f1c4e-3e40-481b-b969-c50e886c8710")) ScreenRenderSetting : public Serializable
-        , // derive from Serializable first, otherwise reflection breaks
-                                                                                     public RenderSetting {
+    class RCLASS(Guid("168f1c4e-3e40-481b-b969-c50e886c8710")) ScreenRenderSetting : public RenderSetting {
     public:
         virtual ~ScreenRenderSetting() override = default;
 
@@ -355,7 +348,7 @@ namespace ne RNAMESPACE() {
          *
          * @return Error if something went wrong.
          */
-        [[nodiscard]] virtual std::optional<Error> saveConfigurationToDisk() override;
+        [[nodiscard]] std::optional<Error> saveConfigurationToDisk();
 
         /** Changes renderer settings/state to match the current settings. */
         virtual void updateRendererConfiguration() override;

@@ -10,43 +10,15 @@
 // Custom.
 #include "misc/Error.h"
 #include "materials/ShaderManager.h"
+#include "render/RenderSettings.h"
+#include "misc/ProjectPaths.h"
 
 namespace ne {
     class Game;
     class Window;
     class PsoManager;
-
-    /**
-     * Describes texture filtering mode.
-     */
-    enum class TextureFilteringMode : int { POINT = 0, LINEAR = 1, ANISOTROPIC = 2 };
-
-    /**
-     * Contains width, height and refresh rate.
-     */
-    struct RenderMode {
-        /** Width in pixels. */
-        int iWidth;
-        /** Height in pixels. */
-        int iHeight;
-        /** Refresh rate numerator. */
-        int iRefreshRateNumerator;
-        /** Refresh rate denominator. */
-        int iRefreshRateDenominator;
-    };
-
-    /**
-     * Describes anti-aliasing settings.
-     */
-    struct Antialiasing {
-        /** Whether the AA is enabled or not. */
-        bool bIsEnabled;
-        /**
-         * Sample count of AA, for MSAA valid values are:
-         * 2 (x2 sample count - good quality) or 4 (x4 sample count - best quality).
-         */
-        int iSampleCount;
-    };
+    class ShaderConfiguration;
+    class RenderSettings;
 
     /**
      * Defines a base class for renderers to implement.
@@ -67,55 +39,27 @@ namespace ne {
         virtual ~Renderer() = default;
 
         /**
-         * Sets texture filtering.
-         *
-         * @param settings Texture filtering mode.
-         *
-         * @return Error if something went wrong.
-         */
-        [[nodiscard]] virtual std::optional<Error>
-        setTextureFiltering(const TextureFilteringMode& settings) = 0;
-
-        /**
-         * Sets antialiasing settings.
-         *
-         * @param settings Antialiasing settings.
-         *
-         * @return Error if something went wrong.
-         */
-        [[nodiscard]] virtual std::optional<Error> setAntialiasing(const Antialiasing& settings) = 0;
-
-        /**
-         * Sets backbuffer color.
-         *
-         * @param fillColor Color that the backbuffer will be filled with before rendering a frame.
-         * 4 values correspond to RGBA parameters.
-         *
-         * @return Error if something went wrong.
-         */
-        [[nodiscard]] virtual std::optional<Error> setBackbufferFillColor(float fillColor[4]) = 0;
-
-        /**
          * Looks for video adapters (GPUs) that support this renderer.
          *
          * @return Error if can't find any GPU that supports this renderer,
          * vector with GPU names if successful.
          */
-        virtual std::variant<std::vector<std::string>, Error> getSupportedGpus() const = 0;
+        virtual std::variant<std::vector<std::string>, Error> getSupportedGpuNames() const = 0;
 
         /**
-         * Returns a list of supported render resolution.
+         * Returns a list of supported render resolution (pairs of width and height).
          *
          * @return Error if something went wrong, otherwise render mode.
          */
-        virtual std::variant<std::vector<RenderMode>, Error> getSupportedRenderResolutions() const = 0;
+        virtual std::variant<std::vector<std::pair<unsigned int, unsigned int>>, Error>
+        getSupportedRenderResolutions() const = 0;
 
         /**
-         * Returns backbuffer resolution.
+         * Returns render settings that can be configured.
          *
-         * @return Width and height.
+         * @return Do not delete (free) returned pointer. Non-owning pointer to render settings.
          */
-        virtual std::pair<int, int> getRenderResolution() const = 0;
+        std::pair<std::recursive_mutex, std::unique_ptr<RenderSettings>>* getRenderSettings();
 
         /**
          * Returns the name of the GPU that is being currently used.
@@ -123,20 +67,6 @@ namespace ne {
          * @return Name of the GPU.
          */
         virtual std::string getCurrentlyUsedGpuName() const = 0;
-
-        /**
-         * Returns currently used antialiasing settings.
-         *
-         * @return Antialiasing settings.
-         */
-        virtual Antialiasing getAntialiasing() const = 0;
-
-        /**
-         * Returns currently used texture filtering mode.
-         *
-         * @return Texture filtering mode.
-         */
-        virtual TextureFilteringMode getTextureFiltering() const = 0;
 
         /**
          * Returns total video memory size (VRAM) in megabytes.
@@ -163,13 +93,11 @@ namespace ne {
          * Returns the current shader configuration (shader settings,
          * represented by a bunch of predefined macros).
          *
-         * @remark Do not delete (free) returned pointer, returning a pointer to avoid copy.
+         * Must be used with mutex.
          *
-         * @param shaderType Type of shader configuration to get.
-         *
-         * @return Vertex shader configuration.
+         * @return Do not delete (free) returned pointer. Shader configuration.
          */
-        std::set<ShaderParameter>* getShaderConfiguration(ShaderType shaderType);
+        std::pair<std::recursive_mutex, std::unique_ptr<ShaderConfiguration>>* getShaderConfiguration();
 
         /**
          * Returns the window that we render to.
@@ -215,9 +143,29 @@ namespace ne {
          */
         std::recursive_mutex* getRenderResourcesMutex();
 
+        /**
+         * Returns name of the directory we use to store render-specific settings.
+         *
+         * @return Directory name.
+         */
+        static const char* getRenderConfigurationDirectoryName();
+
     protected:
         // Only window should be able to request new frames to be drawn.
         friend class Window;
+
+        // Settings will change shader configuration and other render settings.
+        friend class RenderSetting;
+
+        // Can update shader configuration.
+        friend class ShaderConfiguration;
+
+        /**
+         * Returns the amount of buffers the swap chain has.
+         *
+         * @return The amount of buffers the swap chain has.
+         */
+        static consteval unsigned int getSwapChainBufferCount() { return iSwapChainBufferCount; }
 
         /** Update internal resources for the next frame. */
         virtual void updateResourcesForNextFrame() = 0;
@@ -226,93 +174,42 @@ namespace ne {
         virtual void drawNextFrame() = 0;
 
         /**
-         * Writes current renderer configuration to disk.
-         */
-        virtual void writeConfigurationToConfigFile() = 0;
-
-        /**
-         * Reads renderer configuration from disk.
-         * If at least one key is empty or incorrect the renderer should
-         * throw an error.
-         */
-        virtual void readConfigurationFromConfigFile() = 0;
-
-        /**
-         * Returns the amount of buffers the swap chain has.
+         * Recreates all render buffers to match current settings.
          *
-         * @return The amount of buffers the swap chain has.
+         * @return Error if something went wrong.
          */
-        static consteval unsigned int getSwapChainBufferCount();
+        [[nodiscard]] virtual std::optional<Error> updateRenderBuffers() = 0;
 
         /**
-         * Used to determine if the configuration file exists on the disk.
+         * (Re)creates depth/stencil buffer.
          *
-         * @return 'true' if configuration file exists, 'false' otherwise.
-         */
-        static bool isConfigurationFileExists();
-
-        /**
-         * Returns path of the configuration file used by the renderer.
+         * @remark Make sure that the old depth/stencil buffer (if was) is not used by the GPU.
          *
-         * @return Configuration file path, file might not exist, but the directories will be created.
+         * @return Error if something went wrong.
          */
-        static std::filesystem::path getRendererConfigurationFilePath();
+        [[nodiscard]] virtual std::optional<Error> createDepthStencilBuffer() = 0;
 
         /**
-         * Sets the current shader configuration (settings).
+         * Tells whether the renderer is initialized or not
+         * (whether it's safe to use renderer functionality or not).
+         *
+         * @return Whether the renderer is initialized or not.
+         */
+        virtual bool isInitialized() const = 0;
+
+        /** Initializes render settings, must be called in the beginning of the constructor. */
+        void initializeRenderSettings();
+
+    private:
+        /**
+         * Updates the current shader configuration (settings) based on the current value
+         * from @ref getShaderConfiguration.
          *
          * @remark Flushes the command queue and recreates PSOs' internal resources so that they
          * will use new shader configuration.
-         *
-         * @param shaderConfiguration Shader configuration.
-         * @param shaderType          Type of shaders that should apply this configuration.
          */
-        void
-        setShaderConfiguration(const std::set<ShaderParameter>& shaderConfiguration, ShaderType shaderType);
+        void updateShaderConfiguration();
 
-        /**
-         * Returns name of the section used in configuration file.
-         *
-         * @return Section name.
-         */
-        static const char* getConfigurationSectionGpu();
-
-        /**
-         * Returns name of the section used in configuration file.
-         *
-         * @return Section name.
-         */
-        static const char* getConfigurationSectionResolution();
-
-        /**
-         * Returns name of the section used in configuration file.
-         *
-         * @return Section name.
-         */
-        static const char* getConfigurationSectionRefreshRate();
-
-        /**
-         * Returns name of the section used in configuration file.
-         *
-         * @return Section name.
-         */
-        static const char* getConfigurationSectionAntialiasing();
-
-        /**
-         * Returns name of the section used in configuration file.
-         *
-         * @return Section name.
-         */
-        static const char* getConfigurationSectionVSync();
-
-        /**
-         * Returns name of the section used in configuration file.
-         *
-         * @return Section name.
-         */
-        static const char* getConfigurationSectionTextureFiltering();
-
-    private:
         /** Lock when reading or writing to render resources. Usually used with @ref flushCommandQueue. */
         std::recursive_mutex mtxRwRenderResources;
 
@@ -322,11 +219,17 @@ namespace ne {
         /** Used to store various graphics and compute PSOs. */
         std::unique_ptr<PsoManager> pPsoManager;
 
-        /** Vertex shader parameters. */
-        std::set<ShaderParameter> currentVertexShaderConfiguration;
+        /**
+         * Shader parameters.
+         * Must be used with mutex.
+         */
+        std::pair<std::recursive_mutex, std::unique_ptr<ShaderConfiguration>> mtxShaderConfiguration;
 
-        /** Pixel shader parameters. */
-        std::set<ShaderParameter> currentPixelShaderConfiguration;
+        /**
+         * Render setting objects that configure the renderer.
+         * Must be used with mutex.
+         */
+        std::pair<std::recursive_mutex, std::unique_ptr<RenderSettings>> mtxRenderSettings;
 
         /** Do not delete (free) this pointer. Game object that owns this renderer. */
         Game* pGame = nullptr;
@@ -334,30 +237,169 @@ namespace ne {
         /** Number of buffers in swap chain. */
         static constexpr unsigned int iSwapChainBufferCount = 2;
 
-        /** File name used to store renderer configuration. */
-        inline static const char* sRendererConfigurationFileName = "render";
-
-        /** Name of the section (used in configuration) for GPU settings. */
-        inline static const char* sConfigurationSectionGpu = "GPU";
-
-        /** Name of the section (used in configuration) for resolution settings. */
-        inline static const char* sConfigurationSectionResolution = "resolution";
-
-        /** Name of the section (used in configuration) for refresh rate settings. */
-        inline static const char* sConfigurationSectionRefreshRate = "refresh_rate";
-
-        /** Name of the section (used in configuration) for anti-aliasing settings. */
-        inline static const char* sConfigurationSectionAntialiasing = "anti_aliasing";
-
-        /** Name of the section (used in configuration) for vsync settings. */
-        inline static const char* sConfigurationSectionVSync = "vsync";
-
-        /** Name of the section (used in configuration) for texture filtering settings. */
-        inline static const char* sConfigurationSectionTextureFiltering = "texture_filtering";
+        /** Directory name used to store renderer configuration. */
+        inline static const char* sRendererConfigurationDirectoryName = "render";
 
         /** Name of the category used for logging. */
         inline static const char* sRendererLogCategory = "Renderer";
     };
 
-    consteval unsigned Renderer::getSwapChainBufferCount() { return iSwapChainBufferCount; }
+    /** Small class that combines all render setting objects. */
+    class RenderSettings {
+    public:
+        RenderSettings() = delete;
+
+        RenderSettings(const RenderSetting&) = delete;
+        RenderSettings& operator=(const RenderSetting&) = delete;
+
+        /**
+         * Returns anti-aliasing settings.
+         *
+         * @return Do not delete (free) returned pointer. Anti-aliasing settings.
+         */
+        AntialiasingRenderSetting* getAntialiasingSettings() { return pAntialiasingSettings.get(); }
+
+        /**
+         * Returns texture filtering settings.
+         *
+         * @return Do not delete (free) returned pointer. Texture filtering settings.
+         */
+        TextureFilteringRenderSetting* getTextureFilteringSettings() {
+            return pTextureFilteringSettings.get();
+        }
+
+        /**
+         * Returns screen settings.
+         *
+         * @return Do not delete (free) returned pointer. Screen settings.
+         */
+        ScreenRenderSetting* getScreenSettings() { return pScreenSettings.get(); }
+
+    private:
+        // Only renderer can initialize render settings.
+        friend class Renderer;
+
+        /**
+         * Initializes render settings.
+         *
+         * @param pRenderer Game's renderer.
+         */
+        RenderSettings(Renderer* pRenderer) { this->pRenderer = pRenderer; }
+
+        /** Initializes render settings. */
+        void initialize() {
+            if (bIsInitialized)
+                return;
+
+            bIsInitialized = true;
+
+            pAntialiasingSettings = setupRenderSetting<AntialiasingRenderSetting>(pRenderer);
+            pTextureFilteringSettings = setupRenderSetting<TextureFilteringRenderSetting>(pRenderer);
+            pScreenSettings = setupRenderSetting<ScreenRenderSetting>(pRenderer);
+        }
+
+        /**
+         * Looks if the configuration file for the specified setting exists and deserializes it,
+         * otherwise creates a new object and returns it.
+         *
+         * @param pRenderer Renderer to use.
+         *
+         * @return Render setting object.
+         */
+        template <typename T>
+            requires std::derived_from<T, RenderSetting> && std::derived_from<T, Serializable>
+        std::shared_ptr<T> setupRenderSetting(Renderer* pRenderer) {
+            // Construct path to the directory with config files.
+            const auto pathToConfigDirectory = ProjectPaths::getDirectoryForEngineConfigurationFiles() /
+                                               pRenderer->getRenderConfigurationDirectoryName();
+
+            // Construct path to config file.
+            const auto pathToConfigFile = pathToConfigDirectory / T::getConfigurationFileName(true);
+
+            std::shared_ptr<T> pRenderSetting;
+
+            // See if config file exists.
+            if (std::filesystem::exists(pathToConfigFile)) {
+                // Try to deserialize.
+                auto result = Serializable::deserialize<std::shared_ptr, T>(pathToConfigFile);
+                if (std::holds_alternative<Error>(result)) {
+                    auto error = std::get<Error>(std::move(result));
+                    error.addEntry();
+                    Logger::get().error(
+                        fmt::format(
+                            "failed to deserialize render settings from the file \"{}\", using default "
+                            "settings instead, error: \"{}\"",
+                            pathToConfigFile.string(),
+                            error.getError()),
+                        sRenderSettingsLogCategory);
+
+                    // Just create a new object with default settings.
+                    pRenderSetting = std::make_shared<T>();
+                } else {
+                    // Use the deserialized object.
+                    pRenderSetting = std::get<std::shared_ptr<T>>(std::move(result));
+                }
+            } else {
+                // Just create a new object with default settings.
+                pRenderSetting = std::make_shared<T>();
+            }
+
+            // Apply the configuration.
+            const auto pParentSettings = dynamic_cast<RenderSetting*>(pRenderSetting.get());
+            pParentSettings->setRenderer(pRenderer);
+            pParentSettings->updateRendererConfiguration();
+
+            return pRenderSetting;
+        }
+
+        /** Anti-aliasing settings. */
+        std::shared_ptr<AntialiasingRenderSetting> pAntialiasingSettings;
+
+        /** Texture filtering settings. */
+        std::shared_ptr<TextureFilteringRenderSetting> pTextureFilteringSettings;
+
+        /** Screen related settings. */
+        std::shared_ptr<ScreenRenderSetting> pScreenSettings;
+
+        /** Used renderer. */
+        Renderer* pRenderer = nullptr;
+
+        /** Whether the @ref initialize was called or not. */
+        bool bIsInitialized = false;
+
+        /** Name of the category used for logging. */
+        inline static const char* sRenderSettingsLogCategory = "Render Settings";
+    };
+
+    /** Describes shader parameters. */
+    class ShaderConfiguration {
+    public:
+        ShaderConfiguration() = delete;
+
+        /**
+         * Saves render to use.
+         *
+         * @param pRenderer Renderer to use.
+         */
+        ShaderConfiguration(Renderer* pRenderer) { this->pRenderer = pRenderer; }
+
+        /**
+         * Updates the current shader configuration (settings) for the current renderer based on the current
+         * values from this struct.
+         *
+         * @remark Flushes the command queue and recreates PSOs' internal resources so that they
+         * will use new shader configuration.
+         */
+        void updateShaderConfiguration() { pRenderer->updateShaderConfiguration(); }
+
+        /** Vertex shader parameters. */
+        std::set<ShaderParameter> currentVertexShaderConfiguration;
+
+        /** Pixel shader parameters. */
+        std::set<ShaderParameter> currentPixelShaderConfiguration;
+
+    private:
+        /** Used renderer. */
+        Renderer* pRenderer = nullptr;
+    };
 } // namespace ne

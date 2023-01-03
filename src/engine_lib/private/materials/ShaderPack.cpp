@@ -192,17 +192,6 @@ namespace ne {
             throw std::runtime_error(error.getError());
         }
 
-        // Make sure our current configuration matches the renderer's shader configuration.
-        const auto pRenderer = Game::get()->getWindow()->getRenderer();
-        if (*pRenderer->getShaderConfiguration(shaderType) != configuration) [[unlikely]] {
-            Error error(fmt::format(
-                "configuration for the shader \"{}\" does not match current renderer's shader "
-                "configuration",
-                sShaderName));
-            error.showError();
-            throw std::runtime_error(error.getError());
-        }
-
         return *mtxCurrentConfigurationShader.second;
     }
 

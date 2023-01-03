@@ -120,7 +120,7 @@ namespace ne {
 
     std::optional<Error> PsoManager::releaseInternalGraphicsPsosResources() {
         for (auto& [mutex, map] : vGraphicsPsos) {
-            std::scoped_lock guard(mutex);
+            mutex.lock(); // lock until resources where not restored
 
             for (const auto& [sUniqueId, pGraphicsPso] : map) {
                 auto optionalError = pGraphicsPso->releaseInternalResources();
@@ -137,16 +137,20 @@ namespace ne {
 
     std::optional<Error> PsoManager::restoreInternalGraphicsPsosResources() {
         for (auto& [mutex, map] : vGraphicsPsos) {
-            std::scoped_lock guard(mutex);
+            {
+                std::scoped_lock guard(mutex);
 
-            for (const auto& [sUniqueId, pGraphicsPso] : map) {
-                auto optionalError = pGraphicsPso->restoreInternalResources();
-                if (optionalError.has_value()) {
-                    auto error = optionalError.value();
-                    error.addEntry();
-                    return error;
+                for (const auto& [sUniqueId, pGraphicsPso] : map) {
+                    auto optionalError = pGraphicsPso->restoreInternalResources();
+                    if (optionalError.has_value()) {
+                        auto error = optionalError.value();
+                        error.addEntry();
+                        return error;
+                    }
                 }
             }
+
+            mutex.unlock(); // unlock because resources were restored
         }
 
         return {};

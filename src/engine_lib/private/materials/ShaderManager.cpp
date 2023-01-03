@@ -617,22 +617,31 @@ namespace ne {
                 });
             } else {
                 // Set initial shader configuration.
-                const auto configuration = *pRenderer->getShaderConfiguration(shaderDescription.shaderType);
-                const auto bFailed = pShaderPack->setConfiguration(configuration);
+                const auto pShaderConfiguration = pRenderer->getShaderConfiguration();
+                std::scoped_lock shaderConfigurationGuard(pShaderConfiguration->first);
+
+                bool bFailed = false;
+                switch (pShaderPack->getShaderType()) {
+                case (ShaderType::VERTEX_SHADER): {
+                    bFailed = pShaderPack->setConfiguration(
+                        pShaderConfiguration->second->currentVertexShaderConfiguration);
+                    break;
+                }
+                case (ShaderType::PIXEL_SHADER): {
+                    bFailed = pShaderPack->setConfiguration(
+                        pShaderConfiguration->second->currentPixelShaderConfiguration);
+                    break;
+                }
+                case (ShaderType::COMPUTE_SHADER): {
+                    bFailed = true;
+                    break;
+                }
+                }
+
                 if (bFailed) [[unlikely]] {
-                    const auto shaderParameters = shaderParametersToText(configuration);
-                    std::string sParameters;
-                    for (const auto& sParameter : shaderParameters) {
-                        sParameters += sParameter + " ";
-                    }
-                    if (!sParameters.empty()) {
-                        sParameters.pop_back();
-                    }
                     Error err(fmt::format(
-                        "failed to set the initial shader configuration for the shader \"{}\" "
-                        "(configuration parameters: {})",
-                        shaderDescription.sShaderName,
-                        sParameters));
+                        "failed to set the initial shader configuration for the shader \"{}\"",
+                        shaderDescription.sShaderName));
                     Logger::get().error(
                         fmt::format("shader compilation query #{}: {}", iQueryId, err.getError()),
                         sShaderManagerLogCategory);

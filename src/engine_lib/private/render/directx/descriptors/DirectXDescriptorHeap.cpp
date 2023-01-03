@@ -267,19 +267,25 @@ namespace ne {
         CD3DX12_CPU_DESCRIPTOR_HANDLE heapHandle,
         const DirectXResource* pResource,
         DescriptorType descriptorType) const {
+        const auto pRenderSettings = pRenderer->getRenderSettings();
+        std::scoped_lock guard(pRenderSettings->first);
+
         switch (descriptorType) {
         case (DescriptorType::RTV): {
-            pRenderer->getDevice()->CreateRenderTargetView(pResource->getInternalResource(), nullptr, heapHandle);
+            pRenderer->getDevice()->CreateRenderTargetView(
+                pResource->getInternalResource(), nullptr, heapHandle);
         } break;
         case (DescriptorType::DSV): {
             D3D12_DEPTH_STENCIL_VIEW_DESC dsvDesc;
             dsvDesc.Flags = D3D12_DSV_FLAG_NONE;
-            dsvDesc.ViewDimension = pRenderer->getAntialiasing().bIsEnabled ? D3D12_DSV_DIMENSION_TEXTURE2DMS
-                                                                            : D3D12_DSV_DIMENSION_TEXTURE2D;
+            dsvDesc.ViewDimension = pRenderSettings->second->getAntialiasingSettings()->isEnabled()
+                                        ? D3D12_DSV_DIMENSION_TEXTURE2DMS
+                                        : D3D12_DSV_DIMENSION_TEXTURE2D;
             dsvDesc.Format = pRenderer->depthStencilBufferFormat;
             dsvDesc.Texture2D.MipSlice = 0;
 
-            pRenderer->getDevice()->CreateDepthStencilView(pResource->getInternalResource(), &dsvDesc, heapHandle);
+            pRenderer->getDevice()->CreateDepthStencilView(
+                pResource->getInternalResource(), &dsvDesc, heapHandle);
         } break;
         case (DescriptorType::CBV): {
             const auto resourceGpuVirtualAddress = pResource->getInternalResource()->GetGPUVirtualAddress();

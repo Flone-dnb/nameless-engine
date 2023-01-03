@@ -2,9 +2,8 @@
 
 // Custom.
 #include "game/Game.h"
-#include "io/ConfigManager.h"
+#include "game/Window.h"
 #include "io/Logger.h"
-#include "misc/ProjectPaths.h"
 #include "materials/ShaderParameter.h"
 #include "render/pso/PsoManager.h"
 
@@ -14,8 +13,11 @@
 namespace ne {
     Renderer::Renderer(Game* pGame) {
         this->pGame = pGame;
+
         pShaderManager = std::make_unique<ShaderManager>(this);
         pPsoManager = std::make_unique<PsoManager>(this);
+        mtxRenderSettings.second = std::unique_ptr<RenderSettings>(new RenderSettings(this));
+        mtxShaderConfiguration.second = std::make_unique<ShaderConfiguration>(this);
 
         // Log amount of shader variants per shader pack.
         Logger::get().info(
@@ -30,27 +32,13 @@ namespace ne {
             sRendererLogCategory);
     }
 
-    std::set<ShaderParameter>* Renderer::getShaderConfiguration(ShaderType shaderType) {
-        switch (shaderType) {
-        case (ShaderType::VERTEX_SHADER): {
-            return &currentVertexShaderConfiguration;
-            break;
-        }
-        case (ShaderType::PIXEL_SHADER): {
-            return &currentPixelShaderConfiguration;
-            break;
-        }
-        case (ShaderType::COMPUTE_SHADER): {
-            Error error("unexpected case");
-            error.showError();
-            throw std::runtime_error(error.getError());
-            break;
-        }
-        }
+    std::pair<std::recursive_mutex, std::unique_ptr<RenderSettings>>* Renderer::getRenderSettings() {
+        return &mtxRenderSettings;
+    }
 
-        Error error("unexpected case");
-        error.showError();
-        throw std::runtime_error(error.getError());
+    std::pair<std::recursive_mutex, std::unique_ptr<ShaderConfiguration>>*
+    Renderer::getShaderConfiguration() {
+        return &mtxShaderConfiguration;
     }
 
     Window* Renderer::getWindow() const { return pGame->getWindow(); }
@@ -63,73 +51,35 @@ namespace ne {
 
     std::recursive_mutex* Renderer::getRenderResourcesMutex() { return &mtxRwRenderResources; }
 
-    bool Renderer::isConfigurationFileExists() {
-        const auto configPath = getRendererConfigurationFilePath();
-        return std::filesystem::exists(configPath);
-    }
-
-    std::filesystem::path Renderer::getRendererConfigurationFilePath() {
-        std::filesystem::path basePath = ProjectPaths::getDirectoryForEngineConfigurationFiles();
-
-        if (!std::filesystem::exists(basePath)) {
-            std::filesystem::create_directories(basePath);
-        }
-
-        basePath /= sRendererConfigurationFileName;
-
-        // Check extension.
-        if (!std::string_view(sRendererConfigurationFileName)
-                 .ends_with(ConfigManager::getConfigFormatExtension())) {
-            basePath += ConfigManager::getConfigFormatExtension();
-        }
-
-        return basePath;
-    }
-
-    void Renderer::setShaderConfiguration(
-        const std::set<ShaderParameter>& shaderConfiguration, ShaderType shaderType) {
-        Logger::get().info(
-            "renderer's current shader configuration was changed, flushing the command queue and recreating "
-            "all PSOs' internal resources",
-            sRendererLogCategory);
-
-        {
+    void Renderer::updateShaderConfiguration() {
+        if (isInitialized()) {
             const auto psoGuard = pPsoManager->clearGraphicsPsosInternalResourcesAndDelayRestoring();
 
-            // Change configuration.
-            switch (shaderType) {
-            case (ShaderType::VERTEX_SHADER): {
-                currentVertexShaderConfiguration = shaderConfiguration;
-                break;
+            {
+                std::scoped_lock shaderParametersGuard(mtxShaderConfiguration.first);
+
+                // Update shaders.
+                pShaderManager->setConfigurationForShaders(
+                    mtxShaderConfiguration.second->currentVertexShaderConfiguration,
+                    ShaderType::VERTEX_SHADER);
+                pShaderManager->setConfigurationForShaders(
+                    mtxShaderConfiguration.second->currentPixelShaderConfiguration, ShaderType::PIXEL_SHADER);
             }
-            case (ShaderType::PIXEL_SHADER): {
-                currentPixelShaderConfiguration = shaderConfiguration;
-                break;
-            }
-            case (ShaderType::COMPUTE_SHADER): {
-                Error error("unexpected case");
-                error.showError();
-                throw std::runtime_error(error.getError());
-                break;
-            }
-            }
+        } else {
+            std::scoped_lock shaderParametersGuard(mtxShaderConfiguration.first);
 
             // Update shaders.
-            pShaderManager->setConfigurationForShaders(shaderConfiguration, shaderType);
+            pShaderManager->setConfigurationForShaders(
+                mtxShaderConfiguration.second->currentVertexShaderConfiguration, ShaderType::VERTEX_SHADER);
+            pShaderManager->setConfigurationForShaders(
+                mtxShaderConfiguration.second->currentPixelShaderConfiguration, ShaderType::PIXEL_SHADER);
         }
     }
 
-    const char* Renderer::getConfigurationSectionGpu() { return sConfigurationSectionGpu; }
-
-    const char* Renderer::getConfigurationSectionResolution() { return sConfigurationSectionResolution; }
-
-    const char* Renderer::getConfigurationSectionRefreshRate() { return sConfigurationSectionRefreshRate; }
-
-    const char* Renderer::getConfigurationSectionAntialiasing() { return sConfigurationSectionAntialiasing; }
-
-    const char* Renderer::getConfigurationSectionVSync() { return sConfigurationSectionVSync; }
-
-    const char* Renderer::getConfigurationSectionTextureFiltering() {
-        return sConfigurationSectionTextureFiltering;
+    const char* Renderer::getRenderConfigurationDirectoryName() {
+        return sRendererConfigurationDirectoryName;
     }
+
+    void Renderer::initializeRenderSettings() { mtxRenderSettings.second->initialize(); }
+
 } // namespace ne

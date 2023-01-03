@@ -282,6 +282,9 @@ namespace ne {
          * @warning Expects that the GPU is not referencing graphics PSOs (command queue is empty) and
          * that no drawing will occur until @ref restoreInternalGraphicsPsosResources is called.
          *
+         * @remark Causes the mutex that guards graphics PSOs to be locked until
+         * @ref restoreInternalGraphicsPsosResources is not called and finished.
+         *
          * @remark Typically used before changing something (for ex. shader configuration), so that no PSO
          * will reference old resources, to later call @ref restoreInternalGraphicsPsosResources.
          *

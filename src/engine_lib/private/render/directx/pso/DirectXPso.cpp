@@ -4,6 +4,7 @@
 #include "materials/hlsl/HlslShader.h"
 #include "render/directx/DirectXRenderer.h"
 #include "materials/hlsl/RootSignatureGenerator.h"
+#include "io/Logger.h"
 
 namespace ne {
     DirectXPso::DirectXPso(
@@ -36,8 +37,18 @@ namespace ne {
     }
 
     std::optional<Error> DirectXPso::releaseInternalResources() {
+        std::scoped_lock resourcesGuard(mtxInternalResources.first);
+
+        if (!mtxInternalResources.second.bIsReadyForUsage) [[unlikely]] {
+            Logger::get().warn(
+                "PSO was requested to release internal PSO resources but internal resources are already "
+                "released, ignoring this request",
+                sDirectXPsoLogCategory);
+            return {};
+        }
+
         // Release graphics PSO.
-        auto iNewRefCount = internalResources.pGraphicsPso.Reset();
+        auto iNewRefCount = mtxInternalResources.second.pGraphicsPso.Reset();
         if (iNewRefCount != 0) {
             return Error(std::format(
                 "internal graphics PSO was requested to be released from the "
@@ -47,7 +58,7 @@ namespace ne {
         }
 
         // Release root signature.
-        iNewRefCount = internalResources.pRootSignature.Reset();
+        iNewRefCount = mtxInternalResources.second.pRootSignature.Reset();
         if (iNewRefCount != 0) {
             return Error(std::format(
                 "internal root signature was requested to be released from the "
@@ -55,6 +66,13 @@ namespace ne {
                 iNewRefCount,
                 getUniquePsoIdentifier()));
         }
+
+        // !!!
+        // !!! new resources go here !!!
+        // !!!
+
+        // Done.
+        mtxInternalResources.second.bIsReadyForUsage = false;
 
         return {};
     }
@@ -74,6 +92,19 @@ namespace ne {
 
     std::optional<Error> DirectXPso::generateGraphicsPsoForShaders(
         const std::string& sVertexShaderName, const std::string& sPixelShaderName, bool bUsePixelBlending) {
+        // Get settings.
+        const auto pRenderSettings = getRenderer()->getRenderSettings();
+
+        std::scoped_lock resourcesGuard(mtxInternalResources.first, pRenderSettings->first);
+
+        if (mtxInternalResources.second.bIsReadyForUsage) [[unlikely]] {
+            Logger::get().warn(
+                "PSO was requested to generate internal PSO resources but internal resources are already "
+                "created, ignoring this request",
+                sDirectXPsoLogCategory);
+            return {};
+        }
+
         // Assign new shaders.
         const bool bVertexShaderNotFound = addShader(sVertexShaderName);
         const bool bPixelShaderNotFound = addShader(sPixelShaderName);
@@ -112,7 +143,7 @@ namespace ne {
             err.addEntry();
             return err;
         }
-        internalResources.pRootSignature = std::get<ComPtr<ID3D12RootSignature>>(std::move(result));
+        mtxInternalResources.second.pRootSignature = std::get<ComPtr<ID3D12RootSignature>>(std::move(result));
 
         // Get vertex shader bytecode.
         auto shaderBytecode = pVertexShader->getCompiledBlob();
@@ -134,12 +165,11 @@ namespace ne {
 
         // Prepare to create a PSO from these shaders.
         D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
-        const auto antialiasingSettings = getRenderer()->getAntialiasing();
 
         // Setup input layout and shaders.
         const auto vInputLayout = pVertexShader->getShaderInputElementDescription();
         psoDesc.InputLayout = {vInputLayout.data(), static_cast<UINT>(vInputLayout.size())};
-        psoDesc.pRootSignature = internalResources.pRootSignature.Get();
+        psoDesc.pRootSignature = mtxInternalResources.second.pRootSignature.Get();
         psoDesc.VS = {pVertexShaderBytecode->GetBufferPointer(), pVertexShaderBytecode->GetBufferSize()};
         psoDesc.PS = {pPixelShaderBytecode->GetBufferPointer(), pPixelShaderBytecode->GetBufferSize()};
 
@@ -147,7 +177,8 @@ namespace ne {
         CD3DX12_RASTERIZER_DESC rasterizerDesc(D3D12_DEFAULT);
         rasterizerDesc.CullMode = bUsePixelBlending ? D3D12_CULL_MODE_NONE : D3D12_CULL_MODE_BACK;
         rasterizerDesc.FillMode = D3D12_FILL_MODE_SOLID;
-        rasterizerDesc.MultisampleEnable = static_cast<int>(antialiasingSettings.bIsEnabled);
+        rasterizerDesc.MultisampleEnable =
+            static_cast<int>(pRenderSettings->second->getAntialiasingSettings()->isEnabled());
         psoDesc.RasterizerState = rasterizerDesc;
 
         // Setup pixel blend description (if needed).
@@ -165,7 +196,7 @@ namespace ne {
             blendDesc.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
             psoDesc.BlendState.RenderTarget[0] = blendDesc;
             psoDesc.BlendState.AlphaToCoverageEnable =
-                static_cast<int>(getRenderer()->getAntialiasing().bIsEnabled);
+                static_cast<int>(pRenderSettings->second->getAntialiasingSettings()->isEnabled());
         } else {
             psoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
         }
@@ -176,17 +207,24 @@ namespace ne {
         psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
         psoDesc.NumRenderTargets = 1;
         psoDesc.RTVFormats[0] = pDirectXRenderer->getBackBufferFormat();
-        psoDesc.SampleDesc.Count = antialiasingSettings.bIsEnabled ? antialiasingSettings.iSampleCount : 1;
-        psoDesc.SampleDesc.Quality =
-            antialiasingSettings.bIsEnabled ? (pDirectXRenderer->getMsaaQualityLevel() - 1) : 0;
+        psoDesc.SampleDesc.Count =
+            pRenderSettings->second->getAntialiasingSettings()->isEnabled()
+                ? static_cast<unsigned int>(pRenderSettings->second->getAntialiasingSettings()->getQuality())
+                : 1;
+        psoDesc.SampleDesc.Quality = pRenderSettings->second->getAntialiasingSettings()->isEnabled()
+                                         ? (pDirectXRenderer->getMsaaQualityLevel() - 1)
+                                         : 0;
         psoDesc.DSVFormat = pDirectXRenderer->getDepthStencilBufferFormat();
 
         // Create PSO.
         HRESULT hResult = pDirectXRenderer->getDevice()->CreateGraphicsPipelineState(
-            &psoDesc, IID_PPV_ARGS(internalResources.pGraphicsPso.GetAddressOf()));
+            &psoDesc, IID_PPV_ARGS(mtxInternalResources.second.pGraphicsPso.GetAddressOf()));
         if (FAILED(hResult)) {
             return Error(hResult);
         }
+
+        // Done.
+        mtxInternalResources.second.bIsReadyForUsage = true;
 
         return {};
     } // namespace ne

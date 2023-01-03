@@ -77,6 +77,9 @@ namespace ne {
 
             // !!! new internal resources go here !!!
             // !!! don't forget to update @ref releaseInternalResources !!!
+
+            /** Whether resources were created or not. */
+            bool bIsReadyForUsage = false;
         };
 
         /**
@@ -114,7 +117,13 @@ namespace ne {
             const std::string& sPixelShaderName,
             bool bUsePixelBlending);
 
-        /** Internal resources. */
-        InternalDirectXPsoResources internalResources;
+        /**
+         * Internal resources
+         * Must be used with mutex when changing.
+         */
+        std::pair<std::mutex, InternalDirectXPsoResources> mtxInternalResources;
+
+        /** Name of the category used for logging. */
+        inline static const char* sDirectXPsoLogCategory = "DirectX Pipeline State Object";
     };
 } // namespace ne

@@ -8,7 +8,6 @@
 
 // Custom.
 #include "game/Window.h"
-#include "io/ConfigManager.h"
 #include "io/Logger.h"
 #include "misc/Globals.h"
 #include "misc/MessageBox.h"
@@ -32,10 +31,9 @@
 
 namespace ne {
     DirectXRenderer::DirectXRenderer(Game* pGame) : Renderer(pGame) {
-        // Read configuration from config file (if exists).
-        if (isConfigurationFileExists()) {
-            DirectXRenderer::readConfigurationFromConfigFile();
-        }
+        std::scoped_lock frameGuard(*getRenderResourcesMutex());
+
+        initializeRenderSettings();
 
         // Initialize DirectX.
         std::optional<Error> error = initializeDirectX();
@@ -44,14 +42,6 @@ namespace ne {
             error->showError();
             throw std::runtime_error(error->getError());
         }
-
-        // Save configuration (possibly was corrected).
-        DirectXRenderer::writeConfigurationToConfigFile();
-
-        // Log used GPU name.
-        Logger::get().info(
-            fmt::format("using the following GPU: \"{}\"", getCurrentlyUsedGpuName()),
-            sDirectXRendererLogCategory);
 
         // Disable Alt + Enter.
         const HRESULT hResult =
@@ -63,15 +53,12 @@ namespace ne {
         }
 
         // Set initial size for buffers.
-        error = resizeRenderBuffersToCurrentDisplayMode();
+        error = updateRenderBuffers();
         if (error.has_value()) {
             error->addEntry();
             error->showError();
             throw std::runtime_error(error->getError());
         }
-
-        // Determine initial shader that will be used by each shader pack.
-        setInitialShaderConfiguration();
 
         // Compile engine shaders.
         error = compileEngineShaders();
@@ -116,11 +103,19 @@ namespace ne {
     }
 
     std::optional<Error> DirectXRenderer::createDepthStencilBuffer() {
+        // Get render settings.
+        const auto pRenderSettings = getRenderSettings();
+        std::scoped_lock renderSettingsGuard(pRenderSettings->first);
+        const auto renderResolution = pRenderSettings->second->getScreenSettings()->getRenderResolution();
+        const auto bIsMsaaEnabled = pRenderSettings->second->getAntialiasingSettings()->isEnabled();
+        const auto iMsaaSampleCount =
+            static_cast<int>(pRenderSettings->second->getAntialiasingSettings()->getQuality());
+
         const D3D12_RESOURCE_DESC depthStencilDesc = CD3DX12_RESOURCE_DESC(
             D3D12_RESOURCE_DIMENSION_TEXTURE2D,
             0,
-            currentDisplayMode.Width,
-            currentDisplayMode.Height,
+            renderResolution.first,
+            renderResolution.second,
             1,
             1,
             depthStencilBufferFormat,
@@ -138,7 +133,7 @@ namespace ne {
         allocationDesc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
 
         auto result = pResourceManager->createDsvResource(
-            "Renderer depth/stencil buffer",
+            "renderer depth/stencil buffer",
             allocationDesc,
             depthStencilDesc,
             D3D12_RESOURCE_STATE_DEPTH_WRITE,
@@ -153,79 +148,7 @@ namespace ne {
         return {};
     }
 
-    std::optional<Error> DirectXRenderer::setTextureFiltering(const TextureFilteringMode& settings) {
-        // Make sure no drawing is happening and the GPU is not referencing any resources.
-        std::scoped_lock guard(*getRenderResourcesMutex());
-        flushCommandQueue();
-
-        {
-            // TODO: move this section to a separate class/struct
-            // TODO: log what setting was changed, also log from/to setting values
-            textureFilteringMode = settings;
-
-            // Update shader configuration.
-            auto configuration = *getShaderConfiguration(ShaderType::PIXEL_SHADER);
-
-            switch (textureFilteringMode) {
-            case (TextureFilteringMode::POINT): {
-                configuration.insert(ShaderParameter::TEXTURE_FILTERING_POINT);
-                break;
-            }
-            case (TextureFilteringMode::LINEAR): {
-                configuration.insert(ShaderParameter::TEXTURE_FILTERING_LINEAR);
-                break;
-            }
-            case (TextureFilteringMode::ANISOTROPIC): {
-                configuration.insert(ShaderParameter::TEXTURE_FILTERING_ANISOTROPIC);
-                break;
-            }
-            }
-
-            setShaderConfiguration(configuration, ShaderType::PIXEL_SHADER);
-        }
-
-        // Write new configuration to disk.
-        writeConfigurationToConfigFile();
-
-        return {};
-    }
-
-    std::optional<Error> DirectXRenderer::setAntialiasing(const Antialiasing& settings) {
-        // Make sure no drawing is happening and the GPU is not referencing any resources.
-        std::scoped_lock guard(*getRenderResourcesMutex());
-        flushCommandQueue();
-
-        {
-            // TODO: move this section to a separate class/struct
-            // TODO: log what setting was changed, also log from/to setting values
-            bIsMsaaEnabled = settings.bIsEnabled;
-
-            if (bIsMsaaEnabled && settings.iSampleCount != 2 && settings.iSampleCount != 4) {
-                return Error(std::format(
-                    "{} is not a valid quality parameter, valid quality values for MSAA are 2 and 4",
-                    settings.iSampleCount));
-            }
-
-            iMsaaSampleCount = settings.iSampleCount;
-        }
-
-        // Recreate depth/stencil buffer with(out) multisampling.
-        auto optionalError = createDepthStencilBuffer();
-        if (optionalError.has_value()) {
-            optionalError->addEntry();
-            return optionalError.value();
-        }
-
-        // Recreate all PSOs' internal resources so they will now use new multisampling settings.
-        { const auto psoGuard = getPsoManager()->clearGraphicsPsosInternalResourcesAndDelayRestoring(); }
-
-        // Write new configuration to disk.
-        writeConfigurationToConfigFile();
-
-        return {};
-    }
-
-    std::variant<std::vector<std::string>, Error> DirectXRenderer::getSupportedGpus() const {
+    std::variant<std::vector<std::string>, Error> DirectXRenderer::getSupportedGpuNames() const {
         std::vector<std::string> vAddedVideoAdapters;
 
         for (UINT iAdapterIndex = 0;; iAdapterIndex++) {
@@ -257,43 +180,26 @@ namespace ne {
         return vAddedVideoAdapters;
     }
 
-    std::pair<int, int> DirectXRenderer::getRenderResolution() const {
-        return std::pair(currentDisplayMode.Width, currentDisplayMode.Height);
-    }
-
-    std::variant<std::vector<RenderMode>, Error> DirectXRenderer::getSupportedRenderResolutions() const {
+    std::variant<std::vector<std::pair<unsigned int, unsigned int>>, Error>
+    DirectXRenderer::getSupportedRenderResolutions() const {
         auto result = getSupportedDisplayModes();
         if (std::holds_alternative<Error>(result)) {
             Error error = std::get<Error>(std::move(result));
             error.addEntry();
             return error;
         }
-
         const std::vector<DXGI_MODE_DESC> vRenderModes =
             std::get<std::vector<DXGI_MODE_DESC>>(std::move(result));
 
-        std::vector<RenderMode> vOutRenderModes;
+        std::vector<std::pair<unsigned int, unsigned int>> vFoundResolutions;
         for (const auto& mode : vRenderModes) {
-            vOutRenderModes.push_back(RenderMode{
-                static_cast<int>(mode.Width),
-                static_cast<int>(mode.Height),
-                static_cast<int>(mode.RefreshRate.Numerator),
-                static_cast<int>(mode.RefreshRate.Denominator)});
+            vFoundResolutions.push_back(std::make_pair(mode.Width, mode.Height));
         }
 
-        return vOutRenderModes;
+        return vFoundResolutions;
     }
 
     std::string DirectXRenderer::getCurrentlyUsedGpuName() const { return sUsedVideoAdapter; }
-
-    Antialiasing DirectXRenderer::getAntialiasing() const {
-        Antialiasing aa;
-        aa.bIsEnabled = bIsMsaaEnabled;
-        aa.iSampleCount = static_cast<int>(iMsaaSampleCount);
-        return aa;
-    }
-
-    TextureFilteringMode DirectXRenderer::getTextureFiltering() const { return textureFilteringMode; }
 
     size_t DirectXRenderer::getTotalVideoMemoryInMb() const {
         return pResourceManager->getTotalVideoMemoryInMb();
@@ -303,25 +209,9 @@ namespace ne {
         return pResourceManager->getUsedVideoMemoryInMb();
     }
 
-    std::optional<Error> DirectXRenderer::setBackbufferFillColor(float fillColor[4]) {
-        backBufferFillColor[0] = fillColor[0];
-        backBufferFillColor[1] = fillColor[1];
-        backBufferFillColor[2] = fillColor[2];
-        backBufferFillColor[3] = fillColor[3];
-
-        auto error = resizeRenderBuffersToCurrentDisplayMode();
-        if (error.has_value()) {
-            error->addEntry();
-            return error;
-        }
-
-        return {};
-    }
-
     void DirectXRenderer::drawNextFrame() {
-        updateResourcesForNextFrame();
-
         std::scoped_lock frameGuard(*getRenderResourcesMutex());
+        updateResourcesForNextFrame();
 
         // TODO: draw start logic
 
@@ -457,9 +347,16 @@ namespace ne {
     }
 
     std::optional<Error> DirectXRenderer::createSwapChain() {
+        // Get render settings.
+        const auto pRenderSettings = getRenderSettings();
+        std::scoped_lock renderSettingsGuard(pRenderSettings->first);
+        const auto renderResolution = pRenderSettings->second->getScreenSettings()->getRenderResolution();
+        const auto refreshRate = pRenderSettings->second->getScreenSettings()->getRefreshRate();
+        const auto bIsVSyncEnabled = pRenderSettings->second->getScreenSettings()->isVsyncEnabled();
+
         DXGI_SWAP_CHAIN_DESC1 desc;
-        desc.Width = currentDisplayMode.Width;
-        desc.Height = currentDisplayMode.Height;
+        desc.Width = renderResolution.first;
+        desc.Height = renderResolution.second;
         desc.Format = backBufferFormat;
         desc.Stereo = false;
 
@@ -480,10 +377,14 @@ namespace ne {
             desc.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH | DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
         }
 
+        DXGI_RATIONAL refreshRateData;
+        refreshRateData.Numerator = refreshRate.first;
+        refreshRateData.Denominator = refreshRate.second;
+
         DXGI_SWAP_CHAIN_FULLSCREEN_DESC fullscreenDesc;
-        fullscreenDesc.RefreshRate = currentDisplayMode.RefreshRate;
-        fullscreenDesc.Scaling = currentDisplayMode.Scaling;
-        fullscreenDesc.ScanlineOrdering = currentDisplayMode.ScanlineOrdering;
+        fullscreenDesc.RefreshRate = refreshRateData;
+        fullscreenDesc.Scaling = usedScaling;
+        fullscreenDesc.ScanlineOrdering = usedScanlineOrdering;
         fullscreenDesc.Windowed = true;
 
         const HRESULT hResult = pFactory->CreateSwapChainForHwnd(
@@ -552,27 +453,37 @@ namespace ne {
             return Error(hResult);
         }
 
+        // Get render settings.
+        const auto pRenderSettings = getRenderSettings();
+        std::scoped_lock renderSettingsGuard(pRenderSettings->first);
+
         // Get supported video adapters.
-        auto result = DirectXRenderer::getSupportedGpus();
+        auto result = DirectXRenderer::getSupportedGpuNames();
         if (std::holds_alternative<Error>(result)) {
             Error error = std::get<Error>(std::move(result));
             error.addEntry();
             return error;
         }
         const auto vSupportedVideoAdapters = std::get<std::vector<std::string>>(std::move(result));
-        if (iPreferredGpuIndex >= static_cast<long>(vSupportedVideoAdapters.size())) {
+
+        // Make sure the GPU index is in range of supported GPUs.
+        iPickedGpuIndex = pRenderSettings->second->getScreenSettings()->getUsedGpuIndex();
+        if (iPickedGpuIndex >= static_cast<unsigned int>(vSupportedVideoAdapters.size())) {
             Logger::get().error(
                 std::format(
                     "preferred GPU index {} is out of range, supported GPUs in total: {}, using first found "
                     "GPU",
-                    iPreferredGpuIndex,
+                    iPickedGpuIndex,
                     vSupportedVideoAdapters.size()),
                 sDirectXRendererLogCategory);
-            iPreferredGpuIndex = 0; // use first found GPU
+
+            // Just use first found GPU then.
+            iPickedGpuIndex = 0;
+            pRenderSettings->second->getScreenSettings()->setGpuToUse(iPickedGpuIndex);
         }
 
         // Use video adapter.
-        std::optional<Error> error = setVideoAdapter(vSupportedVideoAdapters[iPreferredGpuIndex]);
+        std::optional<Error> error = setVideoAdapter(vSupportedVideoAdapters[iPickedGpuIndex]);
         if (error.has_value()) {
             error->addEntry();
             return error;
@@ -581,17 +492,25 @@ namespace ne {
         // Set output adapter (monitor) to use.
         error = setOutputAdapter();
         if (error.has_value()) {
-            if (iPreferredGpuIndex == 0) {
+            // This might happen for GPUs with non-zero index, see if we can pick something else.
+            if (iPickedGpuIndex == 0) {
                 error->addEntry();
                 return error;
             }
             Logger::get().error(
-                std::format("{} ({}), using first found GPU", error->getInitialMessage(), iPreferredGpuIndex),
+                std::format(
+                    "failed to set output adapter for the GPU \"{}\" (index {}), using first found GPU, "
+                    "error: {}",
+                    vSupportedVideoAdapters[iPickedGpuIndex],
+                    iPickedGpuIndex,
+                    error->getInitialMessage()),
                 sDirectXRendererLogCategory);
 
             // Try first found GPU.
-            iPreferredGpuIndex = 0;
-            error = setVideoAdapter(vSupportedVideoAdapters[iPreferredGpuIndex]);
+            iPickedGpuIndex = 0;
+            pRenderSettings->second->getScreenSettings()->setGpuToUse(iPickedGpuIndex);
+
+            error = setVideoAdapter(vSupportedVideoAdapters[iPickedGpuIndex]);
             if (error.has_value()) {
                 error->addEntry();
                 return error;
@@ -638,16 +557,25 @@ namespace ne {
             return err;
         }
 
-        if (bDisplayModeInitializedFromDiskConfig) {
+        // Get preferred screen settings.
+        const auto preferredRenderResolution =
+            pRenderSettings->second->getScreenSettings()->getRenderResolution();
+        const auto preferredRefreshRate = pRenderSettings->second->getScreenSettings()->getRefreshRate();
+
+        // Setup video mode.
+        DXGI_MODE_DESC pickedDisplayMode;
+        if (preferredRenderResolution.first != 0 && preferredRenderResolution.second != 0 &&
+            preferredRefreshRate.first != 0 && preferredRefreshRate.second != 0) {
             // Find the specified video mode.
             const auto vVideoModes = std::get<std::vector<DXGI_MODE_DESC>>(std::move(videoModesResult));
 
             std::vector<DXGI_MODE_DESC> vFilteredModes;
 
             for (const auto& mode : vVideoModes) {
-                if (mode.Width == currentDisplayMode.Width && mode.Height == currentDisplayMode.Height &&
-                    mode.RefreshRate.Numerator == currentDisplayMode.RefreshRate.Numerator &&
-                    mode.RefreshRate.Denominator == currentDisplayMode.RefreshRate.Denominator) {
+                if (mode.Width == preferredRenderResolution.first &&
+                    mode.Height == preferredRenderResolution.second &&
+                    mode.RefreshRate.Numerator == preferredRefreshRate.first &&
+                    mode.RefreshRate.Denominator == preferredRefreshRate.second) {
                     vFilteredModes.push_back(mode);
                 }
             }
@@ -655,26 +583,26 @@ namespace ne {
             if (vFilteredModes.empty()) {
                 Logger::get().error(
                     std::format(
-                        "video mode with resolution ({}x{}) and refresh rate "
-                        "({}/{}) is not supported, using default video mode",
-                        currentDisplayMode.Width,
-                        currentDisplayMode.Height,
-                        currentDisplayMode.RefreshRate.Numerator,
-                        currentDisplayMode.RefreshRate.Denominator),
+                        "video mode with resolution {}x{} and refresh rate "
+                        "{}/{} is not supported, using default video mode",
+                        preferredRenderResolution.first,
+                        preferredRenderResolution.second,
+                        preferredRefreshRate.first,
+                        preferredRefreshRate.second),
                     sDirectXRendererLogCategory);
                 // use last display mode
-                currentDisplayMode = vVideoModes.back();
+                pickedDisplayMode = vVideoModes.back();
             } else if (vFilteredModes.size() == 1) {
                 // found specified display mode
-                currentDisplayMode = vFilteredModes[0];
+                pickedDisplayMode = vFilteredModes[0];
             } else {
                 std::string sErrorMessage = std::format(
-                    "video mode with resolution ({}x{}) and refresh rate "
-                    "({}/{}) matched multiple supported modes:\n",
-                    currentDisplayMode.Width,
-                    currentDisplayMode.Height,
-                    currentDisplayMode.RefreshRate.Numerator,
-                    currentDisplayMode.RefreshRate.Denominator);
+                    "video mode with resolution {}x{} and refresh rate "
+                    "{}/{} matched multiple supported modes:\n",
+                    preferredRenderResolution.first,
+                    preferredRenderResolution.second,
+                    preferredRefreshRate.first,
+                    preferredRefreshRate.second);
                 for (const auto& mode : vFilteredModes) {
                     sErrorMessage += std::format(
                         "- resolution: {}x{}, refresh rate: {}/{}, format: {}, "
@@ -690,12 +618,18 @@ namespace ne {
                 Logger::get().error(
                     std::format("{}\nusing default video mode", sErrorMessage), sDirectXRendererLogCategory);
                 // use last display mode
-                currentDisplayMode = vVideoModes.back();
+                pickedDisplayMode = vVideoModes.back();
             }
         } else {
             // use last display mode
-            currentDisplayMode = std::get<std::vector<DXGI_MODE_DESC>>(std::move(videoModesResult)).back();
+            pickedDisplayMode = std::get<std::vector<DXGI_MODE_DESC>>(std::move(videoModesResult)).back();
         }
+
+        // Save display settings.
+        pRenderSettings->second->getScreenSettings()->setRenderResolution(
+            std::make_pair(pickedDisplayMode.Width, pickedDisplayMode.Height));
+        pRenderSettings->second->getScreenSettings()->setRefreshRate(std::make_pair(
+            pickedDisplayMode.RefreshRate.Numerator, pickedDisplayMode.RefreshRate.Denominator));
 
         // Create resource manager.
         error = createResourceManager();
@@ -710,6 +644,13 @@ namespace ne {
             error->addEntry();
             return error;
         }
+
+        // Log used GPU name.
+        Logger::get().info(
+            fmt::format("using the following GPU: \"{}\"", getCurrentlyUsedGpuName()),
+            sDirectXRendererLogCategory);
+
+        bIsDirectXInitialized = true;
 
         return {};
     }
@@ -816,6 +757,7 @@ namespace ne {
     UINT DirectXRenderer::getMsaaQualityLevel() const { return iMsaaQuality; }
 
     void DirectXRenderer::updateResourcesForNextFrame() {
+        std::scoped_lock frameGuard(*getRenderResourcesMutex());
         // TODO: wait for frame resource to be free
 
         // TODO: updateMaterialConstantBuffersForNextFrame()
@@ -824,10 +766,19 @@ namespace ne {
         // TODO: updateMainPassConstantBuffersForNextFrame()
     }
 
-    std::optional<Error> DirectXRenderer::resizeRenderBuffersToCurrentDisplayMode() {
+    std::optional<Error> DirectXRenderer::updateRenderBuffers() {
         std::scoped_lock guard(*getRenderResourcesMutex());
 
         flushCommandQueue();
+
+        // Get render settings.
+        const auto pRenderSettings = getRenderSettings();
+        std::scoped_lock renderSettingsGuard(pRenderSettings->first);
+        const auto renderResolution = pRenderSettings->second->getScreenSettings()->getRenderResolution();
+        const auto bIsVSyncEnabled = pRenderSettings->second->getScreenSettings()->isVsyncEnabled();
+        const auto bIsMsaaEnabled = pRenderSettings->second->getAntialiasingSettings()->isEnabled();
+        const auto iMsaaSampleCount =
+            static_cast<int>(pRenderSettings->second->getAntialiasingSettings()->getQuality());
 
         // Swapchain cannot be resized unless all outstanding buffer references have been released.
         vSwapChainBuffers.clear();
@@ -836,10 +787,11 @@ namespace ne {
         // Resize the swap chain.
         HRESULT hResult = pSwapChain->ResizeBuffers(
             getSwapChainBufferCount(),
-            currentDisplayMode.Width,
-            currentDisplayMode.Height,
+            renderResolution.first,
+            renderResolution.second,
             backBufferFormat,
-            bIsVSyncEnabled ? 0 : DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING);
+            bIsVSyncEnabled ? DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH
+                            : DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH | DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING);
         if (FAILED(hResult)) {
             return Error(hResult);
         }
@@ -859,8 +811,8 @@ namespace ne {
         const auto msaaRenderTargetDesc = CD3DX12_RESOURCE_DESC(
             D3D12_RESOURCE_DIMENSION_TEXTURE2D,
             0,
-            currentDisplayMode.Width,
-            currentDisplayMode.Height,
+            renderResolution.first,
+            renderResolution.second,
             1,
             1,
             backBufferFormat,
@@ -880,7 +832,7 @@ namespace ne {
         allocationDesc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
 
         auto result = pResourceManager->createRtvResource(
-            "Renderer render target buffer",
+            "renderer render target buffer",
             allocationDesc,
             msaaRenderTargetDesc,
             D3D12_RESOURCE_STATE_COMMON,
@@ -902,23 +854,21 @@ namespace ne {
         // Update the viewport transform to cover the new display size.
         screenViewport.TopLeftX = 0;
         screenViewport.TopLeftY = 0;
-        screenViewport.Width = static_cast<float>(currentDisplayMode.Width);
-        screenViewport.Height = static_cast<float>(currentDisplayMode.Height);
+        screenViewport.Width = static_cast<float>(renderResolution.first);
+        screenViewport.Height = static_cast<float>(renderResolution.second);
         screenViewport.MinDepth = fMinDepth;
         screenViewport.MaxDepth = fMaxDepth;
 
         scissorRect = {
-            0, 0, static_cast<LONG>(currentDisplayMode.Width), static_cast<LONG>(currentDisplayMode.Height)};
+            0, 0, static_cast<LONG>(renderResolution.first), static_cast<LONG>(renderResolution.second)};
 
         return {};
     }
 
+    bool DirectXRenderer::isInitialized() const { return bIsDirectXInitialized; }
+
     void DirectXRenderer::flushCommandQueue() {
         std::scoped_lock guardFrame(*getRenderResourcesMutex());
-
-        if (pCommandQueue == nullptr) {
-            return;
-        }
 
         const auto iFenceValue = iCurrentFence.fetch_add(1);
         HRESULT hResult = pCommandQueue->Signal(pFence.Get(), iFenceValue);
@@ -979,172 +929,13 @@ namespace ne {
             if (mode.Scaling != usedScaling) {
                 continue;
             }
+            if (mode.ScanlineOrdering != usedScanlineOrdering) {
+                continue;
+            }
 
             vFilteredModes.push_back(mode);
         }
 
         return vFilteredModes;
-    }
-
-    void DirectXRenderer::writeConfigurationToConfigFile() {
-        std::scoped_lock guard(mtxRwConfigFile);
-
-        ConfigManager manager;
-
-        if (isConfigurationFileExists()) {
-            // Add existing values first.
-            auto error = manager.loadFile(getRendererConfigurationFilePath());
-            if (error.has_value()) {
-                error->addEntry();
-                // error->showError(); don't show on screen as it's not a critical error
-                Logger::get().error(error->getError(), sDirectXRendererLogCategory);
-                return;
-            }
-        }
-
-        // Write GPU.
-        manager.setValue<int>(
-            getConfigurationSectionGpu(),
-            "GPU",
-            iPreferredGpuIndex,
-            "index of the GPU to use, where '0' is the GPU with the most priority "
-            "(first found GPU), '1' is the second found and etc.");
-
-        // Write resolution.
-        manager.setValue<unsigned int>(
-            getConfigurationSectionResolution(), "width", currentDisplayMode.Width);
-        manager.setValue<unsigned int>(
-            getConfigurationSectionResolution(), "height", currentDisplayMode.Height);
-
-        // Write refresh rate.
-        manager.setValue<unsigned int>(
-            getConfigurationSectionRefreshRate(), "numerator", currentDisplayMode.RefreshRate.Numerator);
-        manager.setValue<unsigned int>(
-            getConfigurationSectionRefreshRate(), "denominator", currentDisplayMode.RefreshRate.Denominator);
-
-        // Write antialiasing.
-        manager.setValue<bool>(getConfigurationSectionAntialiasing(), "enabled", bIsMsaaEnabled);
-        manager.setValue<unsigned int>(
-            getConfigurationSectionAntialiasing(),
-            "sample_count",
-            iMsaaSampleCount,
-            "valid values for MSAA: 2 or 4");
-
-        // Write VSync.
-        manager.setValue<bool>(getConfigurationSectionVSync(), "enabled", bIsVSyncEnabled);
-
-        // Write texture filtering.
-        manager.setValue<int>(
-            getConfigurationSectionTextureFiltering(), "mode", static_cast<int>(textureFilteringMode));
-
-        // !!!
-        // New settings go here!
-        // !!!
-
-        auto error = manager.saveFile(getRendererConfigurationFilePath(), false);
-        if (error.has_value()) {
-            error->addEntry();
-            // error->showError(); don't show on screen as it's not a critical error
-            Logger::get().error(error->getError(), sDirectXRendererLogCategory);
-        }
-    }
-
-    void DirectXRenderer::readConfigurationFromConfigFile() {
-        std::scoped_lock guard(mtxRwConfigFile);
-
-        if (!isConfigurationFileExists()) {
-            return;
-        }
-
-        std::set<ShaderParameter> pixelShaderConfiguration;
-
-        ConfigManager manager;
-
-        // Try loading file.
-        auto loadError = manager.loadFile(getRendererConfigurationFilePath());
-        if (loadError.has_value()) {
-            loadError->addEntry();
-            Logger::get().error(loadError->getError(), sDirectXRendererLogCategory);
-            return;
-        }
-
-        // Read GPU.
-        iPreferredGpuIndex = manager.getValue<long>(getConfigurationSectionGpu(), "GPU", 0);
-
-        // Read resolution.
-        currentDisplayMode.Width =
-            manager.getValue<unsigned int>(getConfigurationSectionResolution(), "width", 0);
-        currentDisplayMode.Height =
-            manager.getValue<unsigned int>(getConfigurationSectionResolution(), "height", 0);
-        if (currentDisplayMode.Width == 0 || currentDisplayMode.Height == 0) {
-            const Error error(std::format(
-                "failed to read valid resolution values from configuration file \"{}\"",
-                std::filesystem::path(manager.getFilePath()).string()));
-            Logger::get().error(error.getError(), sDirectXRendererLogCategory);
-            return;
-        }
-
-        // Read refresh rate.
-        currentDisplayMode.RefreshRate.Numerator =
-            manager.getValue<unsigned int>(getConfigurationSectionRefreshRate(), "numerator", 0);
-        currentDisplayMode.RefreshRate.Denominator =
-            manager.getValue<unsigned int>(getConfigurationSectionRefreshRate(), "denominator", 0);
-        if (currentDisplayMode.RefreshRate.Numerator == 0 ||
-            currentDisplayMode.RefreshRate.Denominator == 0) {
-            const Error error(std::format(
-                "failed to read valid refresh rate values from configuration file \"{}\"",
-                std::filesystem::path(manager.getFilePath()).string()));
-            Logger::get().error(error.getError(), sDirectXRendererLogCategory);
-            return;
-        }
-
-        bDisplayModeInitializedFromDiskConfig = true;
-
-        // Read antialiasing.
-        bIsMsaaEnabled =
-            manager.getValue<bool>(getConfigurationSectionAntialiasing(), "enabled", bIsMsaaEnabled);
-        iMsaaSampleCount = manager.getValue<unsigned int>(
-            getConfigurationSectionAntialiasing(), "sample_count", iMsaaSampleCount);
-        if (iMsaaSampleCount != 2 && iMsaaSampleCount != 4) {
-            iMsaaSampleCount = 4;
-            const Error error(std::format(
-                "failed to read valid antialiasing values from configuration file \"{}\"",
-                std::filesystem::path(manager.getFilePath()).string()));
-            Logger::get().error(error.getError(), sDirectXRendererLogCategory);
-            return;
-        }
-
-        // Read VSync.
-        bIsVSyncEnabled = manager.getValue<bool>(getConfigurationSectionVSync(), "enabled", bIsVSyncEnabled);
-
-        // Read texture filtering.
-        textureFilteringMode = static_cast<TextureFilteringMode>(manager.getValue<int>(
-            getConfigurationSectionTextureFiltering(), "mode", static_cast<int>(textureFilteringMode)));
-        switch (textureFilteringMode) {
-        case (TextureFilteringMode::POINT): {
-            pixelShaderConfiguration.insert(ShaderParameter::TEXTURE_FILTERING_POINT);
-            break;
-        }
-        case (TextureFilteringMode::LINEAR): {
-            pixelShaderConfiguration.insert(ShaderParameter::TEXTURE_FILTERING_LINEAR);
-            break;
-        }
-        case (TextureFilteringMode::ANISOTROPIC): {
-            pixelShaderConfiguration.insert(ShaderParameter::TEXTURE_FILTERING_ANISOTROPIC);
-            break;
-        }
-        }
-
-        // !!!
-        // New settings go here!
-        // !!!
-
-        setShaderConfiguration(pixelShaderConfiguration, ShaderType::PIXEL_SHADER);
-    }
-
-    void DirectXRenderer::setInitialShaderConfiguration() {
-        std::set<ShaderParameter> parameters;
-        parameters.insert(ShaderParameter::TEXTURE_FILTERING_ANISOTROPIC);
-        setShaderConfiguration(parameters, ShaderType::PIXEL_SHADER);
     }
 } // namespace ne

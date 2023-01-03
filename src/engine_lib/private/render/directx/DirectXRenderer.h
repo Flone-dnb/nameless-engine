@@ -51,45 +51,20 @@ namespace ne {
         static std::array<const CD3DX12_STATIC_SAMPLER_DESC, 4> getStaticTextureSamplers();
 
         /**
-         * Sets texture filtering.
-         *
-         * @param settings Texture filtering mode.
-         *
-         * @return Error if something went wrong.
-         */
-        [[nodiscard]] virtual std::optional<Error>
-        setTextureFiltering(const TextureFilteringMode& settings) override;
-
-        /**
-         * Sets antialiasing settings.
-         *
-         * @param settings Antialiasing settings.
-         *
-         * @return Error if something went wrong.
-         */
-        [[nodiscard]] virtual std::optional<Error> setAntialiasing(const Antialiasing& settings) override;
-
-        /**
          * Looks for video adapters (GPUs) that support used DirectX version and feature level.
          *
          * @return Error if can't find any GPU that supports our DirectX version and feature level,
          * vector with GPU names if successful.
          */
-        virtual std::variant<std::vector<std::string>, Error> getSupportedGpus() const override;
+        virtual std::variant<std::vector<std::string>, Error> getSupportedGpuNames() const override;
 
         /**
-         * Returns backbuffer resolution.
-         *
-         * @return A pair of X and Y pixels.
-         */
-        virtual std::pair<int, int> getRenderResolution() const override;
-
-        /**
-         * Returns a list of supported render resolution.
+         * Returns a list of supported render resolution (pairs of width and height).
          *
          * @return Error if something went wrong, otherwise render mode.
          */
-        virtual std::variant<std::vector<RenderMode>, Error> getSupportedRenderResolutions() const override;
+        virtual std::variant<std::vector<std::pair<unsigned int, unsigned int>>, Error>
+        getSupportedRenderResolutions() const override;
 
         /**
          * Returns the name of the GPU that is being currently used.
@@ -97,20 +72,6 @@ namespace ne {
          * @return Name of the GPU.
          */
         virtual std::string getCurrentlyUsedGpuName() const override;
-
-        /**
-         * Returns currently used AA settings.
-         *
-         * @return AA settings.
-         */
-        virtual Antialiasing getAntialiasing() const override;
-
-        /**
-         * Returns currently used texture filtering mode.
-         *
-         * @return Texture filtering mode.
-         */
-        virtual TextureFilteringMode getTextureFiltering() const override;
 
         /**
          * Returns total video memory size (VRAM) in megabytes.
@@ -125,16 +86,6 @@ namespace ne {
          * @return Used video memory size in megabytes.
          */
         virtual size_t getUsedVideoMemoryInMb() const override;
-
-        /**
-         * Sets backbuffer color.
-         *
-         * @param fillColor Color that the backbuffer will be filled with before rendering a frame.
-         * 4 values correspond to RGBA parameters.
-         *
-         * @return Error if something went wrong.
-         */
-        [[nodiscard]] virtual std::optional<Error> setBackbufferFillColor(float fillColor[4]) override;
 
         /**
          * Blocks the current thread until the GPU finishes executing all queued commands up to this point.
@@ -187,25 +138,25 @@ namespace ne {
         /** Update internal resources for the next frame. */
         virtual void updateResourcesForNextFrame() override;
 
-        /**
-         * Writes current renderer configuration to disk.
-         */
-        virtual void writeConfigurationToConfigFile() override;
-
-        /**
-         * Reads renderer configuration from disk.
-         */
-        virtual void readConfigurationFromConfigFile() override;
-
         /** Draw new frame. */
         virtual void drawNextFrame() override;
 
-    private:
         /**
-         * Sets initial shader configuration, typically used before compiling engine shaders.
+         * Recreates all render buffers to match current settings.
+         *
+         * @return Error if something went wrong.
          */
-        void setInitialShaderConfiguration();
+        [[nodiscard]] virtual std::optional<Error> updateRenderBuffers() override;
 
+        /**
+         * Tells whether the renderer is initialized or not
+         * (whether it's safe to use renderer functionality or not).
+         *
+         * @return Whether the renderer is initialized or not.
+         */
+        virtual bool isInitialized() const override;
+
+    private:
         /**
          * Enables DX debug layer.
          *
@@ -218,19 +169,19 @@ namespace ne {
         [[nodiscard]] std::optional<Error> enableDebugLayer() const;
 
         /**
-         * (Re)creates depth/stencil buffer @ref pDepthStencilBuffer.
+         * (Re)creates depth/stencil buffer.
+         *
+         * @remark Make sure that the old depth/stencil buffer (if was) is not used by the GPU.
          *
          * @return Error if something went wrong.
-         *
-         * @remark Make sure that old depth/stencil buffer (if was) is not used by the GPU.
          */
-        [[nodiscard]] std::optional<Error> createDepthStencilBuffer();
+        [[nodiscard]] virtual std::optional<Error> createDepthStencilBuffer() override;
 
         /**
          * Sets the video adapter to be used.
          *
          * @param sVideoAdapterName Name of the video adapter to use.
-         * You can query supported video adapters by using @ref getSupportedGpus
+         * You can query supported video adapters by using @ref getSupportedGpuNames.
          *
          * @return Error if something went wrong, for example, if an adapter with the specified
          * name was not found, or if it was found but does not support used DirectX version
@@ -295,13 +246,6 @@ namespace ne {
         [[nodiscard]] std::optional<Error> compileEngineShaders() const;
 
         /**
-         * Recreates all render buffers to match current display mode (width/height).
-         *
-         * @return Error if something went wrong.
-         */
-        [[nodiscard]] std::optional<Error> resizeRenderBuffersToCurrentDisplayMode();
-
-        /**
          * Returns a vector of display modes that the current output adapter
          * supports for current back buffer format.
          *
@@ -309,90 +253,92 @@ namespace ne {
          */
         std::variant<std::vector<DXGI_MODE_DESC>, Error> getSupportedDisplayModes() const;
 
-        // Main DX objects.
         /** DXGI Factory. */
         ComPtr<IDXGIFactory4> pFactory;
+
         /** D3D12 Device. */
         ComPtr<ID3D12Device> pDevice;
+
         /** GPU. */
         ComPtr<IDXGIAdapter3> pVideoAdapter;
+
         /** Monitor. */
         ComPtr<IDXGIOutput> pOutputAdapter;
+
         /** Swap chain. */
         ComPtr<IDXGISwapChain3> pSwapChain;
 
-        // Command objects.
         /** GPU command queue. */
         ComPtr<ID3D12CommandQueue> pCommandQueue;
-        /** Command list allocator - stores commands from command list (works like std::vector). */
+
+        /** Stores commands from command lists. */
         ComPtr<ID3D12CommandAllocator> pCommandListAllocator;
+
         /** CPU command list. */
         ComPtr<ID3D12GraphicsCommandList> pCommandList;
 
         /** Fence object. */
         ComPtr<ID3D12Fence> pFence;
+
         /** Fence counter. */
         std::atomic<UINT64> iCurrentFence{0};
 
         /** Resource manager. */
         std::unique_ptr<DirectXResourceManager> pResourceManager;
 
-        // Render/depth buffers.
         /** Swap chain buffer. */
         std::vector<std::unique_ptr<DirectXResource>> vSwapChainBuffers;
+
         /** Depth stencil buffer. */
         std::unique_ptr<DirectXResource> pDepthStencilBuffer;
+
         /** Default back buffer fill color. */
         float backBufferFillColor[4] = {0.0F, 0.0F, 0.0F, 1.0F};
 
-        // Buffer formats.
-        /** Back buffer format. */
-        const DXGI_FORMAT backBufferFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
-        /** Depth/stencil buffer format. */
-        const DXGI_FORMAT depthStencilBufferFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
-
-        // MSAA.
         /** Render target for MSAA rendering. */
         std::unique_ptr<DirectXResource> pMsaaRenderBuffer;
-        /** Whether the MSAA is currently enabled or not. */
-        bool bIsMsaaEnabled = true;
-        /** Current MSAA sample count (quality). */
-        UINT iMsaaSampleCount = 4;
+
         /** Supported quality level for MSAA. */
         UINT iMsaaQuality = 0;
 
-        // Display mode.
-        /** Currently used display mode. */
-        DXGI_MODE_DESC currentDisplayMode{};
-        /** Use only display modes that use this scaling. */
-        DXGI_MODE_SCALING usedScaling = DXGI_MODE_SCALING_UNSPECIFIED;
-        /** Whether the VSync is currently enabled or not. */
-        bool bIsVSyncEnabled = false;
-
-        // Viewport.
         /** Screen viewport size and depth range. */
         D3D12_VIEWPORT screenViewport;
+
         /** Scissor rectangle for viewport. */
         D3D12_RECT scissorRect;
-        /** Minimum value for depth. */
-        const float fMinDepth = 0.0F;
-        /** Maximum value for depth. */
-        const float fMaxDepth = 1.0F;
 
-        // Video Adapters (GPUs).
-        /** Preferred GPU to use (for @ref getSupportedGpus). Can be overriden by configuration from disk. */
-        long iPreferredGpuIndex = 0;
         /** Name of the GPU we are currently using. */
         std::string sUsedVideoAdapter;
 
-        /** Texture filtering mode. */
-        TextureFilteringMode textureFilteringMode = TextureFilteringMode::ANISOTROPIC;
+        /**
+         * Index of the picked GPU.
+         *
+         * @remark Although we have this value in screen render setting object, the value there
+         * represents preferred GPU index which can change on the fly, while here we care about picked
+         * GPU index (not preferred).
+         */
+        unsigned int iPickedGpuIndex = 0;
 
-        /** Will be 'true' if we read the configuration from disk at startup and it's valid. */
-        bool bDisplayModeInitializedFromDiskConfig = false;
+        /** Whether @ref initializeDirectX was finished without errors or not. */
+        bool bIsDirectXInitialized = false;
 
-        /** Used to create a critical section for read/write operation on config files. */
-        std::mutex mtxRwConfigFile;
+        /** Minimum value for depth. */
+        const float fMinDepth = 0.0F;
+
+        /** Maximum value for depth. */
+        const float fMaxDepth = 1.0F;
+
+        /** Back buffer format. */
+        const DXGI_FORMAT backBufferFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
+
+        /** Depth/stencil buffer format. */
+        const DXGI_FORMAT depthStencilBufferFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
+
+        /** Use only display modes that use this scaling. */
+        const DXGI_MODE_SCALING usedScaling = DXGI_MODE_SCALING_UNSPECIFIED;
+
+        /** Use only display modes that use this scanline ordering. */
+        const DXGI_MODE_SCANLINE_ORDER usedScanlineOrdering = DXGI_MODE_SCANLINE_ORDER_PROGRESSIVE;
 
         /** D3D feature level that we use (required feature level). */
         const D3D_FEATURE_LEVEL rendererD3dFeatureLevel = D3D_FEATURE_LEVEL::D3D_FEATURE_LEVEL_12_1;

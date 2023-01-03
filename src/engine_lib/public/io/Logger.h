@@ -117,7 +117,7 @@ namespace ne {
          * If the logger directory contains this amount of log files,
          * the oldest log file will be removed to create a new one.
          */
-        inline static constexpr size_t iMaxLogFiles = 3;
+        inline static constexpr size_t iMaxLogFiles = 5;
 
         /** Name of the category used for logging. */
         inline static const char* sDefaultLogCategory = "Default";

@@ -70,6 +70,8 @@ set(ENGINE_LIB_SOURCES
     private/game/Game.cpp
     public/render/Renderer.h
     private/render/Renderer.cpp
+    public/render/RenderSettings.h
+    private/render/RenderSettings.cpp
     private/render/pso/PsoManager.h
     private/render/pso/PsoManager.cpp
     private/render/pso/Pso.h

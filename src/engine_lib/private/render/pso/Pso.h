@@ -184,17 +184,17 @@ namespace ne {
          */
         std::pair<std::mutex, std::set<Material*>> mtxMaterialsThatUseThisPso;
 
-        /**
-         * Contains combines used shader names, transparency setting and etc. that
-         * uniquely identifies the PSO.
-         */
-        std::string sUniquePsoIdentifier;
-
         /** Do not delete (free) this pointer. PSO manager that owns this PSO. */
         PsoManager* pPsoManager;
 
         /** Do not delete (free) this pointer. Current renderer. */
         Renderer* pRenderer;
+
+        /**
+         * Contains combines used shader names, transparency setting and etc. that
+         * uniquely identifies the PSO.
+         */
+        std::string sUniquePsoIdentifier;
 
         /** Name of the compiled vertex shader (see ShaderManager::compileShaders) that this PSO uses. */
         std::string sVertexShaderName;

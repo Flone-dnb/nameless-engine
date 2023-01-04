@@ -107,10 +107,10 @@ namespace ne {
         std::filesystem::path sLoggerWorkingDirectory;
 
         /** Total amount of warnings produced. */
-        inline static size_t iTotalWarningsProduced = 0;
+        inline static std::atomic<size_t> iTotalWarningsProduced{0};
 
         /** Total amount of errors produced. */
-        inline static size_t iTotalErrorsProduced = 0;
+        inline static std::atomic<size_t> iTotalErrorsProduced{0};
 
         /**
          * Maximum amount of log files in the logger directory.
@@ -118,6 +118,9 @@ namespace ne {
          * the oldest log file will be removed to create a new one.
          */
         inline static constexpr size_t iMaxLogFiles = 5;
+
+        /** Extension of the log files. */
+        inline static const char* sLogFileExtension = ".log";
 
         /** Name of the category used for logging. */
         inline static const char* sDefaultLogCategory = "Default";

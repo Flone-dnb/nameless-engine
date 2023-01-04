@@ -15,13 +15,13 @@
 
 namespace ne {
     Logger::~Logger() {
-        if (iTotalWarningsProduced > 0 || iTotalErrorsProduced > 0) {
+        if (iTotalWarningsProduced.load() > 0 || iTotalErrorsProduced.load() > 0) {
             pSpdLogger->info(fmt::format(
                 "\n---------------------------------------------------\n"
                 "Total warnings produced: {}.\n"
                 "Total errors produced: {}.",
-                iTotalWarningsProduced,
-                iTotalErrorsProduced));
+                iTotalWarningsProduced.load(),
+                iTotalErrorsProduced.load()));
         }
         // Explicitly destroy spdlogger here, why:
         // if you would try to write to log in destructor of your class while using `gc` pointer
@@ -39,8 +39,9 @@ namespace ne {
 
     void Logger::info(
         std::string_view sText, std::string_view sCategory, const nostd::source_location location) const {
-        if (!pSpdLogger)
+        if (pSpdLogger == nullptr) {
             return;
+        }
 
         if (sCategory.empty()) {
             sCategory = sDefaultLogCategory;
@@ -55,8 +56,9 @@ namespace ne {
 
     void Logger::warn(
         std::string_view sText, std::string_view sCategory, const nostd::source_location location) const {
-        if (!pSpdLogger)
+        if (pSpdLogger == nullptr) {
             return;
+        }
 
         if (sCategory.empty()) {
             sCategory = sDefaultLogCategory;
@@ -67,13 +69,14 @@ namespace ne {
             std::filesystem::path(location.file_name()).filename().string(),
             location.line(),
             sText));
-        iTotalWarningsProduced += 1;
+        iTotalWarningsProduced.fetch_add(1);
     }
 
     void Logger::error(
         std::string_view sText, std::string_view sCategory, const nostd::source_location location) const {
-        if (!pSpdLogger)
+        if (pSpdLogger == nullptr) {
             return;
+        }
 
         if (sCategory.empty()) {
             sCategory = sDefaultLogCategory;
@@ -84,7 +87,7 @@ namespace ne {
             std::filesystem::path(location.file_name()).filename().string(),
             location.line(),
             sText));
-        iTotalErrorsProduced += 1;
+        iTotalErrorsProduced.fetch_add(1);
     }
 
     std::filesystem::path Logger::getDirectoryWithLogs() const { return sLoggerWorkingDirectory; }
@@ -97,7 +100,7 @@ namespace ne {
         }
 
         sLoggerWorkingDirectory = sLoggerFilePath;
-        sLoggerFilePath /= getApplicationName() + "-" + getDateTime() + ".txt";
+        sLoggerFilePath /= getApplicationName() + "-" + getDateTime() + sLogFileExtension;
 
         removeOldestLogFiles(sLoggerWorkingDirectory);
 
@@ -122,7 +125,7 @@ namespace ne {
     std::string Logger::getDateTime() {
         const time_t now = time(nullptr);
 
-        tm tm{};
+        tm tm{}; // NOLINT
 #if defined(WIN32)
         const auto iError = localtime_s(&tm, &now);
         if (iError != 0) {

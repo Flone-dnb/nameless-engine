@@ -12,10 +12,6 @@
 #include "render/Renderer.h"
 #include "materials/Shader.h"
 #include "render/pso/PsoManager.h"
-#if defined(WIN32)
-#include "render/directx/resources/DirectXResourceManager.h"
-#include "render/directx/DirectXRenderer.h"
-#endif
 #include "io/serializers/PrimitiveFieldSerializer.h"
 #include "io/serializers/StringFieldSerializer.h"
 #include "io/serializers/VectorFieldSerializer.h"
@@ -66,13 +62,7 @@ namespace ne {
 #endif
 
         // Create renderer.
-#if defined(WIN32)
-        pRenderer = std::make_unique<DirectXRenderer>(this);
-#elif __linux__
-        static_assert(false, "not implemented");
-#else
-        static_assert(false, "not implemented");
-#endif
+        pRenderer = Renderer::create(this);
     }
 
     void Game::onTickFinished() { runGarbageCollection(); }

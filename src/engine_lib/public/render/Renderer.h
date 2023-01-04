@@ -25,18 +25,20 @@ namespace ne {
      */
     class Renderer {
     public:
-        /**
-         * Constructor.
-         *
-         * @param pGame   Game object that owns this renderer.
-         */
-        Renderer(Game* pGame);
-
         Renderer() = delete;
         Renderer(const Renderer&) = delete;
         Renderer& operator=(const Renderer&) = delete;
 
         virtual ~Renderer() = default;
+
+        /**
+         * Creates a new platform-specific renderer.
+         *
+         * @param pGame Game object that will own this renderer.
+         *
+         * @return Created renderer.
+         */
+        static std::unique_ptr<Renderer> create(Game* pGame);
 
         /**
          * Looks for video adapters (GPUs) that support this renderer.
@@ -159,6 +161,13 @@ namespace ne {
 
         // Can update shader configuration.
         friend class ShaderConfiguration;
+
+        /**
+         * Constructor.
+         *
+         * @param pGame Game object that owns this renderer.
+         */
+        Renderer(Game* pGame);
 
         /**
          * Returns the amount of buffers the swap chain has.

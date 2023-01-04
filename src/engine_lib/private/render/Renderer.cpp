@@ -6,6 +6,9 @@
 #include "io/Logger.h"
 #include "materials/ShaderParameter.h"
 #include "render/pso/PsoManager.h"
+#if defined(WIN32)
+#include "render/directx/DirectXRenderer.h"
+#endif
 
 // External.
 #include "fmt/core.h"
@@ -30,6 +33,16 @@ namespace ne {
                 "using {} shader(s) per vertex shader pack",
                 ShaderParameterConfigurations::validVertexShaderParameterConfigurations.size()),
             sRendererLogCategory);
+    }
+
+    std::unique_ptr<Renderer> Renderer::create(Game* pGame) {
+#if defined(WIN32)
+        return std::make_unique<DirectXRenderer>(pGame);
+#elif __linux__
+        static_assert(false, "not implemented");
+#else
+        static_assert(false, "not implemented");
+#endif
     }
 
     std::pair<std::recursive_mutex, std::unique_ptr<RenderSettings>>* Renderer::getRenderSettings() {

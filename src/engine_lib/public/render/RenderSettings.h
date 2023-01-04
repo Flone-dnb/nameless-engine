@@ -10,271 +10,71 @@
 namespace ne RNAMESPACE() {
     class Renderer;
 
+    /** Describes the quality (sample count) of MSAA. */
+    enum class MsaaQuality : int { MEDIUM = 2, HIGH = 4 };
+
+    /** Describes texture filtering mode. */
+    enum class TextureFilteringMode : int { POINT = 0, LINEAR = 1, ANISOTROPIC = 2 };
+
     /**
      * Base class for render settings.
      *
      * @remark In order to create an object of this class you need to make sure that both game and renderer
      * objects exist.
      */
-    class RCLASS(Guid("eb477c6d-cdc4-4b7a-9349-296fb38e6bfc")) RenderSetting : public Serializable {
+    class RCLASS(Guid("eb477c6d-cdc4-4b7a-9349-296fb38e6bfc")) RenderSettings : public Serializable {
     public:
-        RenderSetting() = default;
-        virtual ~RenderSetting() override = default;
+        RenderSettings() = default;
+        virtual ~RenderSettings() override = default;
 
         /**
          * Returns path to the file that is used to store setting configuration.
          *
          * @return Path to file.
          */
-        virtual std::filesystem::path getPathToConfigurationFile() {
-            throw std::runtime_error("not implemented");
-        };
-
-    protected:
-        // "Manager" might request the configuration to be updated.
-        friend class RenderSettings;
-
-        /**
-         * Sets renderer to be used.
-         *
-         * @remark It is essential to call this function to initialize the object.
-         *
-         * @param pRenderer Game's renderer.
-         */
-        void setRenderer(Renderer* pRenderer);
-
-        /** Changes renderer settings/state to match the current settings. */
-        virtual void updateRendererConfiguration() { throw std::runtime_error("not implemented"); };
-
-        /**
-         * Saves the current configuration to disk.
-         *
-         * @return Error if something went wrong.
-         */
-        [[nodiscard]] virtual std::optional<Error> saveConfigurationToDisk() {
-            throw std::runtime_error("not implemented");
-        };
-
-        /**
-         * Returns name of the category used for logging.
-         *
-         * @return Name of the category used for logging.
-         */
-        static const char* getRenderSettingLogCategory();
-
-        /**
-         * Recreates all render buffers to match current settings.
-         *
-         * @return Error if something went wrong.
-         */
-        [[nodiscard]] std::optional<Error> updateRenderBuffers();
-
-        /**
-         * Returns game's renderer.
-         *
-         * @return Do not delete (free) returned pointer. `nullptr` if the renderer is not initialized yet,
-         * otherwise game's renderer.
-         */
-        Renderer* getRenderer() const;
-
-        /**
-         * Tells whether the renderer is initialized or not
-         * (whether it's safe to use renderer functionality or not).
-         *
-         * @return Whether the renderer is initialized or not.
-         */
-        bool isRendererInitialized() const;
-
-    private:
-        /** Do not delete (free) this pointer. Game's renderer. */
-        Renderer* pRenderer = nullptr;
-
-        /** Name of the category used for logging. */
-        static inline const char* sRenderSettingLogCategory = "Render Setting";
-
-        ne_RenderSetting_GENERATED
-    };
-
-    /** Describes the quality (sample count) of MSAA. */
-    enum class MsaaQuality : int { MEDIUM = 2, HIGH = 4 };
-
-    /** Controls anti-aliasing settings. */
-    class RCLASS(Guid("9a9f58a6-fcea-4906-bb23-9aac508e6ea0")) AntialiasingRenderSetting
-        : public RenderSetting {
-    public:
-        AntialiasingRenderSetting() = default;
-        virtual ~AntialiasingRenderSetting() override = default;
-
-        /**
-         * Returns name of the file that is used to store setting configuration.
-         *
-         * @param bIncludeFileExtension Whether to include file extension in the returned string or not.
-         *
-         * @return Name of the file.
-         */
-        static std::string getConfigurationFileName(bool bIncludeFileExtension);
-
-        /**
-         * Returns path to the file that is used to store setting configuration.
-         *
-         * @return Path to file.
-         */
-        virtual std::filesystem::path getPathToConfigurationFile() override;
+        std::filesystem::path getPathToConfigurationFile();
 
         /**
          * Enables/disables anti-aliasing (AA).
          *
          * @param bEnable Whether to enable AA or not.
          */
-        void setEnabled(bool bEnable);
+        void setAntialiasingEnabled(bool bEnable);
 
         /**
          * Sets anti-aliasing (AA) quality.
          *
          * @param quality AA quality.
          */
-        void setQuality(MsaaQuality quality);
+        void setAntialiasingQuality(MsaaQuality quality);
 
         /**
          * Tells whether anti-aliasing (AA) is currently enabled or not.
          *
          * @return Whether AA is enabled or not.
          */
-        bool isEnabled() const;
+        bool isAntialiasingEnabled() const;
 
         /**
          * Returns current anti-aliasing (AA) quality.
          *
          * @return Current AA quality.
          */
-        MsaaQuality getQuality() const;
-
-    protected:
-        /** Changes renderer settings/state to match the current settings. */
-        virtual void updateRendererConfiguration() override;
-
-        /**
-         * Called after the object was successfully deserialized.
-         * Used to execute post-deserialization logic.
-         *
-         * @warning If overriding you must call the parent's version of this function first
-         * (before executing your login) to execute parent's logic.
-         */
-        virtual void onAfterDeserialized() override;
-
-        /**
-         * Saves the current configuration to disk.
-         *
-         * @return Error if something went wrong.
-         */
-        [[nodiscard]] virtual std::optional<Error> saveConfigurationToDisk() override;
-
-    private:
-        /** Whether AA is enabled or not. */
-        RPROPERTY(Serialize)
-        bool bIsEnabled = true;
-
-        /** Sample count of AA. */
-        RPROPERTY(Serialize)
-        int iSampleCount = static_cast<int>(MsaaQuality::HIGH);
-
-        /** Name of the file we use to store configuration. */
-        static inline const char* sAntialiasingConfigFileName = "antialiasing";
-
-        ne_AntialiasingRenderSetting_GENERATED
-    };
-
-    /** Describes texture filtering mode. */
-    enum class TextureFilteringMode : int { POINT = 0, LINEAR = 1, ANISOTROPIC = 2 };
-
-    /** Controls texture filtering settings. */
-    class RCLASS(Guid("071d0acb-3da1-408c-bf44-41653192d568")) TextureFilteringRenderSetting
-        : public RenderSetting {
-    public:
-        TextureFilteringRenderSetting() = default;
-        virtual ~TextureFilteringRenderSetting() override = default;
-
-        /**
-         * Returns name of the file that is used to store setting configuration.
-         *
-         * @param bIncludeFileExtension Whether to include file extension in the returned string or not.
-         *
-         * @return Name of the file.
-         */
-        static std::string getConfigurationFileName(bool bIncludeFileExtension);
-
-        /**
-         * Returns path to the file that is used to store setting configuration.
-         *
-         * @return Path to file.
-         */
-        virtual std::filesystem::path getPathToConfigurationFile() override;
+        MsaaQuality getAntialiasingQuality() const;
 
         /**
          * Sets texture filtering mode to be used.
          *
          * @param mode Mode to use.
          */
-        void setMode(TextureFilteringMode mode);
+        void setTextureFilteringMode(TextureFilteringMode mode);
 
         /**
          * Returns currently used texture filtering mode.
          *
          * @return Texture filtering mode.
          */
-        TextureFilteringMode getMode() const;
-
-    protected:
-        /** Changes renderer settings/state to match the current settings. */
-        virtual void updateRendererConfiguration() override;
-
-        /**
-         * Called after the object was successfully deserialized.
-         * Used to execute post-deserialization logic.
-         *
-         * @warning If overriding you must call the parent's version of this function first
-         * (before executing your login) to execute parent's logic.
-         */
-        virtual void onAfterDeserialized() override;
-
-        /**
-         * Saves the current configuration to disk.
-         *
-         * @return Error if something went wrong.
-         */
-        [[nodiscard]] virtual std::optional<Error> saveConfigurationToDisk() override;
-
-    private:
-        /** Texture filtering mode. */
-        RPROPERTY(Serialize)
-        int iTextureFilteringMode = static_cast<int>(TextureFilteringMode::ANISOTROPIC);
-
-        /** Name of the file we use to store configuration. */
-        static inline const char* sTextureFilteringConfigFileName = "texture_filtering";
-
-        ne_TextureFilteringRenderSetting_GENERATED
-    };
-
-    /** Controls various screen related settings such as render resolution, refresh rate, vsync, etc. */
-    class RCLASS(Guid("168f1c4e-3e40-481b-b969-c50e886c8710")) ScreenRenderSetting : public RenderSetting {
-    public:
-        virtual ~ScreenRenderSetting() override = default;
-
-        /**
-         * Returns name of the file that is used to store setting configuration.
-         *
-         * @param bIncludeFileExtension Whether to include file extension in the returned string or not.
-         *
-         * @return Name of the file.
-         */
-        static std::string getConfigurationFileName(bool bIncludeFileExtension);
-
-        /**
-         * Returns path to the file that is used to store setting configuration.
-         *
-         * @return Path to file.
-         */
-        virtual std::filesystem::path getPathToConfigurationFile() override;
+        TextureFilteringMode getTextureFilteringMode() const;
 
         /**
          * Sets the width and the height of the rendered images.
@@ -353,16 +153,60 @@ namespace ne RNAMESPACE() {
 
     protected:
         /**
+         * Called after the object was successfully deserialized.
+         * Used to execute post-deserialization logic.
+         *
+         * @warning If overriding you must call the parent's version of this function first
+         * (before executing your login) to execute parent's logic.
+         */
+        virtual void onAfterDeserialized() override;
+
+    private:
+        // Renderer will initialize this object.
+        friend class Renderer;
+
+        /**
+         * Returns name of the file that is used to store setting configuration.
+         *
+         * @param bIncludeFileExtension Whether to include file extension in the returned string or not.
+         *
+         * @return Name of the file.
+         */
+        static std::string getConfigurationFileName(bool bIncludeFileExtension);
+
+        /**
+         * Sets renderer to be used.
+         *
+         * @remark It is essential to call this function to initialize the object.
+         *
+         * @param pRenderer Game's renderer.
+         */
+        void setRenderer(Renderer* pRenderer);
+
+        /** Changes renderer's state to match the current settings. */
+        void updateRendererConfiguration();
+
+        /**
          * Saves the current configuration to disk.
          *
          * @return Error if something went wrong.
          */
-        [[nodiscard]] virtual std::optional<Error> saveConfigurationToDisk() override;
+        [[nodiscard]] std::optional<Error> saveConfigurationToDisk();
 
-        /** Changes renderer settings/state to match the current settings. */
-        virtual void updateRendererConfiguration() override;
+        /** Changes renderer's state to match the current texture filtering settings. */
+        void updateRendererConfigurationForTextureFiltering();
 
-    private:
+        /** Changes renderer' state to match the current antialiasing settings. */
+        void updateRendererConfigurationForAntialiasing();
+
+        /** Changes renderer's state to match the current screen settings. */
+        void updateRendererConfigurationForScreen();
+
+        // !!!
+        // !!! don't forget to add new `updateRendererConfiguration...` function to
+        // !!! `updateRendererConfiguration()` function.
+        // !!!
+
         /** Width of the back buffer. */
         RPROPERTY(Serialize)
         unsigned int iRenderResolutionWidth = 0;
@@ -383,14 +227,32 @@ namespace ne RNAMESPACE() {
         RPROPERTY(Serialize)
         unsigned int iUsedGpuIndex = 0;
 
+        /** Sample count of AA. */
+        RPROPERTY(Serialize)
+        int iAntialiasingSampleCount = static_cast<int>(MsaaQuality::HIGH);
+
+        /** Texture filtering mode. */
+        RPROPERTY(Serialize)
+        int iTextureFilteringMode = static_cast<int>(TextureFilteringMode::ANISOTROPIC);
+
         /** Whether VSync is enabled or not. */
         RPROPERTY(Serialize)
         bool bIsVsyncEnabled = false;
 
-        /** Name of the file we use to store configuration. */
-        static inline const char* sScreenConfigFileName = "screen";
+        /** Whether AA is enabled or not. */
+        RPROPERTY(Serialize)
+        bool bIsAntialiasingEnabled = true;
 
-        ne_ScreenRenderSetting_GENERATED
+        /** Do not delete (free) this pointer. Game's renderer. */
+        Renderer* pRenderer = nullptr;
+
+        /** Name of the file we use to store render settings. */
+        static inline const char* sRenderSettingsConfigurationFileName = "render";
+
+        /** Name of the category used for logging. */
+        static inline const char* sRenderSettingsLogCategory = "Render Settings";
+
+        ne_RenderSettings_GENERATED
     };
 } // namespace ne RNAMESPACE()
 

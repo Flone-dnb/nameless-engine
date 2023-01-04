@@ -61,7 +61,7 @@ namespace ne {
          *
          * @return Do not delete (free) returned pointer. Non-owning pointer to render settings.
          */
-        std::pair<std::recursive_mutex, std::unique_ptr<RenderSettings>>* getRenderSettings();
+        std::pair<std::recursive_mutex, std::shared_ptr<RenderSettings>>* getRenderSettings();
 
         /**
          * Returns the name of the GPU that is being currently used.
@@ -145,22 +145,15 @@ namespace ne {
          */
         std::recursive_mutex* getRenderResourcesMutex();
 
-        /**
-         * Returns name of the directory we use to store render-specific settings.
-         *
-         * @return Directory name.
-         */
-        static const char* getRenderConfigurationDirectoryName();
-
     protected:
         // Only window should be able to request new frames to be drawn.
         friend class Window;
 
-        // Settings will change shader configuration and other render settings.
-        friend class RenderSetting;
-
         // Can update shader configuration.
         friend class ShaderConfiguration;
+
+        // Settings will modify renderer's state.
+        friend class RenderSettings;
 
         /**
          * Constructor.
@@ -238,7 +231,7 @@ namespace ne {
          * Render setting objects that configure the renderer.
          * Must be used with mutex.
          */
-        std::pair<std::recursive_mutex, std::unique_ptr<RenderSettings>> mtxRenderSettings;
+        std::pair<std::recursive_mutex, std::shared_ptr<RenderSettings>> mtxRenderSettings;
 
         /** Do not delete (free) this pointer. Game object that owns this renderer. */
         Game* pGame = nullptr;
@@ -246,154 +239,8 @@ namespace ne {
         /** Number of buffers in swap chain. */
         static constexpr unsigned int iSwapChainBufferCount = 2;
 
-        /** Directory name used to store renderer configuration. */
-        inline static const char* sRendererConfigurationDirectoryName = "render";
-
         /** Name of the category used for logging. */
         inline static const char* sRendererLogCategory = "Renderer";
-    };
-
-    /** Small class that combines all render setting objects. */
-    class RenderSettings {
-    public:
-        RenderSettings() = delete;
-
-        RenderSettings(const RenderSetting&) = delete;
-        RenderSettings& operator=(const RenderSetting&) = delete;
-
-        /**
-         * Returns anti-aliasing settings.
-         *
-         * @return Do not delete (free) returned pointer. Anti-aliasing settings.
-         */
-        AntialiasingRenderSetting* getAntialiasingSettings() { return pAntialiasingSettings.get(); }
-
-        /**
-         * Returns texture filtering settings.
-         *
-         * @return Do not delete (free) returned pointer. Texture filtering settings.
-         */
-        TextureFilteringRenderSetting* getTextureFilteringSettings() {
-            return pTextureFilteringSettings.get();
-        }
-
-        /**
-         * Returns screen settings.
-         *
-         * @return Do not delete (free) returned pointer. Screen settings.
-         */
-        ScreenRenderSetting* getScreenSettings() { return pScreenSettings.get(); }
-
-    private:
-        // Only renderer can initialize render settings.
-        friend class Renderer;
-
-        /**
-         * Initializes render settings.
-         *
-         * @param pRenderer Game's renderer.
-         */
-        RenderSettings(Renderer* pRenderer) { this->pRenderer = pRenderer; }
-
-        /** Initializes render settings. */
-        void initialize() {
-            if (bIsInitialized)
-                return;
-
-            bIsInitialized = true;
-
-            pAntialiasingSettings = setupRenderSetting<AntialiasingRenderSetting>(pRenderer);
-            pTextureFilteringSettings = setupRenderSetting<TextureFilteringRenderSetting>(pRenderer);
-            pScreenSettings = setupRenderSetting<ScreenRenderSetting>(pRenderer);
-        }
-
-        /**
-         * Looks if the configuration file for the specified setting exists and deserializes it,
-         * otherwise creates a new object and returns it.
-         *
-         * @param pRenderer Renderer to use.
-         *
-         * @return Render setting object.
-         */
-        template <typename T>
-            requires std::derived_from<T, RenderSetting> && std::derived_from<T, Serializable>
-        std::shared_ptr<T> setupRenderSetting(Renderer* pRenderer) {
-            // Construct path to the directory with config files.
-            const auto pathToConfigDirectory = ProjectPaths::getDirectoryForEngineConfigurationFiles() /
-                                               pRenderer->getRenderConfigurationDirectoryName();
-
-            // Construct path to config file.
-            const auto pathToConfigFile = pathToConfigDirectory / T::getConfigurationFileName(true);
-
-            std::shared_ptr<T> pRenderSetting;
-            bool bDeserializedWithoutIssues = false;
-
-            // See if config file exists.
-            if (std::filesystem::exists(pathToConfigFile)) {
-                // Try to deserialize.
-                auto result = Serializable::deserialize<std::shared_ptr, T>(pathToConfigFile);
-                if (std::holds_alternative<Error>(result)) {
-                    auto error = std::get<Error>(std::move(result));
-                    error.addEntry();
-                    Logger::get().error(
-                        fmt::format(
-                            "failed to deserialize render settings from the file \"{}\", using default "
-                            "settings instead, error: \"{}\"",
-                            pathToConfigFile.string(),
-                            error.getError()),
-                        sRenderSettingsLogCategory);
-
-                    // Just create a new object with default settings.
-                    pRenderSetting = std::make_shared<T>();
-                } else {
-                    // Use the deserialized object.
-                    pRenderSetting = std::get<std::shared_ptr<T>>(std::move(result));
-                    bDeserializedWithoutIssues = true;
-                }
-            } else {
-                // Just create a new object with default settings.
-                pRenderSetting = std::make_shared<T>();
-            }
-
-            // Initialize the setting.
-            const auto pParentSettings = dynamic_cast<RenderSetting*>(pRenderSetting.get());
-            pParentSettings->setRenderer(pRenderer);
-
-            // Save if no config existed.
-            if (!bDeserializedWithoutIssues) {
-                auto optionalError = pParentSettings->saveConfigurationToDisk();
-                if (optionalError.has_value()) {
-                    auto error = optionalError.value();
-                    error.addEntry();
-                    Logger::get().error(
-                        fmt::format("failed to save new render settings, error: \"{}\"", error.getError()),
-                        sRenderSettingsLogCategory);
-                }
-            }
-
-            // Apply the configuration.
-            pParentSettings->updateRendererConfiguration();
-
-            return pRenderSetting;
-        }
-
-        /** Anti-aliasing settings. */
-        std::shared_ptr<AntialiasingRenderSetting> pAntialiasingSettings;
-
-        /** Texture filtering settings. */
-        std::shared_ptr<TextureFilteringRenderSetting> pTextureFilteringSettings;
-
-        /** Screen related settings. */
-        std::shared_ptr<ScreenRenderSetting> pScreenSettings;
-
-        /** Used renderer. */
-        Renderer* pRenderer = nullptr;
-
-        /** Whether the @ref initialize was called or not. */
-        bool bIsInitialized = false;
-
-        /** Name of the category used for logging. */
-        inline static const char* sRenderSettingsLogCategory = "Render Settings";
     };
 
     /** Describes shader parameters. */

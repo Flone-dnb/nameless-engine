@@ -177,8 +177,7 @@ namespace ne {
         CD3DX12_RASTERIZER_DESC rasterizerDesc(D3D12_DEFAULT);
         rasterizerDesc.CullMode = bUsePixelBlending ? D3D12_CULL_MODE_NONE : D3D12_CULL_MODE_BACK;
         rasterizerDesc.FillMode = D3D12_FILL_MODE_SOLID;
-        rasterizerDesc.MultisampleEnable =
-            static_cast<int>(pRenderSettings->second->getAntialiasingSettings()->isEnabled());
+        rasterizerDesc.MultisampleEnable = static_cast<int>(pRenderSettings->second->isAntialiasingEnabled());
         psoDesc.RasterizerState = rasterizerDesc;
 
         // Setup pixel blend description (if needed).
@@ -196,7 +195,7 @@ namespace ne {
             blendDesc.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
             psoDesc.BlendState.RenderTarget[0] = blendDesc;
             psoDesc.BlendState.AlphaToCoverageEnable =
-                static_cast<int>(pRenderSettings->second->getAntialiasingSettings()->isEnabled());
+                static_cast<int>(pRenderSettings->second->isAntialiasingEnabled());
         } else {
             psoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
         }
@@ -208,10 +207,10 @@ namespace ne {
         psoDesc.NumRenderTargets = 1;
         psoDesc.RTVFormats[0] = pDirectXRenderer->getBackBufferFormat();
         psoDesc.SampleDesc.Count =
-            pRenderSettings->second->getAntialiasingSettings()->isEnabled()
-                ? static_cast<unsigned int>(pRenderSettings->second->getAntialiasingSettings()->getQuality())
+            pRenderSettings->second->isAntialiasingEnabled()
+                ? static_cast<unsigned int>(pRenderSettings->second->getAntialiasingQuality())
                 : 1;
-        psoDesc.SampleDesc.Quality = pRenderSettings->second->getAntialiasingSettings()->isEnabled()
+        psoDesc.SampleDesc.Quality = pRenderSettings->second->isAntialiasingEnabled()
                                          ? (pDirectXRenderer->getMsaaQualityLevel() - 1)
                                          : 0;
         psoDesc.DSVFormat = pDirectXRenderer->getDepthStencilBufferFormat();

@@ -6,31 +6,27 @@
 #include "misc/ProjectPaths.h"
 
 namespace ne {
-    void RenderSetting::setRenderer(Renderer* pRenderer) { this->pRenderer = pRenderer; }
+    void RenderSettings::setRenderer(Renderer* pRenderer) { this->pRenderer = pRenderer; }
 
-    std::optional<Error> RenderSetting::updateRenderBuffers() { return getRenderer()->updateRenderBuffers(); }
+    std::filesystem::path RenderSettings::getPathToConfigurationFile() {
+        return ProjectPaths::getDirectoryForEngineConfigurationFiles() / getConfigurationFileName(true);
+    }
 
-    Renderer* RenderSetting::getRenderer() const { return pRenderer; }
-
-    bool RenderSetting::isRendererInitialized() const { return pRenderer->isInitialized(); }
-
-    const char* RenderSetting::getRenderSettingLogCategory() { return sRenderSettingLogCategory; }
-
-    void AntialiasingRenderSetting::setEnabled(bool bEnable) {
-        if (bIsEnabled == bEnable) {
+    void RenderSettings::setAntialiasingEnabled(bool bEnable) {
+        if (bIsAntialiasingEnabled == bEnable) {
             return; // do nothing
         }
 
         // Log change.
         Logger::get().info(
-            fmt::format("AA state is being changed from \"{}\" to \"{}\"", bIsEnabled, bEnable),
-            getRenderSettingLogCategory());
+            fmt::format("AA state is being changed from \"{}\" to \"{}\"", bIsAntialiasingEnabled, bEnable),
+            sRenderSettingsLogCategory);
 
         // Change.
-        bIsEnabled = bEnable;
+        bIsAntialiasingEnabled = bEnable;
 
         // Update.
-        updateRendererConfiguration();
+        updateRendererConfigurationForAntialiasing();
 
         // Save.
         auto optionalError = saveConfigurationToDisk();
@@ -40,14 +36,14 @@ namespace ne {
             Logger::get().error(
                 fmt::format(
                     "failed to save new render setting configuration, error: \"{}\"", error.getError()),
-                getRenderSettingLogCategory());
+                sRenderSettingsLogCategory);
         }
     }
 
-    bool AntialiasingRenderSetting::isEnabled() const { return bIsEnabled; }
+    bool RenderSettings::isAntialiasingEnabled() const { return bIsAntialiasingEnabled; }
 
-    void AntialiasingRenderSetting::setQuality(MsaaQuality quality) {
-        if (iSampleCount == static_cast<int>(quality)) {
+    void RenderSettings::setAntialiasingQuality(MsaaQuality quality) {
+        if (iAntialiasingSampleCount == static_cast<int>(quality)) {
             return; // do nothing
         }
 
@@ -55,15 +51,15 @@ namespace ne {
         Logger::get().info(
             fmt::format(
                 "AA sample count is being changed from \"{}\" to \"{}\"",
-                iSampleCount,
+                iAntialiasingSampleCount,
                 static_cast<int>(quality)),
-            getRenderSettingLogCategory());
+            sRenderSettingsLogCategory);
 
         // Change.
-        iSampleCount = static_cast<int>(quality);
+        iAntialiasingSampleCount = static_cast<int>(quality);
 
         // Update.
-        updateRendererConfiguration();
+        updateRendererConfigurationForAntialiasing();
 
         // Save.
         auto optionalError = saveConfigurationToDisk();
@@ -73,20 +69,18 @@ namespace ne {
             Logger::get().error(
                 fmt::format(
                     "failed to save new render setting configuration, error: \"{}\"", error.getError()),
-                getRenderSettingLogCategory());
+                sRenderSettingsLogCategory);
         }
     }
 
-    void AntialiasingRenderSetting::updateRendererConfiguration() {
-        const auto pRenderer = getRenderer();
-
-        if (isRendererInitialized()) {
+    void RenderSettings::updateRendererConfigurationForAntialiasing() {
+        if (pRenderer->isInitialized()) {
             // Make sure no drawing is happening and the GPU is not referencing any resources.
             std::scoped_lock guard(*pRenderer->getRenderResourcesMutex());
             pRenderer->flushCommandQueue();
 
             // Recreate depth/stencil buffer with(out) multisampling.
-            auto optionalError = updateRenderBuffers();
+            auto optionalError = pRenderer->updateRenderBuffers();
             if (optionalError.has_value()) {
                 optionalError->addEntry();
                 optionalError->showError();
@@ -101,11 +95,11 @@ namespace ne {
         }
     }
 
-    MsaaQuality AntialiasingRenderSetting::getQuality() const {
-        return static_cast<MsaaQuality>(iSampleCount);
+    MsaaQuality RenderSettings::getAntialiasingQuality() const {
+        return static_cast<MsaaQuality>(iAntialiasingSampleCount);
     }
 
-    std::optional<Error> AntialiasingRenderSetting::saveConfigurationToDisk() {
+    std::optional<Error> RenderSettings::saveConfigurationToDisk() {
         auto optionalError = serialize(getPathToConfigurationFile(), false);
         if (optionalError.has_value()) {
             optionalError->addEntry();
@@ -115,61 +109,29 @@ namespace ne {
         return {};
     }
 
-    void AntialiasingRenderSetting::onAfterDeserialized() {
+    void RenderSettings::onAfterDeserialized() {
         Serializable::onAfterDeserialized();
 
         // Make sure that deserialized values are valid.
 
-        // Check quality.
-        if (iSampleCount != static_cast<int>(MsaaQuality::MEDIUM) &&
-            iSampleCount != static_cast<int>(MsaaQuality::HIGH)) {
+        // Check antialiasing quality.
+        if (iAntialiasingSampleCount != static_cast<int>(MsaaQuality::MEDIUM) &&
+            iAntialiasingSampleCount != static_cast<int>(MsaaQuality::HIGH)) {
             const auto iNewSampleCount = static_cast<int>(MsaaQuality::HIGH);
 
             // Log change.
             Logger::get().warn(
                 std::format(
                     "deserialized AA quality \"{}\" is not a valid parameter, changing to \"{}\"",
-                    iSampleCount,
+                    iAntialiasingSampleCount,
                     iNewSampleCount),
-                getRenderSettingLogCategory());
+                sRenderSettingsLogCategory);
 
             // Correct the value.
-            iSampleCount = iNewSampleCount;
+            iAntialiasingSampleCount = iNewSampleCount;
         }
-    }
 
-    std::filesystem::path AntialiasingRenderSetting::getPathToConfigurationFile() {
-        return ProjectPaths::getDirectoryForEngineConfigurationFiles() /
-               getRenderer()->getRenderConfigurationDirectoryName() / getConfigurationFileName(true);
-    }
-
-    std::string AntialiasingRenderSetting::getConfigurationFileName(bool bIncludeFileExtension) {
-        if (bIncludeFileExtension) {
-            return sAntialiasingConfigFileName + ConfigManager::getConfigFormatExtension();
-        } else {
-            return sAntialiasingConfigFileName;
-        }
-    }
-
-    std::filesystem::path TextureFilteringRenderSetting::getPathToConfigurationFile() {
-        return ProjectPaths::getDirectoryForEngineConfigurationFiles() /
-               getRenderer()->getRenderConfigurationDirectoryName() / getConfigurationFileName(true);
-    }
-
-    std::string TextureFilteringRenderSetting::getConfigurationFileName(bool bIncludeFileExtension) {
-        if (bIncludeFileExtension) {
-            return sTextureFilteringConfigFileName + ConfigManager::getConfigFormatExtension();
-        } else {
-            return sTextureFilteringConfigFileName;
-        }
-    }
-
-    void TextureFilteringRenderSetting::onAfterDeserialized() {
-        Serializable::onAfterDeserialized();
-
-        // Make sure that deserialized values are valid.
-
-        // Check filtering mode.
+        // Check texture filtering mode.
         if (iTextureFilteringMode != static_cast<int>(TextureFilteringMode::POINT) &&
             iTextureFilteringMode != static_cast<int>(TextureFilteringMode::LINEAR) &&
             iTextureFilteringMode != static_cast<int>(TextureFilteringMode::ANISOTROPIC)) {
@@ -181,24 +143,14 @@ namespace ne {
                     "deserialized texture filtering mode \"{}\" is not a valid parameter, changing to \"{}\"",
                     iTextureFilteringMode,
                     iNewTextureFilteringMode),
-                getRenderSettingLogCategory());
+                sRenderSettingsLogCategory);
 
             // Correct the value.
             iTextureFilteringMode = iNewTextureFilteringMode;
         }
     }
 
-    std::optional<Error> TextureFilteringRenderSetting::saveConfigurationToDisk() {
-        auto optionalError = serialize(getPathToConfigurationFile(), false);
-        if (optionalError.has_value()) {
-            optionalError->addEntry();
-            return optionalError;
-        }
-
-        return {};
-    }
-
-    void TextureFilteringRenderSetting::setMode(TextureFilteringMode mode) {
+    void RenderSettings::setTextureFilteringMode(TextureFilteringMode mode) {
         if (iTextureFilteringMode == static_cast<int>(mode)) {
             return; // do nothing
         }
@@ -209,13 +161,13 @@ namespace ne {
                 "texture filtering mode is being changed from \"{}\" to \"{}\"",
                 iTextureFilteringMode,
                 static_cast<int>(mode)),
-            getRenderSettingLogCategory());
+            sRenderSettingsLogCategory);
 
         // Change.
         iTextureFilteringMode = static_cast<int>(mode);
 
         // Update.
-        updateRendererConfiguration();
+        updateRendererConfigurationForTextureFiltering();
 
         // Save.
         auto optionalError = saveConfigurationToDisk();
@@ -225,17 +177,15 @@ namespace ne {
             Logger::get().error(
                 fmt::format(
                     "failed to save new render setting configuration, error: \"{}\"", error.getError()),
-                getRenderSettingLogCategory());
+                sRenderSettingsLogCategory);
         }
     }
 
-    void TextureFilteringRenderSetting::updateRendererConfiguration() {
-        const auto pRenderer = getRenderer();
-
+    void RenderSettings::updateRendererConfigurationForTextureFiltering() {
         // Change shader configuration.
-        {
-            const auto pShaderConfiguration = pRenderer->getShaderConfiguration();
+        const auto pShaderConfiguration = pRenderer->getShaderConfiguration();
 
+        {
             std::scoped_lock guard(pShaderConfiguration->first);
 
             // First, remove all settings.
@@ -270,38 +220,15 @@ namespace ne {
         }
     }
 
-    TextureFilteringMode TextureFilteringRenderSetting::getMode() const {
+    TextureFilteringMode RenderSettings::getTextureFilteringMode() const {
         return static_cast<TextureFilteringMode>(iTextureFilteringMode);
     }
 
-    std::optional<Error> ScreenRenderSetting::saveConfigurationToDisk() {
-        auto optionalError = serialize(getPathToConfigurationFile(), false);
-        if (optionalError.has_value()) {
-            optionalError->addEntry();
-            return optionalError;
-        }
-
-        return {};
-    }
-
-    std::string ScreenRenderSetting::getConfigurationFileName(bool bIncludeFileExtension) {
-        if (bIncludeFileExtension) {
-            return sScreenConfigFileName + ConfigManager::getConfigFormatExtension();
-        } else {
-            return sScreenConfigFileName;
-        }
-    }
-
-    std::filesystem::path ScreenRenderSetting::getPathToConfigurationFile() {
-        return ProjectPaths::getDirectoryForEngineConfigurationFiles() /
-               getRenderer()->getRenderConfigurationDirectoryName() / getConfigurationFileName(true);
-    }
-
-    std::pair<unsigned int, unsigned int> ScreenRenderSetting::getRenderResolution() {
+    std::pair<unsigned int, unsigned int> RenderSettings::getRenderResolution() {
         return std::make_pair(iRenderResolutionWidth, iRenderResolutionHeight);
     }
 
-    void ScreenRenderSetting::setRenderResolution(std::pair<unsigned int, unsigned int> resolution) {
+    void RenderSettings::setRenderResolution(std::pair<unsigned int, unsigned int> resolution) {
         if (iRenderResolutionWidth == resolution.first && iRenderResolutionHeight == resolution.second) {
             return; // do nothing
         }
@@ -314,14 +241,14 @@ namespace ne {
                 iRenderResolutionHeight,
                 resolution.first,
                 resolution.second),
-            getRenderSettingLogCategory());
+            sRenderSettingsLogCategory);
 
         // Change.
         iRenderResolutionWidth = resolution.first;
         iRenderResolutionHeight = resolution.second;
 
         // Update.
-        updateRendererConfiguration();
+        updateRendererConfigurationForScreen();
 
         // Save.
         auto optionalError = saveConfigurationToDisk();
@@ -331,11 +258,11 @@ namespace ne {
             Logger::get().error(
                 fmt::format(
                     "failed to save new render setting configuration, error: \"{}\"", error.getError()),
-                getRenderSettingLogCategory());
+                sRenderSettingsLogCategory);
         }
     }
 
-    void ScreenRenderSetting::setVsyncEnabled(bool bEnableVsync) {
+    void RenderSettings::setVsyncEnabled(bool bEnableVsync) {
         if (bIsVsyncEnabled == bEnableVsync) {
             return; // do nothing
         }
@@ -343,13 +270,13 @@ namespace ne {
         // Log change.
         Logger::get().info(
             fmt::format("vsync state is being changed from \"{}\" to \"{}\"", bIsVsyncEnabled, bEnableVsync),
-            getRenderSettingLogCategory());
+            sRenderSettingsLogCategory);
 
         // Change.
         bIsVsyncEnabled = bEnableVsync;
 
         // Update.
-        updateRendererConfiguration();
+        updateRendererConfigurationForScreen();
 
         // Save.
         auto optionalError = saveConfigurationToDisk();
@@ -359,14 +286,14 @@ namespace ne {
             Logger::get().error(
                 fmt::format(
                     "failed to save new render setting configuration, error: \"{}\"", error.getError()),
-                getRenderSettingLogCategory());
+                sRenderSettingsLogCategory);
         }
     }
 
-    void ScreenRenderSetting::updateRendererConfiguration() {
-        if (isRendererInitialized()) {
+    void RenderSettings::updateRendererConfigurationForScreen() {
+        if (pRenderer->isInitialized()) {
             // Update render buffers.
-            auto optionalError = updateRenderBuffers();
+            auto optionalError = pRenderer->updateRenderBuffers();
             if (optionalError.has_value()) {
                 auto error = optionalError.value();
                 error.addEntry();
@@ -376,9 +303,9 @@ namespace ne {
         }
     }
 
-    bool ScreenRenderSetting::isVsyncEnabled() const { return bIsVsyncEnabled; }
+    bool RenderSettings::isVsyncEnabled() const { return bIsVsyncEnabled; }
 
-    void ScreenRenderSetting::setRefreshRate(std::pair<unsigned int, unsigned int> refreshRate) {
+    void RenderSettings::setRefreshRate(std::pair<unsigned int, unsigned int> refreshRate) {
         if (iRefreshRateNumerator == refreshRate.first && iRefreshRateDenominator == refreshRate.second) {
             return; // do nothing
         }
@@ -391,14 +318,14 @@ namespace ne {
                 iRefreshRateDenominator,
                 refreshRate.first,
                 refreshRate.second),
-            getRenderSettingLogCategory());
+            sRenderSettingsLogCategory);
 
         // Change.
         iRefreshRateNumerator = refreshRate.first;
         iRefreshRateDenominator = refreshRate.second;
 
         // TODO: need to change without restarting
-        // updateRendererConfiguration();
+        // updateRendererConfigurationForScreen();
 
         // Save.
         auto optionalError = saveConfigurationToDisk();
@@ -408,27 +335,27 @@ namespace ne {
             Logger::get().error(
                 fmt::format(
                     "failed to save new render setting configuration, error: \"{}\"", error.getError()),
-                getRenderSettingLogCategory());
+                sRenderSettingsLogCategory);
         }
     }
 
-    std::pair<unsigned int, unsigned int> ScreenRenderSetting::getRefreshRate() const {
+    std::pair<unsigned int, unsigned int> RenderSettings::getRefreshRate() const {
         return std::make_pair(iRefreshRateNumerator, iRefreshRateDenominator);
     }
 
-    void ScreenRenderSetting::setGpuToUse(const std::string& sGpuName) {
+    void RenderSettings::setGpuToUse(const std::string& sGpuName) {
         if (sGpuName == getUsedGpuName()) {
             return; // do nothing
         }
 
         // Get names of supported GPUs.
-        auto result = getRenderer()->getSupportedGpuNames();
+        auto result = pRenderer->getSupportedGpuNames();
         if (std::holds_alternative<Error>(result)) {
             auto error = std::get<Error>(std::move(result));
             error.addEntry();
             Logger::get().error(
                 fmt::format("failed to get the list of supported GPUs, error: \"{}\"", error.getError()),
-                getRenderSettingLogCategory());
+                sRenderSettingsLogCategory);
             return;
         }
         const auto vSupportedGpuNames = std::get<std::vector<std::string>>(std::move(result));
@@ -438,7 +365,7 @@ namespace ne {
             Logger::get().error(
                 fmt::format(
                     "list of supported GPUs is too big to handle ({} items)", vSupportedGpuNames.size()),
-                getRenderSettingLogCategory());
+                sRenderSettingsLogCategory);
             return;
         }
 
@@ -451,7 +378,7 @@ namespace ne {
                         "preferred GPU is being changed from \"{}\" to \"{}\"",
                         vSupportedGpuNames[iUsedGpuIndex],
                         sGpuName),
-                    getRenderSettingLogCategory());
+                    sRenderSettingsLogCategory);
 
                 // Change.
                 iUsedGpuIndex = i;
@@ -467,7 +394,7 @@ namespace ne {
                         fmt::format(
                             "failed to save new render setting configuration, error: \"{}\"",
                             error.getError()),
-                        getRenderSettingLogCategory());
+                        sRenderSettingsLogCategory);
                 }
                 return;
             }
@@ -476,22 +403,22 @@ namespace ne {
         // Log.
         Logger::get().error(
             fmt::format("failed to find the GPU \"{}\" in the list of supported GPUs", sGpuName),
-            getRenderSettingLogCategory());
+            sRenderSettingsLogCategory);
     }
 
-    void ScreenRenderSetting::setGpuToUse(unsigned int iGpuIndex) {
+    void RenderSettings::setGpuToUse(unsigned int iGpuIndex) {
         if (iGpuIndex == iUsedGpuIndex) {
             return; // do nothing
         }
 
         // Get names of supported GPUs.
-        auto result = getRenderer()->getSupportedGpuNames();
+        auto result = pRenderer->getSupportedGpuNames();
         if (std::holds_alternative<Error>(result)) {
             auto error = std::get<Error>(std::move(result));
             error.addEntry();
             Logger::get().error(
                 fmt::format("failed to get the list of supported GPUs, error: \"{}\"", error.getError()),
-                getRenderSettingLogCategory());
+                sRenderSettingsLogCategory);
             return;
         }
         const auto vSupportedGpuNames = std::get<std::vector<std::string>>(std::move(result));
@@ -501,7 +428,7 @@ namespace ne {
             Logger::get().error(
                 fmt::format(
                     "list of supported GPUs is too big to handle ({} items)", vSupportedGpuNames.size()),
-                getRenderSettingLogCategory());
+                sRenderSettingsLogCategory);
             return;
         }
 
@@ -512,7 +439,7 @@ namespace ne {
                     "specified GPU index to use ({}) is out of range, supported GPUs in total: {}",
                     iGpuIndex,
                     vSupportedGpuNames.size()),
-                getRenderSettingLogCategory());
+                sRenderSettingsLogCategory);
             return;
         }
 
@@ -522,7 +449,7 @@ namespace ne {
                 "preferred GPU is being changed from \"{}\" to \"{}\"",
                 vSupportedGpuNames[iUsedGpuIndex],
                 vSupportedGpuNames[iGpuIndex]),
-            getRenderSettingLogCategory());
+            sRenderSettingsLogCategory);
 
         // Change.
         iUsedGpuIndex = iGpuIndex;
@@ -537,13 +464,26 @@ namespace ne {
             Logger::get().error(
                 fmt::format(
                     "failed to save new render setting configuration, error: \"{}\"", error.getError()),
-                getRenderSettingLogCategory());
+                sRenderSettingsLogCategory);
         }
     }
 
-    std::string ScreenRenderSetting::getUsedGpuName() const {
-        return getRenderer()->getCurrentlyUsedGpuName();
+    std::string RenderSettings::getUsedGpuName() const { return pRenderer->getCurrentlyUsedGpuName(); }
+
+    unsigned int RenderSettings::getUsedGpuIndex() const { return iUsedGpuIndex; }
+
+    void RenderSettings::updateRendererConfiguration() {
+        updateRendererConfigurationForAntialiasing();
+        updateRendererConfigurationForTextureFiltering();
+        updateRendererConfigurationForScreen();
     }
 
-    unsigned int ScreenRenderSetting::getUsedGpuIndex() const { return iUsedGpuIndex; }
+    std::string RenderSettings::getConfigurationFileName(bool bIncludeFileExtension) {
+        if (bIncludeFileExtension) {
+            return sRenderSettingsConfigurationFileName + ConfigManager::getConfigFormatExtension();
+        } else {
+            return sRenderSettingsConfigurationFileName;
+        }
+    }
+
 } // namespace ne

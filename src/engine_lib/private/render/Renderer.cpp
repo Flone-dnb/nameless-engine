@@ -6,6 +6,7 @@
 #include "io/Logger.h"
 #include "materials/ShaderParameter.h"
 #include "render/pso/PsoManager.h"
+#include "render/RenderSettings.h"
 #if defined(WIN32)
 #include "render/directx/DirectXRenderer.h"
 #endif
@@ -19,7 +20,6 @@ namespace ne {
 
         pShaderManager = std::make_unique<ShaderManager>(this);
         pPsoManager = std::make_unique<PsoManager>(this);
-        mtxRenderSettings.second = std::unique_ptr<RenderSettings>(new RenderSettings(this));
         mtxShaderConfiguration.second = std::make_unique<ShaderConfiguration>(this);
 
         // Log amount of shader variants per shader pack.
@@ -45,7 +45,7 @@ namespace ne {
 #endif
     }
 
-    std::pair<std::recursive_mutex, std::unique_ptr<RenderSettings>>* Renderer::getRenderSettings() {
+    std::pair<std::recursive_mutex, std::shared_ptr<RenderSettings>>* Renderer::getRenderSettings() {
         return &mtxRenderSettings;
     }
 
@@ -89,10 +89,57 @@ namespace ne {
         }
     }
 
-    const char* Renderer::getRenderConfigurationDirectoryName() {
-        return sRendererConfigurationDirectoryName;
-    }
+    void Renderer::initializeRenderSettings() {
+        // Construct path to config file.
+        const auto pathToConfigFile = ProjectPaths::getDirectoryForEngineConfigurationFiles() /
+                                      RenderSettings::getConfigurationFileName(true);
 
-    void Renderer::initializeRenderSettings() { mtxRenderSettings.second->initialize(); }
+        bool bDeserializedWithoutIssues = false;
+
+        // See if config file exists.
+        if (std::filesystem::exists(pathToConfigFile)) {
+            // Try to deserialize.
+            auto result = Serializable::deserialize<std::shared_ptr, RenderSettings>(pathToConfigFile);
+            if (std::holds_alternative<Error>(result)) {
+                auto error = std::get<Error>(std::move(result));
+                error.addEntry();
+                Logger::get().error(
+                    fmt::format(
+                        "failed to deserialize render settings from the file \"{}\", using default "
+                        "settings instead, error: \"{}\"",
+                        pathToConfigFile.string(),
+                        error.getError()),
+                    sRendererLogCategory);
+
+                // Just create a new object with default settings.
+                mtxRenderSettings.second = std::make_shared<RenderSettings>();
+            } else {
+                // Use the deserialized object.
+                mtxRenderSettings.second = std::get<std::shared_ptr<RenderSettings>>(std::move(result));
+                bDeserializedWithoutIssues = true;
+            }
+        } else {
+            // Just create a new object with default settings.
+            mtxRenderSettings.second = std::make_shared<RenderSettings>();
+        }
+
+        // Initialize the setting.
+        mtxRenderSettings.second->setRenderer(this);
+
+        // Save if no config existed.
+        if (!bDeserializedWithoutIssues) {
+            auto optionalError = mtxRenderSettings.second->saveConfigurationToDisk();
+            if (optionalError.has_value()) {
+                auto error = optionalError.value();
+                error.addEntry();
+                Logger::get().error(
+                    fmt::format("failed to save new render settings, error: \"{}\"", error.getError()),
+                    sRendererLogCategory);
+            }
+        }
+
+        // Apply the configuration.
+        mtxRenderSettings.second->updateRendererConfiguration();
+    }
 
 } // namespace ne

@@ -106,10 +106,9 @@ namespace ne {
         // Get render settings.
         const auto pRenderSettings = getRenderSettings();
         std::scoped_lock renderSettingsGuard(pRenderSettings->first);
-        const auto renderResolution = pRenderSettings->second->getScreenSettings()->getRenderResolution();
-        const auto bIsMsaaEnabled = pRenderSettings->second->getAntialiasingSettings()->isEnabled();
-        const auto iMsaaSampleCount =
-            static_cast<int>(pRenderSettings->second->getAntialiasingSettings()->getQuality());
+        const auto renderResolution = pRenderSettings->second->getRenderResolution();
+        const auto bIsMsaaEnabled = pRenderSettings->second->isAntialiasingEnabled();
+        const auto iMsaaSampleCount = static_cast<int>(pRenderSettings->second->getAntialiasingQuality());
 
         const D3D12_RESOURCE_DESC depthStencilDesc = CD3DX12_RESOURCE_DESC(
             D3D12_RESOURCE_DIMENSION_TEXTURE2D,
@@ -350,9 +349,9 @@ namespace ne {
         // Get render settings.
         const auto pRenderSettings = getRenderSettings();
         std::scoped_lock renderSettingsGuard(pRenderSettings->first);
-        const auto renderResolution = pRenderSettings->second->getScreenSettings()->getRenderResolution();
-        const auto refreshRate = pRenderSettings->second->getScreenSettings()->getRefreshRate();
-        const auto bIsVSyncEnabled = pRenderSettings->second->getScreenSettings()->isVsyncEnabled();
+        const auto renderResolution = pRenderSettings->second->getRenderResolution();
+        const auto refreshRate = pRenderSettings->second->getRefreshRate();
+        const auto bIsVSyncEnabled = pRenderSettings->second->isVsyncEnabled();
 
         DXGI_SWAP_CHAIN_DESC1 desc;
         desc.Width = renderResolution.first;
@@ -467,7 +466,7 @@ namespace ne {
         const auto vSupportedVideoAdapters = std::get<std::vector<std::string>>(std::move(result));
 
         // Make sure the GPU index is in range of supported GPUs.
-        iPickedGpuIndex = pRenderSettings->second->getScreenSettings()->getUsedGpuIndex();
+        iPickedGpuIndex = pRenderSettings->second->getUsedGpuIndex();
         if (iPickedGpuIndex >= static_cast<unsigned int>(vSupportedVideoAdapters.size())) {
             Logger::get().error(
                 std::format(
@@ -479,7 +478,7 @@ namespace ne {
 
             // Just use first found GPU then.
             iPickedGpuIndex = 0;
-            pRenderSettings->second->getScreenSettings()->setGpuToUse(iPickedGpuIndex);
+            pRenderSettings->second->setGpuToUse(iPickedGpuIndex);
         }
 
         // Use video adapter.
@@ -508,7 +507,7 @@ namespace ne {
 
             // Try first found GPU.
             iPickedGpuIndex = 0;
-            pRenderSettings->second->getScreenSettings()->setGpuToUse(iPickedGpuIndex);
+            pRenderSettings->second->setGpuToUse(iPickedGpuIndex);
 
             error = setVideoAdapter(vSupportedVideoAdapters[iPickedGpuIndex]);
             if (error.has_value()) {
@@ -558,9 +557,8 @@ namespace ne {
         }
 
         // Get preferred screen settings.
-        const auto preferredRenderResolution =
-            pRenderSettings->second->getScreenSettings()->getRenderResolution();
-        const auto preferredRefreshRate = pRenderSettings->second->getScreenSettings()->getRefreshRate();
+        const auto preferredRenderResolution = pRenderSettings->second->getRenderResolution();
+        const auto preferredRefreshRate = pRenderSettings->second->getRefreshRate();
 
         // Setup video mode.
         DXGI_MODE_DESC pickedDisplayMode;
@@ -626,9 +624,9 @@ namespace ne {
         }
 
         // Save display settings.
-        pRenderSettings->second->getScreenSettings()->setRenderResolution(
+        pRenderSettings->second->setRenderResolution(
             std::make_pair(pickedDisplayMode.Width, pickedDisplayMode.Height));
-        pRenderSettings->second->getScreenSettings()->setRefreshRate(std::make_pair(
+        pRenderSettings->second->setRefreshRate(std::make_pair(
             pickedDisplayMode.RefreshRate.Numerator, pickedDisplayMode.RefreshRate.Denominator));
 
         // Create resource manager.
@@ -774,11 +772,10 @@ namespace ne {
         // Get render settings.
         const auto pRenderSettings = getRenderSettings();
         std::scoped_lock renderSettingsGuard(pRenderSettings->first);
-        const auto renderResolution = pRenderSettings->second->getScreenSettings()->getRenderResolution();
-        const auto bIsVSyncEnabled = pRenderSettings->second->getScreenSettings()->isVsyncEnabled();
-        const auto bIsMsaaEnabled = pRenderSettings->second->getAntialiasingSettings()->isEnabled();
-        const auto iMsaaSampleCount =
-            static_cast<int>(pRenderSettings->second->getAntialiasingSettings()->getQuality());
+        const auto renderResolution = pRenderSettings->second->getRenderResolution();
+        const auto bIsVSyncEnabled = pRenderSettings->second->isVsyncEnabled();
+        const auto bIsMsaaEnabled = pRenderSettings->second->isAntialiasingEnabled();
+        const auto iMsaaSampleCount = static_cast<int>(pRenderSettings->second->getAntialiasingQuality());
 
         // Swapchain cannot be resized unless all outstanding buffer references have been released.
         vSwapChainBuffers.clear();

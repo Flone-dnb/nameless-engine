@@ -2,8 +2,6 @@
 
 // Custom.
 #include "io/Serializable.h"
-#include "materials/ShaderParameter.h"
-#include "materials/ShaderDescription.h"
 
 #include "RenderSettings.generated.h"
 
@@ -16,12 +14,7 @@ namespace ne RNAMESPACE() {
     /** Describes texture filtering mode. */
     enum class TextureFilteringMode : int { POINT = 0, LINEAR = 1, ANISOTROPIC = 2 };
 
-    /**
-     * Base class for render settings.
-     *
-     * @remark In order to create an object of this class you need to make sure that both game and renderer
-     * objects exist.
-     */
+    /** Controls renderer settings. */
     class RCLASS(Guid("eb477c6d-cdc4-4b7a-9349-296fb38e6bfc")) RenderSettings : public Serializable {
     public:
         RenderSettings() = default;

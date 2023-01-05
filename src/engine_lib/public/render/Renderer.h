@@ -51,10 +51,21 @@ namespace ne {
         /**
          * Returns a list of supported render resolution (pairs of width and height).
          *
-         * @return Error if something went wrong, otherwise render mode.
+         * @return Error if something went wrong, otherwise render resolutions.
          */
-        virtual std::variant<std::vector<std::pair<unsigned int, unsigned int>>, Error>
+        virtual std::variant<std::set<std::pair<unsigned int, unsigned int>>, Error>
         getSupportedRenderResolutions() const = 0;
+
+        /**
+         * Returns a list of supported screen refresh rates (pairs of numerator and denominator).
+         *
+         * @remark The list of supported refresh rates depends on the currently used GPU,
+         * so if changing used GPU this list might return different values.
+         *
+         * @return Error if something went wrong, otherwise refresh rates.
+         */
+        virtual std::variant<std::set<std::pair<unsigned int, unsigned int>>, Error>
+        getSupportedRefreshRates() const = 0;
 
         /**
          * Returns render settings that can be configured.
@@ -71,14 +82,14 @@ namespace ne {
         virtual std::string getCurrentlyUsedGpuName() const = 0;
 
         /**
-         * Returns total video memory size (VRAM) in megabytes.
+         * Returns total video memory (VRAM) size in megabytes.
          *
          * @return Total video memory size in megabytes.
          */
         virtual size_t getTotalVideoMemoryInMb() const = 0;
 
         /**
-         * Returns used video memory size (VRAM) in megabytes.
+         * Returns the amount of currently used video memory (VRAM) by this renderer.
          *
          * @return Used video memory size in megabytes.
          */

@@ -179,7 +179,7 @@ namespace ne {
         return vAddedVideoAdapters;
     }
 
-    std::variant<std::vector<std::pair<unsigned int, unsigned int>>, Error>
+    std::variant<std::set<std::pair<unsigned int, unsigned int>>, Error>
     DirectXRenderer::getSupportedRenderResolutions() const {
         auto result = getSupportedDisplayModes();
         if (std::holds_alternative<Error>(result)) {
@@ -190,12 +190,32 @@ namespace ne {
         const std::vector<DXGI_MODE_DESC> vRenderModes =
             std::get<std::vector<DXGI_MODE_DESC>>(std::move(result));
 
-        std::vector<std::pair<unsigned int, unsigned int>> vFoundResolutions;
+        std::set<std::pair<unsigned int, unsigned int>> foundResolutions;
         for (const auto& mode : vRenderModes) {
-            vFoundResolutions.push_back(std::make_pair(mode.Width, mode.Height));
+            foundResolutions.insert(std::make_pair(mode.Width, mode.Height));
         }
 
-        return vFoundResolutions;
+        return foundResolutions;
+    }
+
+    std::variant<std::set<std::pair<unsigned int, unsigned int>>, Error>
+    DirectXRenderer::getSupportedRefreshRates() const {
+        auto result = getSupportedDisplayModes();
+        if (std::holds_alternative<Error>(result)) {
+            Error error = std::get<Error>(std::move(result));
+            error.addEntry();
+            return error;
+        }
+        const std::vector<DXGI_MODE_DESC> vRenderModes =
+            std::get<std::vector<DXGI_MODE_DESC>>(std::move(result));
+
+        std::set<std::pair<unsigned int, unsigned int>> foundRefreshRates;
+        for (const auto& mode : vRenderModes) {
+            foundRefreshRates.insert(
+                std::make_pair(mode.RefreshRate.Numerator, mode.RefreshRate.Denominator));
+        }
+
+        return foundRefreshRates;
     }
 
     std::string DirectXRenderer::getCurrentlyUsedGpuName() const { return sUsedVideoAdapter; }

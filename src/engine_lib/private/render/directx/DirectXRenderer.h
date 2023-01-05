@@ -63,8 +63,19 @@ namespace ne {
          *
          * @return Error if something went wrong, otherwise render mode.
          */
-        virtual std::variant<std::vector<std::pair<unsigned int, unsigned int>>, Error>
+        virtual std::variant<std::set<std::pair<unsigned int, unsigned int>>, Error>
         getSupportedRenderResolutions() const override;
+
+        /**
+         * Returns a list of supported screen refresh rates (pairs of numerator and denominator).
+         *
+         * @remark The list of supported refresh rates depends on the currently used GPU,
+         * so if changing used GPU this list might return different values.
+         *
+         * @return Error if something went wrong, otherwise refresh rates.
+         */
+        virtual std::variant<std::set<std::pair<unsigned int, unsigned int>>, Error>
+        getSupportedRefreshRates() const override;
 
         /**
          * Returns the name of the GPU that is being currently used.

@@ -310,109 +310,58 @@ Here is the list of base features that needs to be implemented in order for you 
 - [X] Handling user input events
 - [X] Config management (progress, settings, etc.)
 - [X] Node system (Godot-like ECS alternative)
+- [ ] Rendering (DirectX 12 and Vulkan)
+    - [ ] Forward rendering
+        - [ ] Transparent materials
+        - [ ] MSAA (Multisample anti-aliasing)
+        - [ ] Frustum culling
+        - [ ] Instancing
+        - [ ] Light sources
+            - [ ] Point light
+            - [ ] Spot light
+            - [ ] Directional light
+            - [ ] Rectangular light
+        - [ ] Shadow mapping (for all light sources)
+        - [ ] Cascading shadow maps
+        - [ ] SSAO (Screen space ambient occlusion)
+        - [ ] Post-processing effects
+        - [ ] PBR (Physically based rendering)
+        - [ ] HDR (High dynamic range)
+    - [ ] Forward+ rendering
+        - [ ] Transparent materials
+        - [ ] AA (Anti-aliasing)
+        - [ ] Frustum culling
+        - [ ] Instancing
+        - [ ] Light sources
+            - [ ] Point light
+            - [ ] Spot light
+            - [ ] Directional light
+            - [ ] Rectangular light
+        - [ ] Shadow mapping (for all light sources)
+        - [ ] Cascading shadow maps
+        - [ ] SSAO (Screen space ambient occlusion)
+        - [ ] Post-processing effects
+        - [ ] PBR (Physically based rendering)
+        - [ ] HDR (High dynamic range)
+    - [ ] Deferred rendering
+        - [ ] Transparent materials
+        - [ ] AA (Anti-aliasing)
+        - [ ] Frustum culling
+        - [ ] Instancing
+        - [ ] Light sources
+            - [ ] Point light
+            - [ ] Spot light
+            - [ ] Directional light
+            - [ ] Rectangular light
+        - [ ] Shadow mapping (for all light sources)
+        - [ ] Cascading shadow maps
+        - [ ] SSAO (Screen space ambient occlusion)
+        - [ ] Post-processing effects
+        - [ ] PBR (Physically based rendering)
+        - [ ] HDR (High dynamic range)
+    - [ ] GUI
 - [ ] Profiler
-- [ ] Rendering
-    - [ ] DirectX 12
-        - [ ] Forward rendering
-            - [ ] Transparent materials
-            - [ ] MSAA (Multisample anti-aliasing)
-            - [ ] Frustum culling
-            - [ ] Instancing
-            - [ ] Light sources
-                - [ ] Point light
-                - [ ] Spot light
-                - [ ] Directional light
-                - [ ] Rectangular light
-            - [ ] Shadow mapping (for all light sources)
-            - [ ] Cascading shadow maps
-            - [ ] SSAO (Screen space ambient occlusion)
-            - [ ] Post-processing effects
-            - [ ] PBR (Physically based rendering)
-            - [ ] HDR (High dynamic range)
-        - [ ] Forward+ rendering
-            - [ ] Transparent materials
-            - [ ] AA (Anti-aliasing)
-            - [ ] Frustum culling
-            - [ ] Instancing
-            - [ ] Light sources
-                - [ ] Point light
-                - [ ] Spot light
-                - [ ] Directional light
-                - [ ] Rectangular light
-            - [ ] Shadow mapping (for all light sources)
-            - [ ] Cascading shadow maps
-            - [ ] SSAO (Screen space ambient occlusion)
-            - [ ] Post-processing effects
-            - [ ] PBR (Physically based rendering)
-            - [ ] HDR (High dynamic range)
-        - [ ] Deferred rendering
-            - [ ] Transparent materials
-            - [ ] AA (Anti-aliasing)
-            - [ ] Frustum culling
-            - [ ] Instancing
-            - [ ] Light sources
-                - [ ] Point light
-                - [ ] Spot light
-                - [ ] Directional light
-                - [ ] Rectangular light
-            - [ ] Shadow mapping (for all light sources)
-            - [ ] Cascading shadow maps
-            - [ ] SSAO (Screen space ambient occlusion)
-            - [ ] Post-processing effects
-            - [ ] PBR (Physically based rendering)
-            - [ ] HDR (High dynamic range)
-        - [ ] GUI
-    - [ ] Vulkan
-        - [ ] Forward rendering
-            - [ ] Transparent materials
-            - [ ] MSAA (Multisample anti-aliasing)
-            - [ ] Frustum culling
-            - [ ] Instancing
-            - [ ] Light sources
-                - [ ] Point light
-                - [ ] Spot light
-                - [ ] Directional light
-                - [ ] Rectangular light
-            - [ ] Shadow mapping (for all light sources)
-            - [ ] Cascading shadow maps
-            - [ ] SSAO (Screen space ambient occlusion)
-            - [ ] Post-processing effects
-            - [ ] PBR (Physically based rendering)
-            - [ ] HDR (High dynamic range)
-        - [ ] Forward+ rendering
-            - [ ] Transparent materials
-            - [ ] AA (Anti-aliasing)
-            - [ ] Frustum culling
-            - [ ] Instancing
-            - [ ] Light sources
-                - [ ] Point light
-                - [ ] Spot light
-                - [ ] Directional light
-                - [ ] Rectangular light
-            - [ ] Shadow mapping (for all light sources)
-            - [ ] Cascading shadow maps
-            - [ ] SSAO (Screen space ambient occlusion)
-            - [ ] Post-processing effects
-            - [ ] PBR (Physically based rendering)
-            - [ ] HDR (High dynamic range)
-        - [ ] Deferred rendering
-            - [ ] Transparent materials
-            - [ ] AA (Anti-aliasing)
-            - [ ] Frustum culling
-            - [ ] Instancing
-            - [ ] Light sources
-                - [ ] Point light
-                - [ ] Spot light
-                - [ ] Directional light
-                - [ ] Rectangular light
-            - [ ] Shadow mapping (for all light sources)
-            - [ ] Cascading shadow maps
-            - [ ] SSAO (Screen space ambient occlusion)
-            - [ ] Post-processing effects
-            - [ ] PBR (Physically based rendering)
-            - [ ] HDR (High dynamic range)
-        - [ ] GUI
-- [ ] Scripting
+- [ ] Minimal scripting
 - [ ] Editor
     - [ ] Content management
     - [ ] Script debugging

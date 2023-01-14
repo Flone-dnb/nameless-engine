@@ -81,7 +81,7 @@ gc_collector()->collect(); // this will be run regularly somewhere in the engine
 // PlayerSaveData.h
 // ---------------------------------------------------------------------------------
 // Example below shows a sample code for saving/loading player's data (such as name, level, inventory).
-// Reflected fields will be serialized to file and deserialized from file.
+// Class fields will be serialized to file and deserialized from file.
 // ---------------------------------------------------------------------------------
 
 #pragma once
@@ -137,7 +137,8 @@ public:
     }
 
 private:
-    /// Contains item ID as a key and item amount (in the inventory) as a value.
+    /// Contains pairs of "item ID" - "item amount" (in the inventory).
+    /// We could instead use `std::string` as the key for storing GUIDs, this is just an example.
     RPROPERTY(Serialize)
     std::unordered_map<unsigned long long, unsigned long long> items;
 
@@ -163,6 +164,7 @@ public:
     InventorySaveData inventory;
 
     /// Stores IDs of player abilities.
+    /// Can also store here `std::string` instead.
     RPROPERTY(Serialize)
     std::vector<unsigned long long> vAbilities;
 
@@ -189,7 +191,7 @@ File_PlayerSaveData_GENERATED
     pPlayerSaveData->inventory.addOneItem(42); // now have two items with ID "42"
     pPlayerSaveData->inventory.addOneItem(102);
 
-    // Prepare new profile file name.
+    // Prepare a new profile file name so that it would not conflict with existing profiles.
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_int_distribution<unsigned short int> uid(0, USHRT_MAX);
@@ -211,7 +213,7 @@ File_PlayerSaveData_GENERATED
     // Serialize.
     const auto pathToFile =
         ConfigManager::getCategoryDirectory(ConfigCategory::PROGRESS) / sNewProfileFilename;
-    const auto optionalError = pPlayerSaveData->serialize(pathToFile, true);
+    const auto optionalError = pPlayerSaveData->serialize(pathToFile, true); // `true` to enable additional backup file
     if (optionalError.has_value()) {
         // process error
     }

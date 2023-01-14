@@ -11,7 +11,7 @@
 #include "io/Logger.h"
 #include "misc/Globals.h"
 #include "misc/MessageBox.h"
-#include "render/directx/descriptors/DirectXDescriptorHeap.h"
+#include "render/RenderSettings.h"
 #include "render/directx/resources/DirectXResource.h"
 #include "render/directx/resources/DirectXResourceManager.h"
 #include "materials/hlsl/HlslEngineShaders.hpp"
@@ -33,7 +33,7 @@ namespace ne {
     DirectXRenderer::DirectXRenderer(Game* pGame) : Renderer(pGame) {
         std::scoped_lock frameGuard(*getRenderResourcesMutex());
 
-        initializeRenderSettings();
+        initializeRenderer();
 
         // Initialize DirectX.
         std::optional<Error> error = initializeDirectX();
@@ -131,12 +131,13 @@ namespace ne {
         D3D12MA::ALLOCATION_DESC allocationDesc = {};
         allocationDesc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
 
-        auto result = pResourceManager->createDsvResource(
-            "renderer depth/stencil buffer",
-            allocationDesc,
-            depthStencilDesc,
-            D3D12_RESOURCE_STATE_DEPTH_WRITE,
-            depthClear);
+        auto result = dynamic_cast<DirectXResourceManager*>(getResourceManager())
+                          ->createDsvResource(
+                              "renderer depth/stencil buffer",
+                              allocationDesc,
+                              depthStencilDesc,
+                              D3D12_RESOURCE_STATE_DEPTH_WRITE,
+                              depthClear);
         if (std::holds_alternative<Error>(result)) {
             auto err = std::get<Error>(std::move(result));
             err.addEntry();
@@ -221,14 +222,16 @@ namespace ne {
     std::string DirectXRenderer::getCurrentlyUsedGpuName() const { return sUsedVideoAdapter; }
 
     size_t DirectXRenderer::getTotalVideoMemoryInMb() const {
-        return pResourceManager->getTotalVideoMemoryInMb();
+        return getResourceManager()->getTotalVideoMemoryInMb();
     }
 
     size_t DirectXRenderer::getUsedVideoMemoryInMb() const {
-        return pResourceManager->getUsedVideoMemoryInMb();
+        return getResourceManager()->getUsedVideoMemoryInMb();
     }
 
     void DirectXRenderer::drawNextFrame() {
+        // TODO: wait for frame resources
+
         std::scoped_lock frameGuard(*getRenderResourcesMutex());
         updateResourcesForNextFrame();
 
@@ -348,19 +351,6 @@ namespace ne {
         // to the command list (later) we will Reset() it (put in 'Open' state), and in order
         // for Reset() to work, command list should be in closed state.
         pCommandList->Close();
-
-        return {};
-    }
-
-    std::optional<Error> DirectXRenderer::createResourceManager() {
-        auto result = DirectXResourceManager::create(this, pDevice.Get(), pVideoAdapter.Get());
-        if (std::holds_alternative<Error>(result)) {
-            auto err = std::get<Error>(std::move(result));
-            err.addEntry();
-            return err;
-        }
-
-        pResourceManager = std::get<std::unique_ptr<DirectXResourceManager>>(std::move(result));
 
         return {};
     }
@@ -649,12 +639,7 @@ namespace ne {
         pRenderSettings->second->setRefreshRate(std::make_pair(
             pickedDisplayMode.RefreshRate.Numerator, pickedDisplayMode.RefreshRate.Denominator));
 
-        // Create resource manager.
-        error = createResourceManager();
-        if (error.has_value()) {
-            error->addEntry();
-            return error;
-        }
+        initializeResourceManager();
 
         // Create swap chain.
         error = createSwapChain();
@@ -764,9 +749,9 @@ namespace ne {
         return {pointWrap, linearWrap, anisotropicWrap, shadow};
     }
 
-    DirectXResourceManager* DirectXRenderer::getResourceManager() const { return pResourceManager.get(); }
-
     ID3D12Device* DirectXRenderer::getDevice() const { return pDevice.Get(); }
+
+    IDXGIAdapter3* DirectXRenderer::getVideoAdapter() const { return pVideoAdapter.Get(); }
 
     DXGI_FORMAT DirectXRenderer::getBackBufferFormat() const { return backBufferFormat; }
 
@@ -776,7 +761,6 @@ namespace ne {
 
     void DirectXRenderer::updateResourcesForNextFrame() {
         std::scoped_lock frameGuard(*getRenderResourcesMutex());
-        // TODO: wait for frame resource to be free
 
         // TODO: updateMaterialConstantBuffersForNextFrame()
         // TODO: updateMeshConstantBuffersForNextFrame()
@@ -814,8 +798,9 @@ namespace ne {
         }
 
         // Create RTV to swap chain buffers.
-        auto swapChainResult = pResourceManager->makeRtvResourcesFromSwapChainBuffer(
-            pSwapChain.Get(), getSwapChainBufferCount());
+        auto swapChainResult =
+            dynamic_cast<DirectXResourceManager*>(getResourceManager())
+                ->makeRtvResourcesFromSwapChainBuffer(pSwapChain.Get(), getSwapChainBufferCount());
         if (std::holds_alternative<Error>(swapChainResult)) {
             auto err = std::get<Error>(std::move(swapChainResult));
             err.addEntry();
@@ -848,12 +833,13 @@ namespace ne {
         D3D12MA::ALLOCATION_DESC allocationDesc = {};
         allocationDesc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
 
-        auto result = pResourceManager->createRtvResource(
-            "renderer render target buffer",
-            allocationDesc,
-            msaaRenderTargetDesc,
-            D3D12_RESOURCE_STATE_COMMON,
-            msaaClear);
+        auto result = dynamic_cast<DirectXResourceManager*>(getResourceManager())
+                          ->createRtvResource(
+                              "renderer render target buffer",
+                              allocationDesc,
+                              msaaRenderTargetDesc,
+                              D3D12_RESOURCE_STATE_COMMON,
+                              msaaClear);
         if (std::holds_alternative<Error>(result)) {
             auto err = std::get<Error>(std::move(result));
             err.addEntry();

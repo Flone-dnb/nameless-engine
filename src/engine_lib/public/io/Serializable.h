@@ -17,6 +17,8 @@
 #include "misc/GC.hpp"
 #include "io/serializers/IFieldSerializer.hpp"
 #include "io/properties/SerializeProperty.h"
+#include "io/properties/SerializeAsExternalProperty.h"
+#include "io/serializers/SerializableObjectFieldSerializer.h"
 
 // External.
 #include "Refureku/Refureku.h"
@@ -195,13 +197,17 @@ namespace ne RNAMESPACE() {
          *
          * @remark This is an overloaded function. See full documentation for other overload.
          *
-         * @param tomlData          Toml value to append this object to.
-         * @param sEntityId         Unique ID of this object. When serializing multiple objects into
+         * @param tomlData           Toml value to append this object to.
+         * @param sEntityId          Unique ID of this object. When serializing multiple objects into
          * one toml value provide different IDs for each object so they could be differentiated. Don't use
          * dots in the entity ID, dots are used in recursion when this function is called from this
          * function to process reflected field (sub entity).
-         * @param customAttributes  Optional. Custom pairs of values that will be saved as this object's
+         * @param customAttributes   Optional. Custom pairs of values that will be saved as this object's
          * additional information and could be later retrieved in @ref deserialize.
+         * @param optionalPathToFile Optional. Path to the file that this TOML data will be serialized.
+         * Used for fields marked as `SerializeAsExternal`.
+         * @param bEnableBackup      Optional. If this TOML data will be serialized to file whether
+         * the backup file is needed or not. Used for fields marked as `SerializeAsExternal`.
          *
          * @return Error if something went wrong, for example when found an unsupported for
          * serialization reflected field, otherwise name of the section that was used to store this entity.
@@ -209,7 +215,9 @@ namespace ne RNAMESPACE() {
         [[nodiscard]] std::variant<std::string, Error> serialize(
             toml::value& tomlData,
             std::string sEntityId = "",
-            const std::unordered_map<std::string, std::string>& customAttributes = {});
+            const std::unordered_map<std::string, std::string>& customAttributes = {},
+            std::optional<std::filesystem::path> optionalPathToFile = {},
+            bool bEnableBackup = false);
 
         /**
          * Serializes the object and all reflected fields (including inherited) into a toml value.
@@ -217,16 +225,20 @@ namespace ne RNAMESPACE() {
          * @remark This is an overloaded function that takes an original object to serialize only changed
          * values. See full documentation for other overload.
          *
-         * @param tomlData          Toml value to append this object to.
-         * @param pOriginalObject   Optional. Original object of the same type as the object being
+         * @param tomlData           Toml value to append this object to.
+         * @param pOriginalObject    Optional. Original object of the same type as the object being
          * serialized, this object is a deserialized version of the object being serialized,
          * used to compare serializable fields' values and only serialize changed values.
-         * @param sEntityId         Unique ID of this object. When serializing multiple objects into
+         * @param sEntityId          Unique ID of this object. When serializing multiple objects into
          * one toml value provide different IDs for each object so they could be differentiated. Don't use
          * dots in the entity ID, dots are used in recursion when this function is called from this
          * function to process reflected field (sub entity).
-         * @param customAttributes  Optional. Custom pairs of values that will be saved as this object's
+         * @param customAttributes   Optional. Custom pairs of values that will be saved as this object's
          * additional information and could be later retrieved in @ref deserialize.
+         * @param optionalPathToFile Optional. Path to the file that this TOML data will be serialized.
+         * Used for fields marked as `SerializeAsExternal`.
+         * @param bEnableBackup      Optional. If this TOML data will be serialized to file whether
+         * the backup file is needed or not. Used for fields marked as `SerializeAsExternal`.
          *
          * @return Error if something went wrong, for example when found an unsupported for
          * serialization reflected field, otherwise name of the section that was used to store this entity.
@@ -235,7 +247,9 @@ namespace ne RNAMESPACE() {
             toml::value& tomlData,
             Serializable* pOriginalObject,
             std::string sEntityId = "",
-            const std::unordered_map<std::string, std::string>& customAttributes = {});
+            const std::unordered_map<std::string, std::string>& customAttributes = {},
+            std::optional<std::filesystem::path> optionalPathToFile = {},
+            bool bEnableBackup = false);
 
         /**
          * Analyzes the file for serialized objects, gathers and returns unique IDs of those objects.
@@ -320,7 +334,7 @@ namespace ne RNAMESPACE() {
                      (std::same_as<SmartPointer<T>, std::shared_ptr<T>> ||
                       std::same_as<SmartPointer<T>, gc<T>>)
         static std::variant<SmartPointer<T>, Error> deserialize(
-            const std::filesystem::path& pathToFile,
+            std::filesystem::path pathToFile,
             std::unordered_map<std::string, std::string>& customAttributes,
             const std::string& sEntityId);
 
@@ -368,10 +382,12 @@ namespace ne RNAMESPACE() {
          *
          * @remark This is an overloaded function, see a more detailed documentation for the other overload.
          *
-         * @param tomlData         Toml value to retrieve an object from.
-         * @param customAttributes Pairs of values that were associated with this object.
-         * @param sEntityId        Unique ID of this object. When serializing multiple objects into
+         * @param tomlData           Toml value to retrieve an object from.
+         * @param customAttributes   Pairs of values that were associated with this object.
+         * @param sEntityId          Unique ID of this object. When serializing multiple objects into
          * one toml value provide different IDs for each object so they could be differentiated.
+         * @param optionalPathToFile Optional. Path to the file that this TOML data is deserialized from.
+         * Used for fields marked as `SerializeAsExternal`
          *
          * @warning Don't use dots in the entity ID, dots are used
          * in recursion when this function is called from this function to process reflected field (sub
@@ -386,7 +402,8 @@ namespace ne RNAMESPACE() {
         static std::variant<SmartPointer<T>, Error> deserialize(
             const toml::value& tomlData,
             std::unordered_map<std::string, std::string>& customAttributes,
-            std::string sEntityId = "");
+            std::string sEntityId = "",
+            std::optional<std::filesystem::path> optionalPathToFile = {});
 
         /**
          * Adds a field serializer that will be automatically used in serialization/deserialization
@@ -565,7 +582,8 @@ namespace ne RNAMESPACE() {
     std::variant<SmartPointer<T>, Error> Serializable::deserialize(
         const toml::value& tomlData,
         std::unordered_map<std::string, std::string>& customAttributes,
-        std::string sEntityId) {
+        std::string sEntityId,
+        std::optional<std::filesystem::path> optionalPathToFile) {
         if (sEntityId.empty()) {
             // Put something as entity ID so it would not look weird.
             sEntityId = "0";
@@ -777,6 +795,65 @@ namespace ne RNAMESPACE() {
             if (!isFieldSerializable(*pField))
                 continue;
 
+            // Check if we need to deserialize from external file.
+            if (pField->getProperty<SerializeAsExternal>()) {
+                // Make sure this field derives from `Serializable`.
+                if (!Serializable::isDerivedFromSerializable(pField->getType().getArchetype())) [[unlikely]] {
+                    // Show an error so that the developer will instantly see the mistake.
+                    auto error = Error("only fields of type derived from `Serializable` can use "
+                                       "`SerializeAsExternal` property");
+                    error.showError();
+                    throw std::runtime_error(error.getError());
+                }
+
+                // Make sure path to the main file is specified.
+                if (!optionalPathToFile.has_value()) [[unlikely]] {
+                    return Error("unable to deserialize field marked as `SerializeAsExternal` "
+                                 "because path to the main file was not specified");
+                }
+
+                // Get entity ID chain.
+                auto iLastDotPos = sTargetSection.rfind('.');
+                if (iLastDotPos == std::string::npos) [[unlikely]] {
+                    return Error(fmt::format("section name \"{}\" is corrupted", sTargetSection));
+                }
+                // Will be something like: "entityId.subEntityId",
+                // "entityId.subEntityId.subSubEntityId" or etc.
+                const auto sEntityIdChain = sTargetSection.substr(0, iLastDotPos);
+
+                // Prepare path to the external file.
+                const auto sExternalFileName = fmt::format(
+                    "{}.{}.{}{}",
+                    optionalPathToFile->stem().string(),
+                    sEntityIdChain,
+                    pField->getName(),
+                    ConfigManager::getConfigFormatExtension());
+                const auto pathToExternalFile = optionalPathToFile.value().parent_path() / sExternalFileName;
+
+                // Deserialize external file.
+                auto result = deserialize<std::shared_ptr, Serializable>(pathToExternalFile);
+                if (std::holds_alternative<Error>(result)) {
+                    auto error = std::get<Error>(std::move(result));
+                    error.addEntry();
+                    return error;
+                }
+                const auto pDeserializedExternalField =
+                    std::get<std::shared_ptr<Serializable>>(std::move(result));
+
+                // Clone deserialized data to field.
+                Serializable* pFieldObject =
+                    reinterpret_cast<Serializable*>(pField->getPtrUnsafe(&*pSmartPointerInstance));
+                auto optionalError = SerializableObjectFieldSerializer::cloneSerializableObject(
+                    pDeserializedExternalField.get(), pFieldObject, false);
+                if (optionalError.has_value()) {
+                    auto error = optionalError.value();
+                    error.addEntry();
+                    return error;
+                }
+
+                continue;
+            }
+
             // Deserialize field value.
             bool bFoundSerializer = false;
             for (const auto& pSerializer : vFieldSerializers) {
@@ -824,22 +901,21 @@ namespace ne RNAMESPACE() {
         requires std::derived_from<T, Serializable> &&
                  (std::same_as<SmartPointer<T>, std::shared_ptr<T>> || std::same_as<SmartPointer<T>, gc<T>>)
     std::variant<SmartPointer<T>, Error> Serializable::deserialize(
-        const std::filesystem::path& pathToFile,
+        std::filesystem::path pathToFile,
         std::unordered_map<std::string, std::string>& customAttributes,
         const std::string& sEntityId) {
         // Add TOML extension to file.
-        auto fixedPath = pathToFile;
-        if (!fixedPath.string().ends_with(".toml")) {
-            fixedPath += ".toml";
+        if (!pathToFile.string().ends_with(".toml")) {
+            pathToFile += ".toml";
         }
 
-        std::filesystem::path backupFile = fixedPath;
+        std::filesystem::path backupFile = pathToFile;
         backupFile += ConfigManager::getBackupFileExtension();
 
-        if (!std::filesystem::exists(fixedPath)) {
+        if (!std::filesystem::exists(pathToFile)) {
             // Check if a backup file exists.
             if (std::filesystem::exists(backupFile)) {
-                std::filesystem::copy_file(backupFile, fixedPath);
+                std::filesystem::copy_file(backupFile, pathToFile);
             } else {
                 return Error("requested file or a backup file do not exist");
             }
@@ -848,24 +924,24 @@ namespace ne RNAMESPACE() {
         // Load file.
         toml::value tomlData;
         try {
-            tomlData = toml::parse(fixedPath);
+            tomlData = toml::parse(pathToFile);
         } catch (std::exception& exception) {
             return Error(fmt::format(
-                "failed to parse TOML file at \"{}\", error: {}", fixedPath.string(), exception.what()));
+                "failed to parse TOML file at \"{}\", error: {}", pathToFile.string(), exception.what()));
         }
 
         // Deserialize.
-        auto result = deserialize<SmartPointer, T>(tomlData, customAttributes, sEntityId);
+        auto result = deserialize<SmartPointer, T>(tomlData, customAttributes, sEntityId, pathToFile);
         if (std::holds_alternative<Error>(result)) {
             auto err = std::get<Error>(std::move(result));
             err.addEntry();
             return err;
-        } else if (fixedPath.string().starts_with(
+        } else if (pathToFile.string().starts_with(
                        ProjectPaths::getDirectoryForResources(ResourceDirectory::ROOT).string())) {
             // File is located in the `res` directory, save a relative path to the `res` directory.
             auto sRelativePath =
                 std::filesystem::relative(
-                    fixedPath, ProjectPaths::getDirectoryForResources(ResourceDirectory::ROOT))
+                    pathToFile, ProjectPaths::getDirectoryForResources(ResourceDirectory::ROOT))
                     .string();
 
             // Replace all '\' characters with '/' just to be consistent.
@@ -883,7 +959,7 @@ namespace ne RNAMESPACE() {
                 return Error(fmt::format(
                     "failed to save the relative path to the `res` directory for the file at \"{}\", "
                     "reason: constructed path \"{}\" does not exist",
-                    fixedPath.string(),
+                    pathToFile.string(),
                     pathToOriginalFile.string()));
             }
 

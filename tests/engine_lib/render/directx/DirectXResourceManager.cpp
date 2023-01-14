@@ -26,7 +26,8 @@ TEST_CASE("make the CBV heap expand") {
             auto pRenderer = dynamic_cast<DirectXRenderer*>(pGameWindow->getRenderer());
             REQUIRE(pRenderer);
 
-            const auto pResourceManager = pRenderer->getResourceManager();
+            const auto pResourceManager =
+                dynamic_cast<DirectXResourceManager*>(pRenderer->getResourceManager());
             const auto pHeapManager = pResourceManager->getCbvSrvUavHeap();
 
             const auto iInitialHeapCapacity = pHeapManager->getHeapCapacity();
@@ -98,7 +99,8 @@ TEST_CASE("make the CBV heap shrink") {
             auto pRenderer = dynamic_cast<DirectXRenderer*>(pGameWindow->getRenderer());
             REQUIRE(pRenderer);
 
-            const auto pResourceManager = pRenderer->getResourceManager();
+            const auto pResourceManager =
+                dynamic_cast<DirectXResourceManager*>(pRenderer->getResourceManager());
             const auto pHeapManager = pResourceManager->getCbvSrvUavHeap();
 
             const auto iInitialHeapCapacity = pHeapManager->getHeapCapacity();
@@ -170,7 +172,8 @@ TEST_CASE("assign multiple descriptors to one resource") {
             auto pRenderer = dynamic_cast<DirectXRenderer*>(pGameWindow->getRenderer());
             REQUIRE(pRenderer);
 
-            const auto pResourceManager = pRenderer->getResourceManager();
+            const auto pResourceManager =
+                dynamic_cast<DirectXResourceManager*>(pRenderer->getResourceManager());
 
             // Prepare data for resource creation.
             D3D12MA::ALLOCATION_DESC allocationDesc = {};
@@ -239,13 +242,16 @@ TEST_CASE("all assigned descriptors are freed when resource is destroyed") {
             auto pRenderer = dynamic_cast<DirectXRenderer*>(pGameWindow->getRenderer());
             REQUIRE(pRenderer);
 
+            const auto pResourceManager =
+                dynamic_cast<DirectXResourceManager*>(pRenderer->getResourceManager());
+
             const auto iNoLongerUsedDescriptorCount =
-                pRenderer->getResourceManager()->getCbvSrvUavHeap()->getNoLongerUsedDescriptorCount();
+                dynamic_cast<DirectXResourceManager*>(pRenderer->getResourceManager())
+                    ->getCbvSrvUavHeap()
+                    ->getNoLongerUsedDescriptorCount();
             REQUIRE(iNoLongerUsedDescriptorCount == 0);
 
             {
-                const auto pResourceManager = pRenderer->getResourceManager();
-
                 // Prepare data for resource creation.
                 D3D12MA::ALLOCATION_DESC allocationDesc = {};
                 allocationDesc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
@@ -283,7 +289,7 @@ TEST_CASE("all assigned descriptors are freed when resource is destroyed") {
             }
 
             const auto iNewNoLongerUsedDescriptorCount =
-                pRenderer->getResourceManager()->getCbvSrvUavHeap()->getNoLongerUsedDescriptorCount();
+                pResourceManager->getCbvSrvUavHeap()->getNoLongerUsedDescriptorCount();
             REQUIRE(iNewNoLongerUsedDescriptorCount == 2);
 
             pGameWindow->close();
@@ -313,7 +319,8 @@ TEST_CASE("create CBV resource") {
             auto pRenderer = dynamic_cast<DirectXRenderer*>(pGameWindow->getRenderer());
             REQUIRE(pRenderer);
 
-            const auto pResourceManager = pRenderer->getResourceManager();
+            const auto pResourceManager =
+                dynamic_cast<DirectXResourceManager*>(pRenderer->getResourceManager());
 
             D3D12MA::ALLOCATION_DESC allocationDesc = {};
             allocationDesc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
@@ -357,7 +364,8 @@ TEST_CASE("create SRV resource") {
             auto pRenderer = dynamic_cast<DirectXRenderer*>(pGameWindow->getRenderer());
             REQUIRE(pRenderer);
 
-            const auto pResourceManager = pRenderer->getResourceManager();
+            const auto pResourceManager =
+                dynamic_cast<DirectXResourceManager*>(pRenderer->getResourceManager());
 
             // Prepare data for resource creation.
             D3D12MA::ALLOCATION_DESC allocationDesc = {};
@@ -413,7 +421,8 @@ TEST_CASE("create UAV resource") {
             auto pRenderer = dynamic_cast<DirectXRenderer*>(pGameWindow->getRenderer());
             REQUIRE(pRenderer);
 
-            const auto pResourceManager = pRenderer->getResourceManager();
+            const auto pResourceManager =
+                dynamic_cast<DirectXResourceManager*>(pRenderer->getResourceManager());
 
             // Prepare data for resource creation.
             D3D12MA::ALLOCATION_DESC allocationDesc = {};
@@ -469,7 +478,8 @@ TEST_CASE("create RTV resource") {
             auto pRenderer = dynamic_cast<DirectXRenderer*>(pGameWindow->getRenderer());
             REQUIRE(pRenderer);
 
-            const auto pResourceManager = pRenderer->getResourceManager();
+            const auto pResourceManager =
+                dynamic_cast<DirectXResourceManager*>(pRenderer->getResourceManager());
 
             // Prepare data for resource creation.
             const auto resourceDesc = CD3DX12_RESOURCE_DESC(
@@ -529,7 +539,8 @@ TEST_CASE("create DSV resource") {
             auto pRenderer = dynamic_cast<DirectXRenderer*>(pGameWindow->getRenderer());
             REQUIRE(pRenderer);
 
-            const auto pResourceManager = pRenderer->getResourceManager();
+            const auto pResourceManager =
+                dynamic_cast<DirectXResourceManager*>(pRenderer->getResourceManager());
 
             // Prepare data for resource creation.
             D3D12_RESOURCE_DESC depthStencilDesc = CD3DX12_RESOURCE_DESC(

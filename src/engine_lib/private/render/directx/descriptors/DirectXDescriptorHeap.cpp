@@ -4,6 +4,7 @@
 #include "render/directx/DirectXRenderer.h"
 #include "io/Logger.h"
 #include "render/directx/resources/DirectXResource.h"
+#include "render/RenderSettings.h"
 
 namespace ne {
     std::variant<std::unique_ptr<DirectXDescriptorHeap>, Error>
@@ -41,8 +42,11 @@ namespace ne {
                 static_cast<int>(descriptorType)));
         }
 
+        // Add a new descriptor to the heap.
+
         std::scoped_lock guard(mtxRwHeap);
 
+        // Expand the heap if needed.
         if (iHeapSize.load() == iHeapCapacity.load()) {
             auto optionalError = expandHeap();
             if (optionalError.has_value()) {

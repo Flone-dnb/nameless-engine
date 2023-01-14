@@ -104,22 +104,18 @@ namespace ne {
         virtual void flushCommandQueue() override;
 
         /**
-         * Returns resource manager.
-         * Resource manager handles resource allocation and descriptor binding.
-         *
-         * This function is used for engine testing and generally should not be used
-         * outside of testing.
-         *
-         * @return Resource manager. Do not delete returned pointer.
-         */
-        DirectXResourceManager* getResourceManager() const;
-
-        /**
          * Returns DirectX device.
          *
-         * @return Device. Do not delete this pointer.
+         * @return Do not delete (free) this pointer. Device.
          */
         ID3D12Device* getDevice() const;
+
+        /**
+         * Returns DirectX video adapter.
+         *
+         * @return Do not delete (free) this pointer. Video adapter.
+         */
+        IDXGIAdapter3* getVideoAdapter() const;
 
         /**
          * Returns used back buffer format.
@@ -215,13 +211,6 @@ namespace ne {
         [[nodiscard]] std::optional<Error> createCommandObjects();
 
         /**
-         * Creates resource manager.
-         *
-         * @return Error if something went wrong.
-         */
-        [[nodiscard]] std::optional<Error> createResourceManager();
-
-        /**
          * Creates and initializes the swap chain.
          *
          * @return Error if something went wrong.
@@ -293,9 +282,6 @@ namespace ne {
 
         /** Fence counter. */
         std::atomic<UINT64> iCurrentFence{0};
-
-        /** Resource manager. */
-        std::unique_ptr<DirectXResourceManager> pResourceManager;
 
         /** Swap chain buffer. */
         std::vector<std::unique_ptr<DirectXResource>> vSwapChainBuffers;

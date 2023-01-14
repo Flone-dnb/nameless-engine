@@ -8,11 +8,23 @@
 // Custom.
 #include "io/Serializable.h"
 #include "game/nodes/Node.h"
+#include "game/nodes/MeshNode.h"
 #include "io/properties/SerializeProperty.h"
 
 #include "ReflectionTest.generated.h"
 
 using namespace ne;
+
+class RCLASS(Guid("9ae433d9-2cba-497a-8061-26f2683b4f35")) MeshVertices : public Serializable {
+public:
+    MeshVertices() = default;
+    virtual ~MeshVertices() override = default;
+
+    RPROPERTY(Serialize)
+    std::vector<MeshVertex> vVertices;
+
+    MeshVertices_GENERATED
+};
 
 class RCLASS(Guid("550ea9f9-dd8a-4089-a717-0fe4e351a686")) ReflectionTestEntity : public Serializable {
 public:

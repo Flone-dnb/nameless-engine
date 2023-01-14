@@ -6,7 +6,8 @@
 namespace ne {
     /**
      * Serializer for some `std::vector<T>` types, the following inner vector types are supported:
-     * `bool`, `int`, `unsigned int`, `long long`, `unsigned long long`, `float`, `double`, `std::string`.
+     * `bool`, `int`, `unsigned int`, `long long`, `unsigned long long`, `float`, `double`, `std::string`,
+     * `MeshVertex`.
      */
     class VectorFieldSerializer : public IFieldSerializer {
     public:

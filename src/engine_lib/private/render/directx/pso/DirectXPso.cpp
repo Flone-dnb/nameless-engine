@@ -5,6 +5,7 @@
 #include "render/directx/DirectXRenderer.h"
 #include "materials/hlsl/RootSignatureGenerator.h"
 #include "io/Logger.h"
+#include "render/RenderSettings.h"
 
 namespace ne {
     DirectXPso::DirectXPso(

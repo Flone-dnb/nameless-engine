@@ -7,7 +7,9 @@
 #include "materials/ShaderParameter.h"
 #include "render/pso/PsoManager.h"
 #include "render/RenderSettings.h"
+#include "render/resources/GpuResourceManager.h"
 #if defined(WIN32)
+#include "render/directx/resources/DirectXResourceManager.h"
 #include "render/directx/DirectXRenderer.h"
 #endif
 
@@ -38,7 +40,9 @@ namespace ne {
     std::unique_ptr<Renderer> Renderer::create(Game* pGame) {
 #if defined(WIN32)
         return std::make_unique<DirectXRenderer>(pGame);
+        // TODO: vulkan
 #elif __linux__
+        // TODO: vulkan
         static_assert(false, "not implemented");
 #else
         static_assert(false, "not implemented");
@@ -61,6 +65,8 @@ namespace ne {
     ShaderManager* Renderer::getShaderManager() const { return pShaderManager.get(); }
 
     PsoManager* Renderer::getPsoManager() const { return pPsoManager.get(); }
+
+    GpuResourceManager* Renderer::getResourceManager() const { return pResourceManager.get(); }
 
     std::recursive_mutex* Renderer::getRenderResourcesMutex() { return &mtxRwRenderResources; }
 
@@ -140,6 +146,20 @@ namespace ne {
 
         // Apply the configuration.
         mtxRenderSettings.second->updateRendererConfiguration();
+    }
+
+    void Renderer::initializeRenderer() { initializeRenderSettings(); }
+
+    void Renderer::initializeResourceManager() {
+        // Create GPU resource manager.
+        auto result = GpuResourceManager::create(this);
+        if (std::holds_alternative<Error>(result)) {
+            auto error = std::get<Error>(std::move(result));
+            error.addEntry();
+            error.showError();
+            throw std::runtime_error(error.getError());
+        }
+        pResourceManager = std::get<std::unique_ptr<GpuResourceManager>>(std::move(result));
     }
 
 } // namespace ne

@@ -52,7 +52,7 @@ namespace ne {
 
         // Serialize data to TOML value.
         toml::value tomlData;
-        auto result = serialize(tomlData, "", customAttributes);
+        auto result = serialize(tomlData, "", customAttributes, pathToFile, bEnableBackup);
         if (std::holds_alternative<Error>(result)) {
             auto err = std::get<Error>(std::move(result));
             err.addEntry();
@@ -97,8 +97,10 @@ namespace ne {
     std::variant<std::string, Error> Serializable::serialize(
         toml::value& tomlData,
         std::string sEntityId,
-        const std::unordered_map<std::string, std::string>& customAttributes) {
-        return serialize(tomlData, nullptr, sEntityId, customAttributes);
+        const std::unordered_map<std::string, std::string>& customAttributes,
+        std::optional<std::filesystem::path> optionalPathToFile,
+        bool bEnableBackup) {
+        return serialize(tomlData, nullptr, sEntityId, customAttributes, optionalPathToFile, bEnableBackup);
     }
 
 #if defined(DEBUG)
@@ -181,7 +183,7 @@ namespace ne {
         const auto& fieldType = field.getType();
 
         // Ignore this field if not marked as Serialize.
-        if (!field.getProperty<Serialize>())
+        if (field.getProperty<Serialize>() == nullptr && field.getProperty<SerializeAsExternal>() == nullptr)
             return false;
 
         // Don't serialize specific types.
@@ -389,7 +391,9 @@ namespace ne {
                 tomlData,
                 objectData.pOriginalObject,
                 objectData.sObjectUniqueId,
-                objectData.customAttributes);
+                objectData.customAttributes,
+                pathToFile,
+                bEnableBackup);
             if (std::holds_alternative<Error>(result)) {
                 auto err = std::get<Error>(std::move(result));
                 err.addEntry();
@@ -477,7 +481,9 @@ namespace ne {
         toml::value& tomlData,
         Serializable* pOriginalObject,
         std::string sEntityId,
-        const std::unordered_map<std::string, std::string>& customAttributes) {
+        const std::unordered_map<std::string, std::string>& customAttributes,
+        std::optional<std::filesystem::path> optionalPathToFile,
+        bool bEnableBackup) {
         rfk::Class const& selfArchetype = getArchetype();
         if (sEntityId.empty()) {
             // Put something as entity ID so it would not look weird.
@@ -493,7 +499,8 @@ namespace ne {
         // Check that this type has a GUID.
         const auto pGuid = selfArchetype.getProperty<Guid>(false);
         if (!pGuid) {
-            Error err(fmt::format("type {} does not have a GUID assigned to it", selfArchetype.getName()));
+            Error err(
+                fmt::format("type \"{}\" does not have a GUID assigned to it", selfArchetype.getName()));
             return err;
         }
 
@@ -515,6 +522,8 @@ namespace ne {
             std::optional<Error> error;
             std::string sEntityId;
             Serializable* pOriginalEntity = nullptr;
+            std::optional<std::filesystem::path> optionalPathToFile = {};
+            bool bEnableBackup = false;
             gc<Serializable> pGcOriginalEntity = nullptr;
             size_t iSubEntityId = 0;
             size_t iTotalFieldsSerialized = 0;
@@ -528,7 +537,9 @@ namespace ne {
             getFieldSerializers(),
             {},
             sEntityId,
-            pOriginalObject};
+            pOriginalObject,
+            optionalPathToFile,
+            bEnableBackup};
 
         selfArchetype.foreachField(
             [](rfk::Field const& field, void* userData) -> bool {
@@ -547,8 +558,9 @@ namespace ne {
                     // No field exists with this name in this section - OK.
                     // Save field data in TOML.
 
+                    // Check if there was an original (previously deserialized) object.
                     Serializable* pOriginalFieldObject = nullptr;
-                    if (pData->pOriginalEntity) {
+                    if (pData->pOriginalEntity != nullptr) {
                         // Check if this field's value was changed compared to the value
                         // in the original file.
                         const auto pOriginalField = pData->pOriginalEntity->getArchetype().getFieldByName(
@@ -599,6 +611,65 @@ namespace ne {
                                     .second));
                             return false;
                         }
+                    }
+
+                    // Check if need to serialize as external file.
+                    if (field.getProperty<SerializeAsExternal>() != nullptr) {
+                        // Make sure this field derives from `Serializable`.
+                        if (!Serializable::isDerivedFromSerializable(field.getType().getArchetype()))
+                            [[unlikely]] {
+                            // Show an error so that the developer will instantly see the mistake.
+                            auto error = Error("only fields of type derived from `Serializable` can use "
+                                               "`SerializeAsExternal` property");
+                            error.showError();
+                            throw std::runtime_error(error.getError());
+                        }
+
+                        // Make sure path to the main file is specified.
+                        if (!pData->optionalPathToFile.has_value()) [[unlikely]] {
+                            pData->error = Error("unable to serialize field marked as `SerializeAsExternal` "
+                                                 "because path to the main file was not specified");
+                            return false;
+                        }
+
+                        // Get entity ID chain.
+                        auto iLastDotPos = pData->sSectionName.rfind('.');
+                        if (iLastDotPos == std::string::npos) [[unlikely]] {
+                            pData->error =
+                                Error(fmt::format("section name \"{}\" is corrupted", pData->sSectionName));
+                            return false;
+                        }
+                        // Will be something like: "entityId.subEntityId",
+                        // "entityId.subEntityId.subSubEntityId" or etc.
+                        const auto sEntityIdChain = pData->sSectionName.substr(0, iLastDotPos);
+
+                        // Prepare path to the external file.
+                        const auto sExternalFileName = fmt::format(
+                            "{}.{}.{}{}",
+                            pData->optionalPathToFile->stem().string(),
+                            sEntityIdChain,
+                            field.getName(),
+                            ConfigManager::getConfigFormatExtension());
+                        const auto pathToExternalFile =
+                            pData->optionalPathToFile.value().parent_path() / sExternalFileName;
+
+                        // Serialize as external file.
+                        Serializable* pFieldObject =
+                            reinterpret_cast<Serializable*>(field.getPtrUnsafe(pData->self));
+                        auto optionalError =
+                            pFieldObject->serialize(pathToExternalFile, pData->bEnableBackup);
+                        if (optionalError.has_value()) {
+                            pData->error = optionalError.value();
+                            pData->error->addEntry();
+                            return false;
+                        }
+
+                        // Reference external file in the main file.
+                        pData->pTomlData->operator[](pData->sSectionName).operator[](field.getName()) =
+                            sExternalFileName;
+
+                        pData->iTotalFieldsSerialized += 1;
+                        return true;
                     }
 
                     // Serialize field.

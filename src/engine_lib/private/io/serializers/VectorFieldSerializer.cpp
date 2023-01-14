@@ -1,5 +1,8 @@
 #include "io/serializers/VectorFieldSerializer.h"
 
+// Custom.
+#include "game/nodes/MeshNode.h"
+
 // External.
 #include "fmt/format.h"
 
@@ -22,6 +25,8 @@ namespace ne {
         } else if (sFieldCanonicalTypeName == "std::vector<double>") {
             return true;
         } else if (sFieldCanonicalTypeName == fmt::format("std::vector<{}>", sStringCanonicalTypeName)) {
+            return true;
+        } else if (sFieldCanonicalTypeName == "std::vector<ne::MeshVertex>") {
             return true;
         }
 
@@ -75,6 +80,11 @@ namespace ne {
         } else if (sFieldCanonicalTypeName == fmt::format("std::vector<{}>", sStringCanonicalTypeName)) {
             pTomlData->operator[](sSectionName).operator[](sFieldName) =
                 pField->getUnsafe<std::vector<std::string>>(pFieldOwner);
+        } else if (sFieldCanonicalTypeName == "std::vector<ne::MeshVertex>") {
+            MeshVertex::serializeVec(
+                reinterpret_cast<std::vector<MeshVertex>*>(pField->getPtrUnsafe(pFieldOwner)),
+                &pTomlData->operator[](sSectionName),
+                sFieldName);
         } else {
             return Error(fmt::format(
                 "The type \"{}\" of the specified field \"{}\" is not supported by this serializer.",
@@ -96,7 +106,7 @@ namespace ne {
         const auto sFieldCanonicalTypeName = std::string(pField->getCanonicalTypeName());
         const auto sFieldName = pField->getName();
 
-        if (!pTomlValue->is_array()) {
+        if (sFieldCanonicalTypeName != "std::vector<ne::MeshVertex>" && !pTomlValue->is_array()) {
             return Error(fmt::format(
                 "The type \"{}\" of the specified field \"{}\" is supported by this serializer, "
                 "but the TOML value is not an array.",
@@ -104,9 +114,8 @@ namespace ne {
                 sFieldName));
         }
 
-        auto fieldValue = pTomlValue->as_array();
-
         if (sFieldCanonicalTypeName == "std::vector<bool>") {
+            auto fieldValue = pTomlValue->as_array();
             std::vector<bool> vArray;
             for (const auto& item : fieldValue) {
                 if (!item.is_boolean()) {
@@ -120,6 +129,7 @@ namespace ne {
             }
             pField->setUnsafe<std::vector<bool>>(pFieldOwner, std::move(vArray));
         } else if (sFieldCanonicalTypeName == "std::vector<int>") {
+            auto fieldValue = pTomlValue->as_array();
             std::vector<int> vArray;
             for (const auto& item : fieldValue) {
                 if (!item.is_integer()) {
@@ -133,6 +143,7 @@ namespace ne {
             }
             pField->setUnsafe<std::vector<int>>(pFieldOwner, std::move(vArray));
         } else if (sFieldCanonicalTypeName == "std::vector<unsigned int>") {
+            auto fieldValue = pTomlValue->as_array();
             std::vector<unsigned int> vArray;
             for (const auto& item : fieldValue) {
                 if (!item.is_integer()) {
@@ -153,6 +164,7 @@ namespace ne {
             }
             pField->setUnsafe<std::vector<unsigned int>>(pFieldOwner, std::move(vArray));
         } else if (sFieldCanonicalTypeName == "std::vector<long long>") {
+            auto fieldValue = pTomlValue->as_array();
             std::vector<long long> vArray;
             for (const auto& item : fieldValue) {
                 if (!item.is_integer()) {
@@ -166,6 +178,7 @@ namespace ne {
             }
             pField->setUnsafe<std::vector<long long>>(pFieldOwner, std::move(vArray));
         } else if (sFieldCanonicalTypeName == "std::vector<unsigned long long>") {
+            auto fieldValue = pTomlValue->as_array();
             std::vector<unsigned long long> vArray;
             for (const auto& item : fieldValue) {
                 // Stored as string.
@@ -188,6 +201,7 @@ namespace ne {
             }
             pField->setUnsafe<std::vector<unsigned long long>>(pFieldOwner, std::move(vArray));
         } else if (sFieldCanonicalTypeName == "std::vector<float>") {
+            auto fieldValue = pTomlValue->as_array();
             std::vector<float> vArray;
             for (const auto& item : fieldValue) {
                 if (!item.is_floating()) {
@@ -201,6 +215,7 @@ namespace ne {
             }
             pField->setUnsafe<std::vector<float>>(pFieldOwner, std::move(vArray));
         } else if (sFieldCanonicalTypeName == "std::vector<double>") {
+            auto fieldValue = pTomlValue->as_array();
             // We are storing double as a string for better precision.
             std::vector<double> vArray;
             for (const auto& item : fieldValue) {
@@ -224,6 +239,7 @@ namespace ne {
             }
             pField->setUnsafe<std::vector<double>>(pFieldOwner, std::move(vArray));
         } else if (sFieldCanonicalTypeName == fmt::format("std::vector<{}>", sStringCanonicalTypeName)) {
+            auto fieldValue = pTomlValue->as_array();
             std::vector<std::string> vArray;
             for (const auto& item : fieldValue) {
                 if (!item.is_string()) {
@@ -236,6 +252,14 @@ namespace ne {
                 vArray.push_back(item.as_string());
             }
             pField->setUnsafe<std::vector<std::string>>(pFieldOwner, std::move(vArray));
+        } else if (sFieldCanonicalTypeName == "std::vector<ne::MeshVertex>") {
+            auto optionalError = MeshVertex::deserializeVec(
+                reinterpret_cast<std::vector<MeshVertex>*>(pField->getPtrUnsafe(pFieldOwner)), pTomlValue);
+            if (optionalError.has_value()) {
+                auto error = optionalError.value();
+                error.addEntry();
+                return error;
+            }
         } else {
             return Error(fmt::format(
                 "The type \"{}\" of the specified field \"{}\" is not supported by this serializer.",
@@ -278,6 +302,9 @@ namespace ne {
         } else if (sFieldCanonicalTypeName == fmt::format("std::vector<{}>", sStringCanonicalTypeName)) {
             auto value = pFromField->getUnsafe<std::vector<std::string>>(pFromInstance);
             pToField->setUnsafe<std::vector<std::string>>(pToInstance, std::move(value));
+        } else if (sFieldCanonicalTypeName == "std::vector<ne::MeshVertex>") {
+            auto value = pFromField->getUnsafe<std::vector<MeshVertex>>(pFromInstance);
+            pToField->setUnsafe<std::vector<MeshVertex>>(pToInstance, std::move(value));
         } else {
             return Error(fmt::format(
                 "The type \"{}\" of the specified field \"{}\" is not supported by this serializer.",
@@ -320,6 +347,7 @@ namespace ne {
         COMPARE_VECTOR_FIELDS(float)
         COMPARE_VECTOR_FIELDS(double)
         COMPARE_VECTOR_FIELDS(std::basic_string<char>)
+        COMPARE_VECTOR_FIELDS(ne::MeshVertex)
 
         return false;
     }

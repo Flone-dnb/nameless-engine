@@ -72,10 +72,20 @@ set(ENGINE_LIB_SOURCES
     private/render/Renderer.cpp
     public/render/RenderSettings.h
     private/render/RenderSettings.cpp
+    private/render/GpuCommandList.h
+    private/render/GpuCommandList.cpp
     private/render/pso/PsoManager.h
     private/render/pso/PsoManager.cpp
     private/render/pso/Pso.h
     private/render/pso/Pso.cpp
+    private/render/resources/GpuResource.h
+    private/render/resources/GpuResource.cpp
+    private/render/resources/FrameResourcesManager.h
+    private/render/resources/FrameResourcesManager.cpp
+    private/render/resources/GpuResourceManager.h
+    private/render/resources/GpuResourceManager.cpp
+    private/render/resources/UploadBuffer.h
+    private/render/resources/UploadBuffer.cpp
     private/window/GLFW.hpp
     public/input/KeyboardKey.hpp
     private/io/Logger.cpp
@@ -129,6 +139,8 @@ set(ENGINE_LIB_SOURCES
     private/io/properties/SerializeProperty.cpp
     private/io/properties/GuidProperty.cpp
     public/io/properties/GuidProperty.h
+    private/io/properties/SerializeAsExternalProperty.cpp
+    public/io/properties/SerializeAsExternalProperty.h
     private/game/World.h
     private/game/World.cpp
     public/misc/GC.hpp

@@ -217,7 +217,7 @@ namespace ne {
          * Will return control after the window was closed.
          */
         template <typename MyGameInstance>
-        requires std::derived_from<MyGameInstance, GameInstance>
+            requires std::derived_from<MyGameInstance, GameInstance>
         void processEvents();
 
         /**
@@ -523,7 +523,7 @@ namespace ne {
     };
 
     template <typename MyGameInstance>
-    requires std::derived_from<MyGameInstance, GameInstance>
+        requires std::derived_from<MyGameInstance, GameInstance>
     void Window::processEvents() {
         pGame = std::unique_ptr<Game>(new Game(this));
 
@@ -554,7 +554,7 @@ namespace ne {
         }
 
         pGame->onWindowClose();
-        pGame = nullptr; // explicitly destroy here to run GC for the last time (before everything else is
-                         // destroyed)
+        pGame->destroy(); // explicitly destroy here to run GC for the last time (before everything else is
+                          // destroyed)
     }
 } // namespace ne

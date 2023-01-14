@@ -3,15 +3,17 @@
 // Custom.
 #include "render/directx/descriptors/DirectXDescriptorHeap.h"
 #include "render/directx/resources/DirectXResource.h"
+#include "render/directx/DirectXRenderer.h"
+#include "render/resources/UploadBuffer.h"
 
 namespace ne {
-    std::variant<std::unique_ptr<DirectXResourceManager>, Error> DirectXResourceManager::create(
-        DirectXRenderer* pRenderer, ID3D12Device* pDevice, IDXGIAdapter3* pVideoAdapter) {
+    std::variant<std::unique_ptr<DirectXResourceManager>, Error>
+    DirectXResourceManager::create(DirectXRenderer* pRenderer) {
         // Create resource allocator.
         D3D12MA::ALLOCATOR_DESC desc = {};
         desc.Flags = D3D12MA::ALLOCATOR_FLAG_DEFAULT_POOLS_NOT_ZEROED;
-        desc.pDevice = pDevice;
-        desc.pAdapter = pVideoAdapter;
+        desc.pDevice = pRenderer->getDevice();
+        desc.pAdapter = pRenderer->getVideoAdapter();
 
         ComPtr<D3D12MA::Allocator> pMemoryAllocator;
 
@@ -53,6 +55,32 @@ namespace ne {
             std::move(pRtvHeapManager),
             std::move(pDsvHeapManager),
             std::move(pCbvSrvUavHeapManager)));
+    }
+
+    std::variant<std::unique_ptr<UploadBuffer>, Error> DirectXResourceManager::createCbvResourceWithCpuAccess(
+        const std::string& sResourceName, size_t iElementSizeInBytes, size_t iElementCount) const {
+        // Constant buffers must be multiple of 256.
+        iElementSizeInBytes = makeMultipleOf256(iElementSizeInBytes);
+
+        // Prepare resource description.
+        CD3DX12_RESOURCE_DESC resourceDesc =
+            CD3DX12_RESOURCE_DESC::Buffer(iElementSizeInBytes * iElementCount);
+        D3D12MA::ALLOCATION_DESC allocationDesc = {};
+        allocationDesc.HeapType = D3D12_HEAP_TYPE_UPLOAD;
+
+        // Create resource.
+        auto result =
+            createCbvResource(sResourceName, allocationDesc, resourceDesc, D3D12_RESOURCE_STATE_GENERIC_READ);
+        if (std::holds_alternative<Error>(result)) {
+            auto error = std::get<Error>(std::move(result));
+            error.addEntry();
+            return error;
+        }
+
+        return std::unique_ptr<UploadBuffer>(new UploadBuffer(
+            std::get<std::unique_ptr<DirectXResource>>(std::move(result)),
+            iElementSizeInBytes,
+            iElementCount));
     }
 
     size_t DirectXResourceManager::getTotalVideoMemoryInMb() const {

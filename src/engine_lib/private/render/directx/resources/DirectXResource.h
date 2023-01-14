@@ -7,6 +7,7 @@
 
 // Custom.
 #include "misc/Error.h"
+#include "render/resources/GpuResource.h"
 #include "render/directx/descriptors/DirectXDescriptor.h"
 
 // External.
@@ -25,10 +26,12 @@ namespace ne {
     /**
      * D3D resource wrapper with automatic descriptor binding.
      */
-    class DirectXResource {
+    class DirectXResource : public GpuResource {
     public:
         DirectXResource(const DirectXResource&) = delete;
         DirectXResource& operator=(const DirectXResource&) = delete;
+
+        virtual ~DirectXResource() override = default;
 
         /**
          * Creates a new resource.
@@ -146,8 +149,8 @@ namespace ne {
         ComPtr<D3D12MA::Allocation> pAllocatedResource;
 
         /**
-         * Used when resource was created from swap chain buffer (can be empty if @ref pAllocatedResource is
-         * used).
+         * Used when resource was created from swap chain buffer
+         * (can be empty if @ref pAllocatedResource is used).
          */
         ComPtr<ID3D12Resource> pSwapChainBuffer;
     };

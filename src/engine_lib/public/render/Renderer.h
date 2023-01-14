@@ -10,8 +10,6 @@
 // Custom.
 #include "misc/Error.h"
 #include "materials/ShaderManager.h"
-#include "render/RenderSettings.h"
-#include "misc/ProjectPaths.h"
 
 namespace ne {
     class Game;
@@ -19,6 +17,7 @@ namespace ne {
     class PsoManager;
     class ShaderConfiguration;
     class RenderSettings;
+    class GpuResourceManager;
 
     /**
      * Defines a base class for renderers to implement.
@@ -149,6 +148,15 @@ namespace ne {
         PsoManager* getPsoManager() const;
 
         /**
+         * Returns GPU resource manager.
+         *
+         * @warning Do not delete (free) returned pointer.
+         *
+         * @return GPU resource manager.
+         */
+        GpuResourceManager* getResourceManager() const;
+
+        /**
          * Returns mutex used when reading or writing to render resources.
          * Usually used with @ref flushCommandQueue.
          *
@@ -210,8 +218,20 @@ namespace ne {
          */
         virtual bool isInitialized() const = 0;
 
-        /** Initializes render settings, must be called in the beginning of the constructor. */
-        void initializeRenderSettings();
+        /**
+         * Initializes some parts of the renderer that require final renderer object to be constructed.
+         *
+         * @remark Must be called by derived classes in constructor.
+         */
+        void initializeRenderer();
+
+        /**
+         * Initializes resource manager.
+         *
+         * @remark Must be called by derived classes after base initialization
+         * (i.e. in DirectX after device and video adapter were created).
+         */
+        void initializeResourceManager();
 
     private:
         /**
@@ -223,8 +243,14 @@ namespace ne {
          */
         void updateShaderConfiguration();
 
+        /** Initializes @ref mtxRenderSettings. */
+        void initializeRenderSettings();
+
         /** Lock when reading or writing to render resources. Usually used with @ref flushCommandQueue. */
         std::recursive_mutex mtxRwRenderResources;
+
+        /** Used to create various GPU resources. */
+        std::unique_ptr<GpuResourceManager> pResourceManager;
 
         /** Used to compile shaders. */
         std::unique_ptr<ShaderManager> pShaderManager;

@@ -65,66 +65,12 @@ namespace ne {
         pRenderer = Renderer::create(this);
     }
 
-    void Game::onTickFinished() { runGarbageCollection(); }
-
-    void Game::runGarbageCollection(bool bForce) {
-        // Make sure this function is being executed on the main thread.
-        const auto currentThreadId = std::this_thread::get_id();
-        if (currentThreadId != mainThreadId) {
-            std::stringstream currentThreadIdString;
-            currentThreadIdString << currentThreadId;
-
-            std::stringstream mainThreadIdString;
-            mainThreadIdString << mainThreadId;
-
-            Error err(fmt::format(
-                "an attempt was made to call a function that should only be called on the main thread "
-                "in a non main thread (main thread ID: {}, current thread ID: {})",
-                mainThreadIdString.str(),
-                currentThreadIdString.str()));
-            err.showError();
-            throw std::runtime_error(err.getError());
+    void Game::destroy() {
+        if (bIsDestroyed) {
+            return;
         }
+        bIsDestroyed = true;
 
-        if (!bForce) {
-            // Check if we need to run garbage collector.
-            const auto iTimeSinceLastGcInSec = std::chrono::duration_cast<std::chrono::seconds>(
-                                                   std::chrono::steady_clock::now() - lastGcRunTime)
-                                                   .count();
-            if (iTimeSinceLastGcInSec < iGcRunIntervalInSec) {
-                return;
-            }
-        }
-
-        // Run garbage collector.
-        Logger::get().info("running garbage collector...", sGarbageCollectorLogCategory);
-
-        // Measure the time it takes to run garbage collector.
-        const auto start = std::chrono::steady_clock::now();
-        gc_collector()->collect();
-        const auto end = std::chrono::steady_clock::now();
-        const auto durationInMs =
-            static_cast<float>(std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count()) *
-            0.000001f;
-
-        // Limit precision to 1 digit.
-        std::stringstream durationStream;
-        durationStream << std::fixed << std::setprecision(1) << durationInMs;
-
-        // Log results.
-        Logger::get().info(
-            fmt::format(
-                "garbage collector has finished, took {} millisecond(s): "
-                "freed {} object(s) ({} left alive)",
-                durationStream.str(),
-                gc_collector()->getLastFreedObjectsCount(),
-                gc_collector()->getAliveObjectsCount()),
-            sGarbageCollectorLogCategory);
-
-        lastGcRunTime = std::chrono::steady_clock::now();
-    }
-
-    Game::~Game() {
         threadPool.stop();
 
         // Destroy world if needed.
@@ -190,6 +136,67 @@ namespace ne {
                 sGameLogCategory);
         }
     }
+
+    void Game::onTickFinished() { runGarbageCollection(); }
+
+    void Game::runGarbageCollection(bool bForce) {
+        // Make sure this function is being executed on the main thread.
+        const auto currentThreadId = std::this_thread::get_id();
+        if (currentThreadId != mainThreadId) {
+            std::stringstream currentThreadIdString;
+            currentThreadIdString << currentThreadId;
+
+            std::stringstream mainThreadIdString;
+            mainThreadIdString << mainThreadId;
+
+            Error err(fmt::format(
+                "an attempt was made to call a function that should only be called on the main thread "
+                "in a non main thread (main thread ID: {}, current thread ID: {})",
+                mainThreadIdString.str(),
+                currentThreadIdString.str()));
+            err.showError();
+            throw std::runtime_error(err.getError());
+        }
+
+        if (!bForce) {
+            // Check if we need to run garbage collector.
+            const auto iTimeSinceLastGcInSec = std::chrono::duration_cast<std::chrono::seconds>(
+                                                   std::chrono::steady_clock::now() - lastGcRunTime)
+                                                   .count();
+            if (iTimeSinceLastGcInSec < iGcRunIntervalInSec) {
+                return;
+            }
+        }
+
+        // Run garbage collector.
+        Logger::get().info("running garbage collector...", sGarbageCollectorLogCategory);
+
+        // Measure the time it takes to run garbage collector.
+        const auto start = std::chrono::steady_clock::now();
+        gc_collector()->collect();
+        const auto end = std::chrono::steady_clock::now();
+        const auto durationInMs =
+            static_cast<float>(std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count()) *
+            0.000001f;
+
+        // Limit precision to 1 digit.
+        std::stringstream durationStream;
+        durationStream << std::fixed << std::setprecision(1) << durationInMs;
+
+        // Log results.
+        Logger::get().info(
+            fmt::format(
+                "garbage collector has finished, took {} millisecond(s): "
+                "freed {} object(s) ({} left alive)",
+                durationStream.str(),
+                gc_collector()->getLastFreedObjectsCount(),
+                gc_collector()->getAliveObjectsCount()),
+            sGarbageCollectorLogCategory);
+
+        lastGcRunTime = std::chrono::steady_clock::now();
+    }
+
+    Game::~Game() { destroy(); }
 
     Game* Game::get() { return pLastCreatedGame; }
 

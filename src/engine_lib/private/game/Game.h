@@ -197,11 +197,22 @@ namespace ne {
         Game(Window* pWindow);
 
         /**
+         * Contains destructor logic: runs GC for the last time, destroys game instance, etc.
+         *
+         * @warning Should be called from the main thread.
+         *
+         * @param Can be safely called multiple times (additional calls will be ignored).
+         *
+         * @remark Can be used to destroy the game without clearing the actual game pointer.
+         */
+        void destroy();
+
+        /**
          * Set GameInstance derived class to react to
          * user inputs, window events and etc.
          */
         template <typename MyGameInstance>
-        requires std::derived_from<MyGameInstance, GameInstance>
+            requires std::derived_from<MyGameInstance, GameInstance>
         void setGameInstance() {
             pGameInstance = std::make_unique<MyGameInstance>(pWindow, &inputManager);
             pGameInstance->onGameStarted();
@@ -346,6 +357,9 @@ namespace ne {
 
         /** ID of the main thread. */
         std::thread::id mainThreadId;
+
+        /** Whether @ref destroy was called or not. */
+        bool bIsDestroyed = false;
 
         /** Name of the category used for logging. */
         inline static const char* sGameLogCategory = "Game";

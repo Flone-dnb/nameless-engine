@@ -1,0 +1,28 @@
+
+["0.d5407ca4-3c2e-4a5a-9ff3-1262b6a4d264"]
+pMaterial = "reflected type, see other sub-section"
+relativeLocation = [
+0.0,
+0.0,
+0.0,
+]
+meshData = "MeshNodeSerializationTestForBackwardsCompatibility.0.meshData.toml"
+relativeRotation = [
+0.0,
+0.0,
+0.0,
+]
+relativeScale = [
+1.0,
+1.0,
+1.0,
+]
+sName = "Mesh Node"
+
+["0.0.a603fa3a-e9c2-4c38-bb4c-76384ef001f4"]
+sVertexShaderName = "engine.default.vs"
+bUseTransparency = false
+sPixelShaderName = "engine.default.ps"
+sName = "Material"
+".field_name" = "pMaterial"
+

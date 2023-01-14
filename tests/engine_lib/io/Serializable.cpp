@@ -85,8 +85,8 @@ TEST_CASE("make sure relative path to the file the object was deserialized from 
     REQUIRE(!pDeserialized->getPathDeserializedFromRelativeToRes().has_value());
 
     // Cleanup.
-    std::filesystem::remove_all(ProjectPaths::getDirectoryForResources(ResourceDirectory::ROOT) / "test");
-    std::filesystem::remove(pathToFileInTemp);
+    ConfigManager::removeFile(pathToFileInRes);
+    ConfigManager::removeFile(pathToFileInTemp);
 }
 
 TEST_CASE("serialize and deserialize with a backup file") {
@@ -348,7 +348,8 @@ TEST_CASE("deserialize a node tree that references external node") {
     }
 
     // Cleanup.
-    std::filesystem::remove_all(ProjectPaths::getDirectoryForResources(ResourceDirectory::ROOT) / "test");
+    ConfigManager::removeFile(pathToCustomNodeFileInRes);
+    ConfigManager::removeFile(pathToNodeTreeFileInRes);
     gc_collector()->collect();
     REQUIRE(Node::getAliveNodeCount() == 0);
     REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
@@ -493,7 +494,8 @@ TEST_CASE("deserialize a node tree that references external node tree") {
     }
 
     // Cleanup.
-    std::filesystem::remove_all(ProjectPaths::getDirectoryForResources(ResourceDirectory::ROOT) / "test");
+    ConfigManager::removeFile(pathToCustomNodeTreeFileInRes);
+    ConfigManager::removeFile(pathToNodeTreeFileInRes);
     gc_collector()->collect();
     REQUIRE(Node::getAliveNodeCount() == 0);
     REQUIRE(gc_collector()->getAliveObjectsCount() == 0);

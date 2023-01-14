@@ -498,3 +498,64 @@ TEST_CASE("serialize and deserialize MeshNode as part of a node tree with origin
     REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
     REQUIRE(Material::getTotalMaterialCount() == 0);
 }
+
+TEST_CASE("MeshNode's meshdata deserialization backwards compatibility") {
+    using namespace ne;
+
+    class TestGameInstance : public GameInstance {
+    public:
+        TestGameInstance(Window* pGameWindow, InputManager* pInputManager)
+            : GameInstance(pGameWindow, pInputManager) {}
+        virtual void onGameStarted() override {
+            createWorld();
+
+            const std::filesystem::path pathToFileInTemp =
+                ProjectPaths::getDirectoryForResources(ResourceDirectory::ROOT) / "test" / "meshnode" /
+                "MeshNodeSerializationTestForBackwardsCompatibility.toml";
+
+            // Create mesh data.
+            MeshVertex vertex1, vertex2;
+            vertex1.position = glm::vec3(5.0f, 15.0f, -5.0f);
+            vertex1.uv = glm::vec2(10.0f, -9.0f);
+            vertex2.position = glm::vec3(-1.0f, -2.0f, -3.0f);
+            vertex2.uv = glm::vec2(-1.0f, -2.0f);
+
+            // Deserialize.
+            auto result = Serializable::deserialize<gc, MeshNode>(pathToFileInTemp);
+            if (std::holds_alternative<Error>(result)) {
+                Error error = std::get<Error>(std::move(result));
+                error.addEntry();
+                INFO(error.getError());
+                REQUIRE(false);
+            }
+            const auto pMeshNode = std::get<gc<MeshNode>>(std::move(result));
+
+            // Check.
+            const auto mtxMeshData = pMeshNode->getMeshData();
+            std::scoped_lock guard(*mtxMeshData.first);
+            REQUIRE(mtxMeshData.second->getVertices()->size() == 2);
+            REQUIRE(mtxMeshData.second->getIndices()->size() == 2);
+            REQUIRE(mtxMeshData.second->getVertices()->at(0) == vertex1);
+            REQUIRE(mtxMeshData.second->getVertices()->at(1) == vertex2);
+            REQUIRE(mtxMeshData.second->getIndices()->at(0) == 0);
+            REQUIRE(mtxMeshData.second->getIndices()->at(1) == 1);
+
+            getWindow()->close();
+        }
+        virtual ~TestGameInstance() override {}
+    };
+
+    auto result = Window::getBuilder().withVisibility(false).build();
+    if (std::holds_alternative<Error>(result)) {
+        Error error = std::get<Error>(std::move(result));
+        error.addEntry();
+        INFO(error.getError());
+        REQUIRE(false);
+    }
+
+    const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
+    pMainWindow->processEvents<TestGameInstance>();
+
+    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+    REQUIRE(Material::getTotalMaterialCount() == 0);
+}

@@ -18,7 +18,8 @@ TEST_CASE("compile HLSL vertex shader") {
     public:
         TestGameInstance(Window* pGameWindow, InputManager* pInputManager)
             : GameInstance(pGameWindow, pInputManager) {
-            auto shaderPath = std::filesystem::temp_directory_path() / sTopLevelShaderName;
+            auto shaderPath = ProjectPaths::getDirectoryForResources(ResourceDirectory::ROOT) / "test" /
+                              "temp" / sTopLevelShaderName;
             shaderPath += ".hlsl";
 
             // Create a simple shader file.
@@ -71,7 +72,8 @@ TEST_CASE("compile HLSL pixel shader") {
     public:
         TestGameInstance(Window* pGameWindow, InputManager* pInputManager)
             : GameInstance(pGameWindow, pInputManager) {
-            auto shaderPath = std::filesystem::temp_directory_path() / sTopLevelShaderName;
+            auto shaderPath = ProjectPaths::getDirectoryForResources(ResourceDirectory::ROOT) / "test" /
+                              "temp" / sTopLevelShaderName;
             shaderPath += ".hlsl";
 
             // Create a simple shader file.
@@ -124,7 +126,8 @@ TEST_CASE("compile HLSL compute shader") {
     public:
         TestGameInstance(Window* pGameWindow, InputManager* pInputManager)
             : GameInstance(pGameWindow, pInputManager) {
-            auto shaderPath = std::filesystem::temp_directory_path() / sTopLevelShaderName;
+            auto shaderPath = ProjectPaths::getDirectoryForResources(ResourceDirectory::ROOT) / "test" /
+                              "temp" / sTopLevelShaderName;
             shaderPath += ".hlsl";
 
             // Create a simple shader file.
@@ -175,7 +178,8 @@ TEST_CASE("find valid HLSL shader cache") {
     public:
         TestGameInstance(Window* pGameWindow, InputManager* pInputManager)
             : GameInstance(pGameWindow, pInputManager) {
-            auto shaderPath = std::filesystem::temp_directory_path() / sTopLevelShaderName;
+            auto shaderPath = ProjectPaths::getDirectoryForResources(ResourceDirectory::ROOT) / "test" /
+                              "temp" / sTopLevelShaderName;
             shaderPath += ".hlsl";
 
             // Create a simple shader file (initial file).
@@ -241,7 +245,8 @@ TEST_CASE("invalidate HLSL shader cache - ENTRY_FUNCTION_NAME_CHANGED") {
     public:
         TestGameInstance(Window* pGameWindow, InputManager* pInputManager)
             : GameInstance(pGameWindow, pInputManager) {
-            auto shaderPath = std::filesystem::temp_directory_path() / sTopLevelShaderName;
+            auto shaderPath = ProjectPaths::getDirectoryForResources(ResourceDirectory::ROOT) / "test" /
+                              "temp" / sTopLevelShaderName;
             shaderPath += ".hlsl";
 
             // Create a simple shader file (initial file).
@@ -316,7 +321,8 @@ TEST_CASE("invalidate HLSL shader cache - SHADER_TYPE_CHANGED") {
     public:
         TestGameInstance(Window* pGameWindow, InputManager* pInputManager)
             : GameInstance(pGameWindow, pInputManager) {
-            auto shaderPath = std::filesystem::temp_directory_path() / sTopLevelShaderName;
+            auto shaderPath = ProjectPaths::getDirectoryForResources(ResourceDirectory::ROOT) / "test" /
+                              "temp" / sTopLevelShaderName;
             shaderPath += ".hlsl";
 
             // Create a simple shader file (initial file).
@@ -388,7 +394,8 @@ TEST_CASE("invalidate HLSL shader cache - DEFINED_SHADER_MACROS_CHANGED") {
     public:
         TestGameInstance(Window* pGameWindow, InputManager* pInputManager)
             : GameInstance(pGameWindow, pInputManager) {
-            auto shaderPath = std::filesystem::temp_directory_path() / sTopLevelShaderName;
+            auto shaderPath = ProjectPaths::getDirectoryForResources(ResourceDirectory::ROOT) / "test" /
+                              "temp" / sTopLevelShaderName;
             shaderPath += ".hlsl";
 
             // Create a simple shader file (initial file).
@@ -481,7 +488,8 @@ TEST_CASE("invalidate HLSL shader cache - SHADER_SOURCE_FILE_CHANGED") {
     public:
         TestGameInstance(Window* pGameWindow, InputManager* pInputManager)
             : GameInstance(pGameWindow, pInputManager) {
-            auto shaderPath = std::filesystem::temp_directory_path() / sTopLevelShaderName;
+            auto shaderPath = ProjectPaths::getDirectoryForResources(ResourceDirectory::ROOT) / "test" /
+                              "temp" / sTopLevelShaderName;
             shaderPath += ".hlsl";
 
             // Create a simple shader file (initial file).
@@ -554,7 +562,8 @@ TEST_CASE("invalidate HLSL shader cache - SHADER_INCLUDE_TREE_CONTENT_CHANGED") 
     public:
         TestGameInstance(Window* pGameWindow, InputManager* pInputManager)
             : GameInstance(pGameWindow, pInputManager) {
-            auto shaderPath = std::filesystem::temp_directory_path() / sTopLevelShaderName;
+            auto shaderPath = ProjectPaths::getDirectoryForResources(ResourceDirectory::ROOT) / "test" /
+                              "temp" / sTopLevelShaderName;
             shaderPath += ".hlsl";
 
             // Create the following shader tree:
@@ -574,13 +583,15 @@ TEST_CASE("invalidate HLSL shader cache - SHADER_INCLUDE_TREE_CONTENT_CHANGED") 
             shaderFile.close();
 
             // foo.hlsl
-            const auto fooShaderPath = std::filesystem::temp_directory_path() / "foo.hlsl";
+            const auto fooShaderPath = ProjectPaths::getDirectoryForResources(ResourceDirectory::ROOT) /
+                                       "test" / "temp" / "foo.hlsl";
             shaderFile.open(fooShaderPath);
             REQUIRE(shaderFile.is_open());
             shaderFile << "void foo(){};\n";
             shaderFile.close();
 
-            const auto testShadersDirPath = std::filesystem::temp_directory_path() / "test_shaders";
+            const auto testShadersDirPath = ProjectPaths::getDirectoryForResources(ResourceDirectory::ROOT) /
+                                            "test" / "temp" / "test_shaders";
             std::filesystem::create_directory(testShadersDirPath);
 
             // test_shaders/bar.hlsl

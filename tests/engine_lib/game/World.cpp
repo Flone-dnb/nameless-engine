@@ -185,7 +185,8 @@ TEST_CASE("create, serialize and deserialize world") {
 
     private:
         const std::filesystem::path fullPathToNodeTreeFile =
-            std::filesystem::temp_directory_path() / "TESTING_TestWorld_TESTING.toml";
+            ProjectPaths::getDirectoryForResources(ResourceDirectory::ROOT) / "test" / "temp" /
+            "TESTING_TestWorld_TESTING.toml";
     };
 
     auto result = Window::getBuilder().withVisibility(false).build();

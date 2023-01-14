@@ -19,7 +19,8 @@ TEST_CASE("serialize and deserialize MeshNode") {
             createWorld();
 
             const std::filesystem::path pathToFileInTemp =
-                std::filesystem::temp_directory_path() / "TESTING_MeshNodeSerialization_TESTING.toml";
+                ProjectPaths::getDirectoryForResources(ResourceDirectory::ROOT) / "test" / "temp" /
+                "TESTING_MeshNodeSerialization_TESTING.toml";
 
             // Create mesh data.
             MeshVertex vertex1, vertex2;
@@ -132,7 +133,8 @@ TEST_CASE("serialize and deserialize array of mesh vertices") {
     using namespace ne;
 
     const std::filesystem::path pathToFileInTemp =
-        std::filesystem::temp_directory_path() / "TESTING_MeshVerticesSerialization_TESTING.toml";
+        ProjectPaths::getDirectoryForResources(ResourceDirectory::ROOT) / "test" / "temp" /
+        "TESTING_MeshVerticesSerialization_TESTING.toml";
 
     MeshVertices vertices;
 
@@ -189,7 +191,8 @@ TEST_CASE("serialize and deserialize MeshNode as part of a node tree") {
             createWorld();
 
             const std::filesystem::path pathToFileInTemp =
-                std::filesystem::temp_directory_path() / "TESTING_MeshNodeTreeSerialization_TESTING.toml";
+                ProjectPaths::getDirectoryForResources(ResourceDirectory::ROOT) / "test" / "temp" /
+                "TESTING_MeshNodeTreeSerialization_TESTING.toml";
 
             // Create mesh data.
             MeshVertex vertex1, vertex2;

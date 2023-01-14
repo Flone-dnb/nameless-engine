@@ -438,7 +438,8 @@ TEST_CASE("serialize and deserialize SpatialNode") {
             createWorld();
 
             const std::filesystem::path pathToFileInTemp =
-                std::filesystem::temp_directory_path() / "TESTING_SpatialNodeSerialization_TESTING.toml";
+                ProjectPaths::getDirectoryForResources(ResourceDirectory::ROOT) / "test" / "temp" /
+                "TESTING_SpatialNodeSerialization_TESTING.toml";
 
             const auto location = glm::vec3(1.0f, -2.0f, 3.0f);
             const auto rotation = glm::vec3(-5.0f, 15.0f, -30.0f);

@@ -3,6 +3,7 @@
 
 // Custom.
 #include "io/ConfigManager.h"
+#include "misc/ProjectPaths.h"
 
 // External.
 #include "catch2/catch_test_macros.hpp"
@@ -66,7 +67,8 @@ TEST_CASE("create simple config file") {
 TEST_CASE("create simple config file using path") {
     using namespace ne;
 
-    std::filesystem::path testConfigPath = std::filesystem::temp_directory_path();
+    std::filesystem::path testConfigPath =
+        ProjectPaths::getDirectoryForResources(ResourceDirectory::ROOT) / "test" / "temp";
     testConfigPath /= "some folder";
     testConfigPath /= sTestConfigFileName;
 

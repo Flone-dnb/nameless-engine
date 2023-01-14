@@ -114,10 +114,12 @@ TEST_CASE("serialize and deserialize node tree") {
     using namespace ne;
 
     // Prepare paths.
-    const std::filesystem::path pathToFile = std::filesystem::temp_directory_path() /
+    const std::filesystem::path pathToFile = ProjectPaths::getDirectoryForResources(ResourceDirectory::ROOT) /
+                                             "test" / "temp" /
                                              "TESTING_NodeTree_TESTING"; // not specifying ".toml" on purpose
     const std::filesystem::path fullPathToFile =
-        std::filesystem::temp_directory_path() / "TESTING_NodeTree_TESTING.toml";
+        ProjectPaths::getDirectoryForResources(ResourceDirectory::ROOT) / "test" / "temp" /
+        "TESTING_NodeTree_TESTING.toml";
 
     {
         // Create nodes.

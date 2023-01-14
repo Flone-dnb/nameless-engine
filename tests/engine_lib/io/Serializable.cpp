@@ -13,13 +13,14 @@
 #include "catch2/catch_test_macros.hpp"
 
 TEST_CASE("make sure relative path to the file the object was deserialized from is valid") {
-    const std::string sRelativePathToFile = "test/test.toml";
+    const std::string sRelativePathToFile = "test/temp/test.toml";
 
     // Prepare paths to the file.
     const auto pathToFileInRes =
         ProjectPaths::getDirectoryForResources(ResourceDirectory::ROOT) / sRelativePathToFile;
     const std::filesystem::path pathToFileInTemp =
-        std::filesystem::temp_directory_path() / "TESTING_ReflectionTest_TESTING.toml";
+        std::filesystem::temp_directory_path() /
+        "TESTING_ReflectionTest_TESTING.toml"; // store outside of `res`
 
     // Serialize into the `res` directory.
     InventorySaveData data;
@@ -92,7 +93,8 @@ TEST_CASE("serialize and deserialize with a backup file") {
     using namespace ne;
 
     const std::filesystem::path fullPathToFile =
-        std::filesystem::temp_directory_path() / "TESTING_ReflectionTest1_TESTING.toml";
+        ProjectPaths::getDirectoryForResources(ResourceDirectory::ROOT) / "test" / "temp" /
+        "TESTING_ReflectionTest1_TESTING.toml";
 
     // Serialize to file with a backup.
     {
@@ -510,10 +512,11 @@ TEST_CASE("serialize and deserialize fields of different types") {
 
     // Prepare data.
     const std::filesystem::path pathToFile =
-        std::filesystem::temp_directory_path() /
+        ProjectPaths::getDirectoryForResources(ResourceDirectory::ROOT) / "test" / "temp" /
         "TESTING_ReflectionTest_TESTING"; // not specifying ".toml" on purpose
     const std::filesystem::path fullPathToFile =
-        std::filesystem::temp_directory_path() / "TESTING_ReflectionTest_TESTING.toml";
+        ProjectPaths::getDirectoryForResources(ResourceDirectory::ROOT) / "test" / "temp" /
+        "TESTING_ReflectionTest_TESTING.toml";
 
     // Create test instance with some fields.
     ReflectionOuterTestClass outerTestObj;
@@ -820,10 +823,11 @@ TEST_CASE("serialize and deserialize node") {
 
     // Prepare data.
     const std::filesystem::path pathToFile =
-        std::filesystem::temp_directory_path() /
+        ProjectPaths::getDirectoryForResources(ResourceDirectory::ROOT) / "test" / "temp" /
         "TESTING_MyCoolNode_TESTING"; // not specifying ".toml" on purpose
     const std::filesystem::path fullPathToFile =
-        std::filesystem::temp_directory_path() / "TESTING_MyCoolNode_TESTING.toml";
+        ProjectPaths::getDirectoryForResources(ResourceDirectory::ROOT) / "test" / "temp" /
+        "TESTING_MyCoolNode_TESTING.toml";
     const auto sCustomAttributeName = "Test Attribute";
     const auto sCustomAttributeValue = "142";
 
@@ -878,10 +882,11 @@ TEST_CASE("serialize and deserialize multiple nodes") {
 
     // Prepare data.
     const std::filesystem::path pathToFile =
-        std::filesystem::temp_directory_path() /
+        ProjectPaths::getDirectoryForResources(ResourceDirectory::ROOT) / "test" / "temp" /
         "TESTING_MyCoolNode_TESTING"; // not specifying ".toml" on purpose
     const std::filesystem::path fullPathToFile =
-        std::filesystem::temp_directory_path() / "TESTING_MyCoolNode_TESTING.toml";
+        ProjectPaths::getDirectoryForResources(ResourceDirectory::ROOT) / "test" / "temp" /
+        "TESTING_MyCoolNode_TESTING.toml";
     const auto sNode1CustomAttributeName = "node1_attribute";
     const auto sNode2CustomAttributeName = "node2_attribute";
 

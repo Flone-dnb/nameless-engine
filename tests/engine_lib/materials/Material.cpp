@@ -97,7 +97,8 @@ TEST_CASE("serialize and deserialize Material") {
             createWorld();
 
             const std::filesystem::path pathToFileInTemp =
-                std::filesystem::temp_directory_path() / "TESTING_MaterialSerialization_TESTING.toml";
+                ProjectPaths::getDirectoryForResources(ResourceDirectory::ROOT) / "test" / "temp" /
+                "TESTING_MaterialSerialization_TESTING.toml";
 
             {
                 // Create material.

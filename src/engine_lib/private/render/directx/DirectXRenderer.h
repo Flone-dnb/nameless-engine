@@ -101,7 +101,7 @@ namespace ne {
         /**
          * Blocks the current thread until the GPU finishes executing all queued commands up to this point.
          */
-        virtual void flushCommandQueue() override;
+        virtual void waitForGpuToFinishWorkUpToThisPoint() override;
 
         /**
          * Returns DirectX device.

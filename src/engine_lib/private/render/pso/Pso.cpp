@@ -35,7 +35,7 @@ namespace ne {
         // Make sure the renderer is no longer using this PSO or its resources.
         Logger::get().info(
             "PSO is being destroyed, flushing the command queue before being deleted", sPsoLogCategory);
-        getRenderer()->flushCommandQueue();
+        getRenderer()->waitForGpuToFinishWorkUpToThisPoint();
     }
 
     std::string Pso::constructUniquePsoIdentifier(

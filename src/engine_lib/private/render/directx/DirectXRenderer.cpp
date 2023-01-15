@@ -771,7 +771,7 @@ namespace ne {
     std::optional<Error> DirectXRenderer::updateRenderBuffers() {
         std::scoped_lock guard(*getRenderResourcesMutex());
 
-        flushCommandQueue();
+        waitForGpuToFinishWorkUpToThisPoint();
 
         // Get render settings.
         const auto pRenderSettings = getRenderSettings();
@@ -870,7 +870,7 @@ namespace ne {
 
     bool DirectXRenderer::isInitialized() const { return bIsDirectXInitialized; }
 
-    void DirectXRenderer::flushCommandQueue() {
+    void DirectXRenderer::waitForGpuToFinishWorkUpToThisPoint() {
         std::scoped_lock guardFrame(*getRenderResourcesMutex());
 
         const auto iFenceValue = iCurrentFence.fetch_add(1);

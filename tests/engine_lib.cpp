@@ -9,8 +9,11 @@
 #include <filesystem>
 
 // Custom.
-#include "catch2/catch_session.hpp"
 #include "misc/Globals.h"
+#include "misc/ProjectPaths.h"
+
+// External.
+#include "catch2/catch_session.hpp"
 
 int main() {
 // Enable run-time memory check for debug builds.
@@ -21,10 +24,15 @@ int main() {
 #endif
 
     // Clear any config files.
-    const std::filesystem::path basePath = ne::getBaseDirectoryForConfigs() / ne::getApplicationName();
+    const std::filesystem::path baseConfigPath = ne::getBaseDirectoryForConfigs() / ne::getApplicationName();
+    const auto baseTempPath =
+        ne::ProjectPaths::getDirectoryForResources(ne::ResourceDirectory::ROOT) / "test" / "temp";
 
-    if (std::filesystem::exists(basePath)) {
-        std::filesystem::remove_all(basePath);
+    if (std::filesystem::exists(baseConfigPath)) {
+        std::filesystem::remove_all(baseConfigPath);
+    }
+    if (std::filesystem::exists(baseTempPath)) {
+        std::filesystem::remove_all(baseTempPath);
     }
 
     Catch::Session().run();

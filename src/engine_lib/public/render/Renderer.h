@@ -99,7 +99,7 @@ namespace ne {
          *
          * @remark Typically used with @ref getRenderResourcesMutex.
          */
-        virtual void flushCommandQueue() = 0;
+        virtual void waitForGpuToFinishWorkUpToThisPoint() = 0;
 
         /**
          * Returns the current shader configuration (shader settings,
@@ -158,7 +158,7 @@ namespace ne {
 
         /**
          * Returns mutex used when reading or writing to render resources.
-         * Usually used with @ref flushCommandQueue.
+         * Usually used with @ref waitForGpuToFinishWorkUpToThisPoint.
          *
          * @return Mutex.
          */
@@ -246,7 +246,8 @@ namespace ne {
         /** Initializes @ref mtxRenderSettings. */
         void initializeRenderSettings();
 
-        /** Lock when reading or writing to render resources. Usually used with @ref flushCommandQueue. */
+        /** Lock when reading or writing to render resources. Usually used with @ref
+         * waitForGpuToFinishWorkUpToThisPoint. */
         std::recursive_mutex mtxRwRenderResources;
 
         /** Used to create various GPU resources. */

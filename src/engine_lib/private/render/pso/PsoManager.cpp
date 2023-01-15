@@ -181,7 +181,7 @@ namespace ne {
 
         // Make sure no drawing is happening and the GPU is not referencing any resources.
         std::scoped_lock guard(*pRenderer->getRenderResourcesMutex());
-        pRenderer->flushCommandQueue();
+        pRenderer->waitForGpuToFinishWorkUpToThisPoint();
 
         // Release resources.
         auto optionalError = pPsoManager->releaseInternalGraphicsPsosResources();

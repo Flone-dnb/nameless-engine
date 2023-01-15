@@ -385,7 +385,7 @@ namespace ne {
 
         // Make sure we don't render anything.
         std::scoped_lock drawGuard(*pRenderer->getRenderResourcesMutex());
-        pRenderer->flushCommandQueue();
+        pRenderer->waitForGpuToFinishWorkUpToThisPoint();
 
         // Create heap.
         D3D12_DESCRIPTOR_HEAP_DESC heapDesc;

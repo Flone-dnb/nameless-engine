@@ -192,7 +192,7 @@ TEST_CASE("serialize and deserialize MeshNode as part of a node tree") {
 
             const std::filesystem::path pathToFileInTemp =
                 ProjectPaths::getDirectoryForResources(ResourceDirectory::ROOT) / "test" / "temp" /
-                "TESTING_MeshNodeTreeSerialization_TESTING.toml";
+                "TESTING_MeshNodeTreeSerializationWithoutOriginalObject_TESTING.toml";
 
             // Create mesh data.
             MeshVertex vertex1, vertex2;

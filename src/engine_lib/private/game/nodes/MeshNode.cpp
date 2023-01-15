@@ -75,7 +75,7 @@ namespace ne {
             // Make sure the GPU is not using our constant buffers.
             const auto pRenderer = getGameInstance()->getWindow()->getRenderer();
             std::scoped_lock renderGuard(*pRenderer->getRenderResourcesMutex());
-            pRenderer->flushCommandQueue();
+            pRenderer->waitForGpuToFinishWorkUpToThisPoint();
 
             // Deallocate constant buffers.
             pShaderConstantBuffers = nullptr;

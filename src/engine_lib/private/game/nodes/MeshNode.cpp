@@ -4,10 +4,10 @@
 #include "materials/Material.h"
 #include "game/Window.h"
 #include "render/Renderer.h"
-#include "render/resources/FrameResourcesManager.h"
-#include "render/resources/GpuResourceManager.h"
-#include "render/resources/UploadBuffer.h"
-#include "render/GpuCommandList.h"
+#include "render/general/resources/FrameResourcesManager.h"
+#include "render/general/resources/GpuResourceManager.h"
+#include "render/general/resources/UploadBuffer.h"
+#include "render/general/GpuCommandList.h"
 
 namespace ne {
 

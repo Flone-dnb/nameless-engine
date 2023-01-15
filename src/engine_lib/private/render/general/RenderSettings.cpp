@@ -1,7 +1,7 @@
 #include "render/RenderSettings.h"
 
 #include "render/Renderer.h"
-#include "render/pso/PsoManager.h"
+#include "render/general/pso/PsoManager.h"
 #include "io/Logger.h"
 #include "misc/ProjectPaths.h"
 

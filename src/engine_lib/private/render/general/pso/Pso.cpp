@@ -3,7 +3,7 @@
 // Custom.
 #include "render/Renderer.h"
 #include "io/Logger.h"
-#include "render/pso/PsoManager.h"
+#include "render/general/pso/PsoManager.h"
 #include "materials/Material.h"
 #if defined(WIN32)
 #include "render/directx/DirectXRenderer.h"

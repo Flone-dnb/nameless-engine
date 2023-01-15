@@ -8,7 +8,7 @@
 #include <atomic>
 
 // Custom.
-#include "render/pso/Pso.h"
+#include "render/general/pso/Pso.h"
 
 namespace ne {
     class Renderer;

@@ -5,9 +5,9 @@
 #include "game/Window.h"
 #include "io/Logger.h"
 #include "materials/ShaderParameter.h"
-#include "render/pso/PsoManager.h"
+#include "render/general/pso/PsoManager.h"
 #include "render/RenderSettings.h"
-#include "render/resources/GpuResourceManager.h"
+#include "render/general/resources/GpuResourceManager.h"
 #if defined(WIN32)
 #include "render/directx/resources/DirectXResourceManager.h"
 #include "render/directx/DirectXRenderer.h"

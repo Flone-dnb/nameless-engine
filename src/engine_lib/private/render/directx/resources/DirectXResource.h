@@ -7,7 +7,7 @@
 
 // Custom.
 #include "misc/Error.h"
-#include "render/resources/GpuResource.h"
+#include "render/general/resources/GpuResource.h"
 #include "render/directx/descriptors/DirectXDescriptor.h"
 
 // External.

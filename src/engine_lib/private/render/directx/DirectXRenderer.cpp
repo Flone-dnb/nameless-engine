@@ -15,7 +15,7 @@
 #include "render/directx/resources/DirectXResource.h"
 #include "render/directx/resources/DirectXResourceManager.h"
 #include "materials/hlsl/HlslEngineShaders.hpp"
-#include "render/pso/PsoManager.h"
+#include "render/general/pso/PsoManager.h"
 #include "materials/ShaderFilesystemPaths.hpp"
 #include "materials/Material.h"
 
@@ -75,8 +75,6 @@ namespace ne {
             error->showError();
             throw std::runtime_error(error->getError());
         }
-
-        // TODO: create frame resources.
     }
 
     std::optional<Error> DirectXRenderer::enableDebugLayer() const {

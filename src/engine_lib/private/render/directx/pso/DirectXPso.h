@@ -1,7 +1,7 @@
 ﻿#pragma once
 
 // Custom.
-#include "render/pso/Pso.h"
+#include "render/general/pso/Pso.h"
 
 // External.
 #include "directx/d3dx12.h"

@@ -4,7 +4,7 @@
 #include <string>
 
 // Custom.
-#include "render/pso/PsoManager.h"
+#include "render/general/pso/PsoManager.h"
 #include "io/Serializable.h"
 
 #include "Material.generated.h"
@@ -173,6 +173,6 @@ namespace ne RNAMESPACE() {
 
         ne_Material_GENERATED
     };
-} // namespace )
+} // namespace ne RNAMESPACE()
 
 File_Material_GENERATED

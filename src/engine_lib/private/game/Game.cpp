@@ -11,7 +11,7 @@
 #include "misc/GC.hpp"
 #include "render/Renderer.h"
 #include "materials/Shader.h"
-#include "render/pso/PsoManager.h"
+#include "render/general/pso/PsoManager.h"
 #include "io/serializers/PrimitiveFieldSerializer.h"
 #include "io/serializers/StringFieldSerializer.h"
 #include "io/serializers/VectorFieldSerializer.h"

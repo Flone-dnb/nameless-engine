@@ -45,6 +45,10 @@ namespace ne {
     }
 
     void ThreadPool::addTask(const std::function<void()>& task) {
+        if (bIsShuttingDown.test()) {
+            return;
+        }
+
         std::scoped_lock guard(mtxTaskQueue.first);
         mtxTaskQueue.second.push(task);
 

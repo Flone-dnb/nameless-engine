@@ -470,24 +470,29 @@ TEST_CASE("capture a `gc` pointer in `std::function`") {
             : GameInstance(pGameWindow, pInputManager) {}
         virtual ~TestGameInstance() override {}
         virtual void onGameStarted() override {
-            pMyNode = gc_new<MyDerivedNode>();
-            auto pNode = gc_new<Node>();
-            pMyNode->addChildNode(pNode);
+            {
+                pMyNode = gc_new<MyDerivedNode>();
+                auto pNode = gc_new<Node>();
+                pMyNode->addChildNode(pNode);
 
-            std::function<void()> function = [pNode]() {};
-            // pMyNode->callback = [pMyNode]() {};         // not OK, leaks
+                std::function<void()> function = [pNode]() {};
+                // pMyNode->callback = [pMyNode]() {};         // not OK, leaks
 
-            pMyNode->startTimer();
+                pMyNode->startTimer();
 
-            // Test some engine functions.
-            addDeferredTask([&, pNode]() {
-                pNode->setName("deferred task finished");
-                bDeferredTaskFinished = true;
-            });
-            addTaskToThreadPool([&, pNode] {
-                pNode->setName("thread pool task finished");
-                bThreadPoolTaskFinished = true;
-            });
+                // Test some engine functions.
+                addDeferredTask([&, pNode]() {
+                    pNode->setName("deferred task finished");
+                    bDeferredTaskFinished = true;
+                });
+                addTaskToThreadPool([&, pNode] {
+                    pNode->setName("thread pool task finished");
+                    bThreadPoolTaskFinished = true;
+                });
+            }
+
+            // This is not really an honest test,
+            // run garbage collection here to get a crash (not 100% reproducible).
         }
         virtual void onBeforeNewFrame(float fTimeSincePrevCallInSec) override {
             if (bDeferredTaskFinished && bThreadPoolTaskFinished && pMyNode->bTimerFinished) {

@@ -71,7 +71,12 @@ namespace ne {
         }
         bIsDestroyed = true;
 
+        // Make sure thread pool and deferred tasks are finished.
         threadPool.stop();
+        {
+            std::scoped_lock guard(mtxDeferredTasks.first);
+            mtxDeferredTasks.second = {};
+        }
 
         // Destroy world if needed.
         {
@@ -204,7 +209,7 @@ namespace ne {
         this->iGcRunIntervalInSec = std::clamp<long long>(iGcRunIntervalInSec, 30, 300);
     }
 
-    void Game::queueGarbageCollection(std::optional<std::function<void()>> onFinished) {
+    void Game::queueGarbageCollection(const std::optional<std::function<void()>>& onFinished) {
         addDeferredTask([this, onFinished]() {
             runGarbageCollection(true);
             if (onFinished.has_value()) {
@@ -249,23 +254,22 @@ namespace ne {
     }
 
     void Game::executeDeferredTasks() {
-        std::queue<std::function<void()>> localTasks;
-        {
-            std::scoped_lock<std::mutex> guard(mtxDeferredTasks.first);
-            if (mtxDeferredTasks.second.empty()) {
-                return;
-            }
+        std::scoped_lock guard(mtxDeferredTasks.first);
 
-            localTasks = std::move(mtxDeferredTasks.second);
-            mtxDeferredTasks.second = {};
-        }
-        while (!localTasks.empty()) {
-            localTasks.front()();
-            localTasks.pop();
+        while (!mtxDeferredTasks.second.empty()) {
+            mtxDeferredTasks.second.front()();
+            mtxDeferredTasks.second.pop();
         }
     }
 
-    void Game::addTaskToThreadPool(const std::function<void()>& task) { threadPool.addTask(task); }
+    void Game::addTaskToThreadPool(const std::function<void()>& task) {
+        if (bIsDestroyed) [[unlikely]] {
+            // Destructor is running, don't queue any more tasks.
+            return;
+        }
+
+        threadPool.addTask(task);
+    }
 
     void Game::createWorld(size_t iWorldSize) {
         std::scoped_lock guard(mtxWorld.first);
@@ -383,6 +387,11 @@ namespace ne {
     void Game::onWindowClose() const { pGameInstance->onWindowClose(); }
 
     void Game::addDeferredTask(const std::function<void()>& task) {
+        if (bIsDestroyed) [[unlikely]] {
+            // Destructor is running, don't queue any more tasks.
+            return;
+        }
+
         {
             std::scoped_lock guard(mtxDeferredTasks.first);
             mtxDeferredTasks.second.push(task);

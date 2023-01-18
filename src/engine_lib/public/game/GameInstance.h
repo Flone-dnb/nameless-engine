@@ -123,9 +123,12 @@ namespace ne {
          * Adds a function to be executed on the main thread next time @ref onBeforeNewFrame
          * is called.
          *
-         * @warning If you are using member functions as tasks you need to make
-         * sure that the owner object of these member functions will not be deleted until
+         * @warning If you are using a member function as a task you need to make
+         * sure that the owner object of this member function will not be deleted until
          * this task is finished. GameInstance member functions are safe to use.
+         *
+         * @remark In the task you don't need to check if the game is being destroyed,
+         * the engine makes sure all tasks are finished before the game is destroyed.
          *
          * @param task Function to execute.
          *
@@ -135,9 +138,12 @@ namespace ne {
         /**
          * Adds a function to be executed on the thread pool.
          *
-         * @warning If you are using member functions as tasks you need to make
-         * sure that the owner object of these member functions will not be deleted until
+         * @warning If you are using a member function as a task you need to make
+         * sure that the owner object of this member function will not be deleted until
          * this task is finished. GameInstance member functions are safe to use.
+         *
+         * @remark In the task you don't need to check if the game is being destroyed,
+         * the engine makes sure all tasks are finished before the game is destroyed.
          *
          * @param task Function to execute.
          */
@@ -199,9 +205,9 @@ namespace ne {
          * regularly (see @ref setGarbageCollectorRunInterval) but you can still call it anyway.
          *
          * @param onFinished Optional callback that will be triggered on the main thread
-         * when garbage collection is finished.
+         * when garbage collection is finished (queued as @ref addDeferredTask).
          */
-        void queueGarbageCollection(std::optional<std::function<void()>> onFinished);
+        void queueGarbageCollection(const std::optional<std::function<void()>>& onFinished);
 
         /**
          * Modifies the interval after which we need to run garbage collector again.

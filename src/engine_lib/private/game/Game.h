@@ -63,17 +63,22 @@ namespace ne {
          * such as when World is being destructed or some nodes are being detached and despawned.
          *
          * @param onFinished Optional callback that will be triggered on the main thread
-         * when garbage collection is finished.
+         * when garbage collection is finished (queued as @ref addDeferredTask).
          */
-        void queueGarbageCollection(std::optional<std::function<void()>> onFinished);
+        void queueGarbageCollection(const std::optional<std::function<void()>>& onFinished);
 
         /**
          * Adds a function to be executed on the main thread next time @ref onBeforeNewFrame
          * is called.
          *
-         * @warning If you are using member functions as callbacks you need to make
-         * sure that the owner object of these member functions will not be deleted until
+         * TODO: introduce a `std::move_only_function` overload (+ in the game instance)?
+         *
+         * @warning If you are using a member function as a task you need to make
+         * sure that the owner object of this member function will not be deleted until
          * this task is finished.
+         *
+         * @remark In the task you don't need to check if the game is being destroyed,
+         * the engine makes sure all tasks are finished before the game is destroyed.
          *
          * @param task Function to execute.
          *
@@ -83,11 +88,14 @@ namespace ne {
         /**
          * Adds a function to be executed on the thread pool.
          *
-         * TODO: introduce a `std::move_only_function` overload?
+         * TODO: introduce a `std::move_only_function` overload (+ in the game instance)?
          *
-         * @warning If you are using member functions as callbacks you need to make
-         * sure that the owner object of these member functions will not be deleted until
+         * @warning If you are using a member function as a task you need to make
+         * sure that the owner object of this member function will not be deleted until
          * this task is finished.
+         *
+         * @remark In the task you don't need to check if the game is being destroyed,
+         * the engine makes sure all tasks are finished before the game is destroyed.
          *
          * @param task Function to execute.
          */
@@ -344,7 +352,7 @@ namespace ne {
          * Mutex for read/write operations on deferred tasks queue.
          * Queue of functions to call on the main thread before each frame is rendered.
          */
-        std::pair<std::mutex, std::queue<std::function<void()>>> mtxDeferredTasks;
+        std::pair<std::recursive_mutex, std::queue<std::function<void()>>> mtxDeferredTasks;
 
         /** Binds action/axis names with input keys. */
         InputManager inputManager;

@@ -66,7 +66,7 @@ namespace ne {
         return {};
     }
 
-    void GameInstance::queueGarbageCollection(std::optional<std::function<void()>> onFinished) {
+    void GameInstance::queueGarbageCollection(const std::optional<std::function<void()>>& onFinished) {
         pGame->queueGarbageCollection(onFinished);
     }
 

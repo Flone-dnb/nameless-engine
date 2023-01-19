@@ -6,9 +6,6 @@
 #include <chrono>
 #include <vector>
 
-// Custom.
-#include "misc/GC.hpp"
-
 namespace ne {
     class Node;
 

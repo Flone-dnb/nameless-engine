@@ -7,15 +7,16 @@
 #include "fmt/core.h"
 
 namespace ne {
-    Timer::Timer(bool bWaitForCallbacksToFinishOnDestruction) {
-        this->bWaitForCallbacksToFinishOnDestruction = bWaitForCallbacksToFinishOnDestruction;
+    Timer::Timer(bool bWarnAboutWaitingForCallbackTooLong) {
+        this->bWarnAboutWaitingForCallbackTooLong = bWarnAboutWaitingForCallbackTooLong;
     }
 
     Timer::~Timer() {
         {
             std::scoped_lock guard(mtxTerminateTimerThread);
-            if (!timerThreadFuture.has_value())
+            if (!timerThreadFuture.has_value()) {
                 return;
+            }
 
             // Notify timer thread if it's running.
             bIsShuttingDown.test_and_set();
@@ -31,54 +32,7 @@ namespace ne {
                 fmt::format("a timer thread has finished with the following exception: {}", ex.what()), "");
         }
 
-        {
-            std::scoped_lock guard(mtxFuturesForStartedCallbackThreads.first);
-            if (!mtxFuturesForStartedCallbackThreads.second.empty()) {
-                const auto start = std::chrono::steady_clock::now();
-                for (auto& future : mtxFuturesForStartedCallbackThreads.second) {
-                    try {
-                        if (future.valid()) {
-                            future.get();
-                        }
-                    } catch (std::exception& ex) {
-                        Logger::get().error(
-                            fmt::format(
-                                "timer's callback function thread (user code) has finished with the "
-                                "following "
-                                "exception: {}",
-                                ex.what()),
-                            "");
-                    }
-                }
-                const auto end = std::chrono::steady_clock::now();
-                const auto durationInMs =
-                    static_cast<float>(
-                        std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count()) *
-                    0.000001f;
-
-                // Limit precision to 1 digit.
-                std::stringstream durationStream;
-                durationStream << std::fixed << std::setprecision(1) << durationInMs;
-
-                if (durationInMs < 1.0f) {
-                    // Information.
-                    Logger::get().info(
-                        fmt::format(
-                            "timer has finished waiting for started callback functions to finish, took {} "
-                            "millisecond",
-                            durationStream.str()),
-                        "");
-                } else {
-                    // Warning.
-                    Logger::get().warn(
-                        fmt::format(
-                            "timer has finished waiting for started callback functions to finish, took {} "
-                            "millisecond(s)",
-                            durationStream.str()),
-                        "");
-                }
-            }
-        }
+        waitForRunningCallbackThreadsToFinish();
     }
 
     void Timer::setCallbackForTimeout(
@@ -91,16 +45,18 @@ namespace ne {
         this->bIsLooping = bIsLooping;
     }
 
-    void Timer::start() { // NOLINT: shadowing member variable
-        if (bIsShuttingDown.test())
+    void Timer::start(bool bWaitForRunningCallbackThreadsToFinish) {
+        if (bIsShuttingDown.test()) {
             return;
+        }
 
         if (timerThreadFuture.has_value()) {
-            stop();
+            stop(bWaitForRunningCallbackThreadsToFinish);
         }
 
         std::scoped_lock guard(mtxTerminateTimerThread);
         bIsStopRequested.clear();
+
         if (callbackForTimeout.has_value()) {
             // Use a separate thread to wait for timeout.
             timerThreadFuture = std::async(
@@ -112,17 +68,22 @@ namespace ne {
         }
     }
 
-    void Timer::stop() {
+    void Timer::stop(bool bWaitForRunningCallbackThreadsToFinish) {
         {
             std::scoped_lock guard(mtxTerminateTimerThread);
 
             bIsStopRequested.test_and_set();
 
             // Notify timer thread if it's running.
-            if (!timerThreadFuture.has_value())
+            if (!timerThreadFuture.has_value()) {
                 return;
+            }
 
             cvTerminateTimerThread.notify_one();
+
+            if (bWaitForRunningCallbackThreadsToFinish) {
+                waitForRunningCallbackThreadsToFinish();
+            }
         }
 
         try {
@@ -159,10 +120,10 @@ namespace ne {
             if (callbackForTimeout.has_value()) {
                 // Callback was set, so the timer thread is used.
                 return false;
-            } else {
-                // No callback was set, being used as a regular timer.
-                return !bIsStopRequested.test();
             }
+
+            // No callback was set, being used as a regular timer.
+            return !bIsStopRequested.test();
         }
 
         if (!timerThreadFuture->valid()) {
@@ -186,15 +147,60 @@ namespace ne {
                 guard, timeToWaitInMs, [this] { return bIsShuttingDown.test() || bIsStopRequested.test(); });
 
             if (!bIsShuttingDown.test() && !bIsStopRequested.test() && callbackForTimeout.has_value()) {
-                if (bWaitForCallbacksToFinishOnDestruction) {
-                    std::scoped_lock guard1(mtxFuturesForStartedCallbackThreads.first);
-                    mtxFuturesForStartedCallbackThreads.second.push_back(std::async(
-                        std::launch::async, [callback = callbackForTimeout.value()]() { callback(); }));
-                } else {
-                    auto handle = std::thread([callback = callbackForTimeout.value()]() { callback(); });
-                    handle.detach();
-                }
+                std::scoped_lock guard1(mtxStartedCallbackThreads.first);
+                mtxStartedCallbackThreads.second.push_back(
+                    std::thread([&]() { callbackForTimeout->operator()(); }));
             }
         } while (!bIsShuttingDown.test() && !bIsStopRequested.test() && bIsLooping);
+    }
+
+    void Timer::waitForRunningCallbackThreadsToFinish() {
+        std::scoped_lock guard(mtxStartedCallbackThreads.first);
+        if (!mtxStartedCallbackThreads.second.empty()) {
+            const auto start = std::chrono::steady_clock::now();
+            for (auto& thread : mtxStartedCallbackThreads.second) {
+                try {
+                    thread.join();
+                } catch (std::exception& ex) {
+                    Logger::get().error(
+                        fmt::format(
+                            "timer's callback function thread (user code) has finished with the "
+                            "following exception: {}",
+                            ex.what()),
+                        "");
+                }
+            }
+            const auto end = std::chrono::steady_clock::now();
+            const auto durationInMs =
+                static_cast<float>(
+                    std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count()) *
+                0.000001F;
+
+            // Limit precision to 1 digit.
+            std::stringstream durationStream;
+            durationStream << std::fixed << std::setprecision(1) << durationInMs;
+
+            if (durationInMs < 1.0F || !bWarnAboutWaitingForCallbackTooLong) {
+                // Information.
+                Logger::get().info(
+                    fmt::format(
+                        "timer has finished waiting for started callback functions to finish, took {} "
+                        "millisecond",
+                        durationStream.str()),
+                    "");
+            } else {
+                // Warning.
+                Logger::get().warn(
+                    fmt::format(
+                        "timer has finished waiting for started callback functions to finish, took {} "
+                        "millisecond(s)\n"
+                        "(hint: specify `bWarnAboutWaitingForCallbackTooLong` as `false` to timer "
+                        "constructor to convert this message category from `warning` to `info`)",
+                        durationStream.str()),
+                    "");
+            }
+
+            mtxStartedCallbackThreads.second.clear();
+        }
     }
 } // namespace ne

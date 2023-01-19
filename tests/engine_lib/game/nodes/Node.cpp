@@ -440,28 +440,33 @@ TEST_CASE("test GC performance and stability with nodes") {
     REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
 }
 
-TEST_CASE("capture a `gc` pointer in `std::function`") {
+TEST_CASE("use `Timer` with node's member function while the node is being garbage collected") {
     using namespace ne;
 
     class MyDerivedNode : public Node {
     public:
         MyDerivedNode() = default;
-        virtual ~MyDerivedNode() override = default;
+        virtual ~MyDerivedNode() override {
+            timer.stop(true); // always remember to stop the timer in destructor
+        }
 
         void startTimer() {
             // seems like a typical timer usage
             timer.setCallbackForTimeout(1, [&]() { myCallback(); });
-            timer.start();
+            timer.start(true);
         }
 
-        std::function<void()> callback;
-
-        bool bTimerFinished = false;
-        int iAnswer = 0;
+        bool bCallbackRunning = false;
 
     protected:
-        Timer timer{true};
-        void myCallback() { bTimerFinished = true; }
+        Timer timer{false}; // don't warn about waiting too long
+        std::string sSomePrivateString = "Hello!";
+        void myCallback() {
+            bCallbackRunning = true;
+            std::this_thread::sleep_for(std::chrono::seconds(1));
+            sSomePrivateString = "It seems to work.";
+            getGameInstance()->getWindow()->close();
+        }
     };
 
     class TestGameInstance : public GameInstance {
@@ -470,40 +475,23 @@ TEST_CASE("capture a `gc` pointer in `std::function`") {
             : GameInstance(pGameWindow, pInputManager) {}
         virtual ~TestGameInstance() override {}
         virtual void onGameStarted() override {
+            REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+
             {
-                pMyNode = gc_new<MyDerivedNode>();
-                auto pNode = gc_new<Node>();
-                pMyNode->addChildNode(pNode);
-
-                std::function<void()> function = [pNode]() {};
-                // pMyNode->callback = [pMyNode]() {};         // not OK, leaks
-
+                auto pMyNode = gc_new<MyDerivedNode>();
                 pMyNode->startTimer();
-
-                // Test some engine functions.
-                addDeferredTask([&, pNode]() {
-                    pNode->setName("deferred task finished");
-                    bDeferredTaskFinished = true;
-                });
-                addTaskToThreadPool([&, pNode] {
-                    pNode->setName("thread pool task finished");
-                    bThreadPoolTaskFinished = true;
-                });
+                while (!pMyNode->bCallbackRunning) {
+                    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+                };
             }
 
-            // This is not really an honest test,
-            // run garbage collection here to get a crash (not 100% reproducible).
-        }
-        virtual void onBeforeNewFrame(float fTimeSincePrevCallInSec) override {
-            if (bDeferredTaskFinished && bThreadPoolTaskFinished && pMyNode->bTimerFinished) {
-                getWindow()->close();
-            }
-        }
+            // timer is still running
+            REQUIRE(gc_collector()->getAliveObjectsCount() == 2);
 
-    private:
-        gc<MyDerivedNode> pMyNode;
-        bool bDeferredTaskFinished = false;
-        bool bThreadPoolTaskFinished = false;
+            gc_collector()->fullCollect(); // waiting for callback to finish
+
+            REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+        }
     };
 
     auto result = Window::getBuilder().withVisibility(false).build();

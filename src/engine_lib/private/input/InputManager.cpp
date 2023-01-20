@@ -406,9 +406,9 @@ namespace ne {
 
         if (vKeys.empty()) {
             return {};
-        } else {
-            return vKeys;
         }
+
+        return vKeys;
     }
 
     std::optional<std::vector<std::pair<KeyboardKey, KeyboardKey>>>
@@ -463,8 +463,7 @@ namespace ne {
 
         // Fill axis.
         for (size_t i = 0; i < vPlusKeys.size(); i++) {
-            vAxis.push_back(
-                std::make_pair<KeyboardKey, KeyboardKey>(std::move(vPlusKeys[i]), std::move(vMinusKeys[i])));
+            vAxis.push_back(std::make_pair(vPlusKeys[i], vMinusKeys[i]));
         }
 
         return vAxis;
@@ -475,22 +474,11 @@ namespace ne {
 
         const auto stateIt = axisState.find(sAxisName);
         if (stateIt == axisState.end()) {
-            return 0.0f;
+            return 0.0F;
         }
 
         return static_cast<float>(stateIt->second.second);
     }
-
-    //    bool InputManager::getCurrentActionEventState(const std::string& sActionName) {
-    //        std::scoped_lock<std::recursive_mutex> guard(mtxActionEvents);
-
-    //        const auto stateIt = actionState.find(sActionName);
-    //        if (stateIt == actionState.end()) {
-    //            return false;
-    //        }
-
-    //        return stateIt->second.second;
-    //    }
 
     bool InputManager::removeActionEvent(const std::string& sActionName) {
         std::scoped_lock<std::recursive_mutex> guard(mtxActionEvents);

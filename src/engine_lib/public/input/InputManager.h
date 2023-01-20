@@ -237,18 +237,6 @@ namespace ne {
          */
         float getCurrentAxisEventState(const std::string& sAxisName);
 
-        // Will use `isActionJust...` functions instead.
-        //        /**
-        //         * Returns the current value of an action event.
-        //         * This value is equal to the last value passed to GameInstance::onInputActionEvent.
-        //         *
-        //         * @param sActionName Name of the action event that you used in @ref addActionEvent.
-        //         *
-        //         * @return 'false' if action event with this name does not exist, 'true' if at least one
-        //         * key/button associated with this action is pressed, 'false' if all released (not pressed).
-        //         */
-        //        bool getCurrentActionEventState(const std::string& sActionName);
-
         /**
          * Removes an action event with the specified name.
          *

@@ -345,7 +345,7 @@ TEST_CASE("remove file") {
     REQUIRE(!std::filesystem::exists(pathToFirstFileBackup));
 
     // See the only second file exists.
-    auto vFiles = ConfigManager::getAllFiles(ConfigCategory::PROGRESS);
+    auto vFiles = ConfigManager::getAllFileNames(ConfigCategory::PROGRESS);
     REQUIRE(vFiles.size() == 1);
     REQUIRE(vFiles[0] == sSecondFileName);
 
@@ -378,8 +378,12 @@ TEST_CASE("get all config files of category (with backup test)") {
     auto backupFile = manager.getFilePath();
     backupFile += ".old";
 
-    REQUIRE(std::filesystem::exists(manager.getFilePath()));
+    REQUIRE(std::filesystem::exists(firstFilePath));
     REQUIRE(std::filesystem::exists(backupFile));
+
+    auto vFiles = ConfigManager::getAllFileNames(ConfigCategory::PROGRESS);
+    REQUIRE(vFiles.size() == 1);
+    REQUIRE(vFiles[0] == firstFilePath.stem().string()); // make sure there's no file extension
 
     const std::string sSecondFileName = std::string(sTestConfigFileName) + "2";
 
@@ -396,21 +400,21 @@ TEST_CASE("get all config files of category (with backup test)") {
     REQUIRE(std::filesystem::exists(secondFilePath));
     REQUIRE(std::filesystem::exists(secondFilePath.string() + ".old"));
 
-    auto vFiles = ConfigManager::getAllFiles(ConfigCategory::PROGRESS);
+    vFiles = ConfigManager::getAllFileNames(ConfigCategory::PROGRESS);
     REQUIRE(vFiles.size() == 2);
 
     // Remove first file without backup.
     std::filesystem::remove(firstFilePath);
 
     // This function should restore original file from backup.
-    vFiles = ConfigManager::getAllFiles(ConfigCategory::PROGRESS);
+    vFiles = ConfigManager::getAllFileNames(ConfigCategory::PROGRESS);
     REQUIRE(vFiles.size() == 2);
     REQUIRE(std::filesystem::exists(firstFilePath));
 
     // Remove first file backup.
     std::filesystem::remove(firstFilePath.string() + ".old");
 
-    vFiles = ConfigManager::getAllFiles(ConfigCategory::PROGRESS);
+    vFiles = ConfigManager::getAllFileNames(ConfigCategory::PROGRESS);
     REQUIRE(vFiles.size() == 2);
 
     // Remove second file with backup.

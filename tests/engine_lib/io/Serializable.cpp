@@ -754,28 +754,12 @@ TEST_CASE("serialize and deserialize sample player save data") {
         pPlayerSaveData->inventory.addOneItem(42); // now have two items with ID "42"
         pPlayerSaveData->inventory.addOneItem(102);
 
-        // Prepare new profile file name.
-        std::random_device rd;
-        std::mt19937 gen(rd());
-        std::uniform_int_distribution<unsigned short int> uid(0, USHRT_MAX);
-        std::string sNewProfileFilename;
-        const auto vExistingProfiles = ConfigManager::getAllFiles(ConfigCategory::PROGRESS);
-        bool bContinue = false;
-        do {
-            bContinue = false;
-            sNewProfileFilename = std::to_string(uid(gen));
-            for (const auto& sProfile : vExistingProfiles) {
-                if (sProfile == sNewProfileFilename) {
-                    // This profile name is already used, generate another one.
-                    bContinue = true;
-                    break;
-                }
-            }
-        } while (bContinue);
+        // Prepare new file name.
+        const std::string sNewProfileName = ConfigManager::getFreeProgressProfileName();
 
         // Serialize.
         const auto pathToFile =
-            ConfigManager::getCategoryDirectory(ConfigCategory::PROGRESS) / sNewProfileFilename;
+            ConfigManager::getCategoryDirectory(ConfigCategory::PROGRESS) / sNewProfileName;
         const auto optionalError = pPlayerSaveData->serialize(pathToFile, true);
         if (optionalError.has_value()) {
             auto err = optionalError.value();
@@ -791,7 +775,7 @@ TEST_CASE("serialize and deserialize sample player save data") {
 
     {
         // Get all save files.
-        const auto vProfiles = ConfigManager::getAllFiles(ConfigCategory::PROGRESS);
+        const auto vProfiles = ConfigManager::getAllFileNames(ConfigCategory::PROGRESS);
         REQUIRE(!vProfiles.empty());
 
         // ... say the user picks the first profile ...

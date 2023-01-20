@@ -191,29 +191,13 @@ File_PlayerSaveData_GENERATED
     pPlayerSaveData->inventory.addOneItem(42); // now have two items with ID "42"
     pPlayerSaveData->inventory.addOneItem(102);
 
-    // Prepare a new profile file name so that it would not conflict with existing profiles.
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_int_distribution<unsigned short int> uid(0, USHRT_MAX);
-    std::string sNewProfileFilename;
-    const auto vExistingProfiles = ConfigManager::getAllFiles(ConfigCategory::PROGRESS);
-    bool bContinue = false;
-    do {
-        bContinue = false;
-        sNewProfileFilename = std::to_string(uid(gen));
-        for (const auto& sProfile : vExistingProfiles) {
-            if (sProfile == sNewProfileFilename) {
-                // This profile name is already used, generate another one.
-                bContinue = true;
-                break;
-            }
-        }
-    } while (bContinue);
+    // Prepare new file name.
+    const std::string sNewProfileName = ConfigManager::getFreeProgressProfileName();
 
     // Serialize.
     const auto pathToFile =
-        ConfigManager::getCategoryDirectory(ConfigCategory::PROGRESS) / sNewProfileFilename;
-    const auto optionalError = pPlayerSaveData->serialize(pathToFile, true); // `true` to enable additional backup file
+        ConfigManager::getCategoryDirectory(ConfigCategory::PROGRESS) / sNewProfileName;
+    const auto optionalError = pPlayerSaveData->serialize(pathToFile, true);
     if (optionalError.has_value()) {
         // process error
     }
@@ -223,19 +207,20 @@ File_PlayerSaveData_GENERATED
 
 {
     // Get all save files.
-    const auto vProfiles = ConfigManager::getAllFiles(ConfigCategory::PROGRESS);
+    const auto vProfiles = ConfigManager::getAllFileNames(ConfigCategory::PROGRESS);
 
     // ... say the user picks the first profile ...
     const auto sProfileName = vProfiles[0];
 
     // Deserialize.
     const auto pathToFile = ConfigManager::getCategoryDirectory(ConfigCategory::PROGRESS) / sProfileName;
-    const auto result = Serializable::deserialize<std::shared_ptr, PlayerSaveData>(pathToFile);
+    std::unordered_map<std::string, std::string> foundCustomAttributes;
+    const auto result = Serializable::deserialize<PlayerSaveData>(pathToFile, foundCustomAttributes);
     if (std::holds_alternative<Error>(result)) {
         // process error
     }
 
-    const auto pPlayerSaveData = std::get<std::shared_ptr<PlayerSaveData>>(result);
+    gc<PlayerSaveData> pPlayerSaveData = std::get<gc<PlayerSaveData>>(result);
 
     // Everything is loaded:
     assert(pPlayerSaveData->sCharacterName == "Player 1");

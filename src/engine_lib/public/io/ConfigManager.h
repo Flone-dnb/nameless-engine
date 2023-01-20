@@ -53,18 +53,32 @@ namespace ne {
          * Returns file names (without extension) that this category (directory)
          * contains.
          *
-         * How backup files are handled:
-         * Imagine you had a file 'player.toml' and a backup file ('player.toml.old').
-         * If, for some reason, 'player.toml' (the original file) does not exist,
+         * @remark Does not include names of backup files.
+         *
+         * @remark How backup files are handled:
+         * Imagine you had a file `player.toml` and a backup file (`player.toml.old`).
+         * If for some reason `player.toml` (the original file) does not exist,
          * but its backup file is there, we will copy the backup file (player.toml.old)
-         * as the original file (will copy 'player.toml.old' as 'player.toml') and
-         * return 'player' as an available config file.
+         * as the original file (will copy `player.toml.old` as `player.toml`) and
+         * return `player` as a file name.
          *
          * @param category Category (directory) in which to look for files.
          *
          * @return All files in the specified category (backup files are excluded).
          */
-        static std::vector<std::string> getAllFiles(ConfigCategory category);
+        static std::vector<std::string> getAllFileNames(ConfigCategory category);
+
+        /**
+         * Goes through all existing (on disk) config files used for storing user's progress
+         * (PROGRESS category, see @ref getAllFileNames) and returns the name of the file that is not used
+         * (free) by existing progress config files.
+         *
+         * @remark This function is useful for getting the name of the new player profile
+         * (that will not conflict with existing profiles).
+         *
+         * @return Name of the progress config file without extension.
+         */
+        static std::string getFreeProgressProfileName();
 
         /**
          * Returns path to the directory used to store specific category of files.
@@ -105,7 +119,7 @@ namespace ne {
 
         /**
          * Loads data from TOML file.
-         * File should exist, otherwise an error will be returned (you can use @ref getAllFiles
+         * File should exist, otherwise an error will be returned (you can use @ref getAllFileNames
          * or @ref getCategoryDirectory to see if files exist).
          * If you used @ref saveFile before and enabled a backup file (see @ref saveFile),
          * if usual file does not exist this function will look for a backup file and if found,
@@ -317,6 +331,17 @@ namespace ne {
          */
         static std::variant<std::filesystem::path, Error>
         constructFilePath(ConfigCategory category, std::string_view sFileName);
+
+        /**
+         * Generates a free (unused) file name (without extension).
+         *
+         * @param vUsedFileNames   File names (without extension) that cannot be used.
+         * @param sFileNamePrefix  Prefix for generated file name. Final prefix may be different.
+         *
+         * @return Generated file name (without extension).
+         */
+        static std::string generateFreeFileName(
+            const std::vector<std::string>& vUsedFileNames, const std::string& sFileNamePrefix = "");
 
         /** Config file structure */
         toml::value tomlData;

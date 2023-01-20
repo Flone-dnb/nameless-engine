@@ -15,7 +15,7 @@ namespace ne {
 
     std::string ConfigManager::getBackupFileExtension() { return sBackupFileExtension; }
 
-    std::vector<std::string> ConfigManager::getAllFiles(ConfigCategory category) {
+    std::vector<std::string> ConfigManager::getAllFileNames(ConfigCategory category) {
         const auto categoryDirectory = getCategoryDirectory(category);
 
         std::vector<std::string> vConfigFiles;
@@ -47,6 +47,11 @@ namespace ne {
         }
 
         return vConfigFiles;
+    }
+
+    std::string ConfigManager::getFreeProgressProfileName() {
+        const auto vProgressConfigFileNames = getAllFileNames(ConfigCategory::PROGRESS);
+        return generateFreeFileName(vProgressConfigFileNames);
     }
 
     std::filesystem::path ConfigManager::getCategoryDirectory(ConfigCategory category) {
@@ -311,5 +316,26 @@ namespace ne {
         }
 
         return basePath;
+    }
+
+    std::string ConfigManager::generateFreeFileName(
+        const std::vector<std::string>& vUsedFileNames, const std::string& sFileNamePrefix) {
+        for (size_t i = 0; i < SIZE_MAX; i++) {
+            std::string sFileNameToUse = sFileNamePrefix + std::to_string(i);
+            bool bIsFree = true;
+
+            for (const auto& sUsedFileName : vUsedFileNames) {
+                if (sUsedFileName == sFileNameToUse) {
+                    bIsFree = false;
+                    break;
+                }
+            }
+
+            if (bIsFree) {
+                return sFileNameToUse;
+            }
+        }
+
+        return generateFreeFileName(vUsedFileNames, sFileNamePrefix + "0");
     }
 } // namespace ne

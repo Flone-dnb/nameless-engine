@@ -160,7 +160,7 @@ namespace ne {
                 mainThreadIdString.str(),
                 currentThreadIdString.str()));
             err.showError();
-            throw std::runtime_error(err.getError());
+            throw std::runtime_error(err.getFullErrorMessage());
         }
 
         if (!bForce) {

@@ -114,7 +114,7 @@ namespace ne {
                         "failed to deserialize render settings from the file \"{}\", using default "
                         "settings instead, error: \"{}\"",
                         pathToConfigFile.string(),
-                        error.getError()),
+                        error.getFullErrorMessage()),
                     sRendererLogCategory);
 
                 // Just create a new object with default settings.
@@ -139,7 +139,8 @@ namespace ne {
                 auto error = optionalError.value();
                 error.addEntry();
                 Logger::get().error(
-                    fmt::format("failed to save new render settings, error: \"{}\"", error.getError()),
+                    fmt::format(
+                        "failed to save new render settings, error: \"{}\"", error.getFullErrorMessage()),
                     sRendererLogCategory);
             }
         }
@@ -157,7 +158,7 @@ namespace ne {
             auto error = std::get<Error>(std::move(result));
             error.addEntry();
             error.showError();
-            throw std::runtime_error(error.getError());
+            throw std::runtime_error(error.getFullErrorMessage());
         }
         pResourceManager = std::get<std::unique_ptr<GpuResourceManager>>(std::move(result));
     }

@@ -13,7 +13,7 @@ namespace ne {
             Error err(fmt::format(
                 "world size {} should be power of 2 (128, 256, 512, 1024, 2048, etc.).", iWorldSize));
             err.showError();
-            throw std::runtime_error(err.getError());
+            throw std::runtime_error(err.getFullErrorMessage());
         }
 
         // Check if the game instance exists.
@@ -23,7 +23,7 @@ namespace ne {
                       "Are you trying to create a new world in GameInstance's constructor? Use "
                       "`GameInstance::onGameStarted` instead.");
             err.showError();
-            throw std::runtime_error(err.getError());
+            throw std::runtime_error(err.getFullErrorMessage());
         }
 
         // Initialize self.

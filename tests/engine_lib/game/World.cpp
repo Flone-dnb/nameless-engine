@@ -70,7 +70,7 @@ TEST_CASE("create and destroy world") {
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
         error.addEntry();
-        INFO(error.getError());
+        INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }
 
@@ -114,7 +114,7 @@ TEST_CASE("create world and switch to another world") {
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
         error.addEntry();
-        INFO(error.getError());
+        INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }
 
@@ -150,7 +150,7 @@ TEST_CASE("create, serialize and deserialize world") {
                 if (optionalError.has_value()) {
                     auto error = optionalError.value();
                     error.addEntry();
-                    INFO(error.getError());
+                    INFO(error.getFullErrorMessage());
                     REQUIRE(false);
                 }
             }
@@ -164,7 +164,7 @@ TEST_CASE("create, serialize and deserialize world") {
                 if (optionalError.has_value()) {
                     auto error = optionalError.value();
                     error.addEntry();
-                    INFO(error.getError());
+                    INFO(error.getFullErrorMessage());
                     REQUIRE(false);
                 }
 
@@ -193,7 +193,7 @@ TEST_CASE("create, serialize and deserialize world") {
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
         error.addEntry();
-        INFO(error.getError());
+        INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }
 

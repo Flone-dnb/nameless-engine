@@ -20,7 +20,7 @@ namespace ne {
                 sGuid,
                 sGuidInformation));
             err.showError();
-            throw std::runtime_error(err.getError());
+            throw std::runtime_error(err.getFullErrorMessage());
         }
 
         // Check GUID format.
@@ -28,7 +28,7 @@ namespace ne {
             const Error err(
                 fmt::format("The specified GUID \"{}\" has incorrect format.\n{}", sGuid, sGuidInformation));
             err.showError();
-            throw std::runtime_error(err.getError());
+            throw std::runtime_error(err.getFullErrorMessage());
         }
 
         // Make sure we don't have dots in the GUID as we use them internally in serialized format.
@@ -38,7 +38,7 @@ namespace ne {
                 sGuid,
                 sGuidInformation));
             err.showError();
-            throw std::runtime_error(err.getError());
+            throw std::runtime_error(err.getFullErrorMessage());
         }
 #endif
     }

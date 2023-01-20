@@ -23,14 +23,14 @@ TEST_CASE("create engine default materials") {
                 if (std::holds_alternative<Error>(resultOpaque)) {
                     Error error = std::get<Error>(std::move(resultOpaque));
                     error.addEntry();
-                    INFO(error.getError());
+                    INFO(error.getFullErrorMessage());
                     REQUIRE(false);
                 }
                 auto resultTransparent = Material::create(true);
                 if (std::holds_alternative<Error>(resultTransparent)) {
                     Error error = std::get<Error>(std::move(resultTransparent));
                     error.addEntry();
-                    INFO(error.getError());
+                    INFO(error.getFullErrorMessage());
                     REQUIRE(false);
                 }
 
@@ -75,7 +75,7 @@ TEST_CASE("create engine default materials") {
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
         error.addEntry();
-        INFO(error.getError());
+        INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }
 
@@ -106,7 +106,7 @@ TEST_CASE("serialize and deserialize Material") {
                 if (std::holds_alternative<Error>(result)) {
                     Error error = std::get<Error>(std::move(result));
                     error.addEntry();
-                    INFO(error.getError());
+                    INFO(error.getFullErrorMessage());
                     REQUIRE(false);
                 }
 
@@ -116,7 +116,7 @@ TEST_CASE("serialize and deserialize Material") {
                 if (optionalError.has_value()) {
                     auto error = optionalError.value();
                     error.addEntry();
-                    INFO(error.getError());
+                    INFO(error.getFullErrorMessage());
                     REQUIRE(false);
                 }
             }
@@ -129,7 +129,7 @@ TEST_CASE("serialize and deserialize Material") {
                 if (std::holds_alternative<Error>(result)) {
                     Error error = std::get<Error>(std::move(result));
                     error.addEntry();
-                    INFO(error.getError());
+                    INFO(error.getFullErrorMessage());
                     REQUIRE(false);
                 }
 
@@ -156,7 +156,7 @@ TEST_CASE("serialize and deserialize Material") {
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
         error.addEntry();
-        INFO(error.getError());
+        INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }
 

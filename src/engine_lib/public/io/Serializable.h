@@ -803,7 +803,7 @@ namespace ne RNAMESPACE() {
                     auto error = Error("only fields of type derived from `Serializable` can use "
                                        "`SerializeAsExternal` property");
                     error.showError();
-                    throw std::runtime_error(error.getError());
+                    throw std::runtime_error(error.getFullErrorMessage());
                 }
 
                 // Make sure path to the main file is specified.
@@ -875,7 +875,7 @@ namespace ne RNAMESPACE() {
                                 fmt::format(
                                     "an error occurred while deserializing "
                                     "changed field (this field was not deserialized), error: {}",
-                                    error.getError()),
+                                    error.getFullErrorMessage()),
                                 "");
                         } else {
                             return error;

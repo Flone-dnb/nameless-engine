@@ -118,7 +118,7 @@ namespace ne {
             const Error err(
                 fmt::format("Type {} does not have a GUID assigned to it.", selfArchetype.getName()));
             err.showError();
-            throw std::runtime_error(err.getError());
+            throw std::runtime_error(err.getFullErrorMessage());
         }
         vGuids[pSelfGuid->getGuid()] = selfArchetype.getName();
 
@@ -155,7 +155,7 @@ namespace ne {
                     ": public ne::Serializable",
                     pDerivedEntity->getName()));
                 err.showError();
-                throw std::runtime_error(err.getError());
+                throw std::runtime_error(err.getFullErrorMessage());
             }
 
             // Look if this GUID is already used.
@@ -167,7 +167,7 @@ namespace ne {
                     pDerivedEntity->getName(),
                     it->second));
                 err.showError();
-                throw std::runtime_error(err.getError());
+                throw std::runtime_error(err.getFullErrorMessage());
             }
 
             // Add this GUID.
@@ -208,7 +208,7 @@ namespace ne {
                     ": public ne::Serializable",
                     pDerivedEntity->getName()));
                 err.showError();
-                throw std::runtime_error(err.getError());
+                throw std::runtime_error(err.getFullErrorMessage());
             }
 
             if (pGuid->getGuid() == sGuid) {
@@ -234,7 +234,7 @@ namespace ne {
             const Error err(
                 fmt::format("Type {} does not have a GUID assigned to it.", selfArchetype.getName()));
             err.showError();
-            throw std::runtime_error(err.getError());
+            throw std::runtime_error(err.getFullErrorMessage());
         }
 
         if (pSelfGuid->getGuid() == sGuid) {
@@ -622,7 +622,7 @@ namespace ne {
                             auto error = Error("only fields of type derived from `Serializable` can use "
                                                "`SerializeAsExternal` property");
                             error.showError();
-                            throw std::runtime_error(error.getError());
+                            throw std::runtime_error(error.getFullErrorMessage());
                         }
 
                         // Make sure path to the main file is specified.

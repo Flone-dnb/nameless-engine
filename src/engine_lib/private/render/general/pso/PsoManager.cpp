@@ -189,7 +189,7 @@ namespace ne {
             auto error = optionalError.value();
             error.addEntry();
             error.showError();
-            throw std::runtime_error(error.getError());
+            throw std::runtime_error(error.getFullErrorMessage());
         }
     }
 
@@ -204,7 +204,7 @@ namespace ne {
             auto error = optionalError.value();
             error.addEntry();
             error.showError();
-            throw std::runtime_error(error.getError());
+            throw std::runtime_error(error.getFullErrorMessage());
         }
     }
 

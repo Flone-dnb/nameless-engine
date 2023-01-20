@@ -35,7 +35,8 @@ namespace ne {
             error.addEntry();
             Logger::get().error(
                 fmt::format(
-                    "failed to save new render setting configuration, error: \"{}\"", error.getError()),
+                    "failed to save new render setting configuration, error: \"{}\"",
+                    error.getFullErrorMessage()),
                 sRenderSettingsLogCategory);
         }
     }
@@ -68,7 +69,8 @@ namespace ne {
             error.addEntry();
             Logger::get().error(
                 fmt::format(
-                    "failed to save new render setting configuration, error: \"{}\"", error.getError()),
+                    "failed to save new render setting configuration, error: \"{}\"",
+                    error.getFullErrorMessage()),
                 sRenderSettingsLogCategory);
         }
     }
@@ -84,7 +86,7 @@ namespace ne {
             if (optionalError.has_value()) {
                 optionalError->addEntry();
                 optionalError->showError();
-                throw std::runtime_error(optionalError->getError());
+                throw std::runtime_error(optionalError->getFullErrorMessage());
             }
 
             // Recreate all PSOs' internal resources so they will now use new multisampling settings.
@@ -176,7 +178,8 @@ namespace ne {
             error.addEntry();
             Logger::get().error(
                 fmt::format(
-                    "failed to save new render setting configuration, error: \"{}\"", error.getError()),
+                    "failed to save new render setting configuration, error: \"{}\"",
+                    error.getFullErrorMessage()),
                 sRenderSettingsLogCategory);
         }
     }
@@ -257,7 +260,8 @@ namespace ne {
             error.addEntry();
             Logger::get().error(
                 fmt::format(
-                    "failed to save new render setting configuration, error: \"{}\"", error.getError()),
+                    "failed to save new render setting configuration, error: \"{}\"",
+                    error.getFullErrorMessage()),
                 sRenderSettingsLogCategory);
         }
     }
@@ -285,7 +289,8 @@ namespace ne {
             error.addEntry();
             Logger::get().error(
                 fmt::format(
-                    "failed to save new render setting configuration, error: \"{}\"", error.getError()),
+                    "failed to save new render setting configuration, error: \"{}\"",
+                    error.getFullErrorMessage()),
                 sRenderSettingsLogCategory);
         }
     }
@@ -298,7 +303,7 @@ namespace ne {
                 auto error = optionalError.value();
                 error.addEntry();
                 error.showError();
-                throw std::runtime_error(error.getError());
+                throw std::runtime_error(error.getFullErrorMessage());
             }
         }
     }
@@ -334,7 +339,8 @@ namespace ne {
             error.addEntry();
             Logger::get().error(
                 fmt::format(
-                    "failed to save new render setting configuration, error: \"{}\"", error.getError()),
+                    "failed to save new render setting configuration, error: \"{}\"",
+                    error.getFullErrorMessage()),
                 sRenderSettingsLogCategory);
         }
     }
@@ -354,7 +360,8 @@ namespace ne {
             auto error = std::get<Error>(std::move(result));
             error.addEntry();
             Logger::get().error(
-                fmt::format("failed to get the list of supported GPUs, error: \"{}\"", error.getError()),
+                fmt::format(
+                    "failed to get the list of supported GPUs, error: \"{}\"", error.getFullErrorMessage()),
                 sRenderSettingsLogCategory);
             return;
         }
@@ -393,7 +400,7 @@ namespace ne {
                     Logger::get().error(
                         fmt::format(
                             "failed to save new render setting configuration, error: \"{}\"",
-                            error.getError()),
+                            error.getFullErrorMessage()),
                         sRenderSettingsLogCategory);
                 }
                 return;
@@ -417,7 +424,8 @@ namespace ne {
             auto error = std::get<Error>(std::move(result));
             error.addEntry();
             Logger::get().error(
-                fmt::format("failed to get the list of supported GPUs, error: \"{}\"", error.getError()),
+                fmt::format(
+                    "failed to get the list of supported GPUs, error: \"{}\"", error.getFullErrorMessage()),
                 sRenderSettingsLogCategory);
             return;
         }
@@ -463,7 +471,8 @@ namespace ne {
             error.addEntry();
             Logger::get().error(
                 fmt::format(
-                    "failed to save new render setting configuration, error: \"{}\"", error.getError()),
+                    "failed to save new render setting configuration, error: \"{}\"",
+                    error.getFullErrorMessage()),
                 sRenderSettingsLogCategory);
         }
     }

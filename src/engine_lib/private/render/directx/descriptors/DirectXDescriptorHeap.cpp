@@ -104,7 +104,7 @@ namespace ne {
 
         const Error err("not handled heap type");
         err.showError();
-        throw std::runtime_error(err.getError());
+        throw std::runtime_error(err.getFullErrorMessage());
     }
 
     DirectXDescriptorHeap::DirectXDescriptorHeap(DirectXRenderer* pRenderer, DescriptorHeapType heapType) {
@@ -131,7 +131,7 @@ namespace ne {
         default: {
             const Error err("invalid heap type");
             err.showError();
-            throw std::runtime_error(err.getError());
+            throw std::runtime_error(err.getFullErrorMessage());
         }
         }
 
@@ -174,7 +174,7 @@ namespace ne {
             auto optionalError = shrinkHeap();
             if (optionalError.has_value()) {
                 optionalError->addEntry();
-                Logger::get().error(optionalError->getError(), sDescriptorHeapLogCategory);
+                Logger::get().error(optionalError->getFullErrorMessage(), sDescriptorHeapLogCategory);
             }
         }
     }
@@ -367,7 +367,7 @@ namespace ne {
         case (DescriptorType::END): {
             const Error err("invalid heap type");
             err.showError();
-            throw std::runtime_error(err.getError());
+            throw std::runtime_error(err.getFullErrorMessage());
         }
         }
     }
@@ -420,7 +420,7 @@ namespace ne {
 
         const Error err("not handled heap type");
         err.showError();
-        throw std::runtime_error(err.getError());
+        throw std::runtime_error(err.getFullErrorMessage());
     }
 
     void DirectXDescriptorHeap::recreateOldViews() const {

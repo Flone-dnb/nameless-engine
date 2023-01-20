@@ -133,7 +133,7 @@ namespace ne {
         if (pDirectXRenderer == nullptr) [[unlikely]] {
             Error error("DirectX pipeline state object is used with non-DirectX renderer");
             error.showError();
-            throw std::runtime_error(error.getError());
+            throw std::runtime_error(error.getFullErrorMessage());
         }
 
         // Generate one root signature for both shaders.

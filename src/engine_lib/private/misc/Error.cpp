@@ -80,7 +80,7 @@ namespace ne {
         stack.push_back(sourceLocationToInfo(location));
     }
 
-    std::string Error::getError() const {
+    std::string Error::getFullErrorMessage() const {
         std::string sErrorMessage = "An error occurred: ";
         sErrorMessage += sMessage;
         sErrorMessage += "\nError stack:\n";
@@ -99,7 +99,7 @@ namespace ne {
     std::string Error::getInitialMessage() const { return sMessage; }
 
     void Error::showError() const {
-        const std::string sErrorMessage = getError();
+        const std::string sErrorMessage = getFullErrorMessage();
         Logger::get().error(sErrorMessage, "");
 
 #if defined(WIN32)

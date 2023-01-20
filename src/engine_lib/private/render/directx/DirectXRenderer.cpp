@@ -40,7 +40,7 @@ namespace ne {
         if (error.has_value()) {
             error->addEntry();
             error->showError();
-            throw std::runtime_error(error->getError());
+            throw std::runtime_error(error->getFullErrorMessage());
         }
 
         // Disable Alt + Enter.
@@ -49,7 +49,7 @@ namespace ne {
         if (FAILED(hResult)) {
             const Error error1(hResult);
             error1.showError();
-            throw std::runtime_error(error1.getError());
+            throw std::runtime_error(error1.getFullErrorMessage());
         }
 
         // Set initial size for buffers.
@@ -57,7 +57,7 @@ namespace ne {
         if (error.has_value()) {
             error->addEntry();
             error->showError();
-            throw std::runtime_error(error->getError());
+            throw std::runtime_error(error->getFullErrorMessage());
         }
 
         // Compile engine shaders.
@@ -65,7 +65,7 @@ namespace ne {
         if (error.has_value()) {
             error->addEntry();
             error->showError();
-            throw std::runtime_error(error->getError());
+            throw std::runtime_error(error->getFullErrorMessage());
         }
 
         // Create pipeline state objects.
@@ -73,7 +73,7 @@ namespace ne {
         if (error.has_value()) {
             error->addEntry();
             error->showError();
-            throw std::runtime_error(error->getError());
+            throw std::runtime_error(error->getFullErrorMessage());
         }
     }
 
@@ -672,12 +672,12 @@ namespace ne {
                     std::get<std::string>(std::move(error)));
                 const Error err(sErrorMessage);
                 err.showError();
-                throw std::runtime_error(err.getError());
+                throw std::runtime_error(err.getFullErrorMessage());
             } else {
                 const auto sErrorMessage = std::format(
                     "failed to compile shader \"{}\" due to internal error:\n{}",
                     shaderDescription.sShaderName,
-                    std::get<Error>(std::move(error)).getError());
+                    std::get<Error>(std::move(error)).getFullErrorMessage());
                 const Error err(sErrorMessage);
                 err.showError();
                 MessageBox::info(
@@ -686,7 +686,7 @@ namespace ne {
                         "Try restarting the application or deleting the directory \"{}\", if this "
                         "does not help contact the developers.",
                         ShaderFilesystemPaths::getPathToShaderCacheDirectory().string()));
-                throw std::runtime_error(err.getError());
+                throw std::runtime_error(err.getFullErrorMessage());
             }
         };
         auto onCompleted = [pPromiseFinish]() { pPromiseFinish->set_value(false); };
@@ -695,7 +695,7 @@ namespace ne {
         if (error.has_value()) {
             error->addEntry();
             error->showError();
-            throw std::runtime_error(error->getError());
+            throw std::runtime_error(error->getFullErrorMessage());
         }
 
         try {
@@ -877,7 +877,7 @@ namespace ne {
         if (FAILED(hResult)) {
             auto error = Error(hResult);
             error.showError();
-            throw std::runtime_error(error.getError());
+            throw std::runtime_error(error.getFullErrorMessage());
         }
 
         // Wait until the GPU has completed commands up to this fence point.
@@ -886,7 +886,7 @@ namespace ne {
             if (hEvent == nullptr) {
                 auto error = Error(GetLastError());
                 error.showError();
-                throw std::runtime_error(error.getError());
+                throw std::runtime_error(error.getFullErrorMessage());
             }
 
             // Fire event when the GPU hits current fence.
@@ -894,7 +894,7 @@ namespace ne {
             if (FAILED(hResult)) {
                 auto error = Error(hResult);
                 error.showError();
-                throw std::runtime_error(error.getError());
+                throw std::runtime_error(error.getFullErrorMessage());
             }
 
             WaitForSingleObject(hEvent, INFINITE);

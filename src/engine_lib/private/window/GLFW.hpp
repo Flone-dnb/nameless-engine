@@ -17,7 +17,7 @@ namespace ne {
     inline void GLFWErrorCallback(int iErrorCode, const char* pDescription) {
         const Error error("GLFW error (" + std::to_string(iErrorCode) + "): " + std::string(pDescription));
         error.showError();
-        throw std::runtime_error(error.getError());
+        throw std::runtime_error(error.getFullErrorMessage());
     }
 
     /**
@@ -53,7 +53,7 @@ namespace ne {
             if (!glfwInit()) {
                 const Error error("failed to initialize GLFW");
                 error.showError();
-                throw std::runtime_error(error.getError());
+                throw std::runtime_error(error.getFullErrorMessage());
             }
         }
     };

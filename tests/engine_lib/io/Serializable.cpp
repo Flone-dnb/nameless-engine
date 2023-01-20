@@ -28,7 +28,7 @@ TEST_CASE("make sure relative path to the file the object was deserialized from 
     auto optionalError = data.serialize(pathToFileInRes, true);
     if (optionalError.has_value()) {
         optionalError->addEntry();
-        INFO(optionalError->getError());
+        INFO(optionalError->getFullErrorMessage());
         REQUIRE(false);
     }
 
@@ -36,7 +36,7 @@ TEST_CASE("make sure relative path to the file the object was deserialized from 
     optionalError = data.serialize(pathToFileInTemp, false);
     if (optionalError.has_value()) {
         optionalError->addEntry();
-        INFO(optionalError->getError());
+        INFO(optionalError->getFullErrorMessage());
         REQUIRE(false);
     }
 
@@ -52,7 +52,7 @@ TEST_CASE("make sure relative path to the file the object was deserialized from 
     if (std::holds_alternative<Error>(result)) {
         auto error = std::get<Error>(result);
         error.addEntry();
-        INFO(error.getError());
+        INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }
 
@@ -73,7 +73,7 @@ TEST_CASE("make sure relative path to the file the object was deserialized from 
     if (std::holds_alternative<Error>(result)) {
         auto error = std::get<Error>(result);
         error.addEntry();
-        INFO(error.getError());
+        INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }
 
@@ -103,7 +103,7 @@ TEST_CASE("serialize and deserialize with a backup file") {
         auto optionalError = data.serialize(fullPathToFile, true);
         if (optionalError.has_value()) {
             optionalError->addEntry();
-            INFO(optionalError->getError());
+            INFO(optionalError->getFullErrorMessage());
             REQUIRE(false);
         }
 
@@ -120,7 +120,7 @@ TEST_CASE("serialize and deserialize with a backup file") {
         if (std::holds_alternative<Error>(result)) {
             auto error = std::get<Error>(result);
             error.addEntry();
-            INFO(error.getError());
+            INFO(error.getFullErrorMessage());
             REQUIRE(false);
         }
 
@@ -160,7 +160,7 @@ TEST_CASE("deserialize a node tree that references external node") {
         auto optionalError = embedableNode.serialize(pathToCustomNodeFileInRes, false);
         if (optionalError.has_value()) {
             optionalError->addEntry();
-            INFO(optionalError->getError());
+            INFO(optionalError->getFullErrorMessage());
             REQUIRE(false);
         }
 
@@ -175,7 +175,7 @@ TEST_CASE("deserialize a node tree that references external node") {
         if (std::holds_alternative<Error>(result)) {
             auto error = std::get<Error>(result);
             error.addEntry();
-            INFO(error.getError());
+            INFO(error.getFullErrorMessage());
             REQUIRE(false);
         }
 
@@ -200,7 +200,7 @@ TEST_CASE("deserialize a node tree that references external node") {
         auto optionalError = pParentNode->serializeNodeTree(pathToNodeTreeFileInRes, false);
         if (optionalError.has_value()) {
             optionalError->addEntry();
-            INFO(optionalError->getError());
+            INFO(optionalError->getFullErrorMessage());
             REQUIRE(false);
         }
     }
@@ -212,7 +212,7 @@ TEST_CASE("deserialize a node tree that references external node") {
         if (std::holds_alternative<Error>(result)) {
             auto error = std::get<Error>(result);
             error.addEntry();
-            INFO(error.getError());
+            INFO(error.getFullErrorMessage());
             REQUIRE(false);
         }
 
@@ -243,7 +243,7 @@ TEST_CASE("deserialize a node tree that references external node") {
         if (optionalError.has_value()) {
             auto error = optionalError.value();
             error.addEntry();
-            INFO(error.getError());
+            INFO(error.getFullErrorMessage());
             REQUIRE(false);
         }
 
@@ -277,7 +277,7 @@ TEST_CASE("deserialize a node tree that references external node") {
         if (std::holds_alternative<Error>(keysResult)) {
             auto error = std::get<Error>(keysResult);
             error.addEntry();
-            INFO(error.getError());
+            INFO(error.getFullErrorMessage());
             REQUIRE(false);
         }
         auto vKeys = std::get<std::vector<std::string>>(std::move(keysResult));
@@ -331,7 +331,7 @@ TEST_CASE("deserialize a node tree that references external node") {
         if (std::holds_alternative<Error>(keysResult)) {
             auto error = std::get<Error>(keysResult);
             error.addEntry();
-            INFO(error.getError());
+            INFO(error.getFullErrorMessage());
             REQUIRE(false);
         }
         vKeys = std::get<std::vector<std::string>>(std::move(keysResult));
@@ -388,7 +388,7 @@ TEST_CASE("deserialize a node tree that references external node tree") {
         auto optionalError = pRootNode->serializeNodeTree(pathToCustomNodeTreeFileInRes, false);
         if (optionalError.has_value()) {
             optionalError->addEntry();
-            INFO(optionalError->getError());
+            INFO(optionalError->getFullErrorMessage());
             REQUIRE(false);
         }
 
@@ -403,7 +403,7 @@ TEST_CASE("deserialize a node tree that references external node tree") {
         if (std::holds_alternative<Error>(result)) {
             auto error = std::get<Error>(result);
             error.addEntry();
-            INFO(error.getError());
+            INFO(error.getFullErrorMessage());
             REQUIRE(false);
         }
 
@@ -446,7 +446,7 @@ TEST_CASE("deserialize a node tree that references external node tree") {
         auto optionalError = pParentNode->serializeNodeTree(pathToNodeTreeFileInRes, false);
         if (optionalError.has_value()) {
             optionalError->addEntry();
-            INFO(optionalError->getError());
+            INFO(optionalError->getFullErrorMessage());
             REQUIRE(false);
         }
     }
@@ -458,7 +458,7 @@ TEST_CASE("deserialize a node tree that references external node tree") {
         if (std::holds_alternative<Error>(result)) {
             auto error = std::get<Error>(result);
             error.addEntry();
-            INFO(error.getError());
+            INFO(error.getFullErrorMessage());
             REQUIRE(false);
         }
 
@@ -570,7 +570,7 @@ TEST_CASE("serialize and deserialize fields of different types") {
     if (optionalError.has_value()) {
         auto err = optionalError.value();
         err.addEntry();
-        INFO(err.getError());
+        INFO(err.getFullErrorMessage());
         REQUIRE(false);
     }
 
@@ -581,7 +581,7 @@ TEST_CASE("serialize and deserialize fields of different types") {
     if (std::holds_alternative<Error>(idResult)) {
         auto err = std::get<Error>(std::move(idResult));
         err.addEntry();
-        INFO(err.getError());
+        INFO(err.getFullErrorMessage());
         REQUIRE(false);
     }
     const auto ids = std::get<std::set<std::string>>(idResult);
@@ -593,7 +593,7 @@ TEST_CASE("serialize and deserialize fields of different types") {
     if (std::holds_alternative<Error>(result)) {
         auto err = std::get<Error>(std::move(result));
         err.addEntry();
-        INFO(err.getError());
+        INFO(err.getFullErrorMessage());
         REQUIRE(false);
     }
 
@@ -780,7 +780,7 @@ TEST_CASE("serialize and deserialize sample player save data") {
         if (optionalError.has_value()) {
             auto err = optionalError.value();
             err.addEntry();
-            INFO(err.getError());
+            INFO(err.getFullErrorMessage());
             REQUIRE(false);
         }
 
@@ -805,7 +805,7 @@ TEST_CASE("serialize and deserialize sample player save data") {
         if (std::holds_alternative<Error>(result)) {
             auto error = std::get<Error>(result);
             error.addEntry();
-            INFO(error.getError());
+            INFO(error.getFullErrorMessage());
             REQUIRE(false);
         }
 
@@ -848,7 +848,7 @@ TEST_CASE("serialize and deserialize node") {
     if (optionalError.has_value()) {
         auto err = optionalError.value();
         err.addEntry();
-        INFO(err.getError());
+        INFO(err.getFullErrorMessage());
         REQUIRE(false);
     }
 
@@ -860,7 +860,7 @@ TEST_CASE("serialize and deserialize node") {
     if (std::holds_alternative<Error>(result)) {
         auto err = std::get<Error>(std::move(result));
         err.addEntry();
-        INFO(err.getError());
+        INFO(err.getFullErrorMessage());
         REQUIRE(false);
     }
     const auto pDeserializedNode = std::get<gc<Node>>(std::move(result));
@@ -908,7 +908,7 @@ TEST_CASE("serialize and deserialize multiple nodes") {
     if (optionalError.has_value()) {
         auto err = optionalError.value();
         err.addEntry();
-        INFO(err.getError());
+        INFO(err.getFullErrorMessage());
         REQUIRE(false);
     }
 
@@ -919,7 +919,7 @@ TEST_CASE("serialize and deserialize multiple nodes") {
     if (std::holds_alternative<Error>(idResult)) {
         auto err = std::get<Error>(std::move(idResult));
         err.addEntry();
-        INFO(err.getError());
+        INFO(err.getFullErrorMessage());
         REQUIRE(false);
     }
     const auto ids = std::get<std::set<std::string>>(idResult);
@@ -932,7 +932,7 @@ TEST_CASE("serialize and deserialize multiple nodes") {
     if (std::holds_alternative<Error>(result)) {
         auto err = std::get<Error>(std::move(result));
         err.addEntry();
-        INFO(err.getError());
+        INFO(err.getFullErrorMessage());
         REQUIRE(false);
     }
     auto vDeserializedObjects = std::get<std::vector<DeserializedObjectInformation<gc>>>(std::move(result));

@@ -95,7 +95,7 @@ namespace ne {
             auto err = std::move(optional.value());
             err.addEntry();
             // don't show message as it's not a critical error
-            Logger::get().error(err.getError(), sShaderManagerLogCategory);
+            Logger::get().error(err.getFullErrorMessage(), sShaderManagerLogCategory);
             return;
         }
 
@@ -248,7 +248,7 @@ namespace ne {
             auto err = std::move(optional.value());
             err.addEntry();
             // don't show message as it's not a critical error
-            Logger::get().error(err.getError(), sShaderManagerLogCategory);
+            Logger::get().error(err.getFullErrorMessage(), sShaderManagerLogCategory);
         }
     }
 
@@ -438,7 +438,7 @@ namespace ne {
                         "failed to set the shader configuration for the shader \"{}\"",
                         pShader->getShaderName()));
                     error.showError();
-                    throw std::runtime_error(error.getError());
+                    throw std::runtime_error(error.getFullErrorMessage());
                 }
             }
         }
@@ -590,7 +590,7 @@ namespace ne {
                             "shader compilation query #{}: "
                             "an error occurred during shader compilation: {}",
                             iQueryId,
-                            err.getError()),
+                            err.getFullErrorMessage()),
                         sShaderManagerLogCategory);
                     pRenderer->getGame()->addDeferredTask([onError, shaderDescription, err]() mutable {
                         onError(std::move(shaderDescription), err);
@@ -610,7 +610,7 @@ namespace ne {
                 Error err(fmt::format(
                     "shader with the name \"{}\" is already added", shaderDescription.sShaderName));
                 Logger::get().error(
-                    fmt::format("shader compilation query #{}: {}", iQueryId, err.getError()),
+                    fmt::format("shader compilation query #{}: {}", iQueryId, err.getFullErrorMessage()),
                     sShaderManagerLogCategory);
                 pRenderer->getGame()->addDeferredTask([onError, shaderDescription, err]() mutable {
                     onError(std::move(shaderDescription), err);
@@ -643,7 +643,7 @@ namespace ne {
                         "failed to set the initial shader configuration for the shader \"{}\"",
                         shaderDescription.sShaderName));
                     Logger::get().error(
-                        fmt::format("shader compilation query #{}: {}", iQueryId, err.getError()),
+                        fmt::format("shader compilation query #{}: {}", iQueryId, err.getFullErrorMessage()),
                         sShaderManagerLogCategory);
                     pRenderer->getGame()->addDeferredTask([onError, shaderDescription, err]() mutable {
                         onError(std::move(shaderDescription), err);

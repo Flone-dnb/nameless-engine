@@ -189,7 +189,7 @@ namespace ne {
                 "configuration for the shader \"{}\" was not set yet but the shader is already requested",
                 sShaderName));
             error.showError();
-            throw std::runtime_error(error.getError());
+            throw std::runtime_error(error.getFullErrorMessage());
         }
 
         return *mtxCurrentConfigurationShader.second;

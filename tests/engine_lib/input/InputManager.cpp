@@ -395,7 +395,7 @@ TEST_CASE("test saving and loading") {
         auto result = manager.saveToFile(sFileName);
         if (result.has_value()) {
             result->addEntry();
-            INFO(result->getError());
+            INFO(result->getFullErrorMessage());
             REQUIRE(false);
         }
     }
@@ -415,7 +415,7 @@ TEST_CASE("test saving and loading") {
         auto result = manager.loadFromFile(sFileName);
         if (result.has_value()) {
             result->addEntry();
-            INFO(result->getError());
+            INFO(result->getFullErrorMessage());
             REQUIRE(false);
         }
 

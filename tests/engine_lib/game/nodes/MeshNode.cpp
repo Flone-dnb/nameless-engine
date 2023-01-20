@@ -35,7 +35,7 @@ TEST_CASE("serialize and deserialize MeshNode") {
                 if (std::holds_alternative<Error>(result)) {
                     Error error = std::get<Error>(std::move(result));
                     error.addEntry();
-                    INFO(error.getError());
+                    INFO(error.getFullErrorMessage());
                     REQUIRE(false);
                 }
 
@@ -55,7 +55,7 @@ TEST_CASE("serialize and deserialize MeshNode") {
                 if (optionalError.has_value()) {
                     auto error = optionalError.value();
                     error.addEntry();
-                    INFO(error.getError());
+                    INFO(error.getFullErrorMessage());
                     REQUIRE(false);
                 }
             }
@@ -76,7 +76,7 @@ TEST_CASE("serialize and deserialize MeshNode") {
                 if (std::holds_alternative<Error>(result)) {
                     Error error = std::get<Error>(std::move(result));
                     error.addEntry();
-                    INFO(error.getError());
+                    INFO(error.getFullErrorMessage());
                     REQUIRE(false);
                 }
                 const auto pMeshNode = std::get<gc<MeshNode>>(std::move(result));
@@ -118,7 +118,7 @@ TEST_CASE("serialize and deserialize MeshNode") {
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
         error.addEntry();
-        INFO(error.getError());
+        INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }
 
@@ -152,7 +152,7 @@ TEST_CASE("serialize and deserialize array of mesh vertices") {
     if (optionalError.has_value()) {
         auto error = optionalError.value();
         error.addEntry();
-        INFO(error.getError());
+        INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }
 
@@ -161,7 +161,7 @@ TEST_CASE("serialize and deserialize array of mesh vertices") {
     if (std::holds_alternative<Error>(result)) {
         auto error = std::get<Error>(std::move(result));
         error.addEntry();
-        INFO(error.getError());
+        INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }
     const auto pMeshVertices = std::get<std::shared_ptr<MeshVertices>>(std::move(result));
@@ -207,7 +207,7 @@ TEST_CASE("serialize and deserialize MeshNode as part of a node tree") {
                 if (std::holds_alternative<Error>(result)) {
                     Error error = std::get<Error>(std::move(result));
                     error.addEntry();
-                    INFO(error.getError());
+                    INFO(error.getFullErrorMessage());
                     REQUIRE(false);
                 }
 
@@ -229,7 +229,7 @@ TEST_CASE("serialize and deserialize MeshNode as part of a node tree") {
                 if (optionalError.has_value()) {
                     auto error = optionalError.value();
                     error.addEntry();
-                    INFO(error.getError());
+                    INFO(error.getFullErrorMessage());
                     REQUIRE(false);
                 }
             }
@@ -249,7 +249,7 @@ TEST_CASE("serialize and deserialize MeshNode as part of a node tree") {
                 if (std::holds_alternative<Error>(result)) {
                     Error error = std::get<Error>(std::move(result));
                     error.addEntry();
-                    INFO(error.getError());
+                    INFO(error.getFullErrorMessage());
                     REQUIRE(false);
                 }
                 const auto pRootNode = std::get<gc<Node>>(std::move(result));
@@ -294,7 +294,7 @@ TEST_CASE("serialize and deserialize MeshNode as part of a node tree") {
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
         error.addEntry();
-        INFO(error.getError());
+        INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }
 
@@ -336,7 +336,7 @@ TEST_CASE("serialize and deserialize MeshNode as part of a node tree with origin
                 if (std::holds_alternative<Error>(result)) {
                     Error error = std::get<Error>(std::move(result));
                     error.addEntry();
-                    INFO(error.getError());
+                    INFO(error.getFullErrorMessage());
                     REQUIRE(false);
                 }
 
@@ -356,7 +356,7 @@ TEST_CASE("serialize and deserialize MeshNode as part of a node tree with origin
                 if (optionalError.has_value()) {
                     auto error = optionalError.value();
                     error.addEntry();
-                    INFO(error.getError());
+                    INFO(error.getFullErrorMessage());
                     REQUIRE(false);
                 }
             }
@@ -367,7 +367,7 @@ TEST_CASE("serialize and deserialize MeshNode as part of a node tree with origin
                 if (std::holds_alternative<Error>(result)) {
                     auto error = std::get<Error>(result);
                     error.addEntry();
-                    INFO(error.getError());
+                    INFO(error.getFullErrorMessage());
                     REQUIRE(false);
                 }
                 auto pMeshNode = std::get<gc<MeshNode>>(std::move(result));
@@ -380,7 +380,7 @@ TEST_CASE("serialize and deserialize MeshNode as part of a node tree with origin
                 if (optionalError.has_value()) {
                     auto error = optionalError.value();
                     error.addEntry();
-                    INFO(error.getError());
+                    INFO(error.getFullErrorMessage());
                     REQUIRE(false);
                 }
             }
@@ -419,7 +419,7 @@ TEST_CASE("serialize and deserialize MeshNode as part of a node tree with origin
                 if (optionalError.has_value()) {
                     auto error = optionalError.value();
                     error.addEntry();
-                    INFO(error.getError());
+                    INFO(error.getFullErrorMessage());
                     REQUIRE(false);
                 }
             }
@@ -438,7 +438,7 @@ TEST_CASE("serialize and deserialize MeshNode as part of a node tree with origin
                 if (std::holds_alternative<Error>(result)) {
                     Error error = std::get<Error>(std::move(result));
                     error.addEntry();
-                    INFO(error.getError());
+                    INFO(error.getFullErrorMessage());
                     REQUIRE(false);
                 }
                 const auto pRootNode = std::get<gc<Node>>(std::move(result));
@@ -488,7 +488,7 @@ TEST_CASE("serialize and deserialize MeshNode as part of a node tree with origin
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
         error.addEntry();
-        INFO(error.getError());
+        INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }
 
@@ -525,7 +525,7 @@ TEST_CASE("MeshNode's meshdata deserialization backwards compatibility") {
             if (std::holds_alternative<Error>(result)) {
                 Error error = std::get<Error>(std::move(result));
                 error.addEntry();
-                INFO(error.getError());
+                INFO(error.getFullErrorMessage());
                 REQUIRE(false);
             }
             const auto pMeshNode = std::get<gc<MeshNode>>(std::move(result));
@@ -549,7 +549,7 @@ TEST_CASE("MeshNode's meshdata deserialization backwards compatibility") {
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
         error.addEntry();
-        INFO(error.getError());
+        INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }
 

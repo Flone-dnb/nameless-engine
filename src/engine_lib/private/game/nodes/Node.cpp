@@ -156,7 +156,7 @@ namespace ne {
             Error error("Instead of despawning world's root node, create/replace world using GameInstance "
                         "functions, this would destroy the previous world with all nodes.");
             error.showError();
-            throw std::runtime_error(error.getError());
+            throw std::runtime_error(error.getFullErrorMessage());
         }
 
         // Check if this node is spawned.
@@ -225,7 +225,7 @@ namespace ne {
                 "there is no parent node",
                 getName()));
             err.showError();
-            throw std::runtime_error(err.getError());
+            throw std::runtime_error(err.getFullErrorMessage());
         }
 
         return mtxParentNode.second->findValidWorld();
@@ -679,7 +679,7 @@ namespace ne {
         if (bIsSpawned) {
             Error error("this function should not be called while the node is spawned");
             error.showError();
-            throw std::runtime_error(error.getError());
+            throw std::runtime_error(error.getFullErrorMessage());
         }
 
         bIsCalledEveryFrame = bEnable;
@@ -690,7 +690,7 @@ namespace ne {
         if (bIsSpawned) {
             Error error("this function should not be called while the node is spawned");
             error.showError();
-            throw std::runtime_error(error.getError());
+            throw std::runtime_error(error.getFullErrorMessage());
         }
 
         this->tickGroup = tickGroup;
@@ -703,7 +703,7 @@ namespace ne {
         if (bIsSpawned) {
             Error error("this function should not be called while the node is spawned");
             error.showError();
-            throw std::runtime_error(error.getError());
+            throw std::runtime_error(error.getFullErrorMessage());
         }
 
         this->bReceiveInput = bEnable;

@@ -87,7 +87,7 @@ namespace ne {
 
         Error err("no renderer for this platform");
         err.showError();
-        throw std::runtime_error(err.getError());
+        throw std::runtime_error(err.getFullErrorMessage());
     }
 
     std::string Pso::getUniquePsoIdentifier() const { return sUniquePsoIdentifier; }

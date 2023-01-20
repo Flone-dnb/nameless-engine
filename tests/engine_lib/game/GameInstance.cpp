@@ -39,7 +39,7 @@ TEST_CASE("input event callbacks in GameInstance are triggered") {
             if (optionalError.has_value()) {
                 auto error = optionalError.value();
                 error.addEntry();
-                INFO(error.getError());
+                INFO(error.getFullErrorMessage());
                 REQUIRE(false);
             }
             optionalError =
@@ -47,7 +47,7 @@ TEST_CASE("input event callbacks in GameInstance are triggered") {
             if (optionalError.has_value()) {
                 auto error = optionalError.value();
                 error.addEntry();
-                INFO(error.getError());
+                INFO(error.getFullErrorMessage());
                 REQUIRE(false);
             }
 
@@ -74,7 +74,7 @@ TEST_CASE("input event callbacks in GameInstance are triggered") {
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
         error.addEntry();
-        INFO(error.getError());
+        INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }
 

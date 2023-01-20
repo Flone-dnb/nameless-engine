@@ -19,7 +19,7 @@ namespace ne {
         if (std::holds_alternative<Error>(result)) {
             auto error = std::get<Error>(std::move(result));
             error.showError();
-            throw std::runtime_error(error.getError());
+            throw std::runtime_error(error.getFullErrorMessage());
         }
         pMaterial = std::get<std::shared_ptr<Material>>(std::move(result));
     }
@@ -28,7 +28,7 @@ namespace ne {
         if (pMaterial == nullptr) [[unlikely]] {
             auto error = Error("cannot use `nullptr` as a material");
             error.showError();
-            throw std::runtime_error(error.getError());
+            throw std::runtime_error(error.getFullErrorMessage());
         }
 
         std::scoped_lock guard(mtxSpawning);
@@ -54,7 +54,7 @@ namespace ne {
             auto error = std::get<Error>(std::move(result));
             error.addEntry();
             error.showError();
-            throw std::runtime_error(error.getError());
+            throw std::runtime_error(error.getFullErrorMessage());
         }
         pShaderConstantBuffers = std::get<std::unique_ptr<UploadBuffer>>(std::move(result));
 
@@ -100,7 +100,7 @@ namespace ne {
             Error error(fmt::format(
                 "expected `unsigned int` type to be 4 bytes long, got: {}", sizeof(unsigned short)));
             error.showError();
-            throw std::runtime_error(error.getError());
+            throw std::runtime_error(error.getFullErrorMessage());
         }
     }
 

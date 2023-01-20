@@ -103,7 +103,7 @@ namespace ne {
          *
          * @return Error message and error stack.
          */
-        std::string getError() const;
+        std::string getFullErrorMessage() const;
 
         /**
          * Returns initial error message that was used to create this error.

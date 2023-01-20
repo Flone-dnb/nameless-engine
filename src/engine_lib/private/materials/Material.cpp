@@ -80,7 +80,7 @@ namespace ne {
                 auto error = std::get<Error>(std::move(result));
                 error.addEntry();
                 error.showError();
-                throw std::runtime_error(error.getError());
+                throw std::runtime_error(error.getFullErrorMessage());
             }
             pUsedPso = std::get<PsoSharedPtr>(std::move(result));
         }
@@ -111,7 +111,7 @@ namespace ne {
                 auto error = std::get<Error>(std::move(result));
                 error.addEntry();
                 error.showError();
-                throw std::runtime_error(error.getError());
+                throw std::runtime_error(error.getFullErrorMessage());
             }
             pUsedPso = std::get<PsoSharedPtr>(std::move(result));
         }

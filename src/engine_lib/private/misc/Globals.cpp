@@ -27,7 +27,7 @@ namespace ne {
         if (GetModuleFileName(nullptr, buffer, bufSize) == bufSize) {
             const Error err("failed to get path to the application, path is too long");
             err.showError();
-            throw std::runtime_error(err.getError());
+            throw std::runtime_error(err.getFullErrorMessage());
         }
 
         return std::filesystem::path(buffer).stem().string();
@@ -62,7 +62,7 @@ namespace ne {
 
             const Error err(result);
             err.showError();
-            throw std::runtime_error(err.getError());
+            throw std::runtime_error(err.getFullErrorMessage());
         }
 
         basePath = pathTmp;
@@ -139,7 +139,7 @@ namespace ne {
         if (GetModuleFileName(nullptr, buffer, bufSize) == bufSize) {
             const Error err("failed to get path to the application, path is too long");
             err.showError();
-            throw std::runtime_error(err.getError());
+            throw std::runtime_error(err.getFullErrorMessage());
         }
 
         pathToExecutable = std::filesystem::path(buffer);
@@ -165,7 +165,7 @@ namespace ne {
         if (!std::filesystem::exists(pathToRes)) {
             const Error err(fmt::format("`res` directory does not exist at \"{}\"", pathToRes.string()));
             err.showError();
-            throw std::runtime_error(err.getError());
+            throw std::runtime_error(err.getFullErrorMessage());
         }
 
         return pathToRes;

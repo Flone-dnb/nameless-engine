@@ -46,7 +46,7 @@ TEST_CASE("make the CBV heap expand") {
                 if (std::holds_alternative<Error>(result)) {
                     auto err = std::get<Error>(std::move(result));
                     err.addEntry();
-                    INFO(err.getError());
+                    INFO(err.getFullErrorMessage());
                     REQUIRE(false);
                 }
 
@@ -61,7 +61,7 @@ TEST_CASE("make the CBV heap expand") {
             if (std::holds_alternative<Error>(result)) {
                 auto err = std::get<Error>(std::move(result));
                 err.addEntry();
-                INFO(err.getError());
+                INFO(err.getFullErrorMessage());
                 REQUIRE(false);
             }
 
@@ -81,7 +81,7 @@ TEST_CASE("make the CBV heap expand") {
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
         error.addEntry();
-        INFO(error.getError());
+        INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }
 
@@ -120,7 +120,7 @@ TEST_CASE("make the CBV heap shrink") {
                 if (std::holds_alternative<Error>(result)) {
                     auto err = std::get<Error>(std::move(result));
                     err.addEntry();
-                    INFO(err.getError());
+                    INFO(err.getFullErrorMessage());
                     REQUIRE(false);
                 }
 
@@ -154,7 +154,7 @@ TEST_CASE("make the CBV heap shrink") {
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
         error.addEntry();
-        INFO(error.getError());
+        INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }
 
@@ -197,7 +197,7 @@ TEST_CASE("assign multiple descriptors to one resource") {
             if (std::holds_alternative<Error>(result)) {
                 auto err = std::get<Error>(std::move(result));
                 err.addEntry();
-                INFO(err.getError());
+                INFO(err.getFullErrorMessage());
                 REQUIRE(false);
             }
             auto pResource = std::get<std::unique_ptr<DirectXResource>>(std::move(result));
@@ -206,7 +206,7 @@ TEST_CASE("assign multiple descriptors to one resource") {
             auto optionalError = pResource->addUav();
             if (optionalError.has_value()) {
                 optionalError->addEntry();
-                INFO(optionalError->getError());
+                INFO(optionalError->getFullErrorMessage());
                 REQUIRE(false);
             }
 
@@ -224,7 +224,7 @@ TEST_CASE("assign multiple descriptors to one resource") {
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
         error.addEntry();
-        INFO(error.getError());
+        INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }
 
@@ -274,7 +274,7 @@ TEST_CASE("all assigned descriptors are freed when resource is destroyed") {
                 if (std::holds_alternative<Error>(result)) {
                     auto err = std::get<Error>(std::move(result));
                     err.addEntry();
-                    INFO(err.getError());
+                    INFO(err.getFullErrorMessage());
                     REQUIRE(false);
                 }
                 auto pResource = std::get<std::unique_ptr<DirectXResource>>(std::move(result));
@@ -283,7 +283,7 @@ TEST_CASE("all assigned descriptors are freed when resource is destroyed") {
                 auto optionalError = pResource->addUav();
                 if (optionalError.has_value()) {
                     optionalError->addEntry();
-                    INFO(optionalError->getError());
+                    INFO(optionalError->getFullErrorMessage());
                     REQUIRE(false);
                 }
             }
@@ -301,7 +301,7 @@ TEST_CASE("all assigned descriptors are freed when resource is destroyed") {
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
         error.addEntry();
-        INFO(error.getError());
+        INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }
 
@@ -332,7 +332,7 @@ TEST_CASE("create CBV resource") {
             if (std::holds_alternative<Error>(result)) {
                 auto err = std::get<Error>(std::move(result));
                 err.addEntry();
-                INFO(err.getError());
+                INFO(err.getFullErrorMessage());
                 REQUIRE(false);
             }
             auto pResource = std::get<std::unique_ptr<DirectXResource>>(std::move(result));
@@ -346,7 +346,7 @@ TEST_CASE("create CBV resource") {
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
         error.addEntry();
-        INFO(error.getError());
+        INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }
 
@@ -389,7 +389,7 @@ TEST_CASE("create SRV resource") {
             if (std::holds_alternative<Error>(result)) {
                 auto err = std::get<Error>(std::move(result));
                 err.addEntry();
-                INFO(err.getError());
+                INFO(err.getFullErrorMessage());
                 REQUIRE(false);
             }
             auto pResource = std::get<std::unique_ptr<DirectXResource>>(std::move(result));
@@ -403,7 +403,7 @@ TEST_CASE("create SRV resource") {
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
         error.addEntry();
-        INFO(error.getError());
+        INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }
 
@@ -446,7 +446,7 @@ TEST_CASE("create UAV resource") {
             if (std::holds_alternative<Error>(result)) {
                 auto err = std::get<Error>(std::move(result));
                 err.addEntry();
-                INFO(err.getError());
+                INFO(err.getFullErrorMessage());
                 REQUIRE(false);
             }
             auto pResource = std::get<std::unique_ptr<DirectXResource>>(std::move(result));
@@ -460,7 +460,7 @@ TEST_CASE("create UAV resource") {
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
         error.addEntry();
-        INFO(error.getError());
+        INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }
 
@@ -507,7 +507,7 @@ TEST_CASE("create RTV resource") {
             if (std::holds_alternative<Error>(result)) {
                 auto err = std::get<Error>(std::move(result));
                 err.addEntry();
-                INFO(err.getError());
+                INFO(err.getFullErrorMessage());
                 REQUIRE(false);
             }
             auto pResource = std::get<std::unique_ptr<DirectXResource>>(std::move(result));
@@ -521,7 +521,7 @@ TEST_CASE("create RTV resource") {
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
         error.addEntry();
-        INFO(error.getError());
+        INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }
 
@@ -574,7 +574,7 @@ TEST_CASE("create DSV resource") {
             if (std::holds_alternative<Error>(result)) {
                 auto err = std::get<Error>(std::move(result));
                 err.addEntry();
-                INFO(err.getError());
+                INFO(err.getFullErrorMessage());
                 REQUIRE(false);
             }
             auto pResource = std::get<std::unique_ptr<DirectXResource>>(std::move(result));
@@ -588,7 +588,7 @@ TEST_CASE("create DSV resource") {
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
         error.addEntry();
-        INFO(error.getError());
+        INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }
 

@@ -30,7 +30,7 @@ int main() {
         Error error = std::get<Error>(std::move(result));
         error.addEntry();
         error.showError();
-        throw std::runtime_error(error.getError());
+        throw std::runtime_error(error.getFullErrorMessage());
     }
 
     const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));

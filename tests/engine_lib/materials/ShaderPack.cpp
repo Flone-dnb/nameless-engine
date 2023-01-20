@@ -39,7 +39,7 @@ TEST_CASE("compile HLSL vertex shader") {
                 if (std::holds_alternative<std::string>(result)) {
                     sErrorMessage = std::get<std::string>(result);
                 } else {
-                    sErrorMessage = std::get<Error>(result).getError();
+                    sErrorMessage = std::get<Error>(result).getFullErrorMessage();
                 }
                 INFO(sErrorMessage);
                 REQUIRE(std::holds_alternative<std::shared_ptr<ShaderPack>>(result));
@@ -57,7 +57,7 @@ TEST_CASE("compile HLSL vertex shader") {
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
         error.addEntry();
-        INFO(error.getError());
+        INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }
 
@@ -93,7 +93,7 @@ TEST_CASE("compile HLSL pixel shader") {
                 if (std::holds_alternative<std::string>(result)) {
                     sErrorMessage = std::get<std::string>(result);
                 } else {
-                    sErrorMessage = std::get<Error>(result).getError();
+                    sErrorMessage = std::get<Error>(result).getFullErrorMessage();
                 }
                 INFO(sErrorMessage);
                 REQUIRE(std::holds_alternative<std::shared_ptr<ShaderPack>>(result));
@@ -111,7 +111,7 @@ TEST_CASE("compile HLSL pixel shader") {
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
         error.addEntry();
-        INFO(error.getError());
+        INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }
 
@@ -145,7 +145,7 @@ TEST_CASE("compile HLSL compute shader") {
                 if (std::holds_alternative<std::string>(result)) {
                     sErrorMessage = std::get<std::string>(result);
                 } else {
-                    sErrorMessage = std::get<Error>(result).getError();
+                    sErrorMessage = std::get<Error>(result).getFullErrorMessage();
                 }
                 INFO(sErrorMessage);
                 REQUIRE(std::holds_alternative<std::shared_ptr<ShaderPack>>(result));
@@ -163,7 +163,7 @@ TEST_CASE("compile HLSL compute shader") {
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
         error.addEntry();
-        INFO(error.getError());
+        INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }
 
@@ -199,7 +199,7 @@ TEST_CASE("find valid HLSL shader cache") {
                 if (std::holds_alternative<std::string>(compileResult)) {
                     sErrorMessage = std::get<std::string>(compileResult);
                 } else {
-                    sErrorMessage = std::get<Error>(compileResult).getError();
+                    sErrorMessage = std::get<Error>(compileResult).getFullErrorMessage();
                 }
                 INFO(sErrorMessage);
                 REQUIRE(std::holds_alternative<std::shared_ptr<ShaderPack>>(compileResult));
@@ -211,7 +211,7 @@ TEST_CASE("find valid HLSL shader cache") {
                 ShaderPack::createFromCache(pGameWindow->getRenderer(), description, cacheInvalidationReason);
 
             if (!std::holds_alternative<std::shared_ptr<ShaderPack>>(result)) {
-                std::string sErrorMessage = std::get<Error>(result).getError();
+                std::string sErrorMessage = std::get<Error>(result).getFullErrorMessage();
                 INFO(sErrorMessage);
                 REQUIRE(std::holds_alternative<std::shared_ptr<ShaderPack>>(result));
             }
@@ -230,7 +230,7 @@ TEST_CASE("find valid HLSL shader cache") {
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
         error.addEntry();
-        INFO(error.getError());
+        INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }
 
@@ -266,7 +266,7 @@ TEST_CASE("invalidate HLSL shader cache - ENTRY_FUNCTION_NAME_CHANGED") {
                 if (std::holds_alternative<std::string>(compileResult)) {
                     sErrorMessage = std::get<std::string>(compileResult);
                 } else {
-                    sErrorMessage = std::get<Error>(compileResult).getError();
+                    sErrorMessage = std::get<Error>(compileResult).getFullErrorMessage();
                 }
                 INFO(sErrorMessage);
                 REQUIRE(std::holds_alternative<std::shared_ptr<ShaderPack>>(compileResult));
@@ -306,7 +306,7 @@ TEST_CASE("invalidate HLSL shader cache - ENTRY_FUNCTION_NAME_CHANGED") {
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
         error.addEntry();
-        INFO(error.getError());
+        INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }
 
@@ -342,7 +342,7 @@ TEST_CASE("invalidate HLSL shader cache - SHADER_TYPE_CHANGED") {
                 if (std::holds_alternative<std::string>(compileResult)) {
                     sErrorMessage = std::get<std::string>(compileResult);
                 } else {
-                    sErrorMessage = std::get<Error>(compileResult).getError();
+                    sErrorMessage = std::get<Error>(compileResult).getFullErrorMessage();
                 }
                 INFO(sErrorMessage);
                 REQUIRE(std::holds_alternative<std::shared_ptr<ShaderPack>>(compileResult));
@@ -379,7 +379,7 @@ TEST_CASE("invalidate HLSL shader cache - SHADER_TYPE_CHANGED") {
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
         error.addEntry();
-        INFO(error.getError());
+        INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }
 
@@ -415,7 +415,7 @@ TEST_CASE("invalidate HLSL shader cache - DEFINED_SHADER_MACROS_CHANGED") {
                 if (std::holds_alternative<std::string>(compileResult)) {
                     sErrorMessage = std::get<std::string>(compileResult);
                 } else {
-                    sErrorMessage = std::get<Error>(compileResult).getError();
+                    sErrorMessage = std::get<Error>(compileResult).getFullErrorMessage();
                 }
                 INFO(sErrorMessage);
                 REQUIRE(std::holds_alternative<std::shared_ptr<ShaderPack>>(compileResult));
@@ -442,7 +442,7 @@ TEST_CASE("invalidate HLSL shader cache - DEFINED_SHADER_MACROS_CHANGED") {
                 if (std::holds_alternative<std::string>(compileResult)) {
                     sErrorMessage = std::get<std::string>(compileResult);
                 } else {
-                    sErrorMessage = std::get<Error>(compileResult).getError();
+                    sErrorMessage = std::get<Error>(compileResult).getFullErrorMessage();
                 }
                 INFO(sErrorMessage);
                 REQUIRE(std::holds_alternative<std::shared_ptr<ShaderPack>>(compileResult));
@@ -454,7 +454,7 @@ TEST_CASE("invalidate HLSL shader cache - DEFINED_SHADER_MACROS_CHANGED") {
                 ShaderPack::createFromCache(pGameWindow->getRenderer(), description, cacheInvalidationReason);
 
             if (!std::holds_alternative<std::shared_ptr<ShaderPack>>(cacheResult)) {
-                std::string sErrorMessage = std::get<Error>(cacheResult).getError();
+                std::string sErrorMessage = std::get<Error>(cacheResult).getFullErrorMessage();
                 INFO(sErrorMessage);
                 REQUIRE(std::holds_alternative<std::shared_ptr<ShaderPack>>(cacheResult));
             }
@@ -473,7 +473,7 @@ TEST_CASE("invalidate HLSL shader cache - DEFINED_SHADER_MACROS_CHANGED") {
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
         error.addEntry();
-        INFO(error.getError());
+        INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }
 
@@ -510,7 +510,7 @@ TEST_CASE("invalidate HLSL shader cache - SHADER_SOURCE_FILE_CHANGED") {
                 if (std::holds_alternative<std::string>(compileResult)) {
                     sErrorMessage = std::get<std::string>(compileResult);
                 } else {
-                    sErrorMessage = std::get<Error>(compileResult).getError();
+                    sErrorMessage = std::get<Error>(compileResult).getFullErrorMessage();
                 }
                 INFO(sErrorMessage);
                 REQUIRE(std::holds_alternative<std::shared_ptr<ShaderPack>>(compileResult));
@@ -547,7 +547,7 @@ TEST_CASE("invalidate HLSL shader cache - SHADER_SOURCE_FILE_CHANGED") {
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
         error.addEntry();
-        INFO(error.getError());
+        INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }
 
@@ -618,7 +618,7 @@ TEST_CASE("invalidate HLSL shader cache - SHADER_INCLUDE_TREE_CONTENT_CHANGED") 
                 if (std::holds_alternative<std::string>(compileResult)) {
                     sErrorMessage = std::get<std::string>(compileResult);
                 } else {
-                    sErrorMessage = std::get<Error>(compileResult).getError();
+                    sErrorMessage = std::get<Error>(compileResult).getFullErrorMessage();
                 }
                 INFO(sErrorMessage);
                 REQUIRE(std::holds_alternative<std::shared_ptr<ShaderPack>>(compileResult));
@@ -630,7 +630,7 @@ TEST_CASE("invalidate HLSL shader cache - SHADER_INCLUDE_TREE_CONTENT_CHANGED") 
                 ShaderPack::createFromCache(pGameWindow->getRenderer(), description, cacheInvalidationReason);
 
             if (!std::holds_alternative<std::shared_ptr<ShaderPack>>(cacheResult)) {
-                std::string sErrorMessage = std::get<Error>(cacheResult).getError();
+                std::string sErrorMessage = std::get<Error>(cacheResult).getFullErrorMessage();
                 INFO(sErrorMessage);
                 REQUIRE(std::holds_alternative<std::shared_ptr<ShaderPack>>(cacheResult));
             }
@@ -660,7 +660,7 @@ TEST_CASE("invalidate HLSL shader cache - SHADER_INCLUDE_TREE_CONTENT_CHANGED") 
                 if (std::holds_alternative<std::string>(compileResult)) {
                     sErrorMessage = std::get<std::string>(compileResult);
                 } else {
-                    sErrorMessage = std::get<Error>(compileResult).getError();
+                    sErrorMessage = std::get<Error>(compileResult).getFullErrorMessage();
                 }
                 INFO(sErrorMessage);
                 REQUIRE(std::holds_alternative<std::shared_ptr<ShaderPack>>(compileResult));
@@ -690,7 +690,7 @@ TEST_CASE("invalidate HLSL shader cache - SHADER_INCLUDE_TREE_CONTENT_CHANGED") 
                 if (std::holds_alternative<std::string>(compileResult)) {
                     sErrorMessage = std::get<std::string>(compileResult);
                 } else {
-                    sErrorMessage = std::get<Error>(compileResult).getError();
+                    sErrorMessage = std::get<Error>(compileResult).getFullErrorMessage();
                 }
                 INFO(sErrorMessage);
                 REQUIRE(std::holds_alternative<std::shared_ptr<ShaderPack>>(compileResult));
@@ -725,7 +725,7 @@ TEST_CASE("invalidate HLSL shader cache - SHADER_INCLUDE_TREE_CONTENT_CHANGED") 
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
         error.addEntry();
-        INFO(error.getError());
+        INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }
 

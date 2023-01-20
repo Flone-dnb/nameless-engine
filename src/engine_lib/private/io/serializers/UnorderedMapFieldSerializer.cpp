@@ -392,7 +392,7 @@ namespace ne {
         if (std::string_view(#TYPEA) == "float" || std::string_view(#TYPEA) == "double") {                   \
             Error error("`float` or `double` should not be used as map keys");                               \
             error.showError();                                                                               \
-            throw std::runtime_error(error.getError());                                                      \
+            throw std::runtime_error(error.getFullErrorMessage());                                           \
         }                                                                                                    \
         const auto mapA = pFieldA->getUnsafe<std::unordered_map<TYPEA, TYPEB>>(pFieldAOwner);                \
         const auto mapB = pFieldB->getUnsafe<std::unordered_map<TYPEA, TYPEB>>(pFieldBOwner);                \

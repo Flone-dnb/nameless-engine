@@ -138,7 +138,7 @@ TEST_CASE("serialize and deserialize node tree") {
         if (optionalError.has_value()) {
             auto err = optionalError.value();
             err.addEntry();
-            INFO(err.getError());
+            INFO(err.getFullErrorMessage());
             REQUIRE(false);
         }
 
@@ -154,7 +154,7 @@ TEST_CASE("serialize and deserialize node tree") {
         if (std::holds_alternative<Error>(deserializeResult)) {
             auto err = std::get<Error>(deserializeResult);
             err.addEntry();
-            INFO(err.getError());
+            INFO(err.getFullErrorMessage());
             REQUIRE(false);
         }
         const auto pRootNode = std::get<gc<Node>>(deserializeResult);
@@ -253,7 +253,7 @@ TEST_CASE("get parent node of type") {
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
         error.addEntry();
-        INFO(error.getError());
+        INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }
 
@@ -327,7 +327,7 @@ TEST_CASE("get child node of type") {
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
         error.addEntry();
-        INFO(error.getError());
+        INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }
 
@@ -379,7 +379,7 @@ TEST_CASE("saving pointer to the root node does not prevent correct world destru
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
         error.addEntry();
-        INFO(error.getError());
+        INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }
 
@@ -430,7 +430,7 @@ TEST_CASE("test GC performance and stability with nodes") {
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
         error.addEntry();
-        INFO(error.getError());
+        INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }
 
@@ -498,7 +498,7 @@ TEST_CASE("use `Timer` with node's member function while the node is being garba
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
         error.addEntry();
-        INFO(error.getError());
+        INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }
 
@@ -563,7 +563,7 @@ TEST_CASE("onBeforeNewFrame is called only on marked nodes") {
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
         error.addEntry();
-        INFO(error.getError());
+        INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }
 
@@ -643,7 +643,7 @@ TEST_CASE("tick groups order is correct") {
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
         error.addEntry();
-        INFO(error.getError());
+        INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }
 
@@ -702,7 +702,7 @@ TEST_CASE("input event callbacks in Node are triggered") {
             if (optionalError.has_value()) {
                 auto error = optionalError.value();
                 error.addEntry();
-                INFO(error.getError());
+                INFO(error.getFullErrorMessage());
                 REQUIRE(false);
             }
             optionalError =
@@ -710,7 +710,7 @@ TEST_CASE("input event callbacks in Node are triggered") {
             if (optionalError.has_value()) {
                 auto error = optionalError.value();
                 error.addEntry();
-                INFO(error.getError());
+                INFO(error.getFullErrorMessage());
                 REQUIRE(false);
             }
 
@@ -730,7 +730,7 @@ TEST_CASE("input event callbacks in Node are triggered") {
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
         error.addEntry();
-        INFO(error.getError());
+        INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }
 

@@ -26,7 +26,7 @@ namespace ne {
                 Error error(hResult);
                 error.addEntry();
                 error.showError();
-                throw std::runtime_error(error.getError());
+                throw std::runtime_error(error.getFullErrorMessage());
             }
         }
 #endif

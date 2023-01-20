@@ -45,7 +45,7 @@ TEST_CASE("world location, rotation and scale are calculated correctly (no paren
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
         error.addEntry();
-        INFO(error.getError());
+        INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }
 
@@ -94,7 +94,7 @@ TEST_CASE("world location, rotation and scale are calculated correctly (with par
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
         error.addEntry();
-        INFO(error.getError());
+        INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }
 
@@ -165,7 +165,7 @@ TEST_CASE(
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
         error.addEntry();
-        INFO(error.getError());
+        INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }
 
@@ -245,7 +245,7 @@ TEST_CASE("world location with parent rotation is correct") {
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
         error.addEntry();
-        INFO(error.getError());
+        INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }
 
@@ -301,7 +301,7 @@ TEST_CASE("set world location with parent is correct") {
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
         error.addEntry();
-        INFO(error.getError());
+        INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }
 
@@ -360,7 +360,7 @@ TEST_CASE("set world rotation with parent is correct") {
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
         error.addEntry();
-        INFO(error.getError());
+        INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }
 
@@ -416,7 +416,7 @@ TEST_CASE("set world scale with parent is correct") {
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
         error.addEntry();
-        INFO(error.getError());
+        INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }
 
@@ -457,7 +457,7 @@ TEST_CASE("serialize and deserialize SpatialNode") {
                 if (optionalError.has_value()) {
                     auto error = optionalError.value();
                     error.addEntry();
-                    INFO(error.getError());
+                    INFO(error.getFullErrorMessage());
                     REQUIRE(false);
                 }
             }
@@ -468,7 +468,7 @@ TEST_CASE("serialize and deserialize SpatialNode") {
                 if (std::holds_alternative<Error>(result)) {
                     Error error = std::get<Error>(std::move(result));
                     error.addEntry();
-                    INFO(error.getError());
+                    INFO(error.getFullErrorMessage());
                     REQUIRE(false);
                 }
                 const auto pSpatialNode = std::get<gc<SpatialNode>>(std::move(result));
@@ -503,7 +503,7 @@ TEST_CASE("serialize and deserialize SpatialNode") {
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
         error.addEntry();
-        INFO(error.getError());
+        INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }
 

@@ -146,7 +146,7 @@ private:
 };
 
 /// Holds information about player's data.
-class RCLASS(Guid("36063853-79b1-41e6-afa6-6923c8b24815")) PlayerSaveData : public ne::Serializable {
+class RCLASS(Guid("36063853-79b1-41e6-afa6-6923c8b24815")) PlayerSaveData : public Serializable {
 public:
     PlayerSaveData() = default;
     virtual ~PlayerSaveData() override = default;
@@ -197,9 +197,9 @@ File_PlayerSaveData_GENERATED
     // Serialize.
     const auto pathToFile =
         ConfigManager::getCategoryDirectory(ConfigCategory::PROGRESS) / sNewProfileName;
-    const auto optionalError = pPlayerSaveData->serialize(pathToFile, true);
+    const auto optionalError = pPlayerSaveData->serialize(pathToFile, true); // `true` to enable backup file
     if (optionalError.has_value()) {
-        // process error
+        // handle error
     }
 }
 
@@ -215,12 +215,13 @@ File_PlayerSaveData_GENERATED
     // Deserialize.
     const auto pathToFile = ConfigManager::getCategoryDirectory(ConfigCategory::PROGRESS) / sProfileName;
     std::unordered_map<std::string, std::string> foundCustomAttributes;
-    const auto result = Serializable::deserialize<PlayerSaveData>(pathToFile, foundCustomAttributes);
+    const auto result =
+        Serializable::deserialize<std::shared_ptr, PlayerSaveData>(pathToFile, foundCustomAttributes);
     if (std::holds_alternative<Error>(result)) {
-        // process error
+         // handle error
     }
 
-    gc<PlayerSaveData> pPlayerSaveData = std::get<gc<PlayerSaveData>>(result);
+    const auto pPlayerSaveData = std::get<std::shared_ptr<PlayerSaveData>>(result);
 
     // Everything is loaded:
     assert(pPlayerSaveData->sCharacterName == "Player 1");

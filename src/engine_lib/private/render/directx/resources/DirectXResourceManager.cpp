@@ -1,7 +1,6 @@
 ﻿#include "DirectXResourceManager.h"
 
 // Custom.
-#include "render/directx/descriptors/DirectXDescriptorHeap.h"
 #include "render/directx/resources/DirectXResource.h"
 #include "render/directx/DirectXRenderer.h"
 #include "render/general/resources/UploadBuffer.h"

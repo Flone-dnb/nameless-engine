@@ -21,9 +21,9 @@ namespace ne {
             std::scoped_lock guard(mtxLocalMatrix.first);
 
             mtxLocalMatrix.second.localMatrix =
-                glm::rotate(glm::radians(rotation.x), glm::vec3(1.0f, 0.0f, 0.0f)) *
-                glm::rotate(glm::radians(rotation.y), glm::vec3(0.0f, 1.0f, 0.0f)) *
-                glm::rotate(glm::radians(rotation.z), glm::vec3(0.0f, 0.0f, 1.0f));
+                glm::rotate(glm::radians(rotation.x), glm::vec3(1.0F, 0.0F, 0.0F)) *
+                glm::rotate(glm::radians(rotation.y), glm::vec3(0.0F, 1.0F, 0.0F)) *
+                glm::rotate(glm::radians(rotation.z), glm::vec3(0.0F, 0.0F, 1.0F));
             mtxLocalMatrix.second.localMatrixIncludingParents = mtxLocalMatrix.second.localMatrix;
         }
 
@@ -124,7 +124,7 @@ namespace ne {
 
             const auto parentLocalMatrixIncludingParents = pSpatialParent->getLocalMatrixIncludingParents();
             locationRelativeToParentLocalSpace =
-                glm::vec4(locationRelativeToParentLocalSpace, 0.0f) * parentLocalMatrixIncludingParents;
+                glm::vec4(locationRelativeToParentLocalSpace, 0.0F) * parentLocalMatrixIncludingParents;
 
             mtxLocalMatrix.second.localMatrixIncludingParents =
                 mtxLocalMatrix.second.localMatrix * parentLocalMatrixIncludingParents;
@@ -133,9 +133,9 @@ namespace ne {
         // Calculate world matrix without counting the parent.
         const auto myWorldMatrix =
             glm::translate(locationRelativeToParentLocalSpace) *
-            glm::rotate(glm::radians(relativeRotation.z), glm::vec3(0.0f, 0.0f, 1.0f)) *
-            glm::rotate(glm::radians(relativeRotation.y), glm::vec3(0.0f, 1.0f, 0.0f)) *
-            glm::rotate(glm::radians(relativeRotation.x), glm::vec3(1.0f, 0.0f, 0.0f)) *
+            glm::rotate(glm::radians(relativeRotation.z), glm::vec3(0.0F, 0.0F, 1.0F)) *
+            glm::rotate(glm::radians(relativeRotation.y), glm::vec3(0.0F, 1.0F, 0.0F)) *
+            glm::rotate(glm::radians(relativeRotation.x), glm::vec3(1.0F, 0.0F, 0.0F)) *
             glm::scale(relativeScale);
 
         // Recalculate world matrix.
@@ -163,8 +163,8 @@ namespace ne {
             // Notify spatial child nodes.
             // (don't unlock our world matrix yet)
             const auto vChildNodes = getChildNodes();
-            for (const auto& pChildNode : *vChildNodes) {
-                recalculateWorldMatrixForNodeAndNotifyChildren(pChildNode);
+            for (size_t i = 0; i < vChildNodes->size(); i++) {
+                recalculateWorldMatrixForNodeAndNotifyChildren(vChildNodes->at(i));
             }
         }
     }
@@ -176,8 +176,8 @@ namespace ne {
         } else {
             // This is not a spatial node, notify children maybe there's a spatial node somewhere.
             const auto vChildNodes = pNode->getChildNodes();
-            for (const auto& pChildNode : *vChildNodes) {
-                recalculateWorldMatrixForNodeAndNotifyChildren(pChildNode);
+            for (size_t i = 0; i < vChildNodes->size(); i++) {
+                recalculateWorldMatrixForNodeAndNotifyChildren(vChildNodes->at(i));
             }
         }
     }

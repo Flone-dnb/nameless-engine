@@ -131,7 +131,7 @@ namespace ne {
             return Error(hResult);
         }
 
-        if (pSerializerErrorMessage) {
+        if (pSerializerErrorMessage != nullptr) {
             return Error(std::string(
                 static_cast<char*>(pSerializerErrorMessage->GetBufferPointer()),
                 pSerializerErrorMessage->GetBufferSize()));
@@ -151,8 +151,10 @@ namespace ne {
         return std::make_tuple(pRootSignature, vRootParameters, vStaticSamplersToBind);
     }
 
-    std::variant<ComPtr<ID3D12RootSignature>, Error> RootSignatureGenerator::merge(
-        ID3D12Device* pDevice, const HlslShader* pVertexShader, const HlslShader* pPixelShader) {
+    std::variant<ComPtr<ID3D12RootSignature>, Error> RootSignatureGenerator::merge( // NOLINT: too complex
+        ID3D12Device* pDevice,
+        const HlslShader* pVertexShader,
+        const HlslShader* pPixelShader) {
         // Check that vertex shader is indeed a vertex shader.
         if (pVertexShader->getShaderType() != ShaderType::VERTEX_SHADER) [[unlikely]] {
             return Error(std::format(

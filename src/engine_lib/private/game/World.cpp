@@ -18,7 +18,7 @@ namespace ne {
 
         // Check if the game instance exists.
         const auto pGameInstance = pGame->getGameInstance();
-        if (!pGameInstance) {
+        if (pGameInstance == nullptr) {
             Error err("an attempt was made to create a new world while GameInstance is not created. "
                       "Are you trying to create a new world in GameInstance's constructor? Use "
                       "`GameInstance::onGameStarted` instead.");
@@ -33,7 +33,7 @@ namespace ne {
         mtxReceivingInputNodes.second = gc_new_vector<Node>();
 
         // Spawn root node.
-        mtxRootNode.second = pRootNode;
+        mtxRootNode.second = std::move(pRootNode);
         mtxRootNode.second->pWorld = this;
         mtxRootNode.second->spawn();
 
@@ -81,7 +81,7 @@ namespace ne {
                                    std::chrono::steady_clock::now() - timeWhenWorldCreated)
                                    .count());
 
-        return durationInMs / 1000.0f;
+        return durationInMs / 1000.0F; // NOLINT
     }
 
     size_t World::getWorldSize() const { return iWorldSize; }
@@ -122,7 +122,7 @@ namespace ne {
         return &mtxReceivingInputNodes;
     }
 
-    void World::onNodeSpawned(gc<Node> pNode) {
+    void World::onNodeSpawned(const gc<Node>& pNode) {
         // Exit if world is being destroyed.
         std::scoped_lock isDestroyedGuard(mtxIsDestroyed.first);
         if (mtxIsDestroyed.second) {
@@ -147,7 +147,7 @@ namespace ne {
         }
     }
 
-    void World::onNodeDespawned(gc<Node> pNode) {
+    void World::onNodeDespawned(const gc<Node>& pNode) {
         // Exit if world is being destroyed.
         std::scoped_lock isDestroyedGuard(mtxIsDestroyed.first);
         if (mtxIsDestroyed.second) {

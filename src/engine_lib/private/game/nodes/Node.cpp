@@ -48,7 +48,7 @@ namespace ne {
 
     std::string Node::getName() const { return sName; }
 
-    void Node::addChildNode(gc<Node> pNode) {
+    void Node::addChildNode(const gc<Node>& pNode) {
         std::scoped_lock spawnGuard(mtxSpawning);
 
         // Check if this node is valid.
@@ -161,8 +161,9 @@ namespace ne {
 
         // Check if this node is spawned.
         std::scoped_lock guard(mtxSpawning);
-        if (bIsSpawned == false)
+        if (!bIsSpawned) {
             return;
+        }
 
         // Detach from parent.
         std::scoped_lock parentGuard(mtxParentNode.first);
@@ -214,8 +215,9 @@ namespace ne {
     World* Node::findValidWorld() {
         std::scoped_lock guard(mtxSpawning);
 
-        if (pWorld)
+        if (pWorld != nullptr) {
             return pWorld;
+        }
 
         // Ask parent node for the valid game instance and world pointers.
         std::scoped_lock parentGuard(mtxParentNode.first);
@@ -322,8 +324,11 @@ namespace ne {
             // Convert information array.
             std::vector<SerializableObjectInformation> vNodesInfo;
             for (const auto& info : vOriginalNodesInfo) {
-                vNodesInfo.push_back(SerializableObjectInformation(
-                    info.pObject, info.sObjectUniqueId, info.customAttributes, info.pOriginalObject));
+                vNodesInfo.push_back(SerializableObjectInformation( // NOLINT
+                    info.pObject,
+                    info.sObjectUniqueId,
+                    info.customAttributes,
+                    info.pOriginalObject));
             }
 
             // Serialize.
@@ -439,7 +444,8 @@ namespace ne {
         }
     }
 
-    std::variant<gc<Node>, Error> Node::deserializeNodeTree(const std::filesystem::path& pathToFile) {
+    std::variant<gc<Node>, Error>
+    Node::deserializeNodeTree(const std::filesystem::path& pathToFile) { // NOLINT: too complex
         // Get all IDs from this file.
         const auto idResult = Serializable::getIdsFromFile(pathToFile);
         if (std::holds_alternative<Error>(idResult)) {
@@ -450,7 +456,7 @@ namespace ne {
         const auto ids = std::get<std::set<std::string>>(idResult);
 
         // Deserialize all nodes.
-        const auto deserializeResult = Serializable::deserializeMultiple<gc>(pathToFile, ids);
+        auto deserializeResult = Serializable::deserializeMultiple<gc>(pathToFile, ids);
         if (std::holds_alternative<Error>(deserializeResult)) {
             auto err = std::get<Error>(deserializeResult);
             err.addEntry();
@@ -462,13 +468,14 @@ namespace ne {
         // See if some node is external node tree.
         for (auto& nodeInfo : vNodesInfo) {
             // Try to cast this object to Node.
-            if (!dynamic_cast<Node*>(&*nodeInfo.pObject)) [[unlikely]] {
+            if (dynamic_cast<Node*>(&*nodeInfo.pObject) == nullptr) [[unlikely]] {
                 return Error("deserialized object is not a node");
             }
 
             auto it = nodeInfo.customAttributes.find(sExternalNodeTreePathAttributeName);
-            if (it == nodeInfo.customAttributes.end())
+            if (it == nodeInfo.customAttributes.end()) {
                 continue;
+            }
 
             // Construct path to this external node tree.
             const auto pathToExternalNodeTree =
@@ -493,8 +500,8 @@ namespace ne {
 
             // Attach child nodes of this external root node to our node that has changed fields.
             const auto vChildNodes = pExternalRootNode->getChildNodes();
-            for (const auto& pChildNode : *vChildNodes) {
-                pNode->addChildNode(pChildNode);
+            for (size_t i = 0; i < vChildNodes->size(); i++) {
+                pNode->addChildNode(vChildNodes->at(i));
             }
         }
 
@@ -505,7 +512,7 @@ namespace ne {
         for (const auto& nodeInfo : vNodesInfo) {
             // Try to cast this object to Node.
             const auto pNode = dynamic_cast<Node*>(&*nodeInfo.pObject);
-            if (!pNode) [[unlikely]] {
+            if (pNode == nullptr) [[unlikely]] {
                 return Error("deserialized object is not a node");
             }
 
@@ -556,7 +563,7 @@ namespace ne {
             }
 
             // Check if we already set a node in this index position.
-            if (vNodes[iNodeId].first) [[unlikely]] {
+            if (vNodes[iNodeId].first != nullptr) [[unlikely]] {
                 return Error(fmt::format("parsed ID {} was already used by some other node", iNodeId));
             }
 
@@ -589,8 +596,9 @@ namespace ne {
     gc<Node> Node::getWorldRootNode() {
         std::scoped_lock guard(mtxSpawning);
 
-        if (pWorld == nullptr)
+        if (pWorld == nullptr) {
             return nullptr;
+        }
 
         return pWorld->getRootNode();
     }
@@ -598,7 +606,8 @@ namespace ne {
     bool Node::isParentOf(Node* pNode) {
         std::scoped_lock guard(mtxChildNodes.first);
 
-        for (const auto& pChildNode : *mtxChildNodes.second) {
+        // See if the specified node is in our child tree.
+        for (const auto& pChildNode : *mtxChildNodes.second) { // NOLINT
             if (&*pChildNode == pNode) {
                 return true;
             }
@@ -606,9 +615,9 @@ namespace ne {
             const auto bIsChild = pChildNode->isParentOf(pNode);
             if (!bIsChild) {
                 continue;
-            } else {
-                return true;
             }
+
+            return true;
         }
 
         return false;
@@ -617,9 +626,10 @@ namespace ne {
     bool Node::isChildOf(Node* pNode) {
         std::scoped_lock guard(mtxParentNode.first);
 
-        // Check if have a parent.
-        if (!mtxParentNode.second)
+        // Check if we have a parent.
+        if (!mtxParentNode.second) {
             return false;
+        }
 
         if (&*mtxParentNode.second == pNode) {
             return true;
@@ -716,8 +726,9 @@ namespace ne {
         std::scoped_lock guard(mtxBindedActionEvents.first);
 
         const auto it = mtxBindedActionEvents.second.find(sActionName);
-        if (it == mtxBindedActionEvents.second.end())
+        if (it == mtxBindedActionEvents.second.end()) {
             return;
+        }
 
         it->second(modifiers, bIsPressedDown);
     }
@@ -726,8 +737,9 @@ namespace ne {
         std::scoped_lock guard(mtxBindedAxisEvents.first);
 
         const auto it = mtxBindedAxisEvents.second.find(sAxisName);
-        if (it == mtxBindedAxisEvents.second.end())
+        if (it == mtxBindedAxisEvents.second.end()) {
             return;
+        }
 
         it->second(modifiers, input);
     }

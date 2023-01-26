@@ -3,9 +3,6 @@
 // Standard.
 #include <optional>
 
-// Custom.
-#include "render/directx/resources/DirectXResourceManager.h"
-
 namespace ne {
     class DirectXDescriptorHeap;
     class DirectXResource;

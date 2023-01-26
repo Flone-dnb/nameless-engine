@@ -159,7 +159,7 @@ namespace ne {
          * @param iTotalShaderCount Total number of shaders to compile in this query
          * (might be bigger than the size of the vShadersToCompile argument because the query is
          * divided in smaller tasks).
-         * @param shaderToCompile   Shader to compile.
+         * @param shaderDescription Shader to compile.
          * @param onProgress        Callback function that will be called when each shader is compiled.
          * This will also be called when all shaders are compiled (together with 'onCompleted').
          * The first argument is number of compiled shaders and the second one is total number of
@@ -176,7 +176,7 @@ namespace ne {
             size_t iQueryId,
             const std::shared_ptr<std::atomic<size_t>>& pCompiledShaderCount,
             size_t iTotalShaderCount,
-            ShaderDescription shaderToCompile,
+            ShaderDescription shaderDescription,
             const std::function<void(size_t iCompiledShaderCount, size_t iTotalShadersToCompile)>& onProgress,
             const std::function<
                 void(ShaderDescription shaderDescription, std::variant<std::string, Error> error)>& onError,

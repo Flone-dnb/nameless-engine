@@ -17,14 +17,14 @@ namespace ne {
 
 #if defined(WIN32)
     Error::Error(const HRESULT hResult, const nostd::source_location location) {
-        LPSTR errorText = nullptr;
+        LPSTR pErrorText = nullptr;
 
         FormatMessageA(
             FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_IGNORE_INSERTS,
             nullptr,
             hResult,
             MAKELANGID(LANG_ENGLISH, SUBLANG_ENGLISH_US),
-            reinterpret_cast<LPSTR>(&errorText),
+            reinterpret_cast<LPSTR>(&pErrorText),
             0,
             nullptr);
 
@@ -33,9 +33,9 @@ namespace ne {
         hexStream << std::hex << hResult;
         sMessage = std::format("0x{}: ", hexStream.str());
 
-        if (errorText) {
-            sMessage += std::string_view(errorText);
-            LocalFree(errorText);
+        if (pErrorText != nullptr) {
+            sMessage += std::string_view(pErrorText);
+            LocalFree(pErrorText);
         } else {
             sMessage += "unknown error";
         }
@@ -44,7 +44,7 @@ namespace ne {
     }
 
     Error::Error(unsigned long iErrorCode, const nostd::source_location location) {
-        LPSTR messageBuffer = nullptr;
+        LPSTR pMessageBuffer = nullptr;
 
         // Ask Win32 to give us the string version of that message ID.
         // The parameters we pass in, tell Win32 to create the buffer that holds the message for us
@@ -54,7 +54,7 @@ namespace ne {
             nullptr,
             iErrorCode,
             MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-            (LPSTR)&messageBuffer,
+            (LPSTR)&pMessageBuffer,
             0,
             nullptr);
 
@@ -62,14 +62,14 @@ namespace ne {
         this->sMessage = std::string("error code: ");
         this->sMessage += std::to_string(iErrorCode);
         this->sMessage += ", description: ";
-        if (messageBuffer) {
-            this->sMessage += std::string(messageBuffer, iSize);
+        if (pMessageBuffer != nullptr) {
+            this->sMessage += std::string(pMessageBuffer, iSize);
         } else {
             this->sMessage += "unknown error";
         }
 
-        if (messageBuffer) {
-            LocalFree(messageBuffer);
+        if (pMessageBuffer != nullptr) {
+            LocalFree(pMessageBuffer);
         }
 
         stack.push_back(sourceLocationToInfo(location));

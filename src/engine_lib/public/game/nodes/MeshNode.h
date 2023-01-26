@@ -6,6 +6,7 @@
 // Custom.
 #include "game/nodes/SpatialNode.h"
 #include "math/GLMath.hpp"
+#include "render/general/resources/UploadBuffer.h"
 
 #include "MeshNode.generated.h"
 

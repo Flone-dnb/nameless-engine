@@ -184,8 +184,8 @@ namespace ne {
     }
 
     std::variant<std::shared_ptr<Material>, Error> Material::create(
-        const std::string& sCustomVertexShaderName,
-        const std::string& sCustomPixelShaderName,
+        const std::string& sVertexShaderName,
+        const std::string& sPixelShaderName,
         bool bUseTransparency,
         const std::string& sMaterialName) {
         // Check that the specified custom shaders exist.
@@ -202,21 +202,21 @@ namespace ne {
         const auto pShaderManager = pRenderer->getShaderManager();
 
         // Check vertex shader.
-        if (pShaderManager->isShaderNameCanBeUsed(sCustomVertexShaderName)) {
-            return Error(fmt::format(
-                "Vertex shader \"{}\" was not found in the shader manager.", sCustomVertexShaderName));
+        if (pShaderManager->isShaderNameCanBeUsed(sVertexShaderName)) {
+            return Error(
+                fmt::format("Vertex shader \"{}\" was not found in the shader manager.", sVertexShaderName));
         }
 
         // Check pixel shader.
-        if (pShaderManager->isShaderNameCanBeUsed(sCustomPixelShaderName)) {
-            return Error(fmt::format(
-                "Pixel shader \"{}\" was not found in the shader manager.", sCustomPixelShaderName));
+        if (pShaderManager->isShaderNameCanBeUsed(sPixelShaderName)) {
+            return Error(
+                fmt::format("Pixel shader \"{}\" was not found in the shader manager.", sPixelShaderName));
         }
 
         // Create material.
         return std::shared_ptr<Material>(new Material(
-            sCustomVertexShaderName,
-            sCustomPixelShaderName,
+            sVertexShaderName,
+            sPixelShaderName,
             bUseTransparency,
             pRenderer->getPsoManager(),
             sMaterialName));

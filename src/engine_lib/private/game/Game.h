@@ -191,7 +191,7 @@ namespace ne {
          *
          * @return Interval in seconds.
          */
-        long long getGarbageCollectorRunIntervalInSec();
+        long long getGarbageCollectorRunIntervalInSec() const;
 
     private:
         // The object should be created by a Window instance.

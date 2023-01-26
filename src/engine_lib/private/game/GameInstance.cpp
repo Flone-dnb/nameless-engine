@@ -27,8 +27,9 @@ namespace ne {
         std::scoped_lock guard(mtxBindedActionEvents.first);
 
         const auto it = mtxBindedActionEvents.second.find(sActionName);
-        if (it == mtxBindedActionEvents.second.end())
+        if (it == mtxBindedActionEvents.second.end()) {
             return;
+        }
 
         it->second(modifiers, bIsPressedDown);
     }
@@ -38,8 +39,9 @@ namespace ne {
         std::scoped_lock guard(mtxBindedAxisEvents.first);
 
         const auto it = mtxBindedAxisEvents.second.find(sAxisName);
-        if (it == mtxBindedAxisEvents.second.end())
+        if (it == mtxBindedAxisEvents.second.end()) {
             return;
+        }
 
         it->second(modifiers, input);
     }

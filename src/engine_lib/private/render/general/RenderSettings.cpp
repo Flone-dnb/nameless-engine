@@ -490,9 +490,9 @@ namespace ne {
     std::string RenderSettings::getConfigurationFileName(bool bIncludeFileExtension) {
         if (bIncludeFileExtension) {
             return sRenderSettingsConfigurationFileName + ConfigManager::getConfigFormatExtension();
-        } else {
-            return sRenderSettingsConfigurationFileName;
         }
+
+        return sRenderSettingsConfigurationFileName;
     }
 
 } // namespace ne

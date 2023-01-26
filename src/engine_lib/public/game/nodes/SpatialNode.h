@@ -217,19 +217,19 @@ namespace ne RNAMESPACE() {
              * Location in world, includes hierarchy.
              * This value contains the location component of @ref worldMatrix.
              */
-            glm::vec3 worldLocation = glm::vec3(0.0f, 0.0f, 0.0f);
+            glm::vec3 worldLocation = glm::vec3(0.0F, 0.0F, 0.0F);
 
             /**
              * Rotation (in degrees) in world, includes hierarchy.
              * This value contains the rotation component of @ref worldMatrix.
              */
-            glm::vec3 worldRotation = glm::vec3(0.0f, 0.0f, 0.0f);
+            glm::vec3 worldRotation = glm::vec3(0.0F, 0.0F, 0.0F);
 
             /**
              * Scale in world, includes hierarchy.
              * This value contains the scale component of @ref worldMatrix.
              */
-            glm::vec3 worldScale = glm::vec3(1.0f, 1.0f, 1.0f);
+            glm::vec3 worldScale = glm::vec3(1.0F, 1.0F, 1.0F);
 
             /**
              * Matrix that combines @ref worldLocation, @ref worldRotation and @ref worldScale.
@@ -253,7 +253,7 @@ namespace ne RNAMESPACE() {
          * in the parent chain, relative to the world.
          */
         RPROPERTY(Serialize)
-        glm::vec3 relativeLocation = glm::vec3(0.0f, 0.0f, 0.0f);
+        glm::vec3 relativeLocation = glm::vec3(0.0F, 0.0F, 0.0F);
 
         /**
          * Node's rotation in degrees, if there is another SpatialNode in the parent chain then
@@ -261,7 +261,7 @@ namespace ne RNAMESPACE() {
          * is no SpatialNode in the parent chain, relative to the world.
          */
         RPROPERTY(Serialize)
-        glm::vec3 relativeRotation = glm::vec3(0.0f, 0.0f, 0.0f);
+        glm::vec3 relativeRotation = glm::vec3(0.0F, 0.0F, 0.0F);
 
         /**
          * Node's scale, if there is another SpatialNode in the parent chain then this scale is
@@ -269,7 +269,7 @@ namespace ne RNAMESPACE() {
          * in the parent chain, relative to the world.
          */
         RPROPERTY(Serialize)
-        glm::vec3 relativeScale = glm::vec3(1.0f, 1.0f, 1.0f);
+        glm::vec3 relativeScale = glm::vec3(1.0F, 1.0F, 1.0F);
 
         /** Matrix that describes basis vectors that define node's local space. */
         std::pair<std::recursive_mutex, LocalMatrixInformation> mtxLocalMatrix;
@@ -282,6 +282,6 @@ namespace ne RNAMESPACE() {
 
         ne_SpatialNode_GENERATED
     };
-} // namespace )
+} // namespace ne RNAMESPACE()
 
 File_SpatialNode_GENERATED

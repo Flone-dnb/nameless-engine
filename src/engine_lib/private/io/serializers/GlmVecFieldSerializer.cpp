@@ -9,14 +9,9 @@
 namespace ne {
     bool GlmVecFieldSerializer::isFieldTypeSupported(const rfk::Field* pField) {
         const auto sFieldCanonicalTypeName = std::string(pField->getCanonicalTypeName());
-
-        if (sFieldCanonicalTypeName == sVec2CanonicalTypeName ||
-            sFieldCanonicalTypeName == sVec3CanonicalTypeName ||
-            sFieldCanonicalTypeName == sVec4CanonicalTypeName) {
-            return true;
-        }
-
-        return false;
+        return sFieldCanonicalTypeName == sVec2CanonicalTypeName ||
+               sFieldCanonicalTypeName == sVec3CanonicalTypeName ||
+               sFieldCanonicalTypeName == sVec4CanonicalTypeName;
     }
 
     std::optional<Error> GlmVecFieldSerializer::serializeField(
@@ -28,24 +23,24 @@ namespace ne {
         size_t& iSubEntityId,
         Serializable* pOriginalObject) {
         const auto sFieldCanonicalTypeName = std::string(pField->getCanonicalTypeName());
-        const auto sFieldName = pField->getName();
+        const auto pFieldName = pField->getName();
 
         if (sFieldCanonicalTypeName == sVec2CanonicalTypeName) {
             const auto value = pField->getUnsafe<glm::vec2>(pFieldOwner);
-            pTomlData->operator[](sSectionName).operator[](sFieldName) = std::vector<float>{value.x, value.y};
+            pTomlData->operator[](sSectionName).operator[](pFieldName) = std::vector<float>{value.x, value.y};
         } else if (sFieldCanonicalTypeName == sVec3CanonicalTypeName) {
             const auto value = pField->getUnsafe<glm::vec3>(pFieldOwner);
-            pTomlData->operator[](sSectionName).operator[](sFieldName) =
+            pTomlData->operator[](sSectionName).operator[](pFieldName) =
                 std::vector<float>{value.x, value.y, value.z};
         } else if (sFieldCanonicalTypeName == sVec4CanonicalTypeName) {
             const auto value = pField->getUnsafe<glm::vec4>(pFieldOwner);
-            pTomlData->operator[](sSectionName).operator[](sFieldName) =
+            pTomlData->operator[](sSectionName).operator[](pFieldName) =
                 std::vector<float>{value.x, value.y, value.z, value.w};
         } else {
             return Error(fmt::format(
                 "The type \"{}\" of the specified field \"{}\" is not supported by this serializer.",
                 sFieldCanonicalTypeName,
-                sFieldName));
+                pFieldName));
         }
 
         return {};
@@ -60,14 +55,14 @@ namespace ne {
         const std::string& sEntityId,
         std::unordered_map<std::string, std::string>& customAttributes) {
         const auto sFieldCanonicalTypeName = std::string(pField->getCanonicalTypeName());
-        const auto sFieldName = pField->getName();
+        const auto pFieldName = pField->getName();
 
         if (!pTomlValue->is_array()) {
             return Error(fmt::format(
                 "The type \"{}\" of the specified field \"{}\" is supported by this serializer, "
                 "but the TOML value is not an array.",
                 sFieldCanonicalTypeName,
-                sFieldName));
+                pFieldName));
         }
 
         if (sFieldCanonicalTypeName == sVec2CanonicalTypeName) {
@@ -78,7 +73,7 @@ namespace ne {
                     "The type \"{}\" of the specified field \"{}\" is supported by this serializer, "
                     "but the TOML value (array) has incorrect size.",
                     sFieldCanonicalTypeName,
-                    sFieldName));
+                    pFieldName));
             }
             for (const auto& item : array) {
                 if (!item.is_floating()) {
@@ -86,7 +81,7 @@ namespace ne {
                         "The type \"{}\" of the specified field \"{}\" is supported by this serializer, "
                         "but the TOML value is not float.",
                         sFieldCanonicalTypeName,
-                        sFieldName));
+                        pFieldName));
                 }
                 floatArray.push_back(static_cast<float>(item.as_floating()));
             }
@@ -104,7 +99,7 @@ namespace ne {
                     "The type \"{}\" of the specified field \"{}\" is supported by this serializer, "
                     "but the TOML value (array) has incorrect size.",
                     sFieldCanonicalTypeName,
-                    sFieldName));
+                    pFieldName));
             }
             for (const auto& item : array) {
                 if (!item.is_floating()) {
@@ -112,7 +107,7 @@ namespace ne {
                         "The type \"{}\" of the specified field \"{}\" is supported by this serializer, "
                         "but the TOML value is not float.",
                         sFieldCanonicalTypeName,
-                        sFieldName));
+                        pFieldName));
                 }
                 floatArray.push_back(static_cast<float>(item.as_floating()));
             }
@@ -130,7 +125,7 @@ namespace ne {
                     "The type \"{}\" of the specified field \"{}\" is supported by this serializer, "
                     "but the TOML value (array) has incorrect size.",
                     sFieldCanonicalTypeName,
-                    sFieldName));
+                    pFieldName));
             }
             for (const auto& item : array) {
                 if (!item.is_floating()) {
@@ -138,7 +133,7 @@ namespace ne {
                         "The type \"{}\" of the specified field \"{}\" is supported by this serializer, "
                         "but the TOML value is not float.",
                         sFieldCanonicalTypeName,
-                        sFieldName));
+                        pFieldName));
                 }
                 floatArray.push_back(static_cast<float>(item.as_floating()));
             }
@@ -152,7 +147,7 @@ namespace ne {
             return Error(fmt::format(
                 "The type \"{}\" of the specified field \"{}\" is not supported by this serializer.",
                 sFieldCanonicalTypeName,
-                sFieldName));
+                pFieldName));
         }
 
         return {};
@@ -201,10 +196,12 @@ namespace ne {
         const rfk::Field* pFieldA,
         Serializable* pFieldBOwner,
         const rfk::Field* pFieldB) {
-        if (!isFieldTypeSupported(pFieldA))
+        if (!isFieldTypeSupported(pFieldA)) {
             return false;
-        if (!isFieldTypeSupported(pFieldB))
+        }
+        if (!isFieldTypeSupported(pFieldB)) {
             return false;
+        }
 
         // Check that types are equal.
         const std::string sFieldACanonicalTypeName = pFieldA->getCanonicalTypeName();
@@ -217,11 +214,13 @@ namespace ne {
             const auto valueA = pFieldA->getUnsafe<glm::vec2>(pFieldAOwner);
             const auto valueB = pFieldB->getUnsafe<glm::vec2>(pFieldBOwner);
             return glm::all(glm::epsilonEqual(valueA, valueB, floatEpsilon));
-        } else if (sFieldACanonicalTypeName == sVec3CanonicalTypeName) {
+        }
+        if (sFieldACanonicalTypeName == sVec3CanonicalTypeName) {
             const auto valueA = pFieldA->getUnsafe<glm::vec3>(pFieldAOwner);
             const auto valueB = pFieldB->getUnsafe<glm::vec3>(pFieldBOwner);
             return glm::all(glm::epsilonEqual(valueA, valueB, floatEpsilon));
-        } else if (sFieldACanonicalTypeName == sVec4CanonicalTypeName) {
+        }
+        if (sFieldACanonicalTypeName == sVec4CanonicalTypeName) {
             const auto valueA = pFieldA->getUnsafe<glm::vec4>(pFieldAOwner);
             const auto valueB = pFieldB->getUnsafe<glm::vec4>(pFieldBOwner);
             return glm::all(glm::epsilonEqual(valueA, valueB, floatEpsilon));

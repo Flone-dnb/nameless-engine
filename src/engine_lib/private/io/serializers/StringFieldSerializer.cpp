@@ -7,11 +7,7 @@ namespace ne {
     bool StringFieldSerializer::isFieldTypeSupported(const rfk::Field* pField) {
         const auto sFieldCanonicalTypeName = std::string(pField->getCanonicalTypeName());
 
-        if (sFieldCanonicalTypeName == sStringCanonicalTypeName) {
-            return true;
-        }
-
-        return false;
+        return sFieldCanonicalTypeName == sStringCanonicalTypeName;
     }
 
     std::optional<Error> StringFieldSerializer::serializeField(
@@ -23,16 +19,16 @@ namespace ne {
         size_t& iSubEntityId,
         Serializable* pOriginalObject) {
         const auto sFieldCanonicalTypeName = std::string(pField->getCanonicalTypeName());
-        const auto sFieldName = pField->getName();
+        const auto pFieldName = pField->getName();
 
         if (sFieldCanonicalTypeName == sStringCanonicalTypeName) {
-            pTomlData->operator[](sSectionName).operator[](sFieldName) =
+            pTomlData->operator[](sSectionName).operator[](pFieldName) =
                 pField->getUnsafe<std::string>(pFieldOwner);
         } else {
             return Error(fmt::format(
                 "The type \"{}\" of the specified field \"{}\" is not supported by this serializer.",
                 sFieldCanonicalTypeName,
-                sFieldName));
+                pFieldName));
         }
 
         return {};
@@ -47,7 +43,7 @@ namespace ne {
         const std::string& sEntityId,
         std::unordered_map<std::string, std::string>& customAttributes) {
         const auto sFieldCanonicalTypeName = std::string(pField->getCanonicalTypeName());
-        const auto sFieldName = pField->getName();
+        const auto pFieldName = pField->getName();
 
         if (sFieldCanonicalTypeName == sStringCanonicalTypeName && pTomlValue->is_string()) {
             auto fieldValue = pTomlValue->as_string().str;
@@ -57,12 +53,12 @@ namespace ne {
                 "The type \"{}\" of the specified field \"{}\" is supported by this serializer, "
                 "but the TOML value is not string.",
                 sFieldCanonicalTypeName,
-                sFieldName));
+                pFieldName));
         } else {
             return Error(fmt::format(
                 "The type \"{}\" of the specified field \"{}\" is not supported by this serializer.",
                 sFieldCanonicalTypeName,
-                sFieldName));
+                pFieldName));
         }
 
         return {};
@@ -93,10 +89,12 @@ namespace ne {
         const rfk::Field* pFieldA,
         Serializable* pFieldBOwner,
         const rfk::Field* pFieldB) {
-        if (!isFieldTypeSupported(pFieldA))
+        if (!isFieldTypeSupported(pFieldA)) {
             return false;
-        if (!isFieldTypeSupported(pFieldB))
+        }
+        if (!isFieldTypeSupported(pFieldB)) {
             return false;
+        }
 
         const auto sValueA = pFieldA->getUnsafe<std::string>(pFieldAOwner);
         const auto sValueB = pFieldB->getUnsafe<std::string>(pFieldBOwner);

@@ -55,19 +55,19 @@ namespace ne {
 #if defined(WIN32)
 
         // Try to get AppData folder.
-        PWSTR pathTmp;
-        const HRESULT result = SHGetKnownFolderPath(FOLDERID_LocalAppData, 0, nullptr, &pathTmp);
+        PWSTR pPathTmp = nullptr;
+        const HRESULT result = SHGetKnownFolderPath(FOLDERID_LocalAppData, 0, nullptr, &pPathTmp);
         if (result != S_OK) {
-            CoTaskMemFree(pathTmp);
+            CoTaskMemFree(pPathTmp);
 
             const Error err(result);
             err.showError();
             throw std::runtime_error(err.getFullErrorMessage());
         }
 
-        basePath = pathTmp;
+        basePath = pPathTmp;
 
-        CoTaskMemFree(pathTmp);
+        CoTaskMemFree(pPathTmp);
 
 #elif __linux__
 
@@ -100,7 +100,7 @@ namespace ne {
 
 #if defined(WIN32)
         size_t iResultBytes;
-        wcstombs_s(&iResultBytes, &sOutput[0], sOutput.size() + 1, sText.c_str(), sText.size());
+        wcstombs_s(&iResultBytes, sOutput.data(), sOutput.size() + 1, sText.c_str(), sText.size());
 #elif __linux__
         wcstombs(&sOutput[0], sText.c_str(), sOutput.size());
 #else
@@ -117,7 +117,7 @@ namespace ne {
 
 #if defined(WIN32)
         size_t iResultBytes;
-        mbstowcs_s(&iResultBytes, &sOutput[0], sOutput.size() + 1, sText.c_str(), sText.size());
+        mbstowcs_s(&iResultBytes, sOutput.data(), sOutput.size() + 1, sText.c_str(), sText.size());
 #elif __linux__
         mbstowcs(&sOutput[0], sText.c_str(), sOutput.size());
 #else

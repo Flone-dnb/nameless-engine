@@ -11,12 +11,7 @@
 namespace ne {
     bool MaterialFieldSerializer::isFieldTypeSupported(const rfk::Field* pField) {
         const auto sFieldCanonicalTypeName = std::string(pField->getCanonicalTypeName());
-
-        if (sFieldCanonicalTypeName == sSharedPtrMaterialCanonicalTypeName) {
-            return true;
-        }
-
-        return false;
+        return sFieldCanonicalTypeName == sSharedPtrMaterialCanonicalTypeName;
     }
 
     std::optional<Error> MaterialFieldSerializer::serializeField(
@@ -28,23 +23,24 @@ namespace ne {
         size_t& iSubEntityId,
         Serializable* pOriginalObject) {
         const auto sFieldCanonicalTypeName = std::string(pField->getCanonicalTypeName());
-        const auto sFieldName = pField->getName();
+        const auto pFieldName = pField->getName();
 
         if (!isFieldTypeSupported(pField)) {
             return Error(fmt::format(
                 "The type \"{}\" of the specified field \"{}\" is not supported by this serializer.",
                 sFieldCanonicalTypeName,
-                sFieldName));
+                pFieldName));
         }
 
         const auto pSubEntity = static_cast<std::shared_ptr<Material>*>(pField->getPtrUnsafe(pFieldOwner));
-        if (*pSubEntity == nullptr)
+        if (*pSubEntity == nullptr) {
             return {};
+        }
 
         Material* pRawMaterial = (*pSubEntity).get();
 
         const auto optionalError = SerializableObjectFieldSerializer::serializeFieldObject(
-            pRawMaterial, pTomlData, sFieldName, sSectionName, sEntityId, iSubEntityId, pOriginalObject);
+            pRawMaterial, pTomlData, pFieldName, sSectionName, sEntityId, iSubEntityId, pOriginalObject);
         if (optionalError.has_value()) {
             Error error = optionalError.value();
             error.addEntry();
@@ -63,13 +59,13 @@ namespace ne {
         const std::string& sEntityId,
         std::unordered_map<std::string, std::string>& customAttributes) {
         const auto sFieldCanonicalTypeName = std::string(pField->getCanonicalTypeName());
-        const auto sFieldName = pField->getName();
+        const auto pFieldName = pField->getName();
 
         if (!isFieldTypeSupported(pField)) {
             return Error(fmt::format(
                 "The type \"{}\" of the specified field \"{}\" is not supported by this serializer.",
                 sFieldCanonicalTypeName,
-                sFieldName));
+                pFieldName));
         }
 
         const auto pSubEntity = static_cast<std::shared_ptr<Material>*>(pField->getPtrUnsafe(pFieldOwner));
@@ -77,7 +73,7 @@ namespace ne {
 
         // Deserialize object.
         auto result = SerializableObjectFieldSerializer::deserializeSerializableObject(
-            pTomlDocument, pTomlValue, sFieldName, pTarget, sOwnerSectionName, sEntityId, customAttributes);
+            pTomlDocument, pTomlValue, pFieldName, pTarget, sOwnerSectionName, sEntityId, customAttributes);
         if (std::holds_alternative<Error>(result)) {
             auto error = std::get<Error>(std::move(result));
             error.addEntry();
@@ -103,20 +99,21 @@ namespace ne {
         Serializable* pToInstance,
         const rfk::Field* pToField) {
         const auto sFieldCanonicalTypeName = std::string(pFromField->getCanonicalTypeName());
-        const auto sFieldName = pFromField->getName();
+        const auto pFieldName = pFromField->getName();
 
         if (!isFieldTypeSupported(pFromField)) {
             return Error(fmt::format(
                 "The type \"{}\" of the specified field \"{}\" is not supported by this serializer.",
                 sFieldCanonicalTypeName,
-                sFieldName));
+                pFieldName));
         }
 
         const auto pFrom = static_cast<std::shared_ptr<Material>*>(pFromField->getPtrUnsafe(pFromInstance));
         const auto pTo = static_cast<std::shared_ptr<Material>*>(pToField->getPtrUnsafe(pToInstance));
 
-        if ((*pFrom) == nullptr || (*pTo) == nullptr)
+        if ((*pFrom) == nullptr || (*pTo) == nullptr) {
             return Error("One of the fields is `nullptr`.");
+        }
 
         auto optionalError =
             SerializableObjectFieldSerializer::cloneSerializableObject((*pFrom).get(), (*pTo).get(), false);
@@ -134,10 +131,12 @@ namespace ne {
         const rfk::Field* pFieldA,
         Serializable* pFieldBOwner,
         const rfk::Field* pFieldB) {
-        if (!isFieldTypeSupported(pFieldA))
+        if (!isFieldTypeSupported(pFieldA)) {
             return false;
-        if (!isFieldTypeSupported(pFieldB))
+        }
+        if (!isFieldTypeSupported(pFieldB)) {
             return false;
+        }
 
         // Check that types are equal.
         const std::string sFieldACanonicalTypeName = pFieldA->getCanonicalTypeName();
@@ -149,11 +148,13 @@ namespace ne {
         const auto pEntityA = static_cast<std::shared_ptr<Material>*>(pFieldA->getPtrUnsafe(pFieldAOwner));
         const auto pEntityB = static_cast<std::shared_ptr<Material>*>(pFieldB->getPtrUnsafe(pFieldBOwner));
 
-        if ((*pEntityA) == nullptr && (*pEntityB) == nullptr)
+        if ((*pEntityA) == nullptr && (*pEntityB) == nullptr) {
             return true;
+        }
 
-        if ((*pEntityA) == nullptr || (*pEntityB) == nullptr)
+        if ((*pEntityA) == nullptr || (*pEntityB) == nullptr) {
             return false;
+        }
 
         return SerializableObjectFieldSerializer::isSerializableObjectValueEqual(
             (*pEntityA).get(), (*pEntityB).get());

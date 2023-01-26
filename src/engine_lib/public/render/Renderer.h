@@ -10,6 +10,7 @@
 // Custom.
 #include "misc/Error.h"
 #include "materials/ShaderManager.h"
+#include "render/general/resources/GpuResourceManager.h"
 
 namespace ne {
     class Game;
@@ -17,7 +18,6 @@ namespace ne {
     class PsoManager;
     class ShaderConfiguration;
     class RenderSettings;
-    class GpuResourceManager;
 
     /**
      * Defines a base class for renderers to implement.

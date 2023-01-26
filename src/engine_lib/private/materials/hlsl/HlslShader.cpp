@@ -48,7 +48,7 @@ namespace ne {
         const std::string& sConfiguration,
         const ShaderDescription& shaderDescription) {
         // Check that the renderer is DirectX renderer.
-        if (!dynamic_cast<DirectXRenderer*>(pRenderer)) {
+        if (dynamic_cast<DirectXRenderer*>(pRenderer) == nullptr) {
             return Error("the specified renderer is not a DirectX renderer");
         }
 

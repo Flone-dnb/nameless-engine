@@ -30,9 +30,9 @@ namespace ne {
                                  bAllowSelectingMultipleFiles ? pfd::opt::multiselect : pfd::opt::none)
                                  .result();
         // Convert result.
-        std::vector<std::filesystem::path> vSelectedPaths;
-        for (const auto& sPath : vResult) {
-            vSelectedPaths.push_back(sPath);
+        std::vector<std::filesystem::path> vSelectedPaths(vResult.size());
+        for (size_t i = 0; i < vResult.size(); i++) {
+            vSelectedPaths[i] = vResult[i];
         }
 
         return vSelectedPaths;
@@ -60,26 +60,30 @@ namespace ne {
 
         if (sResult.empty()) {
             return {};
-        } else {
-            if (sFileExtension.size() > 1) {
-                const auto sExtension = sFileExtension.substr(1); // skip "*".
-                if (!sResult.ends_with(sExtension)) {
-                    sResult += sExtension;
-                }
-            }
-            return sResult;
         }
+
+        if (sFileExtension.size() > 1) {
+            const auto sExtension = sFileExtension.substr(1); // skip "*".
+            if (!sResult.ends_with(sExtension)) {
+                sResult += sExtension;
+            }
+        }
+        return sResult;
     }
 
     std::optional<std::filesystem::path>
     FileDialog::selectDirectory(const std::string& sTitle, const std::filesystem::path& directory) {
-        const auto sResult = pfd::select_folder(sTitle, directory.string(), pfd::opt::none).result();
+        const auto sResult = pfd::select_folder( // NOLINT: potential memory leak in `pfd`
+                                 sTitle,
+                                 directory.string(),
+                                 pfd::opt::none)
+                                 .result();
 
         if (sResult.empty()) {
             return {};
-        } else {
-            return sResult;
         }
+
+        return sResult;
     }
 } // namespace ne
 

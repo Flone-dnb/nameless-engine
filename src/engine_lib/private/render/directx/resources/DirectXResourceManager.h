@@ -6,6 +6,7 @@
 
 // Custom.
 #include "misc/Error.h"
+#include "render/directx/descriptors/DirectXDescriptorHeap.h"
 #include "render/general/resources/GpuResourceManager.h"
 
 // External.
@@ -19,7 +20,6 @@ namespace ne {
     using namespace Microsoft::WRL;
 
     class DirectXResource;
-    class DirectXDescriptorHeap;
     class DirectXRenderer;
     class UploadBuffer;
 

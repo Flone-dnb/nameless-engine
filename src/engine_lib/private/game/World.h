@@ -133,14 +133,14 @@ namespace ne {
          *
          * @param pNode Node that is being spawned.
          */
-        void onNodeSpawned(gc<Node> pNode);
+        void onNodeSpawned(const gc<Node>& pNode);
 
         /**
          * Called from Node to notify the World about a node being despawned.
          *
          * @param pNode Node that is being despawned.
          */
-        void onNodeDespawned(gc<Node> pNode);
+        void onNodeDespawned(const gc<Node>& pNode);
 
     private:
         /**

@@ -11,12 +11,8 @@
 namespace ne {
     bool SerializableObjectFieldSerializer::isFieldTypeSupported(const rfk::Field* pField) {
         const auto& fieldType = pField->getType();
-
-        if (fieldType.getArchetype() && Serializable::isDerivedFromSerializable(fieldType.getArchetype())) {
-            return true;
-        }
-
-        return false;
+        return fieldType.getArchetype() != nullptr &&
+               Serializable::isDerivedFromSerializable(fieldType.getArchetype());
     }
 
     std::optional<Error> SerializableObjectFieldSerializer::serializeField(
@@ -28,19 +24,19 @@ namespace ne {
         size_t& iSubEntityId,
         Serializable* pOriginalObject) {
         const auto sFieldCanonicalTypeName = std::string(pField->getCanonicalTypeName());
-        const auto sFieldName = pField->getName();
+        const auto pFieldName = pField->getName();
 
         if (!isFieldTypeSupported(pField)) {
             return Error(fmt::format(
                 "The type \"{}\" of the specified field \"{}\" is not supported by this serializer.",
                 sFieldCanonicalTypeName,
-                sFieldName));
+                pFieldName));
         }
 
         const auto pSubEntity = static_cast<Serializable*>(pField->getPtrUnsafe(pFieldOwner));
 
         const auto optionalError = serializeFieldObject(
-            pSubEntity, pTomlData, sFieldName, sSectionName, sEntityId, iSubEntityId, pOriginalObject);
+            pSubEntity, pTomlData, pFieldName, sSectionName, sEntityId, iSubEntityId, pOriginalObject);
         if (optionalError.has_value()) {
             Error error = optionalError.value();
             error.addEntry();
@@ -58,12 +54,12 @@ namespace ne {
         // Check if types are equal.
         const auto pFromGuid = fromArchetype.getProperty<Guid>(false);
         const auto pToGuid = toArchetype.getProperty<Guid>(false);
-        if (!pFromGuid) {
+        if (pFromGuid == nullptr) {
             const Error err(
                 fmt::format("The type {} does not have a GUID assigned to it", fromArchetype.getName()));
             return err;
         }
-        if (!pToGuid) {
+        if (pToGuid == nullptr) {
             const Error err(
                 fmt::format("The type {} does not have a GUID assigned to it", toArchetype.getName()));
             return err;
@@ -84,16 +80,17 @@ namespace ne {
         Data loopData{pFrom, pTo, Serializable::getFieldSerializers(), std::optional<Error>{}};
 
         fromArchetype.foreachField(
-            [](rfk::Field const& field, void* userData) -> bool {
-                if (!Serializable::isFieldSerializable(field))
+            [](rfk::Field const& field, void* pUserData) -> bool {
+                if (!Serializable::isFieldSerializable(field)) {
                     return true;
+                }
 
-                Data* pData = static_cast<Data*>(userData);
-                const auto sFieldName = field.getName();
+                Data* pData = static_cast<Data*>(pUserData);
+                const auto pFieldName = field.getName();
 
                 const auto* pFieldTo =
-                    pData->pTo->getArchetype().getFieldByName(sFieldName, rfk::EFieldFlags::Default, true);
-                if (!pFieldTo) {
+                    pData->pTo->getArchetype().getFieldByName(pFieldName, rfk::EFieldFlags::Default, true);
+                if (pFieldTo == nullptr) {
                     pData->error = Error(fmt::format(
                         "Unable to find the field \"{}\" in type \"{}\".",
                         field.getName(),
@@ -167,8 +164,9 @@ namespace ne {
         const auto iNumberOfDotsInTargetSectionName =
             std::ranges::count(sOwnerSectionName.begin(), sOwnerSectionName.end(), '.');
         for (const auto& sSectionName : vSections) {
-            if (sSectionName == sOwnerSectionName)
+            if (sSectionName == sOwnerSectionName) {
                 continue; // skip self
+            }
 
             const auto iNumberOfDotsInSectionName =
                 std::ranges::count(sSectionName.begin(), sSectionName.end(), '.');
@@ -285,18 +283,19 @@ namespace ne {
         Data loopData{pObjectA, pObjectB, Serializable::getFieldSerializers()};
 
         entityAArchetype.foreachField(
-            [](rfk::Field const& field, void* userData) -> bool {
-                if (!Serializable::isFieldSerializable(field))
+            [](rfk::Field const& field, void* pUserData) -> bool {
+                if (!Serializable::isFieldSerializable(field)) {
                     return true;
+                }
 
-                Data* pData = static_cast<Data*>(userData);
-                const auto sFieldName = field.getName();
+                Data* pData = static_cast<Data*>(pUserData);
+                const auto pFieldName = field.getName();
 
                 // Check if this field's value is equal.
                 // Reflected field names are unique (this is checked in Serializable).
                 const auto pOtherField = pData->pOtherEntity->getArchetype().getFieldByName(
-                    sFieldName, rfk::EFieldFlags::Default, true);
-                if (!pOtherField) {
+                    pFieldName, rfk::EFieldFlags::Default, true);
+                if (pOtherField == nullptr) {
                     // Probably will never happen but still add a check.
                     Logger::get().error(
                         fmt::format(
@@ -319,11 +318,11 @@ namespace ne {
                                 pData->pSelf, &field, pData->pOtherEntity, pOtherField)) {
                             // Field values are equal, continue.
                             return true;
-                        } else {
-                            // Field values are different, stop.
-                            pData->bIsEqual = false;
-                            return false;
                         }
+
+                        // Field values are different, stop.
+                        pData->bIsEqual = false;
+                        return false;
                     }
                 }
 
@@ -354,20 +353,20 @@ namespace ne {
         const std::string& sEntityId,
         std::unordered_map<std::string, std::string>& customAttributes) {
         const auto sFieldCanonicalTypeName = std::string(pField->getCanonicalTypeName());
-        const auto sFieldName = pField->getName();
+        const auto pFieldName = pField->getName();
 
         if (!isFieldTypeSupported(pField)) {
             return Error(fmt::format(
                 "The type \"{}\" of the specified field \"{}\" is not supported by this serializer.",
                 sFieldCanonicalTypeName,
-                sFieldName));
+                pFieldName));
         }
 
         Serializable* pTarget = static_cast<Serializable*>(pField->getPtrUnsafe(pFieldOwner));
 
         // Deserialize object.
         auto result = deserializeSerializableObject(
-            pTomlDocument, pTomlValue, sFieldName, pTarget, sOwnerSectionName, sEntityId, customAttributes);
+            pTomlDocument, pTomlValue, pFieldName, pTarget, sOwnerSectionName, sEntityId, customAttributes);
         if (std::holds_alternative<Error>(result)) {
             auto error = std::get<Error>(std::move(result));
             error.addEntry();
@@ -392,13 +391,13 @@ namespace ne {
         Serializable* pToInstance,
         const rfk::Field* pToField) {
         const auto sFieldCanonicalTypeName = std::string(pFromField->getCanonicalTypeName());
-        const auto sFieldName = pFromField->getName();
+        const auto pFieldName = pFromField->getName();
 
         if (!isFieldTypeSupported(pFromField)) {
             return Error(fmt::format(
                 "The type \"{}\" of the specified field \"{}\" is not supported by this serializer.",
                 sFieldCanonicalTypeName,
-                sFieldName));
+                pFieldName));
         }
 
         auto optionalError = cloneSerializableObject(
@@ -419,10 +418,12 @@ namespace ne {
         const rfk::Field* pFieldA,
         Serializable* pFieldBOwner,
         const rfk::Field* pFieldB) {
-        if (!isFieldTypeSupported(pFieldA))
+        if (!isFieldTypeSupported(pFieldA)) {
             return false;
-        if (!isFieldTypeSupported(pFieldB))
+        }
+        if (!isFieldTypeSupported(pFieldB)) {
             return false;
+        }
 
         // Check that types are equal.
         const std::string sFieldACanonicalTypeName = pFieldA->getCanonicalTypeName();

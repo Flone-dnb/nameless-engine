@@ -182,7 +182,7 @@ namespace ne {
         const auto end = std::chrono::steady_clock::now();
         const auto durationInMs =
             static_cast<float>(std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count()) *
-            0.000001f;
+            0.000001F;
 
         // Limit precision to 1 digit.
         std::stringstream durationStream;
@@ -206,7 +206,7 @@ namespace ne {
     Game* Game::get() { return pLastCreatedGame; }
 
     void Game::setGarbageCollectorRunInterval(long long iGcRunIntervalInSec) {
-        this->iGcRunIntervalInSec = std::clamp<long long>(iGcRunIntervalInSec, 30, 300);
+        this->iGcRunIntervalInSec = std::clamp<long long>(iGcRunIntervalInSec, 30, 300); // NOLINT
     }
 
     void Game::queueGarbageCollection(const std::optional<std::function<void()>>& onFinished) {
@@ -301,8 +301,9 @@ namespace ne {
     gc<Node> Game::getWorldRootNode() {
         std::scoped_lock guard(mtxWorld.first);
 
-        if (!mtxWorld.second)
+        if (mtxWorld.second == nullptr) {
             return nullptr;
+        }
 
         return mtxWorld.second->getRootNode();
     }
@@ -310,8 +311,9 @@ namespace ne {
     float Game::getWorldTimeInSeconds() {
         std::scoped_lock guard(mtxWorld.first);
 
-        if (!mtxWorld.second)
-            return 0.0f;
+        if (mtxWorld.second == nullptr) {
+            return 0.0F;
+        }
 
         return mtxWorld.second->getWorldTimeInSeconds();
     }
@@ -319,8 +321,9 @@ namespace ne {
     size_t Game::getWorldSize() {
         std::scoped_lock guard(mtxWorld.first);
 
-        if (!mtxWorld.second)
+        if (mtxWorld.second == nullptr) {
             return 0;
+        }
 
         return mtxWorld.second->getWorldSize();
     }
@@ -328,8 +331,9 @@ namespace ne {
     size_t Game::getCalledEveryFrameNodeCount() {
         std::scoped_lock guard(mtxWorld.first);
 
-        if (!mtxWorld.second)
+        if (mtxWorld.second == nullptr) {
             return 0;
+        }
 
         return mtxWorld.second->getCalledEveryFrameNodeCount();
     }
@@ -408,10 +412,12 @@ namespace ne {
 
     GameInstance* Game::getGameInstance() const { return pGameInstance.get(); }
 
-    long long Game::getGarbageCollectorRunIntervalInSec() { return iGcRunIntervalInSec; }
+    long long Game::getGarbageCollectorRunIntervalInSec() const { return iGcRunIntervalInSec; }
 
-    void Game::triggerActionEvents(
-        std::variant<KeyboardKey, MouseButton> key, KeyboardModifiers modifiers, bool bIsPressedDown) {
+    void Game::triggerActionEvents( // NOLINT
+        std::variant<KeyboardKey, MouseButton> key,
+        KeyboardModifiers modifiers,
+        bool bIsPressedDown) {
         std::scoped_lock<std::recursive_mutex> guard(inputManager.mtxActionEvents);
         if (inputManager.actionEvents.empty()) {
             return;
@@ -452,7 +458,7 @@ namespace ne {
                     }
                 }
 
-                if (bSet == false) {
+                if (!bSet) {
                     if (std::holds_alternative<KeyboardKey>(key)) {
                         Logger::get().error(
                             fmt::format(
@@ -474,7 +480,7 @@ namespace ne {
 
                 bool bNewState = bIsPressedDown;
 
-                if (bIsPressedDown == false) {
+                if (!bIsPressedDown) {
                     // See if other button are pressed.
                     for (const auto actionKey : statePair.first) {
                         if (actionKey.bIsPressed) {
@@ -504,7 +510,8 @@ namespace ne {
         }
     }
 
-    void Game::triggerAxisEvents(KeyboardKey key, KeyboardModifiers modifiers, bool bIsPressedDown) {
+    void
+    Game::triggerAxisEvents(KeyboardKey key, KeyboardModifiers modifiers, bool bIsPressedDown) { // NOLINT
         std::scoped_lock<std::recursive_mutex> guard(inputManager.mtxAxisEvents);
         if (inputManager.axisEvents.empty()) {
             return;
@@ -532,7 +539,7 @@ namespace ne {
                         sAxisName),
                     sGameLogCategory);
                 pGameInstance->onInputAxisEvent(
-                    sAxisName, modifiers, bIsPressedDown ? static_cast<float>(iInput) : 0.0f);
+                    sAxisName, modifiers, bIsPressedDown ? static_cast<float>(iInput) : 0.0F);
 
                 // Call on nodes that receive input.
                 std::scoped_lock guard(mtxWorld.first);
@@ -543,7 +550,7 @@ namespace ne {
                     const gc_vector<Node>* pNodes = &pReceivingInputNodes->second;
                     for (auto it = (*pNodes)->begin(); it != (*pNodes)->end(); ++it) {
                         (*it)->onInputAxisEvent(
-                            sAxisName, modifiers, bIsPressedDown ? static_cast<float>(iInput) : 0.0f);
+                            sAxisName, modifiers, bIsPressedDown ? static_cast<float>(iInput) : 0.0F);
                     }
                 }
 
@@ -559,14 +566,16 @@ namespace ne {
                     state.bIsPlusKeyPressed = bIsPressedDown;
                     bSet = true;
                     break;
-                } else if (iInput == -1 && state.minusKey == key) {
+                }
+
+                if (iInput == -1 && state.minusKey == key) {
                     // Minus key.
                     state.bIsMinusKeyPressed = bIsPressedDown;
                     bSet = true;
                     break;
                 }
             }
-            if (bSet == false) {
+            if (!bSet) {
                 Logger::get().error(
                     fmt::format(
                         "could not find key '{}' in key "
@@ -575,7 +584,7 @@ namespace ne {
                         sAxisName),
                     sGameLogCategory);
                 pGameInstance->onInputAxisEvent(
-                    sAxisName, modifiers, bIsPressedDown ? static_cast<float>(iInput) : 0.0f);
+                    sAxisName, modifiers, bIsPressedDown ? static_cast<float>(iInput) : 0.0F);
 
                 // Call on nodes that receive input.
                 std::scoped_lock guard(mtxWorld.first);
@@ -586,7 +595,7 @@ namespace ne {
                     const gc_vector<Node>* pNodes = &pReceivingInputNodes->second;
                     for (auto it = (*pNodes)->begin(); it != (*pNodes)->end(); ++it) {
                         (*it)->onInputAxisEvent(
-                            sAxisName, modifiers, bIsPressedDown ? static_cast<float>(iInput) : 0.0f);
+                            sAxisName, modifiers, bIsPressedDown ? static_cast<float>(iInput) : 0.0F);
                     }
                 }
 

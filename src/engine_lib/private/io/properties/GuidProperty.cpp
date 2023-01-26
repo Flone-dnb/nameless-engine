@@ -14,7 +14,7 @@ namespace ne {
             "You can generate a random GUID by just googling \"generate GUID\".";
 
         // Check GUID length.
-        if (sGuid.size() != 36) {
+        if (sGuid.size() != iGuidLength) {
             const Error err(fmt::format(
                 "The specified GUID \"{}\" should have a length of 36 characters.\n{}",
                 sGuid,
@@ -24,7 +24,7 @@ namespace ne {
         }
 
         // Check GUID format.
-        if (sGuid[8] != '-' || sGuid[13] != '-' || sGuid[18] != '-' || sGuid[23] != '-') {
+        if (sGuid[8] != '-' || sGuid[13] != '-' || sGuid[18] != '-' || sGuid[23] != '-') { // NOLINT
             const Error err(
                 fmt::format("The specified GUID \"{}\" has incorrect format.\n{}", sGuid, sGuidInformation));
             err.showError();

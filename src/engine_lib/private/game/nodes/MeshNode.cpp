@@ -6,7 +6,6 @@
 #include "render/Renderer.h"
 #include "render/general/resources/FrameResourcesManager.h"
 #include "render/general/resources/GpuResourceManager.h"
-#include "render/general/resources/UploadBuffer.h"
 #include "render/general/GpuCommandList.h"
 
 namespace ne {
@@ -108,11 +107,7 @@ namespace ne {
     const std::string sUvsKeyName = "uvs";
 
     bool MeshVertex::operator==(const MeshVertex& other) const {
-        if (position == other.position && uv == other.uv) {
-            return true;
-        }
-
-        return false;
+        return position == other.position && uv == other.uv;
     }
 
     void MeshVertex::serializeVec(
@@ -222,7 +217,7 @@ namespace ne {
             vertex.position = vPositions[i];
             vertex.uv = vUvs[i];
 
-            pTo->push_back(std::move(vertex));
+            pTo->push_back(vertex);
         }
 
         return {};

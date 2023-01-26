@@ -6,11 +6,11 @@
 
 // Custom.
 #include "misc/Error.h"
+#include "render/general/resources/UploadBuffer.h"
 
 namespace ne {
     class Renderer;
     class GpuResource;
-    class UploadBuffer;
 
     /** Base class for render-specific GPU resource managers. */
     class GpuResourceManager {

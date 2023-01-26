@@ -12,7 +12,6 @@
 #include "misc/Globals.h"
 #include "misc/MessageBox.h"
 #include "render/RenderSettings.h"
-#include "render/directx/resources/DirectXResource.h"
 #include "render/directx/resources/DirectXResourceManager.h"
 #include "materials/hlsl/HlslEngineShaders.hpp"
 #include "render/general/pso/PsoManager.h"
@@ -67,17 +66,9 @@ namespace ne {
             error->showError();
             throw std::runtime_error(error->getFullErrorMessage());
         }
-
-        // Create pipeline state objects.
-        error = createPipelineStateObjects();
-        if (error.has_value()) {
-            error->addEntry();
-            error->showError();
-            throw std::runtime_error(error->getFullErrorMessage());
-        }
     }
 
-    std::optional<Error> DirectXRenderer::enableDebugLayer() const {
+    std::optional<Error> DirectXRenderer::enableDebugLayer() {
 #if defined(DEBUG)
         ComPtr<ID3D12Debug> pDebugController;
         HRESULT hResult = D3D12GetDebugInterface(IID_PPV_ARGS(&pDebugController));
@@ -93,9 +84,9 @@ namespace ne {
             return Error(hResult);
         }
 
-        pDxgiInfoQueue->SetBreakOnSeverity(DXGI_DEBUG_ALL, DXGI_INFO_QUEUE_MESSAGE_SEVERITY_ERROR, true);
-        pDxgiInfoQueue->SetBreakOnSeverity(DXGI_DEBUG_ALL, DXGI_INFO_QUEUE_MESSAGE_SEVERITY_CORRUPTION, true);
-        pDxgiInfoQueue->SetBreakOnSeverity(DXGI_DEBUG_ALL, DXGI_INFO_QUEUE_MESSAGE_SEVERITY_WARNING, true);
+        pDxgiInfoQueue->SetBreakOnSeverity(DXGI_DEBUG_ALL, DXGI_INFO_QUEUE_MESSAGE_SEVERITY_ERROR, 1);
+        pDxgiInfoQueue->SetBreakOnSeverity(DXGI_DEBUG_ALL, DXGI_INFO_QUEUE_MESSAGE_SEVERITY_CORRUPTION, 1);
+        pDxgiInfoQueue->SetBreakOnSeverity(DXGI_DEBUG_ALL, DXGI_INFO_QUEUE_MESSAGE_SEVERITY_WARNING, 1);
 #endif
         return {};
     }
@@ -123,7 +114,7 @@ namespace ne {
 
         D3D12_CLEAR_VALUE depthClear;
         depthClear.Format = depthStencilBufferFormat;
-        depthClear.DepthStencil.Depth = 1.0f;
+        depthClear.DepthStencil.Depth = 1.0F;
         depthClear.DepthStencil.Stencil = 0;
 
         D3D12MA::ALLOCATION_DESC allocationDesc = {};
@@ -283,10 +274,10 @@ namespace ne {
                     sUsedVideoAdapter = sVideoAdapterName;
 
                     return {};
-                } else {
-                    return Error("the specified video adapter does not support used DirectX "
-                                 "version or feature level");
                 }
+
+                return Error("the specified video adapter does not support used DirectX "
+                             "version or feature level");
             }
         }
 
@@ -294,7 +285,7 @@ namespace ne {
     }
 
     std::optional<Error> DirectXRenderer::setOutputAdapter() {
-        if (pOutputAdapter) {
+        if (pOutputAdapter != nullptr) {
             return Error("output adapter already created");
         }
 
@@ -303,7 +294,9 @@ namespace ne {
         const HRESULT hResult = pVideoAdapter->EnumOutputs(0, pTestOutput.GetAddressOf());
         if (hResult == DXGI_ERROR_NOT_FOUND) {
             return Error("no output adapter was found for current video adapter");
-        } else if (FAILED(hResult)) {
+        }
+
+        if (FAILED(hResult)) {
             return Error(hResult);
         }
 
@@ -312,7 +305,7 @@ namespace ne {
     }
 
     std::optional<Error> DirectXRenderer::createCommandObjects() {
-        if (pCommandQueue || pCommandListAllocator || pCommandList) {
+        if (pCommandQueue != nullptr || pCommandListAllocator != nullptr || pCommandList != nullptr) {
             return Error("command objects already created");
         }
 
@@ -365,7 +358,7 @@ namespace ne {
         desc.Width = renderResolution.first;
         desc.Height = renderResolution.second;
         desc.Format = backBufferFormat;
-        desc.Stereo = false;
+        desc.Stereo = 0;
 
         // Flip model swapchains (DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL and DXGI_SWAP_EFFECT_FLIP_DISCARD)
         // do not support multisampling.
@@ -392,7 +385,7 @@ namespace ne {
         fullscreenDesc.RefreshRate = refreshRateData;
         fullscreenDesc.Scaling = usedScaling;
         fullscreenDesc.ScanlineOrdering = usedScanlineOrdering;
-        fullscreenDesc.Windowed = true;
+        fullscreenDesc.Windowed = 1;
 
         const HRESULT hResult = pFactory->CreateSwapChainForHwnd(
             pCommandQueue.Get(),
@@ -408,14 +401,8 @@ namespace ne {
         return {};
     }
 
-    std::optional<Error> DirectXRenderer::createPipelineStateObjects() {
-        // TODO: setup manager (rename this function)
-
-        return {};
-    }
-
     std::optional<Error> DirectXRenderer::checkMsaaSupport() {
-        if (!pDevice) {
+        if (pDevice == nullptr) {
             return Error("device is not created");
         }
 
@@ -673,21 +660,21 @@ namespace ne {
                 const Error err(sErrorMessage);
                 err.showError();
                 throw std::runtime_error(err.getFullErrorMessage());
-            } else {
-                const auto sErrorMessage = std::format(
-                    "failed to compile shader \"{}\" due to internal error:\n{}",
-                    shaderDescription.sShaderName,
-                    std::get<Error>(std::move(error)).getFullErrorMessage());
-                const Error err(sErrorMessage);
-                err.showError();
-                MessageBox::info(
-                    "Info",
-                    fmt::format(
-                        "Try restarting the application or deleting the directory \"{}\", if this "
-                        "does not help contact the developers.",
-                        ShaderFilesystemPaths::getPathToShaderCacheDirectory().string()));
-                throw std::runtime_error(err.getFullErrorMessage());
             }
+
+            const auto sErrorMessage = std::format(
+                "failed to compile shader \"{}\" due to internal error:\n{}",
+                shaderDescription.sShaderName,
+                std::get<Error>(std::move(error)).getFullErrorMessage());
+            const Error err(sErrorMessage);
+            err.showError();
+            MessageBox::info(
+                "Info",
+                fmt::format(
+                    "Try restarting the application or deleting the directory \"{}\", if this "
+                    "does not help contact the developers.",
+                    ShaderFilesystemPaths::getPathToShaderCacheDirectory().string()));
+            throw std::runtime_error(err.getFullErrorMessage());
         };
         auto onCompleted = [pPromiseFinish]() { pPromiseFinish->set_value(false); };
 
@@ -739,7 +726,7 @@ namespace ne {
             D3D12_TEXTURE_ADDRESS_MODE_BORDER,
             D3D12_TEXTURE_ADDRESS_MODE_BORDER,
             D3D12_TEXTURE_ADDRESS_MODE_BORDER,
-            0.0f,
+            0.0F,
             16,
             D3D12_COMPARISON_FUNC_LESS_EQUAL,
             D3D12_STATIC_BORDER_COLOR_OPAQUE_WHITE);
@@ -882,23 +869,23 @@ namespace ne {
 
         // Wait until the GPU has completed commands up to this fence point.
         if (pFence->GetCompletedValue() < iFenceValue) {
-            const HANDLE hEvent = CreateEventEx(nullptr, nullptr, FALSE, EVENT_ALL_ACCESS);
-            if (hEvent == nullptr) {
+            const HANDLE pEvent = CreateEventEx(nullptr, nullptr, FALSE, EVENT_ALL_ACCESS);
+            if (pEvent == nullptr) {
                 auto error = Error(GetLastError());
                 error.showError();
                 throw std::runtime_error(error.getFullErrorMessage());
             }
 
             // Fire event when the GPU hits current fence.
-            hResult = pFence->SetEventOnCompletion(iFenceValue, hEvent);
+            hResult = pFence->SetEventOnCompletion(iFenceValue, pEvent);
             if (FAILED(hResult)) {
                 auto error = Error(hResult);
                 error.showError();
                 throw std::runtime_error(error.getFullErrorMessage());
             }
 
-            WaitForSingleObject(hEvent, INFINITE);
-            CloseHandle(hEvent);
+            WaitForSingleObject(pEvent, INFINITE);
+            CloseHandle(pEvent);
         }
     }
 

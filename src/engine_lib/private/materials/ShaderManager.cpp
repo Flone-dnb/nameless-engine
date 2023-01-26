@@ -33,9 +33,9 @@ namespace ne {
         const auto it = compiledShaders.find(sShaderName);
         if (it == compiledShaders.end()) {
             return {};
-        } else {
-            return it->second;
         }
+
+        return it->second;
     }
 
     void ShaderManager::releaseShaderBytecodeIfNotUsed(const std::string& sShaderName) {
@@ -99,10 +99,11 @@ namespace ne {
             return;
         }
 
+        constexpr long iSelfValidationInternalMinimum = 15; // NOLINT: don't do self validation too often.
         auto iNewSelfValidationIntervalInMin = configManager.getValue<long>(
             "", sConfigurationSelfValidationIntervalKeyName, iSelfValidationIntervalInMin);
-        if (iNewSelfValidationIntervalInMin < 15) { // NOLINT: don't do self validation too often.
-            iNewSelfValidationIntervalInMin = 15;
+        if (iNewSelfValidationIntervalInMin < iSelfValidationInternalMinimum) {
+            iNewSelfValidationIntervalInMin = iSelfValidationInternalMinimum;
         }
 
         iSelfValidationIntervalInMin = iNewSelfValidationIntervalInMin;
@@ -155,7 +156,7 @@ namespace ne {
             }
 
 #if defined(WIN32)
-            if (!bUpdateShaderCacheConfig && dynamic_cast<DirectXRenderer*>(pRenderer)) {
+            if (!bUpdateShaderCacheConfig && dynamic_cast<DirectXRenderer*>(pRenderer) != nullptr) {
                 // Check if vertex shader model changed.
                 if (!bUpdateShaderCacheConfig && sOldHlslVsModel != HlslShader::sVertexShaderModel) {
                     Logger::get().info(
@@ -204,7 +205,7 @@ namespace ne {
             }
 
 #if defined(WIN32)
-            if (dynamic_cast<DirectXRenderer*>(pRenderer)) {
+            if (dynamic_cast<DirectXRenderer*>(pRenderer) != nullptr) {
                 configManager.setValue<std::string>(
                     "", sGlobalShaderCacheHlslVsModelKeyName, HlslShader::sVertexShaderModel);
                 configManager.setValue<std::string>(
@@ -267,11 +268,7 @@ namespace ne {
     bool ShaderManager::isShaderNameCanBeUsed(const std::string& sShaderName) {
         std::scoped_lock guard(mtxRwShaders);
         const auto it = compiledShaders.find(sShaderName);
-        if (it == compiledShaders.end()) {
-            return true;
-        } else {
-            return false;
-        }
+        return it == compiledShaders.end();
     }
 
     bool ShaderManager::markShaderToBeRemoved(const std::string& sShaderName) {
@@ -303,7 +300,7 @@ namespace ne {
         return false;
     }
 
-    void ShaderManager::performSelfValidation() {
+    void ShaderManager::performSelfValidation() { // NOLINT
         using namespace std::chrono;
         const auto iDurationInMin =
             duration_cast<minutes>(steady_clock::now() - lastSelfValidationCheckTime).count();
@@ -577,7 +574,7 @@ namespace ne {
             auto result = ShaderPack::compileShaderPack(pRenderer, shaderDescription);
             if (!std::holds_alternative<std::shared_ptr<ShaderPack>>(result)) {
                 if (std::holds_alternative<std::string>(result)) {
-                    const auto sShaderError = std::get<std::string>(std::move(result));
+                    auto sShaderError = std::get<std::string>(std::move(result));
                     pRenderer->getGame()->addDeferredTask(
                         [onError, shaderDescription, sShaderError = std::move(sShaderError)]() mutable {
                             onError(std::move(shaderDescription), sShaderError);

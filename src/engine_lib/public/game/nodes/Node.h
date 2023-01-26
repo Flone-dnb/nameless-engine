@@ -48,9 +48,9 @@ namespace ne RNAMESPACE() {
         /**
          * Creates a new node with the specified name.
          *
-         * @param sNodeName Name of this node.
+         * @param sName Name of this node.
          */
-        Node(const std::string& sNodeName);
+        Node(const std::string& sName);
 
         Node(const Node&) = delete;
         Node& operator=(const Node&) = delete;
@@ -95,7 +95,7 @@ namespace ne RNAMESPACE() {
          * @param pNode Node to attach as a child. If the specified node is a parent of `this` node the
          * operation will fail and log an error.
          */
-        void addChildNode(gc<Node> pNode);
+        void addChildNode(const gc<Node>& pNode);
 
         /**
          * Serializes the node and all child nodes (hierarchy information will also be saved) into a file.
@@ -164,8 +164,8 @@ namespace ne RNAMESPACE() {
          * @return nullptr if not found, otherwise a valid pointer to the node.
          */
         template <typename NodeType>
-        requires std::derived_from<NodeType, Node> gc<NodeType>
-        getParentNodeOfType(const std::string& sParentNodeName = "");
+            requires std::derived_from<NodeType, Node>
+        gc<NodeType> getParentNodeOfType(const std::string& sParentNodeName = "");
 
         /**
          * Goes down the child node chain to find a first node that matches the specified node type and
@@ -182,15 +182,15 @@ namespace ne RNAMESPACE() {
          * @return nullptr if not found, otherwise a valid pointer to the node.
          */
         template <typename NodeType>
-        requires std::derived_from<NodeType, Node> gc<NodeType>
-        getChildNodeOfType(const std::string& sChildNodeName = "");
+            requires std::derived_from<NodeType, Node>
+        gc<NodeType> getChildNodeOfType(const std::string& sChildNodeName = "");
 
         /**
          * Returns last created game instance.
          *
          * @return Game instance.
          */
-        GameInstance* getGameInstance();
+        static GameInstance* getGameInstance();
 
         /**
          * Returns the tick group this node resides in.
@@ -637,8 +637,8 @@ namespace ne RNAMESPACE() {
     };
 
     template <typename NodeType>
-    requires std::derived_from<NodeType, Node> gc<NodeType> Node::getParentNodeOfType(
-        const std::string& sParentNodeName) {
+        requires std::derived_from<NodeType, Node>
+    gc<NodeType> Node::getParentNodeOfType(const std::string& sParentNodeName) {
         std::scoped_lock guard(mtxParentNode.first);
 
         // Check if have a parent.
@@ -655,8 +655,8 @@ namespace ne RNAMESPACE() {
     }
 
     template <typename NodeType>
-    requires std::derived_from<NodeType, Node> gc<NodeType> Node::getChildNodeOfType(
-        const std::string& sChildNodeName) {
+        requires std::derived_from<NodeType, Node>
+    gc<NodeType> Node::getChildNodeOfType(const std::string& sChildNodeName) {
         std::scoped_lock guard(mtxChildNodes.first);
 
         for (auto& pChildNode : *mtxChildNodes.second) {
@@ -675,6 +675,6 @@ namespace ne RNAMESPACE() {
 
         return nullptr;
     }
-} // namespace )
+} // namespace ne RNAMESPACE()
 
 File_Node_GENERATED

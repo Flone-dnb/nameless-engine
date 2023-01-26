@@ -214,9 +214,9 @@ namespace ne RNAMESPACE() {
          */
         [[nodiscard]] std::variant<std::string, Error> serialize(
             toml::value& tomlData,
-            std::string sEntityId = "",
+            const std::string& sEntityId = "",
             const std::unordered_map<std::string, std::string>& customAttributes = {},
-            std::optional<std::filesystem::path> optionalPathToFile = {},
+            const std::optional<std::filesystem::path>& optionalPathToFile = {},
             bool bEnableBackup = false);
 
         /**
@@ -248,7 +248,7 @@ namespace ne RNAMESPACE() {
             Serializable* pOriginalObject,
             std::string sEntityId = "",
             const std::unordered_map<std::string, std::string>& customAttributes = {},
-            std::optional<std::filesystem::path> optionalPathToFile = {},
+            const std::optional<std::filesystem::path>& optionalPathToFile = {},
             bool bEnableBackup = false);
 
         /**

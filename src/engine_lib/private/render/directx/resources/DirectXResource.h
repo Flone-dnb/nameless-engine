@@ -22,6 +22,7 @@ namespace ne {
 
     class DirectXRenderer;
     class DirectXDescriptorHeap;
+    class DirectXResourceManager;
 
     /**
      * D3D resource wrapper with automatic descriptor binding.

@@ -96,9 +96,9 @@ namespace ne {
 
     std::variant<std::string, Error> Serializable::serialize(
         toml::value& tomlData,
-        std::string sEntityId,
+        const std::string& sEntityId,
         const std::unordered_map<std::string, std::string>& customAttributes,
-        std::optional<std::filesystem::path> optionalPathToFile,
+        const std::optional<std::filesystem::path>& optionalPathToFile,
         bool bEnableBackup) {
         return serialize(tomlData, nullptr, sEntityId, customAttributes, optionalPathToFile, bEnableBackup);
     }
@@ -114,7 +114,7 @@ namespace ne {
         // Get GUID of this class.
         const auto& selfArchetype = staticGetArchetype();
         const auto pSelfGuid = selfArchetype.getProperty<Guid>(false);
-        if (!pSelfGuid) {
+        if (pSelfGuid == nullptr) {
             const Error err(
                 fmt::format("Type {} does not have a GUID assigned to it.", selfArchetype.getName()));
             err.showError();
@@ -128,7 +128,7 @@ namespace ne {
         const auto endTime = std::chrono::steady_clock::now();
         const auto durationInMs =
             std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime).count();
-        const float timeTookInSec = static_cast<float>(durationInMs) / 1000.0f;
+        const float timeTookInSec = static_cast<float>(durationInMs) / 1000.0F; // NOLINT
 
         // Limit precision to 1 digit.
         std::stringstream durationStream;
@@ -147,7 +147,7 @@ namespace ne {
         const auto vDirectSubclasses = pArchetypeToAnalyze->getDirectSubclasses();
         for (const auto& pDerivedEntity : vDirectSubclasses) {
             const auto pGuid = pDerivedEntity->getProperty<Guid>(false);
-            if (!pGuid) {
+            if (pGuid == nullptr) {
                 const Error err(fmt::format(
                     "Type {} does not have a GUID assigned to it.\n\n"
                     "Here is an example of how to assign a GUID to your type:\n"
@@ -183,13 +183,16 @@ namespace ne {
         const auto& fieldType = field.getType();
 
         // Ignore this field if not marked as Serialize.
-        if (field.getProperty<Serialize>() == nullptr && field.getProperty<SerializeAsExternal>() == nullptr)
+        if (field.getProperty<Serialize>() == nullptr &&
+            field.getProperty<SerializeAsExternal>() == nullptr) {
             return false;
+        }
 
         // Don't serialize specific types.
         if (fieldType.isConst() || fieldType.isPointer() || fieldType.isLValueReference() ||
-            fieldType.isRValueReference() || fieldType.isCArray())
+            fieldType.isRValueReference() || fieldType.isCArray()) {
             return false;
+        }
 
         return true;
     }
@@ -200,7 +203,7 @@ namespace ne {
         for (const auto& pDerivedEntity : vDirectSubclasses) {
             // Get GUID property.
             const auto pGuid = pDerivedEntity->getProperty<Guid>(false);
-            if (!pGuid) {
+            if (pGuid == nullptr) {
                 const Error err(fmt::format(
                     "Type {} does not have a GUID assigned to it.\n\n"
                     "Here is an example of how to assign a GUID to your type:\n"
@@ -213,13 +216,11 @@ namespace ne {
 
             if (pGuid->getGuid() == sGuid) {
                 return pDerivedEntity;
-            } else {
-                const auto pResult = getClassForGuid(pDerivedEntity, sGuid);
-                if (pResult) {
-                    return pResult;
-                } else {
-                    continue;
-                }
+            }
+
+            const auto pResult = getClassForGuid(pDerivedEntity, sGuid);
+            if (pResult != nullptr) {
+                return pResult;
             }
         }
 
@@ -230,7 +231,7 @@ namespace ne {
         // Get GUID of this class.
         const auto& selfArchetype = Serializable::staticGetArchetype();
         const auto pSelfGuid = selfArchetype.getProperty<Guid>(false);
-        if (!pSelfGuid) {
+        if (pSelfGuid == nullptr) {
             const Error err(
                 fmt::format("Type {} does not have a GUID assigned to it.", selfArchetype.getName()));
             err.showError();
@@ -425,8 +426,8 @@ namespace ne {
         std::scoped_lock guard(mtxFieldSerializers.first);
 
         for (const auto& pSerializer : mtxFieldSerializers.second) {
-            auto& addedSerializer = *pSerializer.get();
-            auto& newSerializer = *pFieldSerializer.get();
+            auto& addedSerializer = *pSerializer;
+            auto& newSerializer = *pFieldSerializer;
             if (typeid(addedSerializer) == typeid(newSerializer)) {
                 return;
             }
@@ -438,9 +439,9 @@ namespace ne {
     std::vector<IFieldSerializer*> Serializable::getFieldSerializers() {
         std::scoped_lock guard(mtxFieldSerializers.first);
 
-        std::vector<IFieldSerializer*> vSerializers;
-        for (const auto& pSerializer : mtxFieldSerializers.second) {
-            vSerializers.push_back(pSerializer.get());
+        std::vector<IFieldSerializer*> vSerializers(mtxFieldSerializers.second.size());
+        for (size_t i = 0; i < mtxFieldSerializers.second.size(); i++) {
+            vSerializers[i] = mtxFieldSerializers.second[i].get();
         }
 
         return vSerializers;
@@ -449,27 +450,29 @@ namespace ne {
     bool Serializable::isDerivedFromSerializable(const rfk::Archetype* pArchetype) {
         if (rfk::Class const* pClass = rfk::classCast(pArchetype)) {
             // Check parents.
-            if (pClass->isSubclassOf(Serializable::staticGetArchetype()))
+            if (pClass->isSubclassOf(Serializable::staticGetArchetype())) {
                 return true;
+            }
 
             // Check if Serializable.
             const auto pGuid = pClass->getProperty<Guid>(false);
-            if (!pGuid)
+            if (pGuid == nullptr) {
                 return false;
+            }
 
-            if (pGuid->getGuid() == Serializable::staticGetArchetype().getProperty<Guid>(false)->getGuid())
+            if (pGuid->getGuid() == Serializable::staticGetArchetype().getProperty<Guid>(false)->getGuid()) {
                 return true;
+            }
 
-            return false;
-        } else if (rfk::Struct const* pStruct = rfk::structCast(pArchetype)) {
-            // Check parents.
-            if (pStruct->isSubclassOf(Serializable::staticGetArchetype()))
-                return true;
-
-            return false;
-        } else {
             return false;
         }
+
+        if (rfk::Struct const* pStruct = rfk::structCast(pArchetype)) {
+            // Check parents.
+            return pStruct->isSubclassOf(Serializable::staticGetArchetype());
+        }
+
+        return false;
     }
 
     std::optional<std::pair<std::string, std::string>>
@@ -477,12 +480,12 @@ namespace ne {
         return pathDeserializedFromRelativeToRes;
     }
 
-    std::variant<std::string, Error> Serializable::serialize(
+    std::variant<std::string, Error> Serializable::serialize( // NOLINT: too complex
         toml::value& tomlData,
         Serializable* pOriginalObject,
         std::string sEntityId,
         const std::unordered_map<std::string, std::string>& customAttributes,
-        std::optional<std::filesystem::path> optionalPathToFile,
+        const std::optional<std::filesystem::path>& optionalPathToFile,
         bool bEnableBackup) {
         rfk::Class const& selfArchetype = getArchetype();
         if (sEntityId.empty()) {
@@ -498,7 +501,7 @@ namespace ne {
 
         // Check that this type has a GUID.
         const auto pGuid = selfArchetype.getProperty<Guid>(false);
-        if (!pGuid) {
+        if (pGuid == nullptr) {
             Error err(
                 fmt::format("type \"{}\" does not have a GUID assigned to it", selfArchetype.getName()));
             return err;
@@ -542,18 +545,19 @@ namespace ne {
             bEnableBackup};
 
         selfArchetype.foreachField(
-            [](rfk::Field const& field, void* userData) -> bool {
-                if (!isFieldSerializable(field))
+            [](rfk::Field const& field, void* userData) -> bool { // NOLINT: too complex
+                if (!isFieldSerializable(field)) {
                     return true;
+                }
 
                 Data* pData = static_cast<Data*>(userData);
-                const auto sFieldName = field.getName();
+                const auto pFieldName = field.getName();
 
                 // We require all reflected field names to be unique (not only here,
                 // but this is also required for some serializers).
                 try {
                     // Throws if not found.
-                    toml::find(*pData->pTomlData, pData->sSectionName, sFieldName);
+                    toml::find(*pData->pTomlData, pData->sSectionName, pFieldName);
                 } catch (...) {
                     // No field exists with this name in this section - OK.
                     // Save field data in TOML.
@@ -564,8 +568,8 @@ namespace ne {
                         // Check if this field's value was changed compared to the value
                         // in the original file.
                         const auto pOriginalField = pData->pOriginalEntity->getArchetype().getFieldByName(
-                            sFieldName, rfk::EFieldFlags::Default, true);
-                        if (!pOriginalField) {
+                            pFieldName, rfk::EFieldFlags::Default, true);
+                        if (pOriginalField == nullptr) {
                             pData->error = Error(fmt::format(
                                 "the field \"{}\" (maybe inherited) of type \"{}\" was not found "
                                 "in the original entity",
@@ -590,10 +594,10 @@ namespace ne {
                                         pData->self, &field, pData->pOriginalEntity, pOriginalField)) {
                                     // Field value was not changed, skip it.
                                     return true;
-                                } else {
-                                    // Field value was changed, serialize it.
-                                    break;
                                 }
+
+                                // Field value was changed, serialize it.
+                                break;
                             }
                         }
 
@@ -712,7 +716,7 @@ namespace ne {
                 // If we continue it will get overwritten.
                 pData->error = Error(fmt::format(
                     "found two fields with the same name \"{}\" in type \"{}\" (maybe inherited)",
-                    sFieldName,
+                    pFieldName,
                     pData->selfArchetype->getName()));
 
                 return false;

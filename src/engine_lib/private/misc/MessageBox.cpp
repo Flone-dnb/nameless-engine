@@ -69,7 +69,12 @@ namespace ne {
 
     MessageBoxResult
     MessageBox::error(const std::string& sTitle, const std::string& sText, MessageBoxChoice buttons) {
-        return convertResult(pfd::message(sTitle, sText, convertChoice(buttons), pfd::icon::error).result());
+        return convertResult(pfd::message( // NOLINT: potential memory leak in `pfd`
+                                 sTitle,
+                                 sText,
+                                 convertChoice(buttons),
+                                 pfd::icon::error)
+                                 .result());
     }
 } // namespace ne
 

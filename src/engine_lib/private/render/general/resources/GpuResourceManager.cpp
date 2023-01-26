@@ -18,7 +18,6 @@ namespace ne {
             }
             return std::get<std::unique_ptr<DirectXResourceManager>>(std::move(result));
         }
-        // TODO: vulkan
 #elif __linux__
         // TODO: vulkan
         static_assert(false, "not implemented");

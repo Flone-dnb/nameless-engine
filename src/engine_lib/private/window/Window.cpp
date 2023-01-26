@@ -30,7 +30,7 @@ namespace ne {
         return *this;
     }
 
-    WindowBuilder& WindowBuilder::withIcon(std::filesystem::path pathToIcon) {
+    WindowBuilder& WindowBuilder::withIcon(const std::filesystem::path& pathToIcon) {
         params.pathToWindowIcon = pathToIcon;
 
         return *this;
@@ -69,7 +69,8 @@ namespace ne {
     std::pair<int, int> Window::getSize() const {
         showErrorIfNotOnMainThread();
 
-        int iWidth, iHeight;
+        int iWidth = -1;
+        int iHeight = -1;
 
         glfwGetWindowSize(pGlfwWindow, &iWidth, &iHeight);
 
@@ -79,13 +80,14 @@ namespace ne {
     std::pair<float, float> Window::getCursorPosition() const {
         showErrorIfNotOnMainThread();
 
-        double xPos, yPos;
+        double xPos = 0.0;
+        double yPos = 0.0;
         glfwGetCursorPos(pGlfwWindow, &xPos, &yPos);
 
         const auto size = getSize();
         if (size.first == 0 || size.second == 0) {
             Logger::get().error("failed to get window size", sWindowLogCategory);
-            return std::make_pair(0.0f, 0.0f);
+            return std::make_pair(0.0F, 0.0F);
         }
 
         return std::make_pair(
@@ -157,29 +159,27 @@ namespace ne {
         }
 
         const Window* pWindow = static_cast<Window*>(glfwGetWindowUserPointer(pGlfwWindow));
-        if (!pWindow) {
+        if (pWindow == nullptr) {
             return;
         }
 
         pWindow->onKeyboardInput(
-            static_cast<KeyboardKey>(iKey), KeyboardModifiers(iMods), iAction == GLFW_PRESS ? true : false);
+            static_cast<KeyboardKey>(iKey), KeyboardModifiers(iMods), iAction == GLFW_PRESS);
     }
 
     void Window::glfwWindowMouseCallback(GLFWwindow* pGlfwWindow, int iButton, int iAction, int iMods) {
         const Window* pWindow = static_cast<Window*>(glfwGetWindowUserPointer(pGlfwWindow));
-        if (!pWindow) {
+        if (pWindow == nullptr) {
             return;
         }
 
         pWindow->onMouseInput(
-            static_cast<MouseButton>(iButton),
-            KeyboardModifiers(iMods),
-            iAction == GLFW_PRESS ? true : false);
+            static_cast<MouseButton>(iButton), KeyboardModifiers(iMods), iAction == GLFW_PRESS);
     }
 
     void Window::glfwWindowFocusCallback(GLFWwindow* pGlfwWindow, int iFocused) {
         const Window* pWindow = static_cast<Window*>(glfwGetWindowUserPointer(pGlfwWindow));
-        if (!pWindow) {
+        if (pWindow == nullptr) {
             return;
         }
 
@@ -188,7 +188,7 @@ namespace ne {
 
     void Window::glfwWindowMouseCursorPosCallback(GLFWwindow* pGlfwWindow, double xPos, double yPos) {
         auto* pWindow = static_cast<Window*>(glfwGetWindowUserPointer(pGlfwWindow));
-        if (!pWindow) {
+        if (pWindow == nullptr) {
             return;
         }
 
@@ -197,7 +197,7 @@ namespace ne {
 
     void Window::glfwWindowMouseScrollCallback(GLFWwindow* pGlfwWindow, double xOffset, double yOffset) {
         const Window* pWindow = static_cast<Window*>(glfwGetWindowUserPointer(pGlfwWindow));
-        if (!pWindow) {
+        if (pWindow == nullptr) {
             return;
         }
 
@@ -237,15 +237,15 @@ namespace ne {
         GLFWmonitor* pMonitor = nullptr;
         if (params.bFullscreen) {
             pMonitor = glfwGetPrimaryMonitor();
-            const GLFWvidmode* mode = glfwGetVideoMode(pMonitor);
+            const GLFWvidmode* pMode = glfwGetVideoMode(pMonitor);
 
-            glfwWindowHint(GLFW_RED_BITS, mode->redBits);
-            glfwWindowHint(GLFW_GREEN_BITS, mode->greenBits);
-            glfwWindowHint(GLFW_BLUE_BITS, mode->blueBits);
-            glfwWindowHint(GLFW_REFRESH_RATE, mode->refreshRate);
+            glfwWindowHint(GLFW_RED_BITS, pMode->redBits);
+            glfwWindowHint(GLFW_GREEN_BITS, pMode->greenBits);
+            glfwWindowHint(GLFW_BLUE_BITS, pMode->blueBits);
+            glfwWindowHint(GLFW_REFRESH_RATE, pMode->refreshRate);
 
-            params.iWindowWidth = mode->width;
-            params.iWindowHeight = mode->height;
+            params.iWindowWidth = pMode->width;
+            params.iWindowHeight = pMode->height;
         } else {
             if (!params.bShowWindow) {
                 glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
@@ -263,7 +263,7 @@ namespace ne {
         // Create GLFW window.
         GLFWwindow* pGLFWWindow = glfwCreateWindow(
             params.iWindowWidth, params.iWindowHeight, sNewWindowTitle.c_str(), pMonitor, nullptr);
-        if (!pGLFWWindow) {
+        if (pGLFWWindow == nullptr) {
             return Error("failed to create window");
         }
 
@@ -322,7 +322,7 @@ namespace ne {
         sWindowTitle = sNewTitle;
     }
 
-    std::optional<Error> Window::setIcon(std::filesystem::path pathToIcon) const {
+    std::optional<Error> Window::setIcon(const std::filesystem::path& pathToIcon) const {
         showErrorIfNotOnMainThread();
 
         if (!std::filesystem::exists(pathToIcon)) {
@@ -343,7 +343,7 @@ namespace ne {
         return {};
     }
 
-    std::variant<WindowCursor*, Error> Window::createCursor(std::filesystem::path pathToIcon) {
+    std::variant<WindowCursor*, Error> Window::createCursor(const std::filesystem::path& pathToIcon) {
         showErrorIfNotOnMainThread();
 
         // Create new cursor.
@@ -372,13 +372,13 @@ namespace ne {
 
     void Window::setCursorVisibility(const bool bIsVisible) const {
         if (bIsVisible) {
-            if (glfwRawMouseMotionSupported()) {
+            if (glfwRawMouseMotionSupported() == GLFW_TRUE) {
                 glfwSetInputMode(pGlfwWindow, GLFW_RAW_MOUSE_MOTION, GLFW_FALSE);
             }
             glfwSetInputMode(pGlfwWindow, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
         } else {
             glfwSetInputMode(pGlfwWindow, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-            if (glfwRawMouseMotionSupported()) {
+            if (glfwRawMouseMotionSupported() == GLFW_TRUE) {
                 glfwSetInputMode(pGlfwWindow, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
             } else {
                 Logger::get().warn("raw mouse motion is not supported", sWindowLogCategory);
@@ -401,7 +401,7 @@ namespace ne {
     }
 
     WindowCursor::~WindowCursor() {
-        if (pCursor) {
+        if (pCursor != nullptr) {
             Logger::get().error(
                 "previously created window cursor is being destroyed but internal GLFW cursor object was not "
                 "released (you should release it manually)",
@@ -410,7 +410,7 @@ namespace ne {
     }
 
     std::variant<std::unique_ptr<WindowCursor>, Error>
-    WindowCursor::create(std::filesystem::path pathToIcon) {
+    WindowCursor::create(const std::filesystem::path& pathToIcon) {
         if (!std::filesystem::exists(pathToIcon)) {
             return Error(fmt::format("the specified file \"{}\" does not exist.", pathToIcon.string()));
         }
@@ -421,7 +421,7 @@ namespace ne {
 
         // Create cursor.
         auto pGlfwCursor = glfwCreateCursor(&image, 0, 0);
-        if (!pGlfwCursor) {
+        if (pGlfwCursor == nullptr) {
             return Error("failed to create a cursor object");
         }
 

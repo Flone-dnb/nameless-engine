@@ -138,52 +138,29 @@ func make_simlink_to_res(res_directory string, working_directory string, build_d
 	fmt.Println("INFO: engine_post_build.go: using working directory:", working_directory)
 	fmt.Println("INFO: engine_post_build.go: using build directory:", build_directory)
 
-	_, err = os.Stat(filepath.Join(working_directory, "res"))
-	if os.IsNotExist(err) {
-		err = os.Symlink(res_directory, filepath.Join(working_directory, "res"))
-		if err != nil {
-			fmt.Println("ERROR: engine_post_build.go: failed to create symlink to 'res' in", working_directory, "error:", err)
-			if runtime.GOOS == "windows" {
-				// Maybe not enough privileges.
-				fmt.Println("ERROR: engine_post_build.go: failed to create symlink to 'res' directory. " +
-					"In order to create symlinks on Windows administrator rights are requires (make sure you are running your " +
-					"IDE with administrator rights).")
-			}
-			os.Exit(1)
-		}
-	}
-
-	_, err = os.Stat(filepath.Join(engine_lib_dir, "res"))
-	if os.IsNotExist(err) {
-		err = os.Symlink(res_directory, filepath.Join(engine_lib_dir, "res"))
-		if err != nil {
-			fmt.Println("ERROR: engine_post_build.go: failed to create symlink to 'res' in", engine_lib_dir, "error:", err)
-			if runtime.GOOS == "windows" {
-				// Maybe not enough privileges.
-				fmt.Println("ERROR: engine_post_build.go: failed to create symlink to 'res' directory. " +
-					"In order to create symlinks on Windows administrator rights are requires (make sure you are running your " +
-					"IDE with administrator rights).")
-			}
-			os.Exit(1)
-		}
-	}
-
-	_, err = os.Stat(filepath.Join(build_directory, "res"))
-	if os.IsNotExist(err) {
-		err = os.Symlink(res_directory, filepath.Join(build_directory, "res"))
-		if err != nil {
-			fmt.Println("ERROR: engine_post_build.go: failed to create symlink to 'res' in", build_directory, "error:", err)
-			if runtime.GOOS == "windows" {
-				// Maybe not enough privileges.
-				fmt.Println("ERROR: engine_post_build.go: failed to create symlink to 'res' directory. " +
-					"In order to create symlinks on Windows administrator rights are requires (make sure you are running your " +
-					"IDE with administrator rights).")
-			}
-			os.Exit(1)
-		}
-	}
+	create_symlink(res_directory, filepath.Join(working_directory, "res"))
+	create_symlink(res_directory, filepath.Join(engine_lib_dir, "res"))
+	create_symlink(res_directory, filepath.Join(engine_lib_dir, "Debug", "res")) // for tests
+	create_symlink(res_directory, filepath.Join(build_directory, "res"))
 
 	fmt.Println("SUCCESS: engine_post_build.go: symlinks to 'res' directory were created.")
+}
+
+func create_symlink(target string, symlink_location string) {
+	var _, err = os.Stat(symlink_location)
+	if os.IsNotExist(err) {
+		err = os.Symlink(target, symlink_location)
+		if err != nil {
+			fmt.Println("ERROR: engine_post_build.go: failed to create symlink to 'res' for", symlink_location, "error:", err)
+			if runtime.GOOS == "windows" {
+				// Maybe not enough privileges.
+				fmt.Println("ERROR: engine_post_build.go: failed to create symlink to 'res' directory. " +
+					"In order to create symlinks on Windows administrator rights are requires (make sure you are running your " +
+					"IDE with administrator rights).")
+			}
+			os.Exit(1)
+		}
+	}
 }
 
 func copy_ext_licenses(ext_directory string, build_directory string) {

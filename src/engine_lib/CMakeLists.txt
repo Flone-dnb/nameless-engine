@@ -53,6 +53,24 @@ if (NOT EXISTS ${TGC_CPP_FILE_PATH})
     file(WRITE ${TGC_CPP_FILE_PATH} "")
 endif()
 
+# Add `DEBUG` macro in Debug build.
+if(CMAKE_BUILD_TYPE MATCHES "^[Dd]ebug")
+    set(BUILD_MODE_DIRECTORY ${CMAKE_BINARY_DIR}/Debug)
+    message(STATUS "Adding DEBUG macro for this build type.")
+    add_compile_definitions(DEBUG)
+endif()
+
+# Add `WIN32` macro for debug builds (some setups don't define it).
+if(WIN32)
+    message(STATUS "Adding WIN32 macro because running Windows.")
+    add_compile_definitions(WIN32)
+endif()
+
+# Add `_WIN32` macro for non MSVC compiler (needed for some third party dependencies).
+if(WIN32 AND NOT MSVC)
+    add_compile_definitions(_WIN32)
+endif()
+
 # Engine general (cross-platform) sources.
 set(ENGINE_LIB_SOURCES
     ../.generated/${REFLECTION_FILE_NAME}
@@ -183,13 +201,6 @@ if(NOT CMAKE_BUILD_TYPE)
 endif()
 message(STATUS "${PROJECT_NAME}: build type: ${CMAKE_BUILD_TYPE}.")
 
-# Add DEBUG macro in Debug build.
-if(CMAKE_BUILD_TYPE MATCHES "^[Dd]ebug")
-    set(BUILD_MODE_DIRECTORY ${CMAKE_BINARY_DIR}/Debug)
-    message(STATUS "Adding DEBUG macro for this build type.")
-    add_compile_definitions(DEBUG)
-endif()
-
 # Add BUILD_MODE_DIRECTORY variable.
 if(CMAKE_BUILD_TYPE MATCHES "^[Dd]ebug")
     set(BUILD_MODE_DIRECTORY ${CMAKE_BINARY_DIR}/Debug)
@@ -225,7 +236,7 @@ target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_${PROJECT_CXX_STANDARD_VE
 
 # Enable Address Sanitizer.
 if(CMAKE_BUILD_TYPE MATCHES "^[Dd]ebug")
-    if(NOT CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+    if(NOT WIN32)
         message(STATUS "Adding Address Sanitizer flags.")
         set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fno-omit-frame-pointer -fsanitize=address")
         set (CMAKE_LINKER_FLAGS_DEBUG "${CMAKE_LINKER_FLAGS_DEBUG} -fno-omit-frame-pointer -fsanitize=address")
@@ -235,16 +246,29 @@ endif()
 # Set directory name for dependencies.
 set(DEPENDENCY_BUILD_DIR_NAME dependency_build)
 
+# Setup Clang-tidy.
+find_program (CLANG_TIDY NAMES "clang-tidy" REQUIRED)
+set(RUN_CLANG_TIDY
+    "${CLANG_TIDY}"
+    "--header-filter=src/* --config-file=${CMAKE_CURRENT_LIST_DIR}/../../.clang-tidy")
+set_target_properties(${PROJECT_NAME} PROPERTIES CXX_CLANG_TIDY "${RUN_CLANG_TIDY}")
+if(MSVC)
+    target_compile_options(${PROJECT_NAME} PUBLIC -EHsc) # needed for clang-tidy when running MSVC to enable exceptions
+endif()
+
 # External: glfw.
-set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE) # disable docs
-set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE) # disable tests
-set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE) # disable examples
-add_subdirectory(${RELATIVE_EXT_PATH}/glfw ${DEPENDENCY_BUILD_DIR_NAME}/glfw) # add GLFW target
+set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
+set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+set(GLFW_INSTALL OFF CACHE BOOL "" FORCE)
+add_subdirectory(${RELATIVE_EXT_PATH}/glfw ${DEPENDENCY_BUILD_DIR_NAME}/glfw SYSTEM)
 target_link_libraries(${PROJECT_NAME} PUBLIC glfw)
 set_target_properties(glfw PROPERTIES FOLDER ${EXTERNAL_FOLDER})
+set_target_properties(update_mappings PROPERTIES FOLDER ${EXTERNAL_FOLDER})
 
 # External: spdlog.
-add_subdirectory(${RELATIVE_EXT_PATH}/spdlog ${DEPENDENCY_BUILD_DIR_NAME}/spdlog)
+set(SPDLOG_FMT_EXTERNAL OFF CACHE BOOL "" FORCE)
+add_subdirectory(${RELATIVE_EXT_PATH}/spdlog ${DEPENDENCY_BUILD_DIR_NAME}/spdlog SYSTEM)
 target_link_libraries(${PROJECT_NAME} PUBLIC spdlog::spdlog)
 set_target_properties(spdlog PROPERTIES FOLDER ${EXTERNAL_FOLDER})
 
@@ -252,28 +276,34 @@ set_target_properties(spdlog PROPERTIES FOLDER ${EXTERNAL_FOLDER})
 if (MSVC)
     target_compile_options(${PROJECT_NAME} PUBLIC /Zc:__cplusplus)
 endif()
-add_subdirectory(${RELATIVE_EXT_PATH}/toml11 ${DEPENDENCY_BUILD_DIR_NAME}/toml11)
+add_subdirectory(${RELATIVE_EXT_PATH}/toml11 ${DEPENDENCY_BUILD_DIR_NAME}/toml11 SYSTEM)
 set_target_properties(toml11 PROPERTIES FOLDER ${EXTERNAL_FOLDER})
 
 # External: portable-file-dialogs
-add_subdirectory(${RELATIVE_EXT_PATH}/portable-file-dialogs ${DEPENDENCY_BUILD_DIR_NAME}/portable-file-dialogs)
+add_subdirectory(${RELATIVE_EXT_PATH}/portable-file-dialogs ${DEPENDENCY_BUILD_DIR_NAME}/portable-file-dialogs SYSTEM)
 target_link_libraries(${PROJECT_NAME} PUBLIC portable_file_dialogs)
 set_target_properties(portable_file_dialogs PROPERTIES FOLDER ${EXTERNAL_FOLDER})
 
 # External: fmt
-add_subdirectory(${RELATIVE_EXT_PATH}/fmt ${DEPENDENCY_BUILD_DIR_NAME}/fmt)
+add_subdirectory(${RELATIVE_EXT_PATH}/fmt ${DEPENDENCY_BUILD_DIR_NAME}/fmt SYSTEM)
 target_link_libraries(${PROJECT_NAME} PUBLIC fmt)
 set_target_properties(fmt PROPERTIES FOLDER ${EXTERNAL_FOLDER})
 
 # External: GLM
-add_subdirectory(${RELATIVE_EXT_PATH}/glm ${DEPENDENCY_BUILD_DIR_NAME}/glm)
+add_subdirectory(${RELATIVE_EXT_PATH}/glm ${DEPENDENCY_BUILD_DIR_NAME}/glm SYSTEM)
 target_link_libraries(${PROJECT_NAME} PUBLIC glm)
 set_target_properties(glm PROPERTIES FOLDER ${EXTERNAL_FOLDER})
+set_target_properties(uninstall PROPERTIES FOLDER ${EXTERNAL_FOLDER})
 
 # [temporary solution]: External: tgc
-target_sources(${PROJECT_NAME} PUBLIC ${TGC_CPP_FILE_PATH})
+set(TGC_TARGET_NAME tgc)
+add_library(${TGC_TARGET_NAME}
+    ${TGC_CPP_FILE_PATH}
+    ${TGC_H_FILE_PATH})
+set_target_properties(tgc PROPERTIES FOLDER ${EXTERNAL_FOLDER})
+add_dependencies(${PROJECT_NAME} ${TGC_TARGET_NAME})
+target_link_libraries(${PROJECT_NAME} PUBLIC ${TGC_TARGET_NAME})
 if(NOT MSVC)
-    message(STATUS "Adding flags to ignore some warnings in external dependency `tgc2`.")
     set_source_files_properties(${TGC_CPP_FILE_PATH} PROPERTIES COMPILE_FLAGS "-Wno-unused-parameter -Wno-error=extra")
     set_source_files_properties(${TGC_H_FILE_PATH} PROPERTIES COMPILE_FLAGS "-Wno-unused-parameter -Wno-error=extra")
 endif()
@@ -340,7 +370,7 @@ add_custom_target(${SETUP_REFUREKU_TARGET}
                 ${CMAKE_CXX_COMPILER_ID} # used compiler
 )
 add_dependencies(${PROJECT_NAME} ${SETUP_REFUREKU_TARGET})
-target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/Refureku/build/Include/)
+target_include_directories(${PROJECT_NAME} SYSTEM PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/Refureku/build/Include/)
 set_target_properties(${SETUP_REFUREKU_TARGET} PROPERTIES FOLDER ${EXTERNAL_FOLDER})
 
 # Link Refureku library.
@@ -370,17 +400,18 @@ add_dependencies(${PROJECT_NAME} ${REFUREKU_GENERATOR_TARGET})
 set_target_properties(${REFUREKU_GENERATOR_TARGET} PROPERTIES FOLDER ${EXTERNAL_FOLDER})
 
 # Add generated headers to include directories.
-target_include_directories(${PROJECT_NAME} PUBLIC ../.generated)
+target_include_directories(${PROJECT_NAME} SYSTEM PUBLIC ../.generated)
 
-# Copy Refureku dynamic library to the top level binary directory.
+# Prepare variable for Refureku dynamic library name.
 set(REFUREKU_DYN_LIB Refureku.dll)
 if (NOT WIN32)
     if(APPLE) # test macos before unix
-        message(FATAL_ERROR "Put Refureku dynamic library name here.")
+        message(FATAL_ERROR "TODO: put Refureku dynamic library name here.")
     elseif(UNIX)
         set(REFUREKU_DYN_LIB libRefureku.so)
     endif()
 endif()
+# Copy Refureku dynamic library to the top level binary directory.
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
                 COMMAND ${CMAKE_COMMAND} -E copy
                 ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/Refureku/build/Bin/${REFUREKU_DYN_LIB} ${CMAKE_BINARY_DIR}/${REFUREKU_DYN_LIB})
@@ -389,20 +420,31 @@ add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
                 COMMAND ${CMAKE_COMMAND} -E copy
                 ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/Refureku/build/Bin/${REFUREKU_DYN_LIB} ${BUILD_MODE_DIRECTORY}/${REFUREKU_DYN_LIB})
+# Copy DXC DLLs to engine_lib binary directory.
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E copy
+                ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/Refureku/build/Bin/${REFUREKU_DYN_LIB} ${CMAKE_CURRENT_BINARY_DIR}/${REFUREKU_DYN_LIB})
 # External: Refureku (end) --------------------------------------------------------------------------
 
 # Win32 specific dependencies:
 if (WIN32)
     # External: D3D12MemoryAllocator
-    add_subdirectory(${RELATIVE_EXT_PATH}/D3D12MemoryAllocator ${DEPENDENCY_BUILD_DIR_NAME}/D3D12MemoryAllocator)
+    add_subdirectory(${RELATIVE_EXT_PATH}/D3D12MemoryAllocator ${DEPENDENCY_BUILD_DIR_NAME}/D3D12MemoryAllocator SYSTEM)
     target_link_libraries(${PROJECT_NAME} PUBLIC D3D12MemoryAllocator)
     set_target_properties(D3D12MemoryAllocator PROPERTIES FOLDER ${EXTERNAL_FOLDER})
+    if(NOT MSVC)
+        set_source_files_properties(${RELATIVE_EXT_PATH}/D3D12MemoryAllocator/src/D3D12MemAlloc.cpp PROPERTIES COMPILE_FLAGS "-Wno-tautological-undefined-compare")
+        set_source_files_properties(${RELATIVE_EXT_PATH}/D3D12MemoryAllocator/src/D3D12MemAlloc.cpp PROPERTIES COMPILE_FLAGS "-Wno-switch")
+    endif()
 
     # External: DirectX-Headers
-    add_subdirectory(${RELATIVE_EXT_PATH}/DirectX-Headers ${DEPENDENCY_BUILD_DIR_NAME}/DirectX-Headers)
+    add_subdirectory(${RELATIVE_EXT_PATH}/DirectX-Headers ${DEPENDENCY_BUILD_DIR_NAME}/DirectX-Headers SYSTEM)
     target_link_libraries(${PROJECT_NAME} PUBLIC DirectX-Headers)
     set_target_properties(DirectX-Headers PROPERTIES FOLDER ${EXTERNAL_FOLDER})
     set_target_properties(DirectX-Guids PROPERTIES FOLDER ${EXTERNAL_FOLDER})
+    if(NOT MSVC)
+        set_source_files_properties(${RELATIVE_EXT_PATH}/DirectX-Headers/src/d3dx12_property_format_table.cpp PROPERTIES COMPILE_FLAGS "-Wno-switch")
+    endif()
 
     # External: DXC.
     # Download and unzip DXC.
@@ -421,6 +463,7 @@ if (WIN32)
     # Link to DXC libraries.
     target_link_directories(${PROJECT_NAME} PUBLIC ${PATH_TO_DXC_DLL_DIR})
     target_link_directories(${PROJECT_NAME} PUBLIC ${PATH_TO_DXC_LIB_DIR})
+    target_link_libraries(${PROJECT_NAME} PUBLIC ${PATH_TO_DXC_LIB_DIR}/dxcompiler.lib)
 
     # Copy DXC DLLs to the top level binary directory.
     add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
@@ -464,7 +507,7 @@ add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
 )
 
 # Tests.
-add_subdirectory(${RELATIVE_EXT_PATH}/Catch2 ${DEPENDENCY_BUILD_DIR_NAME}/Catch2)
+add_subdirectory(${RELATIVE_EXT_PATH}/Catch2 ${DEPENDENCY_BUILD_DIR_NAME}/Catch2 SYSTEM)
 set_target_properties(Catch2 PROPERTIES FOLDER ${EXTERNAL_FOLDER})
 set_target_properties(Catch2WithMain PROPERTIES FOLDER ${EXTERNAL_FOLDER})
 
@@ -513,8 +556,8 @@ include(Catch)
 #catch_discover_tests(${ENGINE_TESTS_NAME})
 
 # Add includes.
-target_include_directories(${PROJECT_NAME} PUBLIC ${RELATIVE_EXT_PATH})
-target_include_directories(${PROJECT_NAME} PUBLIC ${RELATIVE_EXT_PATH}/source_location/include)
+target_include_directories(${PROJECT_NAME} SYSTEM PUBLIC ${RELATIVE_EXT_PATH})
+target_include_directories(${PROJECT_NAME} SYSTEM PUBLIC ${RELATIVE_EXT_PATH}/source_location/include)
 target_include_directories(${PROJECT_NAME} PUBLIC public)
 target_include_directories(${PROJECT_NAME} PUBLIC private)
 

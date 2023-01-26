@@ -65,7 +65,7 @@ namespace ne {
         std::vector<std::string> vShaderNamesToRemove;
 
         for (const auto& [key, shader] : mtxAssignedShaders.second) {
-            vShaderNamesToRemove.push_back(shader->getShaderName());
+            vShaderNamesToRemove.push_back(shader->getShaderName()); // NOLINT
         }
 
         // Clear shaders so that we don't hold any references now

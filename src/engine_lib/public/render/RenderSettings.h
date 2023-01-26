@@ -25,7 +25,7 @@ namespace ne RNAMESPACE() {
          *
          * @return Path to file.
          */
-        std::filesystem::path getPathToConfigurationFile();
+        static std::filesystem::path getPathToConfigurationFile();
 
         /**
          * Enables/disables anti-aliasing (AA).

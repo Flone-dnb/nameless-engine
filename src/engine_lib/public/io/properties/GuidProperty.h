@@ -50,8 +50,11 @@ namespace ne RNAMESPACE() {
         /** Entity's GUID. */
         std::string sGuid;
 
+        /** Length of the GUID. */
+        static constexpr size_t iGuidLength = 36;
+
         ne_Guid_GENERATED
     };
-} // namespace )
+} // namespace ne RNAMESPACE()
 
 File_GuidProperty_GENERATED

@@ -10,17 +10,23 @@ namespace ne {
         // The `match` function can only be used with the primitive types.
         if (fieldType.match(rfk::getType<bool>())) {
             return true;
-        } else if (fieldType.match(rfk::getType<int>())) {
+        }
+        if (fieldType.match(rfk::getType<int>())) {
             return true;
-        } else if (fieldType.match(rfk::getType<unsigned int>())) {
+        }
+        if (fieldType.match(rfk::getType<unsigned int>())) {
             return true;
-        } else if (fieldType.match(rfk::getType<long long>())) {
+        }
+        if (fieldType.match(rfk::getType<long long>())) {
             return true;
-        } else if (fieldType.match(rfk::getType<unsigned long long>())) {
+        }
+        if (fieldType.match(rfk::getType<unsigned long long>())) {
             return true;
-        } else if (fieldType.match(rfk::getType<float>())) {
+        }
+        if (fieldType.match(rfk::getType<float>())) {
             return true;
-        } else if (fieldType.match(rfk::getType<double>())) {
+        }
+        if (fieldType.match(rfk::getType<double>())) {
             return true;
         }
 
@@ -36,37 +42,37 @@ namespace ne {
         size_t& iSubEntityId,
         Serializable* pOriginalObject) {
         const auto& fieldType = pField->getType();
-        const auto sFieldName = pField->getName();
+        const auto pFieldName = pField->getName();
 
         // The `match` function can only be used with the primitive types.
         if (fieldType.match(rfk::getType<bool>())) {
-            pTomlData->operator[](sSectionName).operator[](sFieldName) = pField->getUnsafe<bool>(pFieldOwner);
+            pTomlData->operator[](sSectionName).operator[](pFieldName) = pField->getUnsafe<bool>(pFieldOwner);
         } else if (fieldType.match(rfk::getType<int>())) {
-            pTomlData->operator[](sSectionName).operator[](sFieldName) = pField->getUnsafe<int>(pFieldOwner);
+            pTomlData->operator[](sSectionName).operator[](pFieldName) = pField->getUnsafe<int>(pFieldOwner);
         } else if (fieldType.match(rfk::getType<unsigned int>())) {
-            pTomlData->operator[](sSectionName).operator[](sFieldName) =
+            pTomlData->operator[](sSectionName).operator[](pFieldName) =
                 pField->getUnsafe<unsigned int>(pFieldOwner);
         } else if (fieldType.match(rfk::getType<long long>())) {
-            pTomlData->operator[](sSectionName).operator[](sFieldName) =
+            pTomlData->operator[](sSectionName).operator[](pFieldName) =
                 pField->getUnsafe<long long>(pFieldOwner);
         } else if (fieldType.match(rfk::getType<unsigned long long>())) {
             const auto iValue = pField->getUnsafe<unsigned long long>(pFieldOwner);
             // Since toml11 (library that we use) uses `long long` for integers,
             // store this type as a string.
             const std::string sValue = std::to_string(iValue);
-            pTomlData->operator[](sSectionName).operator[](sFieldName) = sValue;
+            pTomlData->operator[](sSectionName).operator[](pFieldName) = sValue;
         } else if (fieldType.match(rfk::getType<float>())) {
-            pTomlData->operator[](sSectionName).operator[](sFieldName) =
+            pTomlData->operator[](sSectionName).operator[](pFieldName) =
                 pField->getUnsafe<float>(pFieldOwner);
         } else if (fieldType.match(rfk::getType<double>())) {
             // Store double as string for better precision.
-            pTomlData->operator[](sSectionName).operator[](sFieldName) =
+            pTomlData->operator[](sSectionName).operator[](pFieldName) =
                 toml::format(toml::value(pField->getUnsafe<double>(pFieldOwner)));
         } else {
             return Error(fmt::format(
                 "The type \"{}\" of the specified field \"{}\" is not supported by this serializer.",
                 pField->getCanonicalTypeName(),
-                sFieldName));
+                pFieldName));
         }
 
         return {};
@@ -81,15 +87,15 @@ namespace ne {
         const std::string& sEntityId,
         std::unordered_map<std::string, std::string>& customAttributes) {
         const auto& fieldType = pField->getType();
-        const auto sFieldName = pField->getName();
+        const auto pFieldName = pField->getName();
 
         // The `match` function can only be used with the primitive types.
         if (fieldType.match(rfk::getType<bool>()) && pTomlValue->is_boolean()) {
             auto fieldValue = pTomlValue->as_boolean();
-            pField->setUnsafe<bool>(pFieldOwner, std::move(fieldValue));
+            pField->setUnsafe<bool>(pFieldOwner, std::move(fieldValue)); // NOLINT
         } else if (fieldType.match(rfk::getType<int>()) && pTomlValue->is_integer()) {
             auto fieldValue = static_cast<int>(pTomlValue->as_integer());
-            pField->setUnsafe<int>(pFieldOwner, std::move(fieldValue));
+            pField->setUnsafe<int>(pFieldOwner, std::move(fieldValue)); // NOLINT
         } else if (fieldType.match(rfk::getType<unsigned int>()) && pTomlValue->is_integer()) {
             const auto iOriginalValue = pTomlValue->as_integer();
             auto fieldValue = static_cast<unsigned int>(iOriginalValue);
@@ -98,39 +104,39 @@ namespace ne {
                 // we add this check.
                 fieldValue = 0;
             }
-            pField->setUnsafe<unsigned int>(pFieldOwner, std::move(fieldValue));
+            pField->setUnsafe<unsigned int>(pFieldOwner, std::move(fieldValue)); // NOLINT
         } else if (fieldType.match(rfk::getType<long long>()) && pTomlValue->is_integer()) {
             long long fieldValue = pTomlValue->as_integer();
-            pField->setUnsafe<long long>(pFieldOwner, std::move(fieldValue));
+            pField->setUnsafe<long long>(pFieldOwner, std::move(fieldValue)); // NOLINT
         } else if (fieldType.match(rfk::getType<unsigned long long>()) && pTomlValue->is_string()) {
             // Stored as a string.
-            const auto sValue = pTomlValue->as_string();
+            const auto& sValue = pTomlValue->as_string();
             try {
                 unsigned long long iValue = std::stoull(sValue);
-                pField->setUnsafe<unsigned long long>(pFieldOwner, std::move(iValue));
+                pField->setUnsafe<unsigned long long>(pFieldOwner, std::move(iValue)); // NOLINT
             } catch (std::exception& ex) {
                 return Error(fmt::format(
                     "Failed to convert string to unsigned long long for field \"{}\": {}",
-                    sFieldName,
+                    pFieldName,
                     ex.what()));
             }
         } else if (fieldType.match(rfk::getType<float>()) && pTomlValue->is_floating()) {
             auto fieldValue = static_cast<float>(pTomlValue->as_floating());
-            pField->setUnsafe<float>(pFieldOwner, std::move(fieldValue));
+            pField->setUnsafe<float>(pFieldOwner, std::move(fieldValue)); // NOLINT
         } else if (fieldType.match(rfk::getType<double>()) && pTomlValue->is_string()) {
             // We store double as a string for better precision.
             try {
                 double fieldValue = std::stod(pTomlValue->as_string().str);
-                pField->setUnsafe<double>(pFieldOwner, std::move(fieldValue));
+                pField->setUnsafe<double>(pFieldOwner, std::move(fieldValue)); // NOLINT
             } catch (std::exception& ex) {
                 return Error(fmt::format(
-                    "Failed to convert string to double for field \"{}\": {}", sFieldName, ex.what()));
+                    "Failed to convert string to double for field \"{}\": {}", pFieldName, ex.what()));
             }
         } else {
             return Error(fmt::format(
                 "The type \"{}\" of the specified field \"{}\" is not supported by this serializer.",
                 pField->getCanonicalTypeName(),
-                sFieldName));
+                pFieldName));
         }
 
         return {};
@@ -144,25 +150,25 @@ namespace ne {
         // The `match` function can only be used with the primitive types.
         if (pFromField->getType().match(rfk::getType<bool>())) {
             auto value = pFromField->getUnsafe<bool>(pFromInstance);
-            pToField->setUnsafe<bool>(pToInstance, std::move(value));
+            pToField->setUnsafe<bool>(pToInstance, std::move(value)); // NOLINT
         } else if (pFromField->getType().match(rfk::getType<int>())) {
             auto value = pFromField->getUnsafe<int>(pFromInstance);
-            pToField->setUnsafe<int>(pToInstance, std::move(value));
+            pToField->setUnsafe<int>(pToInstance, std::move(value)); // NOLINT
         } else if (pFromField->getType().match(rfk::getType<unsigned int>())) {
             auto value = pFromField->getUnsafe<unsigned int>(pFromInstance);
-            pToField->setUnsafe<unsigned int>(pToInstance, std::move(value));
+            pToField->setUnsafe<unsigned int>(pToInstance, std::move(value)); // NOLINT
         } else if (pFromField->getType().match(rfk::getType<long long>())) {
             auto value = pFromField->getUnsafe<long long>(pFromInstance);
-            pToField->setUnsafe<long long>(pToInstance, std::move(value));
+            pToField->setUnsafe<long long>(pToInstance, std::move(value)); // NOLINT
         } else if (pFromField->getType().match(rfk::getType<unsigned long long>())) {
             auto value = pFromField->getUnsafe<unsigned long long>(pFromInstance);
-            pToField->setUnsafe<unsigned long long>(pToInstance, std::move(value));
+            pToField->setUnsafe<unsigned long long>(pToInstance, std::move(value)); // NOLINT
         } else if (pFromField->getType().match(rfk::getType<float>())) {
             auto value = pFromField->getUnsafe<float>(pFromInstance);
-            pToField->setUnsafe<float>(pToInstance, std::move(value));
+            pToField->setUnsafe<float>(pToInstance, std::move(value)); // NOLINT
         } else if (pFromField->getType().match(rfk::getType<double>())) {
             auto value = pFromField->getUnsafe<double>(pFromInstance);
-            pToField->setUnsafe<double>(pToInstance, std::move(value));
+            pToField->setUnsafe<double>(pToInstance, std::move(value)); // NOLINT
         } else {
             return Error(fmt::format(
                 "The type \"{}\" of the specified field \"{}\" is not supported by this serializer.",
@@ -178,10 +184,12 @@ namespace ne {
         const rfk::Field* pFieldA,
         Serializable* pFieldBOwner,
         const rfk::Field* pFieldB) {
-        if (!isFieldTypeSupported(pFieldA))
+        if (!isFieldTypeSupported(pFieldA)) {
             return false;
-        if (!isFieldTypeSupported(pFieldB))
+        }
+        if (!isFieldTypeSupported(pFieldB)) {
             return false;
+        }
 
         // Check that types are equal.
         const std::string sFieldACanonicalTypeName = pFieldA->getCanonicalTypeName();
@@ -197,29 +205,35 @@ namespace ne {
             const auto fieldAValue = pFieldA->getUnsafe<bool>(pFieldAOwner);
             const auto fieldBValue = pFieldB->getUnsafe<bool>(pFieldBOwner);
             return fieldAValue == fieldBValue;
-        } else if (fieldAType.match(rfk::getType<int>())) {
+        }
+        if (fieldAType.match(rfk::getType<int>())) {
             const auto fieldAValue = pFieldA->getUnsafe<int>(pFieldAOwner);
             const auto fieldBValue = pFieldB->getUnsafe<int>(pFieldBOwner);
             return fieldAValue == fieldBValue;
-        } else if (fieldAType.match(rfk::getType<unsigned int>())) {
+        }
+        if (fieldAType.match(rfk::getType<unsigned int>())) {
             const auto fieldAValue = pFieldA->getUnsafe<unsigned int>(pFieldAOwner);
             const auto fieldBValue = pFieldB->getUnsafe<unsigned int>(pFieldBOwner);
             return fieldAValue == fieldBValue;
-        } else if (fieldAType.match(rfk::getType<long long>())) {
+        }
+        if (fieldAType.match(rfk::getType<long long>())) {
             const auto fieldAValue = pFieldA->getUnsafe<long long>(pFieldAOwner);
             const auto fieldBValue = pFieldB->getUnsafe<long long>(pFieldBOwner);
             return fieldAValue == fieldBValue;
-        } else if (fieldAType.match(rfk::getType<unsigned long long>())) {
+        }
+        if (fieldAType.match(rfk::getType<unsigned long long>())) {
             const auto fieldAValue = pFieldA->getUnsafe<unsigned long long>(pFieldAOwner);
             const auto fieldBValue = pFieldB->getUnsafe<unsigned long long>(pFieldBOwner);
             return fieldAValue == fieldBValue;
-        } else if (fieldAType.match(rfk::getType<float>())) {
-            constexpr auto floatDelta = 0.00001f;
+        }
+        if (fieldAType.match(rfk::getType<float>())) {
+            constexpr auto floatDelta = 0.00001F; // NOLINT
             const auto fieldAValue = pFieldA->getUnsafe<float>(pFieldAOwner);
             const auto fieldBValue = pFieldB->getUnsafe<float>(pFieldBOwner);
             return fabs(fieldAValue - fieldBValue) < floatDelta;
-        } else if (fieldAType.match(rfk::getType<double>())) {
-            constexpr auto doubleDelta = 0.0000000000001;
+        }
+        if (fieldAType.match(rfk::getType<double>())) {
+            constexpr auto doubleDelta = 0.0000000000001; // NOLINT
             const auto fieldAValue = pFieldA->getUnsafe<double>(pFieldAOwner);
             const auto fieldBValue = pFieldB->getUnsafe<double>(pFieldBOwner);
             return fabs(fieldAValue - fieldBValue) < doubleDelta;

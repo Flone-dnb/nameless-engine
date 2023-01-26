@@ -375,9 +375,10 @@ Once these base features will be implemented I will create a separate repository
 
 Prerequisites:
 
-- compiler that supports C++23
+- compiler that supports C++23 (latest MSVC/Clang)
 - [CMake](https://cmake.org/download/)
 - [Doxygen](https://doxygen.nl/download.html)
+- [LLVM](https://github.com/llvm/llvm-project/releases/latest)
 - [Go](https://go.dev/dl/)
 - prerequisites for Linux:
     - `libtinfo.so` might not be installed but is required (on Archlinux can be found in [ncurses5-compat-libs](https://aur.archlinux.org/packages/ncurses5-compat-libs) AUR package)
@@ -420,7 +421,7 @@ The generated documentation will be located at `docs/gen/html`, open the `index.
 
 # Code style
 
-Mostly engine's code style is controlled though `clang-format` and `clang-tidy`, configuration for both of these is located in the root of this repository, make sure you have those enabled. Nevertheless, there are few things that those two can't control, which are:
+Mostly engine's code style is controlled though `clang-format` and `clang-tidy`, configuration for both of these is located in the root directory of this repository. Nevertheless, there are few things that those two can't control, which are:
 
 - for `bool` variables the prefix is `b`, example: `bIsEnabled`,
 - for integer variables (`int`, `size_t`, etc.) the prefix is `i`, example: `iSwapChainBufferCount`,

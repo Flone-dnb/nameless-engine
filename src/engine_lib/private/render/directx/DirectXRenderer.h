@@ -11,6 +11,7 @@
 // Custom.
 #include "render/Renderer.h"
 #include "misc/Error.h"
+#include "render/directx/resources/DirectXResource.h"
 
 // External.
 #include "directx/d3dx12.h"
@@ -23,7 +24,6 @@ namespace ne {
     using namespace Microsoft::WRL;
 
     class Game;
-    class DirectXResource;
     class DirectXResourceManager;
 
     /**
@@ -173,7 +173,7 @@ namespace ne {
          *
          * @return Returns an error if something went wrong.
          */
-        [[nodiscard]] std::optional<Error> enableDebugLayer() const;
+        [[nodiscard]] static std::optional<Error> enableDebugLayer();
 
         /**
          * (Re)creates depth/stencil buffer.
@@ -216,13 +216,6 @@ namespace ne {
          * @return Error if something went wrong.
          */
         [[nodiscard]] std::optional<Error> createSwapChain();
-
-        /**
-         * Creates and initializes the pipeline state objects.
-         *
-         * @return Error if something went wrong.
-         */
-        [[nodiscard]] std::optional<Error> createPipelineStateObjects();
 
         /**
          * Checks if the created device supports MSAA.

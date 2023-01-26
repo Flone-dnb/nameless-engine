@@ -175,7 +175,7 @@ namespace ne {
         return {};
     }
 
-    std::optional<Error> InputManager::loadFromFile(std::string_view sFileName) {
+    std::optional<Error> InputManager::loadFromFile(std::string_view sFileName) { // NOLINT: too complex
         ConfigManager manager;
         auto optional = manager.loadFile(ConfigCategory::SETTINGS, sFileName);
         if (optional.has_value()) {
@@ -625,6 +625,7 @@ namespace ne {
         removeActionEvent(sActionName);
 
         // Add keys for actions.
+        std::vector<ActionState> vActionState;
         for (const auto& key : vKeys) {
             auto it = actionEvents.find(key);
             if (it == actionEvents.end()) {
@@ -632,13 +633,11 @@ namespace ne {
             } else {
                 it->second.insert(sActionName);
             }
+
+            vActionState.push_back(ActionState(key));
         }
 
         // Add state.
-        std::vector<ActionState> vActionState;
-        for (const auto& action : vKeys) {
-            vActionState.push_back(ActionState(action));
-        }
         actionState[sActionName] =
             std::make_pair<std::vector<ActionState>, bool>(std::move(vActionState), false);
 
@@ -653,6 +652,7 @@ namespace ne {
         removeAxisEvent(sAxisName);
 
         // Add keys.
+        std::vector<AxisState> vAxisState;
         for (const auto& [plusKey, minusKey] : vAxis) {
             auto it = axisEvents.find(plusKey);
             if (it == axisEvents.end()) {
@@ -667,13 +667,11 @@ namespace ne {
             } else {
                 it->second.insert(std::make_pair<std::string, int>(sAxisName.data(), -1));
             }
+
+            vAxisState.push_back(AxisState(plusKey, minusKey));
         }
 
         // Add state.
-        std::vector<AxisState> vAxisState;
-        for (const auto& axis : vAxis) {
-            vAxisState.push_back(AxisState(axis.first, axis.second));
-        }
         axisState[sAxisName] = std::make_pair<std::vector<AxisState>, int>(std::move(vAxisState), 0);
 
         return {};

@@ -36,7 +36,7 @@ namespace ne {
         return false;
     }
 
-    std::optional<Error> UnorderedMapFieldSerializer::serializeField(
+    std::optional<Error> UnorderedMapFieldSerializer::serializeField( // NOLINT: too complex
         toml::value* pTomlData,
         Serializable* pFieldOwner,
         const rfk::Field* pField,
@@ -97,10 +97,7 @@ namespace ne {
     template <typename T> std::optional<T> convertStringToType(const std::string& sText) { return {}; }
 
     template <> std::optional<bool> convertStringToType<bool>(const std::string& sText) {
-        if (sText == "true")
-            return true;
-        else
-            return false;
+        return sText == "true";
     }
 
     template <> std::optional<int> convertStringToType<int>(const std::string& sText) {
@@ -208,7 +205,7 @@ namespace ne {
         if (!value.is_string()) {
             return {};
         }
-        const auto sValue = value.as_string();
+        const auto& sValue = value.as_string();
         try {
             unsigned long long iValue = std::stoull(sValue);
             return iValue;
@@ -225,14 +222,17 @@ namespace ne {
     }
 
     template <> std::optional<double> convertTomlValueToType<double>(const toml::value& value) {
-        if (value.is_floating())
+        if (value.is_floating()) {
             return value.as_floating();
-        else if (value.is_string())
+        }
+
+        if (value.is_string()) {
             try {
                 return std::stod(value.as_string());
             } catch (...) {
                 return {};
             }
+        }
 
         return {};
     }
@@ -246,7 +246,7 @@ namespace ne {
 
     // ------------------------------------------------------------------------------------------------
 
-    std::optional<Error> UnorderedMapFieldSerializer::deserializeField(
+    std::optional<Error> UnorderedMapFieldSerializer::deserializeField( // NOLINT: too complex
         const toml::value* pTomlDocument,
         const toml::value* pTomlValue,
         Serializable* pFieldOwner,
@@ -331,7 +331,7 @@ namespace ne {
         Serializable* pToInstance,
         const rfk::Field* pToField) {
         const auto sFieldCanonicalTypeName = std::string(pFromField->getCanonicalTypeName());
-        const auto sFieldName = pFromField->getName();
+        const auto pFieldName = pFromField->getName();
 
 // Define another helper macro...
 #define CLONE_UNORDERED_MAP_TYPE(TYPEA, TYPEB)                                                               \
@@ -364,7 +364,7 @@ namespace ne {
         return Error(fmt::format(
             "The type \"{}\" of the specified field \"{}\" is not supported by this serializer.",
             sFieldCanonicalTypeName,
-            sFieldName));
+            pFieldName));
     }
 
     bool UnorderedMapFieldSerializer::isFieldValueEqual(
@@ -372,10 +372,12 @@ namespace ne {
         const rfk::Field* pFieldA,
         Serializable* pFieldBOwner,
         const rfk::Field* pFieldB) {
-        if (!isFieldTypeSupported(pFieldA))
+        if (!isFieldTypeSupported(pFieldA)) {
             return false;
-        if (!isFieldTypeSupported(pFieldB))
+        }
+        if (!isFieldTypeSupported(pFieldB)) {
             return false;
+        }
 
         // Check that types are equal.
         const std::string sFieldACanonicalTypeName = pFieldA->getCanonicalTypeName();
@@ -384,7 +386,7 @@ namespace ne {
             return false;
         }
 
-        constexpr auto floatDelta = 0.00001f;
+        constexpr auto floatDelta = 0.00001F;
         constexpr auto doubleDelta = 0.0000000000001;
 
 #define COMPARE_UNORDERED_MAPS(TYPEA, TYPEB)                                                                 \

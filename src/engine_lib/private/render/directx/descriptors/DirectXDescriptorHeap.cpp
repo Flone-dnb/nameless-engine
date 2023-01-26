@@ -154,15 +154,17 @@ namespace ne {
         // Save indexes of no longer used descriptors.
         const auto vHandledDescriptorTypes = getDescriptorTypesHandledByThisHeap();
         for (auto& descriptor : pResource->vHeapDescriptors) {
-            if (!descriptor.has_value())
+            if (!descriptor.has_value()) {
                 continue;
+            }
 
             const auto descriptorIt =
                 std::ranges::find_if(vHandledDescriptorTypes, [&descriptor](const auto& descriptorType) {
                     return descriptor->descriptorType == descriptorType;
                 });
-            if (descriptorIt == vHandledDescriptorTypes.end())
+            if (descriptorIt == vHandledDescriptorTypes.end()) {
                 continue; // this descriptor type is not handled in this heap
+            }
 
             noLongerUsedDescriptorIndexes.push(descriptor->iDescriptorOffsetInDescriptors.value());
             descriptor->iDescriptorOffsetInDescriptors = {}; // mark descriptor as cleared
@@ -432,15 +434,17 @@ namespace ne {
 
         for (const auto& pResource : bindedResources) {
             for (const auto& descriptor : pResource->vHeapDescriptors) {
-                if (!descriptor.has_value())
+                if (!descriptor.has_value()) {
                     continue;
+                }
 
                 const auto descriptorIt =
                     std::ranges::find_if(vHandledDescriptorTypes, [&descriptor](const auto& descriptorType) {
                         return descriptor->descriptorType == descriptorType;
                     });
-                if (descriptorIt == vHandledDescriptorTypes.end())
+                if (descriptorIt == vHandledDescriptorTypes.end()) {
                     break; // this descriptor type is not handled in this heap
+                }
 
                 createView(heapHandle, pResource, descriptor->descriptorType);
                 pResource->vHeapDescriptors[static_cast<int>(descriptor->descriptorType)]

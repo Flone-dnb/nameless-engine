@@ -2,6 +2,7 @@
 
 // Custom.
 #include "render/directx/descriptors/DirectXDescriptorHeap.h"
+#include "render/directx/resources/DirectXResourceManager.h"
 #include "misc/Globals.h"
 
 namespace ne {
@@ -121,19 +122,19 @@ namespace ne {
     }
 
     ID3D12Resource* DirectXResource::getInternalResource() const {
-        if (pAllocatedResource) {
+        if (pAllocatedResource != nullptr) {
             return pAllocatedResource->GetResource();
-        } else {
-            return pSwapChainBuffer.Get();
         }
+
+        return pSwapChainBuffer.Get();
     }
 
     std::string DirectXResource::getResourceName() const {
-        if (pAllocatedResource) {
+        if (pAllocatedResource != nullptr) {
             return wstringToString(std::wstring(pAllocatedResource->GetName()));
-        } else {
-            return "Swap chain buffer resource";
         }
+
+        return "swap chain buffer resource";
     }
 
     DirectXResource::DirectXResource(const DirectXResourceManager* pResourceManager) {

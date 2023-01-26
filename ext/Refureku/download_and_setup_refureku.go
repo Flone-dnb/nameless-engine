@@ -40,7 +40,7 @@ func main() {
 	var compiler_id = os.Args[5]
 
 	// Change this to update used Refureku version.
-	var refureku_version_tag = "v2.3.0c"
+	var refureku_version_tag = "v2.3.0d"
 	var archive_url = ""
 	var base_archive_url = "https://github.com/Flone-dnb/Refureku/releases/download/"
 	if runtime.GOOS == "windows" {

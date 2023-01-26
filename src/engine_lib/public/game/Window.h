@@ -49,7 +49,8 @@ namespace ne {
          *
          * @return Error if something went wrong, otherwise created cursor.
          */
-        static std::variant<std::unique_ptr<WindowCursor>, Error> create(std::filesystem::path pathToIcon);
+        static std::variant<std::unique_ptr<WindowCursor>, Error>
+        create(const std::filesystem::path& pathToIcon);
 
         /**
          * Releases existing cursor.
@@ -134,7 +135,7 @@ namespace ne {
          *
          * @return Builder.
          */
-        WindowBuilder& withIcon(std::filesystem::path pathToIcon);
+        WindowBuilder& withIcon(const std::filesystem::path& pathToIcon);
 
         /**
          * Defines the visibility of a window that we will create.
@@ -247,7 +248,7 @@ namespace ne {
          *
          * @return Error if file not found.
          */
-        [[nodiscard]] std::optional<Error> setIcon(std::filesystem::path pathToIcon) const;
+        [[nodiscard]] std::optional<Error> setIcon(const std::filesystem::path& pathToIcon) const;
 
         /**
          * Loads the image and creates a new cursor, note that in order for this new
@@ -264,7 +265,7 @@ namespace ne {
          * the created cursor that is managed by the window. Do not delete returned pointer,
          * the window owns this cursor and will automatically delete it when the window is closed.
          */
-        std::variant<WindowCursor*, Error> createCursor(std::filesystem::path pathToIcon);
+        std::variant<WindowCursor*, Error> createCursor(const std::filesystem::path& pathToIcon);
 
         /**
          * Changes the cursor.

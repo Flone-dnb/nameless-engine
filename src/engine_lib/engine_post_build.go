@@ -147,7 +147,12 @@ func make_simlink_to_res(res_directory string, working_directory string, build_d
 }
 
 func create_symlink(target string, symlink_location string) {
-	var _, err = os.Stat(symlink_location)
+	var _, err = os.Stat(filepath.Dir(symlink_location))
+	if os.IsNotExist(err) {
+		return // directory does not exist
+	}
+
+	_, err = os.Stat(symlink_location)
 	if os.IsNotExist(err) {
 		err = os.Symlink(target, symlink_location)
 		if err != nil {

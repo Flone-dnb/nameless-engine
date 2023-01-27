@@ -37,15 +37,6 @@ set(ENGINE_WIN32_SOURCES
     # add Windows specific sources here...
 )
 
-# Prepare file that will include all generated reflection.
-set(REFLECTION_FILE_NAME Reflection_impl.hpp)
-set(REFLECTION_FILE_NAME ${REFLECTION_FILE_NAME} PARENT_SCOPE)
-file(MAKE_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../.generated)
-set(GENERATED_REFLECTION_FILE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../.generated/${REFLECTION_FILE_NAME})
-if (NOT EXISTS ${GENERATED_REFLECTION_FILE_PATH})
-    file(WRITE ${GENERATED_REFLECTION_FILE_PATH} "")
-endif()
-
 # Temporary solution for `tgc2` in `Refureku` (because we use it below).
 set(TGC_CPP_FILE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/Refureku/build/Include/tgc2/include/tgc2.cpp)
 set(TGC_H_FILE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/Refureku/build/Include/tgc2/include/tgc2.h)
@@ -73,7 +64,6 @@ endif()
 
 # Engine general (cross-platform) sources.
 set(ENGINE_LIB_SOURCES
-    ../.generated/${REFLECTION_FILE_NAME}
     ${RELATIVE_EXT_PATH}/xxHash/xxhash.c
     ${RELATIVE_EXT_PATH}/xxHash/xxhash.h
     private/misc/Error.cpp
@@ -255,6 +245,7 @@ set_target_properties(${PROJECT_NAME} PROPERTIES CXX_CLANG_TIDY "${RUN_CLANG_TID
 if(MSVC)
     target_compile_options(${PROJECT_NAME} PUBLIC -EHsc) # needed for clang-tidy when running MSVC to enable exceptions
 endif()
+message(STATUS "Clang-tidy is enabled.")
 
 # External: glfw.
 set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
@@ -297,7 +288,7 @@ set_target_properties(uninstall PROPERTIES FOLDER ${EXTERNAL_FOLDER})
 
 # [temporary solution]: External: tgc
 set(TGC_TARGET_NAME tgc)
-add_library(${TGC_TARGET_NAME}
+add_library(${TGC_TARGET_NAME} STATIC
     ${TGC_CPP_FILE_PATH}
     ${TGC_H_FILE_PATH})
 set_target_properties(tgc PROPERTIES FOLDER ${EXTERNAL_FOLDER})
@@ -319,12 +310,18 @@ if (DOXYGEN_FOUND)
         VERBATIM )
     set_target_properties(${DOXYGEN_TARGET} PROPERTIES FOLDER ${EXTERNAL_FOLDER})
     add_dependencies(${PROJECT_NAME} ${DOXYGEN_TARGET})
-    message("Doxygen is enabled.")
+    message(STATUS "Doxygen is enabled.")
 else()
     message(FATAL "Doxygen need to be installed to verify/generate the documentation, please install Doxygen.")
 endif()
 
 # External: Refureku (start) --------------------------------------------------------------------------
+
+set(GENERATED_DIR_NAME ".generated")
+set(REFUREKU_SETTINGS_FILE_NAME "RefurekuSettings.toml")
+set(GENERATED_SOURCE_DIR_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../${GENERATED_DIR_NAME})
+set(REFUREKU_SETTINGS_FILE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../${GENERATED_DIR_NAME}/${REFUREKU_SETTINGS_FILE_NAME})
+
 # Check that path does not have pipe character because we use it to separate paths.
 string(FIND ${CMAKE_CURRENT_SOURCE_DIR} "|" PIPE_POS)
 if (NOT ${PIPE_POS} STREQUAL "-1")
@@ -340,9 +337,11 @@ ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/spdlog/include|\
 ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/source_location/include|\
 ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/fmt/include|\
 ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/glm|\
-${CMAKE_CURRENT_SOURCE_DIR}/../.generated|\
-${CMAKE_CURRENT_SOURCE_DIR}/public/|\
-${CMAKE_CURRENT_SOURCE_DIR}/private|${CMAKE_CURRENT_SOURCE_DIR}/../../ext/Refureku/build/Include/")
+${CMAKE_CURRENT_SOURCE_DIR}/../${GENERATED_DIR_NAME}|\
+${CMAKE_CURRENT_SOURCE_DIR}/public|\
+${CMAKE_CURRENT_SOURCE_DIR}/private|\
+${CMAKE_CURRENT_SOURCE_DIR}/../../ext/Refureku/build/Include/"
+)
 
 # Collect files to exclude from analyzing.
 set(REFUREKU_EXCLUDE_FILES "")
@@ -358,20 +357,31 @@ if (NOT WIN32)
     endforeach()
 endif()
 
-# Define "Setup Refureku" target.
-set(SETUP_REFUREKU_TARGET SetupRefureku)
-add_custom_target(${SETUP_REFUREKU_TARGET}
-                WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/Refureku/
-                COMMAND go run ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/Refureku/download_and_setup_refureku.go
-                ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/Refureku/ # working directory
-                ${CMAKE_CURRENT_SOURCE_DIR}/../ # source directory (where to put Refureku settings file)
-                "\"${REFUREKU_INCLUDE_DIRECTORIES}\"" # project include directories
-                "\"${REFUREKU_EXCLUDE_FILES}\"" # files to exclude from analyzing
-                ${CMAKE_CXX_COMPILER_ID} # used compiler
+# Make sure generated directory exists.
+if (NOT EXISTS ${GENERATED_SOURCE_DIR_PATH})
+    file(MAKE_DIRECTORY ${GENERATED_SOURCE_DIR_PATH})
+endif()
+
+# Delete existing Refureku config file.
+message(STATUS "Removing Refureku config file to generate a fresh one...")
+file(REMOVE ${REFUREKU_SETTINGS_FILE_PATH})
+
+# Download Refureku and generate new config file.
+message(STATUS "Downloading Refureku (reflection generator) and generating reflection generator config...")
+execute_process(
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/Refureku/
+    COMMAND go run ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/Refureku/download_and_setup_refureku.go
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/Refureku/ # working directory
+    ${CMAKE_CURRENT_SOURCE_DIR}/../ # source directory (where to put Refureku settings file)
+    "${REFUREKU_INCLUDE_DIRECTORIES}" # project include directories
+    "${REFUREKU_EXCLUDE_FILES}" # files to exclude from analyzing
+    ${CMAKE_CXX_COMPILER_ID} # used compiler
+    OUTPUT_VARIABLE output
 )
-add_dependencies(${PROJECT_NAME} ${SETUP_REFUREKU_TARGET})
+message(STATUS "${output}")
+
+# Include Refureku header files.
 target_include_directories(${PROJECT_NAME} SYSTEM PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/Refureku/build/Include/)
-set_target_properties(${SETUP_REFUREKU_TARGET} PROPERTIES FOLDER ${EXTERNAL_FOLDER})
 
 # Link Refureku library.
 if (MSVC)
@@ -391,16 +401,14 @@ target_link_libraries(${PROJECT_NAME} PUBLIC Refureku)
 # Add a pre build step to run reflection code generator.
 set(REFUREKU_GENERATOR_TARGET RunRefurekuGeneratorEngine)
 add_custom_target(${REFUREKU_GENERATOR_TARGET}
-        WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
-        COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/Refureku/build/Bin/RefurekuGenerator ${CMAKE_CURRENT_SOURCE_DIR}/../.reflection/RefurekuSettings.toml
-        COMMAND go run ${CMAKE_CURRENT_SOURCE_DIR}/../.reflection/merge_generated_reflection/merge_generated_reflection.go ${CMAKE_CURRENT_SOURCE_DIR}/../.generated ${REFLECTION_FILE_NAME}
+    WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+    COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/Refureku/build/Bin/RefurekuGenerator ${REFUREKU_SETTINGS_FILE_PATH}
 )
-add_dependencies(${REFUREKU_GENERATOR_TARGET} ${SETUP_REFUREKU_TARGET})
 add_dependencies(${PROJECT_NAME} ${REFUREKU_GENERATOR_TARGET})
 set_target_properties(${REFUREKU_GENERATOR_TARGET} PROPERTIES FOLDER ${EXTERNAL_FOLDER})
 
 # Add generated headers to include directories.
-target_include_directories(${PROJECT_NAME} SYSTEM PUBLIC ../.generated)
+target_include_directories(${PROJECT_NAME} SYSTEM PUBLIC ../${GENERATED_DIR_NAME})
 
 # Prepare variable for Refureku dynamic library name.
 set(REFUREKU_DYN_LIB Refureku.dll)
@@ -411,6 +419,7 @@ if (NOT WIN32)
         set(REFUREKU_DYN_LIB libRefureku.so)
     endif()
 endif()
+
 # Copy Refureku dynamic library to the top level binary directory.
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
                 COMMAND ${CMAKE_COMMAND} -E copy
@@ -424,6 +433,7 @@ add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
                 COMMAND ${CMAKE_COMMAND} -E copy
                 ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/Refureku/build/Bin/${REFUREKU_DYN_LIB} ${CMAKE_CURRENT_BINARY_DIR}/${REFUREKU_DYN_LIB})
+
 # External: Refureku (end) --------------------------------------------------------------------------
 
 # Win32 specific dependencies:
@@ -448,13 +458,11 @@ if (WIN32)
 
     # External: DXC.
     # Download and unzip DXC.
-    set(SETUP_DXT_TARGET SetupDirectXShaderCompiler)
-    add_custom_target(${SETUP_DXT_TARGET}
-                   COMMAND go run ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/DirectXShaderCompiler/download_dxc.go
-                   ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/DirectXShaderCompiler/ # working directory
+    message(STATUS "Downloading DirectXShaderCompiler...")
+    execute_process(
+        COMMAND go run ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/DirectXShaderCompiler/download_dxc.go
+        ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/DirectXShaderCompiler/ # working directory
     )
-    add_dependencies(${PROJECT_NAME} ${SETUP_DXT_TARGET})
-    set_target_properties(${SETUP_DXT_TARGET} PROPERTIES FOLDER ${EXTERNAL_FOLDER})
 
     # Set DXC variables.
     set(PATH_TO_DXC_DLL_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/DirectXShaderCompiler/bin/x64)
@@ -524,6 +532,7 @@ set(ENGINE_TEST_SOURCES
     ${TESTS_RELATIVE_PATH}/engine_lib/game/Window.cpp
     ${TESTS_RELATIVE_PATH}/engine_lib/io/ConfigManager.cpp
     ${TESTS_RELATIVE_PATH}/engine_lib/io/ReflectionTest.h
+    ${TESTS_RELATIVE_PATH}/engine_lib/io/ReflectionTest.cpp
     ${TESTS_RELATIVE_PATH}/engine_lib/input/InputManager.cpp
     ${TESTS_RELATIVE_PATH}/engine_lib/misc/Timer.cpp
     ${TESTS_RELATIVE_PATH}/engine_lib/materials/ShaderPack.cpp
@@ -553,7 +562,6 @@ set_target_properties(${ENGINE_TESTS_NAME} PROPERTIES FOLDER ${ENGINE_FOLDER})
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/ext/Catch2/contrib")
 include(CTest)
 include(Catch)
-#catch_discover_tests(${ENGINE_TESTS_NAME})
 
 # Add includes.
 target_include_directories(${PROJECT_NAME} SYSTEM PUBLIC ${RELATIVE_EXT_PATH})

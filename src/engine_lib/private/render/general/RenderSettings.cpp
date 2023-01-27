@@ -5,6 +5,8 @@
 #include "io/Logger.h"
 #include "misc/ProjectPaths.h"
 
+#include "RenderSettings.generated_impl.h"
+
 namespace ne {
     void RenderSettings::setRenderer(Renderer* pRenderer) { this->pRenderer = pRenderer; }
 

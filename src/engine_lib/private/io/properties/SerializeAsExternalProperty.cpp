@@ -1,4 +1,5 @@
 #include "io/properties/SerializeAsExternalProperty.h"
 
-namespace ne{
-}
+#include "SerializeAsExternalProperty.generated_impl.h"
+
+namespace ne {}

@@ -7,6 +7,8 @@
 #include "game/nodes/MeshNode.h"
 #include "materials/EngineShaderNames.hpp"
 
+#include "Material.generated_impl.h"
+
 /** Total amount of created materials. */
 static std::atomic<size_t> iTotalMaterialCount{0};
 

@@ -3,6 +3,8 @@
 // Custom.
 #include "game/GameInstance.h"
 
+#include "SpatialNode.generated_impl.h"
+
 namespace ne {
     SpatialNode::SpatialNode() : SpatialNode("Spatial Node") {}
 

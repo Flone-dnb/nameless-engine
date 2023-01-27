@@ -6,6 +6,8 @@
 // External.
 #include "fmt/format.h"
 
+#include "GuidProperty.generated_impl.h"
+
 namespace ne {
     Guid::Guid(const char* pGuid) : sGuid(pGuid) {
 #if DEBUG

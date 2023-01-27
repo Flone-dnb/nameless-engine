@@ -5,13 +5,14 @@
 
 // Custom.
 #include "io/serializers/IFieldSerializer.hpp"
+#include "misc/Globals.h"
 
 // External.
 #include "fmt/format.h"
 #define TOML11_PRESERVE_COMMENTS_BY_DEFAULT
 #include "toml11/toml.hpp"
 
-#include "Reflection_impl.hpp"
+#include "Serializable.generated_impl.h"
 
 namespace ne {
     std::optional<Error> Serializable::serialize(

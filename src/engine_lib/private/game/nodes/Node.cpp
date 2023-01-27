@@ -10,6 +10,8 @@
 #include "game/World.h"
 #include "game/Game.h"
 
+#include "Node.generated_impl.h"
+
 /** Total amount of alive nodes. */
 static std::atomic<size_t> iTotalAliveNodeCount{0};
 

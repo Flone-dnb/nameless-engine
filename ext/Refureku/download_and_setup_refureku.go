@@ -30,8 +30,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	fmt.Println("Setting up Refureku...")
-
 	// Save command line arguments.
 	var working_directory = os.Args[1]
 	var src_dir = os.Args[2]
@@ -200,7 +198,7 @@ func initialize_refureku_settings(
 		os.Exit(1)
 	}
 
-	var out_settings_file = filepath.Join(src_directory, ".reflection", "RefurekuSettings.toml")
+	var out_settings_file = filepath.Join(src_directory, ".generated", "RefurekuSettings.toml")
 	// Don't check if settings file already exists to skip this step.
 	// Otherwrite with new settings (maybe this script changed due to git updates).
 
@@ -279,7 +277,6 @@ func initialize_refureku_settings(
 
 	// Prepare variables for config.
 	var generated_dir_path = filepath.Join(src_directory, ".generated")
-	var reflection_dir_path = filepath.Join(src_directory, ".reflection")
 
 	compiler_id = strings.ToLower(compiler_id)
 	var compiler_binary_name = ""
@@ -298,7 +295,7 @@ func initialize_refureku_settings(
 
 	// Configure Refureku settings.
 	cfg.CodeGenManagerSettings.ToProcessDirectories = []string{src_directory}
-	cfg.CodeGenManagerSettings.IgnoredDirectories = []string{generated_dir_path, reflection_dir_path}
+	cfg.CodeGenManagerSettings.IgnoredDirectories = []string{generated_dir_path}
 	cfg.CodeGenManagerSettings.IgnoredFiles = exclude_files
 	cfg.CodeGenManagerSettings.ToProcessFiles = []string{reflection_test_path}
 	cfg.CodeGenUnitSettings.OutputDirectory = generated_dir_path

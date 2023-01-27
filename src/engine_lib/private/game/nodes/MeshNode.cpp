@@ -8,6 +8,8 @@
 #include "render/general/resources/GpuResourceManager.h"
 #include "render/general/GpuCommandList.h"
 
+#include "MeshNode.generated_impl.h"
+
 namespace ne {
 
     MeshNode::MeshNode() : MeshNode("Mesh Node") {}

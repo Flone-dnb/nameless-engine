@@ -17,7 +17,6 @@
 #include "misc/GC.hpp"
 #include "io/serializers/IFieldSerializer.hpp"
 #include "io/properties/SerializeProperty.h"
-#include "io/properties/SerializeAsExternalProperty.h"
 #include "io/serializers/SerializableObjectFieldSerializer.h"
 
 // External.
@@ -205,9 +204,9 @@ namespace ne RNAMESPACE() {
          * @param customAttributes   Optional. Custom pairs of values that will be saved as this object's
          * additional information and could be later retrieved in @ref deserialize.
          * @param optionalPathToFile Optional. Path to the file that this TOML data will be serialized.
-         * Used for fields marked as `SerializeAsExternal`.
+         * Used for fields marked as `Serialize(AsExternal)`.
          * @param bEnableBackup      Optional. If this TOML data will be serialized to file whether
-         * the backup file is needed or not. Used for fields marked as `SerializeAsExternal`.
+         * the backup file is needed or not. Used for fields marked as `Serialize(AsExternal)`.
          *
          * @return Error if something went wrong, for example when found an unsupported for
          * serialization reflected field, otherwise name of the section that was used to store this entity.
@@ -236,9 +235,9 @@ namespace ne RNAMESPACE() {
          * @param customAttributes   Optional. Custom pairs of values that will be saved as this object's
          * additional information and could be later retrieved in @ref deserialize.
          * @param optionalPathToFile Optional. Path to the file that this TOML data will be serialized.
-         * Used for fields marked as `SerializeAsExternal`.
+         * Used for fields marked as `Serialize(AsExternal)`.
          * @param bEnableBackup      Optional. If this TOML data will be serialized to file whether
-         * the backup file is needed or not. Used for fields marked as `SerializeAsExternal`.
+         * the backup file is needed or not. Used for fields marked as `Serialize(AsExternal)`.
          *
          * @return Error if something went wrong, for example when found an unsupported for
          * serialization reflected field, otherwise name of the section that was used to store this entity.
@@ -287,7 +286,7 @@ namespace ne RNAMESPACE() {
          *
          * @return Error if something went wrong, otherwise a pointer to deserialized object.
          */
-        template <template <typename> class SmartPointer, typename T>
+        template <template <typename T> class SmartPointer, typename T>
             requires std::derived_from<T, Serializable> &&
                      (std::same_as<SmartPointer<T>, std::shared_ptr<T>> ||
                       std::same_as<SmartPointer<T>, gc<T>>)
@@ -387,7 +386,7 @@ namespace ne RNAMESPACE() {
          * @param sEntityId          Unique ID of this object. When serializing multiple objects into
          * one toml value provide different IDs for each object so they could be differentiated.
          * @param optionalPathToFile Optional. Path to the file that this TOML data is deserialized from.
-         * Used for fields marked as `SerializeAsExternal`
+         * Used for fields marked as `Serialize(AsExternal)`
          *
          * @warning Don't use dots in the entity ID, dots are used
          * in recursion when this function is called from this function to process reflected field (sub
@@ -792,11 +791,13 @@ namespace ne RNAMESPACE() {
             }
             const auto sFieldCanonicalTypeName = std::string(pField->getCanonicalTypeName());
 
-            if (!isFieldSerializable(*pField))
+            if (!isFieldSerializable(*pField)) {
                 continue;
+            }
 
             // Check if we need to deserialize from external file.
-            if (pField->getProperty<SerializeAsExternal>()) {
+            const auto pSerializeProperty = pField->getProperty<Serialize>();
+            if (pSerializeProperty->getSerializationType() == FieldSerializationType::AS_EXTERNAL_FILE) {
                 // Make sure this field derives from `Serializable`.
                 if (!Serializable::isDerivedFromSerializable(pField->getType().getArchetype())) [[unlikely]] {
                     // Show an error so that the developer will instantly see the mistake.

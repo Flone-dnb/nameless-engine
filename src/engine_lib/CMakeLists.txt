@@ -147,8 +147,6 @@ set(ENGINE_LIB_SOURCES
     private/io/properties/SerializeProperty.cpp
     private/io/properties/GuidProperty.cpp
     public/io/properties/GuidProperty.h
-    private/io/properties/SerializeAsExternalProperty.cpp
-    public/io/properties/SerializeAsExternalProperty.h
     private/game/World.h
     private/game/World.cpp
     public/misc/GC.hpp

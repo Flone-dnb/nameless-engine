@@ -184,8 +184,7 @@ namespace ne {
         const auto& fieldType = field.getType();
 
         // Ignore this field if not marked as Serialize.
-        if (field.getProperty<Serialize>() == nullptr &&
-            field.getProperty<SerializeAsExternal>() == nullptr) {
+        if (field.getProperty<Serialize>() == nullptr) {
             return false;
         }
 
@@ -619,21 +618,24 @@ namespace ne {
                     }
 
                     // Check if need to serialize as external file.
-                    if (field.getProperty<SerializeAsExternal>() != nullptr) {
+                    const auto pSerializeProperty = field.getProperty<Serialize>();
+                    if (pSerializeProperty->getSerializationType() ==
+                        FieldSerializationType::AS_EXTERNAL_FILE) {
                         // Make sure this field derives from `Serializable`.
                         if (!Serializable::isDerivedFromSerializable(field.getType().getArchetype()))
                             [[unlikely]] {
                             // Show an error so that the developer will instantly see the mistake.
                             auto error = Error("only fields of type derived from `Serializable` can use "
-                                               "`SerializeAsExternal` property");
+                                               "`Serialize(AsExternal)` property");
                             error.showError();
                             throw std::runtime_error(error.getFullErrorMessage());
                         }
 
                         // Make sure path to the main file is specified.
                         if (!pData->optionalPathToFile.has_value()) [[unlikely]] {
-                            pData->error = Error("unable to serialize field marked as `SerializeAsExternal` "
-                                                 "because path to the main file was not specified");
+                            pData->error =
+                                Error("unable to serialize field marked as `Serialize(AsExternal)` "
+                                      "because path to the main file was not specified");
                             return false;
                         }
 

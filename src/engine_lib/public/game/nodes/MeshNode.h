@@ -261,7 +261,8 @@ namespace ne RNAMESPACE() {
          *
          * @warning Use with @ref mtxMeshData;
          */
-        RPROPERTY(SerializeAsExternal) // allow VCSs to treat this file in a special way
+        RPROPERTY(Serialize(
+            FieldSerializationType::AS_EXTERNAL_FILE)) // allow VCSs to treat this file in a special way
         MeshData meshData; // don't change this field's name (no backwards compatibility in deserialization)
 
         /** Mutex to use with @ref meshData. */

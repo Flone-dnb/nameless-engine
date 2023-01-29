@@ -12,14 +12,17 @@ jobs:
       run: git submodule update --init --recursive
     - name: Install dependencies
       run: |
-        choco install doxygen.install ninja
+        choco install ninja
         cmake --version
         clang --version
         ninja --version
-        DIR "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Tools\MSVC"
+        choco install doxygen.install --yes --force
+        choco install doxygen.install --yes --force
+        refreshenv
     - name: Build
       run: |
+        doxygen -v
         mkdir build
         cd build
-        cmake -G "Visual Studio 17 2022" -DCMAKE_BUILD_TYPE=Release -DENABLE_DOXYGEN=OFF ..
+        cmake -G "Visual Studio 17 2022" -DCMAKE_BUILD_TYPE=Release ..
         cmake --build . --target ALL_BUILD --config Release

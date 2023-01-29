@@ -298,19 +298,16 @@ if(NOT MSVC)
 endif()
 
 # Doxygen
-option(ENABLE_DOXYGEN "Run doxygen before building the project." ON)
-if (ENABLE_DOXYGEN)
-    find_package(Doxygen REQUIRED)
-    set(DOXYGEN_TARGET doc_doxygen)
-    add_custom_target(${DOXYGEN_TARGET}
-        COMMAND doxygen
-        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../../docs/
-        COMMENT "Generating API documentation using Doxygen..."
-        VERBATIM )
-    set_target_properties(${DOXYGEN_TARGET} PROPERTIES FOLDER ${EXTERNAL_FOLDER})
-    add_dependencies(${PROJECT_NAME} ${DOXYGEN_TARGET})
-    message(STATUS "Doxygen is enabled.")
-endif()
+find_package(Doxygen REQUIRED)
+set(DOXYGEN_TARGET doc_doxygen)
+add_custom_target(${DOXYGEN_TARGET}
+    COMMAND doxygen
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../../docs/
+    COMMENT "Generating API documentation using Doxygen..."
+    VERBATIM )
+set_target_properties(${DOXYGEN_TARGET} PROPERTIES FOLDER ${EXTERNAL_FOLDER})
+add_dependencies(${PROJECT_NAME} ${DOXYGEN_TARGET})
+message(STATUS "Doxygen is enabled.")
 
 # External: Refureku (start) --------------------------------------------------------------------------
 

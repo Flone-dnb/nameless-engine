@@ -1,0 +1,25 @@
+name: C++
+
+on: [push, pull_request, pull_request_review]
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+    - name: Pull submodules
+      run: git submodule update --init --recursive
+    - name: Install dependencies
+      run: |
+        choco install doxygen.install ninja
+        cmake --version
+        clang --version
+        ninja --version
+        DIR "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Tools\MSVC"
+    - name: Build
+      run: |
+        mkdir build
+        cd build
+        cmake -G "Visual Studio 17 2022" -DCMAKE_BUILD_TYPE=Release ..
+        cmake --build . --target ALL_BUILD --config Release

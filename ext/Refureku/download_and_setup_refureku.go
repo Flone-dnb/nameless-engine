@@ -278,18 +278,6 @@ func initialize_refureku_settings(
 	// Prepare variables for config.
 	var generated_dir_path = filepath.Join(src_directory, ".generated")
 
-	compiler_id = strings.ToLower(compiler_id)
-	var compiler_binary_name = ""
-	if strings.Contains(compiler_id, "msvc") {
-		compiler_binary_name = "msvc"
-	} else if strings.Contains(compiler_id, "clang") {
-		compiler_binary_name = "clang++"
-	} else if strings.Contains(compiler_id, "gnu") {
-		compiler_binary_name = "g++"
-	} else {
-		fmt.Println("ERROR: download_and_setup_refureku.go: unknown compiler name", compiler_id)
-		os.Exit(1)
-	}
 	// Prepare tests files.
 	var reflection_test_path = filepath.Join(src_directory, "..", "tests", "engine_lib", "io", "ReflectionTest.h")
 
@@ -302,7 +290,7 @@ func initialize_refureku_settings(
 	cfg.CodeGenUnitSettings.GeneratedHeaderFileNamePattern = "##FILENAME##.generated.h"
 	cfg.CodeGenUnitSettings.GeneratedSourceFileNamePattern = "##FILENAME##.generated_impl.h"
 	cfg.ParsingSettings.ProjectIncludeDirectories = include_directories
-	cfg.ParsingSettings.CompilerExeName = compiler_binary_name
+	cfg.ParsingSettings.CompilerExeName = "clang++"
 	cfg.ParsingSettings.AdditionalClangArguments = "-Wno-ignored-attributes"
 	cfg.ParsingSettings.CppVersion = 20
 	cfg.ParsingSettings.ShouldFailCodeGenerationOnClangErrors = true

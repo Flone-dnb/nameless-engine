@@ -381,7 +381,8 @@ Prerequisites:
 - [LLVM](https://github.com/llvm/llvm-project/releases/latest)
 - [Go](https://go.dev/dl/)
 - prerequisites for Linux:
-    - `libtinfo.so` might not be installed but is required (on Archlinux can be found in [ncurses5-compat-libs](https://aur.archlinux.org/packages/ncurses5-compat-libs) AUR package)
+    - `libtinfo.so` might not be installed on your system but is required
+    - `Clang 14` (needed for reflection code generator), **after** CMake is configured `ext/Refureku/build/Bin/` will contain needed libraries, you would need to create the file `/etc/ld.so.conf.d/nameless-engine.conf` with the path to this directory and run `sudo ldconfig` so that these libraries will be found by the reflection generator
 
 First, clone this repository:
 

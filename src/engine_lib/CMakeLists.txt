@@ -399,8 +399,9 @@ target_link_libraries(${PROJECT_NAME} PUBLIC Refureku)
 # Add a pre build step to run reflection code generator.
 set(REFUREKU_GENERATOR_TARGET RunRefurekuGeneratorEngine)
 add_custom_target(${REFUREKU_GENERATOR_TARGET}
-    WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/Refureku/build/Bin
     COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/Refureku/build/Bin/RefurekuGenerator ${REFUREKU_SETTINGS_FILE_PATH}
+    ENVIRONMENT LD_LIBRARY_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/Refureku/build/Bin
 )
 add_dependencies(${PROJECT_NAME} ${REFUREKU_GENERATOR_TARGET})
 set_target_properties(${REFUREKU_GENERATOR_TARGET} PROPERTIES FOLDER ${EXTERNAL_FOLDER})

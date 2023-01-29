@@ -209,7 +209,7 @@ namespace ne {
          *
          * @warning Should be called from the main thread.
          *
-         * @param Can be safely called multiple times (additional calls will be ignored).
+         * @remark Can be safely called multiple times (additional calls will be ignored).
          *
          * @remark Can be used to destroy the game without clearing the actual game pointer.
          */

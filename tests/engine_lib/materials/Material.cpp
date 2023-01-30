@@ -15,9 +15,14 @@ TEST_CASE("create engine default materials") {
         TestGameInstance(Window* pGameWindow, InputManager* pInputManager)
             : GameInstance(pGameWindow, pInputManager) {}
         virtual void onGameStarted() override {
-            createWorld();
+            createWorld([&](const std::optional<Error>& optionalError) {
+                if (optionalError.has_value()) {
+                    auto error = optionalError.value();
+                    error.addEntry();
+                    INFO(error.getFullErrorMessage());
+                    REQUIRE(false);
+                }
 
-            {
                 // Create material.
                 auto resultOpaque = Material::create(false);
                 if (std::holds_alternative<Error>(resultOpaque)) {
@@ -57,16 +62,22 @@ TEST_CASE("create engine default materials") {
                 pMeshNodeOpaque->detachFromParentAndDespawn();
                 REQUIRE(Material::getTotalMaterialCount() == 2);
                 REQUIRE(getWindow()->getRenderer()->getPsoManager()->getCreatedGraphicsPsoCount() == 1);
-            }
 
-            // Despawn all nodes.
-            createWorld();
+                // Despawn all nodes.
+                createWorld([&](const std::optional<Error>& optionalError) {
+                    if (optionalError.has_value()) {
+                        auto error = optionalError.value();
+                        error.addEntry();
+                        INFO(error.getFullErrorMessage());
+                        REQUIRE(false);
+                    }
+                    // Check that everything is cleaned up.
+                    REQUIRE(Material::getTotalMaterialCount() == 0);
+                    REQUIRE(getWindow()->getRenderer()->getPsoManager()->getCreatedGraphicsPsoCount() == 0);
 
-            // Check that everything is cleaned up.
-            REQUIRE(Material::getTotalMaterialCount() == 0);
-            REQUIRE(getWindow()->getRenderer()->getPsoManager()->getCreatedGraphicsPsoCount() == 0);
-
-            getWindow()->close();
+                    getWindow()->close();
+                });
+            });
         }
         virtual ~TestGameInstance() override {}
     };
@@ -94,60 +105,67 @@ TEST_CASE("serialize and deserialize Material") {
         TestGameInstance(Window* pGameWindow, InputManager* pInputManager)
             : GameInstance(pGameWindow, pInputManager) {}
         virtual void onGameStarted() override {
-            createWorld();
-
-            const std::filesystem::path pathToFileInTemp =
-                ProjectPaths::getDirectoryForResources(ResourceDirectory::ROOT) / "test" / "temp" /
-                "TESTING_MaterialSerialization_TESTING.toml";
-
-            {
-                // Create material.
-                auto result = Material::create(true, "My Material");
-                if (std::holds_alternative<Error>(result)) {
-                    Error error = std::get<Error>(std::move(result));
-                    error.addEntry();
-                    INFO(error.getFullErrorMessage());
-                    REQUIRE(false);
-                }
-
-                // Serialize.
-                const auto pMaterial = std::get<std::shared_ptr<Material>>(std::move(result));
-                auto optionalError = pMaterial->serialize(pathToFileInTemp, false);
+            createWorld([&](const std::optional<Error>& optionalError) {
                 if (optionalError.has_value()) {
                     auto error = optionalError.value();
                     error.addEntry();
                     INFO(error.getFullErrorMessage());
                     REQUIRE(false);
                 }
-            }
 
-            REQUIRE(Material::getTotalMaterialCount() == 0);
+                const std::filesystem::path pathToFileInTemp =
+                    ProjectPaths::getDirectoryForResources(ResourceDirectory::ROOT) / "test" / "temp" /
+                    "TESTING_MaterialSerialization_TESTING.toml";
 
-            {
-                // Deserialize.
-                auto result = Serializable::deserialize<std::shared_ptr, Material>(pathToFileInTemp);
-                if (std::holds_alternative<Error>(result)) {
-                    Error error = std::get<Error>(std::move(result));
-                    error.addEntry();
-                    INFO(error.getFullErrorMessage());
-                    REQUIRE(false);
+                {
+                    // Create material.
+                    auto result = Material::create(true, "My Material");
+                    if (std::holds_alternative<Error>(result)) {
+                        Error error = std::get<Error>(std::move(result));
+                        error.addEntry();
+                        INFO(error.getFullErrorMessage());
+                        REQUIRE(false);
+                    }
+
+                    // Serialize.
+                    const auto pMaterial = std::get<std::shared_ptr<Material>>(std::move(result));
+                    auto optionalError = pMaterial->serialize(pathToFileInTemp, false);
+                    if (optionalError.has_value()) {
+                        auto error = optionalError.value();
+                        error.addEntry();
+                        INFO(error.getFullErrorMessage());
+                        REQUIRE(false);
+                    }
                 }
 
-                const auto pMaterial = std::get<std::shared_ptr<Material>>(std::move(result));
+                REQUIRE(Material::getTotalMaterialCount() == 0);
 
-                // Check.
-                REQUIRE(pMaterial->getName() == "My Material");
-                REQUIRE(pMaterial->isUsingTransparency());
-            }
+                {
+                    // Deserialize.
+                    auto result = Serializable::deserialize<std::shared_ptr, Material>(pathToFileInTemp);
+                    if (std::holds_alternative<Error>(result)) {
+                        Error error = std::get<Error>(std::move(result));
+                        error.addEntry();
+                        INFO(error.getFullErrorMessage());
+                        REQUIRE(false);
+                    }
 
-            REQUIRE(Material::getTotalMaterialCount() == 0);
+                    const auto pMaterial = std::get<std::shared_ptr<Material>>(std::move(result));
 
-            // Cleanup.
-            if (std::filesystem::exists(pathToFileInTemp)) {
-                std::filesystem::remove(pathToFileInTemp);
-            }
+                    // Check.
+                    REQUIRE(pMaterial->getName() == "My Material");
+                    REQUIRE(pMaterial->isUsingTransparency());
+                }
 
-            getWindow()->close();
+                REQUIRE(Material::getTotalMaterialCount() == 0);
+
+                // Cleanup.
+                if (std::filesystem::exists(pathToFileInTemp)) {
+                    std::filesystem::remove(pathToFileInTemp);
+                }
+
+                getWindow()->close();
+            });
         }
         virtual ~TestGameInstance() override {}
     };

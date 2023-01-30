@@ -52,16 +52,23 @@ TEST_CASE("create and destroy world") {
         TestGameInstance(Window* pGameWindow, InputManager* pInputManager)
             : GameInstance(pGameWindow, pInputManager) {}
         virtual void onGameStarted() override {
-            createWorld();
+            createWorld([&](const std::optional<Error>& optionalError) {
+                if (optionalError.has_value()) {
+                    auto error = optionalError.value();
+                    error.addEntry();
+                    INFO(error.getFullErrorMessage());
+                    REQUIRE(false);
+                }
 
-            REQUIRE(getWorldRootNode());
+                REQUIRE(getWorldRootNode());
 
-            const auto pNode1 = gc_new<MyNode>();
-            const auto pNode2 = gc_new<Node>();
-            getWorldRootNode()->addChildNode(pNode1);
-            getWorldRootNode()->addChildNode(pNode2);
+                const auto pNode1 = gc_new<MyNode>();
+                const auto pNode2 = gc_new<Node>();
+                getWorldRootNode()->addChildNode(pNode1);
+                getWorldRootNode()->addChildNode(pNode2);
 
-            getWindow()->close();
+                getWindow()->close();
+            });
         }
         virtual ~TestGameInstance() override {}
     };
@@ -87,25 +94,35 @@ TEST_CASE("create world and switch to another world") {
             : GameInstance(pGameWindow, pInputManager) {}
         virtual void onGameStarted() override {
             // Create initial world.
-            createWorld();
+            createWorld([&](const std::optional<Error>& optionalError) {
+                if (optionalError.has_value()) {
+                    auto error = optionalError.value();
+                    error.addEntry();
+                    INFO(error.getFullErrorMessage());
+                    REQUIRE(false);
+                }
 
-            REQUIRE(getWorldRootNode());
+                REQUIRE(getWorldRootNode());
 
-            {
                 const auto pNode = gc_new<Node>();
                 getWorldRootNode()->addChildNode(pNode);
-            }
 
-            // Create another world now.
-            createWorld();
+                // Create another world now.
+                createWorld([&](const std::optional<Error>& optionalError) {
+                    if (optionalError.has_value()) {
+                        auto error = optionalError.value();
+                        error.addEntry();
+                        INFO(error.getFullErrorMessage());
+                        REQUIRE(false);
+                    }
 
-            {
-                const auto pNode = gc_new<Node>();
-                getWorldRootNode()->addChildNode(pNode);
-            }
+                    const auto pNode = gc_new<Node>();
+                    getWorldRootNode()->addChildNode(pNode);
 
-            // Finished.
-            getWindow()->close();
+                    // Finished.
+                    getWindow()->close();
+                });
+            });
         }
         virtual ~TestGameInstance() override {}
     };
@@ -130,11 +147,14 @@ TEST_CASE("create, serialize and deserialize world") {
         TestGameInstance(Window* pGameWindow, InputManager* pInputManager)
             : GameInstance(pGameWindow, pInputManager) {}
         virtual void onGameStarted() override {
-            createWorld();
+            createWorld([&](const std::optional<Error>& optionalError) {
+                if (optionalError.has_value()) {
+                    auto error = optionalError.value();
+                    error.addEntry();
+                    INFO(error.getFullErrorMessage());
+                    REQUIRE(false);
+                }
 
-            REQUIRE(getWorldRootNode());
-
-            {
                 // Add child node.
                 const auto pMyNode = gc_new<ReflectionTestNode1>();
                 REQUIRE(!pMyNode->bBoolValue2);
@@ -146,40 +166,48 @@ TEST_CASE("create, serialize and deserialize world") {
                 pMyNode->addChildNode(pChildNode);
 
                 // Serialize world.
-                auto optionalError = getWorldRootNode()->serializeNodeTree(fullPathToNodeTreeFile, false);
-                if (optionalError.has_value()) {
-                    auto error = optionalError.value();
-                    error.addEntry();
-                    INFO(error.getFullErrorMessage());
-                    REQUIRE(false);
-                }
-            }
-
-            // Remove existing world.
-            createWorld();
-
-            {
-                // Deserialize world.
-                auto optionalError = loadNodeTreeAsWorld(fullPathToNodeTreeFile);
-                if (optionalError.has_value()) {
-                    auto error = optionalError.value();
+                auto optionalSerializationError =
+                    getWorldRootNode()->serializeNodeTree(fullPathToNodeTreeFile, false);
+                if (optionalSerializationError.has_value()) {
+                    auto error = optionalSerializationError.value();
                     error.addEntry();
                     INFO(error.getFullErrorMessage());
                     REQUIRE(false);
                 }
 
-                // Check that everything is correct.
-                REQUIRE(getWorldRootNode());
-                REQUIRE(getWorldRootNode()->getChildNodes()->size() == 1);
+                // Remove existing world.
+                createWorld([&](const std::optional<Error>& optionalWorldError) {
+                    if (optionalWorldError.has_value()) {
+                        auto error = optionalWorldError.value();
+                        error.addEntry();
+                        INFO(error.getFullErrorMessage());
+                        REQUIRE(false);
+                    }
 
-                auto pMyNode =
-                    gc_dynamic_pointer_cast<ReflectionTestNode1>(getWorldRootNode()->getChildNodes()[0]);
-                REQUIRE(pMyNode);
-                REQUIRE(pMyNode->bBoolValue2);
-                REQUIRE(pMyNode->getChildNodes()->size() == 1);
-            }
+                    // Deserialize world.
+                    loadNodeTreeAsWorld(
+                        [&](const std::optional<Error>& optionalWorldError) {
+                            if (optionalWorldError.has_value()) {
+                                auto error = optionalWorldError.value();
+                                error.addEntry();
+                                INFO(error.getFullErrorMessage());
+                                REQUIRE(false);
+                            }
+                            // Check that everything is correct.
+                            REQUIRE(getWorldRootNode());
+                            REQUIRE(getWorldRootNode()->getChildNodes()->size() == 1);
 
-            getWindow()->close();
+                            auto pMyNode = gc_dynamic_pointer_cast<ReflectionTestNode1>(
+                                getWorldRootNode()->getChildNodes()[0]);
+                            REQUIRE(pMyNode);
+                            REQUIRE(pMyNode->bBoolValue2);
+                            REQUIRE(pMyNode->getChildNodes()->size() == 1);
+
+                            getWindow()->close();
+                        },
+                        fullPathToNodeTreeFile);
+                });
+            });
         }
         virtual ~TestGameInstance() override {}
 

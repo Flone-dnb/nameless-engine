@@ -102,14 +102,18 @@ namespace ne {
         void addTaskToThreadPool(const std::function<void()>& task);
 
         /**
-         * Creates a new world that contains only one node - root node.
-         * Replaces the old world (if existed).
+         * Adds a deferred task (see @ref addDeferredTask) to create a new world that contains only
+         * one node - root node.
          *
-         * @warning This function should be called from the main thread. If this function is called
-         * outside of the main thread an error will be shown.
-         * Use @ref addDeferredTask if you are not sure.
+         * @remark Causes GameInstance::onWorldLoaded to be called after the world is loaded.
          *
-         * @param iWorldSize     Size of the world in game units. Must be power of 2
+         * @remark Replaces the old world (if existed).
+         *
+         * @param onCreated  Callback function that will be called on the main thread after the world is
+         * created. Contains optional error (if world creation failed) as the only argument. Use
+         * GameInstance member functions as callback functions for created worlds, because all nodes
+         * and other game objects will be destroyed while the world is changing.
+         * @param iWorldSize Size of the new world in game units. Must be power of 2
          * (128, 256, 512, 1024, 2048, etc.). World size needs to be specified for
          * internal purposes such as Directional Light shadow map size.
          * You don't need to care why we need this information, you only need to know that if
@@ -117,17 +121,21 @@ namespace ne {
          * (the editor or engine will warn you if something is leaving world bounds, pay attention
          * to the logs).
          */
-        void createWorld(size_t iWorldSize = 1024);
+        void createWorld(
+            const std::function<void(const std::optional<Error>&)>& onCreated, size_t iWorldSize = 1024);
 
         /**
-         * Loads and deserializes a node tree to be used as a new world.
+         * Adds a deferred task (see @ref addDeferredTask)
+         * to load and deserialize a node tree to be used as the new world.
          *
          * Node tree's root node will be used as world's root node.
          *
-         * @warning This function should be called from the main thread. If this function is called
-         * outside of the main thread an error will be shown.
-         * Use @ref addDeferredTask if you are not sure.
+         * @remark Replaces the old world (if existed).
          *
+         * @param onLoaded       Callback function that will be called on the main thread after the world is
+         * loaded. Contains optional error (if world loading failed) as the only argument. Use
+         * GameInstance member functions as callback functions for loaded worlds, because all nodes
+         * and other game objects will be destroyed while the world is changing.
          * @param pathToNodeTree Path to the file that contains a node tree to load, the ".toml"
          * extension will be automatically added if not specified.
          * @param iWorldSize     Size of the world in game units. Must be power of 2
@@ -137,11 +145,11 @@ namespace ne {
          * you leave world bounds lighting or physics may be incorrect
          * (the editor or engine will warn you if something is leaving world bounds, pay attention
          * to the logs).
-         *
-         * @return Error if failed to deserialize the node tree.
          */
-        std::optional<Error>
-        loadNodeTreeAsWorld(const std::filesystem::path& pathToNodeTree, size_t iWorldSize = 1024);
+        void loadNodeTreeAsWorld(
+            const std::function<void(const std::optional<Error>&)>& onLoaded,
+            const std::filesystem::path& pathToNodeTree,
+            size_t iWorldSize = 1024);
 
         /**
          * Returns a pointer to world's root node.

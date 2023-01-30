@@ -271,31 +271,41 @@ namespace ne {
         threadPool.addTask(task);
     }
 
-    void Game::createWorld(size_t iWorldSize) {
-        std::scoped_lock guard(mtxWorld.first);
+    void
+    Game::createWorld(const std::function<void(const std::optional<Error>&)>& onCreated, size_t iWorldSize) {
+        addDeferredTask([=]() {
+            std::scoped_lock guard(mtxWorld.first);
 
-        destroyAndCleanExistingWorld();
+            destroyAndCleanExistingWorld();
 
-        mtxWorld.second = World::createWorld(this, iWorldSize);
+            mtxWorld.second = World::createWorld(this, iWorldSize);
+
+            onCreated({});
+        });
     }
 
-    std::optional<Error>
-    Game::loadNodeTreeAsWorld(const std::filesystem::path& pathToNodeTree, size_t iWorldSize) {
-        std::scoped_lock guard(mtxWorld.first);
+    void Game::loadNodeTreeAsWorld(
+        const std::function<void(const std::optional<Error>&)>& onLoaded,
+        const std::filesystem::path& pathToNodeTree,
+        size_t iWorldSize) {
+        addDeferredTask([=]() {
+            std::scoped_lock guard(mtxWorld.first);
 
-        destroyAndCleanExistingWorld();
+            destroyAndCleanExistingWorld();
 
-        // Load new world.
-        auto result = World::loadNodeTreeAsWorld(this, pathToNodeTree, iWorldSize);
-        if (std::holds_alternative<Error>(result)) {
-            auto error = std::get<Error>(result);
-            error.addEntry();
-            return error;
-        }
+            // Load new world.
+            auto result = World::loadNodeTreeAsWorld(this, pathToNodeTree, iWorldSize);
+            if (std::holds_alternative<Error>(result)) {
+                auto error = std::get<Error>(result);
+                error.addEntry();
+                onLoaded(error);
+                return;
+            }
 
-        mtxWorld.second = std::get<std::unique_ptr<World>>(std::move(result));
+            mtxWorld.second = std::get<std::unique_ptr<World>>(std::move(result));
 
-        return {};
+            onLoaded({});
+        });
     }
 
     gc<Node> Game::getWorldRootNode() {

@@ -39,7 +39,7 @@ namespace ne {
 
         timeWhenWorldCreated = std::chrono::steady_clock::now();
 
-        Logger::get().info("new world is created", sWorldLogCategory);
+        Logger::get().info(fmt::format("new world with size {} is created", iWorldSize), sWorldLogCategory);
     }
 
     World::~World() { destroyWorld(); }
@@ -94,7 +94,7 @@ namespace ne {
         }
         mtxIsDestroyed.second = true;
 
-        Logger::get().info("world is being destroyed, despawning the root node...", sWorldLogCategory);
+        Logger::get().info("world is being destroyed, despawning world's root node...", sWorldLogCategory);
 
         // Clear array of nodes that should be called every frame.
         {
@@ -111,9 +111,6 @@ namespace ne {
             mtxRootNode.second->despawn(); // explicitly despawn root to despawn all nodes.
             mtxRootNode.second = nullptr;
         }
-
-        // Run GC.
-        pGame->queueGarbageCollection({});
     }
 
     CalledEveryFrameNodes* World::getCalledEveryFrameNodes() { return &calledEveryFrameNodes; }

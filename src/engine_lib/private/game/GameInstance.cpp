@@ -3,7 +3,6 @@
 // Custom.
 #include "game/Window.h"
 #include "render/Renderer.h"
-#include "window/GLFW.hpp"
 
 namespace ne {
     GameInstance::GameInstance(Window* pGameWindow, InputManager* pInputManager) {
@@ -54,18 +53,16 @@ namespace ne {
         pGame->addTaskToThreadPool(task);
     }
 
-    void GameInstance::createWorld(size_t iWorldSize) { pGame->createWorld(iWorldSize); }
+    void GameInstance::createWorld(
+        const std::function<void(const std::optional<Error>&)>& onCreated, size_t iWorldSize) {
+        pGame->createWorld(onCreated, iWorldSize);
+    }
 
-    std::optional<Error>
-    GameInstance::loadNodeTreeAsWorld(const std::filesystem::path& pathToNodeTree, size_t iWorldSize) {
-        auto optionalError = pGame->loadNodeTreeAsWorld(pathToNodeTree, iWorldSize);
-        if (optionalError.has_value()) {
-            auto error = optionalError.value();
-            error.addEntry();
-            return error;
-        }
-
-        return {};
+    void GameInstance::loadNodeTreeAsWorld(
+        const std::function<void(const std::optional<Error>&)>& onLoaded,
+        const std::filesystem::path& pathToNodeTree,
+        size_t iWorldSize) {
+        pGame->loadNodeTreeAsWorld(onLoaded, pathToNodeTree, iWorldSize);
     }
 
     void GameInstance::queueGarbageCollection(const std::optional<std::function<void()>>& onFinished) {

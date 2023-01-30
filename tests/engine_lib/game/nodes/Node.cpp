@@ -227,24 +227,31 @@ TEST_CASE("get parent node of type") {
         TestGameInstance(Window* pGameWindow, InputManager* pInputManager)
             : GameInstance(pGameWindow, pInputManager) {}
         virtual void onGameStarted() override {
-            createWorld();
+            createWorld([&](const std::optional<Error>& optionalWorldError) {
+                if (optionalWorldError.has_value()) {
+                    auto error = optionalWorldError.value();
+                    error.addEntry();
+                    INFO(error.getFullErrorMessage());
+                    REQUIRE(false);
+                }
 
-            // Create nodes.
-            auto pDerivedNodeParent = gc_new<MyDerivedNode>("MyDerivedNode");
-            pDerivedNodeParent->iAnswer = 42;
+                // Create nodes.
+                auto pDerivedNodeParent = gc_new<MyDerivedNode>("MyDerivedNode");
+                pDerivedNodeParent->iAnswer = 42;
 
-            const auto pDerivedNodeChild = gc_new<MyDerivedNode>();
+                const auto pDerivedNodeChild = gc_new<MyDerivedNode>();
 
-            auto pDerivedDerivedNode = gc_new<MyDerivedDerivedNode>();
+                auto pDerivedDerivedNode = gc_new<MyDerivedDerivedNode>();
 
-            // Build node hierarchy.
-            pDerivedNodeChild->addChildNode(pDerivedDerivedNode);
-            pDerivedNodeParent->addChildNode(pDerivedNodeChild);
-            getWorldRootNode()->addChildNode(pDerivedNodeParent);
+                // Build node hierarchy.
+                pDerivedNodeChild->addChildNode(pDerivedDerivedNode);
+                pDerivedNodeParent->addChildNode(pDerivedNodeChild);
+                getWorldRootNode()->addChildNode(pDerivedNodeParent);
 
-            REQUIRE(pDerivedDerivedNode->bSpawnCalled);
+                REQUIRE(pDerivedDerivedNode->bSpawnCalled);
 
-            getWindow()->close();
+                getWindow()->close();
+            });
         }
         virtual ~TestGameInstance() override {}
     };
@@ -301,24 +308,30 @@ TEST_CASE("get child node of type") {
         TestGameInstance(Window* pGameWindow, InputManager* pInputManager)
             : GameInstance(pGameWindow, pInputManager) {}
         virtual void onGameStarted() override {
-            createWorld();
+            createWorld([&](const std::optional<Error>& optionalWorldError) {
+                if (optionalWorldError.has_value()) {
+                    auto error = optionalWorldError.value();
+                    error.addEntry();
+                    INFO(error.getFullErrorMessage());
+                    REQUIRE(false);
+                }
+                // Create nodes.
+                auto pDerivedDerivedNode = gc_new<MyDerivedDerivedNode>();
 
-            // Create nodes.
-            auto pDerivedDerivedNode = gc_new<MyDerivedDerivedNode>();
+                auto pDerivedNodeParent = gc_new<MyDerivedNode>();
 
-            auto pDerivedNodeParent = gc_new<MyDerivedNode>();
+                const auto pDerivedNodeChild = gc_new<MyDerivedNode>("MyDerivedNode");
+                pDerivedNodeChild->iAnswer = 42;
 
-            const auto pDerivedNodeChild = gc_new<MyDerivedNode>("MyDerivedNode");
-            pDerivedNodeChild->iAnswer = 42;
+                // Build node hierarchy.
+                pDerivedNodeParent->addChildNode(pDerivedNodeChild);
+                pDerivedDerivedNode->addChildNode(pDerivedNodeParent);
+                getWorldRootNode()->addChildNode(pDerivedDerivedNode);
 
-            // Build node hierarchy.
-            pDerivedNodeParent->addChildNode(pDerivedNodeChild);
-            pDerivedDerivedNode->addChildNode(pDerivedNodeParent);
-            getWorldRootNode()->addChildNode(pDerivedDerivedNode);
+                REQUIRE(pDerivedDerivedNode->bSpawnCalled);
 
-            REQUIRE(pDerivedDerivedNode->bSpawnCalled);
-
-            getWindow()->close();
+                getWindow()->close();
+            });
         }
         virtual ~TestGameInstance() override {}
     };
@@ -353,9 +366,14 @@ TEST_CASE("saving pointer to the root node does not prevent correct world destru
         TestGameInstance(Window* pGameWindow, InputManager* pInputManager)
             : GameInstance(pGameWindow, pInputManager) {}
         virtual void onGameStarted() override {
-            createWorld();
+            createWorld([&](const std::optional<Error>& optionalWorldError) {
+                if (optionalWorldError.has_value()) {
+                    auto error = optionalWorldError.value();
+                    error.addEntry();
+                    INFO(error.getFullErrorMessage());
+                    REQUIRE(false);
+                }
 
-            {
                 // Create our custom node.
                 auto pNode = gc_new<MyDerivedNode>();
                 pNode->pRootNode = getWorldRootNode();
@@ -365,12 +383,18 @@ TEST_CASE("saving pointer to the root node does not prevent correct world destru
                 // - in World object,
                 // - in our custom node.
                 getWorldRootNode()->addChildNode(pNode);
-            }
 
-            // Change world to see if GC will collect everything.
-            createWorld();
-
-            getWindow()->close();
+                // Change world to see if GC will collect everything.
+                createWorld([&](const std::optional<Error>& optionalWorldError) {
+                    if (optionalWorldError.has_value()) {
+                        auto error = optionalWorldError.value();
+                        error.addEntry();
+                        INFO(error.getFullErrorMessage());
+                        REQUIRE(false);
+                    }
+                    getWindow()->close();
+                });
+            });
         }
         virtual ~TestGameInstance() override {}
     };
@@ -400,7 +424,9 @@ TEST_CASE("test GC performance and stability with nodes") {
     public:
         TestGameInstance(Window* pGameWindow, InputManager* pInputManager)
             : GameInstance(pGameWindow, pInputManager) {}
-        virtual void onGameStarted() override { createWorld(); }
+        virtual void onGameStarted() override {
+            createWorld([](const std::optional<Error>&) {});
+        }
         virtual void onBeforeNewFrame(float fTimeSincePrevCallInSec) override {
             if (Node::getAliveNodeCount() == 10000) {
                 getWindow()->close();
@@ -530,16 +556,24 @@ TEST_CASE("onBeforeNewFrame is called only on marked nodes") {
         TestGameInstance(Window* pGameWindow, InputManager* pInputManager)
             : GameInstance(pGameWindow, pInputManager) {}
         virtual void onGameStarted() override {
-            createWorld();
-            REQUIRE(getWorldRootNode());
+            createWorld([&](const std::optional<Error>& optionalWorldError) {
+                if (optionalWorldError.has_value()) {
+                    auto error = optionalWorldError.value();
+                    error.addEntry();
+                    INFO(error.getFullErrorMessage());
+                    REQUIRE(false);
+                }
 
-            pNotCalledtNode = gc_new<MyNode>(false);
-            getWorldRootNode()->addChildNode(pNotCalledtNode);
-            REQUIRE(getCalledEveryFrameNodeCount() == 0);
+                REQUIRE(getWorldRootNode());
 
-            pCalledNode = gc_new<MyNode>(true);
-            getWorldRootNode()->addChildNode(pCalledNode);
-            REQUIRE(getCalledEveryFrameNodeCount() == 1);
+                pNotCalledtNode = gc_new<MyNode>(false);
+                getWorldRootNode()->addChildNode(pNotCalledtNode);
+                REQUIRE(getCalledEveryFrameNodeCount() == 0);
+
+                pCalledNode = gc_new<MyNode>(true);
+                getWorldRootNode()->addChildNode(pCalledNode);
+                REQUIRE(getCalledEveryFrameNodeCount() == 1);
+            });
         }
         virtual ~TestGameInstance() override {}
 
@@ -582,11 +616,19 @@ TEST_CASE("tick groups order is correct") {
         TestGameInstance(Window* pGameWindow, InputManager* pInputManager)
             : GameInstance(pGameWindow, pInputManager) {}
         virtual void onGameStarted() override {
-            createWorld();
-            REQUIRE(getWorldRootNode());
+            createWorld([&](const std::optional<Error>& optionalWorldError) {
+                if (optionalWorldError.has_value()) {
+                    auto error = optionalWorldError.value();
+                    error.addEntry();
+                    INFO(error.getFullErrorMessage());
+                    REQUIRE(false);
+                }
 
-            getWorldRootNode()->addChildNode(gc_new<MyFirstNode>());
-            getWorldRootNode()->addChildNode(gc_new<MySecondNode>());
+                REQUIRE(getWorldRootNode());
+
+                getWorldRootNode()->addChildNode(gc_new<MyFirstNode>());
+                getWorldRootNode()->addChildNode(gc_new<MySecondNode>());
+            });
         }
         virtual ~TestGameInstance() override {}
 
@@ -691,37 +733,44 @@ TEST_CASE("input event callbacks in Node are triggered") {
         TestGameInstance(Window* pGameWindow, InputManager* pInputManager)
             : GameInstance(pGameWindow, pInputManager) {}
         virtual void onGameStarted() override {
-            createWorld();
+            createWorld([&](const std::optional<Error>& optionalWorldError) {
+                if (optionalWorldError.has_value()) {
+                    auto error = optionalWorldError.value();
+                    error.addEntry();
+                    INFO(error.getFullErrorMessage());
+                    REQUIRE(false);
+                }
 
-            // Spawn node.
-            const auto pMyNode = gc_new<MyNode>();
-            getWorldRootNode()->addChildNode(pMyNode);
+                // Spawn node.
+                const auto pMyNode = gc_new<MyNode>();
+                getWorldRootNode()->addChildNode(pMyNode);
 
-            // Register events.
-            auto optionalError = getInputManager()->addActionEvent("action1", {KeyboardKey::KEY_W});
-            if (optionalError.has_value()) {
-                auto error = optionalError.value();
-                error.addEntry();
-                INFO(error.getFullErrorMessage());
-                REQUIRE(false);
-            }
-            optionalError =
-                getInputManager()->addAxisEvent("axis1", {{KeyboardKey::KEY_A, KeyboardKey::KEY_B}});
-            if (optionalError.has_value()) {
-                auto error = optionalError.value();
-                error.addEntry();
-                INFO(error.getFullErrorMessage());
-                REQUIRE(false);
-            }
+                // Register events.
+                auto optionalError = getInputManager()->addActionEvent("action1", {KeyboardKey::KEY_W});
+                if (optionalError.has_value()) {
+                    auto error = optionalError.value();
+                    error.addEntry();
+                    INFO(error.getFullErrorMessage());
+                    REQUIRE(false);
+                }
+                optionalError =
+                    getInputManager()->addAxisEvent("axis1", {{KeyboardKey::KEY_A, KeyboardKey::KEY_B}});
+                if (optionalError.has_value()) {
+                    auto error = optionalError.value();
+                    error.addEntry();
+                    INFO(error.getFullErrorMessage());
+                    REQUIRE(false);
+                }
 
-            // Simulate input.
-            getWindow()->onKeyboardInput(KeyboardKey::KEY_A, KeyboardModifiers(0), true);
-            getWindow()->onKeyboardInput(KeyboardKey::KEY_W, KeyboardModifiers(0), true);
+                // Simulate input.
+                getWindow()->onKeyboardInput(KeyboardKey::KEY_A, KeyboardModifiers(0), true);
+                getWindow()->onKeyboardInput(KeyboardKey::KEY_W, KeyboardModifiers(0), true);
 
-            REQUIRE(pMyNode->bAction1Triggered);
-            REQUIRE(pMyNode->bAxis1Triggered);
+                REQUIRE(pMyNode->bAction1Triggered);
+                REQUIRE(pMyNode->bAxis1Triggered);
 
-            getWindow()->close();
+                getWindow()->close();
+            });
         }
         virtual ~TestGameInstance() override {}
     };

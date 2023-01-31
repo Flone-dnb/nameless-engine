@@ -109,6 +109,13 @@ namespace ne {
          *
          * @remark Replaces the old world (if existed).
          *
+         * @remark Engine will execute all deferred tasks before changing the world (before destroying
+         * all nodes), so even if deferred tasks queue looks like this:
+         * ... -- create/load world task -- call node's member function task -- ...,
+         * on `create/load world task` the engine will finish all other tasks and only when deferred
+         * tasks queue is empty start to create/load world so you don't need to care about the order
+         * of deferred tasks.
+         *
          * @param onCreated  Callback function that will be called on the main thread after the world is
          * created. Contains optional error (if world creation failed) as the only argument. Use
          * GameInstance member functions as callback functions for created worlds, because all nodes
@@ -131,6 +138,13 @@ namespace ne {
          * Node tree's root node will be used as world's root node.
          *
          * @remark Replaces the old world (if existed).
+         *
+         * @remark Engine will execute all deferred tasks before changing the world (before destroying
+         * all nodes), so even if deferred tasks queue looks like this:
+         * ... -- create/load world task -- call node's member function task -- ...,
+         * on `create/load world task` the engine will finish all other tasks and only when deferred
+         * tasks queue is empty start to create/load world so you don't need to care about the order
+         * of deferred tasks.
          *
          * @param onLoaded       Callback function that will be called on the main thread after the world is
          * loaded. Contains optional error (if world loading failed) as the only argument. Use

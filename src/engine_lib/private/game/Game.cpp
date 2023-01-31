@@ -257,8 +257,9 @@ namespace ne {
         std::scoped_lock guard(mtxDeferredTasks.first);
 
         while (!mtxDeferredTasks.second.empty()) {
-            mtxDeferredTasks.second.front()();
-            mtxDeferredTasks.second.pop();
+            auto task = std::move(mtxDeferredTasks.second.front());
+            mtxDeferredTasks.second.pop(); // remove first and only then execute to avoid recursion
+            task();
         }
     }
 
@@ -411,8 +412,8 @@ namespace ne {
             mtxDeferredTasks.second.push(task);
         }
 
-        if (!pGameInstance) {
-            // Tick not started yet but we already have some tasks (probably engine internal calls).
+        if (pGameInstance == nullptr) {
+            // Tick is not started yet but we already have some tasks (probably engine internal calls).
             // Execute them now.
             executeDeferredTasks();
         }
@@ -654,46 +655,55 @@ namespace ne {
     }
 
     void Game::destroyAndCleanExistingWorld() {
-        std::scoped_lock guard(mtxWorld.first);
+        std::scoped_lock worldGuard(mtxWorld.first);
 
-        if (mtxWorld.second) {
-            // Explicitly destroy the world, so that no node will reference the world.
-            mtxWorld.second = nullptr;
+        if (mtxWorld.second == nullptr) {
+            return; // nothing to do
+        }
 
-            // Force run GC to destroy all nodes.
-            runGarbageCollection(true);
+        // Finish all deferred tasks and lock them until not finished deleting all nodes.
+        // We want to finish all deferred tasks right now because there might be
+        // node member functions waiting to be executed - execute them and only
+        // then delete nodes.
+        std::scoped_lock deferredTasksGuard(mtxDeferredTasks.first);
+        executeDeferredTasks();
 
-            // Make sure that all nodes were destroyed.
-            const auto iAliveNodeCount = Node::getAliveNodeCount();
-            if (iAliveNodeCount != 0) {
-                Logger::get().error(
-                    fmt::format(
-                        "the world was destroyed and garbage collection was finished but there are still "
-                        "{} node(s) alive, here are a few reasons why this may happen:\n{}",
-                        iAliveNodeCount,
-                        sGcLeakReasons),
-                    sGameLogCategory);
-            }
+        // Explicitly destroy the world, so that no node will reference the world.
+        mtxWorld.second = nullptr;
 
-            // Make sure all PSOs were destroyed.
-            const auto iGraphicsPsoCount = pRenderer->getPsoManager()->getCreatedGraphicsPsoCount();
-            const auto iComputePsoCount = pRenderer->getPsoManager()->getCreatedComputePsoCount();
-            if (iGraphicsPsoCount != 0) {
-                Logger::get().error(
-                    fmt::format(
-                        "the world was destroyed and garbage collection was finished but there are still "
-                        "{} graphics PSO(s) exist",
-                        iGraphicsPsoCount),
-                    sGameLogCategory);
-            }
-            if (iComputePsoCount != 0) {
-                Logger::get().error(
-                    fmt::format(
-                        "the world was destroyed and garbage collection was finished but there are still "
-                        "{} compute PSO(s) exist",
-                        iComputePsoCount),
-                    sGameLogCategory);
-            }
+        // Now force run GC to destroy all nodes.
+        runGarbageCollection(true);
+
+        // Make sure that all nodes were destroyed.
+        const auto iAliveNodeCount = Node::getAliveNodeCount();
+        if (iAliveNodeCount != 0) {
+            Logger::get().error(
+                fmt::format(
+                    "the world was destroyed and garbage collection was finished but there are still "
+                    "{} node(s) alive, here are a few reasons why this may happen:\n{}",
+                    iAliveNodeCount,
+                    sGcLeakReasons),
+                sGameLogCategory);
+        }
+
+        // Make sure all PSOs were destroyed.
+        const auto iGraphicsPsoCount = pRenderer->getPsoManager()->getCreatedGraphicsPsoCount();
+        const auto iComputePsoCount = pRenderer->getPsoManager()->getCreatedComputePsoCount();
+        if (iGraphicsPsoCount != 0) {
+            Logger::get().error(
+                fmt::format(
+                    "the world was destroyed and garbage collection was finished but there are still "
+                    "{} graphics PSO(s) exist",
+                    iGraphicsPsoCount),
+                sGameLogCategory);
+        }
+        if (iComputePsoCount != 0) {
+            Logger::get().error(
+                fmt::format(
+                    "the world was destroyed and garbage collection was finished but there are still "
+                    "{} compute PSO(s) exist",
+                    iComputePsoCount),
+                sGameLogCategory);
         }
     }
 } // namespace ne

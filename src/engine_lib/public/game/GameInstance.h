@@ -125,7 +125,7 @@ namespace ne {
          *
          * @warning If you are using a member function as a task you need to make
          * sure that the owner object of this member function will not be deleted until
-         * this task is finished. GameInstance member functions are safe to use.
+         * this task is finished. GameInstance and Node member functions are safe to use.
          *
          * @remark In the task you don't need to check if the game is being destroyed,
          * the engine makes sure all tasks are finished before the game is destroyed.
@@ -158,6 +158,13 @@ namespace ne {
          *
          * @remark Replaces the old world (if existed).
          *
+         * @remark Engine will execute all deferred tasks before changing the world (before destroying
+         * all nodes), so even if deferred tasks queue looks like this:
+         * ... -- create/load world task -- call node's member function task -- ...,
+         * on `create/load world task` the engine will finish all other tasks and only when deferred
+         * tasks queue is empty start to create/load world so you don't need to care about the order
+         * of deferred tasks.
+         *
          * @param onCreated  Callback function that will be called on the main thread after the world is
          * created. Contains optional error (if world creation failed) as the only argument. Use
          * GameInstance member functions as callback functions for created worlds, because all nodes
@@ -183,6 +190,13 @@ namespace ne {
          * make sure you set `nullptr` to them before calling this function.
          *
          * @remark Replaces the old world (if existed).
+         *
+         * @remark Engine will execute all deferred tasks before changing the world (before destroying
+         * all nodes), so even if deferred tasks queue looks like this:
+         * ... -- create/load world task -- call node's member function task -- ...,
+         * on `create/load world task` the engine will finish all other tasks and only when deferred
+         * tasks queue is empty start to create/load world so you don't need to care about the order
+         * of deferred tasks.
          *
          * @param onLoaded       Callback function that will be called on the main thread after the world is
          * loaded. Contains optional error (if world loading failed) as the only argument. Use

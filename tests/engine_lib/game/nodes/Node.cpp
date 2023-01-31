@@ -786,3 +786,71 @@ TEST_CASE("input event callbacks in Node are triggered") {
     const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
     pMainWindow->processEvents<TestGameInstance>();
 }
+
+TEST_CASE("use deferred task with node's member function while the world is being changed") {
+    using namespace ne;
+
+    class MyDerivedNode : public Node {
+    public:
+        MyDerivedNode() = default;
+        virtual ~MyDerivedNode() override {}
+
+        void start() {
+            getGameInstance()->addDeferredTask([this]() { myCallback(); });
+        }
+
+        bool bCallbackRunning = false;
+
+    protected:
+        std::string sSomePrivateString = "Hello!";
+        void myCallback() {
+            bCallbackRunning = true;
+            std::this_thread::sleep_for(std::chrono::seconds(1));
+            sSomePrivateString = "It seems to work.";
+            getGameInstance()->getWindow()->close();
+        }
+    };
+
+    class TestGameInstance : public GameInstance {
+    public:
+        TestGameInstance(Window* pGameWindow, InputManager* pInputManager)
+            : GameInstance(pGameWindow, pInputManager) {}
+        virtual ~TestGameInstance() override { REQUIRE(bFinished); }
+        virtual void onGameStarted() override {
+            createWorld([this](const std::optional<Error>& optionalWorldError1) {
+                const auto iInitialObjectCount = gc_collector()->getAliveObjectsCount();
+
+                auto pMyNode = gc_new<MyDerivedNode>();
+                getWorldRootNode()->addChildNode(pMyNode);
+
+                // add deferred task to change world
+                createWorld([this, iInitialObjectCount](const std::optional<Error>& optionalWorldError2) {
+                    REQUIRE(gc_collector()->getAliveObjectsCount() == iInitialObjectCount);
+                    bFinished = true;
+                });
+
+                // add deferred task to call our function
+                pMyNode->start();
+
+                // engine should finish all deferred tasks before changing the world (before destroying all
+                // nodes)
+            });
+        }
+
+    private:
+        bool bFinished = false;
+    };
+
+    auto result = Window::getBuilder().withVisibility(false).build();
+    if (std::holds_alternative<Error>(result)) {
+        Error error = std::get<Error>(std::move(result));
+        error.addEntry();
+        INFO(error.getFullErrorMessage());
+        REQUIRE(false);
+    }
+
+    const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
+    pMainWindow->processEvents<TestGameInstance>();
+
+    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+}

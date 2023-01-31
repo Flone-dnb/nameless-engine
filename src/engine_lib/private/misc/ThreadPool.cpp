@@ -37,7 +37,7 @@ namespace ne {
                     return;
                 }
 
-                task = mtxTaskQueue.second.front();
+                task = std::move(mtxTaskQueue.second.front());
                 mtxTaskQueue.second.pop();
             }
             task();

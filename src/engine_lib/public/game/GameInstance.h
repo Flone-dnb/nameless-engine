@@ -140,7 +140,8 @@ namespace ne {
          *
          * @warning If you are using a member function as a task you need to make
          * sure that the owner object of this member function will not be deleted until
-         * this task is finished. GameInstance member functions are safe to use.
+         * this task is finished. GameInstance member functions are safe to use because the thread
+         * pool will finish all tasks and stop before the GameInstance is destroyed.
          *
          * @remark In the task you don't need to check if the game is being destroyed,
          * the engine makes sure all tasks are finished before the game is destroyed.

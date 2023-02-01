@@ -125,7 +125,9 @@ namespace ne {
          *
          * @warning If you are using a member function as a task you need to make
          * sure that the owner object of this member function will not be deleted until
-         * this task is finished. GameInstance and Node member functions are safe to use.
+         * this task is finished. If you use GameInstance or Node member functions then
+         * ignore this warning, they are safe to use in deferred tasks and will not be
+         * deleted until the task is finished.
          *
          * @remark In the task you don't need to check if the game is being destroyed,
          * the engine makes sure all tasks are finished before the game is destroyed.
@@ -225,10 +227,12 @@ namespace ne {
          * @remark Typically you don't need to call this function as garbage collection is executed
          * regularly (see @ref setGarbageCollectorRunInterval) but you can still call it anyway.
          *
+         * @param bForce     Force run garbage collection even if the last garbage collection was run
+         * not so long ago.
          * @param onFinished Optional callback that will be triggered on the main thread
          * when garbage collection is finished (queued as @ref addDeferredTask).
          */
-        void queueGarbageCollection(const std::optional<std::function<void()>>& onFinished);
+        void queueGarbageCollection(bool bForce, const std::optional<std::function<void()>>& onFinished = {});
 
         /**
          * Modifies the interval after which we need to run garbage collector again.

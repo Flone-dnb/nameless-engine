@@ -65,8 +65,9 @@ namespace ne {
         pGame->loadNodeTreeAsWorld(onLoaded, pathToNodeTree, iWorldSize);
     }
 
-    void GameInstance::queueGarbageCollection(const std::optional<std::function<void()>>& onFinished) {
-        pGame->queueGarbageCollection(onFinished);
+    void GameInstance::queueGarbageCollection(
+        bool bForce, const std::optional<std::function<void()>>& onFinished) {
+        pGame->queueGarbageCollection(bForce, onFinished);
     }
 
     void GameInstance::setGarbageCollectorRunInterval(long long iGcRunIntervalInSec) {

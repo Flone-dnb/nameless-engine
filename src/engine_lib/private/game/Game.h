@@ -62,10 +62,12 @@ namespace ne {
          * @remark Note that garbage collection will also be executed additionally in some special cases,
          * such as when World is being destructed or some nodes are being detached and despawned.
          *
+         * @param bForce     Force run garbage collection even if the last garbage collection was run
+         * not so long ago.
          * @param onFinished Optional callback that will be triggered on the main thread
          * when garbage collection is finished (queued as @ref addDeferredTask).
          */
-        void queueGarbageCollection(const std::optional<std::function<void()>>& onFinished);
+        void queueGarbageCollection(bool bForce, const std::optional<std::function<void()>>& onFinished = {});
 
         /**
          * Adds a function to be executed on the main thread next time @ref onBeforeNewFrame

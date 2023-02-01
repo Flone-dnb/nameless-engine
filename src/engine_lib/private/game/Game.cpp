@@ -147,7 +147,7 @@ namespace ne {
     void Game::runGarbageCollection(bool bForce) {
         // Make sure this function is being executed on the main thread.
         const auto currentThreadId = std::this_thread::get_id();
-        if (currentThreadId != mainThreadId) {
+        if (currentThreadId != mainThreadId) [[unlikely]] {
             std::stringstream currentThreadIdString;
             currentThreadIdString << currentThreadId;
 
@@ -164,7 +164,7 @@ namespace ne {
         }
 
         if (!bForce) {
-            // Check if we need to run garbage collector.
+            // Check if enough time has passed since the last garbage collection.
             const auto iTimeSinceLastGcInSec = std::chrono::duration_cast<std::chrono::seconds>(
                                                    std::chrono::steady_clock::now() - lastGcRunTime)
                                                    .count();
@@ -173,18 +173,29 @@ namespace ne {
             }
         }
 
-        // Run garbage collector.
+        // Finish all deferred tasks and lock them until not finished with garbage collector.
+        // We want to finish all deferred tasks right now because there might be
+        // node member functions waiting to be executed - execute them and only
+        // then delete nodes.
+        std::scoped_lock deferredTasksGuard(mtxDeferredTasks.first);
+        executeDeferredTasks();
+
+        // Log start.
         Logger::get().info("running garbage collector...", sGarbageCollectorLogCategory);
 
-        // Measure the time it takes to run garbage collector.
+        // Save time to measure later.
         const auto start = std::chrono::steady_clock::now();
+
+        // Run garbage collector.
         gc_collector()->collect();
+
+        // Measure the time it took to run garbage collector.
         const auto end = std::chrono::steady_clock::now();
         const auto durationInMs =
             static_cast<float>(std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count()) *
             0.000001F;
 
-        // Limit precision to 1 digit.
+        // Convert time to string. Limit precision to 1 digit.
         std::stringstream durationStream;
         durationStream << std::fixed << std::setprecision(1) << durationInMs;
 
@@ -198,6 +209,7 @@ namespace ne {
                 gc_collector()->getAliveObjectsCount()),
             sGarbageCollectorLogCategory);
 
+        // Save current time.
         lastGcRunTime = std::chrono::steady_clock::now();
     }
 
@@ -209,9 +221,9 @@ namespace ne {
         this->iGcRunIntervalInSec = std::clamp<long long>(iGcRunIntervalInSec, 30, 300); // NOLINT
     }
 
-    void Game::queueGarbageCollection(const std::optional<std::function<void()>>& onFinished) {
-        addDeferredTask([this, onFinished]() {
-            runGarbageCollection(true);
+    void Game::queueGarbageCollection(bool bForce, const std::optional<std::function<void()>>& onFinished) {
+        addDeferredTask([this, bForce, onFinished]() {
+            runGarbageCollection(bForce);
             if (onFinished.has_value()) {
                 onFinished->operator()();
             }
@@ -660,13 +672,6 @@ namespace ne {
         if (mtxWorld.second == nullptr) {
             return; // nothing to do
         }
-
-        // Finish all deferred tasks and lock them until not finished deleting all nodes.
-        // We want to finish all deferred tasks right now because there might be
-        // node member functions waiting to be executed - execute them and only
-        // then delete nodes.
-        std::scoped_lock deferredTasksGuard(mtxDeferredTasks.first);
-        executeDeferredTasks();
 
         // Explicitly destroy the world, so that no node will reference the world.
         mtxWorld.second = nullptr;

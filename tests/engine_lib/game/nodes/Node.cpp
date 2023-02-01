@@ -799,13 +799,9 @@ TEST_CASE("use deferred task with node's member function while the world is bein
             getGameInstance()->addDeferredTask([this]() { myCallback(); });
         }
 
-        bool bCallbackRunning = false;
-
     protected:
         std::string sSomePrivateString = "Hello!";
         void myCallback() {
-            bCallbackRunning = true;
-            std::this_thread::sleep_for(std::chrono::seconds(1));
             sSomePrivateString = "It seems to work.";
             getGameInstance()->getWindow()->close();
         }
@@ -834,6 +830,73 @@ TEST_CASE("use deferred task with node's member function while the world is bein
 
                 // engine should finish all deferred tasks before changing the world (before destroying all
                 // nodes)
+            });
+        }
+
+    private:
+        bool bFinished = false;
+    };
+
+    auto result = Window::getBuilder().withVisibility(false).build();
+    if (std::holds_alternative<Error>(result)) {
+        Error error = std::get<Error>(std::move(result));
+        error.addEntry();
+        INFO(error.getFullErrorMessage());
+        REQUIRE(false);
+    }
+
+    const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
+    pMainWindow->processEvents<TestGameInstance>();
+
+    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+}
+
+TEST_CASE("use deferred task with node's member function while the garbage collector is running") {
+    using namespace ne;
+
+    class MyDerivedNode : public Node {
+    public:
+        MyDerivedNode() = default;
+        virtual ~MyDerivedNode() override {}
+
+        void start() {
+            getGameInstance()->addDeferredTask([this]() { myCallback(); });
+        }
+
+    protected:
+        std::string sSomePrivateString = "Hello!";
+        void myCallback() {
+            sSomePrivateString = "It seems to work.";
+            getGameInstance()->getWindow()->close();
+        }
+    };
+
+    class TestGameInstance : public GameInstance {
+    public:
+        TestGameInstance(Window* pGameWindow, InputManager* pInputManager)
+            : GameInstance(pGameWindow, pInputManager) {}
+        virtual ~TestGameInstance() override { REQUIRE(bFinished); }
+        virtual void onGameStarted() override {
+            createWorld([this](const std::optional<Error>& optionalWorldError1) {
+                const auto iInitialObjectCount = gc_collector()->getAliveObjectsCount();
+
+                // add deferred task to run GC
+                queueGarbageCollection(true, [this, iInitialObjectCount]() {
+                    REQUIRE(gc_collector()->getAliveObjectsCount() == iInitialObjectCount);
+                    bFinished = true;
+                });
+
+                {
+                    auto pMyNode = gc_new<MyDerivedNode>();
+
+                    // add deferred task to call our function
+                    pMyNode->start();
+                }
+
+                // node should be still alive
+                REQUIRE(gc_collector()->getAliveObjectsCount() == iInitialObjectCount + 2);
+
+                // engine should finish all deferred tasks before running the GC
             });
         }
 

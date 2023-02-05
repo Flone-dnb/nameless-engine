@@ -152,8 +152,28 @@ func create_symlink(target string, symlink_location string) {
 		return // directory does not exist
 	}
 
-	_, err = os.Stat(symlink_location)
+	var create_symlink = false
+
+	fi, err := os.Lstat(symlink_location) // read symlink
 	if os.IsNotExist(err) {
+		create_symlink = true
+	}
+
+	if fi.Mode()&os.ModeSymlink != 0 { // make sure this is symlink
+		_, err := os.Readlink(fi.Name())
+		if err != nil {
+			fmt.Println("INFO: engine_post_build.go: found broken symlink at", symlink_location, "attempting to fix it...")
+			os.RemoveAll(symlink_location)
+			create_symlink = true
+		}
+		return // nothing to do
+	} else {
+		fmt.Println("INFO: engine_post_build.go: found broken symlink at", symlink_location, "attempting to fix it...")
+		os.RemoveAll(symlink_location)
+		create_symlink = true
+	}
+
+	if create_symlink {
 		err = os.Symlink(target, symlink_location)
 		if err != nil {
 			fmt.Println("ERROR: engine_post_build.go: failed to create symlink to 'res' for", symlink_location, "error:", err)

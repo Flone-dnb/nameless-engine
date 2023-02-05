@@ -427,6 +427,20 @@ Mostly engine's code style is controlled though `clang-format` and `clang-tidy`,
 - for `bool` variables the prefix is `b`, example: `bIsEnabled`,
 - for integer variables (`int`, `size_t`, etc.) the prefix is `i`, example: `iSwapChainBufferCount`,
 - for string variables (`std::string`, `std::string_view`, etc.) the prefix is `s`, example: `sNodeName`,
-- for vector variables (`std::vector`, `std::array`, etc.) the prefix is `v`, example: `vActionEvents`.
+- for vector variables (`std::vector`, `std::array`, etc.) the prefix is `v`, example: `vActionEvents`,
+- additionally, if you're using mutex to guard specific field(s) use `std::pair` if possible, example:
+
+```C++
+std::pair<std::recursive_mutex, gc<Node>> mtxParentNode;
+
+// --------------------
+
+struct LocalMatrixInformation {
+    glm::mat4x4 localMatrix = glm::identity<glm::mat4x4>();
+    glm::mat4x4 localMatrixIncludingParents = glm::identity<glm::mat4x4>();
+};
+
+std::pair<std::recursive_mutex, LocalMatrixInformation> mtxLocalMatrix;
+```
 
 Make sure you are naming your variables according to this when writing engine code.

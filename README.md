@@ -313,8 +313,6 @@ Here is the list of base features that needs to be implemented in order for you 
         - [ ] Cascading shadow maps
         - [ ] SSAO (Screen space ambient occlusion)
         - [ ] Post-processing effects
-        - [ ] PBR (Physically based rendering)
-        - [ ] HDR (High dynamic range)
     - [ ] Forward+ rendering
         - [ ] Transparent materials
         - [ ] AA (Anti-aliasing)

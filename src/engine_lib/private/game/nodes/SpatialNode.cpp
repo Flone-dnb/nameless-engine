@@ -204,6 +204,9 @@ namespace ne {
 
     void SpatialNode::warnIfExceedingWorldBounds() {
         std::scoped_lock guard(mtxSpawning, mtxWorldMatrix.first);
+        if (!isSpawned()) {
+            return;
+        }
 
         const auto pGameInstance = getGameInstance();
         if (pGameInstance == nullptr) {

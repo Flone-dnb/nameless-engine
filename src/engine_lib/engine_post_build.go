@@ -157,9 +157,7 @@ func create_symlink(target string, symlink_location string) {
 	fi, err := os.Lstat(symlink_location) // read symlink
 	if os.IsNotExist(err) {
 		create_symlink = true
-	}
-
-	if fi.Mode()&os.ModeSymlink != 0 { // make sure this is symlink
+	} else if fi.Mode()&os.ModeSymlink != 0 { // make sure this is symlink
 		_, err := os.Readlink(fi.Name())
 		if err != nil {
 			fmt.Println("INFO: engine_post_build.go: found broken symlink at", symlink_location, "attempting to fix it...")
@@ -168,6 +166,7 @@ func create_symlink(target string, symlink_location string) {
 		}
 		return // nothing to do
 	} else {
+		// not a symlink
 		fmt.Println("INFO: engine_post_build.go: found broken symlink at", symlink_location, "attempting to fix it...")
 		os.RemoveAll(symlink_location)
 		create_symlink = true

@@ -138,7 +138,7 @@ namespace ne {
 
         // Generate one root signature for both shaders.
         auto result = RootSignatureGenerator::merge(
-            pDirectXRenderer->getDevice(), pVertexShader.get(), pPixelShader.get());
+            pDirectXRenderer->getD3dDevice(), pVertexShader.get(), pPixelShader.get());
         if (std::holds_alternative<Error>(result)) {
             auto err = std::get<Error>(std::move(result));
             err.addEntry();
@@ -217,7 +217,7 @@ namespace ne {
         psoDesc.DSVFormat = pDirectXRenderer->getDepthStencilBufferFormat();
 
         // Create PSO.
-        HRESULT hResult = pDirectXRenderer->getDevice()->CreateGraphicsPipelineState(
+        HRESULT hResult = pDirectXRenderer->getD3dDevice()->CreateGraphicsPipelineState(
             &psoDesc, IID_PPV_ARGS(mtxInternalResources.second.pGraphicsPso.GetAddressOf()));
         if (FAILED(hResult)) {
             return Error(hResult);

@@ -35,16 +35,14 @@ namespace ne {
         virtual ~DirectXResource() override = default;
 
         /**
-         * Creates a new resource.
+         * Creates a new resource (without binding a descriptor to it).
          *
          * @param pResourceManager     Owner resource manager.
          * @param sResourceName        Resource name, used for logging.
-         * @param pHeap                Heap to store descriptor to this resource.
-         * @param descriptorType       Type of new descriptor.
          * @param pMemoryAllocator     Allocator to create resource.
          * @param allocationDesc       Allocation description.
          * @param resourceDesc         Resource description.
-         * @param initialResourceState Initial resource state.
+         * @param initialResourceState Initial state of this resource.
          * @param resourceClearValue   Optimized clear value. Pass empty if creating
          * CBV/SRV/UAV resource.
          *
@@ -53,8 +51,6 @@ namespace ne {
         static std::variant<std::unique_ptr<DirectXResource>, Error> create(
             const DirectXResourceManager* pResourceManager,
             const std::string& sResourceName,
-            DirectXDescriptorHeap* pHeap,
-            DescriptorType descriptorType,
             D3D12MA::Allocator* pMemoryAllocator,
             const D3D12MA::ALLOCATION_DESC& allocationDesc,
             const D3D12_RESOURCE_DESC& resourceDesc,
@@ -95,7 +91,7 @@ namespace ne {
          *
          * @return Error if something went wrong.
          */
-        [[nodiscard]] std::optional<Error> addCbv();
+        [[nodiscard]] virtual std::optional<Error> bindCbv() override;
 
         /**
          * Creates a new shader resource view descriptor that points to this resource.

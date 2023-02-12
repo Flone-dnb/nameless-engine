@@ -3,6 +3,7 @@
 // Custom.
 #include "render/directx/resources/DirectXResource.h"
 #include "render/directx/DirectXRenderer.h"
+#include "render/general/resources/FrameResourcesManager.h"
 #include "render/general/resources/UploadBuffer.h"
 
 namespace ne {
@@ -11,7 +12,7 @@ namespace ne {
         // Create resource allocator.
         D3D12MA::ALLOCATOR_DESC desc = {};
         desc.Flags = D3D12MA::ALLOCATOR_FLAG_DEFAULT_POOLS_NOT_ZEROED;
-        desc.pDevice = pRenderer->getDevice();
+        desc.pDevice = pRenderer->getD3dDevice();
         desc.pAdapter = pRenderer->getVideoAdapter();
 
         ComPtr<D3D12MA::Allocator> pMemoryAllocator;
@@ -50,13 +51,14 @@ namespace ne {
             std::get<std::unique_ptr<DirectXDescriptorHeap>>(std::move(heapManagerResult));
 
         return std::unique_ptr<DirectXResourceManager>(new DirectXResourceManager(
+            pRenderer,
             std::move(pMemoryAllocator),
             std::move(pRtvHeapManager),
             std::move(pDsvHeapManager),
             std::move(pCbvSrvUavHeapManager)));
     }
 
-    std::variant<std::unique_ptr<UploadBuffer>, Error> DirectXResourceManager::createCbvResourceWithCpuAccess(
+    std::variant<std::unique_ptr<UploadBuffer>, Error> DirectXResourceManager::createResourceWithCpuAccess(
         const std::string& sResourceName, size_t iElementSizeInBytes, size_t iElementCount) const {
         // Constant buffers must be multiple of 256.
         iElementSizeInBytes = makeMultipleOf256(iElementSizeInBytes);
@@ -68,18 +70,141 @@ namespace ne {
         allocationDesc.HeapType = D3D12_HEAP_TYPE_UPLOAD;
 
         // Create resource.
-        auto result =
-            createCbvResource(sResourceName, allocationDesc, resourceDesc, D3D12_RESOURCE_STATE_GENERIC_READ);
+        auto result = DirectXResource::create(
+            this,
+            sResourceName,
+            pMemoryAllocator.Get(),
+            allocationDesc,
+            resourceDesc,
+            D3D12_RESOURCE_STATE_GENERIC_READ,
+            {});
         if (std::holds_alternative<Error>(result)) {
-            auto error = std::get<Error>(std::move(result));
-            error.addEntry();
-            return error;
+            auto err = std::get<Error>(std::move(result));
+            err.addEntry();
+            return err;
+        }
+        auto pResource = std::get<std::unique_ptr<DirectXResource>>(std::move(result));
+
+        return std::unique_ptr<UploadBuffer>(
+            new UploadBuffer(std::move(pResource), iElementSizeInBytes, iElementCount));
+    }
+
+    std::variant<std::unique_ptr<GpuResource>, Error> DirectXResourceManager::createResourceWithData(
+        const std::string& sResourceName,
+        const void* pBufferData,
+        size_t iDataSizeInBytes,
+        bool bAllowUnorderedAccess) const {
+        // In order to create a GPU resource with our data from the CPU
+        // we have to do a few steps:
+        // 1. Create a GPU resource with DEFAULT heap type (CPU read-only heap) AKA resulting resource.
+        // 2. Create a GPU resource with UPLOAD heap type (CPU read-write heap) AKA upload resource.
+        // 3. Copy our data from the CPU to the resulting resource by using the upload resource.
+        // 4. Wait for GPU to finish copying data and delete the upload resource.
+
+        // 1. Create the resulting resource.
+        D3D12MA::ALLOCATION_DESC allocationDesc;
+        allocationDesc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
+        D3D12_RESOURCE_DESC resourceDesc = CD3DX12_RESOURCE_DESC::Buffer(
+            iDataSizeInBytes,
+            bAllowUnorderedAccess ? D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS : D3D12_RESOURCE_FLAG_NONE);
+        D3D12_RESOURCE_STATES initialResourceState = D3D12_RESOURCE_STATE_COPY_DEST;
+        auto result = DirectXResource::create(
+            this,
+            sResourceName,
+            pMemoryAllocator.Get(),
+            allocationDesc,
+            resourceDesc,
+            initialResourceState,
+            {});
+        if (std::holds_alternative<Error>(result)) {
+            auto err = std::get<Error>(std::move(result));
+            err.addEntry();
+            return err;
+        }
+        auto pResultingResource = std::get<std::unique_ptr<DirectXResource>>(std::move(result));
+
+        // 2. Create the upload resource.
+        allocationDesc = D3D12MA::ALLOCATION_DESC();
+        allocationDesc.HeapType = D3D12_HEAP_TYPE_UPLOAD;
+        resourceDesc = CD3DX12_RESOURCE_DESC::Buffer(iDataSizeInBytes);
+        initialResourceState = D3D12_RESOURCE_STATE_GENERIC_READ;
+        result = DirectXResource::create(
+            this,
+            std::format("upload resource for \"{}\"", sResourceName),
+            pMemoryAllocator.Get(),
+            allocationDesc,
+            resourceDesc,
+            initialResourceState,
+            {});
+        if (std::holds_alternative<Error>(result)) {
+            auto err = std::get<Error>(std::move(result));
+            err.addEntry();
+            return err;
+        }
+        auto pUploadResource = std::get<std::unique_ptr<DirectXResource>>(std::move(result));
+
+        // Stop rendering.
+        std::scoped_lock renderingGuard(*pRenderer->getRenderResourcesMutex());
+        pRenderer->waitForGpuToFinishWorkUpToThisPoint();
+
+        // Get command allocator from the current frame resource.
+        const auto pFrameResourcesManager = pRenderer->getFrameResourcesManager();
+        const auto mtxCurrentFrameResource = pFrameResourcesManager->getCurrentFrameResource();
+        std::scoped_lock frameResourceGuard(*mtxCurrentFrameResource.first);
+
+        const auto pCommandList = pRenderer->getD3dCommandList();
+        const auto pCommandQueue = pRenderer->getD3dCommandQueue();
+        const auto pCommandAllocator = mtxCurrentFrameResource.second->pCommandAllocator.Get();
+
+        // Clear command list allocator (because it's not used by the GPU now).
+        auto hResult = pCommandAllocator->Reset();
+        if (FAILED(hResult)) {
+            return Error(hResult);
         }
 
-        return std::unique_ptr<UploadBuffer>(new UploadBuffer(
-            std::get<std::unique_ptr<DirectXResource>>(std::move(result)),
-            iElementSizeInBytes,
-            iElementCount));
+        // Prepare command list (it was closed).
+        hResult = pCommandList->Reset(pCommandAllocator, nullptr);
+        if (FAILED(hResult)) {
+            return Error(hResult);
+        }
+
+        // 3. Copy our data from the CPU to the resulting resource by using the upload resource.
+        D3D12_SUBRESOURCE_DATA subResourceData = {};
+        subResourceData.pData = pBufferData;
+        subResourceData.RowPitch = iDataSizeInBytes;
+        subResourceData.SlicePitch = subResourceData.RowPitch;
+        // Queues a copy command using `ID3D12CommandList::CopySubresourceRegion`.
+        UpdateSubresources<1>(
+            pCommandList,
+            pResultingResource->getInternalResource(),
+            pUploadResource->getInternalResource(),
+            0,
+            0,
+            1,
+            &subResourceData);
+
+        // Queue resulting resource state change.
+        CD3DX12_RESOURCE_BARRIER transition = CD3DX12_RESOURCE_BARRIER::Transition(
+            pResultingResource->getInternalResource(),
+            D3D12_RESOURCE_STATE_COPY_DEST,
+            bAllowUnorderedAccess ? D3D12_RESOURCE_STATE_UNORDERED_ACCESS
+                                  : D3D12_RESOURCE_STATE_GENERIC_READ);
+        pCommandList->ResourceBarrier(1, &transition);
+
+        // Close recording commands.
+        hResult = pCommandList->Close();
+        if (FAILED(hResult)) {
+            return Error(hResult);
+        }
+
+        // Add the command list to the command queue for execution.
+        ID3D12CommandList* commandLists[] = {pCommandList};
+        pCommandQueue->ExecuteCommandLists(_countof(commandLists), commandLists);
+
+        // 4. Wait for GPU to finish copying data and delete the upload resource.
+        pRenderer->waitForGpuToFinishWorkUpToThisPoint();
+
+        return pResultingResource;
     }
 
     size_t DirectXResourceManager::getTotalVideoMemoryInMb() const {
@@ -102,11 +227,10 @@ namespace ne {
         const D3D12_RESOURCE_DESC& resourceDesc,
         const D3D12_RESOURCE_STATES& initialResourceState,
         const D3D12_CLEAR_VALUE& resourceClearValue) const {
+        // Create resource.
         auto result = DirectXResource::create(
             this,
             sResourceName,
-            pRtvHeap.get(),
-            DescriptorType::RTV,
             pMemoryAllocator.Get(),
             allocationDesc,
             resourceDesc,
@@ -117,8 +241,17 @@ namespace ne {
             err.addEntry();
             return err;
         }
+        auto pResource = std::get<std::unique_ptr<DirectXResource>>(std::move(result));
 
-        return result;
+        // Assign descriptor.
+        auto optionalError = pResource->addRtv();
+        if (optionalError.has_value()) {
+            auto err = optionalError.value();
+            err.addEntry();
+            return err;
+        }
+
+        return pResource;
     }
 
     std::variant<std::unique_ptr<DirectXResource>, Error> DirectXResourceManager::createDsvResource(
@@ -127,11 +260,10 @@ namespace ne {
         const D3D12_RESOURCE_DESC& resourceDesc,
         const D3D12_RESOURCE_STATES& initialResourceState,
         const D3D12_CLEAR_VALUE& resourceClearValue) const {
+        // Create resource.
         auto result = DirectXResource::create(
             this,
             sResourceName,
-            pDsvHeap.get(),
-            DescriptorType::DSV,
             pMemoryAllocator.Get(),
             allocationDesc,
             resourceDesc,
@@ -142,8 +274,17 @@ namespace ne {
             err.addEntry();
             return err;
         }
+        auto pResource = std::get<std::unique_ptr<DirectXResource>>(std::move(result));
 
-        return result;
+        // Assign descriptor.
+        auto optionalError = pResource->addDsv();
+        if (optionalError.has_value()) {
+            auto err = optionalError.value();
+            err.addEntry();
+            return err;
+        }
+
+        return pResource;
     }
 
     std::variant<std::unique_ptr<DirectXResource>, Error> DirectXResourceManager::createCbvResource(
@@ -151,11 +292,10 @@ namespace ne {
         const D3D12MA::ALLOCATION_DESC& allocationDesc,
         const D3D12_RESOURCE_DESC& resourceDesc,
         const D3D12_RESOURCE_STATES& initialResourceState) const {
+        // Create resource.
         auto result = DirectXResource::create(
             this,
             sResourceName,
-            pCbvSrvUavHeap.get(),
-            DescriptorType::CBV,
             pMemoryAllocator.Get(),
             allocationDesc,
             resourceDesc,
@@ -166,8 +306,17 @@ namespace ne {
             err.addEntry();
             return err;
         }
+        auto pResource = std::get<std::unique_ptr<DirectXResource>>(std::move(result));
 
-        return result;
+        // Assign descriptor.
+        auto optionalError = pResource->bindCbv();
+        if (optionalError.has_value()) {
+            auto err = optionalError.value();
+            err.addEntry();
+            return err;
+        }
+
+        return pResource;
     }
 
     std::variant<std::unique_ptr<DirectXResource>, Error> DirectXResourceManager::createSrvResource(
@@ -175,11 +324,10 @@ namespace ne {
         const D3D12MA::ALLOCATION_DESC& allocationDesc,
         const D3D12_RESOURCE_DESC& resourceDesc,
         const D3D12_RESOURCE_STATES& initialResourceState) const {
+        // Create resource.
         auto result = DirectXResource::create(
             this,
             sResourceName,
-            pCbvSrvUavHeap.get(),
-            DescriptorType::SRV,
             pMemoryAllocator.Get(),
             allocationDesc,
             resourceDesc,
@@ -191,7 +339,17 @@ namespace ne {
             return err;
         }
 
-        return result;
+        auto pResource = std::get<std::unique_ptr<DirectXResource>>(std::move(result));
+
+        // Assign descriptor.
+        auto optionalError = pResource->addSrv();
+        if (optionalError.has_value()) {
+            auto err = optionalError.value();
+            err.addEntry();
+            return err;
+        }
+
+        return pResource;
     }
 
     std::variant<std::unique_ptr<DirectXResource>, Error> DirectXResourceManager::createUavResource(
@@ -199,11 +357,10 @@ namespace ne {
         const D3D12MA::ALLOCATION_DESC& allocationDesc,
         const D3D12_RESOURCE_DESC& resourceDesc,
         const D3D12_RESOURCE_STATES& initialResourceState) const {
+        // Create resource.
         auto result = DirectXResource::create(
             this,
             sResourceName,
-            pCbvSrvUavHeap.get(),
-            DescriptorType::UAV,
             pMemoryAllocator.Get(),
             allocationDesc,
             resourceDesc,
@@ -215,7 +372,17 @@ namespace ne {
             return err;
         }
 
-        return result;
+        auto pResource = std::get<std::unique_ptr<DirectXResource>>(std::move(result));
+
+        // Assign descriptor.
+        auto optionalError = pResource->addUav();
+        if (optionalError.has_value()) {
+            auto err = optionalError.value();
+            err.addEntry();
+            return err;
+        }
+
+        return pResource;
     }
 
     std::variant<std::vector<std::unique_ptr<DirectXResource>>, Error>
@@ -249,10 +416,12 @@ namespace ne {
     DirectXDescriptorHeap* DirectXResourceManager::getCbvSrvUavHeap() const { return pCbvSrvUavHeap.get(); }
 
     DirectXResourceManager::DirectXResourceManager(
+        DirectXRenderer* pRenderer,
         ComPtr<D3D12MA::Allocator>&& pMemoryAllocator,
         std::unique_ptr<DirectXDescriptorHeap>&& pRtvHeap,
         std::unique_ptr<DirectXDescriptorHeap>&& pDsvHeap,
         std::unique_ptr<DirectXDescriptorHeap>&& pCbvSrvUavHeap) {
+        this->pRenderer = pRenderer;
         this->pMemoryAllocator = std::move(pMemoryAllocator);
         this->pRtvHeap = std::move(pRtvHeap);
         this->pDsvHeap = std::move(pDsvHeap);

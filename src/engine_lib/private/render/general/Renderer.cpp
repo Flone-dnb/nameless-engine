@@ -66,6 +66,8 @@ namespace ne {
 
     GpuResourceManager* Renderer::getResourceManager() const { return pResourceManager.get(); }
 
+    FrameResourcesManager* Renderer::getFrameResourcesManager() const { return pFrameResourcesManager.get(); }
+
     std::recursive_mutex* Renderer::getRenderResourcesMutex() { return &mtxRwRenderResources; }
 
     void Renderer::updateShaderConfiguration() {
@@ -149,16 +151,27 @@ namespace ne {
 
     void Renderer::initializeRenderer() { initializeRenderSettings(); }
 
-    void Renderer::initializeResourceManager() {
+    void Renderer::initializeResourceManagers() {
         // Create GPU resource manager.
-        auto result = GpuResourceManager::create(this);
-        if (std::holds_alternative<Error>(result)) {
-            auto error = std::get<Error>(std::move(result));
+        auto gpuResourceManagerResult = GpuResourceManager::create(this);
+        if (std::holds_alternative<Error>(gpuResourceManagerResult)) {
+            auto error = std::get<Error>(std::move(gpuResourceManagerResult));
             error.addEntry();
             error.showError();
             throw std::runtime_error(error.getFullErrorMessage());
         }
-        pResourceManager = std::get<std::unique_ptr<GpuResourceManager>>(std::move(result));
+        pResourceManager = std::get<std::unique_ptr<GpuResourceManager>>(std::move(gpuResourceManagerResult));
+
+        // Create frame resources manager.
+        auto frameResourceManagerResult = FrameResourcesManager::create(this);
+        if (std::holds_alternative<Error>(gpuResourceManagerResult)) {
+            auto error = std::get<Error>(std::move(gpuResourceManagerResult));
+            error.addEntry();
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+        }
+        pFrameResourcesManager =
+            std::get<std::unique_ptr<FrameResourcesManager>>(std::move(frameResourceManagerResult));
     }
 
 } // namespace ne

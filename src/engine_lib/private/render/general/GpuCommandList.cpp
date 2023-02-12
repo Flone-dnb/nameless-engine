@@ -3,5 +3,7 @@
 #include "render/Renderer.h"
 
 namespace ne {
-    GpuCommandList::GpuCommandList(Renderer* pRenderer) { this->pRenderer = pRenderer; }
+    GpuCommandList::GpuCommandList(ID3D12GraphicsCommandList* pCommandList) {
+        this->pCommandList = pCommandList;
+    }
 } // namespace ne

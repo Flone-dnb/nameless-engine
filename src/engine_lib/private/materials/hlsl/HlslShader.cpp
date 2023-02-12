@@ -205,7 +205,7 @@ namespace ne {
 
         // Generate root signature.
         auto result = RootSignatureGenerator::generate(
-            dynamic_cast<DirectXRenderer*>(pRenderer)->getDevice(), pReflection);
+            dynamic_cast<DirectXRenderer*>(pRenderer)->getD3dDevice(), pReflection);
         if (std::holds_alternative<Error>(result)) {
             auto err = std::get<Error>(std::move(result));
             err.addEntry();
@@ -458,7 +458,7 @@ namespace ne {
 
             // Generate root signature.
             auto result = RootSignatureGenerator::generate(
-                dynamic_cast<DirectXRenderer*>(getUsedRenderer())->getDevice(), pReflection);
+                dynamic_cast<DirectXRenderer*>(getUsedRenderer())->getD3dDevice(), pReflection);
             if (std::holds_alternative<Error>(result)) {
                 auto err = std::get<Error>(std::move(result));
                 err.addEntry();

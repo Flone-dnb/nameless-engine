@@ -11,6 +11,7 @@
 #include "misc/Error.h"
 #include "materials/ShaderManager.h"
 #include "render/general/resources/GpuResourceManager.h"
+#include "render/general/resources/FrameResourcesManager.h"
 
 namespace ne {
     class Game;
@@ -18,6 +19,7 @@ namespace ne {
     class PsoManager;
     class ShaderConfiguration;
     class RenderSettings;
+    class GpuCommandList;
 
     /**
      * Defines a base class for renderers to implement.
@@ -112,6 +114,13 @@ namespace ne {
         std::pair<std::recursive_mutex, std::unique_ptr<ShaderConfiguration>>* getShaderConfiguration();
 
         /**
+         * Returns a temporary render-independent command list wrapper.
+         *
+         * @return Command list wrapper.
+         */
+        virtual std::unique_ptr<GpuCommandList> getCommandList() = 0;
+
+        /**
          * Returns the window that we render to.
          *
          * @warning Do not delete (free) returned pointer.
@@ -155,6 +164,15 @@ namespace ne {
          * @return GPU resource manager.
          */
         GpuResourceManager* getResourceManager() const;
+
+        /**
+         * Returns frame resources manager.
+         *
+         * @warning Do not delete (free) returned pointer.
+         *
+         * @return Frame resources manager.
+         */
+        FrameResourcesManager* getFrameResourcesManager() const;
 
         /**
          * Returns mutex used when reading or writing to render resources.
@@ -226,12 +244,12 @@ namespace ne {
         void initializeRenderer();
 
         /**
-         * Initializes resource manager.
+         * Initializes various resource managers.
          *
          * @remark Must be called by derived classes after base initialization
-         * (i.e. in DirectX after device and video adapter were created).
+         * (for ex. in DirectX after device and video adapter were created).
          */
-        void initializeResourceManager();
+        void initializeResourceManagers();
 
     private:
         /**
@@ -258,6 +276,9 @@ namespace ne {
 
         /** Used to store various graphics and compute PSOs. */
         std::unique_ptr<PsoManager> pPsoManager;
+
+        /** Stores frame-specific GPU resources. */
+        std::unique_ptr<FrameResourcesManager> pFrameResourcesManager;
 
         /**
          * Shader parameters.

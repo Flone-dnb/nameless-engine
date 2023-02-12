@@ -16,7 +16,9 @@
 #include "materials/hlsl/HlslEngineShaders.hpp"
 #include "render/general/pso/PsoManager.h"
 #include "materials/ShaderFilesystemPaths.hpp"
+#include "render/general/GpuCommandList.h"
 #include "materials/Material.h"
+#include "render/general/resources/FrameResourcesManager.h"
 
 // DirectX.
 #pragma comment(lib, "D3D12.lib")
@@ -304,9 +306,9 @@ namespace ne {
         return {};
     }
 
-    std::optional<Error> DirectXRenderer::createCommandObjects() {
-        if (pCommandQueue != nullptr || pCommandListAllocator != nullptr || pCommandList != nullptr) {
-            return Error("command objects already created");
+    std::optional<Error> DirectXRenderer::createCommandQueue() {
+        if (pCommandQueue != nullptr) {
+            return Error("command queue already created");
         }
 
         // Create Command Queue.
@@ -314,24 +316,33 @@ namespace ne {
         queueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
         queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
 
-        HRESULT hResult = pDevice->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&pCommandQueue));
+        auto hResult = pDevice->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&pCommandQueue));
         if (FAILED(hResult)) {
             return Error(hResult);
         }
 
-        // Create Command Allocator.
-        hResult = pDevice->CreateCommandAllocator(
-            D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(pCommandListAllocator.GetAddressOf()));
-        if (FAILED(hResult)) {
-            return Error(hResult);
+        return {};
+    }
+
+    std::optional<Error> DirectXRenderer::createCommandList() {
+        if (pCommandList != nullptr) {
+            return Error("command list already created");
         }
+
+        // Get command allocator from the current frame resource.
+        const auto pFrameResourcesManager = getFrameResourcesManager();
+        if (pFrameResourcesManager == nullptr) {
+            return Error("frame resources manager needs to be created at this point");
+        }
+        const auto mtxCurrentFrameResource = pFrameResourcesManager->getCurrentFrameResource();
+        std::scoped_lock frameResourceGuard(*mtxCurrentFrameResource.first);
 
         // Create Command List.
-        hResult = pDevice->CreateCommandList(
+        auto hResult = pDevice->CreateCommandList(
             0, // Create list for only one GPU. See pDevice->GetNodeCount()
                // and documentation for more info.
             D3D12_COMMAND_LIST_TYPE_DIRECT,
-            pCommandListAllocator.Get(), // Associated command allocator
+            mtxCurrentFrameResource.second->pCommandAllocator.Get(), // Associated command allocator
             nullptr,
             IID_PPV_ARGS(pCommandList.GetAddressOf()));
         if (FAILED(hResult)) {
@@ -477,19 +488,19 @@ namespace ne {
         }
 
         // Use video adapter.
-        std::optional<Error> error = setVideoAdapter(vSupportedVideoAdapters[iPickedGpuIndex]);
-        if (error.has_value()) {
-            error->addEntry();
-            return error;
+        std::optional<Error> optionalError = setVideoAdapter(vSupportedVideoAdapters[iPickedGpuIndex]);
+        if (optionalError.has_value()) {
+            optionalError->addEntry();
+            return optionalError;
         }
 
         // Set output adapter (monitor) to use.
-        error = setOutputAdapter();
-        if (error.has_value()) {
+        optionalError = setOutputAdapter();
+        if (optionalError.has_value()) {
             // This might happen for GPUs with non-zero index, see if we can pick something else.
             if (iPickedGpuIndex == 0) {
-                error->addEntry();
-                return error;
+                optionalError->addEntry();
+                return optionalError;
             }
             Logger::get().error(
                 std::format(
@@ -497,23 +508,23 @@ namespace ne {
                     "error: {}",
                     vSupportedVideoAdapters[iPickedGpuIndex],
                     iPickedGpuIndex,
-                    error->getInitialMessage()),
+                    optionalError->getInitialMessage()),
                 sDirectXRendererLogCategory);
 
             // Try first found GPU.
             iPickedGpuIndex = 0;
             pMtxRenderSettings->second->setGpuToUse(iPickedGpuIndex);
 
-            error = setVideoAdapter(vSupportedVideoAdapters[iPickedGpuIndex]);
-            if (error.has_value()) {
-                error->addEntry();
-                return error;
+            optionalError = setVideoAdapter(vSupportedVideoAdapters[iPickedGpuIndex]);
+            if (optionalError.has_value()) {
+                optionalError->addEntry();
+                return optionalError;
             }
 
-            error = setOutputAdapter();
-            if (error.has_value()) {
-                error->addEntry();
-                return error;
+            optionalError = setOutputAdapter();
+            if (optionalError.has_value()) {
+                optionalError->addEntry();
+                return optionalError;
             }
         }
 
@@ -530,17 +541,28 @@ namespace ne {
         }
 
         // Check MSAA support.
-        error = checkMsaaSupport();
-        if (error.has_value()) {
-            error->addEntry();
-            return error;
+        optionalError = checkMsaaSupport();
+        if (optionalError.has_value()) {
+            optionalError->addEntry();
+            return optionalError;
         }
 
-        // Create command queue and command list.
-        error = createCommandObjects();
-        if (error.has_value()) {
-            error->addEntry();
-            return error;
+        // Create command queue.
+        optionalError = createCommandQueue();
+        if (optionalError.has_value()) {
+            optionalError->addEntry();
+            return optionalError;
+        }
+
+        // Create frame resources manager so that we can create a command list
+        // that will use command allocator from frame resources.
+        initializeResourceManagers();
+
+        // Create command list.
+        optionalError = createCommandList();
+        if (optionalError.has_value()) {
+            optionalError->addEntry();
+            return optionalError;
         }
 
         // Determine display mode.
@@ -624,13 +646,11 @@ namespace ne {
         pMtxRenderSettings->second->setRefreshRate(std::make_pair(
             pickedDisplayMode.RefreshRate.Numerator, pickedDisplayMode.RefreshRate.Denominator));
 
-        initializeResourceManager();
-
         // Create swap chain.
-        error = createSwapChain();
-        if (error.has_value()) {
-            error->addEntry();
-            return error;
+        optionalError = createSwapChain();
+        if (optionalError.has_value()) {
+            optionalError->addEntry();
+            return optionalError;
         }
 
         // Log used GPU name.
@@ -734,8 +754,6 @@ namespace ne {
         return {pointWrap, linearWrap, anisotropicWrap, shadow};
     }
 
-    ID3D12Device* DirectXRenderer::getDevice() const { return pDevice.Get(); }
-
     IDXGIAdapter3* DirectXRenderer::getVideoAdapter() const { return pVideoAdapter.Get(); }
 
     DXGI_FORMAT DirectXRenderer::getBackBufferFormat() const { return backBufferFormat; }
@@ -746,6 +764,11 @@ namespace ne {
 
     void DirectXRenderer::updateResourcesForNextFrame() {
         std::scoped_lock frameGuard(*getRenderResourcesMutex());
+
+        // Switch to the next frame resource.
+        getFrameResourcesManager()->switchToNextFrameResource();
+
+        // TODO: wait for frame resource to be free
 
         // TODO: updateMaterialConstantBuffersForNextFrame()
         // TODO: updateMeshConstantBuffersForNextFrame()
@@ -888,6 +911,16 @@ namespace ne {
             CloseHandle(pEvent);
         }
     }
+
+    std::unique_ptr<GpuCommandList> DirectXRenderer::getCommandList() {
+        return std::make_unique<GpuCommandList>(getD3dCommandList());
+    }
+
+    ID3D12Device* DirectXRenderer::getD3dDevice() const { return pDevice.Get(); }
+
+    ID3D12GraphicsCommandList* DirectXRenderer::getD3dCommandList() { return pCommandList.Get(); }
+
+    ID3D12CommandQueue* DirectXRenderer::getD3dCommandQueue() { return pCommandQueue.Get(); }
 
     std::variant<std::vector<DXGI_MODE_DESC>, Error> DirectXRenderer::getSupportedDisplayModes() const {
         if (pOutputAdapter == nullptr) {

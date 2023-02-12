@@ -1,24 +1,32 @@
 #pragma once
 
+struct ID3D12GraphicsCommandList;
+
 namespace ne {
     class Renderer;
 
-    /** Small render-independent command list wrapper. */
+    /**
+     * Small render-independent non-owning command list wrapper.
+     *
+     * @remark Generally used for temporary render-independent command list access.
+     */
     class GpuCommandList {
     public:
-        /**
-         * Saves data to use.
-         *
-         * @param pRenderer Renderer that owns this command list.
-         */
-        GpuCommandList(Renderer* pRenderer);
-
         GpuCommandList() = delete;
         GpuCommandList(GpuCommandList&) = delete;
         GpuCommandList& operator=(GpuCommandList&) = delete;
 
+        /**
+         * Creates a new non-owning command list wrapper.
+         *
+         * @param pCommandList DirectX renderer's command list.
+         */
+        GpuCommandList(ID3D12GraphicsCommandList* pCommandList);
+
     private:
-        /** Do not delete (free) this pointer. Renderer that owns this command list. */
-        Renderer* pRenderer = nullptr;
+#if defined(WIN32)
+        /** Contains commands for the GPU. */
+        ID3D12GraphicsCommandList* pCommandList = nullptr;
+#endif
     };
 } // namespace ne

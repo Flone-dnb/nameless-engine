@@ -7,6 +7,7 @@
 #include "render/general/resources/FrameResourcesManager.h"
 #include "render/general/resources/GpuResourceManager.h"
 #include "render/general/GpuCommandList.h"
+#include "render/general/resources/GpuResource.h"
 
 #include "MeshNode.generated_impl.h"
 
@@ -47,7 +48,7 @@ namespace ne {
 
         // Create constant buffers for shaders.
         const auto pRenderer = getGameInstance()->getWindow()->getRenderer();
-        auto result = pRenderer->getResourceManager()->createCbvResourceWithCpuAccess(
+        auto result = pRenderer->getResourceManager()->createResourceWithCpuAccess(
             fmt::format("mesh node \"{}\" shader constant buffer", getName()),
             sizeof(MeshShaderConstants),
             FrameResourcesManager::getFrameResourcesCount());
@@ -58,6 +59,15 @@ namespace ne {
             throw std::runtime_error(error.getFullErrorMessage());
         }
         pShaderConstantBuffers = std::get<std::unique_ptr<UploadBuffer>>(std::move(result));
+
+        // Bind constant buffer view to the resource.
+        auto optionalError = pShaderConstantBuffers->getInternalResource()->bindCbv();
+        if (optionalError.has_value()) {
+            auto error = optionalError.value();
+            error.addEntry();
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+        }
 
         // Mark buffers as "needs to be updated".
         iFrameResourceCountToUpdate.store(FrameResourcesManager::getFrameResourcesCount());
@@ -89,10 +99,6 @@ namespace ne {
         SpatialNode::onWorldLocationRotationScaleChanged();
 
         iFrameResourceCountToUpdate.store(FrameResourcesManager::getFrameResourcesCount());
-    }
-
-    void MeshNode::draw(GpuCommandList* pCommandList, unsigned int iCurrentFrameResourceIndex) {
-        // TODO
     }
 
     MeshData::MeshData() {
@@ -245,6 +251,10 @@ namespace ne {
         std::scoped_lock guard(mtxMeshData);
 
         // TODO: recreate GPU resources, etc.
+    }
+
+    void MeshNode::draw(GpuCommandList* pCommandList, unsigned int iCurrentFrameResourceIndex) {
+        // TODO
     }
 
     std::pair<std::recursive_mutex*, MeshData*> MeshNode::getMeshData() {

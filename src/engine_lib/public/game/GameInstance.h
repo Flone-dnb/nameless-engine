@@ -41,8 +41,7 @@ namespace ne {
         virtual ~GameInstance() = default;
 
         /**
-         * Returns the time in seconds that has passed
-         * since the very first window was created.
+         * Returns the time in seconds that has passed since the very first window was created.
          *
          * @return Time in seconds.
          */

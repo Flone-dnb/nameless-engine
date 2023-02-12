@@ -41,11 +41,8 @@ namespace ne {
         virtual size_t getUsedVideoMemoryInMb() const = 0;
 
         /**
-         * Creates a new constant buffer resource with available CPU access, typically used
+         * Creates a new GPU constant buffer resource with available CPU access, typically used
          * for resources that needs to be frequently updated from the CPU side.
-         *
-         * @remark When used with DirectX renderer additionally binds a constant buffer view descriptor to
-         * created buffer.
          *
          * @remark Due to hardware requirements resulting element size might be bigger than you've expected
          * due to padding if not multiple of 256.
@@ -56,7 +53,7 @@ namespace ne {
          *     glm::mat4x4 world;
          * };
          *
-         * auto result = pResourceManager->createCbvResourceWithCpuAccess(
+         * auto result = pResourceManager->createResourceWithCpuAccess(
          *     "object constant data",
          *     sizeof(ObjectData),
          *     1);
@@ -68,8 +65,35 @@ namespace ne {
          *
          * @return Error if something went wrong, otherwise created resource.
          */
-        virtual std::variant<std::unique_ptr<UploadBuffer>, Error> createCbvResourceWithCpuAccess(
+        virtual std::variant<std::unique_ptr<UploadBuffer>, Error> createResourceWithCpuAccess(
             const std::string& sResourceName, size_t iElementSizeInBytes, size_t iElementCount) const = 0;
+
+        /**
+         * Creates a new GPU resource and fills it with the specified data.
+         *
+         * Example:
+         * @code
+         * std::vector<glm::vec3> vVertices;
+         *
+         * auto result = pResourceManager->createResourceWithData(
+         *     "mesh vertex buffer",
+         *     vVertices.data(),
+         *     vVertices.size() * sizeof(glm::vec3),
+         *     true);
+         * @endcode
+         *
+         * @param sResourceName         Resource name, used for logging.
+         * @param pBufferData           Pointer to the data that the new resource will contain.
+         * @param iDataSizeInBytes      Size in bytes of the data (resource size).
+         * @param bAllowUnorderedAccess Whether the new resource allows unordered access or not.
+         *
+         * @return Error if something went wrong, otherwise created resource.
+         */
+        virtual std::variant<std::unique_ptr<GpuResource>, Error> createResourceWithData(
+            const std::string& sResourceName,
+            const void* pBufferData,
+            size_t iDataSizeInBytes,
+            bool bAllowUnorderedAccess) const = 0;
 
     protected:
         GpuResourceManager() = default;

@@ -115,16 +115,16 @@ namespace ne {
         switch (heapType) {
         case (DescriptorHeapType::RTV): {
             iDescriptorSize =
-                pRenderer->getDevice()->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+                pRenderer->getD3dDevice()->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
             d3dHeapType = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
         } break;
         case (DescriptorHeapType::DSV): {
             iDescriptorSize =
-                pRenderer->getDevice()->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
+                pRenderer->getD3dDevice()->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
             d3dHeapType = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
         } break;
         case (DescriptorHeapType::CBV_SRV_UAV): {
-            iDescriptorSize = pRenderer->getDevice()->GetDescriptorHandleIncrementSize(
+            iDescriptorSize = pRenderer->getD3dDevice()->GetDescriptorHandleIncrementSize(
                 D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
             d3dHeapType = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
         } break;
@@ -278,7 +278,7 @@ namespace ne {
 
         switch (descriptorType) {
         case (DescriptorType::RTV): {
-            pRenderer->getDevice()->CreateRenderTargetView(
+            pRenderer->getD3dDevice()->CreateRenderTargetView(
                 pResource->getInternalResource(), nullptr, heapHandle);
         } break;
         case (DescriptorType::DSV): {
@@ -287,10 +287,10 @@ namespace ne {
             dsvDesc.ViewDimension = pRenderSettings->second->isAntialiasingEnabled()
                                         ? D3D12_DSV_DIMENSION_TEXTURE2DMS
                                         : D3D12_DSV_DIMENSION_TEXTURE2D;
-            dsvDesc.Format = pRenderer->depthStencilBufferFormat;
+            dsvDesc.Format = pRenderer->getDepthStencilBufferFormat();
             dsvDesc.Texture2D.MipSlice = 0;
 
-            pRenderer->getDevice()->CreateDepthStencilView(
+            pRenderer->getD3dDevice()->CreateDepthStencilView(
                 pResource->getInternalResource(), &dsvDesc, heapHandle);
         } break;
         case (DescriptorType::CBV): {
@@ -300,7 +300,7 @@ namespace ne {
             cbvDesc.BufferLocation = resourceGpuVirtualAddress;
             cbvDesc.SizeInBytes = static_cast<UINT>(pResource->getInternalResource()->GetDesc().Width);
 
-            pRenderer->getDevice()->CreateConstantBufferView(&cbvDesc, heapHandle);
+            pRenderer->getD3dDevice()->CreateConstantBufferView(&cbvDesc, heapHandle);
         } break;
         case (DescriptorType::SRV): {
             const auto resourceDesc = pResource->getInternalResource()->GetDesc();
@@ -332,7 +332,7 @@ namespace ne {
             srvDesc.Texture2D.MostDetailedMip = 0;
             srvDesc.Texture2D.MipLevels = resourceDesc.MipLevels;
 
-            pRenderer->getDevice()->CreateShaderResourceView(
+            pRenderer->getD3dDevice()->CreateShaderResourceView(
                 pResource->getInternalResource(), &srvDesc, heapHandle);
         } break;
         case (DescriptorType::UAV): {
@@ -363,7 +363,7 @@ namespace ne {
             uavDesc.ViewDimension = uavDimension;
             uavDesc.Texture2D.MipSlice = 0;
 
-            pRenderer->getDevice()->CreateUnorderedAccessView(
+            pRenderer->getD3dDevice()->CreateUnorderedAccessView(
                 pResource->getInternalResource(), nullptr, &uavDesc, heapHandle);
         } break;
         case (DescriptorType::END): {
@@ -396,7 +396,7 @@ namespace ne {
         heapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
         heapDesc.NodeMask = 0;
 
-        const HRESULT hResult = pRenderer->getDevice()->CreateDescriptorHeap(
+        const HRESULT hResult = pRenderer->getD3dDevice()->CreateDescriptorHeap(
             &heapDesc, IID_PPV_ARGS(pHeap.ReleaseAndGetAddressOf()));
         if (FAILED(hResult)) {
             return Error(hResult);

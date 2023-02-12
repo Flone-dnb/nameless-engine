@@ -10,8 +10,6 @@ namespace ne {
     std::variant<std::unique_ptr<DirectXResource>, Error> DirectXResource::create(
         const DirectXResourceManager* pResourceManager,
         const std::string& sResourceName,
-        DirectXDescriptorHeap* pHeap,
-        DescriptorType descriptorType,
         D3D12MA::Allocator* pMemoryAllocator,
         const D3D12MA::ALLOCATION_DESC& allocationDesc,
         const D3D12_RESOURCE_DESC& resourceDesc,
@@ -39,13 +37,6 @@ namespace ne {
 
         // Assign resource name.
         pCreatedResource->pAllocatedResource->SetName(stringToWstring(sResourceName).c_str());
-
-        // Assign descriptor.
-        auto optionalError = pHeap->assignDescriptor(pCreatedResource.get(), descriptorType);
-        if (optionalError.has_value()) {
-            optionalError->addEntry();
-            return optionalError.value();
-        }
 
         return pCreatedResource;
     }
@@ -88,7 +79,7 @@ namespace ne {
         return {};
     }
 
-    std::optional<Error> DirectXResource::addCbv() {
+    std::optional<Error> DirectXResource::bindCbv() {
         auto optionalError =
             pResourceManager->getCbvSrvUavHeap()->assignDescriptor(this, DescriptorType::CBV);
         if (optionalError.has_value()) {

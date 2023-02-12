@@ -15,10 +15,10 @@
 
 // External.
 #include "directx/d3dx12.h"
-#include <dxgi1_4.h>
 
 // OS.
 #include <wrl.h>
+#include <dxgi1_4.h>
 
 namespace ne {
     using namespace Microsoft::WRL;
@@ -104,11 +104,32 @@ namespace ne {
         virtual void waitForGpuToFinishWorkUpToThisPoint() override;
 
         /**
+         * Returns a temporary render-independent command list wrapper.
+         *
+         * @return Command list wrapper.
+         */
+        virtual std::unique_ptr<GpuCommandList> getCommandList() override;
+
+        /**
          * Returns DirectX device.
          *
-         * @return Do not delete (free) this pointer. Device.
+         * @return Do not delete (free) this pointer. Render's internal device.
          */
-        ID3D12Device* getDevice() const;
+        ID3D12Device* getD3dDevice() const;
+
+        /**
+         * Returns DirectX command list.
+         *
+         * @return Do not delete (free) this pointer. Render's internal command list.
+         */
+        ID3D12GraphicsCommandList* getD3dCommandList();
+
+        /**
+         * Returns DirectX command queue.
+         *
+         * @return Do not delete (free) this pointer. Render's internal command queue.
+         */
+        ID3D12CommandQueue* getD3dCommandQueue();
 
         /**
          * Returns DirectX video adapter.
@@ -139,9 +160,6 @@ namespace ne {
         UINT getMsaaQualityLevel() const;
 
     protected:
-        // Heap needs to know buffer formats that the renderer uses.
-        friend class DirectXDescriptorHeap;
-
         /** Update internal resources for the next frame. */
         virtual void updateResourcesForNextFrame() override;
 
@@ -204,11 +222,20 @@ namespace ne {
         [[nodiscard]] std::optional<Error> setOutputAdapter();
 
         /**
-         * Creates and initializes Command Queue, Command List and Command List Allocator.
+         * Creates and initializes command queue.
          *
          * @return Error if something went wrong.
          */
-        [[nodiscard]] std::optional<Error> createCommandObjects();
+        [[nodiscard]] std::optional<Error> createCommandQueue();
+
+        /**
+         * Creates and initializes command list.
+         *
+         * @remark Requires frame resources to be created.
+         *
+         * @return Error if something went wrong.
+         */
+        [[nodiscard]] std::optional<Error> createCommandList();
 
         /**
          * Creates and initializes the swap chain.
@@ -264,10 +291,7 @@ namespace ne {
         /** GPU command queue. */
         ComPtr<ID3D12CommandQueue> pCommandQueue;
 
-        /** Stores commands from command lists. */
-        ComPtr<ID3D12CommandAllocator> pCommandListAllocator;
-
-        /** CPU command list. */
+        /** Contains commands for the GPU. */
         ComPtr<ID3D12GraphicsCommandList> pCommandList;
 
         /** Fence object. */

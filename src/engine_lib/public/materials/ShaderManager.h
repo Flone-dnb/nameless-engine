@@ -22,10 +22,14 @@ namespace ne {
     class Shader;
     class Renderer;
 
-    /**
-     * Handles shader compilation and controls shader registry.
-     */
+    /** Handles shader compilation and controls shader registry. */
     class ShaderManager {
+        // Only ShaderUser should be able to work with shaders.
+        friend class ShaderUser;
+
+        // Renderer sets shaders' configuration.
+        friend class Renderer;
+
     public:
         /**
          * Constructor.
@@ -131,12 +135,6 @@ namespace ne {
         void performSelfValidation();
 
     protected:
-        // Only ShaderUser should be able to work with shaders.
-        friend class ShaderUser;
-
-        // Renderer sets shaders' configuration.
-        friend class Renderer;
-
         /**
          * Sets shader configuration for specific types of shaders.
          *

@@ -113,6 +113,9 @@ namespace ne RNAMESPACE() {
      * serialize the type and all reflected fields (even inherited).
      */
     class RCLASS(Guid("f5a59b47-ead8-4da4-892e-cf05abb2f3cc")) Serializable : public rfk::Object {
+        // This field serializer will call `onAfterDeserialized` after deserialization.
+        friend class SerializableObjectFieldSerializer;
+
     public:
         Serializable() = default;
         virtual ~Serializable() override = default;
@@ -471,9 +474,6 @@ namespace ne RNAMESPACE() {
 #endif
 
     protected:
-        // This field serializer will call `onAfterDeserialized` after deserialization.
-        friend class SerializableObjectFieldSerializer;
-
         /**
          * Called after the object was successfully deserialized.
          * Used to execute post-deserialization logic.

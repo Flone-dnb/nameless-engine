@@ -29,6 +29,12 @@ namespace ne {
         return vShaderVertexDescription;
     }
 
+    std::string HlslShader::getVertexShaderModel() { return sVertexShaderModel; }
+
+    std::string HlslShader::getPixelShaderModel() { return sPixelShaderModel; }
+
+    std::string HlslShader::getComputeShaderModel() { return sComputeShaderModel; }
+
     std::optional<Error> HlslShader::testIfShaderCacheIsCorrupted() {
         std::scoped_lock guard(mtxCompiledBlobRootSignature.first);
         auto optionalError = loadShaderDataFromDiskIfNotLoaded();

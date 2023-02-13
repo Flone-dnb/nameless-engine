@@ -158,7 +158,7 @@ namespace ne {
 #if defined(WIN32)
             if (!bUpdateShaderCacheConfig && dynamic_cast<DirectXRenderer*>(pRenderer) != nullptr) {
                 // Check if vertex shader model changed.
-                if (!bUpdateShaderCacheConfig && sOldHlslVsModel != HlslShader::sVertexShaderModel) {
+                if (!bUpdateShaderCacheConfig && sOldHlslVsModel != HlslShader::getVertexShaderModel()) {
                     Logger::get().info(
                         "clearing shader cache directory because vertex shader model was changed",
                         sShaderManagerLogCategory);
@@ -166,7 +166,7 @@ namespace ne {
                     bUpdateShaderCacheConfig = true;
                 }
                 // Check if pixel shader model changed.
-                if (!bUpdateShaderCacheConfig && sOldHlslPsModel != HlslShader::sPixelShaderModel) {
+                if (!bUpdateShaderCacheConfig && sOldHlslPsModel != HlslShader::getPixelShaderModel()) {
                     Logger::get().info(
                         "clearing shader cache directory because pixel shader model was changed",
                         sShaderManagerLogCategory);
@@ -174,7 +174,7 @@ namespace ne {
                     bUpdateShaderCacheConfig = true;
                 }
                 // Check if compute shader model changed.
-                if (!bUpdateShaderCacheConfig && sOldHlslCsModel != HlslShader::sComputeShaderModel) {
+                if (!bUpdateShaderCacheConfig && sOldHlslCsModel != HlslShader::getComputeShaderModel()) {
                     Logger::get().info(
                         "clearing shader cache directory because compute shader model was changed",
                         sShaderManagerLogCategory);
@@ -207,11 +207,11 @@ namespace ne {
 #if defined(WIN32)
             if (dynamic_cast<DirectXRenderer*>(pRenderer) != nullptr) {
                 configManager.setValue<std::string>(
-                    "", sGlobalShaderCacheHlslVsModelKeyName, HlslShader::sVertexShaderModel);
+                    "", sGlobalShaderCacheHlslVsModelKeyName, HlslShader::getVertexShaderModel());
                 configManager.setValue<std::string>(
-                    "", sGlobalShaderCacheHlslPsModelKeyName, HlslShader::sPixelShaderModel);
+                    "", sGlobalShaderCacheHlslPsModelKeyName, HlslShader::getPixelShaderModel());
                 configManager.setValue<std::string>(
-                    "", sGlobalShaderCacheHlslCsModelKeyName, HlslShader::sComputeShaderModel);
+                    "", sGlobalShaderCacheHlslCsModelKeyName, HlslShader::getComputeShaderModel());
             }
 #elif __linux__
             static_assert(false, "not implemented");

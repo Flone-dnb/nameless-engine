@@ -22,6 +22,9 @@ namespace ne {
      * Automatically marked as unused in destructor.
      */
     class DirectXDescriptor {
+        // We notify the heap about descriptor being no longer used in destructor.
+        friend class DirectXDescriptorHeap;
+
     public:
         /** Destructor. */
         ~DirectXDescriptor();
@@ -46,10 +49,6 @@ namespace ne {
         DirectXDescriptor& operator=(DirectXDescriptor&& other) noexcept;
 
     protected:
-        // We notify the heap about descriptor being no longer used
-        // in destructor.
-        friend class DirectXDescriptorHeap;
-
         /**
          * Constructor.
          *

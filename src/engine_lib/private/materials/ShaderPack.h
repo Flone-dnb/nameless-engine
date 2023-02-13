@@ -20,6 +20,9 @@ namespace ne {
      * (typically this means one shader compiled with different combinations of predefined macros).
      */
     class ShaderPack {
+        // Shader manager can change shader pack configuration.
+        friend class ShaderManager;
+
     public:
         ShaderPack() = delete;
         ShaderPack(const ShaderPack&) = delete;
@@ -97,9 +100,6 @@ namespace ne {
         ShaderType getShaderType();
 
     private:
-        // Shader manager can change shader pack configuration.
-        friend class ShaderManager;
-
         /**
          * Constructor to create an empty shader pack.
          *

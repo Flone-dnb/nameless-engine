@@ -189,6 +189,12 @@ namespace ne {
 
     /** Base class for managing render specific Pipeline State Objects (PSOs). */
     class PsoManager {
+        // PSO notifies the manager when a material stops referencing it.
+        friend class Pso;
+
+        // Releases/restores internal PSOs' resources.
+        friend class DelayedPsoResourcesCreation;
+
     public:
         /**
          * Creates a new PSO manager.
@@ -261,12 +267,6 @@ namespace ne {
         size_t getCreatedComputePsoCount();
 
     protected:
-        // PSO notifies the manager when a material stops referencing it.
-        friend class Pso;
-
-        // Releases/restores internal PSOs' resources.
-        friend class DelayedPsoResourcesCreation;
-
         /**
          * Returns renderer that owns this PSO manager.
          *

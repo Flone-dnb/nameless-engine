@@ -139,6 +139,9 @@ namespace ne RNAMESPACE() {
 
     /** Represents a node that can have 3D geometry to display (mesh). */
     class RCLASS(Guid("d5407ca4-3c2e-4a5a-9ff3-1262b6a4d264")) MeshNode : public SpatialNode {
+        // Renderer will call `draw` on this node.
+        friend class Renderer;
+
     public:
         MeshNode();
 
@@ -200,9 +203,6 @@ namespace ne RNAMESPACE() {
         void onMeshDataChanged();
 
     protected:
-        // Renderer will call `draw` on this node.
-        friend class Renderer;
-
         /** Constants used by shaders. */
         struct MeshShaderConstants {
             /** World matrix. */

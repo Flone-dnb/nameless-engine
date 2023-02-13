@@ -23,6 +23,10 @@ namespace ne {
      * Represents a custom window cursor.
      */
     class WindowCursor {
+        // Only Window can directly create instances of this class.
+        // For users we provide a separate function.
+        friend class Window;
+
     public:
         WindowCursor() = delete;
         WindowCursor(const WindowCursor&) = delete;
@@ -32,10 +36,6 @@ namespace ne {
         ~WindowCursor();
 
     protected:
-        // Only Window can directly create instances of this class.
-        // For users we provide a separate function.
-        friend class Window;
-
         /**
          * Loads image and creates a new cursor.
          *
@@ -191,10 +191,11 @@ namespace ne {
         WindowBuilderParameters params;
     };
 
-    /**
-     * Describes a window.
-     */
+    /** Describes a window. */
     class Window {
+        // Builder will create new instances.
+        friend class WindowBuilder;
+
     public:
         Window(const Window&) = delete;
         Window& operator=(const Window&) = delete;
@@ -410,9 +411,6 @@ namespace ne {
         void onMouseScrollMove(int iOffset) const;
 
     private:
-        // Builder will create new instances.
-        friend class WindowBuilder;
-
         /**
          * GLFW callback.
          *

@@ -25,6 +25,12 @@ namespace ne {
      * Base class for render specific Pipeline State Objects (PSOs).
      */
     class Pso : public ShaderUser {
+        // Only PSO manager should be able to create PSO.
+        friend class PsoManager;
+
+        // Will notify when material is no longer referencing a PSO.
+        friend class PsoSharedPtr;
+
     public:
         Pso() = delete;
         Pso(const Pso&) = delete;
@@ -77,12 +83,6 @@ namespace ne {
         std::pair<std::mutex, std::set<Material*>>* getMaterialsThatUseThisPso();
 
     protected:
-        // Only PSO manager should be able to create PSO.
-        friend class PsoManager;
-
-        // Will notify when material is no longer referencing a PSO.
-        friend class PsoSharedPtr;
-
         /**
          * Creates a new uninitialized PSO.
          *

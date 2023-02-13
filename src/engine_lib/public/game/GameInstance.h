@@ -21,6 +21,9 @@ namespace ne {
      * Owned by Game object.
      */
     class GameInstance {
+        // Game will trigger input events.
+        friend class Game;
+
     public:
         GameInstance() = delete;
         /**
@@ -360,9 +363,6 @@ namespace ne {
         getAxisEventBindings();
 
     private:
-        // Game will trigger input events.
-        friend class Game;
-
         /**
          * Called when a window that owns this game instance receives user
          * input and the input key exists as an action event in the InputManager.

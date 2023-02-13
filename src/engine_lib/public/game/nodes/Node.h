@@ -32,6 +32,12 @@ namespace ne RNAMESPACE() {
      * or being attached to some parent node.
      */
     class RCLASS(Guid("2a721c37-3c22-450c-8dad-7b6985cbbd61")) Node : public Serializable {
+        // Game will propagate functions to all nodes in the world such as `onBeforeNewFrame`.
+        friend class Game;
+
+        // World is able to spawn root node.
+        friend class World;
+
     public:
         /**
          * Returns the total amount of currently alive (allocated) nodes.
@@ -241,11 +247,6 @@ namespace ne RNAMESPACE() {
         bool isChildOf(Node* pNode);
 
     protected:
-        // Game will propagate functions to all nodes in the world such as onBeforeNewFrame.
-        friend class Game;
-        // World is able to spawn root node.
-        friend class World;
-
         /**
          * Determines if the @ref onBeforeNewFrame should be called each frame or not
          * (disabled by default).

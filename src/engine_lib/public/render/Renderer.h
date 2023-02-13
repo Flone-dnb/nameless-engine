@@ -21,10 +21,17 @@ namespace ne {
     class RenderSettings;
     class GpuCommandList;
 
-    /**
-     * Defines a base class for renderers to implement.
-     */
+    /** Defines a base class for renderers to implement. */
     class Renderer {
+        // Only window should be able to request new frames to be drawn.
+        friend class Window;
+
+        // Can update shader configuration.
+        friend class ShaderConfiguration;
+
+        // Settings will modify renderer's state.
+        friend class RenderSettings;
+
     public:
         Renderer() = delete;
         Renderer(const Renderer&) = delete;
@@ -183,15 +190,6 @@ namespace ne {
         std::recursive_mutex* getRenderResourcesMutex();
 
     protected:
-        // Only window should be able to request new frames to be drawn.
-        friend class Window;
-
-        // Can update shader configuration.
-        friend class ShaderConfiguration;
-
-        // Settings will modify renderer's state.
-        friend class RenderSettings;
-
         /**
          * Constructor.
          *

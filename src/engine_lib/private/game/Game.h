@@ -26,6 +26,9 @@ namespace ne {
      * Owned by Window object.
      */
     class Game {
+        // The Game should only be created by a Window instance.
+        friend class Window;
+
     public:
         Game(const Game&) = delete;
         Game& operator=(const Game&) = delete;
@@ -218,9 +221,6 @@ namespace ne {
         long long getGarbageCollectorRunIntervalInSec() const;
 
     private:
-        // The object should be created by a Window instance.
-        friend class Window;
-
         /**
          * Constructor.
          *

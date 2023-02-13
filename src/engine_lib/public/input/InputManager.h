@@ -75,6 +75,9 @@ namespace ne {
      * Stored in GameInstance object.
      */
     class InputManager {
+        // Triggers input events.
+        friend class Game;
+
     public:
         InputManager() = default;
         InputManager(const InputManager&) = delete;
@@ -282,8 +285,6 @@ namespace ne {
         splitString(const std::string& sStringToSplit, const std::string& sDelimiter);
 
     private:
-        friend class Game;
-
         /**
          * Adds a new action event. If an action with this name already exists it will be removed
          * to register this new action event.

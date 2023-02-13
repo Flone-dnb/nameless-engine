@@ -16,6 +16,9 @@ namespace ne RNAMESPACE() {
 
     /** Controls renderer settings. */
     class RCLASS(Guid("eb477c6d-cdc4-4b7a-9349-296fb38e6bfc")) RenderSettings : public Serializable {
+        // Renderer will initialize this object.
+        friend class Renderer;
+
     public:
         RenderSettings() = default;
         virtual ~RenderSettings() override = default;
@@ -155,9 +158,6 @@ namespace ne RNAMESPACE() {
         virtual void onAfterDeserialized() override;
 
     private:
-        // Renderer will initialize this object.
-        friend class Renderer;
-
         /**
          * Returns name of the file that is used to store setting configuration.
          *

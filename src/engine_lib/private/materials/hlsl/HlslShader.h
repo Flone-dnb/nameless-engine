@@ -54,6 +54,27 @@ namespace ne {
         static std::vector<D3D12_INPUT_ELEMENT_DESC> getShaderInputElementDescription();
 
         /**
+         * Returns used vertex shader model version.
+         *
+         * @return Vertex shader model version.
+         */
+        static std::string getVertexShaderModel();
+
+        /**
+         * Returns used pixel shader model version.
+         *
+         * @return Pixel shader model version.
+         */
+        static std::string getPixelShaderModel();
+
+        /**
+         * Returns used compute shader model version.
+         *
+         * @return Compute shader model version.
+         */
+        static std::string getComputeShaderModel();
+
+        /**
          * Tests if the shader cache for this shader is corrupted or not.
          *
          * @remark This function should be used before you want to use the shader cache.
@@ -124,8 +145,6 @@ namespace ne {
         virtual bool releaseShaderDataFromMemoryIfLoaded(bool bLogOnlyErrors = false) override;
 
     private:
-        friend class ShaderManager;
-
         /**
          * Reads file and creates a new DXC blob using file's content.
          *

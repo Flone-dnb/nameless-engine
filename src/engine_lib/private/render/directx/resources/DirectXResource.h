@@ -24,10 +24,12 @@ namespace ne {
     class DirectXDescriptorHeap;
     class DirectXResourceManager;
 
-    /**
-     * D3D resource wrapper with automatic descriptor binding.
-     */
+    /** D3D resource wrapper with automatic descriptor binding. */
     class DirectXResource : public GpuResource {
+        // If descriptor heap of a used descriptor (see field of this class) was recreated
+        // then descriptor heap will update our descriptors with new descriptor information.
+        friend class DirectXDescriptorHeap;
+
     public:
         DirectXResource(const DirectXResource&) = delete;
         DirectXResource& operator=(const DirectXResource&) = delete;
@@ -122,10 +124,6 @@ namespace ne {
         std::string getResourceName() const;
 
     private:
-        // If descriptor heap of a used descriptor (see field of this class) was recreated
-        // then descriptor heap will update our descriptors with new descriptor information.
-        friend class DirectXDescriptorHeap;
-
         /**
          * Constructor. Creates an empty resource.
          *

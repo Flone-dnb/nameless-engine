@@ -33,6 +33,9 @@ namespace ne {
 
     /** Represents a descriptor heap. */
     class DirectXDescriptorHeap {
+        // Notifies the heap about descriptor being destroyed.
+        friend class DirectXDescriptor;
+
     public:
         DirectXDescriptorHeap() = delete;
         DirectXDescriptorHeap(const DirectXDescriptorHeap&) = delete;
@@ -95,9 +98,6 @@ namespace ne {
         size_t getNoLongerUsedDescriptorCount();
 
     protected:
-        // Notifies the heap about descriptor being destroyed.
-        friend class DirectXDescriptor;
-
         /**
          * Converts heap type to string.
          *

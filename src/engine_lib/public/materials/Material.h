@@ -16,6 +16,9 @@ namespace ne RNAMESPACE() {
      * Defines visual aspects of a mesh.
      */
     class RCLASS(Guid("a603fa3a-e9c2-4c38-bb4c-76384ef001f4")) Material : public Serializable {
+        // Mesh node will notify the material when it's spawned/despawned.
+        friend class MeshNode;
+
     public:
         /** Creates uninitialized material, only used for deserialization, instead use @ref create. */
         Material();
@@ -84,9 +87,6 @@ namespace ne RNAMESPACE() {
         bool isUsingTransparency() const;
 
     private:
-        // Mesh node will notify the material when it's spawned/despawned.
-        friend class MeshNode;
-
         /**
          * Creates a new material with the specified name.
          *

@@ -59,7 +59,7 @@ namespace ne {
         return pCreatedResource;
     }
 
-    std::optional<Error> DirectXResource::addRtv() {
+    std::optional<Error> DirectXResource::bindRtv() {
         auto optionalError = pResourceManager->getRtvHeap()->assignDescriptor(this, DescriptorType::RTV);
         if (optionalError.has_value()) {
             optionalError->addEntry();
@@ -69,7 +69,7 @@ namespace ne {
         return {};
     }
 
-    std::optional<Error> DirectXResource::addDsv() {
+    std::optional<Error> DirectXResource::bindDsv() {
         auto optionalError = pResourceManager->getDsvHeap()->assignDescriptor(this, DescriptorType::DSV);
         if (optionalError.has_value()) {
             optionalError->addEntry();
@@ -90,7 +90,7 @@ namespace ne {
         return {};
     }
 
-    std::optional<Error> DirectXResource::addSrv() {
+    std::optional<Error> DirectXResource::bindSrv() {
         auto optionalError =
             pResourceManager->getCbvSrvUavHeap()->assignDescriptor(this, DescriptorType::SRV);
         if (optionalError.has_value()) {
@@ -101,7 +101,7 @@ namespace ne {
         return {};
     }
 
-    std::optional<Error> DirectXResource::addUav() {
+    std::optional<Error> DirectXResource::bindUav() {
         auto optionalError =
             pResourceManager->getCbvSrvUavHeap()->assignDescriptor(this, DescriptorType::UAV);
         if (optionalError.has_value()) {

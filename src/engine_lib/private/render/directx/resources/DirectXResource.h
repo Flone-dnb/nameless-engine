@@ -30,11 +30,72 @@ namespace ne {
         // then descriptor heap will update our descriptors with new descriptor information.
         friend class DirectXDescriptorHeap;
 
+        // Only resource manager can create this resources
+        // (simply because only manager has memory allocator object).
+        friend class DirectXResourceManager;
+
     public:
         DirectXResource(const DirectXResource&) = delete;
         DirectXResource& operator=(const DirectXResource&) = delete;
 
         virtual ~DirectXResource() override = default;
+
+        /**
+         * Creates a new render target view descriptor that points to this resource.
+         *
+         * @return Error if something went wrong.
+         */
+        [[nodiscard]] virtual std::optional<Error> bindRtv() override;
+
+        /**
+         * Creates a new depth stencil view descriptor that points to this resource.
+         *
+         * @return Error if something went wrong.
+         */
+        [[nodiscard]] virtual std::optional<Error> bindDsv() override;
+
+        /**
+         * Creates a new constant buffer view descriptor that points to this resource.
+         *
+         * @return Error if something went wrong.
+         */
+        [[nodiscard]] virtual std::optional<Error> bindCbv() override;
+
+        /**
+         * Creates a new shader resource view descriptor that points to this resource.
+         *
+         * @return Error if something went wrong.
+         */
+        [[nodiscard]] virtual std::optional<Error> bindSrv() override;
+
+        /**
+         * Creates a new unordered access view descriptor that points to this resource.
+         *
+         * @return Error if something went wrong.
+         */
+        [[nodiscard]] virtual std::optional<Error> bindUav() override;
+
+        /**
+         * Returns internal resource.
+         *
+         * @return Do not delete (free) this pointer. Internal resource.
+         */
+        ID3D12Resource* getInternalResource() const;
+
+        /**
+         * Returns resource name.
+         *
+         * @return Resource name.
+         */
+        std::string getResourceName() const;
+
+    private:
+        /**
+         * Constructor. Creates an empty resource.
+         *
+         * @param pResourceManager Owner resource manager.
+         */
+        DirectXResource(const DirectXResourceManager* pResourceManager);
 
         /**
          * Creates a new resource (without binding a descriptor to it).
@@ -73,63 +134,6 @@ namespace ne {
             const DirectXResourceManager* pResourceManager,
             DirectXDescriptorHeap* pRtvHeap,
             const ComPtr<ID3D12Resource>& pSwapChainBuffer);
-
-        /**
-         * Creates a new render target view descriptor that points to this resource.
-         *
-         * @return Error if something went wrong.
-         */
-        [[nodiscard]] std::optional<Error> addRtv();
-
-        /**
-         * Creates a new depth stencil view descriptor that points to this resource.
-         *
-         * @return Error if something went wrong.
-         */
-        [[nodiscard]] std::optional<Error> addDsv();
-
-        /**
-         * Creates a new constant buffer view descriptor that points to this resource.
-         *
-         * @return Error if something went wrong.
-         */
-        [[nodiscard]] virtual std::optional<Error> bindCbv() override;
-
-        /**
-         * Creates a new shader resource view descriptor that points to this resource.
-         *
-         * @return Error if something went wrong.
-         */
-        [[nodiscard]] std::optional<Error> addSrv();
-
-        /**
-         * Creates a new unordered access view descriptor that points to this resource.
-         *
-         * @return Error if something went wrong.
-         */
-        [[nodiscard]] std::optional<Error> addUav();
-
-        /**
-         * Returns internal resource.
-         *
-         * @return Do not delete (free) this pointer. Internal resource.
-         */
-        ID3D12Resource* getInternalResource() const;
-
-        /**
-         * Returns resource name.
-         *
-         * @return Resource name.
-         */
-        std::string getResourceName() const;
-
-    private:
-        /**
-         * Constructor. Creates an empty resource.
-         *
-         * @param pResourceManager Owner resource manager.
-         */
-        DirectXResource(const DirectXResourceManager* pResourceManager);
 
         /** Do not delete. Owner resource manager. */
         const DirectXResourceManager* pResourceManager = nullptr;

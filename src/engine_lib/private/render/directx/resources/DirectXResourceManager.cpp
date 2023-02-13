@@ -244,7 +244,7 @@ namespace ne {
         auto pResource = std::get<std::unique_ptr<DirectXResource>>(std::move(result));
 
         // Assign descriptor.
-        auto optionalError = pResource->addRtv();
+        auto optionalError = pResource->bindRtv();
         if (optionalError.has_value()) {
             auto err = optionalError.value();
             err.addEntry();
@@ -277,7 +277,7 @@ namespace ne {
         auto pResource = std::get<std::unique_ptr<DirectXResource>>(std::move(result));
 
         // Assign descriptor.
-        auto optionalError = pResource->addDsv();
+        auto optionalError = pResource->bindDsv();
         if (optionalError.has_value()) {
             auto err = optionalError.value();
             err.addEntry();
@@ -342,7 +342,7 @@ namespace ne {
         auto pResource = std::get<std::unique_ptr<DirectXResource>>(std::move(result));
 
         // Assign descriptor.
-        auto optionalError = pResource->addSrv();
+        auto optionalError = pResource->bindSrv();
         if (optionalError.has_value()) {
             auto err = optionalError.value();
             err.addEntry();
@@ -375,7 +375,7 @@ namespace ne {
         auto pResource = std::get<std::unique_ptr<DirectXResource>>(std::move(result));
 
         // Assign descriptor.
-        auto optionalError = pResource->addUav();
+        auto optionalError = pResource->bindUav();
         if (optionalError.has_value()) {
             auto err = optionalError.value();
             err.addEntry();

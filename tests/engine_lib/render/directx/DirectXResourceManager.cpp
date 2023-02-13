@@ -203,7 +203,7 @@ TEST_CASE("assign multiple descriptors to one resource") {
             auto pResource = std::get<std::unique_ptr<DirectXResource>>(std::move(result));
 
             // Assign a UAV descriptor to this resource.
-            auto optionalError = pResource->addUav();
+            auto optionalError = pResource->bindUav();
             if (optionalError.has_value()) {
                 optionalError->addEntry();
                 INFO(optionalError->getFullErrorMessage());
@@ -212,7 +212,7 @@ TEST_CASE("assign multiple descriptors to one resource") {
 
             // Assign a SRV descriptor to this resource (again).
             // (should fail because descriptor of this type is already added)
-            optionalError = pResource->addSrv();
+            optionalError = pResource->bindSrv();
             REQUIRE(optionalError.has_value());
 
             pGameWindow->close();
@@ -280,7 +280,7 @@ TEST_CASE("all assigned descriptors are freed when resource is destroyed") {
                 auto pResource = std::get<std::unique_ptr<DirectXResource>>(std::move(result));
 
                 // Assign a UAV descriptor to this resource.
-                auto optionalError = pResource->addUav();
+                auto optionalError = pResource->bindUav();
                 if (optionalError.has_value()) {
                     optionalError->addEntry();
                     INFO(optionalError->getFullErrorMessage());

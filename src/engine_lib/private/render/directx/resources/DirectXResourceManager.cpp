@@ -102,7 +102,7 @@ namespace ne {
         // 4. Wait for GPU to finish copying data and delete the upload resource.
 
         // 1. Create the resulting resource.
-        D3D12MA::ALLOCATION_DESC allocationDesc;
+        D3D12MA::ALLOCATION_DESC allocationDesc = {};
         allocationDesc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
         D3D12_RESOURCE_DESC resourceDesc = CD3DX12_RESOURCE_DESC::Buffer(
             iDataSizeInBytes,
@@ -124,7 +124,7 @@ namespace ne {
         auto pResultingResource = std::get<std::unique_ptr<DirectXResource>>(std::move(result));
 
         // 2. Create the upload resource.
-        allocationDesc = D3D12MA::ALLOCATION_DESC();
+        allocationDesc = {};
         allocationDesc.HeapType = D3D12_HEAP_TYPE_UPLOAD;
         resourceDesc = CD3DX12_RESOURCE_DESC::Buffer(iDataSizeInBytes);
         initialResourceState = D3D12_RESOURCE_STATE_GENERIC_READ;
@@ -162,7 +162,7 @@ namespace ne {
             return Error(hResult);
         }
 
-        // Prepare command list (it was closed).
+        // Open command list (it was closed).
         hResult = pCommandList->Reset(pCommandAllocator, nullptr);
         if (FAILED(hResult)) {
             return Error(hResult);
@@ -191,7 +191,7 @@ namespace ne {
                                   : D3D12_RESOURCE_STATE_GENERIC_READ);
         pCommandList->ResourceBarrier(1, &transition);
 
-        // Close recording commands.
+        // Close command list.
         hResult = pCommandList->Close();
         if (FAILED(hResult)) {
             return Error(hResult);

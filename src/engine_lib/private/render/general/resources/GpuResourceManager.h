@@ -87,7 +87,7 @@ namespace ne {
          * @param iDataSizeInBytes      Size in bytes of the data (resource size).
          * @param bAllowUnorderedAccess Whether the new resource allows unordered access or not.
          *
-         * @return Error if something went wrong, otherwise created resource.
+         * @return Error if something went wrong, otherwise created resource with filled data.
          */
         virtual std::variant<std::unique_ptr<GpuResource>, Error> createResourceWithData(
             const std::string& sResourceName,

@@ -39,13 +39,22 @@ TEST_CASE("create engine default materials") {
                     REQUIRE(false);
                 }
 
+                // Prepare dummy mesh.
+                MeshVertex vertex;
+                MeshData meshData;
+                meshData.getVertices()->push_back(vertex);
+                meshData.getIndices()->push_back(0);
+
                 // Create nodes.
                 auto pMeshNodeTransparent = gc_new<MeshNode>("Transparent material node");
                 pMeshNodeTransparent->setMaterial(
                     std::get<std::shared_ptr<Material>>(std::move(resultTransparent)));
+                pMeshNodeTransparent->setMeshData(meshData);
+                pMeshNodeTransparent->setMeshData(meshData);
 
                 auto pMeshNodeOpaque = gc_new<MeshNode>("Opaque material node");
                 pMeshNodeOpaque->setMaterial(std::get<std::shared_ptr<Material>>(std::move(resultOpaque)));
+                pMeshNodeOpaque->setMeshData(meshData);
 
                 // There should be no PSOs created since no material is spawned.
                 REQUIRE(getWindow()->getRenderer()->getPsoManager()->getCreatedGraphicsPsoCount() == 0);

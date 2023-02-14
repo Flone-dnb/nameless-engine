@@ -6,13 +6,13 @@
 // Custom.
 #include "game/nodes/SpatialNode.h"
 #include "math/GLMath.hpp"
+#include "render/general/resources/GpuResource.h"
 #include "render/general/resources/UploadBuffer.h"
 
 #include "MeshNode.generated.h"
 
 namespace ne RNAMESPACE() {
     class Material;
-    class GpuResource;
     class UploadBuffer;
     class GpuCommandList;
 
@@ -88,6 +88,9 @@ namespace ne RNAMESPACE() {
     /** Stores mesh geometry (vertices and indices). */
     class RCLASS(Guid("b60e4b47-b1e6-4001-87a8-b7885b4e8383")) MeshData : public Serializable {
     public:
+        /** Type of mesh index. */
+        using meshindex_t = unsigned int;
+
         MeshData();
         virtual ~MeshData() override = default;
 
@@ -123,7 +126,7 @@ namespace ne RNAMESPACE() {
          *
          * @return Mesh indices.
          */
-        std::vector<unsigned int>* getIndices();
+        std::vector<meshindex_t>* getIndices();
 
     private:
         /** Mesh vertices. */
@@ -132,7 +135,7 @@ namespace ne RNAMESPACE() {
 
         /** Stores mesh indices. */
         RPROPERTY(Serialize)
-        std::vector<unsigned int> vIndices;
+        std::vector<meshindex_t> vIndices;
 
         ne_MeshData_GENERATED
     };
@@ -182,7 +185,7 @@ namespace ne RNAMESPACE() {
          *
          * @return Material.
          */
-        std::shared_ptr<Material> getMaterial() const;
+        std::shared_ptr<Material> getMaterial();
 
         /**
          * Returns mesh geometry.
@@ -252,6 +255,40 @@ namespace ne RNAMESPACE() {
         void draw(GpuCommandList* pCommandList, unsigned int iCurrentFrameResourceIndex);
 
     private:
+        /** Groups GPU buffers that store mesh data. */
+        struct GeometryBuffers {
+            /** Stores mesh vertices. */
+            std::unique_ptr<GpuResource> pVertexBuffer;
+
+            /** Stores mesh indices. */
+            std::unique_ptr<GpuResource> pIndexBuffer;
+        };
+
+        /** Stores GPU resources used by shaders. */
+        struct ShaderConstants {
+            /**
+             * Buffer with CPU access that contains N elements with object-specific data
+             * (@ref MeshShaderConstants). Amount of elements in this buffer is defined by the amount
+             * of frame resources.
+             */
+            std::unique_ptr<UploadBuffer> pConstantBuffers;
+
+            /** Number of elements in @ref pConstantBuffers that needs to be updated with new data. */
+            std::atomic<unsigned int> iFrameResourceCountToUpdate{0};
+        };
+
+        /** Allocates @ref mtxShaderConstantBuffers to be used by shaders. */
+        void allocateShaderConstantBuffers();
+
+        /** Allocates @ref mtxGeometryBuffers to be used by renderer. */
+        void allocateGeometryBuffers();
+
+        /** Deallocates @ref mtxShaderConstantBuffers. */
+        void deallocateShaderConstantBuffers();
+
+        /** Deallocates @ref mtxGeometryBuffers. */
+        void deallocateGeometryBuffers();
+
         /** Used material. Always contains a valid pointer. */
         RPROPERTY(Serialize)
         std::shared_ptr<Material> pMaterial;
@@ -268,15 +305,14 @@ namespace ne RNAMESPACE() {
         /** Mutex to use with @ref meshData. */
         std::recursive_mutex mtxMeshData;
 
-        /**
-         * Buffer with CPU access that contains N elements with object-specific data
-         * (@ref MeshShaderConstants). Amount of elements in this buffer is defined by the amount
-         * of frame resources.
-         */
-        std::unique_ptr<UploadBuffer> pShaderConstantBuffers;
+        /** Stores @ref meshData in GPU memory.  */
+        std::pair<std::mutex, GeometryBuffers> mtxGeometryBuffers;
 
-        /** Number of elements in @ref pShaderConstantBuffers that needs to be updated with new data. */
-        std::atomic<unsigned int> iFrameResourceCountToUpdate{0};
+        /** Stores GPU resources used by shaders. */
+        std::pair<std::mutex, ShaderConstants> mtxShaderConstantBuffers;
+
+        /** Name of the category used for logging. */
+        static inline const auto sMeshNodeLogCategory = "Mesh Node";
 
         ne_MeshNode_GENERATED
     };

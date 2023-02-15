@@ -156,51 +156,52 @@ namespace ne {
 
     void Timer::waitForRunningCallbackThreadsToFinish() {
         std::scoped_lock guard(mtxStartedCallbackThreads.first);
-        if (!mtxStartedCallbackThreads.second.empty()) {
-            const auto start = std::chrono::steady_clock::now();
-            for (auto& thread : mtxStartedCallbackThreads.second) {
-                try {
-                    thread.join();
-                } catch (std::exception& ex) {
-                    Logger::get().error(
-                        fmt::format(
-                            "timer's callback function thread (user code) has finished with the "
-                            "following exception: {}",
-                            ex.what()),
-                        "");
-                }
-            }
-            const auto end = std::chrono::steady_clock::now();
-            const auto durationInMs =
-                static_cast<float>(
-                    std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count()) *
-                0.000001F;
-
-            // Limit precision to 1 digit.
-            std::stringstream durationStream;
-            durationStream << std::fixed << std::setprecision(1) << durationInMs;
-
-            if (durationInMs < 1.0F || !bWarnAboutWaitingForCallbackTooLong) {
-                // Information.
-                Logger::get().info(
-                    fmt::format(
-                        "timer has finished waiting for started callback functions to finish, took {} "
-                        "millisecond",
-                        durationStream.str()),
-                    "");
-            } else {
-                // Warning.
-                Logger::get().warn(
-                    fmt::format(
-                        "timer has finished waiting for started callback functions to finish, took {} "
-                        "millisecond(s)\n"
-                        "(hint: specify `bWarnAboutWaitingForCallbackTooLong` as `false` to timer "
-                        "constructor to convert this message category from `warning` to `info`)",
-                        durationStream.str()),
-                    "");
-            }
-
-            mtxStartedCallbackThreads.second.clear();
+        if (mtxStartedCallbackThreads.second.empty()) {
+            return;
         }
+
+        const auto start = std::chrono::steady_clock::now();
+        for (auto& thread : mtxStartedCallbackThreads.second) {
+            try {
+                thread.join();
+            } catch (std::exception& ex) {
+                Logger::get().error(
+                    fmt::format(
+                        "timer's callback function thread (user code) has finished with the "
+                        "following exception: {}",
+                        ex.what()),
+                    "");
+            }
+        }
+        const auto end = std::chrono::steady_clock::now();
+        const auto durationInMs =
+            static_cast<float>(std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count()) *
+            0.000001F;
+
+        // Limit precision to 1 digit.
+        std::stringstream durationStream;
+        durationStream << std::fixed << std::setprecision(1) << durationInMs;
+
+        if (durationInMs < 1.0F || !bWarnAboutWaitingForCallbackTooLong) {
+            // Information.
+            Logger::get().info(
+                fmt::format(
+                    "timer has finished waiting for started callback functions to finish, took {} "
+                    "millisecond",
+                    durationStream.str()),
+                "");
+        } else {
+            // Warning.
+            Logger::get().warn(
+                fmt::format(
+                    "timer has finished waiting for started callback functions to finish, took {} "
+                    "millisecond(s)\n"
+                    "(hint: specify `bWarnAboutWaitingForCallbackTooLong` as `false` to timer "
+                    "constructor to convert this message category from `warning` to `info`)",
+                    durationStream.str()),
+                "");
+        }
+
+        mtxStartedCallbackThreads.second.clear();
     }
 } // namespace ne

@@ -67,7 +67,7 @@ namespace ne {
                 fmt::format(
                     "mesh node \"{}\" notified used material about being spawned but this mesh node already "
                     "exists in material's array of spawned mesh nodes",
-                    pMeshNode->getName()),
+                    pMeshNode->getNodeName()),
                 sMaterialLogCategory);
             return;
         }
@@ -98,7 +98,7 @@ namespace ne {
                 fmt::format(
                     "mesh node \"{}\" notified a material about being used but this mesh node already "
                     "exists in material's array of spawned mesh nodes",
-                    pMeshNode->getName()),
+                    pMeshNode->getNodeName()),
                 sMaterialLogCategory);
             return;
         }
@@ -129,7 +129,7 @@ namespace ne {
                 fmt::format(
                     "mesh node \"{}\" notified used material about no longer being used but this mesh node "
                     "does not exist in material's array of spawned mesh nodes",
-                    pMeshNode->getName()),
+                    pMeshNode->getNodeName()),
                 sMaterialLogCategory);
             return;
         }
@@ -152,7 +152,7 @@ namespace ne {
                 fmt::format(
                     "mesh node \"{}\" notified used material about being despawned but this mesh node "
                     "does not exist in material's array of spawned mesh nodes",
-                    pMeshNode->getName()),
+                    pMeshNode->getNodeName()),
                 sMaterialLogCategory);
             return;
         }

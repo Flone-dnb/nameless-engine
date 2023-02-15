@@ -15,8 +15,8 @@ TEST_CASE("node names should not be unique") {
     const auto pNode1 = gc_new<Node>(sNodeName);
     const auto pNode2 = gc_new<Node>(sNodeName);
 
-    REQUIRE(pNode1->getName() == sNodeName);
-    REQUIRE(pNode2->getName() == sNodeName);
+    REQUIRE(pNode1->getNodeName() == sNodeName);
+    REQUIRE(pNode2->getNodeName() == sNodeName);
 }
 
 TEST_CASE("build and check node hierarchy") {
@@ -160,19 +160,19 @@ TEST_CASE("serialize and deserialize node tree") {
         const auto pRootNode = std::get<gc<Node>>(deserializeResult);
 
         // Check results.
-        REQUIRE(pRootNode->getName() == "Root Node");
+        REQUIRE(pRootNode->getNodeName() == "Root Node");
         const auto vChildNodes = pRootNode->getChildNodes();
         REQUIRE(vChildNodes->size() == 2);
 
         // Check child nodes.
         gc<Node> pChildNode1;
         gc<Node> pChildNode2;
-        if ((*vChildNodes)[0]->getName() == "Child Node 1") {
-            REQUIRE((*vChildNodes)[1]->getName() == "Child Node 2");
+        if ((*vChildNodes)[0]->getNodeName() == "Child Node 1") {
+            REQUIRE((*vChildNodes)[1]->getNodeName() == "Child Node 2");
             pChildNode1 = (*vChildNodes)[0];
             pChildNode2 = (*vChildNodes)[1];
-        } else if ((*vChildNodes)[0]->getName() == "Child Node 2") {
-            REQUIRE((*vChildNodes)[1]->getName() == "Child Node 1");
+        } else if ((*vChildNodes)[0]->getNodeName() == "Child Node 2") {
+            REQUIRE((*vChildNodes)[1]->getNodeName() == "Child Node 1");
             pChildNode1 = (*vChildNodes)[1];
             pChildNode2 = (*vChildNodes)[2];
         }
@@ -182,7 +182,7 @@ TEST_CASE("serialize and deserialize node tree") {
         const auto vChildChildNodes = pChildNode1->getChildNodes();
         REQUIRE(vChildChildNodes->size() == 1);
         REQUIRE((*vChildChildNodes)[0]->getChildNodes()->empty());
-        REQUIRE((*vChildChildNodes)[0]->getName() == "Child Child Node 1");
+        REQUIRE((*vChildChildNodes)[0]->getNodeName() == "Child Child Node 1");
     }
 
     gc_collector()->fullCollect();

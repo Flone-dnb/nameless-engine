@@ -91,7 +91,7 @@ TEST_CASE("serialize and deserialize MeshNode") {
                     REQUIRE(std::filesystem::exists(pathToExternalFile));
 
                     // Check.
-                    REQUIRE(pMeshNode->getName() == "My cool node");
+                    REQUIRE(pMeshNode->getNodeName() == "My cool node");
                     REQUIRE(pMeshNode->getMaterial()->isUsingTransparency());
                     REQUIRE(pMeshNode->getMaterial()->getName() == "My Material");
                     const auto mtxMeshData = pMeshNode->getMeshData();
@@ -275,7 +275,7 @@ TEST_CASE("serialize and deserialize MeshNode as part of a node tree") {
                     REQUIRE(std::filesystem::exists(pathToExternalFile));
 
                     // Check.
-                    REQUIRE(pMeshNode->getName() == "My cool node");
+                    REQUIRE(pMeshNode->getNodeName() == "My cool node");
                     REQUIRE(pMeshNode->getMaterial()->isUsingTransparency());
                     REQUIRE(pMeshNode->getMaterial()->getName() == "My Material");
                     const auto mtxMeshData = pMeshNode->getMeshData();
@@ -472,7 +472,7 @@ TEST_CASE("serialize and deserialize MeshNode as part of a node tree with origin
                     REQUIRE(std::filesystem::exists(pathToExternalFile));
 
                     // Check.
-                    REQUIRE(pMeshNode->getName() == "My cool node");
+                    REQUIRE(pMeshNode->getNodeName() == "My cool node");
                     REQUIRE(pMeshNode->getMaterial()->isUsingTransparency());
                     REQUIRE(pMeshNode->getMaterial()->getName() == "My Material");
                     const auto mtxMeshData = pMeshNode->getMeshData();

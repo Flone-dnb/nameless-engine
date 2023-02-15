@@ -439,7 +439,7 @@ TEST_CASE("deserialize a node tree that references external node tree") {
         pChildNode->entity.vVectorValue2 = {"Hello", "World"};
 
         // Change external root node's fields (we will see this in the TOML file).
-        pDeserializedRootNode->setName("External Root Node");
+        pDeserializedRootNode->setNodeName("External Root Node");
         pDeserializedRootNode->entity.iIntValue1 = 42;
 
         // Now serialize this node tree.
@@ -476,7 +476,7 @@ TEST_CASE("deserialize a node tree that references external node tree") {
         REQUIRE(
             pChildNode->getPathDeserializedFromRelativeToRes().value().first == sNodeTreeRelativePathToFile);
         REQUIRE(!pChildNode->getPathDeserializedFromRelativeToRes().value().second.starts_with("0."));
-        REQUIRE(pChildNode->getName() == "External Root Node");
+        REQUIRE(pChildNode->getNodeName() == "External Root Node");
         REQUIRE(pChildNode->entity.iIntValue1 == 42);
 
         // Get child child nodes.
@@ -850,7 +850,7 @@ TEST_CASE("serialize and deserialize node") {
     const auto pDeserializedNode = std::get<gc<Node>>(std::move(result));
 
     // Check that name is the same.
-    REQUIRE(pDeserializedNode->getName() == node.getName());
+    REQUIRE(pDeserializedNode->getNodeName() == node.getNodeName());
 
     // Check custom attributes.
     REQUIRE(deserializeCustomAttributes.size() == serializeCustomAttributes.size());
@@ -929,8 +929,8 @@ TEST_CASE("serialize and deserialize multiple nodes") {
 
     REQUIRE(pNode1 != nullptr);
     REQUIRE(pNode2 != nullptr);
-    REQUIRE(pNode1->getName() == node1.getName());
-    REQUIRE(pNode2->getName() == node2.getName());
+    REQUIRE(pNode1->getNodeName() == node1.getNodeName());
+    REQUIRE(pNode2->getNodeName() == node2.getNodeName());
 
     // Check custom attributes.
     REQUIRE(vDeserializedObjects[0].customAttributes.size() == 1);

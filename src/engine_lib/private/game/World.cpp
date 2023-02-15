@@ -176,7 +176,7 @@ namespace ne {
                     fmt::format(
                         "node \"{}\" is marked as \"should be called every frame\" but it does not exist "
                         "in the array of nodes that should be called every frame",
-                        pNode->getName()),
+                        pNode->getNodeName()),
                     sWorldLogCategory);
             }
         }
@@ -200,7 +200,7 @@ namespace ne {
                     fmt::format(
                         "node \"{}\" receives input but it does not exist "
                         "in the array of nodes that receive input",
-                        pNode->getName()),
+                        pNode->getNodeName()),
                     sWorldLogCategory);
             }
         }

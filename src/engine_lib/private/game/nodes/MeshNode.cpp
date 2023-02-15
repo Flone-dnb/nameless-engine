@@ -213,7 +213,7 @@ namespace ne {
                 fmt::format(
                     "mesh node \"{}\" was requested to allocate shader constant buffers but the node is not "
                     "spawned",
-                    getName()),
+                    getNodeName()),
                 sMeshNodeLogCategory);
             return;
         }
@@ -223,7 +223,7 @@ namespace ne {
                 fmt::format(
                     "mesh node \"{}\" was requested to allocate shader constant buffers but they are already "
                     "created",
-                    getName()),
+                    getNodeName()),
                 sMeshNodeLogCategory);
             return;
         }
@@ -231,7 +231,7 @@ namespace ne {
         // Create constant buffers for shaders.
         const auto pRenderer = getGameInstance()->getWindow()->getRenderer();
         auto result = pRenderer->getResourceManager()->createResourceWithCpuAccess(
-            fmt::format("mesh node \"{}\" shader constant buffer", getName()),
+            fmt::format("mesh node \"{}\" shader constant buffer", getNodeName()),
             sizeof(MeshShaderConstants),
             FrameResourcesManager::getFrameResourcesCount());
         if (std::holds_alternative<Error>(result)) {
@@ -266,7 +266,7 @@ namespace ne {
                 fmt::format(
                     "mesh node \"{}\" was requested to deallocate shader constant buffers but the node is "
                     "not spawned",
-                    getName()),
+                    getNodeName()),
                 sMeshNodeLogCategory);
             return;
         }
@@ -276,7 +276,7 @@ namespace ne {
                 fmt::format(
                     "mesh node \"{}\" was requested to deallocate shader constant buffers but they were not "
                     "created previously",
-                    getName()),
+                    getNodeName()),
                 sMeshNodeLogCategory);
             return;
         }
@@ -298,7 +298,7 @@ namespace ne {
                 fmt::format(
                     "mesh node \"{}\" was requested to allocate geometry buffers but the node is not "
                     "spawned",
-                    getName()),
+                    getNodeName()),
                 sMeshNodeLogCategory);
             return;
         }
@@ -309,19 +309,19 @@ namespace ne {
                 fmt::format(
                     "mesh node \"{}\" was requested to deallocate geometry buffers but they are already "
                     "created",
-                    getName()),
+                    getNodeName()),
                 sMeshNodeLogCategory);
             return;
         }
 
         if (meshData.getVertices()->empty()) [[unlikely]] {
             Logger::get().warn(
-                fmt::format("mesh node \"{}\" has no mesh vertices", getName()), sMeshNodeLogCategory);
+                fmt::format("mesh node \"{}\" has no mesh vertices", getNodeName()), sMeshNodeLogCategory);
             return; // nothing to create
         }
         if (meshData.getIndices()->empty()) [[unlikely]] {
             Logger::get().warn(
-                fmt::format("mesh node \"{}\" has no mesh indices", getName()), sMeshNodeLogCategory);
+                fmt::format("mesh node \"{}\" has no mesh indices", getNodeName()), sMeshNodeLogCategory);
             return; // nothing to create
         }
 
@@ -330,7 +330,7 @@ namespace ne {
 
         // Create vertex buffer.
         auto result = pResourceManager->createResourceWithData(
-            fmt::format("mesh node \"{}\" vertex buffer", getName()),
+            fmt::format("mesh node \"{}\" vertex buffer", getNodeName()),
             meshData.getVertices()->data(),
             meshData.getVertices()->size() * sizeof(MeshVertex),
             true);
@@ -344,7 +344,7 @@ namespace ne {
 
         // Create index buffer.
         result = pResourceManager->createResourceWithData(
-            fmt::format("mesh node \"{}\" index buffer", getName()),
+            fmt::format("mesh node \"{}\" index buffer", getNodeName()),
             meshData.getIndices()->data(),
             meshData.getIndices()->size() * sizeof(MeshData::meshindex_t),
             true);
@@ -365,7 +365,7 @@ namespace ne {
                 fmt::format(
                     "mesh node \"{}\" was requested to deallocate geometry buffers but the node is not "
                     "spawned",
-                    getName()),
+                    getNodeName()),
                 sMeshNodeLogCategory);
             return;
         }
@@ -376,7 +376,7 @@ namespace ne {
                 fmt::format(
                     "mesh node \"{}\" was requested to deallocate geometry buffers but they were not "
                     "created previously",
-                    getName()),
+                    getNodeName()),
                 sMeshNodeLogCategory);
             return;
         }

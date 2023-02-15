@@ -81,7 +81,7 @@ namespace ne RNAMESPACE() {
          *
          * @param sName New name of this node.
          */
-        void setName(const std::string& sName);
+        void setNodeName(const std::string& sName);
 
         /**
          * Detaches this node from the parent and despawns this node and
@@ -130,7 +130,7 @@ namespace ne RNAMESPACE() {
          *
          * @return Node name.
          */
-        std::string getName() const;
+        std::string getNodeName() const;
 
         /**
          * Returns world's root node.
@@ -648,7 +648,7 @@ namespace ne RNAMESPACE() {
 
         // Check parent's type and optionally name.
         if (dynamic_cast<NodeType*>(&*mtxParentNode.second) &&
-            (sParentNodeName.empty() || mtxParentNode.second->getName() == sParentNodeName)) {
+            (sParentNodeName.empty() || mtxParentNode.second->getNodeName() == sParentNodeName)) {
             return gc_dynamic_pointer_cast<NodeType>(mtxParentNode.second);
         }
 
@@ -662,7 +662,7 @@ namespace ne RNAMESPACE() {
 
         for (auto& pChildNode : *mtxChildNodes.second) {
             if (dynamic_cast<NodeType*>(&*pChildNode) &&
-                (sChildNodeName.empty() || pChildNode->getName() == sChildNodeName)) {
+                (sChildNodeName.empty() || pChildNode->getNodeName() == sChildNodeName)) {
                 return gc_dynamic_pointer_cast<NodeType>(pChildNode);
             }
 

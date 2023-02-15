@@ -46,9 +46,9 @@ namespace ne {
             sNodeLogCategory);
     }
 
-    void Node::setName(const std::string& sName) { this->sName = sName; }
+    void Node::setNodeName(const std::string& sName) { this->sName = sName; }
 
-    std::string Node::getName() const { return sName; }
+    std::string Node::getNodeName() const { return sName; }
 
     void Node::addChildNode(const gc<Node>& pNode) {
         std::scoped_lock spawnGuard(mtxSpawning);
@@ -59,7 +59,7 @@ namespace ne {
                 fmt::format(
                     "an attempt was made to attach a nullptr node to the \"{}\" node, aborting this "
                     "operation",
-                    getName()),
+                    getNodeName()),
                 sNodeLogCategory);
             return;
         }
@@ -70,7 +70,7 @@ namespace ne {
                 fmt::format(
                     "an attempt was made to attach the \"{}\" node to itself, aborting this "
                     "operation",
-                    getName()),
+                    getNodeName()),
                 sNodeLogCategory);
             return;
         }
@@ -84,9 +84,9 @@ namespace ne {
                     fmt::format(
                         "an attempt was made to attach the \"{}\" node to the \"{}\" node but it's already "
                         "a direct child node of \"{}\", aborting this operation",
-                        pNode->getName(),
-                        getName(),
-                        getName()),
+                        pNode->getNodeName(),
+                        getNodeName(),
+                        getNodeName()),
                     sNodeLogCategory);
                 return;
             }
@@ -99,8 +99,8 @@ namespace ne {
                     "an attempt was made to attach the \"{}\" node to the node \"{}\", "
                     "but the first node is a parent of the second node, "
                     "aborting this operation",
-                    pNode->getName(),
-                    getName()),
+                    pNode->getNodeName(),
+                    getNodeName()),
                 sNodeLogCategory);
             return;
         }
@@ -114,7 +114,7 @@ namespace ne {
                     fmt::format(
                         "an attempt was made to attach the \"{}\" node to its parent again, "
                         "aborting this operation",
-                        pNode->getName()),
+                        pNode->getNodeName()),
                     sNodeLogCategory);
                 return;
             }
@@ -193,7 +193,7 @@ namespace ne {
                     fmt::format(
                         "Node \"{}\" has a parent node but parent's children array "
                         "does not contain this node.",
-                        getName()),
+                        getNodeName()),
                     sNodeLogCategory);
             }
 
@@ -227,7 +227,7 @@ namespace ne {
             Error err(fmt::format(
                 "node \"{}\" can't find a pointer to a valid world instance because "
                 "there is no parent node",
-                getName()));
+                getNodeName()));
             err.showError();
             throw std::runtime_error(err.getFullErrorMessage());
         }
@@ -242,7 +242,7 @@ namespace ne {
             Logger::get().warn(
                 fmt::format(
                     "an attempt was made to spawn already spawned node \"{}\", aborting this operation",
-                    getName()),
+                    getNodeName()),
                 sNodeLogCategory);
             return;
         }
@@ -277,7 +277,7 @@ namespace ne {
             Logger::get().warn(
                 fmt::format(
                     "an attempt was made to despawn already despawned node \"{}\", aborting this operation",
-                    getName()),
+                    getNodeName()),
                 sNodeLogCategory);
             return;
         }
@@ -526,7 +526,7 @@ namespace ne {
                     pRootNode = gc<Node>(pNode);
                 } else {
                     return Error(fmt::format(
-                        "found non root node \"{}\" that does not have a parent", pNode->getName()));
+                        "found non root node \"{}\" that does not have a parent", pNode->getNodeName()));
                 }
             } else {
                 try {

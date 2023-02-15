@@ -58,7 +58,7 @@ namespace ne {
                 fmt::format(
                     "setting world location for node \"{}\" has no effect "
                     "because the node is not spawned in the world",
-                    getName()),
+                    getNodeName()),
                 "");
             return;
         }
@@ -74,7 +74,7 @@ namespace ne {
                 fmt::format(
                     "setting world rotation for node \"{}\" has no effect "
                     "because the node is not spawned in the world",
-                    getName()),
+                    getNodeName()),
                 "");
             return;
         }
@@ -90,7 +90,7 @@ namespace ne {
                 fmt::format(
                     "setting world scale for node \"{}\" has no effect "
                     "because the node is not spawned in the world",
-                    getName()),
+                    getNodeName()),
                 "");
             return;
         }
@@ -222,7 +222,7 @@ namespace ne {
                 fmt::format(
                     "spatial node \"{}\" is exceeding world bounds, node's world location: "
                     "({}, {}, {}), world size: {}",
-                    getName(),
+                    getNodeName(),
                     mtxWorldMatrix.second.worldLocation.x,
                     mtxWorldMatrix.second.worldLocation.y,
                     mtxWorldMatrix.second.worldLocation.z,

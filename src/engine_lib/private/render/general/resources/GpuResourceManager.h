@@ -41,11 +41,8 @@ namespace ne {
         virtual size_t getUsedVideoMemoryInMb() const = 0;
 
         /**
-         * Creates a new GPU constant buffer resource with available CPU access, typically used
+         * Creates a new GPU resource with available CPU access, typically used
          * for resources that needs to be frequently updated from the CPU side.
-         *
-         * @remark Due to hardware requirements resulting element size might be bigger than you've expected
-         * due to padding if not multiple of 256.
          *
          * Example:
          * @code
@@ -56,17 +53,25 @@ namespace ne {
          * auto result = pResourceManager->createResourceWithCpuAccess(
          *     "object constant data",
          *     sizeof(ObjectData),
-         *     1);
+         *     1,
+         *     true);
          * @endcode
          *
-         * @param sResourceName        Resource name, used for logging.
-         * @param iElementSizeInBytes  Size of one buffer element in bytes.
-         * @param iElementCount        Amount of elements in the resulting buffer.
+         * @param sResourceName           Resource name, used for logging.
+         * @param iElementSizeInBytes     Size of one buffer element in bytes.
+         * @param iElementCount           Amount of elements in the resulting buffer.
+         * @param bIsShaderConstantBuffer Determines whether this resource will be used as
+         * a constant buffer in shaders or not. Specify `true` if you plan to use this resource
+         * as a constant buffer in shaders, this will result in element size being padded to
+         * be a multiple of 256 because of the hardware requirement for shader constant buffers.
          *
          * @return Error if something went wrong, otherwise created resource.
          */
         virtual std::variant<std::unique_ptr<UploadBuffer>, Error> createResourceWithCpuAccess(
-            const std::string& sResourceName, size_t iElementSizeInBytes, size_t iElementCount) const = 0;
+            const std::string& sResourceName,
+            size_t iElementSizeInBytes,
+            size_t iElementCount,
+            bool bIsShaderConstantBuffer) const = 0;
 
         /**
          * Creates a new GPU resource and fills it with the specified data.

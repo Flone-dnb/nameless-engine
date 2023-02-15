@@ -233,7 +233,8 @@ namespace ne {
         auto result = pRenderer->getResourceManager()->createResourceWithCpuAccess(
             fmt::format("mesh node \"{}\" shader constant buffer", getNodeName()),
             sizeof(MeshShaderConstants),
-            FrameResourcesManager::getFrameResourcesCount());
+            FrameResourcesManager::getFrameResourcesCount(),
+            true);
         if (std::holds_alternative<Error>(result)) {
             auto error = std::get<Error>(std::move(result));
             error.addEntry();

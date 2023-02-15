@@ -59,9 +59,14 @@ namespace ne {
     }
 
     std::variant<std::unique_ptr<UploadBuffer>, Error> DirectXResourceManager::createResourceWithCpuAccess(
-        const std::string& sResourceName, size_t iElementSizeInBytes, size_t iElementCount) const {
-        // Constant buffers must be multiple of 256.
-        iElementSizeInBytes = makeMultipleOf256(iElementSizeInBytes);
+        const std::string& sResourceName,
+        size_t iElementSizeInBytes,
+        size_t iElementCount,
+        bool bIsShaderConstantBuffer) const {
+        if (bIsShaderConstantBuffer) {
+            // Constant buffers must be multiple of 256 (hardware requirement).
+            iElementSizeInBytes = makeMultipleOf256(iElementSizeInBytes);
+        }
 
         // Prepare resource description.
         CD3DX12_RESOURCE_DESC resourceDesc =

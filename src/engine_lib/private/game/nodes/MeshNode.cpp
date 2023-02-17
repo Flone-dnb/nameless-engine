@@ -84,8 +84,11 @@ namespace ne {
             vPositions.push_back(vertex.position.x);
             vPositions.push_back(vertex.position.y);
             vPositions.push_back(vertex.position.z);
+            vPositions.push_back(vertex.position.w);
             vUvs.push_back(vertex.uv.x);
             vUvs.push_back(vertex.uv.y);
+            vUvs.push_back(vertex.uv.z);
+            vUvs.push_back(vertex.uv.w);
         }
 
         auto table = toml::table();
@@ -144,8 +147,9 @@ namespace ne {
         std::vector<T> vOutput;
         for (size_t i = 0; i < vData.size(); i += iGlmVecSize) {
             T vec;
+            float* pData = glm::value_ptr(vec);
             for (size_t j = 0; j < iGlmVecSize; j++) {
-                vec.data.data[j] = vData[i + j];
+                pData[j] = vData[i + j];
             }
             vOutput.push_back(vec);
         }
@@ -155,22 +159,22 @@ namespace ne {
 
     std::optional<Error> MeshVertex::deserializeVec(std::vector<MeshVertex>* pTo, const toml::value* pToml) {
         // Get positions.
-        auto positionsResult = deserializeArrayGlmVec<glm::vec3>(pToml, sPositionsKeyName);
+        auto positionsResult = deserializeArrayGlmVec<glm::vec4>(pToml, sPositionsKeyName);
         if (std::holds_alternative<Error>(positionsResult)) {
             auto error = std::get<Error>(std::move(positionsResult));
             error.addEntry();
             return error;
         }
-        const auto vPositions = std::get<std::vector<glm::vec3>>(std::move(positionsResult));
+        const auto vPositions = std::get<std::vector<glm::vec4>>(std::move(positionsResult));
 
         // Get UVs.
-        auto uvsResult = deserializeArrayGlmVec<glm::vec2>(pToml, sUvsKeyName);
+        auto uvsResult = deserializeArrayGlmVec<glm::vec4>(pToml, sUvsKeyName);
         if (std::holds_alternative<Error>(uvsResult)) {
             auto error = std::get<Error>(std::move(uvsResult));
             error.addEntry();
             return error;
         }
-        const auto vUvs = std::get<std::vector<glm::vec2>>(std::move(uvsResult));
+        const auto vUvs = std::get<std::vector<glm::vec4>>(std::move(uvsResult));
 
         // Check sizes.
         if (vPositions.size() != vUvs.size()) [[unlikely]] {

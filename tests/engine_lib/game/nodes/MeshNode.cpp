@@ -30,10 +30,10 @@ TEST_CASE("serialize and deserialize MeshNode") {
 
                 // Create mesh data.
                 MeshVertex vertex1, vertex2;
-                vertex1.position = glm::vec3(5.0f, 15.0f, -5.0f);
-                vertex1.uv = glm::vec2(10.0f, -9.0f);
-                vertex2.position = glm::vec3(-1.0f, -2.0f, -3.0f);
-                vertex2.uv = glm::vec2(-1.0f, -2.0f);
+                vertex1.position = glm::vec4(5.0f, 15.0f, -5.0f, 0.0f);
+                vertex1.uv = glm::vec4(10.0f, -9.0f, 0.0f, 0.0f);
+                vertex2.position = glm::vec4(-1.0f, -2.0f, -3.0f, 0.0f);
+                vertex2.uv = glm::vec4(-1.0f, -2.0f, 0.0f, 0.0f);
 
                 {
                     // Create material.
@@ -146,10 +146,10 @@ TEST_CASE("serialize and deserialize array of mesh vertices") {
     MeshVertices vertices;
 
     MeshVertex vertex1, vertex2;
-    vertex1.position = glm::vec3(5.0f, 15.0f, -5.0f);
-    vertex1.uv = glm::vec2(10.0f, -9.0f);
-    vertex2.position = glm::vec3(-1.0f, -2.0f, -3.0f);
-    vertex2.uv = glm::vec2(-1.0f, -2.0f);
+    vertex1.position = glm::vec4(5.0f, 15.0f, -5.0f, 0.0f);
+    vertex1.uv = glm::vec4(10.0f, -9.0f, 0.0f, 0.0f);
+    vertex2.position = glm::vec4(-1.0f, -2.0f, -3.0f, 0.0f);
+    vertex2.uv = glm::vec4(-1.0f, -2.0f, 0.0f, 0.0f);
 
     vertices.vVertices.push_back(vertex1);
     vertices.vVertices.push_back(vertex2);
@@ -209,10 +209,10 @@ TEST_CASE("serialize and deserialize MeshNode as part of a node tree") {
 
                 // Create mesh data.
                 MeshVertex vertex1, vertex2;
-                vertex1.position = glm::vec3(5.0f, 15.0f, -5.0f);
-                vertex1.uv = glm::vec2(10.0f, -9.0f);
-                vertex2.position = glm::vec3(-1.0f, -2.0f, -3.0f);
-                vertex2.uv = glm::vec2(-1.0f, -2.0f);
+                vertex1.position = glm::vec4(5.0f, 15.0f, -5.0f, 0.0f);
+                vertex1.uv = glm::vec4(10.0f, -9.0f, 0.0f, 0.0f);
+                vertex2.position = glm::vec4(-1.0f, -2.0f, -3.0f, 0.0f);
+                vertex2.uv = glm::vec4(-1.0f, -2.0f, 0.0f, 0.0f);
 
                 {
                     // Create material.
@@ -345,10 +345,10 @@ TEST_CASE("serialize and deserialize MeshNode as part of a node tree with origin
 
                 // Create mesh data.
                 MeshVertex vertex1, vertex2;
-                vertex1.position = glm::vec3(5.0f, 15.0f, -5.0f);
-                vertex1.uv = glm::vec2(10.0f, -9.0f);
-                vertex2.position = glm::vec3(-1.0f, -2.0f, -3.0f);
-                vertex2.uv = glm::vec2(-1.0f, -2.0f);
+                vertex1.position = glm::vec4(5.0f, 15.0f, -5.0f, 0.0f);
+                vertex1.uv = glm::vec4(10.0f, -9.0f, 0.0f, 0.0f);
+                vertex2.position = glm::vec4(-1.0f, -2.0f, -3.0f, 0.0f);
+                vertex2.uv = glm::vec4(-1.0f, -2.0f, 0.0f, 0.0f);
 
                 {
                     // Create material.
@@ -416,8 +416,8 @@ TEST_CASE("serialize and deserialize MeshNode as part of a node tree with origin
                 REQUIRE(std::filesystem::exists(pathToExternalFile));
 
                 MeshVertex vertex3;
-                vertex3.position = glm::vec3(-1.0f, -2.0f, -3.0f);
-                vertex3.uv = glm::vec2(-1.0f, -2.0f);
+                vertex3.position = glm::vec4(-1.0f, -2.0f, -3.0f, 0.0f);
+                vertex3.uv = glm::vec4(-1.0f, -2.0f, 0.0f, 0.0f);
 
                 {
                     // Modify mesh data.
@@ -543,10 +543,10 @@ TEST_CASE("MeshNode's meshdata deserialization backwards compatibility") {
 
                 // Create mesh data.
                 MeshVertex vertex1, vertex2;
-                vertex1.position = glm::vec3(5.0f, 15.0f, -5.0f);
-                vertex1.uv = glm::vec2(10.0f, -9.0f);
-                vertex2.position = glm::vec3(-1.0f, -2.0f, -3.0f);
-                vertex2.uv = glm::vec2(-1.0f, -2.0f);
+                vertex1.position = glm::vec4(5.0f, 15.0f, -5.0f, 0.0f);
+                vertex1.uv = glm::vec4(10.0f, -9.0f, 0.0f, 0.0f);
+                vertex2.position = glm::vec4(-1.0f, -2.0f, -3.0f, 0.0f);
+                vertex2.uv = glm::vec4(-1.0f, -2.0f, 0.0f, 0.0f);
 
                 // Deserialize.
                 auto result = Serializable::deserialize<gc, MeshNode>(pathToFileInTemp);

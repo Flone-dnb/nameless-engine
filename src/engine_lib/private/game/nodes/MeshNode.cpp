@@ -73,22 +73,29 @@ namespace ne {
     const std::string sUvsKeyName = "uvs";
 
     bool MeshVertex::operator==(const MeshVertex& other) const {
-        return position == other.position && uv == other.uv;
+        static_assert(
+            sizeof(MeshVertex) == 32, // NOLINT
+            "add new fields to `serializeVec`, `deserializeVec`, `operator==` and to unit "
+            "tests");
+        constexpr auto floatDelta = 0.00001F;
+        return glm::all(glm::epsilonEqual(position, other.position, floatDelta)) &&
+               glm::all(glm::epsilonEqual(uv, other.uv, floatDelta));
     }
 
     void MeshVertex::serializeVec(
         std::vector<MeshVertex>* pFrom, toml::value* pToml, const std::string& sSectionName) {
-        std::vector<float> vPositions;
-        std::vector<float> vUvs;
+        std::vector<std::string> vPositions;
+        std::vector<std::string> vUvs;
+        // Store float as string for better precision.
         for (const auto& vertex : *pFrom) {
-            vPositions.push_back(vertex.position.x);
-            vPositions.push_back(vertex.position.y);
-            vPositions.push_back(vertex.position.z);
-            vPositions.push_back(vertex.position.w);
-            vUvs.push_back(vertex.uv.x);
-            vUvs.push_back(vertex.uv.y);
-            vUvs.push_back(vertex.uv.z);
-            vUvs.push_back(vertex.uv.w);
+            vPositions.push_back(toml::format(toml::value(vertex.position.x)));
+            vPositions.push_back(toml::format(toml::value(vertex.position.y)));
+            vPositions.push_back(toml::format(toml::value(vertex.position.z)));
+            vPositions.push_back(toml::format(toml::value(vertex.position.w)));
+            vUvs.push_back(toml::format(toml::value(vertex.uv.x)));
+            vUvs.push_back(toml::format(toml::value(vertex.uv.y)));
+            vUvs.push_back(toml::format(toml::value(vertex.uv.z)));
+            vUvs.push_back(toml::format(toml::value(vertex.uv.w)));
         }
 
         auto table = toml::table();
@@ -136,11 +143,17 @@ namespace ne {
         // Deserialize.
         std::vector<float> vData;
         for (const auto& item : array) {
-            if (!item.is_floating()) [[unlikely]] {
+            // We are storing float as string for better precision.
+            if (!item.is_string()) [[unlikely]] {
                 return Error(fmt::format(
-                    "failed to deserialize mesh data: \"{}\" array item is not float", sTomKeyName));
+                    "failed to deserialize mesh data: \"{}\" array item is not string", sTomKeyName));
             }
-            vData.push_back(static_cast<float>(item.as_floating()));
+            try {
+                vData.push_back(std::stof(item.as_string().str));
+            } catch (std::exception& ex) {
+                return Error(fmt::format(
+                    "An exception occurred while trying to convert a string to a float: {}", ex.what()));
+            }
         }
 
         // Convert to output.

@@ -30,8 +30,8 @@ TEST_CASE("serialize and deserialize MeshNode") {
 
                 // Create mesh data.
                 MeshVertex vertex1, vertex2;
-                vertex1.position = glm::vec4(5.0f, 15.0f, -5.0f, 0.0f);
-                vertex1.uv = glm::vec4(10.0f, -9.0f, 0.0f, 0.0f);
+                vertex1.position = glm::vec4(5123.91827f, -12225.24142f, -5.0f, 0.0f);
+                vertex1.uv = glm::vec4(10.0f, -8885.14122f, 0.0f, 0.0f);
                 vertex2.position = glm::vec4(-1.0f, -2.0f, -3.0f, 0.0f);
                 vertex2.uv = glm::vec4(-1.0f, -2.0f, 0.0f, 0.0f);
 
@@ -146,8 +146,8 @@ TEST_CASE("serialize and deserialize array of mesh vertices") {
     MeshVertices vertices;
 
     MeshVertex vertex1, vertex2;
-    vertex1.position = glm::vec4(5.0f, 15.0f, -5.0f, 0.0f);
-    vertex1.uv = glm::vec4(10.0f, -9.0f, 0.0f, 0.0f);
+    vertex1.position = glm::vec4(5123.91827f, -12225.24142f, -5.0f, 0.0f);
+    vertex1.uv = glm::vec4(10.0f, -8885.14122f, 0.0f, 0.0f);
     vertex2.position = glm::vec4(-1.0f, -2.0f, -3.0f, 0.0f);
     vertex2.uv = glm::vec4(-1.0f, -2.0f, 0.0f, 0.0f);
 
@@ -209,8 +209,8 @@ TEST_CASE("serialize and deserialize MeshNode as part of a node tree") {
 
                 // Create mesh data.
                 MeshVertex vertex1, vertex2;
-                vertex1.position = glm::vec4(5.0f, 15.0f, -5.0f, 0.0f);
-                vertex1.uv = glm::vec4(10.0f, -9.0f, 0.0f, 0.0f);
+                vertex1.position = glm::vec4(5123.91827f, -12225.24142f, -5.0f, 0.0f);
+                vertex1.uv = glm::vec4(10.0f, -8885.14122f, 0.0f, 0.0f);
                 vertex2.position = glm::vec4(-1.0f, -2.0f, -3.0f, 0.0f);
                 vertex2.uv = glm::vec4(-1.0f, -2.0f, 0.0f, 0.0f);
 
@@ -345,8 +345,8 @@ TEST_CASE("serialize and deserialize MeshNode as part of a node tree with origin
 
                 // Create mesh data.
                 MeshVertex vertex1, vertex2;
-                vertex1.position = glm::vec4(5.0f, 15.0f, -5.0f, 0.0f);
-                vertex1.uv = glm::vec4(10.0f, -9.0f, 0.0f, 0.0f);
+                vertex1.position = glm::vec4(5123.91827f, -12225.24142f, -5.0f, 0.0f);
+                vertex1.uv = glm::vec4(10.0f, -8885.14122f, 0.0f, 0.0f);
                 vertex2.position = glm::vec4(-1.0f, -2.0f, -3.0f, 0.0f);
                 vertex2.uv = glm::vec4(-1.0f, -2.0f, 0.0f, 0.0f);
 
@@ -543,8 +543,8 @@ TEST_CASE("MeshNode's meshdata deserialization backwards compatibility") {
 
                 // Create mesh data.
                 MeshVertex vertex1, vertex2;
-                vertex1.position = glm::vec4(5.0f, 15.0f, -5.0f, 0.0f);
-                vertex1.uv = glm::vec4(10.0f, -9.0f, 0.0f, 0.0f);
+                vertex1.position = glm::vec4(5123.91827f, -12225.24142f, -5.0f, 0.0f);
+                vertex1.uv = glm::vec4(10.0f, -8885.14122f, 0.0f, 0.0f);
                 vertex2.position = glm::vec4(-1.0f, -2.0f, -3.0f, 0.0f);
                 vertex2.uv = glm::vec4(-1.0f, -2.0f, 0.0f, 0.0f);
 

@@ -73,6 +73,8 @@ namespace ne RNAMESPACE() {
          */
         static std::optional<Error> deserializeVec(std::vector<MeshVertex>* pTo, const toml::value* pToml);
 
+        // --------------------------------------------------------------------------------------
+
         /**
          * Position of the vertex in a 3D space.
          *
@@ -89,10 +91,14 @@ namespace ne RNAMESPACE() {
          */
         glm::vec4 uv = glm::vec4(0.0f, 0.0f, 0.0f, 0.0f);
 
+        // --------------------------------------------------------------------------------------
+
         // ! only vertex related fields (same as in shader) can be added here !
         // ! add new fields to `serializeVec`, `deserializeVec` and `operator==` !
         // ! and to unit test !
         // (not deriving from `Serializable` to avoid extra fields that are not related to vertex)
+
+        // --------------------------------------------------------------------------------------
     };
 
     /** Stores mesh geometry (vertices and indices). */

@@ -14,6 +14,14 @@ namespace ne {
                sFieldCanonicalTypeName == sVec4CanonicalTypeName;
     }
 
+    std::vector<std::string> vecFloatToString(const std::vector<float>& vInitial) {
+        std::vector<std::string> vOutput;
+        for (size_t i = 0; i < vInitial.size(); i++) {
+            vOutput.push_back(toml::format(toml::value(vInitial[i])));
+        }
+        return vOutput;
+    }
+
     std::optional<Error> GlmVecFieldSerializer::serializeField(
         toml::value* pTomlData,
         Serializable* pFieldOwner,
@@ -27,15 +35,16 @@ namespace ne {
 
         if (sFieldCanonicalTypeName == sVec2CanonicalTypeName) {
             const auto value = pField->getUnsafe<glm::vec2>(pFieldOwner);
-            pTomlData->operator[](sSectionName).operator[](pFieldName) = std::vector<float>{value.x, value.y};
+            pTomlData->operator[](sSectionName).operator[](pFieldName) =
+                vecFloatToString(std::vector<float>{value.x, value.y});
         } else if (sFieldCanonicalTypeName == sVec3CanonicalTypeName) {
             const auto value = pField->getUnsafe<glm::vec3>(pFieldOwner);
             pTomlData->operator[](sSectionName).operator[](pFieldName) =
-                std::vector<float>{value.x, value.y, value.z};
+                vecFloatToString(std::vector<float>{value.x, value.y, value.z});
         } else if (sFieldCanonicalTypeName == sVec4CanonicalTypeName) {
             const auto value = pField->getUnsafe<glm::vec4>(pFieldOwner);
             pTomlData->operator[](sSectionName).operator[](pFieldName) =
-                std::vector<float>{value.x, value.y, value.z, value.w};
+                vecFloatToString(std::vector<float>{value.x, value.y, value.z, value.w});
         } else {
             return Error(fmt::format(
                 "The type \"{}\" of the specified field \"{}\" is not supported by this serializer.",
@@ -76,14 +85,23 @@ namespace ne {
                     pFieldName));
             }
             for (const auto& item : array) {
-                if (!item.is_floating()) {
+                if (!item.is_string()) {
                     return Error(fmt::format(
                         "The type \"{}\" of the specified field \"{}\" is supported by this serializer, "
-                        "but the TOML value is not float.",
+                        "but the TOML value is not string.",
                         sFieldCanonicalTypeName,
                         pFieldName));
                 }
-                floatArray.push_back(static_cast<float>(item.as_floating()));
+                try {
+                    floatArray.push_back(std::stof(item.as_string().str));
+                } catch (std::exception& ex) {
+                    return Error(fmt::format(
+                        "The type \"{}\" of the specified field \"{}\" is supported by this serializer, "
+                        "but an exception occurred while trying to convert a string to a float: {}",
+                        sFieldCanonicalTypeName,
+                        pFieldName,
+                        ex.what()));
+                }
             }
             // `setUnsafe` throws exception for `glm::vec` for some reason, thus use this approach
             auto pVec = reinterpret_cast<glm::vec2*>(pField->getPtrUnsafe(pFieldOwner));
@@ -102,14 +120,23 @@ namespace ne {
                     pFieldName));
             }
             for (const auto& item : array) {
-                if (!item.is_floating()) {
+                if (!item.is_string()) {
                     return Error(fmt::format(
                         "The type \"{}\" of the specified field \"{}\" is supported by this serializer, "
-                        "but the TOML value is not float.",
+                        "but the TOML value is not string.",
                         sFieldCanonicalTypeName,
                         pFieldName));
                 }
-                floatArray.push_back(static_cast<float>(item.as_floating()));
+                try {
+                    floatArray.push_back(std::stof(item.as_string().str));
+                } catch (std::exception& ex) {
+                    return Error(fmt::format(
+                        "The type \"{}\" of the specified field \"{}\" is supported by this serializer, "
+                        "but an exception occurred while trying to convert a string to a float: {}",
+                        sFieldCanonicalTypeName,
+                        pFieldName,
+                        ex.what()));
+                }
             }
             // `setUnsafe` throws exception for `glm::vec` for some reason, thus use this approach
             auto pVec = reinterpret_cast<glm::vec3*>(pField->getPtrUnsafe(pFieldOwner));
@@ -128,14 +155,23 @@ namespace ne {
                     pFieldName));
             }
             for (const auto& item : array) {
-                if (!item.is_floating()) {
+                if (!item.is_string()) {
                     return Error(fmt::format(
                         "The type \"{}\" of the specified field \"{}\" is supported by this serializer, "
                         "but the TOML value is not float.",
                         sFieldCanonicalTypeName,
                         pFieldName));
                 }
-                floatArray.push_back(static_cast<float>(item.as_floating()));
+                try {
+                    floatArray.push_back(std::stof(item.as_string().str));
+                } catch (std::exception& ex) {
+                    return Error(fmt::format(
+                        "The type \"{}\" of the specified field \"{}\" is supported by this serializer, "
+                        "but an exception occurred while trying to convert a string to a float: {}",
+                        sFieldCanonicalTypeName,
+                        pFieldName,
+                        ex.what()));
+                }
             }
             // `setUnsafe` throws exception for `glm::vec` for some reason, thus use this approach
             auto pVec = reinterpret_cast<glm::vec4*>(pField->getPtrUnsafe(pFieldOwner));

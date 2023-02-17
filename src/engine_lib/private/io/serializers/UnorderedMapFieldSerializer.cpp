@@ -51,7 +51,8 @@ namespace ne {
 #define SERIALIZE_UNORDERED_MAP_TYPE(TYPEA, TYPEB)                                                           \
     if (sFieldCanonicalTypeName == fmt::format("std::unordered_map<{}, {}>", #TYPEA, #TYPEB)) {              \
         const auto originalMap = pField->getUnsafe<std::unordered_map<TYPEA, TYPEB>>(pFieldOwner);           \
-        if (std::string(#TYPEB) == "double" || std::string(#TYPEB) == "unsigned long long") {                \
+        if (std::string(#TYPEB) == "float" || std::string(#TYPEB) == "double" ||                             \
+            std::string(#TYPEB) == "unsigned long long") {                                                   \
             std::unordered_map<std::string, std::string> map;                                                \
             for (const auto& [key, value] : originalMap) {                                                   \
                 map[fmt::format("{}", key)] = fmt::format("{}", value);                                      \
@@ -215,10 +216,14 @@ namespace ne {
     }
 
     template <> std::optional<float> convertTomlValueToType<float>(const toml::value& value) {
-        if (!value.is_floating()) {
+        if (!value.is_string()) {
             return {};
         }
-        return static_cast<float>(value.as_floating());
+        try {
+            return std::stof(value.as_string());
+        } catch (...) {
+            return {};
+        }
     }
 
     template <> std::optional<double> convertTomlValueToType<double>(const toml::value& value) {

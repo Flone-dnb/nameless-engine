@@ -62,8 +62,9 @@ namespace ne {
             const std::string sValue = std::to_string(iValue);
             pTomlData->operator[](sSectionName).operator[](pFieldName) = sValue;
         } else if (fieldType.match(rfk::getType<float>())) {
+            // Store float as string for better precision.
             pTomlData->operator[](sSectionName).operator[](pFieldName) =
-                pField->getUnsafe<float>(pFieldOwner);
+                toml::format(toml::value(pField->getUnsafe<float>(pFieldOwner)));
         } else if (fieldType.match(rfk::getType<double>())) {
             // Store double as string for better precision.
             pTomlData->operator[](sSectionName).operator[](pFieldName) =
@@ -120,9 +121,15 @@ namespace ne {
                     pFieldName,
                     ex.what()));
             }
-        } else if (fieldType.match(rfk::getType<float>()) && pTomlValue->is_floating()) {
-            auto fieldValue = static_cast<float>(pTomlValue->as_floating());
-            pField->setUnsafe<float>(pFieldOwner, std::move(fieldValue)); // NOLINT
+        } else if (fieldType.match(rfk::getType<float>()) && pTomlValue->is_string()) {
+            // We store float as a string for better precision.
+            try {
+                float fieldValue = std::stof(pTomlValue->as_string().str);
+                pField->setUnsafe<float>(pFieldOwner, std::move(fieldValue)); // NOLINT
+            } catch (std::exception& ex) {
+                return Error(fmt::format(
+                    "Failed to convert string to double for field \"{}\": {}", pFieldName, ex.what()));
+            }
         } else if (fieldType.match(rfk::getType<double>()) && pTomlValue->is_string()) {
             // We store double as a string for better precision.
             try {

@@ -504,7 +504,7 @@ TEST_CASE("serialize and deserialize SpatialNode") {
                     ProjectPaths::getDirectoryForResources(ResourceDirectory::ROOT) / "test" / "temp" /
                     "TESTING_SpatialNodeSerialization_TESTING.toml";
 
-                const auto location = glm::vec3(1.0f, -2.0f, 3.0f);
+                const auto location = glm::vec3(5123.91827f, -12225.24142f, 3.0f);
                 const auto rotation = glm::vec3(-5.0f, 15.0f, -30.0f);
                 const auto scale = glm::vec3(10.0f, 20.0f, 30.0f);
 

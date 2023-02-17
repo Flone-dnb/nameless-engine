@@ -75,8 +75,13 @@ namespace ne {
             }
             pTomlData->operator[](sSectionName).operator[](pFieldName) = vArray;
         } else if (sFieldCanonicalTypeName == "std::vector<float>") {
-            pTomlData->operator[](sSectionName).operator[](pFieldName) =
-                pField->getUnsafe<std::vector<float>>(pFieldOwner);
+            const std::vector<float> vArray = pField->getUnsafe<std::vector<float>>(pFieldOwner);
+            // Store float as string for better precision.
+            std::vector<std::string> vStrArray(vArray.size());
+            for (size_t i = 0; i < vArray.size(); i++) {
+                vStrArray[i] = toml::format(toml::value(vArray[i]));
+            }
+            pTomlData->operator[](sSectionName).operator[](pFieldName) = vStrArray;
         } else if (sFieldCanonicalTypeName == "std::vector<double>") {
             const std::vector<double> vArray = pField->getUnsafe<std::vector<double>>(pFieldOwner);
             // Store double as string for better precision.
@@ -210,16 +215,26 @@ namespace ne {
             pField->setUnsafe<std::vector<unsigned long long>>(pFieldOwner, std::move(vArray));
         } else if (sFieldCanonicalTypeName == "std::vector<float>") {
             auto fieldValue = pTomlValue->as_array();
+            // We are storing float as a string for better precision.
             std::vector<float> vArray;
             for (const auto& item : fieldValue) {
-                if (!item.is_floating()) {
+                if (!item.is_string()) {
                     return Error(fmt::format(
                         "The type \"{}\" of the specified field \"{}\" is supported by this serializer, "
-                        "but the TOML value is not floating.",
+                        "but the TOML value is not string.",
                         sFieldCanonicalTypeName,
                         pFieldName));
                 }
-                vArray.push_back(static_cast<float>(item.as_floating()));
+                try {
+                    vArray.push_back(std::stof(item.as_string().str));
+                } catch (std::exception& ex) {
+                    return Error(fmt::format(
+                        "The type \"{}\" of the specified field \"{}\" is supported by this serializer, "
+                        "but an exception occurred while trying to convert a string to a float: {}",
+                        sFieldCanonicalTypeName,
+                        pFieldName,
+                        ex.what()));
+                }
             }
             pField->setUnsafe<std::vector<float>>(pFieldOwner, std::move(vArray));
         } else if (sFieldCanonicalTypeName == "std::vector<double>") {

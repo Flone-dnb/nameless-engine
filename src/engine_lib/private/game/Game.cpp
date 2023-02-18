@@ -241,27 +241,22 @@ namespace ne {
         {
             // Call on all tickable nodes.
             std::scoped_lock guard(mtxWorld.first);
-            if (mtxWorld.second) {
-                const auto pCalledEveryFrameNodes = mtxWorld.second->getCalledEveryFrameNodes();
-
-                {
-                    // First tick group.
-                    std::scoped_lock nodesGuard(pCalledEveryFrameNodes->mtxFirstTickGroup.first);
-                    const gc_vector<Node>* pNodes = &pCalledEveryFrameNodes->mtxFirstTickGroup.second;
-                    for (auto it = (*pNodes)->begin(); it != (*pNodes)->end(); ++it) {
-                        (*it)->onBeforeNewFrame(fTimeSincePrevCallInSec);
-                    }
-                }
-
-                {
-                    // Second tick group.
-                    std::scoped_lock nodesGuard(pCalledEveryFrameNodes->mtxSecondTickGroup.first);
-                    const gc_vector<Node>* pNodes = &pCalledEveryFrameNodes->mtxSecondTickGroup.second;
-                    for (auto it = (*pNodes)->begin(); it != (*pNodes)->end(); ++it) {
-                        (*it)->onBeforeNewFrame(fTimeSincePrevCallInSec);
-                    }
-                }
+            if (mtxWorld.second == nullptr) {
+                return;
             }
+
+            const auto pCalledEveryFrameNodes = mtxWorld.second->getCalledEveryFrameNodes();
+
+            auto callTick = [&](std::pair<std::recursive_mutex, gc_vector<Node>>* pTickGroup) {
+                std::scoped_lock nodesGuard(pTickGroup->first);
+                const gc_vector<Node>* pNodes = &pTickGroup->second;
+                for (auto it = (*pNodes)->begin(); it != (*pNodes)->end(); ++it) {
+                    (*it)->onBeforeNewFrame(fTimeSincePrevCallInSec);
+                }
+            };
+
+            callTick(&pCalledEveryFrameNodes->mtxFirstTickGroup);
+            callTick(&pCalledEveryFrameNodes->mtxSecondTickGroup);
         }
     }
 

@@ -19,7 +19,6 @@ namespace ne {
     class PsoManager;
     class ShaderConfiguration;
     class RenderSettings;
-    class GpuCommandList;
 
     /** Defines a base class for renderers to implement. */
     class Renderer {
@@ -119,13 +118,6 @@ namespace ne {
          * @return Do not delete (free) returned pointer. Shader configuration.
          */
         std::pair<std::recursive_mutex, std::unique_ptr<ShaderConfiguration>>* getShaderConfiguration();
-
-        /**
-         * Returns a temporary render-independent command list wrapper.
-         *
-         * @return Command list wrapper.
-         */
-        virtual std::unique_ptr<GpuCommandList> getCommandList() = 0;
 
         /**
          * Returns the window that we render to.

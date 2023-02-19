@@ -12,9 +12,44 @@
 namespace ne RNAMESPACE() {
     class MeshNode;
 
-    /**
-     * Defines visual aspects of a mesh.
-     */
+    /** Groups mesh nodes by visibility. */
+    struct MeshNodesThatUseThisMaterial {
+        /**
+         * Returns total number of visible and invisible mesh nodes that use this material.
+         *
+         * @return Total number of nodes that use this material.
+         */
+        size_t getTotalSize() const { return visibleMeshNodes.size() + invisibleMeshNodes.size(); }
+
+        /**
+         * Tells whether the specified node is already added to be considered.
+         *
+         * @param pMeshNode Mesh node to check.
+         *
+         * @return Whether the node is added or not.
+         */
+        bool isMeshNodeAdded(MeshNode* pMeshNode) {
+            auto it = visibleMeshNodes.find(pMeshNode);
+            if (it != visibleMeshNodes.end()) {
+                return true;
+            }
+
+            it = invisibleMeshNodes.find(pMeshNode);
+            if (it != invisibleMeshNodes.end()) {
+                return true;
+            }
+
+            return false;
+        }
+
+        /** Visible nodes. */
+        std::set<MeshNode*> visibleMeshNodes;
+
+        /** Invisible nodes. */
+        std::set<MeshNode*> invisibleMeshNodes;
+    };
+
+    /** Defines visual aspects of a mesh. */
     class RCLASS(Guid("a603fa3a-e9c2-4c38-bb4c-76384ef001f4")) Material : public Serializable {
         // Mesh node will notify the material when it's spawned/despawned.
         friend class MeshNode;
@@ -70,7 +105,7 @@ namespace ne RNAMESPACE() {
          *
          * @return Array of mesh nodes.
          */
-        std::pair<std::mutex, std::set<MeshNode*>>* getSpawnedMeshNodesThatUseThisMaterial();
+        std::pair<std::mutex, MeshNodesThatUseThisMaterial>* getSpawnedMeshNodesThatUseThisMaterial();
 
         /**
          * Returns material name.
@@ -122,6 +157,14 @@ namespace ne RNAMESPACE() {
         void onSpawnedMeshNodeStartedUsingMaterial(MeshNode* pMeshNode);
 
         /**
+         * Called from MeshNode when a spawned mesh node changed its visibility.
+         *
+         * @param pMeshNode      Spawned mesh node that is using this material.
+         * @param bOldVisibility Old visibility of the mesh.
+         */
+        void onSpawnedMeshNodeChangedVisibility(MeshNode* pMeshNode, bool bOldVisibility);
+
+        /**
          * Called from MeshNode when a spawned mesh node changed its material and now no longer
          * using this material.
          *
@@ -140,7 +183,7 @@ namespace ne RNAMESPACE() {
          * Array of spawned mesh nodes that use this material.
          * Must be used with mutex.
          */
-        std::pair<std::mutex, std::set<MeshNode*>> mtxSpawnedMeshNodesThatUseThisMaterial;
+        std::pair<std::mutex, MeshNodesThatUseThisMaterial> mtxSpawnedMeshNodesThatUseThisMaterial;
 
         /** Used PSO, only valid when the mesh that is using this material is spawned. */
         PsoSharedPtr pUsedPso;

@@ -6,7 +6,6 @@
 #include "render/Renderer.h"
 #include "render/general/resources/FrameResourcesManager.h"
 #include "render/general/resources/GpuResourceManager.h"
-#include "render/general/GpuCommandList.h"
 
 #include "MeshNode.generated_impl.h"
 
@@ -415,6 +414,52 @@ namespace ne {
             return;
         }
 
+        // Make sure we don't exceed type limit for vertices.
+        const auto iVertexCount = meshData.getVertices()->size();
+        if (iVertexCount > UINT_MAX) [[unlikely]] {
+            // This will exceed type limit for DirectX vertex buffer view fields.
+            auto error = Error(fmt::format(
+                "the number of vertices in the mesh node \"{}\" has exceeded the maximum number of vertices "
+                "(maximum is {}), can't continue because an overflow will occur",
+                getNodeName(),
+                UINT_MAX));
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+        }
+        const auto iVertexBufferSize = iVertexCount * sizeof(MeshVertex);
+        if (iVertexBufferSize > UINT_MAX) [[unlikely]] {
+            // This will exceed type limit for DirectX vertex buffer view fields.
+            auto error = Error(fmt::format(
+                "size of the vertex buffer ({} bytes) for the mesh node \"{}\" will exceed the limit of {} "
+                "bytes ({} vertices * {} vertex size = {}), can't continue because an overflow will occur",
+                iVertexBufferSize,
+                getNodeName(),
+                UINT_MAX,
+                iVertexCount,
+                sizeof(MeshVertex),
+                iVertexBufferSize));
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+        }
+
+        // Make sure we don't exceed type limit for indices.
+        const auto iIndexCount = meshData.getIndices()->size();
+        const auto iIndexBufferSize = iIndexCount * sizeof(MeshData::meshindex_t);
+        if (iIndexBufferSize > UINT_MAX) [[unlikely]] {
+            // This will exceed type limit for DirectX vertex buffer view fields.
+            auto error = Error(fmt::format(
+                "size of the index buffer ({} bytes) for the mesh node \"{}\" will exceed the limit of {} "
+                "bytes ({} indices * {} index size = {}), can't continue because an overflow will occur",
+                iIndexBufferSize,
+                getNodeName(),
+                UINT_MAX,
+                iIndexCount,
+                sizeof(MeshData::meshindex_t),
+                iIndexBufferSize));
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+        }
+
         deallocateGeometryBuffers();
         allocateGeometryBuffers();
     }
@@ -439,9 +484,19 @@ namespace ne {
         deallocateGeometryBuffers();
     }
 
-    void MeshNode::draw(GpuCommandList* pCommandList, unsigned int iCurrentFrameResourceIndex) {
-        // TODO
+    void MeshNode::setVisibility(bool bVisible) {
+        std::scoped_lock guard(mtxSpawning); // don't change visibility while we are being spawned
+
+        if (bIsVisible == bVisible) {
+            return;
+        }
+
+        bIsVisible = bVisible;
+
+        pMaterial->onSpawnedMeshNodeChangedVisibility(this, !bIsVisible);
     }
+
+    bool MeshNode::isVisible() const { return bIsVisible; }
 
     std::pair<std::recursive_mutex*, MeshData*> MeshNode::getMeshData() {
         return std::make_pair(&mtxMeshData, &meshData);

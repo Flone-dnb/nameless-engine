@@ -14,7 +14,6 @@
 namespace ne RNAMESPACE() {
     class Material;
     class UploadBuffer;
-    class GpuCommandList;
 
     /**
      * Vertex of a mesh.
@@ -105,7 +104,8 @@ namespace ne RNAMESPACE() {
     class RCLASS(Guid("b60e4b47-b1e6-4001-87a8-b7885b4e8383")) MeshData : public Serializable {
     public:
         /** Type of mesh index. */
-        using meshindex_t = unsigned int;
+        using meshindex_t = unsigned int; // if making this dynamic (changes depending on the number of
+                                          // indices) change hardcoded FORMAT in the renderer
 
         MeshData();
         virtual ~MeshData() override = default;
@@ -162,6 +162,36 @@ namespace ne RNAMESPACE() {
         friend class Renderer;
 
     public:
+        /** Groups GPU buffers that store mesh data. */
+        struct GeometryBuffers {
+            /** Stores mesh vertices. */
+            std::unique_ptr<GpuResource> pVertexBuffer;
+
+            /** Stores mesh indices. */
+            std::unique_ptr<GpuResource> pIndexBuffer;
+        };
+
+        /** Stores GPU resources used by shaders. */
+        struct ShaderConstants {
+            /**
+             * Buffer with CPU access that contains N elements with object-specific data
+             * (@ref MeshShaderConstants). Amount of elements in this buffer is defined by the amount
+             * of frame resources.
+             */
+            std::unique_ptr<UploadBuffer> pConstantBuffers;
+
+            /** Number of elements in @ref pConstantBuffers that needs to be updated with new data. */
+            std::atomic<unsigned int> iFrameResourceCountToUpdate{0};
+        };
+
+        /** Constants used by shaders. */
+        struct MeshShaderConstants {
+            /** World matrix. */
+            glm::mat4x4 world = glm::identity<glm::mat4x4>();
+
+            // remember to add padding to 4 floats (if needed)
+        };
+
         MeshNode();
 
         /**
@@ -196,6 +226,16 @@ namespace ne RNAMESPACE() {
          */
         void setMeshData(MeshData&& meshData);
 
+        /** Must be called after mesh data was modified to (re)create internal CPU/GPU resources. */
+        void onMeshDataChanged();
+
+        /**
+         * Sets whether this mesh is visible or not.
+         *
+         * @param bVisible Whether this mesh is visible or not.
+         */
+        void setVisibility(bool bVisible);
+
         /**
          * Returns material used by this name.
          *
@@ -217,19 +257,20 @@ namespace ne RNAMESPACE() {
         std::pair<std::recursive_mutex*, MeshData*> getMeshData();
 
         /**
-         * Must be called after mesh data was modified to (re)create internal CPU/GPU resources.
+         * Returns GPU resources that store mesh geometry.
+         *
+         * @return Geometry buffers.
          */
-        void onMeshDataChanged();
+        inline std::pair<std::mutex, GeometryBuffers>* getGeometryBuffers() { return &mtxGeometryBuffers; }
+
+        /**
+         * Tells whether this mesh is currently visible or not.
+         *
+         * @return Whether the mesh is visible or not.
+         */
+        bool isVisible() const;
 
     protected:
-        /** Constants used by shaders. */
-        struct MeshShaderConstants {
-            /** World matrix. */
-            glm::mat4x4 world = glm::identity<glm::mat4x4>();
-
-            // remember to add padding to 4 floats
-        };
-
         /**
          * Called when this node was not spawned previously and it was either attached to a parent node
          * that is spawned or set as world's root node to execute custom spawn logic.
@@ -262,37 +303,7 @@ namespace ne RNAMESPACE() {
          */
         virtual void onWorldLocationRotationScaleChanged() override;
 
-        /**
-         * Called by renderer to add draw commands (that will draw this mesh) to the command list.
-         *
-         * @param pCommandList               Command list to add draw commands to.
-         * @param iCurrentFrameResourceIndex Index of currently used frame resource.
-         */
-        void draw(GpuCommandList* pCommandList, unsigned int iCurrentFrameResourceIndex);
-
     private:
-        /** Groups GPU buffers that store mesh data. */
-        struct GeometryBuffers {
-            /** Stores mesh vertices. */
-            std::unique_ptr<GpuResource> pVertexBuffer;
-
-            /** Stores mesh indices. */
-            std::unique_ptr<GpuResource> pIndexBuffer;
-        };
-
-        /** Stores GPU resources used by shaders. */
-        struct ShaderConstants {
-            /**
-             * Buffer with CPU access that contains N elements with object-specific data
-             * (@ref MeshShaderConstants). Amount of elements in this buffer is defined by the amount
-             * of frame resources.
-             */
-            std::unique_ptr<UploadBuffer> pConstantBuffers;
-
-            /** Number of elements in @ref pConstantBuffers that needs to be updated with new data. */
-            std::atomic<unsigned int> iFrameResourceCountToUpdate{0};
-        };
-
         /** Allocates @ref mtxShaderConstantBuffers to be used by shaders. */
         void allocateShaderConstantBuffers();
 
@@ -326,6 +337,9 @@ namespace ne RNAMESPACE() {
 
         /** Stores GPU resources used by shaders. */
         std::pair<std::mutex, ShaderConstants> mtxShaderConstantBuffers;
+
+        /** Whether mesh is visible or not. */
+        bool bIsVisible = true;
 
         /** Name of the category used for logging. */
         static inline const auto sMeshNodeLogCategory = "Mesh Node";

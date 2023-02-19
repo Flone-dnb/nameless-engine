@@ -104,13 +104,6 @@ namespace ne {
         virtual void waitForGpuToFinishWorkUpToThisPoint() override;
 
         /**
-         * Returns a temporary render-independent command list wrapper.
-         *
-         * @return Command list wrapper.
-         */
-        virtual std::unique_ptr<GpuCommandList> getCommandList() override;
-
-        /**
          * Returns DirectX device.
          *
          * @return Do not delete (free) this pointer. Render's internal device.

@@ -16,8 +16,9 @@
 #include "materials/hlsl/HlslEngineShaders.hpp"
 #include "render/general/pso/PsoManager.h"
 #include "materials/ShaderFilesystemPaths.hpp"
-#include "render/general/GpuCommandList.h"
+#include "render/directx/resources/DirectXResource.h"
 #include "materials/Material.h"
+#include "game/nodes/MeshNode.h"
 #include "render/general/resources/FrameResourcesManager.h"
 
 // DirectX.
@@ -221,31 +222,62 @@ namespace ne {
     }
 
     void DirectXRenderer::drawNextFrame() {
-        // TODO: wait for frame resources
-
         std::scoped_lock frameGuard(*getRenderResourcesMutex());
         updateResourcesForNextFrame();
 
         // TODO: draw start logic
 
+        // Set topology type.
+        pCommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
         const auto pCreatedGraphicsPsos = getPsoManager()->getGraphicsPsos();
         for (auto& [mtx, map] : *pCreatedGraphicsPsos) {
+            // Iterate over all PSOs.
             std::scoped_lock psoGuard(mtx);
-
             for (const auto& [sPsoId, pPso] : map) {
                 // TODO: set PSO
 
                 const auto pMtxMaterials = pPso->getMaterialsThatUseThisPso();
 
+                // Iterate over all materials that use this PSO.
                 std::scoped_lock materialsGuard(pMtxMaterials->first);
                 for (const auto& pMaterial : pMtxMaterials->second) {
                     // TODO: set material
 
                     const auto pMtxMeshNodes = pMaterial->getSpawnedMeshNodesThatUseThisMaterial();
 
+                    // Iterate over all visible mesh nodes that use this material.
                     std::scoped_lock meshNodesGuard(pMtxMeshNodes->first);
-                    for (const auto& pMeshNodes : pMtxMeshNodes->second) {
-                        // TODO: draw mesh
+                    for (const auto& pMeshNode : pMtxMeshNodes->second.visibleMeshNodes) {
+                        // Get mesh data.
+                        auto pMtxGeometryBuffers = pMeshNode->getGeometryBuffers();
+                        auto mtxMeshData = pMeshNode->getMeshData();
+
+                        std::scoped_lock geometryGuard(pMtxGeometryBuffers->first, *mtxMeshData.first);
+
+                        // Create vertex buffer view.
+                        D3D12_VERTEX_BUFFER_VIEW vertexBufferView;
+                        vertexBufferView.BufferLocation = reinterpret_cast<DirectXResource*>(
+                                                              pMtxGeometryBuffers->second.pVertexBuffer.get())
+                                                              ->getInternalResource()
+                                                              ->GetGPUVirtualAddress();
+                        vertexBufferView.StrideInBytes = sizeof(MeshVertex);
+                        vertexBufferView.SizeInBytes = static_cast<UINT>(
+                            mtxMeshData.second->getVertices()->size() * vertexBufferView.StrideInBytes);
+
+                        // Create index buffer view.
+                        D3D12_INDEX_BUFFER_VIEW indexBufferView;
+                        indexBufferView.BufferLocation =
+                            reinterpret_cast<DirectXResource*>(pMtxGeometryBuffers->second.pIndexBuffer.get())
+                                ->getInternalResource()
+                                ->GetGPUVirtualAddress();
+                        indexBufferView.Format = DXGI_FORMAT_R32_UINT;
+                        indexBufferView.SizeInBytes = static_cast<UINT>(
+                            mtxMeshData.second->getIndices()->size() * sizeof(MeshData::meshindex_t));
+
+                        // Set buffers.
+                        pCommandList->IASetVertexBuffers(0, 1, &vertexBufferView);
+                        pCommandList->IASetIndexBuffer(&indexBufferView);
                     }
                 }
             }
@@ -910,10 +942,6 @@ namespace ne {
             WaitForSingleObject(pEvent, INFINITE);
             CloseHandle(pEvent);
         }
-    }
-
-    std::unique_ptr<GpuCommandList> DirectXRenderer::getCommandList() {
-        return std::make_unique<GpuCommandList>(getD3dCommandList());
     }
 
     ID3D12Device* DirectXRenderer::getD3dDevice() const { return pDevice.Get(); }

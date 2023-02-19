@@ -80,8 +80,6 @@ set(ENGINE_LIB_SOURCES
     private/render/general/Renderer.cpp
     public/render/RenderSettings.h
     private/render/general/RenderSettings.cpp
-    private/render/general/GpuCommandList.h
-    private/render/general/GpuCommandList.cpp
     private/render/general/pso/PsoManager.h
     private/render/general/pso/PsoManager.cpp
     private/render/general/pso/Pso.h

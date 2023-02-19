@@ -34,12 +34,12 @@ namespace ne {
         std::scoped_lock guard(mtxSpawnedMeshNodesThatUseThisMaterial.first);
 
         // Make sure everything is correct.
-        const auto iMeshNodeCount = mtxSpawnedMeshNodesThatUseThisMaterial.second.size();
+        auto iMeshNodeCount = mtxSpawnedMeshNodesThatUseThisMaterial.second.getTotalSize();
         if (iMeshNodeCount != 0) [[unlikely]] {
             Logger::get().error(
                 fmt::format(
-                    "material \"{}\" is being destroyed but material's array of spawned mesh nodes that use "
-                    "this material still has {} item(s)",
+                    "material \"{}\" is being destroyed but material's array of spawned mesh nodes "
+                    "that use this material still has {} item(s)",
                     sName,
                     iMeshNodeCount),
                 sMaterialLogCategory);
@@ -58,11 +58,14 @@ namespace ne {
     size_t Material::getTotalMaterialCount() { return iTotalMaterialCount.load(); }
 
     void Material::onMeshNodeSpawned(MeshNode* pMeshNode) {
+        onSpawnedMeshNodeStartedUsingMaterial(pMeshNode);
+    }
+
+    void Material::onSpawnedMeshNodeStartedUsingMaterial(MeshNode* pMeshNode) {
         std::scoped_lock guard(mtxSpawnedMeshNodesThatUseThisMaterial.first);
 
         // Make sure we don't have this mesh node in our array.
-        const auto it = mtxSpawnedMeshNodesThatUseThisMaterial.second.find(pMeshNode);
-        if (it != mtxSpawnedMeshNodesThatUseThisMaterial.second.end()) {
+        if (mtxSpawnedMeshNodesThatUseThisMaterial.second.isMeshNodeAdded(pMeshNode)) [[unlikely]] {
             Logger::get().error(
                 fmt::format(
                     "mesh node \"{}\" notified used material about being spawned but this mesh node already "
@@ -72,38 +75,12 @@ namespace ne {
             return;
         }
 
-        mtxSpawnedMeshNodesThatUseThisMaterial.second.insert(pMeshNode);
-
-        // Initialize PSO if needed.
-        if (!pUsedPso.isInitialized()) {
-            auto result = pPsoManager->getGraphicsPsoForMaterial(
-                sVertexShaderName, sPixelShaderName, bUseTransparency, this);
-            if (std::holds_alternative<Error>(result)) {
-                auto error = std::get<Error>(std::move(result));
-                error.addEntry();
-                error.showError();
-                throw std::runtime_error(error.getFullErrorMessage());
-            }
-            pUsedPso = std::get<PsoSharedPtr>(std::move(result));
+        // Add node to be considered.
+        if (pMeshNode->isVisible()) {
+            mtxSpawnedMeshNodesThatUseThisMaterial.second.visibleMeshNodes.insert(pMeshNode);
+        } else {
+            mtxSpawnedMeshNodesThatUseThisMaterial.second.invisibleMeshNodes.insert(pMeshNode);
         }
-    }
-
-    void Material::onSpawnedMeshNodeStartedUsingMaterial(MeshNode* pMeshNode) {
-        std::scoped_lock guard(mtxSpawnedMeshNodesThatUseThisMaterial.first);
-
-        // Make sure we don't have this mesh node in our array.
-        const auto it = mtxSpawnedMeshNodesThatUseThisMaterial.second.find(pMeshNode);
-        if (it != mtxSpawnedMeshNodesThatUseThisMaterial.second.end()) {
-            Logger::get().error(
-                fmt::format(
-                    "mesh node \"{}\" notified a material about being used but this mesh node already "
-                    "exists in material's array of spawned mesh nodes",
-                    pMeshNode->getNodeName()),
-                sMaterialLogCategory);
-            return;
-        }
-
-        mtxSpawnedMeshNodesThatUseThisMaterial.second.insert(pMeshNode);
 
         // Initialize PSO if needed.
         if (!pUsedPso.isInitialized()) {
@@ -123,8 +100,7 @@ namespace ne {
         std::scoped_lock guard(mtxSpawnedMeshNodesThatUseThisMaterial.first);
 
         // Make sure we have this mesh node in our array.
-        const auto it = mtxSpawnedMeshNodesThatUseThisMaterial.second.find(pMeshNode);
-        if (it == mtxSpawnedMeshNodesThatUseThisMaterial.second.end()) {
+        if (!mtxSpawnedMeshNodesThatUseThisMaterial.second.isMeshNodeAdded(pMeshNode)) [[unlikely]] {
             Logger::get().error(
                 fmt::format(
                     "mesh node \"{}\" notified used material about no longer being used but this mesh node "
@@ -134,35 +110,21 @@ namespace ne {
             return;
         }
 
-        mtxSpawnedMeshNodesThatUseThisMaterial.second.erase(it);
+        // Remove node from consideration.
+        if (pMeshNode->isVisible()) {
+            mtxSpawnedMeshNodesThatUseThisMaterial.second.visibleMeshNodes.erase(pMeshNode);
+        } else {
+            mtxSpawnedMeshNodesThatUseThisMaterial.second.invisibleMeshNodes.erase(pMeshNode);
+        }
 
         // Check if need to free PSO.
-        if (mtxSpawnedMeshNodesThatUseThisMaterial.second.empty()) {
+        if (mtxSpawnedMeshNodesThatUseThisMaterial.second.getTotalSize() == 0) {
             pUsedPso.clear();
         }
     }
 
     void Material::onMeshNodeDespawned(MeshNode* pMeshNode) {
-        std::scoped_lock guard(mtxSpawnedMeshNodesThatUseThisMaterial.first);
-
-        // Make sure we have this mesh node in our array.
-        const auto it = mtxSpawnedMeshNodesThatUseThisMaterial.second.find(pMeshNode);
-        if (it == mtxSpawnedMeshNodesThatUseThisMaterial.second.end()) {
-            Logger::get().error(
-                fmt::format(
-                    "mesh node \"{}\" notified used material about being despawned but this mesh node "
-                    "does not exist in material's array of spawned mesh nodes",
-                    pMeshNode->getNodeName()),
-                sMaterialLogCategory);
-            return;
-        }
-
-        mtxSpawnedMeshNodesThatUseThisMaterial.second.erase(it);
-
-        // Check if need to free PSO.
-        if (mtxSpawnedMeshNodesThatUseThisMaterial.second.empty()) {
-            pUsedPso.clear();
-        }
+        onSpawnedMeshNodeStoppedUsingMaterial(pMeshNode);
     }
 
     std::variant<std::shared_ptr<Material>, Error>
@@ -224,12 +186,54 @@ namespace ne {
             sMaterialName));
     }
 
-    std::pair<std::mutex, std::set<MeshNode*>>* Material::getSpawnedMeshNodesThatUseThisMaterial() {
+    std::pair<std::mutex, MeshNodesThatUseThisMaterial>* Material::getSpawnedMeshNodesThatUseThisMaterial() {
         return &mtxSpawnedMeshNodesThatUseThisMaterial;
     }
 
     std::string Material::getName() const { return sName; }
 
     bool Material::isUsingTransparency() const { return bUseTransparency; }
+
+    void Material::onSpawnedMeshNodeChangedVisibility(MeshNode* pMeshNode, bool bOldVisibility) {
+        std::scoped_lock guard(mtxSpawnedMeshNodesThatUseThisMaterial.first);
+
+        if (bOldVisibility == pMeshNode->isVisible()) [[unlikely]] {
+            Logger::get().error(
+                fmt::format(
+                    "mesh node \"{}\" notified used material about changed visibility but the visibility "
+                    "of this mesh node was not changed",
+                    pMeshNode->getNodeName()),
+                sMaterialLogCategory);
+            return;
+        }
+
+        if (bOldVisibility) {
+            auto it = mtxSpawnedMeshNodesThatUseThisMaterial.second.visibleMeshNodes.find(pMeshNode);
+            if (it == mtxSpawnedMeshNodesThatUseThisMaterial.second.visibleMeshNodes.end()) [[unlikely]] {
+                Logger::get().error(
+                    fmt::format(
+                        "mesh node \"{}\" notified used material about changed visibility but this mesh node "
+                        "does not exist in material's array of spawned mesh nodes",
+                        pMeshNode->getNodeName()),
+                    sMaterialLogCategory);
+                return;
+            }
+            mtxSpawnedMeshNodesThatUseThisMaterial.second.visibleMeshNodes.erase(it);
+            mtxSpawnedMeshNodesThatUseThisMaterial.second.invisibleMeshNodes.insert(pMeshNode);
+        } else {
+            auto it = mtxSpawnedMeshNodesThatUseThisMaterial.second.invisibleMeshNodes.find(pMeshNode);
+            if (it == mtxSpawnedMeshNodesThatUseThisMaterial.second.invisibleMeshNodes.end()) [[unlikely]] {
+                Logger::get().error(
+                    fmt::format(
+                        "mesh node \"{}\" notified used material about changed visibility but this mesh node "
+                        "does not exist in material's array of spawned mesh nodes",
+                        pMeshNode->getNodeName()),
+                    sMaterialLogCategory);
+                return;
+            }
+            mtxSpawnedMeshNodesThatUseThisMaterial.second.invisibleMeshNodes.erase(it);
+            mtxSpawnedMeshNodesThatUseThisMaterial.second.visibleMeshNodes.insert(pMeshNode);
+        }
+    }
 
 } // namespace ne

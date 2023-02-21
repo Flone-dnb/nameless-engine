@@ -44,10 +44,10 @@ namespace ne {
 
         // Add a new descriptor to the heap.
 
-        std::scoped_lock guard(mtxRwHeap);
+        std::scoped_lock guard(mtxInternalResources.first);
 
         // Expand the heap if needed.
-        if (iHeapSize.load() == iHeapCapacity.load()) {
+        if (mtxInternalResources.second.iHeapSize == mtxInternalResources.second.iHeapCapacity) {
             auto optionalError = expandHeap();
             if (optionalError.has_value()) {
                 optionalError->addEntry();
@@ -55,41 +55,47 @@ namespace ne {
             }
         }
 
-        auto heapHandle = CD3DX12_CPU_DESCRIPTOR_HANDLE(pHeap->GetCPUDescriptorHandleForHeapStart());
+        // Prepare to create a new view.
+        auto heapHandle = CD3DX12_CPU_DESCRIPTOR_HANDLE(
+            mtxInternalResources.second.pHeap->GetCPUDescriptorHandleForHeapStart());
 
+        // Get free index.
         INT iDescriptorIndex = 0;
-        if (iNextFreeHeapIndex.load() == iHeapCapacity.load()) {
-            iDescriptorIndex = noLongerUsedDescriptorIndexes.front();
-            noLongerUsedDescriptorIndexes.pop();
+        if (mtxInternalResources.second.iNextFreeHeapIndex == mtxInternalResources.second.iHeapCapacity) {
+            iDescriptorIndex = mtxInternalResources.second.noLongerUsedDescriptorIndexes.front();
+            mtxInternalResources.second.noLongerUsedDescriptorIndexes.pop();
         } else {
-            iDescriptorIndex = iNextFreeHeapIndex.fetch_add(1);
+            iDescriptorIndex = mtxInternalResources.second.iNextFreeHeapIndex;
+            mtxInternalResources.second.iNextFreeHeapIndex += 1;
         }
         heapHandle.Offset(iDescriptorIndex, iDescriptorSize);
 
         createView(heapHandle, pResource, descriptorType);
 
-        bindedResources.insert(pResource);
+        // Save binding information.
+        mtxInternalResources.second.bindedResources.insert(pResource);
         pResource->vHeapDescriptors[static_cast<int>(descriptorType)] =
             DirectXDescriptor(this, descriptorType, pResource, iDescriptorIndex);
 
-        iHeapSize.fetch_add(1);
+        // Mark increased heap size.
+        mtxInternalResources.second.iHeapSize += 1;
 
         return {};
     }
 
     INT DirectXDescriptorHeap::getHeapCapacity() {
-        std::scoped_lock guard(mtxRwHeap);
-        return iHeapCapacity.load();
+        std::scoped_lock guard(mtxInternalResources.first);
+        return mtxInternalResources.second.iHeapCapacity;
     }
 
     INT DirectXDescriptorHeap::getHeapSize() {
-        std::scoped_lock guard(mtxRwHeap);
-        return iHeapSize.load();
+        std::scoped_lock guard(mtxInternalResources.first);
+        return mtxInternalResources.second.iHeapSize;
     }
 
     size_t DirectXDescriptorHeap::getNoLongerUsedDescriptorCount() {
-        std::scoped_lock guard(mtxRwHeap);
-        return noLongerUsedDescriptorIndexes.size();
+        std::scoped_lock guard(mtxInternalResources.first);
+        return mtxInternalResources.second.noLongerUsedDescriptorIndexes.size();
     }
 
     std::string DirectXDescriptorHeap::convertHeapTypeToString(DescriptorHeapType heapType) {
@@ -108,6 +114,8 @@ namespace ne {
     }
 
     DirectXDescriptorHeap::DirectXDescriptorHeap(DirectXRenderer* pRenderer, DescriptorHeapType heapType) {
+        static_assert(iHeapGrowSize % 2 == 0, "grow size must be even because we use INT / INT");
+
         this->pRenderer = pRenderer;
         this->heapType = heapType;
 
@@ -139,17 +147,17 @@ namespace ne {
     }
 
     void DirectXDescriptorHeap::markDescriptorAsNoLongerBeingUsed(DirectXResource* pResource) {
-        std::scoped_lock guard(mtxRwHeap);
+        std::scoped_lock guard(mtxInternalResources.first);
 
-        const auto it = bindedResources.find(pResource);
-        if (it == bindedResources.end()) {
+        const auto it = mtxInternalResources.second.bindedResources.find(pResource);
+        if (it == mtxInternalResources.second.bindedResources.end()) {
             Logger::get().error(
                 fmt::format("the specified resource \"{}\" is not found", pResource->getResourceName()),
                 sDescriptorHeapLogCategory);
             return;
         }
 
-        bindedResources.erase(it);
+        mtxInternalResources.second.bindedResources.erase(it);
 
         // Save indexes of no longer used descriptors.
         const auto vHandledDescriptorTypes = getDescriptorTypesHandledByThisHeap();
@@ -166,13 +174,16 @@ namespace ne {
                 continue; // this descriptor type is not handled in this heap
             }
 
-            noLongerUsedDescriptorIndexes.push(descriptor->iDescriptorOffsetInDescriptors.value());
+            mtxInternalResources.second.noLongerUsedDescriptorIndexes.push(
+                descriptor->iDescriptorOffsetInDescriptors.value());
             descriptor->iDescriptorOffsetInDescriptors = {}; // mark descriptor as cleared
-            iHeapSize.fetch_sub(1);
+            mtxInternalResources.second.iHeapSize -= 1;
         }
 
-        if (iHeapCapacity.load() >= iHeapGrowSize * 2 &&
-            iHeapSize.load() <= (iHeapCapacity.load() - iHeapGrowSize - iHeapGrowSize / 2)) {
+        // Shrink the heap if needed.
+        if (mtxInternalResources.second.iHeapCapacity >= iHeapGrowSize * 2 &&
+            mtxInternalResources.second.iHeapSize <=
+                (mtxInternalResources.second.iHeapCapacity - iHeapGrowSize - iHeapGrowSize / 2)) {
             auto optionalError = shrinkHeap();
             if (optionalError.has_value()) {
                 optionalError->addEntry();
@@ -182,42 +193,44 @@ namespace ne {
     }
 
     std::optional<Error> DirectXDescriptorHeap::expandHeap() {
-        std::scoped_lock guard(mtxRwHeap);
+        std::scoped_lock guard(mtxInternalResources.first);
 
-        if (iHeapSize.load() != iHeapCapacity.load()) [[unlikely]] {
+        if (mtxInternalResources.second.iHeapSize != mtxInternalResources.second.iHeapCapacity) [[unlikely]] {
             Logger::get().error(
                 std::format(
                     "requested to expand {} heap of capacity {} while the actual size is {}",
                     sHeapType,
-                    iHeapCapacity.load(),
-                    iHeapSize.load()),
+                    mtxInternalResources.second.iHeapCapacity,
+                    mtxInternalResources.second.iHeapSize),
                 sDescriptorHeapLogCategory);
         }
 
-        if (!noLongerUsedDescriptorIndexes.empty()) [[unlikely]] {
+        if (!mtxInternalResources.second.noLongerUsedDescriptorIndexes.empty()) [[unlikely]] {
             Logger::get().error(
                 std::format(
                     "requested to expand {} heap of capacity {} while there are not used "
                     "descriptors exist ({}) (actual heap size is {})",
                     sHeapType,
-                    iHeapCapacity.load(),
-                    noLongerUsedDescriptorIndexes.size(),
-                    iHeapSize.load()),
+                    mtxInternalResources.second.iHeapCapacity,
+                    mtxInternalResources.second.noLongerUsedDescriptorIndexes.size(),
+                    mtxInternalResources.second.iHeapSize),
                 sDescriptorHeapLogCategory);
         }
 
-        if (static_cast<size_t>(iHeapCapacity.load()) + static_cast<size_t>(iHeapGrowSize) >
+        if (static_cast<size_t>(mtxInternalResources.second.iHeapCapacity) +
+                static_cast<size_t>(iHeapGrowSize) >
             static_cast<size_t>(INT_MAX)) [[unlikely]] {
             return Error(std::format(
                 "a request to expand {} descriptor heap (from capacity {} to {}) was rejected, reason: "
                 "heap will exceed type limit of {}",
                 sHeapType,
-                iHeapCapacity.load(),
-                static_cast<size_t>(iHeapCapacity.load()) + static_cast<size_t>(iHeapGrowSize),
+                mtxInternalResources.second.iHeapCapacity,
+                static_cast<size_t>(mtxInternalResources.second.iHeapCapacity) +
+                    static_cast<size_t>(iHeapGrowSize),
                 INT_MAX));
         }
 
-        const auto iOldHeapSize = iHeapCapacity.load();
+        const auto iOldHeapSize = mtxInternalResources.second.iHeapCapacity;
 
         auto optionalError = createHeap(iOldHeapSize + iHeapGrowSize);
         if (optionalError.has_value()) {
@@ -225,37 +238,38 @@ namespace ne {
             return optionalError.value();
         }
 
-        iNextFreeHeapIndex.store(iOldHeapSize);
-        noLongerUsedDescriptorIndexes = {};
+        mtxInternalResources.second.iNextFreeHeapIndex = iOldHeapSize;
+        mtxInternalResources.second.noLongerUsedDescriptorIndexes = {};
 
         return {};
     }
 
     std::optional<Error> DirectXDescriptorHeap::shrinkHeap() {
-        std::scoped_lock guard(mtxRwHeap);
+        std::scoped_lock guard(mtxInternalResources.first);
 
-        if (iHeapCapacity.load() < iHeapGrowSize * 2) [[unlikely]] {
+        if (mtxInternalResources.second.iHeapCapacity < iHeapGrowSize * 2) [[unlikely]] {
             return Error(std::format(
                 "a request to shrink {} heap of capacity {} with the actual size of {} was rejected, reason: "
                 "expected at least size of {}",
                 sHeapType,
-                iHeapCapacity.load(),
-                iHeapSize.load(),
+                mtxInternalResources.second.iHeapCapacity,
+                mtxInternalResources.second.iHeapSize,
                 iHeapGrowSize * 2));
         }
 
-        if (iHeapSize.load() > iHeapCapacity.load() - iHeapGrowSize - iHeapGrowSize / 2) [[unlikely]] {
+        if (mtxInternalResources.second.iHeapSize >
+            mtxInternalResources.second.iHeapCapacity - iHeapGrowSize - iHeapGrowSize / 2) [[unlikely]] {
             return Error(std::format(
                 "a request to shrink {} heap of capacity {} with the actual size of {} was rejected, reason: "
                 "shrink condition is not met (size {} < {} is false)",
                 sHeapType,
-                iHeapCapacity.load(),
-                iHeapSize.load(),
-                iHeapSize.load(),
-                iHeapCapacity.load() - iHeapGrowSize - iHeapGrowSize / 2));
+                mtxInternalResources.second.iHeapCapacity,
+                mtxInternalResources.second.iHeapSize,
+                mtxInternalResources.second.iHeapSize,
+                mtxInternalResources.second.iHeapCapacity - iHeapGrowSize - iHeapGrowSize / 2));
         }
 
-        const auto iNewHeapSize = iHeapCapacity.load() - iHeapGrowSize;
+        const auto iNewHeapSize = mtxInternalResources.second.iHeapCapacity - iHeapGrowSize;
 
         auto optionalError = createHeap(iNewHeapSize);
         if (optionalError.has_value()) {
@@ -263,8 +277,8 @@ namespace ne {
             return optionalError.value();
         }
 
-        iNextFreeHeapIndex.store(iNewHeapSize - iHeapGrowSize / 2);
-        noLongerUsedDescriptorIndexes = {};
+        mtxInternalResources.second.iNextFreeHeapIndex = iNewHeapSize - iHeapGrowSize / 2;
+        mtxInternalResources.second.noLongerUsedDescriptorIndexes = {};
 
         return {};
     }
@@ -375,14 +389,16 @@ namespace ne {
     }
 
     std::optional<Error> DirectXDescriptorHeap::createHeap(INT iCapacity) {
+        std::scoped_lock guard(mtxInternalResources.first);
+
         Logger::get().info(
             std::format(
                 "flushing the command queue to (re)create {} descriptor heap (from capacity {} to {}) "
                 "(current actual heap size: {})",
                 sHeapType,
-                iHeapCapacity.load(),
+                mtxInternalResources.second.iHeapCapacity,
                 iCapacity,
-                iHeapSize.load()),
+                mtxInternalResources.second.iHeapSize),
             sDescriptorHeapLogCategory);
 
         // Make sure we don't render anything.
@@ -397,13 +413,13 @@ namespace ne {
         heapDesc.NodeMask = 0;
 
         const HRESULT hResult = pRenderer->getD3dDevice()->CreateDescriptorHeap(
-            &heapDesc, IID_PPV_ARGS(pHeap.ReleaseAndGetAddressOf()));
+            &heapDesc, IID_PPV_ARGS(mtxInternalResources.second.pHeap.ReleaseAndGetAddressOf()));
         if (FAILED(hResult)) {
             return Error(hResult);
         }
 
         // Save heap size.
-        iHeapCapacity.store(iCapacity);
+        mtxInternalResources.second.iHeapCapacity = iCapacity;
 
         recreateOldViews();
 
@@ -425,14 +441,17 @@ namespace ne {
         throw std::runtime_error(err.getFullErrorMessage());
     }
 
-    void DirectXDescriptorHeap::recreateOldViews() const {
+    void DirectXDescriptorHeap::recreateOldViews() {
+        std::scoped_lock guard(mtxInternalResources.first);
+
         // Start from 0 heap index, increment and update old offsets
         // to "shrink" heap usage (needed for heap shrinking).
-        auto heapHandle = CD3DX12_CPU_DESCRIPTOR_HANDLE(pHeap->GetCPUDescriptorHandleForHeapStart());
+        auto heapHandle = CD3DX12_CPU_DESCRIPTOR_HANDLE(
+            mtxInternalResources.second.pHeap->GetCPUDescriptorHandleForHeapStart());
         INT iCurrentHeapIndex = 0;
         const auto vHandledDescriptorTypes = getDescriptorTypesHandledByThisHeap();
 
-        for (const auto& pResource : bindedResources) {
+        for (const auto& pResource : mtxInternalResources.second.bindedResources) {
             for (const auto& descriptor : pResource->vHeapDescriptors) {
                 if (!descriptor.has_value()) {
                     continue;

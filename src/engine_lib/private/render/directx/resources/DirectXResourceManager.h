@@ -236,6 +236,13 @@ namespace ne {
          */
         DirectXDescriptorHeap* getCbvSrvUavHeap() const;
 
+        /**
+         * Returns renderer that owns this resource manager.
+         *
+         * @return Do not delete returned pointer. Renderer.
+         */
+        DirectXRenderer* getRenderer() const;
+
     private:
         /**
          * Constructor.

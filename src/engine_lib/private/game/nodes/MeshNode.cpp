@@ -498,10 +498,6 @@ namespace ne {
 
     bool MeshNode::isVisible() const { return bIsVisible; }
 
-    std::pair<std::recursive_mutex*, MeshData*> MeshNode::getMeshData() {
-        return std::make_pair(&mtxMeshData, &meshData);
-    }
-
     std::vector<MeshData::meshindex_t>* MeshData::getIndices() { return &vIndices; }
 
     std::vector<MeshVertex>* MeshData::getVertices() { return &vVertices; }

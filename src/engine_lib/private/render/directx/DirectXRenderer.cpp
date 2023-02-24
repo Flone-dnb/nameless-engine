@@ -12,6 +12,7 @@
 #include "misc/Globals.h"
 #include "misc/MessageBox.h"
 #include "render/RenderSettings.h"
+#include "render/directx/pso/DirectXPso.h"
 #include "render/directx/resources/DirectXResourceManager.h"
 #include "materials/hlsl/HlslEngineShaders.hpp"
 #include "render/general/pso/PsoManager.h"
@@ -225,22 +226,56 @@ namespace ne {
         std::scoped_lock frameGuard(*getRenderResourcesMutex());
         updateResourcesForNextFrame();
 
-        // TODO: draw start logic
+        // Get command allocator to open command list.
+        auto mtxFrameResource = getFrameResourcesManager()->getCurrentFrameResource();
+        std::scoped_lock frameResourceGuard(*mtxFrameResource.first);
+        const auto pCommandAllocator = mtxFrameResource.second->pCommandAllocator.Get();
+
+        // Open command list.
+        auto hResult = pCommandAllocator->Reset();
+        if (FAILED(hResult)) {
+            auto error = Error(hResult);
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+        }
+        pCommandList->Reset(pCommandAllocator, nullptr);
+
+        // Set CBV/SRV/UAV descriptor heap.
+        const auto pResourceManager = reinterpret_cast<DirectXResourceManager*>(getResourceManager());
+        auto mtxHeap = pResourceManager->getCbvSrvUavHeap()->getInternalHeap();
+
+        std::scoped_lock guardHeap(*mtxHeap.first);
+
+        ID3D12DescriptorHeap* pDescriptorHeaps[] = {mtxHeap.second};
+        pCommandList->SetDescriptorHeaps(_countof(pDescriptorHeaps), pDescriptorHeaps);
+
+        // TODO: Set viewport and scissor.
+        // TODO: use swap chain to get current back buffer and transfer to render target state
+
+        // TODO: other stuff
+        // TODO: move prep stage to a separate function
 
         // Set topology type.
         pCommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
+        // Iterate over all PSOs.
         const auto pCreatedGraphicsPsos = getPsoManager()->getGraphicsPsos();
         for (auto& [mtx, map] : *pCreatedGraphicsPsos) {
-            // Iterate over all PSOs.
             std::scoped_lock psoGuard(mtx);
-            for (const auto& [sPsoId, pPso] : map) {
-                // TODO: set PSO
 
-                const auto pMtxMaterials = pPso->getMaterialsThatUseThisPso();
+            for (const auto& [sPsoId, pPso] : map) {
+                auto pMtxPsoResources = reinterpret_cast<DirectXPso*>(pPso.get())->getInternalResources();
+
+                std::scoped_lock guardPsoResources(pMtxPsoResources->first);
+
+                // Set PSO and root signature.
+                pCommandList->SetPipelineState(pMtxPsoResources->second.pGraphicsPso.Get());
+                pCommandList->SetGraphicsRootSignature(pMtxPsoResources->second.pRootSignature.Get());
 
                 // Iterate over all materials that use this PSO.
+                const auto pMtxMaterials = pPso->getMaterialsThatUseThisPso();
                 std::scoped_lock materialsGuard(pMtxMaterials->first);
+
                 for (const auto& pMaterial : pMtxMaterials->second) {
                     // TODO: set material
 
@@ -281,6 +316,14 @@ namespace ne {
                     }
                 }
             }
+        }
+
+        // Close command list.
+        hResult = pCommandList->Close();
+        if (FAILED(hResult)) {
+            auto error = Error(hResult);
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
         }
 
         // TODO: draw end logic
@@ -911,6 +954,20 @@ namespace ne {
     bool DirectXRenderer::isInitialized() const { return bIsDirectXInitialized; }
 
     void DirectXRenderer::waitForGpuToFinishWorkUpToThisPoint() {
+        if (pCommandQueue == nullptr) {
+            if (Game::get()->isBeingDestroyed()) {
+                // This might happen on destruction, it's fine.
+                return;
+            }
+
+            // This is unexpected.
+            Logger::get().error(
+                "attempt to flush the command queue failed due to command queue being `nullptr`",
+                sDirectXRendererLogCategory);
+
+            return;
+        }
+
         std::scoped_lock guardFrame(*getRenderResourcesMutex());
 
         const auto iFenceValue = iCurrentFence.fetch_add(1);

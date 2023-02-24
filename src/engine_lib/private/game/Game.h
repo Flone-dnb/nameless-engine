@@ -220,6 +220,13 @@ namespace ne {
          */
         long long getGarbageCollectorRunIntervalInSec() const;
 
+        /**
+         * Tells whether Game's destruction process was started or not.
+         *
+         * @return Whether Game's destruction process was started or not.
+         */
+        bool isBeingDestroyed() const;
+
     private:
         /**
          * Constructor.
@@ -391,7 +398,7 @@ namespace ne {
         std::thread::id mainThreadId;
 
         /** Whether @ref destroy was called or not. */
-        bool bIsDestroyed = false;
+        bool bIsBeingDestroyed = false;
 
         /** Name of the category used for logging. */
         inline static const char* sGameLogCategory = "Game";

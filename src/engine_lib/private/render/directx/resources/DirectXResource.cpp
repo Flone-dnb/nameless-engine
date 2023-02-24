@@ -4,6 +4,8 @@
 #include "render/directx/descriptors/DirectXDescriptorHeap.h"
 #include "render/directx/resources/DirectXResourceManager.h"
 #include "misc/Globals.h"
+#include "render/directx/DirectXRenderer.h"
+#include "io/Logger.h"
 
 namespace ne {
 
@@ -131,5 +133,12 @@ namespace ne {
     DirectXResource::DirectXResource(const DirectXResourceManager* pResourceManager) {
         this->pResourceManager = pResourceManager;
         vHeapDescriptors.resize(static_cast<int>(DescriptorType::END));
+    }
+
+    DirectXResource::~DirectXResource() {
+        // Don't log here to avoid spamming.
+
+        // Make sure the GPU is not using this resource.
+        pResourceManager->getRenderer()->waitForGpuToFinishWorkUpToThisPoint();
     }
 } // namespace ne

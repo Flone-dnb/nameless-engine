@@ -254,7 +254,9 @@ namespace ne RNAMESPACE() {
          *
          * @return Mesh data.
          */
-        std::pair<std::recursive_mutex*, MeshData*> getMeshData();
+        inline std::pair<std::recursive_mutex*, MeshData*> getMeshData() {
+            return std::make_pair(&mtxMeshData, &meshData);
+        }
 
         /**
          * Returns GPU resources that store mesh geometry.

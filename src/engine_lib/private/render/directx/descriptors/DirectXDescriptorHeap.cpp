@@ -401,7 +401,7 @@ namespace ne {
                 mtxInternalResources.second.iHeapSize),
             sDescriptorHeapLogCategory);
 
-        // Make sure we don't render anything.
+        // Make sure we don't render anything and not processing any resources.
         std::scoped_lock drawGuard(*pRenderer->getRenderResourcesMutex());
         pRenderer->waitForGpuToFinishWorkUpToThisPoint();
 
@@ -409,7 +409,9 @@ namespace ne {
         D3D12_DESCRIPTOR_HEAP_DESC heapDesc;
         heapDesc.NumDescriptors = iCapacity;
         heapDesc.Type = d3dHeapType;
-        heapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+        heapDesc.Flags = heapDesc.Type == D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV
+                             ? D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE
+                             : D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
         heapDesc.NodeMask = 0;
 
         const HRESULT hResult = pRenderer->getD3dDevice()->CreateDescriptorHeap(

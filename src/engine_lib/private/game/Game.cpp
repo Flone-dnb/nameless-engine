@@ -66,10 +66,10 @@ namespace ne {
     }
 
     void Game::destroy() {
-        if (bIsDestroyed) {
+        if (bIsBeingDestroyed) {
             return;
         }
-        bIsDestroyed = true;
+        bIsBeingDestroyed = true;
 
         // Make sure thread pool and deferred tasks are finished.
         threadPool.stop();
@@ -129,6 +129,10 @@ namespace ne {
                     sGcLeakReasons),
                 sGameLogCategory);
         }
+
+        // Wait for GPU to finish all work.
+        // Make sure no GPU resource is used.
+        pRenderer->waitForGpuToFinishWorkUpToThisPoint();
 
         // Explicitly destroy the renderer to check how much shaders left in the memory.
         pRenderer = nullptr;
@@ -271,7 +275,7 @@ namespace ne {
     }
 
     void Game::addTaskToThreadPool(const std::function<void()>& task) {
-        if (bIsDestroyed) [[unlikely]] {
+        if (bIsBeingDestroyed) [[unlikely]] {
             // Destructor is running, don't queue any more tasks.
             return;
         }
@@ -409,7 +413,7 @@ namespace ne {
     void Game::onWindowClose() const { pGameInstance->onWindowClose(); }
 
     void Game::addDeferredTask(const std::function<void()>& task) {
-        if (bIsDestroyed) [[unlikely]] {
+        if (bIsBeingDestroyed) [[unlikely]] {
             // Destructor is running, don't queue any more tasks.
             return;
         }
@@ -431,6 +435,8 @@ namespace ne {
     GameInstance* Game::getGameInstance() const { return pGameInstance.get(); }
 
     long long Game::getGarbageCollectorRunIntervalInSec() const { return iGcRunIntervalInSec; }
+
+    bool Game::isBeingDestroyed() const { return bIsBeingDestroyed; }
 
     void Game::triggerActionEvents( // NOLINT
         std::variant<KeyboardKey, MouseButton> key,

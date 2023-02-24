@@ -420,6 +420,8 @@ namespace ne {
 
     DirectXDescriptorHeap* DirectXResourceManager::getCbvSrvUavHeap() const { return pCbvSrvUavHeap.get(); }
 
+    DirectXRenderer* DirectXResourceManager::getRenderer() const { return pRenderer; }
+
     DirectXResourceManager::DirectXResourceManager(
         DirectXRenderer* pRenderer,
         ComPtr<D3D12MA::Allocator>&& pMemoryAllocator,

@@ -17,6 +17,21 @@ namespace ne {
     /** Our DirectX pipeline state object (PSO) wrapper. */
     class DirectXPso : public Pso {
     public:
+        /** Stores internal resources. */
+        struct InternalResources {
+            /** Root signature, used in PSO. */
+            ComPtr<ID3D12RootSignature> pRootSignature;
+
+            /** Graphics PSO, created using @ref createGraphicsPso. */
+            ComPtr<ID3D12PipelineState> pGraphicsPso;
+
+            // !!! new internal resources go here !!!
+            // !!! don't forget to update @ref releaseInternalResources !!!
+
+            /** Whether resources were created or not. */
+            bool bIsReadyForUsage = false;
+        };
+
         DirectXPso() = delete;
         DirectXPso(const DirectXPso&) = delete;
         DirectXPso& operator=(const DirectXPso&) = delete;
@@ -66,22 +81,16 @@ namespace ne {
          */
         [[nodiscard]] virtual std::optional<Error> restoreInternalResources() override;
 
+        /**
+         * Returns internal resources that this PSO uses.
+         *
+         * @return Internal resources.
+         */
+        inline std::pair<std::mutex, InternalResources>* getInternalResources() {
+            return &mtxInternalResources;
+        }
+
     private:
-        /** Stores internal resources. */
-        struct InternalDirectXPsoResources {
-            /** Root signature, used in PSO. */
-            ComPtr<ID3D12RootSignature> pRootSignature;
-
-            /** Graphics PSO, created using @ref createGraphicsPso. */
-            ComPtr<ID3D12PipelineState> pGraphicsPso;
-
-            // !!! new internal resources go here !!!
-            // !!! don't forget to update @ref releaseInternalResources !!!
-
-            /** Whether resources were created or not. */
-            bool bIsReadyForUsage = false;
-        };
-
         /**
          * Constructor.
          *
@@ -118,10 +127,10 @@ namespace ne {
             bool bUsePixelBlending);
 
         /**
-         * Internal resources
+         * Internal resources.
          * Must be used with mutex when changing.
          */
-        std::pair<std::mutex, InternalDirectXPsoResources> mtxInternalResources;
+        std::pair<std::mutex, InternalResources> mtxInternalResources;
 
         /** Name of the category used for logging. */
         inline static const char* sDirectXPsoLogCategory = "DirectX Pipeline State Object";

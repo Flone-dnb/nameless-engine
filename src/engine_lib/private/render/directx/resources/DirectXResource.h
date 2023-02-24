@@ -38,7 +38,7 @@ namespace ne {
         DirectXResource(const DirectXResource&) = delete;
         DirectXResource& operator=(const DirectXResource&) = delete;
 
-        virtual ~DirectXResource() override = default;
+        virtual ~DirectXResource() override;
 
         /**
          * Creates a new render target view descriptor that points to this resource.
@@ -152,5 +152,8 @@ namespace ne {
          * (can be empty if @ref pAllocatedResource is used).
          */
         ComPtr<ID3D12Resource> pSwapChainBuffer;
+
+        /** Name of the category used for logging. */
+        inline static const char* sDirectXResourceLogCategory = "DirectX Resource";
     };
 } // namespace ne

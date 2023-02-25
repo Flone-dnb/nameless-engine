@@ -21,7 +21,7 @@ namespace ne {
     Node::Node() : Node("Node") {}
 
     Node::Node(const std::string& sName) {
-        this->sName = sName;
+        this->sNodeName = sName;
         mtxParentNode.second = nullptr;
         bIsSpawned = false;
         mtxChildNodes.second = gc_new_vector<Node>();
@@ -42,13 +42,13 @@ namespace ne {
         // Log destruction.
         const size_t iNodesLeft = iTotalAliveNodeCount.fetch_sub(1) - 1;
         Logger::get().info(
-            fmt::format("destructor for node \"{}\" is called (alive nodes left: {})", sName, iNodesLeft),
+            fmt::format("destructor for node \"{}\" is called (alive nodes left: {})", sNodeName, iNodesLeft),
             sNodeLogCategory);
     }
 
-    void Node::setNodeName(const std::string& sName) { this->sName = sName; }
+    void Node::setNodeName(const std::string& sName) { this->sNodeName = sName; }
 
-    std::string Node::getNodeName() const { return sName; }
+    std::string Node::getNodeName() const { return sNodeName; }
 
     void Node::addChildNode(const gc<Node>& pNode) {
         std::scoped_lock spawnGuard(mtxSpawning);

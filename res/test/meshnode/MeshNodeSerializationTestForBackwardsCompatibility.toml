@@ -17,7 +17,7 @@ relativeScale = [
 "1.0",
 "1.0",
 ]
-sName = "Mesh Node"
+sNodeName = "Mesh Node"
 
 ["0.0.a603fa3a-e9c2-4c38-bb4c-76384ef001f4"]
 sVertexShaderName = "engine.default.vs"

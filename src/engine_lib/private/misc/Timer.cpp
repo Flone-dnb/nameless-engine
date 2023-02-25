@@ -7,7 +7,8 @@
 #include "fmt/core.h"
 
 namespace ne {
-    Timer::Timer(bool bWarnAboutWaitingForCallbackTooLong) {
+    Timer::Timer(const std::string& sTimerName, bool bWarnAboutWaitingForCallbackTooLong) {
+        this->sTimerName = sTimerName;
         this->bWarnAboutWaitingForCallbackTooLong = bWarnAboutWaitingForCallbackTooLong;
     }
 
@@ -29,7 +30,11 @@ namespace ne {
             }
         } catch (std::exception& ex) {
             Logger::get().error(
-                fmt::format("a timer thread has finished with the following exception: {}", ex.what()), "");
+                fmt::format(
+                    "\"{}\" timer thread has finished with the following exception: {}",
+                    sTimerName,
+                    ex.what()),
+                "");
         }
 
         waitForRunningCallbackThreadsToFinish();
@@ -92,7 +97,11 @@ namespace ne {
             }
         } catch (std::exception& ex) {
             Logger::get().error(
-                fmt::format("a timer thread has finished with the following exception: {}", ex.what()), "");
+                fmt::format(
+                    "\"{}\" timer thread has finished with the following exception: {}",
+                    sTimerName,
+                    ex.what()),
+                "");
         }
 
         timerThreadFuture = {};
@@ -167,8 +176,9 @@ namespace ne {
             } catch (std::exception& ex) {
                 Logger::get().error(
                     fmt::format(
-                        "timer's callback function thread (user code) has finished with the "
+                        "\"{}\" timer's callback function thread (user code) has finished with the "
                         "following exception: {}",
+                        sTimerName,
                         ex.what()),
                     "");
             }
@@ -186,18 +196,20 @@ namespace ne {
             // Information.
             Logger::get().info(
                 fmt::format(
-                    "timer has finished waiting for started callback functions to finish, took {} "
+                    "\"{}\" timer has finished waiting for started callback functions to finish, took {} "
                     "millisecond",
+                    sTimerName,
                     durationStream.str()),
                 "");
         } else {
             // Warning.
             Logger::get().warn(
                 fmt::format(
-                    "timer has finished waiting for started callback functions to finish, took {} "
+                    "\"{}\" timer has finished waiting for started callback functions to finish, took {} "
                     "millisecond(s)\n"
-                    "(hint: specify `bWarnAboutWaitingForCallbackTooLong` as `false` to timer "
-                    "constructor to convert this message category from `warning` to `info`)",
+                    "(hint: specify `Timer::bWarnAboutWaitingForCallbackTooLong` as `false` to "
+                    "convert this message category from `warning` to `info`)",
+                    sTimerName,
                     durationStream.str()),
                 "");
         }

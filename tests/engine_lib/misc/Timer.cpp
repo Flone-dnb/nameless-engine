@@ -13,7 +13,7 @@ TEST_CASE("measure elapsed time") {
     using namespace std::chrono;
     constexpr long long iDeltaInMs = 5;
 
-    Timer timer;
+    Timer timer{"test"};
     timer.start(true);
     while (!timer.getElapsedTimeInMs().has_value()) {
     }
@@ -31,7 +31,7 @@ TEST_CASE("measure elapsed time") {
 
 TEST_CASE("run callback on timeout") {
     using namespace ne;
-    Timer timer;
+    Timer timer{"test"};
     auto pPromiseFinish = std::make_shared<std::promise<bool>>();
     auto future = pPromiseFinish->get_future();
     constexpr auto bExpected = true;
@@ -47,7 +47,7 @@ TEST_CASE("check that timer is running") {
     using namespace ne;
 
     constexpr size_t iCheckIntervalTimeInMs = 15;
-    Timer timer;
+    Timer timer{"test"};
 
     SECTION("without callback") {
         timer.start(true);
@@ -99,7 +99,7 @@ TEST_CASE("wait for callback to finish on timer destruction") {
         1; // should be way lower than iCallbackSleepTimeInMs
 
     {
-        Timer timer(false); // ignore warning about waiting time being too long
+        Timer timer("test", false); // ignore warning about waiting time being too long
         timer.setCallbackForTimeout(iWaitTimeForCallbackToStartInMs, [&]() {
             pPromiseStart->set_value(true);
             std::this_thread::sleep_for(std::chrono::milliseconds(iCallbackSleepTimeInMs));

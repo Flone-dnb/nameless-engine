@@ -485,7 +485,7 @@ TEST_CASE("use `Timer` with node's member function while the node is being garba
         bool bCallbackRunning = false;
 
     protected:
-        Timer timer{false}; // don't warn about waiting too long
+        Timer timer{"test", false}; // don't warn about waiting too long
         std::string sSomePrivateString = "Hello!";
         void myCallback() {
             bCallbackRunning = true;

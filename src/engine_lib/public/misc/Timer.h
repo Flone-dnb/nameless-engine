@@ -12,15 +12,17 @@ namespace ne {
     /** Simple timer that can trigger a callback function on a timeout. */
     class Timer {
     public:
-        Timer() = default;
+        Timer() = delete;
 
         /**
          * Constructor.
          *
+         * @param sTimerName Name of this timer (used for logging). Don't add "timer" word to your timer's
+         * name as it will be appended in the logs.
          * @param bWarnAboutWaitingForCallbackTooLong In timer destructor, whether the timer should log
          * a warning message if waiting for started callback to finish is taking too long or not.
          */
-        Timer(bool bWarnAboutWaitingForCallbackTooLong);
+        Timer(const std::string& sTimerName, bool bWarnAboutWaitingForCallbackTooLong = true);
 
         /** Destructor. */
         ~Timer();
@@ -143,6 +145,9 @@ namespace ne {
 
         /** Function to call on timeout. */
         std::optional<std::function<void()>> callbackForTimeout;
+
+        /** Name of this timer (used for logging). */
+        std::string sTimerName;
 
         /**
          * Time when the @ref start was called.

@@ -114,6 +114,32 @@ namespace ne {
         return {};
     }
 
+    std::optional<D3D12_CPU_DESCRIPTOR_HANDLE>
+    DirectXResource::getBindedDescriptorHandle(DescriptorType descriptorType) const {
+        // Get descriptor.
+        const auto pOptionalDescriptor = &vHeapDescriptors[static_cast<size_t>(descriptorType)];
+
+        // Make sure it was binded previously.
+        if (!pOptionalDescriptor->has_value()) {
+            return {};
+        }
+
+        // Get descriptor offset.
+        auto optionalOffset = pOptionalDescriptor->value().getDescriptorOffsetInDescriptors();
+        if (!optionalOffset.has_value()) {
+            return {};
+        }
+
+        // Get heap that this descriptor uses.
+        const auto pHeap = pOptionalDescriptor->value().getDescriptorHeap();
+
+        // Construct descriptor handle.
+        return CD3DX12_CPU_DESCRIPTOR_HANDLE(
+            pHeap->getInternalHeap()->GetCPUDescriptorHandleForHeapStart(),
+            optionalOffset.value(),
+            pHeap->getDescriptorSize());
+    }
+
     ID3D12Resource* DirectXResource::getInternalResource() const {
         if (pAllocatedResource != nullptr) {
             return pAllocatedResource->GetResource();

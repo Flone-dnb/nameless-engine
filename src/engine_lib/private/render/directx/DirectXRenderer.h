@@ -259,12 +259,34 @@ namespace ne {
         [[nodiscard]] std::optional<Error> compileEngineShaders() const;
 
         /**
+         * Setups everything for render commands to be recorded (calls @ref updateResourcesForNextFrame,
+         * resets lists, binds RTV/DSV, etc.).
+         *
+         * @return Error if something went wrong.
+         */
+        [[nodiscard]] std::optional<Error> prepareForDrawingNextFrame();
+
+        /**
+         * Does final logic in drawing next frame (closes lists, executes lists, etc.).
+         *
+         * @return Error if something went wrong.
+         */
+        [[nodiscard]] std::optional<Error> finishDrawingNextFrame();
+
+        /**
          * Returns a vector of display modes that the current output adapter
          * supports for current back buffer format.
          *
          * @return Error if something went wrong, vector of display modes otherwise.
          */
         std::variant<std::vector<DXGI_MODE_DESC>, Error> getSupportedDisplayModes() const;
+
+        /**
+         * Returns current buffer to draw to.
+         *
+         * @return GPU resource.
+         */
+        DirectXResource* getCurrentBackBufferResource();
 
         /** DXGI Factory. */
         ComPtr<IDXGIFactory4> pFactory;

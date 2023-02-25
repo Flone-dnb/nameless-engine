@@ -222,8 +222,9 @@ namespace ne {
         return getResourceManager()->getUsedVideoMemoryInMb();
     }
 
-    void DirectXRenderer::drawNextFrame() {
+    std::optional<Error> DirectXRenderer::prepareForDrawingNextFrame() {
         std::scoped_lock frameGuard(*getRenderResourcesMutex());
+
         updateResourcesForNextFrame();
 
         // Get command allocator to open command list.
@@ -231,31 +232,85 @@ namespace ne {
         std::scoped_lock frameResourceGuard(*mtxFrameResource.first);
         const auto pCommandAllocator = mtxFrameResource.second->pCommandAllocator.Get();
 
-        // Open command list.
+        // Clear command allocator since the GPU is no longer using it.
         auto hResult = pCommandAllocator->Reset();
-        if (FAILED(hResult)) {
-            auto error = Error(hResult);
-            error.showError();
-            throw std::runtime_error(error.getFullErrorMessage());
+        if (FAILED(hResult)) [[unlikely]] {
+            return Error(hResult);
         }
-        pCommandList->Reset(pCommandAllocator, nullptr);
+
+        // Open command list to record new commands.
+        hResult = pCommandList->Reset(pCommandAllocator, nullptr);
+        if (FAILED(hResult)) [[unlikely]] {
+            return Error(hResult);
+        }
 
         // Set CBV/SRV/UAV descriptor heap.
         const auto pResourceManager = reinterpret_cast<DirectXResourceManager*>(getResourceManager());
-        auto mtxHeap = pResourceManager->getCbvSrvUavHeap()->getInternalHeap();
-
-        std::scoped_lock guardHeap(*mtxHeap.first);
-
-        ID3D12DescriptorHeap* pDescriptorHeaps[] = {mtxHeap.second};
+        ID3D12DescriptorHeap* pDescriptorHeaps[] = {pResourceManager->getCbvSrvUavHeap()->getInternalHeap()};
         pCommandList->SetDescriptorHeaps(_countof(pDescriptorHeaps), pDescriptorHeaps);
 
-        // TODO: Set viewport and scissor.
-        // TODO: use swap chain to get current back buffer and transfer to render target state
+        // Set viewport size and scissor rectangles.
+        pCommandList->RSSetViewports(1, &screenViewport);
+        pCommandList->RSSetScissorRects(1, &scissorRect);
 
-        // TODO: other stuff
-        // TODO: move prep stage to a separate function
+        // Change render target buffer's state from PRESENT to RENDER TARGET.
+        const auto pCurrentBackBufferResource = getCurrentBackBufferResource();
+        CD3DX12_RESOURCE_BARRIER transition = CD3DX12_RESOURCE_BARRIER::Transition(
+            pCurrentBackBufferResource->getInternalResource(),
+            D3D12_RESOURCE_STATE_PRESENT,
+            D3D12_RESOURCE_STATE_RENDER_TARGET);
+        pCommandList->ResourceBarrier(1, &transition);
 
-        // Set topology type.
+        // Get render target resource descriptor handle.
+        auto optionalRenderTargetDescritorHandle =
+            pCurrentBackBufferResource->getBindedDescriptorHandle(DescriptorType::RTV);
+        if (!optionalRenderTargetDescritorHandle.has_value()) [[unlikely]] {
+            return Error(fmt::format(
+                "render target resource \"{}\" has no RTV binded to it",
+                pCurrentBackBufferResource->getResourceName()));
+        }
+        const auto renderTargetDescriptorHandle = optionalRenderTargetDescritorHandle.value();
+
+        // Get depth stencil resource descriptor handle.
+        auto optionalDepthStencilDescritorHandle =
+            pDepthStencilBuffer->getBindedDescriptorHandle(DescriptorType::DSV);
+        if (!optionalDepthStencilDescritorHandle.has_value()) [[unlikely]] {
+            return Error(fmt::format(
+                "depth stencil resource \"{}\" has no DSV binded to it",
+                pDepthStencilBuffer->getResourceName()));
+        }
+        const auto depthStencilDescriptorHandle = optionalDepthStencilDescritorHandle.value();
+
+        // Clear render target and depth stencil buffers using descriptor handles.
+        pCommandList->ClearRenderTargetView(renderTargetDescriptorHandle, backBufferFillColor, 0, nullptr);
+        pCommandList->ClearDepthStencilView(
+            depthStencilDescriptorHandle,
+            D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL,
+            fMaxDepth,
+            0,
+            0,
+            nullptr);
+
+        // Bind RTV and DSV to use to pipeline.
+        pCommandList->OMSetRenderTargets(
+            1, &renderTargetDescriptorHandle, TRUE, &depthStencilDescriptorHandle);
+
+        return {};
+    }
+
+    void DirectXRenderer::drawNextFrame() {
+        std::scoped_lock renderGuard(*getRenderResourcesMutex());
+
+        // Setup.
+        auto optionalError = prepareForDrawingNextFrame();
+        if (optionalError.has_value()) [[unlikely]] {
+            auto error = optionalError.value();
+            error.addEntry();
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+        }
+
+        // Set topology type (this will be moved in some other place).
         pCommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
         // Iterate over all PSOs.
@@ -318,15 +373,24 @@ namespace ne {
             }
         }
 
-        // Close command list.
-        hResult = pCommandList->Close();
-        if (FAILED(hResult)) {
-            auto error = Error(hResult);
+        // Do finish logic.
+        optionalError = finishDrawingNextFrame();
+        if (optionalError.has_value()) [[unlikely]] {
+            auto error = optionalError.value();
+            error.addEntry();
             error.showError();
             throw std::runtime_error(error.getFullErrorMessage());
         }
+    }
 
-        // TODO: draw end logic
+    std::optional<Error> DirectXRenderer::finishDrawingNextFrame() {
+        // Close command list.
+        auto hResult = pCommandList->Close();
+        if (FAILED(hResult)) [[unlikely]] {
+            return Error(hResult);
+        }
+
+        return {};
     }
 
     std::optional<Error> DirectXRenderer::setVideoAdapter(const std::string& sVideoAdapterName) {
@@ -1043,5 +1107,16 @@ namespace ne {
         }
 
         return vFilteredModes;
+    }
+
+    DirectXResource* DirectXRenderer::getCurrentBackBufferResource() {
+        auto pMtxRenderSettings = getRenderSettings();
+        std::scoped_lock guard(pMtxRenderSettings->first);
+
+        if (pMtxRenderSettings->second->isAntialiasingEnabled()) {
+            return pMsaaRenderBuffer.get();
+        }
+
+        return vSwapChainBuffers[pSwapChain->GetCurrentBackBufferIndex()].get();
     }
 } // namespace ne

@@ -48,6 +48,21 @@ namespace ne {
          */
         DirectXDescriptor& operator=(DirectXDescriptor&& other) noexcept;
 
+        /**
+         * Returns offset of this descriptor from the heap start
+         * (offset is specified in descriptors, not an actual index).
+         *
+         * @return Empty if this object was moved (i.e. invalid now), otherwise descriptor offset.
+         */
+        std::optional<int> getDescriptorOffsetInDescriptors() const;
+
+        /**
+         * Returns heap that this descriptor uses.
+         *
+         * @return Descriptor heap.
+         */
+        DirectXDescriptorHeap* getDescriptorHeap() const;
+
     protected:
         /**
          * Constructor.

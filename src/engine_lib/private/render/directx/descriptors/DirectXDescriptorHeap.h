@@ -132,12 +132,19 @@ namespace ne {
         size_t getNoLongerUsedDescriptorCount();
 
         /**
+         * Returns size of one descriptor in this heap.
+         *
+         * @return Descriptor size.
+         */
+        inline UINT getDescriptorSize() const { return iDescriptorSize; }
+
+        /**
          * Returns internal DirectX heap.
          *
          * @return DirectX heap.
          */
-        inline std::pair<std::recursive_mutex*, ID3D12DescriptorHeap*> getInternalHeap() {
-            return std::make_pair(&mtxInternalResources.first, mtxInternalResources.second.pHeap.Get());
+        inline ID3D12DescriptorHeap* getInternalHeap() const {
+            return mtxInternalResources.second.pHeap.Get();
         }
 
     protected:

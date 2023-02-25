@@ -76,6 +76,17 @@ namespace ne {
         [[nodiscard]] virtual std::optional<Error> bindUav() override;
 
         /**
+         * Returns descriptor handle to the descriptor that was previously binded using `bind...` function(s).
+         *
+         * @param descriptorType Type of descriptor to get.
+         *
+         * @return Empty if descriptor if this type was not binded to this resource, otherwise
+         * descriptor handle.
+         */
+        std::optional<D3D12_CPU_DESCRIPTOR_HANDLE>
+        getBindedDescriptorHandle(DescriptorType descriptorType) const;
+
+        /**
          * Returns internal resource.
          *
          * @return Do not delete (free) this pointer. Internal resource.

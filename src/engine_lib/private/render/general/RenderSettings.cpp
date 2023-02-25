@@ -78,24 +78,26 @@ namespace ne {
     }
 
     void RenderSettings::updateRendererConfigurationForAntialiasing() {
-        if (pRenderer->isInitialized()) {
-            // Make sure no drawing is happening and the GPU is not referencing any resources.
-            std::scoped_lock guard(*pRenderer->getRenderResourcesMutex());
-            pRenderer->waitForGpuToFinishWorkUpToThisPoint();
+        if (!pRenderer->isInitialized()) {
+            return;
+        }
 
-            // Recreate depth/stencil buffer with(out) multisampling.
-            auto optionalError = pRenderer->updateRenderBuffers();
-            if (optionalError.has_value()) {
-                optionalError->addEntry();
-                optionalError->showError();
-                throw std::runtime_error(optionalError->getFullErrorMessage());
-            }
+        // Make sure no drawing is happening and the GPU is not referencing any resources.
+        std::scoped_lock guard(*pRenderer->getRenderResourcesMutex());
+        pRenderer->waitForGpuToFinishWorkUpToThisPoint();
 
-            // Recreate all PSOs' internal resources so they will now use new multisampling settings.
-            {
-                const auto psoGuard =
-                    pRenderer->getPsoManager()->clearGraphicsPsosInternalResourcesAndDelayRestoring();
-            }
+        // Recreate depth/stencil buffer with(out) multisampling.
+        auto optionalError = pRenderer->updateRenderBuffers();
+        if (optionalError.has_value()) {
+            optionalError->addEntry();
+            optionalError->showError();
+            throw std::runtime_error(optionalError->getFullErrorMessage());
+        }
+
+        // Recreate all PSOs' internal resources so they will now use new multisampling settings.
+        {
+            const auto psoGuard =
+                pRenderer->getPsoManager()->clearGraphicsPsosInternalResourcesAndDelayRestoring();
         }
     }
 
@@ -298,15 +300,17 @@ namespace ne {
     }
 
     void RenderSettings::updateRendererConfigurationForScreen() {
-        if (pRenderer->isInitialized()) {
-            // Update render buffers.
-            auto optionalError = pRenderer->updateRenderBuffers();
-            if (optionalError.has_value()) {
-                auto error = optionalError.value();
-                error.addEntry();
-                error.showError();
-                throw std::runtime_error(error.getFullErrorMessage());
-            }
+        if (!pRenderer->isInitialized()) {
+            return;
+        }
+
+        // Update render buffers.
+        auto optionalError = pRenderer->updateRenderBuffers();
+        if (optionalError.has_value()) {
+            auto error = optionalError.value();
+            error.addEntry();
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
         }
     }
 

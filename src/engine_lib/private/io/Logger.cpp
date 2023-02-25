@@ -18,17 +18,19 @@ namespace ne {
         if (iTotalWarningsProduced.load() > 0 || iTotalErrorsProduced.load() > 0) {
             pSpdLogger->info(fmt::format(
                 "\n---------------------------------------------------\n"
-                "Total warnings produced: {}.\n"
-                "Total errors produced: {}.",
+                "Total WARNINGS produced: {}.\n"
+                "Total ERRORS produced: {}."
+                "\n---------------------------------------------------\n",
                 iTotalWarningsProduced.load(),
                 iTotalErrorsProduced.load()));
         }
-        // Explicitly destroy spdlogger here, why:
+        // Explicitly destroy spdlogger here, because:
         // if you would try to write to log in destructor of your class while using `gc` pointer
         // to store your class' instance, if it happens that your instance is destroyed when the program
         // is finished (almost, i. e. when exited main) because of `gc` or some other magic (don't know the
-        // actual reason to be honest) we would try to write to log but spdlogger is already destroyed
-        // so we would crash. This is why I clear logger here and use checks in logging functions.
+        // actual reason to be honest, maybe because logger is static) we would try to write to log but
+        // spdlogger is already destroyed so we would crash. This is why I clear logger here and use checks in
+        // logging functions.
         pSpdLogger = nullptr;
     }
 

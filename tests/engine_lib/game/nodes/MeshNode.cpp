@@ -93,7 +93,7 @@ TEST_CASE("serialize and deserialize MeshNode") {
                     // Check.
                     REQUIRE(pMeshNode->getNodeName() == "My cool node");
                     REQUIRE(pMeshNode->getMaterial()->isUsingTransparency());
-                    REQUIRE(pMeshNode->getMaterial()->getName() == "My Material");
+                    REQUIRE(pMeshNode->getMaterial()->getMaterialName() == "My Material");
                     const auto mtxMeshData = pMeshNode->getMeshData();
                     std::scoped_lock guard(*mtxMeshData.first);
                     REQUIRE(mtxMeshData.second->getVertices()->size() == 2);
@@ -277,7 +277,7 @@ TEST_CASE("serialize and deserialize MeshNode as part of a node tree") {
                     // Check.
                     REQUIRE(pMeshNode->getNodeName() == "My cool node");
                     REQUIRE(pMeshNode->getMaterial()->isUsingTransparency());
-                    REQUIRE(pMeshNode->getMaterial()->getName() == "My Material");
+                    REQUIRE(pMeshNode->getMaterial()->getMaterialName() == "My Material");
                     const auto mtxMeshData = pMeshNode->getMeshData();
                     std::scoped_lock guard(*mtxMeshData.first);
                     REQUIRE(mtxMeshData.second->getVertices()->size() == 2);
@@ -474,7 +474,7 @@ TEST_CASE("serialize and deserialize MeshNode as part of a node tree with origin
                     // Check.
                     REQUIRE(pMeshNode->getNodeName() == "My cool node");
                     REQUIRE(pMeshNode->getMaterial()->isUsingTransparency());
-                    REQUIRE(pMeshNode->getMaterial()->getName() == "My Material");
+                    REQUIRE(pMeshNode->getMaterial()->getMaterialName() == "My Material");
                     const auto mtxMeshData = pMeshNode->getMeshData();
                     std::scoped_lock guard(*mtxMeshData.first);
                     REQUIRE(mtxMeshData.second->getVertices()->size() == 3);

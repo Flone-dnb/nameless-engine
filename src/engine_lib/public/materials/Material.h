@@ -112,7 +112,7 @@ namespace ne RNAMESPACE() {
          *
          * @return Material name.
          */
-        std::string getName() const;
+        std::string getMaterialName() const;
 
         /**
          * Tells whether this material uses transparency or not.
@@ -191,21 +191,17 @@ namespace ne RNAMESPACE() {
         /** Do not delete (free) this pointer. PSO manager that the renderer owns. */
         PsoManager* pPsoManager = nullptr;
 
-        /**
-         * Name of the vertex shader that this material is using.
-         */
+        /** Name of the vertex shader that this material is using. */
         RPROPERTY(Serialize)
         std::string sVertexShaderName;
 
-        /**
-         * Name of the pixel shader that this material is using.
-         */
+        /** Name of the pixel shader that this material is using. */
         RPROPERTY(Serialize)
         std::string sPixelShaderName;
 
         /** Name of this material. */
         RPROPERTY(Serialize)
-        std::string sName;
+        std::string sMaterialName;
 
         /** Whether this material will use transparency or not. */
         RPROPERTY(Serialize)

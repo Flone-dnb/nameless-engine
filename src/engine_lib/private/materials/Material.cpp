@@ -27,7 +27,7 @@ namespace ne {
         this->sPixelShaderName = sPixelShaderName;
         this->bUseTransparency = bUseTransparency;
         this->pPsoManager = pPsoManager;
-        this->sName = sMaterialName;
+        this->sMaterialName = sMaterialName;
     }
 
     Material::~Material() {
@@ -40,14 +40,14 @@ namespace ne {
                 fmt::format(
                     "material \"{}\" is being destroyed but material's array of spawned mesh nodes "
                     "that use this material still has {} item(s)",
-                    sName,
+                    sMaterialName,
                     iMeshNodeCount),
                 sMaterialLogCategory);
         }
 
         if (pUsedPso.isInitialized()) [[unlikely]] {
             Logger::get().error(
-                fmt::format("material \"{}\" is being destroyed but used PSO was not cleared", sName),
+                fmt::format("material \"{}\" is being destroyed but used PSO was not cleared", sMaterialName),
                 sMaterialLogCategory);
             pUsedPso.clear();
         }
@@ -190,7 +190,7 @@ namespace ne {
         return &mtxSpawnedMeshNodesThatUseThisMaterial;
     }
 
-    std::string Material::getName() const { return sName; }
+    std::string Material::getMaterialName() const { return sMaterialName; }
 
     bool Material::isUsingTransparency() const { return bUseTransparency; }
 

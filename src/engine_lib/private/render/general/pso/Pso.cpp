@@ -103,7 +103,7 @@ namespace ne {
                     fmt::format(
                         "material \"{}\" notified the PSO with ID \"{}\" of being used but this "
                         "material already existed in the array of materials that use this PSO",
-                        pMaterial->getName(),
+                        pMaterial->getMaterialName(),
                         sUniquePsoIdentifier),
                     sPsoLogCategory);
                 return;
@@ -124,7 +124,7 @@ namespace ne {
                     fmt::format(
                         "material \"{}\" notified the PSO with ID \"{}\" of no longer being used but this "
                         "material was not found in the array of materials that use this PSO",
-                        pMaterial->getName(),
+                        pMaterial->getMaterialName(),
                         sUniquePsoIdentifier),
                     sPsoLogCategory);
                 return;

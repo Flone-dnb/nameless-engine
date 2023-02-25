@@ -162,7 +162,7 @@ TEST_CASE("serialize and deserialize Material") {
                     const auto pMaterial = std::get<std::shared_ptr<Material>>(std::move(result));
 
                     // Check.
-                    REQUIRE(pMaterial->getName() == "My Material");
+                    REQUIRE(pMaterial->getMaterialName() == "My Material");
                     REQUIRE(pMaterial->isUsingTransparency());
                 }
 

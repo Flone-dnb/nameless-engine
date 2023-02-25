@@ -23,6 +23,6 @@ sNodeName = "Mesh Node"
 sVertexShaderName = "engine.default.vs"
 bUseTransparency = false
 sPixelShaderName = "engine.default.ps"
-sName = "Material"
+sMaterialName = "Material"
 ".field_name" = "pMaterial"
 

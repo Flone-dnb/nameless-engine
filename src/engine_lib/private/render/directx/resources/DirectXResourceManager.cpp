@@ -226,13 +226,12 @@ namespace ne {
         return localBudget.UsageBytes / 1024 / 1024; // NOLINT
     }
 
-    std::variant<std::unique_ptr<DirectXResource>, Error> DirectXResourceManager::createRtvResource(
+    std::variant<std::unique_ptr<DirectXResource>, Error> DirectXResourceManager::createResource(
         const std::string& sResourceName,
         const D3D12MA::ALLOCATION_DESC& allocationDesc,
         const D3D12_RESOURCE_DESC& resourceDesc,
         const D3D12_RESOURCE_STATES& initialResourceState,
-        const D3D12_CLEAR_VALUE& resourceClearValue) const {
-        // Create resource.
+        const std::optional<D3D12_CLEAR_VALUE>& resourceClearValue) const {
         auto result = DirectXResource::create(
             this,
             sResourceName,
@@ -246,148 +245,8 @@ namespace ne {
             err.addEntry();
             return err;
         }
-        auto pResource = std::get<std::unique_ptr<DirectXResource>>(std::move(result));
 
-        // Assign descriptor.
-        auto optionalError = pResource->bindRtv();
-        if (optionalError.has_value()) {
-            auto err = optionalError.value();
-            err.addEntry();
-            return err;
-        }
-
-        return pResource;
-    }
-
-    std::variant<std::unique_ptr<DirectXResource>, Error> DirectXResourceManager::createDsvResource(
-        const std::string& sResourceName,
-        const D3D12MA::ALLOCATION_DESC& allocationDesc,
-        const D3D12_RESOURCE_DESC& resourceDesc,
-        const D3D12_RESOURCE_STATES& initialResourceState,
-        const D3D12_CLEAR_VALUE& resourceClearValue) const {
-        // Create resource.
-        auto result = DirectXResource::create(
-            this,
-            sResourceName,
-            pMemoryAllocator.Get(),
-            allocationDesc,
-            resourceDesc,
-            initialResourceState,
-            resourceClearValue);
-        if (std::holds_alternative<Error>(result)) {
-            auto err = std::get<Error>(std::move(result));
-            err.addEntry();
-            return err;
-        }
-        auto pResource = std::get<std::unique_ptr<DirectXResource>>(std::move(result));
-
-        // Assign descriptor.
-        auto optionalError = pResource->bindDsv();
-        if (optionalError.has_value()) {
-            auto err = optionalError.value();
-            err.addEntry();
-            return err;
-        }
-
-        return pResource;
-    }
-
-    std::variant<std::unique_ptr<DirectXResource>, Error> DirectXResourceManager::createCbvResource(
-        const std::string& sResourceName,
-        const D3D12MA::ALLOCATION_DESC& allocationDesc,
-        const D3D12_RESOURCE_DESC& resourceDesc,
-        const D3D12_RESOURCE_STATES& initialResourceState) const {
-        // Create resource.
-        auto result = DirectXResource::create(
-            this,
-            sResourceName,
-            pMemoryAllocator.Get(),
-            allocationDesc,
-            resourceDesc,
-            initialResourceState,
-            {});
-        if (std::holds_alternative<Error>(result)) {
-            auto err = std::get<Error>(std::move(result));
-            err.addEntry();
-            return err;
-        }
-        auto pResource = std::get<std::unique_ptr<DirectXResource>>(std::move(result));
-
-        // Assign descriptor.
-        auto optionalError = pResource->bindCbv();
-        if (optionalError.has_value()) {
-            auto err = optionalError.value();
-            err.addEntry();
-            return err;
-        }
-
-        return pResource;
-    }
-
-    std::variant<std::unique_ptr<DirectXResource>, Error> DirectXResourceManager::createSrvResource(
-        const std::string& sResourceName,
-        const D3D12MA::ALLOCATION_DESC& allocationDesc,
-        const D3D12_RESOURCE_DESC& resourceDesc,
-        const D3D12_RESOURCE_STATES& initialResourceState) const {
-        // Create resource.
-        auto result = DirectXResource::create(
-            this,
-            sResourceName,
-            pMemoryAllocator.Get(),
-            allocationDesc,
-            resourceDesc,
-            initialResourceState,
-            {});
-        if (std::holds_alternative<Error>(result)) {
-            auto err = std::get<Error>(std::move(result));
-            err.addEntry();
-            return err;
-        }
-
-        auto pResource = std::get<std::unique_ptr<DirectXResource>>(std::move(result));
-
-        // Assign descriptor.
-        auto optionalError = pResource->bindSrv();
-        if (optionalError.has_value()) {
-            auto err = optionalError.value();
-            err.addEntry();
-            return err;
-        }
-
-        return pResource;
-    }
-
-    std::variant<std::unique_ptr<DirectXResource>, Error> DirectXResourceManager::createUavResource(
-        const std::string& sResourceName,
-        const D3D12MA::ALLOCATION_DESC& allocationDesc,
-        const D3D12_RESOURCE_DESC& resourceDesc,
-        const D3D12_RESOURCE_STATES& initialResourceState) const {
-        // Create resource.
-        auto result = DirectXResource::create(
-            this,
-            sResourceName,
-            pMemoryAllocator.Get(),
-            allocationDesc,
-            resourceDesc,
-            initialResourceState,
-            {});
-        if (std::holds_alternative<Error>(result)) {
-            auto err = std::get<Error>(std::move(result));
-            err.addEntry();
-            return err;
-        }
-
-        auto pResource = std::get<std::unique_ptr<DirectXResource>>(std::move(result));
-
-        // Assign descriptor.
-        auto optionalError = pResource->bindUav();
-        if (optionalError.has_value()) {
-            auto err = optionalError.value();
-            err.addEntry();
-            return err;
-        }
-
-        return pResource;
+        return std::get<std::unique_ptr<DirectXResource>>(std::move(result));
     }
 
     std::variant<std::vector<std::unique_ptr<DirectXResource>>, Error>

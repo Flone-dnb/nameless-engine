@@ -41,39 +41,14 @@ namespace ne {
         virtual ~DirectXResource() override;
 
         /**
-         * Creates a new render target view descriptor that points to this resource.
+         * Creates a new descriptor and binds it to this resource.
+         *
+         * @param descriptorType Type of descriptor to bind.
          *
          * @return Error if something went wrong.
          */
-        [[nodiscard]] virtual std::optional<Error> bindRtv() override;
-
-        /**
-         * Creates a new depth stencil view descriptor that points to this resource.
-         *
-         * @return Error if something went wrong.
-         */
-        [[nodiscard]] virtual std::optional<Error> bindDsv() override;
-
-        /**
-         * Creates a new constant buffer view descriptor that points to this resource.
-         *
-         * @return Error if something went wrong.
-         */
-        [[nodiscard]] virtual std::optional<Error> bindCbv() override;
-
-        /**
-         * Creates a new shader resource view descriptor that points to this resource.
-         *
-         * @return Error if something went wrong.
-         */
-        [[nodiscard]] virtual std::optional<Error> bindSrv() override;
-
-        /**
-         * Creates a new unordered access view descriptor that points to this resource.
-         *
-         * @return Error if something went wrong.
-         */
-        [[nodiscard]] virtual std::optional<Error> bindUav() override;
+        [[nodiscard]] virtual std::optional<Error>
+        bindDescriptor(GpuResource::DescriptorType descriptorType) override;
 
         /**
          * Returns descriptor handle to the descriptor that was previously binded using `bind...` function(s).
@@ -98,7 +73,7 @@ namespace ne {
          *
          * @return Resource name.
          */
-        std::string getResourceName() const;
+        virtual std::string getResourceName() const override;
 
     private:
         /**

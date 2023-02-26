@@ -119,88 +119,22 @@ namespace ne {
         virtual size_t getUsedVideoMemoryInMb() const override;
 
         /**
-         * Creates a new resource and binds a render target view descriptor to it.
+         * Creates a new GPU resource.
          *
          * @param sResourceName        Resource name, used for logging.
          * @param allocationDesc       Allocation description.
          * @param resourceDesc         Resource description.
          * @param initialResourceState Initial resource state.
-         * @param resourceClearValue   Optimized clear value.
+         * @param resourceClearValue   Clear value for render target or depth/stencil resources.
          *
          * @return Error if something went wrong, otherwise created resource.
          */
-        std::variant<std::unique_ptr<DirectXResource>, Error> createRtvResource(
+        std::variant<std::unique_ptr<DirectXResource>, Error> createResource(
             const std::string& sResourceName,
             const D3D12MA::ALLOCATION_DESC& allocationDesc,
             const D3D12_RESOURCE_DESC& resourceDesc,
             const D3D12_RESOURCE_STATES& initialResourceState,
-            const D3D12_CLEAR_VALUE& resourceClearValue) const;
-
-        /**
-         * Creates a new resource and binds a depth stencil view descriptor to it.
-         *
-         * @param sResourceName        Resource name, used for logging.
-         * @param allocationDesc       Allocation description.
-         * @param resourceDesc         Resource description.
-         * @param initialResourceState Initial resource state.
-         * @param resourceClearValue   Optimized clear value.
-         *
-         * @return Error if something went wrong, otherwise created resource.
-         */
-        std::variant<std::unique_ptr<DirectXResource>, Error> createDsvResource(
-            const std::string& sResourceName,
-            const D3D12MA::ALLOCATION_DESC& allocationDesc,
-            const D3D12_RESOURCE_DESC& resourceDesc,
-            const D3D12_RESOURCE_STATES& initialResourceState,
-            const D3D12_CLEAR_VALUE& resourceClearValue) const;
-
-        /**
-         * Creates a new resource and binds a constant buffer view descriptor to it.
-         *
-         * @param sResourceName        Resource name, used for logging.
-         * @param allocationDesc       Allocation description.
-         * @param resourceDesc         Resource description.
-         * @param initialResourceState Initial resource state.
-         *
-         * @return Error if something went wrong, otherwise created resource.
-         */
-        std::variant<std::unique_ptr<DirectXResource>, Error> createCbvResource(
-            const std::string& sResourceName,
-            const D3D12MA::ALLOCATION_DESC& allocationDesc,
-            const D3D12_RESOURCE_DESC& resourceDesc,
-            const D3D12_RESOURCE_STATES& initialResourceState) const;
-
-        /**
-         * Creates a new resource and binds a shader resource view descriptor to it.
-         *
-         * @param sResourceName        Resource name, used for logging.
-         * @param allocationDesc       Allocation description.
-         * @param resourceDesc         Resource description.
-         * @param initialResourceState Initial resource state.
-         *
-         * @return Error if something went wrong, otherwise created resource.
-         */
-        std::variant<std::unique_ptr<DirectXResource>, Error> createSrvResource(
-            const std::string& sResourceName,
-            const D3D12MA::ALLOCATION_DESC& allocationDesc,
-            const D3D12_RESOURCE_DESC& resourceDesc,
-            const D3D12_RESOURCE_STATES& initialResourceState) const;
-
-        /**
-         * Creates a new resource and binds an unordered access view descriptor to it.
-         *
-         * @param sResourceName        Resource name, used for logging.
-         * @param allocationDesc       Allocation description.
-         * @param resourceDesc         Resource description.
-         * @param initialResourceState Initial resource state.
-         *
-         * @return Error if something went wrong, otherwise created resource.
-         */
-        std::variant<std::unique_ptr<DirectXResource>, Error> createUavResource(
-            const std::string& sResourceName,
-            const D3D12MA::ALLOCATION_DESC& allocationDesc,
-            const D3D12_RESOURCE_DESC& resourceDesc,
-            const D3D12_RESOURCE_STATES& initialResourceState) const;
+            const std::optional<D3D12_CLEAR_VALUE>& resourceClearValue) const;
 
         /**
          * Creates new resources by wrapping swap chain buffers and binding

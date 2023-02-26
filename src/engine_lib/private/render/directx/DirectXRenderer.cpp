@@ -103,6 +103,7 @@ namespace ne {
         const auto bIsMsaaEnabled = pMtxRenderSettings->second->isAntialiasingEnabled();
         const auto iMsaaSampleCount = static_cast<int>(pMtxRenderSettings->second->getAntialiasingQuality());
 
+        // Prepare resource description.
         const D3D12_RESOURCE_DESC depthStencilDesc = CD3DX12_RESOURCE_DESC(
             D3D12_RESOURCE_DIMENSION_TEXTURE2D,
             0,
@@ -124,8 +125,9 @@ namespace ne {
         D3D12MA::ALLOCATION_DESC allocationDesc = {};
         allocationDesc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
 
+        // Create resource.
         auto result = dynamic_cast<DirectXResourceManager*>(getResourceManager())
-                          ->createDsvResource(
+                          ->createResource(
                               "renderer depth/stencil buffer",
                               allocationDesc,
                               depthStencilDesc,
@@ -137,6 +139,14 @@ namespace ne {
             return err;
         }
         pDepthStencilBuffer = std::get<std::unique_ptr<DirectXResource>>(std::move(result));
+
+        // Bind DSV.
+        auto optionalError = pDepthStencilBuffer->bindDescriptor(GpuResource::DescriptorType::DSV);
+        if (optionalError.has_value()) {
+            auto error = optionalError.value();
+            error.addEntry();
+            return error;
+        }
 
         return {};
     }
@@ -263,7 +273,7 @@ namespace ne {
 
         // Get render target resource descriptor handle.
         auto optionalRenderTargetDescritorHandle =
-            pCurrentBackBufferResource->getBindedDescriptorHandle(DescriptorType::RTV);
+            pCurrentBackBufferResource->getBindedDescriptorHandle(GpuResource::DescriptorType::RTV);
         if (!optionalRenderTargetDescritorHandle.has_value()) [[unlikely]] {
             return Error(fmt::format(
                 "render target resource \"{}\" has no RTV binded to it",
@@ -273,7 +283,7 @@ namespace ne {
 
         // Get depth stencil resource descriptor handle.
         auto optionalDepthStencilDescritorHandle =
-            pDepthStencilBuffer->getBindedDescriptorHandle(DescriptorType::DSV);
+            pDepthStencilBuffer->getBindedDescriptorHandle(GpuResource::DescriptorType::DSV);
         if (!optionalDepthStencilDescritorHandle.has_value()) [[unlikely]] {
             return Error(fmt::format(
                 "depth stencil resource \"{}\" has no DSV binded to it",
@@ -981,7 +991,7 @@ namespace ne {
         allocationDesc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
 
         auto result = dynamic_cast<DirectXResourceManager*>(getResourceManager())
-                          ->createRtvResource(
+                          ->createResource(
                               "renderer render target buffer",
                               allocationDesc,
                               msaaRenderTargetDesc,
@@ -994,8 +1004,15 @@ namespace ne {
         }
         pMsaaRenderBuffer = std::get<std::unique_ptr<DirectXResource>>(std::move(result));
 
+        // Bind RTV.
+        auto optionalError = pMsaaRenderBuffer->bindDescriptor(GpuResource::DescriptorType::RTV);
+        if (optionalError.has_value()) {
+            optionalError->addEntry();
+            return optionalError.value();
+        }
+
         // Create depth/stencil buffer.
-        auto optionalError = createDepthStencilBuffer();
+        optionalError = createDepthStencilBuffer();
         if (optionalError.has_value()) {
             optionalError->addEntry();
             return optionalError.value();

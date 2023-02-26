@@ -3,19 +3,12 @@
 // Standard.
 #include <optional>
 
+// Custom.
+#include "render/general/resources/GpuResource.h"
+
 namespace ne {
     class DirectXDescriptorHeap;
     class DirectXResource;
-
-    /** Defines types of different descriptors. */
-    enum class DescriptorType : int {
-        RTV = 0,
-        DSV,
-        CBV,
-        SRV,
-        UAV,
-        END // marks the end of this enum
-    };
 
     /**
      * Represents a descriptor (to a resource) that is stored in a descriptor heap.
@@ -75,7 +68,7 @@ namespace ne {
          */
         DirectXDescriptor(
             DirectXDescriptorHeap* pHeap,
-            DescriptorType descriptorType,
+            GpuResource::DescriptorType descriptorType,
             DirectXResource* pResource,
             int iDescriptorOffsetInDescriptors);
 
@@ -104,7 +97,7 @@ namespace ne {
         std::optional<int> iDescriptorOffsetInDescriptors;
 
         /** Type of this descriptor. */
-        DescriptorType descriptorType;
+        GpuResource::DescriptorType descriptorType;
 
         // !!!
         // if adding new fields consider adding them to move assignment operator

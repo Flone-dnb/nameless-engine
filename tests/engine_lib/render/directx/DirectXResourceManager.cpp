@@ -41,36 +41,57 @@ TEST_CASE("make the CBV heap expand") {
             std::vector<std::unique_ptr<DirectXResource>> vCreatedResources(iResourcesTilExpand);
 
             for (int i = 0; i < iResourcesTilExpand; i++) {
-                auto result = pResourceManager->createCbvResource(
-                    "Test CBV resource", allocationDesc, resourceDesc, D3D12_RESOURCE_STATE_GENERIC_READ);
+                // Create resource.
+                auto result = pResourceManager->createResource(
+                    "Test CBV resource", allocationDesc, resourceDesc, D3D12_RESOURCE_STATE_GENERIC_READ, {});
                 if (std::holds_alternative<Error>(result)) {
                     auto err = std::get<Error>(std::move(result));
                     err.addEntry();
                     INFO(err.getFullErrorMessage());
                     REQUIRE(false);
                 }
+                auto pResource = std::get<std::unique_ptr<DirectXResource>>(std::move(result));
 
-                vCreatedResources[i] = std::get<std::unique_ptr<DirectXResource>>(std::move(result));
+                // Bind CBV.
+                auto optionalError = pResource->bindDescriptor(GpuResource::DescriptorType::CBV);
+                if (optionalError.has_value()) {
+                    auto error = optionalError.value();
+                    error.addEntry();
+                    INFO(error.getFullErrorMessage());
+                    REQUIRE(false);
+                }
+
+                // Add to array.
+                vCreatedResources[i] = std::move(pResource);
             }
 
             REQUIRE(pHeapManager->getHeapCapacity() == iInitialHeapCapacity);
 
             // Create one more resource so that the heap will expand.
-            auto result = pResourceManager->createCbvResource(
-                "Test CBV resource", allocationDesc, resourceDesc, D3D12_RESOURCE_STATE_GENERIC_READ);
+            auto result = pResourceManager->createResource(
+                "Test CBV resource", allocationDesc, resourceDesc, D3D12_RESOURCE_STATE_GENERIC_READ, {});
             if (std::holds_alternative<Error>(result)) {
                 auto err = std::get<Error>(std::move(result));
                 err.addEntry();
                 INFO(err.getFullErrorMessage());
                 REQUIRE(false);
             }
+            auto pResource = std::get<std::unique_ptr<DirectXResource>>(std::move(result));
 
-            vCreatedResources.push_back(std::get<std::unique_ptr<DirectXResource>>(std::move(result)));
+            // Bind CBV.
+            auto optionalError = pResource->bindDescriptor(GpuResource::DescriptorType::CBV);
+            if (optionalError.has_value()) {
+                auto error = optionalError.value();
+                error.addEntry();
+                INFO(error.getFullErrorMessage());
+                REQUIRE(false);
+            }
+
+            // Add to array.
+            vCreatedResources.push_back(std::move(pResource));
 
             REQUIRE(pHeapManager->getHeapCapacity() > iInitialHeapCapacity);
             REQUIRE(pHeapManager->getHeapSize() == iInitialHeapCapacity + 1);
-
-            // TODO: check that resources and views are valid
 
             pGameWindow->close();
         }
@@ -115,16 +136,28 @@ TEST_CASE("make the CBV heap shrink") {
             std::vector<std::unique_ptr<DirectXResource>> vCreatedResources(iResourcesTilExpand);
 
             for (int i = 0; i < iResourcesTilExpand; i++) {
-                auto result = pResourceManager->createCbvResource(
-                    "Test CBV resource", allocationDesc, resourceDesc, D3D12_RESOURCE_STATE_GENERIC_READ);
+                // Create resource.
+                auto result = pResourceManager->createResource(
+                    "Test CBV resource", allocationDesc, resourceDesc, D3D12_RESOURCE_STATE_GENERIC_READ, {});
                 if (std::holds_alternative<Error>(result)) {
                     auto err = std::get<Error>(std::move(result));
                     err.addEntry();
                     INFO(err.getFullErrorMessage());
                     REQUIRE(false);
                 }
+                auto pResource = std::get<std::unique_ptr<DirectXResource>>(std::move(result));
 
-                vCreatedResources[i] = std::get<std::unique_ptr<DirectXResource>>(std::move(result));
+                // Bind CBV.
+                auto optionalError = pResource->bindDescriptor(GpuResource::DescriptorType::CBV);
+                if (optionalError.has_value()) {
+                    auto error = optionalError.value();
+                    error.addEntry();
+                    INFO(error.getFullErrorMessage());
+                    REQUIRE(false);
+                }
+
+                // Add to array.
+                vCreatedResources[i] = std::move(pResource);
             }
 
             REQUIRE(pHeapManager->getHeapCapacity() > iInitialHeapCapacity);
@@ -142,8 +175,6 @@ TEST_CASE("make the CBV heap shrink") {
             }
 
             REQUIRE(pHeapManager->getHeapCapacity() == iInitialHeapCapacity);
-
-            // TODO: check that resources and views are valid
 
             pGameWindow->close();
         }
@@ -192,8 +223,8 @@ TEST_CASE("assign multiple descriptors to one resource") {
                 D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
 
             // Create SRV resource.
-            auto result = pResourceManager->createSrvResource(
-                "Test SRV resource", allocationDesc, resourceDesc, D3D12_RESOURCE_STATE_COMMON);
+            auto result = pResourceManager->createResource(
+                "Test SRV resource", allocationDesc, resourceDesc, D3D12_RESOURCE_STATE_COMMON, {});
             if (std::holds_alternative<Error>(result)) {
                 auto err = std::get<Error>(std::move(result));
                 err.addEntry();
@@ -202,8 +233,17 @@ TEST_CASE("assign multiple descriptors to one resource") {
             }
             auto pResource = std::get<std::unique_ptr<DirectXResource>>(std::move(result));
 
+            // Bind SRV.
+            auto optionalError = pResource->bindDescriptor(GpuResource::DescriptorType::SRV);
+            if (optionalError.has_value()) {
+                auto error = optionalError.value();
+                error.addEntry();
+                INFO(error.getFullErrorMessage());
+                REQUIRE(false);
+            }
+
             // Assign a UAV descriptor to this resource.
-            auto optionalError = pResource->bindUav();
+            optionalError = pResource->bindDescriptor(GpuResource::DescriptorType::UAV);
             if (optionalError.has_value()) {
                 optionalError->addEntry();
                 INFO(optionalError->getFullErrorMessage());
@@ -212,7 +252,7 @@ TEST_CASE("assign multiple descriptors to one resource") {
 
             // Assign a SRV descriptor to this resource (again).
             // (should fail because descriptor of this type is already added)
-            optionalError = pResource->bindSrv();
+            optionalError = pResource->bindDescriptor(GpuResource::DescriptorType::SRV);
             REQUIRE(optionalError.has_value());
 
             pGameWindow->close();
@@ -269,8 +309,8 @@ TEST_CASE("all assigned descriptors are freed when resource is destroyed") {
                     D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
 
                 // Create SRV resource.
-                auto result = pResourceManager->createSrvResource(
-                    "Test SRV resource", allocationDesc, resourceDesc, D3D12_RESOURCE_STATE_COMMON);
+                auto result = pResourceManager->createResource(
+                    "Test SRV resource", allocationDesc, resourceDesc, D3D12_RESOURCE_STATE_COMMON, {});
                 if (std::holds_alternative<Error>(result)) {
                     auto err = std::get<Error>(std::move(result));
                     err.addEntry();
@@ -279,8 +319,17 @@ TEST_CASE("all assigned descriptors are freed when resource is destroyed") {
                 }
                 auto pResource = std::get<std::unique_ptr<DirectXResource>>(std::move(result));
 
+                // Bind SRV.
+                auto optionalError = pResource->bindDescriptor(GpuResource::DescriptorType::SRV);
+                if (optionalError.has_value()) {
+                    auto error = optionalError.value();
+                    error.addEntry();
+                    INFO(error.getFullErrorMessage());
+                    REQUIRE(false);
+                }
+
                 // Assign a UAV descriptor to this resource.
-                auto optionalError = pResource->bindUav();
+                optionalError = pResource->bindDescriptor(GpuResource::DescriptorType::UAV);
                 if (optionalError.has_value()) {
                     optionalError->addEntry();
                     INFO(optionalError->getFullErrorMessage());
@@ -327,8 +376,8 @@ TEST_CASE("create CBV resource") {
             const CD3DX12_RESOURCE_DESC resourceDesc = CD3DX12_RESOURCE_DESC::Buffer(iResourceSizeInBytes);
 
             // Create CBV resource.
-            auto result = pResourceManager->createCbvResource(
-                "Test CBV resource", allocationDesc, resourceDesc, D3D12_RESOURCE_STATE_GENERIC_READ);
+            auto result = pResourceManager->createResource(
+                "Test CBV resource", allocationDesc, resourceDesc, D3D12_RESOURCE_STATE_GENERIC_READ, {});
             if (std::holds_alternative<Error>(result)) {
                 auto err = std::get<Error>(std::move(result));
                 err.addEntry();
@@ -336,6 +385,15 @@ TEST_CASE("create CBV resource") {
                 REQUIRE(false);
             }
             auto pResource = std::get<std::unique_ptr<DirectXResource>>(std::move(result));
+
+            // Bind CBV.
+            auto optionalError = pResource->bindDescriptor(GpuResource::DescriptorType::CBV);
+            if (optionalError.has_value()) {
+                auto error = optionalError.value();
+                error.addEntry();
+                INFO(error.getFullErrorMessage());
+                REQUIRE(false);
+            }
 
             pGameWindow->close();
         }
@@ -384,8 +442,8 @@ TEST_CASE("create SRV resource") {
                 D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
 
             // Create SRV resource.
-            auto result = pResourceManager->createSrvResource(
-                "Test SRV resource", allocationDesc, resourceDesc, D3D12_RESOURCE_STATE_COMMON);
+            auto result = pResourceManager->createResource(
+                "Test SRV resource", allocationDesc, resourceDesc, D3D12_RESOURCE_STATE_COMMON, {});
             if (std::holds_alternative<Error>(result)) {
                 auto err = std::get<Error>(std::move(result));
                 err.addEntry();
@@ -393,6 +451,15 @@ TEST_CASE("create SRV resource") {
                 REQUIRE(false);
             }
             auto pResource = std::get<std::unique_ptr<DirectXResource>>(std::move(result));
+
+            // Bind SRV.
+            auto optionalError = pResource->bindDescriptor(GpuResource::DescriptorType::SRV);
+            if (optionalError.has_value()) {
+                auto error = optionalError.value();
+                error.addEntry();
+                INFO(error.getFullErrorMessage());
+                REQUIRE(false);
+            }
 
             pGameWindow->close();
         }
@@ -441,8 +508,8 @@ TEST_CASE("create UAV resource") {
                 D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
 
             // Create UAV resource.
-            auto result = pResourceManager->createUavResource(
-                "Test UAV resource", allocationDesc, resourceDesc, D3D12_RESOURCE_STATE_COMMON);
+            auto result = pResourceManager->createResource(
+                "Test UAV resource", allocationDesc, resourceDesc, D3D12_RESOURCE_STATE_COMMON, {});
             if (std::holds_alternative<Error>(result)) {
                 auto err = std::get<Error>(std::move(result));
                 err.addEntry();
@@ -450,6 +517,15 @@ TEST_CASE("create UAV resource") {
                 REQUIRE(false);
             }
             auto pResource = std::get<std::unique_ptr<DirectXResource>>(std::move(result));
+
+            // Bind UAV.
+            auto optionalError = pResource->bindDescriptor(GpuResource::DescriptorType::UAV);
+            if (optionalError.has_value()) {
+                auto error = optionalError.value();
+                error.addEntry();
+                INFO(error.getFullErrorMessage());
+                REQUIRE(false);
+            }
 
             pGameWindow->close();
         }
@@ -502,7 +578,7 @@ TEST_CASE("create RTV resource") {
             allocationDesc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
 
             // Create RTV resource.
-            auto result = pResourceManager->createRtvResource(
+            auto result = pResourceManager->createResource(
                 "Test RTV resource", allocationDesc, resourceDesc, D3D12_RESOURCE_STATE_COMMON, clearValue);
             if (std::holds_alternative<Error>(result)) {
                 auto err = std::get<Error>(std::move(result));
@@ -511,6 +587,15 @@ TEST_CASE("create RTV resource") {
                 REQUIRE(false);
             }
             auto pResource = std::get<std::unique_ptr<DirectXResource>>(std::move(result));
+
+            // Bind RTV.
+            auto optionalError = pResource->bindDescriptor(GpuResource::DescriptorType::RTV);
+            if (optionalError.has_value()) {
+                auto error = optionalError.value();
+                error.addEntry();
+                INFO(error.getFullErrorMessage());
+                REQUIRE(false);
+            }
 
             pGameWindow->close();
         }
@@ -565,7 +650,7 @@ TEST_CASE("create DSV resource") {
             allocationDesc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
 
             // Create DSV resource.
-            auto result = pResourceManager->createDsvResource(
+            auto result = pResourceManager->createResource(
                 "Test DSV resource",
                 allocationDesc,
                 depthStencilDesc,
@@ -578,6 +663,15 @@ TEST_CASE("create DSV resource") {
                 REQUIRE(false);
             }
             auto pResource = std::get<std::unique_ptr<DirectXResource>>(std::move(result));
+
+            // Bind DSV.
+            auto optionalError = pResource->bindDescriptor(GpuResource::DescriptorType::DSV);
+            if (optionalError.has_value()) {
+                auto error = optionalError.value();
+                error.addEntry();
+                INFO(error.getFullErrorMessage());
+                REQUIRE(false);
+            }
 
             pGameWindow->close();
         }

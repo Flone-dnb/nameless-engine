@@ -262,7 +262,8 @@ namespace ne {
 
         // Bind constant buffer view to the resource.
         auto optionalError =
-            mtxShaderConstantBuffers.second.pConstantBuffers->getInternalResource()->bindCbv();
+            mtxShaderConstantBuffers.second.pConstantBuffers->getInternalResource()->bindDescriptor(
+                GpuResource::DescriptorType::CBV);
         if (optionalError.has_value()) {
             auto error = optionalError.value();
             error.addEntry();

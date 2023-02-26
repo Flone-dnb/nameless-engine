@@ -40,7 +40,7 @@ namespace ne {
 
     DirectXDescriptor::DirectXDescriptor(
         DirectXDescriptorHeap* pHeap,
-        DescriptorType descriptorType,
+        GpuResource::DescriptorType descriptorType,
         DirectXResource* pResource,
         int iDescriptorOffsetInDescriptors) {
         this->iDescriptorOffsetInDescriptors = iDescriptorOffsetInDescriptors;

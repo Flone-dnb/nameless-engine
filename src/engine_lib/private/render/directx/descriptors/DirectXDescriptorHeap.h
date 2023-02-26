@@ -10,6 +10,7 @@
 
 // Custom.
 #include "render/directx/descriptors/DirectXDescriptor.h"
+#include "render/general/resources/GpuResource.h"
 
 // External.
 #include "directx/d3dx12.h"
@@ -93,8 +94,6 @@ namespace ne {
          * @param pResource      Resource to point new descriptor to.
          * @param descriptorType Type of the new descriptor.
          *
-         * @remark Prefer to use DirectXResource's "addRtv", "addDsv" and other functions instead of this one.
-         *
          * @remark You can use this function to assign a different descriptor to already created resource.
          * For example: create SRV resource using resource manager and use RTV heap to assign
          * a RTV descriptor to this resource so it will have 2 different descriptors.
@@ -102,7 +101,7 @@ namespace ne {
          * @return Error if something went wrong.
          */
         [[nodiscard]] std::optional<Error>
-        assignDescriptor(DirectXResource* pResource, DescriptorType descriptorType);
+        assignDescriptor(DirectXResource* pResource, GpuResource::DescriptorType descriptorType);
 
         /**
          * Returns current heap capacity (allocated heap size).
@@ -186,7 +185,7 @@ namespace ne {
         void createView(
             CD3DX12_CPU_DESCRIPTOR_HANDLE heapHandle,
             const DirectXResource* pResource,
-            DescriptorType descriptorType) const;
+            GpuResource::DescriptorType descriptorType) const;
 
         /**
          * Recreates the heap to expand it to another @ref iHeapGrowSize descriptors.
@@ -221,7 +220,7 @@ namespace ne {
          *
          * @return Descriptor types that this heap handles.
          */
-        std::vector<DescriptorType> getDescriptorTypesHandledByThisHeap() const;
+        std::vector<GpuResource::DescriptorType> getDescriptorTypesHandledByThisHeap() const;
 
         /**
          * Recreates views for created descriptors

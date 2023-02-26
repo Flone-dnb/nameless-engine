@@ -5,7 +5,6 @@
 #include "render/directx/resources/DirectXResourceManager.h"
 #include "misc/Globals.h"
 #include "render/directx/DirectXRenderer.h"
-#include "io/Logger.h"
 
 namespace ne {
 
@@ -61,59 +60,6 @@ namespace ne {
         return pCreatedResource;
     }
 
-    std::optional<Error> DirectXResource::bindRtv() {
-        auto optionalError = pResourceManager->getRtvHeap()->assignDescriptor(this, DescriptorType::RTV);
-        if (optionalError.has_value()) {
-            optionalError->addEntry();
-            return optionalError;
-        }
-
-        return {};
-    }
-
-    std::optional<Error> DirectXResource::bindDsv() {
-        auto optionalError = pResourceManager->getDsvHeap()->assignDescriptor(this, DescriptorType::DSV);
-        if (optionalError.has_value()) {
-            optionalError->addEntry();
-            return optionalError;
-        }
-
-        return {};
-    }
-
-    std::optional<Error> DirectXResource::bindCbv() {
-        auto optionalError =
-            pResourceManager->getCbvSrvUavHeap()->assignDescriptor(this, DescriptorType::CBV);
-        if (optionalError.has_value()) {
-            optionalError->addEntry();
-            return optionalError;
-        }
-
-        return {};
-    }
-
-    std::optional<Error> DirectXResource::bindSrv() {
-        auto optionalError =
-            pResourceManager->getCbvSrvUavHeap()->assignDescriptor(this, DescriptorType::SRV);
-        if (optionalError.has_value()) {
-            optionalError->addEntry();
-            return optionalError;
-        }
-
-        return {};
-    }
-
-    std::optional<Error> DirectXResource::bindUav() {
-        auto optionalError =
-            pResourceManager->getCbvSrvUavHeap()->assignDescriptor(this, DescriptorType::UAV);
-        if (optionalError.has_value()) {
-            optionalError->addEntry();
-            return optionalError;
-        }
-
-        return {};
-    }
-
     std::optional<D3D12_CPU_DESCRIPTOR_HANDLE>
     DirectXResource::getBindedDescriptorHandle(DescriptorType descriptorType) const {
         // Get descriptor.
@@ -166,5 +112,45 @@ namespace ne {
 
         // Make sure the GPU is not using this resource.
         pResourceManager->getRenderer()->waitForGpuToFinishWorkUpToThisPoint();
+    }
+
+    std::optional<Error> DirectXResource::bindDescriptor(DescriptorType descriptorType) {
+        DirectXDescriptorHeap* pHeap = nullptr;
+
+        switch (descriptorType) {
+        case (GpuResource::DescriptorType::CBV): {
+            pHeap = pResourceManager->getCbvSrvUavHeap();
+            break;
+        }
+        case (GpuResource::DescriptorType::SRV): {
+            pHeap = pResourceManager->getCbvSrvUavHeap();
+            break;
+        }
+        case (GpuResource::DescriptorType::UAV): {
+            pHeap = pResourceManager->getCbvSrvUavHeap();
+            break;
+        }
+        case (GpuResource::DescriptorType::RTV): {
+            pHeap = pResourceManager->getRtvHeap();
+            break;
+        }
+        case (GpuResource::DescriptorType::DSV): {
+            pHeap = pResourceManager->getDsvHeap();
+            break;
+        }
+        default:
+            Error error("unexpected case");
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+        }
+
+        // Assign descriptor.
+        auto optionalError = pHeap->assignDescriptor(this, descriptorType);
+        if (optionalError.has_value()) {
+            optionalError->addEntry();
+            return optionalError;
+        }
+
+        return {};
     }
 } // namespace ne

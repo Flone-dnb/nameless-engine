@@ -2,6 +2,7 @@
 
 // Standard.
 #include <optional>
+#include <string>
 
 // Custom.
 #include "misc/Error.h"
@@ -10,6 +11,16 @@ namespace ne {
     /** Resource stored in the GPU memory. */
     class GpuResource {
     public:
+        /** Types of descriptors that point to resources and specify how a resource should be used. */
+        enum class DescriptorType : size_t {
+            RTV = 0,
+            DSV,
+            CBV,
+            SRV,
+            UAV,
+            END // marks the end of this enum
+        };
+
         GpuResource() = default;
         virtual ~GpuResource() = default;
 
@@ -17,38 +28,19 @@ namespace ne {
         GpuResource& operator=(GpuResource&) = delete;
 
         /**
-         * Creates a new render target view descriptor that points to this resource.
+         * Creates a new descriptor and binds it to this resource.
+         *
+         * @param descriptorType Type of descriptor to bind.
          *
          * @return Error if something went wrong.
          */
-        [[nodiscard]] virtual std::optional<Error> bindRtv() = 0;
+        [[nodiscard]] virtual std::optional<Error> bindDescriptor(DescriptorType descriptorType) = 0;
 
         /**
-         * Creates a new depth stencil view descriptor that points to this resource.
+         * Returns resource name.
          *
-         * @return Error if something went wrong.
+         * @return Resource name.
          */
-        [[nodiscard]] virtual std::optional<Error> bindDsv() = 0;
-
-        /**
-         * Creates a new constant buffer view descriptor that points to this resource.
-         *
-         * @return Error if something went wrong.
-         */
-        [[nodiscard]] virtual std::optional<Error> bindCbv() = 0;
-
-        /**
-         * Creates a new shader resource view descriptor that points to this resource.
-         *
-         * @return Error if something went wrong.
-         */
-        [[nodiscard]] virtual std::optional<Error> bindSrv() = 0;
-
-        /**
-         * Creates a new unordered access view descriptor that points to this resource.
-         *
-         * @return Error if something went wrong.
-         */
-        [[nodiscard]] virtual std::optional<Error> bindUav() = 0;
+        virtual std::string getResourceName() const = 0;
     };
 } // namespace ne

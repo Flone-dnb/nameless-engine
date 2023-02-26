@@ -21,8 +21,8 @@ namespace ne {
         return pManager;
     }
 
-    std::optional<Error>
-    DirectXDescriptorHeap::assignDescriptor(DirectXResource* pResource, DescriptorType descriptorType) {
+    std::optional<Error> DirectXDescriptorHeap::assignDescriptor(
+        DirectXResource* pResource, GpuResource::DescriptorType descriptorType) {
         // Check if this heap handles the specified descriptor type.
         const auto vHandledDescriptorTypes = getDescriptorTypesHandledByThisHeap();
         const auto descriptorIt = std::ranges::find_if(
@@ -286,16 +286,16 @@ namespace ne {
     void DirectXDescriptorHeap::createView(
         CD3DX12_CPU_DESCRIPTOR_HANDLE heapHandle,
         const DirectXResource* pResource,
-        DescriptorType descriptorType) const {
+        GpuResource::DescriptorType descriptorType) const {
         const auto pRenderSettings = pRenderer->getRenderSettings();
         std::scoped_lock guard(pRenderSettings->first);
 
         switch (descriptorType) {
-        case (DescriptorType::RTV): {
+        case (GpuResource::DescriptorType::RTV): {
             pRenderer->getD3dDevice()->CreateRenderTargetView(
                 pResource->getInternalResource(), nullptr, heapHandle);
         } break;
-        case (DescriptorType::DSV): {
+        case (GpuResource::DescriptorType::DSV): {
             D3D12_DEPTH_STENCIL_VIEW_DESC dsvDesc;
             dsvDesc.Flags = D3D12_DSV_FLAG_NONE;
             dsvDesc.ViewDimension = pRenderSettings->second->isAntialiasingEnabled()
@@ -307,7 +307,7 @@ namespace ne {
             pRenderer->getD3dDevice()->CreateDepthStencilView(
                 pResource->getInternalResource(), &dsvDesc, heapHandle);
         } break;
-        case (DescriptorType::CBV): {
+        case (GpuResource::DescriptorType::CBV): {
             const auto resourceGpuVirtualAddress = pResource->getInternalResource()->GetGPUVirtualAddress();
 
             D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc;
@@ -316,7 +316,7 @@ namespace ne {
 
             pRenderer->getD3dDevice()->CreateConstantBufferView(&cbvDesc, heapHandle);
         } break;
-        case (DescriptorType::SRV): {
+        case (GpuResource::DescriptorType::SRV): {
             const auto resourceDesc = pResource->getInternalResource()->GetDesc();
 
             // Determine SRV dimension.
@@ -349,7 +349,7 @@ namespace ne {
             pRenderer->getD3dDevice()->CreateShaderResourceView(
                 pResource->getInternalResource(), &srvDesc, heapHandle);
         } break;
-        case (DescriptorType::UAV): {
+        case (GpuResource::DescriptorType::UAV): {
             const auto resourceDesc = pResource->getInternalResource()->GetDesc();
 
             // Determine UAV dimension.
@@ -380,7 +380,7 @@ namespace ne {
             pRenderer->getD3dDevice()->CreateUnorderedAccessView(
                 pResource->getInternalResource(), nullptr, &uavDesc, heapHandle);
         } break;
-        case (DescriptorType::END): {
+        case (GpuResource::DescriptorType::END): {
             const Error err("invalid heap type");
             err.showError();
             throw std::runtime_error(err.getFullErrorMessage());
@@ -428,14 +428,18 @@ namespace ne {
         return {};
     }
 
-    std::vector<DescriptorType> DirectXDescriptorHeap::getDescriptorTypesHandledByThisHeap() const {
+    std::vector<GpuResource::DescriptorType>
+    DirectXDescriptorHeap::getDescriptorTypesHandledByThisHeap() const {
         switch (heapType) {
         case (DescriptorHeapType::RTV):
-            return {DescriptorType::RTV};
+            return {GpuResource::DescriptorType::RTV};
         case (DescriptorHeapType::DSV):
-            return {DescriptorType::DSV};
+            return {GpuResource::DescriptorType::DSV};
         case (DescriptorHeapType::CBV_SRV_UAV):
-            return {DescriptorType::CBV, DescriptorType::SRV, DescriptorType::UAV};
+            return {
+                GpuResource::DescriptorType::CBV,
+                GpuResource::DescriptorType::SRV,
+                GpuResource::DescriptorType::UAV};
         }
 
         const Error err("not handled heap type");

@@ -10,7 +10,7 @@
 
 // Custom.
 #include "render/directx/descriptors/DirectXDescriptor.h"
-#include "render/general/resources/GpuResource.h"
+#include "render/resources/GpuResource.h"
 
 // External.
 #include "directx/d3dx12.h"

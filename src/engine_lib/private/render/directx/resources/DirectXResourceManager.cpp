@@ -4,7 +4,7 @@
 #include "render/directx/resources/DirectXResource.h"
 #include "render/directx/DirectXRenderer.h"
 #include "render/general/resources/FrameResourcesManager.h"
-#include "render/general/resources/UploadBuffer.h"
+#include "render/resources/UploadBuffer.h"
 
 namespace ne {
     std::variant<std::unique_ptr<DirectXResourceManager>, Error>

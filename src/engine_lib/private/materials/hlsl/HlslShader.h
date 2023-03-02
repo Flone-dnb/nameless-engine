@@ -23,6 +23,21 @@ namespace ne {
      */
     class HlslShader : public Shader {
     public:
+        /** Stores information about root signature. */
+        struct RootSignatureInfo {
+            /** Root parameters that were used in creation of the root signature. */
+            std::vector<CD3DX12_ROOT_PARAMETER> vRootParameters;
+
+            /** Static samplers that were used in creation of the root signature. */
+            std::vector<CD3DX12_STATIC_SAMPLER_DESC> vStaticSamplers;
+
+            /**
+             * Stores pairs of `shader resource name` (taken from shader file) -
+             * `root parameter index / root parameter`.
+             */
+            std::unordered_map<std::string, std::pair<UINT, CD3DX12_ROOT_PARAMETER>> rootParameterIndices;
+        };
+
         /**
          * Constructor. Used to create shader using cache.
          *
@@ -118,18 +133,11 @@ namespace ne {
         std::variant<ComPtr<IDxcBlob>, Error> getCompiledBlob();
 
         /**
-         * Returns root parameters that were used for generating shader's root signature.
+         * Returns information about root signature.
          *
-         * @return Root parameters.
+         * @return Info.
          */
-        std::vector<CD3DX12_ROOT_PARAMETER> getShaderRootParameters() const;
-
-        /**
-         * Returns static samplers that were used for generating shader's root signature.
-         *
-         * @return Static samplers.
-         */
-        std::vector<CD3DX12_STATIC_SAMPLER_DESC> getShaderStaticSamplers() const;
+        std::pair<std::mutex, RootSignatureInfo>* getRootSignatureInfo();
 
         /**
          * Releases underlying shader data (bytecode, root signature, etc.) from memory (this object will not
@@ -170,11 +178,8 @@ namespace ne {
         std::pair<std::recursive_mutex, std::pair<ComPtr<IDxcBlob>, ComPtr<ID3D12RootSignature>>>
             mtxCompiledBlobRootSignature;
 
-        /** Root parameters that were used for generating @ref mtxCompiledBlobRootSignature. */
-        std::vector<CD3DX12_ROOT_PARAMETER> vRootParameters;
-
-        /** Static samplers that were used for generating @ref mtxCompiledBlobRootSignature. */
-        std::vector<CD3DX12_STATIC_SAMPLER_DESC> vStaticSamplers;
+        /** Contains information about @ref mtxCompiledBlobRootSignature. */
+        std::pair<std::mutex, RootSignatureInfo> mtxRootSignatureInfo;
 
         /** Name of the category used for logging. */
         inline static const char* sHlslShaderLogCategory = "HLSL Shader";
@@ -187,14 +192,25 @@ namespace ne {
 
         /** Shader input element description. */
         static inline std::vector<D3D12_INPUT_ELEMENT_DESC> vShaderVertexDescription = {
-            {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
-            {"NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
-            {"UV", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 24, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
-            {"CUSTOM",
+            {"POSITION",
              0,
-             DXGI_FORMAT_R32G32B32A32_FLOAT,
+             DXGI_FORMAT_R32G32B32_FLOAT,
              0,
-             32,
+             16, // NOLINT
+             D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,
+             0},
+            {"NORMAL",
+             0,
+             DXGI_FORMAT_R32G32B32_FLOAT,
+             0,
+             32, // NOLINT
+             D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,
+             0},
+            {"UV",
+             0,
+             DXGI_FORMAT_R32G32_FLOAT,
+             0,
+             48, // NOLINT
              D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,
              0}};
 

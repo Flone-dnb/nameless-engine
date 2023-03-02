@@ -84,13 +84,13 @@ set(ENGINE_LIB_SOURCES
     private/render/general/pso/PsoManager.cpp
     private/render/general/pso/Pso.h
     private/render/general/pso/Pso.cpp
-    private/render/general/resources/GpuResource.h
+    public/render/resources/GpuResource.h
     private/render/general/resources/GpuResource.cpp
     private/render/general/resources/FrameResourcesManager.h
     private/render/general/resources/FrameResourcesManager.cpp
-    private/render/general/resources/GpuResourceManager.h
+    public/render/resources/GpuResourceManager.h
     private/render/general/resources/GpuResourceManager.cpp
-    private/render/general/resources/UploadBuffer.h
+    public/render/resources/UploadBuffer.h
     private/render/general/resources/UploadBuffer.cpp
     private/window/GLFW.hpp
     public/input/KeyboardKey.hpp

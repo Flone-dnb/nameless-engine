@@ -10,7 +10,7 @@
 // Custom.
 #include "misc/Error.h"
 #include "materials/ShaderManager.h"
-#include "render/general/resources/GpuResourceManager.h"
+#include "render/resources/GpuResourceManager.h"
 #include "render/general/resources/FrameResourcesManager.h"
 
 namespace ne {

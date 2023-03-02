@@ -3,6 +3,7 @@
 // Standard.
 #include <filesystem>
 #include <memory>
+#include <unordered_map>
 #include <variant>
 
 // Custom.

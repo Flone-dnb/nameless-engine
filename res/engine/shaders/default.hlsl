@@ -6,26 +6,28 @@
     SamplerState samplerAnisotropicWrap : register(s0);
 #endif
 
-// TODO: wrap with something like RECEIVE_SHADOWS
-SamplerComparisonState samplerShadowMap : register(s1);
-
-#ifdef USE_DIFFUSE_TEXTURE
-    Texture2D diffuseTexture : register(t0);
+#ifdef RECEIVE_DYNAMIC_SHADOWS
+    SamplerComparisonState samplerShadowMap : register(s1);
 #endif
+
+// will be used later
+// #ifdef USE_DIFFUSE_TEXTURE
+//     Texture2D diffuseTexture : register(t0);
+// #endif
 
 cbuffer frameData : register(b0)
 {
-    float4x4 mView;
-    float4x4 mInvView;
-    float4x4 mProjection;
-    float4x4 mInvProjection;
-    float4x4 mViewProjection;
-    float4x4 mInvViewProjection;
+    float4x4 viewMatrix;
+    float4x4 inverseViewMatrix;
+    float4x4 projectionMatrix;
+    float4x4 inverseProjectionMatrix;
+    float4x4 viewProjectionMatrix;
+    float4x4 inverseViewProjectionMatrix;
 
-    float fNearZ;
-    float fFarZ;
-    float fTotalTime;
-    float fTimeSincePrevFrame;
+    float nearZ;
+    float farZ;
+    float totalTimeInSec;
+    float timeSincePrevFrameInSec;
 
     int iRenderTargetWidth;
     int iRenderTargetHeight;
@@ -37,8 +39,8 @@ cbuffer frameData : register(b0)
 
 cbuffer objectData : register(b1)
 {
-    float4x4 vWorld; 
-    float4x4 vTexTransform;
+    float4x4 worldMatrix; 
+    float4x4 texTransformMatrix;
 	uint iCustomProperty;
 	
 	float3 _objectPad;
@@ -48,53 +50,51 @@ cbuffer objectData : register(b1)
 
 struct VertexIn
 {
-    float3 vPos   : POSITION;
-    float3 vNormal: NORMAL;
-    float2 vUV    : UV;
-	float4 vCustomVec4 : CUSTOM;
+    float3 localPosition : POSITION;    // position in local space
+    float3 localNormal   : NORMAL;      // normal in local space
+    float2 uv            : UV;
 };
 
 struct VertexOut
 {
-    float4 vPosViewSpace  : SV_POSITION;
-	float4 vPosWorldSpace : POSITION;
-    float3 vNormal : NORMAL;
-    float2 vUV     : UV;
-	float4 vCustomVec4 : CUSTOM;
+    float4 viewPosition            : SV_POSITION; // position in view space
+	float4 worldPosition           : POSITION;    // position in world space
+    float3 worldNormal             : NORMAL;      // normal in world space
+    float2 uv                      : UV;
 };
 
 VertexOut vsDefault(VertexIn vertexIn)
 {
     VertexOut vertexOut;
 
-    vertexOut.vCustomVec4 = vertexIn.vCustomVec4;
+    // Calculate world position and normal.
+    vertexOut.worldPosition = mul(float4(vertexIn.localPosition, 1.0f), worldMatrix);
+    vertexOut.worldNormal = mul(vertexIn.localNormal, (float3x3)worldMatrix);
 
-    // Apply world matrix.
-    vertexOut.vPosWorldSpace = mul(float4(vertexIn.vPos, 1.0f), vWorld);
-    vertexOut.vNormal = mul(vertexIn.vNormal, (float3x3)vWorld);
+    // Transform position to homogeneous clip space.
+    vertexOut.viewPosition = mul(vertexOut.worldPosition, viewProjectionMatrix);
 
-    // Transform to homogeneous clip space.
-    vertexOut.vPosViewSpace = mul(vertexOut.vPosWorldSpace, mViewProjection);
+    // Copy UV.
+    vertexOut.uv = vertexIn.uv;
 
     return vertexOut;
 }
 
 float4 psDefault(VertexOut pin) : SV_Target
 {
-    float4 vDiffuse = float4(1.0f, 1.0f, 1.0f, 1.0f);
+    float4 diffuseColor = float4(1.0f, 1.0f, 1.0f, 1.0f);
 
-#ifdef USE_DIFFUSE_TEXTURE
-    // Apply texture filtering.
-    #ifdef TEXTURE_FILTERING_POINT
-        vDiffuse = diffuseTexture.Sample(samplerPointWrap, pin.vUV);
-    #elif TEXTURE_FILTERING_LINEAR
-        vDiffuse = diffuseTexture.Sample(samplerLinearWrap, pin.vUV);
-    #elif TEXTURE_FILTERING_ANISOTROPIC
-        vDiffuse = diffuseTexture.Sample(samplerAnisotropicWrap, pin.vUV);
-    #endif
-#endif
+// will be used later
+// #ifdef USE_DIFFUSE_TEXTURE
+//     // Apply texture filtering.
+//     #ifdef TEXTURE_FILTERING_POINT
+//         diffuseColor = diffuseTexture.Sample(samplerPointWrap, pin.uv);
+//     #elif TEXTURE_FILTERING_LINEAR
+//         diffuseColor = diffuseTexture.Sample(samplerLinearWrap, pin.uv);
+//     #elif TEXTURE_FILTERING_ANISOTROPIC
+//         diffuseColor = diffuseTexture.Sample(samplerAnisotropicWrap, pin.uv);
+//     #endif
+// #endif
 
-    // TODO: should we filter other textures?
-
-    return vDiffuse;
+    return diffuseColor;
 }

@@ -7,7 +7,7 @@
 // Custom.
 #include "misc/Error.h"
 #include "render/directx/descriptors/DirectXDescriptorHeap.h"
-#include "render/general/resources/GpuResourceManager.h"
+#include "render/resources/GpuResourceManager.h"
 
 // External.
 #include "directx/d3dx12.h"

@@ -71,7 +71,7 @@ namespace ne {
         // !!!
         // !!! new resources go here !!!
         static_assert(
-            sizeof(InternalResources) == 24, "release new resources here"); // NOLINT: current struct size
+            sizeof(InternalResources) == 104, "release new resources here"); // NOLINT: current struct size
         // !!!
 
         // Done.
@@ -127,8 +127,8 @@ namespace ne {
         const auto pPixelShaderPack = getShader(ShaderType::PIXEL_SHADER).value();
 
         // Get shaders for the current configuration.
-        const auto pVertexShader = std::dynamic_pointer_cast<HlslShader>(pVertexShaderPack->getShader());
-        const auto pPixelShader = std::dynamic_pointer_cast<HlslShader>(pPixelShaderPack->getShader());
+        auto pVertexShader = std::dynamic_pointer_cast<HlslShader>(pVertexShaderPack->getShader());
+        auto pPixelShader = std::dynamic_pointer_cast<HlslShader>(pPixelShaderPack->getShader());
 
         // Get DirectX renderer.
         DirectXRenderer* pDirectXRenderer = dynamic_cast<DirectXRenderer*>(getRenderer());
@@ -146,7 +146,10 @@ namespace ne {
             err.addEntry();
             return err;
         }
-        mtxInternalResources.second.pRootSignature = std::get<ComPtr<ID3D12RootSignature>>(std::move(result));
+        auto mergedRootSignature = std::get<RootSignatureGenerator::Merged>(std::move(result));
+        mtxInternalResources.second.pRootSignature = std::move(mergedRootSignature.pRootSignature);
+        mtxInternalResources.second.rootParameterIndices =
+            std::move(mergedRootSignature.rootParameterIndices);
 
         // Get vertex shader bytecode.
         auto shaderBytecode = pVertexShader->getCompiledBlob();

@@ -22,6 +22,15 @@ namespace ne {
             /** Root signature, used in PSO. */
             ComPtr<ID3D12RootSignature> pRootSignature;
 
+            /**
+             * Root parameter indices that was used in creation of @ref pRootSignature.
+             *
+             * Stores pairs of `shader resource name` - `root parameter index`,
+             * allows determining what resource is binded to what root parameter index
+             * (by using resource name taken from shader file).
+             */
+            std::unordered_map<std::string, UINT> rootParameterIndices;
+
             /** Graphics PSO, created using @ref createGraphicsPso. */
             ComPtr<ID3D12PipelineState> pGraphicsPso;
 

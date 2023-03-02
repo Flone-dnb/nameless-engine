@@ -11,6 +11,7 @@
 #include "misc/Globals.h"
 #include "render/directx/DirectXRenderer.h"
 #include "materials/ShaderFilesystemPaths.hpp"
+#include "game/nodes/MeshNode.h"
 
 // External.
 #include "DirectXShaderCompiler/inc/d3d12shader.h"
@@ -23,7 +24,11 @@ namespace ne {
         const std::string& sShaderName,
         ShaderType shaderType,
         const std::string& sSourceFileHash)
-        : Shader(pRenderer, std::move(pathToCompiledShader), sShaderName, shaderType, sSourceFileHash) {}
+        : Shader(pRenderer, std::move(pathToCompiledShader), sShaderName, shaderType, sSourceFileHash) {
+        static_assert(
+            sizeof(MeshVertex) == 48, // NOLINT: current size
+            "`vShaderVertexDescription` needs to be updated");
+    }
 
     std::vector<D3D12_INPUT_ELEMENT_DESC> HlslShader::getShaderInputElementDescription() {
         return vShaderVertexDescription;
@@ -218,10 +223,7 @@ namespace ne {
             return err;
         }
         // Ignore root signature (will be later used from cache), but use other results.
-        auto [rootSignature, vUsedRootParameters, vUsedStaticSamplers] = std::get<std::tuple<
-            ComPtr<ID3D12RootSignature>,
-            std::vector<CD3DX12_ROOT_PARAMETER>,
-            std::vector<CD3DX12_STATIC_SAMPLER_DESC>>>(std::move(result));
+        auto generatedRootSignature = std::get<RootSignatureGenerator::Generated>(std::move(result));
 
         // Get compiled shader binary.
         ComPtr<IDxcBlob> pCompiledShaderBlob = nullptr;
@@ -277,15 +279,22 @@ namespace ne {
         shaderPdbFile.close();
 #endif
 
-        // Return shader instance.
+        // Create shader instance.
         auto pShader = std::make_shared<HlslShader>(
             pRenderer,
             pathToCompiledShader,
             shaderDescription.sShaderName,
             shaderDescription.shaderType,
             sSourceFileHash);
-        pShader->vRootParameters = vUsedRootParameters;
-        pShader->vStaticSamplers = vUsedStaticSamplers;
+        // `generatedRootSignature.pRootSignature` is intentionally left unused
+        // here we only care about the fact that it was successfully generated.
+        std::scoped_lock rootSignatureInfoGuard(pShader->mtxRootSignatureInfo.first);
+        pShader->mtxRootSignatureInfo.second.rootParameterIndices =
+            std::move(generatedRootSignature.rootParameterIndices);
+        pShader->mtxRootSignatureInfo.second.vStaticSamplers =
+            std::move(generatedRootSignature.vStaticSamplers);
+        pShader->mtxRootSignatureInfo.second.vRootParameters =
+            std::move(generatedRootSignature.vRootParameters);
         return pShader;
     }
 
@@ -301,12 +310,8 @@ namespace ne {
         return mtxCompiledBlobRootSignature.second.first;
     }
 
-    std::vector<CD3DX12_ROOT_PARAMETER> HlslShader::getShaderRootParameters() const {
-        return vRootParameters;
-    }
-
-    std::vector<CD3DX12_STATIC_SAMPLER_DESC> HlslShader::getShaderStaticSamplers() const {
-        return vStaticSamplers;
+    std::pair<std::mutex, HlslShader::RootSignatureInfo>* HlslShader::getRootSignatureInfo() {
+        return &mtxRootSignatureInfo;
     }
 
     bool HlslShader::releaseShaderDataFromMemoryIfLoaded(bool bLogOnlyErrors) {
@@ -471,14 +476,14 @@ namespace ne {
                 return err;
             }
 
-            auto [rootSignature, vUsedRootParameters, vUsedStaticSamplers] = std::get<std::tuple<
-                ComPtr<ID3D12RootSignature>,
-                std::vector<CD3DX12_ROOT_PARAMETER>,
-                std::vector<CD3DX12_STATIC_SAMPLER_DESC>>>(std::move(result));
+            auto generated = std::get<RootSignatureGenerator::Generated>(std::move(result));
 
-            mtxCompiledBlobRootSignature.second.second = rootSignature;
-            vRootParameters = vUsedRootParameters;
-            vStaticSamplers = vUsedStaticSamplers;
+            // Save results.
+            mtxCompiledBlobRootSignature.second.second = std::move(generated.pRootSignature);
+            std::scoped_lock rootSignatureInfoGuard(mtxRootSignatureInfo.first);
+            mtxRootSignatureInfo.second.rootParameterIndices = std::move(generated.rootParameterIndices);
+            mtxRootSignatureInfo.second.vStaticSamplers = std::move(generated.vStaticSamplers);
+            mtxRootSignatureInfo.second.vRootParameters = std::move(generated.vRootParameters);
         }
 
         return {};

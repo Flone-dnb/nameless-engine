@@ -7,26 +7,8 @@
 #include "render/directx/DirectXRenderer.h"
 
 namespace ne {
-    std::variant<
-        std::tuple<
-            ComPtr<ID3D12RootSignature>,
-            std::vector<CD3DX12_ROOT_PARAMETER>,
-            std::vector<CD3DX12_STATIC_SAMPLER_DESC>>,
-        Error>
-    RootSignatureGenerator::generate(
+    std::variant<RootSignatureGenerator::Generated, Error> RootSignatureGenerator::generate(
         ID3D12Device* pDevice, const ComPtr<ID3D12ShaderReflection>& pShaderReflection) {
-        // Root parameter can be a table, root descriptor or root constant.
-        std::vector<CD3DX12_ROOT_PARAMETER> vRootParameters;
-        std::vector<CD3DX12_STATIC_SAMPLER_DESC> vStaticSamplersToBind;
-
-        // Texture resources.
-        struct TextureResourceTable {
-            UINT iRegisterSpace = 0;
-            UINT iTextureResourceCount = 0;
-            UINT iTexturesBaseShaderRegister = UINT_MAX;
-        };
-        std::vector<TextureResourceTable> vTextureResources;
-
         // Get shader description.
         D3D12_SHADER_DESC shaderDesc;
         HRESULT hResult = pShaderReflection->GetDesc(&shaderDesc);
@@ -35,23 +17,55 @@ namespace ne {
             err.showError();
         }
 
-        // Iterate over all shader resources.
+        // Just collect description of all resources for now.
+        std::vector<D3D12_SHADER_INPUT_BIND_DESC> vResourcesDescription(shaderDesc.BoundResources);
         for (UINT iCurrentResourceIndex = 0; iCurrentResourceIndex < shaderDesc.BoundResources;
              iCurrentResourceIndex++) {
+            // Get resource description.
             D3D12_SHADER_INPUT_BIND_DESC resourceDesc;
             hResult = pShaderReflection->GetResourceBindingDesc(iCurrentResourceIndex, &resourceDesc);
-            if (FAILED(hResult)) {
-                const Error err(hResult);
-                err.showError();
+            if (FAILED(hResult)) [[unlikely]] {
+                return Error(hResult);
             }
 
+            // Save to array of all resources.
+            vResourcesDescription[iCurrentResourceIndex] = resourceDesc;
+        }
+
+        // Make sure that names of all resources are unique.
+        std::set<std::string> resourceNames;
+        for (const auto& resourceDesc : vResourcesDescription) {
+            auto sName = std::string(resourceDesc.Name);
+
+            auto it = resourceNames.find(sName);
+            if (it != resourceNames.end()) [[unlikely]] {
+                return Error(fmt::format(
+                    "found at least two shader resources with the same name \"{}\" - all shader "
+                    "resources must have unique names",
+                    resourceDesc.Name));
+            }
+
+            resourceNames.insert(sName);
+        }
+
+        // Root parameter can be a table, root descriptor or root constant.
+        std::vector<CD3DX12_ROOT_PARAMETER> vRootParameters;
+        std::vector<CD3DX12_STATIC_SAMPLER_DESC> vStaticSamplersToBind;
+        std::unordered_map<std::string, std::pair<UINT, CD3DX12_ROOT_PARAMETER>> rootParameterIndices;
+
+        // Now iterate over all shader resources and add them to root parameters.
+        for (const auto& resourceDesc : vResourcesDescription) {
             if (resourceDesc.Type == D3D_SIT_CBUFFER) {
-                auto newRootParameter = CD3DX12_ROOT_PARAMETER{};
-                newRootParameter.InitAsConstantBufferView(resourceDesc.BindPoint, resourceDesc.Space);
-                vRootParameters.push_back(newRootParameter);
+                auto optionalError =
+                    addCbufferRootParameter(vRootParameters, rootParameterIndices, resourceDesc);
+                if (optionalError.has_value()) [[unlikely]] {
+                    auto error = optionalError.value();
+                    error.addEntry();
+                    return error;
+                }
             } else if (resourceDesc.Type == D3D_SIT_SAMPLER) {
                 auto result = findStaticSamplerForSamplerResource(resourceDesc);
-                if (std::holds_alternative<Error>(result)) {
+                if (std::holds_alternative<Error>(result)) [[unlikely]] {
                     auto error = std::get<Error>(std::move(result));
                     error.addEntry();
                     return error;
@@ -59,54 +73,12 @@ namespace ne {
 
                 vStaticSamplersToBind.push_back(std::get<CD3DX12_STATIC_SAMPLER_DESC>(std::move(result)));
             } else if (resourceDesc.Type == D3D_SIT_TEXTURE) {
-                auto texIt = std::ranges::find_if(vTextureResources, [&](const TextureResourceTable& table) {
-                    return table.iRegisterSpace == resourceDesc.Space;
-                });
-                if (texIt == vTextureResources.end()) {
-                    TextureResourceTable newTextureTable;
-                    newTextureTable.iRegisterSpace = resourceDesc.Space;
-                    newTextureTable.iTextureResourceCount = 1;
-                    newTextureTable.iTexturesBaseShaderRegister = resourceDesc.BindPoint;
-                    vTextureResources.push_back(newTextureTable);
-                } else {
-                    texIt->iTextureResourceCount += 1;
-                    if (resourceDesc.BindPoint < texIt->iTexturesBaseShaderRegister) {
-                        texIt->iTexturesBaseShaderRegister = resourceDesc.BindPoint;
-                    } else if (
-                        resourceDesc.BindPoint >=
-                        texIt->iTexturesBaseShaderRegister + texIt->iTextureResourceCount) {
-                        return Error(std::format(
-                            "invalid texture register {} on texture resource \"{}\", "
-                            "expected to find a contiguous range of texture registers (1, 2, 3..., "
-                            "not 1, 2, 4...) in the same register space",
-                            resourceDesc.BindPoint,
-                            resourceDesc.Name));
-                    }
-                }
-            } else {
+                // TODO
+            } else [[unlikely]] {
                 return Error(std::format(
-                    "encountered unhandled resource type {} (not implemented)",
+                    "encountered unhandled resource type \"{}\" (not implemented)",
                     static_cast<int>(resourceDesc.Type)));
             }
-        }
-
-        // Create descriptor table for texture resources.
-        std::vector<CD3DX12_DESCRIPTOR_RANGE> vTextureDescriptorRanges;
-        for (const auto& textureTable : vTextureResources) {
-            CD3DX12_DESCRIPTOR_RANGE textureResourceDescriptors;
-            textureResourceDescriptors.Init(
-                D3D12_DESCRIPTOR_RANGE_TYPE_SRV,
-                textureTable.iTextureResourceCount,
-                textureTable.iTexturesBaseShaderRegister,
-                textureTable.iRegisterSpace,
-                D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND); // auto increment total count
-            vTextureDescriptorRanges.push_back(textureResourceDescriptors);
-        }
-        if (!vTextureDescriptorRanges.empty()) {
-            auto newRootParameter = CD3DX12_ROOT_PARAMETER{};
-            newRootParameter.InitAsDescriptorTable(
-                static_cast<UINT>(vTextureDescriptorRanges.size()), vTextureDescriptorRanges.data());
-            vRootParameters.push_back(newRootParameter);
         }
 
         // Create root signature description.
@@ -127,11 +99,11 @@ namespace ne {
             D3D_ROOT_SIGNATURE_VERSION_1,
             pSerializedRootSignature.GetAddressOf(),
             pSerializerErrorMessage.GetAddressOf());
-        if (FAILED(hResult)) {
+        if (FAILED(hResult)) [[unlikely]] {
             return Error(hResult);
         }
 
-        if (pSerializerErrorMessage != nullptr) {
+        if (pSerializerErrorMessage != nullptr) [[unlikely]] {
             return Error(std::string(
                 static_cast<char*>(pSerializerErrorMessage->GetBufferPointer()),
                 pSerializerErrorMessage->GetBufferSize()));
@@ -144,30 +116,58 @@ namespace ne {
             pSerializedRootSignature->GetBufferPointer(),
             pSerializedRootSignature->GetBufferSize(),
             IID_PPV_ARGS(&pRootSignature));
-        if (FAILED(hResult)) {
+        if (FAILED(hResult)) [[unlikely]] {
             return Error(hResult);
         }
 
-        return std::make_tuple(pRootSignature, vRootParameters, vStaticSamplersToBind);
+        // Self check: make sure root parameter indices are unique.
+        std::set<UINT> indices;
+        for (const auto& [sResourceName, parameterInfo] : rootParameterIndices) {
+            auto it = indices.find(parameterInfo.first);
+            if (it != indices.end()) [[unlikely]] {
+                return Error(fmt::format(
+                    "at least two resources of the generated root signature have conflicting indices"
+                    "for root parameter index {} (this is a bug, please report to developers)",
+                    parameterInfo.first));
+            }
+            indices.insert(parameterInfo.first);
+        }
+
+        // Another self check.
+        if (rootParameterIndices.size() != vRootParameters.size()) [[unlikely]] {
+            return Error(fmt::format(
+                "sizes of generated root parameter arrays are different {} != {} (this is a bug, "
+                "please report to developers)",
+                rootParameterIndices.size(),
+                vRootParameters.size()));
+        }
+
+        // Return results.
+        Generated generated;
+        generated.pRootSignature = pRootSignature;
+        generated.vRootParameters = std::move(vRootParameters);
+        generated.vStaticSamplers = std::move(vStaticSamplersToBind);
+        generated.rootParameterIndices = std::move(rootParameterIndices);
+        return generated;
     }
 
-    std::variant<ComPtr<ID3D12RootSignature>, Error> RootSignatureGenerator::merge( // NOLINT: too complex
+    std::variant<RootSignatureGenerator::Merged, Error> RootSignatureGenerator::merge( // NOLINT: too complex
         ID3D12Device* pDevice,
-        const HlslShader* pVertexShader,
-        const HlslShader* pPixelShader) {
-        // Check that vertex shader is indeed a vertex shader.
+        HlslShader* pVertexShader,
+        HlslShader* pPixelShader) {
+        // Make sure that the vertex shader is indeed a vertex shader.
         if (pVertexShader->getShaderType() != ShaderType::VERTEX_SHADER) [[unlikely]] {
             return Error(std::format(
                 "the specified shader \"{}\" is not a vertex shader", pVertexShader->getShaderName()));
         }
 
-        // Check that pixel shader is indeed a pixel shader.
+        // Make sure that the pixel shader is indeed a pixel shader.
         if (pPixelShader->getShaderType() != ShaderType::PIXEL_SHADER) [[unlikely]] {
             return Error(std::format(
                 "the specified shader \"{}\" is not a pixel shader", pPixelShader->getShaderName()));
         }
 
-        // Check that shaders were compiled from the same source file.
+        // Make sure that the shaders were compiled from the same source file.
         if (pVertexShader->getShaderSourceFileHash() != pPixelShader->getShaderSourceFileHash())
             [[unlikely]] {
             return Error(std::format(
@@ -179,16 +179,41 @@ namespace ne {
                 pPixelShader->getShaderSourceFileHash()));
         }
 
-        // Get shaders' root parameters and used static samplers.
-        auto vRootParameters = pPixelShader->getShaderRootParameters();
-        auto vStaticSamplers = pPixelShader->getShaderStaticSamplers();
-        const auto vRootParametersToAdd = pVertexShader->getShaderRootParameters();
-        const auto vStaticSamplersToAdd = pVertexShader->getShaderStaticSamplers();
+        // Get shaders' used root parameters and used static samplers.
+        auto pMtxPixelRootInfo = pPixelShader->getRootSignatureInfo();
+        auto pMtxVertexRootInfo = pVertexShader->getRootSignatureInfo();
 
-        // Do some basic checks to add parameters/samplers that don't exist in vertex shader.
+        std::scoped_lock shaderRootSignatureInfoGuard(pMtxPixelRootInfo->first, pMtxVertexRootInfo->first);
+
+        auto vStaticSamplers = pMtxPixelRootInfo->second.vStaticSamplers;
+        std::unordered_map<std::string, UINT> rootParameterIndices;
+        std::vector<CD3DX12_ROOT_PARAMETER> vRootParameters;
+        std::set<std::string> addedRootParameterNames;
+
+        // Check that vertex shader uses frame constant buffer as first root parameter.
+        auto vertexFrameBufferIt =
+            pMtxVertexRootInfo->second.rootParameterIndices.find(sFrameConstantBufferName);
+        if (vertexFrameBufferIt == pMtxVertexRootInfo->second.rootParameterIndices.end()) [[unlikely]] {
+            return Error(fmt::format(
+                "expected to find `cbuffer` \"{}\" to be used in vertex shader \"{}\")",
+                sFrameConstantBufferName,
+                pVertexShader->getShaderName()));
+        }
+
+        // Save only first root parameter, this should be frame resources.
+        static_assert(
+            iFrameConstantBufferRootParameterIndex == 0,
+            "frame cbuffer is expected to be the first root parameter");
+
+        // Add first root parameter (frame constants).
+        vRootParameters.push_back(vertexFrameBufferIt->second.second);
+        addedRootParameterNames.insert(sFrameConstantBufferName);
+        rootParameterIndices[sFrameConstantBufferName] = 0;
+
+        // Do some basic checks to add parameters/samplers that don't exist in pixel shader.
 
         // First, add static samplers.
-        for (const auto& sampler : vStaticSamplersToAdd) {
+        for (const auto& sampler : pMtxVertexRootInfo->second.vStaticSamplers) {
             // Check if we already use this sampler.
             const auto it =
                 std::ranges::find_if(vStaticSamplers, [&sampler](const CD3DX12_STATIC_SAMPLER_DESC& item) {
@@ -198,71 +223,36 @@ namespace ne {
             if (it == vStaticSamplers.end()) {
                 // This sampler is new, add it.
                 vStaticSamplers.push_back(sampler);
-            } // else: we already use this static sampler
+            }
         }
 
         // Then, add root parameters.
-        for (const auto& parameter : vRootParametersToAdd) {
-            // Check if we already use this root parameter.
-            const auto it =
-                std::ranges::find_if(vRootParameters, [&parameter](const CD3DX12_ROOT_PARAMETER& item) {
-                    if (parameter.ShaderVisibility != item.ShaderVisibility ||
-                        parameter.ParameterType != item.ParameterType) {
-                        return false;
+        auto addRootParameters =
+            [&](const std::unordered_map<std::string, std::pair<UINT, CD3DX12_ROOT_PARAMETER>>&
+                    rootParametersToAdd) {
+                for (const auto& [sResourceName, resourceInfo] : rootParametersToAdd) {
+                    // See if we already added this resource.
+                    auto it = addedRootParameterNames.find(sResourceName);
+                    if (it != addedRootParameterNames.end()) {
+                        continue;
                     }
 
-                    if (parameter.ParameterType == D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS) {
-                        if (parameter.Constants.RegisterSpace == item.Constants.RegisterSpace &&
-                            parameter.Constants.ShaderRegister == item.Constants.ShaderRegister) {
-                            return true;
-                        }
-                    } else if (
-                        parameter.ParameterType == D3D12_ROOT_PARAMETER_TYPE_CBV ||
-                        parameter.ParameterType == D3D12_ROOT_PARAMETER_TYPE_SRV ||
-                        parameter.ParameterType == D3D12_ROOT_PARAMETER_TYPE_UAV) {
-                        if (parameter.Descriptor.RegisterSpace == item.Descriptor.RegisterSpace &&
-                            parameter.Descriptor.ShaderRegister == item.Descriptor.ShaderRegister) {
-                            return true;
-                        }
-                    } else if (parameter.ParameterType == D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE) {
-                        if (parameter.DescriptorTable.NumDescriptorRanges !=
-                            item.DescriptorTable.NumDescriptorRanges) {
-                            return false;
-                        }
+                    // Add it.
+                    rootParameterIndices[sResourceName] = static_cast<UINT>(vRootParameters.size());
+                    vRootParameters.push_back(resourceInfo.second);
+                    addedRootParameterNames.insert(sResourceName);
+                }
+            };
+        addRootParameters(pMtxPixelRootInfo->second.rootParameterIndices);
+        addRootParameters(pMtxVertexRootInfo->second.rootParameterIndices);
 
-                        for (UINT i = 0; i < parameter.DescriptorTable.NumDescriptorRanges; i++) {
-                            bool bFound = false;
-                            for (UINT j = 0; j < item.DescriptorTable.NumDescriptorRanges; j++) {
-                                if (parameter.DescriptorTable.pDescriptorRanges[i].BaseShaderRegister ==
-                                        item.DescriptorTable.pDescriptorRanges[j].BaseShaderRegister &&
-                                    parameter.DescriptorTable.pDescriptorRanges[i].RegisterSpace ==
-                                        item.DescriptorTable.pDescriptorRanges[j].RegisterSpace) {
-                                    bFound = true;
-                                    break;
-                                }
-                            }
-
-                            if (!bFound) {
-                                return false;
-                            }
-                        }
-
-                        return true;
-                    } else {
-                        Logger::get().error(
-                            std::format(
-                                "unhandled root signature parameter type {}",
-                                static_cast<int>(parameter.ParameterType)),
-                            "");
-                        return false;
-                    }
-
-                    return false;
-                });
-            if (it == vRootParameters.end()) {
-                // This parameter is new, add it.
-                vRootParameters.push_back(parameter);
-            } // else: we already use this parameter
+        // Make sure there are root parameters.
+        if (vRootParameters.empty()) [[unlikely]] {
+            return Error(fmt::format(
+                "at least 1 shader resource (written in the shader file for shader \"{}\") is need (expected "
+                "the shader to have at least `cbuffer` \"{}\")",
+                pVertexShader->getShaderName(),
+                sFrameConstantBufferName));
         }
 
         // Create root signature description.
@@ -304,7 +294,10 @@ namespace ne {
             return Error(hResult);
         }
 
-        return pRootSignature;
+        Merged merged;
+        merged.pRootSignature = std::move(pRootSignature);
+        merged.rootParameterIndices = std::move(rootParameterIndices);
+        return merged;
     }
 
     std::variant<CD3DX12_STATIC_SAMPLER_DESC, Error>
@@ -360,5 +353,51 @@ namespace ne {
 
         return Error(std::format(
             "static sampler with filter {} is not found", static_cast<int>(currentSamplerFilter)));
+    }
+
+    std::optional<Error> RootSignatureGenerator::addUniquePairResourceNameRootParameterIndex(
+        std::unordered_map<std::string, std::pair<UINT, CD3DX12_ROOT_PARAMETER>>& mapToAddTo,
+        const std::string& sResourceName,
+        UINT iRootParameterIndex,
+        const CD3DX12_ROOT_PARAMETER& parameter) {
+        // See if resource with this name already exists.
+        auto it = mapToAddTo.find(sResourceName);
+        if (it != mapToAddTo.end()) [[unlikely]] {
+            return Error(fmt::format(
+                "found two shader resources with equal names - \"{}\" (see shader file), all shader "
+                "resources must have unique names",
+                sResourceName));
+        }
+
+        // Add to map.
+        mapToAddTo[sResourceName] = std::make_pair(iRootParameterIndex, parameter);
+
+        return {};
+    }
+
+    std::optional<Error> RootSignatureGenerator::addCbufferRootParameter(
+        std::vector<CD3DX12_ROOT_PARAMETER>& vRootParameters,
+        std::unordered_map<std::string, std::pair<UINT, CD3DX12_ROOT_PARAMETER>>& rootParameterIndices,
+        const D3D12_SHADER_INPUT_BIND_DESC& resourceDescription) {
+        // Prepare root parameter description.
+        auto newRootParameter = CD3DX12_ROOT_PARAMETER{};
+        newRootParameter.InitAsConstantBufferView(resourceDescription.BindPoint, resourceDescription.Space);
+
+        // Make sure this resource name is unique, save its root index.
+        auto optionalError = addUniquePairResourceNameRootParameterIndex(
+            rootParameterIndices,
+            resourceDescription.Name,
+            static_cast<UINT>(vRootParameters.size()),
+            newRootParameter);
+        if (optionalError.has_value()) [[unlikely]] {
+            auto error = optionalError.value();
+            error.addEntry();
+            return error;
+        }
+
+        // Add to root parameters.
+        vRootParameters.push_back(newRootParameter);
+
+        return {};
     }
 } // namespace ne

@@ -6,8 +6,8 @@
 // Custom.
 #include "game/nodes/SpatialNode.h"
 #include "math/GLMath.hpp"
-#include "render/general/resources/GpuResource.h"
-#include "render/general/resources/UploadBuffer.h"
+#include "render/resources/GpuResource.h"
+#include "render/resources/UploadBuffer.h"
 
 #include "MeshNode.generated.h"
 
@@ -74,21 +74,14 @@ namespace ne RNAMESPACE() {
 
         // --------------------------------------------------------------------------------------
 
-        /**
-         * Position of the vertex in a 3D space.
-         *
-         * @remark Using `vec4` instead of `vec3` because of the enabled GLM type alignment, so
-         * `vec3` would take the same amount of space as `vec4` but with `vec4` we allow using
-         * an extra `float` for custom purposes.
-         */
-        glm::vec4 position = glm::vec4(0.0f, 0.0f, 0.0f, 0.0f);
+        /** Position of the vertex in a 3D space. */
+        glm::vec3 position = glm::vec3(0.0f, 0.0f, 0.0f);
 
-        /**
-         * UV coordinates of the vertex.
-         *
-         * @remark Using `vec4` instead of `vec2` for the same reason as @ref position.
-         */
-        glm::vec4 uv = glm::vec4(0.0f, 0.0f, 0.0f, 0.0f);
+        /** Normal vector of the vertex. */
+        glm::vec3 normal = glm::vec3(0.0f, 0.0f, 0.0f);
+
+        /** UV coordinates of the vertex. */
+        glm::vec2 uv = glm::vec2(0.0f, 0.0f);
 
         // --------------------------------------------------------------------------------------
 

@@ -20,6 +20,7 @@
 #include "render/directx/resources/DirectXResource.h"
 #include "materials/Material.h"
 #include "game/nodes/MeshNode.h"
+#include "materials/hlsl/RootSignatureGenerator.h"
 #include "render/general/resources/FrameResourcesManager.h"
 
 // DirectX.
@@ -320,6 +321,10 @@ namespace ne {
             throw std::runtime_error(error.getFullErrorMessage());
         }
 
+        // Lock frame resources to use them (see below).
+        auto mtxFrameResource = getFrameResourcesManager()->getCurrentFrameResource();
+        std::scoped_lock frameResourceGuard(*mtxFrameResource.first);
+
         // Set topology type (this will be moved in some other place).
         pCommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
@@ -336,6 +341,16 @@ namespace ne {
                 // Set PSO and root signature.
                 pCommandList->SetPipelineState(pMtxPsoResources->second.pGraphicsPso.Get());
                 pCommandList->SetGraphicsRootSignature(pMtxPsoResources->second.pRootSignature.Get());
+
+                // After setting root signature we can set root parameters.
+
+                // Set CBV to frame constant buffer.
+                pCommandList->SetGraphicsRootConstantBufferView(
+                    RootSignatureGenerator::getFrameConstantBufferRootParameterIndex(),
+                    reinterpret_cast<DirectXResource*>(
+                        mtxFrameResource.second->pFrameConstantBuffer->getInternalResource())
+                        ->getInternalResource()
+                        ->GetGPUVirtualAddress());
 
                 // Iterate over all materials that use this PSO.
                 const auto pMtxMaterials = pPso->getMaterialsThatUseThisPso();

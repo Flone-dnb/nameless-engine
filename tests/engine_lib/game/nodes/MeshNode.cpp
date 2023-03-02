@@ -30,10 +30,12 @@ TEST_CASE("serialize and deserialize MeshNode") {
 
                 // Create mesh data.
                 MeshVertex vertex1, vertex2;
-                vertex1.position = glm::vec4(5123.91827f, -12225.24142f, -5.0f, 0.0f);
-                vertex1.uv = glm::vec4(10.0f, -8885.14122f, 0.0f, 0.0f);
-                vertex2.position = glm::vec4(-1.0f, -2.0f, -3.0f, 0.0f);
-                vertex2.uv = glm::vec4(-1.0f, -2.0f, 0.0f, 0.0f);
+                vertex1.position = glm::vec3(5123.91827f, -12225.24142f, -5.0f);
+                vertex1.normal = glm::vec3(10.0f, -1111.22212f, 0.0f);
+                vertex1.uv = glm::vec3(10.0f, -8885.14122f, 0.0f);
+                vertex2.position = glm::vec3(-1.0f, -2.0f, -3.0f);
+                vertex2.normal = glm::vec3(-1.0f, 0.0f, 0.0f);
+                vertex2.uv = glm::vec2(-1.0f, -2.0f);
 
                 {
                     // Create material.
@@ -146,10 +148,12 @@ TEST_CASE("serialize and deserialize array of mesh vertices") {
     MeshVertices vertices;
 
     MeshVertex vertex1, vertex2;
-    vertex1.position = glm::vec4(5123.91827f, -12225.24142f, -5.0f, 0.0f);
-    vertex1.uv = glm::vec4(10.0f, -8885.14122f, 0.0f, 0.0f);
-    vertex2.position = glm::vec4(-1.0f, -2.0f, -3.0f, 0.0f);
-    vertex2.uv = glm::vec4(-1.0f, -2.0f, 0.0f, 0.0f);
+    vertex1.position = glm::vec3(5123.91827f, -12225.24142f, -5.0f);
+    vertex1.normal = glm::vec3(10.0f, -1111.22212f, 0.0f);
+    vertex1.uv = glm::vec3(10.0f, -8885.14122f, 0.0f);
+    vertex2.position = glm::vec3(-1.0f, -2.0f, -3.0f);
+    vertex2.normal = glm::vec3(-1.0f, 0.0f, 0.0f);
+    vertex2.uv = glm::vec2(-1.0f, -2.0f);
 
     vertices.vVertices.push_back(vertex1);
     vertices.vVertices.push_back(vertex2);
@@ -209,10 +213,12 @@ TEST_CASE("serialize and deserialize MeshNode as part of a node tree") {
 
                 // Create mesh data.
                 MeshVertex vertex1, vertex2;
-                vertex1.position = glm::vec4(5123.91827f, -12225.24142f, -5.0f, 0.0f);
-                vertex1.uv = glm::vec4(10.0f, -8885.14122f, 0.0f, 0.0f);
-                vertex2.position = glm::vec4(-1.0f, -2.0f, -3.0f, 0.0f);
-                vertex2.uv = glm::vec4(-1.0f, -2.0f, 0.0f, 0.0f);
+                vertex1.position = glm::vec3(5123.91827f, -12225.24142f, -5.0f);
+                vertex1.normal = glm::vec3(10.0f, -1111.22212f, 0.0f);
+                vertex1.uv = glm::vec3(10.0f, -8885.14122f, 0.0f);
+                vertex2.position = glm::vec3(-1.0f, -2.0f, -3.0f);
+                vertex2.normal = glm::vec3(-1.0f, 0.0f, 0.0f);
+                vertex2.uv = glm::vec2(-1.0f, -2.0f);
 
                 {
                     // Create material.
@@ -345,10 +351,12 @@ TEST_CASE("serialize and deserialize MeshNode as part of a node tree with origin
 
                 // Create mesh data.
                 MeshVertex vertex1, vertex2;
-                vertex1.position = glm::vec4(5123.91827f, -12225.24142f, -5.0f, 0.0f);
-                vertex1.uv = glm::vec4(10.0f, -8885.14122f, 0.0f, 0.0f);
-                vertex2.position = glm::vec4(-1.0f, -2.0f, -3.0f, 0.0f);
-                vertex2.uv = glm::vec4(-1.0f, -2.0f, 0.0f, 0.0f);
+                vertex1.position = glm::vec3(5123.91827f, -12225.24142f, -5.0f);
+                vertex1.normal = glm::vec3(10.0f, -1111.22212f, 0.0f);
+                vertex1.uv = glm::vec3(10.0f, -8885.14122f, 0.0f);
+                vertex2.position = glm::vec3(-1.0f, -2.0f, -3.0f);
+                vertex2.normal = glm::vec3(-1.0f, 0.0f, 0.0f);
+                vertex2.uv = glm::vec2(-1.0f, -2.0f);
 
                 {
                     // Create material.
@@ -416,8 +424,8 @@ TEST_CASE("serialize and deserialize MeshNode as part of a node tree with origin
                 REQUIRE(std::filesystem::exists(pathToExternalFile));
 
                 MeshVertex vertex3;
-                vertex3.position = glm::vec4(-1.0f, -2.0f, -3.0f, 0.0f);
-                vertex3.uv = glm::vec4(-1.0f, -2.0f, 0.0f, 0.0f);
+                vertex3.position = glm::vec3(-1.0f, -2.0f, -3.0f);
+                vertex3.uv = glm::vec2(-1.0f, -2.0f);
 
                 {
                     // Modify mesh data.
@@ -481,7 +489,7 @@ TEST_CASE("serialize and deserialize MeshNode as part of a node tree with origin
                     REQUIRE(mtxMeshData.second->getIndices()->size() == 3);
                     REQUIRE(mtxMeshData.second->getVertices()->at(0) == vertex1);
                     REQUIRE(mtxMeshData.second->getVertices()->at(1) == vertex2);
-                    REQUIRE(mtxMeshData.second->getVertices()->at(1) == vertex3);
+                    REQUIRE(mtxMeshData.second->getVertices()->at(2) == vertex3);
                     REQUIRE(mtxMeshData.second->getIndices()->at(0) == 0);
                     REQUIRE(mtxMeshData.second->getIndices()->at(1) == 1);
                     REQUIRE(mtxMeshData.second->getIndices()->at(2) == 2);
@@ -543,10 +551,12 @@ TEST_CASE("MeshNode's meshdata deserialization backwards compatibility") {
 
                 // Create mesh data.
                 MeshVertex vertex1, vertex2;
-                vertex1.position = glm::vec4(5123.91827f, -12225.24142f, -5.0f, 0.0f);
-                vertex1.uv = glm::vec4(10.0f, -8885.14122f, 0.0f, 0.0f);
-                vertex2.position = glm::vec4(-1.0f, -2.0f, -3.0f, 0.0f);
-                vertex2.uv = glm::vec4(-1.0f, -2.0f, 0.0f, 0.0f);
+                vertex1.position = glm::vec3(5123.91827f, -12225.24142f, -5.0f);
+                vertex1.normal = glm::vec3(10.0f, -1111.22212f, 0.0f);
+                vertex1.uv = glm::vec3(10.0f, -8885.14122f, 0.0f);
+                vertex2.position = glm::vec3(-1.0f, -2.0f, -3.0f);
+                vertex2.normal = glm::vec3(-1.0f, 0.0f, 0.0f);
+                vertex2.uv = glm::vec2(-1.0f, -2.0f);
 
                 // Deserialize.
                 auto result = Serializable::deserialize<gc, MeshNode>(pathToFileInTemp);

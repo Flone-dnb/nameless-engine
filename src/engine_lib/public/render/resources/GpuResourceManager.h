@@ -6,25 +6,19 @@
 
 // Custom.
 #include "misc/Error.h"
-#include "render/general/resources/UploadBuffer.h"
+#include "render/resources/UploadBuffer.h"
 
 namespace ne {
     class Renderer;
     class GpuResource;
 
-    /** Base class for render-specific GPU resource managers. */
+    /** Allows creating GPU resources. */
     class GpuResourceManager {
+        // Only renderer should be allowed to create resource manager.
+        friend class Renderer;
+
     public:
         virtual ~GpuResourceManager() = default;
-
-        /**
-         * Creates a new platform-specific resource manager.
-         *
-         * @param pRenderer Used renderer.
-         *
-         * @return Error if something went wrong, otherwise created resource manager.
-         */
-        static std::variant<std::unique_ptr<GpuResourceManager>, Error> create(Renderer* pRenderer);
 
         /**
          * Returns total video memory size (VRAM) in megabytes.
@@ -101,6 +95,16 @@ namespace ne {
             bool bAllowUnorderedAccess) const = 0;
 
     protected:
+        /**
+         * Creates a new platform-specific resource manager.
+         *
+         * @param pRenderer Used renderer.
+         *
+         * @return Error if something went wrong, otherwise created resource manager.
+         */
+        static std::variant<std::unique_ptr<GpuResourceManager>, Error> create(Renderer* pRenderer);
+
+        /** Creates uninitialized manager, used internally. */
         GpuResourceManager() = default;
     };
 } // namespace ne

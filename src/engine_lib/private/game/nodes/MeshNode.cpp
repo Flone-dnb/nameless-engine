@@ -5,7 +5,7 @@
 #include "game/Window.h"
 #include "render/Renderer.h"
 #include "render/general/resources/FrameResourcesManager.h"
-#include "render/general/resources/GpuResourceManager.h"
+#include "render/resources/GpuResourceManager.h"
 
 #include "MeshNode.generated_impl.h"
 
@@ -70,14 +70,16 @@ namespace ne {
 
     const std::string sPositionsKeyName = "positions";
     const std::string sUvsKeyName = "uvs";
+    const std::string sNormalsKeyName = "normals";
 
     bool MeshVertex::operator==(const MeshVertex& other) const {
         static_assert(
-            sizeof(MeshVertex) == 32, // NOLINT
+            sizeof(MeshVertex) == 48, // NOLINT
             "add new fields to `serializeVec`, `deserializeVec`, `operator==` and to unit "
             "tests");
         constexpr auto floatDelta = 0.00001F;
         return glm::all(glm::epsilonEqual(position, other.position, floatDelta)) &&
+               glm::all(glm::epsilonEqual(normal, other.normal, floatDelta)) &&
                glm::all(glm::epsilonEqual(uv, other.uv, floatDelta));
     }
 
@@ -85,20 +87,22 @@ namespace ne {
         std::vector<MeshVertex>* pFrom, toml::value* pToml, const std::string& sSectionName) {
         std::vector<std::string> vPositions;
         std::vector<std::string> vUvs;
+        std::vector<std::string> vNormals;
         // Store float as string for better precision.
         for (const auto& vertex : *pFrom) {
             vPositions.push_back(toml::format(toml::value(vertex.position.x)));
             vPositions.push_back(toml::format(toml::value(vertex.position.y)));
             vPositions.push_back(toml::format(toml::value(vertex.position.z)));
-            vPositions.push_back(toml::format(toml::value(vertex.position.w)));
             vUvs.push_back(toml::format(toml::value(vertex.uv.x)));
             vUvs.push_back(toml::format(toml::value(vertex.uv.y)));
-            vUvs.push_back(toml::format(toml::value(vertex.uv.z)));
-            vUvs.push_back(toml::format(toml::value(vertex.uv.w)));
+            vNormals.push_back(toml::format(toml::value(vertex.normal.x)));
+            vNormals.push_back(toml::format(toml::value(vertex.normal.y)));
+            vNormals.push_back(toml::format(toml::value(vertex.normal.z)));
         }
 
         auto table = toml::table();
         table[sPositionsKeyName] = vPositions;
+        table[sNormalsKeyName] = vNormals;
         table[sUvsKeyName] = vUvs;
 
         pToml->operator[](sSectionName) = table;
@@ -125,6 +129,7 @@ namespace ne {
 
         // Get data.
         const toml::value& data = pToml->at(sTomKeyName);
+
         if (!data.is_array()) [[unlikely]] {
             return Error(fmt::format(
                 "failed to deserialize mesh data: \"{}\" key does not contain array", sTomKeyName));
@@ -171,25 +176,34 @@ namespace ne {
 
     std::optional<Error> MeshVertex::deserializeVec(std::vector<MeshVertex>* pTo, const toml::value* pToml) {
         // Get positions.
-        auto positionsResult = deserializeArrayGlmVec<glm::vec4>(pToml, sPositionsKeyName);
+        auto positionsResult = deserializeArrayGlmVec<glm::vec3>(pToml, sPositionsKeyName);
         if (std::holds_alternative<Error>(positionsResult)) {
             auto error = std::get<Error>(std::move(positionsResult));
             error.addEntry();
             return error;
         }
-        const auto vPositions = std::get<std::vector<glm::vec4>>(std::move(positionsResult));
+        const auto vPositions = std::get<std::vector<glm::vec3>>(std::move(positionsResult));
+
+        // Get normals.
+        auto normalsResult = deserializeArrayGlmVec<glm::vec3>(pToml, sNormalsKeyName);
+        if (std::holds_alternative<Error>(normalsResult)) {
+            auto error = std::get<Error>(std::move(normalsResult));
+            error.addEntry();
+            return error;
+        }
+        const auto vNormals = std::get<std::vector<glm::vec3>>(std::move(normalsResult));
 
         // Get UVs.
-        auto uvsResult = deserializeArrayGlmVec<glm::vec4>(pToml, sUvsKeyName);
+        auto uvsResult = deserializeArrayGlmVec<glm::vec2>(pToml, sUvsKeyName);
         if (std::holds_alternative<Error>(uvsResult)) {
             auto error = std::get<Error>(std::move(uvsResult));
             error.addEntry();
             return error;
         }
-        const auto vUvs = std::get<std::vector<glm::vec4>>(std::move(uvsResult));
+        const auto vUvs = std::get<std::vector<glm::vec2>>(std::move(uvsResult));
 
         // Check sizes.
-        if (vPositions.size() != vUvs.size()) [[unlikely]] {
+        if (vPositions.size() != vUvs.size() || vPositions.size() != vNormals.size()) [[unlikely]] {
             return Error("sizes of deserializes vec arrays are not equal");
         }
 
@@ -197,6 +211,7 @@ namespace ne {
         for (size_t i = 0; i < vPositions.size(); i++) {
             MeshVertex vertex;
             vertex.position = vPositions[i];
+            vertex.normal = vNormals[i];
             vertex.uv = vUvs[i];
 
             pTo->push_back(vertex);

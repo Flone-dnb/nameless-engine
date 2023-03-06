@@ -1,3 +1,3 @@
-#include "render/resources/GpuResource.h"
+#include "GpuResource.h"
 
 namespace ne {}

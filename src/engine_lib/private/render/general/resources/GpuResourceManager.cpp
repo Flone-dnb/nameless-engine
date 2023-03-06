@@ -1,4 +1,4 @@
-#include "render/resources/GpuResourceManager.h"
+#include "GpuResourceManager.h"
 
 #if defined(WIN32)
 #include "render/directx/DirectXRenderer.h"

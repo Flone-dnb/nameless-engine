@@ -4,7 +4,7 @@
 #include <optional>
 
 // Custom.
-#include "render/resources/GpuResource.h"
+#include "render/general/resources/GpuResource.h"
 
 namespace ne {
     class DirectXDescriptorHeap;

@@ -36,6 +36,9 @@ namespace ne {
             return Error(hResult);
         }
 
+        // Save pointer to internal resource.
+        pCreatedResource->pInternalResource = pCreatedResource->pAllocatedResource->GetResource();
+
         // Assign resource name.
         pCreatedResource->pAllocatedResource->SetName(stringToWstring(sResourceName).c_str());
 
@@ -49,6 +52,9 @@ namespace ne {
         auto pCreatedResource = std::unique_ptr<DirectXResource>(new DirectXResource(pResourceManager));
 
         pCreatedResource->pSwapChainBuffer = pSwapChainBuffer;
+
+        // Save pointer to internal resource.
+        pCreatedResource->pInternalResource = pCreatedResource->pSwapChainBuffer.Get();
 
         // Assign descriptor.
         auto optionalError = pRtvHeap->assignDescriptor(pCreatedResource.get(), DescriptorType::RTV);
@@ -84,14 +90,6 @@ namespace ne {
             pHeap->getInternalHeap()->GetCPUDescriptorHandleForHeapStart(),
             optionalOffset.value(),
             pHeap->getDescriptorSize());
-    }
-
-    ID3D12Resource* DirectXResource::getInternalResource() const {
-        if (pAllocatedResource != nullptr) {
-            return pAllocatedResource->GetResource();
-        }
-
-        return pSwapChainBuffer.Get();
     }
 
     std::string DirectXResource::getResourceName() const {

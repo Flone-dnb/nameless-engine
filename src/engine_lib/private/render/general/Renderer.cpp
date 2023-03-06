@@ -68,6 +68,10 @@ namespace ne {
 
     FrameResourcesManager* Renderer::getFrameResourcesManager() const { return pFrameResourcesManager.get(); }
 
+    ShaderCpuReadWriteResourceManager* Renderer::getShaderCpuReadWriteResourceManager() const {
+        return pShaderCpuReadWriteResourceManager.get();
+    }
+
     std::recursive_mutex* Renderer::getRenderResourcesMutex() { return &mtxRwRenderResources; }
 
     void Renderer::updateShaderConfiguration() {
@@ -172,6 +176,10 @@ namespace ne {
         }
         pFrameResourcesManager =
             std::get<std::unique_ptr<FrameResourcesManager>>(std::move(frameResourceManagerResult));
+
+        // Create shader read/write resource manager.
+        pShaderCpuReadWriteResourceManager =
+            std::unique_ptr<ShaderCpuReadWriteResourceManager>(new ShaderCpuReadWriteResourceManager(this));
     }
 
 } // namespace ne

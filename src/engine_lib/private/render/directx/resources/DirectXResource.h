@@ -7,7 +7,7 @@
 
 // Custom.
 #include "misc/Error.h"
-#include "render/resources/GpuResource.h"
+#include "render/general/resources/GpuResource.h"
 #include "render/directx/descriptors/DirectXDescriptor.h"
 
 // External.
@@ -66,7 +66,7 @@ namespace ne {
          *
          * @return Do not delete (free) this pointer. Internal resource.
          */
-        ID3D12Resource* getInternalResource() const;
+        inline ID3D12Resource* getInternalResource() const { return pInternalResource; }
 
         /**
          * Returns resource name.
@@ -138,6 +138,12 @@ namespace ne {
          * (can be empty if @ref pAllocatedResource is used).
          */
         ComPtr<ID3D12Resource> pSwapChainBuffer;
+
+        /**
+         * Pointer to @ref pSwapChainBuffer or @ref pAllocatedResource used for fast access
+         * to internal resource.
+         */
+        ID3D12Resource* pInternalResource = nullptr;
 
         /** Name of the category used for logging. */
         inline static const char* sDirectXResourceLogCategory = "DirectX Resource";

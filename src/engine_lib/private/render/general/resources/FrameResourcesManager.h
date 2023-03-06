@@ -20,13 +20,13 @@
 #include <wrl.h>
 #endif
 
-static constexpr unsigned int iFrameResourcesCount = 3;
-
 #if defined(WIN32)
 struct ID3D12CommandAllocator;
 #endif
 
 namespace ne {
+    static constexpr unsigned int iFrameResourcesCount = 3;
+
 #if defined(WIN32)
     using namespace Microsoft::WRL;
 #endif
@@ -45,6 +45,9 @@ namespace ne {
 #if defined(WIN32)
         /** Stores frame commands from command lists. */
         ComPtr<ID3D12CommandAllocator> pCommandAllocator;
+
+        /**  */
+        unsigned long long iFence = 0;
 #endif
 
         /** Stores frame-global constants, such as camera position, time, various matrices, etc. */
@@ -60,6 +63,15 @@ namespace ne {
      */
     class FrameResourcesManager {
     public:
+        /** Stores index and pointer to the current item in @ref vFrameResources. */
+        struct CurrentFrameResource {
+            /** Current index in frame resources array. */
+            size_t iCurrentFrameResourceIndex = 0;
+
+            /** Pointer to item in the index @ref iCurrentFrameResourceIndex. */
+            FrameResource* pResource = nullptr;
+        };
+
         FrameResourcesManager() = delete;
         FrameResourcesManager(const FrameResourcesManager&) = delete;
         FrameResourcesManager& operator=(const FrameResourcesManager&) = delete;
@@ -69,7 +81,7 @@ namespace ne {
          *
          * @return Number of frame resources being used.
          */
-        static inline unsigned int getFrameResourcesCount() { return iFrameResourcesCount; }
+        static constexpr unsigned int getFrameResourcesCount() { return iFrameResourcesCount; }
 
         /**
          * Creates a new frame resources manager.
@@ -86,13 +98,16 @@ namespace ne {
          *
          * @return Current frame resource.
          */
-        std::pair<std::recursive_mutex*, FrameResource*> getCurrentFrameResource();
+        std::pair<std::recursive_mutex, CurrentFrameResource>* getCurrentFrameResource();
 
         /**
          * Uses mutex from @ref getCurrentFrameResource to switch to the next available frame resource.
          *
          * @remark After this function is finished calls to @ref getCurrentFrameResource will return next
          * frame resource.
+         *
+         * @remark Next frame resource (that we switched to) can still be used by the GPU, it's up to the
+         * caller to check whether the frame resource is used by the GPU or not.
          */
         void switchToNextFrameResource();
 
@@ -103,15 +118,6 @@ namespace ne {
          * @param pRenderer Renderer that owns this manager.
          */
         FrameResourcesManager(Renderer* pRenderer);
-
-        /** Stores index and pointer to the current item in @ref vFrameResources. */
-        struct CurrentFrameResource {
-            /** Current index in frame resources array. */
-            size_t iCurrentFrameResourceIndex = 0;
-
-            /** Pointer to item in the index @ref iCurrentFrameResourceIndex. */
-            FrameResource* pCurrentFrameResource = nullptr;
-        };
 
         /** Renderer that owns this manager. */
         Renderer* pRenderer = nullptr;

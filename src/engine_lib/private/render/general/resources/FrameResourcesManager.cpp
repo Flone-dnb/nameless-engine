@@ -18,7 +18,7 @@ namespace ne {
         }
 
         mtxCurrentFrameResource.second.iCurrentFrameResourceIndex = 0;
-        mtxCurrentFrameResource.second.pCurrentFrameResource = vFrameResources[0].get();
+        mtxCurrentFrameResource.second.pResource = vFrameResources[0].get();
     }
 
     std::variant<std::unique_ptr<FrameResourcesManager>, Error>
@@ -63,9 +63,9 @@ namespace ne {
         return pManager;
     }
 
-    std::pair<std::recursive_mutex*, FrameResource*> FrameResourcesManager::getCurrentFrameResource() {
-        return std::make_pair(
-            &mtxCurrentFrameResource.first, mtxCurrentFrameResource.second.pCurrentFrameResource);
+    std::pair<std::recursive_mutex, FrameResourcesManager::CurrentFrameResource>*
+    FrameResourcesManager::getCurrentFrameResource() {
+        return &mtxCurrentFrameResource;
     }
 
     void FrameResourcesManager::switchToNextFrameResource() {
@@ -79,7 +79,7 @@ namespace ne {
         }
 
         // Update current frame resource pointer.
-        mtxCurrentFrameResource.second.pCurrentFrameResource =
+        mtxCurrentFrameResource.second.pResource =
             vFrameResources[mtxCurrentFrameResource.second.iCurrentFrameResourceIndex].get();
     }
 

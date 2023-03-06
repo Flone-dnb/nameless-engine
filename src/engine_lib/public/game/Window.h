@@ -226,9 +226,9 @@ namespace ne {
          * Sets the window opacity (1.0f for opaque, 0.0f for transparent).
          * Does nothing if the OS does not support transparent windows.
          *
-         * @param fOpacity Opacity value between 0.0 and 1.0.
+         * @param opacity Opacity value between 0.0 and 1.0.
          */
-        void setOpacity(float fOpacity) const;
+        void setOpacity(float opacity) const;
 
         /**
          * Sets new window title.
@@ -297,28 +297,43 @@ namespace ne {
 
         /**
          * Minimizes the window.
+         *
+         * @warning This function must only be called from the main thread. If this function is called
+         * outside of the main thread an error will be shown.
          */
         void minimize() const;
 
         /**
          * Maximizes the window.
+         *
+         * @warning This function must only be called from the main thread. If this function is called
+         * outside of the main thread an error will be shown.
          */
         void maximize() const;
 
         /**
          * Restores the window (makes it visible with normal size).
          * Does nothing for fullscreen windows.
+         *
+         * @warning This function must only be called from the main thread. If this function is called
+         * outside of the main thread an error will be shown.
          */
         void restore() const;
 
         /**
          * Hides the windows (makes it invisible).
          * Does nothing for fullscreen windows.
+         *
+         * @warning This function must only be called from the main thread. If this function is called
+         * outside of the main thread an error will be shown.
          */
         void hide() const;
 
         /**
          * Shows the hidden window on screen.
+         *
+         * @warning This function must only be called from the main thread. If this function is called
+         * outside of the main thread an error will be shown.
          */
         void show() const;
 

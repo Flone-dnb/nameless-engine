@@ -236,4 +236,6 @@ namespace ne {
         }
     }
 
+    Pso* Material::getUsedPso() const { return pUsedPso.getPso(); }
+
 } // namespace ne

@@ -8,9 +8,10 @@
 #include <memory>
 
 // Custom.
+#include "materials/ShaderReadWriteResourceManager.h"
 #include "misc/Error.h"
 #include "materials/ShaderManager.h"
-#include "render/resources/GpuResourceManager.h"
+#include "render/general/resources/GpuResourceManager.h"
 #include "render/general/resources/FrameResourcesManager.h"
 
 namespace ne {
@@ -174,6 +175,15 @@ namespace ne {
         FrameResourcesManager* getFrameResourcesManager() const;
 
         /**
+         * Returns shader read/write resource manager.
+         *
+         * @warning Do not delete (free) returned pointer.
+         *
+         * @return Shader read/write resource manager.
+         */
+        ShaderCpuReadWriteResourceManager* getShaderCpuReadWriteResourceManager() const;
+
+        /**
          * Returns mutex used when reading or writing to render resources.
          * Usually used with @ref waitForGpuToFinishWorkUpToThisPoint.
          *
@@ -269,6 +279,9 @@ namespace ne {
 
         /** Stores frame-specific GPU resources. */
         std::unique_ptr<FrameResourcesManager> pFrameResourcesManager;
+
+        /** Stores all shader resources with CPU read/write access. */
+        std::unique_ptr<ShaderCpuReadWriteResourceManager> pShaderCpuReadWriteResourceManager;
 
         /**
          * Shader parameters.

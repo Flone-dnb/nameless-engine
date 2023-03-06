@@ -37,14 +37,10 @@ cbuffer frameData : register(b0)
     // remember to add padding to 4 floats
 }
 
-cbuffer objectData : register(b1)
+cbuffer meshData : register(b1)
 {
     float4x4 worldMatrix; 
-    float4x4 texTransformMatrix;
-	uint iCustomProperty;
-	
-	float3 _objectPad;
-
+    
     // remember to add padding to 4 floats
 };
 

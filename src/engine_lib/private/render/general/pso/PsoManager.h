@@ -89,6 +89,15 @@ namespace ne {
         }
 
         /**
+         * Returns pointer to underlying PSO.
+         *
+         * @warning Do not delete returned pointer.
+         *
+         * @return Raw pointer to the underlying PSO.
+         */
+        Pso* getPso() const { return pPso.get(); }
+
+        /**
          * Access operator.
          *
          * @return Raw pointer to the underlying PSO.

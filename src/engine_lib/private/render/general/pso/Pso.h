@@ -82,6 +82,13 @@ namespace ne {
          */
         std::pair<std::mutex, std::set<Material*>>* getMaterialsThatUseThisPso();
 
+        /**
+         * Returns renderer that owns this PSO.
+         *
+         * @return Renderer.
+         */
+        Renderer* getRenderer() const;
+
     protected:
         /**
          * Creates a new uninitialized PSO.
@@ -98,13 +105,6 @@ namespace ne {
             const std::string& sVertexShaderName,
             const std::string& sPixelShaderName,
             bool bUsePixelBlending);
-
-        /**
-         * Returns renderer that owns this PSO.
-         *
-         * @return Renderer.
-         */
-        Renderer* getRenderer() const;
 
         /**
          * Returns unique identifier for this PSO.

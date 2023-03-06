@@ -4,7 +4,7 @@
 #include "render/directx/resources/DirectXResource.h"
 #include "render/directx/DirectXRenderer.h"
 #include "render/general/resources/FrameResourcesManager.h"
-#include "render/resources/UploadBuffer.h"
+#include "render/general/resources/UploadBuffer.h"
 
 namespace ne {
     std::variant<std::unique_ptr<DirectXResourceManager>, Error>
@@ -154,12 +154,12 @@ namespace ne {
 
         // Get command allocator from the current frame resource.
         const auto pFrameResourcesManager = pRenderer->getFrameResourcesManager();
-        const auto mtxCurrentFrameResource = pFrameResourcesManager->getCurrentFrameResource();
-        std::scoped_lock frameResourceGuard(*mtxCurrentFrameResource.first);
+        const auto pMtxCurrentFrameResource = pFrameResourcesManager->getCurrentFrameResource();
+        std::scoped_lock frameResourceGuard(pMtxCurrentFrameResource->first);
 
         const auto pCommandList = pRenderer->getD3dCommandList();
         const auto pCommandQueue = pRenderer->getD3dCommandQueue();
-        const auto pCommandAllocator = mtxCurrentFrameResource.second->pCommandAllocator.Get();
+        const auto pCommandAllocator = pMtxCurrentFrameResource->second.pResource->pCommandAllocator.Get();
 
         // Clear command list allocator (because it's not used by the GPU now).
         auto hResult = pCommandAllocator->Reset();

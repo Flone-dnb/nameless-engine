@@ -6,7 +6,7 @@
 
 // Custom.
 #include "misc/Error.h"
-#include "render/resources/UploadBuffer.h"
+#include "render/general/resources/UploadBuffer.h"
 
 namespace ne {
     class Renderer;

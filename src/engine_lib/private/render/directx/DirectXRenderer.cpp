@@ -22,6 +22,7 @@
 #include "game/nodes/MeshNode.h"
 #include "materials/hlsl/RootSignatureGenerator.h"
 #include "render/general/resources/FrameResourcesManager.h"
+#include "materials/hlsl/HlslShaderResource.h"
 
 // DirectX.
 #pragma comment(lib, "D3D12.lib")
@@ -37,39 +38,42 @@ namespace ne {
     DirectXRenderer::DirectXRenderer(Game* pGame) : Renderer(pGame) {
         std::scoped_lock frameGuard(*getRenderResourcesMutex());
 
+        // Initialize the current fence value.
+        mtxCurrentFenceValue.second = 0;
+
         initializeRenderer();
 
         // Initialize DirectX.
-        std::optional<Error> error = initializeDirectX();
-        if (error.has_value()) {
-            error->addEntry();
-            error->showError();
-            throw std::runtime_error(error->getFullErrorMessage());
+        auto optionalError = initializeDirectX();
+        if (optionalError.has_value()) {
+            optionalError->addEntry();
+            optionalError->showError();
+            throw std::runtime_error(optionalError->getFullErrorMessage());
         }
 
         // Disable Alt + Enter.
         const HRESULT hResult =
             pFactory->MakeWindowAssociation(getWindow()->getWindowHandle(), DXGI_MWA_NO_ALT_ENTER);
         if (FAILED(hResult)) {
-            const Error error1(hResult);
-            error1.showError();
-            throw std::runtime_error(error1.getFullErrorMessage());
+            Error error(hResult);
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
         }
 
         // Set initial size for buffers.
-        error = updateRenderBuffers();
-        if (error.has_value()) {
-            error->addEntry();
-            error->showError();
-            throw std::runtime_error(error->getFullErrorMessage());
+        optionalError = updateRenderBuffers();
+        if (optionalError.has_value()) {
+            optionalError->addEntry();
+            optionalError->showError();
+            throw std::runtime_error(optionalError->getFullErrorMessage());
         }
 
         // Compile engine shaders.
-        error = compileEngineShaders();
-        if (error.has_value()) {
-            error->addEntry();
-            error->showError();
-            throw std::runtime_error(error->getFullErrorMessage());
+        optionalError = compileEngineShaders();
+        if (optionalError.has_value()) {
+            optionalError->addEntry();
+            optionalError->showError();
+            throw std::runtime_error(optionalError->getFullErrorMessage());
         }
     }
 
@@ -92,6 +96,8 @@ namespace ne {
         pDxgiInfoQueue->SetBreakOnSeverity(DXGI_DEBUG_ALL, DXGI_INFO_QUEUE_MESSAGE_SEVERITY_ERROR, 1);
         pDxgiInfoQueue->SetBreakOnSeverity(DXGI_DEBUG_ALL, DXGI_INFO_QUEUE_MESSAGE_SEVERITY_CORRUPTION, 1);
         pDxgiInfoQueue->SetBreakOnSeverity(DXGI_DEBUG_ALL, DXGI_INFO_QUEUE_MESSAGE_SEVERITY_WARNING, 1);
+
+        Logger::get().info("D3D debug layer enabled", sDirectXRendererLogCategory);
 #endif
         return {};
     }
@@ -239,9 +245,9 @@ namespace ne {
         updateResourcesForNextFrame();
 
         // Get command allocator to open command list.
-        auto mtxFrameResource = getFrameResourcesManager()->getCurrentFrameResource();
-        std::scoped_lock frameResourceGuard(*mtxFrameResource.first);
-        const auto pCommandAllocator = mtxFrameResource.second->pCommandAllocator.Get();
+        auto pMtxCurrentFrameResource = getFrameResourcesManager()->getCurrentFrameResource();
+        std::scoped_lock frameResourceGuard(pMtxCurrentFrameResource->first);
+        const auto pCommandAllocator = pMtxCurrentFrameResource->second.pResource->pCommandAllocator.Get();
 
         // Clear command allocator since the GPU is no longer using it.
         auto hResult = pCommandAllocator->Reset();
@@ -322,10 +328,11 @@ namespace ne {
         }
 
         // Lock frame resources to use them (see below).
-        auto mtxFrameResource = getFrameResourcesManager()->getCurrentFrameResource();
-        std::scoped_lock frameResourceGuard(*mtxFrameResource.first);
+        auto pMtxCurrentFrameResource = getFrameResourcesManager()->getCurrentFrameResource();
+        std::scoped_lock frameResourceGuard(pMtxCurrentFrameResource->first);
 
-        // Set topology type (this will be moved in some other place).
+        // Set topology type.
+        // TODO: this will be moved in some other place later
         pCommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
         // Iterate over all PSOs.
@@ -347,8 +354,8 @@ namespace ne {
                 // Set CBV to frame constant buffer.
                 pCommandList->SetGraphicsRootConstantBufferView(
                     RootSignatureGenerator::getFrameConstantBufferRootParameterIndex(),
-                    reinterpret_cast<DirectXResource*>(
-                        mtxFrameResource.second->pFrameConstantBuffer->getInternalResource())
+                    reinterpret_cast<DirectXResource*>(pMtxCurrentFrameResource->second.pResource
+                                                           ->pFrameConstantBuffer->getInternalResource())
                         ->getInternalResource()
                         ->GetGPUVirtualAddress());
 
@@ -357,43 +364,9 @@ namespace ne {
                 std::scoped_lock materialsGuard(pMtxMaterials->first);
 
                 for (const auto& pMaterial : pMtxMaterials->second) {
-                    // TODO: set material
+                    // TODO: set material resources
 
-                    const auto pMtxMeshNodes = pMaterial->getSpawnedMeshNodesThatUseThisMaterial();
-
-                    // Iterate over all visible mesh nodes that use this material.
-                    std::scoped_lock meshNodesGuard(pMtxMeshNodes->first);
-                    for (const auto& pMeshNode : pMtxMeshNodes->second.visibleMeshNodes) {
-                        // Get mesh data.
-                        auto pMtxGeometryBuffers = pMeshNode->getGeometryBuffers();
-                        auto mtxMeshData = pMeshNode->getMeshData();
-
-                        std::scoped_lock geometryGuard(pMtxGeometryBuffers->first, *mtxMeshData.first);
-
-                        // Create vertex buffer view.
-                        D3D12_VERTEX_BUFFER_VIEW vertexBufferView;
-                        vertexBufferView.BufferLocation = reinterpret_cast<DirectXResource*>(
-                                                              pMtxGeometryBuffers->second.pVertexBuffer.get())
-                                                              ->getInternalResource()
-                                                              ->GetGPUVirtualAddress();
-                        vertexBufferView.StrideInBytes = sizeof(MeshVertex);
-                        vertexBufferView.SizeInBytes = static_cast<UINT>(
-                            mtxMeshData.second->getVertices()->size() * vertexBufferView.StrideInBytes);
-
-                        // Create index buffer view.
-                        D3D12_INDEX_BUFFER_VIEW indexBufferView;
-                        indexBufferView.BufferLocation =
-                            reinterpret_cast<DirectXResource*>(pMtxGeometryBuffers->second.pIndexBuffer.get())
-                                ->getInternalResource()
-                                ->GetGPUVirtualAddress();
-                        indexBufferView.Format = DXGI_FORMAT_R32_UINT;
-                        indexBufferView.SizeInBytes = static_cast<UINT>(
-                            mtxMeshData.second->getIndices()->size() * sizeof(MeshData::meshindex_t));
-
-                        // Set buffers.
-                        pCommandList->IASetVertexBuffers(0, 1, &vertexBufferView);
-                        pCommandList->IASetIndexBuffer(&indexBufferView);
-                    }
+                    drawMeshNodes(pMaterial, pMtxCurrentFrameResource->second.iCurrentFrameResourceIndex);
                 }
             }
         }
@@ -409,13 +382,102 @@ namespace ne {
     }
 
     std::optional<Error> DirectXRenderer::finishDrawingNextFrame() {
+        std::scoped_lock guardFrame(*getRenderResourcesMutex());
+
         // Close command list.
         auto hResult = pCommandList->Close();
         if (FAILED(hResult)) [[unlikely]] {
             return Error(hResult);
         }
 
+        // TODO
+
+        // Update fence value.
+        UINT64 iNewFenceValue = 0;
+        {
+            std::scoped_lock fenceGuard(mtxCurrentFenceValue.first);
+            mtxCurrentFenceValue.second += 1;
+            iNewFenceValue = mtxCurrentFenceValue.second;
+        }
+
+        // Save new fence value in the current frame resource.
+        auto pMtxCurrentFrameResource = getFrameResourcesManager()->getCurrentFrameResource();
+        std::scoped_lock frameResourceGuard(pMtxCurrentFrameResource->first);
+        pMtxCurrentFrameResource->second.pResource->iFence = iNewFenceValue;
+
+        // Add an instruction to the command queue to set a new fence point.
+        // This fence point won't be set until the GPU finishes processing all the commands prior
+        // to this `Signal` call.
+        pCommandQueue->Signal(pFence.Get(), iNewFenceValue);
+
         return {};
+    }
+
+    void DirectXRenderer::drawMeshNodes(Material* pMaterial, size_t iCurrentFrameResourceIndex) {
+        const auto pMtxMeshNodes = pMaterial->getSpawnedMeshNodesThatUseThisMaterial();
+
+        // Iterate over all visible mesh nodes that use this material.
+        std::scoped_lock meshNodesGuard(pMtxMeshNodes->first);
+        for (const auto& pMeshNode : pMtxMeshNodes->second.visibleMeshNodes) {
+            // Get mesh data.
+            auto pMtxMeshGpuResources = pMeshNode->getMeshGpuResources();
+            auto mtxMeshData = pMeshNode->getMeshData();
+
+            std::scoped_lock geometryGuard(pMtxMeshGpuResources->first, *mtxMeshData.first);
+
+            // Create vertex buffer view.
+            D3D12_VERTEX_BUFFER_VIEW vertexBufferView;
+            vertexBufferView.BufferLocation =
+                reinterpret_cast<DirectXResource*>(pMtxMeshGpuResources->second.mesh.pVertexBuffer.get())
+                    ->getInternalResource()
+                    ->GetGPUVirtualAddress();
+            vertexBufferView.StrideInBytes = sizeof(MeshVertex);
+            vertexBufferView.SizeInBytes =
+                static_cast<UINT>(mtxMeshData.second->getVertices()->size() * vertexBufferView.StrideInBytes);
+
+            // Create index buffer view.
+            D3D12_INDEX_BUFFER_VIEW indexBufferView;
+            indexBufferView.BufferLocation =
+                reinterpret_cast<DirectXResource*>(pMtxMeshGpuResources->second.mesh.pIndexBuffer.get())
+                    ->getInternalResource()
+                    ->GetGPUVirtualAddress();
+            indexBufferView.Format = DXGI_FORMAT_R32_UINT;
+            indexBufferView.SizeInBytes =
+                static_cast<UINT>(mtxMeshData.second->getIndices()->size() * sizeof(MeshData::meshindex_t));
+
+            // Set vertex/index buffer.
+            pCommandList->IASetVertexBuffers(0, 1, &vertexBufferView);
+            pCommandList->IASetIndexBuffer(&indexBufferView);
+
+            // Set read/write shader resources.
+            for (const auto& [sResourceName, pShaderReadWriteResource] :
+                 pMtxMeshGpuResources->second.shaderResources.shaderCpuReadWriteResources) {
+                reinterpret_cast<HlslShaderCpuReadWriteResource*>(pShaderReadWriteResource.getResource())
+                    ->setToPipeline(pCommandList, iCurrentFrameResourceIndex);
+            }
+        }
+    }
+
+    void DirectXRenderer::waitForFenceValue(UINT64 iFenceToWaitFor) {
+        if (pFence->GetCompletedValue() < iFenceToWaitFor) {
+            const auto pEvent = CreateEventEx(nullptr, nullptr, FALSE, EVENT_ALL_ACCESS);
+            if (pEvent == nullptr) [[unlikely]] {
+                auto error = Error(GetLastError());
+                error.showError();
+                throw std::runtime_error(error.getFullErrorMessage());
+            }
+
+            // Fire event when the GPU hits current fence.
+            const auto hResult = pFence->SetEventOnCompletion(iFenceToWaitFor, pEvent);
+            if (FAILED(hResult)) [[unlikely]] {
+                auto error = Error(hResult);
+                error.showError();
+                throw std::runtime_error(error.getFullErrorMessage());
+            }
+
+            WaitForSingleObject(pEvent, INFINITE);
+            CloseHandle(pEvent);
+        }
     }
 
     std::optional<Error> DirectXRenderer::setVideoAdapter(const std::string& sVideoAdapterName) {
@@ -498,15 +560,14 @@ namespace ne {
         if (pFrameResourcesManager == nullptr) {
             return Error("frame resources manager needs to be created at this point");
         }
-        const auto mtxCurrentFrameResource = pFrameResourcesManager->getCurrentFrameResource();
-        std::scoped_lock frameResourceGuard(*mtxCurrentFrameResource.first);
+        auto pMtxCurrentFrameResource = getFrameResourcesManager()->getCurrentFrameResource();
+        std::scoped_lock frameResourceGuard(pMtxCurrentFrameResource->first);
 
         // Create Command List.
         auto hResult = pDevice->CreateCommandList(
-            0, // Create list for only one GPU. See pDevice->GetNodeCount()
-               // and documentation for more info.
+            0, // Create list for only one GPU. See pDevice->GetNodeCount().
             D3D12_COMMAND_LIST_TYPE_DIRECT,
-            mtxCurrentFrameResource.second->pCommandAllocator.Get(), // Associated command allocator
+            pMtxCurrentFrameResource->second.pResource->pCommandAllocator.Get(),
             nullptr,
             IID_PPV_ARGS(pCommandList.GetAddressOf()));
         if (FAILED(hResult)) {
@@ -605,9 +666,9 @@ namespace ne {
     std::optional<Error> DirectXRenderer::initializeDirectX() {
         // Enable debug layer in DEBUG mode.
         DWORD debugFactoryFlags = 0;
-#if defined(DEBUG) || defined(_DEBUG)
+#if defined(DEBUG)
         {
-            std::optional<Error> error = enableDebugLayer();
+            auto error = enableDebugLayer();
             if (error.has_value()) {
                 error->addEntry();
                 return error;
@@ -932,12 +993,16 @@ namespace ne {
         // Switch to the next frame resource.
         getFrameResourcesManager()->switchToNextFrameResource();
 
-        // TODO: wait for frame resource to be free
+        // Get current frame resource.
+        auto pMtxCurrentFrameResource = getFrameResourcesManager()->getCurrentFrameResource();
+        std::scoped_lock frameResource(pMtxCurrentFrameResource->first);
 
-        // TODO: updateMaterialConstantBuffersForNextFrame()
-        // TODO: updateMeshConstantBuffersForNextFrame()
-        // TODO: updateShadowMapConstantBuffersForNextFrame()
-        // TODO: updateMainPassConstantBuffersForNextFrame()
+        // Wait for this frame resource to no longer be used by the GPU.
+        waitForFenceValue(pMtxCurrentFrameResource->second.pResource->iFence);
+
+        // Update shader read/write resources marked as "needs update".
+        getShaderCpuReadWriteResourceManager()->updateResources(
+            pMtxCurrentFrameResource->second.iCurrentFrameResourceIndex);
     }
 
     std::optional<Error> DirectXRenderer::updateRenderBuffers() {
@@ -1064,37 +1129,23 @@ namespace ne {
             return;
         }
 
-        std::scoped_lock guardFrame(*getRenderResourcesMutex());
+        UINT64 iFenceToWait = 0;
+        {
+            // Update fence.
+            std::scoped_lock fenceGuard(mtxCurrentFenceValue.first);
+            mtxCurrentFenceValue.second += 1;
+            iFenceToWait = mtxCurrentFenceValue.second;
+        }
 
-        const auto iFenceValue = iCurrentFence.fetch_add(1);
-        HRESULT hResult = pCommandQueue->Signal(pFence.Get(), iFenceValue);
-
-        if (FAILED(hResult)) {
+        // Add to queue.
+        auto hResult = pCommandQueue->Signal(pFence.Get(), iFenceToWait);
+        if (FAILED(hResult)) [[unlikely]] {
             auto error = Error(hResult);
             error.showError();
             throw std::runtime_error(error.getFullErrorMessage());
         }
 
-        // Wait until the GPU has completed commands up to this fence point.
-        if (pFence->GetCompletedValue() < iFenceValue) {
-            const HANDLE pEvent = CreateEventEx(nullptr, nullptr, FALSE, EVENT_ALL_ACCESS);
-            if (pEvent == nullptr) {
-                auto error = Error(GetLastError());
-                error.showError();
-                throw std::runtime_error(error.getFullErrorMessage());
-            }
-
-            // Fire event when the GPU hits current fence.
-            hResult = pFence->SetEventOnCompletion(iFenceValue, pEvent);
-            if (FAILED(hResult)) {
-                auto error = Error(hResult);
-                error.showError();
-                throw std::runtime_error(error.getFullErrorMessage());
-            }
-
-            WaitForSingleObject(pEvent, INFINITE);
-            CloseHandle(pEvent);
-        }
+        waitForFenceValue(iFenceToWait);
     }
 
     ID3D12Device* DirectXRenderer::getD3dDevice() const { return pDevice.Get(); }

@@ -4,8 +4,8 @@
 #include "materials/Material.h"
 #include "game/Window.h"
 #include "render/Renderer.h"
-#include "render/general/resources/FrameResourcesManager.h"
-#include "render/resources/GpuResourceManager.h"
+#include "render/general/resources/GpuResourceManager.h"
+#include "materials/ShaderReadWriteResourceManager.h"
 
 #include "MeshNode.generated_impl.h"
 
@@ -49,10 +49,12 @@ namespace ne {
     void MeshNode::onWorldLocationRotationScaleChanged() {
         SpatialNode::onWorldLocationRotationScaleChanged();
 
-        std::scoped_lock guard(mtxShaderConstantBuffers.first);
+        // Update shader constants.
+        std::scoped_lock guard(mtxShaderMeshDataConstants.first);
+        mtxShaderMeshDataConstants.second.world = getWorldMatrix();
 
-        mtxShaderConstantBuffers.second.iFrameResourceCountToUpdate.store(
-            FrameResourcesManager::getFrameResourcesCount());
+        // Mark as updated.
+        markShaderCpuReadWriteResourceAsNeedsUpdate(sMeshShaderConstantBufferName);
     }
 
     MeshData::MeshData() {
@@ -236,95 +238,50 @@ namespace ne {
         onMeshDataChanged();
     }
 
-    void MeshNode::allocateShaderConstantBuffers() {
-        std::scoped_lock guard(mtxSpawning, mtxShaderConstantBuffers.first);
+    void MeshNode::allocateShaderResources() {
+        std::scoped_lock guard(mtxSpawning, mtxGpuResources.first);
 
         if (!isSpawned()) [[unlikely]] {
             Logger::get().warn(
                 fmt::format(
-                    "mesh node \"{}\" was requested to allocate shader constant buffers but the node is not "
+                    "mesh node \"{}\" was requested to allocate shader resources but the node is not "
                     "spawned",
                     getNodeName()),
                 sMeshNodeLogCategory);
             return;
         }
 
-        if (mtxShaderConstantBuffers.second.pConstantBuffers != nullptr) [[unlikely]] {
-            Logger::get().warn(
-                fmt::format(
-                    "mesh node \"{}\" was requested to allocate shader constant buffers but they are already "
-                    "created",
-                    getNodeName()),
-                sMeshNodeLogCategory);
-            return;
-        }
-
-        // Create constant buffers for shaders.
-        const auto pRenderer = getGameInstance()->getWindow()->getRenderer();
-        auto result = pRenderer->getResourceManager()->createResourceWithCpuAccess(
-            fmt::format("mesh node \"{}\" shader constant buffer", getNodeName()),
+        prepareDataForBindingToShaderCpuReadWriteResource(
+            sMeshShaderConstantBufferName,
             sizeof(MeshShaderConstants),
-            FrameResourcesManager::getFrameResourcesCount(),
-            true);
-        if (std::holds_alternative<Error>(result)) {
-            auto error = std::get<Error>(std::move(result));
-            error.addEntry();
-            error.showError();
-            throw std::runtime_error(error.getFullErrorMessage());
-        }
-        mtxShaderConstantBuffers.second.pConstantBuffers =
-            std::get<std::unique_ptr<UploadBuffer>>(std::move(result));
-
-        // Bind constant buffer view to the resource.
-        auto optionalError =
-            mtxShaderConstantBuffers.second.pConstantBuffers->getInternalResource()->bindDescriptor(
-                GpuResource::DescriptorType::CBV);
-        if (optionalError.has_value()) {
-            auto error = optionalError.value();
-            error.addEntry();
-            error.showError();
-            throw std::runtime_error(error.getFullErrorMessage());
-        }
-
-        // Mark buffers as "needs to be updated".
-        mtxShaderConstantBuffers.second.iFrameResourceCountToUpdate.store(
-            FrameResourcesManager::getFrameResourcesCount());
+            [this]() -> void* { return onStartUpdatingShaderMeshConstants(); },
+            [this]() { onFinishedUpdatingShaderMeshConstants(); });
     }
 
-    void MeshNode::deallocateShaderConstantBuffers() {
-        std::scoped_lock guard(mtxSpawning, mtxShaderConstantBuffers.first);
+    void MeshNode::deallocateShaderResources() {
+        std::scoped_lock guard(mtxSpawning, mtxGpuResources.first);
 
         if (!isSpawned()) [[unlikely]] {
             Logger::get().warn(
                 fmt::format(
-                    "mesh node \"{}\" was requested to deallocate shader constant buffers but the node is "
+                    "mesh node \"{}\" was requested to deallocate shader resources but the node is "
                     "not spawned",
                     getNodeName()),
                 sMeshNodeLogCategory);
             return;
         }
 
-        if (mtxShaderConstantBuffers.second.pConstantBuffers == nullptr) [[unlikely]] {
-            Logger::get().warn(
-                fmt::format(
-                    "mesh node \"{}\" was requested to deallocate shader constant buffers but they were not "
-                    "created previously",
-                    getNodeName()),
-                sMeshNodeLogCategory);
-            return;
-        }
-
-        // Make sure the GPU is not using our constant buffers.
+        // Make sure the GPU is not using our resources.
         const auto pRenderer = getGameInstance()->getWindow()->getRenderer();
         std::scoped_lock renderGuard(*pRenderer->getRenderResourcesMutex());
         pRenderer->waitForGpuToFinishWorkUpToThisPoint();
 
-        // Deallocate constant buffers.
-        mtxShaderConstantBuffers.second.pConstantBuffers = nullptr;
+        // Deallocate resources.
+        mtxGpuResources.second.shaderResources = {};
     }
 
     void MeshNode::allocateGeometryBuffers() {
-        std::scoped_lock guard(mtxSpawning, mtxMeshData, mtxGeometryBuffers.first);
+        std::scoped_lock guard(mtxSpawning, mtxMeshData, mtxGpuResources.first);
 
         if (!isSpawned()) [[unlikely]] {
             Logger::get().warn(
@@ -336,8 +293,8 @@ namespace ne {
             return;
         }
 
-        if (mtxGeometryBuffers.second.pVertexBuffer != nullptr ||
-            mtxGeometryBuffers.second.pIndexBuffer != nullptr) [[unlikely]] {
+        if (mtxGpuResources.second.mesh.pVertexBuffer != nullptr ||
+            mtxGpuResources.second.mesh.pIndexBuffer != nullptr) [[unlikely]] {
             Logger::get().warn(
                 fmt::format(
                     "mesh node \"{}\" was requested to deallocate geometry buffers but they are already "
@@ -373,7 +330,7 @@ namespace ne {
             error.showError();
             throw std::runtime_error(error.getFullErrorMessage());
         }
-        mtxGeometryBuffers.second.pVertexBuffer = std::get<std::unique_ptr<GpuResource>>(std::move(result));
+        mtxGpuResources.second.mesh.pVertexBuffer = std::get<std::unique_ptr<GpuResource>>(std::move(result));
 
         // Create index buffer.
         result = pResourceManager->createResourceWithData(
@@ -387,11 +344,11 @@ namespace ne {
             error.showError();
             throw std::runtime_error(error.getFullErrorMessage());
         }
-        mtxGeometryBuffers.second.pIndexBuffer = std::get<std::unique_ptr<GpuResource>>(std::move(result));
+        mtxGpuResources.second.mesh.pIndexBuffer = std::get<std::unique_ptr<GpuResource>>(std::move(result));
     }
 
     void MeshNode::deallocateGeometryBuffers() {
-        std::scoped_lock guard(mtxSpawning, mtxMeshData, mtxGeometryBuffers.first);
+        std::scoped_lock guard(mtxSpawning, mtxMeshData, mtxGpuResources.first);
 
         if (!isSpawned()) [[unlikely]] {
             Logger::get().warn(
@@ -403,8 +360,8 @@ namespace ne {
             return;
         }
 
-        if (mtxGeometryBuffers.second.pVertexBuffer == nullptr ||
-            mtxGeometryBuffers.second.pIndexBuffer == nullptr) [[unlikely]] {
+        if (mtxGpuResources.second.mesh.pVertexBuffer == nullptr ||
+            mtxGpuResources.second.mesh.pIndexBuffer == nullptr) [[unlikely]] {
             Logger::get().warn(
                 fmt::format(
                     "mesh node \"{}\" was requested to deallocate geometry buffers but they were not "
@@ -420,8 +377,8 @@ namespace ne {
         pRenderer->waitForGpuToFinishWorkUpToThisPoint();
 
         // Deallocate buffers.
-        mtxGeometryBuffers.second.pVertexBuffer = nullptr;
-        mtxGeometryBuffers.second.pIndexBuffer = nullptr;
+        mtxGpuResources.second.mesh.pVertexBuffer = nullptr;
+        mtxGpuResources.second.mesh.pIndexBuffer = nullptr;
     }
 
     void MeshNode::onMeshDataChanged() {
@@ -481,23 +438,124 @@ namespace ne {
     }
 
     void MeshNode::onSpawn() {
+        // Make sure no rendering happens during the spawn process.
+        const auto pRenderer = getGameInstance()->getWindow()->getRenderer();
+        std::scoped_lock drawGuard(*pRenderer->getRenderResourcesMutex());
+        pRenderer->waitForGpuToFinishWorkUpToThisPoint();
+
         SpatialNode::onSpawn();
 
-        allocateShaderConstantBuffers();
         allocateGeometryBuffers();
 
         // Notify the material so that the renderer will render this mesh now.
         pMaterial->onMeshNodeSpawned(this);
+
+        // After material was notified (because materials initialize PSOs that shader resources need).
+        allocateShaderResources();
     }
 
     void MeshNode::onDespawn() {
+        // Make sure no rendering happens during the despawn process.
+        const auto pRenderer = getGameInstance()->getWindow()->getRenderer();
+        std::scoped_lock drawGuard(*pRenderer->getRenderResourcesMutex());
+        pRenderer->waitForGpuToFinishWorkUpToThisPoint();
+
         SpatialNode::onDespawn();
 
         // Notify the material so that the renderer will no longer render this mesh.
         pMaterial->onMeshNodeDespawned(this);
 
-        deallocateShaderConstantBuffers();
+        deallocateShaderResources();
         deallocateGeometryBuffers();
+    }
+
+    void* MeshNode::onStartUpdatingShaderMeshConstants() {
+        mtxShaderMeshDataConstants.first.lock();
+        return &mtxShaderMeshDataConstants.second;
+    }
+
+    void MeshNode::onFinishedUpdatingShaderMeshConstants() { mtxShaderMeshDataConstants.first.unlock(); }
+
+    void MeshNode::prepareDataForBindingToShaderCpuReadWriteResource(
+        const std::string& sShaderResourceName,
+        size_t iResourceSizeInBytes,
+        const std::function<void*()>& onStartedUpdatingResource,
+        const std::function<void()>& onFinishedUpdatingResource) {
+        // Make sure the node is spawned.
+        std::scoped_lock spawnGuard(mtxSpawning);
+        if (!isSpawned()) [[unlikely]] {
+            Error error("binding data to shader resources should be called in `onSpawn` function when the "
+                        "node is spawned");
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+        }
+        // keep spawn locked
+
+        // Make sure material was initialized.
+        const auto pUsedPso = pMaterial->getUsedPso();
+        if (pUsedPso == nullptr) [[unlikely]] {
+            Error error(fmt::format(
+                "unable to create shader resources for mesh node \"{}\" because material was not initialized",
+                getNodeName()));
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+        }
+
+        std::scoped_lock gpuResourceGuard(mtxGpuResources.first);
+
+        // Make sure there is no resource with this name.
+        auto it =
+            mtxGpuResources.second.shaderResources.shaderCpuReadWriteResources.find(sShaderResourceName);
+        if (it != mtxGpuResources.second.shaderResources.shaderCpuReadWriteResources.end()) [[unlikely]] {
+            Error error(fmt::format(
+                "mesh node \"{}\" already has a shader CPU read/write resource with the name \"{}\"",
+                getNodeName(),
+                sShaderResourceName));
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+        }
+
+        // Create object data constant buffer for shaders.
+        const auto pShaderReadWriteResourceManager =
+            getGameInstance()->getWindow()->getRenderer()->getShaderCpuReadWriteResourceManager();
+        auto result = pShaderReadWriteResourceManager->createShaderCpuReadWriteResource(
+            sShaderResourceName,
+            fmt::format("mesh node \"{}\"", getNodeName()),
+            iResourceSizeInBytes,
+            pUsedPso,
+            onStartedUpdatingResource,
+            onFinishedUpdatingResource);
+        if (std::holds_alternative<Error>(result)) {
+            auto error = std::get<Error>(std::move(result));
+            error.addEntry();
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+        }
+
+        // Add to be considered.
+        mtxGpuResources.second.shaderResources.shaderCpuReadWriteResources[sShaderResourceName] =
+            std::get<ShaderCpuReadWriteResourceUniquePtr>(std::move(result));
+    }
+
+    void MeshNode::markShaderCpuReadWriteResourceAsNeedsUpdate(const std::string& sShaderResourceName) {
+        // Make sure the node is spawned.
+        std::scoped_lock spawnGuard(mtxSpawning);
+        if (!isSpawned()) {
+            return; // silently exit
+        }
+        // keep spawn locked
+
+        std::scoped_lock gpuResourceGuard(mtxGpuResources.first);
+
+        // Make sure there is a resource with this name.
+        auto it =
+            mtxGpuResources.second.shaderResources.shaderCpuReadWriteResources.find(sShaderResourceName);
+        if (it == mtxGpuResources.second.shaderResources.shaderCpuReadWriteResources.end()) {
+            return; // silently exit
+        }
+
+        // Mark as needs update.
+        it->second.markAsNeedsUpdate();
     }
 
     void MeshNode::setVisibility(bool bVisible) {

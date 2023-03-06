@@ -22,6 +22,8 @@ set(ENGINE_WIN32_SOURCES
     private/materials/hlsl/HlslEngineShaders.hpp
     private/materials/hlsl/RootSignatureGenerator.h
     private/materials/hlsl/RootSignatureGenerator.cpp
+    private/materials/hlsl/HlslShaderResource.h
+    private/materials/hlsl/HlslShaderResource.cpp
     private/render/directx/DirectXRenderer.h
     private/render/directx/DirectXRenderer.cpp
     private/render/directx/pso/DirectXPso.cpp
@@ -84,13 +86,13 @@ set(ENGINE_LIB_SOURCES
     private/render/general/pso/PsoManager.cpp
     private/render/general/pso/Pso.h
     private/render/general/pso/Pso.cpp
-    public/render/resources/GpuResource.h
+    private/render/general/resources/GpuResource.h
     private/render/general/resources/GpuResource.cpp
     private/render/general/resources/FrameResourcesManager.h
     private/render/general/resources/FrameResourcesManager.cpp
-    public/render/resources/GpuResourceManager.h
+    private/render/general/resources/GpuResourceManager.h
     private/render/general/resources/GpuResourceManager.cpp
-    public/render/resources/UploadBuffer.h
+    private/render/general/resources/UploadBuffer.h
     private/render/general/resources/UploadBuffer.cpp
     private/window/GLFW.hpp
     public/input/KeyboardKey.hpp
@@ -114,6 +116,8 @@ set(ENGINE_LIB_SOURCES
     private/materials/Material.cpp
     public/materials/Material.h
     private/materials/EngineShaderNames.hpp
+    private/materials/ShaderResource.h
+    private/materials/ShaderResource.cpp
     private/misc/ThreadPool.h
     private/misc/ThreadPool.cpp
     private/misc/Timer.cpp
@@ -131,6 +135,10 @@ set(ENGINE_LIB_SOURCES
     private/materials/ShaderParameter.h
     private/materials/ShaderParameter.cpp
     private/materials/ShaderFilesystemPaths.hpp
+    private/materials/ShaderReadWriteResourceManager.cpp
+    private/materials/ShaderReadWriteResourceManager.h
+    private/materials/ShaderReadWriteResourceUniquePtr.cpp
+    private/materials/ShaderReadWriteResourceUniquePtr.h
     public/misc/ProjectPaths.h
     private/misc/ProjectPaths.cpp
     private/io/Serializable.cpp

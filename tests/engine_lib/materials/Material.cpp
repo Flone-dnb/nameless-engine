@@ -50,7 +50,6 @@ TEST_CASE("create engine default materials") {
                 pMeshNodeTransparent->setMaterial(
                     std::get<std::shared_ptr<Material>>(std::move(resultTransparent)));
                 pMeshNodeTransparent->setMeshData(meshData);
-                pMeshNodeTransparent->setMeshData(meshData);
 
                 auto pMeshNodeOpaque = gc_new<MeshNode>("Opaque material node");
                 pMeshNodeOpaque->setMaterial(std::get<std::shared_ptr<Material>>(std::move(resultOpaque)));

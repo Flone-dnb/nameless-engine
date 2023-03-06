@@ -151,10 +151,8 @@ namespace ne {
         return generated;
     }
 
-    std::variant<RootSignatureGenerator::Merged, Error> RootSignatureGenerator::merge( // NOLINT: too complex
-        ID3D12Device* pDevice,
-        HlslShader* pVertexShader,
-        HlslShader* pPixelShader) {
+    std::variant<RootSignatureGenerator::Merged, Error> RootSignatureGenerator::merge(
+        ID3D12Device* pDevice, HlslShader* pVertexShader, HlslShader* pPixelShader) {
         // Make sure that the vertex shader is indeed a vertex shader.
         if (pVertexShader->getShaderType() != ShaderType::VERTEX_SHADER) [[unlikely]] {
             return Error(std::format(

@@ -6,8 +6,9 @@
 // Custom.
 #include "game/nodes/SpatialNode.h"
 #include "math/GLMath.hpp"
-#include "render/resources/GpuResource.h"
-#include "render/resources/UploadBuffer.h"
+#include "render/general/resources/GpuResource.h"
+#include "materials/ShaderResource.h"
+#include "materials/ShaderReadWriteResourceUniquePtr.h"
 
 #include "MeshNode.generated.h"
 
@@ -155,29 +156,41 @@ namespace ne RNAMESPACE() {
         friend class Renderer;
 
     public:
-        /** Groups GPU buffers that store mesh data. */
-        struct GeometryBuffers {
-            /** Stores mesh vertices. */
-            std::unique_ptr<GpuResource> pVertexBuffer;
+        /** Stores internal GPU resources. */
+        struct GpuResources {
 
-            /** Stores mesh indices. */
-            std::unique_ptr<GpuResource> pIndexBuffer;
+            /** Stores mesh GPU resources. */
+            struct Mesh {
+                /** Stores mesh vertices. */
+                std::unique_ptr<GpuResource> pVertexBuffer;
+
+                /** Stores mesh indices. */
+                std::unique_ptr<GpuResource> pIndexBuffer;
+            };
+
+            /** Stores resources used by shaders. */
+            struct ShaderResources {
+                /** Shader single (non-array) resources with CPU access. */
+                std::unordered_map<std::string, ShaderCpuReadWriteResourceUniquePtr>
+                    shaderCpuReadWriteResources;
+
+                // TODO: vShaderCpuReadOnlyResources
+
+                // TODO: vShaderCpuReadOnlyArrayResources
+            };
+
+            /** Mesh GPU resources. */
+            Mesh mesh;
+
+            /** Shader GPU resources. */
+            ShaderResources shaderResources;
         };
 
-        /** Stores GPU resources used by shaders. */
-        struct ShaderConstants {
-            /**
-             * Buffer with CPU access that contains N elements with object-specific data
-             * (@ref MeshShaderConstants). Amount of elements in this buffer is defined by the amount
-             * of frame resources.
-             */
-            std::unique_ptr<UploadBuffer> pConstantBuffers;
-
-            /** Number of elements in @ref pConstantBuffers that needs to be updated with new data. */
-            std::atomic<unsigned int> iFrameResourceCountToUpdate{0};
-        };
-
-        /** Constants used by shaders. */
+        /**
+         * Constants used by shaders.
+         *
+         * @remark Should be exactly the same as constant buffer in shaders.
+         */
         struct MeshShaderConstants {
             /** World matrix. */
             glm::mat4x4 world = glm::identity<glm::mat4x4>();
@@ -252,11 +265,13 @@ namespace ne RNAMESPACE() {
         }
 
         /**
-         * Returns GPU resources that store mesh geometry.
+         * Returns GPU resources that mesh node uses.
          *
-         * @return Geometry buffers.
+         * @return GPU resources.
          */
-        inline std::pair<std::mutex, GeometryBuffers>* getGeometryBuffers() { return &mtxGeometryBuffers; }
+        inline std::pair<std::recursive_mutex, GpuResources>* getMeshGpuResources() {
+            return &mtxGpuResources;
+        }
 
         /**
          * Tells whether this mesh is currently visible or not.
@@ -298,18 +313,68 @@ namespace ne RNAMESPACE() {
          */
         virtual void onWorldLocationRotationScaleChanged() override;
 
-    private:
-        /** Allocates @ref mtxShaderConstantBuffers to be used by shaders. */
-        void allocateShaderConstantBuffers();
+        /**
+         * Prepares data for binding to shader resource with CPU read/write access to copy data from CPU to
+         * shader.
+         *
+         * @remark Call this function in your onSpawn function to bind to shader resources, all bindings
+         * will be automatically removed in onDespawn.
+         *
+         * @param sShaderResourceName        Name of the resource we are referencing (should be exactly the
+         * same as the resource name written in the shader file we are referencing).
+         * @param iResourceSizeInBytes       Size of the data that this resource will contain. Note that
+         * this size will most likely be padded to be a multiple of 256 because of the hardware requirement
+         * for shader constant buffers.
+         * @param onStartedUpdatingResource  Function that will be called when started updating resource
+         * data. Function returns pointer to data of the specified resource data size that needs to be copied
+         * into the resource.
+         * @param onFinishedUpdatingResource Function that will be called when finished updating
+         * (usually used for unlocking resource data mutex).
+         */
+        void prepareDataForBindingToShaderCpuReadWriteResource(
+            const std::string& sShaderResourceName,
+            size_t iResourceSizeInBytes,
+            const std::function<void*()>& onStartedUpdatingResource,
+            const std::function<void()>& onFinishedUpdatingResource);
 
-        /** Allocates @ref mtxGeometryBuffers to be used by renderer. */
+        /**
+         * Looks for binding created using @ref prepareDataForBindingToShaderCpuReadWriteResource and
+         * notifies the engine that there is new (updated) data for shader CPU read/write resource to copy.
+         *
+         * @remark You don't need to check if the node is spawned or not before calling this function,
+         * if the binding does not exist this call will be ignored.
+         *
+         * @param sShaderResourceName Name of the shader CPU read/write resource (should be exactly the same
+         * as the resource name written in the shader file we are referencing).
+         */
+        void markShaderCpuReadWriteResourceAsNeedsUpdate(const std::string& sShaderResourceName);
+
+    private:
+        /**
+         * Allocates shader resources (see @ref mtxGpuResources).
+         *
+         * @warning Expects @ref pMaterial to have initialized PSO.
+         */
+        void allocateShaderResources();
+
+        /** Allocates geometry resources (see @ref mtxGpuResources). */
         void allocateGeometryBuffers();
 
-        /** Deallocates @ref mtxShaderConstantBuffers. */
-        void deallocateShaderConstantBuffers();
+        /** Deallocates shader resources (see @ref mtxGpuResources). */
+        void deallocateShaderResources();
 
-        /** Deallocates @ref mtxGeometryBuffers. */
+        /** Deallocates geometry resources (see @ref mtxGpuResources). */
         void deallocateGeometryBuffers();
+
+        /**
+         * Called to copy data from @ref mtxShaderMeshDataConstants.
+         *
+         * @return Pointer to data in @ref mtxShaderMeshDataConstants.
+         */
+        void* onStartUpdatingShaderMeshConstants();
+
+        /** Called after finished copying data from @ref mtxShaderMeshDataConstants. */
+        void onFinishedUpdatingShaderMeshConstants();
 
         /** Used material. Always contains a valid pointer. */
         RPROPERTY(Serialize)
@@ -324,17 +389,20 @@ namespace ne RNAMESPACE() {
             FieldSerializationType::AS_EXTERNAL_FILE)) // allow VCSs to treat this file in a special way
         MeshData meshData; // don't change this field's name (no backwards compatibility in deserialization)
 
-        /** Mutex to use with @ref meshData. */
+        /** Mutex for @ref meshData. */
         std::recursive_mutex mtxMeshData;
 
         /** Stores @ref meshData in GPU memory.  */
-        std::pair<std::mutex, GeometryBuffers> mtxGeometryBuffers;
+        std::pair<std::recursive_mutex, GpuResources> mtxGpuResources;
 
-        /** Stores GPU resources used by shaders. */
-        std::pair<std::mutex, ShaderConstants> mtxShaderConstantBuffers;
+        /** Stores data for constant buffer used by shaders. */
+        std::pair<std::recursive_mutex, MeshShaderConstants> mtxShaderMeshDataConstants;
 
         /** Whether mesh is visible or not. */
         bool bIsVisible = true;
+
+        /** Name of the constant buffer used to store general mesh data in shaders. */
+        static inline const auto sMeshShaderConstantBufferName = "meshData";
 
         /** Name of the category used for logging. */
         static inline const auto sMeshNodeLogCategory = "Mesh Node";

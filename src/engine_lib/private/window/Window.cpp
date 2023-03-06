@@ -62,7 +62,10 @@ namespace ne {
 
     std::variant<std::unique_ptr<Window>, Error> WindowBuilder::build() { return Window::create(params); }
 
-    void Window::hide() const { glfwHideWindow(pGlfwWindow); }
+    void Window::hide() const {
+        showErrorIfNotOnMainThread();
+        glfwHideWindow(pGlfwWindow);
+    }
 
     void Window::close() const { glfwSetWindowShouldClose(pGlfwWindow, 1); }
 
@@ -315,7 +318,7 @@ namespace ne {
 
     void Window::show() const { glfwShowWindow(pGlfwWindow); }
 
-    void Window::setOpacity(float fOpacity) const { glfwSetWindowOpacity(pGlfwWindow, fOpacity); }
+    void Window::setOpacity(float opacity) const { glfwSetWindowOpacity(pGlfwWindow, opacity); }
 
     void Window::setTitle(const std::string& sNewTitle) {
         glfwSetWindowTitle(pGlfwWindow, sNewTitle.c_str());
@@ -386,11 +389,20 @@ namespace ne {
         }
     }
 
-    void Window::minimize() const { glfwIconifyWindow(pGlfwWindow); }
+    void Window::minimize() const {
+        showErrorIfNotOnMainThread();
+        glfwIconifyWindow(pGlfwWindow);
+    }
 
-    void Window::maximize() const { glfwMaximizeWindow(pGlfwWindow); }
+    void Window::maximize() const {
+        showErrorIfNotOnMainThread();
+        glfwMaximizeWindow(pGlfwWindow);
+    }
 
-    void Window::restore() const { glfwRestoreWindow(pGlfwWindow); }
+    void Window::restore() const {
+        showErrorIfNotOnMainThread();
+        glfwRestoreWindow(pGlfwWindow);
+    }
 
     Window::Window(GLFWwindow* pGlfwWindow, const std::string& sWindowTitle) {
         this->pGlfwWindow = pGlfwWindow;

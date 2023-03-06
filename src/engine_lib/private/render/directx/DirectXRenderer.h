@@ -25,6 +25,7 @@ namespace ne {
 
     class Game;
     class DirectXResourceManager;
+    class Material;
 
     /**
      * DirectX 12 renderer.
@@ -274,6 +275,21 @@ namespace ne {
         [[nodiscard]] std::optional<Error> finishDrawingNextFrame();
 
         /**
+         * Adds draw commands to command list to draw all mesh nodes that use the specified material
+         *
+         * @param pMaterial                  Material that mesh nodes use.
+         * @param iCurrentFrameResourceIndex Index of the current frame resource.
+         */
+        void drawMeshNodes(Material* pMaterial, size_t iCurrentFrameResourceIndex);
+
+        /**
+         * Waits until the GPU has completed commands up to the specified fence point.
+         *
+         * @param iFenceToWaitFor Fence value to wait for.
+         */
+        void waitForFenceValue(UINT64 iFenceToWaitFor);
+
+        /**
          * Returns a vector of display modes that the current output adapter
          * supports for current back buffer format.
          *
@@ -313,7 +329,7 @@ namespace ne {
         ComPtr<ID3D12Fence> pFence;
 
         /** Fence counter. */
-        std::atomic<UINT64> iCurrentFence{0};
+        std::pair<std::recursive_mutex, UINT64> mtxCurrentFenceValue;
 
         /** Swap chain buffer. */
         std::vector<std::unique_ptr<DirectXResource>> vSwapChainBuffers;

@@ -71,6 +71,10 @@ namespace ne {
         }
         bIsBeingDestroyed = true;
 
+        // Wait for GPU to finish all work.
+        // Make sure no GPU resource is used.
+        pRenderer->waitForGpuToFinishWorkUpToThisPoint();
+
         // Make sure thread pool and deferred tasks are finished.
         threadPool.stop();
         {
@@ -129,10 +133,6 @@ namespace ne {
                     sGcLeakReasons),
                 sGameLogCategory);
         }
-
-        // Wait for GPU to finish all work.
-        // Make sure no GPU resource is used.
-        pRenderer->waitForGpuToFinishWorkUpToThisPoint();
 
         // Explicitly destroy the renderer to check how much shaders left in the memory.
         pRenderer = nullptr;
@@ -673,6 +673,12 @@ namespace ne {
         if (mtxWorld.second == nullptr) {
             return; // nothing to do
         }
+
+        // Make sure no GPU resource is used.
+        // Block rendering.
+        std::scoped_lock drawGuard(*pRenderer->getRenderResourcesMutex());
+        // Wait for GPU to finish all work.
+        pRenderer->waitForGpuToFinishWorkUpToThisPoint();
 
         // Explicitly destroy the world, so that no node will reference the world.
         mtxWorld.second = nullptr;

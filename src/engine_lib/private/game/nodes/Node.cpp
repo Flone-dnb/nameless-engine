@@ -53,7 +53,7 @@ namespace ne {
     void Node::addChildNode(const gc<Node>& pNode) {
         std::scoped_lock spawnGuard(mtxSpawning);
 
-        // Check if this node is valid.
+        // Make sure the specified node is valid.
         if (pNode == nullptr) [[unlikely]] {
             Logger::get().warn(
                 fmt::format(
@@ -64,7 +64,7 @@ namespace ne {
             return;
         }
 
-        // Check if this node is `this`.
+        // Make sure the specified node is not `this`.
         if (&*pNode == this) [[unlikely]] {
             Logger::get().warn(
                 fmt::format(
@@ -77,7 +77,7 @@ namespace ne {
 
         std::scoped_lock guard(mtxChildNodes.first);
 
-        // Check if this node is already our child.
+        // Make sure the specified node is not our direct child.
         for (const auto& pChildNode : *mtxChildNodes.second) {
             if (pChildNode == pNode) [[unlikely]] {
                 Logger::get().warn(
@@ -92,7 +92,7 @@ namespace ne {
             }
         }
 
-        // Check that we don't add our parent as our child.
+        // Make sure the specified node is not our parent.
         if (pNode->isParentOf(this)) {
             Logger::get().error(
                 fmt::format(

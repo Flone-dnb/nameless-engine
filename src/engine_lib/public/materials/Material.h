@@ -121,6 +121,15 @@ namespace ne RNAMESPACE() {
          */
         bool isUsingTransparency() const;
 
+        /**
+         * Returns PSO that this material uses.
+         *
+         * @warning Do not delete returned pointer.
+         *
+         * @return `nullptr` if PSO was not initialized yet, otherwise used PSO.
+         */
+        Pso* getUsedPso() const;
+
     private:
         /**
          * Creates a new material with the specified name.

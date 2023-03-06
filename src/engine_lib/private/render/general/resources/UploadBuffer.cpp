@@ -1,10 +1,10 @@
-#include "render/resources/UploadBuffer.h"
+#include "UploadBuffer.h"
 
 // Standard.
 #include <stdexcept>
 
 // Custom.
-#include "render/resources/GpuResource.h"
+#include "render/general/resources/GpuResource.h"
 #if defined(WIN32)
 #include "render/directx/resources/DirectXResource.h"
 #endif

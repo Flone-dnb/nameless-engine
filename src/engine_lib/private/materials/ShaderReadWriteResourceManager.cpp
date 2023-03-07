@@ -110,7 +110,7 @@ namespace ne {
             sShaderCpuReadWriteResourceManagerLogCategory);
     }
 
-    std::pair<std::mutex, ShaderCpuReadWriteResourceManager::Resources>*
+    std::pair<std::recursive_mutex, ShaderCpuReadWriteResourceManager::Resources>*
     ShaderCpuReadWriteResourceManager::getResources() {
         return &mtxShaderCpuReadWriteResources;
     }

@@ -598,3 +598,91 @@ TEST_CASE("MeshNode's meshdata deserialization backwards compatibility") {
     REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
     REQUIRE(Material::getTotalMaterialCount() == 0);
 }
+
+TEST_CASE("shader read/write resources exist only when MeshNode is spawned") {
+    using namespace ne;
+
+    class TestGameInstance : public GameInstance {
+    public:
+        TestGameInstance(Window* pGameWindow, InputManager* pInputManager)
+            : GameInstance(pGameWindow, pInputManager) {}
+        virtual void onGameStarted() override {
+            createWorld([&](const std::optional<Error>& optionalWorldError) {
+                if (optionalWorldError.has_value()) {
+                    auto error = optionalWorldError.value();
+                    error.addEntry();
+                    INFO(error.getFullErrorMessage());
+                    REQUIRE(false);
+                }
+
+                // Create dummy mesh data.
+                MeshVertex vertex1;
+                vertex1.position = glm::vec3(5123.91827f, -12225.24142f, -5.0f);
+                vertex1.normal = glm::vec3(10.0f, -1111.22212f, 0.0f);
+                vertex1.uv = glm::vec3(10.0f, -8885.14122f, 0.0f);
+
+                // Create material.
+                auto result = Material::create(false, "My Material");
+                if (std::holds_alternative<Error>(result)) {
+                    Error error = std::get<Error>(std::move(result));
+                    error.addEntry();
+                    INFO(error.getFullErrorMessage());
+                    REQUIRE(false);
+                }
+
+                MeshData meshData;
+                meshData.getVertices()->push_back(vertex1);
+                meshData.getIndices()->push_back(0);
+
+                // Create node and initialize.
+                const auto pMeshNode = gc_new<MeshNode>("My cool node");
+                pMeshNode->setMaterial(std::get<std::shared_ptr<Material>>(std::move(result)));
+                pMeshNode->setMeshData(std::move(meshData));
+
+                // Get shader resource manager.
+                const auto pShaderRwResourceManager =
+                    getWindow()->getRenderer()->getShaderCpuReadWriteResourceManager();
+                auto pMtxResources = pShaderRwResourceManager->getResources();
+
+                // Make sure no shader read/write resources created.
+                std::scoped_lock shaderRwResourcesGuard(pMtxResources->first);
+                REQUIRE(pMtxResources->second.vAll.empty());
+                REQUIRE(pMtxResources->second.toBeUpdated.empty());
+                const auto iVramBefore = getWindow()->getRenderer()->getUsedVideoMemoryInMb();
+
+                // Spawn mesh node.
+                getWorldRootNode()->addChildNode(pMeshNode);
+
+                // Make sure there is 1 resource.
+                REQUIRE(pMtxResources->second.vAll.size() == 1);
+                REQUIRE(pMtxResources->second.toBeUpdated.size() == 1);
+                const auto iVramAfter = getWindow()->getRenderer()->getUsedVideoMemoryInMb();
+                REQUIRE(iVramAfter > iVramBefore);
+
+                // Despawn mesh node.
+                pMeshNode->detachFromParentAndDespawn();
+
+                // Make sure resources were freed.
+                REQUIRE(pMtxResources->second.vAll.empty());
+                REQUIRE(pMtxResources->second.toBeUpdated.empty());
+
+                getWindow()->close();
+            });
+        }
+        virtual ~TestGameInstance() override {}
+    };
+
+    auto result = Window::getBuilder().withVisibility(false).build();
+    if (std::holds_alternative<Error>(result)) {
+        Error error = std::get<Error>(std::move(result));
+        error.addEntry();
+        INFO(error.getFullErrorMessage());
+        REQUIRE(false);
+    }
+
+    const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
+    pMainWindow->processEvents<TestGameInstance>();
+
+    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+    REQUIRE(Material::getTotalMaterialCount() == 0);
+}

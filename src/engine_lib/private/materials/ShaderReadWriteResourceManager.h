@@ -85,7 +85,7 @@ namespace ne {
          *
          * @return Internal resources.
          */
-        std::pair<std::mutex, Resources>* getResources();
+        std::pair<std::recursive_mutex, Resources>* getResources();
 
     private:
         ShaderCpuReadWriteResourceManager() = delete;
@@ -111,7 +111,7 @@ namespace ne {
         Renderer* pRenderer = nullptr;
 
         /** Shader read/write resources. */
-        std::pair<std::mutex, Resources> mtxShaderCpuReadWriteResources;
+        std::pair<std::recursive_mutex, Resources> mtxShaderCpuReadWriteResources;
 
         /** Name of the category used for logging. */
         static inline const auto sShaderCpuReadWriteResourceManagerLogCategory =

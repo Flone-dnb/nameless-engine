@@ -127,32 +127,12 @@ namespace ne {
         onSpawnedMeshNodeStoppedUsingMaterial(pMeshNode);
     }
 
-    std::variant<std::shared_ptr<Material>, Error>
-    Material::create(bool bUseTransparency, const std::string& sMaterialName) {
-        const auto pGame = Game::get();
-        if (pGame == nullptr) {
-            return Error("Unable to create material when game object is not created.");
-        }
-
-        const auto pRenderer = pGame->getWindow()->getRenderer();
-        if (pRenderer == nullptr) {
-            return Error("Unable to create material when renderer is not created.");
-        }
-
-        return std::shared_ptr<Material>(new Material(
-            EngineShaderNames::sVertexShaderName,
-            EngineShaderNames::sPixelShaderName,
-            bUseTransparency,
-            pRenderer->getPsoManager(),
-            sMaterialName));
-    }
-
     std::variant<std::shared_ptr<Material>, Error> Material::create(
         const std::string& sVertexShaderName,
         const std::string& sPixelShaderName,
         bool bUseTransparency,
         const std::string& sMaterialName) {
-        // Check that the specified custom shaders exist.
+        // Check that the specified shaders exist.
         const auto pGame = Game::get();
         if (pGame == nullptr) {
             return Error("Unable to create material when game object is not created.");

@@ -6,6 +6,7 @@
 #include "render/Renderer.h"
 #include "render/general/resources/GpuResourceManager.h"
 #include "materials/ShaderReadWriteResourceManager.h"
+#include "materials/EngineShaderNames.hpp"
 
 #include "MeshNode.generated_impl.h"
 
@@ -15,7 +16,11 @@ namespace ne {
 
     MeshNode::MeshNode(const std::string& sNodeName) : SpatialNode(sNodeName) {
         // Initialize material.
-        auto result = Material::create(false);
+        auto result = Material::create(
+            EngineShaderNames::sMeshNodeVertexShaderName,
+            EngineShaderNames::sMeshNodePixelShaderName,
+            false,
+            "Mesh Node's default material");
         if (std::holds_alternative<Error>(result)) {
             auto error = std::get<Error>(std::move(result));
             error.showError();

@@ -3,6 +3,7 @@
 #include "game/GameInstance.h"
 #include "game/Window.h"
 #include "game/nodes/MeshNode.h"
+#include "materials/EngineShaderNames.hpp"
 
 // External.
 #include "catch2/catch_test_macros.hpp"
@@ -24,14 +25,20 @@ TEST_CASE("create engine default materials") {
                 }
 
                 // Create material.
-                auto resultOpaque = Material::create(false);
+                auto resultOpaque = Material::create(
+                    EngineShaderNames::sMeshNodeVertexShaderName,
+                    EngineShaderNames::sMeshNodePixelShaderName,
+                    false);
                 if (std::holds_alternative<Error>(resultOpaque)) {
                     Error error = std::get<Error>(std::move(resultOpaque));
                     error.addEntry();
                     INFO(error.getFullErrorMessage());
                     REQUIRE(false);
                 }
-                auto resultTransparent = Material::create(true);
+                auto resultTransparent = Material::create(
+                    EngineShaderNames::sMeshNodeVertexShaderName,
+                    EngineShaderNames::sMeshNodePixelShaderName,
+                    true);
                 if (std::holds_alternative<Error>(resultTransparent)) {
                     Error error = std::get<Error>(std::move(resultTransparent));
                     error.addEntry();
@@ -127,7 +134,11 @@ TEST_CASE("serialize and deserialize Material") {
 
                 {
                     // Create material.
-                    auto result = Material::create(true, "My Material");
+                    auto result = Material::create(
+                        EngineShaderNames::sMeshNodeVertexShaderName,
+                        EngineShaderNames::sMeshNodePixelShaderName,
+                        true,
+                        "My Material");
                     if (std::holds_alternative<Error>(result)) {
                         Error error = std::get<Error>(std::move(result));
                         error.addEntry();

@@ -71,18 +71,7 @@ namespace ne RNAMESPACE() {
         static size_t getTotalMaterialCount();
 
         /**
-         * Creates a new material that uses default engine shaders.
-         *
-         * @param bUseTransparency Whether this material will use transparency or not.
-         * @param sMaterialName    Name of this material.
-         *
-         * @return Error if something went wrong, otherwise created material.
-         */
-        static std::variant<std::shared_ptr<Material>, Error>
-        create(bool bUseTransparency, const std::string& sMaterialName = "Material");
-
-        /**
-         * Creates a new material that uses custom shaders.
+         * Creates a new material that uses the specified shaders.
          *
          * @param sVertexShaderName Name of the compiled vertex shader
          * (see ShaderManager::compileShaders) to use.

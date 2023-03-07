@@ -9,9 +9,9 @@ namespace ne {
         EngineShaderNames& operator=(const EngineShaderNames&) = delete;
 
         /** Unique name of the engine's vertex shader. */
-        static inline const auto sVertexShaderName = "engine.default.vs";
+        static inline const auto sMeshNodeVertexShaderName = "engine.meshnode.vs";
 
         /** Unique name of the engine's pixel shader. */
-        static inline const auto sPixelShaderName = "engine.default.ps";
+        static inline const auto sMeshNodePixelShaderName = "engine.meshnode.ps";
     };
 } // namespace ne

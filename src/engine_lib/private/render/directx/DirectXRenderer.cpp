@@ -889,12 +889,13 @@ namespace ne {
     }
 
     std::optional<Error> DirectXRenderer::compileEngineShaders() const {
-        // Do this synchronously (before user can queue his shaders).
-        std::vector vEngineShaders = {HlslEngineShaders::vertexShader, HlslEngineShaders::pixelShader};
-
+        // Prepare data.
+        std::vector vEngineShaders = {
+            HlslEngineShaders::meshNodeVertexShader, HlslEngineShaders::meshNodePixelShader};
         auto pPromiseFinish = std::make_shared<std::promise<bool>>();
         auto future = pPromiseFinish->get_future();
 
+        // Prepare callbacks.
         auto onProgress = [](size_t iCompiledShaderCount, size_t iTotalShadersToCompile) {};
         auto onError = [](ShaderDescription shaderDescription, std::variant<std::string, Error> error) {
             if (std::holds_alternative<std::string>(error)) {
@@ -923,6 +924,7 @@ namespace ne {
         };
         auto onCompleted = [pPromiseFinish]() { pPromiseFinish->set_value(false); };
 
+        // Compile shaders.
         auto error = getShaderManager()->compileShaders(vEngineShaders, onProgress, onError, onCompleted);
         if (error.has_value()) {
             error->addEntry();
@@ -930,6 +932,7 @@ namespace ne {
             throw std::runtime_error(error->getFullErrorMessage());
         }
 
+        // Do this synchronously (before user can queue his shaders).
         try {
             if (future.valid()) {
                 future.get();

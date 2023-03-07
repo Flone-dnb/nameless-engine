@@ -3,6 +3,7 @@
 #include "game/GameInstance.h"
 #include "game/Window.h"
 #include "materials/Material.h"
+#include "materials/EngineShaderNames.hpp"
 #include "../../io/ReflectionTest.h"
 
 // External.
@@ -39,7 +40,11 @@ TEST_CASE("serialize and deserialize MeshNode") {
 
                 {
                     // Create material.
-                    auto result = Material::create(true, "My Material");
+                    auto result = Material::create(
+                        EngineShaderNames::sMeshNodeVertexShaderName,
+                        EngineShaderNames::sMeshNodePixelShaderName,
+                        true,
+                        "My Material");
                     if (std::holds_alternative<Error>(result)) {
                         Error error = std::get<Error>(std::move(result));
                         error.addEntry();
@@ -222,7 +227,11 @@ TEST_CASE("serialize and deserialize MeshNode as part of a node tree") {
 
                 {
                     // Create material.
-                    auto result = Material::create(true, "My Material");
+                    auto result = Material::create(
+                        EngineShaderNames::sMeshNodeVertexShaderName,
+                        EngineShaderNames::sMeshNodePixelShaderName,
+                        true,
+                        "My Material");
                     if (std::holds_alternative<Error>(result)) {
                         Error error = std::get<Error>(std::move(result));
                         error.addEntry();
@@ -360,7 +369,11 @@ TEST_CASE("serialize and deserialize MeshNode as part of a node tree with origin
 
                 {
                     // Create material.
-                    auto result = Material::create(true, "My Material");
+                    auto result = Material::create(
+                        EngineShaderNames::sMeshNodeVertexShaderName,
+                        EngineShaderNames::sMeshNodePixelShaderName,
+                        true,
+                        "My Material");
                     if (std::holds_alternative<Error>(result)) {
                         Error error = std::get<Error>(std::move(result));
                         error.addEntry();
@@ -622,7 +635,11 @@ TEST_CASE("shader read/write resources exist only when MeshNode is spawned") {
                 vertex1.uv = glm::vec3(10.0f, -8885.14122f, 0.0f);
 
                 // Create material.
-                auto result = Material::create(false, "My Material");
+                auto result = Material::create(
+                    EngineShaderNames::sMeshNodeVertexShaderName,
+                    EngineShaderNames::sMeshNodePixelShaderName,
+                    false,
+                    "My Material");
                 if (std::holds_alternative<Error>(result)) {
                     Error error = std::get<Error>(std::move(result));
                     error.addEntry();

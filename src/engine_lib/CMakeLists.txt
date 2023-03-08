@@ -515,6 +515,8 @@ add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
                    ${IS_RELEASE_BUILD}
 )
 
+# -----------------------------------------------------------------------------------------------------------
+
 # Tests.
 add_subdirectory(${RELATIVE_EXT_PATH}/Catch2 ${DEPENDENCY_BUILD_DIR_NAME}/Catch2 SYSTEM)
 set_target_properties(Catch2 PROPERTIES FOLDER ${EXTERNAL_FOLDER})
@@ -536,6 +538,7 @@ set(ENGINE_TEST_SOURCES
     ${TESTS_RELATIVE_PATH}/engine_lib/io/ReflectionTest.cpp
     ${TESTS_RELATIVE_PATH}/engine_lib/input/InputManager.cpp
     ${TESTS_RELATIVE_PATH}/engine_lib/misc/Timer.cpp
+    ${TESTS_RELATIVE_PATH}/engine_lib/misc/GC.cpp
     ${TESTS_RELATIVE_PATH}/engine_lib/materials/ShaderPack.cpp
     ${TESTS_RELATIVE_PATH}/engine_lib/materials/Material.cpp
     ${TESTS_RELATIVE_PATH}/engine_lib/io/Serializable.cpp

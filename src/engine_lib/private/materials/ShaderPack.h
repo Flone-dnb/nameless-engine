@@ -9,7 +9,7 @@
 
 // Custom.
 #include "materials/ShaderDescription.h"
-#include "materials/ShaderParameter.h"
+#include "materials/ShaderMacro.h"
 
 namespace ne {
     class Renderer;
@@ -20,7 +20,7 @@ namespace ne {
      * (typically this means one shader compiled with different combinations of predefined macros).
      */
     class ShaderPack {
-        // Shader manager can change shader pack configuration.
+        // Shader manager can change shader pack configuration (to tell what shader should be currently used).
         friend class ShaderManager;
 
     public:
@@ -121,10 +121,10 @@ namespace ne {
          *
          * @return `true` if the shader for this configuration was not found, otherwise `false`.
          */
-        [[nodiscard]] bool setConfiguration(const std::set<ShaderParameter>& configuration);
+        [[nodiscard]] bool setConfiguration(const std::set<ShaderMacro>& configuration);
 
         /** Last configuration that was set in @ref setConfiguration. */
-        std::set<ShaderParameter> configuration;
+        std::set<ShaderMacro> configuration;
 
         /** Initial shader name (without configuration text). */
         std::string sShaderName;
@@ -144,7 +144,7 @@ namespace ne {
          */
         std::pair<
             std::mutex,
-            std::unordered_map<std::set<ShaderParameter>, std::shared_ptr<Shader>, ShaderParameterSetHash>>
+            std::unordered_map<std::set<ShaderMacro>, std::shared_ptr<Shader>, ShaderMacroSetHash>>
             mtxShadersInPack;
 
         /** Name of the category used for logging. */

@@ -132,8 +132,8 @@ set(ENGINE_LIB_SOURCES
     public/misc/FileDialog.h
     private/materials/ShaderPack.h
     private/materials/ShaderPack.cpp
-    private/materials/ShaderParameter.h
-    private/materials/ShaderParameter.cpp
+    private/materials/ShaderMacro.h
+    private/materials/ShaderMacro.cpp
     private/materials/ShaderFilesystemPaths.hpp
     private/materials/ShaderReadWriteResourceManager.cpp
     private/materials/ShaderReadWriteResourceManager.h

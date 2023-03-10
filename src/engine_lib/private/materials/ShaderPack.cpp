@@ -30,17 +30,16 @@ namespace ne {
             new ShaderPack(shaderDescription.sShaderName, shaderDescription.shaderType));
 
         // Configurations.
-        const std::set<std::set<ShaderParameter>>* pParameterCombinations;
+        const std::set<std::set<ShaderMacro>>* pParameterCombinations;
         switch (shaderDescription.shaderType) {
         case (ShaderType::VERTEX_SHADER):
-            pParameterCombinations = &ShaderParameterConfigurations::validVertexShaderParameterConfigurations;
+            pParameterCombinations = &ShaderMacroConfigurations::validVertexShaderMacroConfigurations;
             break;
         case (ShaderType::PIXEL_SHADER):
-            pParameterCombinations = &ShaderParameterConfigurations::validPixelShaderParameterConfigurations;
+            pParameterCombinations = &ShaderMacroConfigurations::validPixelShaderMacroConfigurations;
             break;
         case (ShaderType::COMPUTE_SHADER):
-            pParameterCombinations =
-                &ShaderParameterConfigurations::validComputeShaderParameterConfigurations;
+            pParameterCombinations = &ShaderMacroConfigurations::validComputeShaderMacroConfigurations;
             break;
         }
 
@@ -48,13 +47,12 @@ namespace ne {
             auto currentShaderDescription = shaderDescription;
 
             // Add configuration macros.
-            auto vParameterNames = shaderParametersToText(parameters);
+            auto vParameterNames = shaderMacrosToText(parameters);
             for (const auto& sParameter : vParameterNames) {
                 currentShaderDescription.vDefinedShaderMacros.push_back(sParameter);
             }
 
-            const auto sConfigurationText =
-                ShaderParameterConfigurations::convertConfigurationToText(parameters);
+            const auto sConfigurationText = ShaderMacroConfigurations::convertConfigurationToText(parameters);
             currentShaderDescription.sShaderName +=
                 sConfigurationText; // add configuration to name for logging
 
@@ -91,17 +89,16 @@ namespace ne {
     std::variant<std::shared_ptr<ShaderPack>, std::string, Error>
     ShaderPack::compileShaderPack(Renderer* pRenderer, const ShaderDescription& shaderDescription) {
         // Configurations.
-        const std::set<std::set<ShaderParameter>>* pParameterCombinations;
+        const std::set<std::set<ShaderMacro>>* pParameterCombinations;
         switch (shaderDescription.shaderType) {
         case (ShaderType::VERTEX_SHADER):
-            pParameterCombinations = &ShaderParameterConfigurations::validVertexShaderParameterConfigurations;
+            pParameterCombinations = &ShaderMacroConfigurations::validVertexShaderMacroConfigurations;
             break;
         case (ShaderType::PIXEL_SHADER):
-            pParameterCombinations = &ShaderParameterConfigurations::validPixelShaderParameterConfigurations;
+            pParameterCombinations = &ShaderMacroConfigurations::validPixelShaderMacroConfigurations;
             break;
         case (ShaderType::COMPUTE_SHADER):
-            pParameterCombinations =
-                &ShaderParameterConfigurations::validComputeShaderParameterConfigurations;
+            pParameterCombinations = &ShaderMacroConfigurations::validComputeShaderMacroConfigurations;
             break;
         }
 
@@ -111,13 +108,12 @@ namespace ne {
             auto currentShaderDescription = shaderDescription;
 
             // Add configuration macros.
-            auto vParameterNames = shaderParametersToText(parameters);
+            auto vParameterNames = shaderMacrosToText(parameters);
             for (const auto& sParameter : vParameterNames) {
                 currentShaderDescription.vDefinedShaderMacros.push_back(sParameter);
             }
 
-            const auto sConfigurationText =
-                ShaderParameterConfigurations::convertConfigurationToText(parameters);
+            const auto sConfigurationText = ShaderMacroConfigurations::convertConfigurationToText(parameters);
             currentShaderDescription.sShaderName +=
                 sConfigurationText; // add configuration to name for logging
 
@@ -140,7 +136,7 @@ namespace ne {
         return pShaderPack;
     }
 
-    bool ShaderPack::setConfiguration(const std::set<ShaderParameter>& configuration) {
+    bool ShaderPack::setConfiguration(const std::set<ShaderMacro>& configuration) {
         std::scoped_lock guard(mtxShadersInPack.first, mtxCurrentConfigurationShader.first);
 
         if (mtxCurrentConfigurationShader.second != nullptr) {

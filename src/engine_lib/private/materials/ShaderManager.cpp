@@ -425,7 +425,7 @@ namespace ne {
     }
 
     void ShaderManager::setConfigurationForShaders(
-        const std::set<ShaderParameter>& configuration, ShaderType shaderType) {
+        const std::set<ShaderMacro>& configuration, ShaderType shaderType) {
         std::scoped_lock guard(mtxRwShaders);
 
         for (const auto& [sShaderName, pShader] : compiledShaders) {

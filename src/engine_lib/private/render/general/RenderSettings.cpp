@@ -197,27 +197,27 @@ namespace ne {
 
             // First, remove all settings.
             pShaderConfiguration->second->currentPixelShaderConfiguration.erase(
-                ShaderParameter::TEXTURE_FILTERING_POINT);
+                ShaderMacro::TEXTURE_FILTERING_POINT);
             pShaderConfiguration->second->currentPixelShaderConfiguration.erase(
-                ShaderParameter::TEXTURE_FILTERING_LINEAR);
+                ShaderMacro::TEXTURE_FILTERING_LINEAR);
             pShaderConfiguration->second->currentPixelShaderConfiguration.erase(
-                ShaderParameter::TEXTURE_FILTERING_ANISOTROPIC);
+                ShaderMacro::TEXTURE_FILTERING_ANISOTROPIC);
 
             // Now add the appropriate one.
             switch (static_cast<TextureFilteringMode>(iTextureFilteringMode)) {
             case (TextureFilteringMode::POINT): {
                 pShaderConfiguration->second->currentPixelShaderConfiguration.insert(
-                    ShaderParameter::TEXTURE_FILTERING_POINT);
+                    ShaderMacro::TEXTURE_FILTERING_POINT);
                 break;
             }
             case (TextureFilteringMode::LINEAR): {
                 pShaderConfiguration->second->currentPixelShaderConfiguration.insert(
-                    ShaderParameter::TEXTURE_FILTERING_LINEAR);
+                    ShaderMacro::TEXTURE_FILTERING_LINEAR);
                 break;
             }
             case (TextureFilteringMode::ANISOTROPIC): {
                 pShaderConfiguration->second->currentPixelShaderConfiguration.insert(
-                    ShaderParameter::TEXTURE_FILTERING_ANISOTROPIC);
+                    ShaderMacro::TEXTURE_FILTERING_ANISOTROPIC);
                 break;
             }
             }

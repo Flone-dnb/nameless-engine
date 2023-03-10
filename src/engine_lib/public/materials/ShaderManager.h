@@ -147,7 +147,7 @@ namespace ne {
          * @param shaderType    Types of shaders to set the configuration to.
          */
         void
-        setConfigurationForShaders(const std::set<ShaderParameter>& configuration, ShaderType shaderType);
+        setConfigurationForShaders(const std::set<ShaderMacro>& configuration, ShaderType shaderType);
 
         /**
          * Compiles each shader. Executed as a thread pooled task to do this work asynchronously.

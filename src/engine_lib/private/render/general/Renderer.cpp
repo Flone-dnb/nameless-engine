@@ -4,7 +4,7 @@
 #include "game/Game.h"
 #include "game/Window.h"
 #include "io/Logger.h"
-#include "materials/ShaderParameter.h"
+#include "materials/ShaderMacro.h"
 #include "render/general/pso/PsoManager.h"
 #include "render/RenderSettings.h"
 #if defined(WIN32)
@@ -26,12 +26,12 @@ namespace ne {
         Logger::get().info(
             fmt::format(
                 "using {} shader(s) per pixel shader pack",
-                ShaderParameterConfigurations::validPixelShaderParameterConfigurations.size()),
+                ShaderMacroConfigurations::validPixelShaderMacroConfigurations.size()),
             sRendererLogCategory);
         Logger::get().info(
             fmt::format(
                 "using {} shader(s) per vertex shader pack",
-                ShaderParameterConfigurations::validVertexShaderParameterConfigurations.size()),
+                ShaderMacroConfigurations::validVertexShaderMacroConfigurations.size()),
             sRendererLogCategory);
     }
 

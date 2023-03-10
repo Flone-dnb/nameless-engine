@@ -305,7 +305,7 @@ namespace ne {
         inline static const char* sRendererLogCategory = "Renderer";
     };
 
-    /** Describes shader parameters. */
+    /** Describes a group of shader macros. */
     class ShaderConfiguration {
     public:
         ShaderConfiguration() = delete;
@@ -326,11 +326,11 @@ namespace ne {
          */
         void updateShaderConfiguration() { pRenderer->updateShaderConfiguration(); }
 
-        /** Vertex shader parameters. */
-        std::set<ShaderParameter> currentVertexShaderConfiguration;
+        /** Vertex shader macros. */
+        std::set<ShaderMacro> currentVertexShaderConfiguration;
 
-        /** Pixel shader parameters. */
-        std::set<ShaderParameter> currentPixelShaderConfiguration;
+        /** Pixel shader macros. */
+        std::set<ShaderMacro> currentPixelShaderConfiguration;
 
     private:
         /** Used renderer. */

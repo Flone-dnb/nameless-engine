@@ -1,8 +1,29 @@
+// Standard.
+#include <variant>
+
 // Custom.
 #include "misc/GC.hpp"
 
 // External.
 #include "catch2/catch_test_macros.hpp"
+
+TEST_CASE("gc pointer comparison") {
+    class Collected {};
+
+    {
+        const gc<Collected> pUninitialized;
+        const auto pCollected = gc_new<Collected>();
+
+        REQUIRE(pUninitialized == nullptr);
+        REQUIRE(pUninitialized != pCollected);
+        REQUIRE(!pUninitialized); // implicit conversion to bool
+    }
+
+    gc_collector()->fullCollect();
+
+    // No object should exist now.
+    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+}
 
 TEST_CASE("moving gc pointers does not cause leaks") {
     class Collected {};
@@ -21,6 +42,154 @@ TEST_CASE("moving gc pointers does not cause leaks") {
 
         // Still 1 object exist.
         REQUIRE(gc_collector()->getAliveObjectsCount() == 1);
+    }
+
+    gc_collector()->fullCollect();
+
+    // No object should exist now.
+    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+}
+
+TEST_CASE("storing gc pointer in pair does not cause leaks") {
+    class Collected {};
+
+    // No object should exist.
+    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+
+    class Outer {
+    public:
+        std::pair<std::mutex, gc<Collected>> mtxCollected;
+    };
+
+    {
+        Outer outer;
+        outer.mtxCollected.second = gc_new<Collected>();
+
+        REQUIRE(gc_collector()->getAliveObjectsCount() == 1);
+    }
+
+    gc_collector()->fullCollect();
+
+    // No object should exist now.
+    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+}
+
+TEST_CASE("storing gc vector in pair does not cause leaks") {
+    class Collected {};
+
+    // No object should exist.
+    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+
+    class Outer {
+    public:
+        std::pair<std::mutex, gc_vector<Collected>> mtxCollected;
+    };
+
+    {
+        Outer outer;
+        outer.mtxCollected.second = gc_new_vector<Collected>();
+        outer.mtxCollected.second->push_back(gc_new<Collected>());
+
+        REQUIRE(gc_collector()->getAliveObjectsCount() == 2);
+    }
+
+    gc_collector()->fullCollect();
+
+    // No object should exist now.
+    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+}
+
+TEST_CASE("storing gc pointer in optional does not cause leaks") {
+    class Collected {};
+
+    // No object should exist.
+    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+
+    class Outer {
+    public:
+        std::optional<gc<Collected>> collected;
+    };
+
+    {
+        Outer outer;
+        outer.collected = gc_new<Collected>();
+
+        REQUIRE(gc_collector()->getAliveObjectsCount() == 1);
+    }
+
+    gc_collector()->fullCollect();
+
+    // No object should exist now.
+    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+}
+
+TEST_CASE("storing gc vector in optional does not cause leaks") {
+    class Collected {};
+
+    // No object should exist.
+    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+
+    class Outer {
+    public:
+        std::optional<gc_vector<Collected>> collected;
+    };
+
+    {
+        Outer outer;
+        outer.collected = gc_new_vector<Collected>();
+        outer.collected.value()->push_back(gc_new<Collected>());
+
+        REQUIRE(gc_collector()->getAliveObjectsCount() == 2);
+    }
+
+    gc_collector()->fullCollect();
+
+    // No object should exist now.
+    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+}
+
+TEST_CASE("storing gc pointer in variant does not cause leaks") {
+    class Collected {};
+
+    // No object should exist.
+    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+
+    class Outer {
+    public:
+        std::variant<gc<Collected>> collected;
+    };
+
+    {
+        Outer outer;
+        outer.collected = gc_new<Collected>();
+
+        REQUIRE(gc_collector()->getAliveObjectsCount() == 1);
+    }
+
+    gc_collector()->fullCollect();
+
+    // No object should exist now.
+    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+}
+
+TEST_CASE("storing gc vector in variant does not cause leaks") {
+    class Collected {};
+
+    // No object should exist.
+    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+
+    class Outer {
+    public:
+        std::variant<gc_vector<Collected>> collected;
+    };
+
+    {
+        auto pVector = gc_new_vector<Collected>();
+        pVector->push_back(gc_new<Collected>());
+        Outer outer;
+        outer.collected = std::move(pVector);
+
+        REQUIRE(gc_collector()->getAliveObjectsCount() == 2);
     }
 
     gc_collector()->fullCollect();

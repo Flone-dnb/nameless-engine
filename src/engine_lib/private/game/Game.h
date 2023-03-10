@@ -38,6 +38,10 @@ namespace ne {
         /**
          * Returns last created Game object.
          *
+         * @warning Avoid using this getter, use only when there's no other good way to get Game object.
+         *
+         * @warning As an addition to checking returned pointer for `nullptr` use @ref isBeingDestroyed.
+         *
          * @return `nullptr` if no Game object was created yet, otherwise pointer to game object.
          */
         static Game* get();

@@ -1119,7 +1119,7 @@ namespace ne {
 
     void DirectXRenderer::waitForGpuToFinishWorkUpToThisPoint() {
         if (pCommandQueue == nullptr) {
-            if (Game::get()->isBeingDestroyed()) {
+            if (Game::get() == nullptr || Game::get()->isBeingDestroyed()) {
                 // This might happen on destruction, it's fine.
                 return;
             }

@@ -593,7 +593,21 @@ namespace ne {
         return mtxChildNodes.second;
     }
 
-    GameInstance* Node::getGameInstance() { return Game::get()->getGameInstance(); }
+    GameInstance* Node::getGameInstance() {
+        const auto pGame = Game::get();
+
+        if (pGame == nullptr) [[unlikely]] {
+            // Unexpected behavior, all nodes should have been deleted before Game pointer is cleared.
+            Error error("failed to get game instance because static Game object is nullptr");
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+        }
+
+        // Don't check for `pGame->isBeingDestroyed()` here as Game will be marked as `isBeingDestroyed`
+        // before world is destroyed (before nodes are despawned).
+
+        return pGame->getGameInstance();
+    }
 
     gc<Node> Node::getWorldRootNode() {
         std::scoped_lock guard(mtxSpawning);

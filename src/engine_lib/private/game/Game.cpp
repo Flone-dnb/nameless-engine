@@ -98,7 +98,8 @@ namespace ne {
         pGameInstance = nullptr;
 
         // Run GC for the last time.
-        Logger::get().info("game is destroyed, running garbage collector...", sGarbageCollectorLogCategory);
+        Logger::get().info(
+            "Game object is being destroyed, running garbage collector...", sGarbageCollectorLogCategory);
         gc_collector()->fullCollect();
 
         // Log results.
@@ -109,6 +110,11 @@ namespace ne {
                 gc_collector()->getLastFreedObjectsCount(),
                 gc_collector()->getAliveObjectsCount()),
             sGarbageCollectorLogCategory);
+
+        // After GC has finished and all nodes were deleted.
+        // Clear global game pointer.
+        Logger::get().info("clearing static Game pointer", sGameLogCategory);
+        pLastCreatedGame = nullptr;
 
         // See if there are any nodes alive.
         const auto iNodesAlive = Node::getAliveNodeCount();

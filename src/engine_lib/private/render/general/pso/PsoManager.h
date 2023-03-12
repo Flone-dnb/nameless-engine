@@ -235,11 +235,13 @@ namespace ne {
          * they will be released from the memory once the PSO object is destroyed (not the shared pointer)
          * and no other object is using them.
          *
-         * @param sVertexShaderName Name of the compiled vertex shader (see ShaderManager::compileShaders).
-         * @param sPixelShaderName  Name of the compiled pixel shader (see ShaderManager::compileShaders).
-         * @param bUsePixelBlending Whether the pixels of the mesh that uses this PSO should blend with
+         * @param sVertexShaderName    Name of the compiled vertex shader (see ShaderManager::compileShaders).
+         * @param sPixelShaderName     Name of the compiled pixel shader (see ShaderManager::compileShaders).
+         * @param bUsePixelBlending    Whether the pixels of the mesh that uses this PSO should blend with
          * existing pixels on back buffer or not (for transparency).
-         * @param pMaterial         Material that requests the PSO.
+         * @param additionalVertexShaderMacros Additional macros to enable for vertex shader configuration.
+         * @param additionalPixelShaderMacros  Additional macros to enable for pixel shader configuration.
+         * @param pMaterial            Material that requests the PSO.
          *
          * @return Error if one or both shaders were not found in ShaderManager or if failed to generate PSO,
          * otherwise created PSO.
@@ -248,6 +250,8 @@ namespace ne {
             const std::string& sVertexShaderName,
             const std::string& sPixelShaderName,
             bool bUsePixelBlending,
+            const std::set<ShaderMacro>& additionalVertexShaderMacros,
+            const std::set<ShaderMacro>& additionalPixelShaderMacros,
             Material* pMaterial);
 
         /**
@@ -314,11 +318,13 @@ namespace ne {
         /**
          * Assigns vertex and pixel shaders to create a render specific graphics PSO (for usual rendering).
          *
-         * @param sVertexShaderName Name of the compiled vertex shader (see ShaderManager::compileShaders).
-         * @param sPixelShaderName  Name of the compiled pixel shader (see ShaderManager::compileShaders).
-         * @param bUsePixelBlending Whether the pixels of the mesh that uses this PSO should blend with
+         * @param sVertexShaderName    Name of the compiled vertex shader (see ShaderManager::compileShaders).
+         * @param sPixelShaderName     Name of the compiled pixel shader (see ShaderManager::compileShaders).
+         * @param bUsePixelBlending    Whether the pixels of the mesh that uses this PSO should blend with
          * existing pixels on back buffer or not (for transparency).
-         * @param pMaterial         Material that requests the PSO.
+         * @param additionalVertexShaderMacros Additional macros to enable for vertex shader configuration.
+         * @param additionalPixelShaderMacros  Additional macros to enable for pixel shader configuration.
+         * @param pMaterial            Material that requests the PSO.
          *
          * @return Error if one or both were not found in ShaderManager or if failed to generate PSO,
          * otherwise created PSO.
@@ -327,6 +333,8 @@ namespace ne {
             const std::string& sVertexShaderName,
             const std::string& sPixelShaderName,
             bool bUsePixelBlending,
+            const std::set<ShaderMacro>& additionalVertexShaderMacros,
+            const std::set<ShaderMacro>& additionalPixelShaderMacros,
             Material* pMaterial);
 
         /**

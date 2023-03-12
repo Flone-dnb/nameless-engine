@@ -15,6 +15,8 @@ namespace ne {
         const std::string& sVertexShaderName,
         const std::string& sPixelShaderName,
         bool bUsePixelBlending,
+        const std::set<ShaderMacro>& additionalVertexShaderMacros,
+        const std::set<ShaderMacro>& additionalPixelShaderMacros,
         Material* pMaterial) {
         const size_t iIndex = bUsePixelBlending ? static_cast<size_t>(PsoType::PT_TRANSPARENT)
                                                 : static_cast<size_t>(PsoType::PT_OPAQUE);
@@ -26,7 +28,12 @@ namespace ne {
 
         if (it == vGraphicsPsos[iIndex].second.end()) {
             return createGraphicsPsoForMaterial(
-                sVertexShaderName, sPixelShaderName, bUsePixelBlending, pMaterial);
+                sVertexShaderName,
+                sPixelShaderName,
+                bUsePixelBlending,
+                additionalVertexShaderMacros,
+                additionalPixelShaderMacros,
+                pMaterial);
         }
 
         return PsoSharedPtr(it->second, pMaterial);
@@ -65,10 +72,18 @@ namespace ne {
         const std::string& sVertexShaderName,
         const std::string& sPixelShaderName,
         bool bUsePixelBlending,
+        const std::set<ShaderMacro>& additionalVertexShaderMacros,
+        const std::set<ShaderMacro>& additionalPixelShaderMacros,
         Material* pMaterial) {
         // Create PSO.
-        auto result =
-            Pso::createGraphicsPso(pRenderer, this, sVertexShaderName, sPixelShaderName, bUsePixelBlending);
+        auto result = Pso::createGraphicsPso(
+            pRenderer,
+            this,
+            sVertexShaderName,
+            sPixelShaderName,
+            bUsePixelBlending,
+            additionalVertexShaderMacros,
+            additionalPixelShaderMacros);
         if (std::holds_alternative<Error>(result)) {
             auto error = std::get<Error>(std::move(result));
             error.addEntry();

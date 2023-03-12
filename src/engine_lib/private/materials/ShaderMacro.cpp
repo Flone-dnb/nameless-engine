@@ -4,7 +4,7 @@
 #include "xxHash/xxhash.h"
 
 namespace ne {
-    std::vector<std::string> shaderMacrosToText(const std::set<ShaderMacro>& macros) {
+    std::vector<std::string> convertShaderMacrosToText(const std::set<ShaderMacro>& macros) {
         std::vector<std::string> vMacroNames;
 
         for (const auto& macro : macros) {
@@ -31,22 +31,30 @@ namespace ne {
     }
 
     std::set<std::set<ShaderMacro>> ShaderMacroConfigurations::combineConfigurations(
-        const std::set<ShaderMacro>& appendToEachSet,
+        const std::set<std::set<ShaderMacro>>& constantSets,
         const std::set<std::set<ShaderMacro>>& macroSets,
+        const std::set<ShaderMacro>& appendToEachSet,
         bool bIncludeEmptyConfiguration) {
+        // Define resulting set.
         std::set<std::set<ShaderMacro>> configurations;
+
+        // Append macros.
+        for (const auto& appendMacro : appendToEachSet) {
+            for (const auto& set : macroSets) {
+                auto setCopy = set;
+                setCopy.insert(appendMacro);
+                configurations.insert(std::move(setCopy));
+            }
+        }
+
+        // Add empty configuration.
         if (bIncludeEmptyConfiguration) {
             configurations.insert(std::set<ShaderMacro>{});
         }
 
-        for (const auto& appendMacro : appendToEachSet) {
-            configurations.insert({appendMacro});
-
-            for (const auto& set : macroSets) {
-                auto setCopy = set;
-                setCopy.insert(appendMacro);
-                configurations.insert(setCopy);
-            }
+        // Append constant sets.
+        for (const auto& set : constantSets) {
+            configurations.insert(set);
         }
 
         return configurations;
@@ -76,4 +84,37 @@ namespace ne {
         // Calculate hash.
         return std::to_string(convertConfigurationToHash(configuration));
     }
+
+    bool ShaderMacroConfigurations::isMacroShouldBeConsideredInConfiguration(
+        ShaderMacro macro, const std::set<ShaderMacro>& configuration) {
+        // See the specified macro in the list of dependent macros.
+        auto dependentIt = dependentMacros.find(macro);
+        if (dependentIt == dependentMacros.end()) {
+            // Valid for this configuration because does not depend on other macros.
+            return true;
+        }
+
+        // See if the specified configuration has a macro that the specified macro depends on.
+        auto it = configuration.find(dependentIt->second);
+
+        return it != configuration.end();
+    }
+
+    std::string formatShaderMacros(const std::vector<std::string>& macros) {
+        if (macros.empty()) {
+            return "";
+        }
+
+        std::string sOutput;
+
+        for (const auto& macro : macros) {
+            sOutput = macro + ", ";
+        }
+
+        sOutput.pop_back(); // pop last space
+        sOutput.pop_back(); // pop last comma
+
+        return sOutput;
+    }
+
 } // namespace ne

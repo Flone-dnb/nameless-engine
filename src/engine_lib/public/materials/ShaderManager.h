@@ -136,7 +136,7 @@ namespace ne {
 
     protected:
         /**
-         * Sets shader configuration for specific types of shaders.
+         * Sets renderer's shader configuration for specific types of shaders.
          *
          * @warning If the configuration is changed we will try to release
          * old shader resources from the memory.
@@ -147,7 +147,7 @@ namespace ne {
          * @param shaderType    Types of shaders to set the configuration to.
          */
         void
-        setConfigurationForShaders(const std::set<ShaderMacro>& configuration, ShaderType shaderType);
+        setRendererConfigurationForShaders(const std::set<ShaderMacro>& configuration, ShaderType shaderType);
 
         /**
          * Compiles each shader. Executed as a thread pooled task to do this work asynchronously.

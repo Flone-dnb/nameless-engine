@@ -934,9 +934,7 @@ namespace ne {
 
         // Do this synchronously (before user can queue his shaders).
         try {
-            if (future.valid()) {
-                future.get();
-            }
+            future.get();
         } catch (const std::exception& ex) {
             const Error err(ex.what());
             err.showError();

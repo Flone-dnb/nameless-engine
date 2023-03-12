@@ -34,6 +34,12 @@ namespace ne {
             /** Graphics PSO, created using @ref createGraphicsPso. */
             ComPtr<ID3D12PipelineState> pGraphicsPso;
 
+            /** Additional macros to enable for vertex shader configuration. */
+            std::set<ShaderMacro> additionalVertexShaderMacros;
+
+            /** Additional macros to enable for pixel shader configuration. */
+            std::set<ShaderMacro> additionalPixelShaderMacros;
+
             // !!! new internal resources go here !!!
             // !!! don't forget to update @ref releaseInternalResources !!!
 
@@ -50,12 +56,16 @@ namespace ne {
         /**
          * Assigns vertex and pixel shaders to create a graphics PSO (for usual rendering).
          *
-         * @param pRenderer Parent renderer that owns this PSO.
-         * @param pPsoManager PSO manager that owns this PSO.
-         * @param sVertexShaderName Name of the compiled vertex shader (see ShaderManager::compileShaders).
-         * @param sPixelShaderName  Name of the compiled pixel shader (see ShaderManager::compileShaders).
-         * @param bUsePixelBlending Whether the pixels of the mesh that uses this PSO should blend with
+         * @param pRenderer              Parent renderer that owns this PSO.
+         * @param pPsoManager            PSO manager that owns this PSO.
+         * @param sVertexShaderName      Name of the compiled vertex shader (see
+         * ShaderManager::compileShaders).
+         * @param sPixelShaderName       Name of the compiled pixel shader (see
+         * ShaderManager::compileShaders).
+         * @param bUsePixelBlending      Whether the pixels of the mesh that uses this PSO should blend with
          * existing pixels on back buffer or not (for transparency).
+         * @param additionalVertexShaderMacros Additional macros to enable for vertex shader configuration.
+         * @param additionalPixelShaderMacros  Additional macros to enable for pixel shader configuration.
          *
          * @return Error if one or both were not found in ShaderManager or if failed to generate PSO,
          * otherwise created PSO.
@@ -65,7 +75,9 @@ namespace ne {
             PsoManager* pPsoManager,
             const std::string& sVertexShaderName,
             const std::string& sPixelShaderName,
-            bool bUsePixelBlending);
+            bool bUsePixelBlending,
+            const std::set<ShaderMacro>& additionalVertexShaderMacros,
+            const std::set<ShaderMacro>& additionalPixelShaderMacros);
 
         /**
          * Releases internal resources such as root signature, internal PSO, etc.
@@ -95,7 +107,7 @@ namespace ne {
          *
          * @return Internal resources.
          */
-        inline std::pair<std::mutex, InternalResources>* getInternalResources() {
+        inline std::pair<std::recursive_mutex, InternalResources>* getInternalResources() {
             return &mtxInternalResources;
         }
 
@@ -124,22 +136,28 @@ namespace ne {
          * When shader is replaced the old shader gets freed from the memory and
          * a new PSO is immediately generated. Make sure the GPU is not using old shader/PSO.
          *
-         * @param sVertexShaderName Name of the compiled vertex shader (see ShaderManager::compileShaders).
-         * @param sPixelShaderName  Name of the compiled pixel shader (see ShaderManager::compileShaders).
-         * @param bUsePixelBlending Whether the PSO should use blending or not (for transparency).
+         * @param sVertexShaderName      Name of the compiled vertex shader (see
+         * ShaderManager::compileShaders).
+         * @param sPixelShaderName       Name of the compiled pixel shader (see
+         * ShaderManager::compileShaders).
+         * @param bUsePixelBlending      Whether the PSO should use blending or not (for transparency).
+         * @param additionalVertexShaderMacros Additional macros to enable for vertex shader.
+         * @param additionalPixelShaderMacros  Additional macros to enable for pixel shader.
          *
          * @return Error if failed to generate PSO.
          */
         [[nodiscard]] std::optional<Error> generateGraphicsPsoForShaders(
             const std::string& sVertexShaderName,
             const std::string& sPixelShaderName,
-            bool bUsePixelBlending);
+            bool bUsePixelBlending,
+            const std::set<ShaderMacro>& additionalVertexShaderMacros,
+            const std::set<ShaderMacro>& additionalPixelShaderMacros);
 
         /**
          * Internal resources.
          * Must be used with mutex when changing.
          */
-        std::pair<std::mutex, InternalResources> mtxInternalResources;
+        std::pair<std::recursive_mutex, InternalResources> mtxInternalResources;
 
         /** Name of the category used for logging. */
         inline static const char* sDirectXPsoLogCategory = "DirectX Pipeline State Object";

@@ -6,6 +6,7 @@
 // Custom.
 #include "render/general/pso/PsoManager.h"
 #include "io/Serializable.h"
+#include "materials/ShaderMacro.h"
 
 #include "Material.generated.h"
 
@@ -120,6 +121,26 @@ namespace ne RNAMESPACE() {
         Pso* getUsedPso() const;
 
     private:
+        /** Groups internal data. */
+        struct InternalResources {
+            /** Used PSO, only valid when the mesh that is using this material is spawned. */
+            PsoSharedPtr pUsedPso;
+
+            /**
+             * Vertex shader macros that this material enables (i.e. DIFFUSE_TEXTURE if using a diffuse
+             * texture).
+             */
+            std::set<ShaderMacro> materialVertexShaderMacros;
+
+            /**
+             * Pixel shader macros that this material enables (i.e. DIFFUSE_TEXTURE if using a diffuse
+             * texture).
+             */
+            std::set<ShaderMacro> materialPixelShaderMacros;
+
+            // TODO: texture resources go here
+        };
+
         /**
          * Creates a new material with the specified name.
          *
@@ -183,8 +204,8 @@ namespace ne RNAMESPACE() {
          */
         std::pair<std::mutex, MeshNodesThatUseThisMaterial> mtxSpawnedMeshNodesThatUseThisMaterial;
 
-        /** Used PSO, only valid when the mesh that is using this material is spawned. */
-        PsoSharedPtr pUsedPso;
+        /** Internal data. */
+        std::pair<std::mutex, InternalResources> mtxInternalResources;
 
         /** Do not delete (free) this pointer. PSO manager that the renderer owns. */
         PsoManager* pPsoManager = nullptr;

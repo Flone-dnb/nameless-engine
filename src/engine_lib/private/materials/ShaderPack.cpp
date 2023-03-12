@@ -8,8 +8,6 @@
 #include "materials/Shader.h"
 #include "materials/ShaderFilesystemPaths.hpp"
 #include "render/Renderer.h"
-#include "game/Game.h"
-#include "game/Window.h"
 
 // External.
 #include "fmt/core.h"
@@ -21,38 +19,44 @@ namespace ne {
         std::optional<ShaderCacheInvalidationReason>& cacheInvalidationReason) {
         cacheInvalidationReason = {};
 
+        // Prepare paths to shader.
         const auto pathToShaderDirectory =
             ShaderFilesystemPaths::getPathToShaderCacheDirectory() / shaderDescription.sShaderName;
         const auto pathToCompiledShader =
             pathToShaderDirectory / ShaderFilesystemPaths::getShaderCacheBaseFileName();
 
+        // Create pack.
         const auto pShaderPack = std::shared_ptr<ShaderPack>(
             new ShaderPack(shaderDescription.sShaderName, shaderDescription.shaderType));
 
-        // Configurations.
-        const std::set<std::set<ShaderMacro>>* pParameterCombinations;
+        // Choose a valid configurations depending on our shader type.
+        const std::set<std::set<ShaderMacro>>* pMacroConfigurations;
         switch (shaderDescription.shaderType) {
         case (ShaderType::VERTEX_SHADER):
-            pParameterCombinations = &ShaderMacroConfigurations::validVertexShaderMacroConfigurations;
+            pMacroConfigurations = &ShaderMacroConfigurations::validVertexShaderMacroConfigurations;
             break;
         case (ShaderType::PIXEL_SHADER):
-            pParameterCombinations = &ShaderMacroConfigurations::validPixelShaderMacroConfigurations;
+            pMacroConfigurations = &ShaderMacroConfigurations::validPixelShaderMacroConfigurations;
             break;
         case (ShaderType::COMPUTE_SHADER):
-            pParameterCombinations = &ShaderMacroConfigurations::validComputeShaderMacroConfigurations;
+            pMacroConfigurations = &ShaderMacroConfigurations::validComputeShaderMacroConfigurations;
             break;
         }
 
-        for (const auto& parameters : *pParameterCombinations) {
+        std::scoped_lock resourcesGuard(pShaderPack->mtxInternalResources.first);
+
+        // Prepare a shader per macro configuration and add it to pack.
+        for (const auto& macros : *pMacroConfigurations) {
+            // Prepare shader description.
             auto currentShaderDescription = shaderDescription;
 
-            // Add configuration macros.
-            auto vParameterNames = shaderMacrosToText(parameters);
+            // Add configuration macros to description.
+            auto vParameterNames = convertShaderMacrosToText(macros);
             for (const auto& sParameter : vParameterNames) {
                 currentShaderDescription.vDefinedShaderMacros.push_back(sParameter);
             }
 
-            const auto sConfigurationText = ShaderMacroConfigurations::convertConfigurationToText(parameters);
+            const auto sConfigurationText = ShaderMacroConfigurations::convertConfigurationToText(macros);
             currentShaderDescription.sShaderName +=
                 sConfigurationText; // add configuration to name for logging
 
@@ -60,6 +64,7 @@ namespace ne {
             auto currentPathToCompiledShader = pathToCompiledShader;
             currentPathToCompiledShader += sConfigurationText;
 
+            // Try shader to load from cache.
             auto result = Shader::createFromCache(
                 pRenderer,
                 currentPathToCompiledShader,
@@ -76,7 +81,8 @@ namespace ne {
                 return err;
             }
 
-            pShaderPack->mtxShadersInPack.second[parameters] = std::get<std::shared_ptr<Shader>>(result);
+            pShaderPack->mtxInternalResources.second.shadersInPack[macros] =
+                std::get<std::shared_ptr<Shader>>(result);
         }
 
         Logger::get().info(
@@ -88,36 +94,40 @@ namespace ne {
 
     std::variant<std::shared_ptr<ShaderPack>, std::string, Error>
     ShaderPack::compileShaderPack(Renderer* pRenderer, const ShaderDescription& shaderDescription) {
-        // Configurations.
-        const std::set<std::set<ShaderMacro>>* pParameterCombinations;
+        // Choose a valid configurations depending on our shader type.
+        const std::set<std::set<ShaderMacro>>* pMacroConfigurations;
         switch (shaderDescription.shaderType) {
         case (ShaderType::VERTEX_SHADER):
-            pParameterCombinations = &ShaderMacroConfigurations::validVertexShaderMacroConfigurations;
+            pMacroConfigurations = &ShaderMacroConfigurations::validVertexShaderMacroConfigurations;
             break;
         case (ShaderType::PIXEL_SHADER):
-            pParameterCombinations = &ShaderMacroConfigurations::validPixelShaderMacroConfigurations;
+            pMacroConfigurations = &ShaderMacroConfigurations::validPixelShaderMacroConfigurations;
             break;
         case (ShaderType::COMPUTE_SHADER):
-            pParameterCombinations = &ShaderMacroConfigurations::validComputeShaderMacroConfigurations;
+            pMacroConfigurations = &ShaderMacroConfigurations::validComputeShaderMacroConfigurations;
             break;
         }
 
+        // Create pack.
         auto pShaderPack = std::shared_ptr<ShaderPack>(
             new ShaderPack(shaderDescription.sShaderName, shaderDescription.shaderType));
-        for (const auto& parameters : *pParameterCombinations) {
+
+        // Compile a shader per macro configuration and add it to pack.
+        for (const auto& macros : *pMacroConfigurations) {
+            // Prepare shader description.
             auto currentShaderDescription = shaderDescription;
 
-            // Add configuration macros.
-            auto vParameterNames = shaderMacrosToText(parameters);
+            // Add configuration macros to description.
+            auto vParameterNames = convertShaderMacrosToText(macros);
             for (const auto& sParameter : vParameterNames) {
                 currentShaderDescription.vDefinedShaderMacros.push_back(sParameter);
             }
 
-            const auto sConfigurationText = ShaderMacroConfigurations::convertConfigurationToText(parameters);
+            const auto sConfigurationText = ShaderMacroConfigurations::convertConfigurationToText(macros);
             currentShaderDescription.sShaderName +=
                 sConfigurationText; // add configuration to name for logging
 
-            // Cache directory.
+            // Prepare path to cache directory.
             auto currentPathToCompiledShader = ShaderFilesystemPaths::getPathToShaderCacheDirectory() /
                                                shaderDescription.sShaderName; // use non modified name here
 
@@ -125,7 +135,8 @@ namespace ne {
             const auto result = Shader::compileShader(
                 pRenderer, currentPathToCompiledShader, sConfigurationText, currentShaderDescription);
             if (std::holds_alternative<std::shared_ptr<Shader>>(result)) {
-                pShaderPack->mtxShadersInPack.second[parameters] = std::get<std::shared_ptr<Shader>>(result);
+                pShaderPack->mtxInternalResources.second.shadersInPack[macros] =
+                    std::get<std::shared_ptr<Shader>>(result);
             } else if (std::holds_alternative<std::string>(result)) {
                 return std::get<std::string>(result);
             } else {
@@ -136,59 +147,91 @@ namespace ne {
         return pShaderPack;
     }
 
-    bool ShaderPack::setConfiguration(const std::set<ShaderMacro>& configuration) {
-        std::scoped_lock guard(mtxShadersInPack.first, mtxCurrentConfigurationShader.first);
+    void ShaderPack::setRendererConfiguration(const std::set<ShaderMacro>& renderConfiguration) {
+        std::scoped_lock configurationGuard(mtxInternalResources.first);
 
-        if (mtxCurrentConfigurationShader.second != nullptr) {
-            if (this->configuration == configuration) {
-                return false; // do nothing
-            }
+        mtxInternalResources.second.bIsRenderConfigurationSet = true;
 
-            // Try to release the old shader.
-            mtxCurrentConfigurationShader.second->get()->releaseShaderDataFromMemoryIfLoaded();
-            mtxCurrentConfigurationShader.second = nullptr;
+        if (mtxInternalResources.second.renderConfiguration == renderConfiguration) {
+            return; // do nothing
         }
 
-        this->configuration = configuration;
-
-        // Find shader for the specified configuration.
-        const auto it = mtxShadersInPack.second.find(configuration);
-        if (it == mtxShadersInPack.second.end()) [[unlikely]] {
-            return true; // failed to find
+        // Try to release previously used (old) shaders.
+        for (const auto& [macros, pShader] : mtxInternalResources.second.shadersInPack) {
+            pShader->releaseShaderDataFromMemoryIfLoaded();
         }
 
-        // Save found shader.
-        mtxCurrentConfigurationShader.second = &it->second;
-
-        return false;
+        mtxInternalResources.second.renderConfiguration = renderConfiguration;
     }
 
     bool ShaderPack::releaseShaderPackDataFromMemoryIfLoaded(bool bLogOnlyErrors) {
-        std::scoped_lock guard(mtxShadersInPack.first);
+        std::scoped_lock guard(mtxInternalResources.first);
 
-        bool bResult = true;
-        for (const auto& [key, shader] : mtxShadersInPack.second) {
-            if (!shader->releaseShaderDataFromMemoryIfLoaded(bLogOnlyErrors)) {
-                bResult = false;
+        bool bAtLeastOneWasReleased = false;
+        for (const auto& [macros, pShader] : mtxInternalResources.second.shadersInPack) {
+            if (!pShader->releaseShaderDataFromMemoryIfLoaded(bLogOnlyErrors)) {
+                bAtLeastOneWasReleased = true;
             }
         }
 
-        return bResult;
+        return !bAtLeastOneWasReleased;
     }
 
-    std::shared_ptr<Shader> ShaderPack::getShader() {
-        std::scoped_lock guard(mtxCurrentConfigurationShader.first);
+    std::shared_ptr<Shader> ShaderPack::getShader(const std::set<ShaderMacro>& additionalConfiguration) {
+        std::scoped_lock guard(mtxInternalResources.first);
 
-        // Make sure the configuration was set.
-        if (mtxCurrentConfigurationShader.second == nullptr) [[unlikely]] {
+        // Make sure the renderer's configuration was previously set.
+        if (!mtxInternalResources.second.bIsRenderConfigurationSet) [[unlikely]] {
             Error error(fmt::format(
-                "configuration for the shader \"{}\" was not set yet but the shader is already requested",
+                "render configuration for the shader \"{}\" was not set yet but the shader was already "
+                "requested",
                 sShaderName));
             error.showError();
             throw std::runtime_error(error.getFullErrorMessage());
         }
 
-        return *mtxCurrentConfigurationShader.second;
+        // Combine renderer's shader configuration and the specified one.
+        auto targetShaderConfiguration = additionalConfiguration;
+        for (const auto& macro : mtxInternalResources.second.renderConfiguration) {
+#if defined(DEBUG)
+            // Check if something is wrong and additional configuration has macros that renderer defines.
+            auto it = additionalConfiguration.find(macro);
+            if (it != additionalConfiguration.end()) [[unlikely]] {
+                // Unexpected, potential error somewhere else.
+                Error error(fmt::format(
+                    "shader macro \"{}\" of the specified additional shader configuration "
+                    "is already defined by the renderer",
+                    convertShaderMacrosToText({macro})[0]));
+                error.showError();
+                throw std::runtime_error(error.getFullErrorMessage());
+            }
+#endif
+
+            // See if this macro should be considered (valid) in this configuration.
+            if (!ShaderMacroConfigurations::isMacroShouldBeConsideredInConfiguration(
+                    macro, additionalConfiguration)) {
+                continue;
+            }
+
+            targetShaderConfiguration.insert(macro);
+        }
+
+        // Find a shader which configuration is equal to the configuration we are looking for.
+        for (auto& [configuration, pShader] : mtxInternalResources.second.shadersInPack) {
+            if (configuration == targetShaderConfiguration) {
+                // Found needed shader.
+                return pShader;
+            }
+        }
+
+        // Nothing found, raise an exception.
+        Error error(fmt::format(
+            "unable to find a shader in shader pack \"{}\" that matches the specified shader configuration: "
+            "{}",
+            sShaderName,
+            formatShaderMacros(convertShaderMacrosToText(targetShaderConfiguration))));
+        error.showError();
+        throw std::runtime_error(error.getFullErrorMessage());
     }
 
     std::string ShaderPack::getShaderName() const { return sShaderName; }
@@ -198,7 +241,5 @@ namespace ne {
     ShaderPack::ShaderPack(const std::string& sShaderName, ShaderType shaderType) {
         this->sShaderName = sShaderName;
         this->shaderType = shaderType;
-
-        mtxCurrentConfigurationShader.second = nullptr;
     }
 } // namespace ne

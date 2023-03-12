@@ -49,7 +49,7 @@ namespace ne {
         }
 
         if (it->second.use_count() > 1) {
-            // Still used by somebody else.
+            // Shader pack is still used by somebody else.
             return;
         }
 
@@ -424,19 +424,13 @@ namespace ne {
         lastSelfValidationCheckTime = steady_clock::now();
     }
 
-    void ShaderManager::setConfigurationForShaders(
+    void ShaderManager::setRendererConfigurationForShaders(
         const std::set<ShaderMacro>& configuration, ShaderType shaderType) {
         std::scoped_lock guard(mtxRwShaders);
 
         for (const auto& [sShaderName, pShader] : compiledShaders) {
             if (pShader->getShaderType() == shaderType) {
-                if (pShader->setConfiguration(configuration)) [[unlikely]] {
-                    Error error(fmt::format(
-                        "failed to set the shader configuration for the shader \"{}\"",
-                        pShader->getShaderName()));
-                    error.showError();
-                    throw std::runtime_error(error.getFullErrorMessage());
-                }
+                pShader->setRendererConfiguration(configuration);
             }
         }
     }
@@ -557,10 +551,10 @@ namespace ne {
                     // Invalidated cache.
                     Logger::get().info(err.getInitialMessage(), sShaderManagerLogCategory);
                 } else {
-                    // Cache files are corrupted.
+                    // Cache files are corrupted/outdated.
                     Logger::get().info(
                         fmt::format(
-                            "shader \"{}\" cache files are corrupted, attempting to recompile",
+                            "shader \"{}\" cache files are corrupted/outdated, attempting to recompile",
                             shaderDescription.sShaderName),
                         sShaderManagerLogCategory);
                 }
@@ -617,27 +611,21 @@ namespace ne {
                 const auto pShaderConfiguration = pRenderer->getShaderConfiguration();
                 std::scoped_lock shaderConfigurationGuard(pShaderConfiguration->first);
 
-                bool bFailed = false;
                 switch (pShaderPack->getShaderType()) {
                 case (ShaderType::VERTEX_SHADER): {
-                    bFailed = pShaderPack->setConfiguration(
+                    pShaderPack->setRendererConfiguration(
                         pShaderConfiguration->second->currentVertexShaderConfiguration);
                     break;
                 }
                 case (ShaderType::PIXEL_SHADER): {
-                    bFailed = pShaderPack->setConfiguration(
+                    pShaderPack->setRendererConfiguration(
                         pShaderConfiguration->second->currentPixelShaderConfiguration);
                     break;
                 }
                 case (ShaderType::COMPUTE_SHADER): {
-                    bFailed = true;
-                    break;
-                }
-                }
-
-                if (bFailed) [[unlikely]] {
                     Error err(fmt::format(
-                        "failed to set the initial shader configuration for the shader \"{}\"",
+                        "failed to set the initial shader configuration for the shader \"{}\" (unsupported "
+                        "shader type)",
                         shaderDescription.sShaderName));
                     Logger::get().error(
                         fmt::format("shader compilation query #{}: {}", iQueryId, err.getFullErrorMessage()),
@@ -645,6 +633,8 @@ namespace ne {
                     pRenderer->getGame()->addDeferredTask([onError, shaderDescription, err]() mutable {
                         onError(std::move(shaderDescription), err);
                     });
+                    break;
+                }
                 }
 
                 // Save shader.

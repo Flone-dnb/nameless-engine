@@ -82,19 +82,19 @@ namespace ne {
                 std::scoped_lock shaderParametersGuard(mtxShaderConfiguration.first);
 
                 // Update shaders.
-                pShaderManager->setConfigurationForShaders(
+                pShaderManager->setRendererConfigurationForShaders(
                     mtxShaderConfiguration.second->currentVertexShaderConfiguration,
                     ShaderType::VERTEX_SHADER);
-                pShaderManager->setConfigurationForShaders(
+                pShaderManager->setRendererConfigurationForShaders(
                     mtxShaderConfiguration.second->currentPixelShaderConfiguration, ShaderType::PIXEL_SHADER);
             }
         } else {
             std::scoped_lock shaderParametersGuard(mtxShaderConfiguration.first);
 
             // Update shaders.
-            pShaderManager->setConfigurationForShaders(
+            pShaderManager->setRendererConfigurationForShaders(
                 mtxShaderConfiguration.second->currentVertexShaderConfiguration, ShaderType::VERTEX_SHADER);
-            pShaderManager->setConfigurationForShaders(
+            pShaderManager->setRendererConfigurationForShaders(
                 mtxShaderConfiguration.second->currentPixelShaderConfiguration, ShaderType::PIXEL_SHADER);
         }
     }

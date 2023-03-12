@@ -118,8 +118,7 @@ namespace ne {
          * Specifying 'true' is useful when we are testing if shader cache is corrupted or not,
          * to make log slightly cleaner.
          *
-         * @return 'false' if at least one shader variant was released from memory,
-         * 'true' if all variants were not loaded into memory.
+         * @return `false` if was released from memory, `true` if was not loaded in memory previously.
          */
         virtual bool releaseShaderDataFromMemoryIfLoaded(bool bLogOnlyErrors = false) = 0;
 

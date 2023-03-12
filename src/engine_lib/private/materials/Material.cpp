@@ -31,7 +31,7 @@ namespace ne {
     }
 
     Material::~Material() {
-        std::scoped_lock guard(mtxSpawnedMeshNodesThatUseThisMaterial.first);
+        std::scoped_lock guard(mtxSpawnedMeshNodesThatUseThisMaterial.first, mtxInternalResources.first);
 
         // Make sure everything is correct.
         auto iMeshNodeCount = mtxSpawnedMeshNodesThatUseThisMaterial.second.getTotalSize();
@@ -45,11 +45,11 @@ namespace ne {
                 sMaterialLogCategory);
         }
 
-        if (pUsedPso.isInitialized()) [[unlikely]] {
+        if (mtxInternalResources.second.pUsedPso.isInitialized()) [[unlikely]] {
             Logger::get().error(
                 fmt::format("material \"{}\" is being destroyed but used PSO was not cleared", sMaterialName),
                 sMaterialLogCategory);
-            pUsedPso.clear();
+            mtxInternalResources.second.pUsedPso.clear();
         }
 
         iTotalMaterialCount.fetch_sub(1);
@@ -62,7 +62,7 @@ namespace ne {
     }
 
     void Material::onSpawnedMeshNodeStartedUsingMaterial(MeshNode* pMeshNode) {
-        std::scoped_lock guard(mtxSpawnedMeshNodesThatUseThisMaterial.first);
+        std::scoped_lock guard(mtxSpawnedMeshNodesThatUseThisMaterial.first, mtxInternalResources.first);
 
         // Make sure we don't have this mesh node in our array.
         if (mtxSpawnedMeshNodesThatUseThisMaterial.second.isMeshNodeAdded(pMeshNode)) [[unlikely]] {
@@ -83,21 +83,26 @@ namespace ne {
         }
 
         // Initialize PSO if needed.
-        if (!pUsedPso.isInitialized()) {
+        if (!mtxInternalResources.second.pUsedPso.isInitialized()) {
             auto result = pPsoManager->getGraphicsPsoForMaterial(
-                sVertexShaderName, sPixelShaderName, bUseTransparency, this);
+                sVertexShaderName,
+                sPixelShaderName,
+                bUseTransparency,
+                mtxInternalResources.second.materialVertexShaderMacros,
+                mtxInternalResources.second.materialPixelShaderMacros,
+                this);
             if (std::holds_alternative<Error>(result)) {
                 auto error = std::get<Error>(std::move(result));
                 error.addEntry();
                 error.showError();
                 throw std::runtime_error(error.getFullErrorMessage());
             }
-            pUsedPso = std::get<PsoSharedPtr>(std::move(result));
+            mtxInternalResources.second.pUsedPso = std::get<PsoSharedPtr>(std::move(result));
         }
     }
 
     void Material::onSpawnedMeshNodeStoppedUsingMaterial(MeshNode* pMeshNode) {
-        std::scoped_lock guard(mtxSpawnedMeshNodesThatUseThisMaterial.first);
+        std::scoped_lock guard(mtxSpawnedMeshNodesThatUseThisMaterial.first, mtxInternalResources.first);
 
         // Make sure we have this mesh node in our array.
         if (!mtxSpawnedMeshNodesThatUseThisMaterial.second.isMeshNodeAdded(pMeshNode)) [[unlikely]] {
@@ -119,7 +124,7 @@ namespace ne {
 
         // Check if need to free PSO.
         if (mtxSpawnedMeshNodesThatUseThisMaterial.second.getTotalSize() == 0) {
-            pUsedPso.clear();
+            mtxInternalResources.second.pUsedPso.clear();
         }
     }
 
@@ -221,6 +226,6 @@ namespace ne {
         }
     }
 
-    Pso* Material::getUsedPso() const { return pUsedPso.getPso(); }
+    Pso* Material::getUsedPso() const { return mtxInternalResources.second.pUsedPso.getPso(); }
 
 } // namespace ne

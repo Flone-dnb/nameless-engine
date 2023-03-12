@@ -64,11 +64,19 @@ namespace ne {
         PsoManager* pPsoManager,
         const std::string& sVertexShaderName,
         const std::string& sPixelShaderName,
-        bool bUsePixelBlending) {
+        bool bUsePixelBlending,
+        const std::set<ShaderMacro>& additionalVertexShaderMacros,
+        const std::set<ShaderMacro>& additionalPixelShaderMacros) {
 #if defined(WIN32)
         if (dynamic_cast<DirectXRenderer*>(pRenderer) != nullptr) {
             auto result = DirectXPso::createGraphicsPso(
-                pRenderer, pPsoManager, sVertexShaderName, sPixelShaderName, bUsePixelBlending);
+                pRenderer,
+                pPsoManager,
+                sVertexShaderName,
+                sPixelShaderName,
+                bUsePixelBlending,
+                additionalVertexShaderMacros,
+                additionalPixelShaderMacros);
             if (std::holds_alternative<Error>(result)) {
                 auto error = std::get<Error>(std::move(result));
                 error.addEntry();

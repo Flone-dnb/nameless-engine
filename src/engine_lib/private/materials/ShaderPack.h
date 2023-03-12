@@ -79,11 +79,18 @@ namespace ne {
         bool releaseShaderPackDataFromMemoryIfLoaded(bool bLogOnlyErrors = false);
 
         /**
-         * Returns a shader that matches the current shader configuration.
+         * Returns a shader that matches the current renderer's shader configuration and the specified
+         * additional configuration.
+         *
+         * Since renderer's shader configuration usually does not contain all needed macros for a shader,
+         * you should specify an additional configuration that will be considered together with the
+         * renderer's configuration to find a matching shader that has uses this configuration (macros).
+         *
+         * @param additionalConfiguration
          *
          * @return Shader.
          */
-        std::shared_ptr<Shader> getShader();
+        std::shared_ptr<Shader> getShader(const std::set<ShaderMacro>& additionalConfiguration);
 
         /**
          * Returns unique name of this shader.
@@ -100,6 +107,19 @@ namespace ne {
         ShaderType getShaderType();
 
     private:
+        /** Groups used data. */
+        struct InternalResources {
+            /** Whether @ref renderConfiguration was set or not. */
+            bool bIsRenderConfigurationSet = false;
+
+            /** Last set renderer's configuration. */
+            std::set<ShaderMacro> renderConfiguration;
+
+            /** Stores shaders of this pack (pairs of "shader configuration" - "shader"). */
+            std::unordered_map<std::set<ShaderMacro>, std::shared_ptr<Shader>, ShaderMacroSetHash>
+                shadersInPack;
+        };
+
         /**
          * Constructor to create an empty shader pack.
          *
@@ -109,43 +129,25 @@ namespace ne {
         ShaderPack(const std::string& sShaderName, ShaderType shaderType);
 
         /**
-         * Looks for a shader that matches the specified configuration and saves it to be returned
-         * in @ref getShader.
+         * Sets renderer's shader configuration, it will be considered in the further calls to @ref getShader.
          *
          * @warning If the configuration is changed we will try to release
          * old shader's resources from the memory.
          * Make sure no object is holding shared pointers to old shader (old configuration),
          * otherwise there would be an error printed in the logs.
          *
-         * @param configuration New configuration.
-         *
-         * @return `true` if the shader for this configuration was not found, otherwise `false`.
+         * @param renderConfiguration New renderer configuration.
          */
-        [[nodiscard]] bool setConfiguration(const std::set<ShaderMacro>& configuration);
+        void setRendererConfiguration(const std::set<ShaderMacro>& renderConfiguration);
 
-        /** Last configuration that was set in @ref setConfiguration. */
-        std::set<ShaderMacro> configuration;
+        /** Used data. */
+        std::pair<std::mutex, InternalResources> mtxInternalResources;
 
         /** Initial shader name (without configuration text). */
         std::string sShaderName;
 
         /** Type of shaders this pack stores. */
         ShaderType shaderType;
-
-        /**
-         * Shader that matched the requested configuration in the last call to @ref setConfiguration.
-         * Must be used with mutex.
-         */
-        std::pair<std::mutex, std::shared_ptr<Shader>*> mtxCurrentConfigurationShader;
-
-        /**
-         * Map of shaders in this pack.
-         * Must be used with the mutex.
-         */
-        std::pair<
-            std::mutex,
-            std::unordered_map<std::set<ShaderMacro>, std::shared_ptr<Shader>, ShaderMacroSetHash>>
-            mtxShadersInPack;
 
         /** Name of the category used for logging. */
         static inline const auto sShaderPackLogCategory = "Shader Pack";

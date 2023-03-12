@@ -140,12 +140,14 @@ namespace ne {
         /**
          * Assigns vertex and pixel shaders to create a render specific graphics PSO (for usual rendering).
          *
-         * @param pRenderer Parent renderer that owns this PSO.
-         * @param pPsoManager PSO manager that owns this PSO.
-         * @param sVertexShaderName Name of the compiled vertex shader (see ShaderManager::compileShaders).
-         * @param sPixelShaderName  Name of the compiled pixel shader (see ShaderManager::compileShaders).
-         * @param bUsePixelBlending Whether the pixels of the mesh that uses this PSO should blend with
+         * @param pRenderer            Parent renderer that owns this PSO.
+         * @param pPsoManager          PSO manager that owns this PSO.
+         * @param sVertexShaderName    Name of the compiled vertex shader (see ShaderManager::compileShaders).
+         * @param sPixelShaderName     Name of the compiled pixel shader (see ShaderManager::compileShaders).
+         * @param bUsePixelBlending    Whether the pixels of the mesh that uses this PSO should blend with
          * existing pixels on back buffer or not (for transparency).
+         * @param additionalVertexShaderMacros Additional macros to enable for vertex shader configuration.
+         * @param additionalPixelShaderMacros  Additional macros to enable for pixel shader configuration.
          *
          * @return Error if one or both were not found in ShaderManager or if failed to generate PSO,
          * otherwise created PSO.
@@ -155,7 +157,9 @@ namespace ne {
             PsoManager* pPsoManager,
             const std::string& sVertexShaderName,
             const std::string& sPixelShaderName,
-            bool bUsePixelBlending);
+            bool bUsePixelBlending,
+            const std::set<ShaderMacro>& additionalVertexShaderMacros,
+            const std::set<ShaderMacro>& additionalPixelShaderMacros);
 
         /**
          * Called to notify this PSO that a material started storing

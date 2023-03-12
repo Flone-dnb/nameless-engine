@@ -21,14 +21,20 @@ namespace ne {
         PsoManager* pPsoManager,
         const std::string& sVertexShaderName,
         const std::string& sPixelShaderName,
-        bool bUsePixelBlending) {
+        bool bUsePixelBlending,
+        const std::set<ShaderMacro>& additionalVertexShaderMacros,
+        const std::set<ShaderMacro>& additionalPixelShaderMacros) {
         // Create PSO.
         auto pPso = std::shared_ptr<DirectXPso>(
             new DirectXPso(pRenderer, pPsoManager, sVertexShaderName, sPixelShaderName, bUsePixelBlending));
 
         // Generate DirectX PSO.
-        auto optionalError =
-            pPso->generateGraphicsPsoForShaders(sVertexShaderName, sPixelShaderName, bUsePixelBlending);
+        auto optionalError = pPso->generateGraphicsPsoForShaders(
+            sVertexShaderName,
+            sPixelShaderName,
+            bUsePixelBlending,
+            additionalVertexShaderMacros,
+            additionalPixelShaderMacros);
         if (optionalError.has_value()) {
             optionalError->addEntry();
             return optionalError.value();
@@ -71,7 +77,7 @@ namespace ne {
         // !!!
         // !!! new resources go here !!!
         static_assert(
-            sizeof(InternalResources) == 104, "release new resources here"); // NOLINT: current struct size
+            sizeof(InternalResources) == 152, "release new resources here"); // NOLINT: current struct size
         // !!!
 
         // Done.
@@ -81,9 +87,15 @@ namespace ne {
     }
 
     std::optional<Error> DirectXPso::restoreInternalResources() {
+        std::scoped_lock resourcesGuard(mtxInternalResources.first);
+
         // Recreate internal PSO and root signature.
         auto optionalError = generateGraphicsPsoForShaders(
-            getVertexShaderName(), getPixelShaderName(), isUsingPixelBlending());
+            getVertexShaderName(),
+            getPixelShaderName(),
+            isUsingPixelBlending(),
+            mtxInternalResources.second.additionalVertexShaderMacros,
+            mtxInternalResources.second.additionalPixelShaderMacros);
         if (optionalError.has_value()) {
             auto error = optionalError.value();
             error.addEntry();
@@ -94,7 +106,11 @@ namespace ne {
     }
 
     std::optional<Error> DirectXPso::generateGraphicsPsoForShaders(
-        const std::string& sVertexShaderName, const std::string& sPixelShaderName, bool bUsePixelBlending) {
+        const std::string& sVertexShaderName,
+        const std::string& sPixelShaderName,
+        bool bUsePixelBlending,
+        const std::set<ShaderMacro>& additionalVertexShaderMacros,
+        const std::set<ShaderMacro>& additionalPixelShaderMacros) {
         // Get settings.
         const auto pRenderSettings = getRenderer()->getRenderSettings();
 
@@ -127,8 +143,10 @@ namespace ne {
         const auto pPixelShaderPack = getShader(ShaderType::PIXEL_SHADER).value();
 
         // Get shaders for the current configuration.
-        auto pVertexShader = std::dynamic_pointer_cast<HlslShader>(pVertexShaderPack->getShader());
-        auto pPixelShader = std::dynamic_pointer_cast<HlslShader>(pPixelShaderPack->getShader());
+        auto pVertexShader =
+            std::dynamic_pointer_cast<HlslShader>(pVertexShaderPack->getShader(additionalVertexShaderMacros));
+        auto pPixelShader =
+            std::dynamic_pointer_cast<HlslShader>(pPixelShaderPack->getShader(additionalPixelShaderMacros));
 
         // Get DirectX renderer.
         DirectXRenderer* pDirectXRenderer = dynamic_cast<DirectXRenderer*>(getRenderer());
@@ -229,6 +247,8 @@ namespace ne {
         }
 
         // Done.
+        mtxInternalResources.second.additionalVertexShaderMacros = additionalVertexShaderMacros;
+        mtxInternalResources.second.additionalPixelShaderMacros = additionalPixelShaderMacros;
         mtxInternalResources.second.bIsReadyForUsage = true;
 
         return {};

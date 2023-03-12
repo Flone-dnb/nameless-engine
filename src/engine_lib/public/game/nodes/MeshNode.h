@@ -150,7 +150,11 @@ namespace ne RNAMESPACE() {
         ne_MeshData_GENERATED
     };
 
-    /** Represents a node that can have 3D geometry to display (mesh). */
+    /**
+     * Represents a node that can have 3D geometry to display (mesh).
+     *
+     * @remark Used for GPU optimized geometry - geometry that rarely (if ever) changes from the CPU side.
+     */
     class RCLASS(Guid("d5407ca4-3c2e-4a5a-9ff3-1262b6a4d264")) MeshNode : public SpatialNode {
         // Renderer will call `draw` on this node.
         friend class Renderer;
@@ -250,13 +254,17 @@ namespace ne RNAMESPACE() {
         std::shared_ptr<Material> getMaterial();
 
         /**
-         * Returns mesh geometry.
+         * Returns mesh geometry for read/write operations.
          *
          * @warning Must be used with mutex.
          *
          * @warning If you're changing mesh data you must call @ref onMeshDataChanged after you
          * finished modifying the mesh data to update internal CPU/GPU resources and see updated geometry
          * on the screen, otherwise this might cause the object to be displayed incorrectly.
+         *
+         * @remark Note that changing mesh data using @ref onMeshDataChanged will have the same performance as
+         * if you used @ref setMeshData because they both do the same work. The main reason why this getter
+         * exists is to avoid copying MeshData when somebody wants to read/modify existing mesh data.
          *
          * @return Mesh data.
          */

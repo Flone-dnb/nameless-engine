@@ -100,8 +100,8 @@ namespace ne {
         recalculateWorldMatrix();
     }
 
-    void SpatialNode::onSpawn() {
-        Node::onSpawn();
+    void SpatialNode::onSpawning() {
+        Node::onSpawning();
 
         // No need to notify child nodes since this function is called before any of
         // the child nodes are spawned.
@@ -217,7 +217,7 @@ namespace ne {
 
         if (mtxWorldMatrix.second.worldLocation.x >= iWorldSize ||
             mtxWorldMatrix.second.worldLocation.y >= iWorldSize ||
-            mtxWorldMatrix.second.worldLocation.z >= iWorldSize) [[unlikely]] {
+            mtxWorldMatrix.second.worldLocation.z >= iWorldSize) {
             Logger::get().warn(
                 fmt::format(
                     "spatial node \"{}\" is exceeding world bounds, node's world location: "

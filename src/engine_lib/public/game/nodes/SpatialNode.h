@@ -158,7 +158,7 @@ namespace ne RNAMESPACE() {
          * @warning If overriding you must call the parent's version of this function first
          * (before executing your login) to execute parent's logic.
          */
-        virtual void onSpawn() override;
+        virtual void onSpawning() override;
 
         /**
          * Called after this node or one of the node's parents (in the parent hierarchy)

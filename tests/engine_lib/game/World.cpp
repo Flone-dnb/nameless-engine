@@ -31,14 +31,14 @@ TEST_CASE("create and destroy world") {
         }
 
     protected:
-        virtual void onSpawn() override {
+        virtual void onSpawning() override {
             bWasSpawned = true;
 
             // Get root node.
             pRootNode = getWorldRootNode();
             REQUIRE(pRootNode);
         }
-        virtual void onDespawn() override { bWasDespawned = true; }
+        virtual void onDespawning() override { bWasDespawned = true; }
 
     private:
         gc<Node> pRootNode;

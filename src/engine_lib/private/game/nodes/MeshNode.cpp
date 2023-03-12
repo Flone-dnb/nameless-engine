@@ -442,13 +442,13 @@ namespace ne {
         allocateGeometryBuffers();
     }
 
-    void MeshNode::onSpawn() {
+    void MeshNode::onSpawning() {
         // Make sure no rendering happens during the spawn process.
         const auto pRenderer = getGameInstance()->getWindow()->getRenderer();
         std::scoped_lock drawGuard(*pRenderer->getRenderResourcesMutex());
         pRenderer->waitForGpuToFinishWorkUpToThisPoint();
 
-        SpatialNode::onSpawn();
+        SpatialNode::onSpawning(); // now call super
 
         allocateGeometryBuffers();
 
@@ -459,13 +459,13 @@ namespace ne {
         allocateShaderResources();
     }
 
-    void MeshNode::onDespawn() {
+    void MeshNode::onDespawning() {
         // Make sure no rendering happens during the despawn process.
         const auto pRenderer = getGameInstance()->getWindow()->getRenderer();
         std::scoped_lock drawGuard(*pRenderer->getRenderResourcesMutex());
         pRenderer->waitForGpuToFinishWorkUpToThisPoint();
 
-        SpatialNode::onDespawn();
+        SpatialNode::onDespawning(); // now call super
 
         // Notify the material so that the renderer will no longer render this mesh.
         pMaterial->onMeshNodeDespawned(this);

@@ -255,7 +255,7 @@ namespace ne {
         // With this spawn order we will not make "holes" in world's node tree
         // (i.e. when node is spawned, node's parent is not spawned but parent's parent node is spawned).
         bIsSpawned = true;
-        onSpawn();
+        onSpawning();
 
         // Notify world.
         pWorld->onNodeSpawned(gc<Node>(this));
@@ -298,7 +298,7 @@ namespace ne {
         pWorld->onNodeDespawned(gc<Node>(this));
 
         // Despawn self.
-        onDespawn();
+        onDespawning();
         bIsSpawned = false;
         pWorld = nullptr; // don't allow accessing world at this point
     }

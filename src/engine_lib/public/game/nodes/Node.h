@@ -398,7 +398,7 @@ namespace ne RNAMESPACE() {
          * @warning If overriding you must call the parent's version of this function first
          * (before executing your login) to execute parent's logic.
          */
-        virtual void onSpawn() {}
+        virtual void onSpawning() {}
 
         /**
          * Called before this node is despawned from the world to execute custom despawn logic.
@@ -410,7 +410,7 @@ namespace ne RNAMESPACE() {
          * @warning If overriding you must call the parent's version of this function first
          * (before executing your login) to execute parent's logic.
          */
-        virtual void onDespawn() {}
+        virtual void onDespawning() {}
 
         /**
          * Called before this node or one of the node's parents (in the parent hierarchy)
@@ -503,10 +503,10 @@ namespace ne RNAMESPACE() {
          */
         void onInputAxisEvent(const std::string& sAxisName, KeyboardModifiers modifiers, float input);
 
-        /** Calls @ref onSpawn on this node and all of its child nodes. */
+        /** Calls @ref onSpawning on this node and all of its child nodes. */
         void spawn();
 
-        /** Calls @ref onDespawn on this node and all of its child nodes. */
+        /** Calls @ref onDespawning on this node and all of its child nodes. */
         void despawn();
 
         /**

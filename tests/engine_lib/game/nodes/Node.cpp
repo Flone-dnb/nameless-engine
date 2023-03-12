@@ -205,8 +205,8 @@ TEST_CASE("get parent node of type") {
         MyDerivedDerivedNode() = default;
         MyDerivedDerivedNode(const std::string& sName) : MyDerivedNode(sName) {}
         virtual ~MyDerivedDerivedNode() override = default;
-        virtual void onSpawn() override {
-            MyDerivedNode::onSpawn();
+        virtual void onSpawning() override {
+            MyDerivedNode::onSpawning();
 
             bSpawnCalled = true;
 
@@ -286,8 +286,8 @@ TEST_CASE("get child node of type") {
         MyDerivedDerivedNode() = default;
         MyDerivedDerivedNode(const std::string& sName) : MyDerivedNode(sName) {}
         virtual ~MyDerivedDerivedNode() override = default;
-        virtual void onSpawn() override {
-            MyDerivedNode::onSpawn();
+        virtual void onSpawning() override {
+            MyDerivedNode::onSpawning();
 
             bSpawnCalled = true;
 

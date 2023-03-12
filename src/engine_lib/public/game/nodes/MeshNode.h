@@ -291,7 +291,7 @@ namespace ne RNAMESPACE() {
          * @warning If overriding you must call the parent's version of this function first
          * (before executing your login) to execute parent's logic.
          */
-        virtual void onSpawn() override;
+        virtual void onSpawning() override;
 
         /**
          * Called before this node is despawned from the world to execute custom despawn logic.
@@ -303,7 +303,7 @@ namespace ne RNAMESPACE() {
          * @warning If overriding you must call the parent's version of this function first
          * (before executing your login) to execute parent's logic.
          */
-        virtual void onDespawn() override;
+        virtual void onDespawning() override;
 
         /**
          * Called after node's world location/rotation/scale was changed.

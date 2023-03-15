@@ -84,10 +84,13 @@ namespace ne RNAMESPACE() {
         void setNodeName(const std::string& sName);
 
         /**
-         * Detaches this node from the parent and despawns this node and
-         * all of its child nodes.
+         * Detaches this node from the parent and optionally despawns this node and
+         * all of its child nodes if the node was spawned.
          *
-         * The node and its child nodes are not guaranteed to be deleted after this
+         * @remark This function is usually used to mark node (tree) as "to be destroyed", if you
+         * just want to change node's parent consider using @ref addChildNode.
+         *
+         * @remark The node and its child nodes are not guaranteed to be deleted after this
          * function is finished. Deletion is handled automatically by `gc` pointers.
          */
         void detachFromParentAndDespawn();
@@ -95,8 +98,12 @@ namespace ne RNAMESPACE() {
         /**
          * Attaches a node as a child of this node.
          *
-         * If the specified node already has a parent it will change its parent to be
+         * @remark If the specified node already has a parent it will change its parent to be
          * a child of this node. This way you can change to which node you are attached.
+         *
+         * @remark If the specified node needs to be spawned it will queue a deferred task to be added
+         * to the World on next frame so input events and @ref onBeforeNewFrame (if enabled) will be called
+         * only starting from the next frame.
          *
          * @param pNode Node to attach as a child. If the specified node is a parent of `this` node the
          * operation will fail and log an error.
@@ -135,8 +142,8 @@ namespace ne RNAMESPACE() {
         /**
          * Returns world's root node.
          *
-         * @return `nullptr` if this node is not spawned or was despawned (always check
-         * returned pointer before doing something), otherwise valid pointer.
+         * @return `nullptr` if this node is not spawned or was despawned or world is being destroyed (always
+         * check returned pointer before doing something), otherwise valid pointer.
          */
         gc<Node> getWorldRootNode();
 

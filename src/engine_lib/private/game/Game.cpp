@@ -75,22 +75,30 @@ namespace ne {
         // Make sure no GPU resource is used.
         pRenderer->waitForGpuToFinishWorkUpToThisPoint();
 
-        // Make sure thread pool and deferred tasks are finished.
-        threadPool.stop();
-        {
-            std::scoped_lock guard(mtxDeferredTasks.first);
-            mtxDeferredTasks.second = {};
-        }
-
         // Destroy world if needed.
         {
             std::scoped_lock guard(mtxWorld.first);
 
-            if (mtxWorld.second) {
-                // Explicitly destroy world before game instance, so that no node
+            if (mtxWorld.second != nullptr) {
+                // Destroy world before game instance, so that no node
                 // will reference game instance.
+                mtxWorld.second->destroyWorld();
+
+                // Process all `node despawned` tasks that will notify world.
+                std::scoped_lock guard(mtxDeferredTasks.first);
+                executeDeferredTasks();
+
+                // Can safely destroy world object now.
                 mtxWorld.second = nullptr;
             }
+        }
+
+        // Make sure thread pool and deferred tasks are finished.
+        threadPool.stop();
+        {
+            std::scoped_lock guard(mtxDeferredTasks.first);
+            executeDeferredTasks(); // finish all deferred tasks
+            bShouldAcceptNewDeferredTasks = false;
         }
 
         // Explicitly destroy game instance before running GC so that if game instance holds any GC
@@ -187,7 +195,7 @@ namespace ne {
         // We want to finish all deferred tasks right now because there might be
         // node member functions waiting to be executed - execute them and only
         // then delete nodes.
-        std::scoped_lock deferredTasksGuard(mtxDeferredTasks.first);
+        std::scoped_lock deferredTasksGuard(mtxDeferredTasks.first); // don't allow new tasks before finished
         executeDeferredTasks();
 
         // Log start.
@@ -241,8 +249,6 @@ namespace ne {
     }
 
     void Game::onBeforeNewFrame(float fTimeSincePrevCallInSec) {
-        executeDeferredTasks();
-
         pRenderer->getShaderManager()->performSelfValidation();
 
         // Call on game instance.
@@ -257,10 +263,10 @@ namespace ne {
 
             const auto pCalledEveryFrameNodes = mtxWorld.second->getCalledEveryFrameNodes();
 
-            auto callTick = [&](std::pair<std::recursive_mutex, gc_vector<Node>>* pTickGroup) {
+            auto callTick = [&](std::pair<std::recursive_mutex, std::vector<Node*>>* pTickGroup) {
                 std::scoped_lock nodesGuard(pTickGroup->first);
-                const gc_vector<Node>* pNodes = &pTickGroup->second;
-                for (auto it = (*pNodes)->begin(); it != (*pNodes)->end(); ++it) {
+                std::vector<Node*>* pNodes = &pTickGroup->second;
+                for (auto it = pNodes->begin(); it != pNodes->end(); ++it) {
                     (*it)->onBeforeNewFrame(fTimeSincePrevCallInSec);
                 }
             };
@@ -272,6 +278,11 @@ namespace ne {
 
     void Game::executeDeferredTasks() {
         std::scoped_lock guard(mtxDeferredTasks.first);
+
+        if (!bShouldAcceptNewDeferredTasks) // check under mutex
+        {
+            return;
+        }
 
         while (!mtxDeferredTasks.second.empty()) {
             auto task = std::move(mtxDeferredTasks.second.front());
@@ -356,6 +367,16 @@ namespace ne {
         return mtxWorld.second->getWorldSize();
     }
 
+    size_t Game::getTotalSpawnedNodeCount() {
+        std::scoped_lock guard(mtxWorld.first);
+
+        if (mtxWorld.second == nullptr) {
+            return 0;
+        }
+
+        return mtxWorld.second->getTotalSpawnedNodeCount();
+    }
+
     size_t Game::getCalledEveryFrameNodeCount() {
         std::scoped_lock guard(mtxWorld.first);
 
@@ -389,8 +410,8 @@ namespace ne {
             const auto pReceivingInputNodes = mtxWorld.second->getReceivingInputNodes();
 
             std::scoped_lock nodesGuard(pReceivingInputNodes->first);
-            const gc_vector<Node>* pNodes = &pReceivingInputNodes->second;
-            for (auto it = (*pNodes)->begin(); it != (*pNodes)->end(); ++it) {
+            std::vector<Node*>* pNodes = &pReceivingInputNodes->second;
+            for (auto it = pNodes->begin(); it != pNodes->end(); ++it) {
                 (*it)->onMouseMove(iXOffset, iYOffset);
             }
         }
@@ -405,8 +426,8 @@ namespace ne {
             const auto pReceivingInputNodes = mtxWorld.second->getReceivingInputNodes();
 
             std::scoped_lock nodesGuard(pReceivingInputNodes->first);
-            const gc_vector<Node>* pNodes = &pReceivingInputNodes->second;
-            for (auto it = (*pNodes)->begin(); it != (*pNodes)->end(); ++it) {
+            std::vector<Node*>* pNodes = &pReceivingInputNodes->second;
+            for (auto it = pNodes->begin(); it != pNodes->end(); ++it) {
                 (*it)->onMouseScrollMove(iOffset);
             }
         }
@@ -419,7 +440,7 @@ namespace ne {
     void Game::onWindowClose() const { pGameInstance->onWindowClose(); }
 
     void Game::addDeferredTask(const std::function<void()>& task) {
-        if (bIsBeingDestroyed) [[unlikely]] {
+        if (!bShouldAcceptNewDeferredTasks) {
             // Destructor is running, don't queue any more tasks.
             return;
         }
@@ -526,13 +547,12 @@ namespace ne {
 
                     // Call on nodes that receive input.
                     std::scoped_lock guard(mtxWorld.first);
-                    if (mtxWorld.second) {
+                    if (mtxWorld.second != nullptr) {
                         const auto pReceivingInputNodes = mtxWorld.second->getReceivingInputNodes();
 
                         std::scoped_lock nodesGuard(pReceivingInputNodes->first);
-                        const gc_vector<Node>* pNodes = &pReceivingInputNodes->second;
-                        for (auto it = (*pNodes)->begin(); it != (*pNodes)->end(); ++it) {
-                            (*it)->onInputActionEvent(sActionName, modifiers, bNewState);
+                        for (const auto& pNode : pReceivingInputNodes->second) {
+                            pNode->onInputActionEvent(sActionName, modifiers, bNewState);
                         }
                     }
                 }
@@ -577,9 +597,8 @@ namespace ne {
                     const auto pReceivingInputNodes = mtxWorld.second->getReceivingInputNodes();
 
                     std::scoped_lock nodesGuard(pReceivingInputNodes->first);
-                    const gc_vector<Node>* pNodes = &pReceivingInputNodes->second;
-                    for (auto it = (*pNodes)->begin(); it != (*pNodes)->end(); ++it) {
-                        (*it)->onInputAxisEvent(
+                    for (const auto& pNode : pReceivingInputNodes->second) {
+                        pNode->onInputAxisEvent(
                             sAxisName, modifiers, bIsPressedDown ? static_cast<float>(iInput) : 0.0F);
                     }
                 }
@@ -622,9 +641,8 @@ namespace ne {
                     const auto pReceivingInputNodes = mtxWorld.second->getReceivingInputNodes();
 
                     std::scoped_lock nodesGuard(pReceivingInputNodes->first);
-                    const gc_vector<Node>* pNodes = &pReceivingInputNodes->second;
-                    for (auto it = (*pNodes)->begin(); it != (*pNodes)->end(); ++it) {
-                        (*it)->onInputAxisEvent(
+                    for (const auto& pNode : pReceivingInputNodes->second) {
+                        pNode->onInputAxisEvent(
                             sAxisName, modifiers, bIsPressedDown ? static_cast<float>(iInput) : 0.0F);
                     }
                 }
@@ -664,9 +682,8 @@ namespace ne {
                     const auto pReceivingInputNodes = mtxWorld.second->getReceivingInputNodes();
 
                     std::scoped_lock nodesGuard(pReceivingInputNodes->first);
-                    const gc_vector<Node>* pNodes = &pReceivingInputNodes->second;
-                    for (auto it = (*pNodes)->begin(); it != (*pNodes)->end(); ++it) {
-                        (*it)->onInputAxisEvent(sAxisName, modifiers, static_cast<float>(iInputToPass));
+                    for (const auto& pNode : pReceivingInputNodes->second) {
+                        pNode->onInputAxisEvent(sAxisName, modifiers, static_cast<float>(iInputToPass));
                     }
                 }
             }
@@ -686,10 +703,17 @@ namespace ne {
         // Wait for GPU to finish all work.
         pRenderer->waitForGpuToFinishWorkUpToThisPoint();
 
-        // Explicitly destroy the world, so that no node will reference the world.
+        // Start node despawning process.
+        mtxWorld.second->destroyWorld();
+
+        // Process all `node despawned` tasks that will notify world.
+        std::scoped_lock guard(mtxDeferredTasks.first); // don't accept any deferred tasks until finished
+        executeDeferredTasks();
+
+        // Can safely destroy world object now.
         mtxWorld.second = nullptr;
 
-        // Now force run GC to destroy all nodes.
+        // Force run GC to destroy all nodes.
         runGarbageCollection(true);
 
         // Make sure that all nodes were destroyed.

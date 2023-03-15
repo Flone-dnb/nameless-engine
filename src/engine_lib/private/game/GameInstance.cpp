@@ -94,6 +94,8 @@ namespace ne {
 
     size_t GameInstance::getWorldSize() const { return pGame->getWorldSize(); }
 
+    size_t GameInstance::getTotalSpawnedNodeCount() { return pGame->getTotalSpawnedNodeCount(); }
+
     size_t GameInstance::getCalledEveryFrameNodeCount() { return pGame->getCalledEveryFrameNodeCount(); }
 
 } // namespace ne

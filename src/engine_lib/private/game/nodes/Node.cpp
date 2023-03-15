@@ -35,7 +35,14 @@ namespace ne {
 
     Node::~Node() {
         std::scoped_lock guard(mtxSpawning);
-        if (bIsSpawned) {
+        if (bIsSpawned) [[unlikely]] {
+            // Unexpected.
+            Logger::get().error(
+                fmt::format(
+                    "spawned node \"{}\" is being destructed without being despawned, continuing will most "
+                    "likely cause undefined behavior",
+                    sNodeName),
+                sNodeLogCategory);
             despawn();
         }
 
@@ -161,14 +168,8 @@ namespace ne {
             throw std::runtime_error(error.getFullErrorMessage());
         }
 
-        // Check if this node is spawned.
-        std::scoped_lock guard(mtxSpawning);
-        if (!bIsSpawned) {
-            return;
-        }
-
         // Detach from parent.
-        std::scoped_lock parentGuard(mtxParentNode.first);
+        std::scoped_lock guard(mtxSpawning, mtxParentNode.first);
         gc<Node> pSelf;
 
         if (mtxParentNode.second != nullptr) {
@@ -191,7 +192,7 @@ namespace ne {
             if (!bFound) [[unlikely]] {
                 Logger::get().error(
                     fmt::format(
-                        "Node \"{}\" has a parent node but parent's children array "
+                        "node \"{}\" has a parent node but parent's children array "
                         "does not contain this node.",
                         getNodeName()),
                     sNodeLogCategory);
@@ -201,12 +202,14 @@ namespace ne {
             mtxParentNode.second = nullptr;
         }
 
-        // Despawn.
-        despawn();
+        // don't unlock mutexes yet
 
-        // Queue garbage collection.
+        if (bIsSpawned) {
+            // Despawn.
+            despawn();
+        }
+
         pSelf = nullptr;
-        getGameInstance()->queueGarbageCollection({});
     }
 
     bool Node::isSpawned() {
@@ -258,7 +261,7 @@ namespace ne {
         onSpawning();
 
         // Notify world.
-        pWorld->onNodeSpawned(gc<Node>(this));
+        pWorld->onNodeSpawned(this);
 
         // Spawn children.
         {
@@ -295,7 +298,7 @@ namespace ne {
         }
 
         // Notify world.
-        pWorld->onNodeDespawned(gc<Node>(this));
+        pWorld->onNodeDespawned(this);
 
         // Despawn self.
         onDespawning();

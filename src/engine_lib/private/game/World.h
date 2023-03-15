@@ -14,20 +14,22 @@ namespace ne {
 
     /** Represents arrays of nodes that are marked as "should be called every frame". */
     struct CalledEveryFrameNodes {
-        CalledEveryFrameNodes() {
-            mtxFirstTickGroup.second = gc_new_vector<Node>();
-            mtxSecondTickGroup.second = gc_new_vector<Node>();
-        }
+        CalledEveryFrameNodes() = default;
+
         CalledEveryFrameNodes(const CalledEveryFrameNodes&) = delete;
         CalledEveryFrameNodes& operator=(const CalledEveryFrameNodes&) = delete;
 
         /** Nodes of the first tick group. */
-        std::pair<std::recursive_mutex, gc_vector<Node>> mtxFirstTickGroup;
+        std::pair<std::recursive_mutex, std::vector<Node*>> mtxFirstTickGroup;
         /** Nodes of the second tick group. */
-        std::pair<std::recursive_mutex, gc_vector<Node>> mtxSecondTickGroup;
+        std::pair<std::recursive_mutex, std::vector<Node*>> mtxSecondTickGroup;
     };
 
-    /** Owns world's root node. */
+    /**
+     * Owns world's root node.
+     *
+     * @warning @ref destroyWorld must be explicitly called before destroying this object.
+     */
     class World {
     public:
         World() = delete;
@@ -38,7 +40,7 @@ namespace ne {
         World(World&&) = delete;
         World& operator=(World&&) = delete;
 
-        /** Destroys the world (if @ref destroyWorld was not called before) and logs about destruction. */
+        /** Checks that world is destructed correctly (see @ref destroyWorld) and logs in case of error. */
         ~World();
 
         /**
@@ -79,10 +81,19 @@ namespace ne {
             Game* pGame, const std::filesystem::path& pathToNodeTree, size_t iWorldSize = 1024);
 
         /**
+         * Returns total amount of currently spawned nodes.
+         *
+         * @return Total nodes spawned right now.
+         */
+        size_t getTotalSpawnedNodeCount();
+
+        /**
          * Clears pointer to the root node which should cause the world
          * to recursively be despawned and destroyed.
          *
-         * @remark This function will be called in destructor but you can also call it explicitly.
+         * @warning Node despawn process will queue a bunch of deferred tasks that will notify world
+         * about nodes being despawned. Make sure to execute all deferred tasks after calling this function
+         * and before destroying this object.
          */
         void destroyWorld();
 
@@ -98,12 +109,12 @@ namespace ne {
          *
          * @return Pointer to array of nodes (use with mutex).
          */
-        std::pair<std::recursive_mutex, gc_vector<Node>>* getReceivingInputNodes();
+        std::pair<std::recursive_mutex, std::vector<Node*>>* getReceivingInputNodes();
 
         /**
          * Returns a pointer to world's root node.
          *
-         * @return World's root node.
+         * @return `nullptr` if world is being destroyed, otherwise pointer to world's root node.
          */
         gc<Node> getRootNode();
 
@@ -133,14 +144,14 @@ namespace ne {
          *
          * @param pNode Node that is being spawned.
          */
-        void onNodeSpawned(const gc<Node>& pNode);
+        void onNodeSpawned(Node* pNode);
 
         /**
          * Called from Node to notify the World about a node being despawned.
          *
          * @param pNode Node that is being despawned.
          */
-        void onNodeDespawned(const gc<Node>& pNode);
+        void onNodeDespawned(Node* pNode);
 
     private:
         /**
@@ -166,10 +177,13 @@ namespace ne {
         CalledEveryFrameNodes calledEveryFrameNodes;
 
         /** Array of currently spawned nodes that receive input. */
-        std::pair<std::recursive_mutex, gc_vector<Node>> mtxReceivingInputNodes;
+        std::pair<std::recursive_mutex, std::vector<Node*>> mtxReceivingInputNodes;
+
+        /** Total amount of nodes spawned. */
+        std::atomic<size_t> iTotalSpawnedNodeCount{0};
 
         /** World size in game units. */
-        size_t iWorldSize = 0;
+        const size_t iWorldSize = 0;
 
         /** Time when world was created. */
         std::chrono::steady_clock::time_point timeWhenWorldCreated;

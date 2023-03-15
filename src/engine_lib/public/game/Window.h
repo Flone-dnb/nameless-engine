@@ -552,6 +552,11 @@ namespace ne {
         float fPrevTimeInSec = static_cast<float>(glfwGetTime());
 
         while (!glfwWindowShouldClose(pGlfwWindow)) {
+            // Execute deferred tasks before processing input and ticking
+            // because some deferred tasks are used to remove despawned nodes from world,
+            // this way we won't trigger input events/tick on despawned nodes.
+            pGame->executeDeferredTasks();
+
             // Process window events.
             glfwPollEvents();
 

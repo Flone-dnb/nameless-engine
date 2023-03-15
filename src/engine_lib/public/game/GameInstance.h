@@ -61,6 +61,8 @@ namespace ne {
         /**
          * Called before a new frame is rendered.
          *
+         * @remark Called before nodes that should be called every frame.
+         *
          * @param fTimeSincePrevCallInSec Time in seconds that has passed since the last call
          * to this function.
          */
@@ -271,6 +273,13 @@ namespace ne {
          * @return World size.
          */
         size_t getWorldSize() const;
+
+        /**
+         * Returns total amount of currently spawned nodes.
+         *
+         * @return Total nodes spawned right now.
+         */
+        size_t getTotalSpawnedNodeCount();
 
         /**
          * Returns the current amount of spawned nodes that are marked as "should be called every frame".

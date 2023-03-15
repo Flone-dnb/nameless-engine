@@ -4,6 +4,7 @@
 #include <memory>
 #include <functional>
 #include <queue>
+#include <atomic>
 #include <mutex>
 
 // Custom.
@@ -195,6 +196,13 @@ namespace ne {
          * @return World size.
          */
         size_t getWorldSize();
+
+        /**
+         * Returns total amount of currently spawned nodes.
+         *
+         * @return Total nodes spawned right now.
+         */
+        size_t getTotalSpawnedNodeCount();
 
         /**
          * Returns the current amount of spawned nodes that are marked as "should be called every frame".
@@ -400,6 +408,9 @@ namespace ne {
 
         /** ID of the main thread. */
         std::thread::id mainThreadId;
+
+        /** Whether @ref addDeferredTask should accept new tasks or not. */
+        bool bShouldAcceptNewDeferredTasks = true;
 
         /** Whether @ref destroy was called or not. */
         bool bIsBeingDestroyed = false;

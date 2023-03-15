@@ -14,10 +14,14 @@ TEST_CASE("gc pointer comparison") {
         const gc<Collected> pUninitialized;
         const auto pCollected = gc_new<Collected>();
 
+        REQUIRE(gc_collector()->getAliveObjectsCount() == 1);
+
         REQUIRE(pUninitialized == nullptr);
         REQUIRE(pUninitialized != pCollected);
         REQUIRE(!pUninitialized); // implicit conversion to bool
     }
+
+    REQUIRE(gc_collector()->getAliveObjectsCount() == 1);
 
     gc_collector()->fullCollect();
 
@@ -43,6 +47,9 @@ TEST_CASE("moving gc pointers does not cause leaks") {
         // Still 1 object exist.
         REQUIRE(gc_collector()->getAliveObjectsCount() == 1);
     }
+
+    // Still 1 object exist.
+    REQUIRE(gc_collector()->getAliveObjectsCount() == 1);
 
     gc_collector()->fullCollect();
 

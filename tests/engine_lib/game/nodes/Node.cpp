@@ -75,6 +75,7 @@ TEST_CASE("move nodes in the hierarchy") {
         const auto pParentNode = gc_new<Node>();
         const auto pCharacterNode = gc_new<Node>();
         const auto pCarNode = gc_new<Node>();
+        const auto pSomeNode = gc_new<Node>();
 
         const auto pCharacterChildNode1 = gc_new<Node>();
         const auto pCharacterChildNode2 = gc_new<Node>();
@@ -87,12 +88,21 @@ TEST_CASE("move nodes in the hierarchy") {
 
         // Attach the character to the car.
         pCarNode->addChildNode(pCharacterNode);
+        pCarNode->addChildNode(pSomeNode);
 
         // Check that everything is correct.
         REQUIRE(&*pCharacterNode->getParentNode() == &*pCarNode);
+        REQUIRE(&*pSomeNode->getParentNode() == &*pCarNode);
         REQUIRE(pCharacterNode->getChildNodes()->size() == 2);
+        REQUIRE(pCarNode->getChildNodes()->size() == 2);
         REQUIRE(pCharacterChildNode1->isChildOf(&*pCharacterNode));
         REQUIRE(pCharacterChildNode2->isChildOf(&*pCharacterNode));
+
+        // Detach some node.
+        pSomeNode->detachFromParentAndDespawn();
+        REQUIRE(pSomeNode->getParentNode() == nullptr);
+
+        REQUIRE(pCarNode->getChildNodes()->size() == 1);
 
         // Detach the character from the car.
         pParentNode->addChildNode(pCharacterNode);
@@ -566,13 +576,13 @@ TEST_CASE("onBeforeNewFrame is called only on marked nodes") {
 
                 REQUIRE(getWorldRootNode());
 
-                pNotCalledtNode = gc_new<MyNode>(false);
-                getWorldRootNode()->addChildNode(pNotCalledtNode);
                 REQUIRE(getCalledEveryFrameNodeCount() == 0);
 
+                pNotCalledtNode = gc_new<MyNode>(false);
+                getWorldRootNode()->addChildNode(pNotCalledtNode); // queues deferred task to add to world
+
                 pCalledNode = gc_new<MyNode>(true);
-                getWorldRootNode()->addChildNode(pCalledNode);
-                REQUIRE(getCalledEveryFrameNodeCount() == 1);
+                getWorldRootNode()->addChildNode(pCalledNode); // queues deferred task to add to world
             });
         }
         virtual ~TestGameInstance() override {}
@@ -581,8 +591,12 @@ TEST_CASE("onBeforeNewFrame is called only on marked nodes") {
             iTicks += 1;
 
             if (iTicks == 2) {
+                REQUIRE(getTotalSpawnedNodeCount() == 3);
+                REQUIRE(getCalledEveryFrameNodeCount() == 1);
+
                 REQUIRE(pCalledNode->bTickCalled);
                 REQUIRE(!pNotCalledtNode->bTickCalled);
+
                 getWindow()->close();
             }
         }
@@ -742,8 +756,8 @@ TEST_CASE("input event callbacks in Node are triggered") {
                 }
 
                 // Spawn node.
-                const auto pMyNode = gc_new<MyNode>();
-                getWorldRootNode()->addChildNode(pMyNode);
+                pMyNode = gc_new<MyNode>();
+                getWorldRootNode()->addChildNode(pMyNode); // queues a deferred task to be added to world
 
                 // Register events.
                 auto optionalError = getInputManager()->addActionEvent("action1", {KeyboardKey::KEY_W});
@@ -761,18 +775,22 @@ TEST_CASE("input event callbacks in Node are triggered") {
                     INFO(error.getFullErrorMessage());
                     REQUIRE(false);
                 }
-
-                // Simulate input.
-                getWindow()->onKeyboardInput(KeyboardKey::KEY_A, KeyboardModifiers(0), true);
-                getWindow()->onKeyboardInput(KeyboardKey::KEY_W, KeyboardModifiers(0), true);
-
-                REQUIRE(pMyNode->bAction1Triggered);
-                REQUIRE(pMyNode->bAxis1Triggered);
-
-                getWindow()->close();
             });
         }
+        virtual void onBeforeNewFrame(float fTimeSincePrevCallInSec) override {
+            // Simulate input.
+            getWindow()->onKeyboardInput(KeyboardKey::KEY_A, KeyboardModifiers(0), true);
+            getWindow()->onKeyboardInput(KeyboardKey::KEY_W, KeyboardModifiers(0), true);
+
+            REQUIRE(pMyNode->bAction1Triggered);
+            REQUIRE(pMyNode->bAxis1Triggered);
+
+            getWindow()->close();
+        }
         virtual ~TestGameInstance() override {}
+
+    private:
+        gc<MyNode> pMyNode;
     };
 
     auto result = Window::getBuilder().withVisibility(false).build();
@@ -789,6 +807,10 @@ TEST_CASE("input event callbacks in Node are triggered") {
 
 TEST_CASE("use deferred task with node's member function while the world is being changed") {
     using namespace ne;
+
+    // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    //          this is essential test, some engine systems rely on this
+    // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
     class MyDerivedNode : public Node {
     public:
@@ -814,6 +836,10 @@ TEST_CASE("use deferred task with node's member function while the world is bein
         virtual ~TestGameInstance() override { REQUIRE(bFinished); }
         virtual void onGameStarted() override {
             createWorld([this](const std::optional<Error>& optionalWorldError1) {
+                // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                //          this is essential test, some engine systems rely on this
+                // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
                 const auto iInitialObjectCount = gc_collector()->getAliveObjectsCount();
 
                 auto pMyNode = gc_new<MyDerivedNode>();
@@ -854,6 +880,10 @@ TEST_CASE("use deferred task with node's member function while the world is bein
 TEST_CASE("use deferred task with node's member function while the garbage collector is running") {
     using namespace ne;
 
+    // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    //          this is essential test, some engine systems rely on this
+    // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
     class MyDerivedNode : public Node {
     public:
         MyDerivedNode() = default;
@@ -878,6 +908,10 @@ TEST_CASE("use deferred task with node's member function while the garbage colle
         virtual ~TestGameInstance() override { REQUIRE(bFinished); }
         virtual void onGameStarted() override {
             createWorld([this](const std::optional<Error>& optionalWorldError1) {
+                // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                //          this is essential test, some engine systems rely on this
+                // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
                 const auto iInitialObjectCount = gc_collector()->getAliveObjectsCount();
 
                 // add deferred task to run GC
@@ -891,12 +925,14 @@ TEST_CASE("use deferred task with node's member function while the garbage colle
 
                     // add deferred task to call our function
                     pMyNode->start();
-                }
+                } // this node is no longer used and can be garbage collected
 
                 // node should be still alive
                 REQUIRE(gc_collector()->getAliveObjectsCount() == iInitialObjectCount + 2);
 
-                // engine should finish all deferred tasks before running the GC
+                // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                //       engine should finish all deferred tasks before running the GC
+                // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
             });
         }
 
@@ -916,4 +952,193 @@ TEST_CASE("use deferred task with node's member function while the garbage colle
     pMainWindow->processEvents<TestGameInstance>();
 
     REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+}
+
+TEST_CASE("detach and despawn spawned node") {
+    using namespace ne;
+
+    class TestGameInstance : public GameInstance {
+    public:
+        TestGameInstance(Window* pGameWindow, InputManager* pInputManager)
+            : GameInstance(pGameWindow, pInputManager) {}
+        virtual void onGameStarted() override {
+            createWorld([this](const std::optional<Error>&) {
+                REQUIRE(getTotalSpawnedNodeCount() == 0); // world root node is still in deferred task
+
+                pMyNode = gc_new<Node>();
+                getWorldRootNode()->addChildNode(pMyNode); // queues a deferred task
+            });
+        }
+        virtual void onBeforeNewFrame(float fTimeSincePrevCallInSec) override {
+            iTickCount += 1;
+
+            if (iTickCount == 1) {
+                REQUIRE(getTotalSpawnedNodeCount() == 2);
+
+                pMyNode->detachFromParentAndDespawn();
+                pMyNode = nullptr;
+                queueGarbageCollection(true);
+            } else {
+                REQUIRE(getTotalSpawnedNodeCount() == 1);
+                REQUIRE(Node::getAliveNodeCount() == 1);
+
+                getWindow()->close();
+            }
+        }
+        virtual ~TestGameInstance() override {}
+
+    private:
+        size_t iTickCount = 0;
+        gc<Node> pMyNode;
+    };
+
+    auto result = Window::getBuilder().withVisibility(false).build();
+    if (std::holds_alternative<Error>(result)) {
+        Error error = std::get<Error>(std::move(result));
+        error.addEntry();
+        INFO(error.getFullErrorMessage());
+        REQUIRE(false);
+    }
+
+    const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
+    pMainWindow->processEvents<TestGameInstance>();
+
+    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+}
+
+TEST_CASE("input event callbacks and tick in Node is not triggered after despawning") {
+    using namespace ne;
+
+    class MyNode : public Node {
+    public:
+        MyNode() {
+            setReceiveInput(true);
+            setIsCalledEveryFrame(true);
+
+            {
+                const auto pActionEvents = getActionEventBindings();
+                std::scoped_lock guard(pActionEvents->first);
+
+                pActionEvents->second["action1"] = [&](KeyboardModifiers modifiers, bool bIsPressedDown) {
+                    action1(modifiers, bIsPressedDown);
+                };
+            }
+
+            {
+                const auto pAxisEvents = getAxisEventBindings();
+                std::scoped_lock guard(pAxisEvents->first);
+
+                pAxisEvents->second["axis1"] = [&](KeyboardModifiers modifiers, float input) {
+                    axis1(modifiers, input);
+                };
+            }
+        }
+
+        bool bAction1Triggered = false;
+        bool bAxis1Triggered = false;
+        size_t iTickCalledCount = 0;
+
+    protected:
+        virtual void onBeforeNewFrame(float fTimeSincePrevCallInSec) override {
+            Node::onBeforeNewFrame(fTimeSincePrevCallInSec);
+
+            iTickCalledCount += 1;
+        }
+
+    private:
+        void action1(KeyboardModifiers modifiers, bool bIsPressedDown) { bAction1Triggered = true; }
+        void axis1(KeyboardModifiers modifiers, float input) { bAxis1Triggered = true; }
+    };
+
+    class TestGameInstance : public GameInstance {
+    public:
+        TestGameInstance(Window* pGameWindow, InputManager* pInputManager)
+            : GameInstance(pGameWindow, pInputManager) {}
+        virtual void onGameStarted() override {
+            createWorld([&](const std::optional<Error>& optionalWorldError) {
+                if (optionalWorldError.has_value()) {
+                    auto error = optionalWorldError.value();
+                    error.addEntry();
+                    INFO(error.getFullErrorMessage());
+                    REQUIRE(false);
+                }
+
+                // Spawn node.
+                pMyNode = gc_new<MyNode>();
+                getWorldRootNode()->addChildNode(pMyNode); // queues a deferred task to be added to world
+
+                // Register events.
+                auto optionalError = getInputManager()->addActionEvent("action1", {KeyboardKey::KEY_W});
+                if (optionalError.has_value()) {
+                    auto error = optionalError.value();
+                    error.addEntry();
+                    INFO(error.getFullErrorMessage());
+                    REQUIRE(false);
+                }
+                optionalError =
+                    getInputManager()->addAxisEvent("axis1", {{KeyboardKey::KEY_A, KeyboardKey::KEY_B}});
+                if (optionalError.has_value()) {
+                    auto error = optionalError.value();
+                    error.addEntry();
+                    INFO(error.getFullErrorMessage());
+                    REQUIRE(false);
+                }
+            });
+        }
+        virtual void onBeforeNewFrame(float fTimeSincePrevCallInSec) override {
+            iTickCount += 1;
+
+            if (iTickCount == 1) {
+                // Simulate input.
+                getWindow()->onKeyboardInput(KeyboardKey::KEY_A, KeyboardModifiers(0), true);
+                getWindow()->onKeyboardInput(KeyboardKey::KEY_W, KeyboardModifiers(0), true);
+
+                REQUIRE(pMyNode->bAction1Triggered);
+                REQUIRE(pMyNode->bAxis1Triggered);
+
+                REQUIRE(getTotalSpawnedNodeCount() == 2);
+
+                // GameInstance is ticking before nodes.
+                REQUIRE(pMyNode->iTickCalledCount == 0);
+            } else if (iTickCount == 2) {
+                REQUIRE(pMyNode->iTickCalledCount == 1);
+
+                pMyNode->detachFromParentAndDespawn();
+
+                REQUIRE(getTotalSpawnedNodeCount() == 2); // still in world
+            } else if (iTickCount == 3) {
+                // Node was called in previous tick (because not despawned instantly), should no longer tick.
+                REQUIRE(pMyNode->iTickCalledCount == 2);
+
+                REQUIRE(getTotalSpawnedNodeCount() == 1); // removed from world
+            } else if (iTickCount == 4) {
+                REQUIRE(pMyNode->iTickCalledCount == 2); // no longer ticking
+
+                pMyNode = nullptr;
+
+                queueGarbageCollection(true);
+            } else {
+                REQUIRE(getTotalSpawnedNodeCount() == 1);
+                REQUIRE(Node::getAliveNodeCount() == 1);
+
+                getWindow()->close();
+            }
+        }
+        virtual ~TestGameInstance() override {}
+
+    private:
+        size_t iTickCount = 0;
+        gc<MyNode> pMyNode;
+    };
+
+    auto result = Window::getBuilder().withVisibility(false).build();
+    if (std::holds_alternative<Error>(result)) {
+        Error error = std::get<Error>(std::move(result));
+        error.addEntry();
+        INFO(error.getFullErrorMessage());
+        REQUIRE(false);
+    }
+
+    const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
+    pMainWindow->processEvents<TestGameInstance>();
 }

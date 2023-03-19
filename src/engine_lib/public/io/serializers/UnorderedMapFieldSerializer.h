@@ -5,7 +5,7 @@
 
 namespace ne {
     /**
-     * Serializer for some `std::unordered_map<T, T>` types, the following inner types are supported:
+     * Serializer for some `std::unordered_map<T, T>` field types, the following inner types are supported:
      * `bool`, `int`, `unsigned int`, `long long`, `unsigned long long`, `float`, `double`, `std::string`.
      */
     class UnorderedMapFieldSerializer : public IFieldSerializer {

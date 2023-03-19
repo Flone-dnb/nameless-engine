@@ -5,7 +5,7 @@
 
 namespace ne {
     /**
-     * Serializer for the `std::string` type.
+     * Serializer for the `std::string` field type.
      */
     class StringFieldSerializer : public IFieldSerializer {
     public:

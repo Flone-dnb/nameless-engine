@@ -5,7 +5,7 @@
 
 namespace ne {
     /**
-     * Serializer for some primitive types: `bool`, `int`, `unsigned int`, `long long`,
+     * Serializer for some primitive field types: `bool`, `int`, `unsigned int`, `long long`,
      * `unsigned long long`, `float`, `double`.
      */
     class PrimitiveFieldSerializer : public IFieldSerializer {

@@ -5,7 +5,7 @@
 
 namespace ne {
     /**
-     * Serializer for `glm::vec2`, `glm::vec3` and `glm::vec4` types.
+     * Serializer for `glm::vec2`, `glm::vec3` and `glm::vec4` field types.
      */
     class GlmVecFieldSerializer : public IFieldSerializer {
     public:

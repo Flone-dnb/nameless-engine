@@ -449,17 +449,18 @@ namespace ne {
 
     bool Serializable::isDerivedFromSerializable(const rfk::Archetype* pArchetype) {
         if (rfk::Class const* pClass = rfk::classCast(pArchetype)) {
-            // Check parents.
+            // Make sure the type derives from `Serializable`t.
             if (pClass->isSubclassOf(Serializable::staticGetArchetype())) {
                 return true;
             }
 
-            // Check if Serializable.
+            // Make sure the type has GUID.
             const auto pGuid = pClass->getProperty<Guid>(false);
             if (pGuid == nullptr) {
                 return false;
             }
 
+            // (don't know if this is needed or not)
             if (pGuid->getGuid() == Serializable::staticGetArchetype().getProperty<Guid>(false)->getGuid()) {
                 return true;
             }

@@ -5,7 +5,7 @@
 
 namespace ne {
     /**
-     * Serializer for `std::shared_ptr<Material>` type.
+     * Serializer for `std::shared_ptr<Material>` field type.
      */
     class MaterialFieldSerializer : public IFieldSerializer {
     public:

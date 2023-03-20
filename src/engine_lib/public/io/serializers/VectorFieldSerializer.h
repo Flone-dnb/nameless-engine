@@ -5,9 +5,10 @@
 
 namespace ne {
     /**
-     * Serializer for some `std::vector<T>` types, the following inner vector types are supported:
+     * Serializer for some `std::vector<T>` field types, the following inner vector types are supported:
      * `bool`, `int`, `unsigned int`, `long long`, `unsigned long long`, `float`, `double`, `std::string`,
-     * `MeshVertex`.
+     * `MeshVertex`. Additionally, supported inner types include `std::shared_ptr<T>`
+     * where `T` is any type that derives from `Serializable`.
      */
     class VectorFieldSerializer : public IFieldSerializer {
     public:
@@ -108,6 +109,16 @@ namespace ne {
             const rfk::Field* pFieldB) override;
 
     private:
+        /**
+         * Looks if the specified type contains `Serializable` type.
+         * Supports the following type format: `SomeContainerType<SomeOtherContainerType<T>>`.
+         *
+         * @param sFieldCanonicalTypeName Canonical type name.
+         *
+         * @return `false` if the most inner type is not `Serializable`, otherwise `true`.
+         */
+        static bool isMostInnerTypeSerializable(const std::string& sFieldCanonicalTypeName);
+
         /** Canonical type name for `std::string` fields. */
         static inline const std::string sStringCanonicalTypeName = "std::basic_string<char>";
     };

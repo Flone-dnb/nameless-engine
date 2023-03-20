@@ -344,6 +344,104 @@ namespace ne {
         return loopData.bIsEqual;
     }
 
+    bool
+    SerializableObjectFieldSerializer::isTypeDerivesFromSerializable(const std::string& sCanonicalTypeName) {
+        // Make sure the type has no templates (not supported).
+        if (sCanonicalTypeName.contains('<')) [[unlikely]] {
+            Logger::get().error(
+                fmt::format(
+                    "unable to check if type \"{}\" derives from Serializable because templates are not "
+                    "supported",
+                    sCanonicalTypeName),
+                "");
+            return false;
+        }
+
+        // Make sure the type is not a raw pointer (not supported).
+        if (sCanonicalTypeName.contains('*')) [[unlikely]] {
+            Logger::get().error(
+                fmt::format(
+                    "unable to check if type \"{}\" derives from Serializable because pointer types are not "
+                    "supported",
+                    sCanonicalTypeName),
+                "");
+            return false;
+        }
+
+        // See if the type has a namespace.
+        auto iFoundNamespaceEndPosition = sCanonicalTypeName.rfind(':');
+        if (iFoundNamespaceEndPosition == std::string::npos) {
+            // No namespace.
+            return isTypeDerivesFromSerializable(sCanonicalTypeName, nullptr);
+        }
+
+        // Make sure found position is valid.
+        if (iFoundNamespaceEndPosition <= 1) {
+            return false;
+        }
+
+        iFoundNamespaceEndPosition -= 1;
+
+        // Cut full namespace name (including inner namespace).
+        const auto sNamespaceName = sCanonicalTypeName.substr(0, iFoundNamespaceEndPosition);
+
+        // Find this namespace in the reflection database.
+        try {
+            const auto pNamespace = rfk::getDatabase().getNamespaceByName(sNamespaceName.c_str());
+            if (pNamespace == nullptr) {
+                return false;
+            }
+
+            // Get inner type name.
+            const auto sInnerType = sCanonicalTypeName.substr(iFoundNamespaceEndPosition + 1);
+
+            // Get GUID.
+            return isTypeDerivesFromSerializable(sInnerType, pNamespace);
+        } catch (std::exception& exception) {
+            Logger::get().error(
+                fmt::format(
+                    "failed to get type GUID because namespace name \"{}\" is incorrectly formatted, error: "
+                    "{}",
+                    sNamespaceName,
+                    exception.what()),
+                "");
+            return false;
+        }
+    }
+
+    bool SerializableObjectFieldSerializer::isTypeDerivesFromSerializable(
+        const std::string& sCanonicalTypeName, const rfk::Namespace* pNamespace) {
+        // Attempt to find the target type.
+        rfk::Struct const* pTargetType = nullptr;
+        if (pNamespace == nullptr) {
+            pTargetType = rfk::getDatabase().getFileLevelClassByName(sCanonicalTypeName.c_str());
+            if (pTargetType == nullptr) {
+                pTargetType = rfk::getDatabase().getFileLevelStructByName(sCanonicalTypeName.c_str());
+                if (pTargetType == nullptr) {
+                    return false;
+                }
+            }
+        } else {
+            pTargetType = pNamespace->getClassByName(sCanonicalTypeName.c_str());
+            if (pTargetType == nullptr) {
+                pTargetType = pNamespace->getStructByName(sCanonicalTypeName.c_str());
+                if (pTargetType == nullptr) {
+                    return false;
+                }
+            }
+        }
+
+        // Make sure this type derives from `Serializable`.
+        if (!pTargetType->isSubclassOf(Serializable::staticGetArchetype())) {
+            return false;
+        }
+
+        // Make sure this type has a GUID.
+        const auto pGuidProperty = pTargetType->getProperty<Guid>(false);
+
+        return pGuidProperty != nullptr;
+    }
+
     std::optional<Error> SerializableObjectFieldSerializer::deserializeField(
         const toml::value* pTomlDocument,
         const toml::value* pTomlValue,

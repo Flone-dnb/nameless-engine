@@ -63,6 +63,23 @@ public:
     ReflectionTestNode1_GENERATED
 };
 
+namespace special RNAMESPACE() {
+    class RCLASS(Guid("550ea9f9-dd8a-4089-a717-0fe4e351a699")) ReflectionTestNode1Child
+        : public ReflectionTestNode1 {
+    public:
+        ReflectionTestNode1Child() = default;
+        virtual ~ReflectionTestNode1Child() override = default;
+
+        RPROPERTY(Serialize)
+        int iIntValue = 0;
+
+        RPROPERTY(Serialize)
+        std::vector<std::shared_ptr<ReflectionTestNode1>> vNodes;
+
+        special_ReflectionTestNode1Child_GENERATED
+    };
+} // namespace special RNAMESPACE()
+
 struct RSTRUCT(Guid("550ea9f9-dd8a-4089-a717-0fe4e351a688")) ReflectionTestStruct : public Serializable {
 public:
     ReflectionTestStruct() = default;
@@ -117,6 +134,9 @@ public:
 
     RPROPERTY(Serialize)
     std::vector<std::string> vStringVector;
+
+    RPROPERTY(Serialize)
+    std::vector<std::shared_ptr<ReflectionTestNode1>> vSharedPtrSerializable;
 
     RPROPERTY(Serialize)
     std::vector<int> vEmpty;
@@ -239,6 +259,22 @@ private:
     InventorySaveData_GENERATED
 };
 
+/// Some in-game character ability.
+class RCLASS(Guid("36063853-79b1-41e6-afa6-6923c8b24811")) Ability : public ne::Serializable {
+public:
+    Ability() = default;
+    virtual ~Ability() override = default;
+
+    Ability(const std::string& sAbilityName) { this->sAbilityName = sAbilityName; }
+
+    RPROPERTY(Serialize)
+    std::string sAbilityName;
+
+    // ...
+
+    Ability_GENERATED
+};
+
 class RCLASS(Guid("36063853-79b1-41e6-afa6-6923c8b24815")) PlayerSaveData : public ne::Serializable {
 public:
     PlayerSaveData() = default;
@@ -256,9 +292,9 @@ public:
     RPROPERTY(Serialize)
     InventorySaveData inventory;
 
-    /// Stores IDs of player abilities.
+    // Can also store types that derive from `Ability` without any serialization/deserialization issues.
     RPROPERTY(Serialize)
-    std::vector<unsigned long long> vAbilities;
+    std::vector<std::shared_ptr<Ability>> vAbilities;
 
     PlayerSaveData_GENERATED
 };

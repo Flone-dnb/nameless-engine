@@ -520,221 +520,261 @@ TEST_CASE("serialize and deserialize fields of different types") {
         ProjectPaths::getDirectoryForResources(ResourceDirectory::ROOT) / "test" / "temp" /
         "TESTING_ReflectionTest_TESTING.toml";
 
-    // Create test instance with some fields.
-    ReflectionOuterTestClass outerTestObj;
-    outerTestObj.bBoolValue = true;
-    outerTestObj.iIntNotSerialized = 42;
     {
-        ReflectionTestStruct testObj;
+        // Create test instance with some fields.
+        ReflectionOuterTestClass outerTestObj;
+        outerTestObj.bBoolValue = true;
+        outerTestObj.iIntNotSerialized = 42;
+        {
+            outerTestObj.entity.bBoolValue = true;
+            outerTestObj.entity.iIntValue = 42;
+            outerTestObj.entity.iUnsignedIntValue = UINT_MAX;
+            outerTestObj.entity.iLongLongValue = INT_MAX * 10ll;
+            outerTestObj.entity.iUnsignedLongLongValue = ULLONG_MAX;
+            outerTestObj.entity.floatValue = 3.14159f;
+            outerTestObj.entity.doubleValue = 3.14159265358979;
 
-        testObj.bBoolValue = true;
-        testObj.iIntValue = 42;
-        testObj.iUnsignedIntValue = UINT_MAX;
-        testObj.iLongLongValue = INT_MAX * 10ll;
-        testObj.iUnsignedLongLongValue = ULLONG_MAX;
-        testObj.floatValue = 3.14159f;
-        testObj.doubleValue = 3.14159265358979;
+            outerTestObj.entity.sStringValue = "Привет \"мир\""; // using non-ASCII on purpose
 
-        testObj.sStringValue = "Привет \"мир\""; // using non-ASCII on purpose
+            outerTestObj.entity.vBoolVector = {true, true, false};
+            outerTestObj.entity.vIntVector = {42, -42, 43, -43};
+            outerTestObj.entity.vUnsignedIntVector = {UINT_MAX, INT_MAX + 1u};
+            outerTestObj.entity.vLongLongVector = {INT_MAX * 10ll, INT_MIN * 10ll};
+            outerTestObj.entity.vUnsignedLongLongVector = {ULLONG_MAX, ULLONG_MAX - 1};
+            outerTestObj.entity.vFloatVector = {3.14159f, -3.14159f};
+            outerTestObj.entity.vDoubleVector = {3.14159265358979, -3.14159265358979};
+            outerTestObj.entity.vStringVector = {"Привет \"мир\"", "Hello \"world\""};
+            outerTestObj.entity.vSharedPtrSerializable = {
+                std::make_shared<ReflectionTestNode1>(),
+                std::make_shared<special::ReflectionTestNode1Child>(),
+                std::make_shared<ReflectionTestNode1>()};
 
-        testObj.vBoolVector = {true, true, false};
-        testObj.vIntVector = {42, -42, 43, -43};
-        testObj.vUnsignedIntVector = {UINT_MAX, INT_MAX + 1u};
-        testObj.vLongLongVector = {INT_MAX * 10ll, INT_MIN * 10ll};
-        testObj.vUnsignedLongLongVector = {ULLONG_MAX, ULLONG_MAX - 1};
-        testObj.vFloatVector = {3.14159f, -3.14159f};
-        testObj.vDoubleVector = {3.14159265358979, -3.14159265358979};
-        testObj.vStringVector = {"Привет \"мир\"", "Hello \"world\""};
+            outerTestObj.entity.vSharedPtrSerializable[0]->bBoolValue1 = false;
+            outerTestObj.entity.vSharedPtrSerializable[0]->bBoolValue2 = false;
+            outerTestObj.entity.vSharedPtrSerializable[0]->entity.iIntValue1 = 1;
+            outerTestObj.entity.vSharedPtrSerializable[0]->entity.iIntValue2 = 2;
+            outerTestObj.entity.vSharedPtrSerializable[0]->entity.vVectorValue1 = {"Hello", "World!"};
+            outerTestObj.entity.vSharedPtrSerializable[0]->entity.vVectorValue2 = {"Hallo", "Welt!"};
+            const auto pChild = dynamic_cast<special::ReflectionTestNode1Child*>(
+                outerTestObj.entity.vSharedPtrSerializable[1].get());
+            pChild->bBoolValue1 = true;
+            pChild->bBoolValue2 = true;
+            pChild->entity.iIntValue1 = 11;
+            pChild->entity.iIntValue2 = 22;
+            pChild->entity.vVectorValue1 = {"Hello2", "World!2"};
+            pChild->entity.vVectorValue2 = {"Hallo2", "Welt!2"};
+            pChild->iIntValue = 42;
+            pChild->vNodes = {
+                std::make_shared<ReflectionTestNode1>(), std::make_shared<ReflectionTestNode1>()};
+            pChild->vNodes[0]->entity.iIntValue1 = 10;
+            pChild->vNodes[1]->entity.iIntValue2 = 20;
+            outerTestObj.entity.vSharedPtrSerializable[2]->bBoolValue1 = false;
+            outerTestObj.entity.vSharedPtrSerializable[2]->bBoolValue2 = true;
+            outerTestObj.entity.vSharedPtrSerializable[2]->entity.iIntValue1 = 111;
+            outerTestObj.entity.vSharedPtrSerializable[2]->entity.iIntValue2 = 222;
+            outerTestObj.entity.vSharedPtrSerializable[2]->entity.vVectorValue1 = {"Hello3", "World!3"};
+            outerTestObj.entity.vSharedPtrSerializable[2]->entity.vVectorValue2 = {"Hallo3", "Welt!3"};
 
-        testObj.mapBoolBool = {{false, false}, {true, true}};
-        testObj.mapBoolInt = {{false, -1}, {true, 42}};
-        testObj.mapBoolUnsignedInt = {{false, UINT_MAX}, {true, INT_MAX + 1u}};
-        testObj.mapBoolLongLong = {{false, INT_MIN * 10ll}, {true, INT_MAX * 10ll}};
-        testObj.mapBoolUnsignedLongLong = {{false, ULLONG_MAX}, {true, ULLONG_MAX - 1}};
-        testObj.mapBoolFloat = {{false, -3.14159f}, {true, 3.14159f}};
-        testObj.mapBoolDouble = {{false, -3.14159265358979}, {true, 3.14159265358979}};
-        testObj.mapBoolString = {{false, "Привет \"мир\""}, {true, "Hello \"world\""}};
-        testObj.mapIntBool = {{-1, false}, {42, true}};
-        testObj.mapUnsignedIntBool = {{UINT_MAX, false}, {INT_MAX + 1u, true}};
-        testObj.mapLongLongBool = {{INT_MIN * 10ll, false}, {INT_MAX * 10ll, true}};
-        testObj.mapUnsignedLongLongBool = {{ULLONG_MAX, false}, {ULLONG_MAX - 1, true}};
-        testObj.mapFloatBool = {{-3.14159f, false}, {3.14159f, true}};
-        testObj.mapDoubleBool = {{-3.14159265358979, false}, {3.14159265358979, true}};
-        testObj.mapStringBool = {{"Привет \"мир\"", false}, {"Hello \"world\"", true}};
-
-        outerTestObj.entity = testObj;
-    }
-
-    // Serialize.
-    auto optionalError = outerTestObj.serialize(pathToFile, false);
-    if (optionalError.has_value()) {
-        auto err = optionalError.value();
-        err.addEntry();
-        INFO(err.getFullErrorMessage());
-        REQUIRE(false);
-    }
-
-    REQUIRE(std::filesystem::exists(fullPathToFile));
-
-    // Check IDs.
-    const auto idResult = Serializable::getIdsFromFile(pathToFile);
-    if (std::holds_alternative<Error>(idResult)) {
-        auto err = std::get<Error>(std::move(idResult));
-        err.addEntry();
-        INFO(err.getFullErrorMessage());
-        REQUIRE(false);
-    }
-    const auto ids = std::get<std::set<std::string>>(idResult);
-    REQUIRE(ids.size() == 1);
-    REQUIRE(ids.find("0") != ids.end());
-
-    // Deserialize.
-    auto result = Serializable::deserialize<gc, ReflectionOuterTestClass>(pathToFile);
-    if (std::holds_alternative<Error>(result)) {
-        auto err = std::get<Error>(std::move(result));
-        err.addEntry();
-        INFO(err.getFullErrorMessage());
-        REQUIRE(false);
-    }
-
-    const auto pDeserialized = std::get<gc<ReflectionOuterTestClass>>(result);
-
-    // Compare results.
-
-    constexpr auto floatDelta = 0.00001f;
-    constexpr auto doubleDelta = 0.0000000000001;
-
-    // Primitive types + std::string.
-    REQUIRE(outerTestObj.iIntNotSerialized != 0);
-    REQUIRE(pDeserialized->iIntNotSerialized == 0);
-    REQUIRE(outerTestObj.bBoolValue == pDeserialized->bBoolValue);
-    REQUIRE(outerTestObj.entity.bBoolValue == pDeserialized->entity.bBoolValue);
-    REQUIRE(outerTestObj.entity.iIntValue == pDeserialized->entity.iIntValue);
-    REQUIRE(outerTestObj.entity.iUnsignedIntValue == pDeserialized->entity.iUnsignedIntValue);
-    REQUIRE(outerTestObj.entity.iLongLongValue == pDeserialized->entity.iLongLongValue);
-    REQUIRE(outerTestObj.entity.iUnsignedLongLongValue == pDeserialized->entity.iUnsignedLongLongValue);
-    REQUIRE(fabs(outerTestObj.entity.floatValue - pDeserialized->entity.floatValue) < floatDelta);
-    REQUIRE(fabs(outerTestObj.entity.doubleValue - pDeserialized->entity.doubleValue) < doubleDelta);
-    REQUIRE(outerTestObj.entity.sStringValue == pDeserialized->entity.sStringValue);
-
-    // Vectors.
-    REQUIRE(!outerTestObj.entity.vBoolVector.empty());
-    REQUIRE(outerTestObj.entity.vBoolVector == pDeserialized->entity.vBoolVector);
-
-    REQUIRE(!outerTestObj.entity.vIntVector.empty());
-    REQUIRE(outerTestObj.entity.vIntVector == pDeserialized->entity.vIntVector);
-
-    REQUIRE(!outerTestObj.entity.vUnsignedIntVector.empty());
-    REQUIRE(outerTestObj.entity.vUnsignedIntVector == pDeserialized->entity.vUnsignedIntVector);
-
-    REQUIRE(!outerTestObj.entity.vLongLongVector.empty());
-    REQUIRE(outerTestObj.entity.vLongLongVector == pDeserialized->entity.vLongLongVector);
-
-    REQUIRE(!outerTestObj.entity.vUnsignedLongLongVector.empty());
-    REQUIRE(outerTestObj.entity.vUnsignedLongLongVector == pDeserialized->entity.vUnsignedLongLongVector);
-
-    REQUIRE(!outerTestObj.entity.vFloatVector.empty());
-    REQUIRE(outerTestObj.entity.vFloatVector.size() == pDeserialized->entity.vFloatVector.size());
-    for (size_t i = 0; i < outerTestObj.entity.vFloatVector.size(); i++)
-        REQUIRE(
-            fabs(outerTestObj.entity.vFloatVector[i] - pDeserialized->entity.vFloatVector[i]) < floatDelta);
-
-    REQUIRE(!outerTestObj.entity.vDoubleVector.empty());
-    REQUIRE(outerTestObj.entity.vDoubleVector.size() == pDeserialized->entity.vDoubleVector.size());
-    for (size_t i = 0; i < outerTestObj.entity.vDoubleVector.size(); i++)
-        REQUIRE(
-            fabs(outerTestObj.entity.vDoubleVector[i] - pDeserialized->entity.vDoubleVector[i]) <
-            doubleDelta);
-
-    REQUIRE(!outerTestObj.entity.vStringVector.empty());
-    REQUIRE(outerTestObj.entity.vStringVector == pDeserialized->entity.vStringVector);
-
-    REQUIRE(outerTestObj.entity.vEmpty.empty());
-    REQUIRE(outerTestObj.entity.vEmpty == pDeserialized->entity.vEmpty);
-
-    // Unordered maps.
-    REQUIRE(!outerTestObj.entity.mapBoolBool.empty());
-    REQUIRE(outerTestObj.entity.mapBoolBool == pDeserialized->entity.mapBoolBool);
-
-    REQUIRE(!outerTestObj.entity.mapBoolInt.empty());
-    REQUIRE(outerTestObj.entity.mapBoolInt == pDeserialized->entity.mapBoolInt);
-
-    REQUIRE(!outerTestObj.entity.mapBoolUnsignedInt.empty());
-    REQUIRE(outerTestObj.entity.mapBoolUnsignedInt == pDeserialized->entity.mapBoolUnsignedInt);
-
-    REQUIRE(!outerTestObj.entity.mapBoolLongLong.empty());
-    REQUIRE(outerTestObj.entity.mapBoolLongLong == pDeserialized->entity.mapBoolLongLong);
-
-    REQUIRE(!outerTestObj.entity.mapBoolUnsignedLongLong.empty());
-    REQUIRE(outerTestObj.entity.mapBoolUnsignedLongLong == pDeserialized->entity.mapBoolUnsignedLongLong);
-
-    REQUIRE(!outerTestObj.entity.mapBoolFloat.empty());
-    REQUIRE(outerTestObj.entity.mapBoolFloat.size() == pDeserialized->entity.mapBoolFloat.size());
-    for (const auto& [key, value] : outerTestObj.entity.mapBoolFloat) {
-        const auto it = pDeserialized->entity.mapBoolFloat.find(key);
-        REQUIRE(it != pDeserialized->entity.mapBoolFloat.end());
-        REQUIRE(key == it->first);
-        REQUIRE(fabs(value - it->second) < floatDelta);
-    }
-
-    REQUIRE(!outerTestObj.entity.mapBoolDouble.empty());
-    REQUIRE(outerTestObj.entity.mapBoolDouble.size() == pDeserialized->entity.mapBoolDouble.size());
-    for (const auto& [key, value] : outerTestObj.entity.mapBoolDouble) {
-        const auto it = pDeserialized->entity.mapBoolDouble.find(key);
-        REQUIRE(it != pDeserialized->entity.mapBoolDouble.end());
-        REQUIRE(key == it->first);
-        REQUIRE(fabs(value - it->second) < doubleDelta);
-    }
-
-    REQUIRE(!outerTestObj.entity.mapBoolString.empty());
-    REQUIRE(outerTestObj.entity.mapBoolString == pDeserialized->entity.mapBoolString);
-
-    REQUIRE(!outerTestObj.entity.mapIntBool.empty());
-    REQUIRE(outerTestObj.entity.mapIntBool == pDeserialized->entity.mapIntBool);
-
-    REQUIRE(!outerTestObj.entity.mapUnsignedIntBool.empty());
-    REQUIRE(outerTestObj.entity.mapUnsignedIntBool == pDeserialized->entity.mapUnsignedIntBool);
-
-    REQUIRE(!outerTestObj.entity.mapLongLongBool.empty());
-    REQUIRE(outerTestObj.entity.mapLongLongBool == pDeserialized->entity.mapLongLongBool);
-
-    REQUIRE(!outerTestObj.entity.mapUnsignedLongLongBool.empty());
-    REQUIRE(outerTestObj.entity.mapUnsignedLongLongBool == pDeserialized->entity.mapUnsignedLongLongBool);
-
-    REQUIRE(!outerTestObj.entity.mapFloatBool.empty());
-    REQUIRE(outerTestObj.entity.mapFloatBool.size() == pDeserialized->entity.mapFloatBool.size());
-    for (const auto& [key, value] : outerTestObj.entity.mapFloatBool) {
-        bool bFound = false;
-        for (const auto& [otherKey, otherValue] : pDeserialized->entity.mapFloatBool) {
-            if (fabs(key - otherKey) < floatDelta) {
-                bFound = true;
-                break;
-            }
+            outerTestObj.entity.mapBoolBool = {{false, false}, {true, true}};
+            outerTestObj.entity.mapBoolInt = {{false, -1}, {true, 42}};
+            outerTestObj.entity.mapBoolUnsignedInt = {{false, UINT_MAX}, {true, INT_MAX + 1u}};
+            outerTestObj.entity.mapBoolLongLong = {{false, INT_MIN * 10ll}, {true, INT_MAX * 10ll}};
+            outerTestObj.entity.mapBoolUnsignedLongLong = {{false, ULLONG_MAX}, {true, ULLONG_MAX - 1}};
+            outerTestObj.entity.mapBoolFloat = {{false, -3.14159f}, {true, 3.14159f}};
+            outerTestObj.entity.mapBoolDouble = {{false, -3.14159265358979}, {true, 3.14159265358979}};
+            outerTestObj.entity.mapBoolString = {{false, "Привет \"мир\""}, {true, "Hello \"world\""}};
+            outerTestObj.entity.mapIntBool = {{-1, false}, {42, true}};
+            outerTestObj.entity.mapUnsignedIntBool = {{UINT_MAX, false}, {INT_MAX + 1u, true}};
+            outerTestObj.entity.mapLongLongBool = {{INT_MIN * 10ll, false}, {INT_MAX * 10ll, true}};
+            outerTestObj.entity.mapUnsignedLongLongBool = {{ULLONG_MAX, false}, {ULLONG_MAX - 1, true}};
+            outerTestObj.entity.mapFloatBool = {{-3.14159f, false}, {3.14159f, true}};
+            outerTestObj.entity.mapDoubleBool = {{-3.14159265358979, false}, {3.14159265358979, true}};
+            outerTestObj.entity.mapStringBool = {{"Привет \"мир\"", false}, {"Hello \"world\"", true}};
         }
-        REQUIRE(bFound);
-    }
 
-    REQUIRE(!outerTestObj.entity.mapDoubleBool.empty());
-    REQUIRE(outerTestObj.entity.mapDoubleBool.size() == pDeserialized->entity.mapDoubleBool.size());
-    for (const auto& [key, value] : outerTestObj.entity.mapDoubleBool) {
-        bool bFound = false;
-        for (const auto& [otherKey, otherValue] : pDeserialized->entity.mapDoubleBool) {
-            if (fabs(key - otherKey) < doubleDelta) {
-                bFound = true;
-                break;
-            }
+        // Serialize.
+        auto optionalError = outerTestObj.serialize(pathToFile, false);
+        if (optionalError.has_value()) {
+            auto err = optionalError.value();
+            err.addEntry();
+            INFO(err.getFullErrorMessage());
+            REQUIRE(false);
         }
-        REQUIRE(bFound);
+
+        REQUIRE(std::filesystem::exists(fullPathToFile));
+
+        // Check IDs.
+        const auto idResult = Serializable::getIdsFromFile(pathToFile);
+        if (std::holds_alternative<Error>(idResult)) {
+            auto err = std::get<Error>(std::move(idResult));
+            err.addEntry();
+            INFO(err.getFullErrorMessage());
+            REQUIRE(false);
+        }
+        const auto ids = std::get<std::set<std::string>>(idResult);
+        REQUIRE(ids.size() == 1);
+        REQUIRE(ids.find("0") != ids.end());
+
+        // Deserialize.
+        auto result = Serializable::deserialize<gc, ReflectionOuterTestClass>(pathToFile);
+        if (std::holds_alternative<Error>(result)) {
+            auto err = std::get<Error>(std::move(result));
+            err.addEntry();
+            INFO(err.getFullErrorMessage());
+            REQUIRE(false);
+        }
+
+        const auto pDeserialized = std::get<gc<ReflectionOuterTestClass>>(result);
+
+        // Compare results.
+
+        constexpr auto floatDelta = 0.00001f;
+        constexpr auto doubleDelta = 0.0000000000001;
+
+        // Primitive types + std::string.
+        REQUIRE(outerTestObj.iIntNotSerialized != 0);
+        REQUIRE(pDeserialized->iIntNotSerialized == 0);
+        REQUIRE(outerTestObj.bBoolValue == pDeserialized->bBoolValue);
+        REQUIRE(outerTestObj.entity.bBoolValue == pDeserialized->entity.bBoolValue);
+        REQUIRE(outerTestObj.entity.iIntValue == pDeserialized->entity.iIntValue);
+        REQUIRE(outerTestObj.entity.iUnsignedIntValue == pDeserialized->entity.iUnsignedIntValue);
+        REQUIRE(outerTestObj.entity.iLongLongValue == pDeserialized->entity.iLongLongValue);
+        REQUIRE(outerTestObj.entity.iUnsignedLongLongValue == pDeserialized->entity.iUnsignedLongLongValue);
+        REQUIRE(fabs(outerTestObj.entity.floatValue - pDeserialized->entity.floatValue) < floatDelta);
+        REQUIRE(fabs(outerTestObj.entity.doubleValue - pDeserialized->entity.doubleValue) < doubleDelta);
+        REQUIRE(outerTestObj.entity.sStringValue == pDeserialized->entity.sStringValue);
+
+        // Vectors.
+        REQUIRE(!outerTestObj.entity.vBoolVector.empty());
+        REQUIRE(outerTestObj.entity.vBoolVector == pDeserialized->entity.vBoolVector);
+
+        REQUIRE(!outerTestObj.entity.vIntVector.empty());
+        REQUIRE(outerTestObj.entity.vIntVector == pDeserialized->entity.vIntVector);
+
+        REQUIRE(!outerTestObj.entity.vUnsignedIntVector.empty());
+        REQUIRE(outerTestObj.entity.vUnsignedIntVector == pDeserialized->entity.vUnsignedIntVector);
+
+        REQUIRE(!outerTestObj.entity.vLongLongVector.empty());
+        REQUIRE(outerTestObj.entity.vLongLongVector == pDeserialized->entity.vLongLongVector);
+
+        REQUIRE(!outerTestObj.entity.vUnsignedLongLongVector.empty());
+        REQUIRE(outerTestObj.entity.vUnsignedLongLongVector == pDeserialized->entity.vUnsignedLongLongVector);
+
+        REQUIRE(!outerTestObj.entity.vFloatVector.empty());
+        REQUIRE(outerTestObj.entity.vFloatVector.size() == pDeserialized->entity.vFloatVector.size());
+        for (size_t i = 0; i < outerTestObj.entity.vFloatVector.size(); i++)
+            REQUIRE(
+                fabs(outerTestObj.entity.vFloatVector[i] - pDeserialized->entity.vFloatVector[i]) <
+                floatDelta);
+
+        REQUIRE(!outerTestObj.entity.vDoubleVector.empty());
+        REQUIRE(outerTestObj.entity.vDoubleVector.size() == pDeserialized->entity.vDoubleVector.size());
+        for (size_t i = 0; i < outerTestObj.entity.vDoubleVector.size(); i++)
+            REQUIRE(
+                fabs(outerTestObj.entity.vDoubleVector[i] - pDeserialized->entity.vDoubleVector[i]) <
+                doubleDelta);
+
+        REQUIRE(!outerTestObj.entity.vStringVector.empty());
+        REQUIRE(outerTestObj.entity.vStringVector == pDeserialized->entity.vStringVector);
+
+        REQUIRE(!outerTestObj.entity.vSharedPtrSerializable.empty());
+        REQUIRE(
+            outerTestObj.entity.vSharedPtrSerializable.size() ==
+            pDeserialized->entity.vSharedPtrSerializable.size());
+        for (size_t i = 0; i < outerTestObj.entity.vSharedPtrSerializable.size(); i++) {
+            REQUIRE(SerializableObjectFieldSerializer::isSerializableObjectValueEqual(
+                outerTestObj.entity.vSharedPtrSerializable[i].get(),
+                pDeserialized->entity.vSharedPtrSerializable[i].get()));
+        }
+
+        REQUIRE(outerTestObj.entity.vEmpty.empty());
+        REQUIRE(outerTestObj.entity.vEmpty == pDeserialized->entity.vEmpty);
+
+        // Unordered maps.
+        REQUIRE(!outerTestObj.entity.mapBoolBool.empty());
+        REQUIRE(outerTestObj.entity.mapBoolBool == pDeserialized->entity.mapBoolBool);
+
+        REQUIRE(!outerTestObj.entity.mapBoolInt.empty());
+        REQUIRE(outerTestObj.entity.mapBoolInt == pDeserialized->entity.mapBoolInt);
+
+        REQUIRE(!outerTestObj.entity.mapBoolUnsignedInt.empty());
+        REQUIRE(outerTestObj.entity.mapBoolUnsignedInt == pDeserialized->entity.mapBoolUnsignedInt);
+
+        REQUIRE(!outerTestObj.entity.mapBoolLongLong.empty());
+        REQUIRE(outerTestObj.entity.mapBoolLongLong == pDeserialized->entity.mapBoolLongLong);
+
+        REQUIRE(!outerTestObj.entity.mapBoolUnsignedLongLong.empty());
+        REQUIRE(outerTestObj.entity.mapBoolUnsignedLongLong == pDeserialized->entity.mapBoolUnsignedLongLong);
+
+        REQUIRE(!outerTestObj.entity.mapBoolFloat.empty());
+        REQUIRE(outerTestObj.entity.mapBoolFloat.size() == pDeserialized->entity.mapBoolFloat.size());
+        for (const auto& [key, value] : outerTestObj.entity.mapBoolFloat) {
+            const auto it = pDeserialized->entity.mapBoolFloat.find(key);
+            REQUIRE(it != pDeserialized->entity.mapBoolFloat.end());
+            REQUIRE(key == it->first);
+            REQUIRE(fabs(value - it->second) < floatDelta);
+        }
+
+        REQUIRE(!outerTestObj.entity.mapBoolDouble.empty());
+        REQUIRE(outerTestObj.entity.mapBoolDouble.size() == pDeserialized->entity.mapBoolDouble.size());
+        for (const auto& [key, value] : outerTestObj.entity.mapBoolDouble) {
+            const auto it = pDeserialized->entity.mapBoolDouble.find(key);
+            REQUIRE(it != pDeserialized->entity.mapBoolDouble.end());
+            REQUIRE(key == it->first);
+            REQUIRE(fabs(value - it->second) < doubleDelta);
+        }
+
+        REQUIRE(!outerTestObj.entity.mapBoolString.empty());
+        REQUIRE(outerTestObj.entity.mapBoolString == pDeserialized->entity.mapBoolString);
+
+        REQUIRE(!outerTestObj.entity.mapIntBool.empty());
+        REQUIRE(outerTestObj.entity.mapIntBool == pDeserialized->entity.mapIntBool);
+
+        REQUIRE(!outerTestObj.entity.mapUnsignedIntBool.empty());
+        REQUIRE(outerTestObj.entity.mapUnsignedIntBool == pDeserialized->entity.mapUnsignedIntBool);
+
+        REQUIRE(!outerTestObj.entity.mapLongLongBool.empty());
+        REQUIRE(outerTestObj.entity.mapLongLongBool == pDeserialized->entity.mapLongLongBool);
+
+        REQUIRE(!outerTestObj.entity.mapUnsignedLongLongBool.empty());
+        REQUIRE(outerTestObj.entity.mapUnsignedLongLongBool == pDeserialized->entity.mapUnsignedLongLongBool);
+
+        REQUIRE(!outerTestObj.entity.mapFloatBool.empty());
+        REQUIRE(outerTestObj.entity.mapFloatBool.size() == pDeserialized->entity.mapFloatBool.size());
+        for (const auto& [key, value] : outerTestObj.entity.mapFloatBool) {
+            bool bFound = false;
+            for (const auto& [otherKey, otherValue] : pDeserialized->entity.mapFloatBool) {
+                if (fabs(key - otherKey) < floatDelta) {
+                    bFound = true;
+                    break;
+                }
+            }
+            REQUIRE(bFound);
+        }
+
+        REQUIRE(!outerTestObj.entity.mapDoubleBool.empty());
+        REQUIRE(outerTestObj.entity.mapDoubleBool.size() == pDeserialized->entity.mapDoubleBool.size());
+        for (const auto& [key, value] : outerTestObj.entity.mapDoubleBool) {
+            bool bFound = false;
+            for (const auto& [otherKey, otherValue] : pDeserialized->entity.mapDoubleBool) {
+                if (fabs(key - otherKey) < doubleDelta) {
+                    bFound = true;
+                    break;
+                }
+            }
+            REQUIRE(bFound);
+        }
+
+        REQUIRE(!outerTestObj.entity.mapStringBool.empty());
+        REQUIRE(outerTestObj.entity.mapStringBool == pDeserialized->entity.mapStringBool);
+
+        REQUIRE(outerTestObj.entity.mapEmpty.empty());
+        REQUIRE(outerTestObj.entity.mapEmpty == pDeserialized->entity.mapEmpty);
     }
-
-    REQUIRE(!outerTestObj.entity.mapStringBool.empty());
-    REQUIRE(outerTestObj.entity.mapStringBool == pDeserialized->entity.mapStringBool);
-
-    REQUIRE(outerTestObj.entity.mapEmpty.empty());
-    REQUIRE(outerTestObj.entity.mapEmpty == pDeserialized->entity.mapEmpty);
 
     // Cleanup.
     std::filesystem::remove(fullPathToFile);
+    gc_collector()->fullCollect();
 }
 
 TEST_CASE("serialize and deserialize sample player save data") {
@@ -749,7 +789,7 @@ TEST_CASE("serialize and deserialize sample player save data") {
         pPlayerSaveData->sCharacterName = "Player 1";
         pPlayerSaveData->iCharacterLevel = 42;
         pPlayerSaveData->iExperiencePoints = 200;
-        pPlayerSaveData->vAbilities = {241, 3122, 22};
+        pPlayerSaveData->vAbilities = {std::make_shared<Ability>("Fire"), std::make_shared<Ability>("Wind")};
         pPlayerSaveData->inventory.addOneItem(42);
         pPlayerSaveData->inventory.addOneItem(42); // now have two items with ID "42"
         pPlayerSaveData->inventory.addOneItem(102);
@@ -798,7 +838,9 @@ TEST_CASE("serialize and deserialize sample player save data") {
         REQUIRE(pPlayerSaveData->sCharacterName == "Player 1");
         REQUIRE(pPlayerSaveData->iCharacterLevel == 42);
         REQUIRE(pPlayerSaveData->iExperiencePoints == 200);
-        REQUIRE(pPlayerSaveData->vAbilities == std::vector<unsigned long long>{241, 3122, 22});
+        REQUIRE(pPlayerSaveData->vAbilities.size() == 2);
+        REQUIRE(pPlayerSaveData->vAbilities[0]->sAbilityName == "Fire");
+        REQUIRE(pPlayerSaveData->vAbilities[1]->sAbilityName == "Wind");
         REQUIRE(pPlayerSaveData->inventory.getItemAmount(42) == 2);
         REQUIRE(pPlayerSaveData->inventory.getItemAmount(102) == 1);
     }

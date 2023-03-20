@@ -103,7 +103,7 @@ namespace ne {
 
         if (!isFieldTypeSupported(pFromField)) {
             return Error(fmt::format(
-                "The type \"{}\" of the specified field \"{}\" is not supported by this serializer.",
+                "the type \"{}\" of the specified field \"{}\" is not supported by this serializer",
                 sFieldCanonicalTypeName,
                 pFieldName));
         }
@@ -112,7 +112,7 @@ namespace ne {
         const auto pTo = static_cast<std::shared_ptr<Material>*>(pToField->getPtrUnsafe(pToInstance));
 
         if ((*pFrom) == nullptr || (*pTo) == nullptr) {
-            return Error("One of the fields is `nullptr`.");
+            return Error("one of the fields is `nullptr`");
         }
 
         auto optionalError =

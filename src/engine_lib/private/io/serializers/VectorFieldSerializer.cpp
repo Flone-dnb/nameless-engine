@@ -2,11 +2,13 @@
 
 // Custom.
 #include "game/nodes/MeshNode.h"
+#include "io/serializers/SerializableObjectFieldSerializer.h"
 
 // External.
 #include "fmt/format.h"
 
 namespace ne {
+
     bool VectorFieldSerializer::isFieldTypeSupported(const rfk::Field* pField) {
         const auto sFieldCanonicalTypeName = std::string(pField->getCanonicalTypeName());
 
@@ -36,6 +38,10 @@ namespace ne {
         }
         if (sFieldCanonicalTypeName == "std::vector<ne::MeshVertex>") {
             return true;
+        }
+        if (sFieldCanonicalTypeName.starts_with("std::vector<") &&
+            isMostInnerTypeSerializable(sFieldCanonicalTypeName)) {
+            return sFieldCanonicalTypeName.contains("std::shared_ptr<");
         }
 
         return false;
@@ -98,15 +104,49 @@ namespace ne {
                 reinterpret_cast<std::vector<MeshVertex>*>(pField->getPtrUnsafe(pFieldOwner)),
                 &pTomlData->operator[](sSectionName),
                 pFieldName);
+        } else if (
+            sFieldCanonicalTypeName.starts_with("std::vector<") &&
+            isMostInnerTypeSerializable(sFieldCanonicalTypeName)) {
+// Define a helper macro.
+#define SERIALIZE_VECTOR_INNER_POINTER_SERIALIZABLE                                                          \
+    toml::table table;                                                                                       \
+    for (size_t i = 0; i < pArray->size(); i++) {                                                            \
+        const auto& pSerializable = pArray->at(i);                                                           \
+        const auto pGuid = pSerializable->getArchetype().getProperty<Guid>(false);                           \
+        if (pGuid == nullptr) {                                                                              \
+            return Error(fmt::format(                                                                        \
+                "type \"{}\" should have a GUID assigned to it", pSerializable->getArchetype().getName()));  \
+        }                                                                                                    \
+        toml::value data;                                                                                    \
+        auto result = pSerializable->serialize(data);                                                        \
+        if (std::holds_alternative<Error>(result)) [[unlikely]] {                                            \
+            auto error = std::get<Error>(std::move(result));                                                 \
+            error.addEntry();                                                                                \
+            return error;                                                                                    \
+        }                                                                                                    \
+        table[fmt::format("{}[{}]", pFieldName, i)] = std::move(data);                                       \
+    }                                                                                                        \
+    pTomlData->operator[](sSectionName).operator[](pFieldName) = std::move(table);
+
+            if (sFieldCanonicalTypeName.contains("std::shared_ptr<")) {
+                const auto pArray = reinterpret_cast<std::vector<std::shared_ptr<Serializable>>*>(
+                    pField->getPtrUnsafe(pFieldOwner));
+                SERIALIZE_VECTOR_INNER_POINTER_SERIALIZABLE
+            } else {
+                return Error(fmt::format(
+                    "the type \"{}\" of the specified array field \"{}\" has unsupported smart pointer type",
+                    sFieldCanonicalTypeName,
+                    pFieldName));
+            }
         } else {
             return Error(fmt::format(
-                "The type \"{}\" of the specified field \"{}\" is not supported by this serializer.",
+                "the type \"{}\" of the specified field \"{}\" is not supported by this serializer",
                 sFieldCanonicalTypeName,
                 pFieldName));
         }
 
         return {};
-    }
+    } // namespace ne
 
     std::optional<Error> VectorFieldSerializer::deserializeField( // NOLINT: too complex
         const toml::value* pTomlDocument,
@@ -119,16 +159,28 @@ namespace ne {
         const auto sFieldCanonicalTypeName = std::string(pField->getCanonicalTypeName());
         const auto pFieldName = pField->getName();
 
-        if (sFieldCanonicalTypeName != "std::vector<ne::MeshVertex>" && !pTomlValue->is_array()) {
-            return Error(fmt::format(
-                "The type \"{}\" of the specified field \"{}\" is supported by this serializer, "
-                "but the TOML value is not an array.",
-                sFieldCanonicalTypeName,
-                pFieldName));
-        }
+#define GET_TOML_VALUE_AS_ARRAY_WITH_CHECK                                                                   \
+    if (!pTomlValue->is_array()) {                                                                           \
+        return Error(fmt::format(                                                                            \
+            "The type \"{}\" of the specified field \"{}\" is supported by this serializer, "                \
+            "but the TOML value is not an array.",                                                           \
+            sFieldCanonicalTypeName,                                                                         \
+            pFieldName));                                                                                    \
+    }                                                                                                        \
+    auto fieldValue = pTomlValue->as_array();
+
+#define GET_TOML_VALUE_AS_TABLE_WITH_CHECK                                                                   \
+    if (!pTomlValue->is_table()) {                                                                           \
+        return Error(fmt::format(                                                                            \
+            "The type \"{}\" of the specified field \"{}\" is supported by this serializer, "                \
+            "but the TOML value is not a table.",                                                            \
+            sFieldCanonicalTypeName,                                                                         \
+            pFieldName));                                                                                    \
+    }                                                                                                        \
+    auto& fieldValue = pTomlValue->as_table();
 
         if (sFieldCanonicalTypeName == "std::vector<bool>") {
-            auto fieldValue = pTomlValue->as_array();
+            GET_TOML_VALUE_AS_ARRAY_WITH_CHECK
             std::vector<bool> vArray;
             for (const auto& item : fieldValue) {
                 if (!item.is_boolean()) {
@@ -142,7 +194,7 @@ namespace ne {
             }
             pField->setUnsafe<std::vector<bool>>(pFieldOwner, std::move(vArray));
         } else if (sFieldCanonicalTypeName == "std::vector<int>") {
-            auto fieldValue = pTomlValue->as_array();
+            GET_TOML_VALUE_AS_ARRAY_WITH_CHECK
             std::vector<int> vArray;
             for (const auto& item : fieldValue) {
                 if (!item.is_integer()) {
@@ -156,7 +208,7 @@ namespace ne {
             }
             pField->setUnsafe<std::vector<int>>(pFieldOwner, std::move(vArray));
         } else if (sFieldCanonicalTypeName == "std::vector<unsigned int>") {
-            auto fieldValue = pTomlValue->as_array();
+            GET_TOML_VALUE_AS_ARRAY_WITH_CHECK
             std::vector<unsigned int> vArray;
             for (const auto& item : fieldValue) {
                 if (!item.is_integer()) {
@@ -177,7 +229,7 @@ namespace ne {
             }
             pField->setUnsafe<std::vector<unsigned int>>(pFieldOwner, std::move(vArray));
         } else if (sFieldCanonicalTypeName == "std::vector<long long>") {
-            auto fieldValue = pTomlValue->as_array();
+            GET_TOML_VALUE_AS_ARRAY_WITH_CHECK
             std::vector<long long> vArray;
             for (const auto& item : fieldValue) {
                 if (!item.is_integer()) {
@@ -191,7 +243,7 @@ namespace ne {
             }
             pField->setUnsafe<std::vector<long long>>(pFieldOwner, std::move(vArray));
         } else if (sFieldCanonicalTypeName == "std::vector<unsigned long long>") {
-            auto fieldValue = pTomlValue->as_array();
+            GET_TOML_VALUE_AS_ARRAY_WITH_CHECK
             std::vector<unsigned long long> vArray;
             for (const auto& item : fieldValue) {
                 // Stored as string.
@@ -214,7 +266,7 @@ namespace ne {
             }
             pField->setUnsafe<std::vector<unsigned long long>>(pFieldOwner, std::move(vArray));
         } else if (sFieldCanonicalTypeName == "std::vector<float>") {
-            auto fieldValue = pTomlValue->as_array();
+            GET_TOML_VALUE_AS_ARRAY_WITH_CHECK
             // We are storing float as a string for better precision.
             std::vector<float> vArray;
             for (const auto& item : fieldValue) {
@@ -238,7 +290,7 @@ namespace ne {
             }
             pField->setUnsafe<std::vector<float>>(pFieldOwner, std::move(vArray));
         } else if (sFieldCanonicalTypeName == "std::vector<double>") {
-            auto fieldValue = pTomlValue->as_array();
+            GET_TOML_VALUE_AS_ARRAY_WITH_CHECK
             // We are storing double as a string for better precision.
             std::vector<double> vArray;
             for (const auto& item : fieldValue) {
@@ -253,7 +305,7 @@ namespace ne {
                     vArray.push_back(std::stod(item.as_string().str));
                 } catch (std::exception& ex) {
                     return Error(fmt::format(
-                        "The type \"{}\" of the specified field \"{}\" is supported by this serializer, "
+                        "the type \"{}\" of the specified field \"{}\" is supported by this serializer, "
                         "but an exception occurred while trying to convert a string to a double: {}",
                         sFieldCanonicalTypeName,
                         pFieldName,
@@ -262,13 +314,13 @@ namespace ne {
             }
             pField->setUnsafe<std::vector<double>>(pFieldOwner, std::move(vArray));
         } else if (sFieldCanonicalTypeName == fmt::format("std::vector<{}>", sStringCanonicalTypeName)) {
-            auto fieldValue = pTomlValue->as_array();
+            GET_TOML_VALUE_AS_ARRAY_WITH_CHECK
             std::vector<std::string> vArray;
             for (const auto& item : fieldValue) {
                 if (!item.is_string()) {
                     return Error(fmt::format(
-                        "The type \"{}\" of the specified field \"{}\" is supported by this serializer, "
-                        "but the TOML value is not string.",
+                        "the type \"{}\" of the specified field \"{}\" is supported by this serializer, "
+                        "but the TOML value is not string",
                         sFieldCanonicalTypeName,
                         pFieldName));
                 }
@@ -283,9 +335,43 @@ namespace ne {
                 error.addEntry();
                 return error;
             }
+        } else if (
+            sFieldCanonicalTypeName.starts_with("std::vector<") &&
+            isMostInnerTypeSerializable(sFieldCanonicalTypeName)) {
+            GET_TOML_VALUE_AS_TABLE_WITH_CHECK
+
+            if (sFieldCanonicalTypeName.contains("std::shared_ptr<")) {
+                const auto pArray = reinterpret_cast<std::vector<std::shared_ptr<Serializable>>*>(
+                    pField->getPtrUnsafe(pFieldOwner));
+                // Make sure target array is empty.
+                if (!pArray->empty()) [[unlikely]] {
+                    return Error(fmt::format(
+                        "the type \"{}\" of the specified array field \"{}\" is supported by this "
+                        "serializer, but this array should be empty before deserialization",
+                        sFieldCanonicalTypeName,
+                        pFieldName));
+                }
+
+                for (const auto& [key, value] : fieldValue) {
+                    auto result =
+                        Serializable::deserialize<std::shared_ptr, Serializable>(value, customAttributes);
+                    if (std::holds_alternative<Error>(result)) {
+                        auto error = std::get<Error>(std::move(result));
+                        error.addEntry();
+                        return error;
+                    }
+
+                    pArray->push_back(std::get<std::shared_ptr<Serializable>>(std::move(result)));
+                }
+            } else {
+                return Error(fmt::format(
+                    "the type \"{}\" of the specified array field \"{}\" has unsupported smart pointer type",
+                    sFieldCanonicalTypeName,
+                    pFieldName));
+            }
         } else {
             return Error(fmt::format(
-                "The type \"{}\" of the specified field \"{}\" is not supported by this serializer.",
+                "the type \"{}\" of the specified field \"{}\" is not supported by this serializer",
                 sFieldCanonicalTypeName,
                 pFieldName));
         }
@@ -301,41 +387,68 @@ namespace ne {
         const auto sFieldCanonicalTypeName = std::string(pFromField->getCanonicalTypeName());
         const auto pFieldName = pFromField->getName();
 
-        if (sFieldCanonicalTypeName == "std::vector<bool>") {
-            auto value = pFromField->getUnsafe<std::vector<bool>>(pFromInstance);
-            pToField->setUnsafe<std::vector<bool>>(pToInstance, std::move(value));
-        } else if (sFieldCanonicalTypeName == "std::vector<int>") {
-            auto value = pFromField->getUnsafe<std::vector<int>>(pFromInstance);
-            pToField->setUnsafe<std::vector<int>>(pToInstance, std::move(value));
-        } else if (sFieldCanonicalTypeName == "std::vector<unsigned int>") {
-            auto value = pFromField->getUnsafe<std::vector<unsigned int>>(pFromInstance);
-            pToField->setUnsafe<std::vector<unsigned int>>(pToInstance, std::move(value));
-        } else if (sFieldCanonicalTypeName == "std::vector<long long>") {
-            auto value = pFromField->getUnsafe<std::vector<long long>>(pFromInstance);
-            pToField->setUnsafe<std::vector<long long>>(pToInstance, std::move(value));
-        } else if (sFieldCanonicalTypeName == "std::vector<unsigned long long>") {
-            auto value = pFromField->getUnsafe<std::vector<unsigned long long>>(pFromInstance);
-            pToField->setUnsafe<std::vector<unsigned long long>>(pToInstance, std::move(value));
-        } else if (sFieldCanonicalTypeName == "std::vector<float>") {
-            auto value = pFromField->getUnsafe<std::vector<float>>(pFromInstance);
-            pToField->setUnsafe<std::vector<float>>(pToInstance, std::move(value));
-        } else if (sFieldCanonicalTypeName == "std::vector<double>") {
-            auto value = pFromField->getUnsafe<std::vector<double>>(pFromInstance);
-            pToField->setUnsafe<std::vector<double>>(pToInstance, std::move(value));
-        } else if (sFieldCanonicalTypeName == fmt::format("std::vector<{}>", sStringCanonicalTypeName)) {
+#define CLONE_VECTOR_FIELDS(INNERTYPE)                                                                       \
+    if (sFieldCanonicalTypeName == #INNERTYPE) {                                                             \
+        auto value = pFromField->getUnsafe<INNERTYPE>(pFromInstance);                                        \
+        pToField->setUnsafe<INNERTYPE>(pToInstance, std::move(value));                                       \
+        return {};                                                                                           \
+    }
+
+        CLONE_VECTOR_FIELDS(std::vector<bool>)
+        CLONE_VECTOR_FIELDS(std::vector<int>)
+        CLONE_VECTOR_FIELDS(std::vector<unsigned int>)
+        CLONE_VECTOR_FIELDS(std::vector<long long>)
+        CLONE_VECTOR_FIELDS(std::vector<unsigned long long>)
+        CLONE_VECTOR_FIELDS(std::vector<float>)
+        CLONE_VECTOR_FIELDS(std::vector<double>)
+
+        // String.
+        if (sFieldCanonicalTypeName == fmt::format("std::vector<{}>", sStringCanonicalTypeName)) {
             auto value = pFromField->getUnsafe<std::vector<std::string>>(pFromInstance);
             pToField->setUnsafe<std::vector<std::string>>(pToInstance, std::move(value));
-        } else if (sFieldCanonicalTypeName == "std::vector<ne::MeshVertex>") {
-            auto value = pFromField->getUnsafe<std::vector<MeshVertex>>(pFromInstance);
-            pToField->setUnsafe<std::vector<MeshVertex>>(pToInstance, std::move(value));
-        } else {
-            return Error(fmt::format(
-                "The type \"{}\" of the specified field \"{}\" is not supported by this serializer.",
-                sFieldCanonicalTypeName,
-                pFieldName));
+            return {};
         }
 
-        return {};
+        CLONE_VECTOR_FIELDS(std::vector<ne::MeshVertex>)
+
+        // Serializable pointer.
+        if (sFieldCanonicalTypeName.starts_with("std::vector<") &&
+            isMostInnerTypeSerializable(sFieldCanonicalTypeName)) {
+#define CLONE_VECTOR_SMART_POINTER_SERIALIZABLE_FIELDS(VectorType, MakeInstanceFunctionName)                 \
+    const auto pFromArray = reinterpret_cast<VectorType>(pFromField->getPtrUnsafe(pFromInstance));           \
+    const auto pToArray = reinterpret_cast<VectorType>(pToField->getPtrUnsafe(pToInstance));                 \
+    if (!pToArray->empty()) [[unlikely]] {                                                                   \
+        return Error(fmt::format(                                                                            \
+            "the specified field array \"{}\" needs to be empty", sFieldCanonicalTypeName, pFieldName));     \
+    }                                                                                                        \
+    pToArray->resize(pFromArray->size());                                                                    \
+    for (size_t i = 0; i < pFromArray->size(); i++) {                                                        \
+        pToArray->at(i) = pFromArray->at(i)->getArchetype().MakeInstanceFunctionName<Serializable>();        \
+        const auto optionalError = SerializableObjectFieldSerializer::cloneSerializableObject(               \
+            pFromArray->at(i).get(), pToArray->at(i).get(), true);                                           \
+        if (optionalError.has_value()) {                                                                     \
+            auto error = optionalError.value();                                                              \
+            error.addEntry();                                                                                \
+            return error;                                                                                    \
+        }                                                                                                    \
+    }
+
+            if (sFieldCanonicalTypeName.contains("std::shared_ptr<")) {
+                CLONE_VECTOR_SMART_POINTER_SERIALIZABLE_FIELDS(
+                    std::vector<std::shared_ptr<Serializable>>*, makeSharedInstance)
+            } else {
+                return Error(fmt::format(
+                    "the type \"{}\" of the specified array field \"{}\" has unsupported smart pointer type",
+                    sFieldCanonicalTypeName,
+                    pFieldName));
+            }
+            return {};
+        }
+
+        return Error(fmt::format(
+            "the type \"{}\" of the specified field \"{}\" is not supported by this serializer",
+            sFieldCanonicalTypeName,
+            pFieldName));
     }
 
     bool VectorFieldSerializer::isFieldValueEqual(
@@ -374,6 +487,63 @@ namespace ne {
         COMPARE_VECTOR_FIELDS(std::basic_string<char>)
         COMPARE_VECTOR_FIELDS(ne::MeshVertex)
 
+        // Serializable pointers.
+        if (sFieldACanonicalTypeName.starts_with("std::vector<") &&
+            isMostInnerTypeSerializable(sFieldACanonicalTypeName)) {
+
+#define COMPARE_VECTOR_SMART_POINTER_SERIALIZABLE_FIELDS(ArrayType)                                          \
+    const auto pArrayA = reinterpret_cast<ArrayType>(pFieldA->getPtrUnsafe(pFieldAOwner));                   \
+    const auto pArrayB = reinterpret_cast<ArrayType>(pFieldB->getPtrUnsafe(pFieldBOwner));                   \
+    if (pArrayA->size() != pArrayB->size()) {                                                                \
+        return false;                                                                                        \
+    }                                                                                                        \
+    for (size_t i = 0; i < pArrayA->size(); i++) {                                                           \
+        if (!SerializableObjectFieldSerializer::isSerializableObjectValueEqual(                              \
+                pArrayA->at(i).get(), pArrayB->at(i).get())) {                                               \
+            return false;                                                                                    \
+        }                                                                                                    \
+    }                                                                                                        \
+    return true;
+
+            if (sFieldACanonicalTypeName.contains("std::shared_ptr<")) {
+                COMPARE_VECTOR_SMART_POINTER_SERIALIZABLE_FIELDS(std::vector<std::shared_ptr<Serializable>>*)
+            }
+        }
+
         return false;
     }
+
+    bool VectorFieldSerializer::isMostInnerTypeSerializable(const std::string& sFieldCanonicalTypeName) {
+        // Get position of the first '<' occurrence.
+        auto iFoundInnerTypeStartPosition = sFieldCanonicalTypeName.find('<');
+        if (iFoundInnerTypeStartPosition == std::string::npos) {
+            return false;
+        }
+
+        // Get position of the second '<' occurrence.
+        iFoundInnerTypeStartPosition = sFieldCanonicalTypeName.find('<', iFoundInnerTypeStartPosition + 1);
+        if (iFoundInnerTypeStartPosition == std::string::npos) {
+            return false;
+        }
+        iFoundInnerTypeStartPosition += 1;
+
+        // Find '>' character now.
+        const auto iFoundInnerTypeStopPosition =
+            sFieldCanonicalTypeName.find('>', iFoundInnerTypeStartPosition + 1);
+        if (iFoundInnerTypeStopPosition == std::string::npos) {
+            return false;
+        }
+
+        // Make sure found positions are valid.
+        if (iFoundInnerTypeStartPosition >= iFoundInnerTypeStopPosition) {
+            return false;
+        }
+
+        // Cut inner type.
+        const auto sInnerTypeCanonicalName = sFieldCanonicalTypeName.substr(
+            iFoundInnerTypeStartPosition, iFoundInnerTypeStopPosition - iFoundInnerTypeStartPosition);
+
+        return SerializableObjectFieldSerializer::isTypeDerivesFromSerializable(sInnerTypeCanonicalName);
+    }
+
 } // namespace ne

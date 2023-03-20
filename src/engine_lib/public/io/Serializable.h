@@ -653,7 +653,7 @@ namespace ne RNAMESPACE() {
 
         // Collect keys.
         const auto& sectionTable = section.as_table();
-        std::vector<std::string> vKeys;
+        std::set<std::string> keys;
         SmartPointer<T> pOriginalEntity = nullptr;
         for (const auto& [key, value] : sectionTable) {
             if (key == sNothingToSerializeKey) {
@@ -680,8 +680,27 @@ namespace ne RNAMESPACE() {
                     return Error(fmt::format("found custom attribute \"{}\" is not a string", key));
                 }
                 customAttributes[key.substr(2)] = value.as_string().str;
+            } else if (key.contains('[')) {
+                // Describes array of `Serializable` objects,
+                // for example: std::vector<std::shared_ptr<Serializable>>.
+                // Insert only field name.
+                // Get field name end.
+                const auto iFieldNameEndPosition = key.find('[');
+                auto iFieldNameStartPosition = key.rfind('"', iFieldNameEndPosition);
+                if (iFieldNameStartPosition == std::string::npos) [[unlikely]] {
+                    return Error(fmt::format("section name \"{}\" is corrupted", key));
+                }
+                iFieldNameStartPosition += 1;
+
+                if (iFieldNameStartPosition >= iFieldNameEndPosition) [[unlikely]] {
+                    return Error(fmt::format("section name \"{}\" is corrupted", key));
+                }
+
+                auto sFieldName =
+                    key.substr(iFieldNameStartPosition, iFieldNameEndPosition - iFieldNameEndPosition);
+                keys.insert(std::move(sFieldName));
             } else {
-                vKeys.push_back(key);
+                keys.insert(key);
             }
         }
 
@@ -759,7 +778,7 @@ namespace ne RNAMESPACE() {
         const auto vFieldSerializers = getFieldSerializers();
 
         // Deserialize fields.
-        for (auto& sFieldName : vKeys) {
+        for (auto& sFieldName : keys) {
             if (sFieldName == sSubEntityFieldNameKey) {
                 // This field is used as section metadata and tells us what field of parent entity
                 // this section describes.

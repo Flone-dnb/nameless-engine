@@ -84,6 +84,12 @@ gc_collector()->collect(); // this will be run regularly somewhere in the engine
 // Class fields will be serialized to file and deserialized from file.
 // ---------------------------------------------------------------------------------
 
+// PlayerSaveData.cpp
+
+#include "PlayerSaveData.generated_impl.h"
+
+// PlayerSaveData.h
+
 #pragma once
 
 #include <string>
@@ -95,7 +101,6 @@ gc_collector()->collect(); // this will be run regularly somewhere in the engine
 
 using namespace ne;
 
-/// Holds information about player's inventory.
 class RCLASS(Guid("a34a8047-d7b4-4c70-bb9a-429875a8cd26")) InventorySaveData : public Serializable {
 public:
     InventorySaveData() = default;
@@ -137,16 +142,30 @@ public:
     }
 
 private:
-    /// Contains pairs of "item ID" - "item amount" (in the inventory).
-    /// We could instead use `std::string` as the key for storing GUIDs, this is just an example.
+    /// Contains item ID as a key and item amount (in the inventory) as a value.
     RPROPERTY(Serialize)
     std::unordered_map<unsigned long long, unsigned long long> items;
 
     InventorySaveData_GENERATED
 };
 
-/// Holds information about player's data.
-class RCLASS(Guid("36063853-79b1-41e6-afa6-6923c8b24815")) PlayerSaveData : public Serializable {
+/// Some in-game character ability.
+class RCLASS(Guid("36063853-79b1-41e6-afa6-6923c8b24811")) Ability : public ne::Serializable {
+public:
+    Ability() = default;
+    virtual ~Ability() override = default;
+
+    Ability(const std::string& sAbilityName) { this->sAbilityName = sAbilityName; }
+
+    RPROPERTY(Serialize)
+    std::string sAbilityName;
+
+    // ...
+
+    Ability_GENERATED
+};
+
+class RCLASS(Guid("36063853-79b1-41e6-afa6-6923c8b24815")) PlayerSaveData : public ne::Serializable {
 public:
     PlayerSaveData() = default;
     virtual ~PlayerSaveData() override = default;
@@ -163,30 +182,29 @@ public:
     RPROPERTY(Serialize)
     InventorySaveData inventory;
 
-    /// Stores IDs of player abilities.
-    /// Can also store here `std::string` instead.
+    // Can also store types that derive from `Ability` without any serialization/deserialization issues.
     RPROPERTY(Serialize)
-    std::vector<unsigned long long> vAbilities;
+    std::vector<std::shared_ptr<Ability>> vAbilities;
 
     PlayerSaveData_GENERATED
 };
 
 File_PlayerSaveData_GENERATED
 
-// --------------------------------------------
+// ---------------------------------------
 
 {
     // Somewhere in the game code.
-    std::shared_ptr<PlayerSaveData> pPlayerSaveData;
+    gc<PlayerSaveData> pPlayerSaveData;
 
     // ... if the user creates a new player profile ...
-    pPlayerSaveData = std::make_shared<PlayerSaveData>();
+    pPlayerSaveData = gc_new<PlayerSaveData>();
 
     // Fill save data with some information.
     pPlayerSaveData->sCharacterName = "Player 1";
     pPlayerSaveData->iCharacterLevel = 42;
     pPlayerSaveData->iExperiencePoints = 200;
-    pPlayerSaveData->vAbilities = {241, 3122, 22};
+    pPlayerSaveData->vAbilities = {std::make_shared<Ability>("Fire"), std::make_shared<Ability>("Wind")};
     pPlayerSaveData->inventory.addOneItem(42);
     pPlayerSaveData->inventory.addOneItem(42); // now have two items with ID "42"
     pPlayerSaveData->inventory.addOneItem(102);
@@ -197,9 +215,9 @@ File_PlayerSaveData_GENERATED
     // Serialize.
     const auto pathToFile =
         ConfigManager::getCategoryDirectory(ConfigCategory::PROGRESS) / sNewProfileName;
-    const auto optionalError = pPlayerSaveData->serialize(pathToFile, true); // `true` to enable backup file
+    const auto optionalError = pPlayerSaveData->serialize(pathToFile, true);
     if (optionalError.has_value()) {
-        // handle error
+        // process error
     }
 }
 
@@ -215,19 +233,20 @@ File_PlayerSaveData_GENERATED
     // Deserialize.
     const auto pathToFile = ConfigManager::getCategoryDirectory(ConfigCategory::PROGRESS) / sProfileName;
     std::unordered_map<std::string, std::string> foundCustomAttributes;
-    const auto result =
-        Serializable::deserialize<std::shared_ptr, PlayerSaveData>(pathToFile, foundCustomAttributes);
+    const auto result = Serializable::deserialize<PlayerSaveData>(pathToFile, foundCustomAttributes);
     if (std::holds_alternative<Error>(result)) {
-         // handle error
+        // process error
     }
 
-    const auto pPlayerSaveData = std::get<std::shared_ptr<PlayerSaveData>>(result);
+    gc<PlayerSaveData> pPlayerSaveData = std::get<gc<PlayerSaveData>>(result);
 
     // Everything is loaded:
     assert(pPlayerSaveData->sCharacterName == "Player 1");
     assert(pPlayerSaveData->iCharacterLevel == 42);
     assert(pPlayerSaveData->iExperiencePoints == 200);
-    assert(pPlayerSaveData->vAbilities == std::vector<unsigned long long>{241, 3122, 22});
+    assert(pPlayerSaveData->vAbilities.size() == 2);
+    assert(pPlayerSaveData->vAbilities[0]->sAbilityName == "Fire");
+    assert(pPlayerSaveData->vAbilities[1]->sAbilityName == "Wind");
     assert(pPlayerSaveData->inventory.getItemAmount(42) == 2);
     assert(pPlayerSaveData->inventory.getItemAmount(102) == 1);
 }

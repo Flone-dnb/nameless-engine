@@ -9,7 +9,7 @@
 
 namespace ne {
     /**
-     * Serializer for types that derive from Serializable class.
+     * Serializer for field types that derive from Serializable class.
      */
     class SerializableObjectFieldSerializer : public IFieldSerializer {
     public:
@@ -53,9 +53,11 @@ namespace ne {
          *
          * @param pFrom                    Object to clone fields from.
          * @param pTo                      Object to clone fields to.
-         * @param bNotifyAboutDeserialized Whether to notify the object we cloned fields to about
-         * it being finally deserialized or not. This should be `true` if use are calling this function
-         * as the last step of your `deserialize` function, otherwise `false`.
+         * @param bNotifyAboutDeserialized Whether or not to notify the target object we cloned fields to
+         * about it being finally deserialized or not. This should be `true` if you are calling this function
+         * as the last step of your `deserialize` function or in some special cases for new objects
+         * that won't reach `deserialize` function (for ex. when copying data to new object), otherwise
+         * `false`.
          *
          * @return Error if something went wrong.
          */
@@ -102,6 +104,17 @@ namespace ne {
          * are not equal, `true` otherwise.
          */
         static bool isSerializableObjectValueEqual(Serializable* pObjectA, Serializable* pObjectB);
+
+        /**
+         * Looks if the specified canonical type name derives from `Serializable` or not.
+         *
+         * @param sCanonicalTypeName Canonical type name (not just type name, see
+         * `rfk::Field::getCanonicalTypeName`).
+         *
+         * @return `false` if the specified type was not found to be derived from `Serializable`,
+         * otherwise `true`.
+         */
+        static bool isTypeDerivesFromSerializable(const std::string& sCanonicalTypeName);
 
         /**
          * Tests if this serializer supports serialization/deserialization of this field.
@@ -197,6 +210,18 @@ namespace ne {
             const rfk::Field* pFieldB) override;
 
     private:
+        /**
+         * Looks if the specified canonical type name derives from `Serializable`.
+         *
+         * @param sCanonicalTypeName Canonical type name without namespace in the name.
+         * @param pNamespace         Optional. Namespace that the specified type resides in.
+         *
+         * @return `false` if the specified type was not found to be derived from `Serializable`,
+         * otherwise `true`.
+         */
+        static bool isTypeDerivesFromSerializable(
+            const std::string& sCanonicalTypeName, const rfk::Namespace* pNamespace);
+
         /** Name of the key in which to store name of the field a section represents. */
         static inline const auto sSubEntityFieldNameKey = ".field_name";
     };

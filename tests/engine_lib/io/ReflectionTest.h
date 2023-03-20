@@ -211,7 +211,7 @@ public:
     ReflectionOuterTestClass_GENERATED
 };
 
-class RCLASS(Guid("a34a8047-d7b4-4c70-bb9a-429875a8cd26")) InventorySaveData : public ne::Serializable {
+class RCLASS(Guid("a34a8047-d7b4-4c70-bb9a-429875a8cd26")) InventorySaveData : public Serializable {
 public:
     InventorySaveData() = default;
     virtual ~InventorySaveData() override = default;
@@ -260,7 +260,7 @@ private:
 };
 
 /// Some in-game character ability.
-class RCLASS(Guid("36063853-79b1-41e6-afa6-6923c8b24811")) Ability : public ne::Serializable {
+class RCLASS(Guid("36063853-79b1-41e6-afa6-6923c8b24811")) Ability : public Serializable {
 public:
     Ability() = default;
     virtual ~Ability() override = default;
@@ -275,7 +275,7 @@ public:
     Ability_GENERATED
 };
 
-class RCLASS(Guid("36063853-79b1-41e6-afa6-6923c8b24815")) PlayerSaveData : public ne::Serializable {
+class RCLASS(Guid("36063853-79b1-41e6-afa6-6923c8b24815")) PlayerSaveData : public Serializable {
 public:
     PlayerSaveData() = default;
     virtual ~PlayerSaveData() override = default;

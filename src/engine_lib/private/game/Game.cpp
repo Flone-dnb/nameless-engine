@@ -58,7 +58,7 @@ namespace ne {
             sGameLogCategory);
 
 #if defined(DEBUG)
-        Serializable::checkGuidUniqueness();
+        SerializableObjectFieldSerializer::checkGuidUniqueness();
 #endif
 
         // Create renderer.

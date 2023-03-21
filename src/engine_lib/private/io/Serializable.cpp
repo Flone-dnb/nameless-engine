@@ -5,7 +5,6 @@
 
 // Custom.
 #include "io/serializers/IFieldSerializer.hpp"
-#include "misc/Globals.h"
 
 // External.
 #include "fmt/format.h"
@@ -102,99 +101,6 @@ namespace ne {
         const std::optional<std::filesystem::path>& optionalPathToFile,
         bool bEnableBackup) {
         return serialize(tomlData, nullptr, sEntityId, customAttributes, optionalPathToFile, bEnableBackup);
-    }
-
-#if defined(DEBUG)
-    void Serializable::checkGuidUniqueness() {
-        // Record start time.
-        const auto startTime = std::chrono::steady_clock::now();
-
-        // Map of GUIDs (key) and type names (value).
-        std::unordered_map<std::string, std::string> vGuids;
-
-        // Get GUID of this class.
-        const auto& selfArchetype = staticGetArchetype();
-        const auto pSelfGuid = selfArchetype.getProperty<Guid>(false);
-        if (pSelfGuid == nullptr) {
-            const Error err(
-                fmt::format("Type {} does not have a GUID assigned to it.", selfArchetype.getName()));
-            err.showError();
-            throw std::runtime_error(err.getFullErrorMessage());
-        }
-        vGuids[pSelfGuid->getGuid()] = selfArchetype.getName();
-
-        collectGuids(&selfArchetype, vGuids);
-
-        // Calculate time it took for us to do all this.
-        const auto endTime = std::chrono::steady_clock::now();
-        const auto durationInMs =
-            std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime).count();
-        const float timeTookInSec = static_cast<float>(durationInMs) / 1000.0F; // NOLINT
-
-        // Limit precision to 1 digit.
-        std::stringstream durationStream;
-        durationStream << std::fixed << std::setprecision(1) << timeTookInSec;
-
-        Logger::get().info(
-            fmt::format(
-                "[{}] finished checking all GUID uniqueness, took: {} sec.",
-                sDebugOnlyLoggingSubCategory,
-                durationStream.str()),
-            "");
-    }
-
-    void Serializable::collectGuids(
-        const rfk::Struct* pArchetypeToAnalyze, std::unordered_map<std::string, std::string>& vAllGuids) {
-        const auto vDirectSubclasses = pArchetypeToAnalyze->getDirectSubclasses();
-        for (const auto& pDerivedEntity : vDirectSubclasses) {
-            const auto pGuid = pDerivedEntity->getProperty<Guid>(false);
-            if (pGuid == nullptr) {
-                const Error err(fmt::format(
-                    "Type {} does not have a GUID assigned to it.\n\n"
-                    "Here is an example of how to assign a GUID to your type:\n"
-                    "class RCLASS(Guid(\"00000000-0000-0000-0000-000000000000\")) MyCoolClass "
-                    ": public ne::Serializable",
-                    pDerivedEntity->getName()));
-                err.showError();
-                throw std::runtime_error(err.getFullErrorMessage());
-            }
-
-            // Look if this GUID is already used.
-            const auto it = vAllGuids.find(pGuid->getGuid());
-            if (it != vAllGuids.end()) [[unlikely]] {
-                const Error err(fmt::format(
-                    "GUID of type {} is already used by type {}, please generate another "
-                    "GUID.",
-                    pDerivedEntity->getName(),
-                    it->second));
-                err.showError();
-                throw std::runtime_error(err.getFullErrorMessage());
-            }
-
-            // Add this GUID.
-            vAllGuids[pGuid->getGuid()] = pDerivedEntity->getName();
-
-            // Go though all children.
-            collectGuids(pDerivedEntity, vAllGuids);
-        }
-    }
-#endif
-
-    bool Serializable::isFieldSerializable(rfk::Field const& field) {
-        const auto& fieldType = field.getType();
-
-        // Ignore this field if not marked as Serialize.
-        if (field.getProperty<Serialize>() == nullptr) {
-            return false;
-        }
-
-        // Don't serialize specific types.
-        if (fieldType.isConst() || fieldType.isPointer() || fieldType.isLValueReference() ||
-            fieldType.isRValueReference() || fieldType.isCArray()) {
-            return false;
-        }
-
-        return true;
     }
 
     const rfk::Struct*
@@ -447,35 +353,6 @@ namespace ne {
         return vSerializers;
     }
 
-    bool Serializable::isDerivedFromSerializable(const rfk::Archetype* pArchetype) {
-        if (rfk::Class const* pClass = rfk::classCast(pArchetype)) {
-            // Make sure the type derives from `Serializable`t.
-            if (pClass->isSubclassOf(Serializable::staticGetArchetype())) {
-                return true;
-            }
-
-            // Make sure the type has GUID.
-            const auto pGuid = pClass->getProperty<Guid>(false);
-            if (pGuid == nullptr) {
-                return false;
-            }
-
-            // (don't know if this is needed or not)
-            if (pGuid->getGuid() == Serializable::staticGetArchetype().getProperty<Guid>(false)->getGuid()) {
-                return true;
-            }
-
-            return false;
-        }
-
-        if (rfk::Struct const* pStruct = rfk::structCast(pArchetype)) {
-            // Check parents.
-            return pStruct->isSubclassOf(Serializable::staticGetArchetype());
-        }
-
-        return false;
-    }
-
     std::optional<std::pair<std::string, std::string>>
     Serializable::getPathDeserializedFromRelativeToRes() const {
         return pathDeserializedFromRelativeToRes;
@@ -547,7 +424,7 @@ namespace ne {
 
         selfArchetype.foreachField(
             [](rfk::Field const& field, void* userData) -> bool { // NOLINT: too complex
-                if (!isFieldSerializable(field)) {
+                if (!SerializableObjectFieldSerializer::isFieldSerializable(field)) {
                     return true;
                 }
 
@@ -580,7 +457,8 @@ namespace ne {
                         }
 
                         // Save a pointer to the field if it's serializable.
-                        if (isDerivedFromSerializable(pOriginalField->getType().getArchetype())) {
+                        if (SerializableObjectFieldSerializer::isDerivedFromSerializable(
+                                pOriginalField->getType().getArchetype())) {
                             pOriginalFieldObject = static_cast<Serializable*>(
                                 pOriginalField->getPtrUnsafe(&*pData->pOriginalEntity));
                         }
@@ -623,8 +501,8 @@ namespace ne {
                     if (pSerializeProperty->getSerializationType() ==
                         FieldSerializationType::AS_EXTERNAL_FILE) {
                         // Make sure this field derives from `Serializable`.
-                        if (!Serializable::isDerivedFromSerializable(field.getType().getArchetype()))
-                            [[unlikely]] {
+                        if (!SerializableObjectFieldSerializer::isDerivedFromSerializable(
+                                field.getType().getArchetype())) [[unlikely]] {
                             // Show an error so that the developer will instantly see the mistake.
                             auto error = Error("only fields of type derived from `Serializable` can use "
                                                "`Serialize(AsExternal)` property");

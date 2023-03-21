@@ -20,7 +20,6 @@
 #include "io/serializers/SerializableObjectFieldSerializer.h"
 
 // External.
-#include "Refureku/Refureku.h"
 #include "Refureku/Object.h"
 #include "fmt/core.h"
 
@@ -445,35 +444,6 @@ namespace ne RNAMESPACE() {
          */
         std::optional<std::pair<std::string, std::string>> getPathDeserializedFromRelativeToRes() const;
 
-        /**
-         * Returns whether the specified field can be serialized or not.
-         *
-         * @param field Field to test.
-         *
-         * @return Whether the field can be serialized or not.
-         */
-        static bool isFieldSerializable(rfk::Field const& field);
-
-        /**
-         * Tests whether the specified archetype is Serializable or derives at some point from Serializable
-         * class.
-         *
-         * @param pArchetype Archetype to test.
-         *
-         * @return Whether the specified archetype is derived from Serializable or not.
-         */
-        static bool isDerivedFromSerializable(rfk::Archetype const* pArchetype);
-
-#if defined(DEBUG)
-        /**
-         * Checks that all classes/structs that inherit from Serializable have correct and unique GUIDs.
-         *
-         * Automatically called by the Game object (object that owns GameInstance) and has no point in being
-         * called from your game's code.
-         */
-        static void checkGuidUniqueness();
-#endif
-
     protected:
         /**
          * Called after the object was successfully deserialized.
@@ -485,17 +455,6 @@ namespace ne RNAMESPACE() {
         virtual void onAfterDeserialized() {}
 
     private:
-#if defined(DEBUG)
-        /**
-         * Collects GUIDs of children of the specified type.
-         *
-         * @param pArchetypeToAnalyze Type which children to analyze.
-         * @param vAllGuids           Map of already collected GUIDs to check for uniqueness.
-         */
-        static void collectGuids(
-            const rfk::Struct* pArchetypeToAnalyze, std::unordered_map<std::string, std::string>& vAllGuids);
-#endif
-
         /**
          * Returns archetype for the specified GUID.
          *
@@ -718,7 +677,7 @@ namespace ne RNAMESPACE() {
                 return Error(fmt::format("no type found for GUID \"{}\"", sTypeGuid));
             }
         }
-        if (!isDerivedFromSerializable(pType)) {
+        if (!SerializableObjectFieldSerializer::isDerivedFromSerializable(pType)) {
             if (pOriginalEntity) {
                 return Error(fmt::format(
                     "deserialized type for \"{}\" does not derive from {}, but "
@@ -811,7 +770,7 @@ namespace ne RNAMESPACE() {
             }
             const auto sFieldCanonicalTypeName = std::string(pField->getCanonicalTypeName());
 
-            if (!isFieldSerializable(*pField)) {
+            if (!SerializableObjectFieldSerializer::isFieldSerializable(*pField)) {
                 continue;
             }
 
@@ -819,7 +778,8 @@ namespace ne RNAMESPACE() {
             const auto pSerializeProperty = pField->getProperty<Serialize>();
             if (pSerializeProperty->getSerializationType() == FieldSerializationType::AS_EXTERNAL_FILE) {
                 // Make sure this field derives from `Serializable`.
-                if (!Serializable::isDerivedFromSerializable(pField->getType().getArchetype())) [[unlikely]] {
+                if (!SerializableObjectFieldSerializer::isDerivedFromSerializable(
+                        pField->getType().getArchetype())) [[unlikely]] {
                     // Show an error so that the developer will instantly see the mistake.
                     auto error = Error("only fields of type derived from `Serializable` can use "
                                        "`SerializeAsExternal` property");

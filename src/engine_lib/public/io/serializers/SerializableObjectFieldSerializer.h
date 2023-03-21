@@ -7,11 +7,20 @@
 #include "io/serializers/IFieldSerializer.hpp"
 #include "misc/GC.hpp"
 
+namespace rfk {
+    class Struct;
+    class Field;
+    class Archetype;
+} // namespace rfk
+
 namespace ne {
     /**
      * Serializer for field types that derive from Serializable class.
      */
     class SerializableObjectFieldSerializer : public IFieldSerializer {
+        // Checks GUIDs uniqueness in debug builds.
+        friend class Game;
+
     public:
         SerializableObjectFieldSerializer() = default;
         virtual ~SerializableObjectFieldSerializer() override = default;
@@ -117,6 +126,25 @@ namespace ne {
         static bool isTypeDerivesFromSerializable(const std::string& sCanonicalTypeName);
 
         /**
+         * Returns whether the specified field can be serialized or not.
+         *
+         * @param field Field to test.
+         *
+         * @return Whether the field can be serialized or not.
+         */
+        static bool isFieldSerializable(rfk::Field const& field);
+
+        /**
+         * Tests whether the specified archetype is Serializable or derives at some point from Serializable
+         * class.
+         *
+         * @param pArchetype Archetype to test.
+         *
+         * @return Whether the specified archetype is derived from Serializable or not.
+         */
+        static bool isDerivedFromSerializable(rfk::Archetype const* pArchetype);
+
+        /**
          * Tests if this serializer supports serialization/deserialization of this field.
          *
          * @param pField Field to test for serialization/deserialization support.
@@ -210,6 +238,25 @@ namespace ne {
             const rfk::Field* pFieldB) override;
 
     private:
+#if defined(DEBUG)
+        /**
+         * Checks that all classes/structs that inherit from Serializable have correct and unique GUIDs.
+         *
+         * Automatically called by the Game object (object that owns GameInstance) and has no point in being
+         * called from your game's code.
+         */
+        static void checkGuidUniqueness();
+
+        /**
+         * Collects GUIDs of children of the specified type.
+         *
+         * @param pArchetypeToAnalyze Type which children to analyze.
+         * @param vAllGuids           Map of already collected GUIDs to check for uniqueness.
+         */
+        static void collectGuids(
+            const rfk::Struct* pArchetypeToAnalyze, std::unordered_map<std::string, std::string>& vAllGuids);
+#endif
+
         /**
          * Looks if the specified canonical type name derives from `Serializable`.
          *

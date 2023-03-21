@@ -4,6 +4,7 @@
 #include "io/Serializable.h"
 #include "io/properties/GuidProperty.h"
 #include "io/Logger.h"
+#include "misc/Globals.h"
 
 // External.
 #include "fmt/format.h"
@@ -11,8 +12,7 @@
 namespace ne {
     bool SerializableObjectFieldSerializer::isFieldTypeSupported(const rfk::Field* pField) {
         const auto& fieldType = pField->getType();
-        return fieldType.getArchetype() != nullptr &&
-               Serializable::isDerivedFromSerializable(fieldType.getArchetype());
+        return fieldType.getArchetype() != nullptr && isDerivedFromSerializable(fieldType.getArchetype());
     }
 
     std::optional<Error> SerializableObjectFieldSerializer::serializeField(
@@ -81,7 +81,7 @@ namespace ne {
 
         fromArchetype.foreachField(
             [](rfk::Field const& field, void* pUserData) -> bool {
-                if (!Serializable::isFieldSerializable(field)) {
+                if (!isFieldSerializable(field)) {
                     return true;
                 }
 
@@ -284,7 +284,7 @@ namespace ne {
 
         entityAArchetype.foreachField(
             [](rfk::Field const& field, void* pUserData) -> bool {
-                if (!Serializable::isFieldSerializable(field)) {
+                if (!isFieldSerializable(field)) {
                     return true;
                 }
 
@@ -407,6 +407,52 @@ namespace ne {
                 "");
             return false;
         }
+    }
+
+    bool SerializableObjectFieldSerializer::isFieldSerializable(const rfk::Field& field) {
+        const auto& fieldType = field.getType();
+
+        // Ignore this field if not marked as Serialize.
+        if (field.getProperty<Serialize>() == nullptr) {
+            return false;
+        }
+
+        // Don't serialize specific types.
+        if (fieldType.isConst() || fieldType.isPointer() || fieldType.isLValueReference() ||
+            fieldType.isRValueReference() || fieldType.isCArray()) {
+            return false;
+        }
+
+        return true;
+    }
+
+    bool SerializableObjectFieldSerializer::isDerivedFromSerializable(const rfk::Archetype* pArchetype) {
+        if (rfk::Class const* pClass = rfk::classCast(pArchetype)) {
+            // Make sure the type derives from `Serializable`t.
+            if (pClass->isSubclassOf(Serializable::staticGetArchetype())) {
+                return true;
+            }
+
+            // Make sure the type has GUID.
+            const auto pGuid = pClass->getProperty<Guid>(false);
+            if (pGuid == nullptr) {
+                return false;
+            }
+
+            // (don't know if this is needed or not)
+            if (pGuid->getGuid() == Serializable::staticGetArchetype().getProperty<Guid>(false)->getGuid()) {
+                return true;
+            }
+
+            return false;
+        }
+
+        if (rfk::Struct const* pStruct = rfk::structCast(pArchetype)) {
+            // Check parents.
+            return pStruct->isSubclassOf(Serializable::staticGetArchetype());
+        }
+
+        return false;
     }
 
     bool SerializableObjectFieldSerializer::isTypeDerivesFromSerializable(
@@ -535,6 +581,81 @@ namespace ne {
 
         return isSerializableObjectValueEqual(pEntityA, pEntityB);
     }
+
+#if defined(DEBUG)
+    void SerializableObjectFieldSerializer::checkGuidUniqueness() {
+        // Record start time.
+        const auto startTime = std::chrono::steady_clock::now();
+
+        // Map of GUIDs (key) and type names (value).
+        std::unordered_map<std::string, std::string> vGuids;
+
+        // Get GUID of this class.
+        const auto& selfArchetype = Serializable::staticGetArchetype();
+        const auto pSelfGuid = selfArchetype.getProperty<Guid>(false);
+        if (pSelfGuid == nullptr) {
+            const Error err(
+                fmt::format("type {} does not have a GUID assigned to it", selfArchetype.getName()));
+            err.showError();
+            throw std::runtime_error(err.getFullErrorMessage());
+        }
+        vGuids[pSelfGuid->getGuid()] = selfArchetype.getName();
+
+        collectGuids(&selfArchetype, vGuids);
+
+        // Calculate time it took for us to do all this.
+        const auto endTime = std::chrono::steady_clock::now();
+        const auto durationInMs =
+            std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime).count();
+        const float timeTookInSec = static_cast<float>(durationInMs) / 1000.0F; // NOLINT
+
+        // Limit precision to 1 digit.
+        std::stringstream durationStream;
+        durationStream << std::fixed << std::setprecision(1) << timeTookInSec;
+
+        Logger::get().info(
+            fmt::format(
+                "[{}] finished checking all GUID uniqueness, took: {} sec.",
+                sDebugOnlyLoggingSubCategory,
+                durationStream.str()),
+            "");
+    }
+
+    void SerializableObjectFieldSerializer::collectGuids(
+        const rfk::Struct* pArchetypeToAnalyze, std::unordered_map<std::string, std::string>& vAllGuids) {
+        const auto vDirectSubclasses = pArchetypeToAnalyze->getDirectSubclasses();
+        for (const auto& pDerivedEntity : vDirectSubclasses) {
+            const auto pGuid = pDerivedEntity->getProperty<Guid>(false);
+            if (pGuid == nullptr) {
+                const Error err(fmt::format(
+                    "type {} does not have a GUID assigned to it.\n\n"
+                    "Here is an example of how to assign a GUID to your type:\n"
+                    "class RCLASS(Guid(\"00000000-0000-0000-0000-000000000000\")) MyCoolClass "
+                    ": public ne::Serializable",
+                    pDerivedEntity->getName()));
+                err.showError();
+                throw std::runtime_error(err.getFullErrorMessage());
+            }
+
+            // Look if this GUID is already used.
+            const auto it = vAllGuids.find(pGuid->getGuid());
+            if (it != vAllGuids.end()) [[unlikely]] {
+                const Error err(fmt::format(
+                    "GUID of type {} is already used by type {}, please generate another GUID",
+                    pDerivedEntity->getName(),
+                    it->second));
+                err.showError();
+                throw std::runtime_error(err.getFullErrorMessage());
+            }
+
+            // Add this GUID.
+            vAllGuids[pGuid->getGuid()] = pDerivedEntity->getName();
+
+            // Go though all children.
+            collectGuids(pDerivedEntity, vAllGuids);
+        }
+    }
+#endif
 
     std::optional<Error> SerializableObjectFieldSerializer::serializeFieldObject(
         Serializable* pObject,

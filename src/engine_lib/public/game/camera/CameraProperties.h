@@ -19,6 +19,9 @@ namespace ne {
 
     /** Defines camera settings, base axis, location, modes, etc. */
     class CameraProperties {
+        // Sets world adjustment matrix to include parent nodes.
+        friend class CameraNode;
+
     public:
         CameraProperties();
 
@@ -113,6 +116,9 @@ namespace ne {
 
             /** Parameters used by orbital camera mode. */
             OrbitalModeData orbitalModeData;
+
+            /** Matrix used to adjust location/axis when constructing a view matrix. */
+            glm::mat4x4 worldAdjustmentMatrix = glm::identity<glm::mat4x4>();
 
             /** Sets whether we can flip the camera (make it upside down) during its rotation or not. */
             bool bDontFlipCamera = true;
@@ -296,30 +302,60 @@ namespace ne {
         /**
          * Returns location of the camera.
          *
+         * @param bInWorldSpace Specify `true` to get camera's location in world space (includes
+         * world adjustment matrix), `false` to get camera's location in its "local" space
+         * (which could be the same as in world space or not).
+         *
          * @return Camera's location.
          */
-        glm::vec3 getLocation();
+        glm::vec3 getLocation(bool bInWorldSpace);
 
         /**
          * Returns unit vector that points in camera's current forward direction.
          *
+         * @param bInWorldSpace Specify `true` to get camera's forward direction in world space (includes
+         * world adjustment matrix), `false` to get camera's forward direction in its "local" space
+         * (which could be the same as in world space or not).
+         *
          * @return Camera's forward direction.
          */
-        glm::vec3 getForwardDirection();
+        glm::vec3 getForwardDirection(bool bInWorldSpace);
 
         /**
          * Returns unit vector that points in camera's current right direction.
          *
+         * @param bInWorldSpace Specify `true` to get camera's right direction in world space (includes
+         * world adjustment matrix), `false` to get camera's right direction in its "local" space
+         * (which could be the same as in world space or not).
+         *
          * @return Camera's right direction.
          */
-        glm::vec3 getRightDirection();
+        glm::vec3 getRightDirection(bool bInWorldSpace);
 
         /**
          * Returns unit vector that points in camera's current up direction.
          *
+         * @param bInWorldSpace Specify `true` to get camera's up direction in world space (includes
+         * world adjustment matrix), `false` to get camera's up direction in its "local" space
+         * (which could be the same as in world space or not).
+         *
          * @return Camera's up direction.
          */
-        glm::vec3 getUpDirection();
+        glm::vec3 getUpDirection(bool bInWorldSpace);
+
+        /**
+         * Returns a location that orbital camera looks at.
+         *
+         * @remark Only works if the current camera mode is orbital (see @ref setCameraMode), otherwise
+         * logs a warning.
+         *
+         * @param bInWorldSpace Specify `true` to get camera's up direction in world space (includes
+         * world adjustment matrix), `false` to get camera's up direction in its "local" space
+         * (which could be the same as in world space or not).
+         *
+         * @return Location the camera looks at.
+         */
+        glm::vec3 getOrbitalCameraTargetLocation(bool bInWorldSpace);
 
         /**
          * Returns rotation (in degrees) around camera's right direction.
@@ -451,8 +487,18 @@ namespace ne {
             mtxData.second.upDirection = glm::cross(mtxData.second.rightDirection, worldUpDirection);
         }
 
+        /**
+         * Sets world adjustment matrix that is used to adjust location/axis when constructing a view matrix.
+         *
+         * @param adjustmentMatrix Matrix to use.
+         */
+        void setWorldAdjustmentMatrix(const glm::mat4x4& adjustmentMatrix);
+
         /** Internal properties. */
         std::pair<std::recursive_mutex, Data> mtxData;
+
+        /** Delta to compare input to zero. */
+        static inline constexpr float floatDelta = 0.00001F;
 
         /** Name of the category used for logging. */
         static inline const auto sCameraPropertiesLogCategory = "Camera Properties";

@@ -13,9 +13,9 @@ TEST_CASE("make sure free camera rotation behaves correctly") {
     constexpr auto floatDelta = 0.00001F;
 
     // Check initial parameters.
-    REQUIRE(glm::all(glm::epsilonEqual(cameraProperties.getUpDirection(), worldUpDirection, floatDelta)));
+    REQUIRE(glm::all(glm::epsilonEqual(cameraProperties.getUpDirection(true), worldUpDirection, floatDelta)));
     REQUIRE(glm::all(
-        glm::epsilonEqual(cameraProperties.getForwardDirection(), worldForwardDirection, floatDelta)));
+        glm::epsilonEqual(cameraProperties.getForwardDirection(true), worldForwardDirection, floatDelta)));
     REQUIRE(glm::epsilonEqual(cameraProperties.getFreeCameraPitch(), 0.0F, floatDelta));
 
     // Look slightly down.
@@ -24,32 +24,32 @@ TEST_CASE("make sure free camera rotation behaves correctly") {
     // Check.
     REQUIRE(
         glm::epsilonEqual(cameraProperties.getFreeCameraPitch(), -45.0F, floatDelta)); // NOLINT: magic number
-    REQUIRE(glm::epsilonEqual(glm::length(cameraProperties.getForwardDirection()), 1.0F, floatDelta));
-    REQUIRE(glm::epsilonEqual(glm::length(cameraProperties.getUpDirection()), 1.0F, floatDelta));
+    REQUIRE(glm::epsilonEqual(glm::length(cameraProperties.getForwardDirection(true)), 1.0F, floatDelta));
+    REQUIRE(glm::epsilonEqual(glm::length(cameraProperties.getUpDirection(true)), 1.0F, floatDelta));
 
     // Look down.
     cameraProperties.setFreeCameraPitch(-90.0F); // NOLINT: magic number
 
     // Check.
-    REQUIRE(
-        glm::all(glm::epsilonEqual(cameraProperties.getUpDirection(), worldForwardDirection, floatDelta)));
-    REQUIRE(
-        glm::all(glm::epsilonEqual(cameraProperties.getForwardDirection(), -worldUpDirection, floatDelta)));
+    REQUIRE(glm::all(
+        glm::epsilonEqual(cameraProperties.getUpDirection(true), worldForwardDirection, floatDelta)));
+    REQUIRE(glm::all(
+        glm::epsilonEqual(cameraProperties.getForwardDirection(true), -worldUpDirection, floatDelta)));
     REQUIRE(
         glm::epsilonEqual(cameraProperties.getFreeCameraPitch(), -90.0F, floatDelta)); // NOLINT: magic number
-    REQUIRE(glm::epsilonEqual(glm::length(cameraProperties.getForwardDirection()), 1.0F, floatDelta));
-    REQUIRE(glm::epsilonEqual(glm::length(cameraProperties.getUpDirection()), 1.0F, floatDelta));
+    REQUIRE(glm::epsilonEqual(glm::length(cameraProperties.getForwardDirection(true)), 1.0F, floatDelta));
+    REQUIRE(glm::epsilonEqual(glm::length(cameraProperties.getUpDirection(true)), 1.0F, floatDelta));
 
     // Try to flip camera.
     cameraProperties.setFreeCameraPitch(-180.0F); // NOLINT: magic number
 
     // Check that everything is the same.
-    REQUIRE(
-        glm::all(glm::epsilonEqual(cameraProperties.getUpDirection(), worldForwardDirection, floatDelta)));
-    REQUIRE(
-        glm::all(glm::epsilonEqual(cameraProperties.getForwardDirection(), -worldUpDirection, floatDelta)));
+    REQUIRE(glm::all(
+        glm::epsilonEqual(cameraProperties.getUpDirection(true), worldForwardDirection, floatDelta)));
+    REQUIRE(glm::all(
+        glm::epsilonEqual(cameraProperties.getForwardDirection(true), -worldUpDirection, floatDelta)));
     REQUIRE(
         glm::epsilonEqual(cameraProperties.getFreeCameraPitch(), -90.0F, floatDelta)); // NOLINT: magic number
-    REQUIRE(glm::epsilonEqual(glm::length(cameraProperties.getForwardDirection()), 1.0F, floatDelta));
-    REQUIRE(glm::epsilonEqual(glm::length(cameraProperties.getUpDirection()), 1.0F, floatDelta));
+    REQUIRE(glm::epsilonEqual(glm::length(cameraProperties.getForwardDirection(true)), 1.0F, floatDelta));
+    REQUIRE(glm::epsilonEqual(glm::length(cameraProperties.getUpDirection(true)), 1.0F, floatDelta));
 }

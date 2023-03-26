@@ -145,12 +145,16 @@ set(ENGINE_LIB_SOURCES
     public/io/Serializable.h
     public/game/camera/CameraProperties.h
     private/game/camera/CameraProperties.cpp
+    public/game/camera/TransientCamera.h
+    private/game/camera/TransientCamera.cpp
     private/game/nodes/Node.cpp
     public/game/nodes/Node.h
     private/game/nodes/SpatialNode.cpp
     public/game/nodes/SpatialNode.h
     private/game/nodes/MeshNode.cpp
     public/game/nodes/MeshNode.h
+    private/game/nodes/CameraNode.cpp
+    public/game/nodes/CameraNode.h
     public/io/properties/SerializeProperty.h
     private/io/properties/SerializeProperty.cpp
     private/io/properties/GuidProperty.cpp
@@ -547,6 +551,7 @@ set(ENGINE_TEST_SOURCES
     ${TESTS_RELATIVE_PATH}/engine_lib/game/nodes/Node.cpp
     ${TESTS_RELATIVE_PATH}/engine_lib/game/nodes/SpatialNode.cpp
     ${TESTS_RELATIVE_PATH}/engine_lib/game/nodes/MeshNode.cpp
+    ${TESTS_RELATIVE_PATH}/engine_lib/game/nodes/CameraNode.cpp
     ${TESTS_RELATIVE_PATH}/engine_lib/game/camera/CameraProperties.cpp
     ${TESTS_RELATIVE_PATH}/engine_lib/game/World.cpp
     ${TESTS_RELATIVE_PATH}/engine_lib/game/GameInstance.cpp

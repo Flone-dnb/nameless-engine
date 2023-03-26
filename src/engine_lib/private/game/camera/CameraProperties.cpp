@@ -22,7 +22,7 @@ namespace ne {
         mtxData.second.projectionData.second.iRenderTargetWidth = iRenderTargetWidth;
         mtxData.second.projectionData.second.iRenderTargetHeight = iRenderTargetHeight;
 
-        // Mark projection matrix as dirty.
+        // Mark projection matrix as "needs update".
         mtxData.second.projectionData.first = true;
     }
 
@@ -44,7 +44,7 @@ namespace ne {
             mtxData.second.freeModeData.rotation = glm::vec3(0.0F, 0.0F, 0.0F);
         }
 
-        // Mark view matrix as dirty.
+        // Mark view matrix as "needs update".
         mtxData.second.viewMatrix.first = true;
     }
 
@@ -65,11 +65,16 @@ namespace ne {
             recalculateBaseVectorsForOrbitalCamera();
         }
 
-        // Mark view matrix as dirty.
+        // Mark view matrix as "needs update".
         mtxData.second.viewMatrix.first = true;
     }
 
     void CameraProperties::moveFreeCameraForward(float distance) {
+        // Make sure the input is not zero.
+        if (glm::epsilonEqual(distance, 0.0F, floatDelta)) {
+            return;
+        }
+
         std::scoped_lock guard(mtxData.first);
 
         // Make sure we are in the free camera mode.
@@ -84,11 +89,16 @@ namespace ne {
         // Apply movement.
         mtxData.second.location += mtxData.second.forwardDirection * distance;
 
-        // Mark view matrix as dirty.
+        // Mark view matrix as "needs update".
         mtxData.second.viewMatrix.first = true;
     }
 
     void CameraProperties::moveFreeCameraRight(float distance) {
+        // Make sure the input is not zero.
+        if (glm::epsilonEqual(distance, 0.0F, floatDelta)) {
+            return;
+        }
+
         std::scoped_lock guard(mtxData.first);
 
         // Make sure we are in the free camera mode.
@@ -103,11 +113,16 @@ namespace ne {
         // Apply movement.
         mtxData.second.location += mtxData.second.rightDirection * distance;
 
-        // Mark view matrix as dirty.
+        // Mark view matrix as "needs update".
         mtxData.second.viewMatrix.first = true;
     }
 
     void CameraProperties::moveFreeCameraUp(float distance) {
+        // Make sure the input is not zero.
+        if (glm::epsilonEqual(distance, 0.0F, floatDelta)) {
+            return;
+        }
+
         std::scoped_lock guard(mtxData.first);
 
         // Make sure we are in the free camera mode.
@@ -122,11 +137,16 @@ namespace ne {
         // Apply movement.
         mtxData.second.location += mtxData.second.upDirection * distance;
 
-        // Mark view matrix as dirty.
+        // Mark view matrix as "needs update".
         mtxData.second.viewMatrix.first = true;
     }
 
     void CameraProperties::moveFreeCameraWorldUp(float distance) {
+        // Make sure the input is not zero.
+        if (glm::epsilonEqual(distance, 0.0F, floatDelta)) {
+            return;
+        }
+
         std::scoped_lock guard(mtxData.first);
 
         // Make sure we are in the free camera mode.
@@ -141,7 +161,7 @@ namespace ne {
         // Apply movement.
         mtxData.second.location += worldUpDirection * distance;
 
-        // Mark view matrix as dirty.
+        // Mark view matrix as "needs update".
         mtxData.second.viewMatrix.first = true;
     }
 
@@ -169,23 +189,13 @@ namespace ne {
         const auto rotationMatrix = glm::rotate(glm::radians(pitchDiff), mtxData.second.rightDirection);
 
         // Rotate forward/up vectors.
-        mtxData.second.forwardDirection = glm::vec4(
-                                              mtxData.second.forwardDirection.x,
-                                              mtxData.second.forwardDirection.y,
-                                              mtxData.second.forwardDirection.z,
-                                              0.0F) *
-                                          rotationMatrix;
-        mtxData.second.upDirection = glm::vec4(
-                                         mtxData.second.upDirection.x,
-                                         mtxData.second.upDirection.y,
-                                         mtxData.second.upDirection.z,
-                                         0.0F) *
-                                     rotationMatrix;
+        mtxData.second.forwardDirection = glm::vec4(mtxData.second.forwardDirection, 0.0F) * rotationMatrix;
+        mtxData.second.upDirection = glm::vec4(mtxData.second.upDirection, 0.0F) * rotationMatrix;
 
         // Save new pitch.
         mtxData.second.freeModeData.rotation.y = pitch;
 
-        // Mark view matrix as dirty.
+        // Mark view matrix as "needs update".
         mtxData.second.viewMatrix.first = true;
     }
 
@@ -208,23 +218,13 @@ namespace ne {
         const auto rotationMatrix = glm::rotate(glm::radians(yawDiff), mtxData.second.upDirection);
 
         // Rotate forward/right vectors.
-        mtxData.second.forwardDirection = glm::vec4(
-                                              mtxData.second.forwardDirection.x,
-                                              mtxData.second.forwardDirection.y,
-                                              mtxData.second.forwardDirection.z,
-                                              0.0F) *
-                                          rotationMatrix;
-        mtxData.second.rightDirection = glm::vec4(
-                                            mtxData.second.rightDirection.x,
-                                            mtxData.second.rightDirection.y,
-                                            mtxData.second.rightDirection.z,
-                                            0.0F) *
-                                        rotationMatrix;
+        mtxData.second.forwardDirection = glm::vec4(mtxData.second.forwardDirection, 0.0F) * rotationMatrix;
+        mtxData.second.rightDirection = glm::vec4(mtxData.second.rightDirection, 0.0F) * rotationMatrix;
 
         // Save new yaw.
         mtxData.second.freeModeData.rotation.z = yaw;
 
-        // Mark view matrix as dirty.
+        // Mark view matrix as "needs update".
         mtxData.second.viewMatrix.first = true;
     }
 
@@ -256,23 +256,13 @@ namespace ne {
         const auto rotationMatrix = glm::rotate(glm::radians(rollDiff), mtxData.second.forwardDirection);
 
         // Rotate right/up vectors.
-        mtxData.second.rightDirection = glm::vec4(
-                                            mtxData.second.rightDirection.x,
-                                            mtxData.second.rightDirection.y,
-                                            mtxData.second.rightDirection.z,
-                                            0.0F) *
-                                        rotationMatrix;
-        mtxData.second.upDirection = glm::vec4(
-                                         mtxData.second.upDirection.x,
-                                         mtxData.second.upDirection.y,
-                                         mtxData.second.upDirection.z,
-                                         0.0F) *
-                                     rotationMatrix;
+        mtxData.second.rightDirection = glm::vec4(mtxData.second.rightDirection, 0.0F) * rotationMatrix;
+        mtxData.second.upDirection = glm::vec4(mtxData.second.upDirection, 0.0F) * rotationMatrix;
 
         // Save new roll.
         mtxData.second.freeModeData.rotation.x = roll;
 
-        // Mark view matrix as dirty.
+        // Mark view matrix as "needs update".
         mtxData.second.viewMatrix.first = true;
     }
 
@@ -295,7 +285,7 @@ namespace ne {
         mtxData.second.upDirection =
             glm::cross(mtxData.second.rightDirection, mtxData.second.forwardDirection);
 
-        // Mark view matrix as dirty.
+        // Mark view matrix as "needs update".
         mtxData.second.viewMatrix.first = true;
     }
 
@@ -323,7 +313,7 @@ namespace ne {
 
         recalculateBaseVectorsForOrbitalCamera();
 
-        // Mark view matrix as dirty.
+        // Mark view matrix as "needs update".
         mtxData.second.viewMatrix.first = true;
     }
 
@@ -348,7 +338,7 @@ namespace ne {
             mtxData.second.orbitalModeData.theta,
             mtxData.second.orbitalModeData.phi);
 
-        // Mark view matrix as dirty.
+        // Mark view matrix as "needs update".
         mtxData.second.viewMatrix.first = true;
     }
 
@@ -376,7 +366,7 @@ namespace ne {
 
         recalculateBaseVectorsForOrbitalCamera();
 
-        // Mark view matrix as dirty.
+        // Mark view matrix as "needs update".
         mtxData.second.viewMatrix.first = true;
     }
 
@@ -392,7 +382,7 @@ namespace ne {
         // Apply FOV.
         mtxData.second.projectionData.second.iVerticalFov = iVerticalFov;
 
-        // Mark projection matrix as dirty.
+        // Mark projection matrix as "needs update".
         mtxData.second.projectionData.first = true;
     }
 
@@ -412,7 +402,7 @@ namespace ne {
         // Apply near clip plane.
         mtxData.second.projectionData.second.nearClipPlaneDistance = nearClipPlaneDistance;
 
-        // Mark projection matrix as dirty.
+        // Mark projection matrix as "needs update".
         mtxData.second.projectionData.first = true;
     }
 
@@ -432,32 +422,68 @@ namespace ne {
         // Apply far clip plane.
         mtxData.second.projectionData.second.farClipPlaneDistance = farClipPlaneDistance;
 
-        // Mark projection matrix as dirty.
+        // Mark projection matrix as "needs update".
         mtxData.second.projectionData.first = true;
     }
 
-    glm::vec3 CameraProperties::getLocation() {
+    glm::vec3 CameraProperties::getLocation(bool bInWorldSpace) {
         std::scoped_lock guard(mtxData.first);
+
+        if (bInWorldSpace) {
+            return mtxData.second.worldAdjustmentMatrix * glm::vec4(mtxData.second.location, 1.0F);
+        }
 
         return mtxData.second.location;
     }
 
-    glm::vec3 CameraProperties::getForwardDirection() {
+    glm::vec3 CameraProperties::getForwardDirection(bool bInWorldSpace) {
         std::scoped_lock guard(mtxData.first);
+
+        if (bInWorldSpace) {
+            return mtxData.second.worldAdjustmentMatrix * glm::vec4(mtxData.second.forwardDirection, 0.0F);
+        }
 
         return mtxData.second.forwardDirection;
     }
 
-    glm::vec3 CameraProperties::getRightDirection() {
+    glm::vec3 CameraProperties::getRightDirection(bool bInWorldSpace) {
         std::scoped_lock guard(mtxData.first);
+
+        if (bInWorldSpace) {
+            return mtxData.second.worldAdjustmentMatrix * glm::vec4(mtxData.second.rightDirection, 0.0F);
+        }
 
         return mtxData.second.rightDirection;
     }
 
-    glm::vec3 CameraProperties::getUpDirection() {
+    glm::vec3 CameraProperties::getUpDirection(bool bInWorldSpace) {
         std::scoped_lock guard(mtxData.first);
 
+        if (bInWorldSpace) {
+            return mtxData.second.worldAdjustmentMatrix * glm::vec4(mtxData.second.upDirection, 0.0F);
+        }
+
         return mtxData.second.upDirection;
+    }
+
+    glm::vec3 CameraProperties::getOrbitalCameraTargetLocation(bool bInWorldSpace) {
+        std::scoped_lock guard(mtxData.first);
+
+        // Make sure we are in the orbital camera mode.
+        if (mtxData.second.currentCameraMode == CameraMode::FREE) [[unlikely]] {
+            Logger::get().warn(
+                "an attempt was made to get orbital camera's target location while the camera is not "
+                "in the orbital mode",
+                sCameraPropertiesLogCategory);
+            return glm::vec3(0.0F, 0.0F, 0.0F);
+        }
+
+        if (bInWorldSpace) {
+            return mtxData.second.worldAdjustmentMatrix *
+                   glm::vec4(mtxData.second.orbitalModeData.targetPointLocation, 1.0F);
+        }
+
+        return mtxData.second.orbitalModeData.targetPointLocation;
     }
 
     float CameraProperties::getFreeCameraPitch() {
@@ -591,22 +617,31 @@ namespace ne {
     void CameraProperties::makeSureViewMatrixIsUpToDate() {
         std::scoped_lock guard(mtxData.first);
 
+        // Only continue if the view matrix is marked as "needs update".
         if (!mtxData.second.viewMatrix.first) {
             return;
         }
 
+        // Construct location and up direction considering world adjustment matrix.
+        const glm::vec3 location = getLocation(true);
+        const glm::vec3 upDirection = getUpDirection(true);
+
         if (mtxData.second.currentCameraMode == CameraMode::FREE) {
-            mtxData.second.viewMatrix.second = glm::lookAtLH(
-                mtxData.second.location,
-                mtxData.second.location + mtxData.second.forwardDirection,
-                mtxData.second.upDirection);
+            // Construct forward direction considering world adjustment matrix.
+            const glm::vec3 forwardDirection = getForwardDirection(true);
+
+            // Construct view matrix.
+            mtxData.second.viewMatrix.second =
+                glm::lookAtLH(location, location + forwardDirection, upDirection);
         } else {
-            mtxData.second.viewMatrix.second = glm::lookAtLH(
-                mtxData.second.location,
-                mtxData.second.orbitalModeData.targetPointLocation,
-                mtxData.second.upDirection);
+            // Construct target location considering world adjustment matrix.
+            const glm::vec3 targetLocation = getOrbitalCameraTargetLocation(true);
+
+            // Construct view matrix.
+            mtxData.second.viewMatrix.second = glm::lookAtLH(location, targetLocation, upDirection);
         }
 
+        // Mark view matrix as "updated".
         mtxData.second.viewMatrix.first = false;
     }
 
@@ -642,6 +677,15 @@ namespace ne {
 
         // Change flag.
         mtxData.second.projectionData.first = false;
+    }
+
+    void CameraProperties::setWorldAdjustmentMatrix(const glm::mat4x4& adjustmentMatrix) {
+        std::scoped_lock guard(mtxData.first);
+
+        mtxData.second.worldAdjustmentMatrix = adjustmentMatrix;
+
+        // Mark view matrix as "needs update"
+        mtxData.second.viewMatrix.first = true;
     }
 
 } // namespace ne

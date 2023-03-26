@@ -126,7 +126,7 @@ namespace ne {
 
             const auto parentLocalMatrixIncludingParents = pSpatialParent->getLocalMatrixIncludingParents();
             locationRelativeToParentLocalSpace =
-                glm::vec4(locationRelativeToParentLocalSpace, 0.0F) * parentLocalMatrixIncludingParents;
+                glm::vec4(locationRelativeToParentLocalSpace, 1.0F) * parentLocalMatrixIncludingParents;
 
             mtxLocalMatrix.second.localMatrixIncludingParents =
                 mtxLocalMatrix.second.localMatrix * parentLocalMatrixIncludingParents;

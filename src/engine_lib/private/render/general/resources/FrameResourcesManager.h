@@ -9,6 +9,7 @@
 
 // Custom.
 #include "misc/Error.h"
+#include "math/GLMath.hpp"
 
 // External.
 #if defined(WIN32)
@@ -34,10 +35,26 @@ namespace ne {
     class UploadBuffer;
     class Renderer;
 
-    /** Stores frame-global constants. */
+    /**
+     * Stores frame-global constants. Used by shaders.
+     *
+     * @warning Should be exactly the same as `cbuffer` in shaders (except for GLM type aligning).
+     */
     struct FrameConstants {
-        /** Time in seconds that has passed since the very first window was created. */
-        float totalApplicationTimeInSec = 0.0F;
+        /** Camera's view matrix multiplied by camera's projection matrix. */
+        glm::mat4x4 viewProjectionMatrix = glm::identity<glm::mat4x4>();
+
+        /** Camera's world location. */
+        glm::vec3 cameraPosition = glm::vec3(0.0F, 0.0F, 0.0F);
+
+        /** Time that has passed since the last frame in seconds (i.e. delta time). */
+        float timeSincePrevFrameInSec = 0.0F;
+
+        /** Time since the first window was created (in seconds). */
+        float totalTimeInSec = 0.0F;
+
+        /** Padding. */
+        float pad[2];
     };
 
     /** Stores objects used by one frame. */

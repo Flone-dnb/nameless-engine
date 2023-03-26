@@ -480,6 +480,19 @@ namespace ne {
         }
     }
 
+    void DirectXRenderer::updateFrameConstantsBuffer(FrameResource* pCurrentFrameResource) {
+        std::scoped_lock guard(mtxFrameConstants.first);
+
+        // TODO: copy camera's `viewProjectionMatrix` (don't transpose
+        // TODO: copy camera's world position
+
+        mtxFrameConstants.second.timeSincePrevFrameInSec = getGame()->getTimeSincePrevFrameInSec();
+        mtxFrameConstants.second.totalTimeInSec = GameInstance::getTotalApplicationTimeInSec();
+
+        pCurrentFrameResource->pFrameConstantBuffer->copyDataToElement(
+            0, &mtxFrameConstants.second, sizeof(mtxFrameConstants.second));
+    }
+
     std::optional<Error> DirectXRenderer::setVideoAdapter(const std::string& sVideoAdapterName) {
         for (UINT iAdapterIndex = 0;; iAdapterIndex++) {
             ComPtr<IDXGIAdapter3> pTestAdapter;
@@ -1001,7 +1014,10 @@ namespace ne {
         // Wait for this frame resource to no longer be used by the GPU.
         waitForFenceValue(pMtxCurrentFrameResource->second.pResource->iFence);
 
-        // Update shader read/write resources marked as "needs update".
+        // Copy new (up to date) data to frame data cbuffer to be used by the shaders.
+        updateFrameConstantsBuffer(pMtxCurrentFrameResource->second.pResource);
+
+        // Update shader CPU read/write resources marked as "needs update".
         getShaderCpuReadWriteResourceManager()->updateResources(
             pMtxCurrentFrameResource->second.iCurrentFrameResourceIndex);
     }
@@ -1109,6 +1125,9 @@ namespace ne {
 
         scissorRect = {
             0, 0, static_cast<LONG>(renderResolution.first), static_cast<LONG>(renderResolution.second)};
+
+        // TODO: update camera's aspect ratio.
+        // TODO: update camera's view matrix.
 
         return {};
     }

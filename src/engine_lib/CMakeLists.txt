@@ -98,7 +98,7 @@ set(ENGINE_LIB_SOURCES
     public/input/KeyboardKey.hpp
     private/io/Logger.cpp
     public/io/Logger.h
-    private/misc/Globals.h
+    public/misc/Globals.h
     private/misc/Globals.cpp
     private/io/ConfigManager.cpp
     public/io/ConfigManager.h
@@ -143,6 +143,8 @@ set(ENGINE_LIB_SOURCES
     private/misc/ProjectPaths.cpp
     private/io/Serializable.cpp
     public/io/Serializable.h
+    public/game/camera/CameraProperties.h
+    private/game/camera/CameraProperties.cpp
     private/game/nodes/Node.cpp
     public/game/nodes/Node.h
     private/game/nodes/SpatialNode.cpp
@@ -545,6 +547,7 @@ set(ENGINE_TEST_SOURCES
     ${TESTS_RELATIVE_PATH}/engine_lib/game/nodes/Node.cpp
     ${TESTS_RELATIVE_PATH}/engine_lib/game/nodes/SpatialNode.cpp
     ${TESTS_RELATIVE_PATH}/engine_lib/game/nodes/MeshNode.cpp
+    ${TESTS_RELATIVE_PATH}/engine_lib/game/camera/CameraProperties.cpp
     ${TESTS_RELATIVE_PATH}/engine_lib/game/World.cpp
     ${TESTS_RELATIVE_PATH}/engine_lib/game/GameInstance.cpp
     # add engine test .cpp files here

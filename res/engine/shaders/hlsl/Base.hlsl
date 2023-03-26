@@ -1,25 +1,26 @@
+/** Stores frame-global constants. */
 cbuffer frameData : register(b0, space5)
 {
-    float4x4 viewMatrix;
-    float4x4 inverseViewMatrix;
-    float4x4 projectionMatrix;
-    float4x4 inverseProjectionMatrix;
+    /** Camera's view matrix multiplied by camera's projection matrix. */
     float4x4 viewProjectionMatrix;
-    float4x4 inverseViewProjectionMatrix;
 
-    float nearZ;
-    float farZ;
-    float totalTimeInSec;
+    /** Camera's world location. */
+    float3 cameraPosition;
+    
+    float _cameraPositionAligning;
+
+    /** Time that has passed since the last frame in seconds (i.e. delta time). */
     float timeSincePrevFrameInSec;
 
-    int iRenderTargetWidth;
-    int iRenderTargetHeight;
+    /** Time since the first window was created (in seconds). */
+    float totalTimeInSec;
 
     float2 _framePad;
 
-    // remember to add padding to 4 floats
+    // don't forget to pad to 4 floats
 }
 
+/** Describes vertex shader input data. */
 struct VertexIn
 {
     float3 localPosition : POSITION;    // position in local space
@@ -27,6 +28,7 @@ struct VertexIn
     float2 uv            : UV;
 };
 
+/** Describes pixel shader input data. */
 struct VertexOut
 {
     float4 viewPosition            : SV_POSITION; // position in view space

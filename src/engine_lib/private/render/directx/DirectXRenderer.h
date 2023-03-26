@@ -290,6 +290,14 @@ namespace ne {
         void waitForFenceValue(UINT64 iFenceToWaitFor);
 
         /**
+         * Takes the current frame resource and updates frame data constant buffer that it stores (by copying
+         * new (up to date) constants to it).
+         *
+         * @param pCurrentFrameResource Current frame resource.
+         */
+        void updateFrameConstantsBuffer(FrameResource* pCurrentFrameResource);
+
+        /**
          * Returns a vector of display modes that the current output adapter
          * supports for current back buffer format.
          *
@@ -330,6 +338,9 @@ namespace ne {
 
         /** Fence counter. */
         std::pair<std::recursive_mutex, UINT64> mtxCurrentFenceValue;
+
+        /** Up to date frame-global constant data. */
+        std::pair<std::mutex, FrameConstants> mtxFrameConstants;
 
         /** Swap chain buffer. */
         std::vector<std::unique_ptr<DirectXResource>> vSwapChainBuffers;

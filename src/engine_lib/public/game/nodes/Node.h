@@ -390,10 +390,10 @@ namespace ne RNAMESPACE() {
          * @warning If overriding you must call the parent's version of this function first
          * (before executing your login) to execute parent's logic.
          *
-         * @param fTimeSincePrevCallInSec Time in seconds that has passed since the last call
+         * @param timeSincePrevCallInSec Time in seconds that has passed since the last call
          * to this function.
          */
-        virtual void onBeforeNewFrame(float fTimeSincePrevCallInSec) {}
+        virtual void onBeforeNewFrame(float timeSincePrevCallInSec) {}
 
         /**
          * Called when this node was not spawned previously and it was either attached to a parent node

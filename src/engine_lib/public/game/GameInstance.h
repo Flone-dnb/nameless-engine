@@ -63,10 +63,10 @@ namespace ne {
          *
          * @remark Called before nodes that should be called every frame.
          *
-         * @param fTimeSincePrevCallInSec Time in seconds that has passed since the last call
+         * @param timeSincePrevCallInSec Time in seconds that has passed since the last call
          * to this function.
          */
-        virtual void onBeforeNewFrame(float fTimeSincePrevCallInSec) {}
+        virtual void onBeforeNewFrame(float timeSincePrevCallInSec) {}
 
         /**
          * Called when the window receives keyboard input.

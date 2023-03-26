@@ -17,11 +17,13 @@
 //     Texture2D diffuseTexture : register(t0, space5);
 // #endif
 
+/** Describes MeshNode's constants. */
 cbuffer meshData : register(b1, space5)
 {
+    /** Matrix that transforms vertices from mesh local space to world space. */
     float4x4 worldMatrix; 
     
-    // remember to add padding to 4 floats
+    // don't forget to pad to 4 floats
 };
 
 VertexOut vsMeshNode(VertexIn vertexIn)

@@ -248,11 +248,14 @@ namespace ne {
         });
     }
 
-    void Game::onBeforeNewFrame(float fTimeSincePrevCallInSec) {
+    void Game::onBeforeNewFrame(float timeSincePrevCallInSec) {
+        // Save delta time.
+        timeSincePrevFrameInSec = timeSincePrevCallInSec;
+
         pRenderer->getShaderManager()->performSelfValidation();
 
         // Call on game instance.
-        pGameInstance->onBeforeNewFrame(fTimeSincePrevCallInSec);
+        pGameInstance->onBeforeNewFrame(timeSincePrevCallInSec);
 
         {
             // Call on all tickable nodes.
@@ -267,7 +270,7 @@ namespace ne {
                 std::scoped_lock nodesGuard(pTickGroup->first);
                 std::vector<Node*>* pNodes = &pTickGroup->second;
                 for (auto it = pNodes->begin(); it != pNodes->end(); ++it) {
-                    (*it)->onBeforeNewFrame(fTimeSincePrevCallInSec);
+                    (*it)->onBeforeNewFrame(timeSincePrevCallInSec);
                 }
             };
 
@@ -460,6 +463,8 @@ namespace ne {
     Window* Game::getWindow() const { return pWindow; }
 
     GameInstance* Game::getGameInstance() const { return pGameInstance.get(); }
+
+    float Game::getTimeSincePrevFrameInSec() const { return timeSincePrevFrameInSec; }
 
     long long Game::getGarbageCollectorRunIntervalInSec() const { return iGcRunIntervalInSec; }
 

@@ -4,6 +4,9 @@
 #include <filesystem>
 #include <string>
 
+// Custom.
+#include "math/GLMath.hpp"
+
 namespace ne {
     /**
      * Returns the name of this application.
@@ -55,6 +58,15 @@ namespace ne {
      * @return Path to base engine directory.
      */
     std::filesystem::path getBaseDirectoryForConfigs();
+
+    /** Vector that points in world's up direction. */
+    static inline const glm::vec3 worldUpDirection = glm::vec3(0.0F, 0.0F, 1.0F);
+
+    /** Vector that points in world's right direction. */
+    static inline const glm::vec3 worldRightDirection = glm::vec3(0.0F, 1.0F, 0.0F);
+
+    /** Vector that points in world's forward direction. */
+    static inline const glm::vec3 worldForwardDirection = glm::vec3(1.0F, 0.0F, 0.0F);
 
     /** Name of the root (base) engine directory. */
     constexpr std::string_view sBaseEngineDirectoryName = "nameless-engine";

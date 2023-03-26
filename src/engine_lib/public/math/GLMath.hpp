@@ -12,7 +12,9 @@
                                            // rely on this auto-padding (we don't pad structs manually)
 #define GLM_FORCE_INTRINSICS
 #include "glm/glm.hpp"
+#include "glm/trigonometric.hpp"
 #define GLM_ENABLE_EXPERIMENTAL
 #include "glm/gtx/vector_angle.hpp"
 #include "glm/gtx/matrix_decompose.hpp"
 #include "glm/gtc/type_ptr.hpp"
+#include "glm/gtx/compatibility.hpp"

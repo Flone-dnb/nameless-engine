@@ -226,6 +226,13 @@ namespace ne {
         GameInstance* getGameInstance() const;
 
         /**
+         * Returns the last time that was passed to onBeforeNewFrame function(s).
+         *
+         * @return Delta time.
+         */
+        float getTimeSincePrevFrameInSec() const;
+
+        /**
          * Returns the current interval after which we need to run garbage collector again.
          *
          * @return Interval in seconds.
@@ -272,10 +279,10 @@ namespace ne {
         /**
          * Called before a new frame is rendered.
          *
-         * @param fTimeSincePrevCallInSec   Time in seconds that has passed since the last call
+         * @param timeSincePrevCallInSec Time in seconds that has passed since the last call
          * to this function.
          */
-        void onBeforeNewFrame(float fTimeSincePrevCallInSec);
+        void onBeforeNewFrame(float timeSincePrevCallInSec);
 
         /**
          * Called when the window (that owns this object) receives keyboard input.
@@ -402,6 +409,9 @@ namespace ne {
 
         /** Last time we run garbage collector. */
         std::chrono::steady_clock::time_point lastGcRunTime;
+
+        /** The last time that was passed to @ref onBeforeNewFrame. */
+        float timeSincePrevFrameInSec = 0.0F;
 
         /** Interval in seconds after which we need to run garbage collector again. */
         long long iGcRunIntervalInSec = 120;

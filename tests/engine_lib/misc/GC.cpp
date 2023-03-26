@@ -29,6 +29,37 @@ TEST_CASE("gc pointer comparison") {
     REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
 }
 
+TEST_CASE("constructing gc pointer from raw pointer is counted by garbage collector") {
+    class Collected {};
+
+    {
+        gc<Collected> pCollectedFromRaw = nullptr;
+
+        {
+            const auto pCollected = gc_new<Collected>();
+
+            REQUIRE(gc_collector()->getAliveObjectsCount() == 1);
+
+            Collected* pRaw = &*pCollected;
+
+            REQUIRE(gc_collector()->getAliveObjectsCount() == 1);
+
+            pCollectedFromRaw = gc<Collected>(pRaw);
+
+            REQUIRE(gc_collector()->getAliveObjectsCount() == 1);
+        }
+
+        gc_collector()->fullCollect();
+
+        REQUIRE(gc_collector()->getAliveObjectsCount() == 1);
+    }
+
+    gc_collector()->fullCollect();
+
+    // No object should exist now.
+    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+}
+
 TEST_CASE("moving gc pointers does not cause leaks") {
     class Collected {};
 

@@ -12,28 +12,22 @@ namespace ne {
 
     void SpatialNode::setRelativeLocation(const glm::vec3& location) {
         relativeLocation = location;
+
+        recalculateLocalMatrix();
         recalculateWorldMatrix();
     }
 
     void SpatialNode::setRelativeRotation(const glm::vec3& rotation) {
         relativeRotation = rotation;
 
-        {
-            // Recalculate basis vectors.
-            std::scoped_lock guard(mtxLocalMatrix.first);
-
-            mtxLocalMatrix.second.localMatrix =
-                glm::rotate(glm::radians(rotation.x), glm::vec3(1.0F, 0.0F, 0.0F)) *
-                glm::rotate(glm::radians(rotation.y), glm::vec3(0.0F, 1.0F, 0.0F)) *
-                glm::rotate(glm::radians(rotation.z), glm::vec3(0.0F, 0.0F, 1.0F));
-            mtxLocalMatrix.second.localMatrixIncludingParents = mtxLocalMatrix.second.localMatrix;
-        }
-
+        recalculateLocalMatrix();
         recalculateWorldMatrix();
     }
 
     void SpatialNode::setRelativeScale(const glm::vec3& scale) {
         relativeScale = scale;
+
+        recalculateLocalMatrix();
         recalculateWorldMatrix();
     }
 
@@ -65,6 +59,8 @@ namespace ne {
 
         std::scoped_lock guard(mtxWorldMatrix.first);
         relativeLocation = location - mtxWorldMatrix.second.worldLocation;
+
+        recalculateLocalMatrix();
         recalculateWorldMatrix();
     }
 
@@ -81,6 +77,8 @@ namespace ne {
 
         std::scoped_lock guard(mtxWorldMatrix.first);
         relativeRotation = rotation - mtxWorldMatrix.second.worldRotation;
+
+        recalculateLocalMatrix();
         recalculateWorldMatrix();
     }
 
@@ -97,6 +95,8 @@ namespace ne {
 
         std::scoped_lock guard(mtxWorldMatrix.first);
         relativeScale = scale / mtxWorldMatrix.second.worldScale;
+
+        recalculateLocalMatrix();
         recalculateWorldMatrix();
     }
 
@@ -114,6 +114,7 @@ namespace ne {
     }
 
     void SpatialNode::recalculateWorldMatrix(bool bNotifyChildren) {
+        // Prepare some variables.
         glm::mat4x4 parentWorldMatrix = glm::identity<glm::mat4x4>();
         glm::vec3 locationRelativeToParentLocalSpace = relativeLocation;
 
@@ -122,14 +123,23 @@ namespace ne {
         // See if there is a spatial node in the parent chain.
         const auto pSpatialParent = getParentNodeOfType<SpatialNode>();
         if (pSpatialParent != nullptr) {
+            // Save parent's world matrix.
             parentWorldMatrix = pSpatialParent->getWorldMatrix();
 
-            const auto parentLocalMatrixIncludingParents = pSpatialParent->getLocalMatrixIncludingParents();
-            locationRelativeToParentLocalSpace =
-                glm::vec4(locationRelativeToParentLocalSpace, 1.0F) * parentLocalMatrixIncludingParents;
+            // Calculate location relative to parent base axis.
+            const auto parentLocalMatrix = pSpatialParent->getLocalMatrixIncludingParents();
 
+            locationRelativeToParentLocalSpace =
+                parentLocalMatrix *
+                glm::vec4(
+                    locationRelativeToParentLocalSpace, 0.0F); // <- intentionally ignore parent translation
+
+            // Save local matrix including parents.
             mtxLocalMatrix.second.localMatrixIncludingParents =
-                mtxLocalMatrix.second.localMatrix * parentLocalMatrixIncludingParents;
+                parentLocalMatrix * mtxLocalMatrix.second.localMatrix;
+        } else {
+            // Save local matrix including parents.
+            mtxLocalMatrix.second.localMatrixIncludingParents = mtxLocalMatrix.second.localMatrix;
         }
 
         // Calculate world matrix without counting the parent.
@@ -239,6 +249,17 @@ namespace ne {
         // after this function is finished, once a child node is added it will recalculate its matrix.
         // 2. If this is a single node that is being deserialized, there are no children.
         recalculateWorldMatrix(false);
+    }
+
+    void SpatialNode::recalculateLocalMatrix() {
+        std::scoped_lock guard(mtxLocalMatrix.first);
+
+        mtxLocalMatrix.second.localMatrix =
+            glm::translate(relativeLocation) *
+            glm::rotate(glm::radians(relativeRotation.z), glm::vec3(0.0F, 0.0F, 1.0F)) *
+            glm::rotate(glm::radians(relativeRotation.y), glm::vec3(0.0F, 1.0F, 0.0F)) *
+            glm::rotate(glm::radians(relativeRotation.x), glm::vec3(1.0F, 0.0F, 0.0F)) *
+            glm::scale(relativeScale);
     }
 
 } // namespace ne

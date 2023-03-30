@@ -193,6 +193,9 @@ namespace ne RNAMESPACE() {
          */
         void recalculateWorldMatrix(bool bNotifyChildren = true);
 
+        /** Recalculates node's local matrix based on local location/rotation/scale. */
+        void recalculateLocalMatrix();
+
         /**
          * Checks if the specified node is a SpatialNode and calls @ref recalculateWorldMatrix,
          * otherwise calls this function on all child nodes.

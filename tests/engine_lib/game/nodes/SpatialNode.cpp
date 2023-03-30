@@ -63,6 +63,174 @@ TEST_CASE("world location, rotation and scale are calculated correctly (no paren
     REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
 }
 
+TEST_CASE("world location is calculated correctly when rotating parent by X") {
+    using namespace ne;
+
+    class TestGameInstance : public GameInstance {
+    public:
+        TestGameInstance(Window* pGameWindow, InputManager* pInputManager)
+            : GameInstance(pGameWindow, pInputManager) {}
+        virtual void onGameStarted() override {
+            createWorld([&](const std::optional<Error>& optionalWorldError) {
+                if (optionalWorldError.has_value()) {
+                    auto error = optionalWorldError.value();
+                    error.addEntry();
+                    INFO(error.getFullErrorMessage());
+                    REQUIRE(false);
+                }
+
+                constexpr float floatEpsilon = 0.00001f;
+
+                const auto pParentSpatialNode = gc_new<SpatialNode>();
+                pParentSpatialNode->setRelativeLocation(glm::vec3(5.0f, 0.0f, 0.0f));
+                pParentSpatialNode->setRelativeRotation(glm::vec3(-90.0f, 0.0f, 0.0f));
+
+                const auto pChildSpatialNode = gc_new<SpatialNode>();
+                pParentSpatialNode->addChildNode(pChildSpatialNode);
+
+                REQUIRE(glm::all(glm::epsilonEqual(
+                    pChildSpatialNode->getWorldLocation(), glm::vec3(5.0f, 0.0f, 0.0f), floatEpsilon)));
+
+                pChildSpatialNode->setRelativeLocation(glm::vec3(0.0f, 5.0f, 0.0f));
+
+                const auto worldLocation = pChildSpatialNode->getWorldLocation();
+
+                REQUIRE(
+                    glm::all(glm::epsilonEqual(worldLocation, glm::vec3(5.0f, 0.0f, -5.0f), floatEpsilon)));
+
+                getWindow()->close();
+            });
+        }
+        virtual ~TestGameInstance() override {}
+    };
+
+    auto result = Window::getBuilder().withVisibility(false).build();
+    if (std::holds_alternative<Error>(result)) {
+        Error error = std::get<Error>(std::move(result));
+        error.addEntry();
+        INFO(error.getFullErrorMessage());
+        REQUIRE(false);
+    }
+
+    const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
+    pMainWindow->processEvents<TestGameInstance>();
+
+    // Make sure everything is collected correctly.
+    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+}
+
+TEST_CASE("world location is calculated correctly when rotating parent by Y") {
+    using namespace ne;
+
+    class TestGameInstance : public GameInstance {
+    public:
+        TestGameInstance(Window* pGameWindow, InputManager* pInputManager)
+            : GameInstance(pGameWindow, pInputManager) {}
+        virtual void onGameStarted() override {
+            createWorld([&](const std::optional<Error>& optionalWorldError) {
+                if (optionalWorldError.has_value()) {
+                    auto error = optionalWorldError.value();
+                    error.addEntry();
+                    INFO(error.getFullErrorMessage());
+                    REQUIRE(false);
+                }
+
+                constexpr float floatEpsilon = 0.00001f;
+
+                const auto pParentSpatialNode = gc_new<SpatialNode>();
+                pParentSpatialNode->setRelativeLocation(glm::vec3(0.0f, 5.0f, 0.0f));
+                pParentSpatialNode->setRelativeRotation(glm::vec3(0.0f, -90.0f, 0.0f));
+
+                const auto pChildSpatialNode = gc_new<SpatialNode>();
+                pParentSpatialNode->addChildNode(pChildSpatialNode);
+
+                REQUIRE(glm::all(glm::epsilonEqual(
+                    pChildSpatialNode->getWorldLocation(), glm::vec3(0.0f, 5.0f, 0.0f), floatEpsilon)));
+
+                pChildSpatialNode->setRelativeLocation(glm::vec3(0.0f, 0.0f, 5.0f));
+
+                const auto worldLocation = pChildSpatialNode->getWorldLocation();
+
+                REQUIRE(
+                    glm::all(glm::epsilonEqual(worldLocation, glm::vec3(-5.0f, 5.0f, 0.0f), floatEpsilon)));
+
+                getWindow()->close();
+            });
+        }
+        virtual ~TestGameInstance() override {}
+    };
+
+    auto result = Window::getBuilder().withVisibility(false).build();
+    if (std::holds_alternative<Error>(result)) {
+        Error error = std::get<Error>(std::move(result));
+        error.addEntry();
+        INFO(error.getFullErrorMessage());
+        REQUIRE(false);
+    }
+
+    const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
+    pMainWindow->processEvents<TestGameInstance>();
+
+    // Make sure everything is collected correctly.
+    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+}
+
+TEST_CASE("world location is calculated correctly when rotating parent by Z") {
+    using namespace ne;
+
+    class TestGameInstance : public GameInstance {
+    public:
+        TestGameInstance(Window* pGameWindow, InputManager* pInputManager)
+            : GameInstance(pGameWindow, pInputManager) {}
+        virtual void onGameStarted() override {
+            createWorld([&](const std::optional<Error>& optionalWorldError) {
+                if (optionalWorldError.has_value()) {
+                    auto error = optionalWorldError.value();
+                    error.addEntry();
+                    INFO(error.getFullErrorMessage());
+                    REQUIRE(false);
+                }
+
+                constexpr float floatEpsilon = 0.00001f;
+
+                const auto pParentSpatialNode = gc_new<SpatialNode>();
+                pParentSpatialNode->setRelativeLocation(glm::vec3(0.0f, 0.0f, 5.0f));
+                pParentSpatialNode->setRelativeRotation(glm::vec3(0.0f, 0.0f, -90.0f));
+
+                const auto pChildSpatialNode = gc_new<SpatialNode>();
+                pParentSpatialNode->addChildNode(pChildSpatialNode);
+
+                REQUIRE(glm::all(glm::epsilonEqual(
+                    pChildSpatialNode->getWorldLocation(), glm::vec3(0.0f, 0.0f, 5.0f), floatEpsilon)));
+
+                pChildSpatialNode->setRelativeLocation(glm::vec3(5.0f, 0.0f, 0.0f));
+
+                const auto worldLocation = pChildSpatialNode->getWorldLocation();
+
+                REQUIRE(
+                    glm::all(glm::epsilonEqual(worldLocation, glm::vec3(0.0f, -5.0f, 5.0f), floatEpsilon)));
+
+                getWindow()->close();
+            });
+        }
+        virtual ~TestGameInstance() override {}
+    };
+
+    auto result = Window::getBuilder().withVisibility(false).build();
+    if (std::holds_alternative<Error>(result)) {
+        Error error = std::get<Error>(std::move(result));
+        error.addEntry();
+        INFO(error.getFullErrorMessage());
+        REQUIRE(false);
+    }
+
+    const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
+    pMainWindow->processEvents<TestGameInstance>();
+
+    // Make sure everything is collected correctly.
+    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+}
+
 TEST_CASE("world location, rotation and scale are calculated correctly (with parent)") {
     using namespace ne;
 
@@ -87,6 +255,10 @@ TEST_CASE("world location, rotation and scale are calculated correctly (with par
 
                 const auto pChildSpatialNode = gc_new<SpatialNode>("My Cool Child Spatial Node");
                 pParentSpatialNode->addChildNode(pChildSpatialNode);
+
+                REQUIRE(glm::all(glm::epsilonEqual(
+                    pChildSpatialNode->getWorldLocation(), glm::vec3(5.0f, 0.0f, 0.0f), floatEpsilon)));
+
                 pChildSpatialNode->setRelativeLocation(glm::vec3(5.0f, 0.0f, 0.0f));
                 pChildSpatialNode->setRelativeScale(glm::vec3(1.0f, 1.0f, 5.0f));
 
@@ -95,7 +267,7 @@ TEST_CASE("world location, rotation and scale are calculated correctly (with par
                 const auto worldScale = pChildSpatialNode->getWorldScale();
 
                 REQUIRE(
-                    glm::all(glm::epsilonEqual(worldLocation, glm::vec3(10.0f, 0.0f, 0.0f), floatEpsilon)));
+                    glm::all(glm::epsilonEqual(worldLocation, glm::vec3(30.0f, 0.0f, 0.0f), floatEpsilon)));
                 REQUIRE(
                     glm::all(glm::epsilonEqual(worldRotation, glm::vec3(0.0f, 0.0f, 0.0f), floatEpsilon)));
                 REQUIRE(glm::all(glm::epsilonEqual(worldScale, glm::vec3(5.0f, 1.0f, 5.0f), floatEpsilon)));
@@ -175,7 +347,7 @@ TEST_CASE(
                 const auto worldScale = pChildChildSpatialNode->getWorldScale();
 
                 REQUIRE(
-                    glm::all(glm::epsilonEqual(worldLocation, glm::vec3(15.0f, 0.0f, 0.0f), floatEpsilon)));
+                    glm::all(glm::epsilonEqual(worldLocation, glm::vec3(55.0f, 0.0f, 0.0f), floatEpsilon)));
                 REQUIRE(
                     glm::all(glm::epsilonEqual(worldRotation, glm::vec3(0.0f, 0.0f, 0.0f), floatEpsilon)));
                 REQUIRE(glm::all(glm::epsilonEqual(worldScale, glm::vec3(5.0f, 1.0f, 25.0f), floatEpsilon)));
@@ -235,6 +407,7 @@ TEST_CASE("world location with parent rotation is correct") {
 
                 const auto pSpatialNodeC = gc_new<SpatialNode>();
                 pSpatialNodeC->setRelativeRotation(glm::vec3(0.0f, 0.0f, 90.0f));
+                pSpatialNodeC->setRelativeLocation(glm::vec3(0.0F, 5.0F, 0.0F));
 
                 const auto pChildSpatialNodeA = gc_new<SpatialNode>();
                 const auto pChildSpatialNodeB = gc_new<SpatialNode>();
@@ -258,14 +431,17 @@ TEST_CASE("world location with parent rotation is correct") {
                 const auto childANodeWorldLocation = pChildSpatialNodeA->getWorldLocation();
                 const auto childBNodeWorldLocation = pChildSpatialNodeB->getWorldLocation();
                 const auto childCNodeWorldLocation = pChildSpatialNodeC->getWorldLocation();
-                REQUIRE(glm::all(glm::epsilonEqual(
-                    middleANodeWorldLocation, glm::vec3(7.07106f, -7.07106f, 0.0f), floatEpsilon)));
-                REQUIRE(glm::all(glm::epsilonEqual(
-                    childANodeWorldLocation, glm::vec3(7.07106f, -7.07106f, 0.0f), floatEpsilon)));
+                const auto cNodeWorldLocation = pSpatialNodeC->getWorldLocation();
                 REQUIRE(glm::all(
-                    glm::epsilonEqual(childBNodeWorldLocation, glm::vec3(0.0f, -10.0f, 0.0f), floatEpsilon)));
+                    glm::epsilonEqual(cNodeWorldLocation, glm::vec3(0.0f, 0.0f, 5.0f), floatEpsilon)));
                 REQUIRE(glm::all(
-                    glm::epsilonEqual(childCNodeWorldLocation, glm::vec3(10.0f, 0.0f, 0.0f), floatEpsilon)));
+                    glm::epsilonEqual(childCNodeWorldLocation, glm::vec3(-10.0f, 0.0f, 5.0f), floatEpsilon)));
+                REQUIRE(glm::all(glm::epsilonEqual(
+                    middleANodeWorldLocation, glm::vec3(7.07106f, 7.07106f, 0.0f), floatEpsilon)));
+                REQUIRE(glm::all(glm::epsilonEqual(
+                    childANodeWorldLocation, glm::vec3(7.07106f, 7.07106f, 0.0f), floatEpsilon)));
+                REQUIRE(glm::all(
+                    glm::epsilonEqual(childBNodeWorldLocation, glm::vec3(0.0f, 10.0f, 0.0f), floatEpsilon)));
 
                 getWindow()->close();
             });

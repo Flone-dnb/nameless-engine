@@ -189,8 +189,8 @@ namespace ne {
         const auto rotationMatrix = glm::rotate(glm::radians(pitchDiff), mtxData.second.rightDirection);
 
         // Rotate forward/up vectors.
-        mtxData.second.forwardDirection = glm::vec4(mtxData.second.forwardDirection, 0.0F) * rotationMatrix;
-        mtxData.second.upDirection = glm::vec4(mtxData.second.upDirection, 0.0F) * rotationMatrix;
+        mtxData.second.forwardDirection = rotationMatrix * glm::vec4(mtxData.second.forwardDirection, 0.0F);
+        mtxData.second.upDirection = rotationMatrix * glm::vec4(mtxData.second.upDirection, 0.0F);
 
         // Save new pitch.
         mtxData.second.freeModeData.rotation.y = pitch;
@@ -218,8 +218,8 @@ namespace ne {
         const auto rotationMatrix = glm::rotate(glm::radians(yawDiff), mtxData.second.upDirection);
 
         // Rotate forward/right vectors.
-        mtxData.second.forwardDirection = glm::vec4(mtxData.second.forwardDirection, 0.0F) * rotationMatrix;
-        mtxData.second.rightDirection = glm::vec4(mtxData.second.rightDirection, 0.0F) * rotationMatrix;
+        mtxData.second.forwardDirection = rotationMatrix * glm::vec4(mtxData.second.forwardDirection, 0.0F);
+        mtxData.second.rightDirection = rotationMatrix * glm::vec4(mtxData.second.rightDirection, 0.0F);
 
         // Save new yaw.
         mtxData.second.freeModeData.rotation.z = yaw;
@@ -256,8 +256,8 @@ namespace ne {
         const auto rotationMatrix = glm::rotate(glm::radians(rollDiff), mtxData.second.forwardDirection);
 
         // Rotate right/up vectors.
-        mtxData.second.rightDirection = glm::vec4(mtxData.second.rightDirection, 0.0F) * rotationMatrix;
-        mtxData.second.upDirection = glm::vec4(mtxData.second.upDirection, 0.0F) * rotationMatrix;
+        mtxData.second.rightDirection = rotationMatrix * glm::vec4(mtxData.second.rightDirection, 0.0F);
+        mtxData.second.upDirection = rotationMatrix * glm::vec4(mtxData.second.upDirection, 0.0F);
 
         // Save new roll.
         mtxData.second.freeModeData.rotation.x = roll;
@@ -334,9 +334,10 @@ namespace ne {
 
         // Recalculate location.
         mtxData.second.location = MathHelpers::convertSphericalToCartesianCoordinates(
-            mtxData.second.orbitalModeData.distanceToTarget,
-            mtxData.second.orbitalModeData.theta,
-            mtxData.second.orbitalModeData.phi);
+                                      mtxData.second.orbitalModeData.distanceToTarget,
+                                      mtxData.second.orbitalModeData.theta,
+                                      mtxData.second.orbitalModeData.phi) +
+                                  mtxData.second.orbitalModeData.targetPointLocation;
 
         // Mark view matrix as "needs update".
         mtxData.second.viewMatrix.first = true;
@@ -360,9 +361,10 @@ namespace ne {
 
         // Recalculate location.
         mtxData.second.location = MathHelpers::convertSphericalToCartesianCoordinates(
-            mtxData.second.orbitalModeData.distanceToTarget,
-            mtxData.second.orbitalModeData.theta,
-            mtxData.second.orbitalModeData.phi);
+                                      mtxData.second.orbitalModeData.distanceToTarget,
+                                      mtxData.second.orbitalModeData.theta,
+                                      mtxData.second.orbitalModeData.phi) +
+                                  mtxData.second.orbitalModeData.targetPointLocation;
 
         recalculateBaseVectorsForOrbitalCamera();
 
@@ -440,7 +442,8 @@ namespace ne {
         std::scoped_lock guard(mtxData.first);
 
         if (bInWorldSpace) {
-            return mtxData.second.worldAdjustmentMatrix * glm::vec4(mtxData.second.forwardDirection, 0.0F);
+            return glm::normalize(
+                mtxData.second.worldAdjustmentMatrix * glm::vec4(mtxData.second.forwardDirection, 0.0F));
         }
 
         return mtxData.second.forwardDirection;
@@ -450,7 +453,8 @@ namespace ne {
         std::scoped_lock guard(mtxData.first);
 
         if (bInWorldSpace) {
-            return mtxData.second.worldAdjustmentMatrix * glm::vec4(mtxData.second.rightDirection, 0.0F);
+            return glm::normalize(
+                mtxData.second.worldAdjustmentMatrix * glm::vec4(mtxData.second.rightDirection, 0.0F));
         }
 
         return mtxData.second.rightDirection;
@@ -460,7 +464,8 @@ namespace ne {
         std::scoped_lock guard(mtxData.first);
 
         if (bInWorldSpace) {
-            return mtxData.second.worldAdjustmentMatrix * glm::vec4(mtxData.second.upDirection, 0.0F);
+            return glm::normalize(
+                mtxData.second.worldAdjustmentMatrix * glm::vec4(mtxData.second.upDirection, 0.0F));
         }
 
         return mtxData.second.upDirection;

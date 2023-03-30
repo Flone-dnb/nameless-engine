@@ -16,8 +16,8 @@ namespace ne {
          * Converts coordinates from the spherical coordinate system to the Cartesian coordinate system.
          *
          * @param radius Radial distance.
-         * @param theta  Azimuthal angle.
-         * @param phi    Polar angle.
+         * @param theta  Azimuthal angle (in degrees).
+         * @param phi    Polar angle (in degrees).
          *
          * @return Coordinates in Cartesian coordinate system.
          */
@@ -28,14 +28,17 @@ namespace ne {
          *
          * @param location Location in Cartesian coordinate system.
          * @param radius   Calculated radius in spherical coordinate system.
-         * @param theta    Calculated theta in spherical coordinate system.
-         * @param phi      Calculated phi in spherical coordinate system.
+         * @param theta    Calculated theta in spherical coordinate system (in degrees).
+         * @param phi      Calculated phi in spherical coordinate system (in degrees).
          */
         static inline void convertCartesianCoordinatesToSpherical(
             const glm::vec3& location, float& radius, float& theta, float& phi);
     };
 
     glm::vec3 MathHelpers::convertSphericalToCartesianCoordinates(float radius, float theta, float phi) {
+        phi = glm::radians(phi);
+        theta = glm::radians(theta);
+
         const auto sinPhi = std::sinf(phi);
         const auto sinTheta = std::sinf(theta);
         const auto cosPhi = std::cosf(phi);
@@ -45,6 +48,9 @@ namespace ne {
 
     void MathHelpers::convertCartesianCoordinatesToSpherical(
         const glm::vec3& location, float& radius, float& theta, float& phi) {
+        phi = glm::radians(phi);
+        theta = glm::radians(theta);
+
         radius = glm::sqrt(location.x * location.x + location.y * location.y + location.z * location.z);
         theta = glm::atan2(location.y, location.x);
         phi = glm::atan2(glm::sqrt(location.x * location.x + location.y * location.y), location.z);

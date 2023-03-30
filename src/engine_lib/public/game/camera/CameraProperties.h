@@ -30,16 +30,16 @@ namespace ne {
             /** Stores orbital mode specific data. */
             struct OrbitalModeData {
                 /** Location of the point that the camera should look at. */
-                glm::vec3 targetPointLocation = glm::vec3(0.0F, 0.0F, 0.0F);
+                glm::vec3 targetPointLocation = glm::vec3(0.0F, 0.0F, 0.0F); // NOLINT: magic number
 
                 /** Radial distance or distance from camera to @ref targetPointLocation. */
                 float distanceToTarget = 10.0F; // NOLINT: magic number
 
-                /** Polar angle or camera's tilt relative target point. */
-                float theta = 1.5f * glm::pi<float>(); // NOLINT: magic number
+                /** Polar angle (in degrees). */
+                float theta = 0.0F; // NOLINT: magic number
 
-                /** Azimuthal angle or camera's rotation relative target point. */
-                float phi = glm::pi<float>() / 4.0F; // NOLINT: magic number
+                /** Azimuthal angle (in degrees). */
+                float phi = 0.0F; // NOLINT: magic number
             };
 
             /** Stores free mode specific data. */
@@ -258,8 +258,8 @@ namespace ne {
          * @remark Only works if the current camera mode is orbital (see @ref setCameraMode), otherwise
          * logs a warning.
          *
-         * @param phi   Azimuthal angle or camera's rotation relative target point.
-         * @param theta Polar angle or camera's tilt relative target point.
+         * @param phi   Azimuthal angle (in degrees).
+         * @param theta Polar angle (in degrees).
          */
         void setOrbitalCameraRotation(float phi, float theta);
 
@@ -405,7 +405,7 @@ namespace ne {
         float getOrbitalCameraDistanceToTarget();
 
         /**
-         * Returns polar angle or camera's tilt relative target point.
+         * Returns polar angle or camera's tilt relative target point (in degrees).
          *
          * @remark Only works if the current camera mode is orbital (see @ref setCameraMode), otherwise
          * logs a warning.

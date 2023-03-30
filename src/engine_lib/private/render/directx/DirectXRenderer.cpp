@@ -937,6 +937,9 @@ namespace ne {
         };
         auto onCompleted = [pPromiseFinish]() { pPromiseFinish->set_value(false); };
 
+        // Mark start time.
+        const auto startTime = std::chrono::steady_clock::now();
+
         // Compile shaders.
         auto error = getShaderManager()->compileShaders(vEngineShaders, onProgress, onError, onCompleted);
         if (error.has_value()) {
@@ -953,6 +956,23 @@ namespace ne {
             err.showError();
             throw std::runtime_error(err.getInitialMessage());
         }
+
+        // Mark end time.
+        const auto endTime = std::chrono::steady_clock::now();
+
+        // Calculate duration.
+        const auto durationInMs =
+            std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime).count();
+        const float timeTookInSec = static_cast<float>(durationInMs) / 1000.0F; // NOLINT
+
+        // Limit precision to 1 digit.
+        std::stringstream durationStream;
+        durationStream << std::fixed << std::setprecision(1) << timeTookInSec;
+
+        // Log time.
+        Logger::get().info(
+            fmt::format("took {} sec. to compile engine shaders", durationStream.str()),
+            sDirectXRendererLogCategory);
 
         return {};
     }

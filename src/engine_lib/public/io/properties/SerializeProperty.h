@@ -6,16 +6,20 @@
 #include "SerializeProperty.generated.h"
 
 namespace ne RNAMESPACE() {
-    /** Defines how a field should be serialized. */
-    enum class FieldSerializationType {
-        WITH_OWNER,       ///< Field is serialized in the same file as the owner object.
-        AS_EXTERNAL_FILE, ///< Field is serialized in a separate file located next to the file of owner
-                          ///< object. Only fields of types that derive from `Serializable` can be marked with
-                          ///< this type. External file will have the following naming:
-                          ///< "owner_file_name_without_extension.id.field_name.toml", where "id" is the
-                          ///< section name (without GUID) of the owner object.
-                          ///< For example, the resulting external file name might look like this:
-                          ///< "savedata.0.1.test.toml".
+    /**
+     * Defines how a field should be serialized.
+     *
+     * @remark Intentionally not using `enum class` to make `RPROPERTY` settings to look short and compact.
+     */
+    enum FieldSerializationType {
+        FST_WITH_OWNER,       ///< Field is serialized in the same file as the owner object.
+        FST_AS_EXTERNAL_FILE, ///< Field is serialized in a separate file located next to the file of owner
+                              ///< object. Only fields of types that derive from `Serializable` can be marked
+                              ///< with this type. External file will have the following naming:
+                              ///< "owner_file_name_without_extension.id.field_name.toml", where "id" is the
+                              ///< section name (without GUID) of the owner object.
+                              ///< For example, the resulting external file name might look like this:
+                              ///< "savedata.0.1.test.toml".
     };
 
     /**
@@ -32,7 +36,7 @@ namespace ne RNAMESPACE() {
     class RCLASS(rfk::PropertySettings(rfk::EEntityKind::Field, false, false)) Serialize
         : public rfk::Property {
     public:
-        Serialize() : Serialize(FieldSerializationType::WITH_OWNER) {}
+        Serialize() : Serialize(FieldSerializationType::FST_WITH_OWNER) {}
 
         virtual ~Serialize() override = default;
 

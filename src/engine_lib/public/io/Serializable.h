@@ -776,7 +776,7 @@ namespace ne RNAMESPACE() {
 
             // Check if we need to deserialize from external file.
             const auto pSerializeProperty = pField->getProperty<Serialize>();
-            if (pSerializeProperty->getSerializationType() == FieldSerializationType::AS_EXTERNAL_FILE) {
+            if (pSerializeProperty->getSerializationType() == FieldSerializationType::FST_AS_EXTERNAL_FILE) {
                 // Make sure this field derives from `Serializable`.
                 if (!SerializableObjectFieldSerializer::isDerivedFromSerializable(
                         pField->getType().getArchetype())) [[unlikely]] {

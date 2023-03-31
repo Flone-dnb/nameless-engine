@@ -499,7 +499,7 @@ namespace ne {
                     // Check if need to serialize as external file.
                     const auto pSerializeProperty = field.getProperty<Serialize>();
                     if (pSerializeProperty->getSerializationType() ==
-                        FieldSerializationType::AS_EXTERNAL_FILE) {
+                        FieldSerializationType::FST_AS_EXTERNAL_FILE) {
                         // Make sure this field derives from `Serializable`.
                         if (!SerializableObjectFieldSerializer::isDerivedFromSerializable(
                                 field.getType().getArchetype())) [[unlikely]] {

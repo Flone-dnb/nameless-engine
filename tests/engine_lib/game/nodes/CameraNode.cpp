@@ -11,8 +11,8 @@ TEST_CASE("camera's location/rotation is correct when used in a node hierarchy")
 
     class TestGameInstance : public GameInstance {
     public:
-        TestGameInstance(Window* pGameWindow, InputManager* pInputManager)
-            : GameInstance(pGameWindow, pInputManager) {}
+        TestGameInstance(Window* pGameWindow, Game* pGame, InputManager* pInputManager)
+            : GameInstance(pGameWindow, pGame, pInputManager) {}
         virtual void onGameStarted() override {
             createWorld([&](const std::optional<Error>& optionalWorldError) {
                 if (optionalWorldError.has_value()) {
@@ -85,8 +85,8 @@ TEST_CASE("orbital camera node behaves correctly when parent node rotates") {
 
     class TestGameInstance : public GameInstance {
     public:
-        TestGameInstance(Window* pGameWindow, InputManager* pInputManager)
-            : GameInstance(pGameWindow, pInputManager) {}
+        TestGameInstance(Window* pGameWindow, Game* pGame, InputManager* pInputManager)
+            : GameInstance(pGameWindow, pGame, pInputManager) {}
         virtual void onGameStarted() override {
             createWorld([&](const std::optional<Error>& optionalWorldError) {
                 if (optionalWorldError.has_value()) {

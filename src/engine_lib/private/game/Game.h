@@ -19,6 +19,7 @@ namespace ne {
     class GameInstance;
     class Renderer;
     class Window;
+    class CameraManager;
 
     /**
      * Holds main game objects: game instance, input manager, renderer,
@@ -226,6 +227,13 @@ namespace ne {
         GameInstance* getGameInstance() const;
 
         /**
+         * Returns camera manager.
+         *
+         * @return Do not delete this pointer. Camera manager.
+         */
+        CameraManager* getCameraManager() const;
+
+        /**
          * Returns the last time that was passed to onBeforeNewFrame function(s).
          *
          * @return Delta time.
@@ -272,7 +280,7 @@ namespace ne {
         template <typename MyGameInstance>
             requires std::derived_from<MyGameInstance, GameInstance>
         void setGameInstance() {
-            pGameInstance = std::make_unique<MyGameInstance>(pWindow, &inputManager);
+            pGameInstance = std::make_unique<MyGameInstance>(pWindow, this, &inputManager);
             pGameInstance->onGameStarted();
         }
 
@@ -394,6 +402,9 @@ namespace ne {
 
         /** Draws graphics on window. */
         std::unique_ptr<Renderer> pRenderer;
+
+        /** Determines what camera is used as in-game eyes. */
+        std::unique_ptr<CameraManager> pCameraManager;
 
         /** Thread pool to execute tasks. */
         ThreadPool threadPool;

@@ -1,19 +1,20 @@
 ﻿#include "game/GameInstance.h"
 
 // Custom.
-#include "game/Window.h"
-#include "render/Renderer.h"
+#include "game/Game.h"
 
 namespace ne {
-    GameInstance::GameInstance(Window* pGameWindow, InputManager* pInputManager) {
+    GameInstance::GameInstance(Window* pGameWindow, Game* pGame, InputManager* pInputManager) {
         this->pGameWindow = pGameWindow;
-        this->pGame = pGameWindow->getRenderer()->getGame();
+        this->pGame = pGame;
         this->pInputManager = pInputManager;
     }
 
     float GameInstance::getTotalApplicationTimeInSec() { return static_cast<float>(glfwGetTime()); }
 
     Window* GameInstance::getWindow() const { return pGameWindow; }
+
+    CameraManager* GameInstance::getCameraManager() const { return pGame->getCameraManager(); }
 
     InputManager* GameInstance::getInputManager() const { return pInputManager; }
 

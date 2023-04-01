@@ -206,9 +206,6 @@ namespace ne {
          */
         static consteval unsigned int getSwapChainBufferCount() { return iSwapChainBufferCount; }
 
-        /** Update internal resources for the next frame. */
-        virtual void updateResourcesForNextFrame() = 0;
-
         /** Draw new frame. */
         virtual void drawNextFrame() = 0;
 

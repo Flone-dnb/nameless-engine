@@ -66,10 +66,10 @@ namespace ne {
                 unsigned int iVerticalFov = 90; // NOLINT: magic number
 
                 /** Width of the buffer we are rendering the image to. */
-                int iRenderTargetWidth = 800; // NOLINT: default value
+                unsigned int iRenderTargetWidth = 800; // NOLINT: default value
 
                 /** Height of the buffer we are rendering the image to. */
-                int iRenderTargetHeight = 600; // NOLINT: default value
+                unsigned int iRenderTargetHeight = 600; // NOLINT: default value
 
                 /** Height of camera's near clip plane. */
                 float nearClipPlaneHeight = 0.0F;
@@ -280,10 +280,12 @@ namespace ne {
         /**
          * Sets camera's aspect ratio.
          *
+         * @remark Does nothing if the specified aspect ratio is equal to the current aspect ratio.
+         *
          * @param iRenderTargetWidth  Width of the buffer we are rendering the image to.
          * @param iRenderTargetHeight Height of the buffer we are rendering the image to.
          */
-        void setAspectRatio(int iRenderTargetWidth, int iRenderTargetHeight);
+        void setAspectRatio(unsigned int iRenderTargetWidth, unsigned int iRenderTargetHeight);
 
         /**
          * Sets distance from camera (view) space origin to camera's near clip plane.

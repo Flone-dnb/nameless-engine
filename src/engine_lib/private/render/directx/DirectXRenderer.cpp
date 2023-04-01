@@ -22,6 +22,10 @@
 #include "game/nodes/MeshNode.h"
 #include "materials/hlsl/RootSignatureGenerator.h"
 #include "render/general/resources/FrameResourcesManager.h"
+#include "game/camera/CameraProperties.h"
+#include "game/camera/CameraManager.h"
+#include "game/nodes/CameraNode.h"
+#include "game/camera/TransientCamera.h"
 #include "materials/hlsl/HlslShaderResource.h"
 
 // DirectX.
@@ -239,10 +243,13 @@ namespace ne {
         return getResourceManager()->getUsedVideoMemoryInMb();
     }
 
-    std::optional<Error> DirectXRenderer::prepareForDrawingNextFrame() {
+    std::optional<Error> DirectXRenderer::prepareForDrawingNextFrame(CameraProperties* pCameraProperties) {
         std::scoped_lock frameGuard(*getRenderResourcesMutex());
 
-        updateResourcesForNextFrame();
+        // Set camera's aspect ratio.
+        pCameraProperties->setAspectRatio(scissorRect.right, scissorRect.bottom);
+
+        updateResourcesForNextFrame(pCameraProperties);
 
         // Get command allocator to open command list.
         auto pMtxCurrentFrameResource = getFrameResourcesManager()->getCurrentFrameResource();
@@ -316,10 +323,27 @@ namespace ne {
     }
 
     void DirectXRenderer::drawNextFrame() {
+        // Get active camera.
+        const auto pMtxActiveCamera = getGame()->getCameraManager()->getActiveCamera();
+        std::scoped_lock activeCameraGuard(pMtxActiveCamera->first);
+
+        // Get camera properties of the active camera.
+        CameraProperties* pActiveCameraProperties = nullptr;
+        if (pMtxActiveCamera->second.pCameraNode != nullptr) {
+            pActiveCameraProperties = pMtxActiveCamera->second.pCameraNode->getCameraProperties();
+        } else if (pMtxActiveCamera->second.pTransientCamera != nullptr) {
+            pActiveCameraProperties = pMtxActiveCamera->second.pTransientCamera->getCameraProperties();
+        } else {
+            // No active camera.
+            return;
+        }
+
+        // don't unlock active camera mutex until finished submitting the next frame for drawing
+
         std::scoped_lock renderGuard(*getRenderResourcesMutex());
 
         // Setup.
-        auto optionalError = prepareForDrawingNextFrame();
+        auto optionalError = prepareForDrawingNextFrame(pActiveCameraProperties);
         if (optionalError.has_value()) [[unlikely]] {
             auto error = optionalError.value();
             error.addEntry();
@@ -480,15 +504,20 @@ namespace ne {
         }
     }
 
-    void DirectXRenderer::updateFrameConstantsBuffer(FrameResource* pCurrentFrameResource) {
+    void DirectXRenderer::updateFrameConstantsBuffer(
+        FrameResource* pCurrentFrameResource, CameraProperties* pCameraProperties) {
         std::scoped_lock guard(mtxFrameConstants.first);
 
-        // TODO: copy camera's `viewProjectionMatrix` (don't transpose
-        // TODO: copy camera's world position
+        // Set camera properties.
+        mtxFrameConstants.second.cameraPosition = pCameraProperties->getLocation(true);
+        mtxFrameConstants.second.viewProjectionMatrix =
+            pCameraProperties->getProjectionMatrix() * pCameraProperties->getViewMatrix();
 
+        // Set time parameters.
         mtxFrameConstants.second.timeSincePrevFrameInSec = getGame()->getTimeSincePrevFrameInSec();
         mtxFrameConstants.second.totalTimeInSec = GameInstance::getTotalApplicationTimeInSec();
 
+        // Copy to GPU.
         pCurrentFrameResource->pFrameConstantBuffer->copyDataToElement(
             0, &mtxFrameConstants.second, sizeof(mtxFrameConstants.second));
     }
@@ -1021,7 +1050,7 @@ namespace ne {
 
     UINT DirectXRenderer::getMsaaQualityLevel() const { return iMsaaQuality; }
 
-    void DirectXRenderer::updateResourcesForNextFrame() {
+    void DirectXRenderer::updateResourcesForNextFrame(CameraProperties* pCameraProperties) {
         std::scoped_lock frameGuard(*getRenderResourcesMutex());
 
         // Switch to the next frame resource.
@@ -1035,7 +1064,7 @@ namespace ne {
         waitForFenceValue(pMtxCurrentFrameResource->second.pResource->iFence);
 
         // Copy new (up to date) data to frame data cbuffer to be used by the shaders.
-        updateFrameConstantsBuffer(pMtxCurrentFrameResource->second.pResource);
+        updateFrameConstantsBuffer(pMtxCurrentFrameResource->second.pResource, pCameraProperties);
 
         // Update shader CPU read/write resources marked as "needs update".
         getShaderCpuReadWriteResourceManager()->updateResources(
@@ -1143,11 +1172,10 @@ namespace ne {
         screenViewport.MinDepth = fMinDepth;
         screenViewport.MaxDepth = fMaxDepth;
 
-        scissorRect = {
-            0, 0, static_cast<LONG>(renderResolution.first), static_cast<LONG>(renderResolution.second)};
-
-        // TODO: update camera's aspect ratio.
-        // TODO: update camera's view matrix.
+        scissorRect.left = 0;
+        scissorRect.top = 0;
+        scissorRect.right = static_cast<LONG>(renderResolution.first);
+        scissorRect.bottom = static_cast<LONG>(renderResolution.second);
 
         return {};
     }

@@ -234,8 +234,8 @@ TEST_CASE("get parent node of type") {
 
     class TestGameInstance : public GameInstance {
     public:
-        TestGameInstance(Window* pGameWindow, InputManager* pInputManager)
-            : GameInstance(pGameWindow, pInputManager) {}
+        TestGameInstance(Window* pGameWindow, Game* pGame, InputManager* pInputManager)
+            : GameInstance(pGameWindow, pGame, pInputManager) {}
         virtual void onGameStarted() override {
             createWorld([&](const std::optional<Error>& optionalWorldError) {
                 if (optionalWorldError.has_value()) {
@@ -315,8 +315,8 @@ TEST_CASE("get child node of type") {
 
     class TestGameInstance : public GameInstance {
     public:
-        TestGameInstance(Window* pGameWindow, InputManager* pInputManager)
-            : GameInstance(pGameWindow, pInputManager) {}
+        TestGameInstance(Window* pGameWindow, Game* pGame, InputManager* pInputManager)
+            : GameInstance(pGameWindow, pGame, pInputManager) {}
         virtual void onGameStarted() override {
             createWorld([&](const std::optional<Error>& optionalWorldError) {
                 if (optionalWorldError.has_value()) {
@@ -373,8 +373,8 @@ TEST_CASE("saving pointer to the root node does not prevent correct world destru
 
     class TestGameInstance : public GameInstance {
     public:
-        TestGameInstance(Window* pGameWindow, InputManager* pInputManager)
-            : GameInstance(pGameWindow, pInputManager) {}
+        TestGameInstance(Window* pGameWindow, Game* pGame, InputManager* pInputManager)
+            : GameInstance(pGameWindow, pGame, pInputManager) {}
         virtual void onGameStarted() override {
             createWorld([&](const std::optional<Error>& optionalWorldError) {
                 if (optionalWorldError.has_value()) {
@@ -432,8 +432,8 @@ TEST_CASE("test GC performance and stability with nodes") {
 
     class TestGameInstance : public GameInstance {
     public:
-        TestGameInstance(Window* pGameWindow, InputManager* pInputManager)
-            : GameInstance(pGameWindow, pInputManager) {}
+        TestGameInstance(Window* pGameWindow, Game* pGame, InputManager* pInputManager)
+            : GameInstance(pGameWindow, pGame, pInputManager) {}
         virtual void onGameStarted() override {
             createWorld([](const std::optional<Error>&) {});
         }
@@ -507,8 +507,8 @@ TEST_CASE("use `Timer` with node's member function while the node is being garba
 
     class TestGameInstance : public GameInstance {
     public:
-        TestGameInstance(Window* pGameWindow, InputManager* pInputManager)
-            : GameInstance(pGameWindow, pInputManager) {}
+        TestGameInstance(Window* pGameWindow, Game* pGame, InputManager* pInputManager)
+            : GameInstance(pGameWindow, pGame, pInputManager) {}
         virtual ~TestGameInstance() override {}
         virtual void onGameStarted() override {
             REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
@@ -563,8 +563,8 @@ TEST_CASE("onBeforeNewFrame is called only on marked nodes") {
 
     class TestGameInstance : public GameInstance {
     public:
-        TestGameInstance(Window* pGameWindow, InputManager* pInputManager)
-            : GameInstance(pGameWindow, pInputManager) {}
+        TestGameInstance(Window* pGameWindow, Game* pGame, InputManager* pInputManager)
+            : GameInstance(pGameWindow, pGame, pInputManager) {}
         virtual void onGameStarted() override {
             createWorld([&](const std::optional<Error>& optionalWorldError) {
                 if (optionalWorldError.has_value()) {
@@ -627,8 +627,8 @@ TEST_CASE("tick groups order is correct") {
 
     class TestGameInstance : public GameInstance {
     public:
-        TestGameInstance(Window* pGameWindow, InputManager* pInputManager)
-            : GameInstance(pGameWindow, pInputManager) {}
+        TestGameInstance(Window* pGameWindow, Game* pGame, InputManager* pInputManager)
+            : GameInstance(pGameWindow, pGame, pInputManager) {}
         virtual void onGameStarted() override {
             createWorld([&](const std::optional<Error>& optionalWorldError) {
                 if (optionalWorldError.has_value()) {
@@ -744,8 +744,8 @@ TEST_CASE("input event callbacks in Node are triggered") {
 
     class TestGameInstance : public GameInstance {
     public:
-        TestGameInstance(Window* pGameWindow, InputManager* pInputManager)
-            : GameInstance(pGameWindow, pInputManager) {}
+        TestGameInstance(Window* pGameWindow, Game* pGame, InputManager* pInputManager)
+            : GameInstance(pGameWindow, pGame, pInputManager) {}
         virtual void onGameStarted() override {
             createWorld([&](const std::optional<Error>& optionalWorldError) {
                 if (optionalWorldError.has_value()) {
@@ -831,8 +831,8 @@ TEST_CASE("use deferred task with node's member function while the world is bein
 
     class TestGameInstance : public GameInstance {
     public:
-        TestGameInstance(Window* pGameWindow, InputManager* pInputManager)
-            : GameInstance(pGameWindow, pInputManager) {}
+        TestGameInstance(Window* pGameWindow, Game* pGame, InputManager* pInputManager)
+            : GameInstance(pGameWindow, pGame, pInputManager) {}
         virtual ~TestGameInstance() override { REQUIRE(bFinished); }
         virtual void onGameStarted() override {
             createWorld([this](const std::optional<Error>& optionalWorldError1) {
@@ -903,8 +903,8 @@ TEST_CASE("use deferred task with node's member function while the garbage colle
 
     class TestGameInstance : public GameInstance {
     public:
-        TestGameInstance(Window* pGameWindow, InputManager* pInputManager)
-            : GameInstance(pGameWindow, pInputManager) {}
+        TestGameInstance(Window* pGameWindow, Game* pGame, InputManager* pInputManager)
+            : GameInstance(pGameWindow, pGame, pInputManager) {}
         virtual ~TestGameInstance() override { REQUIRE(bFinished); }
         virtual void onGameStarted() override {
             createWorld([this](const std::optional<Error>& optionalWorldError1) {
@@ -959,8 +959,8 @@ TEST_CASE("detach and despawn spawned node") {
 
     class TestGameInstance : public GameInstance {
     public:
-        TestGameInstance(Window* pGameWindow, InputManager* pInputManager)
-            : GameInstance(pGameWindow, pInputManager) {}
+        TestGameInstance(Window* pGameWindow, Game* pGame, InputManager* pInputManager)
+            : GameInstance(pGameWindow, pGame, pInputManager) {}
         virtual void onGameStarted() override {
             createWorld([this](const std::optional<Error>&) {
                 REQUIRE(getTotalSpawnedNodeCount() == 0); // world root node is still in deferred task
@@ -1052,8 +1052,8 @@ TEST_CASE("input event callbacks and tick in Node is not triggered after despawn
 
     class TestGameInstance : public GameInstance {
     public:
-        TestGameInstance(Window* pGameWindow, InputManager* pInputManager)
-            : GameInstance(pGameWindow, pInputManager) {}
+        TestGameInstance(Window* pGameWindow, Game* pGame, InputManager* pInputManager)
+            : GameInstance(pGameWindow, pGame, pInputManager) {}
         virtual void onGameStarted() override {
             createWorld([&](const std::optional<Error>& optionalWorldError) {
                 if (optionalWorldError.has_value()) {

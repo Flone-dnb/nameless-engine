@@ -26,6 +26,7 @@ namespace ne {
     class Game;
     class DirectXResourceManager;
     class Material;
+    class CameraProperties;
 
     /**
      * DirectX 12 renderer.
@@ -154,8 +155,12 @@ namespace ne {
         UINT getMsaaQualityLevel() const;
 
     protected:
-        /** Update internal resources for the next frame. */
-        virtual void updateResourcesForNextFrame() override;
+        /**
+         * Update internal resources for the next frame.
+         *
+         * @param pCameraProperties Camera properties to use.
+         */
+        void updateResourcesForNextFrame(CameraProperties* pCameraProperties);
 
         /** Draw new frame. */
         virtual void drawNextFrame() override;
@@ -263,9 +268,11 @@ namespace ne {
          * Setups everything for render commands to be recorded (calls @ref updateResourcesForNextFrame,
          * resets lists, binds RTV/DSV, etc.).
          *
+         * @param pCameraProperties Camera properties to use.
+         *
          * @return Error if something went wrong.
          */
-        [[nodiscard]] std::optional<Error> prepareForDrawingNextFrame();
+        [[nodiscard]] std::optional<Error> prepareForDrawingNextFrame(CameraProperties* pCameraProperties);
 
         /**
          * Does final logic in drawing next frame (closes lists, executes lists, etc.).
@@ -294,8 +301,10 @@ namespace ne {
          * new (up to date) constants to it).
          *
          * @param pCurrentFrameResource Current frame resource.
+         * @param pCameraProperties     Camera properties to use.
          */
-        void updateFrameConstantsBuffer(FrameResource* pCurrentFrameResource);
+        void
+        updateFrameConstantsBuffer(FrameResource* pCurrentFrameResource, CameraProperties* pCameraProperties);
 
         /**
          * Returns a vector of display modes that the current output adapter

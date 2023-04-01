@@ -22,7 +22,7 @@ namespace ne {
          *
          * @return Camera properties.
          */
-        CameraProperties* getProperties();
+        CameraProperties* getCameraProperties();
 
     private:
         /**
@@ -30,7 +30,7 @@ namespace ne {
          *
          * @remark In order to stop the movement specify 0 as input.
          *
-         * @remark Logs a warning if the camera is in orbital mode (see @ref getProperties).
+         * @remark Logs a warning if the camera is in orbital mode (see @ref getCameraProperties).
          *
          * @param input User input in range [-1.0F, 1.0F] where 0 means no input and 1 means full input
          * strength.
@@ -42,7 +42,7 @@ namespace ne {
          *
          * @remark In order to stop the movement specify 0 as input.
          *
-         * @remark Logs a warning if the camera is in orbital mode (see @ref getProperties).
+         * @remark Logs a warning if the camera is in orbital mode (see @ref getCameraProperties).
          *
          * @param input User input in range [-1.0F, 1.0F] where 0 means no input and 1 means full input
          * strength.
@@ -54,7 +54,7 @@ namespace ne {
          *
          * @remark In order to stop the movement specify 0 as input.
          *
-         * @remark Logs a warning if the camera is in orbital mode (see @ref getProperties).
+         * @remark Logs a warning if the camera is in orbital mode (see @ref getCameraProperties).
          *
          * @param input User input in range [-1.0F, 1.0F] where 0 means no input and 1 means full input
          * strength.

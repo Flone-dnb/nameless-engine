@@ -14,8 +14,8 @@ TEST_CASE("serialize and deserialize MeshNode") {
 
     class TestGameInstance : public GameInstance {
     public:
-        TestGameInstance(Window* pGameWindow, InputManager* pInputManager)
-            : GameInstance(pGameWindow, pInputManager) {}
+        TestGameInstance(Window* pGameWindow, Game* pGame, InputManager* pInputManager)
+            : GameInstance(pGameWindow, pGame, pInputManager) {}
         virtual void onGameStarted() override {
             createWorld([&](const std::optional<Error>& optionalWorldError) {
                 if (optionalWorldError.has_value()) {
@@ -201,8 +201,8 @@ TEST_CASE("serialize and deserialize MeshNode as part of a node tree") {
 
     class TestGameInstance : public GameInstance {
     public:
-        TestGameInstance(Window* pGameWindow, InputManager* pInputManager)
-            : GameInstance(pGameWindow, pInputManager) {}
+        TestGameInstance(Window* pGameWindow, Game* pGame, InputManager* pInputManager)
+            : GameInstance(pGameWindow, pGame, pInputManager) {}
         virtual void onGameStarted() override {
             createWorld([&](const std::optional<Error>& optionalWorldError) {
                 if (optionalWorldError.has_value()) {
@@ -339,8 +339,8 @@ TEST_CASE("serialize and deserialize MeshNode as part of a node tree with origin
 
     class TestGameInstance : public GameInstance {
     public:
-        TestGameInstance(Window* pGameWindow, InputManager* pInputManager)
-            : GameInstance(pGameWindow, pInputManager) {}
+        TestGameInstance(Window* pGameWindow, Game* pGame, InputManager* pInputManager)
+            : GameInstance(pGameWindow, pGame, pInputManager) {}
         virtual void onGameStarted() override {
             createWorld([&](const std::optional<Error>& optionalWorldError) {
                 if (optionalWorldError.has_value()) {
@@ -547,8 +547,8 @@ TEST_CASE("MeshNode's meshdata deserialization backwards compatibility") {
 
     class TestGameInstance : public GameInstance {
     public:
-        TestGameInstance(Window* pGameWindow, InputManager* pInputManager)
-            : GameInstance(pGameWindow, pInputManager) {}
+        TestGameInstance(Window* pGameWindow, Game* pGame, InputManager* pInputManager)
+            : GameInstance(pGameWindow, pGame, pInputManager) {}
         virtual void onGameStarted() override {
             createWorld([&](const std::optional<Error>& optionalWorldError) {
                 if (optionalWorldError.has_value()) {
@@ -617,8 +617,8 @@ TEST_CASE("shader read/write resources exist only when MeshNode is spawned") {
 
     class TestGameInstance : public GameInstance {
     public:
-        TestGameInstance(Window* pGameWindow, InputManager* pInputManager)
-            : GameInstance(pGameWindow, pInputManager) {}
+        TestGameInstance(Window* pGameWindow, Game* pGame, InputManager* pInputManager)
+            : GameInstance(pGameWindow, pGame, pInputManager) {}
         virtual void onGameStarted() override {
             createWorld([&](const std::optional<Error>& optionalWorldError) {
                 if (optionalWorldError.has_value()) {

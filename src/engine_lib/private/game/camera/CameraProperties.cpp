@@ -15,8 +15,14 @@ namespace ne {
         makeSureProjectionMatrixAndClipPlanesAreUpToDate();
     }
 
-    void CameraProperties::setAspectRatio(int iRenderTargetWidth, int iRenderTargetHeight) {
+    void CameraProperties::setAspectRatio(unsigned int iRenderTargetWidth, unsigned int iRenderTargetHeight) {
         std::scoped_lock guard(mtxData.first);
+
+        // Make sure this aspect ratio is different.
+        if (mtxData.second.projectionData.second.iRenderTargetWidth == iRenderTargetWidth &&
+            mtxData.second.projectionData.second.iRenderTargetHeight == iRenderTargetHeight) {
+            return;
+        }
 
         // Apply change.
         mtxData.second.projectionData.second.iRenderTargetWidth = iRenderTargetWidth;

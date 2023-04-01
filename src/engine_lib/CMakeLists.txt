@@ -147,6 +147,8 @@ set(ENGINE_LIB_SOURCES
     private/game/camera/CameraProperties.cpp
     public/game/camera/TransientCamera.h
     private/game/camera/TransientCamera.cpp
+    public/game/camera/CameraManager.h
+    private/game/camera/CameraManager.cpp
     private/game/nodes/Node.cpp
     public/game/nodes/Node.h
     private/game/nodes/SpatialNode.cpp
@@ -554,6 +556,7 @@ set(ENGINE_TEST_SOURCES
     ${TESTS_RELATIVE_PATH}/engine_lib/game/nodes/MeshNode.cpp
     ${TESTS_RELATIVE_PATH}/engine_lib/game/nodes/CameraNode.cpp
     ${TESTS_RELATIVE_PATH}/engine_lib/game/camera/CameraProperties.cpp
+    ${TESTS_RELATIVE_PATH}/engine_lib/game/camera/CameraManager.cpp
     ${TESTS_RELATIVE_PATH}/engine_lib/game/World.cpp
     ${TESTS_RELATIVE_PATH}/engine_lib/game/GameInstance.cpp
     # add engine test .cpp files here

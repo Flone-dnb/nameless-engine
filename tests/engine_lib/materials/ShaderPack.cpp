@@ -16,8 +16,8 @@ TEST_CASE("compile HLSL vertex shader") {
 
     class TestGameInstance : public GameInstance {
     public:
-        TestGameInstance(Window* pGameWindow, InputManager* pInputManager)
-            : GameInstance(pGameWindow, pInputManager) {
+        TestGameInstance(Window* pGameWindow, Game* pGame, InputManager* pInputManager)
+            : GameInstance(pGameWindow, pGame, pInputManager) {
             auto shaderPath = ProjectPaths::getDirectoryForResources(ResourceDirectory::ROOT) / "test" /
                               "temp" / sTopLevelShaderName;
             shaderPath += ".hlsl";
@@ -70,8 +70,8 @@ TEST_CASE("compile HLSL pixel shader") {
 
     class TestGameInstance : public GameInstance {
     public:
-        TestGameInstance(Window* pGameWindow, InputManager* pInputManager)
-            : GameInstance(pGameWindow, pInputManager) {
+        TestGameInstance(Window* pGameWindow, Game* pGame, InputManager* pInputManager)
+            : GameInstance(pGameWindow, pGame, pInputManager) {
             auto shaderPath = ProjectPaths::getDirectoryForResources(ResourceDirectory::ROOT) / "test" /
                               "temp" / sTopLevelShaderName;
             shaderPath += ".hlsl";
@@ -124,8 +124,8 @@ TEST_CASE("compile HLSL compute shader") {
 
     class TestGameInstance : public GameInstance {
     public:
-        TestGameInstance(Window* pGameWindow, InputManager* pInputManager)
-            : GameInstance(pGameWindow, pInputManager) {
+        TestGameInstance(Window* pGameWindow, Game* pGame, InputManager* pInputManager)
+            : GameInstance(pGameWindow, pGame, pInputManager) {
             auto shaderPath = ProjectPaths::getDirectoryForResources(ResourceDirectory::ROOT) / "test" /
                               "temp" / sTopLevelShaderName;
             shaderPath += ".hlsl";
@@ -176,8 +176,8 @@ TEST_CASE("find valid HLSL shader cache") {
 
     class TestGameInstance : public GameInstance {
     public:
-        TestGameInstance(Window* pGameWindow, InputManager* pInputManager)
-            : GameInstance(pGameWindow, pInputManager) {
+        TestGameInstance(Window* pGameWindow, Game* pGame, InputManager* pInputManager)
+            : GameInstance(pGameWindow, pGame, pInputManager) {
             auto shaderPath = ProjectPaths::getDirectoryForResources(ResourceDirectory::ROOT) / "test" /
                               "temp" / sTopLevelShaderName;
             shaderPath += ".hlsl";
@@ -243,8 +243,8 @@ TEST_CASE("invalidate HLSL shader cache - ENTRY_FUNCTION_NAME_CHANGED") {
 
     class TestGameInstance : public GameInstance {
     public:
-        TestGameInstance(Window* pGameWindow, InputManager* pInputManager)
-            : GameInstance(pGameWindow, pInputManager) {
+        TestGameInstance(Window* pGameWindow, Game* pGame, InputManager* pInputManager)
+            : GameInstance(pGameWindow, pGame, pInputManager) {
             auto shaderPath = ProjectPaths::getDirectoryForResources(ResourceDirectory::ROOT) / "test" /
                               "temp" / sTopLevelShaderName;
             shaderPath += ".hlsl";
@@ -319,8 +319,8 @@ TEST_CASE("invalidate HLSL shader cache - SHADER_TYPE_CHANGED") {
 
     class TestGameInstance : public GameInstance {
     public:
-        TestGameInstance(Window* pGameWindow, InputManager* pInputManager)
-            : GameInstance(pGameWindow, pInputManager) {
+        TestGameInstance(Window* pGameWindow, Game* pGame, InputManager* pInputManager)
+            : GameInstance(pGameWindow, pGame, pInputManager) {
             auto shaderPath = ProjectPaths::getDirectoryForResources(ResourceDirectory::ROOT) / "test" /
                               "temp" / sTopLevelShaderName;
             shaderPath += ".hlsl";
@@ -392,8 +392,8 @@ TEST_CASE("invalidate HLSL shader cache - DEFINED_SHADER_MACROS_CHANGED") {
 
     class TestGameInstance : public GameInstance {
     public:
-        TestGameInstance(Window* pGameWindow, InputManager* pInputManager)
-            : GameInstance(pGameWindow, pInputManager) {
+        TestGameInstance(Window* pGameWindow, Game* pGame, InputManager* pInputManager)
+            : GameInstance(pGameWindow, pGame, pInputManager) {
             auto shaderPath = ProjectPaths::getDirectoryForResources(ResourceDirectory::ROOT) / "test" /
                               "temp" / sTopLevelShaderName;
             shaderPath += ".hlsl";
@@ -486,8 +486,8 @@ TEST_CASE("invalidate HLSL shader cache - SHADER_SOURCE_FILE_CHANGED") {
 
     class TestGameInstance : public GameInstance {
     public:
-        TestGameInstance(Window* pGameWindow, InputManager* pInputManager)
-            : GameInstance(pGameWindow, pInputManager) {
+        TestGameInstance(Window* pGameWindow, Game* pGame, InputManager* pInputManager)
+            : GameInstance(pGameWindow, pGame, pInputManager) {
             auto shaderPath = ProjectPaths::getDirectoryForResources(ResourceDirectory::ROOT) / "test" /
                               "temp" / sTopLevelShaderName;
             shaderPath += ".hlsl";
@@ -560,8 +560,8 @@ TEST_CASE("invalidate HLSL shader cache - SHADER_INCLUDE_TREE_CONTENT_CHANGED") 
 
     class TestGameInstance : public GameInstance {
     public:
-        TestGameInstance(Window* pGameWindow, InputManager* pInputManager)
-            : GameInstance(pGameWindow, pInputManager) {
+        TestGameInstance(Window* pGameWindow, Game* pGame, InputManager* pInputManager)
+            : GameInstance(pGameWindow, pGame, pInputManager) {
             auto shaderPath = ProjectPaths::getDirectoryForResources(ResourceDirectory::ROOT) / "test" /
                               "temp" / sTopLevelShaderName;
             shaderPath += ".hlsl";

@@ -49,8 +49,8 @@ TEST_CASE("create and destroy world") {
 
     class TestGameInstance : public GameInstance {
     public:
-        TestGameInstance(Window* pGameWindow, InputManager* pInputManager)
-            : GameInstance(pGameWindow, pInputManager) {}
+        TestGameInstance(Window* pGameWindow, Game* pGame, InputManager* pInputManager)
+            : GameInstance(pGameWindow, pGame, pInputManager) {}
         virtual void onGameStarted() override {
             createWorld([&](const std::optional<Error>& optionalError) {
                 if (optionalError.has_value()) {
@@ -90,8 +90,8 @@ TEST_CASE("create world and switch to another world") {
 
     class TestGameInstance : public GameInstance {
     public:
-        TestGameInstance(Window* pGameWindow, InputManager* pInputManager)
-            : GameInstance(pGameWindow, pInputManager) {}
+        TestGameInstance(Window* pGameWindow, Game* pGame, InputManager* pInputManager)
+            : GameInstance(pGameWindow, pGame, pInputManager) {}
         virtual void onGameStarted() override {
             // Create initial world.
             createWorld([&](const std::optional<Error>& optionalError) {
@@ -144,8 +144,8 @@ TEST_CASE("create, serialize and deserialize world") {
 
     class TestGameInstance : public GameInstance {
     public:
-        TestGameInstance(Window* pGameWindow, InputManager* pInputManager)
-            : GameInstance(pGameWindow, pInputManager) {}
+        TestGameInstance(Window* pGameWindow, Game* pGame, InputManager* pInputManager)
+            : GameInstance(pGameWindow, pGame, pInputManager) {}
         virtual void onGameStarted() override {
             createWorld([&](const std::optional<Error>& optionalError) {
                 if (optionalError.has_value()) {

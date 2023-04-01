@@ -2,16 +2,21 @@
 
 // Standard.
 #include <functional>
+#include <optional>
+#include <mutex>
+#include <filesystem>
 
 // Custom.
 #include "input/KeyboardKey.hpp"
 #include "input/MouseButton.hpp"
-#include "game/nodes/Node.h"
+#include "misc/GC.hpp"
 
 namespace ne {
     class Window;
     class InputManager;
     class Game;
+    class Node;
+    class CameraManager;
 
     /**
      * Main game class, exists while the game window is not closed
@@ -34,9 +39,10 @@ namespace ne {
          * provides @ref getWindow and @ref getInputManager functions.
          *
          * @param pGameWindow   Window that owns this game instance.
+         * @param pGame         Game that owns this game instance.
          * @param pInputManager Input manager of the owner Game object.
          */
-        explicit GameInstance(Window* pGameWindow, InputManager* pInputManager);
+        GameInstance(Window* pGameWindow, Game* pGame, InputManager* pInputManager);
 
         GameInstance(const GameInstance&) = delete;
         GameInstance& operator=(const GameInstance&) = delete;
@@ -294,6 +300,13 @@ namespace ne {
          * @return A pointer to the window, should not be deleted.
          */
         Window* getWindow() const;
+
+        /**
+         * Returns a reference to the camera manager this game is using.
+         *
+         * @return A pointer to the camera manager, should not be deleted.
+         */
+        CameraManager* getCameraManager() const;
 
         /**
          * Returns a reference to the input manager this game instance is using.

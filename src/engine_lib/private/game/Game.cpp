@@ -19,6 +19,7 @@
 #include "io/serializers/SerializableObjectFieldSerializer.h"
 #include "io/serializers/GlmVecFieldSerializer.h"
 #include "io/serializers/MaterialFieldSerializer.h"
+#include "game/camera/CameraManager.h"
 
 // External.
 #include "fmt/core.h"
@@ -50,8 +51,8 @@ namespace ne {
         Serializable::addFieldSerializer(std::make_unique<GlmVecFieldSerializer>());
         Serializable::addFieldSerializer(std::make_unique<MaterialFieldSerializer>());
 
-        // Mark start time.
-        gc_collector()->collect(); // run for the first time to setup things (I guess)
+        // Run GC for the first time to setup things (I guess, first scan is usually not that fast).
+        gc_collector()->collect();
         lastGcRunTime = std::chrono::steady_clock::now();
         Logger::get().info(
             fmt::format("garbage collector will run every {} seconds", iGcRunIntervalInSec),
@@ -63,6 +64,9 @@ namespace ne {
 
         // Create renderer.
         pRenderer = Renderer::create(this);
+
+        // Create camera manager.
+        pCameraManager = std::make_unique<CameraManager>();
     }
 
     void Game::destroy() {
@@ -268,6 +272,7 @@ namespace ne {
 
             auto callTick = [&](std::pair<std::recursive_mutex, std::vector<Node*>>* pTickGroup) {
                 std::scoped_lock nodesGuard(pTickGroup->first);
+
                 std::vector<Node*>* pNodes = &pTickGroup->second;
                 for (auto it = pNodes->begin(); it != pNodes->end(); ++it) {
                     (*it)->onBeforeNewFrame(timeSincePrevCallInSec);
@@ -277,6 +282,9 @@ namespace ne {
             callTick(&pCalledEveryFrameNodes->mtxFirstTickGroup);
             callTick(&pCalledEveryFrameNodes->mtxSecondTickGroup);
         }
+
+        // Call on camera manager.
+        pCameraManager->onBeforeNewFrame(timeSincePrevCallInSec);
     }
 
     void Game::executeDeferredTasks() {
@@ -463,6 +471,8 @@ namespace ne {
     Window* Game::getWindow() const { return pWindow; }
 
     GameInstance* Game::getGameInstance() const { return pGameInstance.get(); }
+
+    CameraManager* Game::getCameraManager() const { return pCameraManager.get(); }
 
     float Game::getTimeSincePrevFrameInSec() const { return timeSincePrevFrameInSec; }
 

@@ -50,7 +50,7 @@ namespace ne {
         bHasInputToProcess = true;
     }
 
-    CameraProperties* TransientCamera::getProperties() { return &properties; }
+    CameraProperties* TransientCamera::getCameraProperties() { return &properties; }
 
     void TransientCamera::onBeforeNewFrame(float timeSincePrevCallInSec) {
         // Make sure the input is not zero.

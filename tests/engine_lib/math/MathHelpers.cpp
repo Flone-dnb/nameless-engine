@@ -11,9 +11,13 @@ TEST_CASE("get roll/pitch/yaw from +X direction") {
 
     const auto direction = glm::vec3(1.0F, 0.0F, 0.0F);
 
+    // Convert to rotation.
     const auto rotation = MathHelpers::convertDirectionToRollPitchYaw(direction);
-
     REQUIRE(glm::all(glm::epsilonEqual(rotation, glm::vec3(0.0F, 0.0F, 0.0F), floatDelta)));
+
+    // Convert back to direction.
+    const auto calculatedDirection = MathHelpers::convertRollPitchYawToDirection(rotation);
+    REQUIRE(glm::all(glm::epsilonEqual(calculatedDirection, direction, floatDelta)));
 }
 
 TEST_CASE("get roll/pitch/yaw from -X direction") {
@@ -23,9 +27,13 @@ TEST_CASE("get roll/pitch/yaw from -X direction") {
 
     const auto direction = glm::vec3(-1.0F, 0.0F, 0.0F);
 
+    // Convert to rotation.
     const auto rotation = MathHelpers::convertDirectionToRollPitchYaw(direction);
-
     REQUIRE(glm::all(glm::epsilonEqual(rotation, glm::vec3(0.0F, 0.0F, 180.0F), floatDelta))); // NOLINT
+
+    // Convert back to direction.
+    const auto calculatedDirection = MathHelpers::convertRollPitchYawToDirection(rotation);
+    REQUIRE(glm::all(glm::epsilonEqual(calculatedDirection, direction, floatDelta)));
 }
 
 TEST_CASE("get roll/pitch/yaw from +Y direction") {
@@ -35,9 +43,13 @@ TEST_CASE("get roll/pitch/yaw from +Y direction") {
 
     const auto direction = glm::vec3(0.0F, 1.0F, 0.0F);
 
+    // Convert to rotation.
     const auto rotation = MathHelpers::convertDirectionToRollPitchYaw(direction);
-
     REQUIRE(glm::all(glm::epsilonEqual(rotation, glm::vec3(0.0F, 0.0F, 90.0F), floatDelta))); // NOLINT
+
+    // Convert back to direction.
+    const auto calculatedDirection = MathHelpers::convertRollPitchYawToDirection(rotation);
+    REQUIRE(glm::all(glm::epsilonEqual(calculatedDirection, direction, floatDelta)));
 }
 
 TEST_CASE("get roll/pitch/yaw from -Y direction") {
@@ -47,9 +59,13 @@ TEST_CASE("get roll/pitch/yaw from -Y direction") {
 
     const auto direction = glm::vec3(0.0F, -1.0F, 0.0F);
 
+    // Convert to rotation.
     const auto rotation = MathHelpers::convertDirectionToRollPitchYaw(direction);
-
     REQUIRE(glm::all(glm::epsilonEqual(rotation, glm::vec3(0.0F, 0.0F, -90.0F), floatDelta))); // NOLINT
+
+    // Convert back to direction.
+    const auto calculatedDirection = MathHelpers::convertRollPitchYawToDirection(rotation);
+    REQUIRE(glm::all(glm::epsilonEqual(calculatedDirection, direction, floatDelta)));
 }
 
 TEST_CASE("get roll/pitch/yaw from +Z direction") {
@@ -59,9 +75,13 @@ TEST_CASE("get roll/pitch/yaw from +Z direction") {
 
     const auto direction = glm::vec3(0.0F, 0.0F, 1.0F);
 
+    // Convert to rotation.
     const auto rotation = MathHelpers::convertDirectionToRollPitchYaw(direction);
-
     REQUIRE(glm::all(glm::epsilonEqual(rotation, glm::vec3(0.0F, -90.0F, 0.0F), floatDelta))); // NOLINT
+
+    // Convert back to direction.
+    const auto calculatedDirection = MathHelpers::convertRollPitchYawToDirection(rotation);
+    REQUIRE(glm::all(glm::epsilonEqual(calculatedDirection, direction, floatDelta)));
 }
 
 TEST_CASE("get roll/pitch/yaw from -Z direction") {
@@ -71,9 +91,13 @@ TEST_CASE("get roll/pitch/yaw from -Z direction") {
 
     const auto direction = glm::vec3(0.0F, 0.0F, -1.0F);
 
+    // Convert to rotation.
     const auto rotation = MathHelpers::convertDirectionToRollPitchYaw(direction);
-
     REQUIRE(glm::all(glm::epsilonEqual(rotation, glm::vec3(0.0F, 90.0F, 0.0F), floatDelta))); // NOLINT
+
+    // Convert back to direction.
+    const auto calculatedDirection = MathHelpers::convertRollPitchYawToDirection(rotation);
+    REQUIRE(glm::all(glm::epsilonEqual(calculatedDirection, direction, floatDelta)));
 }
 
 TEST_CASE("get roll/pitch/yaw from +X+Y direction") {
@@ -83,9 +107,13 @@ TEST_CASE("get roll/pitch/yaw from +X+Y direction") {
 
     const auto direction = glm::normalize(glm::vec3(1.0F, 1.0F, 0.0F));
 
+    // Convert to rotation.
     const auto rotation = MathHelpers::convertDirectionToRollPitchYaw(direction);
-
     REQUIRE(glm::all(glm::epsilonEqual(rotation, glm::vec3(0.0F, 0.0F, 45.0F), floatDelta))); // NOLINT
+
+    // Convert back to direction.
+    const auto calculatedDirection = MathHelpers::convertRollPitchYawToDirection(rotation);
+    REQUIRE(glm::all(glm::epsilonEqual(calculatedDirection, direction, floatDelta)));
 }
 
 TEST_CASE("get roll/pitch/yaw from +X-Y direction") {
@@ -95,9 +123,13 @@ TEST_CASE("get roll/pitch/yaw from +X-Y direction") {
 
     const auto direction = glm::normalize(glm::vec3(1.0F, -1.0F, 0.0F));
 
+    // Convert to rotation.
     const auto rotation = MathHelpers::convertDirectionToRollPitchYaw(direction);
-
     REQUIRE(glm::all(glm::epsilonEqual(rotation, glm::vec3(0.0F, 0.0F, -45.0F), floatDelta))); // NOLINT
+
+    // Convert back to direction.
+    const auto calculatedDirection = MathHelpers::convertRollPitchYawToDirection(rotation);
+    REQUIRE(glm::all(glm::epsilonEqual(calculatedDirection, direction, floatDelta)));
 }
 
 TEST_CASE("get roll/pitch/yaw from -X+Y direction") {
@@ -107,9 +139,13 @@ TEST_CASE("get roll/pitch/yaw from -X+Y direction") {
 
     const auto direction = glm::normalize(glm::vec3(-1.0F, 1.0F, 0.0F));
 
+    // Convert to rotation.
     const auto rotation = MathHelpers::convertDirectionToRollPitchYaw(direction);
-
     REQUIRE(glm::all(glm::epsilonEqual(rotation, glm::vec3(0.0F, 0.0F, 135.0F), floatDelta))); // NOLINT
+
+    // Convert back to direction.
+    const auto calculatedDirection = MathHelpers::convertRollPitchYawToDirection(rotation);
+    REQUIRE(glm::all(glm::epsilonEqual(calculatedDirection, direction, floatDelta)));
 }
 
 TEST_CASE("get roll/pitch/yaw from -X-Y direction") {
@@ -119,9 +155,13 @@ TEST_CASE("get roll/pitch/yaw from -X-Y direction") {
 
     const auto direction = glm::normalize(glm::vec3(-1.0F, -1.0F, 0.0F));
 
+    // Convert to rotation.
     const auto rotation = MathHelpers::convertDirectionToRollPitchYaw(direction);
-
     REQUIRE(glm::all(glm::epsilonEqual(rotation, glm::vec3(0.0F, 0.0F, -135.0F), floatDelta))); // NOLINT
+
+    // Convert back to direction.
+    const auto calculatedDirection = MathHelpers::convertRollPitchYawToDirection(rotation);
+    REQUIRE(glm::all(glm::epsilonEqual(calculatedDirection, direction, floatDelta)));
 }
 
 TEST_CASE("get roll/pitch/yaw from +X+Z direction") {
@@ -131,9 +171,13 @@ TEST_CASE("get roll/pitch/yaw from +X+Z direction") {
 
     const auto direction = glm::normalize(glm::vec3(1.0F, 0.0F, 1.0F));
 
+    // Convert to rotation.
     const auto rotation = MathHelpers::convertDirectionToRollPitchYaw(direction);
-
     REQUIRE(glm::all(glm::epsilonEqual(rotation, glm::vec3(0.0F, -45.0F, 0.0F), floatDelta))); // NOLINT
+
+    // Convert back to direction.
+    const auto calculatedDirection = MathHelpers::convertRollPitchYawToDirection(rotation);
+    REQUIRE(glm::all(glm::epsilonEqual(calculatedDirection, direction, floatDelta)));
 }
 
 TEST_CASE("get roll/pitch/yaw from -X+Z direction") {
@@ -143,9 +187,13 @@ TEST_CASE("get roll/pitch/yaw from -X+Z direction") {
 
     const auto direction = glm::normalize(glm::vec3(-1.0F, 0.0F, 1.0F));
 
+    // Convert to rotation.
     const auto rotation = MathHelpers::convertDirectionToRollPitchYaw(direction);
-
     REQUIRE(glm::all(glm::epsilonEqual(rotation, glm::vec3(0.0F, -45.0F, 180.0F), floatDelta))); // NOLINT
+
+    // Convert back to direction.
+    const auto calculatedDirection = MathHelpers::convertRollPitchYawToDirection(rotation);
+    REQUIRE(glm::all(glm::epsilonEqual(calculatedDirection, direction, floatDelta)));
 }
 
 TEST_CASE("get roll/pitch/yaw from +X-Z direction") {
@@ -155,9 +203,13 @@ TEST_CASE("get roll/pitch/yaw from +X-Z direction") {
 
     const auto direction = glm::normalize(glm::vec3(1.0F, 0.0F, -1.0F));
 
+    // Convert to rotation.
     const auto rotation = MathHelpers::convertDirectionToRollPitchYaw(direction);
-
     REQUIRE(glm::all(glm::epsilonEqual(rotation, glm::vec3(0.0F, 45.0F, 0.0F), floatDelta))); // NOLINT
+
+    // Convert back to direction.
+    const auto calculatedDirection = MathHelpers::convertRollPitchYawToDirection(rotation);
+    REQUIRE(glm::all(glm::epsilonEqual(calculatedDirection, direction, floatDelta)));
 }
 
 TEST_CASE("get roll/pitch/yaw from -X-Z direction") {
@@ -167,7 +219,11 @@ TEST_CASE("get roll/pitch/yaw from -X-Z direction") {
 
     const auto direction = glm::normalize(glm::vec3(-1.0F, 0.0F, -1.0F));
 
+    // Convert to rotation.
     const auto rotation = MathHelpers::convertDirectionToRollPitchYaw(direction);
-
     REQUIRE(glm::all(glm::epsilonEqual(rotation, glm::vec3(0.0F, 45.0F, 180.0F), floatDelta))); // NOLINT
+
+    // Convert back to direction.
+    const auto calculatedDirection = MathHelpers::convertRollPitchYawToDirection(rotation);
+    REQUIRE(glm::all(glm::epsilonEqual(calculatedDirection, direction, floatDelta)));
 }

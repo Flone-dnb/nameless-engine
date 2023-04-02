@@ -19,7 +19,7 @@ namespace ne {
         MathHelpers() = delete;
 
         /**
-         * Converts a direction to angles.
+         * Converts a direction to rotation angles.
          *
          * @warning Expects the specified direction to be normalized.
          *
@@ -28,6 +28,15 @@ namespace ne {
          * @return Roll (as X), pitch (as Y) and yaw (as Z) in degrees.
          */
         static inline glm::vec3 convertDirectionToRollPitchYaw(const glm::vec3& direction);
+
+        /**
+         * Converts rotation angles to a direction.
+         *
+         * @param rotation Rotation roll (as X), pitch (as Y) and yaw (as Z) in degrees.
+         *
+         * @return Unit direction vector.
+         */
+        static inline glm::vec3 convertRollPitchYawToDirection(const glm::vec3& rotation);
 
         /**
          * Converts coordinates from the spherical coordinate system to the Cartesian coordinate system.
@@ -106,6 +115,14 @@ namespace ne {
         // }
 
         return worldRotation;
+    }
+
+    glm::vec3 MathHelpers::convertRollPitchYawToDirection(const glm::vec3& rotation) {
+        const auto rotationMatrix = glm::rotate(glm::radians(rotation.z), glm::vec3(0.0F, 0.0F, 1.0F)) *
+                                    glm::rotate(glm::radians(rotation.y), glm::vec3(0.0F, 1.0F, 0.0F)) *
+                                    glm::rotate(glm::radians(rotation.x), glm::vec3(1.0F, 0.0F, 0.0F));
+
+        return rotationMatrix * glm::vec4(worldForwardDirection, 0.0F);
     }
 
     glm::vec3 MathHelpers::convertSphericalToCartesianCoordinates(float radius, float theta, float phi) {

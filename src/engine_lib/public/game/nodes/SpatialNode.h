@@ -3,6 +3,7 @@
 // Custom.
 #include "game/nodes/Node.h"
 #include "math/GLMath.hpp"
+#include "misc/Globals.h"
 
 #include "SpatialNode.generated.h"
 
@@ -117,11 +118,32 @@ namespace ne RNAMESPACE() {
         glm::vec3 getWorldRotation();
 
         /**
+         * Returns node's world rotation in the quaternion form.
+         *
+         * @return Rotation of the node in the world.
+         */
+        glm::quat getWorldRotationQuaternion();
+
+        /**
          * Returns node's world scale (see @ref setWorldScale).
          *
          * @return Scale of the node in the world.
          */
         glm::vec3 getWorldScale();
+
+        /**
+         * Returns node's forward direction in world space.
+         *
+         * @return Unit vector that points in the node's world forward direction.
+         */
+        glm::vec3 getWorldForwardDirection();
+
+        /**
+         * Returns node's right direction in world space.
+         *
+         * @return Unit vector that points in the node's right direction.
+         */
+        glm::vec3 getWorldRightDirection();
 
         /**
          * Returns node's world matrix (matrix that transforms node's data (for example vertices)
@@ -217,22 +239,31 @@ namespace ne RNAMESPACE() {
         /** Small helper struct to keep all world space related information in one place. */
         struct WorldMatrixInformation {
             /**
-             * Location in world, includes hierarchy.
+             * World location of this node.
              * This value contains the location component of @ref worldMatrix.
              */
             glm::vec3 worldLocation = glm::vec3(0.0F, 0.0F, 0.0F);
 
             /**
-             * Rotation (in degrees) in world, includes hierarchy.
+             * World rotation (roll, pitch, yaw in degrees) of this node.
              * This value contains the rotation component of @ref worldMatrix.
              */
             glm::vec3 worldRotation = glm::vec3(0.0F, 0.0F, 0.0F);
 
             /**
-             * Scale in world, includes hierarchy.
+             * World space of this node.
              * This value contains the scale component of @ref worldMatrix.
              */
             glm::vec3 worldScale = glm::vec3(1.0F, 1.0F, 1.0F);
+
+            /** World forward direction of this node. */
+            glm::vec3 worldForward = worldForwardDirection;
+
+            /** World right direction of this node. */
+            glm::vec3 worldRight = worldRightDirection;
+
+            /** Rotation from @ref worldMatrix in the quaternion form. */
+            glm::quat worldRotationQuaternion = glm::identity<glm::quat>();
 
             /**
              * Matrix that combines @ref worldLocation, @ref worldRotation and @ref worldScale.
@@ -273,6 +304,9 @@ namespace ne RNAMESPACE() {
          */
         RPROPERTY(Serialize)
         glm::vec3 relativeScale = glm::vec3(1.0F, 1.0F, 1.0F);
+
+        /** First (most closer to this node) spatial node in the parent chain. */
+        std::pair<std::recursive_mutex, gc<SpatialNode>> mtxSpatialParent;
 
         /** Matrix that describes basis vectors that define node's local space. */
         std::pair<std::recursive_mutex, LocalMatrixInformation> mtxLocalMatrix;

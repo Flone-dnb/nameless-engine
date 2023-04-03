@@ -650,8 +650,9 @@ namespace ne RNAMESPACE() {
         std::scoped_lock guard(mtxParentNode.first);
 
         // Check if have a parent.
-        if (!mtxParentNode.second)
+        if (mtxParentNode.second == nullptr) {
             return nullptr;
+        }
 
         // Check parent's type and optionally name.
         if (dynamic_cast<NodeType*>(&*mtxParentNode.second) &&

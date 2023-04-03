@@ -60,6 +60,24 @@ namespace ne {
         static inline void convertCartesianCoordinatesToSpherical(
             const glm::vec3& location, float& radius, float& theta, float& phi);
 
+        /**
+         * Calculates 1 / vector while checking for zero division.
+         *
+         * @param vector Input vector.
+         *
+         * @return vector 1 / input vector.
+         */
+        static inline glm::vec3 calculateReciprocalVector(const glm::vec3& vector);
+
+        /**
+         * Builds a rotation matrix in the engine specific way.
+         *
+         * @param rotation Rotation in degrees where X is roll, Y is pitch and Z is yaw.
+         *
+         * @return Rotation matrix.
+         */
+        static inline glm::mat4x4 buildRotationMatrix(const glm::vec3& rotation);
+
     private:
 #if defined(DEBUG)
         /** Name of the category used for logging. */
@@ -82,28 +100,32 @@ namespace ne {
         worldRotation.z = glm::degrees(std::atan2f(direction.y, direction.x));
         worldRotation.y = glm::degrees(-std::asinf(direction.z));
 
-#if defined(DEBUG)
         // Check for NaNs.
         if (glm::isnan(worldRotation.z)) {
             Logger::get().warn(
-                "found NaN in the Z component of the calculated rotation", sMathHelpersLogCategory);
+                "found NaN in the Z component of the calculated rotation, setting this component's value to "
+                "zero",
+                sMathHelpersLogCategory);
+            worldRotation.z = 0.0F;
         }
         if (glm::isnan(worldRotation.y)) {
             Logger::get().warn(
-                "found NaN in the Y component of the calculated rotation", sMathHelpersLogCategory);
+                "found NaN in the Y component of the calculated rotation, setting this component's value to "
+                "zero",
+                sMathHelpersLogCategory);
+            worldRotation.y = 0.0F;
         }
-#endif
 
         // Use zero roll for now.
 
         // Calculate roll:
         // See if we can use world up direction to find the right direction.
         // glm::vec3 vecToFindRight = worldUpDirection;
-        // if (direction.z > 0.999F) { // NOLINT: magic number
+        // if (std::abs(direction.z) > 0.999F) { // NOLINT: magic number
         //    // Use +X then.
         //    vecToFindRight = glm::vec3(1.0F, 0.0F, 0.0F);
         //}
-        // const auto rightDirection = glm::normalize(glm::cross(vecToFindRight, direction));
+        // const auto rightDirection = glm::normalize(glm::cross(direction, vecToFindRight));
 
         // worldRotation.x =
         //     glm::degrees(-std::asinf(worldUpDirection.x * rightDirection.x + worldUpDirection.y *
@@ -144,5 +166,36 @@ namespace ne {
         radius = glm::sqrt(location.x * location.x + location.y * location.y + location.z * location.z);
         theta = glm::atan2(location.y, location.x);
         phi = glm::atan2(glm::sqrt(location.x * location.x + location.y * location.y), location.z);
+    }
+
+    glm::vec3 MathHelpers::calculateReciprocalVector(const glm::vec3& vector) {
+        constexpr float floatEpsilon = 0.000001F; // NOLINT: using not a very small number
+        glm::vec3 reciprocal;
+
+        if (std::abs(vector.x) < floatEpsilon) [[unlikely]] {
+            reciprocal.x = 0.0F;
+        } else [[likely]] {
+            reciprocal.x = 1.0F / vector.x;
+        }
+
+        if (std::abs(vector.y) < floatEpsilon) [[unlikely]] {
+            reciprocal.y = 0.0F;
+        } else [[likely]] {
+            reciprocal.y = 1.0F / vector.y;
+        }
+
+        if (std::abs(vector.z) < floatEpsilon) [[unlikely]] {
+            reciprocal.z = 0.0F;
+        } else [[likely]] {
+            reciprocal.z = 1.0F / vector.z;
+        }
+
+        return reciprocal;
+    }
+
+    glm::mat4x4 MathHelpers::buildRotationMatrix(const glm::vec3& rotation) {
+        return glm::rotate(glm::radians(rotation.z), glm::vec3(0.0F, 0.0F, 1.0F)) *
+               glm::rotate(glm::radians(rotation.y), glm::vec3(0.0F, 1.0F, 0.0F)) *
+               glm::rotate(glm::radians(rotation.x), glm::vec3(1.0F, 0.0F, 0.0F));
     }
 } // namespace ne

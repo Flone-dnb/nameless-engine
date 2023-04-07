@@ -224,8 +224,9 @@ TEST_CASE("deserialize a node tree that references external node") {
             pRootNode->getPathDeserializedFromRelativeToRes().value().first == sNodeTreeRelativePathToFile);
 
         // Get our child node.
-        REQUIRE(pRootNode->getChildNodes()->size() == 1);
-        auto pChildNode = gc_dynamic_pointer_cast<ReflectionTestNode1>(pRootNode->getChildNodes()[0]);
+        REQUIRE(pRootNode->getChildNodes()->second->size() == 1);
+        auto pChildNode =
+            gc_dynamic_pointer_cast<ReflectionTestNode1>(pRootNode->getChildNodes()->second->operator[](0));
         REQUIRE(pChildNode);
 
         // Check that everything is deserialized correctly.
@@ -417,9 +418,9 @@ TEST_CASE("deserialize a node tree that references external node tree") {
             sCustomNodeTreeRelativePathToFile);
 
         // Check children.
-        REQUIRE(pDeserializedRootNode->getChildNodes()->size() == 1);
-        const auto pChildNode =
-            gc_dynamic_pointer_cast<ReflectionTestNode1>(pDeserializedRootNode->getChildNodes()[0]);
+        REQUIRE(pDeserializedRootNode->getChildNodes()->second->size() == 1);
+        const auto pChildNode = gc_dynamic_pointer_cast<ReflectionTestNode1>(
+            pDeserializedRootNode->getChildNodes()->second->operator[](0));
         REQUIRE(pChildNode);
         REQUIRE(pChildNode->bBoolValue1);
         REQUIRE(!pChildNode->bBoolValue2);
@@ -465,12 +466,13 @@ TEST_CASE("deserialize a node tree that references external node tree") {
         const auto pRootNode = std::get<gc<Node>>(result);
 
         // Get our child node.
-        REQUIRE(pRootNode->getChildNodes()->size() == 1);
+        REQUIRE(pRootNode->getChildNodes()->second->size() == 1);
         REQUIRE(pRootNode->getPathDeserializedFromRelativeToRes().has_value());
         REQUIRE(
             pRootNode->getPathDeserializedFromRelativeToRes().value().first == sNodeTreeRelativePathToFile);
 
-        auto pChildNode = gc_dynamic_pointer_cast<ReflectionTestNode1>(pRootNode->getChildNodes()[0]);
+        auto pChildNode =
+            gc_dynamic_pointer_cast<ReflectionTestNode1>(pRootNode->getChildNodes()->second->operator[](0));
         REQUIRE(pChildNode);
         REQUIRE(pChildNode->getPathDeserializedFromRelativeToRes().has_value());
         REQUIRE(
@@ -480,8 +482,9 @@ TEST_CASE("deserialize a node tree that references external node tree") {
         REQUIRE(pChildNode->entity.iIntValue1 == 42);
 
         // Get child child nodes.
-        REQUIRE(pChildNode->getChildNodes()->size() == 1);
-        auto pChildChildNode = gc_dynamic_pointer_cast<ReflectionTestNode1>(pChildNode->getChildNodes()[0]);
+        REQUIRE(pChildNode->getChildNodes()->second->size() == 1);
+        auto pChildChildNode =
+            gc_dynamic_pointer_cast<ReflectionTestNode1>(pChildNode->getChildNodes()->second->operator[](0));
         REQUIRE(pChildChildNode);
 
         // Check that everything is deserialized correctly.

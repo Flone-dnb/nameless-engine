@@ -91,6 +91,7 @@ namespace ne RNAMESPACE() {
 
         /**
          * Returns node's relative rotation in degrees (see @ref setRelativeRotation).
+         * Also see @ref getRelativeRotationMatrix.
          *
          * @return Relative rotation.
          */
@@ -104,6 +105,13 @@ namespace ne RNAMESPACE() {
         inline glm::vec3 getRelativeScale() const { return relativeScale; }
 
         /**
+         * Returns a rotation matrix that applies node's relative rotation.
+         *
+         * @return Rotation matrix.
+         */
+        glm::mat4x4 getRelativeRotationMatrix();
+
+        /**
          * Returns node's world location (see @ref setWorldLocation).
          *
          * @return Location of the node in the world.
@@ -112,6 +120,7 @@ namespace ne RNAMESPACE() {
 
         /**
          * Returns node's world rotation in degrees (see @ref setWorldRotation).
+         * Also see @ref getWorldRotationQuaternion.
          *
          * @return Rotation of the node in the world.
          */
@@ -119,6 +128,7 @@ namespace ne RNAMESPACE() {
 
         /**
          * Returns node's world rotation in the quaternion form.
+         * Also see @ref getWorldRotation.
          *
          * @return Rotation of the node in the world.
          */
@@ -146,6 +156,13 @@ namespace ne RNAMESPACE() {
         glm::vec3 getWorldRightDirection();
 
         /**
+         * Returns node's up direction in world space.
+         *
+         * @return Unit vector that points in the node's up direction.
+         */
+        glm::vec3 getWorldUpDirection();
+
+        /**
          * Returns node's world matrix (matrix that transforms node's data (for example vertices)
          * to world space).
          *
@@ -154,11 +171,19 @@ namespace ne RNAMESPACE() {
         glm::mat4x4 getWorldMatrix();
 
         /**
-         * Returns matrix that describes basis vectors that define node's local space.
+         * Returns the first (most closer to this node) spatial node in the parent node chain
+         * (i.e. cached result of `getParentNodeOfType<SpatialNode>` that can be used without any search
+         * operations).
          *
-         * @return Local matrix;
+         * @warning Avoid saving returned raw pointer as it points to the node's field and does not guarantee
+         * that the node will always live while you hold this pointer. Returning raw pointer in order
+         * to avoid creating GC pointers (if you for example only want to check closes parent node),
+         * but you can always save GC pointer if you need.
+         *
+         * @return `nullptr` as a gc pointer (second value in the pair) if there is no SpatialNode in the
+         * parent node chain, otherwise closest SpatialNode in the parent node chain.
          */
-        glm::mat4x4 getLocalMatrix();
+        std::pair<std::recursive_mutex, gc<SpatialNode>>* getClosestSpatialParent();
 
     protected:
         /**
@@ -202,6 +227,9 @@ namespace ne RNAMESPACE() {
          *
          * @warning If overriding you must call the parent's version of this function first
          * (before executing your login) to execute parent's logic.
+         *
+         * @remark If you change location/rotation/scale inside of this function,
+         * this function will not be called again (no recursion will occur).
          */
         virtual void onWorldLocationRotationScaleChanged(){};
 
@@ -209,6 +237,8 @@ namespace ne RNAMESPACE() {
         /**
          * Recalculates node's world matrix based on the parent world matrix (can be identity
          * if there's node parent) and optionally notifies spatial child nodes.
+         *
+         * @warning Expects @ref mtxLocalSpace to be up to date (see @ref recalculateLocalMatrix).
          *
          * @param bNotifyChildren Whether to notify spatial child nodes so that could recalculate
          * their world matrix or not.
@@ -224,17 +254,10 @@ namespace ne RNAMESPACE() {
          *
          * @param pNode Node to recalculate world matrix for (if SpatialNode).
          */
-        void recalculateWorldMatrixForNodeAndNotifyChildren(gc<Node> pNode);
+        void recalculateWorldMatrixForNodeAndNotifyChildren(Node* pNode);
 
         /** Logs a warning if node's world location exceeds world bounds. */
         void warnIfExceedingWorldBounds();
-
-        /**
-         * Returns @ref getLocalMatrix multiplied by local matrices of parent spatial nodes.
-         *
-         * @return Local matrix.
-         */
-        glm::mat4x4 getLocalMatrixIncludingParents();
 
         /** Small helper struct to keep all world space related information in one place. */
         struct WorldMatrixInformation {
@@ -256,11 +279,14 @@ namespace ne RNAMESPACE() {
              */
             glm::vec3 worldScale = glm::vec3(1.0F, 1.0F, 1.0F);
 
-            /** World forward direction of this node. */
+            /** Forward direction of this node in world space. */
             glm::vec3 worldForward = worldForwardDirection;
 
-            /** World right direction of this node. */
+            /** Right direction of this node in world space. */
             glm::vec3 worldRight = worldRightDirection;
+
+            /** Up direction of this node in world space. */
+            glm::vec3 worldUp = worldUpDirection;
 
             /** Rotation from @ref worldMatrix in the quaternion form. */
             glm::quat worldRotationQuaternion = glm::identity<glm::quat>();
@@ -270,15 +296,18 @@ namespace ne RNAMESPACE() {
              * Allows transforming data from node's local space directly into the world space.
              */
             glm::mat4x4 worldMatrix = glm::identity<glm::mat4x4>();
+
+            /** Whether we are in the notification callback or not. */
+            bool bInOnWorldLocationRotationScaleChanged = false;
         };
 
         /** Small helper struct to keep all local space related information in one place. */
-        struct LocalMatrixInformation {
+        struct LocalSpaceInformation {
             /** Matrix that describes basis vectors that define node's local space. */
-            glm::mat4x4 localMatrix = glm::identity<glm::mat4x4>();
+            glm::mat4x4 relativeRotationMatrix = glm::identity<glm::mat4x4>();
 
-            /** @ref localMatrix multiplied by local matrices of parent spatial nodes. */
-            glm::mat4x4 localMatrixIncludingParents = glm::identity<glm::mat4x4>();
+            /** Node's relative rotation in quaternion form. */
+            glm::quat relativeRotationQuaternion = glm::identity<glm::quat>();
         };
 
         /**
@@ -309,7 +338,7 @@ namespace ne RNAMESPACE() {
         std::pair<std::recursive_mutex, gc<SpatialNode>> mtxSpatialParent;
 
         /** Matrix that describes basis vectors that define node's local space. */
-        std::pair<std::recursive_mutex, LocalMatrixInformation> mtxLocalMatrix;
+        std::pair<std::recursive_mutex, LocalSpaceInformation> mtxLocalSpace;
 
         /** World related information, must be used with mutex. */
         std::pair<std::recursive_mutex, WorldMatrixInformation> mtxWorldMatrix;

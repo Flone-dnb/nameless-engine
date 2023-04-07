@@ -195,13 +195,13 @@ TEST_CASE("create, serialize and deserialize world") {
                             }
                             // Check that everything is correct.
                             REQUIRE(getWorldRootNode());
-                            REQUIRE(getWorldRootNode()->getChildNodes()->size() == 1);
+                            REQUIRE(getWorldRootNode()->getChildNodes()->second->size() == 1);
 
                             auto pMyNode = gc_dynamic_pointer_cast<ReflectionTestNode1>(
-                                getWorldRootNode()->getChildNodes()[0]);
+                                getWorldRootNode()->getChildNodes()->second->operator[](0));
                             REQUIRE(pMyNode);
                             REQUIRE(pMyNode->bBoolValue2);
-                            REQUIRE(pMyNode->getChildNodes()->size() == 1);
+                            REQUIRE(pMyNode->getChildNodes()->second->size() == 1);
 
                             getWindow()->close();
                         },

@@ -556,7 +556,6 @@ set(ENGINE_TEST_SOURCES
     ${TESTS_RELATIVE_PATH}/engine_lib/game/nodes/SpatialNode.cpp
     ${TESTS_RELATIVE_PATH}/engine_lib/game/nodes/MeshNode.cpp
     ${TESTS_RELATIVE_PATH}/engine_lib/game/nodes/CameraNode.cpp
-    ${TESTS_RELATIVE_PATH}/engine_lib/game/camera/CameraProperties.cpp
     ${TESTS_RELATIVE_PATH}/engine_lib/game/camera/CameraManager.cpp
     ${TESTS_RELATIVE_PATH}/engine_lib/game/World.cpp
     ${TESTS_RELATIVE_PATH}/engine_lib/game/GameInstance.cpp

@@ -150,17 +150,33 @@ namespace ne RNAMESPACE() {
         /**
          * Returns parent node if this node.
          *
-         * @return `nullptr` if this node has no parent (could only happen when the node is not spawned),
-         * otherwise valid pointer.
+         * @warning Must be used with mutex.
+         *
+         * @warning Avoid saving returned raw pointer as it points to the node's field and does not guarantee
+         * that the node will always live while you hold this pointer. Returning raw pointer in order
+         * to avoid creating GC pointers (if you for example only want to check the parent node there's
+         * no point in returning a gc pointer), but you can always save returned GC pointer to
+         * node's parent if you need.
+         *
+         * @return `nullptr` as a gc pointer (second value in the pair) if this node has no parent
+         * (could only happen when the node is not spawned), otherwise valid gc pointer.
          */
-        gc<Node> getParentNode();
+        std::pair<std::recursive_mutex, gc<Node>>* getParentNode();
 
         /**
-         * Returns a copy of the array of child nodes.
+         * Returns pointer to child nodes array.
+         *
+         * @warning Must be used with mutex.
+         *
+         * @warning Avoid saving returned raw pointer as it points to the node's field and does not guarantee
+         * that the node will always live while you hold this pointer. Returning raw pointer in order
+         * to avoid creating GC pointers (if you for example only want to iterate over child nodes
+         * there's no point in returning gc_vector), but you can always save returned gc_vector
+         * or GC pointers to child nodes if you need.
          *
          * @return Array of child nodes.
          */
-        gc_vector<Node> getChildNodes();
+        std::pair<std::recursive_mutex, gc_vector<Node>>* getChildNodes();
 
         /**
          * Goes up the parent node chain (up to the world's root node if needed) to find

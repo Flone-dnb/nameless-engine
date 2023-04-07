@@ -25,6 +25,68 @@ namespace ne RNAMESPACE() {
         virtual ~CameraNode() override = default;
 
         /**
+         * Sets how the camera can move and rotate.
+         *
+         * @param mode New mode.
+         */
+        void setCameraMode(CameraMode mode);
+
+        /**
+         * Sets a location in world space that orbital camera should look at
+         * (when not set, orbital camera looks at the node's local space origin,
+         * see @ref clearOrbitalTargetLocation).
+         *
+         * @remark Only works if the current camera mode is orbital (see @ref setCameraMode), otherwise
+         * logs a warning.
+         *
+         * @param targetPointLocation Location in world space to look at.
+         */
+        void setOrbitalTargetLocation(const glm::vec3& targetPointLocation);
+
+        /**
+         * Resets target point specified in @ref setOrbitalTargetLocation so that orbital camera
+         * will look at node's local space origin.
+         *
+         * @remark Only works if the current camera mode is orbital (see @ref setCameraMode), otherwise
+         * logs a warning.
+         */
+        void clearOrbitalTargetLocation();
+
+        /**
+         * Sets orbital camera's rotation by specifying tilt and rotation around camera's target point
+         * (see @ref setOrbitalTargetLocation).
+         *
+         * @remark Only works if the current camera mode is orbital (see @ref setCameraMode), otherwise
+         * logs a warning.
+         *
+         * @param phi   Azimuthal angle (in degrees).
+         * @param theta Polar angle (in degrees).
+         */
+        void setOrbitalRotation(float phi, float theta);
+
+        /**
+         * Sets orbital camera's radial distance or distance from camera to camera's target point
+         * (see @ref setOrbitalTargetLocation).
+         *
+         * @remark Only works if the current camera mode is orbital (see @ref setCameraMode), otherwise
+         * logs a warning.
+         *
+         * @param distanceToTarget Radial distance or distance from camera to camera's target point.
+         */
+        void setOrbitalDistanceToTarget(float distanceToTarget);
+
+        /**
+         * Returns location in world space to where the orbital camera looks at
+         * (also see @ref setOrbitalTargetLocation).
+         *
+         * @remark Only works if the current camera mode is orbital (see @ref setCameraMode), otherwise
+         * logs a warning.
+         *
+         * @return Location in world space.
+         */
+        glm::vec3 getOrbitalTargetLocation();
+
+        /**
          * Returns camera properties.
          *
          * @warning Do not delete returned pointer.
@@ -55,8 +117,17 @@ namespace ne RNAMESPACE() {
         virtual void onDespawning() override;
 
     private:
+        /** Applies current location/rotation to camera properties based on the current camera mode. */
+        void updateCameraProperties();
+
         /** Camera properties. */
         CameraProperties cameraProperties;
+
+        /** If not empty used instead of @ref localSpaceOriginInWorldSpace. */
+        std::optional<glm::vec3> orbitalCameraTargetInWorldSpace = {};
+
+        /** (0.0F, 0.0F, 0.0F) in local space converted to world space. */
+        glm::vec3 localSpaceOriginInWorldSpace = glm::vec3(0.0F, 0.0F, 0.0F);
 
         /**
          * Whether this camera is used by the camera manager or not.
@@ -64,6 +135,12 @@ namespace ne RNAMESPACE() {
          * @warning Only camera manager can change this value.
          */
         std::pair<std::recursive_mutex, bool> mtxIsActive;
+
+        /** Delta to compare rotations. */
+        static inline constexpr float rotationDelta = 0.0001F;
+
+        /** Name of the category used for logging. */
+        static inline const auto sCameraNodeLogCategory = "Camera Node";
 
         ne_CameraNode_GENERATED
     };

@@ -19,8 +19,9 @@ namespace ne {
 
     /** Defines camera settings, base axis, location, modes, etc. */
     class CameraProperties {
-        // Sets world adjustment matrix to include parent nodes.
+        // Only camera node or transient camera can control internal data.
         friend class CameraNode;
+        friend class TransientCamera;
 
     public:
         CameraProperties();
@@ -29,10 +30,7 @@ namespace ne {
         struct Data {
             /** Stores orbital mode specific data. */
             struct OrbitalModeData {
-                /** Location of the point that the camera should look at. */
-                glm::vec3 targetPointLocation = glm::vec3(0.0F, 0.0F, 0.0F); // NOLINT: magic number
-
-                /** Radial distance or distance from camera to @ref targetPointLocation. */
+                /** Radial distance or distance from camera to target point (look target). */
                 float distanceToTarget = 10.0F; // NOLINT: magic number
 
                 /** Polar angle (in degrees). */
@@ -42,10 +40,19 @@ namespace ne {
                 float phi = 0.0F; // NOLINT: magic number
             };
 
-            /** Stores free mode specific data. */
-            struct FreeModeData {
-                /** Rotation in degrees where X is roll, Y is pitch and Z is yaw. */
-                glm::vec3 rotation = glm::vec3(0.0F, 0.0F, 0.0F);
+            /** Stores data used for view matrix. */
+            struct ViewData {
+                /** Matrix that transforms positions to view (camera) space. */
+                glm::mat4x4 viewMatrix;
+
+                /** Location of the camera in world space. */
+                glm::vec3 worldLocation = glm::vec3(0.0F, 0.0F, 0.0F);
+
+                /** Unit vector that points in camera's current up direction in world space. */
+                glm::vec3 worldUpDirection = ne::worldUpDirection;
+
+                /** Location of the point in world space that the camera should look at. */
+                glm::vec3 targetPointWorldLocation = glm::vec3(0.0F, 0.0F, 0.0F);
             };
 
             /** Stores data used for projection matrix. */
@@ -84,7 +91,7 @@ namespace ne {
              *
              * @remark The bool variable is used to minimize the amount of times we recalculate view matrix.
              */
-            std::pair<bool, glm::mat4x4> viewMatrix = std::make_pair(true, glm::identity<glm::mat4x4>());
+            std::pair<bool, ViewData> viewData = std::make_pair(true, ViewData());
 
             /**
              * Contains a flag the indicates whether projection matrix needs to be recalculated or not
@@ -96,179 +103,15 @@ namespace ne {
              */
             std::pair<bool, ProjectionData> projectionData = std::make_pair(true, ProjectionData());
 
-            /** Location of the camera. */
-            glm::vec3 location = glm::vec3(0.0F, 0.0F, 0.0F);
-
-            /** Unit vector that points in camera's current up direction. */
-            glm::vec3 upDirection = worldUpDirection;
-
-            /** Unit vector that points in camera's current right direction. */
-            glm::vec3 rightDirection = worldRightDirection;
-
-            /** Unit vector that points in camera's current forward direction. */
-            glm::vec3 forwardDirection = worldForwardDirection;
-
             /** Defines how camera can move and rotate. */
             CameraMode currentCameraMode = CameraMode::FREE;
-
-            /** Parameters used by free camera mode. */
-            FreeModeData freeModeData;
 
             /** Parameters used by orbital camera mode. */
             OrbitalModeData orbitalModeData;
 
-            /** Matrix used to adjust location/axis when constructing a view matrix. */
-            glm::mat4x4 worldAdjustmentMatrix = glm::identity<glm::mat4x4>();
-
-            /** Sets whether we can flip the camera (make it upside down) during its rotation or not. */
-            bool bDontFlipCamera = true;
-
             /** Minimum allowed value for near clip plane distance and far clip plane distance. */
             static inline const float minimumClipPlaneDistance = 0.00001F;
         };
-
-        /**
-         * Sets how the camera can move and rotate.
-         *
-         * @param cameraMode New mode.
-         */
-        void setCameraMode(CameraMode cameraMode);
-
-        /**
-         * Sets camera's location.
-         *
-         * @param location Camera's new location.
-         */
-        void setCameraLocation(const glm::vec3& location);
-
-        /**
-         * Moves free camera according to its forward direction (see @ref getForwardDirection).
-         *
-         * @remark Only works if the current camera mode is free (see @ref setCameraMode), otherwise
-         * logs a warning.
-         *
-         * @param distance Distance to move the camera. Specify a negative value to move backward.
-         */
-        void moveFreeCameraForward(float distance);
-
-        /**
-         * Moves free camera according to its right direction (see @ref getRightDirection).
-         *
-         * @remark Only works if the current camera mode is free (see @ref setCameraMode), otherwise
-         * logs a warning.
-         *
-         * @param distance Distance to move the camera. Specify a negative value to move left.
-         */
-        void moveFreeCameraRight(float distance);
-
-        /**
-         * Moves free camera according to its up direction (see @ref getUpDirection).
-         *
-         * @remark Only works if the current camera mode is free (see @ref setCameraMode), otherwise
-         * logs a warning.
-         *
-         * @param distance Distance to move the camera. Specify a negative value to move down.
-         */
-        void moveFreeCameraUp(float distance);
-
-        /**
-         * Moves free camera according to world's up direction.
-         *
-         * @remark Only works if the current camera mode is free (see @ref setCameraMode), otherwise
-         * logs a warning.
-         *
-         * @param distance Distance to move the camera.
-         */
-        void moveFreeCameraWorldUp(float distance);
-
-        /**
-         * Sets free camera's pitch (angle in degrees) by rotating the camera around its
-         * right direction.
-         *
-         * @remark Only works if the current camera mode is free (see @ref setCameraMode), otherwise
-         * logs a warning.
-         *
-         * @remark The specified pitch may be clamped if "don't flip the camera" is enabled
-         * (see @ref setDontFlipCamera).
-         *
-         * @param pitch Angle (in degrees).
-         */
-        void setFreeCameraPitch(float pitch);
-
-        /**
-         * Sets free camera's yaw (angle in degrees) by rotating the camera around its
-         * up direction.
-         *
-         * @remark Only works if the current camera mode is free (see @ref setCameraMode), otherwise
-         * logs a warning.
-         *
-         * @param yaw Angle (in degrees).
-         */
-        void setFreeCameraYaw(float yaw);
-
-        /**
-         * Sets free camera's roll (angle in degrees) by rotating the camera around its
-         * forward direction.
-         *
-         * @remark Only works if the current camera mode is free (see @ref setCameraMode), otherwise
-         * logs a warning.
-         *
-         * @remark Only works if "don't flip the camera" is disabled (see @ref setDontFlipCamera),
-         * otherwise logs a warning.
-         *
-         * @param roll Angle (in degrees).
-         */
-        void setFreeCameraRoll(float roll);
-
-        /**
-         * Makes free camera to look at the specified location.
-         *
-         * @remark Only works if the current camera mode is free (see @ref setCameraMode), otherwise
-         * logs a warning.
-         *
-         * @param targetLocation Location to look at.
-         */
-        void makeFreeCameraLookAt(const glm::vec3& targetLocation);
-
-        /**
-         * Sets a point location that orbital camera should look at.
-         *
-         * @remark Only works if the current camera mode is orbital (see @ref setCameraMode), otherwise
-         * logs a warning.
-         *
-         * @param targetPointLocation Location to look at.
-         */
-        void setOrbitalCameraTargetPoint(const glm::vec3& targetPointLocation);
-
-        /**
-         * Sets camera's radial distance or distance from camera to camera's target point
-         * (see @ref setOrbitalCameraTargetPoint).
-         *
-         * @remark Only works if the current camera mode is orbital (see @ref setCameraMode), otherwise
-         * logs a warning.
-         *
-         * @param distanceToTarget Radial distance or distance from camera to camera's target point.
-         */
-        void setOrbitalCameraDistanceToTarget(float distanceToTarget);
-
-        /**
-         * Sets camera's rotation by specifying tilt and rotation around camera's target point
-         * (see @ref setOrbitalCameraTargetPoint).
-         *
-         * @remark Only works if the current camera mode is orbital (see @ref setCameraMode), otherwise
-         * logs a warning.
-         *
-         * @param phi   Azimuthal angle (in degrees).
-         * @param theta Polar angle (in degrees).
-         */
-        void setOrbitalCameraRotation(float phi, float theta);
-
-        /**
-         * Sets whether we can flip the camera (make it upside down) during its rotation or not.
-         *
-         * @param bDontFlipCamera `true` to don't flip the camera, `false` to allow flipping the camera.
-         */
-        void setDontFlipCamera(bool bDontFlipCamera);
 
         /**
          * Sets camera's vertical field of view.
@@ -302,129 +145,11 @@ namespace ne {
         void setFarClipPlaneDistance(float farClipPlaneDistance);
 
         /**
-         * Returns location of the camera.
-         *
-         * @param bInWorldSpace Specify `true` to get camera's location in world space (includes
-         * world adjustment matrix), `false` to get camera's location in its "local" space
-         * (which could be the same as in world space or not).
-         *
-         * @return Camera's location.
-         */
-        glm::vec3 getLocation(bool bInWorldSpace);
-
-        /**
-         * Returns unit vector that points in camera's current forward direction.
-         *
-         * @param bInWorldSpace Specify `true` to get camera's forward direction in world space (includes
-         * world adjustment matrix), `false` to get camera's forward direction in its "local" space
-         * (which could be the same as in world space or not).
-         *
-         * @return Camera's forward direction.
-         */
-        glm::vec3 getForwardDirection(bool bInWorldSpace);
-
-        /**
-         * Returns unit vector that points in camera's current right direction.
-         *
-         * @param bInWorldSpace Specify `true` to get camera's right direction in world space (includes
-         * world adjustment matrix), `false` to get camera's right direction in its "local" space
-         * (which could be the same as in world space or not).
-         *
-         * @return Camera's right direction.
-         */
-        glm::vec3 getRightDirection(bool bInWorldSpace);
-
-        /**
-         * Returns unit vector that points in camera's current up direction.
-         *
-         * @param bInWorldSpace Specify `true` to get camera's up direction in world space (includes
-         * world adjustment matrix), `false` to get camera's up direction in its "local" space
-         * (which could be the same as in world space or not).
-         *
-         * @return Camera's up direction.
-         */
-        glm::vec3 getUpDirection(bool bInWorldSpace);
-
-        /**
-         * Returns a location that orbital camera looks at.
-         *
-         * @remark Only works if the current camera mode is orbital (see @ref setCameraMode), otherwise
-         * logs a warning.
-         *
-         * @param bInWorldSpace Specify `true` to get camera's up direction in world space (includes
-         * world adjustment matrix), `false` to get camera's up direction in its "local" space
-         * (which could be the same as in world space or not).
-         *
-         * @return Location the camera looks at.
-         */
-        glm::vec3 getOrbitalCameraTargetLocation(bool bInWorldSpace);
-
-        /**
-         * Returns rotation (in degrees) around camera's right direction.
-         *
-         * @remark Only works if the current camera mode is free (see @ref setCameraMode), otherwise
-         * logs a warning.
-         *
-         * @return Camera's pitch.
-         */
-        float getFreeCameraPitch();
-
-        /**
-         * Returns rotation (in degrees) around camera's up direction.
-         *
-         * @remark Only works if the current camera mode is free (see @ref setCameraMode), otherwise
-         * logs a warning.
-         *
-         * @return Camera's yaw.
-         */
-        float getFreeCameraYaw();
-
-        /**
-         * Returns rotation (in degrees) around camera's forward direction.
-         *
-         * @remark Only works if the current camera mode is free (see @ref setCameraMode), otherwise
-         * logs a warning.
-         *
-         * @return Camera's roll.
-         */
-        float getFreeCameraRoll();
-
-        /**
          * Returns vertical field of view of the camera.
          *
          * @return Vertical field of view.
          */
         unsigned int getVerticalFov();
-
-        /**
-         * Returns radial distance or distance from camera to camera's target point location.
-         *
-         * @remark Only works if the current camera mode is orbital (see @ref setCameraMode), otherwise
-         * logs a warning.
-         *
-         * @return Distance to view target.
-         */
-        float getOrbitalCameraDistanceToTarget();
-
-        /**
-         * Returns polar angle or camera's tilt relative target point (in degrees).
-         *
-         * @remark Only works if the current camera mode is orbital (see @ref setCameraMode), otherwise
-         * logs a warning.
-         *
-         * @return Camera's tilt.
-         */
-        float getOrbitalCameraTheta();
-
-        /**
-         * Returns azimuthal angle or camera's rotation relative target point.
-         *
-         * @remark Only works if the current camera mode is orbital (see @ref setCameraMode), otherwise
-         * logs a warning.
-         *
-         * @return Camera's rotation.
-         */
-        float getOrbitalCameraPhi();
 
         /**
          * Returns distance from camera (view) space origin to camera's near clip plane.
@@ -446,6 +171,20 @@ namespace ne {
          * @return Camera's aspect ratio.
          */
         float getAspectRatio();
+
+        /**
+         * Returns orbital camera properties.
+         *
+         * @return Orbital camera properties.
+         */
+        Data::OrbitalModeData getOrbitalModeProperties();
+
+        /**
+         * Returns camera's world location.
+         *
+         * @return Location in world space.
+         */
+        glm::vec3 getWorldLocation();
 
         /**
          * Returns a matrix that transforms positions to view (camera) space.
@@ -476,25 +215,6 @@ namespace ne {
          * @remark This function can ignore the call if there's no need to recalculate projection matrix.
          */
         void makeSureProjectionMatrixAndClipPlanesAreUpToDate();
-
-        /**
-         * Recalculates camera's forward/right/up directions based on orbital camera's location and
-         * camera's target point location.
-         */
-        inline void recalculateBaseVectorsForOrbitalCamera() {
-            mtxData.second.forwardDirection =
-                glm::normalize(mtxData.second.orbitalModeData.targetPointLocation - mtxData.second.location);
-            mtxData.second.rightDirection =
-                glm::normalize(glm::cross(mtxData.second.forwardDirection, worldUpDirection));
-            mtxData.second.upDirection = glm::cross(mtxData.second.rightDirection, worldUpDirection);
-        }
-
-        /**
-         * Sets world adjustment matrix that is used to adjust location/axis when constructing a view matrix.
-         *
-         * @param adjustmentMatrix Matrix to use.
-         */
-        void setWorldAdjustmentMatrix(const glm::mat4x4& adjustmentMatrix);
 
         /** Internal properties. */
         std::pair<std::recursive_mutex, Data> mtxData;

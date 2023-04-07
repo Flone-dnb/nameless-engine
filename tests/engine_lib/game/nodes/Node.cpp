@@ -35,17 +35,23 @@ TEST_CASE("build and check node hierarchy") {
         pChildNode->addChildNode(pChildChildNode2);
         pParentNode->addChildNode(pChildNode);
 
+        const auto pMtxParentChildNodes = pParentNode->getChildNodes();
+        std::scoped_lock parentChildNodesGuard(pMtxParentChildNodes->first);
+
+        const auto pMtxChildChildNodes = pChildNode->getChildNodes();
+        std::scoped_lock childChildNodesGuard(pMtxChildChildNodes->first);
+
         // Check that everything is correct.
-        REQUIRE(pParentNode->getChildNodes()->size() == 1);
-        REQUIRE(&*pParentNode->getChildNodes()->operator[](0) == &*pChildNode);
+        REQUIRE(pMtxParentChildNodes->second->size() == 1);
+        REQUIRE(&*pMtxParentChildNodes->second->operator[](0) == &*pChildNode);
 
-        REQUIRE(pChildNode->getChildNodes()->size() == 2);
-        REQUIRE(&*pChildNode->getChildNodes()->operator[](0) == &*pChildChildNode1);
-        REQUIRE(&*pChildNode->getChildNodes()->operator[](1) == &*pChildChildNode2);
+        REQUIRE(pMtxChildChildNodes->second->size() == 2);
+        REQUIRE(&*pMtxChildChildNodes->second->operator[](0) == &*pChildChildNode1);
+        REQUIRE(&*pMtxChildChildNodes->second->operator[](1) == &*pChildChildNode2);
 
-        REQUIRE(pChildNode->getParentNode() == pParentNode);
-        REQUIRE(pChildChildNode1->getParentNode() == pChildNode);
-        REQUIRE(pChildChildNode2->getParentNode() == pChildNode);
+        REQUIRE(pChildNode->getParentNode()->second == pParentNode);
+        REQUIRE(pChildChildNode1->getParentNode()->second == pChildNode);
+        REQUIRE(pChildChildNode2->getParentNode()->second == pChildNode);
 
         REQUIRE(pParentNode->isParentOf(&*pChildNode));
         REQUIRE(pParentNode->isParentOf(&*pChildChildNode1));
@@ -91,25 +97,25 @@ TEST_CASE("move nodes in the hierarchy") {
         pCarNode->addChildNode(pSomeNode);
 
         // Check that everything is correct.
-        REQUIRE(&*pCharacterNode->getParentNode() == &*pCarNode);
-        REQUIRE(&*pSomeNode->getParentNode() == &*pCarNode);
-        REQUIRE(pCharacterNode->getChildNodes()->size() == 2);
-        REQUIRE(pCarNode->getChildNodes()->size() == 2);
+        REQUIRE(&*pCharacterNode->getParentNode()->second == &*pCarNode);
+        REQUIRE(&*pSomeNode->getParentNode()->second == &*pCarNode);
+        REQUIRE(pCharacterNode->getChildNodes()->second->size() == 2);
+        REQUIRE(pCarNode->getChildNodes()->second->size() == 2);
         REQUIRE(pCharacterChildNode1->isChildOf(&*pCharacterNode));
         REQUIRE(pCharacterChildNode2->isChildOf(&*pCharacterNode));
 
         // Detach some node.
         pSomeNode->detachFromParentAndDespawn();
-        REQUIRE(pSomeNode->getParentNode() == nullptr);
+        REQUIRE(pSomeNode->getParentNode()->second == nullptr);
 
-        REQUIRE(pCarNode->getChildNodes()->size() == 1);
+        REQUIRE(pCarNode->getChildNodes()->second->size() == 1);
 
         // Detach the character from the car.
         pParentNode->addChildNode(pCharacterNode);
 
         // Check that everything is correct.
-        REQUIRE(&*pCharacterNode->getParentNode() == &*pParentNode);
-        REQUIRE(pCharacterNode->getChildNodes()->size() == 2);
+        REQUIRE(&*pCharacterNode->getParentNode()->second == &*pParentNode);
+        REQUIRE(pCharacterNode->getChildNodes()->second->size() == 2);
         REQUIRE(pCharacterChildNode1->isChildOf(&*pCharacterNode));
         REQUIRE(pCharacterChildNode2->isChildOf(&*pCharacterNode));
     }
@@ -171,28 +177,30 @@ TEST_CASE("serialize and deserialize node tree") {
 
         // Check results.
         REQUIRE(pRootNode->getNodeName() == "Root Node");
-        const auto vChildNodes = pRootNode->getChildNodes();
-        REQUIRE(vChildNodes->size() == 2);
+        const auto pMtxChildNodes = pRootNode->getChildNodes();
+        std::scoped_lock childNodesGuard(pMtxChildNodes->first);
+        REQUIRE(pMtxChildNodes->second->size() == 2);
 
         // Check child nodes.
         gc<Node> pChildNode1;
         gc<Node> pChildNode2;
-        if ((*vChildNodes)[0]->getNodeName() == "Child Node 1") {
-            REQUIRE((*vChildNodes)[1]->getNodeName() == "Child Node 2");
-            pChildNode1 = (*vChildNodes)[0];
-            pChildNode2 = (*vChildNodes)[1];
-        } else if ((*vChildNodes)[0]->getNodeName() == "Child Node 2") {
-            REQUIRE((*vChildNodes)[1]->getNodeName() == "Child Node 1");
-            pChildNode1 = (*vChildNodes)[1];
-            pChildNode2 = (*vChildNodes)[2];
+        if ((*pMtxChildNodes->second)[0]->getNodeName() == "Child Node 1") {
+            REQUIRE((*pMtxChildNodes->second)[1]->getNodeName() == "Child Node 2");
+            pChildNode1 = (*pMtxChildNodes->second)[0];
+            pChildNode2 = (*pMtxChildNodes->second)[1];
+        } else if ((*pMtxChildNodes->second)[0]->getNodeName() == "Child Node 2") {
+            REQUIRE((*pMtxChildNodes->second)[1]->getNodeName() == "Child Node 1");
+            pChildNode1 = (*pMtxChildNodes->second)[1];
+            pChildNode2 = (*pMtxChildNodes->second)[2];
         }
 
         // Check for child child nodes.
-        REQUIRE(pChildNode2->getChildNodes()->empty());
-        const auto vChildChildNodes = pChildNode1->getChildNodes();
-        REQUIRE(vChildChildNodes->size() == 1);
-        REQUIRE((*vChildChildNodes)[0]->getChildNodes()->empty());
-        REQUIRE((*vChildChildNodes)[0]->getNodeName() == "Child Child Node 1");
+        REQUIRE(pChildNode2->getChildNodes()->second->empty());
+        const auto pMtxChildChildNodes = pChildNode1->getChildNodes();
+        std::scoped_lock childChildNodesGuard(pMtxChildChildNodes->first);
+        REQUIRE(pMtxChildChildNodes->second->size() == 1);
+        REQUIRE((*pMtxChildChildNodes->second)[0]->getChildNodes()->second->empty());
+        REQUIRE((*pMtxChildChildNodes->second)[0]->getNodeName() == "Child Child Node 1");
     }
 
     gc_collector()->fullCollect();
@@ -222,7 +230,7 @@ TEST_CASE("get parent node of type") {
 
             // Get parent without name.
             auto pNode = getParentNodeOfType<MyDerivedNode>();
-            REQUIRE(&*pNode == &*getParentNode());
+            REQUIRE(&*pNode == &*getParentNode()->second);
             REQUIRE(pNode->iAnswer == 0);
 
             // Get parent with name.
@@ -303,7 +311,7 @@ TEST_CASE("get child node of type") {
 
             // Get child without name.
             auto pNode = getChildNodeOfType<MyDerivedNode>();
-            REQUIRE(&*pNode == &*getChildNodes()->operator[](0));
+            REQUIRE(&*pNode == &*getChildNodes()->second->operator[](0));
             REQUIRE(pNode->iAnswer == 0);
 
             // Get child with name.

@@ -9,28 +9,25 @@ namespace ne {
      * don't want to modify world's node tree with your CameraNode (for ex. the engine editor's camera).
      */
     class TransientCamera {
-        // Controls movement.
+        // Calls `onBeforeNewFrame` and `clearInput`.
         friend class CameraManager;
 
     public:
         TransientCamera() = default;
 
         /**
-         * Returns camera properties.
+         * Sets how the camera can move and rotate.
          *
-         * @warning Do not delete returned pointer.
-         *
-         * @return Camera properties.
+         * @param mode New mode.
          */
-        CameraProperties* getCameraProperties();
+        void setCameraMode(CameraMode mode);
 
-    private:
         /**
          * Makes free camera to constantly move forward/backward.
          *
          * @remark In order to stop the movement specify 0 as input.
          *
-         * @remark Logs a warning if the camera is in orbital mode (see @ref getCameraProperties).
+         * @remark Logs a warning if the camera is in orbital mode (see @ref setCameraMode).
          *
          * @param input User input in range [-1.0F, 1.0F] where 0 means no input and 1 means full input
          * strength.
@@ -42,7 +39,7 @@ namespace ne {
          *
          * @remark In order to stop the movement specify 0 as input.
          *
-         * @remark Logs a warning if the camera is in orbital mode (see @ref getCameraProperties).
+         * @remark Logs a warning if the camera is in orbital mode (see @ref setCameraMode).
          *
          * @param input User input in range [-1.0F, 1.0F] where 0 means no input and 1 means full input
          * strength.
@@ -54,13 +51,78 @@ namespace ne {
          *
          * @remark In order to stop the movement specify 0 as input.
          *
-         * @remark Logs a warning if the camera is in orbital mode (see @ref getCameraProperties).
+         * @remark Logs a warning if the camera is in orbital mode (see @ref setCameraMode).
          *
          * @param input User input in range [-1.0F, 1.0F] where 0 means no input and 1 means full input
          * strength.
          */
         void setFreeCameraWorldUpMovement(float input);
 
+        /**
+         * Sets camera's world location.
+         *
+         * @param location Location to set.
+         */
+        void setLocation(const glm::vec3& location);
+
+        /**
+         * Sets camera's rotation in world space.
+         *
+         * @remark Logs a warning if the camera is in orbital mode (see @ref setCameraMode).
+         *
+         * @param rotation Camera's rotation in degrees (where X is roll, Y is pitch and Z is yaw).
+         */
+        void setFreeCameraRotation(const glm::vec3& rotation);
+
+        /**
+         * Sets orbital camera's target location in world space.
+         *
+         * @remark Logs a warning if the camera is in free mode (see @ref setCameraMode).
+         *
+         * @param targetLocation Location for camera to look at.
+         */
+        void setOrbitalCameraTargetLocation(const glm::vec3& targetLocation);
+
+        /**
+         * Sets camera's radial distance or distance from camera to camera's target point
+         * (see @ref setOrbitalCameraTargetLocation).
+         *
+         * @remark Only works if the current camera mode is orbital (see @ref setCameraMode), otherwise
+         * logs a warning.
+         *
+         * @param distanceToTarget Radial distance or distance from camera to camera's target point.
+         */
+        void setOrbitalCameraDistanceToTarget(float distanceToTarget);
+
+        /**
+         * Sets camera's rotation by specifying tilt and rotation around camera's target point
+         * (see @ref setOrbitalCameraTargetLocation).
+         *
+         * @remark Only works if the current camera mode is orbital (see @ref setCameraMode), otherwise
+         * logs a warning.
+         *
+         * @param phi   Azimuthal angle (in degrees).
+         * @param theta Polar angle (in degrees).
+         */
+        void setOrbitalCameraRotation(float phi, float theta);
+
+        /**
+         * Returns camera's rotation in world space.
+         *
+         * @return Rotation where X is roll, Y is pitch and Z is yaw.
+         */
+        glm::vec3 getFreeCameraRotation() const;
+
+        /**
+         * Returns camera properties.
+         *
+         * @warning Do not delete returned pointer.
+         *
+         * @return Camera properties.
+         */
+        CameraProperties* getCameraProperties();
+
+    private:
         /**
          * Called by camera manager before a new frame is rendered to process movement input.
          *
@@ -75,8 +137,42 @@ namespace ne {
          */
         void clearInput();
 
+        /**
+         * Recalculates camera's forward/right/up directions based on orbital camera's location and
+         * camera's target point location.
+         */
+        inline void recalculateBaseVectorsForOrbitalCamera() {
+            cameraForwardDirection = glm::normalize(
+                cameraProperties.mtxData.second.viewData.second.targetPointWorldLocation -
+                cameraProperties.mtxData.second.viewData.second.worldLocation);
+            cameraRightDirection = glm::normalize(glm::cross(cameraForwardDirection, worldUpDirection));
+            cameraUpDirection = glm::cross(cameraRightDirection, worldUpDirection);
+        }
+
+        /**
+         * Moves free camera in the specified direction.
+         *
+         * @remark Only works if the current camera mode is orbital (see @ref setCameraMode), otherwise
+         * logs a warning.
+         *
+         * @param distance Distance (where X is forward, Y is right and Z is up).
+         */
+        void moveFreeCamera(const glm::vec3& distance);
+
         /** Camera properties. */
-        CameraProperties properties;
+        CameraProperties cameraProperties;
+
+        /** Camera's forward direction in world space. */
+        glm::vec3 cameraForwardDirection = worldForwardDirection;
+
+        /** Camera's right direction in world space. */
+        glm::vec3 cameraRightDirection = worldRightDirection;
+
+        /** Camera's up direction in world space. */
+        glm::vec3 cameraUpDirection = worldUpDirection;
+
+        /** Camera's world rotation in degrees (roll, pitch, yaw). */
+        glm::vec3 cameraRotation = glm::vec3(0.0F, 0.0F, 0.0F);
 
         /**
          * Last input specified in @ref setFreeCameraForwardMovement (X) and
@@ -89,5 +185,8 @@ namespace ne {
 
         /** Delta to compare input to zero. */
         static inline constexpr float inputDelta = 0.001F;
+
+        /** Name of the category used for logging. */
+        static inline const auto sTransientCameraLogCategory = "Transient Camera";
     };
 } // namespace ne

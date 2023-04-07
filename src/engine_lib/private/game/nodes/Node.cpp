@@ -306,10 +306,7 @@ namespace ne {
         pWorld = nullptr; // don't allow accessing world at this point
     }
 
-    gc<Node> Node::getParentNode() {
-        std::scoped_lock guard(mtxParentNode.first);
-        return mtxParentNode.second;
-    }
+    std::pair<std::recursive_mutex, gc<Node>>* Node::getParentNode() { return &mtxParentNode; }
 
     std::optional<Error>
     Node::serializeNodeTree(const std::filesystem::path& pathToFile, bool bEnableBackup) {
@@ -504,9 +501,10 @@ namespace ne {
             gc<Node> pNode = gc_dynamic_pointer_cast<Node>(nodeInfo.pObject);
 
             // Attach child nodes of this external root node to our node that has changed fields.
-            const auto vChildNodes = pExternalRootNode->getChildNodes();
-            for (size_t i = 0; i < vChildNodes->size(); i++) {
-                pNode->addChildNode(vChildNodes->at(i));
+            const auto pMtxChildNodes = pExternalRootNode->getChildNodes();
+            std::scoped_lock externalChildNodesGuard(pMtxChildNodes->first);
+            for (const auto& pExternalChildNode : *pMtxChildNodes->second) {
+                pNode->addChildNode(pExternalChildNode);
             }
         }
 
@@ -591,10 +589,7 @@ namespace ne {
         return pRootNode;
     }
 
-    gc_vector<Node> Node::getChildNodes() {
-        std::scoped_lock guard(mtxChildNodes.first);
-        return mtxChildNodes.second;
-    }
+    std::pair<std::recursive_mutex, gc_vector<Node>>* Node::getChildNodes() { return &mtxChildNodes; }
 
     GameInstance* Node::getGameInstance() {
         const auto pGame = Game::get();

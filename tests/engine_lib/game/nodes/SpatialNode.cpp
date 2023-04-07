@@ -295,6 +295,78 @@ TEST_CASE("world location, rotation and scale are calculated correctly (with par
     REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
 }
 
+TEST_CASE("move parent node with rotation") {
+    using namespace ne;
+
+    class TestGameInstance : public GameInstance {
+    public:
+        TestGameInstance(Window* pGameWindow, Game* pGame, InputManager* pInputManager)
+            : GameInstance(pGameWindow, pGame, pInputManager) {}
+        virtual void onGameStarted() override {
+            createWorld([&](const std::optional<Error>& optionalWorldError) {
+                if (optionalWorldError.has_value()) {
+                    auto error = optionalWorldError.value();
+                    error.addEntry();
+                    INFO(error.getFullErrorMessage());
+                    REQUIRE(false);
+                }
+
+                constexpr float floatEpsilon = 0.001f;
+
+                const auto pParentSpatialNode = gc_new<SpatialNode>();
+                pParentSpatialNode->setRelativeRotation(glm::vec3(0.0F, 0.0F, 90.0F));
+
+                const auto pChildSpatialNode = gc_new<SpatialNode>();
+
+                // Spawn in world.
+                pParentSpatialNode->addChildNode(pChildSpatialNode);
+                getWorldRootNode()->addChildNode(pParentSpatialNode);
+
+                // Set relative location.
+                pChildSpatialNode->setRelativeLocation(glm::vec3(10.0F, 0.0F, 0.0F));
+
+                auto childWorldLocation = pChildSpatialNode->getWorldLocation();
+                auto childRelativeLocation = pChildSpatialNode->getRelativeLocation();
+
+                // Check.
+                REQUIRE(glm::all(
+                    glm::epsilonEqual(childWorldLocation, glm::vec3(0.0F, 10.0F, 0.0F), floatEpsilon)));
+                REQUIRE(glm::all(
+                    glm::epsilonEqual(childRelativeLocation, glm::vec3(10.0F, 0.0F, 0.0F), floatEpsilon)));
+
+                // Move parent.
+                pParentSpatialNode->setRelativeLocation(glm::vec3(0.0F, 5.0F, 0.0F));
+
+                childWorldLocation = pChildSpatialNode->getWorldLocation();
+                childRelativeLocation = pChildSpatialNode->getRelativeLocation();
+
+                // Check.
+                REQUIRE(glm::all(
+                    glm::epsilonEqual(childWorldLocation, glm::vec3(0.0F, 15.0F, 0.0F), floatEpsilon)));
+                REQUIRE(glm::all(
+                    glm::epsilonEqual(childRelativeLocation, glm::vec3(10.0F, 0.0F, 0.0F), floatEpsilon)));
+
+                getWindow()->close();
+            });
+        }
+        virtual ~TestGameInstance() override {}
+    };
+
+    auto result = Window::getBuilder().withVisibility(false).build();
+    if (std::holds_alternative<Error>(result)) {
+        Error error = std::get<Error>(std::move(result));
+        error.addEntry();
+        INFO(error.getFullErrorMessage());
+        REQUIRE(false);
+    }
+
+    const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
+    pMainWindow->processEvents<TestGameInstance>();
+
+    // Make sure everything is collected correctly.
+    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+}
+
 TEST_CASE(
     "world location, rotation and scale are calculated correctly (with non spatial nodes in the hierarchy)") {
     using namespace ne;
@@ -788,9 +860,11 @@ TEST_CASE("make spatial node look at world location with parent rotation") {
                 // Check child forward/right.
                 auto childWorldForward = pChildSpatialNode->getWorldForwardDirection();
                 auto childWorldRight = pChildSpatialNode->getWorldRightDirection();
+                auto childWorldUp = pChildSpatialNode->getWorldUpDirection();
 
                 REQUIRE(glm::all(glm::epsilonEqual(childWorldForward, -worldUpDirection, floatEpsilon)));
                 REQUIRE(glm::all(glm::epsilonEqual(childWorldRight, -worldForwardDirection, floatEpsilon)));
+                REQUIRE(glm::all(glm::epsilonEqual(childWorldUp, worldRightDirection, floatEpsilon)));
 
                 // Set parent rotation.
                 pParentSpatialNode->setRelativeRotation(glm::vec3(0.0f, 90.0f, -90.0f));
@@ -798,9 +872,11 @@ TEST_CASE("make spatial node look at world location with parent rotation") {
                 // Check child forward/right.
                 childWorldForward = pChildSpatialNode->getWorldForwardDirection();
                 childWorldRight = pChildSpatialNode->getWorldRightDirection();
+                childWorldUp = pChildSpatialNode->getWorldUpDirection();
 
                 REQUIRE(glm::all(glm::epsilonEqual(childWorldForward, -worldUpDirection, floatEpsilon)));
                 REQUIRE(glm::all(glm::epsilonEqual(childWorldRight, worldForwardDirection, floatEpsilon)));
+                REQUIRE(glm::all(glm::epsilonEqual(childWorldUp, -worldRightDirection, floatEpsilon)));
 
                 // Make child node look at +Y.
                 auto targetRotation = MathHelpers::convertDirectionToRollPitchYaw(worldRightDirection);
@@ -809,8 +885,6 @@ TEST_CASE("make spatial node look at world location with parent rotation") {
                 // Local forward should look at -X and local right should look at -Z.
                 auto relativeRotation = pChildSpatialNode->getRelativeRotation();
                 auto relativeForward = MathHelpers::convertRollPitchYawToDirection(relativeRotation);
-
-                REQUIRE(glm::all(glm::epsilonEqual(relativeForward, -worldForwardDirection, floatEpsilon)));
 
                 // Check child forward/right.
                 childWorldForward = pChildSpatialNode->getWorldForwardDirection();

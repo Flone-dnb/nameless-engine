@@ -509,7 +509,7 @@ namespace ne {
         std::scoped_lock guard(mtxFrameConstants.first);
 
         // Set camera properties.
-        mtxFrameConstants.second.cameraPosition = pCameraProperties->getLocation(true);
+        mtxFrameConstants.second.cameraPosition = pCameraProperties->getWorldLocation();
         mtxFrameConstants.second.viewProjectionMatrix =
             pCameraProperties->getProjectionMatrix() * pCameraProperties->getViewMatrix();
 

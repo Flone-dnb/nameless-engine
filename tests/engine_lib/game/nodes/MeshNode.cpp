@@ -282,9 +282,9 @@ TEST_CASE("serialize and deserialize MeshNode as part of a node tree") {
                     }
                     const auto pRootNode = std::get<gc<Node>>(std::move(result));
 
-                    REQUIRE(pRootNode->getChildNodes()->size() == 1);
+                    REQUIRE(pRootNode->getChildNodes()->second->size() == 1);
                     const auto pMeshNode =
-                        gc_dynamic_pointer_cast<MeshNode>(pRootNode->getChildNodes()->operator[](0));
+                        gc_dynamic_pointer_cast<MeshNode>(pRootNode->getChildNodes()->second->operator[](0));
 
                     // Original file should be restored.
                     REQUIRE(std::filesystem::exists(pathToExternalFile));
@@ -442,8 +442,8 @@ TEST_CASE("serialize and deserialize MeshNode as part of a node tree with origin
 
                 {
                     // Modify mesh data.
-                    auto pMeshNode =
-                        gc_dynamic_pointer_cast<MeshNode>(getWorldRootNode()->getChildNodes()[0]);
+                    auto pMeshNode = gc_dynamic_pointer_cast<MeshNode>(
+                        getWorldRootNode()->getChildNodes()->second->operator[](0));
 
                     MeshData meshData;
                     meshData.getVertices()->push_back(vertex1);
@@ -485,9 +485,9 @@ TEST_CASE("serialize and deserialize MeshNode as part of a node tree with origin
                     }
                     const auto pRootNode = std::get<gc<Node>>(std::move(result));
 
-                    REQUIRE(pRootNode->getChildNodes()->size() == 1);
+                    REQUIRE(pRootNode->getChildNodes()->second->size() == 1);
                     const auto pMeshNode =
-                        gc_dynamic_pointer_cast<MeshNode>(pRootNode->getChildNodes()->operator[](0));
+                        gc_dynamic_pointer_cast<MeshNode>(pRootNode->getChildNodes()->second->operator[](0));
 
                     // Original file should be restored.
                     REQUIRE(std::filesystem::exists(pathToExternalFile));

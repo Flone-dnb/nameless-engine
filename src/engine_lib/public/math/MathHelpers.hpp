@@ -87,11 +87,12 @@ namespace ne {
 
     glm::vec3 MathHelpers::convertDirectionToRollPitchYaw(const glm::vec3& direction) {
 #if defined(DEBUG)
+        constexpr float lengthDelta = 0.001F; // NOLINT: magic number
+        const auto length = glm::length(direction);
         // Make sure we are given a normalized vector.
-        if (!glm::epsilonEqual(glm::length(direction), 1.0F, 0.001F)) { // NOLINT: magic number
+        if (!glm::epsilonEqual(length, 1.0F, lengthDelta)) [[unlikely]] {
             Logger::get().error(
                 "the specified direction vector should have been normalized", sMathHelpersLogCategory);
-            return glm::vec3(0.0F, 0.0F, 0.0F);
         }
 #endif
 
@@ -140,11 +141,7 @@ namespace ne {
     }
 
     glm::vec3 MathHelpers::convertRollPitchYawToDirection(const glm::vec3& rotation) {
-        const auto rotationMatrix = glm::rotate(glm::radians(rotation.z), glm::vec3(0.0F, 0.0F, 1.0F)) *
-                                    glm::rotate(glm::radians(rotation.y), glm::vec3(0.0F, 1.0F, 0.0F)) *
-                                    glm::rotate(glm::radians(rotation.x), glm::vec3(1.0F, 0.0F, 0.0F));
-
-        return rotationMatrix * glm::vec4(worldForwardDirection, 0.0F);
+        return buildRotationMatrix(rotation) * glm::vec4(worldForwardDirection, 0.0F);
     }
 
     glm::vec3 MathHelpers::convertSphericalToCartesianCoordinates(float radius, float theta, float phi) {
@@ -160,12 +157,10 @@ namespace ne {
 
     void MathHelpers::convertCartesianCoordinatesToSpherical(
         const glm::vec3& location, float& radius, float& theta, float& phi) {
-        phi = glm::radians(phi);
-        theta = glm::radians(theta);
-
         radius = glm::sqrt(location.x * location.x + location.y * location.y + location.z * location.z);
-        theta = glm::atan2(location.y, location.x);
-        phi = glm::atan2(glm::sqrt(location.x * location.x + location.y * location.y), location.z);
+        theta = glm::degrees(glm::atan2(location.y, location.x));
+        phi = glm::degrees(
+            glm::atan2(glm::sqrt(location.x * location.x + location.y * location.y), location.z));
     }
 
     glm::vec3 MathHelpers::calculateReciprocalVector(const glm::vec3& vector) {

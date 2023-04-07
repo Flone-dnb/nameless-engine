@@ -450,14 +450,14 @@ Mostly engine's code style is controlled though `clang-format` and `clang-tidy`,
 ```C++
 std::pair<std::recursive_mutex, gc<Node>> mtxParentNode;
 
-// --------------------
+// -------------------- OR --------------------
 
-struct LocalMatrixInformation {
-    glm::mat4x4 localMatrix = glm::identity<glm::mat4x4>();
-    glm::mat4x4 localMatrixIncludingParents = glm::identity<glm::mat4x4>();
+struct LocalSpaceInformation {
+    glm::mat4x4 relativeRotationMatrix = glm::identity<glm::mat4x4>();
+    glm::quat relativeRotationQuaternion = glm::identity<glm::quat>();
 };
 
-std::pair<std::recursive_mutex, LocalMatrixInformation> mtxLocalMatrix;
+std::pair<std::recursive_mutex, LocalSpaceInformation> mtxLocalSpace;
 ```
 
 Make sure you are naming your variables according to this when writing engine code.

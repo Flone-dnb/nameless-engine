@@ -67,13 +67,22 @@ TEST_CASE("moving gc pointers does not cause leaks") {
     REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
 
     {
-        auto pPointer1 = gc_new<Collected>();
         gc<Collected> pPointer2;
 
-        // Only 1 object exist.
-        REQUIRE(gc_collector()->getAliveObjectsCount() == 1);
+        {
+            auto pPointer1 = gc_new<Collected>();
 
-        pPointer2 = std::move(pPointer1);
+            // Only 1 object exist.
+            REQUIRE(gc_collector()->getAliveObjectsCount() == 1);
+
+            pPointer2 = std::move(pPointer1);
+
+            // Still 1 object exist.
+            REQUIRE(gc_collector()->getAliveObjectsCount() == 1);
+        }
+
+        // Attempt to free.
+        gc_collector()->fullCollect();
 
         // Still 1 object exist.
         REQUIRE(gc_collector()->getAliveObjectsCount() == 1);

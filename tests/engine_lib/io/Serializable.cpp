@@ -8,6 +8,8 @@
 #include "io/ConfigManager.h"
 #include "ReflectionTest.h"
 #include "io/serializers/PrimitiveFieldSerializer.h"
+#include "game/Window.h"
+#include "game/GameInstance.h"
 
 // External.
 #include "catch2/catch_test_macros.hpp"
@@ -505,11 +507,46 @@ TEST_CASE("deserialize a node tree that references external node tree") {
 }
 
 TEST_CASE("attempting to add a serializer that was previously added does nothing") {
-    const auto iFieldSerializers = Serializable::getFieldSerializers().size();
+    using namespace ne;
 
-    // Add already existing serializer again.
-    Serializable::addFieldSerializer(std::make_unique<PrimitiveFieldSerializer>());
-    REQUIRE(Serializable::getFieldSerializers().size() == iFieldSerializers);
+    class TestGameInstance : public GameInstance {
+    public:
+        TestGameInstance(Window* pGameWindow, Game* pGame, InputManager* pInputManager)
+            : GameInstance(pGameWindow, pGame, pInputManager) {}
+        virtual void onGameStarted() override {
+            createWorld([&](const std::optional<Error>& optionalWorldError) {
+                if (optionalWorldError.has_value()) {
+                    auto error = optionalWorldError.value();
+                    error.addEntry();
+                    INFO(error.getFullErrorMessage());
+                    REQUIRE(false);
+                }
+
+                const auto iFieldSerializers = FieldSerializerManager::getFieldSerializers().size();
+                REQUIRE(iFieldSerializers > 0);
+
+                // Add already existing serializer again.
+                FieldSerializerManager::addFieldSerializer(std::make_unique<PrimitiveFieldSerializer>());
+                REQUIRE(FieldSerializerManager::getFieldSerializers().size() == iFieldSerializers);
+
+                getWindow()->close();
+            });
+        }
+        virtual ~TestGameInstance() override {}
+    };
+
+    auto result = Window::getBuilder().withVisibility(false).build();
+    if (std::holds_alternative<Error>(result)) {
+        Error error = std::get<Error>(std::move(result));
+        error.addEntry();
+        INFO(error.getFullErrorMessage());
+        REQUIRE(false);
+    }
+
+    const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
+    pMainWindow->processEvents<TestGameInstance>();
+
+    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
 }
 
 TEST_CASE("serialize and deserialize fields of different types") {

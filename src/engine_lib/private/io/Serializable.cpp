@@ -328,31 +328,6 @@ namespace ne {
         return {};
     }
 
-    void Serializable::addFieldSerializer(std::unique_ptr<IFieldSerializer> pFieldSerializer) {
-        std::scoped_lock guard(mtxFieldSerializers.first);
-
-        for (const auto& pSerializer : mtxFieldSerializers.second) {
-            auto& addedSerializer = *pSerializer;
-            auto& newSerializer = *pFieldSerializer;
-            if (typeid(addedSerializer) == typeid(newSerializer)) {
-                return;
-            }
-        }
-
-        mtxFieldSerializers.second.push_back(std::move(pFieldSerializer));
-    }
-
-    std::vector<IFieldSerializer*> Serializable::getFieldSerializers() {
-        std::scoped_lock guard(mtxFieldSerializers.first);
-
-        std::vector<IFieldSerializer*> vSerializers(mtxFieldSerializers.second.size());
-        for (size_t i = 0; i < mtxFieldSerializers.second.size(); i++) {
-            vSerializers[i] = mtxFieldSerializers.second[i].get();
-        }
-
-        return vSerializers;
-    }
-
     std::optional<std::pair<std::string, std::string>>
     Serializable::getPathDeserializedFromRelativeToRes() const {
         return pathDeserializedFromRelativeToRes;
@@ -415,7 +390,7 @@ namespace ne {
             &selfArchetype,
             &tomlData,
             sSectionName,
-            getFieldSerializers(),
+            FieldSerializerManager::getFieldSerializers(),
             {},
             sEntityId,
             pOriginalObject,

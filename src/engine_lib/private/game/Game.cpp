@@ -12,13 +12,7 @@
 #include "render/Renderer.h"
 #include "materials/Shader.h"
 #include "render/general/pso/PsoManager.h"
-#include "io/serializers/PrimitiveFieldSerializer.h"
-#include "io/serializers/StringFieldSerializer.h"
-#include "io/serializers/VectorFieldSerializer.h"
-#include "io/serializers/UnorderedMapFieldSerializer.h"
-#include "io/serializers/SerializableObjectFieldSerializer.h"
-#include "io/serializers/GlmVecFieldSerializer.h"
-#include "io/serializers/MaterialFieldSerializer.h"
+#include "io/FieldSerializerManager.h"
 #include "game/camera/CameraManager.h"
 
 // External.
@@ -42,14 +36,8 @@ namespace ne {
         // Save ID of this thread (should be main thread).
         mainThreadId = std::this_thread::get_id();
 
-        // Add engine serializers.
-        Serializable::addFieldSerializer(std::make_unique<PrimitiveFieldSerializer>());
-        Serializable::addFieldSerializer(std::make_unique<StringFieldSerializer>());
-        Serializable::addFieldSerializer(std::make_unique<VectorFieldSerializer>());
-        Serializable::addFieldSerializer(std::make_unique<UnorderedMapFieldSerializer>());
-        Serializable::addFieldSerializer(std::make_unique<SerializableObjectFieldSerializer>());
-        Serializable::addFieldSerializer(std::make_unique<GlmVecFieldSerializer>());
-        Serializable::addFieldSerializer(std::make_unique<MaterialFieldSerializer>());
+        // Register engine serializers.
+        FieldSerializerManager::registerEngineFieldSerializers();
 
         // Run GC for the first time to setup things (I guess, first scan is usually not that fast).
         gc_collector()->collect();

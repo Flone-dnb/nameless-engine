@@ -5,7 +5,6 @@
 
 // Custom.
 #include "io/serializers/IFieldSerializer.hpp"
-#include "misc/GC.hpp"
 
 namespace rfk {
     class Struct;

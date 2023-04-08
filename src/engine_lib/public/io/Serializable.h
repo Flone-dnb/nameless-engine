@@ -15,9 +15,9 @@
 #include "io/ConfigManager.h"
 #include "io/properties/GuidProperty.h"
 #include "misc/GC.hpp"
-#include "io/serializers/IFieldSerializer.hpp"
 #include "io/properties/SerializeProperty.h"
 #include "io/serializers/SerializableObjectFieldSerializer.h"
+#include "io/FieldSerializerManager.h"
 
 // External.
 #include "Refureku/Object.h"
@@ -109,7 +109,7 @@ namespace ne RNAMESPACE() {
      * Adds support for serialization/deserialization for your reflected type.
      *
      * Inherit your class/struct from this class to add functions which will
-     * serialize the type and all reflected fields (even inherited).
+     * serialize the type and reflected fields (even inherited) that are marked with special properties.
      */
     class RCLASS(Guid("f5a59b47-ead8-4da4-892e-cf05abb2f3cc")) Serializable : public rfk::Object {
         // This field serializer will call `onAfterDeserialized` after deserialization.
@@ -408,26 +408,6 @@ namespace ne RNAMESPACE() {
             std::optional<std::filesystem::path> optionalPathToFile = {});
 
         /**
-         * Adds a field serializer that will be automatically used in serialization/deserialization
-         * to support specific field types. Use @ref getFieldSerializers to get array of added serializers.
-         *
-         * @remark If the serializer of the specified type was already added previously it will not be
-         * added again.
-         *
-         * @param pFieldSerializer Field serializer to add.
-         */
-        static void addFieldSerializer(std::unique_ptr<IFieldSerializer> pFieldSerializer);
-
-        /**
-         * Returns available field serializers that will be automatically used in
-         * serialization/deserialization.
-         *
-         * @return Array of available field serializers. Do not delete serializers, they are owned by the
-         * Serializable object.
-         */
-        static std::vector<IFieldSerializer*> getFieldSerializers();
-
-        /**
          * If this object was deserialized from a file that is located in the `res` directory
          * of this project, returns a pair of values:
          * - path to this file relative to the `res` directory,
@@ -489,10 +469,6 @@ namespace ne RNAMESPACE() {
          * this value will be equal to `game/test.toml`.
          */
         std::optional<std::pair<std::string, std::string>> pathDeserializedFromRelativeToRes;
-
-        /** Serializers used to serialize/deserialize fields. */
-        static inline std::pair<std::mutex, std::vector<std::unique_ptr<IFieldSerializer>>>
-            mtxFieldSerializers;
 
         /** Name of the key in which to store name of the field a section represents. */
         static inline const auto sSubEntityFieldNameKey = ".field_name";
@@ -734,7 +710,7 @@ namespace ne RNAMESPACE() {
             }
         }
 
-        const auto vFieldSerializers = getFieldSerializers();
+        const auto vFieldSerializers = FieldSerializerManager::getFieldSerializers();
 
         // Deserialize fields.
         for (auto& sFieldName : keys) {

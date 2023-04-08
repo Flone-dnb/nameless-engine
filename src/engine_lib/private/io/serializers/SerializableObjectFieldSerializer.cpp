@@ -5,6 +5,8 @@
 #include "io/properties/GuidProperty.h"
 #include "io/Logger.h"
 #include "misc/Globals.h"
+#include "misc/GC.hpp"
+#include "io/FieldSerializerManager.h"
 
 // External.
 #include "fmt/format.h"
@@ -77,7 +79,7 @@ namespace ne {
             std::optional<Error> error;
         };
 
-        Data loopData{pFrom, pTo, Serializable::getFieldSerializers(), std::optional<Error>{}};
+        Data loopData{pFrom, pTo, FieldSerializerManager::getFieldSerializers(), std::optional<Error>{}};
 
         fromArchetype.foreachField(
             [](rfk::Field const& field, void* pUserData) -> bool {
@@ -280,7 +282,7 @@ namespace ne {
             std::optional<Error> error = {};
         };
 
-        Data loopData{pObjectA, pObjectB, Serializable::getFieldSerializers()};
+        Data loopData{pObjectA, pObjectB, FieldSerializerManager::getFieldSerializers()};
 
         entityAArchetype.foreachField(
             [](rfk::Field const& field, void* pUserData) -> bool {

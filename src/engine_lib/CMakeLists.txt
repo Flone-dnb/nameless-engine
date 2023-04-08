@@ -98,6 +98,8 @@ set(ENGINE_LIB_SOURCES
     public/input/KeyboardKey.hpp
     private/io/Logger.cpp
     public/io/Logger.h
+    private/io/FieldSerializerManager.cpp
+    public/io/FieldSerializerManager.h
     public/misc/Globals.h
     private/misc/Globals.cpp
     private/io/ConfigManager.cpp

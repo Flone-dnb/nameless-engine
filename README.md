@@ -366,7 +366,7 @@ Here is the list of base features that needs to be implemented in order for you 
         - [ ] HDR (High dynamic range)
     - [ ] GUI
 - [ ] Profiler
-- [ ] Minimal scripting
+- [ ] Minimal scripting using AngelScript
 - [ ] Editor
     - [ ] Content management
     - [ ] Script debugging
@@ -382,11 +382,11 @@ Here is the list of base features that needs to be implemented in order for you 
     - [ ] Soft body
     - [ ] Joints
 - [ ] Skeletal animations
-- [ ] LODs (Level of details)
+- [ ] Automatic LODs (Level of details)
 - [ ] AI and pathfinding
 - [ ] Particle effects
 
-Once these base features will be implemented I will create a separate repository for examples and add a link to it here.
+Once base renderers will be implemented I will publish a manual that contains general documentation and step by step guide for working with the engine. Also once all base features will be implemented I will create a separate repository for examples and add a link to it here.
 
 # Setup (Build)
 
@@ -445,12 +445,10 @@ Mostly engine's code style is controlled though `clang-format` and `clang-tidy`,
 - for integer variables (`int`, `size_t`, etc.) the prefix is `i`, example: `iSwapChainBufferCount`,
 - for string variables (`std::string`, `std::string_view`, etc.) the prefix is `s`, example: `sNodeName`,
 - for vector variables (`std::vector`, `std::array`, etc.) the prefix is `v`, example: `vActionEvents`,
-- additionally, if you're using mutex to guard specific field(s) use `std::pair` if possible, example:
+- additionally, if you're using mutex to guard specific field(s) use `std::pair` if possible, here are some examples:
 
 ```C++
 std::pair<std::recursive_mutex, gc<Node>> mtxParentNode;
-
-// -------------------- OR --------------------
 
 struct LocalSpaceInformation {
     glm::mat4x4 relativeRotationMatrix = glm::identity<glm::mat4x4>();

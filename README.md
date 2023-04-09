@@ -386,7 +386,7 @@ Here is the list of base features that needs to be implemented in order for you 
 - [ ] AI and pathfinding
 - [ ] Particle effects
 
-Once base renderers will be implemented I will publish a manual that contains general documentation and step by step guide for working with the engine. Also once all base features will be implemented I will create a separate repository for examples and add a link to it here.
+Once base renderers will be implemented I will publish a manual that contains general documentation and a step by step guide for working with the engine. Also once all base features will be implemented I will create a separate repository for examples and add a link to it here.
 
 # Setup (Build)
 
@@ -439,7 +439,7 @@ The generated documentation will be located at `docs/gen/html`, open the `index.
 
 # Code style
 
-Mostly engine's code style is controlled though `clang-format` and `clang-tidy`, configuration for both of these is located in the root directory of this repository. Nevertheless, there are few things that those two can't control, which are:
+Mostly engine code style is controlled though `clang-format` and `clang-tidy` (although `clang-tidy` is only enabled for release builds), configuration for both of these is located in the root directory of this repository. Nevertheless, there are few things that those two can't control, which are:
 
 - for `bool` variables the prefix is `b`, example: `bIsEnabled`,
 - for integer variables (`int`, `size_t`, etc.) the prefix is `i`, example: `iSwapChainBufferCount`,

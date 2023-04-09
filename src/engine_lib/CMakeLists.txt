@@ -15,6 +15,13 @@ endif()
 # Relative path to 'ext' directory.
 set(RELATIVE_EXT_PATH "../../ext")
 
+# Prepare variable for build type.
+if(CMAKE_BUILD_TYPE MATCHES "^[Dd]ebug")
+    set(IS_RELEASE_BUILD 0)
+else()
+    set(IS_RELEASE_BUILD 1)
+endif()
+
 # Windows specific sources.
 set(ENGINE_WIN32_SOURCES
     private/materials/hlsl/HlslShader.h
@@ -252,14 +259,16 @@ set(DEPENDENCY_BUILD_DIR_NAME dependency_build)
 
 # Setup Clang-tidy.
 find_program (CLANG_TIDY NAMES "clang-tidy" REQUIRED)
-set(RUN_CLANG_TIDY
-    "${CLANG_TIDY}"
-    "--header-filter=src/* --config-file=${CMAKE_CURRENT_LIST_DIR}/../../.clang-tidy")
-set_target_properties(${PROJECT_NAME} PROPERTIES CXX_CLANG_TIDY "${RUN_CLANG_TIDY}")
-if(MSVC)
-    target_compile_options(${PROJECT_NAME} PUBLIC -EHsc) # needed for clang-tidy when running MSVC to enable exceptions
+if (IS_RELEASE_BUILD)
+    set(RUN_CLANG_TIDY
+        "${CLANG_TIDY}"
+        "--header-filter=src/* --config-file=${CMAKE_CURRENT_LIST_DIR}/../../.clang-tidy")
+    set_target_properties(${PROJECT_NAME} PROPERTIES CXX_CLANG_TIDY "${RUN_CLANG_TIDY}")
+    if(MSVC)
+        target_compile_options(${PROJECT_NAME} PUBLIC -EHsc) # needed for clang-tidy when running MSVC to enable exceptions
+    endif()
+    message(STATUS "${PROJECT_NAME}: Clang-tidy is enabled.")
 endif()
-message(STATUS "Clang-tidy is enabled.")
 
 # External: glfw.
 set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
@@ -510,11 +519,6 @@ if (WIN32)
 endif()
 
 # Execute post build script.
-if(CMAKE_BUILD_TYPE MATCHES "^[Dd]ebug")
-    set(IS_RELEASE_BUILD 0)
-else()
-    set(IS_RELEASE_BUILD 1)
-endif()
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
                    COMMAND go run ${CMAKE_CURRENT_LIST_DIR}/engine_post_build.go
                    ${CMAKE_CURRENT_LIST_DIR}/../../res/

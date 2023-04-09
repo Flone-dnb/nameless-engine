@@ -32,6 +32,13 @@ if(WIN32 AND NOT MSVC)
     add_compile_definitions(_WIN32)
 endif()
 
+# Prepare variable for build type.
+if(CMAKE_BUILD_TYPE MATCHES "^[Dd]ebug")
+    set(IS_RELEASE_BUILD 0)
+else()
+    set(IS_RELEASE_BUILD 1)
+endif()
+
 # Create some path variables.
 set(EDITOR_SRC_RELATIVE_PATH src/engine_editor)
 set(EDITOR_SRC_ABSOLUTE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/${EDITOR_SRC_RELATIVE_PATH})
@@ -78,13 +85,16 @@ if(CMAKE_BUILD_TYPE MATCHES "^[Dd]ebug")
 endif()
 
 # Setup Clang-tidy.
-find_program (CLANG_TIDY NAMES "clang-tidy" REQUIRED)
-set(RUN_CLANG_TIDY
-    "${CLANG_TIDY}"
-    "--header-filter=src/* --config-file=${CMAKE_CURRENT_LIST_DIR}/.clang-tidy")
-set_target_properties(${PROJECT_NAME} PROPERTIES CXX_CLANG_TIDY "${RUN_CLANG_TIDY}")
-if(MSVC)
-    target_compile_options(${PROJECT_NAME} PUBLIC -EHsc) # needed for clang-tidy when running MSVC to enable exceptions
+if(IS_RELEASE_BUILD)
+    find_program (CLANG_TIDY NAMES "clang-tidy" REQUIRED)
+    set(RUN_CLANG_TIDY
+        "${CLANG_TIDY}"
+        "--header-filter=src/* --config-file=${CMAKE_CURRENT_LIST_DIR}/.clang-tidy")
+    set_target_properties(${PROJECT_NAME} PROPERTIES CXX_CLANG_TIDY "${RUN_CLANG_TIDY}")
+    if(MSVC)
+        target_compile_options(${PROJECT_NAME} PUBLIC -EHsc) # needed for clang-tidy when running MSVC to enable exceptions
+    endif()
+    message(STATUS "${PROJECT_NAME}: Clang-tidy is enabled.")
 endif()
 
 message(STATUS "${PROJECT_NAME} is configured to use the following C++ standard: ${CMAKE_CXX_STANDARD}")

@@ -21,7 +21,7 @@ TEST_CASE("make the CBV heap expand") {
 
     class TestGameInstance : public GameInstance {
     public:
-        TestGameInstance(Window* pGameWindow, Game* pGame, InputManager* pInputManager)
+        TestGameInstance(Window* pGameWindow, GameManager* pGame, InputManager* pInputManager)
             : GameInstance(pGameWindow, pGame, pInputManager) {
             auto pRenderer = dynamic_cast<DirectXRenderer*>(pGameWindow->getRenderer());
             REQUIRE(pRenderer);
@@ -115,7 +115,7 @@ TEST_CASE("make the CBV heap shrink") {
 
     class TestGameInstance : public GameInstance {
     public:
-        TestGameInstance(Window* pGameWindow, Game* pGame, InputManager* pInputManager)
+        TestGameInstance(Window* pGameWindow, GameManager* pGame, InputManager* pInputManager)
             : GameInstance(pGameWindow, pGame, pInputManager) {
             auto pRenderer = dynamic_cast<DirectXRenderer*>(pGameWindow->getRenderer());
             REQUIRE(pRenderer);
@@ -198,7 +198,7 @@ TEST_CASE("assign multiple descriptors to one resource") {
 
     class TestGameInstance : public GameInstance {
     public:
-        TestGameInstance(Window* pGameWindow, Game* pGame, InputManager* pInputManager)
+        TestGameInstance(Window* pGameWindow, GameManager* pGame, InputManager* pInputManager)
             : GameInstance(pGameWindow, pGame, pInputManager) {
             auto pRenderer = dynamic_cast<DirectXRenderer*>(pGameWindow->getRenderer());
             REQUIRE(pRenderer);
@@ -277,7 +277,7 @@ TEST_CASE("all assigned descriptors are freed when resource is destroyed") {
 
     class TestGameInstance : public GameInstance {
     public:
-        TestGameInstance(Window* pGameWindow, Game* pGame, InputManager* pInputManager)
+        TestGameInstance(Window* pGameWindow, GameManager* pGame, InputManager* pInputManager)
             : GameInstance(pGameWindow, pGame, pInputManager) {
             auto pRenderer = dynamic_cast<DirectXRenderer*>(pGameWindow->getRenderer());
             REQUIRE(pRenderer);
@@ -363,7 +363,7 @@ TEST_CASE("create CBV resource") {
 
     class TestGameInstance : public GameInstance {
     public:
-        TestGameInstance(Window* pGameWindow, Game* pGame, InputManager* pInputManager)
+        TestGameInstance(Window* pGameWindow, GameManager* pGame, InputManager* pInputManager)
             : GameInstance(pGameWindow, pGame, pInputManager) {
             auto pRenderer = dynamic_cast<DirectXRenderer*>(pGameWindow->getRenderer());
             REQUIRE(pRenderer);
@@ -417,7 +417,7 @@ TEST_CASE("create SRV resource") {
 
     class TestGameInstance : public GameInstance {
     public:
-        TestGameInstance(Window* pGameWindow, Game* pGame, InputManager* pInputManager)
+        TestGameInstance(Window* pGameWindow, GameManager* pGame, InputManager* pInputManager)
             : GameInstance(pGameWindow, pGame, pInputManager) {
             auto pRenderer = dynamic_cast<DirectXRenderer*>(pGameWindow->getRenderer());
             REQUIRE(pRenderer);
@@ -483,7 +483,7 @@ TEST_CASE("create UAV resource") {
 
     class TestGameInstance : public GameInstance {
     public:
-        TestGameInstance(Window* pGameWindow, Game* pGame, InputManager* pInputManager)
+        TestGameInstance(Window* pGameWindow, GameManager* pGame, InputManager* pInputManager)
             : GameInstance(pGameWindow, pGame, pInputManager) {
             auto pRenderer = dynamic_cast<DirectXRenderer*>(pGameWindow->getRenderer());
             REQUIRE(pRenderer);
@@ -549,7 +549,7 @@ TEST_CASE("create RTV resource") {
 
     class TestGameInstance : public GameInstance {
     public:
-        TestGameInstance(Window* pGameWindow, Game* pGame, InputManager* pInputManager)
+        TestGameInstance(Window* pGameWindow, GameManager* pGame, InputManager* pInputManager)
             : GameInstance(pGameWindow, pGame, pInputManager) {
             auto pRenderer = dynamic_cast<DirectXRenderer*>(pGameWindow->getRenderer());
             REQUIRE(pRenderer);
@@ -619,7 +619,7 @@ TEST_CASE("create DSV resource") {
 
     class TestGameInstance : public GameInstance {
     public:
-        TestGameInstance(Window* pGameWindow, Game* pGame, InputManager* pInputManager)
+        TestGameInstance(Window* pGameWindow, GameManager* pGame, InputManager* pInputManager)
             : GameInstance(pGameWindow, pGame, pInputManager) {
             auto pRenderer = dynamic_cast<DirectXRenderer*>(pGameWindow->getRenderer());
             REQUIRE(pRenderer);

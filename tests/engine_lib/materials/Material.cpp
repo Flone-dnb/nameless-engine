@@ -13,7 +13,7 @@ TEST_CASE("create engine default materials") {
 
     class TestGameInstance : public GameInstance {
     public:
-        TestGameInstance(Window* pGameWindow, Game* pGame, InputManager* pInputManager)
+        TestGameInstance(Window* pGameWindow, GameManager* pGame, InputManager* pInputManager)
             : GameInstance(pGameWindow, pGame, pInputManager) {}
         virtual void onGameStarted() override {
             createWorld([&](const std::optional<Error>& optionalError) {
@@ -117,7 +117,7 @@ TEST_CASE("serialize and deserialize Material") {
 
     class TestGameInstance : public GameInstance {
     public:
-        TestGameInstance(Window* pGameWindow, Game* pGame, InputManager* pInputManager)
+        TestGameInstance(Window* pGameWindow, GameManager* pGame, InputManager* pInputManager)
             : GameInstance(pGameWindow, pGame, pInputManager) {}
         virtual void onGameStarted() override {
             createWorld([&](const std::optional<Error>& optionalError) {

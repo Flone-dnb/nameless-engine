@@ -39,7 +39,7 @@
 #endif
 
 namespace ne {
-    DirectXRenderer::DirectXRenderer(Game* pGame) : Renderer(pGame) {
+    DirectXRenderer::DirectXRenderer(GameManager* pGame) : Renderer(pGame) {
         std::scoped_lock frameGuard(*getRenderResourcesMutex());
 
         // Initialize the current fence value.
@@ -324,7 +324,7 @@ namespace ne {
 
     void DirectXRenderer::drawNextFrame() {
         // Get active camera.
-        const auto pMtxActiveCamera = getGame()->getCameraManager()->getActiveCamera();
+        const auto pMtxActiveCamera = getGameManager()->getCameraManager()->getActiveCamera();
         std::scoped_lock activeCameraGuard(pMtxActiveCamera->first);
 
         // Get camera properties of the active camera.
@@ -514,7 +514,7 @@ namespace ne {
             pCameraProperties->getProjectionMatrix() * pCameraProperties->getViewMatrix();
 
         // Set time parameters.
-        mtxFrameConstants.second.timeSincePrevFrameInSec = getGame()->getTimeSincePrevFrameInSec();
+        mtxFrameConstants.second.timeSincePrevFrameInSec = getGameManager()->getTimeSincePrevFrameInSec();
         mtxFrameConstants.second.totalTimeInSec = GameInstance::getTotalApplicationTimeInSec();
 
         // Copy to GPU.
@@ -1184,7 +1184,7 @@ namespace ne {
 
     void DirectXRenderer::waitForGpuToFinishWorkUpToThisPoint() {
         if (pCommandQueue == nullptr) {
-            if (Game::get() == nullptr || Game::get()->isBeingDestroyed()) {
+            if (GameManager::get() == nullptr || GameManager::get()->isBeingDestroyed()) {
                 // This might happen on destruction, it's fine.
                 return;
             }

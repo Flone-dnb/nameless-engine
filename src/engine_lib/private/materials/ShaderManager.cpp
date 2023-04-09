@@ -4,7 +4,7 @@
 #include <filesystem>
 
 // Custom.
-#include "game/Game.h"
+#include "game/GameManager.h"
 #include "io/Logger.h"
 #include "materials/Shader.h"
 #include "render/Renderer.h"
@@ -503,23 +503,24 @@ namespace ne {
         std::shared_ptr<std::atomic<size_t>> pCompiledShaderCount = std::make_shared<std::atomic<size_t>>();
 
         for (size_t i = 0; i < vShadersToCompile.size(); i++) {
-            pRenderer->getGame()->addTaskToThreadPool([this,
-                                                       iCurrentQueryId,
-                                                       pCompiledShaderCount,
-                                                       iTotalShaderCount,
-                                                       shaderToCompile = std::move(vShadersToCompile[i]),
-                                                       onProgress,
-                                                       onError,
-                                                       onCompleted]() mutable {
-                compileShaderTask(
-                    iCurrentQueryId,
-                    pCompiledShaderCount,
-                    iTotalShaderCount,
-                    std::move(shaderToCompile),
-                    onProgress,
-                    onError,
-                    onCompleted);
-            });
+            pRenderer->getGameManager()->addTaskToThreadPool(
+                [this,
+                 iCurrentQueryId,
+                 pCompiledShaderCount,
+                 iTotalShaderCount,
+                 shaderToCompile = std::move(vShadersToCompile[i]),
+                 onProgress,
+                 onError,
+                 onCompleted]() mutable {
+                    compileShaderTask(
+                        iCurrentQueryId,
+                        pCompiledShaderCount,
+                        iTotalShaderCount,
+                        std::move(shaderToCompile),
+                        onProgress,
+                        onError,
+                        onCompleted);
+                });
         }
 
         return {};
@@ -569,7 +570,7 @@ namespace ne {
             if (!std::holds_alternative<std::shared_ptr<ShaderPack>>(result)) {
                 if (std::holds_alternative<std::string>(result)) {
                     auto sShaderError = std::get<std::string>(std::move(result));
-                    pRenderer->getGame()->addDeferredTask(
+                    pRenderer->getGameManager()->addDeferredTask(
                         [onError, shaderDescription, sShaderError = std::move(sShaderError)]() mutable {
                             onError(std::move(shaderDescription), sShaderError);
                         });
@@ -583,7 +584,7 @@ namespace ne {
                             iQueryId,
                             err.getFullErrorMessage()),
                         sShaderManagerLogCategory);
-                    pRenderer->getGame()->addDeferredTask([onError, shaderDescription, err]() mutable {
+                    pRenderer->getGameManager()->addDeferredTask([onError, shaderDescription, err]() mutable {
                         onError(std::move(shaderDescription), err);
                     });
                 }
@@ -603,7 +604,7 @@ namespace ne {
                 Logger::get().error(
                     fmt::format("shader compilation query #{}: {}", iQueryId, err.getFullErrorMessage()),
                     sShaderManagerLogCategory);
-                pRenderer->getGame()->addDeferredTask([onError, shaderDescription, err]() mutable {
+                pRenderer->getGameManager()->addDeferredTask([onError, shaderDescription, err]() mutable {
                     onError(std::move(shaderDescription), err);
                 });
             } else {
@@ -630,7 +631,7 @@ namespace ne {
                     Logger::get().error(
                         fmt::format("shader compilation query #{}: {}", iQueryId, err.getFullErrorMessage()),
                         sShaderManagerLogCategory);
-                    pRenderer->getGame()->addDeferredTask([onError, shaderDescription, err]() mutable {
+                    pRenderer->getGameManager()->addDeferredTask([onError, shaderDescription, err]() mutable {
                         onError(std::move(shaderDescription), err);
                     });
                     break;
@@ -655,7 +656,7 @@ namespace ne {
                 iTotalShaderCount,
                 shaderDescription.sShaderName),
             sShaderManagerLogCategory);
-        pRenderer->getGame()->addDeferredTask([onProgress, iCompiledShaderCount, iTotalShaderCount]() {
+        pRenderer->getGameManager()->addDeferredTask([onProgress, iCompiledShaderCount, iTotalShaderCount]() {
             onProgress(iCompiledShaderCount, iTotalShaderCount);
         });
 
@@ -668,7 +669,7 @@ namespace ne {
                     iQueryId,
                     iTotalShaderCount),
                 sShaderManagerLogCategory);
-            pRenderer->getGame()->addDeferredTask(onCompleted);
+            pRenderer->getGameManager()->addDeferredTask(onCompleted);
         }
     }
 } // namespace ne

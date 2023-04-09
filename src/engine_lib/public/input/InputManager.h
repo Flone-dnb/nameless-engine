@@ -76,7 +76,7 @@ namespace ne {
      */
     class InputManager {
         // Triggers input events.
-        friend class Game;
+        friend class GameManager;
 
     public:
         InputManager() = default;

@@ -22,20 +22,20 @@ namespace ne {
     class CameraManager;
 
     /**
-     * Holds main game objects: game instance, input manager, renderer,
+     * Controls main game objects: game instance, input manager, renderer,
      * audio engine, physics engine and etc.
      *
-     * Owned by Window object.
+     * @remark Owned by Window object.
      */
-    class Game {
+    class GameManager {
         // The Game should only be created by a Window instance.
         friend class Window;
 
     public:
-        Game(const Game&) = delete;
-        Game& operator=(const Game&) = delete;
+        GameManager(const GameManager&) = delete;
+        GameManager& operator=(const GameManager&) = delete;
 
-        virtual ~Game();
+        virtual ~GameManager();
 
         /**
          * Returns last created Game object.
@@ -46,7 +46,7 @@ namespace ne {
          *
          * @return `nullptr` if no Game object was created yet, otherwise pointer to game object.
          */
-        static Game* get();
+        static GameManager* get();
 
         /**
          * Modifies the interval after which we need to run garbage collector again.
@@ -260,7 +260,7 @@ namespace ne {
          *
          * @param pWindow Window that owns this Game object.
          */
-        Game(Window* pWindow);
+        GameManager(Window* pWindow);
 
         /**
          * Contains destructor logic: runs GC for the last time, destroys game instance, etc.

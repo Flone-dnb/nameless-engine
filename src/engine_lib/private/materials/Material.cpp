@@ -1,7 +1,7 @@
 #include "materials/Material.h"
 
 // Custom.
-#include "game/Game.h"
+#include "game/GameManager.h"
 #include "game/Window.h"
 #include "io/Logger.h"
 #include "game/nodes/MeshNode.h"
@@ -138,7 +138,7 @@ namespace ne {
         bool bUseTransparency,
         const std::string& sMaterialName) {
         // Get shader manager.
-        const auto pGame = Game::get();
+        const auto pGame = GameManager::get();
         if (pGame == nullptr) [[unlikely]] {
             return Error("unable to create material when game object is not created");
         }

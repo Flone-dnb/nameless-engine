@@ -1,7 +1,7 @@
 ﻿#include "render/Renderer.h"
 
 // Custom.
-#include "game/Game.h"
+#include "game/GameManager.h"
 #include "game/Window.h"
 #include "io/Logger.h"
 #include "materials/ShaderMacro.h"
@@ -15,8 +15,8 @@
 #include "fmt/core.h"
 
 namespace ne {
-    Renderer::Renderer(Game* pGame) {
-        this->pGame = pGame;
+    Renderer::Renderer(GameManager* pGameManager) {
+        this->pGameManager = pGameManager;
 
         pShaderManager = std::make_unique<ShaderManager>(this);
         pPsoManager = std::make_unique<PsoManager>(this);
@@ -35,9 +35,9 @@ namespace ne {
             sRendererLogCategory);
     }
 
-    std::unique_ptr<Renderer> Renderer::create(Game* pGame) {
+    std::unique_ptr<Renderer> Renderer::create(GameManager* pGameManager) {
 #if defined(WIN32)
-        return std::make_unique<DirectXRenderer>(pGame);
+        return std::make_unique<DirectXRenderer>(pGameManager);
         // TODO: vulkan
 #elif __linux__
         // TODO: vulkan
@@ -56,9 +56,9 @@ namespace ne {
         return &mtxShaderConfiguration;
     }
 
-    Window* Renderer::getWindow() const { return pGame->getWindow(); }
+    Window* Renderer::getWindow() const { return pGameManager->getWindow(); }
 
-    Game* Renderer::getGame() const { return pGame; }
+    GameManager* Renderer::getGameManager() const { return pGameManager; }
 
     ShaderManager* Renderer::getShaderManager() const { return pShaderManager.get(); }
 

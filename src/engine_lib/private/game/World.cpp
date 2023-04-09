@@ -3,11 +3,11 @@
 // Custom.
 #include "misc/Error.h"
 #include "io/Logger.h"
-#include "game/Game.h"
+#include "game/GameManager.h"
 
 namespace ne {
 
-    World::World(Game* pGame, gc<Node> pRootNode, size_t iWorldSize) : iWorldSize(iWorldSize) {
+    World::World(GameManager* pGameManager, gc<Node> pRootNode, size_t iWorldSize) : iWorldSize(iWorldSize) {
         // Check that world size is power of 2.
         if (!std::has_single_bit(iWorldSize)) {
             Error err(fmt::format(
@@ -17,7 +17,7 @@ namespace ne {
         }
 
         // Check if the game instance exists.
-        const auto pGameInstance = pGame->getGameInstance();
+        const auto pGameInstance = pGameManager->getGameInstance();
         if (pGameInstance == nullptr) {
             Error err("an attempt was made to create a new world while GameInstance is not created. "
                       "Are you trying to create a new world in GameInstance's constructor? Use "
@@ -27,7 +27,7 @@ namespace ne {
         }
 
         // Initialize self.
-        this->pGame = pGame;
+        this->pGameManager = pGameManager;
         mtxIsDestroyed.second = false;
 
         // Spawn root node.
@@ -61,12 +61,12 @@ namespace ne {
         }
     }
 
-    std::unique_ptr<World> World::createWorld(Game* pGame, size_t iWorldSize) {
-        return std::unique_ptr<World>(new World(pGame, gc_new<Node>("Root"), iWorldSize));
+    std::unique_ptr<World> World::createWorld(GameManager* pGameManager, size_t iWorldSize) {
+        return std::unique_ptr<World>(new World(pGameManager, gc_new<Node>("Root"), iWorldSize));
     }
 
-    std::variant<std::unique_ptr<World>, Error>
-    World::loadNodeTreeAsWorld(Game* pGame, const std::filesystem::path& pathToNodeTree, size_t iWorldSize) {
+    std::variant<std::unique_ptr<World>, Error> World::loadNodeTreeAsWorld(
+        GameManager* pGameManager, const std::filesystem::path& pathToNodeTree, size_t iWorldSize) {
         // Deserialize node tree.
         auto result = Node::deserializeNodeTree(pathToNodeTree);
         if (std::holds_alternative<Error>(result)) {
@@ -77,7 +77,7 @@ namespace ne {
 
         auto pRootNode = std::get<gc<Node>>(result);
 
-        return std::unique_ptr<World>(new World(pGame, pRootNode, iWorldSize));
+        return std::unique_ptr<World>(new World(pGameManager, pRootNode, iWorldSize));
     }
 
     size_t World::getTotalSpawnedNodeCount() { return iTotalSpawnedNodeCount.load(); }
@@ -137,7 +137,7 @@ namespace ne {
         // one node inside of its tick function decided to spawn another node would cause us to get here)
         // without deferred task we will modify array that we are iterating over which will cause
         // bad things.
-        pGame->addDeferredTask([this, pNode]() {
+        pGameManager->addDeferredTask([this, pNode]() {
             if (pNode->isCalledEveryFrame()) {
                 // Add node to array of nodes that should be called every frame.
                 if (pNode->getTickGroup() == TickGroup::FIRST) {
@@ -162,7 +162,7 @@ namespace ne {
     void World::onNodeDespawned(Node* pNode) {
         // Remove to our arrays as deferred task (see onNodeSpawned for the reason).
         // Additionally, engine guarantees that all deferred tasks will be finished
-        pGame->addDeferredTask([this, pNode]() {
+        pGameManager->addDeferredTask([this, pNode]() {
             if (pNode->isCalledEveryFrame()) {
                 // Remove node from array of nodes that should be called every frame.
                 bool bFound = false;

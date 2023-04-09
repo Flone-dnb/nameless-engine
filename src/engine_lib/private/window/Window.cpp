@@ -103,8 +103,8 @@ namespace ne {
     float Window::getOpacity() const { return glfwGetWindowOpacity(pGlfwWindow); }
 
     Renderer* Window::getRenderer() const {
-        if (pGame && pGame->pRenderer) {
-            return pGame->pRenderer.get();
+        if (pGameManager != nullptr && pGameManager->pRenderer != nullptr) {
+            return pGameManager->pRenderer.get();
         }
 
         return nullptr;
@@ -115,25 +115,25 @@ namespace ne {
 #endif
 
     void Window::onKeyboardInput(KeyboardKey key, KeyboardModifiers modifiers, bool bIsPressedDown) const {
-        if (!pGame) {
+        if (pGameManager == nullptr) [[unlikely]] {
             return;
         }
-        pGame->onKeyboardInput(key, modifiers, bIsPressedDown);
+        pGameManager->onKeyboardInput(key, modifiers, bIsPressedDown);
     }
 
     void Window::onMouseInput(MouseButton button, KeyboardModifiers modifiers, bool bIsPressedDown) const {
-        if (!pGame) {
+        if (pGameManager == nullptr) [[unlikely]] {
             return;
         }
 
-        pGame->onMouseInput(button, modifiers, bIsPressedDown);
+        pGameManager->onMouseInput(button, modifiers, bIsPressedDown);
     }
 
     void Window::onMouseMove(int iXPos, int iYPos) {
-        if (pGame) {
+        if (pGameManager != nullptr) [[likely]] {
             const int iDeltaX = iXPos - iLastMouseXPos;
             const int iDeltaY = iLastMouseYPos - iYPos;
-            pGame->onMouseMove(iDeltaX, iDeltaY);
+            pGameManager->onMouseMove(iDeltaX, iDeltaY);
         }
 
         iLastMouseXPos = static_cast<int>(iXPos);
@@ -141,18 +141,18 @@ namespace ne {
     }
 
     void Window::onMouseScrollMove(int iOffset) const {
-        if (!pGame) {
+        if (pGameManager == nullptr) [[unlikely]] {
             return;
         }
 
-        pGame->onMouseScrollMove(iOffset);
+        pGameManager->onMouseScrollMove(iOffset);
     }
 
     void Window::onWindowFocusChanged(bool bIsFocused) const {
-        if (!pGame) {
+        if (pGameManager == nullptr) {
             return;
         }
-        pGame->onWindowFocusChanged(bIsFocused);
+        pGameManager->onWindowFocusChanged(bIsFocused);
     }
 
     void Window::glfwWindowKeyboardCallback(

@@ -15,7 +15,7 @@
 #include "render/general/resources/FrameResourcesManager.h"
 
 namespace ne {
-    class Game;
+    class GameManager;
     class Window;
     class PsoManager;
     class ShaderConfiguration;
@@ -42,11 +42,11 @@ namespace ne {
         /**
          * Creates a new platform-specific renderer.
          *
-         * @param pGame Game object that will own this renderer.
+         * @param pGameManager Game manager object that will own this renderer.
          *
          * @return Created renderer.
          */
-        static std::unique_ptr<Renderer> create(Game* pGame);
+        static std::unique_ptr<Renderer> create(GameManager* pGameManager);
 
         /**
          * Looks for video adapters (GPUs) that support this renderer.
@@ -130,13 +130,13 @@ namespace ne {
         Window* getWindow() const;
 
         /**
-         * Game object that owns this renderer.
+         * Game manager object that owns this renderer.
          *
          * @warning Do not delete (free) returned pointer.
          *
-         * @return Game object.
+         * @return Game manager object.
          */
-        Game* getGame() const;
+        GameManager* getGameManager() const;
 
         /**
          * Returns shader manager used to compile shaders.
@@ -195,9 +195,9 @@ namespace ne {
         /**
          * Constructor.
          *
-         * @param pGame Game object that owns this renderer.
+         * @param pGameManager pGameManager object that owns this renderer.
          */
-        Renderer(Game* pGame);
+        Renderer(GameManager* pGameManager);
 
         /**
          * Returns the amount of buffers the swap chain has.
@@ -292,8 +292,8 @@ namespace ne {
          */
         std::pair<std::recursive_mutex, std::shared_ptr<RenderSettings>> mtxRenderSettings;
 
-        /** Do not delete (free) this pointer. Game object that owns this renderer. */
-        Game* pGame = nullptr;
+        /** Do not delete (free) this pointer. Game manager object that owns this renderer. */
+        GameManager* pGameManager = nullptr;
 
         /** Number of buffers in swap chain. */
         static constexpr unsigned int iSwapChainBufferCount = 2;

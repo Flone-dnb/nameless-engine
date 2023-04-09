@@ -1,6 +1,7 @@
 ﻿#include "EditorGameInstance.h"
 
 namespace ne {
-    EditorGameInstance::EditorGameInstance(Window* pWindow, Game* pGame, InputManager* pInputManager)
-        : GameInstance(pWindow, pGame, pInputManager) {}
+    EditorGameInstance::EditorGameInstance(
+        Window* pWindow, GameManager* pGameManager, InputManager* pInputManager)
+        : GameInstance(pWindow, pGameManager, pInputManager) {}
 } // namespace ne

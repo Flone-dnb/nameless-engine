@@ -5,7 +5,7 @@
 
 namespace ne {
     class Window;
-    class Game;
+    class GameManager;
     class InputManager;
 
     /** Defines editor game. */
@@ -19,10 +19,10 @@ namespace ne {
          * provides @ref getWindow and @ref getInputManager functions.
          *
          * @param pWindow       Window that owns this game instance.
-         * @param pGame         Game that owns this game instance.
+         * @param pGameManager  GameManager that owns this game instance.
          * @param pInputManager Input manager of the owner Game object.
          */
-        EditorGameInstance(Window* pWindow, Game* pGame, InputManager* pInputManager);
+        EditorGameInstance(Window* pWindow, GameManager* pGameManager, InputManager* pInputManager);
 
         virtual ~EditorGameInstance() override = default;
     };

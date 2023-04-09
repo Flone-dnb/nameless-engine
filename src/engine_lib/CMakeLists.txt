@@ -83,8 +83,8 @@ set(ENGINE_LIB_SOURCES
     public/game/Window.h
     private/game/GameInstance.cpp
     public/game/GameInstance.h
-    private/game/Game.h
-    private/game/Game.cpp
+    private/game/GameManager.h
+    private/game/GameManager.cpp
     public/render/Renderer.h
     private/render/general/Renderer.cpp
     public/render/RenderSettings.h

@@ -11,7 +11,7 @@ TEST_CASE("orbital camera node behaves correctly when used in a node tree") {
 
     class TestGameInstance : public GameInstance {
     public:
-        TestGameInstance(Window* pGameWindow, Game* pGame, InputManager* pInputManager)
+        TestGameInstance(Window* pGameWindow, GameManager* pGame, InputManager* pInputManager)
             : GameInstance(pGameWindow, pGame, pInputManager) {}
         virtual void onGameStarted() override {
             createWorld([&](const std::optional<Error>& optionalWorldError) {

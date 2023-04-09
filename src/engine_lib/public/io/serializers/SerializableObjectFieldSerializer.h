@@ -18,7 +18,7 @@ namespace ne {
      */
     class SerializableObjectFieldSerializer : public IFieldSerializer {
         // Checks GUIDs uniqueness in debug builds.
-        friend class Game;
+        friend class GameManager;
 
     public:
         SerializableObjectFieldSerializer() = default;
@@ -241,8 +241,8 @@ namespace ne {
         /**
          * Checks that all classes/structs that inherit from Serializable have correct and unique GUIDs.
          *
-         * Automatically called by the Game object (object that owns GameInstance) and has no point in being
-         * called from your game's code.
+         * Automatically called by the GameManager object (object that owns GameInstance) and has no point in
+         * being called from your game's code.
          */
         static void checkGuidUniqueness();
 

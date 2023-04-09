@@ -1,4 +1,4 @@
-﻿#include "Game.h"
+﻿#include "GameManager.h"
 
 // Standard.
 #include <thread>
@@ -20,14 +20,15 @@
 
 namespace ne {
     // Static pointer for accessing last created game.
-    static Game* pLastCreatedGame = nullptr;
+    static GameManager* pLastCreatedGameManager = nullptr;
 
-    Game::Game(Window* pWindow) {
+    GameManager::GameManager(Window* pWindow) {
         this->pWindow = pWindow;
 
         // Update static pointer.
-        Logger::get().info("new Game is created, updating static Game pointer", sGameLogCategory);
-        pLastCreatedGame = this;
+        Logger::get().info(
+            "new GameManager is created, updating static GameManager pointer", sGameLogCategory);
+        pLastCreatedGameManager = this;
 
         // Make sure that `res` directory is set and exists.
         // (intentionally ignore result, will show an error if not exists)
@@ -57,7 +58,7 @@ namespace ne {
         pCameraManager = std::make_unique<CameraManager>();
     }
 
-    void Game::destroy() {
+    void GameManager::destroy() {
         if (bIsBeingDestroyed) {
             return;
         }
@@ -113,8 +114,8 @@ namespace ne {
 
         // After GC has finished and all nodes were deleted.
         // Clear global game pointer.
-        Logger::get().info("clearing static Game pointer", sGameLogCategory);
-        pLastCreatedGame = nullptr;
+        Logger::get().info("clearing static GameManager pointer", sGameLogCategory);
+        pLastCreatedGameManager = nullptr;
 
         // See if there are any nodes alive.
         const auto iNodesAlive = Node::getAliveNodeCount();
@@ -152,9 +153,9 @@ namespace ne {
         }
     }
 
-    void Game::onTickFinished() { runGarbageCollection(); }
+    void GameManager::onTickFinished() { runGarbageCollection(); }
 
-    void Game::runGarbageCollection(bool bForce) {
+    void GameManager::runGarbageCollection(bool bForce) {
         // Make sure this function is being executed on the main thread.
         const auto currentThreadId = std::this_thread::get_id();
         if (currentThreadId != mainThreadId) [[unlikely]] {
@@ -223,15 +224,16 @@ namespace ne {
         lastGcRunTime = std::chrono::steady_clock::now();
     }
 
-    Game::~Game() { destroy(); }
+    GameManager::~GameManager() { destroy(); }
 
-    Game* Game::get() { return pLastCreatedGame; }
+    GameManager* GameManager::get() { return pLastCreatedGameManager; }
 
-    void Game::setGarbageCollectorRunInterval(long long iGcRunIntervalInSec) {
+    void GameManager::setGarbageCollectorRunInterval(long long iGcRunIntervalInSec) {
         this->iGcRunIntervalInSec = std::clamp<long long>(iGcRunIntervalInSec, 30, 300); // NOLINT
     }
 
-    void Game::queueGarbageCollection(bool bForce, const std::optional<std::function<void()>>& onFinished) {
+    void
+    GameManager::queueGarbageCollection(bool bForce, const std::optional<std::function<void()>>& onFinished) {
         addDeferredTask([this, bForce, onFinished]() {
             runGarbageCollection(bForce);
             if (onFinished.has_value()) {
@@ -240,7 +242,7 @@ namespace ne {
         });
     }
 
-    void Game::onBeforeNewFrame(float timeSincePrevCallInSec) {
+    void GameManager::onBeforeNewFrame(float timeSincePrevCallInSec) {
         // Save delta time.
         timeSincePrevFrameInSec = timeSincePrevCallInSec;
 
@@ -275,7 +277,7 @@ namespace ne {
         pCameraManager->onBeforeNewFrame(timeSincePrevCallInSec);
     }
 
-    void Game::executeDeferredTasks() {
+    void GameManager::executeDeferredTasks() {
         std::scoped_lock guard(mtxDeferredTasks.first);
 
         if (!bShouldAcceptNewDeferredTasks) // check under mutex
@@ -290,7 +292,7 @@ namespace ne {
         }
     }
 
-    void Game::addTaskToThreadPool(const std::function<void()>& task) {
+    void GameManager::addTaskToThreadPool(const std::function<void()>& task) {
         if (bIsBeingDestroyed) [[unlikely]] {
             // Destructor is running, don't queue any more tasks.
             return;
@@ -299,8 +301,8 @@ namespace ne {
         threadPool.addTask(task);
     }
 
-    void
-    Game::createWorld(const std::function<void(const std::optional<Error>&)>& onCreated, size_t iWorldSize) {
+    void GameManager::createWorld(
+        const std::function<void(const std::optional<Error>&)>& onCreated, size_t iWorldSize) {
         addDeferredTask([=]() {
             std::scoped_lock guard(mtxWorld.first);
 
@@ -312,7 +314,7 @@ namespace ne {
         });
     }
 
-    void Game::loadNodeTreeAsWorld(
+    void GameManager::loadNodeTreeAsWorld(
         const std::function<void(const std::optional<Error>&)>& onLoaded,
         const std::filesystem::path& pathToNodeTree,
         size_t iWorldSize) {
@@ -336,7 +338,7 @@ namespace ne {
         });
     }
 
-    gc<Node> Game::getWorldRootNode() {
+    gc<Node> GameManager::getWorldRootNode() {
         std::scoped_lock guard(mtxWorld.first);
 
         if (mtxWorld.second == nullptr) {
@@ -346,7 +348,7 @@ namespace ne {
         return mtxWorld.second->getRootNode();
     }
 
-    float Game::getWorldTimeInSeconds() {
+    float GameManager::getWorldTimeInSeconds() {
         std::scoped_lock guard(mtxWorld.first);
 
         if (mtxWorld.second == nullptr) {
@@ -356,7 +358,7 @@ namespace ne {
         return mtxWorld.second->getWorldTimeInSeconds();
     }
 
-    size_t Game::getWorldSize() {
+    size_t GameManager::getWorldSize() {
         std::scoped_lock guard(mtxWorld.first);
 
         if (mtxWorld.second == nullptr) {
@@ -366,7 +368,7 @@ namespace ne {
         return mtxWorld.second->getWorldSize();
     }
 
-    size_t Game::getTotalSpawnedNodeCount() {
+    size_t GameManager::getTotalSpawnedNodeCount() {
         std::scoped_lock guard(mtxWorld.first);
 
         if (mtxWorld.second == nullptr) {
@@ -376,7 +378,7 @@ namespace ne {
         return mtxWorld.second->getTotalSpawnedNodeCount();
     }
 
-    size_t Game::getCalledEveryFrameNodeCount() {
+    size_t GameManager::getCalledEveryFrameNodeCount() {
         std::scoped_lock guard(mtxWorld.first);
 
         if (mtxWorld.second == nullptr) {
@@ -386,7 +388,7 @@ namespace ne {
         return mtxWorld.second->getCalledEveryFrameNodeCount();
     }
 
-    void Game::onKeyboardInput(KeyboardKey key, KeyboardModifiers modifiers, bool bIsPressedDown) {
+    void GameManager::onKeyboardInput(KeyboardKey key, KeyboardModifiers modifiers, bool bIsPressedDown) {
         pGameInstance->onKeyboardInput(key, modifiers, bIsPressedDown);
 
         triggerActionEvents(key, modifiers, bIsPressedDown);
@@ -394,13 +396,13 @@ namespace ne {
         triggerAxisEvents(key, modifiers, bIsPressedDown);
     }
 
-    void Game::onMouseInput(MouseButton button, KeyboardModifiers modifiers, bool bIsPressedDown) {
+    void GameManager::onMouseInput(MouseButton button, KeyboardModifiers modifiers, bool bIsPressedDown) {
         pGameInstance->onMouseInput(button, modifiers, bIsPressedDown);
 
         triggerActionEvents(button, modifiers, bIsPressedDown);
     }
 
-    void Game::onMouseMove(int iXOffset, int iYOffset) {
+    void GameManager::onMouseMove(int iXOffset, int iYOffset) {
         pGameInstance->onMouseMove(iXOffset, iYOffset);
 
         // Call on nodes that receive input.
@@ -416,7 +418,7 @@ namespace ne {
         }
     }
 
-    void Game::onMouseScrollMove(int iOffset) {
+    void GameManager::onMouseScrollMove(int iOffset) {
         pGameInstance->onMouseScrollMove(iOffset);
 
         // Call on nodes that receive input.
@@ -432,13 +434,13 @@ namespace ne {
         }
     }
 
-    void Game::onWindowFocusChanged(bool bIsFocused) const {
+    void GameManager::onWindowFocusChanged(bool bIsFocused) const {
         pGameInstance->onWindowFocusChanged(bIsFocused);
     }
 
-    void Game::onWindowClose() const { pGameInstance->onWindowClose(); }
+    void GameManager::onWindowClose() const { pGameInstance->onWindowClose(); }
 
-    void Game::addDeferredTask(const std::function<void()>& task) {
+    void GameManager::addDeferredTask(const std::function<void()>& task) {
         if (!bShouldAcceptNewDeferredTasks) {
             // Destructor is running, don't queue any more tasks.
             return;
@@ -456,19 +458,19 @@ namespace ne {
         }
     }
 
-    Window* Game::getWindow() const { return pWindow; }
+    Window* GameManager::getWindow() const { return pWindow; }
 
-    GameInstance* Game::getGameInstance() const { return pGameInstance.get(); }
+    GameInstance* GameManager::getGameInstance() const { return pGameInstance.get(); }
 
-    CameraManager* Game::getCameraManager() const { return pCameraManager.get(); }
+    CameraManager* GameManager::getCameraManager() const { return pCameraManager.get(); }
 
-    float Game::getTimeSincePrevFrameInSec() const { return timeSincePrevFrameInSec; }
+    float GameManager::getTimeSincePrevFrameInSec() const { return timeSincePrevFrameInSec; }
 
-    long long Game::getGarbageCollectorRunIntervalInSec() const { return iGcRunIntervalInSec; }
+    long long GameManager::getGarbageCollectorRunIntervalInSec() const { return iGcRunIntervalInSec; }
 
-    bool Game::isBeingDestroyed() const { return bIsBeingDestroyed; }
+    bool GameManager::isBeingDestroyed() const { return bIsBeingDestroyed; }
 
-    void Game::triggerActionEvents( // NOLINT
+    void GameManager::triggerActionEvents( // NOLINT
         std::variant<KeyboardKey, MouseButton> key,
         KeyboardModifiers modifiers,
         bool bIsPressedDown) {
@@ -563,8 +565,8 @@ namespace ne {
         }
     }
 
-    void
-    Game::triggerAxisEvents(KeyboardKey key, KeyboardModifiers modifiers, bool bIsPressedDown) { // NOLINT
+    void GameManager::triggerAxisEvents(
+        KeyboardKey key, KeyboardModifiers modifiers, bool bIsPressedDown) { // NOLINT
         std::scoped_lock<std::recursive_mutex> guard(inputManager.mtxAxisEvents);
         if (inputManager.axisEvents.empty()) {
             return;
@@ -693,7 +695,7 @@ namespace ne {
         }
     }
 
-    void Game::destroyAndCleanExistingWorld() {
+    void GameManager::destroyAndCleanExistingWorld() {
         std::scoped_lock worldGuard(mtxWorld.first);
 
         if (mtxWorld.second == nullptr) {

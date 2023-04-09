@@ -123,8 +123,8 @@ namespace ne {
         bool markShaderToBeRemoved(const std::string& sShaderName);
 
         /**
-         * Automatically called by the Game object (object that owns GameInstance) and has no point in being
-         * called from your game's code.
+         * Automatically called by the Game manager object (object that owns GameInstance) and has no point
+         * in being called from your game's code.
          *
          * Analyzes the current state to see if any errors have place.
          * Fixes errors and reports them in log.

@@ -1,12 +1,12 @@
 ﻿#include "game/GameInstance.h"
 
 // Custom.
-#include "game/Game.h"
+#include "game/GameManager.h"
 
 namespace ne {
-    GameInstance::GameInstance(Window* pGameWindow, Game* pGame, InputManager* pInputManager) {
+    GameInstance::GameInstance(Window* pGameWindow, GameManager* pGameManager, InputManager* pInputManager) {
         this->pGameWindow = pGameWindow;
-        this->pGame = pGame;
+        this->pGameManager = pGameManager;
         this->pInputManager = pInputManager;
     }
 
@@ -14,12 +14,12 @@ namespace ne {
 
     Window* GameInstance::getWindow() const { return pGameWindow; }
 
-    CameraManager* GameInstance::getCameraManager() const { return pGame->getCameraManager(); }
+    CameraManager* GameInstance::getCameraManager() const { return pGameManager->getCameraManager(); }
 
     InputManager* GameInstance::getInputManager() const { return pInputManager; }
 
     long long GameInstance::getGarbageCollectorRunIntervalInSec() {
-        return pGame->getGarbageCollectorRunIntervalInSec();
+        return pGameManager->getGarbageCollectorRunIntervalInSec();
     }
 
     void GameInstance::onInputActionEvent(
@@ -47,32 +47,32 @@ namespace ne {
     }
 
     void GameInstance::addDeferredTask(const std::function<void()>& task) const {
-        pGame->addDeferredTask(task);
+        pGameManager->addDeferredTask(task);
     }
 
     void GameInstance::addTaskToThreadPool(const std::function<void()>& task) const {
-        pGame->addTaskToThreadPool(task);
+        pGameManager->addTaskToThreadPool(task);
     }
 
     void GameInstance::createWorld(
         const std::function<void(const std::optional<Error>&)>& onCreated, size_t iWorldSize) {
-        pGame->createWorld(onCreated, iWorldSize);
+        pGameManager->createWorld(onCreated, iWorldSize);
     }
 
     void GameInstance::loadNodeTreeAsWorld(
         const std::function<void(const std::optional<Error>&)>& onLoaded,
         const std::filesystem::path& pathToNodeTree,
         size_t iWorldSize) {
-        pGame->loadNodeTreeAsWorld(onLoaded, pathToNodeTree, iWorldSize);
+        pGameManager->loadNodeTreeAsWorld(onLoaded, pathToNodeTree, iWorldSize);
     }
 
     void GameInstance::queueGarbageCollection(
         bool bForce, const std::optional<std::function<void()>>& onFinished) {
-        pGame->queueGarbageCollection(bForce, onFinished);
+        pGameManager->queueGarbageCollection(bForce, onFinished);
     }
 
     void GameInstance::setGarbageCollectorRunInterval(long long iGcRunIntervalInSec) {
-        pGame->setGarbageCollectorRunInterval(iGcRunIntervalInSec);
+        pGameManager->setGarbageCollectorRunInterval(iGcRunIntervalInSec);
     }
 
     std::pair<
@@ -89,14 +89,16 @@ namespace ne {
         return &mtxBindedAxisEvents;
     }
 
-    gc<Node> GameInstance::getWorldRootNode() const { return pGame->getWorldRootNode(); }
+    gc<Node> GameInstance::getWorldRootNode() const { return pGameManager->getWorldRootNode(); }
 
-    float GameInstance::getWorldTimeInSeconds() const { return pGame->getWorldTimeInSeconds(); }
+    float GameInstance::getWorldTimeInSeconds() const { return pGameManager->getWorldTimeInSeconds(); }
 
-    size_t GameInstance::getWorldSize() const { return pGame->getWorldSize(); }
+    size_t GameInstance::getWorldSize() const { return pGameManager->getWorldSize(); }
 
-    size_t GameInstance::getTotalSpawnedNodeCount() { return pGame->getTotalSpawnedNodeCount(); }
+    size_t GameInstance::getTotalSpawnedNodeCount() { return pGameManager->getTotalSpawnedNodeCount(); }
 
-    size_t GameInstance::getCalledEveryFrameNodeCount() { return pGame->getCalledEveryFrameNodeCount(); }
+    size_t GameInstance::getCalledEveryFrameNodeCount() {
+        return pGameManager->getCalledEveryFrameNodeCount();
+    }
 
 } // namespace ne

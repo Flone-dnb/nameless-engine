@@ -32,8 +32,8 @@ namespace ne RNAMESPACE() {
      * or being attached to some parent node.
      */
     class RCLASS(Guid("2a721c37-3c22-450c-8dad-7b6985cbbd61")) Node : public Serializable {
-        // Game will propagate functions to all nodes in the world such as `onBeforeNewFrame`.
-        friend class Game;
+        // GameManager will propagate functions to all nodes in the world such as `onBeforeNewFrame`.
+        friend class GameManager;
 
         // World is able to spawn root node.
         friend class World;

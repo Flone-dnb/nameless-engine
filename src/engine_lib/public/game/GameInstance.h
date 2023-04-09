@@ -14,7 +14,7 @@
 namespace ne {
     class Window;
     class InputManager;
-    class Game;
+    class GameManager;
     class Node;
     class CameraManager;
 
@@ -27,10 +27,11 @@ namespace ne {
      */
     class GameInstance {
         // Game will trigger input events.
-        friend class Game;
+        friend class GameManager;
 
     public:
         GameInstance() = delete;
+
         /**
          * Constructor.
          *
@@ -39,10 +40,10 @@ namespace ne {
          * provides @ref getWindow and @ref getInputManager functions.
          *
          * @param pGameWindow   Window that owns this game instance.
-         * @param pGame         Game that owns this game instance.
+         * @param pGameManager  GameManager that owns this game instance.
          * @param pInputManager Input manager of the owner Game object.
          */
-        GameInstance(Window* pGameWindow, Game* pGame, InputManager* pInputManager);
+        GameInstance(Window* pGameWindow, GameManager* pGameManager, InputManager* pInputManager);
 
         GameInstance(const GameInstance&) = delete;
         GameInstance& operator=(const GameInstance&) = delete;
@@ -420,14 +421,14 @@ namespace ne {
             std::unordered_map<std::string, std::function<void(KeyboardModifiers, float)>>>
             mtxBindedAxisEvents;
 
-        /** Do not delete. Owner of @ref pGame object. */
+        /** Do not delete. Owner of @ref pGameManager object. */
         Window* pGameWindow = nullptr;
 
         /** Do not delete. Owner of this object. */
-        Game* pGame = nullptr;
+        GameManager* pGameManager = nullptr;
 
         /**
-         * Do not delete. Input manager of the @ref pGame object.
+         * Do not delete. Input manager of the @ref pGameManager object.
          */
         InputManager* pInputManager = nullptr;
     };

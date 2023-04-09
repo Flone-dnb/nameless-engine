@@ -8,7 +8,7 @@
 #include "misc/Globals.h"
 #include "game/GameInstance.h"
 #include "game/World.h"
-#include "game/Game.h"
+#include "game/GameManager.h"
 
 #include "Node.generated_impl.h"
 
@@ -592,19 +592,19 @@ namespace ne {
     std::pair<std::recursive_mutex, gc_vector<Node>>* Node::getChildNodes() { return &mtxChildNodes; }
 
     GameInstance* Node::getGameInstance() {
-        const auto pGame = Game::get();
+        const auto pGameManager = GameManager::get();
 
-        if (pGame == nullptr) [[unlikely]] {
-            // Unexpected behavior, all nodes should have been deleted before Game pointer is cleared.
-            Error error("failed to get game instance because static Game object is nullptr");
+        if (pGameManager == nullptr) [[unlikely]] {
+            // Unexpected behavior, all nodes should have been deleted before GameManager pointer is cleared.
+            Error error("failed to get game instance because static GameManager object is nullptr");
             error.showError();
             throw std::runtime_error(error.getFullErrorMessage());
         }
 
-        // Don't check for `pGame->isBeingDestroyed()` here as Game will be marked as `isBeingDestroyed`
-        // before world is destroyed (before nodes are despawned).
+        // Don't check for `pGameManager->isBeingDestroyed()` here as pGameManager will be marked as
+        // `isBeingDestroyed` before world is destroyed (before nodes are despawned).
 
-        return pGame->getGameInstance();
+        return pGameManager->getGameInstance();
     }
 
     gc<Node> Node::getWorldRootNode() {

@@ -8,7 +8,7 @@
 
 // Custom.
 #include "misc/Error.h"
-#include "game/Game.h"
+#include "game/GameManager.h"
 #include "render/Renderer.h"
 #include "window/GLFW.hpp"
 #include "game/GameInstance.h"
@@ -513,7 +513,7 @@ namespace ne {
         Window(GLFWwindow* pGlfwWindow, const std::string& sWindowTitle);
 
         /** Holds main game objects. */
-        std::unique_ptr<Game> pGame;
+        std::unique_ptr<GameManager> pGameManager;
 
         /** GLFW window. */
         GLFWwindow* pGlfwWindow = nullptr;
@@ -539,13 +539,13 @@ namespace ne {
     template <typename MyGameInstance>
         requires std::derived_from<MyGameInstance, GameInstance>
     void Window::processEvents() {
-        pGame = std::unique_ptr<Game>(new Game(this));
+        pGameManager = std::unique_ptr<GameManager>(new GameManager(this));
 
         // ... initialize other Game fields here ...
 
         // Finally create Game Instance when engine (Game) is fully initialized.
         // So that the user can call engine functions in Game Instance constructor.
-        pGame->setGameInstance<MyGameInstance>();
+        pGameManager->setGameInstance<MyGameInstance>();
 
         // Used for tick.
         float fCurrentTimeInSec = 0.0f;
@@ -555,25 +555,25 @@ namespace ne {
             // Execute deferred tasks before processing input and ticking
             // because some deferred tasks are used to remove despawned nodes from world,
             // this way we won't trigger input events/tick on despawned nodes.
-            pGame->executeDeferredTasks();
+            pGameManager->executeDeferredTasks();
 
             // Process window events.
             glfwPollEvents();
 
             // Tick.
             fCurrentTimeInSec = static_cast<float>(glfwGetTime());
-            pGame->onBeforeNewFrame(fCurrentTimeInSec - fPrevTimeInSec);
+            pGameManager->onBeforeNewFrame(fCurrentTimeInSec - fPrevTimeInSec);
             fPrevTimeInSec = fCurrentTimeInSec;
 
             // Draw next frame.
             getRenderer()->drawNextFrame();
 
             // Notify finish.
-            pGame->onTickFinished();
+            pGameManager->onTickFinished();
         }
 
-        pGame->onWindowClose();
-        pGame->destroy(); // explicitly destroy here to run GC for the last time (before everything else is
-                          // destroyed)
+        pGameManager->onWindowClose();
+        pGameManager->destroy(); // explicitly destroy here to run GC for the last time (before everything
+                                 // else is destroyed)
     }
 } // namespace ne

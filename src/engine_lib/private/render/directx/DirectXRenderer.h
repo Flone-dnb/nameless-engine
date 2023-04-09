@@ -22,8 +22,8 @@
 
 namespace ne {
     using namespace Microsoft::WRL;
-
-    class Game;
+    
+    class GameManager;
     class DirectXResourceManager;
     class Material;
     class CameraProperties;
@@ -38,7 +38,7 @@ namespace ne {
          *
          * @param pGame   Game object that owns this renderer.
          */
-        DirectXRenderer(Game* pGame);
+        DirectXRenderer(GameManager* pGame);
         DirectXRenderer() = delete;
         DirectXRenderer(const DirectXRenderer&) = delete;
         DirectXRenderer& operator=(const DirectXRenderer&) = delete;

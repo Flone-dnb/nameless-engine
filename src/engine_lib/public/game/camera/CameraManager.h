@@ -17,7 +17,7 @@ namespace ne {
         friend class CameraNode;
 
         // Calls "on before new frame".
-        friend class Game;
+        friend class GameManager;
 
     public:
         /** Stores active camera. It's either a transient camera or a camera node (never both). */

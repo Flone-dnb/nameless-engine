@@ -10,7 +10,7 @@
 #include "misc/GC.hpp"
 
 namespace ne {
-    class Game;
+    class GameManager;
 
     /** Represents arrays of nodes that are marked as "should be called every frame". */
     struct CalledEveryFrameNodes {
@@ -46,8 +46,8 @@ namespace ne {
         /**
          * Creates a new world that contains only one node - root node.
          *
-         * @param pGame       Game object that owns this world.
-         * @param iWorldSize  Size of the world in game units. Must be power of 2
+         * @param pGameManager GameManager object that owns this world.
+         * @param iWorldSize   Size of the world in game units. Must be power of 2
          * (128, 256, 512, 1024, 2048, etc.). World size needs to be specified for
          * internal purposes such as Directional Light shadow map size.
          * You don't need to care why we need this information, you only need to know that if
@@ -57,14 +57,14 @@ namespace ne {
          *
          * @return Pointer to the new world instance.
          */
-        static std::unique_ptr<World> createWorld(Game* pGame, size_t iWorldSize = 1024);
+        static std::unique_ptr<World> createWorld(GameManager* pGameManager, size_t iWorldSize = 1024);
 
         /**
          * Loads and deserializes a node tree to be used as a new world.
          *
          * Node tree's root node will be used as world's root node.
          *
-         * @param pGame          Game object that owns this world.
+         * @param pGameManager   GameManager object that owns this world.
          * @param pathToNodeTree Path to the file that contains a node tree to load, the ".toml"
          * extension will be automatically added if not specified.
          * @param iWorldSize     Size of the world in game units. Must be power of 2
@@ -78,7 +78,7 @@ namespace ne {
          * @return Error if failed to deserialize the node tree, otherwise pointer to the new world instance.
          */
         static std::variant<std::unique_ptr<World>, Error> loadNodeTreeAsWorld(
-            Game* pGame, const std::filesystem::path& pathToNodeTree, size_t iWorldSize = 1024);
+            GameManager* pGameManager, const std::filesystem::path& pathToNodeTree, size_t iWorldSize = 1024);
 
         /**
          * Returns total amount of currently spawned nodes.
@@ -157,15 +157,15 @@ namespace ne {
         /**
          * Creates a new world with the specified root node.
          *
-         * @param pGame       Game object that owns this world.
-         * @param pRootNode   World's root node.
-         * @param iWorldSize  World size in game units. Must be power of 2
+         * @param pGameManager GameManager object that owns this world.
+         * @param pRootNode    World's root node.
+         * @param iWorldSize   World size in game units. Must be power of 2
          * (128, 256, 512, 1024, 2048, etc.).
          */
-        World(Game* pGame, gc<Node> pRootNode, size_t iWorldSize);
+        World(GameManager* pGameManager, gc<Node> pRootNode, size_t iWorldSize);
 
-        /** Do not delete. Owner game object. */
-        Game* pGame = nullptr;
+        /** Do not delete. Owner GameManager object. */
+        GameManager* pGameManager = nullptr;
 
         /** Whether the world is destroyed (or being destroyed) and should not be used or not. */
         std::pair<std::recursive_mutex, bool> mtxIsDestroyed;

@@ -115,43 +115,25 @@ namespace ne {
 #endif
 
     void Window::onKeyboardInput(KeyboardKey key, KeyboardModifiers modifiers, bool bIsPressedDown) const {
-        if (pGameManager == nullptr) [[unlikely]] {
-            return;
-        }
         pGameManager->onKeyboardInput(key, modifiers, bIsPressedDown);
     }
 
     void Window::onMouseInput(MouseButton button, KeyboardModifiers modifiers, bool bIsPressedDown) const {
-        if (pGameManager == nullptr) [[unlikely]] {
-            return;
-        }
-
         pGameManager->onMouseInput(button, modifiers, bIsPressedDown);
     }
 
     void Window::onMouseMove(int iXPos, int iYPos) {
-        if (pGameManager != nullptr) [[likely]] {
-            const int iDeltaX = iXPos - iLastMouseXPos;
-            const int iDeltaY = iLastMouseYPos - iYPos;
-            pGameManager->onMouseMove(iDeltaX, iDeltaY);
-        }
+        const int iDeltaX = iXPos - iLastMouseXPos;
+        const int iDeltaY = iLastMouseYPos - iYPos;
+        pGameManager->onMouseMove(iDeltaX, iDeltaY);
 
         iLastMouseXPos = static_cast<int>(iXPos);
         iLastMouseYPos = static_cast<int>(iYPos);
     }
 
-    void Window::onMouseScrollMove(int iOffset) const {
-        if (pGameManager == nullptr) [[unlikely]] {
-            return;
-        }
-
-        pGameManager->onMouseScrollMove(iOffset);
-    }
+    void Window::onMouseScrollMove(int iOffset) const { pGameManager->onMouseScrollMove(iOffset); }
 
     void Window::onWindowFocusChanged(bool bIsFocused) const {
-        if (pGameManager == nullptr) {
-            return;
-        }
         pGameManager->onWindowFocusChanged(bIsFocused);
     }
 
@@ -162,7 +144,7 @@ namespace ne {
         }
 
         const Window* pWindow = static_cast<Window*>(glfwGetWindowUserPointer(pGlfwWindow));
-        if (pWindow == nullptr) {
+        if (pWindow == nullptr) [[unlikely]] {
             return;
         }
 
@@ -172,7 +154,7 @@ namespace ne {
 
     void Window::glfwWindowMouseCallback(GLFWwindow* pGlfwWindow, int iButton, int iAction, int iMods) {
         const Window* pWindow = static_cast<Window*>(glfwGetWindowUserPointer(pGlfwWindow));
-        if (pWindow == nullptr) {
+        if (pWindow == nullptr) [[unlikely]] {
             return;
         }
 
@@ -182,7 +164,7 @@ namespace ne {
 
     void Window::glfwWindowFocusCallback(GLFWwindow* pGlfwWindow, int iFocused) {
         const Window* pWindow = static_cast<Window*>(glfwGetWindowUserPointer(pGlfwWindow));
-        if (pWindow == nullptr) {
+        if (pWindow == nullptr) [[unlikely]] {
             return;
         }
 
@@ -191,7 +173,7 @@ namespace ne {
 
     void Window::glfwWindowMouseCursorPosCallback(GLFWwindow* pGlfwWindow, double xPos, double yPos) {
         auto* pWindow = static_cast<Window*>(glfwGetWindowUserPointer(pGlfwWindow));
-        if (pWindow == nullptr) {
+        if (pWindow == nullptr) [[unlikely]] {
             return;
         }
 
@@ -200,7 +182,7 @@ namespace ne {
 
     void Window::glfwWindowMouseScrollCallback(GLFWwindow* pGlfwWindow, double xOffset, double yOffset) {
         const Window* pWindow = static_cast<Window*>(glfwGetWindowUserPointer(pGlfwWindow));
-        if (pWindow == nullptr) {
+        if (pWindow == nullptr) [[unlikely]] {
             return;
         }
 

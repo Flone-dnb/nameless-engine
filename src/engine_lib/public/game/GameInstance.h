@@ -58,79 +58,6 @@ namespace ne {
         static float getTotalApplicationTimeInSec();
 
         /**
-         * Called after GameInstance's constructor is finished and created
-         * GameInstance object was saved in Game object (that owns GameInstance).
-         *
-         * At this point you can create and interact with the game world and etc.
-         */
-        virtual void onGameStarted() {}
-
-        /**
-         * Called before a new frame is rendered.
-         *
-         * @remark Called before nodes that should be called every frame.
-         *
-         * @param timeSincePrevCallInSec Time in seconds that has passed since the last call
-         * to this function.
-         */
-        virtual void onBeforeNewFrame(float timeSincePrevCallInSec) {}
-
-        /**
-         * Called when the window receives keyboard input.
-         * Called before @ref onInputActionEvent.
-         * Prefer to use @ref onInputActionEvent instead of this function.
-         *
-         * @param key            Keyboard key.
-         * @param modifiers      Keyboard modifier keys.
-         * @param bIsPressedDown Whether the key down event occurred or key up.
-         */
-        virtual void onKeyboardInput(KeyboardKey key, KeyboardModifiers modifiers, bool bIsPressedDown) {}
-
-        /**
-         * Called when the window receives mouse input.
-         * Called before @ref onInputActionEvent.
-         * Prefer to use @ref onInputActionEvent instead of this function.
-         *
-         * @param button         Mouse button.
-         * @param modifiers      Keyboard modifier keys.
-         * @param bIsPressedDown Whether the button down event occurred or button up.
-         */
-        virtual void onMouseInput(MouseButton button, KeyboardModifiers modifiers, bool bIsPressedDown) {}
-
-        /**
-         * Called when the window received mouse movement.
-         *
-         * @param iXOffset  Mouse X movement delta in pixels (plus if moved to the right,
-         * minus if moved to the left).
-         * @param iYOffset  Mouse Y movement delta in pixels (plus if moved up,
-         * minus if moved down).
-         */
-        virtual void onMouseMove(int iXOffset, int iYOffset) {}
-
-        /**
-         * Called when the window receives mouse scroll movement.
-         *
-         * @param iOffset Movement offset.
-         */
-        virtual void onMouseScrollMove(int iOffset) {}
-
-        /**
-         * Called when the window focus was changed.
-         *
-         * @param bIsFocused  Whether the window has gained or lost the focus.
-         */
-        virtual void onWindowFocusChanged(bool bIsFocused) {}
-
-        /**
-         * Called when the window that owns this game instance
-         * was requested to close (no new frames will be rendered).
-         *
-         * Prefer to have your destructor logic here, because after this function is finished
-         * the world will be destroyed and will be inaccessible (`nullptr`).
-         */
-        virtual void onWindowClose() {}
-
-        /**
          * Adds a function to be executed on the main thread next time @ref onBeforeNewFrame
          * is called.
          *
@@ -326,6 +253,79 @@ namespace ne {
         long long getGarbageCollectorRunIntervalInSec();
 
     protected:
+        /**
+         * Called after GameInstance's constructor is finished and created
+         * GameInstance object was saved in Game object (that owns GameInstance).
+         *
+         * At this point you can create and interact with the game world and etc.
+         */
+        virtual void onGameStarted() {}
+
+        /**
+         * Called before a new frame is rendered.
+         *
+         * @remark Called before nodes that should be called every frame.
+         *
+         * @param timeSincePrevCallInSec Time in seconds that has passed since the last call
+         * to this function.
+         */
+        virtual void onBeforeNewFrame(float timeSincePrevCallInSec) {}
+
+        /**
+         * Called when the window receives keyboard input.
+         * Called before @ref onInputActionEvent.
+         * Prefer to use @ref onInputActionEvent instead of this function.
+         *
+         * @param key            Keyboard key.
+         * @param modifiers      Keyboard modifier keys.
+         * @param bIsPressedDown Whether the key down event occurred or key up.
+         */
+        virtual void onKeyboardInput(KeyboardKey key, KeyboardModifiers modifiers, bool bIsPressedDown) {}
+
+        /**
+         * Called when the window receives mouse input.
+         * Called before @ref onInputActionEvent.
+         * Prefer to use @ref onInputActionEvent instead of this function.
+         *
+         * @param button         Mouse button.
+         * @param modifiers      Keyboard modifier keys.
+         * @param bIsPressedDown Whether the button down event occurred or button up.
+         */
+        virtual void onMouseInput(MouseButton button, KeyboardModifiers modifiers, bool bIsPressedDown) {}
+
+        /**
+         * Called when the window received mouse movement.
+         *
+         * @param iXOffset  Mouse X movement delta in pixels (plus if moved to the right,
+         * minus if moved to the left).
+         * @param iYOffset  Mouse Y movement delta in pixels (plus if moved up,
+         * minus if moved down).
+         */
+        virtual void onMouseMove(int iXOffset, int iYOffset) {}
+
+        /**
+         * Called when the window receives mouse scroll movement.
+         *
+         * @param iOffset Movement offset.
+         */
+        virtual void onMouseScrollMove(int iOffset) {}
+
+        /**
+         * Called when the window focus was changed.
+         *
+         * @param bIsFocused  Whether the window has gained or lost the focus.
+         */
+        virtual void onWindowFocusChanged(bool bIsFocused) {}
+
+        /**
+         * Called when the window that owns this game instance
+         * was requested to close (no new frames will be rendered).
+         *
+         * Prefer to have your destructor logic here, because after this function is finished
+         * the world will be destroyed and will be inaccessible (`nullptr`).
+         */
+        virtual void onWindowClose() {}
+
         /**
          * Returns map of action events that this GameInstance is binded to (must be used with mutex).
          * Binded callbacks will be automatically called when an action event is triggered.

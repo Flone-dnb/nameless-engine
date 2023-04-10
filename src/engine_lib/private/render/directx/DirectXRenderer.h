@@ -22,7 +22,7 @@
 
 namespace ne {
     using namespace Microsoft::WRL;
-    
+
     class GameManager;
     class DirectXResourceManager;
     class Material;
@@ -166,7 +166,7 @@ namespace ne {
         virtual void drawNextFrame() override;
 
         /**
-         * Recreates all render buffers to match current settings.
+         * Recreates all main render buffers to match current render settings.
          *
          * @return Error if something went wrong.
          */
@@ -193,7 +193,8 @@ namespace ne {
         [[nodiscard]] static std::optional<Error> enableDebugLayer();
 
         /**
-         * (Re)creates depth/stencil buffer.
+         * (Re)creates the depth/stencil buffer with the "depth write" initial state
+         * and binds a DSV to it.
          *
          * @remark Make sure that the old depth/stencil buffer (if was) is not used by the GPU.
          *
@@ -315,7 +316,7 @@ namespace ne {
         std::variant<std::vector<DXGI_MODE_DESC>, Error> getSupportedDisplayModes() const;
 
         /**
-         * Returns current buffer to draw to.
+         * Returns current buffer to draw to: either MSAA render buffer of swap chain's buffer.
          *
          * @return GPU resource.
          */
@@ -360,7 +361,7 @@ namespace ne {
         /** Default back buffer fill color. */
         float backBufferFillColor[4] = {0.0F, 0.0F, 0.0F, 1.0F};
 
-        /** Render target for MSAA rendering. */
+        /** Render target when MSAA is enabled because our swap chain does not support multisampling. */
         std::unique_ptr<DirectXResource> pMsaaRenderBuffer;
 
         /** Supported quality level for MSAA. */
@@ -383,6 +384,18 @@ namespace ne {
          * GPU index (not preferred).
          */
         unsigned int iPickedGpuIndex = 0;
+
+        /** Synchronize presentation for at least N vertical blanks. Used when VSync is enabled.*/
+        UINT iPresentSyncInternal = 0;
+
+        /** Used to prevent tearing when VSync is enabled. */
+        UINT iPresentFlags = 0;
+
+        /**
+         * Whether MSAA enabled and we use @ref pMsaaRenderBuffer as render buffer or not
+         * and we use @ref pSwapChain as render buffer.
+         */
+        bool bIsUsingMsaaRenderTarget = true;
 
         /** Whether @ref initializeDirectX was finished without errors or not. */
         bool bIsDirectXInitialized = false;

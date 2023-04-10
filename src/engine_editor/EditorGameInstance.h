@@ -25,5 +25,14 @@ namespace ne {
         EditorGameInstance(Window* pWindow, GameManager* pGameManager, InputManager* pInputManager);
 
         virtual ~EditorGameInstance() override = default;
+
+    protected:
+        /**
+         * Called after GameInstance's constructor is finished and created
+         * GameInstance object was saved in Game object (that owns GameInstance).
+         *
+         * At this point you can create and interact with the game world and etc.
+         */
+        virtual void onGameStarted() override;
     };
 } // namespace ne

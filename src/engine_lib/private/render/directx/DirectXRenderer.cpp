@@ -277,7 +277,7 @@ namespace ne {
         pCommandList->RSSetViewports(1, &screenViewport);
         pCommandList->RSSetScissorRects(1, &scissorRect);
 
-        // Change render target buffer's state from PRESENT to RENDER TARGET.
+        // Change render target buffer's state from "Present" to "render target.
         const auto pCurrentBackBufferResource = getCurrentBackBufferResource();
         CD3DX12_RESOURCE_BARRIER transition = CD3DX12_RESOURCE_BARRIER::Transition(
             pCurrentBackBufferResource->getInternalResource(),
@@ -408,13 +408,65 @@ namespace ne {
     std::optional<Error> DirectXRenderer::finishDrawingNextFrame() {
         std::scoped_lock guardFrame(*getRenderResourcesMutex());
 
+        // Transition render buffer from "render target" to "present".
+        auto transition = CD3DX12_RESOURCE_BARRIER::Transition(
+            getCurrentBackBufferResource()->getInternalResource(),
+            D3D12_RESOURCE_STATE_RENDER_TARGET,
+            D3D12_RESOURCE_STATE_PRESENT);
+        pCommandList->ResourceBarrier(1, &transition);
+
+        if (bIsUsingMsaaRenderTarget) {
+            // Resolve MSAA render buffer to swap chain buffer.
+            const auto pCurrentSwapChainBuffer =
+                vSwapChainBuffers[pSwapChain->GetCurrentBackBufferIndex()].get();
+
+            CD3DX12_RESOURCE_BARRIER barriersToResolve[] = {
+                CD3DX12_RESOURCE_BARRIER::Transition(
+                    pMsaaRenderBuffer->getInternalResource(),
+                    D3D12_RESOURCE_STATE_PRESENT,
+                    D3D12_RESOURCE_STATE_RESOLVE_SOURCE),
+                CD3DX12_RESOURCE_BARRIER::Transition(
+                    pCurrentSwapChainBuffer->getInternalResource(),
+                    D3D12_RESOURCE_STATE_PRESENT,
+                    D3D12_RESOURCE_STATE_RESOLVE_DEST)};
+
+            CD3DX12_RESOURCE_BARRIER barriersToPresent[] = {
+                CD3DX12_RESOURCE_BARRIER::Transition(
+                    pMsaaRenderBuffer->getInternalResource(),
+                    D3D12_RESOURCE_STATE_RESOLVE_SOURCE,
+                    D3D12_RESOURCE_STATE_PRESENT),
+                CD3DX12_RESOURCE_BARRIER::Transition(
+                    pCurrentSwapChainBuffer->getInternalResource(),
+                    D3D12_RESOURCE_STATE_RESOLVE_DEST,
+                    D3D12_RESOURCE_STATE_PRESENT)};
+
+            pCommandList->ResourceBarrier(2, barriersToResolve);
+
+            pCommandList->ResolveSubresource(
+                pCurrentSwapChainBuffer->getInternalResource(),
+                0,
+                pMsaaRenderBuffer->getInternalResource(),
+                0,
+                backBufferFormat);
+
+            pCommandList->ResourceBarrier(2, barriersToPresent);
+        }
+
         // Close command list.
         auto hResult = pCommandList->Close();
         if (FAILED(hResult)) [[unlikely]] {
             return Error(hResult);
         }
 
-        // TODO
+        // Add the command list to the command queue for execution.
+        ID3D12CommandList* commandLists[] = {pCommandList.Get()};
+        pCommandQueue->ExecuteCommandLists(_countof(commandLists), commandLists);
+
+        // Flip swap chain buffers.
+        hResult = pSwapChain->Present(iPresentSyncInternal, iPresentFlags);
+        if (FAILED(hResult)) [[unlikely]] {
+            return Error(hResult);
+        }
 
         // Update fence value.
         UINT64 iNewFenceValue = 0;
@@ -638,6 +690,9 @@ namespace ne {
         desc.Format = backBufferFormat;
         desc.Stereo = 0;
 
+        // D3D12 apps must use DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL or DXGI_SWAP_EFFECT_FLIP_DISCARD for
+        // better performance (from the docs).
+
         // Flip model swapchains (DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL and DXGI_SWAP_EFFECT_FLIP_DISCARD)
         // do not support multisampling.
         desc.SampleDesc.Count = 1;
@@ -647,7 +702,7 @@ namespace ne {
         desc.BufferCount = getSwapChainBufferCount();
 
         desc.Scaling = DXGI_SCALING_STRETCH;
-        desc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
+        desc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL;
         desc.AlphaMode = DXGI_ALPHA_MODE_UNSPECIFIED;
         if (bIsVSyncEnabled) {
             desc.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
@@ -1112,53 +1167,59 @@ namespace ne {
         vSwapChainBuffers =
             std::get<std::vector<std::unique_ptr<DirectXResource>>>(std::move(swapChainResult));
 
-        // Create MSAA render target.
-        const auto msaaRenderTargetDesc = CD3DX12_RESOURCE_DESC(
-            D3D12_RESOURCE_DIMENSION_TEXTURE2D,
-            0,
-            renderResolution.first,
-            renderResolution.second,
-            1,
-            1,
-            backBufferFormat,
-            bIsMsaaEnabled ? iMsaaSampleCount : 1,
-            bIsMsaaEnabled ? (iMsaaQuality - 1) : 0,
-            D3D12_TEXTURE_LAYOUT_UNKNOWN,
-            D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET);
+        // Setup MSAA render target.
+        bIsUsingMsaaRenderTarget = bIsMsaaEnabled;
+        if (bIsMsaaEnabled) {
+            // Create MSAA render target.
+            const auto msaaRenderTargetDesc = CD3DX12_RESOURCE_DESC(
+                D3D12_RESOURCE_DIMENSION_TEXTURE2D,
+                0,
+                renderResolution.first,
+                renderResolution.second,
+                1,
+                1,
+                backBufferFormat,
+                bIsMsaaEnabled ? iMsaaSampleCount : 1,
+                bIsMsaaEnabled ? (iMsaaQuality - 1) : 0,
+                D3D12_TEXTURE_LAYOUT_UNKNOWN,
+                D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET);
 
-        D3D12_CLEAR_VALUE msaaClear;
-        msaaClear.Format = backBufferFormat;
-        msaaClear.Color[0] = backBufferFillColor[0];
-        msaaClear.Color[1] = backBufferFillColor[1];
-        msaaClear.Color[2] = backBufferFillColor[2];
-        msaaClear.Color[3] = backBufferFillColor[3];
+            D3D12_CLEAR_VALUE msaaClear;
+            msaaClear.Format = backBufferFormat;
+            msaaClear.Color[0] = backBufferFillColor[0];
+            msaaClear.Color[1] = backBufferFillColor[1];
+            msaaClear.Color[2] = backBufferFillColor[2];
+            msaaClear.Color[3] = backBufferFillColor[3];
 
-        D3D12MA::ALLOCATION_DESC allocationDesc = {};
-        allocationDesc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
+            D3D12MA::ALLOCATION_DESC allocationDesc = {};
+            allocationDesc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
 
-        auto result = dynamic_cast<DirectXResourceManager*>(getResourceManager())
-                          ->createResource(
-                              "renderer render target buffer",
-                              allocationDesc,
-                              msaaRenderTargetDesc,
-                              D3D12_RESOURCE_STATE_COMMON,
-                              msaaClear);
-        if (std::holds_alternative<Error>(result)) {
-            auto err = std::get<Error>(std::move(result));
-            err.addEntry();
-            return err;
-        }
-        pMsaaRenderBuffer = std::get<std::unique_ptr<DirectXResource>>(std::move(result));
+            auto result = dynamic_cast<DirectXResourceManager*>(getResourceManager())
+                              ->createResource(
+                                  "renderer render target buffer",
+                                  allocationDesc,
+                                  msaaRenderTargetDesc,
+                                  D3D12_RESOURCE_STATE_COMMON,
+                                  msaaClear);
+            if (std::holds_alternative<Error>(result)) {
+                auto err = std::get<Error>(std::move(result));
+                err.addEntry();
+                return err;
+            }
+            pMsaaRenderBuffer = std::get<std::unique_ptr<DirectXResource>>(std::move(result));
 
-        // Bind RTV.
-        auto optionalError = pMsaaRenderBuffer->bindDescriptor(GpuResource::DescriptorType::RTV);
-        if (optionalError.has_value()) {
-            optionalError->addEntry();
-            return optionalError.value();
+            // Bind RTV.
+            auto optionalError = pMsaaRenderBuffer->bindDescriptor(GpuResource::DescriptorType::RTV);
+            if (optionalError.has_value()) {
+                optionalError->addEntry();
+                return optionalError.value();
+            }
+        } else {
+            pMsaaRenderBuffer = nullptr;
         }
 
         // Create depth/stencil buffer.
-        optionalError = createDepthStencilBuffer();
+        auto optionalError = createDepthStencilBuffer();
         if (optionalError.has_value()) {
             optionalError->addEntry();
             return optionalError.value();
@@ -1176,6 +1237,15 @@ namespace ne {
         scissorRect.top = 0;
         scissorRect.right = static_cast<LONG>(renderResolution.first);
         scissorRect.bottom = static_cast<LONG>(renderResolution.second);
+
+        // Save VSync state for `Present` calls.
+        if (bIsVSyncEnabled) {
+            iPresentSyncInternal = 1;
+            iPresentFlags = 0; // prevent tearing
+        } else {
+            iPresentSyncInternal = 0;
+            iPresentFlags = DXGI_PRESENT_ALLOW_TEARING;
+        }
 
         return {};
     }
@@ -1261,10 +1331,7 @@ namespace ne {
     }
 
     DirectXResource* DirectXRenderer::getCurrentBackBufferResource() {
-        auto pMtxRenderSettings = getRenderSettings();
-        std::scoped_lock guard(pMtxRenderSettings->first);
-
-        if (pMtxRenderSettings->second->isAntialiasingEnabled()) {
+        if (bIsUsingMsaaRenderTarget) {
             return pMsaaRenderBuffer.get();
         }
 

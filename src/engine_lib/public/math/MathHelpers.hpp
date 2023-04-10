@@ -5,9 +5,7 @@
 
 // Custom.
 #include "misc/Globals.h"
-#if defined(DEBUG)
 #include "io/Logger.h"
-#endif
 
 // External.
 #include "math/GLMath.hpp"
@@ -79,10 +77,8 @@ namespace ne {
         static inline glm::mat4x4 buildRotationMatrix(const glm::vec3& rotation);
 
     private:
-#if defined(DEBUG)
         /** Name of the category used for logging. */
         static inline const auto sMathHelpersLogCategory = "Math Helpers";
-#endif
     };
 
     glm::vec3 MathHelpers::convertDirectionToRollPitchYaw(const glm::vec3& direction) {

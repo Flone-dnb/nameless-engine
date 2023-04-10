@@ -565,8 +565,10 @@ namespace ne {
         }
     }
 
-    void GameManager::triggerAxisEvents(
-        KeyboardKey key, KeyboardModifiers modifiers, bool bIsPressedDown) { // NOLINT
+    void GameManager::triggerAxisEvents( // NOLINT: too complex
+        KeyboardKey key,
+        KeyboardModifiers modifiers,
+        bool bIsPressedDown) {
         std::scoped_lock<std::recursive_mutex> guard(inputManager.mtxAxisEvents);
         if (inputManager.axisEvents.empty()) {
             return;

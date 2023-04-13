@@ -192,25 +192,19 @@ namespace ne {
 
         /** Shader input element description. */
         static inline std::vector<D3D12_INPUT_ELEMENT_DESC> vShaderVertexDescription = {
-            {"POSITION",
+            {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
+            {"NORMAL",
              0,
              DXGI_FORMAT_R32G32B32_FLOAT,
              0,
              16, // NOLINT
              D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,
              0},
-            {"NORMAL",
-             0,
-             DXGI_FORMAT_R32G32B32_FLOAT,
-             0,
-             32, // NOLINT
-             D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,
-             0},
             {"UV",
              0,
              DXGI_FORMAT_R32G32_FLOAT,
              0,
-             48, // NOLINT
+             32, // NOLINT
              D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,
              0}};
 

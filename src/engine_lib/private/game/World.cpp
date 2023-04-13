@@ -26,6 +26,8 @@ namespace ne {
             throw std::runtime_error(err.getFullErrorMessage());
         }
 
+        Logger::get().info(fmt::format("new world with size {} is created", iWorldSize), sWorldLogCategory);
+
         // Initialize self.
         this->pGameManager = pGameManager;
         mtxIsDestroyed.second = false;
@@ -36,8 +38,6 @@ namespace ne {
         mtxRootNode.second->spawn();
 
         timeWhenWorldCreated = std::chrono::steady_clock::now();
-
-        Logger::get().info(fmt::format("new world with size {} is created", iWorldSize), sWorldLogCategory);
     }
 
     World::~World() {

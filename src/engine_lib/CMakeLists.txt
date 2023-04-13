@@ -150,6 +150,8 @@ set(ENGINE_LIB_SOURCES
     private/materials/ShaderReadWriteResourceUniquePtr.h
     public/misc/ProjectPaths.h
     private/misc/ProjectPaths.cpp
+    public/misc/PrimitiveMeshGenerator.h
+    private/misc/PrimitiveMeshGenerator.cpp
     private/io/Serializable.cpp
     public/io/Serializable.h
     public/game/camera/CameraProperties.h

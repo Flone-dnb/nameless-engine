@@ -25,7 +25,9 @@ namespace ne {
     void SpatialNode::setRelativeRotation(const glm::vec3& rotation) {
         std::scoped_lock guard(mtxWorldMatrix.first);
 
-        relativeRotation = rotation;
+        relativeRotation.x = MathHelpers::normalizeValue(rotation.x, -360.0F, 360.0F); // NOLINT
+        relativeRotation.y = MathHelpers::normalizeValue(rotation.y, -360.0F, 360.0F); // NOLINT
+        relativeRotation.z = MathHelpers::normalizeValue(rotation.z, -360.0F, 360.0F); // NOLINT
 
         recalculateLocalMatrix();
         recalculateWorldMatrix();
@@ -127,6 +129,11 @@ namespace ne {
             return;
         }
 
+        glm::vec3 targetWorldRotation;
+        targetWorldRotation.x = MathHelpers::normalizeValue(rotation.x, -360.0F, 360.0F); // NOLINT
+        targetWorldRotation.y = MathHelpers::normalizeValue(rotation.y, -360.0F, 360.0F); // NOLINT
+        targetWorldRotation.z = MathHelpers::normalizeValue(rotation.z, -360.0F, 360.0F); // NOLINT
+
         std::scoped_lock guard(mtxWorldMatrix.first, mtxSpatialParent.first);
 
         // See if we have a parent.
@@ -135,11 +142,11 @@ namespace ne {
             // and we warn about it.
             const auto inverseParentQuat =
                 glm::inverse(mtxSpatialParent.second->getWorldRotationQuaternion());
-            const auto rotationQuat = glm::toQuat(MathHelpers::buildRotationMatrix(rotation));
+            const auto rotationQuat = glm::toQuat(MathHelpers::buildRotationMatrix(targetWorldRotation));
 
             relativeRotation = glm::degrees(glm::eulerAngles(inverseParentQuat * rotationQuat));
         } else {
-            relativeRotation = rotation;
+            relativeRotation = targetWorldRotation;
         }
 
         recalculateLocalMatrix();

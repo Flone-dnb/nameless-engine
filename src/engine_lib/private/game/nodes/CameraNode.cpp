@@ -77,12 +77,8 @@ namespace ne {
 
             // Make node look at target.
             const auto toTarget = viewData.targetPointWorldLocation - viewData.worldLocation;
-            glm::vec3 targetRotation = glm::vec3(0.0F, 0.0F, 0.0F);
-
-            // Check if zero to avoid having NaNs after `glm::normalize`.
-            if (!glm::all(glm::epsilonEqual(toTarget, glm::vec3(0.0F, 0.0F, 0.0F), rotationDelta))) {
-                targetRotation = MathHelpers::convertDirectionToRollPitchYaw(glm::normalize(toTarget));
-            }
+            glm::vec3 targetRotation =
+                MathHelpers::convertDirectionToRollPitchYaw(MathHelpers::normalizeSafely(toTarget));
 
             // Set rotation if different.
             if (!glm::all(glm::epsilonEqual(targetRotation, getWorldRotation(), rotationDelta))) {

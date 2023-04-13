@@ -24,12 +24,16 @@ namespace ne {
         friend class TransientCamera;
 
     public:
-        CameraProperties();
+        CameraProperties() = default;
 
         /** Stores internal data. */
         struct Data {
+            Data() = default;
+
             /** Stores orbital mode specific data. */
             struct OrbitalModeData {
+                OrbitalModeData() = default;
+
                 /** Radial distance or distance from camera to target point (look target). */
                 float distanceToTarget = 10.0F; // NOLINT: magic number
 
@@ -42,26 +46,30 @@ namespace ne {
 
             /** Stores data used for view matrix. */
             struct ViewData {
+                ViewData() = default;
+
                 /** Matrix that transforms positions to view (camera) space. */
-                glm::mat4x4 viewMatrix;
+                glm::mat4x4 viewMatrix = glm::identity<glm::mat4x4>();
 
                 /** Location of the camera in world space. */
                 glm::vec3 worldLocation = glm::vec3(0.0F, 0.0F, 0.0F);
 
                 /** Unit vector that points in camera's current up direction in world space. */
-                glm::vec3 worldUpDirection = ne::worldUpDirection;
+                glm::vec3 worldUpDirection = ::ne::worldUpDirection;
 
                 /** Location of the point in world space that the camera should look at. */
-                glm::vec3 targetPointWorldLocation = glm::vec3(0.0F, 0.0F, 0.0F);
+                glm::vec3 targetPointWorldLocation = glm::vec3(1.0F, 0.0F, 0.0F);
             };
 
             /** Stores data used for projection matrix. */
             struct ProjectionData {
+                ProjectionData() = default;
+
                 /**
                  * Transforms positions from view (camera) space to 2D projection window
                  * (homogeneous clip space).
                  */
-                glm::mat4x4 projectionMatrix;
+                glm::mat4x4 projectionMatrix = glm::identity<glm::mat4x4>();
 
                 /** Distance from camera (view) space origin to camera's near clip plane. */
                 float nearClipPlaneDistance = 0.3F; // NOLINT: magic number
@@ -91,7 +99,7 @@ namespace ne {
              *
              * @remark The bool variable is used to minimize the amount of times we recalculate view matrix.
              */
-            std::pair<bool, ViewData> viewData = std::make_pair(true, ViewData());
+            std::pair<bool, ViewData> viewData = std::make_pair(true, ViewData{});
 
             /**
              * Contains a flag the indicates whether projection matrix needs to be recalculated or not
@@ -101,7 +109,7 @@ namespace ne {
              * @remark The bool variable is used to minimize the amount of times we recalculate projection
              * matrix.
              */
-            std::pair<bool, ProjectionData> projectionData = std::make_pair(true, ProjectionData());
+            std::pair<bool, ProjectionData> projectionData = std::make_pair(true, ProjectionData{});
 
             /** Defines how camera can move and rotate. */
             CameraMode currentCameraMode = CameraMode::FREE;
@@ -217,7 +225,7 @@ namespace ne {
         void makeSureProjectionMatrixAndClipPlanesAreUpToDate();
 
         /** Internal properties. */
-        std::pair<std::recursive_mutex, Data> mtxData;
+        std::pair<std::recursive_mutex, Data> mtxData{};
 
         /** Delta to compare input to zero. */
         static inline constexpr float floatDelta = 0.00001F;

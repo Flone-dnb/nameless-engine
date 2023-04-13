@@ -2,18 +2,11 @@
 
 // Custom.
 #include "misc/Error.h"
-#include "io/Logger.h"
-#include "math/MathHelpers.hpp"
 
 // External.
 #include "fmt/core.h"
 
 namespace ne {
-
-    CameraProperties::CameraProperties() {
-        makeSureViewMatrixIsUpToDate();
-        makeSureProjectionMatrixAndClipPlanesAreUpToDate();
-    }
 
     void CameraProperties::setAspectRatio(unsigned int iRenderTargetWidth, unsigned int iRenderTargetHeight) {
         std::scoped_lock guard(mtxData.first);

@@ -408,13 +408,6 @@ namespace ne {
     std::optional<Error> DirectXRenderer::finishDrawingNextFrame() {
         std::scoped_lock guardFrame(*getRenderResourcesMutex());
 
-        // Transition render buffer from "render target" to "present".
-        auto transition = CD3DX12_RESOURCE_BARRIER::Transition(
-            getCurrentBackBufferResource()->getInternalResource(),
-            D3D12_RESOURCE_STATE_RENDER_TARGET,
-            D3D12_RESOURCE_STATE_PRESENT);
-        pCommandList->ResourceBarrier(1, &transition);
-
         if (bIsUsingMsaaRenderTarget) {
             // Resolve MSAA render buffer to swap chain buffer.
             const auto pCurrentSwapChainBuffer =
@@ -423,7 +416,7 @@ namespace ne {
             CD3DX12_RESOURCE_BARRIER barriersToResolve[] = {
                 CD3DX12_RESOURCE_BARRIER::Transition(
                     pMsaaRenderBuffer->getInternalResource(),
-                    D3D12_RESOURCE_STATE_PRESENT,
+                    D3D12_RESOURCE_STATE_RENDER_TARGET,
                     D3D12_RESOURCE_STATE_RESOLVE_SOURCE),
                 CD3DX12_RESOURCE_BARRIER::Transition(
                     pCurrentSwapChainBuffer->getInternalResource(),
@@ -450,6 +443,13 @@ namespace ne {
                 backBufferFormat);
 
             pCommandList->ResourceBarrier(2, barriersToPresent);
+        } else {
+            // Transition render buffer from "render target" to "present".
+            auto transition = CD3DX12_RESOURCE_BARRIER::Transition(
+                vSwapChainBuffers[pSwapChain->GetCurrentBackBufferIndex()]->getInternalResource(),
+                D3D12_RESOURCE_STATE_RENDER_TARGET,
+                D3D12_RESOURCE_STATE_PRESENT);
+            pCommandList->ResourceBarrier(1, &transition);
         }
 
         // Close command list.
@@ -525,12 +525,16 @@ namespace ne {
             pCommandList->IASetVertexBuffers(0, 1, &vertexBufferView);
             pCommandList->IASetIndexBuffer(&indexBufferView);
 
-            // Set read/write shader resources.
+            // Set read/write shader resources (`cbuffer`s for example).
             for (const auto& [sResourceName, pShaderReadWriteResource] :
                  pMtxMeshGpuResources->second.shaderResources.shaderCpuReadWriteResources) {
                 reinterpret_cast<HlslShaderCpuReadWriteResource*>(pShaderReadWriteResource.getResource())
                     ->setToPipeline(pCommandList, iCurrentFrameResourceIndex);
             }
+
+            // Add a draw command.
+            pCommandList->DrawIndexedInstanced(
+                static_cast<UINT>(mtxMeshData.second->getIndices()->size()), 1, 0, 0, 0);
         }
     }
 

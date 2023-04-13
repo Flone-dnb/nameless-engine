@@ -31,11 +31,11 @@ VertexOut vsMeshNode(VertexIn vertexIn)
     VertexOut vertexOut;
 
     // Calculate world position and normal.
-    vertexOut.worldPosition = mul(float4(vertexIn.localPosition, 1.0f), worldMatrix);
-    vertexOut.worldNormal = mul(vertexIn.localNormal, (float3x3)worldMatrix);
+    vertexOut.worldPosition = mul(worldMatrix, float4(vertexIn.localPosition, 1.0f));
+    vertexOut.worldNormal = normalize(mul((float3x3)worldMatrix, vertexIn.localNormal));
 
     // Transform position to homogeneous clip space.
-    vertexOut.viewPosition = mul(vertexOut.worldPosition, viewProjectionMatrix);
+    vertexOut.viewPosition = mul(viewProjectionMatrix, vertexOut.worldPosition);
 
     // Copy UV.
     vertexOut.uv = vertexIn.uv;

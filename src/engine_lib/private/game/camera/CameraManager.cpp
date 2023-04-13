@@ -3,10 +3,11 @@
 // Custom.
 #include "io/Logger.h"
 #include "game/nodes/CameraNode.h"
+#include "game/camera/TransientCamera.h"
 
 namespace ne {
 
-    void CameraManager::setActiveCamera(std::unique_ptr<TransientCamera> pTransientCamera) {
+    void CameraManager::setActiveCamera(std::shared_ptr<TransientCamera> pTransientCamera) {
         if (pTransientCamera == nullptr) [[unlikely]] {
             Error error("`nullptr` is not a valid camera");
             error.showError();

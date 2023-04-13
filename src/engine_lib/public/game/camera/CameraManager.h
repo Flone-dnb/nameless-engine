@@ -5,11 +5,11 @@
 #include <mutex>
 
 // Custom.
-#include "game/camera/TransientCamera.h"
 #include "misc/GC.hpp"
 
 namespace ne {
     class CameraNode;
+    class TransientCamera;
 
     /** Determines what camera is used to draw on the screen. */
     class CameraManager {
@@ -23,7 +23,7 @@ namespace ne {
         /** Stores active camera. It's either a transient camera or a camera node (never both). */
         struct ActiveCamera {
             /** Transient camera. */
-            std::unique_ptr<TransientCamera> pTransientCamera;
+            std::shared_ptr<TransientCamera> pTransientCamera;
 
             /** Camera node spawned in world. */
             gc<CameraNode> pCameraNode;
@@ -32,11 +32,11 @@ namespace ne {
         CameraManager() = default;
 
         /**
-         * Takes ownership of a transient camera an makes it the primary camera.
+         * Takes a transient camera an makes it the primary camera.
          *
          * @param pTransientCamera Camera to make active.
          */
-        void setActiveCamera(std::unique_ptr<TransientCamera> pTransientCamera);
+        void setActiveCamera(std::shared_ptr<TransientCamera> pTransientCamera);
 
         /**
          * Makes a camera node to be the primary camera.

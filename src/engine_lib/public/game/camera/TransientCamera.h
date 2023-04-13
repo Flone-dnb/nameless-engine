@@ -2,6 +2,7 @@
 
 // Custom.
 #include "game/camera/CameraProperties.h"
+#include "math/MathHelpers.hpp"
 
 namespace ne {
     /**
@@ -107,6 +108,13 @@ namespace ne {
         void setOrbitalCameraRotation(float phi, float theta);
 
         /**
+         * Sets multiplier for camera's movement.
+         *
+         * @param speed Multiplier.
+         */
+        void setCameraMovementSpeed(float speed);
+
+        /**
          * Returns camera's rotation in world space.
          *
          * @return Rotation where X is roll, Y is pitch and Z is yaw.
@@ -142,7 +150,7 @@ namespace ne {
          * camera's target point location.
          */
         inline void recalculateBaseVectorsForOrbitalCamera() {
-            cameraForwardDirection = glm::normalize(
+            cameraForwardDirection = MathHelpers::normalizeSafely(
                 cameraProperties.mtxData.second.viewData.second.targetPointWorldLocation -
                 cameraProperties.mtxData.second.viewData.second.worldLocation);
             cameraRightDirection = glm::normalize(glm::cross(cameraForwardDirection, worldUpDirection));
@@ -179,6 +187,9 @@ namespace ne {
          * @ref setFreeCameraRightMovement (Y).
          */
         glm::vec3 lastInputDirection = glm::vec3(0.0F, 0.0F, 0.0F);
+
+        /** Multiplier for movement. */
+        float cameraMovementSpeed = 1.0F;
 
         /** Whether @ref lastInputDirection is zero or not. */
         bool bHasInputToProcess = false;

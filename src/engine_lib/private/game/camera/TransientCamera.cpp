@@ -2,7 +2,6 @@
 
 // Custom.
 #include "io/Logger.h"
-#include "math/MathHelpers.hpp"
 
 namespace ne {
 
@@ -80,6 +79,10 @@ namespace ne {
             recalculateBaseVectorsForOrbitalCamera();
         }
 
+        // Update target.
+        cameraProperties.mtxData.second.viewData.second.targetPointWorldLocation =
+            cameraProperties.mtxData.second.viewData.second.worldLocation + cameraForwardDirection;
+
         // Mark view matrix as "needs update".
         cameraProperties.mtxData.second.viewData.first = true;
     }
@@ -96,16 +99,18 @@ namespace ne {
             return;
         }
 
+        // Save new rotation.
+        cameraRotation.x = MathHelpers::normalizeValue(rotation.x, -360.0F, 360.0F); // NOLINT
+        cameraRotation.y = MathHelpers::normalizeValue(rotation.y, -360.0F, 360.0F); // NOLINT
+        cameraRotation.z = MathHelpers::normalizeValue(rotation.z, -360.0F, 360.0F); // NOLINT
+
         // Build rotation matrix.
-        const auto rotationMatrix = MathHelpers::buildRotationMatrix(rotation);
+        const auto rotationMatrix = MathHelpers::buildRotationMatrix(cameraRotation);
 
         // Recalculate axis.
         cameraForwardDirection = rotationMatrix * glm::vec4(cameraForwardDirection, 0.0F);
         cameraRightDirection = rotationMatrix * glm::vec4(cameraRightDirection, 0.0F);
         cameraUpDirection = rotationMatrix * glm::vec4(cameraUpDirection, 0.0F);
-
-        // Save new rotation.
-        cameraRotation = rotation;
 
         // Update camera properties.
         cameraProperties.mtxData.second.viewData.second.targetPointWorldLocation =
@@ -202,6 +207,8 @@ namespace ne {
         cameraProperties.mtxData.second.viewData.first = true;
     }
 
+    void TransientCamera::setCameraMovementSpeed(float speed) { cameraMovementSpeed = speed; }
+
     glm::vec3 TransientCamera::getFreeCameraRotation() const { return cameraRotation; }
 
     CameraProperties* TransientCamera::getCameraProperties() { return &cameraProperties; }
@@ -212,7 +219,7 @@ namespace ne {
             return;
         }
 
-        moveFreeCamera(lastInputDirection * timeSincePrevCallInSec);
+        moveFreeCamera(lastInputDirection * timeSincePrevCallInSec * cameraMovementSpeed);
     }
 
     void TransientCamera::clearInput() { lastInputDirection = glm::vec3(0.0F, 0.0F, 0.0F); }
@@ -238,6 +245,10 @@ namespace ne {
         cameraProperties.mtxData.second.viewData.second.worldLocation += cameraForwardDirection * distance.x;
         cameraProperties.mtxData.second.viewData.second.worldLocation += cameraRightDirection * distance.y;
         cameraProperties.mtxData.second.viewData.second.worldLocation += cameraUpDirection * distance.z;
+
+        // Recalculate look direction.
+        cameraProperties.mtxData.second.viewData.second.targetPointWorldLocation =
+            cameraProperties.mtxData.second.viewData.second.worldLocation + cameraForwardDirection;
 
         // Mark view matrix as "needs update".
         cameraProperties.mtxData.second.viewData.first = true;

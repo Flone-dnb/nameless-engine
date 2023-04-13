@@ -76,16 +76,51 @@ namespace ne {
          */
         static inline glm::mat4x4 buildRotationMatrix(const glm::vec3& rotation);
 
+        /**
+         * Changes the value to be in the range [min; max].
+         *
+         * Example:
+         * @code
+         * normalizeValue(370.0F, -360.0F, 360.0F); // result is `-350`
+         *
+         * normalizeValue(-730, -360, 360); // result is `-10`
+         * @endcode
+         *
+         * @param value Value to normalize.
+         * @param min   Minimum value in range.
+         * @param max   Maximum value in range.
+         *
+         * @return Normalized value.
+         */
+        static inline float normalizeValue(float value, float min, float max);
+
+        /**
+         * Normalizes the specified vector while checking for zero division (to avoid NaNs in
+         * the normalized vector).
+         *
+         * @param vector Input vector to normalize.
+         *
+         * @return Normalized vector.
+         */
+        static inline glm::vec3 normalizeSafely(const glm::vec3& vector);
+
     private:
+        /** Default tolerance for floats to use. */
+        static inline const float smallFloatEpsilon = 0.0000001F; // NOLINT: not a very small number
+
         /** Name of the category used for logging. */
         static inline const auto sMathHelpersLogCategory = "Math Helpers";
     };
 
     glm::vec3 MathHelpers::convertDirectionToRollPitchYaw(const glm::vec3& direction) {
+        if (glm::all(glm::epsilonEqual(direction, glm::vec3(0.0F, 0.0F, 0.0F), smallFloatEpsilon))) {
+            return glm::vec3(0.0F, 0.0F, 0.0F);
+        }
+
 #if defined(DEBUG)
-        constexpr float lengthDelta = 0.001F; // NOLINT: magic number
-        const auto length = glm::length(direction);
         // Make sure we are given a normalized vector.
+        constexpr float lengthDelta = 0.001F; // NOLINT: don't use too small value here
+        const auto length = glm::length(direction);
         if (!glm::epsilonEqual(length, 1.0F, lengthDelta)) [[unlikely]] {
             Logger::get().error(
                 "the specified direction vector should have been normalized", sMathHelpersLogCategory);
@@ -160,22 +195,21 @@ namespace ne {
     }
 
     glm::vec3 MathHelpers::calculateReciprocalVector(const glm::vec3& vector) {
-        constexpr float floatEpsilon = 0.000001F; // NOLINT: using not a very small number
         glm::vec3 reciprocal;
 
-        if (std::abs(vector.x) < floatEpsilon) [[unlikely]] {
+        if (std::abs(vector.x) < smallFloatEpsilon) [[unlikely]] {
             reciprocal.x = 0.0F;
         } else [[likely]] {
             reciprocal.x = 1.0F / vector.x;
         }
 
-        if (std::abs(vector.y) < floatEpsilon) [[unlikely]] {
+        if (std::abs(vector.y) < smallFloatEpsilon) [[unlikely]] {
             reciprocal.y = 0.0F;
         } else [[likely]] {
             reciprocal.y = 1.0F / vector.y;
         }
 
-        if (std::abs(vector.z) < floatEpsilon) [[unlikely]] {
+        if (std::abs(vector.z) < smallFloatEpsilon) [[unlikely]] {
             reciprocal.z = 0.0F;
         } else [[likely]] {
             reciprocal.z = 1.0F / vector.z;
@@ -188,5 +222,22 @@ namespace ne {
         return glm::rotate(glm::radians(rotation.z), glm::vec3(0.0F, 0.0F, 1.0F)) *
                glm::rotate(glm::radians(rotation.y), glm::vec3(0.0F, 1.0F, 0.0F)) *
                glm::rotate(glm::radians(rotation.x), glm::vec3(1.0F, 0.0F, 0.0F));
+    }
+
+    float MathHelpers::normalizeValue(float value, float min, float max) {
+        const auto width = max - min;
+        const auto offsetValue = value - min;
+
+        return (offsetValue - (floor(offsetValue / width) * width)) + min;
+    }
+
+    glm::vec3 MathHelpers::normalizeSafely(const glm::vec3& vector) {
+        const auto squareSum = vector.x * vector.x + vector.y * vector.y + vector.z * vector.z;
+
+        if (squareSum < smallFloatEpsilon) {
+            return glm::vec3(0.0F, 0.0F, 0.0F);
+        }
+
+        return vector * glm::inversesqrt(squareSum);
     }
 } // namespace ne

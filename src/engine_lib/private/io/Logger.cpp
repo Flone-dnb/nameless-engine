@@ -92,6 +92,8 @@ namespace ne {
         iTotalErrorsProduced.fetch_add(1);
     }
 
+    void Logger::flushToDisk() { pSpdLogger->flush(); }
+
     std::filesystem::path Logger::getDirectoryWithLogs() const { return sLoggerWorkingDirectory; }
 
     Logger::Logger() {

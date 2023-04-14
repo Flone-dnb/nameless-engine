@@ -76,6 +76,9 @@ namespace ne {
             std::string_view sCategory,
             const nostd::source_location location = nostd::source_location::current()) const;
 
+        /** Forces the log to be flushed to the disk. */
+        void flushToDisk();
+
         /**
          * Returns the directory that contains all logs.
          *

@@ -46,6 +46,8 @@ namespace ne {
          * Add text to console and log file using "warning" category.
          * The text message will be appended with the file name and the line it was called from.
          *
+         * @remark Forces the log to be flushed on the disk.
+         *
          * @param sText  Text to write to log.
          * @param sCategory Category that this log text is related to. This text will be
          * added to log text to make log reading easier. Pass empty string for default
@@ -60,6 +62,8 @@ namespace ne {
         /**
          * Add text to console and log file using "error" category.
          * The text message will be appended with the file name and the line it was called from.
+         *
+         * @remark Forces the log to be flushed on the disk.
          *
          * @param sText  Text to write to log.
          * @param sCategory Category that this log text is related to. This text will be

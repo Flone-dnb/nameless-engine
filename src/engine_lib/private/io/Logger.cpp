@@ -121,7 +121,9 @@ namespace ne {
         pSpdLogger = std::unique_ptr<spdlog::logger>(new spdlog::logger("MainLogger", fileSink));
 #endif
 
+        // Setup logger.
         pSpdLogger->set_pattern("[%H:%M:%S] [%^%l%$] %v");
+        pSpdLogger->flush_on(spdlog::level::warn); // flush log on warnings and errors
     }
 
     std::string Logger::getDateTime() {

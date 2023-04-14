@@ -59,19 +59,19 @@ namespace ne {
         cameraProperties.mtxData.second.currentCameraMode = mode;
 
         // Mark view matrix as "needs update".
-        cameraProperties.mtxData.second.viewData.first = true;
+        cameraProperties.mtxData.second.viewData.bViewMatrixNeedsUpdate = true;
     }
 
     void TransientCamera::setLocation(const glm::vec3& location) {
         std::scoped_lock guard(cameraProperties.mtxData.first);
 
         // Update camera properties.
-        cameraProperties.mtxData.second.viewData.second.worldLocation = location;
+        cameraProperties.mtxData.second.viewData.worldLocation = location;
         if (cameraProperties.mtxData.second.currentCameraMode == CameraMode::ORBITAL) {
             // Calculate rotation based on new location.
             MathHelpers::convertCartesianCoordinatesToSpherical(
-                cameraProperties.mtxData.second.viewData.second.worldLocation -
-                    cameraProperties.mtxData.second.viewData.second.targetPointWorldLocation,
+                cameraProperties.mtxData.second.viewData.worldLocation -
+                    cameraProperties.mtxData.second.viewData.targetPointWorldLocation,
                 cameraProperties.mtxData.second.orbitalModeData.distanceToTarget,
                 cameraProperties.mtxData.second.orbitalModeData.theta,
                 cameraProperties.mtxData.second.orbitalModeData.phi);
@@ -80,11 +80,11 @@ namespace ne {
         }
 
         // Update target.
-        cameraProperties.mtxData.second.viewData.second.targetPointWorldLocation =
-            cameraProperties.mtxData.second.viewData.second.worldLocation + cameraForwardDirection;
+        cameraProperties.mtxData.second.viewData.targetPointWorldLocation =
+            cameraProperties.mtxData.second.viewData.worldLocation + cameraForwardDirection;
 
         // Mark view matrix as "needs update".
-        cameraProperties.mtxData.second.viewData.first = true;
+        cameraProperties.mtxData.second.viewData.bViewMatrixNeedsUpdate = true;
     }
 
     void TransientCamera::setFreeCameraRotation(const glm::vec3& rotation) {
@@ -108,17 +108,17 @@ namespace ne {
         const auto rotationMatrix = MathHelpers::buildRotationMatrix(cameraRotation);
 
         // Recalculate axis.
-        cameraForwardDirection = rotationMatrix * glm::vec4(cameraForwardDirection, 0.0F);
-        cameraRightDirection = rotationMatrix * glm::vec4(cameraRightDirection, 0.0F);
-        cameraUpDirection = rotationMatrix * glm::vec4(cameraUpDirection, 0.0F);
+        cameraForwardDirection = rotationMatrix * glm::vec4(worldForwardDirection, 0.0F);
+        cameraRightDirection = rotationMatrix * glm::vec4(worldRightDirection, 0.0F);
+        cameraUpDirection = rotationMatrix * glm::vec4(worldUpDirection, 0.0F);
 
         // Update camera properties.
-        cameraProperties.mtxData.second.viewData.second.targetPointWorldLocation =
-            cameraProperties.mtxData.second.viewData.second.worldLocation + cameraForwardDirection;
-        cameraProperties.mtxData.second.viewData.second.worldUpDirection = cameraUpDirection;
+        cameraProperties.mtxData.second.viewData.targetPointWorldLocation =
+            cameraProperties.mtxData.second.viewData.worldLocation + cameraForwardDirection;
+        cameraProperties.mtxData.second.viewData.worldUpDirection = cameraUpDirection;
 
         // Mark view matrix as "needs update".
-        cameraProperties.mtxData.second.viewData.first = true;
+        cameraProperties.mtxData.second.viewData.bViewMatrixNeedsUpdate = true;
     }
 
     void TransientCamera::setOrbitalCameraTargetLocation(const glm::vec3& targetLocation) {
@@ -134,12 +134,12 @@ namespace ne {
         }
 
         // Update camera properties.
-        cameraProperties.mtxData.second.viewData.second.targetPointWorldLocation = targetLocation;
+        cameraProperties.mtxData.second.viewData.targetPointWorldLocation = targetLocation;
 
         // Calculate rotation based on new target point location.
         MathHelpers::convertCartesianCoordinatesToSpherical(
-            cameraProperties.mtxData.second.viewData.second.worldLocation -
-                cameraProperties.mtxData.second.viewData.second.targetPointWorldLocation,
+            cameraProperties.mtxData.second.viewData.worldLocation -
+                cameraProperties.mtxData.second.viewData.targetPointWorldLocation,
             cameraProperties.mtxData.second.orbitalModeData.distanceToTarget,
             cameraProperties.mtxData.second.orbitalModeData.theta,
             cameraProperties.mtxData.second.orbitalModeData.phi);
@@ -147,7 +147,7 @@ namespace ne {
         recalculateBaseVectorsForOrbitalCamera();
 
         // Mark view matrix as "needs update".
-        cameraProperties.mtxData.second.viewData.first = true;
+        cameraProperties.mtxData.second.viewData.bViewMatrixNeedsUpdate = true;
     }
 
     void TransientCamera::setOrbitalCameraDistanceToTarget(float distanceToTarget) {
@@ -166,15 +166,15 @@ namespace ne {
         cameraProperties.mtxData.second.orbitalModeData.distanceToTarget = distanceToTarget;
 
         // Recalculate location.
-        cameraProperties.mtxData.second.viewData.second.worldLocation =
+        cameraProperties.mtxData.second.viewData.worldLocation =
             MathHelpers::convertSphericalToCartesianCoordinates(
                 cameraProperties.mtxData.second.orbitalModeData.distanceToTarget,
                 cameraProperties.mtxData.second.orbitalModeData.theta,
                 cameraProperties.mtxData.second.orbitalModeData.phi) +
-            cameraProperties.mtxData.second.viewData.second.targetPointWorldLocation;
+            cameraProperties.mtxData.second.viewData.targetPointWorldLocation;
 
         // Mark view matrix as "needs update".
-        cameraProperties.mtxData.second.viewData.first = true;
+        cameraProperties.mtxData.second.viewData.bViewMatrixNeedsUpdate = true;
     }
 
     void TransientCamera::setOrbitalCameraRotation(float phi, float theta) {
@@ -194,17 +194,17 @@ namespace ne {
         cameraProperties.mtxData.second.orbitalModeData.theta = theta;
 
         // Recalculate location.
-        cameraProperties.mtxData.second.viewData.second.worldLocation =
+        cameraProperties.mtxData.second.viewData.worldLocation =
             MathHelpers::convertSphericalToCartesianCoordinates(
                 cameraProperties.mtxData.second.orbitalModeData.distanceToTarget,
                 cameraProperties.mtxData.second.orbitalModeData.theta,
                 cameraProperties.mtxData.second.orbitalModeData.phi) +
-            cameraProperties.mtxData.second.viewData.second.worldLocation;
+            cameraProperties.mtxData.second.viewData.worldLocation;
 
         recalculateBaseVectorsForOrbitalCamera();
 
         // Mark view matrix as "needs update".
-        cameraProperties.mtxData.second.viewData.first = true;
+        cameraProperties.mtxData.second.viewData.bViewMatrixNeedsUpdate = true;
     }
 
     void TransientCamera::setCameraMovementSpeed(float speed) { cameraMovementSpeed = speed; }
@@ -242,16 +242,16 @@ namespace ne {
         }
 
         // Apply movement.
-        cameraProperties.mtxData.second.viewData.second.worldLocation += cameraForwardDirection * distance.x;
-        cameraProperties.mtxData.second.viewData.second.worldLocation += cameraRightDirection * distance.y;
-        cameraProperties.mtxData.second.viewData.second.worldLocation += cameraUpDirection * distance.z;
+        cameraProperties.mtxData.second.viewData.worldLocation += cameraForwardDirection * distance.x;
+        cameraProperties.mtxData.second.viewData.worldLocation += cameraRightDirection * distance.y;
+        cameraProperties.mtxData.second.viewData.worldLocation += cameraUpDirection * distance.z;
 
         // Recalculate look direction.
-        cameraProperties.mtxData.second.viewData.second.targetPointWorldLocation =
-            cameraProperties.mtxData.second.viewData.second.worldLocation + cameraForwardDirection;
+        cameraProperties.mtxData.second.viewData.targetPointWorldLocation =
+            cameraProperties.mtxData.second.viewData.worldLocation + cameraForwardDirection;
 
         // Mark view matrix as "needs update".
-        cameraProperties.mtxData.second.viewData.first = true;
+        cameraProperties.mtxData.second.viewData.bViewMatrixNeedsUpdate = true;
     }
 
 } // namespace ne

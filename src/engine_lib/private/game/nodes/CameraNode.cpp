@@ -52,7 +52,7 @@ namespace ne {
         // Update camera properties.
         std::scoped_lock cameraPropertiesGuard(cameraProperties.mtxData.first);
 
-        CameraProperties::Data::ViewData& viewData = cameraProperties.mtxData.second.viewData.second;
+        CameraProperties::Data::ViewData& viewData = cameraProperties.mtxData.second.viewData;
 
         viewData.worldLocation = getWorldLocation();
 
@@ -87,7 +87,7 @@ namespace ne {
         }
 
         // Mark view matrix as "needs update".
-        cameraProperties.mtxData.second.viewData.first = true;
+        cameraProperties.mtxData.second.viewData.bViewMatrixNeedsUpdate = true;
     }
 
     void CameraNode::setCameraMode(CameraMode mode) {
@@ -153,12 +153,11 @@ namespace ne {
         cameraProperties.mtxData.second.orbitalModeData.theta = theta;
 
         // Change node's location according to new spherical rotation.
-        const auto newWorldLocation =
-            MathHelpers::convertSphericalToCartesianCoordinates(
-                cameraProperties.mtxData.second.orbitalModeData.distanceToTarget,
-                cameraProperties.mtxData.second.orbitalModeData.theta,
-                cameraProperties.mtxData.second.orbitalModeData.phi) +
-            cameraProperties.mtxData.second.viewData.second.targetPointWorldLocation;
+        const auto newWorldLocation = MathHelpers::convertSphericalToCartesianCoordinates(
+                                          cameraProperties.mtxData.second.orbitalModeData.distanceToTarget,
+                                          cameraProperties.mtxData.second.orbitalModeData.theta,
+                                          cameraProperties.mtxData.second.orbitalModeData.phi) +
+                                      cameraProperties.mtxData.second.viewData.targetPointWorldLocation;
 
         setWorldLocation(newWorldLocation); // causes `updateCameraProperties` to be called
     }
@@ -180,12 +179,11 @@ namespace ne {
         cameraProperties.mtxData.second.orbitalModeData.distanceToTarget = distanceToTarget;
 
         // Change node's location according to new spherical rotation.
-        const auto newWorldLocation =
-            MathHelpers::convertSphericalToCartesianCoordinates(
-                cameraProperties.mtxData.second.orbitalModeData.distanceToTarget,
-                cameraProperties.mtxData.second.orbitalModeData.theta,
-                cameraProperties.mtxData.second.orbitalModeData.phi) +
-            cameraProperties.mtxData.second.viewData.second.targetPointWorldLocation;
+        const auto newWorldLocation = MathHelpers::convertSphericalToCartesianCoordinates(
+                                          cameraProperties.mtxData.second.orbitalModeData.distanceToTarget,
+                                          cameraProperties.mtxData.second.orbitalModeData.theta,
+                                          cameraProperties.mtxData.second.orbitalModeData.phi) +
+                                      cameraProperties.mtxData.second.viewData.targetPointWorldLocation;
 
         setWorldLocation(newWorldLocation); // causes `updateCameraProperties` to be called
     }

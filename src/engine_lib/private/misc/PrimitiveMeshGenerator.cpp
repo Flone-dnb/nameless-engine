@@ -7,7 +7,9 @@ namespace ne {
         MeshVertex vertex;
         const auto halfSize = size * 0.5F;
 
-        static_assert(sizeof(MeshVertex) == 48, "properly generate new mesh data");
+        static_assert(sizeof(MeshVertex) == 48, "properly generate new mesh data"); // NOLINT: current size
+
+        // NOLINTBEGIN(readability-magic-numbers)
 
         // Vertices:
         meshData.getVertices()->resize(24);
@@ -24,7 +26,7 @@ namespace ne {
         vertex.uv = glm::vec2(1.0F, 0.0F);
         meshData.getVertices()->at(2) = vertex;
         vertex.position = glm::vec3(halfSize, halfSize, halfSize);
-        vertex.uv = glm::vec2(0.0f, 0.0f);
+        vertex.uv = glm::vec2(0.0F, 0.0F);
         meshData.getVertices()->at(3) = vertex;
 
         // -X face.
@@ -39,7 +41,7 @@ namespace ne {
         vertex.uv = glm::vec2(1.0F, 0.0F);
         meshData.getVertices()->at(6) = vertex;
         vertex.position = glm::vec3(-halfSize, -halfSize, halfSize);
-        vertex.uv = glm::vec2(0.0f, 0.0f);
+        vertex.uv = glm::vec2(0.0F, 0.0F);
         meshData.getVertices()->at(7) = vertex;
 
         // +Y face.
@@ -54,7 +56,7 @@ namespace ne {
         vertex.uv = glm::vec2(1.0F, 0.0F);
         meshData.getVertices()->at(10) = vertex;
         vertex.position = glm::vec3(-halfSize, halfSize, halfSize);
-        vertex.uv = glm::vec2(0.0f, 0.0f);
+        vertex.uv = glm::vec2(0.0F, 0.0F);
         meshData.getVertices()->at(11) = vertex;
 
         // -Y face.
@@ -69,7 +71,7 @@ namespace ne {
         vertex.uv = glm::vec2(1.0F, 0.0F);
         meshData.getVertices()->at(14) = vertex;
         vertex.position = glm::vec3(halfSize, -halfSize, halfSize);
-        vertex.uv = glm::vec2(0.0f, 0.0f);
+        vertex.uv = glm::vec2(0.0F, 0.0F);
         meshData.getVertices()->at(15) = vertex;
 
         // +Z face.
@@ -84,7 +86,7 @@ namespace ne {
         vertex.uv = glm::vec2(1.0F, 0.0F);
         meshData.getVertices()->at(18) = vertex;
         vertex.position = glm::vec3(halfSize, halfSize, halfSize);
-        vertex.uv = glm::vec2(0.0f, 0.0f);
+        vertex.uv = glm::vec2(0.0F, 0.0F);
         meshData.getVertices()->at(19) = vertex;
 
         // -Z face.
@@ -99,7 +101,7 @@ namespace ne {
         vertex.uv = glm::vec2(1.0F, 0.0F);
         meshData.getVertices()->at(22) = vertex;
         vertex.position = glm::vec3(halfSize, -halfSize, -halfSize);
-        vertex.uv = glm::vec2(0.0f, 0.0f);
+        vertex.uv = glm::vec2(0.0F, 0.0F);
         meshData.getVertices()->at(23) = vertex;
 
         // Indices:
@@ -111,6 +113,8 @@ namespace ne {
             16, 17, 18, 19, 18, 17, // +Z face.
             20, 21, 22, 23, 22, 21  // -Z face.
         };
+
+        // NOLINTEND(readability-magic-numbers)
 
         return meshData;
     }

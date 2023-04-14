@@ -151,8 +151,8 @@ namespace ne {
          */
         inline void recalculateBaseVectorsForOrbitalCamera() {
             cameraForwardDirection = MathHelpers::normalizeSafely(
-                cameraProperties.mtxData.second.viewData.second.targetPointWorldLocation -
-                cameraProperties.mtxData.second.viewData.second.worldLocation);
+                cameraProperties.mtxData.second.viewData.targetPointWorldLocation -
+                cameraProperties.mtxData.second.viewData.worldLocation);
             cameraRightDirection = glm::normalize(glm::cross(cameraForwardDirection, worldUpDirection));
             cameraUpDirection = glm::cross(cameraRightDirection, worldUpDirection);
         }

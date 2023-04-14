@@ -12,27 +12,27 @@ namespace ne {
         std::scoped_lock guard(mtxData.first);
 
         // Make sure this aspect ratio is different.
-        if (mtxData.second.projectionData.second.iRenderTargetWidth == iRenderTargetWidth &&
-            mtxData.second.projectionData.second.iRenderTargetHeight == iRenderTargetHeight) {
+        if (mtxData.second.projectionData.iRenderTargetWidth == iRenderTargetWidth &&
+            mtxData.second.projectionData.iRenderTargetHeight == iRenderTargetHeight) {
             return;
         }
 
         // Apply change.
-        mtxData.second.projectionData.second.iRenderTargetWidth = iRenderTargetWidth;
-        mtxData.second.projectionData.second.iRenderTargetHeight = iRenderTargetHeight;
+        mtxData.second.projectionData.iRenderTargetWidth = iRenderTargetWidth;
+        mtxData.second.projectionData.iRenderTargetHeight = iRenderTargetHeight;
 
         // Mark projection matrix as "needs update".
-        mtxData.second.projectionData.first = true;
+        mtxData.second.projectionData.bProjectionMatrixNeedsUpdate = true;
     }
 
     void CameraProperties::setFov(unsigned int iVerticalFov) {
         std::scoped_lock guard(mtxData.first);
 
         // Apply FOV.
-        mtxData.second.projectionData.second.iVerticalFov = iVerticalFov;
+        mtxData.second.projectionData.iVerticalFov = iVerticalFov;
 
         // Mark projection matrix as "needs update".
-        mtxData.second.projectionData.first = true;
+        mtxData.second.projectionData.bProjectionMatrixNeedsUpdate = true;
     }
 
     void CameraProperties::setNearClipPlaneDistance(float nearClipPlaneDistance) {
@@ -49,10 +49,10 @@ namespace ne {
         std::scoped_lock guard(mtxData.first);
 
         // Apply near clip plane.
-        mtxData.second.projectionData.second.nearClipPlaneDistance = nearClipPlaneDistance;
+        mtxData.second.projectionData.nearClipPlaneDistance = nearClipPlaneDistance;
 
         // Mark projection matrix as "needs update".
-        mtxData.second.projectionData.first = true;
+        mtxData.second.projectionData.bProjectionMatrixNeedsUpdate = true;
     }
 
     void CameraProperties::setFarClipPlaneDistance(float farClipPlaneDistance) {
@@ -69,35 +69,40 @@ namespace ne {
         std::scoped_lock guard(mtxData.first);
 
         // Apply far clip plane.
-        mtxData.second.projectionData.second.farClipPlaneDistance = farClipPlaneDistance;
+        mtxData.second.projectionData.farClipPlaneDistance = farClipPlaneDistance;
 
         // Mark projection matrix as "needs update".
-        mtxData.second.projectionData.first = true;
+        mtxData.second.projectionData.bProjectionMatrixNeedsUpdate = true;
     }
 
     unsigned int CameraProperties::getVerticalFov() {
         std::scoped_lock guard(mtxData.first);
 
-        return mtxData.second.projectionData.second.iVerticalFov;
+        return mtxData.second.projectionData.iVerticalFov;
     }
 
     float CameraProperties::getNearClipPlaneDistance() {
         std::scoped_lock guard(mtxData.first);
 
-        return mtxData.second.projectionData.second.nearClipPlaneDistance;
+        return mtxData.second.projectionData.nearClipPlaneDistance;
     }
 
     float CameraProperties::getFarClipPlaneDistance() {
         std::scoped_lock guard(mtxData.first);
 
-        return mtxData.second.projectionData.second.farClipPlaneDistance;
+        return mtxData.second.projectionData.farClipPlaneDistance;
     }
 
-    float CameraProperties::getAspectRatio() {
+    unsigned int CameraProperties::getRenderTargetWidth() {
         std::scoped_lock guard(mtxData.first);
 
-        return static_cast<float>(mtxData.second.projectionData.second.iRenderTargetWidth) /
-               static_cast<float>(mtxData.second.projectionData.second.iRenderTargetHeight);
+        return mtxData.second.projectionData.iRenderTargetWidth;
+    }
+
+    unsigned int CameraProperties::getRenderTargetHeight() {
+        std::scoped_lock guard(mtxData.first);
+
+        return mtxData.second.projectionData.iRenderTargetHeight;
     }
 
     CameraProperties::Data::OrbitalModeData CameraProperties::getOrbitalModeProperties() {
@@ -107,7 +112,7 @@ namespace ne {
 
     glm::vec3 CameraProperties::getWorldLocation() {
         std::scoped_lock guard(mtxData.first);
-        return mtxData.second.viewData.second.worldLocation;
+        return mtxData.second.viewData.worldLocation;
     }
 
     glm::mat4x4 CameraProperties::getViewMatrix() {
@@ -115,7 +120,7 @@ namespace ne {
 
         makeSureViewMatrixIsUpToDate();
 
-        return mtxData.second.viewData.second.viewMatrix;
+        return mtxData.second.viewData.viewMatrix;
     }
 
     glm::mat4x4 CameraProperties::getProjectionMatrix() {
@@ -123,45 +128,45 @@ namespace ne {
 
         makeSureProjectionMatrixAndClipPlanesAreUpToDate();
 
-        return mtxData.second.projectionData.second.projectionMatrix;
+        return mtxData.second.projectionData.projectionMatrix;
     }
 
     void CameraProperties::makeSureViewMatrixIsUpToDate() {
         std::scoped_lock guard(mtxData.first);
 
         // Only continue if the view matrix is marked as "needs update".
-        if (!mtxData.second.viewData.first) {
+        if (!mtxData.second.viewData.bViewMatrixNeedsUpdate) {
             return;
         }
 
         // Calculate view matrix.
-        mtxData.second.viewData.second.viewMatrix = glm::lookAtLH(
-            mtxData.second.viewData.second.worldLocation,
-            mtxData.second.viewData.second.targetPointWorldLocation,
-            mtxData.second.viewData.second.worldUpDirection);
+        mtxData.second.viewData.viewMatrix = glm::lookAtLH(
+            mtxData.second.viewData.worldLocation,
+            mtxData.second.viewData.targetPointWorldLocation,
+            mtxData.second.viewData.worldUpDirection);
 
         // Mark view matrix as "updated".
-        mtxData.second.viewData.first = false;
+        mtxData.second.viewData.bViewMatrixNeedsUpdate = false;
     }
 
     void CameraProperties::makeSureProjectionMatrixAndClipPlanesAreUpToDate() {
         std::scoped_lock guard(mtxData.first);
 
         // Make sure that we actually need to recalculate it.
-        if (!mtxData.second.projectionData.first) {
+        if (!mtxData.second.projectionData.bProjectionMatrixNeedsUpdate) {
             return;
         }
 
         const auto verticalFovInRadians =
-            glm::radians(static_cast<float>(mtxData.second.projectionData.second.iVerticalFov));
+            glm::radians(static_cast<float>(mtxData.second.projectionData.iVerticalFov));
 
         // Calculate projection matrix.
-        mtxData.second.projectionData.second.projectionMatrix = glm::perspectiveFovLH(
+        mtxData.second.projectionData.projectionMatrix = glm::perspectiveFovLH(
             verticalFovInRadians,
-            static_cast<float>(mtxData.second.projectionData.second.iRenderTargetWidth),
-            static_cast<float>(mtxData.second.projectionData.second.iRenderTargetHeight),
-            mtxData.second.projectionData.second.nearClipPlaneDistance,
-            mtxData.second.projectionData.second.farClipPlaneDistance);
+            static_cast<float>(mtxData.second.projectionData.iRenderTargetWidth),
+            static_cast<float>(mtxData.second.projectionData.iRenderTargetHeight),
+            mtxData.second.projectionData.nearClipPlaneDistance,
+            mtxData.second.projectionData.farClipPlaneDistance);
 
         // Projection window width/height in normalized device coordinates.
         constexpr float projectionWindowDimensionSize = 2.0F; // because view space window is [-1; 1]
@@ -169,13 +174,13 @@ namespace ne {
         const auto tan = std::tanf(0.5F * verticalFovInRadians);
 
         // Calculate clip planes height.
-        mtxData.second.projectionData.second.nearClipPlaneHeight =
-            projectionWindowDimensionSize * mtxData.second.projectionData.second.nearClipPlaneDistance * tan;
-        mtxData.second.projectionData.second.farClipPlaneHeight =
-            projectionWindowDimensionSize * mtxData.second.projectionData.second.farClipPlaneDistance * tan;
+        mtxData.second.projectionData.nearClipPlaneHeight =
+            projectionWindowDimensionSize * mtxData.second.projectionData.nearClipPlaneDistance * tan;
+        mtxData.second.projectionData.farClipPlaneHeight =
+            projectionWindowDimensionSize * mtxData.second.projectionData.farClipPlaneDistance * tan;
 
         // Change flag.
-        mtxData.second.projectionData.first = false;
+        mtxData.second.projectionData.bProjectionMatrixNeedsUpdate = false;
     }
 
 } // namespace ne

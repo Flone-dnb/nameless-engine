@@ -51,6 +51,9 @@ namespace ne {
                 /** Matrix that transforms positions to view (camera) space. */
                 glm::mat4x4 viewMatrix = glm::identity<glm::mat4x4>();
 
+                /** Whether @ref viewMatrix needs to be recalculated or not. */
+                bool bViewMatrixNeedsUpdate = true;
+
                 /** Location of the camera in world space. */
                 glm::vec3 worldLocation = glm::vec3(0.0F, 0.0F, 0.0F);
 
@@ -70,6 +73,9 @@ namespace ne {
                  * (homogeneous clip space).
                  */
                 glm::mat4x4 projectionMatrix = glm::identity<glm::mat4x4>();
+
+                /** Whether @ref projectionMatrix needs to be recalculated or not. */
+                bool bProjectionMatrixNeedsUpdate = true;
 
                 /** Distance from camera (view) space origin to camera's near clip plane. */
                 float nearClipPlaneDistance = 0.3F; // NOLINT: magic number
@@ -99,7 +105,7 @@ namespace ne {
              *
              * @remark The bool variable is used to minimize the amount of times we recalculate view matrix.
              */
-            std::pair<bool, ViewData> viewData = std::make_pair(true, ViewData{});
+            ViewData viewData;
 
             /**
              * Contains a flag the indicates whether projection matrix needs to be recalculated or not
@@ -109,7 +115,7 @@ namespace ne {
              * @remark The bool variable is used to minimize the amount of times we recalculate projection
              * matrix.
              */
-            std::pair<bool, ProjectionData> projectionData = std::make_pair(true, ProjectionData{});
+            ProjectionData projectionData;
 
             /** Defines how camera can move and rotate. */
             CameraMode currentCameraMode = CameraMode::FREE;
@@ -174,11 +180,18 @@ namespace ne {
         float getFarClipPlaneDistance();
 
         /**
-         * Returns camera's aspect ratio.
+         * Returns width (component of aspect ratio) of the target we are presenting the camera.
          *
-         * @return Camera's aspect ratio.
+         * @return Camera's aspect ratio's width.
          */
-        float getAspectRatio();
+        unsigned int getRenderTargetWidth();
+
+        /**
+         * Returns height (component of aspect ratio) of the target we are presenting the camera.
+         *
+         * @return Camera's aspect ratio's height.
+         */
+        unsigned int getRenderTargetHeight();
 
         /**
          * Returns orbital camera properties.

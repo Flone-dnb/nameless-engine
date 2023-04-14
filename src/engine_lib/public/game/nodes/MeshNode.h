@@ -23,6 +23,7 @@ namespace ne RNAMESPACE() {
      */
     struct MeshVertex { // not using inheritance to avoid extra fields that are not related to vertex
         MeshVertex() = default;
+        ~MeshVertex() = default;
 
         /** Copy constructor. */
         MeshVertex(const MeshVertex&) = default;

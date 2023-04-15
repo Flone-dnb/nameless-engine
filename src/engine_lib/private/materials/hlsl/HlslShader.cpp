@@ -26,7 +26,7 @@ namespace ne {
         const std::string& sSourceFileHash)
         : Shader(pRenderer, std::move(pathToCompiledShader), sShaderName, shaderType, sSourceFileHash) {
         static_assert(
-            sizeof(MeshVertex) == 48, // NOLINT: current size
+            sizeof(MeshVertex) == 32, // NOLINT: current size
             "`vShaderVertexDescription` needs to be updated");
     }
 

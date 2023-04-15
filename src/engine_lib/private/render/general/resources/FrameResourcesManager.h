@@ -38,7 +38,7 @@ namespace ne {
     /**
      * Stores frame-global constants. Used by shaders.
      *
-     * @warning Should be exactly the same as `cbuffer` in shaders (except for GLM type aligning).
+     * @warning Should be structured properly to be packed as a constant buffer in shaders.
      */
     struct FrameConstants {
         /** Camera's view matrix multiplied by camera's projection matrix. */
@@ -54,7 +54,9 @@ namespace ne {
         float totalTimeInSec = 0.0F;
 
         /** Padding. */
-        float pad[2];
+        float pad[3];
+
+        // don't forget to pad to 4 floats (if needed)
     };
 
     /** Stores objects used by one frame. */

@@ -200,7 +200,7 @@ namespace ne RNAMESPACE() {
             /** World matrix. */
             glm::mat4x4 world = glm::identity<glm::mat4x4>();
 
-            // remember to add padding to 4 floats (if needed)
+            // don't forget to add padding to 4 floats (if needed)
         };
 
         MeshNode();

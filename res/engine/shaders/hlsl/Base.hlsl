@@ -6,8 +6,6 @@ cbuffer frameData : register(b0, space5)
 
     /** Camera's world location. */
     float3 cameraPosition;
-    
-    float _cameraPositionAligning;
 
     /** Time that has passed since the last frame in seconds (i.e. delta time). */
     float timeSincePrevFrameInSec;
@@ -15,9 +13,9 @@ cbuffer frameData : register(b0, space5)
     /** Time since the first window was created (in seconds). */
     float totalTimeInSec;
 
-    float2 _framePad;
+    float3 _framePad;
 
-    // don't forget to pad to 4 floats
+    // don't forget to pad to 4 floats (if needed)
 }
 
 /** Describes vertex shader input data. */

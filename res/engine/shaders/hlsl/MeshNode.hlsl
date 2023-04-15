@@ -23,7 +23,7 @@ cbuffer meshData : register(b1, space5)
     /** Matrix that transforms vertices from mesh local space to world space. */
     float4x4 worldMatrix; 
     
-    // don't forget to pad to 4 floats
+    // don't forget to pad to 4 floats (if needed)
 };
 
 VertexOut vsMeshNode(VertexIn vertexIn)

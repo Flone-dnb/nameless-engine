@@ -153,8 +153,8 @@ namespace ne {
             cameraForwardDirection = MathHelpers::normalizeSafely(
                 cameraProperties.mtxData.second.viewData.targetPointWorldLocation -
                 cameraProperties.mtxData.second.viewData.worldLocation);
-            cameraRightDirection = glm::normalize(glm::cross(cameraForwardDirection, worldUpDirection));
-            cameraUpDirection = glm::cross(cameraRightDirection, worldUpDirection);
+            cameraRightDirection = glm::normalize(glm::cross(WorldDirection::up, cameraForwardDirection));
+            cameraUpDirection = glm::cross(cameraForwardDirection, cameraRightDirection);
         }
 
         /**
@@ -171,13 +171,13 @@ namespace ne {
         CameraProperties cameraProperties;
 
         /** Camera's forward direction in world space. */
-        glm::vec3 cameraForwardDirection = worldForwardDirection;
+        glm::vec3 cameraForwardDirection = WorldDirection::forward;
 
         /** Camera's right direction in world space. */
-        glm::vec3 cameraRightDirection = worldRightDirection;
+        glm::vec3 cameraRightDirection = WorldDirection::right;
 
         /** Camera's up direction in world space. */
-        glm::vec3 cameraUpDirection = worldUpDirection;
+        glm::vec3 cameraUpDirection = WorldDirection::up;
 
         /** Camera's world rotation in degrees (roll, pitch, yaw). */
         glm::vec3 cameraRotation = glm::vec3(0.0F, 0.0F, 0.0F);

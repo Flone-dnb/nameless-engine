@@ -81,7 +81,7 @@ namespace ne {
 
     bool MeshVertex::operator==(const MeshVertex& other) const {
         static_assert(
-            sizeof(MeshVertex) == 48, // NOLINT
+            sizeof(MeshVertex) == 32, // NOLINT
             "add new fields to `serializeVec`, `deserializeVec`, `operator==` and to unit "
             "tests");
         constexpr auto floatDelta = 0.00001F;

@@ -562,9 +562,10 @@ namespace ne {
                     }
 
                     pData->error = Error(fmt::format(
-                        "the field \"{}\" (maybe inherited) of type \"{}\" has unsupported for "
-                        "serialization type",
+                        "the field \"{}\" with type \"{}\" (maybe inherited) of type \"{}\" has unsupported "
+                        "for serialization type",
                         field.getName(),
+                        field.getCanonicalTypeName(),
                         pData->selfArchetype->getName()));
                     return false;
                 }

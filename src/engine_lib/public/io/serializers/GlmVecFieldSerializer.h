@@ -107,13 +107,13 @@ namespace ne {
 
     private:
         /** Canonical type name for `glm::vec2` fields. */
-        static inline const std::string sVec2CanonicalTypeName = "glm::vec<2, float, glm::aligned_highp>";
+        static inline const std::string sVec2CanonicalTypeName = "glm::vec<2, float, glm::packed_highp>";
 
         /** Canonical type name for `glm::vec3` fields. */
-        static inline const std::string sVec3CanonicalTypeName = "glm::vec<3, float, glm::aligned_highp>";
+        static inline const std::string sVec3CanonicalTypeName = "glm::vec<3, float, glm::packed_highp>";
 
         /** Canonical type name for `glm::vec4` fields. */
-        static inline const std::string sVec4CanonicalTypeName = "glm::vec<4, float, glm::aligned_highp>";
+        static inline const std::string sVec4CanonicalTypeName = "glm::vec<4, float, glm::packed_highp>";
 
         /** Delta used when comparing floats. */
         static inline const float floatEpsilon = 0.00001f;

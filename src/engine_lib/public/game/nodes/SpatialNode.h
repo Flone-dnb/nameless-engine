@@ -261,6 +261,8 @@ namespace ne RNAMESPACE() {
 
         /** Small helper struct to keep all world space related information in one place. */
         struct WorldMatrixInformation {
+            WorldMatrixInformation() = default;
+
             /**
              * World location of this node.
              * This value contains the location component of @ref worldMatrix.
@@ -280,13 +282,13 @@ namespace ne RNAMESPACE() {
             glm::vec3 worldScale = glm::vec3(1.0F, 1.0F, 1.0F);
 
             /** Forward direction of this node in world space. */
-            glm::vec3 worldForward = worldForwardDirection;
+            glm::vec3 worldForward = WorldDirection::forward;
 
             /** Right direction of this node in world space. */
-            glm::vec3 worldRight = worldRightDirection;
+            glm::vec3 worldRight = WorldDirection::right;
 
             /** Up direction of this node in world space. */
-            glm::vec3 worldUp = worldUpDirection;
+            glm::vec3 worldUp = WorldDirection::up;
 
             /** Rotation from @ref worldMatrix in the quaternion form. */
             glm::quat worldRotationQuaternion = glm::identity<glm::quat>();
@@ -303,6 +305,8 @@ namespace ne RNAMESPACE() {
 
         /** Small helper struct to keep all local space related information in one place. */
         struct LocalSpaceInformation {
+            LocalSpaceInformation() = default;
+
             /** Matrix that describes basis vectors that define node's local space. */
             glm::mat4x4 relativeRotationMatrix = glm::identity<glm::mat4x4>();
 
@@ -335,13 +339,13 @@ namespace ne RNAMESPACE() {
         glm::vec3 relativeScale = glm::vec3(1.0F, 1.0F, 1.0F);
 
         /** First (most closer to this node) spatial node in the parent chain. */
-        std::pair<std::recursive_mutex, gc<SpatialNode>> mtxSpatialParent;
+        std::pair<std::recursive_mutex, gc<SpatialNode>> mtxSpatialParent{};
 
         /** Matrix that describes basis vectors that define node's local space. */
-        std::pair<std::recursive_mutex, LocalSpaceInformation> mtxLocalSpace;
+        std::pair<std::recursive_mutex, LocalSpaceInformation> mtxLocalSpace{};
 
         /** World related information, must be used with mutex. */
-        std::pair<std::recursive_mutex, WorldMatrixInformation> mtxWorldMatrix;
+        std::pair<std::recursive_mutex, WorldMatrixInformation> mtxWorldMatrix{};
 
         /** Name of the category used for logging. */
         static inline const auto sSpatialNodeLogCategory = "Spatial Node";

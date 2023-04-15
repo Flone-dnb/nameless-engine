@@ -7,7 +7,7 @@ namespace ne {
         MeshVertex vertex;
         const auto halfSize = size * 0.5F;
 
-        static_assert(sizeof(MeshVertex) == 48, "properly generate new mesh data"); // NOLINT: current size
+        static_assert(sizeof(MeshVertex) == 32, "properly generate new mesh data"); // NOLINT: current size
 
         // NOLINTBEGIN(readability-magic-numbers)
 

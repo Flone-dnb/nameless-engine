@@ -241,11 +241,11 @@ namespace ne {
 
         // Calculate world forward direction.
         mtxWorldMatrix.second.worldForward =
-            glm::normalize(mtxWorldMatrix.second.worldMatrix * glm::vec4(worldForwardDirection, 0.0F));
+            glm::normalize(mtxWorldMatrix.second.worldMatrix * glm::vec4(WorldDirection::forward, 0.0F));
 
         // Calculate world right direction.
         mtxWorldMatrix.second.worldRight =
-            glm::normalize(mtxWorldMatrix.second.worldMatrix * glm::vec4(worldRightDirection, 0.0F));
+            glm::normalize(mtxWorldMatrix.second.worldMatrix * glm::vec4(WorldDirection::right, 0.0F));
 
         // Calculate world up direction.
         mtxWorldMatrix.second.worldUp =
@@ -294,6 +294,7 @@ namespace ne {
 
         // Find a spatial node in the parent chain and save it.
         std::scoped_lock spatialParentGuard(mtxSpatialParent.first);
+
         mtxSpatialParent.second = getParentNodeOfType<SpatialNode>();
 
         // No need to notify child nodes since this function (on after attached)

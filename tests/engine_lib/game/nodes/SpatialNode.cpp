@@ -862,9 +862,9 @@ TEST_CASE("make spatial node look at world location with parent rotation") {
                 auto childWorldRight = pChildSpatialNode->getWorldRightDirection();
                 auto childWorldUp = pChildSpatialNode->getWorldUpDirection();
 
-                REQUIRE(glm::all(glm::epsilonEqual(childWorldForward, -worldUpDirection, floatEpsilon)));
-                REQUIRE(glm::all(glm::epsilonEqual(childWorldRight, -worldForwardDirection, floatEpsilon)));
-                REQUIRE(glm::all(glm::epsilonEqual(childWorldUp, worldRightDirection, floatEpsilon)));
+                REQUIRE(glm::all(glm::epsilonEqual(childWorldForward, -WorldDirection::up, floatEpsilon)));
+                REQUIRE(glm::all(glm::epsilonEqual(childWorldRight, -WorldDirection::forward, floatEpsilon)));
+                REQUIRE(glm::all(glm::epsilonEqual(childWorldUp, WorldDirection::right, floatEpsilon)));
 
                 // Set parent rotation.
                 pParentSpatialNode->setRelativeRotation(glm::vec3(0.0f, 90.0f, -90.0f));
@@ -874,12 +874,12 @@ TEST_CASE("make spatial node look at world location with parent rotation") {
                 childWorldRight = pChildSpatialNode->getWorldRightDirection();
                 childWorldUp = pChildSpatialNode->getWorldUpDirection();
 
-                REQUIRE(glm::all(glm::epsilonEqual(childWorldForward, -worldUpDirection, floatEpsilon)));
-                REQUIRE(glm::all(glm::epsilonEqual(childWorldRight, worldForwardDirection, floatEpsilon)));
-                REQUIRE(glm::all(glm::epsilonEqual(childWorldUp, -worldRightDirection, floatEpsilon)));
+                REQUIRE(glm::all(glm::epsilonEqual(childWorldForward, -WorldDirection::up, floatEpsilon)));
+                REQUIRE(glm::all(glm::epsilonEqual(childWorldRight, WorldDirection::forward, floatEpsilon)));
+                REQUIRE(glm::all(glm::epsilonEqual(childWorldUp, -WorldDirection::right, floatEpsilon)));
 
                 // Make child node look at +Y.
-                auto targetRotation = MathHelpers::convertDirectionToRollPitchYaw(worldRightDirection);
+                auto targetRotation = MathHelpers::convertDirectionToRollPitchYaw(WorldDirection::right);
                 pChildSpatialNode->setWorldRotation(targetRotation);
 
                 // Local forward should look at -X and local right should look at -Z.
@@ -890,56 +890,57 @@ TEST_CASE("make spatial node look at world location with parent rotation") {
                 childWorldForward = pChildSpatialNode->getWorldForwardDirection();
                 childWorldRight = pChildSpatialNode->getWorldRightDirection();
 
-                REQUIRE(glm::all(glm::epsilonEqual(childWorldForward, worldRightDirection, floatEpsilon)));
-                REQUIRE(glm::all(glm::epsilonEqual(childWorldRight, -worldForwardDirection, floatEpsilon)));
+                REQUIRE(glm::all(glm::epsilonEqual(childWorldForward, WorldDirection::right, floatEpsilon)));
+                REQUIRE(glm::all(glm::epsilonEqual(childWorldRight, -WorldDirection::forward, floatEpsilon)));
 
                 // Make child node look at -Y.
-                targetRotation = MathHelpers::convertDirectionToRollPitchYaw(-worldRightDirection);
+                targetRotation = MathHelpers::convertDirectionToRollPitchYaw(-WorldDirection::right);
                 pChildSpatialNode->setWorldRotation(targetRotation);
 
                 // Check child forward/right.
                 childWorldForward = pChildSpatialNode->getWorldForwardDirection();
                 childWorldRight = pChildSpatialNode->getWorldRightDirection();
 
-                REQUIRE(glm::all(glm::epsilonEqual(childWorldForward, -worldRightDirection, floatEpsilon)));
-                REQUIRE(glm::all(glm::epsilonEqual(childWorldRight, worldForwardDirection, floatEpsilon)));
+                REQUIRE(glm::all(glm::epsilonEqual(childWorldForward, -WorldDirection::right, floatEpsilon)));
+                REQUIRE(glm::all(glm::epsilonEqual(childWorldRight, WorldDirection::forward, floatEpsilon)));
 
                 // Make child node look at -X.
-                targetRotation = MathHelpers::convertDirectionToRollPitchYaw(-worldForwardDirection);
+                targetRotation = MathHelpers::convertDirectionToRollPitchYaw(-WorldDirection::forward);
                 pChildSpatialNode->setWorldRotation(targetRotation);
 
                 // Local forward should look at -Y and local right should look at -Z.
                 relativeRotation = pChildSpatialNode->getRelativeRotation();
                 relativeForward = MathHelpers::convertRollPitchYawToDirection(relativeRotation);
-                REQUIRE(glm::all(glm::epsilonEqual(relativeForward, -worldRightDirection, floatEpsilon)));
+                REQUIRE(glm::all(glm::epsilonEqual(relativeForward, -WorldDirection::right, floatEpsilon)));
 
                 // Check child forward/right.
                 childWorldForward = pChildSpatialNode->getWorldForwardDirection();
                 childWorldRight = pChildSpatialNode->getWorldRightDirection();
 
-                REQUIRE(glm::all(glm::epsilonEqual(childWorldForward, -worldForwardDirection, floatEpsilon)));
-                REQUIRE(glm::all(glm::epsilonEqual(childWorldRight, -worldRightDirection, floatEpsilon)));
+                REQUIRE(
+                    glm::all(glm::epsilonEqual(childWorldForward, -WorldDirection::forward, floatEpsilon)));
+                REQUIRE(glm::all(glm::epsilonEqual(childWorldRight, -WorldDirection::right, floatEpsilon)));
 
                 // Make child node look at +Z.
-                targetRotation = MathHelpers::convertDirectionToRollPitchYaw(worldUpDirection);
+                targetRotation = MathHelpers::convertDirectionToRollPitchYaw(WorldDirection::up);
                 pChildSpatialNode->setWorldRotation(targetRotation);
 
                 // Check child forward/right.
                 childWorldForward = pChildSpatialNode->getWorldForwardDirection();
                 childWorldRight = pChildSpatialNode->getWorldRightDirection();
 
-                REQUIRE(glm::all(glm::epsilonEqual(childWorldForward, worldUpDirection, floatEpsilon)));
+                REQUIRE(glm::all(glm::epsilonEqual(childWorldForward, WorldDirection::up, floatEpsilon)));
                 REQUIRE(glm::all(glm::epsilonEqual(childWorldRight, childWorldRight, floatEpsilon)));
 
                 // Make child node look at -Z.
-                targetRotation = MathHelpers::convertDirectionToRollPitchYaw(-worldUpDirection);
+                targetRotation = MathHelpers::convertDirectionToRollPitchYaw(-WorldDirection::up);
                 pChildSpatialNode->setWorldRotation(targetRotation);
 
                 // Check child forward/right.
                 childWorldForward = pChildSpatialNode->getWorldForwardDirection();
                 childWorldRight = pChildSpatialNode->getWorldRightDirection();
 
-                REQUIRE(glm::all(glm::epsilonEqual(childWorldForward, -worldUpDirection, floatEpsilon)));
+                REQUIRE(glm::all(glm::epsilonEqual(childWorldForward, -WorldDirection::up, floatEpsilon)));
                 REQUIRE(glm::all(glm::epsilonEqual(childWorldRight, childWorldRight, floatEpsilon)));
 
                 // Make child node look at +X+Y.

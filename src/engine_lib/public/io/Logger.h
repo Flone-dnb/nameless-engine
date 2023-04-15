@@ -76,7 +76,14 @@ namespace ne {
             std::string_view sCategory,
             const nostd::source_location location = nostd::source_location::current()) const;
 
-        /** Forces the log to be flushed to the disk. */
+        /**
+         * Forces the log to be flushed to the disk.
+         *
+         * @remark Note that you are not required to call this explicitly as the logger will
+         * automatically flush the log to the disk from time to time but you can also
+         * explicitly call this function when you need to make sure the current log is
+         * fully saved on the disk.
+         */
         void flushToDisk();
 
         /**

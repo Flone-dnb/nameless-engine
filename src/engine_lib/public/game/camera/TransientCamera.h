@@ -196,7 +196,7 @@ namespace ne {
         bool bHasInputToProcess = false;
 
         /** Delta to compare input to zero. */
-        static inline constexpr float inputDelta = 0.001F;
+        static inline constexpr float inputDelta = 0.0001F;
 
         /** Name of the category used for logging. */
         static inline const auto sTransientCameraLogCategory = "Transient Camera";

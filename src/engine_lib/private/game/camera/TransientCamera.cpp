@@ -225,11 +225,6 @@ namespace ne {
     void TransientCamera::clearInput() { lastInputDirection = glm::vec3(0.0F, 0.0F, 0.0F); }
 
     void TransientCamera::moveFreeCamera(const glm::vec3& distance) {
-        // Make sure the input is not zero.
-        if (glm::all(glm::epsilonEqual(distance, glm::vec3(0.0F, 0.0F, 0.0F), inputDelta))) {
-            return;
-        }
-
         std::scoped_lock guard(cameraProperties.mtxData.first);
 
         // Make sure we are in the free camera mode.

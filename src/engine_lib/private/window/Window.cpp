@@ -224,33 +224,37 @@ namespace ne {
             pMonitor = glfwGetPrimaryMonitor();
             const GLFWvidmode* pMode = glfwGetVideoMode(pMonitor);
 
-            glfwWindowHint(GLFW_RED_BITS, pMode->redBits);
-            glfwWindowHint(GLFW_GREEN_BITS, pMode->greenBits);
-            glfwWindowHint(GLFW_BLUE_BITS, pMode->blueBits);
-            glfwWindowHint(GLFW_REFRESH_RATE, pMode->refreshRate);
-
+            // Use monitor size for window.
             params.iWindowWidth = pMode->width;
             params.iWindowHeight = pMode->height;
-        } else {
-            if (!params.bShowWindow) {
-                glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
-            }
 
-            if (params.bIsSplashScreen) {
-                glfwWindowHint(GLFW_DECORATED, GLFW_FALSE);
-            }
+            glfwWindowHint(GLFW_DECORATED, GLFW_FALSE);
+        } else if (params.bIsSplashScreen) {
+            glfwWindowHint(GLFW_DECORATED, GLFW_FALSE);
+        }
 
-            if (params.bMaximized) {
-                glfwWindowHint(GLFW_MAXIMIZED, GLFW_TRUE);
-            }
+        if (params.bMaximized) {
+            glfwWindowHint(GLFW_MAXIMIZED, GLFW_TRUE);
+        }
+
+        if (!params.bShowWindow) {
+            glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
         }
 
         // Create GLFW window.
-        GLFWwindow* pGLFWWindow = glfwCreateWindow(
-            params.iWindowWidth, params.iWindowHeight, sNewWindowTitle.c_str(), pMonitor, nullptr);
+        auto pGLFWWindow = glfwCreateWindow(
+            params.iWindowWidth, params.iWindowHeight, sNewWindowTitle.c_str(), nullptr, nullptr);
         if (pGLFWWindow == nullptr) {
             return Error("failed to create window");
         }
+
+#if defined(WIN32)
+        if (params.bFullscreen) {
+            // Make window overlap taskbar.
+            HWND hWindow = glfwGetWin32Window(pGLFWWindow);
+            SetWindowPos(hWindow, HWND_TOP, 0, 0, params.iWindowWidth, params.iWindowHeight, 0);
+        }
+#endif
 
         auto pWindow = std::unique_ptr<Window>(new Window(pGLFWWindow, sNewWindowTitle));
 

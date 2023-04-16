@@ -55,7 +55,8 @@ namespace ne {
             throw std::runtime_error(optionalError->getFullErrorMessage());
         }
 
-        // Disable Alt + Enter.
+        // Disable Alt + Enter in order to avoid switching to fullscreen exclusive mode
+        // because we don't support it and use windowed fullscreen instead.
         const HRESULT hResult =
             pFactory->MakeWindowAssociation(getWindow()->getWindowHandle(), DXGI_MWA_NO_ALT_ENTER);
         if (FAILED(hResult)) {

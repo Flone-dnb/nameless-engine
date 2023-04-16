@@ -14,27 +14,23 @@
 #undef IGNORE
 
 namespace ne {
-    inline void GLFWErrorCallback(int iErrorCode, const char* pDescription) {
+    inline void glfwErrorCallback(int iErrorCode, const char* pDescription) {
         const Error error("GLFW error (" + std::to_string(iErrorCode) + "): " + std::string(pDescription));
         error.showError();
         throw std::runtime_error(error.getFullErrorMessage());
     }
 
-    /**
-     * Singleton helper class to globally initialize/terminate GLFW.
-     */
+    /** Singleton helper class to globally initialize/terminate GLFW. */
     class GLFW {
     public:
         GLFW(const GLFW&) = delete;
         GLFW& operator=(const GLFW&) = delete;
 
-        /**
-         * Terminates GLFW.
-         */
+        /** Terminates GLFW. */
         ~GLFW() { glfwTerminate(); }
 
         /**
-         * Will create a static class instance and return instance if not created before.
+         * Creates a static GLFW instance and return instance if not created before.
          *
          * @return Singleton.
          */
@@ -44,13 +40,11 @@ namespace ne {
         }
 
     private:
-        /**
-         * Initialized GLFW.
-         */
+        /** Initializes GLFW. */
         GLFW() {
-            glfwSetErrorCallback(ne::GLFWErrorCallback);
+            glfwSetErrorCallback(ne::glfwErrorCallback);
 
-            if (!glfwInit()) {
+            if (glfwInit() != GLFW_TRUE) {
                 const Error error("failed to initialize GLFW");
                 error.showError();
                 throw std::runtime_error(error.getFullErrorMessage());

@@ -282,7 +282,6 @@ namespace ne {
         void setGameInstance() {
             pGameInstance = std::make_unique<MyGameInstance>(pWindow, this, &inputManager);
             pGameInstance->onGameStarted();
-            bIsGameInstanceInitialized = true;
         }
 
         /**
@@ -433,9 +432,6 @@ namespace ne {
 
         /** Whether @ref addDeferredTask should accept new tasks or not. */
         bool bShouldAcceptNewDeferredTasks = true;
-
-        /** Whether @ref pGameInstance is initialized or not. */
-        bool bIsGameInstanceInitialized = false;
 
         /** Whether @ref destroy was called or not. */
         bool bIsBeingDestroyed = false;

@@ -192,9 +192,6 @@ namespace ne {
         /** Multiplier for movement. */
         float cameraMovementSpeed = 1.0F;
 
-        /** Whether @ref lastInputDirection is zero or not. */
-        bool bHasInputToProcess = false;
-
         /** Delta to compare input to zero. */
         static inline constexpr float inputDelta = 0.0001F;
 

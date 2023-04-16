@@ -7,26 +7,14 @@ namespace ne {
 
     void TransientCamera::setFreeCameraForwardMovement(float input) {
         lastInputDirection.x = std::clamp(input, -1.0F, 1.0F);
-
-        // Stop input processing if the input is zero.
-        bHasInputToProcess =
-            !glm::all(glm::epsilonEqual(lastInputDirection, glm::vec3(0.0F, 0.0F, 0.0F), inputDelta));
     }
 
     void TransientCamera::setFreeCameraRightMovement(float input) {
         lastInputDirection.y = std::clamp(input, -1.0F, 1.0F);
-
-        // Stop input processing if the input is zero.
-        bHasInputToProcess =
-            !glm::all(glm::epsilonEqual(lastInputDirection, glm::vec3(0.0F, 0.0F, 0.0F), inputDelta));
     }
 
     void TransientCamera::setFreeCameraWorldUpMovement(float input) {
         lastInputDirection.z = std::clamp(input, -1.0F, 1.0F);
-
-        // Stop input processing if the input is zero.
-        bHasInputToProcess =
-            !glm::all(glm::epsilonEqual(lastInputDirection, glm::vec3(0.0F, 0.0F, 0.0F), inputDelta));
     }
 
     void TransientCamera::setCameraMode(CameraMode mode) {
@@ -191,7 +179,7 @@ namespace ne {
 
     void TransientCamera::onBeforeNewFrame(float timeSincePrevCallInSec) {
         // Make sure the input is not zero.
-        if (!bHasInputToProcess) {
+        if (glm::all(glm::epsilonEqual(lastInputDirection, glm::vec3(0.0F, 0.0F, 0.0F), inputDelta))) {
             return;
         }
 

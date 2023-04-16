@@ -1029,7 +1029,8 @@ namespace ne {
         const auto startTime = std::chrono::steady_clock::now();
 
         // Compile shaders.
-        auto error = getShaderManager()->compileShaders(vEngineShaders, onProgress, onError, onCompleted);
+        auto error =
+            getShaderManager()->compileShaders(std::move(vEngineShaders), onProgress, onError, onCompleted);
         if (error.has_value()) {
             error->addEntry();
             error->showError();

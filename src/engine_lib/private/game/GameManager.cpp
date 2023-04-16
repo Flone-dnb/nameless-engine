@@ -456,8 +456,8 @@ namespace ne {
             mtxDeferredTasks.second.push(task);
         }
 
-        if (pGameInstance == nullptr) {
-            // Tick is not started yet but we already have some tasks (probably engine internal calls).
+        if (!bIsGameInstanceInitialized) {
+            // Tick is not started yet but we already have some tasks.
             // Execute them now.
             executeDeferredTasks();
         }

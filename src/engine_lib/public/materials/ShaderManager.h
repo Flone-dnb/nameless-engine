@@ -75,10 +75,13 @@ namespace ne {
          * @remark If a shader was already compiled previously (valid shader cache exists on disk),
          * its compilation will be skipped.
          *
+         * @remark You can make the compilation to be synchronous (blocks the current thread) for example
+         * by using an `std::future` and `std::promise` for `onCompleted` event.
+         *
          * @return An error if something went wrong.
          */
         [[nodiscard]] std::optional<Error> compileShaders(
-            std::vector<ShaderDescription>& vShadersToCompile,
+            std::vector<ShaderDescription> vShadersToCompile,
             const std::function<void(size_t iCompiledShaderCount, size_t iTotalShadersToCompile)>& onProgress,
             const std::function<
                 void(ShaderDescription shaderDescription, std::variant<std::string, Error> error)>& onError,

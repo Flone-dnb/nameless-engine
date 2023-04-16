@@ -436,7 +436,7 @@ namespace ne {
     }
 
     std::optional<Error> ShaderManager::compileShaders(
-        std::vector<ShaderDescription>& vShadersToCompile,
+        std::vector<ShaderDescription> vShadersToCompile,
         const std::function<void(size_t iCompiledShaderCount, size_t iTotalShadersToCompile)>& onProgress,
         const std::function<
             void(ShaderDescription shaderDescription, std::variant<std::string, Error> error)>& onError,

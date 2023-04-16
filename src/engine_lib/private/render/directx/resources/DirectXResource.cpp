@@ -40,7 +40,7 @@ namespace ne {
         pCreatedResource->pInternalResource = pCreatedResource->pAllocatedResource->GetResource();
 
         // Assign resource name.
-        pCreatedResource->pAllocatedResource->SetName(stringToWstring(sResourceName).c_str());
+        pCreatedResource->pAllocatedResource->SetName(Globals::stringToWstring(sResourceName).c_str());
 
         return pCreatedResource;
     }
@@ -94,7 +94,7 @@ namespace ne {
 
     std::string DirectXResource::getResourceName() const {
         if (pAllocatedResource != nullptr) {
-            return wstringToString(std::wstring(pAllocatedResource->GetName()));
+            return Globals::wstringToString(std::wstring(pAllocatedResource->GetName()));
         }
 
         return "swap chain buffer resource";

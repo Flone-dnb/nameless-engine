@@ -59,10 +59,10 @@ namespace ne {
 
         switch (category) {
         case ConfigCategory::PROGRESS:
-            basePath = ProjectPaths::getDirectoryForPlayerProgress();
+            basePath = ProjectPaths::getPathToPlayerProgressDirectory();
             break;
         case ConfigCategory::SETTINGS:
-            basePath = ProjectPaths::getDirectoryForPlayerSettings();
+            basePath = ProjectPaths::getPathToPlayerSettingsDirectory();
             break;
         }
 
@@ -297,10 +297,10 @@ namespace ne {
 
         switch (category) {
         case ConfigCategory::PROGRESS:
-            basePath = ProjectPaths::getDirectoryForPlayerProgress();
+            basePath = ProjectPaths::getPathToPlayerProgressDirectory();
             break;
         case ConfigCategory::SETTINGS:
-            basePath = ProjectPaths::getDirectoryForPlayerSettings();
+            basePath = ProjectPaths::getPathToPlayerSettingsDirectory();
             break;
         }
 

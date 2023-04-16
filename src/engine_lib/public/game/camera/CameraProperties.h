@@ -58,7 +58,7 @@ namespace ne {
                 glm::vec3 worldLocation = glm::vec3(0.0F, 0.0F, 0.0F);
 
                 /** Unit vector that points in camera's current up direction in world space. */
-                glm::vec3 worldUpDirection = WorldDirection::up;
+                glm::vec3 worldUpDirection = Globals::WorldDirection::up;
 
                 /** Location of the point in world space that the camera should look at. */
                 glm::vec3 targetPointWorldLocation = glm::vec3(1.0F, 0.0F, 0.0F);

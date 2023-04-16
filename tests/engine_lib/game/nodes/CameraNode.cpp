@@ -2,6 +2,7 @@
 #include "game/nodes/CameraNode.h"
 #include "game/GameInstance.h"
 #include "game/Window.h"
+#include "misc/Globals.h"
 
 // External.
 #include "catch2/catch_test_macros.hpp"
@@ -57,7 +58,8 @@ TEST_CASE("orbital camera node behaves correctly when used in a node tree") {
                     glm::all(glm::epsilonEqual(cameraLocation, glm::vec3(0.0F, 5.0F, 0.0F), floatEpsilon)));
                 REQUIRE(glm::all(
                     glm::epsilonEqual(cameraRelativeLocation, glm::vec3(5.0F, 0.0F, 0.0F), floatEpsilon)));
-                REQUIRE(glm::all(glm::epsilonEqual(cameraForward, -WorldDirection::right, floatEpsilon)));
+                REQUIRE(glm::all(
+                    glm::epsilonEqual(cameraForward, -Globals::WorldDirection::right, floatEpsilon)));
 
                 // Set distance to target.
                 pChildCameraNode->setOrbitalDistanceToTarget(10.0F); // causes location to change

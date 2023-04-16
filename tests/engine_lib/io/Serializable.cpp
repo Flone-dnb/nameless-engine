@@ -19,7 +19,7 @@ TEST_CASE("make sure relative path to the file the object was deserialized from 
 
     // Prepare paths to the file.
     const auto pathToFileInRes =
-        ProjectPaths::getDirectoryForResources(ResourceDirectory::ROOT) / sRelativePathToFile;
+        ProjectPaths::getPathToResDirectory(ResourceDirectory::ROOT) / sRelativePathToFile;
     const std::filesystem::path pathToFileInTemp =
         std::filesystem::temp_directory_path() /
         "TESTING_ReflectionTest_TESTING.toml"; // store outside of `res`
@@ -95,7 +95,7 @@ TEST_CASE("serialize and deserialize with a backup file") {
     using namespace ne;
 
     const std::filesystem::path fullPathToFile =
-        ProjectPaths::getDirectoryForResources(ResourceDirectory::ROOT) / "test" / "temp" /
+        ProjectPaths::getPathToResDirectory(ResourceDirectory::ROOT) / "test" / "temp" /
         "TESTING_ReflectionTest1_TESTING.toml";
 
     // Serialize to file with a backup.
@@ -138,14 +138,14 @@ TEST_CASE("deserialize a node tree that references external node") {
     // Prepare paths.
     const std::string sNodeTreeRelativePathToFile = "test/node_tree.toml";
     const auto pathToNodeTreeFileInRes =
-        ProjectPaths::getDirectoryForResources(ResourceDirectory::ROOT) / sNodeTreeRelativePathToFile;
+        ProjectPaths::getPathToResDirectory(ResourceDirectory::ROOT) / sNodeTreeRelativePathToFile;
     const std::string sCustomNodeRelativePathToFile = "test/custom_node.toml";
     const auto pathToCustomNodeFileInRes =
-        ProjectPaths::getDirectoryForResources(ResourceDirectory::ROOT) / sCustomNodeRelativePathToFile;
+        ProjectPaths::getPathToResDirectory(ResourceDirectory::ROOT) / sCustomNodeRelativePathToFile;
 
-    if (!std::filesystem::exists(ProjectPaths::getDirectoryForResources(ResourceDirectory::ROOT) / "test")) {
+    if (!std::filesystem::exists(ProjectPaths::getPathToResDirectory(ResourceDirectory::ROOT) / "test")) {
         std::filesystem::create_directory(
-            ProjectPaths::getDirectoryForResources(ResourceDirectory::ROOT) / "test");
+            ProjectPaths::getPathToResDirectory(ResourceDirectory::ROOT) / "test");
     }
 
     {
@@ -362,14 +362,14 @@ TEST_CASE("deserialize a node tree that references external node tree") {
     // Prepare paths.
     const std::string sNodeTreeRelativePathToFile = "test/node_tree.toml";
     const auto pathToNodeTreeFileInRes =
-        ProjectPaths::getDirectoryForResources(ResourceDirectory::ROOT) / sNodeTreeRelativePathToFile;
+        ProjectPaths::getPathToResDirectory(ResourceDirectory::ROOT) / sNodeTreeRelativePathToFile;
     const std::string sCustomNodeTreeRelativePathToFile = "test/custom_node_tree.toml";
     const auto pathToCustomNodeTreeFileInRes =
-        ProjectPaths::getDirectoryForResources(ResourceDirectory::ROOT) / sCustomNodeTreeRelativePathToFile;
+        ProjectPaths::getPathToResDirectory(ResourceDirectory::ROOT) / sCustomNodeTreeRelativePathToFile;
 
-    if (!std::filesystem::exists(ProjectPaths::getDirectoryForResources(ResourceDirectory::ROOT) / "test")) {
+    if (!std::filesystem::exists(ProjectPaths::getPathToResDirectory(ResourceDirectory::ROOT) / "test")) {
         std::filesystem::create_directory(
-            ProjectPaths::getDirectoryForResources(ResourceDirectory::ROOT) / "test");
+            ProjectPaths::getPathToResDirectory(ResourceDirectory::ROOT) / "test");
     }
 
     {
@@ -554,10 +554,10 @@ TEST_CASE("serialize and deserialize fields of different types") {
 
     // Prepare data.
     const std::filesystem::path pathToFile =
-        ProjectPaths::getDirectoryForResources(ResourceDirectory::ROOT) / "test" / "temp" /
+        ProjectPaths::getPathToResDirectory(ResourceDirectory::ROOT) / "test" / "temp" /
         "TESTING_ReflectionTest_TESTING"; // not specifying ".toml" on purpose
     const std::filesystem::path fullPathToFile =
-        ProjectPaths::getDirectoryForResources(ResourceDirectory::ROOT) / "test" / "temp" /
+        ProjectPaths::getPathToResDirectory(ResourceDirectory::ROOT) / "test" / "temp" /
         "TESTING_ReflectionTest_TESTING.toml";
 
     {
@@ -891,10 +891,10 @@ TEST_CASE("serialize and deserialize node") {
 
     // Prepare data.
     const std::filesystem::path pathToFile =
-        ProjectPaths::getDirectoryForResources(ResourceDirectory::ROOT) / "test" / "temp" /
+        ProjectPaths::getPathToResDirectory(ResourceDirectory::ROOT) / "test" / "temp" /
         "TESTING_MyCoolNode_TESTING"; // not specifying ".toml" on purpose
     const std::filesystem::path fullPathToFile =
-        ProjectPaths::getDirectoryForResources(ResourceDirectory::ROOT) / "test" / "temp" /
+        ProjectPaths::getPathToResDirectory(ResourceDirectory::ROOT) / "test" / "temp" /
         "TESTING_MyCoolNode_TESTING.toml";
     const auto sCustomAttributeName = "Test Attribute";
     const auto sCustomAttributeValue = "142";
@@ -950,10 +950,10 @@ TEST_CASE("serialize and deserialize multiple nodes") {
 
     // Prepare data.
     const std::filesystem::path pathToFile =
-        ProjectPaths::getDirectoryForResources(ResourceDirectory::ROOT) / "test" / "temp" /
+        ProjectPaths::getPathToResDirectory(ResourceDirectory::ROOT) / "test" / "temp" /
         "TESTING_MyCoolNode_TESTING"; // not specifying ".toml" on purpose
     const std::filesystem::path fullPathToFile =
-        ProjectPaths::getDirectoryForResources(ResourceDirectory::ROOT) / "test" / "temp" /
+        ProjectPaths::getPathToResDirectory(ResourceDirectory::ROOT) / "test" / "temp" /
         "TESTING_MyCoolNode_TESTING.toml";
     const auto sNode1CustomAttributeName = "node1_attribute";
     const auto sNode2CustomAttributeName = "node2_attribute";

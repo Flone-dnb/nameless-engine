@@ -372,8 +372,8 @@ namespace ne {
             // of the fields can be deserialized from that file.
 
             // Check that entity file exists.
-            const auto pathToOriginalFile =
-                getPathToResDirectory() / getPathDeserializedFromRelativeToRes().value().first;
+            const auto pathToOriginalFile = ProjectPaths::getPathToResDirectory(ResourceDirectory::ROOT) /
+                                            getPathDeserializedFromRelativeToRes().value().first;
             if (!std::filesystem::exists(pathToOriginalFile)) {
                 const Error error(fmt::format(
                     "object of type \"{}\" has the path it was deserialized from ({}, ID {}) but this "
@@ -481,7 +481,7 @@ namespace ne {
 
             // Construct path to this external node tree.
             const auto pathToExternalNodeTree =
-                ProjectPaths::getDirectoryForResources(ResourceDirectory::ROOT) / it->second;
+                ProjectPaths::getPathToResDirectory(ResourceDirectory::ROOT) / it->second;
             if (!std::filesystem::exists(pathToExternalNodeTree)) {
                 Error error(fmt::format(
                     "file storing external node tree \"{}\" does not exist",

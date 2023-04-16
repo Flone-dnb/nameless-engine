@@ -108,9 +108,9 @@ namespace ne {
         const auto rotationMatrix = MathHelpers::buildRotationMatrix(cameraRotation);
 
         // Recalculate axis.
-        cameraForwardDirection = rotationMatrix * glm::vec4(WorldDirection::forward, 0.0F);
-        cameraRightDirection = rotationMatrix * glm::vec4(WorldDirection::right, 0.0F);
-        cameraUpDirection = rotationMatrix * glm::vec4(WorldDirection::up, 0.0F);
+        cameraForwardDirection = rotationMatrix * glm::vec4(Globals::WorldDirection::forward, 0.0F);
+        cameraRightDirection = rotationMatrix * glm::vec4(Globals::WorldDirection::right, 0.0F);
+        cameraUpDirection = rotationMatrix * glm::vec4(Globals::WorldDirection::up, 0.0F);
 
         // Update camera properties.
         cameraProperties.mtxData.second.viewData.targetPointWorldLocation =

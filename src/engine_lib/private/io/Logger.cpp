@@ -97,14 +97,14 @@ namespace ne {
     std::filesystem::path Logger::getDirectoryWithLogs() const { return sLoggerWorkingDirectory; }
 
     Logger::Logger() {
-        auto sLoggerFilePath = ProjectPaths::getDirectoryForLogFiles();
+        auto sLoggerFilePath = ProjectPaths::getPathToLogsDirectory();
 
         if (!std::filesystem::exists(sLoggerFilePath)) {
             std::filesystem::create_directories(sLoggerFilePath);
         }
 
         sLoggerWorkingDirectory = sLoggerFilePath;
-        sLoggerFilePath /= getApplicationName() + "-" + getDateTime() + sLogFileExtension;
+        sLoggerFilePath /= Globals::getApplicationName() + "-" + getDateTime() + sLogFileExtension;
 
         removeOldestLogFiles(sLoggerWorkingDirectory);
 

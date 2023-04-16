@@ -68,7 +68,7 @@ TEST_CASE("create simple config file using path") {
     using namespace ne;
 
     std::filesystem::path testConfigPath =
-        ProjectPaths::getDirectoryForResources(ResourceDirectory::ROOT) / "test" / "temp";
+        ProjectPaths::getPathToResDirectory(ResourceDirectory::ROOT) / "test" / "temp";
     testConfigPath /= "some folder";
     testConfigPath /= sTestConfigFileName;
 

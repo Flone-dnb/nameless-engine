@@ -182,7 +182,7 @@ namespace ne {
                 // Found supported adapter.
                 DXGI_ADAPTER_DESC desc;
                 pTestAdapter->GetDesc(&desc);
-                vAddedVideoAdapters.push_back(wstringToString(desc.Description));
+                vAddedVideoAdapters.push_back(Globals::wstringToString(desc.Description));
             }
         }
 
@@ -590,7 +590,7 @@ namespace ne {
 
             DXGI_ADAPTER_DESC desc;
             pTestAdapter->GetDesc(&desc);
-            if (wstringToString(desc.Description) == sVideoAdapterName) {
+            if (Globals::wstringToString(desc.Description) == sVideoAdapterName) {
                 // Check if the adapter supports used D3D version, but don't create the actual device yet.
                 const HRESULT hResult = D3D12CreateDevice(
                     pTestAdapter.Get(), rendererD3dFeatureLevel, _uuidof(ID3D12Device), nullptr);

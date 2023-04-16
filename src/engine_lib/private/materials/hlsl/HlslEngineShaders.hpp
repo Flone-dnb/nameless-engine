@@ -10,13 +10,11 @@ namespace ne {
     class HlslEngineShaders {
     public:
         HlslEngineShaders() = delete;
-        HlslEngineShaders(const HlslEngineShaders&) = delete;
-        HlslEngineShaders& operator=(const HlslEngineShaders&) = delete;
 
         /** Mesh node's vertex shader. */
         static inline const auto meshNodeVertexShader = ShaderDescription(
             EngineShaderNames::sMeshNodeVertexShaderName,
-            ProjectPaths::getDirectoryForResources(ResourceDirectory::ENGINE) / "shaders/hlsl/MeshNode.hlsl",
+            ProjectPaths::getPathToResDirectory(ResourceDirectory::ENGINE) / "shaders/hlsl/MeshNode.hlsl",
             ShaderType::VERTEX_SHADER,
             "vsMeshNode",
             {});
@@ -24,7 +22,7 @@ namespace ne {
         /** Mesh node's pixel shader. */
         static inline const auto meshNodePixelShader = ShaderDescription(
             EngineShaderNames::sMeshNodePixelShaderName,
-            ProjectPaths::getDirectoryForResources(ResourceDirectory::ENGINE) / "shaders/hlsl/MeshNode.hlsl",
+            ProjectPaths::getPathToResDirectory(ResourceDirectory::ENGINE) / "shaders/hlsl/MeshNode.hlsl",
             ShaderType::PIXEL_SHADER,
             "psMeshNode",
             {});

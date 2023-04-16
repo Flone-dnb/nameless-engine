@@ -11,7 +11,7 @@ namespace ne {
     void RenderSettings::setRenderer(Renderer* pRenderer) { this->pRenderer = pRenderer; }
 
     std::filesystem::path RenderSettings::getPathToConfigurationFile() {
-        return ProjectPaths::getDirectoryForEngineConfigurationFiles() / getConfigurationFileName(true);
+        return ProjectPaths::getPathToEngineConfigsDirectory() / getConfigurationFileName(true);
     }
 
     void RenderSettings::setAntialiasingEnabled(bool bEnable) {

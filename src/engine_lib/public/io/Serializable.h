@@ -602,7 +602,7 @@ namespace ne RNAMESPACE() {
 
                 // Deserialize original entity.
                 const auto deserializeResult = Serializable::deserialize<SmartPointer, T>(
-                    ProjectPaths::getDirectoryForResources(ResourceDirectory::ROOT) / value.as_string().str);
+                    ProjectPaths::getPathToResDirectory(ResourceDirectory::ROOT) / value.as_string().str);
                 if (std::holds_alternative<Error>(deserializeResult)) {
                     auto err = std::get<Error>(deserializeResult);
                     err.addEntry();
@@ -894,12 +894,11 @@ namespace ne RNAMESPACE() {
             err.addEntry();
             return err;
         } else if (pathToFile.string().starts_with(
-                       ProjectPaths::getDirectoryForResources(ResourceDirectory::ROOT).string())) {
+                       ProjectPaths::getPathToResDirectory(ResourceDirectory::ROOT).string())) {
             // File is located in the `res` directory, save a relative path to the `res` directory.
-            auto sRelativePath =
-                std::filesystem::relative(
-                    pathToFile, ProjectPaths::getDirectoryForResources(ResourceDirectory::ROOT))
-                    .string();
+            auto sRelativePath = std::filesystem::relative(
+                                     pathToFile, ProjectPaths::getPathToResDirectory(ResourceDirectory::ROOT))
+                                     .string();
 
             // Replace all '\' characters with '/' just to be consistent.
             std::replace(sRelativePath.begin(), sRelativePath.end(), '\\', '/');
@@ -911,7 +910,7 @@ namespace ne RNAMESPACE() {
 
             // Double check that everything is correct.
             const auto pathToOriginalFile =
-                ProjectPaths::getDirectoryForResources(ResourceDirectory::ROOT) / sRelativePath;
+                ProjectPaths::getPathToResDirectory(ResourceDirectory::ROOT) / sRelativePath;
             if (!std::filesystem::exists(pathToOriginalFile)) {
                 return Error(fmt::format(
                     "failed to save the relative path to the `res` directory for the file at \"{}\", "

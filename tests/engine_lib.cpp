@@ -24,9 +24,10 @@ int main() {
 #endif
 
     // Clear any config files.
-    const std::filesystem::path baseConfigPath = ne::getBaseDirectoryForConfigs() / ne::getApplicationName();
+    const std::filesystem::path baseConfigPath =
+        ne::ProjectPaths::getPathToBaseConfigDirectory() / ne::Globals::getApplicationName();
     const auto baseTempPath =
-        ne::ProjectPaths::getDirectoryForResources(ne::ResourceDirectory::ROOT) / "test" / "temp";
+        ne::ProjectPaths::getPathToResDirectory(ne::ResourceDirectory::ROOT) / "test" / "temp";
 
     if (std::filesystem::exists(baseConfigPath)) {
         std::filesystem::remove_all(baseConfigPath);

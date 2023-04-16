@@ -101,7 +101,7 @@ namespace ne {
 
     void Renderer::initializeRenderSettings() {
         // Construct path to config file.
-        const auto pathToConfigFile = ProjectPaths::getDirectoryForEngineConfigurationFiles() /
+        const auto pathToConfigFile = ProjectPaths::getPathToEngineConfigsDirectory() /
                                       RenderSettings::getConfigurationFileName(true);
 
         bool bDeserializedWithoutIssues = false;

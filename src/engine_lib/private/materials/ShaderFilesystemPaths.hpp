@@ -21,7 +21,7 @@ namespace ne {
          * @return Path to shader cache directory (created if not existed before).
          */
         static std::filesystem::path getPathToShaderCacheDirectory() {
-            std::filesystem::path basePath = ProjectPaths::getDirectoryForCompiledShaders();
+            std::filesystem::path basePath = ProjectPaths::getPathToCompiledShadersDirectory();
 
             if (!std::filesystem::exists(basePath)) {
                 std::filesystem::create_directories(basePath);

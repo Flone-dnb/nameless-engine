@@ -2,6 +2,7 @@
 #include "game/GameInstance.h"
 #include "game/Window.h"
 #include "game/nodes/Node.h"
+#include "misc/ProjectPaths.h"
 #include "../io/ReflectionTest.h"
 
 // External.
@@ -213,7 +214,7 @@ TEST_CASE("create, serialize and deserialize world") {
 
     private:
         const std::filesystem::path fullPathToNodeTreeFile =
-            ProjectPaths::getDirectoryForResources(ResourceDirectory::ROOT) / "test" / "temp" /
+            ProjectPaths::getPathToResDirectory(ResourceDirectory::ROOT) / "test" / "temp" /
             "TESTING_TestWorld_TESTING.toml";
     };
 

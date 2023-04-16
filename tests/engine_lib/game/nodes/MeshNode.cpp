@@ -26,7 +26,7 @@ TEST_CASE("serialize and deserialize MeshNode") {
                 }
 
                 const std::filesystem::path pathToFileInTemp =
-                    ProjectPaths::getDirectoryForResources(ResourceDirectory::ROOT) / "test" / "temp" /
+                    ProjectPaths::getPathToResDirectory(ResourceDirectory::ROOT) / "test" / "temp" /
                     "TESTING_MeshNodeSerialization_TESTING.toml";
 
                 // Create mesh data.
@@ -147,7 +147,7 @@ TEST_CASE("serialize and deserialize array of mesh vertices") {
     using namespace ne;
 
     const std::filesystem::path pathToFileInTemp =
-        ProjectPaths::getDirectoryForResources(ResourceDirectory::ROOT) / "test" / "temp" /
+        ProjectPaths::getPathToResDirectory(ResourceDirectory::ROOT) / "test" / "temp" /
         "TESTING_MeshVerticesSerialization_TESTING.toml";
 
     MeshVertices vertices;
@@ -213,7 +213,7 @@ TEST_CASE("serialize and deserialize MeshNode as part of a node tree") {
                 }
 
                 const std::filesystem::path pathToFileInTemp =
-                    ProjectPaths::getDirectoryForResources(ResourceDirectory::ROOT) / "test" / "temp" /
+                    ProjectPaths::getPathToResDirectory(ResourceDirectory::ROOT) / "test" / "temp" /
                     "TESTING_MeshNodeTreeSerializationWithoutOriginalObject_TESTING.toml";
 
                 // Create mesh data.
@@ -351,11 +351,11 @@ TEST_CASE("serialize and deserialize MeshNode as part of a node tree with origin
                 }
 
                 const std::filesystem::path pathToNodeFile =
-                    ProjectPaths::getDirectoryForResources(ResourceDirectory::ROOT) / "test" / "temp" /
+                    ProjectPaths::getPathToResDirectory(ResourceDirectory::ROOT) / "test" / "temp" /
                     "TESTING_MeshNodeOriginalObjectSerialization_TESTING.toml";
 
                 const std::filesystem::path pathToFileInTemp =
-                    ProjectPaths::getDirectoryForResources(ResourceDirectory::ROOT) / "test" / "temp" /
+                    ProjectPaths::getPathToResDirectory(ResourceDirectory::ROOT) / "test" / "temp" /
                     "TESTING_MeshNodeTreeSerialization_TESTING.toml";
 
                 // Create mesh data.
@@ -559,7 +559,7 @@ TEST_CASE("MeshNode's meshdata deserialization backwards compatibility") {
                 }
 
                 const std::filesystem::path pathToFileInTemp =
-                    ProjectPaths::getDirectoryForResources(ResourceDirectory::ROOT) / "test" / "meshnode" /
+                    ProjectPaths::getPathToResDirectory(ResourceDirectory::ROOT) / "test" / "meshnode" /
                     "MeshNodeSerializationTestForBackwardsCompatibility.toml";
 
                 // Create mesh data.

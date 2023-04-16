@@ -5,8 +5,6 @@ namespace ne {
     class EngineShaderNames {
     public:
         EngineShaderNames() = delete;
-        EngineShaderNames(const EngineShaderNames&) = delete;
-        EngineShaderNames& operator=(const EngineShaderNames&) = delete;
 
         /** Unique name of the engine's vertex shader. */
         static inline const auto sMeshNodeVertexShaderName = "engine.meshnode.vs";

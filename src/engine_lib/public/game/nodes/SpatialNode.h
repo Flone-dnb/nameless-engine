@@ -282,13 +282,13 @@ namespace ne RNAMESPACE() {
             glm::vec3 worldScale = glm::vec3(1.0F, 1.0F, 1.0F);
 
             /** Forward direction of this node in world space. */
-            glm::vec3 worldForward = WorldDirection::forward;
+            glm::vec3 worldForward = Globals::WorldDirection::forward;
 
             /** Right direction of this node in world space. */
-            glm::vec3 worldRight = WorldDirection::right;
+            glm::vec3 worldRight = Globals::WorldDirection::right;
 
             /** Up direction of this node in world space. */
-            glm::vec3 worldUp = WorldDirection::up;
+            glm::vec3 worldUp = Globals::WorldDirection::up;
 
             /** Rotation from @ref worldMatrix in the quaternion form. */
             glm::quat worldRotationQuaternion = glm::identity<glm::quat>();

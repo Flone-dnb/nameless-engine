@@ -618,7 +618,7 @@ namespace ne {
         Logger::get().info(
             fmt::format(
                 "[{}] finished checking all GUID uniqueness, took: {} sec.",
-                sDebugOnlyLoggingSubCategory,
+                Globals::getDebugOnlyLoggingSubCategoryName(),
                 durationStream.str()),
             "");
     }

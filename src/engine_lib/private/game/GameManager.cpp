@@ -30,9 +30,14 @@ namespace ne {
             "new GameManager is created, updating static GameManager pointer", sGameLogCategory);
         pLastCreatedGameManager = this;
 
-        // Make sure that `res` directory is set and exists.
-        // (intentionally ignore result, will show an error if not exists)
-        ProjectPaths::getDirectoryForResources(ResourceDirectory::ROOT);
+        // Make sure that resources directory is set and exists.
+        const auto pathToRes = ProjectPaths::getPathToResDirectory(ResourceDirectory::ROOT);
+        if (!std::filesystem::exists(pathToRes)) {
+            const Error err(
+                fmt::format("expected resources directory to exist at \"{}\"", pathToRes.string()));
+            err.showError();
+            throw std::runtime_error(err.getFullErrorMessage());
+        }
 
         // Save ID of this thread (should be main thread).
         mainThreadId = std::this_thread::get_id();

@@ -101,13 +101,13 @@ namespace ne {
         std::wstring sShaderModel;
         switch (shaderDescription.shaderType) {
         case ShaderType::VERTEX_SHADER:
-            sShaderModel = stringToWstring(sVertexShaderModel);
+            sShaderModel = Globals::stringToWstring(sVertexShaderModel);
             break;
         case ShaderType::PIXEL_SHADER:
-            sShaderModel = stringToWstring(sPixelShaderModel);
+            sShaderModel = Globals::stringToWstring(sPixelShaderModel);
             break;
         case ShaderType::COMPUTE_SHADER:
-            sShaderModel = stringToWstring(sComputeShaderModel);
+            sShaderModel = Globals::stringToWstring(sComputeShaderModel);
             break;
         }
 
@@ -144,7 +144,7 @@ namespace ne {
         // Add macros.
         for (const auto& macroDefine : shaderDescription.vDefinedShaderMacros) {
             vArgs.push_back(L"-D");
-            vArgs.push_back(stringToWstring(macroDefine));
+            vArgs.push_back(Globals::stringToWstring(macroDefine));
         }
 
         // Open source file.

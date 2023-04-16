@@ -172,7 +172,7 @@ namespace ne {
     }
 
     glm::vec3 MathHelpers::convertRollPitchYawToDirection(const glm::vec3& rotation) {
-        return buildRotationMatrix(rotation) * glm::vec4(WorldDirection::forward, 0.0F);
+        return buildRotationMatrix(rotation) * glm::vec4(Globals::WorldDirection::forward, 0.0F);
     }
 
     glm::vec3 MathHelpers::convertSphericalToCartesianCoordinates(float radius, float theta, float phi) {

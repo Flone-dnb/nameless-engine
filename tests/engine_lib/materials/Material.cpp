@@ -3,6 +3,7 @@
 #include "game/GameInstance.h"
 #include "game/Window.h"
 #include "game/nodes/MeshNode.h"
+#include "misc/ProjectPaths.h"
 #include "materials/EngineShaderNames.hpp"
 
 // External.
@@ -129,7 +130,7 @@ TEST_CASE("serialize and deserialize Material") {
                 }
 
                 const std::filesystem::path pathToFileInTemp =
-                    ProjectPaths::getDirectoryForResources(ResourceDirectory::ROOT) / "test" / "temp" /
+                    ProjectPaths::getPathToResDirectory(ResourceDirectory::ROOT) / "test" / "temp" /
                     "TESTING_MaterialSerialization_TESTING.toml";
 
                 {

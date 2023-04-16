@@ -9,48 +9,24 @@ namespace ne {
         lastInputDirection.x = std::clamp(input, -1.0F, 1.0F);
 
         // Stop input processing if the input is zero.
-        if (glm::all(glm::epsilonEqual(lastInputDirection, glm::vec3(0.0F, 0.0F, 0.0F), inputDelta))) {
-            bHasInputToProcess = false;
-            return;
-        }
-
-        // Normalize in order to avoid speed boost when multiple input keys are pressed.
-        lastInputDirection = glm::normalize(lastInputDirection);
-
-        // Mark input to be processed.
-        bHasInputToProcess = true;
+        bHasInputToProcess =
+            !glm::all(glm::epsilonEqual(lastInputDirection, glm::vec3(0.0F, 0.0F, 0.0F), inputDelta));
     }
 
     void TransientCamera::setFreeCameraRightMovement(float input) {
         lastInputDirection.y = std::clamp(input, -1.0F, 1.0F);
 
         // Stop input processing if the input is zero.
-        if (glm::all(glm::epsilonEqual(lastInputDirection, glm::vec3(0.0F, 0.0F, 0.0F), inputDelta))) {
-            bHasInputToProcess = false;
-            return;
-        }
-
-        // Normalize in order to avoid speed boost when multiple input keys are pressed.
-        lastInputDirection = glm::normalize(lastInputDirection);
-
-        // Mark input to be processed.
-        bHasInputToProcess = true;
+        bHasInputToProcess =
+            !glm::all(glm::epsilonEqual(lastInputDirection, glm::vec3(0.0F, 0.0F, 0.0F), inputDelta));
     }
 
     void TransientCamera::setFreeCameraWorldUpMovement(float input) {
         lastInputDirection.z = std::clamp(input, -1.0F, 1.0F);
 
         // Stop input processing if the input is zero.
-        if (glm::all(glm::epsilonEqual(lastInputDirection, glm::vec3(0.0F, 0.0F, 0.0F), inputDelta))) {
-            bHasInputToProcess = false;
-            return;
-        }
-
-        // Normalize in order to avoid speed boost when multiple input keys are pressed.
-        lastInputDirection = glm::normalize(lastInputDirection);
-
-        // Mark input to be processed.
-        bHasInputToProcess = true;
+        bHasInputToProcess =
+            !glm::all(glm::epsilonEqual(lastInputDirection, glm::vec3(0.0F, 0.0F, 0.0F), inputDelta));
     }
 
     void TransientCamera::setCameraMode(CameraMode mode) {
@@ -219,7 +195,8 @@ namespace ne {
             return;
         }
 
-        moveFreeCamera(lastInputDirection * timeSincePrevCallInSec * cameraMovementSpeed);
+        // Normalize in order to avoid speed boost when multiple input keys are pressed.
+        moveFreeCamera(glm::normalize(lastInputDirection) * timeSincePrevCallInSec * cameraMovementSpeed);
     }
 
     void TransientCamera::clearInput() { lastInputDirection = glm::vec3(0.0F, 0.0F, 0.0F); }

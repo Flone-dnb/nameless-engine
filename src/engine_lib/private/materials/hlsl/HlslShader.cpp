@@ -343,24 +343,29 @@ namespace ne {
 
         // Release root signature.
         if (mtxCompiledBlobRootSignature.second.second != nullptr) {
-            const auto iNewRefCount = mtxCompiledBlobRootSignature.second.second.Reset();
-            if (iNewRefCount != 0) {
-                Logger::get().error(
-                    std::format(
-                        "shader \"{}\" root signature was requested to be released from the "
-                        "memory but it's still being referenced (new ref count: {})",
-                        getShaderName(),
-                        iNewRefCount),
-                    sHlslShaderLogCategory);
-            } else if (!bLogOnlyErrors) {
-                Logger::get().info(
-                    std::format(
-                        "shader \"{}\" root signature is being released from the memory as it's no longer "
-                        "being used (new ref count: {})",
-                        getShaderName(),
-                        iNewRefCount),
-                    sHlslShaderLogCategory);
-            }
+            mtxCompiledBlobRootSignature.second.second.Reset();
+            // `CreateRootSignature` can return a pointer to the existing root signature (for example
+            // a pointer to the root signature of some shader) if arguments
+            // for creation were the same as in the previous call.
+            // Because of this we don't check returned ref count for zero since we don't know
+            // whether it's safe to compare it to zero or not.
+            //            const auto iNewRefCount = mtxCompiledBlobRootSignature.second.second.Reset();
+            //            if (iNewRefCount != 0) {
+            //                Logger::get().error(
+            //                    std::format(
+            //                        "shader \"{}\" root signature was requested to be released from the "
+            //                        "memory but it's still being referenced (new ref count: {})",
+            //                        getShaderName(),
+            //                        iNewRefCount),
+            //                    sHlslShaderLogCategory);
+            //            } else if (!bLogOnlyErrors) {
+            //                Logger::get().info(
+            //                    std::format(
+            //                        "shader \"{}\" root signature is being released from the memory as it's
+            //                        no longer " "being used (new ref count: {})", getShaderName(),
+            //                        iNewRefCount),
+            //                    sHlslShaderLogCategory);
+            //            }
         }
 
         return false;

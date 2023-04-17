@@ -65,23 +65,31 @@ namespace ne {
         }
 
         // Release root signature.
-        iNewRefCount = mtxInternalResources.second.pRootSignature.Reset();
-        if (iNewRefCount != 0) {
-            return Error(std::format(
-                "internal root signature was requested to be released from the "
-                "memory but it's still being referenced (new ref count: {}) (PSO ID: {})",
-                iNewRefCount,
-                getUniquePsoIdentifier()));
-        }
+        mtxInternalResources.second.pRootSignature.Reset();
+        // `CreateRootSignature` can return a pointer to the existing root signature (for example
+        // a pointer to the root signature of some shader) if arguments
+        // for creation were the same as in the previous call.
+        // Because of this we don't check returned ref count for zero since we don't know
+        // whether it's safe to compare it to zero or not.
+        //        iNewRefCount = mtxInternalResources.second.pRootSignature.Reset();
+        //        if (iNewRefCount != 0) {
+        //            return Error(std::format(
+        //                "internal root signature was requested to be released from the "
+        //                "memory but it's still being referenced (new ref count: {}) (PSO ID: {})",
+        //                iNewRefCount,
+        //                getUniquePsoIdentifier()));
+        //        }
 
         // !!!
         // !!! new resources go here !!!
 #if defined(DEBUG)
         static_assert(
-            sizeof(InternalResources) == 152, "release new resources here"); // NOLINT: current struct size
+            sizeof(InternalResources) == 152,
+            "release new resources here"); // NOLINT: current struct size
 #else
         static_assert(
-            sizeof(InternalResources) == 120, "release new resources here"); // NOLINT: current struct size
+            sizeof(InternalResources) == 120,
+            "release new resources here"); // NOLINT: current struct size
 #endif
         // !!!
 

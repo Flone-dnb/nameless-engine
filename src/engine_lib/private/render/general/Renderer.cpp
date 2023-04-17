@@ -101,10 +101,8 @@ namespace ne {
 
     void Renderer::initializeRenderSettings() {
         // Construct path to config file.
-        const auto pathToConfigFile = ProjectPaths::getPathToEngineConfigsDirectory() /
-                                      RenderSettings::getConfigurationFileName(true);
-
-        bool bDeserializedWithoutIssues = false;
+        const auto pathToConfigFile =
+            ProjectPaths::getPathToEngineConfigsDirectory() / RenderSettings::getConfigurationFileName(true);
 
         // See if config file exists.
         if (std::filesystem::exists(pathToConfigFile)) {
@@ -126,7 +124,6 @@ namespace ne {
             } else {
                 // Use the deserialized object.
                 mtxRenderSettings.second = std::get<std::shared_ptr<RenderSettings>>(std::move(result));
-                bDeserializedWithoutIssues = true;
             }
         } else {
             // Just create a new object with default settings.
@@ -136,17 +133,16 @@ namespace ne {
         // Initialize the setting.
         mtxRenderSettings.second->setRenderer(this);
 
-        // Save if no config existed.
-        if (!bDeserializedWithoutIssues) {
-            auto optionalError = mtxRenderSettings.second->saveConfigurationToDisk();
-            if (optionalError.has_value()) {
-                auto error = optionalError.value();
-                error.addEntry();
-                Logger::get().error(
-                    fmt::format(
-                        "failed to save new render settings, error: \"{}\"", error.getFullErrorMessage()),
-                    sRendererLogCategory);
-            }
+        // Resave because:
+        // - maybe no config existed
+        // - some deserialized values could have been corrected to be valid
+        auto optionalError = mtxRenderSettings.second->saveConfigurationToDisk();
+        if (optionalError.has_value()) {
+            auto error = optionalError.value();
+            error.addEntry();
+            Logger::get().error(
+                fmt::format("failed to save new render settings, error: \"{}\"", error.getFullErrorMessage()),
+                sRendererLogCategory);
         }
 
         // Apply the configuration.

@@ -251,8 +251,8 @@ namespace ne {
 #if defined(WIN32)
         if (params.bFullscreen) {
             // Make window overlap taskbar.
-            HWND hWindow = glfwGetWin32Window(pGLFWWindow);
-            SetWindowPos(hWindow, HWND_TOP, 0, 0, params.iWindowWidth, params.iWindowHeight, 0);
+            HWND pHWindow = glfwGetWin32Window(pGLFWWindow);
+            SetWindowPos(pHWindow, HWND_TOP, 0, 0, params.iWindowWidth, params.iWindowHeight, 0);
         }
 #endif
 

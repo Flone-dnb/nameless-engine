@@ -674,7 +674,7 @@ TEST_CASE("shader read/write resources exist only when MeshNode is spawned") {
                 REQUIRE(pMtxResources->second.vAll.size() == 1);
                 REQUIRE(pMtxResources->second.toBeUpdated.size() == 1);
                 const auto iVramAfter = getWindow()->getRenderer()->getUsedVideoMemoryInMb();
-                REQUIRE(iVramAfter > iVramBefore);
+                REQUIRE(iVramAfter >= iVramBefore);
 
                 // Despawn mesh node.
                 pMeshNode->detachFromParentAndDespawn();

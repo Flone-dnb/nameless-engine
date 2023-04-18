@@ -543,7 +543,7 @@ set(TESTS_RELATIVE_PATH ../../tests)
 
 set(ENGINE_TEST_WIN32_SOURCES
     ${TESTS_RELATIVE_PATH}/engine_lib/render/directx/DirectXResourceManager.cpp
-    # add Windows specific test sources here...
+    # add Windows specific test files here...
 )
 
 set(ENGINE_TEST_SOURCES
@@ -558,6 +558,7 @@ set(ENGINE_TEST_SOURCES
     ${TESTS_RELATIVE_PATH}/engine_lib/materials/ShaderPack.cpp
     ${TESTS_RELATIVE_PATH}/engine_lib/materials/Material.cpp
     ${TESTS_RELATIVE_PATH}/engine_lib/io/Serializable.cpp
+    ${TESTS_RELATIVE_PATH}/engine_lib/render/RenderSettings.cpp
     ${TESTS_RELATIVE_PATH}/engine_lib/math/GLMath.cpp
     ${TESTS_RELATIVE_PATH}/engine_lib/math/MathHelpers.cpp
     ${TESTS_RELATIVE_PATH}/engine_lib/game/nodes/Node.cpp
@@ -567,7 +568,7 @@ set(ENGINE_TEST_SOURCES
     ${TESTS_RELATIVE_PATH}/engine_lib/game/camera/CameraManager.cpp
     ${TESTS_RELATIVE_PATH}/engine_lib/game/World.cpp
     ${TESTS_RELATIVE_PATH}/engine_lib/game/GameInstance.cpp
-    # add engine test .cpp files here
+    # add general (cross-platform) test files here...
 )
 
 if (WIN32)

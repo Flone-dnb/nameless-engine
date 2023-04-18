@@ -464,7 +464,7 @@ namespace ne {
         pCommandQueue->ExecuteCommandLists(_countof(commandLists), commandLists);
 
         // Flip swap chain buffers.
-        hResult = pSwapChain->Present(iPresentSyncInternal, iPresentFlags);
+        hResult = pSwapChain->Present(iPresentSyncInterval, iPresentFlags);
         if (FAILED(hResult)) [[unlikely]] {
             return Error(hResult);
         }
@@ -1149,6 +1149,27 @@ namespace ne {
         vSwapChainBuffers.clear();
         vSwapChainBuffers.resize(getSwapChainBufferCount());
 
+        // Apply VSync state for `Present` calls.
+        const auto iOldPresentSyncInterval = iPresentSyncInterval;
+        if (bIsVSyncEnabled) {
+            iPresentSyncInterval = 1;
+            iPresentFlags = 0; // prevent tearing
+        } else {
+            iPresentSyncInterval = 0;
+            iPresentFlags = DXGI_PRESENT_ALLOW_TEARING;
+        }
+        if (iOldPresentSyncInterval != iPresentSyncInterval) {
+            // VSync state changed, recreate the swap chain to allow/disallow tearing
+            // (i.e. add/remove `DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING` flag because we can't
+            // append/remove it using the `ResizeBuffers` function).
+            const auto optionalError = createSwapChain();
+            if (optionalError.has_value()) [[unlikely]] {
+                auto err = optionalError.value();
+                err.addEntry();
+                return err;
+            }
+        }
+
         // Resize the swap chain.
         HRESULT hResult = pSwapChain->ResizeBuffers(
             getSwapChainBufferCount(),
@@ -1243,15 +1264,6 @@ namespace ne {
         scissorRect.top = 0;
         scissorRect.right = static_cast<LONG>(renderResolution.first);
         scissorRect.bottom = static_cast<LONG>(renderResolution.second);
-
-        // Save VSync state for `Present` calls.
-        if (bIsVSyncEnabled) {
-            iPresentSyncInternal = 1;
-            iPresentFlags = 0; // prevent tearing
-        } else {
-            iPresentSyncInternal = 0;
-            iPresentFlags = DXGI_PRESENT_ALLOW_TEARING;
-        }
 
         return {};
     }

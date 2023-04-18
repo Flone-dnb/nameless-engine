@@ -386,7 +386,7 @@ namespace ne {
         unsigned int iPickedGpuIndex = 0;
 
         /** Synchronize presentation for at least N vertical blanks. Used when VSync is enabled.*/
-        UINT iPresentSyncInternal = 0;
+        UINT iPresentSyncInterval = 0;
 
         /** Used to prevent tearing when VSync is enabled. */
         UINT iPresentFlags = 0;

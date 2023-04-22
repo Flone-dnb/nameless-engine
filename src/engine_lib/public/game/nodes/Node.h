@@ -17,6 +17,7 @@
 namespace ne RNAMESPACE() {
     class GameInstance;
     class World;
+    class Timer;
 
     /**
      * Describes the order of ticking. Every object of the first tick group will tick first
@@ -229,6 +230,15 @@ namespace ne RNAMESPACE() {
         TickGroup getTickGroup() const;
 
         /**
+         * Returns a unique ID of the node.
+         *
+         * @remark Each spawn gives the node a new ID.
+         *
+         * @return Empty if this node was never spawned, otherwise unique ID of this node.
+         */
+        std::optional<size_t> getNodeId() const;
+
+        /**
          * Returns whether the @ref onBeforeNewFrame should be called each frame or not.
          *
          * @return Whether the @ref onBeforeNewFrame should be called each frame or not.
@@ -317,6 +327,44 @@ namespace ne RNAMESPACE() {
          * @param bEnable Whether the input function should be enabled or not.
          */
         void setReceiveInput(bool bEnable);
+
+        /**
+         * Creates a new timer and saves it inside of this node to be used while the node is spawned.
+         *
+         * @warning Do not free (delete) returned pointer.
+         * @warning Do not use returned pointer outside of this node object as the timer is only guaranteed
+         * to live while the node (that created the timer) is living.
+         *
+         * @remark Note that although you can create timers while the node is despawned or was not
+         * spawned yet any attempt to start a timer while the node is despawned (or not spawned yet)
+         * will result in an error being logged.
+         * @remark This function exists to automatically stop and disable created timers
+         * before @ref onDespawning is called by using Timer::stop(true)
+         * so that you don't have to remember to stop created timers. Moreover, if you are using
+         * a callback function for the timer's timeout event it's guaranteed that this callback
+         * function will only be called while the node is spawned.
+         * @remark There is no `removeTimer` function but it may appear in the future
+         * (although there's really no point in removing a timer so don't care about it).
+         *
+         * @param sTimerName Name of this timer (used for logging). Don't add "timer" word to your timer's
+         * name as it will be appended in the logs.
+         *
+         * @return `nullptr` if something went wrong, otherwise a non-owning pointer to the created timer
+         * that is guaranteed to be valid while this node object is alive (i.e. even valid when despawned).
+         */
+        Timer* createTimer(const std::string& sTimerName);
+
+        /**
+         * Enables the specified timer and sets a callback validator or stops and disables the timer.
+         *
+         * @remark Does nothing if the timer is already in the requested state.
+         *
+         * @param pTimer   Timer to enable/disable.
+         * @param bEnable  New timer state to set.
+         *
+         * @return `false` if successful, `true` otherwise.
+         */
+        bool enableTimer(Timer* pTimer, bool bEnable);
 
         /**
          * Returns map of action events that this node is binded to (must be used with mutex).
@@ -623,6 +671,16 @@ namespace ne RNAMESPACE() {
             mtxBindedAxisEvents;
 
         /**
+         * Timers creates via @ref createTimer.
+         *
+         * @warning Don't remove/erase timers from this array because in @ref despawn
+         * we might submit a deferred task (while stopping the timer) and will
+         * use the timer to check its state in deferred task so we need to make
+         * sure that stopped timer will not be deleted while the node exists.
+         */
+        std::pair<std::recursive_mutex, std::vector<std::unique_ptr<Timer>>> mtxCreatedTimers;
+
+        /**
          * Do not delete this pointer. World object that owns this node.
          *
          * @warning Will be initialized after the node is spawned and reset when despawned.
@@ -631,6 +689,9 @@ namespace ne RNAMESPACE() {
 
         /** Tick group used by this node. */
         TickGroup tickGroup = TickGroup::FIRST;
+
+        /** Unique ID of the spawned node (initialized after the node is spawned). */
+        std::optional<size_t> iNodeId;
 
         /**
          * Whether this node is spawned in the world or not.

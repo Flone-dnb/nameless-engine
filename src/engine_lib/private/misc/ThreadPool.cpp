@@ -36,6 +36,10 @@ namespace ne {
                 if (bIsShuttingDown.test(std::memory_order_seq_cst)) {
                     return;
                 }
+                if (mtxTaskQueue.second.empty()) {
+                    // Seems to be a spurious wakeup.
+                    continue;
+                }
 
                 task = std::move(mtxTaskQueue.second.front());
                 mtxTaskQueue.second.pop();

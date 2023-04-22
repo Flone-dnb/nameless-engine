@@ -78,12 +78,14 @@ namespace ne {
             std::scoped_lock guard(mtxWorld.first);
 
             if (mtxWorld.second != nullptr) {
-                // Destroy world before game instance, so that no node
-                // will reference game instance.
+                // Destroy world before game instance, so that no node will reference game instance.
+                // (causes every node to queue a deferred task for despawning from world)
                 mtxWorld.second->destroyWorld();
 
-                // Process all `node despawned` tasks that will notify world.
-                std::scoped_lock guard(mtxDeferredTasks.first);
+                // Don't accept any new deferred tasks.
+                bShouldAcceptNewDeferredTasks = false;
+
+                // Process all "node despawned" tasks that will notify world.
                 executeDeferredTasks();
 
                 // Can safely destroy world object now.
@@ -93,11 +95,7 @@ namespace ne {
 
         // Make sure thread pool and deferred tasks are finished.
         threadPool.stop();
-        {
-            std::scoped_lock guard(mtxDeferredTasks.first);
-            executeDeferredTasks(); // finish all deferred tasks
-            bShouldAcceptNewDeferredTasks = false;
-        }
+        executeDeferredTasks();
 
         // Explicitly destroy game instance before running GC so that if game instance holds any GC
         // pointers they will be cleared.
@@ -117,7 +115,7 @@ namespace ne {
                 gc_collector()->getAliveObjectsCount()),
             sGarbageCollectorLogCategory);
 
-        // After GC has finished and all nodes were deleted.
+        // ONLY AFTER GC has finished, all tasks were finished and all nodes were deleted.
         // Clear global game pointer.
         Logger::get().info("clearing static GameManager pointer", sGameLogCategory);
         pLastCreatedGameManager = nullptr;
@@ -193,11 +191,11 @@ namespace ne {
         // We want to finish all deferred tasks right now because there might be
         // node member functions waiting to be executed - execute them and only
         // then delete nodes.
-        std::scoped_lock deferredTasksGuard(mtxDeferredTasks.first); // don't allow new tasks before finished
         executeDeferredTasks();
 
         // Log start.
         Logger::get().info("running garbage collector...", sGarbageCollectorLogCategory);
+        Logger::get().flushToDisk(); // flush to disk in order to see if a crash was caused by a GC
 
         // Save time to measure later.
         const auto start = std::chrono::steady_clock::now();
@@ -283,18 +281,41 @@ namespace ne {
     }
 
     void GameManager::executeDeferredTasks() {
-        std::scoped_lock guard(mtxDeferredTasks.first);
-
-        if (!bShouldAcceptNewDeferredTasks) // check under mutex
-        {
-            return;
+        // We have to guarantee that the GameManager exists while deferred tasks are running.
+        if (pLastCreatedGameManager == nullptr) [[unlikely]] {
+            Error error(
+                "unable to execute deferred tasks while the GameManager is invalid (this is an engine bug)");
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
         }
 
-        while (!mtxDeferredTasks.second.empty()) {
-            auto task = std::move(mtxDeferredTasks.second.front());
-            mtxDeferredTasks.second.pop(); // remove first and only then execute to avoid recursion
-            task();
-        }
+        bool bExecutedAtLeastOneTask = false;
+
+        do {
+            bExecutedAtLeastOneTask = false;
+            do {
+                std::function<void()> task;
+
+                {
+                    std::scoped_lock guard(mtxDeferredTasks.first);
+
+                    if (mtxDeferredTasks.second.empty()) {
+                        break;
+                    }
+
+                    task = std::move(mtxDeferredTasks.second.front());
+                    mtxDeferredTasks.second.pop(); // remove first and only then execute to avoid recursion
+                }
+
+                // Execute the task while the mutex is not locked to avoid a deadlock,
+                // because inside of this task the user might want to interact with some other thread
+                // which also might want to add a deferred task.
+                task();
+                bExecutedAtLeastOneTask = true;
+            } while (true); // TODO: rework this
+
+            // Check if the deferred tasks that we executed added more deferred tasks.
+        } while (bExecutedAtLeastOneTask);
     }
 
     void GameManager::addTaskToThreadPool(const std::function<void()>& task) {
@@ -447,7 +468,7 @@ namespace ne {
 
     void GameManager::addDeferredTask(const std::function<void()>& task) {
         if (!bShouldAcceptNewDeferredTasks) {
-            // Destructor is running, don't queue any more tasks.
+            // Don't queue any more tasks.
             return;
         }
 
@@ -472,6 +493,15 @@ namespace ne {
     float GameManager::getTimeSincePrevFrameInSec() const { return timeSincePrevFrameInSec; }
 
     long long GameManager::getGarbageCollectorRunIntervalInSec() const { return iGcRunIntervalInSec; }
+
+    bool GameManager::isNodeSpawned(size_t iNodeId) {
+        std::scoped_lock guard(mtxWorld.first);
+        if (mtxWorld.second == nullptr) {
+            return false;
+        }
+
+        return mtxWorld.second->isNodeSpawned(iNodeId);
+    }
 
     bool GameManager::isBeingDestroyed() const { return bIsBeingDestroyed; }
 
@@ -718,8 +748,7 @@ namespace ne {
         // Start node despawning process.
         mtxWorld.second->destroyWorld();
 
-        // Process all `node despawned` tasks that will notify world.
-        std::scoped_lock guard(mtxDeferredTasks.first); // don't accept any deferred tasks until finished
+        // Process all "node despawned" tasks that will notify world.
         executeDeferredTasks();
 
         // Can safely destroy world object now.

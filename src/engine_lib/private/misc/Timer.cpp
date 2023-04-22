@@ -2,61 +2,100 @@
 
 // Custom.
 #include "io/Logger.h"
+#include "game/GameManager.h"
 
 // External.
 #include "fmt/core.h"
 
 namespace ne {
-    Timer::Timer(const std::string& sTimerName, bool bWarnAboutWaitingForCallbackTooLong) {
-        this->sTimerName = sTimerName;
-        this->bWarnAboutWaitingForCallbackTooLong = bWarnAboutWaitingForCallbackTooLong;
+    Timer::Timer(const std::string& sTimerName) { this->sTimerName = sTimerName; }
+
+    void Timer::setCallbackValidator(const std::function<bool(size_t)>& validator) {
+        if (isRunning()) [[unlikely]] {
+            Logger::get().error(
+                fmt::format(
+                    "\"{}\" timer is unable to set a callback validator while the timer is running",
+                    sTimerName),
+                sTimerLogCategory);
+            return;
+        }
+
+        this->callbackValidator = validator;
+    }
+
+    void Timer::setEnable(bool bEnable) {
+        std::scoped_lock guard(mtxTerminateTimerThread);
+        bIsEnabled = bEnable;
     }
 
     Timer::~Timer() {
         {
+            // Make sure the timer thread is running.
             std::scoped_lock guard(mtxTerminateTimerThread);
             if (!timerThreadFuture.has_value()) {
                 return;
             }
 
-            // Notify timer thread if it's running.
+            // Notify the timer thread if it's still running.
             bIsShuttingDown.test_and_set();
             cvTerminateTimerThread.notify_one();
         }
 
+        // Wait for the timer thread to finish.
         try {
-            if (timerThreadFuture->valid()) {
-                timerThreadFuture->get();
-            }
+            timerThreadFuture->get();
         } catch (std::exception& ex) {
             Logger::get().error(
                 fmt::format(
                     "\"{}\" timer thread has finished with the following exception: {}",
                     sTimerName,
                     ex.what()),
-                "");
+                sTimerLogCategory);
         }
-
-        waitForRunningCallbackThreadsToFinish();
     }
 
     void Timer::setCallbackForTimeout(
         long long iTimeToWaitInMs, // NOLINT: shadowing member variable
         const std::function<void()>& callback,
         bool bIsLooping) { // NOLINT: shadowing member variable
+        if (isRunning()) [[unlikely]] {
+            Logger::get().error(
+                fmt::format(
+                    "\"{}\" timer is unable to set a callback for timeout while the timer is running",
+                    sTimerName),
+                sTimerLogCategory);
+            return;
+        }
+
         std::scoped_lock guard(mtxTerminateTimerThread);
         callbackForTimeout = callback;
         this->iTimeToWaitInMs = iTimeToWaitInMs;
         this->bIsLooping = bIsLooping;
     }
 
-    void Timer::start(bool bWaitForRunningCallbackThreadsToFinish) {
+    void Timer::start() {
+        {
+            // Make sure the timer is enabled.
+            std::scoped_lock guard(mtxTerminateTimerThread);
+            if (!bIsEnabled) {
+                Logger::get().error(
+                    fmt::format(
+                        "\"{}\" timer was requested to start while disabled, timer will not be started",
+                        sTimerName),
+                    sTimerLogCategory);
+                return;
+            }
+
+            iStartCount += 1;
+        }
+
         if (bIsShuttingDown.test()) {
             return;
         }
 
         if (timerThreadFuture.has_value()) {
-            stop(bWaitForRunningCallbackThreadsToFinish);
+            // Stop the timer thread.
+            stop();
         }
 
         std::scoped_lock guard(mtxTerminateTimerThread);
@@ -67,44 +106,45 @@ namespace ne {
             timerThreadFuture = std::async(
                 std::launch::async, &Timer::timerThread, this, std::chrono::milliseconds(iTimeToWaitInMs));
         } else {
-            // Mark start time. No need to sleep.
+            // Mark start time. No need to use a separate thread.
             std::scoped_lock timeGuard(mtxTimeWhenStarted.first);
             mtxTimeWhenStarted.second = std::chrono::steady_clock::now();
+            bIsRunning = true;
         }
     }
 
-    void Timer::stop(bool bWaitForRunningCallbackThreadsToFinish) {
+    void Timer::stop(bool bDisableTimer) {
         {
             std::scoped_lock guard(mtxTerminateTimerThread);
 
+            bIsEnabled = !bDisableTimer;
             bIsStopRequested.test_and_set();
 
-            // Notify timer thread if it's running.
+            // Notify the timer thread if it's running.
             if (!timerThreadFuture.has_value()) {
+                // No callback was set, being used as a regular timer.
+                bIsRunning = false;
                 return;
             }
 
             cvTerminateTimerThread.notify_one();
-
-            if (bWaitForRunningCallbackThreadsToFinish) {
-                waitForRunningCallbackThreadsToFinish();
-            }
         }
 
+        // Wait for the timer thread to finish.
         try {
-            if (timerThreadFuture->valid()) {
-                timerThreadFuture->get();
-            }
+            timerThreadFuture->get();
         } catch (std::exception& ex) {
             Logger::get().error(
                 fmt::format(
                     "\"{}\" timer thread has finished with the following exception: {}",
                     sTimerName,
                     ex.what()),
-                "");
+                sTimerLogCategory);
         }
 
         timerThreadFuture = {};
+
+        bIsRunning = false;
     }
 
     std::optional<long long> Timer::getElapsedTimeInMs() {
@@ -114,106 +154,120 @@ namespace ne {
             return {};
         }
 
-        if (bIsStopRequested.test()) {
-            return {};
-        }
-
         using namespace std::chrono;
         return duration_cast<milliseconds>(steady_clock::now() - mtxTimeWhenStarted.second.value()).count();
     }
 
+    std::string Timer::getName() const { return sTimerName; }
+
+    size_t Timer::getStartCount() {
+        std::scoped_lock guard(mtxTerminateTimerThread);
+        return iStartCount;
+    }
+
     bool Timer::isRunning() {
         std::scoped_lock guard(mtxTerminateTimerThread);
-        if (!timerThreadFuture.has_value()) {
-            // Timer thread is not running.
-            if (callbackForTimeout.has_value()) {
-                // Callback was set, so the timer thread is used.
-                return false;
-            }
+        return bIsRunning;
+    }
 
-            // No callback was set, being used as a regular timer.
-            return !bIsStopRequested.test();
-        }
+    bool Timer::isStopped() {
+        std::scoped_lock guard(mtxTerminateTimerThread);
+        return bIsStopRequested.test();
+    }
 
-        if (!timerThreadFuture->valid()) {
-            return false;
-        }
-
-        const auto status = timerThreadFuture->wait_for(std::chrono::nanoseconds(0));
-
-        return status != std::future_status::ready;
+    bool Timer::isEnabled() {
+        std::scoped_lock guard(mtxTerminateTimerThread);
+        return bIsEnabled;
     }
 
     void Timer::timerThread(std::chrono::milliseconds timeToWaitInMs) {
+        using namespace std::chrono;
+
+        {
+            std::scoped_lock terminationGuard(mtxTerminateTimerThread);
+            bIsRunning = true;
+        }
+
         do {
             {
                 // Mark start time.
                 std::scoped_lock timeGuard(mtxTimeWhenStarted.first);
-                mtxTimeWhenStarted.second = std::chrono::steady_clock::now();
+                mtxTimeWhenStarted.second = steady_clock::now();
             }
-            std::unique_lock guard(mtxTerminateTimerThread);
-            cvTerminateTimerThread.wait_for(
-                guard, timeToWaitInMs, [this] { return bIsShuttingDown.test() || bIsStopRequested.test(); });
 
-            if (!bIsShuttingDown.test() && !bIsStopRequested.test() && callbackForTimeout.has_value()) {
-                std::scoped_lock guard1(mtxStartedCallbackThreads.first);
-                mtxStartedCallbackThreads.second.push_back(
-                    std::thread([&]() { callbackForTimeout->operator()(); }));
+            do {
+                // Wait until timeout or stopped or shutdown.
+                std::unique_lock terminationGuard(mtxTerminateTimerThread);
+                cvTerminateTimerThread.wait_for(terminationGuard, timeToWaitInMs, [this] {
+                    return bIsShuttingDown.test() || bIsStopRequested.test();
+                });
+
+                if (bIsShuttingDown.test() || bIsStopRequested.test()) {
+                    bIsRunning = false;
+                    return;
+                } else {
+                    // Check how much time has passed.
+                    std::scoped_lock timeGuard(mtxTimeWhenStarted.first);
+
+                    const long long iMillisecondsPassed =
+                        duration_cast<milliseconds>(steady_clock::now() - mtxTimeWhenStarted.second.value())
+                            .count();
+                    const long long iMillisecondsLeft = timeToWaitInMs.count() - iMillisecondsPassed;
+                    if (iMillisecondsLeft > 0) {
+                        // Seems to be a spurious wakeup.
+                        timeToWaitInMs = std::chrono::milliseconds(iMillisecondsLeft);
+                        continue;
+                    }
+
+                    // Enough time has passed.
+                }
+                // Releasing termination mutex here on purpose (because we don't need to hold it anymore).
+                // TODO: should we just use a dummy mutex for `wait_for`?
+            } while (false);
+
+            if (callbackForTimeout.has_value()) {
+                // Get game manager to submit a deferred task.
+                const auto pGameManager = GameManager::get();
+                if (pGameManager == nullptr) [[unlikely]] {
+                    Logger::get().error(
+                        fmt::format(
+                            "timer \"{}\" is unable to start the callback because the game manager is "
+                            "nullptr",
+                            sTimerName),
+                        sTimerLogCategory);
+                    std::scoped_lock terminationGuard(mtxTerminateTimerThread);
+                    bIsRunning = false;
+                    return;
+                }
+
+                if (pGameManager->isBeingDestroyed()) [[unlikely]] {
+                    Logger::get().error(
+                        fmt::format(
+                            "timer \"{}\" is unable to start the callback because the game manager is being "
+                            "destroyed",
+                            sTimerName),
+                        sTimerLogCategory);
+                    std::scoped_lock terminationGuard(mtxTerminateTimerThread);
+                    bIsRunning = false;
+                    return;
+                }
+
+                // Submit a deferred task.
+                if (callbackValidator.has_value()) {
+                    pGameManager->addDeferredTask([iStartCount = iStartCount,
+                                                   validator = callbackValidator.value(),
+                                                   callbackForTimeout = callbackForTimeout.value()]() {
+                        if (validator(iStartCount)) {
+                            callbackForTimeout();
+                        }
+                    });
+                } else {
+                    pGameManager->addDeferredTask(callbackForTimeout.value());
+                }
             }
         } while (!bIsShuttingDown.test() && !bIsStopRequested.test() && bIsLooping);
-    }
 
-    void Timer::waitForRunningCallbackThreadsToFinish() {
-        std::scoped_lock guard(mtxStartedCallbackThreads.first);
-        if (mtxStartedCallbackThreads.second.empty()) {
-            return;
-        }
-
-        const auto start = std::chrono::steady_clock::now();
-        for (auto& thread : mtxStartedCallbackThreads.second) {
-            try {
-                thread.join();
-            } catch (std::exception& ex) {
-                Logger::get().error(
-                    fmt::format(
-                        "\"{}\" timer's callback function thread (user code) has finished with the "
-                        "following exception: {}",
-                        sTimerName,
-                        ex.what()),
-                    "");
-            }
-        }
-        const auto end = std::chrono::steady_clock::now();
-        const auto durationInMs =
-            static_cast<float>(std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count()) *
-            0.000001F;
-
-        // Limit precision to 1 digit.
-        std::stringstream durationStream;
-        durationStream << std::fixed << std::setprecision(1) << durationInMs;
-
-        if (durationInMs < 1.0F || !bWarnAboutWaitingForCallbackTooLong) {
-            // Information.
-            Logger::get().info(
-                fmt::format(
-                    "\"{}\" timer has finished waiting for started callback functions to finish, took {} "
-                    "millisecond",
-                    sTimerName,
-                    durationStream.str()),
-                "");
-        } else {
-            // Warning.
-            Logger::get().warn(
-                fmt::format(
-                    "\"{}\" timer has finished waiting for started callback functions to finish, took {} "
-                    "millisecond(s)\n"
-                    "(hint: specify `Timer::bWarnAboutWaitingForCallbackTooLong` as `false` to "
-                    "convert this message category from `warning` to `info`)",
-                    sTimerName,
-                    durationStream.str()),
-                "");
-        }
-
-        mtxStartedCallbackThreads.second.clear();
+        std::scoped_lock terminationGuard(mtxTerminateTimerThread);
+        bIsRunning = false;
     }
 } // namespace ne

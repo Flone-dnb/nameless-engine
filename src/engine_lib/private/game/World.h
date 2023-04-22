@@ -140,6 +140,15 @@ namespace ne {
         size_t getWorldSize() const;
 
         /**
+         * Tells if a node with the specified ID is currently spawned or not.
+         *
+         * @param iNodeId ID of the node to check.
+         *
+         * @return `true` if the node is spawned, `false` otherwise.
+         */
+        bool isNodeSpawned(size_t iNodeId);
+
+        /**
          * Called from Node to notify the World about a new node being spawned.
          *
          * @param pNode Node that is being spawned.
@@ -178,6 +187,9 @@ namespace ne {
 
         /** Array of currently spawned nodes that receive input. */
         std::pair<std::recursive_mutex, std::vector<Node*>> mtxReceivingInputNodes;
+
+        /** Stores pairs of "Node ID" - "Spawned Node". */
+        std::pair<std::mutex, std::unordered_map<size_t, Node*>> mtxSpawnedNodes;
 
         /** Total amount of nodes spawned. */
         std::atomic<size_t> iTotalSpawnedNodeCount{0};

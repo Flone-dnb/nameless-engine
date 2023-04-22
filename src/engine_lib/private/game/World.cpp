@@ -105,6 +105,14 @@ namespace ne {
 
     size_t World::getWorldSize() const { return iWorldSize; }
 
+    bool World::isNodeSpawned(size_t iNodeId) {
+        std::scoped_lock guard(mtxSpawnedNodes.first);
+
+        const auto it = mtxSpawnedNodes.second.find(iNodeId);
+
+        return it != mtxSpawnedNodes.second.end();
+    }
+
     void World::destroyWorld() {
         // Mark world as being destroyed.
         std::scoped_lock isDestroyedGuard(mtxIsDestroyed.first);
@@ -132,6 +140,39 @@ namespace ne {
     }
 
     void World::onNodeSpawned(Node* pNode) {
+        {
+            // Get node ID.
+            const auto optionalNodeId = pNode->getNodeId();
+
+            // Make sure the node ID is valid.
+            if (!optionalNodeId.has_value()) [[unlikely]] {
+                Error error(fmt::format(
+                    "the node \"{}\" notified the world about being spawned but its ID is invalid",
+                    pNode->getNodeName()));
+                error.showError();
+                throw std::runtime_error(error.getFullErrorMessage());
+            }
+
+            const auto iNodeId = optionalNodeId.value();
+
+            std::scoped_lock guard(mtxSpawnedNodes.first);
+
+            // See if we already have a node with this ID.
+            const auto it = mtxSpawnedNodes.second.find(iNodeId);
+            if (it != mtxSpawnedNodes.second.end()) [[unlikely]] {
+                Error error(fmt::format(
+                    "the node \"{}\" with ID \"{}\" notified the world about being spawned but there is "
+                    "already a spawned node with this ID",
+                    pNode->getNodeName(),
+                    iNodeId));
+                error.showError();
+                throw std::runtime_error(error.getFullErrorMessage());
+            }
+
+            // Save node.
+            mtxSpawnedNodes.second[iNodeId] = pNode;
+        }
+
         // Add to our arrays as deferred task. Why I've decided to do it as a deferred task:
         // if we are right now iterating over an array of nodes that world stores (for ex. ticking, where
         // one node inside of its tick function decided to spawn another node would cause us to get here)
@@ -160,8 +201,42 @@ namespace ne {
     }
 
     void World::onNodeDespawned(Node* pNode) {
+        {
+            // Get node ID.
+            const auto optionalNodeId = pNode->getNodeId();
+
+            // Make sure the node ID is valid.
+            if (!optionalNodeId.has_value()) [[unlikely]] {
+                Error error(fmt::format(
+                    "the node \"{}\" notified the world about being despawned but its ID is invalid",
+                    pNode->getNodeName()));
+                error.showError();
+                throw std::runtime_error(error.getFullErrorMessage());
+            }
+
+            const auto iNodeId = optionalNodeId.value();
+
+            std::scoped_lock guard(mtxSpawnedNodes.first);
+
+            // See if we indeed have a node with this ID.
+            const auto it = mtxSpawnedNodes.second.find(iNodeId);
+            if (it == mtxSpawnedNodes.second.end()) [[unlikely]] {
+                Error error(fmt::format(
+                    "the node \"{}\" with ID \"{}\" notified the world about being despawned but this node's "
+                    "ID is not found",
+                    pNode->getNodeName(),
+                    iNodeId));
+                error.showError();
+                throw std::runtime_error(error.getFullErrorMessage());
+            }
+
+            // Remove node.
+            mtxSpawnedNodes.second.erase(it);
+        }
+
         // Remove to our arrays as deferred task (see onNodeSpawned for the reason).
-        // Additionally, engine guarantees that all deferred tasks will be finished
+        // Additionally, engine guarantees that all deferred tasks will be finished before GC runs
+        // so it's safe to do so.
         pGameManager->addDeferredTask([this, pNode]() {
             if (pNode->isCalledEveryFrame()) {
                 // Remove node from array of nodes that should be called every frame.

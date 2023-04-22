@@ -248,6 +248,15 @@ namespace ne {
         long long getGarbageCollectorRunIntervalInSec() const;
 
         /**
+         * Tells if a node with the specified ID is currently spawned or not.
+         *
+         * @param iNodeId ID of the node to check.
+         *
+         * @return `true` if the node is spawned, `false` otherwise.
+         */
+        bool isNodeSpawned(size_t iNodeId);
+
+        /**
          * Tells whether Game's destruction process was started or not.
          *
          * @return Whether Game's destruction process was started or not.

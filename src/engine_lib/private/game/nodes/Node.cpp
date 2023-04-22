@@ -9,11 +9,15 @@
 #include "game/GameInstance.h"
 #include "game/World.h"
 #include "game/GameManager.h"
+#include "misc/Timer.h"
 
 #include "Node.generated_impl.h"
 
 /** Total amount of alive nodes. */
 static std::atomic<size_t> iTotalAliveNodeCount{0};
+
+/** Stores the next node ID that can be used. */
+static std::atomic<size_t> iAvailableNodeId{0};
 
 namespace ne {
     size_t Node::getAliveNodeCount() { return iTotalAliveNodeCount.load(); }
@@ -31,6 +35,15 @@ namespace ne {
         Logger::get().info(
             fmt::format("constructor for node \"{}\" is called (alive nodes now: {})", sName, iNodeCount),
             sNodeLogCategory);
+
+        if (iNodeCount == std::numeric_limits<size_t>::max()) [[unlikely]] {
+            Logger::get().warn(
+                fmt::format(
+                    "total alive node counter is at its maximum value: {}, another new node will cause an "
+                    "overflow",
+                    iNodeCount),
+                sNodeLogCategory);
+        }
     }
 
     Node::~Node() {
@@ -253,11 +266,33 @@ namespace ne {
         // Initialize world.
         pWorld = findValidWorld();
 
-        // Spawn self first and only then child nodes.
-        // This spawn order is required for some nodes to work correctly.
-        // With this spawn order we will not make "holes" in world's node tree
-        // (i.e. when node is spawned, node's parent is not spawned but parent's parent node is spawned).
+        // Get unique ID.
+        iNodeId = iAvailableNodeId.fetch_add(1);
+        if (iNodeId.value() + 1 == std::numeric_limits<size_t>::max()) [[unlikely]] {
+            Logger::get().warn(
+                fmt::format(
+                    "the next available node ID is at its maximum value: {}, another spawned node will cause "
+                    "an overflow",
+                    iNodeId.value() + 1),
+                sNodeLogCategory);
+        }
+
+        // Mark state.
         bIsSpawned = true;
+
+        // Enable all created timers.
+        {
+            std::scoped_lock timersGuard(mtxCreatedTimers.first);
+
+            for (const auto& pTimer : mtxCreatedTimers.second) {
+                enableTimer(pTimer.get(), true);
+            }
+        }
+
+        // Spawn self first and only then child nodes.
+        // This spawn order is required for some nodes and engine parts to work correctly.
+        // With this spawn order we will not make "holes" in the world's node tree
+        // (i.e. when node is spawned, node's parent is not spawned but parent's parent node is spawned).
         onSpawning();
 
         // Notify world.
@@ -299,6 +334,16 @@ namespace ne {
 
         // Notify world.
         pWorld->onNodeDespawned(this);
+
+        // Stop and disable all created timers.
+        {
+            std::scoped_lock timersGuard(mtxCreatedTimers.first);
+
+            // Don't delete timers or clear array.
+            for (const auto& pTimer : mtxCreatedTimers.second) {
+                enableTimer(pTimer.get(), false);
+            }
+        }
 
         // Despawn self.
         onDespawning();
@@ -771,5 +816,92 @@ namespace ne {
     Node::getAxisEventBindings() {
         return &mtxBindedAxisEvents;
     }
+
+    Timer* Node::createTimer(const std::string& sTimerName) {
+        std::scoped_lock timersGuard(mtxCreatedTimers.first);
+
+        // Create timer.
+        auto pNewTimer = std::unique_ptr<Timer>(new Timer(sTimerName));
+
+        // Disable timer for now.
+        pNewTimer->setEnable(false);
+
+        {
+            std::scoped_lock spawnGuard(mtxSpawning);
+            if (bIsSpawned) {
+                if (enableTimer(pNewTimer.get(), true)) {
+                    pNewTimer = nullptr;
+                    return nullptr;
+                }
+            }
+        }
+
+        // Add to our array of created timers.
+        const auto pRawTimer = pNewTimer.get();
+        mtxCreatedTimers.second.push_back(std::move(pNewTimer));
+
+        return pRawTimer;
+    }
+
+    bool Node::enableTimer(Timer* pTimer, bool bEnable) {
+        std::scoped_lock spawnGuard(mtxSpawning);
+
+        if (pTimer->isEnabled() == bEnable) {
+            // Already set.
+            return false;
+        }
+
+        if (bEnable) {
+            if (!bIsSpawned) {
+                Logger::get().error(
+                    fmt::format(
+                        "node \"{}\" is not spawned but the timer \"{}\" was requested to be enabled - this "
+                        "is an engine bug",
+                        sNodeName,
+                        pTimer->getName()),
+                    sNodeLogCategory);
+                return true;
+            }
+
+            // Check that node's ID is initialized.
+            if (!iNodeId.has_value()) [[unlikely]] {
+                Logger::get().error(
+                    fmt::format(
+                        "node \"{}\" is spawned but it's ID is invalid - this is an engine bug", sNodeName),
+                    sNodeLogCategory);
+                return true;
+            }
+
+            // Set validator.
+            pTimer->setCallbackValidator([iNodeId = iNodeId.value(), pTimer](size_t iStartCount) -> bool {
+                const auto pGameManager = GameManager::get();
+
+                if (!pGameManager->isNodeSpawned(iNodeId)) {
+                    return false;
+                }
+
+                // TODO: we can actually think of adding `removeTimer` by using `std::shared_ptr`s
+                // instead of raw pointers so we won't hit deleted memory here but right now I
+                // don't really see a reason to remove a timer.
+
+                if (iStartCount != pTimer->getStartCount()) {
+                    // The timer was stopped and started (probably with some other callback).
+                    return false;
+                }
+
+                return !pTimer->isStopped();
+            });
+
+            // Enable.
+            pTimer->setEnable(true);
+        } else {
+            // Disable.
+            pTimer->stop(true);
+        }
+
+        return false;
+    }
+
+    std::optional<size_t> Node::getNodeId() const { return iNodeId; }
 
 } // namespace ne

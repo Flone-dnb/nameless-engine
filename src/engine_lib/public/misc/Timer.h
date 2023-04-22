@@ -11,27 +11,25 @@ namespace ne {
 
     /** Simple timer that can trigger a callback function on a timeout. */
     class Timer {
+        // Only node and game instance can create timers because they have some additional protection
+        // code to avoid shooting yourself in the foot (like if you forget to stop the timer).
+        // Although only nodes and game instances can create timers this does not mean that the timer
+        // depends on their functionality - no, the timer is modular and you can use it outside of those
+        // classes if you remove `friend class` clauses and move functions from `protected` section of
+        // the timer to `public` section.
+        friend class Node;
+        friend class GameInstance;
+
     public:
         Timer() = delete;
 
-        /**
-         * Constructor.
-         *
-         * @param sTimerName Name of this timer (used for logging). Don't add "timer" word to your timer's
-         * name as it will be appended in the logs.
-         * @param bWarnAboutWaitingForCallbackTooLong In timer destructor, whether the timer should log
-         * a warning message if waiting for started callback to finish is taking too long or not.
-         */
-        Timer(const std::string& sTimerName, bool bWarnAboutWaitingForCallbackTooLong = true);
-
-        /** Destructor. */
         ~Timer();
 
         Timer(const Timer&) = delete;
         Timer& operator=(const Timer&) = delete;
 
         /**
-         * Sets a function to be executed when the waiting time is over (timeout).
+         * Sets a function to be executed when the waiting time is over (timeout event).
          *
          * Example:
          * @code
@@ -41,37 +39,33 @@ namespace ne {
          *     // ...
          *
          *     void throw(){
-         *         explodeTimer.setCallbackForTimeout(3000, [&]() { explode(); });
-         *         explodeTimer.start();
+         *         pExplodeTimer->setCallbackForTimeout(3000, [this]() { explode(); });
+         *         pExplodeTimer->start();
          *     }
          * private:
          *     void explode(){
          *         // ...
          *     }
          *
-         *     Timer explodeTimer;
+         *     Timer* pExplodeTimer = nullptr;
          * }
          * @endcode
          *
-         * @remark If the timer is currently running with some other callback setup earlier we will
-         * use @ref stop to stop the timer and setup a new callback.
+         * @remark If the timer is currently running (see @ref isRunning) this call will be ignored
+         * and an error will be logged.
          *
-         * @remark If the callback function is your node's member function, in this callback function
-         * you don't need to worry about node being destroyed/deleted, the timer makes sure that the node
-         * will not be deleted while the callback is running.
-         *
-         * @remark Although the timer will wait for the running callback function to finish in
-         * timer's destructor (if the callback was started) you still need to make sure that
-         * the owner of the callback function will not be deleted
-         * until the timer is finished. It will be enough to call @ref stop with `true` as the first parameter
-         * in the destructor of your type to wait for all running callback function threads to finish.
+         * @remark Upon a timeout the timer will submit a deferred task with your callback function
+         * to the main thread because deferred tasks are executed each frame you might expect a slight
+         * delay after the timeout event and before your callback is actually started, the delay
+         * should be generally smaller that ~30 ms so it should not make a big difference to you,
+         * but note that you probably want to avoid using callback timers for benchmarking or
+         * other high precision timing events due to this delay.
          *
          * @param iTimeToWaitInMs Time this timer should wait (in milliseconds) until the callback is called.
          * @param callback        Function to execute on timeout.
          * @param bIsLooping      Whether the timer should start again after a timeout or not.
-         * If specified 'true', after the waiting time is over (timeout) the timer will automatically
-         * restart itself and will start the waiting time again. There are 2 ways to stop a looping timer:
-         * call @ref stop or destroy this object (destructor is called).
+         * If specified `true`, after the waiting time is over (timeout) the timer will automatically
+         * restart itself and will start the waiting time again.
          */
         void setCallbackForTimeout(
             long long iTimeToWaitInMs, const std::function<void()>& callback, bool bIsLooping = false);
@@ -83,11 +77,8 @@ namespace ne {
          * executed on timeout see @ref setCallbackForTimeout.
          *
          * @remark If the timer is currently running it will be stopped (see @ref stop).
-         *
-         * @param bWaitForRunningCallbackThreadsToFinish Will be passed to @ref stop if the timer
-         * is currently running (see @ref stop documentation on this parameter).
          */
-        void start(bool bWaitForRunningCallbackThreadsToFinish);
+        void start();
 
         /**
          * Stops the timer and timer looping (if was specified in @ref start).
@@ -97,37 +88,90 @@ namespace ne {
          * without stopping. If the timer was running and the callback function was not started yet
          * it will be never started.
          *
-         * @param bWaitForRunningCallbackThreadsToFinish If @ref setCallbackForTimeout was used, determines
-         * whether we should wait for all currently running callback function threads to finish or not.
-         * If @ref setCallbackForTimeout was not used, this value is ignored.
-         * Here is an example describing what this parameter does:
-         * you use @ref setCallbackForTimeout, then start the timer (@ref start) and the
-         * callback function you specified was started and is currently running (in another thread)
-         * but now you want the timer to stop, what should the timer do: should it wait for
-         * this running callback function thread to finish (and block the current thread) or not?
+         * @param bDisableTimer Specify `true` to make future @ref start calls to be ignored,
+         * `false` to allow restarting the timer.
          */
-        void stop(bool bWaitForRunningCallbackThreadsToFinish);
+        void stop(bool bDisableTimer = false);
 
         /**
          * Returns the time that has passed since the timer was started (see @ref start).
          *
-         * @return Empty if the @ref start was never called before or if the timer was stopped
-         * (see @ref stop), otherwise time in milliseconds since the timer was started.
+         * @return Empty if the @ref start was never called before,
+         * otherwise time in milliseconds since the timer was started.
          *
          * @remark For looping timers (see @ref start) returns time since the beginning
          * of the current loop iteration. Each new loop will reset elapsed time to 0.
          *
-         * @remark Note that if you call this function right after a call to @ref start
+         * @remark Note that if you call this function right after the call to @ref start
+         * with a callback function set (see @ref setCallbackForTimeout)
          * this function may return empty because the timer thread is not started yet.
          */
         std::optional<long long> getElapsedTimeInMs();
 
         /**
+         * Returns timer's name (only used for logging purposes).
+         *
+         * @return Timer's name.
+         */
+        std::string getName() const;
+
+        /**
+         * Returns the amount of times @ref start was called.
+         *
+         * @return @ref start call count.
+         */
+        size_t getStartCount();
+
+        /**
          * Whether this timer is running (started) or not (finished/not started).
          *
-         * @return 'true' if currently running, 'false' otherwise.
+         * @return `true` if currently running, `false` otherwise.
          */
         bool isRunning();
+
+        /**
+         * Whether this timer was running (started) and was stopped using @ref stop.
+         *
+         * @return `true` if the timer was stopped using @ref stop and is not running right now,
+         * `false` otherwise.
+         */
+        bool isStopped();
+
+        /**
+         * Whether this timer can use @ref start function or not.
+         *
+         * @return `true` if @ref start can be called, `false` otherwise.
+         */
+        bool isEnabled();
+
+    protected:
+        /**
+         * Constructor.
+         *
+         * @param sTimerName Name of this timer (used for logging). Don't add "timer" word to your timer's
+         * name as it will be appended in the logs.
+         */
+        Timer(const std::string& sTimerName);
+
+        /**
+         * Sets a function to be called from a deferred task before the actual callback
+         * to test if the actual callback should be started or not.
+         *
+         * @remark If the timer is currently running (see @ref isRunning) this call will be ignored
+         * and an error will be logged.
+         *
+         * @param validator Validator function. The only parameter is @ref getStartCount at the moment
+         * of timeout event. Returns `true` if the actual callback needs
+         * to be started and `false` if the actual callback should not be started.
+         */
+        void setCallbackValidator(const std::function<bool(size_t)>& validator);
+
+        /**
+         * Determines whether @ref start will work or not.
+         *
+         * @param bEnable `true` to allow using @ref start, `false` otherwise.
+         */
+        void setEnable(bool bEnable);
 
     private:
         /**
@@ -137,14 +181,17 @@ namespace ne {
          */
         void timerThread(std::chrono::milliseconds timeToWaitInMs);
 
-        /** Waits for all threads from @ref mtxStartedCallbackThreads to finish and clears the array. */
-        void waitForRunningCallbackThreadsToFinish();
-
         /** Future of the waiting thread. */
         std::optional<std::future<void>> timerThreadFuture;
 
         /** Function to call on timeout. */
         std::optional<std::function<void()>> callbackForTimeout;
+
+        /**
+         * Function to call from a deferred task before @ref callbackForTimeout to test if
+         * the callback should be started or not.
+         */
+        std::optional<std::function<bool(size_t)>> callbackValidator;
 
         /** Name of this timer (used for logging). */
         std::string sTimerName;
@@ -155,11 +202,11 @@ namespace ne {
          */
         std::pair<std::mutex, std::optional<std::chrono::steady_clock::time_point>> mtxTimeWhenStarted;
 
+        /** The number of times @ref start was called. */
+        size_t iStartCount = 0;
+
         /** Mutex for read/write operations on data that the timer thread is using. */
         std::mutex mtxTerminateTimerThread;
-
-        /** Array of started callback threads. */
-        std::pair<std::mutex, std::vector<std::thread>> mtxStartedCallbackThreads;
 
         /** Condition variable for timer thread termination. */
         std::condition_variable cvTerminateTimerThread;
@@ -170,16 +217,22 @@ namespace ne {
         /** Whether the timer was explicitly stopped or not. */
         std::atomic_flag bIsStopRequested{};
 
+        /** Whether the timer is currently running or not. */
+        bool bIsRunning = false;
+
         /**
-         * Whether the timer should log a warning message if waiting for started callback (in timer
-         * destructor) is taking too long or not.
+         * `true` if @ref start calls should be allowed (able to restart the timer) or
+         * `false` to ignore calls to @ref start function (won't be able to start the timer).
          */
-        bool bWarnAboutWaitingForCallbackTooLong = true;
+        bool bIsEnabled = true;
 
         /** Time to wait until the callback is called. */
         long long iTimeToWaitInMs = 0;
 
         /** Whether the timer should restart itself upon a timeout or not. */
         bool bIsLooping = false;
+
+        /** Name of the category used for logging. */
+        static inline const auto sTimerLogCategory = "Timer";
     };
 } // namespace ne

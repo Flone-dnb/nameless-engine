@@ -3,116 +3,388 @@
 
 // Custom.
 #include "misc/Timer.h"
+#include "game/nodes/Node.h"
 #include "io/Logger.h"
+#include "game/GameInstance.h"
+#include "game/Window.h"
 
 // External.
 #include "catch2/catch_test_macros.hpp"
 
 TEST_CASE("measure elapsed time") {
     using namespace ne;
-    using namespace std::chrono;
-    constexpr long long iDeltaInMs = 5;
 
-    Timer timer{"test"};
-    timer.start(true);
-    while (!timer.getElapsedTimeInMs().has_value()) {
+    class MyDerivedNode : public Node {
+    public:
+        MyDerivedNode() {
+            pTimer = createTimer("test timer");
+            REQUIRE(pTimer != nullptr);
+        };
+        virtual ~MyDerivedNode() override = default;
+
+    protected:
+        virtual void onSpawning() override {
+            Node::onSpawning();
+
+            using namespace std::chrono;
+            constexpr long long iDeltaInMs = 5;
+
+            pTimer->start();
+
+            while (!pTimer->getElapsedTimeInMs().has_value()) {
+            }
+            REQUIRE(pTimer->getElapsedTimeInMs().has_value());
+
+            const auto start = steady_clock::now();
+            std::this_thread::sleep_for(milliseconds(50)); // NOLINT
+            const auto iElapsedInMs =
+                std::chrono::duration_cast<milliseconds>(steady_clock::now() - start).count();
+
+            const auto iTimerElapsedInMs = pTimer->getElapsedTimeInMs().value();
+            pTimer->stop();
+            REQUIRE(iElapsedInMs <= iTimerElapsedInMs);
+            REQUIRE(iElapsedInMs > iTimerElapsedInMs - iDeltaInMs);
+
+            getGameInstance()->getWindow()->close();
+        }
+
+    private:
+        Timer* pTimer = nullptr;
+    };
+
+    class TestGameInstance : public GameInstance {
+    public:
+        TestGameInstance(Window* pGameWindow, GameManager* pGame, InputManager* pInputManager)
+            : GameInstance(pGameWindow, pGame, pInputManager) {}
+        virtual ~TestGameInstance() override {}
+        virtual void onGameStarted() override {
+            createWorld([&](const std::optional<Error>& optionalWorldError) {
+                if (optionalWorldError.has_value()) {
+                    auto error = optionalWorldError.value();
+                    error.addEntry();
+                    INFO(error.getFullErrorMessage());
+                    REQUIRE(false);
+                }
+
+                getWorldRootNode()->addChildNode(gc_new<MyDerivedNode>());
+            });
+        }
+    };
+
+    auto result = Window::getBuilder().withVisibility(false).build();
+    if (std::holds_alternative<Error>(result)) {
+        Error error = std::get<Error>(std::move(result));
+        error.addEntry();
+        INFO(error.getFullErrorMessage());
+        REQUIRE(false);
     }
 
-    const auto start = steady_clock::now();
-    std::this_thread::sleep_for(milliseconds(50)); // NOLINT
-    const auto iElapsedInMs = std::chrono::duration_cast<milliseconds>(steady_clock::now() - start).count();
+    const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
+    pMainWindow->processEvents<TestGameInstance>();
 
-    const auto iTimerElapsedInMs = timer.getElapsedTimeInMs().value();
-    timer.stop(true);
-    REQUIRE(iElapsedInMs <= iTimerElapsedInMs);
-    REQUIRE(iElapsedInMs > iTimerElapsedInMs - iDeltaInMs);
-    REQUIRE(!timer.getElapsedTimeInMs().has_value());
+    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
 }
 
 TEST_CASE("run callback on timeout") {
     using namespace ne;
-    Timer timer{"test"};
-    auto pPromiseFinish = std::make_shared<std::promise<bool>>();
-    auto future = pPromiseFinish->get_future();
-    constexpr auto bExpected = true;
 
-    timer.setCallbackForTimeout(1, [bExpected, pPromiseFinish]() { pPromiseFinish->set_value(bExpected); });
-    timer.start(true);
+    class MyDerivedNode : public Node {
+    public:
+        MyDerivedNode() {
+            pTimer = createTimer("test timer");
+            REQUIRE(pTimer != nullptr);
+        };
+        virtual ~MyDerivedNode() override { REQUIRE(bCallbackCalled); }
 
-    REQUIRE(future.valid());
-    REQUIRE(future.get() == bExpected);
+    protected:
+        virtual void onSpawning() override {
+            Node::onSpawning();
+
+            pTimer->setCallbackForTimeout(50, [this]() {
+                REQUIRE(isSpawned());
+
+                bCallbackCalled = true;
+
+                pTimer->stop();
+
+                getGameInstance()->getWindow()->close();
+            });
+
+            pTimer->start();
+        }
+
+    private:
+        Timer* pTimer = nullptr;
+        bool bCallbackCalled = false;
+    };
+
+    class TestGameInstance : public GameInstance {
+    public:
+        TestGameInstance(Window* pGameWindow, GameManager* pGame, InputManager* pInputManager)
+            : GameInstance(pGameWindow, pGame, pInputManager) {}
+        virtual ~TestGameInstance() override {}
+        virtual void onGameStarted() override {
+            createWorld([&](const std::optional<Error>& optionalWorldError) {
+                if (optionalWorldError.has_value()) {
+                    auto error = optionalWorldError.value();
+                    error.addEntry();
+                    INFO(error.getFullErrorMessage());
+                    REQUIRE(false);
+                }
+
+                getWorldRootNode()->addChildNode(gc_new<MyDerivedNode>());
+            });
+        }
+    };
+
+    auto result = Window::getBuilder().withVisibility(false).build();
+    if (std::holds_alternative<Error>(result)) {
+        Error error = std::get<Error>(std::move(result));
+        error.addEntry();
+        INFO(error.getFullErrorMessage());
+        REQUIRE(false);
+    }
+
+    const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
+    pMainWindow->processEvents<TestGameInstance>();
+
+    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
 }
 
-TEST_CASE("check that timer is running") {
+TEST_CASE("check that timer is running (without callback)") {
     using namespace ne;
 
-    constexpr size_t iCheckIntervalTimeInMs = 15;
-    Timer timer{"test"};
+    class MyDerivedNode : public Node {
+    public:
+        MyDerivedNode() {
+            pTimer = createTimer("test timer");
+            REQUIRE(pTimer != nullptr);
+        };
+        virtual ~MyDerivedNode() override = default;
 
-    SECTION("without callback") {
-        timer.start(true);
+    protected:
+        virtual void onSpawning() override {
+            Node::onSpawning();
 
-        std::this_thread::sleep_for(std::chrono::milliseconds(iCheckIntervalTimeInMs));
-        REQUIRE(timer.isRunning());
+            using namespace std::chrono;
+            constexpr size_t iCheckIntervalTimeInMs = 15;
 
-        timer.stop(true);
-        std::this_thread::sleep_for(std::chrono::milliseconds(iCheckIntervalTimeInMs));
-        REQUIRE(!timer.isRunning());
+            pTimer->start();
+            std::this_thread::sleep_for(std::chrono::milliseconds(iCheckIntervalTimeInMs));
+
+            REQUIRE(pTimer->isRunning());
+            REQUIRE(!pTimer->isStopped());
+
+            pTimer->stop();
+            std::this_thread::sleep_for(std::chrono::milliseconds(iCheckIntervalTimeInMs));
+
+            REQUIRE(!pTimer->isRunning());
+            REQUIRE(pTimer->isStopped());
+
+            getGameInstance()->getWindow()->close();
+        }
+
+    private:
+        Timer* pTimer = nullptr;
+    };
+
+    class TestGameInstance : public GameInstance {
+    public:
+        TestGameInstance(Window* pGameWindow, GameManager* pGame, InputManager* pInputManager)
+            : GameInstance(pGameWindow, pGame, pInputManager) {}
+        virtual ~TestGameInstance() override {}
+        virtual void onGameStarted() override {
+            createWorld([&](const std::optional<Error>& optionalWorldError) {
+                if (optionalWorldError.has_value()) {
+                    auto error = optionalWorldError.value();
+                    error.addEntry();
+                    INFO(error.getFullErrorMessage());
+                    REQUIRE(false);
+                }
+
+                getWorldRootNode()->addChildNode(gc_new<MyDerivedNode>());
+            });
+        }
+    };
+
+    auto result = Window::getBuilder().withVisibility(false).build();
+    if (std::holds_alternative<Error>(result)) {
+        Error error = std::get<Error>(std::move(result));
+        error.addEntry();
+        INFO(error.getFullErrorMessage());
+        REQUIRE(false);
     }
-    SECTION("with callback (force stop)") {
-        constexpr long long iWaitTime = 50;
-        timer.setCallbackForTimeout(iWaitTime, []() {});
-        timer.start(true);
 
-        std::this_thread::sleep_for(std::chrono::milliseconds(iWaitTime / 2));
-        REQUIRE(timer.isRunning());
+    const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
+    pMainWindow->processEvents<TestGameInstance>();
 
-        timer.stop(true);
-        std::this_thread::sleep_for(std::chrono::milliseconds(iCheckIntervalTimeInMs));
-        REQUIRE(!timer.isRunning());
-    }
-    SECTION("with callback") {
-        constexpr long long iWaitTime = 50;
-        timer.setCallbackForTimeout(iWaitTime, []() {});
-        timer.start(true);
-
-        std::this_thread::sleep_for(std::chrono::milliseconds(iWaitTime / 2));
-        REQUIRE(timer.isRunning());
-
-        std::this_thread::sleep_for(std::chrono::milliseconds(iWaitTime));
-        REQUIRE(!timer.isRunning());
-    }
+    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
 }
 
-TEST_CASE("wait for callback to finish on timer destruction") {
+TEST_CASE("check that timer is running (with callback, force stop)") {
     using namespace ne;
 
-    const auto pPromiseFinish = std::make_shared<std::promise<bool>>();
-    const auto futureFinish = pPromiseFinish->get_future();
+    class MyDerivedNode : public Node {
+    public:
+        MyDerivedNode() { setIsCalledEveryFrame(true); };
+        virtual ~MyDerivedNode() override = default;
 
-    const auto pPromiseStart = std::make_shared<std::promise<bool>>();
-    auto futureStart = pPromiseStart->get_future();
+    protected:
+        virtual void onSpawning() override {
+            Node::onSpawning();
 
-    constexpr auto iCallbackSleepTimeInMs =
-        30; // NOLINT: should be way bigger than iWaitTimeForCallbackToStartInMs
-    constexpr long long iWaitTimeForCallbackToStartInMs =
-        1; // should be way lower than iCallbackSleepTimeInMs
+            // Intentionally create the timer in `onSpawning` to test if that works.
+            pTimer = createTimer("test timer");
+            REQUIRE(pTimer != nullptr);
 
-    {
-        Timer timer("test", false); // ignore warning about waiting time being too long
-        timer.setCallbackForTimeout(iWaitTimeForCallbackToStartInMs, [&]() {
-            pPromiseStart->set_value(true);
-            std::this_thread::sleep_for(std::chrono::milliseconds(iCallbackSleepTimeInMs));
-            pPromiseFinish->set_value(true);
-        });
-        timer.start(true);
+            constexpr long long iWaitTime = 100;
+            using namespace std::chrono;
+            constexpr size_t iCheckIntervalTimeInMs = 15;
 
-        futureStart.get();
-        // The callback is currently running...
-        // The timer will wait here until the callback is finished.
+            pTimer->setCallbackForTimeout(iWaitTime, []() {
+                // Should not be called.
+                REQUIRE(false);
+            });
+
+            pTimer->start();
+            std::this_thread::sleep_for(std::chrono::milliseconds(iWaitTime / 2));
+
+            REQUIRE(pTimer->isRunning());
+            REQUIRE(!pTimer->isStopped());
+
+            pTimer->stop();
+            std::this_thread::sleep_for(std::chrono::milliseconds(iCheckIntervalTimeInMs));
+
+            REQUIRE(!pTimer->isRunning());
+            REQUIRE(pTimer->isStopped());
+
+            // Wait a few ticks to make sure that the callback will not be started.
+        }
+
+        virtual void onBeforeNewFrame(float timeSincePrevCallInSec) override {
+            Node::onBeforeNewFrame(timeSincePrevCallInSec);
+
+            iTickCount += 1;
+
+            if (iTickCount == 10) {
+                getGameInstance()->getWindow()->close();
+            }
+        }
+
+    private:
+        Timer* pTimer = nullptr;
+        size_t iTickCount = 0;
+    };
+
+    class TestGameInstance : public GameInstance {
+    public:
+        TestGameInstance(Window* pGameWindow, GameManager* pGame, InputManager* pInputManager)
+            : GameInstance(pGameWindow, pGame, pInputManager) {}
+        virtual ~TestGameInstance() override {}
+        virtual void onGameStarted() override {
+            createWorld([&](const std::optional<Error>& optionalWorldError) {
+                if (optionalWorldError.has_value()) {
+                    auto error = optionalWorldError.value();
+                    error.addEntry();
+                    INFO(error.getFullErrorMessage());
+                    REQUIRE(false);
+                }
+
+                getWorldRootNode()->addChildNode(gc_new<MyDerivedNode>());
+            });
+        }
+    };
+
+    auto result = Window::getBuilder().withVisibility(false).build();
+    if (std::holds_alternative<Error>(result)) {
+        Error error = std::get<Error>(std::move(result));
+        error.addEntry();
+        INFO(error.getFullErrorMessage());
+        REQUIRE(false);
     }
 
-    // The callback should be finished now.
-    REQUIRE(futureFinish.valid());
-    REQUIRE(futureFinish.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready);
+    const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
+    pMainWindow->processEvents<TestGameInstance>();
+
+    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+}
+
+TEST_CASE("check that timer is running (with callback)") {
+    using namespace ne;
+
+    class MyDerivedNode : public Node {
+    public:
+        MyDerivedNode() = default;
+        virtual ~MyDerivedNode() override { REQUIRE(bCallbackCalled); };
+
+    protected:
+        virtual void onSpawning() override {
+            Node::onSpawning();
+
+            // Intentionally create the timer in `onSpawning` to test if that works.
+            pTimer = createTimer("test timer");
+            REQUIRE(pTimer != nullptr);
+
+            constexpr long long iWaitTime = 100;
+            constexpr size_t iCheckIntervalTimeInMs = 15;
+            using namespace std::chrono;
+
+            pTimer->setCallbackForTimeout(iWaitTime, [this]() {
+                REQUIRE(isSpawned());
+
+                bCallbackCalled = true;
+
+                pTimer->stop();
+
+                getGameInstance()->getWindow()->close();
+            });
+
+            pTimer->start();
+            std::this_thread::sleep_for(std::chrono::milliseconds(iCheckIntervalTimeInMs));
+
+            REQUIRE(pTimer->isRunning());
+            REQUIRE(!pTimer->isStopped());
+
+            std::this_thread::sleep_for(std::chrono::milliseconds(iWaitTime));
+
+            REQUIRE(!pTimer->isRunning());
+            REQUIRE(!pTimer->isStopped());
+        }
+
+    private:
+        Timer* pTimer = nullptr;
+        bool bCallbackCalled = false;
+    };
+
+    class TestGameInstance : public GameInstance {
+    public:
+        TestGameInstance(Window* pGameWindow, GameManager* pGame, InputManager* pInputManager)
+            : GameInstance(pGameWindow, pGame, pInputManager) {}
+        virtual ~TestGameInstance() override {}
+        virtual void onGameStarted() override {
+            createWorld([&](const std::optional<Error>& optionalWorldError) {
+                if (optionalWorldError.has_value()) {
+                    auto error = optionalWorldError.value();
+                    error.addEntry();
+                    INFO(error.getFullErrorMessage());
+                    REQUIRE(false);
+                }
+
+                getWorldRootNode()->addChildNode(gc_new<MyDerivedNode>());
+            });
+        }
+    };
+
+    auto result = Window::getBuilder().withVisibility(false).build();
+    if (std::holds_alternative<Error>(result)) {
+        Error error = std::get<Error>(std::move(result));
+        error.addEntry();
+        INFO(error.getFullErrorMessage());
+        REQUIRE(false);
+    }
+
+    const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
+    pMainWindow->processEvents<TestGameInstance>();
+
+    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
 }

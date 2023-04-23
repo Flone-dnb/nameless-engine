@@ -561,6 +561,7 @@ set(ENGINE_TEST_SOURCES
     ${TESTS_RELATIVE_PATH}/engine_lib/render/RenderSettings.cpp
     ${TESTS_RELATIVE_PATH}/engine_lib/math/GLMath.cpp
     ${TESTS_RELATIVE_PATH}/engine_lib/math/MathHelpers.cpp
+    ${TESTS_RELATIVE_PATH}/engine_lib/game/GameManager.cpp
     ${TESTS_RELATIVE_PATH}/engine_lib/game/nodes/Node.cpp
     ${TESTS_RELATIVE_PATH}/engine_lib/game/nodes/SpatialNode.cpp
     ${TESTS_RELATIVE_PATH}/engine_lib/game/nodes/MeshNode.cpp

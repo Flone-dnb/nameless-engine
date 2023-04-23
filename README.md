@@ -317,7 +317,7 @@ Here is the list of base features that needs to be implemented in order for you 
 - [X] Handling user input events
 - [X] Config management (progress, settings, etc.)
 - [X] Node system (Godot-like ECS alternative)
-- [ ] Rendering (DirectX 12 and Vulkan)
+- [ ] Rendering (features for both DirectX 12 and Vulkan renderers)
     - [ ] Forward rendering
         - [ ] Transparent materials
         - [ ] MSAA (Multisample anti-aliasing)
@@ -327,11 +327,10 @@ Here is the list of base features that needs to be implemented in order for you 
             - [ ] Point light
             - [ ] Spot light
             - [ ] Directional light
-            - [ ] Rectangular light
         - [ ] Shadow mapping (for all light sources)
-        - [ ] Cascading shadow maps
+        - [ ] Normal mapping
         - [ ] SSAO (Screen space ambient occlusion)
-        - [ ] Post-processing effects
+        - [ ] Some post-processing effects
     - [ ] Forward+ rendering
         - [ ] Transparent materials
         - [ ] AA (Anti-aliasing)
@@ -344,6 +343,9 @@ Here is the list of base features that needs to be implemented in order for you 
             - [ ] Rectangular light
         - [ ] Shadow mapping (for all light sources)
         - [ ] Cascading shadow maps
+        - [ ] Normal mapping
+        - [ ] Cube mapping
+        - [ ] Z-prepass
         - [ ] SSAO (Screen space ambient occlusion)
         - [ ] Post-processing effects
         - [ ] PBR (Physically based rendering)
@@ -360,12 +362,16 @@ Here is the list of base features that needs to be implemented in order for you 
             - [ ] Rectangular light
         - [ ] Shadow mapping (for all light sources)
         - [ ] Cascading shadow maps
+        - [ ] Normal mapping
+        - [ ] Cube mapping
+        - [ ] Z-prepass
         - [ ] SSAO (Screen space ambient occlusion)
         - [ ] Post-processing effects
         - [ ] PBR (Physically based rendering)
         - [ ] HDR (High dynamic range)
     - [ ] GUI
 - [ ] Profiler
+- [ ] GLTF/GLB import
 - [ ] Minimal scripting using AngelScript
 - [ ] Editor
     - [ ] Content management

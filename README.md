@@ -350,6 +350,8 @@ Here is the list of base features that needs to be implemented in order for you 
         - [ ] Post-processing effects
         - [ ] PBR (Physically based rendering)
         - [ ] HDR (High dynamic range)
+        - [ ] Decals
+        - [ ] Emissive materials
     - [ ] Deferred rendering
         - [ ] Transparent materials
         - [ ] AA (Anti-aliasing)
@@ -369,6 +371,8 @@ Here is the list of base features that needs to be implemented in order for you 
         - [ ] Post-processing effects
         - [ ] PBR (Physically based rendering)
         - [ ] HDR (High dynamic range)
+        - [ ] Decals
+        - [ ] Emissive materials
     - [ ] GUI
 - [ ] Profiler
 - [ ] GLTF/GLB import

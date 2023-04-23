@@ -388,3 +388,400 @@ TEST_CASE("check that timer is running (with callback)") {
 
     REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
 }
+
+TEST_CASE("callback validator should prevent callback being executed after despawn") {
+    using namespace ne;
+
+    class MyDerivedNode : public Node {
+    public:
+        MyDerivedNode() {
+            pTimer = createTimer("test timer");
+            REQUIRE(pTimer != nullptr);
+        };
+        virtual ~MyDerivedNode() override = default;
+
+    protected:
+        virtual void onSpawning() override {
+            Node::onSpawning();
+
+            constexpr long long iWaitTime = 30;
+            constexpr size_t iCheckIntervalTimeInMs = 15;
+            using namespace std::chrono;
+
+            // This will queue a deferred task on timeout.
+            pTimer->setCallbackForTimeout(iWaitTime, []() {
+                // This should not happen in this test.
+                REQUIRE(false);
+            });
+
+            pTimer->start();
+            std::this_thread::sleep_for(std::chrono::milliseconds(iCheckIntervalTimeInMs));
+
+            REQUIRE(pTimer->isRunning());
+            REQUIRE(!pTimer->isStopped());
+
+            std::this_thread::sleep_for(std::chrono::milliseconds(iWaitTime * 2));
+
+            // Timeout should submit a deferred task at this point.
+            REQUIRE(!pTimer->isRunning());
+            REQUIRE(!pTimer->isStopped());
+        }
+
+    private:
+        Timer* pTimer = nullptr;
+    };
+
+    class TestGameInstance : public GameInstance {
+    public:
+        TestGameInstance(Window* pGameWindow, GameManager* pGame, InputManager* pInputManager)
+            : GameInstance(pGameWindow, pGame, pInputManager) {}
+        virtual ~TestGameInstance() override {}
+        virtual void onGameStarted() override {
+            createWorld([&](const std::optional<Error>& optionalWorldError) {
+                if (optionalWorldError.has_value()) {
+                    auto error = optionalWorldError.value();
+                    error.addEntry();
+                    INFO(error.getFullErrorMessage());
+                    REQUIRE(false);
+                }
+
+                const auto pNode = gc_new<MyDerivedNode>();
+                getWorldRootNode()->addChildNode(pNode); // do Node::onSpawning logic
+
+                // Timeout submitted a deferred task, despawn now.
+                pNode->detachFromParentAndDespawn();
+
+                // On next game tick when deferred tasks are executed the callback should not be called.
+                iTickCount = 0;
+            });
+        }
+
+    protected:
+        virtual void onBeforeNewFrame(float timeSincePrevCall) override {
+            GameInstance::onBeforeNewFrame(timeSincePrevCall);
+
+            iTickCount += 1;
+
+            if (iTickCount == 10) {
+                // Seems like timer's callback was not called, done.
+                getWindow()->close();
+            }
+        }
+
+    private:
+        size_t iTickCount = 0;
+    };
+
+    auto result = Window::getBuilder().withVisibility(false).build();
+    if (std::holds_alternative<Error>(result)) {
+        Error error = std::get<Error>(std::move(result));
+        error.addEntry();
+        INFO(error.getFullErrorMessage());
+        REQUIRE(false);
+    }
+
+    const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
+    pMainWindow->processEvents<TestGameInstance>();
+
+    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+}
+
+TEST_CASE("callback validator should prevent callback being executed after despawning and spawning again "
+          "with another timer start") {
+    using namespace ne;
+
+    class MyDerivedNode : public Node {
+    public:
+        MyDerivedNode() {
+            pTimer = createTimer("test timer");
+            REQUIRE(pTimer != nullptr);
+        };
+        virtual ~MyDerivedNode() override = default;
+
+    protected:
+        virtual void onSpawning() override {
+            Node::onSpawning();
+
+            constexpr long long iWaitTime = 30;
+            constexpr size_t iCheckIntervalTimeInMs = 15;
+            using namespace std::chrono;
+
+            // This will queue a deferred task on timeout.
+            pTimer->setCallbackForTimeout(iWaitTime, []() {
+                // This should not happen in this test.
+                REQUIRE(false);
+            });
+
+            pTimer->start();
+            std::this_thread::sleep_for(std::chrono::milliseconds(iCheckIntervalTimeInMs));
+
+            REQUIRE(pTimer->isRunning());
+            REQUIRE(!pTimer->isStopped());
+
+            std::this_thread::sleep_for(std::chrono::milliseconds(iWaitTime * 2));
+
+            // Timeout should submit a deferred task at this point.
+            REQUIRE(!pTimer->isRunning());
+            REQUIRE(!pTimer->isStopped());
+        }
+
+    private:
+        Timer* pTimer = nullptr;
+    };
+
+    class TestGameInstance : public GameInstance {
+    public:
+        TestGameInstance(Window* pGameWindow, GameManager* pGame, InputManager* pInputManager)
+            : GameInstance(pGameWindow, pGame, pInputManager) {}
+        virtual ~TestGameInstance() override {}
+        virtual void onGameStarted() override {
+            createWorld([&](const std::optional<Error>& optionalWorldError) {
+                if (optionalWorldError.has_value()) {
+                    auto error = optionalWorldError.value();
+                    error.addEntry();
+                    INFO(error.getFullErrorMessage());
+                    REQUIRE(false);
+                }
+
+                const auto pNode = gc_new<MyDerivedNode>();
+                getWorldRootNode()->addChildNode(pNode); // do Node::onSpawning logic
+
+                // Timeout submitted a deferred task, despawn now.
+                pNode->detachFromParentAndDespawn();
+
+                // Now spawn again.
+                getWorldRootNode()->addChildNode(pNode); // run timer again
+
+                // Despawn.
+                pNode->detachFromParentAndDespawn();
+
+                // On next game tick when deferred tasks are executed the callback should not be called.
+                iTickCount = 0;
+            });
+        }
+
+    protected:
+        virtual void onBeforeNewFrame(float timeSincePrevCall) override {
+            GameInstance::onBeforeNewFrame(timeSincePrevCall);
+
+            iTickCount += 1;
+
+            if (iTickCount == 10) {
+                // Seems like timer's callback was not called, done.
+                getWindow()->close();
+            }
+        }
+
+    private:
+        size_t iTickCount = 0;
+    };
+
+    auto result = Window::getBuilder().withVisibility(false).build();
+    if (std::holds_alternative<Error>(result)) {
+        Error error = std::get<Error>(std::move(result));
+        error.addEntry();
+        INFO(error.getFullErrorMessage());
+        REQUIRE(false);
+    }
+
+    const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
+    pMainWindow->processEvents<TestGameInstance>();
+
+    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+}
+
+TEST_CASE("callback validator should prevent callback being executed after despawning and spawning again") {
+    using namespace ne;
+
+    class MyDerivedNode : public Node {
+    public:
+        MyDerivedNode() {
+            pTimer = createTimer("test timer");
+            REQUIRE(pTimer != nullptr);
+        };
+        virtual ~MyDerivedNode() override = default;
+
+        void runTimer() {
+            constexpr long long iWaitTime = 30;
+            constexpr size_t iCheckIntervalTimeInMs = 15;
+            using namespace std::chrono;
+
+            // This will queue a deferred task on timeout.
+            pTimer->setCallbackForTimeout(iWaitTime, []() {
+                // This should not happen in this test.
+                REQUIRE(false);
+            });
+
+            pTimer->start();
+            std::this_thread::sleep_for(std::chrono::milliseconds(iCheckIntervalTimeInMs));
+
+            REQUIRE(pTimer->isRunning());
+            REQUIRE(!pTimer->isStopped());
+
+            std::this_thread::sleep_for(std::chrono::milliseconds(iWaitTime * 2));
+
+            // Timeout should submit a deferred task at this point.
+            REQUIRE(!pTimer->isRunning());
+            REQUIRE(!pTimer->isStopped());
+        }
+
+    private:
+        Timer* pTimer = nullptr;
+    };
+
+    class TestGameInstance : public GameInstance {
+    public:
+        TestGameInstance(Window* pGameWindow, GameManager* pGame, InputManager* pInputManager)
+            : GameInstance(pGameWindow, pGame, pInputManager) {}
+        virtual ~TestGameInstance() override {}
+        virtual void onGameStarted() override {
+            createWorld([&](const std::optional<Error>& optionalWorldError) {
+                if (optionalWorldError.has_value()) {
+                    auto error = optionalWorldError.value();
+                    error.addEntry();
+                    INFO(error.getFullErrorMessage());
+                    REQUIRE(false);
+                }
+
+                const auto pNode = gc_new<MyDerivedNode>();
+                getWorldRootNode()->addChildNode(pNode);
+                pNode->runTimer();
+
+                // Timeout submitted a deferred task, despawn now.
+                pNode->detachFromParentAndDespawn();
+
+                // Now spawn again.
+                getWorldRootNode()->addChildNode(pNode); // run timer again
+
+                // Don't despawn, this time there's no timer.
+
+                // On next game tick when deferred tasks are executed the callback should not be called.
+                iTickCount = 0;
+            });
+        }
+
+    protected:
+        virtual void onBeforeNewFrame(float timeSincePrevCall) override {
+            GameInstance::onBeforeNewFrame(timeSincePrevCall);
+
+            iTickCount += 1;
+
+            if (iTickCount == 10) {
+                // Seems like timer's callback was not called, done.
+                getWindow()->close();
+            }
+        }
+
+    private:
+        size_t iTickCount = 0;
+    };
+
+    auto result = Window::getBuilder().withVisibility(false).build();
+    if (std::holds_alternative<Error>(result)) {
+        Error error = std::get<Error>(std::move(result));
+        error.addEntry();
+        INFO(error.getFullErrorMessage());
+        REQUIRE(false);
+    }
+
+    const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
+    pMainWindow->processEvents<TestGameInstance>();
+
+    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+}
+
+TEST_CASE("callback validator should prevent previous callback being executed after starting a new one") {
+    using namespace ne;
+
+    class MyDerivedNode : public Node {
+    public:
+        MyDerivedNode() {
+            pTimer = createTimer("test timer");
+            REQUIRE(pTimer != nullptr);
+        };
+        virtual ~MyDerivedNode() override { REQUIRE(bExpectedCallbackWasCalled); }
+
+        void runTimer(bool bExpectToBeCalled) {
+            constexpr long long iWaitTime = 30;
+            constexpr size_t iCheckIntervalTimeInMs = 15;
+            using namespace std::chrono;
+
+            // This will queue a deferred task on timeout.
+            pTimer->setCallbackForTimeout(iWaitTime, [this, bExpectToBeCalled]() {
+                if (bExpectToBeCalled) {
+                    bExpectedCallbackWasCalled = true;
+                } else {
+                    REQUIRE(false);
+                }
+            });
+
+            pTimer->start();
+            std::this_thread::sleep_for(std::chrono::milliseconds(iCheckIntervalTimeInMs));
+
+            REQUIRE(pTimer->isRunning());
+            REQUIRE(!pTimer->isStopped());
+
+            std::this_thread::sleep_for(std::chrono::milliseconds(iWaitTime * 2));
+
+            // Timeout should submit a deferred task at this point.
+            REQUIRE(!pTimer->isRunning());
+            REQUIRE(!pTimer->isStopped());
+        }
+
+    private:
+        Timer* pTimer = nullptr;
+        bool bExpectedCallbackWasCalled = false;
+    };
+
+    class TestGameInstance : public GameInstance {
+    public:
+        TestGameInstance(Window* pGameWindow, GameManager* pGame, InputManager* pInputManager)
+            : GameInstance(pGameWindow, pGame, pInputManager) {}
+        virtual ~TestGameInstance() override {}
+        virtual void onGameStarted() override {
+            createWorld([&](const std::optional<Error>& optionalWorldError) {
+                if (optionalWorldError.has_value()) {
+                    auto error = optionalWorldError.value();
+                    error.addEntry();
+                    INFO(error.getFullErrorMessage());
+                    REQUIRE(false);
+                }
+
+                const auto pNode = gc_new<MyDerivedNode>();
+                getWorldRootNode()->addChildNode(pNode);
+
+                pNode->runTimer(false);
+                pNode->runTimer(true); // previous callback should not be called
+
+                iTickCount = 0;
+            });
+        }
+
+    protected:
+        virtual void onBeforeNewFrame(float timeSincePrevCall) override {
+            GameInstance::onBeforeNewFrame(timeSincePrevCall);
+
+            iTickCount += 1;
+
+            if (iTickCount == 10) {
+                getWindow()->close();
+            }
+        }
+
+    private:
+        size_t iTickCount = 0;
+    };
+
+    auto result = Window::getBuilder().withVisibility(false).build();
+    if (std::holds_alternative<Error>(result)) {
+        Error error = std::get<Error>(std::move(result));
+        error.addEntry();
+        INFO(error.getFullErrorMessage());
+        REQUIRE(false);
+    }
+
+    const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
+    pMainWindow->processEvents<TestGameInstance>();
+
+    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+}

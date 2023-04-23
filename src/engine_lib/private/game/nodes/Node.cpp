@@ -875,6 +875,7 @@ namespace ne {
             // Set validator.
             pTimer->setCallbackValidator([iNodeId = iNodeId.value(), pTimer](size_t iStartCount) -> bool {
                 const auto pGameManager = GameManager::get();
+                // GameManager is guaranteed to be valid inside of a deferred task.
 
                 if (!pGameManager->isNodeSpawned(iNodeId)) {
                     return false;

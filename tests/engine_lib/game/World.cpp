@@ -229,3 +229,51 @@ TEST_CASE("create, serialize and deserialize world") {
     const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
     pMainWindow->processEvents<TestGameInstance>();
 }
+
+TEST_CASE("check that node is spawned") {
+    using namespace ne;
+
+    class TestGameInstance : public GameInstance {
+    public:
+        TestGameInstance(Window* pGameWindow, GameManager* pGame, InputManager* pInputManager)
+            : GameInstance(pGameWindow, pGame, pInputManager) {}
+        virtual void onGameStarted() override {
+            createWorld([&](const std::optional<Error>& optionalError) {
+                if (optionalError.has_value()) {
+                    auto error = optionalError.value();
+                    error.addEntry();
+                    INFO(error.getFullErrorMessage());
+                    REQUIRE(false);
+                }
+
+                REQUIRE(getWorldRootNode());
+
+                const auto pNode = gc_new<Node>();
+                getWorldRootNode()->addChildNode(pNode);
+
+                // Check that spawned.
+                REQUIRE(pNode->getNodeId().has_value());
+                REQUIRE(GameManager::get()->isNodeSpawned(pNode->getNodeId().value()));
+
+                pNode->detachFromParentAndDespawn();
+
+                // Check that despawned.
+                REQUIRE(!GameManager::get()->isNodeSpawned(pNode->getNodeId().value()));
+
+                getWindow()->close();
+            });
+        }
+        virtual ~TestGameInstance() override {}
+    };
+
+    auto result = Window::getBuilder().withVisibility(false).build();
+    if (std::holds_alternative<Error>(result)) {
+        Error error = std::get<Error>(std::move(result));
+        error.addEntry();
+        INFO(error.getFullErrorMessage());
+        REQUIRE(false);
+    }
+
+    const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
+    pMainWindow->processEvents<TestGameInstance>();
+}

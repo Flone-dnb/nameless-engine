@@ -2,6 +2,7 @@
 
 // Custom.
 #include "game/GameManager.h"
+#include "misc/Timer.h"
 
 namespace ne {
     GameInstance::GameInstance(Window* pGameWindow, GameManager* pGameManager, InputManager* pInputManager) {
@@ -20,6 +21,52 @@ namespace ne {
 
     long long GameInstance::getGarbageCollectorRunIntervalInSec() {
         return pGameManager->getGarbageCollectorRunIntervalInSec();
+    }
+
+    Timer* GameInstance::createTimer(const std::string& sTimerName) {
+        std::scoped_lock guard(mtxCreatedTimers.first);
+
+        if (!bAllowCreatingTimers) {
+            Logger::get().error(
+                "timers can no longer be created because the GameInstance will soon be "
+                "destroyed",
+                sGameInstanceLogCategory);
+            return nullptr;
+        }
+
+        // Create timer.
+        auto pNewTimer = std::unique_ptr<Timer>(new Timer(sTimerName));
+
+        // Set validator.
+        pNewTimer->setCallbackValidator([this, pTimer = pNewTimer.get()](size_t iStartCount) -> bool {
+            if (!bAllowCreatingTimers) {
+                // Being destroyed, we don't expect any timers to be called at this point.
+                return false;
+            }
+
+            if (iStartCount != pTimer->getStartCount()) {
+                // The timer was stopped and started (probably with some other callback).
+                return false;
+            }
+
+            return !pTimer->isStopped();
+        });
+
+        // Add to our array of created timers.
+        const auto pRawTimer = pNewTimer.get();
+        mtxCreatedTimers.second.push_back(std::move(pNewTimer));
+
+        return pRawTimer;
+    }
+
+    void GameInstance::stopAndDisableCreatedTimers() {
+        std::scoped_lock guard(mtxCreatedTimers.first);
+
+        for (const auto& pTimer : mtxCreatedTimers.second) {
+            pTimer->stop(true);
+        }
+
+        bAllowCreatingTimers = false;
     }
 
     void GameInstance::onInputActionEvent(

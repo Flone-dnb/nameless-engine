@@ -9,6 +9,7 @@
 // Custom.
 #include "input/KeyboardKey.hpp"
 #include "input/MouseButton.hpp"
+#include "misc/Timer.h"
 #include "misc/GC.hpp"
 
 namespace ne {
@@ -119,7 +120,8 @@ namespace ne {
          * to the logs).
          */
         void createWorld(
-            const std::function<void(const std::optional<Error>&)>& onCreated, size_t iWorldSize = 1024);
+            const std::function<void(const std::optional<Error>&)>& onCreated,
+            size_t iWorldSize = 1024); // NOLINT: seems like a typical world size
 
         /**
          * Adds a deferred task (see @ref addDeferredTask)
@@ -156,7 +158,7 @@ namespace ne {
         void loadNodeTreeAsWorld(
             const std::function<void(const std::optional<Error>&)>& onLoaded,
             const std::filesystem::path& pathToNodeTree,
-            size_t iWorldSize = 1024);
+            size_t iWorldSize = 1024); // NOLINT: seems like a typical world size
 
         /**
          * Queues a request to run a garbage collection as a deferred task on the main thread
@@ -253,6 +255,37 @@ namespace ne {
         long long getGarbageCollectorRunIntervalInSec();
 
     protected:
+        /**
+         * Creates a new timer and saves it inside of this GameInstance.
+         *
+         * @warning Do not free (delete) returned pointer.
+         * @warning Do not use returned pointer outside of this object as the timer is only guaranteed
+         * to live while the GameInstance (that created the timer) is living.
+         *
+         * @remark This function will not work and will log an error if you would try to create
+         * a timer inside of the @ref onWindowClose function.
+         * @remark This function exists to automatically stop and disable created timers
+         * before @ref onWindowClose is called by using Timer::stop(true)
+         * so that you don't have to remember to stop created timers. Moreover, if you are using
+         * a callback function for the timer's timeout event it's guaranteed that this callback
+         * function will only be called while the object is valid.
+         * @remark There is no `removeTimer` function but it may appear in the future
+         * (although there's really no point in removing a timer so don't care about it).
+         *
+         * @param sTimerName Name of this timer (used for logging). Don't add "timer" word to your timer's
+         * name as it will be appended in the logs.
+         *
+         * @return `nullptr` if something went wrong, otherwise a non-owning pointer to the created timer
+         * that is guaranteed to be valid while this object is alive.
+         */
+        Timer* createTimer(const std::string& sTimerName);
+
+        /**
+         * Called by owner object to stop and disable all created timers,
+         * additionally does not allows creating any more timers.
+         */
+        void stopAndDisableCreatedTimers();
+
         /**
          * Called after GameInstance's constructor is finished and created
          * GameInstance object was saved in Game object (that owns GameInstance).
@@ -421,6 +454,18 @@ namespace ne {
             std::unordered_map<std::string, std::function<void(KeyboardModifiers, float)>>>
             mtxBindedAxisEvents;
 
+        /**
+         * Timers creates via @ref createTimer.
+         *
+         * @warning Don't remove/erase timers from this array because in callback validator's deferred task
+         * we will use the timer to check its state so we need to make
+         * sure that stopped timer will not be deleted while the object exists.
+         */
+        std::pair<std::recursive_mutex, std::vector<std::unique_ptr<Timer>>> mtxCreatedTimers;
+
+        /** Whether @ref createTimer works or not. */
+        bool bAllowCreatingTimers = true;
+
         /** Do not delete. Owner of @ref pGameManager object. */
         Window* pGameWindow = nullptr;
 
@@ -431,5 +476,8 @@ namespace ne {
          * Do not delete. Input manager of the @ref pGameManager object.
          */
         InputManager* pInputManager = nullptr;
+
+        /** Name of the category used for logging. */
+        static inline const auto sGameInstanceLogCategory = "Game Instance";
     };
 } // namespace ne

@@ -464,7 +464,10 @@ namespace ne {
         pGameInstance->onWindowFocusChanged(bIsFocused);
     }
 
-    void GameManager::onWindowClose() const { pGameInstance->onWindowClose(); }
+    void GameManager::onWindowClose() const {
+        pGameInstance->stopAndDisableCreatedTimers();
+        pGameInstance->onWindowClose();
+    }
 
     void GameManager::addDeferredTask(const std::function<void()>& task) {
         if (!bShouldAcceptNewDeferredTasks) {

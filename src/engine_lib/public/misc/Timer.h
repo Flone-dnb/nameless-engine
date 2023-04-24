@@ -14,9 +14,9 @@ namespace ne {
         // Only node and game instance can create timers because they have some additional protection
         // code to avoid shooting yourself in the foot (like if you forget to stop the timer).
         // Although only nodes and game instances can create timers this does not mean that the timer
-        // depends on their functionality - no, the timer is modular and you can use it outside of those
-        // classes if you remove `friend class` clauses and move functions from `protected` section of
-        // the timer to `public` section.
+        // depends on their functionality - no, the timer is modular and you can use it outside of these
+        // classes if you remove `friend class` and move functions from the `protected` section of
+        // the timer to the `public` section.
         friend class Node;
         friend class GameInstance;
 

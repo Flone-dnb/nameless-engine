@@ -41,9 +41,17 @@ TEST_CASE("measure elapsed time") {
                 std::chrono::duration_cast<milliseconds>(steady_clock::now() - start).count();
 
             const auto iTimerElapsedInMs = pTimer->getElapsedTimeInMs().value();
+
             pTimer->stop();
+
             REQUIRE(iElapsedInMs <= iTimerElapsedInMs);
             REQUIRE(iElapsedInMs > iTimerElapsedInMs - iDeltaInMs);
+
+            std::this_thread::sleep_for(milliseconds(50)); // NOLINT
+
+            // Make sure the time can still be queries after stopping.
+            REQUIRE(pTimer->getElapsedTimeInMs().has_value());
+            REQUIRE(pTimer->getElapsedTimeInMs().value() == iTimerElapsedInMs);
 
             getGameInstance()->getWindow()->close();
         }
@@ -69,6 +77,66 @@ TEST_CASE("measure elapsed time") {
                 getWorldRootNode()->addChildNode(gc_new<MyDerivedNode>());
             });
         }
+    };
+
+    auto result = Window::getBuilder().withVisibility(false).build();
+    if (std::holds_alternative<Error>(result)) {
+        Error error = std::get<Error>(std::move(result));
+        error.addEntry();
+        INFO(error.getFullErrorMessage());
+        REQUIRE(false);
+    }
+
+    const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
+    pMainWindow->processEvents<TestGameInstance>();
+
+    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+}
+
+TEST_CASE("measure elapsed time of a looping timer") {
+    using namespace ne;
+
+    class TestGameInstance : public GameInstance {
+    public:
+        TestGameInstance(Window* pGameWindow, GameManager* pGame, InputManager* pInputManager)
+            : GameInstance(pGameWindow, pGame, pInputManager) {}
+        virtual ~TestGameInstance() override {}
+        virtual void onGameStarted() override {
+            pTimer = createTimer("test timer");
+            REQUIRE(pTimer != nullptr);
+
+            pTimer->setCallbackForTimeout(
+                iLoopTimeInterval,
+                [this]() {
+                    const auto optionalTimeElapsed = pTimer->getElapsedTimeInMs();
+                    REQUIRE(optionalTimeElapsed.has_value());
+
+                    const auto iTimePassed = optionalTimeElapsed.value();
+                    REQUIRE(iTimePassed <= iLoopTimeInterval * 2);
+
+                    iCallbackCount += 1;
+                },
+                true);
+
+            pTimer->start();
+            timerStart = std::chrono::steady_clock::now();
+        }
+
+    protected:
+        virtual void onBeforeNewFrame(float timeSincePrevCall) override {
+            GameInstance::onBeforeNewFrame(timeSincePrevCall);
+
+            if (iCallbackCount == iTargetLoopCount) {
+                getWindow()->close();
+            }
+        }
+
+    private:
+        Timer* pTimer = nullptr;
+        size_t iCallbackCount = 0;
+        std::chrono::steady_clock::time_point timerStart;
+        long long iLoopTimeInterval = 100;
+        const size_t iTargetLoopCount = 10;
     };
 
     auto result = Window::getBuilder().withVisibility(false).build();

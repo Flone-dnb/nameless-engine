@@ -117,6 +117,16 @@ namespace ne {
         {
             std::scoped_lock guard(mtxTerminateTimerThread);
 
+            // Save elapsed time.
+            if (!mtxTimeWhenStarted.second.has_value()) {
+                elapsedTimeWhenStopped = {};
+            } else {
+                using namespace std::chrono;
+                elapsedTimeWhenStopped =
+                    duration_cast<milliseconds>(steady_clock::now() - mtxTimeWhenStarted.second.value())
+                        .count();
+            }
+
             bIsEnabled = !bDisableTimer;
             bIsStopRequested.test_and_set();
 
@@ -148,6 +158,14 @@ namespace ne {
     }
 
     std::optional<long long> Timer::getElapsedTimeInMs() {
+        {
+            // If was stopped return time when was stopped.
+            std::scoped_lock guard(mtxTerminateTimerThread);
+            if (bIsStopRequested.test()) {
+                return elapsedTimeWhenStopped;
+            }
+        }
+
         std::scoped_lock guard(mtxTimeWhenStarted.first);
 
         if (!mtxTimeWhenStarted.second.has_value()) {

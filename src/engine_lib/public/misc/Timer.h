@@ -157,6 +157,22 @@ namespace ne {
          * Sets a function to be called from a deferred task before the actual callback
          * to test if the actual callback should be started or not.
          *
+         * Example of typical callback validator:
+         * @code
+         * pTimer->setCallbackValidator([pTimer](size_t iStartCount) -> bool {
+         *     // Timer does not have a validator by default because it does not know whether
+         *     // the timer object will still be alive or not at the moment when the validator is started
+         *     // so it's up to the owner to guarantee that.
+         *
+         *     if (iStartCount != pTimer->getStartCount()) {
+         *         // The timer was stopped and started (probably with some other callback).
+         *         return false; // don't run the actual callback
+         *     }
+         *
+         *     return !pTimer->isStopped(); // only run the actual callback if the timer was not stopped
+         * }
+         * @endcode
+         *
          * @remark If the timer is currently running (see @ref isRunning) this call will be ignored
          * and an error will be logged.
          *
@@ -216,6 +232,9 @@ namespace ne {
 
         /** Whether the timer was explicitly stopped or not. */
         std::atomic_flag bIsStopRequested{};
+
+        /** @ref getElapsedTimeInMs when @ref stop was called. */
+        std::optional<long long> elapsedTimeWhenStopped;
 
         /** Whether the timer is currently running or not. */
         bool bIsRunning = false;

@@ -428,7 +428,7 @@ cmake -DCMAKE_BUILD_TYPE=Debug .. // for debug mode
 cmake -DCMAKE_BUILD_TYPE=Release .. // for release mode
 ```
 
-This will generate engine editor project files that you will use for development.
+This will generate project files that you will use for development.
 
 # Update
 

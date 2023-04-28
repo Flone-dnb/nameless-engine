@@ -17,7 +17,7 @@ endif()
 
 # Add `DEBUG` macro in debug builds.
 if(NOT IS_RELEASE_BUILD)
-    message(STATUS "Adding DEBUG macro for this build type.")
+    message(STATUS "${PROJECT_NAME}: adding DEBUG macro for this build type.")
     add_compile_definitions(DEBUG)
 endif()
 
@@ -27,17 +27,17 @@ if(NOT IS_RELEASE_BUILD)
 else()
     set(BUILD_MODE_DIRECTORY ${CMAKE_BINARY_DIR}/Release)
 endif()
-message(STATUS "Current build directory: ${BUILD_MODE_DIRECTORY}.")
+message(STATUS "${PROJECT_NAME}: current build directory: ${BUILD_MODE_DIRECTORY}.")
 
 # Add `WIN32` macro on Windows (some setups don't define it).
 if(WIN32 AND NOT MSVC)
-    message(STATUS "Adding WIN32 macro because running Windows on non-MSVS compiler.")
+    message(STATUS "${PROJECT_NAME}: adding WIN32 macro because running Windows on non-MSVS compiler.")
     add_compile_definitions(WIN32)
 endif()
 
 # Add `_WIN32` macro for Windows on non MSVC compiler (needed for some third party dependencies).
 if(WIN32 AND NOT MSVC)
-    message(STATUS "Adding _WIN32 macro because running Windows on non-MSVS compiler.")
+    message(STATUS "${PROJECT_NAME}: adding _WIN32 macro because running Windows on non-MSVS compiler.")
     add_compile_definitions(_WIN32)
 endif()
 

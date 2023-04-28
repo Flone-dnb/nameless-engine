@@ -24,3 +24,17 @@ function(enable_more_warnings TARGET_NAME)
         target_compile_options(${TARGET_NAME} PUBLIC /utf-8)
     endif()
 endfunction()
+
+# Enable Doxygen to be run before building your target.
+function(enable_doxygen TARGET_NAME DOCS_DIRECTORY)
+    find_package(Doxygen REQUIRED)
+    set(DOXYGEN_TARGET_NAME ${TARGET_NAME}_doxygen)
+    add_custom_target(${DOXYGEN_TARGET_NAME}
+        COMMAND doxygen
+        WORKING_DIRECTORY ${DOCS_DIRECTORY}
+        COMMENT "${PROJECT_NAME}: generating documentation using Doxygen..."
+        VERBATIM)
+    set_target_properties(${DOXYGEN_TARGET_NAME} PROPERTIES FOLDER ${EXTERNAL_FOLDER})
+    add_dependencies(${PROJECT_NAME} ${DOXYGEN_TARGET_NAME})
+    message(STATUS "${PROJECT_NAME}: doxygen is enabled.")
+endfunction()

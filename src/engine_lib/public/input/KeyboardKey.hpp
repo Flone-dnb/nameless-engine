@@ -208,7 +208,7 @@ namespace ne {
      */
     inline std::string getKeyName(KeyboardKey key) {
         const auto pName = glfwGetKeyName(static_cast<int>(key), 0);
-        if (!pName) {
+        if (pName == nullptr) {
             switch (key) { // translate some keys
             case KeyboardKey::KEY_TAB:
                 return "Tab";
@@ -305,7 +305,8 @@ namespace ne {
             default:
                 return "?";
             }
-        } else
+        } else {
             return pName;
+        }
     }
 } // namespace ne

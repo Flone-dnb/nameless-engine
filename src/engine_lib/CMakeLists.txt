@@ -179,10 +179,7 @@ set(ENGINE_LIB_SOURCES
 
 # Append Windows specific sources if we are on Windows.
 if (WIN32)
-    message(STATUS "Appending Windows specific source files.")
     list(APPEND ENGINE_LIB_SOURCES ${ENGINE_WIN32_SOURCES})
-else()
-    message(STATUS "Windows specific source files are excluded.")
 endif()
 
 # Define target.
@@ -223,13 +220,17 @@ target_include_directories(${PROJECT_NAME} SYSTEM PUBLIC ${RELATIVE_EXT_PATH}/so
 target_include_directories(${PROJECT_NAME} PUBLIC public)
 target_include_directories(${PROJECT_NAME} PUBLIC private)
 
-message(STATUS "${PROJECT_NAME} is configured to use the following C++ standard: ${CMAKE_CXX_STANDARD}")
+# Enable doxygen.
+enable_doxygen(${PROJECT_NAME} ${CMAKE_CURRENT_SOURCE_DIR}/../../docs)
+
+message(STATUS "${PROJECT_NAME}: using the following C++ standard: ${CMAKE_CXX_STANDARD}")
 
 # -------------------------------------------------------------------------------------------------
 #                                       EXTERNAL DEPENDENCIES
 # -------------------------------------------------------------------------------------------------
 
 # External: glfw.
+message(STATUS "${PROJECT_NAME}: adding external dependency \"GLFW\"...")
 set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
@@ -240,12 +241,14 @@ set_target_properties(glfw PROPERTIES FOLDER ${EXTERNAL_FOLDER})
 set_target_properties(update_mappings PROPERTIES FOLDER ${EXTERNAL_FOLDER})
 
 # External: spdlog.
+message(STATUS "${PROJECT_NAME}: adding external dependency \"SPDLOG\"...")
 set(SPDLOG_FMT_EXTERNAL OFF CACHE BOOL "" FORCE)
 add_subdirectory(${RELATIVE_EXT_PATH}/spdlog ${DEPENDENCY_BUILD_DIR_NAME}/spdlog SYSTEM)
 target_link_libraries(${PROJECT_NAME} PUBLIC spdlog::spdlog)
 set_target_properties(spdlog PROPERTIES FOLDER ${EXTERNAL_FOLDER})
 
 # External: toml11.
+message(STATUS "${PROJECT_NAME}: adding external dependency \"TOML11\"...")
 if (MSVC)
     target_compile_options(${PROJECT_NAME} PUBLIC /Zc:__cplusplus)
 endif()
@@ -253,22 +256,26 @@ add_subdirectory(${RELATIVE_EXT_PATH}/toml11 ${DEPENDENCY_BUILD_DIR_NAME}/toml11
 set_target_properties(toml11 PROPERTIES FOLDER ${EXTERNAL_FOLDER})
 
 # External: portable-file-dialogs
+message(STATUS "${PROJECT_NAME}: adding external dependency \"portable-file-dialogs\"...")
 add_subdirectory(${RELATIVE_EXT_PATH}/portable-file-dialogs ${DEPENDENCY_BUILD_DIR_NAME}/portable-file-dialogs SYSTEM)
 target_link_libraries(${PROJECT_NAME} PUBLIC portable_file_dialogs)
 set_target_properties(portable_file_dialogs PROPERTIES FOLDER ${EXTERNAL_FOLDER})
 
 # External: fmt
+message(STATUS "${PROJECT_NAME}: adding external dependency \"FMT\"...")
 add_subdirectory(${RELATIVE_EXT_PATH}/fmt ${DEPENDENCY_BUILD_DIR_NAME}/fmt SYSTEM)
 target_link_libraries(${PROJECT_NAME} PUBLIC fmt)
 set_target_properties(fmt PROPERTIES FOLDER ${EXTERNAL_FOLDER})
 
 # External: GLM
+message(STATUS "${PROJECT_NAME}: adding external dependency \"GLM\"...")
 add_subdirectory(${RELATIVE_EXT_PATH}/glm ${DEPENDENCY_BUILD_DIR_NAME}/glm SYSTEM)
 target_link_libraries(${PROJECT_NAME} PUBLIC glm)
 set_target_properties(glm PROPERTIES FOLDER ${EXTERNAL_FOLDER})
 set_target_properties(uninstall PROPERTIES FOLDER ${EXTERNAL_FOLDER})
 
 # [temporary solution]: External: tgc
+message(STATUS "${PROJECT_NAME}: adding external dependency \"TGC\"...")
 set(TGC_TARGET_NAME tgc)
 add_library(${TGC_TARGET_NAME} STATIC
     ${TGC_CPP_FILE_PATH}
@@ -281,19 +288,9 @@ if(NOT MSVC)
     set_source_files_properties(${TGC_H_FILE_PATH} PROPERTIES COMPILE_FLAGS "-Wno-unused-parameter -Wno-error=extra")
 endif()
 
-# Doxygen
-find_package(Doxygen REQUIRED)
-set(DOXYGEN_TARGET doc_doxygen)
-add_custom_target(${DOXYGEN_TARGET}
-    COMMAND doxygen
-    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../../docs/
-    COMMENT "Generating API documentation using Doxygen..."
-    VERBATIM )
-set_target_properties(${DOXYGEN_TARGET} PROPERTIES FOLDER ${EXTERNAL_FOLDER})
-add_dependencies(${PROJECT_NAME} ${DOXYGEN_TARGET})
-message(STATUS "Doxygen is enabled.")
-
 # External: Refureku (start) --------------------------------------------------------------------------
+
+message(STATUS "${PROJECT_NAME}: adding external dependency \"Refureku\"...")
 
 set(GENERATED_DIR_NAME ".generated")
 set(REFUREKU_SETTINGS_FILE_NAME "RefurekuSettings.toml")
@@ -303,7 +300,7 @@ set(REFUREKU_SETTINGS_FILE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../${GENERATED_DIR_N
 # Check that path does not have pipe character because we use it to separate paths.
 string(FIND ${CMAKE_CURRENT_SOURCE_DIR} "|" PIPE_POS)
 if (NOT ${PIPE_POS} STREQUAL "-1")
-    message(FATAL_ERROR "Path ${CMAKE_CURRENT_SOURCE_DIR} contains forbidden character '|'.")
+    message(FATAL_ERROR "${PROJECT_NAME}: path ${CMAKE_CURRENT_SOURCE_DIR} contains forbidden character '|'.")
 endif()
 
 # Write project include directories for Refureku.
@@ -329,7 +326,7 @@ if (NOT WIN32)
         set(SRC_PATH ${CMAKE_CURRENT_SOURCE_DIR}/${SRC_PATH})
         string(FIND ${SRC_PATH} "|" PIPE_POS)
         if (NOT ${PIPE_POS} STREQUAL "-1")
-            message(FATAL_ERROR "Path ${SRC_PATH} contains forbidden character '|'.")
+            message(FATAL_ERROR "${PROJECT_NAME}: path ${SRC_PATH} contains forbidden character '|'.")
         endif()
         set(REFUREKU_EXCLUDE_FILES ${SRC_PATH}|${REFUREKU_EXCLUDE_FILES})
     endforeach()
@@ -341,11 +338,11 @@ if (NOT EXISTS ${GENERATED_SOURCE_DIR_PATH})
 endif()
 
 # Delete existing Refureku config file.
-message(STATUS "Removing Refureku config file to generate a fresh one...")
+message(STATUS "${PROJECT_NAME}: removing Refureku config file to generate a fresh one...")
 file(REMOVE ${REFUREKU_SETTINGS_FILE_PATH})
 
 # Download Refureku and generate new config file.
-message(STATUS "Downloading Refureku (reflection generator) and generating reflection generator config...")
+message(STATUS "${PROJECT_NAME}: downloading Refureku (reflection generator) and creating a reflection generator config...")
 execute_process(
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/Refureku/
     COMMAND go run ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/Refureku/download_and_setup_refureku.go
@@ -356,7 +353,7 @@ execute_process(
     ${CMAKE_CXX_COMPILER_ID} # used compiler
     OUTPUT_VARIABLE output
 )
-message(STATUS "${output}")
+message(STATUS "${PROJECT_NAME}: ${output}")
 
 # Include Refureku header files.
 target_include_directories(${PROJECT_NAME} SYSTEM PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/Refureku/build/Include/)
@@ -370,7 +367,7 @@ endif()
 if (WIN32)
     target_link_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/Refureku/build/Lib)
 elseif(APPLE) # test macos before unix
-    message(FATAL_ERROR "Put Refureku dynamic library directory here.")
+    message(FATAL_ERROR "${PROJECT_NAME}: TODO: put Refureku dynamic library directory here.")
 elseif(UNIX)
     target_link_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/Refureku/build/Bin)
 endif()
@@ -393,7 +390,7 @@ target_include_directories(${PROJECT_NAME} SYSTEM PUBLIC ../${GENERATED_DIR_NAME
 set(REFUREKU_DYN_LIB Refureku.dll)
 if (NOT WIN32)
     if(APPLE) # test macos before unix
-        message(FATAL_ERROR "TODO: put Refureku dynamic library name here.")
+        message(FATAL_ERROR "${PROJECT_NAME}: TODO: put Refureku dynamic library name here.")
     elseif(UNIX)
         set(REFUREKU_DYN_LIB libRefureku.so)
     endif()
@@ -418,6 +415,7 @@ add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
 # Win32 specific dependencies:
 if (WIN32)
     # External: D3D12MemoryAllocator
+    message(STATUS "${PROJECT_NAME}: adding external dependency \"D3D12MemoryAllocator\"...")
     add_subdirectory(${RELATIVE_EXT_PATH}/D3D12MemoryAllocator ${DEPENDENCY_BUILD_DIR_NAME}/D3D12MemoryAllocator SYSTEM)
     target_link_libraries(${PROJECT_NAME} PUBLIC D3D12MemoryAllocator)
     set_target_properties(D3D12MemoryAllocator PROPERTIES FOLDER ${EXTERNAL_FOLDER})
@@ -427,6 +425,7 @@ if (WIN32)
     endif()
 
     # External: DirectX-Headers
+    message(STATUS "${PROJECT_NAME}: adding external dependency \"DirectX-Headers\"...")
     add_subdirectory(${RELATIVE_EXT_PATH}/DirectX-Headers ${DEPENDENCY_BUILD_DIR_NAME}/DirectX-Headers SYSTEM)
     target_link_libraries(${PROJECT_NAME} PUBLIC DirectX-Headers)
     set_target_properties(DirectX-Headers PROPERTIES FOLDER ${EXTERNAL_FOLDER})
@@ -437,7 +436,8 @@ if (WIN32)
 
     # External: DXC.
     # Download and unzip DXC.
-    message(STATUS "Downloading DirectXShaderCompiler...")
+    message(STATUS "${PROJECT_NAME}: adding external dependency \"DirectXShaderCompiler\"...")
+    message(STATUS "${PROJECT_NAME}: downloading DirectXShaderCompiler...")
     execute_process(
         COMMAND go run ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/DirectXShaderCompiler/download_dxc.go
         ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/DirectXShaderCompiler/ # working directory
@@ -493,6 +493,7 @@ add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
 # -------------------------------------------------------------------------------------------------
 
 # Add `Catch2`.
+message(STATUS "${PROJECT_NAME}: adding external dependency \"Catch2\"...")
 add_subdirectory(${RELATIVE_EXT_PATH}/Catch2 ${DEPENDENCY_BUILD_DIR_NAME}/Catch2 SYSTEM)
 set_target_properties(Catch2 PROPERTIES FOLDER ${EXTERNAL_FOLDER})
 set_target_properties(Catch2WithMain PROPERTIES FOLDER ${EXTERNAL_FOLDER})

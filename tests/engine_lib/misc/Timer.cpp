@@ -119,7 +119,6 @@ TEST_CASE("measure elapsed time of a looping timer") {
                 true);
 
             pTimer->start();
-            timerStart = std::chrono::steady_clock::now();
         }
 
     protected:
@@ -134,7 +133,6 @@ TEST_CASE("measure elapsed time of a looping timer") {
     private:
         Timer* pTimer = nullptr;
         size_t iCallbackCount = 0;
-        std::chrono::steady_clock::time_point timerStart;
         long long iLoopTimeInterval = 100;
         const size_t iTargetLoopCount = 10;
     };
@@ -838,6 +836,79 @@ TEST_CASE("callback validator should prevent previous callback being executed af
 
     private:
         size_t iTickCount = 0;
+    };
+
+    auto result = Window::getBuilder().withVisibility(false).build();
+    if (std::holds_alternative<Error>(result)) {
+        Error error = std::get<Error>(std::move(result));
+        error.addEntry();
+        INFO(error.getFullErrorMessage());
+        REQUIRE(false);
+    }
+
+    const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
+    pMainWindow->processEvents<TestGameInstance>();
+
+    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+}
+
+TEST_CASE("stopping looping timer from callback") {
+    using namespace ne;
+
+    class TestGameInstance : public GameInstance {
+    public:
+        TestGameInstance(Window* pGameWindow, GameManager* pGame, InputManager* pInputManager)
+            : GameInstance(pGameWindow, pGame, pInputManager) {}
+        virtual ~TestGameInstance() override { REQUIRE(iCallbackCount == iTargetLoopCount); }
+        virtual void onGameStarted() override {
+            pTimer = createTimer("test timer");
+            REQUIRE(pTimer != nullptr);
+
+            pTimer->setCallbackForTimeout(
+                iLoopTimeInterval,
+                [this]() {
+                    const auto optionalTimeElapsed = pTimer->getElapsedTimeInMs();
+                    REQUIRE(optionalTimeElapsed.has_value());
+
+                    const auto iTimePassed = optionalTimeElapsed.value();
+                    REQUIRE(iTimePassed <= iLoopTimeInterval * 2);
+
+                    iCallbackCount += 1;
+                    REQUIRE(iCallbackCount <= iTargetLoopCount);
+
+                    if (iCallbackCount == iTargetLoopCount) {
+                        pTimer->stop();
+                        timerStop = std::chrono::steady_clock::now();
+                    }
+                },
+                true);
+
+            pTimer->start();
+        }
+
+    protected:
+        virtual void onBeforeNewFrame(float timeSincePrevCall) override {
+            GameInstance::onBeforeNewFrame(timeSincePrevCall);
+
+            if (iCallbackCount == iTargetLoopCount) {
+                const auto iTimePassedAfterStop = std::chrono::duration_cast<std::chrono::milliseconds>(
+                                                      std::chrono::steady_clock::now() - timerStop)
+                                                      .count();
+
+                if (iTimePassedAfterStop >= iTimeToWaitAfterTimerStop) {
+                    getWindow()->close();
+                    return;
+                }
+            }
+        }
+
+    private:
+        Timer* pTimer = nullptr;
+        size_t iCallbackCount = 0;
+        std::chrono::steady_clock::time_point timerStop;
+        long long iLoopTimeInterval = 30;
+        const size_t iTargetLoopCount = 10;
+        const long long iTimeToWaitAfterTimerStop = iLoopTimeInterval * 10;
     };
 
     auto result = Window::getBuilder().withVisibility(false).build();

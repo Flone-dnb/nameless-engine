@@ -338,7 +338,8 @@ namespace ne RNAMESPACE() {
          * @remark Note that although you can create timers while the node is despawned or was not
          * spawned yet any attempt to start a timer while the node is despawned (or not spawned yet)
          * will result in an error being logged.
-         * @remark This function exists to automatically stop and disable created timers
+         * @remark This function exists to add some protection code to not shoot yourself in the foot,
+         * such as: Node will automatically stop and disable created timers
          * before @ref onDespawning is called by using Timer::stop(true)
          * so that you don't have to remember to stop created timers. Moreover, if you are using
          * a callback function for the timer's timeout event it's guaranteed that this callback

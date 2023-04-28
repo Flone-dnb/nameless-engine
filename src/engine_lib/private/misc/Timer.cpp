@@ -223,22 +223,23 @@ namespace ne {
                 if (bIsShuttingDown.test() || bIsStopRequested.test()) {
                     bIsRunning = false;
                     return;
-                } else {
-                    // Check how much time has passed.
-                    std::scoped_lock timeGuard(mtxTimeWhenStarted.first);
-
-                    const long long iMillisecondsPassed =
-                        duration_cast<milliseconds>(steady_clock::now() - mtxTimeWhenStarted.second.value())
-                            .count();
-                    const long long iMillisecondsLeft = timeToWaitInMs.count() - iMillisecondsPassed;
-                    if (iMillisecondsLeft > 0) {
-                        // Seems to be a spurious wakeup.
-                        timeToWaitInMs = std::chrono::milliseconds(iMillisecondsLeft);
-                        continue;
-                    }
-
-                    // Enough time has passed.
                 }
+
+                // Check how much time has passed.
+                std::scoped_lock timeGuard(mtxTimeWhenStarted.first);
+
+                const long long iMillisecondsPassed =
+                    duration_cast<milliseconds>(steady_clock::now() - mtxTimeWhenStarted.second.value())
+                        .count();
+                const long long iMillisecondsLeft = timeToWaitInMs.count() - iMillisecondsPassed;
+                if (iMillisecondsLeft > 0) {
+                    // Seems to be a spurious wakeup.
+                    timeToWaitInMs = std::chrono::milliseconds(iMillisecondsLeft);
+                    continue;
+                }
+
+                // Enough time has passed.
+
                 // Releasing termination mutex here on purpose (because we don't need to hold it anymore).
                 // TODO: should we just use a dummy mutex for `wait_for`?
             } while (false);

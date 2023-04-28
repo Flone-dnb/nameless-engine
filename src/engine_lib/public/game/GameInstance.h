@@ -264,7 +264,8 @@ namespace ne {
          *
          * @remark This function will not work and will log an error if you would try to create
          * a timer inside of the @ref onWindowClose function.
-         * @remark This function exists to automatically stop and disable created timers
+         * @remark This function exists to add some protection code to not shoot yourself in the foot,
+         * such as: GameInstance will automatically stop and disable created timers
          * before @ref onWindowClose is called by using Timer::stop(true)
          * so that you don't have to remember to stop created timers. Moreover, if you are using
          * a callback function for the timer's timeout event it's guaranteed that this callback

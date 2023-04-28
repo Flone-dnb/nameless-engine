@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.20)
 
 project(engine_lib)
 
-# See if Go is installed.
+# Make sure Go is installed.
 execute_process(
     COMMAND go version
     OUTPUT_VARIABLE go_out
@@ -12,15 +12,15 @@ if (go_error)
     message(FATAL_ERROR "\"Go\" programming language needs to be installed.")
 endif()
 
-# Relative path to 'ext' directory.
+# Define some relative paths.
 set(RELATIVE_EXT_PATH "../../ext")
+set(RELATIVE_CMAKE_HELPERS_PATH "../.cmake")
 
-# Prepare variable for build type.
-if(CMAKE_BUILD_TYPE MATCHES "^[Dd]ebug")
-    set(IS_RELEASE_BUILD 0)
-else()
-    set(IS_RELEASE_BUILD 1)
-endif()
+# Include essential stuff.
+include(${RELATIVE_CMAKE_HELPERS_PATH}/essential.cmake)
+
+# Include helper functions.
+include(${RELATIVE_CMAKE_HELPERS_PATH}/utils.cmake)
 
 # Windows specific sources.
 set(ENGINE_WIN32_SOURCES
@@ -51,24 +51,6 @@ set(TGC_CPP_FILE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/Refureku/build/Inclu
 set(TGC_H_FILE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/Refureku/build/Include/tgc2/include/tgc2.h)
 if (NOT EXISTS ${TGC_CPP_FILE_PATH})
     file(WRITE ${TGC_CPP_FILE_PATH} "")
-endif()
-
-# Add `DEBUG` macro in Debug build.
-if(CMAKE_BUILD_TYPE MATCHES "^[Dd]ebug")
-    set(BUILD_MODE_DIRECTORY ${CMAKE_BINARY_DIR}/Debug)
-    message(STATUS "Adding DEBUG macro for this build type.")
-    add_compile_definitions(DEBUG)
-endif()
-
-# Add `WIN32` macro for debug builds (some setups don't define it).
-if(WIN32)
-    message(STATUS "Adding WIN32 macro because running Windows.")
-    add_compile_definitions(WIN32)
-endif()
-
-# Add `_WIN32` macro for non MSVC compiler (needed for some third party dependencies).
-if(WIN32 AND NOT MSVC)
-    add_compile_definitions(_WIN32)
 endif()
 
 # Engine general (cross-platform) sources.
@@ -195,7 +177,7 @@ set(ENGINE_LIB_SOURCES
     # add general (cross-platform) sources here...
 )
 
-# Append Window specific sources.
+# Append Windows specific sources if we are on Windows.
 if (WIN32)
     message(STATUS "Appending Windows specific source files.")
     list(APPEND ENGINE_LIB_SOURCES ${ENGINE_WIN32_SOURCES})
@@ -203,61 +185,24 @@ else()
     message(STATUS "Windows specific source files are excluded.")
 endif()
 
-# Target.
+# Define target.
 add_library(${PROJECT_NAME} STATIC ${ENGINE_LIB_SOURCES})
 
-# Set build mode.
-set(default_build_type "Release")
-if(NOT CMAKE_BUILD_TYPE)
-    message(STATUS "Using build mode '${default_build_type}' as none was specified.")
-    set(CMAKE_BUILD_TYPE "${default_build_type}" CACHE STRING "Choose the type of build." FORCE)
-endif()
-message(STATUS "${PROJECT_NAME}: build type: ${CMAKE_BUILD_TYPE}.")
-
-# Add BUILD_MODE_DIRECTORY variable.
-if(CMAKE_BUILD_TYPE MATCHES "^[Dd]ebug")
-    set(BUILD_MODE_DIRECTORY ${CMAKE_BINARY_DIR}/Debug)
-else()
-    set(BUILD_MODE_DIRECTORY ${CMAKE_BINARY_DIR}/Release)
-endif()
-
-# Set folder.
-set_property(GLOBAL PROPERTY USE_FOLDERS ON)
-set(ENGINE_FOLDER "NAMELESS-ENGINE")
-set(EXTERNAL_FOLDER "EXTERNAL")
-set(EXTERNAL_FOLDER ${EXTERNAL_FOLDER} PARENT_SCOPE)
+# Set target folder.
 set_target_properties(${PROJECT_NAME} PROPERTIES FOLDER ${ENGINE_FOLDER})
 
-# More warnings.
-if(MSVC)
-    target_compile_options(${PROJECT_NAME} PUBLIC /W3 /WX)
-else()
-    target_compile_options(${PROJECT_NAME} PUBLIC -Wall -Wextra -Werror -Wno-unused-parameter)
-endif()
-
-# Compiler specific flags.
-if(MSVC)
-    target_compile_options(${PROJECT_NAME} PUBLIC /utf-8)
-else()
-    target_compile_options(${PROJECT_NAME} PUBLIC -Wno-unused-variable)
-endif()
+# Enable more warnings and warnings as errors.
+enable_more_warnings(${PROJECT_NAME})
 
 # Set C++ standard.
 set(PROJECT_CXX_STANDARD_VERSION 23)
 set(CMAKE_CXX_STANDARD ${PROJECT_CXX_STANDARD_VERSION})
 target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_${PROJECT_CXX_STANDARD_VERSION})
 
-# Enable Address Sanitizer.
-if(CMAKE_BUILD_TYPE MATCHES "^[Dd]ebug")
-    if(NOT WIN32)
-        message(STATUS "Adding Address Sanitizer flags.")
-        set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fno-omit-frame-pointer -fsanitize=address")
-        set (CMAKE_LINKER_FLAGS_DEBUG "${CMAKE_LINKER_FLAGS_DEBUG} -fno-omit-frame-pointer -fsanitize=address")
-    endif()
+# Enable Address Sanitizer in `Debug` builds on non-Windows OS.
+if(NOT IS_RELEASE_BUILD AND NOT WIN32)
+    enable_address_sanitizer(${PROJECT_NAME})
 endif()
-
-# Set directory name for dependencies.
-set(DEPENDENCY_BUILD_DIR_NAME dependency_build)
 
 # Setup Clang-tidy.
 find_program (CLANG_TIDY NAMES "clang-tidy" REQUIRED)
@@ -271,6 +216,18 @@ if (IS_RELEASE_BUILD)
     endif()
     message(STATUS "${PROJECT_NAME}: Clang-tidy is enabled.")
 endif()
+
+# Add includes.
+target_include_directories(${PROJECT_NAME} SYSTEM PUBLIC ${RELATIVE_EXT_PATH})
+target_include_directories(${PROJECT_NAME} SYSTEM PUBLIC ${RELATIVE_EXT_PATH}/source_location/include)
+target_include_directories(${PROJECT_NAME} PUBLIC public)
+target_include_directories(${PROJECT_NAME} PUBLIC private)
+
+message(STATUS "${PROJECT_NAME} is configured to use the following C++ standard: ${CMAKE_CXX_STANDARD}")
+
+# -------------------------------------------------------------------------------------------------
+#                                       EXTERNAL DEPENDENCIES
+# -------------------------------------------------------------------------------------------------
 
 # External: glfw.
 set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
@@ -531,9 +488,11 @@ add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
                    ${IS_RELEASE_BUILD}
 )
 
-# -----------------------------------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------------------------
+#                                            TESTS
+# -------------------------------------------------------------------------------------------------
 
-# Tests.
+# Add `Catch2`.
 add_subdirectory(${RELATIVE_EXT_PATH}/Catch2 ${DEPENDENCY_BUILD_DIR_NAME}/Catch2 SYSTEM)
 set_target_properties(Catch2 PROPERTIES FOLDER ${EXTERNAL_FOLDER})
 set_target_properties(Catch2WithMain PROPERTIES FOLDER ${EXTERNAL_FOLDER})
@@ -588,11 +547,3 @@ set_target_properties(${ENGINE_TESTS_NAME} PROPERTIES FOLDER ${ENGINE_FOLDER})
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/ext/Catch2/contrib")
 include(CTest)
 include(Catch)
-
-# Add includes.
-target_include_directories(${PROJECT_NAME} SYSTEM PUBLIC ${RELATIVE_EXT_PATH})
-target_include_directories(${PROJECT_NAME} SYSTEM PUBLIC ${RELATIVE_EXT_PATH}/source_location/include)
-target_include_directories(${PROJECT_NAME} PUBLIC public)
-target_include_directories(${PROJECT_NAME} PUBLIC private)
-
-message(STATUS "${PROJECT_NAME} is configured to use the following C++ standard: ${CMAKE_CXX_STANDARD}")

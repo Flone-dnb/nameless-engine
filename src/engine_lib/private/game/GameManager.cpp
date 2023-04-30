@@ -30,6 +30,13 @@ namespace ne {
             "new GameManager is created, updating static GameManager pointer", sGameLogCategory);
         pLastCreatedGameManager = this;
 
+        // Log build mode.
+#if defined(DEBUG)
+        Logger::get().info("DEBUG macro is defined, running DEBUG build", sGameLogCategory);
+#else
+        Logger::get().info("DEBUG macro is not defined, running RELEASE build", sGameLogCategory);
+#endif
+
         // Make sure that resources directory is set and exists.
         const auto pathToRes = ProjectPaths::getPathToResDirectory(ResourceDirectory::ROOT);
         if (!std::filesystem::exists(pathToRes)) {

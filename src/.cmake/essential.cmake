@@ -21,23 +21,9 @@ if(NOT IS_RELEASE_BUILD)
     add_compile_definitions(DEBUG)
 endif()
 
-# Add `BUILD_MODE_DIRECTORY` variable.
-if(NOT IS_RELEASE_BUILD)
-    set(BUILD_MODE_DIRECTORY ${CMAKE_BINARY_DIR}/Debug)
-else()
-    set(BUILD_MODE_DIRECTORY ${CMAKE_BINARY_DIR}/Release)
-endif()
-message(STATUS "${PROJECT_NAME}: current build directory: ${BUILD_MODE_DIRECTORY}.")
-
-# Add `WIN32` macro on Windows (some setups don't define it).
-if(WIN32 AND NOT MSVC)
-    message(STATUS "${PROJECT_NAME}: adding WIN32 macro because running Windows on non-MSVS compiler.")
+# Add `WIN32` and `_WIN32` macros on Windows (some setups don't define them).
+if(WIN32)
     add_compile_definitions(WIN32)
-endif()
-
-# Add `_WIN32` macro for Windows on non MSVC compiler (needed for some third party dependencies).
-if(WIN32 AND NOT MSVC)
-    message(STATUS "${PROJECT_NAME}: adding _WIN32 macro because running Windows on non-MSVS compiler.")
     add_compile_definitions(_WIN32)
 endif()
 

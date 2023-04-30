@@ -22,8 +22,12 @@ include(${RELATIVE_CMAKE_HELPERS_PATH}/essential.cmake)
 # Include helper functions.
 include(${RELATIVE_CMAKE_HELPERS_PATH}/utils.cmake)
 
+# -------------------------------------------------------------------------------------------------
+#                                          TARGET SOURCES
+# -------------------------------------------------------------------------------------------------
+
 # Windows specific sources.
-set(ENGINE_WIN32_SOURCES
+set(PROJECT_WIN32_SOURCES
     private/materials/hlsl/HlslShader.h
     private/materials/hlsl/HlslShader.cpp
     private/materials/hlsl/HlslEngineShaders.hpp
@@ -54,7 +58,7 @@ if (NOT EXISTS ${TGC_CPP_FILE_PATH})
 endif()
 
 # Engine general (cross-platform) sources.
-set(ENGINE_LIB_SOURCES
+set(PROJECT_SOURCES
     ${RELATIVE_EXT_PATH}/xxHash/xxhash.c
     ${RELATIVE_EXT_PATH}/xxHash/xxhash.h
     private/misc/Error.cpp
@@ -179,40 +183,27 @@ set(ENGINE_LIB_SOURCES
 
 # Append Windows specific sources if we are on Windows.
 if (WIN32)
-    list(APPEND ENGINE_LIB_SOURCES ${ENGINE_WIN32_SOURCES})
+    list(APPEND PROJECT_SOURCES ${PROJECT_WIN32_SOURCES})
 endif()
 
 # Define target.
-add_library(${PROJECT_NAME} STATIC ${ENGINE_LIB_SOURCES})
+add_library(${PROJECT_NAME} STATIC ${PROJECT_SOURCES})
+
+# -------------------------------------------------------------------------------------------------
+#                                         CONFIGURE TARGET
+# -------------------------------------------------------------------------------------------------
 
 # Set target folder.
 set_target_properties(${PROJECT_NAME} PROPERTIES FOLDER ${ENGINE_FOLDER})
 
 # Enable more warnings and warnings as errors.
-enable_more_warnings(${PROJECT_NAME})
+enable_more_warnings()
 
 # Set C++ standard.
 set(PROJECT_CXX_STANDARD_VERSION 23)
 set(CMAKE_CXX_STANDARD ${PROJECT_CXX_STANDARD_VERSION})
 target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_${PROJECT_CXX_STANDARD_VERSION})
-
-# Enable Address Sanitizer in `Debug` builds on non-Windows OS.
-if(NOT IS_RELEASE_BUILD AND NOT WIN32)
-    enable_address_sanitizer(${PROJECT_NAME})
-endif()
-
-# Setup Clang-tidy.
-find_program (CLANG_TIDY NAMES "clang-tidy" REQUIRED)
-if (IS_RELEASE_BUILD)
-    set(RUN_CLANG_TIDY
-        "${CLANG_TIDY}"
-        "--header-filter=src/* --config-file=${CMAKE_CURRENT_LIST_DIR}/../../.clang-tidy")
-    set_target_properties(${PROJECT_NAME} PROPERTIES CXX_CLANG_TIDY "${RUN_CLANG_TIDY}")
-    if(MSVC)
-        target_compile_options(${PROJECT_NAME} PUBLIC -EHsc) # needed for clang-tidy when running MSVC to enable exceptions
-    endif()
-    message(STATUS "${PROJECT_NAME}: Clang-tidy is enabled.")
-endif()
+message(STATUS "${PROJECT_NAME}: using the following C++ standard: ${CMAKE_CXX_STANDARD}")
 
 # Add includes.
 target_include_directories(${PROJECT_NAME} SYSTEM PUBLIC ${RELATIVE_EXT_PATH})
@@ -220,13 +211,25 @@ target_include_directories(${PROJECT_NAME} SYSTEM PUBLIC ${RELATIVE_EXT_PATH}/so
 target_include_directories(${PROJECT_NAME} PUBLIC public)
 target_include_directories(${PROJECT_NAME} PUBLIC private)
 
-# Enable doxygen.
-enable_doxygen(${PROJECT_NAME} ${CMAKE_CURRENT_SOURCE_DIR}/../../docs)
+# -------------------------------------------------------------------------------------------------
+#                                           TOOLS
+# -------------------------------------------------------------------------------------------------
 
-message(STATUS "${PROJECT_NAME}: using the following C++ standard: ${CMAKE_CXX_STANDARD}")
+# Enable Address Sanitizer in `Debug` builds on non-Windows OS.
+if(NOT IS_RELEASE_BUILD AND NOT WIN32)
+    enable_address_sanitizer()
+endif()
+
+# Enable Clang-tidy in `Release` builds.
+if (IS_RELEASE_BUILD)
+    enable_clang_tidy(${CMAKE_CURRENT_LIST_DIR}/../../.clang-tidy)
+endif()
+
+# Enable doxygen.
+enable_doxygen(${CMAKE_CURRENT_SOURCE_DIR}/../../docs)
 
 # -------------------------------------------------------------------------------------------------
-#                                       EXTERNAL DEPENDENCIES
+#                                       DEPENDENCIES
 # -------------------------------------------------------------------------------------------------
 
 # External: glfw.
@@ -322,7 +325,7 @@ ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/Refureku/build/Include/"
 set(REFUREKU_EXCLUDE_FILES "")
 if (NOT WIN32)
     # Add Windows sources to be excluded from analyzing.
-    foreach(SRC_PATH IN LISTS ENGINE_WIN32_SOURCES)
+    foreach(SRC_PATH IN LISTS PROJECT_WIN32_SOURCES)
         set(SRC_PATH ${CMAKE_CURRENT_SOURCE_DIR}/${SRC_PATH})
         string(FIND ${SRC_PATH} "|" PIPE_POS)
         if (NOT ${PIPE_POS} STREQUAL "-1")
@@ -386,30 +389,6 @@ set_target_properties(${REFUREKU_GENERATOR_TARGET} PROPERTIES FOLDER ${EXTERNAL_
 # Add generated headers to include directories.
 target_include_directories(${PROJECT_NAME} SYSTEM PUBLIC ../${GENERATED_DIR_NAME})
 
-# Prepare variable for Refureku dynamic library name.
-set(REFUREKU_DYN_LIB Refureku.dll)
-if (NOT WIN32)
-    if(APPLE) # test macos before unix
-        message(FATAL_ERROR "${PROJECT_NAME}: TODO: put Refureku dynamic library name here.")
-    elseif(UNIX)
-        set(REFUREKU_DYN_LIB libRefureku.so)
-    endif()
-endif()
-
-# Copy Refureku dynamic library to the top level binary directory.
-add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-                COMMAND ${CMAKE_COMMAND} -E copy
-                ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/Refureku/build/Bin/${REFUREKU_DYN_LIB} ${CMAKE_BINARY_DIR}/${REFUREKU_DYN_LIB})
-
-# Copy Refureku dynamic library to the current top level build directory.
-add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-                COMMAND ${CMAKE_COMMAND} -E copy
-                ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/Refureku/build/Bin/${REFUREKU_DYN_LIB} ${BUILD_MODE_DIRECTORY}/${REFUREKU_DYN_LIB})
-# Copy DXC DLLs to engine_lib binary directory.
-add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-                COMMAND ${CMAKE_COMMAND} -E copy
-                ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/Refureku/build/Bin/${REFUREKU_DYN_LIB} ${CMAKE_CURRENT_BINARY_DIR}/${REFUREKU_DYN_LIB})
-
 # External: Refureku (end) --------------------------------------------------------------------------
 
 # Win32 specific dependencies:
@@ -442,109 +421,11 @@ if (WIN32)
         COMMAND go run ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/DirectXShaderCompiler/download_dxc.go
         ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/DirectXShaderCompiler/ # working directory
     )
-
     # Set DXC variables.
     set(PATH_TO_DXC_DLL_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/DirectXShaderCompiler/bin/x64)
     set(PATH_TO_DXC_LIB_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/DirectXShaderCompiler/lib/x64)
-
     # Link to DXC libraries.
     target_link_directories(${PROJECT_NAME} PUBLIC ${PATH_TO_DXC_DLL_DIR})
     target_link_directories(${PROJECT_NAME} PUBLIC ${PATH_TO_DXC_LIB_DIR})
     target_link_libraries(${PROJECT_NAME} PUBLIC ${PATH_TO_DXC_LIB_DIR}/dxcompiler.lib)
-
-    # Copy DXC DLLs to the top level binary directory.
-    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-                   COMMAND ${CMAKE_COMMAND} -E copy
-                   ${PATH_TO_DXC_DLL_DIR}/dxcompiler.dll ${CMAKE_BINARY_DIR}/dxcompiler.dll)
-    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-                   COMMAND ${CMAKE_COMMAND} -E copy
-                   ${PATH_TO_DXC_DLL_DIR}/dxil.dll ${CMAKE_BINARY_DIR}/dxil.dll)
-
-    # Copy DXC DLLs to the current top level build directory.
-    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-                   COMMAND ${CMAKE_COMMAND} -E copy
-                   ${PATH_TO_DXC_DLL_DIR}/dxcompiler.dll ${BUILD_MODE_DIRECTORY}/dxcompiler.dll)
-    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-                   COMMAND ${CMAKE_COMMAND} -E copy
-                   ${PATH_TO_DXC_DLL_DIR}/dxil.dll ${BUILD_MODE_DIRECTORY}/dxil.dll)
-
-    # Copy DXC DLLs to engine_lib binary directory.
-    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-                   COMMAND ${CMAKE_COMMAND} -E copy
-                   ${PATH_TO_DXC_DLL_DIR}/dxcompiler.dll ${CMAKE_CURRENT_BINARY_DIR}/dxcompiler.dll)
-    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-                   COMMAND ${CMAKE_COMMAND} -E copy
-                   ${PATH_TO_DXC_DLL_DIR}/dxil.dll ${CMAKE_CURRENT_BINARY_DIR}/dxil.dll)
 endif()
-
-# Execute post build script.
-add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-                   COMMAND go run ${CMAKE_CURRENT_LIST_DIR}/engine_post_build.go
-                   ${CMAKE_CURRENT_LIST_DIR}/../../res/
-                   ${CMAKE_CURRENT_LIST_DIR}/../../ext/
-                   ${CMAKE_BINARY_DIR}
-                   ${CMAKE_CURRENT_BINARY_DIR}
-                   ${BUILD_MODE_DIRECTORY}
-                   ${IS_RELEASE_BUILD}
-)
-
-# -------------------------------------------------------------------------------------------------
-#                                            TESTS
-# -------------------------------------------------------------------------------------------------
-
-# Add `Catch2`.
-message(STATUS "${PROJECT_NAME}: adding external dependency \"Catch2\"...")
-add_subdirectory(${RELATIVE_EXT_PATH}/Catch2 ${DEPENDENCY_BUILD_DIR_NAME}/Catch2 SYSTEM)
-set_target_properties(Catch2 PROPERTIES FOLDER ${EXTERNAL_FOLDER})
-set_target_properties(Catch2WithMain PROPERTIES FOLDER ${EXTERNAL_FOLDER})
-
-set(ENGINE_TESTS_NAME engine_tests)
-set(TESTS_RELATIVE_PATH ../../tests)
-
-set(ENGINE_TEST_WIN32_SOURCES
-    ${TESTS_RELATIVE_PATH}/engine_lib/render/directx/DirectXResourceManager.cpp
-    # add Windows specific test files here...
-)
-
-set(ENGINE_TEST_SOURCES
-    ${TESTS_RELATIVE_PATH}/engine_lib.cpp
-    ${TESTS_RELATIVE_PATH}/engine_lib/game/Window.cpp
-    ${TESTS_RELATIVE_PATH}/engine_lib/io/ConfigManager.cpp
-    ${TESTS_RELATIVE_PATH}/engine_lib/io/ReflectionTest.h
-    ${TESTS_RELATIVE_PATH}/engine_lib/io/ReflectionTest.cpp
-    ${TESTS_RELATIVE_PATH}/engine_lib/input/InputManager.cpp
-    ${TESTS_RELATIVE_PATH}/engine_lib/misc/Timer.cpp
-    ${TESTS_RELATIVE_PATH}/engine_lib/misc/GC.cpp
-    ${TESTS_RELATIVE_PATH}/engine_lib/materials/ShaderPack.cpp
-    ${TESTS_RELATIVE_PATH}/engine_lib/materials/Material.cpp
-    ${TESTS_RELATIVE_PATH}/engine_lib/io/Serializable.cpp
-    ${TESTS_RELATIVE_PATH}/engine_lib/render/RenderSettings.cpp
-    ${TESTS_RELATIVE_PATH}/engine_lib/math/GLMath.cpp
-    ${TESTS_RELATIVE_PATH}/engine_lib/math/MathHelpers.cpp
-    ${TESTS_RELATIVE_PATH}/engine_lib/game/GameManager.cpp
-    ${TESTS_RELATIVE_PATH}/engine_lib/game/nodes/Node.cpp
-    ${TESTS_RELATIVE_PATH}/engine_lib/game/nodes/SpatialNode.cpp
-    ${TESTS_RELATIVE_PATH}/engine_lib/game/nodes/MeshNode.cpp
-    ${TESTS_RELATIVE_PATH}/engine_lib/game/nodes/CameraNode.cpp
-    ${TESTS_RELATIVE_PATH}/engine_lib/game/camera/CameraManager.cpp
-    ${TESTS_RELATIVE_PATH}/engine_lib/game/World.cpp
-    ${TESTS_RELATIVE_PATH}/engine_lib/game/GameInstance.cpp
-    # add general (cross-platform) test files here...
-)
-
-if (WIN32)
-    list(APPEND ENGINE_TEST_SOURCES ${ENGINE_TEST_WIN32_SOURCES})
-endif()
-
-add_executable(${ENGINE_TESTS_NAME} ${ENGINE_TEST_SOURCES})
-
-target_compile_features(${ENGINE_TESTS_NAME} PRIVATE cxx_std_${PROJECT_CXX_STANDARD_VERSION})
-
-target_link_libraries(${ENGINE_TESTS_NAME} PRIVATE engine_lib)
-target_link_libraries(${ENGINE_TESTS_NAME} PRIVATE Catch2::Catch2)
-
-set_target_properties(${ENGINE_TESTS_NAME} PROPERTIES FOLDER ${ENGINE_FOLDER})
-
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/ext/Catch2/contrib")
-include(CTest)
-include(Catch)

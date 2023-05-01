@@ -175,7 +175,8 @@ namespace ne {
         }
 
         // Apply rotation.
-        cameraProperties.mtxData.second.orbitalModeData.phi = phi;
+        cameraProperties.mtxData.second.orbitalModeData.phi =
+            std::clamp(phi, 0.1F, 180.0F); // NOLINT: don't allow flipping the camera
         cameraProperties.mtxData.second.orbitalModeData.theta = theta;
 
         // Recalculate location.

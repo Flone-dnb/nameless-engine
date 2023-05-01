@@ -105,6 +105,12 @@ namespace ne {
         return mtxData.second.projectionData.iRenderTargetHeight;
     }
 
+    CameraMode CameraProperties::getCurrentCameraMode() {
+        std::scoped_lock guard(mtxData.first);
+
+        return mtxData.second.currentCameraMode;
+    }
+
     CameraProperties::Data::OrbitalModeData CameraProperties::getOrbitalModeProperties() {
         std::scoped_lock guard(mtxData.first);
         return mtxData.second.orbitalModeData;

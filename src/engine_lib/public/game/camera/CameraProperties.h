@@ -194,6 +194,13 @@ namespace ne {
         unsigned int getRenderTargetHeight();
 
         /**
+         * Returns the current camera mode.
+         *
+         * @return Camera mode.
+         */
+        CameraMode getCurrentCameraMode();
+
+        /**
          * Returns orbital camera properties.
          *
          * @return Orbital camera properties.

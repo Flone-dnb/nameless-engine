@@ -57,11 +57,13 @@ namespace ne {
         viewData.worldLocation = getWorldLocation();
 
         if (cameraProperties.mtxData.second.currentCameraMode == CameraMode::FREE) {
-            // Update free camera properties.
+            // Get target direction to point along Node's forward (to be used in view matrix).
             viewData.targetPointWorldLocation = viewData.worldLocation + getWorldForwardDirection();
+
+            // Get world up from Node's up (to be used in view matrix).
             viewData.worldUpDirection = getWorldUpDirection();
         } else {
-            // Update orbital camera properties.
+            // Update target for view matrix.
             if (orbitalCameraTargetInWorldSpace.has_value()) {
                 viewData.targetPointWorldLocation = orbitalCameraTargetInWorldSpace.value();
             } else {
@@ -84,6 +86,9 @@ namespace ne {
             if (!glm::all(glm::epsilonEqual(targetRotation, getWorldRotation(), rotationDelta))) {
                 setWorldRotation(targetRotation);
             }
+
+            // Get world up from Node's up (to be used in view matrix).
+            viewData.worldUpDirection = getWorldUpDirection();
         }
 
         // Mark view matrix as "needs update".

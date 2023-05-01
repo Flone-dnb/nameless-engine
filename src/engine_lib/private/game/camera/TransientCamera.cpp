@@ -21,6 +21,24 @@ namespace ne {
         std::scoped_lock guard(cameraProperties.mtxData.first);
 
         cameraProperties.mtxData.second.currentCameraMode = mode;
+        if (mode == CameraMode::ORBITAL) {
+            // Recalculate rotation.
+            MathHelpers::convertCartesianCoordinatesToSpherical(
+                cameraProperties.mtxData.second.viewData.worldLocation -
+                    cameraProperties.mtxData.second.viewData.targetPointWorldLocation,
+                cameraProperties.mtxData.second.orbitalModeData.distanceToTarget,
+                cameraProperties.mtxData.second.orbitalModeData.theta,
+                cameraProperties.mtxData.second.orbitalModeData.phi);
+
+            recalculateBaseVectorsForOrbitalCamera();
+        } else {
+            // Update target for free camera.
+            cameraProperties.mtxData.second.viewData.targetPointWorldLocation =
+                cameraProperties.mtxData.second.viewData.worldLocation + cameraForwardDirection;
+
+            // Update rotation.
+            setFreeCameraRotation(MathHelpers::convertDirectionToRollPitchYaw(cameraForwardDirection));
+        }
 
         // Mark view matrix as "needs update".
         cameraProperties.mtxData.second.viewData.bViewMatrixNeedsUpdate = true;
@@ -41,11 +59,11 @@ namespace ne {
                 cameraProperties.mtxData.second.orbitalModeData.phi);
 
             recalculateBaseVectorsForOrbitalCamera();
+        } else {
+            // Update target for free camera.
+            cameraProperties.mtxData.second.viewData.targetPointWorldLocation =
+                cameraProperties.mtxData.second.viewData.worldLocation + cameraForwardDirection;
         }
-
-        // Update target.
-        cameraProperties.mtxData.second.viewData.targetPointWorldLocation =
-            cameraProperties.mtxData.second.viewData.worldLocation + cameraForwardDirection;
 
         // Mark view matrix as "needs update".
         cameraProperties.mtxData.second.viewData.bViewMatrixNeedsUpdate = true;
@@ -110,6 +128,9 @@ namespace ne {
 
         recalculateBaseVectorsForOrbitalCamera();
 
+        // Save new camera's up direction to view data (to be used in view matrix).
+        cameraProperties.mtxData.second.viewData.worldUpDirection = cameraUpDirection;
+
         // Mark view matrix as "needs update".
         cameraProperties.mtxData.second.viewData.bViewMatrixNeedsUpdate = true;
     }
@@ -163,9 +184,12 @@ namespace ne {
                 cameraProperties.mtxData.second.orbitalModeData.distanceToTarget,
                 cameraProperties.mtxData.second.orbitalModeData.theta,
                 cameraProperties.mtxData.second.orbitalModeData.phi) +
-            cameraProperties.mtxData.second.viewData.worldLocation;
+            cameraProperties.mtxData.second.viewData.targetPointWorldLocation;
 
         recalculateBaseVectorsForOrbitalCamera();
+
+        // Save new camera's up direction to view data (to be used in view matrix).
+        cameraProperties.mtxData.second.viewData.worldUpDirection = cameraUpDirection;
 
         // Mark view matrix as "needs update".
         cameraProperties.mtxData.second.viewData.bViewMatrixNeedsUpdate = true;

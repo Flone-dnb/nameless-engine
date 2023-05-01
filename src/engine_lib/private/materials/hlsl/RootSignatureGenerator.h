@@ -110,20 +110,6 @@ namespace ne {
         findStaticSamplerForSamplerResource(const D3D12_SHADER_INPUT_BIND_DESC& samplerResourceDescription);
 
         /**
-         * Checks that essential shader resources such as frame and object constant buffer
-         * are binded to the expected registers.
-         *
-         * @param vResourcesDescription Description of all shader resources.
-         * @param vRootParameters       Final root parameter set used for root signature creation.
-         * It might be reordered to put some constant buffers in the beginning (like frame/object buffers).
-         *
-         * @return Error if something went wrong (resource binded incorrectly).
-         */
-        static std::optional<Error> makeSureEssentialConstantBuffersBindedCorrectly(
-            const std::vector<D3D12_SHADER_INPUT_BIND_DESC>& vResourcesDescription,
-            std::vector<CD3DX12_ROOT_PARAMETER>& vRootParameters);
-
-        /**
          * Adds a new pair of `resource name` - `root parameter index` to the specified map,
          * additionally checks if a resource with this name already exists in the map and returns
          * error in this case.

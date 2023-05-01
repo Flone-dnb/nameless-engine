@@ -278,14 +278,11 @@ func initialize_refureku_settings(
 	// Prepare variables for config.
 	var generated_dir_path = filepath.Join(src_directory, ".generated")
 
-	// Prepare tests files.
-	var reflection_test_path = filepath.Join(src_directory, "..", "tests", "engine_lib", "io", "ReflectionTest.h")
-
 	// Configure Refureku settings.
 	cfg.CodeGenManagerSettings.ToProcessDirectories = []string{src_directory}
 	cfg.CodeGenManagerSettings.IgnoredDirectories = []string{generated_dir_path}
 	cfg.CodeGenManagerSettings.IgnoredFiles = exclude_files
-	cfg.CodeGenManagerSettings.ToProcessFiles = []string{reflection_test_path}
+	cfg.CodeGenManagerSettings.ToProcessFiles = []string{}
 	cfg.CodeGenUnitSettings.OutputDirectory = generated_dir_path
 	cfg.CodeGenUnitSettings.GeneratedHeaderFileNamePattern = "##FILENAME##.generated.h"
 	cfg.CodeGenUnitSettings.GeneratedSourceFileNamePattern = "##FILENAME##.generated_impl.h"

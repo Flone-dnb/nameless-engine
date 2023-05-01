@@ -22,7 +22,7 @@ set(PROJECT_WIN32_SOURCES
 )
 
 set(PROJECT_SOURCES
-    src/engine_lib.cpp
+    src/main.cpp
     src/game/Window.cpp
     src/io/ConfigManager.cpp
     src/io/ReflectionTest.h

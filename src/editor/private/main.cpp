@@ -5,7 +5,7 @@
 #undef IGNORE
 #endif
 
-// Std.
+// Standard.
 #include <stdexcept>
 
 // Custom.

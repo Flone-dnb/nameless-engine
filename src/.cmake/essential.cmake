@@ -28,7 +28,7 @@ if(WIN32)
 endif()
 
 # Set directory name for dependencies.
-set(DEPENDENCY_BUILD_DIR_NAME dependency_build)
+set(DEPENDENCY_BUILD_DIR_NAME dep)
 
 # Enable cmake folders.
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)

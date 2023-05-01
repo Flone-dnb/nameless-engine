@@ -88,7 +88,7 @@ enable_doxygen(${CMAKE_CURRENT_SOURCE_DIR}/../../docs)
 set(EDITOR_LIB_TARGET editor_lib)
 if (NOT TARGET ${EDITOR_LIB_TARGET}) # define target only if not defined yet
     message(STATUS "${PROJECT_NAME}: started adding ${EDITOR_LIB_TARGET}...\n----------------------------------------------\n")
-    add_subdirectory(../${EDITOR_LIB_TARGET} dependency_build/${EDITOR_LIB_TARGET})
+    add_subdirectory(../${EDITOR_LIB_TARGET} ${DEPENDENCY_BUILD_DIR_NAME}/${EDITOR_LIB_TARGET})
     message(STATUS "\n\n----------------------------------------------\n${PROJECT_NAME}: finished adding ${EDITOR_LIB_TARGET}")
 else()
     message(STATUS "${PROJECT_NAME}: ${EDITOR_LIB_TARGET} already defined, just using it without redefining")

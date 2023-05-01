@@ -13,6 +13,8 @@ namespace ne {
         Window* pWindow, GameManager* pGameManager, InputManager* pInputManager)
         : GameInstance(pWindow, pGameManager, pInputManager) {}
 
+    std::shared_ptr<TransientCamera> EditorGameInstance::getEditorCamera() { return pEditorCamera; }
+
     void EditorGameInstance::onGameStarted() {
         // Create and setup camera.
         pEditorCamera = std::make_shared<TransientCamera>();

@@ -225,9 +225,6 @@ if (IS_RELEASE_BUILD)
     enable_clang_tidy(${CMAKE_CURRENT_LIST_DIR}/../../.clang-tidy)
 endif()
 
-# Enable doxygen.
-enable_doxygen(${CMAKE_CURRENT_SOURCE_DIR}/../../docs)
-
 # -------------------------------------------------------------------------------------------------
 #                                       DEPENDENCIES
 # -------------------------------------------------------------------------------------------------

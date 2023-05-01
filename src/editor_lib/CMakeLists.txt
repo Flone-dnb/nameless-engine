@@ -18,7 +18,7 @@ include(${RELATIVE_CMAKE_HELPERS_PATH}/utils.cmake)
 
 # Specify project sources.
 set(PROJECT_SOURCES
-    private/EditorGameInstance.h
+    public/EditorGameInstance.h
     private/EditorGameInstance.cpp
     # add your .h/.cpp files here
 )
@@ -60,9 +60,6 @@ if (IS_RELEASE_BUILD)
     enable_clang_tidy(${CMAKE_CURRENT_LIST_DIR}/../../.clang-tidy)
 endif()
 
-# Enable doxygen.
-enable_doxygen(${CMAKE_CURRENT_SOURCE_DIR}/../../docs)
-
 # -------------------------------------------------------------------------------------------------
 #                                       DEPENDENCIES
 # -------------------------------------------------------------------------------------------------
@@ -70,7 +67,7 @@ enable_doxygen(${CMAKE_CURRENT_SOURCE_DIR}/../../docs)
 # Add engine library.
 set(ENGINE_TARGET engine_lib)
 message(STATUS "${PROJECT_NAME}: started adding ${ENGINE_TARGET}...\n----------------------------------------------\n")
-add_subdirectory(../${ENGINE_TARGET} dependency_build/${ENGINE_TARGET})
+add_subdirectory(../${ENGINE_TARGET} ${DEPENDENCY_BUILD_DIR_NAME}/${ENGINE_TARGET})
 target_link_libraries(${PROJECT_NAME} PUBLIC ${ENGINE_TARGET})
 add_dependencies(${PROJECT_NAME} ${ENGINE_TARGET})
 message(STATUS "\n\n----------------------------------------------\n${PROJECT_NAME}: finished adding ${ENGINE_TARGET}")

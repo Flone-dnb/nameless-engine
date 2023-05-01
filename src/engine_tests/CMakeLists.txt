@@ -101,7 +101,7 @@ endif()
 set(ENGINE_LIB_TARGET engine_lib)
 if (NOT TARGET ${ENGINE_LIB_TARGET}) # define target only if not defined yet
     message(STATUS "${PROJECT_NAME}: started adding ${ENGINE_LIB_TARGET}...\n----------------------------------------------\n")
-    add_subdirectory(../${ENGINE_LIB_TARGET} dependency_build/${ENGINE_LIB_TARGET})
+    add_subdirectory(../${ENGINE_LIB_TARGET} ${DEPENDENCY_BUILD_DIR_NAME}/${ENGINE_LIB_TARGET})
     message(STATUS "\n\n----------------------------------------------\n${PROJECT_NAME}: finished adding ${ENGINE_LIB_TARGET}")
 else()
     message(STATUS "${PROJECT_NAME}: ${ENGINE_LIB_TARGET} already defined, just using it without redefining")

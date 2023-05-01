@@ -25,6 +25,13 @@ namespace ne {
          */
         EditorGameInstance(Window* pWindow, GameManager* pGameManager, InputManager* pInputManager);
 
+        /**
+         * Returns camera that's used for editor's viewport.
+         *
+         * @return Camera.
+         */
+        std::shared_ptr<TransientCamera> getEditorCamera();
+
         virtual ~EditorGameInstance() override = default;
 
     protected:

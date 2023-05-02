@@ -157,9 +157,6 @@ namespace ne RNAMESPACE() {
      * @remark Used for GPU optimized geometry - geometry that rarely (if ever) changes from the CPU side.
      */
     class RCLASS(Guid("d5407ca4-3c2e-4a5a-9ff3-1262b6a4d264")) MeshNode : public SpatialNode {
-        // Renderer will call `draw` on this node.
-        friend class Renderer;
-
     public:
         /** Stores internal GPU resources. */
         struct GpuResources {
@@ -189,18 +186,6 @@ namespace ne RNAMESPACE() {
 
             /** Shader GPU resources. */
             ShaderResources shaderResources;
-        };
-
-        /**
-         * Constants used by shaders.
-         *
-         * @remark Should be exactly the same as constant buffer in shaders.
-         */
-        struct MeshShaderConstants {
-            /** World matrix. */
-            glm::mat4x4 world = glm::identity<glm::mat4x4>();
-
-            // don't forget to add padding to 4 floats (if needed)
         };
 
         MeshNode();
@@ -274,7 +259,7 @@ namespace ne RNAMESPACE() {
         }
 
         /**
-         * Returns GPU resources that mesh node uses.
+         * Returns GPU resources that this mesh node uses.
          *
          * @return GPU resources.
          */
@@ -290,6 +275,18 @@ namespace ne RNAMESPACE() {
         bool isVisible() const;
 
     protected:
+        /**
+         * Constants used by shaders.
+         *
+         * @remark Should be exactly the same as constant buffer in shaders.
+         */
+        struct MeshShaderConstants {
+            /** World matrix. */
+            glm::mat4x4 world = glm::identity<glm::mat4x4>();
+
+            // don't forget to add padding to 4 floats (if needed)
+        };
+
         /**
          * Called when this node was not spawned previously and it was either attached to a parent node
          * that is spawned or set as world's root node to execute custom spawn logic.
@@ -323,35 +320,53 @@ namespace ne RNAMESPACE() {
         virtual void onWorldLocationRotationScaleChanged() override;
 
         /**
-         * Prepares data for binding to shader resource with CPU read/write access to copy data from CPU to
-         * shader.
+         * Setups callbacks for shader resource with CPU read/write access to copy data from CPU to
+         * the GPU to be used by shaders.
          *
-         * @remark Call this function in your onSpawn function to bind to shader resources, all bindings
-         * will be automatically removed in onDespawn.
+         * @remark Call this function in your onSpawning function to bind to shader resources, all bindings
+         * will be automatically removed in onDespawning. An error will be shown if this function
+         * is called when the node is not spawned.
+         *
+         * @remark When data of a resource that you registered was updated on the CPU side you need
+         * to call @ref markShaderCpuReadWriteResourceAsNeedsUpdate so that update callbacks will be
+         * called and updated data will be copied to the GPU to be used by shaders.
+         * Note that you don't need to call @ref markShaderCpuReadWriteResourceAsNeedsUpdate for
+         * resources you have not registered yourself. Also note that all registered resources
+         * are marked as "need update" by default so you don't have to call
+         * @ref markShaderCpuReadWriteResourceAsNeedsUpdate right after calling this function.
          *
          * @param sShaderResourceName        Name of the resource we are referencing (should be exactly the
          * same as the resource name written in the shader file we are referencing).
          * @param iResourceSizeInBytes       Size of the data that this resource will contain. Note that
-         * this size will most likely be padded to be a multiple of 256 because of the hardware requirement
-         * for shader constant buffers.
-         * @param onStartedUpdatingResource  Function that will be called when started updating resource
-         * data. Function returns pointer to data of the specified resource data size that needs to be copied
-         * into the resource.
-         * @param onFinishedUpdatingResource Function that will be called when finished updating
-         * (usually used for unlocking resource data mutex).
+         * the specified size will most likely be padded (changed) to be a multiple of 256 because of
+         * the hardware requirement for shader constant buffers.
+         * @param onStartedUpdatingResource  Function that will be called when the engine has started
+         * copying data to the GPU. Function returns pointer to new (updated) data
+         * of the specified resource that will be copied to the GPU.
+         * @param onFinishedUpdatingResource Function that will be called when the engine has finished
+         * copying resource data to the GPU (usually used for unlocking mutexes).
          */
-        void prepareDataForBindingToShaderCpuReadWriteResource(
+        void setShaderCpuReadWriteResourceBindingData(
             const std::string& sShaderResourceName,
             size_t iResourceSizeInBytes,
             const std::function<void*()>& onStartedUpdatingResource,
             const std::function<void()>& onFinishedUpdatingResource);
 
         /**
-         * Looks for binding created using @ref prepareDataForBindingToShaderCpuReadWriteResource and
-         * notifies the engine that there is new (updated) data for shader CPU read/write resource to copy.
+         * Looks for binding created using @ref setShaderCpuReadWriteResourceBindingData and
+         * notifies the engine that there is new (updated) data for shader CPU read/write resource to copy
+         * to the GPU to be used by shaders.
          *
          * @remark You don't need to check if the node is spawned or not before calling this function,
-         * if the binding does not exist this call will be ignored.
+         * if the binding does not exist or some other condition is not met this call will be
+         * silently ignored without any errors.
+         *
+         * @remark Note that the callbacks that you have specified in
+         * @ref setShaderCpuReadWriteResourceBindingData will not be called inside of this function,
+         * moreover they are most likely to be called in the next frame(s) (most likely multiple times)
+         * when the engine is ready to copy the data to the GPU, so if the resource's data is used by
+         * multiple threads in your code, make sure to use mutex or other synchronization primitive
+         * in your callbacks.
          *
          * @param sShaderResourceName Name of the shader CPU read/write resource (should be exactly the same
          * as the resource name written in the shader file we are referencing).
@@ -400,7 +415,7 @@ namespace ne RNAMESPACE() {
         /** Mutex for @ref meshData. */
         std::recursive_mutex mtxMeshData;
 
-        /** Stores @ref meshData in GPU memory.  */
+        /** Stores GPU resources used by this mesh node.  */
         std::pair<std::recursive_mutex, GpuResources> mtxGpuResources;
 
         /** Stores data for constant buffer used by shaders. */

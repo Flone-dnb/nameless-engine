@@ -279,7 +279,6 @@ namespace ne {
          */
         size_t getCreatedComputePsoCount();
 
-    protected:
         /**
          * Returns renderer that owns this PSO manager.
          *

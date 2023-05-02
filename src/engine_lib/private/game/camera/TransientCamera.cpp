@@ -229,7 +229,7 @@ namespace ne {
         // Apply movement.
         cameraProperties.mtxData.second.viewData.worldLocation += cameraForwardDirection * distance.x;
         cameraProperties.mtxData.second.viewData.worldLocation += cameraRightDirection * distance.y;
-        cameraProperties.mtxData.second.viewData.worldLocation += cameraUpDirection * distance.z;
+        cameraProperties.mtxData.second.viewData.worldLocation += Globals::WorldDirection::up * distance.z;
 
         // Recalculate look direction.
         cameraProperties.mtxData.second.viewData.targetPointWorldLocation =

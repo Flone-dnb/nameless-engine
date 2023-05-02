@@ -7,6 +7,8 @@
 #include "render/general/pso/PsoManager.h"
 #include "io/Serializable.h"
 #include "materials/ShaderMacro.h"
+#include "math/GLMath.hpp"
+#include "materials/ShaderReadWriteResourceUniquePtr.h"
 
 #include "Material.generated.h"
 
@@ -56,6 +58,23 @@ namespace ne RNAMESPACE() {
         friend class MeshNode;
 
     public:
+        /** Stores internal GPU resources. */
+        struct GpuResources {
+            /** Stores resources used by shaders. */
+            struct ShaderResources {
+                /** Shader single (non-array) resources with CPU access. */
+                std::unordered_map<std::string, ShaderCpuReadWriteResourceUniquePtr>
+                    shaderCpuReadWriteResources;
+
+                // TODO: vShaderCpuReadOnlyResources
+
+                // TODO: vShaderCpuReadOnlyArrayResources
+            };
+
+            /** Shader GPU resources. */
+            ShaderResources shaderResources;
+        };
+
         /** Creates uninitialized material, only used for deserialization, instead use @ref create. */
         Material();
 
@@ -90,6 +109,23 @@ namespace ne RNAMESPACE() {
             const std::string& sMaterialName = "Material");
 
         /**
+         * Sets material's fill color.
+         *
+         * @param diffuseColor Color in the RGB format.
+         */
+        void setDiffuseColor(const glm::vec3& diffuseColor);
+
+        /**
+         * Sets material's opacity.
+         *
+         * @remark Only works if the material has transparency enabled (see @ref create),
+         * otherwise logs an error.
+         *
+         * @param opacity Value in range [0.0F; 1.0F].
+         */
+        void setOpacity(float opacity = 1.0F);
+
+        /**
          * Returns array of mesh nodes that currently use this material.
          * Must be used with mutex.
          *
@@ -120,6 +156,29 @@ namespace ne RNAMESPACE() {
          */
         Pso* getUsedPso() const;
 
+        /**
+         * Returns GPU resources that this material uses.
+         *
+         * @return GPU resources.
+         */
+        inline std::pair<std::recursive_mutex, GpuResources>* getMaterialGpuResources() {
+            return &mtxGpuResources;
+        }
+
+        /**
+         * Returns name of the vertex shader that this material uses.
+         *
+         * @return Vertex shader name.
+         */
+        std::string getVertexShaderName() const;
+
+        /**
+         * Returns name of the pixel shader that this material uses.
+         *
+         * @return Pixel shader name.
+         */
+        std::string getPixelShaderName() const;
+
     private:
         /** Groups internal data. */
         struct InternalResources {
@@ -139,6 +198,21 @@ namespace ne RNAMESPACE() {
             std::set<ShaderMacro> materialPixelShaderMacros;
 
             // TODO: texture resources go here
+        };
+
+        /**
+         * Constants used by shaders.
+         *
+         * @remark Should be exactly the same as constant buffer in shaders.
+         */
+        struct MaterialShaderConstants {
+            /** Fill color. */
+            glm::vec3 diffuseColor = glm::vec3(1.0F, 1.0F, 1.0F);
+
+            /** Opacity (when material transparency is used). */
+            float opacity = 1.0F;
+
+            // don't forget to add padding to 4 floats (if needed)
         };
 
         /**
@@ -199,13 +273,96 @@ namespace ne RNAMESPACE() {
         void onMeshNodeDespawned(MeshNode* pMeshNode);
 
         /**
+         * Creates shader resources such as material's constant buffer.
+         *
+         * @remark Should be called after PSO was initialized.
+         */
+        void allocateShaderResources();
+
+        /**
+         * Deallocates shader resources after @ref allocateShaderResources was called.
+         *
+         * @remark Should be called before PSO is cleared.
+         */
+        void deallocateShaderResources();
+
+        /**
+         * Setups callbacks for shader resource with CPU read/write access to copy data from CPU to
+         * the GPU to be used by shaders.
+         *
+         * @remark Call this function in @ref allocateShaderResources to bind to shader resources, all
+         * bindings will be automatically removed in @ref deallocateShaderResources.
+         *
+         * @remark When data of a resource that you registered was updated on the CPU side you need
+         * to call @ref markShaderCpuReadWriteResourceAsNeedsUpdate so that update callbacks will be
+         * called and updated data will be copied to the GPU to be used by shaders.
+         * Note that you don't need to call @ref markShaderCpuReadWriteResourceAsNeedsUpdate for
+         * resources you have not registered yourself. Also note that all registered resources
+         * are marked as "need update" by default so you don't have to call
+         * @ref markShaderCpuReadWriteResourceAsNeedsUpdate right after calling this function.
+         *
+         * @param sShaderResourceName        Name of the resource we are referencing (should be exactly the
+         * same as the resource name written in the shader file we are referencing).
+         * @param iResourceSizeInBytes       Size of the data that this resource will contain. Note that
+         * the specified size will most likely be padded (changed) to be a multiple of 256 because of
+         * the hardware requirement for shader constant buffers.
+         * @param onStartedUpdatingResource  Function that will be called when the engine has started
+         * copying data to the GPU. Function returns pointer to new (updated) data
+         * of the specified resource that will be copied to the GPU.
+         * @param onFinishedUpdatingResource Function that will be called when the engine has finished
+         * copying resource data to the GPU (usually used for unlocking mutexes).
+         */
+        void setShaderCpuReadWriteResourceBindingData(
+            const std::string& sShaderResourceName,
+            size_t iResourceSizeInBytes,
+            const std::function<void*()>& onStartedUpdatingResource,
+            const std::function<void()>& onFinishedUpdatingResource);
+
+        /**
+         * Looks for binding created using @ref setShaderCpuReadWriteResourceBindingData and
+         * notifies the engine that there is new (updated) data for shader CPU read/write resource to copy
+         * to the GPU to be used by shaders.
+         *
+         * @remark You don't need to check if the PSO is initialized or not before calling this function,
+         * if the binding does not exist or some other condition is not met this call will be
+         * silently ignored without any errors.
+         *
+         * @remark Note that the callbacks that you have specified in
+         * @ref setShaderCpuReadWriteResourceBindingData will not be called inside of this function,
+         * moreover they are most likely to be called in the next frame(s) (most likely multiple times)
+         * when the engine is ready to copy the data to the GPU, so if the resource's data is used by
+         * multiple threads in your code, make sure to use mutex or other synchronization primitive
+         * in your callbacks.
+         *
+         * @param sShaderResourceName Name of the shader CPU read/write resource (should be exactly the same
+         * as the resource name written in the shader file we are referencing).
+         */
+        void markShaderCpuReadWriteResourceAsNeedsUpdate(const std::string& sShaderResourceName);
+
+        /**
+         * Called to copy data from @ref mtxShaderMaterialDataConstants.
+         *
+         * @return Pointer to data in @ref mtxShaderMaterialDataConstants.
+         */
+        void* onStartUpdatingShaderMeshConstants();
+
+        /** Called after finished copying data from @ref mtxShaderMaterialDataConstants. */
+        void onFinishedUpdatingShaderMeshConstants();
+
+        /**
          * Array of spawned mesh nodes that use this material.
          * Must be used with mutex.
          */
         std::pair<std::mutex, MeshNodesThatUseThisMaterial> mtxSpawnedMeshNodesThatUseThisMaterial;
 
         /** Internal data. */
-        std::pair<std::mutex, InternalResources> mtxInternalResources;
+        std::pair<std::recursive_mutex, InternalResources> mtxInternalResources;
+
+        /** Stores GPU resources used by this material. */
+        std::pair<std::recursive_mutex, GpuResources> mtxGpuResources;
+
+        /** Stores data for constant buffer used by shaders. */
+        std::pair<std::recursive_mutex, MaterialShaderConstants> mtxShaderMaterialDataConstants;
 
         /** Do not delete (free) this pointer. PSO manager that the renderer owns. */
         PsoManager* pPsoManager = nullptr;
@@ -225,6 +382,12 @@ namespace ne RNAMESPACE() {
         /** Whether this material will use transparency or not. */
         RPROPERTY(Serialize)
         bool bUseTransparency = false;
+
+        /** Whether @ref allocateShaderResources was called or not. */
+        bool bIsShaderResourcesAllocated = false;
+
+        /** Name of the constant buffer used to store material data in shaders. */
+        static inline const auto sMaterialShaderConstantBufferName = "materialData";
 
         /** Name of the category used for logging. */
         inline static const char* sMaterialLogCategory = "Material";

@@ -10,6 +10,7 @@
 #include "misc/ProjectPaths.h"
 #include "misc/GC.hpp"
 #include "render/Renderer.h"
+#include "materials/Material.h"
 #include "materials/Shader.h"
 #include "render/general/pso/PsoManager.h"
 #include "io/FieldSerializerManager.h"
@@ -127,9 +128,9 @@ namespace ne {
         Logger::get().info("clearing static GameManager pointer", sGameLogCategory);
         pLastCreatedGameManager = nullptr;
 
-        // See if there are any nodes alive.
+        // Make sure there are no nodes alive.
         const auto iNodesAlive = Node::getAliveNodeCount();
-        if (iNodesAlive != 0) {
+        if (iNodesAlive != 0) [[unlikely]] {
             Logger::get().error(
                 fmt::format(
                     "the game was destroyed and a full garbage collection was run but there are still "
@@ -139,9 +140,9 @@ namespace ne {
                 sGameLogCategory);
         }
 
-        // See if there are any gc objects left.
+        // Make sure there are no GC objects alive.
         const auto iGcObjectsLeft = gc_collector()->getAliveObjectsCount();
-        if (iGcObjectsLeft != 0) {
+        if (iGcObjectsLeft != 0) [[unlikely]] {
             Logger::get().error(
                 fmt::format(
                     "the game was destroyed and a full garbage collection was run but there are still "
@@ -154,11 +155,20 @@ namespace ne {
         // Explicitly destroy the renderer to check how much shaders left in the memory.
         pRenderer = nullptr;
         const auto iTotalShadersInMemory = Shader::getTotalAmountOfLoadedShaders();
-        if (iTotalShadersInMemory != 0) {
+        if (iTotalShadersInMemory != 0) [[unlikely]] {
             Logger::get().error(
                 fmt::format(
                     "the renderer was destroyed but there are still {} shader(s) left in the memory",
                     iTotalShadersInMemory),
+                sGameLogCategory);
+        }
+
+        // Make sure there are no materials exist.
+        const auto iTotalMaterialCount = Material::getTotalMaterialCount();
+        if (iTotalMaterialCount != 0) [[unlikely]] {
+            Logger::get().error(
+                fmt::format(
+                    "the game was destroyed but there are still {} material(s) alive", iTotalMaterialCount),
                 sGameLogCategory);
         }
     }

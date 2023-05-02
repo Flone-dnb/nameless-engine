@@ -28,12 +28,17 @@ namespace ne {
         this->bUseTransparency = bUseTransparency;
         this->pPsoManager = pPsoManager;
         this->sMaterialName = sMaterialName;
+
+        if (bUseTransparency) {
+            mtxInternalResources.second.materialPixelShaderMacros.insert(
+                ShaderMacro::USE_MATERIAL_TRANSPARENCY);
+        }
     }
 
     Material::~Material() {
         std::scoped_lock guard(mtxSpawnedMeshNodesThatUseThisMaterial.first, mtxInternalResources.first);
 
-        // Make sure everything is correct.
+        // Make sure there are no nodes that reference this material.
         auto iMeshNodeCount = mtxSpawnedMeshNodesThatUseThisMaterial.second.getTotalSize();
         if (iMeshNodeCount != 0) [[unlikely]] {
             Logger::get().error(
@@ -45,6 +50,7 @@ namespace ne {
                 sMaterialLogCategory);
         }
 
+        // Make sure PSO was cleared.
         if (mtxInternalResources.second.pUsedPso.isInitialized()) [[unlikely]] {
             Logger::get().error(
                 fmt::format("material \"{}\" is being destroyed but used PSO was not cleared", sMaterialName),
@@ -52,6 +58,16 @@ namespace ne {
             mtxInternalResources.second.pUsedPso.clear();
         }
 
+        // Make sure shader resources were deallocated.
+        if (bIsShaderResourcesAllocated) [[unlikely]] {
+            Logger::get().error(
+                fmt::format(
+                    "material \"{}\" is being destroyed but shader resources were not deallocated",
+                    sMaterialName),
+                sMaterialLogCategory);
+        }
+
+        // Update total material count.
         iTotalMaterialCount.fetch_sub(1);
     }
 
@@ -98,6 +114,8 @@ namespace ne {
                 throw std::runtime_error(error.getFullErrorMessage());
             }
             mtxInternalResources.second.pUsedPso = std::get<PsoSharedPtr>(std::move(result));
+
+            allocateShaderResources();
         }
     }
 
@@ -124,6 +142,7 @@ namespace ne {
 
         // Check if need to free PSO.
         if (mtxSpawnedMeshNodesThatUseThisMaterial.second.getTotalSize() == 0) {
+            deallocateShaderResources();
             mtxInternalResources.second.pUsedPso.clear();
         }
     }
@@ -227,5 +246,192 @@ namespace ne {
     }
 
     Pso* Material::getUsedPso() const { return mtxInternalResources.second.pUsedPso.getPso(); }
+
+    void Material::allocateShaderResources() {
+        std::scoped_lock guard(mtxInternalResources.first, mtxGpuResources.first);
+
+        // Make sure resources were not allocated before.
+        if (bIsShaderResourcesAllocated) [[unlikely]] {
+            Error error(fmt::format(
+                "material \"{}\" was requested to allocate shader resources but shader resources already "
+                "allocated",
+                sMaterialName));
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+        }
+
+        // Make sure PSO is initialized.
+        if (!mtxInternalResources.second.pUsedPso.isInitialized()) [[unlikely]] {
+            Error error(fmt::format(
+                "material \"{}\" was requested to allocate shader resources but PSO is not initialized",
+                sMaterialName));
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+        }
+
+        // Set flag before adding binding data.
+        bIsShaderResourcesAllocated = true;
+
+        // Set material constant buffer.
+        setShaderCpuReadWriteResourceBindingData(
+            sMaterialShaderConstantBufferName,
+            sizeof(MaterialShaderConstants),
+            [this]() -> void* { return onStartUpdatingShaderMeshConstants(); },
+            [this]() { return onFinishedUpdatingShaderMeshConstants(); });
+    }
+
+    void Material::deallocateShaderResources() {
+        std::scoped_lock guard(mtxInternalResources.first, mtxGpuResources.first);
+
+        // Make sure shader resources were previously allocated.
+        if (!bIsShaderResourcesAllocated) [[unlikely]] {
+            Error error(fmt::format(
+                "material \"{}\" was requested to deallocate shader resources but shader resources were not "
+                "allocated yet",
+                sMaterialName));
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+        }
+
+        // Make sure PSO is initialized.
+        if (!mtxInternalResources.second.pUsedPso.isInitialized()) [[unlikely]] {
+            Error error(fmt::format(
+                "material \"{}\" was requested to deallocate shader resources but PSO is not initialized",
+                sMaterialName));
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+        }
+
+        // Make sure the GPU is not using our resources.
+        const auto pRenderer = pPsoManager->getRenderer();
+        std::scoped_lock renderGuard(*pRenderer->getRenderResourcesMutex());
+        pRenderer->waitForGpuToFinishWorkUpToThisPoint();
+
+        // Clear flag.
+        bIsShaderResourcesAllocated = false;
+
+        // Deallocate resources.
+        mtxGpuResources.second.shaderResources = {};
+    }
+
+    void Material::setShaderCpuReadWriteResourceBindingData(
+        const std::string& sShaderResourceName,
+        size_t iResourceSizeInBytes,
+        const std::function<void*()>& onStartedUpdatingResource,
+        const std::function<void()>& onFinishedUpdatingResource) {
+        std::scoped_lock guard(mtxInternalResources.first, mtxGpuResources.first);
+
+        // Make sure shader resources allocated.
+        if (!bIsShaderResourcesAllocated) [[unlikely]] {
+            Error error(fmt::format(
+                "material \"{}\" was requested to set shader CPU read/write resource binding data all shader "
+                "resources were not allocated yet",
+                sMaterialName));
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+        }
+
+        // Make sure PSO is initialized.
+        if (!mtxInternalResources.second.pUsedPso.isInitialized()) [[unlikely]] {
+            Error error(fmt::format(
+                "material \"{}\" was requested to allocate shader resources but PSO is not initialized",
+                sMaterialName));
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+        }
+
+        // Make sure there is no resource with this name.
+        auto it =
+            mtxGpuResources.second.shaderResources.shaderCpuReadWriteResources.find(sShaderResourceName);
+        if (it != mtxGpuResources.second.shaderResources.shaderCpuReadWriteResources.end()) [[unlikely]] {
+            Error error(fmt::format(
+                "material \"{}\" already has a shader CPU read/write resource with the name \"{}\"",
+                sMaterialName,
+                sShaderResourceName));
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+        }
+
+        // Create object data constant buffer for shaders.
+        const auto pShaderReadWriteResourceManager =
+            pPsoManager->getRenderer()->getShaderCpuReadWriteResourceManager();
+        auto result = pShaderReadWriteResourceManager->createShaderCpuReadWriteResource(
+            sShaderResourceName,
+            fmt::format("material \"{}\"", sMaterialName),
+            iResourceSizeInBytes,
+            mtxInternalResources.second.pUsedPso.getPso(),
+            onStartedUpdatingResource,
+            onFinishedUpdatingResource);
+        if (std::holds_alternative<Error>(result)) {
+            auto error = std::get<Error>(std::move(result));
+            error.addEntry();
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+        }
+
+        // Add to be considered.
+        mtxGpuResources.second.shaderResources.shaderCpuReadWriteResources[sShaderResourceName] =
+            std::get<ShaderCpuReadWriteResourceUniquePtr>(std::move(result));
+    }
+
+    void Material::markShaderCpuReadWriteResourceAsNeedsUpdate(const std::string& sShaderResourceName) {
+        std::scoped_lock guard(mtxInternalResources.first, mtxGpuResources.first);
+
+        // Make sure shader resources allocated.
+        if (!bIsShaderResourcesAllocated) {
+            return; // silently exit, this is not an error
+        }
+
+        // Make sure PSO is initialized.
+        if (!mtxInternalResources.second.pUsedPso.isInitialized()) {
+            return; // silently exit, this is not an error
+        }
+
+        // Make sure there is a resource with this name.
+        auto it =
+            mtxGpuResources.second.shaderResources.shaderCpuReadWriteResources.find(sShaderResourceName);
+        if (it == mtxGpuResources.second.shaderResources.shaderCpuReadWriteResources.end()) {
+            return; // silently exit, this is not an error
+        }
+
+        // Mark as needs update.
+        it->second.markAsNeedsUpdate();
+    }
+
+    void* Material::onStartUpdatingShaderMeshConstants() {
+        mtxShaderMaterialDataConstants.first.lock();
+        return &mtxShaderMaterialDataConstants.second;
+    }
+
+    void Material::onFinishedUpdatingShaderMeshConstants() { mtxShaderMaterialDataConstants.first.unlock(); }
+
+    void Material::setDiffuseColor(const glm::vec3& diffuseColor) {
+        std::scoped_lock guard(mtxShaderMaterialDataConstants.first);
+
+        mtxShaderMaterialDataConstants.second.diffuseColor = diffuseColor;
+
+        markShaderCpuReadWriteResourceAsNeedsUpdate(sMaterialShaderConstantBufferName);
+    }
+
+    void Material::setOpacity(float opacity) {
+        if (!bUseTransparency) [[unlikely]] {
+            Logger::get().error(
+                fmt::format(
+                    "material \"{}\" was requested to set opacity but it does not use transparency",
+                    sMaterialName),
+                sMaterialLogCategory);
+            return;
+        }
+
+        std::scoped_lock guard(mtxShaderMaterialDataConstants.first);
+
+        mtxShaderMaterialDataConstants.second.opacity = std::clamp(opacity, 0.0F, 1.0F);
+
+        markShaderCpuReadWriteResourceAsNeedsUpdate(sMaterialShaderConstantBufferName);
+    }
+
+    std::string Material::getVertexShaderName() const { return sVertexShaderName; }
+
+    std::string Material::getPixelShaderName() const { return sPixelShaderName; }
 
 } // namespace ne

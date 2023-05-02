@@ -24,6 +24,9 @@ namespace ne {
             case (ShaderMacro::USE_NORMAL_TEXTURE):
                 vMacroNames.push_back("USE_NORMAL_TEXTURE");
                 break;
+            case (ShaderMacro::USE_MATERIAL_TRANSPARENCY):
+                vMacroNames.push_back("USE_MATERIAL_TRANSPARENCY");
+                break;
             }
         }
 
@@ -58,6 +61,26 @@ namespace ne {
         }
 
         return configurations;
+    }
+
+    std::set<std::set<ShaderMacro>> ShaderMacroConfigurations::duplicateAndAppendConfiguration(
+        const std::set<std::set<ShaderMacro>>& toDuplicateSets,
+        const std::set<ShaderMacro>& toAppendToDuplicated) {
+        std::set<std::set<ShaderMacro>> resultingSets;
+
+        for (const auto& set : toDuplicateSets) {
+            // Append the original set.
+            resultingSets.insert(set);
+
+            // Append the duplicated/modified set.
+            auto duplicatedSet = set;
+            for (const auto& macro : toAppendToDuplicated) {
+                duplicatedSet.insert(macro);
+            }
+            resultingSets.insert(std::move(duplicatedSet));
+        }
+
+        return resultingSets;
     }
 
     unsigned long long

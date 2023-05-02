@@ -58,7 +58,7 @@ namespace ne {
         std::scoped_lock guard(mtxShaderMeshDataConstants.first);
         mtxShaderMeshDataConstants.second.world = getWorldMatrix();
 
-        // Mark as updated.
+        // Mark as shader constants resources as "needs update".
         markShaderCpuReadWriteResourceAsNeedsUpdate(sMeshShaderConstantBufferName);
     }
 
@@ -256,7 +256,8 @@ namespace ne {
             return;
         }
 
-        prepareDataForBindingToShaderCpuReadWriteResource(
+        // Set object constant buffer.
+        setShaderCpuReadWriteResourceBindingData(
             sMeshShaderConstantBufferName,
             sizeof(MeshShaderConstants),
             [this]() -> void* { return onStartUpdatingShaderMeshConstants(); },
@@ -481,7 +482,7 @@ namespace ne {
 
     void MeshNode::onFinishedUpdatingShaderMeshConstants() { mtxShaderMeshDataConstants.first.unlock(); }
 
-    void MeshNode::prepareDataForBindingToShaderCpuReadWriteResource(
+    void MeshNode::setShaderCpuReadWriteResourceBindingData(
         const std::string& sShaderResourceName,
         size_t iResourceSizeInBytes,
         const std::function<void*()>& onStartedUpdatingResource,
@@ -489,7 +490,7 @@ namespace ne {
         // Make sure the node is spawned.
         std::scoped_lock spawnGuard(mtxSpawning);
         if (!isSpawned()) [[unlikely]] {
-            Error error("binding data to shader resources should be called in `onSpawn` function when the "
+            Error error("binding data to shader resources should be called in `onSpawning` function when the "
                         "node is spawned");
             error.showError();
             throw std::runtime_error(error.getFullErrorMessage());
@@ -543,10 +544,14 @@ namespace ne {
     }
 
     void MeshNode::markShaderCpuReadWriteResourceAsNeedsUpdate(const std::string& sShaderResourceName) {
+        // In this function we silently exit if some condition is not met and don't log anything
+        // intentionally because the user does not check for conditions to be met - it's simpler for the user
+        // to write code this way. Moreover, unmet conditions are not errors in this function.
+
         // Make sure the node is spawned.
         std::scoped_lock spawnGuard(mtxSpawning);
         if (!isSpawned()) {
-            return; // silently exit
+            return; // silently exit, this is not an error
         }
         // keep spawn locked
 
@@ -556,7 +561,7 @@ namespace ne {
         auto it =
             mtxGpuResources.second.shaderResources.shaderCpuReadWriteResources.find(sShaderResourceName);
         if (it == mtxGpuResources.second.shaderResources.shaderCpuReadWriteResources.end()) {
-            return; // silently exit
+            return; // silently exit, this is not an error
         }
 
         // Mark as needs update.
@@ -564,7 +569,7 @@ namespace ne {
     }
 
     void MeshNode::setVisibility(bool bVisible) {
-        std::scoped_lock guard(mtxSpawning); // don't change visibility while we are being spawned
+        std::scoped_lock guard(mtxSpawning); // don't change visibility while we are being spawned/despawned
 
         if (bIsVisible == bVisible) {
             return;
@@ -572,7 +577,9 @@ namespace ne {
 
         bIsVisible = bVisible;
 
-        pMaterial->onSpawnedMeshNodeChangedVisibility(this, !bIsVisible);
+        if (isSpawned()) {
+            pMaterial->onSpawnedMeshNodeChangedVisibility(this, !bIsVisible);
+        }
     }
 
     bool MeshNode::isVisible() const { return bIsVisible; }

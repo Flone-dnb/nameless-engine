@@ -184,8 +184,10 @@ namespace ne {
         glm::vec3 cameraRotation = glm::vec3(0.0F, 0.0F, 0.0F);
 
         /**
-         * Last input specified in @ref setFreeCameraForwardMovement (X) and
-         * @ref setFreeCameraRightMovement (Y).
+         * Last input specified in
+         * @ref setFreeCameraForwardMovement (X),
+         * @ref setFreeCameraRightMovement (Y) and
+         * @ref setFreeCameraWorldUpMovement (Z).
          */
         glm::vec3 lastInputDirection = glm::vec3(0.0F, 0.0F, 0.0F);
 

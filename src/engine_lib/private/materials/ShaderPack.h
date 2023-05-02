@@ -82,13 +82,24 @@ namespace ne {
          * Returns a shader that matches the current renderer's shader configuration and the specified
          * additional configuration.
          *
-         * Since renderer's shader configuration usually does not contain all needed macros for a shader,
-         * you should specify an additional configuration that will be considered together with the
+         * @remark Since renderer's shader configuration usually does not contain all needed macros for a
+         * shader, you should specify an additional configuration that will be considered together with the
          * renderer's configuration to find a matching shader that has uses this configuration (macros).
          *
-         * @param additionalConfiguration
+         * @remark Some macros that the renderer defines in the current renderer shader configuration
+         * will not be appended to the specified configuration if they are not applicable
+         * (i.e. if the renderer defines texture filtering macro but your configuration does not
+         * have a diffuse texture macro - adding texture filtering macro is useless)
+         * see ShaderMacro::isMacroShouldBeConsideredInConfiguration.
          *
-         * @return Shader.
+         * @remark If the a shader that matches the target configuration is not found an error
+         * will be shown and an exception will be thrown.
+         *
+         * @param additionalConfiguration Macros that the renderer does not define but that are
+         * needed by the current configuration for the shader. If this array contains a macro that
+         * the renderer already defines an error will be shown and an exception will be thrown.
+         *
+         * @return Found shader.
          */
         std::shared_ptr<Shader> getShader(const std::set<ShaderMacro>& additionalConfiguration);
 

@@ -21,6 +21,7 @@ namespace ne {
         TEXTURE_FILTERING_ANISOTROPIC,
         USE_DIFFUSE_TEXTURE,
         USE_NORMAL_TEXTURE,
+        USE_MATERIAL_TRANSPARENCY,
         // add new entries here...
         // !! also add new entries to shaderMacrosToText !!
         // !! also add new entries to valid configuration combinations below !!
@@ -79,11 +80,11 @@ namespace ne {
          * // 7. {NORMAL_TEXTURE}
          * @endcode
          *
-         * @param constantSets               Sets that will be in the resulting set.
-         * @param macroSets                  Sets to append macros to.
-         * @param appendToEachSet            Each macro from this set will be added to each set of the
-         * first argument.
-         * @param bIncludeEmptyConfiguration Whether to add empty configuration to resulting sets or not.
+         * @param constantSets                   Sets that will be in the resulting set.
+         * @param macroSets                      Sets to append macros to.
+         * @param appendToEachSet                Each macro from this set will be added to each set of the
+         * second argument.
+         * @param bIncludeEmptyConfiguration     Whether to add empty configuration to resulting sets or not.
          *
          * @return Resulting sets (modified macroSets argument).
          */
@@ -92,6 +93,20 @@ namespace ne {
             const std::set<std::set<ShaderMacro>>& macroSets,
             const std::set<ShaderMacro>& appendToEachSet,
             bool bIncludeEmptyConfiguration);
+
+        /**
+         * Takes an array of shader configurations, duplicates it and appends additional macros to the
+         * duplicated set.
+         *
+         * @param toDuplicateSets       Original sets to duplicate.
+         * @param toAppendToDuplicated  Macros to add to each set of the duplicated sets.
+         *
+         * @return Two sets: the original sets and the original sets with the specified macros appended
+         * to each set.
+         */
+        static std::set<std::set<ShaderMacro>> duplicateAndAppendConfiguration(
+            const std::set<std::set<ShaderMacro>>& toDuplicateSets,
+            const std::set<ShaderMacro>& toAppendToDuplicated);
 
         /**
          * Defines dependent macros that should be considered only when a specific macro is defined.
@@ -142,13 +157,15 @@ namespace ne {
 
         /** Valid combinations of pixel shader macros. */
         static inline const std::set<std::set<ShaderMacro>> validPixelShaderMacroConfigurations =
-            combineConfigurations(
-                {{ShaderMacro::USE_NORMAL_TEXTURE}},
-                {{ShaderMacro::USE_DIFFUSE_TEXTURE}},
-                {ShaderMacro::TEXTURE_FILTERING_POINT,
-                 ShaderMacro::TEXTURE_FILTERING_LINEAR,
-                 ShaderMacro::TEXTURE_FILTERING_ANISOTROPIC},
-                true);
+            duplicateAndAppendConfiguration(
+                combineConfigurations(
+                    {{ShaderMacro::USE_NORMAL_TEXTURE}},
+                    {{ShaderMacro::USE_DIFFUSE_TEXTURE}},
+                    {ShaderMacro::TEXTURE_FILTERING_POINT,
+                     ShaderMacro::TEXTURE_FILTERING_LINEAR,
+                     ShaderMacro::TEXTURE_FILTERING_ANISOTROPIC},
+                    true),
+                {ShaderMacro::USE_MATERIAL_TRANSPARENCY});
 
         /** Valid combinations of compute shader macros. */
         static inline const std::set<std::set<ShaderMacro>> validComputeShaderMacroConfigurations = {{}};

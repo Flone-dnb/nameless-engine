@@ -389,8 +389,20 @@ namespace ne {
                 std::scoped_lock materialsGuard(pMtxMaterials->first);
 
                 for (const auto& pMaterial : pMtxMaterials->second) {
-                    // TODO: set material resources
+                    // Set material's GPU resources.
+                    const auto pMtxMaterialGpuResources = pMaterial->getMaterialGpuResources();
+                    std::scoped_lock materialGpuResourcesGuard(pMtxMaterialGpuResources->first);
 
+                    // Set material's read/write shader resources (`cbuffer`s for example).
+                    for (const auto& [sResourceName, pShaderReadWriteResource] :
+                         pMtxMaterialGpuResources->second.shaderResources.shaderCpuReadWriteResources) {
+                        reinterpret_cast<HlslShaderCpuReadWriteResource*>(
+                            pShaderReadWriteResource.getResource())
+                            ->setToPipeline(
+                                pCommandList, pMtxCurrentFrameResource->second.iCurrentFrameResourceIndex);
+                    }
+
+                    // Draw mesh node.
                     drawMeshNodes(pMaterial, pMtxCurrentFrameResource->second.iCurrentFrameResourceIndex);
                 }
             }

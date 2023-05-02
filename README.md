@@ -351,6 +351,7 @@ Here is the list of base features that needs to be implemented in order for you 
         - [ ] PBR (Physically based rendering)
         - [ ] HDR (High dynamic range)
         - [ ] Decals
+        - [ ] Transparent objects drawing order fix (either draw back-to-front or use some order-independent method)
         - [ ] Emissive materials
     - [ ] Deferred rendering
         - [ ] Transparent materials
@@ -372,6 +373,7 @@ Here is the list of base features that needs to be implemented in order for you 
         - [ ] PBR (Physically based rendering)
         - [ ] HDR (High dynamic range)
         - [ ] Decals
+        - [ ] Transparent objects drawing order fix (either draw back-to-front or use some order-independent method)
         - [ ] Emissive materials
     - [ ] GUI
 - [ ] Profiler

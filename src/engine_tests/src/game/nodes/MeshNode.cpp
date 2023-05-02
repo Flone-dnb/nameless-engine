@@ -678,9 +678,9 @@ TEST_CASE("shader read/write resources exist only when MeshNode is spawned") {
                 // Spawn mesh node.
                 getWorldRootNode()->addChildNode(pMeshNode);
 
-                // Make sure there is 1 resource.
-                REQUIRE(pMtxResources->second.vAll.size() == 1);
-                REQUIRE(pMtxResources->second.toBeUpdated.size() == 1);
+                // Make sure there are 2 resources (meshData and materialData).
+                REQUIRE(pMtxResources->second.vAll.size() == 2);
+                REQUIRE(pMtxResources->second.toBeUpdated.size() == 2);
 
                 // Check VRAM.
                 const auto iVramSpawned = getWindow()->getRenderer()->getUsedVideoMemoryInMb();

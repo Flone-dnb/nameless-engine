@@ -24,6 +24,19 @@ namespace ne {
         friend class ShaderManager;
 
     public:
+        /** Groups used data. */
+        struct InternalResources {
+            /** Whether @ref renderConfiguration was set or not. */
+            bool bIsRenderConfigurationSet = false;
+
+            /** Last set renderer's configuration. */
+            std::set<ShaderMacro> renderConfiguration;
+
+            /** Stores shaders of this pack (pairs of "shader configuration" - "shader"). */
+            std::unordered_map<std::set<ShaderMacro>, std::shared_ptr<Shader>, ShaderMacroSetHash>
+                shadersInPack;
+        };
+
         ShaderPack() = delete;
         ShaderPack(const ShaderPack&) = delete;
         ShaderPack& operator=(const ShaderPack&) = delete;
@@ -98,10 +111,14 @@ namespace ne {
          * @param additionalConfiguration Macros that the renderer does not define but that are
          * needed by the current configuration for the shader. If this array contains a macro that
          * the renderer already defines an error will be shown and an exception will be thrown.
+         * @param fullShaderConfiguration Output. Full shader configuration (might include renderer's
+         * configuration) of the found shader.
          *
          * @return Found shader.
          */
-        std::shared_ptr<Shader> getShader(const std::set<ShaderMacro>& additionalConfiguration);
+        std::shared_ptr<Shader> getShader(
+            const std::set<ShaderMacro>& additionalConfiguration,
+            std::set<ShaderMacro>& fullShaderConfiguration);
 
         /**
          * Returns unique name of this shader.
@@ -117,20 +134,14 @@ namespace ne {
          */
         ShaderType getShaderType();
 
+        /**
+         * Returns internal resources that this shader pack uses.
+         *
+         * @return Internal resources.
+         */
+        std::pair<std::mutex, InternalResources>* getInternalResources();
+
     private:
-        /** Groups used data. */
-        struct InternalResources {
-            /** Whether @ref renderConfiguration was set or not. */
-            bool bIsRenderConfigurationSet = false;
-
-            /** Last set renderer's configuration. */
-            std::set<ShaderMacro> renderConfiguration;
-
-            /** Stores shaders of this pack (pairs of "shader configuration" - "shader"). */
-            std::unordered_map<std::set<ShaderMacro>, std::shared_ptr<Shader>, ShaderMacroSetHash>
-                shadersInPack;
-        };
-
         /**
          * Constructor to create an empty shader pack.
          *

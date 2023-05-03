@@ -177,7 +177,9 @@ namespace ne {
         return !bAtLeastOneWasReleased;
     }
 
-    std::shared_ptr<Shader> ShaderPack::getShader(const std::set<ShaderMacro>& additionalConfiguration) {
+    std::shared_ptr<Shader> ShaderPack::getShader(
+        const std::set<ShaderMacro>& additionalConfiguration,
+        std::set<ShaderMacro>& fullShaderConfiguration) {
         std::scoped_lock guard(mtxInternalResources.first);
 
         // Make sure the renderer's configuration was previously set.
@@ -217,26 +219,29 @@ namespace ne {
         }
 
         // Find a shader which configuration is equal to the configuration we are looking for.
-        for (auto& [configuration, pShader] : mtxInternalResources.second.shadersInPack) {
-            if (configuration == targetShaderConfiguration) {
-                // Found needed shader.
-                return pShader;
-            }
+        auto it = mtxInternalResources.second.shadersInPack.find(targetShaderConfiguration);
+        if (it == mtxInternalResources.second.shadersInPack.end()) [[unlikely]] {
+            // Nothing found.
+            Error error(fmt::format(
+                "unable to find a shader in shader pack \"{}\" that matches the specified shader "
+                "configuration: {}",
+                sShaderName,
+                formatShaderMacros(convertShaderMacrosToText(targetShaderConfiguration))));
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
         }
 
-        // Nothing found, raise an exception.
-        Error error(fmt::format(
-            "unable to find a shader in shader pack \"{}\" that matches the specified shader configuration: "
-            "{}",
-            sShaderName,
-            formatShaderMacros(convertShaderMacrosToText(targetShaderConfiguration))));
-        error.showError();
-        throw std::runtime_error(error.getFullErrorMessage());
+        fullShaderConfiguration = targetShaderConfiguration;
+        return it->second;
     }
 
     std::string ShaderPack::getShaderName() const { return sShaderName; }
 
     ShaderType ShaderPack::getShaderType() { return shaderType; }
+
+    std::pair<std::mutex, ShaderPack::InternalResources>* ShaderPack::getInternalResources() {
+        return &mtxInternalResources;
+    }
 
     ShaderPack::ShaderPack(const std::string& sShaderName, ShaderType shaderType) {
         this->sShaderName = sShaderName;

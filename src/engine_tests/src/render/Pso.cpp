@@ -3,13 +3,12 @@
 #include "game/GameInstance.h"
 #include "game/Window.h"
 #include "game/nodes/MeshNode.h"
-#include "render/directx/pso/DirectXPso.h"
-#include "materials/EngineShaderNames.hpp"
+#include "render/general/pso/Pso.h"
 
 // External.
 #include "catch2/catch_test_macros.hpp"
 
-TEST_CASE("root signature merge is correct") {
+TEST_CASE("make sure used vertex/pixel shader configuration of MeshNode is correct") {
     using namespace ne;
 
     class TestGameInstance : public GameInstance {
@@ -38,28 +37,24 @@ TEST_CASE("root signature merge is correct") {
                 getWorldRootNode()->addChildNode(pMeshNode);
 
                 // Get initialized PSO.
-                const auto pPso = dynamic_cast<DirectXPso*>(pMeshNode->getMaterial()->getUsedPso());
-                if (pPso == nullptr) {
-                    INFO("expected a DirectX renderer");
-                    REQUIRE(false);
-                }
+                const auto pPso = pMeshNode->getMaterial()->getUsedPso();
 
-                const auto pMtxPsoInternalResources = pPso->getInternalResources();
-                {
-                    std::scoped_lock guard(pMtxPsoInternalResources->first);
-                    auto& params = pMtxPsoInternalResources->second.rootParameterIndices;
+                // Check vertex shader configuration.
+                const auto optionalFullVertexShaderConfiguration =
+                    pPso->getCurrentShaderConfiguration(ShaderType::VERTEX_SHADER);
+                REQUIRE(optionalFullVertexShaderConfiguration.has_value());
 
-                    REQUIRE(params.size() == 3);
+                const auto fullVertexShaderConfiguration = optionalFullVertexShaderConfiguration.value();
+                REQUIRE(fullVertexShaderConfiguration.empty());
 
-                    auto it = params.find("frameData");
-                    REQUIRE(it != params.end());
+                // Check vertex shader configuration.
+                const auto optionalFullPixelShaderConfiguration =
+                    pPso->getCurrentShaderConfiguration(ShaderType::PIXEL_SHADER);
+                REQUIRE(optionalFullPixelShaderConfiguration.has_value());
 
-                    it = params.find("meshData");
-                    REQUIRE(it != params.end());
+                const auto fullPixelShaderConfiguration = optionalFullPixelShaderConfiguration.value();
+                REQUIRE(fullPixelShaderConfiguration.empty());
 
-                    it = params.find("materialData");
-                    REQUIRE(it != params.end());
-                }
                 getWindow()->close();
             });
         }

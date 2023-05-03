@@ -35,6 +35,7 @@ set(PROJECT_SOURCES
     src/materials/Material.cpp
     src/io/Serializable.cpp
     src/render/RenderSettings.cpp
+    src/render/Pso.cpp
     src/math/GLMath.cpp
     src/math/MathHelpers.cpp
     src/game/GameManager.cpp

@@ -68,6 +68,15 @@ namespace ne {
         std::string getPixelShaderName();
 
         /**
+         * Returns a shader configuration of the currently used shader.
+         *
+         * @param shaderType Shader type to get configuration of.
+         *
+         * @return Empty if a shader of this type is not used by this PSO, otherwise shader configuration.
+         */
+        std::optional<std::set<ShaderMacro>> getCurrentShaderConfiguration(ShaderType shaderType);
+
+        /**
          * Tells whether this PSO is using pixel blending or not.
          *
          * @return Whether this PSO is using pixel blending or not.
@@ -105,6 +114,16 @@ namespace ne {
             const std::string& sVertexShaderName,
             const std::string& sPixelShaderName,
             bool bUsePixelBlending);
+
+        /**
+         * Saves shader configuration of the currently used shader.
+         *
+         * @remark This should be called by derived classes when they start to use some shader.
+         *
+         * @param shaderType        Type of the shader being currently used.
+         * @param fullConfiguration Shader's full (might include renderer's configuration) configuration.
+         */
+        void saveUsedShaderConfiguration(ShaderType shaderType, std::set<ShaderMacro>&& fullConfiguration);
 
         /**
          * Returns unique identifier for this PSO.
@@ -187,6 +206,9 @@ namespace ne {
          * Must be used with mutex.
          */
         std::pair<std::mutex, std::set<Material*>> mtxMaterialsThatUseThisPso;
+
+        /** Full shader configuration (might include renderer's configuration) of a currently used shader. */
+        std::unordered_map<ShaderType, std::set<ShaderMacro>> usedShaderConfiguration;
 
         /** Do not delete (free) this pointer. PSO manager that owns this PSO. */
         PsoManager* pPsoManager;

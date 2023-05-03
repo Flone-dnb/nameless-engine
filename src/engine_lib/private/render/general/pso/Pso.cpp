@@ -31,6 +31,10 @@ namespace ne {
             constructUniquePsoIdentifier(sVertexShaderName, sPixelShaderName, bUsePixelBlending);
     }
 
+    void Pso::saveUsedShaderConfiguration(ShaderType shaderType, std::set<ShaderMacro>&& fullConfiguration) {
+        usedShaderConfiguration[shaderType] = std::move(fullConfiguration);
+    }
+
     Pso::~Pso() {
         // Make sure the renderer is no longer using this PSO or its resources.
         Logger::get().info(
@@ -52,6 +56,15 @@ namespace ne {
     std::string Pso::getVertexShaderName() { return sVertexShaderName; }
 
     std::string Pso::getPixelShaderName() { return sPixelShaderName; }
+
+    std::optional<std::set<ShaderMacro>> Pso::getCurrentShaderConfiguration(ShaderType shaderType) {
+        auto it = usedShaderConfiguration.find(shaderType);
+        if (it == usedShaderConfiguration.end()) {
+            return {};
+        }
+
+        return it->second;
+    }
 
     bool Pso::isUsingPixelBlending() const { return bIsUsingPixelBlending; }
 

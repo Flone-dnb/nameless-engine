@@ -156,10 +156,12 @@ namespace ne {
         const auto pPixelShaderPack = getShader(ShaderType::PIXEL_SHADER).value();
 
         // Get shaders for the current configuration.
-        auto pVertexShader =
-            std::dynamic_pointer_cast<HlslShader>(pVertexShaderPack->getShader(additionalVertexShaderMacros));
-        auto pPixelShader =
-            std::dynamic_pointer_cast<HlslShader>(pPixelShaderPack->getShader(additionalPixelShaderMacros));
+        std::set<ShaderMacro> fullVertexShaderConfiguration;
+        std::set<ShaderMacro> fullPixelShaderConfiguration;
+        auto pVertexShader = std::dynamic_pointer_cast<HlslShader>(
+            pVertexShaderPack->getShader(additionalVertexShaderMacros, fullVertexShaderConfiguration));
+        auto pPixelShader = std::dynamic_pointer_cast<HlslShader>(
+            pPixelShaderPack->getShader(additionalPixelShaderMacros, fullPixelShaderConfiguration));
 
         // Get DirectX renderer.
         DirectXRenderer* pDirectXRenderer = dynamic_cast<DirectXRenderer*>(getRenderer());
@@ -267,6 +269,8 @@ namespace ne {
         mtxInternalResources.second.additionalVertexShaderMacros = additionalVertexShaderMacros;
         mtxInternalResources.second.additionalPixelShaderMacros = additionalPixelShaderMacros;
         mtxInternalResources.second.bIsReadyForUsage = true;
+        saveUsedShaderConfiguration(ShaderType::VERTEX_SHADER, std::move(fullVertexShaderConfiguration));
+        saveUsedShaderConfiguration(ShaderType::PIXEL_SHADER, std::move(fullPixelShaderConfiguration));
 
         return {};
     } // namespace ne

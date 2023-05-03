@@ -18,6 +18,7 @@ include(${RELATIVE_CMAKE_HELPERS_PATH}/utils.cmake)
 
 set(PROJECT_WIN32_SOURCES
     src/render/directx/DirectXResourceManager.cpp
+    src/materials/hlsl/RootSignatureGenerator.cpp
     # add Windows specific test files here...
 )
 

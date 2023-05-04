@@ -88,7 +88,7 @@ namespace ne RNAMESPACE() {
          *
          * @return Total amount of materials.
          */
-        static size_t getTotalMaterialCount();
+        static size_t getCurrentMaterialCount();
 
         /**
          * Creates a new material that uses the specified shaders.

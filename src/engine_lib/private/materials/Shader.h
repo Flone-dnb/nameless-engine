@@ -25,11 +25,11 @@ namespace ne {
         virtual ~Shader() = default;
 
         /**
-         * Returns the total amount of loaded into the memory shaders.
+         * Returns the current amount shaders (vertex, pixel, etc.) loaded into the memory (RAM/VRAM).
          *
-         * @return Total amount of loaded into the memory shaders.
+         * @return Current amount of shaders loaded into the memory (RAM/VRAM).
          */
-        static size_t getTotalAmountOfLoadedShaders();
+        static size_t getCurrentAmountOfShadersInMemory();
 
         /**
          * Tests if the shader cache for this shader is corrupted or not.

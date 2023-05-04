@@ -71,7 +71,7 @@ namespace ne {
         iTotalMaterialCount.fetch_sub(1);
     }
 
-    size_t Material::getTotalMaterialCount() { return iTotalMaterialCount.load(); }
+    size_t Material::getCurrentMaterialCount() { return iTotalMaterialCount.load(); }
 
     void Material::onMeshNodeSpawned(MeshNode* pMeshNode) {
         onSpawnedMeshNodeStartedUsingMaterial(pMeshNode);

@@ -33,8 +33,9 @@ namespace ne {
         auto it = pMtxInternalPsoResources->second.rootParameterIndices.find(sShaderResourceName);
         if (it == pMtxInternalPsoResources->second.rootParameterIndices.end()) [[unlikely]] {
             return Error(fmt::format(
-                "unable to find shader resource by the specified name \"{}\", make sure resource name is "
-                "correct",
+                "unable to find a shader resource by the specified name \"{}\", make sure the resource name "
+                "is correct and that this resource is actually being used inside of your shader (otherwise "
+                "the shader resource might be optimized out and the engine will not be able to see it)",
                 sShaderResourceName));
         }
 

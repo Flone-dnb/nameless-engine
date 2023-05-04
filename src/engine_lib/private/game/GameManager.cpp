@@ -154,7 +154,7 @@ namespace ne {
 
         // Explicitly destroy the renderer to check how much shaders left in the memory.
         pRenderer = nullptr;
-        const auto iTotalShadersInMemory = Shader::getTotalAmountOfLoadedShaders();
+        const auto iTotalShadersInMemory = Shader::getCurrentAmountOfShadersInMemory();
         if (iTotalShadersInMemory != 0) [[unlikely]] {
             Logger::get().error(
                 fmt::format(
@@ -164,7 +164,7 @@ namespace ne {
         }
 
         // Make sure there are no materials exist.
-        const auto iTotalMaterialCount = Material::getTotalMaterialCount();
+        const auto iTotalMaterialCount = Material::getCurrentMaterialCount();
         if (iTotalMaterialCount != 0) [[unlikely]] {
             Logger::get().error(
                 fmt::format(

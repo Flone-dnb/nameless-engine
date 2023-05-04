@@ -29,7 +29,7 @@ namespace ne {
         this->sSourceFileHash = sSourceFileHash;
     }
 
-    size_t Shader::getTotalAmountOfLoadedShaders() { return iTotalShaderInMemoryCount.load(); }
+    size_t Shader::getCurrentAmountOfShadersInMemory() { return iTotalShaderInMemoryCount.load(); }
 
     void Shader::notifyShaderBytecodeLoadedIntoMemory() { iTotalShaderInMemoryCount.fetch_add(1); }
 

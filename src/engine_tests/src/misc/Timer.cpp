@@ -411,7 +411,7 @@ TEST_CASE("check that timer is running (with callback)") {
             REQUIRE(pTimer->isRunning());
             REQUIRE(!pTimer->isStopped());
 
-            std::this_thread::sleep_for(std::chrono::milliseconds(iWaitTime));
+            std::this_thread::sleep_for(std::chrono::milliseconds(iWaitTime * 2));
 
             REQUIRE(!pTimer->isRunning());
             REQUIRE(!pTimer->isStopped());

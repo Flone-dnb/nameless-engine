@@ -82,11 +82,41 @@ namespace ne {
          * Adds a function to be executed on the main thread next time @ref onBeforeNewFrame
          * is called.
          *
-         * TODO: introduce a `std::move_only_function` overload (+ in the game instance)?
+         * @warning Don't capture `gc` pointers in `std::function`, this is not supported and
+         * will cause memory leaks/crashes!
          *
-         * @warning If you are using a member function as a task you need to make
-         * sure that the owner object of this member function will not be deleted until
-         * this task is finished.
+         * @warning If you are using member functions/fields inside of the task you need to make
+         * sure that the owner object of these member functions/fields will not be deleted until
+         * this task is finished. If you use GameInstance or Node member functions/fields inside of
+         * the task and submitting a deferred tasks from the main thread then
+         * ignore this warning, they are safe to use in deferred tasks and will not be
+         * deleted until the task is finished. If you are submitting a deferred task
+         * that operates on a GameInstance/Node from a non main thread then you need to do a few
+         * additional checks inside of your deferred task, for example:
+         * @code
+         * // We are on a non-main thread inside of a node:
+         * addDeferredTask([this, iNodeId](){ // capturing `this` to use `Node` (self) functions, also
+         * capturing self ID
+         *     // We are inside of a deferred task (on the main thread) and we don't know if the node (`this`)
+         *     // was garbage collected or not because we submitted our task from a non-main thread.
+         *     // REMEMBER: we can't capture `gc` pointers in `std::function`, this is not supported
+         *     // and will cause memory leaks/crashes!
+         *
+         *     const auto pGameManager = GameManager::get(); // using engine's private class `GameManager`
+         *
+         *     // `pGameManager` is guaranteed to be valid inside of a deferred task.
+         *     // Otherwise, if running this code outside of a deferred task you need to do 2 checks:
+         *     // if (pGameManager == nullptr) return;
+         *     // if (pGameManager->isBeingDestroyed()) return;
+         *
+         *      if (!pGameManager->isNodeSpawned(iNodeId)){
+         *          // Node was despawned and it may be dangerous to run the callback.
+         *          return;
+         *       }
+         *
+         *       // Can safely interact with `this` (self) - we are on the main thread.
+         *   });
+         * @endcode
          *
          * @remark In the task you don't need to check if the game is being destroyed,
          * the engine makes sure all tasks are finished before the game is destroyed.
@@ -99,10 +129,11 @@ namespace ne {
         /**
          * Adds a function to be executed on the thread pool.
          *
-         * TODO: introduce a `std::move_only_function` overload (+ in the game instance)?
+         * @warning Don't capture `gc` pointers in `std::function`, this is not supported and
+         * will cause memory leaks/crashes!
          *
-         * @warning If you are using a member function as a task you need to make
-         * sure that the owner object of this member function will not be deleted until
+         * @warning If you are using a member functions/fields inside of the task you need to make
+         * sure that the owner object of these member functions/fields will not be deleted until
          * this task is finished.
          *
          * @remark In the task you don't need to check if the game is being destroyed,

@@ -289,14 +289,16 @@ namespace ne {
             }
         }
 
-        // Spawn self first and only then child nodes.
+        // Notify world in order for node ID to be registered before running custom user spawn logic.
+        pWorld->onNodeSpawned(this);
+
+        // Do custom user spawn logic.
+        onSpawning();
+
+        // We spawn self first and only then child nodes.
         // This spawn order is required for some nodes and engine parts to work correctly.
         // With this spawn order we will not make "holes" in the world's node tree
         // (i.e. when node is spawned, node's parent is not spawned but parent's parent node is spawned).
-        onSpawning();
-
-        // Notify world.
-        pWorld->onNodeSpawned(this);
 
         // Spawn children.
         {

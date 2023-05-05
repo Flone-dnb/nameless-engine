@@ -81,7 +81,7 @@ namespace ne {
         // Make sure no GPU resource is used.
         pRenderer->waitForGpuToFinishWorkUpToThisPoint();
 
-        // Destroy world if needed.
+        // Destroy world if it exists.
         {
             std::scoped_lock guard(mtxWorld.first);
 
@@ -90,26 +90,27 @@ namespace ne {
                 // (causes every node to queue a deferred task for despawning from world)
                 mtxWorld.second->destroyWorld();
 
-                // Don't accept any new deferred tasks.
+                // Don't accept any new deferred tasks anymore.
                 bShouldAcceptNewDeferredTasks = false;
 
-                // Process all "node despawned" tasks that will notify world.
+                // Process all "node despawned" tasks that notify the world.
                 executeDeferredTasks();
 
-                // Can safely destroy world object now.
+                // Can safely destroy the world object now.
                 mtxWorld.second = nullptr;
             }
         }
 
-        // Make sure thread pool and deferred tasks are finished.
-        threadPool.stop();
+        // Make sure the thread pool and all deferred tasks are finished.
+        threadPool.stop(); // they might queue new deferred tasks
+        bShouldAcceptNewDeferredTasks = false;
         executeDeferredTasks();
 
-        // Explicitly destroy game instance before running GC so that if game instance holds any GC
-        // pointers they will be cleared.
+        // Explicitly destroy the game instance before running the GC so that if the game instance holds
+        // any GC pointers they will be cleared/removed.
         pGameInstance = nullptr;
 
-        // Run GC for the last time.
+        // Run the GC for the last time.
         Logger::get().info(
             "Game object is being destroyed, running garbage collector...", sGarbageCollectorLogCategory);
         gc_collector()->fullCollect();
@@ -122,11 +123,6 @@ namespace ne {
                 gc_collector()->getLastFreedObjectsCount(),
                 gc_collector()->getAliveObjectsCount()),
             sGarbageCollectorLogCategory);
-
-        // ONLY AFTER GC has finished, all tasks were finished and all nodes were deleted.
-        // Clear global game pointer.
-        Logger::get().info("clearing static GameManager pointer", sGameLogCategory);
-        pLastCreatedGameManager = nullptr;
 
         // Make sure there are no nodes alive.
         const auto iNodesAlive = Node::getAliveNodeCount();
@@ -152,8 +148,15 @@ namespace ne {
                 sGameLogCategory);
         }
 
+        // ONLY AFTER THE GC has finished, all tasks were finished and all nodes were deleted.
+        // Clear global game pointer.
+        Logger::get().info("clearing static GameManager pointer", sGameLogCategory);
+        pLastCreatedGameManager = nullptr;
+
         // Explicitly destroy the renderer to check how much shaders left in the memory.
         pRenderer = nullptr;
+
+        // Make sure there are no shaders left in memory.
         const auto iTotalShadersInMemory = Shader::getCurrentAmountOfShadersInMemory();
         if (iTotalShadersInMemory != 0) [[unlikely]] {
             Logger::get().error(

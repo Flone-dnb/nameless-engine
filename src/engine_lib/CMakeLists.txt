@@ -146,6 +146,7 @@ set(PROJECT_SOURCES
     private/game/camera/TransientCamera.cpp
     public/game/camera/CameraManager.h
     private/game/camera/CameraManager.cpp
+    public/game/callbacks/NodeFunction.hpp
     private/game/nodes/Node.cpp
     public/game/nodes/Node.h
     private/game/nodes/SpatialNode.cpp

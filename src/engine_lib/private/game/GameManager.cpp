@@ -15,6 +15,7 @@
 #include "render/general/pso/PsoManager.h"
 #include "io/FieldSerializerManager.h"
 #include "game/camera/CameraManager.h"
+#include "game/nodes/Node.h"
 
 // External.
 #include "fmt/core.h"

@@ -40,6 +40,7 @@ set(PROJECT_SOURCES
     src/math/MathHelpers.cpp
     src/game/GameManager.cpp
     src/game/callbacks/NodeFunction.cpp
+    src/game/callbacks/NodeNotificationBroadcaster.cpp
     src/game/nodes/Node.cpp
     src/game/nodes/SpatialNode.cpp
     src/game/nodes/MeshNode.cpp

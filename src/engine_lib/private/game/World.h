@@ -4,13 +4,16 @@
 #include <memory>
 #include <chrono>
 #include <string>
+#include <variant>
+#include <filesystem>
 
 // Custom.
-#include "game/nodes/Node.h"
 #include "misc/GC.hpp"
+#include "misc/Error.h"
 
 namespace ne {
     class GameManager;
+    class Node;
 
     /** Represents arrays of nodes that are marked as "should be called every frame". */
     struct CalledEveryFrameNodes {

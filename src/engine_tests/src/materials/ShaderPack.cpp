@@ -2,6 +2,7 @@
 #include "materials/ShaderPack.h"
 #include "game/GameInstance.h"
 #include "game/Window.h"
+#include "misc/ProjectPaths.h"
 
 // Standard.
 #include <fstream>

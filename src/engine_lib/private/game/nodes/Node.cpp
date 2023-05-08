@@ -36,12 +36,12 @@ namespace ne {
             fmt::format("constructor for node \"{}\" is called (alive nodes now: {})", sName, iNodeCount),
             sNodeLogCategory);
 
-        if (iNodeCount == std::numeric_limits<size_t>::max()) [[unlikely]] {
+        if (iNodeCount + 1 == std::numeric_limits<size_t>::max()) [[unlikely]] {
             Logger::get().warn(
                 fmt::format(
-                    "total alive node counter is at its maximum value: {}, another new node will cause an "
-                    "overflow",
-                    iNodeCount),
+                    "\"total alive nodes\" counter is at its maximum value: {}, another new node will cause "
+                    "an overflow",
+                    iNodeCount + 1),
                 sNodeLogCategory);
         }
     }
@@ -271,8 +271,8 @@ namespace ne {
         if (iNodeId.value() + 1 == std::numeric_limits<size_t>::max()) [[unlikely]] {
             Logger::get().warn(
                 fmt::format(
-                    "the next available node ID is at its maximum value: {}, another spawned node will cause "
-                    "an overflow",
+                    "\"next available node ID\" is at its maximum value: {}, another spawned node will "
+                    "cause an overflow",
                     iNodeId.value() + 1),
                 sNodeLogCategory);
         }
@@ -286,6 +286,14 @@ namespace ne {
 
             for (const auto& pTimer : mtxCreatedTimers.second) {
                 enableTimer(pTimer.get(), true);
+            }
+        }
+
+        // Notify created broadcasters.
+        {
+            std::scoped_lock broadcastersGuard(mtxCreatedBroadcasters.first);
+            for (const auto& pBroadcaster : mtxCreatedBroadcasters.second) {
+                pBroadcaster->onOwnerNodeSpawning(this, iNodeId.value());
             }
         }
 
@@ -323,7 +331,7 @@ namespace ne {
         }
 
         // Despawn children first.
-        // This despawn order is required for some nodes to work correctly.
+        // This despawn order is required for some nodes and engine parts to work correctly.
         // With this despawn order we will not make "holes" in world's node tree
         // (i.e. when node is spawned, node's parent is not spawned but parent's parent node is spawned).
         {
@@ -333,9 +341,6 @@ namespace ne {
                 pChildNode->despawn();
             }
         }
-
-        // Notify world.
-        pWorld->onNodeDespawned(this);
 
         // Stop and disable all created timers.
         {
@@ -347,10 +352,25 @@ namespace ne {
             }
         }
 
+        // Notify created broadcasters.
+        {
+            std::scoped_lock broadcastersGuard(mtxCreatedBroadcasters.first);
+            for (const auto& pBroadcaster : mtxCreatedBroadcasters.second) {
+                pBroadcaster->onOwnerNodeDespawning(this);
+            }
+        }
+
         // Despawn self.
         onDespawning();
+
+        // Mark state.
         bIsSpawned = false;
-        pWorld = nullptr; // don't allow accessing world at this point
+
+        // Notify world.
+        pWorld->onNodeDespawned(this);
+
+        // Don't allow accessing world at this point.
+        pWorld = nullptr;
     }
 
     std::pair<std::recursive_mutex, gc<Node>>* Node::getParentNode() { return &mtxParentNode; }

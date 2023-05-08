@@ -11,6 +11,7 @@
 #include "io/Serializable.h"
 #include "misc/GC.hpp"
 #include "input/KeyboardKey.hpp"
+#include "game/callbacks/NodeNotificationBroadcaster.hpp"
 
 #include "Node.generated.h"
 
@@ -356,16 +357,60 @@ namespace ne RNAMESPACE() {
         Timer* createTimer(const std::string& sTimerName);
 
         /**
-         * Enables the specified timer and sets a callback validator or stops and disables the timer.
+         * Creates a new notification broadcaster that only accepts callbacks of the specified type.
          *
-         * @remark Does nothing if the timer is already in the requested state.
+         * Example:
+         * @code
+         * // inside of your Node derived class:
+         * auto pBroadcaster = createNotificationBroadcaster<void(bool)>();
+         * // save broadcaster pointer somewhere
          *
-         * @param pTimer   Timer to enable/disable.
-         * @param bEnable  New timer state to set.
+         * // ...
          *
-         * @return `false` if successful, `true` otherwise.
+         * // Subscribe.
+         * pBroadcaster->subscribe(NodeFunction<void(bool)>(getNodeId().value(), [](bool bParam){
+         *     // callback logic ...
+         * });
+         * @endcode
+         *
+         * @warning Do not free (delete) returned pointer.
+         * @warning Do not use returned pointer outside of this node object as the broadcaster is only
+         * guaranteed to live while the node (that created the broadcaster) is living.
+         *
+         * @remark Note that although you can create broadcasters while the node is despawned or was not
+         * spawned yet any attempt to broadcast the notification will be ignored and will do nothing.
+         *
+         * @return A non-owning pointer to the created broadcaster that is guaranteed to be valid
+         * while this node object is alive (i.e. even valid when despawned).
          */
-        bool enableTimer(Timer* pTimer, bool bEnable);
+        template <typename FunctionType>
+        NodeNotificationBroadcaster<FunctionType>* createNotificationBroadcaster() {
+            std::scoped_lock guard(mtxSpawning, mtxCreatedBroadcasters.first);
+
+            // Create broadcaster.
+            auto pNewBroadcaster = std::unique_ptr<NodeNotificationBroadcaster<FunctionType>>(
+                new NodeNotificationBroadcaster<FunctionType>());
+            const auto pRawBroadcaster = pNewBroadcaster.get();
+
+            // Add to our array.
+            mtxCreatedBroadcasters.second.push_back(std::move(pNewBroadcaster));
+
+            if (bIsSpawned) {
+                // Get node ID.
+                if (!iNodeId.has_value()) [[unlikely]] {
+                    Error error(fmt::format(
+                        "node \"{}\" created a new broadcaster while being spawned but node's ID is empty",
+                        sNodeName));
+                    error.showError();
+                    throw std::runtime_error(error.getFullErrorMessage());
+                }
+
+                // Notify broadcaster about node being spawned.
+                pRawBroadcaster->onOwnerNodeSpawning(this, iNodeId.value());
+            }
+
+            return pRawBroadcaster;
+        }
 
         /**
          * Returns map of action events that this node is binded to (must be used with mutex).
@@ -549,6 +594,18 @@ namespace ne RNAMESPACE() {
         };
 
         /**
+         * Enables the specified timer and sets a callback validator or stops and disables the timer.
+         *
+         * @remark Does nothing if the timer is already in the requested state.
+         *
+         * @param pTimer   Timer to enable/disable.
+         * @param bEnable  New timer state to set.
+         *
+         * @return `false` if successful, `true` otherwise.
+         */
+        bool enableTimer(Timer* pTimer, bool bEnable);
+
+        /**
          * Called when a window that owns this game instance receives user
          * input and the input key exists as an action event in the InputManager.
          *
@@ -672,14 +729,27 @@ namespace ne RNAMESPACE() {
             mtxBindedAxisEvents;
 
         /**
-         * Timers creates via @ref createTimer.
+         * Timers creates using @ref createTimer.
          *
          * @warning Don't remove/erase timers from this array because in @ref despawn
          * we might submit a deferred task (while stopping the timer) and will
          * use the timer to check its state in deferred task so we need to make
          * sure that stopped timer will not be deleted while the node exists.
+         * Additionally, all users hold raw pointers to timers so they will hit deleted memory
+         * in the case of deletion.
          */
         std::pair<std::recursive_mutex, std::vector<std::unique_ptr<Timer>>> mtxCreatedTimers;
+
+        /**
+         * Notification broadcasters created using @ref createNotificationBroadcaster.
+         *
+         * @warning Don't remove/erase broadcasters from this array because it's allowed
+         * to use broadcasters while the node is despawned.
+         * Additionally, all users hold raw pointers to broadcasters so they will hit deleted memory
+         * in the case of deletion.
+         */
+        std::pair<std::recursive_mutex, std::vector<std::unique_ptr<NodeNotificationBroadcasterBase>>>
+            mtxCreatedBroadcasters;
 
         /**
          * Do not delete this pointer. World object that owns this node.

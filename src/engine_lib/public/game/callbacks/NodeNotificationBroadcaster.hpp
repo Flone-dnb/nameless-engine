@@ -263,7 +263,7 @@ namespace ne {
                 auto it = mtxCallbacksToAdd.second.find(iBindingId);
                 if (it != mtxCallbacksToAdd.second.end()) {
                     // Just remove it from the pending array.
-                    mtxCallbacksToAdd.erase(it);
+                    mtxCallbacksToAdd.second.erase(it);
                     return;
                 }
             }

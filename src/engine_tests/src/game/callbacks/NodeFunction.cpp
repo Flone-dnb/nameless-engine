@@ -12,6 +12,8 @@ TEST_CASE("node callback function is not called after the node is despawned") {
 
     class MyNode : public Node {
     public:
+        virtual ~MyNode() override = default;
+
         NodeFunction<void(bool)> getCallback() {
             return NodeFunction<void(bool)>(
                 getNodeId().value(), [this](bool bShouldClose) { myCallback(bShouldClose); });

@@ -293,7 +293,7 @@ namespace ne {
         {
             std::scoped_lock broadcastersGuard(mtxCreatedBroadcasters.first);
             for (const auto& pBroadcaster : mtxCreatedBroadcasters.second) {
-                pBroadcaster->onOwnerNodeSpawning(this, iNodeId.value());
+                pBroadcaster->onOwnerNodeSpawning(this);
             }
         }
 

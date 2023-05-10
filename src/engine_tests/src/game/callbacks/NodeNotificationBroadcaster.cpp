@@ -54,13 +54,13 @@ TEST_CASE("broadcast does not trigger despawned nodes") {
                 }
 
                 // Create nodes.
-                pBroadcasterNode = gc_new<MyNode>();
+                auto pBroadcasterNode = gc_new<MyNode>();
                 pBroadcasterNode->createBroadcaster();
                 REQUIRE(pBroadcasterNode->getSubscriberCount() == 0);
 
-                pSubscriberNode1 = gc_new<MyNode>();
-                pSubscriberNode2 = gc_new<MyNode>();
-                pSubscriberNode3 = gc_new<MyNode>();
+                auto pSubscriberNode1 = gc_new<MyNode>();
+                auto pSubscriberNode2 = gc_new<MyNode>();
+                auto pSubscriberNode3 = gc_new<MyNode>();
 
                 REQUIRE(pSubscriberNode1->iCallbackCallCount == 0);
                 REQUIRE(pSubscriberNode2->iCallbackCallCount == 0);
@@ -81,45 +81,27 @@ TEST_CASE("broadcast does not trigger despawned nodes") {
                 // Broadcast.
                 pBroadcasterNode->broadcast(); // queues a deferred task
 
-                // wait a few frames
-                REQUIRE(iTickCount == 0);
-            });
-        }
-
-    protected:
-        virtual void onBeforeNewFrame(float timeSincePrevCall) override {
-            GameInstance::onBeforeNewFrame(timeSincePrevCall);
-
-            iTickCount += 1;
-
-            if (iTickCount == 3) {
+                // Make sure callbacks were triggered.
                 REQUIRE(pSubscriberNode1->iCallbackCallCount == 1);
                 REQUIRE(pSubscriberNode2->iCallbackCallCount == 1);
                 REQUIRE(pSubscriberNode3->iCallbackCallCount == 1);
                 REQUIRE(pBroadcasterNode->getSubscriberCount() == 3);
 
-                // Now broadcast again.
-                pBroadcasterNode->broadcast();
-
-                // ... but this time despawn subscriber 2.
+                // Now despawn node 2.
                 pSubscriberNode2->detachFromParentAndDespawn();
                 REQUIRE(pBroadcasterNode->getSubscriberCount() == 3); // not detected yet
-            } else if (iTickCount == 5) {
+
+                // ... and broadcast again.
+                pBroadcasterNode->broadcast();
+
                 REQUIRE(pSubscriberNode1->iCallbackCallCount == 2);
                 REQUIRE(pSubscriberNode2->iCallbackCallCount == 1);
                 REQUIRE(pSubscriberNode3->iCallbackCallCount == 2);
                 REQUIRE(pBroadcasterNode->getSubscriberCount() == 2);
 
                 getWindow()->close();
-            }
+            });
         }
-
-    private:
-        gc<MyNode> pBroadcasterNode = nullptr;
-        gc<MyNode> pSubscriberNode1 = nullptr;
-        gc<MyNode> pSubscriberNode2 = nullptr;
-        gc<MyNode> pSubscriberNode3 = nullptr;
-        size_t iTickCount = 0;
     };
 
     auto result = Window::getBuilder().withVisibility(false).build();
@@ -134,7 +116,7 @@ TEST_CASE("broadcast does not trigger despawned nodes") {
     pMainWindow->processEvents<TestGameInstance>();
 }
 
-TEST_CASE("broadcasters use deferred tasks to guarantee the correct call order") {
+TEST_CASE("broadcasters don't use deferred tasks to guarantee the correct call order") {
     // Imagine we have a train with a non-blocking collision node that covers
     // the train and some space around the train, and a character node that when stops
     // overlapping with this collision should be teleported back on the train (to avoid characters
@@ -200,25 +182,43 @@ TEST_CASE("broadcasters use deferred tasks to guarantee the correct call order")
         NodeNotificationBroadcaster<void()>* pBeginOverlapBroadcaster = nullptr;
         NodeNotificationBroadcaster<void()>* pEndOverlapBroadcaster = nullptr;
 
+        size_t iSubscriberIndex = 0;
+
     private:
         void onBeginOverlap() {
             REQUIRE(isSpawned());
 
-            // call order should be "end-begin" overlap.
-            REQUIRE(bEndOverlapCalled);
+            if (iSubscriberIndex != 2) {
+                // call order should be "end-begin" overlap
+                REQUIRE(bEndOverlapCalled);
 
-            REQUIRE(!bBeginOverlapCalled);
-            bBeginOverlapCalled = true;
+                REQUIRE(!bBeginOverlapCalled);
+                bBeginOverlapCalled = true;
+            } else {
+                // receives begin-end order when it should be end-begin
+                REQUIRE(!bEndOverlapCalled);
+
+                REQUIRE(!bBeginOverlapCalled);
+                bBeginOverlapCalled = true;
+            }
         }
 
         void onEndOverlap() {
             REQUIRE(isSpawned());
 
-            // call order should be "end-begin" overlap.
-            REQUIRE(!bBeginOverlapCalled);
+            if (iSubscriberIndex != 2) {
+                // call order should be "end-begin" overlap
+                REQUIRE(!bBeginOverlapCalled);
 
-            REQUIRE(!bEndOverlapCalled);
-            bEndOverlapCalled = true;
+                REQUIRE(!bEndOverlapCalled);
+                bEndOverlapCalled = true;
+            } else {
+                // receives begin-end order when it should be end-begin
+                REQUIRE(bBeginOverlapCalled);
+
+                REQUIRE(!bEndOverlapCalled);
+                bEndOverlapCalled = true;
+            }
         }
 
         bool bBeginOverlapCalled = false;
@@ -239,14 +239,14 @@ TEST_CASE("broadcasters use deferred tasks to guarantee the correct call order")
                 }
 
                 // Create nodes.
-                pBroadcasterNode = gc_new<MyNode>();
+                auto pBroadcasterNode = gc_new<MyNode>();
                 pBroadcasterNode->createBroadcasters();
                 REQUIRE(pBroadcasterNode->pBeginOverlapBroadcaster->getSubscriberCount() == 0);
                 REQUIRE(pBroadcasterNode->pEndOverlapBroadcaster->getSubscriberCount() == 0);
 
-                pSubscriberNode1 = gc_new<MyNode>();
-                pSubscriberNode2 = gc_new<MyNode>();
-                pSubscriberNode3 = gc_new<MyNode>();
+                auto pSubscriberNode1 = gc_new<MyNode>();
+                auto pSubscriberNode2 = gc_new<MyNode>();
+                auto pSubscriberNode3 = gc_new<MyNode>();
 
                 // only for testing purposes - don't do this in real code:
                 pSubscriberNode2->pBeginOverlapBroadcaster = pBroadcasterNode->pBeginOverlapBroadcaster;
@@ -275,31 +275,16 @@ TEST_CASE("broadcasters use deferred tasks to guarantee the correct call order")
                     pSubscriberNode3->getOnEndOverlapCallback());
                 REQUIRE(pBroadcasterNode->pEndOverlapBroadcaster->getSubscriberCount() == 3);
 
-                // Broadcast end overlap (subscriber 2 should trigger begin overlap).
-                pBroadcasterNode->pEndOverlapBroadcaster->broadcast(); // queues a deferred task
+                pSubscriberNode1->iSubscriberIndex = 0;
+                pSubscriberNode2->iSubscriberIndex = 1;
+                pSubscriberNode3->iSubscriberIndex = 2;
 
-                // wait a few frames
-                REQUIRE(iTickCount == 0);
+                // Broadcast end overlap (subscriber 2 should trigger begin overlap).
+                pBroadcasterNode->pEndOverlapBroadcaster->broadcast();
+
+                getWindow()->close();
             });
         }
-
-    protected:
-        virtual void onBeforeNewFrame(float timeSincePrevCall) override {
-            GameInstance::onBeforeNewFrame(timeSincePrevCall);
-
-            iTickCount += 1;
-
-            if (iTickCount == 3) {
-                getWindow()->close();
-            }
-        }
-
-    private:
-        gc<MyNode> pBroadcasterNode = nullptr;
-        gc<MyNode> pSubscriberNode1 = nullptr;
-        gc<MyNode> pSubscriberNode2 = nullptr;
-        gc<MyNode> pSubscriberNode3 = nullptr;
-        size_t iTickCount = 0;
     };
 
     auto result = Window::getBuilder().withVisibility(false).build();
@@ -365,13 +350,13 @@ TEST_CASE("unsubscribe outside of a broadcast call") {
                 }
 
                 // Create nodes.
-                pBroadcasterNode = gc_new<MyNode>();
+                auto pBroadcasterNode = gc_new<MyNode>();
                 pBroadcasterNode->createBroadcaster();
                 REQUIRE(pBroadcasterNode->getSubscriberCount() == 0);
 
-                pSubscriberNode1 = gc_new<MyNode>();
-                pSubscriberNode2 = gc_new<MyNode>();
-                pSubscriberNode3 = gc_new<MyNode>();
+                auto pSubscriberNode1 = gc_new<MyNode>();
+                auto pSubscriberNode2 = gc_new<MyNode>();
+                auto pSubscriberNode3 = gc_new<MyNode>();
 
                 REQUIRE(pSubscriberNode1->iCallbackCallCount == 0);
                 REQUIRE(pSubscriberNode2->iCallbackCallCount == 0);
@@ -386,7 +371,8 @@ TEST_CASE("unsubscribe outside of a broadcast call") {
                 // Subscribe.
                 const auto iSubscriber1BindingId =
                     pBroadcasterNode->subscribe(pSubscriberNode1->getCallback());
-                iSubscriber2BindingId = pBroadcasterNode->subscribe(pSubscriberNode2->getCallback());
+                const auto iSubscriber2BindingId =
+                    pBroadcasterNode->subscribe(pSubscriberNode2->getCallback());
                 const auto iSubscriber3BindingId =
                     pBroadcasterNode->subscribe(pSubscriberNode3->getCallback());
                 REQUIRE(pBroadcasterNode->getSubscriberCount() == 3);
@@ -396,48 +382,29 @@ TEST_CASE("unsubscribe outside of a broadcast call") {
                 REQUIRE(iSubscriber3BindingId == 2);
 
                 // Broadcast.
-                pBroadcasterNode->broadcast(); // queues a deferred task
+                pBroadcasterNode->broadcast();
 
-                // wait a few frames
-                REQUIRE(iTickCount == 0);
-            });
-        }
-
-    protected:
-        virtual void onBeforeNewFrame(float timeSincePrevCall) override {
-            GameInstance::onBeforeNewFrame(timeSincePrevCall);
-
-            iTickCount += 1;
-
-            if (iTickCount == 3) {
+                // Make sure callbacks were triggered.
                 REQUIRE(pSubscriberNode1->iCallbackCallCount == 1);
                 REQUIRE(pSubscriberNode2->iCallbackCallCount == 1);
                 REQUIRE(pSubscriberNode3->iCallbackCallCount == 1);
                 REQUIRE(pBroadcasterNode->getSubscriberCount() == 3);
 
+                // Unsubscribe subscriber 2.
+                pBroadcasterNode->unsubscribe(iSubscriber2BindingId);
+                REQUIRE(pBroadcasterNode->getSubscriberCount() == 2);
+
                 // Now broadcast again.
                 pBroadcasterNode->broadcast();
 
-                // ... but this time unsubscribe subscriber 2
-                pBroadcasterNode->unsubscribe(iSubscriber2BindingId);
-                REQUIRE(pBroadcasterNode->getSubscriberCount() == 2);
-            } else if (iTickCount == 5) {
                 REQUIRE(pSubscriberNode1->iCallbackCallCount == 2);
                 REQUIRE(pSubscriberNode2->iCallbackCallCount == 1);
                 REQUIRE(pSubscriberNode3->iCallbackCallCount == 2);
                 REQUIRE(pBroadcasterNode->getSubscriberCount() == 2);
 
                 getWindow()->close();
-            }
+            });
         }
-
-    private:
-        size_t iSubscriber2BindingId = 0;
-        gc<MyNode> pBroadcasterNode = nullptr;
-        gc<MyNode> pSubscriberNode1 = nullptr;
-        gc<MyNode> pSubscriberNode2 = nullptr;
-        gc<MyNode> pSubscriberNode3 = nullptr;
-        size_t iTickCount = 0;
     };
 
     auto result = Window::getBuilder().withVisibility(false).build();
@@ -509,13 +476,13 @@ TEST_CASE("unsubscribe inside of a broadcast call") {
                 }
 
                 // Create nodes.
-                pBroadcasterNode = gc_new<MyNode>();
+                auto pBroadcasterNode = gc_new<MyNode>();
                 pBroadcasterNode->createBroadcaster();
                 REQUIRE(pBroadcasterNode->getSubscriberCount() == 0);
 
-                pSubscriberNode1 = gc_new<MyNode>();
-                pSubscriberNode2 = gc_new<MyNode>();
-                pSubscriberNode3 = gc_new<MyNode>();
+                auto pSubscriberNode1 = gc_new<MyNode>();
+                auto pSubscriberNode2 = gc_new<MyNode>();
+                auto pSubscriberNode3 = gc_new<MyNode>();
 
                 REQUIRE(pSubscriberNode1->iCallbackCallCount == 0);
                 REQUIRE(pSubscriberNode2->iCallbackCallCount == 0);
@@ -529,7 +496,7 @@ TEST_CASE("unsubscribe inside of a broadcast call") {
 
                 // Subscribe.
                 pBroadcasterNode->subscribe(pSubscriberNode1->getCallback());
-                auto iSubscriber2BindingId =
+                const auto iSubscriber2BindingId =
                     pBroadcasterNode->subscribe(pSubscriberNode2->getCallbackToUnsubscribe());
                 pBroadcasterNode->subscribe(pSubscriberNode3->getCallback());
                 REQUIRE(pBroadcasterNode->getSubscriberCount() == 3);
@@ -544,18 +511,7 @@ TEST_CASE("unsubscribe inside of a broadcast call") {
                 // Broadcast.
                 pBroadcasterNode->broadcast(); // queues a deferred task
 
-                // wait a few frames
-                REQUIRE(iTickCount == 0);
-            });
-        }
-
-    protected:
-        virtual void onBeforeNewFrame(float timeSincePrevCall) override {
-            GameInstance::onBeforeNewFrame(timeSincePrevCall);
-
-            iTickCount += 1;
-
-            if (iTickCount == 3) {
+                // Make sure callbacks were triggered.
                 REQUIRE(pSubscriberNode1->iCallbackCallCount == 1);
                 REQUIRE(pSubscriberNode2->iCallbackCallCount == 1);
                 REQUIRE(pSubscriberNode3->iCallbackCallCount == 1);
@@ -565,22 +521,186 @@ TEST_CASE("unsubscribe inside of a broadcast call") {
 
                 // Now broadcast again.
                 pBroadcasterNode->broadcast();
-            } else if (iTickCount == 5) {
+
                 REQUIRE(pSubscriberNode1->iCallbackCallCount == 2);
                 REQUIRE(pSubscriberNode2->iCallbackCallCount == 1);
                 REQUIRE(pSubscriberNode3->iCallbackCallCount == 2);
                 REQUIRE(pBroadcasterNode->getSubscriberCount() == 2);
 
                 getWindow()->close();
-            }
+            });
+        }
+    };
+
+    auto result = Window::getBuilder().withVisibility(false).build();
+    if (std::holds_alternative<Error>(result)) {
+        Error error = std::get<Error>(std::move(result));
+        error.addEntry();
+        INFO(error.getFullErrorMessage());
+        REQUIRE(false);
+    }
+
+    const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
+    pMainWindow->processEvents<TestGameInstance>();
+}
+
+TEST_CASE("pass GC pointer as a broadcast argument") {
+    using namespace ne;
+
+    class MyNode : public Node {
+    public:
+        virtual ~MyNode() override = default;
+
+        void createBroadcaster() {
+            pBroadcaster = createNotificationBroadcaster<void(const gc<MyNode>&)>();
+            REQUIRE(pBroadcaster != nullptr);
+        }
+
+        NodeFunction<void(const gc<MyNode>&)> getCallback() {
+            return NodeFunction<void(const gc<MyNode>&)>(
+                getNodeId().value(), [this](const gc<MyNode>& pSomeNode) { myCallback(pSomeNode); });
+        }
+
+        size_t iCallbackCallCount = 0;
+
+        NodeNotificationBroadcaster<void(const gc<MyNode>&)>* pBroadcaster = nullptr;
+
+        void useNode() {
+            REQUIRE(pSomeNode != nullptr);
+            pSomeNode->sSomePrivateString = "It seems to work.";
         }
 
     private:
-        gc<MyNode> pBroadcasterNode = nullptr;
-        gc<MyNode> pSubscriberNode1 = nullptr;
-        gc<MyNode> pSubscriberNode2 = nullptr;
-        gc<MyNode> pSubscriberNode3 = nullptr;
-        size_t iTickCount = 0;
+        void myCallback(const gc<MyNode>& pSomeNode) {
+            REQUIRE(isSpawned());
+            iCallbackCallCount += 1;
+
+            this->pSomeNode = pSomeNode;
+        }
+
+        gc<MyNode> pSomeNode = nullptr;
+
+        std::string sSomePrivateString = "Hello";
+    };
+
+    class TestGameInstance : public GameInstance {
+    public:
+        TestGameInstance(Window* pGameWindow, GameManager* pGame, InputManager* pInputManager)
+            : GameInstance(pGameWindow, pGame, pInputManager) {}
+        virtual void onGameStarted() override {
+            createWorld([this](const std::optional<Error>& optionalWorldError) {
+                if (optionalWorldError.has_value()) {
+                    auto error = optionalWorldError.value();
+                    error.addEntry();
+                    INFO(error.getFullErrorMessage());
+                    REQUIRE(false);
+                }
+
+                // Create nodes.
+                auto pBroadcasterNode = gc_new<MyNode>();
+                pBroadcasterNode->createBroadcaster();
+
+                auto pSubscriberNode1 = gc_new<MyNode>();
+
+                // Now spawn nodes.
+                getWorldRootNode()->addChildNode(pBroadcasterNode);
+                getWorldRootNode()->addChildNode(pSubscriberNode1);
+
+                // Subscribe.
+                pBroadcasterNode->pBroadcaster->subscribe(pSubscriberNode1->getCallback());
+
+                // Broadcast.
+                pBroadcasterNode->pBroadcaster->broadcast(pBroadcasterNode);
+
+                REQUIRE(pSubscriberNode1->iCallbackCallCount == 1);
+                pSubscriberNode1->useNode();
+
+                getWindow()->close();
+            });
+        }
+    };
+
+    auto result = Window::getBuilder().withVisibility(false).build();
+    if (std::holds_alternative<Error>(result)) {
+        Error error = std::get<Error>(std::move(result));
+        error.addEntry();
+        INFO(error.getFullErrorMessage());
+        REQUIRE(false);
+    }
+
+    const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
+    pMainWindow->processEvents<TestGameInstance>();
+}
+
+TEST_CASE("call broadcast inside of another broadcast call") {
+    using namespace ne;
+
+    class MyNode : public Node {
+    public:
+        virtual ~MyNode() override = default;
+
+        void createBroadcaster() {
+            pBroadcaster = createNotificationBroadcaster<void(const gc<MyNode>&)>();
+            REQUIRE(pBroadcaster != nullptr);
+        }
+
+        NodeFunction<void(const gc<MyNode>&)> getCallback() {
+            return NodeFunction<void(const gc<MyNode>&)>(
+                getNodeId().value(), [this](const gc<MyNode>& pSomeNode) { myCallback(pSomeNode); });
+        }
+
+        size_t iCallbackCallCount = 0;
+
+        NodeNotificationBroadcaster<void(const gc<MyNode>&)>* pBroadcaster = nullptr;
+
+    private:
+        void myCallback(const gc<MyNode>& pSomeNode) {
+            REQUIRE(isSpawned());
+            iCallbackCallCount += 1;
+
+            if (iCallbackCallCount == 1) {
+                pBroadcaster->broadcast(pSomeNode);
+            }
+        }
+    };
+
+    class TestGameInstance : public GameInstance {
+    public:
+        TestGameInstance(Window* pGameWindow, GameManager* pGame, InputManager* pInputManager)
+            : GameInstance(pGameWindow, pGame, pInputManager) {}
+        virtual void onGameStarted() override {
+            createWorld([this](const std::optional<Error>& optionalWorldError) {
+                if (optionalWorldError.has_value()) {
+                    auto error = optionalWorldError.value();
+                    error.addEntry();
+                    INFO(error.getFullErrorMessage());
+                    REQUIRE(false);
+                }
+
+                // Create nodes.
+                auto pBroadcasterNode = gc_new<MyNode>();
+                pBroadcasterNode->createBroadcaster();
+
+                auto pSubscriberNode1 = gc_new<MyNode>();
+
+                // Now spawn nodes.
+                getWorldRootNode()->addChildNode(pBroadcasterNode);
+                getWorldRootNode()->addChildNode(pSubscriberNode1);
+
+                // Subscribe.
+                pBroadcasterNode->pBroadcaster->subscribe(pSubscriberNode1->getCallback());
+
+                // only for testing purposes - don't do this in real code:
+                pSubscriberNode1->pBroadcaster = pBroadcasterNode->pBroadcaster;
+
+                // Broadcast.
+                pBroadcasterNode->pBroadcaster->broadcast(pBroadcasterNode);
+
+                REQUIRE(pSubscriberNode1->iCallbackCallCount == 2);
+
+                getWindow()->close();
+            });
+        }
     };
 
     auto result = Window::getBuilder().withVisibility(false).build();

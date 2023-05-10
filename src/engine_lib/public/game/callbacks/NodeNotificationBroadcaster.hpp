@@ -31,9 +31,8 @@ namespace ne {
          * Called by the node, that owns this broadcaster, when it's spawning.
          *
          * @param pOwnerNode Spawned node that owns this broadcaster.
-         * @param iNodeId    ID of this node.
          */
-        virtual void onOwnerNodeSpawning(Node* pOwnerNode, size_t iNodeId) = 0;
+        virtual void onOwnerNodeSpawning(Node* pOwnerNode) = 0;
 
         /**
          * Called by the node, that owns this broadcaster, when it's despawning.
@@ -64,100 +63,30 @@ namespace ne {
         NodeNotificationBroadcaster& operator=(const NodeNotificationBroadcaster&) = delete;
 
         /**
-         * Queues a new deferred task in which calls all registered (subscribed) callbacks to notify all
-         * nodes that have subscribed to this broadcaster.
+         * Executes all registered (subscribed) callbacks.
          *
          * @remark It's safe to call this function while your node is despawned, in this case the call
          * will be ignored and nothing will be broadcasted.
          *
          * @remark Additionally, before running registered callbacks, removes callbacks of despawned nodes.
+         *
+         * @param args Arguments to pass to subscribed callbacks.
          */
-        void broadcast() {
+        void broadcast(FunctionArgs... args) {
             // Make sure we have a spawned owner node.
-            std::scoped_lock ownerGuard(mtxSpawnedOwnerNodeInfo.first);
-            if (mtxSpawnedOwnerNodeInfo.second.pNode == nullptr) {
+            std::scoped_lock ownerGuard(mtxSpawnedOwnerNode.first, mtxCallbacks.first);
+            if (mtxSpawnedOwnerNode.second == nullptr) {
                 // Being in a cleared state - do nothing.
                 return;
             }
 
-            // don't unlock owner mutex yet
+            // don't unlock mutexes yet
 
-            // Get game manager.
-            const auto pGameManager = GameManager::get();
-            if (pGameManager == nullptr) [[unlikely]] {
-                Logger::get().error(
-                    fmt::format("`broadcast` is called on a broadcaster with a non-nullptr owner node but "
-                                "GameManager is nullptr - this is a bug, report to developers"),
-                    sNodeNotificationBroadcasterLogCategory);
-                return;
-            }
-
-            // Make sure game manager is not being destroyed.
-            if (pGameManager->isBeingDestroyed()) [[unlikely]] {
-                Logger::get().error(
-                    fmt::format("`broadcast` is called on a broadcaster with a non-nullptr owner node but "
-                                "GameManager is being destroyed - this is a bug, report to developers"),
-                    sNodeNotificationBroadcasterLogCategory);
-                return;
-            }
-
-            // I've decided to add a deferred task here because it would avoid some potential bugs,
-            // for example: imagine we have a train with a non-blocking collision node that covers
-            // the train and some space around the train, and a character node that when stops
-            // overlapping with this collision should be teleported back on the train (to avoid characters
-            // falling off the moving train). We have a collision node with 2 broadcasters: onBeginOverlap
-            // and onEndOverlap. The train subscribes to both collision events to teleport
-            // players back on the train and do additional stuff. Now imagine if the character jumps and
-            // starts falling off the train - this causes onEndOverlap to be broadcasted. Inside of this
-            // onEndOverlap callback the train teleport the player back on the train which causes the
-            // character to begin overlapping with the collision area which triggers onBeginOverlap. This
-            // creates the following call stack (if we don't use deferred tasks):
-            // - Train::onSomethingFinishedOverlapping
-            //   we teleport the player back on the train
-            // -- Train::onSomethingStartedOverlapping
-            // Some other subscribers will receive notifications in an incorrect order, imagine
-            // we have 3 subscribers and the train is the middle one, the call stack history will look like
-            // this:
-            // - subscriber1::onEndOverlap
-            // - subscriber2::onEndOverlap (train)
-            //   we teleport the player, onBeginOverlap is triggered
-            // -- subscriber1::onBeginOverlap
-            // -- subscriber2::onBeginOverlap (train)
-            // -- subscriber3::onBeginOverlap
-            // - subscriber3::onEndOverlap (received begin-end order when it should be end-begin).
-            // Additionally, if we would not use deferred tasks this could cause some other issues
-            // that might cause weird bugs in the game code.
-            // So if I'm being correct here we should use a deferred task.
-            pGameManager->addDeferredTask([this, iOwnerId = mtxSpawnedOwnerNodeInfo.second.iNodeId]() {
-                // At this point we don't know if our owner node is still spawned/alive and if
-                // `this` is still valid or not.
-
-                // Get game manager, Game Manager is guaranteed to be valid inside of a deferred task.
-                const auto pGameManager = GameManager::get();
-
-                // Make sure our owner node is still spawned.
-                if (!pGameManager->isNodeSpawned(iOwnerId)) {
-                    return;
-                }
-
-                // We will now modify callbacks array (add/remove) before broadcasting.
-                std::scoped_lock callbacksGuard(mtxCallbacks.first, mtxSpawnedOwnerNodeInfo.first);
-
-                // Make sure our owner is still set.
-                if (mtxSpawnedOwnerNodeInfo.second.pNode == nullptr) {
-                    // Owner node was despawned and all callbacks were removed, exit.
-                    return;
-                }
-
-                // Make sure we are not broadcasting right now (could only be in a recursion)
-                // because we will modify callbacks array.
-                if (bIsBroadcasting.test()) [[unlikely]] {
-                    Logger::get().error(
-                        "broadcast is called in a recursion - this is a bug, report to developers",
-                        sNodeNotificationBroadcasterLogCategory);
-                    return;
-                }
-
+            // Make sure we are in the top level `broadcast` call (not called from some
+            // callback that was triggered in other `broadcast` call)
+            // because we will modify callbacks array.
+            bool bIsTopLevelBroadcast = !bIsBroadcasting.test();
+            if (bIsTopLevelBroadcast) {
                 // Mark the start of broadcasting (start of working with callbacks).
                 bIsBroadcasting.test_and_set();
 
@@ -192,21 +121,24 @@ namespace ne {
 
                 // Erase no longer valid callbacks.
                 std::erase_if(mtxCallbacks.second, [](auto& item) { return !item.second.isNodeSpawned(); });
+            }
 
-                for (auto& [iBindingId, callback] : mtxCallbacks.second) {
-                    callback();
+            // Call registered callbacks.
+            for (auto& [iBindingId, callback] : mtxCallbacks.second) {
+                callback(args...);
 
-                    // Make sure our owner node is still spawned because the callback we just
-                    // called could have despawned the owner node.
-                    if (mtxSpawnedOwnerNodeInfo.second.pNode == nullptr) {
-                        // Owner node was despawned and all callbacks were removed, exit.
-                        break;
-                    }
+                // Make sure our owner node is still spawned because the callback we just
+                // called could have despawned the owner node.
+                if (mtxSpawnedOwnerNode.second == nullptr) {
+                    // Owner node was despawned and all callbacks were removed, exit.
+                    break;
                 }
+            }
 
+            if (bIsTopLevelBroadcast) {
                 // Finished broadcasting.
                 bIsBroadcasting.clear();
-            });
+            }
         }
 
         /**
@@ -331,18 +263,18 @@ namespace ne {
         }
 
     protected:
-        NodeNotificationBroadcaster() { mtxSpawnedOwnerNodeInfo.second.pNode = nullptr; };
+        NodeNotificationBroadcaster() { mtxSpawnedOwnerNode.second = nullptr; };
+
         /**
          * Called by the node, that owns this broadcaster, when it's spawning.
          *
          * @param pOwnerNode Spawned node that owns this broadcaster.
-         * @param iNodeId    ID of this node.
          */
-        virtual void onOwnerNodeSpawning(Node* pOwnerNode, size_t iNodeId) override {
-            std::scoped_lock ownerGuard(mtxSpawnedOwnerNodeInfo.first);
+        virtual void onOwnerNodeSpawning(Node* pOwnerNode) override {
+            std::scoped_lock ownerGuard(mtxSpawnedOwnerNode.first);
 
             // Make sure we don't have an owner.
-            if (mtxSpawnedOwnerNodeInfo.second.pNode != nullptr) {
+            if (mtxSpawnedOwnerNode.second != nullptr) {
                 Error error(
                     "some node has notified a broadcaster about being spawned but this broadcaster already "
                     "has an owner node");
@@ -351,8 +283,7 @@ namespace ne {
             }
 
             // Save new owner.
-            mtxSpawnedOwnerNodeInfo.second.pNode = pOwnerNode;
-            mtxSpawnedOwnerNodeInfo.second.iNodeId = iNodeId;
+            mtxSpawnedOwnerNode.second = pOwnerNode;
         }
 
         /**
@@ -361,10 +292,10 @@ namespace ne {
          * @param pOwnerNode Node that owns this broadcaster.
          */
         virtual void onOwnerNodeDespawning(Node* pOwnerNode) override {
-            std::scoped_lock ownerGuard(mtxSpawnedOwnerNodeInfo.first);
+            std::scoped_lock ownerGuard(mtxSpawnedOwnerNode.first);
 
             // Make sure the specified owner is indeed our owner node.
-            if (mtxSpawnedOwnerNodeInfo.second.pNode != pOwnerNode) [[unlikely]] {
+            if (mtxSpawnedOwnerNode.second != pOwnerNode) [[unlikely]] {
                 Logger::get().error(
                     "some node notified a broadcaster about it being despawned but this "
                     "broadcaster's owner is not this node",
@@ -373,22 +304,12 @@ namespace ne {
             }
 
             // Clear pointer to the owner node (to mark "cleared" state and avoid broadcasting).
-            mtxSpawnedOwnerNodeInfo.second.pNode = nullptr;
-            mtxSpawnedOwnerNodeInfo.second.iNodeId = 0;
+            mtxSpawnedOwnerNode.second = nullptr;
 
             removeAllCallbacks();
         }
 
     private:
-        /** Groups information about the owner node. */
-        struct OwnerInfo {
-            /** Spawned node that owns this broadcaster. */
-            Node* pNode = nullptr;
-
-            /** ID of the owner node. */
-            size_t iNodeId = 0;
-        };
-
         /** Removes all registered callbacks (including callbacks that are pending to be added/removed). */
         void removeAllCallbacks() {
             {
@@ -432,7 +353,7 @@ namespace ne {
         std::pair<std::recursive_mutex, std::vector<size_t>> mtxCallbacksToRemove;
 
         /** Information about the owner node. */
-        std::pair<std::recursive_mutex, OwnerInfo> mtxSpawnedOwnerNodeInfo;
+        std::pair<std::recursive_mutex, Node*> mtxSpawnedOwnerNode;
 
         /** Stores the next free (available for use) binding ID. */
         std::atomic<size_t> iAvailableBindingId{0};

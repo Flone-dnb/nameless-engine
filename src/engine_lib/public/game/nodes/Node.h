@@ -368,9 +368,12 @@ namespace ne RNAMESPACE() {
          * // ...
          *
          * // Subscribe.
-         * pBroadcaster->subscribe(NodeFunction<void(bool)>(getNodeId().value(), [](bool bParam){
+         * pBroadcaster->subscribe(NodeFunction<void(bool)>(getNodeId().value(), [](bool bParameter){
          *     // callback logic ...
          * });
+         *
+         * // Notify.
+         * pBroadcaster->broadcast(true);
          * @endcode
          *
          * @warning Do not free (delete) returned pointer.
@@ -406,7 +409,7 @@ namespace ne RNAMESPACE() {
                 }
 
                 // Notify broadcaster about node being spawned.
-                pRawBroadcaster->onOwnerNodeSpawning(this, iNodeId.value());
+                pRawBroadcaster->onOwnerNodeSpawning(this);
             }
 
             return pRawBroadcaster;

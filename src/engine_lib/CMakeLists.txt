@@ -12,8 +12,9 @@ if (go_error)
     message(FATAL_ERROR "\"Go\" programming language needs to be installed.")
 endif()
 
-# Define some relative paths.
+# Define some paths.
 set(RELATIVE_EXT_PATH "../../ext")
+set(ABSOLUTE_EXT_PATH ${CMAKE_CURRENT_SOURCE_DIR}/${RELATIVE_EXT_PATH})
 set(RELATIVE_CMAKE_HELPERS_PATH "../.cmake")
 
 # Include essential stuff.
@@ -50,11 +51,14 @@ set(PROJECT_WIN32_SOURCES
     # add Windows specific sources here...
 )
 
-# Temporary solution for `tgc2` in `Refureku` (because we use it below).
-set(TGC_CPP_FILE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/Refureku/build/Include/tgc2/include/tgc2.cpp)
-set(TGC_H_FILE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/Refureku/build/Include/tgc2/include/tgc2.h)
+# TODO: Temporary solution for `tgc2` in `Refureku` (because we use it below).
+set(TGC_CPP_FILE_PATH ${ABSOLUTE_EXT_PATH}/Refureku/build/Include/tgc2/include/tgc2.cpp)
+set(TGC_H_FILE_PATH ${ABSOLUTE_EXT_PATH}/Refureku/build/Include/tgc2/include/tgc2.h)
 if (NOT EXISTS ${TGC_CPP_FILE_PATH})
     file(WRITE ${TGC_CPP_FILE_PATH} "")
+endif()
+if (NOT EXISTS ${TGC_H_FILE_PATH})
+    file(WRITE ${TGC_H_FILE_PATH} "")
 endif()
 
 # Engine general (cross-platform) sources.
@@ -276,7 +280,7 @@ target_link_libraries(${PROJECT_NAME} PUBLIC glm)
 set_target_properties(glm PROPERTIES FOLDER ${EXTERNAL_FOLDER})
 set_target_properties(uninstall PROPERTIES FOLDER ${EXTERNAL_FOLDER})
 
-# [temporary solution]: External: tgc
+# [TODO: temporary solution]: External: tgc
 message(STATUS "${PROJECT_NAME}: adding external dependency \"TGC\"...")
 set(TGC_TARGET_NAME tgc)
 add_library(${TGC_TARGET_NAME} STATIC
@@ -290,105 +294,31 @@ if(NOT MSVC)
     set_source_files_properties(${TGC_H_FILE_PATH} PROPERTIES COMPILE_FLAGS "-Wno-unused-parameter -Wno-error=extra")
 endif()
 
-# External: Refureku (start) --------------------------------------------------------------------------
-
-message(STATUS "${PROJECT_NAME}: adding external dependency \"Refureku\"...")
-
-set(GENERATED_DIR_NAME ".generated")
-set(REFUREKU_SETTINGS_FILE_NAME "RefurekuSettings.toml")
-set(GENERATED_SOURCE_DIR_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../${GENERATED_DIR_NAME})
-set(REFUREKU_SETTINGS_FILE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../${GENERATED_DIR_NAME}/${REFUREKU_SETTINGS_FILE_NAME})
-
-# Check that path does not have pipe character because we use it to separate paths.
-string(FIND ${CMAKE_CURRENT_SOURCE_DIR} "|" PIPE_POS)
-if (NOT ${PIPE_POS} STREQUAL "-1")
-    message(FATAL_ERROR "${PROJECT_NAME}: path ${CMAKE_CURRENT_SOURCE_DIR} contains forbidden character '|'.")
+# External: Refureku
+set(REFUREKU_EXCLUDED_FILES "")
+if (NOT WIN32)
+    set(REFUREKU_EXCLUDED_FILES PROJECT_WIN32_SOURCES)
 endif()
-
 # Write project include directories for Refureku.
 set(REFUREKU_INCLUDE_DIRECTORIES
-    "${CMAKE_CURRENT_SOURCE_DIR}/../../ext/|\
-${CMAKE_CURRENT_SOURCE_DIR}/../../ext/glfw/include|\
-${CMAKE_CURRENT_SOURCE_DIR}/../../ext/DirectX-Headers/include|\
-${CMAKE_CURRENT_SOURCE_DIR}/../../ext/spdlog/include|\
-${CMAKE_CURRENT_SOURCE_DIR}/../../ext/source_location/include|\
-${CMAKE_CURRENT_SOURCE_DIR}/../../ext/fmt/include|\
-${CMAKE_CURRENT_SOURCE_DIR}/../../ext/glm|\
-${CMAKE_CURRENT_SOURCE_DIR}/../${GENERATED_DIR_NAME}|\
-${CMAKE_CURRENT_SOURCE_DIR}/public|\
-${CMAKE_CURRENT_SOURCE_DIR}/private|\
-${CMAKE_CURRENT_SOURCE_DIR}/../../ext/Refureku/build/Include/"
+    ${ABSOLUTE_EXT_PATH}
+    ${ABSOLUTE_EXT_PATH}/glfw/include
+    ${ABSOLUTE_EXT_PATH}/DirectX-Headers/include
+    ${ABSOLUTE_EXT_PATH}/spdlog/include
+    ${ABSOLUTE_EXT_PATH}/source_location/include
+    ${ABSOLUTE_EXT_PATH}/fmt/include
+    ${ABSOLUTE_EXT_PATH}/glm
+    ${ABSOLUTE_EXT_PATH}/Refureku/build/Include
+    ${CMAKE_CURRENT_SOURCE_DIR}/public
+    ${CMAKE_CURRENT_SOURCE_DIR}/private
 )
-
-# Collect files to exclude from analyzing.
-set(REFUREKU_EXCLUDE_FILES "")
-if (NOT WIN32)
-    # Add Windows sources to be excluded from analyzing.
-    foreach(SRC_PATH IN LISTS PROJECT_WIN32_SOURCES)
-        set(SRC_PATH ${CMAKE_CURRENT_SOURCE_DIR}/${SRC_PATH})
-        string(FIND ${SRC_PATH} "|" PIPE_POS)
-        if (NOT ${PIPE_POS} STREQUAL "-1")
-            message(FATAL_ERROR "${PROJECT_NAME}: path ${SRC_PATH} contains forbidden character '|'.")
-        endif()
-        set(REFUREKU_EXCLUDE_FILES ${SRC_PATH}|${REFUREKU_EXCLUDE_FILES})
-    endforeach()
-endif()
-
-# Make sure generated directory exists.
-if (NOT EXISTS ${GENERATED_SOURCE_DIR_PATH})
-    file(MAKE_DIRECTORY ${GENERATED_SOURCE_DIR_PATH})
-endif()
-
-# Delete existing Refureku config file.
-message(STATUS "${PROJECT_NAME}: removing Refureku config file to generate a fresh one...")
-file(REMOVE ${REFUREKU_SETTINGS_FILE_PATH})
-
-# Download Refureku and generate new config file.
-message(STATUS "${PROJECT_NAME}: downloading Refureku (reflection generator) and creating a reflection generator config...")
-execute_process(
-    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/Refureku/
-    COMMAND go run ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/Refureku/download_and_setup_refureku.go
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/Refureku/ # working directory
-    ${CMAKE_CURRENT_SOURCE_DIR}/../ # source directory (where to put Refureku settings file)
-    "${REFUREKU_INCLUDE_DIRECTORIES}" # project include directories
-    "${REFUREKU_EXCLUDE_FILES}" # files to exclude from analyzing
-    ${CMAKE_CXX_COMPILER_ID} # used compiler
-    OUTPUT_VARIABLE output
+add_refureku(
+    "${CMAKE_CURRENT_SOURCE_DIR}"
+    "${REFUREKU_EXCLUDED_FILES}"
+    "${ABSOLUTE_EXT_PATH}/Refureku"
+    ""
+    "${REFUREKU_INCLUDE_DIRECTORIES}"
 )
-message(STATUS "${PROJECT_NAME}: ${output}")
-
-# Include Refureku header files.
-target_include_directories(${PROJECT_NAME} SYSTEM PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/Refureku/build/Include/)
-
-# Link Refureku library.
-if (MSVC)
-    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /ignore:4006")
-    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} /ignore:4006")
-    set(CMAKE_STATIC_LINKER_FLAGS "${CMAKE_STATIC_LINKER_FLAGS} /ignore:4006")
-endif()
-if (WIN32)
-    target_link_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/Refureku/build/Lib)
-elseif(APPLE) # test macos before unix
-    message(FATAL_ERROR "${PROJECT_NAME}: TODO: put Refureku dynamic library directory here.")
-elseif(UNIX)
-    target_link_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/Refureku/build/Bin)
-endif()
-target_link_libraries(${PROJECT_NAME} PUBLIC Refureku)
-
-# Add a pre build step to run reflection code generator.
-set(REFUREKU_GENERATOR_TARGET RunRefurekuGeneratorEngine)
-add_custom_target(${REFUREKU_GENERATOR_TARGET}
-    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/Refureku/build/Bin
-    COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/Refureku/build/Bin/RefurekuGenerator ${REFUREKU_SETTINGS_FILE_PATH}
-    ENVIRONMENT LD_LIBRARY_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/Refureku/build/Bin
-)
-add_dependencies(${PROJECT_NAME} ${REFUREKU_GENERATOR_TARGET})
-set_target_properties(${REFUREKU_GENERATOR_TARGET} PROPERTIES FOLDER ${EXTERNAL_FOLDER})
-
-# Add generated headers to include directories.
-target_include_directories(${PROJECT_NAME} SYSTEM PUBLIC ../${GENERATED_DIR_NAME})
-
-# External: Refureku (end) --------------------------------------------------------------------------
 
 # Win32 specific dependencies:
 if (WIN32)
@@ -418,8 +348,14 @@ if (WIN32)
     message(STATUS "${PROJECT_NAME}: downloading DirectXShaderCompiler...")
     execute_process(
         COMMAND go run ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/DirectXShaderCompiler/download_dxc.go
-        ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/DirectXShaderCompiler/ # working directory
+        ${ABSOLUTE_EXT_PATH}/DirectXShaderCompiler/ # working directory
+        OUTPUT_VARIABLE dxc_output
+        ERROR_VARIABLE dxc_error
     )
+    message(STATUS "${PROJECT_NAME}: ${dxc_output}")
+    if (dxc_error)
+        message(FATAL_ERROR "${dxc_error}")
+    endif()
     # Set DXC variables.
     set(PATH_TO_DXC_DLL_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/DirectXShaderCompiler/bin/x64)
     set(PATH_TO_DXC_LIB_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../ext/DirectXShaderCompiler/lib/x64)

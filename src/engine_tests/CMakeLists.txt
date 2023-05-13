@@ -2,8 +2,9 @@ cmake_minimum_required(VERSION 3.20)
 
 project(engine_tests)
 
-# Define some relative paths.
+# Define some paths.
 set(RELATIVE_EXT_PATH "../../ext")
+set(ABSOLUTE_EXT_PATH ${CMAKE_CURRENT_SOURCE_DIR}/${RELATIVE_EXT_PATH})
 set(RELATIVE_CMAKE_HELPERS_PATH "../.cmake")
 
 # Include essential stuff.
@@ -112,6 +113,24 @@ else()
 endif()
 target_link_libraries(${PROJECT_NAME} PUBLIC ${ENGINE_LIB_TARGET})
 add_dependencies(${PROJECT_NAME} ${ENGINE_LIB_TARGET})
+
+# External: Refureku
+set(REFUREKU_EXCLUDED_FILES "")
+if (NOT WIN32)
+    set(REFUREKU_EXCLUDED_FILES PROJECT_WIN32_SOURCES)
+endif()
+# Write project include directories for Refureku.
+set(REFUREKU_INCLUDE_DIRECTORIES
+    ${ABSOLUTE_EXT_PATH}/Catch2/src/catch2
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+)
+add_refureku(
+    "${CMAKE_CURRENT_SOURCE_DIR}"
+    "${REFUREKU_EXCLUDED_FILES}"
+    "${ABSOLUTE_EXT_PATH}/Refureku"
+    "${ENGINE_LIB_TARGET}"
+    "${REFUREKU_INCLUDE_DIRECTORIES}"
+)
 
 # Add `Catch2`.
 message(STATUS "${PROJECT_NAME}: adding external dependency \"Catch2\"...")

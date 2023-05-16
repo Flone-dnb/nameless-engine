@@ -31,8 +31,14 @@ TEST_CASE("orbital camera node behaves correctly when used in a node tree") {
                 const auto pChildCameraNode = gc_new<CameraNode>();
 
                 // Spawn in world.
-                pParentSpatialNode->addChildNode(pChildCameraNode);
-                getWorldRootNode()->addChildNode(pParentSpatialNode);
+                pParentSpatialNode->addChildNode(
+                    pChildCameraNode,
+                    Node::AttachmentRule::KEEP_RELATIVE,
+                    Node::AttachmentRule::KEEP_RELATIVE);
+                getWorldRootNode()->addChildNode(
+                    pParentSpatialNode,
+                    Node::AttachmentRule::KEEP_RELATIVE,
+                    Node::AttachmentRule::KEEP_RELATIVE);
 
                 // Set mode.
                 pChildCameraNode->setCameraMode(CameraMode::ORBITAL);

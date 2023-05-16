@@ -10,6 +10,9 @@
 namespace ne RNAMESPACE() {
     /** Represents a node that can have a location, rotation and a scale in a 3D space. */
     class RCLASS(Guid("150d647c-f385-4a11-b585-d059d2be88aa")) SpatialNode : public Node {
+        // Calls `applyAttachmentRule`.
+        friend class Node;
+
     public:
         SpatialNode();
 
@@ -53,8 +56,7 @@ namespace ne RNAMESPACE() {
          * Sets relative location in the way that the resulting node's location in the world
          * would match the specified location.
          *
-         * @remark Calling this function while the node is not spawned will have no effect
-         * and will produce a warning.
+         * @remark If the node is not spawned just sets node's relative location.
          *
          * @param location Location that the node should take in the world.
          */
@@ -64,8 +66,7 @@ namespace ne RNAMESPACE() {
          * Sets relative rotation in the way that the resulting node's rotation in the world
          * would match the specified rotation.
          *
-         * @remark Calling this function while the node is not spawned will have no effect
-         * and will produce a warning.
+         * @remark If the node is not spawned just sets node's relative rotation.
          *
          * @param rotation Rotation that the node should take in the world.
          */
@@ -75,8 +76,7 @@ namespace ne RNAMESPACE() {
          * Sets relative scale in the way that the resulting node's scale in the world
          * would match the specified scale.
          *
-         * @remark Calling this function while the node is not spawned will have no effect
-         * and will produce a warning.
+         * @remark If the node is not spawned just sets node's relative scale.
          *
          * @param scale Scale that the node should take in the world.
          */
@@ -114,6 +114,9 @@ namespace ne RNAMESPACE() {
         /**
          * Returns node's world location (see @ref setWorldLocation).
          *
+         * @remark If the node is not spawned and has no parent, returns @ref getRelativeLocation.
+         * If the node is not spawned but has a parent, returns its location in the hierarchy.
+         *
          * @return Location of the node in the world.
          */
         glm::vec3 getWorldLocation();
@@ -122,13 +125,15 @@ namespace ne RNAMESPACE() {
          * Returns node's world rotation in degrees (see @ref setWorldRotation).
          * Also see @ref getWorldRotationQuaternion.
          *
+         * @remark If the node is not spawned and has no parent, returns @ref getRelativeRotation.
+         * If the node is not spawned but has a parent, returns its rotation in the hierarchy.
+         *
          * @return Rotation of the node in the world.
          */
         glm::vec3 getWorldRotation();
 
         /**
-         * Returns node's world rotation in the quaternion form.
-         * Also see @ref getWorldRotation.
+         * Returns node's world rotation in the quaternion form (see @ref getWorldRotation).
          *
          * @return Rotation of the node in the world.
          */
@@ -136,6 +141,9 @@ namespace ne RNAMESPACE() {
 
         /**
          * Returns node's world scale (see @ref setWorldScale).
+         *
+         * @remark If the node is not spawned and has no parent, returns @ref getRelativeScale.
+         * If the node is not spawned but has a parent, returns its scale in the hierarchy.
          *
          * @return Scale of the node in the world.
          */
@@ -234,6 +242,25 @@ namespace ne RNAMESPACE() {
         virtual void onWorldLocationRotationScaleChanged(){};
 
     private:
+        /**
+         * Called by `Node` class after we have attached to a new parent node and
+         * now need to apply attachment rules based on this new parent node.
+         *
+         * @param locationRule                  Defines how location should change.
+         * @param worldLocationBeforeAttachment World location of this node before being attached.
+         * @param rotationRule                  Defines how rotation should change.
+         * @param worldRotationBeforeAttachment World rotation of this node before being attached.
+         * @param scaleRule                     Defines how scale should change.
+         * @param worldScaleBeforeAttachment    World scale of this node before being attached.
+         */
+        void applyAttachmentRule(
+            Node::AttachmentRule locationRule,
+            const glm::vec3& worldLocationBeforeAttachment,
+            Node::AttachmentRule rotationRule,
+            const glm::vec3& worldRotationBeforeAttachment,
+            Node::AttachmentRule scaleRule,
+            const glm::vec3& worldScaleBeforeAttachment);
+
         /**
          * Recalculates node's world matrix based on the parent world matrix (can be identity
          * if there's node parent) and optionally notifies spatial child nodes.

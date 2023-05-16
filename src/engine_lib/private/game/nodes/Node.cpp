@@ -10,6 +10,7 @@
 #include "game/World.h"
 #include "game/GameManager.h"
 #include "misc/Timer.h"
+#include "game/nodes/SpatialNode.h"
 
 #include "Node.generated_impl.h"
 
@@ -70,7 +71,24 @@ namespace ne {
 
     std::string Node::getNodeName() const { return sNodeName; }
 
-    void Node::addChildNode(const gc<Node>& pNode) {
+    void Node::addChildNode(
+        const gc<Node>& pNode,
+        AttachmentRule locationRule,
+        AttachmentRule rotationRule,
+        AttachmentRule scaleRule) {
+        // Convert to spatial node for later use.
+        SpatialNode* pSpatialNode = dynamic_cast<SpatialNode*>(&*pNode);
+
+        // Save world rotation/location/scale for later use.
+        glm::vec3 worldLocation = glm::vec3(0.0F, 0.0F, 0.0F);
+        glm::vec3 worldRotation = glm::vec3(0.0F, 0.0F, 0.0F);
+        glm::vec3 worldScale = glm::vec3(1.0F, 1.0F, 1.0F);
+        if (pSpatialNode != nullptr) {
+            worldLocation = pSpatialNode->getWorldLocation();
+            worldRotation = pSpatialNode->getWorldRotation();
+            worldScale = pSpatialNode->getWorldScale();
+        }
+
         std::scoped_lock spawnGuard(mtxSpawning);
 
         // Make sure the specified node is valid.
@@ -158,8 +176,19 @@ namespace ne {
         pNode->mtxParentNode.second = gc<Node>(this);
         mtxChildNodes.second->push_back(pNode);
 
-        // Notify.
+        // The specified node is not attached.
+
+        // Notify the node (here, SpatialNode will save a pointer to the first SpatialNode in the parent
+        // chain and will use it in `setWorld...` operations).
         pNode->notifyAboutAttachedToNewParent(true);
+
+        // Now after the SpatialNode did its `onAfterAttached` logic `setWorld...` calls when applying
+        // attachment rule will work.
+        // Apply attachment rule (if possible).
+        if (pSpatialNode != nullptr) {
+            pSpatialNode->applyAttachmentRule(
+                locationRule, worldLocation, rotationRule, worldRotation, scaleRule, worldScale);
+        }
 
         // don't unlock node's parent lock here yet, still doing some logic based on the new parent
 
@@ -571,7 +600,11 @@ namespace ne {
             const auto pMtxChildNodes = pExternalRootNode->getChildNodes();
             std::scoped_lock externalChildNodesGuard(pMtxChildNodes->first);
             for (const auto& pExternalChildNode : *pMtxChildNodes->second) {
-                pNode->addChildNode(pExternalChildNode);
+                pNode->addChildNode(
+                    pExternalChildNode,
+                    AttachmentRule::KEEP_RELATIVE,
+                    AttachmentRule::KEEP_RELATIVE,
+                    AttachmentRule::KEEP_RELATIVE);
             }
         }
 
@@ -649,7 +682,11 @@ namespace ne {
         // Build hierarchy using value from attribute.
         for (const auto& node : vNodes) {
             if (node.second.has_value()) {
-                vNodes[node.second.value()].first->addChildNode(gc<Node>(node.first));
+                vNodes[node.second.value()].first->addChildNode(
+                    gc<Node>(node.first),
+                    AttachmentRule::KEEP_RELATIVE,
+                    AttachmentRule::KEEP_RELATIVE,
+                    AttachmentRule::KEEP_RELATIVE);
             }
         }
 

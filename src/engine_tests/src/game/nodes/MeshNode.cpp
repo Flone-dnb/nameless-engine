@@ -249,7 +249,8 @@ TEST_CASE("serialize and deserialize MeshNode as part of a node tree") {
                     const auto pMeshNode = gc_new<MeshNode>("My cool node");
                     pMeshNode->setMaterial(std::get<std::shared_ptr<Material>>(std::move(result)));
                     pMeshNode->setMeshData(std::move(meshData));
-                    getWorldRootNode()->addChildNode(pMeshNode);
+                    getWorldRootNode()->addChildNode(
+                        pMeshNode, Node::AttachmentRule::KEEP_RELATIVE, Node::AttachmentRule::KEEP_RELATIVE);
 
                     // Serialize tree.
                     auto optionalError =
@@ -413,7 +414,8 @@ TEST_CASE("serialize and deserialize MeshNode as part of a node tree with origin
                     }
                     auto pMeshNode = std::get<gc<MeshNode>>(std::move(result));
 
-                    getWorldRootNode()->addChildNode(pMeshNode);
+                    getWorldRootNode()->addChildNode(
+                        pMeshNode, Node::AttachmentRule::KEEP_RELATIVE, Node::AttachmentRule::KEEP_RELATIVE);
 
                     // Serialize tree.
                     auto optionalError =
@@ -676,7 +678,8 @@ TEST_CASE("shader read/write resources exist only when MeshNode is spawned") {
                 const auto iVramNotSpawned = getWindow()->getRenderer()->getUsedVideoMemoryInMb();
 
                 // Spawn mesh node.
-                getWorldRootNode()->addChildNode(pMeshNode);
+                getWorldRootNode()->addChildNode(
+                    pMeshNode, Node::AttachmentRule::KEEP_RELATIVE, Node::AttachmentRule::KEEP_RELATIVE);
 
                 // Make sure there are 2 resources (meshData and materialData).
                 REQUIRE(pMtxResources->second.vAll.size() == 2);

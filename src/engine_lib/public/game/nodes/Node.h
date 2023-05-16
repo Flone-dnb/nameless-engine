@@ -42,6 +42,20 @@ namespace ne RNAMESPACE() {
 
     public:
         /**
+         * Defines how location, rotation or scale of a node being attached as a child node
+         * should change after the attachment process (after `onAfterAttachedToNewParent` was called).
+         */
+        enum class AttachmentRule {
+            RESET_RELATIVE, //< After the new child node was attached, resets its relative location
+                            //< or rotation to 0 and relative scale to 1.
+            KEEP_RELATIVE,  //< After the new child node was attached, its relative location/rotation/scale
+                            //< will stay the same, but world location/rotation/scale might change.
+            KEEP_WORLD,     //< After the new child node was attached, its relative
+                            //< location/rotation/scale will be recalculated so that its
+                            //< world location/rotation/scale will stay the same (as before attached).
+        };
+
+        /**
          * Returns the total amount of currently alive (allocated) nodes.
          *
          * @return Number of alive nodes right now.
@@ -107,10 +121,23 @@ namespace ne RNAMESPACE() {
          * to the World on next frame so input events and @ref onBeforeNewFrame (if enabled) will be called
          * only starting from the next frame.
          *
-         * @param pNode Node to attach as a child. If the specified node is a parent of `this` node the
-         * operation will fail and log an error.
+         * @param pNode        Node to attach as a child. If the specified node is a parent of `this`
+         * node the operation will fail and log an error.
+         * @param locationRule Only applied if the child node is a SpatialNode, otherwise ignored.
+         * Defines how child node's location should change after the attachment process
+         * (after `onAfterAttachedToNewParent` was called)
+         * @param rotationRule Only applied if the child node is a SpatialNode, otherwise ignored.
+         * Defines how child node's rotation should change after the attachment process
+         * (after `onAfterAttachedToNewParent` was called)
+         * @param scaleRule    Only applied if the child node is a SpatialNode, otherwise ignored.
+         * Defines how child node's scale should change after the attachment process
+         * (after `onAfterAttachedToNewParent` was called)
          */
-        void addChildNode(const gc<Node>& pNode);
+        void addChildNode(
+            const gc<Node>& pNode,
+            AttachmentRule locationRule = AttachmentRule::KEEP_WORLD,
+            AttachmentRule rotationRule = AttachmentRule::KEEP_WORLD,
+            AttachmentRule scaleRule = AttachmentRule::KEEP_WORLD);
 
         /**
          * Serializes the node and all child nodes (hierarchy information will also be saved) into a file.

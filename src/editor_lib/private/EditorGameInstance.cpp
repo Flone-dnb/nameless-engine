@@ -43,7 +43,8 @@ namespace ne {
                 (*mtxMeshData.second) = PrimitiveMeshGenerator::createCube(1.0F);
             }
 
-            getWorldRootNode()->addChildNode(pMeshNode);
+            getWorldRootNode()->addChildNode(
+                pMeshNode, Node::AttachmentRule::KEEP_RELATIVE, Node::AttachmentRule::KEEP_RELATIVE);
             pMeshNode->setWorldLocation(glm::vec3(1.0F, 0.0F, 0.0F));
         });
     }

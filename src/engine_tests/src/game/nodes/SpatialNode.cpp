@@ -88,7 +88,11 @@ TEST_CASE("world location is calculated correctly when rotating parent by X") {
                 pParentSpatialNode->setRelativeRotation(glm::vec3(-90.0f, 0.0f, 0.0f));
 
                 const auto pChildSpatialNode = gc_new<SpatialNode>();
-                pParentSpatialNode->addChildNode(pChildSpatialNode);
+                pParentSpatialNode->addChildNode(
+                    pChildSpatialNode,
+                    Node::AttachmentRule::KEEP_RELATIVE,
+                    Node::AttachmentRule::KEEP_RELATIVE,
+                    Node::AttachmentRule::KEEP_RELATIVE);
 
                 REQUIRE(glm::all(glm::epsilonEqual(
                     pChildSpatialNode->getWorldLocation(), glm::vec3(5.0f, 0.0f, 0.0f), floatEpsilon)));
@@ -144,7 +148,11 @@ TEST_CASE("world location is calculated correctly when rotating parent by Y") {
                 pParentSpatialNode->setRelativeRotation(glm::vec3(0.0f, -90.0f, 0.0f));
 
                 const auto pChildSpatialNode = gc_new<SpatialNode>();
-                pParentSpatialNode->addChildNode(pChildSpatialNode);
+                pParentSpatialNode->addChildNode(
+                    pChildSpatialNode,
+                    Node::AttachmentRule::KEEP_RELATIVE,
+                    Node::AttachmentRule::KEEP_RELATIVE,
+                    Node::AttachmentRule::KEEP_RELATIVE);
 
                 REQUIRE(glm::all(glm::epsilonEqual(
                     pChildSpatialNode->getWorldLocation(), glm::vec3(0.0f, 5.0f, 0.0f), floatEpsilon)));
@@ -200,7 +208,11 @@ TEST_CASE("world location is calculated correctly when rotating parent by Z") {
                 pParentSpatialNode->setRelativeRotation(glm::vec3(0.0f, 0.0f, -90.0f));
 
                 const auto pChildSpatialNode = gc_new<SpatialNode>();
-                pParentSpatialNode->addChildNode(pChildSpatialNode);
+                pParentSpatialNode->addChildNode(
+                    pChildSpatialNode,
+                    Node::AttachmentRule::KEEP_RELATIVE,
+                    Node::AttachmentRule::KEEP_RELATIVE,
+                    Node::AttachmentRule::KEEP_RELATIVE);
 
                 REQUIRE(glm::all(glm::epsilonEqual(
                     pChildSpatialNode->getWorldLocation(), glm::vec3(0.0f, 0.0f, 5.0f), floatEpsilon)));
@@ -256,7 +268,11 @@ TEST_CASE("world location, rotation and scale are calculated correctly (with par
                 pParentSpatialNode->setRelativeScale(glm::vec3(5.0f, 1.0f, 1.0f));
 
                 const auto pChildSpatialNode = gc_new<SpatialNode>("My Cool Child Spatial Node");
-                pParentSpatialNode->addChildNode(pChildSpatialNode);
+                pParentSpatialNode->addChildNode(
+                    pChildSpatialNode,
+                    Node::AttachmentRule::KEEP_RELATIVE,
+                    Node::AttachmentRule::KEEP_RELATIVE,
+                    Node::AttachmentRule::KEEP_RELATIVE);
 
                 REQUIRE(glm::all(glm::epsilonEqual(
                     pChildSpatialNode->getWorldLocation(), glm::vec3(5.0f, 0.0f, 0.0f), floatEpsilon)));
@@ -319,8 +335,16 @@ TEST_CASE("move parent node with rotation") {
                 const auto pChildSpatialNode = gc_new<SpatialNode>();
 
                 // Spawn in world.
-                pParentSpatialNode->addChildNode(pChildSpatialNode);
-                getWorldRootNode()->addChildNode(pParentSpatialNode);
+                pParentSpatialNode->addChildNode(
+                    pChildSpatialNode,
+                    Node::AttachmentRule::KEEP_RELATIVE,
+                    Node::AttachmentRule::KEEP_RELATIVE,
+                    Node::AttachmentRule::KEEP_RELATIVE);
+                getWorldRootNode()->addChildNode(
+                    pParentSpatialNode,
+                    Node::AttachmentRule::KEEP_RELATIVE,
+                    Node::AttachmentRule::KEEP_RELATIVE,
+                    Node::AttachmentRule::KEEP_RELATIVE);
 
                 // Set relative location.
                 pChildSpatialNode->setRelativeLocation(glm::vec3(10.0F, 0.0F, 0.0F));
@@ -408,12 +432,36 @@ TEST_CASE(
                 pChildChildSpatialNode->setRelativeScale(glm::vec3(1.0f, 1.0f, 5.0f));
 
                 // Build hierarchy.
-                pParentSpatialNode->addChildNode(pUsualNode1);
-                pUsualNode1->addChildNode(pSpatialNode);
-                pSpatialNode->addChildNode(pUsualNode2);
-                pUsualNode2->addChildNode(pChildSpatialNode);
-                pChildSpatialNode->addChildNode(pUsualNode3);
-                pUsualNode3->addChildNode(pChildChildSpatialNode);
+                pParentSpatialNode->addChildNode(
+                    pUsualNode1,
+                    Node::AttachmentRule::KEEP_RELATIVE,
+                    Node::AttachmentRule::KEEP_RELATIVE,
+                    Node::AttachmentRule::KEEP_RELATIVE);
+                pUsualNode1->addChildNode(
+                    pSpatialNode,
+                    Node::AttachmentRule::KEEP_RELATIVE,
+                    Node::AttachmentRule::KEEP_RELATIVE,
+                    Node::AttachmentRule::KEEP_RELATIVE);
+                pSpatialNode->addChildNode(
+                    pUsualNode2,
+                    Node::AttachmentRule::KEEP_RELATIVE,
+                    Node::AttachmentRule::KEEP_RELATIVE,
+                    Node::AttachmentRule::KEEP_RELATIVE);
+                pUsualNode2->addChildNode(
+                    pChildSpatialNode,
+                    Node::AttachmentRule::KEEP_RELATIVE,
+                    Node::AttachmentRule::KEEP_RELATIVE,
+                    Node::AttachmentRule::KEEP_RELATIVE);
+                pChildSpatialNode->addChildNode(
+                    pUsualNode3,
+                    Node::AttachmentRule::KEEP_RELATIVE,
+                    Node::AttachmentRule::KEEP_RELATIVE,
+                    Node::AttachmentRule::KEEP_RELATIVE);
+                pUsualNode3->addChildNode(
+                    pChildChildSpatialNode,
+                    Node::AttachmentRule::KEEP_RELATIVE,
+                    Node::AttachmentRule::KEEP_RELATIVE,
+                    Node::AttachmentRule::KEEP_RELATIVE);
 
                 // Check locations.
                 const auto worldLocation = pChildChildSpatialNode->getWorldLocation();
@@ -491,14 +539,46 @@ TEST_CASE("world location with parent rotation is correct") {
                 pChildSpatialNodeC->setRelativeLocation(glm::vec3(0.0f, 10.0f, 0.0f));
 
                 // Build hierarchy.
-                pParentSpatialNodeA->addChildNode(pSpatialNodeA);
-                pParentSpatialNodeA->addChildNode(pSpatialNodeB);
-                pParentSpatialNodeB->addChildNode(pSpatialNodeC);
-                pSpatialNodeA->addChildNode(pChildSpatialNodeA);
-                pSpatialNodeB->addChildNode(pChildSpatialNodeB);
-                pSpatialNodeC->addChildNode(pChildSpatialNodeC);
-                getWorldRootNode()->addChildNode(pParentSpatialNodeA);
-                getWorldRootNode()->addChildNode(pParentSpatialNodeB);
+                pParentSpatialNodeA->addChildNode(
+                    pSpatialNodeA,
+                    Node::AttachmentRule::KEEP_RELATIVE,
+                    Node::AttachmentRule::KEEP_RELATIVE,
+                    Node::AttachmentRule::KEEP_RELATIVE);
+                pParentSpatialNodeA->addChildNode(
+                    pSpatialNodeB,
+                    Node::AttachmentRule::KEEP_RELATIVE,
+                    Node::AttachmentRule::KEEP_RELATIVE,
+                    Node::AttachmentRule::KEEP_RELATIVE);
+                pParentSpatialNodeB->addChildNode(
+                    pSpatialNodeC,
+                    Node::AttachmentRule::KEEP_RELATIVE,
+                    Node::AttachmentRule::KEEP_RELATIVE,
+                    Node::AttachmentRule::KEEP_RELATIVE);
+                pSpatialNodeA->addChildNode(
+                    pChildSpatialNodeA,
+                    Node::AttachmentRule::KEEP_RELATIVE,
+                    Node::AttachmentRule::KEEP_RELATIVE,
+                    Node::AttachmentRule::KEEP_RELATIVE);
+                pSpatialNodeB->addChildNode(
+                    pChildSpatialNodeB,
+                    Node::AttachmentRule::KEEP_RELATIVE,
+                    Node::AttachmentRule::KEEP_RELATIVE,
+                    Node::AttachmentRule::KEEP_RELATIVE);
+                pSpatialNodeC->addChildNode(
+                    pChildSpatialNodeC,
+                    Node::AttachmentRule::KEEP_RELATIVE,
+                    Node::AttachmentRule::KEEP_RELATIVE,
+                    Node::AttachmentRule::KEEP_RELATIVE);
+                getWorldRootNode()->addChildNode(
+                    pParentSpatialNodeA,
+                    Node::AttachmentRule::KEEP_RELATIVE,
+                    Node::AttachmentRule::KEEP_RELATIVE,
+                    Node::AttachmentRule::KEEP_RELATIVE);
+                getWorldRootNode()->addChildNode(
+                    pParentSpatialNodeB,
+                    Node::AttachmentRule::KEEP_RELATIVE,
+                    Node::AttachmentRule::KEEP_RELATIVE,
+                    Node::AttachmentRule::KEEP_RELATIVE);
 
                 // Check location.
                 const auto middleANodeWorldLocation = pSpatialNodeA->getWorldLocation();
@@ -566,9 +646,21 @@ TEST_CASE("set world location with parent is correct") {
                 const auto pChildSpatialNode = gc_new<SpatialNode>("My Cool Spatial Node");
 
                 // Build hierarchy.
-                getWorldRootNode()->addChildNode(pParentSpatialNode);
-                pParentSpatialNode->addChildNode(pUsualNode);
-                pUsualNode->addChildNode(pChildSpatialNode);
+                getWorldRootNode()->addChildNode(
+                    pParentSpatialNode,
+                    Node::AttachmentRule::KEEP_RELATIVE,
+                    Node::AttachmentRule::KEEP_RELATIVE,
+                    Node::AttachmentRule::KEEP_RELATIVE);
+                pParentSpatialNode->addChildNode(
+                    pUsualNode,
+                    Node::AttachmentRule::KEEP_RELATIVE,
+                    Node::AttachmentRule::KEEP_RELATIVE,
+                    Node::AttachmentRule::KEEP_RELATIVE);
+                pUsualNode->addChildNode(
+                    pChildSpatialNode,
+                    Node::AttachmentRule::KEEP_RELATIVE,
+                    Node::AttachmentRule::KEEP_RELATIVE,
+                    Node::AttachmentRule::KEEP_RELATIVE);
 
                 // Set world location.
                 pChildSpatialNode->setWorldLocation(glm::vec3(-5.0f, -5.0f, -5.0f));
@@ -632,9 +724,21 @@ TEST_CASE("set world rotation with parent is correct") {
                 const auto pChildSpatialNode = gc_new<SpatialNode>("My Cool Spatial Node");
 
                 // Build hierarchy.
-                getWorldRootNode()->addChildNode(pParentSpatialNode);
-                pParentSpatialNode->addChildNode(pUsualNode);
-                pUsualNode->addChildNode(pChildSpatialNode);
+                getWorldRootNode()->addChildNode(
+                    pParentSpatialNode,
+                    Node::AttachmentRule::KEEP_RELATIVE,
+                    Node::AttachmentRule::KEEP_RELATIVE,
+                    Node::AttachmentRule::KEEP_RELATIVE);
+                pParentSpatialNode->addChildNode(
+                    pUsualNode,
+                    Node::AttachmentRule::KEEP_RELATIVE,
+                    Node::AttachmentRule::KEEP_RELATIVE,
+                    Node::AttachmentRule::KEEP_RELATIVE);
+                pUsualNode->addChildNode(
+                    pChildSpatialNode,
+                    Node::AttachmentRule::KEEP_RELATIVE,
+                    Node::AttachmentRule::KEEP_RELATIVE,
+                    Node::AttachmentRule::KEEP_RELATIVE);
 
                 // Set world rotation.
                 pChildSpatialNode->setWorldRotation(glm::vec3(0.0f, 0.0f, -90.0f));
@@ -695,9 +799,21 @@ TEST_CASE("set world scale with parent is correct") {
                 const auto pChildSpatialNode = gc_new<SpatialNode>("My Cool Spatial Node");
 
                 // Build hierarchy.
-                getWorldRootNode()->addChildNode(pParentSpatialNode);
-                pParentSpatialNode->addChildNode(pUsualNode);
-                pUsualNode->addChildNode(pChildSpatialNode);
+                getWorldRootNode()->addChildNode(
+                    pParentSpatialNode,
+                    Node::AttachmentRule::KEEP_RELATIVE,
+                    Node::AttachmentRule::KEEP_RELATIVE,
+                    Node::AttachmentRule::KEEP_RELATIVE);
+                pParentSpatialNode->addChildNode(
+                    pUsualNode,
+                    Node::AttachmentRule::KEEP_RELATIVE,
+                    Node::AttachmentRule::KEEP_RELATIVE,
+                    Node::AttachmentRule::KEEP_RELATIVE);
+                pUsualNode->addChildNode(
+                    pChildSpatialNode,
+                    Node::AttachmentRule::KEEP_RELATIVE,
+                    Node::AttachmentRule::KEEP_RELATIVE,
+                    Node::AttachmentRule::KEEP_RELATIVE);
 
                 // Set world scale.
                 pChildSpatialNode->setWorldScale(glm::vec3(2.0f, 2.0f, 2.0f));
@@ -851,8 +967,16 @@ TEST_CASE("make spatial node look at world location with parent rotation") {
                 const auto pChildSpatialNode = gc_new<SpatialNode>();
 
                 // Build hierarchy.
-                getWorldRootNode()->addChildNode(pParentSpatialNode);
-                pParentSpatialNode->addChildNode(pChildSpatialNode);
+                getWorldRootNode()->addChildNode(
+                    pParentSpatialNode,
+                    Node::AttachmentRule::KEEP_RELATIVE,
+                    Node::AttachmentRule::KEEP_RELATIVE,
+                    Node::AttachmentRule::KEEP_RELATIVE);
+                pParentSpatialNode->addChildNode(
+                    pChildSpatialNode,
+                    Node::AttachmentRule::KEEP_RELATIVE,
+                    Node::AttachmentRule::KEEP_RELATIVE,
+                    Node::AttachmentRule::KEEP_RELATIVE);
 
                 // Set parent rotation.
                 pParentSpatialNode->setRelativeRotation(glm::vec3(0.0f, 90.0f, 90.0f));
@@ -978,6 +1102,698 @@ TEST_CASE("make spatial node look at world location with parent rotation") {
                 childWorldForward = pChildSpatialNode->getWorldForwardDirection();
 
                 REQUIRE(glm::all(glm::epsilonEqual(childWorldForward, targetLookDirection, floatEpsilon)));
+
+                getWindow()->close();
+            });
+        }
+        virtual ~TestGameInstance() override {}
+    };
+
+    auto result = Window::getBuilder().withVisibility(false).build();
+    if (std::holds_alternative<Error>(result)) {
+        Error error = std::get<Error>(std::move(result));
+        error.addEntry();
+        INFO(error.getFullErrorMessage());
+        REQUIRE(false);
+    }
+
+    const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
+    pMainWindow->processEvents<TestGameInstance>();
+
+    // Make sure everything is collected correctly.
+    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+}
+
+TEST_CASE("relative location/rotation/scale is considered as world when not spawned (no parent)") {
+    using namespace ne;
+
+    class TestGameInstance : public GameInstance {
+    public:
+        TestGameInstance(Window* pGameWindow, GameManager* pGame, InputManager* pInputManager)
+            : GameInstance(pGameWindow, pGame, pInputManager) {}
+        virtual void onGameStarted() override {
+            createWorld([&](const std::optional<Error>& optionalWorldError) {
+                if (optionalWorldError.has_value()) {
+                    auto error = optionalWorldError.value();
+                    error.addEntry();
+                    INFO(error.getFullErrorMessage());
+                    REQUIRE(false);
+                }
+
+                float floatEpsilon = 0.001f;
+
+                const auto pSpatialNode = gc_new<SpatialNode>();
+                pSpatialNode->setRelativeLocation(glm::vec3(5.0F, 0.0F, 0.0F));
+                pSpatialNode->setRelativeRotation(glm::vec3(0.0F, 5.0F, 0.0F));
+                pSpatialNode->setRelativeScale(glm::vec3(0.0F, 0.0F, 5.0F));
+
+                REQUIRE(glm::all(glm::epsilonEqual(
+                    pSpatialNode->getWorldLocation(), pSpatialNode->getRelativeLocation(), floatEpsilon)));
+                REQUIRE(glm::all(glm::epsilonEqual(
+                    pSpatialNode->getWorldRotation(), pSpatialNode->getRelativeRotation(), floatEpsilon)));
+                REQUIRE(glm::all(glm::epsilonEqual(
+                    pSpatialNode->getWorldScale(), pSpatialNode->getRelativeScale(), floatEpsilon)));
+
+                getWindow()->close();
+            });
+        }
+        virtual ~TestGameInstance() override {}
+    };
+
+    auto result = Window::getBuilder().withVisibility(false).build();
+    if (std::holds_alternative<Error>(result)) {
+        Error error = std::get<Error>(std::move(result));
+        error.addEntry();
+        INFO(error.getFullErrorMessage());
+        REQUIRE(false);
+    }
+
+    const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
+    pMainWindow->processEvents<TestGameInstance>();
+
+    // Make sure everything is collected correctly.
+    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+}
+
+TEST_CASE("use `reset` attachment rule for location") {
+    using namespace ne;
+
+    class TestGameInstance : public GameInstance {
+    public:
+        TestGameInstance(Window* pGameWindow, GameManager* pGame, InputManager* pInputManager)
+            : GameInstance(pGameWindow, pGame, pInputManager) {}
+        virtual void onGameStarted() override {
+            createWorld([&](const std::optional<Error>& optionalWorldError) {
+                if (optionalWorldError.has_value()) {
+                    auto error = optionalWorldError.value();
+                    error.addEntry();
+                    INFO(error.getFullErrorMessage());
+                    REQUIRE(false);
+                }
+
+                float floatEpsilon = 0.001f;
+
+                const auto pSpatialNode = gc_new<SpatialNode>();
+                pSpatialNode->setRelativeLocation(glm::vec3(5.0F, 0.0F, 0.0F));
+
+                const auto pParentSpatialNode = gc_new<SpatialNode>();
+                pParentSpatialNode->setRelativeLocation(glm::vec3(5.0F, 0.0F, 0.0F));
+
+                getWorldRootNode()->addChildNode(pParentSpatialNode);
+                pParentSpatialNode->addChildNode(
+                    pSpatialNode, Node::AttachmentRule::RESET_RELATIVE, Node::AttachmentRule::KEEP_RELATIVE);
+
+                const auto relativeLocation = pSpatialNode->getRelativeLocation();
+                const auto worldLocation = pSpatialNode->getWorldLocation();
+                REQUIRE(
+                    glm::all(glm::epsilonEqual(relativeLocation, glm::vec3(0.0f, 0.0f, 0.0f), floatEpsilon)));
+                REQUIRE(
+                    glm::all(glm::epsilonEqual(worldLocation, glm::vec3(5.0f, 0.0f, 0.0f), floatEpsilon)));
+
+                getWindow()->close();
+            });
+        }
+        virtual ~TestGameInstance() override {}
+    };
+
+    auto result = Window::getBuilder().withVisibility(false).build();
+    if (std::holds_alternative<Error>(result)) {
+        Error error = std::get<Error>(std::move(result));
+        error.addEntry();
+        INFO(error.getFullErrorMessage());
+        REQUIRE(false);
+    }
+
+    const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
+    pMainWindow->processEvents<TestGameInstance>();
+
+    // Make sure everything is collected correctly.
+    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+}
+
+TEST_CASE("use `keepRelative` attachment rule for location") {
+    using namespace ne;
+
+    class TestGameInstance : public GameInstance {
+    public:
+        TestGameInstance(Window* pGameWindow, GameManager* pGame, InputManager* pInputManager)
+            : GameInstance(pGameWindow, pGame, pInputManager) {}
+        virtual void onGameStarted() override {
+            createWorld([&](const std::optional<Error>& optionalWorldError) {
+                if (optionalWorldError.has_value()) {
+                    auto error = optionalWorldError.value();
+                    error.addEntry();
+                    INFO(error.getFullErrorMessage());
+                    REQUIRE(false);
+                }
+
+                float floatEpsilon = 0.001f;
+
+                const auto pSpatialNode = gc_new<SpatialNode>();
+                pSpatialNode->setRelativeLocation(glm::vec3(5.0F, 0.0F, 0.0F));
+
+                const auto pParentSpatialNode = gc_new<SpatialNode>();
+                pParentSpatialNode->setRelativeLocation(glm::vec3(5.0F, 0.0F, 0.0F));
+
+                getWorldRootNode()->addChildNode(pParentSpatialNode);
+                pParentSpatialNode->addChildNode(
+                    pSpatialNode, Node::AttachmentRule::KEEP_RELATIVE, Node::AttachmentRule::KEEP_RELATIVE);
+
+                const auto relativeLocation = pSpatialNode->getRelativeLocation();
+                const auto worldLocation = pSpatialNode->getWorldLocation();
+                REQUIRE(
+                    glm::all(glm::epsilonEqual(relativeLocation, glm::vec3(5.0f, 0.0f, 0.0f), floatEpsilon)));
+                REQUIRE(
+                    glm::all(glm::epsilonEqual(worldLocation, glm::vec3(10.0f, 0.0f, 0.0f), floatEpsilon)));
+
+                getWindow()->close();
+            });
+        }
+        virtual ~TestGameInstance() override {}
+    };
+
+    auto result = Window::getBuilder().withVisibility(false).build();
+    if (std::holds_alternative<Error>(result)) {
+        Error error = std::get<Error>(std::move(result));
+        error.addEntry();
+        INFO(error.getFullErrorMessage());
+        REQUIRE(false);
+    }
+
+    const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
+    pMainWindow->processEvents<TestGameInstance>();
+
+    // Make sure everything is collected correctly.
+    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+}
+
+TEST_CASE("use `keepWorld` attachment rule for location") {
+    using namespace ne;
+
+    class TestGameInstance : public GameInstance {
+    public:
+        TestGameInstance(Window* pGameWindow, GameManager* pGame, InputManager* pInputManager)
+            : GameInstance(pGameWindow, pGame, pInputManager) {}
+        virtual void onGameStarted() override {
+            createWorld([&](const std::optional<Error>& optionalWorldError) {
+                if (optionalWorldError.has_value()) {
+                    auto error = optionalWorldError.value();
+                    error.addEntry();
+                    INFO(error.getFullErrorMessage());
+                    REQUIRE(false);
+                }
+
+                float floatEpsilon = 0.001f;
+
+                const auto pSpatialNode = gc_new<SpatialNode>();
+                pSpatialNode->setRelativeLocation(glm::vec3(5.0F, 0.0F, 0.0F));
+
+                const auto pParentSpatialNode = gc_new<SpatialNode>();
+                pParentSpatialNode->setRelativeLocation(glm::vec3(5.0F, 0.0F, 0.0F));
+
+                getWorldRootNode()->addChildNode(pParentSpatialNode);
+                pParentSpatialNode->addChildNode(
+                    pSpatialNode, Node::AttachmentRule::KEEP_WORLD, Node::AttachmentRule::KEEP_RELATIVE);
+
+                const auto relativeLocation = pSpatialNode->getRelativeLocation();
+                const auto worldLocation = pSpatialNode->getWorldLocation();
+                REQUIRE(
+                    glm::all(glm::epsilonEqual(relativeLocation, glm::vec3(0.0f, 0.0f, 0.0f), floatEpsilon)));
+                REQUIRE(
+                    glm::all(glm::epsilonEqual(worldLocation, glm::vec3(5.0f, 0.0f, 0.0f), floatEpsilon)));
+
+                getWindow()->close();
+            });
+        }
+        virtual ~TestGameInstance() override {}
+    };
+
+    auto result = Window::getBuilder().withVisibility(false).build();
+    if (std::holds_alternative<Error>(result)) {
+        Error error = std::get<Error>(std::move(result));
+        error.addEntry();
+        INFO(error.getFullErrorMessage());
+        REQUIRE(false);
+    }
+
+    const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
+    pMainWindow->processEvents<TestGameInstance>();
+
+    // Make sure everything is collected correctly.
+    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+}
+
+TEST_CASE("use `reset` attachment rule for rotation") {
+    using namespace ne;
+
+    class TestGameInstance : public GameInstance {
+    public:
+        TestGameInstance(Window* pGameWindow, GameManager* pGame, InputManager* pInputManager)
+            : GameInstance(pGameWindow, pGame, pInputManager) {}
+        virtual void onGameStarted() override {
+            createWorld([&](const std::optional<Error>& optionalWorldError) {
+                if (optionalWorldError.has_value()) {
+                    auto error = optionalWorldError.value();
+                    error.addEntry();
+                    INFO(error.getFullErrorMessage());
+                    REQUIRE(false);
+                }
+
+                float floatEpsilon = 0.001f;
+
+                const auto pSpatialNode = gc_new<SpatialNode>();
+                pSpatialNode->setRelativeRotation(glm::vec3(5.0F, 0.0F, 0.0F));
+
+                const auto pParentSpatialNode = gc_new<SpatialNode>();
+                pParentSpatialNode->setRelativeRotation(glm::vec3(5.0F, 0.0F, 0.0F));
+
+                getWorldRootNode()->addChildNode(pParentSpatialNode);
+                pParentSpatialNode->addChildNode(
+                    pSpatialNode, Node::AttachmentRule::KEEP_RELATIVE, Node::AttachmentRule::RESET_RELATIVE);
+
+                const auto relativeRotation = pSpatialNode->getRelativeRotation();
+                const auto worldRotation = pSpatialNode->getWorldRotation();
+                REQUIRE(
+                    glm::all(glm::epsilonEqual(relativeRotation, glm::vec3(0.0f, 0.0f, 0.0f), floatEpsilon)));
+                REQUIRE(
+                    glm::all(glm::epsilonEqual(worldRotation, glm::vec3(5.0f, 0.0f, 0.0f), floatEpsilon)));
+
+                getWindow()->close();
+            });
+        }
+        virtual ~TestGameInstance() override {}
+    };
+
+    auto result = Window::getBuilder().withVisibility(false).build();
+    if (std::holds_alternative<Error>(result)) {
+        Error error = std::get<Error>(std::move(result));
+        error.addEntry();
+        INFO(error.getFullErrorMessage());
+        REQUIRE(false);
+    }
+
+    const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
+    pMainWindow->processEvents<TestGameInstance>();
+
+    // Make sure everything is collected correctly.
+    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+}
+
+TEST_CASE("use `keepRelative` attachment rule for rotation") {
+    using namespace ne;
+
+    class TestGameInstance : public GameInstance {
+    public:
+        TestGameInstance(Window* pGameWindow, GameManager* pGame, InputManager* pInputManager)
+            : GameInstance(pGameWindow, pGame, pInputManager) {}
+        virtual void onGameStarted() override {
+            createWorld([&](const std::optional<Error>& optionalWorldError) {
+                if (optionalWorldError.has_value()) {
+                    auto error = optionalWorldError.value();
+                    error.addEntry();
+                    INFO(error.getFullErrorMessage());
+                    REQUIRE(false);
+                }
+
+                float floatEpsilon = 0.001f;
+
+                const auto pSpatialNode = gc_new<SpatialNode>();
+                pSpatialNode->setRelativeRotation(glm::vec3(5.0F, 0.0F, 0.0F));
+
+                const auto pParentSpatialNode = gc_new<SpatialNode>();
+                pParentSpatialNode->setRelativeRotation(glm::vec3(5.0F, 0.0F, 0.0F));
+
+                getWorldRootNode()->addChildNode(pParentSpatialNode);
+                pParentSpatialNode->addChildNode(
+                    pSpatialNode, Node::AttachmentRule::KEEP_RELATIVE, Node::AttachmentRule::KEEP_RELATIVE);
+
+                const auto relativeRotation = pSpatialNode->getRelativeRotation();
+                const auto worldRotation = pSpatialNode->getWorldRotation();
+                REQUIRE(
+                    glm::all(glm::epsilonEqual(relativeRotation, glm::vec3(5.0f, 0.0f, 0.0f), floatEpsilon)));
+                REQUIRE(
+                    glm::all(glm::epsilonEqual(worldRotation, glm::vec3(10.0f, 0.0f, 0.0f), floatEpsilon)));
+
+                getWindow()->close();
+            });
+        }
+        virtual ~TestGameInstance() override {}
+    };
+
+    auto result = Window::getBuilder().withVisibility(false).build();
+    if (std::holds_alternative<Error>(result)) {
+        Error error = std::get<Error>(std::move(result));
+        error.addEntry();
+        INFO(error.getFullErrorMessage());
+        REQUIRE(false);
+    }
+
+    const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
+    pMainWindow->processEvents<TestGameInstance>();
+
+    // Make sure everything is collected correctly.
+    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+}
+
+TEST_CASE("use `keepWorld` attachment rule for rotation") {
+    using namespace ne;
+
+    class TestGameInstance : public GameInstance {
+    public:
+        TestGameInstance(Window* pGameWindow, GameManager* pGame, InputManager* pInputManager)
+            : GameInstance(pGameWindow, pGame, pInputManager) {}
+        virtual void onGameStarted() override {
+            createWorld([&](const std::optional<Error>& optionalWorldError) {
+                if (optionalWorldError.has_value()) {
+                    auto error = optionalWorldError.value();
+                    error.addEntry();
+                    INFO(error.getFullErrorMessage());
+                    REQUIRE(false);
+                }
+
+                float floatEpsilon = 0.001f;
+
+                const auto pSpatialNode = gc_new<SpatialNode>();
+                pSpatialNode->setRelativeRotation(glm::vec3(5.0F, 0.0F, 0.0F));
+
+                const auto pParentSpatialNode = gc_new<SpatialNode>();
+                pParentSpatialNode->setRelativeRotation(glm::vec3(5.0F, 0.0F, 0.0F));
+
+                getWorldRootNode()->addChildNode(pParentSpatialNode);
+                pParentSpatialNode->addChildNode(
+                    pSpatialNode, Node::AttachmentRule::KEEP_RELATIVE, Node::AttachmentRule::KEEP_WORLD);
+
+                const auto relativeRotation = pSpatialNode->getRelativeRotation();
+                const auto worldRotation = pSpatialNode->getWorldRotation();
+                REQUIRE(
+                    glm::all(glm::epsilonEqual(relativeRotation, glm::vec3(0.0f, 0.0f, 0.0f), floatEpsilon)));
+                REQUIRE(
+                    glm::all(glm::epsilonEqual(worldRotation, glm::vec3(5.0f, 0.0f, 0.0f), floatEpsilon)));
+
+                getWindow()->close();
+            });
+        }
+        virtual ~TestGameInstance() override {}
+    };
+
+    auto result = Window::getBuilder().withVisibility(false).build();
+    if (std::holds_alternative<Error>(result)) {
+        Error error = std::get<Error>(std::move(result));
+        error.addEntry();
+        INFO(error.getFullErrorMessage());
+        REQUIRE(false);
+    }
+
+    const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
+    pMainWindow->processEvents<TestGameInstance>();
+
+    // Make sure everything is collected correctly.
+    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+}
+
+TEST_CASE("use `reset` attachment rule for scale") {
+    using namespace ne;
+
+    class TestGameInstance : public GameInstance {
+    public:
+        TestGameInstance(Window* pGameWindow, GameManager* pGame, InputManager* pInputManager)
+            : GameInstance(pGameWindow, pGame, pInputManager) {}
+        virtual void onGameStarted() override {
+            createWorld([&](const std::optional<Error>& optionalWorldError) {
+                if (optionalWorldError.has_value()) {
+                    auto error = optionalWorldError.value();
+                    error.addEntry();
+                    INFO(error.getFullErrorMessage());
+                    REQUIRE(false);
+                }
+
+                float floatEpsilon = 0.001f;
+
+                const auto pSpatialNode = gc_new<SpatialNode>();
+                pSpatialNode->setRelativeScale(glm::vec3(5.0F, 0.0F, 0.0F));
+
+                const auto pParentSpatialNode = gc_new<SpatialNode>();
+                pParentSpatialNode->setRelativeScale(glm::vec3(5.0F, 0.0F, 0.0F));
+
+                getWorldRootNode()->addChildNode(pParentSpatialNode);
+                pParentSpatialNode->addChildNode(
+                    pSpatialNode,
+                    Node::AttachmentRule::RESET_RELATIVE,
+                    Node::AttachmentRule::KEEP_RELATIVE,
+                    Node::AttachmentRule::RESET_RELATIVE);
+
+                const auto relativeScale = pSpatialNode->getRelativeScale();
+                const auto worldScale = pSpatialNode->getWorldScale();
+                REQUIRE(
+                    glm::all(glm::epsilonEqual(relativeScale, glm::vec3(1.0f, 1.0f, 1.0f), floatEpsilon)));
+                REQUIRE(glm::all(glm::epsilonEqual(worldScale, glm::vec3(5.0f, 0.0f, 0.0f), floatEpsilon)));
+
+                getWindow()->close();
+            });
+        }
+        virtual ~TestGameInstance() override {}
+    };
+
+    auto result = Window::getBuilder().withVisibility(false).build();
+    if (std::holds_alternative<Error>(result)) {
+        Error error = std::get<Error>(std::move(result));
+        error.addEntry();
+        INFO(error.getFullErrorMessage());
+        REQUIRE(false);
+    }
+
+    const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
+    pMainWindow->processEvents<TestGameInstance>();
+
+    // Make sure everything is collected correctly.
+    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+}
+
+TEST_CASE("use `keepRelative` attachment rule for scale") {
+    using namespace ne;
+
+    class TestGameInstance : public GameInstance {
+    public:
+        TestGameInstance(Window* pGameWindow, GameManager* pGame, InputManager* pInputManager)
+            : GameInstance(pGameWindow, pGame, pInputManager) {}
+        virtual void onGameStarted() override {
+            createWorld([&](const std::optional<Error>& optionalWorldError) {
+                if (optionalWorldError.has_value()) {
+                    auto error = optionalWorldError.value();
+                    error.addEntry();
+                    INFO(error.getFullErrorMessage());
+                    REQUIRE(false);
+                }
+
+                float floatEpsilon = 0.001f;
+
+                const auto pSpatialNode = gc_new<SpatialNode>();
+                pSpatialNode->setRelativeScale(glm::vec3(5.0F, 0.0F, 0.0F));
+
+                const auto pParentSpatialNode = gc_new<SpatialNode>();
+                pParentSpatialNode->setRelativeScale(glm::vec3(5.0F, 0.0F, 0.0F));
+
+                getWorldRootNode()->addChildNode(pParentSpatialNode);
+                pParentSpatialNode->addChildNode(
+                    pSpatialNode,
+                    Node::AttachmentRule::KEEP_RELATIVE,
+                    Node::AttachmentRule::KEEP_RELATIVE,
+                    Node::AttachmentRule::KEEP_RELATIVE);
+
+                const auto relativeScale = pSpatialNode->getRelativeScale();
+                const auto worldScale = pSpatialNode->getWorldScale();
+                REQUIRE(
+                    glm::all(glm::epsilonEqual(relativeScale, glm::vec3(5.0f, 0.0f, 0.0f), floatEpsilon)));
+                REQUIRE(glm::all(glm::epsilonEqual(worldScale, glm::vec3(25.0f, 0.0f, 0.0f), floatEpsilon)));
+
+                getWindow()->close();
+            });
+        }
+        virtual ~TestGameInstance() override {}
+    };
+
+    auto result = Window::getBuilder().withVisibility(false).build();
+    if (std::holds_alternative<Error>(result)) {
+        Error error = std::get<Error>(std::move(result));
+        error.addEntry();
+        INFO(error.getFullErrorMessage());
+        REQUIRE(false);
+    }
+
+    const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
+    pMainWindow->processEvents<TestGameInstance>();
+
+    // Make sure everything is collected correctly.
+    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+}
+
+TEST_CASE("use `keepWorld` attachment rule for scale") {
+    using namespace ne;
+
+    class TestGameInstance : public GameInstance {
+    public:
+        TestGameInstance(Window* pGameWindow, GameManager* pGame, InputManager* pInputManager)
+            : GameInstance(pGameWindow, pGame, pInputManager) {}
+        virtual void onGameStarted() override {
+            createWorld([&](const std::optional<Error>& optionalWorldError) {
+                if (optionalWorldError.has_value()) {
+                    auto error = optionalWorldError.value();
+                    error.addEntry();
+                    INFO(error.getFullErrorMessage());
+                    REQUIRE(false);
+                }
+
+                float floatEpsilon = 0.001f;
+
+                const auto pSpatialNode = gc_new<SpatialNode>();
+                pSpatialNode->setRelativeScale(glm::vec3(5.0F, 0.0F, 0.0F));
+
+                const auto pParentSpatialNode = gc_new<SpatialNode>();
+                pParentSpatialNode->setRelativeScale(glm::vec3(5.0F, 0.0F, 0.0F));
+
+                getWorldRootNode()->addChildNode(pParentSpatialNode);
+                pParentSpatialNode->addChildNode(
+                    pSpatialNode,
+                    Node::AttachmentRule::KEEP_RELATIVE,
+                    Node::AttachmentRule::KEEP_RELATIVE,
+                    Node::AttachmentRule::KEEP_WORLD);
+
+                const auto relativeScale = pSpatialNode->getRelativeScale();
+                const auto worldScale = pSpatialNode->getWorldScale();
+                REQUIRE(
+                    glm::all(glm::epsilonEqual(relativeScale, glm::vec3(1.0f, 0.0f, 0.0f), floatEpsilon)));
+                REQUIRE(glm::all(glm::epsilonEqual(worldScale, glm::vec3(5.0f, 0.0f, 0.0f), floatEpsilon)));
+
+                getWindow()->close();
+            });
+        }
+        virtual ~TestGameInstance() override {}
+    };
+
+    auto result = Window::getBuilder().withVisibility(false).build();
+    if (std::holds_alternative<Error>(result)) {
+        Error error = std::get<Error>(std::move(result));
+        error.addEntry();
+        INFO(error.getFullErrorMessage());
+        REQUIRE(false);
+    }
+
+    const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
+    pMainWindow->processEvents<TestGameInstance>();
+
+    // Make sure everything is collected correctly.
+    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+}
+
+TEST_CASE("serialize and deserialize spatial node tree") {
+    using namespace ne;
+
+    class TestGameInstance : public GameInstance {
+    public:
+        TestGameInstance(Window* pGameWindow, GameManager* pGame, InputManager* pInputManager)
+            : GameInstance(pGameWindow, pGame, pInputManager) {}
+        virtual void onGameStarted() override {
+            createWorld([&](const std::optional<Error>& optionalWorldError) {
+                if (optionalWorldError.has_value()) {
+                    auto error = optionalWorldError.value();
+                    error.addEntry();
+                    INFO(error.getFullErrorMessage());
+                    REQUIRE(false);
+                }
+
+                float floatEpsilon = 0.001f;
+
+                // Prepare paths.
+                const std::filesystem::path pathToFile =
+                    ProjectPaths::getPathToResDirectory(ResourceDirectory::ROOT) / "test" / "temp" /
+                    "TESTING_SpatialNodeTree_TESTING"; // not specifying ".toml" on purpose
+                const std::filesystem::path fullPathToFile =
+                    ProjectPaths::getPathToResDirectory(ResourceDirectory::ROOT) / "test" / "temp" /
+                    "TESTING_SpatialNodeTree_TESTING.toml";
+
+                {
+                    // Create nodes.
+                    const auto pSpatialNode = gc_new<SpatialNode>();
+                    const auto pChildSpatialNode = gc_new<SpatialNode>();
+
+                    // Build hierarchy.
+                    getWorldRootNode()->addChildNode(pSpatialNode);
+                    pSpatialNode->addChildNode(pChildSpatialNode);
+
+                    // Set locations.
+                    pSpatialNode->setRelativeLocation(glm::vec3(5.0F, 0.0F, 0.0F));
+                    pChildSpatialNode->setRelativeLocation(glm::vec3(5.0F, 0.0F, 0.0F));
+
+                    // Make sure locations are correct.
+                    REQUIRE(glm::all(glm::epsilonEqual(
+                        pSpatialNode->getRelativeLocation(), glm::vec3(5.0f, 0.0f, 0.0f), floatEpsilon)));
+                    REQUIRE(glm::all(glm::epsilonEqual(
+                        pChildSpatialNode->getRelativeLocation(),
+                        glm::vec3(5.0f, 0.0f, 0.0f),
+                        floatEpsilon)));
+                    REQUIRE(glm::all(glm::epsilonEqual(
+                        pSpatialNode->getWorldLocation(), glm::vec3(5.0f, 0.0f, 0.0f), floatEpsilon)));
+                    REQUIRE(glm::all(glm::epsilonEqual(
+                        pChildSpatialNode->getWorldLocation(), glm::vec3(10.0f, 0.0f, 0.0f), floatEpsilon)));
+
+                    // Serialize.
+                    const auto optionalError = getWorldRootNode()->serializeNodeTree(pathToFile, false);
+                    if (optionalError.has_value()) {
+                        auto err = optionalError.value();
+                        err.addEntry();
+                        INFO(err.getFullErrorMessage());
+                        REQUIRE(false);
+                    }
+
+                    REQUIRE(std::filesystem::exists(fullPathToFile));
+                }
+
+                {
+                    // Deserialize.
+                    const auto deserializeResult = Node::deserializeNodeTree(pathToFile);
+                    if (std::holds_alternative<Error>(deserializeResult)) {
+                        auto err = std::get<Error>(deserializeResult);
+                        err.addEntry();
+                        INFO(err.getFullErrorMessage());
+                        REQUIRE(false);
+                    }
+                    const auto pRootNode = std::get<gc<Node>>(deserializeResult);
+
+                    // Check results.
+                    auto pMtxChildNodes = pRootNode->getChildNodes();
+                    {
+                        std::scoped_lock childNodesGuard(pMtxChildNodes->first);
+                        REQUIRE(pMtxChildNodes->second->size() == 1);
+                    }
+
+                    // Check child nodes.
+                    const auto pSpatialNode =
+                        gc_dynamic_pointer_cast<SpatialNode>(pMtxChildNodes->second->at(0));
+                    pMtxChildNodes = pSpatialNode->getChildNodes();
+                    {
+                        std::scoped_lock childNodesGuard(pMtxChildNodes->first);
+                        REQUIRE(pMtxChildNodes->second->size() == 1);
+                    }
+                    const auto pChildSpatialNode =
+                        gc_dynamic_pointer_cast<SpatialNode>(pMtxChildNodes->second->at(0));
+                    pMtxChildNodes = pChildSpatialNode->getChildNodes();
+                    {
+                        std::scoped_lock childNodesGuard(pMtxChildNodes->first);
+                        REQUIRE(pMtxChildNodes->second->size() == 0);
+                    }
+
+                    // Make sure locations are correct.
+                    REQUIRE(glm::all(glm::epsilonEqual(
+                        pSpatialNode->getRelativeLocation(), glm::vec3(5.0f, 0.0f, 0.0f), floatEpsilon)));
+                    REQUIRE(glm::all(glm::epsilonEqual(
+                        pChildSpatialNode->getRelativeLocation(),
+                        glm::vec3(5.0f, 0.0f, 0.0f),
+                        floatEpsilon)));
+                    REQUIRE(glm::all(glm::epsilonEqual(
+                        pSpatialNode->getWorldLocation(), glm::vec3(5.0f, 0.0f, 0.0f), floatEpsilon)));
+                    REQUIRE(glm::all(glm::epsilonEqual(
+                        pChildSpatialNode->getWorldLocation(), glm::vec3(10.0f, 0.0f, 0.0f), floatEpsilon)));
+                }
 
                 getWindow()->close();
             });

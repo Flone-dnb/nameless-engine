@@ -84,16 +84,6 @@ namespace ne {
     }
 
     void SpatialNode::setWorldLocation(const glm::vec3& location) {
-        if (!isSpawned()) [[unlikely]] {
-            Logger::get().warn(
-                fmt::format(
-                    "setting world location for node \"{}\" has no effect "
-                    "because the node is not spawned in the world",
-                    getNodeName()),
-                "");
-            return;
-        }
-
         std::scoped_lock guard(mtxWorldMatrix.first, mtxSpatialParent.first);
 
         // See if we have a parent.
@@ -119,16 +109,6 @@ namespace ne {
     }
 
     void SpatialNode::setWorldRotation(const glm::vec3& rotation) {
-        if (!isSpawned()) [[unlikely]] {
-            Logger::get().warn(
-                fmt::format(
-                    "setting world rotation for node \"{}\" has no effect "
-                    "because the node is not spawned in the world",
-                    getNodeName()),
-                "");
-            return;
-        }
-
         glm::vec3 targetWorldRotation;
         targetWorldRotation.x = MathHelpers::normalizeValue(rotation.x, -360.0F, 360.0F); // NOLINT
         targetWorldRotation.y = MathHelpers::normalizeValue(rotation.y, -360.0F, 360.0F); // NOLINT
@@ -154,19 +134,11 @@ namespace ne {
     }
 
     void SpatialNode::setWorldScale(const glm::vec3& scale) {
-        if (!isSpawned()) [[unlikely]] {
-            Logger::get().warn(
-                fmt::format(
-                    "setting world scale for node \"{}\" has no effect "
-                    "because the node is not spawned in the world",
-                    getNodeName()),
-                "");
-            return;
-        }
-
 #if defined(DEBUG)
         if (scale.x < 0.0F || scale.y < 0.0F || scale.z < 0.0F) [[unlikely]] {
-            Logger::get().warn("avoid using negative scale as it may cause issues", sSpatialNodeLogCategory);
+            Logger::get().warn(
+                "avoid using negative scale as it's not supported and may cause issues",
+                sSpatialNodeLogCategory);
         }
 #endif
 
@@ -358,6 +330,62 @@ namespace ne {
 
     std::pair<std::recursive_mutex, gc<SpatialNode>>* SpatialNode::getClosestSpatialParent() {
         return &mtxSpatialParent;
+    }
+
+    void SpatialNode::applyAttachmentRule(
+        Node::AttachmentRule locationRule,
+        const glm::vec3& worldLocationBeforeAttachment,
+        Node::AttachmentRule rotationRule,
+        const glm::vec3& worldRotationBeforeAttachment,
+        Node::AttachmentRule scaleRule,
+        const glm::vec3& worldScaleBeforeAttachment) {
+        // Apply location rule.
+        switch (locationRule) {
+        case (AttachmentRule::RESET_RELATIVE): {
+            setRelativeLocation(glm::vec3(0.0F, 0.0F, 0.0F));
+            break;
+        }
+        case (AttachmentRule::KEEP_RELATIVE): {
+            // Do nothing.
+            break;
+        }
+        case (AttachmentRule::KEEP_WORLD): {
+            setWorldLocation(worldLocationBeforeAttachment);
+            break;
+        }
+        }
+
+        // Apply rotation rule.
+        switch (rotationRule) {
+        case (AttachmentRule::RESET_RELATIVE): {
+            setRelativeRotation(glm::vec3(0.0F, 0.0F, 0.0F));
+            break;
+        }
+        case (AttachmentRule::KEEP_RELATIVE): {
+            // Do nothing.
+            break;
+        }
+        case (AttachmentRule::KEEP_WORLD): {
+            setWorldRotation(worldRotationBeforeAttachment);
+            break;
+        }
+        }
+
+        // Apply scale rule.
+        switch (scaleRule) {
+        case (AttachmentRule::RESET_RELATIVE): {
+            setRelativeScale(glm::vec3(1.0F, 1.0F, 1.0F));
+            break;
+        }
+        case (AttachmentRule::KEEP_RELATIVE): {
+            // Do nothing.
+            break;
+        }
+        case (AttachmentRule::KEEP_WORLD): {
+            setWorldScale(worldScaleBeforeAttachment);
+            break;
+        }
+        }
     }
 
 } // namespace ne

@@ -31,9 +31,12 @@ TEST_CASE("build and check node hierarchy") {
         const auto pChildChildNode2 = gc_new<Node>();
 
         // Build hierarchy.
-        pChildNode->addChildNode(pChildChildNode1);
-        pChildNode->addChildNode(pChildChildNode2);
-        pParentNode->addChildNode(pChildNode);
+        pChildNode->addChildNode(
+            pChildChildNode1, Node::AttachmentRule::KEEP_RELATIVE, Node::AttachmentRule::KEEP_RELATIVE);
+        pChildNode->addChildNode(
+            pChildChildNode2, Node::AttachmentRule::KEEP_RELATIVE, Node::AttachmentRule::KEEP_RELATIVE);
+        pParentNode->addChildNode(
+            pChildNode, Node::AttachmentRule::KEEP_RELATIVE, Node::AttachmentRule::KEEP_RELATIVE);
 
         const auto pMtxParentChildNodes = pParentNode->getChildNodes();
         std::scoped_lock parentChildNodesGuard(pMtxParentChildNodes->first);
@@ -87,14 +90,20 @@ TEST_CASE("move nodes in the hierarchy") {
         const auto pCharacterChildNode2 = gc_new<Node>();
 
         // Build hierarchy.
-        pCharacterNode->addChildNode(pCharacterChildNode1);
-        pCharacterNode->addChildNode(pCharacterChildNode2);
-        pParentNode->addChildNode(pCharacterNode);
-        pParentNode->addChildNode(pCarNode);
+        pCharacterNode->addChildNode(
+            pCharacterChildNode1, Node::AttachmentRule::KEEP_RELATIVE, Node::AttachmentRule::KEEP_RELATIVE);
+        pCharacterNode->addChildNode(
+            pCharacterChildNode2, Node::AttachmentRule::KEEP_RELATIVE, Node::AttachmentRule::KEEP_RELATIVE);
+        pParentNode->addChildNode(
+            pCharacterNode, Node::AttachmentRule::KEEP_RELATIVE, Node::AttachmentRule::KEEP_RELATIVE);
+        pParentNode->addChildNode(
+            pCarNode, Node::AttachmentRule::KEEP_RELATIVE, Node::AttachmentRule::KEEP_RELATIVE);
 
         // Attach the character to the car.
-        pCarNode->addChildNode(pCharacterNode);
-        pCarNode->addChildNode(pSomeNode);
+        pCarNode->addChildNode(
+            pCharacterNode, Node::AttachmentRule::KEEP_RELATIVE, Node::AttachmentRule::KEEP_RELATIVE);
+        pCarNode->addChildNode(
+            pSomeNode, Node::AttachmentRule::KEEP_RELATIVE, Node::AttachmentRule::KEEP_RELATIVE);
 
         // Check that everything is correct.
         REQUIRE(&*pCharacterNode->getParentNode()->second == &*pCarNode);
@@ -111,7 +120,8 @@ TEST_CASE("move nodes in the hierarchy") {
         REQUIRE(pCarNode->getChildNodes()->second->size() == 1);
 
         // Detach the character from the car.
-        pParentNode->addChildNode(pCharacterNode);
+        pParentNode->addChildNode(
+            pCharacterNode, Node::AttachmentRule::KEEP_RELATIVE, Node::AttachmentRule::KEEP_RELATIVE);
 
         // Check that everything is correct.
         REQUIRE(&*pCharacterNode->getParentNode()->second == &*pParentNode);
@@ -145,9 +155,12 @@ TEST_CASE("serialize and deserialize node tree") {
         const auto pChildChildNode1 = gc_new<Node>("Child Child Node 1");
 
         // Build hierarchy.
-        pRootNode->addChildNode(pChildNode1);
-        pRootNode->addChildNode(pChildNode2);
-        pChildNode1->addChildNode(pChildChildNode1);
+        pRootNode->addChildNode(
+            pChildNode1, Node::AttachmentRule::KEEP_RELATIVE, Node::AttachmentRule::KEEP_RELATIVE);
+        pRootNode->addChildNode(
+            pChildNode2, Node::AttachmentRule::KEEP_RELATIVE, Node::AttachmentRule::KEEP_RELATIVE);
+        pChildNode1->addChildNode(
+            pChildChildNode1, Node::AttachmentRule::KEEP_RELATIVE, Node::AttachmentRule::KEEP_RELATIVE);
 
         // Serialize.
         const auto optionalError = pRootNode->serializeNodeTree(pathToFile, false);
@@ -262,9 +275,18 @@ TEST_CASE("get parent node of type") {
                 auto pDerivedDerivedNode = gc_new<MyDerivedDerivedNode>();
 
                 // Build node hierarchy.
-                pDerivedNodeChild->addChildNode(pDerivedDerivedNode);
-                pDerivedNodeParent->addChildNode(pDerivedNodeChild);
-                getWorldRootNode()->addChildNode(pDerivedNodeParent);
+                pDerivedNodeChild->addChildNode(
+                    pDerivedDerivedNode,
+                    Node::AttachmentRule::KEEP_RELATIVE,
+                    Node::AttachmentRule::KEEP_RELATIVE);
+                pDerivedNodeParent->addChildNode(
+                    pDerivedNodeChild,
+                    Node::AttachmentRule::KEEP_RELATIVE,
+                    Node::AttachmentRule::KEEP_RELATIVE);
+                getWorldRootNode()->addChildNode(
+                    pDerivedNodeParent,
+                    Node::AttachmentRule::KEEP_RELATIVE,
+                    Node::AttachmentRule::KEEP_RELATIVE);
 
                 REQUIRE(pDerivedDerivedNode->bSpawnCalled);
 
@@ -342,9 +364,18 @@ TEST_CASE("get child node of type") {
                 pDerivedNodeChild->iAnswer = 42;
 
                 // Build node hierarchy.
-                pDerivedNodeParent->addChildNode(pDerivedNodeChild);
-                pDerivedDerivedNode->addChildNode(pDerivedNodeParent);
-                getWorldRootNode()->addChildNode(pDerivedDerivedNode);
+                pDerivedNodeParent->addChildNode(
+                    pDerivedNodeChild,
+                    Node::AttachmentRule::KEEP_RELATIVE,
+                    Node::AttachmentRule::KEEP_RELATIVE);
+                pDerivedDerivedNode->addChildNode(
+                    pDerivedNodeParent,
+                    Node::AttachmentRule::KEEP_RELATIVE,
+                    Node::AttachmentRule::KEEP_RELATIVE);
+                getWorldRootNode()->addChildNode(
+                    pDerivedDerivedNode,
+                    Node::AttachmentRule::KEEP_RELATIVE,
+                    Node::AttachmentRule::KEEP_RELATIVE);
 
                 REQUIRE(pDerivedDerivedNode->bSpawnCalled);
 
@@ -400,7 +431,8 @@ TEST_CASE("saving pointer to the root node does not prevent correct world destru
                 // At this point the pointer to the root node is stored in two places:
                 // - in World object,
                 // - in our custom node.
-                getWorldRootNode()->addChildNode(pNode);
+                getWorldRootNode()->addChildNode(
+                    pNode, Node::AttachmentRule::KEEP_RELATIVE, Node::AttachmentRule::KEEP_RELATIVE);
 
                 // Change world to see if GC will collect everything.
                 createWorld([&](const std::optional<Error>& optionalWorldError) {
@@ -453,7 +485,8 @@ TEST_CASE("test GC performance and stability with nodes") {
 
             const auto pNewNode = gc_new<Node>();
             addChildNodes(100, pNewNode);
-            getWorldRootNode()->addChildNode(pNewNode);
+            getWorldRootNode()->addChildNode(
+                pNewNode, Node::AttachmentRule::KEEP_RELATIVE, Node::AttachmentRule::KEEP_RELATIVE);
         }
         virtual ~TestGameInstance() override {}
 
@@ -466,7 +499,8 @@ TEST_CASE("test GC performance and stability with nodes") {
 
             const auto pNewNode = gc_new<Node>();
             addChildNodes(iChildrenCount - 1, pNewNode);
-            pNode->addChildNode(pNewNode);
+            pNode->addChildNode(
+                pNewNode, Node::AttachmentRule::KEEP_RELATIVE, Node::AttachmentRule::KEEP_RELATIVE);
         }
     };
 
@@ -519,10 +553,16 @@ TEST_CASE("onBeforeNewFrame is called only on marked nodes") {
                 REQUIRE(getCalledEveryFrameNodeCount() == 0);
 
                 pNotCalledtNode = gc_new<MyNode>(false);
-                getWorldRootNode()->addChildNode(pNotCalledtNode); // queues deferred task to add to world
+                getWorldRootNode()->addChildNode(
+                    pNotCalledtNode,
+                    Node::AttachmentRule::KEEP_RELATIVE,
+                    Node::AttachmentRule::KEEP_RELATIVE); // queues deferred task to add to world
 
                 pCalledNode = gc_new<MyNode>(true);
-                getWorldRootNode()->addChildNode(pCalledNode); // queues deferred task to add to world
+                getWorldRootNode()->addChildNode(
+                    pCalledNode,
+                    Node::AttachmentRule::KEEP_RELATIVE,
+                    Node::AttachmentRule::KEEP_RELATIVE); // queues deferred task to add to world
             });
         }
         virtual ~TestGameInstance() override {}
@@ -580,8 +620,14 @@ TEST_CASE("tick groups order is correct") {
 
                 REQUIRE(getWorldRootNode());
 
-                getWorldRootNode()->addChildNode(gc_new<MyFirstNode>());
-                getWorldRootNode()->addChildNode(gc_new<MySecondNode>());
+                getWorldRootNode()->addChildNode(
+                    gc_new<MyFirstNode>(),
+                    Node::AttachmentRule::KEEP_RELATIVE,
+                    Node::AttachmentRule::KEEP_RELATIVE);
+                getWorldRootNode()->addChildNode(
+                    gc_new<MySecondNode>(),
+                    Node::AttachmentRule::KEEP_RELATIVE,
+                    Node::AttachmentRule::KEEP_RELATIVE);
             });
         }
         virtual ~TestGameInstance() override {}
@@ -697,7 +743,10 @@ TEST_CASE("input event callbacks in Node are triggered") {
 
                 // Spawn node.
                 pMyNode = gc_new<MyNode>();
-                getWorldRootNode()->addChildNode(pMyNode); // queues a deferred task to be added to world
+                getWorldRootNode()->addChildNode(
+                    pMyNode,
+                    Node::AttachmentRule::KEEP_RELATIVE,
+                    Node::AttachmentRule::KEEP_RELATIVE); // queues a deferred task to be added to world
 
                 // Register events.
                 auto optionalError = getInputManager()->addActionEvent("action1", {KeyboardKey::KEY_W});
@@ -783,7 +832,8 @@ TEST_CASE("use deferred task with node's member function while the world is bein
                 const auto iInitialObjectCount = gc_collector()->getAliveObjectsCount();
 
                 auto pMyNode = gc_new<MyDerivedNode>();
-                getWorldRootNode()->addChildNode(pMyNode);
+                getWorldRootNode()->addChildNode(
+                    pMyNode, Node::AttachmentRule::KEEP_RELATIVE, Node::AttachmentRule::KEEP_RELATIVE);
 
                 // add deferred task to change world
                 createWorld([this, iInitialObjectCount](const std::optional<Error>& optionalWorldError2) {
@@ -906,7 +956,10 @@ TEST_CASE("detach and despawn spawned node") {
                 REQUIRE(getTotalSpawnedNodeCount() == 0); // world root node is still in deferred task
 
                 pMyNode = gc_new<Node>();
-                getWorldRootNode()->addChildNode(pMyNode); // queues a deferred task
+                getWorldRootNode()->addChildNode(
+                    pMyNode,
+                    Node::AttachmentRule::KEEP_RELATIVE,
+                    Node::AttachmentRule::KEEP_RELATIVE); // queues a deferred task
             });
         }
         virtual void onBeforeNewFrame(float fTimeSincePrevCallInSec) override {
@@ -1005,7 +1058,10 @@ TEST_CASE("input event callbacks and tick in Node is not triggered after despawn
 
                 // Spawn node.
                 pMyNode = gc_new<MyNode>();
-                getWorldRootNode()->addChildNode(pMyNode); // queues a deferred task to be added to world
+                getWorldRootNode()->addChildNode(
+                    pMyNode,
+                    Node::AttachmentRule::KEEP_RELATIVE,
+                    Node::AttachmentRule::KEEP_RELATIVE); // queues a deferred task to be added to world
 
                 // Register events.
                 auto optionalError = getInputManager()->addActionEvent("action1", {KeyboardKey::KEY_W});

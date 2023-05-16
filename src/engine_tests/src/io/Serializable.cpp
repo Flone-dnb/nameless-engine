@@ -191,7 +191,11 @@ TEST_CASE("deserialize a node tree that references external node") {
 
         // Build a node tree.
         gc<Node> pParentNode = gc_new<Node>();
-        pParentNode->addChildNode(pDeserializedNode);
+        pParentNode->addChildNode(
+            pDeserializedNode,
+            Node::AttachmentRule::KEEP_RELATIVE,
+            Node::AttachmentRule::KEEP_RELATIVE,
+            Node::AttachmentRule::KEEP_RELATIVE);
 
         // Change some fields so that we will see it in the TOML file as changed.
         pDeserializedNode->bBoolValue2 = true;
@@ -378,7 +382,11 @@ TEST_CASE("deserialize a node tree that references external node tree") {
         auto pChildNode = gc_new<ReflectionTestNode1>();
 
         // Build node tree.
-        pRootNode->addChildNode(pChildNode);
+        pRootNode->addChildNode(
+            pChildNode,
+            Node::AttachmentRule::KEEP_RELATIVE,
+            Node::AttachmentRule::KEEP_RELATIVE,
+            Node::AttachmentRule::KEEP_RELATIVE);
 
         REQUIRE(!pChildNode->bBoolValue1);
         REQUIRE(!pChildNode->bBoolValue2);
@@ -433,7 +441,11 @@ TEST_CASE("deserialize a node tree that references external node tree") {
 
         // Build a new node tree and reference our custom node tree.
         gc<Node> pParentNode = gc_new<Node>();
-        pParentNode->addChildNode(pDeserializedRootNode);
+        pParentNode->addChildNode(
+            pDeserializedRootNode,
+            Node::AttachmentRule::KEEP_RELATIVE,
+            Node::AttachmentRule::KEEP_RELATIVE,
+            Node::AttachmentRule::KEEP_RELATIVE);
 
         // Change some child node fields, we will not see them in the TOML file because
         // when referencing a node tree, only root node will save it's changed values.

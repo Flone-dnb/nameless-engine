@@ -250,14 +250,17 @@ namespace ne {
     void SpatialNode::recalculateWorldMatrixForNodeAndNotifyChildren(Node* pNode) {
         const auto pSpatialNode = dynamic_cast<SpatialNode*>(pNode);
         if (pSpatialNode != nullptr) {
-            pSpatialNode->recalculateWorldMatrix();
-        } else {
-            // This is not a spatial node, notify children maybe there's a spatial node somewhere.
-            const auto pMtxChildNodes = pNode->getChildNodes();
-            std::scoped_lock childNodesGuard(pMtxChildNodes->first);
-            for (const auto& pNode : *pMtxChildNodes->second) {
-                recalculateWorldMatrixForNodeAndNotifyChildren(&*pNode);
-            }
+            pSpatialNode->recalculateWorldMatrix(); // recalculates for its children
+            return;
+        }
+
+        assert(pNode != nullptr); // silence clang-tidy's false positive warning
+
+        // This is not a spatial node, notify children maybe there's a spatial node somewhere.
+        const auto pMtxChildNodes = pNode->getChildNodes();
+        std::scoped_lock childNodesGuard(pMtxChildNodes->first);
+        for (const auto& pNode : *pMtxChildNodes->second) {
+            recalculateWorldMatrixForNodeAndNotifyChildren(&*pNode);
         }
     }
 

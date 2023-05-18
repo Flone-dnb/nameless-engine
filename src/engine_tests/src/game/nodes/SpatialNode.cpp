@@ -1815,3 +1815,80 @@ TEST_CASE("serialize and deserialize spatial node tree") {
     // Make sure everything is collected correctly.
     REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
 }
+
+TEST_CASE("using `reset`/`keepRelative`/`keepWorld` attachment rule for location triggers "
+          "onWorldLocationRotationScaleChanged on attach") {
+    using namespace ne;
+
+    class MyNode : public SpatialNode {
+    public:
+        virtual ~MyNode() override = default;
+
+        bool bOnWorldLocationRotationScaleChanged = false;
+
+    protected:
+        /**
+         * Called after node's world location/rotation/scale was changed.
+         *
+         * @warning If overriding you must call the parent's version of this function first
+         * (before executing your login) to execute parent's logic.
+         *
+         * @remark If you change location/rotation/scale inside of this function,
+         * this function will not be called again (no recursion will occur).
+         */
+        virtual void onWorldLocationRotationScaleChanged() override {
+            SpatialNode::onWorldLocationRotationScaleChanged();
+
+            bOnWorldLocationRotationScaleChanged = true;
+        };
+    };
+
+    class TestGameInstance : public GameInstance {
+    public:
+        TestGameInstance(Window* pGameWindow, GameManager* pGame, InputManager* pInputManager)
+            : GameInstance(pGameWindow, pGame, pInputManager) {}
+        virtual void onGameStarted() override {
+            createWorld([&](const std::optional<Error>& optionalWorldError) {
+                if (optionalWorldError.has_value()) {
+                    auto error = optionalWorldError.value();
+                    error.addEntry();
+                    INFO(error.getFullErrorMessage());
+                    REQUIRE(false);
+                }
+
+                const auto pSpatialNode1 = gc_new<MyNode>();
+                const auto pSpatialNode2 = gc_new<MyNode>();
+                const auto pSpatialNode3 = gc_new<MyNode>();
+
+                REQUIRE(!pSpatialNode1->bOnWorldLocationRotationScaleChanged);
+                REQUIRE(!pSpatialNode2->bOnWorldLocationRotationScaleChanged);
+                REQUIRE(!pSpatialNode3->bOnWorldLocationRotationScaleChanged);
+
+                getWorldRootNode()->addChildNode(pSpatialNode1, Node::AttachmentRule::RESET_RELATIVE);
+                getWorldRootNode()->addChildNode(pSpatialNode2, Node::AttachmentRule::KEEP_RELATIVE);
+                getWorldRootNode()->addChildNode(pSpatialNode3, Node::AttachmentRule::KEEP_WORLD);
+
+                REQUIRE(pSpatialNode1->bOnWorldLocationRotationScaleChanged);
+                REQUIRE(pSpatialNode2->bOnWorldLocationRotationScaleChanged);
+                REQUIRE(pSpatialNode3->bOnWorldLocationRotationScaleChanged);
+
+                getWindow()->close();
+            });
+        }
+        virtual ~TestGameInstance() override {}
+    };
+
+    auto result = Window::getBuilder().withVisibility(false).build();
+    if (std::holds_alternative<Error>(result)) {
+        Error error = std::get<Error>(std::move(result));
+        error.addEntry();
+        INFO(error.getFullErrorMessage());
+        REQUIRE(false);
+    }
+
+    const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
+    pMainWindow->processEvents<TestGameInstance>();
+
+    // Make sure everything is collected correctly.
+    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+}

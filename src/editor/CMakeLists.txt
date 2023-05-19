@@ -18,7 +18,7 @@ include(${RELATIVE_CMAKE_HELPERS_PATH}/utils.cmake)
 
 # Specify project sources.
 set(PROJECT_SOURCES
-    private/main.cpp
+    src/main.cpp
     # add your .h/.cpp files here
 )
 

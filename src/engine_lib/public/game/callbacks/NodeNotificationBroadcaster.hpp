@@ -72,7 +72,7 @@ namespace ne {
          *
          * @param args Arguments to pass to subscribed callbacks.
          */
-        void broadcast(FunctionArgs... args) {
+        void broadcast(FunctionArgs&&... args) {
             // Make sure we have a spawned owner node.
             std::scoped_lock ownerGuard(mtxSpawnedOwnerNode.first, mtxCallbacks.first);
             if (mtxSpawnedOwnerNode.second == nullptr) {
@@ -125,7 +125,7 @@ namespace ne {
 
             // Call registered callbacks.
             for (auto& [iBindingId, callback] : mtxCallbacks.second) {
-                callback(args...);
+                callback(std::forward<FunctionArgs>(args)...);
 
                 // Make sure our owner node is still spawned because the callback we just
                 // called could have despawned the owner node.

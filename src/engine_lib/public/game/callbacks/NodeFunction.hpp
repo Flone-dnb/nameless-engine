@@ -88,9 +88,9 @@ namespace ne {
          * @return `true` if the node, the callback function points to, was despawned and the callback
          * was not called to avoid running logic on despawned/deleted node, otherwise `false`.
          */
-        bool operator()(FunctionArgs... args) {
+        bool operator()(FunctionArgs&&... args) {
             if (isNodeSpawned()) {
-                callback(args...);
+                callback(std::forward<FunctionArgs>(args)...);
                 return false;
             }
 

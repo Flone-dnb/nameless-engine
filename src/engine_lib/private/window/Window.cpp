@@ -279,6 +279,9 @@ namespace ne {
             glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
         }
 
+        // Don't create any OpenGL contexts.
+        glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+
         // Create GLFW window.
         auto pGLFWWindow = glfwCreateWindow(
             params.iWindowWidth, params.iWindowHeight, sNewWindowTitle.c_str(), nullptr, nullptr);

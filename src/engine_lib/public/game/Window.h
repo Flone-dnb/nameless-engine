@@ -475,11 +475,11 @@ namespace ne {
         static void glfwWindowMouseScrollCallback(GLFWwindow* pGlfwWindow, double xOffset, double yOffset);
 
         /**
-         * Binds to user input events.
+         * Binds to various window events such as user input events.
          *
          * @remark Expects game instance to be created at this point.
          */
-        void bindToWindowInputEvents();
+        void bindToWindowEvents();
 
         /**
          * Checks whether the current thread is the main thread or not and if not
@@ -546,6 +546,7 @@ namespace ne {
     template <typename MyGameInstance>
         requires std::derived_from<MyGameInstance, GameInstance>
     void Window::processEvents() {
+        // Create game manager.
         pGameManager = std::unique_ptr<GameManager>(new GameManager(this));
 
         // ... initialize other Game fields here ...
@@ -554,8 +555,11 @@ namespace ne {
         // So that the user can call engine functions in Game Instance constructor.
         pGameManager->setGameInstance<MyGameInstance>();
 
-        // Now bind to window input events because game instance is created.
-        bindToWindowInputEvents();
+        // Now bind to window events because game instance is created.
+        bindToWindowEvents();
+
+        // After enabling window events notify game instance about game being ready to start.
+        pGameManager->onGameStarted();
 
         // Used for tick.
         float fCurrentTimeInSec = 0.0f;

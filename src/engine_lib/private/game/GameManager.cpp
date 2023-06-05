@@ -177,6 +177,17 @@ namespace ne {
         }
     }
 
+    void GameManager::onGameStarted() {
+        // Make sure game instance was created.
+        if (pGameInstance == nullptr) [[unlikely]] {
+            Error error("expected game instance to exist at this point");
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+        }
+
+        pGameInstance->onGameStarted();
+    }
+
     void GameManager::onTickFinished() { runGarbageCollection(); }
 
     void GameManager::runGarbageCollection(bool bForce) {

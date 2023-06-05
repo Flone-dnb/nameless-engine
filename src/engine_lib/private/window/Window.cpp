@@ -189,7 +189,7 @@ namespace ne {
         pWindow->onMouseScrollMove(static_cast<int>(yOffset));
     }
 
-    void Window::bindToWindowInputEvents() {
+    void Window::bindToWindowEvents() {
         // Make sure window is created.
         if (pGlfwWindow == nullptr) [[unlikely]] {
             Error error("expected window to be created at this point");

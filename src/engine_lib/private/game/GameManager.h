@@ -321,8 +321,14 @@ namespace ne {
             requires std::derived_from<MyGameInstance, GameInstance>
         void setGameInstance() {
             pGameInstance = std::make_unique<MyGameInstance>(pWindow, this, &inputManager);
-            pGameInstance->onGameStarted();
         }
+
+        /**
+         * Called by owner Window to notify game instance about game being started (everything is set up).
+         *
+         * @remark Expects game instance to exist.
+         */
+        void onGameStarted();
 
         /**
          * Called before a new frame is rendered.

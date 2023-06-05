@@ -189,6 +189,44 @@ namespace ne {
         pWindow->onMouseScrollMove(static_cast<int>(yOffset));
     }
 
+    void Window::bindToWindowInputEvents() {
+        // Make sure window is created.
+        if (pGlfwWindow == nullptr) [[unlikely]] {
+            Error error("expected window to be created at this point");
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+        }
+
+        // Make sure game manager is created because input callbacks will use game manager.
+        if (pGameManager == nullptr) [[unlikely]] {
+            Error error("expected game manager to be created at this point");
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+        }
+
+        // Make sure game instance is created because input callbacks will use game instance.
+        if (pGameManager->getGameInstance() == nullptr) [[unlikely]] {
+            Error error("expected game instance to be created at this point");
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+        }
+
+        // Bind to keyboard input.
+        glfwSetKeyCallback(pGlfwWindow, Window::glfwWindowKeyboardCallback);
+
+        // Bind to mouse input.
+        glfwSetMouseButtonCallback(pGlfwWindow, Window::glfwWindowMouseCallback);
+
+        // Bind to mouse move.
+        glfwSetCursorPosCallback(pGlfwWindow, Window::glfwWindowMouseCursorPosCallback);
+
+        // Bind to mouse scroll move.
+        glfwSetScrollCallback(pGlfwWindow, Window::glfwWindowMouseScrollCallback);
+
+        // Bind to focus change event.
+        glfwSetWindowFocusCallback(pGlfwWindow, Window::glfwWindowFocusCallback);
+    }
+
     void Window::showErrorIfNotOnMainThread() const {
         const auto currentThreadId = std::this_thread::get_id();
         if (currentThreadId != mainThreadId) {
@@ -270,21 +308,6 @@ namespace ne {
 
         // Add Window pointer.
         glfwSetWindowUserPointer(pGLFWWindow, pWindow.get());
-
-        // Bind to keyboard input.
-        glfwSetKeyCallback(pGLFWWindow, Window::glfwWindowKeyboardCallback);
-
-        // Bind to mouse input.
-        glfwSetMouseButtonCallback(pGLFWWindow, Window::glfwWindowMouseCallback);
-
-        // Bind to mouse move.
-        glfwSetCursorPosCallback(pGLFWWindow, Window::glfwWindowMouseCursorPosCallback);
-
-        // Bind to mouse scroll move.
-        glfwSetScrollCallback(pGLFWWindow, Window::glfwWindowMouseScrollCallback);
-
-        // Bind to focus change event.
-        glfwSetWindowFocusCallback(pGLFWWindow, Window::glfwWindowFocusCallback);
 
         return pWindow;
     }

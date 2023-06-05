@@ -475,6 +475,13 @@ namespace ne {
         static void glfwWindowMouseScrollCallback(GLFWwindow* pGlfwWindow, double xOffset, double yOffset);
 
         /**
+         * Binds to user input events.
+         *
+         * @remark Expects game instance to be created at this point.
+         */
+        void bindToWindowInputEvents();
+
+        /**
          * Checks whether the current thread is the main thread or not and if not
          * shows an error.
          */
@@ -546,6 +553,9 @@ namespace ne {
         // Finally create Game Instance when engine (Game) is fully initialized.
         // So that the user can call engine functions in Game Instance constructor.
         pGameManager->setGameInstance<MyGameInstance>();
+
+        // Now bind to window input events because game instance is created.
+        bindToWindowInputEvents();
 
         // Used for tick.
         float fCurrentTimeInSec = 0.0f;

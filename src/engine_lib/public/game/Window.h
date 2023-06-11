@@ -561,6 +561,9 @@ namespace ne {
         // After enabling window events notify game instance about game being ready to start.
         pGameManager->onGameStarted();
 
+        // Prepare reference to renderer.
+        const auto pRenderer = getRenderer();
+
         // Used for tick.
         float fCurrentTimeInSec = 0.0f;
         float fPrevTimeInSec = static_cast<float>(glfwGetTime());
@@ -580,7 +583,7 @@ namespace ne {
             fPrevTimeInSec = fCurrentTimeInSec;
 
             // Draw next frame.
-            getRenderer()->drawNextFrame();
+            pRenderer->drawNextFrame();
 
             // Notify finish.
             pGameManager->onTickFinished();

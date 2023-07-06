@@ -113,7 +113,7 @@ namespace ne {
 
         // Run the GC for the last time.
         Logger::get().info(
-            "Game object is being destroyed, running garbage collector...", sGarbageCollectorLogCategory);
+            "GameManager is being destroyed, running garbage collector...", sGarbageCollectorLogCategory);
         gc_collector()->fullCollect();
 
         // Log results.

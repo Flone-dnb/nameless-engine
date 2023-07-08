@@ -29,12 +29,12 @@ namespace ne {
 
         // Update static pointer.
         Logger::get().info(
-            "new GameManager is created, updating static GameManager pointer", sGameLogCategory);
+            "new GameManager is created, updating static GameManager pointer", sGameManagerLogCategory);
         pLastCreatedGameManager = this;
 
         // Log build mode.
 #if defined(DEBUG)
-        Logger::get().info("DEBUG macro is defined, running DEBUG build", sGameLogCategory);
+        Logger::get().info("DEBUG macro is defined, running DEBUG build", sGameManagerLogCategory);
 #else
         Logger::get().info("DEBUG macro is not defined, running RELEASE build", sGameLogCategory);
 #endif
@@ -59,7 +59,7 @@ namespace ne {
         lastGcRunTime = std::chrono::steady_clock::now();
         Logger::get().info(
             fmt::format("garbage collector will run every {} seconds", iGcRunIntervalInSec),
-            sGameLogCategory);
+            sGameManagerLogCategory);
 
 #if defined(DEBUG)
         SerializableObjectFieldSerializer::checkGuidUniqueness();
@@ -134,7 +134,7 @@ namespace ne {
                     "{} node(s) alive, here are a few reasons why this may happen:\n{}",
                     iNodesAlive,
                     sGcLeakReasons),
-                sGameLogCategory);
+                sGameManagerLogCategory);
         }
 
         // Make sure there are no GC objects alive.
@@ -146,12 +146,12 @@ namespace ne {
                     "{} gc object(s) alive, here are a few reasons why this may happen:\n{}",
                     iGcObjectsLeft,
                     sGcLeakReasons),
-                sGameLogCategory);
+                sGameManagerLogCategory);
         }
 
         // ONLY AFTER THE GC has finished, all tasks were finished and all nodes were deleted.
         // Clear global game pointer.
-        Logger::get().info("clearing static GameManager pointer", sGameLogCategory);
+        Logger::get().info("clearing static GameManager pointer", sGameManagerLogCategory);
         pLastCreatedGameManager = nullptr;
 
         // Explicitly destroy the renderer to check how much shaders left in the memory.
@@ -164,7 +164,7 @@ namespace ne {
                 fmt::format(
                     "the renderer was destroyed but there are still {} shader(s) left in the memory",
                     iTotalShadersInMemory),
-                sGameLogCategory);
+                sGameManagerLogCategory);
         }
 
         // Make sure there are no materials exist.
@@ -173,7 +173,7 @@ namespace ne {
             Logger::get().error(
                 fmt::format(
                     "the game was destroyed but there are still {} material(s) alive", iTotalMaterialCount),
-                sGameLogCategory);
+                sGameManagerLogCategory);
         }
     }
 
@@ -570,7 +570,7 @@ namespace ne {
                         "input manager returned 0 "
                         "states for '{}' action event",
                         sActionName),
-                    sGameLogCategory);
+                    sGameManagerLogCategory);
             } else {
                 std::pair<std::vector<ActionState>, bool /* action state */>& statePair = stateIt->second;
 
@@ -592,7 +592,7 @@ namespace ne {
                                 "states for '{}' action event",
                                 getKeyName(std::get<KeyboardKey>(key)),
                                 sActionName),
-                            sGameLogCategory);
+                            sGameManagerLogCategory);
                     } else {
                         Logger::get().error(
                             fmt::format(
@@ -600,7 +600,7 @@ namespace ne {
                                 "states for '{}' action event",
                                 static_cast<int>(std::get<MouseButton>(key)),
                                 sActionName),
-                            sGameLogCategory);
+                            sGameManagerLogCategory);
                     }
                 }
 
@@ -664,7 +664,7 @@ namespace ne {
                         "input manager returned 0 "
                         "states for '{}' axis event",
                         sAxisName),
-                    sGameLogCategory);
+                    sGameManagerLogCategory);
                 pGameInstance->onInputAxisEvent(
                     sAxisName, modifiers, bIsPressedDown ? static_cast<float>(iInput) : 0.0F);
 
@@ -708,7 +708,7 @@ namespace ne {
                         "states for '{}' axis event",
                         getKeyName(key),
                         sAxisName),
-                    sGameLogCategory);
+                    sGameManagerLogCategory);
                 pGameInstance->onInputAxisEvent(
                     sAxisName, modifiers, bIsPressedDown ? static_cast<float>(iInput) : 0.0F);
 
@@ -801,7 +801,7 @@ namespace ne {
                     "{} node(s) alive, here are a few reasons why this may happen:\n{}",
                     iAliveNodeCount,
                     sGcLeakReasons),
-                sGameLogCategory);
+                sGameManagerLogCategory);
         }
 
         // Make sure all PSOs were destroyed.
@@ -813,7 +813,7 @@ namespace ne {
                     "the world was destroyed and garbage collection was finished but there are still "
                     "{} graphics PSO(s) exist",
                     iGraphicsPsoCount),
-                sGameLogCategory);
+                sGameManagerLogCategory);
         }
         if (iComputePsoCount != 0) {
             Logger::get().error(
@@ -821,7 +821,7 @@ namespace ne {
                     "the world was destroyed and garbage collection was finished but there are still "
                     "{} compute PSO(s) exist",
                     iComputePsoCount),
-                sGameLogCategory);
+                sGameManagerLogCategory);
         }
     }
 } // namespace ne

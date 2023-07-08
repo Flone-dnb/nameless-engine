@@ -651,7 +651,7 @@ TEST_CASE("shader read/write resources exist only when MeshNode is spawned") {
 
                 // Create sample mesh data.
                 MeshData meshData;
-                constexpr size_t iSize = 1000000;
+                constexpr size_t iSize = 5000000;
                 meshData.getVertices()->resize(iSize);
                 meshData.getIndices()->resize(iSize);
                 for (size_t i = 0; i < iSize; i++) {
@@ -675,7 +675,7 @@ TEST_CASE("shader read/write resources exist only when MeshNode is spawned") {
                 REQUIRE(pMtxResources->second.toBeUpdated.empty());
 
                 // Save VRAM to check later.
-                const auto iVramNotSpawned = getWindow()->getRenderer()->getUsedVideoMemoryInMb();
+                const auto iVramMbNotSpawned = getWindow()->getRenderer()->getUsedVideoMemoryInMb();
 
                 // Spawn mesh node.
                 getWorldRootNode()->addChildNode(
@@ -686,8 +686,19 @@ TEST_CASE("shader read/write resources exist only when MeshNode is spawned") {
                 REQUIRE(pMtxResources->second.toBeUpdated.size() == 2);
 
                 // Check VRAM.
-                const auto iVramSpawned = getWindow()->getRenderer()->getUsedVideoMemoryInMb();
-                REQUIRE(iVramSpawned > iVramNotSpawned);
+                const auto iVramMbSpawned = getWindow()->getRenderer()->getUsedVideoMemoryInMb();
+                REQUIRE(iVramMbSpawned > iVramMbNotSpawned);
+
+                // Self check for spawned mesh size.
+                constexpr size_t iMaxMeshSizeForTestMb = 512;
+                if (iVramMbSpawned - iVramMbNotSpawned > iMaxMeshSizeForTestMb) {
+                    Error error(fmt::format(
+                        "test mesh node takes {}+ MB of VRAM, that's too much for a test, decrease "
+                        "mesh vertex count",
+                        iMaxMeshSizeForTestMb));
+                    INFO(error.getFullErrorMessage());
+                    REQUIRE(false);
+                }
 
                 // Despawn mesh node.
                 pMeshNode->detachFromParentAndDespawn();
@@ -698,7 +709,7 @@ TEST_CASE("shader read/write resources exist only when MeshNode is spawned") {
 
                 // Check VRAM.
                 const auto iVramDespawned = getWindow()->getRenderer()->getUsedVideoMemoryInMb();
-                REQUIRE(iVramDespawned < iVramSpawned / 2);
+                REQUIRE(iVramDespawned < iVramMbSpawned / 2);
 
                 getWindow()->close();
             });

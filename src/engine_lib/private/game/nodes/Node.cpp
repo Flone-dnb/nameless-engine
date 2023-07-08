@@ -17,7 +17,15 @@
 /** Total amount of alive nodes. */
 static std::atomic<size_t> iTotalAliveNodeCount{0};
 
-/** Stores the next node ID that can be used. */
+/**
+ * Stores the next node ID that can be used.
+ *
+ * @warning Don't reset (zero) this value even if no node exists as we will never hit type limit
+ * but resetting this value might cause unwanted behavior.
+ *
+ * @remark Used in World to quickly and safely check if some node is spawned or not
+ * (for example it's used in callbacks).
+ */
 static std::atomic<size_t> iAvailableNodeId{0};
 
 namespace ne {

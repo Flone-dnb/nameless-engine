@@ -36,7 +36,7 @@ namespace ne {
 #if defined(DEBUG)
         Logger::get().info("DEBUG macro is defined, running DEBUG build", sGameManagerLogCategory);
 #else
-        Logger::get().info("DEBUG macro is not defined, running RELEASE build", sGameLogCategory);
+        Logger::get().info("DEBUG macro is not defined, running RELEASE build", sGameManagerLogCategory);
 #endif
 
         // Make sure that resources directory is set and exists.

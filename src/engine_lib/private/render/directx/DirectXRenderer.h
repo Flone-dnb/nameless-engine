@@ -367,8 +367,8 @@ namespace ne {
         /** Render target when MSAA is enabled because our swap chain does not support multisampling. */
         std::unique_ptr<DirectXResource> pMsaaRenderBuffer;
 
-        /** Supported quality level for MSAA. */
-        UINT iMsaaQuality = 0;
+        /** The number of supported quality levels for MSAA. */
+        UINT iMsaaQualityLevelsCount = 0;
 
         /** Screen viewport size and depth range. */
         D3D12_VIEWPORT screenViewport;

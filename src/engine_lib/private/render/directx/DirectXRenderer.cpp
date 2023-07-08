@@ -125,7 +125,7 @@ namespace ne {
             1,
             depthStencilBufferFormat,
             bIsMsaaEnabled ? iMsaaSampleCount : 1,
-            bIsMsaaEnabled ? (iMsaaQuality - 1) : 0,
+            bIsMsaaEnabled ? (iMsaaQualityLevelsCount - 1) : 0,
             D3D12_TEXTURE_LAYOUT_UNKNOWN,
             D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL);
 
@@ -758,7 +758,7 @@ namespace ne {
 
         D3D12_FEATURE_DATA_MULTISAMPLE_QUALITY_LEVELS msQualityLevels;
         msQualityLevels.Format = backBufferFormat;
-        msQualityLevels.SampleCount = 4; // test max quality
+        msQualityLevels.SampleCount = 8; // NOLINT: test quality (will replace this later)
         msQualityLevels.Flags = D3D12_MULTISAMPLE_QUALITY_LEVELS_FLAG_NONE;
         msQualityLevels.NumQualityLevels = 0;
 
@@ -769,10 +769,12 @@ namespace ne {
         }
 
         if (msQualityLevels.NumQualityLevels == 0) {
-            return Error("received zero quality levels for MSAA");
+            // The specified sample count with this format is not supported.
+            return Error(
+                fmt::format("MSAA with sample count {} is not supported", msQualityLevels.SampleCount));
         }
 
-        iMsaaQuality = msQualityLevels.NumQualityLevels;
+        iMsaaQualityLevelsCount = msQualityLevels.NumQualityLevels;
 
         return {};
     }
@@ -1116,7 +1118,7 @@ namespace ne {
 
     DXGI_FORMAT DirectXRenderer::getDepthStencilBufferFormat() const { return depthStencilBufferFormat; }
 
-    UINT DirectXRenderer::getMsaaQualityLevel() const { return iMsaaQuality; }
+    UINT DirectXRenderer::getMsaaQualityLevel() const { return iMsaaQualityLevelsCount; }
 
     void DirectXRenderer::updateResourcesForNextFrame(CameraProperties* pCameraProperties) {
         std::scoped_lock frameGuard(*getRenderResourcesMutex());
@@ -1214,7 +1216,7 @@ namespace ne {
                 1,
                 backBufferFormat,
                 bIsMsaaEnabled ? iMsaaSampleCount : 1,
-                bIsMsaaEnabled ? (iMsaaQuality - 1) : 0,
+                bIsMsaaEnabled ? (iMsaaQualityLevelsCount - 1) : 0,
                 D3D12_TEXTURE_LAYOUT_UNKNOWN,
                 D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET);
 

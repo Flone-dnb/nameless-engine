@@ -95,12 +95,10 @@ namespace ne {
     }
 
     float World::getWorldTimeInSeconds() const {
-        const auto durationInMs =
-            static_cast<float>(std::chrono::duration_cast<std::chrono::milliseconds>(
-                                   std::chrono::steady_clock::now() - timeWhenWorldCreated)
-                                   .count());
-
-        return durationInMs / 1000.0F; // NOLINT
+        const auto durationInSec = std::chrono::duration<float, std::chrono::seconds::period>(
+                                       std::chrono::steady_clock::now() - timeWhenWorldCreated)
+                                       .count();
+        return durationInSec;
     }
 
     size_t World::getWorldSize() const { return iWorldSize; }

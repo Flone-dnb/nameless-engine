@@ -67,6 +67,18 @@ namespace ne {
             return;
         }
 
+        // Make sure that time to wait is positive.
+        if (iTimeToWaitInMs < 0) [[unlikely]] {
+            Logger::get().error(
+                fmt::format(
+                    "\"{}\" timer is unable to set a callback for timeout because the specified time to "
+                    "wait ({}) is negative",
+                    sTimerName,
+                    iTimeToWaitInMs),
+                sTimerLogCategory);
+            return;
+        }
+
         std::scoped_lock guard(mtxTerminateTimerThread);
         callbackForTimeout = callback;
         this->iTimeToWaitInMs = iTimeToWaitInMs;

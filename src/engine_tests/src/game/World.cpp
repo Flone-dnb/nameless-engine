@@ -86,6 +86,53 @@ TEST_CASE("create and destroy world") {
     pMainWindow->processEvents<TestGameInstance>();
 }
 
+TEST_CASE("test world time") {
+    using namespace ne;
+
+    class TestGameInstance : public GameInstance {
+    public:
+        TestGameInstance(Window* pGameWindow, GameManager* pGame, InputManager* pInputManager)
+            : GameInstance(pGameWindow, pGame, pInputManager) {}
+        virtual void onGameStarted() override {
+            createWorld([&](const std::optional<Error>& optionalError) {
+                if (optionalError.has_value()) {
+                    auto error = optionalError.value();
+                    error.addEntry();
+                    INFO(error.getFullErrorMessage());
+                    REQUIRE(false);
+                }
+
+                const auto pTimer = createTimer("test world time");
+                REQUIRE(pTimer != nullptr);
+
+                constexpr float timeToWaitInSec = 1.25F;
+                pTimer->setCallbackForTimeout(static_cast<long long>(timeToWaitInSec * 1000), [this]() {
+                    const auto worldTimeInSec = getWorldTimeInSeconds();
+
+                    const auto diffInSec = std::abs(worldTimeInSec - timeToWaitInSec);
+                    REQUIRE(diffInSec < 0.1F);
+
+                    getWindow()->close();
+                });
+
+                pTimer->start();
+            });
+        }
+        virtual ~TestGameInstance() override {}
+    };
+
+    auto result = Window::getBuilder().withVisibility(false).build();
+    if (std::holds_alternative<Error>(result)) {
+        Error error = std::get<Error>(std::move(result));
+        error.addEntry();
+        INFO(error.getFullErrorMessage());
+        REQUIRE(false);
+    }
+
+    const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
+    pMainWindow->processEvents<TestGameInstance>();
+}
+
 TEST_CASE("create world and switch to another world") {
     using namespace ne;
 

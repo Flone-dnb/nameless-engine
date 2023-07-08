@@ -94,9 +94,12 @@ namespace ne {
         virtual size_t getTotalVideoMemoryInMb() const override;
 
         /**
-         * Returns used video memory size (VRAM) in megabytes.
+         * Returns the amount of video memory (VRAM) that is currently being used by the renderer.
          *
-         * @return Used video memory size in megabytes.
+         * @remark Does not return global (system-wide) used VRAM size, only VRAM used by the renderer
+         * (i.e. only VRAM used by this application).
+         *
+         * @return Size of the video memory used by the renderer in megabytes.
          */
         virtual size_t getUsedVideoMemoryInMb() const override;
 

@@ -28,9 +28,9 @@ namespace ne {
         virtual size_t getTotalVideoMemoryInMb() const = 0;
 
         /**
-         * Returns used video memory size (VRAM) in megabytes.
+         * Returns the amount of video memory (VRAM) occupied by all currently allocated resources.
          *
-         * @return Used video memory size in megabytes.
+         * @return Size of the video memory used by allocated resources.
          */
         virtual size_t getUsedVideoMemoryInMb() const = 0;
 

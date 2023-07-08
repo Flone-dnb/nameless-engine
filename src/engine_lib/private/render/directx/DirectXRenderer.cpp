@@ -1003,7 +1003,7 @@ namespace ne {
     }
 
     std::optional<Error> DirectXRenderer::compileEngineShaders() const {
-        // Prepare data.
+        // Prepare shaders to compile.
         std::vector vEngineShaders = {
             HlslEngineShaders::meshNodeVertexShader, HlslEngineShaders::meshNodePixelShader};
         auto pPromiseFinish = std::make_shared<std::promise<bool>>();
@@ -1050,7 +1050,7 @@ namespace ne {
             throw std::runtime_error(error->getFullErrorMessage());
         }
 
-        // Do this synchronously (before user can queue his shaders).
+        // Wait synchronously (before user adds his shaders).
         try {
             future.get();
         } catch (const std::exception& ex) {
@@ -1063,17 +1063,12 @@ namespace ne {
         const auto endTime = std::chrono::steady_clock::now();
 
         // Calculate duration.
-        const auto durationInMs =
-            std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime).count();
-        const float timeTookInSec = static_cast<float>(durationInMs) / 1000.0F; // NOLINT
-
-        // Limit precision to 1 digit.
-        std::stringstream durationStream;
-        durationStream << std::fixed << std::setprecision(1) << timeTookInSec;
+        const auto timeTookInSec =
+            std::chrono::duration<float, std::chrono::seconds::period>(endTime - startTime).count();
 
         // Log time.
         Logger::get().info(
-            fmt::format("took {} sec. to compile engine shaders", durationStream.str()),
+            fmt::format("took {:.1f} sec. to compile engine shaders", timeTookInSec),
             sDirectXRendererLogCategory);
 
         return {};

@@ -141,28 +141,42 @@ namespace ne {
 
     std::optional<ShaderCacheInvalidationReason>
     ShaderDescription::isSerializableDataEqual(ShaderDescription& other) {
-        // Prepare source file hash.
-        // Recalculate all here anyway because the file might change.
+        // Calculate source file hashes if path to shader file is specified to compare them later.
+        // If a shader description was retrieved from cache it will not have path to shader file specified.
+        // (recalculate hashes here because the file might be changed at this point)
         if (!pathToShaderFile.empty()) { // data from cache will not have path to shader file
             sSourceFileHash = getShaderSourceFileHash(pathToShaderFile, sShaderName);
             calculateShaderIncludeTreeHashes();
         }
-        if (!other.pathToShaderFile.empty()) { // data from cache will not have path to shader file
+        if (!other.pathToShaderFile.empty()) { //
             other.sSourceFileHash = getShaderSourceFileHash(other.pathToShaderFile, other.sShaderName);
             other.calculateShaderIncludeTreeHashes();
         }
 
-        // Shader entry.
+        // Make sure source file hashes are filled.
+        if (sSourceFileHash.empty() && other.sSourceFileHash.empty()) [[unlikely]] {
+            Logger::get().error(
+                fmt::format(
+                    "unable to compare the specified shader descriptions \"{}\" and \"{}\" because their "
+                    "shader source file hashes are empty and it's impossible to calculate them because "
+                    "path to the shader source file also seems to be empty",
+                    sShaderName,
+                    other.sShaderName),
+                sShaderDescriptionLogCategory);
+            return ShaderCacheInvalidationReason::SHADER_SOURCE_FILE_CHANGED;
+        }
+
+        // Compare shader entry function name.
         if (sShaderEntryFunctionName != other.sShaderEntryFunctionName) {
             return ShaderCacheInvalidationReason::ENTRY_FUNCTION_NAME_CHANGED;
         }
 
-        // Shader type.
+        // Compare shader type.
         if (shaderType != other.shaderType) {
             return ShaderCacheInvalidationReason::SHADER_TYPE_CHANGED;
         }
 
-        // Shader macro defines.
+        // Compare shader macro defines.
         if (vDefinedShaderMacros.size() != other.vDefinedShaderMacros.size()) {
             return ShaderCacheInvalidationReason::DEFINED_SHADER_MACROS_CHANGED;
         }

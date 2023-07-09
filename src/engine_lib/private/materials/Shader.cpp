@@ -92,41 +92,50 @@ namespace ne {
         const std::string& sShaderNameWithoutConfiguration,
         std::optional<ShaderCacheInvalidationReason>& cacheInvalidationReason) {
         cacheInvalidationReason = {};
-        // Create shader directory if needed.
+        // Make sure the specified path to compiled shader exists.
         if (!std::filesystem::exists(pathToCompiledShader)) {
-            return Error("shader cache does not exist");
+            return Error(fmt::format(
+                "the specified path to shader cache \"{}\" does not exist", pathToCompiledShader.string()));
         }
 
+        // Prepare path to the file that stores metadata about this shader's cache.
         const auto shaderCacheConfigurationPath =
             pathToCompiledShader.string() + ConfigManager::getConfigFormatExtension();
 
-        ConfigManager configManager;
-
-        // Check if cached config exists.
-        if (std::filesystem::exists(shaderCacheConfigurationPath)) {
-            // Check if cache is valid.
-            auto optionalError = configManager.loadFile(shaderCacheConfigurationPath);
-            if (optionalError.has_value()) {
-                auto error = optionalError.value();
-                error.addEntry();
-                return error;
-            }
-
-            auto cachedShaderDescription = configManager.getValue<ShaderDescription>(
-                "", ShaderDescription::getConfigurationFileSectionName(), ShaderDescription());
-
-            auto reason = shaderDescription.isSerializableDataEqual(cachedShaderDescription);
-            if (reason.has_value()) {
-                Error err(fmt::format(
-                    "invalidated cache for shader \"{}\" (reason: {})",
-                    sShaderNameWithoutConfiguration,
-                    ShaderCacheInvalidationReasonDescription::getDescription(reason.value())));
-                cacheInvalidationReason = reason.value();
-                return err;
-            }
+        // Make sure the metadata file exists.
+        if (!std::filesystem::exists(shaderCacheConfigurationPath)) [[unlikely]] {
+            return Error(fmt::format(
+                "cache metadata of the specified shader does not exist", shaderDescription.sShaderName));
         }
 
-        // Calculate source file hash.
+        // Read shader cache metadata file from disk.
+        ConfigManager configManager;
+        auto optionalError = configManager.loadFile(shaderCacheConfigurationPath);
+        if (optionalError.has_value()) {
+            auto error = optionalError.value();
+            error.addEntry();
+            return error;
+        }
+
+        // Generate shader description that was specified when this shader was compiled.
+        auto cachedShaderDescription = configManager.getValue<ShaderDescription>(
+            "", ShaderDescription::getConfigurationFileSectionName(), ShaderDescription());
+
+        // Check if the current shader description is equal to the shader description when
+        // this shader was compiled.
+        const auto reason = shaderDescription.isSerializableDataEqual(cachedShaderDescription);
+        if (reason.has_value()) {
+            // Something has changed, cache is no longer valid.
+            Error err(fmt::format(
+                "invalidated cache for shader \"{}\" (reason: {})",
+                sShaderNameWithoutConfiguration,
+                ShaderCacheInvalidationReasonDescription::getDescription(reason.value())));
+            cacheInvalidationReason = reason.value();
+            return err;
+        }
+
+        // Calculate source file hash so that we could determine what pixel/fragment/vertex shaders
+        // were compiled from the same file.
         const auto sSourceFileHash = ShaderDescription::getShaderSourceFileHash(
             shaderDescription.pathToShaderFile, shaderDescription.sShaderName);
         if (sSourceFileHash.empty()) {
@@ -135,7 +144,7 @@ namespace ne {
                 shaderDescription.pathToShaderFile.string()));
         }
 
-        std::shared_ptr<Shader> pShader;
+        std::shared_ptr<Shader> pShader = nullptr;
 #if defined(WIN32)
         if (dynamic_cast<DirectXRenderer*>(pRenderer) != nullptr) {
             pShader = std::make_shared<HlslShader>(

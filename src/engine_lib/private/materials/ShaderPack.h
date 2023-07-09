@@ -50,27 +50,23 @@ namespace ne {
          * @param shaderDescription Description that describes the shader and how the shader should be
          * compiled.
          *
-         * @return Returns one of the three values:
-         * @arg compiled shader pack
-         * @arg string containing shader compilation error/warning
-         * @arg internal error
+         * @return One of the three values: compiled shader pack, string containing shader
+         * compilation error/warning, internal error
          */
-        static std::variant<
-            std::shared_ptr<ShaderPack> /** Compiled shader pack. */,
-            std::string /** Compilation error. */,
-            Error /** Internal error. */>
+        static std::variant<std::shared_ptr<ShaderPack>, std::string, Error>
         compileShaderPack(Renderer* pRenderer, const ShaderDescription& shaderDescription);
 
         /**
-         * Creates a new shader pack using shader cache.
+         * Creates a new shader pack using shader cache on the disk.
          *
          * @param pRenderer             Used renderer.
          * @param shaderDescription     Description that describes the shader and how the shader should be
          * compiled. Used for cache invalidation.
          * @param cacheInvalidationReason Will be not empty if cache was invalidated. Used for testing.
          *
-         * @return Returns error if shader cache is corrupted or was invalidated,
-         * otherwise a shader pack created using cache.
+         * @return Error if shader cache is corrupted or invalid, this also means that
+         * corrupted/invalid shader cache directory was deleted and cache for this shader no longer
+         * exists, otherwise a shader pack created using cache.
          */
         static std::variant<std::shared_ptr<ShaderPack>, Error> createFromCache(
             Renderer* pRenderer,

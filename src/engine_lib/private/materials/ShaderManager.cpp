@@ -535,24 +535,26 @@ namespace ne {
         const std::function<
             void(ShaderDescription shaderDescription, std::variant<std::string, Error> error)>& onError,
         const std::function<void()>& onCompleted) {
+        // Prepare pointer to shader pack.
         std::shared_ptr<ShaderPack> pShaderPack = nullptr;
 
-        // See if we compiled this shader before (check cache).
+        // See if this shader is in the shader cache on disk (was compiled before and still valid).
         if (std::filesystem::exists(
                 ShaderFilesystemPaths::getPathToShaderCacheDirectory() / shaderDescription.sShaderName)) {
-            // Try to use cache.
+            // Try to use cached data.
             std::optional<ShaderCacheInvalidationReason> cacheInvalidationReason;
             auto result = ShaderPack::createFromCache(pRenderer, shaderDescription, cacheInvalidationReason);
             if (std::holds_alternative<Error>(result)) {
+                // Cache is corrupted / invalid.
                 auto err = std::get<Error>(std::move(result));
                 err.addEntry();
 
                 // Not a critical error.
                 if (cacheInvalidationReason.has_value()) {
-                    // Invalidated cache.
+                    // Cache was invalidated. Log information about invalidated cache.
                     Logger::get().info(err.getInitialMessage(), sShaderManagerLogCategory);
                 } else {
-                    // Cache files are corrupted/outdated.
+                    // Cache files are corrupted/outdated. Need recompilation.
                     Logger::get().info(
                         fmt::format(
                             "shader \"{}\" cache files are corrupted/outdated, attempting to recompile",
@@ -560,6 +562,7 @@ namespace ne {
                         sShaderManagerLogCategory);
                 }
             } else {
+                // Save shader found in cache.
                 pShaderPack = std::get<std::shared_ptr<ShaderPack>>(result);
             }
         }
@@ -569,12 +572,14 @@ namespace ne {
             auto result = ShaderPack::compileShaderPack(pRenderer, shaderDescription);
             if (!std::holds_alternative<std::shared_ptr<ShaderPack>>(result)) {
                 if (std::holds_alternative<std::string>(result)) {
+                    // Shader compilation error/warning.
                     auto sShaderError = std::get<std::string>(std::move(result));
                     pRenderer->getGameManager()->addDeferredTask(
                         [onError, shaderDescription, sShaderError = std::move(sShaderError)]() mutable {
                             onError(std::move(shaderDescription), sShaderError);
                         });
                 } else {
+                    // Internal error.
                     auto err = std::get<Error>(std::move(result));
                     err.addEntry();
                     Logger::get().error(
@@ -589,14 +594,16 @@ namespace ne {
                     });
                 }
             } else {
+                // Save compiled shader.
                 pShaderPack = std::get<std::shared_ptr<ShaderPack>>(std::move(result));
             }
         }
 
         if (pShaderPack != nullptr) {
-            // Add shader to shader registry.
+            // Add shader to the shader registry.
             std::scoped_lock guard(mtxRwShaders);
 
+            // Make sure the shader registry does not have a shader with this name.
             const auto it = compiledShaders.find(shaderDescription.sShaderName);
             if (it != compiledShaders.end()) [[unlikely]] {
                 Error err(fmt::format(
@@ -638,14 +645,13 @@ namespace ne {
                 }
                 }
 
-                // Save shader.
+                // Save shader to shader registry.
                 compiledShaders[shaderDescription.sShaderName] = std::move(pShaderPack);
             }
         }
 
         // Mark progress.
         const size_t iLastFetchCompiledShaderCount = pCompiledShaderCount->fetch_add(1);
-
         const auto iCompiledShaderCount = iLastFetchCompiledShaderCount + 1;
         Logger::get().info(
             fmt::format(
@@ -660,7 +666,7 @@ namespace ne {
             onProgress(iCompiledShaderCount, iTotalShaderCount);
         });
 
-        // Make sure that only one task should call onCompleted.
+        // Make sure that only one task would call `onCompleted` callback.
         if (iLastFetchCompiledShaderCount + 1 == iTotalShaderCount) {
             Logger::get().info(
                 fmt::format(

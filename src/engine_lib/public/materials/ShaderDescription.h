@@ -140,7 +140,10 @@ namespace ne {
          * This is usually done to check if shader cache is valid or not
          * (needs to be recompiled or not).
          *
-         * @param other Other shader description to compare with.
+         * @param other Other shader description to compare with. If this "other" shader
+         * description was retrieved from the cache it will not be changed, otherwise if it
+         * has path to the shader source file specified it will be updated
+         * with hashes of the source shader file and its includes.
          *
          * @return Whether the data is equal or not. If the data is not equal,
          * has a value that contains a reason.

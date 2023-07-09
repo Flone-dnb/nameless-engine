@@ -17,6 +17,7 @@ namespace ne {
         Renderer* pRenderer,
         const ShaderDescription& shaderDescription,
         std::optional<ShaderCacheInvalidationReason>& cacheInvalidationReason) {
+        // Reset received cache invalidation reason (just in case it contains a value).
         cacheInvalidationReason = {};
 
         // Prepare paths to shader.
@@ -25,12 +26,12 @@ namespace ne {
         const auto pathToCompiledShader =
             pathToShaderDirectory / ShaderFilesystemPaths::getShaderCacheBaseFileName();
 
-        // Create pack.
+        // Create an empty shader pack.
         const auto pShaderPack = std::shared_ptr<ShaderPack>(
             new ShaderPack(shaderDescription.sShaderName, shaderDescription.shaderType));
 
-        // Choose a valid configurations depending on our shader type.
-        const std::set<std::set<ShaderMacro>>* pMacroConfigurations;
+        // Choose valid configurations depending on the shader type.
+        const std::set<std::set<ShaderMacro>>* pMacroConfigurations = nullptr;
         switch (shaderDescription.shaderType) {
         case (ShaderType::VERTEX_SHADER):
             pMacroConfigurations = &ShaderMacroConfigurations::validVertexShaderMacroConfigurations;
@@ -45,26 +46,27 @@ namespace ne {
 
         std::scoped_lock resourcesGuard(pShaderPack->mtxInternalResources.first);
 
-        // Prepare a shader per macro configuration and add it to pack.
+        // Prepare a shader per macro configuration and add it to the shader pack.
         for (const auto& macros : *pMacroConfigurations) {
             // Prepare shader description.
             auto currentShaderDescription = shaderDescription;
 
-            // Add configuration macros to description.
+            // Specify defined macros for this shader.
             auto vParameterNames = convertShaderMacrosToText(macros);
             for (const auto& sParameter : vParameterNames) {
                 currentShaderDescription.vDefinedShaderMacros.push_back(sParameter);
             }
 
+            // Add hash of the configuration to the shader name for logging.
             const auto sConfigurationText = ShaderMacroConfigurations::convertConfigurationToText(macros);
-            currentShaderDescription.sShaderName +=
-                sConfigurationText; // add configuration to name for logging
+            currentShaderDescription.sShaderName += sConfigurationText;
 
-            // Add configuration to filename so that all shader variants will be stored in different files.
+            // Add hash of the configuration to the compiled shader file name
+            // so that all shader variants will be stored in different files.
             auto currentPathToCompiledShader = pathToCompiledShader;
             currentPathToCompiledShader += sConfigurationText;
 
-            // Try shader to load from cache.
+            // Try to load the shader from cache.
             auto result = Shader::createFromCache(
                 pRenderer,
                 currentPathToCompiledShader,
@@ -72,19 +74,22 @@ namespace ne {
                 shaderDescription.sShaderName,
                 cacheInvalidationReason);
             if (std::holds_alternative<Error>(result)) {
-                // Delete invalid cache.
+                // Shader cache is corrupted or invalid. Delete invalid cache directory.
                 std::filesystem::remove_all(
                     ShaderFilesystemPaths::getPathToShaderCacheDirectory() / shaderDescription.sShaderName);
 
+                // Return error that specifies that cache is invalid.
                 auto err = std::get<Error>(std::move(result));
                 err.addEntry();
                 return err;
             }
 
+            // Save loaded shader to shader pack.
             pShaderPack->mtxInternalResources.second.shadersInPack[macros] =
                 std::get<std::shared_ptr<Shader>>(result);
         }
 
+        // Log finish.
         Logger::get().info(
             fmt::format("successfully loaded shader \"{}\" from cache", shaderDescription.sShaderName),
             sShaderPackLogCategory);

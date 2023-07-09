@@ -51,6 +51,13 @@ namespace ne {
          * automatically loaded from disk into memory and when no longer being used it will be
          * released from memory (stored on disk again).
          *
+         * @remark If a shader was already compiled previously compilation results will be stored in
+         * the shader cache on the disk and if the cache is currently valid
+         * (for ex. shader source file has not changed, included shader source files also not changed,
+         * defined shader macros not changed, build configuration not changed and etc.),
+         * shader compilation will be skipped and instead the shader will be loaded from the cache
+         * (which is faster than compiling the shader).
+         *
          * @param vShadersToCompile Array of shaders to compile. Use @ref isShaderNameCanBeUsed
          * to check if a shader name is free (unique).
          * @param onProgress        Callback function that will be called when each shader is compiled.
@@ -72,8 +79,6 @@ namespace ne {
          * If you are using member functions as callbacks you need to make sure that the owner object
          * of these member functions will not be deleted until onCompleted is called.
          *
-         * @remark If a shader was already compiled previously (valid shader cache exists on disk),
-         * its compilation will be skipped.
          *
          * @return An error if something went wrong.
          */

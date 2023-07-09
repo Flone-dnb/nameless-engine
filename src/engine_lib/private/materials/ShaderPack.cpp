@@ -169,12 +169,12 @@ namespace ne {
         mtxInternalResources.second.renderConfiguration = renderConfiguration;
     }
 
-    bool ShaderPack::releaseShaderPackDataFromMemoryIfLoaded(bool bLogOnlyErrors) {
+    bool ShaderPack::releaseShaderPackDataFromMemoryIfLoaded() {
         std::scoped_lock guard(mtxInternalResources.first);
 
         bool bAtLeastOneWasReleased = false;
         for (const auto& [macros, pShader] : mtxInternalResources.second.shadersInPack) {
-            if (!pShader->releaseShaderDataFromMemoryIfLoaded(bLogOnlyErrors)) {
+            if (!pShader->releaseShaderDataFromMemoryIfLoaded()) {
                 bAtLeastOneWasReleased = true;
             }
         }

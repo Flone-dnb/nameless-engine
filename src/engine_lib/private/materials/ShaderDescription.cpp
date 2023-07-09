@@ -41,7 +41,7 @@ namespace ne {
         outValue["shader_type"] = static_cast<int>(shaderType);
 
         if (sSourceFileHash.empty()) {
-            outValue["source_file_hash"] = getShaderSourceFileHash(pathToShaderFile, sShaderName);
+            outValue["source_file_hash"] = getFileHash(pathToShaderFile, sShaderName);
         } else {
             outValue["source_file_hash"] = sSourceFileHash;
         }
@@ -52,25 +52,22 @@ namespace ne {
         return outValue;
     }
 
-    std::string ShaderDescription::getShaderSourceFileHash(
-        const std::filesystem::path& pathToShaderSourceFile, const std::string& sShaderName) {
-        if (pathToShaderSourceFile.empty()) [[unlikely]] {
+    std::string
+    ShaderDescription::getFileHash(const std::filesystem::path& pathToFile, const std::string& sShaderName) {
+        if (pathToFile.empty()) [[unlikely]] {
             Logger::get().error(
-                fmt::format("path to shader file is empty (shader: {})", sShaderName),
+                fmt::format("path to file is empty (shader: {})", sShaderName),
                 sShaderDescriptionLogCategory);
             return "";
         }
-        if (!std::filesystem::exists(pathToShaderSourceFile)) [[unlikely]] {
+        if (!std::filesystem::exists(pathToFile)) [[unlikely]] {
             Logger::get().error(
-                fmt::format(
-                    "shader file does not exist (shader: {}, path: {})",
-                    sShaderName,
-                    pathToShaderSourceFile.string()),
+                fmt::format("file does not exist (shader: {}, path: {})", sShaderName, pathToFile.string()),
                 sShaderDescriptionLogCategory);
             return "";
         }
 
-        std::ifstream sourceFile(pathToShaderSourceFile, std::ios::binary);
+        std::ifstream sourceFile(pathToFile, std::ios::binary);
 
         sourceFile.seekg(0, std::ios::end);
         const long long iFileLength = sourceFile.tellg();
@@ -145,11 +142,11 @@ namespace ne {
         // If a shader description was retrieved from cache it will not have path to shader file specified.
         // (recalculate hashes here because the file might be changed at this point)
         if (!pathToShaderFile.empty()) { // data from cache will not have path to shader file
-            sSourceFileHash = getShaderSourceFileHash(pathToShaderFile, sShaderName);
+            sSourceFileHash = getFileHash(pathToShaderFile, sShaderName);
             calculateShaderIncludeTreeHashes();
         }
         if (!other.pathToShaderFile.empty()) { //
-            other.sSourceFileHash = getShaderSourceFileHash(other.pathToShaderFile, other.sShaderName);
+            other.sSourceFileHash = getFileHash(other.pathToShaderFile, other.sShaderName);
             other.calculateShaderIncludeTreeHashes();
         }
 
@@ -321,14 +318,14 @@ namespace ne {
 
             vIncludePathsToScan.push_back(pathToIncludeFile);
 
-            includesTable[sInclude] =
-                getShaderSourceFileHash(pathToIncludeFile, pathToIncludeFile.stem().string());
+            includesTable[sInclude] = getFileHash(pathToIncludeFile, pathToIncludeFile.stem().string());
         }
 
         // Don't need include strings anymore.
         vIncludePaths.clear();
         vIncludePaths.shrink_to_fit();
 
+        // Exit if there are no more include paths to scan.
         if (vIncludePathsToScan.empty()) {
             return;
         }

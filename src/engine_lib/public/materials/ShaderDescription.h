@@ -26,6 +26,7 @@ namespace ne {
         DEFINED_SHADER_MACROS_CHANGED,
         SHADER_SOURCE_FILE_CHANGED,
         SHADER_INCLUDE_TREE_CONTENT_CHANGED,
+        COMPILED_BINARY_CHANGED, //< some binary file was changed or missing
         // add new entry to ShaderCacheInvalidationReasonDescription...
         // add test for new reason...
     };
@@ -42,7 +43,10 @@ namespace ne {
                  "defined shader macros changed"},
                 {ShaderCacheInvalidationReason::SHADER_SOURCE_FILE_CHANGED, "shader source file changed"},
                 {ShaderCacheInvalidationReason::SHADER_INCLUDE_TREE_CONTENT_CHANGED,
-                 "shader include tree content changed"}};
+                 "shader include tree content changed"},
+                {ShaderCacheInvalidationReason::COMPILED_BINARY_CHANGED,
+                 "previously compiled binary file(s) changed"}};
+
         /**
          * Returns description in form of text for the specified reason.
          *
@@ -52,7 +56,7 @@ namespace ne {
          */
         static const char* getDescription(ShaderCacheInvalidationReason reason) {
             const auto it = cacheInvalidationReasons.find(reason);
-            if (it == cacheInvalidationReasons.end()) {
+            if (it == cacheInvalidationReasons.end()) [[unlikely]] {
                 throw std::runtime_error("no description is provided for this reason");
             }
             return it->second;
@@ -124,15 +128,15 @@ namespace ne {
         ShaderDescription& operator=(ShaderDescription&& other) noexcept = default;
 
         /**
-         * Calculates hash of shader source file and returns it.
+         * Calculates hash of a file and returns it.
          *
-         * @param pathToShaderSourceFile Path to shader source file. Assumes that this path exists.
-         * @param sShaderName            Unique name of this shader (used for logging).
+         * @param pathToFile  Path to a file. Assumes that this path exists.
+         * @param sShaderName Unique name of this shader (used for logging).
          *
          * @return Empty string if something went wrong, source file hash otherwise.
          */
-        static std::string getShaderSourceFileHash(
-            const std::filesystem::path& pathToShaderSourceFile, const std::string& sShaderName);
+        static std::string
+        getFileHash(const std::filesystem::path& pathToFile, const std::string& sShaderName);
 
         /**
          * Compares this shader description with other to see

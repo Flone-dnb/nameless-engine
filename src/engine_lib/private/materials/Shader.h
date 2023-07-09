@@ -12,6 +12,7 @@
 
 namespace ne {
     class Renderer;
+    class ConfigManager;
 
     /**
      * Base class for different types/formats of shaders to implement.
@@ -32,15 +33,6 @@ namespace ne {
         static size_t getCurrentAmountOfShadersInMemory();
 
         /**
-         * Tests if the shader cache for this shader is corrupted or not.
-         *
-         * @remark This function should be used before you want to use the shader cache.
-         *
-         * @return Error if shader cache is corrupted.
-         */
-        [[nodiscard]] virtual std::optional<Error> testIfShaderCacheIsCorrupted() = 0;
-
-        /**
          * Compiles a shader.
          *
          * @param pRenderer            Current renderer.
@@ -50,16 +42,10 @@ namespace ne {
          * @param shaderDescription    Description that describes the shader and how the shader should be
          * compiled.
          *
-         * @return Returns one of the three values:
-         * @arg compiled shader
-         * @arg string containing shader compilation error/warning
-         * @arg internal error
+         * @return One of the three values: compiled shader, string containing shader compilation
+         * error/warning or an internal error.
          */
-        static std::variant<
-            std::shared_ptr<Shader> /** Compiled shader pack. */,
-            std::string /** Compilation error. */,
-            Error /** Internal error. */>
-        compileShader(
+        static std::variant<std::shared_ptr<Shader>, std::string, Error> compileShader(
             Renderer* pRenderer,
             const std::filesystem::path& shaderCacheDirectory,
             const std::string& sConfiguration,
@@ -75,9 +61,12 @@ namespace ne {
          * compiled. Used for cache invalidation.
          * @param sShaderNameWithoutConfiguration Initial shader name without configuration hash,
          * this name is used for logging.
-         * @param cacheInvalidationReason Will be not empty if cache was invalidated.
+         * @param cacheInvalidationReason Will be not empty if cache was invalidated
+         * (i.e. cache can't be used).
          *
-         * @return Returns error if the shader cache is corrupted or was invalidated,
+         * @return Error if the shader cache is corrupted/invalidated (cache invalidation reason
+         * should have a value and returned Error will contain a full description of this invalidation
+         * reason) or there was something wrong while attempting to load the cache,
          * otherwise a shader created using shader cache.
          */
         static std::variant<std::shared_ptr<Shader>, Error> createFromCache(
@@ -114,13 +103,9 @@ namespace ne {
          * if the shader bytecode was loaded into memory.
          * Next time this shader will be needed it will be loaded from disk.
          *
-         * @param bLogOnlyErrors Specify 'true' to only log errors, 'false' to log errors and info.
-         * Specifying 'true' is useful when we are testing if shader cache is corrupted or not,
-         * to make log slightly cleaner.
-         *
          * @return `false` if was released from memory, `true` if was not loaded in memory previously.
          */
-        virtual bool releaseShaderDataFromMemoryIfLoaded(bool bLogOnlyErrors = false) = 0;
+        virtual bool releaseShaderDataFromMemoryIfLoaded() = 0;
 
     protected:
         /**
@@ -153,6 +138,38 @@ namespace ne {
         static void notifyShaderBytecodeReleasedFromMemory();
 
         /**
+         * Used to save data of shader language specific (additional) shader compilation results
+         * (such as reflection data, i.e. if there are some other compilation results besides compiled
+         * shader bytecode which is automatically hashed and checked)
+         * to later check them in @ref checkCachedAdditionalCompilationResultsInfo.
+         *
+         * @param cacheMetadataConfigManager Config manager to write the data to.
+         *
+         * @return Error if something went wrong.
+         */
+        [[nodiscard]] virtual std::optional<Error>
+        saveAdditionalCompilationResultsInfo(ConfigManager& cacheMetadataConfigManager) {
+            return {};
+        };
+
+        /**
+         * Used to check cached data of shader language specific (additional) shader compilation results
+         * (such as reflection data, i.e. if there are some other compilation results besides compiled
+         * shader bytecode which is automatically hashed and checked) whether its valid or not.
+         *
+         * @param cacheMetadataConfigManager Config manager to write the data to.
+         * @param cacheInvalidationReason     Will be not empty if cache was invalidated
+         * (i.e. cache can't be used).
+         *
+         * @return Error if some internal error occurred.
+         */
+        [[nodiscard]] virtual std::optional<Error> checkCachedAdditionalCompilationResultsInfo(
+            ConfigManager& cacheMetadataConfigManager,
+            std::optional<ShaderCacheInvalidationReason>& cacheInvalidationReason) {
+            return {};
+        };
+
+        /**
          * Returns path to compiled shader blob on disk.
          *
          * @return Error if the compiled shader does not exist, otherwise path to compiled shader.
@@ -181,6 +198,9 @@ namespace ne {
 
         /** Shader source file hash, used to tell what shaders were compiled from the same file. */
         std::string sSourceFileHash;
+
+        /** Name of the key used to store compiled bytecode hash in the metadata file. */
+        static inline const auto sCompiledBytecodeHashKeyName = "compiled_bytecode_hash";
 
         /** Name of the category used for logging. */
         static inline const auto sShaderLogCategory = "Shader";

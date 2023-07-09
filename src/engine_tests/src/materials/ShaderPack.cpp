@@ -3,6 +3,7 @@
 #include "game/GameInstance.h"
 #include "game/Window.h"
 #include "misc/ProjectPaths.h"
+#include "materials/ShaderFilesystemPaths.hpp"
 
 // Standard.
 #include <fstream>
@@ -716,6 +717,190 @@ TEST_CASE("invalidate HLSL shader cache - SHADER_INCLUDE_TREE_CONTENT_CHANGED") 
             // Cleanup.
             std::filesystem::remove(shaderPath);
             std::filesystem::remove_all(testShadersDirPath);
+
+            pGameWindow->close();
+        }
+        virtual ~TestGameInstance() override {}
+    };
+
+    auto result = Window::getBuilder().withVisibility(false).build();
+    if (std::holds_alternative<Error>(result)) {
+        Error error = std::get<Error>(std::move(result));
+        error.addEntry();
+        INFO(error.getFullErrorMessage());
+        REQUIRE(false);
+    }
+
+    const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
+    pMainWindow->processEvents<TestGameInstance>();
+}
+
+TEST_CASE("invalidate HLSL shader cache - COMPILED_BINARY_CHANGED (bytecode)") {
+    using namespace ne;
+
+    class TestGameInstance : public GameInstance {
+    public:
+        TestGameInstance(Window* pGameWindow, GameManager* pGame, InputManager* pInputManager)
+            : GameInstance(pGameWindow, pGame, pInputManager) {
+            const auto shaderPath = ProjectPaths::getPathToResDirectory(ResourceDirectory::ROOT) / "test" /
+                                    "temp" / "shader_COMPILED_BINARY_CHANGED_test.hlsl";
+
+            // Create temporary shader file.
+            std::ofstream shaderFile(shaderPath);
+            REQUIRE(shaderFile.is_open());
+            shaderFile << "float4 ps(float4 vPos : SV_POSITION) : SV_Target\n"
+                          "{\n"
+                          "return float4(1.0f, 1.0f, 1.0f, 1.0f);\n"
+                          "}\n";
+            shaderFile.close();
+
+            const auto sShaderUniqueName = std::string("test shader");
+
+            ShaderDescription description{sShaderUniqueName, shaderPath, ShaderType::PIXEL_SHADER, "ps", {}};
+
+            // Compile.
+            auto compileResult = ShaderPack::compileShaderPack(pGameWindow->getRenderer(), description);
+            if (!std::holds_alternative<std::shared_ptr<ShaderPack>>(compileResult)) {
+                std::string sErrorMessage;
+                if (std::holds_alternative<std::string>(compileResult)) {
+                    sErrorMessage = std::get<std::string>(compileResult);
+                } else {
+                    sErrorMessage = std::get<Error>(compileResult).getFullErrorMessage();
+                }
+                INFO(sErrorMessage);
+                REQUIRE(std::holds_alternative<std::shared_ptr<ShaderPack>>(compileResult));
+            }
+
+            // Should find valid cache.
+            std::optional<ShaderCacheInvalidationReason> cacheInvalidationReason;
+            auto cacheResult =
+                ShaderPack::createFromCache(pGameWindow->getRenderer(), description, cacheInvalidationReason);
+
+            if (!std::holds_alternative<std::shared_ptr<ShaderPack>>(cacheResult)) {
+                std::string sErrorMessage = std::get<Error>(cacheResult).getFullErrorMessage();
+                INFO(sErrorMessage);
+                REQUIRE(std::holds_alternative<std::shared_ptr<ShaderPack>>(cacheResult));
+            }
+            REQUIRE(!cacheInvalidationReason.has_value());
+            const auto pShaderPack = std::get<std::shared_ptr<ShaderPack>>(cacheResult);
+
+            // Get path to shader bytecode.
+            const auto pathToShaderBytecode = ProjectPaths::getPathToCompiledShadersDirectory() /
+                                              sShaderUniqueName /
+                                              ShaderFilesystemPaths::getShaderCacheBaseFileName();
+            REQUIRE(std::filesystem::exists(pathToShaderBytecode));
+
+            // Now manually change shader bytecode.
+            // It's enough to modify bytecode of just one shader configuration for cache to be invalid.
+            std::ofstream shaderBytecodeFile(pathToShaderBytecode);
+            REQUIRE(shaderBytecodeFile.is_open());
+            shaderBytecodeFile << "Hello World!";
+            shaderBytecodeFile.close();
+
+            // Cache should be invalidated.
+            cacheResult =
+                ShaderPack::createFromCache(pGameWindow->getRenderer(), description, cacheInvalidationReason);
+
+            REQUIRE(!std::holds_alternative<std::shared_ptr<ShaderPack>>(cacheResult));
+            REQUIRE(cacheInvalidationReason.has_value());
+            REQUIRE(
+                cacheInvalidationReason.value() == ShaderCacheInvalidationReason::COMPILED_BINARY_CHANGED);
+
+            // Cleanup.
+            std::filesystem::remove(shaderPath);
+
+            pGameWindow->close();
+        }
+        virtual ~TestGameInstance() override {}
+    };
+
+    auto result = Window::getBuilder().withVisibility(false).build();
+    if (std::holds_alternative<Error>(result)) {
+        Error error = std::get<Error>(std::move(result));
+        error.addEntry();
+        INFO(error.getFullErrorMessage());
+        REQUIRE(false);
+    }
+
+    const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
+    pMainWindow->processEvents<TestGameInstance>();
+}
+
+TEST_CASE("invalidate HLSL shader cache - COMPILED_BINARY_CHANGED (reflection)") {
+    using namespace ne;
+
+    class TestGameInstance : public GameInstance {
+    public:
+        TestGameInstance(Window* pGameWindow, GameManager* pGame, InputManager* pInputManager)
+            : GameInstance(pGameWindow, pGame, pInputManager) {
+            const auto shaderPath = ProjectPaths::getPathToResDirectory(ResourceDirectory::ROOT) / "test" /
+                                    "temp" / "shader_COMPILED_BINARY_CHANGED_test.hlsl";
+
+            // Create temporary shader file.
+            std::ofstream shaderFile(shaderPath);
+            REQUIRE(shaderFile.is_open());
+            shaderFile << "float4 ps(float4 vPos : SV_POSITION) : SV_Target\n"
+                          "{\n"
+                          "return float4(1.0f, 1.0f, 1.0f, 1.0f);\n"
+                          "}\n";
+            shaderFile.close();
+
+            const auto sShaderUniqueName = std::string("test shader");
+
+            ShaderDescription description{sShaderUniqueName, shaderPath, ShaderType::PIXEL_SHADER, "ps", {}};
+
+            // Compile.
+            auto compileResult = ShaderPack::compileShaderPack(pGameWindow->getRenderer(), description);
+            if (!std::holds_alternative<std::shared_ptr<ShaderPack>>(compileResult)) {
+                std::string sErrorMessage;
+                if (std::holds_alternative<std::string>(compileResult)) {
+                    sErrorMessage = std::get<std::string>(compileResult);
+                } else {
+                    sErrorMessage = std::get<Error>(compileResult).getFullErrorMessage();
+                }
+                INFO(sErrorMessage);
+                REQUIRE(std::holds_alternative<std::shared_ptr<ShaderPack>>(compileResult));
+            }
+
+            // Should find valid cache.
+            std::optional<ShaderCacheInvalidationReason> cacheInvalidationReason;
+            auto cacheResult =
+                ShaderPack::createFromCache(pGameWindow->getRenderer(), description, cacheInvalidationReason);
+
+            if (!std::holds_alternative<std::shared_ptr<ShaderPack>>(cacheResult)) {
+                std::string sErrorMessage = std::get<Error>(cacheResult).getFullErrorMessage();
+                INFO(sErrorMessage);
+                REQUIRE(std::holds_alternative<std::shared_ptr<ShaderPack>>(cacheResult));
+            }
+            REQUIRE(!cacheInvalidationReason.has_value());
+            const auto pShaderPack = std::get<std::shared_ptr<ShaderPack>>(cacheResult);
+
+            // Get path to shader bytecode.
+            const std::filesystem::path pathToShaderReflection =
+                (ProjectPaths::getPathToCompiledShadersDirectory() / sShaderUniqueName /
+                 ShaderFilesystemPaths::getShaderCacheBaseFileName())
+                    .string() +
+                ".reflection";
+            REQUIRE(std::filesystem::exists(pathToShaderReflection));
+
+            // Now manually change shader reflection.
+            // It's enough to modify reflection of just one shader configuration for cache to be invalid.
+            std::ofstream shaderReflectionFile(pathToShaderReflection);
+            REQUIRE(shaderReflectionFile.is_open());
+            shaderReflectionFile << "Hello World!";
+            shaderReflectionFile.close();
+
+            // Cache should be invalidated.
+            cacheResult =
+                ShaderPack::createFromCache(pGameWindow->getRenderer(), description, cacheInvalidationReason);
+
+            REQUIRE(!std::holds_alternative<std::shared_ptr<ShaderPack>>(cacheResult));
+            REQUIRE(cacheInvalidationReason.has_value());
+            REQUIRE(
+                cacheInvalidationReason.value() == ShaderCacheInvalidationReason::COMPILED_BINARY_CHANGED);
+
+            // Cleanup.
+            std::filesystem::remove(shaderPath);
 
             pGameWindow->close();
         }

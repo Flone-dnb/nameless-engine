@@ -171,6 +171,24 @@ namespace ne {
             throw std::runtime_error(error.getFullErrorMessage());
         }
 
+        // Get vertex shader bytecode and generate its root signature.
+        auto shaderBytecode = pVertexShader->getCompiledBlob();
+        if (std::holds_alternative<Error>(shaderBytecode)) {
+            auto err = std::get<Error>(std::move(shaderBytecode));
+            err.addEntry();
+            return err;
+        }
+        const ComPtr<IDxcBlob> pVertexShaderBytecode = std::get<ComPtr<IDxcBlob>>(std::move(shaderBytecode));
+
+        // Get pixel shader bytecode and generate its root signature.
+        shaderBytecode = pPixelShader->getCompiledBlob();
+        if (std::holds_alternative<Error>(shaderBytecode)) {
+            auto err = std::get<Error>(std::move(shaderBytecode));
+            err.addEntry();
+            return err;
+        }
+        const ComPtr<IDxcBlob> pPixelShaderBytecode = std::get<ComPtr<IDxcBlob>>(std::move(shaderBytecode));
+
         // Generate one root signature for both shaders.
         auto result = RootSignatureGenerator::merge(
             pDirectXRenderer->getD3dDevice(), pVertexShader.get(), pPixelShader.get());
@@ -183,24 +201,6 @@ namespace ne {
         mtxInternalResources.second.pRootSignature = std::move(mergedRootSignature.pRootSignature);
         mtxInternalResources.second.rootParameterIndices =
             std::move(mergedRootSignature.rootParameterIndices);
-
-        // Get vertex shader bytecode.
-        auto shaderBytecode = pVertexShader->getCompiledBlob();
-        if (std::holds_alternative<Error>(shaderBytecode)) {
-            auto err = std::get<Error>(std::move(shaderBytecode));
-            err.addEntry();
-            return err;
-        }
-        const ComPtr<IDxcBlob> pVertexShaderBytecode = std::get<ComPtr<IDxcBlob>>(std::move(shaderBytecode));
-
-        // Get pixel shader bytecode.
-        shaderBytecode = pPixelShader->getCompiledBlob();
-        if (std::holds_alternative<Error>(shaderBytecode)) {
-            auto err = std::get<Error>(std::move(shaderBytecode));
-            err.addEntry();
-            return err;
-        }
-        const ComPtr<IDxcBlob> pPixelShaderBytecode = std::get<ComPtr<IDxcBlob>>(std::move(shaderBytecode));
 
         // Prepare to create a PSO from these shaders.
         D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};

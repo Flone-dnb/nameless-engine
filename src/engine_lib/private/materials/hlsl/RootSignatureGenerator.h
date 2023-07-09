@@ -84,6 +84,9 @@ namespace ne {
          *
          * @remark Shaders must be compiled from one shader source file.
          *
+         * @remark Expects that root signature and its information is already generated for both
+         * shaders, otherwise returns error.
+         *
          * @return Error if something went wrong, otherwise generated root signature.
          */
         static std::variant<Merged, Error>

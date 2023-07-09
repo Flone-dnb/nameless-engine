@@ -33,7 +33,17 @@ namespace ne {
 
     void Shader::notifyShaderBytecodeLoadedIntoMemory() { iTotalShaderInMemoryCount.fetch_add(1); }
 
-    void Shader::notifyShaderBytecodeReleasedFromMemory() { iTotalShaderInMemoryCount.fetch_sub(1); }
+    void Shader::notifyShaderBytecodeReleasedFromMemory() {
+        const auto iPreviouslyShadersInMemoryCount = iTotalShaderInMemoryCount.fetch_sub(1);
+
+        // Self check:
+        if (iPreviouslyShadersInMemoryCount == 0) [[unlikely]] {
+            Logger::get().error(
+                "detected shader load/release notify mismatch, shaders loaded in the memory just "
+                "went below 0",
+                sShaderLogCategory);
+        }
+    }
 
     std::variant<std::shared_ptr<Shader>, std::string, Error> Shader::compileShader(
         Renderer* pRenderer,
@@ -70,12 +80,45 @@ namespace ne {
                 shaderCacheDirectory / ShaderFilesystemPaths::getShaderCacheBaseFileName();
             shaderCacheConfigurationPath += sConfiguration;
 
-            // Save to file.
+            // Save shader description to cache metadata file.
             ConfigManager configManager;
             configManager.setValue<ShaderDescription>(
                 "", ShaderDescription::getConfigurationFileSectionName(), shaderDescription);
-            auto optionalError = configManager.saveFile(shaderCacheConfigurationPath, false);
-            if (optionalError.has_value()) {
+
+            // Get path to compiled shader bytecode file.
+            const auto pCompiledShader = std::get<std::shared_ptr<Shader>>(result);
+            auto pathToCompiledShaderResult = pCompiledShader->getPathToCompiledShader();
+            if (std::holds_alternative<Error>(pathToCompiledShaderResult)) [[unlikely]] {
+                auto error = std::get<Error>(std::move(pathToCompiledShaderResult));
+                error.addEntry();
+                return error;
+            }
+            const auto pathToCompiledShader =
+                std::get<std::filesystem::path>(std::move(pathToCompiledShaderResult));
+
+            // Calculate hash of compiled shader bytecode file.
+            const auto sCompiledFileHash =
+                ShaderDescription::getFileHash(pathToCompiledShader, shaderDescription.sShaderName);
+            if (sCompiledFileHash.empty()) [[unlikely]] {
+                return Error(fmt::format(
+                    "failed to calculate hash of compiled shader bytecode at \"{}\"",
+                    pathToCompiledShader.string()));
+            }
+
+            // Save hash of the compiled bytecode to later test during cache validation.
+            configManager.setValue<std::string>("", sCompiledBytecodeHashKeyName, sCompiledFileHash);
+
+            // Save other additional information.
+            auto optionalError = pCompiledShader->saveAdditionalCompilationResultsInfo(configManager);
+            if (optionalError.has_value()) [[unlikely]] {
+                auto error = optionalError.value();
+                error.addEntry();
+                return error;
+            }
+
+            // Save cache metadata file.
+            optionalError = configManager.saveFile(shaderCacheConfigurationPath, false);
+            if (optionalError.has_value()) [[unlikely]] {
                 auto error = optionalError.value();
                 error.addEntry();
                 return error;
@@ -134,10 +177,36 @@ namespace ne {
             return err;
         }
 
+        // Now check if bytecode and other compilation results (from the old compilation) are the same.
+
+        // Calculate hash of existing shader bytecode file that was previously compiled.
+        const auto sCompiledFileHash =
+            ShaderDescription::getFileHash(pathToCompiledShader, shaderDescription.sShaderName);
+        if (sCompiledFileHash.empty()) [[unlikely]] {
+            return Error(fmt::format(
+                "failed to calculate hash of compiled shader bytecode at \"{}\"",
+                pathToCompiledShader.string()));
+        }
+
+        // Read hash of the compiled bytecode from cache metadata file.
+        const auto sCachedCompiledFileHash =
+            configManager.getValue<std::string>("", sCompiledBytecodeHashKeyName, "");
+
+        // Make sure compiled bytecode file is the same.
+        if (sCompiledFileHash != sCachedCompiledFileHash) [[unlikely]] {
+            // File was changed, cache is no longer valid.
+            cacheInvalidationReason = ShaderCacheInvalidationReason::COMPILED_BINARY_CHANGED;
+            Error err(fmt::format(
+                "invalidated cache for shader \"{}\" (reason: {})",
+                sShaderNameWithoutConfiguration,
+                ShaderCacheInvalidationReasonDescription::getDescription(cacheInvalidationReason.value())));
+            return err;
+        }
+
         // Calculate source file hash so that we could determine what pixel/fragment/vertex shaders
         // were compiled from the same file.
-        const auto sSourceFileHash = ShaderDescription::getShaderSourceFileHash(
-            shaderDescription.pathToShaderFile, shaderDescription.sShaderName);
+        const auto sSourceFileHash =
+            ShaderDescription::getFileHash(shaderDescription.pathToShaderFile, shaderDescription.sShaderName);
         if (sSourceFileHash.empty()) {
             return Error(fmt::format(
                 "unable to calculate shader source file hash (shader path: \"{}\")",
@@ -165,10 +234,21 @@ namespace ne {
         static_assert(false, "not implemented");
 #endif
 
-        auto result = pShader->testIfShaderCacheIsCorrupted();
-        if (result.has_value()) {
-            auto err = result.value();
-            err.addEntry();
+        // Check if other compilation results are valid.
+        optionalError =
+            pShader->checkCachedAdditionalCompilationResultsInfo(configManager, cacheInvalidationReason);
+        if (optionalError.has_value()) {
+            auto error = optionalError.value();
+            error.addEntry();
+            return error;
+        }
+
+        // Check if cache was invalidated.
+        if (cacheInvalidationReason.has_value()) {
+            Error err(fmt::format(
+                "invalidated cache for shader \"{}\" (reason: {})",
+                sShaderNameWithoutConfiguration,
+                ShaderCacheInvalidationReasonDescription::getDescription(cacheInvalidationReason.value())));
             return err;
         }
 
@@ -178,7 +258,7 @@ namespace ne {
     std::string Shader::getShaderName() const { return sShaderName; }
 
     std::variant<std::filesystem::path, Error> Shader::getPathToCompiledShader() {
-        if (!std::filesystem::exists(pathToCompiledShader)) {
+        if (!std::filesystem::exists(pathToCompiledShader)) [[unlikely]] {
             const Error err(fmt::format(
                 "path to compiled shader \"{}\" no longer exists", pathToCompiledShader.string()));
             return err;

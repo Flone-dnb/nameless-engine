@@ -40,19 +40,6 @@ namespace ne {
 
     std::string HlslShader::getComputeShaderModel() { return sComputeShaderModel; }
 
-    std::optional<Error> HlslShader::testIfShaderCacheIsCorrupted() {
-        std::scoped_lock guard(mtxCompiledBlobRootSignature.first);
-        auto optionalError = loadShaderDataFromDiskIfNotLoaded();
-        if (optionalError.has_value()) {
-            optionalError->addEntry();
-            return optionalError.value();
-        }
-
-        releaseShaderDataFromMemoryIfLoaded(true);
-
-        return {};
-    }
-
     std::variant<std::shared_ptr<Shader>, std::string, Error> HlslShader::compileShader(
         Renderer* pRenderer,
         const std::filesystem::path& cacheDirectory,
@@ -70,8 +57,8 @@ namespace ne {
         }
 
         // Calculate source file hash.
-        const auto sSourceFileHash = ShaderDescription::getShaderSourceFileHash(
-            shaderDescription.pathToShaderFile, shaderDescription.sShaderName);
+        const auto sSourceFileHash =
+            ShaderDescription::getFileHash(shaderDescription.pathToShaderFile, shaderDescription.sShaderName);
         if (sSourceFileHash.empty()) {
             return Error(std::format(
                 "unable to calculate shader source file hash (shader path: \"{}\")",
@@ -289,12 +276,15 @@ namespace ne {
         // `generatedRootSignature.pRootSignature` is intentionally left unused
         // here we only care about the fact that it was successfully generated.
         std::scoped_lock rootSignatureInfoGuard(pShader->mtxRootSignatureInfo.first);
-        pShader->mtxRootSignatureInfo.second.rootParameterIndices =
-            std::move(generatedRootSignature.rootParameterIndices);
-        pShader->mtxRootSignatureInfo.second.vStaticSamplers =
-            std::move(generatedRootSignature.vStaticSamplers);
-        pShader->mtxRootSignatureInfo.second.vRootParameters =
-            std::move(generatedRootSignature.vRootParameters);
+
+        // Save root signature info.
+        RootSignatureInfo info;
+        info.rootParameterIndices = std::move(generatedRootSignature.rootParameterIndices);
+        info.vStaticSamplers = std::move(generatedRootSignature.vStaticSamplers);
+        info.vRootParameters = std::move(generatedRootSignature.vRootParameters);
+
+        pShader->mtxRootSignatureInfo.second = std::move(info);
+
         return pShader;
     }
 
@@ -310,11 +300,11 @@ namespace ne {
         return mtxCompiledBlobRootSignature.second.first;
     }
 
-    std::pair<std::mutex, HlslShader::RootSignatureInfo>* HlslShader::getRootSignatureInfo() {
+    std::pair<std::mutex, std::optional<HlslShader::RootSignatureInfo>>* HlslShader::getRootSignatureInfo() {
         return &mtxRootSignatureInfo;
     }
 
-    bool HlslShader::releaseShaderDataFromMemoryIfLoaded(bool bLogOnlyErrors) {
+    bool HlslShader::releaseShaderDataFromMemoryIfLoaded() {
         std::scoped_lock guard(mtxCompiledBlobRootSignature.first);
 
         // Release shader bytecode.
@@ -328,7 +318,7 @@ namespace ne {
                         getShaderName(),
                         iNewRefCount),
                     sHlslShaderLogCategory);
-            } else if (!bLogOnlyErrors) {
+            } else {
                 Logger::get().info(
                     std::format(
                         "shader \"{}\" bytecode is being released from the memory as it's no longer being "
@@ -349,30 +339,57 @@ namespace ne {
             // for creation were the same as in the previous call.
             // Because of this we don't check returned ref count for zero since we don't know
             // whether it's safe to compare it to zero or not.
-            //            const auto iNewRefCount = mtxCompiledBlobRootSignature.second.second.Reset();
-            //            if (iNewRefCount != 0) {
-            //                Logger::get().error(
-            //                    std::format(
-            //                        "shader \"{}\" root signature was requested to be released from the "
-            //                        "memory but it's still being referenced (new ref count: {})",
-            //                        getShaderName(),
-            //                        iNewRefCount),
-            //                    sHlslShaderLogCategory);
-            //            } else if (!bLogOnlyErrors) {
-            //                Logger::get().info(
-            //                    std::format(
-            //                        "shader \"{}\" root signature is being released from the memory as it's
-            //                        no longer " "being used (new ref count: {})", getShaderName(),
-            //                        iNewRefCount),
-            //                    sHlslShaderLogCategory);
-            //            }
         }
 
         return false;
     }
 
+    std::optional<Error>
+    HlslShader::saveAdditionalCompilationResultsInfo(ConfigManager& cacheMetadataConfigManager) {
+        // Calculate hash of reflection file.
+        auto result = calculateReflectionFileHash();
+        if (std::holds_alternative<Error>(result)) [[unlikely]] {
+            auto error = std::get<Error>(std::move(result));
+            error.addEntry();
+            return error;
+        }
+        const auto sReflectionFileHash = std::get<std::string>(std::move(result));
+
+        // Save hash of the reflection file to later test during cache validation.
+        cacheMetadataConfigManager.setValue<std::string>(
+            sHlslSectionName, sReflectionFileHashKeyName, sReflectionFileHash);
+
+        return {};
+    }
+
+    std::optional<Error> HlslShader::checkCachedAdditionalCompilationResultsInfo(
+        ConfigManager& cacheMetadataConfigManager,
+        std::optional<ShaderCacheInvalidationReason>& cacheInvalidationReason) {
+        // Calculate hash of reflection file.
+        auto result = calculateReflectionFileHash();
+        if (std::holds_alternative<Error>(result)) [[unlikely]] {
+            auto error = std::get<Error>(std::move(result));
+            error.addEntry();
+            return error;
+        }
+        const auto sReflectionFileHash = std::get<std::string>(std::move(result));
+
+        // Read cached hash of the reflection file.
+        const auto sCachedReflectionFileHash = cacheMetadataConfigManager.getValue<std::string>(
+            sHlslSectionName, sReflectionFileHashKeyName, "");
+
+        // Compare reflection file hashes.
+        if (sCachedReflectionFileHash != sReflectionFileHash) [[unlikely]] {
+            cacheInvalidationReason = ShaderCacheInvalidationReason::COMPILED_BINARY_CHANGED;
+            return {};
+        }
+
+        return {};
+    }
+
     std::variant<ComPtr<IDxcBlob>, Error>
     HlslShader::readBlobFromDisk(const std::filesystem::path& pathToFile) {
+        // Open file.
         std::ifstream shaderBytecodeFile(pathToFile, std::ios::binary);
         if (!shaderBytecodeFile.is_open()) {
             return Error(std::format("failed to open file at {}", pathToFile.string()));
@@ -412,6 +429,45 @@ namespace ne {
         }
 
         return pBlob;
+    }
+
+    std::variant<std::string, Error> HlslShader::calculateReflectionFileHash() {
+        // Get path to compiled shader.
+        auto pathToCompiledShaderResult = getPathToCompiledShader();
+        if (std::holds_alternative<Error>(pathToCompiledShaderResult)) [[unlikely]] {
+            auto error = std::get<Error>(std::move(pathToCompiledShaderResult));
+            error.addEntry();
+            return error;
+        }
+        const auto pathToCompiledPath =
+            std::get<std::filesystem::path>(std::move(pathToCompiledShaderResult));
+
+        // Make sure there is no extension (expecting the file to not have extension).
+        if (pathToCompiledPath.has_extension()) [[unlikely]] {
+            return Error(fmt::format(
+                "expected the shader bytecode file \"{}\" to not have an extension",
+                pathToCompiledPath.string()));
+        }
+
+        // Add extension that reflection binary files use.
+        const auto pathToReflectionFile =
+            std::filesystem::path(pathToCompiledPath.string() + sShaderReflectionFileExtension);
+
+        // Make sure the reflection file exists.
+        if (!std::filesystem::exists(pathToReflectionFile)) [[unlikely]] {
+            return Error(
+                fmt::format("expected reflection file to exist at \"{}\"", pathToReflectionFile.string()));
+        }
+
+        // Calculate hash of the reflection file.
+        const auto sReflectionFileHash =
+            ShaderDescription::getFileHash(pathToReflectionFile, getShaderName());
+        if (sReflectionFileHash.empty()) [[unlikely]] {
+            return Error(
+                fmt::format("failed to calculate hash of the file at \"{}\"", pathToReflectionFile.string()));
+        }
+
+        return sReflectionFileHash;
     }
 
     std::optional<Error> HlslShader::loadShaderDataFromDiskIfNotLoaded() {
@@ -486,9 +542,14 @@ namespace ne {
             // Save results.
             mtxCompiledBlobRootSignature.second.second = std::move(generated.pRootSignature);
             std::scoped_lock rootSignatureInfoGuard(mtxRootSignatureInfo.first);
-            mtxRootSignatureInfo.second.rootParameterIndices = std::move(generated.rootParameterIndices);
-            mtxRootSignatureInfo.second.vStaticSamplers = std::move(generated.vStaticSamplers);
-            mtxRootSignatureInfo.second.vRootParameters = std::move(generated.vRootParameters);
+
+            // Save root signature info.
+            RootSignatureInfo info;
+            info.rootParameterIndices = std::move(generated.rootParameterIndices);
+            info.vStaticSamplers = std::move(generated.vStaticSamplers);
+            info.vRootParameters = std::move(generated.vRootParameters);
+
+            mtxRootSignatureInfo.second = std::move(info);
         }
 
         return {};

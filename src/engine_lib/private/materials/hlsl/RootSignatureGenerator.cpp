@@ -177,21 +177,39 @@ namespace ne {
                 pPixelShader->getShaderSourceFileHash()));
         }
 
-        // Get shaders' used root parameters and used static samplers.
+        // Get pixel shader used root parameters and used static samplers.
         auto pMtxPixelRootInfo = pPixelShader->getRootSignatureInfo();
+        if (!pMtxPixelRootInfo->second.has_value()) [[unlikely]] {
+            return Error(std::format(
+                "unable to merge root signature of the pixel shader \"{}\" "
+                "because it does have root signature generated",
+                pPixelShader->getShaderName()));
+        }
+
+        // Get vertex shader used root parameters and used static samplers.
         auto pMtxVertexRootInfo = pVertexShader->getRootSignatureInfo();
+        if (!pMtxVertexRootInfo->second.has_value()) [[unlikely]] {
+            return Error(std::format(
+                "unable to merge root signature of the vertex shader \"{}\" "
+                "because it does have root signature generated",
+                pVertexShader->getShaderName()));
+        }
 
         std::scoped_lock shaderRootSignatureInfoGuard(pMtxPixelRootInfo->first, pMtxVertexRootInfo->first);
 
-        auto vStaticSamplers = pMtxPixelRootInfo->second.vStaticSamplers;
+        auto& pixelShaderRootSignatureInfo = pMtxPixelRootInfo->second.value();
+        auto& vertexShaderRootSignatureInfo = pMtxVertexRootInfo->second.value();
+
+        auto vStaticSamplers = pixelShaderRootSignatureInfo.vStaticSamplers;
+
         std::unordered_map<std::string, UINT> rootParameterIndices;
         std::vector<CD3DX12_ROOT_PARAMETER> vRootParameters;
         std::set<std::string> addedRootParameterNames;
 
         // Check that vertex shader uses frame constant buffer as first root parameter.
         auto vertexFrameBufferIt =
-            pMtxVertexRootInfo->second.rootParameterIndices.find(sFrameConstantBufferName);
-        if (vertexFrameBufferIt == pMtxVertexRootInfo->second.rootParameterIndices.end()) [[unlikely]] {
+            vertexShaderRootSignatureInfo.rootParameterIndices.find(sFrameConstantBufferName);
+        if (vertexFrameBufferIt == vertexShaderRootSignatureInfo.rootParameterIndices.end()) [[unlikely]] {
             return Error(fmt::format(
                 "expected to find `cbuffer` \"{}\" to be used in vertex shader \"{}\")",
                 sFrameConstantBufferName,
@@ -211,7 +229,7 @@ namespace ne {
         // Do some basic checks to add parameters/samplers that don't exist in pixel shader.
 
         // First, add static samplers.
-        for (const auto& sampler : pMtxVertexRootInfo->second.vStaticSamplers) {
+        for (const auto& sampler : vertexShaderRootSignatureInfo.vStaticSamplers) {
             // Check if we already use this sampler.
             const auto it =
                 std::ranges::find_if(vStaticSamplers, [&sampler](const CD3DX12_STATIC_SAMPLER_DESC& item) {
@@ -241,8 +259,8 @@ namespace ne {
                     addedRootParameterNames.insert(sResourceName);
                 }
             };
-        addRootParameters(pMtxPixelRootInfo->second.rootParameterIndices);
-        addRootParameters(pMtxVertexRootInfo->second.rootParameterIndices);
+        addRootParameters(pixelShaderRootSignatureInfo.rootParameterIndices);
+        addRootParameters(vertexShaderRootSignatureInfo.rootParameterIndices);
 
         // Make sure there are root parameters.
         if (vRootParameters.empty()) [[unlikely]] {

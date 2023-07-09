@@ -78,14 +78,10 @@ namespace ne {
          * if the shader bytecode was loaded into memory.
          * Next time this shader will be needed it will be loaded from disk.
          *
-         * @param bLogOnlyErrors Specify `true` to only log errors, `false` to log errors and info.
-         * Specifying `true` is useful when we are testing if shader cache is corrupted or not,
-         * to make log slightly cleaner.
-         *
          * @return `false` if at least one shader variant was released from memory,
          * `true` if all variants were not loaded into memory.
          */
-        bool releaseShaderPackDataFromMemoryIfLoaded(bool bLogOnlyErrors = false);
+        bool releaseShaderPackDataFromMemoryIfLoaded();
 
         /**
          * Returns a shader that matches the current renderer's shader configuration and the specified

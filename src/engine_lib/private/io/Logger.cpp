@@ -24,6 +24,10 @@ namespace ne {
                 iTotalWarningsProduced.load(),
                 iTotalErrorsProduced.load()));
         }
+
+        // Make sure the log is flushed.
+        flushToDisk();
+
         // Explicitly destroy spdlogger here, because:
         // if you would try to write to log in destructor of your class while using `gc` pointer
         // to store your class' instance, if it happens that your instance is destroyed when the program

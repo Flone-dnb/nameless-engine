@@ -205,9 +205,6 @@ namespace ne {
          */
         std::pair<std::mutex, std::optional<RootSignatureInfo>> mtxRootSignatureInfo;
 
-        /** Name of the category used for logging. */
-        inline static const char* sHlslShaderLogCategory = "HLSL Shader";
-
         /** Shader file encoding. */
         static inline UINT iShaderFileCodepage = DXC_CP_ACP;
 

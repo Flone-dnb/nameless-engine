@@ -28,10 +28,8 @@ namespace ne {
         std::scoped_lock guard(mtxCreatedTimers.first);
 
         if (!bAllowCreatingTimers) {
-            Logger::get().error(
-                "timers can no longer be created because the GameInstance will soon be "
-                "destroyed",
-                sGameInstanceLogCategory);
+            Logger::get().error("timers can no longer be created because the GameInstance will soon be "
+                                "destroyed");
             return nullptr;
         }
 

@@ -374,9 +374,6 @@ namespace ne RNAMESPACE() {
         /** World related information, must be used with mutex. */
         std::pair<std::recursive_mutex, WorldMatrixInformation> mtxWorldMatrix{};
 
-        /** Name of the category used for logging. */
-        static inline const auto sSpatialNodeLogCategory = "Spatial Node";
-
         ne_SpatialNode_GENERATED
     };
 } // namespace ne RNAMESPACE()

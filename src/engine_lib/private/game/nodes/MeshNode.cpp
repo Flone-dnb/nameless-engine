@@ -247,12 +247,10 @@ namespace ne {
         std::scoped_lock guard(mtxSpawning, mtxGpuResources.first);
 
         if (!isSpawned()) [[unlikely]] {
-            Logger::get().warn(
-                fmt::format(
-                    "mesh node \"{}\" was requested to allocate shader resources but the node is not "
-                    "spawned",
-                    getNodeName()),
-                sMeshNodeLogCategory);
+            Logger::get().warn(fmt::format(
+                "mesh node \"{}\" was requested to allocate shader resources but the node is not "
+                "spawned",
+                getNodeName()));
             return;
         }
 
@@ -268,12 +266,10 @@ namespace ne {
         std::scoped_lock guard(mtxSpawning, mtxGpuResources.first);
 
         if (!isSpawned()) [[unlikely]] {
-            Logger::get().warn(
-                fmt::format(
-                    "mesh node \"{}\" was requested to deallocate shader resources but the node is "
-                    "not spawned",
-                    getNodeName()),
-                sMeshNodeLogCategory);
+            Logger::get().warn(fmt::format(
+                "mesh node \"{}\" was requested to deallocate shader resources but the node is "
+                "not spawned",
+                getNodeName()));
             return;
         }
 
@@ -290,34 +286,28 @@ namespace ne {
         std::scoped_lock guard(mtxSpawning, mtxMeshData, mtxGpuResources.first);
 
         if (!isSpawned()) [[unlikely]] {
-            Logger::get().warn(
-                fmt::format(
-                    "mesh node \"{}\" was requested to allocate geometry buffers but the node is not "
-                    "spawned",
-                    getNodeName()),
-                sMeshNodeLogCategory);
+            Logger::get().warn(fmt::format(
+                "mesh node \"{}\" was requested to allocate geometry buffers but the node is not "
+                "spawned",
+                getNodeName()));
             return;
         }
 
         if (mtxGpuResources.second.mesh.pVertexBuffer != nullptr ||
             mtxGpuResources.second.mesh.pIndexBuffer != nullptr) [[unlikely]] {
-            Logger::get().warn(
-                fmt::format(
-                    "mesh node \"{}\" was requested to deallocate geometry buffers but they are already "
-                    "created",
-                    getNodeName()),
-                sMeshNodeLogCategory);
+            Logger::get().warn(fmt::format(
+                "mesh node \"{}\" was requested to deallocate geometry buffers but they are already "
+                "created",
+                getNodeName()));
             return;
         }
 
         if (meshData.getVertices()->empty()) [[unlikely]] {
-            Logger::get().warn(
-                fmt::format("mesh node \"{}\" has no mesh vertices", getNodeName()), sMeshNodeLogCategory);
+            Logger::get().warn(fmt::format("mesh node \"{}\" has no mesh vertices", getNodeName()));
             return; // nothing to create
         }
         if (meshData.getIndices()->empty()) [[unlikely]] {
-            Logger::get().warn(
-                fmt::format("mesh node \"{}\" has no mesh indices", getNodeName()), sMeshNodeLogCategory);
+            Logger::get().warn(fmt::format("mesh node \"{}\" has no mesh indices", getNodeName()));
             return; // nothing to create
         }
 
@@ -357,23 +347,19 @@ namespace ne {
         std::scoped_lock guard(mtxSpawning, mtxMeshData, mtxGpuResources.first);
 
         if (!isSpawned()) [[unlikely]] {
-            Logger::get().warn(
-                fmt::format(
-                    "mesh node \"{}\" was requested to deallocate geometry buffers but the node is not "
-                    "spawned",
-                    getNodeName()),
-                sMeshNodeLogCategory);
+            Logger::get().warn(fmt::format(
+                "mesh node \"{}\" was requested to deallocate geometry buffers but the node is not "
+                "spawned",
+                getNodeName()));
             return;
         }
 
         if (mtxGpuResources.second.mesh.pVertexBuffer == nullptr ||
             mtxGpuResources.second.mesh.pIndexBuffer == nullptr) [[unlikely]] {
-            Logger::get().warn(
-                fmt::format(
-                    "mesh node \"{}\" was requested to deallocate geometry buffers but they were not "
-                    "created previously",
-                    getNodeName()),
-                sMeshNodeLogCategory);
+            Logger::get().warn(fmt::format(
+                "mesh node \"{}\" was requested to deallocate geometry buffers but they were not "
+                "created previously",
+                getNodeName()));
             return;
         }
 

@@ -230,8 +230,5 @@ namespace ne {
 
         /** Whether this PSO is using pixel blending or not. */
         bool bIsUsingPixelBlending = false;
-
-        /** Name of the category used for logging. */
-        inline static const char* sPsoLogCategory = "Pipeline State Object";
     };
 } // namespace ne

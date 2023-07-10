@@ -26,7 +26,7 @@ namespace ne {
             throw std::runtime_error(err.getFullErrorMessage());
         }
 
-        Logger::get().info(fmt::format("new world with size {} is created", iWorldSize), sWorldLogCategory);
+        Logger::get().info(fmt::format("new world with size {} is created", iWorldSize));
 
         // Initialize self.
         this->pGameManager = pGameManager;
@@ -44,20 +44,16 @@ namespace ne {
         // Make sure world was marked as destroyed.
         std::scoped_lock isDestroyedGuard(mtxIsDestroyed.first);
         if (!mtxIsDestroyed.second) [[unlikely]] {
-            Logger::get().error(
-                "destructor for the world object is called but the world was not destroyed",
-                sWorldLogCategory);
+            Logger::get().error("destructor for the world object is called but the world was not destroyed");
         }
 
         // Make sure all nodes were despawned.
         const auto iSpawnedNodeCount = iTotalSpawnedNodeCount.load();
         if (iSpawnedNodeCount != 0) [[unlikely]] {
-            Logger::get().error(
-                fmt::format(
-                    "destructor for the world object is called but there are still {} node(s) exist "
-                    "in the world",
-                    iSpawnedNodeCount),
-                sWorldLogCategory);
+            Logger::get().error(fmt::format(
+                "destructor for the world object is called but there are still {} node(s) exist "
+                "in the world",
+                iSpawnedNodeCount));
         }
     }
 
@@ -119,7 +115,7 @@ namespace ne {
         }
         mtxIsDestroyed.second = true;
 
-        Logger::get().info("world is being destroyed, despawning world's root node...", sWorldLogCategory);
+        Logger::get().info("world is being destroyed, despawning world's root node...");
 
         // Mark root node as not used explicitly.
         {
@@ -257,12 +253,10 @@ namespace ne {
                 }
 
                 if (!bFound) [[unlikely]] {
-                    Logger::get().error(
-                        fmt::format(
-                            "node \"{}\" is marked as \"should be called every frame\" but it does not exist "
-                            "in the array of nodes that should be called every frame",
-                            pNode->getNodeName()),
-                        sWorldLogCategory);
+                    Logger::get().error(fmt::format(
+                        "node \"{}\" is marked as \"should be called every frame\" but it does not exist "
+                        "in the array of nodes that should be called every frame",
+                        pNode->getNodeName()));
                 }
             }
 
@@ -282,12 +276,10 @@ namespace ne {
                 }
 
                 if (!bFound) [[unlikely]] {
-                    Logger::get().error(
-                        fmt::format(
-                            "node \"{}\" receives input but it does not exist "
-                            "in the array of nodes that receive input",
-                            pNode->getNodeName()),
-                        sWorldLogCategory);
+                    Logger::get().error(fmt::format(
+                        "node \"{}\" receives input but it does not exist "
+                        "in the array of nodes that receive input",
+                        pNode->getNodeName()));
                 }
             }
 

@@ -37,8 +37,7 @@ namespace ne {
 
     Pso::~Pso() {
         // Make sure the renderer is no longer using this PSO or its resources.
-        Logger::get().info(
-            "PSO is being destroyed, flushing the command queue before being deleted", sPsoLogCategory);
+        Logger::get().info("PSO is being destroyed, flushing the command queue before being deleted");
         getRenderer()->waitForGpuToFinishWorkUpToThisPoint();
     }
 
@@ -120,13 +119,11 @@ namespace ne {
             // Check if this material was already added previously.
             const auto it = mtxMaterialsThatUseThisPso.second.find(pMaterial);
             if (it != mtxMaterialsThatUseThisPso.second.end()) [[unlikely]] {
-                Logger::get().error(
-                    fmt::format(
-                        "material \"{}\" notified the PSO with ID \"{}\" of being used but this "
-                        "material already existed in the array of materials that use this PSO",
-                        pMaterial->getMaterialName(),
-                        sUniquePsoIdentifier),
-                    sPsoLogCategory);
+                Logger::get().error(fmt::format(
+                    "material \"{}\" notified the PSO with ID \"{}\" of being used but this "
+                    "material already existed in the array of materials that use this PSO",
+                    pMaterial->getMaterialName(),
+                    sUniquePsoIdentifier));
                 return;
             }
 
@@ -141,13 +138,11 @@ namespace ne {
             // Make sure this material was previously added to our array of materials.
             const auto it = mtxMaterialsThatUseThisPso.second.find(pMaterial);
             if (it == mtxMaterialsThatUseThisPso.second.end()) [[unlikely]] {
-                Logger::get().error(
-                    fmt::format(
-                        "material \"{}\" notified the PSO with ID \"{}\" of no longer being used but this "
-                        "material was not found in the array of materials that use this PSO",
-                        pMaterial->getMaterialName(),
-                        sUniquePsoIdentifier),
-                    sPsoLogCategory);
+                Logger::get().error(fmt::format(
+                    "material \"{}\" notified the PSO with ID \"{}\" of no longer being used but this "
+                    "material was not found in the array of materials that use this PSO",
+                    pMaterial->getMaterialName(),
+                    sUniquePsoIdentifier));
                 return;
             }
         }

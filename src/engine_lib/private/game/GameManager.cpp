@@ -28,15 +28,14 @@ namespace ne {
         this->pWindow = pWindow;
 
         // Update static pointer.
-        Logger::get().info(
-            "new GameManager is created, updating static GameManager pointer", sGameManagerLogCategory);
+        Logger::get().info("new GameManager is created, updating static GameManager pointer");
         pLastCreatedGameManager = this;
 
         // Log build mode.
 #if defined(DEBUG)
-        Logger::get().info("DEBUG macro is defined, running DEBUG build", sGameManagerLogCategory);
+        Logger::get().info("DEBUG macro is defined, running DEBUG build");
 #else
-        Logger::get().info("DEBUG macro is not defined, running RELEASE build", sGameManagerLogCategory);
+        Logger::get().info("DEBUG macro is not defined, running RELEASE build");
 #endif
 
         // Make sure that resources directory is set and exists.
@@ -57,9 +56,7 @@ namespace ne {
         // Run GC for the first time to setup things (I guess, first scan is usually not that fast).
         gc_collector()->collect();
         lastGcRunTime = std::chrono::steady_clock::now();
-        Logger::get().info(
-            fmt::format("garbage collector will run every {} seconds", iGcRunIntervalInSec),
-            sGameManagerLogCategory);
+        Logger::get().info(fmt::format("garbage collector will run every {} seconds", iGcRunIntervalInSec));
 
 #if defined(DEBUG)
         SerializableObjectFieldSerializer::checkGuidUniqueness();
@@ -112,46 +109,39 @@ namespace ne {
         pGameInstance = nullptr;
 
         // Run the GC for the last time.
-        Logger::get().info(
-            "GameManager is being destroyed, running garbage collector...", sGarbageCollectorLogCategory);
+        Logger::get().info("GameManager is being destroyed, running garbage collector...");
         gc_collector()->fullCollect();
 
         // Log results.
-        Logger::get().info(
-            fmt::format(
-                "garbage collector has finished: "
-                "freed {} object(s) ({} left alive)",
-                gc_collector()->getLastFreedObjectsCount(),
-                gc_collector()->getAliveObjectsCount()),
-            sGarbageCollectorLogCategory);
+        Logger::get().info(fmt::format(
+            "garbage collector has finished: "
+            "freed {} object(s) ({} left alive)",
+            gc_collector()->getLastFreedObjectsCount(),
+            gc_collector()->getAliveObjectsCount()));
 
         // Make sure there are no nodes alive.
         const auto iNodesAlive = Node::getAliveNodeCount();
         if (iNodesAlive != 0) [[unlikely]] {
-            Logger::get().error(
-                fmt::format(
-                    "the game was destroyed and a full garbage collection was run but there are still "
-                    "{} node(s) alive, here are a few reasons why this may happen:\n{}",
-                    iNodesAlive,
-                    sGcLeakReasons),
-                sGameManagerLogCategory);
+            Logger::get().error(fmt::format(
+                "the game was destroyed and a full garbage collection was run but there are still "
+                "{} node(s) alive, here are a few reasons why this may happen:\n{}",
+                iNodesAlive,
+                sGcLeakReasons));
         }
 
         // Make sure there are no GC objects alive.
         const auto iGcObjectsLeft = gc_collector()->getAliveObjectsCount();
         if (iGcObjectsLeft != 0) [[unlikely]] {
-            Logger::get().error(
-                fmt::format(
-                    "the game was destroyed and a full garbage collection was run but there are still "
-                    "{} gc object(s) alive, here are a few reasons why this may happen:\n{}",
-                    iGcObjectsLeft,
-                    sGcLeakReasons),
-                sGameManagerLogCategory);
+            Logger::get().error(fmt::format(
+                "the game was destroyed and a full garbage collection was run but there are still "
+                "{} gc object(s) alive, here are a few reasons why this may happen:\n{}",
+                iGcObjectsLeft,
+                sGcLeakReasons));
         }
 
         // ONLY AFTER THE GC has finished, all tasks were finished and all nodes were deleted.
         // Clear global game pointer.
-        Logger::get().info("clearing static GameManager pointer", sGameManagerLogCategory);
+        Logger::get().info("clearing static GameManager pointer");
         pLastCreatedGameManager = nullptr;
 
         // Explicitly destroy the renderer to check how much shaders left in the memory.
@@ -160,20 +150,16 @@ namespace ne {
         // Make sure there are no shaders left in memory.
         const auto iTotalShadersInMemory = Shader::getCurrentAmountOfShadersInMemory();
         if (iTotalShadersInMemory != 0) [[unlikely]] {
-            Logger::get().error(
-                fmt::format(
-                    "the renderer was destroyed but there are still {} shader(s) left in the memory",
-                    iTotalShadersInMemory),
-                sGameManagerLogCategory);
+            Logger::get().error(fmt::format(
+                "the renderer was destroyed but there are still {} shader(s) left in the memory",
+                iTotalShadersInMemory));
         }
 
         // Make sure there are no materials exist.
         const auto iTotalMaterialCount = Material::getCurrentMaterialCount();
         if (iTotalMaterialCount != 0) [[unlikely]] {
-            Logger::get().error(
-                fmt::format(
-                    "the game was destroyed but there are still {} material(s) alive", iTotalMaterialCount),
-                sGameManagerLogCategory);
+            Logger::get().error(fmt::format(
+                "the game was destroyed but there are still {} material(s) alive", iTotalMaterialCount));
         }
     }
 
@@ -226,7 +212,7 @@ namespace ne {
         executeDeferredTasks();
 
         // Log start.
-        Logger::get().info("running garbage collector...", sGarbageCollectorLogCategory);
+        Logger::get().info("running garbage collector...");
         Logger::get().flushToDisk(); // flush to disk in order to see if a crash was caused by a GC
 
         // Save time to measure later.
@@ -246,14 +232,12 @@ namespace ne {
         durationStream << std::fixed << std::setprecision(1) << durationInMs;
 
         // Log results.
-        Logger::get().info(
-            fmt::format(
-                "garbage collector has finished, took {} millisecond(s): "
-                "freed {} object(s) ({} left alive)",
-                durationStream.str(),
-                gc_collector()->getLastFreedObjectsCount(),
-                gc_collector()->getAliveObjectsCount()),
-            sGarbageCollectorLogCategory);
+        Logger::get().info(fmt::format(
+            "garbage collector has finished, took {} millisecond(s): "
+            "freed {} object(s) ({} left alive)",
+            durationStream.str(),
+            gc_collector()->getLastFreedObjectsCount(),
+            gc_collector()->getAliveObjectsCount()));
 
         // Save current time.
         lastGcRunTime = std::chrono::steady_clock::now();
@@ -565,12 +549,10 @@ namespace ne {
             // Update state.
             const auto stateIt = inputManager.actionState.find(sActionName);
             if (stateIt == inputManager.actionState.end()) {
-                Logger::get().error(
-                    fmt::format(
-                        "input manager returned 0 "
-                        "states for '{}' action event",
-                        sActionName),
-                    sGameManagerLogCategory);
+                Logger::get().error(fmt::format(
+                    "input manager returned 0 "
+                    "states for '{}' action event",
+                    sActionName));
             } else {
                 std::pair<std::vector<ActionState>, bool /* action state */>& statePair = stateIt->second;
 
@@ -586,21 +568,17 @@ namespace ne {
 
                 if (!bSet) {
                     if (std::holds_alternative<KeyboardKey>(key)) {
-                        Logger::get().error(
-                            fmt::format(
-                                "could not find key '{}' in key "
-                                "states for '{}' action event",
-                                getKeyName(std::get<KeyboardKey>(key)),
-                                sActionName),
-                            sGameManagerLogCategory);
+                        Logger::get().error(fmt::format(
+                            "could not find key '{}' in key "
+                            "states for '{}' action event",
+                            getKeyName(std::get<KeyboardKey>(key)),
+                            sActionName));
                     } else {
-                        Logger::get().error(
-                            fmt::format(
-                                "could not find mouse button '{}' in key "
-                                "states for '{}' action event",
-                                static_cast<int>(std::get<MouseButton>(key)),
-                                sActionName),
-                            sGameManagerLogCategory);
+                        Logger::get().error(fmt::format(
+                            "could not find mouse button '{}' in key "
+                            "states for '{}' action event",
+                            static_cast<int>(std::get<MouseButton>(key)),
+                            sActionName));
                     }
                 }
 
@@ -659,12 +637,10 @@ namespace ne {
         for (const auto& [sAxisName, iInput] : axisCopy) {
             auto stateIt = inputManager.axisState.find(sAxisName);
             if (stateIt == inputManager.axisState.end()) {
-                Logger::get().error(
-                    fmt::format(
-                        "input manager returned 0 "
-                        "states for '{}' axis event",
-                        sAxisName),
-                    sGameManagerLogCategory);
+                Logger::get().error(fmt::format(
+                    "input manager returned 0 "
+                    "states for '{}' axis event",
+                    sAxisName));
                 pGameInstance->onInputAxisEvent(
                     sAxisName, modifiers, bIsPressedDown ? static_cast<float>(iInput) : 0.0F);
 
@@ -702,13 +678,11 @@ namespace ne {
                 }
             }
             if (!bSet) {
-                Logger::get().error(
-                    fmt::format(
-                        "could not find key '{}' in key "
-                        "states for '{}' axis event",
-                        getKeyName(key),
-                        sAxisName),
-                    sGameManagerLogCategory);
+                Logger::get().error(fmt::format(
+                    "could not find key '{}' in key "
+                    "states for '{}' axis event",
+                    getKeyName(key),
+                    sAxisName));
                 pGameInstance->onInputAxisEvent(
                     sAxisName, modifiers, bIsPressedDown ? static_cast<float>(iInput) : 0.0F);
 
@@ -795,33 +769,27 @@ namespace ne {
         // Make sure that all nodes were destroyed.
         const auto iAliveNodeCount = Node::getAliveNodeCount();
         if (iAliveNodeCount != 0) {
-            Logger::get().error(
-                fmt::format(
-                    "the world was destroyed and garbage collection was finished but there are still "
-                    "{} node(s) alive, here are a few reasons why this may happen:\n{}",
-                    iAliveNodeCount,
-                    sGcLeakReasons),
-                sGameManagerLogCategory);
+            Logger::get().error(fmt::format(
+                "the world was destroyed and garbage collection was finished but there are still "
+                "{} node(s) alive, here are a few reasons why this may happen:\n{}",
+                iAliveNodeCount,
+                sGcLeakReasons));
         }
 
         // Make sure all PSOs were destroyed.
         const auto iGraphicsPsoCount = pRenderer->getPsoManager()->getCreatedGraphicsPsoCount();
         const auto iComputePsoCount = pRenderer->getPsoManager()->getCreatedComputePsoCount();
         if (iGraphicsPsoCount != 0) {
-            Logger::get().error(
-                fmt::format(
-                    "the world was destroyed and garbage collection was finished but there are still "
-                    "{} graphics PSO(s) exist",
-                    iGraphicsPsoCount),
-                sGameManagerLogCategory);
+            Logger::get().error(fmt::format(
+                "the world was destroyed and garbage collection was finished but there are still "
+                "{} graphics PSO(s) exist",
+                iGraphicsPsoCount));
         }
         if (iComputePsoCount != 0) {
-            Logger::get().error(
-                fmt::format(
-                    "the world was destroyed and garbage collection was finished but there are still "
-                    "{} compute PSO(s) exist",
-                    iComputePsoCount),
-                sGameManagerLogCategory);
+            Logger::get().error(fmt::format(
+                "the world was destroyed and garbage collection was finished but there are still "
+                "{} compute PSO(s) exist",
+                iComputePsoCount));
         }
     }
 } // namespace ne

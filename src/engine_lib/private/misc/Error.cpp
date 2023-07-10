@@ -100,7 +100,7 @@ namespace ne {
 
     void Error::showError() const {
         const std::string sErrorMessage = getFullErrorMessage();
-        Logger::get().error(sErrorMessage, "");
+        Logger::get().error(sErrorMessage);
 
 #if defined(WIN32)
 #pragma push_macro("MessageBox")

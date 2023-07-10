@@ -735,13 +735,11 @@ namespace ne RNAMESPACE() {
             rfk::Field const* pField =
                 pType->getFieldByName(sFieldName.c_str(), rfk::EFieldFlags::Default, true);
             if (!pField) {
-                Logger::get().warn(
-                    fmt::format(
-                        "field name \"{}\" exists in the specified toml value but does not exist in the "
-                        "actual object (if you removed/renamed this reflected field from your "
-                        "class/struct - ignore this warning)",
-                        sFieldName),
-                    "");
+                Logger::get().warn(fmt::format(
+                    "field name \"{}\" exists in the specified toml value but does not exist in the "
+                    "actual object (if you removed/renamed this reflected field from your "
+                    "class/struct - ignore this warning)",
+                    sFieldName));
                 continue;
             }
             const auto sFieldCanonicalTypeName = std::string(pField->getCanonicalTypeName());
@@ -828,12 +826,10 @@ namespace ne RNAMESPACE() {
                         auto error = optionalError.value();
                         error.addEntry();
                         if (pOriginalEntity) {
-                            Logger::get().error(
-                                fmt::format(
-                                    "an error occurred while deserializing "
-                                    "changed field (this field was not deserialized), error: {}",
-                                    error.getFullErrorMessage()),
-                                "");
+                            Logger::get().error(fmt::format(
+                                "an error occurred while deserializing "
+                                "changed field (this field was not deserialized), error: {}",
+                                error.getFullErrorMessage()));
                         } else {
                             return error;
                         }
@@ -843,7 +839,7 @@ namespace ne RNAMESPACE() {
 
             if (!bFoundSerializer) {
                 Logger::get().warn(
-                    fmt::format("unable to find a deserializer that supports field \"{}\"", sFieldName), "");
+                    fmt::format("unable to find a deserializer that supports field \"{}\"", sFieldName));
             }
         }
 

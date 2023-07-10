@@ -107,9 +107,6 @@ namespace ne {
     private:
         /** Default tolerance for floats to use. */
         static inline const float smallFloatEpsilon = 0.0000001F; // NOLINT: not a very small number
-
-        /** Name of the category used for logging. */
-        static inline const auto sMathHelpersLogCategory = "Math Helpers";
     };
 
     glm::vec3 MathHelpers::convertDirectionToRollPitchYaw(const glm::vec3& direction) {
@@ -122,8 +119,7 @@ namespace ne {
         constexpr float lengthDelta = 0.001F; // NOLINT: don't use too small value here
         const auto length = glm::length(direction);
         if (!glm::epsilonEqual(length, 1.0F, lengthDelta)) [[unlikely]] {
-            Logger::get().error(
-                "the specified direction vector should have been normalized", sMathHelpersLogCategory);
+            Logger::get().error("the specified direction vector should have been normalized");
         }
 #endif
 
@@ -136,15 +132,13 @@ namespace ne {
         if (glm::isnan(worldRotation.z)) {
             Logger::get().warn(
                 "found NaN in the Z component of the calculated rotation, setting this component's value to "
-                "zero",
-                sMathHelpersLogCategory);
+                "zero");
             worldRotation.z = 0.0F;
         }
         if (glm::isnan(worldRotation.y)) {
             Logger::get().warn(
                 "found NaN in the Y component of the calculated rotation, setting this component's value to "
-                "zero",
-                sMathHelpersLogCategory);
+                "zero");
             worldRotation.y = 0.0F;
         }
 

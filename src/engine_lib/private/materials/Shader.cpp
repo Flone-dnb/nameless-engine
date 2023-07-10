@@ -40,8 +40,7 @@ namespace ne {
         if (iPreviouslyShadersInMemoryCount == 0) [[unlikely]] {
             Logger::get().error(
                 "detected shader load/release notify mismatch, shaders loaded in the memory just "
-                "went below 0",
-                sShaderLogCategory);
+                "went below 0");
         }
     }
 

@@ -106,12 +106,10 @@ namespace ne {
                         // Make sure a binding with this ID exists.
                         auto it = mtxCallbacks.second.find(iBindingId);
                         if (it == mtxCallbacks.second.end()) [[unlikely]] {
-                            Logger::get().error(
-                                fmt::format(
-                                    "a callback with binding ID {} was marked to be removed from a "
-                                    "broadcaster but broadcaster does not have a callback with this ID",
-                                    iBindingId),
-                                sNodeNotificationBroadcasterLogCategory);
+                            Logger::get().error(fmt::format(
+                                "a callback with binding ID {} was marked to be removed from a "
+                                "broadcaster but broadcaster does not have a callback with this ID",
+                                iBindingId));
                             continue;
                         }
                         mtxCallbacks.second.erase(it);
@@ -157,12 +155,10 @@ namespace ne {
             // Generate new binding ID.
             const auto iNewBindingId = iAvailableBindingId.fetch_add(1);
             if (iNewBindingId + 1 == ULLONG_MAX) [[unlikely]] {
-                Logger::get().warn(
-                    fmt::format(
-                        "\"next available broadcaster binding ID\" is at its maximum value: {}, another "
-                        "subscribed callback will cause an overflow",
-                        iNewBindingId + 1),
-                    sNodeNotificationBroadcasterLogCategory);
+                Logger::get().warn(fmt::format(
+                    "\"next available broadcaster binding ID\" is at its maximum value: {}, another "
+                    "subscribed callback will cause an overflow",
+                    iNewBindingId + 1));
             }
 
             // Check if we are inside of a `broadcast` call.
@@ -205,8 +201,7 @@ namespace ne {
             auto it = mtxCallbacks.second.find(iBindingId);
             if (it == mtxCallbacks.second.end()) [[unlikely]] {
                 Logger::get().error(
-                    fmt::format("callback with binding ID {} was not found in the broadcaster", iBindingId),
-                    sNodeNotificationBroadcasterLogCategory);
+                    fmt::format("callback with binding ID {} was not found in the broadcaster", iBindingId));
                 return;
             }
 
@@ -247,15 +242,13 @@ namespace ne {
 
             // Make extra sure everything is correct.
             if (iCurrentPlusPending < iPendingToBeRemoved) [[unlikely]] {
-                Logger::get().error(
-                    fmt::format(
-                        "there are more callbacks to be removed than all existing callbacks plus "
-                        "pending to be added: currently registered: {}, pending to be added: {}, pending to "
-                        "be removed: {}",
-                        mtxCallbacks.second.size(),
-                        mtxCallbacksToAdd.second.size(),
-                        mtxCallbacksToRemove.second.size()),
-                    sNodeNotificationBroadcasterLogCategory);
+                Logger::get().error(fmt::format(
+                    "there are more callbacks to be removed than all existing callbacks plus "
+                    "pending to be added: currently registered: {}, pending to be added: {}, pending to "
+                    "be removed: {}",
+                    mtxCallbacks.second.size(),
+                    mtxCallbacksToAdd.second.size(),
+                    mtxCallbacksToRemove.second.size()));
                 return 0;
             }
 
@@ -296,10 +289,8 @@ namespace ne {
 
             // Make sure the specified owner is indeed our owner node.
             if (mtxSpawnedOwnerNode.second != pOwnerNode) [[unlikely]] {
-                Logger::get().error(
-                    "some node notified a broadcaster about it being despawned but this "
-                    "broadcaster's owner is not this node",
-                    sNodeNotificationBroadcasterLogCategory);
+                Logger::get().error("some node notified a broadcaster about it being despawned but this "
+                                    "broadcaster's owner is not this node");
                 return;
             }
 
@@ -360,8 +351,5 @@ namespace ne {
 
         /** Determines whether we are currently broadcasting or not. */
         std::atomic_flag bIsBroadcasting{};
-
-        /** Name of the category used for logging. */
-        static inline const auto sNodeNotificationBroadcasterLogCategory = "Node Notification Broadcaster";
     };
 } // namespace ne

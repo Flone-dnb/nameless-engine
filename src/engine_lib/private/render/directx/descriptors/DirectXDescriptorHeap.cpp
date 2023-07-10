@@ -152,8 +152,7 @@ namespace ne {
         const auto it = mtxInternalResources.second.bindedResources.find(pResource);
         if (it == mtxInternalResources.second.bindedResources.end()) {
             Logger::get().error(
-                fmt::format("the specified resource \"{}\" is not found", pResource->getResourceName()),
-                sDescriptorHeapLogCategory);
+                fmt::format("the specified resource \"{}\" is not found", pResource->getResourceName()));
             return;
         }
 
@@ -187,7 +186,7 @@ namespace ne {
             auto optionalError = shrinkHeap();
             if (optionalError.has_value()) {
                 optionalError->addEntry();
-                Logger::get().error(optionalError->getFullErrorMessage(), sDescriptorHeapLogCategory);
+                Logger::get().error(optionalError->getFullErrorMessage());
             }
         }
     }
@@ -196,25 +195,21 @@ namespace ne {
         std::scoped_lock guard(mtxInternalResources.first);
 
         if (mtxInternalResources.second.iHeapSize != mtxInternalResources.second.iHeapCapacity) [[unlikely]] {
-            Logger::get().error(
-                std::format(
-                    "requested to expand {} heap of capacity {} while the actual size is {}",
-                    sHeapType,
-                    mtxInternalResources.second.iHeapCapacity,
-                    mtxInternalResources.second.iHeapSize),
-                sDescriptorHeapLogCategory);
+            Logger::get().error(std::format(
+                "requested to expand {} heap of capacity {} while the actual size is {}",
+                sHeapType,
+                mtxInternalResources.second.iHeapCapacity,
+                mtxInternalResources.second.iHeapSize));
         }
 
         if (!mtxInternalResources.second.noLongerUsedDescriptorIndexes.empty()) [[unlikely]] {
-            Logger::get().error(
-                std::format(
-                    "requested to expand {} heap of capacity {} while there are not used "
-                    "descriptors exist ({}) (actual heap size is {})",
-                    sHeapType,
-                    mtxInternalResources.second.iHeapCapacity,
-                    mtxInternalResources.second.noLongerUsedDescriptorIndexes.size(),
-                    mtxInternalResources.second.iHeapSize),
-                sDescriptorHeapLogCategory);
+            Logger::get().error(std::format(
+                "requested to expand {} heap of capacity {} while there are not used "
+                "descriptors exist ({}) (actual heap size is {})",
+                sHeapType,
+                mtxInternalResources.second.iHeapCapacity,
+                mtxInternalResources.second.noLongerUsedDescriptorIndexes.size(),
+                mtxInternalResources.second.iHeapSize));
         }
 
         if (static_cast<size_t>(mtxInternalResources.second.iHeapCapacity) +
@@ -391,15 +386,13 @@ namespace ne {
     std::optional<Error> DirectXDescriptorHeap::createHeap(INT iCapacity) {
         std::scoped_lock guard(mtxInternalResources.first);
 
-        Logger::get().info(
-            std::format(
-                "flushing the command queue to (re)create {} descriptor heap (from capacity {} to {}) "
-                "(current actual heap size: {})",
-                sHeapType,
-                mtxInternalResources.second.iHeapCapacity,
-                iCapacity,
-                mtxInternalResources.second.iHeapSize),
-            sDescriptorHeapLogCategory);
+        Logger::get().info(std::format(
+            "flushing the command queue to (re)create {} descriptor heap (from capacity {} to {}) "
+            "(current actual heap size: {})",
+            sHeapType,
+            mtxInternalResources.second.iHeapCapacity,
+            iCapacity,
+            mtxInternalResources.second.iHeapSize));
 
         // Make sure we don't render anything and not processing any resources.
         std::scoped_lock drawGuard(*pRenderer->getRenderResourcesMutex());

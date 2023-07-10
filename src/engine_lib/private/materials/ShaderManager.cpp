@@ -43,8 +43,7 @@ namespace ne {
 
         const auto it = compiledShaders.find(sShaderName);
         if (it == compiledShaders.end()) [[unlikely]] {
-            Logger::get().error(
-                fmt::format("no shader with the name \"{}\" exists", sShaderName), sShaderManagerLogCategory);
+            Logger::get().error(fmt::format("no shader with the name \"{}\" exists", sShaderName));
             return;
         }
 
@@ -66,8 +65,7 @@ namespace ne {
 
         const auto shaderIt = compiledShaders.find(*it);
         if (shaderIt == compiledShaders.end()) [[unlikely]] {
-            Logger::get().error(
-                fmt::format("no shader with the name \"{}\" exists", sShaderName), sShaderManagerLogCategory);
+            Logger::get().error(fmt::format("no shader with the name \"{}\" exists", sShaderName));
             return;
         }
 
@@ -95,7 +93,7 @@ namespace ne {
             auto err = std::move(optional.value());
             err.addEntry();
             // don't show message as it's not a critical error
-            Logger::get().error(err.getFullErrorMessage(), sShaderManagerLogCategory);
+            Logger::get().error(err.getFullErrorMessage());
             return;
         }
 
@@ -148,9 +146,7 @@ namespace ne {
 
             // Check if build mode changed.
             if (bOldShaderCacheInRelease != bIsReleaseBuild) {
-                Logger::get().info(
-                    "clearing shader cache directory because build mode was changed",
-                    sShaderManagerLogCategory);
+                Logger::get().info("clearing shader cache directory because build mode was changed");
 
                 bUpdateShaderCacheConfig = true;
             }
@@ -160,24 +156,21 @@ namespace ne {
                 // Check if vertex shader model changed.
                 if (!bUpdateShaderCacheConfig && sOldHlslVsModel != HlslShader::getVertexShaderModel()) {
                     Logger::get().info(
-                        "clearing shader cache directory because vertex shader model was changed",
-                        sShaderManagerLogCategory);
+                        "clearing shader cache directory because vertex shader model was changed");
 
                     bUpdateShaderCacheConfig = true;
                 }
                 // Check if pixel shader model changed.
                 if (!bUpdateShaderCacheConfig && sOldHlslPsModel != HlslShader::getPixelShaderModel()) {
                     Logger::get().info(
-                        "clearing shader cache directory because pixel shader model was changed",
-                        sShaderManagerLogCategory);
+                        "clearing shader cache directory because pixel shader model was changed");
 
                     bUpdateShaderCacheConfig = true;
                 }
                 // Check if compute shader model changed.
                 if (!bUpdateShaderCacheConfig && sOldHlslCsModel != HlslShader::getComputeShaderModel()) {
                     Logger::get().info(
-                        "clearing shader cache directory because compute shader model was changed",
-                        sShaderManagerLogCategory);
+                        "clearing shader cache directory because compute shader model was changed");
 
                     bUpdateShaderCacheConfig = true;
                 }
@@ -189,11 +182,9 @@ namespace ne {
             static_assert(false, "not implemented");
 #endif
         } else {
-            Logger::get().info(
-                fmt::format(
-                    "global shader cache configuration was not found, creating a new {} configuration",
-                    bIsReleaseBuild ? "release" : "debug"),
-                sShaderManagerLogCategory);
+            Logger::get().info(fmt::format(
+                "global shader cache configuration was not found, creating a new {} configuration",
+                bIsReleaseBuild ? "release" : "debug"));
 
             bUpdateShaderCacheConfig = true;
         }
@@ -249,7 +240,7 @@ namespace ne {
             auto err = std::move(optional.value());
             err.addEntry();
             // don't show message as it's not a critical error
-            Logger::get().error(err.getFullErrorMessage(), sShaderManagerLogCategory);
+            Logger::get().error(err.getFullErrorMessage());
         }
     }
 
@@ -275,8 +266,7 @@ namespace ne {
         std::scoped_lock guard(mtxRwShaders);
         const auto it = compiledShaders.find(sShaderName);
         if (it == compiledShaders.end()) {
-            Logger::get().warn(
-                fmt::format("no shader with the name \"{}\" exists", sShaderName), sShaderManagerLogCategory);
+            Logger::get().warn(fmt::format("no shader with the name \"{}\" exists", sShaderName));
             return false;
         }
 
@@ -284,12 +274,8 @@ namespace ne {
         if (iUseCount > 1) {
             const auto toBeRemovedIt = std::ranges::find(vShadersToBeRemoved, sShaderName);
             if (toBeRemovedIt == vShadersToBeRemoved.end()) {
-                Logger::get().info(
-                    fmt::format(
-                        "shader \"{}\" is marked to be removed later (use count: {})",
-                        sShaderName,
-                        iUseCount),
-                    sShaderManagerLogCategory);
+                Logger::get().info(fmt::format(
+                    "shader \"{}\" is marked to be removed later (use count: {})", sShaderName, iUseCount));
                 vShadersToBeRemoved.push_back(sShaderName);
             }
             return true;
@@ -351,7 +337,7 @@ namespace ne {
 
         std::scoped_lock guard(mtxRwShaders);
 
-        Logger::get().info("starting self validation...", sShaderManagerLogCategory);
+        Logger::get().info("starting self validation...");
 
         const auto start = steady_clock::now();
 
@@ -407,18 +393,15 @@ namespace ne {
         const auto iTimeTookInMs = duration_cast<milliseconds>(end - start).count();
 
         if (results.isError()) {
-            Logger::get().error(
-                fmt::format(
-                    "finished self validation (took {} ms), found and fixed the following "
-                    "errors:\n"
-                    "\n{}",
-                    iTimeTookInMs,
-                    results.toString()),
-                sShaderManagerLogCategory);
+            Logger::get().error(fmt::format(
+                "finished self validation (took {} ms), found and fixed the following "
+                "errors:\n"
+                "\n{}",
+                iTimeTookInMs,
+                results.toString()));
         } else {
             Logger::get().info(
-                fmt::format("finished self validation (took {} ms): everything is OK", iTimeTookInMs),
-                sShaderManagerLogCategory);
+                fmt::format("finished self validation (took {} ms): everything is OK", iTimeTookInMs));
         }
 
         lastSelfValidationCheckTime = steady_clock::now();
@@ -552,14 +535,12 @@ namespace ne {
                 // Not a critical error.
                 if (cacheInvalidationReason.has_value()) {
                     // Cache was invalidated. Log information about invalidated cache.
-                    Logger::get().info(err.getInitialMessage(), sShaderManagerLogCategory);
+                    Logger::get().info(err.getInitialMessage());
                 } else {
                     // Cache files are corrupted/outdated. Need recompilation.
-                    Logger::get().info(
-                        fmt::format(
-                            "shader \"{}\" cache files are corrupted/outdated, attempting to recompile",
-                            shaderDescription.sShaderName),
-                        sShaderManagerLogCategory);
+                    Logger::get().info(fmt::format(
+                        "shader \"{}\" cache files are corrupted/outdated, attempting to recompile",
+                        shaderDescription.sShaderName));
                 }
             } else {
                 // Save shader found in cache.
@@ -582,13 +563,11 @@ namespace ne {
                     // Internal error.
                     auto err = std::get<Error>(std::move(result));
                     err.addEntry();
-                    Logger::get().error(
-                        fmt::format(
-                            "shader compilation query #{}: "
-                            "an error occurred during shader compilation: {}",
-                            iQueryId,
-                            err.getFullErrorMessage()),
-                        sShaderManagerLogCategory);
+                    Logger::get().error(fmt::format(
+                        "shader compilation query #{}: "
+                        "an error occurred during shader compilation: {}",
+                        iQueryId,
+                        err.getFullErrorMessage()));
                     pRenderer->getGameManager()->addDeferredTask([onError, shaderDescription, err]() mutable {
                         onError(std::move(shaderDescription), err);
                     });
@@ -609,8 +588,7 @@ namespace ne {
                 Error err(fmt::format(
                     "shader with the name \"{}\" is already added", shaderDescription.sShaderName));
                 Logger::get().error(
-                    fmt::format("shader compilation query #{}: {}", iQueryId, err.getFullErrorMessage()),
-                    sShaderManagerLogCategory);
+                    fmt::format("shader compilation query #{}: {}", iQueryId, err.getFullErrorMessage()));
                 pRenderer->getGameManager()->addDeferredTask([onError, shaderDescription, err]() mutable {
                     onError(std::move(shaderDescription), err);
                 });
@@ -636,8 +614,7 @@ namespace ne {
                         "shader type)",
                         shaderDescription.sShaderName));
                     Logger::get().error(
-                        fmt::format("shader compilation query #{}: {}", iQueryId, err.getFullErrorMessage()),
-                        sShaderManagerLogCategory);
+                        fmt::format("shader compilation query #{}: {}", iQueryId, err.getFullErrorMessage()));
                     pRenderer->getGameManager()->addDeferredTask([onError, shaderDescription, err]() mutable {
                         onError(std::move(shaderDescription), err);
                     });
@@ -653,28 +630,24 @@ namespace ne {
         // Mark progress.
         const size_t iLastFetchCompiledShaderCount = pCompiledShaderCount->fetch_add(1);
         const auto iCompiledShaderCount = iLastFetchCompiledShaderCount + 1;
-        Logger::get().info(
-            fmt::format(
-                "shader compilation query #{}: "
-                "progress {}/{} ({})",
-                iQueryId,
-                iCompiledShaderCount,
-                iTotalShaderCount,
-                shaderDescription.sShaderName),
-            sShaderManagerLogCategory);
+        Logger::get().info(fmt::format(
+            "shader compilation query #{}: "
+            "progress {}/{} ({})",
+            iQueryId,
+            iCompiledShaderCount,
+            iTotalShaderCount,
+            shaderDescription.sShaderName));
         pRenderer->getGameManager()->addDeferredTask([onProgress, iCompiledShaderCount, iTotalShaderCount]() {
             onProgress(iCompiledShaderCount, iTotalShaderCount);
         });
 
         // Make sure that only one task would call `onCompleted` callback.
         if (iLastFetchCompiledShaderCount + 1 == iTotalShaderCount) {
-            Logger::get().info(
-                fmt::format(
-                    "shader compilation query #{}: "
-                    "finished compiling {} shader(s)",
-                    iQueryId,
-                    iTotalShaderCount),
-                sShaderManagerLogCategory);
+            Logger::get().info(fmt::format(
+                "shader compilation query #{}: "
+                "finished compiling {} shader(s)",
+                iQueryId,
+                iTotalShaderCount));
             pRenderer->getGameManager()->addDeferredTask(onCompleted);
         }
     }

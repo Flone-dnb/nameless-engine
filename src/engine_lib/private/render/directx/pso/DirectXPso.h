@@ -158,8 +158,5 @@ namespace ne {
          * Must be used with mutex when changing.
          */
         std::pair<std::recursive_mutex, InternalResources> mtxInternalResources;
-
-        /** Name of the category used for logging. */
-        inline static const char* sDirectXPsoLogCategory = "DirectX Pipeline State Object";
     };
 } // namespace ne

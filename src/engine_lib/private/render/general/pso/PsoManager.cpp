@@ -50,21 +50,17 @@ namespace ne {
         // Make sure all graphics PSOs were destroyed.
         const auto iCreatedGraphicsPsoCount = getCreatedGraphicsPsoCount();
         if (iCreatedGraphicsPsoCount != 0) [[unlikely]] {
-            Logger::get().error(
-                fmt::format(
-                    "PSO manager is being destroyed but there are still {} graphics PSO(s) exist",
-                    iCreatedGraphicsPsoCount),
-                sPsoManagerLogCategory);
+            Logger::get().error(fmt::format(
+                "PSO manager is being destroyed but there are still {} graphics PSO(s) exist",
+                iCreatedGraphicsPsoCount));
         }
 
         // Make sure all compute PSOs were destroyed.
         const auto iCreatedComputePsoCount = getCreatedComputePsoCount();
         if (iCreatedComputePsoCount != 0) [[unlikely]] {
-            Logger::get().error(
-                fmt::format(
-                    "PSO manager is being destroyed but there are still {} compute PSO(s) exist",
-                    iCreatedComputePsoCount),
-                sPsoManagerLogCategory);
+            Logger::get().error(fmt::format(
+                "PSO manager is being destroyed but there are still {} compute PSO(s) exist",
+                iCreatedComputePsoCount));
         }
     }
 
@@ -101,12 +97,10 @@ namespace ne {
 
         const auto it = vGraphicsPsos[iIndex].second.find(sUniquePsoIdentifier);
         if (it != vGraphicsPsos[iIndex].second.end()) [[unlikely]] {
-            Logger::get().error(
-                fmt::format(
-                    "created a PSO with combined shader name \"{}\" but another PSO already existed with "
-                    "this combined shader name in the array of created PSO",
-                    sUniquePsoIdentifier),
-                sPsoManagerLogCategory);
+            Logger::get().error(fmt::format(
+                "created a PSO with combined shader name \"{}\" but another PSO already existed with "
+                "this combined shader name in the array of created PSO",
+                sUniquePsoIdentifier));
         }
 
         vGraphicsPsos[iIndex].second[sUniquePsoIdentifier] = pPso;

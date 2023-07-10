@@ -32,14 +32,10 @@ namespace ne {
          * The text message will be appended with the file name and the line it was called from.
          *
          * @param sText     Text to write to log.
-         * @param sCategory Category that this log text is related to. This text will be
-         * added to log text to make log reading easier. Pass empty string for default
-         * category.
          * @param location  Should not be passed explicitly.
          */
         void info(
             std::string_view sText,
-            std::string_view sCategory,
             const nostd::source_location location = nostd::source_location::current()) const;
 
         /**
@@ -49,14 +45,10 @@ namespace ne {
          * @remark Forces the log to be flushed on the disk.
          *
          * @param sText  Text to write to log.
-         * @param sCategory Category that this log text is related to. This text will be
-         * added to log text to make log reading easier. Pass empty string for default
-         * category.
          * @param location Should not be passed explicitly.
          */
         void warn(
             std::string_view sText,
-            std::string_view sCategory,
             const nostd::source_location location = nostd::source_location::current()) const;
 
         /**
@@ -66,14 +58,10 @@ namespace ne {
          * @remark Forces the log to be flushed on the disk.
          *
          * @param sText  Text to write to log.
-         * @param sCategory Category that this log text is related to. This text will be
-         * added to log text to make log reading easier. Pass empty string for default
-         * category.
          * @param location Should not be passed explicitly.
          */
         void error(
             std::string_view sText,
-            std::string_view sCategory,
             const nostd::source_location location = nostd::source_location::current()) const;
 
         /**
@@ -135,8 +123,5 @@ namespace ne {
 
         /** Extension of the log files. */
         inline static const char* sLogFileExtension = ".log";
-
-        /** Name of the category used for logging. */
-        inline static const char* sDefaultLogCategory = "Default";
     };
 } // namespace ne

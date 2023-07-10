@@ -318,8 +318,5 @@ namespace ne {
 
         /** Maximum length of a shader name. */
         const size_t iMaximumShaderNameLength = 40;
-
-        /** Name of the category used for logging. */
-        inline static const char* sShaderManagerLogCategory = "Shader Manager";
     };
 } // namespace ne

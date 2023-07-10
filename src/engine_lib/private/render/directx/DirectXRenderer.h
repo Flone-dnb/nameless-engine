@@ -423,8 +423,5 @@ namespace ne {
 
         /** D3D feature level that we use (required feature level). */
         const D3D_FEATURE_LEVEL rendererD3dFeatureLevel = D3D_FEATURE_LEVEL::D3D_FEATURE_LEVEL_12_1;
-
-        /** Name of the category used for logging. */
-        inline static const char* sDirectXRendererLogCategory = "DirectX Renderer";
     };
 } // namespace ne

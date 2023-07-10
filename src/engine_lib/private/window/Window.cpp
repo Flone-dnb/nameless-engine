@@ -89,7 +89,7 @@ namespace ne {
 
         const auto size = getSize();
         if (size.first == 0 || size.second == 0) {
-            Logger::get().error("failed to get window size", sWindowLogCategory);
+            Logger::get().error("failed to get window size");
             return std::make_pair(0.0F, 0.0F);
         }
 
@@ -396,7 +396,7 @@ namespace ne {
             if (glfwRawMouseMotionSupported() == GLFW_TRUE) {
                 glfwSetInputMode(pGlfwWindow, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
             } else {
-                Logger::get().warn("raw mouse motion is not supported", sWindowLogCategory);
+                Logger::get().warn("raw mouse motion is not supported");
             }
         }
     }
@@ -428,8 +428,7 @@ namespace ne {
         if (pCursor != nullptr) {
             Logger::get().error(
                 "previously created window cursor is being destroyed but internal GLFW cursor object was not "
-                "released (you should release it manually)",
-                "");
+                "released (you should release it manually)");
         }
     }
 

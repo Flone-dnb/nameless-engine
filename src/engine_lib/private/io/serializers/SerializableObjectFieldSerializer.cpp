@@ -299,15 +299,13 @@ namespace ne {
                     pFieldName, rfk::EFieldFlags::Default, true);
                 if (pOtherField == nullptr) {
                     // Probably will never happen but still add a check.
-                    Logger::get().error(
-                        fmt::format(
-                            "the field \"{}\" (maybe inherited) of type \"{}\" was not found "
-                            "in the other entity of type \"{}\" (this is strange because "
-                            "entities have equal canonical type name)",
-                            field.getName(),
-                            pData->pSelf->getArchetype().getName(),
-                            pData->pOtherEntity->getArchetype().getName()),
-                        "");
+                    Logger::get().error(fmt::format(
+                        "the field \"{}\" (maybe inherited) of type \"{}\" was not found "
+                        "in the other entity of type \"{}\" (this is strange because "
+                        "entities have equal canonical type name)",
+                        field.getName(),
+                        pData->pSelf->getArchetype().getName(),
+                        pData->pOtherEntity->getArchetype().getName()));
                     pData->bIsEqual = false;
                     return false;
                 }
@@ -328,15 +326,13 @@ namespace ne {
                     }
                 }
 
-                Logger::get().error(
-                    fmt::format(
-                        "failed to compare value of the field \"{}\" of type \"{}\" "
-                        "with the field from other entity, reason: no serializer "
-                        "supports both field types (maybe we took the wrong field from the "
-                        "original file",
-                        field.getName(),
-                        pData->pSelf->getArchetype().getName()),
-                    "");
+                Logger::get().error(fmt::format(
+                    "failed to compare value of the field \"{}\" of type \"{}\" "
+                    "with the field from other entity, reason: no serializer "
+                    "supports both field types (maybe we took the wrong field from the "
+                    "original file",
+                    field.getName(),
+                    pData->pSelf->getArchetype().getName()));
                 pData->bIsEqual = false;
                 return false;
             },
@@ -350,23 +346,19 @@ namespace ne {
     SerializableObjectFieldSerializer::isTypeDerivesFromSerializable(const std::string& sCanonicalTypeName) {
         // Make sure the type has no templates (not supported).
         if (sCanonicalTypeName.contains('<')) [[unlikely]] {
-            Logger::get().error(
-                fmt::format(
-                    "unable to check if type \"{}\" derives from Serializable because templates are not "
-                    "supported",
-                    sCanonicalTypeName),
-                "");
+            Logger::get().error(fmt::format(
+                "unable to check if type \"{}\" derives from Serializable because templates are not "
+                "supported",
+                sCanonicalTypeName));
             return false;
         }
 
         // Make sure the type is not a raw pointer (not supported).
         if (sCanonicalTypeName.contains('*')) [[unlikely]] {
-            Logger::get().error(
-                fmt::format(
-                    "unable to check if type \"{}\" derives from Serializable because pointer types are not "
-                    "supported",
-                    sCanonicalTypeName),
-                "");
+            Logger::get().error(fmt::format(
+                "unable to check if type \"{}\" derives from Serializable because pointer types are not "
+                "supported",
+                sCanonicalTypeName));
             return false;
         }
 
@@ -400,13 +392,11 @@ namespace ne {
             // Get GUID.
             return isTypeDerivesFromSerializable(sInnerType, pNamespace);
         } catch (std::exception& exception) {
-            Logger::get().error(
-                fmt::format(
-                    "failed to get type GUID because namespace name \"{}\" is incorrectly formatted, error: "
-                    "{}",
-                    sNamespaceName,
-                    exception.what()),
-                "");
+            Logger::get().error(fmt::format(
+                "failed to get type GUID because namespace name \"{}\" is incorrectly formatted, error: "
+                "{}",
+                sNamespaceName,
+                exception.what()));
             return false;
         }
     }
@@ -615,12 +605,10 @@ namespace ne {
         std::stringstream durationStream;
         durationStream << std::fixed << std::setprecision(1) << timeTookInSec;
 
-        Logger::get().info(
-            fmt::format(
-                "[{}] finished checking all GUID uniqueness, took: {} sec.",
-                Globals::getDebugOnlyLoggingSubCategoryName(),
-                durationStream.str()),
-            "");
+        Logger::get().info(fmt::format(
+            "[{}] finished checking all GUID uniqueness, took: {} sec.",
+            Globals::getDebugOnlyLoggingSubCategoryName(),
+            durationStream.str()));
     }
 
     void SerializableObjectFieldSerializer::collectGuids(

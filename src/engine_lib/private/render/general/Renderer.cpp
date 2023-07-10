@@ -23,16 +23,12 @@ namespace ne {
         mtxShaderConfiguration.second = std::make_unique<ShaderConfiguration>(this);
 
         // Log amount of shader variants per shader pack.
-        Logger::get().info(
-            fmt::format(
-                "using {} shader(s) per pixel shader pack",
-                ShaderMacroConfigurations::validPixelShaderMacroConfigurations.size()),
-            sRendererLogCategory);
-        Logger::get().info(
-            fmt::format(
-                "using {} shader(s) per vertex shader pack",
-                ShaderMacroConfigurations::validVertexShaderMacroConfigurations.size()),
-            sRendererLogCategory);
+        Logger::get().info(fmt::format(
+            "using {} shader(s) per pixel shader pack",
+            ShaderMacroConfigurations::validPixelShaderMacroConfigurations.size()));
+        Logger::get().info(fmt::format(
+            "using {} shader(s) per vertex shader pack",
+            ShaderMacroConfigurations::validVertexShaderMacroConfigurations.size()));
     }
 
     std::unique_ptr<Renderer> Renderer::create(GameManager* pGameManager) {
@@ -111,13 +107,11 @@ namespace ne {
             if (std::holds_alternative<Error>(result)) {
                 auto error = std::get<Error>(std::move(result));
                 error.addEntry();
-                Logger::get().error(
-                    fmt::format(
-                        "failed to deserialize render settings from the file \"{}\", using default "
-                        "settings instead, error: \"{}\"",
-                        pathToConfigFile.string(),
-                        error.getFullErrorMessage()),
-                    sRendererLogCategory);
+                Logger::get().error(fmt::format(
+                    "failed to deserialize render settings from the file \"{}\", using default "
+                    "settings instead, error: \"{}\"",
+                    pathToConfigFile.string(),
+                    error.getFullErrorMessage()));
 
                 // Just create a new object with default settings.
                 mtxRenderSettings.second = std::make_shared<RenderSettings>();
@@ -140,9 +134,8 @@ namespace ne {
         if (optionalError.has_value()) {
             auto error = optionalError.value();
             error.addEntry();
-            Logger::get().error(
-                fmt::format("failed to save new render settings, error: \"{}\"", error.getFullErrorMessage()),
-                sRendererLogCategory);
+            Logger::get().error(fmt::format(
+                "failed to save new render settings, error: \"{}\"", error.getFullErrorMessage()));
         }
 
         // Apply the configuration.

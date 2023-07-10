@@ -236,6 +236,9 @@ namespace ne {
         /** @ref getElapsedTimeInMs when @ref stop was called. */
         std::optional<long long> elapsedTimeWhenStopped;
 
+        /** Time to wait until the callback is called. */
+        long long iTimeToWaitInMs = 0;
+
         /** Whether the timer is currently running or not. */
         bool bIsRunning = false;
 
@@ -245,13 +248,7 @@ namespace ne {
          */
         bool bIsEnabled = true;
 
-        /** Time to wait until the callback is called. */
-        long long iTimeToWaitInMs = 0;
-
         /** Whether the timer should restart itself upon a timeout or not. */
         bool bIsLooping = false;
-
-        /** Name of the category used for logging. */
-        static inline const auto sTimerLogCategory = "Timer";
     };
 } // namespace ne

@@ -360,8 +360,5 @@ namespace ne {
 
         /** Do not delete (free) this pointer. Renderer that owns this PSO manager. */
         Renderer* pRenderer;
-
-        /** Name of the category used for logging. */
-        inline static const char* sPsoManagerLogCategory = "PSO Manager";
     };
 } // namespace ne

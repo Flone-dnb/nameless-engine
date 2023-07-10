@@ -102,7 +102,7 @@ namespace ne {
         pDxgiInfoQueue->SetBreakOnSeverity(DXGI_DEBUG_ALL, DXGI_INFO_QUEUE_MESSAGE_SEVERITY_CORRUPTION, 1);
         pDxgiInfoQueue->SetBreakOnSeverity(DXGI_DEBUG_ALL, DXGI_INFO_QUEUE_MESSAGE_SEVERITY_WARNING, 1);
 
-        Logger::get().info("D3D debug layer enabled", sDirectXRendererLogCategory);
+        Logger::get().info("D3D debug layer enabled");
 #endif
         return {};
     }
@@ -815,13 +815,11 @@ namespace ne {
         // Make sure the GPU index is in range of supported GPUs.
         iPickedGpuIndex = pMtxRenderSettings->second->getUsedGpuIndex();
         if (iPickedGpuIndex >= static_cast<unsigned int>(vSupportedVideoAdapters.size())) {
-            Logger::get().error(
-                std::format(
-                    "preferred GPU index {} is out of range, supported GPUs in total: {}, using first found "
-                    "GPU",
-                    iPickedGpuIndex,
-                    vSupportedVideoAdapters.size()),
-                sDirectXRendererLogCategory);
+            Logger::get().error(std::format(
+                "preferred GPU index {} is out of range, supported GPUs in total: {}, using first found "
+                "GPU",
+                iPickedGpuIndex,
+                vSupportedVideoAdapters.size()));
 
             // Just use first found GPU then.
             iPickedGpuIndex = 0;
@@ -843,14 +841,12 @@ namespace ne {
                 optionalError->addEntry();
                 return optionalError;
             }
-            Logger::get().error(
-                std::format(
-                    "failed to set output adapter for the GPU \"{}\" (index {}), using first found GPU, "
-                    "error: {}",
-                    vSupportedVideoAdapters[iPickedGpuIndex],
-                    iPickedGpuIndex,
-                    optionalError->getInitialMessage()),
-                sDirectXRendererLogCategory);
+            Logger::get().error(std::format(
+                "failed to set output adapter for the GPU \"{}\" (index {}), using first found GPU, "
+                "error: {}",
+                vSupportedVideoAdapters[iPickedGpuIndex],
+                iPickedGpuIndex,
+                optionalError->getInitialMessage()));
 
             // Try first found GPU.
             iPickedGpuIndex = 0;
@@ -937,15 +933,13 @@ namespace ne {
             }
 
             if (vFilteredModes.empty()) {
-                Logger::get().error(
-                    std::format(
-                        "video mode with resolution {}x{} and refresh rate "
-                        "{}/{} is not supported, using default video mode",
-                        preferredRenderResolution.first,
-                        preferredRenderResolution.second,
-                        preferredRefreshRate.first,
-                        preferredRefreshRate.second),
-                    sDirectXRendererLogCategory);
+                Logger::get().error(std::format(
+                    "video mode with resolution {}x{} and refresh rate "
+                    "{}/{} is not supported, using default video mode",
+                    preferredRenderResolution.first,
+                    preferredRenderResolution.second,
+                    preferredRefreshRate.first,
+                    preferredRefreshRate.second));
                 // use last display mode
                 pickedDisplayMode = vVideoModes.back();
             } else if (vFilteredModes.size() == 1) {
@@ -971,8 +965,7 @@ namespace ne {
                         static_cast<int>(mode.ScanlineOrdering),
                         static_cast<int>(mode.Scaling));
                 }
-                Logger::get().error(
-                    std::format("{}\nusing default video mode", sErrorMessage), sDirectXRendererLogCategory);
+                Logger::get().error(std::format("{}\nusing default video mode", sErrorMessage));
                 // use last display mode
                 pickedDisplayMode = vVideoModes.back();
             }
@@ -995,9 +988,7 @@ namespace ne {
         }
 
         // Log used GPU name.
-        Logger::get().info(
-            fmt::format("using the following GPU: \"{}\"", getCurrentlyUsedGpuName()),
-            sDirectXRendererLogCategory);
+        Logger::get().info(fmt::format("using the following GPU: \"{}\"", getCurrentlyUsedGpuName()));
 
         bIsDirectXInitialized = true;
 
@@ -1069,9 +1060,7 @@ namespace ne {
             std::chrono::duration<float, std::chrono::seconds::period>(endTime - startTime).count();
 
         // Log time.
-        Logger::get().info(
-            fmt::format("took {:.1f} sec. to compile engine shaders", timeTookInSec),
-            sDirectXRendererLogCategory);
+        Logger::get().info(fmt::format("took {:.1f} sec. to compile engine shaders", timeTookInSec));
 
         return {};
     }
@@ -1288,8 +1277,7 @@ namespace ne {
 
             // This is unexpected.
             Logger::get().error(
-                "attempt to flush the command queue failed due to command queue being `nullptr`",
-                sDirectXRendererLogCategory);
+                "attempt to flush the command queue failed due to command queue being `nullptr`");
 
             return;
         }

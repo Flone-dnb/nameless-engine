@@ -43,53 +43,38 @@ namespace ne {
         return logger;
     }
 
-    void Logger::info(
-        std::string_view sText, std::string_view sCategory, const nostd::source_location location) const {
+    void Logger::info(std::string_view sText, const nostd::source_location location) const {
         if (pSpdLogger == nullptr) {
             return;
         }
 
-        if (sCategory.empty()) {
-            sCategory = sDefaultLogCategory;
-        }
         pSpdLogger->info(fmt::format(
-            "[{}] [{}, {}] {}",
-            sCategory,
+            "[{}, {}] {}",
             std::filesystem::path(location.file_name()).filename().string(),
             location.line(),
             sText));
     }
 
-    void Logger::warn(
-        std::string_view sText, std::string_view sCategory, const nostd::source_location location) const {
+    void Logger::warn(std::string_view sText, const nostd::source_location location) const {
         if (pSpdLogger == nullptr) {
             return;
         }
 
-        if (sCategory.empty()) {
-            sCategory = sDefaultLogCategory;
-        }
         pSpdLogger->warn(fmt::format(
-            "[{}] [{}:{}] {}",
-            sCategory,
+            "[{}:{}] {}",
             std::filesystem::path(location.file_name()).filename().string(),
             location.line(),
             sText));
         iTotalWarningsProduced.fetch_add(1);
     }
 
-    void Logger::error(
-        std::string_view sText, std::string_view sCategory, const nostd::source_location location) const {
+    void Logger::error(std::string_view sText, const nostd::source_location location) const {
         if (pSpdLogger == nullptr) {
             return;
         }
 
-        if (sCategory.empty()) {
-            sCategory = sDefaultLogCategory;
-        }
         pSpdLogger->error(fmt::format(
-            "[{}] [{}:{}] {}",
-            sCategory,
+            "[{}:{}] {}",
             std::filesystem::path(location.file_name()).filename().string(),
             location.line(),
             sText));
@@ -139,7 +124,7 @@ namespace ne {
 #if defined(WIN32)
         const auto iError = localtime_s(&tm, &now);
         if (iError != 0) {
-            get().error(fmt::format("failed to get localtime (error code {})", iError), "");
+            get().error(fmt::format("failed to get localtime (error code {})", iError));
         }
 #elif __linux__
         localtime_r(&now, &tm);

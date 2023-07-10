@@ -10,6 +10,7 @@
 #include "render/general/resources/FrameResourcesManager.h"
 #include "render/general/resources/UploadBuffer.h"
 #include "io/Logger.h"
+#include "misc/Globals.h"
 
 namespace ne {
     class Pso;
@@ -98,12 +99,11 @@ namespace ne {
 #if defined(DEBUG)
             // Self check:
             if (iFrameResourceCountToUpdate.load() == 0) [[unlikely]] {
-                Logger::get().error(
-                    fmt::format(
-                        "[debug mode only] shader read write resource \"{}\" was updated while no update was "
-                        "needed, update flag will now have incorrect state",
-                        getResourceName()),
-                    "");
+                Logger::get().error(fmt::format(
+                    "{} shader read write resource \"{}\" was updated while no update was "
+                    "needed, update flag will now have incorrect state",
+                    Globals::getDebugOnlyLoggingSubCategoryName(),
+                    getResourceName()));
             }
 #endif
 

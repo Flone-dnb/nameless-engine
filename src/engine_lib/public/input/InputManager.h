@@ -361,8 +361,5 @@ namespace ne {
 
         /** Section name to store axis events, used in .toml files. */
         const std::string_view sAxisEventSectionName = "axis event";
-
-        /** Name of the category used for logging. */
-        inline static const char* sInputManagerLogCategory = "Input Manager";
     };
 } // namespace ne

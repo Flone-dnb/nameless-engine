@@ -11,12 +11,10 @@ namespace ne {
         auto iThreadCount = std::thread::hardware_concurrency();
         if (iThreadCount == 0) {
             iThreadCount = iMinThreadCount;
-            Logger::get().error(
-                fmt::format(
-                    "hardware concurrency information is not available, as a fallback creating {} thread(s) "
-                    "for the thread pool",
-                    iThreadCount),
-                sThreadPoolLogCategory);
+            Logger::get().error(fmt::format(
+                "hardware concurrency information is not available, as a fallback creating {} thread(s) "
+                "for the thread pool",
+                iThreadCount));
         }
 
         vRunningThreads.resize(iThreadCount);

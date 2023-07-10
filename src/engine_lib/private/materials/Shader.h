@@ -201,8 +201,5 @@ namespace ne {
 
         /** Name of the key used to store compiled bytecode hash in the metadata file. */
         static inline const auto sCompiledBytecodeHashKeyName = "compiled_bytecode_hash";
-
-        /** Name of the category used for logging. */
-        static inline const auto sShaderLogCategory = "Shader";
     };
 } // namespace ne

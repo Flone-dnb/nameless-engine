@@ -482,9 +482,6 @@ namespace ne {
         /** Whether @ref destroy was called or not. */
         bool bIsBeingDestroyed = false;
 
-        /** Name of the category used for logging. */
-        inline static const char* sGameManagerLogCategory = "Game Manager";
-
         /** Description of reasons why a leak may occur. */
         inline static const char* sGcLeakReasons =
             "1. you are not using STL container wrappers for gc "

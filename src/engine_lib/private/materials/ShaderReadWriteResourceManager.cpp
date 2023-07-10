@@ -105,9 +105,7 @@ namespace ne {
         }
 
         // Maybe the specified resource pointer is invalid.
-        Logger::get().error(
-            "unable to find the specified resource to be destroyed",
-            sShaderCpuReadWriteResourceManagerLogCategory);
+        Logger::get().error("unable to find the specified resource to be destroyed");
     }
 
     std::pair<std::recursive_mutex, ShaderCpuReadWriteResourceManager::Resources>*

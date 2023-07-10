@@ -242,9 +242,6 @@ namespace ne RNAMESPACE() {
         /** Name of the file we use to store render settings. */
         static inline const char* sRenderSettingsConfigurationFileName = "render";
 
-        /** Name of the category used for logging. */
-        static inline const char* sRenderSettingsLogCategory = "Render Settings";
-
         ne_RenderSettings_GENERATED
     };
 } // namespace ne RNAMESPACE()

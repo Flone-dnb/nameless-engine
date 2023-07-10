@@ -36,7 +36,7 @@ namespace ne {
     void SpatialNode::setRelativeScale(const glm::vec3& scale) {
 #if defined(DEBUG)
         if (scale.x < 0.0F || scale.y < 0.0F || scale.z < 0.0F) [[unlikely]] {
-            Logger::get().warn("avoid using negative scale as it may cause issues", sSpatialNodeLogCategory);
+            Logger::get().warn("avoid using negative scale as it may cause issues");
         }
 #endif
 
@@ -136,9 +136,7 @@ namespace ne {
     void SpatialNode::setWorldScale(const glm::vec3& scale) {
 #if defined(DEBUG)
         if (scale.x < 0.0F || scale.y < 0.0F || scale.z < 0.0F) [[unlikely]] {
-            Logger::get().warn(
-                "avoid using negative scale as it's not supported and may cause issues",
-                sSpatialNodeLogCategory);
+            Logger::get().warn("avoid using negative scale as it's not supported and may cause issues");
         }
 #endif
 
@@ -293,16 +291,14 @@ namespace ne {
         if (mtxWorldMatrix.second.worldLocation.x >= iWorldSize ||
             mtxWorldMatrix.second.worldLocation.y >= iWorldSize ||
             mtxWorldMatrix.second.worldLocation.z >= iWorldSize) {
-            Logger::get().warn(
-                fmt::format(
-                    "spatial node \"{}\" is exceeding world bounds, node's world location: "
-                    "({}, {}, {}), world size: {}",
-                    getNodeName(),
-                    mtxWorldMatrix.second.worldLocation.x,
-                    mtxWorldMatrix.second.worldLocation.y,
-                    mtxWorldMatrix.second.worldLocation.z,
-                    iWorldSize),
-                sSpatialNodeLogCategory);
+            Logger::get().warn(fmt::format(
+                "spatial node \"{}\" is exceeding world bounds, node's world location: "
+                "({}, {}, {}), world size: {}",
+                getNodeName(),
+                mtxWorldMatrix.second.worldLocation.x,
+                mtxWorldMatrix.second.worldLocation.y,
+                mtxWorldMatrix.second.worldLocation.z,
+                iWorldSize));
         }
     }
 

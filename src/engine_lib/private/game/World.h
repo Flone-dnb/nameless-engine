@@ -202,8 +202,5 @@ namespace ne {
 
         /** Time when world was created. */
         std::chrono::steady_clock::time_point timeWhenWorldCreated;
-
-        /** Name of the category used for logging. */
-        inline static const char* sWorldLogCategory = "World";
     };
 } // namespace ne

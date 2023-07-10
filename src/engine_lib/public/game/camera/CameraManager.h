@@ -83,8 +83,5 @@ namespace ne {
 
         /** Stores active camera. */
         std::pair<std::recursive_mutex, ActiveCamera> mtxActiveCamera;
-
-        /** Name of the category used for logging. */
-        static inline const auto sCameraManagerLogCategory = "Camera Manager";
     };
 } // namespace ne

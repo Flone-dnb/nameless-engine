@@ -440,8 +440,7 @@ namespace ne {
                 pairs.begin(), pairs.end(), [&](const AxisState& item) { return item.plusKey == plusKey; });
             if (it == pairs.end()) {
                 Logger::get().error(
-                    fmt::format("can't find minus key for plus key in axis event '{}'", sAxisName),
-                    sInputManagerLogCategory);
+                    fmt::format("can't find minus key for plus key in axis event '{}'", sAxisName));
                 return {};
             }
 
@@ -450,14 +449,12 @@ namespace ne {
 
         // Check sizes.
         if (vPlusKeys.size() != vMinusKeys.size()) {
-            Logger::get().error(
-                fmt::format(
-                    "not equal size of plus and minus keys, found {} plus key(s) and {} minus(s) keys "
-                    "for axis event {}",
-                    vPlusKeys.size(),
-                    vMinusKeys.size(),
-                    sAxisName),
-                sInputManagerLogCategory);
+            Logger::get().error(fmt::format(
+                "not equal size of plus and minus keys, found {} plus key(s) and {} minus(s) keys "
+                "for axis event {}",
+                vPlusKeys.size(),
+                vMinusKeys.size(),
+                sAxisName));
             return {};
         }
 
@@ -591,9 +588,7 @@ namespace ne {
                         axes[sAxisName] = std::move(option.value());
                     } else {
                         axes[sAxisName] = {};
-                        Logger::get().error(
-                            fmt::format("no axis event found by name '{}'", sAxisName),
-                            sInputManagerLogCategory);
+                        Logger::get().error(fmt::format("no axis event found by name '{}'", sAxisName));
                     }
                 }
             }

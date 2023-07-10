@@ -76,8 +76,7 @@ namespace ne {
         if (cameraProperties.mtxData.second.currentCameraMode == CameraMode::ORBITAL) [[unlikely]] {
             Logger::get().warn(
                 "an attempt to set free camera rotation was ignored because the camera is not in "
-                "the free mode",
-                sTransientCameraLogCategory);
+                "the free mode");
             return;
         }
 
@@ -110,8 +109,7 @@ namespace ne {
         if (cameraProperties.mtxData.second.currentCameraMode == CameraMode::FREE) [[unlikely]] {
             Logger::get().warn(
                 "an attempt to set orbital camera target location was ignored because the camera is not in "
-                "the orbital mode",
-                sTransientCameraLogCategory);
+                "the orbital mode");
             return;
         }
 
@@ -142,8 +140,7 @@ namespace ne {
         if (cameraProperties.mtxData.second.currentCameraMode == CameraMode::FREE) [[unlikely]] {
             Logger::get().warn(
                 "an attempt to set orbital camera distance to target was ignored because the camera is not "
-                "in the orbital mode",
-                sTransientCameraLogCategory);
+                "in the orbital mode");
             return;
         }
 
@@ -169,8 +166,7 @@ namespace ne {
         if (cameraProperties.mtxData.second.currentCameraMode == CameraMode::FREE) [[unlikely]] {
             Logger::get().warn(
                 "an attempt to set orbital camera rotation was ignored because the camera is not "
-                "in the orbital mode",
-                sTransientCameraLogCategory);
+                "in the orbital mode");
             return;
         }
 
@@ -221,8 +217,7 @@ namespace ne {
         if (cameraProperties.mtxData.second.currentCameraMode == CameraMode::ORBITAL) [[unlikely]] {
             Logger::get().warn(
                 "an attempt to move free camera forward was ignored because the camera is not in "
-                "the free mode",
-                sTransientCameraLogCategory);
+                "the free mode");
             return;
         }
 

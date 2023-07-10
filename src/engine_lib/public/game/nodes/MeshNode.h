@@ -427,9 +427,6 @@ namespace ne RNAMESPACE() {
         /** Name of the constant buffer used to store general mesh data in shaders. */
         static inline const auto sMeshShaderConstantBufferName = "meshData";
 
-        /** Name of the category used for logging. */
-        static inline const auto sMeshNodeLogCategory = "Mesh Node";
-
         ne_MeshNode_GENERATED
     };
 } // namespace ne RNAMESPACE()

@@ -162,8 +162,5 @@ namespace ne {
 
         /** Type of shaders this pack stores. */
         ShaderType shaderType;
-
-        /** Name of the category used for logging. */
-        static inline const auto sShaderPackLogCategory = "Shader Pack";
     };
 } // namespace ne

@@ -42,16 +42,13 @@ namespace ne {
         // Log construction.
         const size_t iNodeCount = iTotalAliveNodeCount.fetch_add(1) + 1;
         Logger::get().info(
-            fmt::format("constructor for node \"{}\" is called (alive nodes now: {})", sName, iNodeCount),
-            sNodeLogCategory);
+            fmt::format("constructor for node \"{}\" is called (alive nodes now: {})", sName, iNodeCount));
 
         if (iNodeCount + 1 == std::numeric_limits<size_t>::max()) [[unlikely]] {
-            Logger::get().warn(
-                fmt::format(
-                    "\"total alive nodes\" counter is at its maximum value: {}, another new node will cause "
-                    "an overflow",
-                    iNodeCount + 1),
-                sNodeLogCategory);
+            Logger::get().warn(fmt::format(
+                "\"total alive nodes\" counter is at its maximum value: {}, another new node will cause "
+                "an overflow",
+                iNodeCount + 1));
         }
     }
 
@@ -59,20 +56,17 @@ namespace ne {
         std::scoped_lock guard(mtxSpawning);
         if (bIsSpawned) [[unlikely]] {
             // Unexpected.
-            Logger::get().error(
-                fmt::format(
-                    "spawned node \"{}\" is being destructed without being despawned, continuing will most "
-                    "likely cause undefined behavior",
-                    sNodeName),
-                sNodeLogCategory);
+            Logger::get().error(fmt::format(
+                "spawned node \"{}\" is being destructed without being despawned, continuing will most "
+                "likely cause undefined behavior",
+                sNodeName));
             despawn();
         }
 
         // Log destruction.
         const size_t iNodesLeft = iTotalAliveNodeCount.fetch_sub(1) - 1;
-        Logger::get().info(
-            fmt::format("destructor for node \"{}\" is called (alive nodes left: {})", sNodeName, iNodesLeft),
-            sNodeLogCategory);
+        Logger::get().info(fmt::format(
+            "destructor for node \"{}\" is called (alive nodes left: {})", sNodeName, iNodesLeft));
     }
 
     void Node::setNodeName(const std::string& sName) { this->sNodeName = sName; }
@@ -101,23 +95,19 @@ namespace ne {
 
         // Make sure the specified node is valid.
         if (pNode == nullptr) [[unlikely]] {
-            Logger::get().warn(
-                fmt::format(
-                    "an attempt was made to attach a nullptr node to the \"{}\" node, aborting this "
-                    "operation",
-                    getNodeName()),
-                sNodeLogCategory);
+            Logger::get().warn(fmt::format(
+                "an attempt was made to attach a nullptr node to the \"{}\" node, aborting this "
+                "operation",
+                getNodeName()));
             return;
         }
 
         // Make sure the specified node is not `this`.
         if (&*pNode == this) [[unlikely]] {
-            Logger::get().warn(
-                fmt::format(
-                    "an attempt was made to attach the \"{}\" node to itself, aborting this "
-                    "operation",
-                    getNodeName()),
-                sNodeLogCategory);
+            Logger::get().warn(fmt::format(
+                "an attempt was made to attach the \"{}\" node to itself, aborting this "
+                "operation",
+                getNodeName()));
             return;
         }
 
@@ -126,28 +116,24 @@ namespace ne {
         // Make sure the specified node is not our direct child.
         for (const auto& pChildNode : *mtxChildNodes.second) {
             if (pChildNode == pNode) [[unlikely]] {
-                Logger::get().warn(
-                    fmt::format(
-                        "an attempt was made to attach the \"{}\" node to the \"{}\" node but it's already "
-                        "a direct child node of \"{}\", aborting this operation",
-                        pNode->getNodeName(),
-                        getNodeName(),
-                        getNodeName()),
-                    sNodeLogCategory);
+                Logger::get().warn(fmt::format(
+                    "an attempt was made to attach the \"{}\" node to the \"{}\" node but it's already "
+                    "a direct child node of \"{}\", aborting this operation",
+                    pNode->getNodeName(),
+                    getNodeName(),
+                    getNodeName()));
                 return;
             }
         }
 
         // Make sure the specified node is not our parent.
         if (pNode->isParentOf(this)) {
-            Logger::get().error(
-                fmt::format(
-                    "an attempt was made to attach the \"{}\" node to the node \"{}\", "
-                    "but the first node is a parent of the second node, "
-                    "aborting this operation",
-                    pNode->getNodeName(),
-                    getNodeName()),
-                sNodeLogCategory);
+            Logger::get().error(fmt::format(
+                "an attempt was made to attach the \"{}\" node to the node \"{}\", "
+                "but the first node is a parent of the second node, "
+                "aborting this operation",
+                pNode->getNodeName(),
+                getNodeName()));
             return;
         }
 
@@ -156,12 +142,10 @@ namespace ne {
         if (pNode->mtxParentNode.second != nullptr) {
             // Check if we are already this node's parent.
             if (&*pNode->mtxParentNode.second == this) {
-                Logger::get().warn(
-                    fmt::format(
-                        "an attempt was made to attach the \"{}\" node to its parent again, "
-                        "aborting this operation",
-                        pNode->getNodeName()),
-                    sNodeLogCategory);
+                Logger::get().warn(fmt::format(
+                    "an attempt was made to attach the \"{}\" node to its parent again, "
+                    "aborting this operation",
+                    pNode->getNodeName()));
                 return;
             }
 
@@ -240,12 +224,10 @@ namespace ne {
             }
 
             if (!bFound) [[unlikely]] {
-                Logger::get().error(
-                    fmt::format(
-                        "node \"{}\" has a parent node but parent's children array "
-                        "does not contain this node.",
-                        getNodeName()),
-                    sNodeLogCategory);
+                Logger::get().error(fmt::format(
+                    "node \"{}\" has a parent node but parent's children array "
+                    "does not contain this node.",
+                    getNodeName()));
             }
 
             // Clear parent.
@@ -292,11 +274,9 @@ namespace ne {
         std::scoped_lock guard(mtxSpawning);
 
         if (bIsSpawned) [[unlikely]] {
-            Logger::get().warn(
-                fmt::format(
-                    "an attempt was made to spawn already spawned node \"{}\", aborting this operation",
-                    getNodeName()),
-                sNodeLogCategory);
+            Logger::get().warn(fmt::format(
+                "an attempt was made to spawn already spawned node \"{}\", aborting this operation",
+                getNodeName()));
             return;
         }
 
@@ -306,12 +286,10 @@ namespace ne {
         // Get unique ID.
         iNodeId = iAvailableNodeId.fetch_add(1);
         if (iNodeId.value() + 1 == std::numeric_limits<size_t>::max()) [[unlikely]] {
-            Logger::get().warn(
-                fmt::format(
-                    "\"next available node ID\" is at its maximum value: {}, another spawned node will "
-                    "cause an overflow",
-                    iNodeId.value() + 1),
-                sNodeLogCategory);
+            Logger::get().warn(fmt::format(
+                "\"next available node ID\" is at its maximum value: {}, another spawned node will "
+                "cause an overflow",
+                iNodeId.value() + 1));
         }
 
         // Mark state.
@@ -359,11 +337,9 @@ namespace ne {
         std::scoped_lock guard(mtxSpawning);
 
         if (!bIsSpawned) [[unlikely]] {
-            Logger::get().warn(
-                fmt::format(
-                    "an attempt was made to despawn already despawned node \"{}\", aborting this operation",
-                    getNodeName()),
-                sNodeLogCategory);
+            Logger::get().warn(fmt::format(
+                "an attempt was made to despawn already despawned node \"{}\", aborting this operation",
+                getNodeName()));
             return;
         }
 
@@ -920,22 +896,18 @@ namespace ne {
 
         if (bEnable) {
             if (!bIsSpawned) {
-                Logger::get().error(
-                    fmt::format(
-                        "node \"{}\" is not spawned but the timer \"{}\" was requested to be enabled - this "
-                        "is an engine bug",
-                        sNodeName,
-                        pTimer->getName()),
-                    sNodeLogCategory);
+                Logger::get().error(fmt::format(
+                    "node \"{}\" is not spawned but the timer \"{}\" was requested to be enabled - this "
+                    "is an engine bug",
+                    sNodeName,
+                    pTimer->getName()));
                 return true;
             }
 
             // Check that node's ID is initialized.
             if (!iNodeId.has_value()) [[unlikely]] {
-                Logger::get().error(
-                    fmt::format(
-                        "node \"{}\" is spawned but it's ID is invalid - this is an engine bug", sNodeName),
-                    sNodeLogCategory);
+                Logger::get().error(fmt::format(
+                    "node \"{}\" is spawned but it's ID is invalid - this is an engine bug", sNodeName));
                 return true;
             }
 

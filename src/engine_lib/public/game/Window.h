@@ -536,11 +536,9 @@ namespace ne {
 
         /** Last mouse X position, used for calculating delta movement. */
         int iLastMouseXPos = 0;
+
         /** Last mouse Y position, used for calculating delta movement. */
         int iLastMouseYPos = 0;
-
-        /** Name of the category used for logging. */
-        inline static const char* sWindowLogCategory = "Window";
     };
 
     template <typename MyGameInstance>

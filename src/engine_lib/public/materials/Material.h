@@ -389,9 +389,6 @@ namespace ne RNAMESPACE() {
         /** Name of the constant buffer used to store material data in shaders. */
         static inline const auto sMaterialShaderConstantBufferName = "materialData";
 
-        /** Name of the category used for logging. */
-        inline static const char* sMaterialLogCategory = "Material";
-
         ne_Material_GENERATED
     };
 } // namespace ne RNAMESPACE()

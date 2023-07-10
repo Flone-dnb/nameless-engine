@@ -139,9 +139,6 @@ namespace ne RNAMESPACE() {
         /** Delta to compare rotations. */
         static inline constexpr float rotationDelta = 0.0001F;
 
-        /** Name of the category used for logging. */
-        static inline const auto sCameraNodeLogCategory = "Camera Node";
-
         ne_CameraNode_GENERATED
     };
 } // namespace ne RNAMESPACE()

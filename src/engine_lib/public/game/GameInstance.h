@@ -509,8 +509,5 @@ namespace ne {
          * Do not delete. Input manager of the @ref pGameManager object.
          */
         InputManager* pInputManager = nullptr;
-
-        /** Name of the category used for logging. */
-        static inline const auto sGameInstanceLogCategory = "Game Instance";
     };
 } // namespace ne

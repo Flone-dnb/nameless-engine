@@ -49,8 +49,7 @@ namespace ne {
         if (!mtxInternalResources.second.bIsReadyForUsage) [[unlikely]] {
             Logger::get().warn(
                 "PSO was requested to release internal PSO resources but internal resources are already "
-                "released, ignoring this request",
-                sDirectXPsoLogCategory);
+                "released, ignoring this request");
             return {};
         }
 
@@ -132,8 +131,7 @@ namespace ne {
         if (mtxInternalResources.second.bIsReadyForUsage) [[unlikely]] {
             Logger::get().warn(
                 "PSO was requested to generate internal PSO resources but internal resources are already "
-                "created, ignoring this request",
-                sDirectXPsoLogCategory);
+                "created, ignoring this request");
             return {};
         }
 

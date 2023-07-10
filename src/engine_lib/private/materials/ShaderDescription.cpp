@@ -55,15 +55,12 @@ namespace ne {
     std::string
     ShaderDescription::getFileHash(const std::filesystem::path& pathToFile, const std::string& sShaderName) {
         if (pathToFile.empty()) [[unlikely]] {
-            Logger::get().error(
-                fmt::format("path to file is empty (shader: {})", sShaderName),
-                sShaderDescriptionLogCategory);
+            Logger::get().error(fmt::format("path to file is empty (shader: {})", sShaderName));
             return "";
         }
         if (!std::filesystem::exists(pathToFile)) [[unlikely]] {
             Logger::get().error(
-                fmt::format("file does not exist (shader: {}, path: {})", sShaderName, pathToFile.string()),
-                sShaderDescriptionLogCategory);
+                fmt::format("file does not exist (shader: {}, path: {})", sShaderName, pathToFile.string()));
             return "";
         }
 
@@ -106,7 +103,7 @@ namespace ne {
         std::unordered_map<std::string, std::unordered_map<std::string, std::string>> includeTree;
 
         if (!data.is_table()) {
-            Logger::get().error("data is not a table", sShaderDescriptionLogCategory);
+            Logger::get().error("data is not a table");
             return includeTree;
         }
 
@@ -114,7 +111,7 @@ namespace ne {
         for (const auto& [sSectionName, sectionData] : dataTable) {
             if (sSectionName.starts_with(sInitialIncludeChainText)) {
                 if (!sectionData.is_table()) {
-                    Logger::get().error("section data is not a table", sShaderDescriptionLogCategory);
+                    Logger::get().error("section data is not a table");
                     return includeTree;
                 }
                 const auto& sectionTable = sectionData.as_table();
@@ -122,8 +119,7 @@ namespace ne {
                 std::unordered_map<std::string, std::string> includes;
                 for (const auto& [sInclude, sIncludeFileHash] : sectionTable) {
                     if (!sIncludeFileHash.is_string()) {
-                        Logger::get().error(
-                            "include file hash is not a string", sShaderDescriptionLogCategory);
+                        Logger::get().error("include file hash is not a string");
                         return includeTree;
                     }
                     includes[sInclude] = sIncludeFileHash.as_string();
@@ -152,14 +148,12 @@ namespace ne {
 
         // Make sure source file hashes are filled.
         if (sSourceFileHash.empty() && other.sSourceFileHash.empty()) [[unlikely]] {
-            Logger::get().error(
-                fmt::format(
-                    "unable to compare the specified shader descriptions \"{}\" and \"{}\" because their "
-                    "shader source file hashes are empty and it's impossible to calculate them because "
-                    "path to the shader source file also seems to be empty",
-                    sShaderName,
-                    other.sShaderName),
-                sShaderDescriptionLogCategory);
+            Logger::get().error(fmt::format(
+                "unable to compare the specified shader descriptions \"{}\" and \"{}\" because their "
+                "shader source file hashes are empty and it's impossible to calculate them because "
+                "path to the shader source file also seems to be empty",
+                sShaderName,
+                other.sShaderName));
             return ShaderCacheInvalidationReason::SHADER_SOURCE_FILE_CHANGED;
         }
 
@@ -203,8 +197,7 @@ namespace ne {
         const std::filesystem::path& pathToShaderFile, std::string& sCurrentIncludeChain, toml::value& data) {
         if (!std::filesystem::exists(pathToShaderFile)) {
             Logger::get().error(
-                fmt::format("path to shader file \"{}\" does not exist", pathToShaderFile.string()),
-                sShaderDescriptionLogCategory);
+                fmt::format("path to shader file \"{}\" does not exist", pathToShaderFile.string()));
             return;
         }
 
@@ -247,13 +240,11 @@ namespace ne {
                 // include but check anyway).
                 iFoundPos = sShaderFileText.find('<', iCurrentReadIndex);
                 if (iFoundPos == std::string::npos) {
-                    Logger::get().error(
-                        fmt::format(
-                            "found \"{}\" but have not found \" or < character after it in the shader file "
-                            "\"{}\"",
-                            sKeyword,
-                            pathToShaderFile.string()),
-                        sShaderDescriptionLogCategory);
+                    Logger::get().error(fmt::format(
+                        "found \"{}\" but have not found \" or < character after it in the shader file "
+                        "\"{}\"",
+                        sKeyword,
+                        pathToShaderFile.string()));
                     break;
                 }
             }
@@ -273,13 +264,11 @@ namespace ne {
                 // include but check anyway).
                 iFoundPos = sShaderFileText.find('>', iCurrentReadIndex);
                 if (iFoundPos == std::string::npos) {
-                    Logger::get().error(
-                        fmt::format(
-                            "found \"{}\" but have not found \" or > character after it in the shader file "
-                            "\"{}\"",
-                            sKeyword,
-                            pathToShaderFile.string()),
-                        sShaderDescriptionLogCategory);
+                    Logger::get().error(fmt::format(
+                        "found \"{}\" but have not found \" or > character after it in the shader file "
+                        "\"{}\"",
+                        sKeyword,
+                        pathToShaderFile.string()));
                     break;
                 }
             }
@@ -307,12 +296,10 @@ namespace ne {
             const auto pathToIncludeFile =
                 std::filesystem::canonical(pathToShaderFile.parent_path()) / sInclude;
             if (!std::filesystem::exists(pathToIncludeFile)) {
-                Logger::get().error(
-                    fmt::format(
-                        "shader ({}) include file ({}) does not exist",
-                        pathToShaderFile.string(),
-                        pathToIncludeFile.string()),
-                    sShaderDescriptionLogCategory);
+                Logger::get().error(fmt::format(
+                    "shader ({}) include file ({}) does not exist",
+                    pathToShaderFile.string(),
+                    pathToIncludeFile.string()));
                 continue;
             }
 

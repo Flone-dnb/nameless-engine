@@ -91,8 +91,7 @@ namespace ne {
 
         // Log finish.
         Logger::get().info(
-            fmt::format("successfully loaded shader \"{}\" from cache", shaderDescription.sShaderName),
-            sShaderPackLogCategory);
+            fmt::format("successfully loaded shader \"{}\" from cache", shaderDescription.sShaderName));
 
         return pShaderPack;
     }

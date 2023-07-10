@@ -249,8 +249,5 @@ namespace ne {
 
         /** Number of descriptors to add to the heap when there is no more free space left. */
         static constexpr INT iHeapGrowSize = 200; // NOLINT: don't recreate heap too often
-
-        /** Name of the category used for logging. */
-        static inline const auto sDescriptorHeapLogCategory = "Descriptor Heap";
     };
 } // namespace ne

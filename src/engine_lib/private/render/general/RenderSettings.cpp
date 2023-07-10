@@ -21,8 +21,7 @@ namespace ne {
 
         // Log change.
         Logger::get().info(
-            fmt::format("AA state is being changed from \"{}\" to \"{}\"", bIsAntialiasingEnabled, bEnable),
-            sRenderSettingsLogCategory);
+            fmt::format("AA state is being changed from \"{}\" to \"{}\"", bIsAntialiasingEnabled, bEnable));
 
         // Change.
         bIsAntialiasingEnabled = bEnable;
@@ -35,11 +34,9 @@ namespace ne {
         if (optionalError.has_value()) {
             auto error = optionalError.value();
             error.addEntry();
-            Logger::get().error(
-                fmt::format(
-                    "failed to save new render setting configuration, error: \"{}\"",
-                    error.getFullErrorMessage()),
-                sRenderSettingsLogCategory);
+            Logger::get().error(fmt::format(
+                "failed to save new render setting configuration, error: \"{}\"",
+                error.getFullErrorMessage()));
         }
     }
 
@@ -51,12 +48,10 @@ namespace ne {
         }
 
         // Log change.
-        Logger::get().info(
-            fmt::format(
-                "AA sample count is being changed from \"{}\" to \"{}\"",
-                iAntialiasingSampleCount,
-                static_cast<int>(quality)),
-            sRenderSettingsLogCategory);
+        Logger::get().info(fmt::format(
+            "AA sample count is being changed from \"{}\" to \"{}\"",
+            iAntialiasingSampleCount,
+            static_cast<int>(quality)));
 
         // Change.
         iAntialiasingSampleCount = static_cast<int>(quality);
@@ -69,11 +64,9 @@ namespace ne {
         if (optionalError.has_value()) {
             auto error = optionalError.value();
             error.addEntry();
-            Logger::get().error(
-                fmt::format(
-                    "failed to save new render setting configuration, error: \"{}\"",
-                    error.getFullErrorMessage()),
-                sRenderSettingsLogCategory);
+            Logger::get().error(fmt::format(
+                "failed to save new render setting configuration, error: \"{}\"",
+                error.getFullErrorMessage()));
         }
     }
 
@@ -126,12 +119,10 @@ namespace ne {
             const auto iNewSampleCount = static_cast<int>(MsaaQuality::HIGH);
 
             // Log change.
-            Logger::get().warn(
-                std::format(
-                    "deserialized AA quality \"{}\" is not a valid parameter, changing to \"{}\"",
-                    iAntialiasingSampleCount,
-                    iNewSampleCount),
-                sRenderSettingsLogCategory);
+            Logger::get().warn(std::format(
+                "deserialized AA quality \"{}\" is not a valid parameter, changing to \"{}\"",
+                iAntialiasingSampleCount,
+                iNewSampleCount));
 
             // Correct the value.
             iAntialiasingSampleCount = iNewSampleCount;
@@ -144,12 +135,10 @@ namespace ne {
             const auto iNewTextureFilteringMode = static_cast<int>(TextureFilteringMode::ANISOTROPIC);
 
             // Log change.
-            Logger::get().warn(
-                std::format(
-                    "deserialized texture filtering mode \"{}\" is not a valid parameter, changing to \"{}\"",
-                    iTextureFilteringMode,
-                    iNewTextureFilteringMode),
-                sRenderSettingsLogCategory);
+            Logger::get().warn(std::format(
+                "deserialized texture filtering mode \"{}\" is not a valid parameter, changing to \"{}\"",
+                iTextureFilteringMode,
+                iNewTextureFilteringMode));
 
             // Correct the value.
             iTextureFilteringMode = iNewTextureFilteringMode;
@@ -162,12 +151,10 @@ namespace ne {
         }
 
         // Log change.
-        Logger::get().info(
-            fmt::format(
-                "texture filtering mode is being changed from \"{}\" to \"{}\"",
-                iTextureFilteringMode,
-                static_cast<int>(mode)),
-            sRenderSettingsLogCategory);
+        Logger::get().info(fmt::format(
+            "texture filtering mode is being changed from \"{}\" to \"{}\"",
+            iTextureFilteringMode,
+            static_cast<int>(mode)));
 
         // Change.
         iTextureFilteringMode = static_cast<int>(mode);
@@ -180,11 +167,9 @@ namespace ne {
         if (optionalError.has_value()) {
             auto error = optionalError.value();
             error.addEntry();
-            Logger::get().error(
-                fmt::format(
-                    "failed to save new render setting configuration, error: \"{}\"",
-                    error.getFullErrorMessage()),
-                sRenderSettingsLogCategory);
+            Logger::get().error(fmt::format(
+                "failed to save new render setting configuration, error: \"{}\"",
+                error.getFullErrorMessage()));
         }
     }
 
@@ -241,14 +226,12 @@ namespace ne {
         }
 
         // Log change.
-        Logger::get().info(
-            fmt::format(
-                "render resolution is being changed from \"{}x{}\" to \"{}x{}\"",
-                iRenderResolutionWidth,
-                iRenderResolutionHeight,
-                resolution.first,
-                resolution.second),
-            sRenderSettingsLogCategory);
+        Logger::get().info(fmt::format(
+            "render resolution is being changed from \"{}x{}\" to \"{}x{}\"",
+            iRenderResolutionWidth,
+            iRenderResolutionHeight,
+            resolution.first,
+            resolution.second));
 
         // Change.
         iRenderResolutionWidth = resolution.first;
@@ -262,11 +245,9 @@ namespace ne {
         if (optionalError.has_value()) {
             auto error = optionalError.value();
             error.addEntry();
-            Logger::get().error(
-                fmt::format(
-                    "failed to save new render setting configuration, error: \"{}\"",
-                    error.getFullErrorMessage()),
-                sRenderSettingsLogCategory);
+            Logger::get().error(fmt::format(
+                "failed to save new render setting configuration, error: \"{}\"",
+                error.getFullErrorMessage()));
         }
     }
 
@@ -277,8 +258,7 @@ namespace ne {
 
         // Log change.
         Logger::get().info(
-            fmt::format("vsync state is being changed from \"{}\" to \"{}\"", bIsVsyncEnabled, bEnableVsync),
-            sRenderSettingsLogCategory);
+            fmt::format("vsync state is being changed from \"{}\" to \"{}\"", bIsVsyncEnabled, bEnableVsync));
 
         // Change.
         bIsVsyncEnabled = bEnableVsync;
@@ -291,11 +271,9 @@ namespace ne {
         if (optionalError.has_value()) {
             auto error = optionalError.value();
             error.addEntry();
-            Logger::get().error(
-                fmt::format(
-                    "failed to save new render setting configuration, error: \"{}\"",
-                    error.getFullErrorMessage()),
-                sRenderSettingsLogCategory);
+            Logger::get().error(fmt::format(
+                "failed to save new render setting configuration, error: \"{}\"",
+                error.getFullErrorMessage()));
         }
     }
 
@@ -322,14 +300,12 @@ namespace ne {
         }
 
         // Log change.
-        Logger::get().info(
-            fmt::format(
-                "refresh rate is being changed from \"{}/{}\" to \"{}/{}\"",
-                iRefreshRateNumerator,
-                iRefreshRateDenominator,
-                refreshRate.first,
-                refreshRate.second),
-            sRenderSettingsLogCategory);
+        Logger::get().info(fmt::format(
+            "refresh rate is being changed from \"{}/{}\" to \"{}/{}\"",
+            iRefreshRateNumerator,
+            iRefreshRateDenominator,
+            refreshRate.first,
+            refreshRate.second));
 
         // Change.
         iRefreshRateNumerator = refreshRate.first;
@@ -343,11 +319,9 @@ namespace ne {
         if (optionalError.has_value()) {
             auto error = optionalError.value();
             error.addEntry();
-            Logger::get().error(
-                fmt::format(
-                    "failed to save new render setting configuration, error: \"{}\"",
-                    error.getFullErrorMessage()),
-                sRenderSettingsLogCategory);
+            Logger::get().error(fmt::format(
+                "failed to save new render setting configuration, error: \"{}\"",
+                error.getFullErrorMessage()));
         }
     }
 
@@ -365,20 +339,16 @@ namespace ne {
         if (std::holds_alternative<Error>(result)) {
             auto error = std::get<Error>(std::move(result));
             error.addEntry();
-            Logger::get().error(
-                fmt::format(
-                    "failed to get the list of supported GPUs, error: \"{}\"", error.getFullErrorMessage()),
-                sRenderSettingsLogCategory);
+            Logger::get().error(fmt::format(
+                "failed to get the list of supported GPUs, error: \"{}\"", error.getFullErrorMessage()));
             return;
         }
         const auto vSupportedGpuNames = std::get<std::vector<std::string>>(std::move(result));
 
         // Make sure we fit into the `unsigned int` range.
         if (vSupportedGpuNames.size() > UINT_MAX) [[unlikely]] {
-            Logger::get().error(
-                fmt::format(
-                    "list of supported GPUs is too big to handle ({} items)", vSupportedGpuNames.size()),
-                sRenderSettingsLogCategory);
+            Logger::get().error(fmt::format(
+                "list of supported GPUs is too big to handle ({} items)", vSupportedGpuNames.size()));
             return;
         }
 
@@ -386,12 +356,10 @@ namespace ne {
         for (unsigned int i = 0; i < static_cast<unsigned int>(vSupportedGpuNames.size()); i++) {
             if (vSupportedGpuNames[i] == sGpuName) {
                 // Log change.
-                Logger::get().info(
-                    fmt::format(
-                        "preferred GPU is being changed from \"{}\" to \"{}\"",
-                        vSupportedGpuNames[iUsedGpuIndex],
-                        sGpuName),
-                    sRenderSettingsLogCategory);
+                Logger::get().info(fmt::format(
+                    "preferred GPU is being changed from \"{}\" to \"{}\"",
+                    vSupportedGpuNames[iUsedGpuIndex],
+                    sGpuName));
 
                 // Change.
                 iUsedGpuIndex = i;
@@ -403,11 +371,9 @@ namespace ne {
                 if (optionalError.has_value()) {
                     auto error = optionalError.value();
                     error.addEntry();
-                    Logger::get().error(
-                        fmt::format(
-                            "failed to save new render setting configuration, error: \"{}\"",
-                            error.getFullErrorMessage()),
-                        sRenderSettingsLogCategory);
+                    Logger::get().error(fmt::format(
+                        "failed to save new render setting configuration, error: \"{}\"",
+                        error.getFullErrorMessage()));
                 }
                 return;
             }
@@ -415,8 +381,7 @@ namespace ne {
 
         // Log.
         Logger::get().error(
-            fmt::format("failed to find the GPU \"{}\" in the list of supported GPUs", sGpuName),
-            sRenderSettingsLogCategory);
+            fmt::format("failed to find the GPU \"{}\" in the list of supported GPUs", sGpuName));
     }
 
     void RenderSettings::setGpuToUse(unsigned int iGpuIndex) {
@@ -429,41 +394,33 @@ namespace ne {
         if (std::holds_alternative<Error>(result)) {
             auto error = std::get<Error>(std::move(result));
             error.addEntry();
-            Logger::get().error(
-                fmt::format(
-                    "failed to get the list of supported GPUs, error: \"{}\"", error.getFullErrorMessage()),
-                sRenderSettingsLogCategory);
+            Logger::get().error(fmt::format(
+                "failed to get the list of supported GPUs, error: \"{}\"", error.getFullErrorMessage()));
             return;
         }
         const auto vSupportedGpuNames = std::get<std::vector<std::string>>(std::move(result));
 
         // Make sure we fit into the `unsigned int` range.
         if (vSupportedGpuNames.size() > UINT_MAX) [[unlikely]] {
-            Logger::get().error(
-                fmt::format(
-                    "list of supported GPUs is too big to handle ({} items)", vSupportedGpuNames.size()),
-                sRenderSettingsLogCategory);
+            Logger::get().error(fmt::format(
+                "list of supported GPUs is too big to handle ({} items)", vSupportedGpuNames.size()));
             return;
         }
 
         // Make sure this index is in range.
         if (iGpuIndex >= static_cast<unsigned int>(vSupportedGpuNames.size())) {
-            Logger::get().error(
-                fmt::format(
-                    "specified GPU index to use ({}) is out of range, supported GPUs in total: {}",
-                    iGpuIndex,
-                    vSupportedGpuNames.size()),
-                sRenderSettingsLogCategory);
+            Logger::get().error(fmt::format(
+                "specified GPU index to use ({}) is out of range, supported GPUs in total: {}",
+                iGpuIndex,
+                vSupportedGpuNames.size()));
             return;
         }
 
         // Log change.
-        Logger::get().info(
-            fmt::format(
-                "preferred GPU is being changed from \"{}\" to \"{}\"",
-                vSupportedGpuNames[iUsedGpuIndex],
-                vSupportedGpuNames[iGpuIndex]),
-            sRenderSettingsLogCategory);
+        Logger::get().info(fmt::format(
+            "preferred GPU is being changed from \"{}\" to \"{}\"",
+            vSupportedGpuNames[iUsedGpuIndex],
+            vSupportedGpuNames[iGpuIndex]));
 
         // Change.
         iUsedGpuIndex = iGpuIndex;
@@ -475,11 +432,9 @@ namespace ne {
         if (optionalError.has_value()) {
             auto error = optionalError.value();
             error.addEntry();
-            Logger::get().error(
-                fmt::format(
-                    "failed to save new render setting configuration, error: \"{}\"",
-                    error.getFullErrorMessage()),
-                sRenderSettingsLogCategory);
+            Logger::get().error(fmt::format(
+                "failed to save new render setting configuration, error: \"{}\"",
+                error.getFullErrorMessage()));
         }
     }
 

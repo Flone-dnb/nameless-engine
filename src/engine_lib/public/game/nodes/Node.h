@@ -816,9 +816,6 @@ namespace ne RNAMESPACE() {
         static inline const auto sExternalNodeTreePathAttributeName =
             "external_node_tree_path_relative_to_res";
 
-        /** Name of the category used for logging. */
-        static inline const auto sNodeLogCategory = "Node";
-
         ne_Node_GENERATED
     };
 

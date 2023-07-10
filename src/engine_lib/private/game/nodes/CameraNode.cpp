@@ -112,8 +112,7 @@ namespace ne {
         if (cameraProperties.mtxData.second.currentCameraMode == CameraMode::FREE) [[unlikely]] {
             Logger::get().warn(
                 "an attempt to clear orbital camera's target location was ignored because the camera is not "
-                "in the orbital mode",
-                sCameraNodeLogCategory);
+                "in the orbital mode");
             return;
         }
 
@@ -130,8 +129,7 @@ namespace ne {
         if (cameraProperties.mtxData.second.currentCameraMode == CameraMode::FREE) [[unlikely]] {
             Logger::get().warn(
                 "an attempt to set orbital camera's target location was ignored because the camera is not in "
-                "the orbital mode",
-                sCameraNodeLogCategory);
+                "the orbital mode");
             return;
         }
 
@@ -148,8 +146,7 @@ namespace ne {
         if (cameraProperties.mtxData.second.currentCameraMode == CameraMode::FREE) [[unlikely]] {
             Logger::get().warn(
                 "an attempt to set orbital camera's rotation was ignored because the camera is not in "
-                "the orbital mode",
-                sCameraNodeLogCategory);
+                "the orbital mode");
             return;
         }
 
@@ -175,8 +172,7 @@ namespace ne {
         if (cameraProperties.mtxData.second.currentCameraMode == CameraMode::FREE) [[unlikely]] {
             Logger::get().warn(
                 "an attempt to set orbital camera's rotation was ignored because the camera is not in "
-                "the orbital mode",
-                sCameraNodeLogCategory);
+                "the orbital mode");
             return;
         }
 
@@ -200,8 +196,7 @@ namespace ne {
         if (cameraProperties.mtxData.second.currentCameraMode == CameraMode::FREE) [[unlikely]] {
             Logger::get().warn(
                 "an attempt to get orbital camera's target location was ignored because the camera is not in "
-                "the orbital mode",
-                sCameraNodeLogCategory);
+                "the orbital mode");
             return glm::vec3(0.0F, 0.0F, 0.0F);
         }
 

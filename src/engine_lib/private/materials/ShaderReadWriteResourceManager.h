@@ -112,9 +112,5 @@ namespace ne {
 
         /** Shader read/write resources. */
         std::pair<std::recursive_mutex, Resources> mtxShaderCpuReadWriteResources;
-
-        /** Name of the category used for logging. */
-        static inline const auto sShaderCpuReadWriteResourceManagerLogCategory =
-            "Shader CPU Read/Write Resource Manager";
     };
 } // namespace ne

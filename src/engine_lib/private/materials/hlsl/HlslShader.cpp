@@ -311,21 +311,17 @@ namespace ne {
         if (mtxCompiledBlobRootSignature.second.first != nullptr) {
             const auto iNewRefCount = mtxCompiledBlobRootSignature.second.first.Reset();
             if (iNewRefCount != 0) {
-                Logger::get().error(
-                    std::format(
-                        "shader \"{}\" bytecode was requested to be released from the "
-                        "memory but it's still being referenced (new ref count: {})",
-                        getShaderName(),
-                        iNewRefCount),
-                    sHlslShaderLogCategory);
+                Logger::get().error(std::format(
+                    "shader \"{}\" bytecode was requested to be released from the "
+                    "memory but it's still being referenced (new ref count: {})",
+                    getShaderName(),
+                    iNewRefCount));
             } else {
-                Logger::get().info(
-                    std::format(
-                        "shader \"{}\" bytecode is being released from the memory as it's no longer being "
-                        "used (new ref count: {})",
-                        getShaderName(),
-                        iNewRefCount),
-                    sHlslShaderLogCategory);
+                Logger::get().info(std::format(
+                    "shader \"{}\" bytecode is being released from the memory as it's no longer being "
+                    "used (new ref count: {})",
+                    getShaderName(),
+                    iNewRefCount));
             }
 
             notifyShaderBytecodeReleasedFromMemory();

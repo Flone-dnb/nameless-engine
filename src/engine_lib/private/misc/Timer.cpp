@@ -12,11 +12,8 @@ namespace ne {
 
     void Timer::setCallbackValidator(const std::function<bool(size_t)>& validator) {
         if (isRunning()) [[unlikely]] {
-            Logger::get().error(
-                fmt::format(
-                    "\"{}\" timer is unable to set a callback validator while the timer is running",
-                    sTimerName),
-                sTimerLogCategory);
+            Logger::get().error(fmt::format(
+                "\"{}\" timer is unable to set a callback validator while the timer is running", sTimerName));
             return;
         }
 
@@ -45,12 +42,8 @@ namespace ne {
         try {
             timerThreadFuture->get();
         } catch (std::exception& ex) {
-            Logger::get().error(
-                fmt::format(
-                    "\"{}\" timer thread has finished with the following exception: {}",
-                    sTimerName,
-                    ex.what()),
-                sTimerLogCategory);
+            Logger::get().error(fmt::format(
+                "\"{}\" timer thread has finished with the following exception: {}", sTimerName, ex.what()));
         }
     }
 
@@ -59,23 +52,19 @@ namespace ne {
         const std::function<void()>& callback,
         bool bIsLooping) { // NOLINT: shadowing member variable
         if (isRunning()) [[unlikely]] {
-            Logger::get().error(
-                fmt::format(
-                    "\"{}\" timer is unable to set a callback for timeout while the timer is running",
-                    sTimerName),
-                sTimerLogCategory);
+            Logger::get().error(fmt::format(
+                "\"{}\" timer is unable to set a callback for timeout while the timer is running",
+                sTimerName));
             return;
         }
 
         // Make sure that time to wait is positive.
         if (iTimeToWaitInMs < 0) [[unlikely]] {
-            Logger::get().error(
-                fmt::format(
-                    "\"{}\" timer is unable to set a callback for timeout because the specified time to "
-                    "wait ({}) is negative",
-                    sTimerName,
-                    iTimeToWaitInMs),
-                sTimerLogCategory);
+            Logger::get().error(fmt::format(
+                "\"{}\" timer is unable to set a callback for timeout because the specified time to "
+                "wait ({}) is negative",
+                sTimerName,
+                iTimeToWaitInMs));
             return;
         }
 
@@ -90,11 +79,9 @@ namespace ne {
             // Make sure the timer is enabled.
             std::scoped_lock guard(mtxTerminateTimerThread);
             if (!bIsEnabled) {
-                Logger::get().error(
-                    fmt::format(
-                        "\"{}\" timer was requested to start while disabled, timer will not be started",
-                        sTimerName),
-                    sTimerLogCategory);
+                Logger::get().error(fmt::format(
+                    "\"{}\" timer was requested to start while disabled, timer will not be started",
+                    sTimerName));
                 return;
             }
 
@@ -156,12 +143,8 @@ namespace ne {
         try {
             timerThreadFuture->get();
         } catch (std::exception& ex) {
-            Logger::get().error(
-                fmt::format(
-                    "\"{}\" timer thread has finished with the following exception: {}",
-                    sTimerName,
-                    ex.what()),
-                sTimerLogCategory);
+            Logger::get().error(fmt::format(
+                "\"{}\" timer thread has finished with the following exception: {}", sTimerName, ex.what()));
         }
 
         timerThreadFuture = {};
@@ -260,24 +243,20 @@ namespace ne {
                 // Get game manager to submit a deferred task.
                 const auto pGameManager = GameManager::get();
                 if (pGameManager == nullptr) [[unlikely]] {
-                    Logger::get().error(
-                        fmt::format(
-                            "timer \"{}\" is unable to start the callback because the game manager is "
-                            "nullptr",
-                            sTimerName),
-                        sTimerLogCategory);
+                    Logger::get().error(fmt::format(
+                        "timer \"{}\" is unable to start the callback because the game manager is "
+                        "nullptr",
+                        sTimerName));
                     std::scoped_lock terminationGuard(mtxTerminateTimerThread);
                     bIsRunning = false;
                     return;
                 }
 
                 if (pGameManager->isBeingDestroyed()) [[unlikely]] {
-                    Logger::get().error(
-                        fmt::format(
-                            "timer \"{}\" is unable to start the callback because the game manager is being "
-                            "destroyed",
-                            sTimerName),
-                        sTimerLogCategory);
+                    Logger::get().error(fmt::format(
+                        "timer \"{}\" is unable to start the callback because the game manager is being "
+                        "destroyed",
+                        sTimerName));
                     std::scoped_lock terminationGuard(mtxTerminateTimerThread);
                     bIsRunning = false;
                     return;

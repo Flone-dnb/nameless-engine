@@ -73,23 +73,19 @@ namespace ne {
 
         // Make sure there's an active camera.
         if (mtxActiveCamera.second.pCameraNode == nullptr) [[unlikely]] {
-            Logger::get().error(
-                fmt::format(
-                    "the camera node \"{}\" notified the camera manager about it being despawned because "
-                    "it thinks that it's the active camera but the camera manager has no active camera node",
-                    pCameraNode->getNodeName()),
-                sCameraManagerLogCategory);
+            Logger::get().error(fmt::format(
+                "the camera node \"{}\" notified the camera manager about it being despawned because "
+                "it thinks that it's the active camera but the camera manager has no active camera node",
+                pCameraNode->getNodeName()));
             return;
         }
 
         // See if this camera is used as the active one.
         if (&*mtxActiveCamera.second.pCameraNode != pCameraNode) [[unlikely]] {
-            Logger::get().error(
-                fmt::format(
-                    "the camera node \"{}\" notified the camera manager about it being despawned because "
-                    "it thinks that it's the active camera but it's not the active camera node",
-                    pCameraNode->getNodeName()),
-                sCameraManagerLogCategory);
+            Logger::get().error(fmt::format(
+                "the camera node \"{}\" notified the camera manager about it being despawned because "
+                "it thinks that it's the active camera but it's not the active camera node",
+                pCameraNode->getNodeName()));
             return;
         }
 

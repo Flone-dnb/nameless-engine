@@ -305,9 +305,6 @@ namespace ne {
 
         /** Number of buffers in swap chain. */
         static constexpr unsigned int iSwapChainBufferCount = 2;
-
-        /** Name of the category used for logging. */
-        inline static const char* sRendererLogCategory = "Renderer";
     };
 
     /** Describes a group of shader macros. */

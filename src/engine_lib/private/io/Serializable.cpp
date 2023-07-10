@@ -34,13 +34,11 @@ namespace ne {
         constexpr auto iMaxPathLimit = MAX_PATH - iMaxPathLimitBound;
         const auto iFilePathLength = pathToFile.string().length();
         if (iFilePathLength > iMaxPathLimit - (iMaxPathLimitBound * 2) && iFilePathLength < iMaxPathLimit) {
-            Logger::get().warn(
-                fmt::format(
-                    "file path length {} is close to the platform limit of {} characters (path: {})",
-                    iFilePathLength,
-                    iMaxPathLimit,
-                    pathToFile.string()),
-                "");
+            Logger::get().warn(fmt::format(
+                "file path length {} is close to the platform limit of {} characters (path: {})",
+                iFilePathLength,
+                iMaxPathLimit,
+                pathToFile.string()));
         } else if (iFilePathLength >= iMaxPathLimit) {
             return Error(fmt::format(
                 "file path length {} exceeds the platform limit of {} characters (path: {})",
@@ -275,13 +273,11 @@ namespace ne {
         constexpr auto iMaxPathLimit = MAX_PATH - iMaxPathLimitBound;
         const auto iFilePathLength = pathToFile.string().length();
         if (iFilePathLength > iMaxPathLimit - (iMaxPathLimitBound * 2) && iFilePathLength < iMaxPathLimit) {
-            Logger::get().warn(
-                fmt::format(
-                    "file path length {} is close to the platform limit of {} characters (path: {})",
-                    iFilePathLength,
-                    iMaxPathLimit,
-                    pathToFile.string()),
-                "");
+            Logger::get().warn(fmt::format(
+                "file path length {} is close to the platform limit of {} characters (path: {})",
+                iFilePathLength,
+                iMaxPathLimit,
+                pathToFile.string()));
         } else if (iFilePathLength >= iMaxPathLimit) {
             return Error(fmt::format(
                 "file path length {} exceeds the platform limit of {} characters (path: {})",

@@ -249,8 +249,5 @@ namespace ne {
 
         /** Delta to compare input to zero. */
         static inline constexpr float floatDelta = 0.00001F;
-
-        /** Name of the category used for logging. */
-        static inline const auto sCameraPropertiesLogCategory = "Camera Properties";
     };
 } // namespace ne

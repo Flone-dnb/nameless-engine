@@ -196,8 +196,5 @@ namespace ne {
 
         /** Delta to compare input to zero. */
         static inline constexpr float inputDelta = 0.0001F;
-
-        /** Name of the category used for logging. */
-        static inline const auto sTransientCameraLogCategory = "Transient Camera";
     };
 } // namespace ne

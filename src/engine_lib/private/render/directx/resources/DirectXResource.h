@@ -144,8 +144,5 @@ namespace ne {
          * to internal resource.
          */
         ID3D12Resource* pInternalResource = nullptr;
-
-        /** Name of the category used for logging. */
-        inline static const char* sDirectXResourceLogCategory = "DirectX Resource";
     };
 } // namespace ne

@@ -255,20 +255,17 @@ namespace ne {
         // ----------------------------------------
 
         /**
-         * Used as initial text for include chain string (beginning
-         * text in serialized form). After serialization
-         * in TOML configuration it might look like this:
+         * Used as the initial text for "include chain" string (starting text in serialized form).
+         * After serializing data in the TOML file, it might look like this:
+         *
          * @code
          * "includes.default.post_process"
-         *     ^------ [includes] initial text
-         *              ^------ [default] shader from ShaderDescription (say shader A)
-         *                        ^------ [post_process] shader B that shader A includes
+         *     ^------ [includes] initial text (this variable)
+         *              ^------ [default] shader file name from ShaderDescription (say shader A)
+         *                        ^------ [post_process] shader file name B that shader A includes
          * @endcode
          */
         static inline std::string_view sInitialIncludeChainText = "includes";
-
-        /** Name of the category used for logging. */
-        inline static auto sShaderDescriptionLogCategory = "Shader Description";
 
         /** Name of the section that is used to store ShaderDescription in configuration (on disk). */
         inline static auto sConfigurationFileSectionName = "shader_description";

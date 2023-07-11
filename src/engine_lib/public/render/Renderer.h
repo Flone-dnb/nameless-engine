@@ -21,6 +21,9 @@ namespace ne {
     class ShaderConfiguration;
     class RenderSettings;
 
+    /** Describes "types" of derived Renderer classes. */
+    enum class RendererType : unsigned int { DIRECTX = 0, VULKAN = 1 };
+
     /** Defines a base class for renderers to implement. */
     class Renderer {
         // Only window should be able to request new frames to be drawn.
@@ -74,6 +77,20 @@ namespace ne {
          */
         virtual std::variant<std::set<std::pair<unsigned int, unsigned int>>, Error>
         getSupportedRefreshRates() const = 0;
+
+        /**
+         * Returns renderer's name.
+         *
+         * @return Renderer's name.
+         */
+        virtual std::string getName() const = 0;
+
+        /**
+         * Returns renderer's type.
+         *
+         * @return Renderer's type.
+         */
+        virtual RendererType getType() const = 0;
 
         /**
          * Returns render settings that can be configured.

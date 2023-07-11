@@ -109,6 +109,20 @@ namespace ne {
         virtual void waitForGpuToFinishWorkUpToThisPoint() override;
 
         /**
+         * Returns renderer's name.
+         *
+         * @return Renderer's name.
+         */
+        virtual std::string getName() const override;
+
+        /**
+         * Returns renderer's type.
+         *
+         * @return Renderer's type.
+         */
+        virtual RendererType getType() const override;
+
+        /**
          * Returns DirectX device.
          *
          * @return Do not delete (free) this pointer. Render's internal device.

@@ -1301,6 +1301,10 @@ namespace ne {
         waitForFenceValue(iFenceToWait);
     }
 
+    std::string DirectXRenderer::getName() const { return "DirectX"; }
+
+    RendererType DirectXRenderer::getType() const { return RendererType::DIRECTX; }
+
     ID3D12Device* DirectXRenderer::getD3dDevice() const { return pDevice.Get(); }
 
     ID3D12GraphicsCommandList* DirectXRenderer::getD3dCommandList() { return pCommandList.Get(); }

@@ -34,6 +34,7 @@ set(PROJECT_SOURCES
     src/misc/GC.cpp
     src/materials/ShaderPack.cpp
     src/materials/Material.cpp
+    src/materials/ShaderManager.cpp
     src/io/Serializable.cpp
     src/render/RenderSettings.cpp
     src/render/Pso.cpp

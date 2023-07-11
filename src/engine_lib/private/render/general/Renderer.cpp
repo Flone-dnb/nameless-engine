@@ -24,6 +24,7 @@ namespace ne {
 
         this->pGameManager = pGameManager;
 
+        // Create some objects.
         pShaderManager = std::make_unique<ShaderManager>(this);
         pPsoManager = std::make_unique<PsoManager>(this);
         mtxShaderConfiguration.second = std::make_unique<ShaderConfiguration>(this);
@@ -175,6 +176,14 @@ namespace ne {
         // Create shader read/write resource manager.
         pShaderCpuReadWriteResourceManager =
             std::unique_ptr<ShaderCpuReadWriteResourceManager>(new ShaderCpuReadWriteResourceManager(this));
+
+        // Make sure shader cache is valid.
+        auto optionalError = pShaderManager->refreshShaderCache();
+        if (optionalError.has_value()) [[unlikely]] {
+            optionalError->addEntry();
+            optionalError->showError();
+            throw std::runtime_error(optionalError->getFullErrorMessage());
+        }
     }
 
 } // namespace ne

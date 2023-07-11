@@ -224,14 +224,14 @@ namespace ne {
 
         /**
          * Looks if any of the global shader cache parameters changed
-         * (such as build mode, shader model, etc.) and clears shader cache
-         * directory if needed.
+         * (such as build mode, shader model, etc.), clears shader cache
+         * directory and creates a fresh new shader cache directory with up to date info.
          *
-         * @remark If no global shader cache configuration file existed will create it.
+         * @remark If no global shader cache metadata file existed it will create it.
          *
          * @return An error if something went wrong.
          */
-        [[nodiscard]] std::optional<Error> clearShaderCacheIfNeeded();
+        [[nodiscard]] std::optional<Error> refreshShaderCache();
 
         /**
          * Writes current configuration to disk.
@@ -294,10 +294,15 @@ namespace ne {
 
         /** Name of the key for vertex shader model, used in global shader cache information. */
         const std::string_view sGlobalShaderCacheHlslVsModelKeyName = "hlsl_vs";
+
         /** Name of the key for pixel shader model, used in global shader cache information. */
         const std::string_view sGlobalShaderCacheHlslPsModelKeyName = "hlsl_ps";
+
         /** Name of the key for compute shader model, used in global shader cache information. */
         const std::string_view sGlobalShaderCacheHlslCsModelKeyName = "hlsl_cs";
+
+        /** Name of the key for renderer's type, used in global shader cache information. */
+        const std::string_view sGlobalShaderCacheRendererTypeKeyName = "renderer_type";
 
         /** Name of the file in which we store configurable values. */
         const std::string_view sConfigurationFileName = "shader_manager";

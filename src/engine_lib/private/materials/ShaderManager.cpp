@@ -110,7 +110,7 @@ namespace ne {
         writeConfigurationToDisk();
     }
 
-    std::optional<Error> ShaderManager::clearShaderCacheIfNeeded() {
+    std::optional<Error> ShaderManager::refreshShaderCache() {
         std::scoped_lock guard(mtxRwShaders);
 
 #if defined(DEBUG)
@@ -121,57 +121,72 @@ namespace ne {
 
         ConfigManager configManager;
 
+        // Prepare paths to shader cache directory and global cache metadata file.
         const auto shaderCacheDir = ShaderFilesystemPaths::getPathToShaderCacheDirectory();
         const auto shaderParamsPath =
             ShaderFilesystemPaths::getPathToShaderCacheDirectory() / sGlobalShaderCacheParametersFileName;
 
         bool bUpdateShaderCacheConfig = false;
 
+        // Check if global shader cache metadata file exists.
         if (std::filesystem::exists(shaderParamsPath)) {
+            // Load global shader cache metadata file.
             auto result = configManager.loadFile(shaderParamsPath);
-            if (result.has_value()) {
+            if (result.has_value()) [[unlikely]] {
                 result->addEntry();
                 return result.value();
             }
 
-            // Read parameters from config.
+            // Read build mode.
             const auto bOldShaderCacheInRelease =
                 configManager.getValue<bool>("", sGlobalShaderCacheReleaseBuildKeyName, !bIsReleaseBuild);
-            const auto sOldHlslVsModel =
-                configManager.getValue<std::string>("", sGlobalShaderCacheHlslVsModelKeyName, "");
-            const auto sOldHlslPsModel =
-                configManager.getValue<std::string>("", sGlobalShaderCacheHlslPsModelKeyName, "");
-            const auto sOldHlslCsModel =
-                configManager.getValue<std::string>("", sGlobalShaderCacheHlslCsModelKeyName, "");
 
-            // Check if build mode changed.
+            // Check if the current build mode differs from the one in the metadata.
             if (bOldShaderCacheInRelease != bIsReleaseBuild) {
                 Logger::get().info("clearing shader cache directory because build mode was changed");
-
                 bUpdateShaderCacheConfig = true;
+            }
+
+            if (!bUpdateShaderCacheConfig) {
+                // Read renderer type.
+                const auto iOldRendererType = configManager.getValue<unsigned int>(
+                    "", sGlobalShaderCacheRendererTypeKeyName, std::numeric_limits<unsigned int>::max());
+
+                // Check if renderer was changed.
+                if (static_cast<unsigned int>(pRenderer->getType()) != iOldRendererType) {
+                    Logger::get().info("clearing shader cache directory because renderer was changed");
+                    bUpdateShaderCacheConfig = true;
+                }
             }
 
 #if defined(WIN32)
             if (!bUpdateShaderCacheConfig && dynamic_cast<DirectXRenderer*>(pRenderer) != nullptr) {
+                // Read HLSL info.
+                const auto sOldHlslVsModel =
+                    configManager.getValue<std::string>("", sGlobalShaderCacheHlslVsModelKeyName, "");
+                const auto sOldHlslPsModel =
+                    configManager.getValue<std::string>("", sGlobalShaderCacheHlslPsModelKeyName, "");
+                const auto sOldHlslCsModel =
+                    configManager.getValue<std::string>("", sGlobalShaderCacheHlslCsModelKeyName, "");
+
                 // Check if vertex shader model changed.
                 if (!bUpdateShaderCacheConfig && sOldHlslVsModel != HlslShader::getVertexShaderModel()) {
                     Logger::get().info(
                         "clearing shader cache directory because vertex shader model was changed");
-
                     bUpdateShaderCacheConfig = true;
                 }
+
                 // Check if pixel shader model changed.
                 if (!bUpdateShaderCacheConfig && sOldHlslPsModel != HlslShader::getPixelShaderModel()) {
                     Logger::get().info(
                         "clearing shader cache directory because pixel shader model was changed");
-
                     bUpdateShaderCacheConfig = true;
                 }
+
                 // Check if compute shader model changed.
                 if (!bUpdateShaderCacheConfig && sOldHlslCsModel != HlslShader::getComputeShaderModel()) {
                     Logger::get().info(
                         "clearing shader cache directory because compute shader model was changed");
-
                     bUpdateShaderCacheConfig = true;
                 }
             }
@@ -189,6 +204,7 @@ namespace ne {
             bUpdateShaderCacheConfig = true;
         }
 
+        // Clear shader cache if needed.
         if (bUpdateShaderCacheConfig) {
             if (std::filesystem::exists(shaderCacheDir)) {
                 std::filesystem::remove_all(shaderCacheDir);
@@ -197,6 +213,7 @@ namespace ne {
 
 #if defined(WIN32)
             if (dynamic_cast<DirectXRenderer*>(pRenderer) != nullptr) {
+                // Set HLSL info.
                 configManager.setValue<std::string>(
                     "", sGlobalShaderCacheHlslVsModelKeyName, HlslShader::getVertexShaderModel());
                 configManager.setValue<std::string>(
@@ -211,10 +228,16 @@ namespace ne {
             static_assert(false, "not implemented");
 #endif
 
+            // Set build mode.
             configManager.setValue<bool>("", sGlobalShaderCacheReleaseBuildKeyName, bIsReleaseBuild);
 
+            // Set renderer type.
+            configManager.setValue<unsigned int>(
+                "", sGlobalShaderCacheRendererTypeKeyName, static_cast<unsigned int>(pRenderer->getType()));
+
+            // Save new global shader cache metadata file.
             auto result = configManager.saveFile(shaderParamsPath, false);
-            if (result.has_value()) {
+            if (result.has_value()) [[unlikely]] {
                 result->addEntry();
                 return result.value();
             }
@@ -430,26 +453,25 @@ namespace ne {
 
         // Check shader name for forbidden characters and see if source file exists.
         for (const auto& shader : vShadersToCompile) {
-            if (shader.sShaderName.size() > iMaximumShaderNameLength) {
+            if (shader.sShaderName.size() > iMaximumShaderNameLength) [[unlikely]] {
                 return Error(fmt::format(
                     "shader name \"{}\" is too long (only {} characters allowed)",
                     shader.sShaderName,
                     iMaximumShaderNameLength));
             }
-            if (!std::filesystem::exists(shader.pathToShaderFile)) {
+            if (!std::filesystem::exists(shader.pathToShaderFile)) [[unlikely]] {
                 return Error(fmt::format(
                     "shader source file \"{}\" does not exist", shader.pathToShaderFile.string()));
             }
-            if (shader.sShaderName.ends_with(" ") || shader.sShaderName.ends_with(".")) {
+            if (shader.sShaderName.ends_with(" ") || shader.sShaderName.ends_with(".")) [[unlikely]] {
                 return Error(
                     fmt::format("shader name \"{}\" must not end with a dot or a space", shader.sShaderName));
             }
             for (const auto& character : shader.sShaderName) {
-                auto it = std::ranges::find(vValidCharactersForShaderName, character);
+                const auto it = std::ranges::find(vValidCharactersForShaderName, character);
                 if (it == vValidCharactersForShaderName.end()) {
                     return Error(fmt::format(
-                        "shader name \"{}\" contains forbidden "
-                        "character ({})",
+                        "shader name \"{}\" contains forbidden character \"{}\"",
                         shader.sShaderName,
                         character));
                 }
@@ -461,13 +483,11 @@ namespace ne {
         // Check if we already have a shader with this name.
         for (const auto& shader : vShadersToCompile) {
             if (shader.sShaderName.starts_with(".")) [[unlikely]] {
-                return Error(fmt::format(
-                    "shader names that start with a dot (\".\") could not be used as "
-                    "these files are reserved for internal purposes",
-                    sGlobalShaderCacheParametersFileName));
+                return Error("shader names that start with a dot (\".\") could not be used as "
+                             "these names are reserved for internal purposes");
             }
 
-            auto it = compiledShaders.find(shader.sShaderName);
+            const auto it = compiledShaders.find(shader.sShaderName);
             if (it != compiledShaders.end()) [[unlikely]] {
                 return Error(fmt::format(
                     "a shader with the name \"{}\" was already added, "
@@ -476,15 +496,12 @@ namespace ne {
             }
         }
 
-        const auto optional = clearShaderCacheIfNeeded();
-        if (optional.has_value()) {
-            return optional.value();
-        }
-
+        // Prepare for shader compilation.
         const auto iCurrentQueryId = iTotalCompileShadersQueries.fetch_add(1);
         const auto iTotalShaderCount = vShadersToCompile.size();
         std::shared_ptr<std::atomic<size_t>> pCompiledShaderCount = std::make_shared<std::atomic<size_t>>();
 
+        // Start compilation tasks.
         for (size_t i = 0; i < vShadersToCompile.size(); i++) {
             pRenderer->getGameManager()->addTaskToThreadPool(
                 [this,

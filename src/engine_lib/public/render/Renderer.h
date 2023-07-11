@@ -304,7 +304,7 @@ namespace ne {
         GameManager* pGameManager = nullptr;
 
         /** Number of buffers in swap chain. */
-        static constexpr unsigned int iSwapChainBufferCount = 2;
+        static constexpr unsigned int iSwapChainBufferCount = 3;
     };
 
     /** Describes a group of shader macros. */

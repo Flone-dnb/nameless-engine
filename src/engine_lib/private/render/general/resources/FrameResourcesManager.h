@@ -26,8 +26,6 @@ struct ID3D12CommandAllocator;
 #endif
 
 namespace ne {
-    static constexpr unsigned int iFrameResourcesCount = 3;
-
 #if defined(WIN32)
     using namespace Microsoft::WRL;
 #endif
@@ -143,6 +141,9 @@ namespace ne {
 
         /** Points to the currently used item from @ref vFrameResources. */
         std::pair<std::recursive_mutex, CurrentFrameResource> mtxCurrentFrameResource;
+
+        /** Number of frames "in-flight" that the CPU can submit to the GPU without waiting. */
+        static constexpr unsigned int iFrameResourcesCount = 3;
 
         /** Array of frame-specific resources, all contain the same data. */
         std::array<std::unique_ptr<FrameResource>, iFrameResourcesCount> vFrameResources;

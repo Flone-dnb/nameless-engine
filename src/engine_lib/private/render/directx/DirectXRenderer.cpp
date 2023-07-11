@@ -393,11 +393,11 @@ namespace ne {
                     const auto pMtxMaterialGpuResources = pMaterial->getMaterialGpuResources();
                     std::scoped_lock materialGpuResourcesGuard(pMtxMaterialGpuResources->first);
 
-                    // Set material's read/write shader resources (`cbuffer`s for example).
-                    for (const auto& [sResourceName, pShaderReadWriteResource] :
+                    // Set material's CPU read/write shader resources (`cbuffer`s for example).
+                    for (const auto& [sResourceName, pShaderCpuReadWriteResource] :
                          pMtxMaterialGpuResources->second.shaderResources.shaderCpuReadWriteResources) {
                         reinterpret_cast<HlslShaderCpuReadWriteResource*>(
-                            pShaderReadWriteResource.getResource())
+                            pShaderCpuReadWriteResource.getResource())
                             ->setToPipeline(
                                 pCommandList, pMtxCurrentFrameResource->second.iCurrentFrameResourceIndex);
                     }
@@ -538,10 +538,10 @@ namespace ne {
             pCommandList->IASetVertexBuffers(0, 1, &vertexBufferView);
             pCommandList->IASetIndexBuffer(&indexBufferView);
 
-            // Set read/write shader resources (`cbuffer`s for example).
-            for (const auto& [sResourceName, pShaderReadWriteResource] :
+            // Set CPU read/write shader resources (`cbuffer`s for example).
+            for (const auto& [sResourceName, pShaderCpuReadWriteResource] :
                  pMtxMeshGpuResources->second.shaderResources.shaderCpuReadWriteResources) {
-                reinterpret_cast<HlslShaderCpuReadWriteResource*>(pShaderReadWriteResource.getResource())
+                reinterpret_cast<HlslShaderCpuReadWriteResource*>(pShaderCpuReadWriteResource.getResource())
                     ->setToPipeline(pCommandList, iCurrentFrameResourceIndex);
             }
 

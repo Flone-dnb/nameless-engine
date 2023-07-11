@@ -16,6 +16,12 @@
 
 namespace ne {
     Renderer::Renderer(GameManager* pGameManager) {
+        // There should be at least 2 swap chain images.
+        static_assert(iSwapChainBufferCount >= 2);
+
+        // Make sure there are N swap chain images and N frame resources (frames in flight).
+        static_assert(iSwapChainBufferCount == FrameResourcesManager::getFrameResourcesCount());
+
         this->pGameManager = pGameManager;
 
         pShaderManager = std::make_unique<ShaderManager>(this);

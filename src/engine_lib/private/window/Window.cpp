@@ -328,6 +328,10 @@ namespace ne {
 
     WindowBuilder Window::getBuilder() { return {}; }
 
+    void Window::setPreferredRenderer(const std::optional<RendererType>& preferredRenderer) {
+        this->preferredRenderer = preferredRenderer;
+    }
+
     void Window::show() const { glfwShowWindow(pGlfwWindow); }
 
     void Window::setOpacity(float opacity) const { glfwSetWindowOpacity(pGlfwWindow, opacity); }

@@ -28,17 +28,9 @@ namespace ne {
     class Material;
     class CameraProperties;
 
-    /**
-     * DirectX 12 renderer.
-     */
+    /** Renderer made with DirectX 12 API. */
     class DirectXRenderer : public Renderer {
     public:
-        /**
-         * Initializes renderer base entities.
-         *
-         * @param pGame   Game object that owns this renderer.
-         */
-        DirectXRenderer(GameManager* pGame);
         DirectXRenderer() = delete;
         DirectXRenderer(const DirectXRenderer&) = delete;
         DirectXRenderer& operator=(const DirectXRenderer&) = delete;
@@ -59,6 +51,16 @@ namespace ne {
          * vector with GPU names if successful.
          */
         virtual std::variant<std::vector<std::string>, Error> getSupportedGpuNames() const override;
+
+        /**
+         * Creates a new DirectX renderer.
+         *
+         * @param pGameManager GameManager object that owns this renderer.
+         *
+         * @return Error if something went wrong (for ex. if the hardware does not support this
+         * renderer), otherwise created renderer.
+         */
+        static std::variant<std::unique_ptr<Renderer>, Error> create(GameManager* pGameManager);
 
         /**
          * Returns a list of supported render resolution (pairs of width and height).
@@ -109,18 +111,21 @@ namespace ne {
         virtual void waitForGpuToFinishWorkUpToThisPoint() override;
 
         /**
-         * Returns renderer's name.
-         *
-         * @return Renderer's name.
-         */
-        virtual std::string getName() const override;
-
-        /**
          * Returns renderer's type.
          *
          * @return Renderer's type.
          */
         virtual RendererType getType() const override;
+
+        /**
+         * Returns API version or a feature level that the renderer uses.
+         *
+         * For example DirectX renderer will return used feature level and Vulkan renderer
+         * will return used Vulkan API version.
+         *
+         * @return Used API version.
+         */
+        virtual std::string getUsedApiVersion() const override;
 
         /**
          * Returns DirectX device.
@@ -173,31 +178,65 @@ namespace ne {
 
     protected:
         /**
+         * Creates an empty (uninitialized) renderer.
+         *
+         * @remark Use @ref initialize to initialize the renderer.
+         *
+         * @param pGameManager GameManager object that owns this renderer.
+         */
+        DirectXRenderer(GameManager* pGameManager);
+
+        /**
+         * Compiles/verifies all essential shaders that the engine will use.
+         *
+         * @remark This is the last step in renderer initialization that is executed after the
+         * renderer was tested to support the hardware.
+         *
+         * @return Error if something went wrong.
+         */
+        [[nodiscard]] virtual std::optional<Error> compileEngineShaders() const override;
+
+        /**
          * Update internal resources for the next frame.
          *
          * @param pCameraProperties Camera properties to use.
          */
         void updateResourcesForNextFrame(CameraProperties* pCameraProperties);
 
-        /** Draw new frame. */
+        /** Submits a new frame to the GPU. */
         virtual void drawNextFrame() override;
 
         /**
          * Recreates all main render buffers to match current render settings.
+         *
+         * @remark Usually called after some renderer setting was changed or window size changed.
          *
          * @return Error if something went wrong.
          */
         [[nodiscard]] virtual std::optional<Error> updateRenderBuffers() override;
 
         /**
-         * Tells whether the renderer is initialized or not
-         * (whether it's safe to use renderer functionality or not).
+         * Tells whether the renderer is initialized or not.
+         *
+         * Initialized renderer means that the hardware supports it and it's safe to use renderer
+         * functionality such as @ref updateRenderBuffers.
          *
          * @return Whether the renderer is initialized or not.
          */
         virtual bool isInitialized() const override;
 
     private:
+        /**
+         * Initializes the renderer.
+         *
+         * @remark This function is usually called after constructing a new empty (uninitialized)
+         * DirectX renderer.
+         *
+         * @return Error if something went wrong (for ex. if the hardware does not support this
+         * renderer), otherwise created renderer.
+         */
+        [[nodiscard]] std::optional<Error> initialize();
+
         /**
          * Enables DX debug layer.
          *
@@ -213,7 +252,8 @@ namespace ne {
          * (Re)creates the depth/stencil buffer with the "depth write" initial state
          * and binds a DSV to it.
          *
-         * @remark Make sure that the old depth/stencil buffer (if was) is not used by the GPU.
+         * @remark Make sure that the old depth/stencil buffer (if was) is not used by the GPU before
+         * calling this function.
          *
          * @return Error if something went wrong.
          */
@@ -274,13 +314,6 @@ namespace ne {
          * @return Error if something went wrong.
          */
         [[nodiscard]] std::optional<Error> initializeDirectX();
-
-        /**
-         * Compiles all essential shaders that the engine will use.
-         *
-         * @return Error if something went wrong.
-         */
-        [[nodiscard]] std::optional<Error> compileEngineShaders() const;
 
         /**
          * Setups everything for render commands to be recorded (calls @ref updateResourcesForNextFrame,
@@ -418,24 +451,25 @@ namespace ne {
         bool bIsDirectXInitialized = false;
 
         /** Minimum value for depth. */
-        const float fMinDepth = 0.0F;
+        static constexpr float fMinDepth = 0.0F;
 
         /** Maximum value for depth. */
-        const float fMaxDepth = 1.0F;
+        static constexpr float fMaxDepth = 1.0F;
 
         /** Back buffer format. */
-        const DXGI_FORMAT backBufferFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
+        static constexpr DXGI_FORMAT backBufferFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
 
         /** Depth/stencil buffer format. */
-        const DXGI_FORMAT depthStencilBufferFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
+        static constexpr DXGI_FORMAT depthStencilBufferFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
 
         /** Use only display modes that use this scaling. */
-        const DXGI_MODE_SCALING usedScaling = DXGI_MODE_SCALING_UNSPECIFIED;
+        static constexpr DXGI_MODE_SCALING usedScaling = DXGI_MODE_SCALING_UNSPECIFIED;
 
         /** Use only display modes that use this scanline ordering. */
-        const DXGI_MODE_SCANLINE_ORDER usedScanlineOrdering = DXGI_MODE_SCANLINE_ORDER_PROGRESSIVE;
+        static constexpr DXGI_MODE_SCANLINE_ORDER usedScanlineOrdering = DXGI_MODE_SCANLINE_ORDER_PROGRESSIVE;
 
         /** D3D feature level that we use (required feature level). */
-        const D3D_FEATURE_LEVEL rendererD3dFeatureLevel = D3D_FEATURE_LEVEL::D3D_FEATURE_LEVEL_12_1;
+        static constexpr D3D_FEATURE_LEVEL rendererD3dFeatureLevel =
+            D3D_FEATURE_LEVEL::D3D_FEATURE_LEVEL_12_1;
     };
 } // namespace ne

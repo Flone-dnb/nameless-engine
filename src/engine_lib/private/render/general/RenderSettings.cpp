@@ -99,6 +99,11 @@ namespace ne {
     }
 
     std::optional<Error> RenderSettings::saveConfigurationToDisk() {
+        if (!bAllowSavingConfigurationToDisk) {
+            return {};
+        }
+
+        // Save.
         auto optionalError = serialize(getPathToConfigurationFile(), false);
         if (optionalError.has_value()) {
             optionalError->addEntry();
@@ -143,6 +148,11 @@ namespace ne {
             // Correct the value.
             iTextureFilteringMode = iNewTextureFilteringMode;
         }
+
+#if defined(DEBUG)
+        static_assert(
+            sizeof(RenderSettings) == 152, "consider adding new checks here"); // NOLINT: current class size
+#endif
     }
 
     void RenderSettings::setTextureFilteringMode(TextureFilteringMode mode) {
@@ -216,7 +226,7 @@ namespace ne {
         return static_cast<TextureFilteringMode>(iTextureFilteringMode);
     }
 
-    std::pair<unsigned int, unsigned int> RenderSettings::getRenderResolution() {
+    std::pair<unsigned int, unsigned int> RenderSettings::getRenderResolution() const {
         return std::make_pair(iRenderResolutionWidth, iRenderResolutionHeight);
     }
 
@@ -446,6 +456,11 @@ namespace ne {
         updateRendererConfigurationForAntialiasing();
         updateRendererConfigurationForTextureFiltering();
         updateRendererConfigurationForScreen();
+
+#if defined(DEBUG)
+        static_assert(
+            sizeof(RenderSettings) == 152, "add new render settings here"); // NOLINT: current class size
+#endif
     }
 
     std::string RenderSettings::getConfigurationFileName(bool bIncludeFileExtension) {
@@ -454,6 +469,32 @@ namespace ne {
         }
 
         return sRenderSettingsConfigurationFileName;
+    }
+
+    void RenderSettings::setPreferredRenderer(RendererType preferredRenderer) {
+        const auto iNewRendererType = static_cast<unsigned int>(preferredRenderer);
+
+        if (iNewRendererType == iRendererType) {
+            return; // do nothing
+        }
+
+        // Log change.
+        Logger::get().info(fmt::format(
+            "preferred renderer is being changed from \"{}\" to \"{}\"", iRendererType, iNewRendererType));
+
+        // Change.
+        iRendererType = iNewRendererType;
+
+        // Engine needs to be restarted in order for the setting to be applied.
+
+        // Save.
+        auto optionalError = saveConfigurationToDisk();
+        if (optionalError.has_value()) {
+            optionalError->addEntry();
+            Logger::get().error(fmt::format(
+                "failed to save new render setting configuration, error: \"{}\"",
+                optionalError->getFullErrorMessage()));
+        }
     }
 
 } // namespace ne

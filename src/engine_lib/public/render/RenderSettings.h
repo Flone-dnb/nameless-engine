@@ -8,6 +8,9 @@
 namespace ne RNAMESPACE() {
     class Renderer;
 
+    /** Describes "types" of derived Renderer classes. */
+    enum class RendererType : unsigned int { DIRECTX = 0, VULKAN = 1 };
+
     /** Describes the quality (sample count) of MSAA. */
     enum class MsaaQuality : int { MEDIUM = 2, HIGH = 4 };
 
@@ -45,32 +48,11 @@ namespace ne RNAMESPACE() {
         void setAntialiasingQuality(MsaaQuality quality);
 
         /**
-         * Tells whether anti-aliasing (AA) is currently enabled or not.
-         *
-         * @return Whether AA is enabled or not.
-         */
-        bool isAntialiasingEnabled() const;
-
-        /**
-         * Returns current anti-aliasing (AA) quality.
-         *
-         * @return Current AA quality.
-         */
-        MsaaQuality getAntialiasingQuality() const;
-
-        /**
          * Sets texture filtering mode to be used.
          *
          * @param mode Mode to use.
          */
         void setTextureFilteringMode(TextureFilteringMode mode);
-
-        /**
-         * Returns currently used texture filtering mode.
-         *
-         * @return Texture filtering mode.
-         */
-        TextureFilteringMode getTextureFilteringMode() const;
 
         /**
          * Sets the width and the height of the rendered images.
@@ -96,11 +78,24 @@ namespace ne RNAMESPACE() {
         /**
          * Sets GPU to be used next time the engine starts.
          *
+         * @remark Use Renderer to get available GPU names.
+         *
          * @remark In order for this setting to be applied the engine needs to be restarted.
          *
          * @param sGpuName Name of the GPU to use.
          */
         void setGpuToUse(const std::string& sGpuName);
+
+        /**
+         * Changes renderer's config file setting about preferred renderer.
+         *
+         * @remark In order for this setting to be applied the engine needs to be restarted.
+         *
+         * @remark Note that this setting will be ignored if you use Window::setPreferredRenderer.
+         *
+         * @param preferredRenderer Renderer to prefer (test the first one) next time the game is started.
+         */
+        void setPreferredRenderer(RendererType preferredRenderer);
 
         /**
          * Sets GPU to be used next time the engine starts.
@@ -112,11 +107,32 @@ namespace ne RNAMESPACE() {
         void setGpuToUse(unsigned int iGpuIndex);
 
         /**
+         * Tells whether anti-aliasing (AA) is currently enabled or not.
+         *
+         * @return Whether AA is enabled or not.
+         */
+        bool isAntialiasingEnabled() const;
+
+        /**
+         * Returns current anti-aliasing (AA) quality.
+         *
+         * @return Current AA quality.
+         */
+        MsaaQuality getAntialiasingQuality() const;
+
+        /**
+         * Returns currently used texture filtering mode.
+         *
+         * @return Texture filtering mode.
+         */
+        TextureFilteringMode getTextureFilteringMode() const;
+
+        /**
          * Returns currently used render resolution (width and height).
          *
          * @return Width and height in pixels.
          */
-        std::pair<unsigned int, unsigned int> getRenderResolution();
+        std::pair<unsigned int, unsigned int> getRenderResolution() const;
 
         /**
          * Tells if vertical synchronization is currently enabled or not.
@@ -176,15 +192,22 @@ namespace ne RNAMESPACE() {
          */
         void setRenderer(Renderer* pRenderer);
 
-        /** Changes renderer's state to match the current settings. */
-        void updateRendererConfiguration();
-
         /**
          * Saves the current configuration to disk.
          *
+         * @remark Does nothing if @ref bAllowSavingConfigurationToDisk is `false`.
+         *
          * @return Error if something went wrong.
          */
-        [[nodiscard]] std::optional<Error> saveConfigurationToDisk();
+        std::optional<Error> saveConfigurationToDisk();
+
+        /**
+         * Changes renderer's state to match the current settings.
+         *
+         * @remark Does nothing if the renderer is not initialized yet. The renderer
+         * will take values from the settings upon initialization.
+         */
+        void updateRendererConfiguration();
 
         /** Changes renderer's state to match the current texture filtering settings. */
         void updateRendererConfigurationForTextureFiltering();
@@ -220,6 +243,14 @@ namespace ne RNAMESPACE() {
         RPROPERTY(Serialize)
         unsigned int iUsedGpuIndex = 0;
 
+        /**
+         * Stored used type of the renderer (DirectX/Vulkan/etc.).
+         *
+         * @remark Can be changed from the config file to change preferred renderer.
+         */
+        RPROPERTY(Serialize)
+        unsigned int iRendererType = 0;
+
         /** Sample count of AA. */
         RPROPERTY(Serialize)
         int iAntialiasingSampleCount = static_cast<int>(MsaaQuality::HIGH);
@@ -238,6 +269,18 @@ namespace ne RNAMESPACE() {
 
         /** Do not delete (free) this pointer. Game's renderer. */
         Renderer* pRenderer = nullptr;
+
+        /**
+         * Defines whether or not changes to render settings trigger saving on disk.
+         *
+         * @remark Disabled by default as render settings can be modified by a renderer during
+         * its initialization (some settings getting clamped/fixed due to render/hardware capabilities)
+         * and because a renderer can fail to initialize (for example if the hardware does not support it)
+         * we don't want any of these modifications to be saved. Once a renderer was initialized
+         * the base Renderer class will enable saving on disk and will trigger a manual resave to apply
+         * possibly fixed/clamped settings.
+         */
+        bool bAllowSavingConfigurationToDisk = false;
 
         /** Name of the file we use to store render settings. */
         static inline const char* sRenderSettingsConfigurationFileName = "render";

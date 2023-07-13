@@ -1,15 +1,18 @@
 ﻿#include "render/Renderer.h"
 
+// Standard.
+#include <array>
+
 // Custom.
 #include "game/GameManager.h"
 #include "game/Window.h"
 #include "io/Logger.h"
 #include "materials/ShaderMacro.h"
 #include "render/general/pso/PsoManager.h"
-#include "render/RenderSettings.h"
 #if defined(WIN32)
 #include "render/directx/DirectXRenderer.h"
 #endif
+#include "render/vulkan/VulkanRenderer.h"
 
 // External.
 #include "fmt/core.h"
@@ -38,16 +41,136 @@ namespace ne {
             ShaderMacroConfigurations::validVertexShaderMacroConfigurations.size()));
     }
 
-    std::unique_ptr<Renderer> Renderer::create(GameManager* pGameManager) {
+    std::unique_ptr<Renderer>
+    Renderer::createRenderer(GameManager* pGameManager, std::optional<RendererType> preferredRenderer) {
+        // Describe default renderer preference.
+        std::array<RendererType, 2> vRendererPreferenceQueue = {RendererType::DIRECTX, RendererType::VULKAN};
+
+        if (!preferredRenderer.has_value()) {
+            // See if config file has a special preference.
+            // Construct path to config file.
+            const auto pathToConfigFile = ProjectPaths::getPathToEngineConfigsDirectory() /
+                                          RenderSettings::getConfigurationFileName(true);
+
+            // See if config file exists.
+            if (std::filesystem::exists(pathToConfigFile)) {
+                // Try to deserialize.
+                auto result = Serializable::deserialize<std::shared_ptr, RenderSettings>(pathToConfigFile);
+                if (std::holds_alternative<Error>(result)) {
+                    auto error = std::get<Error>(std::move(result));
+                    error.addEntry();
+                    Logger::get().error(fmt::format(
+                        "failed to deserialize render settings from the file \"{}\", using default "
+                        "settings instead, error: \"{}\"",
+                        pathToConfigFile.string(),
+                        error.getFullErrorMessage()));
+                } else {
+                    // Use the deserialized object.
+                    const auto pSettings = std::get<std::shared_ptr<RenderSettings>>(std::move(result));
+
+                    if (pSettings->iRendererType != static_cast<unsigned int>(RendererType::DIRECTX)) {
+                        // Change preference queue.
+                        vRendererPreferenceQueue = {RendererType::VULKAN, RendererType::DIRECTX};
+                    }
+                }
+            }
+        } else if (preferredRenderer.value() == RendererType::VULKAN) {
+            // Change preference queue.
+            vRendererPreferenceQueue = {RendererType::VULKAN, RendererType::DIRECTX};
+        }
+
+        // Create renderer using preference queue.
+        for (const auto& rendererType : vRendererPreferenceQueue) {
+            const auto pRendererName = rendererType == RendererType::DIRECTX ? "DirectX" : "Vulkan";
+
+            // Log test.
+            Logger::get().info(
+                fmt::format("checking if the hardware/OS supports {} renderer...", pRendererName));
+
+            // Attempt to create a renderer.
+            auto result = createRenderer(rendererType, pGameManager);
+            if (std::holds_alternative<Error>(result)) {
+                auto error = std::get<Error>(std::move(result));
+
+                // Log failure (not an error).
+                Logger::get().info(fmt::format(
+                    "failed to initialize {} renderer, error: {}",
+                    pRendererName,
+                    error.getFullErrorMessage()));
+            }
+            auto pRenderer = std::get<std::unique_ptr<Renderer>>(std::move(result));
+
+            // Log success.
+            Logger::get().info(fmt::format(
+                "using {} renderer (used API version: {})", pRendererName, pRenderer->getUsedApiVersion()));
+
+            return pRenderer;
+        }
+
+        return nullptr;
+    }
+
+    std::variant<std::unique_ptr<Renderer>, Error>
+    Renderer::createRenderer(RendererType type, GameManager* pGameManager) {
+        if (type == RendererType::DIRECTX) {
 #if defined(WIN32)
-        return std::make_unique<DirectXRenderer>(pGameManager);
-        // TODO: vulkan
-#elif __linux__
-        // TODO: vulkan
-        static_assert(false, "not implemented");
+            return DirectXRenderer::create(pGameManager);
 #else
-        static_assert(false, "not implemented");
+            return Error("DirectX renderer is not supported on this OS");
 #endif
+        }
+
+        return VulkanRenderer::create(pGameManager);
+    }
+
+    std::variant<std::unique_ptr<Renderer>, Error>
+    Renderer::create(GameManager* pGameManager, std::optional<RendererType> preferredRenderer) {
+        // Create a renderer.
+        auto pCreatedRenderer = createRenderer(pGameManager, preferredRenderer);
+        if (pCreatedRenderer == nullptr) [[unlikely]] {
+            return Error(fmt::format(
+                "unable to create a renderer because the hardware or the operating "
+                "system does not meet the engine requirements, make sure your "
+                "operating system and graphics drivers are updated and try again, "
+                "you can find more information about the error in the most recent log file at \"{}\"",
+                ProjectPaths::getPathToLogsDirectory().string()));
+        }
+
+        // Update render settings (maybe they were fixed/clamped during the renderer initialization).
+        const auto pMtxRenderSettings = pCreatedRenderer->getRenderSettings();
+        {
+            std::scoped_lock guard(pMtxRenderSettings->first);
+
+            // Set picked renderer type.
+            pMtxRenderSettings->second->iRendererType =
+                static_cast<unsigned int>(pCreatedRenderer->getType());
+
+            // Enable saving configuration on disk.
+            pMtxRenderSettings->second->bAllowSavingConfigurationToDisk = true;
+
+            // Save settings.
+            auto optionalError = pMtxRenderSettings->second->saveConfigurationToDisk();
+            if (optionalError.has_value()) [[unlikely]] {
+                optionalError->addEntry();
+                return optionalError.value();
+            }
+        }
+
+        // Update shader cache (clears if the old cache is no longer valid).
+        auto optionalError = pCreatedRenderer->getShaderManager()->refreshShaderCache();
+        if (optionalError.has_value()) [[unlikely]] {
+            optionalError->addEntry();
+            return optionalError.value();
+        }
+
+        // Compile/verify engine shaders.
+        optionalError = pCreatedRenderer->compileEngineShaders();
+        if (optionalError.has_value()) [[unlikely]] {
+            optionalError->addEntry();
+            return optionalError.value();
+        }
+
+        return pCreatedRenderer;
     }
 
     std::pair<std::recursive_mutex, std::shared_ptr<RenderSettings>>* Renderer::getRenderSettings() {
@@ -102,7 +225,7 @@ namespace ne {
         }
     }
 
-    void Renderer::initializeRenderSettings() {
+    std::optional<Error> Renderer::initializeRenderSettings() {
         // Construct path to config file.
         const auto pathToConfigFile =
             ProjectPaths::getPathToEngineConfigsDirectory() / RenderSettings::getConfigurationFileName(true);
@@ -134,22 +257,21 @@ namespace ne {
         // Initialize the setting.
         mtxRenderSettings.second->setRenderer(this);
 
-        // Resave because:
-        // - maybe no config existed
-        // - some deserialized values could have been corrected to be valid
-        auto optionalError = mtxRenderSettings.second->saveConfigurationToDisk();
-        if (optionalError.has_value()) {
-            auto error = optionalError.value();
-            error.addEntry();
-            Logger::get().error(fmt::format(
-                "failed to save new render settings, error: \"{}\"", error.getFullErrorMessage()));
-        }
-
         // Apply the configuration.
         mtxRenderSettings.second->updateRendererConfiguration();
+
+        return {};
     }
 
-    void Renderer::initializeRenderer() { initializeRenderSettings(); }
+    std::optional<Error> Renderer::initializeRenderer() {
+        auto optionalError = initializeRenderSettings();
+        if (optionalError.has_value()) {
+            optionalError->addEntry();
+            return optionalError;
+        }
+
+        return {};
+    }
 
     void Renderer::initializeResourceManagers() {
         // Create GPU resource manager.
@@ -176,14 +298,6 @@ namespace ne {
         // Create shader read/write resource manager.
         pShaderCpuReadWriteResourceManager =
             std::unique_ptr<ShaderCpuReadWriteResourceManager>(new ShaderCpuReadWriteResourceManager(this));
-
-        // Make sure shader cache is valid.
-        auto optionalError = pShaderManager->refreshShaderCache();
-        if (optionalError.has_value()) [[unlikely]] {
-            optionalError->addEntry();
-            optionalError->showError();
-            throw std::runtime_error(optionalError->getFullErrorMessage());
-        }
     }
 
 } // namespace ne

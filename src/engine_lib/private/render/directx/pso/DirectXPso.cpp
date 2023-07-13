@@ -85,10 +85,6 @@ namespace ne {
         static_assert(
             sizeof(InternalResources) == 152, // NOLINT: current struct size
             "release new resources here");
-#else
-        static_assert(
-            sizeof(InternalResources) == 120, // NOLINT: current struct size
-            "release new resources here");
 #endif
         // !!!
 

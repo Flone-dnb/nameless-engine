@@ -14,6 +14,7 @@
 #include "input/MouseButton.hpp"
 #include "misc/ThreadPool.h"
 #include "game/World.h"
+#include "render/RenderSettings.h"
 
 namespace ne {
     class GameInstance;
@@ -296,11 +297,22 @@ namespace ne {
 
     private:
         /**
-         * Constructor.
+         * Creates uninitialized GameManager.
+         *
+         * @remark Use @ref initialize to initialize the manager.
          *
          * @param pWindow Window that owns this Game object.
          */
         GameManager(Window* pWindow);
+
+        /**
+         * Initializes the manager.
+         *
+         * @param preferredRenderer Preferred renderer to be used.
+         *
+         * @return Error if something went wrong.
+         */
+        std::optional<Error> initialize(std::optional<RendererType> preferredRenderer);
 
         /**
          * Contains destructor logic: runs GC for the last time, destroys game instance, etc.
@@ -478,6 +490,9 @@ namespace ne {
 
         /** Whether @ref addDeferredTask should accept new tasks or not. */
         bool bShouldAcceptNewDeferredTasks = true;
+
+        /** Whether @ref initialize was called or not. */
+        bool bIsInitialized = false;
 
         /** Whether @ref destroy was called or not. */
         bool bIsBeingDestroyed = false;

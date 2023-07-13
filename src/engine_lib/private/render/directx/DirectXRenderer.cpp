@@ -39,20 +39,26 @@
 #endif
 
 namespace ne {
-    DirectXRenderer::DirectXRenderer(GameManager* pGame) : Renderer(pGame) {
+    DirectXRenderer::DirectXRenderer(GameManager* pGameManager) : Renderer(pGameManager) {}
+
+    std::optional<Error> DirectXRenderer::initialize() {
         std::scoped_lock frameGuard(*getRenderResourcesMutex());
 
         // Initialize the current fence value.
         mtxCurrentFenceValue.second = 0;
 
-        initializeRenderer();
-
-        // Initialize DirectX.
-        auto optionalError = initializeDirectX();
+        // Initialize essential entities.
+        auto optionalError = initializeRenderer();
         if (optionalError.has_value()) {
             optionalError->addEntry();
-            optionalError->showError();
-            throw std::runtime_error(optionalError->getFullErrorMessage());
+            return optionalError;
+        }
+
+        // Initialize DirectX.
+        optionalError = initializeDirectX();
+        if (optionalError.has_value()) {
+            optionalError->addEntry();
+            return optionalError;
         }
 
         // Disable Alt + Enter in order to avoid switching to fullscreen exclusive mode
@@ -61,25 +67,33 @@ namespace ne {
             pFactory->MakeWindowAssociation(getWindow()->getWindowHandle(), DXGI_MWA_NO_ALT_ENTER);
         if (FAILED(hResult)) {
             Error error(hResult);
-            error.showError();
-            throw std::runtime_error(error.getFullErrorMessage());
+            error.addEntry();
+            return error;
         }
 
         // Set initial size for buffers.
         optionalError = updateRenderBuffers();
         if (optionalError.has_value()) {
             optionalError->addEntry();
-            optionalError->showError();
-            throw std::runtime_error(optionalError->getFullErrorMessage());
+            return optionalError;
         }
 
-        // Compile engine shaders.
-        optionalError = compileEngineShaders();
+        return {};
+    }
+
+    std::variant<std::unique_ptr<Renderer>, Error> DirectXRenderer::create(GameManager* pGameManager) {
+        // Create an empty (uninitialized) DirectX renderer.
+        auto pRenderer = std::unique_ptr<DirectXRenderer>(new DirectXRenderer(pGameManager));
+
+        // Initialize renderer.
+        const auto optionalError = pRenderer->initialize();
         if (optionalError.has_value()) {
-            optionalError->addEntry();
-            optionalError->showError();
-            throw std::runtime_error(optionalError->getFullErrorMessage());
+            auto error = optionalError.value();
+            error.addEntry();
+            return error;
         }
+
+        return pRenderer;
     }
 
     std::optional<Error> DirectXRenderer::enableDebugLayer() {
@@ -1301,9 +1315,14 @@ namespace ne {
         waitForFenceValue(iFenceToWait);
     }
 
-    std::string DirectXRenderer::getName() const { return "DirectX"; }
-
     RendererType DirectXRenderer::getType() const { return RendererType::DIRECTX; }
+
+    std::string DirectXRenderer::getUsedApiVersion() const {
+        static_assert(
+            rendererD3dFeatureLevel == D3D_FEATURE_LEVEL::D3D_FEATURE_LEVEL_12_1,
+            "update returned version string");
+        return "12.1";
+    }
 
     ID3D12Device* DirectXRenderer::getD3dDevice() const { return pDevice.Get(); }
 

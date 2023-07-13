@@ -37,14 +37,17 @@ namespace ne {
 #else
         Logger::get().info("DEBUG macro is not defined, running RELEASE build");
 #endif
+    }
+
+    std::optional<Error> GameManager::initialize(std::optional<RendererType> preferredRenderer) {
+        if (bIsInitialized) [[unlikely]] {
+            return Error("already initialized");
+        }
 
         // Make sure that resources directory is set and exists.
         const auto pathToRes = ProjectPaths::getPathToResDirectory(ResourceDirectory::ROOT);
-        if (!std::filesystem::exists(pathToRes)) {
-            const Error err(
-                fmt::format("expected resources directory to exist at \"{}\"", pathToRes.string()));
-            err.showError();
-            throw std::runtime_error(err.getFullErrorMessage());
+        if (!std::filesystem::exists(pathToRes)) [[unlikely]] {
+            return Error(fmt::format("expected resources directory to exist at \"{}\"", pathToRes.string()));
         }
 
         // Save ID of this thread (should be main thread).
@@ -63,14 +66,25 @@ namespace ne {
 #endif
 
         // Create renderer.
-        pRenderer = Renderer::create(this);
+        auto result = Renderer::create(this, preferredRenderer);
+        if (std::holds_alternative<Error>(result)) [[unlikely]] {
+            auto error = std::get<Error>(std::move(result));
+            error.addEntry();
+            return error;
+        }
+        pRenderer = std::get<std::unique_ptr<Renderer>>(std::move(result));
+
+        // Mark as initialized (because renderer was created successfully).
+        bIsInitialized = true;
 
         // Create camera manager.
         pCameraManager = std::make_unique<CameraManager>();
+
+        return {};
     }
 
     void GameManager::destroy() {
-        if (bIsBeingDestroyed) {
+        if (bIsBeingDestroyed || !bIsInitialized) {
             return;
         }
         bIsBeingDestroyed = true;

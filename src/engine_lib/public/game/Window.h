@@ -212,6 +212,27 @@ namespace ne {
         static WindowBuilder getBuilder();
 
         /**
+         * Saves the type of the preferred renderer to use for the next game created using this window
+         * (when @ref processEvents is called).
+         *
+         * @remark Preferred renderer can also be specified using the renderer config file
+         * on the disk (for example this is how users of your game can change it without using your
+         * game) but if this function was called and some renderer type was specified (not empty)
+         * the setting from the renderer config file will be ignored and the specified here renderer
+         * type will be considered instead.
+         *
+         * @remark By default (no preferred renderer) on Windows DirectX renderer will be preferred
+         * (and Vulkan renderer will be used if DirectX renderer is not supported by the hardware),
+         * on other platforms Vulkan renderer will be picked.
+         *
+         * @param preferredRenderer Renderer that should be preferred to be used
+         * although there is no guarantee that it will actually be used because of OS/hardware
+         * support. The specified renderer will be the first one to test OS/hardware support.
+         * Specify empty value to clear your previously specified preference.
+         */
+        void setPreferredRenderer(const std::optional<RendererType>& preferredRenderer);
+
+        /**
          * Starts the message queue, rendering and game logic.
          * Set GameInstance derived class to react to
          * user inputs, window events and etc.
@@ -534,6 +555,9 @@ namespace ne {
         /** Title of the window. */
         std::string sWindowTitle;
 
+        /** Renderer that the developer wants to use. */
+        std::optional<RendererType> preferredRenderer;
+
         /** Last mouse X position, used for calculating delta movement. */
         int iLastMouseXPos = 0;
 
@@ -546,10 +570,11 @@ namespace ne {
     void Window::processEvents() {
         // Create game manager.
         pGameManager = std::unique_ptr<GameManager>(new GameManager(this));
+        pGameManager->initialize(preferredRenderer);
 
-        // ... initialize other Game fields here ...
+        // ... initialize other GameManager fields here ...
 
-        // Finally create Game Instance when engine (Game) is fully initialized.
+        // Finally create Game Instance when engine (GameManager) is fully initialized.
         // So that the user can call engine functions in Game Instance constructor.
         pGameManager->setGameInstance<MyGameInstance>();
 

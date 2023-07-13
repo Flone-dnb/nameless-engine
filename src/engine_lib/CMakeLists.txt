@@ -91,6 +91,8 @@ set(PROJECT_SOURCES
     private/render/general/resources/GpuResourceManager.cpp
     private/render/general/resources/UploadBuffer.h
     private/render/general/resources/UploadBuffer.cpp
+    private/render/vulkan/VulkanRenderer.cpp
+    private/render/vulkan/VulkanRenderer.h
     private/window/GLFW.hpp
     public/input/KeyboardKey.hpp
     private/io/Logger.cpp
@@ -280,6 +282,16 @@ target_link_libraries(${PROJECT_NAME} PUBLIC glm)
 set_target_properties(glm PROPERTIES FOLDER ${EXTERNAL_FOLDER})
 set_target_properties(uninstall PROPERTIES FOLDER ${EXTERNAL_FOLDER})
 
+# Add Vulkan SDK.
+message(STATUS "${PROJECT_NAME}: adding external dependency \"Vulkan SDK\"...")
+find_package(Vulkan REQUIRED) # check if vulkan sdk is installed
+include(${RELATIVE_EXT_PATH}/Vulkan-Tools/cmake/FindVulkan.cmake) # include FindVulkan cmake helper to fill include/library paths
+if (NOT Vulkan_FOUND)
+    message(FATAL_ERROR "Failed to find Vulkan SDK. Please install Vulkan SDK that defines VULKAN_SDK environment variable.")
+endif()
+target_include_directories(${PROJECT_NAME} PUBLIC ${Vulkan_INCLUDE_DIRS})
+target_link_libraries(${PROJECT_NAME} PUBLIC ${Vulkan_LIBRARIES})
+
 # [TODO: temporary solution]: External: tgc
 message(STATUS "${PROJECT_NAME}: adding external dependency \"TGC\"...")
 set(TGC_TARGET_NAME tgc)
@@ -309,6 +321,7 @@ set(REFUREKU_INCLUDE_DIRECTORIES
     ${ABSOLUTE_EXT_PATH}/fmt/include
     ${ABSOLUTE_EXT_PATH}/glm
     ${ABSOLUTE_EXT_PATH}/Refureku/build/Include
+    ${Vulkan_INCLUDE_DIRS}
     ${CMAKE_CURRENT_SOURCE_DIR}/public
     ${CMAKE_CURRENT_SOURCE_DIR}/private
 )

@@ -13,6 +13,7 @@
 #include "materials/ShaderManager.h"
 #include "render/general/resources/GpuResourceManager.h"
 #include "render/general/resources/FrameResourcesManager.h"
+#include "render/RenderSettings.h"
 
 namespace ne {
     class GameManager;
@@ -20,9 +21,6 @@ namespace ne {
     class PsoManager;
     class ShaderConfiguration;
     class RenderSettings;
-
-    /** Describes "types" of derived Renderer classes. */
-    enum class RendererType : unsigned int { DIRECTX = 0, VULKAN = 1 };
 
     /** Defines a base class for renderers to implement. */
     class Renderer {
@@ -43,13 +41,15 @@ namespace ne {
         virtual ~Renderer() = default;
 
         /**
-         * Creates a new platform-specific renderer.
+         * Creates a new renderer.
          *
-         * @param pGameManager Game manager object that will own this renderer.
+         * @param pGameManager      Game manager object that will own this renderer.
+         * @param preferredRenderer Preferred renderer to be used.
          *
-         * @return Created renderer.
+         * @return Error if no renderer could be created, otherwise created renderer.
          */
-        static std::unique_ptr<Renderer> create(GameManager* pGameManager);
+        static std::variant<std::unique_ptr<Renderer>, Error>
+        create(GameManager* pGameManager, std::optional<RendererType> preferredRenderer);
 
         /**
          * Looks for video adapters (GPUs) that support this renderer.
@@ -79,18 +79,21 @@ namespace ne {
         getSupportedRefreshRates() const = 0;
 
         /**
-         * Returns renderer's name.
-         *
-         * @return Renderer's name.
-         */
-        virtual std::string getName() const = 0;
-
-        /**
          * Returns renderer's type.
          *
          * @return Renderer's type.
          */
         virtual RendererType getType() const = 0;
+
+        /**
+         * Returns API version or a feature level that the renderer uses.
+         *
+         * For example DirectX renderer will return used feature level and Vulkan renderer
+         * will return used Vulkan API version.
+         *
+         * @return Used API version.
+         */
+        virtual std::string getUsedApiVersion() const = 0;
 
         /**
          * Returns render settings that can be configured.
@@ -225,17 +228,29 @@ namespace ne {
         Renderer(GameManager* pGameManager);
 
         /**
-         * Returns the amount of buffers the swap chain has.
+         * Compiles/verifies all essential shaders that the engine will use.
          *
-         * @return The amount of buffers the swap chain has.
+         * @remark This is the last step in renderer initialization that is executed after the
+         * renderer was tested to support the hardware.
+         *
+         * @return Error if something went wrong.
+         */
+        [[nodiscard]] virtual std::optional<Error> compileEngineShaders() const = 0;
+
+        /**
+         * Returns the amount of buffers/images the swap chain has.
+         *
+         * @return The amount of buffers/images the swap chain has.
          */
         static consteval unsigned int getSwapChainBufferCount() { return iSwapChainBufferCount; }
 
-        /** Draw new frame. */
+        /** Submits a new frame to the GPU. */
         virtual void drawNextFrame() = 0;
 
         /**
          * Recreates all render buffers to match current settings.
+         *
+         * @remark Usually called after some renderer setting was changed or window size changed.
          *
          * @return Error if something went wrong.
          */
@@ -244,15 +259,18 @@ namespace ne {
         /**
          * (Re)creates depth/stencil buffer.
          *
-         * @remark Make sure that the old depth/stencil buffer (if was) is not used by the GPU.
+         * @remark Make sure that the old depth/stencil buffer (if was) is not used by the GPU before
+         * calling this function.
          *
          * @return Error if something went wrong.
          */
         [[nodiscard]] virtual std::optional<Error> createDepthStencilBuffer() = 0;
 
         /**
-         * Tells whether the renderer is initialized or not
-         * (whether it's safe to use renderer functionality or not).
+         * Tells whether the renderer is initialized or not.
+         *
+         * Initialized renderer means that the hardware supports it and it's safe to use renderer
+         * functionality such as @ref updateRenderBuffers.
          *
          * @return Whether the renderer is initialized or not.
          */
@@ -261,9 +279,13 @@ namespace ne {
         /**
          * Initializes some parts of the renderer that require final renderer object to be constructed.
          *
-         * @remark Must be called by derived classes in constructor.
+         * @remark Must be called by derived classes during their initialization, specifically
+         * before they start to initialize as derived classes should first initialize the base class
+         * which setups essential things like render settings.
+         *
+         * @return Error if something went wrong.
          */
-        void initializeRenderer();
+        [[nodiscard]] std::optional<Error> initializeRenderer();
 
         /**
          * Initializes various resource managers.
@@ -275,6 +297,35 @@ namespace ne {
 
     private:
         /**
+         * Creates a new renderer and nothing else.
+         *
+         * This function is only used to pick a renderer including the specified preference
+         * without doing any renderer finalization.
+         *
+         * @param pGameManager      Game manager object that will own this renderer.
+         * @param preferredRenderer Renderer to prefer to create.
+         *
+         * @return `nullptr` if no renderer could be created, otherwise created renderer.
+         */
+        static std::unique_ptr<Renderer>
+        createRenderer(GameManager* pGameManager, std::optional<RendererType> preferredRenderer);
+
+        /**
+         * Attempts to create a renderer of the specified type.
+         *
+         * This function is only used to pick a renderer including the specified preference
+         * without doing any renderer finalization.
+         *
+         * @param type         Type of the renderer to create.
+         * @param pGameManager Game manager object that will own this renderer.
+         *
+         * @return Error if the hardware/OS does not support this type of renderer, otherwise
+         * created renderer.
+         */
+        static std::variant<std::unique_ptr<Renderer>, Error>
+        createRenderer(RendererType type, GameManager* pGameManager);
+
+        /**
          * Updates the current shader configuration (settings) based on the current value
          * from @ref getShaderConfiguration.
          *
@@ -283,8 +334,12 @@ namespace ne {
          */
         void updateShaderConfiguration();
 
-        /** Initializes @ref mtxRenderSettings. */
-        void initializeRenderSettings();
+        /**
+         * Initializes @ref mtxRenderSettings.
+         *
+         * @return Error if something went wrong.
+         */
+        std::optional<Error> initializeRenderSettings();
 
         /** Lock when reading or writing to render resources. Usually used with @ref
          * waitForGpuToFinishWorkUpToThisPoint. */

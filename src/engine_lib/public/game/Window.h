@@ -416,6 +416,15 @@ namespace ne {
 #endif
 
         /**
+         * Returns internal GLFW window pointer.
+         *
+         * @remark Do not delete (free) returned pointer.
+         *
+         * @return GLFW window.
+         */
+        GLFWwindow* getGlfwWindow() const;
+
+        /**
          * Called when the window receives keyboard input.
          *
          * @remark Made public so you can simulate input in your tests.

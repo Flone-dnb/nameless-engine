@@ -114,6 +114,8 @@ namespace ne {
     HWND Window::getWindowHandle() const { return glfwGetWin32Window(pGlfwWindow); }
 #endif
 
+    GLFWwindow* Window::getGlfwWindow() const { return pGlfwWindow; }
+
     void Window::onKeyboardInput(KeyboardKey key, KeyboardModifiers modifiers, bool bIsPressedDown) const {
         pGameManager->onKeyboardInput(key, modifiers, bIsPressedDown);
     }

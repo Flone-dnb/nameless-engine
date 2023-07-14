@@ -233,7 +233,7 @@ namespace ne {
          * DirectX renderer.
          *
          * @return Error if something went wrong (for ex. if the hardware does not support this
-         * renderer), otherwise created renderer.
+         * renderer).
          */
         [[nodiscard]] std::optional<Error> initialize();
 

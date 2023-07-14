@@ -31,14 +31,6 @@ namespace ne {
         pShaderManager = std::make_unique<ShaderManager>(this);
         pPsoManager = std::make_unique<PsoManager>(this);
         mtxShaderConfiguration.second = std::make_unique<ShaderConfiguration>(this);
-
-        // Log amount of shader variants per shader pack.
-        Logger::get().info(fmt::format(
-            "using {} shader(s) per pixel shader pack",
-            ShaderMacroConfigurations::validPixelShaderMacroConfigurations.size()));
-        Logger::get().info(fmt::format(
-            "using {} shader(s) per vertex shader pack",
-            ShaderMacroConfigurations::validVertexShaderMacroConfigurations.size()));
     }
 
     std::unique_ptr<Renderer>
@@ -84,8 +76,9 @@ namespace ne {
             const auto pRendererName = rendererType == RendererType::DIRECTX ? "DirectX" : "Vulkan";
 
             // Log test.
-            Logger::get().info(
-                fmt::format("checking if the hardware/OS supports {} renderer...", pRendererName));
+            Logger::get().info(fmt::format(
+                "attempting to initialize {} renderer to test if the hardware/OS supports it...",
+                pRendererName));
 
             // Attempt to create a renderer.
             auto result = createRenderer(rendererType, pGameManager);
@@ -102,7 +95,10 @@ namespace ne {
 
             // Log success.
             Logger::get().info(fmt::format(
-                "using {} renderer (used API version: {})", pRendererName, pRenderer->getUsedApiVersion()));
+                "successfully initialized {} renderer, using {} renderer (used API version: {})",
+                pRendererName,
+                pRendererName,
+                pRenderer->getUsedApiVersion()));
 
             return pRenderer;
         }
@@ -135,6 +131,14 @@ namespace ne {
                 "you can find more information about the error in the most recent log file at \"{}\"",
                 ProjectPaths::getPathToLogsDirectory().string()));
         }
+
+        // Log amount of shader variants per shader pack.
+        Logger::get().info(fmt::format(
+            "using {} shader(s) per vertex shader pack",
+            ShaderMacroConfigurations::validVertexShaderMacroConfigurations.size()));
+        Logger::get().info(fmt::format(
+            "using {} shader(s) per pixel shader pack",
+            ShaderMacroConfigurations::validPixelShaderMacroConfigurations.size()));
 
         // Update render settings (maybe they were fixed/clamped during the renderer initialization).
         const auto pMtxRenderSettings = pCreatedRenderer->getRenderSettings();

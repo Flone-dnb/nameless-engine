@@ -380,6 +380,9 @@ namespace ne {
         /** Swap chain images. */
         std::array<VkImage, getSwapChainBufferCount()> vSwapChainImages;
 
+        /** List of supported GPUs, filled during @ref pickPhysicalDevice. */
+        std::vector<std::string> vSupportedGpuNames;
+
         /** Queue family indices of current @ref pPhysicalDevice. */
         QueueFamilyIndices physicalDeviceQueueFamilyIndices;
 

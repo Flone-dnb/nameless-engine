@@ -585,6 +585,7 @@ namespace ne {
         vScores.reserve(vGpus.size());
 
         // Rate all GPUs.
+        vSupportedGpuNames.clear();
         for (const auto& pGpu : vGpus) {
             // Rate GPU.
             GpuScore score;
@@ -604,6 +605,9 @@ namespace ne {
 
             // Add to be considered.
             vScores.push_back(score);
+
+            // Save to the list of supported GPUs.
+            vSupportedGpuNames.push_back(score.sGpuName);
         }
 
         // Make sure there is at least one GPU.
@@ -624,6 +628,36 @@ namespace ne {
         }
         Logger::get().info(sRating);
 
+        // Get render settings.
+        const auto pMtxRenderSettings = getRenderSettings();
+        std::scoped_lock renderSettingsGuard(pMtxRenderSettings->first);
+
+        // Check if the GPU to use is set.
+        auto sGpuNameToUse = pMtxRenderSettings->second->getGpuToUse();
+        if (!sGpuNameToUse.empty()) {
+            // Find the GPU in the list of available GPUs.
+            std::optional<size_t> iFoundIndex{};
+            for (size_t i = 0; i < vScores.size(); i++) {
+                if (vScores[i].sGpuName == sGpuNameToUse) {
+                    iFoundIndex = i;
+                    break;
+                }
+            }
+            if (!iFoundIndex.has_value()) {
+                // Not found. Log event.
+                Logger::get().info(fmt::format(
+                    "unable to find the GPU \"{}\" (that was specified in the renderer's "
+                    "config file) in the list of available GPUs for this renderer",
+                    sGpuNameToUse));
+            } else if (iFoundIndex.value() > 0) {
+                // Put found GPU in the first place.
+                auto temp = vScores[0];
+                vScores[0] = vScores[iFoundIndex.value()];
+                vScores[iFoundIndex.value()] = temp;
+            }
+        }
+
+        // Pick the best suiting GPU.
         for (size_t i = 0; i < vScores.size(); i++) {
             const auto& currentGpuInfo = vScores[i];
 
@@ -641,9 +675,20 @@ namespace ne {
                 std::get<QueueFamilyIndices>(std::move(queueFamilyIndicesResult));
 
             // Log used GPU.
-            Logger::get().info(fmt::format("using the following GPU: \"{}\"", currentGpuInfo.sGpuName));
+            if (sGpuNameToUse == currentGpuInfo.sGpuName) {
+                Logger::get().info(fmt::format(
+                    "using the following GPU: \"{}\" (was specified as preferred in the renderer's "
+                    "config file)",
+                    currentGpuInfo.sGpuName));
+            } else {
+                Logger::get().info(fmt::format("using the following GPU: \"{}\"", currentGpuInfo.sGpuName));
+            }
 
             pPhysicalDevice = currentGpuInfo.pGpu;
+
+            // Save GPU name in the settings.
+            pMtxRenderSettings->second->setGpuToUse(currentGpuInfo.sGpuName);
+
             break;
         }
 
@@ -671,7 +716,7 @@ namespace ne {
     }
 
     std::variant<std::vector<std::string>, Error> VulkanRenderer::getSupportedGpuNames() const {
-        throw std::runtime_error("not implemented");
+        return vSupportedGpuNames;
     }
 
     std::variant<std::set<std::pair<unsigned int, unsigned int>>, Error>

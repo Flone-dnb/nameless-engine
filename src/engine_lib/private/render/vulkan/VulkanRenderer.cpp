@@ -7,6 +7,8 @@
 #include "game/Window.h"
 
 // External.
+#define VMA_IMPLEMENTATION // define in only one .cpp file
+#include "VulkanMemoryAllocator/include/vk_mem_alloc.h"
 #include "vulkan/vk_enum_string_helper.h"
 
 namespace ne {
@@ -26,7 +28,18 @@ namespace ne {
                     fmt::format("failed to wait for device to be idle, error: {}", string_VkResult(result)));
                 return;
             }
+        }
 
+        destroySwapChainAndDependentResources();
+
+        // ... destroy new stuff here ...
+
+        if (pMemoryAllocator != nullptr) {
+            // Destroy memory allocator.
+            vmaDestroyAllocator(pMemoryAllocator);
+        }
+
+        if (pLogicalDevice != nullptr) {
             // Destroy logical device.
             vkDestroyDevice(pLogicalDevice, nullptr);
             pLogicalDevice = nullptr;
@@ -92,6 +105,27 @@ namespace ne {
 
         // Pick physical device.
         optionalError = pickPhysicalDevice();
+        if (optionalError.has_value()) {
+            optionalError->addEntry();
+            return optionalError;
+        }
+
+        // Create logical device.
+        optionalError = createLogicalDevice();
+        if (optionalError.has_value()) {
+            optionalError->addEntry();
+            return optionalError;
+        }
+
+        // Create memory allocator.
+        optionalError = createMemoryAllocator();
+        if (optionalError.has_value()) {
+            optionalError->addEntry();
+            return optionalError;
+        }
+
+        // Create swap chain.
+        optionalError = createSwapChain();
         if (optionalError.has_value()) {
             optionalError->addEntry();
             return optionalError;
@@ -698,6 +732,245 @@ namespace ne {
         }
 
         return {};
+    }
+
+    std::optional<Error> VulkanRenderer::createLogicalDevice() {
+        // Make sure physical device is created.
+        if (pPhysicalDevice == nullptr) [[unlikely]] {
+            return Error("expected physical device to be created at this point");
+        }
+
+        // Prepare information about the queues to create with the logical device.
+        std::vector<VkDeviceQueueCreateInfo> vQueueCreateInfo;
+        std::set<uint32_t> uniqueQueueFamilyIndices = {
+            physicalDeviceQueueFamilyIndices.iGraphicsFamilyIndex.value(),
+            physicalDeviceQueueFamilyIndices.iPresentFamilyIndex.value()};
+
+        // Fill queue creation info.
+        const auto queuePriority = 1.0F;
+        vQueueCreateInfo.reserve(uniqueQueueFamilyIndices.size());
+        for (const auto& iQueueIndex : uniqueQueueFamilyIndices) {
+            // Fill info to create a queue.
+            VkDeviceQueueCreateInfo queueCreateInfo{};
+            queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+            queueCreateInfo.queueFamilyIndex = iQueueIndex;
+            queueCreateInfo.queueCount = 1;
+            queueCreateInfo.pQueuePriorities = &queuePriority;
+
+            // Add to array of queues to be created.
+            vQueueCreateInfo.push_back(queueCreateInfo);
+        }
+
+        // Specify features that we need.
+        VkPhysicalDeviceFeatures deviceFeatures{};
+        deviceFeatures.samplerAnisotropy = VK_TRUE;
+
+        // Fill info to create a logical device.
+        VkDeviceCreateInfo createInfo{};
+        createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+        createInfo.queueCreateInfoCount = static_cast<uint32_t>(vQueueCreateInfo.size());
+        createInfo.pQueueCreateInfos = vQueueCreateInfo.data();
+        createInfo.pEnabledFeatures = &deviceFeatures;
+
+        // Specify needed device extensions.
+        createInfo.enabledExtensionCount = static_cast<uint32_t>(vUsedDeviceExtensionNames.size());
+        createInfo.ppEnabledExtensionNames = vUsedDeviceExtensionNames.data();
+
+#if defined(DEBUG)
+        // Setup validation layers (for compatibility with older implementations).
+        createInfo.enabledLayerCount = static_cast<uint32_t>(vUsedValidationLayerNames.size());
+        createInfo.ppEnabledLayerNames = vUsedValidationLayerNames.data();
+#endif
+
+        // Create device.
+        const auto result = vkCreateDevice(pPhysicalDevice, &createInfo, nullptr, &pLogicalDevice);
+        if (result != VK_SUCCESS) [[unlikely]] {
+            return Error(fmt::format("failed to create logical device, error: {}", string_VkResult(result)));
+        }
+
+        // Save reference to created graphics queue.
+        vkGetDeviceQueue(
+            pLogicalDevice,
+            physicalDeviceQueueFamilyIndices.iGraphicsFamilyIndex.value(),
+            0,
+            &pGraphicsQueue);
+
+        // Save reference to created presentation queue.
+        vkGetDeviceQueue(
+            pLogicalDevice, physicalDeviceQueueFamilyIndices.iPresentFamilyIndex.value(), 0, &pPresentQueue);
+
+        return {};
+    }
+
+    std::optional<Error> VulkanRenderer::createMemoryAllocator() {
+        // Make sure logical device is created.
+        if (pLogicalDevice == nullptr) [[unlikely]] {
+            return Error("expected logical device to be created at this point");
+        }
+
+        // Prepare to create memory allocator.
+        VmaAllocatorCreateInfo createInfo{};
+        createInfo.device = pLogicalDevice;
+        createInfo.physicalDevice = pPhysicalDevice;
+        createInfo.instance = pInstance;
+        createInfo.vulkanApiVersion = iUsedVulkanVersion;
+
+        // Create memory allocator.
+        const auto result = vmaCreateAllocator(&createInfo, &pMemoryAllocator);
+        if (result != VK_SUCCESS) [[unlikely]] {
+            return Error(
+                fmt::format("failed to create memory allocator, error: {}", string_VkResult(result)));
+        }
+
+        return {};
+    }
+
+    std::optional<Error> VulkanRenderer::createSwapChain() {
+        // Make sure physical device is valid.
+        if (pPhysicalDevice == nullptr) [[unlikely]] {
+            return Error("expected physical device to be initialized at this point");
+        }
+
+        // Prepare swap chain size.
+        auto swapChainSupportDetailsResult = querySwapChainSupportDetails(pPhysicalDevice);
+        if (std::holds_alternative<Error>(swapChainSupportDetailsResult)) {
+            auto error = std::get<Error>(std::move(swapChainSupportDetailsResult));
+            error.addEntry();
+            return error;
+        }
+        const auto swapChainSupportDetails =
+            std::get<SwapChainSupportDetails>(std::move(swapChainSupportDetailsResult));
+
+        // Pick swap chain image size.
+        auto swapChainExtentResult = pickSwapChainExtent(swapChainSupportDetails.capabilities);
+        if (std::holds_alternative<Error>(swapChainExtentResult)) {
+            auto error = std::get<Error>(std::move(swapChainExtentResult));
+            error.addEntry();
+            return error;
+        }
+        swapChainExtent = std::get<VkExtent2D>(std::move(swapChainExtentResult));
+
+        // Prepare swap chain creation info.
+        VkSwapchainCreateInfoKHR createInfo{};
+        createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
+        createInfo.surface = pWindowSurface;
+
+        const auto iSwapChainImageCount = getSwapChainBufferCount();
+
+        // Fill swap chain image related info.
+        createInfo.minImageCount = iSwapChainImageCount;
+        createInfo.imageFormat = swapChainImageFormat;
+        createInfo.imageColorSpace = swapChainImageColorSpace;
+        createInfo.imageExtent = swapChainExtent;
+        createInfo.imageArrayLayers = 1;
+        createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+
+        // Fill info about how images will be shared across queues.
+        if (physicalDeviceQueueFamilyIndices.iGraphicsFamilyIndex.value() !=
+            physicalDeviceQueueFamilyIndices.iPresentFamilyIndex.value()) {
+            std::array<uint32_t, 2> vQueueFamilyIndices = {
+                physicalDeviceQueueFamilyIndices.iGraphicsFamilyIndex.value(),
+                physicalDeviceQueueFamilyIndices.iPresentFamilyIndex.value()};
+
+            createInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
+            createInfo.queueFamilyIndexCount = static_cast<uint32_t>(vQueueFamilyIndices.size());
+            createInfo.pQueueFamilyIndices = vQueueFamilyIndices.data();
+        } else {
+            createInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+            createInfo.queueFamilyIndexCount = 0;     // optional, only considered when MODE_CONCURRENT
+            createInfo.pQueueFamilyIndices = nullptr; // optional, only considered when MODE_CONCURRENT
+        }
+
+        // Specify other parameters.
+        createInfo.preTransform = swapChainSupportDetails.capabilities.currentTransform;
+        createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+        createInfo.presentMode = VK_PRESENT_MODE_IMMEDIATE_KHR;
+        createInfo.clipped = VK_TRUE;
+        createInfo.oldSwapchain = VK_NULL_HANDLE;
+
+        // Create swap chain.
+        auto result = vkCreateSwapchainKHR(pLogicalDevice, &createInfo, nullptr, &pSwapChain);
+        if (result != VK_SUCCESS) [[unlikely]] {
+            return Error(fmt::format("failed to create swap chain, error: {}", string_VkResult(result)));
+        }
+
+        // Query image count in the created swap chain.
+        uint32_t iActualSwapChainImageCount = 0;
+        result = vkGetSwapchainImagesKHR(pLogicalDevice, pSwapChain, &iActualSwapChainImageCount, nullptr);
+        if (result != VK_SUCCESS) [[unlikely]] {
+            return Error(fmt::format(
+                "failed to save references to swap chain image count, error: {}", string_VkResult(result)));
+        }
+
+        // Make sure the requested number of images was created.
+        if (iSwapChainImageCount != iActualSwapChainImageCount) [[unlikely]] {
+            return Error(fmt::format(
+                "failed to created swap chain images, requested: {}, created: {}",
+                iSwapChainImageCount,
+                iActualSwapChainImageCount));
+        }
+
+        // Save references to swap chain images.
+        result = vkGetSwapchainImagesKHR(
+            pLogicalDevice, pSwapChain, &iActualSwapChainImageCount, vSwapChainImages.data());
+        if (result != VK_SUCCESS) [[unlikely]] {
+            return Error(fmt::format(
+                "failed to save references to swap chain images, error: {}", string_VkResult(result)));
+        }
+
+        return {};
+    }
+
+    std::variant<VkExtent2D, Error>
+    VulkanRenderer::pickSwapChainExtent(const VkSurfaceCapabilitiesKHR& surfaceCapabilities) {
+        if (surfaceCapabilities.currentExtent.width != std::numeric_limits<uint32_t>::max()) {
+            // `currentExtent` stores the current width and height of the surface.
+            return surfaceCapabilities.currentExtent;
+        } // else: window size will be determined by the extent of a swapchain
+
+        // Get game manager.
+        const auto pGameManager = getGameManager();
+        if (pGameManager == nullptr) [[unlikely]] {
+            return Error("game manager is nullptr");
+        }
+
+        // Get window.
+        const auto pWindow = pGameManager->getWindow();
+        if (pWindow == nullptr) [[unlikely]] {
+            return Error("window is nullptr");
+        }
+
+        // Get GLFW window.
+        const auto pGlfwWindow = pWindow->getGlfwWindow();
+        if (pGlfwWindow == nullptr) [[unlikely]] {
+            return Error("GLFW window is nullptr");
+        }
+
+        // Get window size and use it as extent.
+        int iWidth = -1;
+        int iHeight = -1;
+        glfwGetFramebufferSize(pGlfwWindow, &iWidth, &iHeight);
+
+        // Make extent.
+        VkExtent2D extent = {static_cast<uint32_t>(iWidth), static_cast<uint32_t>(iHeight)};
+
+        return extent;
+    }
+
+    void VulkanRenderer::destroySwapChainAndDependentResources() {
+        if (pLogicalDevice == nullptr || pSwapChain == nullptr) {
+            return;
+        }
+
+        // Destroy swap chain image views.
+        for (size_t i = 0; i < vSwapChainImageViews.size(); i++) {
+            vkDestroyImageView(pLogicalDevice, vSwapChainImageViews[i], nullptr);
+            vSwapChainImageViews[i] = nullptr;
+        }
+
+        // Destroy swap chain.
+        vkDestroySwapchainKHR(pLogicalDevice, pSwapChain, nullptr);
+        pSwapChain = nullptr;
     }
 
     std::variant<std::unique_ptr<Renderer>, Error> VulkanRenderer::create(GameManager* pGameManager) {

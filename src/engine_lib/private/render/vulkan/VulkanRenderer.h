@@ -5,6 +5,7 @@
 
 // External.
 #include "vulkan/vulkan.h"
+#include "VulkanMemoryAllocator/include/vk_mem_alloc.h"
 
 namespace ne {
     /** Renderer made with Vulkan API. */
@@ -353,9 +354,54 @@ namespace ne {
         /**
          * Picks the first GPU that fits renderer's needs.
          *
+         * @warning Expects @ref pInstance to be valid.
+         *
          * @return Error if something went wrong.
          */
         [[nodiscard]] std::optional<Error> pickPhysicalDevice();
+
+        /**
+         * Creates @ref pLogicalDevice.
+         *
+         * @warning Expects @ref pPhysicalDevice to be valid.
+         *
+         * @return Error if something went wrong.
+         */
+        [[nodiscard]] std::optional<Error> createLogicalDevice();
+
+        /**
+         * Creates @ref pMemoryAllocator.
+         *
+         * @warning Expects @ref pLogicalDevice to be valid.
+         *
+         * @return Error if something went wrong.
+         */
+        [[nodiscard]] std::optional<Error> createMemoryAllocator();
+
+        /**
+         * Creates @ref pSwapChain.
+         *
+         * @warning Expects @ref pPhysicalDevice to be valid.
+         *
+         * @return Error if something went wrong.
+         */
+        [[nodiscard]] std::optional<Error> createSwapChain();
+
+        /**
+         * Chooses the appropriate swap chain size.
+         *
+         * @param surfaceCapabilities Physical device surface's swap chain surface capabilities.
+         *
+         * @return Error if something went wrong, otherwise swap chain size to use.
+         */
+        std::variant<VkExtent2D, Error>
+        pickSwapChainExtent(const VkSurfaceCapabilitiesKHR& surfaceCapabilities);
+
+        /**
+         * Destroys swap chain, framebuffers, graphics pipeline, render pass, image views,
+         * frees command buffers and other objects that depend on the swap chain images.
+         */
+        void destroySwapChainAndDependentResources();
 
         /** Vulkan API instance. */
         VkInstance pInstance = nullptr;
@@ -369,6 +415,18 @@ namespace ne {
         /** Logical device to interface with @ref pPhysicalDevice. */
         VkDevice pLogicalDevice = nullptr;
 
+        /** Graphics queue. */
+        VkQueue pGraphicsQueue = nullptr;
+
+        /** Presentation queue. */
+        VkQueue pPresentQueue = nullptr;
+
+        /** Vulkan memory allocator. */
+        VmaAllocator pMemoryAllocator = nullptr;
+
+        /** Swap chain. */
+        VkSwapchainKHR pSwapChain = nullptr;
+
 #if defined(DEBUG)
         /**
          * Debug messenger to use our custom callback function instead of printing validation layer
@@ -380,11 +438,17 @@ namespace ne {
         /** Swap chain images. */
         std::array<VkImage, getSwapChainBufferCount()> vSwapChainImages;
 
+        /** Views to @ref vSwapChainImages. */
+        std::array<VkImageView, getSwapChainBufferCount()> vSwapChainImageViews;
+
         /** List of supported GPUs, filled during @ref pickPhysicalDevice. */
         std::vector<std::string> vSupportedGpuNames;
 
         /** Queue family indices of current @ref pPhysicalDevice. */
         QueueFamilyIndices physicalDeviceQueueFamilyIndices;
+
+        /** Size of the images in the swap chain. */
+        VkExtent2D swapChainExtent;
 
         /** Used MSAA sample count. */
         VkSampleCountFlagBits msaaSampleCount = VK_SAMPLE_COUNT_8_BIT;

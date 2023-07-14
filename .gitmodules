@@ -34,3 +34,6 @@
 [submodule "ext/Vulkan-Tools"]
 	path = ext/Vulkan-Tools
 	url = https://github.com/KhronosGroup/Vulkan-Tools.git
+[submodule "ext/VulkanMemoryAllocator"]
+	path = ext/VulkanMemoryAllocator
+	url = https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator.git

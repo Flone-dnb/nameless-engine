@@ -45,10 +45,12 @@ namespace ne {
         static std::array<const CD3DX12_STATIC_SAMPLER_DESC, 4> getStaticTextureSamplers();
 
         /**
-         * Looks for video adapters (GPUs) that support used DirectX version and feature level.
+         * Looks for video adapters (GPUs) that support this renderer.
          *
-         * @return Error if can't find any GPU that supports our DirectX version and feature level,
-         * vector with GPU names if successful.
+         * @remark Note that returned array might differ depending on the used renderer.
+         *
+         * @return Error if can't find any GPU that supports this renderer,
+         * otherwise array with GPU names that can be used for this renderer.
          */
         virtual std::variant<std::vector<std::string>, Error> getSupportedGpuNames() const override;
 
@@ -425,15 +427,6 @@ namespace ne {
 
         /** Name of the GPU we are currently using. */
         std::string sUsedVideoAdapter;
-
-        /**
-         * Index of the picked GPU.
-         *
-         * @remark Although we have this value in screen render setting object, the value there
-         * represents preferred GPU index which can change on the fly, while here we care about picked
-         * GPU index (not preferred).
-         */
-        unsigned int iPickedGpuIndex = 0;
 
         /** Synchronize presentation for at least N vertical blanks. Used when VSync is enabled.*/
         UINT iPresentSyncInterval = 0;

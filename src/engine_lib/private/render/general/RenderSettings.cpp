@@ -151,7 +151,7 @@ namespace ne {
 
 #if defined(DEBUG)
         static_assert(
-            sizeof(RenderSettings) == 152, "consider adding new checks here"); // NOLINT: current class size
+            sizeof(RenderSettings) == 184, "consider adding new checks here"); // NOLINT: current class size
 #endif
     }
 
@@ -340,7 +340,7 @@ namespace ne {
     }
 
     void RenderSettings::setGpuToUse(const std::string& sGpuName) {
-        if (sGpuName == getUsedGpuName()) {
+        if (sGpuToUse == sGpuName) {
             return; // do nothing
         }
 
@@ -362,78 +362,23 @@ namespace ne {
             return;
         }
 
-        // Find the specified GPU.
-        for (unsigned int i = 0; i < static_cast<unsigned int>(vSupportedGpuNames.size()); i++) {
-            if (vSupportedGpuNames[i] == sGpuName) {
-                // Log change.
-                Logger::get().info(fmt::format(
-                    "preferred GPU is being changed from \"{}\" to \"{}\"",
-                    vSupportedGpuNames[iUsedGpuIndex],
-                    sGpuName));
-
-                // Change.
-                iUsedGpuIndex = i;
-
-                // Engine needs to be restarted in order for the setting to be applied.
-
-                // Save.
-                auto optionalError = saveConfigurationToDisk();
-                if (optionalError.has_value()) {
-                    auto error = optionalError.value();
-                    error.addEntry();
-                    Logger::get().error(fmt::format(
-                        "failed to save new render setting configuration, error: \"{}\"",
-                        error.getFullErrorMessage()));
-                }
-                return;
-            }
-        }
-
-        // Log.
-        Logger::get().error(
-            fmt::format("failed to find the GPU \"{}\" in the list of supported GPUs", sGpuName));
-    }
-
-    void RenderSettings::setGpuToUse(unsigned int iGpuIndex) {
-        if (iGpuIndex == iUsedGpuIndex) {
-            return; // do nothing
-        }
-
-        // Get names of supported GPUs.
-        auto result = pRenderer->getSupportedGpuNames();
-        if (std::holds_alternative<Error>(result)) {
-            auto error = std::get<Error>(std::move(result));
-            error.addEntry();
+        // Find supported GPU by this name.
+        const auto it = std::ranges::find(vSupportedGpuNames, sGpuName);
+        if (it == vSupportedGpuNames.end()) {
             Logger::get().error(fmt::format(
-                "failed to get the list of supported GPUs, error: \"{}\"", error.getFullErrorMessage()));
-            return;
-        }
-        const auto vSupportedGpuNames = std::get<std::vector<std::string>>(std::move(result));
-
-        // Make sure we fit into the `unsigned int` range.
-        if (vSupportedGpuNames.size() > UINT_MAX) [[unlikely]] {
-            Logger::get().error(fmt::format(
-                "list of supported GPUs is too big to handle ({} items)", vSupportedGpuNames.size()));
-            return;
-        }
-
-        // Make sure this index is in range.
-        if (iGpuIndex >= static_cast<unsigned int>(vSupportedGpuNames.size())) {
-            Logger::get().error(fmt::format(
-                "specified GPU index to use ({}) is out of range, supported GPUs in total: {}",
-                iGpuIndex,
+                "failed to find the specified GPU \"{}\" in the list of supported GPUs",
                 vSupportedGpuNames.size()));
             return;
         }
 
-        // Log change.
-        Logger::get().info(fmt::format(
-            "preferred GPU is being changed from \"{}\" to \"{}\"",
-            vSupportedGpuNames[iUsedGpuIndex],
-            vSupportedGpuNames[iGpuIndex]));
+        if (!sGpuToUse.empty()) {
+            // Log change if the previous GPU name was set.
+            Logger::get().info(
+                fmt::format("preferred GPU is being changed from \"{}\" to \"{}\"", sGpuToUse, sGpuName));
+        }
 
         // Change.
-        iUsedGpuIndex = iGpuIndex;
+        sGpuToUse = sGpuName;
 
         // Engine needs to be restarted in order for the setting to be applied.
 
@@ -448,10 +393,6 @@ namespace ne {
         }
     }
 
-    std::string RenderSettings::getUsedGpuName() const { return pRenderer->getCurrentlyUsedGpuName(); }
-
-    unsigned int RenderSettings::getUsedGpuIndex() const { return iUsedGpuIndex; }
-
     void RenderSettings::updateRendererConfiguration() {
         updateRendererConfigurationForAntialiasing();
         updateRendererConfigurationForTextureFiltering();
@@ -459,7 +400,7 @@ namespace ne {
 
 #if defined(DEBUG)
         static_assert(
-            sizeof(RenderSettings) == 152, "add new render settings here"); // NOLINT: current class size
+            sizeof(RenderSettings) == 184, "add new render settings here"); // NOLINT: current class size
 #endif
     }
 
@@ -496,5 +437,7 @@ namespace ne {
                 optionalError->getFullErrorMessage()));
         }
     }
+
+    std::string RenderSettings::getGpuToUse() const { return sGpuToUse; }
 
 } // namespace ne

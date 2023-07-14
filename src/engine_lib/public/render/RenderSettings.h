@@ -98,15 +98,6 @@ namespace ne RNAMESPACE() {
         void setPreferredRenderer(RendererType preferredRenderer);
 
         /**
-         * Sets GPU to be used next time the engine starts.
-         *
-         * @remark In order for this setting to be applied the engine needs to be restarted.
-         *
-         * @param iGpuIndex Index of the GPU to use.
-         */
-        void setGpuToUse(unsigned int iGpuIndex);
-
-        /**
          * Tells whether anti-aliasing (AA) is currently enabled or not.
          *
          * @return Whether AA is enabled or not.
@@ -149,19 +140,15 @@ namespace ne RNAMESPACE() {
         std::pair<unsigned int, unsigned int> getRefreshRate() const;
 
         /**
-         * Returns name of the GPU being currently used.
+         * Returns name of the GPU to use.
          *
-         * @return Empty if the renderer is not initialized yet, otherwise name of the GPU
-         * being currently used.
-         */
-        std::string getUsedGpuName() const;
-
-        /**
-         * Same as @ref getUsedGpuName but returns index of the used GPU.
+         * @remark This value is taken from the renderer's settings file (see @ref setGpuToUse)
+         * which sometimes might not represent the actual GPU being used.
+         * Instead you might be interested in `Renderer::getCurrentlyUsedGpuName`.
          *
-         * @return Index of the GPU being currently used.
+         * @return Name of the GPU specified in the settings.
          */
-        unsigned int getUsedGpuIndex() const;
+        std::string getGpuToUse() const;
 
     protected:
         /**
@@ -239,9 +226,9 @@ namespace ne RNAMESPACE() {
         RPROPERTY(Serialize)
         unsigned int iRefreshRateDenominator = 0;
 
-        /** Index of the used GPU. */
+        /** Name of the GPU to use. */
         RPROPERTY(Serialize)
-        unsigned int iUsedGpuIndex = 0;
+        std::string sGpuToUse;
 
         /**
          * Stored used type of the renderer (DirectX/Vulkan/etc.).

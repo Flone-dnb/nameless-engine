@@ -54,8 +54,10 @@ namespace ne {
         /**
          * Looks for video adapters (GPUs) that support this renderer.
          *
+         * @remark Note that returned array might differ depending on the used renderer.
+         *
          * @return Error if can't find any GPU that supports this renderer,
-         * vector with GPU names if successful.
+         * otherwise array with GPU names that can be used for this renderer.
          */
         virtual std::variant<std::vector<std::string>, Error> getSupportedGpuNames() const = 0;
 

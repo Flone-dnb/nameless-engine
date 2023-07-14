@@ -826,22 +826,28 @@ namespace ne {
         }
         const auto vSupportedVideoAdapters = std::get<std::vector<std::string>>(std::move(result));
 
-        // Make sure the GPU index is in range of supported GPUs.
-        iPickedGpuIndex = pMtxRenderSettings->second->getUsedGpuIndex();
-        if (iPickedGpuIndex >= static_cast<unsigned int>(vSupportedVideoAdapters.size())) {
-            Logger::get().error(std::format(
-                "preferred GPU index {} is out of range, supported GPUs in total: {}, using first found "
-                "GPU",
-                iPickedGpuIndex,
-                vSupportedVideoAdapters.size()));
-
-            // Just use first found GPU then.
-            iPickedGpuIndex = 0;
-            pMtxRenderSettings->second->setGpuToUse(iPickedGpuIndex);
+        // Check if the GPU to use is set.
+        auto sGpuNameToUse = pMtxRenderSettings->second->getGpuToUse();
+        if (!sGpuNameToUse.empty()) {
+            // Find the GPU in the list of available GPUs.
+            const auto it = std::ranges::find(vSupportedVideoAdapters, sGpuNameToUse);
+            if (it == vSupportedVideoAdapters.end()) {
+                // Not found. Just use the first GPU.
+                Logger::get().info(fmt::format(
+                    "unable to find the GPU \"{}\" (that was specified in the renderer's "
+                    "config file) in the list of available GPUs for this renderer",
+                    sGpuNameToUse));
+                sGpuNameToUse = vSupportedVideoAdapters[0];
+            }
+        } else {
+            sGpuNameToUse = vSupportedVideoAdapters[0];
         }
 
+        // Save GPU name in the settings.
+        pMtxRenderSettings->second->setGpuToUse(sGpuNameToUse);
+
         // Use video adapter.
-        std::optional<Error> optionalError = setVideoAdapter(vSupportedVideoAdapters[iPickedGpuIndex]);
+        std::optional<Error> optionalError = setVideoAdapter(sGpuNameToUse);
         if (optionalError.has_value()) {
             optionalError->addEntry();
             return optionalError;
@@ -850,33 +856,8 @@ namespace ne {
         // Set output adapter (monitor) to use.
         optionalError = setOutputAdapter();
         if (optionalError.has_value()) {
-            // This might happen for GPUs with non-zero index, see if we can pick something else.
-            if (iPickedGpuIndex == 0) {
-                optionalError->addEntry();
-                return optionalError;
-            }
-            Logger::get().error(std::format(
-                "failed to set output adapter for the GPU \"{}\" (index {}), using first found GPU, "
-                "error: {}",
-                vSupportedVideoAdapters[iPickedGpuIndex],
-                iPickedGpuIndex,
-                optionalError->getInitialMessage()));
-
-            // Try first found GPU.
-            iPickedGpuIndex = 0;
-            pMtxRenderSettings->second->setGpuToUse(iPickedGpuIndex);
-
-            optionalError = setVideoAdapter(vSupportedVideoAdapters[iPickedGpuIndex]);
-            if (optionalError.has_value()) {
-                optionalError->addEntry();
-                return optionalError;
-            }
-
-            optionalError = setOutputAdapter();
-            if (optionalError.has_value()) {
-                optionalError->addEntry();
-                return optionalError;
-            }
+            optionalError->addEntry();
+            return optionalError;
         }
 
         // Create device.

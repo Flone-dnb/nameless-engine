@@ -888,7 +888,11 @@ namespace ne {
 
         // Create frame resources manager so that we can create a command list
         // that will use command allocator from frame resources.
-        initializeResourceManagers();
+        optionalError = initializeResourceManagers();
+        if (optionalError.has_value()) {
+            optionalError->addEntry();
+            return optionalError;
+        }
 
         // Create command list.
         optionalError = createCommandList();
@@ -1098,9 +1102,9 @@ namespace ne {
 
     IDXGIAdapter3* DirectXRenderer::getVideoAdapter() const { return pVideoAdapter.Get(); }
 
-    DXGI_FORMAT DirectXRenderer::getBackBufferFormat() const { return backBufferFormat; }
+    DXGI_FORMAT DirectXRenderer::getBackBufferFormat() { return backBufferFormat; }
 
-    DXGI_FORMAT DirectXRenderer::getDepthStencilBufferFormat() const { return depthStencilBufferFormat; }
+    DXGI_FORMAT DirectXRenderer::getDepthStencilBufferFormat() { return depthStencilBufferFormat; }
 
     UINT DirectXRenderer::getMsaaQualityLevel() const { return iMsaaQualityLevelsCount; }
 

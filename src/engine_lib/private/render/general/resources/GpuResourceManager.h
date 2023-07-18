@@ -12,6 +12,9 @@ namespace ne {
     class Renderer;
     class GpuResource;
 
+    /** Describes how a resource will be used. */
+    enum class ResourceUsageType { VERTEX_BUFFER, INDEX_BUFFER, OTHER };
+
     /** Allows creating GPU resources. */
     class GpuResourceManager {
         // Only renderer should be allowed to create resource manager.
@@ -51,13 +54,15 @@ namespace ne {
          *     true);
          * @endcode
          *
-         * @param sResourceName           Resource name, used for logging.
-         * @param iElementSizeInBytes     Size of one buffer element in bytes.
-         * @param iElementCount           Amount of elements in the resulting buffer.
-         * @param bIsShaderConstantBuffer Determines whether this resource will be used as
-         * a constant buffer in shaders or not. Specify `true` if you plan to use this resource
-         * as a constant buffer in shaders, this will result in element size being padded to
-         * be a multiple of 256 because of the hardware requirement for shader constant buffers.
+         * @param sResourceName                  Resource name, used for logging.
+         * @param iElementSizeInBytes            Size of one buffer element in bytes.
+         * @param iElementCount                  Amount of elements in the resulting buffer.
+         * @param bIsUsedInShadersAsReadOnlyData Determines whether this resource will be used to store
+         * shader read-only data (cannon be modified from shaders) or not going to be used in shaders
+         * at all. You need to specify this because in some internal implementations (like DirectX)
+         * it will result in element size being padded to be a multiple of 256 because of the hardware
+         * requirement for shader constant buffers. Otherwise if you don't plan to use this buffer
+         * in shaders (for ex. you can use it as a staging/upload buffer) specify `false`.
          *
          * @return Error if something went wrong, otherwise created resource.
          */
@@ -65,7 +70,7 @@ namespace ne {
             const std::string& sResourceName,
             size_t iElementSizeInBytes,
             size_t iElementCount,
-            bool bIsShaderConstantBuffer) const = 0;
+            bool bIsUsedInShadersAsReadOnlyData) = 0;
 
         /**
          * Creates a new GPU resource and fills it with the specified data.
@@ -81,10 +86,12 @@ namespace ne {
          *     true);
          * @endcode
          *
-         * @param sResourceName         Resource name, used for logging.
-         * @param pBufferData           Pointer to the data that the new resource will contain.
-         * @param iDataSizeInBytes      Size in bytes of the data (resource size).
-         * @param bAllowUnorderedAccess Whether the new resource allows unordered access or not.
+         * @param sResourceName              Resource name, used for logging.
+         * @param pBufferData                Pointer to the data that the new resource will contain.
+         * @param iDataSizeInBytes           Size in bytes of the data (resource size).
+         * @param usage                      Describes how you plan to use this resource.
+         * @param bIsShaderReadWriteResource Specify `true` if you plan to modify the resource
+         * from shaders, otherwise `false`.
          *
          * @return Error if something went wrong, otherwise created resource with filled data.
          */
@@ -92,7 +99,8 @@ namespace ne {
             const std::string& sResourceName,
             const void* pBufferData,
             size_t iDataSizeInBytes,
-            bool bAllowUnorderedAccess) const = 0;
+            ResourceUsageType usage,
+            bool bIsShaderReadWriteResource) = 0;
 
     protected:
         /**

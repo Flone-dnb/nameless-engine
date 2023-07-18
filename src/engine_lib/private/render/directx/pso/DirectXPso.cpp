@@ -242,7 +242,7 @@ namespace ne {
         psoDesc.SampleMask = UINT_MAX;
         psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
         psoDesc.NumRenderTargets = 1;
-        psoDesc.RTVFormats[0] = pDirectXRenderer->getBackBufferFormat();
+        psoDesc.RTVFormats[0] = DirectXRenderer::getBackBufferFormat();
         psoDesc.SampleDesc.Count =
             pRenderSettings->second->isAntialiasingEnabled()
                 ? static_cast<unsigned int>(pRenderSettings->second->getAntialiasingQuality())
@@ -250,7 +250,7 @@ namespace ne {
         psoDesc.SampleDesc.Quality = pRenderSettings->second->isAntialiasingEnabled()
                                          ? (pDirectXRenderer->getMsaaQualityLevel() - 1)
                                          : 0;
-        psoDesc.DSVFormat = pDirectXRenderer->getDepthStencilBufferFormat();
+        psoDesc.DSVFormat = DirectXRenderer::getDepthStencilBufferFormat();
 
         // Create PSO.
         HRESULT hResult = pDirectXRenderer->getD3dDevice()->CreateGraphicsPipelineState(

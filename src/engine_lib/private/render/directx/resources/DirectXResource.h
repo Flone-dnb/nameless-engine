@@ -30,11 +30,12 @@ namespace ne {
         // then descriptor heap will update our descriptors with new descriptor information.
         friend class DirectXDescriptorHeap;
 
-        // Only resource manager can create this resources
-        // (simply because only manager has memory allocator object).
+        // Only resource manager can create this resource
+        // (simply because only manager has a memory allocator object).
         friend class DirectXResourceManager;
 
     public:
+        DirectXResource() = delete;
         DirectXResource(const DirectXResource&) = delete;
         DirectXResource& operator=(const DirectXResource&) = delete;
 
@@ -64,7 +65,11 @@ namespace ne {
         /**
          * Returns internal resource.
          *
-         * @return Do not delete (free) this pointer. Internal resource.
+         * @remark Do not delete (free) this pointer.
+         *
+         * @remark Returned pointer is only valid while this object is valid.
+         *
+         * @return Internal resource.
          */
         inline ID3D12Resource* getInternalResource() const { return pInternalResource; }
 

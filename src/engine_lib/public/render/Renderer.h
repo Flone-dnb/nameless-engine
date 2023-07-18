@@ -294,8 +294,10 @@ namespace ne {
          *
          * @remark Must be called by derived classes after base initialization
          * (for ex. in DirectX after device and video adapter were created).
+         *
+         * @return Error if something went wrong.
          */
-        void initializeResourceManagers();
+        [[nodiscard]] std::optional<Error> initializeResourceManagers();
 
     private:
         /**

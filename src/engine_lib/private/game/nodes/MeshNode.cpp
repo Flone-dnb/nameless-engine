@@ -319,6 +319,7 @@ namespace ne {
             fmt::format("mesh node \"{}\" vertex buffer", getNodeName()),
             meshData.getVertices()->data(),
             meshData.getVertices()->size() * sizeof(MeshVertex),
+            ResourceUsageType::VERTEX_BUFFER,
             true);
         if (std::holds_alternative<Error>(result)) {
             auto error = std::get<Error>(std::move(result));
@@ -333,6 +334,7 @@ namespace ne {
             fmt::format("mesh node \"{}\" index buffer", getNodeName()),
             meshData.getIndices()->data(),
             meshData.getIndices()->size() * sizeof(MeshData::meshindex_t),
+            ResourceUsageType::INDEX_BUFFER,
             true);
         if (std::holds_alternative<Error>(result)) {
             auto error = std::get<Error>(std::move(result));

@@ -227,7 +227,7 @@ TEST_CASE("timer callback validator prevents old (stopped) callback from being c
                     REQUIRE(false);
                 }
 
-                constexpr long long iWaitTime = 30;
+                constexpr long long iWaitTime = 50;
                 constexpr size_t iCheckIntervalTimeInMs = 15;
                 using namespace std::chrono;
 

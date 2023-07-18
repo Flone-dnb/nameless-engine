@@ -277,14 +277,13 @@ namespace ne {
         return {};
     }
 
-    void Renderer::initializeResourceManagers() {
+    std::optional<Error> Renderer::initializeResourceManagers() {
         // Create GPU resource manager.
         auto gpuResourceManagerResult = GpuResourceManager::create(this);
         if (std::holds_alternative<Error>(gpuResourceManagerResult)) {
             auto error = std::get<Error>(std::move(gpuResourceManagerResult));
             error.addEntry();
-            error.showError();
-            throw std::runtime_error(error.getFullErrorMessage());
+            return error;
         }
         pResourceManager = std::get<std::unique_ptr<GpuResourceManager>>(std::move(gpuResourceManagerResult));
 
@@ -293,8 +292,7 @@ namespace ne {
         if (std::holds_alternative<Error>(gpuResourceManagerResult)) {
             auto error = std::get<Error>(std::move(gpuResourceManagerResult));
             error.addEntry();
-            error.showError();
-            throw std::runtime_error(error.getFullErrorMessage());
+            return error;
         }
         pFrameResourcesManager =
             std::get<std::unique_ptr<FrameResourcesManager>>(std::move(frameResourceManagerResult));
@@ -302,6 +300,8 @@ namespace ne {
         // Create shader read/write resource manager.
         pShaderCpuReadWriteResourceManager =
             std::unique_ptr<ShaderCpuReadWriteResourceManager>(new ShaderCpuReadWriteResourceManager(this));
+
+        return {};
     }
 
 } // namespace ne

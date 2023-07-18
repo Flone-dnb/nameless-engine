@@ -45,16 +45,6 @@ namespace ne {
         static std::array<const CD3DX12_STATIC_SAMPLER_DESC, 4> getStaticTextureSamplers();
 
         /**
-         * Looks for video adapters (GPUs) that support this renderer.
-         *
-         * @remark Note that returned array might differ depending on the used renderer.
-         *
-         * @return Error if can't find any GPU that supports this renderer,
-         * otherwise array with GPU names that can be used for this renderer.
-         */
-        virtual std::variant<std::vector<std::string>, Error> getSupportedGpuNames() const override;
-
-        /**
          * Creates a new DirectX renderer.
          *
          * @param pGameManager GameManager object that owns this renderer.
@@ -63,6 +53,30 @@ namespace ne {
          * renderer), otherwise created renderer.
          */
         static std::variant<std::unique_ptr<Renderer>, Error> create(GameManager* pGameManager);
+
+        /**
+         * Returns used back buffer format.
+         *
+         * @return Back buffer format.
+         */
+        static DXGI_FORMAT getBackBufferFormat();
+
+        /**
+         * Returns used depth/stencil buffer format.
+         *
+         * @return Depth/stencil buffer format.
+         */
+        static DXGI_FORMAT getDepthStencilBufferFormat();
+
+        /**
+         * Looks for video adapters (GPUs) that support this renderer.
+         *
+         * @remark Note that returned array might differ depending on the used renderer.
+         *
+         * @return Error if can't find any GPU that supports this renderer,
+         * otherwise array with GPU names that can be used for this renderer.
+         */
+        virtual std::variant<std::vector<std::string>, Error> getSupportedGpuNames() const override;
 
         /**
          * Returns a list of supported render resolution (pairs of width and height).
@@ -156,20 +170,6 @@ namespace ne {
          * @return Do not delete (free) this pointer. Video adapter.
          */
         IDXGIAdapter3* getVideoAdapter() const;
-
-        /**
-         * Returns used back buffer format.
-         *
-         * @return Back buffer format.
-         */
-        DXGI_FORMAT getBackBufferFormat() const;
-
-        /**
-         * Returns used depth/stencil buffer format.
-         *
-         * @return Depth/stencil buffer format.
-         */
-        DXGI_FORMAT getDepthStencilBufferFormat() const;
 
         /**
          * Returns supported quality level for MSAA.

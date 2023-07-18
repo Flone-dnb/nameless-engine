@@ -7,8 +7,6 @@
 #include "game/Window.h"
 
 // External.
-#define VMA_IMPLEMENTATION // define in only one .cpp file
-#include "VulkanMemoryAllocator/include/vk_mem_alloc.h"
 #include "vulkan/vk_enum_string_helper.h"
 
 namespace ne {
@@ -34,11 +32,6 @@ namespace ne {
 
         // ... destroy new stuff here ...
 
-        if (pMemoryAllocator != nullptr) {
-            // Destroy memory allocator.
-            vmaDestroyAllocator(pMemoryAllocator);
-        }
-
         if (pLogicalDevice != nullptr) {
             // Destroy logical device.
             vkDestroyDevice(pLogicalDevice, nullptr);
@@ -63,6 +56,8 @@ namespace ne {
         vkDestroyInstance(pInstance, nullptr);
         pInstance = nullptr;
     }
+
+    uint32_t VulkanRenderer::getUsedVulkanVersion() { return iUsedVulkanVersion; }
 
     std::optional<Error> VulkanRenderer::compileEngineShaders() const {
         throw std::runtime_error("not implemented");
@@ -117,15 +112,24 @@ namespace ne {
             return optionalError;
         }
 
-        // Create memory allocator.
-        optionalError = createMemoryAllocator();
+        // Create swap chain.
+        optionalError = createSwapChain();
         if (optionalError.has_value()) {
             optionalError->addEntry();
             return optionalError;
         }
 
-        // Create swap chain.
-        optionalError = createSwapChain();
+        // ... TODO ...
+
+        // Create command pool.
+        optionalError = createCommandPool();
+        if (optionalError.has_value()) {
+            optionalError->addEntry();
+            return optionalError;
+        }
+
+        // Initialize resource managers.
+        optionalError = initializeResourceManagers();
         if (optionalError.has_value()) {
             optionalError->addEntry();
             return optionalError;
@@ -696,7 +700,7 @@ namespace ne {
             const auto& currentGpuInfo = vScores[i];
 
             // Save (cache) queue family indices of this device.
-            const auto queueFamilyIndicesResult = queryQueueFamilyIndices(currentGpuInfo.pGpu);
+            auto queueFamilyIndicesResult = queryQueueFamilyIndices(currentGpuInfo.pGpu);
             if (std::holds_alternative<Error>(queueFamilyIndicesResult)) [[unlikely]] {
                 auto error = std::get<Error>(std::move(queueFamilyIndicesResult));
                 error.addEntry();
@@ -802,29 +806,6 @@ namespace ne {
         return {};
     }
 
-    std::optional<Error> VulkanRenderer::createMemoryAllocator() {
-        // Make sure logical device is created.
-        if (pLogicalDevice == nullptr) [[unlikely]] {
-            return Error("expected logical device to be created at this point");
-        }
-
-        // Prepare to create memory allocator.
-        VmaAllocatorCreateInfo createInfo{};
-        createInfo.device = pLogicalDevice;
-        createInfo.physicalDevice = pPhysicalDevice;
-        createInfo.instance = pInstance;
-        createInfo.vulkanApiVersion = iUsedVulkanVersion;
-
-        // Create memory allocator.
-        const auto result = vmaCreateAllocator(&createInfo, &pMemoryAllocator);
-        if (result != VK_SUCCESS) [[unlikely]] {
-            return Error(
-                fmt::format("failed to create memory allocator, error: {}", string_VkResult(result)));
-        }
-
-        return {};
-    }
-
     std::optional<Error> VulkanRenderer::createSwapChain() {
         // Make sure physical device is valid.
         if (pPhysicalDevice == nullptr) [[unlikely]] {
@@ -918,7 +899,62 @@ namespace ne {
                 "failed to save references to swap chain images, error: {}", string_VkResult(result)));
         }
 
+        // Create image views to swap chain images.
+        for (size_t i = 0; i < vSwapChainImages.size(); i++) {
+            auto imageViewResult =
+                createImageView(vSwapChainImages[i], 1, swapChainImageFormat, VK_IMAGE_ASPECT_COLOR_BIT);
+            if (std::holds_alternative<Error>(imageViewResult)) {
+                auto error = std::get<Error>(std::move(imageViewResult));
+                error.addEntry();
+                return error;
+            }
+            vSwapChainImageViews[i] = std::get<VkImageView>(imageViewResult);
+        }
+
         return {};
+    }
+
+    std::optional<Error> VulkanRenderer::createCommandPool() {
+        // Describe command pool.
+        VkCommandPoolCreateInfo poolInfo{};
+        poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+        poolInfo.queueFamilyIndex = physicalDeviceQueueFamilyIndices.iGraphicsFamilyIndex.value();
+        poolInfo.flags = 0;
+
+        // Create command pool.
+        const auto result = vkCreateCommandPool(pLogicalDevice, &poolInfo, nullptr, &pCommandPool);
+        if (result != VK_SUCCESS) [[unlikely]] {
+            return Error(fmt::format("failed to create command pool, error: {}", string_VkResult(result)));
+        }
+
+        return {};
+    }
+
+    std::variant<VkImageView, Error> VulkanRenderer::createImageView(
+        VkImage pImage,
+        uint32_t iTextureMipLevelCount,
+        VkFormat imageFormat,
+        VkImageAspectFlags aspectFlags) {
+        // Describe image view.
+        VkImageViewCreateInfo viewInfo{};
+        viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+        viewInfo.image = pImage;
+        viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+        viewInfo.format = imageFormat;
+        viewInfo.subresourceRange.aspectMask = aspectFlags;
+        viewInfo.subresourceRange.baseMipLevel = 0;
+        viewInfo.subresourceRange.levelCount = iTextureMipLevelCount;
+        viewInfo.subresourceRange.baseArrayLayer = 0;
+        viewInfo.subresourceRange.layerCount = 1;
+
+        // Create image view.
+        VkImageView pCreatedImageView = nullptr;
+        const auto result = vkCreateImageView(pLogicalDevice, &viewInfo, nullptr, &pCreatedImageView);
+        if (result != VK_SUCCESS) [[unlikely]] {
+            return Error(fmt::format("failed to create image view, error: {}", string_VkResult(result)));
+        }
+
+        return pCreatedImageView;
     }
 
     std::variant<VkExtent2D, Error>
@@ -1019,6 +1055,86 @@ namespace ne {
 
     void VulkanRenderer::waitForGpuToFinishWorkUpToThisPoint() {
         throw std::runtime_error("not implemented");
+    }
+
+    VkDevice VulkanRenderer::getLogicalDevice() const { return pLogicalDevice; }
+
+    VkPhysicalDevice VulkanRenderer::getPhysicalDevice() const { return pPhysicalDevice; }
+
+    VkInstance VulkanRenderer::getInstance() const { return pInstance; }
+
+    std::variant<VkCommandBuffer, Error> VulkanRenderer::createOneTimeSubmitCommandBuffer() {
+        // Make sure command pool exists.
+        if (pCommandPool == nullptr) [[unlikely]] {
+            return Error("command pool is not created yet");
+        }
+
+        // Describe a one-time submit command buffer.
+        VkCommandBufferAllocateInfo allocationInfo{};
+        allocationInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+        allocationInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+        allocationInfo.commandPool = pCommandPool;
+        allocationInfo.commandBufferCount = 1;
+
+        // Create a one-time submit command buffer.
+        VkCommandBuffer pOneTimeSubmitCommandBuffer = nullptr;
+        auto result = vkAllocateCommandBuffers(pLogicalDevice, &allocationInfo, &pOneTimeSubmitCommandBuffer);
+        if (result != VK_SUCCESS) [[unlikely]] {
+            return Error(fmt::format(
+                "failed to create a one-time submit command buffer, error: {}", string_VkResult(result)));
+        }
+
+        // Prepare to record command to the one-time submit command buffer.
+        VkCommandBufferBeginInfo beginInfo{};
+        beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT; // we will submit once and destroy
+
+        // Start recording commands.
+        result = vkBeginCommandBuffer(pOneTimeSubmitCommandBuffer, &beginInfo);
+        if (result != VK_SUCCESS) [[unlikely]] {
+            return Error(fmt::format(
+                "failed to start recording commands into a one-time submit command buffer, error: {}",
+                string_VkResult(result)));
+        }
+
+        return pOneTimeSubmitCommandBuffer;
+    }
+
+    std::optional<Error>
+    VulkanRenderer::submitWaitDestroyOneTimeSubmitCommandBuffer(VkCommandBuffer pOneTimeSubmitCommandBuffer) {
+        // Finish recording commands.
+        auto result = vkEndCommandBuffer(pOneTimeSubmitCommandBuffer);
+        if (result != VK_SUCCESS) [[unlikely]] {
+            return Error(fmt::format(
+                "failed to finish recording commands into a one-time submit command buffer, error: {}",
+                string_VkResult(result)));
+        }
+
+        // Prepare to execute the commands.
+        VkSubmitInfo submitInfo{};
+        submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        submitInfo.commandBufferCount = 1;
+        submitInfo.pCommandBuffers = &pOneTimeSubmitCommandBuffer;
+
+        // Execute the commands.
+        result = vkQueueSubmit(pGraphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
+        if (result != VK_SUCCESS) [[unlikely]] {
+            return Error(fmt::format(
+                "failed to submit commands of a one-time submit command buffer, error: {}",
+                string_VkResult(result)));
+        }
+
+        // Wait for commands to be executed.
+        result = vkQueueWaitIdle(pGraphicsQueue);
+        if (result != VK_SUCCESS) [[unlikely]] {
+            return Error(
+                fmt::format("failed to wait for queue to be idle, error: {}", string_VkResult(result)));
+        }
+
+        // Free temporary command buffer.
+        vkFreeCommandBuffers(pLogicalDevice, pCommandPool, 1, &pOneTimeSubmitCommandBuffer);
+
+        return {};
     }
 
     void VulkanRenderer::drawNextFrame() { throw std::runtime_error("not implemented"); }

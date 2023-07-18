@@ -4,15 +4,21 @@
 #include <stdexcept>
 
 // Custom.
-#include "render/general/resources/GpuResource.h"
+#include "render/vulkan/resources/VulkanResource.h"
+#include "render/vulkan/resources/VulkanResourceManager.h"
 #if defined(WIN32)
 #include "render/directx/resources/DirectXResource.h"
 #endif
+
+// External.
+#include "vulkan/vk_enum_string_helper.h"
+#include "fmt/core.h"
 
 namespace ne {
 
     UploadBuffer::UploadBuffer(
         std::unique_ptr<GpuResource> pGpuResourceToUse, size_t iElementSizeInBytes, size_t iElementCount) {
+        // Initialize self.
         pGpuResource = std::move(pGpuResourceToUse);
         this->iElementSizeInBytes = iElementSizeInBytes;
         this->iElementCount = iElementCount;
@@ -24,15 +30,48 @@ namespace ne {
                 0, nullptr, reinterpret_cast<void**>(&pMappedResourceData));
             if (FAILED(hResult)) {
                 Error error(hResult);
-                error.addEntry();
                 error.showError();
                 throw std::runtime_error(error.getFullErrorMessage());
             }
+            return;
         }
 #endif
+
+        if (auto pVulkanResource = dynamic_cast<VulkanResource*>(pGpuResource.get())) {
+            // Get memory allocator.
+            const auto pMemoryAllocator = pVulkanResource->getResourceManager()->pMemoryAllocator;
+
+            // Map the resource.
+            const auto result = vmaMapMemory(
+                pMemoryAllocator,
+                pVulkanResource->getInternalResourceMemory(),
+                reinterpret_cast<void**>(&pMappedResourceData));
+            if (result != VK_SUCCESS) [[unlikely]] {
+                Error error(fmt::format(
+                    "failed to map memory of resource, error: {}",
+                    pVulkanResource->getResourceName(),
+                    string_VkResult(result)));
+                error.showError();
+                throw std::runtime_error(error.getFullErrorMessage());
+            }
+            return;
+        }
     }
 
-    void UploadBuffer::copyDataToElement(size_t iElementIndex, void* pData, size_t iDataSize) {
+    void UploadBuffer::copyDataToElement(size_t iElementIndex, const void* pData, size_t iDataSize) {
+        // Make sure the specified element index is not out of bounds.
+        if (iElementIndex >= iElementCount) [[unlikely]] {
+            Error error(fmt::format(
+                "failed to copy data to upload buffer of resource \"{}\" "
+                "because the specified element index {} is out of bounds, "
+                "valid range is [0; {}]",
+                pGpuResource->getResourceName(),
+                iElementIndex,
+                iElementCount));
+            error.addEntry();
+            throw std::runtime_error(error.getFullErrorMessage());
+        }
+
         std::memcpy(&pMappedResourceData[iElementIndex * iElementSizeInBytes], pData, iDataSize);
     }
 
@@ -46,8 +85,21 @@ namespace ne {
             // Unmap the resource.
             pDirectXResource->getInternalResource()->Unmap(0, nullptr);
             pMappedResourceData = nullptr;
+
+            return;
         }
 #endif
+
+        if (auto pVulkanResource = dynamic_cast<VulkanResource*>(pGpuResource.get())) {
+            // Get memory allocator.
+            const auto pMemoryAllocator = pVulkanResource->getResourceManager()->pMemoryAllocator;
+
+            // Unmap the resource.
+            vmaUnmapMemory(pMemoryAllocator, pVulkanResource->getInternalResourceMemory());
+            pMappedResourceData = nullptr;
+
+            return;
+        }
     }
 
     GpuResource* UploadBuffer::getInternalResource() const { return pGpuResource.get(); }

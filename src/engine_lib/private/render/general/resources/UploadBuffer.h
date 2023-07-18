@@ -35,7 +35,7 @@ namespace ne {
          * @param pData         Data to copy.
          * @param iDataSize     Size in bytes of data to copy.
          */
-        void copyDataToElement(size_t iElementIndex, void* pData, size_t iDataSize);
+        void copyDataToElement(size_t iElementIndex, const void* pData, size_t iDataSize);
 
         /**
          * Returns the number of elements stored in the buffer.

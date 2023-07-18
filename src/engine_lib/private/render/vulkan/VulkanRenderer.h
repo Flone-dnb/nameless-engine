@@ -18,6 +18,13 @@ namespace ne {
         virtual ~VulkanRenderer() override;
 
         /**
+         * Returns used Vulkan API version.
+         *
+         * @return Vulkan API version that the renderer uses.
+         */
+        static uint32_t getUsedVulkanVersion();
+
+        /**
          * Creates a new DirectX renderer.
          *
          * @param pGameManager GameManager object that owns this renderer.
@@ -103,6 +110,48 @@ namespace ne {
          * @remark Typically used with @ref getRenderResourcesMutex.
          */
         virtual void waitForGpuToFinishWorkUpToThisPoint() override;
+
+        /**
+         * Returns logical device used in the renderer.
+         *
+         * @return `nullptr` if logical device is not created yet, otherwise used logical device.
+         */
+        VkDevice getLogicalDevice() const;
+
+        /**
+         * Returns physical device used in the renderer.
+         *
+         * @return `nullptr` if physical device is not created yet, otherwise used physical device.
+         */
+        VkPhysicalDevice getPhysicalDevice() const;
+
+        /**
+         * Returns Vulkan instance used in the renderer.
+         *
+         * @return `nullptr` if Vulkan instance is not created yet, otherwise used Vulkan instance.
+         */
+        VkInstance getInstance() const;
+
+        /**
+         * Creates a new one-time submit command buffer to be later used with
+         * @ref submitWaitDestroyOneTimeSubmitCommandBuffer.
+         *
+         * @return Error if something went wrong, otherwise created command buffer.
+         */
+        std::variant<VkCommandBuffer, Error> createOneTimeSubmitCommandBuffer();
+
+        /**
+         * Submits a one-time submit command buffer created by @ref createOneTimeSubmitCommandBuffer,
+         * then waits for the queue (that recorded commands were submitted to) to be idle and destroys
+         * the command buffer.
+         *
+         * @param pOneTimeSubmitCommandBuffer Command buffer created by @ref createOneTimeSubmitCommandBuffer
+         * with recorded commands to submit.
+         *
+         * @return Error if something went wrong.
+         */
+        [[nodiscard]] std::optional<Error>
+        submitWaitDestroyOneTimeSubmitCommandBuffer(VkCommandBuffer pOneTimeSubmitCommandBuffer);
 
     protected:
         /**
@@ -370,15 +419,6 @@ namespace ne {
         [[nodiscard]] std::optional<Error> createLogicalDevice();
 
         /**
-         * Creates @ref pMemoryAllocator.
-         *
-         * @warning Expects @ref pLogicalDevice to be valid.
-         *
-         * @return Error if something went wrong.
-         */
-        [[nodiscard]] std::optional<Error> createMemoryAllocator();
-
-        /**
          * Creates @ref pSwapChain.
          *
          * @warning Expects @ref pPhysicalDevice to be valid.
@@ -386,6 +426,31 @@ namespace ne {
          * @return Error if something went wrong.
          */
         [[nodiscard]] std::optional<Error> createSwapChain();
+
+        /**
+         * Creates @ref pCommandPool.
+         *
+         * @warning Expects @ref pLogicalDevice to be valid.
+         *
+         * @return Error if something went wrong.
+         */
+        [[nodiscard]] std::optional<Error> createCommandPool();
+
+        /**
+         * Creates an image view to the specified image.
+         *
+         * @param pImage      Image to create a view for.
+         * @param iTextureMipLevelCount The number of mip level the texture has.
+         * @param imageFormat Image format.
+         * @param aspectFlags Bitmask specifying which aspects of an image are included in a view.
+         *
+         * @return Error if something went wrong, otherwise created image view.
+         */
+        std::variant<VkImageView, Error> createImageView(
+            VkImage pImage,
+            uint32_t iTextureMipLevelCount,
+            VkFormat imageFormat,
+            VkImageAspectFlags aspectFlags);
 
         /**
          * Chooses the appropriate swap chain size.
@@ -421,11 +486,11 @@ namespace ne {
         /** Presentation queue. */
         VkQueue pPresentQueue = nullptr;
 
-        /** Vulkan memory allocator. */
-        VmaAllocator pMemoryAllocator = nullptr;
-
         /** Swap chain. */
         VkSwapchainKHR pSwapChain = nullptr;
+
+        /** Used to create command buffers. */
+        VkCommandPool pCommandPool = nullptr;
 
 #if defined(DEBUG)
         /**

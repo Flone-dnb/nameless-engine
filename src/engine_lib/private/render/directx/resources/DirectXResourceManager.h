@@ -23,9 +23,7 @@ namespace ne {
     class DirectXRenderer;
     class UploadBuffer;
 
-    /**
-     * Controls resource creation and handles resource descriptors.
-     */
+    /** Controls resource creation and descriptors heaps. */
     class DirectXResourceManager : public GpuResourceManager {
     public:
         DirectXResourceManager() = delete;
@@ -61,13 +59,18 @@ namespace ne {
          *     true);
          * @endcode
          *
-         * @param sResourceName           Resource name, used for logging.
-         * @param iElementSizeInBytes     Size of one buffer element in bytes.
-         * @param iElementCount           Amount of elements in the resulting buffer.
-         * @param bIsShaderConstantBuffer Determines whether this resource will be used as
-         * a constant buffer in shaders or not. Specify `true` if you plan to use this resource
-         * as a constant buffer in shaders, this will result in element size being padded to
-         * be a multiple of 256 because of the hardware requirement for shader constant buffers.
+         * @remark This resource can be used as a `cbuffer` in shaders if `bIsUsedInShadersAsReadOnlyData`
+         * is `true`.
+         *
+         * @param sResourceName                  Resource name, used for logging.
+         * @param iElementSizeInBytes            Size of one buffer element in bytes.
+         * @param iElementCount                  Amount of elements in the resulting buffer.
+         * @param bIsUsedInShadersAsReadOnlyData Determines whether this resource will be used to store
+         * shader read-only data (cannon be modified from shaders) or not going to be used in shaders
+         * at all. You need to specify this because in some internal implementations (like DirectX)
+         * it will result in element size being padded to be a multiple of 256 because of the hardware
+         * requirement for shader constant buffers. Otherwise if you don't plan to use this buffer
+         * in shaders (for ex. you can use it as a staging/upload buffer) specify `false`.
          *
          * @return Error if something went wrong, otherwise created resource.
          */
@@ -75,7 +78,7 @@ namespace ne {
             const std::string& sResourceName,
             size_t iElementSizeInBytes,
             size_t iElementCount,
-            bool bIsShaderConstantBuffer) const override;
+            bool bIsUsedInShadersAsReadOnlyData) override;
 
         /**
          * Creates a new GPU resource and fills it with the specified data.
@@ -91,10 +94,11 @@ namespace ne {
          *     true);
          * @endcode
          *
-         * @param sResourceName         Resource name, used for logging.
-         * @param pBufferData           Pointer to the data that the new resource will contain.
-         * @param iDataSizeInBytes      Size in bytes of the data (resource size).
-         * @param bAllowUnorderedAccess Whether the new resource allows unordered access or not.
+         * @param sResourceName              Resource name, used for logging.
+         * @param pBufferData                Pointer to the data that the new resource will contain.
+         * @param iDataSizeInBytes           Size in bytes of the data (resource size).
+         * @param usage                      Ignored.
+         * @param bIsShaderReadWriteResource Whether the new resource allows unordered access or not.
          *
          * @return Error if something went wrong, otherwise created resource with filled data.
          */
@@ -102,7 +106,8 @@ namespace ne {
             const std::string& sResourceName,
             const void* pBufferData,
             size_t iDataSizeInBytes,
-            bool bAllowUnorderedAccess) const override;
+            ResourceUsageType usage,
+            bool bIsShaderReadWriteResource) override;
 
         /**
          * Returns total video memory size (VRAM) in megabytes.
@@ -146,8 +151,7 @@ namespace ne {
          * @return Error if something went wrong, otherwise created resources.
          */
         std::variant<std::vector<std::unique_ptr<DirectXResource>>, Error>
-        makeRtvResourcesFromSwapChainBuffer(
-            IDXGISwapChain3* pSwapChain, unsigned int iSwapChainBufferCount) const;
+        makeRtvResourcesFromSwapChainBuffer(IDXGISwapChain3* pSwapChain, unsigned int iSwapChainBufferCount);
 
         /**
          * Returns RTV heap.

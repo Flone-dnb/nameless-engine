@@ -296,7 +296,7 @@ namespace ne {
             dsvDesc.ViewDimension = pRenderSettings->second->isAntialiasingEnabled()
                                         ? D3D12_DSV_DIMENSION_TEXTURE2DMS
                                         : D3D12_DSV_DIMENSION_TEXTURE2D;
-            dsvDesc.Format = pRenderer->getDepthStencilBufferFormat();
+            dsvDesc.Format = DirectXRenderer::getDepthStencilBufferFormat();
             dsvDesc.Texture2D.MipSlice = 0;
 
             pRenderer->getD3dDevice()->CreateDepthStencilView(

@@ -62,8 +62,8 @@ namespace ne {
         const std::string& sResourceName,
         size_t iElementSizeInBytes,
         size_t iElementCount,
-        bool bIsShaderConstantBuffer) const {
-        if (bIsShaderConstantBuffer) {
+        bool bIsUsedInShadersAsReadOnlyData) {
+        if (bIsUsedInShadersAsReadOnlyData) {
             // Constant buffers must be multiple of 256 (hardware requirement).
             iElementSizeInBytes = makeMultipleOf256(iElementSizeInBytes);
         }
@@ -98,7 +98,8 @@ namespace ne {
         const std::string& sResourceName,
         const void* pBufferData,
         size_t iDataSizeInBytes,
-        bool bAllowUnorderedAccess) const {
+        ResourceUsageType usage,
+        bool bIsShaderReadWriteResource) {
         // In order to create a GPU resource with our data from the CPU
         // we have to do a few steps:
         // 1. Create a GPU resource with DEFAULT heap type (CPU read-only heap) AKA resulting resource.
@@ -111,7 +112,8 @@ namespace ne {
         allocationDesc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
         D3D12_RESOURCE_DESC resourceDesc = CD3DX12_RESOURCE_DESC::Buffer(
             iDataSizeInBytes,
-            bAllowUnorderedAccess ? D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS : D3D12_RESOURCE_FLAG_NONE);
+            bIsShaderReadWriteResource ? D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS
+                                       : D3D12_RESOURCE_FLAG_NONE);
         D3D12_RESOURCE_STATES initialResourceState = D3D12_RESOURCE_STATE_COPY_DEST;
         auto result = DirectXResource::create(
             this,
@@ -192,8 +194,8 @@ namespace ne {
         CD3DX12_RESOURCE_BARRIER transition = CD3DX12_RESOURCE_BARRIER::Transition(
             pResultingResource->getInternalResource(),
             D3D12_RESOURCE_STATE_COPY_DEST,
-            bAllowUnorderedAccess ? D3D12_RESOURCE_STATE_UNORDERED_ACCESS
-                                  : D3D12_RESOURCE_STATE_GENERIC_READ);
+            bIsShaderReadWriteResource ? D3D12_RESOURCE_STATE_UNORDERED_ACCESS
+                                       : D3D12_RESOURCE_STATE_GENERIC_READ);
         pCommandList->ResourceBarrier(1, &transition);
 
         // Close command list.
@@ -251,7 +253,7 @@ namespace ne {
 
     std::variant<std::vector<std::unique_ptr<DirectXResource>>, Error>
     DirectXResourceManager::makeRtvResourcesFromSwapChainBuffer(
-        IDXGISwapChain3* pSwapChain, unsigned int iSwapChainBufferCount) const {
+        IDXGISwapChain3* pSwapChain, unsigned int iSwapChainBufferCount) {
         std::vector<std::unique_ptr<DirectXResource>> vCreatedResources(iSwapChainBufferCount);
         for (unsigned int i = 0; i < iSwapChainBufferCount; i++) {
             ComPtr<ID3D12Resource> pBuffer;

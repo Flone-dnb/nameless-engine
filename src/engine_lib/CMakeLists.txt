@@ -91,6 +91,10 @@ set(PROJECT_SOURCES
     private/render/general/resources/GpuResourceManager.cpp
     private/render/general/resources/UploadBuffer.h
     private/render/general/resources/UploadBuffer.cpp
+    private/render/vulkan/resources/VulkanResourceManager.cpp
+    private/render/vulkan/resources/VulkanResourceManager.h
+    private/render/vulkan/resources/VulkanResource.cpp
+    private/render/vulkan/resources/VulkanResource.h
     private/render/vulkan/VulkanRenderer.cpp
     private/render/vulkan/VulkanRenderer.h
     private/window/GLFW.hpp

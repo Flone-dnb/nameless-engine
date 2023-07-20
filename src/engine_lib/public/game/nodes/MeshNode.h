@@ -230,7 +230,7 @@ namespace ne RNAMESPACE() {
          *
          * @param bVisible Whether this mesh is visible or not.
          */
-        void setVisibility(bool bVisible);
+        void setIsVisible(bool bVisible);
 
         /**
          * Returns material used by this name.

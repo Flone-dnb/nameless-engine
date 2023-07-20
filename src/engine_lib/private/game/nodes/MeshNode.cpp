@@ -556,7 +556,7 @@ namespace ne {
         it->second.markAsNeedsUpdate();
     }
 
-    void MeshNode::setVisibility(bool bVisible) {
+    void MeshNode::setIsVisible(bool bVisible) {
         std::scoped_lock guard(mtxSpawning); // don't change visibility while we are being spawned/despawned
 
         if (bIsVisible == bVisible) {

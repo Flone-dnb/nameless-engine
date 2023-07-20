@@ -6,6 +6,7 @@
 // Custom.
 #include "render/vulkan/resources/VulkanResourceManager.h"
 #include "io/Logger.h"
+#include "render/vulkan/VulkanRenderer.h"
 
 // External.
 #include "fmt/core.h"
@@ -28,6 +29,12 @@ namespace ne {
     }
 
     VulkanResource::~VulkanResource() {
+        // Don't log here to avoid spamming.
+
+        // Make sure the GPU is not using this resource.
+        pResourceManager->pRenderer->waitForGpuToFinishWorkUpToThisPoint();
+
+        // Destroy the resource and its memory.
         vmaDestroyBuffer(pResourceManager->pMemoryAllocator, pInternalResource, pResourceMemory);
 
         // Decrement counter of alive objects.

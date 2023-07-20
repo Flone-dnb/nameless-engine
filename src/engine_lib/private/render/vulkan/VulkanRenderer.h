@@ -2,6 +2,7 @@
 
 // Custom.
 #include "render/Renderer.h"
+#include "render/general/resources/FrameResourcesManager.h"
 
 // External.
 #include "vulkan/vulkan.h"
@@ -463,6 +464,15 @@ namespace ne {
         pickSwapChainExtent(const VkSurfaceCapabilitiesKHR& surfaceCapabilities);
 
         /**
+         * Creates semaphores and fences used for synchronizing rendering operations.
+         *
+         * @warning Expects @ref pLogicalDevice to be valid.
+         *
+         * @return @return Error if something went wrong.
+         */
+        [[nodiscard]] std::optional<Error> createSynchronizationObjects();
+
+        /**
          * Destroys swap chain, framebuffers, graphics pipeline, render pass, image views,
          * frees command buffers and other objects that depend on the swap chain images.
          */
@@ -505,6 +515,27 @@ namespace ne {
 
         /** Views to @ref vSwapChainImages. */
         std::array<VkImageView, getSwapChainBufferCount()> vSwapChainImageViews;
+
+        /**
+         * Semaphores to signal that an image from the swapchain was acquired and is ready
+         * for rendering.
+         */
+        std::array<VkSemaphore, FrameResourcesManager::getFrameResourcesCount()>
+            vSemaphoreSwapChainImageReadyForRendering;
+
+        /**
+         * Semaphores to signal that the rendering to a swapchain image was finished and the image is now
+         * ready for presenting.
+         */
+        std::array<VkSemaphore, FrameResourcesManager::getFrameResourcesCount()>
+            vSemaphoreSwapChainImageReadyForPresenting;
+
+        /**
+         * Fences used to avoid waiting for the GPU after the CPU
+         * has submitted a frame. With these fences we can now submit up to `iFrameResourceCount` frames
+         * without waiting for the GPU.
+         */
+        std::array<VkFence, FrameResourcesManager::getFrameResourcesCount()> vFences;
 
         /** List of supported GPUs, filled during @ref pickPhysicalDevice. */
         std::vector<std::string> vSupportedGpuNames;

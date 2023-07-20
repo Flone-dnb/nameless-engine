@@ -33,6 +33,14 @@ namespace ne {
         // ... destroy new stuff here ...
 
         if (pLogicalDevice != nullptr) {
+            // Destroy semaphores and fences.
+            for (unsigned int i = 0; i < FrameResourcesManager::getFrameResourcesCount(); i++) {
+                vkDestroySemaphore(pLogicalDevice, vSemaphoreSwapChainImageReadyForRendering[i], nullptr);
+                vkDestroySemaphore(pLogicalDevice, vSemaphoreSwapChainImageReadyForPresenting[i], nullptr);
+                vkDestroyFence(pLogicalDevice, vFences[i], nullptr);
+                vFences[i] = nullptr; // `waitForGpuToFinishWorkUpToThisPoint` checks for this
+            }
+
             // Destroy logical device.
             vkDestroyDevice(pLogicalDevice, nullptr);
             pLogicalDevice = nullptr;
@@ -107,6 +115,13 @@ namespace ne {
 
         // Create logical device.
         optionalError = createLogicalDevice();
+        if (optionalError.has_value()) {
+            optionalError->addEntry();
+            return optionalError;
+        }
+
+        // Create fences and semaphores.
+        optionalError = createSynchronizationObjects();
         if (optionalError.has_value()) {
             optionalError->addEntry();
             return optionalError;
@@ -993,6 +1008,56 @@ namespace ne {
         return extent;
     }
 
+    std::optional<Error> VulkanRenderer::createSynchronizationObjects() {
+        // Make sure the logical device is valid.
+        if (pLogicalDevice == nullptr) [[unlikely]] {
+            return Error("expected the logical device to be valid");
+        }
+
+        // Describe semaphore.
+        VkSemaphoreCreateInfo semaphoreInfo{};
+        semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+
+        // Describe fence.
+        VkFenceCreateInfo fenceInfo{};
+        fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+        fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+
+        // Self check: make sure we have a fence and N semaphores per frame resource
+        // (per frame in-flight).
+        if (vFences.size() != vSemaphoreSwapChainImageReadyForRendering.size() ||
+            vFences.size() != vSemaphoreSwapChainImageReadyForPresenting.size() ||
+            vFences.size() != FrameResourcesManager::getFrameResourcesCount()) [[unlikely]] {
+            Error error("expected a fence and N semaphores per frame resource");
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+        }
+
+        for (unsigned int i = 0; i < FrameResourcesManager::getFrameResourcesCount(); i++) {
+            // Create semaphore 1.
+            auto result = vkCreateSemaphore(
+                pLogicalDevice, &semaphoreInfo, nullptr, &vSemaphoreSwapChainImageReadyForRendering[i]);
+            if (result != VK_SUCCESS) [[unlikely]] {
+                return Error(fmt::format("failed to create a semaphore, error: {}", string_VkResult(result)));
+            }
+
+            // Create semaphore 2.
+            result = vkCreateSemaphore(
+                pLogicalDevice, &semaphoreInfo, nullptr, &vSemaphoreSwapChainImageReadyForPresenting[i]);
+            if (result != VK_SUCCESS) [[unlikely]] {
+                return Error(fmt::format("failed to create a semaphore, error: {}", string_VkResult(result)));
+            }
+
+            // Create fence.
+            result = vkCreateFence(pLogicalDevice, &fenceInfo, nullptr, &vFences[i]);
+            if (result != VK_SUCCESS) [[unlikely]] {
+                return Error(fmt::format("failed to create a fence, error: {}", string_VkResult(result)));
+            }
+        }
+
+        return {};
+    }
+
     void VulkanRenderer::destroySwapChainAndDependentResources() {
         if (pLogicalDevice == nullptr || pSwapChain == nullptr) {
             return;
@@ -1054,7 +1119,32 @@ namespace ne {
     size_t VulkanRenderer::getUsedVideoMemoryInMb() const { throw std::runtime_error("not implemented"); }
 
     void VulkanRenderer::waitForGpuToFinishWorkUpToThisPoint() {
-        throw std::runtime_error("not implemented");
+        // Check if fences were destroyed.
+        if (vFences[0] == nullptr) {
+            // We are probably in the destructor and `vkDeviceWaitIdle` was already called
+            // so all GPU operations already finished at this point.
+            return;
+        }
+
+        // Make sure the logical device is valid.
+        if (pLogicalDevice == nullptr) [[unlikely]] {
+            Logger::get().error("failed to wait for a fence because the logical device is invalid");
+            return;
+        }
+
+        // Make sure no new frames are queued (if we are calling this function from a non-main thread)
+        // to avoid fences change their state to unsignaled due to a new frame being submitted.
+        const auto pRenderResourcesMutex = getRenderResourcesMutex();
+        std::scoped_lock guard(*pRenderResourcesMutex);
+
+        // Wait for the fence to be signaled.
+        const auto result = vkWaitForFences(
+            pLogicalDevice, static_cast<uint32_t>(vFences.size()), vFences.data(), VK_TRUE, UINT64_MAX);
+        if (result != VK_SUCCESS) [[unlikely]] {
+            Error error(fmt::format("failed to wait for a fence, error: {}", string_VkResult(result)));
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+        }
     }
 
     VkDevice VulkanRenderer::getLogicalDevice() const { return pLogicalDevice; }

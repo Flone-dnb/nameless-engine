@@ -387,8 +387,8 @@ namespace ne {
         std::scoped_lock guard(mtxInternalResources.first);
 
         Logger::get().info(std::format(
-            "flushing the command queue to (re)create {} descriptor heap (from capacity {} to {}) "
-            "(current actual heap size: {})",
+            "waiting for the GPU to finish work up to this point to (re)create {} descriptor heap from "
+            "capacity {} to {} (current actual heap size: {})",
             sHeapType,
             mtxInternalResources.second.iHeapCapacity,
             iCapacity,

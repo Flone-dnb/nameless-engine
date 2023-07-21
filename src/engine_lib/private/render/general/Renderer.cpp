@@ -7,6 +7,8 @@
 #include "game/GameManager.h"
 #include "game/Window.h"
 #include "io/Logger.h"
+#include "materials/ShaderFilesystemPaths.hpp"
+#include "misc/MessageBox.h"
 #include "materials/ShaderMacro.h"
 #include "render/general/pso/PsoManager.h"
 #if defined(WIN32)
@@ -31,6 +33,77 @@ namespace ne {
         pShaderManager = std::make_unique<ShaderManager>(this);
         pPsoManager = std::make_unique<PsoManager>(this);
         mtxShaderConfiguration.second = std::make_unique<ShaderConfiguration>(this);
+    }
+
+    std::optional<Error> Renderer::compileEngineShaders() const {
+        // Prepare shaders to compile.
+        const auto vEngineShaders = getEngineShadersToCompile();
+
+        // Prepare a promise/future to synchronously wait for the compilation to finish.
+        auto pPromiseFinish = std::make_shared<std::promise<bool>>();
+        auto future = pPromiseFinish->get_future();
+
+        // Prepare callbacks.
+        auto onProgress = [](size_t iCompiledShaderCount, size_t iTotalShadersToCompile) {};
+        auto onError = [](ShaderDescription shaderDescription, std::variant<std::string, Error> error) {
+            if (std::holds_alternative<std::string>(error)) {
+                const auto sErrorMessage = std::format(
+                    "failed to compile shader \"{}\" due to compilation error:\n{}",
+                    shaderDescription.sShaderName,
+                    std::get<std::string>(std::move(error)));
+                const Error err(sErrorMessage);
+                err.showError();
+                throw std::runtime_error(err.getFullErrorMessage());
+            }
+
+            const auto sErrorMessage = std::format(
+                "failed to compile shader \"{}\" due to internal error:\n{}",
+                shaderDescription.sShaderName,
+                std::get<Error>(std::move(error)).getFullErrorMessage());
+            const Error err(sErrorMessage);
+            err.showError();
+            MessageBox::info(
+                "Info",
+                fmt::format(
+                    "Try restarting the application or deleting the directory \"{}\", if this "
+                    "does not help contact the developers.",
+                    ShaderFilesystemPaths::getPathToShaderCacheDirectory().string()));
+            throw std::runtime_error(err.getFullErrorMessage());
+        };
+        auto onCompleted = [pPromiseFinish]() { pPromiseFinish->set_value(false); };
+
+        // Mark start time.
+        const auto startTime = std::chrono::steady_clock::now();
+
+        // Compile shaders.
+        auto error =
+            getShaderManager()->compileShaders(std::move(vEngineShaders), onProgress, onError, onCompleted);
+        if (error.has_value()) {
+            error->addEntry();
+            error->showError();
+            throw std::runtime_error(error->getFullErrorMessage());
+        }
+
+        // Wait synchronously (before user adds his shaders).
+        try {
+            future.get();
+        } catch (const std::exception& ex) {
+            const Error err(ex.what());
+            err.showError();
+            throw std::runtime_error(err.getInitialMessage());
+        }
+
+        // Mark end time.
+        const auto endTime = std::chrono::steady_clock::now();
+
+        // Calculate duration.
+        const auto timeTookInSec =
+            std::chrono::duration<float, std::chrono::seconds::period>(endTime - startTime).count();
+
+        // Log time.
+        Logger::get().info(fmt::format("took {:.1f} sec. to compile engine shaders", timeTookInSec));
+
+        return {};
     }
 
     std::unique_ptr<Renderer>

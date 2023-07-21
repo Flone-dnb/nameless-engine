@@ -123,6 +123,9 @@ set(PROJECT_SOURCES
     private/materials/EngineShaderNames.hpp
     private/materials/ShaderResource.h
     private/materials/ShaderResource.cpp
+    private/materials/glsl/GlslEngineShaders.hpp
+    private/materials/glsl/GlslShader.h
+    private/materials/glsl/GlslShader.cpp
     private/misc/ThreadPool.h
     private/misc/ThreadPool.cpp
     private/misc/Timer.cpp
@@ -296,6 +299,40 @@ endif()
 target_include_directories(${PROJECT_NAME} PUBLIC ${Vulkan_INCLUDE_DIRS})
 target_link_libraries(${PROJECT_NAME} PUBLIC ${Vulkan_LIBRARIES})
 
+# External: GLSL Shader Includer
+message(STATUS "${PROJECT_NAME}: adding external dependency \"GLSL Shader Includer\"...")
+set(GLSL_SHADER_INCLUDER_ENABLE_TESTS OFF CACHE BOOL "" FORCE)
+add_subdirectory(${RELATIVE_EXT_PATH}/GLSL-Shader-Includes ${DEPENDENCY_BUILD_DIR_NAME}/GLSL-Shader-Includes SYSTEM)
+target_link_libraries(${PROJECT_NAME} PUBLIC GlslShaderIncluderLib)
+set_target_properties(GlslShaderIncluderLib PROPERTIES FOLDER ${EXTERNAL_FOLDER})
+
+# Add "shaderc".
+message(STATUS "${PROJECT_NAME}: adding external dependency \"shaderc\"...")
+# Execute `shaderc` setup repo script
+find_package (Python COMPONENTS Interpreter Development)
+if (NOT EXISTS ${Python_EXECUTABLE})
+    message(FATAL_ERROR "${PROJECT_NAME}: failed to find Python")
+endif()
+message(STATUS "${PROJECT_NAME}: running `git-sync-deps` of `shaderc`, please wait it may take a while...")
+execute_process(COMMAND "${Python_EXECUTABLE}" "${ABSOLUTE_EXT_PATH}/shaderc/utils/git-sync-deps")
+set(SHADERC_ENABLE_TESTS OFF CACHE BOOL "" FORCE)
+set(SHADERC_ENABLE_EXAMPLES OFF CACHE BOOL "" FORCE)
+set(SHADERC_SKIP_COPYRIGHT_CHECK ON CACHE BOOL "" FORCE)
+set(SHADERC_SKIP_TESTS ON CACHE BOOL "" FORCE)
+set(SHADERC_SKIP_INSTALL ON CACHE BOOL "" FORCE)
+set(SHADERC_SKIP_EXAMPLES ON CACHE BOOL "" FORCE)
+set(SHADERC_ENABLE_WERROR_COMPILE ON CACHE BOOL "" FORCE)
+set(SPIRV_HEADERS_SKIP_EXAMPLES ON CACHE BOOL "" FORCE)
+set(SPIRV_HEADERS_SKIP_INSTALL ON CACHE BOOL "" FORCE)
+set(SPIRV_SKIP_EXECUTABLES ON CACHE BOOL "" FORCE)
+set(SPIRV_TOOLS_INSTALL_EMACS_HELPERS OFF CACHE BOOL "" FORCE)
+set(ENABLE_SPVREMAPPER OFF CACHE BOOL "" FORCE)
+set(ENABLE_GLSLANG_BINARIES OFF CACHE BOOL "" FORCE)
+set(ENABLE_SPIRV_TOOLS_INSTALL OFF CACHE BOOL "" FORCE)
+add_subdirectory(${RELATIVE_EXT_PATH}/shaderc ${DEPENDENCY_BUILD_DIR_NAME}/shaderc SYSTEM)
+target_link_libraries(${PROJECT_NAME} PUBLIC shaderc)
+set_target_properties(shaderc PROPERTIES FOLDER ${EXTERNAL_FOLDER})
+
 # [TODO: temporary solution]: External: tgc
 message(STATUS "${PROJECT_NAME}: adding external dependency \"TGC\"...")
 set(TGC_TARGET_NAME tgc)
@@ -325,6 +362,7 @@ set(REFUREKU_INCLUDE_DIRECTORIES
     ${ABSOLUTE_EXT_PATH}/fmt/include
     ${ABSOLUTE_EXT_PATH}/glm
     ${ABSOLUTE_EXT_PATH}/Refureku/build/Include
+    ${ABSOLUTE_EXT_PATH}/GLSL-Shader-Includes/src/project_lib/src
     ${Vulkan_INCLUDE_DIRS}
     ${CMAKE_CURRENT_SOURCE_DIR}/public
     ${CMAKE_CURRENT_SOURCE_DIR}/private

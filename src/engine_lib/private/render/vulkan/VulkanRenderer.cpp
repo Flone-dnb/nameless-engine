@@ -5,12 +5,17 @@
 #include "window/GLFW.hpp"
 #include "game/GameManager.h"
 #include "game/Window.h"
+#include "materials/glsl/GlslEngineShaders.hpp"
 
 // External.
 #include "vulkan/vk_enum_string_helper.h"
 
 namespace ne {
     VulkanRenderer::VulkanRenderer(GameManager* pGameManager) : Renderer(pGameManager) {}
+
+    std::vector<ShaderDescription> VulkanRenderer::getEngineShadersToCompile() const {
+        return {GlslEngineShaders::meshNodeVertexShader, GlslEngineShaders::meshNodeFragmentShader};
+    }
 
     VulkanRenderer::~VulkanRenderer() {
         if (pInstance == nullptr) {
@@ -66,10 +71,6 @@ namespace ne {
     }
 
     uint32_t VulkanRenderer::getUsedVulkanVersion() { return iUsedVulkanVersion; }
-
-    std::optional<Error> VulkanRenderer::compileEngineShaders() const {
-        throw std::runtime_error("not implemented");
-    }
 
     std::optional<Error> VulkanRenderer::initialize() {
         std::scoped_lock frameGuard(*getRenderResourcesMutex());

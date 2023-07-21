@@ -237,7 +237,14 @@ namespace ne {
          *
          * @return Error if something went wrong.
          */
-        [[nodiscard]] virtual std::optional<Error> compileEngineShaders() const = 0;
+        [[nodiscard]] std::optional<Error> compileEngineShaders() const;
+
+        /**
+         * Collects array of engine shaders that will be compiled/verified.
+         *
+         * @return Array of shader descriptions to compile.
+         */
+        virtual std::vector<ShaderDescription> getEngineShadersToCompile() const = 0;
 
         /**
          * Returns the amount of buffers/images the swap chain has.

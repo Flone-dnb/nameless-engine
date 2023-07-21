@@ -165,14 +165,14 @@ namespace ne {
         VulkanRenderer(GameManager* pGameManager);
 
         /**
-         * Compiles/verifies all essential shaders that the engine will use.
+         * Collects array of engine shaders that will be compiled/verified.
          *
-         * @remark This is the last step in renderer initialization that is executed after the
-         * renderer was tested to support the hardware.
+         * @remark Automatically called by the base Renderer class at the end of the renderer's
+         * initialization.
          *
-         * @return Error if something went wrong.
+         * @return Array of shader descriptions to compile.
          */
-        [[nodiscard]] virtual std::optional<Error> compileEngineShaders() const override;
+        virtual std::vector<ShaderDescription> getEngineShadersToCompile() const override;
 
         /** Submits a new frame to the GPU. */
         virtual void drawNextFrame() override;
@@ -468,7 +468,7 @@ namespace ne {
          *
          * @warning Expects @ref pLogicalDevice to be valid.
          *
-         * @return @return Error if something went wrong.
+         * @return Error if something went wrong.
          */
         [[nodiscard]] std::optional<Error> createSynchronizationObjects();
 

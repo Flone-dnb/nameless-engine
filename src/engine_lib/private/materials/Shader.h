@@ -91,14 +91,6 @@ namespace ne {
         ShaderType getShaderType() const;
 
         /**
-         * Returns a hash that was calculated from the shader source file that was used to
-         * compile this shader.
-         *
-         * @return Shader source file hash.
-         */
-        std::string getShaderSourceFileHash() const;
-
-        /**
          * Releases underlying shader bytecode for each shader from memory (this object will not be deleted)
          * if the shader bytecode was loaded into memory.
          * Next time this shader will be needed it will be loaded from disk.
@@ -112,18 +104,15 @@ namespace ne {
          * Constructor.
          *
          * @param pRenderer            Used renderer.
-         * @param pathToCompiledShader Path to compiled shader blob on disk.
+         * @param pathToCompiledShader Path to compiled shader bytecode on disk.
          * @param sShaderName          Unique name of this shader.
          * @param shaderType           Type of this shader.
-         * @param sSourceFileHash      Shader source file hash, used to tell what shaders were compiled from
-         * the same file.
          */
         Shader(
             Renderer* pRenderer,
             std::filesystem::path pathToCompiledShader,
             const std::string& sShaderName,
-            ShaderType shaderType,
-            const std::string& sSourceFileHash);
+            ShaderType shaderType);
 
         /**
          * Derived shader classes should call this function once they load shader bytecode
@@ -184,6 +173,44 @@ namespace ne {
         Renderer* getUsedRenderer() const;
 
     private:
+        /**
+         * Compiles a HLSL/GLSL shader depending on the used renderer.
+         *
+         * @param pRenderer            Current renderer.
+         * @param shaderCacheDirectory Directory to store this shader's cache,
+         * for example: ".../shader_cache/engine.default".
+         * @param sConfiguration       Shader configuration text that will be added to the name.
+         * @param shaderDescription    Description that describes the shader and how the shader should be
+         * compiled.
+         *
+         * @return One of the three values: compiled shader, string containing shader compilation
+         * error/warning or an internal error.
+         */
+        static std::variant<std::shared_ptr<Shader>, std::string, Error> compileRenderDependentShader(
+            Renderer* pRenderer,
+            const std::filesystem::path& shaderCacheDirectory,
+            const std::string& sConfiguration,
+            const ShaderDescription& shaderDescription);
+
+        /**
+         * Creates a new HLSL/GLSL shader depending on the used renderer, expects that all
+         * cached shader data is valid.
+         *
+         * @param pRenderer              Used renderer.
+         * @param pathToSourceShaderFile Path to shader source code file.
+         * @param pathToCompiledShader   Path to compiled shader bytecode on disk.
+         * @param sShaderName            Unique name of this shader.
+         * @param shaderType             Type of this shader.
+         *
+         * @return Error if something went wrong, otherwise created shader.
+         */
+        static std::variant<std::shared_ptr<Shader>, Error> createRenderDependentShaderFromCache(
+            Renderer* pRenderer,
+            const std::filesystem::path& pathToSourceShaderFile,
+            const std::filesystem::path& pathToCompiledShader,
+            const std::string& sShaderName,
+            ShaderType shaderType);
+
         /** Do not delete. Used renderer. */
         Renderer* pUsedRenderer = nullptr;
 
@@ -195,9 +222,6 @@ namespace ne {
 
         /** Path to compiled shader. */
         std::filesystem::path pathToCompiledShader;
-
-        /** Shader source file hash, used to tell what shaders were compiled from the same file. */
-        std::string sSourceFileHash;
 
         /** Name of the key used to store compiled bytecode hash in the metadata file. */
         static inline const auto sCompiledBytecodeHashKeyName = "compiled_bytecode_hash";

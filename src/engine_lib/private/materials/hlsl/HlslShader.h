@@ -5,8 +5,6 @@
 
 // Custom.
 #include "materials/Shader.h"
-#include "materials/ShaderPack.h"
-#include "render/Renderer.h"
 
 // External.
 #include "directx/d3dx12.h"
@@ -18,9 +16,9 @@
 namespace ne {
     using namespace Microsoft::WRL;
 
-    /**
-     * Represents compiled HLSL shader.
-     */
+    class Renderer;
+
+    /** Represents a compiled HLSL shader. */
     class HlslShader : public Shader {
     public:
         /** Stores information about root signature. */
@@ -42,7 +40,7 @@ namespace ne {
          * Constructor. Used to create shader using cache.
          *
          * @param pRenderer            Used renderer.
-         * @param pathToCompiledShader Path to compiled shader blob on disk.
+         * @param pathToCompiledShader Path to compiled shader bytecode on disk.
          * @param sShaderName          Unique name of this shader.
          * @param shaderType           Type of this shader.
          * @param sSourceFileHash      Shader source file hash, used to tell what shaders were compiled from
@@ -126,6 +124,13 @@ namespace ne {
         std::pair<std::mutex, std::optional<RootSignatureInfo>>* getRootSignatureInfo();
 
         /**
+         * Returns hash of the shader source file that was used to compile the shader.
+         *
+         * @return Hash of the shader source file.
+         */
+        std::string getShaderSourceFileHash() const;
+
+        /**
          * Releases underlying shader data (bytecode, root signature, etc.) from memory (this object will not
          * be deleted) if the shader data was loaded into memory. Next time this shader will be needed the
          * data will be loaded from disk.
@@ -188,7 +193,7 @@ namespace ne {
          *
          * @return Error if something went wrong.
          */
-        std::optional<Error> loadShaderDataFromDiskIfNotLoaded();
+        [[nodiscard]] std::optional<Error> loadShaderDataFromDiskIfNotLoaded();
 
         /**
          * Mutex for read/write operations on compiled blob and shader's root signature.
@@ -204,6 +209,9 @@ namespace ne {
          * see @ref loadShaderDataFromDiskIfNotLoaded for calculating root signature information.
          */
         std::pair<std::mutex, std::optional<RootSignatureInfo>> mtxRootSignatureInfo;
+
+        /** Shader source file hash, used to tell what shaders were compiled from the same file. */
+        std::string sSourceFileHash;
 
         /** Shader file encoding. */
         static inline UINT iShaderFileCodepage = DXC_CP_ACP;

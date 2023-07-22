@@ -16,11 +16,7 @@ namespace ne {
      * A group of different shader configurations is stored in a shader pack.
      */
     enum class ShaderMacro : int {
-        TEXTURE_FILTERING_POINT = 0,
-        TEXTURE_FILTERING_LINEAR,
-        TEXTURE_FILTERING_ANISOTROPIC,
         USE_DIFFUSE_TEXTURE,
-        USE_NORMAL_TEXTURE,
         USE_MATERIAL_TRANSPARENCY,
         // add new entries here...
         // !! also add new entries to shaderMacrosToText !!
@@ -111,12 +107,17 @@ namespace ne {
         /**
          * Defines dependent macros that should be considered only when a specific macro is defined.
          * Stores pairs of "dependent macro" - "macro it depends on".
+         *
+         * Example:
+         * @code
+         * dependentMacros = {
+         *     {TEXTURE_FILTERING_POINT, USE_DIFFUSE_TEXTURE},
+         *     {TEXTURE_FILTERING_LINEAR, USE_DIFFUSE_TEXTURE}, // texture filtering depends on texture
+         *     {TEXTURE_FILTERING_ANISOTROPIC, USE_DIFFUSE_TEXTURE}
+         * };
+         * @endcode
          */
-        static inline const std::unordered_map<ShaderMacro, ShaderMacro> dependentMacros = {
-            {ShaderMacro::TEXTURE_FILTERING_POINT, ShaderMacro::USE_DIFFUSE_TEXTURE},
-            {ShaderMacro::TEXTURE_FILTERING_LINEAR, ShaderMacro::USE_DIFFUSE_TEXTURE},
-            {ShaderMacro::TEXTURE_FILTERING_ANISOTROPIC, ShaderMacro::USE_DIFFUSE_TEXTURE},
-        };
+        static inline const std::unordered_map<ShaderMacro, ShaderMacro> dependentMacros = {};
 
     public:
         /**
@@ -152,20 +153,26 @@ namespace ne {
         static bool isMacroShouldBeConsideredInConfiguration(
             ShaderMacro macro, const std::set<ShaderMacro>& configuration);
 
-        /** Valid combinations of vertex shader macros. */
+        /**
+         * Valid combinations of vertex shader macros.
+         *
+         * @remark Also consider @ref dependentMacros.
+         */
         static inline const std::set<std::set<ShaderMacro>> validVertexShaderMacroConfigurations = {{}};
 
-        /** Valid combinations of pixel shader macros. */
+        /**
+         * Valid combinations of pixel shader macros.
+         *
+         * @remark Also consider @ref dependentMacros.
+         */
         static inline const std::set<std::set<ShaderMacro>> validPixelShaderMacroConfigurations =
-            duplicateAndAppendConfiguration(
-                combineConfigurations(
-                    {{ShaderMacro::USE_NORMAL_TEXTURE}},
-                    {{ShaderMacro::USE_DIFFUSE_TEXTURE}},
-                    {ShaderMacro::TEXTURE_FILTERING_POINT,
-                     ShaderMacro::TEXTURE_FILTERING_LINEAR,
-                     ShaderMacro::TEXTURE_FILTERING_ANISOTROPIC},
-                    true),
-                {ShaderMacro::USE_MATERIAL_TRANSPARENCY});
+            combineConfigurations(
+                {{ShaderMacro::USE_DIFFUSE_TEXTURE},
+                 {ShaderMacro::USE_MATERIAL_TRANSPARENCY},
+                 {ShaderMacro::USE_DIFFUSE_TEXTURE, ShaderMacro::USE_MATERIAL_TRANSPARENCY}},
+                {},
+                {},
+                true);
 
         /** Valid combinations of compute shader macros. */
         static inline const std::set<std::set<ShaderMacro>> validComputeShaderMacroConfigurations = {{}};

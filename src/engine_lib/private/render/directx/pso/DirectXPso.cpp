@@ -136,7 +136,7 @@ namespace ne {
         const bool bPixelShaderNotFound = addShader(sPixelShaderName);
 
         // Check if shaders were found.
-        if (bVertexShaderNotFound || bPixelShaderNotFound) {
+        if (bVertexShaderNotFound || bPixelShaderNotFound) [[unlikely]] {
             return Error(std::format(
                 "shaders not found in Shader Manager: vertex \"{}\" (found: {}), pixel \"{}\" (found: {})",
                 sVertexShaderName,
@@ -167,7 +167,7 @@ namespace ne {
 
         // Get vertex shader bytecode and generate its root signature.
         auto shaderBytecode = pVertexShader->getCompiledBlob();
-        if (std::holds_alternative<Error>(shaderBytecode)) {
+        if (std::holds_alternative<Error>(shaderBytecode)) [[unlikely]] {
             auto err = std::get<Error>(std::move(shaderBytecode));
             err.addEntry();
             return err;
@@ -176,27 +176,27 @@ namespace ne {
 
         // Get pixel shader bytecode and generate its root signature.
         shaderBytecode = pPixelShader->getCompiledBlob();
-        if (std::holds_alternative<Error>(shaderBytecode)) {
+        if (std::holds_alternative<Error>(shaderBytecode)) [[unlikely]] {
             auto err = std::get<Error>(std::move(shaderBytecode));
             err.addEntry();
             return err;
         }
         const ComPtr<IDxcBlob> pPixelShaderBytecode = std::get<ComPtr<IDxcBlob>>(std::move(shaderBytecode));
 
-        // Generate one root signature for both shaders.
-        auto result = RootSignatureGenerator::merge(
-            pDirectXRenderer->getD3dDevice(), pVertexShader.get(), pPixelShader.get());
-        if (std::holds_alternative<Error>(result)) {
+        // Generate one root signature from both shaders.
+        auto result = RootSignatureGenerator::generate(
+            pDirectXRenderer, pDirectXRenderer->getD3dDevice(), pVertexShader.get(), pPixelShader.get());
+        if (std::holds_alternative<Error>(result)) [[unlikely]] {
             auto err = std::get<Error>(std::move(result));
             err.addEntry();
             return err;
         }
-        auto mergedRootSignature = std::get<RootSignatureGenerator::Merged>(std::move(result));
-        mtxInternalResources.second.pRootSignature = std::move(mergedRootSignature.pRootSignature);
+        auto generatedRootSignature = std::get<RootSignatureGenerator::Generated>(std::move(result));
+        mtxInternalResources.second.pRootSignature = std::move(generatedRootSignature.pRootSignature);
         mtxInternalResources.second.rootParameterIndices =
-            std::move(mergedRootSignature.rootParameterIndices);
+            std::move(generatedRootSignature.rootParameterIndices);
 
-        // Prepare to create a PSO from these shaders.
+        // Prepare to create a PSO using these shaders.
         D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
 
         // Setup input layout and shaders.

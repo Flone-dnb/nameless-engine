@@ -16,6 +16,8 @@ namespace ne {
 
     /**
      * Base class for different types/formats of shaders to implement.
+     *
+     * Represents a single compiled shader variant from the ShaderPack.
      */
     class Shader {
     public:

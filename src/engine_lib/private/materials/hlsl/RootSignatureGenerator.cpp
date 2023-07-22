@@ -6,13 +6,17 @@
 #include "misc/Error.h"
 #include "render/directx/DirectXRenderer.h"
 
+// External.
+#include "fmt/core.h"
+
 namespace ne {
-    std::variant<RootSignatureGenerator::Generated, Error> RootSignatureGenerator::generate(
+    std::variant<RootSignatureGenerator::CollectedInfo, Error>
+    RootSignatureGenerator::collectInfoFromReflection(
         ID3D12Device* pDevice, const ComPtr<ID3D12ShaderReflection>& pShaderReflection) {
-        // Get shader description.
+        // Get shader description from reflection.
         D3D12_SHADER_DESC shaderDesc;
         HRESULT hResult = pShaderReflection->GetDesc(&shaderDesc);
-        if (FAILED(hResult)) {
+        if (FAILED(hResult)) [[unlikely]] {
             const Error err(hResult);
             err.showError();
         }
@@ -48,9 +52,10 @@ namespace ne {
             resourceNames.insert(sName);
         }
 
-        // Root parameter can be a table, root descriptor or root constant.
+        // Setup variables to fill root signature info from reflection data.
+        // Each root parameter can be a table, a root descriptor or a root constant.
         std::vector<CD3DX12_ROOT_PARAMETER> vRootParameters;
-        std::vector<CD3DX12_STATIC_SAMPLER_DESC> vStaticSamplersToBind;
+        std::set<SamplerType> staticSamplersToBind;
         std::unordered_map<std::string, std::pair<UINT, CD3DX12_ROOT_PARAMETER>> rootParameterIndices;
 
         // Now iterate over all shader resources and add them to root parameters.
@@ -71,53 +76,21 @@ namespace ne {
                     return error;
                 }
 
-                vStaticSamplersToBind.push_back(std::get<CD3DX12_STATIC_SAMPLER_DESC>(std::move(result)));
+                // Make sure there is no sampler of this type.
+                const auto newSamplerType = std::get<SamplerType>(result);
+                auto it = staticSamplersToBind.find(newSamplerType);
+                if (it != staticSamplersToBind.end()) [[unlikely]] {
+                    return Error("unexpected to find 2 samplers of the same type");
+                }
+
+                staticSamplersToBind.insert(std::get<SamplerType>(result));
             } else if (resourceDesc.Type == D3D_SIT_TEXTURE) {
                 // TODO
             } else [[unlikely]] {
-                return Error(std::format(
+                return Error(fmt::format(
                     "encountered unhandled resource type \"{}\" (not implemented)",
                     static_cast<int>(resourceDesc.Type)));
             }
-        }
-
-        // Create root signature description.
-        // A root signature is an array of root parameters.
-        const CD3DX12_ROOT_SIGNATURE_DESC rootSignatureDesc(
-            static_cast<UINT>(vRootParameters.size()),
-            vRootParameters.data(),
-            static_cast<UINT>(vStaticSamplersToBind.size()),
-            vStaticSamplersToBind.data(),
-            D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
-
-        // Serialize root signature in order to create it.
-        ComPtr<ID3DBlob> pSerializedRootSignature = nullptr;
-        ComPtr<ID3DBlob> pSerializerErrorMessage = nullptr;
-
-        hResult = D3D12SerializeRootSignature(
-            &rootSignatureDesc,
-            D3D_ROOT_SIGNATURE_VERSION_1,
-            pSerializedRootSignature.GetAddressOf(),
-            pSerializerErrorMessage.GetAddressOf());
-        if (FAILED(hResult)) [[unlikely]] {
-            return Error(hResult);
-        }
-
-        if (pSerializerErrorMessage != nullptr) [[unlikely]] {
-            return Error(std::string(
-                static_cast<char*>(pSerializerErrorMessage->GetBufferPointer()),
-                pSerializerErrorMessage->GetBufferSize()));
-        }
-
-        // Create root signature.
-        ComPtr<ID3D12RootSignature> pRootSignature;
-        hResult = pDevice->CreateRootSignature(
-            0,
-            pSerializedRootSignature->GetBufferPointer(),
-            pSerializedRootSignature->GetBufferSize(),
-            IID_PPV_ARGS(&pRootSignature));
-        if (FAILED(hResult)) [[unlikely]] {
-            return Error(hResult);
         }
 
         // Self check: make sure root parameter indices are unique.
@@ -143,32 +116,31 @@ namespace ne {
         }
 
         // Return results.
-        Generated generated;
-        generated.pRootSignature = pRootSignature;
-        generated.vRootParameters = std::move(vRootParameters);
-        generated.vStaticSamplers = std::move(vStaticSamplersToBind);
-        generated.rootParameterIndices = std::move(rootParameterIndices);
-        return generated;
+        CollectedInfo collectedInfo;
+        collectedInfo.vRootParameters = std::move(vRootParameters);
+        collectedInfo.staticSamplers = std::move(staticSamplersToBind);
+        collectedInfo.rootParameterIndices = std::move(rootParameterIndices);
+        return collectedInfo;
     }
 
-    std::variant<RootSignatureGenerator::Merged, Error> RootSignatureGenerator::merge(
-        ID3D12Device* pDevice, HlslShader* pVertexShader, HlslShader* pPixelShader) {
+    std::variant<RootSignatureGenerator::Generated, Error> RootSignatureGenerator::generate(
+        Renderer* pRenderer, ID3D12Device* pDevice, HlslShader* pVertexShader, HlslShader* pPixelShader) {
         // Make sure that the vertex shader is indeed a vertex shader.
         if (pVertexShader->getShaderType() != ShaderType::VERTEX_SHADER) [[unlikely]] {
-            return Error(std::format(
+            return Error(fmt::format(
                 "the specified shader \"{}\" is not a vertex shader", pVertexShader->getShaderName()));
         }
 
         // Make sure that the pixel shader is indeed a pixel shader.
         if (pPixelShader->getShaderType() != ShaderType::PIXEL_SHADER) [[unlikely]] {
-            return Error(std::format(
+            return Error(fmt::format(
                 "the specified shader \"{}\" is not a pixel shader", pPixelShader->getShaderName()));
         }
 
         // Make sure that the shaders were compiled from the same source file.
         if (pVertexShader->getShaderSourceFileHash() != pPixelShader->getShaderSourceFileHash())
             [[unlikely]] {
-            return Error(std::format(
+            return Error(fmt::format(
                 "the vertex shader \"{}\" and the pixel shader \"{}\" were not compiled from the same shader "
                 "source file (source file hash is not equal: {} != {})",
                 pVertexShader->getShaderName(),
@@ -180,7 +152,7 @@ namespace ne {
         // Get pixel shader used root parameters and used static samplers.
         auto pMtxPixelRootInfo = pPixelShader->getRootSignatureInfo();
         if (!pMtxPixelRootInfo->second.has_value()) [[unlikely]] {
-            return Error(std::format(
+            return Error(fmt::format(
                 "unable to merge root signature of the pixel shader \"{}\" "
                 "because it does have root signature generated",
                 pPixelShader->getShaderName()));
@@ -189,7 +161,7 @@ namespace ne {
         // Get vertex shader used root parameters and used static samplers.
         auto pMtxVertexRootInfo = pVertexShader->getRootSignatureInfo();
         if (!pMtxVertexRootInfo->second.has_value()) [[unlikely]] {
-            return Error(std::format(
+            return Error(fmt::format(
                 "unable to merge root signature of the vertex shader \"{}\" "
                 "because it does have root signature generated",
                 pVertexShader->getShaderName()));
@@ -199,8 +171,7 @@ namespace ne {
 
         auto& pixelShaderRootSignatureInfo = pMtxPixelRootInfo->second.value();
         auto& vertexShaderRootSignatureInfo = pMtxVertexRootInfo->second.value();
-
-        auto vStaticSamplers = pixelShaderRootSignatureInfo.vStaticSamplers;
+        auto staticSamplers = pixelShaderRootSignatureInfo.staticSamplers;
 
         std::unordered_map<std::string, UINT> rootParameterIndices;
         std::vector<CD3DX12_ROOT_PARAMETER> vRootParameters;
@@ -229,16 +200,12 @@ namespace ne {
         // Do some basic checks to add parameters/samplers that don't exist in pixel shader.
 
         // First, add static samplers.
-        for (const auto& sampler : vertexShaderRootSignatureInfo.vStaticSamplers) {
+        for (const auto& samplerType : vertexShaderRootSignatureInfo.staticSamplers) {
             // Check if we already use this sampler.
-            const auto it =
-                std::ranges::find_if(vStaticSamplers, [&sampler](const CD3DX12_STATIC_SAMPLER_DESC& item) {
-                    return item.ShaderRegister == sampler.ShaderRegister &&
-                           item.RegisterSpace == sampler.RegisterSpace;
-                });
-            if (it == vStaticSamplers.end()) {
+            const auto it = staticSamplers.find(samplerType);
+            if (it == staticSamplers.end()) {
                 // This sampler is new, add it.
-                vStaticSamplers.push_back(sampler);
+                staticSamplers.insert(samplerType);
             }
         }
 
@@ -271,13 +238,39 @@ namespace ne {
                 sFrameConstantBufferName));
         }
 
+        // Get current render settings to query texture filtering for static sampler.
+        const auto pMtxRenderSettings = pRenderer->getRenderSettings();
+        std::scoped_lock renderSettingsGuard(pMtxRenderSettings->first); // keep locked until finished
+
+        // Collect static sampler description.
+        std::vector<D3D12_STATIC_SAMPLER_DESC> vStaticSamplersToBind;
+        for (const auto& samplerType : staticSamplers) {
+            switch (samplerType) {
+            case (SamplerType::BASIC): {
+                vStaticSamplersToBind.push_back(HlslShader::getStaticSamplerDescription(
+                    pMtxRenderSettings->second->getTextureFilteringMode()));
+                break;
+            }
+            case (SamplerType::COMPARISON): {
+                vStaticSamplersToBind.push_back(HlslShader::getStaticComparisonSamplerDescription());
+                break;
+            }
+            default: {
+                Error error("unhandled case");
+                error.showError();
+                throw std::runtime_error(error.getFullErrorMessage());
+                break;
+            }
+            }
+        }
+
         // Create root signature description.
         // A root signature is an array of root parameters.
         const CD3DX12_ROOT_SIGNATURE_DESC rootSignatureDesc(
             static_cast<UINT>(vRootParameters.size()),
             vRootParameters.data(),
-            static_cast<UINT>(vStaticSamplers.size()),
-            vStaticSamplers.data(),
+            static_cast<UINT>(vStaticSamplersToBind.size()),
+            vStaticSamplersToBind.data(),
             D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 
         // Serialize root signature in order to create it.
@@ -289,11 +282,10 @@ namespace ne {
             D3D_ROOT_SIGNATURE_VERSION_1,
             pSerializedRootSignature.GetAddressOf(),
             pSerializerErrorMessage.GetAddressOf());
-        if (FAILED(hResult)) {
+        if (FAILED(hResult)) [[unlikely]] {
             return Error(hResult);
         }
-
-        if (pSerializerErrorMessage != nullptr) {
+        if (pSerializerErrorMessage != nullptr) [[unlikely]] {
             return Error(std::string(
                 static_cast<char*>(pSerializerErrorMessage->GetBufferPointer()),
                 pSerializerErrorMessage->GetBufferSize()));
@@ -306,69 +298,68 @@ namespace ne {
             pSerializedRootSignature->GetBufferPointer(),
             pSerializedRootSignature->GetBufferSize(),
             IID_PPV_ARGS(&pRootSignature));
-        if (FAILED(hResult)) {
+        if (FAILED(hResult)) [[unlikely]] {
             return Error(hResult);
         }
 
-        Merged merged;
+        Generated merged;
         merged.pRootSignature = std::move(pRootSignature);
         merged.rootParameterIndices = std::move(rootParameterIndices);
         return merged;
     }
 
-    std::variant<CD3DX12_STATIC_SAMPLER_DESC, Error>
-    RootSignatureGenerator::findStaticSamplerForSamplerResource(
+    std::variant<SamplerType, Error> RootSignatureGenerator::findStaticSamplerForSamplerResource(
         const D3D12_SHADER_INPUT_BIND_DESC& samplerResourceDescription) {
-        const auto vStaticSamplers = DirectXRenderer::getStaticTextureSamplers();
         const auto sResourceName = std::string(samplerResourceDescription.Name);
 
-        D3D12_FILTER currentSamplerFilter;
-        if (sResourceName.contains("Point") || sResourceName.contains("point") ||
-            sResourceName.contains("POINT")) {
-            currentSamplerFilter = D3D12_FILTER_MIN_MAG_MIP_POINT;
-        } else if (
-            sResourceName.contains("Linear") || sResourceName.contains("linear") ||
-            sResourceName.contains("LINEAR")) {
-            currentSamplerFilter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
-        } else if (
-            sResourceName.contains("Anisotropic") || sResourceName.contains("anisotropic") ||
-            sResourceName.contains("ANISOTROPIC")) {
-            currentSamplerFilter = D3D12_FILTER_ANISOTROPIC;
-        } else if (
-            sResourceName.contains("Shadow") || sResourceName.contains("shadow") ||
-            sResourceName.contains("SHADOW")) {
-            currentSamplerFilter = D3D12_FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT;
-        } else {
-            return Error(std::format(
-                "static sampler for the specified \"{}\" sampler resource is not found, "
-                "please add some keywords to the resource name like \"point\", \"anisotropic\", \"linear\" "
-                "or \"shadow\", for example: \"samplerAnisotropicWrap\"",
-                sResourceName));
-        }
+        constexpr std::string_view sBasicSamplerName = "textureSampler";
+        constexpr std::string_view sComparisonSamplerName = "shadowSampler";
 
-        // Find static sampler for this sampler resource.
-        for (const auto& sampler : vStaticSamplers) {
-            if (sampler.Filter == currentSamplerFilter) {
-                if (samplerResourceDescription.BindPoint != sampler.ShaderRegister) {
-                    return Error(std::format(
-                        "\"{}\" sampler register should be {} instead of {}",
-                        sResourceName,
-                        sampler.ShaderRegister,
-                        samplerResourceDescription.BindPoint));
-                }
-                if (samplerResourceDescription.Space != sampler.RegisterSpace) {
-                    return Error(std::format(
-                        "\"{}\" sampler register space should be {} instead of {}",
-                        sResourceName,
-                        sampler.RegisterSpace,
-                        samplerResourceDescription.Space));
-                }
-                return sampler;
+        SamplerType typeToReturn = SamplerType::BASIC;
+        if (sResourceName == sBasicSamplerName) {
+            // Make sure shader register is correct.
+            if (samplerResourceDescription.BindPoint != static_cast<UINT>(StaticSamplerShaderRegister::BASIC))
+                [[unlikely]] {
+                return Error(fmt::format(
+                    "expected the sampler \"{}\" to use shader register {} instead of {}",
+                    sResourceName,
+                    static_cast<UINT>(StaticSamplerShaderRegister::BASIC),
+                    samplerResourceDescription.BindPoint));
             }
+
+            typeToReturn = SamplerType::BASIC;
+        } else if (sResourceName == sComparisonSamplerName) {
+            // Make sure shader register is correct.
+            if (samplerResourceDescription.BindPoint !=
+                static_cast<UINT>(StaticSamplerShaderRegister::COMPARISON)) [[unlikely]] {
+                return Error(fmt::format(
+                    "expected the sampler \"{}\" to use shader register {} instead of {}",
+                    sResourceName,
+                    static_cast<UINT>(StaticSamplerShaderRegister::COMPARISON),
+                    samplerResourceDescription.BindPoint));
+            }
+
+            typeToReturn = SamplerType::COMPARISON;
+        } else [[unlikely]] {
+            return Error(fmt::format(
+                "expected sampler \"{}\" to be named either as \"{}\" (for `SamplerState` type) or as "
+                "\"{}\" (for `SamplerComparisonState` type)",
+                sResourceName,
+                sBasicSamplerName,
+                sComparisonSamplerName));
         }
 
-        return Error(std::format(
-            "static sampler with filter {} is not found", static_cast<int>(currentSamplerFilter)));
+        // Make sure shader register space is correct.
+        if (samplerResourceDescription.Space != HlslShader::getStaticSamplerShaderRegisterSpace())
+            [[unlikely]] {
+            return Error(fmt::format(
+                "expected the sampler \"{}\" to use shader register space {} instead of {}",
+                sResourceName,
+                HlslShader::getStaticSamplerShaderRegisterSpace(),
+                samplerResourceDescription.Space));
+        }
+
+        return typeToReturn;
     }
 
     std::optional<Error> RootSignatureGenerator::addUniquePairResourceNameRootParameterIndex(

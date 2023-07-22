@@ -134,8 +134,8 @@ namespace ne {
     };
 
     /**
-     * RAII class that once acquired flushed the command queue, pauses the rendering and releases
-     * all internal resources from all graphics PSOs, and restores them in destructor.
+     * RAII class that once acquired flushes the command queue, pauses the rendering, releases
+     * all internal resources from all graphics PSOs, then in destructor restores them.
      */
     class DelayedPsoResourcesCreation {
     public:
@@ -220,8 +220,8 @@ namespace ne {
         PsoManager& operator=(const PsoManager&) = delete;
 
         /**
-         * Returns a RAII object that once acquired flushed the command queue, pauses the rendering and
-         * releases all internal resources from all graphics PSOs, and restores them in destructor.
+         * Returns a RAII object that once acquired flushes the command queue, pauses the rendering,
+         * releases all internal resources from all graphics PSOs, then in destructor restores them.
          *
          * @return RAII object.
          */

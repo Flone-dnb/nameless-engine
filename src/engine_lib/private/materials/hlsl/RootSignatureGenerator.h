@@ -4,6 +4,7 @@
 #include <variant>
 #include <optional>
 #include <unordered_map>
+#include <set>
 
 // Custom.
 #include "misc/Error.h"
@@ -17,8 +18,15 @@
 
 namespace ne {
     class HlslShader;
+    class Renderer;
 
     using namespace Microsoft::WRL;
+
+    /** Represents a type of a sampler defined in the HLSL code. */
+    enum class SamplerType {
+        BASIC,     //< Usual `SamplerState` type in HLSL.
+        COMPARISON //< `SamplerComparisonState` type in HLSL.
+    };
 
     /**
      * Generates Root Signature based on HLSL code.
@@ -29,13 +37,10 @@ namespace ne {
         RootSignatureGenerator(const RootSignatureGenerator&) = delete;
         RootSignatureGenerator& operator=(const RootSignatureGenerator&) = delete;
 
-        /** Contains generated root signature data. */
-        struct Generated {
-            /** Generated root signature. */
-            ComPtr<ID3D12RootSignature> pRootSignature;
-
+        /** Contains collected root signature info. */
+        struct CollectedInfo {
             /** Static samplers of root signature. */
-            std::vector<CD3DX12_STATIC_SAMPLER_DESC> vStaticSamplers;
+            std::set<SamplerType> staticSamplers;
 
             /** Root parameters that were used in creation of the root signature. */
             std::vector<CD3DX12_ROOT_PARAMETER> vRootParameters;
@@ -49,7 +54,7 @@ namespace ne {
         };
 
         /** Contains data that was generated during the process of merging two root signatures. */
-        struct Merged {
+        struct Generated {
             /** Merged (new) root signature. */
             ComPtr<ID3D12RootSignature> pRootSignature;
 
@@ -71,26 +76,31 @@ namespace ne {
          *
          * @return Error if something was wrong, otherwise generated root signature with used parameters.
          */
-        static std::variant<Generated, Error>
-        generate(ID3D12Device* pDevice, const ComPtr<ID3D12ShaderReflection>& pShaderReflection);
+        static std::variant<CollectedInfo, Error> collectInfoFromReflection(
+            ID3D12Device* pDevice, const ComPtr<ID3D12ShaderReflection>& pShaderReflection);
 
         /**
-         * Merges vertex and pixel shader root signatures into one new root signature
-         * that can be used in pipeline state object.
+         * Generates a new root signature using the vertex and pixel shader info.
          *
+         * @remark Shaders must be compiled from one shader source file.
+         *
+         * @remark Expects that root signature information is already collected for both
+         * shaders (see @ref collectInfoFromReflection), otherwise returns error.
+         *
+         * @warning If a shader uses a static sampler this function will take the current texture filtering
+         * setting from the RenderSettings and will set it as a static sampler. This means that
+         * once the current texture filtering setting is changed you need to re-run this function
+         * to set a new filter into the root signature's static sampler.
+         *
+         * @param pRenderer     Current renderer.
          * @param pDevice       DirectX device.
          * @param pVertexShader Vertex shader.
          * @param pPixelShader  Pixel shader.
          *
-         * @remark Shaders must be compiled from one shader source file.
-         *
-         * @remark Expects that root signature and its information is already generated for both
-         * shaders, otherwise returns error.
-         *
          * @return Error if something went wrong, otherwise generated root signature.
          */
-        static std::variant<Merged, Error>
-        merge(ID3D12Device* pDevice, HlslShader* pVertexShader, HlslShader* pPixelShader);
+        static std::variant<Generated, Error> generate(
+            Renderer* pRenderer, ID3D12Device* pDevice, HlslShader* pVertexShader, HlslShader* pPixelShader);
 
         /**
          * Returns index of the root parameter that points to `cbuffer` with frame constants.
@@ -109,7 +119,7 @@ namespace ne {
          *
          * @return Error if static sampler is not found, otherwise found static sampler.
          */
-        static std::variant<CD3DX12_STATIC_SAMPLER_DESC, Error>
+        static std::variant<SamplerType, Error>
         findStaticSamplerForSamplerResource(const D3D12_SHADER_INPUT_BIND_DESC& samplerResourceDescription);
 
         /**

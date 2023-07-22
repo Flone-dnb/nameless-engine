@@ -184,42 +184,13 @@ namespace ne {
     }
 
     void RenderSettings::updateRendererConfigurationForTextureFiltering() {
-        // Change shader configuration.
-        const auto pShaderConfiguration = pRenderer->getShaderConfiguration();
-
-        {
-            std::scoped_lock guard(pShaderConfiguration->first);
-
-            // First, remove all settings.
-            pShaderConfiguration->second->currentPixelShaderConfiguration.erase(
-                ShaderMacro::TEXTURE_FILTERING_POINT);
-            pShaderConfiguration->second->currentPixelShaderConfiguration.erase(
-                ShaderMacro::TEXTURE_FILTERING_LINEAR);
-            pShaderConfiguration->second->currentPixelShaderConfiguration.erase(
-                ShaderMacro::TEXTURE_FILTERING_ANISOTROPIC);
-
-            // Now add the appropriate one.
-            switch (static_cast<TextureFilteringMode>(iTextureFilteringMode)) {
-            case (TextureFilteringMode::POINT): {
-                pShaderConfiguration->second->currentPixelShaderConfiguration.insert(
-                    ShaderMacro::TEXTURE_FILTERING_POINT);
-                break;
-            }
-            case (TextureFilteringMode::LINEAR): {
-                pShaderConfiguration->second->currentPixelShaderConfiguration.insert(
-                    ShaderMacro::TEXTURE_FILTERING_LINEAR);
-                break;
-            }
-            case (TextureFilteringMode::ANISOTROPIC): {
-                pShaderConfiguration->second->currentPixelShaderConfiguration.insert(
-                    ShaderMacro::TEXTURE_FILTERING_ANISOTROPIC);
-                break;
-            }
-            }
-
-            // Update configuration in renderer.
-            pShaderConfiguration->second->updateShaderConfiguration();
+        if (!pRenderer->isInitialized()) {
+            return;
         }
+
+        // This will recreate internal PSO resources and they will use new texture filtering setting:
+        const auto psoGuard =
+            pRenderer->getPsoManager()->clearGraphicsPsosInternalResourcesAndDelayRestoring();
     }
 
     TextureFilteringMode RenderSettings::getTextureFilteringMode() const {

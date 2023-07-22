@@ -112,6 +112,7 @@ namespace ne {
         }
 
         mtxSpirvBytecode.second.clear();
+        mtxSpirvBytecode.second.shrink_to_fit();
 
         notifyShaderBytecodeReleasedFromMemory();
 

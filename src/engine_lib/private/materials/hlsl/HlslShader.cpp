@@ -7,7 +7,6 @@
 
 // Custom.
 #include "io/Logger.h"
-#include "materials/hlsl/RootSignatureGenerator.h"
 #include "misc/Globals.h"
 #include "render/directx/DirectXRenderer.h"
 #include "materials/ShaderFilesystemPaths.hpp"
@@ -25,12 +24,94 @@ namespace ne {
         ShaderType shaderType,
         const std::string& sSourceFileHash)
         : Shader(pRenderer, std::move(pathToCompiledShader), sShaderName, shaderType) {
+        // Save source file hash.
         this->sSourceFileHash = sSourceFileHash;
 
+        // Check if vertex description needs to be updated.
         static_assert(
             sizeof(MeshVertex) == 32, // NOLINT: current size
             "`vShaderVertexDescription` needs to be updated");
     }
+
+    CD3DX12_STATIC_SAMPLER_DESC
+    HlslShader::getStaticSamplerDescription(TextureFilteringMode textureFilteringMode) {
+        switch (textureFilteringMode) {
+        case (TextureFilteringMode::POINT): {
+            return CD3DX12_STATIC_SAMPLER_DESC(
+                static_cast<UINT>(StaticSamplerShaderRegister::BASIC),
+                D3D12_FILTER_MIN_MAG_MIP_POINT,
+                D3D12_TEXTURE_ADDRESS_MODE_WRAP,
+                D3D12_TEXTURE_ADDRESS_MODE_WRAP,
+                D3D12_TEXTURE_ADDRESS_MODE_WRAP,
+                0.0F,
+                16,
+                D3D12_COMPARISON_FUNC_LESS_EQUAL,
+                D3D12_STATIC_BORDER_COLOR_OPAQUE_WHITE,
+                0.0F,
+                D3D12_FLOAT32_MAX,
+                D3D12_SHADER_VISIBILITY_ALL,
+                iStaticSamplerShaderRegisterSpace);
+            break;
+        }
+        case (TextureFilteringMode::LINEAR): {
+            return CD3DX12_STATIC_SAMPLER_DESC(
+                static_cast<UINT>(StaticSamplerShaderRegister::BASIC),
+                D3D12_FILTER_MIN_MAG_MIP_LINEAR,
+                D3D12_TEXTURE_ADDRESS_MODE_WRAP,
+                D3D12_TEXTURE_ADDRESS_MODE_WRAP,
+                D3D12_TEXTURE_ADDRESS_MODE_WRAP,
+                0.0F,
+                16,
+                D3D12_COMPARISON_FUNC_LESS_EQUAL,
+                D3D12_STATIC_BORDER_COLOR_OPAQUE_WHITE,
+                0.0F,
+                D3D12_FLOAT32_MAX,
+                D3D12_SHADER_VISIBILITY_ALL,
+                iStaticSamplerShaderRegisterSpace);
+            break;
+        }
+        case (TextureFilteringMode::ANISOTROPIC): {
+            return CD3DX12_STATIC_SAMPLER_DESC(
+                static_cast<UINT>(StaticSamplerShaderRegister::BASIC),
+                D3D12_FILTER_ANISOTROPIC,
+                D3D12_TEXTURE_ADDRESS_MODE_WRAP,
+                D3D12_TEXTURE_ADDRESS_MODE_WRAP,
+                D3D12_TEXTURE_ADDRESS_MODE_WRAP,
+                0.0F,
+                16,
+                D3D12_COMPARISON_FUNC_LESS_EQUAL,
+                D3D12_STATIC_BORDER_COLOR_OPAQUE_WHITE,
+                0.0F,
+                D3D12_FLOAT32_MAX,
+                D3D12_SHADER_VISIBILITY_ALL,
+                iStaticSamplerShaderRegisterSpace);
+            break;
+        }
+        }
+
+        Error error("unhandled case");
+        error.showError();
+        throw std::runtime_error(error.getFullErrorMessage());
+    }
+
+    CD3DX12_STATIC_SAMPLER_DESC HlslShader::getStaticComparisonSamplerDescription() {
+        return CD3DX12_STATIC_SAMPLER_DESC(
+            static_cast<UINT>(StaticSamplerShaderRegister::COMPARISON),
+            D3D12_FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT,
+            D3D12_TEXTURE_ADDRESS_MODE_BORDER,
+            D3D12_TEXTURE_ADDRESS_MODE_BORDER,
+            D3D12_TEXTURE_ADDRESS_MODE_BORDER,
+            0.0F,
+            16,
+            D3D12_COMPARISON_FUNC_LESS_EQUAL,
+            D3D12_STATIC_BORDER_COLOR_OPAQUE_WHITE,
+            0.0F,
+            D3D12_FLOAT32_MAX,
+            D3D12_SHADER_VISIBILITY_ALL,
+            iStaticSamplerShaderRegisterSpace);
+    }
+
+    UINT HlslShader::getStaticSamplerShaderRegisterSpace() { return iStaticSamplerShaderRegisterSpace; }
 
     std::vector<D3D12_INPUT_ELEMENT_DESC> HlslShader::getShaderInputElementDescription() {
         return vShaderVertexDescription;
@@ -181,28 +262,6 @@ namespace ne {
             return Error("failed to get reflection data");
         }
 
-        // Create reflection interface.
-        DxcBuffer reflectionData{};
-        reflectionData.Encoding = iShaderFileCodepage;
-        reflectionData.Ptr = pReflectionData->GetBufferPointer();
-        reflectionData.Size = pReflectionData->GetBufferSize();
-        ComPtr<ID3D12ShaderReflection> pReflection;
-        hResult = pUtils->CreateReflection(&reflectionData, IID_PPV_ARGS(&pReflection));
-        if (FAILED(hResult)) {
-            return Error(hResult);
-        }
-
-        // Generate root signature.
-        auto result = RootSignatureGenerator::generate(
-            dynamic_cast<DirectXRenderer*>(pRenderer)->getD3dDevice(), pReflection);
-        if (std::holds_alternative<Error>(result)) {
-            auto err = std::get<Error>(std::move(result));
-            err.addEntry();
-            return err;
-        }
-        // Ignore root signature (will be later used from cache), but use other results.
-        auto generatedRootSignature = std::get<RootSignatureGenerator::Generated>(std::move(result));
-
         // Get compiled shader binary.
         ComPtr<IDxcBlob> pCompiledShaderBlob = nullptr;
         ComPtr<IDxcBlobUtf16> pShaderName = nullptr;
@@ -225,6 +284,17 @@ namespace ne {
             static_cast<char*>(pCompiledShaderBlob->GetBufferPointer()),
             static_cast<long long>(pCompiledShaderBlob->GetBufferSize()));
         shaderCacheFile.close();
+
+        // Create reflection interface.
+        DxcBuffer reflectionData{};
+        reflectionData.Encoding = iShaderFileCodepage;
+        reflectionData.Ptr = pReflectionData->GetBufferPointer();
+        reflectionData.Size = pReflectionData->GetBufferSize();
+        ComPtr<ID3D12ShaderReflection> pReflection;
+        hResult = pUtils->CreateReflection(&reflectionData, IID_PPV_ARGS(&pReflection));
+        if (FAILED(hResult)) {
+            return Error(hResult);
+        }
 
         // Write reflection data to file.
         const auto pathToShaderReflection =
@@ -266,23 +336,31 @@ namespace ne {
             shaderDescription.sShaderName,
             shaderDescription.shaderType,
             sSourceFileHash);
-        // `generatedRootSignature.pRootSignature` is intentionally left unused
-        // here we only care about the fact that it was successfully generated.
-        std::scoped_lock rootSignatureInfoGuard(pShader->mtxRootSignatureInfo.first);
+
+        // Collect root signature info from reflection.
+        auto result = RootSignatureGenerator::collectInfoFromReflection(
+            dynamic_cast<DirectXRenderer*>(pRenderer)->getD3dDevice(), pReflection);
+        if (std::holds_alternative<Error>(result)) {
+            auto err = std::get<Error>(std::move(result));
+            err.addEntry();
+            return err;
+        }
+        // Ignore root signature (will be later used from cache), but use other results.
+        auto collectedRootSignatureInfo = std::get<RootSignatureGenerator::CollectedInfo>(std::move(result));
 
         // Save root signature info.
+        std::scoped_lock rootSignatureInfoGuard(pShader->mtxRootSignatureInfo.first);
         RootSignatureInfo info;
-        info.rootParameterIndices = std::move(generatedRootSignature.rootParameterIndices);
-        info.vStaticSamplers = std::move(generatedRootSignature.vStaticSamplers);
-        info.vRootParameters = std::move(generatedRootSignature.vRootParameters);
-
+        info.rootParameterIndices = std::move(collectedRootSignatureInfo.rootParameterIndices);
+        info.staticSamplers = std::move(collectedRootSignatureInfo.staticSamplers);
+        info.vRootParameters = std::move(collectedRootSignatureInfo.vRootParameters);
         pShader->mtxRootSignatureInfo.second = std::move(info);
 
         return pShader;
     }
 
     std::variant<ComPtr<IDxcBlob>, Error> HlslShader::getCompiledBlob() {
-        std::scoped_lock guard(mtxCompiledBlobRootSignature.first);
+        std::scoped_lock guard(mtxCompiledBytecode.first);
 
         auto optionalError = loadShaderDataFromDiskIfNotLoaded();
         if (optionalError.has_value()) {
@@ -290,7 +368,7 @@ namespace ne {
             return optionalError.value();
         }
 
-        return mtxCompiledBlobRootSignature.second.first;
+        return mtxCompiledBytecode.second;
     }
 
     std::pair<std::mutex, std::optional<HlslShader::RootSignatureInfo>>* HlslShader::getRootSignatureInfo() {
@@ -300,11 +378,11 @@ namespace ne {
     std::string HlslShader::getShaderSourceFileHash() const { return sSourceFileHash; }
 
     bool HlslShader::releaseShaderDataFromMemoryIfLoaded() {
-        std::scoped_lock guard(mtxCompiledBlobRootSignature.first);
+        std::scoped_lock guard(mtxCompiledBytecode.first, mtxRootSignatureInfo.first);
 
         // Release shader bytecode.
-        if (mtxCompiledBlobRootSignature.second.first != nullptr) {
-            const auto iNewRefCount = mtxCompiledBlobRootSignature.second.first.Reset();
+        if (mtxCompiledBytecode.second != nullptr) {
+            const auto iNewRefCount = mtxCompiledBytecode.second.Reset();
             if (iNewRefCount != 0) {
                 Logger::get().error(fmt::format(
                     "shader \"{}\" bytecode was requested to be released from the "
@@ -322,14 +400,9 @@ namespace ne {
             notifyShaderBytecodeReleasedFromMemory();
         }
 
-        // Release root signature.
-        if (mtxCompiledBlobRootSignature.second.second != nullptr) {
-            mtxCompiledBlobRootSignature.second.second.Reset();
-            // `CreateRootSignature` can return a pointer to the existing root signature (for example
-            // a pointer to the root signature of some shader) if arguments
-            // for creation were the same as in the previous call.
-            // Because of this we don't check returned ref count for zero since we don't know
-            // whether it's safe to compare it to zero or not.
+        // Release root signature info.
+        if (mtxRootSignatureInfo.second.has_value()) {
+            mtxRootSignatureInfo.second = {};
         }
 
         return false;
@@ -462,7 +535,7 @@ namespace ne {
     }
 
     std::optional<Error> HlslShader::loadShaderDataFromDiskIfNotLoaded() {
-        std::scoped_lock guard(mtxCompiledBlobRootSignature.first);
+        std::scoped_lock guard(mtxCompiledBytecode.first, mtxRootSignatureInfo.first);
 
         // Get path to compiled shader.
         auto pathResult = getPathToCompiledShader();
@@ -473,7 +546,7 @@ namespace ne {
         }
         const auto pathToCompiledShader = std::get<std::filesystem::path>(std::move(pathResult));
 
-        if (mtxCompiledBlobRootSignature.second.first == nullptr) {
+        if (mtxCompiledBytecode.second == nullptr) {
             // Load cached bytecode from disk.
             auto result = readBlobFromDisk(pathToCompiledShader);
             if (std::holds_alternative<Error>(result)) {
@@ -482,12 +555,12 @@ namespace ne {
                 return err;
             }
 
-            mtxCompiledBlobRootSignature.second.first = std::get<ComPtr<IDxcBlob>>(std::move(result));
+            mtxCompiledBytecode.second = std::get<ComPtr<IDxcBlob>>(std::move(result));
 
             notifyShaderBytecodeLoadedIntoMemory();
         }
 
-        if (mtxCompiledBlobRootSignature.second.second == nullptr) {
+        if (!mtxRootSignatureInfo.second.has_value()) {
             // Load shader reflection from disk.
             const auto pathToShaderReflection =
                 pathToCompiledShader.string() + sShaderReflectionFileExtension;
@@ -498,8 +571,7 @@ namespace ne {
                 err.addEntry();
                 return err;
             }
-
-            auto pReflectionData = std::get<ComPtr<IDxcBlob>>(std::move(blobResult));
+            const auto pReflectionData = std::get<ComPtr<IDxcBlob>>(std::move(blobResult));
 
             // Create utils.
             ComPtr<IDxcUtils> pUtils;
@@ -519,27 +591,22 @@ namespace ne {
                 return Error(hResult);
             }
 
-            // Generate root signature.
-            auto result = RootSignatureGenerator::generate(
+            // Collect root signature info from reflection.
+            auto result = RootSignatureGenerator::collectInfoFromReflection(
                 dynamic_cast<DirectXRenderer*>(getUsedRenderer())->getD3dDevice(), pReflection);
             if (std::holds_alternative<Error>(result)) {
                 auto err = std::get<Error>(std::move(result));
                 err.addEntry();
                 return err;
             }
-
-            auto generated = std::get<RootSignatureGenerator::Generated>(std::move(result));
-
-            // Save results.
-            mtxCompiledBlobRootSignature.second.second = std::move(generated.pRootSignature);
-            std::scoped_lock rootSignatureInfoGuard(mtxRootSignatureInfo.first);
+            auto collectedRootSignatureInfo =
+                std::get<RootSignatureGenerator::CollectedInfo>(std::move(result));
 
             // Save root signature info.
             RootSignatureInfo info;
-            info.rootParameterIndices = std::move(generated.rootParameterIndices);
-            info.vStaticSamplers = std::move(generated.vStaticSamplers);
-            info.vRootParameters = std::move(generated.vRootParameters);
-
+            info.rootParameterIndices = std::move(collectedRootSignatureInfo.rootParameterIndices);
+            info.staticSamplers = std::move(collectedRootSignatureInfo.staticSamplers);
+            info.vRootParameters = std::move(collectedRootSignatureInfo.vRootParameters);
             mtxRootSignatureInfo.second = std::move(info);
         }
 

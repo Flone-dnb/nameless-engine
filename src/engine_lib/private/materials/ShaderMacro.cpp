@@ -9,20 +9,8 @@ namespace ne {
 
         for (const auto& macro : macros) {
             switch (macro) {
-            case (ShaderMacro::TEXTURE_FILTERING_POINT):
-                vMacroNames.push_back("TEXTURE_FILTERING_POINT");
-                break;
-            case (ShaderMacro::TEXTURE_FILTERING_LINEAR):
-                vMacroNames.push_back("TEXTURE_FILTERING_LINEAR");
-                break;
-            case (ShaderMacro::TEXTURE_FILTERING_ANISOTROPIC):
-                vMacroNames.push_back("TEXTURE_FILTERING_ANISOTROPIC");
-                break;
             case (ShaderMacro::USE_DIFFUSE_TEXTURE):
                 vMacroNames.push_back("USE_DIFFUSE_TEXTURE");
-                break;
-            case (ShaderMacro::USE_NORMAL_TEXTURE):
-                vMacroNames.push_back("USE_NORMAL_TEXTURE");
                 break;
             case (ShaderMacro::USE_MATERIAL_TRANSPARENCY):
                 vMacroNames.push_back("USE_MATERIAL_TRANSPARENCY");

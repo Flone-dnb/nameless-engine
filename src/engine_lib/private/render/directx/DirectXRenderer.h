@@ -38,13 +38,6 @@ namespace ne {
         virtual ~DirectXRenderer() override = default;
 
         /**
-         * Returns static texture samplers, used in texture filtering.
-         *
-         * @return Array of static texture samplers.
-         */
-        static std::array<const CD3DX12_STATIC_SAMPLER_DESC, 4> getStaticTextureSamplers();
-
-        /**
          * Creates a new DirectX renderer.
          *
          * @param pGameManager GameManager object that owns this renderer.

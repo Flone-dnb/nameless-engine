@@ -138,8 +138,10 @@ namespace ne {
          * @warning Expects that the GPU is not referencing this PSO (command queue is empty) and
          * that no drawing will occur until @ref restoreInternalResources is called.
          *
-         * @remark Typically used before changing something (for ex. shader configuration), so that no PSO
-         * will reference old resources, to later call @ref restoreInternalResources.
+         * @remark Typically used before changing something (for ex. shader configuration, texture
+         * filtering), so that no PSO will reference old resources,
+         * to later call @ref restoreInternalResources that will recreate internal resources with new
+         * render settings.
          *
          * @return Error if something went wrong.
          */

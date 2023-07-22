@@ -2,9 +2,12 @@
 
 // Standard.
 #include <mutex>
+#include <set>
 
 // Custom.
 #include "materials/Shader.h"
+#include "render/RenderSettings.h"
+#include "materials/hlsl/RootSignatureGenerator.h"
 
 // External.
 #include "directx/d3dx12.h"
@@ -18,6 +21,12 @@ namespace ne {
 
     class Renderer;
 
+    /** Determines which shader register (in HLSL) should be used by different sampler types. */
+    enum class StaticSamplerShaderRegister : UINT {
+        BASIC = 0,
+        COMPARISON = 1,
+    };
+
     /** Represents a compiled HLSL shader. */
     class HlslShader : public Shader {
     public:
@@ -27,7 +36,7 @@ namespace ne {
             std::vector<CD3DX12_ROOT_PARAMETER> vRootParameters;
 
             /** Static samplers that were used in creation of the root signature. */
-            std::vector<CD3DX12_STATIC_SAMPLER_DESC> vStaticSamplers;
+            std::set<SamplerType> staticSamplers;
 
             /**
              * Stores pairs of `shader resource name` (taken from shader file) -
@@ -58,6 +67,31 @@ namespace ne {
         HlslShader& operator=(const HlslShader&) = delete;
 
         virtual ~HlslShader() override = default;
+
+        /**
+         * Returns a static sampler description depending on the specified texture filtering mode.
+         *
+         * @param textureFilteringMode Returned sampler description will use the specified texture
+         * filtering.
+         *
+         * @return Static sampler description.
+         */
+        static CD3DX12_STATIC_SAMPLER_DESC
+        getStaticSamplerDescription(TextureFilteringMode textureFilteringMode);
+
+        /**
+         * Returns description of a static comparison sampler.
+         *
+         * @return Static sampler description.
+         */
+        static CD3DX12_STATIC_SAMPLER_DESC getStaticComparisonSamplerDescription();
+
+        /**
+         * Returns shader register space (in HLSL) that should be used by different sampler types.
+         *
+         * @return Shader register space.
+         */
+        static UINT getStaticSamplerShaderRegisterSpace();
 
         /**
          * Returns shader input layout description (@ref vShaderVertexDescription).
@@ -131,9 +165,9 @@ namespace ne {
         std::string getShaderSourceFileHash() const;
 
         /**
-         * Releases underlying shader data (bytecode, root signature, etc.) from memory (this object will not
-         * be deleted) if the shader data was loaded into memory. Next time this shader will be needed the
-         * data will be loaded from disk.
+         * Releases underlying shader bytecode for each shader from memory (this object will not be deleted)
+         * if the shader bytecode was loaded into memory.
+         * Next time this shader will be needed it will be loaded from disk.
          *
          * @return `false` if was released from memory, `true` if was not loaded in memory previously.
          */
@@ -189,24 +223,23 @@ namespace ne {
 
         /**
          * Loads shader data (bytecode, root signature, etc.) from disk cache to @ref
-         * mtxCompiledBlobRootSignature (if something is not loaded).
+         * mtxCompiledBytecode (if something is not loaded).
          *
          * @return Error if something went wrong.
          */
         [[nodiscard]] std::optional<Error> loadShaderDataFromDiskIfNotLoaded();
 
         /**
-         * Mutex for read/write operations on compiled blob and shader's root signature.
-         * Compiled shader bytecode and root signature (may be empty if not stored in memory right now).
+         * Mutex for read/write operations on compiled bytecode
+         * (may be empty if not stored in memory right now).
          */
-        std::pair<std::recursive_mutex, std::pair<ComPtr<IDxcBlob>, ComPtr<ID3D12RootSignature>>>
-            mtxCompiledBlobRootSignature;
+        std::pair<std::recursive_mutex, ComPtr<IDxcBlob>> mtxCompiledBytecode;
 
         /**
-         * Contains information about @ref mtxCompiledBlobRootSignature.
+         * Contains information used to create root signature.
          *
-         * @remark Might not be calculated yet if root signature is not generated,
-         * see @ref loadShaderDataFromDiskIfNotLoaded for calculating root signature information.
+         * @remark Might not be calculated yet if root signature info was not collected yet,
+         * see @ref loadShaderDataFromDiskIfNotLoaded for collecting root signature information.
          */
         std::pair<std::mutex, std::optional<RootSignatureInfo>> mtxRootSignatureInfo;
 
@@ -225,8 +258,11 @@ namespace ne {
         /** Name of the section used to store HLSL specific metadata. */
         static inline const auto sHlslSectionName = "HLSL";
 
+        /** Determines which shader register space (in HLSL) should be used by different sampler types. */
+        static inline const UINT iStaticSamplerShaderRegisterSpace = 5; // NOLINT
+
         /** Shader input element description. */
-        static inline std::vector<D3D12_INPUT_ELEMENT_DESC> vShaderVertexDescription = {
+        static inline const std::vector<D3D12_INPUT_ELEMENT_DESC> vShaderVertexDescription = {
             {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
             {"NORMAL",
              0,
@@ -247,11 +283,11 @@ namespace ne {
         // ! if adding new shader models add them to cache config in ShaderManager !
         // -------------------------------------------------------------------------
         /** Used vertex shader model. */
-        static inline std::string sVertexShaderModel = "vs_6_0";
+        static inline const std::string sVertexShaderModel = "vs_6_0";
         /** Used pixel shader model. */
-        static inline std::string sPixelShaderModel = "ps_6_0";
+        static inline const std::string sPixelShaderModel = "ps_6_0";
         /** Used compute shader model. */
-        static inline std::string sComputeShaderModel = "cs_6_0";
+        static inline const std::string sComputeShaderModel = "cs_6_0";
         // -------------------------------------------------------------------------
         // ! if adding new shader models add them to cache config in ShaderManager !
         // -------------------------------------------------------------------------

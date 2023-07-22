@@ -1,21 +1,12 @@
 #include "Base.hlsl"
 
-#ifdef TEXTURE_FILTERING_POINT
-    SamplerState samplerPointWrap       : register(s0, space5);
-#elif TEXTURE_FILTERING_LINEAR
-    SamplerState samplerLinearWrap      : register(s0, space5);
-#elif TEXTURE_FILTERING_ANISOTROPIC
-    SamplerState samplerAnisotropicWrap : register(s0, space5);
+#ifdef USE_DIFFUSE_TEXTURE
+   SamplerState textureSampler : register(s0, space5);
 #endif
 
-#ifdef RECEIVE_DYNAMIC_SHADOWS
-    SamplerComparisonState samplerShadowMap : register(s1, space5);
+#ifdef USE_DIFFUSE_TEXTURE
+    Texture2D diffuseTexture : register(t0, space5);
 #endif
-
-// will be used later
-// #ifdef USE_DIFFUSE_TEXTURE
-//     Texture2D diffuseTexture : register(t0, space5);
-// #endif
 
 /** Describes MeshNode's constants. */
 cbuffer meshData : register(b1, space5)
@@ -36,7 +27,7 @@ cbuffer materialData : register(b2, space5)
     float opacity;
 
     // don't forget to pad to 4 floats (if needed)
-}
+};
 
 VertexOut vsMeshNode(VertexIn vertexIn)
 {
@@ -59,22 +50,14 @@ float4 psMeshNode(VertexOut pin) : SV_Target
 {
     float4 outputColor = float4(diffuseColor, 1.0F);
 
-// will be used later
-// #ifdef USE_DIFFUSE_TEXTURE
-//     // Apply texture filtering.
-//     #ifdef TEXTURE_FILTERING_POINT
-//         diffuseColor = diffuseTexture.Sample(samplerPointWrap, pin.uv);
-//     #elif TEXTURE_FILTERING_LINEAR
-//         diffuseColor = diffuseTexture.Sample(samplerLinearWrap, pin.uv);
-//     #elif TEXTURE_FILTERING_ANISOTROPIC
-//         diffuseColor = diffuseTexture.Sample(samplerAnisotropicWrap, pin.uv);
-//     #endif
-// #endif
+#ifdef USE_DIFFUSE_TEXTURE
+    outputColor *= diffuseTexture.Sample(textureSampler, pin.uv);
+#endif
 
 #ifdef USE_MATERIAL_TRANSPARENCY
+    outputColor.w *= opacity;
     // Early exit (if possible).
-    clip(opacity - 0.01F);
-    outputColor.a = opacity;
+    clip(outputColor.w - 0.01F);
 #endif
 
     return outputColor;

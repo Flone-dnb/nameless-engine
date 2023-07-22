@@ -282,15 +282,15 @@ namespace ne {
         }
 
         const auto pGameInstance = getGameInstance();
-        if (pGameInstance == nullptr) {
+        if (pGameInstance == nullptr) [[unlikely]] {
             return;
         }
 
-        const float iWorldSize = static_cast<float>(pGameInstance->getWorldSize());
+        const float iWorldSizeOneDimention = static_cast<float>(pGameInstance->getWorldSize()) / 2;
 
-        if (mtxWorldMatrix.second.worldLocation.x >= iWorldSize ||
-            mtxWorldMatrix.second.worldLocation.y >= iWorldSize ||
-            mtxWorldMatrix.second.worldLocation.z >= iWorldSize) {
+        if (std::abs(mtxWorldMatrix.second.worldLocation.x) > iWorldSizeOneDimention ||
+            std::abs(mtxWorldMatrix.second.worldLocation.y) > iWorldSizeOneDimention ||
+            std::abs(mtxWorldMatrix.second.worldLocation.z) > iWorldSizeOneDimention) {
             Logger::get().warn(fmt::format(
                 "spatial node \"{}\" is exceeding world bounds, node's world location: "
                 "({}, {}, {}), world size: {}",
@@ -298,7 +298,7 @@ namespace ne {
                 mtxWorldMatrix.second.worldLocation.x,
                 mtxWorldMatrix.second.worldLocation.y,
                 mtxWorldMatrix.second.worldLocation.z,
-                iWorldSize));
+                pGameInstance->getWorldSize()));
         }
     }
 

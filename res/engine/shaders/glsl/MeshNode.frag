@@ -1,6 +1,8 @@
 #include "Base.glsl"
 
-layout(binding = 1) uniform sampler2D textureSampler;
+#ifdef USE_DIFFUSE_TEXTURE
+    layout(binding = 1) uniform sampler2D textureSampler;
+#endif
 
 layout(location = 0) in vec4 fragmentViewPosition;
 layout(location = 1) in vec4 fragmentWorldPosition;
@@ -21,4 +23,8 @@ layout(binding = 1) uniform MaterialData
 
 void main() {
     outColor = vec4(materialData.diffuseColor, 1.0F);
+
+#ifdef USE_DIFFUSE_TEXTURE
+    outputColor *= texture(textureSampler, fragmentUv);
+#endif
 }

@@ -55,9 +55,9 @@ float4 psMeshNode(VertexOut pin) : SV_Target
 #endif
 
 #ifdef USE_MATERIAL_TRANSPARENCY
-    outputColor.w *= opacity;
+    outputColor.a *= opacity;
     // Early exit (if possible).
-    clip(outputColor.w - 0.01F);
+    clip(outputColor.a - 0.01F);
 #endif
 
     return outputColor;

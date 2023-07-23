@@ -37,7 +37,7 @@ namespace ne {
 
     std::optional<Error> Renderer::compileEngineShaders() const {
         // Prepare shaders to compile.
-        const auto vEngineShaders = getEngineShadersToCompile();
+        auto vEngineShaders = getEngineShadersToCompile();
 
         // Prepare a promise/future to synchronously wait for the compilation to finish.
         auto pPromiseFinish = std::make_shared<std::promise<bool>>();

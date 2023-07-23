@@ -91,7 +91,7 @@ namespace ne {
         }
 
         // Compile shader.
-        const auto result =
+        auto result =
             compileRenderDependentShader(pRenderer, shaderCacheDirectory, sConfiguration, shaderDescription);
 
         // Exit now if there was an error.

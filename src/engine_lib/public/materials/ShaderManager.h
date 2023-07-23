@@ -141,6 +141,13 @@ namespace ne {
 
     protected:
         /**
+         * Returns path to the configuration file.
+         *
+         * @return Path to configuration file.
+         */
+        static std::filesystem::path getConfigurationFilePath();
+
+        /**
          * Sets renderer's shader configuration for specific types of shaders.
          *
          * @warning If the configuration is changed we will try to release
@@ -237,13 +244,6 @@ namespace ne {
          * Writes current configuration to disk.
          */
         void writeConfigurationToDisk();
-
-        /**
-         * Returns path to the configuration file.
-         *
-         * @return Path to configuration file.
-         */
-        std::filesystem::path getConfigurationFilePath() const;
 
     private:
         /** Internal shader data. */

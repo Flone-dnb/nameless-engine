@@ -277,7 +277,7 @@ namespace ne {
         }
     }
 
-    std::filesystem::path ShaderManager::getConfigurationFilePath() const {
+    std::filesystem::path ShaderManager::getConfigurationFilePath() {
         std::filesystem::path configPath = ProjectPaths::getPathToEngineConfigsDirectory();
         configPath /= sConfigurationFileName;
 

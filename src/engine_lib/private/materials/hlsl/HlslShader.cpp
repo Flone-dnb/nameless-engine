@@ -44,7 +44,7 @@ namespace ne {
                 D3D12_TEXTURE_ADDRESS_MODE_WRAP,
                 D3D12_TEXTURE_ADDRESS_MODE_WRAP,
                 0.0F,
-                16,
+                16, // NOLINT: magic number, max anisotropy
                 D3D12_COMPARISON_FUNC_LESS_EQUAL,
                 D3D12_STATIC_BORDER_COLOR_OPAQUE_WHITE,
                 0.0F,
@@ -61,7 +61,7 @@ namespace ne {
                 D3D12_TEXTURE_ADDRESS_MODE_WRAP,
                 D3D12_TEXTURE_ADDRESS_MODE_WRAP,
                 0.0F,
-                16,
+                16, // NOLINT: magic number, max anisotropy
                 D3D12_COMPARISON_FUNC_LESS_EQUAL,
                 D3D12_STATIC_BORDER_COLOR_OPAQUE_WHITE,
                 0.0F,
@@ -78,7 +78,7 @@ namespace ne {
                 D3D12_TEXTURE_ADDRESS_MODE_WRAP,
                 D3D12_TEXTURE_ADDRESS_MODE_WRAP,
                 0.0F,
-                16,
+                16, // NOLINT: magic number, max anisotropy
                 D3D12_COMPARISON_FUNC_LESS_EQUAL,
                 D3D12_STATIC_BORDER_COLOR_OPAQUE_WHITE,
                 0.0F,
@@ -102,7 +102,7 @@ namespace ne {
             D3D12_TEXTURE_ADDRESS_MODE_BORDER,
             D3D12_TEXTURE_ADDRESS_MODE_BORDER,
             0.0F,
-            16,
+            16, // NOLINT: magic number, max anisotropy
             D3D12_COMPARISON_FUNC_LESS_EQUAL,
             D3D12_STATIC_BORDER_COLOR_OPAQUE_WHITE,
             0.0F,

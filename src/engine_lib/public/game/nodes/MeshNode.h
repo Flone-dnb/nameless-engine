@@ -9,6 +9,7 @@
 #include "render/general/resources/GpuResource.h"
 #include "materials/ShaderResource.h"
 #include "materials/ShaderReadWriteResourceUniquePtr.h"
+#include "materials/VulkanAlignmentConstants.hpp"
 
 #include "MeshNode.generated.h"
 
@@ -282,9 +283,9 @@ namespace ne RNAMESPACE() {
          */
         struct MeshShaderConstants {
             /** World matrix. */
-            glm::mat4x4 world = glm::identity<glm::mat4x4>();
+            alignas(iVkMat4Alignment) glm::mat4x4 world = glm::identity<glm::mat4x4>();
 
-            // don't forget to add padding to 4 floats (if needed)
+            // don't forget to add padding to 4 floats (if needed) for HLSL packing rules
         };
 
         /**

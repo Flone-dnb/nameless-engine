@@ -147,6 +147,7 @@ set(PROJECT_SOURCES
     private/materials/ShaderReadWriteResourceManager.h
     private/materials/ShaderReadWriteResourceUniquePtr.cpp
     private/materials/ShaderReadWriteResourceUniquePtr.h
+    public/materials/VulkanAlignmentConstants.hpp
     public/misc/ProjectPaths.h
     private/misc/ProjectPaths.cpp
     public/misc/PrimitiveMeshGenerator.h

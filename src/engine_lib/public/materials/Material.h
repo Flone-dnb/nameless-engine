@@ -9,6 +9,7 @@
 #include "materials/ShaderMacro.h"
 #include "math/GLMath.hpp"
 #include "materials/ShaderReadWriteResourceUniquePtr.h"
+#include "materials/VulkanAlignmentConstants.hpp"
 
 #include "Material.generated.h"
 
@@ -207,12 +208,12 @@ namespace ne RNAMESPACE() {
          */
         struct MaterialShaderConstants {
             /** Fill color. */
-            glm::vec3 diffuseColor = glm::vec3(1.0F, 1.0F, 1.0F);
+            alignas(iVkVec3Alignment) glm::vec3 diffuseColor = glm::vec3(1.0F, 1.0F, 1.0F);
 
             /** Opacity (when material transparency is used). */
-            float opacity = 1.0F;
+            alignas(iVkScalarAlignment) float opacity = 1.0F;
 
-            // don't forget to add padding to 4 floats (if needed)
+            // don't forget to add padding to 4 floats (if needed) for HLSL packing rules
         };
 
         /**

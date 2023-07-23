@@ -10,6 +10,7 @@
 // Custom.
 #include "misc/Error.h"
 #include "math/GLMath.hpp"
+#include "materials/VulkanAlignmentConstants.hpp"
 
 // External.
 #if defined(WIN32)
@@ -40,21 +41,18 @@ namespace ne {
      */
     struct FrameConstants {
         /** Camera's view matrix multiplied by camera's projection matrix. */
-        glm::mat4x4 viewProjectionMatrix = glm::identity<glm::mat4x4>();
+        alignas(iVkMat4Alignment) glm::mat4x4 viewProjectionMatrix = glm::identity<glm::mat4x4>();
 
         /** Camera's world location. */
-        glm::vec3 cameraPosition = glm::vec3(0.0F, 0.0F, 0.0F);
+        alignas(iVkVec3Alignment) glm::vec3 cameraPosition = glm::vec3(0.0F, 0.0F, 0.0F);
 
         /** Time that has passed since the last frame in seconds (i.e. delta time). */
-        float timeSincePrevFrameInSec = 0.0F;
+        alignas(iVkScalarAlignment) float timeSincePrevFrameInSec = 0.0F;
 
         /** Time since the first window was created (in seconds). */
-        float totalTimeInSec = 0.0F;
+        alignas(iVkScalarAlignment) float totalTimeInSec = 0.0F;
 
-        /** Padding. */
-        float pad[3];
-
-        // don't forget to pad to 4 floats (if needed)
+        // don't forget to add padding to 4 floats (if needed) for HLSL packing rules
     };
 
     /** Stores objects used by one frame. */

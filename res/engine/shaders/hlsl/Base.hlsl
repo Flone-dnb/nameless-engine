@@ -13,8 +13,6 @@ cbuffer frameData : register(b0, space5)
     /** Time since the first window was created (in seconds). */
     float totalTimeInSec;
 
-    float3 _framePad;
-
     // don't forget to pad to 4 floats (if needed)
 }
 

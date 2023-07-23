@@ -124,11 +124,14 @@ namespace ne {
 
         // Run the GC for the last time.
         Logger::get().info("GameManager is being destroyed, running garbage collector...");
-        gc_collector()->fullCollect();
+        Logger::get().flushToDisk(); // flush to disk in order to see if a crash was caused by a GC
+
+        gc_collector()->fullCollect(); // `fullCollect` is longer that a usual `collect` but we don't care
+                                       // about the time here
 
         // Log results.
         Logger::get().info(fmt::format(
-            "garbage collector has finished: "
+            "garbage collector has finished, "
             "freed {} object(s) ({} left alive)",
             gc_collector()->getLastFreedObjectsCount(),
             gc_collector()->getAliveObjectsCount()));
@@ -230,26 +233,21 @@ namespace ne {
         Logger::get().flushToDisk(); // flush to disk in order to see if a crash was caused by a GC
 
         // Save time to measure later.
-        const auto start = std::chrono::steady_clock::now();
+        const auto startTime = std::chrono::steady_clock::now();
 
         // Run garbage collector.
         gc_collector()->collect();
 
         // Measure the time it took to run garbage collector.
-        const auto end = std::chrono::steady_clock::now();
-        const auto durationInMs =
-            static_cast<float>(std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count()) *
-            0.000001F;
-
-        // Convert time to string. Limit precision to 1 digit.
-        std::stringstream durationStream;
-        durationStream << std::fixed << std::setprecision(1) << durationInMs;
+        const auto endTime = std::chrono::steady_clock::now();
+        const auto timeTookInMs =
+            std::chrono::duration<float, std::chrono::milliseconds::period>(endTime - startTime).count();
 
         // Log results.
         Logger::get().info(fmt::format(
-            "garbage collector has finished, took {} millisecond(s): "
+            "garbage collector has finished, took {:.1F} millisecond(s): "
             "freed {} object(s) ({} left alive)",
-            durationStream.str(),
+            timeTookInMs,
             gc_collector()->getLastFreedObjectsCount(),
             gc_collector()->getAliveObjectsCount()));
 

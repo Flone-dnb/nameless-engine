@@ -25,13 +25,15 @@ namespace ne {
 
         applyConfigurationFromDisk();
 
-        lastSelfValidationCheckTime = std::chrono::steady_clock::now();
+        mtxShaderData.second.lastSelfValidationCheckTime = std::chrono::steady_clock::now();
     }
 
     std::optional<std::shared_ptr<ShaderPack>> ShaderManager::getShader(const std::string& sShaderName) {
-        std::scoped_lock guard(mtxRwShaders);
-        const auto it = compiledShaders.find(sShaderName);
-        if (it == compiledShaders.end()) {
+        std::scoped_lock guard(mtxShaderData.first);
+
+        // Find the specified shader name in the global array of shaders.
+        const auto it = mtxShaderData.second.compiledShaders.find(sShaderName);
+        if (it == mtxShaderData.second.compiledShaders.end()) {
             return {};
         }
 
@@ -39,54 +41,66 @@ namespace ne {
     }
 
     void ShaderManager::releaseShaderBytecodeIfNotUsed(const std::string& sShaderName) {
-        std::scoped_lock guard(mtxRwShaders);
+        std::scoped_lock guard(mtxShaderData.first);
 
-        const auto it = compiledShaders.find(sShaderName);
-        if (it == compiledShaders.end()) [[unlikely]] {
+        // Find the specified shader name in the global array of shaders.
+        const auto it = mtxShaderData.second.compiledShaders.find(sShaderName);
+        if (it == mtxShaderData.second.compiledShaders.end()) [[unlikely]] {
             Logger::get().error(fmt::format("no shader with the name \"{}\" exists", sShaderName));
             return;
         }
 
+        // Check if some ShaderUser is using this shader.
         if (it->second.use_count() > 1) {
-            // Shader pack is still used by somebody else.
+            // Shader pack is still used by some ShaderUser.
             return;
         }
 
+        // Release shader data from memory.
         it->second->releaseShaderPackDataFromMemoryIfLoaded();
     }
 
     void ShaderManager::removeShaderIfMarkedToBeRemoved(const std::string& sShaderName) {
-        std::scoped_lock guard(mtxRwShaders);
-        const auto it = std::ranges::find(vShadersToBeRemoved, sShaderName);
-        if (it == vShadersToBeRemoved.end()) {
-            // Not marked as "to remove".
+        std::scoped_lock guard(mtxShaderData.first);
+
+        // Find the specified name in the array of shaders to be removed.
+        const auto toBeRemovedIt = std::ranges::find(mtxShaderData.second.vShadersToBeRemoved, sShaderName);
+        if (toBeRemovedIt == mtxShaderData.second.vShadersToBeRemoved.end()) {
+            // Not marked as "to be removed".
             return;
         }
 
-        const auto shaderIt = compiledShaders.find(*it);
-        if (shaderIt == compiledShaders.end()) [[unlikely]] {
+        // Find the specified name in the global array of shaders.
+        const auto shaderIt = mtxShaderData.second.compiledShaders.find(*toBeRemovedIt);
+        if (shaderIt == mtxShaderData.second.compiledShaders.end()) [[unlikely]] {
             Logger::get().error(fmt::format("no shader with the name \"{}\" exists", sShaderName));
             return;
         }
 
+        // Everything seems to be good, the shader is found.
+        // Check if some ShaderUser is using this shader.
         const long iUseCount = shaderIt->second.use_count();
         if (iUseCount > 1) {
-            // Still used by somebody else.
+            // Still used by some ShaderUser.
             return;
         }
 
-        compiledShaders.erase(shaderIt);
-        vShadersToBeRemoved.erase(it);
+        // Remove the shader.
+        mtxShaderData.second.compiledShaders.erase(shaderIt);
+        mtxShaderData.second.vShadersToBeRemoved.erase(toBeRemovedIt);
     }
 
     void ShaderManager::applyConfigurationFromDisk() {
         const auto configPath = getConfigurationFilePath();
 
+        // Check if the config file exists.
         if (!std::filesystem::exists(configPath)) {
+            // Write new config file.
             writeConfigurationToDisk();
             return;
         }
 
+        // Read the config file.
         ConfigManager configManager;
         auto optional = configManager.loadFile(configPath);
         if (optional.has_value()) {
@@ -97,21 +111,25 @@ namespace ne {
             return;
         }
 
+        std::scoped_lock guard(mtxShaderData.first);
+
         constexpr long iSelfValidationInternalMinimum = 15; // NOLINT: don't do self validation too often.
         auto iNewSelfValidationIntervalInMin = configManager.getValue<long>(
-            "", sConfigurationSelfValidationIntervalKeyName, iSelfValidationIntervalInMin);
+            "",
+            sConfigurationSelfValidationIntervalKeyName,
+            mtxShaderData.second.iSelfValidationIntervalInMin);
         if (iNewSelfValidationIntervalInMin < iSelfValidationInternalMinimum) {
             iNewSelfValidationIntervalInMin = iSelfValidationInternalMinimum;
         }
 
-        iSelfValidationIntervalInMin = iNewSelfValidationIntervalInMin;
+        mtxShaderData.second.iSelfValidationIntervalInMin = iNewSelfValidationIntervalInMin;
 
         // Rewrite configuration on disk because we might correct some values.
         writeConfigurationToDisk();
     }
 
     std::optional<Error> ShaderManager::refreshShaderCache() {
-        std::scoped_lock guard(mtxRwShaders);
+        std::scoped_lock guard(mtxShaderData.first);
 
 #if defined(DEBUG)
         constexpr bool bIsReleaseBuild = false;
@@ -236,14 +254,16 @@ namespace ne {
         return {};
     }
 
-    void ShaderManager::writeConfigurationToDisk() const {
+    void ShaderManager::writeConfigurationToDisk() {
+        std::scoped_lock guard(mtxShaderData.first);
+
         const auto configPath = getConfigurationFilePath();
 
         ConfigManager configManager;
         configManager.setValue(
             "",
             sConfigurationSelfValidationIntervalKeyName,
-            iSelfValidationIntervalInMin,
+            mtxShaderData.second.iSelfValidationIntervalInMin,
             "specified in minutes, interval can't be smaller than 15 minutes, for big games this might cause "
             "small framerate drop each time self validation is performed but "
             "this might find errors (if any occurred) and fix them which might result in slightly less RAM "
@@ -270,40 +290,51 @@ namespace ne {
     }
 
     bool ShaderManager::isShaderNameCanBeUsed(const std::string& sShaderName) {
-        std::scoped_lock guard(mtxRwShaders);
-        const auto it = compiledShaders.find(sShaderName);
-        return it == compiledShaders.end();
+        std::scoped_lock guard(mtxShaderData.first);
+
+        const auto it = mtxShaderData.second.compiledShaders.find(sShaderName);
+
+        return it == mtxShaderData.second.compiledShaders.end();
     }
 
     bool ShaderManager::markShaderToBeRemoved(const std::string& sShaderName) {
-        std::scoped_lock guard(mtxRwShaders);
-        const auto it = compiledShaders.find(sShaderName);
-        if (it == compiledShaders.end()) {
+        std::scoped_lock guard(mtxShaderData.first);
+
+        // Find the specified shader name in the global array of shaders.
+        const auto it = mtxShaderData.second.compiledShaders.find(sShaderName);
+        if (it == mtxShaderData.second.compiledShaders.end()) [[unlikely]] {
             Logger::get().warn(fmt::format("no shader with the name \"{}\" exists", sShaderName));
             return false;
         }
 
+        // Check if some ShaderUser is using this shader.
         const long iUseCount = it->second.use_count();
         if (iUseCount > 1) {
-            const auto toBeRemovedIt = std::ranges::find(vShadersToBeRemoved, sShaderName);
-            if (toBeRemovedIt == vShadersToBeRemoved.end()) {
+            // Mark the shader as "to be removed".
+            const auto toBeRemovedIt =
+                std::ranges::find(mtxShaderData.second.vShadersToBeRemoved, sShaderName);
+            if (toBeRemovedIt == mtxShaderData.second.vShadersToBeRemoved.end()) {
                 Logger::get().info(fmt::format(
                     "shader \"{}\" is marked to be removed later (use count: {})", sShaderName, iUseCount));
-                vShadersToBeRemoved.push_back(sShaderName);
+                mtxShaderData.second.vShadersToBeRemoved.push_back(sShaderName);
             }
             return true;
         }
 
-        compiledShaders.erase(it);
+        // Remove the shader.
+        mtxShaderData.second.compiledShaders.erase(it);
 
         return false;
     }
 
     void ShaderManager::performSelfValidation() { // NOLINT
+        std::scoped_lock guard(mtxShaderData.first);
+
         using namespace std::chrono;
         const auto iDurationInMin =
-            duration_cast<minutes>(steady_clock::now() - lastSelfValidationCheckTime).count();
-        if (iDurationInMin < iSelfValidationIntervalInMin) {
+            duration_cast<minutes>(steady_clock::now() - mtxShaderData.second.lastSelfValidationCheckTime)
+                .count();
+        if (iDurationInMin < mtxShaderData.second.iSelfValidationIntervalInMin) {
             return;
         }
 
@@ -348,16 +379,14 @@ namespace ne {
 
         SelfValidationResults results;
 
-        std::scoped_lock guard(mtxRwShaders);
-
         Logger::get().info("starting self validation...");
 
         const auto start = steady_clock::now();
 
         // Look what shaders can be removed.
-        for (const auto& sShaderToRemove : vShadersToBeRemoved) {
-            const auto it = compiledShaders.find(sShaderToRemove);
-            if (it == compiledShaders.end()) [[unlikely]] {
+        for (const auto& sShaderToRemove : mtxShaderData.second.vShadersToBeRemoved) {
+            const auto it = mtxShaderData.second.compiledShaders.find(sShaderToRemove);
+            if (it == mtxShaderData.second.compiledShaders.end()) [[unlikely]] {
                 results.vNotFoundShaders.push_back(sShaderToRemove);
             } else if (it->second.use_count() == 1) {
                 results.vRemovedFromToBeRemoved.push_back(sShaderToRemove);
@@ -367,32 +396,36 @@ namespace ne {
         // Erase shaders that were marked to be removed and not referenced by anyone else
         // from compiled shaders array.
         for (const auto& sShaderName : results.vRemovedFromToBeRemoved) {
-            auto it = compiledShaders.find(sShaderName);
-            if (it != compiledShaders.end()) {
-                compiledShaders.erase(it);
+            auto it = mtxShaderData.second.compiledShaders.find(sShaderName);
+            if (it != mtxShaderData.second.compiledShaders.end()) {
+                mtxShaderData.second.compiledShaders.erase(it);
             }
         }
         // Remove them from "to be removed" array.
         for (const auto& sShaderNameToRemove : results.vRemovedFromToBeRemoved) {
-            for (auto it = vShadersToBeRemoved.begin(); it != vShadersToBeRemoved.end(); ++it) {
+            for (auto it = mtxShaderData.second.vShadersToBeRemoved.begin();
+                 it != mtxShaderData.second.vShadersToBeRemoved.end();
+                 ++it) {
                 if (*it == sShaderNameToRemove) {
-                    vShadersToBeRemoved.erase(it);
+                    mtxShaderData.second.vShadersToBeRemoved.erase(it);
                     break;
                 }
             }
         }
         // Remove not found shaders from "to be removed" array.
         for (const auto& sShaderNameToRemove : results.vNotFoundShaders) {
-            for (auto it = vShadersToBeRemoved.begin(); it != vShadersToBeRemoved.end(); ++it) {
+            for (auto it = mtxShaderData.second.vShadersToBeRemoved.begin();
+                 it != mtxShaderData.second.vShadersToBeRemoved.end();
+                 ++it) {
                 if (*it == sShaderNameToRemove) {
-                    vShadersToBeRemoved.erase(it);
+                    mtxShaderData.second.vShadersToBeRemoved.erase(it);
                     break;
                 }
             }
         }
 
         // Check shaders that were needed but no longer used.
-        for (const auto& [sShaderName, pShaderPack] : compiledShaders) {
+        for (const auto& [sShaderName, pShaderPack] : mtxShaderData.second.compiledShaders) {
             if (pShaderPack.use_count() == 1) {
                 const bool bReleased = !pShaderPack->releaseShaderPackDataFromMemoryIfLoaded();
                 if (bReleased) {
@@ -417,14 +450,14 @@ namespace ne {
                 fmt::format("finished self validation (took {} ms): everything is OK", iTimeTookInMs));
         }
 
-        lastSelfValidationCheckTime = steady_clock::now();
+        mtxShaderData.second.lastSelfValidationCheckTime = steady_clock::now();
     }
 
     void ShaderManager::setRendererConfigurationForShaders(
         const std::set<ShaderMacro>& configuration, ShaderType shaderType) {
-        std::scoped_lock guard(mtxRwShaders);
+        std::scoped_lock guard(mtxShaderData.first);
 
-        for (const auto& [sShaderName, pShader] : compiledShaders) {
+        for (const auto& [sShaderName, pShader] : mtxShaderData.second.compiledShaders) {
             if (pShader->getShaderType() == shaderType) {
                 pShader->setRendererConfiguration(configuration);
             }
@@ -468,7 +501,7 @@ namespace ne {
             }
         }
 
-        std::scoped_lock guard(mtxRwShaders);
+        std::scoped_lock guard(mtxShaderData.first);
 
         // Check if we already have a shader with this name.
         for (const auto& shader : vShadersToCompile) {
@@ -477,8 +510,8 @@ namespace ne {
                              "these names are reserved for internal purposes");
             }
 
-            const auto it = compiledShaders.find(shader.sShaderName);
-            if (it != compiledShaders.end()) [[unlikely]] {
+            const auto it = mtxShaderData.second.compiledShaders.find(shader.sShaderName);
+            if (it != mtxShaderData.second.compiledShaders.end()) [[unlikely]] {
                 return Error(fmt::format(
                     "a shader with the name \"{}\" was already added, "
                     "please choose another name for this shader",
@@ -587,11 +620,11 @@ namespace ne {
 
         if (pShaderPack != nullptr) {
             // Add shader to the shader registry.
-            std::scoped_lock guard(mtxRwShaders);
+            std::scoped_lock guard(mtxShaderData.first);
 
             // Make sure the shader registry does not have a shader with this name.
-            const auto it = compiledShaders.find(shaderDescription.sShaderName);
-            if (it != compiledShaders.end()) [[unlikely]] {
+            const auto it = mtxShaderData.second.compiledShaders.find(shaderDescription.sShaderName);
+            if (it != mtxShaderData.second.compiledShaders.end()) [[unlikely]] {
                 Error err(fmt::format(
                     "shader with the name \"{}\" is already added", shaderDescription.sShaderName));
                 Logger::get().error(
@@ -630,7 +663,7 @@ namespace ne {
                 }
 
                 // Save shader to shader registry.
-                compiledShaders[shaderDescription.sShaderName] = std::move(pShaderPack);
+                mtxShaderData.second.compiledShaders[shaderDescription.sShaderName] = std::move(pShaderPack);
             }
         }
 

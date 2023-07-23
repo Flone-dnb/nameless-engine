@@ -236,7 +236,7 @@ namespace ne {
         /**
          * Writes current configuration to disk.
          */
-        void writeConfigurationToDisk() const;
+        void writeConfigurationToDisk();
 
         /**
          * Returns path to the configuration file.
@@ -246,36 +246,38 @@ namespace ne {
         std::filesystem::path getConfigurationFilePath() const;
 
     private:
+        /** Internal shader data. */
+        struct ShaderData {
+            /**
+             * Map of compiled (added) shaders.
+             *
+             * Storing shared pointer for each pack here instead of just reading from disk, creating
+             * a new shared pointer, giving shared pointer and forgetting about it to make sure
+             * there's not going to be multiple copies of one shader.
+             */
+            std::unordered_map<std::string, std::shared_ptr<ShaderPack>> compiledShaders;
+
+            /**
+             * Array of shader names marked to be removed from @ref compiledShaders when they
+             * are no longer used.
+             */
+            std::vector<std::string> vShadersToBeRemoved;
+
+            /** Last time self validation was performed. */
+            std::chrono::time_point<std::chrono::steady_clock> lastSelfValidationCheckTime;
+
+            /** Amount of time after which to perform self validation. */
+            long iSelfValidationIntervalInMin = 30; // NOLINT: don't do self validation too often
+        };
+
         /** Do not delete. Parent renderer that uses this shader manager. */
         Renderer* pRenderer;
 
-        /** Use for @ref compiledShaders and @ref vShadersToBeRemoved. */
-        std::recursive_mutex mtxRwShaders;
+        /** Internal shader data guarded by mutex. */
+        std::pair<std::recursive_mutex, ShaderData> mtxShaderData;
 
         /**
-         * Map of compiled (added) shaders.
-         * Use with @ref mtxRwShaders.
-         *
-         * Storing shared pointer for each pack here instead of just reading from disk, creating
-         * a new shared pointer, giving shared pointer and forgetting about it to make sure
-         * there's not going to be multiple copies of one shader.
-         */
-        std::unordered_map<std::string, std::shared_ptr<ShaderPack>> compiledShaders;
-
-        /**
-         * Use with @ref mtxRwShaders. Array of shader names marked to be removed from @ref compiledShaders
-         * when they are no longer used.
-         */
-        std::vector<std::string> vShadersToBeRemoved;
-
-        /** Last time self validation was performed. */
-        std::chrono::time_point<std::chrono::steady_clock> lastSelfValidationCheckTime;
-
-        /** Amount of time after which to perform self validation. */
-        long iSelfValidationIntervalInMin = 30; // NOLINT: don't do self validation too often
-
-        /**
-         * Total number of 'compile shaders' queries.
+         * Total number of "compile shaders" queries.
          * Used to differentiate calls to @ref compileShaderTask.
          */
         std::atomic<size_t> iTotalCompileShadersQueries = 0;
@@ -287,41 +289,42 @@ namespace ne {
          *
          * Starts with a dot on purpose (because no shader can start with a dot - reserved for internal use).
          */
-        const std::string_view sGlobalShaderCacheParametersFileName = ".shader_cache.toml";
+        static inline const std::string_view sGlobalShaderCacheParametersFileName = ".shader_cache.toml";
 
         /** Name of the key for build mode, used in global shader cache information. */
-        const std::string_view sGlobalShaderCacheReleaseBuildKeyName = "is_release_build";
+        static inline const std::string_view sGlobalShaderCacheReleaseBuildKeyName = "is_release_build";
 
         /** Name of the key for vertex shader model, used in global shader cache information. */
-        const std::string_view sGlobalShaderCacheHlslVsModelKeyName = "hlsl_vs";
+        static inline const std::string_view sGlobalShaderCacheHlslVsModelKeyName = "hlsl_vs";
 
         /** Name of the key for pixel shader model, used in global shader cache information. */
-        const std::string_view sGlobalShaderCacheHlslPsModelKeyName = "hlsl_ps";
+        static inline const std::string_view sGlobalShaderCacheHlslPsModelKeyName = "hlsl_ps";
 
         /** Name of the key for compute shader model, used in global shader cache information. */
-        const std::string_view sGlobalShaderCacheHlslCsModelKeyName = "hlsl_cs";
+        static inline const std::string_view sGlobalShaderCacheHlslCsModelKeyName = "hlsl_cs";
 
         /** Name of the key for renderer's type, used in global shader cache information. */
-        const std::string_view sGlobalShaderCacheRendererTypeKeyName = "renderer_type";
+        static inline const std::string_view sGlobalShaderCacheRendererTypeKeyName = "renderer_type";
 
         /** Name of the file in which we store configurable values. */
-        const std::string_view sConfigurationFileName = "shader_manager";
+        static inline const std::string_view sConfigurationFileName = "shader_manager";
 
         /** Name of the key used in configuration file to store self validation interval. */
-        const std::string_view sConfigurationSelfValidationIntervalKeyName = "self_validation_interval_min";
+        static inline const std::string_view sConfigurationSelfValidationIntervalKeyName =
+            "self_validation_interval_min";
 
         /**
          * Array of characters that can be used for shader name.
          * We limit amount of valid characters because we store compiled shaders on disk
          * and different filesystems have different limitations for file names.
          */
-        const std::array<char, 65> vValidCharactersForShaderName = {
+        static inline const std::array<char, 65> vValidCharactersForShaderName = {
             'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q',
             'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h',
             'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y',
             'z', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '_', '-'};
 
         /** Maximum length of a shader name. */
-        const size_t iMaximumShaderNameLength = 40;
+        static inline const size_t iMaximumShaderNameLength = 40;
     };
 } // namespace ne

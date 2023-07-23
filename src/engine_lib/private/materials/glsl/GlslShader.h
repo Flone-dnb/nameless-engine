@@ -9,6 +9,7 @@
 // External.
 #include "ShaderIncluder.h"
 #include "shaderc/shaderc.hpp"
+#include "vulkan/vulkan.h"
 
 namespace ne {
     class Renderer;
@@ -35,6 +36,20 @@ namespace ne {
         GlslShader& operator=(const GlslShader&) = delete;
 
         virtual ~GlslShader() override = default;
+
+        /**
+         * Returns vertex description for vertex input binding.
+         *
+         * @return Vertex input binding description.
+         */
+        static VkVertexInputBindingDescription getVertexBindingDescription();
+
+        /**
+         * Returns description of all vertex attributes.
+         *
+         * @return Vertex attribute descriptions.
+         */
+        static std::array<VkVertexInputAttributeDescription, 3> getVertexAttributeDescriptions();
 
         /**
          * Compiles a shader.
@@ -126,5 +141,8 @@ namespace ne {
 
         /** SPIR-V bytecode (array of bytes) of the compiled shader. */
         std::pair<std::recursive_mutex, std::vector<char>> mtxSpirvBytecode;
+
+        /** Index of the vertex input binding. */
+        static constexpr uint32_t iVertexBindingIndex = 0;
     };
 } // namespace ne

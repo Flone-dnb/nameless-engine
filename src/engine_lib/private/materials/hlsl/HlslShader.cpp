@@ -30,7 +30,7 @@ namespace ne {
         // Check if vertex description needs to be updated.
         static_assert(
             sizeof(MeshVertex) == 32, // NOLINT: current size
-            "`vShaderVertexDescription` needs to be updated");
+            "`getShaderInputElementDescription` needs to be updated");
     }
 
     CD3DX12_STATIC_SAMPLER_DESC
@@ -114,7 +114,28 @@ namespace ne {
     UINT HlslShader::getStaticSamplerShaderRegisterSpace() { return iStaticSamplerShaderRegisterSpace; }
 
     std::vector<D3D12_INPUT_ELEMENT_DESC> HlslShader::getShaderInputElementDescription() {
-        return vShaderVertexDescription;
+        return {
+            {"POSITION",
+             0,
+             DXGI_FORMAT_R32G32B32_FLOAT,
+             0,
+             offsetof(MeshVertex, position),
+             D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,
+             0},
+            {"NORMAL",
+             0,
+             DXGI_FORMAT_R32G32B32_FLOAT,
+             0,
+             offsetof(MeshVertex, normal),
+             D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,
+             0},
+            {"UV",
+             0,
+             DXGI_FORMAT_R32G32_FLOAT,
+             0,
+             offsetof(MeshVertex, uv),
+             D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,
+             0}};
     }
 
     std::string HlslShader::getVertexShaderModel() { return sVertexShaderModel; }

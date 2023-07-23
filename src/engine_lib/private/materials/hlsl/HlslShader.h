@@ -94,7 +94,7 @@ namespace ne {
         static UINT getStaticSamplerShaderRegisterSpace();
 
         /**
-         * Returns shader input layout description (@ref vShaderVertexDescription).
+         * Returns shader input layout description (vertex attribute description).
          *
          * @return Input layout description.
          */
@@ -260,24 +260,6 @@ namespace ne {
 
         /** Determines which shader register space (in HLSL) should be used by different sampler types. */
         static inline const UINT iStaticSamplerShaderRegisterSpace = 5; // NOLINT
-
-        /** Shader input element description. */
-        static inline const std::vector<D3D12_INPUT_ELEMENT_DESC> vShaderVertexDescription = {
-            {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
-            {"NORMAL",
-             0,
-             DXGI_FORMAT_R32G32B32_FLOAT,
-             0,
-             12, // NOLINT
-             D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,
-             0},
-            {"UV",
-             0,
-             DXGI_FORMAT_R32G32_FLOAT,
-             0,
-             24, // NOLINT
-             D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,
-             0}};
 
         // -------------------------------------------------------------------------
         // ! if adding new shader models add them to cache config in ShaderManager !

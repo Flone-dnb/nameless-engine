@@ -19,12 +19,12 @@ layout(binding = 1) uniform MaterialData
 
     /** Opacity (when material transparency is used). */
     float opacity;
-} materialData
+} materialData;
 
 void main() {
     outColor = vec4(materialData.diffuseColor, 1.0F);
 
 #ifdef USE_DIFFUSE_TEXTURE
-    outputColor *= texture(textureSampler, fragmentUv);
+    outColor *= texture(textureSampler, fragmentUv);
 #endif
 }

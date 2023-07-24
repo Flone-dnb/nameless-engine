@@ -6,6 +6,8 @@
 #include "render/directx/DirectXRenderer.h"
 #include "materials/hlsl/HlslShaderResource.h"
 #endif
+#include "render/vulkan/VulkanRenderer.h"
+#include "materials/glsl/GlslShaderResource.h"
 
 namespace ne {
 
@@ -30,12 +32,20 @@ namespace ne {
             return handleResourceCreation(std::move(result));
         }
 #endif
-        // TODO:
-        // if (dynamic_cast<VulkanRenderer*>(pRenderer) != nullptr){
-        //     ...
-        // }
+        if (dynamic_cast<VulkanRenderer*>(pRenderer) != nullptr) {
+            auto result = GlslShaderCpuReadWriteResource::create(
+                sShaderResourceName,
+                sResourceAdditionalInfo,
+                iResourceSizeInBytes,
+                pUsedPso,
+                onStartedUpdatingResource,
+                onFinishedUpdatingResource);
+            return handleResourceCreation(std::move(result));
+        }
 
-        throw std::runtime_error("not implemented");
+        Error error("unexpected renderer");
+        error.showError();
+        throw std::runtime_error(error.getFullErrorMessage());
     }
 
     std::variant<ShaderCpuReadWriteResourceUniquePtr, Error>

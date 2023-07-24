@@ -7,7 +7,7 @@
 
 // Custom.
 #include "materials/ShaderResource.h"
-#include "render/directx/resources/DirectXResource.h"
+#include "render/vulkan/resources/VulkanResource.h"
 #include "render/general/resources/UploadBuffer.h"
 
 namespace ne {
@@ -15,12 +15,12 @@ namespace ne {
      * References a single (non-array) shader resource (that is written in a shader file)
      * that has CPU access available (can be updated from the CPU side).
      */
-    class HlslShaderCpuReadWriteResource : public ShaderCpuReadWriteResource {
+    class GlslShaderCpuReadWriteResource : public ShaderCpuReadWriteResource {
     public:
-        virtual ~HlslShaderCpuReadWriteResource() override;
+        virtual ~GlslShaderCpuReadWriteResource() override;
 
         /**
-         * Creates a new HLSL shader resource.
+         * Creates a GLSL shader resource.
          *
          * @param sShaderResourceName  Name of the resource we are referencing (should be exactly the same as
          * the resource name written in the shader file we are referencing).
@@ -47,48 +47,26 @@ namespace ne {
             const std::function<void*()>& onStartedUpdatingResource,
             const std::function<void()>& onFinishedUpdatingResource);
 
-        /**
-         * Adds a new command to the specified command list to use this shader resource.
-         *
-         * @param pCommandList               Command list to add new command to.
-         * @param iCurrentFrameResourceIndex Index of current frame resource.
-         */
-        inline void setToPipeline(
-            const ComPtr<ID3D12GraphicsCommandList>& pCommandList, size_t iCurrentFrameResourceIndex) {
-            pCommandList->SetGraphicsRootConstantBufferView(
-                iRootParameterIndex,
-                reinterpret_cast<DirectXResource*>(
-                    vResourceData[iCurrentFrameResourceIndex]->getInternalResource())
-                    ->getInternalResource()
-                    ->GetGPUVirtualAddress());
-        }
-
     protected:
         /**
          * Initializes the resource.
          *
-         * @param sResourceName                Name of the resource we are referencing (should be exactly the
-         * same as the resource name written in the shader file we are referencing).
+         * @param sResourceName                Name of the resource we are referencing (should be exactly
+         * the same as the resource name written in the shader file we are referencing).
          * @param iOriginalResourceSizeInBytes Size of the resource passed to @ref create (not padded).
          * @param vResourceData                Data that will be binded to this shader resource.
          * @param onStartedUpdatingResource    Function that will be called when started updating resource
-         * data. Function returns pointer to data of the specified resource data size that needs to be copied
-         * into the resource.
+         * data. Function returns pointer to data of the specified resource data size that needs to be
+         * copied into the resource.
          * @param onFinishedUpdatingResource   Function that will be called when finished updating
          * (usually used for unlocking resource data mutex).
-         * @param iRootParameterIndex          Index of this resource in root signature.
          */
-        HlslShaderCpuReadWriteResource(
+        GlslShaderCpuReadWriteResource(
             const std::string& sResourceName,
             size_t iOriginalResourceSizeInBytes,
             std::array<std::unique_ptr<UploadBuffer>, FrameResourcesManager::getFrameResourcesCount()>
                 vResourceData,
             const std::function<void*()>& onStartedUpdatingResource,
-            const std::function<void()>& onFinishedUpdatingResource,
-            UINT iRootParameterIndex);
-
-    private:
-        /** Index of this resource in root signature to bind this resource during the draw operation. */
-        UINT iRootParameterIndex = 0;
+            const std::function<void()>& onFinishedUpdatingResource);
     };
 } // namespace ne

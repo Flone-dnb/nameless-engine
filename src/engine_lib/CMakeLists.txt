@@ -126,6 +126,8 @@ set(PROJECT_SOURCES
     private/materials/glsl/GlslEngineShaders.hpp
     private/materials/glsl/GlslShader.h
     private/materials/glsl/GlslShader.cpp
+    private/materials/glsl/GlslShaderResource.h
+    private/materials/glsl/GlslShaderResource.cpp
     private/misc/ThreadPool.h
     private/misc/ThreadPool.cpp
     private/misc/Timer.cpp

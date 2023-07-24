@@ -61,7 +61,7 @@ namespace ne {
         /** Stores frame commands from command lists. */
         ComPtr<ID3D12CommandAllocator> pCommandAllocator;
 
-        /**  */
+        /** Current fence value of the resource. */
         unsigned long long iFence = 0;
 #endif
 

@@ -39,7 +39,10 @@ namespace ne {
         std::scoped_lock guard(mtxSpawning);
 
         if (isSpawned()) {
+            // Notify old material.
             this->pMaterial->onSpawnedMeshNodeStoppedUsingMaterial(this);
+
+            // Notify new material.
             pMaterial->onSpawnedMeshNodeStartedUsingMaterial(this);
         }
 

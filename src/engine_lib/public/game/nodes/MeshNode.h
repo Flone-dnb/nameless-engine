@@ -396,7 +396,7 @@ namespace ne RNAMESPACE() {
          *
          * @return Pointer to data in @ref mtxShaderMeshDataConstants.
          */
-        void* onStartUpdatingShaderMeshConstants();
+        void* onStartedUpdatingShaderMeshConstants();
 
         /** Called after finished copying data from @ref mtxShaderMeshDataConstants. */
         void onFinishedUpdatingShaderMeshConstants();

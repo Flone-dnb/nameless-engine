@@ -258,7 +258,7 @@ namespace ne {
         setShaderCpuReadWriteResourceBindingData(
             sMeshShaderConstantBufferName,
             sizeof(MeshShaderConstants),
-            [this]() -> void* { return onStartUpdatingShaderMeshConstants(); },
+            [this]() -> void* { return onStartedUpdatingShaderMeshConstants(); },
             [this]() { onFinishedUpdatingShaderMeshConstants(); });
     }
 
@@ -463,7 +463,7 @@ namespace ne {
         deallocateGeometryBuffers();
     }
 
-    void* MeshNode::onStartUpdatingShaderMeshConstants() {
+    void* MeshNode::onStartedUpdatingShaderMeshConstants() {
         mtxShaderMeshDataConstants.first.lock();
         return &mtxShaderMeshDataConstants.second;
     }

@@ -36,5 +36,5 @@ int main() {
         std::filesystem::remove_all(baseTempPath);
     }
 
-    Catch::Session().run();
+    return Catch::Session().run();
 }

@@ -48,6 +48,20 @@ namespace ne {
             const std::function<void()>& onFinishedUpdatingResource);
 
         /**
+         * Called after the shader was changed and we want to update the binding info
+         * to use this resource in the new shader without recreating the resource.
+         *
+         * @param pNewPso New pipeline object that is now being used instead of the old one.
+         *
+         * @remark Implementations will typically ask the new pipeline object about the shader resources
+         * by querying root signature or descriptor layout indices and saving the index for the resource
+         * with the name of this shader resource.
+         *
+         * @return Error if something went wrong.
+         */
+        [[nodiscard]] virtual std::optional<Error> updateBindingInfo(Pso* pNewPso) override;
+
+        /**
          * Adds a new command to the specified command list to use this shader resource.
          *
          * @param pCommandList               Command list to add new command to.
@@ -88,6 +102,18 @@ namespace ne {
             UINT iRootParameterIndex);
 
     private:
+        /**
+         * Looks for a root parameter that is used for the resource with the specified name.
+         *
+         * @param pPso                PSO to look for resource.
+         * @param sShaderResourceName Resource name to look for.
+         *
+         * @return Error if something went wrong, otherwise root parameter index of the resource with
+         * the specified name.
+         */
+        static std::variant<UINT, Error>
+        getRootParameterIndexFromPso(Pso* pPso, const std::string& sShaderResourceName);
+
         /** Index of this resource in root signature to bind this resource during the draw operation. */
         UINT iRootParameterIndex = 0;
     };

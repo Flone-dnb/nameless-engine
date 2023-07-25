@@ -46,7 +46,22 @@ namespace ne {
             pMaterial->onSpawnedMeshNodeStartedUsingMaterial(this);
         }
 
+        // Update used material.
         this->pMaterial = std::move(pMaterial);
+
+        // Update shader resources.
+        std::scoped_lock gpuResourceGuard(mtxGpuResources.first);
+        for (const auto& [sResourceName, shaderCpuReadWriteResource] :
+             mtxGpuResources.second.shaderResources.shaderCpuReadWriteResources) {
+            // Update binding info.
+            auto optionalError =
+                shaderCpuReadWriteResource.getResource()->updateBindingInfo(this->pMaterial->getUsedPso());
+            if (optionalError.has_value()) [[unlikely]] {
+                optionalError->addEntry();
+                optionalError->showError();
+                throw std::runtime_error(optionalError->getFullErrorMessage());
+            }
+        }
     }
 
     std::shared_ptr<Material> MeshNode::getMaterial() {
@@ -306,12 +321,18 @@ namespace ne {
         }
 
         if (meshData.getVertices()->empty()) [[unlikely]] {
-            Logger::get().warn(fmt::format("mesh node \"{}\" has no mesh vertices", getNodeName()));
-            return; // nothing to create
+            // This is a critical error because in the `draw` loop we will try to get the vertex
+            // buffer but it will not exist.
+            Error error(fmt::format("mesh node \"{}\" has no mesh vertices", getNodeName()));
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
         }
         if (meshData.getIndices()->empty()) [[unlikely]] {
-            Logger::get().warn(fmt::format("mesh node \"{}\" has no mesh indices", getNodeName()));
-            return; // nothing to create
+            // This is a critical error because in the `draw` loop we will try to get the index
+            // buffer but it will not exist.
+            Error error(fmt::format("mesh node \"{}\" has no mesh indices", getNodeName()));
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
         }
 
         const auto pRenderer = getGameInstance()->getWindow()->getRenderer();

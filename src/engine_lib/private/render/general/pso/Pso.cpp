@@ -145,6 +145,8 @@ namespace ne {
                     sUniquePsoIdentifier));
                 return;
             }
+
+            mtxMaterialsThatUseThisPso.second.erase(it);
         }
 
         pPsoManager->onPsoNoLongerUsedByMaterial(sUniquePsoIdentifier);

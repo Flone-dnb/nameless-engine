@@ -205,7 +205,8 @@ namespace ne {
 
         /**
          * (Re)creates the heap with the specified capacity.
-         * Old descriptors (if any) will be updates.
+         *
+         * @remark Old descriptors (if any) will be updated.
          *
          * @param iCapacity Size of the heap (in descriptors).
          *

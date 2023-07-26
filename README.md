@@ -317,19 +317,13 @@ Here is the list of base features that needs to be implemented in order for you 
 - [X] Handling user input events
 - [X] Config management (progress, settings, etc.)
 - [X] Node system (Godot-like ECS alternative)
+- [ ] Profiler
+- [ ] GLTF/GLB import
 - [ ] Rendering (features for both DirectX 12 and Vulkan renderers)
     - [ ] Forward rendering
         - [ ] Transparent materials
         - [ ] MSAA (Multisample anti-aliasing)
         - [ ] Frustum culling
-        - [ ] Instancing
-        - [ ] Light sources
-            - [ ] Point light
-            - [ ] Spot light
-            - [ ] Directional light
-        - [ ] Shadow mapping (for all light sources)
-        - [ ] Normal mapping
-        - [ ] SSAO (Screen space ambient occlusion)
         - [ ] Some post-processing effects
     - [ ] Forward+ rendering
         - [ ] Transparent materials
@@ -376,8 +370,7 @@ Here is the list of base features that needs to be implemented in order for you 
         - [ ] Transparent objects drawing order fix (either draw back-to-front or use some order-independent method)
         - [ ] Emissive materials
     - [ ] GUI
-- [ ] Profiler
-- [ ] GLTF/GLB import
+- [ ] Skeletal animations
 - [ ] Minimal scripting using AngelScript
 - [ ] Editor
     - [ ] Content management
@@ -393,7 +386,6 @@ Here is the list of base features that needs to be implemented in order for you 
     - [ ] Ragdoll
     - [ ] Soft body
     - [ ] Joints
-- [ ] Skeletal animations
 - [ ] Automatic LODs (Level of details)
 - [ ] AI and pathfinding
 - [ ] Particle effects

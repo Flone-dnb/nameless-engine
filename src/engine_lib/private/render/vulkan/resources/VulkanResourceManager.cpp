@@ -208,12 +208,51 @@ namespace ne {
         size_t iElementSizeInBytes,
         size_t iElementCount,
         bool bIsUsedInShadersAsReadOnlyData) {
-        // Prepare buffer usage.
-        const auto usage = bIsUsedInShadersAsReadOnlyData ? VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT
-                                                          : VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+        const size_t iBufferSizeInBytes = iElementSizeInBytes * iElementCount;
+        auto usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+
+        if (bIsUsedInShadersAsReadOnlyData) {
+            usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+
+            // Make sure the physical device is valid.
+            const auto pPhysicalDevice = pRenderer->getPhysicalDevice();
+            if (pPhysicalDevice == nullptr) [[unlikely]] {
+                return Error("expected physical device to be valid");
+            }
+
+            // Get GPU limits.
+            VkPhysicalDeviceProperties deviceProperties;
+            vkGetPhysicalDeviceProperties(pPhysicalDevice, &deviceProperties);
+
+            // Check if the requested buffer size exceed UBO size limit.
+            if (iBufferSizeInBytes > deviceProperties.limits.maxUniformBufferRange) {
+                return Error(fmt::format(
+                    "unable to create the requested uniform buffer with the size {} bytes because the GPU "
+                    "limit for uniform buffer sizes is {} bytes",
+                    iBufferSizeInBytes,
+                    deviceProperties.limits.maxUniformBufferRange));
+            }
+        }
 
         // Create buffer.
-        auto result = createBuffer(sResourceName, iElementSizeInBytes * iElementCount, usage, true);
+        auto result = createBuffer(sResourceName, iBufferSizeInBytes, usage, true);
+        if (std::holds_alternative<Error>(result)) {
+            auto error = std::get<Error>(std::move(result));
+            error.addEntry();
+            return error;
+        }
+        auto pResource = std::get<std::unique_ptr<VulkanResource>>(std::move(result));
+
+        return std::unique_ptr<UploadBuffer>(
+            new UploadBuffer(std::move(pResource), iElementSizeInBytes, iElementCount));
+    }
+
+    std::variant<std::unique_ptr<UploadBuffer>, Error>
+    VulkanResourceManager::createStorageBufferWithCpuAccess(
+        const std::string& sResourceName, size_t iElementSizeInBytes, size_t iElementCount) {
+        // Create buffer.
+        auto result = createBuffer(
+            sResourceName, iElementSizeInBytes * iElementCount, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, true);
         if (std::holds_alternative<Error>(result)) {
             auto error = std::get<Error>(std::move(result));
             error.addEntry();

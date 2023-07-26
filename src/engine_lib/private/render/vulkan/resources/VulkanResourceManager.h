@@ -104,6 +104,34 @@ namespace ne {
             bool bIsUsedInShadersAsReadOnlyData) override;
 
         /**
+         * Creates a new GPU resource with available CPU access, typically used
+         * for resources that needs to be frequently updated from the CPU side.
+         *
+         * Example:
+         * @code
+         * struct ObjectData{
+         *     glm::mat4x4 world;
+         * };
+         *
+         * auto result = pResourceManager->createResourceWithCpuAccess(
+         *     "object constant data",
+         *     sizeof(ObjectData),
+         *     1,
+         *     true);
+         * @endcode
+         *
+         * @remark This resource can be used as a `readonly buffer` or a `buffer` in shaders.
+         *
+         * @param sResourceName       Resource name, used for logging.
+         * @param iElementSizeInBytes Size of one buffer element in bytes.
+         * @param iElementCount       Amount of elements in the resulting buffer.
+         *
+         * @return Error if something went wrong, otherwise created resource.
+         */
+        std::variant<std::unique_ptr<UploadBuffer>, Error> createStorageBufferWithCpuAccess(
+            const std::string& sResourceName, size_t iElementSizeInBytes, size_t iElementCount);
+
+        /**
          * Creates a new GPU resource and fills it with the specified data.
          *
          * Example:

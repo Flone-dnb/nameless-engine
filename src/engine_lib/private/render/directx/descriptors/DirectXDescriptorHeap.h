@@ -190,7 +190,7 @@ namespace ne {
         /**
          * Recreates the heap to expand its capacity to support @ref iHeapGrowSize more descriptors.
          *
-         * @remark All internal values and old descriptors will be updates.
+         * @remark All internal values and old descriptors will be updated.
          *
          * @return Error if something went wrong.
          */
@@ -199,7 +199,7 @@ namespace ne {
         /**
          * Recreates the heap to shrink its capacity to support @ref iHeapGrowSize less descriptors.
          *
-         * @remark All internal values and old descriptors will be updates.
+         * @remark All internal values and old descriptors will be updated.
          *
          * @return Error if something went wrong.
          */

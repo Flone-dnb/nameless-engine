@@ -14,9 +14,11 @@ namespace ne {
     DirectXDescriptor::DirectXDescriptor(DirectXDescriptor&& other) noexcept { *this = std::move(other); }
 
     DirectXDescriptor& DirectXDescriptor::operator=(DirectXDescriptor&& other) noexcept {
+#if defined(DEBUG)
         static_assert(
             sizeof(DirectXDescriptor) == 32, // NOLINT: current size
             "add new/edited fields to move operator");
+#endif
 
         if (this != &other) {
             if (other.iDescriptorOffsetInDescriptors.has_value()) {

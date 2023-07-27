@@ -227,8 +227,10 @@ namespace ne {
         std::vector<GpuResource::DescriptorType> getDescriptorTypesHandledByThisHeap() const;
 
         /**
-         * Recreates views for created descriptors
-         * to be binded to the current heap.
+         * Recreates views for previously created descriptors so that they will reference
+         * the new re-created heap and reference the correct index inside of the heap.
+         *
+         * @remark Generally called in @ref createHeap.
          */
         void recreateOldViews();
 

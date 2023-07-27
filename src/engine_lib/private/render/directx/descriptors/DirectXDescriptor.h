@@ -80,10 +80,6 @@ namespace ne {
         DirectXResource* getOwnerResource() const;
 
     private:
-        // !!!
-        // if adding new fields consider adding them to move assignment operator
-        // !!!
-
         /** Do not delete. Owner resource of this descriptor. */
         DirectXResource* pResource = nullptr;
 
@@ -91,16 +87,12 @@ namespace ne {
         DirectXDescriptorHeap* pHeap = nullptr;
 
         /**
-         * Offset of this descriptor from the heap start (offset is specified in descriptors, not an actual
-         * index).
+         * Offset of this descriptor from the heap start (offset is specified in descriptors,
+         * not an actual index).
          */
         std::optional<int> iDescriptorOffsetInDescriptors;
 
         /** Type of this descriptor. */
         GpuResource::DescriptorType descriptorType;
-
-        // !!!
-        // if adding new fields consider adding them to move assignment operator
-        // !!!
     };
 } // namespace ne

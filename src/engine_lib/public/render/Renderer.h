@@ -214,8 +214,9 @@ namespace ne {
         ShaderCpuReadWriteResourceManager* getShaderCpuReadWriteResourceManager() const;
 
         /**
-         * Returns mutex used when reading or writing to render resources.
-         * Usually used with @ref waitForGpuToFinishWorkUpToThisPoint.
+         * Returns mutex that is used when reading or writing to resources that may be used by the GPU.
+         * Usually after locking this mutex you would use @ref waitForGpuToFinishWorkUpToThisPoint
+         * before actually starting to write to GPU resources.
          *
          * @return Mutex.
          */

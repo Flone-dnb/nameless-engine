@@ -75,14 +75,17 @@ namespace ne {
     }
 
     VulkanResourceManager::~VulkanResourceManager() {
-        // Make sure there are no resources exist.
+        // Make sure there are no resources exist
+        // (we do this check only in Vulkan because resources need memory allocator
+        // to be destroyed)
         const auto iTotalAliveResourceCount = iAliveResourceCount.load();
         if (iTotalAliveResourceCount != 0) [[unlikely]] {
-            Logger::get().error(fmt::format(
+            Error error(fmt::format(
                 "Vulkan resource manager is being destroyed but there are "
-                "still {} resource(s) alive",
+                "still {} resource(s) alive (this is a bug, report to developers)",
                 iTotalAliveResourceCount));
-            return;
+            error.showError();
+            return; // don't throw in destructor, just quit
         }
 
         vmaDestroyAllocator(pMemoryAllocator);

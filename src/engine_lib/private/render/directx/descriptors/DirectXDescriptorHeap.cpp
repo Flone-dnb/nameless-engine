@@ -29,7 +29,7 @@ namespace ne {
             vHandledDescriptorTypes, [&descriptorType](const auto& type) { return descriptorType == type; });
         if (descriptorIt == vHandledDescriptorTypes.end()) [[unlikely]] {
             // this descriptor type is not handled in this heap
-            return Error(std::format(
+            return Error(fmt::format(
                 "{} heap does not assign descriptors of the specified type (descriptor type {})",
                 convertHeapTypeToString(heapType),
                 static_cast<int>(descriptorType)));
@@ -37,7 +37,7 @@ namespace ne {
 
         // Check if the resource already has descriptor of this type.
         if (pResource->vHeapDescriptors[static_cast<int>(descriptorType)].has_value()) [[unlikely]] {
-            return Error(std::format(
+            return Error(fmt::format(
                 "resource already has this descriptor assigned (descriptor type {})",
                 static_cast<int>(descriptorType)));
         }
@@ -68,17 +68,18 @@ namespace ne {
             iDescriptorIndex = mtxInternalResources.second.iNextFreeHeapIndex;
             mtxInternalResources.second.iNextFreeHeapIndex += 1;
         }
-        heapHandle.Offset(iDescriptorIndex, iDescriptorSize);
 
+        // Mark increased heap size.
+        mtxInternalResources.second.iHeapSize += 1;
+
+        // Update heap handle to point to a new place and create a new view.
+        heapHandle.Offset(iDescriptorIndex, iDescriptorSize);
         createView(heapHandle, pResource, descriptorType);
 
         // Save binding information.
         mtxInternalResources.second.bindedResources.insert(pResource);
         pResource->vHeapDescriptors[static_cast<int>(descriptorType)] =
             DirectXDescriptor(this, descriptorType, pResource, iDescriptorIndex);
-
-        // Mark increased heap size.
-        mtxInternalResources.second.iHeapSize += 1;
 
         return {};
     }
@@ -194,46 +195,50 @@ namespace ne {
     std::optional<Error> DirectXDescriptorHeap::expandHeap() {
         std::scoped_lock guard(mtxInternalResources.first);
 
+        // Make sure the array is fully filled and there's no free space.
         if (mtxInternalResources.second.iHeapSize != mtxInternalResources.second.iHeapCapacity) [[unlikely]] {
-            Logger::get().error(std::format(
-                "requested to expand {} heap of capacity {} while the actual size is {}",
+            return Error(fmt::format(
+                "a request to expand {} heap of capacity {} while the actual size is {} was "
+                "rejected, reason: expand condition is not met (this is a bug, report to developers)",
                 sHeapType,
                 mtxInternalResources.second.iHeapCapacity,
                 mtxInternalResources.second.iHeapSize));
         }
 
+        // Make sure there are no unused descriptors.
         if (!mtxInternalResources.second.noLongerUsedDescriptorIndexes.empty()) [[unlikely]] {
-            Logger::get().error(std::format(
+            return Error(fmt::format(
                 "requested to expand {} heap of capacity {} while there are not used "
-                "descriptors exist ({}) (actual heap size is {})",
+                "descriptors exist ({}) (actual heap size is {}) (this is a bug, report to developers)",
                 sHeapType,
                 mtxInternalResources.second.iHeapCapacity,
                 mtxInternalResources.second.noLongerUsedDescriptorIndexes.size(),
                 mtxInternalResources.second.iHeapSize));
         }
 
-        if (static_cast<size_t>(mtxInternalResources.second.iHeapCapacity) +
-                static_cast<size_t>(iHeapGrowSize) >
-            static_cast<size_t>(INT_MAX)) [[unlikely]] {
-            return Error(std::format(
-                "a request to expand {} descriptor heap (from capacity {} to {}) was rejected, reason: "
-                "heap will exceed type limit of {}",
+        // Make sure our new capacity will not exceed type limit.
+        constexpr auto iMaxHeapCapacity = std::numeric_limits<INT>::max();
+        if (iMaxHeapCapacity - iHeapGrowSize < mtxInternalResources.second.iHeapCapacity) [[unlikely]] {
+            return Error(fmt::format(
+                "a request to expand {} descriptor heap of capacity {} was rejected, reason: "
+                "heap will exceed the type limit of {}",
                 sHeapType,
                 mtxInternalResources.second.iHeapCapacity,
-                static_cast<size_t>(mtxInternalResources.second.iHeapCapacity) +
-                    static_cast<size_t>(iHeapGrowSize),
-                INT_MAX));
+                iMaxHeapCapacity));
         }
 
-        const auto iOldHeapSize = mtxInternalResources.second.iHeapCapacity;
+        // Save old heap capacity to use later.
+        const auto iOldHeapCapacity = mtxInternalResources.second.iHeapCapacity;
 
-        auto optionalError = createHeap(iOldHeapSize + iHeapGrowSize);
-        if (optionalError.has_value()) {
+        // Re-create the heap with the new capacity.
+        auto optionalError = createHeap(iOldHeapCapacity + iHeapGrowSize);
+        if (optionalError.has_value()) [[unlikely]] {
             optionalError->addEntry();
             return optionalError.value();
         }
 
-        mtxInternalResources.second.iNextFreeHeapIndex = iOldHeapSize;
+        // Update internal values.
+        mtxInternalResources.second.iNextFreeHeapIndex = iOldHeapCapacity;
         mtxInternalResources.second.noLongerUsedDescriptorIndexes = {};
 
         return {};
@@ -242,37 +247,41 @@ namespace ne {
     std::optional<Error> DirectXDescriptorHeap::shrinkHeap() {
         std::scoped_lock guard(mtxInternalResources.first);
 
+        // Make sure we can shrink (check that we are not on the minimum capacity).
         if (mtxInternalResources.second.iHeapCapacity < iHeapGrowSize * 2) [[unlikely]] {
-            return Error(std::format(
+            return Error(fmt::format(
                 "a request to shrink {} heap of capacity {} with the actual size of {} was rejected, reason: "
-                "expected at least size of {}",
+                "need at least the size of {} to shrink (this is a bug, report to developers)",
                 sHeapType,
                 mtxInternalResources.second.iHeapCapacity,
                 mtxInternalResources.second.iHeapSize,
                 iHeapGrowSize * 2));
         }
 
+        // Only shrink if we can erase `iHeapGrowSize` unused elements and will have some
+        // free space (i.e. we will not be on the edge to expand).
         if (mtxInternalResources.second.iHeapSize >
             mtxInternalResources.second.iHeapCapacity - iHeapGrowSize - iHeapGrowSize / 2) [[unlikely]] {
-            return Error(std::format(
+            return Error(fmt::format(
                 "a request to shrink {} heap of capacity {} with the actual size of {} was rejected, reason: "
-                "shrink condition is not met (size {} < {} is false)",
+                "shrink condition is not met (this is a bug, report to developers)",
                 sHeapType,
                 mtxInternalResources.second.iHeapCapacity,
-                mtxInternalResources.second.iHeapSize,
-                mtxInternalResources.second.iHeapSize,
-                mtxInternalResources.second.iHeapCapacity - iHeapGrowSize - iHeapGrowSize / 2));
+                mtxInternalResources.second.iHeapSize));
         }
 
-        const auto iNewHeapSize = mtxInternalResources.second.iHeapCapacity - iHeapGrowSize;
+        // Calculate the new capacity.
+        const auto iNewHeapCapacity = mtxInternalResources.second.iHeapCapacity - iHeapGrowSize;
 
-        auto optionalError = createHeap(iNewHeapSize);
-        if (optionalError.has_value()) {
+        // Re-create the heap with the new capacity.
+        auto optionalError = createHeap(iNewHeapCapacity);
+        if (optionalError.has_value()) [[unlikely]] {
             optionalError->addEntry();
             return optionalError.value();
         }
 
-        mtxInternalResources.second.iNextFreeHeapIndex = iNewHeapSize - iHeapGrowSize / 2;
+        // Update internal values.
+        mtxInternalResources.second.iNextFreeHeapIndex = iNewHeapCapacity - iHeapGrowSize / 2;
         mtxInternalResources.second.noLongerUsedDescriptorIndexes = {};
 
         return {};
@@ -386,7 +395,7 @@ namespace ne {
     std::optional<Error> DirectXDescriptorHeap::createHeap(INT iCapacity) {
         std::scoped_lock guard(mtxInternalResources.first);
 
-        Logger::get().info(std::format(
+        Logger::get().info(fmt::format(
             "waiting for the GPU to finish work up to this point to (re)create {} descriptor heap from "
             "capacity {} to {} (current actual heap size: {})",
             sHeapType,

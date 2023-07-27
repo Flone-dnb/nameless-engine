@@ -80,20 +80,18 @@ namespace ne {
          *     "object constant data",
          *     sizeof(ObjectData),
          *     1,
-         *     true);
+         *     CpuVisibleShaderResourceUsageDetails(true));
          * @endcode
-         *
-         * @remark This resource can be used as a `uniform` in shaders.
          *
          * @param sResourceName                  Resource name, used for logging.
          * @param iElementSizeInBytes            Size of one buffer element in bytes.
          * @param iElementCount                  Amount of elements in the resulting buffer.
-         * @param bIsUsedInShadersAsReadOnlyData Determines whether this resource will be used to store
+         * @param isUsedInShadersAsReadOnlyData Determines whether this resource will be used to store
          * shader read-only data (cannon be modified from shaders) or not going to be used in shaders
-         * at all. You need to specify this because in some internal implementations (like DirectX)
-         * it will result in element size being padded to be a multiple of 256 because of the hardware
-         * requirement for shader constant buffers. Otherwise if you don't plan to use this buffer
-         * in shaders (for ex. you can use it as a staging/upload buffer) specify `false`.
+         * at all (specify empty). You need to specify this because in some internal implementations
+         * might pad the specified element size to be a multiple of 256 because of some
+         * hardware requirements. Otherwise if you don't plan to use this buffer
+         * in shaders (for ex. you can use it as a staging/upload buffer) specify empty.
          *
          * @return Error if something went wrong, otherwise created resource.
          */
@@ -101,35 +99,7 @@ namespace ne {
             const std::string& sResourceName,
             size_t iElementSizeInBytes,
             size_t iElementCount,
-            bool bIsUsedInShadersAsReadOnlyData) override;
-
-        /**
-         * Creates a new GPU resource with available CPU access, typically used
-         * for resources that needs to be frequently updated from the CPU side.
-         *
-         * Example:
-         * @code
-         * struct ObjectData{
-         *     glm::mat4x4 world;
-         * };
-         *
-         * auto result = pResourceManager->createResourceWithCpuAccess(
-         *     "object constant data",
-         *     sizeof(ObjectData),
-         *     1,
-         *     true);
-         * @endcode
-         *
-         * @remark This resource can be used as a `readonly buffer` or a `buffer` in shaders.
-         *
-         * @param sResourceName       Resource name, used for logging.
-         * @param iElementSizeInBytes Size of one buffer element in bytes.
-         * @param iElementCount       Amount of elements in the resulting buffer.
-         *
-         * @return Error if something went wrong, otherwise created resource.
-         */
-        std::variant<std::unique_ptr<UploadBuffer>, Error> createStorageBufferWithCpuAccess(
-            const std::string& sResourceName, size_t iElementSizeInBytes, size_t iElementCount);
+            std::optional<CpuVisibleShaderResourceUsageDetails> isUsedInShadersAsReadOnlyData) override;
 
         /**
          * Creates a new GPU resource and fills it with the specified data.
@@ -200,9 +170,6 @@ namespace ne {
 
         /** Total number of created resources that were not destroyed yet. */
         std::atomic<size_t> iAliveResourceCount{0};
-
-        /** Renderer that owns this manager. */
-        VulkanRenderer* pRenderer = nullptr;
 
         /** Vulkan memory allocator. */
         VmaAllocator pMemoryAllocator = nullptr;

@@ -25,10 +25,13 @@ namespace ne {
     FrameResourcesManager::create(Renderer* pRenderer) {
         auto pManager = std::unique_ptr<FrameResourcesManager>(new FrameResourcesManager(pRenderer));
 
-        // Create a constant buffer (with frame-global data) per frame.
+        // Create a constant buffer with frame-global data per frame.
         for (unsigned int i = 0; i < getFrameResourcesCount(); i++) {
             auto result = pRenderer->getResourceManager()->createResourceWithCpuAccess(
-                fmt::format("frame constants #{}", i), sizeof(FrameConstants), 1, true);
+                fmt::format("frame constants #{}", i),
+                sizeof(FrameConstants),
+                1,
+                CpuVisibleShaderResourceUsageDetails(true));
             if (std::holds_alternative<Error>(result)) {
                 auto error = std::get<Error>(std::move(result));
                 error.addEntry();

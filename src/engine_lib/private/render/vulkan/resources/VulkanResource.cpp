@@ -32,7 +32,7 @@ namespace ne {
         // Don't log here to avoid spamming.
 
         // Make sure the GPU is not using this resource.
-        pResourceManager->pRenderer->waitForGpuToFinishWorkUpToThisPoint();
+        pResourceManager->getRenderer()->waitForGpuToFinishWorkUpToThisPoint();
 
         // Destroy the resource and its memory.
         vmaDestroyBuffer(pResourceManager->pMemoryAllocator, pInternalResource, pResourceMemory);

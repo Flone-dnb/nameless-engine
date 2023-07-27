@@ -9,6 +9,8 @@
 
 namespace ne {
 
+    Renderer* GpuResourceManager::getRenderer() const { return pRenderer; }
+
     std::variant<std::unique_ptr<GpuResourceManager>, Error> GpuResourceManager::create(Renderer* pRenderer) {
 #if defined(WIN32)
         if (auto pDirectXRenderer = dynamic_cast<DirectXRenderer*>(pRenderer)) {
@@ -36,7 +38,9 @@ namespace ne {
             return std::get<std::unique_ptr<VulkanResourceManager>>(std::move(result));
         }
 
-        return Error("found not supported renderer");
+        return Error("unsupported renderer");
     }
+
+    GpuResourceManager::GpuResourceManager(Renderer* pRenderer) { this->pRenderer = pRenderer; }
 
 } // namespace ne

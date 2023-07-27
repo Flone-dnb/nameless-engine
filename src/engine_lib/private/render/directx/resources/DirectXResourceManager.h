@@ -56,21 +56,21 @@ namespace ne {
          *     "object constant data",
          *     sizeof(ObjectData),
          *     1,
-         *     true);
+         *     CpuVisibleShaderResourceUsageDetails(true));
          * @endcode
          *
          * @remark This resource can be used as a `cbuffer` in shaders if `bIsUsedInShadersAsReadOnlyData`
          * is `true`.
          *
-         * @param sResourceName                  Resource name, used for logging.
-         * @param iElementSizeInBytes            Size of one buffer element in bytes.
-         * @param iElementCount                  Amount of elements in the resulting buffer.
-         * @param bIsUsedInShadersAsReadOnlyData Determines whether this resource will be used to store
+         * @param sResourceName                 Resource name, used for logging.
+         * @param iElementSizeInBytes           Size of one buffer element in bytes.
+         * @param iElementCount                 Amount of elements in the resulting buffer.
+         * @param isUsedInShadersAsReadOnlyData Determines whether this resource will be used to store
          * shader read-only data (cannon be modified from shaders) or not going to be used in shaders
-         * at all. You need to specify this because in some internal implementations (like DirectX)
-         * it will result in element size being padded to be a multiple of 256 because of the hardware
-         * requirement for shader constant buffers. Otherwise if you don't plan to use this buffer
-         * in shaders (for ex. you can use it as a staging/upload buffer) specify `false`.
+         * at all (specify empty). You need to specify this because in some internal implementations
+         * might pad the specified element size to be a multiple of 256 because of some
+         * hardware requirements. Otherwise if you don't plan to use this buffer
+         * in shaders (for ex. you can use it as a staging/upload buffer) specify empty.
          *
          * @return Error if something went wrong, otherwise created resource.
          */
@@ -78,7 +78,7 @@ namespace ne {
             const std::string& sResourceName,
             size_t iElementSizeInBytes,
             size_t iElementCount,
-            bool bIsUsedInShadersAsReadOnlyData) override;
+            std::optional<CpuVisibleShaderResourceUsageDetails> isUsedInShadersAsReadOnlyData) override;
 
         /**
          * Creates a new GPU resource and fills it with the specified data.
@@ -174,13 +174,6 @@ namespace ne {
          */
         DirectXDescriptorHeap* getCbvSrvUavHeap() const;
 
-        /**
-         * Returns renderer that owns this resource manager.
-         *
-         * @return Do not delete returned pointer. Renderer.
-         */
-        DirectXRenderer* getRenderer() const;
-
     private:
         /**
          * Constructor.
@@ -225,16 +218,15 @@ namespace ne {
             return (iNumber + 255) & ~255; // NOLINT
         }
 
-        /** Renderer that owns this manager. */
-        DirectXRenderer* pRenderer = nullptr;
-
         /** Allocator for GPU resources. */
         ComPtr<D3D12MA::Allocator> pMemoryAllocator;
 
         /** RTV heap manager. */
         std::unique_ptr<DirectXDescriptorHeap> pRtvHeap;
+
         /** DSV heap manager. */
         std::unique_ptr<DirectXDescriptorHeap> pDsvHeap;
+
         /** CBV/SRV/UAV heap manager. */
         std::unique_ptr<DirectXDescriptorHeap> pCbvSrvUavHeap;
     };

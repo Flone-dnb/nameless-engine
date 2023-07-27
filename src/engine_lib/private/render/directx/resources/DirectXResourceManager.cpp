@@ -62,8 +62,8 @@ namespace ne {
         const std::string& sResourceName,
         size_t iElementSizeInBytes,
         size_t iElementCount,
-        bool bIsUsedInShadersAsReadOnlyData) {
-        if (bIsUsedInShadersAsReadOnlyData) {
+        std::optional<CpuVisibleShaderResourceUsageDetails> isUsedInShadersAsReadOnlyData) {
+        if (isUsedInShadersAsReadOnlyData.has_value()) {
             // Constant buffers must be multiple of 256 (hardware requirement).
             iElementSizeInBytes = makeMultipleOf256(iElementSizeInBytes);
         }
@@ -149,6 +149,12 @@ namespace ne {
             return err;
         }
         auto pUploadResource = std::get<std::unique_ptr<DirectXResource>>(std::move(result));
+
+        // Get renderer.
+        const auto pRenderer = dynamic_cast<DirectXRenderer*>(getRenderer());
+        if (pRenderer == nullptr) [[unlikely]] {
+            return Error("expected a DirectX renderer");
+        }
 
         // Stop rendering.
         std::scoped_lock renderingGuard(*pRenderer->getRenderResourcesMutex());
@@ -281,15 +287,13 @@ namespace ne {
 
     DirectXDescriptorHeap* DirectXResourceManager::getCbvSrvUavHeap() const { return pCbvSrvUavHeap.get(); }
 
-    DirectXRenderer* DirectXResourceManager::getRenderer() const { return pRenderer; }
-
     DirectXResourceManager::DirectXResourceManager(
         DirectXRenderer* pRenderer,
         ComPtr<D3D12MA::Allocator>&& pMemoryAllocator,
         std::unique_ptr<DirectXDescriptorHeap>&& pRtvHeap,
         std::unique_ptr<DirectXDescriptorHeap>&& pDsvHeap,
-        std::unique_ptr<DirectXDescriptorHeap>&& pCbvSrvUavHeap) {
-        this->pRenderer = pRenderer;
+        std::unique_ptr<DirectXDescriptorHeap>&& pCbvSrvUavHeap)
+        : GpuResourceManager(pRenderer) {
         this->pMemoryAllocator = std::move(pMemoryAllocator);
         this->pRtvHeap = std::move(pRtvHeap);
         this->pDsvHeap = std::move(pDsvHeap);

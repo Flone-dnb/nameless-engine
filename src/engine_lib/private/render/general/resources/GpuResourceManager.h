@@ -3,6 +3,7 @@
 // Standard.
 #include <variant>
 #include <memory>
+#include <optional>
 
 // Custom.
 #include "misc/Error.h"
@@ -14,6 +15,46 @@ namespace ne {
 
     /** Describes how a resource will be used. */
     enum class ResourceUsageType { VERTEX_BUFFER, INDEX_BUFFER, OTHER };
+
+    /** Determines the usage of a resources used by shaders. */
+    struct CpuVisibleShaderResourceUsageDetails {
+        CpuVisibleShaderResourceUsageDetails() = delete;
+
+        /**
+         * Constructs a CPU read/write shader resource "usage" details.
+         *
+         * @param bForceFastResourceType Forces strict underlying resource type to guarantee
+         * that the shader code will always treat the resource type correctly.
+         * Specify `true` if the shader resource will only be used
+         * to ALWAYS store small GPU resources (resource size is typically smaller than 64 KB),
+         * for example if you plan to store an array of objects in the resource that have fixed
+         * amount and their total size will most likely always be smaller than 64 KB specify `true`.
+         * Otherwise if you know that at some point you will need to re-create the resource to expand
+         * it or if you don't know the final resource size (maybe it's determined at runtime) and
+         * there is a good chance that resource size will exceed the 64 KB limit specify `false`,
+         * for example if you plan to store an array of objects in the resource the number of which
+         * may vary at runtime specify `false`. When you specify `true` some renderers will stick
+         * to a specific small but fast resource type and if you re-create the resource to maybe
+         * expand it a little bit and specify `true` again the same small but fast resource type
+         * will be picked, if you go out of size limit around 64 KB resource creation will fail.
+         * When you specify `false` some renderers will stick to a specific unlimited in size
+         * resource type and if you re-create the resource to maybe expand it a little bit
+         * and specify `false` again the same unlimited in size but not the most fast resource
+         * type will be picked. Some renderers have different types of resources depending
+         * on their size and usage so when you plan to re-create the resource to expand/shrink it
+         * it's important to make sure that it's underlying type will not change otherwise
+         * the shader code will need to be changed to threat the resource in other way,
+         * for example in some cases the resource type in GLSL shaders may be marked as
+         * `uniform` but in some cases it may not fit in the uniform buffer size limit which
+         * means that another type of buffer will be required.
+         */
+        explicit CpuVisibleShaderResourceUsageDetails(bool bForceFastResourceType) {
+            this->bForceFastResourceType = bForceFastResourceType;
+        }
+
+        /** `true` for small and fast resources, `false` for unlimited in size resources. */
+        bool bForceFastResourceType;
+    };
 
     /** Allows creating GPU resources. */
     class GpuResourceManager {
@@ -51,18 +92,18 @@ namespace ne {
          *     "object constant data",
          *     sizeof(ObjectData),
          *     1,
-         *     true);
+         *     CpuVisibleShaderResourceUsageDetails(true));
          * @endcode
          *
-         * @param sResourceName                  Resource name, used for logging.
-         * @param iElementSizeInBytes            Size of one buffer element in bytes.
-         * @param iElementCount                  Amount of elements in the resulting buffer.
-         * @param bIsUsedInShadersAsReadOnlyData Determines whether this resource will be used to store
+         * @param sResourceName                 Resource name, used for logging.
+         * @param iElementSizeInBytes           Size of one buffer element in bytes.
+         * @param iElementCount                 Amount of elements in the resulting buffer.
+         * @param isUsedInShadersAsReadOnlyData Determines whether this resource will be used to store
          * shader read-only data (cannon be modified from shaders) or not going to be used in shaders
-         * at all. You need to specify this because in some internal implementations (like DirectX)
-         * it will result in element size being padded to be a multiple of 256 because of the hardware
-         * requirement for shader constant buffers. Otherwise if you don't plan to use this buffer
-         * in shaders (for ex. you can use it as a staging/upload buffer) specify `false`.
+         * at all (specify empty). You need to specify this because in some internal implementations
+         * might pad the specified element size to be a multiple of 256 because of some
+         * hardware requirements. Otherwise if you don't plan to use this buffer
+         * in shaders (for ex. you can use it as a staging/upload buffer) specify empty.
          *
          * @return Error if something went wrong, otherwise created resource.
          */
@@ -70,7 +111,7 @@ namespace ne {
             const std::string& sResourceName,
             size_t iElementSizeInBytes,
             size_t iElementCount,
-            bool bIsUsedInShadersAsReadOnlyData) = 0;
+            std::optional<CpuVisibleShaderResourceUsageDetails> isUsedInShadersAsReadOnlyData) = 0;
 
         /**
          * Creates a new GPU resource and fills it with the specified data.
@@ -102,6 +143,15 @@ namespace ne {
             ResourceUsageType usage,
             bool bIsShaderReadWriteResource) = 0;
 
+        /**
+         * Returns renderer that owns this resource manager.
+         *
+         * @remark Do not delete (free) returned pointer.
+         *
+         * @return Renderer that owns this manager.
+         */
+        Renderer* getRenderer() const;
+
     protected:
         /**
          * Creates a new platform-specific resource manager.
@@ -112,7 +162,15 @@ namespace ne {
          */
         static std::variant<std::unique_ptr<GpuResourceManager>, Error> create(Renderer* pRenderer);
 
-        /** Creates uninitialized manager, used internally. */
-        GpuResourceManager() = default;
+        /**
+         * Creates uninitialized manager, used internally.
+         *
+         * @param pRenderer Renderer that owns this manager.
+         */
+        GpuResourceManager(Renderer* pRenderer);
+
+    private:
+        /** Do not delete (free) this pointer. Renderer that owns this manager. */
+        Renderer* pRenderer = nullptr;
     };
 } // namespace ne

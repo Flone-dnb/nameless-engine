@@ -28,16 +28,13 @@ namespace ne {
         }
         const auto iRootParameterIndex = std::get<UINT>(result);
 
-        // Consider all read/write resources as cbuffers for now.
-        const bool bIsShaderConstantBuffer = true;
-
         // Create upload buffer per frame resource.
         std::array<std::unique_ptr<UploadBuffer>, FrameResourcesManager::getFrameResourcesCount()>
             vResourceData;
         for (unsigned int i = 0; i < FrameResourcesManager::getFrameResourcesCount(); i++) {
             auto result = pUsedPso->getRenderer()->getResourceManager()->createResourceWithCpuAccess(
                 fmt::format(
-                    "{} shader ({}/{}) CPU read/write resource \"{}\" #{}",
+                    "{} shader ({}/{}) CPU read/write resource \"{}\" frame #{}",
                     sResourceAdditionalInfo,
                     pUsedPso->getVertexShaderName(),
                     pUsedPso->getPixelShaderName(),
@@ -45,7 +42,7 @@ namespace ne {
                     i),
                 iResourceSizeInBytes,
                 1,
-                bIsShaderConstantBuffer);
+                CpuVisibleShaderResourceUsageDetails(false));
             if (std::holds_alternative<Error>(result)) [[unlikely]] {
                 auto error = std::get<Error>(std::move(result));
                 error.addEntry();
@@ -53,15 +50,13 @@ namespace ne {
             }
             auto pUploadBuffer = std::get<std::unique_ptr<UploadBuffer>>(std::move(result));
 
-            // Bind a CBV if this is a cbuffer.
-            if (bIsShaderConstantBuffer) {
-                auto optionalError =
-                    pUploadBuffer->getInternalResource()->bindDescriptor(GpuResource::DescriptorType::CBV);
-                if (optionalError.has_value()) [[unlikely]] {
-                    auto error = optionalError.value();
-                    error.addEntry();
-                    return error;
-                }
+            // Bind a CBV.
+            auto optionalError =
+                pUploadBuffer->getInternalResource()->bindDescriptor(GpuResource::DescriptorType::CBV);
+            if (optionalError.has_value()) [[unlikely]] {
+                auto error = optionalError.value();
+                error.addEntry();
+                return error;
             }
 
             vResourceData[i] = std::move(pUploadBuffer);

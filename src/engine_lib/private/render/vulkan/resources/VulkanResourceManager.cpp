@@ -13,8 +13,8 @@
 
 namespace ne {
 
-    VulkanResourceManager::VulkanResourceManager(VulkanRenderer* pRenderer, VmaAllocator pMemoryAllocator) {
-        this->pRenderer = pRenderer;
+    VulkanResourceManager::VulkanResourceManager(VulkanRenderer* pRenderer, VmaAllocator pMemoryAllocator)
+        : GpuResourceManager(pRenderer) {
         this->pMemoryAllocator = pMemoryAllocator;
     }
 
@@ -82,6 +82,7 @@ namespace ne {
                 "Vulkan resource manager is being destroyed but there are "
                 "still {} resource(s) alive",
                 iTotalAliveResourceCount));
+            return;
         }
 
         vmaDestroyAllocator(pMemoryAllocator);
@@ -128,6 +129,14 @@ namespace ne {
     }
 
     size_t VulkanResourceManager::getTotalVideoMemoryInMb() const {
+        // Get renderer.
+        const auto pRenderer = dynamic_cast<VulkanRenderer*>(getRenderer());
+        if (pRenderer == nullptr) [[unlikely]] {
+            Error error("expected a Vulkan renderer");
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+        }
+
         // Get physical device.
         const auto pPhysicalDevice = pRenderer->getPhysicalDevice();
 
@@ -159,6 +168,14 @@ namespace ne {
     }
 
     size_t VulkanResourceManager::getUsedVideoMemoryInMb() const {
+        // Get renderer.
+        const auto pRenderer = dynamic_cast<VulkanRenderer*>(getRenderer());
+        if (pRenderer == nullptr) [[unlikely]] {
+            Error error("expected a Vulkan renderer");
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+        }
+
         // Get physical device.
         const auto pPhysicalDevice = pRenderer->getPhysicalDevice();
 
@@ -207,52 +224,45 @@ namespace ne {
         const std::string& sResourceName,
         size_t iElementSizeInBytes,
         size_t iElementCount,
-        bool bIsUsedInShadersAsReadOnlyData) {
+        std::optional<CpuVisibleShaderResourceUsageDetails> isUsedInShadersAsReadOnlyData) {
         const size_t iBufferSizeInBytes = iElementSizeInBytes * iElementCount;
         auto usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
 
-        if (bIsUsedInShadersAsReadOnlyData) {
-            usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+        if (isUsedInShadersAsReadOnlyData.has_value()) {
+            if (isUsedInShadersAsReadOnlyData->bForceFastResourceType) {
+                usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
 
-            // Make sure the physical device is valid.
-            const auto pPhysicalDevice = pRenderer->getPhysicalDevice();
-            if (pPhysicalDevice == nullptr) [[unlikely]] {
-                return Error("expected physical device to be valid");
-            }
+                // Get renderer.
+                const auto pRenderer = dynamic_cast<VulkanRenderer*>(getRenderer());
+                if (pRenderer == nullptr) [[unlikely]] {
+                    return Error("expected a Vulkan renderer");
+                }
 
-            // Get GPU limits.
-            VkPhysicalDeviceProperties deviceProperties;
-            vkGetPhysicalDeviceProperties(pPhysicalDevice, &deviceProperties);
+                // Make sure the physical device is valid.
+                const auto pPhysicalDevice = pRenderer->getPhysicalDevice();
+                if (pPhysicalDevice == nullptr) [[unlikely]] {
+                    return Error("expected physical device to be valid");
+                }
 
-            // Check if the requested buffer size exceed UBO size limit.
-            if (iBufferSizeInBytes > deviceProperties.limits.maxUniformBufferRange) {
-                return Error(fmt::format(
-                    "unable to create the requested uniform buffer with the size {} bytes because the GPU "
-                    "limit for uniform buffer sizes is {} bytes",
-                    iBufferSizeInBytes,
-                    deviceProperties.limits.maxUniformBufferRange));
+                // Get GPU limits.
+                VkPhysicalDeviceProperties deviceProperties;
+                vkGetPhysicalDeviceProperties(pPhysicalDevice, &deviceProperties);
+
+                // Check if the requested buffer size exceed UBO size limit.
+                if (iBufferSizeInBytes > deviceProperties.limits.maxUniformBufferRange) {
+                    return Error(fmt::format(
+                        "unable to create the requested uniform buffer with the size {} bytes "
+                        "because the GPU limit for uniform buffer sizes is {} bytes",
+                        iBufferSizeInBytes,
+                        deviceProperties.limits.maxUniformBufferRange));
+                }
+            } else {
+                usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
             }
         }
 
         // Create buffer.
         auto result = createBuffer(sResourceName, iBufferSizeInBytes, usage, true);
-        if (std::holds_alternative<Error>(result)) {
-            auto error = std::get<Error>(std::move(result));
-            error.addEntry();
-            return error;
-        }
-        auto pResource = std::get<std::unique_ptr<VulkanResource>>(std::move(result));
-
-        return std::unique_ptr<UploadBuffer>(
-            new UploadBuffer(std::move(pResource), iElementSizeInBytes, iElementCount));
-    }
-
-    std::variant<std::unique_ptr<UploadBuffer>, Error>
-    VulkanResourceManager::createStorageBufferWithCpuAccess(
-        const std::string& sResourceName, size_t iElementSizeInBytes, size_t iElementCount) {
-        // Create buffer.
-        auto result = createBuffer(
-            sResourceName, iElementSizeInBytes * iElementCount, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, true);
         if (std::holds_alternative<Error>(result)) {
             auto error = std::get<Error>(std::move(result));
             error.addEntry();
@@ -271,7 +281,7 @@ namespace ne {
         ResourceUsageType usage,
         bool bIsShaderReadWriteResource) {
         // Create an upload resource for uploading data.
-        auto uploadResourceResult = createResourceWithCpuAccess(sResourceName, iDataSizeInBytes, 1, false);
+        auto uploadResourceResult = createResourceWithCpuAccess(sResourceName, iDataSizeInBytes, 1, {});
         if (std::holds_alternative<Error>(uploadResourceResult)) {
             auto error = std::get<Error>(std::move(uploadResourceResult));
             error.addEntry();
@@ -296,6 +306,12 @@ namespace ne {
             return error;
         }
         auto pFinalResource = std::get<std::unique_ptr<VulkanResource>>(std::move(finalResourceResult));
+
+        // Get renderer.
+        const auto pRenderer = dynamic_cast<VulkanRenderer*>(getRenderer());
+        if (pRenderer == nullptr) [[unlikely]] {
+            return Error("expected a Vulkan renderer");
+        }
 
         // Create one-time submit command buffer to copy data from the upload resource to
         // the final resource.

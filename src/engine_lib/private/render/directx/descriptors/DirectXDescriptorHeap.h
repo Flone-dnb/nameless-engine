@@ -188,16 +188,18 @@ namespace ne {
             GpuResource::DescriptorType descriptorType) const;
 
         /**
-         * Recreates the heap to expand it to another @ref iHeapGrowSize descriptors.
-         * Old descriptors will be updates.
+         * Recreates the heap to expand its capacity to support @ref iHeapGrowSize more descriptors.
+         *
+         * @remark All internal values and old descriptors will be updates.
          *
          * @return Error if something went wrong.
          */
         [[nodiscard]] std::optional<Error> expandHeap();
 
         /**
-         * Recreates the heap to expand it to another @ref iHeapGrowSize descriptors.
-         * Old descriptors will be updates.
+         * Recreates the heap to shrink its capacity to support @ref iHeapGrowSize less descriptors.
+         *
+         * @remark All internal values and old descriptors will be updates.
          *
          * @return Error if something went wrong.
          */

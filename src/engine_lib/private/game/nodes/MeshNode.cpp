@@ -5,7 +5,7 @@
 #include "game/Window.h"
 #include "render/Renderer.h"
 #include "render/general/resources/GpuResourceManager.h"
-#include "materials/ShaderReadWriteResourceManager.h"
+#include "materials/ShaderCpuReadWriteResourceManager.h"
 #include "materials/EngineShaderNames.hpp"
 
 #include "MeshNode.generated_impl.h"

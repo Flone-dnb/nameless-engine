@@ -1,4 +1,4 @@
-#include "ShaderReadWriteResourceManager.h"
+#include "ShaderCpuReadWriteResourceManager.h"
 
 // Custom.
 #include "io/Logger.h"

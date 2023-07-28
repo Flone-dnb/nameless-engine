@@ -46,6 +46,9 @@ namespace ne {
                 vFences[i] = nullptr; // `waitForGpuToFinishWorkUpToThisPoint` checks for this
             }
 
+            // Explicitly delete memory allocator before all essential Vulkan objects.
+            resetGpuResourceManager();
+
             // Destroy logical device.
             vkDestroyDevice(pLogicalDevice, nullptr);
             pLogicalDevice = nullptr;

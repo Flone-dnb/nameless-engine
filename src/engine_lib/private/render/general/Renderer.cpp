@@ -106,6 +106,12 @@ namespace ne {
         return {};
     }
 
+    void Renderer::resetGpuResourceManager() {
+        Logger::get().info("explicitly resetting GPU resource manager");
+        Logger::get().flushToDisk();
+        pResourceManager = nullptr;
+    }
+
     std::unique_ptr<Renderer>
     Renderer::createRenderer(GameManager* pGameManager, std::optional<RendererType> preferredRenderer) {
         // Describe default renderer preference.

@@ -36,7 +36,9 @@ namespace ne {
             throw std::runtime_error(error.getFullErrorMessage());
         }
 
-        std::scoped_lock guard(mtxSpawning);
+        // Also lock GPU resources here to make sure the CPU will wait in the `draw` function
+        // until we finished updating our material AND our shader resources.
+        std::scoped_lock guard(mtxSpawning, mtxGpuResources.first);
 
         if (isSpawned()) {
             // Notify old material.
@@ -50,7 +52,6 @@ namespace ne {
         this->pMaterial = std::move(pMaterial);
 
         // Update shader resources.
-        std::scoped_lock gpuResourceGuard(mtxGpuResources.first);
         for (const auto& [sResourceName, shaderCpuReadWriteResource] :
              mtxGpuResources.second.shaderResources.shaderCpuReadWriteResources) {
             // Update binding info.

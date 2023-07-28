@@ -58,23 +58,6 @@ namespace ne {
         }
     }
 
-    void UploadBuffer::copyDataToElement(size_t iElementIndex, const void* pData, size_t iDataSize) {
-        // Make sure the specified element index is not out of bounds.
-        if (iElementIndex >= iElementCount) [[unlikely]] {
-            Error error(fmt::format(
-                "failed to copy data to upload buffer of resource \"{}\" "
-                "because the specified element index {} is out of bounds, "
-                "valid range is [0; {}]",
-                pGpuResource->getResourceName(),
-                iElementIndex,
-                iElementCount));
-            error.addEntry();
-            throw std::runtime_error(error.getFullErrorMessage());
-        }
-
-        std::memcpy(&pMappedResourceData[iElementIndex * iElementSizeInBytes], pData, iDataSize);
-    }
-
     size_t UploadBuffer::getElementCount() const { return iElementCount; }
 
     size_t UploadBuffer::getElementSizeInBytes() const { return iElementSizeInBytes; }

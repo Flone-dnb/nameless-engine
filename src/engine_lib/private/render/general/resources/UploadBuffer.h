@@ -8,7 +8,7 @@ namespace ne {
 
     /**
      * Wrapper class with handy functions that takes ownership of a GPU resource with available CPU
-     * access, typically used when a buffer needs to be frequently updated from the CPU side.
+     * write access, typically used when a buffer needs to be frequently updated from the CPU side.
      */
     class UploadBuffer {
     public:
@@ -29,13 +29,15 @@ namespace ne {
         UploadBuffer& operator=(UploadBuffer&) = delete;
 
         /**
-         * Copies the specified data to the resource.
+         * Copies the specified data to the element in the resource.
          *
          * @param iElementIndex Index of the element to copy the data to (see @ref getElementCount).
          * @param pData         Data to copy.
          * @param iDataSize     Size in bytes of data to copy.
          */
-        void copyDataToElement(size_t iElementIndex, const void* pData, size_t iDataSize);
+        inline void copyDataToElement(size_t iElementIndex, const void* pData, size_t iDataSize) {
+            std::memcpy(&pMappedResourceData[iElementIndex * iElementSizeInBytes], pData, iDataSize);
+        }
 
         /**
          * Returns the number of elements stored in the buffer.

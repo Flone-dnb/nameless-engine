@@ -5,7 +5,7 @@
 #include "game/Window.h"
 #include "render/Renderer.h"
 #include "render/general/resources/GpuResourceManager.h"
-#include "materials/ShaderCpuReadWriteResourceManager.h"
+#include "materials/ShaderCpuWriteResourceManager.h"
 #include "materials/EngineShaderNames.hpp"
 
 #include "MeshNode.generated_impl.h"
@@ -52,11 +52,11 @@ namespace ne {
         this->pMaterial = std::move(pMaterial);
 
         // Update shader resources.
-        for (const auto& [sResourceName, shaderCpuReadWriteResource] :
-             mtxGpuResources.second.shaderResources.shaderCpuReadWriteResources) {
+        for (const auto& [sResourceName, shaderCpuWriteResource] :
+             mtxGpuResources.second.shaderResources.shaderCpuWriteResources) {
             // Update binding info.
             auto optionalError =
-                shaderCpuReadWriteResource.getResource()->updateBindingInfo(this->pMaterial->getUsedPso());
+                shaderCpuWriteResource.getResource()->updateBindingInfo(this->pMaterial->getUsedPso());
             if (optionalError.has_value()) [[unlikely]] {
                 optionalError->addEntry();
                 optionalError->showError();
@@ -78,7 +78,7 @@ namespace ne {
         mtxShaderMeshDataConstants.second.world = getWorldMatrix();
 
         // Mark as shader constants resources as "needs update".
-        markShaderCpuReadWriteResourceAsNeedsUpdate(sMeshShaderConstantBufferName);
+        markShaderCpuWriteResourceAsNeedsUpdate(sMeshShaderConstantBufferName);
     }
 
     MeshData::MeshData() {
@@ -274,7 +274,7 @@ namespace ne {
         }
 
         // Set object constant buffer.
-        setShaderCpuReadWriteResourceBindingData(
+        setShaderCpuWriteResourceBindingData(
             sMeshShaderConstantBufferName,
             sizeof(MeshShaderConstants),
             [this]() -> void* { return onStartedUpdatingShaderMeshConstants(); },
@@ -495,13 +495,14 @@ namespace ne {
 
     void MeshNode::onFinishedUpdatingShaderMeshConstants() { mtxShaderMeshDataConstants.first.unlock(); }
 
-    void MeshNode::setShaderCpuReadWriteResourceBindingData(
+    void MeshNode::setShaderCpuWriteResourceBindingData(
         const std::string& sShaderResourceName,
         size_t iResourceSizeInBytes,
         const std::function<void*()>& onStartedUpdatingResource,
         const std::function<void()>& onFinishedUpdatingResource) {
+        std::scoped_lock spawnGuard(mtxSpawning, mtxGpuResources.first);
+
         // Make sure the node is spawned.
-        std::scoped_lock spawnGuard(mtxSpawning);
         if (!isSpawned()) [[unlikely]] {
             Error error("binding data to shader resources should be called in `onSpawning` function when the "
                         "node is spawned");
@@ -520,14 +521,11 @@ namespace ne {
             throw std::runtime_error(error.getFullErrorMessage());
         }
 
-        std::scoped_lock gpuResourceGuard(mtxGpuResources.first);
-
         // Make sure there is no resource with this name.
-        auto it =
-            mtxGpuResources.second.shaderResources.shaderCpuReadWriteResources.find(sShaderResourceName);
-        if (it != mtxGpuResources.second.shaderResources.shaderCpuReadWriteResources.end()) [[unlikely]] {
+        auto it = mtxGpuResources.second.shaderResources.shaderCpuWriteResources.find(sShaderResourceName);
+        if (it != mtxGpuResources.second.shaderResources.shaderCpuWriteResources.end()) [[unlikely]] {
             Error error(fmt::format(
-                "mesh node \"{}\" already has a shader CPU read/write resource with the name \"{}\"",
+                "mesh node \"{}\" already has a shader CPU write resource with the name \"{}\"",
                 getNodeName(),
                 sShaderResourceName));
             error.showError();
@@ -535,9 +533,9 @@ namespace ne {
         }
 
         // Create object data constant buffer for shaders.
-        const auto pShaderReadWriteResourceManager =
-            getGameInstance()->getWindow()->getRenderer()->getShaderCpuReadWriteResourceManager();
-        auto result = pShaderReadWriteResourceManager->createShaderCpuReadWriteResource(
+        const auto pShaderWriteResourceManager =
+            getGameInstance()->getWindow()->getRenderer()->getShaderCpuWriteResourceManager();
+        auto result = pShaderWriteResourceManager->createShaderCpuWriteResource(
             sShaderResourceName,
             fmt::format("mesh node \"{}\"", getNodeName()),
             iResourceSizeInBytes,
@@ -552,28 +550,26 @@ namespace ne {
         }
 
         // Add to be considered.
-        mtxGpuResources.second.shaderResources.shaderCpuReadWriteResources[sShaderResourceName] =
-            std::get<ShaderCpuReadWriteResourceUniquePtr>(std::move(result));
+        mtxGpuResources.second.shaderResources.shaderCpuWriteResources[sShaderResourceName] =
+            std::get<ShaderCpuWriteResourceUniquePtr>(std::move(result));
     }
 
-    void MeshNode::markShaderCpuReadWriteResourceAsNeedsUpdate(const std::string& sShaderResourceName) {
+    void MeshNode::markShaderCpuWriteResourceAsNeedsUpdate(const std::string& sShaderResourceName) {
         // In this function we silently exit if some condition is not met and don't log anything
         // intentionally because the user does not check for conditions to be met - it's simpler for the user
         // to write code this way. Moreover, unmet conditions are not errors in this function.
 
+        std::scoped_lock spawnGuard(mtxSpawning, mtxGpuResources.first);
+
         // Make sure the node is spawned.
-        std::scoped_lock spawnGuard(mtxSpawning);
         if (!isSpawned()) {
             return; // silently exit, this is not an error
         }
         // keep spawn locked
 
-        std::scoped_lock gpuResourceGuard(mtxGpuResources.first);
-
         // Make sure there is a resource with this name.
-        auto it =
-            mtxGpuResources.second.shaderResources.shaderCpuReadWriteResources.find(sShaderResourceName);
-        if (it == mtxGpuResources.second.shaderResources.shaderCpuReadWriteResources.end()) {
+        auto it = mtxGpuResources.second.shaderResources.shaderCpuWriteResources.find(sShaderResourceName);
+        if (it == mtxGpuResources.second.shaderResources.shaderCpuWriteResources.end()) {
             return; // silently exit, this is not an error
         }
 

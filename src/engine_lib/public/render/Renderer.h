@@ -8,7 +8,7 @@
 #include <memory>
 
 // Custom.
-#include "materials/ShaderCpuReadWriteResourceManager.h"
+#include "materials/ShaderCpuWriteResourceManager.h"
 #include "misc/Error.h"
 #include "materials/ShaderManager.h"
 #include "render/general/resources/GpuResourceManager.h"
@@ -205,13 +205,13 @@ namespace ne {
         FrameResourcesManager* getFrameResourcesManager() const;
 
         /**
-         * Returns shader read/write resource manager.
+         * Returns manager of shader resources with CPU write access.
          *
          * @warning Do not delete (free) returned pointer.
          *
-         * @return Shader read/write resource manager.
+         * @return Manager.
          */
-        ShaderCpuReadWriteResourceManager* getShaderCpuReadWriteResourceManager() const;
+        ShaderCpuWriteResourceManager* getShaderCpuWriteResourceManager() const;
 
         /**
          * Returns mutex that is used when reading or writing to resources that may be used by the GPU.
@@ -377,8 +377,8 @@ namespace ne {
         /** Stores frame-specific GPU resources. */
         std::unique_ptr<FrameResourcesManager> pFrameResourcesManager;
 
-        /** Stores all shader resources with CPU read/write access. */
-        std::unique_ptr<ShaderCpuReadWriteResourceManager> pShaderCpuReadWriteResourceManager;
+        /** Stores all shader resources with CPU write access. */
+        std::unique_ptr<ShaderCpuWriteResourceManager> pShaderCpuWriteResourceManager;
 
         /**
          * Shader parameters.

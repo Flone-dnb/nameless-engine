@@ -5,32 +5,34 @@
 
 namespace ne {
 
-    ShaderResource::ShaderResource(const std::string& sResourceName) { this->sResourceName = sResourceName; }
+    ShaderResourceBase::ShaderResourceBase(const std::string& sResourceName) {
+        this->sResourceName = sResourceName;
+    }
 
-    std::string ShaderResource::getResourceName() const { return sResourceName; }
+    std::string ShaderResourceBase::getResourceName() const { return sResourceName; }
 
-    ShaderCpuReadOnlyResource::~ShaderCpuReadOnlyResource() {}
+    ShaderResource::~ShaderResource() {}
 
-    ShaderCpuReadOnlyResource::ShaderCpuReadOnlyResource(
+    ShaderResource::ShaderResource(
         const std::string& sResourceName, std::unique_ptr<GpuResource> pResourceData)
-        : ShaderResource(sResourceName) {
+        : ShaderResourceBase(sResourceName) {
         this->pResourceData = std::move(pResourceData);
     }
 
-    ShaderCpuReadWriteResource::~ShaderCpuReadWriteResource() {}
+    ShaderCpuWriteResource::~ShaderCpuWriteResource() {}
 
-    void ShaderCpuReadWriteResource::markAsNeedsUpdate() {
+    void ShaderCpuWriteResource::markAsNeedsUpdate() {
         iFrameResourceCountToUpdate.store(FrameResourcesManager::getFrameResourcesCount());
     }
 
-    ShaderCpuReadWriteResource::ShaderCpuReadWriteResource(
+    ShaderCpuWriteResource::ShaderCpuWriteResource(
         const std::string& sResourceName,
         size_t iOriginalResourceSizeInBytes,
         std::array<std::unique_ptr<UploadBuffer>, FrameResourcesManager::getFrameResourcesCount()>
             vResourceData,
         const std::function<void*()>& onStartedUpdatingResource,
         const std::function<void()>& onFinishedUpdatingResource)
-        : ShaderResource(sResourceName) {
+        : ShaderResourceBase(sResourceName) {
         this->iOriginalResourceSizeInBytes = iOriginalResourceSizeInBytes;
         this->vResourceData = std::move(vResourceData);
         this->onStartedUpdatingResource = onStartedUpdatingResource;

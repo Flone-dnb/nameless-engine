@@ -15,7 +15,7 @@
 namespace ne {
     class GpuResourceManager;
     class VulkanStorageResourceArray;
-    class GlslShaderCpuReadWriteResource;
+    class GlslShaderCpuWriteResource;
 
     /**
      * Represents a used slot (place) in the array.
@@ -68,13 +68,13 @@ namespace ne {
         VulkanStorageResourceArraySlot(
             VulkanStorageResourceArray* pArray,
             size_t iIndexInArray,
-            GlslShaderCpuReadWriteResource* pShaderResource);
+            GlslShaderCpuWriteResource* pShaderResource);
 
         /** Array in which the slot resides. */
         VulkanStorageResourceArray* pArray = nullptr;
 
         /** Shader resource that uses this slot. */
-        GlslShaderCpuReadWriteResource* pShaderResource = nullptr;
+        GlslShaderCpuWriteResource* pShaderResource = nullptr;
 
         /** Index into @ref pArray to access the slot's data. */
         size_t iIndexInArray = 0;
@@ -241,7 +241,7 @@ namespace ne {
          * the array.
          */
         std::variant<std::unique_ptr<VulkanStorageResourceArraySlot>, Error>
-        insert(GlslShaderCpuReadWriteResource* pShaderResource);
+        insert(GlslShaderCpuWriteResource* pShaderResource);
 
         /**
          * Called by slots in their destructors to notify the array that the slot can be reused.

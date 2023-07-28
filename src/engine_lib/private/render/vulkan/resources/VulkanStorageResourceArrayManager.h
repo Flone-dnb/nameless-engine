@@ -15,9 +15,9 @@ namespace ne {
     class VulkanRenderer;
     class VulkanStorageResourceArray;
     class VulkanStorageResourceArraySlot;
-    class GlslShaderCpuReadWriteResource;
+    class GlslShaderCpuWriteResource;
 
-    /** Manages arrays of resources of various CPU read/write shader resources. */
+    /** Manages arrays of resources of various CPU write shader resources. */
     class VulkanStorageResourceArrayManager {
         // Only resource manager is supposed to own this manager.
         friend class VulkanResourceManager;
@@ -46,7 +46,7 @@ namespace ne {
          * the array.
          */
         std::variant<std::unique_ptr<VulkanStorageResourceArraySlot>, Error>
-        reserveSlotsInArray(GlslShaderCpuReadWriteResource* pShaderResource);
+        reserveSlotsInArray(GlslShaderCpuWriteResource* pShaderResource);
 
         /**
          * Resource manager that owns this manager
@@ -55,7 +55,7 @@ namespace ne {
          */
         VulkanStorageResourceArrayManager(VulkanResourceManager* pResourceManager);
 
-        /** Goes through all arrays in @ref mtxGlslShaderCpuReadWriteResources and removed empty ones. */
+        /** Goes through all arrays in @ref mtxGlslShaderCpuWriteResources and removed empty ones. */
         void removeEmptyArrays();
 
         /** Do not delete (free) this pointer. Resource manager that owns this manager. */
@@ -68,6 +68,6 @@ namespace ne {
         std::pair<
             std::recursive_mutex,
             std::unordered_map<std::string, std::unique_ptr<VulkanStorageResourceArray>>>
-            mtxGlslShaderCpuReadWriteResources;
+            mtxGlslShaderCpuWriteResources;
     };
 } // namespace ne

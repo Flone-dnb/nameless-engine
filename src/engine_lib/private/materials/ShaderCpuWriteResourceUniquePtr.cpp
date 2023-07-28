@@ -1,26 +1,28 @@
-#include "materials/ShaderCpuReadWriteResourceUniquePtr.h"
+#include "materials/ShaderCpuWriteResourceUniquePtr.h"
 
 // Custom.
-#include "materials/ShaderCpuReadWriteResourceManager.h"
+#include "materials/ShaderCpuWriteResourceManager.h"
 
 namespace ne {
-    ShaderCpuReadWriteResourceUniquePtr::ShaderCpuReadWriteResourceUniquePtr(
-        ShaderCpuReadWriteResourceManager* pManager, ShaderCpuReadWriteResource* pResource) {
+    ShaderCpuWriteResourceUniquePtr::ShaderCpuWriteResourceUniquePtr(
+        ShaderCpuWriteResourceManager* pManager, ShaderCpuWriteResource* pResource) {
         this->pManager = pManager;
         this->pResource = pResource;
     }
 
-    ShaderCpuReadWriteResourceUniquePtr::ShaderCpuReadWriteResourceUniquePtr(
-        ShaderCpuReadWriteResourceUniquePtr&& other) noexcept {
+    ShaderCpuWriteResourceUniquePtr::ShaderCpuWriteResourceUniquePtr(
+        ShaderCpuWriteResourceUniquePtr&& other) noexcept {
         *this = std::move(other);
     }
 
-    ShaderCpuReadWriteResourceUniquePtr&
-    ShaderCpuReadWriteResourceUniquePtr::operator=(ShaderCpuReadWriteResourceUniquePtr&& other) noexcept {
+    ShaderCpuWriteResourceUniquePtr&
+    ShaderCpuWriteResourceUniquePtr::operator=(ShaderCpuWriteResourceUniquePtr&& other) noexcept {
         if (this != &other) {
+#if defined(DEBUG)
             static_assert(
-                sizeof(ShaderCpuReadWriteResourceUniquePtr) == 16, // NOLINT: current size
+                sizeof(ShaderCpuWriteResourceUniquePtr) == 16, // NOLINT: current size
                 "consider adding new fields to move operator");
+#endif
 
             pResource = other.pResource;
             other.pResource = nullptr;
@@ -32,7 +34,7 @@ namespace ne {
         return *this;
     }
 
-    ShaderCpuReadWriteResourceUniquePtr::~ShaderCpuReadWriteResourceUniquePtr() {
+    ShaderCpuWriteResourceUniquePtr::~ShaderCpuWriteResourceUniquePtr() {
         if (pResource == nullptr) {
             // Our data was moved to some other object.
             return;
@@ -41,7 +43,7 @@ namespace ne {
         pManager->destroyResource(pResource);
     }
 
-    void ShaderCpuReadWriteResourceUniquePtr::markAsNeedsUpdate() {
+    void ShaderCpuWriteResourceUniquePtr::markAsNeedsUpdate() {
         if (pResource == nullptr) {
             // Our data was moved to some other object.
             return;

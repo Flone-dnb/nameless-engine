@@ -13,11 +13,11 @@
 namespace ne {
     /**
      * References a single (non-array) shader resource (that is written in a shader file)
-     * that has CPU access available (can be updated from the CPU side).
+     * that has CPU write access available (can be updated from the CPU side).
      */
-    class GlslShaderCpuReadWriteResource : public ShaderCpuReadWriteResource {
+    class GlslShaderCpuWriteResource : public ShaderCpuWriteResource {
     public:
-        virtual ~GlslShaderCpuReadWriteResource() override;
+        virtual ~GlslShaderCpuWriteResource() override;
 
         /**
          * Creates a GLSL shader resource.
@@ -39,7 +39,7 @@ namespace ne {
          *
          * @return Error if something went wrong, otherwise created shader resource.
          */
-        static std::variant<std::unique_ptr<ShaderCpuReadWriteResource>, Error> create(
+        static std::variant<std::unique_ptr<ShaderCpuWriteResource>, Error> create(
             const std::string& sShaderResourceName,
             const std::string& sResourceAdditionalInfo,
             size_t iResourceSizeInBytes,
@@ -75,7 +75,7 @@ namespace ne {
          * @param onFinishedUpdatingResource   Function that will be called when finished updating
          * (usually used for unlocking resource data mutex).
          */
-        GlslShaderCpuReadWriteResource(
+        GlslShaderCpuWriteResource(
             const std::string& sResourceName,
             size_t iOriginalResourceSizeInBytes,
             std::array<std::unique_ptr<UploadBuffer>, FrameResourcesManager::getFrameResourcesCount()>

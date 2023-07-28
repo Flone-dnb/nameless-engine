@@ -72,7 +72,7 @@ namespace ne {
     }
 
     std::variant<std::unique_ptr<VulkanStorageResourceArraySlot>, Error>
-    VulkanStorageResourceArray::insert(GlslShaderCpuReadWriteResource* pShaderResource) {
+    VulkanStorageResourceArray::insert(GlslShaderCpuWriteResource* pShaderResource) {
         // Lock both self and shader resources manager because I think there might be
         // the following AB-BA mutex locking issue if we only lock self:
         // - [thread 1] shader resource manager is in `destroyResource` and locked his mutex
@@ -84,7 +84,7 @@ namespace ne {
         // shader resource manager that some resource needs to be marked as "needs update" but this
         // thread will have to wait because thread 1 is currently using `destroyResource`
         const auto pMtxShaderResources =
-            pResourceManager->getRenderer()->getShaderCpuReadWriteResourceManager()->getResources();
+            pResourceManager->getRenderer()->getShaderCpuWriteResourceManager()->getResources();
         std::scoped_lock guard(mtxInternalResources.first, pMtxShaderResources->first);
 
         // Expand the array if needed.
@@ -198,7 +198,7 @@ namespace ne {
         // Lock both self and shader resources manager because I think there might be
         // the an AB-BA mutex locking issue that I described in `insert`.
         const auto pMtxShaderResources =
-            pResourceManager->getRenderer()->getShaderCpuReadWriteResourceManager()->getResources();
+            pResourceManager->getRenderer()->getShaderCpuWriteResourceManager()->getResources();
         std::scoped_lock guard(mtxInternalResources.first, pMtxShaderResources->first);
 
         // Find the specified slot in the array of active slots.
@@ -236,7 +236,7 @@ namespace ne {
         // Lock both self and shader resources manager because I think there might be
         // the an AB-BA mutex locking issue that I described in `insert`.
         const auto pMtxShaderResources =
-            pResourceManager->getRenderer()->getShaderCpuReadWriteResourceManager()->getResources();
+            pResourceManager->getRenderer()->getShaderCpuWriteResourceManager()->getResources();
         std::scoped_lock guard(mtxInternalResources.first, pMtxShaderResources->first);
 
         // Copy data.
@@ -296,7 +296,7 @@ namespace ne {
         }
 
         // Get shader resource manager to be used.
-        const auto pShaderResourceManager = pRenderer->getShaderCpuReadWriteResourceManager();
+        const auto pShaderResourceManager = pRenderer->getShaderCpuWriteResourceManager();
 
         // Update all active slots.
         size_t iCurrentIndex = 0;
@@ -414,7 +414,7 @@ namespace ne {
     VulkanStorageResourceArraySlot::VulkanStorageResourceArraySlot(
         VulkanStorageResourceArray* pArray,
         size_t iIndexInArray,
-        GlslShaderCpuReadWriteResource* pShaderResource) {
+        GlslShaderCpuWriteResource* pShaderResource) {
         this->pArray = pArray;
         this->iIndexInArray = iIndexInArray;
         this->pShaderResource = pShaderResource;

@@ -665,12 +665,12 @@ TEST_CASE("shader read/write resources exist only when MeshNode is spawned") {
                 pMeshNode->setMeshData(std::move(meshData));
 
                 // Get shader resource manager.
-                const auto pShaderRwResourceManager =
-                    getWindow()->getRenderer()->getShaderCpuReadWriteResourceManager();
-                auto pMtxResources = pShaderRwResourceManager->getResources();
+                const auto pShaderCpuWriteResourceManager =
+                    getWindow()->getRenderer()->getShaderCpuWriteResourceManager();
+                auto pMtxResources = pShaderCpuWriteResourceManager->getResources();
 
                 // Make sure no shader read/write resources created.
-                std::scoped_lock shaderRwResourcesGuard(pMtxResources->first);
+                std::scoped_lock shaderCpuWriteResourcesGuard(pMtxResources->first);
                 REQUIRE(pMtxResources->second.vAll.empty());
                 REQUIRE(pMtxResources->second.toBeUpdated.empty());
 

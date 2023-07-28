@@ -7,28 +7,30 @@
 
 // Custom.
 #include "materials/ShaderResource.h"
-#include "materials/ShaderCpuReadWriteResourceUniquePtr.h"
+#include "materials/ShaderCpuWriteResourceUniquePtr.h"
 
 namespace ne {
     class Renderer;
 
-    /** Stores all shader resources with CPU read/write access. */
-    class ShaderCpuReadWriteResourceManager {
+    /** Stores all shader resources with CPU write access. */
+    class ShaderCpuWriteResourceManager {
         // Only renderer should be allowed to create this manager.
         friend class Renderer;
 
     public:
-        /** Groups shader read/write resources. */
+        /** Groups shader CPU write resources. */
         struct Resources {
-            /** All created shader CPU read/write resources. */
-            std::vector<std::unique_ptr<ShaderCpuReadWriteResource>> vAll;
+            /** All created shader CPU write resources. */
+            std::vector<std::unique_ptr<ShaderCpuWriteResource>> vAll;
 
-            /** Shader CPU read/write resources that needs to be updated. */
-            std::set<ShaderCpuReadWriteResource*> toBeUpdated;
+            /** Shader CPU write resources that needs to be updated. */
+            std::set<ShaderCpuWriteResource*> toBeUpdated;
         };
 
-        ShaderCpuReadWriteResourceManager(const ShaderCpuReadWriteResourceManager&) = delete;
-        ShaderCpuReadWriteResourceManager& operator=(const ShaderCpuReadWriteResourceManager&) = delete;
+        ShaderCpuWriteResourceManager() = delete;
+
+        ShaderCpuWriteResourceManager(const ShaderCpuWriteResourceManager&) = delete;
+        ShaderCpuWriteResourceManager& operator=(const ShaderCpuWriteResourceManager&) = delete;
 
         /**
          * Creates a new render-specific shader resource.
@@ -50,7 +52,7 @@ namespace ne {
          *
          * @return Error if something went wrong, otherwise created shader resource.
          */
-        std::variant<ShaderCpuReadWriteResourceUniquePtr, Error> createShaderCpuReadWriteResource(
+        std::variant<ShaderCpuWriteResourceUniquePtr, Error> createShaderCpuWriteResource(
             const std::string& sShaderResourceName,
             const std::string& sResourceAdditionalInfo,
             size_t iResourceSizeInBytes,
@@ -71,14 +73,14 @@ namespace ne {
          *
          * @param pResourceToDestroy Resource to mark as "needs update".
          */
-        void markResourceAsNeedsUpdate(ShaderCpuReadWriteResource* pResourceToDestroy);
+        void markResourceAsNeedsUpdate(ShaderCpuWriteResource* pResourceToDestroy);
 
         /**
          * Destroys the specified resource because it will no longer be used.
          *
          * @param pResource Resource to destroy.
          */
-        void destroyResource(ShaderCpuReadWriteResource* pResource);
+        void destroyResource(ShaderCpuWriteResource* pResource);
 
         /**
          * Returns internal resources.
@@ -88,14 +90,12 @@ namespace ne {
         std::pair<std::recursive_mutex, Resources>* getResources();
 
     private:
-        ShaderCpuReadWriteResourceManager() = delete;
-
         /**
          * Initializes manager.
          *
          * @param pRenderer
          */
-        ShaderCpuReadWriteResourceManager(Renderer* pRenderer);
+        ShaderCpuWriteResourceManager(Renderer* pRenderer);
 
         /**
          * Processes resource creation.
@@ -104,13 +104,13 @@ namespace ne {
          *
          * @return Result of resource creation.
          */
-        std::variant<ShaderCpuReadWriteResourceUniquePtr, Error>
-        handleResourceCreation(std::variant<std::unique_ptr<ShaderCpuReadWriteResource>, Error> result);
+        std::variant<ShaderCpuWriteResourceUniquePtr, Error>
+        handleResourceCreation(std::variant<std::unique_ptr<ShaderCpuWriteResource>, Error> result);
 
         /** Renderer that owns this manager. */
         Renderer* pRenderer = nullptr;
 
-        /** Shader read/write resources. */
-        std::pair<std::recursive_mutex, Resources> mtxShaderCpuReadWriteResources;
+        /** Shader CPU write resources. */
+        std::pair<std::recursive_mutex, Resources> mtxShaderCpuWriteResources;
     };
 } // namespace ne

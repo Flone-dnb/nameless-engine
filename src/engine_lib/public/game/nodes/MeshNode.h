@@ -8,7 +8,7 @@
 #include "math/GLMath.hpp"
 #include "render/general/resources/GpuResource.h"
 #include "materials/ShaderResource.h"
-#include "materials/ShaderCpuReadWriteResourceUniquePtr.h"
+#include "materials/ShaderCpuWriteResourceUniquePtr.h"
 #include "materials/VulkanAlignmentConstants.hpp"
 
 #include "MeshNode.generated.h"
@@ -173,13 +173,12 @@ namespace ne RNAMESPACE() {
 
             /** Stores resources used by shaders. */
             struct ShaderResources {
-                /** Shader single (non-array) resources with CPU access. */
-                std::unordered_map<std::string, ShaderCpuReadWriteResourceUniquePtr>
-                    shaderCpuReadWriteResources;
+                /** Shader single (non-array) resources with CPU write access. */
+                std::unordered_map<std::string, ShaderCpuWriteResourceUniquePtr> shaderCpuWriteResources;
 
-                // TODO: vShaderCpuReadOnlyResources
+                // TODO: vShaderResources
 
-                // TODO: vShaderCpuReadOnlyArrayResources
+                // TODO: vShaderArrayResources
             };
 
             /** Mesh GPU resources. */
@@ -321,7 +320,7 @@ namespace ne RNAMESPACE() {
         virtual void onWorldLocationRotationScaleChanged() override;
 
         /**
-         * Setups callbacks for shader resource with CPU read/write access to copy data from CPU to
+         * Setups callbacks for shader resource with CPU write access to copy data from CPU to
          * the GPU to be used by shaders.
          *
          * @remark Call this function in your onSpawning function to bind to shader resources, all bindings
@@ -329,12 +328,12 @@ namespace ne RNAMESPACE() {
          * is called when the node is not spawned.
          *
          * @remark When data of a resource that you registered was updated on the CPU side you need
-         * to call @ref markShaderCpuReadWriteResourceAsNeedsUpdate so that update callbacks will be
+         * to call @ref markShaderCpuWriteResourceAsNeedsUpdate so that update callbacks will be
          * called and updated data will be copied to the GPU to be used by shaders.
-         * Note that you don't need to call @ref markShaderCpuReadWriteResourceAsNeedsUpdate for
+         * Note that you don't need to call @ref markShaderCpuWriteResourceAsNeedsUpdate for
          * resources you have not registered yourself. Also note that all registered resources
          * are marked as "need update" by default so you don't have to call
-         * @ref markShaderCpuReadWriteResourceAsNeedsUpdate right after calling this function.
+         * @ref markShaderCpuWriteResourceAsNeedsUpdate right after calling this function.
          *
          * @param sShaderResourceName        Name of the resource we are referencing (should be exactly the
          * same as the resource name written in the shader file we are referencing).
@@ -347,15 +346,15 @@ namespace ne RNAMESPACE() {
          * @param onFinishedUpdatingResource Function that will be called when the engine has finished
          * copying resource data to the GPU (usually used for unlocking mutexes).
          */
-        void setShaderCpuReadWriteResourceBindingData(
+        void setShaderCpuWriteResourceBindingData(
             const std::string& sShaderResourceName,
             size_t iResourceSizeInBytes,
             const std::function<void*()>& onStartedUpdatingResource,
             const std::function<void()>& onFinishedUpdatingResource);
 
         /**
-         * Looks for binding created using @ref setShaderCpuReadWriteResourceBindingData and
-         * notifies the engine that there is new (updated) data for shader CPU read/write resource to copy
+         * Looks for binding created using @ref setShaderCpuWriteResourceBindingData and
+         * notifies the engine that there is new (updated) data for shader CPU write resource to copy
          * to the GPU to be used by shaders.
          *
          * @remark You don't need to check if the node is spawned or not before calling this function,
@@ -363,16 +362,16 @@ namespace ne RNAMESPACE() {
          * silently ignored without any errors.
          *
          * @remark Note that the callbacks that you have specified in
-         * @ref setShaderCpuReadWriteResourceBindingData will not be called inside of this function,
+         * @ref setShaderCpuWriteResourceBindingData will not be called inside of this function,
          * moreover they are most likely to be called in the next frame(s) (most likely multiple times)
          * when the engine is ready to copy the data to the GPU, so if the resource's data is used by
          * multiple threads in your code, make sure to use mutex or other synchronization primitive
          * in your callbacks.
          *
-         * @param sShaderResourceName Name of the shader CPU read/write resource (should be exactly the same
+         * @param sShaderResourceName Name of the shader CPU write resource (should be exactly the same
          * as the resource name written in the shader file we are referencing).
          */
-        void markShaderCpuReadWriteResourceAsNeedsUpdate(const std::string& sShaderResourceName);
+        void markShaderCpuWriteResourceAsNeedsUpdate(const std::string& sShaderResourceName);
 
     private:
         /**

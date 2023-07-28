@@ -5,34 +5,34 @@
 
 namespace ne {
     class Node;
-    class ShaderCpuReadWriteResourceManager;
-    class ShaderCpuReadWriteResource;
+    class ShaderCpuWriteResourceManager;
+    class ShaderCpuWriteResource;
 
     /**
      * Small raw pointer wrapper that acts like `std::unique_ptr`
-     * for ShaderCpuReadWriteResource to do some extra work
+     * for shader CPU write resources to do some extra work
      * when started/stopped referencing a resource.
      *
      * When deleted causes the resource to be also deleted.
      */
-    class ShaderCpuReadWriteResourceUniquePtr {
+    class ShaderCpuWriteResourceUniquePtr {
         // Only manager can create objects of this class.
-        friend class ShaderCpuReadWriteResourceManager;
+        friend class ShaderCpuWriteResourceManager;
 
     public:
-        ShaderCpuReadWriteResourceUniquePtr() = default;
+        ShaderCpuWriteResourceUniquePtr() = default;
 
-        ShaderCpuReadWriteResourceUniquePtr(const ShaderCpuReadWriteResourceUniquePtr&) = delete;
-        ShaderCpuReadWriteResourceUniquePtr& operator=(const ShaderCpuReadWriteResourceUniquePtr&) = delete;
+        ShaderCpuWriteResourceUniquePtr(const ShaderCpuWriteResourceUniquePtr&) = delete;
+        ShaderCpuWriteResourceUniquePtr& operator=(const ShaderCpuWriteResourceUniquePtr&) = delete;
 
-        ~ShaderCpuReadWriteResourceUniquePtr();
+        ~ShaderCpuWriteResourceUniquePtr();
 
         /**
          * Move constructor.
          *
          * @param other Other object.
          */
-        ShaderCpuReadWriteResourceUniquePtr(ShaderCpuReadWriteResourceUniquePtr&& other) noexcept;
+        ShaderCpuWriteResourceUniquePtr(ShaderCpuWriteResourceUniquePtr&& other) noexcept;
 
         /**
          * Move assignment.
@@ -41,7 +41,7 @@ namespace ne {
          *
          * @return Result of move assignment.
          */
-        ShaderCpuReadWriteResourceUniquePtr& operator=(ShaderCpuReadWriteResourceUniquePtr&& other) noexcept;
+        ShaderCpuWriteResourceUniquePtr& operator=(ShaderCpuWriteResourceUniquePtr&& other) noexcept;
 
         /**
          * Marks shader resource as "needs update", this will cause resource's update callback
@@ -54,7 +54,7 @@ namespace ne {
          *
          * @return `nullptr` if moved or not initialized, otherwise valid pointer to resource.
          */
-        inline ShaderCpuReadWriteResource* getResource() const { return pResource; }
+        inline ShaderCpuWriteResource* getResource() const { return pResource; }
 
     private:
         /**
@@ -62,13 +62,13 @@ namespace ne {
          * @param pManager  Manager that owns the resource.
          * @param pResource Resource to point to.
          */
-        ShaderCpuReadWriteResourceUniquePtr(
-            ShaderCpuReadWriteResourceManager* pManager, ShaderCpuReadWriteResource* pResource);
+        ShaderCpuWriteResourceUniquePtr(
+            ShaderCpuWriteResourceManager* pManager, ShaderCpuWriteResource* pResource);
 
         /** Manager that owns the resource we are pointing to. */
-        ShaderCpuReadWriteResourceManager* pManager = nullptr;
+        ShaderCpuWriteResourceManager* pManager = nullptr;
 
         /** Resource we are pointing to. */
-        ShaderCpuReadWriteResource* pResource = nullptr;
+        ShaderCpuWriteResource* pResource = nullptr;
     };
 } // namespace ne

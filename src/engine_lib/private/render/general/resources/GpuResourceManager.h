@@ -21,7 +21,7 @@ namespace ne {
         CpuVisibleShaderResourceUsageDetails() = delete;
 
         /**
-         * Constructs a CPU read/write shader resource "usage" details.
+         * Constructs a CPU write shader resource "usage" details.
          *
          * @param bForceFastResourceType Forces strict underlying resource type to guarantee
          * that the shader code will always treat the resource type correctly.

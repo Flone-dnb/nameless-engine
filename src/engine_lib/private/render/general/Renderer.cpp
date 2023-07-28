@@ -277,8 +277,8 @@ namespace ne {
 
     FrameResourcesManager* Renderer::getFrameResourcesManager() const { return pFrameResourcesManager.get(); }
 
-    ShaderCpuReadWriteResourceManager* Renderer::getShaderCpuReadWriteResourceManager() const {
-        return pShaderCpuReadWriteResourceManager.get();
+    ShaderCpuWriteResourceManager* Renderer::getShaderCpuWriteResourceManager() const {
+        return pShaderCpuWriteResourceManager.get();
     }
 
     std::recursive_mutex* Renderer::getRenderResourcesMutex() { return &mtxRwRenderResources; }
@@ -376,9 +376,9 @@ namespace ne {
         pFrameResourcesManager =
             std::get<std::unique_ptr<FrameResourcesManager>>(std::move(frameResourceManagerResult));
 
-        // Create shader read/write resource manager.
-        pShaderCpuReadWriteResourceManager =
-            std::unique_ptr<ShaderCpuReadWriteResourceManager>(new ShaderCpuReadWriteResourceManager(this));
+        // Create shader CPU write resource manager.
+        pShaderCpuWriteResourceManager =
+            std::unique_ptr<ShaderCpuWriteResourceManager>(new ShaderCpuWriteResourceManager(this));
 
         return {};
     }

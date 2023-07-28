@@ -20,9 +20,9 @@ namespace ne {
     class UploadBuffer;
 
     /** Base class for shader resources. */
-    class ShaderResource {
+    class ShaderResourceBase {
     public:
-        virtual ~ShaderResource() = default;
+        virtual ~ShaderResourceBase() = default;
 
         /**
          * Called after the shader was changed and we want to update the binding info
@@ -52,7 +52,7 @@ namespace ne {
          * @param sResourceName                Name of the resource we are referencing
          * (should be exactly the same as the resource name written in the shader file we are referencing).
          */
-        ShaderResource(const std::string& sResourceName);
+        ShaderResourceBase(const std::string& sResourceName);
 
     private:
         /** Name of the resource we are referencing. */
@@ -63,9 +63,9 @@ namespace ne {
      * References a single (non-array) shader resource (that is written in a shader file)
      * that has no CPU access (cannot be updated from the CPU side, only recreated).
      */
-    class ShaderCpuReadOnlyResource : public ShaderResource {
+    class ShaderResource : public ShaderResourceBase {
     public:
-        virtual ~ShaderCpuReadOnlyResource() override;
+        virtual ~ShaderResource() override;
 
     protected:
         /**
@@ -75,8 +75,7 @@ namespace ne {
          * the resource name written in the shader file we are referencing).
          * @param pResourceData Data that will be binded to this shader resource.
          */
-        ShaderCpuReadOnlyResource(
-            const std::string& sResourceName, std::unique_ptr<GpuResource> pResourceData);
+        ShaderResource(const std::string& sResourceName, std::unique_ptr<GpuResource> pResourceData);
 
     private:
         /** Data binded to shader resource. */
@@ -85,14 +84,14 @@ namespace ne {
 
     /**
      * References a single (non-array) shader resource (that is written in a shader file)
-     * that has CPU access available (can be updated from the CPU side).
+     * that has CPU write access available (can be updated from the CPU side).
      */
-    class ShaderCpuReadWriteResource : public ShaderResource {
+    class ShaderCpuWriteResource : public ShaderResourceBase {
         // Only manager should be able to create and update resources of this type.
-        friend class ShaderCpuReadWriteResourceManager;
+        friend class ShaderCpuWriteResourceManager;
 
     public:
-        virtual ~ShaderCpuReadWriteResource() override;
+        virtual ~ShaderCpuWriteResource() override;
 
         /**
          * Returns original size of the resource (not padded).
@@ -115,7 +114,7 @@ namespace ne {
          * @param onFinishedUpdatingResource   Function that will be called when finished updating
          * (usually used for unlocking resource data mutex).
          */
-        ShaderCpuReadWriteResource(
+        ShaderCpuWriteResource(
             const std::string& sResourceName,
             size_t iOriginalResourceSizeInBytes,
             std::array<std::unique_ptr<UploadBuffer>, FrameResourcesManager::getFrameResourcesCount()>
@@ -144,7 +143,7 @@ namespace ne {
             // Self check:
             if (iFrameResourceCountToUpdate.load() == 0) [[unlikely]] {
                 Logger::get().error(fmt::format(
-                    "{} shader read write resource \"{}\" was updated while no update was "
+                    "{} shader CPU write resource \"{}\" was updated while no update was "
                     "needed, update flag will now have incorrect state",
                     Globals::getDebugOnlyLoggingSubCategoryName(),
                     getResourceName()));
@@ -180,17 +179,5 @@ namespace ne {
 
         /** Original size of the resource (not padded). */
         size_t iOriginalResourceSizeInBytes = 0;
-    };
-
-    /**
-     * References a shader array resource (that is written in a shader file)
-     * that has no CPU access (cannot be updated from the CPU side, only recreated).
-     */
-    class ShaderCpuReadOnlyArrayResource {
-    public:
-        virtual ~ShaderCpuReadOnlyArrayResource() = default;
-
-    protected:
-        ShaderCpuReadOnlyArrayResource() = default;
     };
 } // namespace ne

@@ -258,7 +258,7 @@ namespace ne {
         bIsShaderResourcesAllocated = true;
 
         // Set material constant buffer.
-        setShaderCpuReadWriteResourceBindingData(
+        setShaderCpuWriteResourceBindingData(
             sMaterialShaderConstantBufferName,
             sizeof(MaterialShaderConstants),
             [this]() -> void* { return onStartUpdatingShaderMeshConstants(); },
@@ -299,7 +299,7 @@ namespace ne {
         mtxGpuResources.second.shaderResources = {};
     }
 
-    void Material::setShaderCpuReadWriteResourceBindingData(
+    void Material::setShaderCpuWriteResourceBindingData(
         const std::string& sShaderResourceName,
         size_t iResourceSizeInBytes,
         const std::function<void*()>& onStartedUpdatingResource,
@@ -309,7 +309,7 @@ namespace ne {
         // Make sure shader resources allocated.
         if (!bIsShaderResourcesAllocated) [[unlikely]] {
             Error error(fmt::format(
-                "material \"{}\" was requested to set shader CPU read/write resource binding data all shader "
+                "material \"{}\" was requested to set shader CPU write resource binding data all shader "
                 "resources were not allocated yet",
                 sMaterialName));
             error.showError();
@@ -326,11 +326,10 @@ namespace ne {
         }
 
         // Make sure there is no resource with this name.
-        auto it =
-            mtxGpuResources.second.shaderResources.shaderCpuReadWriteResources.find(sShaderResourceName);
-        if (it != mtxGpuResources.second.shaderResources.shaderCpuReadWriteResources.end()) [[unlikely]] {
+        auto it = mtxGpuResources.second.shaderResources.shaderCpuWriteResources.find(sShaderResourceName);
+        if (it != mtxGpuResources.second.shaderResources.shaderCpuWriteResources.end()) [[unlikely]] {
             Error error(fmt::format(
-                "material \"{}\" already has a shader CPU read/write resource with the name \"{}\"",
+                "material \"{}\" already has a shader CPU write resource with the name \"{}\"",
                 sMaterialName,
                 sShaderResourceName));
             error.showError();
@@ -338,9 +337,9 @@ namespace ne {
         }
 
         // Create object data constant buffer for shaders.
-        const auto pShaderReadWriteResourceManager =
-            pPsoManager->getRenderer()->getShaderCpuReadWriteResourceManager();
-        auto result = pShaderReadWriteResourceManager->createShaderCpuReadWriteResource(
+        const auto pShaderWriteResourceManager =
+            pPsoManager->getRenderer()->getShaderCpuWriteResourceManager();
+        auto result = pShaderWriteResourceManager->createShaderCpuWriteResource(
             sShaderResourceName,
             fmt::format("material \"{}\"", sMaterialName),
             iResourceSizeInBytes,
@@ -355,11 +354,11 @@ namespace ne {
         }
 
         // Add to be considered.
-        mtxGpuResources.second.shaderResources.shaderCpuReadWriteResources[sShaderResourceName] =
-            std::get<ShaderCpuReadWriteResourceUniquePtr>(std::move(result));
+        mtxGpuResources.second.shaderResources.shaderCpuWriteResources[sShaderResourceName] =
+            std::get<ShaderCpuWriteResourceUniquePtr>(std::move(result));
     }
 
-    void Material::markShaderCpuReadWriteResourceAsNeedsUpdate(const std::string& sShaderResourceName) {
+    void Material::markShaderCpuWriteResourceAsNeedsUpdate(const std::string& sShaderResourceName) {
         std::scoped_lock guard(mtxInternalResources.first, mtxGpuResources.first);
 
         // Make sure shader resources allocated.
@@ -373,9 +372,8 @@ namespace ne {
         }
 
         // Make sure there is a resource with this name.
-        auto it =
-            mtxGpuResources.second.shaderResources.shaderCpuReadWriteResources.find(sShaderResourceName);
-        if (it == mtxGpuResources.second.shaderResources.shaderCpuReadWriteResources.end()) {
+        auto it = mtxGpuResources.second.shaderResources.shaderCpuWriteResources.find(sShaderResourceName);
+        if (it == mtxGpuResources.second.shaderResources.shaderCpuWriteResources.end()) {
             return; // silently exit, this is not an error
         }
 
@@ -395,7 +393,7 @@ namespace ne {
 
         mtxShaderMaterialDataConstants.second.diffuseColor = diffuseColor;
 
-        markShaderCpuReadWriteResourceAsNeedsUpdate(sMaterialShaderConstantBufferName);
+        markShaderCpuWriteResourceAsNeedsUpdate(sMaterialShaderConstantBufferName);
     }
 
     void Material::setOpacity(float opacity) {
@@ -410,7 +408,7 @@ namespace ne {
 
         mtxShaderMaterialDataConstants.second.opacity = std::clamp(opacity, 0.0F, 1.0F);
 
-        markShaderCpuReadWriteResourceAsNeedsUpdate(sMaterialShaderConstantBufferName);
+        markShaderCpuWriteResourceAsNeedsUpdate(sMaterialShaderConstantBufferName);
     }
 
     std::string Material::getVertexShaderName() const { return sVertexShaderName; }

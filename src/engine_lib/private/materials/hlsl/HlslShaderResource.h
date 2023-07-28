@@ -13,11 +13,11 @@
 namespace ne {
     /**
      * References a single (non-array) shader resource (that is written in a shader file)
-     * that has CPU access available (can be updated from the CPU side).
+     * that has CPU write access available (can be updated from the CPU side).
      */
-    class HlslShaderCpuReadWriteResource : public ShaderCpuReadWriteResource {
+    class HlslShaderCpuWriteResource : public ShaderCpuWriteResource {
     public:
-        virtual ~HlslShaderCpuReadWriteResource() override;
+        virtual ~HlslShaderCpuWriteResource() override;
 
         /**
          * Creates a new HLSL shader resource.
@@ -39,7 +39,7 @@ namespace ne {
          *
          * @return Error if something went wrong, otherwise created shader resource.
          */
-        static std::variant<std::unique_ptr<ShaderCpuReadWriteResource>, Error> create(
+        static std::variant<std::unique_ptr<ShaderCpuWriteResource>, Error> create(
             const std::string& sShaderResourceName,
             const std::string& sResourceAdditionalInfo,
             size_t iResourceSizeInBytes,
@@ -92,7 +92,7 @@ namespace ne {
          * (usually used for unlocking resource data mutex).
          * @param iRootParameterIndex          Index of this resource in root signature.
          */
-        HlslShaderCpuReadWriteResource(
+        HlslShaderCpuWriteResource(
             const std::string& sResourceName,
             size_t iOriginalResourceSizeInBytes,
             std::array<std::unique_ptr<UploadBuffer>, FrameResourcesManager::getFrameResourcesCount()>

@@ -409,11 +409,10 @@ namespace ne {
                     const auto pMtxMaterialGpuResources = pMaterial->getMaterialGpuResources();
                     std::scoped_lock materialGpuResourcesGuard(pMtxMaterialGpuResources->first);
 
-                    // Set material's CPU read/write shader resources (`cbuffer`s for example).
-                    for (const auto& [sResourceName, pShaderCpuReadWriteResource] :
-                         pMtxMaterialGpuResources->second.shaderResources.shaderCpuReadWriteResources) {
-                        reinterpret_cast<HlslShaderCpuReadWriteResource*>(
-                            pShaderCpuReadWriteResource.getResource())
+                    // Set material's CPU write shader resources (`cbuffer`s for example).
+                    for (const auto& [sResourceName, pShaderCpuWriteResource] :
+                         pMtxMaterialGpuResources->second.shaderResources.shaderCpuWriteResources) {
+                        reinterpret_cast<HlslShaderCpuWriteResource*>(pShaderCpuWriteResource.getResource())
                             ->setToPipeline(
                                 pCommandList, pMtxCurrentFrameResource->second.iCurrentFrameResourceIndex);
                     }
@@ -554,10 +553,10 @@ namespace ne {
             pCommandList->IASetVertexBuffers(0, 1, &vertexBufferView);
             pCommandList->IASetIndexBuffer(&indexBufferView);
 
-            // Set CPU read/write shader resources (`cbuffer`s for example).
-            for (const auto& [sResourceName, pShaderCpuReadWriteResource] :
-                 pMtxMeshGpuResources->second.shaderResources.shaderCpuReadWriteResources) {
-                reinterpret_cast<HlslShaderCpuReadWriteResource*>(pShaderCpuReadWriteResource.getResource())
+            // Set CPU write shader resources (`cbuffer`s for example).
+            for (const auto& [sResourceName, pShaderCpuWriteResource] :
+                 pMtxMeshGpuResources->second.shaderResources.shaderCpuWriteResources) {
+                reinterpret_cast<HlslShaderCpuWriteResource*>(pShaderCpuWriteResource.getResource())
                     ->setToPipeline(pCommandList, iCurrentFrameResourceIndex);
             }
 
@@ -1020,8 +1019,8 @@ namespace ne {
         // Copy new (up to date) data to frame data cbuffer to be used by the shaders.
         updateFrameConstantsBuffer(pMtxCurrentFrameResource->second.pResource, pCameraProperties);
 
-        // Update shader CPU read/write resources marked as "needs update".
-        getShaderCpuReadWriteResourceManager()->updateResources(
+        // Update shader CPU write resources marked as "needs update".
+        getShaderCpuWriteResourceManager()->updateResources(
             pMtxCurrentFrameResource->second.iCurrentFrameResourceIndex);
     }
 

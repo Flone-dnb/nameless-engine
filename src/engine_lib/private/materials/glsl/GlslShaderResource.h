@@ -47,6 +47,20 @@ namespace ne {
             const std::function<void*()>& onStartedUpdatingResource,
             const std::function<void()>& onFinishedUpdatingResource);
 
+        /**
+         * Called after the shader was changed and we want to update the binding info
+         * to use this resource in the new shader without recreating the resource.
+         *
+         * @param pNewPso New pipeline object that is now being used instead of the old one.
+         *
+         * @remark Implementations will typically ask the new pipeline object about the shader resources
+         * by querying root signature or descriptor layout indices and saving the index for the resource
+         * with the name of this shader resource.
+         *
+         * @return Error if something went wrong.
+         */
+        [[nodiscard]] virtual std::optional<Error> updateBindingInfo(Pso* pNewPso) override;
+
     protected:
         /**
          * Initializes the resource.

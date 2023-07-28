@@ -4,6 +4,7 @@
 #include "render/vulkan/VulkanRenderer.h"
 #include "io/Logger.h"
 #include "render/vulkan/resources/VulkanResource.h"
+#include "render/vulkan/resources/VulkanStorageResourceArrayManager.h"
 
 // External.
 #include "fmt/core.h"
@@ -16,13 +17,16 @@ namespace ne {
     VulkanResourceManager::VulkanResourceManager(VulkanRenderer* pRenderer, VmaAllocator pMemoryAllocator)
         : GpuResourceManager(pRenderer) {
         this->pMemoryAllocator = pMemoryAllocator;
+
+        pStorageResourceArrayManager =
+            std::unique_ptr<VulkanStorageResourceArrayManager>(new VulkanStorageResourceArrayManager(this));
     }
 
     std::variant<std::unique_ptr<VulkanResource>, Error> VulkanResourceManager::createBuffer(
         const std::string& sResourceName,
         VkDeviceSize iBufferSize,
         VkBufferUsageFlags bufferUsage,
-        bool bAllowCpuAccess) {
+        bool bAllowCpuWrite) {
         // Describe buffer.
         VkBufferCreateInfo bufferInfo{};
         bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -32,12 +36,11 @@ namespace ne {
 
         // Prepare allocation info.
         VmaAllocationCreateInfo allocationCreateInfo{};
-        allocationCreateInfo.usage = VMA_MEMORY_USAGE_AUTO;
-        if (bAllowCpuAccess) {
-            allocationCreateInfo.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
+        if (bAllowCpuWrite) {
             allocationCreateInfo.requiredFlags =
                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
         } else {
+            allocationCreateInfo.usage = VMA_MEMORY_USAGE_AUTO;
             allocationCreateInfo.flags = VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
         }
 
@@ -75,14 +78,20 @@ namespace ne {
     }
 
     VulkanResourceManager::~VulkanResourceManager() {
+        // Explicitly destroy storage array manager so that it will free its GPU resources.
+        pStorageResourceArrayManager = nullptr;
+
         // Make sure there are no resources exist
-        // (we do this check only in Vulkan because resources need memory allocator
-        // to be destroyed)
+        // (we do this check only in Vulkan because resources need memory allocator to be destroyed).
         const auto iTotalAliveResourceCount = iAliveResourceCount.load();
         if (iTotalAliveResourceCount != 0) [[unlikely]] {
             Error error(fmt::format(
                 "Vulkan resource manager is being destroyed but there are "
-                "still {} resource(s) alive (this is a bug, report to developers)",
+                "still {} resource(s) alive, most likely you forgot to explicitly "
+                "reset/delete some GPU resources that are used in the VulkanRenderer class (only "
+                "resources inside of the VulkanRenderer class should be explicitly deleted before "
+                "the resource manager is destroyed, everything else is expected to be automatically "
+                "deleted by world destruction)",
                 iTotalAliveResourceCount));
             error.showError();
             return; // don't throw in destructor, just quit
@@ -223,7 +232,8 @@ namespace ne {
         return std::get<std::unique_ptr<VulkanResource>>(std::move(result));
     }
 
-    std::variant<std::unique_ptr<UploadBuffer>, Error> VulkanResourceManager::createResourceWithCpuAccess(
+    std::variant<std::unique_ptr<UploadBuffer>, Error>
+    VulkanResourceManager::createResourceWithCpuWriteAccess(
         const std::string& sResourceName,
         size_t iElementSizeInBytes,
         size_t iElementCount,
@@ -284,7 +294,7 @@ namespace ne {
         ResourceUsageType usage,
         bool bIsShaderReadWriteResource) {
         // Create an upload resource for uploading data.
-        auto uploadResourceResult = createResourceWithCpuAccess(sResourceName, iDataSizeInBytes, 1, {});
+        auto uploadResourceResult = createResourceWithCpuWriteAccess(sResourceName, iDataSizeInBytes, 1, {});
         if (std::holds_alternative<Error>(uploadResourceResult)) {
             auto error = std::get<Error>(std::move(uploadResourceResult));
             error.addEntry();
@@ -351,6 +361,10 @@ namespace ne {
         }
 
         return pFinalResource;
+    }
+
+    VulkanStorageResourceArrayManager* VulkanResourceManager::getStorageResourceArrayManager() const {
+        return pStorageResourceArrayManager.get();
     }
 
 } // namespace ne

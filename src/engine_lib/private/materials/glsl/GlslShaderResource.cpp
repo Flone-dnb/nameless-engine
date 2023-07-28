@@ -78,6 +78,10 @@ namespace ne {
         //            iRootParameterIndex));
     }
 
+    std::optional<Error> GlslShaderCpuReadWriteResource::updateBindingInfo(Pso* pNewPso) {
+        throw std::runtime_error("not implemented");
+    }
+
     GlslShaderCpuReadWriteResource::GlslShaderCpuReadWriteResource(
         const std::string& sResourceName,
         size_t iOriginalResourceSizeInBytes,

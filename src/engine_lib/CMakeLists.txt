@@ -95,6 +95,10 @@ set(PROJECT_SOURCES
     private/render/vulkan/resources/VulkanResourceManager.h
     private/render/vulkan/resources/VulkanResource.cpp
     private/render/vulkan/resources/VulkanResource.h
+    private/render/vulkan/resources/VulkanStorageResourceArrayManager.h
+    private/render/vulkan/resources/VulkanStorageResourceArrayManager.cpp
+    private/render/vulkan/resources/VulkanStorageResourceArray.h
+    private/render/vulkan/resources/VulkanStorageResourceArray.cpp
     private/render/vulkan/VulkanRenderer.cpp
     private/render/vulkan/VulkanRenderer.h
     private/window/GLFW.hpp

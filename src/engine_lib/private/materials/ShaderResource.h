@@ -38,21 +38,21 @@ namespace ne {
          */
         [[nodiscard]] virtual std::optional<Error> updateBindingInfo(Pso* pNewPso) = 0;
 
-    protected:
-        /**
-         * Initializes the resource.
-         *
-         * @param sResourceName Name of the resource we are referencing (should be exactly the same as
-         * the resource name written in the shader file we are referencing).
-         */
-        ShaderResource(const std::string& sResourceName);
-
         /**
          * Returns name of this resource.
          *
          * @return Resource name.
          */
         std::string getResourceName() const;
+
+    protected:
+        /**
+         * Initializes the resource.
+         *
+         * @param sResourceName                Name of the resource we are referencing
+         * (should be exactly the same as the resource name written in the shader file we are referencing).
+         */
+        ShaderResource(const std::string& sResourceName);
 
     private:
         /** Name of the resource we are referencing. */
@@ -94,7 +94,35 @@ namespace ne {
     public:
         virtual ~ShaderCpuReadWriteResource() override;
 
+        /**
+         * Returns original size of the resource (not padded).
+         *
+         * @return Size in bytes.
+         */
+        inline size_t getOriginalResourceSizeInBytes() const { return iOriginalResourceSizeInBytes; }
+
     protected:
+        /**
+         * Constructs not fully initialized resource.
+         *
+         * @param sResourceName                Name of the resource we are referencing (should be exactly the
+         * same as the resource name written in the shader file we are referencing).
+         * @param iOriginalResourceSizeInBytes Original size of the resource (not padded).
+         * @param vResourceData                Data that will be binded to this shader resource.
+         * @param onStartedUpdatingResource    Function that will be called when started updating resource
+         * data. Function returns pointer to data of the specified resource data size that needs to be copied
+         * into the resource.
+         * @param onFinishedUpdatingResource   Function that will be called when finished updating
+         * (usually used for unlocking resource data mutex).
+         */
+        ShaderCpuReadWriteResource(
+            const std::string& sResourceName,
+            size_t iOriginalResourceSizeInBytes,
+            std::array<std::unique_ptr<UploadBuffer>, FrameResourcesManager::getFrameResourcesCount()>
+                vResourceData,
+            const std::function<void*()>& onStartedUpdatingResource,
+            const std::function<void()>& onFinishedUpdatingResource);
+
         /**
          * Marks resource as "needs update", causes resource's update callback
          * to be later called multiple times.
@@ -126,33 +154,12 @@ namespace ne {
             void* pDataToCopy = onStartedUpdatingResource();
             {
                 vResourceData[iCurrentFrameResourceIndex]->copyDataToElement(
-                    0, pDataToCopy, iOriginalResourceSizeInBytes);
+                    0, pDataToCopy, getOriginalResourceSizeInBytes());
             }
             onFinishedUpdatingResource();
 
             return (iFrameResourceCountToUpdate.fetch_sub(1) - 1) == 0;
         }
-
-        /**
-         * Constructs not fully initialized resource.
-         *
-         * @param sResourceName                Name of the resource we are referencing (should be exactly the
-         * same as the resource name written in the shader file we are referencing).
-         * @param iOriginalResourceSizeInBytes Original size of the resource (not padded).
-         * @param vResourceData                Data that will be binded to this shader resource.
-         * @param onStartedUpdatingResource    Function that will be called when started updating resource
-         * data. Function returns pointer to data of the specified resource data size that needs to be copied
-         * into the resource.
-         * @param onFinishedUpdatingResource   Function that will be called when finished updating
-         * (usually used for unlocking resource data mutex).
-         */
-        ShaderCpuReadWriteResource(
-            const std::string& sResourceName,
-            size_t iOriginalResourceSizeInBytes,
-            std::array<std::unique_ptr<UploadBuffer>, FrameResourcesManager::getFrameResourcesCount()>
-                vResourceData,
-            const std::function<void*()>& onStartedUpdatingResource,
-            const std::function<void()>& onFinishedUpdatingResource);
 
         /** Data binded to shader resource. */
         std::array<std::unique_ptr<UploadBuffer>, FrameResourcesManager::getFrameResourcesCount()>

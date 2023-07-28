@@ -79,8 +79,8 @@ namespace ne {
         virtual size_t getUsedVideoMemoryInMb() const = 0;
 
         /**
-         * Creates a new GPU resource with available CPU access, typically used
-         * for resources that needs to be frequently updated from the CPU side.
+         * Creates a new GPU resource with available CPU write access (only write not read),
+         * typically used for resources that needs to be frequently updated from the CPU side.
          *
          * Example:
          * @code
@@ -88,7 +88,7 @@ namespace ne {
          *     glm::mat4x4 world;
          * };
          *
-         * auto result = pResourceManager->createResourceWithCpuAccess(
+         * auto result = pResourceManager->createResourceWithCpuWriteAccess(
          *     "object constant data",
          *     sizeof(ObjectData),
          *     1,
@@ -107,7 +107,7 @@ namespace ne {
          *
          * @return Error if something went wrong, otherwise created resource.
          */
-        virtual std::variant<std::unique_ptr<UploadBuffer>, Error> createResourceWithCpuAccess(
+        virtual std::variant<std::unique_ptr<UploadBuffer>, Error> createResourceWithCpuWriteAccess(
             const std::string& sResourceName,
             size_t iElementSizeInBytes,
             size_t iElementCount,

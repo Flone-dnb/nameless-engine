@@ -32,7 +32,7 @@ namespace ne {
         std::array<std::unique_ptr<UploadBuffer>, FrameResourcesManager::getFrameResourcesCount()>
             vResourceData;
         for (unsigned int i = 0; i < FrameResourcesManager::getFrameResourcesCount(); i++) {
-            auto result = pUsedPso->getRenderer()->getResourceManager()->createResourceWithCpuAccess(
+            auto result = pUsedPso->getRenderer()->getResourceManager()->createResourceWithCpuWriteAccess(
                 fmt::format(
                     "{} shader ({}/{}) CPU read/write resource \"{}\" frame #{}",
                     sResourceAdditionalInfo,

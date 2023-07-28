@@ -58,7 +58,8 @@ namespace ne {
             std::move(pCbvSrvUavHeapManager)));
     }
 
-    std::variant<std::unique_ptr<UploadBuffer>, Error> DirectXResourceManager::createResourceWithCpuAccess(
+    std::variant<std::unique_ptr<UploadBuffer>, Error>
+    DirectXResourceManager::createResourceWithCpuWriteAccess(
         const std::string& sResourceName,
         size_t iElementSizeInBytes,
         size_t iElementCount,

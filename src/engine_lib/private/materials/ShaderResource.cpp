@@ -31,8 +31,8 @@ namespace ne {
         const std::function<void*()>& onStartedUpdatingResource,
         const std::function<void()>& onFinishedUpdatingResource)
         : ShaderResource(sResourceName) {
-        this->vResourceData = std::move(vResourceData);
         this->iOriginalResourceSizeInBytes = iOriginalResourceSizeInBytes;
+        this->vResourceData = std::move(vResourceData);
         this->onStartedUpdatingResource = onStartedUpdatingResource;
         this->onFinishedUpdatingResource = onFinishedUpdatingResource;
     }

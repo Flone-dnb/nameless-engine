@@ -98,18 +98,21 @@ namespace ne {
     void ShaderCpuReadWriteResourceManager::destroyResource(ShaderCpuReadWriteResource* pResourceToDestroy) {
         std::scoped_lock guard(mtxShaderCpuReadWriteResources.first);
 
-        // Remove from "to be updated" array (if resource needed an update).
-        auto toBeUpdatedIt = mtxShaderCpuReadWriteResources.second.toBeUpdated.find(pResourceToDestroy);
-        if (toBeUpdatedIt != mtxShaderCpuReadWriteResources.second.toBeUpdated.end()) {
-            mtxShaderCpuReadWriteResources.second.toBeUpdated.erase(toBeUpdatedIt);
-        }
-
         // Remove from "all" array.
         for (auto it = mtxShaderCpuReadWriteResources.second.vAll.begin();
              it != mtxShaderCpuReadWriteResources.second.vAll.end();
              ++it) {
             if (it->get() == pResourceToDestroy) {
+                // Destroy the object from the "all" array first.
                 mtxShaderCpuReadWriteResources.second.vAll.erase(it);
+
+                // Remove raw pointer from "to be updated" array (if resource needed an update).
+                auto toBeUpdatedIt =
+                    mtxShaderCpuReadWriteResources.second.toBeUpdated.find(pResourceToDestroy);
+                if (toBeUpdatedIt != mtxShaderCpuReadWriteResources.second.toBeUpdated.end()) {
+                    mtxShaderCpuReadWriteResources.second.toBeUpdated.erase(toBeUpdatedIt);
+                }
+
                 return;
             }
         }

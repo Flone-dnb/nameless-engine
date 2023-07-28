@@ -13,6 +13,7 @@
 namespace ne {
     class VulkanRenderer;
     class VulkanResource;
+    class VulkanStorageResourceArrayManager;
 
     /** Controls resource creation. */
     class VulkanResourceManager : public GpuResourceManager {
@@ -67,8 +68,8 @@ namespace ne {
             const VmaAllocationCreateInfo& allocationInfo);
 
         /**
-         * Creates a new GPU resource with available CPU access, typically used
-         * for resources that needs to be frequently updated from the CPU side.
+         * Creates a new GPU resource with available CPU write access (only write not read),
+         * typically used for resources that needs to be frequently updated from the CPU side.
          *
          * Example:
          * @code
@@ -76,7 +77,7 @@ namespace ne {
          *     glm::mat4x4 world;
          * };
          *
-         * auto result = pResourceManager->createResourceWithCpuAccess(
+         * auto result = pResourceManager->createResourceWithCpuWriteAccess(
          *     "object constant data",
          *     sizeof(ObjectData),
          *     1,
@@ -95,7 +96,7 @@ namespace ne {
          *
          * @return Error if something went wrong, otherwise created resource.
          */
-        virtual std::variant<std::unique_ptr<UploadBuffer>, Error> createResourceWithCpuAccess(
+        virtual std::variant<std::unique_ptr<UploadBuffer>, Error> createResourceWithCpuWriteAccess(
             const std::string& sResourceName,
             size_t iElementSizeInBytes,
             size_t iElementCount,
@@ -131,6 +132,16 @@ namespace ne {
             ResourceUsageType usage,
             bool bIsShaderReadWriteResource) override;
 
+        /**
+         * Returns manager that controls storage buffers that act as arrays for
+         * shader CPU read/write resources.
+         *
+         * @remark Do not delete (free) returned pointer.
+         *
+         * @return Manager.
+         */
+        VulkanStorageResourceArrayManager* getStorageResourceArrayManager() const;
+
     private:
         /**
          * Constructor.
@@ -153,12 +164,12 @@ namespace ne {
         /**
          * Creates a new buffer and allocates a new memory for it.
          *
-         * @param sResourceName     Name of the created buffer.
-         * @param iBufferSize       Size of the buffer in bytes.
-         * @param bufferUsage       Buffer usage.
-         * @param bAllowCpuAccess   Describes memory properties of the created buffer.
-         * If `true` the memory will have `VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT` and
-         * `VK_MEMORY_PROPERTY_HOST_COHERENT_BIT`, otherwise `VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT`.
+         * @param sResourceName   Name of the created buffer.
+         * @param iBufferSize     Size of the buffer in bytes.
+         * @param bufferUsage     Buffer usage.
+         * @param bAllowCpuWrite  Describes memory properties of the created buffer.
+         * If `true` the memory will be `HOST_VISIBLE`, `HOST_COHERENT`,
+         * otherwise `DEVICE_LOCAL`.
          *
          * @return Error if something went wrong, otherwise created resource.
          */
@@ -166,10 +177,13 @@ namespace ne {
             const std::string& sResourceName,
             VkDeviceSize iBufferSize,
             VkBufferUsageFlags bufferUsage,
-            bool bAllowCpuAccess);
+            bool bAllowCpuWrite);
 
         /** Total number of created resources that were not destroyed yet. */
         std::atomic<size_t> iAliveResourceCount{0};
+
+        /** Controls storage buffers that act as arrays for shader CPU read/write resources. */
+        std::unique_ptr<VulkanStorageResourceArrayManager> pStorageResourceArrayManager;
 
         /** Vulkan memory allocator. */
         VmaAllocator pMemoryAllocator = nullptr;

@@ -63,7 +63,8 @@ namespace ne {
 
         // Add to be considered.
         std::scoped_lock guard(mtxShaderCpuWriteResources.first);
-        mtxShaderCpuWriteResources.second.vAll.push_back(std::move(pResource));
+        mtxShaderCpuWriteResources.second.all.vector.push_back(std::move(pResource));
+        mtxShaderCpuWriteResources.second.all.set.insert(pRawResource);
         mtxShaderCpuWriteResources.second.toBeUpdated.insert(pRawResource);
 
         return ShaderCpuWriteResourceUniquePtr(this, pRawResource);
@@ -86,9 +87,18 @@ namespace ne {
     void ShaderCpuWriteResourceManager::markResourceAsNeedsUpdate(ShaderCpuWriteResource* pResource) {
         std::scoped_lock guard(mtxShaderCpuWriteResources.first);
 
+        // Self check: check if this resource even exists.
+        auto foundResourceIt = mtxShaderCpuWriteResources.second.all.set.find(pResource);
+        if (foundResourceIt == mtxShaderCpuWriteResources.second.all.set.end()) [[unlikely]] {
+            // don't use the pointer as it may reference a deleted memory
+            Logger::get().error("failed to find the specified shader CPU write resource in the array "
+                                "of alive resources to mark it as \"needs update\"");
+            return;
+        }
+
         // See if we need to move this resource to "to be updated" array.
-        auto it = mtxShaderCpuWriteResources.second.toBeUpdated.find(pResource);
-        if (it == mtxShaderCpuWriteResources.second.toBeUpdated.end()) {
+        auto toBeUpdatedIt = mtxShaderCpuWriteResources.second.toBeUpdated.find(pResource);
+        if (toBeUpdatedIt == mtxShaderCpuWriteResources.second.toBeUpdated.end()) {
             mtxShaderCpuWriteResources.second.toBeUpdated.insert(pResource);
         }
 
@@ -99,12 +109,15 @@ namespace ne {
         std::scoped_lock guard(mtxShaderCpuWriteResources.first);
 
         // Remove from "all" array.
-        for (auto it = mtxShaderCpuWriteResources.second.vAll.begin();
-             it != mtxShaderCpuWriteResources.second.vAll.end();
+        for (auto it = mtxShaderCpuWriteResources.second.all.vector.begin();
+             it != mtxShaderCpuWriteResources.second.all.vector.end();
              ++it) {
             if (it->get() == pResourceToDestroy) {
                 // Destroy the object from the "all" array first.
-                mtxShaderCpuWriteResources.second.vAll.erase(it);
+                mtxShaderCpuWriteResources.second.all.vector.erase(it);
+
+                // Remove raw pointer from the set.
+                mtxShaderCpuWriteResources.second.all.set.erase(pResourceToDestroy);
 
                 // Remove raw pointer from "to be updated" array (if resource needed an update).
                 auto toBeUpdatedIt = mtxShaderCpuWriteResources.second.toBeUpdated.find(pResourceToDestroy);
@@ -117,7 +130,7 @@ namespace ne {
         }
 
         // Maybe the specified resource pointer is invalid.
-        Logger::get().error("unable to find the specified resource to be destroyed");
+        Logger::get().error("failed to find the specified shader CPU write resource to be destroyed");
     }
 
     std::pair<std::recursive_mutex, ShaderCpuWriteResourceManager::Resources>*

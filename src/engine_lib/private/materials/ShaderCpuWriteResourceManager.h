@@ -4,6 +4,7 @@
 #include <set>
 #include <memory>
 #include <mutex>
+#include <unordered_set>
 
 // Custom.
 #include "materials/ShaderResource.h"
@@ -20,8 +21,17 @@ namespace ne {
     public:
         /** Groups shader CPU write resources. */
         struct Resources {
-            /** All created shader CPU write resources. */
-            std::vector<std::unique_ptr<ShaderCpuWriteResource>> vAll;
+            /** All shader CPU write resources. */
+            struct All {
+                /** All created shader CPU write resources. */
+                std::vector<std::unique_ptr<ShaderCpuWriteResource>> vector;
+
+                /** Equals to @ref vector but stores raw pointers for quick search. */
+                std::unordered_set<ShaderCpuWriteResource*> set;
+            };
+
+            /** All shader CPU write resources. */
+            All all;
 
             /** Shader CPU write resources that needs to be updated. */
             std::set<ShaderCpuWriteResource*> toBeUpdated;

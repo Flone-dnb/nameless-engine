@@ -1,4 +1,4 @@
-#include "materials/ShaderReadWriteResourceUniquePtr.h"
+#include "materials/ShaderCpuReadWriteResourceUniquePtr.h"
 
 // Custom.
 #include "materials/ShaderCpuReadWriteResourceManager.h"

@@ -151,8 +151,8 @@ set(PROJECT_SOURCES
     private/materials/ShaderFilesystemPaths.hpp
     private/materials/ShaderCpuReadWriteResourceManager.cpp
     private/materials/ShaderCpuReadWriteResourceManager.h
-    private/materials/ShaderReadWriteResourceUniquePtr.cpp
-    private/materials/ShaderReadWriteResourceUniquePtr.h
+    private/materials/ShaderCpuReadWriteResourceUniquePtr.cpp
+    private/materials/ShaderCpuReadWriteResourceUniquePtr.h
     public/materials/VulkanAlignmentConstants.hpp
     public/misc/ProjectPaths.h
     private/misc/ProjectPaths.cpp

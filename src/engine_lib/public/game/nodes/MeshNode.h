@@ -8,7 +8,7 @@
 #include "math/GLMath.hpp"
 #include "render/general/resources/GpuResource.h"
 #include "materials/ShaderResource.h"
-#include "materials/ShaderReadWriteResourceUniquePtr.h"
+#include "materials/ShaderCpuReadWriteResourceUniquePtr.h"
 #include "materials/VulkanAlignmentConstants.hpp"
 
 #include "MeshNode.generated.h"

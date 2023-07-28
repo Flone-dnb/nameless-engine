@@ -7,7 +7,7 @@
 
 // Custom.
 #include "materials/ShaderResource.h"
-#include "materials/ShaderReadWriteResourceUniquePtr.h"
+#include "materials/ShaderCpuReadWriteResourceUniquePtr.h"
 
 namespace ne {
     class Renderer;

@@ -213,7 +213,7 @@ namespace ne {
          * @remark Interval should be in range [30; 300] seconds (otherwise it will be clamped).
          *
          * @remark Note that garbage collection will also be executed additionally in some special cases,
-         * such as when World is being destructed or some nodes are being detached and despawned.
+         * such as when World is being destructed.
          *
          * @param iGcRunIntervalInSec Interval in seconds.
          */

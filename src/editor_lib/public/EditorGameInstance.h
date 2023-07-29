@@ -8,6 +8,7 @@ namespace ne {
     class GameManager;
     class TransientCamera;
     class InputManager;
+    class MeshNode;
 
     /** Defines editor game. */
     class EditorGameInstance : public GameInstance {
@@ -83,6 +84,9 @@ namespace ne {
 
         /** Camera used in the editor. */
         std::shared_ptr<TransientCamera> pEditorCamera;
+
+        // TODO
+        gc<MeshNode> pMeshNode;
 
         /** @ref pEditorCamera movement speed. */
         float cameraMovementSpeed = 3.0F; // NOLINT: default value

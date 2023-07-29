@@ -65,7 +65,11 @@ namespace ne {
         std::scoped_lock guard(mtxShaderCpuWriteResources.first);
         mtxShaderCpuWriteResources.second.all.vector.push_back(std::move(pResource));
         mtxShaderCpuWriteResources.second.all.set.insert(pRawResource);
-        mtxShaderCpuWriteResources.second.toBeUpdated.insert(pRawResource);
+
+        // Add to be updated for each frame resource.
+        for (auto& set : mtxShaderCpuWriteResources.second.toBeUpdated) {
+            set.insert(pRawResource);
+        }
 
         return ShaderCpuWriteResourceUniquePtr(this, pRawResource);
     }
@@ -73,15 +77,20 @@ namespace ne {
     void ShaderCpuWriteResourceManager::updateResources(size_t iCurrentFrameResourceIndex) {
         std::scoped_lock shaderRwResourceGuard(mtxShaderCpuWriteResources.first);
 
-        // Update resources and erase ones that no longer need an update.
-        for (auto it = mtxShaderCpuWriteResources.second.toBeUpdated.begin();
-             it != mtxShaderCpuWriteResources.second.toBeUpdated.end();) {
-            if ((*it)->updateResource(iCurrentFrameResourceIndex)) {
-                it = mtxShaderCpuWriteResources.second.toBeUpdated.erase(it);
-            } else {
-                ++it;
-            }
+        if (mtxShaderCpuWriteResources.second.toBeUpdated[iCurrentFrameResourceIndex].empty()) {
+            // Nothing to update.
+            return;
         }
+
+        // Copy new resource data to the GPU resources of the current frame resource.
+        for (const auto& pResource :
+             mtxShaderCpuWriteResources.second.toBeUpdated[iCurrentFrameResourceIndex]) {
+            pResource->updateResource(iCurrentFrameResourceIndex);
+        }
+
+        // Clear array of resources to be updated for the current frame resource since
+        // we updated all resources for the current frame resource.
+        mtxShaderCpuWriteResources.second.toBeUpdated[iCurrentFrameResourceIndex].clear();
     }
 
     void ShaderCpuWriteResourceManager::markResourceAsNeedsUpdate(ShaderCpuWriteResource* pResource) {
@@ -96,13 +105,12 @@ namespace ne {
             return;
         }
 
-        // See if we need to move this resource to "to be updated" array.
-        auto toBeUpdatedIt = mtxShaderCpuWriteResources.second.toBeUpdated.find(pResource);
-        if (toBeUpdatedIt == mtxShaderCpuWriteResources.second.toBeUpdated.end()) {
-            mtxShaderCpuWriteResources.second.toBeUpdated.insert(pResource);
+        // Add to be updated for each frame resource,
+        // even if it's already marked as "to be updated" `std::set` guarantees element uniqueness
+        // so there's no need to check if the resource already marked as "to be updated".
+        for (auto& set : mtxShaderCpuWriteResources.second.toBeUpdated) {
+            set.insert(pResource);
         }
-
-        pResource->markAsNeedsUpdate();
     }
 
     void ShaderCpuWriteResourceManager::destroyResource(ShaderCpuWriteResource* pResourceToDestroy) {
@@ -120,9 +128,8 @@ namespace ne {
                 mtxShaderCpuWriteResources.second.all.set.erase(pResourceToDestroy);
 
                 // Remove raw pointer from "to be updated" array (if resource needed an update).
-                auto toBeUpdatedIt = mtxShaderCpuWriteResources.second.toBeUpdated.find(pResourceToDestroy);
-                if (toBeUpdatedIt != mtxShaderCpuWriteResources.second.toBeUpdated.end()) {
-                    mtxShaderCpuWriteResources.second.toBeUpdated.erase(toBeUpdatedIt);
+                for (auto& set : mtxShaderCpuWriteResources.second.toBeUpdated) {
+                    set.erase(pResourceToDestroy);
                 }
 
                 return;

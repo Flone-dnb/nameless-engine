@@ -673,7 +673,9 @@ TEST_CASE("shader read/write resources exist only when MeshNode is spawned") {
                 std::scoped_lock shaderCpuWriteResourcesGuard(pMtxResources->first);
                 REQUIRE(pMtxResources->second.all.vector.empty());
                 REQUIRE(pMtxResources->second.all.set.empty());
-                REQUIRE(pMtxResources->second.toBeUpdated.empty());
+                for (const auto& set : pMtxResources->second.toBeUpdated) {
+                    REQUIRE(set.empty());
+                }
 
                 // Save VRAM to check later.
                 const auto iVramMbNotSpawned = getWindow()->getRenderer()->getUsedVideoMemoryInMb();
@@ -685,7 +687,9 @@ TEST_CASE("shader read/write resources exist only when MeshNode is spawned") {
                 // Make sure there are 2 resources (meshData and materialData).
                 REQUIRE(pMtxResources->second.all.vector.size() == 2);
                 REQUIRE(pMtxResources->second.all.set.size() == 2);
-                REQUIRE(pMtxResources->second.toBeUpdated.size() == 2);
+                for (const auto& set : pMtxResources->second.toBeUpdated) {
+                    REQUIRE(set.size() == 2);
+                }
 
                 // Check VRAM.
                 const auto iVramMbSpawned = getWindow()->getRenderer()->getUsedVideoMemoryInMb();
@@ -708,7 +712,9 @@ TEST_CASE("shader read/write resources exist only when MeshNode is spawned") {
                 // Make sure resources were freed.
                 REQUIRE(pMtxResources->second.all.vector.empty());
                 REQUIRE(pMtxResources->second.all.set.empty());
-                REQUIRE(pMtxResources->second.toBeUpdated.empty());
+                for (const auto& set : pMtxResources->second.toBeUpdated) {
+                    REQUIRE(set.empty());
+                }
 
                 // Check VRAM.
                 const auto iVramDespawned = getWindow()->getRenderer()->getUsedVideoMemoryInMb();

@@ -4,11 +4,13 @@
 #include <set>
 #include <memory>
 #include <mutex>
+#include <array>
 #include <unordered_set>
 
 // Custom.
 #include "materials/ShaderResource.h"
 #include "materials/ShaderCpuWriteResourceUniquePtr.h"
+#include "render/general/resources/FrameResourcesManager.h"
 
 namespace ne {
     class Renderer;
@@ -34,7 +36,10 @@ namespace ne {
             All all;
 
             /** Shader CPU write resources that needs to be updated. */
-            std::set<ShaderCpuWriteResource*> toBeUpdated;
+            std::array<
+                std::unordered_set<ShaderCpuWriteResource*>,
+                FrameResourcesManager::getFrameResourcesCount()>
+                toBeUpdated;
         };
 
         ShaderCpuWriteResourceManager() = delete;

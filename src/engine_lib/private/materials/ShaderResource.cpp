@@ -21,10 +21,6 @@ namespace ne {
 
     ShaderCpuWriteResource::~ShaderCpuWriteResource() {}
 
-    void ShaderCpuWriteResource::markAsNeedsUpdate() {
-        iFrameResourceCountToUpdate.store(FrameResourcesManager::getFrameResourcesCount());
-    }
-
     ShaderCpuWriteResource::ShaderCpuWriteResource(
         const std::string& sResourceName,
         size_t iOriginalResourceSizeInBytes,

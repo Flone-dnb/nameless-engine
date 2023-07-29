@@ -123,41 +123,20 @@ namespace ne {
             const std::function<void()>& onFinishedUpdatingResource);
 
         /**
-         * Marks resource as "needs update", causes resource's update callback
-         * to be later called multiple times.
-         */
-        void markAsNeedsUpdate();
-
-        /**
-         * Updates shader resource with up to date data.
+         * Copies up to date data to the GPU resource of the specified frame resource.
          *
-         * @remark Should only be called when resource actually needs an update.
+         * @remark Should only be called when resource actually needs an update, otherwise
+         * you would cause useless copy operations.
          *
          * @param iCurrentFrameResourceIndex Index of currently used frame resource.
-         *
-         * @return `true` if this resource no longer needs to be updated (for now), `false`
-         * if this resource also needs to be updated for next frame resource.
          */
-        inline bool updateResource(size_t iCurrentFrameResourceIndex) {
-#if defined(DEBUG)
-            // Self check:
-            if (iFrameResourceCountToUpdate.load() == 0) [[unlikely]] {
-                Logger::get().error(fmt::format(
-                    "{} shader CPU write resource \"{}\" was updated while no update was "
-                    "needed, update flag will now have incorrect state",
-                    Globals::getDebugOnlyLoggingSubCategoryName(),
-                    getResourceName()));
-            }
-#endif
-
+        inline void updateResource(size_t iCurrentFrameResourceIndex) {
             void* pDataToCopy = onStartedUpdatingResource();
             {
                 vResourceData[iCurrentFrameResourceIndex]->copyDataToElement(
                     0, pDataToCopy, getOriginalResourceSizeInBytes());
             }
             onFinishedUpdatingResource();
-
-            return (iFrameResourceCountToUpdate.fetch_sub(1) - 1) == 0;
         }
 
         /** Data binded to shader resource. */
@@ -172,10 +151,6 @@ namespace ne {
 
         /** Function to call when finished updating (usually used for unlocking resource data mutex). */
         std::function<void()> onFinishedUpdatingResource;
-
-        /** Defines how much elements in @ref vResourceData need to be updated. */
-        std::atomic<unsigned int> iFrameResourceCountToUpdate{
-            FrameResourcesManager::getFrameResourcesCount()};
 
         /** Original size of the resource (not padded). */
         size_t iOriginalResourceSizeInBytes = 0;

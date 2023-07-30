@@ -43,3 +43,6 @@
 [submodule "ext/shaderc"]
 	path = ext/shaderc
 	url = https://github.com/Flone-dnb/shaderc.git
+[submodule "ext/SPIRV-Reflect"]
+	path = ext/SPIRV-Reflect
+	url = https://github.com/KhronosGroup/SPIRV-Reflect.git

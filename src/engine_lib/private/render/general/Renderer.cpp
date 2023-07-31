@@ -48,7 +48,7 @@ namespace ne {
         auto onError = [](ShaderDescription shaderDescription, std::variant<std::string, Error> error) {
             if (std::holds_alternative<std::string>(error)) {
                 const auto sErrorMessage = std::format(
-                    "failed to compile shader \"{}\" due to compilation error:\n{}",
+                    "failed to compile shader \"{}\" due to the following compilation error:\n{}",
                     shaderDescription.sShaderName,
                     std::get<std::string>(std::move(error)));
                 const Error err(sErrorMessage);
@@ -57,7 +57,7 @@ namespace ne {
             }
 
             const auto sErrorMessage = std::format(
-                "failed to compile shader \"{}\" due to internal error:\n{}",
+                "failed to compile shader \"{}\" due to the following internal error:\n{}",
                 shaderDescription.sShaderName,
                 std::get<Error>(std::move(error)).getFullErrorMessage());
             const Error err(sErrorMessage);

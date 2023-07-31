@@ -150,7 +150,8 @@ namespace ne {
         const std::string& sConfiguration,
         const ShaderDescription& shaderDescription) {
         // Check that the renderer is DirectX renderer.
-        if (dynamic_cast<DirectXRenderer*>(pRenderer) == nullptr) [[unlikely]] {
+        const auto pDirectXRenderer = dynamic_cast<DirectXRenderer*>(pRenderer);
+        if (pDirectXRenderer == nullptr) [[unlikely]] {
             return Error("the specified renderer is not a DirectX renderer");
         }
 
@@ -358,31 +359,22 @@ namespace ne {
             shaderDescription.shaderType,
             sSourceFileHash);
 
-        // Collect root signature info from reflection.
-        auto result = RootSignatureGenerator::collectInfoFromReflection(
-            dynamic_cast<DirectXRenderer*>(pRenderer)->getD3dDevice(), pReflection);
+        // Make sure we are able to collect root signature info from reflection
+        // (check that there are no errors)
+        auto result =
+            RootSignatureGenerator::collectInfoFromReflection(pDirectXRenderer->getD3dDevice(), pReflection);
         if (std::holds_alternative<Error>(result)) {
             auto err = std::get<Error>(std::move(result));
             err.addEntry();
             return err;
         }
-        // Ignore root signature (will be later used from cache), but use other results.
-        auto collectedRootSignatureInfo = std::get<RootSignatureGenerator::CollectedInfo>(std::move(result));
-
-        // Save root signature info.
-        std::scoped_lock rootSignatureInfoGuard(pShader->mtxRootSignatureInfo.first);
-        RootSignatureInfo info;
-        info.rootParameterIndices = std::move(collectedRootSignatureInfo.rootParameterIndices);
-        info.staticSamplers = std::move(collectedRootSignatureInfo.staticSamplers);
-        info.vRootParameters = std::move(collectedRootSignatureInfo.vRootParameters);
-        pShader->mtxRootSignatureInfo.second = std::move(info);
+        // Ignore results (will be later used from cache), right now we just checked for errors.
 
         return pShader;
     }
 
     std::variant<ComPtr<IDxcBlob>, Error> HlslShader::getCompiledBlob() {
-        std::scoped_lock guard(mtxCompiledBytecode.first);
-
+        // Load shader data from disk (if needed).
         auto optionalError = loadShaderDataFromDiskIfNotLoaded();
         if (optionalError.has_value()) {
             optionalError->addEntry();
@@ -524,19 +516,19 @@ namespace ne {
             error.addEntry();
             return error;
         }
-        const auto pathToCompiledPath =
+        const auto pathToCompiledShader =
             std::get<std::filesystem::path>(std::move(pathToCompiledShaderResult));
 
         // Make sure there is no extension (expecting the file to not have extension).
-        if (pathToCompiledPath.has_extension()) [[unlikely]] {
+        if (pathToCompiledShader.has_extension()) [[unlikely]] {
             return Error(fmt::format(
                 "expected the shader bytecode file \"{}\" to not have an extension",
-                pathToCompiledPath.string()));
+                pathToCompiledShader.string()));
         }
 
         // Add extension that reflection binary files use.
         const auto pathToReflectionFile =
-            std::filesystem::path(pathToCompiledPath.string() + sShaderReflectionFileExtension);
+            std::filesystem::path(pathToCompiledShader.string() + sShaderReflectionFileExtension);
 
         // Make sure the reflection file exists.
         if (!std::filesystem::exists(pathToReflectionFile)) [[unlikely]] {

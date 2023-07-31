@@ -78,13 +78,13 @@ namespace ne {
         }
 
         // Read shader file.
-        auto result = ShaderIncluder::parseFullSourceCode(shaderDescription.pathToShaderFile);
-        if (std::holds_alternative<ShaderIncluder::Error>(result)) [[unlikely]] {
+        auto parseResult = ShaderIncluder::parseFullSourceCode(shaderDescription.pathToShaderFile);
+        if (std::holds_alternative<ShaderIncluder::Error>(parseResult)) [[unlikely]] {
             return Error(fmt::format(
                 "failed to parse shader source code, error: {}",
-                convertShaderIncluderErrorToString(std::get<ShaderIncluder::Error>(result))));
+                convertShaderIncluderErrorToString(std::get<ShaderIncluder::Error>(parseResult))));
         }
-        const auto sFullShaderSourceCode = std::get<std::string>(std::move(result));
+        const auto sFullShaderSourceCode = std::get<std::string>(std::move(parseResult));
 
         // Prepare a compiler object.
         shaderc::Compiler compiler;
@@ -124,9 +124,17 @@ namespace ne {
         }
 
         // Get compiled SPIR-V bytecode.
-        using bytecode_element_type = uint32_t;
-        std::vector<bytecode_element_type> vCompiledBytecode(
-            compilationResult.cbegin(), compilationResult.cend());
+        std::vector<uint32_t> vCompiledBytecode(compilationResult.cbegin(), compilationResult.cend());
+
+        // Make sure we can generate descriptor set layout without errors.
+        auto layoutResult = DescriptorSetLayoutGenerator::collectInfoFromBytecode(
+            vCompiledBytecode.data(), vCompiledBytecode.size() * sizeof(vCompiledBytecode[0]));
+        if (std::holds_alternative<Error>(layoutResult)) [[unlikely]] {
+            auto error = std::get<Error>(std::move(layoutResult));
+            error.addEntry();
+            return error;
+        }
+        // Intentionally ignore results, we only care about errors here.
 
         // Write shader bytecode to file.
         auto pathToCompiledShader = cacheDirectory / ShaderFilesystemPaths::getShaderCacheBaseFileName();
@@ -139,23 +147,26 @@ namespace ne {
         }
         shaderCacheFile.write(
             reinterpret_cast<const char*>(vCompiledBytecode.data()),
-            vCompiledBytecode.size() * sizeof(bytecode_element_type));
+            vCompiledBytecode.size() * sizeof(vCompiledBytecode[0]));
         shaderCacheFile.close();
 
-        // Create shader instance.
         return std::make_shared<GlslShader>(
             pRenderer, pathToCompiledShader, shaderDescription.sShaderName, shaderDescription.shaderType);
     }
 
     bool GlslShader::releaseShaderDataFromMemoryIfLoaded() {
-        std::scoped_lock guard(mtxSpirvBytecode.first);
+        std::scoped_lock guard(mtxSpirvBytecode.first, mtxDescriptorSetLayoutBindingInfo.first);
 
-        if (mtxSpirvBytecode.second.empty()) {
-            return true;
+        if (!mtxSpirvBytecode.second.empty()) {
+            // Release bytecode.
+            mtxSpirvBytecode.second.clear();
+            mtxSpirvBytecode.second.shrink_to_fit();
         }
 
-        mtxSpirvBytecode.second.clear();
-        mtxSpirvBytecode.second.shrink_to_fit();
+        if (mtxDescriptorSetLayoutBindingInfo.second.has_value()) {
+            // Release descriptor set layout binding info.
+            mtxDescriptorSetLayoutBindingInfo.second = {};
+        }
 
         notifyShaderBytecodeReleasedFromMemory();
 
@@ -174,39 +185,13 @@ namespace ne {
     }
 
     std::variant<std::pair<std::recursive_mutex, std::vector<char>>*, Error>
-    GlslShader::getShaderSpirvBytecode() {
-        std::scoped_lock guard(mtxSpirvBytecode.first);
-
-        if (mtxSpirvBytecode.second.empty()) {
-            // Get path to compiled shader.
-            auto pathResult = getPathToCompiledShader();
-            if (std::holds_alternative<Error>(pathResult)) {
-                auto err = std::get<Error>(std::move(pathResult));
-                err.addEntry();
-                return err;
-            }
-            const auto pathToCompiledShader = std::get<std::filesystem::path>(std::move(pathResult));
-
-            // Open file.
-            std::ifstream file(pathToCompiledShader, std::ios::ate | std::ios::binary);
-            if (!file.is_open()) [[unlikely]] {
-                return Error(fmt::format("failed to open the file \"{}\"", pathToCompiledShader.string()));
-            }
-
-            // Get file size.
-            const auto iFileSize = file.tellg();
-            file.seekg(0);
-
-            // Reserve data.
-            mtxSpirvBytecode.second.reserve(iFileSize);
-
-            // Read file contents.
-            file.read(mtxSpirvBytecode.second.data(), mtxSpirvBytecode.second.size());
-
-            // Close file.
-            file.close();
-
-            notifyShaderBytecodeLoadedIntoMemory();
+    GlslShader::getCompiledBytecode() {
+        // Load shader data from disk (if needed).
+        auto optionalError = loadShaderDataFromDiskIfNotLoaded();
+        if (optionalError.has_value()) [[unlikely]] {
+            auto error = std::move(optionalError.value());
+            error.addEntry();
+            return error;
         }
 
         return &mtxSpirvBytecode;
@@ -268,6 +253,64 @@ namespace ne {
         Error err("unhandled case");
         err.showError();
         throw std::runtime_error(err.getFullErrorMessage());
+    }
+
+    std::optional<Error> GlslShader::loadShaderDataFromDiskIfNotLoaded() {
+        std::scoped_lock guard(mtxSpirvBytecode.first, mtxDescriptorSetLayoutBindingInfo.first);
+
+        if (mtxSpirvBytecode.second.empty()) {
+            // Get path to compiled shader.
+            auto pathResult = getPathToCompiledShader();
+            if (std::holds_alternative<Error>(pathResult)) {
+                auto err = std::get<Error>(std::move(pathResult));
+                err.addEntry();
+                return err;
+            }
+            const auto pathToCompiledShader = std::get<std::filesystem::path>(std::move(pathResult));
+
+            // Open file.
+            std::ifstream file(pathToCompiledShader, std::ios::ate | std::ios::binary);
+            if (!file.is_open()) [[unlikely]] {
+                return Error(fmt::format("failed to open the file \"{}\"", pathToCompiledShader.string()));
+            }
+
+            // Get file size.
+            const auto iFileSize = file.tellg();
+            file.seekg(0);
+
+            // Reserve data.
+            mtxSpirvBytecode.second.reserve(iFileSize);
+
+            // Read file contents.
+            file.read(mtxSpirvBytecode.second.data(), mtxSpirvBytecode.second.size());
+
+            // Close file.
+            file.close();
+
+            notifyShaderBytecodeLoadedIntoMemory();
+        }
+
+        if (!mtxDescriptorSetLayoutBindingInfo.second.has_value()) {
+            // Make sure bytecode was loaded.
+            if (mtxSpirvBytecode.second.empty()) [[unlikely]] {
+                return Error("expected shader bytecode to be loaded at this point");
+            }
+
+            // Generate descriptor set layout.
+            auto layoutResult = DescriptorSetLayoutGenerator::collectInfoFromBytecode(
+                mtxSpirvBytecode.second.data(),
+                mtxSpirvBytecode.second.size() * sizeof(mtxSpirvBytecode.second[0]));
+            if (std::holds_alternative<Error>(layoutResult)) [[unlikely]] {
+                auto error = std::get<Error>(std::move(layoutResult));
+                error.addEntry();
+                return error;
+            }
+            mtxDescriptorSetLayoutBindingInfo.second =
+                std::get<std::unordered_map<uint32_t, DescriptorSetLayoutBindingInfo>>(
+                    std::move(layoutResult));
+        }
+
+        return {};
     }
 
 } // namespace ne

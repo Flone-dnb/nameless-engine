@@ -138,6 +138,13 @@ namespace ne {
             // Compile shader for this configuration.
             const auto result = Shader::compileShader(
                 pRenderer, currentPathToCompiledShader, sConfigurationText, currentShaderDescription);
+
+            if (!std::holds_alternative<std::shared_ptr<Shader>>(result)) {
+                // Delete any created files.
+                std::filesystem::remove_all(
+                    ShaderFilesystemPaths::getPathToShaderCacheDirectory() / shaderDescription.sShaderName);
+            }
+
             if (std::holds_alternative<std::shared_ptr<Shader>>(result)) {
                 pShaderPack->mtxInternalResources.second.shadersInPack[macros] =
                     std::get<std::shared_ptr<Shader>>(result);

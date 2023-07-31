@@ -2,9 +2,12 @@
 
 // Standard.
 #include <mutex>
+#include <optional>
+#include <unordered_map>
 
 // Custom.
 #include "materials/Shader.h"
+#include "materials/glsl/DescriptorSetLayoutGenerator.h"
 
 // External.
 #include "ShaderIncluder.h"
@@ -80,7 +83,7 @@ namespace ne {
          * @return Error if something went wrong, otherwise a mutex to use while accessing the bytecode
          * and an array of bytes.
          */
-        std::variant<std::pair<std::recursive_mutex, std::vector<char>>*, Error> getShaderSpirvBytecode();
+        std::variant<std::pair<std::recursive_mutex, std::vector<char>>*, Error> getCompiledBytecode();
 
         /**
          * Releases underlying shader data (bytecode, root signature, etc.) from memory (this object will not
@@ -139,10 +142,30 @@ namespace ne {
          */
         static std::string convertShaderIncluderErrorToString(ShaderIncluder::Error error);
 
+        /**
+         * Loads shader data (bytecode, descriptor set layout info, etc.) from disk cache
+         * if it's not loaded yet.
+         *
+         * @return Error if something went wrong.
+         */
+        [[nodiscard]] std::optional<Error> loadShaderDataFromDiskIfNotLoaded();
+
         /** SPIR-V bytecode (array of bytes) of the compiled shader. */
         std::pair<std::recursive_mutex, std::vector<char>> mtxSpirvBytecode;
 
+        /**
+         * Contains information used to descriptor set layout.
+         *
+         * @remark Might not be calculated yet, see @ref loadShaderDataFromDiskIfNotLoaded for collecting root
+         * signature information.
+         */
+        std::pair<std::mutex, std::optional<std::unordered_map<uint32_t, DescriptorSetLayoutBindingInfo>>>
+            mtxDescriptorSetLayoutBindingInfo;
+
         /** Index of the vertex input binding. */
         static constexpr uint32_t iVertexBindingIndex = 0;
+
+        /** Name of the section used to store descriptor set layout info. */
+        static inline const auto sDescriptorSetLayoutSectionName = "Descriptor Set Layout";
     };
 } // namespace ne

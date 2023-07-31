@@ -132,6 +132,8 @@ set(PROJECT_SOURCES
     private/materials/glsl/GlslShader.cpp
     private/materials/glsl/GlslShaderResource.h
     private/materials/glsl/GlslShaderResource.cpp
+    private/materials/glsl/DescriptorSetLayoutGenerator.h
+    private/materials/glsl/DescriptorSetLayoutGenerator.cpp
     private/misc/ThreadPool.h
     private/misc/ThreadPool.cpp
     private/misc/Timer.cpp
@@ -339,6 +341,18 @@ set(ENABLE_SPIRV_TOOLS_INSTALL OFF CACHE BOOL "" FORCE)
 add_subdirectory(${RELATIVE_EXT_PATH}/shaderc ${DEPENDENCY_BUILD_DIR_NAME}/shaderc SYSTEM)
 target_link_libraries(${PROJECT_NAME} PUBLIC shaderc)
 set_target_properties(shaderc PROPERTIES FOLDER ${EXTERNAL_FOLDER})
+
+# External: SPIRV-Reflect
+message(STATUS "${PROJECT_NAME}: adding external dependency \"SPIRV-Reflect\"...")
+set(SPIRV_REFLECT_EXECUTABLE OFF CACHE BOOL "" FORCE)
+set(SPIRV_REFLECT_EXAMPLES OFF CACHE BOOL "" FORCE)
+set(SPIRV_REFLECT_STRIPPER OFF CACHE BOOL "" FORCE)
+set(SPIRV_REFLECT_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+set(SPIRV_REFLECT_ENABLE_ASSERTS OFF CACHE BOOL "" FORCE)
+set(SPIRV_REFLECT_STATIC_LIB ON CACHE BOOL "" FORCE)
+add_subdirectory(${RELATIVE_EXT_PATH}/SPIRV-Reflect ${DEPENDENCY_BUILD_DIR_NAME}/SPIRV-Reflect SYSTEM)
+target_link_libraries(${PROJECT_NAME} PUBLIC spirv-reflect-static)
+set_target_properties(spirv-reflect-static PROPERTIES FOLDER ${EXTERNAL_FOLDER})
 
 # [TODO: temporary solution]: External: tgc
 message(STATUS "${PROJECT_NAME}: adding external dependency \"TGC\"...")

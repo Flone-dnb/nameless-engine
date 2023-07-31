@@ -10,16 +10,20 @@ layout(location = 2) out vec3 fragmentNormal;
 layout(location = 3) out vec2 fragmentUv;
 
 /** Describes MeshNode's constants. */
-layout(binding = 1) uniform MeshData {
+struct MeshData {
     /** Matrix that transforms vertices from mesh local space to world space. */
     mat4 worldMatrix; 
-} meshData;
+};
+
+layout(std140, binding = 1) readonly buffer MeshDataBuffer{
+    MeshData data[];
+} meshDataBuffer;
 
 void main(){
-    gl_Position = meshData.worldMatrix * frameData.viewProjectionMatrix * vec4(localPosition, 1.0F);
+    gl_Position = meshDataBuffer.data[gl_BaseInstance].worldMatrix * frameData.viewProjectionMatrix * vec4(localPosition, 1.0F);
 
     fragmentViewPosition = gl_Position;
-    fragmentWorldPosition = meshData.worldMatrix * vec4(localPosition, 1.0F);
-    fragmentNormal = normalize(mat3(meshData.worldMatrix) * localNormal);
+    fragmentWorldPosition = meshDataBuffer.data[gl_BaseInstance].worldMatrix * vec4(localPosition, 1.0F);
+    fragmentNormal = normalize(mat3(meshDataBuffer.data[gl_BaseInstance].worldMatrix) * localNormal);
     fragmentUv = uv;
 }

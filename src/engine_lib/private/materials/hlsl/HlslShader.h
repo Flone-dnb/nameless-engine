@@ -222,8 +222,7 @@ namespace ne {
         std::variant<std::string, Error> calculateReflectionFileHash();
 
         /**
-         * Loads shader data (bytecode, root signature, etc.) from disk cache to @ref
-         * mtxCompiledBytecode (if something is not loaded).
+         * Loads shader data (bytecode, root signature, etc.) from disk cache if it's not loaded yet.
          *
          * @return Error if something went wrong.
          */
@@ -238,8 +237,8 @@ namespace ne {
         /**
          * Contains information used to create root signature.
          *
-         * @remark Might not be calculated yet if root signature info was not collected yet,
-         * see @ref loadShaderDataFromDiskIfNotLoaded for collecting root signature information.
+         * @remark Might not be calculated yet, see @ref loadShaderDataFromDiskIfNotLoaded for
+         * collecting root signature information.
          */
         std::pair<std::mutex, std::optional<RootSignatureInfo>> mtxRootSignatureInfo;
 

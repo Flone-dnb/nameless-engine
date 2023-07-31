@@ -12,7 +12,7 @@ layout(location = 3) in vec2 fragmentUv;
 layout(location = 0) out vec4 outColor;
 
 /** Describes Material's constants. */
-layout(binding = 1) uniform MaterialData
+layout(binding = 2) uniform MaterialData
 {
     /** Fill color. */
     vec3 diffuseColor;

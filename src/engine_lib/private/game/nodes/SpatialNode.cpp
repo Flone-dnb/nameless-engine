@@ -221,7 +221,9 @@ namespace ne {
         mtxWorldMatrix.second.worldUp =
             glm::cross(mtxWorldMatrix.second.worldForward, mtxWorldMatrix.second.worldRight);
 
+#if defined(DEBUG)
         warnIfExceedingWorldBounds();
+#endif
 
         if (mtxWorldMatrix.second.bInOnWorldLocationRotationScaleChanged) {
             // We came here from a `onWorldLocationRotationScaleChanged` call, stop recursion and
@@ -275,6 +277,7 @@ namespace ne {
         recalculateWorldMatrix(false);
     }
 
+#if defined(DEBUG)
     void SpatialNode::warnIfExceedingWorldBounds() {
         std::scoped_lock guard(mtxSpawning, mtxWorldMatrix.first);
         if (!isSpawned()) {
@@ -292,8 +295,9 @@ namespace ne {
             std::abs(mtxWorldMatrix.second.worldLocation.y) > iWorldSizeOneDimention ||
             std::abs(mtxWorldMatrix.second.worldLocation.z) > iWorldSizeOneDimention) {
             Logger::get().warn(fmt::format(
-                "spatial node \"{}\" is exceeding world bounds, node's world location: "
+                "[{}] spatial node \"{}\" is exceeding world bounds, node's world location: "
                 "({}, {}, {}), world size: {}",
+                Globals::getDebugOnlyLoggingSubCategoryName(),
                 getNodeName(),
                 mtxWorldMatrix.second.worldLocation.x,
                 mtxWorldMatrix.second.worldLocation.y,
@@ -301,6 +305,7 @@ namespace ne {
                 pGameInstance->getWorldSize()));
         }
     }
+#endif
 
     void SpatialNode::onAfterDeserialized() {
         Node::onAfterDeserialized();

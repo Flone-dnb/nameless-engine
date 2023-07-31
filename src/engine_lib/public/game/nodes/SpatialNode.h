@@ -283,8 +283,10 @@ namespace ne RNAMESPACE() {
          */
         void recalculateWorldMatrixForNodeAndNotifyChildren(Node* pNode);
 
+#if defined(DEBUG)
         /** Logs a warning if node's world location exceeds world bounds. */
         void warnIfExceedingWorldBounds();
+#endif
 
         /** Small helper struct to keep all world space related information in one place. */
         struct WorldMatrixInformation {

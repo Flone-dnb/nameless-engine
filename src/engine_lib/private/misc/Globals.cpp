@@ -91,7 +91,7 @@ namespace ne {
         return sOutput;
     }
 
-    std::string Globals::getDebugOnlyLoggingSubCategoryName() { return sDebugOnlyLoggingSubCategoryName; }
+    std::string Globals::getDebugOnlyLoggingPrefix() { return sDebugOnlyLoggingPrefix; }
 
     std::string Globals::getResourcesDirectoryName() { return sResDirectoryName; }
 

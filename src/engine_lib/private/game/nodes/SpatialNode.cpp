@@ -297,7 +297,7 @@ namespace ne {
             Logger::get().warn(fmt::format(
                 "[{}] spatial node \"{}\" is exceeding world bounds, node's world location: "
                 "({}, {}, {}), world size: {}",
-                Globals::getDebugOnlyLoggingSubCategoryName(),
+                Globals::getDebugOnlyLoggingPrefix(),
                 getNodeName(),
                 mtxWorldMatrix.second.worldLocation.x,
                 mtxWorldMatrix.second.worldLocation.y,

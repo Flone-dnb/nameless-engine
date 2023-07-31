@@ -65,18 +65,19 @@ namespace ne {
         static std::wstring stringToWstring(const std::string& sText);
 
         /**
-         * Returns name of the sub-category used for logs that exist only in debug builds.
+         * Returns a text that is typically added in the format "[{}]: ..." for logs that exist only
+         * in debug builds.
          *
-         * @return Name of the sub-category.
+         * @return Text.
          */
-        static std::string getDebugOnlyLoggingSubCategoryName();
+        static std::string getDebugOnlyLoggingPrefix();
 
     private:
         /** Name of the root (base) engine directory for storing configs, logs and etc. */
         static constexpr auto sBaseEngineDirectoryName = "nameless-engine";
 
-        /** Name of the sub-category used for logs that exist only in debug builds. */
-        static constexpr auto sDebugOnlyLoggingSubCategoryName = "Debug mode only";
+        /** Prefix for logs that exist only in debug builds. */
+        static constexpr auto sDebugOnlyLoggingPrefix = "Debug mode only";
 
         /** Name of the directory used to store resources. */
         static constexpr auto sResDirectoryName = "res";

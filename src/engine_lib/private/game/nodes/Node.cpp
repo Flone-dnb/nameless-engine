@@ -397,7 +397,7 @@ namespace ne {
             auto result = getInformationForSerialization(iId, {});
             if (std::holds_alternative<Error>(result)) {
                 auto error = std::get<Error>(result);
-                error.addEntry();
+                error.addCurrentLocationToErrorStack();
                 return error;
             }
             const auto vOriginalNodesInfo =
@@ -418,7 +418,7 @@ namespace ne {
                 Serializable::serializeMultiple(pathToFile, std::move(vNodesInfo), bEnableBackup);
             if (optionalError.has_value()) {
                 auto err = optionalError.value();
-                err.addEntry();
+                err.addCurrentLocationToErrorStack();
                 return err;
             }
         }
@@ -470,7 +470,7 @@ namespace ne {
                 pathToOriginalFile, getPathDeserializedFromRelativeToRes().value().second);
             if (std::holds_alternative<Error>(result)) {
                 auto error = std::get<Error>(result);
-                error.addEntry();
+                error.addCurrentLocationToErrorStack();
                 return error;
             }
             // Save original object to only save changed fields later.
@@ -532,7 +532,7 @@ namespace ne {
         const auto idResult = Serializable::getIdsFromFile(pathToFile);
         if (std::holds_alternative<Error>(idResult)) {
             auto err = std::get<Error>(idResult);
-            err.addEntry();
+            err.addCurrentLocationToErrorStack();
             return err;
         }
         const auto ids = std::get<std::set<std::string>>(idResult);
@@ -541,7 +541,7 @@ namespace ne {
         auto deserializeResult = Serializable::deserializeMultiple<gc>(pathToFile, ids);
         if (std::holds_alternative<Error>(deserializeResult)) {
             auto err = std::get<Error>(deserializeResult);
-            err.addEntry();
+            err.addCurrentLocationToErrorStack();
             return err;
         }
         auto vNodesInfo =
@@ -573,7 +573,7 @@ namespace ne {
             auto result = deserializeNodeTree(pathToExternalNodeTree);
             if (std::holds_alternative<Error>(result)) {
                 auto error = std::get<Error>(result);
-                error.addEntry();
+                error.addCurrentLocationToErrorStack();
                 return error;
             }
             gc<Node> pExternalRootNode = std::get<gc<Node>>(result);

@@ -26,7 +26,7 @@ namespace ne {
         auto heapManagerResult = DirectXDescriptorHeap::create(pRenderer, DescriptorHeapType::RTV);
         if (std::holds_alternative<Error>(heapManagerResult)) {
             Error err = std::get<Error>(std::move(heapManagerResult));
-            err.addEntry();
+            err.addCurrentLocationToErrorStack();
             return err;
         }
         auto pRtvHeapManager = std::get<std::unique_ptr<DirectXDescriptorHeap>>(std::move(heapManagerResult));
@@ -35,7 +35,7 @@ namespace ne {
         heapManagerResult = DirectXDescriptorHeap::create(pRenderer, DescriptorHeapType::DSV);
         if (std::holds_alternative<Error>(heapManagerResult)) {
             Error err = std::get<Error>(std::move(heapManagerResult));
-            err.addEntry();
+            err.addCurrentLocationToErrorStack();
             return err;
         }
         auto pDsvHeapManager = std::get<std::unique_ptr<DirectXDescriptorHeap>>(std::move(heapManagerResult));
@@ -44,7 +44,7 @@ namespace ne {
         heapManagerResult = DirectXDescriptorHeap::create(pRenderer, DescriptorHeapType::CBV_SRV_UAV);
         if (std::holds_alternative<Error>(heapManagerResult)) {
             Error err = std::get<Error>(std::move(heapManagerResult));
-            err.addEntry();
+            err.addCurrentLocationToErrorStack();
             return err;
         }
         auto pCbvSrvUavHeapManager =
@@ -86,7 +86,7 @@ namespace ne {
             {});
         if (std::holds_alternative<Error>(result)) {
             auto err = std::get<Error>(std::move(result));
-            err.addEntry();
+            err.addCurrentLocationToErrorStack();
             return err;
         }
         auto pResource = std::get<std::unique_ptr<DirectXResource>>(std::move(result));
@@ -126,7 +126,7 @@ namespace ne {
             {});
         if (std::holds_alternative<Error>(result)) {
             auto err = std::get<Error>(std::move(result));
-            err.addEntry();
+            err.addCurrentLocationToErrorStack();
             return err;
         }
         auto pResultingResource = std::get<std::unique_ptr<DirectXResource>>(std::move(result));
@@ -146,7 +146,7 @@ namespace ne {
             {});
         if (std::holds_alternative<Error>(result)) {
             auto err = std::get<Error>(std::move(result));
-            err.addEntry();
+            err.addCurrentLocationToErrorStack();
             return err;
         }
         auto pUploadResource = std::get<std::unique_ptr<DirectXResource>>(std::move(result));
@@ -251,7 +251,7 @@ namespace ne {
             resourceClearValue);
         if (std::holds_alternative<Error>(result)) {
             auto err = std::get<Error>(std::move(result));
-            err.addEntry();
+            err.addCurrentLocationToErrorStack();
             return err;
         }
 
@@ -272,7 +272,7 @@ namespace ne {
             auto result = DirectXResource::createResourceFromSwapChainBuffer(this, pRtvHeap.get(), pBuffer);
             if (std::holds_alternative<Error>(result)) {
                 auto err = std::get<Error>(std::move(result));
-                err.addEntry();
+                err.addCurrentLocationToErrorStack();
                 return err;
             }
 

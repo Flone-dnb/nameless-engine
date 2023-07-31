@@ -76,7 +76,7 @@ namespace ne {
     }
 #endif
 
-    void Error::addEntry(const nostd::source_location location) {
+    void Error::addCurrentLocationToErrorStack(const nostd::source_location location) {
         stack.push_back(sourceLocationToInfo(location));
     }
 

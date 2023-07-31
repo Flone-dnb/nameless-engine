@@ -77,7 +77,7 @@ namespace ne {
         auto result = constructFilePath(category, sFileName);
         if (std::holds_alternative<Error>(result)) {
             auto error = std::get<Error>(std::move(result));
-            error.addEntry();
+            error.addCurrentLocationToErrorStack();
             return error;
         }
 
@@ -118,13 +118,13 @@ namespace ne {
         auto result = ConfigManager::constructFilePath(category, sFileName);
         if (std::holds_alternative<Error>(result)) {
             auto error = std::get<Error>(std::move(result));
-            error.addEntry();
+            error.addCurrentLocationToErrorStack();
             return error;
         }
 
         auto optional = loadFile(std::get<std::filesystem::path>(result));
         if (optional.has_value()) {
-            optional->addEntry();
+            optional->addCurrentLocationToErrorStack();
             return optional;
         }
         return {};
@@ -201,7 +201,7 @@ namespace ne {
         auto result = ConfigManager::constructFilePath(category, sFileName);
         if (std::holds_alternative<Error>(result)) {
             auto error = std::get<Error>(std::move(result));
-            error.addEntry();
+            error.addCurrentLocationToErrorStack();
             return error;
         }
 
@@ -209,7 +209,7 @@ namespace ne {
 
         auto optional = saveFile(std::get<std::filesystem::path>(result), bEnableBackup);
         if (optional.has_value()) {
-            optional->addEntry();
+            optional->addCurrentLocationToErrorStack();
             return optional;
         }
         return {};

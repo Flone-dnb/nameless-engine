@@ -31,7 +31,7 @@ namespace ne {
         createWorld([this](const std::optional<Error>& optionalWorldError) {
             if (optionalWorldError.has_value()) [[unlikely]] {
                 auto error = optionalWorldError.value();
-                error.addEntry();
+                error.addCurrentLocationToErrorStack();
                 throw std::runtime_error(error.getFullErrorMessage());
             }
 
@@ -70,7 +70,7 @@ namespace ne {
             InputEventNames::moveForwardAxis, {std::make_pair(KeyboardKey::KEY_W, KeyboardKey::KEY_S)});
         if (optionalError.has_value()) [[unlikely]] {
             auto error = optionalError.value();
-            error.addEntry();
+            error.addCurrentLocationToErrorStack();
             throw std::runtime_error(error.getFullErrorMessage());
         }
 
@@ -79,7 +79,7 @@ namespace ne {
             InputEventNames::moveRightAxis, {std::make_pair(KeyboardKey::KEY_D, KeyboardKey::KEY_A)});
         if (optionalError.has_value()) [[unlikely]] {
             auto error = optionalError.value();
-            error.addEntry();
+            error.addCurrentLocationToErrorStack();
             throw std::runtime_error(error.getFullErrorMessage());
         }
 
@@ -88,7 +88,7 @@ namespace ne {
             InputEventNames::moveUpAxis, {std::make_pair(KeyboardKey::KEY_E, KeyboardKey::KEY_Q)});
         if (optionalError.has_value()) [[unlikely]] {
             auto error = optionalError.value();
-            error.addEntry();
+            error.addCurrentLocationToErrorStack();
             throw std::runtime_error(error.getFullErrorMessage());
         }
 
@@ -97,7 +97,7 @@ namespace ne {
             pInputManager->addActionEvent(InputEventNames::captureMouseCursorAction, {MouseButton::RIGHT});
         if (optionalError.has_value()) [[unlikely]] {
             auto error = optionalError.value();
-            error.addEntry();
+            error.addCurrentLocationToErrorStack();
             throw std::runtime_error(error.getFullErrorMessage());
         }
 
@@ -106,7 +106,7 @@ namespace ne {
             InputEventNames::increaseCameraSpeedAction, {KeyboardKey::KEY_LEFT_SHIFT});
         if (optionalError.has_value()) [[unlikely]] {
             auto error = optionalError.value();
-            error.addEntry();
+            error.addCurrentLocationToErrorStack();
             throw std::runtime_error(error.getFullErrorMessage());
         }
 
@@ -115,7 +115,7 @@ namespace ne {
             InputEventNames::decreaseCameraSpeedAction, {KeyboardKey::KEY_LEFT_CONTROL});
         if (optionalError.has_value()) [[unlikely]] {
             auto error = optionalError.value();
-            error.addEntry();
+            error.addCurrentLocationToErrorStack();
             throw std::runtime_error(error.getFullErrorMessage());
         }
 

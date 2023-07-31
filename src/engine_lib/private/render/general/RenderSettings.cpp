@@ -33,7 +33,7 @@ namespace ne {
         auto optionalError = saveConfigurationToDisk();
         if (optionalError.has_value()) {
             auto error = optionalError.value();
-            error.addEntry();
+            error.addCurrentLocationToErrorStack();
             Logger::get().error(fmt::format(
                 "failed to save new render setting configuration, error: \"{}\"",
                 error.getFullErrorMessage()));
@@ -63,7 +63,7 @@ namespace ne {
         auto optionalError = saveConfigurationToDisk();
         if (optionalError.has_value()) {
             auto error = optionalError.value();
-            error.addEntry();
+            error.addCurrentLocationToErrorStack();
             Logger::get().error(fmt::format(
                 "failed to save new render setting configuration, error: \"{}\"",
                 error.getFullErrorMessage()));
@@ -82,7 +82,7 @@ namespace ne {
         // Recreate depth/stencil buffer with(out) multisampling.
         auto optionalError = pRenderer->updateRenderBuffers();
         if (optionalError.has_value()) {
-            optionalError->addEntry();
+            optionalError->addCurrentLocationToErrorStack();
             optionalError->showError();
             throw std::runtime_error(optionalError->getFullErrorMessage());
         }
@@ -106,7 +106,7 @@ namespace ne {
         // Save.
         auto optionalError = serialize(getPathToConfigurationFile(), false);
         if (optionalError.has_value()) {
-            optionalError->addEntry();
+            optionalError->addCurrentLocationToErrorStack();
             return optionalError;
         }
 
@@ -176,7 +176,7 @@ namespace ne {
         auto optionalError = saveConfigurationToDisk();
         if (optionalError.has_value()) {
             auto error = optionalError.value();
-            error.addEntry();
+            error.addCurrentLocationToErrorStack();
             Logger::get().error(fmt::format(
                 "failed to save new render setting configuration, error: \"{}\"",
                 error.getFullErrorMessage()));
@@ -225,7 +225,7 @@ namespace ne {
         auto optionalError = saveConfigurationToDisk();
         if (optionalError.has_value()) {
             auto error = optionalError.value();
-            error.addEntry();
+            error.addCurrentLocationToErrorStack();
             Logger::get().error(fmt::format(
                 "failed to save new render setting configuration, error: \"{}\"",
                 error.getFullErrorMessage()));
@@ -251,7 +251,7 @@ namespace ne {
         auto optionalError = saveConfigurationToDisk();
         if (optionalError.has_value()) {
             auto error = optionalError.value();
-            error.addEntry();
+            error.addCurrentLocationToErrorStack();
             Logger::get().error(fmt::format(
                 "failed to save new render setting configuration, error: \"{}\"",
                 error.getFullErrorMessage()));
@@ -267,7 +267,7 @@ namespace ne {
         auto optionalError = pRenderer->updateRenderBuffers();
         if (optionalError.has_value()) {
             auto error = optionalError.value();
-            error.addEntry();
+            error.addCurrentLocationToErrorStack();
             error.showError();
             throw std::runtime_error(error.getFullErrorMessage());
         }
@@ -299,7 +299,7 @@ namespace ne {
         auto optionalError = saveConfigurationToDisk();
         if (optionalError.has_value()) {
             auto error = optionalError.value();
-            error.addEntry();
+            error.addCurrentLocationToErrorStack();
             Logger::get().error(fmt::format(
                 "failed to save new render setting configuration, error: \"{}\"",
                 error.getFullErrorMessage()));
@@ -319,7 +319,7 @@ namespace ne {
         auto result = pRenderer->getSupportedGpuNames();
         if (std::holds_alternative<Error>(result)) {
             auto error = std::get<Error>(std::move(result));
-            error.addEntry();
+            error.addCurrentLocationToErrorStack();
             Logger::get().error(fmt::format(
                 "failed to get the list of supported GPUs, error: \"{}\"", error.getFullErrorMessage()));
             return;
@@ -357,7 +357,7 @@ namespace ne {
         auto optionalError = saveConfigurationToDisk();
         if (optionalError.has_value()) {
             auto error = optionalError.value();
-            error.addEntry();
+            error.addCurrentLocationToErrorStack();
             Logger::get().error(fmt::format(
                 "failed to save new render setting configuration, error: \"{}\"",
                 error.getFullErrorMessage()));
@@ -402,7 +402,7 @@ namespace ne {
         // Save.
         auto optionalError = saveConfigurationToDisk();
         if (optionalError.has_value()) {
-            optionalError->addEntry();
+            optionalError->addCurrentLocationToErrorStack();
             Logger::get().error(fmt::format(
                 "failed to save new render setting configuration, error: \"{}\"",
                 optionalError->getFullErrorMessage()));

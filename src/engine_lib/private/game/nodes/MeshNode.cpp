@@ -58,7 +58,7 @@ namespace ne {
             auto optionalError =
                 shaderCpuWriteResource.getResource()->updateBindingInfo(this->pMaterial->getUsedPso());
             if (optionalError.has_value()) [[unlikely]] {
-                optionalError->addEntry();
+                optionalError->addCurrentLocationToErrorStack();
                 optionalError->showError();
                 throw std::runtime_error(optionalError->getFullErrorMessage());
             }
@@ -205,7 +205,7 @@ namespace ne {
         auto positionsResult = deserializeArrayGlmVec<glm::vec3>(pToml, sPositionsKeyName);
         if (std::holds_alternative<Error>(positionsResult)) {
             auto error = std::get<Error>(std::move(positionsResult));
-            error.addEntry();
+            error.addCurrentLocationToErrorStack();
             return error;
         }
         const auto vPositions = std::get<std::vector<glm::vec3>>(std::move(positionsResult));
@@ -214,7 +214,7 @@ namespace ne {
         auto normalsResult = deserializeArrayGlmVec<glm::vec3>(pToml, sNormalsKeyName);
         if (std::holds_alternative<Error>(normalsResult)) {
             auto error = std::get<Error>(std::move(normalsResult));
-            error.addEntry();
+            error.addCurrentLocationToErrorStack();
             return error;
         }
         const auto vNormals = std::get<std::vector<glm::vec3>>(std::move(normalsResult));
@@ -223,7 +223,7 @@ namespace ne {
         auto uvsResult = deserializeArrayGlmVec<glm::vec2>(pToml, sUvsKeyName);
         if (std::holds_alternative<Error>(uvsResult)) {
             auto error = std::get<Error>(std::move(uvsResult));
-            error.addEntry();
+            error.addCurrentLocationToErrorStack();
             return error;
         }
         const auto vUvs = std::get<std::vector<glm::vec2>>(std::move(uvsResult));
@@ -348,7 +348,7 @@ namespace ne {
             true);
         if (std::holds_alternative<Error>(result)) {
             auto error = std::get<Error>(std::move(result));
-            error.addEntry();
+            error.addCurrentLocationToErrorStack();
             error.showError();
             throw std::runtime_error(error.getFullErrorMessage());
         }
@@ -363,7 +363,7 @@ namespace ne {
             true);
         if (std::holds_alternative<Error>(result)) {
             auto error = std::get<Error>(std::move(result));
-            error.addEntry();
+            error.addCurrentLocationToErrorStack();
             error.showError();
             throw std::runtime_error(error.getFullErrorMessage());
         }
@@ -544,7 +544,7 @@ namespace ne {
             onFinishedUpdatingResource);
         if (std::holds_alternative<Error>(result)) {
             auto error = std::get<Error>(std::move(result));
-            error.addEntry();
+            error.addCurrentLocationToErrorStack();
             error.showError();
             throw std::runtime_error(error.getFullErrorMessage());
         }

@@ -28,7 +28,7 @@ int main() {
                       .build();
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
-        error.addEntry();
+        error.addCurrentLocationToErrorStack();
         error.showError();
         throw std::runtime_error(error.getFullErrorMessage());
     }

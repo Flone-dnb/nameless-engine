@@ -605,7 +605,7 @@ namespace ne RNAMESPACE() {
                     ProjectPaths::getPathToResDirectory(ResourceDirectory::ROOT) / value.as_string().str);
                 if (std::holds_alternative<Error>(deserializeResult)) {
                     auto err = std::get<Error>(deserializeResult);
-                    err.addEntry();
+                    err.addCurrentLocationToErrorStack();
                     return err;
                 }
                 pOriginalEntity = std::get<SmartPointer<T>>(deserializeResult);
@@ -789,7 +789,7 @@ namespace ne RNAMESPACE() {
                 auto result = deserialize<std::shared_ptr, Serializable>(pathToExternalFile);
                 if (std::holds_alternative<Error>(result)) {
                     auto error = std::get<Error>(std::move(result));
-                    error.addEntry();
+                    error.addCurrentLocationToErrorStack();
                     return error;
                 }
                 const auto pDeserializedExternalField =
@@ -802,7 +802,7 @@ namespace ne RNAMESPACE() {
                     pDeserializedExternalField.get(), pFieldObject, false);
                 if (optionalError.has_value()) {
                     auto error = optionalError.value();
-                    error.addEntry();
+                    error.addCurrentLocationToErrorStack();
                     return error;
                 }
 
@@ -824,7 +824,7 @@ namespace ne RNAMESPACE() {
                         customAttributes);
                     if (optionalError.has_value()) {
                         auto error = optionalError.value();
-                        error.addEntry();
+                        error.addCurrentLocationToErrorStack();
                         if (pOriginalEntity) {
                             Logger::get().error(fmt::format(
                                 "an error occurred while deserializing "
@@ -887,7 +887,7 @@ namespace ne RNAMESPACE() {
         auto result = deserialize<SmartPointer, T>(tomlData, customAttributes, sEntityId, pathToFile);
         if (std::holds_alternative<Error>(result)) {
             auto err = std::get<Error>(std::move(result));
-            err.addEntry();
+            err.addCurrentLocationToErrorStack();
             return err;
         } else if (pathToFile.string().starts_with(
                        ProjectPaths::getPathToResDirectory(ResourceDirectory::ROOT).string())) {
@@ -943,7 +943,7 @@ namespace ne RNAMESPACE() {
             auto result = deserialize<SmartPointer, Serializable>(pathToFile, customAttributes, sId);
             if (std::holds_alternative<Error>(result)) {
                 auto err = std::get<Error>(std::move(result));
-                err.addEntry();
+                err.addCurrentLocationToErrorStack();
                 return err;
             }
 

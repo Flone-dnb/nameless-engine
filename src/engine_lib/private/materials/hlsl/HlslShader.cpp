@@ -365,7 +365,7 @@ namespace ne {
             RootSignatureGenerator::collectInfoFromReflection(pDirectXRenderer->getD3dDevice(), pReflection);
         if (std::holds_alternative<Error>(result)) {
             auto err = std::get<Error>(std::move(result));
-            err.addEntry();
+            err.addCurrentLocationToErrorStack();
             return err;
         }
         // Ignore results (will be later used from cache), right now we just checked for errors.
@@ -377,7 +377,7 @@ namespace ne {
         // Load shader data from disk (if needed).
         auto optionalError = loadShaderDataFromDiskIfNotLoaded();
         if (optionalError.has_value()) {
-            optionalError->addEntry();
+            optionalError->addCurrentLocationToErrorStack();
             return optionalError.value();
         }
 
@@ -427,7 +427,7 @@ namespace ne {
         auto result = calculateReflectionFileHash();
         if (std::holds_alternative<Error>(result)) [[unlikely]] {
             auto error = std::get<Error>(std::move(result));
-            error.addEntry();
+            error.addCurrentLocationToErrorStack();
             return error;
         }
         const auto sReflectionFileHash = std::get<std::string>(std::move(result));
@@ -446,7 +446,7 @@ namespace ne {
         auto result = calculateReflectionFileHash();
         if (std::holds_alternative<Error>(result)) [[unlikely]] {
             auto error = std::get<Error>(std::move(result));
-            error.addEntry();
+            error.addCurrentLocationToErrorStack();
             return error;
         }
         const auto sReflectionFileHash = std::get<std::string>(std::move(result));
@@ -513,7 +513,7 @@ namespace ne {
         auto pathToCompiledShaderResult = getPathToCompiledShader();
         if (std::holds_alternative<Error>(pathToCompiledShaderResult)) [[unlikely]] {
             auto error = std::get<Error>(std::move(pathToCompiledShaderResult));
-            error.addEntry();
+            error.addCurrentLocationToErrorStack();
             return error;
         }
         const auto pathToCompiledShader =
@@ -554,7 +554,7 @@ namespace ne {
         auto pathResult = getPathToCompiledShader();
         if (std::holds_alternative<Error>(pathResult)) {
             auto err = std::get<Error>(std::move(pathResult));
-            err.addEntry();
+            err.addCurrentLocationToErrorStack();
             return err;
         }
         const auto pathToCompiledShader = std::get<std::filesystem::path>(std::move(pathResult));
@@ -564,7 +564,7 @@ namespace ne {
             auto result = readBlobFromDisk(pathToCompiledShader);
             if (std::holds_alternative<Error>(result)) {
                 auto err = std::get<Error>(std::move(result));
-                err.addEntry();
+                err.addCurrentLocationToErrorStack();
                 return err;
             }
 
@@ -581,7 +581,7 @@ namespace ne {
             auto blobResult = readBlobFromDisk(pathToShaderReflection);
             if (std::holds_alternative<Error>(blobResult)) {
                 auto err = std::get<Error>(std::move(blobResult));
-                err.addEntry();
+                err.addCurrentLocationToErrorStack();
                 return err;
             }
             const auto pReflectionData = std::get<ComPtr<IDxcBlob>>(std::move(blobResult));
@@ -609,7 +609,7 @@ namespace ne {
                 dynamic_cast<DirectXRenderer*>(getUsedRenderer())->getD3dDevice(), pReflection);
             if (std::holds_alternative<Error>(result)) {
                 auto err = std::get<Error>(std::move(result));
-                err.addEntry();
+                err.addCurrentLocationToErrorStack();
                 return err;
             }
             auto collectedRootSignatureInfo =

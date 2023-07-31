@@ -23,7 +23,7 @@ namespace ne {
         auto result = getRootParameterIndexFromPso(pUsedPso, sShaderResourceName);
         if (std::holds_alternative<Error>(result)) {
             auto error = std::get<Error>(std::move(result));
-            error.addEntry();
+            error.addCurrentLocationToErrorStack();
             return error;
         }
         const auto iRootParameterIndex = std::get<UINT>(result);
@@ -45,7 +45,7 @@ namespace ne {
                 CpuVisibleShaderResourceUsageDetails(false));
             if (std::holds_alternative<Error>(result)) [[unlikely]] {
                 auto error = std::get<Error>(std::move(result));
-                error.addEntry();
+                error.addCurrentLocationToErrorStack();
                 return error;
             }
             auto pUploadBuffer = std::get<std::unique_ptr<UploadBuffer>>(std::move(result));
@@ -55,7 +55,7 @@ namespace ne {
                 pUploadBuffer->getInternalResource()->bindDescriptor(GpuResource::DescriptorType::CBV);
             if (optionalError.has_value()) [[unlikely]] {
                 auto error = optionalError.value();
-                error.addEntry();
+                error.addCurrentLocationToErrorStack();
                 return error;
             }
 
@@ -77,7 +77,7 @@ namespace ne {
         auto result = getRootParameterIndexFromPso(pNewPso, getResourceName());
         if (std::holds_alternative<Error>(result)) [[unlikely]] {
             auto error = std::get<Error>(std::move(result));
-            error.addEntry();
+            error.addCurrentLocationToErrorStack();
             return error;
         }
 

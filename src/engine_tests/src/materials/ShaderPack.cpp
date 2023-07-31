@@ -207,7 +207,7 @@ TEST_CASE("compile a vertex shader") {
     auto result = Window::getBuilder().withVisibility(false).build();
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
-        error.addEntry();
+        error.addCurrentLocationToErrorStack();
         INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }
@@ -249,7 +249,7 @@ TEST_CASE("compile a pixel shader") {
     auto result = Window::getBuilder().withVisibility(false).build();
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
-        error.addEntry();
+        error.addCurrentLocationToErrorStack();
         INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }
@@ -291,7 +291,7 @@ TEST_CASE("compile a compute shader") {
     auto result = Window::getBuilder().withVisibility(false).build();
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
-        error.addEntry();
+        error.addCurrentLocationToErrorStack();
         INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }
@@ -347,7 +347,7 @@ TEST_CASE("find valid shader cache") {
     auto result = Window::getBuilder().withVisibility(false).build();
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
-        error.addEntry();
+        error.addCurrentLocationToErrorStack();
         INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }
@@ -490,7 +490,7 @@ TEST_CASE("invalidate shader cache - ENTRY_FUNCTION_NAME_CHANGED") {
     auto result = Window::getBuilder().withVisibility(false).build();
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
-        error.addEntry();
+        error.addCurrentLocationToErrorStack();
         INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }
@@ -630,7 +630,7 @@ TEST_CASE("invalidate shader cache - SHADER_TYPE_CHANGED") {
     auto result = Window::getBuilder().withVisibility(false).build();
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
-        error.addEntry();
+        error.addCurrentLocationToErrorStack();
         INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }
@@ -808,7 +808,7 @@ TEST_CASE("invalidate shader cache - DEFINED_SHADER_MACROS_CHANGED") {
     auto result = Window::getBuilder().withVisibility(false).build();
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
-        error.addEntry();
+        error.addCurrentLocationToErrorStack();
         INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }
@@ -949,7 +949,7 @@ TEST_CASE("invalidate shader cache - SHADER_SOURCE_FILE_CHANGED") {
     auto result = Window::getBuilder().withVisibility(false).build();
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
-        error.addEntry();
+        error.addCurrentLocationToErrorStack();
         INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }
@@ -1294,7 +1294,7 @@ TEST_CASE("invalidate HLSL shader cache - SHADER_INCLUDE_TREE_CONTENT_CHANGED") 
     auto result = Window::getBuilder().withVisibility(false).build();
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
-        error.addEntry();
+        error.addCurrentLocationToErrorStack();
         INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }
@@ -1466,7 +1466,7 @@ TEST_CASE("invalidate shader cache - COMPILED_BINARY_CHANGED (bytecode)") {
     auto result = Window::getBuilder().withVisibility(false).build();
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
-        error.addEntry();
+        error.addCurrentLocationToErrorStack();
         INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }
@@ -1564,7 +1564,7 @@ TEST_CASE("invalidate HLSL shader cache - COMPILED_BINARY_CHANGED (reflection)")
     auto result = Window::getBuilder().withVisibility(false).build();
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
-        error.addEntry();
+        error.addCurrentLocationToErrorStack();
         INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }

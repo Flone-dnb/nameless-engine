@@ -14,7 +14,7 @@ namespace ne {
 
         auto optionalError = pManager->createHeap(iHeapGrowSize);
         if (optionalError.has_value()) {
-            optionalError->addEntry();
+            optionalError->addCurrentLocationToErrorStack();
             return optionalError.value();
         }
 
@@ -50,7 +50,7 @@ namespace ne {
         if (mtxInternalResources.second.iHeapSize == mtxInternalResources.second.iHeapCapacity) {
             auto optionalError = expandHeap();
             if (optionalError.has_value()) {
-                optionalError->addEntry();
+                optionalError->addCurrentLocationToErrorStack();
                 return optionalError.value();
             }
         }
@@ -186,7 +186,7 @@ namespace ne {
                 (mtxInternalResources.second.iHeapCapacity - iHeapGrowSize - iHeapGrowSize / 2)) {
             auto optionalError = shrinkHeap();
             if (optionalError.has_value()) {
-                optionalError->addEntry();
+                optionalError->addCurrentLocationToErrorStack();
                 Logger::get().error(optionalError->getFullErrorMessage());
             }
         }
@@ -233,7 +233,7 @@ namespace ne {
         // Re-create the heap with the new capacity.
         auto optionalError = createHeap(iOldHeapCapacity + iHeapGrowSize);
         if (optionalError.has_value()) [[unlikely]] {
-            optionalError->addEntry();
+            optionalError->addCurrentLocationToErrorStack();
             return optionalError.value();
         }
 
@@ -276,7 +276,7 @@ namespace ne {
         // Re-create the heap with the new capacity.
         auto optionalError = createHeap(iNewHeapCapacity);
         if (optionalError.has_value()) [[unlikely]] {
-            optionalError->addEntry();
+            optionalError->addCurrentLocationToErrorStack();
             return optionalError.value();
         }
 

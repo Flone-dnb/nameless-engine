@@ -79,7 +79,7 @@ namespace ne {
         auto error =
             getShaderManager()->compileShaders(std::move(vEngineShaders), onProgress, onError, onCompleted);
         if (error.has_value()) {
-            error->addEntry();
+            error->addCurrentLocationToErrorStack();
             error->showError();
             throw std::runtime_error(error->getFullErrorMessage());
         }
@@ -129,7 +129,7 @@ namespace ne {
                 auto result = Serializable::deserialize<std::shared_ptr, RenderSettings>(pathToConfigFile);
                 if (std::holds_alternative<Error>(result)) {
                     auto error = std::get<Error>(std::move(result));
-                    error.addEntry();
+                    error.addCurrentLocationToErrorStack();
                     Logger::get().error(fmt::format(
                         "failed to deserialize render settings from the file \"{}\", using default "
                         "settings instead, error: \"{}\"",
@@ -234,7 +234,7 @@ namespace ne {
             // Save settings.
             auto optionalError = pMtxRenderSettings->second->saveConfigurationToDisk();
             if (optionalError.has_value()) [[unlikely]] {
-                optionalError->addEntry();
+                optionalError->addCurrentLocationToErrorStack();
                 return optionalError.value();
             }
         }
@@ -242,14 +242,14 @@ namespace ne {
         // Update shader cache (clears if the old cache is no longer valid).
         auto optionalError = pCreatedRenderer->getShaderManager()->refreshShaderCache();
         if (optionalError.has_value()) [[unlikely]] {
-            optionalError->addEntry();
+            optionalError->addCurrentLocationToErrorStack();
             return optionalError.value();
         }
 
         // Compile/verify engine shaders.
         optionalError = pCreatedRenderer->compileEngineShaders();
         if (optionalError.has_value()) [[unlikely]] {
-            optionalError->addEntry();
+            optionalError->addCurrentLocationToErrorStack();
             return optionalError.value();
         }
 
@@ -319,7 +319,7 @@ namespace ne {
             auto result = Serializable::deserialize<std::shared_ptr, RenderSettings>(pathToConfigFile);
             if (std::holds_alternative<Error>(result)) {
                 auto error = std::get<Error>(std::move(result));
-                error.addEntry();
+                error.addCurrentLocationToErrorStack();
                 Logger::get().error(fmt::format(
                     "failed to deserialize render settings from the file \"{}\", using default "
                     "settings instead, error: \"{}\"",
@@ -349,7 +349,7 @@ namespace ne {
     std::optional<Error> Renderer::initializeRenderer() {
         auto optionalError = initializeRenderSettings();
         if (optionalError.has_value()) {
-            optionalError->addEntry();
+            optionalError->addCurrentLocationToErrorStack();
             return optionalError;
         }
 
@@ -361,7 +361,7 @@ namespace ne {
         auto gpuResourceManagerResult = GpuResourceManager::create(this);
         if (std::holds_alternative<Error>(gpuResourceManagerResult)) {
             auto error = std::get<Error>(std::move(gpuResourceManagerResult));
-            error.addEntry();
+            error.addCurrentLocationToErrorStack();
             return error;
         }
         pResourceManager = std::get<std::unique_ptr<GpuResourceManager>>(std::move(gpuResourceManagerResult));
@@ -370,7 +370,7 @@ namespace ne {
         auto frameResourceManagerResult = FrameResourcesManager::create(this);
         if (std::holds_alternative<Error>(gpuResourceManagerResult)) {
             auto error = std::get<Error>(std::move(gpuResourceManagerResult));
-            error.addEntry();
+            error.addCurrentLocationToErrorStack();
             return error;
         }
         pFrameResourcesManager =

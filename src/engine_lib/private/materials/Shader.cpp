@@ -115,7 +115,7 @@ namespace ne {
         auto pathToCompiledShaderResult = pCompiledShader->getPathToCompiledShader();
         if (std::holds_alternative<Error>(pathToCompiledShaderResult)) [[unlikely]] {
             auto error = std::get<Error>(std::move(pathToCompiledShaderResult));
-            error.addEntry();
+            error.addCurrentLocationToErrorStack();
             return error;
         }
         const auto pathToCompiledShader =
@@ -137,7 +137,7 @@ namespace ne {
         auto optionalError = pCompiledShader->saveAdditionalCompilationResultsInfo(configManager);
         if (optionalError.has_value()) [[unlikely]] {
             auto error = optionalError.value();
-            error.addEntry();
+            error.addCurrentLocationToErrorStack();
             return error;
         }
 
@@ -145,7 +145,7 @@ namespace ne {
         optionalError = configManager.saveFile(shaderCacheConfigurationPath, false);
         if (optionalError.has_value()) [[unlikely]] {
             auto error = optionalError.value();
-            error.addEntry();
+            error.addCurrentLocationToErrorStack();
             return error;
         }
 
@@ -180,7 +180,7 @@ namespace ne {
         auto optionalError = configManager.loadFile(shaderCacheConfigurationPath);
         if (optionalError.has_value()) {
             auto error = optionalError.value();
-            error.addEntry();
+            error.addCurrentLocationToErrorStack();
             return error;
         }
 
@@ -236,7 +236,7 @@ namespace ne {
             shaderDescription.shaderType);
         if (std::holds_alternative<Error>(result)) [[unlikely]] {
             auto error = std::get<Error>(std::move(result));
-            error.addEntry();
+            error.addCurrentLocationToErrorStack();
             return error;
         }
         auto pShader = std::get<std::shared_ptr<Shader>>(std::move(result));
@@ -246,7 +246,7 @@ namespace ne {
             pShader->checkCachedAdditionalCompilationResultsInfo(configManager, cacheInvalidationReason);
         if (optionalError.has_value()) {
             auto error = optionalError.value();
-            error.addEntry();
+            error.addCurrentLocationToErrorStack();
             return error;
         }
 

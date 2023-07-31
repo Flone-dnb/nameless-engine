@@ -32,7 +32,7 @@ namespace ne {
 
         auto optional = overwriteActionEvent(sActionName, vKeys);
         if (optional.has_value()) {
-            optional->addEntry();
+            optional->addCurrentLocationToErrorStack();
             return std::move(optional.value());
         }
         return {};
@@ -56,7 +56,7 @@ namespace ne {
 
         auto optional = overwriteAxisEvent(sAxisName, vAxis);
         if (optional.has_value()) {
-            optional->addEntry();
+            optional->addCurrentLocationToErrorStack();
             return std::move(optional.value());
         }
         return {};
@@ -83,7 +83,7 @@ namespace ne {
         // Overwrite event with new keys.
         auto optional = overwriteActionEvent(sActionName, vActionKeys);
         if (optional.has_value()) {
-            optional->addEntry();
+            optional->addCurrentLocationToErrorStack();
             return std::move(optional.value());
         }
         return {};
@@ -117,7 +117,7 @@ namespace ne {
         // Overwrite event with new keys.
         auto optional = overwriteAxisEvent(sAxisName, vAxisKeys);
         if (optional.has_value()) {
-            optional->addEntry();
+            optional->addCurrentLocationToErrorStack();
             return std::move(optional.value());
         }
 
@@ -169,7 +169,7 @@ namespace ne {
 
         auto optional = manager.saveFile(ConfigCategory::SETTINGS, sFileName);
         if (optional.has_value()) {
-            optional->addEntry();
+            optional->addCurrentLocationToErrorStack();
             return std::move(optional.value());
         }
         return {};
@@ -179,7 +179,7 @@ namespace ne {
         ConfigManager manager;
         auto optional = manager.loadFile(ConfigCategory::SETTINGS, sFileName);
         if (optional.has_value()) {
-            optional->addEntry();
+            optional->addCurrentLocationToErrorStack();
             return optional;
         }
 
@@ -216,7 +216,7 @@ namespace ne {
             auto variant = manager.getAllKeysOfSection(sActionEventSectionName);
             if (std::holds_alternative<Error>(variant)) {
                 auto error = std::get<Error>(std::move(variant));
-                error.addEntry();
+                error.addCurrentLocationToErrorStack();
                 return error;
             }
             auto fileActionEvents = std::get<std::vector<std::string>>(std::move(variant));
@@ -274,7 +274,7 @@ namespace ne {
                 // Add keys (replace old ones).
                 optional = overwriteActionEvent(sActionName, vOutActionKeys);
                 if (optional.has_value()) {
-                    optional->addEntry();
+                    optional->addCurrentLocationToErrorStack();
                     return std::move(optional.value());
                 }
             }
@@ -285,7 +285,7 @@ namespace ne {
             auto variant = manager.getAllKeysOfSection(sAxisEventSectionName);
             if (std::holds_alternative<Error>(variant)) {
                 auto error = std::get<Error>(std::move(variant));
-                error.addEntry();
+                error.addCurrentLocationToErrorStack();
                 return error;
             }
             auto fileAxisEvents = std::get<std::vector<std::string>>(std::move(variant));
@@ -351,7 +351,7 @@ namespace ne {
                 // Add keys (replace old ones).
                 optional = overwriteAxisEvent(sAxisName, vOutAxisKeys);
                 if (optional.has_value()) {
-                    optional->addEntry();
+                    optional->addCurrentLocationToErrorStack();
                     return std::move(optional.value());
                 }
             }

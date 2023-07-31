@@ -82,7 +82,7 @@ namespace ne {
             additionalPixelShaderMacros);
         if (std::holds_alternative<Error>(result)) {
             auto error = std::get<Error>(std::move(result));
-            error.addEntry();
+            error.addCurrentLocationToErrorStack();
             return error;
         }
 
@@ -135,7 +135,7 @@ namespace ne {
                 auto optionalError = pGraphicsPso->releaseInternalResources();
                 if (optionalError.has_value()) {
                     auto error = optionalError.value();
-                    error.addEntry();
+                    error.addCurrentLocationToErrorStack();
                     return error;
                 }
             }
@@ -153,7 +153,7 @@ namespace ne {
                     auto optionalError = pGraphicsPso->restoreInternalResources();
                     if (optionalError.has_value()) {
                         auto error = optionalError.value();
-                        error.addEntry();
+                        error.addCurrentLocationToErrorStack();
                         return error;
                     }
                 }
@@ -196,7 +196,7 @@ namespace ne {
         auto optionalError = pPsoManager->releaseInternalGraphicsPsosResources();
         if (optionalError.has_value()) {
             auto error = optionalError.value();
-            error.addEntry();
+            error.addCurrentLocationToErrorStack();
             error.showError();
             throw std::runtime_error(error.getFullErrorMessage());
         }
@@ -211,7 +211,7 @@ namespace ne {
         auto optionalError = pPsoManager->restoreInternalGraphicsPsosResources();
         if (optionalError.has_value()) {
             auto error = optionalError.value();
-            error.addEntry();
+            error.addCurrentLocationToErrorStack();
             error.showError();
             throw std::runtime_error(error.getFullErrorMessage());
         }

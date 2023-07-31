@@ -53,7 +53,7 @@ namespace ne {
         auto result = serialize(tomlData, "", customAttributes, pathToFile, bEnableBackup);
         if (std::holds_alternative<Error>(result)) {
             auto err = std::get<Error>(std::move(result));
-            err.addEntry();
+            err.addCurrentLocationToErrorStack();
             return err;
         }
 
@@ -299,7 +299,7 @@ namespace ne {
                 bEnableBackup);
             if (std::holds_alternative<Error>(result)) {
                 auto err = std::get<Error>(std::move(result));
-                err.addEntry();
+                err.addCurrentLocationToErrorStack();
                 return err;
             }
         }
@@ -517,7 +517,7 @@ namespace ne {
                             pFieldObject->serialize(pathToExternalFile, pData->bEnableBackup);
                         if (optionalError.has_value()) {
                             pData->error = optionalError.value();
-                            pData->error->addEntry();
+                            pData->error->addCurrentLocationToErrorStack();
                             return false;
                         }
 
@@ -548,7 +548,7 @@ namespace ne {
                                 pOriginalFieldObject);
                             if (optionalError.has_value()) {
                                 pData->error = optionalError.value();
-                                pData->error->addEntry();
+                                pData->error->addCurrentLocationToErrorStack();
                                 return false;
                             }
 
@@ -580,7 +580,7 @@ namespace ne {
 
         if (loopData.error.has_value()) {
             auto err = std::move(loopData.error.value());
-            err.addEntry();
+            err.addCurrentLocationToErrorStack();
             return err;
         }
 

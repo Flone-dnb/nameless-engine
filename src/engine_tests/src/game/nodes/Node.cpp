@@ -166,7 +166,7 @@ TEST_CASE("serialize and deserialize node tree") {
         const auto optionalError = pRootNode->serializeNodeTree(pathToFile, false);
         if (optionalError.has_value()) {
             auto err = optionalError.value();
-            err.addEntry();
+            err.addCurrentLocationToErrorStack();
             INFO(err.getFullErrorMessage());
             REQUIRE(false);
         }
@@ -182,7 +182,7 @@ TEST_CASE("serialize and deserialize node tree") {
         const auto deserializeResult = Node::deserializeNodeTree(pathToFile);
         if (std::holds_alternative<Error>(deserializeResult)) {
             auto err = std::get<Error>(deserializeResult);
-            err.addEntry();
+            err.addCurrentLocationToErrorStack();
             INFO(err.getFullErrorMessage());
             REQUIRE(false);
         }
@@ -261,7 +261,7 @@ TEST_CASE("get parent node of type") {
             createWorld([&](const std::optional<Error>& optionalWorldError) {
                 if (optionalWorldError.has_value()) {
                     auto error = optionalWorldError.value();
-                    error.addEntry();
+                    error.addCurrentLocationToErrorStack();
                     INFO(error.getFullErrorMessage());
                     REQUIRE(false);
                 }
@@ -299,7 +299,7 @@ TEST_CASE("get parent node of type") {
     auto result = Window::getBuilder().withVisibility(false).build();
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
-        error.addEntry();
+        error.addCurrentLocationToErrorStack();
         INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }
@@ -351,7 +351,7 @@ TEST_CASE("get child node of type") {
             createWorld([&](const std::optional<Error>& optionalWorldError) {
                 if (optionalWorldError.has_value()) {
                     auto error = optionalWorldError.value();
-                    error.addEntry();
+                    error.addCurrentLocationToErrorStack();
                     INFO(error.getFullErrorMessage());
                     REQUIRE(false);
                 }
@@ -388,7 +388,7 @@ TEST_CASE("get child node of type") {
     auto result = Window::getBuilder().withVisibility(false).build();
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
-        error.addEntry();
+        error.addCurrentLocationToErrorStack();
         INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }
@@ -418,7 +418,7 @@ TEST_CASE("saving pointer to the root node does not prevent correct world destru
             createWorld([&](const std::optional<Error>& optionalWorldError) {
                 if (optionalWorldError.has_value()) {
                     auto error = optionalWorldError.value();
-                    error.addEntry();
+                    error.addCurrentLocationToErrorStack();
                     INFO(error.getFullErrorMessage());
                     REQUIRE(false);
                 }
@@ -438,7 +438,7 @@ TEST_CASE("saving pointer to the root node does not prevent correct world destru
                 createWorld([&](const std::optional<Error>& optionalWorldError) {
                     if (optionalWorldError.has_value()) {
                         auto error = optionalWorldError.value();
-                        error.addEntry();
+                        error.addCurrentLocationToErrorStack();
                         INFO(error.getFullErrorMessage());
                         REQUIRE(false);
                     }
@@ -452,7 +452,7 @@ TEST_CASE("saving pointer to the root node does not prevent correct world destru
     auto result = Window::getBuilder().withVisibility(false).build();
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
-        error.addEntry();
+        error.addCurrentLocationToErrorStack();
         INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }
@@ -507,7 +507,7 @@ TEST_CASE("test GC performance and stability with nodes") {
     auto result = Window::getBuilder().withVisibility(false).build();
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
-        error.addEntry();
+        error.addCurrentLocationToErrorStack();
         INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }
@@ -543,7 +543,7 @@ TEST_CASE("onBeforeNewFrame is called only on marked nodes") {
             createWorld([&](const std::optional<Error>& optionalWorldError) {
                 if (optionalWorldError.has_value()) {
                     auto error = optionalWorldError.value();
-                    error.addEntry();
+                    error.addCurrentLocationToErrorStack();
                     INFO(error.getFullErrorMessage());
                     REQUIRE(false);
                 }
@@ -590,7 +590,7 @@ TEST_CASE("onBeforeNewFrame is called only on marked nodes") {
     auto result = Window::getBuilder().withVisibility(false).build();
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
-        error.addEntry();
+        error.addCurrentLocationToErrorStack();
         INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }
@@ -613,7 +613,7 @@ TEST_CASE("tick groups order is correct") {
             createWorld([&](const std::optional<Error>& optionalWorldError) {
                 if (optionalWorldError.has_value()) {
                     auto error = optionalWorldError.value();
-                    error.addEntry();
+                    error.addCurrentLocationToErrorStack();
                     INFO(error.getFullErrorMessage());
                     REQUIRE(false);
                 }
@@ -684,7 +684,7 @@ TEST_CASE("tick groups order is correct") {
     auto result = Window::getBuilder().withVisibility(false).build();
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
-        error.addEntry();
+        error.addCurrentLocationToErrorStack();
         INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }
@@ -736,7 +736,7 @@ TEST_CASE("input event callbacks in Node are triggered") {
             createWorld([&](const std::optional<Error>& optionalWorldError) {
                 if (optionalWorldError.has_value()) {
                     auto error = optionalWorldError.value();
-                    error.addEntry();
+                    error.addCurrentLocationToErrorStack();
                     INFO(error.getFullErrorMessage());
                     REQUIRE(false);
                 }
@@ -752,7 +752,7 @@ TEST_CASE("input event callbacks in Node are triggered") {
                 auto optionalError = getInputManager()->addActionEvent("action1", {KeyboardKey::KEY_W});
                 if (optionalError.has_value()) {
                     auto error = optionalError.value();
-                    error.addEntry();
+                    error.addCurrentLocationToErrorStack();
                     INFO(error.getFullErrorMessage());
                     REQUIRE(false);
                 }
@@ -760,7 +760,7 @@ TEST_CASE("input event callbacks in Node are triggered") {
                     getInputManager()->addAxisEvent("axis1", {{KeyboardKey::KEY_A, KeyboardKey::KEY_B}});
                 if (optionalError.has_value()) {
                     auto error = optionalError.value();
-                    error.addEntry();
+                    error.addCurrentLocationToErrorStack();
                     INFO(error.getFullErrorMessage());
                     REQUIRE(false);
                 }
@@ -785,7 +785,7 @@ TEST_CASE("input event callbacks in Node are triggered") {
     auto result = Window::getBuilder().withVisibility(false).build();
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
-        error.addEntry();
+        error.addCurrentLocationToErrorStack();
         INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }
@@ -856,7 +856,7 @@ TEST_CASE("use deferred task with node's member function while the world is bein
     auto result = Window::getBuilder().withVisibility(false).build();
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
-        error.addEntry();
+        error.addCurrentLocationToErrorStack();
         INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }
@@ -933,7 +933,7 @@ TEST_CASE("use deferred task with node's member function while the garbage colle
     auto result = Window::getBuilder().withVisibility(false).build();
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
-        error.addEntry();
+        error.addCurrentLocationToErrorStack();
         INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }
@@ -988,7 +988,7 @@ TEST_CASE("detach and despawn spawned node") {
     auto result = Window::getBuilder().withVisibility(false).build();
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
-        error.addEntry();
+        error.addCurrentLocationToErrorStack();
         INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }
@@ -1051,7 +1051,7 @@ TEST_CASE("input event callbacks and tick in Node is not triggered after despawn
             createWorld([&](const std::optional<Error>& optionalWorldError) {
                 if (optionalWorldError.has_value()) {
                     auto error = optionalWorldError.value();
-                    error.addEntry();
+                    error.addCurrentLocationToErrorStack();
                     INFO(error.getFullErrorMessage());
                     REQUIRE(false);
                 }
@@ -1067,7 +1067,7 @@ TEST_CASE("input event callbacks and tick in Node is not triggered after despawn
                 auto optionalError = getInputManager()->addActionEvent("action1", {KeyboardKey::KEY_W});
                 if (optionalError.has_value()) {
                     auto error = optionalError.value();
-                    error.addEntry();
+                    error.addCurrentLocationToErrorStack();
                     INFO(error.getFullErrorMessage());
                     REQUIRE(false);
                 }
@@ -1075,7 +1075,7 @@ TEST_CASE("input event callbacks and tick in Node is not triggered after despawn
                     getInputManager()->addAxisEvent("axis1", {{KeyboardKey::KEY_A, KeyboardKey::KEY_B}});
                 if (optionalError.has_value()) {
                     auto error = optionalError.value();
-                    error.addEntry();
+                    error.addCurrentLocationToErrorStack();
                     INFO(error.getFullErrorMessage());
                     REQUIRE(false);
                 }
@@ -1130,7 +1130,7 @@ TEST_CASE("input event callbacks and tick in Node is not triggered after despawn
     auto result = Window::getBuilder().withVisibility(false).build();
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
-        error.addEntry();
+        error.addCurrentLocationToErrorStack();
         INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }

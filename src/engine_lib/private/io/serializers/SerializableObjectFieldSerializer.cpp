@@ -41,7 +41,7 @@ namespace ne {
             pSubEntity, pTomlData, pFieldName, sSectionName, sEntityId, iSubEntityId, pOriginalObject);
         if (optionalError.has_value()) {
             Error error = optionalError.value();
-            error.addEntry();
+            error.addCurrentLocationToErrorStack();
             return error;
         }
 
@@ -106,7 +106,7 @@ namespace ne {
                             pSerializer->cloneField(pData->pFrom, &field, pData->pTo, pFieldTo);
                         if (optionalError.has_value()) {
                             auto err = std::move(optionalError.value());
-                            err.addEntry();
+                            err.addCurrentLocationToErrorStack();
                             pData->error = err;
                             return false;
                         }
@@ -124,7 +124,7 @@ namespace ne {
 
         if (loopData.error.has_value()) {
             auto err = std::move(loopData.error.value());
-            err.addEntry();
+            err.addCurrentLocationToErrorStack();
             return err;
         }
 
@@ -262,7 +262,7 @@ namespace ne {
             *pTomlDocument, subAttributes, sSubEntityId);
         if (std::holds_alternative<Error>(result)) {
             auto err = std::get<Error>(std::move(result));
-            err.addEntry();
+            err.addCurrentLocationToErrorStack();
             return err;
         }
 
@@ -505,7 +505,7 @@ namespace ne {
             pTomlDocument, pTomlValue, pFieldName, pTarget, sOwnerSectionName, sEntityId, customAttributes);
         if (std::holds_alternative<Error>(result)) {
             auto error = std::get<Error>(std::move(result));
-            error.addEntry();
+            error.addCurrentLocationToErrorStack();
             return error;
         }
         auto pDeserializedObject = std::get<std::shared_ptr<Serializable>>(std::move(result));
@@ -514,7 +514,7 @@ namespace ne {
         auto optionalError = cloneSerializableObject(&*pDeserializedObject, pTarget, true);
         if (optionalError.has_value()) {
             auto error = optionalError.value();
-            error.addEntry();
+            error.addCurrentLocationToErrorStack();
             return error;
         }
 
@@ -542,7 +542,7 @@ namespace ne {
             false);
         if (optionalError.has_value()) {
             auto error = optionalError.value();
-            error.addEntry();
+            error.addCurrentLocationToErrorStack();
             return error;
         }
 
@@ -664,7 +664,7 @@ namespace ne {
         auto result = pObject->serialize(*pTomlData, pOriginalObject, sSubEntityIdSectionName);
         if (std::holds_alternative<Error>(result)) {
             auto error = std::get<Error>(std::move(result));
-            error.addEntry();
+            error.addCurrentLocationToErrorStack();
             return error;
         }
         const auto sSubEntityFinalSectionName = std::get<std::string>(result);

@@ -48,7 +48,7 @@ namespace ne {
         auto result = createResource(sResourceName, bufferInfo, allocationCreateInfo);
         if (std::holds_alternative<Error>(result)) {
             auto error = std::get<Error>(std::move(result));
-            error.addEntry();
+            error.addCurrentLocationToErrorStack();
             return error;
         }
 
@@ -226,7 +226,7 @@ namespace ne {
             VulkanResource::create(this, sResourceName, pMemoryAllocator, bufferInfo, allocationInfo);
         if (std::holds_alternative<Error>(result)) {
             auto error = std::get<Error>(std::move(result));
-            error.addEntry();
+            error.addCurrentLocationToErrorStack();
             return error;
         }
         return std::get<std::unique_ptr<VulkanResource>>(std::move(result));
@@ -278,7 +278,7 @@ namespace ne {
         auto result = createBuffer(sResourceName, iBufferSizeInBytes, usage, true);
         if (std::holds_alternative<Error>(result)) {
             auto error = std::get<Error>(std::move(result));
-            error.addEntry();
+            error.addCurrentLocationToErrorStack();
             return error;
         }
         auto pResource = std::get<std::unique_ptr<VulkanResource>>(std::move(result));
@@ -297,7 +297,7 @@ namespace ne {
         auto uploadResourceResult = createResourceWithCpuWriteAccess(sResourceName, iDataSizeInBytes, 1, {});
         if (std::holds_alternative<Error>(uploadResourceResult)) {
             auto error = std::get<Error>(std::move(uploadResourceResult));
-            error.addEntry();
+            error.addCurrentLocationToErrorStack();
             return error;
         }
         auto pUploadResource = std::get<std::unique_ptr<UploadBuffer>>(std::move(uploadResourceResult));
@@ -315,7 +315,7 @@ namespace ne {
         auto finalResourceResult = createBuffer(sResourceName, iDataSizeInBytes, resourceUsage, false);
         if (std::holds_alternative<Error>(finalResourceResult)) {
             auto error = std::get<Error>(std::move(finalResourceResult));
-            error.addEntry();
+            error.addCurrentLocationToErrorStack();
             return error;
         }
         auto pFinalResource = std::get<std::unique_ptr<VulkanResource>>(std::move(finalResourceResult));
@@ -331,7 +331,7 @@ namespace ne {
         auto commandBufferResult = pRenderer->createOneTimeSubmitCommandBuffer();
         if (std::holds_alternative<Error>(commandBufferResult)) {
             auto error = std::get<Error>(std::move(commandBufferResult));
-            error.addEntry();
+            error.addCurrentLocationToErrorStack();
             return error;
         }
         const auto pOneTimeSubmitCommandBuffer = std::get<VkCommandBuffer>(commandBufferResult);
@@ -356,7 +356,7 @@ namespace ne {
         auto optionalError =
             pRenderer->submitWaitDestroyOneTimeSubmitCommandBuffer(pOneTimeSubmitCommandBuffer);
         if (optionalError.has_value()) {
-            optionalError->addEntry();
+            optionalError->addCurrentLocationToErrorStack();
             return optionalError.value();
         }
 

@@ -17,7 +17,7 @@ TEST_CASE("input event callbacks in GameInstance are triggered") {
             createWorld([&](const std::optional<Error>& optionalWorldError) {
                 if (optionalWorldError.has_value()) {
                     auto error = optionalWorldError.value();
-                    error.addEntry();
+                    error.addCurrentLocationToErrorStack();
                     INFO(error.getFullErrorMessage());
                     REQUIRE(false);
                 }
@@ -45,7 +45,7 @@ TEST_CASE("input event callbacks in GameInstance are triggered") {
                 auto optionalError = getInputManager()->addActionEvent("action1", {KeyboardKey::KEY_W});
                 if (optionalError.has_value()) {
                     auto error = optionalError.value();
-                    error.addEntry();
+                    error.addCurrentLocationToErrorStack();
                     INFO(error.getFullErrorMessage());
                     REQUIRE(false);
                 }
@@ -53,7 +53,7 @@ TEST_CASE("input event callbacks in GameInstance are triggered") {
                     getInputManager()->addAxisEvent("axis1", {{KeyboardKey::KEY_A, KeyboardKey::KEY_B}});
                 if (optionalError.has_value()) {
                     auto error = optionalError.value();
-                    error.addEntry();
+                    error.addCurrentLocationToErrorStack();
                     INFO(error.getFullErrorMessage());
                     REQUIRE(false);
                 }
@@ -81,7 +81,7 @@ TEST_CASE("input event callbacks in GameInstance are triggered") {
     auto result = Window::getBuilder().withVisibility(false).build();
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
-        error.addEntry();
+        error.addCurrentLocationToErrorStack();
         INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }
@@ -102,7 +102,7 @@ TEST_CASE("timer callback is called") {
             createWorld([&](const std::optional<Error>& optionalWorldError) {
                 if (optionalWorldError.has_value()) {
                     auto error = optionalWorldError.value();
-                    error.addEntry();
+                    error.addCurrentLocationToErrorStack();
                     INFO(error.getFullErrorMessage());
                     REQUIRE(false);
                 }
@@ -143,7 +143,7 @@ TEST_CASE("timer callback is called") {
     auto result = Window::getBuilder().withVisibility(false).build();
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
-        error.addEntry();
+        error.addCurrentLocationToErrorStack();
         INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }
@@ -199,7 +199,7 @@ TEST_CASE("timer callback validator prevents callback to be called after onWindo
     auto result = Window::getBuilder().withVisibility(false).build();
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
-        error.addEntry();
+        error.addCurrentLocationToErrorStack();
         INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }
@@ -222,7 +222,7 @@ TEST_CASE("timer callback validator prevents old (stopped) callback from being c
             createWorld([&](const std::optional<Error>& optionalWorldError) {
                 if (optionalWorldError.has_value()) {
                     auto error = optionalWorldError.value();
-                    error.addEntry();
+                    error.addCurrentLocationToErrorStack();
                     INFO(error.getFullErrorMessage());
                     REQUIRE(false);
                 }
@@ -283,7 +283,7 @@ TEST_CASE("timer callback validator prevents old (stopped) callback from being c
     auto result = Window::getBuilder().withVisibility(false).build();
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
-        error.addEntry();
+        error.addCurrentLocationToErrorStack();
         INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }

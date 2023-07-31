@@ -52,14 +52,14 @@ namespace ne {
         // Initialize essential entities.
         auto optionalError = initializeRenderer();
         if (optionalError.has_value()) {
-            optionalError->addEntry();
+            optionalError->addCurrentLocationToErrorStack();
             return optionalError;
         }
 
         // Initialize DirectX.
         optionalError = initializeDirectX();
         if (optionalError.has_value()) {
-            optionalError->addEntry();
+            optionalError->addCurrentLocationToErrorStack();
             return optionalError;
         }
 
@@ -69,14 +69,14 @@ namespace ne {
             pFactory->MakeWindowAssociation(getWindow()->getWindowHandle(), DXGI_MWA_NO_ALT_ENTER);
         if (FAILED(hResult)) {
             Error error(hResult);
-            error.addEntry();
+            error.addCurrentLocationToErrorStack();
             return error;
         }
 
         // Set initial size for buffers.
         optionalError = updateRenderBuffers();
         if (optionalError.has_value()) {
-            optionalError->addEntry();
+            optionalError->addCurrentLocationToErrorStack();
             return optionalError;
         }
 
@@ -91,7 +91,7 @@ namespace ne {
         const auto optionalError = pRenderer->initialize();
         if (optionalError.has_value()) {
             auto error = optionalError.value();
-            error.addEntry();
+            error.addCurrentLocationToErrorStack();
             return error;
         }
 
@@ -163,7 +163,7 @@ namespace ne {
                               depthClear);
         if (std::holds_alternative<Error>(result)) {
             auto err = std::get<Error>(std::move(result));
-            err.addEntry();
+            err.addCurrentLocationToErrorStack();
             return err;
         }
         pDepthStencilBuffer = std::get<std::unique_ptr<DirectXResource>>(std::move(result));
@@ -172,7 +172,7 @@ namespace ne {
         auto optionalError = pDepthStencilBuffer->bindDescriptor(GpuResource::DescriptorType::DSV);
         if (optionalError.has_value()) {
             auto error = optionalError.value();
-            error.addEntry();
+            error.addCurrentLocationToErrorStack();
             return error;
         }
 
@@ -216,7 +216,7 @@ namespace ne {
         auto result = getSupportedDisplayModes();
         if (std::holds_alternative<Error>(result)) {
             Error error = std::get<Error>(std::move(result));
-            error.addEntry();
+            error.addCurrentLocationToErrorStack();
             return error;
         }
         const std::vector<DXGI_MODE_DESC> vRenderModes =
@@ -235,7 +235,7 @@ namespace ne {
         auto result = getSupportedDisplayModes();
         if (std::holds_alternative<Error>(result)) {
             Error error = std::get<Error>(std::move(result));
-            error.addEntry();
+            error.addCurrentLocationToErrorStack();
             return error;
         }
         const std::vector<DXGI_MODE_DESC> vRenderModes =
@@ -363,7 +363,7 @@ namespace ne {
         auto optionalError = prepareForDrawingNextFrame(pActiveCameraProperties);
         if (optionalError.has_value()) [[unlikely]] {
             auto error = optionalError.value();
-            error.addEntry();
+            error.addCurrentLocationToErrorStack();
             error.showError();
             throw std::runtime_error(error.getFullErrorMessage());
         }
@@ -427,7 +427,7 @@ namespace ne {
         optionalError = finishDrawingNextFrame();
         if (optionalError.has_value()) [[unlikely]] {
             auto error = optionalError.value();
-            error.addEntry();
+            error.addCurrentLocationToErrorStack();
             error.showError();
             throw std::runtime_error(error.getFullErrorMessage());
         }
@@ -801,7 +801,7 @@ namespace ne {
         {
             auto error = enableDebugLayer();
             if (error.has_value()) {
-                error->addEntry();
+                error->addCurrentLocationToErrorStack();
                 return error;
             }
             debugFactoryFlags = DXGI_CREATE_FACTORY_DEBUG;
@@ -822,7 +822,7 @@ namespace ne {
         auto result = DirectXRenderer::getSupportedGpuNames();
         if (std::holds_alternative<Error>(result)) {
             Error error = std::get<Error>(std::move(result));
-            error.addEntry();
+            error.addCurrentLocationToErrorStack();
             return error;
         }
         const auto vSupportedVideoAdapters = std::get<std::vector<std::string>>(std::move(result));
@@ -850,14 +850,14 @@ namespace ne {
         // Use video adapter.
         std::optional<Error> optionalError = setVideoAdapter(sGpuNameToUse);
         if (optionalError.has_value()) {
-            optionalError->addEntry();
+            optionalError->addCurrentLocationToErrorStack();
             return optionalError;
         }
 
         // Set output adapter (monitor) to use.
         optionalError = setOutputAdapter();
         if (optionalError.has_value()) {
-            optionalError->addEntry();
+            optionalError->addCurrentLocationToErrorStack();
             return optionalError;
         }
 
@@ -876,14 +876,14 @@ namespace ne {
         // Check MSAA support.
         optionalError = checkMsaaSupport();
         if (optionalError.has_value()) {
-            optionalError->addEntry();
+            optionalError->addCurrentLocationToErrorStack();
             return optionalError;
         }
 
         // Create command queue.
         optionalError = createCommandQueue();
         if (optionalError.has_value()) {
-            optionalError->addEntry();
+            optionalError->addCurrentLocationToErrorStack();
             return optionalError;
         }
 
@@ -891,14 +891,14 @@ namespace ne {
         // that will use command allocator from frame resources.
         optionalError = initializeResourceManagers();
         if (optionalError.has_value()) {
-            optionalError->addEntry();
+            optionalError->addCurrentLocationToErrorStack();
             return optionalError;
         }
 
         // Create command list.
         optionalError = createCommandList();
         if (optionalError.has_value()) {
-            optionalError->addEntry();
+            optionalError->addCurrentLocationToErrorStack();
             return optionalError;
         }
 
@@ -906,7 +906,7 @@ namespace ne {
         auto videoModesResult = getSupportedDisplayModes();
         if (std::holds_alternative<Error>(videoModesResult)) {
             Error err = std::get<Error>(std::move(videoModesResult));
-            err.addEntry();
+            err.addCurrentLocationToErrorStack();
             return err;
         }
 
@@ -983,7 +983,7 @@ namespace ne {
         // Create swap chain.
         optionalError = createSwapChain();
         if (optionalError.has_value()) {
-            optionalError->addEntry();
+            optionalError->addCurrentLocationToErrorStack();
             return optionalError;
         }
 
@@ -1057,7 +1057,7 @@ namespace ne {
             const auto optionalError = createSwapChain();
             if (optionalError.has_value()) [[unlikely]] {
                 auto err = optionalError.value();
-                err.addEntry();
+                err.addCurrentLocationToErrorStack();
                 return err;
             }
         }
@@ -1080,7 +1080,7 @@ namespace ne {
                 ->makeRtvResourcesFromSwapChainBuffer(pSwapChain.Get(), getSwapChainBufferCount());
         if (std::holds_alternative<Error>(swapChainResult)) {
             auto err = std::get<Error>(std::move(swapChainResult));
-            err.addEntry();
+            err.addCurrentLocationToErrorStack();
             return err;
         }
         vSwapChainBuffers =
@@ -1122,7 +1122,7 @@ namespace ne {
                                   msaaClear);
             if (std::holds_alternative<Error>(result)) {
                 auto err = std::get<Error>(std::move(result));
-                err.addEntry();
+                err.addCurrentLocationToErrorStack();
                 return err;
             }
             pMsaaRenderBuffer = std::get<std::unique_ptr<DirectXResource>>(std::move(result));
@@ -1130,7 +1130,7 @@ namespace ne {
             // Bind RTV.
             auto optionalError = pMsaaRenderBuffer->bindDescriptor(GpuResource::DescriptorType::RTV);
             if (optionalError.has_value()) {
-                optionalError->addEntry();
+                optionalError->addCurrentLocationToErrorStack();
                 return optionalError.value();
             }
         } else {
@@ -1140,7 +1140,7 @@ namespace ne {
         // Create depth/stencil buffer.
         auto optionalError = createDepthStencilBuffer();
         if (optionalError.has_value()) {
-            optionalError->addEntry();
+            optionalError->addCurrentLocationToErrorStack();
             return optionalError.value();
         }
 

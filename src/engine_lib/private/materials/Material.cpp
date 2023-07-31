@@ -102,7 +102,7 @@ namespace ne {
                 this);
             if (std::holds_alternative<Error>(result)) {
                 auto error = std::get<Error>(std::move(result));
-                error.addEntry();
+                error.addCurrentLocationToErrorStack();
                 error.showError();
                 throw std::runtime_error(error.getFullErrorMessage());
             }
@@ -348,7 +348,7 @@ namespace ne {
             onFinishedUpdatingResource);
         if (std::holds_alternative<Error>(result)) {
             auto error = std::get<Error>(std::move(result));
-            error.addEntry();
+            error.addCurrentLocationToErrorStack();
             error.showError();
             throw std::runtime_error(error.getFullErrorMessage());
         }

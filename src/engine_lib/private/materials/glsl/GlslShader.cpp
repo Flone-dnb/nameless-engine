@@ -131,7 +131,7 @@ namespace ne {
             vCompiledBytecode.data(), vCompiledBytecode.size() * sizeof(vCompiledBytecode[0]));
         if (std::holds_alternative<Error>(layoutResult)) [[unlikely]] {
             auto error = std::get<Error>(std::move(layoutResult));
-            error.addEntry();
+            error.addCurrentLocationToErrorStack();
             return error;
         }
         // Intentionally ignore results, we only care about errors here.
@@ -190,7 +190,7 @@ namespace ne {
         auto optionalError = loadShaderDataFromDiskIfNotLoaded();
         if (optionalError.has_value()) [[unlikely]] {
             auto error = std::move(optionalError.value());
-            error.addEntry();
+            error.addCurrentLocationToErrorStack();
             return error;
         }
 
@@ -263,7 +263,7 @@ namespace ne {
             auto pathResult = getPathToCompiledShader();
             if (std::holds_alternative<Error>(pathResult)) {
                 auto err = std::get<Error>(std::move(pathResult));
-                err.addEntry();
+                err.addCurrentLocationToErrorStack();
                 return err;
             }
             const auto pathToCompiledShader = std::get<std::filesystem::path>(std::move(pathResult));
@@ -302,7 +302,7 @@ namespace ne {
                 mtxSpirvBytecode.second.size() * sizeof(mtxSpirvBytecode.second[0]));
             if (std::holds_alternative<Error>(layoutResult)) [[unlikely]] {
                 auto error = std::get<Error>(std::move(layoutResult));
-                error.addEntry();
+                error.addCurrentLocationToErrorStack();
                 return error;
             }
             mtxDescriptorSetLayoutBindingInfo.second =

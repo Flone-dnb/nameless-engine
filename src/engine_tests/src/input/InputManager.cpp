@@ -394,7 +394,7 @@ TEST_CASE("test saving and loading") {
         // Save modified events.
         auto result = manager.saveToFile(sFileName);
         if (result.has_value()) {
-            result->addEntry();
+            result->addCurrentLocationToErrorStack();
             INFO(result->getFullErrorMessage());
             REQUIRE(false);
         }
@@ -414,7 +414,7 @@ TEST_CASE("test saving and loading") {
         // Load modified events.
         auto result = manager.loadFromFile(sFileName);
         if (result.has_value()) {
-            result->addEntry();
+            result->addCurrentLocationToErrorStack();
             INFO(result->getFullErrorMessage());
             REQUIRE(false);
         }

@@ -69,7 +69,7 @@ namespace ne {
         auto result = Renderer::create(this, preferredRenderer);
         if (std::holds_alternative<Error>(result)) [[unlikely]] {
             auto error = std::get<Error>(std::move(result));
-            error.addEntry();
+            error.addCurrentLocationToErrorStack();
             return error;
         }
         pRenderer = std::get<std::unique_ptr<Renderer>>(std::move(result));
@@ -381,7 +381,7 @@ namespace ne {
             auto result = World::loadNodeTreeAsWorld(this, pathToNodeTree, iWorldSize);
             if (std::holds_alternative<Error>(result)) {
                 auto error = std::get<Error>(result);
-                error.addEntry();
+                error.addCurrentLocationToErrorStack();
                 onLoaded(error);
                 return;
             }

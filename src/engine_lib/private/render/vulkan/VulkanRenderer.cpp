@@ -81,14 +81,14 @@ namespace ne {
         // Initialize essential entities.
         auto optionalError = initializeRenderer();
         if (optionalError.has_value()) {
-            optionalError->addEntry();
+            optionalError->addCurrentLocationToErrorStack();
             return optionalError;
         }
 
         // Initialize Vulkan.
         optionalError = initializeVulkan();
         if (optionalError.has_value()) {
-            optionalError->addEntry();
+            optionalError->addCurrentLocationToErrorStack();
             return optionalError;
         }
 
@@ -99,42 +99,42 @@ namespace ne {
         // Create Vulkan instance.
         auto optionalError = createVulkanInstance();
         if (optionalError.has_value()) {
-            optionalError->addEntry();
+            optionalError->addCurrentLocationToErrorStack();
             return optionalError;
         }
 
         // Create window surface.
         optionalError = createWindowSurface();
         if (optionalError.has_value()) {
-            optionalError->addEntry();
+            optionalError->addCurrentLocationToErrorStack();
             return optionalError;
         }
 
         // Pick physical device.
         optionalError = pickPhysicalDevice();
         if (optionalError.has_value()) {
-            optionalError->addEntry();
+            optionalError->addCurrentLocationToErrorStack();
             return optionalError;
         }
 
         // Create logical device.
         optionalError = createLogicalDevice();
         if (optionalError.has_value()) {
-            optionalError->addEntry();
+            optionalError->addCurrentLocationToErrorStack();
             return optionalError;
         }
 
         // Create fences and semaphores.
         optionalError = createSynchronizationObjects();
         if (optionalError.has_value()) {
-            optionalError->addEntry();
+            optionalError->addCurrentLocationToErrorStack();
             return optionalError;
         }
 
         // Create swap chain.
         optionalError = createSwapChain();
         if (optionalError.has_value()) {
-            optionalError->addEntry();
+            optionalError->addCurrentLocationToErrorStack();
             return optionalError;
         }
 
@@ -143,14 +143,14 @@ namespace ne {
         // Create command pool.
         optionalError = createCommandPool();
         if (optionalError.has_value()) {
-            optionalError->addEntry();
+            optionalError->addCurrentLocationToErrorStack();
             return optionalError;
         }
 
         // Initialize resource managers.
         optionalError = initializeResourceManagers();
         if (optionalError.has_value()) {
-            optionalError->addEntry();
+            optionalError->addCurrentLocationToErrorStack();
             return optionalError;
         }
 
@@ -206,7 +206,7 @@ namespace ne {
         auto extensionsResult = getRequiredVulkanInstanceExtensions();
         if (std::holds_alternative<Error>(extensionsResult)) [[unlikely]] {
             auto error = std::get<Error>(std::move(extensionsResult));
-            error.addEntry();
+            error.addCurrentLocationToErrorStack();
             return error;
         }
         const auto vRequiredExtensions = std::get<std::vector<const char*>>(std::move(extensionsResult));
@@ -219,7 +219,7 @@ namespace ne {
         // Make sure that used validation layers supported.
         auto optionalError = makeSureUsedValidationLayersSupported();
         if (optionalError.has_value()) [[unlikely]] {
-            optionalError->addEntry();
+            optionalError->addCurrentLocationToErrorStack();
             return optionalError;
         }
 
@@ -344,7 +344,7 @@ namespace ne {
         auto queueFamiliesResult = queryQueueFamilyIndices(pGpu);
         if (std::holds_alternative<Error>(queueFamiliesResult)) [[unlikely]] {
             auto error = std::get<Error>(std::move(queueFamiliesResult));
-            error.addEntry();
+            error.addCurrentLocationToErrorStack();
             return error;
         }
         const auto queueFamiliesIndices = std::get<QueueFamilyIndices>(std::move(queueFamiliesResult));
@@ -357,7 +357,7 @@ namespace ne {
         auto result = isGpuSupportsUsedDeviceExtensions(pGpu);
         if (std::holds_alternative<Error>(result)) [[unlikely]] {
             auto error = std::get<Error>(std::move(result));
-            error.addEntry();
+            error.addCurrentLocationToErrorStack();
             return error;
         }
         const auto sMissingDeviceExtension = std::get<std::string>(std::move(result));
@@ -373,7 +373,7 @@ namespace ne {
         result = isGpuSupportsSwapChain(pGpu);
         if (std::holds_alternative<Error>(result)) [[unlikely]] {
             auto error = std::get<Error>(std::move(result));
-            error.addEntry();
+            error.addCurrentLocationToErrorStack();
             return error;
         }
         const auto sMissingSwapChainDetailDescription = std::get<std::string>(std::move(result));
@@ -530,7 +530,7 @@ namespace ne {
         auto swapChainSupportResult = querySwapChainSupportDetails(pGpu);
         if (std::holds_alternative<Error>(swapChainSupportResult)) {
             auto error = std::get<Error>(std::move(swapChainSupportResult));
-            error.addEntry();
+            error.addCurrentLocationToErrorStack();
             return error;
         }
         const auto swapChainSupportDetails =
@@ -722,7 +722,7 @@ namespace ne {
             auto queueFamilyIndicesResult = queryQueueFamilyIndices(currentGpuInfo.pGpu);
             if (std::holds_alternative<Error>(queueFamilyIndicesResult)) [[unlikely]] {
                 auto error = std::get<Error>(std::move(queueFamilyIndicesResult));
-                error.addEntry();
+                error.addCurrentLocationToErrorStack();
                 Logger::get().error(fmt::format(
                     "failed to query queue family indices for the rated GPU \"{}\"",
                     currentGpuInfo.sGpuName));
@@ -835,7 +835,7 @@ namespace ne {
         auto swapChainSupportDetailsResult = querySwapChainSupportDetails(pPhysicalDevice);
         if (std::holds_alternative<Error>(swapChainSupportDetailsResult)) {
             auto error = std::get<Error>(std::move(swapChainSupportDetailsResult));
-            error.addEntry();
+            error.addCurrentLocationToErrorStack();
             return error;
         }
         const auto swapChainSupportDetails =
@@ -845,7 +845,7 @@ namespace ne {
         auto swapChainExtentResult = pickSwapChainExtent(swapChainSupportDetails.capabilities);
         if (std::holds_alternative<Error>(swapChainExtentResult)) {
             auto error = std::get<Error>(std::move(swapChainExtentResult));
-            error.addEntry();
+            error.addCurrentLocationToErrorStack();
             return error;
         }
         swapChainExtent = std::get<VkExtent2D>(std::move(swapChainExtentResult));
@@ -924,7 +924,7 @@ namespace ne {
                 createImageView(vSwapChainImages[i], 1, swapChainImageFormat, VK_IMAGE_ASPECT_COLOR_BIT);
             if (std::holds_alternative<Error>(imageViewResult)) {
                 auto error = std::get<Error>(std::move(imageViewResult));
-                error.addEntry();
+                error.addCurrentLocationToErrorStack();
                 return error;
             }
             vSwapChainImageViews[i] = std::get<VkImageView>(imageViewResult);
@@ -1086,7 +1086,7 @@ namespace ne {
         const auto optionalError = pRenderer->initialize();
         if (optionalError.has_value()) {
             auto error = optionalError.value();
-            error.addEntry();
+            error.addCurrentLocationToErrorStack();
             return error;
         }
 

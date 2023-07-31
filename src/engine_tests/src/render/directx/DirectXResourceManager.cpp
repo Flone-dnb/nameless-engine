@@ -46,7 +46,7 @@ TEST_CASE("make the CBV heap expand") {
                     "Test CBV resource", allocationDesc, resourceDesc, D3D12_RESOURCE_STATE_GENERIC_READ, {});
                 if (std::holds_alternative<Error>(result)) {
                     auto err = std::get<Error>(std::move(result));
-                    err.addEntry();
+                    err.addCurrentLocationToErrorStack();
                     INFO(err.getFullErrorMessage());
                     REQUIRE(false);
                 }
@@ -56,7 +56,7 @@ TEST_CASE("make the CBV heap expand") {
                 auto optionalError = pResource->bindDescriptor(GpuResource::DescriptorType::CBV);
                 if (optionalError.has_value()) {
                     auto error = optionalError.value();
-                    error.addEntry();
+                    error.addCurrentLocationToErrorStack();
                     INFO(error.getFullErrorMessage());
                     REQUIRE(false);
                 }
@@ -72,7 +72,7 @@ TEST_CASE("make the CBV heap expand") {
                 "Test CBV resource", allocationDesc, resourceDesc, D3D12_RESOURCE_STATE_GENERIC_READ, {});
             if (std::holds_alternative<Error>(result)) {
                 auto err = std::get<Error>(std::move(result));
-                err.addEntry();
+                err.addCurrentLocationToErrorStack();
                 INFO(err.getFullErrorMessage());
                 REQUIRE(false);
             }
@@ -82,7 +82,7 @@ TEST_CASE("make the CBV heap expand") {
             auto optionalError = pResource->bindDescriptor(GpuResource::DescriptorType::CBV);
             if (optionalError.has_value()) {
                 auto error = optionalError.value();
-                error.addEntry();
+                error.addCurrentLocationToErrorStack();
                 INFO(error.getFullErrorMessage());
                 REQUIRE(false);
             }
@@ -101,7 +101,7 @@ TEST_CASE("make the CBV heap expand") {
     auto result = Window::getBuilder().withVisibility(false).build();
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
-        error.addEntry();
+        error.addCurrentLocationToErrorStack();
         INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }
@@ -141,7 +141,7 @@ TEST_CASE("make the CBV heap shrink") {
                     "Test CBV resource", allocationDesc, resourceDesc, D3D12_RESOURCE_STATE_GENERIC_READ, {});
                 if (std::holds_alternative<Error>(result)) {
                     auto err = std::get<Error>(std::move(result));
-                    err.addEntry();
+                    err.addCurrentLocationToErrorStack();
                     INFO(err.getFullErrorMessage());
                     REQUIRE(false);
                 }
@@ -151,7 +151,7 @@ TEST_CASE("make the CBV heap shrink") {
                 auto optionalError = pResource->bindDescriptor(GpuResource::DescriptorType::CBV);
                 if (optionalError.has_value()) {
                     auto error = optionalError.value();
-                    error.addEntry();
+                    error.addCurrentLocationToErrorStack();
                     INFO(error.getFullErrorMessage());
                     REQUIRE(false);
                 }
@@ -184,7 +184,7 @@ TEST_CASE("make the CBV heap shrink") {
     auto result = Window::getBuilder().withVisibility(false).build();
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
-        error.addEntry();
+        error.addCurrentLocationToErrorStack();
         INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }
@@ -227,7 +227,7 @@ TEST_CASE("assign multiple descriptors to one resource") {
                 "Test SRV resource", allocationDesc, resourceDesc, D3D12_RESOURCE_STATE_COMMON, {});
             if (std::holds_alternative<Error>(result)) {
                 auto err = std::get<Error>(std::move(result));
-                err.addEntry();
+                err.addCurrentLocationToErrorStack();
                 INFO(err.getFullErrorMessage());
                 REQUIRE(false);
             }
@@ -237,7 +237,7 @@ TEST_CASE("assign multiple descriptors to one resource") {
             auto optionalError = pResource->bindDescriptor(GpuResource::DescriptorType::SRV);
             if (optionalError.has_value()) {
                 auto error = optionalError.value();
-                error.addEntry();
+                error.addCurrentLocationToErrorStack();
                 INFO(error.getFullErrorMessage());
                 REQUIRE(false);
             }
@@ -245,7 +245,7 @@ TEST_CASE("assign multiple descriptors to one resource") {
             // Assign a UAV descriptor to this resource.
             optionalError = pResource->bindDescriptor(GpuResource::DescriptorType::UAV);
             if (optionalError.has_value()) {
-                optionalError->addEntry();
+                optionalError->addCurrentLocationToErrorStack();
                 INFO(optionalError->getFullErrorMessage());
                 REQUIRE(false);
             }
@@ -263,7 +263,7 @@ TEST_CASE("assign multiple descriptors to one resource") {
     auto result = Window::getBuilder().withVisibility(false).build();
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
-        error.addEntry();
+        error.addCurrentLocationToErrorStack();
         INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }
@@ -313,7 +313,7 @@ TEST_CASE("all assigned descriptors are freed when resource is destroyed") {
                     "Test SRV resource", allocationDesc, resourceDesc, D3D12_RESOURCE_STATE_COMMON, {});
                 if (std::holds_alternative<Error>(result)) {
                     auto err = std::get<Error>(std::move(result));
-                    err.addEntry();
+                    err.addCurrentLocationToErrorStack();
                     INFO(err.getFullErrorMessage());
                     REQUIRE(false);
                 }
@@ -323,7 +323,7 @@ TEST_CASE("all assigned descriptors are freed when resource is destroyed") {
                 auto optionalError = pResource->bindDescriptor(GpuResource::DescriptorType::SRV);
                 if (optionalError.has_value()) {
                     auto error = optionalError.value();
-                    error.addEntry();
+                    error.addCurrentLocationToErrorStack();
                     INFO(error.getFullErrorMessage());
                     REQUIRE(false);
                 }
@@ -331,7 +331,7 @@ TEST_CASE("all assigned descriptors are freed when resource is destroyed") {
                 // Assign a UAV descriptor to this resource.
                 optionalError = pResource->bindDescriptor(GpuResource::DescriptorType::UAV);
                 if (optionalError.has_value()) {
-                    optionalError->addEntry();
+                    optionalError->addCurrentLocationToErrorStack();
                     INFO(optionalError->getFullErrorMessage());
                     REQUIRE(false);
                 }
@@ -349,7 +349,7 @@ TEST_CASE("all assigned descriptors are freed when resource is destroyed") {
     auto result = Window::getBuilder().withVisibility(false).build();
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
-        error.addEntry();
+        error.addCurrentLocationToErrorStack();
         INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }
@@ -380,7 +380,7 @@ TEST_CASE("create CBV resource") {
                 "Test CBV resource", allocationDesc, resourceDesc, D3D12_RESOURCE_STATE_GENERIC_READ, {});
             if (std::holds_alternative<Error>(result)) {
                 auto err = std::get<Error>(std::move(result));
-                err.addEntry();
+                err.addCurrentLocationToErrorStack();
                 INFO(err.getFullErrorMessage());
                 REQUIRE(false);
             }
@@ -390,7 +390,7 @@ TEST_CASE("create CBV resource") {
             auto optionalError = pResource->bindDescriptor(GpuResource::DescriptorType::CBV);
             if (optionalError.has_value()) {
                 auto error = optionalError.value();
-                error.addEntry();
+                error.addCurrentLocationToErrorStack();
                 INFO(error.getFullErrorMessage());
                 REQUIRE(false);
             }
@@ -403,7 +403,7 @@ TEST_CASE("create CBV resource") {
     auto result = Window::getBuilder().withVisibility(false).build();
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
-        error.addEntry();
+        error.addCurrentLocationToErrorStack();
         INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }
@@ -446,7 +446,7 @@ TEST_CASE("create SRV resource") {
                 "Test SRV resource", allocationDesc, resourceDesc, D3D12_RESOURCE_STATE_COMMON, {});
             if (std::holds_alternative<Error>(result)) {
                 auto err = std::get<Error>(std::move(result));
-                err.addEntry();
+                err.addCurrentLocationToErrorStack();
                 INFO(err.getFullErrorMessage());
                 REQUIRE(false);
             }
@@ -456,7 +456,7 @@ TEST_CASE("create SRV resource") {
             auto optionalError = pResource->bindDescriptor(GpuResource::DescriptorType::SRV);
             if (optionalError.has_value()) {
                 auto error = optionalError.value();
-                error.addEntry();
+                error.addCurrentLocationToErrorStack();
                 INFO(error.getFullErrorMessage());
                 REQUIRE(false);
             }
@@ -469,7 +469,7 @@ TEST_CASE("create SRV resource") {
     auto result = Window::getBuilder().withVisibility(false).build();
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
-        error.addEntry();
+        error.addCurrentLocationToErrorStack();
         INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }
@@ -512,7 +512,7 @@ TEST_CASE("create UAV resource") {
                 "Test UAV resource", allocationDesc, resourceDesc, D3D12_RESOURCE_STATE_COMMON, {});
             if (std::holds_alternative<Error>(result)) {
                 auto err = std::get<Error>(std::move(result));
-                err.addEntry();
+                err.addCurrentLocationToErrorStack();
                 INFO(err.getFullErrorMessage());
                 REQUIRE(false);
             }
@@ -522,7 +522,7 @@ TEST_CASE("create UAV resource") {
             auto optionalError = pResource->bindDescriptor(GpuResource::DescriptorType::UAV);
             if (optionalError.has_value()) {
                 auto error = optionalError.value();
-                error.addEntry();
+                error.addCurrentLocationToErrorStack();
                 INFO(error.getFullErrorMessage());
                 REQUIRE(false);
             }
@@ -535,7 +535,7 @@ TEST_CASE("create UAV resource") {
     auto result = Window::getBuilder().withVisibility(false).build();
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
-        error.addEntry();
+        error.addCurrentLocationToErrorStack();
         INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }
@@ -582,7 +582,7 @@ TEST_CASE("create RTV resource") {
                 "Test RTV resource", allocationDesc, resourceDesc, D3D12_RESOURCE_STATE_COMMON, clearValue);
             if (std::holds_alternative<Error>(result)) {
                 auto err = std::get<Error>(std::move(result));
-                err.addEntry();
+                err.addCurrentLocationToErrorStack();
                 INFO(err.getFullErrorMessage());
                 REQUIRE(false);
             }
@@ -592,7 +592,7 @@ TEST_CASE("create RTV resource") {
             auto optionalError = pResource->bindDescriptor(GpuResource::DescriptorType::RTV);
             if (optionalError.has_value()) {
                 auto error = optionalError.value();
-                error.addEntry();
+                error.addCurrentLocationToErrorStack();
                 INFO(error.getFullErrorMessage());
                 REQUIRE(false);
             }
@@ -605,7 +605,7 @@ TEST_CASE("create RTV resource") {
     auto result = Window::getBuilder().withVisibility(false).build();
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
-        error.addEntry();
+        error.addCurrentLocationToErrorStack();
         INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }
@@ -658,7 +658,7 @@ TEST_CASE("create DSV resource") {
                 depthClear);
             if (std::holds_alternative<Error>(result)) {
                 auto err = std::get<Error>(std::move(result));
-                err.addEntry();
+                err.addCurrentLocationToErrorStack();
                 INFO(err.getFullErrorMessage());
                 REQUIRE(false);
             }
@@ -668,7 +668,7 @@ TEST_CASE("create DSV resource") {
             auto optionalError = pResource->bindDescriptor(GpuResource::DescriptorType::DSV);
             if (optionalError.has_value()) {
                 auto error = optionalError.value();
-                error.addEntry();
+                error.addCurrentLocationToErrorStack();
                 INFO(error.getFullErrorMessage());
                 REQUIRE(false);
             }
@@ -681,7 +681,7 @@ TEST_CASE("create DSV resource") {
     auto result = Window::getBuilder().withVisibility(false).build();
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
-        error.addEntry();
+        error.addCurrentLocationToErrorStack();
         INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }

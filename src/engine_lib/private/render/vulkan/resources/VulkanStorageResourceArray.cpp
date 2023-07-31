@@ -16,7 +16,7 @@ namespace ne {
         auto result = calculateCapacityStepSize(iElementSizeInBytes, iCapacityStepSizeMultiplier);
         if (std::holds_alternative<Error>(result)) [[unlikely]] {
             auto error = std::get<Error>(std::move(result));
-            error.addEntry();
+            error.addCurrentLocationToErrorStack();
             return error;
         }
         const auto iCapacityStepSize = std::get<size_t>(result);
@@ -91,7 +91,7 @@ namespace ne {
         if (mtxInternalResources.second.iSize == mtxInternalResources.second.iCapacity) {
             auto optionalError = expandArray();
             if (optionalError.has_value()) [[unlikely]] {
-                optionalError->addEntry();
+                optionalError->addCurrentLocationToErrorStack();
                 return optionalError.value();
             }
         }
@@ -226,7 +226,7 @@ namespace ne {
                 (mtxInternalResources.second.iCapacity - iCapacityStepSize - iCapacityStepSize / 2)) {
             auto optionalError = shrinkArray();
             if (optionalError.has_value()) {
-                optionalError->addEntry();
+                optionalError->addCurrentLocationToErrorStack();
                 Logger::get().error(optionalError->getFullErrorMessage());
             }
         }
@@ -274,7 +274,7 @@ namespace ne {
             sName, iElementSizeInBytes, iCapacity, CpuVisibleShaderResourceUsageDetails(false));
         if (std::holds_alternative<Error>(result)) {
             auto error = std::get<Error>(std::move(result));
-            error.addEntry();
+            error.addCurrentLocationToErrorStack();
             return error;
         }
         mtxInternalResources.second.pStorageBuffer =
@@ -356,7 +356,7 @@ namespace ne {
         // Re-create the array with the new capacity.
         auto optionalError = createArray(iOldArrayCapacity + iCapacityStepSize);
         if (optionalError.has_value()) [[unlikely]] {
-            optionalError->addEntry();
+            optionalError->addCurrentLocationToErrorStack();
             return optionalError.value();
         }
 
@@ -400,7 +400,7 @@ namespace ne {
         // Re-create the array with the new capacity.
         auto optionalError = createArray(iNewCapacity);
         if (optionalError.has_value()) [[unlikely]] {
-            optionalError->addEntry();
+            optionalError->addCurrentLocationToErrorStack();
             return optionalError.value();
         }
 

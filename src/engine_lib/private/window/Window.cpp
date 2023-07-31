@@ -305,7 +305,7 @@ namespace ne {
         if (std::filesystem::exists(params.pathToWindowIcon)) {
             auto error = pWindow->setIcon(params.pathToWindowIcon);
             if (error.has_value()) {
-                error->addEntry();
+                error->addCurrentLocationToErrorStack();
                 error->showError();
                 // don't throw here, not a critical error.
             }
@@ -371,7 +371,7 @@ namespace ne {
         auto result = WindowCursor::create(pathToIcon);
         if (std::holds_alternative<Error>(result)) {
             auto error = std::get<Error>(result);
-            error.addEntry();
+            error.addCurrentLocationToErrorStack();
             return error;
         }
 

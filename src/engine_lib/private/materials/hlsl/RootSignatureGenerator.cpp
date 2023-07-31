@@ -65,14 +65,14 @@ namespace ne {
                     addCbufferRootParameter(vRootParameters, rootParameterIndices, resourceDesc);
                 if (optionalError.has_value()) [[unlikely]] {
                     auto error = optionalError.value();
-                    error.addEntry();
+                    error.addCurrentLocationToErrorStack();
                     return error;
                 }
             } else if (resourceDesc.Type == D3D_SIT_SAMPLER) {
                 auto result = findStaticSamplerForSamplerResource(resourceDesc);
                 if (std::holds_alternative<Error>(result)) [[unlikely]] {
                     auto error = std::get<Error>(std::move(result));
-                    error.addEntry();
+                    error.addCurrentLocationToErrorStack();
                     return error;
                 }
 
@@ -398,7 +398,7 @@ namespace ne {
             newRootParameter);
         if (optionalError.has_value()) [[unlikely]] {
             auto error = optionalError.value();
-            error.addEntry();
+            error.addCurrentLocationToErrorStack();
             return error;
         }
 

@@ -43,7 +43,7 @@ namespace ne {
             pRawMaterial, pTomlData, pFieldName, sSectionName, sEntityId, iSubEntityId, pOriginalObject);
         if (optionalError.has_value()) {
             Error error = optionalError.value();
-            error.addEntry();
+            error.addCurrentLocationToErrorStack();
             return error;
         }
 
@@ -76,7 +76,7 @@ namespace ne {
             pTomlDocument, pTomlValue, pFieldName, pTarget, sOwnerSectionName, sEntityId, customAttributes);
         if (std::holds_alternative<Error>(result)) {
             auto error = std::get<Error>(std::move(result));
-            error.addEntry();
+            error.addCurrentLocationToErrorStack();
             return error;
         }
         auto pDeserializedObject = std::get<std::shared_ptr<Serializable>>(std::move(result));
@@ -86,7 +86,7 @@ namespace ne {
             pDeserializedObject.get(), pTarget, true);
         if (optionalError.has_value()) {
             auto error = optionalError.value();
-            error.addEntry();
+            error.addCurrentLocationToErrorStack();
             return error;
         }
 
@@ -119,7 +119,7 @@ namespace ne {
             SerializableObjectFieldSerializer::cloneSerializableObject((*pFrom).get(), (*pTo).get(), false);
         if (optionalError.has_value()) {
             auto error = optionalError.value();
-            error.addEntry();
+            error.addCurrentLocationToErrorStack();
             return error;
         }
 

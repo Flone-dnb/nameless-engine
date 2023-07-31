@@ -16,6 +16,7 @@ namespace ne {
     struct SourceLocationInfo {
         /** File name. */
         std::string sFilename;
+
         /** Line number. */
         std::string sLine;
     };
@@ -92,11 +93,12 @@ namespace ne {
         Error& operator=(Error&& other) = default;
 
         /**
-         * Adds an entry to the error location stack.
+         * Adds the caller's file and line as a new entry to the error location stack.
          *
-         * @param location  Should not be specified explicitly (use default value).
+         * @param location Should not be specified explicitly (use default value).
          */
-        void addEntry(const nostd::source_location location = nostd::source_location::current());
+        void addCurrentLocationToErrorStack(
+            const nostd::source_location location = nostd::source_location::current());
 
         /**
          * Creates an error string that contains an error message and an error location stack.

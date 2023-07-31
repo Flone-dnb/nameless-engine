@@ -19,7 +19,7 @@ TEST_CASE("world location, rotation and scale are calculated correctly (no paren
             createWorld([&](const std::optional<Error>& optionalWorldError) {
                 if (optionalWorldError.has_value()) {
                     auto error = optionalWorldError.value();
-                    error.addEntry();
+                    error.addCurrentLocationToErrorStack();
                     INFO(error.getFullErrorMessage());
                     REQUIRE(false);
                 }
@@ -53,7 +53,7 @@ TEST_CASE("world location, rotation and scale are calculated correctly (no paren
     auto result = Window::getBuilder().withVisibility(false).build();
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
-        error.addEntry();
+        error.addCurrentLocationToErrorStack();
         INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }
@@ -76,7 +76,7 @@ TEST_CASE("world location is calculated correctly when rotating parent by X") {
             createWorld([&](const std::optional<Error>& optionalWorldError) {
                 if (optionalWorldError.has_value()) {
                     auto error = optionalWorldError.value();
-                    error.addEntry();
+                    error.addCurrentLocationToErrorStack();
                     INFO(error.getFullErrorMessage());
                     REQUIRE(false);
                 }
@@ -113,7 +113,7 @@ TEST_CASE("world location is calculated correctly when rotating parent by X") {
     auto result = Window::getBuilder().withVisibility(false).build();
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
-        error.addEntry();
+        error.addCurrentLocationToErrorStack();
         INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }
@@ -136,7 +136,7 @@ TEST_CASE("world location is calculated correctly when rotating parent by Y") {
             createWorld([&](const std::optional<Error>& optionalWorldError) {
                 if (optionalWorldError.has_value()) {
                     auto error = optionalWorldError.value();
-                    error.addEntry();
+                    error.addCurrentLocationToErrorStack();
                     INFO(error.getFullErrorMessage());
                     REQUIRE(false);
                 }
@@ -173,7 +173,7 @@ TEST_CASE("world location is calculated correctly when rotating parent by Y") {
     auto result = Window::getBuilder().withVisibility(false).build();
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
-        error.addEntry();
+        error.addCurrentLocationToErrorStack();
         INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }
@@ -196,7 +196,7 @@ TEST_CASE("world location is calculated correctly when rotating parent by Z") {
             createWorld([&](const std::optional<Error>& optionalWorldError) {
                 if (optionalWorldError.has_value()) {
                     auto error = optionalWorldError.value();
-                    error.addEntry();
+                    error.addCurrentLocationToErrorStack();
                     INFO(error.getFullErrorMessage());
                     REQUIRE(false);
                 }
@@ -233,7 +233,7 @@ TEST_CASE("world location is calculated correctly when rotating parent by Z") {
     auto result = Window::getBuilder().withVisibility(false).build();
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
-        error.addEntry();
+        error.addCurrentLocationToErrorStack();
         INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }
@@ -256,7 +256,7 @@ TEST_CASE("world location, rotation and scale are calculated correctly (with par
             createWorld([&](const std::optional<Error>& optionalWorldError) {
                 if (optionalWorldError.has_value()) {
                     auto error = optionalWorldError.value();
-                    error.addEntry();
+                    error.addCurrentLocationToErrorStack();
                     INFO(error.getFullErrorMessage());
                     REQUIRE(false);
                 }
@@ -299,7 +299,7 @@ TEST_CASE("world location, rotation and scale are calculated correctly (with par
     auto result = Window::getBuilder().withVisibility(false).build();
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
-        error.addEntry();
+        error.addCurrentLocationToErrorStack();
         INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }
@@ -322,7 +322,7 @@ TEST_CASE("move parent node with rotation") {
             createWorld([&](const std::optional<Error>& optionalWorldError) {
                 if (optionalWorldError.has_value()) {
                     auto error = optionalWorldError.value();
-                    error.addEntry();
+                    error.addCurrentLocationToErrorStack();
                     INFO(error.getFullErrorMessage());
                     REQUIRE(false);
                 }
@@ -379,7 +379,7 @@ TEST_CASE("move parent node with rotation") {
     auto result = Window::getBuilder().withVisibility(false).build();
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
-        error.addEntry();
+        error.addCurrentLocationToErrorStack();
         INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }
@@ -403,7 +403,7 @@ TEST_CASE(
             createWorld([&](const std::optional<Error>& optionalWorldError) {
                 if (optionalWorldError.has_value()) {
                     auto error = optionalWorldError.value();
-                    error.addEntry();
+                    error.addCurrentLocationToErrorStack();
                     INFO(error.getFullErrorMessage());
                     REQUIRE(false);
                 }
@@ -483,7 +483,7 @@ TEST_CASE(
     auto result = Window::getBuilder().withVisibility(false).build();
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
-        error.addEntry();
+        error.addCurrentLocationToErrorStack();
         INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }
@@ -506,7 +506,7 @@ TEST_CASE("world location with parent rotation is correct") {
             createWorld([&](const std::optional<Error>& optionalWorldError) {
                 if (optionalWorldError.has_value()) {
                     auto error = optionalWorldError.value();
-                    error.addEntry();
+                    error.addCurrentLocationToErrorStack();
                     INFO(error.getFullErrorMessage());
                     REQUIRE(false);
                 }
@@ -606,7 +606,7 @@ TEST_CASE("world location with parent rotation is correct") {
     auto result = Window::getBuilder().withVisibility(false).build();
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
-        error.addEntry();
+        error.addCurrentLocationToErrorStack();
         INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }
@@ -629,7 +629,7 @@ TEST_CASE("set world location with parent is correct") {
             createWorld([&](const std::optional<Error>& optionalWorldError) {
                 if (optionalWorldError.has_value()) {
                     auto error = optionalWorldError.value();
-                    error.addEntry();
+                    error.addCurrentLocationToErrorStack();
                     INFO(error.getFullErrorMessage());
                     REQUIRE(false);
                 }
@@ -685,7 +685,7 @@ TEST_CASE("set world location with parent is correct") {
     auto result = Window::getBuilder().withVisibility(false).build();
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
-        error.addEntry();
+        error.addCurrentLocationToErrorStack();
         INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }
@@ -708,7 +708,7 @@ TEST_CASE("set world rotation with parent is correct") {
             createWorld([&](const std::optional<Error>& optionalWorldError) {
                 if (optionalWorldError.has_value()) {
                     auto error = optionalWorldError.value();
-                    error.addEntry();
+                    error.addCurrentLocationToErrorStack();
                     INFO(error.getFullErrorMessage());
                     REQUIRE(false);
                 }
@@ -760,7 +760,7 @@ TEST_CASE("set world rotation with parent is correct") {
     auto result = Window::getBuilder().withVisibility(false).build();
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
-        error.addEntry();
+        error.addCurrentLocationToErrorStack();
         INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }
@@ -783,7 +783,7 @@ TEST_CASE("set world scale with parent is correct") {
             createWorld([&](const std::optional<Error>& optionalWorldError) {
                 if (optionalWorldError.has_value()) {
                     auto error = optionalWorldError.value();
-                    error.addEntry();
+                    error.addCurrentLocationToErrorStack();
                     INFO(error.getFullErrorMessage());
                     REQUIRE(false);
                 }
@@ -838,7 +838,7 @@ TEST_CASE("set world scale with parent is correct") {
     auto result = Window::getBuilder().withVisibility(false).build();
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
-        error.addEntry();
+        error.addCurrentLocationToErrorStack();
         INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }
@@ -861,7 +861,7 @@ TEST_CASE("serialize and deserialize SpatialNode") {
             createWorld([&](const std::optional<Error>& optionalWorldError) {
                 if (optionalWorldError.has_value()) {
                     auto error = optionalWorldError.value();
-                    error.addEntry();
+                    error.addCurrentLocationToErrorStack();
                     INFO(error.getFullErrorMessage());
                     REQUIRE(false);
                 }
@@ -885,7 +885,7 @@ TEST_CASE("serialize and deserialize SpatialNode") {
                     const auto optionalError = pSpatialNode->serialize(pathToFileInTemp, false);
                     if (optionalError.has_value()) {
                         auto error = optionalError.value();
-                        error.addEntry();
+                        error.addCurrentLocationToErrorStack();
                         INFO(error.getFullErrorMessage());
                         REQUIRE(false);
                     }
@@ -896,7 +896,7 @@ TEST_CASE("serialize and deserialize SpatialNode") {
                     auto result = Serializable::deserialize<gc, SpatialNode>(pathToFileInTemp);
                     if (std::holds_alternative<Error>(result)) {
                         Error error = std::get<Error>(std::move(result));
-                        error.addEntry();
+                        error.addCurrentLocationToErrorStack();
                         INFO(error.getFullErrorMessage());
                         REQUIRE(false);
                     }
@@ -932,7 +932,7 @@ TEST_CASE("serialize and deserialize SpatialNode") {
     auto result = Window::getBuilder().withVisibility(false).build();
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
-        error.addEntry();
+        error.addCurrentLocationToErrorStack();
         INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }
@@ -955,7 +955,7 @@ TEST_CASE("make spatial node look at world location with parent rotation") {
             createWorld([&](const std::optional<Error>& optionalWorldError) {
                 if (optionalWorldError.has_value()) {
                     auto error = optionalWorldError.value();
-                    error.addEntry();
+                    error.addCurrentLocationToErrorStack();
                     INFO(error.getFullErrorMessage());
                     REQUIRE(false);
                 }
@@ -1112,7 +1112,7 @@ TEST_CASE("make spatial node look at world location with parent rotation") {
     auto result = Window::getBuilder().withVisibility(false).build();
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
-        error.addEntry();
+        error.addCurrentLocationToErrorStack();
         INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }
@@ -1135,7 +1135,7 @@ TEST_CASE("relative location/rotation/scale is considered as world when not spaw
             createWorld([&](const std::optional<Error>& optionalWorldError) {
                 if (optionalWorldError.has_value()) {
                     auto error = optionalWorldError.value();
-                    error.addEntry();
+                    error.addCurrentLocationToErrorStack();
                     INFO(error.getFullErrorMessage());
                     REQUIRE(false);
                 }
@@ -1163,7 +1163,7 @@ TEST_CASE("relative location/rotation/scale is considered as world when not spaw
     auto result = Window::getBuilder().withVisibility(false).build();
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
-        error.addEntry();
+        error.addCurrentLocationToErrorStack();
         INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }
@@ -1186,7 +1186,7 @@ TEST_CASE("use `reset` attachment rule for location") {
             createWorld([&](const std::optional<Error>& optionalWorldError) {
                 if (optionalWorldError.has_value()) {
                     auto error = optionalWorldError.value();
-                    error.addEntry();
+                    error.addCurrentLocationToErrorStack();
                     INFO(error.getFullErrorMessage());
                     REQUIRE(false);
                 }
@@ -1219,7 +1219,7 @@ TEST_CASE("use `reset` attachment rule for location") {
     auto result = Window::getBuilder().withVisibility(false).build();
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
-        error.addEntry();
+        error.addCurrentLocationToErrorStack();
         INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }
@@ -1242,7 +1242,7 @@ TEST_CASE("use `keepRelative` attachment rule for location") {
             createWorld([&](const std::optional<Error>& optionalWorldError) {
                 if (optionalWorldError.has_value()) {
                     auto error = optionalWorldError.value();
-                    error.addEntry();
+                    error.addCurrentLocationToErrorStack();
                     INFO(error.getFullErrorMessage());
                     REQUIRE(false);
                 }
@@ -1275,7 +1275,7 @@ TEST_CASE("use `keepRelative` attachment rule for location") {
     auto result = Window::getBuilder().withVisibility(false).build();
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
-        error.addEntry();
+        error.addCurrentLocationToErrorStack();
         INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }
@@ -1298,7 +1298,7 @@ TEST_CASE("use `keepWorld` attachment rule for location") {
             createWorld([&](const std::optional<Error>& optionalWorldError) {
                 if (optionalWorldError.has_value()) {
                     auto error = optionalWorldError.value();
-                    error.addEntry();
+                    error.addCurrentLocationToErrorStack();
                     INFO(error.getFullErrorMessage());
                     REQUIRE(false);
                 }
@@ -1331,7 +1331,7 @@ TEST_CASE("use `keepWorld` attachment rule for location") {
     auto result = Window::getBuilder().withVisibility(false).build();
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
-        error.addEntry();
+        error.addCurrentLocationToErrorStack();
         INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }
@@ -1354,7 +1354,7 @@ TEST_CASE("use `reset` attachment rule for rotation") {
             createWorld([&](const std::optional<Error>& optionalWorldError) {
                 if (optionalWorldError.has_value()) {
                     auto error = optionalWorldError.value();
-                    error.addEntry();
+                    error.addCurrentLocationToErrorStack();
                     INFO(error.getFullErrorMessage());
                     REQUIRE(false);
                 }
@@ -1387,7 +1387,7 @@ TEST_CASE("use `reset` attachment rule for rotation") {
     auto result = Window::getBuilder().withVisibility(false).build();
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
-        error.addEntry();
+        error.addCurrentLocationToErrorStack();
         INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }
@@ -1410,7 +1410,7 @@ TEST_CASE("use `keepRelative` attachment rule for rotation") {
             createWorld([&](const std::optional<Error>& optionalWorldError) {
                 if (optionalWorldError.has_value()) {
                     auto error = optionalWorldError.value();
-                    error.addEntry();
+                    error.addCurrentLocationToErrorStack();
                     INFO(error.getFullErrorMessage());
                     REQUIRE(false);
                 }
@@ -1443,7 +1443,7 @@ TEST_CASE("use `keepRelative` attachment rule for rotation") {
     auto result = Window::getBuilder().withVisibility(false).build();
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
-        error.addEntry();
+        error.addCurrentLocationToErrorStack();
         INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }
@@ -1466,7 +1466,7 @@ TEST_CASE("use `keepWorld` attachment rule for rotation") {
             createWorld([&](const std::optional<Error>& optionalWorldError) {
                 if (optionalWorldError.has_value()) {
                     auto error = optionalWorldError.value();
-                    error.addEntry();
+                    error.addCurrentLocationToErrorStack();
                     INFO(error.getFullErrorMessage());
                     REQUIRE(false);
                 }
@@ -1499,7 +1499,7 @@ TEST_CASE("use `keepWorld` attachment rule for rotation") {
     auto result = Window::getBuilder().withVisibility(false).build();
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
-        error.addEntry();
+        error.addCurrentLocationToErrorStack();
         INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }
@@ -1522,7 +1522,7 @@ TEST_CASE("use `reset` attachment rule for scale") {
             createWorld([&](const std::optional<Error>& optionalWorldError) {
                 if (optionalWorldError.has_value()) {
                     auto error = optionalWorldError.value();
-                    error.addEntry();
+                    error.addCurrentLocationToErrorStack();
                     INFO(error.getFullErrorMessage());
                     REQUIRE(false);
                 }
@@ -1557,7 +1557,7 @@ TEST_CASE("use `reset` attachment rule for scale") {
     auto result = Window::getBuilder().withVisibility(false).build();
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
-        error.addEntry();
+        error.addCurrentLocationToErrorStack();
         INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }
@@ -1580,7 +1580,7 @@ TEST_CASE("use `keepRelative` attachment rule for scale") {
             createWorld([&](const std::optional<Error>& optionalWorldError) {
                 if (optionalWorldError.has_value()) {
                     auto error = optionalWorldError.value();
-                    error.addEntry();
+                    error.addCurrentLocationToErrorStack();
                     INFO(error.getFullErrorMessage());
                     REQUIRE(false);
                 }
@@ -1615,7 +1615,7 @@ TEST_CASE("use `keepRelative` attachment rule for scale") {
     auto result = Window::getBuilder().withVisibility(false).build();
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
-        error.addEntry();
+        error.addCurrentLocationToErrorStack();
         INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }
@@ -1638,7 +1638,7 @@ TEST_CASE("use `keepWorld` attachment rule for scale") {
             createWorld([&](const std::optional<Error>& optionalWorldError) {
                 if (optionalWorldError.has_value()) {
                     auto error = optionalWorldError.value();
-                    error.addEntry();
+                    error.addCurrentLocationToErrorStack();
                     INFO(error.getFullErrorMessage());
                     REQUIRE(false);
                 }
@@ -1673,7 +1673,7 @@ TEST_CASE("use `keepWorld` attachment rule for scale") {
     auto result = Window::getBuilder().withVisibility(false).build();
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
-        error.addEntry();
+        error.addCurrentLocationToErrorStack();
         INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }
@@ -1696,7 +1696,7 @@ TEST_CASE("serialize and deserialize spatial node tree") {
             createWorld([&](const std::optional<Error>& optionalWorldError) {
                 if (optionalWorldError.has_value()) {
                     auto error = optionalWorldError.value();
-                    error.addEntry();
+                    error.addCurrentLocationToErrorStack();
                     INFO(error.getFullErrorMessage());
                     REQUIRE(false);
                 }
@@ -1740,7 +1740,7 @@ TEST_CASE("serialize and deserialize spatial node tree") {
                     const auto optionalError = getWorldRootNode()->serializeNodeTree(pathToFile, false);
                     if (optionalError.has_value()) {
                         auto err = optionalError.value();
-                        err.addEntry();
+                        err.addCurrentLocationToErrorStack();
                         INFO(err.getFullErrorMessage());
                         REQUIRE(false);
                     }
@@ -1753,7 +1753,7 @@ TEST_CASE("serialize and deserialize spatial node tree") {
                     const auto deserializeResult = Node::deserializeNodeTree(pathToFile);
                     if (std::holds_alternative<Error>(deserializeResult)) {
                         auto err = std::get<Error>(deserializeResult);
-                        err.addEntry();
+                        err.addCurrentLocationToErrorStack();
                         INFO(err.getFullErrorMessage());
                         REQUIRE(false);
                     }
@@ -1804,7 +1804,7 @@ TEST_CASE("serialize and deserialize spatial node tree") {
     auto result = Window::getBuilder().withVisibility(false).build();
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
-        error.addEntry();
+        error.addCurrentLocationToErrorStack();
         INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }
@@ -1851,7 +1851,7 @@ TEST_CASE("using `reset`/`keepRelative`/`keepWorld` attachment rule for location
             createWorld([&](const std::optional<Error>& optionalWorldError) {
                 if (optionalWorldError.has_value()) {
                     auto error = optionalWorldError.value();
-                    error.addEntry();
+                    error.addCurrentLocationToErrorStack();
                     INFO(error.getFullErrorMessage());
                     REQUIRE(false);
                 }
@@ -1881,7 +1881,7 @@ TEST_CASE("using `reset`/`keepRelative`/`keepWorld` attachment rule for location
     auto result = Window::getBuilder().withVisibility(false).build();
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
-        error.addEntry();
+        error.addCurrentLocationToErrorStack();
         INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }

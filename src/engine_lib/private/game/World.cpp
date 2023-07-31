@@ -67,7 +67,7 @@ namespace ne {
         auto result = Node::deserializeNodeTree(pathToNodeTree);
         if (std::holds_alternative<Error>(result)) {
             auto error = std::get<Error>(result);
-            error.addEntry();
+            error.addCurrentLocationToErrorStack();
             return error;
         }
 

@@ -36,7 +36,7 @@ namespace ne {
             additionalVertexShaderMacros,
             additionalPixelShaderMacros);
         if (optionalError.has_value()) {
-            optionalError->addEntry();
+            optionalError->addCurrentLocationToErrorStack();
             return optionalError.value();
         }
 
@@ -106,7 +106,7 @@ namespace ne {
             mtxInternalResources.second.additionalPixelShaderMacros);
         if (optionalError.has_value()) {
             auto error = optionalError.value();
-            error.addEntry();
+            error.addCurrentLocationToErrorStack();
             return error;
         }
 
@@ -169,7 +169,7 @@ namespace ne {
         auto shaderBytecode = pVertexShader->getCompiledBlob();
         if (std::holds_alternative<Error>(shaderBytecode)) [[unlikely]] {
             auto err = std::get<Error>(std::move(shaderBytecode));
-            err.addEntry();
+            err.addCurrentLocationToErrorStack();
             return err;
         }
         const ComPtr<IDxcBlob> pVertexShaderBytecode = std::get<ComPtr<IDxcBlob>>(std::move(shaderBytecode));
@@ -178,7 +178,7 @@ namespace ne {
         shaderBytecode = pPixelShader->getCompiledBlob();
         if (std::holds_alternative<Error>(shaderBytecode)) [[unlikely]] {
             auto err = std::get<Error>(std::move(shaderBytecode));
-            err.addEntry();
+            err.addCurrentLocationToErrorStack();
             return err;
         }
         const ComPtr<IDxcBlob> pPixelShaderBytecode = std::get<ComPtr<IDxcBlob>>(std::move(shaderBytecode));
@@ -188,7 +188,7 @@ namespace ne {
             pDirectXRenderer, pDirectXRenderer->getD3dDevice(), pVertexShader.get(), pPixelShader.get());
         if (std::holds_alternative<Error>(result)) [[unlikely]] {
             auto err = std::get<Error>(std::move(result));
-            err.addEntry();
+            err.addCurrentLocationToErrorStack();
             return err;
         }
         auto generatedRootSignature = std::get<RootSignatureGenerator::Generated>(std::move(result));

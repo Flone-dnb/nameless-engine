@@ -59,7 +59,7 @@ namespace ne {
         // Assign descriptor.
         auto optionalError = pRtvHeap->assignDescriptor(pCreatedResource.get(), DescriptorType::RTV);
         if (optionalError.has_value()) {
-            optionalError->addEntry();
+            optionalError->addCurrentLocationToErrorStack();
             return optionalError.value();
         }
 
@@ -145,7 +145,7 @@ namespace ne {
         // Assign descriptor.
         auto optionalError = pHeap->assignDescriptor(this, descriptorType);
         if (optionalError.has_value()) {
-            optionalError->addEntry();
+            optionalError->addCurrentLocationToErrorStack();
             return optionalError;
         }
 

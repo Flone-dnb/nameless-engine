@@ -21,7 +21,7 @@ TEST_CASE("create engine default materials") {
             createWorld([&](const std::optional<Error>& optionalError) {
                 if (optionalError.has_value()) {
                     auto error = optionalError.value();
-                    error.addEntry();
+                    error.addCurrentLocationToErrorStack();
                     INFO(error.getFullErrorMessage());
                     REQUIRE(false);
                 }
@@ -33,7 +33,7 @@ TEST_CASE("create engine default materials") {
                     false);
                 if (std::holds_alternative<Error>(resultOpaque)) {
                     Error error = std::get<Error>(std::move(resultOpaque));
-                    error.addEntry();
+                    error.addCurrentLocationToErrorStack();
                     INFO(error.getFullErrorMessage());
                     REQUIRE(false);
                 }
@@ -43,7 +43,7 @@ TEST_CASE("create engine default materials") {
                     true);
                 if (std::holds_alternative<Error>(resultTransparent)) {
                     Error error = std::get<Error>(std::move(resultTransparent));
-                    error.addEntry();
+                    error.addCurrentLocationToErrorStack();
                     INFO(error.getFullErrorMessage());
                     REQUIRE(false);
                 }
@@ -84,7 +84,7 @@ TEST_CASE("create engine default materials") {
                 createWorld([&](const std::optional<Error>& optionalError) {
                     if (optionalError.has_value()) {
                         auto error = optionalError.value();
-                        error.addEntry();
+                        error.addCurrentLocationToErrorStack();
                         INFO(error.getFullErrorMessage());
                         REQUIRE(false);
                     }
@@ -102,7 +102,7 @@ TEST_CASE("create engine default materials") {
     auto result = Window::getBuilder().withVisibility(false).build();
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
-        error.addEntry();
+        error.addCurrentLocationToErrorStack();
         INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }
@@ -125,7 +125,7 @@ TEST_CASE("serialize and deserialize Material") {
             createWorld([&](const std::optional<Error>& optionalError) {
                 if (optionalError.has_value()) {
                     auto error = optionalError.value();
-                    error.addEntry();
+                    error.addCurrentLocationToErrorStack();
                     INFO(error.getFullErrorMessage());
                     REQUIRE(false);
                 }
@@ -143,7 +143,7 @@ TEST_CASE("serialize and deserialize Material") {
                         "My Material");
                     if (std::holds_alternative<Error>(result)) {
                         Error error = std::get<Error>(std::move(result));
-                        error.addEntry();
+                        error.addCurrentLocationToErrorStack();
                         INFO(error.getFullErrorMessage());
                         REQUIRE(false);
                     }
@@ -153,7 +153,7 @@ TEST_CASE("serialize and deserialize Material") {
                     auto optionalError = pMaterial->serialize(pathToFileInTemp, false);
                     if (optionalError.has_value()) {
                         auto error = optionalError.value();
-                        error.addEntry();
+                        error.addCurrentLocationToErrorStack();
                         INFO(error.getFullErrorMessage());
                         REQUIRE(false);
                     }
@@ -166,7 +166,7 @@ TEST_CASE("serialize and deserialize Material") {
                     auto result = Serializable::deserialize<std::shared_ptr, Material>(pathToFileInTemp);
                     if (std::holds_alternative<Error>(result)) {
                         Error error = std::get<Error>(std::move(result));
-                        error.addEntry();
+                        error.addCurrentLocationToErrorStack();
                         INFO(error.getFullErrorMessage());
                         REQUIRE(false);
                     }
@@ -194,7 +194,7 @@ TEST_CASE("serialize and deserialize Material") {
     auto result = Window::getBuilder().withVisibility(false).build();
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
-        error.addEntry();
+        error.addCurrentLocationToErrorStack();
         INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }
@@ -247,7 +247,7 @@ TEST_CASE("unused materials unload shaders from memory") {
                     createWorld([this](const std::optional<Error>& optionalError) {
                         if (optionalError.has_value()) {
                             auto error = optionalError.value();
-                            error.addEntry();
+                            error.addCurrentLocationToErrorStack();
                             INFO(error.getFullErrorMessage());
                             REQUIRE(false);
                         }
@@ -257,7 +257,7 @@ TEST_CASE("unused materials unload shaders from memory") {
                             Material::create("test.custom_mesh_node.vs", "test.custom_mesh_node.ps", false);
                         if (std::holds_alternative<Error>(result)) {
                             Error error = std::get<Error>(std::move(result));
-                            error.addEntry();
+                            error.addCurrentLocationToErrorStack();
                             INFO(error.getFullErrorMessage());
                             REQUIRE(false);
                         }
@@ -310,7 +310,7 @@ TEST_CASE("unused materials unload shaders from memory") {
                 });
             if (optionalError.has_value()) {
                 auto error = optionalError.value();
-                error.addEntry();
+                error.addCurrentLocationToErrorStack();
                 INFO(error.getFullErrorMessage());
                 REQUIRE(false);
             }
@@ -321,7 +321,7 @@ TEST_CASE("unused materials unload shaders from memory") {
     auto result = Window::getBuilder().withVisibility(false).build();
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
-        error.addEntry();
+        error.addCurrentLocationToErrorStack();
         INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }

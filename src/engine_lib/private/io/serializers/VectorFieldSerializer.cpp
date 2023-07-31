@@ -121,7 +121,7 @@ namespace ne {
         auto result = pSerializable->serialize(data);                                                        \
         if (std::holds_alternative<Error>(result)) [[unlikely]] {                                            \
             auto error = std::get<Error>(std::move(result));                                                 \
-            error.addEntry();                                                                                \
+            error.addCurrentLocationToErrorStack();                                                          \
             return error;                                                                                    \
         }                                                                                                    \
         table[fmt::format("{}[{}]", pFieldName, i)] = std::move(data);                                       \
@@ -332,7 +332,7 @@ namespace ne {
                 reinterpret_cast<std::vector<MeshVertex>*>(pField->getPtrUnsafe(pFieldOwner)), pTomlValue);
             if (optionalError.has_value()) {
                 auto error = optionalError.value();
-                error.addEntry();
+                error.addCurrentLocationToErrorStack();
                 return error;
             }
         } else if (
@@ -357,7 +357,7 @@ namespace ne {
                         Serializable::deserialize<std::shared_ptr, Serializable>(value, customAttributes);
                     if (std::holds_alternative<Error>(result)) {
                         auto error = std::get<Error>(std::move(result));
-                        error.addEntry();
+                        error.addCurrentLocationToErrorStack();
                         return error;
                     }
 
@@ -428,7 +428,7 @@ namespace ne {
             pFromArray->at(i).get(), pToArray->at(i).get(), true);                                           \
         if (optionalError.has_value()) {                                                                     \
             auto error = optionalError.value();                                                              \
-            error.addEntry();                                                                                \
+            error.addCurrentLocationToErrorStack();                                                          \
             return error;                                                                                    \
         }                                                                                                    \
     }

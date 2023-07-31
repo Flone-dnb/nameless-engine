@@ -18,7 +18,7 @@ namespace ne {
             auto result = DirectXResourceManager::create(pDirectXRenderer);
             if (std::holds_alternative<Error>(result)) {
                 auto error = std::get<Error>(std::move(result));
-                error.addEntry();
+                error.addCurrentLocationToErrorStack();
                 return error;
             }
 
@@ -31,7 +31,7 @@ namespace ne {
             auto result = VulkanResourceManager::create(pVulkanRenderer);
             if (std::holds_alternative<Error>(result)) {
                 auto error = std::get<Error>(std::move(result));
-                error.addEntry();
+                error.addCurrentLocationToErrorStack();
                 return error;
             }
 

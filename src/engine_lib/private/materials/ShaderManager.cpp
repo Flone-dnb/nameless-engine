@@ -105,7 +105,7 @@ namespace ne {
         auto optional = configManager.loadFile(configPath);
         if (optional.has_value()) {
             auto err = std::move(optional.value());
-            err.addEntry();
+            err.addCurrentLocationToErrorStack();
             // don't show message as it's not a critical error
             Logger::get().error(err.getFullErrorMessage());
             return;
@@ -151,7 +151,7 @@ namespace ne {
             // Load global shader cache metadata file.
             auto result = configManager.loadFile(shaderParamsPath);
             if (result.has_value()) [[unlikely]] {
-                result->addEntry();
+                result->addCurrentLocationToErrorStack();
                 return result.value();
             }
 
@@ -246,7 +246,7 @@ namespace ne {
             // Save new global shader cache metadata file.
             auto result = configManager.saveFile(shaderParamsPath, false);
             if (result.has_value()) [[unlikely]] {
-                result->addEntry();
+                result->addCurrentLocationToErrorStack();
                 return result.value();
             }
         }
@@ -271,7 +271,7 @@ namespace ne {
         auto optional = configManager.saveFile(configPath, false);
         if (optional.has_value()) {
             auto err = std::move(optional.value());
-            err.addEntry();
+            err.addCurrentLocationToErrorStack();
             // don't show message as it's not a critical error
             Logger::get().error(err.getFullErrorMessage());
         }
@@ -570,7 +570,7 @@ namespace ne {
             if (std::holds_alternative<Error>(result)) {
                 // Cache is corrupted / invalid.
                 auto err = std::get<Error>(std::move(result));
-                err.addEntry();
+                err.addCurrentLocationToErrorStack();
 
                 // Not a critical error.
                 if (cacheInvalidationReason.has_value()) {
@@ -602,7 +602,7 @@ namespace ne {
                 } else {
                     // Internal error.
                     auto err = std::get<Error>(std::move(result));
-                    err.addEntry();
+                    err.addCurrentLocationToErrorStack();
                     Logger::get().error(fmt::format(
                         "shader compilation query #{}: "
                         "an error occurred during shader compilation: {}",

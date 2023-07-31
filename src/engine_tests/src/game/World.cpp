@@ -56,7 +56,7 @@ TEST_CASE("create and destroy world") {
             createWorld([&](const std::optional<Error>& optionalError) {
                 if (optionalError.has_value()) {
                     auto error = optionalError.value();
-                    error.addEntry();
+                    error.addCurrentLocationToErrorStack();
                     INFO(error.getFullErrorMessage());
                     REQUIRE(false);
                 }
@@ -77,7 +77,7 @@ TEST_CASE("create and destroy world") {
     auto result = Window::getBuilder().withVisibility(false).build();
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
-        error.addEntry();
+        error.addCurrentLocationToErrorStack();
         INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }
@@ -97,7 +97,7 @@ TEST_CASE("test world time") {
             createWorld([&](const std::optional<Error>& optionalError) {
                 if (optionalError.has_value()) {
                     auto error = optionalError.value();
-                    error.addEntry();
+                    error.addCurrentLocationToErrorStack();
                     INFO(error.getFullErrorMessage());
                     REQUIRE(false);
                 }
@@ -124,7 +124,7 @@ TEST_CASE("test world time") {
     auto result = Window::getBuilder().withVisibility(false).build();
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
-        error.addEntry();
+        error.addCurrentLocationToErrorStack();
         INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }
@@ -145,7 +145,7 @@ TEST_CASE("create world and switch to another world") {
             createWorld([&](const std::optional<Error>& optionalError) {
                 if (optionalError.has_value()) {
                     auto error = optionalError.value();
-                    error.addEntry();
+                    error.addCurrentLocationToErrorStack();
                     INFO(error.getFullErrorMessage());
                     REQUIRE(false);
                 }
@@ -159,7 +159,7 @@ TEST_CASE("create world and switch to another world") {
                 createWorld([&](const std::optional<Error>& optionalError) {
                     if (optionalError.has_value()) {
                         auto error = optionalError.value();
-                        error.addEntry();
+                        error.addCurrentLocationToErrorStack();
                         INFO(error.getFullErrorMessage());
                         REQUIRE(false);
                     }
@@ -178,7 +178,7 @@ TEST_CASE("create world and switch to another world") {
     auto result = Window::getBuilder().withVisibility(false).build();
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
-        error.addEntry();
+        error.addCurrentLocationToErrorStack();
         INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }
@@ -198,7 +198,7 @@ TEST_CASE("create, serialize and deserialize world") {
             createWorld([&](const std::optional<Error>& optionalError) {
                 if (optionalError.has_value()) {
                     auto error = optionalError.value();
-                    error.addEntry();
+                    error.addCurrentLocationToErrorStack();
                     INFO(error.getFullErrorMessage());
                     REQUIRE(false);
                 }
@@ -218,7 +218,7 @@ TEST_CASE("create, serialize and deserialize world") {
                     getWorldRootNode()->serializeNodeTree(fullPathToNodeTreeFile, false);
                 if (optionalSerializationError.has_value()) {
                     auto error = optionalSerializationError.value();
-                    error.addEntry();
+                    error.addCurrentLocationToErrorStack();
                     INFO(error.getFullErrorMessage());
                     REQUIRE(false);
                 }
@@ -227,7 +227,7 @@ TEST_CASE("create, serialize and deserialize world") {
                 createWorld([&](const std::optional<Error>& optionalWorldError) {
                     if (optionalWorldError.has_value()) {
                         auto error = optionalWorldError.value();
-                        error.addEntry();
+                        error.addCurrentLocationToErrorStack();
                         INFO(error.getFullErrorMessage());
                         REQUIRE(false);
                     }
@@ -237,7 +237,7 @@ TEST_CASE("create, serialize and deserialize world") {
                         [&](const std::optional<Error>& optionalWorldError) {
                             if (optionalWorldError.has_value()) {
                                 auto error = optionalWorldError.value();
-                                error.addEntry();
+                                error.addCurrentLocationToErrorStack();
                                 INFO(error.getFullErrorMessage());
                                 REQUIRE(false);
                             }
@@ -268,7 +268,7 @@ TEST_CASE("create, serialize and deserialize world") {
     auto result = Window::getBuilder().withVisibility(false).build();
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
-        error.addEntry();
+        error.addCurrentLocationToErrorStack();
         INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }
@@ -288,7 +288,7 @@ TEST_CASE("check that node is spawned") {
             createWorld([&](const std::optional<Error>& optionalError) {
                 if (optionalError.has_value()) {
                     auto error = optionalError.value();
-                    error.addEntry();
+                    error.addCurrentLocationToErrorStack();
                     INFO(error.getFullErrorMessage());
                     REQUIRE(false);
                 }
@@ -316,7 +316,7 @@ TEST_CASE("check that node is spawned") {
     auto result = Window::getBuilder().withVisibility(false).build();
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
-        error.addEntry();
+        error.addCurrentLocationToErrorStack();
         INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }

@@ -25,7 +25,7 @@ TEST_CASE("create simple config file") {
 
         auto res = manager.saveFile(ConfigCategory::SETTINGS, sTestConfigFileName);
         if (res.has_value()) {
-            res->addEntry();
+            res->addCurrentLocationToErrorStack();
             INFO(res->getFullErrorMessage());
             REQUIRE(false);
         }
@@ -39,7 +39,7 @@ TEST_CASE("create simple config file") {
         ConfigManager manager;
         auto res = manager.loadFile(ConfigCategory::SETTINGS, sTestConfigFileName);
         if (res.has_value()) {
-            res->addEntry();
+            res->addCurrentLocationToErrorStack();
             INFO(res->getFullErrorMessage());
             REQUIRE(false);
         }
@@ -83,7 +83,7 @@ TEST_CASE("create simple config file using path") {
 
         auto res = manager.saveFile(testConfigPath, false);
         if (res.has_value()) {
-            res->addEntry();
+            res->addCurrentLocationToErrorStack();
             INFO(res->getFullErrorMessage());
             REQUIRE(false);
         }
@@ -98,7 +98,7 @@ TEST_CASE("create simple config file using path") {
         ConfigManager manager;
         auto res = manager.loadFile(testConfigPath);
         if (res.has_value()) {
-            res->addEntry();
+            res->addCurrentLocationToErrorStack();
             INFO(res->getFullErrorMessage());
             REQUIRE(false);
         }
@@ -133,7 +133,7 @@ TEST_CASE("create simple config file using non ASCII content") {
 
         auto res = manager.saveFile(ConfigCategory::SETTINGS, sTestConfigFileName);
         if (res.has_value()) {
-            res->addEntry();
+            res->addCurrentLocationToErrorStack();
             INFO(res->getFullErrorMessage());
             REQUIRE(false);
         }
@@ -147,7 +147,7 @@ TEST_CASE("create simple config file using non ASCII content") {
         ConfigManager manager;
         auto res = manager.loadFile(ConfigCategory::SETTINGS, sTestConfigFileName);
         if (res.has_value()) {
-            res->addEntry();
+            res->addCurrentLocationToErrorStack();
             INFO(res->getFullErrorMessage());
             REQUIRE(false);
         }
@@ -173,7 +173,7 @@ TEST_CASE("access field that does not exist") {
 
         auto res = manager.saveFile(ConfigCategory::SETTINGS, sTestConfigFileName);
         if (res.has_value()) {
-            res->addEntry();
+            res->addCurrentLocationToErrorStack();
             INFO(res->getFullErrorMessage());
             REQUIRE(false);
         }
@@ -187,7 +187,7 @@ TEST_CASE("access field that does not exist") {
         ConfigManager manager;
         auto res = manager.loadFile(ConfigCategory::SETTINGS, sTestConfigFileName);
         if (res.has_value()) {
-            res->addEntry();
+            res->addCurrentLocationToErrorStack();
             INFO(res->getFullErrorMessage());
             REQUIRE(false);
         }
@@ -214,7 +214,7 @@ TEST_CASE("same keys in different sections") {
 
         auto res = manager.saveFile(ConfigCategory::SETTINGS, sTestConfigFileName);
         if (res.has_value()) {
-            res->addEntry();
+            res->addCurrentLocationToErrorStack();
             INFO(res->getFullErrorMessage());
             REQUIRE(false);
         }
@@ -228,7 +228,7 @@ TEST_CASE("same keys in different sections") {
         ConfigManager manager;
         auto res = manager.loadFile(ConfigCategory::SETTINGS, sTestConfigFileName);
         if (res.has_value()) {
-            res->addEntry();
+            res->addCurrentLocationToErrorStack();
             INFO(res->getFullErrorMessage());
             REQUIRE(false);
         }
@@ -258,7 +258,7 @@ TEST_CASE("test backup file") {
 
         auto res = manager.saveFile(ConfigCategory::PROGRESS, sTestConfigFileName);
         if (res.has_value()) {
-            res->addEntry();
+            res->addCurrentLocationToErrorStack();
             INFO(res->getFullErrorMessage());
             REQUIRE(false);
         }
@@ -275,7 +275,7 @@ TEST_CASE("test backup file") {
         ConfigManager manager;
         auto res = manager.loadFile(ConfigCategory::PROGRESS, sTestConfigFileName);
         if (res.has_value()) {
-            res->addEntry();
+            res->addCurrentLocationToErrorStack();
             INFO(res->getFullErrorMessage());
             REQUIRE(false);
         }
@@ -304,7 +304,7 @@ TEST_CASE("remove file") {
 
     auto res = manager.saveFile(ConfigCategory::PROGRESS, sTestConfigFileName);
     if (res.has_value()) {
-        res->addEntry();
+        res->addCurrentLocationToErrorStack();
         INFO(res->getFullErrorMessage());
         REQUIRE(false);
     }
@@ -318,7 +318,7 @@ TEST_CASE("remove file") {
     // Create another file.
     res = manager.saveFile(ConfigCategory::PROGRESS, sSecondFileName);
     if (res.has_value()) {
-        res->addEntry();
+        res->addCurrentLocationToErrorStack();
         INFO(res->getFullErrorMessage());
         REQUIRE(false);
     }
@@ -336,7 +336,7 @@ TEST_CASE("remove file") {
     // Remove the first file.
     res = ConfigManager::removeFile(ConfigCategory::PROGRESS, sTestConfigFileName);
     if (res.has_value()) {
-        res->addEntry();
+        res->addCurrentLocationToErrorStack();
         INFO(res->getFullErrorMessage());
         REQUIRE(false);
     }
@@ -367,7 +367,7 @@ TEST_CASE("get all config files of category (with backup test)") {
 
     auto res = manager.saveFile(ConfigCategory::PROGRESS, sTestConfigFileName);
     if (res.has_value()) {
-        res->addEntry();
+        res->addCurrentLocationToErrorStack();
         INFO(res->getFullErrorMessage());
         REQUIRE(false);
     }
@@ -389,7 +389,7 @@ TEST_CASE("get all config files of category (with backup test)") {
 
     res = manager.saveFile(ConfigCategory::PROGRESS, sSecondFileName);
     if (res.has_value()) {
-        res->addEntry();
+        res->addCurrentLocationToErrorStack();
         INFO(res->getFullErrorMessage());
         REQUIRE(false);
     }

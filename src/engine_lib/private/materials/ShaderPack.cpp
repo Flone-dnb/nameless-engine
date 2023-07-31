@@ -80,7 +80,7 @@ namespace ne {
 
                 // Return error that specifies that cache is invalid.
                 auto err = std::get<Error>(std::move(result));
-                err.addEntry();
+                err.addCurrentLocationToErrorStack();
                 return err;
             }
 

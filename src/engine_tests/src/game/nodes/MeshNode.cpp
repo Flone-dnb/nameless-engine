@@ -20,7 +20,7 @@ TEST_CASE("serialize and deserialize MeshNode") {
             createWorld([&](const std::optional<Error>& optionalWorldError) {
                 if (optionalWorldError.has_value()) {
                     auto error = optionalWorldError.value();
-                    error.addEntry();
+                    error.addCurrentLocationToErrorStack();
                     INFO(error.getFullErrorMessage());
                     REQUIRE(false);
                 }
@@ -47,7 +47,7 @@ TEST_CASE("serialize and deserialize MeshNode") {
                         "My Material");
                     if (std::holds_alternative<Error>(result)) {
                         Error error = std::get<Error>(std::move(result));
-                        error.addEntry();
+                        error.addCurrentLocationToErrorStack();
                         INFO(error.getFullErrorMessage());
                         REQUIRE(false);
                     }
@@ -67,7 +67,7 @@ TEST_CASE("serialize and deserialize MeshNode") {
                     auto optionalError = pMeshNode->serialize(pathToFileInTemp, true); // use backup file
                     if (optionalError.has_value()) {
                         auto error = optionalError.value();
-                        error.addEntry();
+                        error.addCurrentLocationToErrorStack();
                         INFO(error.getFullErrorMessage());
                         REQUIRE(false);
                     }
@@ -88,7 +88,7 @@ TEST_CASE("serialize and deserialize MeshNode") {
                     auto result = Serializable::deserialize<gc, MeshNode>(pathToFileInTemp);
                     if (std::holds_alternative<Error>(result)) {
                         Error error = std::get<Error>(std::move(result));
-                        error.addEntry();
+                        error.addCurrentLocationToErrorStack();
                         INFO(error.getFullErrorMessage());
                         REQUIRE(false);
                     }
@@ -131,7 +131,7 @@ TEST_CASE("serialize and deserialize MeshNode") {
     auto result = Window::getBuilder().withVisibility(false).build();
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
-        error.addEntry();
+        error.addCurrentLocationToErrorStack();
         INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }
@@ -167,7 +167,7 @@ TEST_CASE("serialize and deserialize array of mesh vertices") {
     auto optionalError = vertices.serialize(pathToFileInTemp, false);
     if (optionalError.has_value()) {
         auto error = optionalError.value();
-        error.addEntry();
+        error.addCurrentLocationToErrorStack();
         INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }
@@ -176,7 +176,7 @@ TEST_CASE("serialize and deserialize array of mesh vertices") {
     auto result = Serializable::deserialize<std::shared_ptr, MeshVertices>(pathToFileInTemp);
     if (std::holds_alternative<Error>(result)) {
         auto error = std::get<Error>(std::move(result));
-        error.addEntry();
+        error.addCurrentLocationToErrorStack();
         INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }
@@ -207,7 +207,7 @@ TEST_CASE("serialize and deserialize MeshNode as part of a node tree") {
             createWorld([&](const std::optional<Error>& optionalWorldError) {
                 if (optionalWorldError.has_value()) {
                     auto error = optionalWorldError.value();
-                    error.addEntry();
+                    error.addCurrentLocationToErrorStack();
                     INFO(error.getFullErrorMessage());
                     REQUIRE(false);
                 }
@@ -234,7 +234,7 @@ TEST_CASE("serialize and deserialize MeshNode as part of a node tree") {
                         "My Material");
                     if (std::holds_alternative<Error>(result)) {
                         Error error = std::get<Error>(std::move(result));
-                        error.addEntry();
+                        error.addCurrentLocationToErrorStack();
                         INFO(error.getFullErrorMessage());
                         REQUIRE(false);
                     }
@@ -257,7 +257,7 @@ TEST_CASE("serialize and deserialize MeshNode as part of a node tree") {
                         getWorldRootNode()->serializeNodeTree(pathToFileInTemp, true); // use backup file
                     if (optionalError.has_value()) {
                         auto error = optionalError.value();
-                        error.addEntry();
+                        error.addCurrentLocationToErrorStack();
                         INFO(error.getFullErrorMessage());
                         REQUIRE(false);
                     }
@@ -277,7 +277,7 @@ TEST_CASE("serialize and deserialize MeshNode as part of a node tree") {
                     auto result = Node::deserializeNodeTree(pathToFileInTemp);
                     if (std::holds_alternative<Error>(result)) {
                         Error error = std::get<Error>(std::move(result));
-                        error.addEntry();
+                        error.addCurrentLocationToErrorStack();
                         INFO(error.getFullErrorMessage());
                         REQUIRE(false);
                     }
@@ -323,7 +323,7 @@ TEST_CASE("serialize and deserialize MeshNode as part of a node tree") {
     auto result = Window::getBuilder().withVisibility(false).build();
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
-        error.addEntry();
+        error.addCurrentLocationToErrorStack();
         INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }
@@ -346,7 +346,7 @@ TEST_CASE("serialize and deserialize MeshNode as part of a node tree with origin
             createWorld([&](const std::optional<Error>& optionalWorldError) {
                 if (optionalWorldError.has_value()) {
                     auto error = optionalWorldError.value();
-                    error.addEntry();
+                    error.addCurrentLocationToErrorStack();
                     INFO(error.getFullErrorMessage());
                     REQUIRE(false);
                 }
@@ -377,7 +377,7 @@ TEST_CASE("serialize and deserialize MeshNode as part of a node tree with origin
                         "My Material");
                     if (std::holds_alternative<Error>(result)) {
                         Error error = std::get<Error>(std::move(result));
-                        error.addEntry();
+                        error.addCurrentLocationToErrorStack();
                         INFO(error.getFullErrorMessage());
                         REQUIRE(false);
                     }
@@ -397,7 +397,7 @@ TEST_CASE("serialize and deserialize MeshNode as part of a node tree with origin
                     auto optionalError = pMeshNode->serialize(pathToNodeFile, true); // use backup file
                     if (optionalError.has_value()) {
                         auto error = optionalError.value();
-                        error.addEntry();
+                        error.addCurrentLocationToErrorStack();
                         INFO(error.getFullErrorMessage());
                         REQUIRE(false);
                     }
@@ -408,7 +408,7 @@ TEST_CASE("serialize and deserialize MeshNode as part of a node tree with origin
                     auto result = Serializable::deserialize<gc, MeshNode>(pathToNodeFile);
                     if (std::holds_alternative<Error>(result)) {
                         auto error = std::get<Error>(result);
-                        error.addEntry();
+                        error.addCurrentLocationToErrorStack();
                         INFO(error.getFullErrorMessage());
                         REQUIRE(false);
                     }
@@ -422,7 +422,7 @@ TEST_CASE("serialize and deserialize MeshNode as part of a node tree with origin
                         getWorldRootNode()->serializeNodeTree(pathToFileInTemp, true); // use backup file
                     if (optionalError.has_value()) {
                         auto error = optionalError.value();
-                        error.addEntry();
+                        error.addCurrentLocationToErrorStack();
                         INFO(error.getFullErrorMessage());
                         REQUIRE(false);
                     }
@@ -462,7 +462,7 @@ TEST_CASE("serialize and deserialize MeshNode as part of a node tree with origin
                         getWorldRootNode()->serializeNodeTree(pathToFileInTemp, true); // use backup file
                     if (optionalError.has_value()) {
                         auto error = optionalError.value();
-                        error.addEntry();
+                        error.addCurrentLocationToErrorStack();
                         INFO(error.getFullErrorMessage());
                         REQUIRE(false);
                     }
@@ -481,7 +481,7 @@ TEST_CASE("serialize and deserialize MeshNode as part of a node tree with origin
                     auto result = Node::deserializeNodeTree(pathToFileInTemp);
                     if (std::holds_alternative<Error>(result)) {
                         Error error = std::get<Error>(std::move(result));
-                        error.addEntry();
+                        error.addCurrentLocationToErrorStack();
                         INFO(error.getFullErrorMessage());
                         REQUIRE(false);
                     }
@@ -532,7 +532,7 @@ TEST_CASE("serialize and deserialize MeshNode as part of a node tree with origin
     auto result = Window::getBuilder().withVisibility(false).build();
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
-        error.addEntry();
+        error.addCurrentLocationToErrorStack();
         INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }
@@ -555,7 +555,7 @@ TEST_CASE("MeshNode's meshdata deserialization backwards compatibility") {
             createWorld([&](const std::optional<Error>& optionalWorldError) {
                 if (optionalWorldError.has_value()) {
                     auto error = optionalWorldError.value();
-                    error.addEntry();
+                    error.addCurrentLocationToErrorStack();
                     INFO(error.getFullErrorMessage());
                     REQUIRE(false);
                 }
@@ -577,7 +577,7 @@ TEST_CASE("MeshNode's meshdata deserialization backwards compatibility") {
                 auto result = Serializable::deserialize<gc, MeshNode>(pathToFileInTemp);
                 if (std::holds_alternative<Error>(result)) {
                     Error error = std::get<Error>(std::move(result));
-                    error.addEntry();
+                    error.addCurrentLocationToErrorStack();
                     INFO(error.getFullErrorMessage());
                     REQUIRE(false);
                 }
@@ -602,7 +602,7 @@ TEST_CASE("MeshNode's meshdata deserialization backwards compatibility") {
     auto result = Window::getBuilder().withVisibility(false).build();
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
-        error.addEntry();
+        error.addCurrentLocationToErrorStack();
         INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }
@@ -625,7 +625,7 @@ TEST_CASE("shader read/write resources exist only when MeshNode is spawned") {
             createWorld([&](const std::optional<Error>& optionalWorldError) {
                 if (optionalWorldError.has_value()) {
                     auto error = optionalWorldError.value();
-                    error.addEntry();
+                    error.addCurrentLocationToErrorStack();
                     INFO(error.getFullErrorMessage());
                     REQUIRE(false);
                 }
@@ -644,7 +644,7 @@ TEST_CASE("shader read/write resources exist only when MeshNode is spawned") {
                     "My Material");
                 if (std::holds_alternative<Error>(result)) {
                     Error error = std::get<Error>(std::move(result));
-                    error.addEntry();
+                    error.addCurrentLocationToErrorStack();
                     INFO(error.getFullErrorMessage());
                     REQUIRE(false);
                 }
@@ -729,7 +729,7 @@ TEST_CASE("shader read/write resources exist only when MeshNode is spawned") {
     auto result = Window::getBuilder().withVisibility(false).build();
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
-        error.addEntry();
+        error.addCurrentLocationToErrorStack();
         INFO(error.getFullErrorMessage());
         REQUIRE(false);
     }

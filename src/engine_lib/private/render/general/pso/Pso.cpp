@@ -91,7 +91,7 @@ namespace ne {
                 additionalPixelShaderMacros);
             if (std::holds_alternative<Error>(result)) {
                 auto error = std::get<Error>(std::move(result));
-                error.addEntry();
+                error.addCurrentLocationToErrorStack();
                 return error;
             }
 

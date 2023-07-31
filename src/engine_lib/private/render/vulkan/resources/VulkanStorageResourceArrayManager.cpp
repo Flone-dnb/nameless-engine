@@ -75,7 +75,7 @@ namespace ne {
                                                                   // `getFrameResourcesCount` slots at once
             if (std::holds_alternative<Error>(result)) [[unlikely]] {
                 auto error = std::get<Error>(std::move(result));
-                error.addEntry();
+                error.addCurrentLocationToErrorStack();
                 return error;
             }
             mtxGlslShaderCpuWriteResources.second[pShaderResource->getResourceName()] =
@@ -96,7 +96,7 @@ namespace ne {
         auto result = it->second->insert(pShaderResource);
         if (std::holds_alternative<Error>(result)) [[unlikely]] {
             auto error = std::get<Error>(std::move(result));
-            error.addEntry();
+            error.addCurrentLocationToErrorStack();
             return error;
         }
 

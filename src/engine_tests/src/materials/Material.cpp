@@ -65,7 +65,8 @@ TEST_CASE("create engine default materials") {
                 pMeshNodeOpaque->setMeshData(meshData);
 
                 // There should be no PSOs created since no material is spawned.
-                REQUIRE(getWindow()->getRenderer()->getPsoManager()->getCreatedGraphicsPsoCount() == 0);
+                REQUIRE(
+                    getWindow()->getRenderer()->getPipelineManager()->getCreatedGraphicsPipelineCount() == 0);
 
                 // Spawn.
                 getWorldRootNode()->addChildNode(pMeshNodeOpaque);
@@ -73,12 +74,14 @@ TEST_CASE("create engine default materials") {
 
                 // Check everything.
                 REQUIRE(Material::getCurrentAliveMaterialCount() == 2);
-                REQUIRE(getWindow()->getRenderer()->getPsoManager()->getCreatedGraphicsPsoCount() == 2);
+                REQUIRE(
+                    getWindow()->getRenderer()->getPipelineManager()->getCreatedGraphicsPipelineCount() == 2);
 
                 // Despawn one node.
                 pMeshNodeOpaque->detachFromParentAndDespawn();
                 REQUIRE(Material::getCurrentAliveMaterialCount() == 2);
-                REQUIRE(getWindow()->getRenderer()->getPsoManager()->getCreatedGraphicsPsoCount() == 1);
+                REQUIRE(
+                    getWindow()->getRenderer()->getPipelineManager()->getCreatedGraphicsPipelineCount() == 1);
 
                 // Despawn all nodes.
                 createWorld([&](const std::optional<Error>& optionalError) {
@@ -90,7 +93,9 @@ TEST_CASE("create engine default materials") {
                     }
                     // Check that everything is cleaned up.
                     REQUIRE(Material::getCurrentAliveMaterialCount() == 0);
-                    REQUIRE(getWindow()->getRenderer()->getPsoManager()->getCreatedGraphicsPsoCount() == 0);
+                    REQUIRE(
+                        getWindow()->getRenderer()->getPipelineManager()->getCreatedGraphicsPipelineCount() ==
+                        0);
 
                     getWindow()->close();
                 });

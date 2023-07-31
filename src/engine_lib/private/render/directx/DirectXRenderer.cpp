@@ -11,10 +11,10 @@
 #include "io/Logger.h"
 #include "misc/Globals.h"
 #include "render/RenderSettings.h"
-#include "render/directx/pso/DirectXPso.h"
+#include "render/directx/pipeline/DirectXPso.h"
 #include "render/directx/resources/DirectXResourceManager.h"
 #include "materials/hlsl/HlslEngineShaders.hpp"
-#include "render/general/pso/PsoManager.h"
+#include "render/general/pipeline/PipelineManager.h"
 #include "render/directx/resources/DirectXResource.h"
 #include "materials/Material.h"
 #include "game/nodes/MeshNode.h"
@@ -377,7 +377,7 @@ namespace ne {
         pCommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
         // Iterate over all PSOs.
-        const auto pCreatedGraphicsPsos = getPsoManager()->getGraphicsPsos();
+        const auto pCreatedGraphicsPsos = getPipelineManager()->getGraphicsPipelines();
         for (auto& [mtx, map] : *pCreatedGraphicsPsos) {
             std::scoped_lock psoGuard(mtx);
 
@@ -401,7 +401,7 @@ namespace ne {
                         ->GetGPUVirtualAddress());
 
                 // Iterate over all materials that use this PSO.
-                const auto pMtxMaterials = pPso->getMaterialsThatUseThisPso();
+                const auto pMtxMaterials = pPso->getMaterialsThatUseThisPipeline();
                 std::scoped_lock materialsGuard(pMtxMaterials->first);
 
                 for (const auto& pMaterial : pMtxMaterials->second) {

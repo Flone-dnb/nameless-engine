@@ -8,60 +8,61 @@
 
 namespace ne {
     class Renderer;
-    class PsoManager;
+    class PipelineManager;
     class Material;
 
-    enum class PsoType : size_t {
+    enum class PipelineType : size_t {
+        // !!! order of entries in this enum defines draw order !!!
+
         PT_OPAQUE = 0,  // OPAQUE is a Windows macro, thus adding a prefix
         PT_TRANSPARENT, // TRANSPARENT is a Windows macro, thus adding a prefix
 
-        // !!! new PSO types go here !!!
+        // !!! new Pipeline types go here !!!
+
         // !!! order of entries in this enum defines draw order !!!
 
-        SIZE // marks the size of this enum, should be the last entry
+        SIZE ///< marks the size of this enum, should be the last entry
     };
 
-    /**
-     * Base class for render specific Pipeline State Objects (PSOs).
-     */
-    class Pso : public ShaderUser {
-        // Only PSO manager should be able to create PSO.
-        friend class PsoManager;
+    /** Base class for render specific pipeline objects. */
+    class Pipeline : public ShaderUser {
+        // Only Pipeline manager should be able to create Pipeline.
+        friend class PipelineManager;
 
-        // Will notify when material is no longer referencing a PSO.
-        friend class PsoSharedPtr;
+        // Will notify when material is no longer referencing a Pipeline.
+        friend class PipelineSharedPtr;
 
     public:
-        Pso() = delete;
-        Pso(const Pso&) = delete;
-        Pso& operator=(const Pso&) = delete;
+        Pipeline() = delete;
+        Pipeline(const Pipeline&) = delete;
+        Pipeline& operator=(const Pipeline&) = delete;
 
-        virtual ~Pso() override;
+        virtual ~Pipeline() override;
 
         /**
-         * Constructs a unique PSO identifier.
+         * Constructs a unique Pipeline identifier.
          *
-         * @param sVertexShaderName  Name of the vertex shader that PSO is using.
-         * @param sPixelShaderName   Name of the pixel shader that PSO is using.
-         * @param bUsePixelBlending  Whether the pixels of the mesh that uses the PSO should blend with
-         * existing pixels on back buffer or not (for transparency).
+         * @param sVertexShaderName  Name of the vertex shader that Pipeline is using.
+         * @param sPixelShaderName   Name of the pixel shader that Pipeline is using.
+         * @param bUsePixelBlending  Whether the pixels of the mesh that uses the Pipeline should blend
+         * with existing pixels on back buffer or not (for transparency).
          *
-         * @return Unique PSO identifier.
+         * @return Unique Pipeline identifier.
          */
-        static std::string constructUniquePsoIdentifier(
+        static std::string constructUniquePipelineIdentifier(
             const std::string& sVertexShaderName,
             const std::string& sPixelShaderName,
             bool bUsePixelBlending);
 
         /**
-         * Returns name of the vertex shader that this PSO is using.
+         * Returns name of the vertex shader that this Pipeline is using.
          *
          * @return Empty if not using vertex shader, otherwise name of the used vertex shader.
          */
         std::string getVertexShaderName();
 
         /**
-         * Returns name of the pixel shader that this PSO is using.
+         * Returns name of the pixel shader that this Pipeline is using.
          *
          * @return Empty if not using pixel shader, otherwise name of the used pixel shader.
          */
@@ -72,27 +73,28 @@ namespace ne {
          *
          * @param shaderType Shader type to get configuration of.
          *
-         * @return Empty if a shader of this type is not used by this PSO, otherwise shader configuration.
+         * @return Empty if a shader of this type is not used by this Pipeline, otherwise shader
+         * configuration.
          */
         std::optional<std::set<ShaderMacro>> getCurrentShaderConfiguration(ShaderType shaderType);
 
         /**
-         * Tells whether this PSO is using pixel blending or not.
+         * Tells whether this Pipeline is using pixel blending or not.
          *
-         * @return Whether this PSO is using pixel blending or not.
+         * @return Whether this Pipeline is using pixel blending or not.
          */
         bool isUsingPixelBlending() const;
 
         /**
-         * Returns an array of materials that currently reference this PSO.
+         * Returns an array of materials that currently reference this Pipeline.
          * Must be used with mutex.
          *
-         * @return Array of materials that currently reference this PSO.
+         * @return Array of materials that currently reference this Pipeline.
          */
-        std::pair<std::mutex, std::set<Material*>>* getMaterialsThatUseThisPso();
+        std::pair<std::mutex, std::set<Material*>>* getMaterialsThatUseThisPipeline();
 
         /**
-         * Returns renderer that owns this PSO.
+         * Returns renderer that owns this Pipeline.
          *
          * @return Renderer.
          */
@@ -100,17 +102,18 @@ namespace ne {
 
     protected:
         /**
-         * Creates a new uninitialized PSO.
+         * Creates a new uninitialized Pipeline.
          *
          * @param pRenderer         Current renderer.
-         * @param pPsoManager       PSO manager that owns this PSO.
+         * @param pPipelineManager  Pipeline manager that owns this Pipeline.
          * @param sVertexShaderName Name of the compiled vertex shader (see ShaderManager::compileShaders).
          * @param sPixelShaderName  Name of the compiled pixel shader (see ShaderManager::compileShaders).
-         * @param bUsePixelBlending Whether the pixels of the mesh that uses this PSO should blend with
-         * existing pixels on back buffer or not (for transparency).
+         * @param bUsePixelBlending Whether the pixels of the mesh that uses this Pipeline should blend
+         * with existing pixels on back buffer or not (for transparency).
          */
-        Pso(Renderer* pRenderer,
-            PsoManager* pPsoManager,
+        Pipeline(
+            Renderer* pRenderer,
+            PipelineManager* pPipelineManager,
             const std::string& sVertexShaderName,
             const std::string& sPixelShaderName,
             bool bUsePixelBlending);
@@ -126,20 +129,20 @@ namespace ne {
         void saveUsedShaderConfiguration(ShaderType shaderType, std::set<ShaderMacro>&& fullConfiguration);
 
         /**
-         * Returns unique identifier for this PSO.
+         * Returns unique identifier for this Pipeline.
          *
-         * @return Unique PSO identifier.
+         * @return Unique Pipeline identifier.
          */
-        std::string getUniquePsoIdentifier() const;
+        std::string getUniquePipelineIdentifier() const;
 
         /**
-         * Releases internal resources such as root signature, internal PSO, etc.
+         * Releases internal resources such as root signature, internal Pipeline, etc.
          *
-         * @warning Expects that the GPU is not referencing this PSO (command queue is empty) and
+         * @warning Expects that the GPU is not referencing this Pipeline (command queue is empty) and
          * that no drawing will occur until @ref restoreInternalResources is called.
          *
          * @remark Typically used before changing something (for ex. shader configuration, texture
-         * filtering), so that no PSO will reference old resources,
+         * filtering), so that no Pipeline will reference old resources,
          * to later call @ref restoreInternalResources that will recreate internal resources with new
          * render settings.
          *
@@ -159,23 +162,24 @@ namespace ne {
 
     private:
         /**
-         * Assigns vertex and pixel shaders to create a render specific graphics PSO (for usual rendering).
+         * Assigns vertex and pixel shaders to create a render specific graphics pipeline
+         * (for usual rendering).
          *
-         * @param pRenderer            Parent renderer that owns this PSO.
-         * @param pPsoManager          PSO manager that owns this PSO.
+         * @param pRenderer            Parent renderer that owns this pipeline.
+         * @param pPipelineManager     Pipeline manager that owns this pipeline.
          * @param sVertexShaderName    Name of the compiled vertex shader (see ShaderManager::compileShaders).
          * @param sPixelShaderName     Name of the compiled pixel shader (see ShaderManager::compileShaders).
-         * @param bUsePixelBlending    Whether the pixels of the mesh that uses this PSO should blend with
-         * existing pixels on back buffer or not (for transparency).
+         * @param bUsePixelBlending    Whether the pixels of the mesh that uses this Pipeline should
+         * blend with existing pixels on back buffer or not (for transparency).
          * @param additionalVertexShaderMacros Additional macros to enable for vertex shader configuration.
          * @param additionalPixelShaderMacros  Additional macros to enable for pixel shader configuration.
          *
-         * @return Error if one or both were not found in ShaderManager or if failed to generate PSO,
-         * otherwise created PSO.
+         * @return Error if one or both were not found in ShaderManager or if failed to generate Pipeline,
+         * otherwise created Pipeline.
          */
-        static std::variant<std::shared_ptr<Pso>, Error> createGraphicsPso(
+        static std::variant<std::shared_ptr<Pipeline>, Error> createGraphicsPipeline(
             Renderer* pRenderer,
-            PsoManager* pPsoManager,
+            PipelineManager* pPipelineManager,
             const std::string& sVertexShaderName,
             const std::string& sPixelShaderName,
             bool bUsePixelBlending,
@@ -183,54 +187,55 @@ namespace ne {
             const std::set<ShaderMacro>& additionalPixelShaderMacros);
 
         /**
-         * Called to notify this PSO that a material started storing
-         * a shared pointer to this PSO.
+         * Called to notify this Pipeline that a material started storing
+         * a shared pointer to this Pipeline.
          *
-         * @param pMaterial Material that started using this PSO.
+         * @param pMaterial Material that started using this Pipeline.
          *
-         * @remark When a material is no longer references the PSO use @ref onMaterialNoLongerUsingPso
+         * @remark When a material is no longer references the Pipeline use
+         * @ref onMaterialNoLongerUsingPipeline.
          */
-        void onMaterialUsingPso(Material* pMaterial);
+        void onMaterialUsingPipeline(Material* pMaterial);
 
         /**
-         * Called to notify this PSO that the shared pointer to this PSO
+         * Called to notify this Pipeline that the shared pointer to this Pipeline
          * (that Material stores) is now `nullptr`.
          *
-         * @param pMaterial Material that stopped using this PSO.
+         * @param pMaterial Material that stopped using this Pipeline.
          *
          * @warning Call this function after clearing (setting to `nullptr`) the shared pointer,
          * not before.
          */
-        void onMaterialNoLongerUsingPso(Material* pMaterial);
+        void onMaterialNoLongerUsingPipeline(Material* pMaterial);
 
         /**
-         * Array of materials that currently reference this PSO.
+         * Array of materials that currently reference this Pipeline.
          * Must be used with mutex.
          */
-        std::pair<std::mutex, std::set<Material*>> mtxMaterialsThatUseThisPso;
+        std::pair<std::mutex, std::set<Material*>> mtxMaterialsThatUseThisPipeline;
 
         /** Full shader configuration (might include renderer's configuration) of a currently used shader. */
         std::unordered_map<ShaderType, std::set<ShaderMacro>> usedShaderConfiguration;
 
-        /** Do not delete (free) this pointer. PSO manager that owns this PSO. */
-        PsoManager* pPsoManager;
+        /** Do not delete (free) this pointer. Pipeline manager that owns this Pipeline. */
+        PipelineManager* pPipelineManager;
 
         /** Do not delete (free) this pointer. Current renderer. */
         Renderer* pRenderer;
 
         /**
          * Contains combines used shader names, transparency setting and etc. that
-         * uniquely identifies the PSO.
+         * uniquely identifies the Pipeline.
          */
-        std::string sUniquePsoIdentifier;
+        std::string sUniquePipelineIdentifier;
 
-        /** Name of the compiled vertex shader (see ShaderManager::compileShaders) that this PSO uses. */
+        /** Name of the compiled vertex shader (see ShaderManager::compileShaders) that this Pipeline uses. */
         std::string sVertexShaderName;
 
-        /** Name of the compiled pixel shader (see ShaderManager::compileShaders) that this PSO uses. */
+        /** Name of the compiled pixel shader (see ShaderManager::compileShaders) that this Pipeline uses. */
         std::string sPixelShaderName;
 
-        /** Whether this PSO is using pixel blending or not. */
+        /** Whether this Pipeline is using pixel blending or not. */
         bool bIsUsingPixelBlending = false;
     };
 } // namespace ne

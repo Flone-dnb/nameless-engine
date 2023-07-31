@@ -15,7 +15,7 @@
 #include "misc/Error.h"
 
 namespace ne {
-    class Pso;
+    class Pipeline;
     class GpuResource;
     class UploadBuffer;
 
@@ -28,7 +28,7 @@ namespace ne {
          * Called after the shader was changed and we want to update the binding info
          * to use this resource in the new shader without recreating the resource.
          *
-         * @param pNewPso New pipeline object that is now being used instead of the old one.
+         * @param pNewPipeline New pipeline object that is now being used instead of the old one.
          *
          * @remark Implementations will typically ask the new pipeline object about the shader resources
          * by querying root signature or descriptor layout indices and saving the index for the resource
@@ -36,7 +36,7 @@ namespace ne {
          *
          * @return Error if something went wrong.
          */
-        [[nodiscard]] virtual std::optional<Error> updateBindingInfo(Pso* pNewPso) = 0;
+        [[nodiscard]] virtual std::optional<Error> updateBindingInfo(Pipeline* pNewPipeline) = 0;
 
         /**
          * Returns name of this resource.
@@ -132,10 +132,10 @@ namespace ne {
          */
         inline void updateResource(size_t iCurrentFrameResourceIndex) {
             void* pDataToCopy = onStartedUpdatingResource();
-            {
-                vResourceData[iCurrentFrameResourceIndex]->copyDataToElement(
-                    0, pDataToCopy, getOriginalResourceSizeInBytes());
-            }
+
+            vResourceData[iCurrentFrameResourceIndex]->copyDataToElement(
+                0, pDataToCopy, getOriginalResourceSizeInBytes());
+
             onFinishedUpdatingResource();
         }
 

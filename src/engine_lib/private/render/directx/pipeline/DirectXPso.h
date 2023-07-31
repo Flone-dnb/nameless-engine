@@ -1,7 +1,7 @@
 ﻿#pragma once
 
 // Custom.
-#include "render/general/pso/Pso.h"
+#include "render/general/pipeline/Pipeline.h"
 
 // External.
 #include "directx/d3dx12.h"
@@ -14,8 +14,8 @@ namespace ne {
 
     class DirectXRenderer;
 
-    /** Our DirectX pipeline state object (PSO) wrapper. */
-    class DirectXPso : public Pso {
+    /** DirectX pipeline state object (PSO) wrapper. */
+    class DirectXPso : public Pipeline {
     public:
         /** Stores internal resources. */
         struct InternalResources {
@@ -56,8 +56,8 @@ namespace ne {
         /**
          * Assigns vertex and pixel shaders to create a graphics PSO (for usual rendering).
          *
-         * @param pRenderer              Parent renderer that owns this PSO.
-         * @param pPsoManager            PSO manager that owns this PSO.
+         * @param pRenderer              Parent renderer that owns this pipeline.
+         * @param pPipelineManager       Pipeline manager that owns this PSO.
          * @param sVertexShaderName      Name of the compiled vertex shader (see
          * ShaderManager::compileShaders).
          * @param sPixelShaderName       Name of the compiled pixel shader (see
@@ -72,7 +72,7 @@ namespace ne {
          */
         static std::variant<std::shared_ptr<DirectXPso>, Error> createGraphicsPso(
             Renderer* pRenderer,
-            PsoManager* pPsoManager,
+            PipelineManager* pPipelineManager,
             const std::string& sVertexShaderName,
             const std::string& sPixelShaderName,
             bool bUsePixelBlending,
@@ -115,8 +115,8 @@ namespace ne {
         /**
          * Constructor.
          *
-         * @param pRenderer Parent renderer that owns this PSO.
-         * @param pPsoManager PSO manager that owns this PSO.
+         * @param pRenderer         Parent renderer that owns this PSO.
+         * @param pPipelineManager  Pipeline manager that owns this PSO.
          * @param sVertexShaderName Name of the compiled vertex shader (see ShaderManager::compileShaders).
          * @param sPixelShaderName  Name of the compiled pixel shader (see ShaderManager::compileShaders).
          * @param bUsePixelBlending Whether the pixels of the mesh that uses this PSO should blend with
@@ -124,7 +124,7 @@ namespace ne {
          */
         DirectXPso(
             Renderer* pRenderer,
-            PsoManager* pPsoManager,
+            PipelineManager* pPipelineManager,
             const std::string& sVertexShaderName,
             const std::string& sPixelShaderName,
             bool bUsePixelBlending);

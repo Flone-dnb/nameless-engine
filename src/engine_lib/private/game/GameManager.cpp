@@ -12,7 +12,7 @@
 #include "render/Renderer.h"
 #include "materials/Material.h"
 #include "materials/Shader.h"
-#include "render/general/pso/PsoManager.h"
+#include "render/general/pipeline/PipelineManager.h"
 #include "io/FieldSerializerManager.h"
 #include "game/camera/CameraManager.h"
 #include "game/nodes/Node.h"
@@ -788,20 +788,21 @@ namespace ne {
                 sGcLeakReasons));
         }
 
-        // Make sure all PSOs were destroyed.
-        const auto iGraphicsPsoCount = pRenderer->getPsoManager()->getCreatedGraphicsPsoCount();
-        const auto iComputePsoCount = pRenderer->getPsoManager()->getCreatedComputePsoCount();
-        if (iGraphicsPsoCount != 0) {
+        // Make sure all pipelines were destroyed.
+        const auto iGraphicsPipelineCount =
+            pRenderer->getPipelineManager()->getCreatedGraphicsPipelineCount();
+        const auto iComputePipelineCount = pRenderer->getPipelineManager()->getCreatedComputePipelineCount();
+        if (iGraphicsPipelineCount != 0) {
             Logger::get().error(fmt::format(
                 "the world was destroyed and garbage collection was finished but there are still "
-                "{} graphics PSO(s) exist",
-                iGraphicsPsoCount));
+                "{} graphics pipelines(s) exist",
+                iGraphicsPipelineCount));
         }
-        if (iComputePsoCount != 0) {
+        if (iComputePipelineCount != 0) {
             Logger::get().error(fmt::format(
                 "the world was destroyed and garbage collection was finished but there are still "
-                "{} compute PSO(s) exist",
-                iComputePsoCount));
+                "{} compute pipelines(s) exist",
+                iComputePipelineCount));
         }
     }
 } // namespace ne

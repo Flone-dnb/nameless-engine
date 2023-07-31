@@ -15,7 +15,7 @@ namespace ne {
         const std::string& sShaderResourceName,
         const std::string& sResourceAdditionalInfo,
         size_t iResourceSizeInBytes,
-        Pso* pUsedPso,
+        Pipeline* pUsedPipeline,
         const std::function<void*()>& onStartedUpdatingResource,
         const std::function<void()>& onFinishedUpdatingResource) {
         throw std::runtime_error("not implemented");
@@ -73,7 +73,7 @@ namespace ne {
         //            iRootParameterIndex));
     }
 
-    std::optional<Error> GlslShaderCpuWriteResource::updateBindingInfo(Pso* pNewPso) {
+    std::optional<Error> GlslShaderCpuWriteResource::updateBindingInfo(Pipeline* pNewPipeline) {
         throw std::runtime_error("not implemented");
     }
 

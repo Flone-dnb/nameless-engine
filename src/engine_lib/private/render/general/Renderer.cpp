@@ -10,7 +10,7 @@
 #include "materials/ShaderFilesystemPaths.hpp"
 #include "misc/MessageBox.h"
 #include "materials/ShaderMacro.h"
-#include "render/general/pso/PsoManager.h"
+#include "render/general/pipeline/PipelineManager.h"
 #if defined(WIN32)
 #include "render/directx/DirectXRenderer.h"
 #endif
@@ -31,7 +31,7 @@ namespace ne {
 
         // Create some objects.
         pShaderManager = std::make_unique<ShaderManager>(this);
-        pPsoManager = std::make_unique<PsoManager>(this);
+        pPipelineManager = std::make_unique<PipelineManager>(this);
         mtxShaderConfiguration.second = std::make_unique<ShaderConfiguration>(this);
     }
 
@@ -271,7 +271,7 @@ namespace ne {
 
     ShaderManager* Renderer::getShaderManager() const { return pShaderManager.get(); }
 
-    PsoManager* Renderer::getPsoManager() const { return pPsoManager.get(); }
+    PipelineManager* Renderer::getPipelineManager() const { return pPipelineManager.get(); }
 
     GpuResourceManager* Renderer::getResourceManager() const { return pResourceManager.get(); }
 
@@ -285,7 +285,8 @@ namespace ne {
 
     void Renderer::updateShaderConfiguration() {
         if (isInitialized()) {
-            const auto psoGuard = pPsoManager->clearGraphicsPsosInternalResourcesAndDelayRestoring();
+            const auto pipelineGuard =
+                pPipelineManager->clearGraphicsPipelinesInternalResourcesAndDelayRestoring();
 
             {
                 std::scoped_lock shaderParametersGuard(mtxShaderConfiguration.first);

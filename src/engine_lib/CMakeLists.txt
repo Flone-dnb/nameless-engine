@@ -38,8 +38,8 @@ set(PROJECT_WIN32_SOURCES
     private/materials/hlsl/HlslShaderResource.cpp
     private/render/directx/DirectXRenderer.h
     private/render/directx/DirectXRenderer.cpp
-    private/render/directx/pso/DirectXPso.cpp
-    private/render/directx/pso/DirectXPso.h
+    private/render/directx/pipeline/DirectXPso.cpp
+    private/render/directx/pipeline/DirectXPso.h
     private/render/directx/descriptors/DirectXDescriptorHeap.h
     private/render/directx/descriptors/DirectXDescriptorHeap.cpp
     private/render/directx/descriptors/DirectXDescriptor.h
@@ -79,10 +79,10 @@ set(PROJECT_SOURCES
     private/render/general/Renderer.cpp
     public/render/RenderSettings.h
     private/render/general/RenderSettings.cpp
-    private/render/general/pso/PsoManager.h
-    private/render/general/pso/PsoManager.cpp
-    private/render/general/pso/Pso.h
-    private/render/general/pso/Pso.cpp
+    private/render/general/pipeline/PipelineManager.h
+    private/render/general/pipeline/PipelineManager.cpp
+    private/render/general/pipeline/Pipeline.h
+    private/render/general/pipeline/Pipeline.cpp
     private/render/general/resources/GpuResource.h
     private/render/general/resources/GpuResource.cpp
     private/render/general/resources/FrameResourcesManager.h

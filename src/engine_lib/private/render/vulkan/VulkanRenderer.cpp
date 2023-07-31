@@ -1,7 +1,7 @@
 #include "render/vulkan/VulkanRenderer.h"
 
 // Custom.
-#include "render/general/pso/PsoManager.h"
+#include "render/general/pipeline/PipelineManager.h"
 #include "window/GLFW.hpp"
 #include "game/GameManager.h"
 #include "game/Window.h"

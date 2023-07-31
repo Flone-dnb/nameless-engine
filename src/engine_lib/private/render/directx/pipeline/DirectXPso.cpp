@@ -10,23 +10,23 @@
 namespace ne {
     DirectXPso::DirectXPso(
         Renderer* pRenderer,
-        PsoManager* pPsoManager,
+        PipelineManager* pPipelineManager,
         const std::string& sVertexShaderName,
         const std::string& sPixelShaderName,
         bool bUsePixelBlending)
-        : Pso(pRenderer, pPsoManager, sVertexShaderName, sPixelShaderName, bUsePixelBlending) {}
+        : Pipeline(pRenderer, pPipelineManager, sVertexShaderName, sPixelShaderName, bUsePixelBlending) {}
 
     std::variant<std::shared_ptr<DirectXPso>, Error> DirectXPso::createGraphicsPso(
         Renderer* pRenderer,
-        PsoManager* pPsoManager,
+        PipelineManager* pPipelineManager,
         const std::string& sVertexShaderName,
         const std::string& sPixelShaderName,
         bool bUsePixelBlending,
         const std::set<ShaderMacro>& additionalVertexShaderMacros,
         const std::set<ShaderMacro>& additionalPixelShaderMacros) {
         // Create PSO.
-        auto pPso = std::shared_ptr<DirectXPso>(
-            new DirectXPso(pRenderer, pPsoManager, sVertexShaderName, sPixelShaderName, bUsePixelBlending));
+        auto pPso = std::shared_ptr<DirectXPso>(new DirectXPso(
+            pRenderer, pPipelineManager, sVertexShaderName, sPixelShaderName, bUsePixelBlending));
 
         // Generate DirectX PSO.
         auto optionalError = pPso->generateGraphicsPsoForShaders(
@@ -60,7 +60,7 @@ namespace ne {
                 "internal graphics PSO was requested to be released from the "
                 "memory but it's still being referenced (new ref count: {}) (PSO ID: {})",
                 iNewRefCount,
-                getUniquePsoIdentifier()));
+                getUniquePipelineIdentifier()));
         }
 
         // Release root signature.

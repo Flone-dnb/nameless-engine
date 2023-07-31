@@ -56,7 +56,7 @@ namespace ne {
              mtxGpuResources.second.shaderResources.shaderCpuWriteResources) {
             // Update binding info.
             auto optionalError =
-                shaderCpuWriteResource.getResource()->updateBindingInfo(this->pMaterial->getUsedPso());
+                shaderCpuWriteResource.getResource()->updateBindingInfo(this->pMaterial->getUsedPipeline());
             if (optionalError.has_value()) [[unlikely]] {
                 optionalError->addCurrentLocationToErrorStack();
                 optionalError->showError();
@@ -512,8 +512,8 @@ namespace ne {
         // keep spawn locked
 
         // Make sure material was initialized.
-        const auto pUsedPso = pMaterial->getUsedPso();
-        if (pUsedPso == nullptr) [[unlikely]] {
+        const auto pUsedPipeline = pMaterial->getUsedPipeline();
+        if (pUsedPipeline == nullptr) [[unlikely]] {
             Error error(fmt::format(
                 "unable to create shader resources for mesh node \"{}\" because material was not initialized",
                 getNodeName()));
@@ -539,7 +539,7 @@ namespace ne {
             sShaderResourceName,
             fmt::format("mesh node \"{}\"", getNodeName()),
             iResourceSizeInBytes,
-            pUsedPso,
+            pUsedPipeline,
             onStartedUpdatingResource,
             onFinishedUpdatingResource);
         if (std::holds_alternative<Error>(result)) {

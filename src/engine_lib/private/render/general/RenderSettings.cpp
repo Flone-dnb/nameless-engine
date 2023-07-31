@@ -1,7 +1,7 @@
 #include "render/RenderSettings.h"
 
 #include "render/Renderer.h"
-#include "render/general/pso/PsoManager.h"
+#include "render/general/pipeline/PipelineManager.h"
 #include "io/Logger.h"
 #include "misc/ProjectPaths.h"
 
@@ -87,10 +87,10 @@ namespace ne {
             throw std::runtime_error(optionalError->getFullErrorMessage());
         }
 
-        // Recreate all PSOs' internal resources so they will now use new multisampling settings.
+        // Recreate all pipelines' internal resources so they will now use new multisampling settings.
         {
             const auto psoGuard =
-                pRenderer->getPsoManager()->clearGraphicsPsosInternalResourcesAndDelayRestoring();
+                pRenderer->getPipelineManager()->clearGraphicsPipelinesInternalResourcesAndDelayRestoring();
         }
     }
 
@@ -188,9 +188,9 @@ namespace ne {
             return;
         }
 
-        // This will recreate internal PSO resources and they will use new texture filtering setting:
+        // This will recreate internal pipeline resources and they will use new texture filtering setting:
         const auto psoGuard =
-            pRenderer->getPsoManager()->clearGraphicsPsosInternalResourcesAndDelayRestoring();
+            pRenderer->getPipelineManager()->clearGraphicsPipelinesInternalResourcesAndDelayRestoring();
     }
 
     TextureFilteringMode RenderSettings::getTextureFilteringMode() const {

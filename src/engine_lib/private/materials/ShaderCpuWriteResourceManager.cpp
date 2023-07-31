@@ -8,6 +8,7 @@
 #endif
 #include "render/vulkan/VulkanRenderer.h"
 #include "materials/glsl/GlslShaderResource.h"
+#include "render/general/pipeline/Pipeline.h"
 
 namespace ne {
 
@@ -16,7 +17,7 @@ namespace ne {
         const std::string& sShaderResourceName,
         const std::string& sResourceAdditionalInfo,
         size_t iResourceSizeInBytes,
-        Pso* pUsedPso,
+        Pipeline* pUsedPipeline,
         const std::function<void*()>& onStartedUpdatingResource,
         const std::function<void()>& onFinishedUpdatingResource) {
         // Create new resource.
@@ -26,7 +27,7 @@ namespace ne {
                 sShaderResourceName,
                 sResourceAdditionalInfo,
                 iResourceSizeInBytes,
-                pUsedPso,
+                pUsedPipeline,
                 onStartedUpdatingResource,
                 onFinishedUpdatingResource);
             return handleResourceCreation(std::move(result));
@@ -37,7 +38,7 @@ namespace ne {
                 sShaderResourceName,
                 sResourceAdditionalInfo,
                 iResourceSizeInBytes,
-                pUsedPso,
+                pUsedPipeline,
                 onStartedUpdatingResource,
                 onFinishedUpdatingResource);
             return handleResourceCreation(std::move(result));

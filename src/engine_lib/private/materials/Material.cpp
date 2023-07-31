@@ -20,13 +20,13 @@ namespace ne {
         const std::string& sVertexShaderName,
         const std::string& sPixelShaderName,
         bool bUseTransparency,
-        PsoManager* pPsoManager,
+        PipelineManager* pPipelineManager,
         const std::string& sMaterialName)
         : Material() {
         this->sVertexShaderName = sVertexShaderName;
         this->sPixelShaderName = sPixelShaderName;
         this->bUseTransparency = bUseTransparency;
-        this->pPsoManager = pPsoManager;
+        this->pPipelineManager = pPipelineManager;
         this->sMaterialName = sMaterialName;
 
         if (bUseTransparency) {
@@ -48,11 +48,11 @@ namespace ne {
                 iMeshNodeCount));
         }
 
-        // Make sure PSO was cleared.
-        if (mtxInternalResources.second.pUsedPso.isInitialized()) [[unlikely]] {
+        // Make sure pipeline was cleared.
+        if (mtxInternalResources.second.pUsedPipeline.isInitialized()) [[unlikely]] {
             Logger::get().error(fmt::format(
-                "material \"{}\" is being destroyed but used PSO was not cleared", sMaterialName));
-            mtxInternalResources.second.pUsedPso.clear();
+                "material \"{}\" is being destroyed but used pipeline was not cleared", sMaterialName));
+            mtxInternalResources.second.pUsedPipeline.clear();
         }
 
         // Make sure shader resources were deallocated.
@@ -91,9 +91,9 @@ namespace ne {
             mtxSpawnedMeshNodesThatUseThisMaterial.second.invisibleMeshNodes.insert(pMeshNode);
         }
 
-        // Initialize PSO if needed.
-        if (!mtxInternalResources.second.pUsedPso.isInitialized()) {
-            auto result = pPsoManager->getGraphicsPsoForMaterial(
+        // Initialize pipeline if needed.
+        if (!mtxInternalResources.second.pUsedPipeline.isInitialized()) {
+            auto result = pPipelineManager->getGraphicsPipelineForMaterial(
                 sVertexShaderName,
                 sPixelShaderName,
                 bUseTransparency,
@@ -106,7 +106,7 @@ namespace ne {
                 error.showError();
                 throw std::runtime_error(error.getFullErrorMessage());
             }
-            mtxInternalResources.second.pUsedPso = std::get<PsoSharedPtr>(std::move(result));
+            mtxInternalResources.second.pUsedPipeline = std::get<PipelineSharedPtr>(std::move(result));
 
             allocateShaderResources();
         }
@@ -131,10 +131,10 @@ namespace ne {
             mtxSpawnedMeshNodesThatUseThisMaterial.second.invisibleMeshNodes.erase(pMeshNode);
         }
 
-        // Check if need to free PSO.
+        // Check if need to free pipeline.
         if (mtxSpawnedMeshNodesThatUseThisMaterial.second.getTotalSize() == 0) {
             deallocateShaderResources();
-            mtxInternalResources.second.pUsedPso.clear();
+            mtxInternalResources.second.pUsedPipeline.clear();
         }
     }
 
@@ -182,7 +182,7 @@ namespace ne {
             sVertexShaderName,
             sPixelShaderName,
             bUseTransparency,
-            pRenderer->getPsoManager(),
+            pRenderer->getPipelineManager(),
             sMaterialName));
     }
 
@@ -230,7 +230,9 @@ namespace ne {
         }
     }
 
-    Pso* Material::getUsedPso() const { return mtxInternalResources.second.pUsedPso.getPso(); }
+    Pipeline* Material::getUsedPipeline() const {
+        return mtxInternalResources.second.pUsedPipeline.getPipeline();
+    }
 
     void Material::allocateShaderResources() {
         std::scoped_lock guard(mtxInternalResources.first, mtxGpuResources.first);
@@ -245,10 +247,10 @@ namespace ne {
             throw std::runtime_error(error.getFullErrorMessage());
         }
 
-        // Make sure PSO is initialized.
-        if (!mtxInternalResources.second.pUsedPso.isInitialized()) [[unlikely]] {
+        // Make sure pipeline is initialized.
+        if (!mtxInternalResources.second.pUsedPipeline.isInitialized()) [[unlikely]] {
             Error error(fmt::format(
-                "material \"{}\" was requested to allocate shader resources but PSO is not initialized",
+                "material \"{}\" was requested to allocate shader resources but pipeline is not initialized",
                 sMaterialName));
             error.showError();
             throw std::runtime_error(error.getFullErrorMessage());
@@ -278,17 +280,18 @@ namespace ne {
             throw std::runtime_error(error.getFullErrorMessage());
         }
 
-        // Make sure PSO is initialized.
-        if (!mtxInternalResources.second.pUsedPso.isInitialized()) [[unlikely]] {
+        // Make sure pipeline is initialized.
+        if (!mtxInternalResources.second.pUsedPipeline.isInitialized()) [[unlikely]] {
             Error error(fmt::format(
-                "material \"{}\" was requested to deallocate shader resources but PSO is not initialized",
+                "material \"{}\" was requested to deallocate shader resources but pipeline is not "
+                "initialized",
                 sMaterialName));
             error.showError();
             throw std::runtime_error(error.getFullErrorMessage());
         }
 
         // Make sure the GPU is not using our resources.
-        const auto pRenderer = pPsoManager->getRenderer();
+        const auto pRenderer = pPipelineManager->getRenderer();
         std::scoped_lock renderGuard(*pRenderer->getRenderResourcesMutex());
         pRenderer->waitForGpuToFinishWorkUpToThisPoint();
 
@@ -316,10 +319,10 @@ namespace ne {
             throw std::runtime_error(error.getFullErrorMessage());
         }
 
-        // Make sure PSO is initialized.
-        if (!mtxInternalResources.second.pUsedPso.isInitialized()) [[unlikely]] {
+        // Make sure pipeline is initialized.
+        if (!mtxInternalResources.second.pUsedPipeline.isInitialized()) [[unlikely]] {
             Error error(fmt::format(
-                "material \"{}\" was requested to allocate shader resources but PSO is not initialized",
+                "material \"{}\" was requested to allocate shader resources but pipeline is not initialized",
                 sMaterialName));
             error.showError();
             throw std::runtime_error(error.getFullErrorMessage());
@@ -338,12 +341,12 @@ namespace ne {
 
         // Create object data constant buffer for shaders.
         const auto pShaderWriteResourceManager =
-            pPsoManager->getRenderer()->getShaderCpuWriteResourceManager();
+            pPipelineManager->getRenderer()->getShaderCpuWriteResourceManager();
         auto result = pShaderWriteResourceManager->createShaderCpuWriteResource(
             sShaderResourceName,
             fmt::format("material \"{}\"", sMaterialName),
             iResourceSizeInBytes,
-            mtxInternalResources.second.pUsedPso.getPso(),
+            mtxInternalResources.second.pUsedPipeline.getPipeline(),
             onStartedUpdatingResource,
             onFinishedUpdatingResource);
         if (std::holds_alternative<Error>(result)) {
@@ -366,8 +369,8 @@ namespace ne {
             return; // silently exit, this is not an error
         }
 
-        // Make sure PSO is initialized.
-        if (!mtxInternalResources.second.pUsedPso.isInitialized()) {
+        // Make sure pipeline is initialized.
+        if (!mtxInternalResources.second.pUsedPipeline.isInitialized()) {
             return; // silently exit, this is not an error
         }
 

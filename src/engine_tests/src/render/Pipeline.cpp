@@ -3,7 +3,7 @@
 #include "game/GameInstance.h"
 #include "game/Window.h"
 #include "game/nodes/MeshNode.h"
-#include "render/general/pso/Pso.h"
+#include "render/general/pipeline/Pipeline.h"
 
 // External.
 #include "catch2/catch_test_macros.hpp"
@@ -37,7 +37,7 @@ TEST_CASE("make sure used vertex/pixel shader configuration of MeshNode is corre
                 getWorldRootNode()->addChildNode(pMeshNode);
 
                 // Get initialized PSO.
-                const auto pPso = pMeshNode->getMaterial()->getUsedPso();
+                const auto pPso = pMeshNode->getMaterial()->getUsedPipeline();
 
                 // Check vertex shader configuration.
                 const auto optionalFullVertexShaderConfiguration =

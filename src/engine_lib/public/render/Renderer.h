@@ -18,7 +18,7 @@
 namespace ne {
     class GameManager;
     class Window;
-    class PsoManager;
+    class PipelineManager;
     class ShaderConfiguration;
     class RenderSettings;
 
@@ -178,13 +178,13 @@ namespace ne {
         ShaderManager* getShaderManager() const;
 
         /**
-         * Returns PSO manager used to store graphics and compute PSOs.
+         * Returns pipeline manager used to store graphics and compute pipelines.
          *
          * @warning Do not delete (free) returned pointer.
          *
-         * @return PSO manager.
+         * @return Pipeline manager.
          */
-        PsoManager* getPsoManager() const;
+        PipelineManager* getPipelineManager() const;
 
         /**
          * Returns GPU resource manager.
@@ -349,7 +349,7 @@ namespace ne {
          * Updates the current shader configuration (settings) based on the current value
          * from @ref getShaderConfiguration.
          *
-         * @remark Flushes the command queue and recreates PSOs' internal resources so that they
+         * @remark Flushes the command queue and recreates pipelines' internal resources so that they
          * will use new shader configuration.
          */
         void updateShaderConfiguration();
@@ -371,8 +371,8 @@ namespace ne {
         /** Used to compile shaders. */
         std::unique_ptr<ShaderManager> pShaderManager;
 
-        /** Used to store various graphics and compute PSOs. */
-        std::unique_ptr<PsoManager> pPsoManager;
+        /** Used to store various graphics and compute pipelines. */
+        std::unique_ptr<PipelineManager> pPipelineManager;
 
         /** Stores frame-specific GPU resources. */
         std::unique_ptr<FrameResourcesManager> pFrameResourcesManager;
@@ -415,7 +415,7 @@ namespace ne {
          * Updates the current shader configuration (settings) for the current renderer based on the current
          * values from this struct.
          *
-         * @remark Flushes the command queue and recreates PSOs' internal resources so that they
+         * @remark Flushes the command queue and recreates pipelines' internal resources so that they
          * will use new shader configuration.
          */
         void updateShaderConfiguration() { pRenderer->updateShaderConfiguration(); }

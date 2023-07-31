@@ -11,6 +11,8 @@
 #include "render/general/resources/UploadBuffer.h"
 
 namespace ne {
+    class Pipeline;
+
     /**
      * References a single (non-array) shader resource (that is written in a shader file)
      * that has CPU write access available (can be updated from the CPU side).
@@ -29,7 +31,7 @@ namespace ne {
          * @param iResourceSizeInBytes Size of the data that this resource will contain. Note that
          * this size will most likely be padded to be a multiple of 256 because of the hardware requirement
          * for shader constant buffers.
-         * @param pUsedPso             PSO that uses the shader we are referencing (used to get
+         * @param pUsedPipeline        Pipeline that uses the shader we are referencing (used to get
          * render-specific information about this resource at initialization).
          * @param onStartedUpdatingResource    Function that will be called when started updating resource
          * data. Function returns pointer to data of the specified resource data size that needs to be copied
@@ -43,7 +45,7 @@ namespace ne {
             const std::string& sShaderResourceName,
             const std::string& sResourceAdditionalInfo,
             size_t iResourceSizeInBytes,
-            Pso* pUsedPso,
+            Pipeline* pUsedPipeline,
             const std::function<void*()>& onStartedUpdatingResource,
             const std::function<void()>& onFinishedUpdatingResource);
 
@@ -51,7 +53,7 @@ namespace ne {
          * Called after the shader was changed and we want to update the binding info
          * to use this resource in the new shader without recreating the resource.
          *
-         * @param pNewPso New pipeline object that is now being used instead of the old one.
+         * @param pNewPipeline New pipeline object that is now being used instead of the old one.
          *
          * @remark Implementations will typically ask the new pipeline object about the shader resources
          * by querying root signature or descriptor layout indices and saving the index for the resource
@@ -59,7 +61,7 @@ namespace ne {
          *
          * @return Error if something went wrong.
          */
-        [[nodiscard]] virtual std::optional<Error> updateBindingInfo(Pso* pNewPso) override;
+        [[nodiscard]] virtual std::optional<Error> updateBindingInfo(Pipeline* pNewPipeline) override;
 
     protected:
         /**

@@ -14,6 +14,7 @@
 
 namespace ne {
     class Renderer;
+    class Pipeline;
 
     /** Stores all shader resources with CPU write access. */
     class ShaderCpuWriteResourceManager {
@@ -57,7 +58,7 @@ namespace ne {
          * @param iResourceSizeInBytes     Size of the data that this resource will contain. Note that
          * this size will most likely be padded to be a multiple of 256 because of the hardware requirement
          * for shader constant buffers.
-         * @param pUsedPso                 PSO that uses the shader we are referencing (used to get
+         * @param pUsedPipeline            Pipeline that uses the shader we are referencing (used to get
          * render-specific information about this resource at initialization).
          * @param onStartedUpdatingResource    Function that will be called when started updating resource
          * data. Function returns pointer to data of the specified resource data size that needs to be copied
@@ -71,7 +72,7 @@ namespace ne {
             const std::string& sShaderResourceName,
             const std::string& sResourceAdditionalInfo,
             size_t iResourceSizeInBytes,
-            Pso* pUsedPso,
+            Pipeline* pUsedPipeline,
             const std::function<void*()>& onStartedUpdatingResource,
             const std::function<void()>& onFinishedUpdatingResource);
 

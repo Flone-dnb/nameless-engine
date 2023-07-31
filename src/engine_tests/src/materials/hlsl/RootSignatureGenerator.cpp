@@ -3,7 +3,7 @@
 #include "game/GameInstance.h"
 #include "game/Window.h"
 #include "game/nodes/MeshNode.h"
-#include "render/directx/pso/DirectXPso.h"
+#include "render/directx/pipeline/DirectXPso.h"
 #include "materials/EngineShaderNames.hpp"
 
 // External.
@@ -38,7 +38,7 @@ TEST_CASE("root signature merge is correct") {
                 getWorldRootNode()->addChildNode(pMeshNode);
 
                 // Get initialized PSO.
-                const auto pPso = dynamic_cast<DirectXPso*>(pMeshNode->getMaterial()->getUsedPso());
+                const auto pPso = dynamic_cast<DirectXPso*>(pMeshNode->getMaterial()->getUsedPipeline());
                 if (pPso == nullptr) {
                     INFO("expected a DirectX renderer");
                     REQUIRE(false);

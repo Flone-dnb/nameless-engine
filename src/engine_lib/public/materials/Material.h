@@ -4,7 +4,7 @@
 #include <string>
 
 // Custom.
-#include "render/general/pso/PsoManager.h"
+#include "render/general/pipeline/PipelineManager.h"
 #include "io/Serializable.h"
 #include "materials/ShaderMacro.h"
 #include "math/GLMath.hpp"
@@ -148,13 +148,13 @@ namespace ne RNAMESPACE() {
         bool isUsingTransparency() const;
 
         /**
-         * Returns PSO that this material uses.
+         * Returns pipeline that this material uses.
          *
          * @warning Do not delete returned pointer.
          *
-         * @return `nullptr` if PSO was not initialized yet, otherwise used PSO.
+         * @return `nullptr` if pipeline was not initialized yet, otherwise used pipeline.
          */
-        Pso* getUsedPso() const;
+        Pipeline* getUsedPipeline() const;
 
         /**
          * Returns GPU resources that this material uses.
@@ -182,8 +182,8 @@ namespace ne RNAMESPACE() {
     private:
         /** Groups internal data. */
         struct InternalResources {
-            /** Used PSO, only valid when the mesh that is using this material is spawned. */
-            PsoSharedPtr pUsedPso;
+            /** Used pipeline, only valid when the mesh that is using this material is spawned. */
+            PipelineSharedPtr pUsedPipeline;
 
             /**
              * Vertex shader macros that this material enables (i.e. DIFFUSE_TEXTURE if using a diffuse
@@ -224,14 +224,14 @@ namespace ne RNAMESPACE() {
          * @param sVertexShaderName Name of the vertex shader that this material is using.
          * @param sPixelShaderName  Name of the pixel shader that this material is using.
          * @param bUseTransparency  Whether this material will use transparency or not.
-         * @param pPsoManager       PSO manager that the renderer owns.
+         * @param pPipelineManager  Pipeline manager that the renderer owns.
          * @param sMaterialName     Name of this material.
          */
         Material(
             const std::string& sVertexShaderName,
             const std::string& sPixelShaderName,
             bool bUseTransparency,
-            PsoManager* pPsoManager,
+            PipelineManager* pPipelineManager,
             const std::string& sMaterialName = "Material");
 
         /**
@@ -275,14 +275,14 @@ namespace ne RNAMESPACE() {
         /**
          * Creates shader resources such as material's constant buffer.
          *
-         * @remark Should be called after PSO was initialized.
+         * @remark Should be called after pipeline was initialized.
          */
         void allocateShaderResources();
 
         /**
          * Deallocates shader resources after @ref allocateShaderResources was called.
          *
-         * @remark Should be called before PSO is cleared.
+         * @remark Should be called before pipeline is cleared.
          */
         void deallocateShaderResources();
 
@@ -323,7 +323,7 @@ namespace ne RNAMESPACE() {
          * notifies the engine that there is new (updated) data for shader CPU write resource to copy
          * to the GPU to be used by shaders.
          *
-         * @remark You don't need to check if the PSO is initialized or not before calling this function,
+         * @remark You don't need to check if the pipeline is initialized or not before calling this function,
          * if the binding does not exist or some other condition is not met this call will be
          * silently ignored without any errors.
          *
@@ -364,8 +364,8 @@ namespace ne RNAMESPACE() {
         /** Stores data for constant buffer used by shaders. */
         std::pair<std::recursive_mutex, MaterialShaderConstants> mtxShaderMaterialDataConstants;
 
-        /** Do not delete (free) this pointer. PSO manager that the renderer owns. */
-        PsoManager* pPsoManager = nullptr;
+        /** Do not delete (free) this pointer. Pipeline manager that the renderer owns. */
+        PipelineManager* pPipelineManager = nullptr;
 
         /** Name of the vertex shader that this material is using. */
         RPROPERTY(Serialize)

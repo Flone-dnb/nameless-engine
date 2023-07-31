@@ -1,7 +1,7 @@
 #include "HlslShaderResource.h"
 
 // Custom.
-#include "render/directx/pso/DirectXPso.h"
+#include "render/directx/pipeline/DirectXPso.h"
 #include "render/Renderer.h"
 #include "render/general/resources/GpuResourceManager.h"
 
@@ -16,11 +16,11 @@ namespace ne {
         const std::string& sShaderResourceName,
         const std::string& sResourceAdditionalInfo,
         size_t iResourceSizeInBytes,
-        Pso* pUsedPso,
+        Pipeline* pUsedPipeline,
         const std::function<void*()>& onStartedUpdatingResource,
         const std::function<void()>& onFinishedUpdatingResource) {
         // Find a resource with the specified name in the root signature.
-        auto result = getRootParameterIndexFromPso(pUsedPso, sShaderResourceName);
+        auto result = getRootParameterIndexFromPipeline(pUsedPipeline, sShaderResourceName);
         if (std::holds_alternative<Error>(result)) {
             auto error = std::get<Error>(std::move(result));
             error.addCurrentLocationToErrorStack();
@@ -32,17 +32,18 @@ namespace ne {
         std::array<std::unique_ptr<UploadBuffer>, FrameResourcesManager::getFrameResourcesCount()>
             vResourceData;
         for (unsigned int i = 0; i < FrameResourcesManager::getFrameResourcesCount(); i++) {
-            auto result = pUsedPso->getRenderer()->getResourceManager()->createResourceWithCpuWriteAccess(
-                fmt::format(
-                    "{} shader ({}/{}) CPU write resource \"{}\" frame #{}",
-                    sResourceAdditionalInfo,
-                    pUsedPso->getVertexShaderName(),
-                    pUsedPso->getPixelShaderName(),
-                    sShaderResourceName,
-                    i),
-                iResourceSizeInBytes,
-                1,
-                CpuVisibleShaderResourceUsageDetails(false));
+            auto result =
+                pUsedPipeline->getRenderer()->getResourceManager()->createResourceWithCpuWriteAccess(
+                    fmt::format(
+                        "{} shader ({}/{}) CPU write resource \"{}\" frame #{}",
+                        sResourceAdditionalInfo,
+                        pUsedPipeline->getVertexShaderName(),
+                        pUsedPipeline->getPixelShaderName(),
+                        sShaderResourceName,
+                        i),
+                    iResourceSizeInBytes,
+                    1,
+                    CpuVisibleShaderResourceUsageDetails(false));
             if (std::holds_alternative<Error>(result)) [[unlikely]] {
                 auto error = std::get<Error>(std::move(result));
                 error.addCurrentLocationToErrorStack();
@@ -72,9 +73,9 @@ namespace ne {
             iRootParameterIndex));
     }
 
-    std::optional<Error> HlslShaderCpuWriteResource::updateBindingInfo(Pso* pNewPso) {
+    std::optional<Error> HlslShaderCpuWriteResource::updateBindingInfo(Pipeline* pNewPipeline) {
         // Find a resource with the specified name in the root signature.
-        auto result = getRootParameterIndexFromPso(pNewPso, getResourceName());
+        auto result = getRootParameterIndexFromPipeline(pNewPipeline, getResourceName());
         if (std::holds_alternative<Error>(result)) [[unlikely]] {
             auto error = std::get<Error>(std::move(result));
             error.addCurrentLocationToErrorStack();
@@ -104,10 +105,10 @@ namespace ne {
         this->iRootParameterIndex = iRootParameterIndex;
     }
 
-    std::variant<UINT, Error> HlslShaderCpuWriteResource::getRootParameterIndexFromPso(
-        Pso* pPso, const std::string& sShaderResourceName) {
+    std::variant<UINT, Error> HlslShaderCpuWriteResource::getRootParameterIndexFromPipeline(
+        Pipeline* pPipeline, const std::string& sShaderResourceName) {
         // Make sure PSO has correct type.
-        const auto pDirectXPso = dynamic_cast<DirectXPso*>(pPso);
+        const auto pDirectXPso = dynamic_cast<DirectXPso*>(pPipeline);
         if (pDirectXPso == nullptr) [[unlikely]] {
             return Error("expected DirectX PSO");
         }

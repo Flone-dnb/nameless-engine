@@ -1,47 +1,49 @@
-#include "Pso.h"
+#include "Pipeline.h"
 
 // Custom.
 #include "render/Renderer.h"
 #include "io/Logger.h"
-#include "render/general/pso/PsoManager.h"
+#include "render/general/pipeline/PipelineManager.h"
 #include "materials/Material.h"
 #if defined(WIN32)
 #include "render/directx/DirectXRenderer.h"
-#include "render/directx/pso/DirectXPso.h"
+#include "render/directx/pipeline/DirectXPso.h"
 #endif
 
 namespace ne {
 
-    Pso::Pso(
+    Pipeline::Pipeline(
         Renderer* pRenderer,
-        PsoManager* pPsoManager,
+        PipelineManager* pPipelineManager,
         const std::string& sVertexShaderName,
         const std::string& sPixelShaderName,
         bool bUsePixelBlending)
         : ShaderUser(pRenderer->getShaderManager()) {
         this->pRenderer = pRenderer;
-        this->pPsoManager = pPsoManager;
+        this->pPipelineManager = pPipelineManager;
 
         this->sVertexShaderName = sVertexShaderName;
         this->sPixelShaderName = sPixelShaderName;
 
         bIsUsingPixelBlending = bUsePixelBlending;
 
-        sUniquePsoIdentifier =
-            constructUniquePsoIdentifier(sVertexShaderName, sPixelShaderName, bUsePixelBlending);
+        sUniquePipelineIdentifier =
+            constructUniquePipelineIdentifier(sVertexShaderName, sPixelShaderName, bUsePixelBlending);
     }
 
-    void Pso::saveUsedShaderConfiguration(ShaderType shaderType, std::set<ShaderMacro>&& fullConfiguration) {
+    void
+    Pipeline::saveUsedShaderConfiguration(ShaderType shaderType, std::set<ShaderMacro>&& fullConfiguration) {
         usedShaderConfiguration[shaderType] = std::move(fullConfiguration);
     }
 
-    Pso::~Pso() {
+    Pipeline::~Pipeline() {
         // Make sure the renderer is no longer using this PSO or its resources.
-        Logger::get().info("PSO is being destroyed, flushing the command queue before being deleted");
+        Logger::get().info("Pipeline is being destroyed, waiting for the GPU to finish work up to this point "
+                           "before being deleted");
         getRenderer()->waitForGpuToFinishWorkUpToThisPoint();
     }
 
-    std::string Pso::constructUniquePsoIdentifier(
+    std::string Pipeline::constructUniquePipelineIdentifier(
         const std::string& sVertexShaderName, const std::string& sPixelShaderName, bool bUsePixelBlending) {
         // Prepare name.
         std::string sUniqueId = sVertexShaderName + "|" + sPixelShaderName;
@@ -52,11 +54,11 @@ namespace ne {
         return sUniqueId;
     }
 
-    std::string Pso::getVertexShaderName() { return sVertexShaderName; }
+    std::string Pipeline::getVertexShaderName() { return sVertexShaderName; }
 
-    std::string Pso::getPixelShaderName() { return sPixelShaderName; }
+    std::string Pipeline::getPixelShaderName() { return sPixelShaderName; }
 
-    std::optional<std::set<ShaderMacro>> Pso::getCurrentShaderConfiguration(ShaderType shaderType) {
+    std::optional<std::set<ShaderMacro>> Pipeline::getCurrentShaderConfiguration(ShaderType shaderType) {
         auto it = usedShaderConfiguration.find(shaderType);
         if (it == usedShaderConfiguration.end()) {
             return {};
@@ -65,15 +67,15 @@ namespace ne {
         return it->second;
     }
 
-    bool Pso::isUsingPixelBlending() const { return bIsUsingPixelBlending; }
+    bool Pipeline::isUsingPixelBlending() const { return bIsUsingPixelBlending; }
 
-    std::pair<std::mutex, std::set<Material*>>* Pso::getMaterialsThatUseThisPso() {
-        return &mtxMaterialsThatUseThisPso;
+    std::pair<std::mutex, std::set<Material*>>* Pipeline::getMaterialsThatUseThisPipeline() {
+        return &mtxMaterialsThatUseThisPipeline;
     }
 
-    std::variant<std::shared_ptr<Pso>, Error> Pso::createGraphicsPso(
+    std::variant<std::shared_ptr<Pipeline>, Error> Pipeline::createGraphicsPipeline(
         Renderer* pRenderer,
-        PsoManager* pPsoManager,
+        PipelineManager* pPipelineManager,
         const std::string& sVertexShaderName,
         const std::string& sPixelShaderName,
         bool bUsePixelBlending,
@@ -83,7 +85,7 @@ namespace ne {
         if (dynamic_cast<DirectXRenderer*>(pRenderer) != nullptr) {
             auto result = DirectXPso::createGraphicsPso(
                 pRenderer,
-                pPsoManager,
+                pPipelineManager,
                 sVertexShaderName,
                 sPixelShaderName,
                 bUsePixelBlending,
@@ -95,7 +97,7 @@ namespace ne {
                 return error;
             }
 
-            return std::dynamic_pointer_cast<Pso>(std::get<std::shared_ptr<DirectXPso>>(result));
+            return std::dynamic_pointer_cast<Pipeline>(std::get<std::shared_ptr<DirectXPso>>(result));
         }
 #elif __linux__
 
@@ -110,48 +112,48 @@ namespace ne {
         throw std::runtime_error(err.getFullErrorMessage());
     }
 
-    std::string Pso::getUniquePsoIdentifier() const { return sUniquePsoIdentifier; }
+    std::string Pipeline::getUniquePipelineIdentifier() const { return sUniquePipelineIdentifier; }
 
-    void Pso::onMaterialUsingPso(Material* pMaterial) {
+    void Pipeline::onMaterialUsingPipeline(Material* pMaterial) {
         {
-            std::scoped_lock guard(mtxMaterialsThatUseThisPso.first);
+            std::scoped_lock guard(mtxMaterialsThatUseThisPipeline.first);
 
             // Check if this material was already added previously.
-            const auto it = mtxMaterialsThatUseThisPso.second.find(pMaterial);
-            if (it != mtxMaterialsThatUseThisPso.second.end()) [[unlikely]] {
+            const auto it = mtxMaterialsThatUseThisPipeline.second.find(pMaterial);
+            if (it != mtxMaterialsThatUseThisPipeline.second.end()) [[unlikely]] {
                 Logger::get().error(fmt::format(
-                    "material \"{}\" notified the PSO with ID \"{}\" of being used but this "
-                    "material already existed in the array of materials that use this PSO",
+                    "material \"{}\" notified the pipeline with ID \"{}\" of being used but this "
+                    "material already existed in the array of materials that use this pipeline",
                     pMaterial->getMaterialName(),
-                    sUniquePsoIdentifier));
+                    sUniquePipelineIdentifier));
                 return;
             }
 
-            mtxMaterialsThatUseThisPso.second.insert(pMaterial);
+            mtxMaterialsThatUseThisPipeline.second.insert(pMaterial);
         }
     }
 
-    void Pso::onMaterialNoLongerUsingPso(Material* pMaterial) {
+    void Pipeline::onMaterialNoLongerUsingPipeline(Material* pMaterial) {
         {
-            std::scoped_lock guard(mtxMaterialsThatUseThisPso.first);
+            std::scoped_lock guard(mtxMaterialsThatUseThisPipeline.first);
 
             // Make sure this material was previously added to our array of materials.
-            const auto it = mtxMaterialsThatUseThisPso.second.find(pMaterial);
-            if (it == mtxMaterialsThatUseThisPso.second.end()) [[unlikely]] {
+            const auto it = mtxMaterialsThatUseThisPipeline.second.find(pMaterial);
+            if (it == mtxMaterialsThatUseThisPipeline.second.end()) [[unlikely]] {
                 Logger::get().error(fmt::format(
-                    "material \"{}\" notified the PSO with ID \"{}\" of no longer being used but this "
-                    "material was not found in the array of materials that use this PSO",
+                    "material \"{}\" notified the pipeline with ID \"{}\" of no longer being used but this "
+                    "material was not found in the array of materials that use this pipeline",
                     pMaterial->getMaterialName(),
-                    sUniquePsoIdentifier));
+                    sUniquePipelineIdentifier));
                 return;
             }
 
-            mtxMaterialsThatUseThisPso.second.erase(it);
+            mtxMaterialsThatUseThisPipeline.second.erase(it);
         }
 
-        pPsoManager->onPsoNoLongerUsedByMaterial(sUniquePsoIdentifier);
+        pPipelineManager->onPipelineNoLongerUsedByMaterial(sUniquePipelineIdentifier);
     }
 
-    Renderer* Pso::getRenderer() const { return pRenderer; }
+    Renderer* Pipeline::getRenderer() const { return pRenderer; }
 
 } // namespace ne

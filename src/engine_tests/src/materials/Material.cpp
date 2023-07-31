@@ -72,12 +72,12 @@ TEST_CASE("create engine default materials") {
                 getWorldRootNode()->addChildNode(pMeshNodeTransparent);
 
                 // Check everything.
-                REQUIRE(Material::getCurrentMaterialCount() == 2);
+                REQUIRE(Material::getCurrentAliveMaterialCount() == 2);
                 REQUIRE(getWindow()->getRenderer()->getPsoManager()->getCreatedGraphicsPsoCount() == 2);
 
                 // Despawn one node.
                 pMeshNodeOpaque->detachFromParentAndDespawn();
-                REQUIRE(Material::getCurrentMaterialCount() == 2);
+                REQUIRE(Material::getCurrentAliveMaterialCount() == 2);
                 REQUIRE(getWindow()->getRenderer()->getPsoManager()->getCreatedGraphicsPsoCount() == 1);
 
                 // Despawn all nodes.
@@ -89,7 +89,7 @@ TEST_CASE("create engine default materials") {
                         REQUIRE(false);
                     }
                     // Check that everything is cleaned up.
-                    REQUIRE(Material::getCurrentMaterialCount() == 0);
+                    REQUIRE(Material::getCurrentAliveMaterialCount() == 0);
                     REQUIRE(getWindow()->getRenderer()->getPsoManager()->getCreatedGraphicsPsoCount() == 0);
 
                     getWindow()->close();
@@ -111,7 +111,7 @@ TEST_CASE("create engine default materials") {
     pMainWindow->processEvents<TestGameInstance>();
 
     REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
-    REQUIRE(Material::getCurrentMaterialCount() == 0);
+    REQUIRE(Material::getCurrentAliveMaterialCount() == 0);
 }
 
 TEST_CASE("serialize and deserialize Material") {
@@ -159,7 +159,7 @@ TEST_CASE("serialize and deserialize Material") {
                     }
                 }
 
-                REQUIRE(Material::getCurrentMaterialCount() == 0);
+                REQUIRE(Material::getCurrentAliveMaterialCount() == 0);
 
                 {
                     // Deserialize.
@@ -178,7 +178,7 @@ TEST_CASE("serialize and deserialize Material") {
                     REQUIRE(pMaterial->isUsingTransparency());
                 }
 
-                REQUIRE(Material::getCurrentMaterialCount() == 0);
+                REQUIRE(Material::getCurrentAliveMaterialCount() == 0);
 
                 // Cleanup.
                 if (std::filesystem::exists(pathToFileInTemp)) {
@@ -203,7 +203,7 @@ TEST_CASE("serialize and deserialize Material") {
     pMainWindow->processEvents<TestGameInstance>();
 
     REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
-    REQUIRE(Material::getCurrentMaterialCount() == 0);
+    REQUIRE(Material::getCurrentAliveMaterialCount() == 0);
 }
 
 TEST_CASE("unused materials unload shaders from memory") {
@@ -330,5 +330,5 @@ TEST_CASE("unused materials unload shaders from memory") {
     pMainWindow->processEvents<TestGameInstance>();
 
     REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
-    REQUIRE(Material::getCurrentMaterialCount() == 0);
+    REQUIRE(Material::getCurrentAliveMaterialCount() == 0);
 }

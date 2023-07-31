@@ -9,12 +9,12 @@
 
 #include "Material.generated_impl.h"
 
-/** Total amount of created materials. */
-static std::atomic<size_t> iTotalMaterialCount{0};
+/** Total amount of alive material objects. */
+static std::atomic<size_t> iTotalAliveMaterialCount{0};
 
 namespace ne {
 
-    Material::Material() { iTotalMaterialCount.fetch_add(1); }
+    Material::Material() { iTotalAliveMaterialCount.fetch_add(1); }
 
     Material::Material(
         const std::string& sVertexShaderName,
@@ -63,10 +63,10 @@ namespace ne {
         }
 
         // Update total material count.
-        iTotalMaterialCount.fetch_sub(1);
+        iTotalAliveMaterialCount.fetch_sub(1);
     }
 
-    size_t Material::getCurrentMaterialCount() { return iTotalMaterialCount.load(); }
+    size_t Material::getCurrentAliveMaterialCount() { return iTotalAliveMaterialCount.load(); }
 
     void Material::onMeshNodeSpawned(MeshNode* pMeshNode) {
         onSpawnedMeshNodeStartedUsingMaterial(pMeshNode);

@@ -173,7 +173,7 @@ namespace ne {
         }
 
         // Make sure there are no materials exist.
-        const auto iTotalMaterialCount = Material::getCurrentMaterialCount();
+        const auto iTotalMaterialCount = Material::getCurrentAliveMaterialCount();
         if (iTotalMaterialCount != 0) [[unlikely]] {
             Logger::get().error(fmt::format(
                 "the game was destroyed but there are still {} material(s) alive", iTotalMaterialCount));

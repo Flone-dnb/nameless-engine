@@ -84,11 +84,11 @@ namespace ne RNAMESPACE() {
         virtual ~Material() override;
 
         /**
-         * Returns total amount of currently created materials.
+         * Returns total amount of currently alive material objects.
          *
-         * @return Total amount of materials.
+         * @return Total amount of alive materials.
          */
-        static size_t getCurrentMaterialCount();
+        static size_t getCurrentAliveMaterialCount();
 
         /**
          * Creates a new material that uses the specified shaders.

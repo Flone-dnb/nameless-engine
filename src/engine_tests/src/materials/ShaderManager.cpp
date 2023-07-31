@@ -54,5 +54,5 @@ TEST_CASE("unable to compile shader with a name that contains forbidden characte
     pMainWindow->processEvents<TestGameInstance>();
 
     REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
-    REQUIRE(Material::getCurrentMaterialCount() == 0);
+    REQUIRE(Material::getCurrentAliveMaterialCount() == 0);
 }

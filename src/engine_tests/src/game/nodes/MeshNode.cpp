@@ -74,7 +74,7 @@ TEST_CASE("serialize and deserialize MeshNode") {
                 }
 
                 gc_collector()->collect();
-                REQUIRE(Material::getCurrentMaterialCount() == 0);
+                REQUIRE(Material::getCurrentAliveMaterialCount() == 0);
 
                 const auto pathToExternalFile =
                     pathToFileInTemp.parent_path() / (pathToFileInTemp.stem().string() + ".0.meshData.toml");
@@ -112,7 +112,7 @@ TEST_CASE("serialize and deserialize MeshNode") {
                 }
 
                 gc_collector()->collect();
-                REQUIRE(Material::getCurrentMaterialCount() == 0);
+                REQUIRE(Material::getCurrentAliveMaterialCount() == 0);
 
                 // Cleanup.
                 if (std::filesystem::exists(pathToFileInTemp)) {
@@ -140,7 +140,7 @@ TEST_CASE("serialize and deserialize MeshNode") {
     pMainWindow->processEvents<TestGameInstance>();
 
     REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
-    REQUIRE(Material::getCurrentMaterialCount() == 0);
+    REQUIRE(Material::getCurrentAliveMaterialCount() == 0);
 }
 
 TEST_CASE("serialize and deserialize array of mesh vertices") {
@@ -332,7 +332,7 @@ TEST_CASE("serialize and deserialize MeshNode as part of a node tree") {
     pMainWindow->processEvents<TestGameInstance>();
 
     REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
-    REQUIRE(Material::getCurrentMaterialCount() == 0);
+    REQUIRE(Material::getCurrentAliveMaterialCount() == 0);
 }
 
 TEST_CASE("serialize and deserialize MeshNode as part of a node tree with original object") {
@@ -541,7 +541,7 @@ TEST_CASE("serialize and deserialize MeshNode as part of a node tree with origin
     pMainWindow->processEvents<TestGameInstance>();
 
     REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
-    REQUIRE(Material::getCurrentMaterialCount() == 0);
+    REQUIRE(Material::getCurrentAliveMaterialCount() == 0);
 }
 
 TEST_CASE("MeshNode's meshdata deserialization backwards compatibility") {
@@ -611,7 +611,7 @@ TEST_CASE("MeshNode's meshdata deserialization backwards compatibility") {
     pMainWindow->processEvents<TestGameInstance>();
 
     REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
-    REQUIRE(Material::getCurrentMaterialCount() == 0);
+    REQUIRE(Material::getCurrentAliveMaterialCount() == 0);
 }
 
 TEST_CASE("shader read/write resources exist only when MeshNode is spawned") {
@@ -738,5 +738,5 @@ TEST_CASE("shader read/write resources exist only when MeshNode is spawned") {
     pMainWindow->processEvents<TestGameInstance>();
 
     REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
-    REQUIRE(Material::getCurrentMaterialCount() == 0);
+    REQUIRE(Material::getCurrentAliveMaterialCount() == 0);
 }

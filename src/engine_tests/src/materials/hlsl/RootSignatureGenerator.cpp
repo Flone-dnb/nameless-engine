@@ -78,5 +78,5 @@ TEST_CASE("root signature merge is correct") {
     pMainWindow->processEvents<TestGameInstance>();
 
     REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
-    REQUIRE(Material::getCurrentMaterialCount() == 0);
+    REQUIRE(Material::getCurrentAliveMaterialCount() == 0);
 }

@@ -473,6 +473,15 @@ namespace ne {
         [[nodiscard]] std::optional<Error> createSynchronizationObjects();
 
         /**
+         * Creates @ref pRenderPass using the current @ref msaaSampleCount.
+         *
+         * @warning Expects @ref pLogicalDevice to be valid.
+         *
+         * @return Error if something went wrong.
+         */
+        [[nodiscard]] std::optional<Error> createRenderPass();
+
+        /**
          * Destroys swap chain, framebuffers, graphics pipeline, render pass, image views,
          * frees command buffers and other objects that depend on the swap chain images.
          */
@@ -498,6 +507,12 @@ namespace ne {
 
         /** Swap chain. */
         VkSwapchainKHR pSwapChain = nullptr;
+
+        /** Depth buffer. */
+        VkImage pDepthImage = nullptr;
+
+        /** Render pass. */
+        VkRenderPass pRenderPass = nullptr;
 
         /** Used to create command buffers. */
         VkCommandPool pCommandPool = nullptr;
@@ -552,8 +567,20 @@ namespace ne {
         /** Tells if @ref initializeVulkan was finished successfully or not. */
         bool bIsVulkanInitialized = false;
 
+        /** Index of the color attachment in @ref pRenderPass. */
+        static constexpr size_t iRenderPassColorAttachmentIndex = 0;
+
+        /** Index of the depth attachment in @ref pRenderPass. */
+        static constexpr size_t iRenderPassDepthAttachmentIndex = 1;
+
+        /** Index of the color resolve attachment in @ref pRenderPass. */
+        static constexpr size_t iRenderPassColorResolveAttachmentIndex = 2;
+
         /** Format of @ref vSwapChainImages. */
         static constexpr VkFormat swapChainImageFormat = VK_FORMAT_B8G8R8A8_SRGB;
+
+        /** Format of @ref pDepthImage. */
+        static constexpr VkFormat depthImageFormat = VK_FORMAT_D24_UNORM_S8_UINT;
 
         /** Color space of @ref vSwapChainImages. */
         static constexpr VkColorSpaceKHR swapChainImageColorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;

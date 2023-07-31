@@ -138,6 +138,13 @@ namespace ne {
             return optionalError;
         }
 
+        // Create render pass.
+        optionalError = createRenderPass();
+        if (optionalError.has_value()) {
+            optionalError->addCurrentLocationToErrorStack();
+            return optionalError;
+        }
+
         // ... TODO ...
 
         // Create command pool.
@@ -1057,6 +1064,99 @@ namespace ne {
             if (result != VK_SUCCESS) [[unlikely]] {
                 return Error(fmt::format("failed to create a fence, error: {}", string_VkResult(result)));
             }
+        }
+
+        return {};
+    }
+
+    std::optional<Error> VulkanRenderer::createRenderPass() {
+        std::array<VkAttachmentDescription, 3> vAttachments{};
+
+        static_assert(
+            iRenderPassColorAttachmentIndex != iRenderPassDepthAttachmentIndex &&
+                iRenderPassColorAttachmentIndex != iRenderPassColorResolveAttachmentIndex,
+            "attachment indices should be unique");
+
+        // Describe MSAA color buffer.
+        auto& colorAttachment = vAttachments[iRenderPassColorAttachmentIndex];
+        colorAttachment.format = swapChainImageFormat;
+        colorAttachment.samples = msaaSampleCount;
+        colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+        colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+        colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+        colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        colorAttachment.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+        // Describe depth buffer.
+        auto& depthAttachment = vAttachments[iRenderPassDepthAttachmentIndex];
+        depthAttachment.format = depthImageFormat;
+        depthAttachment.samples = msaaSampleCount;
+        depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+        depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        depthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+        depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        depthAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        depthAttachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+        // Describe color resolve attachment to resolve MSAA color buffer (see above) to a regular image
+        // for presenting.
+        auto& colorResolveAttachment = vAttachments[iRenderPassColorResolveAttachmentIndex];
+        colorResolveAttachment.format = swapChainImageFormat;
+        colorResolveAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+        colorResolveAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+        colorResolveAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+        colorResolveAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+        colorResolveAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        colorResolveAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        colorResolveAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+
+        // Create color buffer reference for subpasses.
+        VkAttachmentReference colorAttachmentRef{};
+        colorAttachmentRef.attachment = iRenderPassColorAttachmentIndex;
+        colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+        // Create depth buffer reference for subpasses.
+        VkAttachmentReference depthAttachmentRef{};
+        depthAttachmentRef.attachment = iRenderPassDepthAttachmentIndex;
+        depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+        // Create reference to resolve target for subpasses.
+        VkAttachmentReference colorAttachmentResolveRef{};
+        colorAttachmentResolveRef.attachment = iRenderPassColorResolveAttachmentIndex;
+        colorAttachmentResolveRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+        // Describe subpass.
+        VkSubpassDescription subpass{};
+        subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+        subpass.colorAttachmentCount = 1;
+        subpass.pColorAttachments = &colorAttachmentRef;
+        subpass.pDepthStencilAttachment = &depthAttachmentRef;
+        subpass.pResolveAttachments = &colorAttachmentResolveRef;
+
+        // Describe subpass dependency.
+        VkSubpassDependency dependency{};
+        dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+        dependency.dstSubpass = 0;
+        dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+        dependency.srcAccessMask = 0;
+        dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+        dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+
+        // Describe render pass.
+        VkRenderPassCreateInfo renderPassInfo{};
+        renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+        renderPassInfo.attachmentCount = static_cast<uint32_t>(vAttachments.size());
+        renderPassInfo.pAttachments = vAttachments.data();
+        renderPassInfo.subpassCount = 1;
+        renderPassInfo.pSubpasses = &subpass;
+        renderPassInfo.dependencyCount = 1;
+        renderPassInfo.pDependencies = &dependency;
+
+        // Create render pass.
+        const auto result = vkCreateRenderPass(pLogicalDevice, &renderPassInfo, nullptr, &pRenderPass);
+        if (result != VK_SUCCESS) [[unlikely]] {
+            return Error(fmt::format("failed to create render pass, error: {}", string_VkResult(result)));
         }
 
         return {};

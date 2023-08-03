@@ -7,6 +7,7 @@ namespace ne {
     public:
         EngineShaderNames() = delete;
 
+        /** Groups MeshNode's shader info. */
         struct MeshNode {
             /** Globally unique name of the vertex shader used by MeshNodes. */
             static inline const auto sVertexShaderName = "engine.meshnode.vs";

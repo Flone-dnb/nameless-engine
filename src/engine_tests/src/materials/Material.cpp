@@ -28,8 +28,8 @@ TEST_CASE("create engine default materials") {
 
                 // Create material.
                 auto resultOpaque = Material::create(
-                    EngineShaderNames::sMeshNodeVertexShaderName,
-                    EngineShaderNames::sMeshNodePixelShaderName,
+                    EngineShaderNames::MeshNode::sVertexShaderName,
+                    EngineShaderNames::MeshNode::sPixelShaderName,
                     false);
                 if (std::holds_alternative<Error>(resultOpaque)) {
                     Error error = std::get<Error>(std::move(resultOpaque));
@@ -38,8 +38,8 @@ TEST_CASE("create engine default materials") {
                     REQUIRE(false);
                 }
                 auto resultTransparent = Material::create(
-                    EngineShaderNames::sMeshNodeVertexShaderName,
-                    EngineShaderNames::sMeshNodePixelShaderName,
+                    EngineShaderNames::MeshNode::sVertexShaderName,
+                    EngineShaderNames::MeshNode::sPixelShaderName,
                     true);
                 if (std::holds_alternative<Error>(resultTransparent)) {
                     Error error = std::get<Error>(std::move(resultTransparent));
@@ -142,8 +142,8 @@ TEST_CASE("serialize and deserialize Material") {
                 {
                     // Create material.
                     auto result = Material::create(
-                        EngineShaderNames::sMeshNodeVertexShaderName,
-                        EngineShaderNames::sMeshNodePixelShaderName,
+                        EngineShaderNames::MeshNode::sVertexShaderName,
+                        EngineShaderNames::MeshNode::sPixelShaderName,
                         true,
                         "My Material");
                     if (std::holds_alternative<Error>(result)) {

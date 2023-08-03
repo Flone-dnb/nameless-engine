@@ -41,8 +41,8 @@ TEST_CASE("serialize and deserialize MeshNode") {
                 {
                     // Create material.
                     auto result = Material::create(
-                        EngineShaderNames::sMeshNodeVertexShaderName,
-                        EngineShaderNames::sMeshNodePixelShaderName,
+                        EngineShaderNames::MeshNode::sVertexShaderName,
+                        EngineShaderNames::MeshNode::sPixelShaderName,
                         true,
                         "My Material");
                     if (std::holds_alternative<Error>(result)) {
@@ -228,8 +228,8 @@ TEST_CASE("serialize and deserialize MeshNode as part of a node tree") {
                 {
                     // Create material.
                     auto result = Material::create(
-                        EngineShaderNames::sMeshNodeVertexShaderName,
-                        EngineShaderNames::sMeshNodePixelShaderName,
+                        EngineShaderNames::MeshNode::sVertexShaderName,
+                        EngineShaderNames::MeshNode::sPixelShaderName,
                         true,
                         "My Material");
                     if (std::holds_alternative<Error>(result)) {
@@ -371,8 +371,8 @@ TEST_CASE("serialize and deserialize MeshNode as part of a node tree with origin
                 {
                     // Create material.
                     auto result = Material::create(
-                        EngineShaderNames::sMeshNodeVertexShaderName,
-                        EngineShaderNames::sMeshNodePixelShaderName,
+                        EngineShaderNames::MeshNode::sVertexShaderName,
+                        EngineShaderNames::MeshNode::sPixelShaderName,
                         true,
                         "My Material");
                     if (std::holds_alternative<Error>(result)) {
@@ -638,8 +638,8 @@ TEST_CASE("shader read/write resources exist only when MeshNode is spawned") {
 
                 // Create material.
                 auto result = Material::create(
-                    EngineShaderNames::sMeshNodeVertexShaderName,
-                    EngineShaderNames::sMeshNodePixelShaderName,
+                    EngineShaderNames::MeshNode::sVertexShaderName,
+                    EngineShaderNames::MeshNode::sPixelShaderName,
                     false,
                     "My Material");
                 if (std::holds_alternative<Error>(result)) {

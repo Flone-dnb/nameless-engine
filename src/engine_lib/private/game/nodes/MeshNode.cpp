@@ -17,8 +17,8 @@ namespace ne {
     MeshNode::MeshNode(const std::string& sNodeName) : SpatialNode(sNodeName) {
         // Initialize material.
         auto result = Material::create(
-            EngineShaderNames::sMeshNodeVertexShaderName,
-            EngineShaderNames::sMeshNodePixelShaderName,
+            EngineShaderNames::MeshNode::sVertexShaderName,
+            EngineShaderNames::MeshNode::sPixelShaderName,
             false,
             "Mesh Node's default material");
         if (std::holds_alternative<Error>(result)) {

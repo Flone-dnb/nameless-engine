@@ -327,7 +327,7 @@ namespace ne {
         pCommandList->ClearDepthStencilView(
             depthStencilDescriptorHandle,
             D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL,
-            fMaxDepth,
+            getMaxDepth(),
             0,
             0,
             nullptr);
@@ -1149,8 +1149,8 @@ namespace ne {
         screenViewport.TopLeftY = 0;
         screenViewport.Width = static_cast<float>(renderResolution.first);
         screenViewport.Height = static_cast<float>(renderResolution.second);
-        screenViewport.MinDepth = fMinDepth;
-        screenViewport.MaxDepth = fMaxDepth;
+        screenViewport.MinDepth = getMinDepth();
+        screenViewport.MaxDepth = getMaxDepth();
 
         scissorRect.left = 0;
         scissorRect.top = 0;

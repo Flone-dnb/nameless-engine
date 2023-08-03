@@ -868,7 +868,7 @@ namespace ne {
         createInfo.minImageCount = iSwapChainImageCount;
         createInfo.imageFormat = swapChainImageFormat;
         createInfo.imageColorSpace = swapChainImageColorSpace;
-        createInfo.imageExtent = swapChainExtent;
+        createInfo.imageExtent = swapChainExtent.value();
         createInfo.imageArrayLayers = 1;
         createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
@@ -1167,6 +1167,10 @@ namespace ne {
             return;
         }
 
+        // Destroy render pass.
+        vkDestroyRenderPass(pLogicalDevice, pRenderPass, nullptr);
+        pRenderPass = nullptr;
+
         // Destroy swap chain image views.
         for (size_t i = 0; i < vSwapChainImageViews.size(); i++) {
             vkDestroyImageView(pLogicalDevice, vSwapChainImageViews[i], nullptr);
@@ -1256,6 +1260,10 @@ namespace ne {
     VkPhysicalDevice VulkanRenderer::getPhysicalDevice() const { return pPhysicalDevice; }
 
     VkInstance VulkanRenderer::getInstance() const { return pInstance; }
+
+    VkRenderPass VulkanRenderer::getRenderPass() const { return pRenderPass; }
+
+    std::optional<VkExtent2D> VulkanRenderer::getSwapChainExtent() const { return swapChainExtent; }
 
     std::variant<VkCommandBuffer, Error> VulkanRenderer::createOneTimeSubmitCommandBuffer() {
         // Make sure command pool exists.

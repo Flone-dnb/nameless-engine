@@ -37,7 +37,7 @@ namespace ne {
         Pipeline(const Pipeline&) = delete;
         Pipeline& operator=(const Pipeline&) = delete;
 
-        virtual ~Pipeline() override;
+        virtual ~Pipeline() override = default;
 
         /**
          * Constructs a unique Pipeline identifier.
@@ -136,6 +136,22 @@ namespace ne {
         std::string getUniquePipelineIdentifier() const;
 
         /**
+         * Returns additional macros that were specified during pipeline creation to be enabled for
+         * vertex shader configuration.
+         *
+         * @return Additional macros to enable for vertex shader.
+         */
+        std::set<ShaderMacro> getAdditionalVertexShaderMacros() const;
+
+        /**
+         * Returns additional macros that were specified during pipeline creation to be enabled for
+         * pixel/fragment shader configuration.
+         *
+         * @return Additional macros to enable for pixel/fragment shader.
+         */
+        std::set<ShaderMacro> getAdditionalPixelShaderMacros() const;
+
+        /**
          * Releases internal resources such as root signature, internal Pipeline, etc.
          *
          * @warning Expects that the GPU is not referencing this Pipeline (command queue is empty) and
@@ -151,7 +167,7 @@ namespace ne {
         [[nodiscard]] virtual std::optional<Error> releaseInternalResources() = 0;
 
         /**
-         * Creates internal resources using the current configuration.
+         * Creates internal resources using the current shader configuration.
          *
          * @remark Called after @ref releaseInternalResources to create resources that will now reference
          * changed (new) resources.
@@ -214,14 +230,30 @@ namespace ne {
          */
         std::pair<std::mutex, std::set<Material*>> mtxMaterialsThatUseThisPipeline;
 
+        /**
+         * Additional macros that were specified during pipeline creation to be enabled for
+         * vertex shader configuration.
+         *
+         * @remark Generally used in @ref restoreInternalResources.
+         */
+        std::set<ShaderMacro> additionalVertexShaderMacros;
+
+        /**
+         * Additional macros that were specified during pipeline creation to be enabled for
+         * pixel/fragment shader configuration.
+         *
+         * @remark Generally used in @ref restoreInternalResources.
+         */
+        std::set<ShaderMacro> additionalPixelShaderMacros;
+
         /** Full shader configuration (might include renderer's configuration) of a currently used shader. */
         std::unordered_map<ShaderType, std::set<ShaderMacro>> usedShaderConfiguration;
 
         /** Do not delete (free) this pointer. Pipeline manager that owns this Pipeline. */
-        PipelineManager* pPipelineManager;
+        PipelineManager* pPipelineManager = nullptr;
 
         /** Do not delete (free) this pointer. Current renderer. */
-        Renderer* pRenderer;
+        Renderer* pRenderer = nullptr;
 
         /**
          * Contains combines used shader names, transparency setting and etc. that

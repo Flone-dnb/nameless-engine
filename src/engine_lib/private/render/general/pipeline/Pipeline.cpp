@@ -9,6 +9,8 @@
 #include "render/directx/DirectXRenderer.h"
 #include "render/directx/pipeline/DirectXPso.h"
 #endif
+#include "render/vulkan/VulkanRenderer.h"
+#include "render/vulkan/pipeline/VulkanPipeline.h"
 
 namespace ne {
 
@@ -34,13 +36,6 @@ namespace ne {
     void
     Pipeline::saveUsedShaderConfiguration(ShaderType shaderType, std::set<ShaderMacro>&& fullConfiguration) {
         usedShaderConfiguration[shaderType] = std::move(fullConfiguration);
-    }
-
-    Pipeline::~Pipeline() {
-        // Make sure the renderer is no longer using this PSO or its resources.
-        Logger::get().info("Pipeline is being destroyed, waiting for the GPU to finish work up to this point "
-                           "before being deleted");
-        getRenderer()->waitForGpuToFinishWorkUpToThisPoint();
     }
 
     std::string Pipeline::constructUniquePipelineIdentifier(
@@ -81,8 +76,10 @@ namespace ne {
         bool bUsePixelBlending,
         const std::set<ShaderMacro>& additionalVertexShaderMacros,
         const std::set<ShaderMacro>& additionalPixelShaderMacros) {
+        std::shared_ptr<Pipeline> pCreatedPipeline = nullptr;
 #if defined(WIN32)
         if (dynamic_cast<DirectXRenderer*>(pRenderer) != nullptr) {
+            // Create DirectX PSO.
             auto result = DirectXPso::createGraphicsPso(
                 pRenderer,
                 pPipelineManager,
@@ -97,22 +94,54 @@ namespace ne {
                 return error;
             }
 
-            return std::dynamic_pointer_cast<Pipeline>(std::get<std::shared_ptr<DirectXPso>>(result));
-        }
-#elif __linux__
-
-        static_assert(false, "not implemented");
-        if (dynamic_cast<VulkanRenderer*>(pRenderer) != nullptr) {
-            // TODO
+            pCreatedPipeline =
+                std::dynamic_pointer_cast<Pipeline>(std::get<std::shared_ptr<DirectXPso>>(result));
         }
 #endif
 
-        Error err("no renderer for this platform");
-        err.showError();
-        throw std::runtime_error(err.getFullErrorMessage());
+        if (pCreatedPipeline == nullptr && dynamic_cast<VulkanRenderer*>(pRenderer) != nullptr) {
+            // Create Vulkan pipeline.
+            auto result = VulkanPipeline::createGraphicsPipeline(
+                pRenderer,
+                pPipelineManager,
+                sVertexShaderName,
+                sPixelShaderName,
+                bUsePixelBlending,
+                additionalVertexShaderMacros,
+                additionalPixelShaderMacros);
+            if (std::holds_alternative<Error>(result)) {
+                auto error = std::get<Error>(std::move(result));
+                error.addCurrentLocationToErrorStack();
+                return error;
+            }
+
+            pCreatedPipeline =
+                std::dynamic_pointer_cast<Pipeline>(std::get<std::shared_ptr<VulkanPipeline>>(result));
+        }
+
+        // Make sure the pipeline was created.
+        if (pCreatedPipeline == nullptr) [[unlikely]] {
+            Error err("no renderer for this platform");
+            err.showError();
+            throw std::runtime_error(err.getFullErrorMessage());
+        }
+
+        // Save additional macros that were specified.
+        pCreatedPipeline->additionalVertexShaderMacros = additionalVertexShaderMacros;
+        pCreatedPipeline->additionalPixelShaderMacros = additionalPixelShaderMacros;
+
+        return pCreatedPipeline;
     }
 
     std::string Pipeline::getUniquePipelineIdentifier() const { return sUniquePipelineIdentifier; }
+
+    std::set<ShaderMacro> Pipeline::getAdditionalVertexShaderMacros() const {
+        return additionalVertexShaderMacros;
+    }
+
+    std::set<ShaderMacro> Pipeline::getAdditionalPixelShaderMacros() const {
+        return additionalPixelShaderMacros;
+    }
 
     void Pipeline::onMaterialUsingPipeline(Material* pMaterial) {
         {

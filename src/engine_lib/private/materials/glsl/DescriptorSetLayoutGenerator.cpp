@@ -353,9 +353,9 @@ namespace ne {
             return Error(fmt::format("failed to create descriptor sets, error: {}", string_VkResult(result)));
         }
 
-        // Fill resource descriptors info.
+        // Fill resource bindings info.
         for (const auto& [sResourceName, bindingInfo] : resourceBindings) {
-            generatedData.resourceDescriptors[sResourceName] = bindingInfo.iBindingIndex;
+            generatedData.resourceBindings[sResourceName] = bindingInfo.iBindingIndex;
         }
 
         return generatedData;

@@ -56,7 +56,7 @@ namespace ne {
              * @remark Generally used to bind/update data of some GLSL resource to a specific
              * descriptor in a descriptor set.
              */
-            std::unordered_map<std::string, uint32_t> resourceDescriptors;
+            std::unordered_map<std::string, uint32_t> resourceBindings;
         };
 
         DescriptorSetLayoutGenerator() = delete;

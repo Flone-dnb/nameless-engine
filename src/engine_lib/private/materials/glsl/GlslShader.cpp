@@ -17,11 +17,16 @@ namespace ne {
         Renderer* pRenderer,
         std::filesystem::path pathToCompiledShader,
         const std::string& sShaderName,
-        ShaderType shaderType)
+        ShaderType shaderType,
+        const std::string& sShaderEntryFunctionName)
         : Shader(pRenderer, std::move(pathToCompiledShader), sShaderName, shaderType) {
+        // Make sure vertex attributes don't need update.
         static_assert(
             sizeof(MeshVertex) == 32, // NOLINT: current size
             "`getVertexAttributeDescriptions` needs to be updated");
+
+        // Save entry function name.
+        this->sShaderEntryFunctionName = sShaderEntryFunctionName;
     }
 
     VkVertexInputBindingDescription GlslShader::getVertexBindingDescription() {
@@ -151,7 +156,11 @@ namespace ne {
         shaderCacheFile.close();
 
         return std::make_shared<GlslShader>(
-            pRenderer, pathToCompiledShader, shaderDescription.sShaderName, shaderDescription.shaderType);
+            pRenderer,
+            pathToCompiledShader,
+            shaderDescription.sShaderName,
+            shaderDescription.shaderType,
+            shaderDescription.sShaderEntryFunctionName);
     }
 
     bool GlslShader::releaseShaderDataFromMemoryIfLoaded() {
@@ -201,6 +210,8 @@ namespace ne {
     GlslShader::getDescriptorSetLayoutBindingInfo() {
         return &mtxDescriptorSetLayoutBindingInfo;
     }
+
+    std::string GlslShader::getShaderEntryFunctionName() const { return sShaderEntryFunctionName; }
 
     shaderc_shader_kind GlslShader::convertShaderTypeToShadercShaderKind(ShaderType shaderType) {
         switch (shaderType) {

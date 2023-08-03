@@ -83,6 +83,8 @@ set(PROJECT_SOURCES
     private/render/general/pipeline/PipelineManager.cpp
     private/render/general/pipeline/Pipeline.h
     private/render/general/pipeline/Pipeline.cpp
+    private/render/vulkan/pipeline/VulkanPipeline.h
+    private/render/vulkan/pipeline/VulkanPipeline.cpp
     private/render/general/resources/GpuResource.h
     private/render/general/resources/GpuResource.cpp
     private/render/general/resources/FrameResourcesManager.h

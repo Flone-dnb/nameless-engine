@@ -233,7 +233,8 @@ namespace ne {
             shaderDescription.pathToShaderFile,
             pathToCompiledShader,
             shaderDescription.sShaderName,
-            shaderDescription.shaderType);
+            shaderDescription.shaderType,
+            shaderDescription.sShaderEntryFunctionName);
         if (std::holds_alternative<Error>(result)) [[unlikely]] {
             auto error = std::get<Error>(std::move(result));
             error.addCurrentLocationToErrorStack();
@@ -267,7 +268,8 @@ namespace ne {
         const std::filesystem::path& pathToSourceShaderFile,
         const std::filesystem::path& pathToCompiledShader,
         const std::string& sShaderName,
-        ShaderType shaderType) {
+        ShaderType shaderType,
+        const std::string& sShaderEntryFunctionName) {
 #if defined(WIN32)
         if (dynamic_cast<DirectXRenderer*>(pRenderer) != nullptr) {
             // Calculate source file hash so that we could determine what pixel/fragment/vertex shaders
@@ -284,7 +286,8 @@ namespace ne {
         }
 #endif
         if (dynamic_cast<VulkanRenderer*>(pRenderer) != nullptr) {
-            return std::make_shared<GlslShader>(pRenderer, pathToCompiledShader, sShaderName, shaderType);
+            return std::make_shared<GlslShader>(
+                pRenderer, pathToCompiledShader, sShaderName, shaderType, sShaderEntryFunctionName);
         }
 
         return Error("unsupported renderer");

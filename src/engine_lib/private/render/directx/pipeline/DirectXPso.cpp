@@ -16,6 +16,19 @@ namespace ne {
         bool bUsePixelBlending)
         : Pipeline(pRenderer, pPipelineManager, sVertexShaderName, sPixelShaderName, bUsePixelBlending) {}
 
+    DirectXPso::~DirectXPso() {
+        std::scoped_lock guard(mtxInternalResources.first);
+
+        // Destroy pipeline objects if they are valid.
+        if (!mtxInternalResources.second.bIsReadyForUsage) {
+            return;
+        }
+
+        // Make sure the renderer is no longer using this PSO or its resources.
+        Logger::get().info("waiting for the GPU to finish work up to this point before destroying a PSO");
+        getRenderer()->waitForGpuToFinishWorkUpToThisPoint();
+    }
+
     std::variant<std::shared_ptr<DirectXPso>, Error> DirectXPso::createGraphicsPso(
         Renderer* pRenderer,
         PipelineManager* pPipelineManager,
@@ -79,14 +92,11 @@ namespace ne {
         //                getUniquePsoIdentifier()));
         //        }
 
-        // !!!
-        // !!! new resources go here !!!
 #if defined(DEBUG)
         static_assert(
-            sizeof(InternalResources) == 152, // NOLINT: current struct size
+            sizeof(InternalResources) == 104, // NOLINT: current struct size
             "release new resources here");
 #endif
-        // !!!
 
         // Done.
         mtxInternalResources.second.bIsReadyForUsage = false;
@@ -102,8 +112,8 @@ namespace ne {
             getVertexShaderName(),
             getPixelShaderName(),
             isUsingPixelBlending(),
-            mtxInternalResources.second.additionalVertexShaderMacros,
-            mtxInternalResources.second.additionalPixelShaderMacros);
+            getAdditionalVertexShaderMacros(),
+            getAdditionalPixelShaderMacros());
         if (optionalError.has_value()) {
             auto error = optionalError.value();
             error.addCurrentLocationToErrorStack();
@@ -121,9 +131,9 @@ namespace ne {
         const std::set<ShaderMacro>& additionalPixelShaderMacros) {
         // Get settings.
         const auto pRenderSettings = getRenderer()->getRenderSettings();
-
         std::scoped_lock resourcesGuard(mtxInternalResources.first, pRenderSettings->first);
 
+        // Make sure the pipeline is not initialized yet.
         if (mtxInternalResources.second.bIsReadyForUsage) [[unlikely]] {
             Logger::get().warn(
                 "PSO was requested to generate internal PSO resources but internal resources are already "
@@ -158,11 +168,9 @@ namespace ne {
             pPixelShaderPack->getShader(additionalPixelShaderMacros, fullPixelShaderConfiguration));
 
         // Get DirectX renderer.
-        DirectXRenderer* pDirectXRenderer = dynamic_cast<DirectXRenderer*>(getRenderer());
+        auto pDirectXRenderer = dynamic_cast<DirectXRenderer*>(getRenderer());
         if (pDirectXRenderer == nullptr) [[unlikely]] {
-            Error error("DirectX pipeline state object is used with non-DirectX renderer");
-            error.showError();
-            throw std::runtime_error(error.getFullErrorMessage());
+            return Error("expected a DirectX renderer");
         }
 
         // Get vertex shader bytecode and generate its root signature.
@@ -260,8 +268,6 @@ namespace ne {
         }
 
         // Done.
-        mtxInternalResources.second.additionalVertexShaderMacros = additionalVertexShaderMacros;
-        mtxInternalResources.second.additionalPixelShaderMacros = additionalPixelShaderMacros;
         mtxInternalResources.second.bIsReadyForUsage = true;
         saveUsedShaderConfiguration(ShaderType::VERTEX_SHADER, std::move(fullVertexShaderConfiguration));
         saveUsedShaderConfiguration(ShaderType::PIXEL_SHADER, std::move(fullPixelShaderConfiguration));

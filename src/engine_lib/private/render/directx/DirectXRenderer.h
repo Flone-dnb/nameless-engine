@@ -436,12 +436,6 @@ namespace ne {
         /** Whether @ref initializeDirectX was finished without errors or not. */
         bool bIsDirectXInitialized = false;
 
-        /** Minimum value for depth. */
-        static constexpr float fMinDepth = 0.0F;
-
-        /** Maximum value for depth. */
-        static constexpr float fMaxDepth = 1.0F;
-
         /** Back buffer format. */
         static constexpr DXGI_FORMAT backBufferFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
 

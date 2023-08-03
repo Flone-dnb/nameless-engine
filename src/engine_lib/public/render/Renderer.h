@@ -41,6 +41,20 @@ namespace ne {
         virtual ~Renderer() = default;
 
         /**
+         * Returns the minimum value for depth.
+         *
+         * @return Minimum depth value.
+         */
+        static constexpr float getMinDepth() { return minDepth; }
+
+        /**
+         * Returns the maximum value for depth.
+         *
+         * @return Maximum depth value.
+         */
+        static constexpr float getMaxDepth() { return maxDepth; }
+
+        /**
          * Creates a new renderer.
          *
          * @param pGameManager      Game manager object that will own this renderer.
@@ -397,6 +411,12 @@ namespace ne {
 
         /** Number of buffers in swap chain. */
         static constexpr unsigned int iSwapChainBufferCount = 3;
+
+        /** Minimum value for depth. */
+        static constexpr float minDepth = 0.0F;
+
+        /** Maximum value for depth. */
+        static constexpr float maxDepth = 1.0F;
     };
 
     /** Describes a group of shader macros. */

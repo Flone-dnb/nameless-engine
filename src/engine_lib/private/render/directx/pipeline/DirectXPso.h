@@ -34,12 +34,6 @@ namespace ne {
             /** Graphics PSO, created using @ref createGraphicsPso. */
             ComPtr<ID3D12PipelineState> pGraphicsPso;
 
-            /** Additional macros to enable for vertex shader configuration. */
-            std::set<ShaderMacro> additionalVertexShaderMacros;
-
-            /** Additional macros to enable for pixel shader configuration. */
-            std::set<ShaderMacro> additionalPixelShaderMacros;
-
             // !!! new internal resources go here !!!
             // !!! don't forget to update @ref releaseInternalResources !!!
 
@@ -51,12 +45,12 @@ namespace ne {
         DirectXPso(const DirectXPso&) = delete;
         DirectXPso& operator=(const DirectXPso&) = delete;
 
-        virtual ~DirectXPso() override = default;
+        virtual ~DirectXPso() override;
 
         /**
          * Assigns vertex and pixel shaders to create a graphics PSO (for usual rendering).
          *
-         * @param pRenderer              Parent renderer that owns this pipeline.
+         * @param pRenderer              Used renderer.
          * @param pPipelineManager       Pipeline manager that owns this PSO.
          * @param sVertexShaderName      Name of the compiled vertex shader (see
          * ShaderManager::compileShaders).
@@ -82,7 +76,7 @@ namespace ne {
         /**
          * Releases internal resources such as root signature, internal PSO, etc.
          *
-         * @warning Expects that the GPU is not referencing this PSO (command queue is empty) and
+         * @warning Expects that the GPU is not referencing this PSO and
          * that no drawing will occur until @ref restoreInternalResources is called.
          *
          * @remark Typically used before changing something (for ex. shader configuration), so that no PSO
@@ -93,7 +87,7 @@ namespace ne {
         [[nodiscard]] virtual std::optional<Error> releaseInternalResources() override;
 
         /**
-         * Creates internal resources using the current configuration.
+         * Creates internal resources using the current shader configuration.
          *
          * @remark Called after @ref releaseInternalResources to create resources that will now reference
          * changed (new) resources.
@@ -113,9 +107,9 @@ namespace ne {
 
     private:
         /**
-         * Constructor.
+         * Constructs uninitialized pipeline.
          *
-         * @param pRenderer         Parent renderer that owns this PSO.
+         * @param pRenderer         Used renderer.
          * @param pPipelineManager  Pipeline manager that owns this PSO.
          * @param sVertexShaderName Name of the compiled vertex shader (see ShaderManager::compileShaders).
          * @param sPixelShaderName  Name of the compiled pixel shader (see ShaderManager::compileShaders).

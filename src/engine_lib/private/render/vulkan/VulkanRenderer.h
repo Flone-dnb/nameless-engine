@@ -113,6 +113,27 @@ namespace ne {
         virtual void waitForGpuToFinishWorkUpToThisPoint() override;
 
         /**
+         * Creates a new one-time submit command buffer to be later used with
+         * @ref submitWaitDestroyOneTimeSubmitCommandBuffer.
+         *
+         * @return Error if something went wrong, otherwise created command buffer.
+         */
+        std::variant<VkCommandBuffer, Error> createOneTimeSubmitCommandBuffer();
+
+        /**
+         * Submits a one-time submit command buffer created by @ref createOneTimeSubmitCommandBuffer,
+         * then waits for the queue (that recorded commands were submitted to) to be idle and destroys
+         * the command buffer.
+         *
+         * @param pOneTimeSubmitCommandBuffer Command buffer created by @ref createOneTimeSubmitCommandBuffer
+         * with recorded commands to submit.
+         *
+         * @return Error if something went wrong.
+         */
+        [[nodiscard]] std::optional<Error>
+        submitWaitDestroyOneTimeSubmitCommandBuffer(VkCommandBuffer pOneTimeSubmitCommandBuffer);
+
+        /**
          * Returns logical device used in the renderer.
          *
          * @return `nullptr` if logical device is not created yet, otherwise used logical device.
@@ -134,25 +155,19 @@ namespace ne {
         VkInstance getInstance() const;
 
         /**
-         * Creates a new one-time submit command buffer to be later used with
-         * @ref submitWaitDestroyOneTimeSubmitCommandBuffer.
+         * Returns Vulkan render pass used in the renderer.
          *
-         * @return Error if something went wrong, otherwise created command buffer.
+         * @return `nullptr` if render pass is not created yet, otherwise used render pass.
          */
-        std::variant<VkCommandBuffer, Error> createOneTimeSubmitCommandBuffer();
+        VkRenderPass getRenderPass() const;
 
         /**
-         * Submits a one-time submit command buffer created by @ref createOneTimeSubmitCommandBuffer,
-         * then waits for the queue (that recorded commands were submitted to) to be idle and destroys
-         * the command buffer.
+         * Returns the size of images in the swap chain.
          *
-         * @param pOneTimeSubmitCommandBuffer Command buffer created by @ref createOneTimeSubmitCommandBuffer
-         * with recorded commands to submit.
-         *
-         * @return Error if something went wrong.
+         * @return Empty if the swap chain is not initialized, otherwise the size of images in
+         * the swap chain.
          */
-        [[nodiscard]] std::optional<Error>
-        submitWaitDestroyOneTimeSubmitCommandBuffer(VkCommandBuffer pOneTimeSubmitCommandBuffer);
+        std::optional<VkExtent2D> getSwapChainExtent() const;
 
     protected:
         /**
@@ -558,8 +573,8 @@ namespace ne {
         /** Queue family indices of current @ref pPhysicalDevice. */
         QueueFamilyIndices physicalDeviceQueueFamilyIndices;
 
-        /** Size of the images in the swap chain. */
-        VkExtent2D swapChainExtent;
+        /** Size of images in the swap chain. */
+        std::optional<VkExtent2D> swapChainExtent;
 
         /** Used MSAA sample count. */
         VkSampleCountFlagBits msaaSampleCount = VK_SAMPLE_COUNT_8_BIT;

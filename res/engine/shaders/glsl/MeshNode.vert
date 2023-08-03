@@ -19,7 +19,7 @@ layout(std140, binding = 1) readonly buffer MeshDataBuffer{
     MeshData data[];
 } meshDataBuffer;
 
-void main(){
+void vsMeshNode(){
     gl_Position = meshDataBuffer.data[gl_BaseInstance].worldMatrix * frameData.viewProjectionMatrix * vec4(localPosition, 1.0F);
 
     fragmentViewPosition = gl_Position;

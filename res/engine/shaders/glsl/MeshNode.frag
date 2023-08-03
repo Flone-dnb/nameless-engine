@@ -1,7 +1,7 @@
 #include "Base.glsl"
 
 #ifdef USE_DIFFUSE_TEXTURE
-    layout(binding = 1) uniform sampler2D textureSampler;
+    layout(binding = 2) uniform sampler2D textureSampler;
 #endif
 
 layout(location = 0) in vec4 fragmentViewPosition;
@@ -12,7 +12,7 @@ layout(location = 3) in vec2 fragmentUv;
 layout(location = 0) out vec4 outColor;
 
 /** Describes Material's constants. */
-layout(binding = 2) uniform MaterialData
+layout(binding = 3) uniform MaterialData
 {
     /** Fill color. */
     vec3 diffuseColor;
@@ -21,7 +21,7 @@ layout(binding = 2) uniform MaterialData
     float opacity;
 } materialData;
 
-void main() {
+void psMeshNode() {
     outColor = vec4(materialData.diffuseColor, 1.0F);
 
 #ifdef USE_DIFFUSE_TEXTURE

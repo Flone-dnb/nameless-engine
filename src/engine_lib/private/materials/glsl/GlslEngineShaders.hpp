@@ -13,18 +13,18 @@ namespace ne {
 
         /** Mesh node's vertex shader. */
         static inline const auto meshNodeVertexShader = ShaderDescription(
-            EngineShaderNames::sMeshNodeVertexShaderName,
+            EngineShaderNames::MeshNode::sVertexShaderName,
             ProjectPaths::getPathToResDirectory(ResourceDirectory::ENGINE) / "shaders/glsl/MeshNode.vert",
             ShaderType::VERTEX_SHADER,
-            "main",
+            EngineShaderNames::MeshNode::sVertexShaderEntryName,
             {});
 
         /** Mesh node's fragment shader. */
         static inline const auto meshNodeFragmentShader = ShaderDescription(
-            EngineShaderNames::sMeshNodePixelShaderName,
+            EngineShaderNames::MeshNode::sPixelShaderName,
             ProjectPaths::getPathToResDirectory(ResourceDirectory::ENGINE) / "shaders/glsl/MeshNode.frag",
             ShaderType::PIXEL_SHADER,
-            "main",
+            EngineShaderNames::MeshNode::sPixelShaderEntryName,
             {});
     };
 } // namespace ne

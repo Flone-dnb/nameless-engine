@@ -197,6 +197,11 @@ namespace ne {
         return &mtxSpirvBytecode;
     }
 
+    std::pair<std::mutex, std::optional<std::unordered_map<uint32_t, DescriptorSetLayoutBindingInfo>>>*
+    GlslShader::getDescriptorSetLayoutBindingInfo() {
+        return &mtxDescriptorSetLayoutBindingInfo;
+    }
+
     shaderc_shader_kind GlslShader::convertShaderTypeToShadercShaderKind(ShaderType shaderType) {
         switch (shaderType) {
         case (ShaderType::VERTEX_SHADER): {

@@ -149,25 +149,26 @@ namespace ne {
                 pPixelShader->getShaderSourceFileHash()));
         }
 
-        // Get pixel shader used root parameters and used static samplers.
+        // Get shaders used root parameters and used static samplers.
         auto pMtxPixelRootInfo = pPixelShader->getRootSignatureInfo();
+        auto pMtxVertexRootInfo = pVertexShader->getRootSignatureInfo();
+
+        // Lock info.
+        std::scoped_lock shaderRootSignatureInfoGuard(pMtxPixelRootInfo->first, pMtxVertexRootInfo->first);
+
+        // Make sure it's not empty.
         if (!pMtxPixelRootInfo->second.has_value()) [[unlikely]] {
             return Error(fmt::format(
                 "unable to merge root signature of the pixel shader \"{}\" "
-                "because it does have root signature generated",
+                "because it does have root signature info collected",
                 pPixelShader->getShaderName()));
         }
-
-        // Get vertex shader used root parameters and used static samplers.
-        auto pMtxVertexRootInfo = pVertexShader->getRootSignatureInfo();
         if (!pMtxVertexRootInfo->second.has_value()) [[unlikely]] {
             return Error(fmt::format(
                 "unable to merge root signature of the vertex shader \"{}\" "
-                "because it does have root signature generated",
+                "because it does have root signature info collected",
                 pVertexShader->getShaderName()));
         }
-
-        std::scoped_lock shaderRootSignatureInfoGuard(pMtxPixelRootInfo->first, pMtxVertexRootInfo->first);
 
         auto& pixelShaderRootSignatureInfo = pMtxPixelRootInfo->second.value();
         auto& vertexShaderRootSignatureInfo = pMtxVertexRootInfo->second.value();
@@ -182,7 +183,7 @@ namespace ne {
             vertexShaderRootSignatureInfo.rootParameterIndices.find(sFrameConstantBufferName);
         if (vertexFrameBufferIt == vertexShaderRootSignatureInfo.rootParameterIndices.end()) [[unlikely]] {
             return Error(fmt::format(
-                "expected to find `cbuffer` \"{}\" to be used in vertex shader \"{}\")",
+                "expected to find `cbuffer` \"{}\" to be used in vertex shader \"{}\"",
                 sFrameConstantBufferName,
                 pVertexShader->getShaderName()));
         }

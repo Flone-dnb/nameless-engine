@@ -86,6 +86,15 @@ namespace ne {
         std::variant<std::pair<std::recursive_mutex, std::vector<char>>*, Error> getCompiledBytecode();
 
         /**
+         * Returns information about descriptor layout that can be used for this shader.
+         *
+         * @return Empty if descriptor layout information was not collected yet, use @ref getCompiledBytecode
+         * to collect and load everything, otherwise descriptor layout info.
+         */
+        std::pair<std::mutex, std::optional<std::unordered_map<uint32_t, DescriptorSetLayoutBindingInfo>>>*
+        getDescriptorSetLayoutBindingInfo();
+
+        /**
          * Releases underlying shader data (bytecode, root signature, etc.) from memory (this object will not
          * be deleted) if the shader data was loaded into memory. Next time this shader will be needed the
          * data will be loaded from disk.

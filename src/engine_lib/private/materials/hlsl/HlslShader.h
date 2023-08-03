@@ -150,10 +150,10 @@ namespace ne {
         std::variant<ComPtr<IDxcBlob>, Error> getCompiledBlob();
 
         /**
-         * Returns information about generated root signature for this shader.
+         * Returns information about root signature that can be used for this shader.
          *
-         * @return Empty if root signature was not generated yet, use @ref getCompiledBlob
-         * to generated and load everything, otherwise root signature info.
+         * @return Empty if root signature information was not collected yet, use @ref getCompiledBlob
+         * to collect and load everything, otherwise root signature info.
          */
         std::pair<std::mutex, std::optional<RootSignatureInfo>>* getRootSignatureInfo();
 

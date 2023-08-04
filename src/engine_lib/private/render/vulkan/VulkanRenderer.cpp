@@ -35,8 +35,6 @@ namespace ne {
 
         destroySwapChainAndDependentResources();
 
-        // ... destroy new stuff here ...
-
         if (pLogicalDevice != nullptr) {
             // Destroy semaphores and fences.
             for (unsigned int i = 0; i < FrameResourcesManager::getFrameResourcesCount(); i++) {
@@ -1167,6 +1165,10 @@ namespace ne {
             return;
         }
 
+        // Make sure all pipelines were destroyed because they reference render pass.
+        resetPipelineManager();
+
+        // Now when all pipelines were destroyed:
         // Destroy render pass.
         vkDestroyRenderPass(pLogicalDevice, pRenderPass, nullptr);
         pRenderPass = nullptr;

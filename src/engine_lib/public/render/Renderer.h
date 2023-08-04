@@ -263,6 +263,14 @@ namespace ne {
         void resetGpuResourceManager();
 
         /**
+         * Sets `nullptr` to pipeline manager's unique ptr to force destroy it (if exists).
+         *
+         * @warning Avoid using this function. Only use it if you need a special destruction order
+         * in your renderer.
+         */
+        void resetPipelineManager();
+
+        /**
          * Collects array of engine shaders that will be compiled/verified.
          *
          * @return Array of shader descriptions to compile.

@@ -52,7 +52,7 @@ namespace ne {
         const auto iCreatedGraphicsPipelineCount = getCreatedGraphicsPipelineCount();
         if (iCreatedGraphicsPipelineCount != 0) [[unlikely]] {
             Logger::get().error(fmt::format(
-                "Pipeline manager is being destroyed but there are still {} graphics pipeline(s) exist",
+                "pipeline manager is being destroyed but there are still {} graphics pipeline(s) exist",
                 iCreatedGraphicsPipelineCount));
         }
 
@@ -60,7 +60,7 @@ namespace ne {
         const auto iCreatedComputePipelineCount = getCreatedComputePipelineCount();
         if (iCreatedComputePipelineCount != 0) [[unlikely]] {
             Logger::get().error(fmt::format(
-                "Pipeline manager is being destroyed but there are still {} compute pipeline(s) exist",
+                "pipeline manager is being destroyed but there are still {} compute pipeline(s) exist",
                 iCreatedComputePipelineCount));
         }
     }

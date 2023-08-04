@@ -112,6 +112,12 @@ namespace ne {
         pResourceManager = nullptr;
     }
 
+    void Renderer::resetPipelineManager() {
+        Logger::get().info("explicitly resetting pipeline manager");
+        Logger::get().flushToDisk();
+        pPipelineManager = nullptr;
+    }
+
     std::unique_ptr<Renderer>
     Renderer::createRenderer(GameManager* pGameManager, std::optional<RendererType> preferredRenderer) {
         // Describe default renderer preference.

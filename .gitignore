@@ -2,3 +2,5 @@ build
 *.user
 *.vs
 *.TMP
+out
+CMakeSettings.json

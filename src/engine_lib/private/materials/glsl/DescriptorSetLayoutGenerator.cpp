@@ -37,16 +37,25 @@ namespace ne {
                 fmt::format("failed to get shader descriptor bindings, error: {}", static_cast<int>(result)));
         }
 
+        std::unordered_set<std::string> usedNames;
         std::unordered_map<uint32_t, DescriptorSetLayoutBindingInfo> bindingInfo;
         for (const auto& descriptorBinding : vDescriptorBindings) {
             // Make sure there was no binding with this ID.
-            auto it = bindingInfo.find(descriptorBinding->binding);
-            if (it != bindingInfo.end()) [[unlikely]] {
+            auto bindingInfoIt = bindingInfo.find(descriptorBinding->binding);
+            if (bindingInfoIt != bindingInfo.end()) [[unlikely]] {
                 return Error(fmt::format(
                     "found two resources that use the same binding index {}, these are: \"{}\" and \"{}\"",
-                    it->first,
-                    it->second.sResourceName,
+                    bindingInfoIt->first,
+                    bindingInfoIt->second.sResourceName,
                     descriptorBinding->name));
+            }
+
+            // Make sure this resource name was not used yet because we will use names to
+            // differentiate resources in the engine.
+            auto usedNamesIt = usedNames.find(descriptorBinding->name);
+            if (usedNamesIt != usedNames.end()) [[unlikely]] {
+                return Error(fmt::format(
+                    "found two resources that have the same name \"{}\"", descriptorBinding->name));
             }
 
             // Collect new binding info.

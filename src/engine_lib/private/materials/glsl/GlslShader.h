@@ -27,14 +27,12 @@ namespace ne {
          * @param pathToCompiledShader Path to compiled shader bytecode on disk.
          * @param sShaderName          Unique name of this shader.
          * @param shaderType           Type of this shader.
-         * @param sShaderEntryFunctionName Name of the entry function.
          */
         GlslShader(
             Renderer* pRenderer,
             std::filesystem::path pathToCompiledShader,
             const std::string& sShaderName,
-            ShaderType shaderType,
-            const std::string& sShaderEntryFunctionName);
+            ShaderType shaderType);
 
         GlslShader() = delete;
         GlslShader(const GlslShader&) = delete;
@@ -95,13 +93,6 @@ namespace ne {
          */
         std::pair<std::mutex, std::optional<std::unordered_map<uint32_t, DescriptorSetLayoutBindingInfo>>>*
         getDescriptorSetLayoutBindingInfo();
-
-        /**
-         * Returns name of the shader's entry function.
-         *
-         * @return Entry function name.
-         */
-        std::string getShaderEntryFunctionName() const;
 
         /**
          * Releases underlying shader data (bytecode, root signature, etc.) from memory (this object will not
@@ -179,9 +170,6 @@ namespace ne {
          */
         std::pair<std::mutex, std::optional<std::unordered_map<uint32_t, DescriptorSetLayoutBindingInfo>>>
             mtxDescriptorSetLayoutBindingInfo;
-
-        /** Name of the entry function of this shader. */
-        std::string sShaderEntryFunctionName;
 
         /** Index of the vertex input binding. */
         static constexpr uint32_t iVertexBindingIndex = 0;

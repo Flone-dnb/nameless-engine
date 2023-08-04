@@ -203,7 +203,6 @@ namespace ne {
          * @param pathToCompiledShader   Path to compiled shader bytecode on disk.
          * @param sShaderName            Unique name of this shader.
          * @param shaderType             Type of this shader.
-         * @param sShaderEntryFunctionName Name of the shader entry function.
          *
          * @return Error if something went wrong, otherwise created shader.
          */
@@ -212,8 +211,7 @@ namespace ne {
             const std::filesystem::path& pathToSourceShaderFile,
             const std::filesystem::path& pathToCompiledShader,
             const std::string& sShaderName,
-            ShaderType shaderType,
-            const std::string& sShaderEntryFunctionName);
+            ShaderType shaderType);
 
         /** Do not delete. Used renderer. */
         Renderer* pUsedRenderer = nullptr;

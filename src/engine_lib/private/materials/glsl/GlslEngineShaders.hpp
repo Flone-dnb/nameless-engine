@@ -16,7 +16,7 @@ namespace ne {
             EngineShaderNames::MeshNode::sVertexShaderName,
             ProjectPaths::getPathToResDirectory(ResourceDirectory::ENGINE) / "shaders/glsl/MeshNode.vert",
             ShaderType::VERTEX_SHADER,
-            EngineShaderNames::MeshNode::sVertexShaderEntryName,
+            "main",
             {});
 
         /** Mesh node's fragment shader. */
@@ -24,7 +24,7 @@ namespace ne {
             EngineShaderNames::MeshNode::sPixelShaderName,
             ProjectPaths::getPathToResDirectory(ResourceDirectory::ENGINE) / "shaders/glsl/MeshNode.frag",
             ShaderType::PIXEL_SHADER,
-            EngineShaderNames::MeshNode::sPixelShaderEntryName,
+            "main",
             {});
     };
 } // namespace ne

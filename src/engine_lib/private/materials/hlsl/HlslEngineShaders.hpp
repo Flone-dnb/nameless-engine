@@ -16,7 +16,7 @@ namespace ne {
             EngineShaderNames::MeshNode::sVertexShaderName,
             ProjectPaths::getPathToResDirectory(ResourceDirectory::ENGINE) / "shaders/hlsl/MeshNode.hlsl",
             ShaderType::VERTEX_SHADER,
-            EngineShaderNames::MeshNode::sVertexShaderEntryName,
+            "vsMeshNode",
             {});
 
         /** Mesh node's pixel shader. */
@@ -24,7 +24,7 @@ namespace ne {
             EngineShaderNames::MeshNode::sPixelShaderName,
             ProjectPaths::getPathToResDirectory(ResourceDirectory::ENGINE) / "shaders/hlsl/MeshNode.hlsl",
             ShaderType::PIXEL_SHADER,
-            EngineShaderNames::MeshNode::sPixelShaderEntryName,
+            "psMeshNode",
             {});
     };
 } // namespace ne

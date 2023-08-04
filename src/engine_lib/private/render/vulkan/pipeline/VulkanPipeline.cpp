@@ -303,23 +303,19 @@ namespace ne {
                 string_VkResult(result)));
         }
 
-        // Get shader entry function names.
-        const auto sVertexShaderEntryFunctionName = pVertexShader->getShaderEntryFunctionName();
-        const auto sFragmentShaderEntryFunctionName = pFragmentShader->getShaderEntryFunctionName();
-
         // Describe vertex shader pipeline stage.
         VkPipelineShaderStageCreateInfo vertexShaderStageInfo{};
         vertexShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
         vertexShaderStageInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
         vertexShaderStageInfo.module = pVertexShaderModule;
-        vertexShaderStageInfo.pName = sVertexShaderEntryFunctionName.c_str();
+        vertexShaderStageInfo.pName = "main";
 
         // Describe fragment shader pipeline stage.
         VkPipelineShaderStageCreateInfo fragmentShaderStageInfo{};
         fragmentShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
         fragmentShaderStageInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
         fragmentShaderStageInfo.module = pFragmentShaderModule;
-        fragmentShaderStageInfo.pName = sFragmentShaderEntryFunctionName.c_str();
+        fragmentShaderStageInfo.pName = "main";
 
         // Group shader stages.
         const std::array<VkPipelineShaderStageCreateInfo, 2> shaderStages = {

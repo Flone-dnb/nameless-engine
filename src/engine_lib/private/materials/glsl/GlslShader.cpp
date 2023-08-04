@@ -17,16 +17,12 @@ namespace ne {
         Renderer* pRenderer,
         std::filesystem::path pathToCompiledShader,
         const std::string& sShaderName,
-        ShaderType shaderType,
-        const std::string& sShaderEntryFunctionName)
+        ShaderType shaderType)
         : Shader(pRenderer, std::move(pathToCompiledShader), sShaderName, shaderType) {
         // Make sure vertex attributes don't need update.
         static_assert(
             sizeof(MeshVertex) == 32, // NOLINT: current size
             "`getVertexAttributeDescriptions` needs to be updated");
-
-        // Save entry function name.
-        this->sShaderEntryFunctionName = sShaderEntryFunctionName;
     }
 
     VkVertexInputBindingDescription GlslShader::getVertexBindingDescription() {
@@ -156,11 +152,7 @@ namespace ne {
         shaderCacheFile.close();
 
         return std::make_shared<GlslShader>(
-            pRenderer,
-            pathToCompiledShader,
-            shaderDescription.sShaderName,
-            shaderDescription.shaderType,
-            shaderDescription.sShaderEntryFunctionName);
+            pRenderer, pathToCompiledShader, shaderDescription.sShaderName, shaderDescription.shaderType);
     }
 
     bool GlslShader::releaseShaderDataFromMemoryIfLoaded() {
@@ -210,8 +202,6 @@ namespace ne {
     GlslShader::getDescriptorSetLayoutBindingInfo() {
         return &mtxDescriptorSetLayoutBindingInfo;
     }
-
-    std::string GlslShader::getShaderEntryFunctionName() const { return sShaderEntryFunctionName; }
 
     shaderc_shader_kind GlslShader::convertShaderTypeToShadercShaderKind(ShaderType shaderType) {
         switch (shaderType) {
@@ -285,17 +275,17 @@ namespace ne {
             const auto pathToCompiledShader = std::get<std::filesystem::path>(std::move(pathResult));
 
             // Open file.
-            std::ifstream file(pathToCompiledShader, std::ios::ate | std::ios::binary);
+            std::ifstream file(pathToCompiledShader, std::ifstream::ate | std::ios::binary);
             if (!file.is_open()) [[unlikely]] {
                 return Error(fmt::format("failed to open the file \"{}\"", pathToCompiledShader.string()));
             }
 
             // Get file size.
-            const auto iFileSize = file.tellg();
-            file.seekg(0);
+            const long long iFileByteCount = file.tellg();
+            file.seekg(0, std::ios::beg);
 
-            // Reserve data.
-            mtxSpirvBytecode.second.reserve(iFileSize);
+            // Prepare data.
+            mtxSpirvBytecode.second.resize(iFileByteCount);
 
             // Read file contents.
             file.read(mtxSpirvBytecode.second.data(), mtxSpirvBytecode.second.size());

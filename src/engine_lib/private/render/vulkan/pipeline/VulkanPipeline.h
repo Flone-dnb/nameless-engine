@@ -82,6 +82,16 @@ namespace ne {
             const std::set<ShaderMacro>& additionalFragmentShaderMacros);
 
         /**
+         * Returns internal resources that this pipeline uses.
+         *
+         * @return Internal resources.
+         */
+        inline std::pair<std::recursive_mutex, InternalResources>* getInternalResources() {
+            return &mtxInternalResources;
+        }
+
+    protected:
+        /**
          * Releases internal resources such as pipeline layout, internal pipeline, descriptor layout, etc.
          *
          * @warning Expects that the GPU is not referencing this pipeline and
@@ -103,15 +113,6 @@ namespace ne {
          * @return Error if something went wrong.
          */
         [[nodiscard]] virtual std::optional<Error> restoreInternalResources() override;
-
-        /**
-         * Returns internal resources that this pipeline uses.
-         *
-         * @return Internal resources.
-         */
-        inline std::pair<std::recursive_mutex, InternalResources>* getInternalResources() {
-            return &mtxInternalResources;
-        }
 
     private:
         /**

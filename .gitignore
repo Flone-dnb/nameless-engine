@@ -4,3 +4,4 @@ build
 *.TMP
 out
 CMakeSettings.json
+*.autosave

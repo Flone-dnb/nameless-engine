@@ -84,9 +84,29 @@ namespace ne {
         }
 
         // Copy new resource data to the GPU resources of the current frame resource.
-        for (const auto& pResource :
-             mtxShaderCpuWriteResources.second.toBeUpdated[iCurrentFrameResourceIndex]) {
-            pResource->updateResource(iCurrentFrameResourceIndex);
+
+        static_assert(
+            std::is_same_v<
+                decltype(mtxShaderCpuWriteResources.second.toBeUpdated),
+                std::array<
+                    std::unordered_set<ShaderCpuWriteResource*>,
+                    FrameResourcesManager::getFrameResourcesCount()>>,
+            "update reinterpret_casts");
+
+        // TODO: ugly but helps to avoid usage of virtual functions in this loop as it's executed
+        // every frame with potentially lots of resources to be updated.
+        if (dynamic_cast<VulkanRenderer*>(pRenderer) != nullptr) {
+            const auto pGlslResources = reinterpret_cast<std::unordered_set<GlslShaderCpuWriteResource*>*>(
+                &mtxShaderCpuWriteResources.second.toBeUpdated[iCurrentFrameResourceIndex]);
+            for (const auto& pResource : *pGlslResources) {
+                pResource->updateResource(iCurrentFrameResourceIndex);
+            }
+        } else {
+            const auto pHlslResources = reinterpret_cast<std::unordered_set<HlslShaderCpuWriteResource*>*>(
+                &mtxShaderCpuWriteResources.second.toBeUpdated[iCurrentFrameResourceIndex]);
+            for (const auto& pResource : *pHlslResources) {
+                pResource->updateResource(iCurrentFrameResourceIndex);
+            }
         }
 
         // Clear array of resources to be updated for the current frame resource since

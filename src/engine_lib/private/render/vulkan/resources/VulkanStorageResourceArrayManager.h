@@ -30,7 +30,6 @@ namespace ne {
 
         ~VulkanStorageResourceArrayManager();
 
-    private:
         /**
          * Requests a new slot in the storage buffer array to be reserved for use by the specified
          * shader resource.
@@ -47,6 +46,17 @@ namespace ne {
          */
         std::variant<std::unique_ptr<VulkanStorageResourceArraySlot>, Error>
         reserveSlotsInArray(GlslShaderCpuWriteResource* pShaderResource);
+
+    private:
+        /**
+         * Formats the specified size in bytes to the following format: "<number> MB",
+         * for example the number 1512 will be formatted to the following text: "0.0014 MB".
+         *
+         * @param iSizeInBytes Size in bytes to format.
+         *
+         * @return Formatted text.
+         */
+        static std::string formatBytesToMegabytes(size_t iSizeInBytes);
 
         /**
          * Resource manager that owns this manager

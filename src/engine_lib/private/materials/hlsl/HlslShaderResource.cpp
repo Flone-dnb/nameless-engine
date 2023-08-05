@@ -99,9 +99,9 @@ namespace ne {
         : ShaderCpuWriteResource(
               sResourceName,
               iOriginalResourceSizeInBytes,
-              std::move(vResourceData),
               onStartedUpdatingResource,
               onFinishedUpdatingResource) {
+        this->vResourceData = std::move(vResourceData);
         this->iRootParameterIndex = iRootParameterIndex;
     }
 

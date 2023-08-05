@@ -297,7 +297,7 @@ namespace ne {
         // Describe descriptor types that our descriptor sets will contain.
         std::vector<VkDescriptorPoolSize> vPoolSizes(vLayoutBindings.size());
         for (size_t i = 0; i < vPoolSizes.size(); i++) {
-            VkDescriptorPoolSize descriptorPoolSize;
+            auto& descriptorPoolSize = vPoolSizes[i];
 
             // Specify descriptor type.
             descriptorPoolSize.type = vLayoutBindings[i].descriptorType;

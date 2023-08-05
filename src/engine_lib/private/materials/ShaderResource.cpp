@@ -24,13 +24,10 @@ namespace ne {
     ShaderCpuWriteResource::ShaderCpuWriteResource(
         const std::string& sResourceName,
         size_t iOriginalResourceSizeInBytes,
-        std::array<std::unique_ptr<UploadBuffer>, FrameResourcesManager::getFrameResourcesCount()>
-            vResourceData,
         const std::function<void*()>& onStartedUpdatingResource,
         const std::function<void()>& onFinishedUpdatingResource)
         : ShaderResourceBase(sResourceName) {
         this->iOriginalResourceSizeInBytes = iOriginalResourceSizeInBytes;
-        this->vResourceData = std::move(vResourceData);
         this->onStartedUpdatingResource = onStartedUpdatingResource;
         this->onFinishedUpdatingResource = onFinishedUpdatingResource;
     }

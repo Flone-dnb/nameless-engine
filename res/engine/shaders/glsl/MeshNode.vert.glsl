@@ -14,16 +14,15 @@ struct MeshData {
     /** Matrix that transforms vertices from mesh local space to world space. */
     mat4 worldMatrix; 
 };
-
 layout(std140, binding = 1) readonly buffer MeshDataBuffer{
-    MeshData data[];
-} meshDataBuffer;
+    MeshData array[];
+} meshData;
 
 void vsMeshNode(){
-    gl_Position = meshDataBuffer.data[gl_BaseInstance].worldMatrix * frameData.viewProjectionMatrix * vec4(localPosition, 1.0F);
+    gl_Position = meshData.array[gl_BaseInstance].worldMatrix * frameData.viewProjectionMatrix * vec4(localPosition, 1.0F);
 
     fragmentViewPosition = gl_Position;
-    fragmentWorldPosition = meshDataBuffer.data[gl_BaseInstance].worldMatrix * vec4(localPosition, 1.0F);
-    fragmentNormal = normalize(mat3(meshDataBuffer.data[gl_BaseInstance].worldMatrix) * localNormal);
+    fragmentWorldPosition = meshData.array[gl_BaseInstance].worldMatrix * vec4(localPosition, 1.0F);
+    fragmentNormal = normalize(mat3(meshData.array[gl_BaseInstance].worldMatrix) * localNormal);
     fragmentUv = uv;
 }

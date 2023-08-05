@@ -12,17 +12,20 @@ layout(location = 3) in vec2 fragmentUv;
 layout(location = 0) out vec4 outColor;
 
 /** Describes Material's constants. */
-layout(binding = 3) uniform MaterialData
+struct MaterialData
 {
     /** Fill color. */
     vec3 diffuseColor;
 
     /** Opacity (when material transparency is used). */
     float opacity;
+};
+layout(std140, binding = 3) readonly buffer MaterialDataBuffer{
+    MaterialData array[];
 } materialData;
 
 void fsMeshNode(){
-    outColor = vec4(materialData.diffuseColor, 1.0F);
+    outColor = vec4(materialData.array[0].diffuseColor, 1.0F);
 
 #ifdef USE_DIFFUSE_TEXTURE
     outColor *= texture(textureSampler, fragmentUv);

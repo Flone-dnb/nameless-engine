@@ -2,7 +2,7 @@
 
 // Custom.
 #include "render/general/resources/GpuResourceManager.h"
-#include "render/Renderer.h"
+#include "render/vulkan/VulkanRenderer.h"
 #include "materials/glsl/GlslShaderResource.h"
 
 namespace ne {
@@ -129,6 +129,12 @@ namespace ne {
     size_t VulkanStorageResourceArray::getCapacity() {
         std::scoped_lock guard(mtxInternalResources.first);
         return mtxInternalResources.second.iCapacity;
+    }
+
+    size_t VulkanStorageResourceArray::getSizeInBytes() {
+        std::scoped_lock guard(mtxInternalResources.first);
+
+        return mtxInternalResources.second.iCapacity * iElementSizeInBytes;
     }
 
     size_t VulkanStorageResourceArray::getElementSize() const { return iElementSizeInBytes; }
@@ -295,6 +301,12 @@ namespace ne {
                 mtxInternalResources.second.iSize));
         }
 
+        // Get Vulkan renderer to pass to shader resources below.
+        const auto pVulkanRenderer = dynamic_cast<VulkanRenderer*>(pRenderer);
+        if (pVulkanRenderer == nullptr) [[unlikely]] {
+            return Error("expected a Vulkan renderer");
+        }
+
         // Get shader resource manager to be used.
         const auto pShaderResourceManager = pRenderer->getShaderCpuWriteResourceManager();
 
@@ -304,11 +316,19 @@ namespace ne {
             // Save new index to slot.
             pSlot->iIndexInArray = iCurrentIndex;
 
+            // Notify resource about changed VkBuffer so it will rebind descriptors.
+            auto optionalError = pSlot->pShaderResource->rebindBufferToDescriptor(pVulkanRenderer);
+
             // Increment index.
             iCurrentIndex += 1;
 
             // Mark resource as "needs update" so that it will copy its data to the new
             // storage buffer's index.
+            //
+            // We use shader manager instead of telling a specific shader resource to re-copy its data to GPU
+            // because of several reasons, for example because resource might already be marked as "needs
+            // update" in manager and if we tell a specific resource to re-copy its data the manager
+            // will do this again.
             pShaderResourceManager->markResourceAsNeedsUpdate(pSlot->pShaderResource);
         }
 
@@ -422,6 +442,20 @@ namespace ne {
 
     VulkanStorageResourceArraySlot::~VulkanStorageResourceArraySlot() {
         pArray->markSlotAsNoLongerBeingUsed(this);
+    }
+
+    VkDeviceSize VulkanStorageResourceArraySlot::getOffsetFromArrayStart() const {
+        std::scoped_lock guard(pArray->mtxInternalResources.first);
+
+        return iIndexInArray * pArray->iElementSizeInBytes;
+    }
+
+    VkBuffer VulkanStorageResourceArraySlot::getBuffer() const {
+        std::scoped_lock guard(pArray->mtxInternalResources.first);
+
+        return dynamic_cast<VulkanResource*>(
+                   pArray->mtxInternalResources.second.pStorageBuffer->getInternalResource())
+            ->getInternalResource();
     }
 
     void VulkanStorageResourceArraySlot::updateData(void* pData) { pArray->updateSlotData(this, pData); }

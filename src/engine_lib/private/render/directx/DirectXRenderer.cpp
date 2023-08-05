@@ -342,7 +342,9 @@ namespace ne {
     void DirectXRenderer::drawNextFrame() {
         // Get active camera.
         const auto pMtxActiveCamera = getGameManager()->getCameraManager()->getActiveCamera();
-        std::scoped_lock activeCameraGuard(pMtxActiveCamera->first);
+
+        // Lock both camera and draw mutex.
+        std::scoped_lock renderGuard(pMtxActiveCamera->first, *getRenderResourcesMutex());
 
         // Get camera properties of the active camera.
         CameraProperties* pActiveCameraProperties = nullptr;
@@ -356,8 +358,6 @@ namespace ne {
         }
 
         // don't unlock active camera mutex until finished submitting the next frame for drawing
-
-        std::scoped_lock renderGuard(*getRenderResourcesMutex());
 
         // Setup.
         auto optionalError = prepareForDrawingNextFrame(pActiveCameraProperties);

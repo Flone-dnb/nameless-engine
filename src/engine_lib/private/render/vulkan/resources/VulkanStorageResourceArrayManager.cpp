@@ -81,12 +81,19 @@ namespace ne {
             mtxGlslShaderCpuWriteResources.second[pShaderResource->getResourceName()] =
                 std::get<std::unique_ptr<VulkanStorageResourceArray>>(std::move(result));
 
+            // Calculate total size of all arrays now.
+            size_t iTotalSizeInBytes = 0;
+            for (const auto& [sArrayName, pArray] : mtxGlslShaderCpuWriteResources.second) {
+                iTotalSizeInBytes += pArray->getSizeInBytes();
+            }
+
             // Log creation.
             Logger::get().info(fmt::format(
                 "created a new storage array to handle \"{}\" shader CPU write resource data "
-                "(total storage arrays now: {})",
+                "(total storage arrays now: {}, total size: {})",
                 pShaderResource->getResourceName(),
-                mtxGlslShaderCpuWriteResources.second.size()));
+                mtxGlslShaderCpuWriteResources.second.size(),
+                formatBytesToMegabytes(iTotalSizeInBytes)));
 
             // Update iterator.
             it = mtxGlslShaderCpuWriteResources.second.find(pShaderResource->getResourceName());
@@ -103,6 +110,12 @@ namespace ne {
         removeEmptyArrays();
 
         return std::get<std::unique_ptr<VulkanStorageResourceArraySlot>>(std::move(result));
+    }
+
+    std::string VulkanStorageResourceArrayManager::formatBytesToMegabytes(size_t iSizeInBytes) {
+        return fmt::format(
+            "{:.4} MB",
+            static_cast<float>(iSizeInBytes) / 1024.0F / 1024.0F); // NOLINT: magic numbers
     }
 
 } // namespace ne

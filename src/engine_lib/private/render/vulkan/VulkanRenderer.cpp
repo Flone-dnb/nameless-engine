@@ -1068,7 +1068,7 @@ namespace ne {
     }
 
     std::optional<Error> VulkanRenderer::createRenderPass() {
-        std::array<VkAttachmentDescription, 3> vAttachments{};
+        std::vector<VkAttachmentDescription> vAttachments{};
 
         static_assert(
             iRenderPassColorAttachmentIndex != iRenderPassDepthAttachmentIndex &&
@@ -1076,7 +1076,7 @@ namespace ne {
             "attachment indices should be unique");
 
         // Describe MSAA color buffer.
-        auto& colorAttachment = vAttachments[iRenderPassColorAttachmentIndex];
+        VkAttachmentDescription colorAttachment{};
         colorAttachment.format = swapChainImageFormat;
         colorAttachment.samples = msaaSampleCount;
         colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
@@ -1085,9 +1085,14 @@ namespace ne {
         colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
         colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
         colorAttachment.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+        vAttachments.push_back(colorAttachment);
+        static_assert(iRenderPassColorAttachmentIndex == 0);
+        if (vAttachments.size() != iRenderPassColorAttachmentIndex + 1) [[unlikely]] {
+            return Error("unexpected attachment index");
+        }
 
         // Describe depth buffer.
-        auto& depthAttachment = vAttachments[iRenderPassDepthAttachmentIndex];
+        VkAttachmentDescription depthAttachment{};
         depthAttachment.format = depthImageFormat;
         depthAttachment.samples = msaaSampleCount;
         depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
@@ -1096,18 +1101,30 @@ namespace ne {
         depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
         depthAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
         depthAttachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+        vAttachments.push_back(depthAttachment);
+        static_assert(iRenderPassDepthAttachmentIndex == 1);
+        if (vAttachments.size() != iRenderPassDepthAttachmentIndex + 1) [[unlikely]] {
+            return Error("unexpected attachment index");
+        }
 
-        // Describe color resolve attachment to resolve MSAA color buffer (see above) to a regular image
-        // for presenting.
-        auto& colorResolveAttachment = vAttachments[iRenderPassColorResolveAttachmentIndex];
-        colorResolveAttachment.format = swapChainImageFormat;
-        colorResolveAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-        colorResolveAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-        colorResolveAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-        colorResolveAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-        colorResolveAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-        colorResolveAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        colorResolveAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+        if (msaaSampleCount != VK_SAMPLE_COUNT_1_BIT) {
+            // Describe color resolve attachment to resolve MSAA color buffer (see above) to a regular image
+            // for presenting.
+            VkAttachmentDescription colorResolveAttachment{};
+            colorResolveAttachment.format = swapChainImageFormat;
+            colorResolveAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+            colorResolveAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+            colorResolveAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+            colorResolveAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+            colorResolveAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+            colorResolveAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+            colorResolveAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+            vAttachments.push_back(colorResolveAttachment);
+            static_assert(iRenderPassColorResolveAttachmentIndex == 2);
+            if (vAttachments.size() != iRenderPassColorResolveAttachmentIndex + 1) [[unlikely]] {
+                return Error("unexpected attachment index");
+            }
+        }
 
         // Create color buffer reference for subpasses.
         VkAttachmentReference colorAttachmentRef{};
@@ -1119,10 +1136,12 @@ namespace ne {
         depthAttachmentRef.attachment = iRenderPassDepthAttachmentIndex;
         depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
-        // Create reference to resolve target for subpasses.
         VkAttachmentReference colorAttachmentResolveRef{};
-        colorAttachmentResolveRef.attachment = iRenderPassColorResolveAttachmentIndex;
-        colorAttachmentResolveRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+        if (msaaSampleCount != VK_SAMPLE_COUNT_1_BIT) {
+            // Create reference to resolve target for subpasses.
+            colorAttachmentResolveRef.attachment = iRenderPassColorResolveAttachmentIndex;
+            colorAttachmentResolveRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+        }
 
         // Describe subpass.
         VkSubpassDescription subpass{};
@@ -1130,7 +1149,10 @@ namespace ne {
         subpass.colorAttachmentCount = 1;
         subpass.pColorAttachments = &colorAttachmentRef;
         subpass.pDepthStencilAttachment = &depthAttachmentRef;
-        subpass.pResolveAttachments = &colorAttachmentResolveRef;
+
+        if (msaaSampleCount != VK_SAMPLE_COUNT_1_BIT) {
+            subpass.pResolveAttachments = &colorAttachmentResolveRef;
+        }
 
         // Describe subpass dependency.
         VkSubpassDependency dependency{};
@@ -1247,7 +1269,7 @@ namespace ne {
         const auto pRenderResourcesMutex = getRenderResourcesMutex();
         std::scoped_lock guard(*pRenderResourcesMutex);
 
-        // Wait for the fence to be signaled.
+        // Wait for all fences to be signaled.
         const auto result = vkWaitForFences(
             pLogicalDevice, static_cast<uint32_t>(vFences.size()), vFences.data(), VK_TRUE, UINT64_MAX);
         if (result != VK_SUCCESS) [[unlikely]] {

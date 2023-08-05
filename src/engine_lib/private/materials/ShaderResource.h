@@ -107,7 +107,6 @@ namespace ne {
          * @param sResourceName                Name of the resource we are referencing (should be exactly the
          * same as the resource name written in the shader file we are referencing).
          * @param iOriginalResourceSizeInBytes Original size of the resource (not padded).
-         * @param vResourceData                Data that will be binded to this shader resource.
          * @param onStartedUpdatingResource    Function that will be called when started updating resource
          * data. Function returns pointer to data of the specified resource data size that needs to be copied
          * into the resource.
@@ -117,35 +116,13 @@ namespace ne {
         ShaderCpuWriteResource(
             const std::string& sResourceName,
             size_t iOriginalResourceSizeInBytes,
-            std::array<std::unique_ptr<UploadBuffer>, FrameResourcesManager::getFrameResourcesCount()>
-                vResourceData,
             const std::function<void*()>& onStartedUpdatingResource,
             const std::function<void()>& onFinishedUpdatingResource);
 
         /**
-         * Copies up to date data to the GPU resource of the specified frame resource.
-         *
-         * @remark Should only be called when resource actually needs an update, otherwise
-         * you would cause useless copy operations.
-         *
-         * @param iCurrentFrameResourceIndex Index of currently used frame resource.
-         */
-        inline void updateResource(size_t iCurrentFrameResourceIndex) {
-            void* pDataToCopy = onStartedUpdatingResource();
-
-            vResourceData[iCurrentFrameResourceIndex]->copyDataToElement(
-                0, pDataToCopy, getOriginalResourceSizeInBytes());
-
-            onFinishedUpdatingResource();
-        }
-
-        /** Data binded to shader resource. */
-        std::array<std::unique_ptr<UploadBuffer>, FrameResourcesManager::getFrameResourcesCount()>
-            vResourceData;
-
-        /**
-         * Function used to update @ref vResourceData. Returns pointer to data of size
-         * @ref iOriginalResourceSizeInBytes that needs to be copied into @ref vResourceData.
+         * Function used to update resource data. Returns pointer to data of size
+         * @ref iOriginalResourceSizeInBytes that needs to be copied into resource data storage (GPU
+         * resource).
          */
         std::function<void*()> onStartedUpdatingResource;
 

@@ -12,6 +12,9 @@
 #include "misc/Error.h"
 #include "render/general/resources/UploadBuffer.h"
 
+// External.
+#include "vulkan/vulkan.h"
+
 namespace ne {
     class GpuResourceManager;
     class VulkanStorageResourceArray;
@@ -34,7 +37,7 @@ namespace ne {
         ~VulkanStorageResourceArraySlot();
 
         /**
-         * Returns index into the array to access the slot's data.
+         * Returns offset from the beginning of the internal VkBuffer that slot references.
          *
          * @warning It's only safe to use this function while `Renderer::getRenderResourcesMutex`
          * is locked.
@@ -46,9 +49,18 @@ namespace ne {
          * is happening (so that the GPU is not using the array) then will update indices in all
          * currently active slots to reference a new index in the array.
          *
-         * @return Index into the array to access slot's data.
+         * @return Offset from the beginning of the internal VkBuffer that slot references.
          */
-        inline size_t getIndexInArray() const { return iIndexInArray; }
+        VkDeviceSize getOffsetFromArrayStart() const;
+
+        /**
+         * Returns VkBuffer that slot references by querying owner-array for its current internal resource.
+         *
+         * @remark Returned buffer is not expected to be modified, only use it for descriptor binding.
+         *
+         * @return Buffer that slot uses.
+         */
+        VkBuffer getBuffer() const;
 
         /**
          * Copies the specified data to slot's data.
@@ -76,7 +88,11 @@ namespace ne {
         /** Shader resource that uses this slot. */
         GlslShaderCpuWriteResource* pShaderResource = nullptr;
 
-        /** Index into @ref pArray to access the slot's data. */
+        /**
+         * Index into @ref pArray to access the slot's data.
+         *
+         * @remark Updated by array when it's resizing.
+         */
         size_t iIndexInArray = 0;
     };
 
@@ -114,6 +130,13 @@ namespace ne {
          * @return The maximum possible number of elements without expanding.
          */
         size_t getCapacity();
+
+        /**
+         * Returns size in bytes that this array takes up.
+         *
+         * @return Size of array in bytes.
+         */
+        size_t getSizeInBytes();
 
         /**
          * Returns size (in bytes) of one element in the array.

@@ -577,7 +577,7 @@ namespace ne {
         std::optional<VkExtent2D> swapChainExtent;
 
         /** Used MSAA sample count. */
-        VkSampleCountFlagBits msaaSampleCount = VK_SAMPLE_COUNT_8_BIT;
+        VkSampleCountFlagBits msaaSampleCount = VK_SAMPLE_COUNT_1_BIT;
 
         /** Tells if @ref initializeVulkan was finished successfully or not. */
         bool bIsVulkanInitialized = false;

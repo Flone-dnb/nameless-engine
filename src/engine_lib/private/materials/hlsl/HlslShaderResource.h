@@ -18,6 +18,9 @@ namespace ne {
      * that has CPU write access available (can be updated from the CPU side).
      */
     class HlslShaderCpuWriteResource : public ShaderCpuWriteResource {
+        // Only shader resource manager should be able to call `updateResource`.
+        friend class ShaderCpuWriteResourceManager;
+
     public:
         virtual ~HlslShaderCpuWriteResource() override;
 
@@ -115,6 +118,29 @@ namespace ne {
          */
         static std::variant<UINT, Error>
         getRootParameterIndexFromPipeline(Pipeline* pPipeline, const std::string& sShaderResourceName);
+
+        /**
+         * Copies up to date data to the GPU resource of the specified frame resource.
+         *
+         * @remark Should only be called when resource actually needs an update, otherwise
+         * you would cause useless copy operations.
+         *
+         * @remark Called by shader resource manager.
+         *
+         * @param iCurrentFrameResourceIndex Index of currently used frame resource.
+         */
+        inline void updateResource(size_t iCurrentFrameResourceIndex) {
+            void* pDataToCopy = onStartedUpdatingResource();
+
+            vResourceData[iCurrentFrameResourceIndex]->copyDataToElement(
+                0, pDataToCopy, getOriginalResourceSizeInBytes());
+
+            onFinishedUpdatingResource();
+        }
+
+        /** Data binded to shader resource. */
+        std::array<std::unique_ptr<UploadBuffer>, FrameResourcesManager::getFrameResourcesCount()>
+            vResourceData;
 
         /** Index of this resource in root signature to bind this resource during the draw operation. */
         UINT iRootParameterIndex = 0;

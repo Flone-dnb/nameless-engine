@@ -48,6 +48,8 @@ set(PROJECT_WIN32_SOURCES
     private/render/directx/resources/DirectXResource.cpp
     private/render/directx/resources/DirectXResourceManager.h
     private/render/directx/resources/DirectXResourceManager.cpp
+    private/render/directx/resources/DirectXFrameResource.h
+    private/render/directx/resources/DirectXFrameResource.cpp
     # add Windows specific sources here...
 )
 
@@ -89,6 +91,8 @@ set(PROJECT_SOURCES
     private/render/general/resources/GpuResource.cpp
     private/render/general/resources/FrameResourcesManager.h
     private/render/general/resources/FrameResourcesManager.cpp
+    private/render/general/resources/FrameResource.h
+    private/render/general/resources/FrameResource.cpp
     private/render/general/resources/GpuResourceManager.h
     private/render/general/resources/GpuResourceManager.cpp
     private/render/general/resources/UploadBuffer.h
@@ -103,6 +107,8 @@ set(PROJECT_SOURCES
     private/render/vulkan/resources/VulkanStorageResourceArray.cpp
     private/render/vulkan/VulkanRenderer.cpp
     private/render/vulkan/VulkanRenderer.h
+    private/render/vulkan/resources/VulkanFrameResource.h
+    private/render/vulkan/resources/VulkanFrameResource.cpp
     private/window/GLFW.hpp
     public/input/KeyboardKey.hpp
     private/io/Logger.cpp

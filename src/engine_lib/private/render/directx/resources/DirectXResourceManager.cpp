@@ -5,6 +5,7 @@
 #include "render/directx/DirectXRenderer.h"
 #include "render/general/resources/FrameResourcesManager.h"
 #include "render/general/resources/UploadBuffer.h"
+#include "render/directx/resources/DirectXFrameResource.h"
 
 namespace ne {
     std::variant<std::unique_ptr<DirectXResourceManager>, Error>
@@ -166,9 +167,16 @@ namespace ne {
         const auto pMtxCurrentFrameResource = pFrameResourcesManager->getCurrentFrameResource();
         std::scoped_lock frameResourceGuard(pMtxCurrentFrameResource->first);
 
+        // Convert frame resource.
+        const auto pDirectXFrameResource =
+            dynamic_cast<DirectXFrameResource*>(pMtxCurrentFrameResource->second.pResource);
+        if (pDirectXFrameResource == nullptr) [[unlikely]] {
+            return Error("expected a DirectX frame resource");
+        }
+
         const auto pCommandList = pRenderer->getD3dCommandList();
         const auto pCommandQueue = pRenderer->getD3dCommandQueue();
-        const auto pCommandAllocator = pMtxCurrentFrameResource->second.pResource->pCommandAllocator.Get();
+        const auto pCommandAllocator = pDirectXFrameResource->pCommandAllocator.Get();
 
         // Clear command list allocator (because it's not used by the GPU now).
         auto hResult = pCommandAllocator->Reset();

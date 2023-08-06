@@ -3,30 +3,58 @@
 // Custom.
 #if defined(WIN32)
 #include "render/directx/DirectXRenderer.h"
+#include "render/directx/resources/DirectXFrameResource.h"
 #endif
+#include "render/vulkan/VulkanRenderer.h"
+#include "render/vulkan/resources/VulkanFrameResource.h"
 
 // External.
 #include "fmt/core.h"
 
 namespace ne {
 
+    std::array<std::unique_ptr<FrameResource>, FrameResourcesManager::getFrameResourcesCount()>
+    FrameResourcesManager::createRenderDependentFrameResources(Renderer* pRenderer) {
+        std::array<std::unique_ptr<FrameResource>, FrameResourcesManager::getFrameResourcesCount()>
+            vResources;
+
+#if defined(WIN32)
+        if (dynamic_cast<DirectXRenderer*>(pRenderer) != nullptr) {
+            for (unsigned int i = 0; i < getFrameResourcesCount(); i++) {
+                vResources[i] = std::make_unique<DirectXFrameResource>();
+            }
+            return vResources;
+        }
+#endif
+
+        if (dynamic_cast<VulkanRenderer*>(pRenderer) != nullptr) {
+            for (unsigned int i = 0; i < getFrameResourcesCount(); i++) {
+                vResources[i] = std::make_unique<VulkanFrameResource>();
+            }
+            return vResources;
+        }
+
+        Error error("unsupported renderer");
+        error.showError();
+        throw std::runtime_error(error.getFullErrorMessage());
+    }
+
     FrameResourcesManager::FrameResourcesManager(Renderer* pRenderer) {
         this->pRenderer = pRenderer;
 
-        for (unsigned int i = 0; i < getFrameResourcesCount(); i++) {
-            vFrameResources[i] = std::make_unique<FrameResource>();
-        }
+        vFrameResources = createRenderDependentFrameResources(pRenderer);
 
         mtxCurrentFrameResource.second.iCurrentFrameResourceIndex = 0;
-        mtxCurrentFrameResource.second.pResource = vFrameResources[0].get();
+        mtxCurrentFrameResource.second.pResource =
+            vFrameResources[mtxCurrentFrameResource.second.iCurrentFrameResourceIndex].get();
     }
 
     std::variant<std::unique_ptr<FrameResourcesManager>, Error>
     FrameResourcesManager::create(Renderer* pRenderer) {
         auto pManager = std::unique_ptr<FrameResourcesManager>(new FrameResourcesManager(pRenderer));
 
-        // Create a constant buffer with frame-global data per frame.
         for (unsigned int i = 0; i < getFrameResourcesCount(); i++) {
+            // Create a constant buffer with frame-global data per frame.
             auto result = pRenderer->getResourceManager()->createResourceWithCpuWriteAccess(
                 fmt::format("frame constants #{}", i),
                 sizeof(FrameConstants),
@@ -39,29 +67,14 @@ namespace ne {
             }
             pManager->vFrameResources[i]->pFrameConstantBuffer =
                 std::get<std::unique_ptr<UploadBuffer>>(std::move(result));
-        }
 
-        // Create renderer-specific data per frame.
-#if defined(WIN32)
-        if (auto pDirectXRenderer = dynamic_cast<DirectXRenderer*>(pRenderer)) {
-            // Create a command allocator per frame.
-            for (unsigned int i = 0; i < getFrameResourcesCount(); i++) {
-                auto hResult = pDirectXRenderer->getD3dDevice()->CreateCommandAllocator(
-                    D3D12_COMMAND_LIST_TYPE_DIRECT,
-                    IID_PPV_ARGS(pManager->vFrameResources[i]->pCommandAllocator.GetAddressOf()));
-                if (FAILED(hResult)) {
-                    return Error(hResult);
-                }
+            // Initialize render-specific data.
+            auto optionalError = pManager->vFrameResources[i]->initialize(pRenderer);
+            if (optionalError.has_value()) [[unlikely]] {
+                optionalError->addCurrentLocationToErrorStack();
+                return optionalError.value();
             }
         }
-#elif __linux__
-        static_assert(false, "not implemented");
-//        if (auto pVulkanRenderer = dynamic_cast<VulkanRenderer*>(pRenderer)) {
-//            // TODO: vulkan
-//        } else {
-//            return Error("not implemented");
-//        }
-#endif
 
         return pManager;
     }

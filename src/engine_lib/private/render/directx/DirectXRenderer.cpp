@@ -25,6 +25,7 @@
 #include "game/nodes/CameraNode.h"
 #include "game/camera/TransientCamera.h"
 #include "materials/hlsl/HlslShaderResource.h"
+#include "render/directx/resources/DirectXFrameResource.h"
 
 // DirectX.
 #pragma comment(lib, "D3D12.lib")
@@ -271,7 +272,12 @@ namespace ne {
         // Get command allocator to open command list.
         auto pMtxCurrentFrameResource = getFrameResourcesManager()->getCurrentFrameResource();
         std::scoped_lock frameResourceGuard(pMtxCurrentFrameResource->first);
-        const auto pCommandAllocator = pMtxCurrentFrameResource->second.pResource->pCommandAllocator.Get();
+
+        // Convert frame resource.
+        const auto pDirectXFrameResource =
+            reinterpret_cast<DirectXFrameResource*>(pMtxCurrentFrameResource->second.pResource);
+
+        const auto pCommandAllocator = pDirectXFrameResource->pCommandAllocator.Get();
 
         // Clear command allocator since the GPU is no longer using it.
         auto hResult = pCommandAllocator->Reset();
@@ -504,10 +510,16 @@ namespace ne {
             iNewFenceValue = mtxCurrentFenceValue.second;
         }
 
-        // Save new fence value in the current frame resource.
+        // Get current frame resource.
         auto pMtxCurrentFrameResource = getFrameResourcesManager()->getCurrentFrameResource();
         std::scoped_lock frameResourceGuard(pMtxCurrentFrameResource->first);
-        pMtxCurrentFrameResource->second.pResource->iFence = iNewFenceValue;
+
+        // Convert frame resource.
+        const auto pDirectXFrameResource =
+            reinterpret_cast<DirectXFrameResource*>(pMtxCurrentFrameResource->second.pResource);
+
+        // Save new fence value in the current frame resource.
+        pDirectXFrameResource->iFence = iNewFenceValue;
 
         // Add an instruction to the command queue to set a new fence point.
         // This fence point won't be set until the GPU finishes processing all the commands prior
@@ -689,11 +701,19 @@ namespace ne {
         auto pMtxCurrentFrameResource = getFrameResourcesManager()->getCurrentFrameResource();
         std::scoped_lock frameResourceGuard(pMtxCurrentFrameResource->first);
 
-        // Create Command List.
+        // Convert frame resource.
+        const auto pDirectXFrameResource =
+            dynamic_cast<DirectXFrameResource*>(pMtxCurrentFrameResource->second.pResource);
+        if (pDirectXFrameResource == nullptr) [[unlikely]] {
+            return Error("expected a DirectX frame resource");
+        }
+
+        // Create command list using the current command allocator (and ignore others) since in
+        // `drawNextFrame` we will change used allocator for the command list anyway.
         auto hResult = pDevice->CreateCommandList(
             0, // Create list for only one GPU. See pDevice->GetNodeCount().
             D3D12_COMMAND_LIST_TYPE_DIRECT,
-            pMtxCurrentFrameResource->second.pResource->pCommandAllocator.Get(),
+            pDirectXFrameResource->pCommandAllocator.Get(),
             nullptr,
             IID_PPV_ARGS(pCommandList.GetAddressOf()));
         if (FAILED(hResult)) {
@@ -895,6 +915,20 @@ namespace ne {
             return optionalError;
         }
 
+        // Self check: make sure allocated frame resource is of expected type
+        // so we may just `reinterpret_cast` later because they won't change.
+        {
+            auto pMtxCurrentFrameResource = getFrameResourcesManager()->getCurrentFrameResource();
+            std::scoped_lock frameResourceGuard(pMtxCurrentFrameResource->first);
+
+            // Convert frame resource.
+            const auto pDirectXFrameResource =
+                dynamic_cast<DirectXFrameResource*>(pMtxCurrentFrameResource->second.pResource);
+            if (pDirectXFrameResource == nullptr) [[unlikely]] {
+                return Error("expected a DirectX frame resource");
+            }
+        }
+
         // Create command list.
         optionalError = createCommandList();
         if (optionalError.has_value()) {
@@ -1013,8 +1047,12 @@ namespace ne {
         auto pMtxCurrentFrameResource = getFrameResourcesManager()->getCurrentFrameResource();
         std::scoped_lock frameResource(pMtxCurrentFrameResource->first);
 
+        // Convert frame resource.
+        const auto pDirectXFrameResource =
+            reinterpret_cast<DirectXFrameResource*>(pMtxCurrentFrameResource->second.pResource);
+
         // Wait for this frame resource to no longer be used by the GPU.
-        waitForFenceValue(pMtxCurrentFrameResource->second.pResource->iFence);
+        waitForFenceValue(pDirectXFrameResource->iFence);
 
         // Copy new (up to date) data to frame data cbuffer to be used by the shaders.
         updateFrameConstantsBuffer(pMtxCurrentFrameResource->second.pResource, pCameraProperties);

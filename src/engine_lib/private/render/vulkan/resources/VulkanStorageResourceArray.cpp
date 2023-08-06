@@ -4,12 +4,14 @@
 #include "render/general/resources/GpuResourceManager.h"
 #include "render/vulkan/VulkanRenderer.h"
 #include "materials/glsl/GlslShaderResource.h"
+#include "render/general/pipeline/PipelineManager.h"
+#include "render/vulkan/pipeline/VulkanPipeline.h"
 
 namespace ne {
 
     std::variant<std::unique_ptr<VulkanStorageResourceArray>, Error> VulkanStorageResourceArray::create(
         GpuResourceManager* pResourceManager,
-        const std::string& sArrayName,
+        const std::string& sHandledResourceName,
         size_t iElementSizeInBytes,
         size_t iCapacityStepSizeMultiplier) {
         // Calculate capacity step size.
@@ -23,25 +25,28 @@ namespace ne {
 
         // Self check: make sure capacity step is not zero.
         if (iCapacityStepSize == 0) [[unlikely]] {
-            return Error(fmt::format("calculated capacity step size is 0 (array {})", sArrayName));
+            return Error(fmt::format("calculated capacity step size is 0 (array {})", sHandledResourceName));
         }
 
         // Self check: make sure capacity step is even because we use INT / INT.
         if (iCapacityStepSize % 2 != 0) [[unlikely]] {
             return Error(fmt::format(
-                "calculated capacity step size ({}) is not even (array {})", iCapacityStepSize, sArrayName));
+                "calculated capacity step size ({}) is not even (array {})",
+                iCapacityStepSize,
+                sHandledResourceName));
         }
 
         return std::unique_ptr<VulkanStorageResourceArray>(new VulkanStorageResourceArray(
-            pResourceManager, sArrayName, iElementSizeInBytes, iCapacityStepSize));
+            pResourceManager, sHandledResourceName, iElementSizeInBytes, iCapacityStepSize));
     }
 
     VulkanStorageResourceArray::VulkanStorageResourceArray(
         GpuResourceManager* pResourceManager,
-        const std::string& sArrayName,
+        const std::string& sHandledResourceName,
         size_t iElementSizeInBytes,
         size_t iCapacityStepSize)
-        : iCapacityStepSize(iCapacityStepSize), sName(sArrayName), iElementSizeInBytes(iElementSizeInBytes) {
+        : iCapacityStepSize(iCapacityStepSize), sHandledResourceName(sHandledResourceName),
+          iElementSizeInBytes(iElementSizeInBytes) {
         this->pResourceManager = pResourceManager;
     }
 
@@ -53,7 +58,7 @@ namespace ne {
             Error error(fmt::format(
                 "the storage array \"{}\" is being destroyed but it still has {} "
                 "active slot(s) (this is a bug, report to developers)",
-                sName,
+                sHandledResourceName,
                 mtxInternalResources.second.activeSlots.size()));
             error.showError();
             return; // don't throw in destructor, just quit
@@ -64,7 +69,7 @@ namespace ne {
             Error error(fmt::format(
                 "the storage array \"{}\" is being destroyed but it's not empty (size = {}) "
                 "although there are no active slot(s) (this is a bug, report to developers)",
-                sName,
+                sHandledResourceName,
                 mtxInternalResources.second.iSize));
             error.showError();
             return; // don't throw in destructor, just quit
@@ -73,6 +78,28 @@ namespace ne {
 
     std::variant<std::unique_ptr<VulkanStorageResourceArraySlot>, Error>
     VulkanStorageResourceArray::insert(GlslShaderCpuWriteResource* pShaderResource) {
+        // Self check: make sure array's handled resource name is equal to shader resource.
+        if (pShaderResource->getResourceName() != sHandledResourceName) [[unlikely]] {
+            return Error(fmt::format(
+                "shader resource \"{}\" requested to reserve a memory slot in the array "
+                "but this array only handles shader resources with name \"{}\" not \"{}\" "
+                "(this is a bug, report to developers)",
+                pShaderResource->getResourceName(),
+                sHandledResourceName,
+                pShaderResource->getResourceName()));
+        }
+
+        // Self check: make sure array's element size is equal to the requested one.
+        if (iElementSizeInBytes != pShaderResource->getOriginalResourceSizeInBytes()) [[unlikely]] {
+            return Error(fmt::format(
+                "shader resource \"{}\" requested to reserve a memory slot with size {} bytes in an array "
+                "but array's element size is {} bytes not {} bytes (this is a bug, report to developers)",
+                pShaderResource->getResourceName(),
+                pShaderResource->getOriginalResourceSizeInBytes(),
+                iElementSizeInBytes,
+                pShaderResource->getOriginalResourceSizeInBytes()));
+        }
+
         // Lock both self and shader resources manager because I think there might be
         // the following AB-BA mutex locking issue if we only lock self:
         // - [thread 1] shader resource manager is in `destroyResource` and locked his mutex
@@ -261,7 +288,7 @@ namespace ne {
         Logger::get().info(std::format(
             "waiting for the GPU to finish work up to this point to (re)create the storage array "
             "\"{}\" from capacity {} ({}) to {} ({}) (current actual size: {})",
-            sName,
+            sHandledResourceName,
             mtxInternalResources.second.iCapacity,
             formatBytesToKilobytes(iCurrentSizeInBytes),
             iCapacity,
@@ -273,11 +300,14 @@ namespace ne {
         std::scoped_lock drawGuard(*pRenderer->getRenderResourcesMutex());
         pRenderer->waitForGpuToFinishWorkUpToThisPoint();
 
-        // don't unlock `renderResourcesMutex` until we finished updating all slots
+        // don't unlock `renderResourcesMutex` until we finished updating all slots and descriptors
 
         // Create a new storage buffer.
         auto result = pResourceManager->createResourceWithCpuWriteAccess(
-            sName, iElementSizeInBytes, iCapacity, CpuVisibleShaderResourceUsageDetails(false));
+            fmt::format("{} storage array", sHandledResourceName),
+            iElementSizeInBytes,
+            iCapacity,
+            CpuVisibleShaderResourceUsageDetails(false));
         if (std::holds_alternative<Error>(result)) {
             auto error = std::get<Error>(std::move(result));
             error.addCurrentLocationToErrorStack();
@@ -296,7 +326,7 @@ namespace ne {
             return Error(fmt::format(
                 "the storage array \"{}\" was recreated but its active slot count ({}) "
                 "is not equal to the size ({}) (this is a bug, report to developers)",
-                sName,
+                sHandledResourceName,
                 mtxInternalResources.second.activeSlots.size(),
                 mtxInternalResources.second.iSize));
         }
@@ -316,9 +346,6 @@ namespace ne {
             // Save new index to slot.
             pSlot->iIndexInArray = iCurrentIndex;
 
-            // Notify resource about changed VkBuffer so it will rebind descriptors.
-            auto optionalError = pSlot->pShaderResource->rebindBufferToDescriptor(pVulkanRenderer);
-
             // Increment index.
             iCurrentIndex += 1;
 
@@ -332,6 +359,13 @@ namespace ne {
             pShaderResourceManager->markResourceAsNeedsUpdate(pSlot->pShaderResource);
         }
 
+        // Make descriptors reference new VkBuffer.
+        auto optionalError = updateDescriptors(pVulkanRenderer);
+        if (optionalError.has_value()) [[unlikely]] {
+            optionalError->addCurrentLocationToErrorStack();
+            return optionalError;
+        }
+
         return {};
     }
 
@@ -343,7 +377,7 @@ namespace ne {
             return Error(fmt::format(
                 "a request to expand the array \"{}\" of capacity {} while the actual size is {} "
                 "was rejected, reason: expand condition is not met (this is a bug, report to developers)",
-                sName,
+                sHandledResourceName,
                 mtxInternalResources.second.iCapacity,
                 mtxInternalResources.second.iSize));
         }
@@ -353,7 +387,7 @@ namespace ne {
             return Error(fmt::format(
                 "requested to expand the array \"{}\" of capacity {} while there are not used "
                 "indices exist ({}) (actual size is {}) (this is a bug, report to developers)",
-                sName,
+                sHandledResourceName,
                 mtxInternalResources.second.iCapacity,
                 mtxInternalResources.second.noLongerUsedArrayIndices.size(),
                 mtxInternalResources.second.iSize));
@@ -365,7 +399,7 @@ namespace ne {
             return Error(fmt::format(
                 "a request to expand the array \"{}\" of capacity {} was rejected, reason: "
                 "array will exceed the type limit of {}",
-                sName,
+                sHandledResourceName,
                 mtxInternalResources.second.iCapacity,
                 iMaxArrayCapacity));
         }
@@ -396,7 +430,7 @@ namespace ne {
                 "a request to shrink the array \"{}\" of capacity {} with the actual size of {} was "
                 "rejected, reason: need at least the size of {} to shrink (this is a bug, report "
                 "to developers)",
-                sName,
+                sHandledResourceName,
                 mtxInternalResources.second.iCapacity,
                 mtxInternalResources.second.iSize,
                 iCapacityStepSize * 2));
@@ -409,7 +443,7 @@ namespace ne {
             return Error(std::format(
                 "a request to shrink the array \"{}\" of capacity {} with the actual size of {} was "
                 "rejected, reason: shrink condition is not met (this is a bug, report to developers)",
-                sName,
+                sHandledResourceName,
                 mtxInternalResources.second.iCapacity,
                 mtxInternalResources.second.iSize));
         }
@@ -431,6 +465,82 @@ namespace ne {
         return {};
     }
 
+    std::optional<Error> VulkanStorageResourceArray::updateDescriptors(VulkanRenderer* pVulkanRenderer) {
+        // Get internal resources.
+        std::scoped_lock guard(mtxInternalResources.first);
+
+        // Get internal GPU resource.
+        const auto pInternalStorageResource =
+            dynamic_cast<VulkanResource*>(mtxInternalResources.second.pStorageBuffer->getInternalResource());
+        if (pInternalStorageResource == nullptr) [[unlikely]] {
+            return Error("expected internal GPU resource to be a Vulkan resource");
+        }
+
+        // Get internal VkBuffer.
+        const auto pInternalVkBuffer = pInternalStorageResource->getInternalResource();
+
+        // Get logical device to be used later.
+        const auto pLogicalDevice = pVulkanRenderer->getLogicalDevice();
+        if (pLogicalDevice == nullptr) [[unlikely]] {
+            return Error("logical device is `nullptr`");
+        }
+
+        // Get pipeline manager.
+        const auto pPipelineManager = pVulkanRenderer->getPipelineManager();
+        if (pPipelineManager == nullptr) [[unlikely]] {
+            return Error("pipeline manager is `nullptr`");
+        }
+
+        // Goes through all pipelines.
+        const auto pPipelines = pPipelineManager->getGraphicsPipelines();
+        for (auto& [mtx, map] : *pPipelines) {
+            std::scoped_lock pipelineTypeGuard(mtx);
+            for (const auto& [sPipelineName, pPipeline] : map) {
+                // Convert to a Vulkan pipeline.
+                const auto pVulkanPipeline = dynamic_cast<VulkanPipeline*>(pPipeline.get());
+                if (pVulkanPipeline == nullptr) [[unlikely]] {
+                    return Error("expected a Vulkan pipeline");
+                }
+
+                // Get pipeline's internal resources.
+                const auto pMtxPipelineInternalResources = pVulkanPipeline->getInternalResources();
+                std::scoped_lock pipelineResourcesGuard(pMtxPipelineInternalResources->first);
+
+                // See if this pipeline uses a resource we are handling.
+                auto it = pMtxPipelineInternalResources->second.resourceBindings.find(sHandledResourceName);
+                if (it == pMtxPipelineInternalResources->second.resourceBindings.end()) {
+                    continue;
+                }
+
+                // Update one descriptor in set per frame resource.
+                for (unsigned int i = 0; i < FrameResourcesManager::getFrameResourcesCount(); i++) {
+                    // Prepare info to bind storage buffer slot to descriptor.
+                    VkDescriptorBufferInfo bufferInfo{};
+                    bufferInfo.buffer = pInternalVkBuffer;
+                    bufferInfo.offset = 0;
+                    bufferInfo.range = iElementSizeInBytes * mtxInternalResources.second.iCapacity;
+
+                    // Bind reserved space to descriptor.
+                    VkWriteDescriptorSet descriptorUpdateInfo{};
+                    descriptorUpdateInfo.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+                    descriptorUpdateInfo.dstSet =
+                        pMtxPipelineInternalResources->second.vDescriptorSets[i]; // descriptor to update
+                    descriptorUpdateInfo.dstBinding = it->second;                 // descriptor binding
+                    descriptorUpdateInfo.dstArrayElement = 0; // first descriptor in array to update
+                    descriptorUpdateInfo.descriptorType =
+                        VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;          // type of descriptor
+                    descriptorUpdateInfo.descriptorCount = 1;       // how much descriptors in array to update
+                    descriptorUpdateInfo.pBufferInfo = &bufferInfo; // descriptor refers to buffer data
+
+                    // Update descriptor.
+                    vkUpdateDescriptorSets(pLogicalDevice, 1, &descriptorUpdateInfo, 0, nullptr);
+                }
+            }
+        }
+
+        return {};
+    }
+
     VulkanStorageResourceArraySlot::VulkanStorageResourceArraySlot(
         VulkanStorageResourceArray* pArray,
         size_t iIndexInArray,
@@ -442,20 +552,6 @@ namespace ne {
 
     VulkanStorageResourceArraySlot::~VulkanStorageResourceArraySlot() {
         pArray->markSlotAsNoLongerBeingUsed(this);
-    }
-
-    VkDeviceSize VulkanStorageResourceArraySlot::getOffsetFromArrayStart() const {
-        std::scoped_lock guard(pArray->mtxInternalResources.first);
-
-        return iIndexInArray * pArray->iElementSizeInBytes;
-    }
-
-    VkBuffer VulkanStorageResourceArraySlot::getBuffer() const {
-        std::scoped_lock guard(pArray->mtxInternalResources.first);
-
-        return dynamic_cast<VulkanResource*>(
-                   pArray->mtxInternalResources.second.pStorageBuffer->getInternalResource())
-            ->getInternalResource();
     }
 
     void VulkanStorageResourceArraySlot::updateData(void* pData) { pArray->updateSlotData(this, pData); }

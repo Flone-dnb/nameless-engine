@@ -70,33 +70,11 @@ namespace ne {
          */
         [[nodiscard]] virtual std::optional<Error> updateBindingInfo(Pipeline* pNewPipeline) override;
 
-        /**
-         * Called by storage resource array manager after a buffer that this shader resource reserved
-         * (see @ref vResourceData) was recreated and all descriptors now need to reference a new
-         * buffer instead of the old one.
-         *
-         * @remark The caller guarantees that the GPU is not drawing anything and has no work in progress.
-         *
-         * @warning Do not use @ref updateResource inside of this function. This function is called from
-         * storage resource array manager not from shader resource manager, only shader resource manager
-         * should call @ref updateResource because of the several reasons (for example this resource might
-         * be already marked as "needs update" and if we call @ref updateResource inside of this function
-         * shader resource manager will do it again).
-         *
-         * @param pVulkanRenderer Vulkan renderer.
-         *
-         * @return Error if something went wrong.
-         */
-        [[nodiscard]] std::optional<Error> rebindBufferToDescriptor(VulkanRenderer* pVulkanRenderer);
-
     protected:
         /**
          * Initializes everything except for @ref vResourceData which is expected to be initialized
          * afterwards.
          *
-         * @param pUsedPipeline                Pipeline which descriptors this resource uses.
-         * @param iBindingIndex                Descriptor set layout binding index of descriptor that
-         * this shader resource uses.
          * @param sResourceName                Name of the resource we are referencing (should be exactly
          * the same as the resource name written in the shader file we are referencing).
          * @param iOriginalResourceSizeInBytes Size of the resource passed to @ref create (not padded).
@@ -107,23 +85,12 @@ namespace ne {
          * (usually used for unlocking resource data mutex).
          */
         GlslShaderCpuWriteResource(
-            VulkanPipeline* pUsedPipeline,
-            uint32_t iBindingIndex,
             const std::string& sResourceName,
             size_t iOriginalResourceSizeInBytes,
             const std::function<void*()>& onStartedUpdatingResource,
             const std::function<void()>& onFinishedUpdatingResource);
 
     private:
-        /** Information about pipeline which descriptors this resource uses. */
-        struct UsedPipelineInfo {
-            /** Used pipeline. */
-            VulkanPipeline* pPipeline = nullptr;
-
-            /** Index of descriptor in descriptor set that we use. */
-            uint32_t iBindingIndex = 0;
-        };
-
         /**
          * Looks for a shader resource in the specified pipeline's descriptor set layout and returns
          * resource's binding index.
@@ -154,22 +121,6 @@ namespace ne {
 
             onFinishedUpdatingResource();
         }
-
-        /**
-         * Binds buffers from @ref vResourceData to the specified pipeline's descriptors at
-         * the specified binding index.
-         *
-         * @param pVulkanPipeline Pipeline which descriptors to update.
-         * @param pVulkanRenderer Used renderer.
-         * @param iBindingIndex   Binding index to descriptor to update in descriptor set.
-         *
-         * @return Error if something went wrong.
-         */
-        [[nodiscard]] std::optional<Error> updateDescriptors(
-            VulkanPipeline* pVulkanPipeline, VulkanRenderer* pVulkanRenderer, uint32_t iBindingIndex);
-
-        /** Pipeline which descriptors this resource uses. */
-        std::pair<std::recursive_mutex, UsedPipelineInfo> mtxUsedPipelineInfo;
 
         /** Reserved space in the storage buffer that the resource uses to copy its data to. */
         std::array<

@@ -19,6 +19,7 @@ namespace ne {
     class GpuResourceManager;
     class VulkanStorageResourceArray;
     class GlslShaderCpuWriteResource;
+    class VulkanRenderer;
 
     /**
      * Represents a used slot (place) in the array.
@@ -35,32 +36,6 @@ namespace ne {
         VulkanStorageResourceArraySlot& operator=(const VulkanStorageResourceArraySlot&) = delete;
 
         ~VulkanStorageResourceArraySlot();
-
-        /**
-         * Returns offset from the beginning of the internal VkBuffer that slot references.
-         *
-         * @warning It's only safe to use this function while `Renderer::getRenderResourcesMutex`
-         * is locked.
-         * It's expected that you access the index only to reference a specific place in
-         * the array during the `draw` function, so that the index is only accessed for a small
-         * amount of time because at some point the array that owns this slot may resize which
-         * will invalidate all indices in all active slots. Before array's resizing operation
-         * the array will lock `Renderer::getRenderResourcesMutex` and will make sure no rendering
-         * is happening (so that the GPU is not using the array) then will update indices in all
-         * currently active slots to reference a new index in the array.
-         *
-         * @return Offset from the beginning of the internal VkBuffer that slot references.
-         */
-        VkDeviceSize getOffsetFromArrayStart() const;
-
-        /**
-         * Returns VkBuffer that slot references by querying owner-array for its current internal resource.
-         *
-         * @remark Returned buffer is not expected to be modified, only use it for descriptor binding.
-         *
-         * @return Buffer that slot uses.
-         */
-        VkBuffer getBuffer() const;
 
         /**
          * Copies the specified data to slot's data.
@@ -193,9 +168,11 @@ namespace ne {
         /**
          * Creates a new array.
          *
-         * @param pResourceManager    Resource manager that will allocate storage buffers.
-         * @param sArrayName          Name of the array (used for logging).
-         * @param iElementSizeInBytes Size (in bytes) of one element in the array.
+         * @param pResourceManager     Resource manager that will allocate storage buffers.
+         * @param sHandledResourceName Name of the shader resource this array handles. It will be used
+         * to update descriptors in all pipelines once the array is resized (recreated) to make descriptors
+         * reference a new VkBuffer.
+         * @param iElementSizeInBytes  Size (in bytes) of one element in the array.
          * @param iCapacityStepSizeMultiplier Specify value bigger than 1 if you plan to store
          * multiple copies of each data for different frame resources (frames in-flight). Resulting
          * capacity step size will be multiplied by this value. Should be bigger than 0 and smaller
@@ -205,7 +182,7 @@ namespace ne {
          */
         static std::variant<std::unique_ptr<VulkanStorageResourceArray>, Error> create(
             GpuResourceManager* pResourceManager,
-            const std::string& sArrayName,
+            const std::string& sHandledResourceName,
             size_t iElementSizeInBytes,
             size_t iCapacityStepSizeMultiplier = 1);
 
@@ -214,14 +191,16 @@ namespace ne {
          *
          * @remark Only used internally, for creating new arrays use @ref create.
          *
-         * @param pResourceManager    Resource manager that will allocate storage buffers.
-         * @param sArrayName          Name of the array (used for logging).
+         * @param pResourceManager     Resource manager that will allocate storage buffers.
+         * @param sHandledResourceName Name of the shader resource this array handles. It will be used
+         * to update descriptors in all pipelines once the array is resized (recreated) to make descriptors
+         * reference a new VkBuffer.
          * @param iElementSizeInBytes Size (in bytes) of one element in the array.
          * @param iCapacityStepSize   Capacity step size to use. Expects it to be even and not zero.
          */
         VulkanStorageResourceArray(
             GpuResourceManager* pResourceManager,
-            const std::string& sArrayName,
+            const std::string& sHandledResourceName,
             size_t iElementSizeInBytes,
             size_t iCapacityStepSize);
 
@@ -315,6 +294,19 @@ namespace ne {
         [[nodiscard]] std::optional<Error> shrinkArray();
 
         /**
+         * Updates descriptors in all pipelines to make descriptors reference the current underlying VkBuffer.
+         *
+         * @warning Expects that the GPU is not doing any work and that no new frames are being submitted now.
+         *
+         * @remark Generally called inside @ref createArray after the underlying VkBuffer is changed.
+         *
+         * @param pVulkanRenderer Vulkan renderer.
+         *
+         * @return Error if something went wrong.
+         */
+        [[nodiscard]] std::optional<Error> updateDescriptors(VulkanRenderer* pVulkanRenderer);
+
+        /**
          * Internal resources of the array.
          *
          * @remark Must be access only when the mutex is locked.
@@ -331,8 +323,8 @@ namespace ne {
          */
         const size_t iCapacityStepSize = 0;
 
-        /** Name of the array (used for logging). */
-        const std::string sName;
+        /** Name of the resource this array handles. */
+        const std::string sHandledResourceName;
 
         /** Size in bytes of one element in the array. */
         const size_t iElementSizeInBytes = 0;

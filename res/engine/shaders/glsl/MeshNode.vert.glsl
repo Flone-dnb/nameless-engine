@@ -19,10 +19,10 @@ layout(std140, binding = 1) readonly buffer MeshDataBuffer{
 } meshData;
 
 void vsMeshNode(){
-    gl_Position = meshData.array[gl_BaseInstance].worldMatrix * frameData.viewProjectionMatrix * vec4(localPosition, 1.0F);
+    gl_Position = meshData.array[0].worldMatrix * frameData.viewProjectionMatrix * vec4(localPosition, 1.0F);
 
     fragmentViewPosition = gl_Position;
-    fragmentWorldPosition = meshData.array[gl_BaseInstance].worldMatrix * vec4(localPosition, 1.0F);
-    fragmentNormal = normalize(mat3(meshData.array[gl_BaseInstance].worldMatrix) * localNormal);
+    fragmentWorldPosition = meshData.array[0].worldMatrix * vec4(localPosition, 1.0F);
+    fragmentNormal = normalize(mat3(meshData.array[0].worldMatrix) * localNormal);
     fragmentUv = uv;
 }

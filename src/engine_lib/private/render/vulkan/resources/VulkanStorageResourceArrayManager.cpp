@@ -69,7 +69,7 @@ namespace ne {
             // Create a new array for this resource.
             auto result = VulkanStorageResourceArray::create(
                 pResourceManager,
-                pShaderResource->getResourceName(), // use resource names as array names
+                pShaderResource->getResourceName(),
                 pShaderResource->getOriginalResourceSizeInBytes(),
                 FrameResourcesManager::getFrameResourcesCount()); // because we insert
                                                                   // `getFrameResourcesCount` slots at once
@@ -97,6 +97,26 @@ namespace ne {
 
             // Update iterator.
             it = mtxGlslShaderCpuWriteResources.second.find(pShaderResource->getResourceName());
+        }
+
+        // Make sure this array's element size is equal to the requested one.
+        if (it->second->getElementSize() != pShaderResource->getOriginalResourceSizeInBytes()) [[unlikely]] {
+            // This is probably a different resource with a non-unique name.
+            // We operate only on resource names here because once an array is being resized it
+            // updates all descriptors (of all pipelines) which are used for a specific resource
+            // name to reference a new (resized) VkBuffer.
+            return Error(fmt::format(
+                "shader resource \"{}\" requested to reserve a memory slot with size {} bytes in an array "
+                "and a memory manager already has an array for handling slots of shader resources with name "
+                "\"{}\" but this array's element size is {} bytes not {} bytes, this might mean that you "
+                "have 2 different shaders with 2 different resources (in size) but both resources in both "
+                "shaders have the same name which is an error, if this is the case, please rename one of "
+                "the resources",
+                pShaderResource->getResourceName(),
+                pShaderResource->getOriginalResourceSizeInBytes(),
+                pShaderResource->getResourceName(),
+                it->second->getElementSize(),
+                pShaderResource->getOriginalResourceSizeInBytes()));
         }
 
         // Insert a new slot.

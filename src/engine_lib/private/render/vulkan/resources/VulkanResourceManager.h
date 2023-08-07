@@ -62,13 +62,39 @@ namespace ne {
          *
          * @return Error if something went wrong, otherwise created buffer resource.
          */
-        std::variant<std::unique_ptr<VulkanResource>, Error> createResource(
+        std::variant<std::unique_ptr<VulkanResource>, Error> createBuffer(
             const std::string& sResourceName,
             const VkBufferCreateInfo& bufferInfo,
             const VmaAllocationCreateInfo& allocationInfo);
 
         /**
-         * Creates a new GPU resource with available CPU write access (only write not read),
+         * Creates a new image and allocates a new memory for it.
+         *
+         * @param sResourceName     Name of the created resource.
+         * @param iImageWidth       Width of the image in pixels.
+         * @param iImageHeight      Height of the image in pixels.
+         * @param iTextureMipLevelCount The number of mip level the texture has.
+         * @param sampleCount       The number of samples per pixel. Usually 1 and more than 1 for MSAA.
+         * @param imageFormat       Format of the image.
+         * @param imageTilingMode   Image tiling mode.
+         * @param imageUsage        Image usage.
+         * @param viewDescription   If specified also creates an image view that references the image.
+         *
+         * @return Created image.
+         */
+        std::variant<std::unique_ptr<VulkanResource>, Error> createImage(
+            const std::string& sResourceName,
+            uint32_t iImageWidth,
+            uint32_t iImageHeight,
+            uint32_t iTextureMipLevelCount,
+            VkSampleCountFlagBits sampleCount,
+            VkFormat imageFormat,
+            VkImageTiling imageTilingMode,
+            VkImageUsageFlags imageUsage,
+            std::optional<VkImageAspectFlags> viewDescription);
+
+        /**
+         * Creates a new GPU resource (buffer) with available CPU write access (only write not read),
          * typically used for resources that needs to be frequently updated from the CPU side.
          *
          * Example:
@@ -103,7 +129,7 @@ namespace ne {
             std::optional<CpuVisibleShaderResourceUsageDetails> isUsedInShadersAsReadOnlyData) override;
 
         /**
-         * Creates a new GPU resource and fills it with the specified data.
+         * Creates a new GPU resource (buffer) and fills it with the specified data.
          *
          * Example:
          * @code

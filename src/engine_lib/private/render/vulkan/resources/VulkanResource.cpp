@@ -17,12 +17,17 @@ namespace ne {
     VulkanResource::VulkanResource(
         VulkanResourceManager* pResourceManager,
         const std::string& sResourceName,
-        VkBuffer pInternalResource,
+        std::variant<VkBuffer, VkImage> pInternalResource,
         VmaAllocation pResourceMemory) {
         this->pResourceManager = pResourceManager;
-        this->pInternalResource = pInternalResource;
         this->pResourceMemory = pResourceMemory;
         this->sResourceName = sResourceName;
+
+        if (std::holds_alternative<VkBuffer>(pInternalResource)) {
+            pBufferResource = std::get<VkBuffer>(pInternalResource);
+        } else {
+            pImageResource = std::get<VkImage>(pInternalResource);
+        }
 
         // Increment counter of alive objects.
         pResourceManager->iAliveResourceCount.fetch_add(1);
@@ -31,11 +36,34 @@ namespace ne {
     VulkanResource::~VulkanResource() {
         // Don't log here to avoid spamming.
 
-        // Make sure the GPU is not using this resource.
-        pResourceManager->getRenderer()->waitForGpuToFinishWorkUpToThisPoint();
+        // Get renderer.
+        const auto pVulkanRenderer = dynamic_cast<VulkanRenderer*>(pResourceManager->getRenderer());
+        if (pVulkanRenderer == nullptr) [[unlikely]] {
+            Error error("expected a Vulkan renderer");
+            error.showError();
+            return; // don't throw in destructor, just quit
+        }
 
-        // Destroy the resource and its memory.
-        vmaDestroyBuffer(pResourceManager->pMemoryAllocator, pInternalResource, pResourceMemory);
+        // Get logical device.
+        const auto pLogicalDevice = pVulkanRenderer->getLogicalDevice();
+        if (pLogicalDevice == nullptr) [[unlikely]] {
+            Error error("expected logical device to be valid");
+            error.showError();
+            return; // don't throw in destructor, just quit
+        }
+
+        // Make sure the GPU is not using this resource.
+        pVulkanRenderer->waitForGpuToFinishWorkUpToThisPoint();
+
+        if (pBufferResource != nullptr) {
+            // Destroy the resource and its memory.
+            vmaDestroyBuffer(pResourceManager->pMemoryAllocator, pBufferResource, pResourceMemory);
+        } else {
+            if (pImageView != nullptr) {
+                vkDestroyImageView(pLogicalDevice, pImageView, nullptr);
+            }
+            vmaDestroyImage(pResourceManager->pMemoryAllocator, pImageResource, pResourceMemory);
+        }
 
         // Decrement counter of alive objects.
         const auto iPreviousTotalResourceCount = pResourceManager->iAliveResourceCount.fetch_sub(1);
@@ -69,7 +97,7 @@ namespace ne {
             pMemoryAllocator, &bufferInfo, &allocationInfo, &pCreatedBuffer, &pCreatedMemory, nullptr);
         if (result != VK_SUCCESS) [[unlikely]] {
             return Error(fmt::format(
-                "failed to create resource \"{}\", error: {}", sResourceName, string_VkResult(result)));
+                "failed to create buffer \"{}\", error: {}", sResourceName, string_VkResult(result)));
         }
 
         // Set allocation name.
@@ -77,6 +105,72 @@ namespace ne {
 
         return std::unique_ptr<VulkanResource>(
             new VulkanResource(pResourceManager, sResourceName, pCreatedBuffer, pCreatedMemory));
+    }
+
+    std::variant<std::unique_ptr<VulkanResource>, Error> VulkanResource::create(
+        VulkanResourceManager* pResourceManager,
+        const std::string& sResourceName,
+        VmaAllocator pMemoryAllocator,
+        const VkImageCreateInfo& imageInfo,
+        const VmaAllocationCreateInfo& allocationInfo,
+        std::optional<VkImageAspectFlags> viewDescription) {
+        // Prepare variables for created data.
+        VkImage pCreatedImage = nullptr;
+        VmaAllocation pCreatedMemory = nullptr;
+
+        // Create image.
+        const auto result = vmaCreateImage(
+            pMemoryAllocator, &imageInfo, &allocationInfo, &pCreatedImage, &pCreatedMemory, nullptr);
+        if (result != VK_SUCCESS) [[unlikely]] {
+            return Error(fmt::format(
+                "failed to create image \"{}\", error: {}", sResourceName, string_VkResult(result)));
+        }
+
+        // Set allocation name.
+        vmaSetAllocationName(pMemoryAllocator, pCreatedMemory, sResourceName.c_str());
+
+        auto pCreatedImageResource = std::unique_ptr<VulkanResource>(
+            new VulkanResource(pResourceManager, sResourceName, pCreatedImage, pCreatedMemory));
+
+        if (viewDescription.has_value()) {
+            // Convert renderer.
+            const auto pVulkanRenderer = dynamic_cast<VulkanRenderer*>(pResourceManager->getRenderer());
+            if (pVulkanRenderer == nullptr) [[unlikely]] {
+                return Error("expected a Vulkan renderer");
+            }
+
+            // Get logical device.
+            const auto pLogicalDevice = pVulkanRenderer->getLogicalDevice();
+            if (pLogicalDevice == nullptr) [[unlikely]] {
+                return Error("expected logical device to be valid");
+            }
+
+            // Describe image view.
+            VkImageViewCreateInfo viewInfo{};
+            viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+            viewInfo.image = pCreatedImageResource->pImageResource;
+            viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+            viewInfo.format = imageInfo.format;
+            viewInfo.subresourceRange.aspectMask = viewDescription.value();
+            viewInfo.subresourceRange.baseMipLevel = 0;
+            viewInfo.subresourceRange.levelCount = imageInfo.mipLevels;
+            viewInfo.subresourceRange.baseArrayLayer = 0;
+            viewInfo.subresourceRange.layerCount = 1;
+
+            if (imageInfo.imageType != VK_IMAGE_TYPE_2D && viewInfo.viewType == VK_IMAGE_VIEW_TYPE_2D)
+                [[unlikely]] {
+                return Error("image type / view type mismatch");
+            }
+
+            // Create image view.
+            const auto result =
+                vkCreateImageView(pLogicalDevice, &viewInfo, nullptr, &pCreatedImageResource->pImageView);
+            if (result != VK_SUCCESS) [[unlikely]] {
+                return Error(fmt::format("failed to create image view, error: {}", string_VkResult(result)));
+            }
+        }
+
+        return pCreatedImageResource;
     }
 
 } // namespace ne

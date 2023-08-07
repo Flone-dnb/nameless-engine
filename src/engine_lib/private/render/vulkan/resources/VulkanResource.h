@@ -43,15 +43,16 @@ namespace ne {
         virtual std::string getResourceName() const override;
 
         /**
-         * Returns internal resource.
+         * Returns internal buffer resource.
          *
          * @remark Do not delete (free) returned pointer.
          *
          * @remark Returned pointer is only valid while this object is valid.
          *
-         * @return Internal resource.
+         * @return `nullptr` if this resource uses image as internal resource not a buffer,
+         * otherwise internal buffer resource.
          */
-        inline VkBuffer getInternalResource() const { return pInternalResource; };
+        inline VkBuffer getInternalBufferResource() const { return pBufferResource; };
 
         /**
          * Returns memory allocation of the internal resource.
@@ -85,11 +86,11 @@ namespace ne {
         VulkanResource(
             VulkanResourceManager* pResourceManager,
             const std::string& sResourceName,
-            VkBuffer pInternalResource,
+            std::variant<VkBuffer, VkImage> pInternalResource,
             VmaAllocation pResourceMemory);
 
         /**
-         * Creates a new resource.
+         * Creates a new buffer resource.
          *
          * @param pResourceManager Owner resource manager.
          * @param sResourceName    Resource name, used for logging.
@@ -106,13 +107,47 @@ namespace ne {
             const VkBufferCreateInfo& bufferInfo,
             const VmaAllocationCreateInfo& allocationInfo);
 
+        /**
+         * Creates a new image resource.
+         *
+         * @param pResourceManager Owner resource manager.
+         * @param sResourceName    Resource name, used for logging.
+         * @param pMemoryAllocator Allocator to create resource.
+         * @param imageInfo        Image creation info.
+         * @param allocationInfo   Allocation creation info.
+         * @param viewDescription  If specified also creates an image view that references the image.
+         *
+         * @return Error if something went wrong, otherwise created resource.
+         */
+        static std::variant<std::unique_ptr<VulkanResource>, Error> create(
+            VulkanResourceManager* pResourceManager,
+            const std::string& sResourceName,
+            VmaAllocator pMemoryAllocator,
+            const VkImageCreateInfo& imageInfo,
+            const VmaAllocationCreateInfo& allocationInfo,
+            std::optional<VkImageAspectFlags> viewDescription);
+
         /** Name of the resource. */
         std::string sResourceName;
 
-        /** Created Vulkan resource. */
-        VkBuffer pInternalResource = nullptr;
+        /**
+         * Created buffer Vulkan resource.
+         *
+         * @remark `nullptr` if @ref pImageResource is used.
+         */
+        VkBuffer pBufferResource = nullptr;
 
-        /** Allocated memory for @ref pInternalResource. */
+        /**
+         * Created image Vulkan resource.
+         *
+         * @remark `nullptr` if @ref pBufferResource is used.
+         */
+        VkImage pImageResource = nullptr;
+
+        /** Optional view that references @ref pImageResource. */
+        VkImageView pImageView = nullptr;
+
+        /** Allocated memory for created resource. */
         VmaAllocation pResourceMemory = nullptr;
 
         /** Do not delete. Owner resource manager. */

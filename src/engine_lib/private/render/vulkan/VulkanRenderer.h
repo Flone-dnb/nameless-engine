@@ -3,6 +3,7 @@
 // Custom.
 #include "render/Renderer.h"
 #include "render/general/resources/FrameResourcesManager.h"
+#include "render/vulkan/resources/VulkanResource.h"
 
 // External.
 #include "vulkan/vulkan.h"
@@ -453,22 +454,6 @@ namespace ne {
         [[nodiscard]] std::optional<Error> createCommandPool();
 
         /**
-         * Creates an image view to the specified image.
-         *
-         * @param pImage      Image to create a view for.
-         * @param iTextureMipLevelCount The number of mip level the texture has.
-         * @param imageFormat Image format.
-         * @param aspectFlags Bitmask specifying which aspects of an image are included in a view.
-         *
-         * @return Error if something went wrong, otherwise created image view.
-         */
-        std::variant<VkImageView, Error> createImageView(
-            VkImage pImage,
-            uint32_t iTextureMipLevelCount,
-            VkFormat imageFormat,
-            VkImageAspectFlags aspectFlags);
-
-        /**
          * Chooses the appropriate swap chain size.
          *
          * @param surfaceCapabilities Physical device surface's swap chain surface capabilities.
@@ -502,6 +487,22 @@ namespace ne {
          */
         void destroySwapChainAndDependentResources();
 
+        /**
+         * Tells if @ref depthImageFormat is supported by the hardware.
+         *
+         * @return `true` if supported, `false` otherwise.
+         */
+        bool isUsedDepthImageFormatSupported();
+
+        /**
+         * Creates @ref pDepthImage.
+         *
+         * @warning Expects that GPU resource manager and @ref swapChainExtent are valid.
+         *
+         * @return Error if something went wrong.
+         */
+        [[nodiscard]] std::optional<Error> createDepthImage();
+
         /** Vulkan API instance. */
         VkInstance pInstance = nullptr;
 
@@ -524,7 +525,7 @@ namespace ne {
         VkSwapchainKHR pSwapChain = nullptr;
 
         /** Depth buffer. */
-        VkImage pDepthImage = nullptr;
+        std::unique_ptr<VulkanResource> pDepthImage = nullptr;
 
         /** Render pass. */
         VkRenderPass pRenderPass = nullptr;
@@ -596,6 +597,9 @@ namespace ne {
 
         /** Format of @ref pDepthImage. */
         static constexpr VkFormat depthImageFormat = VK_FORMAT_D24_UNORM_S8_UINT;
+
+        /** Tiling option for @ref pDepthImage. */
+        static constexpr VkImageTiling depthImageTiling = VK_IMAGE_TILING_OPTIMAL;
 
         /** Color space of @ref vSwapChainImages. */
         static constexpr VkColorSpaceKHR swapChainImageColorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;

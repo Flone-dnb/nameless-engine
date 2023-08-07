@@ -6,6 +6,7 @@
 #include "game/GameManager.h"
 #include "game/Window.h"
 #include "materials/glsl/GlslEngineShaders.hpp"
+#include "render/vulkan/resources/VulkanResourceManager.h"
 
 // External.
 #include "vulkan/vk_enum_string_helper.h"
@@ -143,8 +144,6 @@ namespace ne {
             return optionalError;
         }
 
-        // ... TODO ...
-
         // Create command pool.
         optionalError = createCommandPool();
         if (optionalError.has_value()) {
@@ -154,6 +153,14 @@ namespace ne {
 
         // Initialize resource managers.
         optionalError = initializeResourceManagers();
+        if (optionalError.has_value()) {
+            optionalError->addCurrentLocationToErrorStack();
+            return optionalError;
+        }
+
+        // Now that GPU resource manager is created:
+        // Create depth image.
+        optionalError = createDepthImage();
         if (optionalError.has_value()) {
             optionalError->addCurrentLocationToErrorStack();
             return optionalError;
@@ -925,14 +932,24 @@ namespace ne {
 
         // Create image views to swap chain images.
         for (size_t i = 0; i < vSwapChainImages.size(); i++) {
-            auto imageViewResult =
-                createImageView(vSwapChainImages[i], 1, swapChainImageFormat, VK_IMAGE_ASPECT_COLOR_BIT);
-            if (std::holds_alternative<Error>(imageViewResult)) {
-                auto error = std::get<Error>(std::move(imageViewResult));
-                error.addCurrentLocationToErrorStack();
-                return error;
+            // Describe image view.
+            VkImageViewCreateInfo viewInfo{};
+            viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+            viewInfo.image = vSwapChainImages[i];
+            viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+            viewInfo.format = swapChainImageFormat;
+            viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            viewInfo.subresourceRange.baseMipLevel = 0;
+            viewInfo.subresourceRange.levelCount = 1;
+            viewInfo.subresourceRange.baseArrayLayer = 0;
+            viewInfo.subresourceRange.layerCount = 1;
+
+            // Create image view.
+            const auto result =
+                vkCreateImageView(pLogicalDevice, &viewInfo, nullptr, &vSwapChainImageViews[i]);
+            if (result != VK_SUCCESS) [[unlikely]] {
+                return Error(fmt::format("failed to create image view, error: {}", string_VkResult(result)));
             }
-            vSwapChainImageViews[i] = std::get<VkImageView>(imageViewResult);
         }
 
         return {};
@@ -952,33 +969,6 @@ namespace ne {
         }
 
         return {};
-    }
-
-    std::variant<VkImageView, Error> VulkanRenderer::createImageView(
-        VkImage pImage,
-        uint32_t iTextureMipLevelCount,
-        VkFormat imageFormat,
-        VkImageAspectFlags aspectFlags) {
-        // Describe image view.
-        VkImageViewCreateInfo viewInfo{};
-        viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-        viewInfo.image = pImage;
-        viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-        viewInfo.format = imageFormat;
-        viewInfo.subresourceRange.aspectMask = aspectFlags;
-        viewInfo.subresourceRange.baseMipLevel = 0;
-        viewInfo.subresourceRange.levelCount = iTextureMipLevelCount;
-        viewInfo.subresourceRange.baseArrayLayer = 0;
-        viewInfo.subresourceRange.layerCount = 1;
-
-        // Create image view.
-        VkImageView pCreatedImageView = nullptr;
-        const auto result = vkCreateImageView(pLogicalDevice, &viewInfo, nullptr, &pCreatedImageView);
-        if (result != VK_SUCCESS) [[unlikely]] {
-            return Error(fmt::format("failed to create image view, error: {}", string_VkResult(result)));
-        }
-
-        return pCreatedImageView;
     }
 
     std::variant<VkExtent2D, Error>
@@ -1187,6 +1177,9 @@ namespace ne {
             return;
         }
 
+        // Explicitly destroy depth resource before resource manager is destroyed.
+        pDepthImage = nullptr;
+
         // Make sure all pipelines were destroyed because they reference render pass.
         resetPipelineManager();
 
@@ -1204,6 +1197,60 @@ namespace ne {
         // Destroy swap chain.
         vkDestroySwapchainKHR(pLogicalDevice, pSwapChain, nullptr);
         pSwapChain = nullptr;
+    }
+
+    bool VulkanRenderer::isUsedDepthImageFormatSupported() {
+        // Get details of support of the depth image format.
+        VkFormatProperties physicalDeviceFormatProperties;
+        vkGetPhysicalDeviceFormatProperties(
+            pPhysicalDevice, depthImageFormat, &physicalDeviceFormatProperties);
+
+        constexpr auto usageBit = VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT;
+
+        if (depthImageTiling == VK_IMAGE_TILING_OPTIMAL) {
+            return (physicalDeviceFormatProperties.optimalTilingFeatures & usageBit) != 0;
+        }
+
+        return (physicalDeviceFormatProperties.linearTilingFeatures & usageBit) != 0;
+    }
+
+    std::optional<Error> VulkanRenderer::createDepthImage() {
+        // Make sure swap chain extent is set.
+        if (!swapChainExtent.has_value()) {
+            return Error("expected swap chain extent to have a value");
+        }
+
+        // Get resource manager.
+        const auto pResourceManager = getResourceManager();
+        if (pResourceManager == nullptr) [[unlikely]] {
+            return Error("expected GPU resource manager to be valid");
+        }
+
+        // Convert manager.
+        const auto pVulkanResourceManager = dynamic_cast<VulkanResourceManager*>(pResourceManager);
+        if (pVulkanResourceManager == nullptr) [[unlikely]] {
+            return Error("expected a Vulkan resource manager");
+        }
+
+        // Create depth image.
+        auto result = pVulkanResourceManager->createImage(
+            "renderer depth/stencil buffer",
+            swapChainExtent->width,
+            swapChainExtent->height,
+            1,
+            msaaSampleCount,
+            depthImageFormat,
+            depthImageTiling,
+            VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+            VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT);
+        if (std::holds_alternative<Error>(result)) [[unlikely]] {
+            auto error = std::get<Error>(std::move(result));
+            error.addCurrentLocationToErrorStack();
+            return error;
+        }
+        pDepthImage = std::get<std::unique_ptr<VulkanResource>>(std::move(result));
+
+        return {};
     }
 
     std::variant<std::unique_ptr<Renderer>, Error> VulkanRenderer::create(GameManager* pGameManager) {

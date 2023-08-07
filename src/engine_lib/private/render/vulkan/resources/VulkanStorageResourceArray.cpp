@@ -477,7 +477,7 @@ namespace ne {
         }
 
         // Get internal VkBuffer.
-        const auto pInternalVkBuffer = pInternalStorageResource->getInternalResource();
+        const auto pInternalVkBuffer = pInternalStorageResource->getInternalBufferResource();
 
         // Get logical device to be used later.
         const auto pLogicalDevice = pVulkanRenderer->getLogicalDevice();

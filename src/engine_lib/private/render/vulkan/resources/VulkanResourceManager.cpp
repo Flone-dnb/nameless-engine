@@ -45,7 +45,7 @@ namespace ne {
         }
 
         // Create resource.
-        auto result = createResource(sResourceName, bufferInfo, allocationCreateInfo);
+        auto result = createBuffer(sResourceName, bufferInfo, allocationCreateInfo);
         if (std::holds_alternative<Error>(result)) {
             auto error = std::get<Error>(std::move(result));
             error.addCurrentLocationToErrorStack();
@@ -218,7 +218,7 @@ namespace ne {
         return 0;
     }
 
-    std::variant<std::unique_ptr<VulkanResource>, Error> VulkanResourceManager::createResource(
+    std::variant<std::unique_ptr<VulkanResource>, Error> VulkanResourceManager::createBuffer(
         const std::string& sResourceName,
         const VkBufferCreateInfo& bufferInfo,
         const VmaAllocationCreateInfo& allocationInfo) {
@@ -347,8 +347,8 @@ namespace ne {
         copyRegion.size = iDataSizeInBytes;
         vkCmdCopyBuffer(
             pOneTimeSubmitCommandBuffer,
-            pVkUploadResource->getInternalResource(),
-            pFinalResource->getInternalResource(),
+            pVkUploadResource->getInternalBufferResource(),
+            pFinalResource->getInternalBufferResource(),
             1,
             &copyRegion);
 
@@ -361,6 +361,50 @@ namespace ne {
         }
 
         return pFinalResource;
+    }
+
+    std::variant<std::unique_ptr<VulkanResource>, Error> VulkanResourceManager::createImage(
+        const std::string& sResourceName,
+        uint32_t iImageWidth,
+        uint32_t iImageHeight,
+        uint32_t iTextureMipLevelCount,
+        VkSampleCountFlagBits sampleCount,
+        VkFormat imageFormat,
+        VkImageTiling imageTilingMode,
+        VkImageUsageFlags imageUsage,
+        std::optional<VkImageAspectFlags> viewDescription) {
+        // Describe an image object.
+        VkImageCreateInfo imageInfo{};
+        imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+        imageInfo.imageType = VK_IMAGE_TYPE_2D;
+        imageInfo.extent.width = static_cast<uint32_t>(iImageWidth);
+        imageInfo.extent.height = static_cast<uint32_t>(iImageHeight);
+        imageInfo.extent.depth = 1;
+        imageInfo.mipLevels = iTextureMipLevelCount;
+        imageInfo.arrayLayers = 1;
+        imageInfo.format = imageFormat;
+        imageInfo.tiling = imageTilingMode;
+        imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        imageInfo.usage = imageUsage;
+        imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+        imageInfo.samples = sampleCount;
+        imageInfo.flags = 0;
+
+        // Prepare allocation info for memory allocator.
+        VmaAllocationCreateInfo allocationInfo = {};
+        allocationInfo.usage = VMA_MEMORY_USAGE_AUTO;
+        allocationInfo.flags = VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
+
+        // Create resource.
+        auto result = VulkanResource::create(
+            this, sResourceName, pMemoryAllocator, imageInfo, allocationInfo, viewDescription);
+        if (std::holds_alternative<Error>(result)) {
+            auto error = std::get<Error>(std::move(result));
+            error.addCurrentLocationToErrorStack();
+            return error;
+        }
+
+        return std::get<std::unique_ptr<VulkanResource>>(std::move(result));
     }
 
     VulkanStorageResourceArrayManager* VulkanResourceManager::getStorageResourceArrayManager() const {

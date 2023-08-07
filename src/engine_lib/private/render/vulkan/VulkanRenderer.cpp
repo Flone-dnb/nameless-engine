@@ -166,6 +166,20 @@ namespace ne {
             return optionalError;
         }
 
+        // Create MSAA render image (if MSAA is enabled).
+        optionalError = createMsaaImage();
+        if (optionalError.has_value()) {
+            optionalError->addCurrentLocationToErrorStack();
+            return optionalError;
+        }
+
+        // Create framebuffers.
+        optionalError = createSwapChainFramebuffers();
+        if (optionalError.has_value()) {
+            optionalError->addCurrentLocationToErrorStack();
+            return optionalError;
+        }
+
         // ... TODO ...
 
         bIsVulkanInitialized = true;
@@ -1062,10 +1076,12 @@ namespace ne {
 
         static_assert(
             iRenderPassColorAttachmentIndex != iRenderPassDepthAttachmentIndex &&
-                iRenderPassColorAttachmentIndex != iRenderPassColorResolveAttachmentIndex,
+                iRenderPassColorAttachmentIndex != iRenderPassColorResolveTargetAttachmentIndex,
             "attachment indices should be unique");
 
-        // Describe MSAA color buffer.
+        const auto bEnableMsaa = msaaSampleCount != VK_SAMPLE_COUNT_1_BIT;
+
+        // Describe color buffer.
         VkAttachmentDescription colorAttachment{};
         colorAttachment.format = swapChainImageFormat;
         colorAttachment.samples = msaaSampleCount;
@@ -1074,7 +1090,8 @@ namespace ne {
         colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
         colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
         colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        colorAttachment.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+        colorAttachment.finalLayout =
+            bEnableMsaa ? VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL : VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
         vAttachments.push_back(colorAttachment);
         static_assert(iRenderPassColorAttachmentIndex == 0);
         if (vAttachments.size() != iRenderPassColorAttachmentIndex + 1) [[unlikely]] {
@@ -1097,21 +1114,21 @@ namespace ne {
             return Error("unexpected attachment index");
         }
 
-        if (msaaSampleCount != VK_SAMPLE_COUNT_1_BIT) {
-            // Describe color resolve attachment to resolve MSAA color buffer (see above) to a regular image
-            // for presenting.
-            VkAttachmentDescription colorResolveAttachment{};
-            colorResolveAttachment.format = swapChainImageFormat;
-            colorResolveAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-            colorResolveAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-            colorResolveAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-            colorResolveAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-            colorResolveAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-            colorResolveAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-            colorResolveAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-            vAttachments.push_back(colorResolveAttachment);
-            static_assert(iRenderPassColorResolveAttachmentIndex == 2);
-            if (vAttachments.size() != iRenderPassColorResolveAttachmentIndex + 1) [[unlikely]] {
+        if (bEnableMsaa) {
+            // Describe color resolve target attachment to resolve color buffer (see above)
+            // which uses MSAA to a regular image for presenting.
+            VkAttachmentDescription colorResolveTargetAttachment{};
+            colorResolveTargetAttachment.format = swapChainImageFormat;
+            colorResolveTargetAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+            colorResolveTargetAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+            colorResolveTargetAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+            colorResolveTargetAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+            colorResolveTargetAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+            colorResolveTargetAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+            colorResolveTargetAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+            vAttachments.push_back(colorResolveTargetAttachment);
+            static_assert(iRenderPassColorResolveTargetAttachmentIndex == 2);
+            if (vAttachments.size() != iRenderPassColorResolveTargetAttachmentIndex + 1) [[unlikely]] {
                 return Error("unexpected attachment index");
             }
         }
@@ -1127,9 +1144,9 @@ namespace ne {
         depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
         VkAttachmentReference colorAttachmentResolveRef{};
-        if (msaaSampleCount != VK_SAMPLE_COUNT_1_BIT) {
+        if (bEnableMsaa) {
             // Create reference to resolve target for subpasses.
-            colorAttachmentResolveRef.attachment = iRenderPassColorResolveAttachmentIndex;
+            colorAttachmentResolveRef.attachment = iRenderPassColorResolveTargetAttachmentIndex;
             colorAttachmentResolveRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
         }
 
@@ -1140,7 +1157,7 @@ namespace ne {
         subpass.pColorAttachments = &colorAttachmentRef;
         subpass.pDepthStencilAttachment = &depthAttachmentRef;
 
-        if (msaaSampleCount != VK_SAMPLE_COUNT_1_BIT) {
+        if (bEnableMsaa) {
             subpass.pResolveAttachments = &colorAttachmentResolveRef;
         }
 
@@ -1177,8 +1194,17 @@ namespace ne {
             return;
         }
 
+        // Explicitly destroy MSAA resource before resource manager is destroyed.
+        pMsaaImage = nullptr;
+
         // Explicitly destroy depth resource before resource manager is destroyed.
         pDepthImage = nullptr;
+
+        // Destroy swap chain framebuffers.
+        for (size_t i = 0; i < vSwapChainFramebuffers.size(); i++) {
+            vkDestroyFramebuffer(pLogicalDevice, vSwapChainFramebuffers[i], nullptr);
+            vSwapChainFramebuffers[i] = nullptr;
+        }
 
         // Make sure all pipelines were destroyed because they reference render pass.
         resetPipelineManager();
@@ -1249,6 +1275,133 @@ namespace ne {
             return error;
         }
         pDepthImage = std::get<std::unique_ptr<VulkanResource>>(std::move(result));
+
+        return {};
+    }
+
+    std::optional<Error> VulkanRenderer::createMsaaImage() {
+        if (msaaSampleCount == VK_SAMPLE_COUNT_1_BIT) {
+            // Do nothing.
+            return {};
+        }
+
+        // Make sure swap chain extent is set.
+        if (!swapChainExtent.has_value()) {
+            return Error("expected swap chain extent to have a value");
+        }
+
+        // Get resource manager.
+        const auto pResourceManager = getResourceManager();
+        if (pResourceManager == nullptr) [[unlikely]] {
+            return Error("expected GPU resource manager to be valid");
+        }
+
+        // Convert manager.
+        const auto pVulkanResourceManager = dynamic_cast<VulkanResourceManager*>(pResourceManager);
+        if (pVulkanResourceManager == nullptr) [[unlikely]] {
+            return Error("expected a Vulkan resource manager");
+        }
+
+        // Create MSAA image.
+        auto result = pVulkanResourceManager->createImage(
+            "renderer MSAA render buffer",
+            swapChainExtent->width,
+            swapChainExtent->height,
+            1,
+            msaaSampleCount,
+            swapChainImageFormat,
+            VK_IMAGE_TILING_OPTIMAL,
+            VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+            VK_IMAGE_ASPECT_COLOR_BIT);
+        if (std::holds_alternative<Error>(result)) [[unlikely]] {
+            auto error = std::get<Error>(std::move(result));
+            error.addCurrentLocationToErrorStack();
+            return error;
+        }
+        pMsaaImage = std::get<std::unique_ptr<VulkanResource>>(std::move(result));
+
+        return {};
+    }
+
+    std::optional<Error> VulkanRenderer::createSwapChainFramebuffers() {
+        // Make sure swap chain extent is set.
+        if (!swapChainExtent.has_value()) {
+            return Error("expected swap chain extent to have a value");
+        }
+
+        // Make sure the swap chain is created.
+        if (pSwapChain == nullptr) [[unlikely]] {
+            return Error("expected the swap chain to be created at this point");
+        }
+
+        // Make sure the render pass is created.
+        if (pRenderPass == nullptr) [[unlikely]] {
+            return Error("expected the render pass to be created at this point");
+        }
+
+        // Make sure depth image is created.
+        if (pDepthImage == nullptr) [[unlikely]] {
+            return Error("expected the depth image to be created at this point");
+        }
+
+        // Make sure MSAA image is created.
+        if (pMsaaImage == nullptr) [[unlikely]] {
+            return Error("expected the MSAA image to be created at this point");
+        }
+
+        // Make sure framebuffer array size is equal to image views array size.
+        if (vSwapChainFramebuffers.size() != vSwapChainImageViews.size()) [[unlikely]] {
+            return Error(std::format(
+                "swapchain framebuffer array size ({}) is not equal to swapchain image view array size ({}), "
+                "swapchain framebuffers wrap swapchain images thus framebuffer count "
+                "should be equal to swapchain image count",
+                vSwapChainFramebuffers.size(),
+                vSwapChainImageViews.size()));
+        }
+
+        const auto bEnableMsaa = msaaSampleCount != VK_SAMPLE_COUNT_1_BIT;
+
+        for (size_t i = 0; i < vSwapChainImageViews.size(); i++) {
+            // Prepare image views to render pass attachments that framebuffer will reference.
+            std::vector<VkImageView> vAttachments;
+
+            // Specify color attachment.
+            static_assert(iRenderPassColorAttachmentIndex == 0);
+            if (bEnableMsaa) {
+                vAttachments.push_back(pMsaaImage->getInternalImageView());
+            } else {
+                vAttachments.push_back(vSwapChainImageViews[i]);
+            }
+
+            // Specify depth attachment.
+            static_assert(iRenderPassDepthAttachmentIndex == 1);
+            vAttachments.push_back(pDepthImage->getInternalImageView());
+
+            // Specify color resolve target attachment.
+            static_assert(iRenderPassColorResolveTargetAttachmentIndex == 2);
+            if (bEnableMsaa) {
+                vAttachments.push_back(vSwapChainImageViews[i]);
+            }
+
+            // Describe framebuffer.
+            VkFramebufferCreateInfo framebufferInfo{};
+            framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+            framebufferInfo.renderPass = pRenderPass;
+            framebufferInfo.attachmentCount = static_cast<uint32_t>(vAttachments.size());
+            framebufferInfo.pAttachments = vAttachments.data();
+            framebufferInfo.width = swapChainExtent->width;
+            framebufferInfo.height = swapChainExtent->height;
+            framebufferInfo.layers = 1;
+
+            // Create framebuffer.
+            const auto result =
+                vkCreateFramebuffer(pLogicalDevice, &framebufferInfo, nullptr, &vSwapChainFramebuffers[i]);
+            if (result != VK_SUCCESS) [[unlikely]] {
+                return Error(fmt::format(
+                    "failed to create a framebuffer for a swapchain image view, error: {}",
+                    string_VkResult(result)));
+            }
+        }
 
         return {};
     }

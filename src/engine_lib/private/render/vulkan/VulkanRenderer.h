@@ -503,6 +503,26 @@ namespace ne {
          */
         [[nodiscard]] std::optional<Error> createDepthImage();
 
+        /**
+         * Creates @ref pMsaaImage using the current @ref msaaSampleCount (does nothing if only 1 sample
+         * is used).
+         *
+         * @warning Expects that GPU resource manager and @ref swapChainExtent are valid.
+         *
+         * @return Error if something went wrong.
+         */
+        [[nodiscard]] std::optional<Error> createMsaaImage();
+
+        /**
+         * Creates @ref vSwapChainFramebuffers.
+         *
+         * @remark Expects that @ref vSwapChainImageViews, @ref pRenderPass, @ref pDepthImage and
+         * @ref pMsaaImage are valid.
+         *
+         * @return Error if something went wrong.
+         */
+        [[nodiscard]] std::optional<Error> createSwapChainFramebuffers();
+
         /** Vulkan API instance. */
         VkInstance pInstance = nullptr;
 
@@ -527,6 +547,9 @@ namespace ne {
         /** Depth buffer. */
         std::unique_ptr<VulkanResource> pDepthImage = nullptr;
 
+        /** Image with multiple samples per pixel for MSAA. */
+        std::unique_ptr<VulkanResource> pMsaaImage = nullptr;
+
         /** Render pass. */
         VkRenderPass pRenderPass = nullptr;
 
@@ -546,6 +569,9 @@ namespace ne {
 
         /** Views to @ref vSwapChainImages. */
         std::array<VkImageView, getSwapChainBufferCount()> vSwapChainImageViews;
+
+        /** Framebuffers that point to @ref vSwapChainImageViews. */
+        std::array<VkFramebuffer, getSwapChainBufferCount()> vSwapChainFramebuffers;
 
         /**
          * Semaphores to signal that an image from the swapchain was acquired and is ready
@@ -589,8 +615,8 @@ namespace ne {
         /** Index of the depth attachment in @ref pRenderPass. */
         static constexpr size_t iRenderPassDepthAttachmentIndex = 1;
 
-        /** Index of the color resolve attachment in @ref pRenderPass. */
-        static constexpr size_t iRenderPassColorResolveAttachmentIndex = 2;
+        /** Index of the color resolve target attachment in @ref pRenderPass. */
+        static constexpr size_t iRenderPassColorResolveTargetAttachmentIndex = 2;
 
         /** Format of @ref vSwapChainImages. */
         static constexpr VkFormat swapChainImageFormat = VK_FORMAT_B8G8R8A8_SRGB;

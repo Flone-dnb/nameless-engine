@@ -55,6 +55,18 @@ namespace ne {
         inline VkBuffer getInternalBufferResource() const { return pBufferResource; };
 
         /**
+         * Returns internal image view.
+         *
+         * @remark Do not delete (free) returned pointer.
+         *
+         * @remark Returned pointer is only valid while this object is valid.
+         *
+         * @return `nullptr` if this resource uses buffer as internal resource not a image,
+         * otherwise internal image view.
+         */
+        inline VkImageView getInternalImageView() const { return pImageView; }
+
+        /**
          * Returns memory allocation of the internal resource.
          *
          * @remark Do not delete (free) returned pointer.

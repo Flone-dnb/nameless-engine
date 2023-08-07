@@ -107,15 +107,33 @@ namespace ne {
     }
 
     void Renderer::resetGpuResourceManager() {
+        if (pResourceManager == nullptr) {
+            return;
+        }
+
         Logger::get().info("explicitly resetting GPU resource manager");
         Logger::get().flushToDisk();
         pResourceManager = nullptr;
     }
 
     void Renderer::resetPipelineManager() {
+        if (pPipelineManager == nullptr) {
+            return;
+        }
+
         Logger::get().info("explicitly resetting pipeline manager");
         Logger::get().flushToDisk();
         pPipelineManager = nullptr;
+    }
+
+    void Renderer::resetFrameResourcesManager() {
+        if (pFrameResourcesManager == nullptr) {
+            return;
+        }
+
+        Logger::get().info("explicitly resetting frame resources manager");
+        Logger::get().flushToDisk();
+        pFrameResourcesManager = nullptr;
     }
 
     std::unique_ptr<Renderer>

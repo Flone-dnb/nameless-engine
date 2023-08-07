@@ -50,6 +50,12 @@ namespace ne {
                 }
             }
 
+            // Explicitly delete frame resources manager before command pool because command buffers
+            // in frame resources use command pool to be freed.
+            // Also delete frame resources before GPU resource manager because they use memory allocator
+            // for destruction.
+            resetFrameResourcesManager();
+
             // Explicitly delete memory allocator before all essential Vulkan objects.
             resetGpuResourceManager();
 
@@ -78,11 +84,9 @@ namespace ne {
             pWindowSurface = nullptr;
         }
 
-        if (pInstance != nullptr) {
-            // Destroy Vulkan instance.
-            vkDestroyInstance(pInstance, nullptr);
-            pInstance = nullptr;
-        }
+        // Destroy Vulkan instance.
+        vkDestroyInstance(pInstance, nullptr);
+        pInstance = nullptr;
     }
 
     uint32_t VulkanRenderer::getUsedVulkanVersion() { return iUsedVulkanVersion; }
@@ -1002,7 +1006,7 @@ namespace ne {
         VkCommandPoolCreateInfo poolInfo{};
         poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
         poolInfo.queueFamilyIndex = physicalDeviceQueueFamilyIndices.iGraphicsFamilyIndex.value();
-        poolInfo.flags = 0;
+        poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
 
         // Create command pool.
         const auto result = vkCreateCommandPool(pLogicalDevice, &poolInfo, nullptr, &pCommandPool);

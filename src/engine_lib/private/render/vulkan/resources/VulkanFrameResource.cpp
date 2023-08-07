@@ -8,6 +8,40 @@
 
 namespace ne {
 
+    VulkanFrameResource::~VulkanFrameResource() {
+        if (pCommandBuffer == nullptr) {
+            return;
+        }
+
+        // Convert renderer.
+        const auto pVulkanRenderer = dynamic_cast<VulkanRenderer*>(pRenderer);
+        if (pVulkanRenderer == nullptr) [[unlikely]] {
+            Error error("expected a Vulkan renderer");
+            error.showError();
+            return; // don't throw in destructor, just quit
+        }
+
+        // Get logical device.
+        const auto pLogicalDevice = pVulkanRenderer->getLogicalDevice();
+        if (pLogicalDevice == nullptr) [[unlikely]] {
+            Error error("expected logical device to be valid");
+            error.showError();
+            return; // don't throw in destructor, just quit
+        }
+
+        // Get command pool.
+        const auto pCommandPool = pVulkanRenderer->getCommandPool();
+        if (pCommandPool == nullptr) [[unlikely]] {
+            Error error("expected command pool to be valid");
+            error.showError();
+            return; // don't throw in destructor, just quit
+        }
+
+        // Free command buffer.
+        vkFreeCommandBuffers(pLogicalDevice, pCommandPool, 1, &pCommandBuffer);
+        pCommandBuffer = nullptr;
+    }
+
     std::optional<Error> VulkanFrameResource::initialize(Renderer* pRenderer) {
         // Convert renderer.
         const auto pVulkanRenderer = dynamic_cast<VulkanRenderer*>(pRenderer);
@@ -39,6 +73,9 @@ namespace ne {
         if (result != VK_SUCCESS) [[unlikely]] {
             return Error(fmt::format("failed to create command buffer, error: {}", string_VkResult(result)));
         }
+
+        // Save renderer.
+        this->pRenderer = pRenderer;
 
         return {};
     }

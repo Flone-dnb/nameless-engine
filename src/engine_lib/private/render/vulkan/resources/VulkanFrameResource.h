@@ -15,7 +15,7 @@ namespace ne {
 
     /** Stores objects used by one frame. */
     struct VulkanFrameResource : public FrameResource {
-        virtual ~VulkanFrameResource() override = default;
+        virtual ~VulkanFrameResource() override;
 
         /** Stores recorded commands. */
         VkCommandBuffer pCommandBuffer = nullptr;
@@ -29,5 +29,8 @@ namespace ne {
          * @return Error if something went wrong.
          */
         [[nodiscard]] virtual std::optional<Error> initialize(Renderer* pRenderer) override;
+
+        /** Renderer that was passed to @ref initialize. */
+        Renderer* pRenderer = nullptr;
     };
 } // namespace ne

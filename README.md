@@ -484,7 +484,7 @@ Sort your `#include`s and group them like this:
 #include "vulkan/vulkan.h"
 ```
 
-where `Standard` refers to headers from standard library, `Custom` refers to headers from the engine/game and `External` refers to headers from external dependencies.
+where `Standard` refers to headers from the standard library, `Custom` refers to headers from the engine/game and `External` refers to headers from external dependencies.
 
 ## Directory/file naming
 
@@ -583,6 +583,16 @@ private:
     static constexpr UINT iFrameConstantBufferRootParameterIndex = 0;
 }; // end of class
 ```
+
+- if your function can fail use engine's `Error` class as a return type (instead of logging an error and returning nothing), for example:
+
+```C++
+static std::variant<std::unique_ptr<VulkanResource>, Error> create(...);
+
+[[nodiscard]] std::optional<Error> initialize(Renderer* pRenderer) override;
+```
+
+- if your function returns `std::optional<Error>` mark it as `[[nodiscard]]`
 
 ## Some implementation rules
 

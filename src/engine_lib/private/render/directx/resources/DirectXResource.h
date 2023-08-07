@@ -48,8 +48,7 @@ namespace ne {
          *
          * @return Error if something went wrong.
          */
-        [[nodiscard]] virtual std::optional<Error>
-        bindDescriptor(GpuResource::DescriptorType descriptorType) override;
+        [[nodiscard]] std::optional<Error> bindDescriptor(DirectXDescriptorType descriptorType);
 
         /**
          * Returns descriptor handle to the descriptor that was previously binded using `bind...` function(s).
@@ -60,7 +59,7 @@ namespace ne {
          * descriptor handle.
          */
         std::optional<D3D12_CPU_DESCRIPTOR_HANDLE>
-        getBindedDescriptorHandle(DescriptorType descriptorType) const;
+        getBindedDescriptorHandle(DirectXDescriptorType descriptorType) const;
 
         /**
          * Returns internal resource.

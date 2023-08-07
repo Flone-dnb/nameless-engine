@@ -170,7 +170,7 @@ namespace ne {
         pDepthStencilBuffer = std::get<std::unique_ptr<DirectXResource>>(std::move(result));
 
         // Bind DSV.
-        auto optionalError = pDepthStencilBuffer->bindDescriptor(GpuResource::DescriptorType::DSV);
+        auto optionalError = pDepthStencilBuffer->bindDescriptor(DirectXDescriptorType::DSV);
         if (optionalError.has_value()) {
             auto error = optionalError.value();
             error.addCurrentLocationToErrorStack();
@@ -310,7 +310,7 @@ namespace ne {
 
         // Get render target resource descriptor handle.
         auto optionalRenderTargetDescritorHandle =
-            pCurrentBackBufferResource->getBindedDescriptorHandle(GpuResource::DescriptorType::RTV);
+            pCurrentBackBufferResource->getBindedDescriptorHandle(DirectXDescriptorType::RTV);
         if (!optionalRenderTargetDescritorHandle.has_value()) [[unlikely]] {
             return Error(fmt::format(
                 "render target resource \"{}\" has no RTV binded to it",
@@ -320,7 +320,7 @@ namespace ne {
 
         // Get depth stencil resource descriptor handle.
         auto optionalDepthStencilDescritorHandle =
-            pDepthStencilBuffer->getBindedDescriptorHandle(GpuResource::DescriptorType::DSV);
+            pDepthStencilBuffer->getBindedDescriptorHandle(DirectXDescriptorType::DSV);
         if (!optionalDepthStencilDescritorHandle.has_value()) [[unlikely]] {
             return Error(fmt::format(
                 "depth stencil resource \"{}\" has no DSV binded to it",
@@ -1166,7 +1166,7 @@ namespace ne {
             pMsaaRenderBuffer = std::get<std::unique_ptr<DirectXResource>>(std::move(result));
 
             // Bind RTV.
-            auto optionalError = pMsaaRenderBuffer->bindDescriptor(GpuResource::DescriptorType::RTV);
+            auto optionalError = pMsaaRenderBuffer->bindDescriptor(DirectXDescriptorType::RTV);
             if (optionalError.has_value()) {
                 optionalError->addCurrentLocationToErrorStack();
                 return optionalError.value();

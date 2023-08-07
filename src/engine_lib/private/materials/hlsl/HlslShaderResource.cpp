@@ -51,9 +51,15 @@ namespace ne {
             }
             auto pUploadBuffer = std::get<std::unique_ptr<UploadBuffer>>(std::move(result));
 
+            // Convert to DirectX resource.
+            const auto pDirectXResource =
+                dynamic_cast<DirectXResource*>(pUploadBuffer->getInternalResource());
+            if (pDirectXResource == nullptr) [[unlikely]] {
+                return Error("expected a DirectX resource");
+            }
+
             // Bind a CBV.
-            auto optionalError =
-                pUploadBuffer->getInternalResource()->bindDescriptor(GpuResource::DescriptorType::CBV);
+            auto optionalError = pDirectXResource->bindDescriptor(DirectXDescriptorType::CBV);
             if (optionalError.has_value()) [[unlikely]] {
                 auto error = optionalError.value();
                 error.addCurrentLocationToErrorStack();

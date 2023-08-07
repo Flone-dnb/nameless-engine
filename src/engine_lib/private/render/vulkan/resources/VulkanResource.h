@@ -27,15 +27,6 @@ namespace ne {
         virtual ~VulkanResource() override;
 
         /**
-         * Creates a new descriptor and binds it to this resource.
-         *
-         * @param descriptorType Type of descriptor to bind.
-         *
-         * @return Error if something went wrong.
-         */
-        [[nodiscard]] virtual std::optional<Error> bindDescriptor(DescriptorType descriptorType) override;
-
-        /**
          * Returns resource name.
          *
          * @return Resource name.

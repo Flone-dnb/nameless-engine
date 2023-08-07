@@ -101,7 +101,7 @@ namespace ne {
          * @return Error if something went wrong.
          */
         [[nodiscard]] std::optional<Error>
-        assignDescriptor(DirectXResource* pResource, GpuResource::DescriptorType descriptorType);
+        assignDescriptor(DirectXResource* pResource, DirectXDescriptorType descriptorType);
 
         /**
          * Returns current heap capacity (allocated heap size).
@@ -185,7 +185,7 @@ namespace ne {
         void createView(
             CD3DX12_CPU_DESCRIPTOR_HANDLE heapHandle,
             const DirectXResource* pResource,
-            GpuResource::DescriptorType descriptorType) const;
+            DirectXDescriptorType descriptorType) const;
 
         /**
          * Recreates the heap to expand its capacity to support @ref iHeapGrowSize more descriptors.
@@ -224,7 +224,7 @@ namespace ne {
          *
          * @return Descriptor types that this heap handles.
          */
-        std::vector<GpuResource::DescriptorType> getDescriptorTypesHandledByThisHeap() const;
+        std::vector<DirectXDescriptorType> getDescriptorTypesHandledByThisHeap() const;
 
         /**
          * Recreates views for previously created descriptors so that they will reference

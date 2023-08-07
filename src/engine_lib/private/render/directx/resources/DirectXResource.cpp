@@ -57,7 +57,7 @@ namespace ne {
         pCreatedResource->pInternalResource = pCreatedResource->pSwapChainBuffer.Get();
 
         // Assign descriptor.
-        auto optionalError = pRtvHeap->assignDescriptor(pCreatedResource.get(), DescriptorType::RTV);
+        auto optionalError = pRtvHeap->assignDescriptor(pCreatedResource.get(), DirectXDescriptorType::RTV);
         if (optionalError.has_value()) {
             optionalError->addCurrentLocationToErrorStack();
             return optionalError.value();
@@ -67,7 +67,7 @@ namespace ne {
     }
 
     std::optional<D3D12_CPU_DESCRIPTOR_HANDLE>
-    DirectXResource::getBindedDescriptorHandle(DescriptorType descriptorType) const {
+    DirectXResource::getBindedDescriptorHandle(DirectXDescriptorType descriptorType) const {
         // Get descriptor.
         const auto pOptionalDescriptor = &vHeapDescriptors[static_cast<size_t>(descriptorType)];
 
@@ -102,7 +102,7 @@ namespace ne {
 
     DirectXResource::DirectXResource(const DirectXResourceManager* pResourceManager) {
         this->pResourceManager = pResourceManager;
-        vHeapDescriptors.resize(static_cast<int>(DescriptorType::END));
+        vHeapDescriptors.resize(static_cast<int>(DirectXDescriptorType::END));
     }
 
     DirectXResource::~DirectXResource() {
@@ -112,27 +112,27 @@ namespace ne {
         pResourceManager->getRenderer()->waitForGpuToFinishWorkUpToThisPoint();
     }
 
-    std::optional<Error> DirectXResource::bindDescriptor(DescriptorType descriptorType) {
+    std::optional<Error> DirectXResource::bindDescriptor(DirectXDescriptorType descriptorType) {
         DirectXDescriptorHeap* pHeap = nullptr;
 
         switch (descriptorType) {
-        case (GpuResource::DescriptorType::CBV): {
+        case (DirectXDescriptorType::CBV): {
             pHeap = pResourceManager->getCbvSrvUavHeap();
             break;
         }
-        case (GpuResource::DescriptorType::SRV): {
+        case (DirectXDescriptorType::SRV): {
             pHeap = pResourceManager->getCbvSrvUavHeap();
             break;
         }
-        case (GpuResource::DescriptorType::UAV): {
+        case (DirectXDescriptorType::UAV): {
             pHeap = pResourceManager->getCbvSrvUavHeap();
             break;
         }
-        case (GpuResource::DescriptorType::RTV): {
+        case (DirectXDescriptorType::RTV): {
             pHeap = pResourceManager->getRtvHeap();
             break;
         }
-        case (GpuResource::DescriptorType::DSV): {
+        case (DirectXDescriptorType::DSV): {
             pHeap = pResourceManager->getDsvHeap();
             break;
         }

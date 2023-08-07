@@ -53,7 +53,7 @@ TEST_CASE("make the CBV heap expand") {
                 auto pResource = std::get<std::unique_ptr<DirectXResource>>(std::move(result));
 
                 // Bind CBV.
-                auto optionalError = pResource->bindDescriptor(GpuResource::DescriptorType::CBV);
+                auto optionalError = pResource->bindDescriptor(DirectXDescriptorType::CBV);
                 if (optionalError.has_value()) {
                     auto error = optionalError.value();
                     error.addCurrentLocationToErrorStack();
@@ -79,7 +79,7 @@ TEST_CASE("make the CBV heap expand") {
             auto pResource = std::get<std::unique_ptr<DirectXResource>>(std::move(result));
 
             // Bind CBV.
-            auto optionalError = pResource->bindDescriptor(GpuResource::DescriptorType::CBV);
+            auto optionalError = pResource->bindDescriptor(DirectXDescriptorType::CBV);
             if (optionalError.has_value()) {
                 auto error = optionalError.value();
                 error.addCurrentLocationToErrorStack();
@@ -148,7 +148,7 @@ TEST_CASE("make the CBV heap shrink") {
                 auto pResource = std::get<std::unique_ptr<DirectXResource>>(std::move(result));
 
                 // Bind CBV.
-                auto optionalError = pResource->bindDescriptor(GpuResource::DescriptorType::CBV);
+                auto optionalError = pResource->bindDescriptor(DirectXDescriptorType::CBV);
                 if (optionalError.has_value()) {
                     auto error = optionalError.value();
                     error.addCurrentLocationToErrorStack();
@@ -234,7 +234,7 @@ TEST_CASE("assign multiple descriptors to one resource") {
             auto pResource = std::get<std::unique_ptr<DirectXResource>>(std::move(result));
 
             // Bind SRV.
-            auto optionalError = pResource->bindDescriptor(GpuResource::DescriptorType::SRV);
+            auto optionalError = pResource->bindDescriptor(DirectXDescriptorType::SRV);
             if (optionalError.has_value()) {
                 auto error = optionalError.value();
                 error.addCurrentLocationToErrorStack();
@@ -243,7 +243,7 @@ TEST_CASE("assign multiple descriptors to one resource") {
             }
 
             // Assign a UAV descriptor to this resource.
-            optionalError = pResource->bindDescriptor(GpuResource::DescriptorType::UAV);
+            optionalError = pResource->bindDescriptor(DirectXDescriptorType::UAV);
             if (optionalError.has_value()) {
                 optionalError->addCurrentLocationToErrorStack();
                 INFO(optionalError->getFullErrorMessage());
@@ -252,7 +252,7 @@ TEST_CASE("assign multiple descriptors to one resource") {
 
             // Assign a SRV descriptor to this resource (again).
             // (should fail because descriptor of this type is already added)
-            optionalError = pResource->bindDescriptor(GpuResource::DescriptorType::SRV);
+            optionalError = pResource->bindDescriptor(DirectXDescriptorType::SRV);
             REQUIRE(optionalError.has_value());
 
             pGameWindow->close();
@@ -320,7 +320,7 @@ TEST_CASE("all assigned descriptors are freed when resource is destroyed") {
                 auto pResource = std::get<std::unique_ptr<DirectXResource>>(std::move(result));
 
                 // Bind SRV.
-                auto optionalError = pResource->bindDescriptor(GpuResource::DescriptorType::SRV);
+                auto optionalError = pResource->bindDescriptor(DirectXDescriptorType::SRV);
                 if (optionalError.has_value()) {
                     auto error = optionalError.value();
                     error.addCurrentLocationToErrorStack();
@@ -329,7 +329,7 @@ TEST_CASE("all assigned descriptors are freed when resource is destroyed") {
                 }
 
                 // Assign a UAV descriptor to this resource.
-                optionalError = pResource->bindDescriptor(GpuResource::DescriptorType::UAV);
+                optionalError = pResource->bindDescriptor(DirectXDescriptorType::UAV);
                 if (optionalError.has_value()) {
                     optionalError->addCurrentLocationToErrorStack();
                     INFO(optionalError->getFullErrorMessage());
@@ -387,7 +387,7 @@ TEST_CASE("create CBV resource") {
             auto pResource = std::get<std::unique_ptr<DirectXResource>>(std::move(result));
 
             // Bind CBV.
-            auto optionalError = pResource->bindDescriptor(GpuResource::DescriptorType::CBV);
+            auto optionalError = pResource->bindDescriptor(DirectXDescriptorType::CBV);
             if (optionalError.has_value()) {
                 auto error = optionalError.value();
                 error.addCurrentLocationToErrorStack();
@@ -453,7 +453,7 @@ TEST_CASE("create SRV resource") {
             auto pResource = std::get<std::unique_ptr<DirectXResource>>(std::move(result));
 
             // Bind SRV.
-            auto optionalError = pResource->bindDescriptor(GpuResource::DescriptorType::SRV);
+            auto optionalError = pResource->bindDescriptor(DirectXDescriptorType::SRV);
             if (optionalError.has_value()) {
                 auto error = optionalError.value();
                 error.addCurrentLocationToErrorStack();
@@ -519,7 +519,7 @@ TEST_CASE("create UAV resource") {
             auto pResource = std::get<std::unique_ptr<DirectXResource>>(std::move(result));
 
             // Bind UAV.
-            auto optionalError = pResource->bindDescriptor(GpuResource::DescriptorType::UAV);
+            auto optionalError = pResource->bindDescriptor(DirectXDescriptorType::UAV);
             if (optionalError.has_value()) {
                 auto error = optionalError.value();
                 error.addCurrentLocationToErrorStack();
@@ -589,7 +589,7 @@ TEST_CASE("create RTV resource") {
             auto pResource = std::get<std::unique_ptr<DirectXResource>>(std::move(result));
 
             // Bind RTV.
-            auto optionalError = pResource->bindDescriptor(GpuResource::DescriptorType::RTV);
+            auto optionalError = pResource->bindDescriptor(DirectXDescriptorType::RTV);
             if (optionalError.has_value()) {
                 auto error = optionalError.value();
                 error.addCurrentLocationToErrorStack();
@@ -665,7 +665,7 @@ TEST_CASE("create DSV resource") {
             auto pResource = std::get<std::unique_ptr<DirectXResource>>(std::move(result));
 
             // Bind DSV.
-            auto optionalError = pResource->bindDescriptor(GpuResource::DescriptorType::DSV);
+            auto optionalError = pResource->bindDescriptor(DirectXDescriptorType::DSV);
             if (optionalError.has_value()) {
                 auto error = optionalError.value();
                 error.addCurrentLocationToErrorStack();

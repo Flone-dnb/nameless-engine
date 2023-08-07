@@ -74,10 +74,6 @@ namespace ne {
         }
     }
 
-    std::optional<Error> VulkanResource::bindDescriptor(DescriptorType descriptorType) {
-        throw std::runtime_error("not implemented");
-    }
-
     std::string VulkanResource::getResourceName() const { return sResourceName; }
 
     VulkanResourceManager* VulkanResource::getResourceManager() const { return pResourceManager; }

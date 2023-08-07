@@ -107,7 +107,7 @@ namespace ne {
          *
          * @return Root parameter index.
          */
-        static inline UINT getFrameConstantBufferRootParameterIndex() {
+        static constexpr UINT getFrameConstantBufferRootParameterIndex() {
             return iFrameConstantBufferRootParameterIndex;
         }
 
@@ -158,6 +158,6 @@ namespace ne {
         static inline const std::string sFrameConstantBufferName = "frameData";
 
         /** Index of the root parameter that points to `cbuffer` with frame constants. */
-        static inline const UINT iFrameConstantBufferRootParameterIndex = 0;
+        static constexpr UINT iFrameConstantBufferRootParameterIndex = 0;
     };
 } // namespace ne

@@ -443,13 +443,19 @@ The generated documentation will be located at `docs/gen/html`, open the `index.
 
 # Code style
 
-Mostly engine code style is controlled though `clang-format` and `clang-tidy` (although `clang-tidy` is only enabled for release builds), configuration for both of these is located in the root directory of this repository. Nevertheless, there are few things that those two can't control, which are:
+The following is a code style rules for engine developers not for game developers (although if you prefer you can follow these rules even if you're not writing engine code but making a game).
+
+Mostly engine code style is controlled though `clang-format` and `clang-tidy` (although `clang-tidy` is only enabled for release builds so make sure your changes compile in release mode), configuration for both of these is located in the root directory of this repository. Nevertheless, there are several things that those two can't control, which are:
+
+## Use prefixes for variables/fields
+
+Some prefixes are not controlled by `clang-tidy`:
 
 - for `bool` variables the prefix is `b`, example: `bIsEnabled`,
 - for integer variables (`int`, `size_t`, etc.) the prefix is `i`, example: `iSwapChainBufferCount`,
 - for string variables (`std::string`, `std::string_view`, etc.) the prefix is `s`, example: `sNodeName`,
 - for vector variables (`std::vector`, `std::array`, etc.) the prefix is `v`, example: `vActionEvents`,
-- additionally, if you're using mutex to guard specific field(s) use `std::pair` if possible, here are some examples:
+- additionally, if you're using a mutex to guard specific field(s) use `std::pair` if possible, here are some examples:
 
 ```C++
 std::pair<std::recursive_mutex, gc<Node>> mtxParentNode;
@@ -462,4 +468,207 @@ struct LocalSpaceInformation {
 std::pair<std::recursive_mutex, LocalSpaceInformation> mtxLocalSpace;
 ```
 
-Make sure you are naming your variables according to this when writing engine code.
+## Sort included headers
+
+Sort your `#include`s and group them like this:
+
+```C++
+// Standard.
+#include <variant>
+#include <memory>
+
+// Custom.
+#include "render/general/resources/GpuResource.h"
+
+// External.
+#include "vulkan/vulkan.h"
+```
+
+where `Standard` refers to headers from standard library, `Custom` refers to headers from the engine/game and `External` refers to headers from external dependencies.
+
+## Directory/file naming
+
+Directories in the `src` directory are named with 1 lowercase word (preferably without underscores), for example:
+
+```
+render\general\resources
+```
+
+used to store `render`-specific source code, `general` means API-independent (DirectX/Vulkan) and `resources` refers to GPU resources.
+
+Files are named using CamelCase, for example: `EditorGameInstance.h`.
+
+## Some header rules
+
+- if you're using `friend class` specify it in the beginning of the `class` with a small description, for example:
+
+```C++
+/**
+ * Represents a descriptor (to a resource) that is stored in a descriptor heap.
+ * Automatically marked as unused in destructor.
+ */
+class DirectXDescriptor {
+    // We notify the heap about descriptor being no longer used in destructor.
+    friend class DirectXDescriptorHeap;
+
+    // ... then goes other code ...
+```
+
+generally `friend class` is used to hide some internal object communication functions from public section to avoid public API user from shooting himself in the foot and causing unexpected behaviour.
+
+- don't duplicate access modifiers in your class/struct, so don't write code like this:
+
+```C++
+class Foo{
+public:
+    // ... some code here ...
+
+private:
+    // ... some code here ...
+
+public: // <- don't do that as `public` was already specified earlier
+    // ... some code here...
+};
+```
+
+- specify access modifiers in the following order: `public`, `protected` and finally `private`, for example:
+
+```C++
+class Foo{
+public:
+    // ... some code here ...
+
+protected:
+    // ... some code here ...
+
+private:
+    // ... some code here...
+};
+```
+
+- don't mix function with fields: specify all functions first and only then fields, for example:
+
+```C++
+class Foo{
+public:
+    void foo();
+
+protected:
+    void bar();
+
+private:
+    void somefunction1();
+
+    void somefunction2();
+
+    // now all functions were specified and we can specify all fields
+
+    int iAnswer = 42;
+
+    static constexpr bool bEnable = false;
+};
+```
+
+- don't store fields in the `public`/`protected` section, generally you should specify all fields in the `private` section and provide getters/setters in other sections
+    - but there are some exceptions to this rule such as `struct`s that just group a few variables - you don't need to hide them in `private` section and provide getters although if you think this will help or you want to do something in your getters then you can do that
+    - for inheritance generally you should still put all base class fields in the `private` section and for derived classes provide a `protected` getter/setter if you need, although there are also some exceptions to this
+
+- put all `static constexpr` / `static inline const` fields in the bottom of your or class, for example:
+
+```C++
+private:
+    // ... some code here ...
+
+    /** Index of the root parameter that points to `cbuffer` with frame constants. */
+    static constexpr UINT iFrameConstantBufferRootParameterIndex = 0;
+}; // end of class
+```
+
+## Some implementation rules
+
+- avoid nesting, for example:
+
+bad:
+
+```C++
+// Make sure the specified file exists.
+if (std::filesystem::exists(shaderDescription.pathToShaderFile)) [[likely]] {
+    // Make sure the specified path is a file.
+    if (!std::filesystem::is_directory(shaderDescription.pathToShaderFile)) [[likely]] {
+        // Create shader cache directory if needed.
+        if (!std::filesystem::exists(shaderCacheDirectory)) {
+            std::filesystem::create_directory(shaderCacheDirectory);
+        }
+
+        // ... some other code ...
+    }else{
+        return Error(fmt::format(
+            "the specified shader path {} is not a file", shaderDescription.pathToShaderFile.string()));
+    }
+}else{
+    return Error(fmt::format(
+        "the specified shader file {} does not exist", shaderDescription.pathToShaderFile.string()));
+}
+```
+
+good:
+
+```C++
+// Make sure the specified file exists.
+if (!std::filesystem::exists(shaderDescription.pathToShaderFile)) [[unlikely]] {
+    return Error(fmt::format(
+        "the specified shader file {} does not exist", shaderDescription.pathToShaderFile.string()));
+}
+
+// Make sure the specified path is a file.
+if (std::filesystem::is_directory(shaderDescription.pathToShaderFile)) [[unlikely]] {
+        return Error(fmt::format(
+            "the specified shader path {} is not a file", shaderDescription.pathToShaderFile.string()));
+}
+
+// Create shader cache directory if needed.
+if (!std::filesystem::exists(shaderCacheDirectory)) {
+    std::filesystem::create_directory(shaderCacheDirectory);
+}
+```
+
+- prefer to group your implementation code into small chunks without empty lines with a comment in the beginning, all chunks should be separated by 1 empty line, for example:
+
+```C++
+// Specify defined macros for this shader.
+auto vParameterNames = convertShaderMacrosToText(macros);
+for (const auto& sParameter : vParameterNames) {
+    currentShaderDescription.vDefinedShaderMacros.push_back(sParameter);
+}
+
+// Add hash of the configuration to the shader name for logging.
+const auto sConfigurationText = ShaderMacroConfigurations::convertConfigurationToText(macros);
+currentShaderDescription.sShaderName += sConfigurationText;
+
+// Add hash of the configuration to the compiled shader file name
+// so that all shader variants will be stored in different files.
+auto currentPathToCompiledShader = pathToCompiledShader;
+currentPathToCompiledShader += sConfigurationText;
+
+// Try to load the shader from cache.
+auto result = Shader::createFromCache(
+    pRenderer,
+    currentPathToCompiledShader,
+    currentShaderDescription,
+    shaderDescription.sShaderName,
+    cacheInvalidationReason);
+if (std::holds_alternative<Error>(result)) {
+    // Shader cache is corrupted or invalid. Delete invalid cache directory.
+    std::filesystem::remove_all(
+        ShaderFilesystemPaths::getPathToShaderCacheDirectory() / shaderDescription.sShaderName);
+
+    // Return error that specifies that cache is invalid.
+    auto err = std::get<Error>(std::move(result));
+    err.addCurrentLocationToErrorStack();
+    return err;
+}
+
+// Save loaded shader to shader pack.
+pShaderPack->mtxInternalResources.second.shadersInPack[macros] =
+    std::get<std::shared_ptr<Shader>>(result);
+```

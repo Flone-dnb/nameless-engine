@@ -1153,7 +1153,7 @@ namespace ne {
 
             auto result = dynamic_cast<DirectXResourceManager*>(getResourceManager())
                               ->createResource(
-                                  "renderer render target buffer",
+                                  "renderer MSAA render buffer",
                                   allocationDesc,
                                   msaaRenderTargetDesc,
                                   D3D12_RESOURCE_STATE_COMMON,

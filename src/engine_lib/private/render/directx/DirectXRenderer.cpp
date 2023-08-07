@@ -918,14 +918,15 @@ namespace ne {
         // Self check: make sure allocated frame resource is of expected type
         // so we may just `reinterpret_cast` later because they won't change.
         {
-            auto pMtxCurrentFrameResource = getFrameResourcesManager()->getCurrentFrameResource();
-            std::scoped_lock frameResourceGuard(pMtxCurrentFrameResource->first);
+            auto mtxAllFrameResource = getFrameResourcesManager()->getAllFrameResources();
+            std::scoped_lock frameResourceGuard(*mtxAllFrameResource.first);
 
-            // Convert frame resource.
-            const auto pDirectXFrameResource =
-                dynamic_cast<DirectXFrameResource*>(pMtxCurrentFrameResource->second.pResource);
-            if (pDirectXFrameResource == nullptr) [[unlikely]] {
-                return Error("expected a DirectX frame resource");
+            for (const auto& pFrameResource : mtxAllFrameResource.second) {
+                // Convert frame resource.
+                const auto pDirectXFrameResource = dynamic_cast<DirectXFrameResource*>(pFrameResource);
+                if (pDirectXFrameResource == nullptr) [[unlikely]] {
+                    return Error("expected a DirectX frame resource");
+                }
             }
         }
 

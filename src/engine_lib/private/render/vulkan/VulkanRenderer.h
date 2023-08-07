@@ -163,6 +163,13 @@ namespace ne {
         VkRenderPass getRenderPass() const;
 
         /**
+         * Returns Vulkan command pool used in the renderer.
+         *
+         * @return `nullptr` if command pool is not created yet, otherwise used command pool.
+         */
+        VkCommandPool getCommandPool() const;
+
+        /**
          * Returns the size of images in the swap chain.
          *
          * @return Empty if the swap chain is not initialized, otherwise the size of images in

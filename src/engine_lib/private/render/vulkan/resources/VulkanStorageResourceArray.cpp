@@ -524,11 +524,10 @@ namespace ne {
                     VkWriteDescriptorSet descriptorUpdateInfo{};
                     descriptorUpdateInfo.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
                     descriptorUpdateInfo.dstSet =
-                        pMtxPipelineInternalResources->second.vDescriptorSets[i]; // descriptor to update
-                    descriptorUpdateInfo.dstBinding = it->second;                 // descriptor binding
+                        pMtxPipelineInternalResources->second.vDescriptorSets[i]; // descriptor set to update
+                    descriptorUpdateInfo.dstBinding = it->second;                 // descriptor binding index
                     descriptorUpdateInfo.dstArrayElement = 0; // first descriptor in array to update
-                    descriptorUpdateInfo.descriptorType =
-                        VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;          // type of descriptor
+                    descriptorUpdateInfo.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
                     descriptorUpdateInfo.descriptorCount = 1;       // how much descriptors in array to update
                     descriptorUpdateInfo.pBufferInfo = &bufferInfo; // descriptor refers to buffer data
 

@@ -91,6 +91,17 @@ namespace ne {
          */
         void switchToNextFrameResource();
 
+        /**
+         * Returns all frame resources.
+         *
+         * @remark Generally used to reference internal resources of all frame resources.
+         *
+         * @remark Do not delete (free) returned pointers.
+         *
+         * @return All frame resources (use with mutex).
+         */
+        std::pair<std::recursive_mutex*, std::vector<FrameResource*>> getAllFrameResources();
+
     private:
         /** Number of frames "in-flight" that the CPU can submit to the GPU without waiting. */
         static constexpr unsigned int iFrameResourcesCount = 3;

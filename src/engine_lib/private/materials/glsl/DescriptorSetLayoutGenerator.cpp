@@ -269,6 +269,19 @@ namespace ne {
             resourceBindings[bindingInfo.sResourceName] = info;
         }
 
+        // Make sure we have a "frameData" binding at expected index.
+        const auto frameDataBindingIt = resourceBindings.find(sFrameUniformBufferName);
+        if (frameDataBindingIt == resourceBindings.end()) [[unlikely]] {
+            return Error(fmt::format("expected to find \"{}\" binding", sFrameUniformBufferName));
+        }
+        if (frameDataBindingIt->second.iBindingIndex != iFrameUniformBufferBindingIndex) [[unlikely]] {
+            return Error(fmt::format(
+                "expected \"{}\" resource to use the following binding index: {} (actual: {})",
+                sFrameUniformBufferName,
+                iFrameUniformBufferBindingIndex,
+                frameDataBindingIt->second.iBindingIndex));
+        }
+
         // Describe descriptor set layout.
         VkDescriptorSetLayoutCreateInfo layoutInfo{};
         layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;

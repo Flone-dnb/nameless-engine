@@ -7,6 +7,8 @@
 #include "game/Window.h"
 #include "materials/glsl/GlslEngineShaders.hpp"
 #include "render/vulkan/resources/VulkanResourceManager.h"
+#include "render/vulkan/resources/VulkanFrameResource.h"
+#include "render/general/resources/FrameResourcesManager.h"
 
 // External.
 #include "vulkan/vk_enum_string_helper.h"
@@ -37,16 +39,25 @@ namespace ne {
         destroySwapChainAndDependentResources();
 
         if (pLogicalDevice != nullptr) {
-            // Destroy semaphores and fences.
-            for (unsigned int i = 0; i < FrameResourcesManager::getFrameResourcesCount(); i++) {
-                vkDestroySemaphore(pLogicalDevice, vSemaphoreSwapChainImageReadyForRendering[i], nullptr);
-                vkDestroySemaphore(pLogicalDevice, vSemaphoreSwapChainImageReadyForPresenting[i], nullptr);
-                vkDestroyFence(pLogicalDevice, vFences[i], nullptr);
-                vFences[i] = nullptr; // `waitForGpuToFinishWorkUpToThisPoint` checks for this
+            if (vFences[0] != nullptr) {
+                // Destroy semaphores and fences.
+                for (unsigned int i = 0; i < FrameResourcesManager::getFrameResourcesCount(); i++) {
+                    vkDestroySemaphore(pLogicalDevice, vSemaphoreSwapChainImageReadyForRendering[i], nullptr);
+                    vkDestroySemaphore(
+                        pLogicalDevice, vSemaphoreSwapChainImageReadyForPresenting[i], nullptr);
+                    vkDestroyFence(pLogicalDevice, vFences[i], nullptr);
+                    vFences[i] = nullptr; // `waitForGpuToFinishWorkUpToThisPoint` checks for this
+                }
             }
 
             // Explicitly delete memory allocator before all essential Vulkan objects.
             resetGpuResourceManager();
+
+            if (pCommandPool != nullptr) {
+                // Destroy command pool.
+                vkDestroyCommandPool(pLogicalDevice, pCommandPool, nullptr);
+                pCommandPool = nullptr;
+            }
 
             // Destroy logical device.
             vkDestroyDevice(pLogicalDevice, nullptr);
@@ -67,9 +78,11 @@ namespace ne {
             pWindowSurface = nullptr;
         }
 
-        // Destroy Vulkan instance.
-        vkDestroyInstance(pInstance, nullptr);
-        pInstance = nullptr;
+        if (pInstance != nullptr) {
+            // Destroy Vulkan instance.
+            vkDestroyInstance(pInstance, nullptr);
+            pInstance = nullptr;
+        }
     }
 
     uint32_t VulkanRenderer::getUsedVulkanVersion() { return iUsedVulkanVersion; }
@@ -156,6 +169,21 @@ namespace ne {
         if (optionalError.has_value()) {
             optionalError->addCurrentLocationToErrorStack();
             return optionalError;
+        }
+
+        // Self check: make sure allocated frame resource is of expected type
+        // so we may just `reinterpret_cast` later because they won't change.
+        {
+            auto mtxAllFrameResource = getFrameResourcesManager()->getAllFrameResources();
+            std::scoped_lock frameResourceGuard(*mtxAllFrameResource.first);
+
+            for (const auto& pFrameResource : mtxAllFrameResource.second) {
+                // Convert frame resource.
+                const auto pVulkanFrameResource = dynamic_cast<VulkanFrameResource*>(pFrameResource);
+                if (pVulkanFrameResource == nullptr) [[unlikely]] {
+                    return Error("expected a Vulkan frame resource");
+                }
+            }
         }
 
         // Now that GPU resource manager is created:
@@ -1344,9 +1372,13 @@ namespace ne {
             return Error("expected the depth image to be created at this point");
         }
 
-        // Make sure MSAA image is created.
-        if (pMsaaImage == nullptr) [[unlikely]] {
-            return Error("expected the MSAA image to be created at this point");
+        const auto bEnableMsaa = msaaSampleCount != VK_SAMPLE_COUNT_1_BIT;
+
+        if (bEnableMsaa) {
+            // Make sure MSAA image is created.
+            if (pMsaaImage == nullptr) [[unlikely]] {
+                return Error("expected the MSAA image to be created at this point");
+            }
         }
 
         // Make sure framebuffer array size is equal to image views array size.
@@ -1358,8 +1390,6 @@ namespace ne {
                 vSwapChainFramebuffers.size(),
                 vSwapChainImageViews.size()));
         }
-
-        const auto bEnableMsaa = msaaSampleCount != VK_SAMPLE_COUNT_1_BIT;
 
         for (size_t i = 0; i < vSwapChainImageViews.size(); i++) {
             // Prepare image views to render pass attachments that framebuffer will reference.
@@ -1486,6 +1516,8 @@ namespace ne {
     VkInstance VulkanRenderer::getInstance() const { return pInstance; }
 
     VkRenderPass VulkanRenderer::getRenderPass() const { return pRenderPass; }
+
+    VkCommandPool VulkanRenderer::getCommandPool() const { return pCommandPool; }
 
     std::optional<VkExtent2D> VulkanRenderer::getSwapChainExtent() const { return swapChainExtent; }
 

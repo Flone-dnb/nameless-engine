@@ -64,6 +64,15 @@ namespace ne {
         DescriptorSetLayoutGenerator& operator=(const DescriptorSetLayoutGenerator&) = delete;
 
         /**
+         * Returns binding index that shaders should use for "frameData" uniform buffer.
+         *
+         * @return Binding index in descriptor set layout.
+         */
+        static constexpr uint32_t getFrameUniformBufferBindingIndex() {
+            return iFrameUniformBufferBindingIndex;
+        }
+
+        /**
          * Collection information from the specified SPIR-V bytecode that can be used to generate
          * a descriptor set layout.
          *

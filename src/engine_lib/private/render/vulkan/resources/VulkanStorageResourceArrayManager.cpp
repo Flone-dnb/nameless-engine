@@ -90,7 +90,7 @@ namespace ne {
             // Log creation.
             Logger::get().info(fmt::format(
                 "created a new storage array to handle \"{}\" shader CPU write resource data "
-                "(total storage arrays now: {}, total size: {})",
+                "(storage arrays now in total: {}, total size: {})",
                 pShaderResource->getResourceName(),
                 mtxGlslShaderCpuWriteResources.second.size(),
                 formatBytesToMegabytes(iTotalSizeInBytes)));

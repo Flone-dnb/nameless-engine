@@ -99,4 +99,15 @@ namespace ne {
             vFrameResources[mtxCurrentFrameResource.second.iCurrentFrameResourceIndex].get();
     }
 
+    std::pair<std::recursive_mutex*, std::vector<FrameResource*>>
+    FrameResourcesManager::getAllFrameResources() {
+        // Collect all resources to vector.
+        std::vector<FrameResource*> vOutFrameResources(iFrameResourcesCount);
+        for (size_t i = 0; i < vFrameResources.size(); i++) {
+            vOutFrameResources[i] = vFrameResources[i].get();
+        }
+
+        return {&mtxCurrentFrameResource.first, vOutFrameResources};
+    }
+
 } // namespace ne

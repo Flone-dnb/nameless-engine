@@ -198,13 +198,21 @@ namespace ne {
         // Get Vulkan renderer.
         const auto pVulkanRenderer = dynamic_cast<VulkanRenderer*>(getRenderer());
         if (pVulkanRenderer == nullptr) [[unlikely]] {
-            return Error("expected a vulkan renderer");
+            return Error("expected a Vulkan renderer");
         }
 
         // Create graphics pipeline.
         auto optionalError = createGraphicsPipeline(
             pVulkanRenderer, pVertexShader.get(), pFragmentShader.get(), bUsePixelBlending);
-        if (optionalError.has_value()) {
+        if (optionalError.has_value()) [[unlikely]] {
+            auto error = std::move(optionalError.value());
+            error.addCurrentLocationToErrorStack();
+            return error;
+        }
+
+        // Bind "frameData" descriptors to frame uniform buffer.
+        optionalError = bindFrameDataDescriptors();
+        if (optionalError.has_value()) [[unlikely]] {
             auto error = std::move(optionalError.value());
             error.addCurrentLocationToErrorStack();
             return error;
@@ -520,6 +528,81 @@ namespace ne {
 
         // Mark as ready to be used.
         mtxInternalResources.second.bIsReadyForUsage = true;
+
+        return {};
+    }
+
+    std::optional<Error> VulkanPipeline::bindFrameDataDescriptors() {
+        // Get renderer.
+        const auto pVulkanRenderer = dynamic_cast<VulkanRenderer*>(getRenderer());
+        if (pVulkanRenderer == nullptr) [[unlikely]] {
+            return Error("expected a Vulkan renderer");
+        }
+
+        // Get logical device.
+        const auto pLogicalDevice = pVulkanRenderer->getLogicalDevice();
+        if (pLogicalDevice == nullptr) [[unlikely]] {
+            return Error("expected logical device to be valid");
+        }
+
+        // Get frame resource manager.
+        const auto pFrameResourceManager = getRenderer()->getFrameResourcesManager();
+        if (pFrameResourceManager == nullptr) [[unlikely]] {
+            return Error("frame resource manager is `nullptr`");
+        }
+
+        // Get all frame resources.
+        auto mtxAllFrameResource = pFrameResourceManager->getAllFrameResources();
+
+        // Lock both frame resources and internal resources.
+        std::scoped_lock frameResourceGuard(*mtxAllFrameResource.first, mtxInternalResources.first);
+
+        // Make sure frame resource count is equal to our number of descriptor sets.
+        if (mtxAllFrameResource.second.size() != mtxInternalResources.second.vDescriptorSets.size())
+            [[unlikely]] {
+            return Error(fmt::format(
+                "expected frame resource count ({}) to be equal to descriptor set count ({})",
+                mtxAllFrameResource.second.size(),
+                mtxInternalResources.second.vDescriptorSets.size()));
+        }
+
+        for (size_t i = 0; i < mtxAllFrameResource.second.size(); i++) {
+            // Get frame resource.
+            const auto pFrameResource = mtxAllFrameResource.second[i]->pFrameConstantBuffer.get();
+
+            // Convert frame resource to a Vulkan resource.
+            const auto pVulkanResource = dynamic_cast<VulkanResource*>(pFrameResource->getInternalResource());
+            if (pVulkanResource == nullptr) [[unlikely]] {
+                return Error("expected a Vulkan resource");
+            }
+
+            // Get internal VkBuffer.
+            const auto pVkFrameBuffer = pVulkanResource->getInternalBufferResource();
+            if (pVkFrameBuffer == nullptr) [[unlikely]] {
+                return Error("expected frame resource to be a buffer");
+            }
+
+            // Prepare info to bind frame uniform buffer to descriptor.
+            VkDescriptorBufferInfo bufferInfo{};
+            bufferInfo.buffer = pVkFrameBuffer;
+            bufferInfo.offset = 0;
+            bufferInfo.range = pFrameResource->getElementSizeInBytes() * pFrameResource->getElementCount();
+
+            // Bind buffer to descriptor.
+            VkWriteDescriptorSet descriptorUpdateInfo{};
+            descriptorUpdateInfo.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            descriptorUpdateInfo.dstSet =
+                mtxInternalResources.second.vDescriptorSets[i]; // descriptor set to update
+            descriptorUpdateInfo.dstBinding =
+                DescriptorSetLayoutGenerator::getFrameUniformBufferBindingIndex();
+            descriptorUpdateInfo.dstArrayElement = 0; // first descriptor in array to update
+            descriptorUpdateInfo.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+            descriptorUpdateInfo.descriptorCount = 1;       // how much descriptors in array to update
+            descriptorUpdateInfo.pBufferInfo = &bufferInfo; // descriptor refers to buffer data
+
+            // Update descriptor.
+            vkUpdateDescriptorSets(pLogicalDevice, 1, &descriptorUpdateInfo, 0, nullptr);
+        }
 
         return {};
     }

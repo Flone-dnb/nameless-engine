@@ -175,6 +175,15 @@ namespace ne {
             bool bUsePixelBlending);
 
         /**
+         * Binds descriptors that reference "frameData" shader resource to frame resources' uniform buffers.
+         *
+         * @remark Expects that descriptor sets in @ref mtxInternalResources are initialized.
+         *
+         * @return Error if something went wrong.
+         */
+        [[nodiscard]] std::optional<Error> bindFrameDataDescriptors();
+
+        /**
          * Internal resources.
          * Must be used with mutex when changing.
          */

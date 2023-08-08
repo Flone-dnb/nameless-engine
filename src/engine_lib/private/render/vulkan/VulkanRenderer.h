@@ -123,8 +123,8 @@ namespace ne {
 
         /**
          * Submits a one-time submit command buffer created by @ref createOneTimeSubmitCommandBuffer,
-         * then waits for the queue (that recorded commands were submitted to) to be idle and destroys
-         * the command buffer.
+         * then waits for a temporary fence to be signaled (meaning that submitted commands were executed
+         * on the GPU) and destroys the command buffer.
          *
          * @param pOneTimeSubmitCommandBuffer Command buffer created by @ref createOneTimeSubmitCommandBuffer
          * with recorded commands to submit.

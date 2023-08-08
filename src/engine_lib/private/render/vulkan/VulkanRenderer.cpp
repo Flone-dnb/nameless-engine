@@ -1572,6 +1572,17 @@ namespace ne {
                 string_VkResult(result)));
         }
 
+        // Describe fence.
+        VkFenceCreateInfo fenceInfo{};
+        fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+
+        // Create fence to wait for commands to be finished.
+        VkFence pTemporaryFence = nullptr;
+        result = vkCreateFence(pLogicalDevice, &fenceInfo, nullptr, &pTemporaryFence);
+        if (result != VK_SUCCESS) [[unlikely]] {
+            return Error(fmt::format("failed to create a fence, error: {}", string_VkResult(result)));
+        }
+
         // Prepare to execute the commands.
         VkSubmitInfo submitInfo{};
         submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -1579,19 +1590,22 @@ namespace ne {
         submitInfo.pCommandBuffers = &pOneTimeSubmitCommandBuffer;
 
         // Execute the commands.
-        result = vkQueueSubmit(pGraphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
+        result = vkQueueSubmit(pGraphicsQueue, 1, &submitInfo, pTemporaryFence);
         if (result != VK_SUCCESS) [[unlikely]] {
             return Error(fmt::format(
                 "failed to submit commands of a one-time submit command buffer, error: {}",
                 string_VkResult(result)));
         }
 
-        // Wait for commands to be executed.
-        result = vkQueueWaitIdle(pGraphicsQueue);
+        // Wait for the fence to be signaled.
+        result = vkWaitForFences(pLogicalDevice, 1, &pTemporaryFence, VK_TRUE, UINT64_MAX);
         if (result != VK_SUCCESS) [[unlikely]] {
             return Error(
-                fmt::format("failed to wait for queue to be idle, error: {}", string_VkResult(result)));
+                fmt::format("failed to wait for a temporary fence, error: {}", string_VkResult(result)));
         }
+
+        // Destroy the fence.
+        vkDestroyFence(pLogicalDevice, pTemporaryFence, nullptr);
 
         // Free temporary command buffer.
         vkFreeCommandBuffers(pLogicalDevice, pCommandPool, 1, &pOneTimeSubmitCommandBuffer);

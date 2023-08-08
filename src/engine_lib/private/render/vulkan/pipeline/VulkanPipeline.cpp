@@ -4,6 +4,7 @@
 #include "io/Logger.h"
 #include "render/vulkan/VulkanRenderer.h"
 #include "materials/glsl/GlslShader.h"
+#include "materials/EngineShaderNames.hpp"
 #include "materials/glsl/DescriptorSetLayoutGenerator.h"
 
 // External.
@@ -142,6 +143,61 @@ namespace ne {
         }
 
         return {};
+    }
+
+    std::variant<std::optional<VkPushConstantRange>, Error>
+    VulkanPipeline::getPushConstants(GlslShader* pVertexShader, GlslShader* pFragmentShader) {
+        // See if we need to specify push constants.
+        const auto pMtxVertexShaderLayoutInfo = pVertexShader->getDescriptorSetLayoutInfo();
+        const auto pMtxFragmentShaderLayoutInfo = pFragmentShader->getDescriptorSetLayoutInfo();
+
+        std::scoped_lock guard(pMtxVertexShaderLayoutInfo->first, pMtxFragmentShaderLayoutInfo->first);
+
+        // Make sure descriptor layout info is collected.
+        if (!pMtxVertexShaderLayoutInfo->second.has_value()) [[unlikely]] {
+            return Error("expected vertex shader layout info to be set at this point");
+        }
+        if (!pMtxFragmentShaderLayoutInfo->second.has_value()) [[unlikely]] {
+            return Error("expected fragment shader layout info to be set at this point");
+        }
+
+        // Make sure push constants are used.
+        if (!pMtxVertexShaderLayoutInfo->second->pushConstantName.has_value() &&
+            !pMtxFragmentShaderLayoutInfo->second->pushConstantName.has_value()) {
+            // Not used.
+            return {};
+        }
+
+        // At least one shader is using push constants, we expect both to use them.
+        if (!pMtxVertexShaderLayoutInfo->second->pushConstantName.has_value()) {
+            return Error(
+                "expected vertex shader to use push constants because fragment shader is using them");
+        }
+        if (!pMtxFragmentShaderLayoutInfo->second->pushConstantName.has_value()) {
+            return Error(
+                "expected fragment shader to use push constants because vertex shader is using them");
+        }
+
+        // Make sure it has expected name.
+        if (pMtxVertexShaderLayoutInfo->second->pushConstantName.value() != sPushConstantName) [[unlikely]] {
+            return Error(fmt::format(
+                "found unsupported push constant \"{}\"",
+                pMtxVertexShaderLayoutInfo->second->pushConstantName.value()));
+        }
+        if (pMtxFragmentShaderLayoutInfo->second->pushConstantName.value() != sPushConstantName)
+            [[unlikely]] {
+            return Error(fmt::format(
+                "found unsupported push constant \"{}\"",
+                pMtxFragmentShaderLayoutInfo->second->pushConstantName.value()));
+        }
+
+        // Specify range.
+        VkPushConstantRange range{};
+        range.offset = 0;
+        range.size = sizeof(MeshNodePushConstants);
+        range.stageFlags = VK_SHADER_STAGE_ALL_GRAPHICS;
+
+        return range;
     }
 
     VulkanPipeline::VulkanPipeline(
@@ -453,6 +509,24 @@ namespace ne {
         pipelineLayoutInfo.pPushConstantRanges = nullptr;
         pipelineLayoutInfo.setLayoutCount = 1;
         pipelineLayoutInfo.pSetLayouts = &generatedLayout.pDescriptorSetLayout;
+
+        // Get push constants (if used).
+        auto pushConstantsResult = getPushConstants(pVertexShader, pFragmentShader);
+        if (std::holds_alternative<Error>(pushConstantsResult)) [[unlikely]] {
+            auto error = std::get<Error>(std::move(pushConstantsResult));
+            error.addCurrentLocationToErrorStack();
+            return error;
+        }
+        const auto optionalPushConstants = std::get<std::optional<VkPushConstantRange>>(pushConstantsResult);
+        VkPushConstantRange pushConstants{};
+
+        // Specify push constants.
+        if (optionalPushConstants.has_value()) {
+            pushConstants = optionalPushConstants.value();
+
+            pipelineLayoutInfo.pushConstantRangeCount = 1;
+            pipelineLayoutInfo.pPushConstantRanges = &pushConstants;
+        }
 
         // Create pipeline layout.
         VkPipelineLayout pPipelineLayout = nullptr;

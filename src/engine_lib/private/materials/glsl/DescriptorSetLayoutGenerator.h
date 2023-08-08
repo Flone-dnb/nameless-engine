@@ -9,6 +9,7 @@
 // Custom.
 #include "misc/Error.h"
 #include "render/general/resources/FrameResourcesManager.h"
+#include "materials/VulkanAlignmentConstants.hpp"
 
 // External.
 #include "vulkan/vulkan.h"
@@ -25,18 +26,30 @@ namespace ne {
         // ... add new resource types here ...
     };
 
-    /** Contains information about a descriptor set layout binding. */
-    struct DescriptorSetLayoutBindingInfo {
-        /** Type of the shader resource. */
-        GlslResourceType resourceType;
-
-        /** Name of the resource (written in the GLSL code). */
-        std::string sResourceName;
-    };
-
     /** Generates Descriptor Set Layout based on GLSL code. */
     class DescriptorSetLayoutGenerator {
     public:
+        /** Groups collected info. */
+        struct Collected {
+            /** Contains information about a descriptor set layout binding. */
+            struct DescriptorSetLayoutBindingInfo {
+                /** Type of the shader resource. */
+                GlslResourceType resourceType;
+
+                /** Name of the resource (written in the GLSL code). */
+                std::string sResourceName;
+            };
+
+            /**
+             * Map of descriptor set layout binding where key is binding index and value
+             * is descriptor info.
+             */
+            std::unordered_map<uint32_t, DescriptorSetLayoutBindingInfo> bindingInfo;
+
+            /** Not empty if push constant is used. */
+            std::optional<std::string> pushConstantName;
+        };
+
         /** Groups generated data. */
         struct Generated {
             /** Created descriptor set layout. */
@@ -79,10 +92,9 @@ namespace ne {
          * @param pSpirvBytecode SPIR-V bytecode to analyze.
          * @param iSizeInBytes   Size of bytecode in bytes.
          *
-         * @return Error if something went wrong, otherwise a map of descriptor set layout binding
-         * where key is binding index and value is descriptor info.
+         * @return Error if something went wrong, otherwise collected info.
          */
-        static std::variant<std::unordered_map<uint32_t, DescriptorSetLayoutBindingInfo>, Error>
+        static std::variant<Collected, Error>
         collectInfoFromBytecode(void* pSpirvBytecode, size_t iSizeInBytes);
 
         /**
@@ -108,10 +120,10 @@ namespace ne {
          * @param iBindingIndex Index of the binding that was specified in the GLSL code.
          * @param bindingInfo   Information about the GLSL resource used in this binding.
          *
-         * @return
+         * @return Error if something went wrong, otherwise generated binding.
          */
-        static std::variant<VkDescriptorSetLayoutBinding, Error>
-        generateLayoutBinding(uint32_t iBindingIndex, const DescriptorSetLayoutBindingInfo& bindingInfo);
+        static std::variant<VkDescriptorSetLayoutBinding, Error> generateLayoutBinding(
+            uint32_t iBindingIndex, const Collected::DescriptorSetLayoutBindingInfo& bindingInfo);
 
         /** Name of the `uniform` buffer used to store frame data in GLSL shaders. */
         static inline const std::string sFrameUniformBufferName = "frameData";

@@ -156,7 +156,7 @@ namespace ne {
     }
 
     bool GlslShader::releaseShaderDataFromMemoryIfLoaded() {
-        std::scoped_lock guard(mtxSpirvBytecode.first, mtxDescriptorSetLayoutBindingInfo.first);
+        std::scoped_lock guard(mtxSpirvBytecode.first, mtxDescriptorSetLayoutInfo.first);
 
         if (!mtxSpirvBytecode.second.empty()) {
             // Release bytecode.
@@ -164,9 +164,9 @@ namespace ne {
             mtxSpirvBytecode.second.shrink_to_fit();
         }
 
-        if (mtxDescriptorSetLayoutBindingInfo.second.has_value()) {
-            // Release descriptor set layout binding info.
-            mtxDescriptorSetLayoutBindingInfo.second = {};
+        if (mtxDescriptorSetLayoutInfo.second.has_value()) {
+            // Release descriptor set layout info.
+            mtxDescriptorSetLayoutInfo.second = {};
         }
 
         notifyShaderBytecodeReleasedFromMemory();
@@ -198,9 +198,9 @@ namespace ne {
         return &mtxSpirvBytecode;
     }
 
-    std::pair<std::mutex, std::optional<std::unordered_map<uint32_t, DescriptorSetLayoutBindingInfo>>>*
-    GlslShader::getDescriptorSetLayoutBindingInfo() {
-        return &mtxDescriptorSetLayoutBindingInfo;
+    std::pair<std::mutex, std::optional<DescriptorSetLayoutGenerator::Collected>>*
+    GlslShader::getDescriptorSetLayoutInfo() {
+        return &mtxDescriptorSetLayoutInfo;
     }
 
     shaderc_shader_kind GlslShader::convertShaderTypeToShadercShaderKind(ShaderType shaderType) {
@@ -262,7 +262,7 @@ namespace ne {
     }
 
     std::optional<Error> GlslShader::loadShaderDataFromDiskIfNotLoaded() {
-        std::scoped_lock guard(mtxSpirvBytecode.first, mtxDescriptorSetLayoutBindingInfo.first);
+        std::scoped_lock guard(mtxSpirvBytecode.first, mtxDescriptorSetLayoutInfo.first);
 
         if (mtxSpirvBytecode.second.empty()) {
             // Get path to compiled shader.
@@ -296,7 +296,7 @@ namespace ne {
             notifyShaderBytecodeLoadedIntoMemory();
         }
 
-        if (!mtxDescriptorSetLayoutBindingInfo.second.has_value()) {
+        if (!mtxDescriptorSetLayoutInfo.second.has_value()) {
             // Make sure bytecode was loaded.
             if (mtxSpirvBytecode.second.empty()) [[unlikely]] {
                 return Error("expected shader bytecode to be loaded at this point");
@@ -311,9 +311,8 @@ namespace ne {
                 error.addCurrentLocationToErrorStack();
                 return error;
             }
-            mtxDescriptorSetLayoutBindingInfo.second =
-                std::get<std::unordered_map<uint32_t, DescriptorSetLayoutBindingInfo>>(
-                    std::move(layoutResult));
+            mtxDescriptorSetLayoutInfo.second =
+                std::get<DescriptorSetLayoutGenerator::Collected>(std::move(layoutResult));
         }
 
         return {};

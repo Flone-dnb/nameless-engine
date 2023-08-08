@@ -91,8 +91,8 @@ namespace ne {
          * @return Empty if descriptor layout information was not collected yet, use @ref getCompiledBytecode
          * to collect and load everything, otherwise descriptor layout info.
          */
-        std::pair<std::mutex, std::optional<std::unordered_map<uint32_t, DescriptorSetLayoutBindingInfo>>>*
-        getDescriptorSetLayoutBindingInfo();
+        std::pair<std::mutex, std::optional<DescriptorSetLayoutGenerator::Collected>>*
+        getDescriptorSetLayoutInfo();
 
         /**
          * Releases underlying shader data (bytecode, root signature, etc.) from memory (this object will not
@@ -163,13 +163,13 @@ namespace ne {
         std::pair<std::recursive_mutex, std::vector<char>> mtxSpirvBytecode;
 
         /**
-         * Contains information used to descriptor set layout.
+         * Contains information used to create descriptor set layout.
          *
-         * @remark Might not be calculated yet, see @ref loadShaderDataFromDiskIfNotLoaded for collecting root
-         * signature information.
+         * @remark Might not be calculated yet, see @ref loadShaderDataFromDiskIfNotLoaded for collecting
+         * this information.
          */
-        std::pair<std::mutex, std::optional<std::unordered_map<uint32_t, DescriptorSetLayoutBindingInfo>>>
-            mtxDescriptorSetLayoutBindingInfo;
+        std::pair<std::mutex, std::optional<DescriptorSetLayoutGenerator::Collected>>
+            mtxDescriptorSetLayoutInfo;
 
         /** Index of the vertex input binding. */
         static constexpr uint32_t iVertexBindingIndex = 0;

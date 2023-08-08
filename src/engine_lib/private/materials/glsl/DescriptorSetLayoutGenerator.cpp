@@ -11,7 +11,7 @@
 
 namespace ne {
 
-    std::variant<std::unordered_map<uint32_t, DescriptorSetLayoutBindingInfo>, Error>
+    std::variant<DescriptorSetLayoutGenerator::Collected, Error>
     DescriptorSetLayoutGenerator::collectInfoFromBytecode(void* pSpirvBytecode, size_t iSizeInBytes) {
         SpvReflectShaderModule module;
         // Create shader module.
@@ -38,11 +38,11 @@ namespace ne {
         }
 
         std::unordered_set<std::string> usedNames;
-        std::unordered_map<uint32_t, DescriptorSetLayoutBindingInfo> bindingInfo;
+        Collected collected;
         for (const auto& descriptorBinding : vDescriptorBindings) {
             // Make sure there was no binding with this ID.
-            auto bindingInfoIt = bindingInfo.find(descriptorBinding->binding);
-            if (bindingInfoIt != bindingInfo.end()) [[unlikely]] {
+            auto bindingInfoIt = collected.bindingInfo.find(descriptorBinding->binding);
+            if (bindingInfoIt != collected.bindingInfo.end()) [[unlikely]] {
                 return Error(fmt::format(
                     "found two resources that use the same binding index {}, these are: \"{}\" and \"{}\"",
                     bindingInfoIt->first,
@@ -59,7 +59,7 @@ namespace ne {
             }
 
             // Collect new binding info.
-            DescriptorSetLayoutBindingInfo info;
+            Collected::DescriptorSetLayoutBindingInfo info;
             info.sResourceName = descriptorBinding->name;
             switch (descriptorBinding->descriptor_type) {
             case (SPV_REFLECT_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER): {
@@ -82,13 +82,42 @@ namespace ne {
             }
 
             // Add to output.
-            bindingInfo[descriptorBinding->binding] = std::move(info);
+            collected.bindingInfo[descriptorBinding->binding] = std::move(info);
+        }
+
+        // Get push constants count.
+        uint32_t iPushConstantCount = 0;
+        result = spvReflectEnumeratePushConstantBlocks(&module, &iPushConstantCount, nullptr);
+        if (result != SPV_REFLECT_RESULT_SUCCESS) {
+            return Error(
+                fmt::format("failed to get shader push constant count, error: {}", static_cast<int>(result)));
+        }
+
+        // Process push constants here instead of doing this in pipeline to speed up pipeline generation.
+        if (iPushConstantCount != 0) {
+            // Get push constants.
+            std::vector<SpvReflectBlockVariable*> vPushConstants(iPushConstantCount);
+            result =
+                spvReflectEnumeratePushConstantBlocks(&module, &iPushConstantCount, vPushConstants.data());
+            if (result != SPV_REFLECT_RESULT_SUCCESS) {
+                return Error(
+                    fmt::format("failed to get shader push constants, error: {}", static_cast<int>(result)));
+            }
+
+            // Make sure there is only 1 (as only 1 is allowed).
+            if (vPushConstants.size() > 1) [[unlikely]] {
+                return Error(
+                    fmt::format("expected only 1 push constant but received {}", vPushConstants.size()));
+            }
+
+            // Add to info.
+            collected.pushConstantName = vPushConstants[0]->name;
         }
 
         // Destroy shader module.
         spvReflectDestroyShaderModule(&module);
 
-        return bindingInfo;
+        return collected;
     }
 
     std::variant<DescriptorSetLayoutGenerator::Generated, Error> DescriptorSetLayoutGenerator::generate(
@@ -112,8 +141,8 @@ namespace ne {
         }
 
         // Get shaders used descriptor layout info.
-        auto pMtxFragmentDescriptorLayoutInfo = pFragmentShader->getDescriptorSetLayoutBindingInfo();
-        auto pMtxVertexDescriptorLayoutInfo = pVertexShader->getDescriptorSetLayoutBindingInfo();
+        auto pMtxFragmentDescriptorLayoutInfo = pFragmentShader->getDescriptorSetLayoutInfo();
+        auto pMtxVertexDescriptorLayoutInfo = pVertexShader->getDescriptorSetLayoutInfo();
 
         // Lock info.
         std::scoped_lock shaderDescriptorLayoutInfoGuard(
@@ -138,8 +167,9 @@ namespace ne {
         auto& vertexShaderDescriptorLayoutInfo = pMtxVertexDescriptorLayoutInfo->second.value();
 
         // Make sure that vertex shader uses frame uniform buffer on expected binding index.
-        auto vertexFrameBufferIt = vertexShaderDescriptorLayoutInfo.find(iFrameUniformBufferBindingIndex);
-        if (vertexFrameBufferIt == vertexShaderDescriptorLayoutInfo.end()) [[unlikely]] {
+        auto vertexFrameBufferIt =
+            vertexShaderDescriptorLayoutInfo.bindingInfo.find(iFrameUniformBufferBindingIndex);
+        if (vertexFrameBufferIt == vertexShaderDescriptorLayoutInfo.bindingInfo.end()) [[unlikely]] {
             return Error(fmt::format(
                 "expected to find a `uniform` buffer named \"{}\" at binding {} to be used in vertex "
                 "shader \"{}\"",
@@ -158,7 +188,7 @@ namespace ne {
             resourceBindings; // will be used for `Generated` data
 
         // First, add all bindings used in fragment shader.
-        for (const auto& [iBindingIndex, bindingInfo] : fragmentShaderDescriptorLayoutInfo) {
+        for (const auto& [iBindingIndex, bindingInfo] : fragmentShaderDescriptorLayoutInfo.bindingInfo) {
             // Make sure we don't have a resource with this name already.
             auto bindingIt = resourceBindings.find(bindingInfo.sResourceName);
             if (bindingIt != resourceBindings.end()) [[unlikely]] {
@@ -187,7 +217,7 @@ namespace ne {
         }
 
         // Now add all bindings used in vertex shader but avoid duplicates.
-        for (const auto& [iBindingIndex, bindingInfo] : vertexShaderDescriptorLayoutInfo) {
+        for (const auto& [iBindingIndex, bindingInfo] : vertexShaderDescriptorLayoutInfo.bindingInfo) {
             // See if a resource with this name was already added.
             const auto alreadyDefinedBindingIt = resourceBindings.find(bindingInfo.sResourceName);
             if (alreadyDefinedBindingIt != resourceBindings.end()) {
@@ -232,8 +262,9 @@ namespace ne {
             }
 
             // See if this binding index is already used by some other resource.
-            const auto fragmentBindingInfoIt = fragmentShaderDescriptorLayoutInfo.find(iBindingIndex);
-            if (fragmentBindingInfoIt != fragmentShaderDescriptorLayoutInfo.end()) [[unlikely]] {
+            const auto fragmentBindingInfoIt =
+                fragmentShaderDescriptorLayoutInfo.bindingInfo.find(iBindingIndex);
+            if (fragmentBindingInfoIt != fragmentShaderDescriptorLayoutInfo.bindingInfo.end()) [[unlikely]] {
                 // Error: this binding index is already in use by some other resource.
                 return Error(fmt::format(
                     "vertex shader \"{}\" defines a resource named \"{}\" with binding index {} but "
@@ -384,7 +415,7 @@ namespace ne {
     }
 
     std::variant<VkDescriptorSetLayoutBinding, Error> DescriptorSetLayoutGenerator::generateLayoutBinding(
-        uint32_t iBindingIndex, const DescriptorSetLayoutBindingInfo& bindingInfo) {
+        uint32_t iBindingIndex, const Collected::DescriptorSetLayoutBindingInfo& bindingInfo) {
         VkDescriptorSetLayoutBinding layoutBinding;
 
         // Set binding index.

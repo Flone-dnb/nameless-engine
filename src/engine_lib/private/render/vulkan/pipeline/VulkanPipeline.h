@@ -115,6 +115,26 @@ namespace ne {
         [[nodiscard]] virtual std::optional<Error> restoreInternalResources() override;
 
     private:
+        /** Push constants for MeshNode. */
+        struct MeshNodePushConstants {
+            /** Index into mesh data array. */
+            alignas(iVkScalarAlignment) unsigned int iMeshDataIndex = 0;
+
+            /** Index into material array.*/
+            alignas(iVkScalarAlignment) unsigned int iMaterialIndex = 0;
+        };
+
+        /**
+         * Looks if the specified shaders use push constants and returns their description.
+         *
+         * @param pVertexShader   Vertex shader.
+         * @param pFragmentShader Fragment shader.
+         *
+         * @return Error if something went wrong, otherwise push constants range (if push constants are used).
+         */
+        static std::variant<std::optional<VkPushConstantRange>, Error>
+        getPushConstants(GlslShader* pVertexShader, GlslShader* pFragmentShader);
+
         /**
          * Constructs uninitialized pipeline.
          *
@@ -188,5 +208,8 @@ namespace ne {
          * Must be used with mutex when changing.
          */
         std::pair<std::recursive_mutex, InternalResources> mtxInternalResources;
+
+        /** Name of the push constant used to store indices into arrays in GLSL shaders. */
+        static inline const std::string sPushConstantName = "meshIndices";
     };
 } // namespace ne

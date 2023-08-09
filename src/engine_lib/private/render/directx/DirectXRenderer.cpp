@@ -419,7 +419,7 @@ namespace ne {
                     for (const auto& [sResourceName, pShaderCpuWriteResource] :
                          pMtxMaterialGpuResources->second.shaderResources.shaderCpuWriteResources) {
                         reinterpret_cast<HlslShaderCpuWriteResource*>(pShaderCpuWriteResource.getResource())
-                            ->setToPipeline(
+                            ->setConstantBufferView(
                                 pCommandList, pMtxCurrentFrameResource->second.iCurrentFrameResourceIndex);
                     }
 
@@ -569,7 +569,7 @@ namespace ne {
             for (const auto& [sResourceName, pShaderCpuWriteResource] :
                  pMtxMeshGpuResources->second.shaderResources.shaderCpuWriteResources) {
                 reinterpret_cast<HlslShaderCpuWriteResource*>(pShaderCpuWriteResource.getResource())
-                    ->setToPipeline(pCommandList, iCurrentFrameResourceIndex);
+                    ->setConstantBufferView(pCommandList, iCurrentFrameResourceIndex);
             }
 
             // Add a draw command.

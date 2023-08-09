@@ -72,7 +72,7 @@ namespace ne {
          * @param pCommandList               Command list to add new command to.
          * @param iCurrentFrameResourceIndex Index of current frame resource.
          */
-        inline void setToPipeline(
+        inline void setConstantBufferView(
             const ComPtr<ID3D12GraphicsCommandList>& pCommandList, size_t iCurrentFrameResourceIndex) {
             pCommandList->SetGraphicsRootConstantBufferView(
                 iRootParameterIndex,

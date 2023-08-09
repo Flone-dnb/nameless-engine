@@ -9,6 +9,7 @@
 #include "render/vulkan/resources/VulkanResourceManager.h"
 #include "render/vulkan/resources/VulkanFrameResource.h"
 #include "render/general/resources/FrameResourcesManager.h"
+#include "render/vulkan/pipeline/VulkanPushConstantsManager.hpp"
 
 // External.
 #include "vulkan/vk_enum_string_helper.h"
@@ -447,6 +448,16 @@ namespace ne {
         if (supportedFeatures.samplerAnisotropy == VK_FALSE) {
             return fmt::format(
                 "GPU \"{}\" does not support anisotropic filtering", deviceProperties.deviceName);
+        }
+
+        // Make sure that maximum push constants size that we use is supported.
+        if (VulkanPushConstantsManager::getMaxPushConstantsSizeInBytes() >
+            deviceProperties.limits.maxPushConstantsSize) {
+            return fmt::format(
+                "GPU \"{}\" max push constants size is only {} while we expect {}",
+                deviceProperties.deviceName,
+                deviceProperties.limits.maxPushConstantsSize,
+                VulkanPushConstantsManager::getMaxPushConstantsSizeInBytes());
         }
 
         return "";

@@ -5,6 +5,7 @@
 #include <vector>
 #include <unordered_map>
 #include <array>
+#include <unordered_set>
 
 // Custom.
 #include "misc/Error.h"
@@ -46,8 +47,13 @@ namespace ne {
              */
             std::unordered_map<uint32_t, DescriptorSetLayoutBindingInfo> bindingInfo;
 
-            /** Not empty if push constant is used. */
-            std::optional<std::string> pushConstantName;
+            /**
+             * Not empty if push constants are used.
+             * Stores names of fields defined in GLSL as push constants (all with `uint` type).
+             *
+             * @remark If a non `uint` fields is found an error is returned instead.
+             */
+            std::optional<std::unordered_set<std::string>> pushConstantUintFieldNames;
         };
 
         /** Groups generated data. */
@@ -70,6 +76,14 @@ namespace ne {
              * descriptor in a descriptor set.
              */
             std::unordered_map<std::string, uint32_t> resourceBindings;
+
+            /**
+             * Not empty if push constants are used.
+             * Stores names of fields defined in GLSL as push constants (all with `uint` type).
+             *
+             * @remark If a non `uint` fields is found an error is returned instead.
+             */
+            std::optional<std::unordered_set<std::string>> pushConstantUintFieldNames;
         };
 
         DescriptorSetLayoutGenerator() = delete;

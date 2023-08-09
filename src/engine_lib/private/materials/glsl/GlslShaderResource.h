@@ -9,6 +9,7 @@
 #include "materials/ShaderResource.h"
 #include "render/vulkan/resources/VulkanResource.h"
 #include "render/general/resources/UploadBuffer.h"
+#include "render/vulkan/pipeline/VulkanPushConstantsManager.hpp"
 #include "render/vulkan/resources/VulkanStorageResourceArray.h"
 
 namespace ne {
@@ -70,6 +71,18 @@ namespace ne {
          */
         [[nodiscard]] virtual std::optional<Error> updateBindingInfo(Pipeline* pNewPipeline) override;
 
+        /**
+         * Copies resource index (into shader arrays) to a push constant.
+         *
+         * @param pushConstantsManager       Push constants manager.
+         * @param iCurrentFrameResourceIndex Index of the current frame resource.
+         */
+        inline void copyResourceIndexToPushConstants(
+            VulkanPushConstantsManager& pushConstantsManager, size_t iCurrentFrameResourceIndex) {
+            pushConstantsManager.copyValueToPushConstant(
+                iPushConstantIndex, vResourceData[iCurrentFrameResourceIndex]->getIndexIntoArray());
+        }
+
     protected:
         /**
          * Initializes everything except for @ref vResourceData which is expected to be initialized
@@ -95,14 +108,12 @@ namespace ne {
          * Looks for a shader resource in the specified pipeline's descriptor set layout and returns
          * resource's binding index.
          *
-         * @param pVulkanPipeline     Pipeline to scan.
-         * @param sShaderResourceName Name of the shader resource to look for.
+         * @param pVulkanPipeline Pipeline to scan.
          *
          * @return Error if something went wrong, otherwise binding index of the shader resource from
          * descriptor set layout.
          */
-        static std::variant<uint32_t, Error>
-        getResourceBindingIndex(VulkanPipeline* pVulkanPipeline, const std::string& sShaderResourceName);
+        [[nodiscard]] std::optional<Error> updatePushConstantIndex(VulkanPipeline* pVulkanPipeline);
 
         /**
          * Copies up to date data to the GPU resource of the specified frame resource.
@@ -127,5 +138,8 @@ namespace ne {
             std::unique_ptr<VulkanStorageResourceArraySlot>,
             FrameResourcesManager::getFrameResourcesCount()>
             vResourceData;
+
+        /** Index of push constant to copy the current slot's index to (see @ref vResourceData). */
+        size_t iPushConstantIndex = 0;
     };
 } // namespace ne

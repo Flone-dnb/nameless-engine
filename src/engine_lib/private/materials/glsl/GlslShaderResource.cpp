@@ -27,20 +27,6 @@ namespace ne {
             return Error("expected a Vulkan pipeline");
         }
 
-        // Get pipeline's internal resources.
-        const auto pMtxPipelineResources = pVulkanPipeline->getInternalResources();
-        std::scoped_lock guard(pMtxPipelineResources->first);
-
-        // Find a resource with the specified name in the descriptor set layout.
-        auto result = getResourceBindingIndex(pVulkanPipeline, sShaderResourceName);
-        if (std::holds_alternative<Error>(result)) {
-            auto error = std::get<Error>(std::move(result));
-            error.addCurrentLocationToErrorStack();
-            return error;
-        }
-        // That's pretty much it. We just need to check that new pipeline has resources with our name.
-        // Storage array will handle descriptor updates.
-
         // Get resource manager.
         const auto pResourceManager = pVulkanPipeline->getRenderer()->getResourceManager();
         if (pResourceManager == nullptr) [[unlikely]] {
@@ -66,6 +52,14 @@ namespace ne {
             onStartedUpdatingResource,
             onFinishedUpdatingResource));
 
+        // Find a resource with the specified name in the descriptor set layout and update our index.
+        auto optionalError = pShaderResource->updatePushConstantIndex(pVulkanPipeline);
+        if (optionalError.has_value()) {
+            auto error = std::move(optionalError.value());
+            error.addCurrentLocationToErrorStack();
+            return error;
+        }
+
         for (unsigned int i = 0; i < FrameResourcesManager::getFrameResourcesCount(); i++) {
             // Reserve a space for this shader resource's data in a storage buffer per frame resource.
             auto result = pStorageResourceArrayManager->reserveSlotsInArray(pShaderResource.get());
@@ -88,20 +82,12 @@ namespace ne {
             return Error("expected a Vulkan pipeline");
         }
 
-        // Get pipeline's internal resources.
-        const auto pMtxPipelineResources = pVulkanPipeline->getInternalResources();
-        std::scoped_lock guard(pMtxPipelineResources->first);
-
-        // Find a resource with the specified name in the descriptor set layout.
-        auto result = getResourceBindingIndex(pVulkanPipeline, getResourceName());
-        if (std::holds_alternative<Error>(result)) {
-            auto error = std::get<Error>(std::move(result));
-            error.addCurrentLocationToErrorStack();
-            return error;
+        // Find a resource with the specified name in the descriptor set layout and update our index.
+        auto optionalError = updatePushConstantIndex(pVulkanPipeline);
+        if (optionalError.has_value()) {
+            optionalError->addCurrentLocationToErrorStack();
+            return optionalError;
         }
-
-        // That's pretty much it. We just need to check that new pipeline has resources with our name.
-        // Storage array will handle descriptor updates.
 
         return {};
     }
@@ -117,15 +103,17 @@ namespace ne {
               onStartedUpdatingResource,
               onFinishedUpdatingResource) {}
 
-    std::variant<uint32_t, Error> GlslShaderCpuWriteResource::getResourceBindingIndex(
-        VulkanPipeline* pVulkanPipeline, const std::string& sShaderResourceName) {
+    [[nodiscard]] std::optional<Error>
+    GlslShaderCpuWriteResource::updatePushConstantIndex(VulkanPipeline* pVulkanPipeline) {
         // Get pipeline's internal resources.
         const auto pMtxPipelineResources = pVulkanPipeline->getInternalResources();
         std::scoped_lock guard(pMtxPipelineResources->first);
 
+        const auto sShaderResourceName = getResourceName();
+
         // Find a shader resource binding using our name.
-        const auto it = pMtxPipelineResources->second.resourceBindings.find(sShaderResourceName);
-        if (it == pMtxPipelineResources->second.resourceBindings.end()) [[unlikely]] {
+        const auto bindingIt = pMtxPipelineResources->second.resourceBindings.find(sShaderResourceName);
+        if (bindingIt == pMtxPipelineResources->second.resourceBindings.end()) [[unlikely]] {
             return Error(fmt::format(
                 "unable to find a shader resource by the specified name \"{}\", make sure the resource name "
                 "is correct and that this resource is actually being used inside of your shader (otherwise "
@@ -133,7 +121,41 @@ namespace ne {
                 sShaderResourceName));
         }
 
-        return it->second;
+        // For now (maybe will be changed later), make sure our resource name is referenced in push constants
+        // since we will expect it during the rendering.
+        if (!pMtxPipelineResources->second.pushConstantUintFieldNames.has_value()) [[unlikely]] {
+            return Error("expected push constants to be used");
+        }
+        const auto referencedNameIt =
+            pMtxPipelineResources->second.pushConstantUintFieldNames->find(sShaderResourceName);
+        if (referencedNameIt == pMtxPipelineResources->second.pushConstantUintFieldNames->end())
+            [[unlikely]] {
+            return Error(fmt::format(
+                "expected to find a shader resource \"{}\" to be referenced in push constants",
+                sShaderResourceName));
+        }
+
+        // Make sure smallest binding index referenced by push constants is set.
+        if (!pMtxPipelineResources->second.smallestBindingIndexReferencedByPushConstants.has_value())
+            [[unlikely]] {
+            return Error("expected smallest binding index referenced by push constants to be set");
+        }
+
+        // Get values to calculate push constant index.
+        const auto iBindingIndex = bindingIt->second;
+        const auto iSmallestBindingIndexReferencedByPushConstants =
+            pMtxPipelineResources->second.smallestBindingIndexReferencedByPushConstants.value();
+
+        // Make sure we won't go below zero.
+        if (iBindingIndex < iSmallestBindingIndexReferencedByPushConstants) [[unlikely]] {
+            return Error(fmt::format(
+                "failed to calculate push constant index because resulting index will be smaller than zero"));
+        }
+
+        // Now calculate push constant index that we will update.
+        iPushConstantIndex = iBindingIndex - iSmallestBindingIndexReferencedByPushConstants;
+
+        return {};
     }
 
 } // namespace ne

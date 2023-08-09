@@ -44,6 +44,13 @@ namespace ne {
          */
         void updateData(void* pData);
 
+        /**
+         * Returns index into the owning array to access the slot's data.
+         *
+         * @return Index into array.
+         */
+        inline unsigned int getIndexIntoArray() const { return iIndexInArray; }
+
     private:
         /**
          * Initializes the slot.
@@ -55,7 +62,34 @@ namespace ne {
         VulkanStorageResourceArraySlot(
             VulkanStorageResourceArray* pArray,
             size_t iIndexInArray,
-            GlslShaderCpuWriteResource* pShaderResource);
+            GlslShaderCpuWriteResource* pShaderResource) {
+            // Check before converting to unsigned int, see slot index docs for more info.
+            if (iIndexInArray > UINT_MAX) [[unlikely]] {
+                Error error("received slot index exceeds type limit");
+                error.showError();
+                throw std::runtime_error(error.getFullErrorMessage());
+            }
+
+            this->pArray = pArray;
+            this->iIndexInArray = static_cast<unsigned int>(iIndexInArray);
+            this->pShaderResource = pShaderResource;
+        }
+
+        /**
+         * Should be called by array to update the index.
+         *
+         * @param iNewIndex New index.
+         */
+        inline void updateIndex(size_t iNewIndex) {
+            // Check before converting to unsigned int, see slot index docs for more info.
+            if (iNewIndex > UINT_MAX) [[unlikely]] {
+                Error error("received slot index exceeds type limit");
+                error.showError();
+                throw std::runtime_error(error.getFullErrorMessage());
+            }
+
+            iIndexInArray = static_cast<unsigned int>(iNewIndex);
+        }
 
         /** Array in which the slot resides. */
         VulkanStorageResourceArray* pArray = nullptr;
@@ -66,9 +100,12 @@ namespace ne {
         /**
          * Index into @ref pArray to access the slot's data.
          *
-         * @remark Updated by array when it's resizing.
+         * @remark Updated by array when it's resizing (use @ref updateIndex).
+         *
+         * @remark Using `unsigned int` because it will be copied to push constants which store `uint`s.
+         * If changing this type remove checks and static_casts from constructor and `updateIndex`.
          */
-        size_t iIndexInArray = 0;
+        unsigned int iIndexInArray = 0;
     };
 
     /**

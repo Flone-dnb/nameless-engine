@@ -344,7 +344,7 @@ namespace ne {
         size_t iCurrentIndex = 0;
         for (const auto& pSlot : mtxInternalResources.second.activeSlots) {
             // Save new index to slot.
-            pSlot->iIndexInArray = iCurrentIndex;
+            pSlot->updateIndex(iCurrentIndex);
 
             // Increment index.
             iCurrentIndex += 1;
@@ -538,15 +538,6 @@ namespace ne {
         }
 
         return {};
-    }
-
-    VulkanStorageResourceArraySlot::VulkanStorageResourceArraySlot(
-        VulkanStorageResourceArray* pArray,
-        size_t iIndexInArray,
-        GlslShaderCpuWriteResource* pShaderResource) {
-        this->pArray = pArray;
-        this->iIndexInArray = iIndexInArray;
-        this->pShaderResource = pShaderResource;
     }
 
     VulkanStorageResourceArraySlot::~VulkanStorageResourceArraySlot() {

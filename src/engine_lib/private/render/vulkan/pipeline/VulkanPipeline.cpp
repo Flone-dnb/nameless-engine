@@ -1,5 +1,8 @@
 ﻿#include "VulkanPipeline.h"
 
+// Standard.
+#include <set>
+
 // Custom.
 #include "io/Logger.h"
 #include "render/vulkan/VulkanRenderer.h"
@@ -114,9 +117,14 @@ namespace ne {
         // Clear resource binding pairs.
         mtxInternalResources.second.resourceBindings.clear();
 
+        // Clear push constants.
+        mtxInternalResources.second.pPushConstantsManager = nullptr;
+        mtxInternalResources.second.smallestBindingIndexReferencedByPushConstants = {};
+        mtxInternalResources.second.pushConstantUintFieldNames = {};
+
 #if defined(DEBUG)
         static_assert(
-            sizeof(InternalResources) == 144, // NOLINT: current struct size
+            sizeof(InternalResources) == 248, // NOLINT: current struct size
             "release new resources here");
 #endif
 
@@ -145,56 +153,87 @@ namespace ne {
         return {};
     }
 
-    std::variant<std::optional<VkPushConstantRange>, Error>
-    VulkanPipeline::getPushConstants(GlslShader* pVertexShader, GlslShader* pFragmentShader) {
-        // See if we need to specify push constants.
-        const auto pMtxVertexShaderLayoutInfo = pVertexShader->getDescriptorSetLayoutInfo();
-        const auto pMtxFragmentShaderLayoutInfo = pFragmentShader->getDescriptorSetLayoutInfo();
+    std::variant<VkPushConstantRange, Error> VulkanPipeline::definePushConstants(
+        const std::unordered_set<std::string>& pushConstantUintFieldNames,
+        const std::unordered_map<std::string, uint32_t>& resourceBindings) {
+        std::scoped_lock guard(mtxInternalResources.first);
 
-        std::scoped_lock guard(pMtxVertexShaderLayoutInfo->first, pMtxFragmentShaderLayoutInfo->first);
-
-        // Make sure descriptor layout info is collected.
-        if (!pMtxVertexShaderLayoutInfo->second.has_value()) [[unlikely]] {
-            return Error("expected vertex shader layout info to be set at this point");
-        }
-        if (!pMtxFragmentShaderLayoutInfo->second.has_value()) [[unlikely]] {
-            return Error("expected fragment shader layout info to be set at this point");
+        // Make sure push constants manager does not exist yet.
+        if (mtxInternalResources.second.pPushConstantsManager != nullptr) [[unlikely]] {
+            return Error("push constants manager already exists");
         }
 
-        // Make sure push constants are used.
-        if (!pMtxVertexShaderLayoutInfo->second->pushConstantName.has_value() &&
-            !pMtxFragmentShaderLayoutInfo->second->pushConstantName.has_value()) {
-            // Not used.
-            return {};
+        // Make sure push constants are specified.
+        if (pushConstantUintFieldNames.empty()) {
+            return Error("received empty array of push constants");
         }
 
-        // At least one shader is using push constants, we expect both to use them.
-        if (!pMtxVertexShaderLayoutInfo->second->pushConstantName.has_value()) {
-            return Error(
-                "expected vertex shader to use push constants because fragment shader is using them");
-        }
-        if (!pMtxFragmentShaderLayoutInfo->second->pushConstantName.has_value()) {
-            return Error(
-                "expected fragment shader to use push constants because vertex shader is using them");
+        // In order to allow GLSL shader resources to correctly index into continuous push constants
+        // array (stored in push constants manager) we need to make sure that all binding indices
+        // are consecutive (for ex. 3, 4, 5, ... not 1, 4, 5, ...).
+        std::set<unsigned int> referencesBindingIndices;
+        for (const auto& sFieldName : pushConstantUintFieldNames) {
+            // Push constants names should be equal to resource name that they index into.
+            const auto it = resourceBindings.find(sFieldName);
+            if (it == resourceBindings.end()) [[unlikely]] {
+                return Error(fmt::format(
+                    "push constant \"{}\" is referencing a non-existing shader resource \"{}\", make sure "
+                    "the name of your push constant is equal to the name of a shader resource you want "
+                    "to index into",
+                    sFieldName,
+                    sFieldName));
+            }
+
+            // Add index to be considered.
+            referencesBindingIndices.insert(it->second);
         }
 
-        // Make sure it has expected name.
-        if (pMtxVertexShaderLayoutInfo->second->pushConstantName.value() != sPushConstantName) [[unlikely]] {
-            return Error(fmt::format(
-                "found unsupported push constant \"{}\"",
-                pMtxVertexShaderLayoutInfo->second->pushConstantName.value()));
-        }
-        if (pMtxFragmentShaderLayoutInfo->second->pushConstantName.value() != sPushConstantName)
-            [[unlikely]] {
-            return Error(fmt::format(
-                "found unsupported push constant \"{}\"",
-                pMtxFragmentShaderLayoutInfo->second->pushConstantName.value()));
+        // Make sure all indices are consecutive.
+        unsigned int iPreviousBindingIndex = std::numeric_limits<unsigned int>::max();
+        for (const auto& iBindingIndex : referencesBindingIndices) {
+            if (iPreviousBindingIndex == std::numeric_limits<unsigned int>::max()) {
+                iPreviousBindingIndex = iBindingIndex;
+                continue;
+            }
+
+            if (iBindingIndex != iPreviousBindingIndex + 1) [[unlikely]] {
+                return Error(
+                    "expected binding indices of shader resources referenced by push constants to be "
+                    "consecutive, make sure shader resources referenced by push constants have consecutive "
+                    "`binding` value in GLSL code, for example: 2, 3, 4 and not 1, 3, 4");
+            }
         }
 
-        // Specify range.
+        // Make sure binding indices of resources referenced in push constants are the last binding indices
+        // so that "derived" shaders can add new resources referenced by new push constants so that all
+        // binding indices will be consecutive.
+        unsigned int iBiggestReferencedBindingIndex = *referencesBindingIndices.rbegin();
+
+        // Make sure this index is the biggest globally.
+        for (const auto& [sResourceName, iBindingIndex] : resourceBindings) {
+            if (iBindingIndex > iBiggestReferencedBindingIndex) [[unlikely]] {
+                return Error(fmt::format(
+                    "shader resource named \"{}\" has binding index {} which is bigger than {} - biggest "
+                    "binding index of resource referenced by push constants, binding indices of shader "
+                    "resources referenced by push constants should be the biggest (last) in shader",
+                    sResourceName,
+                    iBindingIndex,
+                    iBiggestReferencedBindingIndex));
+            }
+        }
+
+        // Save smallest binding index from shader resources to calculate correct index into push constants.
+        mtxInternalResources.second.smallestBindingIndexReferencedByPushConstants =
+            *referencesBindingIndices.begin();
+
+        // Create push constants manager.
+        mtxInternalResources.second.pPushConstantsManager =
+            std::make_unique<VulkanPushConstantsManager>(referencesBindingIndices.size());
+
+        // Specify range (not creating multiple ranges since it's very complicated to setup).
         VkPushConstantRange range{};
         range.offset = 0;
-        range.size = sizeof(MeshNodePushConstants);
+        range.size = mtxInternalResources.second.pPushConstantsManager->getTotalSizeInBytes();
         range.stageFlags = VK_SHADER_STAGE_ALL_GRAPHICS;
 
         return range;
@@ -510,20 +549,20 @@ namespace ne {
         pipelineLayoutInfo.setLayoutCount = 1;
         pipelineLayoutInfo.pSetLayouts = &generatedLayout.pDescriptorSetLayout;
 
-        // Get push constants (if used).
-        auto pushConstantsResult = getPushConstants(pVertexShader, pFragmentShader);
-        if (std::holds_alternative<Error>(pushConstantsResult)) [[unlikely]] {
-            auto error = std::get<Error>(std::move(pushConstantsResult));
-            error.addCurrentLocationToErrorStack();
-            return error;
-        }
-        const auto optionalPushConstants = std::get<std::optional<VkPushConstantRange>>(pushConstantsResult);
+        // Specify push constants (if used).
         VkPushConstantRange pushConstants{};
+        if (generatedLayout.pushConstantUintFieldNames.has_value()) {
+            // Process push constants.
+            auto pushConstantsResult = definePushConstants(
+                generatedLayout.pushConstantUintFieldNames.value(), generatedLayout.resourceBindings);
+            if (std::holds_alternative<Error>(pushConstantsResult)) [[unlikely]] {
+                auto error = std::get<Error>(std::move(pushConstantsResult));
+                error.addCurrentLocationToErrorStack();
+                return error;
+            }
+            pushConstants = std::get<VkPushConstantRange>(pushConstantsResult);
 
-        // Specify push constants.
-        if (optionalPushConstants.has_value()) {
-            pushConstants = optionalPushConstants.value();
-
+            // Specify in layout.
             pipelineLayoutInfo.pushConstantRangeCount = 1;
             pipelineLayoutInfo.pPushConstantRanges = &pushConstants;
         }
@@ -597,6 +636,8 @@ namespace ne {
         mtxInternalResources.second.pDescriptorPool = generatedLayout.pDescriptorPool;
         mtxInternalResources.second.vDescriptorSets = generatedLayout.vDescriptorSets;
         mtxInternalResources.second.resourceBindings = std::move(generatedLayout.resourceBindings);
+        mtxInternalResources.second.pushConstantUintFieldNames =
+            std::move(generatedLayout.pushConstantUintFieldNames);
         mtxInternalResources.second.pPipelineLayout = pPipelineLayout;
         mtxInternalResources.second.pPipeline = pPipeline;
 

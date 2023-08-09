@@ -1,8 +1,13 @@
 ﻿#pragma once
 
+// Standard.
+#include <memory>
+#include <unordered_set>
+
 // Custom.
 #include "render/general/pipeline/Pipeline.h"
 #include "render/general/resources/FrameResourcesManager.h"
+#include "render/vulkan/pipeline/VulkanPushConstantsManager.hpp"
 
 // External.
 #include "vulkan/vulkan.h"
@@ -41,8 +46,27 @@ namespace ne {
              */
             std::unordered_map<std::string, uint32_t> resourceBindings;
 
-            // !!! new internal resources go here !!!
-            // !!! don't forget to update @ref releaseInternalResources !!!
+            /**
+             * Not empty if push constants are used.
+             * Stores names of fields defined in GLSL as push constants (all with `uint` type).
+             *
+             * @remark If a non `uint` fields is found an error is returned instead.
+             */
+            std::optional<std::unordered_set<std::string>> pushConstantUintFieldNames;
+
+            /**
+             * Smallest `binding` value of a shader resource (from GLSL code) that is referenced
+             * in push constants.
+             *
+             * @remark Used by shader resources (from C++ code) to calculate the correct index into
+             * @ref pPushConstantsManager to update push constants.
+             *
+             * @remark Not empty if @ref pPushConstantsManager is valid.
+             */
+            std::optional<unsigned int> smallestBindingIndexReferencedByPushConstants;
+
+            /** Stores push constants. `nullptr` if push constants are not used. */
+            std::unique_ptr<VulkanPushConstantsManager> pPushConstantsManager;
 
             /** Whether resources were created or not. */
             bool bIsReadyForUsage = false;
@@ -115,26 +139,6 @@ namespace ne {
         [[nodiscard]] virtual std::optional<Error> restoreInternalResources() override;
 
     private:
-        /** Push constants for MeshNode. */
-        struct MeshNodePushConstants {
-            /** Index into mesh data array. */
-            alignas(iVkScalarAlignment) unsigned int iMeshDataIndex = 0;
-
-            /** Index into material array.*/
-            alignas(iVkScalarAlignment) unsigned int iMaterialIndex = 0;
-        };
-
-        /**
-         * Looks if the specified shaders use push constants and returns their description.
-         *
-         * @param pVertexShader   Vertex shader.
-         * @param pFragmentShader Fragment shader.
-         *
-         * @return Error if something went wrong, otherwise push constants range (if push constants are used).
-         */
-        static std::variant<std::optional<VkPushConstantRange>, Error>
-        getPushConstants(GlslShader* pVertexShader, GlslShader* pFragmentShader);
-
         /**
          * Constructs uninitialized pipeline.
          *
@@ -204,12 +208,23 @@ namespace ne {
         [[nodiscard]] std::optional<Error> bindFrameDataDescriptors();
 
         /**
+         * Initializes internal push constants manager and returns push constants description.
+         *
+         * @param pushConstantUintFieldNames Stores names of fields defined in GLSL as push constants
+         * (all with `uint` type).
+         * @param resourceBindings           Map of pairs "resource name" (from GLSL code) - "layout
+         * binding index".
+         *
+         * @return Error if something went wrong, otherwise push constants range.
+         */
+        std::variant<VkPushConstantRange, Error> definePushConstants(
+            const std::unordered_set<std::string>& pushConstantUintFieldNames,
+            const std::unordered_map<std::string, uint32_t>& resourceBindings);
+
+        /**
          * Internal resources.
          * Must be used with mutex when changing.
          */
         std::pair<std::recursive_mutex, InternalResources> mtxInternalResources;
-
-        /** Name of the push constant used to store indices into arrays in GLSL shaders. */
-        static inline const std::string sPushConstantName = "meshIndices";
     };
 } // namespace ne

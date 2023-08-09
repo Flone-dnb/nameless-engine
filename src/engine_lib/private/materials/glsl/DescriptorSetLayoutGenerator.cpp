@@ -110,8 +110,33 @@ namespace ne {
                     fmt::format("expected only 1 push constant but received {}", vPushConstants.size()));
             }
 
-            // Add to info.
-            collected.pushConstantName = vPushConstants[0]->name;
+            const auto pPushConstant = vPushConstants[0];
+
+            // Get members.
+            std::vector<SpvReflectBlockVariable*> vMembers(pPushConstant->member_count);
+            for (size_t i = 0; i < vMembers.size(); i++) {
+                vMembers[i] = reinterpret_cast<SpvReflectBlockVariable*>(
+                    reinterpret_cast<char*>(pPushConstant->members) + i * sizeof(*(vMembers[0])));
+            }
+
+            // Go through each field.
+            std::unordered_set<std::string> uintFieldNames;
+            for (const auto& memberInfo : vMembers) {
+                // Make sure it's a `uint` indeed.
+                if (memberInfo->size != sizeof(unsigned int)) [[unlikely]] {
+                    return Error(fmt::format(
+                        "found a non `uint` field in push constants named \"{}\" - not supported",
+                        memberInfo->name));
+                }
+                if (memberInfo->type_description->op != SpvOpTypeInt) [[unlikely]] {
+                    return Error(fmt::format(
+                        "found a non `uint` field in push constants named \"{}\" - not supported",
+                        memberInfo->name));
+                }
+
+                uintFieldNames.insert(memberInfo->name);
+            }
+            collected.pushConstantUintFieldNames = std::move(uintFieldNames);
         }
 
         // Destroy shader module.
@@ -409,6 +434,18 @@ namespace ne {
         // Fill resource bindings info.
         for (const auto& [sResourceName, bindingInfo] : resourceBindings) {
             generatedData.resourceBindings[sResourceName] = bindingInfo.iBindingIndex;
+        }
+
+        // Merge push constants (if used).
+        if (vertexShaderDescriptorLayoutInfo.pushConstantUintFieldNames.has_value()) {
+            for (const auto& sFieldName : *vertexShaderDescriptorLayoutInfo.pushConstantUintFieldNames) {
+                generatedData.pushConstantUintFieldNames->insert(sFieldName);
+            }
+        }
+        if (fragmentShaderDescriptorLayoutInfo.pushConstantUintFieldNames.has_value()) {
+            for (const auto& sFieldName : *fragmentShaderDescriptorLayoutInfo.pushConstantUintFieldNames) {
+                generatedData.pushConstantUintFieldNames->insert(sFieldName);
+            }
         }
 
         return generatedData;

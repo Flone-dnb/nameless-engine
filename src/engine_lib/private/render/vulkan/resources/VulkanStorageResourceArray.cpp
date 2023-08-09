@@ -199,7 +199,7 @@ namespace ne {
             // need to decide to add or remove 1.
             static_assert(iMaxCapacityStepSize % 2 == 0);
             static_assert(iMinCapacityStepSize % 2 == 0);
-            if (capacityCoef > 0.5F) {
+            if (capacityCoef > 0.5F) { // NOLINT: magic number
                 iCalculatedCapacityStepSize += 1;
             } else {
                 iCalculatedCapacityStepSize -= 1;

@@ -42,7 +42,7 @@ namespace ne {
         pVulkanRenderer->waitForGpuToFinishWorkUpToThisPoint();
 
         // Release all resources.
-        auto optionalError = releaseInternalResources();
+        auto optionalError = VulkanPipeline::releaseInternalResources();
         if (optionalError.has_value()) [[unlikely]] {
             auto error = std::move(optionalError.value());
             error.addCurrentLocationToErrorStack();
@@ -452,7 +452,7 @@ namespace ne {
             vkDestroyDescriptorSetLayout(pLogicalDevice, generatedLayout.pDescriptorSetLayout, nullptr);
             return Error("failed to get swap chain extent");
         }
-        const auto swapChainExtent = std::move(optionalSwapChainExtent.value());
+        const auto swapChainExtent = optionalSwapChainExtent.value();
 
         // Describe viewport.
         VkViewport viewport{};

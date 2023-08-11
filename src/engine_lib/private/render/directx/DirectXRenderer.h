@@ -191,13 +191,6 @@ namespace ne {
          */
         virtual std::vector<ShaderDescription> getEngineShadersToCompile() const override;
 
-        /**
-         * Update internal resources for the next frame.
-         *
-         * @param pCameraProperties Camera properties to use.
-         */
-        void updateResourcesForNextFrame(CameraProperties* pCameraProperties);
-
         /** Submits a new frame to the GPU. */
         virtual void drawNextFrame() override;
 
@@ -209,6 +202,17 @@ namespace ne {
          * @return Error if something went wrong.
          */
         [[nodiscard]] virtual std::optional<Error> updateRenderBuffers() override;
+
+        /**
+         * Blocks the current thread until the GPU is finished using the specified frame resource.
+         *
+         * @remark Generally the current frame resource will be passed and so the current frame resource
+         * mutex will be locked at the time of calling and until the function is not finished it will not
+         * be unlocked.
+         *
+         * @param pFrameResource Frame resource to wait for.
+         */
+        virtual void waitForGpuToFinishUsingFrameResource(FrameResource* pFrameResource) override;
 
         /**
          * Tells whether the renderer is initialized or not.
@@ -252,7 +256,7 @@ namespace ne {
          *
          * @return Error if something went wrong.
          */
-        [[nodiscard]] virtual std::optional<Error> createDepthStencilBuffer() override;
+        [[nodiscard]] std::optional<Error> createDepthStencilBuffer();
 
         /**
          * Sets the video adapter to be used.
@@ -311,7 +315,7 @@ namespace ne {
         [[nodiscard]] std::optional<Error> initializeDirectX();
 
         /**
-         * Setups everything for render commands to be recorded (calls @ref updateResourcesForNextFrame,
+         * Setups everything for render commands to be recorded (updates frame constants, shader resources,
          * resets lists, binds RTV/DSV, etc.).
          *
          * @param pCameraProperties Camera properties to use.
@@ -341,16 +345,6 @@ namespace ne {
          * @param iFenceToWaitFor Fence value to wait for.
          */
         void waitForFenceValue(UINT64 iFenceToWaitFor);
-
-        /**
-         * Takes the current frame resource and updates frame data constant buffer that it stores (by copying
-         * new (up to date) constants to it).
-         *
-         * @param pCurrentFrameResource Current frame resource.
-         * @param pCameraProperties     Camera properties to use.
-         */
-        void
-        updateFrameConstantsBuffer(FrameResource* pCurrentFrameResource, CameraProperties* pCameraProperties);
 
         /**
          * Returns a vector of display modes that the current output adapter
@@ -393,9 +387,6 @@ namespace ne {
 
         /** Fence counter. */
         std::pair<std::recursive_mutex, UINT64> mtxCurrentFenceValue;
-
-        /** Up to date frame-global constant data. */
-        std::pair<std::mutex, FrameConstants> mtxFrameConstants;
 
         /** Swap chain buffer. */
         std::vector<std::unique_ptr<DirectXResource>> vSwapChainBuffers;

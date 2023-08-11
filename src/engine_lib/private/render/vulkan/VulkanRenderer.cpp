@@ -1,6 +1,7 @@
 #include "render/vulkan/VulkanRenderer.h"
 
 // Custom.
+#include "game/nodes/CameraNode.h"
 #include "render/general/pipeline/PipelineManager.h"
 #include "window/GLFW.hpp"
 #include "game/GameManager.h"
@@ -10,6 +11,13 @@
 #include "render/vulkan/resources/VulkanFrameResource.h"
 #include "render/general/resources/FrameResourcesManager.h"
 #include "render/vulkan/pipeline/VulkanPushConstantsManager.hpp"
+#include "game/camera/CameraManager.h"
+#include "game/camera/CameraProperties.h"
+#include "render/vulkan/pipeline/VulkanPipeline.h"
+#include "materials/Material.h"
+#include "game/nodes/MeshNode.h"
+#include "materials/glsl/GlslShaderResource.h"
+#include "game/camera/TransientCamera.h"
 
 // External.
 #include "vulkan/vk_enum_string_helper.h"
@@ -22,6 +30,8 @@ namespace ne {
     }
 
     VulkanRenderer::~VulkanRenderer() {
+        bIsBeingDestroyed = true;
+
         if (pInstance == nullptr) {
             // Nothing to destroy.
             return;
@@ -40,17 +50,6 @@ namespace ne {
         destroySwapChainAndDependentResources();
 
         if (pLogicalDevice != nullptr) {
-            if (vFences[0] != nullptr) {
-                // Destroy semaphores and fences.
-                for (unsigned int i = 0; i < FrameResourcesManager::getFrameResourcesCount(); i++) {
-                    vkDestroySemaphore(pLogicalDevice, vSemaphoreSwapChainImageReadyForRendering[i], nullptr);
-                    vkDestroySemaphore(
-                        pLogicalDevice, vSemaphoreSwapChainImageReadyForPresenting[i], nullptr);
-                    vkDestroyFence(pLogicalDevice, vFences[i], nullptr);
-                    vFences[i] = nullptr; // `waitForGpuToFinishWorkUpToThisPoint` checks for this
-                }
-            }
-
             // Explicitly delete frame resources manager before command pool because command buffers
             // in frame resources use command pool to be freed.
             // Also delete frame resources before GPU resource manager because they use memory allocator
@@ -141,13 +140,6 @@ namespace ne {
             return optionalError;
         }
 
-        // Create fences and semaphores.
-        optionalError = createSynchronizationObjects();
-        if (optionalError.has_value()) {
-            optionalError->addCurrentLocationToErrorStack();
-            return optionalError;
-        }
-
         // Create swap chain.
         optionalError = createSwapChain();
         if (optionalError.has_value()) {
@@ -176,18 +168,21 @@ namespace ne {
             return optionalError;
         }
 
-        // Self check: make sure allocated frame resource is of expected type
-        // so we may just `reinterpret_cast` later because they won't change.
         {
             auto mtxAllFrameResource = getFrameResourcesManager()->getAllFrameResources();
             std::scoped_lock frameResourceGuard(*mtxAllFrameResource.first);
 
-            for (const auto& pFrameResource : mtxAllFrameResource.second) {
-                // Convert frame resource.
-                const auto pVulkanFrameResource = dynamic_cast<VulkanFrameResource*>(pFrameResource);
+            for (size_t i = 0; i < mtxAllFrameResource.second.size(); i++) {
+                // Self check: make sure allocated frame resource is of expected type
+                // so we may just `reinterpret_cast` later because they won't change.
+                const auto pVulkanFrameResource =
+                    dynamic_cast<VulkanFrameResource*>(mtxAllFrameResource.second[i]);
                 if (pVulkanFrameResource == nullptr) [[unlikely]] {
                     return Error("expected a Vulkan frame resource");
                 }
+
+                // Save refs to frame resource fences.
+                vSwapChainImageFenceRefs[i] = pVulkanFrameResource->pFence;
             }
         }
 
@@ -1064,56 +1059,6 @@ namespace ne {
         return extent;
     }
 
-    std::optional<Error> VulkanRenderer::createSynchronizationObjects() {
-        // Make sure the logical device is valid.
-        if (pLogicalDevice == nullptr) [[unlikely]] {
-            return Error("expected the logical device to be valid");
-        }
-
-        // Describe semaphore.
-        VkSemaphoreCreateInfo semaphoreInfo{};
-        semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-
-        // Describe fence.
-        VkFenceCreateInfo fenceInfo{};
-        fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-        fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-
-        // Self check: make sure we have a fence and N semaphores per frame resource
-        // (per frame in-flight).
-        if (vFences.size() != vSemaphoreSwapChainImageReadyForRendering.size() ||
-            vFences.size() != vSemaphoreSwapChainImageReadyForPresenting.size() ||
-            vFences.size() != FrameResourcesManager::getFrameResourcesCount()) [[unlikely]] {
-            Error error("expected a fence and N semaphores per frame resource");
-            error.showError();
-            throw std::runtime_error(error.getFullErrorMessage());
-        }
-
-        for (unsigned int i = 0; i < FrameResourcesManager::getFrameResourcesCount(); i++) {
-            // Create semaphore 1.
-            auto result = vkCreateSemaphore(
-                pLogicalDevice, &semaphoreInfo, nullptr, &vSemaphoreSwapChainImageReadyForRendering[i]);
-            if (result != VK_SUCCESS) [[unlikely]] {
-                return Error(fmt::format("failed to create a semaphore, error: {}", string_VkResult(result)));
-            }
-
-            // Create semaphore 2.
-            result = vkCreateSemaphore(
-                pLogicalDevice, &semaphoreInfo, nullptr, &vSemaphoreSwapChainImageReadyForPresenting[i]);
-            if (result != VK_SUCCESS) [[unlikely]] {
-                return Error(fmt::format("failed to create a semaphore, error: {}", string_VkResult(result)));
-            }
-
-            // Create fence.
-            result = vkCreateFence(pLogicalDevice, &fenceInfo, nullptr, &vFences[i]);
-            if (result != VK_SUCCESS) [[unlikely]] {
-                return Error(fmt::format("failed to create a fence, error: {}", string_VkResult(result)));
-            }
-        }
-
-        return {};
-    }
-
     std::optional<Error> VulkanRenderer::createRenderPass() {
         std::vector<VkAttachmentDescription> vAttachments{};
 
@@ -1451,6 +1396,70 @@ namespace ne {
         return {};
     }
 
+    std::optional<Error> VulkanRenderer::prepareForDrawingNextFrame(CameraProperties* pCameraProperties) {
+        std::scoped_lock frameGuard(*getRenderResourcesMutex());
+
+        // Make sure swap chain extent is set.
+        if (!swapChainExtent.has_value()) [[unlikely]] {
+            return Error("expected swap chain extent to be set at this point");
+        }
+
+        // Waits for frame resource to be no longer used by the GPU.
+        updateResourcesForNextFrame(swapChainExtent->width, swapChainExtent->height, pCameraProperties);
+
+        // Get command buffer to reset it.
+        auto pMtxCurrentFrameResource = getFrameResourcesManager()->getCurrentFrameResource();
+        std::scoped_lock frameResourceGuard(pMtxCurrentFrameResource->first);
+
+        // Convert frame resource.
+        const auto pVulkanFrameResource =
+            reinterpret_cast<VulkanFrameResource*>(pMtxCurrentFrameResource->second.pResource);
+
+        // Reset command buffer.
+        auto result = vkResetCommandBuffer(pVulkanFrameResource->pCommandBuffer, 0);
+        if (result != VK_SUCCESS) [[unlikely]] {
+            return Error(fmt::format("failed to reset command buffer, error: {}", string_VkResult(result)));
+        }
+
+        // Prepare to start recording commands.
+        VkCommandBufferBeginInfo beginInfo{};
+        beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        beginInfo.flags = 0;
+        beginInfo.pInheritanceInfo = nullptr;
+
+        // Mark start of command recording.
+        result = vkBeginCommandBuffer(pVulkanFrameResource->pCommandBuffer, &beginInfo);
+        if (result != VK_SUCCESS) [[unlikely]] {
+            return Error(fmt::format(
+                "failed to start recording commands into a command buffer, error: {}",
+                string_VkResult(result)));
+        }
+
+        // Prepare to begin render pass.
+        VkRenderPassBeginInfo renderPassInfo{};
+        renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+        renderPassInfo.renderPass = pRenderPass;
+        renderPassInfo.framebuffer =
+            vSwapChainFramebuffers[pMtxCurrentFrameResource->second.iCurrentFrameResourceIndex];
+
+        // Specify render area.
+        renderPassInfo.renderArea.offset = {0, 0};
+        renderPassInfo.renderArea.extent = *swapChainExtent;
+
+        // Specify clear color for attachments.
+        std::array<VkClearValue, 2> clearValues{};
+        clearValues[iRenderPassColorAttachmentIndex].color = {0.0F, 0.0F, 0.0F, 1.0F};
+        clearValues[iRenderPassDepthAttachmentIndex].depthStencil = {getMaxDepth(), 0};
+        renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
+        renderPassInfo.pClearValues = clearValues.data();
+
+        // Mark render pass start.
+        vkCmdBeginRenderPass(
+            pVulkanFrameResource->pCommandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+        return {};
+    }
+
     std::variant<std::unique_ptr<Renderer>, Error> VulkanRenderer::create(GameManager* pGameManager) {
         // Create an empty (uninitialized) Vulkan renderer.
         auto pRenderer = std::unique_ptr<VulkanRenderer>(new VulkanRenderer(pGameManager));
@@ -1496,23 +1505,41 @@ namespace ne {
     size_t VulkanRenderer::getUsedVideoMemoryInMb() const { throw std::runtime_error("not implemented"); }
 
     void VulkanRenderer::waitForGpuToFinishWorkUpToThisPoint() {
-        // Check if fences were destroyed.
-        if (vFences[0] == nullptr) {
-            // We are probably in the destructor and `vkDeviceWaitIdle` was already called
-            // so all GPU operations already finished at this point.
+        if (bIsBeingDestroyed) {
+            // Destructor will wait for the GPU to be idle.
             return;
         }
 
         // Make sure the logical device is valid.
         if (pLogicalDevice == nullptr) [[unlikely]] {
-            Logger::get().error("failed to wait for a fence because the logical device is invalid");
-            return;
+            Error error("expected logical device to be valid at this point");
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
         }
+
+        // Get frame resources.
+        const auto pFrameResourcesManager = getFrameResourcesManager();
+        if (pFrameResourcesManager == nullptr) [[unlikely]] {
+            Error error("expected frame resource manager to be valid at this point");
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+        }
+
+        // Get all frame resources.
+        const auto mtxAllFrameResources = pFrameResourcesManager->getAllFrameResources();
 
         // Make sure no new frames are queued (if we are calling this function from a non-main thread)
         // to avoid fences change their state to unsignaled due to a new frame being submitted.
         const auto pRenderResourcesMutex = getRenderResourcesMutex();
-        std::scoped_lock guard(*pRenderResourcesMutex);
+
+        // Lock both rendering and all frame resources.
+        std::scoped_lock guard(*pRenderResourcesMutex, *mtxAllFrameResources.first);
+
+        // Collect all fences into one array.
+        std::vector<VkFence> vFences(mtxAllFrameResources.second.size());
+        for (size_t i = 0; i < mtxAllFrameResources.second.size(); i++) {
+            vFences[i] = reinterpret_cast<VulkanFrameResource*>(mtxAllFrameResources.second[i])->pFence;
+        }
 
         // Wait for all fences to be signaled.
         const auto result = vkWaitForFences(
@@ -1624,14 +1651,290 @@ namespace ne {
         return {};
     }
 
-    void VulkanRenderer::drawNextFrame() { throw std::runtime_error("not implemented"); }
+    void VulkanRenderer::drawNextFrame() {
+        if (bIsWindowMinimized) {
+            // Framebuffer size is zero and swap chain is invalid, wait until the window is
+            // restored/maximized.
+            return;
+        }
+
+        // Get active camera.
+        const auto pMtxActiveCamera = getGameManager()->getCameraManager()->getActiveCamera();
+
+        // Lock both camera and draw mutex.
+        std::scoped_lock renderGuard(pMtxActiveCamera->first, *getRenderResourcesMutex());
+
+        // Get camera properties of the active camera.
+        CameraProperties* pActiveCameraProperties = nullptr;
+        if (pMtxActiveCamera->second.pCameraNode != nullptr) {
+            pActiveCameraProperties = pMtxActiveCamera->second.pCameraNode->getCameraProperties();
+        } else if (pMtxActiveCamera->second.pTransientCamera != nullptr) {
+            pActiveCameraProperties = pMtxActiveCamera->second.pTransientCamera->getCameraProperties();
+        } else {
+            // No active camera.
+            return;
+        }
+
+        // don't unlock active camera mutex until finished submitting the next frame for drawing
+
+        // Setup.
+        auto optionalError = prepareForDrawingNextFrame(pActiveCameraProperties);
+        if (optionalError.has_value()) [[unlikely]] {
+            auto error = optionalError.value();
+            error.addCurrentLocationToErrorStack();
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+        }
+
+        // Lock frame resources to use them (see below).
+        auto pMtxCurrentFrameResource = getFrameResourcesManager()->getCurrentFrameResource();
+        std::scoped_lock frameResourceGuard(pMtxCurrentFrameResource->first);
+        const auto pVulkanCurrentFrameResource =
+            reinterpret_cast<VulkanFrameResource*>(pMtxCurrentFrameResource->second.pResource);
+
+        // Iterate over all pipelines.
+        const auto pCreatedGraphicsPipelines = getPipelineManager()->getGraphicsPipelines();
+        for (auto& [mtx, map] : *pCreatedGraphicsPipelines) {
+            std::scoped_lock pipelineGuard(mtx);
+
+            for (const auto& [sPipelineId, pPipeline] : map) {
+                auto pMtxPipelineResources =
+                    reinterpret_cast<VulkanPipeline*>(pPipeline.get())->getInternalResources();
+
+                std::scoped_lock guardPipelineResources(pMtxPipelineResources->first);
+
+                // Bind pipeline.
+                vkCmdBindPipeline(
+                    pVulkanCurrentFrameResource->pCommandBuffer,
+                    VK_PIPELINE_BIND_POINT_GRAPHICS,
+                    pMtxPipelineResources->second.pPipeline);
+
+                // Bind descriptor sets.
+                vkCmdBindDescriptorSets(
+                    pVulkanCurrentFrameResource->pCommandBuffer,
+                    VK_PIPELINE_BIND_POINT_GRAPHICS,
+                    pMtxPipelineResources->second.pPipelineLayout,
+                    0,
+                    1,
+                    &pMtxPipelineResources->second
+                         .vDescriptorSets[pMtxCurrentFrameResource->second.iCurrentFrameResourceIndex],
+                    0,
+                    nullptr);
+
+                // Iterate over all materials that use this pipeline.
+                const auto pMtxMaterials = pPipeline->getMaterialsThatUseThisPipeline();
+                std::scoped_lock materialsGuard(pMtxMaterials->first);
+
+                for (const auto& pMaterial : pMtxMaterials->second) {
+                    // Set material's GPU resources.
+                    const auto pMtxMaterialGpuResources = pMaterial->getMaterialGpuResources();
+                    std::scoped_lock materialGpuResourcesGuard(pMtxMaterialGpuResources->first);
+
+                    // Set material's CPU write shader resources.
+                    for (const auto& [sResourceName, pShaderCpuWriteResource] :
+                         pMtxMaterialGpuResources->second.shaderResources.shaderCpuWriteResources) {
+                        reinterpret_cast<GlslShaderCpuWriteResource*>(pShaderCpuWriteResource.getResource())
+                            ->copyResourceIndexToPushConstants(
+                                pMtxPipelineResources->second.pPushConstantsManager.get(),
+                                pMtxCurrentFrameResource->second.iCurrentFrameResourceIndex);
+                    }
+
+                    // Draw mesh nodes.
+                    drawMeshNodes(
+                        pMaterial,
+                        pVulkanCurrentFrameResource->pCommandBuffer,
+                        pMtxPipelineResources->second.pPushConstantsManager.get(),
+                        pMtxCurrentFrameResource->second.iCurrentFrameResourceIndex);
+                }
+            }
+        }
+
+        // Do finish logic.
+        optionalError = finishDrawingNextFrame(pVulkanCurrentFrameResource);
+        if (optionalError.has_value()) [[unlikely]] {
+            auto error = optionalError.value();
+            error.addCurrentLocationToErrorStack();
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+        }
+    }
+
+    void VulkanRenderer::drawMeshNodes(
+        Material* pMaterial,
+        VkCommandBuffer pCommandBuffer,
+        VulkanPushConstantsManager* pPushConstantsManager,
+        size_t iCurrentFrameResourceIndex) {
+        const auto pMtxMeshNodes = pMaterial->getSpawnedMeshNodesThatUseThisMaterial();
+
+        // Prepare vertex buffers.
+        static constexpr size_t iVertexBufferCount = 1;
+        std::array<VkBuffer, iVertexBufferCount> vVertexBuffers{};
+        std::array<VkDeviceSize, iVertexBufferCount> vOffsets = {0};
+
+        // Iterate over all visible mesh nodes that use this material.
+        std::scoped_lock meshNodesGuard(pMtxMeshNodes->first);
+        for (const auto& pMeshNode : pMtxMeshNodes->second.visibleMeshNodes) {
+            // Get mesh data.
+            auto pMtxMeshGpuResources = pMeshNode->getMeshGpuResources();
+            auto mtxMeshData = pMeshNode->getMeshData();
+
+            std::scoped_lock geometryGuard(pMtxMeshGpuResources->first, *mtxMeshData.first);
+
+            // Bind vertex buffers.
+            vVertexBuffers[0] = {
+                reinterpret_cast<VulkanResource*>(pMtxMeshGpuResources->second.mesh.pVertexBuffer.get())
+                    ->getInternalBufferResource()};
+            vkCmdBindVertexBuffers(
+                pCommandBuffer,
+                0,
+                static_cast<uint32_t>(vVertexBuffers.size()),
+                vVertexBuffers.data(),
+                vOffsets.data());
+
+            // Bind index buffer.
+            static_assert(sizeof(MeshData::meshindex_t) == sizeof(unsigned int), "change `indexTypeFormat`");
+            vkCmdBindIndexBuffer(
+                pCommandBuffer,
+                reinterpret_cast<VulkanResource*>(pMtxMeshGpuResources->second.mesh.pIndexBuffer.get())
+                    ->getInternalBufferResource(),
+                0,
+                indexTypeFormat);
+
+            // Set CPU write shader resources.
+            for (const auto& [sResourceName, pShaderCpuWriteResource] :
+                 pMtxMeshGpuResources->second.shaderResources.shaderCpuWriteResources) {
+                reinterpret_cast<GlslShaderCpuWriteResource*>(pShaderCpuWriteResource.getResource())
+                    ->copyResourceIndexToPushConstants(pPushConstantsManager, iCurrentFrameResourceIndex);
+            }
+
+            // Queue a draw command.
+            vkCmdDrawIndexed(
+                pCommandBuffer, static_cast<uint32_t>(mtxMeshData.second->getIndices()->size()), 1, 0, 0, 0);
+        }
+    }
+
+    std::optional<Error> VulkanRenderer::finishDrawingNextFrame(VulkanFrameResource* pCurrentFrameResource) {
+        // Convert current frame resource.
+        const auto pVulkanCurrentFrameResource =
+            reinterpret_cast<VulkanFrameResource*>(pCurrentFrameResource);
+
+        // Mark render pass end.
+        vkCmdEndRenderPass(pVulkanCurrentFrameResource->pCommandBuffer);
+
+        // Mark end of command recording.
+        auto result = vkEndCommandBuffer(pVulkanCurrentFrameResource->pCommandBuffer);
+        if (result != VK_SUCCESS) [[unlikely]] {
+            return Error(fmt::format(
+                "failed to finish recording commands into a command buffer, error: {}",
+                string_VkResult(result)));
+        }
+
+        // Acquire an image from the swapchain.
+        uint32_t iImageIndex = 0;
+        result = vkAcquireNextImageKHR(
+            pLogicalDevice,
+            pSwapChain,
+            UINT64_MAX,
+            pVulkanCurrentFrameResource->pSemaphoreSwapChainImageAcquired,
+            VK_NULL_HANDLE,
+            &iImageIndex);
+        if (result != VK_SUCCESS) [[unlikely]] {
+            return Error(
+                fmt::format("failed to acquire next swap chain image, error: {}", string_VkResult(result)));
+        }
+
+        // Since the next acquired image might be not in the order we expect:
+        // Make sure this image is not used by the GPU.
+        result =
+            vkWaitForFences(pLogicalDevice, 1, &vSwapChainImageFenceRefs[iImageIndex], VK_TRUE, UINT64_MAX);
+        if (result != VK_SUCCESS) [[unlikely]] {
+            return Error(
+                fmt::format("failed to wait for acquired image fence, error: {}", string_VkResult(result)));
+        }
+
+        // Mark the image as being used by this frame.
+        vSwapChainImageFenceRefs[iImageIndex] = pVulkanCurrentFrameResource->pFence;
+
+        // Prepare to submit command buffer for execution.
+        VkSubmitInfo submitInfo{};
+        submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+
+        // Specify semaphores to wait for before starting execution.
+        const std::array<VkSemaphore, 1> semaphoresToWaitFor = {
+            pVulkanCurrentFrameResource->pSemaphoreSwapChainImageAcquired};
+        submitInfo.waitSemaphoreCount = static_cast<uint32_t>(semaphoresToWaitFor.size());
+        submitInfo.pWaitSemaphores = semaphoresToWaitFor.data();
+
+        // Specify which stages will wait.
+        const std::array<VkPipelineStageFlags, semaphoresToWaitFor.size()> waitStages = {
+            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
+        submitInfo.pWaitDstStageMask = waitStages.data();
+
+        // Specify which command buffers to execute.
+        submitInfo.commandBufferCount = 1;
+        submitInfo.pCommandBuffers = &pVulkanCurrentFrameResource->pCommandBuffer;
+
+        // Specify which semaphores will be signaled once the command buffer(s) have finished execution.
+        std::array<VkSemaphore, 1> vSemaphoresAfterCommandBufferFinished = {
+            pVulkanCurrentFrameResource->pSemaphoreSwapChainImageDrawingFinished};
+        submitInfo.signalSemaphoreCount = static_cast<uint32_t>(vSemaphoresAfterCommandBufferFinished.size());
+        submitInfo.pSignalSemaphores = vSemaphoresAfterCommandBufferFinished.data();
+
+        // Make fence to be in "unsignaled" state.
+        result = vkResetFences(pLogicalDevice, 1, &pVulkanCurrentFrameResource->pFence);
+        if (result != VK_SUCCESS) [[unlikely]] {
+            return Error(fmt::format("failed to reset a fence, error: {}", string_VkResult(result)));
+        }
+
+        // Submit command buffer(s) to the queue for execution.
+        result = vkQueueSubmit(pGraphicsQueue, 1, &submitInfo, pVulkanCurrentFrameResource->pFence);
+        if (result != VK_SUCCESS) [[unlikely]] {
+            return Error(fmt::format(
+                "failed to submit command buffer(s) for execution, error: {}", string_VkResult(result)));
+        }
+
+        // Prepare for presenting.
+        VkPresentInfoKHR presentInfo{};
+        presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+        presentInfo.waitSemaphoreCount = static_cast<uint32_t>(vSemaphoresAfterCommandBufferFinished.size());
+        presentInfo.pWaitSemaphores = vSemaphoresAfterCommandBufferFinished.data();
+
+        // Specify which swapchain/image to present.
+        std::array<VkSwapchainKHR, 1> vSwapChains = {pSwapChain};
+        presentInfo.swapchainCount = static_cast<uint32_t>(vSwapChains.size());
+        presentInfo.pSwapchains = vSwapChains.data();
+        presentInfo.pImageIndices = &iImageIndex;
+
+        // No using multiple swapchains so leave `pResults` empty as we will get result for our single
+        // swapchain from `vkQueuePresentKHR`.
+        presentInfo.pResults = nullptr;
+
+        // Present.
+        result = vkQueuePresentKHR(pPresentQueue, &presentInfo);
+        if (result != VK_SUCCESS) [[unlikely]] {
+            return Error(
+                fmt::format("failed to present a swapchain image, error: {}", string_VkResult(result)));
+        }
+
+        return {};
+    }
 
     std::optional<Error> VulkanRenderer::updateRenderBuffers() {
         throw std::runtime_error("not implemented");
     }
 
-    std::optional<Error> VulkanRenderer::createDepthStencilBuffer() {
-        throw std::runtime_error("not implemented");
+    void VulkanRenderer::waitForGpuToFinishUsingFrameResource(FrameResource* pFrameResource) {
+        // Convert frame resource.
+        const auto pVulkanFrameResource = reinterpret_cast<VulkanFrameResource*>(pFrameResource);
+
+        // Wait for all fences to be signaled.
+        const auto result =
+            vkWaitForFences(pLogicalDevice, 1, &pVulkanFrameResource->pFence, VK_TRUE, UINT64_MAX);
+        if (result != VK_SUCCESS) [[unlikely]] {
+            Error error(fmt::format("failed to wait for a fence, error: {}", string_VkResult(result)));
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+        }
     }
 
     bool VulkanRenderer::isInitialized() const { return bIsVulkanInitialized; }

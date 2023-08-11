@@ -21,6 +21,7 @@ namespace ne {
     class PipelineManager;
     class ShaderConfiguration;
     class RenderSettings;
+    class CameraProperties;
 
     /** Defines a base class for renderers to implement. */
     class Renderer {
@@ -255,6 +256,19 @@ namespace ne {
         [[nodiscard]] std::optional<Error> compileEngineShaders() const;
 
         /**
+         * Takes the current frame resource and updates frame data constant buffer that it stores (by copying
+         * new (up to date) constants to it).
+         *
+         * @remark Expected to be called by derived renderers only when they know that frame resources
+         * are not being used by the GPU.
+         *
+         * @param pCurrentFrameResource Current frame resource.
+         * @param pCameraProperties     Camera properties to use.
+         */
+        void
+        updateFrameConstantsBuffer(FrameResource* pCurrentFrameResource, CameraProperties* pCameraProperties);
+
+        /**
          * Sets `nullptr` to resource manager's unique ptr to force destroy it (if exists).
          *
          * @warning Avoid using this function. Only use it if you need a special destruction order
@@ -305,14 +319,15 @@ namespace ne {
         [[nodiscard]] virtual std::optional<Error> updateRenderBuffers() = 0;
 
         /**
-         * (Re)creates depth/stencil buffer.
+         * Blocks the current thread until the GPU is finished using the specified frame resource.
          *
-         * @remark Make sure that the old depth/stencil buffer (if was) is not used by the GPU before
-         * calling this function.
+         * @remark Generally the current frame resource will be passed and so the current frame resource
+         * mutex will be locked at the time of calling and until the function is not finished it will not
+         * be unlocked.
          *
-         * @return Error if something went wrong.
+         * @param pFrameResource Frame resource to wait for.
          */
-        [[nodiscard]] virtual std::optional<Error> createDepthStencilBuffer() = 0;
+        virtual void waitForGpuToFinishUsingFrameResource(FrameResource* pFrameResource) = 0;
 
         /**
          * Tells whether the renderer is initialized or not.
@@ -344,6 +359,22 @@ namespace ne {
          * @return Error if something went wrong.
          */
         [[nodiscard]] std::optional<Error> initializeResourceManagers();
+
+        /**
+         * Updates internal resources (frame constants, shader resources, camera's aspect ratio and etc.)
+         * for the next frame.
+         *
+         * @remark Waits before frame resource for the new frame will not be used by the GPU so it's
+         * safe to work with frame resource after calling this function.
+         *
+         * @param iRenderTargetWidth  Width (in pixels) of the image that will be used for the next frame.
+         * @param iRenderTargetHeight Height (in pixels) of the image that will be used for the next frame.
+         * @param pCameraProperties   Camera properties to use.
+         */
+        void updateResourcesForNextFrame(
+            unsigned int iRenderTargetWidth,
+            unsigned int iRenderTargetHeight,
+            CameraProperties* pCameraProperties);
 
     private:
         /**
@@ -421,6 +452,9 @@ namespace ne {
          * Must be used with mutex.
          */
         std::pair<std::recursive_mutex, std::shared_ptr<RenderSettings>> mtxRenderSettings;
+
+        /** Up to date frame-global constant data. */
+        std::pair<std::mutex, FrameConstants> mtxFrameConstants;
 
         /** Do not delete (free) this pointer. Game manager object that owns this renderer. */
         GameManager* pGameManager = nullptr;

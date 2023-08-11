@@ -20,6 +20,18 @@ namespace ne {
         /** Stores recorded commands. */
         VkCommandBuffer pCommandBuffer = nullptr;
 
+        /** Signaled when submitted commands were finished executing. */
+        VkFence pFence = nullptr;
+
+        /** Signaled when an image from the swapchain was acquired and is ready for drawing. */
+        VkSemaphore pSemaphoreSwapChainImageAcquired = nullptr;
+
+        /**
+         * Signaled when submitted commands were finished executing and the image is now
+         * ready for presenting.
+         */
+        VkSemaphore pSemaphoreSwapChainImageDrawingFinished = nullptr;
+
     private:
         /**
          * Called by frame resource manager after a frame resource was constructed to initialize its fields.

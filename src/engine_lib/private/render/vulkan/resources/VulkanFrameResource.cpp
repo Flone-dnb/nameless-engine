@@ -9,10 +9,6 @@
 namespace ne {
 
     VulkanFrameResource::~VulkanFrameResource() {
-        if (pCommandBuffer == nullptr) {
-            return;
-        }
-
         // Convert renderer.
         const auto pVulkanRenderer = dynamic_cast<VulkanRenderer*>(pRenderer);
         if (pVulkanRenderer == nullptr) [[unlikely]] {
@@ -29,17 +25,35 @@ namespace ne {
             return; // don't throw in destructor, just quit
         }
 
-        // Get command pool.
-        const auto pCommandPool = pVulkanRenderer->getCommandPool();
-        if (pCommandPool == nullptr) [[unlikely]] {
-            Error error("expected command pool to be valid");
-            error.showError();
-            return; // don't throw in destructor, just quit
+        // Destroy fence (if was created).
+        if (pFence != nullptr) {
+            vkDestroyFence(pLogicalDevice, pFence, nullptr);
+            pFence = nullptr;
         }
 
-        // Free command buffer.
-        vkFreeCommandBuffers(pLogicalDevice, pCommandPool, 1, &pCommandBuffer);
-        pCommandBuffer = nullptr;
+        // Destroy semaphores (if were created).
+        if (pSemaphoreSwapChainImageAcquired != nullptr) {
+            vkDestroySemaphore(pLogicalDevice, pSemaphoreSwapChainImageAcquired, nullptr);
+            pSemaphoreSwapChainImageAcquired = nullptr;
+        }
+        if (pSemaphoreSwapChainImageDrawingFinished != nullptr) {
+            vkDestroySemaphore(pLogicalDevice, pSemaphoreSwapChainImageDrawingFinished, nullptr);
+            pSemaphoreSwapChainImageDrawingFinished = nullptr;
+        }
+
+        if (pCommandBuffer != nullptr) {
+            // Get command pool.
+            const auto pCommandPool = pVulkanRenderer->getCommandPool();
+            if (pCommandPool == nullptr) [[unlikely]] {
+                Error error("expected command pool to be valid");
+                error.showError();
+                return; // don't throw in destructor, just quit
+            }
+
+            // Free command buffer.
+            vkFreeCommandBuffers(pLogicalDevice, pCommandPool, 1, &pCommandBuffer);
+            pCommandBuffer = nullptr;
+        }
     }
 
     std::optional<Error> VulkanFrameResource::initialize(Renderer* pRenderer) {
@@ -69,9 +83,38 @@ namespace ne {
         commandBuffersInfo.commandBufferCount = 1;
 
         // Create command buffers.
-        const auto result = vkAllocateCommandBuffers(pLogicalDevice, &commandBuffersInfo, &pCommandBuffer);
+        auto result = vkAllocateCommandBuffers(pLogicalDevice, &commandBuffersInfo, &pCommandBuffer);
         if (result != VK_SUCCESS) [[unlikely]] {
             return Error(fmt::format("failed to create command buffer, error: {}", string_VkResult(result)));
+        }
+
+        // Describe fence.
+        VkFenceCreateInfo fenceInfo{};
+        fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+        fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT; // mark as "all previous commands were executed"
+
+        // Create fence.
+        result = vkCreateFence(pLogicalDevice, &fenceInfo, nullptr, &pFence);
+        if (result != VK_SUCCESS) [[unlikely]] {
+            return Error(fmt::format("failed to create a fence, error: {}", string_VkResult(result)));
+        }
+
+        // Describe semaphore.
+        VkSemaphoreCreateInfo semaphoreInfo{};
+        semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+
+        // Create semaphore 1.
+        result =
+            vkCreateSemaphore(pLogicalDevice, &semaphoreInfo, nullptr, &pSemaphoreSwapChainImageAcquired);
+        if (result != VK_SUCCESS) [[unlikely]] {
+            return Error(fmt::format("failed to create a semaphore, error: {}", string_VkResult(result)));
+        }
+
+        // Create semaphore 2.
+        result = vkCreateSemaphore(
+            pLogicalDevice, &semaphoreInfo, nullptr, &pSemaphoreSwapChainImageDrawingFinished);
+        if (result != VK_SUCCESS) [[unlikely]] {
+            return Error(fmt::format("failed to create a semaphore, error: {}", string_VkResult(result)));
         }
 
         // Save renderer.

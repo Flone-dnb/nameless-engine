@@ -10,6 +10,11 @@
 #include "VulkanMemoryAllocator/include/vk_mem_alloc.h"
 
 namespace ne {
+    class CameraProperties;
+    class Material;
+    class VulkanPushConstantsManager;
+    struct VulkanFrameResource;
+
     /** Renderer made with Vulkan API. */
     class VulkanRenderer : public Renderer {
     public:
@@ -210,14 +215,15 @@ namespace ne {
         [[nodiscard]] virtual std::optional<Error> updateRenderBuffers() override;
 
         /**
-         * (Re)creates depth/stencil buffer.
+         * Blocks the current thread until the GPU is finished using the specified frame resource.
          *
-         * @remark Make sure that the old depth/stencil buffer (if was) is not used by the GPU before
-         * calling this function.
+         * @remark Generally the current frame resource will be passed and so the current frame resource
+         * mutex will be locked at the time of calling and until the function is not finished it will not
+         * be unlocked.
          *
-         * @return Error if something went wrong.
+         * @param pFrameResource Frame resource to wait for.
          */
-        [[nodiscard]] virtual std::optional<Error> createDepthStencilBuffer() override;
+        virtual void waitForGpuToFinishUsingFrameResource(FrameResource* pFrameResource) override;
 
         /**
          * Tells whether the renderer is initialized or not.
@@ -471,15 +477,6 @@ namespace ne {
         pickSwapChainExtent(const VkSurfaceCapabilitiesKHR& surfaceCapabilities);
 
         /**
-         * Creates semaphores and fences used for synchronizing rendering operations.
-         *
-         * @warning Expects @ref pLogicalDevice to be valid.
-         *
-         * @return Error if something went wrong.
-         */
-        [[nodiscard]] std::optional<Error> createSynchronizationObjects();
-
-        /**
          * Creates @ref pRenderPass using the current @ref msaaSampleCount.
          *
          * @warning Expects @ref pLogicalDevice to be valid.
@@ -529,6 +526,40 @@ namespace ne {
          * @return Error if something went wrong.
          */
         [[nodiscard]] std::optional<Error> createSwapChainFramebuffers();
+
+        /**
+         * Setups everything for render commands to be recorded (updates frame constants, shader resources,
+         * resets command buffers, starts render pass and etc.).
+         *
+         * @param pCameraProperties Camera properties to use.
+         *
+         * @return Error if something went wrong.
+         */
+        [[nodiscard]] std::optional<Error> prepareForDrawingNextFrame(CameraProperties* pCameraProperties);
+
+        /**
+         * Adds draw commands to command buffer to draw all mesh nodes that use the specified material
+         *
+         * @param pMaterial                  Material that mesh nodes use.
+         * @param pCommandBuffer             Command buffer to add commands to.
+         * @param pPushConstantsManager      Push constants manager.
+         * @param iCurrentFrameResourceIndex Index of the current frame resource.
+         */
+        void drawMeshNodes(
+            Material* pMaterial,
+            VkCommandBuffer pCommandBuffer,
+            VulkanPushConstantsManager* pPushConstantsManager,
+            size_t iCurrentFrameResourceIndex);
+
+        /**
+         * Does final logic in drawing next frame (ends render pass, ends command buffer, etc.).
+         *
+         * @param pCurrentFrameResource Current frame resource. Expects that frame resources mutex is
+         * locked and will not be unlocked until the function is finished.
+         *
+         * @return Error if something went wrong.
+         */
+        [[nodiscard]] std::optional<Error> finishDrawingNextFrame(VulkanFrameResource* pCurrentFrameResource);
 
         /** Vulkan API instance. */
         VkInstance pInstance = nullptr;
@@ -581,11 +612,11 @@ namespace ne {
         std::array<VkFramebuffer, getSwapChainBufferCount()> vSwapChainFramebuffers;
 
         /**
-         * Semaphores to signal that an image from the swapchain was acquired and is ready
-         * for rendering.
+         * Stores references to fences from frame resources.
+         * Used to synchronize `vkAcquireNextImageKHR` calls and wait for a frame resource that uses
+         * the swap chain image.
          */
-        std::array<VkSemaphore, FrameResourcesManager::getFrameResourcesCount()>
-            vSemaphoreSwapChainImageReadyForRendering;
+        std::array<VkFence, getSwapChainBufferCount()> vSwapChainImageFenceRefs;
 
         /**
          * Semaphores to signal that the rendering to a swapchain image was finished and the image is now
@@ -593,13 +624,6 @@ namespace ne {
          */
         std::array<VkSemaphore, FrameResourcesManager::getFrameResourcesCount()>
             vSemaphoreSwapChainImageReadyForPresenting;
-
-        /**
-         * Fences used to avoid waiting for the GPU after the CPU
-         * has submitted a frame. With these fences we can now submit up to `iFrameResourceCount` frames
-         * without waiting for the GPU.
-         */
-        std::array<VkFence, FrameResourcesManager::getFrameResourcesCount()> vFences;
 
         /** List of supported GPUs, filled during @ref pickPhysicalDevice. */
         std::vector<std::string> vSupportedGpuNames;
@@ -615,6 +639,12 @@ namespace ne {
 
         /** Tells if @ref initializeVulkan was finished successfully or not. */
         bool bIsVulkanInitialized = false;
+
+        /** Whether the window that owns the renderer is minimized or not. */
+        bool bIsWindowMinimized = false;
+
+        /** Marked as `true` when entered destructor. */
+        bool bIsBeingDestroyed = false;
 
         /** Index of the color attachment in @ref pRenderPass. */
         static constexpr size_t iRenderPassColorAttachmentIndex = 0;
@@ -633,6 +663,9 @@ namespace ne {
 
         /** Tiling option for @ref pDepthImage. */
         static constexpr VkImageTiling depthImageTiling = VK_IMAGE_TILING_OPTIMAL;
+
+        /** Format of indices. */
+        static constexpr VkIndexType indexTypeFormat = VK_INDEX_TYPE_UINT32;
 
         /** Color space of @ref vSwapChainImages. */
         static constexpr VkColorSpaceKHR swapChainImageColorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;

@@ -11,10 +11,11 @@
 #include "misc/MessageBox.h"
 #include "materials/ShaderMacro.h"
 #include "render/general/pipeline/PipelineManager.h"
+#include "render/vulkan/VulkanRenderer.h"
+#include "game/camera/CameraProperties.h"
 #if defined(WIN32)
 #include "render/directx/DirectXRenderer.h"
 #endif
-#include "render/vulkan/VulkanRenderer.h"
 
 // External.
 #include "fmt/core.h"
@@ -25,6 +26,9 @@ namespace ne {
         static_assert(iSwapChainBufferCount >= 2);
 
         // Make sure there are N swap chain images and N frame resources (frames in flight).
+        // Frame resources expect that the number of swap chain images is equal to the number
+        // of frame resources because frame resources store synchronization objects such as
+        // fences and semaphores that expect one swap chain image per frame resource.
         static_assert(iSwapChainBufferCount == FrameResourcesManager::getFrameResourcesCount());
 
         this->pGameManager = pGameManager;
@@ -104,6 +108,24 @@ namespace ne {
         Logger::get().info(fmt::format("took {:.1f} sec. to compile engine shaders", timeTookInSec));
 
         return {};
+    }
+
+    void Renderer::updateFrameConstantsBuffer(
+        FrameResource* pCurrentFrameResource, CameraProperties* pCameraProperties) {
+        std::scoped_lock guard(mtxFrameConstants.first);
+
+        // Set camera properties.
+        mtxFrameConstants.second.cameraPosition = pCameraProperties->getWorldLocation();
+        mtxFrameConstants.second.viewProjectionMatrix =
+            pCameraProperties->getProjectionMatrix() * pCameraProperties->getViewMatrix();
+
+        // Set time parameters.
+        mtxFrameConstants.second.timeSincePrevFrameInSec = getGameManager()->getTimeSincePrevFrameInSec();
+        mtxFrameConstants.second.totalTimeInSec = GameInstance::getTotalApplicationTimeInSec();
+
+        // Copy to GPU.
+        pCurrentFrameResource->pFrameConstantBuffer->copyDataToElement(
+            0, &mtxFrameConstants.second, sizeof(mtxFrameConstants.second));
     }
 
     void Renderer::resetGpuResourceManager() {
@@ -406,6 +428,33 @@ namespace ne {
             std::unique_ptr<ShaderCpuWriteResourceManager>(new ShaderCpuWriteResourceManager(this));
 
         return {};
+    }
+
+    void Renderer::updateResourcesForNextFrame(
+        unsigned int iRenderTargetWidth,
+        unsigned int iRenderTargetHeight,
+        CameraProperties* pCameraProperties) {
+        std::scoped_lock frameGuard(*getRenderResourcesMutex());
+
+        // Set camera's aspect ratio.
+        pCameraProperties->setAspectRatio(iRenderTargetWidth, iRenderTargetHeight);
+
+        // Switch to the next frame resource.
+        getFrameResourcesManager()->switchToNextFrameResource();
+
+        // Get current frame resource.
+        auto pMtxCurrentFrameResource = getFrameResourcesManager()->getCurrentFrameResource();
+        std::scoped_lock frameResource(pMtxCurrentFrameResource->first);
+
+        // Wait for this frame resource to no longer be used by the GPU.
+        waitForGpuToFinishUsingFrameResource(pMtxCurrentFrameResource->second.pResource);
+
+        // Copy new (up to date) data to frame data cbuffer to be used by the shaders.
+        updateFrameConstantsBuffer(pMtxCurrentFrameResource->second.pResource, pCameraProperties);
+
+        // Update shader CPU write resources marked as "needs update".
+        getShaderCpuWriteResourceManager()->updateResources(
+            pMtxCurrentFrameResource->second.iCurrentFrameResourceIndex);
     }
 
 } // namespace ne

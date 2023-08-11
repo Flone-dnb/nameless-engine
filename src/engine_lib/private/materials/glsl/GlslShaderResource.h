@@ -74,12 +74,12 @@ namespace ne {
         /**
          * Copies resource index (into shader arrays) to a push constant.
          *
-         * @param pushConstantsManager       Push constants manager.
+         * @param pPushConstantsManager      Push constants manager.
          * @param iCurrentFrameResourceIndex Index of the current frame resource.
          */
         inline void copyResourceIndexToPushConstants(
-            VulkanPushConstantsManager& pushConstantsManager, size_t iCurrentFrameResourceIndex) {
-            pushConstantsManager.copyValueToPushConstant(
+            VulkanPushConstantsManager* pPushConstantsManager, size_t iCurrentFrameResourceIndex) {
+            pPushConstantsManager->copyValueToPushConstant(
                 iPushConstantIndex, vResourceData[iCurrentFrameResourceIndex]->getIndexIntoArray());
         }
 

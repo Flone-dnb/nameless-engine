@@ -264,10 +264,8 @@ namespace ne {
     std::optional<Error> DirectXRenderer::prepareForDrawingNextFrame(CameraProperties* pCameraProperties) {
         std::scoped_lock frameGuard(*getRenderResourcesMutex());
 
-        // Set camera's aspect ratio.
-        pCameraProperties->setAspectRatio(scissorRect.right, scissorRect.bottom);
-
-        updateResourcesForNextFrame(pCameraProperties);
+        // Waits for frame resource to be no longer used by the GPU.
+        updateResourcesForNextFrame(scissorRect.right, scissorRect.bottom, pCameraProperties);
 
         // Get command allocator to open command list.
         auto pMtxCurrentFrameResource = getFrameResourcesManager()->getCurrentFrameResource();
@@ -423,7 +421,7 @@ namespace ne {
                                 pCommandList, pMtxCurrentFrameResource->second.iCurrentFrameResourceIndex);
                     }
 
-                    // Draw mesh node.
+                    // Draw mesh nodes.
                     drawMeshNodes(pMaterial, pMtxCurrentFrameResource->second.iCurrentFrameResourceIndex);
                 }
             }
@@ -552,6 +550,7 @@ namespace ne {
                 static_cast<UINT>(mtxMeshData.second->getVertices()->size() * vertexBufferView.StrideInBytes);
 
             // Create index buffer view.
+            static_assert(sizeof(MeshData::meshindex_t) == sizeof(unsigned int), "change `Format`");
             D3D12_INDEX_BUFFER_VIEW indexBufferView;
             indexBufferView.BufferLocation =
                 reinterpret_cast<DirectXResource*>(pMtxMeshGpuResources->second.mesh.pIndexBuffer.get())
@@ -598,24 +597,6 @@ namespace ne {
             WaitForSingleObject(pEvent, INFINITE);
             CloseHandle(pEvent);
         }
-    }
-
-    void DirectXRenderer::updateFrameConstantsBuffer(
-        FrameResource* pCurrentFrameResource, CameraProperties* pCameraProperties) {
-        std::scoped_lock guard(mtxFrameConstants.first);
-
-        // Set camera properties.
-        mtxFrameConstants.second.cameraPosition = pCameraProperties->getWorldLocation();
-        mtxFrameConstants.second.viewProjectionMatrix =
-            pCameraProperties->getProjectionMatrix() * pCameraProperties->getViewMatrix();
-
-        // Set time parameters.
-        mtxFrameConstants.second.timeSincePrevFrameInSec = getGameManager()->getTimeSincePrevFrameInSec();
-        mtxFrameConstants.second.totalTimeInSec = GameInstance::getTotalApplicationTimeInSec();
-
-        // Copy to GPU.
-        pCurrentFrameResource->pFrameConstantBuffer->copyDataToElement(
-            0, &mtxFrameConstants.second, sizeof(mtxFrameConstants.second));
     }
 
     std::optional<Error> DirectXRenderer::setVideoAdapter(const std::string& sVideoAdapterName) {
@@ -1038,31 +1019,6 @@ namespace ne {
 
     UINT DirectXRenderer::getMsaaQualityLevel() const { return iMsaaQualityLevelsCount; }
 
-    void DirectXRenderer::updateResourcesForNextFrame(CameraProperties* pCameraProperties) {
-        std::scoped_lock frameGuard(*getRenderResourcesMutex());
-
-        // Switch to the next frame resource.
-        getFrameResourcesManager()->switchToNextFrameResource();
-
-        // Get current frame resource.
-        auto pMtxCurrentFrameResource = getFrameResourcesManager()->getCurrentFrameResource();
-        std::scoped_lock frameResource(pMtxCurrentFrameResource->first);
-
-        // Convert frame resource.
-        const auto pDirectXFrameResource =
-            reinterpret_cast<DirectXFrameResource*>(pMtxCurrentFrameResource->second.pResource);
-
-        // Wait for this frame resource to no longer be used by the GPU.
-        waitForFenceValue(pDirectXFrameResource->iFence);
-
-        // Copy new (up to date) data to frame data cbuffer to be used by the shaders.
-        updateFrameConstantsBuffer(pMtxCurrentFrameResource->second.pResource, pCameraProperties);
-
-        // Update shader CPU write resources marked as "needs update".
-        getShaderCpuWriteResourceManager()->updateResources(
-            pMtxCurrentFrameResource->second.iCurrentFrameResourceIndex);
-    }
-
     std::optional<Error> DirectXRenderer::updateRenderBuffers() {
         std::scoped_lock guard(*getRenderResourcesMutex());
 
@@ -1197,6 +1153,14 @@ namespace ne {
         scissorRect.bottom = static_cast<LONG>(renderResolution.second);
 
         return {};
+    }
+
+    void DirectXRenderer::waitForGpuToFinishUsingFrameResource(FrameResource* pFrameResource) {
+        // Convert frame resource.
+        const auto pDirectXFrameResource = reinterpret_cast<DirectXFrameResource*>(pFrameResource);
+
+        // Wait for this frame resource to no longer be used by the GPU.
+        waitForFenceValue(pDirectXFrameResource->iFence);
     }
 
     bool DirectXRenderer::isInitialized() const { return bIsDirectXInitialized; }

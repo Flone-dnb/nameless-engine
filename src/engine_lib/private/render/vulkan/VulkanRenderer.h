@@ -12,7 +12,7 @@
 namespace ne {
     class CameraProperties;
     class Material;
-    class VulkanPushConstantsManager;
+    class VulkanPipeline;
     struct VulkanFrameResource;
 
     /** Renderer made with Vulkan API. */
@@ -541,14 +541,14 @@ namespace ne {
          * Adds draw commands to command buffer to draw all mesh nodes that use the specified material
          *
          * @param pMaterial                  Material that mesh nodes use.
+         * @param pPipeline                  Pipeline that the material uses.
          * @param pCommandBuffer             Command buffer to add commands to.
-         * @param pPushConstantsManager      Push constants manager.
          * @param iCurrentFrameResourceIndex Index of the current frame resource.
          */
         void drawMeshNodes(
             Material* pMaterial,
+            VulkanPipeline* pPipeline,
             VkCommandBuffer pCommandBuffer,
-            VulkanPushConstantsManager* pPushConstantsManager,
             size_t iCurrentFrameResourceIndex);
 
         /**

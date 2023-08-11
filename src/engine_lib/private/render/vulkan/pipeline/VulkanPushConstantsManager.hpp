@@ -84,10 +84,17 @@ namespace ne {
          *
          * @return Size in bytes. Returning `unsigned int` since Vulkan works with `uint32_t`s.
          */
-        unsigned int getTotalSizeInBytes() const {
+        inline unsigned int getTotalSizeInBytes() const {
             // We can safely cast to `uint` here since push constants are very small.
             return static_cast<unsigned int>(vPushConstantsData.size() * sizeof(vPushConstantsData[0]));
         }
+
+        /**
+         * Returns pointer to the beginning of the push constants data.
+         *
+         * @return Push constants data.
+         */
+        inline void* getData() { return reinterpret_cast<void*>(vPushConstantsData.data()); }
 
     private:
         /** Data that will be copied to push constants: array of `uint`s. */

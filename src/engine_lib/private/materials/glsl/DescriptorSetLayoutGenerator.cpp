@@ -437,15 +437,19 @@ namespace ne {
         }
 
         // Merge push constants (if used).
+        std::unordered_set<std::string> pushConstantUintFieldNames;
         if (vertexShaderDescriptorLayoutInfo.pushConstantUintFieldNames.has_value()) {
             for (const auto& sFieldName : *vertexShaderDescriptorLayoutInfo.pushConstantUintFieldNames) {
-                generatedData.pushConstantUintFieldNames->insert(sFieldName);
+                pushConstantUintFieldNames.insert(sFieldName);
             }
         }
         if (fragmentShaderDescriptorLayoutInfo.pushConstantUintFieldNames.has_value()) {
             for (const auto& sFieldName : *fragmentShaderDescriptorLayoutInfo.pushConstantUintFieldNames) {
-                generatedData.pushConstantUintFieldNames->insert(sFieldName);
+                pushConstantUintFieldNames.insert(sFieldName);
             }
+        }
+        if (!pushConstantUintFieldNames.empty()) {
+            generatedData.pushConstantUintFieldNames = std::move(pushConstantUintFieldNames);
         }
 
         return generatedData;

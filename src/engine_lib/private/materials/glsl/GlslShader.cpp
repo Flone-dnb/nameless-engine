@@ -162,14 +162,14 @@ namespace ne {
             // Release bytecode.
             mtxSpirvBytecode.second.clear();
             mtxSpirvBytecode.second.shrink_to_fit();
+
+            notifyShaderBytecodeReleasedFromMemory();
         }
 
         if (mtxDescriptorSetLayoutInfo.second.has_value()) {
             // Release descriptor set layout info.
             mtxDescriptorSetLayoutInfo.second = {};
         }
-
-        notifyShaderBytecodeReleasedFromMemory();
 
         return false;
     }

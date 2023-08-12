@@ -40,6 +40,8 @@ namespace ne {
     }
 
     FrameResourcesManager::FrameResourcesManager(Renderer* pRenderer) {
+        static_assert(iFrameResourcesCount == 2, "too much frames in-flight will introduce input latency");
+
         this->pRenderer = pRenderer;
 
         vFrameResources = createRenderDependentFrameResources(pRenderer);

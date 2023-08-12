@@ -104,7 +104,7 @@ namespace ne {
 
     private:
         /** Number of frames "in-flight" that the CPU can submit to the GPU without waiting. */
-        static constexpr unsigned int iFrameResourcesCount = 3;
+        static constexpr unsigned int iFrameResourcesCount = 2; // small to avoid input latency
 
         /**
          * Creates a render-specific frame resources depending on the renderer used.

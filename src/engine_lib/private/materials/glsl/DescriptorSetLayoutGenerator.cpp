@@ -399,10 +399,7 @@ namespace ne {
 
         // Prepare layout for each descriptor set to create.
         std::array<VkDescriptorSetLayout, FrameResourcesManager::getFrameResourcesCount()>
-            vDescriptorLayouts = {
-                generatedData.pDescriptorSetLayout,
-                generatedData.pDescriptorSetLayout,
-                generatedData.pDescriptorSetLayout};
+            vDescriptorLayouts = {generatedData.pDescriptorSetLayout, generatedData.pDescriptorSetLayout};
 
         // Allocate descriptor sets.
         VkDescriptorSetAllocateInfo descriptorSetAllocInfo{};

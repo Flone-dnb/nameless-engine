@@ -460,7 +460,7 @@ namespace ne {
         GameManager* pGameManager = nullptr;
 
         /** Number of buffers in swap chain. */
-        static constexpr unsigned int iSwapChainBufferCount = 3;
+        static constexpr unsigned int iSwapChainBufferCount = 2;
 
         /** Minimum value for depth. */
         static constexpr float minDepth = 0.0F;

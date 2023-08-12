@@ -435,6 +435,9 @@ namespace ne {
             error.showError();
             throw std::runtime_error(error.getFullErrorMessage());
         }
+
+        // Switch to the next frame resource.
+        getFrameResourcesManager()->switchToNextFrameResource();
     }
 
     std::optional<Error> DirectXRenderer::finishDrawingNextFrame() {

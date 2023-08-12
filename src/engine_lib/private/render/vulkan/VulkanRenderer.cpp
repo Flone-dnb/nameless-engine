@@ -1757,6 +1757,9 @@ namespace ne {
             error.showError();
             throw std::runtime_error(error.getFullErrorMessage());
         }
+
+        // Switch to the next frame resource.
+        getFrameResourcesManager()->switchToNextFrameResource();
     }
 
     void VulkanRenderer::drawMeshNodes(

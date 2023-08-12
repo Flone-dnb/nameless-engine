@@ -439,9 +439,6 @@ namespace ne {
         // Set camera's aspect ratio.
         pCameraProperties->setAspectRatio(iRenderTargetWidth, iRenderTargetHeight);
 
-        // Switch to the next frame resource.
-        getFrameResourcesManager()->switchToNextFrameResource();
-
         // Get current frame resource.
         auto pMtxCurrentFrameResource = getFrameResourcesManager()->getCurrentFrameResource();
         std::scoped_lock frameResource(pMtxCurrentFrameResource->first);

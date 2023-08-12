@@ -1750,7 +1750,8 @@ namespace ne {
         }
 
         // Do finish logic.
-        optionalError = finishDrawingNextFrame(pVulkanCurrentFrameResource);
+        optionalError = finishDrawingNextFrame(
+            pVulkanCurrentFrameResource, pMtxCurrentFrameResource->second.iCurrentFrameResourceIndex);
         if (optionalError.has_value()) [[unlikely]] {
             auto error = optionalError.value();
             error.addCurrentLocationToErrorStack();
@@ -1833,7 +1834,8 @@ namespace ne {
         }
     }
 
-    std::optional<Error> VulkanRenderer::finishDrawingNextFrame(VulkanFrameResource* pCurrentFrameResource) {
+    std::optional<Error> VulkanRenderer::finishDrawingNextFrame(
+        VulkanFrameResource* pCurrentFrameResource, size_t iCurrentFrameResourceIndex) {
         // Convert current frame resource.
         const auto pVulkanCurrentFrameResource =
             reinterpret_cast<VulkanFrameResource*>(pCurrentFrameResource);
@@ -1861,6 +1863,17 @@ namespace ne {
         if (result != VK_SUCCESS) [[unlikely]] {
             return Error(
                 fmt::format("failed to acquire next swap chain image, error: {}", string_VkResult(result)));
+        }
+
+        // Log if acquired image index is not expected.
+        if (!bLoggedAboutUnexpectedSwapChainImageAcquired && (iImageIndex != iCurrentFrameResourceIndex))
+            [[unlikely]] {
+            Logger::get().warn(fmt::format(
+                "acquired unexpected swap chain image with index {} while the current frame resource index "
+                "is {}, this might affect the performance",
+                iImageIndex,
+                iCurrentFrameResourceIndex));
+            bLoggedAboutUnexpectedSwapChainImageAcquired = true;
         }
 
         // Since the next acquired image might be not in the order we expect:

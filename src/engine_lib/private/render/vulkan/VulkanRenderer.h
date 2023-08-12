@@ -556,10 +556,12 @@ namespace ne {
          *
          * @param pCurrentFrameResource Current frame resource. Expects that frame resources mutex is
          * locked and will not be unlocked until the function is finished.
+         * @param iCurrentFrameResourceIndex Index of the current frame resource.
          *
          * @return Error if something went wrong.
          */
-        [[nodiscard]] std::optional<Error> finishDrawingNextFrame(VulkanFrameResource* pCurrentFrameResource);
+        [[nodiscard]] std::optional<Error>
+        finishDrawingNextFrame(VulkanFrameResource* pCurrentFrameResource, size_t iCurrentFrameResourceIndex);
 
         /** Vulkan API instance. */
         VkInstance pInstance = nullptr;
@@ -645,6 +647,9 @@ namespace ne {
 
         /** Marked as `true` when entered destructor. */
         bool bIsBeingDestroyed = false;
+
+        /** Whether or not we logged that acquired swap chain image index is not expected. */
+        bool bLoggedAboutUnexpectedSwapChainImageAcquired = false;
 
         /** Index of the color attachment in @ref pRenderPass. */
         static constexpr size_t iRenderPassColorAttachmentIndex = 0;

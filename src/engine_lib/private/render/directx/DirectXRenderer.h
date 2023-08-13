@@ -197,7 +197,7 @@ namespace ne {
         /**
          * Recreates all main render buffers to match current render settings.
          *
-         * @remark Usually called after some renderer setting was changed or window size changed.
+         * @remark Usually called after some renderer setting was changed.
          *
          * @return Error if something went wrong.
          */

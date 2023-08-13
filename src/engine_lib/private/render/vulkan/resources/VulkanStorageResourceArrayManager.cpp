@@ -132,6 +132,22 @@ namespace ne {
         return std::get<std::unique_ptr<VulkanStorageResourceArraySlot>>(std::move(result));
     }
 
+    std::optional<Error> VulkanStorageResourceArrayManager::bindDescriptorsToRecreatedPipelineResources(
+        VulkanRenderer* pVulkanRenderer) {
+        std::scoped_lock guard(mtxGlslShaderCpuWriteResources.first);
+
+        // Update descriptors.
+        for (const auto& [sArrayName, pArray] : mtxGlslShaderCpuWriteResources.second) {
+            auto optionalError = pArray->updateDescriptors(pVulkanRenderer);
+            if (optionalError.has_value()) [[unlikely]] {
+                optionalError->addCurrentLocationToErrorStack();
+                return optionalError;
+            }
+        }
+
+        return {};
+    }
+
     std::string VulkanStorageResourceArrayManager::formatBytesToMegabytes(size_t iSizeInBytes) {
         return fmt::format(
             "{:.4} MB",

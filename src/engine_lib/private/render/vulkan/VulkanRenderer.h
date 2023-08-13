@@ -206,6 +206,14 @@ namespace ne {
         virtual void drawNextFrame() override;
 
         /**
+         * Called when the framebuffer size was changed.
+         *
+         * @param iWidth  New width of the framebuffer (in pixels).
+         * @param iHeight New height of the framebuffer (in pixels).
+         */
+        virtual void onFramebufferSizeChanged(int iWidth, int iHeight) override;
+
+        /**
          * Recreates all render buffers to match current settings.
          *
          * @remark Usually called after some renderer setting was changed.
@@ -488,8 +496,13 @@ namespace ne {
         /**
          * Destroys swap chain, framebuffers, graphics pipeline, render pass, image views,
          * frees command buffers and other objects that depend on the swap chain images.
+         *
+         * @param bDestroyPipelineManager `true` to destroy the pipeline manager, this is generally
+         * used when the renderer is being destroyed, otherwise if you just want to recreate
+         * some resources specify `false` and make sure all pipeline resources were released and will not be
+         * restored before this function is finished.
          */
-        void destroySwapChainAndDependentResources();
+        void destroySwapChainAndDependentResources(bool bDestroyPipelineManager);
 
         /**
          * Tells if @ref depthImageFormat is supported by the hardware.
@@ -516,6 +529,14 @@ namespace ne {
          * @return Error if something went wrong.
          */
         [[nodiscard]] std::optional<Error> createMsaaImage();
+
+        /**
+         * Recreates @ref pSwapChain and all dependent resources after it was created using @ref
+         * createSwapChain.
+         *
+         * @return Error if something went wrong.
+         */
+        [[nodiscard]] std::optional<Error> recreateSwapChainAndDependentResources();
 
         /**
          * Creates @ref vSwapChainFramebuffers.

@@ -16,6 +16,7 @@ namespace ne {
     class VulkanStorageResourceArray;
     class VulkanStorageResourceArraySlot;
     class GlslShaderCpuWriteResource;
+    class VulkanRenderer;
 
     /** Manages arrays of resources of various CPU write shader resources. */
     class VulkanStorageResourceArrayManager {
@@ -46,6 +47,22 @@ namespace ne {
          */
         std::variant<std::unique_ptr<VulkanStorageResourceArraySlot>, Error>
         reserveSlotsInArray(GlslShaderCpuWriteResource* pShaderResource);
+
+        /**
+         * Updates descriptors in all pipelines to make descriptors reference the underlying VkBuffer of used
+         * arrays.
+         *
+         * @warning Expects that the GPU is not doing any work and that no new frames are being submitted now.
+         *
+         * @remark Generally called after all pipeline resources were re-created to update re-created
+         * descriptors.
+         *
+         * @param pVulkanRenderer Vulkan renderer.
+         *
+         * @return Error if something went wrong.
+         */
+        [[nodiscard]] std::optional<Error>
+        bindDescriptorsToRecreatedPipelineResources(VulkanRenderer* pVulkanRenderer);
 
     private:
         /**

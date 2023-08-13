@@ -393,6 +393,14 @@ namespace ne {
         void onWindowFocusChanged(bool bIsFocused) const;
 
         /**
+         * Called when the framebuffer size was changed.
+         *
+         * @param iWidth  New width of the framebuffer (in pixels).
+         * @param iHeight New height of the framebuffer (in pixels).
+         */
+        void onFramebufferSizeChanged(int iWidth, int iHeight) const;
+
+        /**
          * Called when a window that owns this game instance
          * was requested to close (no new frames will be rendered).
          * Prefer to do your destructor logic here.

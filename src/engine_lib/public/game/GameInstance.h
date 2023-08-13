@@ -384,6 +384,14 @@ namespace ne {
         virtual void onWindowFocusChanged(bool bIsFocused) {}
 
         /**
+         * Called when the framebuffer size was changed.
+         *
+         * @param iWidth  New width of the framebuffer (in pixels).
+         * @param iHeight New height of the framebuffer (in pixels).
+         */
+        virtual void onFramebufferSizeChanged(int iWidth, int iHeight) {}
+
+        /**
          * Called when the window that owns this game instance
          * was requested to close (no new frames will be rendered).
          *

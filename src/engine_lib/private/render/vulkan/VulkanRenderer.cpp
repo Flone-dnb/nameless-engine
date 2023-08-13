@@ -17,6 +17,7 @@
 #include "materials/Material.h"
 #include "game/nodes/MeshNode.h"
 #include "materials/glsl/GlslShaderResource.h"
+#include "render/vulkan/resources/VulkanStorageResourceArrayManager.h"
 #include "game/camera/TransientCamera.h"
 
 // External.
@@ -47,7 +48,7 @@ namespace ne {
             }
         }
 
-        destroySwapChainAndDependentResources();
+        destroySwapChainAndDependentResources(true);
 
         if (pLogicalDevice != nullptr) {
             // Explicitly delete frame resources manager before command pool because command buffers
@@ -1177,7 +1178,7 @@ namespace ne {
         return {};
     }
 
-    void VulkanRenderer::destroySwapChainAndDependentResources() {
+    void VulkanRenderer::destroySwapChainAndDependentResources(bool bDestroyPipelineManager) {
         if (pLogicalDevice == nullptr || pSwapChain == nullptr) {
             return;
         }
@@ -1194,8 +1195,10 @@ namespace ne {
             vSwapChainFramebuffers[i] = nullptr;
         }
 
-        // Make sure all pipelines were destroyed because they reference render pass.
-        resetPipelineManager();
+        if (bDestroyPipelineManager) {
+            // Make sure all pipelines were destroyed because they reference render pass.
+            resetPipelineManager();
+        } // else: the caller guarantees that all pipeline resources were released
 
         // Now when all pipelines were destroyed:
         // Destroy render pass.
@@ -1307,6 +1310,91 @@ namespace ne {
             return error;
         }
         pMsaaImage = std::get<std::unique_ptr<VulkanResource>>(std::move(result));
+
+        return {};
+    }
+
+    std::optional<Error> VulkanRenderer::recreateSwapChainAndDependentResources() {
+        // Pause the rendering.
+        std::scoped_lock guard(*getRenderResourcesMutex());
+        waitForGpuToFinishWorkUpToThisPoint();
+
+        // Make sure the swap chain exists.
+        if (pSwapChain == nullptr) [[unlikely]] {
+            return Error("expected the swap chain to exist in order to recreate it");
+        }
+
+        // Make sure the GPU is not using swap chain.
+        const auto result = vkDeviceWaitIdle(pLogicalDevice);
+        if (result != VK_SUCCESS) [[unlikely]] {
+            return Error(
+                fmt::format("failed to wait for device to be idle, error: {}", string_VkResult(result)));
+        }
+
+        {
+            auto pipelineGuard =
+                getPipelineManager()->clearGraphicsPipelinesInternalResourcesAndDelayRestoring();
+
+            // Destroy swap chain and dependent resources.
+            destroySwapChainAndDependentResources(false);
+
+            // Recreate swap chain and dependent resources.
+            auto optionalError = createSwapChain();
+            if (optionalError.has_value()) [[unlikely]] {
+                optionalError->addCurrentLocationToErrorStack();
+                return optionalError;
+            }
+
+            optionalError = createRenderPass(); // it depends on the format of the swap chain images
+            if (optionalError.has_value()) [[unlikely]] {
+                optionalError->addCurrentLocationToErrorStack();
+                return optionalError;
+            }
+        }
+
+        // Now all pipeline resources were re-created including descriptor sets
+        // and we need to update descriptor sets.
+        const auto pVulkanResourceManager = dynamic_cast<VulkanResourceManager*>(getResourceManager());
+        if (pVulkanResourceManager == nullptr) [[unlikely]] {
+            return Error("expected a Vulkan resource manager");
+        }
+        auto optionalError = pVulkanResourceManager->getStorageResourceArrayManager()
+                                 ->bindDescriptorsToRecreatedPipelineResources(this);
+        if (optionalError.has_value()) [[unlikely]] {
+            optionalError->addCurrentLocationToErrorStack();
+            return optionalError;
+        }
+
+        // Create render target for MSAA because it depends on the swap chain image sizes.
+        optionalError = createMsaaImage();
+        if (optionalError.has_value()) [[unlikely]] {
+            optionalError->addCurrentLocationToErrorStack();
+            return optionalError;
+        }
+
+        // Create depth image because it depends on the swap chain image sizes.
+        optionalError = createDepthImage();
+        if (optionalError.has_value()) [[unlikely]] {
+            optionalError->addCurrentLocationToErrorStack();
+            return optionalError;
+        }
+
+        // Create framebuffers because they depend on the swap chain images.
+        optionalError = createSwapChainFramebuffers();
+        if (optionalError.has_value()) [[unlikely]] {
+            optionalError->addCurrentLocationToErrorStack();
+            return optionalError;
+        }
+
+        // Since the next acquired swap chain image index will be 0,
+        // make sure the current frame resource index is also 0.
+        const auto pMtxCurrentFrameResource = getFrameResourcesManager()->getCurrentFrameResource();
+        std::scoped_lock guardFrameResources(pMtxCurrentFrameResource->first);
+        if (pMtxCurrentFrameResource->second.iCurrentFrameResourceIndex != 0) {
+            do {
+                getFrameResourcesManager()->switchToNextFrameResource();
+            } while (pMtxCurrentFrameResource->second.iCurrentFrameResourceIndex != 0);
+        }
 
         return {};
     }
@@ -1763,6 +1851,41 @@ namespace ne {
         getFrameResourcesManager()->switchToNextFrameResource();
     }
 
+    void VulkanRenderer::onFramebufferSizeChanged(int iWidth, int iHeight) {
+        // Make sure the logical device is valid.
+        if (pLogicalDevice == nullptr) {
+            return;
+        }
+
+        if (iWidth == 0 && iHeight == 0) {
+            // Don't draw anything as frame buffer size is zero.
+            bIsWindowMinimized = true;
+            const auto result = vkDeviceWaitIdle(pLogicalDevice);
+            if (result != VK_SUCCESS) [[unlikely]] {
+                Error error(
+                    fmt::format("failed to wait for device to be idle, error: {}", string_VkResult(result)));
+                error.showError();
+                throw std::runtime_error(error.getFullErrorMessage());
+            }
+            return;
+        }
+
+        bIsWindowMinimized = false;
+
+        if (pSwapChain == nullptr) {
+            // Nothing to do.
+            return;
+        }
+
+        // Recreate swap chain and other window-size dependent resources.
+        auto optionalError = updateRenderBuffers();
+        if (optionalError.has_value()) [[unlikely]] {
+            optionalError->addCurrentLocationToErrorStack();
+            optionalError->showError();
+            throw std::runtime_error(optionalError->getFullErrorMessage());
+        }
+    }
+
     void VulkanRenderer::drawMeshNodes(
         Material* pMaterial,
         VulkanPipeline* pPipeline,
@@ -1953,7 +2076,13 @@ namespace ne {
     }
 
     std::optional<Error> VulkanRenderer::updateRenderBuffers() {
-        throw std::runtime_error("not implemented");
+        auto optionalError = recreateSwapChainAndDependentResources();
+        if (optionalError.has_value()) [[unlikely]] {
+            optionalError->addCurrentLocationToErrorStack();
+            return optionalError;
+        }
+
+        return {};
     }
 
     void VulkanRenderer::waitForGpuToFinishUsingFrameResource(FrameResource* pFrameResource) {

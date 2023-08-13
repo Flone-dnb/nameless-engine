@@ -150,8 +150,8 @@ namespace ne {
             {
                 std::scoped_lock guard(mutex);
 
-                for (const auto& [sUniqueId, pGraphicsPso] : map) {
-                    auto optionalError = pGraphicsPso->restoreInternalResources();
+                for (const auto& [sUniqueId, pGraphicsPipeline] : map) {
+                    auto optionalError = pGraphicsPipeline->restoreInternalResources();
                     if (optionalError.has_value()) {
                         auto error = optionalError.value();
                         error.addCurrentLocationToErrorStack();

@@ -139,6 +139,11 @@ namespace ne {
         pGameManager->onWindowFocusChanged(bIsFocused);
     }
 
+    void Window::onFramebufferSizeChanged(int iWidth, int iHeight) const {
+        getRenderer()->onFramebufferSizeChanged(iWidth, iHeight);
+        pGameManager->onFramebufferSizeChanged(iWidth, iHeight);
+    }
+
     void Window::glfwWindowKeyboardCallback(
         GLFWwindow* pGlfwWindow, int iKey, int iScancode, int iAction, int iMods) {
         if (iAction == GLFW_REPEAT) {
@@ -191,6 +196,15 @@ namespace ne {
         pWindow->onMouseScrollMove(static_cast<int>(yOffset));
     }
 
+    void Window::glfwFramebufferResizeCallback(GLFWwindow* pGlfwWindow, int iWidth, int iHeight) {
+        const Window* pWindow = static_cast<Window*>(glfwGetWindowUserPointer(pGlfwWindow));
+        if (pWindow == nullptr) [[unlikely]] {
+            return;
+        }
+
+        pWindow->onFramebufferSizeChanged(iWidth, iHeight);
+    }
+
     void Window::bindToWindowEvents() {
         // Make sure window is created.
         if (pGlfwWindow == nullptr) [[unlikely]] {
@@ -227,6 +241,53 @@ namespace ne {
 
         // Bind to focus change event.
         glfwSetWindowFocusCallback(pGlfwWindow, Window::glfwWindowFocusCallback);
+
+        // Bind to framebuffer size change event.
+        glfwSetFramebufferSizeCallback(pGlfwWindow, Window::glfwFramebufferResizeCallback);
+
+        // ... add new callbacks here ...
+        // ... unbind from new callbacks in `unbindFromWindowEvents` ...
+    }
+
+    void Window::unbindFromWindowEvents() {
+        // Make sure window is created.
+        if (pGlfwWindow == nullptr) [[unlikely]] {
+            Error error("expected window to be created at this point");
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+        }
+
+        // Make sure game manager is created because input callbacks will use game manager.
+        if (pGameManager == nullptr) [[unlikely]] {
+            Error error("expected game manager to be created at this point");
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+        }
+
+        // Make sure game instance is created because input callbacks will use game instance.
+        if (pGameManager->getGameInstance() == nullptr) [[unlikely]] {
+            Error error("expected game instance to be created at this point");
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+        }
+
+        // Unbind from keyboard input.
+        glfwSetKeyCallback(pGlfwWindow, nullptr);
+
+        // Unbind from mouse input.
+        glfwSetMouseButtonCallback(pGlfwWindow, nullptr);
+
+        // Unbind from mouse move.
+        glfwSetCursorPosCallback(pGlfwWindow, nullptr);
+
+        // Unbind from mouse scroll move.
+        glfwSetScrollCallback(pGlfwWindow, nullptr);
+
+        // Unbind from focus change event.
+        glfwSetWindowFocusCallback(pGlfwWindow, nullptr);
+
+        // Unbind from framebuffer size change event.
+        glfwSetFramebufferSizeCallback(pGlfwWindow, nullptr);
     }
 
     void Window::showErrorIfNotOnMainThread() const {

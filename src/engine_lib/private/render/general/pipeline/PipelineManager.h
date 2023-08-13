@@ -134,8 +134,8 @@ namespace ne {
     };
 
     /**
-     * RAII class that once acquired flushes the command queue, pauses the rendering, releases
-     * all internal resources from all graphics pipelines, then in destructor restores them.
+     * RAII class that once acquired waits for the GPU to finish work up to this point, pauses the rendering,
+     * releases all internal resources from all graphics pipelines, then in destructor restores them.
      */
     class DelayedPipelineResourcesCreation {
     public:
@@ -220,12 +220,14 @@ namespace ne {
         PipelineManager& operator=(const PipelineManager&) = delete;
 
         /**
-         * Returns a RAII object that once acquired flushes the command queue, pauses the rendering,
-         * releases all internal resources from all graphics pipelines, then in destructor restores them.
+         * Returns a RAII object that once acquired waits for the GPU to finish work up to this point,
+         * pauses the rendering, releases all internal resources from all graphics pipelines,
+         * then in destructor restores them.
          *
          * @return RAII object.
          */
-        DelayedPipelineResourcesCreation clearGraphicsPipelinesInternalResourcesAndDelayRestoring();
+        [[nodiscard]] DelayedPipelineResourcesCreation
+        clearGraphicsPipelinesInternalResourcesAndDelayRestoring();
 
         /**
          * Look for already created pipeline that uses the specified shaders and settings and returns it,

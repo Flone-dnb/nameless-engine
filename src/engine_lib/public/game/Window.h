@@ -197,6 +197,7 @@ namespace ne {
         friend class WindowBuilder;
 
     public:
+        Window() = delete;
         Window(const Window&) = delete;
         Window& operator=(const Window&) = delete;
 
@@ -505,11 +506,27 @@ namespace ne {
         static void glfwWindowMouseScrollCallback(GLFWwindow* pGlfwWindow, double xOffset, double yOffset);
 
         /**
+         * GLFW callback.
+         *
+         * @param pGlfwWindow Window.
+         * @param iWidth      New width of the framebuffer (in pixels).
+         * @param iHeight     New height of the framebuffer (in pixels).
+         */
+        static void glfwFramebufferResizeCallback(GLFWwindow* pGlfwWindow, int iWidth, int iHeight);
+
+        /**
          * Binds to various window events such as user input events.
          *
          * @remark Expects game instance to be created at this point.
          */
         void bindToWindowEvents();
+
+        /**
+         * Unbinds from window events created in @ref bindToWindowEvents.
+         *
+         * @remark Expects game instance to be valid until this function is not finished.
+         */
+        void unbindFromWindowEvents();
 
         /**
          * Checks whether the current thread is the main thread or not and if not
@@ -531,6 +548,14 @@ namespace ne {
          * @param bIsFocused  Whether the window has gained or lost the focus.
          */
         void onWindowFocusChanged(bool bIsFocused) const;
+
+        /**
+         * Called when the framebuffer size was changed.
+         *
+         * @param iWidth  New width of the framebuffer (in pixels).
+         * @param iHeight New height of the framebuffer (in pixels).
+         */
+        void onFramebufferSizeChanged(int iWidth, int iHeight) const;
 
         /**
          * Creates a new window.
@@ -587,7 +612,7 @@ namespace ne {
         // So that the user can call engine functions in Game Instance constructor.
         pGameManager->setGameInstance<MyGameInstance>();
 
-        // Now bind to window events because game instance is created.
+        // Now bind to window events because game manager/instance is created.
         bindToWindowEvents();
 
         // After enabling window events notify game instance about game being ready to start.
@@ -621,7 +646,12 @@ namespace ne {
             pGameManager->onTickFinished();
         }
 
+        // Notify game.
         pGameManager->onWindowClose();
+
+        // Unbind from callbacks before destroying the game manager/game instance.
+        unbindFromWindowEvents();
+
         pGameManager->destroy(); // explicitly destroy here to run GC for the last time (before everything
                                  // else is destroyed)
     }

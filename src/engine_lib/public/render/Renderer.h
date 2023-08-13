@@ -239,6 +239,13 @@ namespace ne {
 
     protected:
         /**
+         * Returns the amount of buffers/images the swap chain has.
+         *
+         * @return The amount of buffers/images the swap chain has.
+         */
+        static consteval unsigned int getSwapChainBufferCount() { return iSwapChainBufferCount; }
+
+        /**
          * Constructor.
          *
          * @param pGameManager pGameManager object that owns this renderer.
@@ -300,11 +307,12 @@ namespace ne {
         virtual std::vector<ShaderDescription> getEngineShadersToCompile() const = 0;
 
         /**
-         * Returns the amount of buffers/images the swap chain has.
+         * Called when the framebuffer size was changed.
          *
-         * @return The amount of buffers/images the swap chain has.
+         * @param iWidth  New width of the framebuffer (in pixels).
+         * @param iHeight New height of the framebuffer (in pixels).
          */
-        static consteval unsigned int getSwapChainBufferCount() { return iSwapChainBufferCount; }
+        virtual void onFramebufferSizeChanged(int iWidth, int iHeight) {}
 
         /** Submits a new frame to the GPU. */
         virtual void drawNextFrame() = 0;

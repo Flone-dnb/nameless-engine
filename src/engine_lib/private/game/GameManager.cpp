@@ -492,6 +492,10 @@ namespace ne {
         pGameInstance->onWindowFocusChanged(bIsFocused);
     }
 
+    void GameManager::onFramebufferSizeChanged(int iWidth, int iHeight) const {
+        pGameInstance->onFramebufferSizeChanged(iWidth, iHeight);
+    }
+
     void GameManager::onWindowClose() const {
         pGameInstance->stopAndDisableCreatedTimers();
         pGameInstance->onWindowClose();

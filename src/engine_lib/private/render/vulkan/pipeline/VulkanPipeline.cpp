@@ -457,9 +457,10 @@ namespace ne {
         // Describe viewport.
         VkViewport viewport{};
         viewport.x = 0.0F;
-        viewport.y = 0.0F;
+        viewport.y = static_cast<float>(swapChainExtent.height); // flip view space Y to behave as in DirectX
         viewport.width = static_cast<float>(swapChainExtent.width);
-        viewport.height = static_cast<float>(swapChainExtent.height);
+        viewport.height =
+            -static_cast<float>(swapChainExtent.height); // flip view space Y to behave as in DirectX
         viewport.minDepth = Renderer::getMinDepth();
         viewport.maxDepth = Renderer::getMaxDepth();
 

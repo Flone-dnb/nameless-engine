@@ -1492,8 +1492,8 @@ namespace ne {
     RendererType VulkanRenderer::getType() const { return RendererType::VULKAN; }
 
     std::string VulkanRenderer::getUsedApiVersion() const {
-        static_assert(iUsedVulkanVersion == VK_API_VERSION_1_0, "update returned version string");
-        return "1.0";
+        static_assert(iUsedVulkanVersion == VK_API_VERSION_1_1, "update returned version string");
+        return "1.1";
     }
 
     std::string VulkanRenderer::getCurrentlyUsedGpuName() const {

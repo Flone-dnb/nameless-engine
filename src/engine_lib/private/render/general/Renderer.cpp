@@ -215,6 +215,9 @@ namespace ne {
                     "failed to initialize {} renderer, error: {}",
                     pRendererName,
                     error.getFullErrorMessage()));
+
+                // Try the next renderer.
+                continue;
             }
             auto pRenderer = std::get<std::unique_ptr<Renderer>>(std::move(result));
 

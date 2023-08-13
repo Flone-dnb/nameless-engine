@@ -21,10 +21,14 @@ layout(std140, binding = 2) readonly buffer MeshDataBuffer{
 } meshData;
 
 void vsMeshNode(){
-    gl_Position = meshData.array[arrayIndices.meshData].worldMatrix * frameData.viewProjectionMatrix * vec4(localPosition, 1.0F);
-
-    fragmentViewPosition = gl_Position;
+    // Calculate world position and normal.
     fragmentWorldPosition = meshData.array[arrayIndices.meshData].worldMatrix * vec4(localPosition, 1.0F);
     fragmentNormal = normalize(mat3(meshData.array[arrayIndices.meshData].worldMatrix) * localNormal);
+
+    // Transform position to homogeneous clip space.
+    gl_Position = frameData.viewProjectionMatrix * fragmentWorldPosition;
+    fragmentViewPosition = gl_Position;
+    
+    // Copy UV.
     fragmentUv = uv;
 }

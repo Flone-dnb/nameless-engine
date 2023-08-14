@@ -170,7 +170,7 @@ namespace ne {
 
     std::string VulkanStorageResourceArray::formatBytesToKilobytes(size_t iSizeInBytes) {
         return fmt::format(
-            "{:.1} KB",
+            "{:.1F} KB",
             static_cast<float>(iSizeInBytes) /
                 1024.0F); // NOLINT: magic number (size of one kilobyte in bytes)
     }

@@ -150,7 +150,7 @@ namespace ne {
 
     std::string VulkanStorageResourceArrayManager::formatBytesToMegabytes(size_t iSizeInBytes) {
         return fmt::format(
-            "{:.4} MB",
+            "{:.4F} MB",
             static_cast<float>(iSizeInBytes) / 1024.0F / 1024.0F); // NOLINT: magic numbers
     }
 

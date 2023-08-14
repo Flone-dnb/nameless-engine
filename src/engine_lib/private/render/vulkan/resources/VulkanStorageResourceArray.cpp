@@ -255,7 +255,7 @@ namespace ne {
 
         // Shrink the array if needed.
         if (mtxInternalResources.second.iCapacity >= iCapacityStepSize * 2 &&
-            mtxInternalResources.second.iCapacity <=
+            mtxInternalResources.second.iSize <=
                 (mtxInternalResources.second.iCapacity - iCapacityStepSize - iCapacityStepSize / 2)) {
             auto optionalError = shrinkArray();
             if (optionalError.has_value()) {

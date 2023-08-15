@@ -433,6 +433,18 @@ namespace ne {
         return {};
     }
 
+    std::optional<Error> Renderer::clampSettingsToMaxSupported() {
+        std::scoped_lock guard(mtxRenderSettings.first);
+
+        auto optionalError = mtxRenderSettings.second->clampSettingsToMaxSupported();
+        if (optionalError.has_value()) {
+            optionalError->addCurrentLocationToErrorStack();
+            return optionalError;
+        }
+
+        return {};
+    }
+
     void Renderer::updateResourcesForNextFrame(
         unsigned int iRenderTargetWidth,
         unsigned int iRenderTargetHeight,

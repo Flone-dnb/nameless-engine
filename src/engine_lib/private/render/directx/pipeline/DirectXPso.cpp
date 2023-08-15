@@ -133,6 +133,10 @@ namespace ne {
         const auto pRenderSettings = getRenderer()->getRenderSettings();
         std::scoped_lock resourcesGuard(mtxInternalResources.first, pRenderSettings->first);
 
+        // Get AA setting.
+        const auto msaaState = pRenderSettings->second->getAntialiasingState();
+        const auto iMsaaSampleCount = static_cast<int>(msaaState);
+
         // Make sure the pipeline is not initialized yet.
         if (mtxInternalResources.second.bIsReadyForUsage) [[unlikely]] {
             Logger::get().warn(
@@ -218,7 +222,7 @@ namespace ne {
         CD3DX12_RASTERIZER_DESC rasterizerDesc(D3D12_DEFAULT);
         rasterizerDesc.CullMode = bUsePixelBlending ? D3D12_CULL_MODE_NONE : D3D12_CULL_MODE_BACK;
         rasterizerDesc.FillMode = D3D12_FILL_MODE_SOLID;
-        rasterizerDesc.MultisampleEnable = static_cast<int>(pRenderSettings->second->isAntialiasingEnabled());
+        rasterizerDesc.MultisampleEnable = static_cast<int>(msaaState != MsaaState::DISABLED);
         psoDesc.RasterizerState = rasterizerDesc;
 
         // Setup pixel blend description (if needed).
@@ -235,8 +239,7 @@ namespace ne {
             blendDesc.LogicOp = D3D12_LOGIC_OP_NOOP;
             blendDesc.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
             psoDesc.BlendState.RenderTarget[0] = blendDesc;
-            psoDesc.BlendState.AlphaToCoverageEnable =
-                static_cast<int>(pRenderSettings->second->isAntialiasingEnabled());
+            psoDesc.BlendState.AlphaToCoverageEnable = static_cast<int>(msaaState != MsaaState::DISABLED);
         } else {
             psoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
         }
@@ -251,13 +254,9 @@ namespace ne {
         psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
         psoDesc.NumRenderTargets = 1;
         psoDesc.RTVFormats[0] = DirectXRenderer::getBackBufferFormat();
-        psoDesc.SampleDesc.Count =
-            pRenderSettings->second->isAntialiasingEnabled()
-                ? static_cast<unsigned int>(pRenderSettings->second->getAntialiasingQuality())
-                : 1;
-        psoDesc.SampleDesc.Quality = pRenderSettings->second->isAntialiasingEnabled()
-                                         ? (pDirectXRenderer->getMsaaQualityLevel() - 1)
-                                         : 0;
+        psoDesc.SampleDesc.Count = iMsaaSampleCount;
+        psoDesc.SampleDesc.Quality =
+            msaaState != MsaaState::DISABLED ? (pDirectXRenderer->getMsaaQualityLevel() - 1) : 0;
         psoDesc.DSVFormat = DirectXRenderer::getDepthStencilBufferFormat();
 
         // Create PSO.

@@ -182,6 +182,13 @@ namespace ne {
          */
         std::optional<VkExtent2D> getSwapChainExtent() const;
 
+        /**
+         * Returns sample count of the current MSAA quality.
+         *
+         * @return MSAA sample count.
+         */
+        VkSampleCountFlagBits getMsaaSampleCount() const;
+
     protected:
         /**
          * Creates an empty (uninitialized) renderer.
@@ -191,6 +198,17 @@ namespace ne {
          * @param pGameManager GameManager object that owns this renderer.
          */
         VulkanRenderer(GameManager* pGameManager);
+
+        /**
+         * Returns the maximum anti-aliasing quality that can be used on the picked
+         * GPU (@ref getCurrentlyUsedGpuName).
+         *
+         * @remark Note that the maximum supported AA quality can differ depending on the used GPU/renderer.
+         *
+         * @return Error if something went wrong,
+         * otherwise `DISABLED` if AA is not supported or the maximum supported AA quality.
+         */
+        virtual std::variant<MsaaState, Error> getMaxSupportedAntialiasingQuality() const override;
 
         /**
          * Collects array of engine shaders that will be compiled/verified.
@@ -566,7 +584,7 @@ namespace ne {
          * @param pCommandBuffer             Command buffer to add commands to.
          * @param iCurrentFrameResourceIndex Index of the current frame resource.
          */
-        void drawMeshNodes(
+        static void drawMeshNodes(
             Material* pMaterial,
             VulkanPipeline* pPipeline,
             VkCommandBuffer pCommandBuffer,
@@ -583,6 +601,13 @@ namespace ne {
          */
         [[nodiscard]] std::optional<Error>
         finishDrawingNextFrame(VulkanFrameResource* pCurrentFrameResource, size_t iCurrentFrameResourceIndex);
+
+        /**
+         * Queries the current render settings for MSAA quality and updates @ref msaaSampleCount.
+         *
+         * @return Error if something went wrong.
+         */
+        [[nodiscard]] std::optional<Error> updateMsaaSampleCount();
 
         /** Vulkan API instance. */
         VkInstance pInstance = nullptr;

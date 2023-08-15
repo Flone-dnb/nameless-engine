@@ -499,10 +499,15 @@ namespace ne {
         VkPipelineMultisampleStateCreateInfo multisamplingStateInfo{};
         multisamplingStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
         multisamplingStateInfo.sampleShadingEnable = VK_FALSE;
-        multisamplingStateInfo.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+        multisamplingStateInfo.rasterizationSamples = pVulkanRenderer->getMsaaSampleCount();
         multisamplingStateInfo.minSampleShading = 1.0F;
         multisamplingStateInfo.pSampleMask = nullptr;
-        multisamplingStateInfo.alphaToCoverageEnable = VK_FALSE;
+        if (bUsePixelBlending) {
+            multisamplingStateInfo.alphaToCoverageEnable =
+                static_cast<VkBool32>(pVulkanRenderer->getMsaaSampleCount() != VK_SAMPLE_COUNT_1_BIT);
+        } else {
+            multisamplingStateInfo.alphaToCoverageEnable = VK_FALSE;
+        }
         multisamplingStateInfo.alphaToOneEnable = VK_FALSE;
 
         // Describe depth and stencil state.

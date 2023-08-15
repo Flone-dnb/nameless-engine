@@ -12,7 +12,14 @@ namespace ne RNAMESPACE() {
     enum class RendererType : unsigned int { DIRECTX = 0, VULKAN = 1 };
 
     /** Describes the quality (sample count) of MSAA. */
-    enum class MsaaQuality : int { MEDIUM = 2, HIGH = 4 };
+    enum class MsaaState : int {
+        // ! add new entries to `RenderSettings::onAfterDeserialized` !
+        DISABLED = 1,
+        MEDIUM = 2,
+        HIGH = 4,
+        VERY_HIGH = 8,
+        // ! add new entries to `RenderSettings::onAfterDeserialized` !
+    };
 
     /** Describes texture filtering mode. */
     enum class TextureFilteringMode : int { POINT = 0, LINEAR = 1, ANISOTROPIC = 2 };
@@ -34,18 +41,14 @@ namespace ne RNAMESPACE() {
         static std::filesystem::path getPathToConfigurationFile();
 
         /**
-         * Enables/disables anti-aliasing (AA).
+         * Sets anti-aliasing (AA) state.
          *
-         * @param bEnable Whether to enable AA or not.
-         */
-        void setAntialiasingEnabled(bool bEnable);
-
-        /**
-         * Sets anti-aliasing (AA) quality.
+         * @warning Use @ref getMaxSupportedAntialiasingQuality to query for maximum supported AA quality,
+         * if the specified quality is not supported an error will be logged.
          *
-         * @param quality AA quality.
+         * @param state AA state.
          */
-        void setAntialiasingQuality(MsaaQuality quality);
+        void setAntialiasingState(MsaaState state);
 
         /**
          * Sets texture filtering mode to be used.
@@ -98,18 +101,23 @@ namespace ne RNAMESPACE() {
         void setPreferredRenderer(RendererType preferredRenderer);
 
         /**
-         * Tells whether anti-aliasing (AA) is currently enabled or not.
-         *
-         * @return Whether AA is enabled or not.
-         */
-        bool isAntialiasingEnabled() const;
-
-        /**
          * Returns current anti-aliasing (AA) quality.
          *
-         * @return Current AA quality.
+         * @return Returns `DISABLED` if AA is not supported (see @ref getMaxSupportedAntialiasingQuality),
+         * otherwise current AA quality.
          */
-        MsaaQuality getAntialiasingQuality() const;
+        MsaaState getAntialiasingState() const;
+
+        /**
+         * Returns the maximum anti-aliasing quality that can be used on the picked
+         * GPU (see `Renderer::getCurrentlyUsedGpuName`).
+         *
+         * @remark Note that the maximum supported AA quality can differ depending on the used GPU/renderer.
+         *
+         * @return Error if something went wrong,
+         * otherwise `DISABLED` if AA is not supported or the maximum supported AA quality.
+         */
+        std::variant<MsaaState, Error> getMaxSupportedAntialiasingQuality() const;
 
         /**
          * Returns currently used texture filtering mode.
@@ -180,13 +188,21 @@ namespace ne RNAMESPACE() {
         void setRenderer(Renderer* pRenderer);
 
         /**
+         * Called by the renderer when it has finished initializing its essential entities so
+         * that RenderSettings can query maximum supported settings and clamp the current values (if needed).
+         *
+         * @return Error if something went wrong.
+         */
+        [[nodiscard]] std::optional<Error> clampSettingsToMaxSupported();
+
+        /**
          * Saves the current configuration to disk.
          *
          * @remark Does nothing if @ref bAllowSavingConfigurationToDisk is `false`.
          *
          * @return Error if something went wrong.
          */
-        std::optional<Error> saveConfigurationToDisk();
+        [[nodiscard]] std::optional<Error> saveConfigurationToDisk();
 
         /**
          * Changes renderer's state to match the current settings.
@@ -199,7 +215,7 @@ namespace ne RNAMESPACE() {
         /** Changes renderer's state to match the current texture filtering settings. */
         void updateRendererConfigurationForTextureFiltering();
 
-        /** Changes renderer' state to match the current antialiasing settings. */
+        /** Changes renderer' state to match the current anti-aliasing settings. */
         void updateRendererConfigurationForAntialiasing();
 
         /** Changes renderer's state to match the current screen settings. */
@@ -240,7 +256,7 @@ namespace ne RNAMESPACE() {
 
         /** Sample count of AA. */
         RPROPERTY(Serialize)
-        int iAntialiasingSampleCount = static_cast<int>(MsaaQuality::HIGH);
+        int iAntialiasingSampleCount = static_cast<int>(MsaaState::HIGH);
 
         /** Texture filtering mode. */
         RPROPERTY(Serialize)
@@ -249,10 +265,6 @@ namespace ne RNAMESPACE() {
         /** Whether VSync is enabled or not. */
         RPROPERTY(Serialize)
         bool bIsVsyncEnabled = false;
-
-        /** Whether AA is enabled or not. */
-        RPROPERTY(Serialize)
-        bool bIsAntialiasingEnabled = true;
 
         /** Do not delete (free) this pointer. Game's renderer. */
         Renderer* pRenderer = nullptr;

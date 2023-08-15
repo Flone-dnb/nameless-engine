@@ -165,9 +165,9 @@ namespace ne {
         IDXGIAdapter3* getVideoAdapter() const;
 
         /**
-         * Returns supported quality level for MSAA.
+         * Returns quality level count for the current MSAA sample count.
          *
-         * @return MSAA quality level.
+         * @return MSAA quality level count.
          */
         UINT getMsaaQualityLevel() const;
 
@@ -213,6 +213,17 @@ namespace ne {
          * @param pFrameResource Frame resource to wait for.
          */
         virtual void waitForGpuToFinishUsingFrameResource(FrameResource* pFrameResource) override;
+
+        /**
+         * Returns the maximum anti-aliasing quality that can be used on the picked
+         * GPU (@ref getCurrentlyUsedGpuName).
+         *
+         * @remark Note that the maximum supported AA quality can differ depending on the used GPU/renderer.
+         *
+         * @return Error if something went wrong,
+         * otherwise `DISABLED` if AA is not supported or the maximum supported AA quality.
+         */
+        virtual std::variant<MsaaState, Error> getMaxSupportedAntialiasingQuality() const override;
 
         /**
          * Tells whether the renderer is initialized or not.
@@ -301,13 +312,6 @@ namespace ne {
         [[nodiscard]] std::optional<Error> createSwapChain();
 
         /**
-         * Checks if the created device supports MSAA.
-         *
-         * @return Error if something went wrong, for example, if device does not support MSAA.
-         */
-        [[nodiscard]] std::optional<Error> checkMsaaSupport();
-
-        /**
          * Initializes DirectX.
          *
          * @return Error if something went wrong.
@@ -330,6 +334,13 @@ namespace ne {
          * @return Error if something went wrong.
          */
         [[nodiscard]] std::optional<Error> finishDrawingNextFrame();
+
+        /**
+         * Queries the current render settings for MSAA quality and updates @ref iMsaaQualityLevelsCount.
+         *
+         * @return Error if something went wrong.
+         */
+        [[nodiscard]] std::optional<Error> updateMsaaQualityLevelCount();
 
         /**
          * Adds draw commands to command list to draw all mesh nodes that use the specified material
@@ -400,7 +411,7 @@ namespace ne {
         /** Render target when MSAA is enabled because our swap chain does not support multisampling. */
         std::unique_ptr<DirectXResource> pMsaaRenderBuffer;
 
-        /** The number of supported quality levels for MSAA. */
+        /** The number of supported quality levels for the current MSAA sample count. */
         UINT iMsaaQualityLevelsCount = 0;
 
         /** Screen viewport size and depth range. */

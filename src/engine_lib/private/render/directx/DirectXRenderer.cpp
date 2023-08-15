@@ -50,7 +50,7 @@ namespace ne {
         // Initialize the current fence value.
         mtxCurrentFenceValue.second = 0;
 
-        // Initialize essential entities.
+        // Initialize essential render entities (such as render settings).
         auto optionalError = initializeRenderer();
         if (optionalError.has_value()) {
             optionalError->addCurrentLocationToErrorStack();
@@ -129,8 +129,7 @@ namespace ne {
         const auto pMtxRenderSettings = getRenderSettings();
         std::scoped_lock renderSettingsGuard(pMtxRenderSettings->first);
         const auto renderResolution = pMtxRenderSettings->second->getRenderResolution();
-        const auto bIsMsaaEnabled = pMtxRenderSettings->second->isAntialiasingEnabled();
-        const auto iMsaaSampleCount = static_cast<int>(pMtxRenderSettings->second->getAntialiasingQuality());
+        const auto iMsaaSampleCount = static_cast<int>(pMtxRenderSettings->second->getAntialiasingState());
 
         // Prepare resource description.
         const D3D12_RESOURCE_DESC depthStencilDesc = CD3DX12_RESOURCE_DESC(
@@ -141,8 +140,8 @@ namespace ne {
             1,
             1,
             depthStencilBufferFormat,
-            bIsMsaaEnabled ? iMsaaSampleCount : 1,
-            bIsMsaaEnabled ? (iMsaaQualityLevelsCount - 1) : 0,
+            iMsaaSampleCount,
+            iMsaaSampleCount > 1 ? (iMsaaQualityLevelsCount - 1) : 0,
             D3D12_TEXTURE_LAYOUT_UNKNOWN,
             D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL);
 
@@ -530,6 +529,62 @@ namespace ne {
         return {};
     }
 
+    std::optional<Error> DirectXRenderer::updateMsaaQualityLevelCount() {
+        // Make sure the device is valid.
+        if (pDevice == nullptr) [[unlikely]] {
+            return Error("expected device to be valid at this point");
+        }
+
+        // Get maximum supported sample count.
+        auto result = getMaxSupportedAntialiasingQuality();
+        if (std::holds_alternative<Error>(result)) [[unlikely]] {
+            auto error = std::get<Error>(std::move(result));
+            error.addCurrentLocationToErrorStack();
+            return error;
+        }
+        auto maxSampleCount = std::get<MsaaState>(result);
+
+        // First check if AA is supported at all.
+        if (maxSampleCount == MsaaState::DISABLED) {
+            // AA is not supported.
+            iMsaaQualityLevelsCount = 0;
+            return {};
+        }
+        const auto iMaxSampleCount = static_cast<int>(maxSampleCount);
+
+        // Get render setting.
+        const auto pMtxRenderSettings = getRenderSettings();
+        std::scoped_lock guard(pMtxRenderSettings->first);
+
+        // Get current AA sample count.
+        auto sampleCount = pMtxRenderSettings->second->getAntialiasingState();
+        const auto iSampleCount = static_cast<int>(sampleCount);
+
+        // Make sure this sample count is supported.
+        if (iSampleCount > iMaxSampleCount) [[unlikely]] {
+            return Error(fmt::format("expected the current AA quality {} to be supported", iSampleCount));
+        }
+
+        // Prepare to get quality levels for this sample count.
+        D3D12_FEATURE_DATA_MULTISAMPLE_QUALITY_LEVELS msQualityLevels;
+        msQualityLevels.Format = backBufferFormat;
+        msQualityLevels.SampleCount = iSampleCount;
+        msQualityLevels.Flags = D3D12_MULTISAMPLE_QUALITY_LEVELS_FLAG_NONE;
+        msQualityLevels.NumQualityLevels = 0;
+
+        // Query available quality level count.
+        auto hResult = pDevice->CheckFeatureSupport(
+            D3D12_FEATURE_MULTISAMPLE_QUALITY_LEVELS, &msQualityLevels, sizeof(msQualityLevels));
+        if (FAILED(hResult)) [[unlikely]] {
+            return Error(hResult);
+        }
+
+        // Save quality level count.
+        iMsaaQualityLevelsCount = msQualityLevels.NumQualityLevels;
+
+        return {};
+    }
+
     void DirectXRenderer::drawMeshNodes(Material* pMaterial, size_t iCurrentFrameResourceIndex) {
         const auto pMtxMeshNodes = pMaterial->getSpawnedMeshNodesThatUseThisMaterial();
 
@@ -770,34 +825,6 @@ namespace ne {
         return {};
     }
 
-    std::optional<Error> DirectXRenderer::checkMsaaSupport() {
-        if (pDevice == nullptr) {
-            return Error("device is not created");
-        }
-
-        D3D12_FEATURE_DATA_MULTISAMPLE_QUALITY_LEVELS msQualityLevels;
-        msQualityLevels.Format = backBufferFormat;
-        msQualityLevels.SampleCount = 8; // NOLINT: test quality (will replace this later)
-        msQualityLevels.Flags = D3D12_MULTISAMPLE_QUALITY_LEVELS_FLAG_NONE;
-        msQualityLevels.NumQualityLevels = 0;
-
-        const HRESULT hResult = pDevice->CheckFeatureSupport(
-            D3D12_FEATURE_MULTISAMPLE_QUALITY_LEVELS, &msQualityLevels, sizeof(msQualityLevels));
-        if (FAILED(hResult)) {
-            return Error(hResult);
-        }
-
-        if (msQualityLevels.NumQualityLevels == 0) {
-            // The specified sample count with this format is not supported.
-            return Error(
-                fmt::format("MSAA with sample count {} is not supported", msQualityLevels.SampleCount));
-        }
-
-        iMsaaQualityLevelsCount = msQualityLevels.NumQualityLevels;
-
-        return {};
-    }
-
     std::optional<Error> DirectXRenderer::initializeDirectX() {
         // Enable debug layer in DEBUG mode.
         DWORD debugFactoryFlags = 0;
@@ -871,14 +898,21 @@ namespace ne {
             return Error(hResult);
         }
 
+        // Update render settings.
+        optionalError = clampSettingsToMaxSupported();
+        if (optionalError.has_value()) {
+            optionalError->addCurrentLocationToErrorStack();
+            return optionalError;
+        }
+
         // Create fence.
         hResult = pDevice->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&pFence));
         if (FAILED(hResult)) {
             return Error(hResult);
         }
 
-        // Check MSAA support.
-        optionalError = checkMsaaSupport();
+        // Update supported AA quality level count.
+        optionalError = updateMsaaQualityLevelCount();
         if (optionalError.has_value()) {
             optionalError->addCurrentLocationToErrorStack();
             return optionalError;
@@ -1032,8 +1066,14 @@ namespace ne {
         std::scoped_lock renderSettingsGuard(pMtxRenderSettings->first);
         const auto renderResolution = pMtxRenderSettings->second->getRenderResolution();
         const auto bIsVSyncEnabled = pMtxRenderSettings->second->isVsyncEnabled();
-        const auto bIsMsaaEnabled = pMtxRenderSettings->second->isAntialiasingEnabled();
-        const auto iMsaaSampleCount = static_cast<int>(pMtxRenderSettings->second->getAntialiasingQuality());
+        const auto iMsaaSampleCount = static_cast<int>(pMtxRenderSettings->second->getAntialiasingState());
+
+        // Update supported AA quality level count.
+        auto optionalError = updateMsaaQualityLevelCount();
+        if (optionalError.has_value()) [[unlikely]] {
+            optionalError->addCurrentLocationToErrorStack();
+            return optionalError;
+        }
 
         // Swapchain cannot be resized unless all outstanding buffer references have been released.
         vSwapChainBuffers.clear();
@@ -1061,14 +1101,14 @@ namespace ne {
         }
 
         // Resize the swap chain.
-        HRESULT hResult = pSwapChain->ResizeBuffers(
+        auto hResult = pSwapChain->ResizeBuffers(
             getSwapChainBufferCount(),
             renderResolution.first,
             renderResolution.second,
             backBufferFormat,
             bIsVSyncEnabled ? DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH
                             : DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH | DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING);
-        if (FAILED(hResult)) {
+        if (FAILED(hResult)) [[unlikely]] {
             return Error(hResult);
         }
 
@@ -1085,8 +1125,8 @@ namespace ne {
             std::get<std::vector<std::unique_ptr<DirectXResource>>>(std::move(swapChainResult));
 
         // Setup MSAA render target.
-        bIsUsingMsaaRenderTarget = bIsMsaaEnabled;
-        if (bIsMsaaEnabled) {
+        bIsUsingMsaaRenderTarget = iMsaaSampleCount > 1;
+        if (bIsUsingMsaaRenderTarget) {
             // Create MSAA render target.
             const auto msaaRenderTargetDesc = CD3DX12_RESOURCE_DESC(
                 D3D12_RESOURCE_DIMENSION_TEXTURE2D,
@@ -1096,8 +1136,8 @@ namespace ne {
                 1,
                 1,
                 backBufferFormat,
-                bIsMsaaEnabled ? iMsaaSampleCount : 1,
-                bIsMsaaEnabled ? (iMsaaQualityLevelsCount - 1) : 0,
+                iMsaaSampleCount,
+                iMsaaQualityLevelsCount - 1,
                 D3D12_TEXTURE_LAYOUT_UNKNOWN,
                 D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET);
 
@@ -1136,8 +1176,8 @@ namespace ne {
         }
 
         // Create depth/stencil buffer.
-        auto optionalError = createDepthStencilBuffer();
-        if (optionalError.has_value()) {
+        optionalError = createDepthStencilBuffer();
+        if (optionalError.has_value()) [[unlikely]] {
             optionalError->addCurrentLocationToErrorStack();
             return optionalError.value();
         }
@@ -1164,6 +1204,38 @@ namespace ne {
 
         // Wait for this frame resource to no longer be used by the GPU.
         waitForFenceValue(pDirectXFrameResource->iFence);
+    }
+
+    std::variant<MsaaState, Error> DirectXRenderer::getMaxSupportedAntialiasingQuality() const {
+        if (pDevice == nullptr) [[unlikely]] {
+            return Error("expected device to be valid at this point");
+        }
+
+        // Prepare info to check.
+        D3D12_FEATURE_DATA_MULTISAMPLE_QUALITY_LEVELS msQualityLevels;
+        msQualityLevels.Format = backBufferFormat;
+        msQualityLevels.Flags = D3D12_MULTISAMPLE_QUALITY_LEVELS_FLAG_NONE;
+        msQualityLevels.NumQualityLevels = 0;
+
+        const std::array<MsaaState, 3> vQualityToCheck = {
+            MsaaState::VERY_HIGH, MsaaState::HIGH, MsaaState::MEDIUM};
+
+        // Find the maximum supported quality.
+        for (const auto& quality : vQualityToCheck) {
+            // Check hardware support for this sample count.
+            msQualityLevels.SampleCount = static_cast<int>(quality);
+            auto hResult = pDevice->CheckFeatureSupport(
+                D3D12_FEATURE_MULTISAMPLE_QUALITY_LEVELS, &msQualityLevels, sizeof(msQualityLevels));
+            if (FAILED(hResult)) [[unlikely]] {
+                // Something went wrong.
+                return Error(hResult);
+            }
+            if (msQualityLevels.NumQualityLevels != 0) {
+                return quality;
+            }
+        }
+
+        return MsaaState::DISABLED;
     }
 
     bool DirectXRenderer::isInitialized() const { return bIsDirectXInitialized; }

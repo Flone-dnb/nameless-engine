@@ -26,6 +26,32 @@
 namespace ne {
     VulkanRenderer::VulkanRenderer(GameManager* pGameManager) : Renderer(pGameManager) {}
 
+    std::variant<MsaaState, Error> VulkanRenderer::getMaxSupportedAntialiasingQuality() const {
+        // Make sure physical device is valid.
+        if (pPhysicalDevice == nullptr) [[unlikely]] {
+            return Error("expected physical device to be valid at this point");
+        }
+
+        // Get physical device properties.
+        VkPhysicalDeviceProperties physicalDeviceProperties;
+        vkGetPhysicalDeviceProperties(pPhysicalDevice, &physicalDeviceProperties);
+
+        // Combine supported color and depth buffer sample count.
+        VkSampleCountFlags counts = physicalDeviceProperties.limits.framebufferColorSampleCounts &
+                                    physicalDeviceProperties.limits.framebufferDepthSampleCounts;
+        if ((counts & VK_SAMPLE_COUNT_8_BIT) != 0) {
+            return MsaaState::VERY_HIGH;
+        }
+        if ((counts & VK_SAMPLE_COUNT_4_BIT) != 0) {
+            return MsaaState::HIGH;
+        }
+        if ((counts & VK_SAMPLE_COUNT_2_BIT) != 0) {
+            return MsaaState::MEDIUM;
+        }
+
+        return MsaaState::DISABLED;
+    }
+
     std::vector<ShaderDescription> VulkanRenderer::getEngineShadersToCompile() const {
         return {GlslEngineShaders::meshNodeVertexShader, GlslEngineShaders::meshNodeFragmentShader};
     }
@@ -95,7 +121,7 @@ namespace ne {
     std::optional<Error> VulkanRenderer::initialize() {
         std::scoped_lock frameGuard(*getRenderResourcesMutex());
 
-        // Initialize essential entities.
+        // Initialize essential renderer entities (such as RenderSettings).
         auto optionalError = initializeRenderer();
         if (optionalError.has_value()) {
             optionalError->addCurrentLocationToErrorStack();
@@ -129,6 +155,20 @@ namespace ne {
 
         // Pick physical device.
         optionalError = pickPhysicalDevice();
+        if (optionalError.has_value()) {
+            optionalError->addCurrentLocationToErrorStack();
+            return optionalError;
+        }
+
+        // Update render settings.
+        optionalError = clampSettingsToMaxSupported();
+        if (optionalError.has_value()) {
+            optionalError->addCurrentLocationToErrorStack();
+            return optionalError;
+        }
+
+        // Update MSAA sample count using render settings.
+        optionalError = updateMsaaSampleCount();
         if (optionalError.has_value()) {
             optionalError->addCurrentLocationToErrorStack();
             return optionalError;
@@ -440,7 +480,8 @@ namespace ne {
         VkPhysicalDeviceFeatures supportedFeatures;
         vkGetPhysicalDeviceFeatures(pGpu, &supportedFeatures);
 
-        // Make sure anisotropic filtering is supported.
+        // Make sure anisotropic filtering is supported
+        // (because RenderSettings don't check whether it's supported or not when deserialized/changed)
         if (supportedFeatures.samplerAnisotropy == VK_FALSE) {
             return fmt::format(
                 "GPU \"{}\" does not support anisotropic filtering", deviceProperties.deviceName);
@@ -1651,6 +1692,8 @@ namespace ne {
 
     std::optional<VkExtent2D> VulkanRenderer::getSwapChainExtent() const { return swapChainExtent; }
 
+    VkSampleCountFlagBits VulkanRenderer::getMsaaSampleCount() const { return msaaSampleCount; }
+
     std::variant<VkCommandBuffer, Error> VulkanRenderer::createOneTimeSubmitCommandBuffer() {
         // Make sure command pool exists.
         if (pCommandPool == nullptr) [[unlikely]] {
@@ -2075,8 +2118,76 @@ namespace ne {
         return {};
     }
 
+    std::optional<Error> VulkanRenderer::updateMsaaSampleCount() {
+        // Make sure the physical device is valid.
+        if (pPhysicalDevice == nullptr) [[unlikely]] {
+            return Error("expected physical device to be valid at this point");
+        }
+
+        // Get maximum supported sample count.
+        auto result = getMaxSupportedAntialiasingQuality();
+        if (std::holds_alternative<Error>(result)) [[unlikely]] {
+            auto error = std::get<Error>(std::move(result));
+            error.addCurrentLocationToErrorStack();
+            return error;
+        }
+        const auto maxSampleCount = std::get<MsaaState>(result);
+
+        // First check if AA is supported at all.
+        if (maxSampleCount == MsaaState::DISABLED) {
+            // AA is not supported.
+            msaaSampleCount = VK_SAMPLE_COUNT_1_BIT;
+            return {};
+        }
+        const auto iMaxSampleCount = static_cast<int>(maxSampleCount);
+
+        // Get render setting.
+        const auto pMtxRenderSettings = getRenderSettings();
+        std::scoped_lock guard(pMtxRenderSettings->first);
+
+        // Get current AA sample count.
+        const auto sampleCount = pMtxRenderSettings->second->getAntialiasingState();
+        const auto iSampleCount = static_cast<int>(sampleCount);
+
+        // Make sure this sample count is supported.
+        if (iSampleCount > iMaxSampleCount) [[unlikely]] {
+            // This should never happen as render settings guarantee that returned AA quality is supported.
+            return Error(fmt::format("expected the current AA quality {} to be supported", iSampleCount));
+        }
+
+        // Save sample count.
+        switch (sampleCount) {
+        case (MsaaState::DISABLED): {
+            msaaSampleCount = VK_SAMPLE_COUNT_1_BIT;
+            break;
+        }
+        case (MsaaState::MEDIUM): {
+            msaaSampleCount = VK_SAMPLE_COUNT_2_BIT;
+            break;
+        }
+        case (MsaaState::HIGH): {
+            msaaSampleCount = VK_SAMPLE_COUNT_4_BIT;
+            break;
+        }
+        case (MsaaState::VERY_HIGH): {
+            msaaSampleCount = VK_SAMPLE_COUNT_8_BIT;
+            break;
+        }
+        }
+
+        return {};
+    }
+
     std::optional<Error> VulkanRenderer::updateRenderBuffers() {
-        auto optionalError = recreateSwapChainAndDependentResources();
+        // Update MSAA sample count using render settings.
+        auto optionalError = updateMsaaSampleCount();
+        if (optionalError.has_value()) {
+            optionalError->addCurrentLocationToErrorStack();
+            return optionalError;
+        }
+
+        // Re-create some resources.
+        optionalError = recreateSwapChainAndDependentResources();
         if (optionalError.has_value()) [[unlikely]] {
             optionalError->addCurrentLocationToErrorStack();
             return optionalError;

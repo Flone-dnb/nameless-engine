@@ -303,7 +303,7 @@ namespace ne {
         case (DirectXDescriptorType::DSV): {
             D3D12_DEPTH_STENCIL_VIEW_DESC dsvDesc;
             dsvDesc.Flags = D3D12_DSV_FLAG_NONE;
-            dsvDesc.ViewDimension = pRenderSettings->second->isAntialiasingEnabled()
+            dsvDesc.ViewDimension = pRenderSettings->second->getAntialiasingState() != MsaaState::DISABLED
                                         ? D3D12_DSV_DIMENSION_TEXTURE2DMS
                                         : D3D12_DSV_DIMENSION_TEXTURE2D;
             dsvDesc.Format = DirectXRenderer::getDepthStencilBufferFormat();

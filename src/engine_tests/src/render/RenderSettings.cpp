@@ -87,8 +87,16 @@ TEST_CASE(
                 std::scoped_lock renderSettingsGuard(pMtxRenderSettings->first);
 
                 // Apply.
-                bIsAaEnabled = !pMtxRenderSettings->second->isAntialiasingEnabled();
-                pMtxRenderSettings->second->setAntialiasingEnabled(bIsAaEnabled);
+                bIsAaEnabled = pMtxRenderSettings->second->getAntialiasingState() != MsaaState::DISABLED;
+                if (bIsAaEnabled) {
+                    if (pMtxRenderSettings->second->getAntialiasingState() == MsaaState::HIGH) {
+                        pMtxRenderSettings->second->setAntialiasingState(MsaaState::MEDIUM);
+                    } else {
+                        pMtxRenderSettings->second->setAntialiasingState(MsaaState::HIGH);
+                    }
+                } else {
+                    pMtxRenderSettings->second->setAntialiasingState(MsaaState::MEDIUM);
+                }
 
                 // Done.
                 bChangesMsaa = true;
@@ -138,7 +146,11 @@ TEST_CASE(
             std::scoped_lock guard(pMtxRenderSettings->first);
 
             REQUIRE(pMtxRenderSettings->second->getRenderResolution() == targetResolution);
-            REQUIRE(pMtxRenderSettings->second->isAntialiasingEnabled() == bIsAaEnabled);
+            if (bIsAaEnabled) {
+                REQUIRE(pMtxRenderSettings->second->getAntialiasingState() != MsaaState::DISABLED);
+            } else {
+                REQUIRE(pMtxRenderSettings->second->getAntialiasingState() == MsaaState::DISABLED);
+            }
             REQUIRE(pMtxRenderSettings->second->isVsyncEnabled() == bIsVsyncEnabled);
 
             getWindow()->close();

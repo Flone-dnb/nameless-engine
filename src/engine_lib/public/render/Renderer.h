@@ -307,6 +307,17 @@ namespace ne {
         virtual std::vector<ShaderDescription> getEngineShadersToCompile() const = 0;
 
         /**
+         * Returns the maximum anti-aliasing quality that can be used on the picked
+         * GPU (@ref getCurrentlyUsedGpuName).
+         *
+         * @remark Note that the maximum supported AA quality can differ depending on the used GPU/renderer.
+         *
+         * @return Error if something went wrong,
+         * otherwise `DISABLED` if AA is not supported or the maximum supported AA quality.
+         */
+        virtual std::variant<MsaaState, Error> getMaxSupportedAntialiasingQuality() const = 0;
+
+        /**
          * Called when the framebuffer size was changed.
          *
          * @param iWidth  New width of the framebuffer (in pixels).
@@ -348,11 +359,9 @@ namespace ne {
         virtual bool isInitialized() const = 0;
 
         /**
-         * Initializes some parts of the renderer that require final renderer object to be constructed.
+         * Initializes some essential parts of the renderer (such as RenderSettings).
          *
-         * @remark Must be called by derived classes during their initialization, specifically
-         * before they start to initialize as derived classes should first initialize the base class
-         * which setups essential things like render settings.
+         * @warning Must be called by derived classes in the beginning of their initialization.
          *
          * @return Error if something went wrong.
          */
@@ -361,12 +370,24 @@ namespace ne {
         /**
          * Initializes various resource managers.
          *
-         * @remark Must be called by derived classes after base initialization
+         * @warning Must be called by derived classes after base initialization
          * (for ex. in DirectX after device and video adapter were created).
          *
          * @return Error if something went wrong.
          */
         [[nodiscard]] std::optional<Error> initializeResourceManagers();
+
+        /**
+         * Called by derived class after they have created essential API objects
+         * (D3D device / Vulkan physical device) so that RenderSettings can query maximum supported
+         * settings and clamp the current values (if needed).
+         *
+         * @warning Must be called by derived classes after they have created essential API objects
+         * (D3D device / Vulkan physical device).
+         *
+         * @return Error if something went wrong.
+         */
+        [[nodiscard]] std::optional<Error> clampSettingsToMaxSupported();
 
         /**
          * Updates internal resources (frame constants, shader resources, camera's aspect ratio and etc.)

@@ -49,8 +49,8 @@ namespace ne {
         reserveSlotsInArray(GlslShaderCpuWriteResource* pShaderResource);
 
         /**
-         * Updates descriptors in all pipelines to make descriptors reference the underlying VkBuffer of used
-         * arrays.
+         * Updates descriptors in all graphics pipelines to make descriptors reference the underlying
+         * VkBuffer of used arrays.
          *
          * @warning Expects that the GPU is not doing any work and that no new frames are being submitted now.
          *

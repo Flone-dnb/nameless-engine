@@ -3,7 +3,7 @@
 #include "MeshNodeConstants.glsl"
 
 #ifdef USE_DIFFUSE_TEXTURE
-    layout(binding = 1) uniform sampler2D textureSampler;
+    layout(binding = 1) uniform sampler2D diffuseTexture;
 #endif
 
 layout(location = 0) in vec4 fragmentViewPosition;
@@ -30,6 +30,6 @@ void fsMeshNode(){
     outColor = vec4(materialData.array[arrayIndices.materialData].diffuseColor, 1.0F);
 
 #ifdef USE_DIFFUSE_TEXTURE
-    outColor *= texture(textureSampler, fragmentUv);
+    outColor *= texture(diffuseTexture, fragmentUv);
 #endif
 }

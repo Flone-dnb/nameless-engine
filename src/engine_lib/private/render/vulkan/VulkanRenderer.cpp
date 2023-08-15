@@ -76,6 +76,11 @@ namespace ne {
 
         destroySwapChainAndDependentResources(true);
 
+        if (pTextureSampler != nullptr) {
+            // Destroy sampler.
+            vkDestroySampler(pLogicalDevice, pTextureSampler, nullptr);
+        }
+
         if (pLogicalDevice != nullptr) {
             // Explicitly delete frame resources manager before command pool because command buffers
             // in frame resources use command pool to be freed.
@@ -230,6 +235,13 @@ namespace ne {
         // Now that GPU resource manager is created:
         // Create depth image.
         optionalError = createDepthImage();
+        if (optionalError.has_value()) {
+            optionalError->addCurrentLocationToErrorStack();
+            return optionalError;
+        }
+
+        // Create texture sampler.
+        optionalError = createTextureSampler();
         if (optionalError.has_value()) {
             optionalError->addCurrentLocationToErrorStack();
             return optionalError;
@@ -1257,6 +1269,124 @@ namespace ne {
         pSwapChain = nullptr;
     }
 
+    std::optional<Error> VulkanRenderer::createTextureSampler() {
+        // Make sure logical device is valid.
+        if (pLogicalDevice == nullptr) [[unlikely]] {
+            return Error("expected logical device to be valid");
+        }
+
+        // Make sure texture sampler is not created yet.
+        if (pTextureSampler != nullptr) [[unlikely]] {
+            return Error("texture sampler is already created");
+        }
+
+        // Get render settings.
+        const auto pMtxRenderSettings = getRenderSettings();
+        std::scoped_lock guard(pMtxRenderSettings->first);
+
+        // Get current texture filtering mode.
+        const auto textureFilteringMode = pMtxRenderSettings->second->getTextureFilteringMode();
+
+        // Setup Vulkan parameters depending on the texture filtering mode.
+        VkFilter vkFilter = VK_FILTER_NEAREST;
+        VkSamplerMipmapMode vkMipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+        switch (textureFilteringMode) {
+        case (TextureFilteringMode::POINT): {
+            vkFilter = VK_FILTER_NEAREST;
+            vkMipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+            break;
+        }
+        case (TextureFilteringMode::LINEAR): {
+            vkFilter = VK_FILTER_LINEAR;
+            vkMipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+            break;
+        }
+        case (TextureFilteringMode::ANISOTROPIC): {
+            vkFilter = VK_FILTER_LINEAR;
+            vkMipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+            break;
+        }
+        }
+
+        // Describe sampler.
+        VkSamplerCreateInfo samplerInfo{};
+        samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+
+        // Specify how oversampling and undersampling is handed.
+        samplerInfo.magFilter = vkFilter;
+        samplerInfo.minFilter = vkFilter;
+
+        // Specify address mode.
+        samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+        samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+        samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+        samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK; // used when `clamp` address mode
+
+        // Specify whether to use anisotropic filtering or not.
+        if (textureFilteringMode == TextureFilteringMode::ANISOTROPIC) {
+            samplerInfo.anisotropyEnable = VK_TRUE;
+            samplerInfo.maxAnisotropy = 16.0F; // NOLINT: magic number - max anisotropy
+        } else {
+            samplerInfo.anisotropyEnable = VK_FALSE;
+            samplerInfo.maxAnisotropy = 1.0F;
+        }
+
+        // Specify whether to use [0; textureWidth] coordinates or not.
+        samplerInfo.unnormalizedCoordinates = VK_FALSE;
+
+        // Specify texel comparison for texture filtering.
+        samplerInfo.compareEnable = VK_FALSE; // can be used in percentage-closer filtering on shadow maps
+        samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
+
+        // Specify mipmapping options.
+        samplerInfo.mipmapMode = vkMipmapMode;
+        samplerInfo.mipLodBias = 0.0F;
+        samplerInfo.minLod = 0.0F; // NOLINT
+        samplerInfo.maxLod = VK_LOD_CLAMP_NONE;
+
+        // Create sampler.
+        const auto result = vkCreateSampler(pLogicalDevice, &samplerInfo, nullptr, &pTextureSampler);
+        if (result != VK_SUCCESS) [[unlikely]] {
+            return Error(fmt::format("failed to create sampler, error: {}", string_VkResult(result)));
+        }
+
+        return {};
+    }
+
+    std::optional<Error> VulkanRenderer::updateTextureSamplerDescriptors() {
+        // Make sure logical device is valid.
+        if (pLogicalDevice == nullptr) [[unlikely]] {
+            return Error("expected logical device to be valid");
+        }
+
+        // Get pipeline manager.
+        const auto pPipelineManager = getPipelineManager();
+        if (pPipelineManager == nullptr) [[unlikely]] {
+            return Error("expected pipeline manager to be valid");
+        }
+
+        // Goes through all graphics pipelines.
+        const auto pPipelines = pPipelineManager->getGraphicsPipelines();
+        for (auto& [mtx, map] : *pPipelines) {
+            std::scoped_lock pipelineTypeGuard(mtx);
+            for (const auto& [sPipelineName, pPipeline] : map) {
+                // Convert to a Vulkan pipeline.
+                const auto pVulkanPipeline = dynamic_cast<VulkanPipeline*>(pPipeline.get());
+                if (pVulkanPipeline == nullptr) [[unlikely]] {
+                    return Error("expected a Vulkan pipeline");
+                }
+
+                // Get pipeline's internal resources.
+                const auto pMtxPipelineInternalResources = pVulkanPipeline->getInternalResources();
+                std::scoped_lock pipelineResourcesGuard(pMtxPipelineInternalResources->first);
+
+                // TODO
+            }
+        }
+
+        return {};
+    }
+
     bool VulkanRenderer::isUsedDepthImageFormatSupported() {
         // Get details of support of the depth image format.
         VkFormatProperties physicalDeviceFormatProperties;
@@ -1393,14 +1523,23 @@ namespace ne {
             }
         }
 
-        // Now all pipeline resources were re-created including descriptor sets
-        // and we need to update descriptor sets.
+        // Now all pipeline resources were re-created.
+        // Descriptor sets were also re-created and we need to (re)bind/update them.
+
+        // Update descriptors that should point to storage arrays.
         const auto pVulkanResourceManager = dynamic_cast<VulkanResourceManager*>(getResourceManager());
         if (pVulkanResourceManager == nullptr) [[unlikely]] {
             return Error("expected a Vulkan resource manager");
         }
         auto optionalError = pVulkanResourceManager->getStorageResourceArrayManager()
                                  ->bindDescriptorsToRecreatedPipelineResources(this);
+        if (optionalError.has_value()) [[unlikely]] {
+            optionalError->addCurrentLocationToErrorStack();
+            return optionalError;
+        }
+
+        // Update descriptors that should point to texture sampler.
+        optionalError = updateTextureSamplerDescriptors();
         if (optionalError.has_value()) [[unlikely]] {
             optionalError->addCurrentLocationToErrorStack();
             return optionalError;
@@ -2185,6 +2324,18 @@ namespace ne {
 
         // Update MSAA sample count using render settings.
         auto optionalError = updateMsaaSampleCount();
+        if (optionalError.has_value()) {
+            optionalError->addCurrentLocationToErrorStack();
+            return optionalError;
+        }
+
+        if (pTextureSampler != nullptr) {
+            // Destroy sampler to re-create with the current texture filtering setting.
+            vkDestroySampler(pLogicalDevice, pTextureSampler, nullptr);
+        }
+
+        // Re-create texture sampler with the current texture filtering setting.
+        optionalError = createTextureSampler();
         if (optionalError.has_value()) {
             optionalError->addCurrentLocationToErrorStack();
             return optionalError;

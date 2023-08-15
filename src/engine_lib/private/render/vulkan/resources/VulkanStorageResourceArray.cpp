@@ -491,7 +491,7 @@ namespace ne {
             return Error("pipeline manager is `nullptr`");
         }
 
-        // Goes through all pipelines.
+        // Goes through all graphics pipelines.
         const auto pPipelines = pPipelineManager->getGraphicsPipelines();
         for (auto& [mtx, map] : *pPipelines) {
             std::scoped_lock pipelineTypeGuard(mtx);

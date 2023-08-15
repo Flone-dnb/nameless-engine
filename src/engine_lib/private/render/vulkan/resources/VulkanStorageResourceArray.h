@@ -331,7 +331,8 @@ namespace ne {
         [[nodiscard]] std::optional<Error> shrinkArray();
 
         /**
-         * Updates descriptors in all pipelines to make descriptors reference the current underlying VkBuffer.
+         * Updates descriptors in all graphics pipelines to make descriptors reference the current
+         * underlying VkBuffer.
          *
          * @warning Expects that the GPU is not doing any work and that no new frames are being submitted now.
          *

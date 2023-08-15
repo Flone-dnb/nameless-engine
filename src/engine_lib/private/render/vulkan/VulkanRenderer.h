@@ -522,6 +522,24 @@ namespace ne {
         void destroySwapChainAndDependentResources(bool bDestroyPipelineManager);
 
         /**
+         * Creates @ref pTextureSampler using the current texture filtering mode from the render settings.
+         *
+         * @warning Expects that @ref pLogicalDevice is valid.
+         *
+         * @return Error if something went wrong.
+         */
+        [[nodiscard]] std::optional<Error> createTextureSampler();
+
+        /**
+         * (Re)binds @ref pTextureSampler to sampler descriptors in all graphics pipelines.
+         *
+         * @warning Expects that @ref pLogicalDevice is valid.
+         *
+         * @return Error if something went wrong.
+         */
+        [[nodiscard]] std::optional<Error> updateTextureSamplerDescriptors();
+
+        /**
          * Tells if @ref depthImageFormat is supported by the hardware.
          *
          * @return `true` if supported, `false` otherwise.
@@ -640,6 +658,9 @@ namespace ne {
 
         /** Used to create command buffers. */
         VkCommandPool pCommandPool = nullptr;
+
+        /** Texture sampler. */
+        VkSampler pTextureSampler = nullptr;
 
 #if defined(DEBUG)
         /**

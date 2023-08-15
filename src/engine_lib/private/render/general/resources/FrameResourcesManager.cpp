@@ -89,12 +89,9 @@ namespace ne {
     void FrameResourcesManager::switchToNextFrameResource() {
         std::scoped_lock resourceGuard(mtxCurrentFrameResource.first);
 
-        // Increment current frame resource index.
-        if (mtxCurrentFrameResource.second.iCurrentFrameResourceIndex + 1 == getFrameResourcesCount()) {
-            mtxCurrentFrameResource.second.iCurrentFrameResourceIndex = 0;
-        } else {
-            mtxCurrentFrameResource.second.iCurrentFrameResourceIndex += 1;
-        }
+        // Switch to the next frame resource index.
+        mtxCurrentFrameResource.second.iCurrentFrameResourceIndex =
+            (mtxCurrentFrameResource.second.iCurrentFrameResourceIndex + 1) % getFrameResourcesCount();
 
         // Update current frame resource pointer.
         mtxCurrentFrameResource.second.pResource =

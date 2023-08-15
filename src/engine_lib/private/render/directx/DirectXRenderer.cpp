@@ -252,14 +252,6 @@ namespace ne {
 
     std::string DirectXRenderer::getCurrentlyUsedGpuName() const { return sUsedVideoAdapter; }
 
-    size_t DirectXRenderer::getTotalVideoMemoryInMb() const {
-        return getResourceManager()->getTotalVideoMemoryInMb();
-    }
-
-    size_t DirectXRenderer::getUsedVideoMemoryInMb() const {
-        return getResourceManager()->getUsedVideoMemoryInMb();
-    }
-
     std::optional<Error> DirectXRenderer::prepareForDrawingNextFrame(CameraProperties* pCameraProperties) {
         std::scoped_lock frameGuard(*getRenderResourcesMutex());
 

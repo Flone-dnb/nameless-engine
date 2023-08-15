@@ -859,10 +859,14 @@ namespace ne {
                 Logger::get().info(fmt::format("using the following GPU: \"{}\"", currentGpuInfo.sGpuName));
             }
 
+            // Select physical device.
             pPhysicalDevice = currentGpuInfo.pGpu;
 
             // Save GPU name in the settings.
             pMtxRenderSettings->second->setGpuToUse(currentGpuInfo.sGpuName);
+
+            // Save GPU name.
+            sUsedGpuName = currentGpuInfo.sGpuName;
 
             break;
         }
@@ -1774,13 +1778,7 @@ namespace ne {
         return "1.1";
     }
 
-    std::string VulkanRenderer::getCurrentlyUsedGpuName() const {
-        throw std::runtime_error("not implemented");
-    }
-
-    size_t VulkanRenderer::getTotalVideoMemoryInMb() const { throw std::runtime_error("not implemented"); }
-
-    size_t VulkanRenderer::getUsedVideoMemoryInMb() const { throw std::runtime_error("not implemented"); }
+    std::string VulkanRenderer::getCurrentlyUsedGpuName() const { return sUsedGpuName; }
 
     void VulkanRenderer::waitForGpuToFinishWorkUpToThisPoint() {
         if (bIsBeingDestroyed) {

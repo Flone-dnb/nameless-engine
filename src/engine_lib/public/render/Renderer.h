@@ -136,7 +136,7 @@ namespace ne {
          *
          * @return Total video memory size in megabytes.
          */
-        virtual size_t getTotalVideoMemoryInMb() const = 0;
+        size_t getTotalVideoMemoryInMb() const;
 
         /**
          * Returns the amount of video memory (VRAM) that is currently being used by the renderer.
@@ -146,7 +146,7 @@ namespace ne {
          *
          * @return Size of the video memory used by the renderer in megabytes.
          */
-        virtual size_t getUsedVideoMemoryInMb() const = 0;
+        size_t getUsedVideoMemoryInMb() const;
 
         /**
          * Blocks the current thread until the GPU finishes executing all queued commands up to this point.

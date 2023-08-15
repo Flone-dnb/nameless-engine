@@ -309,6 +309,12 @@ namespace ne {
         return &mtxRenderSettings;
     }
 
+    size_t Renderer::getTotalVideoMemoryInMb() const {
+        return getResourceManager()->getTotalVideoMemoryInMb();
+    }
+
+    size_t Renderer::getUsedVideoMemoryInMb() const { return getResourceManager()->getUsedVideoMemoryInMb(); }
+
     std::pair<std::recursive_mutex, std::unique_ptr<ShaderConfiguration>>*
     Renderer::getShaderConfiguration() {
         return &mtxShaderConfiguration;

@@ -999,10 +999,20 @@ namespace ne {
             createInfo.pQueueFamilyIndices = nullptr; // optional, only considered when MODE_CONCURRENT
         }
 
+        // Determine present mode.
+        VkPresentModeKHR presentMode = VK_PRESENT_MODE_IMMEDIATE_KHR;
+        {
+            const auto pMtxRenderSettings = getRenderSettings();
+            std::scoped_lock guard(pMtxRenderSettings->first);
+            if (pMtxRenderSettings->second->isVsyncEnabled()) {
+                presentMode = VK_PRESENT_MODE_FIFO_KHR;
+            }
+        }
+
         // Specify other parameters.
         createInfo.preTransform = swapChainSupportDetails.capabilities.currentTransform;
         createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
-        createInfo.presentMode = VK_PRESENT_MODE_IMMEDIATE_KHR;
+        createInfo.presentMode = presentMode;
         createInfo.clipped = VK_TRUE;
         createInfo.oldSwapchain = VK_NULL_HANDLE;
 

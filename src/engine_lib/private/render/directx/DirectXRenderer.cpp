@@ -408,7 +408,7 @@ namespace ne {
                 std::scoped_lock materialsGuard(pMtxMaterials->first);
 
                 for (const auto& pMaterial : pMtxMaterials->second) {
-                    // Set material's GPU resources.
+                    // Get material's GPU resources.
                     const auto pMtxMaterialGpuResources = pMaterial->getMaterialGpuResources();
                     std::scoped_lock materialGpuResourcesGuard(pMtxMaterialGpuResources->first);
 

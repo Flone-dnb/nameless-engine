@@ -1937,7 +1937,7 @@ namespace ne {
         // Prepare vertex buffers.
         static constexpr size_t iVertexBufferCount = 1;
         std::array<VkBuffer, iVertexBufferCount> vVertexBuffers{};
-        std::array<VkDeviceSize, iVertexBufferCount> vOffsets = {0};
+        const std::array<VkDeviceSize, iVertexBufferCount> vOffsets = {0};
 
         // Get pipeline's internal resources.
         const auto pMtxInternalResources = pPipeline->getInternalResources();
@@ -2200,7 +2200,7 @@ namespace ne {
         // Convert frame resource.
         const auto pVulkanFrameResource = reinterpret_cast<VulkanFrameResource*>(pFrameResource);
 
-        // Wait for all fences to be signaled.
+        // Wait for fence to be signaled.
         const auto result =
             vkWaitForFences(pLogicalDevice, 1, &pVulkanFrameResource->pFence, VK_TRUE, UINT64_MAX);
         if (result != VK_SUCCESS) [[unlikely]] {

@@ -205,26 +205,12 @@ namespace ne RNAMESPACE() {
         [[nodiscard]] std::optional<Error> saveConfigurationToDisk();
 
         /**
-         * Changes renderer's state to match the current settings.
+         * Notifies the renderer to change its internal state to match the current settings.
          *
          * @remark Does nothing if the renderer is not initialized yet. The renderer
          * will take values from the settings upon initialization.
          */
-        void updateRendererConfiguration();
-
-        /** Changes renderer's state to match the current texture filtering settings. */
-        void updateRendererConfigurationForTextureFiltering();
-
-        /** Changes renderer' state to match the current anti-aliasing settings. */
-        void updateRendererConfigurationForAntialiasing();
-
-        /** Changes renderer's state to match the current screen settings. */
-        void updateRendererConfigurationForScreen();
-
-        // !!!
-        // !!! don't forget to add new `updateRendererConfiguration...` function to
-        // !!! `updateRendererConfiguration()` function.
-        // !!!
+        void notifyRendererAboutChangedSettings();
 
         /** Width of the back buffer. */
         RPROPERTY(Serialize)

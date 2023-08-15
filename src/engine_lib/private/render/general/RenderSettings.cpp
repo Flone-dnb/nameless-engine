@@ -57,8 +57,8 @@ namespace ne {
         // Change.
         iAntialiasingSampleCount = iNewSampleCount;
 
-        // Update.
-        updateRendererConfigurationForAntialiasing();
+        // Notify renderer.
+        notifyRendererAboutChangedSettings();
 
         // Save.
         auto optionalError = saveConfigurationToDisk();
@@ -68,30 +68,6 @@ namespace ne {
             Logger::get().error(fmt::format(
                 "failed to save new render setting configuration, error: \"{}\"",
                 error.getFullErrorMessage()));
-        }
-    }
-
-    void RenderSettings::updateRendererConfigurationForAntialiasing() {
-        if (!pRenderer->isInitialized()) {
-            return;
-        }
-
-        // Make sure no drawing is happening and the GPU is not referencing any resources.
-        std::scoped_lock guard(*pRenderer->getRenderResourcesMutex());
-        pRenderer->waitForGpuToFinishWorkUpToThisPoint();
-
-        // Recreate depth/stencil buffer with(out) multisampling.
-        auto optionalError = pRenderer->updateRenderBuffers();
-        if (optionalError.has_value()) {
-            optionalError->addCurrentLocationToErrorStack();
-            optionalError->showError();
-            throw std::runtime_error(optionalError->getFullErrorMessage());
-        }
-
-        // Recreate all pipelines' internal resources so they will now use new multisampling settings.
-        {
-            const auto psoGuard =
-                pRenderer->getPipelineManager()->clearGraphicsPipelinesInternalResourcesAndDelayRestoring();
         }
     }
 
@@ -197,8 +173,8 @@ namespace ne {
         // Change.
         iTextureFilteringMode = static_cast<int>(mode);
 
-        // Update.
-        updateRendererConfigurationForTextureFiltering();
+        // Notify renderer.
+        notifyRendererAboutChangedSettings();
 
         // Save.
         auto optionalError = saveConfigurationToDisk();
@@ -209,16 +185,6 @@ namespace ne {
                 "failed to save new render setting configuration, error: \"{}\"",
                 error.getFullErrorMessage()));
         }
-    }
-
-    void RenderSettings::updateRendererConfigurationForTextureFiltering() {
-        if (!pRenderer->isInitialized()) {
-            return;
-        }
-
-        // This will recreate internal pipeline resources and they will use new texture filtering setting:
-        const auto psoGuard =
-            pRenderer->getPipelineManager()->clearGraphicsPipelinesInternalResourcesAndDelayRestoring();
     }
 
     TextureFilteringMode RenderSettings::getTextureFilteringMode() const {
@@ -246,8 +212,8 @@ namespace ne {
         iRenderResolutionWidth = resolution.first;
         iRenderResolutionHeight = resolution.second;
 
-        // Update.
-        updateRendererConfigurationForScreen();
+        // Notify renderer.
+        notifyRendererAboutChangedSettings();
 
         // Save.
         auto optionalError = saveConfigurationToDisk();
@@ -267,13 +233,13 @@ namespace ne {
 
         // Log change.
         Logger::get().info(
-            fmt::format("vsync state is being changed from \"{}\" to \"{}\"", bIsVsyncEnabled, bEnableVsync));
+            fmt::format("VSync state is being changed from \"{}\" to \"{}\"", bIsVsyncEnabled, bEnableVsync));
 
         // Change.
         bIsVsyncEnabled = bEnableVsync;
 
-        // Update.
-        updateRendererConfigurationForScreen();
+        // Notify renderer.
+        notifyRendererAboutChangedSettings();
 
         // Save.
         auto optionalError = saveConfigurationToDisk();
@@ -283,21 +249,6 @@ namespace ne {
             Logger::get().error(fmt::format(
                 "failed to save new render setting configuration, error: \"{}\"",
                 error.getFullErrorMessage()));
-        }
-    }
-
-    void RenderSettings::updateRendererConfigurationForScreen() {
-        if (!pRenderer->isInitialized()) {
-            return;
-        }
-
-        // Update render buffers.
-        auto optionalError = pRenderer->updateRenderBuffers();
-        if (optionalError.has_value()) {
-            auto error = optionalError.value();
-            error.addCurrentLocationToErrorStack();
-            error.showError();
-            throw std::runtime_error(error.getFullErrorMessage());
         }
     }
 
@@ -321,7 +272,8 @@ namespace ne {
         iRefreshRateDenominator = refreshRate.second;
 
         // TODO: need to change without restarting
-        // updateRendererConfigurationForScreen();
+        // Notify renderer.
+        // notifyRendererAboutChangedSettings();
 
         // Save.
         auto optionalError = saveConfigurationToDisk();
@@ -392,15 +344,20 @@ namespace ne {
         }
     }
 
-    void RenderSettings::updateRendererConfiguration() {
-        updateRendererConfigurationForAntialiasing();
-        updateRendererConfigurationForTextureFiltering();
-        updateRendererConfigurationForScreen();
+    void RenderSettings::notifyRendererAboutChangedSettings() {
+        // Make sure the renderer is initialized.
+        if (!pRenderer->isInitialized()) {
+            // Nothing to do. The renderer will take values from the settings upon initialization.
+            return;
+        }
 
-#if defined(DEBUG)
-        static_assert(
-            sizeof(RenderSettings) == 184, "add new render settings here"); // NOLINT: current class size
-#endif
+        // Notify renderer.
+        auto optionalError = pRenderer->onRenderSettingsChanged();
+        if (optionalError.has_value()) {
+            optionalError->addCurrentLocationToErrorStack();
+            optionalError->showError();
+            throw std::runtime_error(optionalError->getFullErrorMessage());
+        }
     }
 
     std::string RenderSettings::getConfigurationFileName(bool bIncludeFileExtension) {

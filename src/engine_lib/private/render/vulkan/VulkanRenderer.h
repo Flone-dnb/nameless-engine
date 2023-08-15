@@ -232,13 +232,12 @@ namespace ne {
         virtual void onFramebufferSizeChanged(int iWidth, int iHeight) override;
 
         /**
-         * Recreates all render buffers to match current settings.
-         *
-         * @remark Usually called after some renderer setting was changed.
+         * Called after some render setting is changed to recreate internal resources to match the current
+         * settings.
          *
          * @return Error if something went wrong.
          */
-        [[nodiscard]] virtual std::optional<Error> updateRenderBuffers() override;
+        [[nodiscard]] virtual std::optional<Error> onRenderSettingsChanged() override;
 
         /**
          * Blocks the current thread until the GPU is finished using the specified frame resource.
@@ -255,7 +254,7 @@ namespace ne {
          * Tells whether the renderer is initialized or not.
          *
          * Initialized renderer means that the hardware supports it and it's safe to use renderer
-         * functionality such as @ref updateRenderBuffers.
+         * functionality such as @ref onRenderSettingsChanged.
          *
          * @return Whether the renderer is initialized or not.
          */

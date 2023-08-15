@@ -75,7 +75,7 @@ namespace ne {
         }
 
         // Set initial size for buffers.
-        optionalError = updateRenderBuffers();
+        optionalError = onRenderSettingsChanged();
         if (optionalError.has_value()) {
             optionalError->addCurrentLocationToErrorStack();
             return optionalError;
@@ -1056,9 +1056,9 @@ namespace ne {
 
     UINT DirectXRenderer::getMsaaQualityLevel() const { return iMsaaQualityLevelsCount; }
 
-    std::optional<Error> DirectXRenderer::updateRenderBuffers() {
+    std::optional<Error> DirectXRenderer::onRenderSettingsChanged() {
+        // Make sure no rendering is happening.
         std::scoped_lock guard(*getRenderResourcesMutex());
-
         waitForGpuToFinishWorkUpToThisPoint();
 
         // Get render settings.
@@ -1194,6 +1194,12 @@ namespace ne {
         scissorRect.top = 0;
         scissorRect.right = static_cast<LONG>(renderResolution.first);
         scissorRect.bottom = static_cast<LONG>(renderResolution.second);
+
+        // Recreate all pipelines' internal resources so they will now use new multisampling settings.
+        {
+            const auto psoGuard =
+                getPipelineManager()->clearGraphicsPipelinesInternalResourcesAndDelayRestoring();
+        }
 
         return {};
     }

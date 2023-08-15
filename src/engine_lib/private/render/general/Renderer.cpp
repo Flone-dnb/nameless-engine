@@ -391,7 +391,7 @@ namespace ne {
         mtxRenderSettings.second->setRenderer(this);
 
         // Apply the configuration.
-        mtxRenderSettings.second->updateRendererConfiguration();
+        mtxRenderSettings.second->notifyRendererAboutChangedSettings();
 
         return {};
     }

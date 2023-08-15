@@ -1921,7 +1921,7 @@ namespace ne {
         }
 
         // Recreate swap chain and other window-size dependent resources.
-        auto optionalError = updateRenderBuffers();
+        auto optionalError = recreateSwapChainAndDependentResources();
         if (optionalError.has_value()) [[unlikely]] {
             optionalError->addCurrentLocationToErrorStack();
             optionalError->showError();
@@ -2178,7 +2178,11 @@ namespace ne {
         return {};
     }
 
-    std::optional<Error> VulkanRenderer::updateRenderBuffers() {
+    std::optional<Error> VulkanRenderer::onRenderSettingsChanged() {
+        // Make sure no rendering is happening.
+        std::scoped_lock guard(*getRenderResourcesMutex());
+        waitForGpuToFinishWorkUpToThisPoint();
+
         // Update MSAA sample count using render settings.
         auto optionalError = updateMsaaSampleCount();
         if (optionalError.has_value()) {

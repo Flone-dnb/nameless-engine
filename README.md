@@ -320,7 +320,7 @@ Here is the list of base features that needs to be implemented in order for you 
 - [ ] Profiler
 - [ ] GLTF/GLB import
 - [ ] Rendering (features for both DirectX 12 and Vulkan renderers)
-    - [ ] Forward rendering
+    - [ ] Forward rendering (temporary)
         - [X] MSAA (Multisample anti-aliasing)
         - [ ] Transparent materials
         - [ ] Frustum culling

@@ -79,6 +79,7 @@ namespace ne {
         if (pTextureSampler != nullptr) {
             // Destroy sampler.
             vkDestroySampler(pLogicalDevice, pTextureSampler, nullptr);
+            pTextureSampler = nullptr;
         }
 
         if (pLogicalDevice != nullptr) {
@@ -1763,7 +1764,12 @@ namespace ne {
 
     std::variant<std::set<std::pair<unsigned int, unsigned int>>, Error>
     VulkanRenderer::getSupportedRenderResolutions() const {
-        throw std::runtime_error("not implemented");
+        // TODO: replace this implementation
+        if (!swapChainExtent.has_value()) {
+            return Error("swap chain extent is not set");
+        }
+        return std::set{
+            std::pair<unsigned int, unsigned int>{swapChainExtent->width, swapChainExtent->height}};
     }
 
     std::variant<std::set<std::pair<unsigned int, unsigned int>>, Error>
@@ -2340,6 +2346,7 @@ namespace ne {
         if (pTextureSampler != nullptr) {
             // Destroy sampler to re-create with the current texture filtering setting.
             vkDestroySampler(pLogicalDevice, pTextureSampler, nullptr);
+            pTextureSampler = nullptr;
         }
 
         // Re-create texture sampler with the current texture filtering setting.

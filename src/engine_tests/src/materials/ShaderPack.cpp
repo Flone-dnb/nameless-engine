@@ -31,24 +31,24 @@ constexpr std::string_view sSampleHlslComputeShader = "[numthreads(1, 1, 1)]\n"
 
 constexpr std::string_view sSampleGlslVertexShader = "#version 450\n"
                                                      "layout(location = 0) in vec3 position;\n"
-                                                     "void vs(){\n"
-                                                     "gl_Position = position;\n"
+                                                     "void main(){\n"
+                                                     "gl_Position = vec4(position, 1.0F);\n"
                                                      "}\n";
 constexpr std::string_view sSampleGlslPixelShader = "#version 450\n"
                                                     "layout(location = 0) out vec4 outColor;\n"
-                                                    "void ps(){\n"
+                                                    "void main(){\n"
                                                     "outColor = vec4(1.0F, 1.0F, 1.0F, 1.0F);\n"
                                                     "}\n";
 constexpr std::string_view sSampleGlslComputeShader = "#version 450\n"
                                                       "layout (local_size_x = 128) in;\n"
                                                       "shared float foobar [128];\n"
-                                                      "void cs(){\n"
+                                                      "void main(){\n"
                                                       "foobar [gl_LocalInvocationIndex] = 0.0;\n"
                                                       "}\n";
 
-const inline std::string sSampleVertexShaderEntryName = "vs";
-const inline std::string sSamplePixelShaderEntryName = "ps";
-const inline std::string sSampleComputeShaderEntryName = "cs";
+const inline std::string sSampleHlslVertexShaderEntryName = "vs";
+const inline std::string sSampleHlslPixelShaderEntryName = "ps";
+const inline std::string sSampleHlslComputeShaderEntryName = "cs";
 
 const inline std::string sSampleShaderName = "test shader";
 
@@ -66,7 +66,7 @@ createSampleVertexShader(ne::Renderer* pRenderer, ne::ShaderDescription& outDesc
             sSampleShaderName,
             shaderPathNoExtension.string() + ".hlsl",
             ne::ShaderType::VERTEX_SHADER,
-            sSampleVertexShaderEntryName,
+            sSampleHlslVertexShaderEntryName,
             {}};
         return ne::ShaderPack::compileShaderPack(pRenderer, outDescription);
     }
@@ -82,7 +82,7 @@ createSampleVertexShader(ne::Renderer* pRenderer, ne::ShaderDescription& outDesc
             sSampleShaderName,
             shaderPathNoExtension.string() + ".glsl",
             ne::ShaderType::VERTEX_SHADER,
-            sSampleVertexShaderEntryName,
+            "main",
             {}};
         return ne::ShaderPack::compileShaderPack(pRenderer, outDescription);
     }
@@ -106,7 +106,7 @@ createSamplePixelShader(ne::Renderer* pRenderer, ne::ShaderDescription& outDescr
             sSampleShaderName,
             shaderPathNoExtension.string() + ".hlsl",
             ne::ShaderType::PIXEL_SHADER,
-            sSamplePixelShaderEntryName,
+            sSampleHlslPixelShaderEntryName,
             {}};
         return ne::ShaderPack::compileShaderPack(pRenderer, outDescription);
     }
@@ -122,7 +122,7 @@ createSamplePixelShader(ne::Renderer* pRenderer, ne::ShaderDescription& outDescr
             sSampleShaderName,
             shaderPathNoExtension.string() + ".glsl",
             ne::ShaderType::PIXEL_SHADER,
-            sSamplePixelShaderEntryName,
+            "main",
             {}};
         return ne::ShaderPack::compileShaderPack(pRenderer, outDescription);
     }
@@ -146,7 +146,7 @@ createSampleComputeShader(ne::Renderer* pRenderer, ne::ShaderDescription& outDes
             sSampleShaderName,
             shaderPathNoExtension.string() + ".hlsl",
             ne::ShaderType::COMPUTE_SHADER,
-            sSampleComputeShaderEntryName,
+            sSampleHlslComputeShaderEntryName,
             {}};
         return ne::ShaderPack::compileShaderPack(pRenderer, outDescription);
     }
@@ -162,7 +162,7 @@ createSampleComputeShader(ne::Renderer* pRenderer, ne::ShaderDescription& outDes
             sSampleShaderName,
             shaderPathNoExtension.string() + ".glsl",
             ne::ShaderType::COMPUTE_SHADER,
-            sSampleComputeShaderEntryName,
+            "main",
             {}};
         return ne::ShaderPack::compileShaderPack(pRenderer, outDescription);
     }
@@ -193,7 +193,7 @@ TEST_CASE("compile a vertex shader") {
                     sErrorMessage = std::get<Error>(result).getFullErrorMessage();
                 }
                 INFO(sErrorMessage);
-                REQUIRE(std::holds_alternative<std::shared_ptr<ShaderPack>>(result));
+                REQUIRE(false);
             }
 
             // Cleanup.
@@ -431,13 +431,13 @@ TEST_CASE("invalidate shader cache - ENTRY_FUNCTION_NAME_CHANGED") {
                 REQUIRE(shaderFile.is_open());
                 shaderFile << "#version 450\n"
                               "layout(location = 0) out vec4 outColor;\n"
-                              "void ps(){\n"
+                              "void main(){\n"
                               "outColor = vec4(1.0F, 1.0F, 1.0F, 1.0F);\n"
                               "}\n";
                 shaderFile.close();
 
                 ShaderDescription description{
-                    sSampleShaderName, shaderPath, ShaderType::PIXEL_SHADER, "ps", {}};
+                    sSampleShaderName, shaderPath, ShaderType::PIXEL_SHADER, "main", {}};
                 auto compileResult = ShaderPack::compileShaderPack(pGameWindow->getRenderer(), description);
 
                 if (!std::holds_alternative<std::shared_ptr<ShaderPack>>(compileResult)) {
@@ -573,13 +573,13 @@ TEST_CASE("invalidate shader cache - SHADER_TYPE_CHANGED") {
                 REQUIRE(shaderFile.is_open());
                 shaderFile << "#version 450\n"
                               "layout(location = 0) out vec4 outColor;\n"
-                              "void ps(){\n"
+                              "void main(){\n"
                               "outColor = vec4(1.0F, 1.0F, 1.0F, 1.0F);\n"
                               "}\n";
                 shaderFile.close();
 
                 ShaderDescription description{
-                    sSampleShaderName, shaderPath, ShaderType::PIXEL_SHADER, "ps", {}};
+                    sSampleShaderName, shaderPath, ShaderType::PIXEL_SHADER, "main", {}};
                 auto compileResult = ShaderPack::compileShaderPack(pGameWindow->getRenderer(), description);
 
                 if (!std::holds_alternative<std::shared_ptr<ShaderPack>>(compileResult)) {
@@ -598,8 +598,8 @@ TEST_CASE("invalidate shader cache - SHADER_TYPE_CHANGED") {
                 REQUIRE(shaderFile.is_open());
                 shaderFile << "#version 450\n"
                               "layout(location = 0) in vec3 position;\n"
-                              "void ps(){\n" // keep old entry function name
-                              "gl_Position = position;\n"
+                              "void main(){\n" // keep old entry function name
+                              "gl_Position = vec4(position, 1.0F);\n"
                               "}\n";
                 shaderFile.close();
                 description.shaderType = ShaderType::VERTEX_SHADER;
@@ -732,13 +732,13 @@ TEST_CASE("invalidate shader cache - DEFINED_SHADER_MACROS_CHANGED") {
                 REQUIRE(shaderFile.is_open());
                 shaderFile << "#version 450\n"
                               "layout(location = 0) out vec4 outColor;\n"
-                              "void ps(){\n"
+                              "void main(){\n"
                               "outColor = vec4(1.0F, 1.0F, 1.0F, 1.0F);\n"
                               "}\n";
                 shaderFile.close();
 
                 ShaderDescription description{
-                    sSampleShaderName, shaderPath, ShaderType::PIXEL_SHADER, "ps", {}};
+                    sSampleShaderName, shaderPath, ShaderType::PIXEL_SHADER, "main", {}};
 
                 auto compileResult = ShaderPack::compileShaderPack(pGameWindow->getRenderer(), description);
                 if (!std::holds_alternative<std::shared_ptr<ShaderPack>>(compileResult)) {
@@ -891,13 +891,13 @@ TEST_CASE("invalidate shader cache - SHADER_SOURCE_FILE_CHANGED") {
                 REQUIRE(shaderFile.is_open());
                 shaderFile << "#version 450\n"
                               "layout(location = 0) out vec4 outColor;\n"
-                              "void ps(){\n"
+                              "void main(){\n"
                               "outColor = vec4(1.0F, 1.0F, 1.0F, 1.0F);\n"
                               "}\n";
                 shaderFile.close();
 
                 ShaderDescription description{
-                    sSampleShaderName, shaderPath, ShaderType::PIXEL_SHADER, "ps", {}};
+                    sSampleShaderName, shaderPath, ShaderType::PIXEL_SHADER, "main", {}};
 
                 auto compileResult = ShaderPack::compileShaderPack(pGameWindow->getRenderer(), description);
 
@@ -917,7 +917,7 @@ TEST_CASE("invalidate shader cache - SHADER_SOURCE_FILE_CHANGED") {
                 REQUIRE(shaderFile.is_open());
                 shaderFile << "#version 450\n"
                               "layout(location = 0) out vec4 outColor;\n"
-                              "void  ps(){\n"
+                              "void  main(){\n"
                               "outColor = vec4(1.0F, 1.0F, 1.0F, 1.0F);\n"
                               "}\n";
                 shaderFile.close();
@@ -1141,7 +1141,7 @@ TEST_CASE("invalidate HLSL shader cache - SHADER_INCLUDE_TREE_CONTENT_CHANGED") 
                               "#include \"test_shaders/bar.glsl\"\n"
                               "#include \"foo.glsl\"\n"
                               "layout(location = 0) out vec4 outColor;\n"
-                              "void ps(){\n"
+                              "void main(){\n"
                               "outColor = vec4(1.0F, 1.0F, 1.0F, 1.0F);\n"
                               "}\n";
                 shaderFile.close();
@@ -1151,7 +1151,7 @@ TEST_CASE("invalidate HLSL shader cache - SHADER_INCLUDE_TREE_CONTENT_CHANGED") 
                                            "test" / "temp" / "foo.glsl";
                 shaderFile.open(fooShaderPath);
                 REQUIRE(shaderFile.is_open());
-                shaderFile << "void foo(){};\n";
+                shaderFile << "void foo(){}\n";
                 shaderFile.close();
 
                 const auto testShadersDirPath = ProjectPaths::getPathToResDirectory(ResourceDirectory::ROOT) /
@@ -1163,18 +1163,18 @@ TEST_CASE("invalidate HLSL shader cache - SHADER_INCLUDE_TREE_CONTENT_CHANGED") 
                 shaderFile.open(barShaderPath);
                 REQUIRE(shaderFile.is_open());
                 shaderFile << "#include \"foo.glsl\"\n"
-                              "void bar(){};\n";
+                              "void bar(){}\n";
                 shaderFile.close();
 
                 // test_shaders/foo.glsl
                 const auto anotherFooShaderPath = testShadersDirPath / "foo.glsl";
                 shaderFile.open(anotherFooShaderPath);
                 REQUIRE(shaderFile.is_open());
-                shaderFile << "void foo2(){};\n";
+                shaderFile << "void foo2(){}\n";
                 shaderFile.close();
 
                 ShaderDescription description{
-                    sSampleShaderName, shaderPath, ShaderType::PIXEL_SHADER, "ps", {}};
+                    sSampleShaderName, shaderPath, ShaderType::PIXEL_SHADER, "main", {}};
 
                 // Compile initial version.
                 auto compileResult = ShaderPack::compileShaderPack(pGameWindow->getRenderer(), description);
@@ -1205,7 +1205,7 @@ TEST_CASE("invalidate HLSL shader cache - SHADER_INCLUDE_TREE_CONTENT_CHANGED") 
                 // Change test_shaders/foo.glsl source code.
                 shaderFile.open(anotherFooShaderPath);
                 REQUIRE(shaderFile.is_open());
-                shaderFile << "void foo2(){ };\n";
+                shaderFile << "void foo2(){ }\n";
                 shaderFile.close();
 
                 // Cache should be invalidated.
@@ -1235,7 +1235,7 @@ TEST_CASE("invalidate HLSL shader cache - SHADER_INCLUDE_TREE_CONTENT_CHANGED") 
                 shaderFile.open(barShaderPath);
                 REQUIRE(shaderFile.is_open());
                 shaderFile << "#include \"foo.glsl\"\n"
-                              "void bar(){ };\n";
+                              "void bar(){ }\n";
                 shaderFile.close();
 
                 // Cache should be invalidated.
@@ -1264,7 +1264,7 @@ TEST_CASE("invalidate HLSL shader cache - SHADER_INCLUDE_TREE_CONTENT_CHANGED") 
                 // Change bar.glsl source code (remove include).
                 shaderFile.open(barShaderPath);
                 REQUIRE(shaderFile.is_open());
-                shaderFile << "void bar(){ };\n";
+                shaderFile << "void bar(){ }\n";
                 shaderFile.close();
 
                 // Cache should be invalidated.
@@ -1393,13 +1393,13 @@ TEST_CASE("invalidate shader cache - COMPILED_BINARY_CHANGED (bytecode)") {
                 REQUIRE(shaderFile.is_open());
                 shaderFile << "#version 450\n"
                               "layout(location = 0) out vec4 outColor;\n"
-                              "void ps(){\n"
+                              "void main(){\n"
                               "outColor = vec4(1.0F, 1.0F, 1.0F, 1.0F);\n"
                               "}\n";
                 shaderFile.close();
 
                 ShaderDescription description{
-                    sSampleShaderName, shaderPath, ShaderType::PIXEL_SHADER, "ps", {}};
+                    sSampleShaderName, shaderPath, ShaderType::PIXEL_SHADER, "main", {}};
 
                 // Compile.
                 auto compileResult = ShaderPack::compileShaderPack(pGameWindow->getRenderer(), description);

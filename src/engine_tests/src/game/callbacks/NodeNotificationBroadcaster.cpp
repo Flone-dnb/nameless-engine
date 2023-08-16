@@ -299,6 +299,7 @@ TEST_CASE("broadcasters don't use deferred tasks to guarantee the correct call o
     pMainWindow->processEvents<TestGameInstance>();
 
     REQUIRE(iNonBroadcasterNodeDestroyedCount == 3);
+    iNonBroadcasterNodeDestroyedCount = 0; // reset for possible next renderer testing because it's static
 }
 
 TEST_CASE("unsubscribe outside of a broadcast call") {

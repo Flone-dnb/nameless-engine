@@ -4,6 +4,7 @@
 #include "game/Window.h"
 #include "game/nodes/MeshNode.h"
 #include "render/directx/pipeline/DirectXPso.h"
+#include "render/directx/DirectXRenderer.h"
 #include "materials/EngineShaderNames.hpp"
 
 // External.
@@ -17,6 +18,13 @@ TEST_CASE("root signature merge is correct") {
         TestGameInstance(Window* pGameWindow, GameManager* pGame, InputManager* pInputManager)
             : GameInstance(pGameWindow, pGame, pInputManager) {}
         virtual void onGameStarted() override {
+            // Make sure we are using DirectX renderer.
+            if (dynamic_cast<DirectXRenderer*>(getWindow()->getRenderer()) == nullptr) {
+                // Don't run this test on non-DirectX renderer.
+                getWindow()->close();
+                SKIP();
+            }
+
             createWorld([&](const std::optional<Error>& optionalWorldError) {
                 if (optionalWorldError.has_value()) {
                     auto error = optionalWorldError.value();

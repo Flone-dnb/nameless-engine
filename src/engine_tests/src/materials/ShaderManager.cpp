@@ -6,6 +6,9 @@
 #include "misc/ProjectPaths.h"
 #include "materials/EngineShaderNames.hpp"
 #include "materials/Shader.h"
+#if defined(WIN32)
+#include "render/directx/DirectXRenderer.h"
+#endif
 
 // External.
 #include "catch2/catch_test_macros.hpp"

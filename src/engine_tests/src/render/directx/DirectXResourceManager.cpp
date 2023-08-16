@@ -23,6 +23,13 @@ TEST_CASE("make the CBV heap expand") {
     public:
         TestGameInstance(Window* pGameWindow, GameManager* pGame, InputManager* pInputManager)
             : GameInstance(pGameWindow, pGame, pInputManager) {
+            // Make sure we are using DirectX renderer.
+            if (dynamic_cast<DirectXRenderer*>(getWindow()->getRenderer()) == nullptr) {
+                // Don't run this test on non-DirectX renderer.
+                getWindow()->close();
+                SKIP();
+            }
+
             auto pRenderer = dynamic_cast<DirectXRenderer*>(pGameWindow->getRenderer());
             REQUIRE(pRenderer);
 
@@ -117,6 +124,13 @@ TEST_CASE("make the CBV heap shrink") {
     public:
         TestGameInstance(Window* pGameWindow, GameManager* pGame, InputManager* pInputManager)
             : GameInstance(pGameWindow, pGame, pInputManager) {
+            // Make sure we are using DirectX renderer.
+            if (dynamic_cast<DirectXRenderer*>(getWindow()->getRenderer()) == nullptr) {
+                // Don't run this test on non-DirectX renderer.
+                getWindow()->close();
+                SKIP();
+            }
+
             auto pRenderer = dynamic_cast<DirectXRenderer*>(pGameWindow->getRenderer());
             REQUIRE(pRenderer);
 
@@ -200,6 +214,13 @@ TEST_CASE("assign multiple descriptors to one resource") {
     public:
         TestGameInstance(Window* pGameWindow, GameManager* pGame, InputManager* pInputManager)
             : GameInstance(pGameWindow, pGame, pInputManager) {
+            // Make sure we are using DirectX renderer.
+            if (dynamic_cast<DirectXRenderer*>(getWindow()->getRenderer()) == nullptr) {
+                // Don't run this test on non-DirectX renderer.
+                getWindow()->close();
+                SKIP();
+            }
+
             auto pRenderer = dynamic_cast<DirectXRenderer*>(pGameWindow->getRenderer());
             REQUIRE(pRenderer);
 
@@ -279,6 +300,13 @@ TEST_CASE("all assigned descriptors are freed when resource is destroyed") {
     public:
         TestGameInstance(Window* pGameWindow, GameManager* pGame, InputManager* pInputManager)
             : GameInstance(pGameWindow, pGame, pInputManager) {
+            // Make sure we are using DirectX renderer.
+            if (dynamic_cast<DirectXRenderer*>(getWindow()->getRenderer()) == nullptr) {
+                // Don't run this test on non-DirectX renderer.
+                getWindow()->close();
+                SKIP();
+            }
+
             auto pRenderer = dynamic_cast<DirectXRenderer*>(pGameWindow->getRenderer());
             REQUIRE(pRenderer);
 
@@ -365,6 +393,13 @@ TEST_CASE("create CBV resource") {
     public:
         TestGameInstance(Window* pGameWindow, GameManager* pGame, InputManager* pInputManager)
             : GameInstance(pGameWindow, pGame, pInputManager) {
+            // Make sure we are using DirectX renderer.
+            if (dynamic_cast<DirectXRenderer*>(getWindow()->getRenderer()) == nullptr) {
+                // Don't run this test on non-DirectX renderer.
+                getWindow()->close();
+                SKIP();
+            }
+
             auto pRenderer = dynamic_cast<DirectXRenderer*>(pGameWindow->getRenderer());
             REQUIRE(pRenderer);
 
@@ -419,6 +454,13 @@ TEST_CASE("create SRV resource") {
     public:
         TestGameInstance(Window* pGameWindow, GameManager* pGame, InputManager* pInputManager)
             : GameInstance(pGameWindow, pGame, pInputManager) {
+            // Make sure we are using DirectX renderer.
+            if (dynamic_cast<DirectXRenderer*>(getWindow()->getRenderer()) == nullptr) {
+                // Don't run this test on non-DirectX renderer.
+                getWindow()->close();
+                SKIP();
+            }
+
             auto pRenderer = dynamic_cast<DirectXRenderer*>(pGameWindow->getRenderer());
             REQUIRE(pRenderer);
 
@@ -485,6 +527,13 @@ TEST_CASE("create UAV resource") {
     public:
         TestGameInstance(Window* pGameWindow, GameManager* pGame, InputManager* pInputManager)
             : GameInstance(pGameWindow, pGame, pInputManager) {
+            // Make sure we are using DirectX renderer.
+            if (dynamic_cast<DirectXRenderer*>(getWindow()->getRenderer()) == nullptr) {
+                // Don't run this test on non-DirectX renderer.
+                getWindow()->close();
+                SKIP();
+            }
+
             auto pRenderer = dynamic_cast<DirectXRenderer*>(pGameWindow->getRenderer());
             REQUIRE(pRenderer);
 
@@ -551,6 +600,13 @@ TEST_CASE("create RTV resource") {
     public:
         TestGameInstance(Window* pGameWindow, GameManager* pGame, InputManager* pInputManager)
             : GameInstance(pGameWindow, pGame, pInputManager) {
+            // Make sure we are using DirectX renderer.
+            if (dynamic_cast<DirectXRenderer*>(getWindow()->getRenderer()) == nullptr) {
+                // Don't run this test on non-DirectX renderer.
+                getWindow()->close();
+                SKIP();
+            }
+
             auto pRenderer = dynamic_cast<DirectXRenderer*>(pGameWindow->getRenderer());
             REQUIRE(pRenderer);
 
@@ -621,6 +677,13 @@ TEST_CASE("create DSV resource") {
     public:
         TestGameInstance(Window* pGameWindow, GameManager* pGame, InputManager* pInputManager)
             : GameInstance(pGameWindow, pGame, pInputManager) {
+            // Make sure we are using DirectX renderer.
+            if (dynamic_cast<DirectXRenderer*>(getWindow()->getRenderer()) == nullptr) {
+                // Don't run this test on non-DirectX renderer.
+                getWindow()->close();
+                SKIP();
+            }
+
             auto pRenderer = dynamic_cast<DirectXRenderer*>(pGameWindow->getRenderer());
             REQUIRE(pRenderer);
 

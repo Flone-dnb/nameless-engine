@@ -32,4 +32,8 @@ void fsMeshNode(){
 #ifdef USE_DIFFUSE_TEXTURE
     outColor *= texture(diffuseTexture, fragmentUv);
 #endif
+
+#ifdef USE_MATERIAL_TRANSPARENCY
+    outColor.a *= materialData.array[arrayIndices.materialData].opacity;
+#endif
 }

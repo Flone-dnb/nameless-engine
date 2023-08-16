@@ -465,6 +465,67 @@ namespace ne {
         return {};
     }
 
+    std::optional<Error> VulkanStorageResourceArray::updateDescriptorsForPipelineResource(
+        VulkanRenderer* pRenderer,
+        VulkanPipeline* pPipeline,
+        const std::string& sShaderResourceName,
+        unsigned int iBindingIndex) {
+        // Self check: make sure array's handled resource name is equal to shader resource.
+        if (sShaderResourceName != sHandledResourceName) [[unlikely]] {
+            return Error(fmt::format(
+                "this storage array does not handle shader resources with name \"{}\""
+                "(this is a bug, report to developers)",
+                sShaderResourceName));
+        }
+
+        // Get pipeline's internal resources.
+        const auto pMtxPipelineInternalResources = pPipeline->getInternalResources();
+
+        // Get both pipeline resources and internal resources.
+        std::scoped_lock guard(mtxInternalResources.first, pMtxPipelineInternalResources->first);
+
+        // Get internal GPU resource.
+        const auto pInternalStorageResource =
+            dynamic_cast<VulkanResource*>(mtxInternalResources.second.pStorageBuffer->getInternalResource());
+        if (pInternalStorageResource == nullptr) [[unlikely]] {
+            return Error("expected internal GPU resource to be a Vulkan resource");
+        }
+
+        // Get internal VkBuffer.
+        const auto pInternalVkBuffer = pInternalStorageResource->getInternalBufferResource();
+
+        // Get logical device to be used.
+        const auto pLogicalDevice = pRenderer->getLogicalDevice();
+        if (pLogicalDevice == nullptr) [[unlikely]] {
+            return Error("logical device is `nullptr`");
+        }
+
+        // Update one descriptor in set per frame resource.
+        for (unsigned int i = 0; i < FrameResourcesManager::getFrameResourcesCount(); i++) {
+            // Prepare info to bind storage buffer slot to descriptor.
+            VkDescriptorBufferInfo bufferInfo{};
+            bufferInfo.buffer = pInternalVkBuffer;
+            bufferInfo.offset = 0;
+            bufferInfo.range = iElementSizeInBytes * mtxInternalResources.second.iCapacity;
+
+            // Bind reserved space to descriptor.
+            VkWriteDescriptorSet descriptorUpdateInfo{};
+            descriptorUpdateInfo.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            descriptorUpdateInfo.dstSet =
+                pMtxPipelineInternalResources->second.vDescriptorSets[i]; // descriptor set to update
+            descriptorUpdateInfo.dstBinding = iBindingIndex;              // descriptor binding index
+            descriptorUpdateInfo.dstArrayElement = 0; // first descriptor in array to update
+            descriptorUpdateInfo.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+            descriptorUpdateInfo.descriptorCount = 1;       // how much descriptors in array to update
+            descriptorUpdateInfo.pBufferInfo = &bufferInfo; // descriptor refers to buffer data
+
+            // Update descriptor.
+            vkUpdateDescriptorSets(pLogicalDevice, 1, &descriptorUpdateInfo, 0, nullptr);
+        }
+
+        return {};
+    }
+
     std::optional<Error> VulkanStorageResourceArray::updateDescriptors(VulkanRenderer* pVulkanRenderer) {
         // Get internal resources.
         std::scoped_lock guard(mtxInternalResources.first);

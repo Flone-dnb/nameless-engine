@@ -6,10 +6,12 @@
 #include <array>
 #include <mutex>
 #include <string>
+#include <optional>
 #include <unordered_map>
 
 // Custom.
 #include "render/general/resources/FrameResourcesManager.h"
+#include "misc/Error.h"
 
 namespace ne {
     class VulkanRenderer;
@@ -17,6 +19,7 @@ namespace ne {
     class VulkanStorageResourceArraySlot;
     class GlslShaderCpuWriteResource;
     class VulkanRenderer;
+    class VulkanPipeline;
 
     /** Manages arrays of resources of various CPU write shader resources. */
     class VulkanStorageResourceArrayManager {
@@ -63,6 +66,25 @@ namespace ne {
          */
         [[nodiscard]] std::optional<Error>
         bindDescriptorsToRecreatedPipelineResources(VulkanRenderer* pVulkanRenderer);
+
+        /**
+         * Looks if the specified shader resource is handled using storage arrays and binds storage
+         * array to descriptors of the shader resource.
+         *
+         * @param pRenderer           Vulkan renderer.
+         * @param pPipeline           Vulkan pipeline to get descriptors from.
+         * @param sShaderResourceName Name of the shader resource (from GLSL code).
+         * @param iBindingIndex       Shader resource binding index (from GLSL code).
+         *
+         * @return Error if something went wrong. Even if there was no error it does not mean
+         * that descriptors were using storage arrays and were updated. Descriptors may use
+         * storage arrays but required storage array may not be created yet.
+         */
+        [[nodiscard]] std::optional<Error> updateDescriptorsForPipelineResource(
+            VulkanRenderer* pRenderer,
+            VulkanPipeline* pPipeline,
+            const std::string& sShaderResourceName,
+            unsigned int iBindingIndex);
 
     private:
         /**

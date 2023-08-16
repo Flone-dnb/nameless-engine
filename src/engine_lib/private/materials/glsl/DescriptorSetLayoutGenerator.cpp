@@ -198,7 +198,7 @@ namespace ne {
             return Error(fmt::format(
                 "expected to find a `uniform` buffer named \"{}\" at binding {} to be used in vertex "
                 "shader \"{}\"",
-                sFrameUniformBufferName,
+                pFrameUniformBufferName,
                 iFrameUniformBufferBindingIndex,
                 pVertexShader->getShaderName()));
         }
@@ -326,14 +326,14 @@ namespace ne {
         }
 
         // Make sure we have a "frameData" binding at expected index.
-        const auto frameDataBindingIt = resourceBindings.find(sFrameUniformBufferName);
+        const auto frameDataBindingIt = resourceBindings.find(pFrameUniformBufferName);
         if (frameDataBindingIt == resourceBindings.end()) [[unlikely]] {
-            return Error(fmt::format("expected to find \"{}\" binding", sFrameUniformBufferName));
+            return Error(fmt::format("expected to find \"{}\" binding", pFrameUniformBufferName));
         }
         if (frameDataBindingIt->second.iBindingIndex != iFrameUniformBufferBindingIndex) [[unlikely]] {
             return Error(fmt::format(
                 "expected \"{}\" resource to use the following binding index: {} (actual: {})",
-                sFrameUniformBufferName,
+                pFrameUniformBufferName,
                 iFrameUniformBufferBindingIndex,
                 frameDataBindingIt->second.iBindingIndex));
         }

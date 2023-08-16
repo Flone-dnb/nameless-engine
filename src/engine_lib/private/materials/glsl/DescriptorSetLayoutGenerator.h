@@ -100,6 +100,13 @@ namespace ne {
         }
 
         /**
+         * Returns binding name that shaders should use for "frameData" uniform buffer.
+         *
+         * @return Binding name in descriptor set layout.
+         */
+        static constexpr const char* getFrameUniformBufferBindingName() { return pFrameUniformBufferName; }
+
+        /**
          * Collection information from the specified SPIR-V bytecode that can be used to generate
          * a descriptor set layout.
          *
@@ -140,7 +147,7 @@ namespace ne {
             uint32_t iBindingIndex, const Collected::DescriptorSetLayoutBindingInfo& bindingInfo);
 
         /** Name of the `uniform` buffer used to store frame data in GLSL shaders. */
-        static inline const std::string sFrameUniformBufferName = "frameData";
+        static constexpr auto pFrameUniformBufferName = "frameData";
 
         /** Binding index that shaders should use for "frameData" uniform buffer. */
         static constexpr uint32_t iFrameUniformBufferBindingIndex = 0;

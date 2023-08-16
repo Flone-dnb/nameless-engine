@@ -148,6 +148,30 @@ namespace ne {
         return {};
     }
 
+    std::optional<Error> VulkanStorageResourceArrayManager::updateDescriptorsForPipelineResource(
+        VulkanRenderer* pRenderer,
+        VulkanPipeline* pPipeline,
+        const std::string& sShaderResourceName,
+        unsigned int iBindingIndex) {
+        std::scoped_lock guard(mtxGlslShaderCpuWriteResources.first);
+
+        // Find storage array that handles the specified shader resource name.
+        const auto it = mtxGlslShaderCpuWriteResources.second.find(sShaderResourceName);
+        if (it == mtxGlslShaderCpuWriteResources.second.end()) {
+            return {};
+        }
+
+        // Update descriptors.
+        auto optionalError = it->second->updateDescriptorsForPipelineResource(
+            pRenderer, pPipeline, sShaderResourceName, iBindingIndex);
+        if (optionalError.has_value()) [[unlikely]] {
+            optionalError->addCurrentLocationToErrorStack();
+            return optionalError.value();
+        }
+
+        return {};
+    }
+
     std::string VulkanStorageResourceArrayManager::formatBytesToMegabytes(size_t iSizeInBytes) {
         return fmt::format(
             "{:.4F} MB",

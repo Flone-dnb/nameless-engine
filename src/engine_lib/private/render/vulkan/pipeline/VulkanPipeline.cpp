@@ -8,6 +8,8 @@
 #include "render/vulkan/VulkanRenderer.h"
 #include "materials/glsl/GlslShader.h"
 #include "materials/EngineShaderNames.hpp"
+#include "render/vulkan/resources/VulkanResourceManager.h"
+#include "render/vulkan/resources/VulkanStorageResourceArrayManager.h"
 #include "materials/glsl/DescriptorSetLayoutGenerator.h"
 
 // External.
@@ -305,6 +307,10 @@ namespace ne {
             return error;
         }
 
+        // Done generating pipeline.
+        saveUsedShaderConfiguration(ShaderType::VERTEX_SHADER, std::move(fullVertexShaderConfiguration));
+        saveUsedShaderConfiguration(ShaderType::PIXEL_SHADER, std::move(fullFragmentShaderConfiguration));
+
         // Bind "frameData" descriptors to frame uniform buffer.
         optionalError = bindFrameDataDescriptors();
         if (optionalError.has_value()) [[unlikely]] {
@@ -313,9 +319,23 @@ namespace ne {
             return error;
         }
 
-        // Done.
-        saveUsedShaderConfiguration(ShaderType::VERTEX_SHADER, std::move(fullVertexShaderConfiguration));
-        saveUsedShaderConfiguration(ShaderType::PIXEL_SHADER, std::move(fullFragmentShaderConfiguration));
+        // Get Vulkan resource manager.
+        const auto pVulkanResourceManager =
+            dynamic_cast<VulkanResourceManager*>(pVulkanRenderer->getResourceManager());
+        const auto pStorageArrayManager = pVulkanResourceManager->getStorageResourceArrayManager();
+
+        // Bind descriptors that use storage arrays.
+        for (const auto& [sShaderResourceName, iBindingIndex] :
+             mtxInternalResources.second.resourceBindings) {
+            // Update descriptors.
+            optionalError = pStorageArrayManager->updateDescriptorsForPipelineResource(
+                pVulkanRenderer, this, sShaderResourceName, iBindingIndex);
+            if (optionalError.has_value()) [[unlikely]] {
+                auto error = std::move(optionalError.value());
+                error.addCurrentLocationToErrorStack();
+                return error;
+            }
+        }
 
         return {};
     }
@@ -502,19 +522,14 @@ namespace ne {
         multisamplingStateInfo.rasterizationSamples = pVulkanRenderer->getMsaaSampleCount();
         multisamplingStateInfo.minSampleShading = 1.0F;
         multisamplingStateInfo.pSampleMask = nullptr;
-        if (bUsePixelBlending) {
-            multisamplingStateInfo.alphaToCoverageEnable =
-                static_cast<VkBool32>(pVulkanRenderer->getMsaaSampleCount() != VK_SAMPLE_COUNT_1_BIT);
-        } else {
-            multisamplingStateInfo.alphaToCoverageEnable = VK_FALSE;
-        }
+        multisamplingStateInfo.alphaToCoverageEnable = VK_FALSE;
         multisamplingStateInfo.alphaToOneEnable = VK_FALSE;
 
         // Describe depth and stencil state.
         VkPipelineDepthStencilStateCreateInfo depthStencilStateInfo{};
         depthStencilStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
         depthStencilStateInfo.depthTestEnable = VK_TRUE;
-        depthStencilStateInfo.depthWriteEnable = VK_TRUE;
+        depthStencilStateInfo.depthWriteEnable = bUsePixelBlending ? VK_FALSE : VK_TRUE;
         depthStencilStateInfo.depthCompareOp = VK_COMPARE_OP_LESS;
         depthStencilStateInfo.depthBoundsTestEnable = VK_FALSE;
         depthStencilStateInfo.minDepthBounds = Renderer::getMinDepth();
@@ -527,9 +542,9 @@ namespace ne {
         VkPipelineColorBlendAttachmentState colorBlendAttachmentStateInfo{};
         colorBlendAttachmentStateInfo.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
                                                        VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-        colorBlendAttachmentStateInfo.blendEnable = VK_FALSE;
-        colorBlendAttachmentStateInfo.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;
-        colorBlendAttachmentStateInfo.dstColorBlendFactor = VK_BLEND_FACTOR_ZERO;
+        colorBlendAttachmentStateInfo.blendEnable = bUsePixelBlending;
+        colorBlendAttachmentStateInfo.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+        colorBlendAttachmentStateInfo.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
         colorBlendAttachmentStateInfo.colorBlendOp = VK_BLEND_OP_ADD;
         colorBlendAttachmentStateInfo.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
         colorBlendAttachmentStateInfo.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;

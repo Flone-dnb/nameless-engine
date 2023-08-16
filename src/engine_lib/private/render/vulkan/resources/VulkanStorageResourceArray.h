@@ -20,6 +20,7 @@ namespace ne {
     class VulkanStorageResourceArray;
     class GlslShaderCpuWriteResource;
     class VulkanRenderer;
+    class VulkanPipeline;
 
     /**
      * Represents a used slot (place) in the array.
@@ -263,6 +264,23 @@ namespace ne {
          */
         static std::variant<size_t, Error>
         calculateCapacityStepSize(size_t iElementSizeInBytes, size_t iCapacityStepSizeMultiplier = 1);
+
+        /**
+         * Binds internal storage array to descriptors of the specified pipeline at the specified binding
+         * index.
+         *
+         * @param pRenderer           Vulkan renderer.
+         * @param pPipeline           Vulkan pipeline to get descriptors from.
+         * @param sShaderResourceName Name of the shader resource (from GLSL code).
+         * @param iBindingIndex       Shader resource binding index (from GLSL code).
+         *
+         * @return Error if something went wrong.
+         */
+        [[nodiscard]] std::optional<Error> updateDescriptorsForPipelineResource(
+            VulkanRenderer* pRenderer,
+            VulkanPipeline* pPipeline,
+            const std::string& sShaderResourceName,
+            unsigned int iBindingIndex);
 
         /**
          * Inserts a new element in the array.

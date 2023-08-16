@@ -226,6 +226,7 @@ namespace ne {
         psoDesc.RasterizerState = rasterizerDesc;
 
         // Setup pixel blend description (if needed).
+        psoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
         if (bUsePixelBlending) {
             D3D12_RENDER_TARGET_BLEND_DESC blendDesc;
             blendDesc.BlendEnable = 1;
@@ -240,8 +241,6 @@ namespace ne {
             blendDesc.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
             psoDesc.BlendState.RenderTarget[0] = blendDesc;
             psoDesc.BlendState.AlphaToCoverageEnable = 0;
-        } else {
-            psoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
         }
 
         // Finalize PSO description.

@@ -322,7 +322,7 @@ Here is the list of base features that needs to be implemented in order for you 
 - [ ] Rendering (features for both DirectX 12 and Vulkan renderers)
     - [ ] Forward rendering (temporary)
         - [X] MSAA (Multisample anti-aliasing)
-        - [ ] Transparent materials
+        - [X] Transparent materials
         - [ ] Frustum culling
         - [ ] Diffuse textures
         - [ ] Multiple materials per mesh

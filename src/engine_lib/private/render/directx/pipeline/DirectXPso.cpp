@@ -239,7 +239,7 @@ namespace ne {
             blendDesc.LogicOp = D3D12_LOGIC_OP_NOOP;
             blendDesc.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
             psoDesc.BlendState.RenderTarget[0] = blendDesc;
-            psoDesc.BlendState.AlphaToCoverageEnable = static_cast<int>(msaaState != MsaaState::DISABLED);
+            psoDesc.BlendState.AlphaToCoverageEnable = 0;
         } else {
             psoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
         }

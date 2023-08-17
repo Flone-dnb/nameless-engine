@@ -38,7 +38,14 @@
 #endif
 
 namespace ne {
-    DirectXRenderer::DirectXRenderer(GameManager* pGameManager) : Renderer(pGameManager) {}
+    DirectXRenderer::DirectXRenderer(GameManager* pGameManager) : Renderer(pGameManager) {
+        static_assert(
+            backBufferFormat == DXGI_FORMAT_R8G8B8A8_UNORM,
+            "also change format in Vulkan renderer for (visual) consistency");
+        static_assert(
+            depthStencilBufferFormat == DXGI_FORMAT_D24_UNORM_S8_UINT,
+            "also change format in Vulkan renderer for (visual) consistency");
+    }
 
     std::vector<ShaderDescription> DirectXRenderer::getEngineShadersToCompile() const {
         return {HlslEngineShaders::meshNodeVertexShader, HlslEngineShaders::meshNodePixelShader};

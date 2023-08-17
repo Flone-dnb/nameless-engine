@@ -24,7 +24,14 @@
 #include "vulkan/vk_enum_string_helper.h"
 
 namespace ne {
-    VulkanRenderer::VulkanRenderer(GameManager* pGameManager) : Renderer(pGameManager) {}
+    VulkanRenderer::VulkanRenderer(GameManager* pGameManager) : Renderer(pGameManager) {
+        static_assert(
+            swapChainImageFormat == VK_FORMAT_R8G8B8A8_UNORM,
+            "also change format in DirectX renderer for (visual) consistency");
+        static_assert(
+            depthImageFormat == VK_FORMAT_D24_UNORM_S8_UINT,
+            "also change format in DirectX renderer for (visual) consistency");
+    }
 
     std::variant<MsaaState, Error> VulkanRenderer::getMaxSupportedAntialiasingQuality() const {
         // Make sure physical device is valid.

@@ -713,7 +713,7 @@ namespace ne {
         static constexpr size_t iRenderPassColorResolveTargetAttachmentIndex = 2;
 
         /** Format of @ref vSwapChainImages. */
-        static constexpr VkFormat swapChainImageFormat = VK_FORMAT_B8G8R8A8_SRGB;
+        static constexpr VkFormat swapChainImageFormat = VK_FORMAT_R8G8B8A8_UNORM;
 
         /** Format of @ref pDepthImage. */
         static constexpr VkFormat depthImageFormat = VK_FORMAT_D24_UNORM_S8_UINT;

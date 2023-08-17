@@ -542,7 +542,7 @@ namespace ne {
         VkPipelineColorBlendAttachmentState colorBlendAttachmentStateInfo{};
         colorBlendAttachmentStateInfo.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
                                                        VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-        colorBlendAttachmentStateInfo.blendEnable = bUsePixelBlending;
+        colorBlendAttachmentStateInfo.blendEnable = static_cast<VkBool32>(bUsePixelBlending);
         colorBlendAttachmentStateInfo.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
         colorBlendAttachmentStateInfo.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
         colorBlendAttachmentStateInfo.colorBlendOp = VK_BLEND_OP_ADD;

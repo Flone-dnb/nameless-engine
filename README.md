@@ -7,7 +7,7 @@ TODO: screenshot game/editor
 * Windows
 * Linux
 
-# Features
+# Core features
 
 Click on any line below to show an example:
 

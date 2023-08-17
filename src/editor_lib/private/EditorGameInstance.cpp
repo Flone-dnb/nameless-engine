@@ -32,6 +32,7 @@ namespace ne {
             if (optionalWorldError.has_value()) [[unlikely]] {
                 auto error = optionalWorldError.value();
                 error.addCurrentLocationToErrorStack();
+                error.showError();
                 throw std::runtime_error(error.getFullErrorMessage());
             }
 
@@ -71,6 +72,7 @@ namespace ne {
         if (optionalError.has_value()) [[unlikely]] {
             auto error = optionalError.value();
             error.addCurrentLocationToErrorStack();
+            error.showError();
             throw std::runtime_error(error.getFullErrorMessage());
         }
 
@@ -80,6 +82,7 @@ namespace ne {
         if (optionalError.has_value()) [[unlikely]] {
             auto error = optionalError.value();
             error.addCurrentLocationToErrorStack();
+            error.showError();
             throw std::runtime_error(error.getFullErrorMessage());
         }
 
@@ -89,6 +92,7 @@ namespace ne {
         if (optionalError.has_value()) [[unlikely]] {
             auto error = optionalError.value();
             error.addCurrentLocationToErrorStack();
+            error.showError();
             throw std::runtime_error(error.getFullErrorMessage());
         }
 
@@ -98,6 +102,7 @@ namespace ne {
         if (optionalError.has_value()) [[unlikely]] {
             auto error = optionalError.value();
             error.addCurrentLocationToErrorStack();
+            error.showError();
             throw std::runtime_error(error.getFullErrorMessage());
         }
 
@@ -107,6 +112,7 @@ namespace ne {
         if (optionalError.has_value()) [[unlikely]] {
             auto error = optionalError.value();
             error.addCurrentLocationToErrorStack();
+            error.showError();
             throw std::runtime_error(error.getFullErrorMessage());
         }
 
@@ -116,6 +122,7 @@ namespace ne {
         if (optionalError.has_value()) [[unlikely]] {
             auto error = optionalError.value();
             error.addCurrentLocationToErrorStack();
+            error.showError();
             throw std::runtime_error(error.getFullErrorMessage());
         }
 

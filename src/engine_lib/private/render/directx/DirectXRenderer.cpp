@@ -978,7 +978,7 @@ namespace ne {
             }
 
             if (vFilteredModes.empty()) {
-                Logger::get().warn(std::format(
+                Logger::get().info(std::format(
                     "video mode with resolution {}x{} and refresh rate "
                     "{}/{} is not supported, using default video mode",
                     preferredRenderResolution.first,
@@ -1010,7 +1010,7 @@ namespace ne {
                         static_cast<int>(mode.ScanlineOrdering),
                         static_cast<int>(mode.Scaling));
                 }
-                Logger::get().warn(std::format("{}\nusing default video mode", sErrorMessage));
+                Logger::get().info(std::format("{}\nusing default video mode", sErrorMessage));
                 // use the last display mode
                 pickedDisplayMode = vVideoModes.back();
             }

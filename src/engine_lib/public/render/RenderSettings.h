@@ -242,7 +242,7 @@ namespace ne RNAMESPACE() {
 
         /** Sample count of AA. */
         RPROPERTY(Serialize)
-        int iAntialiasingSampleCount = static_cast<int>(MsaaState::HIGH);
+        int iAntialiasingSampleCount = static_cast<int>(MsaaState::VERY_HIGH);
 
         /** Texture filtering mode. */
         RPROPERTY(Serialize)

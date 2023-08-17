@@ -414,7 +414,7 @@ namespace ne {
         // Clamp sample count to max value.
         if (iAntialiasingSampleCount > iMaxSampleCount) {
             // Log change.
-            Logger::get().warn(std::format(
+            Logger::get().info(std::format(
                 "AA sample count \"{}\" is not supported, changing to \"{}\"",
                 iAntialiasingSampleCount,
                 iMaxSampleCount));

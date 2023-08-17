@@ -20,8 +20,6 @@ namespace ne {
             // Because insertion only happens from the manager and the mutex is locked array's size
             // will not change.
             if (item.second->getSize() == 0) {
-                Logger::get().info(
-                    fmt::format("deleting storage array \"{}\" because it's empty", item.first));
                 return true;
             }
             return false;

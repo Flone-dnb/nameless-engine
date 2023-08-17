@@ -25,7 +25,9 @@ namespace ne {
         }
 
         // Make sure the renderer is no longer using this PSO or its resources.
-        Logger::get().info("waiting for the GPU to finish work up to this point before destroying a PSO");
+        Logger::get().info(fmt::format(
+            "waiting for the GPU to finish work up to this point before destroying a PSO with id \"{}\"",
+            getUniquePipelineIdentifier()));
         getRenderer()->waitForGpuToFinishWorkUpToThisPoint();
     }
 

@@ -396,16 +396,10 @@ namespace ne {
         // Release shader bytecode.
         if (mtxCompiledBytecode.second != nullptr) {
             const auto iNewRefCount = mtxCompiledBytecode.second.Reset();
-            if (iNewRefCount != 0) {
+            if (iNewRefCount != 0) [[unlikely]] {
                 Logger::get().error(fmt::format(
                     "shader \"{}\" bytecode was requested to be released from the "
                     "memory but it's still being referenced (new ref count: {})",
-                    getShaderName(),
-                    iNewRefCount));
-            } else {
-                Logger::get().info(fmt::format(
-                    "shader \"{}\" bytecode is being released from the memory as it's no longer being "
-                    "used (new ref count: {})",
                     getShaderName(),
                     iNewRefCount));
             }

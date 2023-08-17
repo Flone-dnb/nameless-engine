@@ -28,6 +28,11 @@ namespace ne {
                 "failed to get shader descriptor binding count, error: {}", static_cast<int>(result)));
         }
 
+        // Make sure we found at least one binding.
+        if (iDescriptorBindingCount == 0) [[unlikely]] {
+            return Error("expected to find at least one descriptor binding in GLSL code");
+        }
+
         // Get descriptor bindings.
         std::vector<SpvReflectDescriptorBinding*> vDescriptorBindings(iDescriptorBindingCount);
         result = spvReflectEnumerateDescriptorBindings(
@@ -40,6 +45,14 @@ namespace ne {
         std::unordered_set<std::string> usedNames;
         Collected collected;
         for (const auto& descriptorBinding : vDescriptorBindings) {
+            // Make sure binding name is valid.
+            if (descriptorBinding->name == nullptr) [[unlikely]] {
+                return Error(fmt::format(
+                    "found {} binding(s) but one has unexpected `nullptr` name (was debug info generated "
+                    "during compilation?)",
+                    vDescriptorBindings.size()));
+            }
+
             // Make sure there was no binding with this ID.
             auto bindingInfoIt = collected.bindingInfo.find(descriptorBinding->binding);
             if (bindingInfoIt != collected.bindingInfo.end()) [[unlikely]] {

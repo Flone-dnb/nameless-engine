@@ -101,11 +101,14 @@ namespace ne {
 
         // Specify optimization level.
 #if defined(DEBUG)
-        compileOptions.SetGenerateDebugInfo();
         compileOptions.SetOptimizationLevel(shaderc_optimization_level_zero);
 #else
         compileOptions.SetOptimizationLevel(shaderc_optimization_level_performance);
 #endif
+
+        // Generate debug info in any build mode for valid reflection (otherwise binding names will be
+        // not available).
+        compileOptions.SetGenerateDebugInfo();
 
         // Prepare shader source file name for compilation.
         const auto sShaderSourceFileName = shaderDescription.pathToShaderFile.stem().string();

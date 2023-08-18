@@ -26,7 +26,10 @@
 namespace ne {
     VulkanRenderer::VulkanRenderer(GameManager* pGameManager) : Renderer(pGameManager) {
         static_assert(
-            swapChainImageFormat == VK_FORMAT_R8G8B8A8_UNORM,
+            swapChainImageFormat == VK_FORMAT_B8G8R8A8_UNORM,
+            "also change format in DirectX renderer for (visual) consistency");
+        static_assert(
+            swapChainImageColorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR,
             "also change format in DirectX renderer for (visual) consistency");
         static_assert(
             depthImageFormat == VK_FORMAT_D24_UNORM_S8_UINT,

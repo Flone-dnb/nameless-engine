@@ -713,7 +713,10 @@ namespace ne {
         static constexpr size_t iRenderPassColorResolveTargetAttachmentIndex = 2;
 
         /** Format of @ref vSwapChainImages. */
-        static constexpr VkFormat swapChainImageFormat = VK_FORMAT_R8G8B8A8_UNORM;
+        static constexpr VkFormat swapChainImageFormat = VK_FORMAT_B8G8R8A8_UNORM;
+
+        /** Color space of @ref vSwapChainImages. */
+        static constexpr VkColorSpaceKHR swapChainImageColorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
 
         /** Format of @ref pDepthImage. */
         static constexpr VkFormat depthImageFormat = VK_FORMAT_D24_UNORM_S8_UINT;
@@ -723,9 +726,6 @@ namespace ne {
 
         /** Format of indices. */
         static constexpr VkIndexType indexTypeFormat = VK_INDEX_TYPE_UINT32;
-
-        /** Color space of @ref vSwapChainImages. */
-        static constexpr VkColorSpaceKHR swapChainImageColorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
 
         /** Version of the Vulkan API that the renderer uses. */
         static constexpr uint32_t iUsedVulkanVersion = VK_API_VERSION_1_1;

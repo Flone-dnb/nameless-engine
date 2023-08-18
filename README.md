@@ -402,6 +402,7 @@ Prerequisites:
 - [Doxygen](https://doxygen.nl/download.html)
 - [LLVM](https://github.com/llvm/llvm-project/releases/latest)
 - [Go](https://go.dev/dl/)
+- [Vulkan SDK](https://vulkan.lunarg.com/sdk/home)
 - prerequisites for Linux:
     - `libtinfo.so` might not be installed on your system but is required
     - `libclang` (needed for reflection code generator), **after** CMake is configured `ext/Refureku/build/Bin/` will contain needed libraries, you would need to create the file `/etc/ld.so.conf.d/nameless-engine.conf` with the path to this directory and run `sudo ldconfig` so that these libraries will be found by the reflection generator

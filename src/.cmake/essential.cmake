@@ -37,6 +37,10 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 set(ENGINE_FOLDER "NAMELESS-ENGINE")
 set(EXTERNAL_FOLDER "EXTERNAL")
 
+# Define some names.
+set(POST_BUILD_SCRIPT_NAME "post_build")
+set(DELETE_NONGAME_FILES_SCRIPT_NAME "delete_nongame_files")
+
 # Refureku related stuff: ------------------------------------------------------------------------------------
 set(GENERATED_DIR_NAME ".generated")
 set(REFUREKU_SETTINGS_FILE_NAME "RefurekuSettings.toml")

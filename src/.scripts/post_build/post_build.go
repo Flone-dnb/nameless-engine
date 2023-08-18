@@ -12,29 +12,33 @@
 // 3. Absolute path to the working directory of your IDE.
 // 4. Absolute path to the output build directory (where resulting binary will be located).
 // 5. Value 0 or 1 the determines whether this is a release build or not.
+// 6. Absolute path to directory with `delete_nongame_files` script.
 
 package main
 
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
 	"time"
+
+	cp "github.com/otiai10/copy"
 )
 
 var log_prefix = "post_build.go:"
+var res_copy_reminder_file_name = "COPY_UPDATED_RES_DIRECTORY_HERE"
+var res_dir_name = "res"
 
 func main() {
 	// Mark start time.
 	var time_start = time.Now()
 
 	// Make sure we have enough arguments passed.
-	var expected_arg_count = 5
+	var expected_arg_count = 6
 	var args_count = len(os.Args[1:])
 	if args_count != expected_arg_count {
 		fmt.Println(log_prefix, "expected", expected_arg_count, "arguments.")
@@ -46,12 +50,15 @@ func main() {
 	var ext_directory = os.Args[2]
 	var working_directory = os.Args[3]
 	var output_build_directory = os.Args[4]
-	var is_release = os.Args[5]
+	var is_release = false
+	var path_to_delete_nongame_files_script_dir = os.Args[6]
 
-	// Print current build type.
-	if is_release == "1" {
+	// Parse current build type.
+	if os.Args[5] == "1" {
+		is_release = true
 		fmt.Println(log_prefix, "current build mode is RELEASE.")
-	} else if is_release == "0" {
+	} else if os.Args[5] == "0" {
+		is_release = false
 		fmt.Println(log_prefix, "current build mode is DEBUG.")
 	} else {
 		fmt.Println(log_prefix, "unknown build mode, expected 0 or 1, received", is_release)
@@ -62,24 +69,154 @@ func main() {
 	copy_ext_libs(ext_directory, working_directory, output_build_directory)
 
 	// Copy external licenses to the build directory (if release build).
-	if is_release == "1" {
+	if is_release {
 		fmt.Println(log_prefix, "copying external licenses to the build directory...")
 		copy_ext_licenses(ext_directory, output_build_directory)
 	} else {
 		fmt.Println(log_prefix, "skip copying external licenses step because running DEBUG build.")
 	}
 
-	// Create symlinks to the `res` directory.
-	make_simlink_to_res(res_directory, working_directory, output_build_directory)
+	// Handle `res` directory.
+	if !is_release {
+		remove_copy_res_reminder_file(output_build_directory)
 
-	// Copy MSVC redisk if build in release on Windows.
-	if runtime.GOOS == "windows" && is_release == "1" {
+		// Create symlinks to the `res` directory.
+		make_simlink_to_res(res_directory, working_directory, output_build_directory)
+	} else {
+		// Remove symlink from directory with executable file so that the application will fail
+		// to start which should remind the developer to copy new version of the `res` directory.
+		remove_simlink_to_res_from_build_dir(output_build_directory)
+
+		create_copy_res_reminder_file(output_build_directory)
+	}
+
+	// Copy MSVC redist if build in release on Windows.
+	if runtime.GOOS == "windows" && is_release {
 		add_redist(output_build_directory)
+	}
+
+	// Handle `delete_nongame_files` script.
+	if is_release {
+		remove_delete_nongame_files_script_dir(path_to_delete_nongame_files_script_dir, output_build_directory)
+		copy_delete_nongame_files_script_dir(path_to_delete_nongame_files_script_dir, output_build_directory)
+	} else {
+		remove_delete_nongame_files_script_dir(path_to_delete_nongame_files_script_dir, output_build_directory)
 	}
 
 	// Print elapsed time.
 	var time_elapsed = time.Since(time_start)
 	fmt.Println(log_prefix, "done, took", time_elapsed.Milliseconds(), "ms")
+}
+
+// Deletes `delete_nongame_files` script directory from the specified output build directory.
+func remove_delete_nongame_files_script_dir(path_to_script_dir string, output_build_directory string) {
+	// Make sure script directory exists.
+	var script_dir_stat, err = os.Stat(path_to_script_dir)
+	if os.IsNotExist(err) {
+		fmt.Println(log_prefix, "directory", path_to_script_dir, "does not exist")
+		os.Exit(1)
+	}
+
+	// Make sure script directory path is not a file.
+	if !script_dir_stat.Mode().IsDir() {
+		fmt.Println(log_prefix, path_to_script_dir, "is not a directory")
+		os.Exit(1)
+	}
+
+	var script_name = filepath.Base(path_to_script_dir)
+
+	// Make sure output directory exists.
+	_, err = os.Stat(output_build_directory)
+	if os.IsNotExist(err) {
+		fmt.Println(log_prefix, "directory", output_build_directory, "does not exist")
+		os.Exit(1)
+	}
+
+	// Construct resulting path.
+	var dst_script_dir_path = filepath.Join(output_build_directory, script_name)
+
+	// Delete script directory from output directory (if exists).
+	_, err = os.Stat(dst_script_dir_path)
+	if err == nil {
+		// Remove existing directory.
+		err = os.RemoveAll(dst_script_dir_path)
+		if err != nil {
+			fmt.Println(log_prefix, "failed to remove directory", dst_script_dir_path)
+			os.Exit(1)
+		}
+	}
+}
+
+func copy_delete_nongame_files_script_dir(path_to_script_dir string, output_build_directory string) {
+	// Make sure script directory exists.
+	var script_dir_stat, err = os.Stat(path_to_script_dir)
+	if os.IsNotExist(err) {
+		fmt.Println(log_prefix, "directory", path_to_script_dir, "does not exist")
+		os.Exit(1)
+	}
+
+	// Make sure script directory path is not a file.
+	if !script_dir_stat.Mode().IsDir() {
+		fmt.Println(log_prefix, path_to_script_dir, "is not a directory")
+		os.Exit(1)
+	}
+
+	var script_name = filepath.Base(path_to_script_dir)
+
+	// Make sure output directory exists.
+	_, err = os.Stat(output_build_directory)
+	if os.IsNotExist(err) {
+		fmt.Println(log_prefix, "directory", output_build_directory, "does not exist")
+		os.Exit(1)
+	}
+
+	// Construct resulting path.
+	var dst_script_dir_path = filepath.Join(output_build_directory, script_name)
+
+	// Delete old copied script directory (if exists).
+	_, err = os.Stat(dst_script_dir_path)
+	if err == nil {
+		// Remove existing directory.
+		err = os.RemoveAll(dst_script_dir_path)
+		if err != nil {
+			fmt.Println(log_prefix, "failed to remove directory", dst_script_dir_path)
+			os.Exit(1)
+		}
+	}
+
+	// Copy script directory.
+	err = cp.Copy(path_to_script_dir, dst_script_dir_path)
+	if err != nil {
+		fmt.Println(log_prefix, "failed to copy", path_to_script_dir, "to", dst_script_dir_path)
+		os.Exit(1)
+	}
+}
+
+func remove_copy_res_reminder_file(output_build_directory string) {
+	// Prepare path to file.
+	var path_to_file = filepath.Join(output_build_directory, res_copy_reminder_file_name)
+
+	// Make sure the file exists.
+	var _, err = os.Stat(path_to_file)
+	if os.IsNotExist(err) {
+		return // nothing to
+	}
+
+	// Remove the file.
+	err = os.Remove(path_to_file)
+	if err != nil {
+		fmt.Println(log_prefix, "failed to create file at", path_to_file)
+		os.Exit(1)
+	}
+}
+
+func create_copy_res_reminder_file(output_build_directory string) {
+	// Create a "reminder" file.
+	err := os.WriteFile(filepath.Join(output_build_directory, res_copy_reminder_file_name), []byte(""), 0755)
+	if err != nil {
+		fmt.Println(log_prefix, "failed to create file at", output_build_directory)
+		os.Exit(1)
+	}
 }
 
 func copy_ext_libs(ext_directory string, working_directory string, build_directory string) {
@@ -210,10 +347,36 @@ func make_simlink_to_res(res_directory string, working_directory string, output_
 	fmt.Println(log_prefix, "build directory:", output_build_directory)
 
 	// Create symlinks to `res` in the working directory and the output build directory.
-	create_symlink(res_directory, filepath.Join(working_directory, "res"))
-	create_symlink(res_directory, filepath.Join(output_build_directory, "res"))
+	create_symlink(res_directory, filepath.Join(working_directory, res_dir_name))
+	create_symlink(res_directory, filepath.Join(output_build_directory, res_dir_name))
 
 	fmt.Println(log_prefix, "symlinks to resources directory were created.")
+}
+
+func remove_simlink_to_res_from_build_dir(output_build_directory string) {
+	// Make sure build directory exists.
+	var err error
+	_, err = os.Stat(output_build_directory)
+	if os.IsNotExist(err) {
+		fmt.Println(log_prefix, "build directory", output_build_directory, "does not exist")
+		os.Exit(1)
+	}
+
+	// Build path to symlink.
+	var path_to_symlink = filepath.Join(output_build_directory, "res")
+
+	// Make sure symlink exists.
+	_, err = os.Stat(path_to_symlink)
+	if os.IsNotExist(err) {
+		return // does not exist, nothing to remove
+	}
+
+	// Remove symlink.
+	err = os.Remove(path_to_symlink)
+	if err != nil {
+		fmt.Println(log_prefix, "failed to remove symlink at", path_to_symlink)
+		os.Exit(1)
+	}
 }
 
 func create_symlink(target string, symlink_location string) {
@@ -310,7 +473,7 @@ func copy_ext_licenses(ext_directory string, build_directory string) {
 
 	var copied_licenses_count = 0
 
-	items, err := ioutil.ReadDir(ext_directory)
+	items, err := os.ReadDir(ext_directory)
 	if err != nil {
 		fmt.Println(log_prefix, err)
 		os.Exit(1)
@@ -321,7 +484,7 @@ func copy_ext_licenses(ext_directory string, build_directory string) {
 		}
 
 		var dir_name = item.Name()
-		subitems, _ := ioutil.ReadDir(filepath.Join(ext_directory, item.Name()))
+		subitems, _ := os.ReadDir(filepath.Join(ext_directory, item.Name()))
 
 		var found_license = false
 		for _, subitem := range subitems {

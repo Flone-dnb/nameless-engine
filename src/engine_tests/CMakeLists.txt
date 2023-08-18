@@ -6,6 +6,7 @@ project(engine_tests)
 set(RELATIVE_EXT_PATH "../../ext")
 set(ABSOLUTE_EXT_PATH ${CMAKE_CURRENT_SOURCE_DIR}/${RELATIVE_EXT_PATH})
 set(RELATIVE_CMAKE_HELPERS_PATH "../.cmake")
+set(RELATIVE_SCRIPTS_PATH "../.scripts")
 
 # Include essential stuff.
 include(${RELATIVE_CMAKE_HELPERS_PATH}/essential.cmake)
@@ -82,12 +83,14 @@ target_include_directories(${PROJECT_NAME} PUBLIC ${TESTS_RELATIVE_PATH})
 
 # Add a post build script.
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-                   COMMAND go run ${CMAKE_CURRENT_LIST_DIR}/../post_build.go
+                   WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/${RELATIVE_SCRIPTS_PATH}/${POST_BUILD_SCRIPT_NAME}
+                   COMMAND go run ${CMAKE_CURRENT_LIST_DIR}/${RELATIVE_SCRIPTS_PATH}/${POST_BUILD_SCRIPT_NAME}/${POST_BUILD_SCRIPT_NAME}.go
                    ${CMAKE_CURRENT_LIST_DIR}/../../res/
                    ${CMAKE_CURRENT_LIST_DIR}/../../ext/
                    ${CMAKE_BINARY_DIR}
                    ${CMAKE_CURRENT_BINARY_DIR}
                    ${IS_RELEASE_BUILD}
+                   ${CMAKE_CURRENT_LIST_DIR}/${RELATIVE_SCRIPTS_PATH}/${DELETE_NONGAME_FILES_SCRIPT_NAME}
 )
 
 # -------------------------------------------------------------------------------------------------

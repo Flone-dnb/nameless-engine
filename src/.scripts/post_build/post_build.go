@@ -342,10 +342,6 @@ func make_simlink_to_res(res_directory string, working_directory string, output_
 		os.Exit(1)
 	}
 
-	fmt.Println(log_prefix, "resources directory:", res_directory)
-	fmt.Println(log_prefix, "working directory:", working_directory)
-	fmt.Println(log_prefix, "build directory:", output_build_directory)
-
 	// Create symlinks to `res` in the working directory and the output build directory.
 	create_symlink(res_directory, filepath.Join(working_directory, res_dir_name))
 	create_symlink(res_directory, filepath.Join(output_build_directory, res_dir_name))
@@ -380,43 +376,22 @@ func remove_simlink_to_res_from_build_dir(output_build_directory string) {
 }
 
 func create_symlink(target string, symlink_location string) {
-	var _, err = os.Stat(filepath.Dir(symlink_location))
-	if os.IsNotExist(err) {
-		return // directory does not exist
+	var err = os.RemoveAll(symlink_location)
+	if err != nil {
+		fmt.Println(log_prefix, "failed to remove path at", symlink_location)
+		os.Exit(1)
 	}
 
-	var create_symlink = false
-
-	fi, err := os.Lstat(symlink_location) // read symlink
-	if os.IsNotExist(err) {
-		create_symlink = true
-	} else if fi.Mode()&os.ModeSymlink != 0 { // make sure this is symlink
-		_, err := os.Readlink(fi.Name())
-		if err != nil {
-			fmt.Println(log_prefix, "found broken symlink at", symlink_location, "attempting to fix it...")
-			os.RemoveAll(symlink_location)
-			create_symlink = true
+	err = os.Symlink(target, symlink_location)
+	if err != nil {
+		fmt.Println(log_prefix, "failed to create symlink to `res` for", symlink_location, "error:", err)
+		if runtime.GOOS == "windows" {
+			// Maybe not enough privileges.
+			fmt.Println(log_prefix, "failed to create symlink to `res` directory. "+
+				"In order to create symlinks on Windows administrator rights are requires (make sure you are running your "+
+				"IDE with administrator rights).")
 		}
-		return // nothing to do
-	} else {
-		// not a symlink
-		fmt.Println(log_prefix, "found broken symlink at", symlink_location, "attempting to fix it...")
-		os.RemoveAll(symlink_location)
-		create_symlink = true
-	}
-
-	if create_symlink {
-		err = os.Symlink(target, symlink_location)
-		if err != nil {
-			fmt.Println(log_prefix, "failed to create symlink to 'res' for", symlink_location, "error:", err)
-			if runtime.GOOS == "windows" {
-				// Maybe not enough privileges.
-				fmt.Println(log_prefix, "failed to create symlink to 'res' directory. "+
-					"In order to create symlinks on Windows administrator rights are requires (make sure you are running your "+
-					"IDE with administrator rights).")
-			}
-			os.Exit(1)
-		}
+		os.Exit(1)
 	}
 }
 

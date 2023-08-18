@@ -414,7 +414,6 @@ namespace ne {
         vkGetPhysicalDeviceProperties(pGpuDevice, &deviceProperties);
 
         // Make sure this device is suitable for this renderer.
-        std::string sErrorDescription;
         auto result = isDeviceSuitable(pGpuDevice);
         if (std::holds_alternative<Error>(result)) {
             const auto error = std::get<Error>(std::move(result));
@@ -426,7 +425,7 @@ namespace ne {
         }
         const auto sMissingSupportMessage = std::get<std::string>(std::move(result));
         if (!sMissingSupportMessage.empty()) {
-            Logger::get().info(fmt::format("{} and thus cannon be used", sErrorDescription));
+            Logger::get().info(fmt::format("{} and thus cannon be used", sMissingSupportMessage));
             return 0;
         }
 

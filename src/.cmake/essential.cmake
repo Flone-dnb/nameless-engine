@@ -145,9 +145,10 @@ function(add_refureku TARGET_CMAKE_DIR EXCLUDED_FROM_ANALYZING REFUREKU_EXT_PATH
         ${CMAKE_CXX_COMPILER_ID} # used compiler
         OUTPUT_VARIABLE refureku_output
         ERROR_VARIABLE refureku_error
+        RESULT_VARIABLE return_code
     )
     message(STATUS "${PROJECT_NAME}: ${refureku_output}")
-    if (refureku_error)
+    if (return_code AND NOT return_code EQUAL 0)
         message(FATAL_ERROR "${refureku_error}")
     endif()
 

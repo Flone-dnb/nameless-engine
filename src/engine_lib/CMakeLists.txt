@@ -314,6 +314,7 @@ include(${RELATIVE_EXT_PATH}/Vulkan-Tools/cmake/FindVulkan.cmake) # include Find
 if (NOT Vulkan_FOUND)
     message(FATAL_ERROR "Failed to find Vulkan SDK. Please install Vulkan SDK that defines VULKAN_SDK environment variable.")
 endif()
+message(STATUS "${PROJECT_NAME}: found Vulkan include dirs at: ${Vulkan_INCLUDE_DIRS}")
 target_include_directories(${PROJECT_NAME} PUBLIC ${Vulkan_INCLUDE_DIRS})
 target_link_libraries(${PROJECT_NAME} PUBLIC ${Vulkan_LIBRARIES})
 
@@ -393,6 +394,8 @@ set(REFUREKU_INCLUDE_DIRECTORIES
     ${ABSOLUTE_EXT_PATH}/glm
     ${ABSOLUTE_EXT_PATH}/Refureku/build/Include
     ${ABSOLUTE_EXT_PATH}/GLSL-Shader-Includes/src/project_lib/src
+    ${ABSOLUTE_EXT_PATH}/shaderc/libshaderc/include
+    ${ABSOLUTE_EXT_PATH}/SPIRV-Reflect
     ${Vulkan_INCLUDE_DIRS}
     ${CMAKE_CURRENT_SOURCE_DIR}/public
     ${CMAKE_CURRENT_SOURCE_DIR}/private

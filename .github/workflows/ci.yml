@@ -1,0 +1,42 @@
+name: Engine
+
+on: [push, pull_request, pull_request_review]
+
+jobs:
+  build-windows-debug:
+    name: Windows Build
+    runs-on: windows-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+    - name: Pull submodules
+      run: git submodule update --init --recursive
+    - name: Install dependencies
+      run: |
+        choco install ninja doxygen.install
+        Copy "C:\Program Files\doxygen\bin\doxygen.exe" "C:\ProgramData\Chocolatey\bin\doxygen.exe"
+        Import-Module $env:ChocolateyInstall\helpers\chocolateyProfile.psm1
+        refreshenv
+        cmake --version
+        clang --version
+        echo "Installed doxygen of version $(doxygen -v)."
+    - name: Prepare Vulkan SDK
+      uses: humbletim/setup-vulkan-sdk@v1.2.0
+      with:
+        vulkan-query-version: 1.3.204.0
+        vulkan-components: Vulkan-Headers, Vulkan-Loader
+        vulkan-use-cache: true
+    - name: Setup vk_enum_string_helper.h
+      run: |
+        '#pragma once' | Out-File -FilePath VULKAN_SDK/include/vulkan/vk_enum_string_helper.h
+        '#include <string>' | Out-File -FilePath VULKAN_SDK/include/vulkan/vk_enum_string_helper.h -Append
+        '#include <vulkan/vulkan.h>' | Out-File -FilePath VULKAN_SDK/include/vulkan/vk_enum_string_helper.h -Append
+        'static inline const char* string_VkResult(VkResult input_value) {return "";}' | Out-File -FilePath VULKAN_SDK/include/vulkan/vk_enum_string_helper.h -Append
+    - name: Build (debug + release)
+      run: |
+        mkdir build
+        cd build
+        cmake -G "Visual Studio 17 2022" -DCMAKE_BUILD_TYPE=Debug ..
+        cmake --build . --target ALL_BUILD --config Debug
+        cmake -G "Visual Studio 17 2022" -DCMAKE_BUILD_TYPE=Release ..
+        cmake --build . --target ALL_BUILD --config Release

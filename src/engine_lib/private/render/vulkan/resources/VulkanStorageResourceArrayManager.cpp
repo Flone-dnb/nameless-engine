@@ -19,10 +19,7 @@ namespace ne {
         std::erase_if(mtxGlslShaderCpuWriteResources.second, [](auto& item) {
             // Because insertion only happens from the manager and the mutex is locked array's size
             // will not change.
-            if (item.second->getSize() == 0) {
-                return true;
-            }
-            return false;
+            return item.second->getSize() == 0;
         });
     }
 
@@ -168,6 +165,19 @@ namespace ne {
         }
 
         return {};
+    }
+
+    VulkanStorageResourceArray*
+    VulkanStorageResourceArrayManager::getArrayForShaderResource(const std::string& sShaderResourceName) {
+        std::scoped_lock guard(mtxGlslShaderCpuWriteResources.first);
+
+        // Find storage array that handles the specified shader resource name.
+        const auto it = mtxGlslShaderCpuWriteResources.second.find(sShaderResourceName);
+        if (it == mtxGlslShaderCpuWriteResources.second.end()) {
+            return nullptr;
+        }
+
+        return it->second.get();
     }
 
     std::string VulkanStorageResourceArrayManager::formatBytesToMegabytes(size_t iSizeInBytes) {

@@ -122,6 +122,41 @@ namespace ne {
         friend class VulkanStorageResourceArrayManager;
 
     public:
+        /** Array's internal resources. */
+        struct InternalResources {
+            /** CPU visible storage buffer that stores all elements. */
+            std::unique_ptr<UploadBuffer> pStorageBuffer = nullptr;
+
+            /**
+             * The maximum number of elements that could be added to the array without
+             * expanding (recreating with a bigger size) the storage buffer.
+             */
+            size_t iCapacity = 0;
+
+            /** The actual number of elements in the array (smaller or equal to @ref iCapacity). */
+            size_t iSize = 0;
+
+            /**
+             * Index of the next free place in the array.
+             * Each new element inserted in the array will fetch this value (to be used) and increment it.
+             * Once this value is equal to @ref iCapacity we will use @ref noLongerUsedArrayIndices
+             * to see if any old indices are no longer being used.
+             */
+            size_t iNextFreeArrayIndex = 0;
+
+            /** Indices in the array that were previously used (inserted) but now erased and are free. */
+            std::queue<size_t> noLongerUsedArrayIndices;
+
+            /**
+             * Set of slots that were inserted (equal to @ref iSize).
+             *
+             * Storing a raw pointer here because it's only used to update
+             * slot's index if the array was resized. Before the slot
+             * is destroyed it will be automatically removed from this set (see slot's destructor).
+             */
+            std::unordered_set<VulkanStorageResourceArraySlot*> activeSlots;
+        };
+
         VulkanStorageResourceArray() = delete;
         VulkanStorageResourceArray(const VulkanStorageResourceArray&) = delete;
         VulkanStorageResourceArray& operator=(const VulkanStorageResourceArray&) = delete;
@@ -167,42 +202,18 @@ namespace ne {
          */
         size_t getCapacityStepSize() const;
 
+        /**
+         * Returns internal resources.
+         *
+         * @remark Generally used by automated tests.
+         *
+         * @remark Do not delete (free) returned pointer.
+         *
+         * @return Internal resources.
+         */
+        std::pair<std::recursive_mutex, InternalResources>* getInternalResources();
+
     private:
-        /** Array's internal resources. */
-        struct InternalResources {
-            /** CPU visible storage buffer that stores all elements. */
-            std::unique_ptr<UploadBuffer> pStorageBuffer = nullptr;
-
-            /**
-             * The maximum number of elements that could be added to the array without
-             * expanding (recreating with a bigger size) the storage buffer.
-             */
-            size_t iCapacity = 0;
-
-            /** The actual number of elements in the array (smaller or equal to @ref iCapacity). */
-            size_t iSize = 0;
-
-            /**
-             * Index of the next free place in the array.
-             * Each new element inserted in the array will fetch this value (to be used) and increment it.
-             * Once this value is equal to @ref iCapacity we will use @ref noLongerUsedArrayIndices
-             * to see if any old indices are no longer being used.
-             */
-            size_t iNextFreeArrayIndex = 0;
-
-            /** Indices in the array that were previously used (inserted) but now erased and are free. */
-            std::queue<size_t> noLongerUsedArrayIndices;
-
-            /**
-             * Set of slots that were inserted (equal to @ref iSize).
-             *
-             * Storing a raw pointer here because it's only used to update
-             * slot's index if the array was resized. Before the slot
-             * is destroyed it will be automatically removed from this set (see slot's destructor).
-             */
-            std::unordered_set<VulkanStorageResourceArraySlot*> activeSlots;
-        };
-
         /**
          * Creates a new array.
          *

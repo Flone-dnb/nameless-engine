@@ -86,6 +86,15 @@ namespace ne {
             const std::string& sShaderResourceName,
             unsigned int iBindingIndex);
 
+        /**
+         * Attempts to find an array that handles shader resources of the specified name.
+         *
+         * @param sShaderResourceName Name of the shader resource (from GLSL code).
+         *
+         * @return `nullptr` if not found, otherwise valid pointer.
+         */
+        VulkanStorageResourceArray* getArrayForShaderResource(const std::string& sShaderResourceName);
+
     private:
         /**
          * Formats the specified size in bytes to the following format: "<number> MB",

@@ -168,6 +168,11 @@ namespace ne {
 
     size_t VulkanStorageResourceArray::getCapacityStepSize() const { return iCapacityStepSize; }
 
+    std::pair<std::recursive_mutex, VulkanStorageResourceArray::InternalResources>*
+    VulkanStorageResourceArray::getInternalResources() {
+        return &mtxInternalResources;
+    }
+
     std::string VulkanStorageResourceArray::formatBytesToKilobytes(size_t iSizeInBytes) {
         return fmt::format(
             "{:.1F} KB",

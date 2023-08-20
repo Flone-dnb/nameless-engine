@@ -38,6 +38,7 @@ set(PROJECT_SOURCES
     src/materials/ShaderManager.cpp
     src/io/Serializable.cpp
     src/render/RenderSettings.cpp
+    src/render/vulkan/VulkanStorageResourceArray.cpp
     src/render/Pipeline.cpp
     src/math/GLMath.cpp
     src/math/MathHelpers.cpp

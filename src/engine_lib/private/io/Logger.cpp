@@ -43,6 +43,10 @@ namespace ne {
         return logger;
     }
 
+    size_t Logger::getTotalWarningsProduced() { return iTotalWarningsProduced.load(); }
+
+    size_t Logger::getTotalErrorsProduced() { return iTotalErrorsProduced.load(); }
+
     void Logger::info(std::string_view sText, const nostd::source_location location) const {
         if (pSpdLogger == nullptr) {
             return;

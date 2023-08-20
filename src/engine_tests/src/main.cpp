@@ -168,6 +168,12 @@ int main() {
         return 1;
     }
 
+    // Check warnings/errors logged.
+    if (ne::Logger::getTotalWarningsProduced() > 0 || ne::Logger::getTotalErrorsProduced() > 0) {
+        ne::Logger::get().info("all tests passed but some warnings/errors were logged");
+        return 1;
+    }
+
     if (bIsDirectXRendererSupported && bIsVulkanRendererSupported) {
         ne::Logger::get().info("both DirectX and Vulkan renderers were tested and all tests passed");
         return 0;

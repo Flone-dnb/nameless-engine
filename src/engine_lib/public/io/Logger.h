@@ -28,6 +28,20 @@ namespace ne {
         static Logger& get();
 
         /**
+         * Returns the total number of warnings produced at this point.
+         *
+         * @return Warning count.
+         */
+        static size_t getTotalWarningsProduced();
+
+        /**
+         * Returns the total number of errors produced at this point.
+         *
+         * @return Error count.
+         */
+        static size_t getTotalErrorsProduced();
+
+        /**
          * Add text to console and log file using "info" category.
          * The text message will be appended with the file name and the line it was called from.
          *
@@ -92,7 +106,7 @@ namespace ne {
         static std::string getDateTime();
 
         /**
-         * Removes oldest log files if the amount of log files exceed a specific limit.
+         * Removes oldest log files if the number of log files exceed a specific limit.
          *
          * @param sLogDirectory Directory that contains log files.
          */
@@ -108,14 +122,14 @@ namespace ne {
          */
         std::filesystem::path sLoggerWorkingDirectory;
 
-        /** Total amount of warnings produced. */
+        /** The total number of warnings produced. */
         inline static std::atomic<size_t> iTotalWarningsProduced{0};
 
-        /** Total amount of errors produced. */
+        /** The total number of errors produced. */
         inline static std::atomic<size_t> iTotalErrorsProduced{0};
 
         /**
-         * Maximum amount of log files in the logger directory.
+         * The maximum number of log files in the logger directory.
          * If the logger directory contains this amount of log files,
          * the oldest log file will be removed to create a new one.
          */

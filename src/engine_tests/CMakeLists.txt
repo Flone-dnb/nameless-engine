@@ -36,6 +36,7 @@ set(PROJECT_SOURCES
     src/materials/ShaderPack.cpp
     src/materials/Material.cpp
     src/materials/ShaderManager.cpp
+    src/materials/glsl/DescriptorSetLayoutGenerator.cpp
     src/io/Serializable.cpp
     src/render/RenderSettings.cpp
     src/render/vulkan/VulkanStorageResourceArray.cpp

@@ -346,6 +346,18 @@ func make_simlink_to_res(res_directory string, working_directory string, output_
 	create_symlink(res_directory, filepath.Join(working_directory, res_dir_name))
 	create_symlink(res_directory, filepath.Join(output_build_directory, res_dir_name))
 
+	// Check if `Debug`/`Release` directories exist in the output build directory.
+	var debug_build_dir = filepath.Join(output_build_directory, "Debug")
+	var release_build_dir = filepath.Join(output_build_directory, "Release")
+	_, err = os.Stat(debug_build_dir)
+	if err == nil {
+		create_symlink(res_directory, debug_build_dir)
+	}
+	_, err = os.Stat(release_build_dir)
+	if err == nil {
+		create_symlink(res_directory, release_build_dir)
+	}
+
 	fmt.Println(log_prefix, "symlinks to resources directory were created.")
 }
 

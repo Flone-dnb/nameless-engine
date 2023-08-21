@@ -1773,7 +1773,7 @@ namespace ne {
 
     std::variant<std::set<std::pair<unsigned int, unsigned int>>, Error>
     VulkanRenderer::getSupportedRenderResolutions() const {
-        // TODO: replace this implementation
+        // TODO: implement window size independent resolution
         if (!swapChainExtent.has_value()) {
             return Error("swap chain extent is not set");
         }
@@ -1783,7 +1783,8 @@ namespace ne {
 
     std::variant<std::set<std::pair<unsigned int, unsigned int>>, Error>
     VulkanRenderer::getSupportedRefreshRates() const {
-        throw std::runtime_error("not implemented");
+        // TODO: properly query this info
+        return std::set<std::pair<unsigned int, unsigned int>>{{0, 0}};
     }
 
     RendererType VulkanRenderer::getType() const { return RendererType::VULKAN; }

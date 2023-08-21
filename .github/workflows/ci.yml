@@ -1,10 +1,20 @@
-name: Engine
+name: All
 
 on: [push, pull_request, pull_request_review]
 
 jobs:
-  build-windows-debug:
-    name: Windows Build
+  clang-format:
+    name: Run clang-format
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      - name: Run clang-format
+        run: |
+          cd .github/scripts/run_clang_format_on_source/
+          go run . ../../../src
+  build-windows:
+    name: Build on Windows
     runs-on: windows-latest
     steps:
     - name: Checkout repository

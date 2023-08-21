@@ -13,4 +13,5 @@ AllowShortIfStatementsOnASingleLine: false
 AllowShortLoopsOnASingleLine: false
 SpaceAroundPointerQualifiers: Default
 PointerAlignment: Left
+FixNamespaceComments: false  # does not work as expected when namespace uses reflection
 ...

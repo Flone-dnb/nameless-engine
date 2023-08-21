@@ -3,7 +3,7 @@
 namespace ne {
     UniqueValueGenerator::~UniqueValueGenerator() {}
 
-    UniqueValueGenerator &UniqueValueGenerator::get() {
+    UniqueValueGenerator& UniqueValueGenerator::get() {
         static UniqueValueGenerator generator;
         return generator;
     }

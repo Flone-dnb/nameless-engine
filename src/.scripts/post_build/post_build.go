@@ -371,18 +371,28 @@ func remove_simlink_to_res_from_build_dir(output_build_directory string) {
 	}
 
 	// Build path to symlink.
-	var path_to_symlink = filepath.Join(output_build_directory, "res")
+	var path_to_symlink = filepath.Join(output_build_directory, res_dir_name)
+	remove_symlink_if_exists(path_to_symlink)
 
+	// Check if `Release` directory exist in the output build directory.
+	var release_build_dir = filepath.Join(output_build_directory, "Release")
+	_, err = os.Stat(release_build_dir)
+	if err == nil {
+		remove_symlink_if_exists(filepath.Join(release_build_dir, res_dir_name))
+	}
+}
+
+func remove_symlink_if_exists(symlink_location string) {
 	// Make sure symlink exists.
-	_, err = os.Stat(path_to_symlink)
+	_, err := os.Stat(symlink_location)
 	if os.IsNotExist(err) {
 		return // does not exist, nothing to remove
 	}
 
 	// Remove symlink.
-	err = os.Remove(path_to_symlink)
+	err = os.Remove(symlink_location)
 	if err != nil {
-		fmt.Println(log_prefix, "failed to remove symlink at", path_to_symlink)
+		fmt.Println(log_prefix, "failed to remove symlink at", symlink_location)
 		os.Exit(1)
 	}
 }

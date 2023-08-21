@@ -65,6 +65,9 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Print some info.
+	fmt.Println(log_prefix, "using the following build directory:", output_build_directory)
+
 	// Copy dynamic libraries.
 	copy_ext_libs(ext_directory, working_directory, output_build_directory)
 
@@ -73,7 +76,7 @@ func main() {
 		fmt.Println(log_prefix, "copying external licenses to the build directory...")
 		copy_ext_licenses(ext_directory, output_build_directory)
 	} else {
-		fmt.Println(log_prefix, "skip copying external licenses step because running DEBUG build.")
+		fmt.Println(log_prefix, "skip copying external licenses step because running DEBUG build")
 	}
 
 	// Handle `res` directory.
@@ -347,18 +350,18 @@ func make_simlink_to_res(res_directory string, working_directory string, output_
 	create_symlink(res_directory, filepath.Join(output_build_directory, res_dir_name))
 
 	// Check if `Debug`/`Release` directories exist in the output build directory.
-	var debug_build_dir = filepath.Join(output_build_directory, "Debug")
-	var release_build_dir = filepath.Join(output_build_directory, "Release")
-	_, err = os.Stat(debug_build_dir)
+	var debug_build_res = filepath.Join(output_build_directory, "Debug")
+	var release_build_res = filepath.Join(output_build_directory, "Release")
+	_, err = os.Stat(debug_build_res)
 	if err == nil {
-		create_symlink(res_directory, debug_build_dir)
+		create_symlink(res_directory, filepath.Join(debug_build_res, res_dir_name))
 	}
-	_, err = os.Stat(release_build_dir)
+	_, err = os.Stat(release_build_res)
 	if err == nil {
-		create_symlink(res_directory, release_build_dir)
+		create_symlink(res_directory, filepath.Join(release_build_res, res_dir_name))
 	}
 
-	fmt.Println(log_prefix, "symlinks to resources directory were created.")
+	fmt.Println(log_prefix, "symlinks to resources directory were created")
 }
 
 func remove_simlink_to_res_from_build_dir(output_build_directory string) {
@@ -415,6 +418,8 @@ func create_symlink(target string, symlink_location string) {
 		}
 		os.Exit(1)
 	}
+
+	fmt.Println(log_prefix, "created symlink at", symlink_location)
 }
 
 func copy_ext_licenses(ext_directory string, build_directory string) {

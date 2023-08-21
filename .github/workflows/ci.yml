@@ -13,8 +13,8 @@ jobs:
         run: |
           cd .github/scripts/run_clang_format_on_source/
           go run . ../../../src
-  build-windows:
-    name: Build on Windows
+  build-tests-windows:
+    name: Build and run tests on Windows
     runs-on: windows-latest
     steps:
     - name: Checkout repository
@@ -42,11 +42,28 @@ jobs:
         '#include <string>' | Out-File -FilePath VULKAN_SDK/include/vulkan/vk_enum_string_helper.h -Append
         '#include <vulkan/vulkan.h>' | Out-File -FilePath VULKAN_SDK/include/vulkan/vk_enum_string_helper.h -Append
         'static inline const char* string_VkResult(VkResult input_value) {return "";}' | Out-File -FilePath VULKAN_SDK/include/vulkan/vk_enum_string_helper.h -Append
-    - name: Build (debug + release)
+    - name: Create build directory
+      run: mkdir build
+    - name: Build (debug)
       run: |
-        mkdir build
-        cd build
         cmake -G "Visual Studio 17 2022" -DCMAKE_BUILD_TYPE=Debug ..
         cmake --build . --target ALL_BUILD --config Debug
+      working-directory: build
+    - name: Test (debug)
+      run: |
+        cmake -G "Visual Studio 17 2022" -DCMAKE_BUILD_TYPE=Debug ..
+        cmake --build . --target engine_tests --config Debug
+        ./OUTPUT/engine_tests/Debug/engine_tests.exe
+      working-directory: build
+    - name: Build (release)
+      run: |
         cmake -G "Visual Studio 17 2022" -DCMAKE_BUILD_TYPE=Release ..
         cmake --build . --target ALL_BUILD --config Release
+      working-directory: build
+    - name: Test (release)
+      run: |
+        cmake -G "Visual Studio 17 2022" -DCMAKE_BUILD_TYPE=Release ..
+        cmake --build . --target engine_tests --config Release
+        Copy-Item -Path ../res -Recurse -Destination ./OUTPUT/engine_tests/Release/ -Container
+        ./OUTPUT/engine_tests/Release/engine_tests.exe
+      working-directory: build

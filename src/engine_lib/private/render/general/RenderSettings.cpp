@@ -128,7 +128,7 @@ namespace ne {
             const auto iNewSampleCount = static_cast<int>(MsaaState::VERY_HIGH);
 
             // Log change.
-            Logger::get().warn(std::format(
+            Logger::get().warn(fmt::format(
                 "deserialized AA sample count \"{}\" is not a valid/supported value, changing to \"{}\"",
                 iAntialiasingSampleCount,
                 iNewSampleCount));
@@ -144,7 +144,7 @@ namespace ne {
             const auto iNewTextureFilteringMode = static_cast<int>(TextureFilteringMode::ANISOTROPIC);
 
             // Log change.
-            Logger::get().warn(std::format(
+            Logger::get().warn(fmt::format(
                 "deserialized texture filtering mode \"{}\" is not a valid parameter, changing to \"{}\"",
                 iTextureFilteringMode,
                 iNewTextureFilteringMode));
@@ -414,7 +414,7 @@ namespace ne {
         // Clamp sample count to max value.
         if (iAntialiasingSampleCount > iMaxSampleCount) {
             // Log change.
-            Logger::get().info(std::format(
+            Logger::get().info(fmt::format(
                 "AA sample count \"{}\" is not supported, changing to \"{}\"",
                 iAntialiasingSampleCount,
                 iMaxSampleCount));

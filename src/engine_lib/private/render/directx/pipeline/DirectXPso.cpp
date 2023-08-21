@@ -71,7 +71,7 @@ namespace ne {
         // Release graphics PSO.
         auto iNewRefCount = mtxInternalResources.second.pGraphicsPso.Reset();
         if (iNewRefCount != 0) {
-            return Error(std::format(
+            return Error(fmt::format(
                 "internal graphics PSO was requested to be released from the "
                 "memory but it's still being referenced (new ref count: {}) (PSO ID: {})",
                 iNewRefCount,
@@ -87,7 +87,7 @@ namespace ne {
         // whether it's safe to compare it to zero or not.
         //        iNewRefCount = mtxInternalResources.second.pRootSignature.Reset();
         //        if (iNewRefCount != 0) {
-        //            return Error(std::format(
+        //            return Error(fmt::format(
         //                "internal root signature was requested to be released from the "
         //                "memory but it's still being referenced (new ref count: {}) (PSO ID: {})",
         //                iNewRefCount,
@@ -153,7 +153,7 @@ namespace ne {
 
         // Check if shaders were found.
         if (bVertexShaderNotFound || bPixelShaderNotFound) [[unlikely]] {
-            return Error(std::format(
+            return Error(fmt::format(
                 "shaders not found in Shader Manager: vertex \"{}\" (found: {}), pixel \"{}\" (found: {})",
                 sVertexShaderName,
                 !bVertexShaderNotFound,

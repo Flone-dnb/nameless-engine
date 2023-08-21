@@ -51,7 +51,7 @@ namespace ne {
         auto onProgress = [](size_t iCompiledShaderCount, size_t iTotalShadersToCompile) {};
         auto onError = [](ShaderDescription shaderDescription, std::variant<std::string, Error> error) {
             if (std::holds_alternative<std::string>(error)) {
-                const auto sErrorMessage = std::format(
+                const auto sErrorMessage = fmt::format(
                     "failed to compile shader \"{}\" due to the following compilation error:\n{}",
                     shaderDescription.sShaderName,
                     std::get<std::string>(std::move(error)));
@@ -60,7 +60,7 @@ namespace ne {
                 throw std::runtime_error(err.getFullErrorMessage());
             }
 
-            const auto sErrorMessage = std::format(
+            const auto sErrorMessage = fmt::format(
                 "failed to compile shader \"{}\" due to the following internal error:\n{}",
                 shaderDescription.sShaderName,
                 std::get<Error>(std::move(error)).getFullErrorMessage());

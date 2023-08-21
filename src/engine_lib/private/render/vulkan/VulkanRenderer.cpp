@@ -1635,7 +1635,7 @@ namespace ne {
 
         // Make sure framebuffer array size is equal to image views array size.
         if (vSwapChainFramebuffers.size() != vSwapChainImageViews.size()) [[unlikely]] {
-            return Error(std::format(
+            return Error(fmt::format(
                 "swapchain framebuffer array size ({}) is not equal to swapchain image view array size ({}), "
                 "swapchain framebuffers wrap swapchain images thus framebuffer count "
                 "should be equal to swapchain image count",

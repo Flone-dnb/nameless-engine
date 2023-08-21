@@ -139,7 +139,7 @@ namespace ne {
         initialResourceState = D3D12_RESOURCE_STATE_GENERIC_READ;
         result = DirectXResource::create(
             this,
-            std::format("upload resource for \"{}\"", sResourceName),
+            fmt::format("upload resource for \"{}\"", sResourceName),
             pMemoryAllocator.Get(),
             allocationDesc,
             resourceDesc,

@@ -290,7 +290,7 @@ namespace ne {
         const auto iNewSizeInBytes = iCapacity * iElementSizeInBytes;
 
         // Log the fact that we will pause the rendering.
-        Logger::get().info(std::format(
+        Logger::get().info(fmt::format(
             "waiting for the GPU to finish work up to this point to (re)create the storage array "
             "\"{}\" from capacity {} ({}) to {} ({}) (current actual size: {})",
             sHandledResourceName,
@@ -431,7 +431,7 @@ namespace ne {
 
         // Make sure we can shrink (check that we are not on the minimum capacity).
         if (mtxInternalResources.second.iCapacity < iCapacityStepSize * 2) [[unlikely]] {
-            return Error(std::format(
+            return Error(fmt::format(
                 "a request to shrink the array \"{}\" of capacity {} with the actual size of {} was "
                 "rejected, reason: need at least the size of {} to shrink (this is a bug, report "
                 "to developers)",
@@ -445,7 +445,7 @@ namespace ne {
         // free space (i.e. we will not be on the edge to expand).
         if (mtxInternalResources.second.iSize >
             mtxInternalResources.second.iCapacity - iCapacityStepSize - iCapacityStepSize / 2) [[unlikely]] {
-            return Error(std::format(
+            return Error(fmt::format(
                 "a request to shrink the array \"{}\" of capacity {} with the actual size of {} was "
                 "rejected, reason: shrink condition is not met (this is a bug, report to developers)",
                 sHandledResourceName,

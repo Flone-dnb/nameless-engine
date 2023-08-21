@@ -273,7 +273,7 @@ namespace ne {
 
         // Check if shaders were found.
         if (bVertexShaderNotFound || bFragmentShaderNotFound) [[unlikely]] {
-            return Error(std::format(
+            return Error(fmt::format(
                 "shaders not found in Shader Manager: vertex \"{}\" (found: {}), fragment \"{}\" "
                 "(found: {}) ",
                 sVertexShaderName,

@@ -138,7 +138,7 @@ namespace ne {
 
     CalledEveryFrameNodes* World::getCalledEveryFrameNodes() { return &calledEveryFrameNodes; }
 
-    std::pair<std::recursive_mutex, std::vector<Node*>>* World::getReceivingInputNodes() {
+    std::pair<std::recursive_mutex, std::unordered_set<Node*>>* World::getReceivingInputNodes() {
         return &mtxReceivingInputNodes;
     }
 
@@ -187,10 +187,10 @@ namespace ne {
                 addNodeToCalledEveryFrameArrays(pNode);
             }
 
-            if (pNode->receivesInput()) {
+            if (pNode->isReceivingInput()) {
                 // Add node to array of nodes that receive input.
                 std::scoped_lock guard(mtxReceivingInputNodes.first);
-                mtxReceivingInputNodes.second.push_back(pNode);
+                mtxReceivingInputNodes.second.insert(pNode);
             }
 
             iTotalSpawnedNodeCount.fetch_add(1);
@@ -243,28 +243,8 @@ namespace ne {
             // We even have a test for this bug.
             removeNodeFromCalledEveryFrameArrays(pNode);
 
-            if (pNode->receivesInput()) {
-                // Remove node from array of nodes that receive input.
-                bool bFound = false;
-
-                std::scoped_lock guard(mtxReceivingInputNodes.first);
-                for (auto it = mtxReceivingInputNodes.second.begin();
-                     it != mtxReceivingInputNodes.second.end();
-                     ++it) {
-                    if ((*it) == pNode) {
-                        mtxReceivingInputNodes.second.erase(it);
-                        bFound = true;
-                        break;
-                    }
-                }
-
-                if (!bFound) [[unlikely]] {
-                    Logger::get().error(fmt::format(
-                        "node \"{}\" receives input but it does not exist "
-                        "in the array of nodes that receive input",
-                        pNode->getNodeName()));
-                }
-            }
+            // Not checking for `Node::isReceivingInput` for the same reason as above.
+            removeNodeFromReceivingInputArray(pNode);
 
             iTotalSpawnedNodeCount.fetch_sub(1);
         });
@@ -314,7 +294,7 @@ namespace ne {
                 // Log this event since the node is changing this while spawned (might be important to
                 // see/debug).
                 Logger::get().info(
-                    fmt::format("node \"{}\" is now called every frame", pNode->getNodeName()));
+                    fmt::format("spawned node \"{}\" is now called every frame", pNode->getNodeName()));
                 return;
             }
 
@@ -325,8 +305,73 @@ namespace ne {
                 if (bFound) {
                     // Log this event since the node is changing this while spawned (might be important to
                     // see/debug).
-                    Logger::get().info(
-                        fmt::format("node \"{}\" is no longer called every frame", pNode->getNodeName()));
+                    Logger::get().info(fmt::format(
+                        "spawned node \"{}\" is no longer called every frame", pNode->getNodeName()));
+                }
+                // else: this might happen if the node had the setting disabled and then quickly
+                // enabled and disabled it back
+            }
+        });
+    }
+
+    void World::onSpawnedNodeChangedIsReceivingInput(Node* pNode) {
+        // Get node ID.
+        const auto optionalNodeId = pNode->getNodeId();
+
+        // Make sure the node ID is valid.
+        if (!optionalNodeId.has_value()) [[unlikely]] {
+            Error error(fmt::format("spawned node \"{}\" ID is invalid", pNode->getNodeName()));
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+        }
+
+        // Save node ID.
+        const auto iNodeId = optionalNodeId.value();
+
+        // Save previous state.
+        const auto bPreviousIsReceivingInput = !pNode->isReceivingInput();
+
+        // Modify our array as deferred task (see onNodeSpawned for the reason).
+        // Additionally, engine guarantees that all deferred tasks will be finished before GC runs
+        // so it's safe to do so.
+        pGameManager->addDeferredTask([this, pNode, iNodeId, bPreviousIsReceivingInput]() {
+            // Make sure this node is still spawned.
+            const auto bIsSpawned = isNodeSpawned(iNodeId);
+            if (!bIsSpawned) {
+                // If it had "receiving input" enabled it was removed from our array during despawn.
+                return;
+            }
+
+            // Get current setting state.
+            const auto bIsReceivingInput = pNode->isReceivingInput();
+
+            if (bIsReceivingInput == bPreviousIsReceivingInput) {
+                // The node changed the setting back, nothing to do.
+                return;
+            }
+
+            if (!bPreviousIsReceivingInput && bIsReceivingInput) {
+                // Was disabled but now enabled.
+                // Add node to array of nodes that receive input.
+                std::scoped_lock guard(mtxReceivingInputNodes.first);
+                mtxReceivingInputNodes.second.insert(pNode);
+
+                // Log this event since the node is changing this while spawned (might be important to
+                // see/debug).
+                Logger::get().info(
+                    fmt::format("spawned node \"{}\" is now receiving input", pNode->getNodeName()));
+                return;
+            }
+
+            if (bPreviousIsReceivingInput && !bIsReceivingInput) {
+                // Was enabled but now disabled.
+                bool bFound = removeNodeFromReceivingInputArray(pNode);
+
+                if (bFound) {
+                    // Log this event since the node is changing this while spawned (might be important to
+                    // see/debug).
+                    Logger::get().info(fmt::format(
+                        "spawned node \"{}\" is no longer receiving input", pNode->getNodeName()));
                 }
                 // else: this might happen if the node had the setting disabled and then quickly
                 // enabled and disabled it back
@@ -353,7 +398,7 @@ namespace ne {
             pPairToUse = &calledEveryFrameNodes.mtxSecondTickGroup;
         }
 
-        // Remove from array.
+        // Find in array.
         std::scoped_lock guard(pPairToUse->first);
         const auto it = pPairToUse->second.find(pNode);
         if (it == pPairToUse->second.end()) {
@@ -363,6 +408,22 @@ namespace ne {
 
         // Remove from array.
         pPairToUse->second.erase(it);
+
+        return true;
+    }
+
+    bool World::removeNodeFromReceivingInputArray(Node* pNode) {
+        std::scoped_lock guard(mtxReceivingInputNodes.first);
+
+        // Find in array.
+        const auto it = mtxReceivingInputNodes.second.find(pNode);
+        if (it == mtxReceivingInputNodes.second.end()) {
+            // Not found.
+            return false;
+        }
+
+        // Remove from array.
+        mtxReceivingInputNodes.second.erase(it);
 
         return true;
     }

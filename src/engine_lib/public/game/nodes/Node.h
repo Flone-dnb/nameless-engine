@@ -271,14 +271,14 @@ namespace ne RNAMESPACE() {
          *
          * @return Whether the @ref onBeforeNewFrame should be called each frame or not.
          */
-        bool isCalledEveryFrame() const;
+        bool isCalledEveryFrame();
 
         /**
          * Returns whether this node receives input or not.
          *
          * @return Whether this node receives input or not.
          */
-        bool receivesInput() const;
+        bool isReceivingInput();
 
         /**
          * Returns whether this node is spawned in the world or not.
@@ -351,7 +351,7 @@ namespace ne RNAMESPACE() {
          *
          * @param bEnable Whether the input function should be enabled or not.
          */
-        void setReceiveInput(bool bEnable);
+        void setIsReceivingInput(bool bEnable);
 
         /**
          * Creates a new timer and saves it inside of this node to be used while the node is spawned.
@@ -444,7 +444,7 @@ namespace ne RNAMESPACE() {
          * Binded callbacks will be automatically called when an action event is triggered.
          *
          * @remark Input events will be only triggered if the node is spawned.
-         * @remark Input events will not be called if @ref setReceiveInput was not enabled.
+         * @remark Input events will not be called if @ref setIsReceivingInput was not enabled.
          * @remark Only events in GameInstance's InputManager (GameInstance::getInputManager)
          * will be considered to trigger events in the node.
          *
@@ -471,7 +471,7 @@ namespace ne RNAMESPACE() {
          * Binded callbacks will be automatically called when an axis event is triggered.
          *
          * @remark Input events will be only triggered if the node is spawned.
-         * @remark Input events will not be called if @ref setReceiveInput was not enabled.
+         * @remark Input events will not be called if @ref setIsReceivingInput was not enabled.
          * @remark Only events in GameInstance's InputManager (GameInstance::getInputManager)
          * will be considered to trigger events in the node.
          *
@@ -498,7 +498,7 @@ namespace ne RNAMESPACE() {
         /**
          * Called when the window received mouse movement.
          *
-         * @remark This function will not be called if @ref setReceiveInput was not enabled.
+         * @remark This function will not be called if @ref setIsReceivingInput was not enabled.
          * @remark This function will only be called while this node is spawned.
          *
          * @param iXOffset  Mouse X movement delta in pixels (plus if moved to the right,
@@ -511,7 +511,7 @@ namespace ne RNAMESPACE() {
         /**
          * Called when the window receives mouse scroll movement.
          *
-         * @remark This function will not be called if @ref setReceiveInput was not enabled.
+         * @remark This function will not be called if @ref setIsReceivingInput was not enabled.
          * @remark This function will only be called while this node is spawned.
          *
          * @param iOffset Movement offset.
@@ -636,7 +636,7 @@ namespace ne RNAMESPACE() {
          * Called when a window that owns this game instance receives user
          * input and the input key exists as an action event in the InputManager.
          *
-         * @remark This function will not be called if @ref setReceiveInput was not enabled.
+         * @remark This function will not be called if @ref setIsReceivingInput was not enabled.
          * @remark This function will only be called while this node is spawned.
          *
          * @param sActionName    Name of the input action event (from input manager).
@@ -650,7 +650,7 @@ namespace ne RNAMESPACE() {
          * Called when a window that owns this game instance receives user
          * input and the input key exists as an axis event in the InputManager.
          *
-         * @remark This function will not be called if @ref setReceiveInput was not enabled.
+         * @remark This function will not be called if @ref setIsReceivingInput was not enabled.
          * @remark This function will only be called while this node is spawned.
          *
          * @param sAxisName      Name of the input axis event (from input manager).
@@ -804,7 +804,7 @@ namespace ne RNAMESPACE() {
          * Determines if the input related functions, such as @ref onMouseMove, @ref onMouseScrollMove,
          * @ref onInputActionEvent and @ref onInputAxisEvent will be called or not.
          */
-        bool bReceiveInput = false;
+        std::pair<std::recursive_mutex, bool> mtxIsReceivingInput;
 
         /** Name of the attribute we use to serialize information about parent node. */
         static inline const auto sParentNodeIdAttributeName = "parent_node_id";

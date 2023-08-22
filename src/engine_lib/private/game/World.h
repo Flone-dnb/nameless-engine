@@ -117,7 +117,7 @@ namespace ne {
          *
          * @return Pointer to array of nodes (use with mutex).
          */
-        std::pair<std::recursive_mutex, std::vector<Node*>>* getReceivingInputNodes();
+        std::pair<std::recursive_mutex, std::unordered_set<Node*>>* getReceivingInputNodes();
 
         /**
          * Returns a pointer to world's root node.
@@ -193,6 +193,17 @@ namespace ne {
         void onSpawnedNodeChangedIsCalledEveryFrame(Node* pNode);
 
         /**
+         * Called from Node to notify the World about a spawned node changed its "is receiving input"
+         * setting.
+         *
+         * @warning Should be called AFTER the node has changed its setting and the new state should not
+         * be changed while this function is running.
+         *
+         * @param pNode Node that is changing its setting.
+         */
+        void onSpawnedNodeChangedIsReceivingInput(Node* pNode);
+
+        /**
          * Adds the specified node to the arrays of "called every frame" nodes
          * (see @ref calledEveryFrameNodes).
          *
@@ -210,6 +221,16 @@ namespace ne {
          */
         bool removeNodeFromCalledEveryFrameArrays(Node* pNode);
 
+        /**
+         * Looks if the specified node exists in the array of "receiving input" nodes
+         * and removes the node from the array (see @ref mtxReceivingInputNodes).
+         *
+         * @param pNode Node to remove.
+         *
+         * @return `true` if the specified node was found and removed, `false` otherwise.
+         */
+        bool removeNodeFromReceivingInputArray(Node* pNode);
+
         /** Do not delete. Owner GameManager object. */
         GameManager* pGameManager = nullptr;
 
@@ -223,7 +244,7 @@ namespace ne {
         CalledEveryFrameNodes calledEveryFrameNodes;
 
         /** Array of currently spawned nodes that receive input. */
-        std::pair<std::recursive_mutex, std::vector<Node*>> mtxReceivingInputNodes;
+        std::pair<std::recursive_mutex, std::unordered_set<Node*>> mtxReceivingInputNodes;
 
         /** Stores pairs of "Node ID" - "Spawned Node". */
         std::pair<std::recursive_mutex, std::unordered_map<size_t, Node*>> mtxSpawnedNodes;

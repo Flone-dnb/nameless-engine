@@ -465,7 +465,7 @@ namespace ne {
             const auto pReceivingInputNodes = mtxWorld.second->getReceivingInputNodes();
 
             std::scoped_lock nodesGuard(pReceivingInputNodes->first);
-            std::vector<Node*>* pNodes = &pReceivingInputNodes->second;
+            std::unordered_set<Node*>* pNodes = &pReceivingInputNodes->second;
             for (auto it = pNodes->begin(); it != pNodes->end(); ++it) {
                 (*it)->onMouseMove(iXOffset, iYOffset);
             }
@@ -481,7 +481,7 @@ namespace ne {
             const auto pReceivingInputNodes = mtxWorld.second->getReceivingInputNodes();
 
             std::scoped_lock nodesGuard(pReceivingInputNodes->first);
-            std::vector<Node*>* pNodes = &pReceivingInputNodes->second;
+            std::unordered_set<Node*>* pNodes = &pReceivingInputNodes->second;
             for (auto it = pNodes->begin(); it != pNodes->end(); ++it) {
                 (*it)->onMouseScrollMove(iOffset);
             }

@@ -39,6 +39,7 @@ namespace ne {
         bIsSpawned = false;
         mtxChildNodes.second = gc_new_vector<Node>();
         mtxIsCalledEveryFrame.second = false;
+        mtxIsReceivingInput.second = false;
 
         // Log construction.
         const size_t iNodeCount = iTotalAliveNodeCount.fetch_add(1) + 1;
@@ -785,7 +786,10 @@ namespace ne {
         return bPathEqual;
     }
 
-    bool Node::isCalledEveryFrame() const { return mtxIsCalledEveryFrame.second; }
+    bool Node::isCalledEveryFrame() {
+        std::scoped_lock guard(mtxIsCalledEveryFrame.first);
+        return mtxIsCalledEveryFrame.second;
+    }
 
     void Node::setIsCalledEveryFrame(bool bEnable) {
         std::scoped_lock guard(mtxSpawning, mtxIsCalledEveryFrame.first);
@@ -808,6 +812,27 @@ namespace ne {
         pWorld->onSpawnedNodeChangedIsCalledEveryFrame(this);
     }
 
+    void Node::setIsReceivingInput(bool bEnable) {
+        std::scoped_lock guard(mtxSpawning, mtxIsReceivingInput.first);
+
+        // Make sure the value is indeed changed.
+        if (bEnable == mtxIsReceivingInput.second) {
+            // Nothing to do.
+            return;
+        }
+
+        // Change the setting.
+        mtxIsReceivingInput.second = bEnable;
+
+        // Check if we are spawned.
+        if (!bIsSpawned) {
+            return;
+        }
+
+        // Notify the world.
+        pWorld->onSpawnedNodeChangedIsReceivingInput(this);
+    }
+
     void Node::setTickGroup(TickGroup tickGroup) {
         std::scoped_lock guard(mtxSpawning);
         if (bIsSpawned) {
@@ -821,18 +846,10 @@ namespace ne {
 
     TickGroup Node::getTickGroup() const { return tickGroup; }
 
-    void Node::setReceiveInput(bool bEnable) {
-        std::scoped_lock guard(mtxSpawning);
-        if (bIsSpawned) {
-            Error error("this function should not be called while the node is spawned");
-            error.showError();
-            throw std::runtime_error(error.getFullErrorMessage());
-        }
-
-        this->bReceiveInput = bEnable;
+    bool Node::isReceivingInput() {
+        std::scoped_lock guard(mtxIsReceivingInput.first);
+        return mtxIsReceivingInput.second;
     }
-
-    bool Node::receivesInput() const { return bReceiveInput; }
 
     void Node::onInputActionEvent(
         const std::string& sActionName, KeyboardModifiers modifiers, bool bIsPressedDown) {

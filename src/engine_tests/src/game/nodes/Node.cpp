@@ -699,7 +699,8 @@ TEST_CASE("input event callbacks in Node are triggered") {
     class MyNode : public Node {
     public:
         MyNode() {
-            setReceiveInput(true);
+            REQUIRE(isReceivingInput() == false); // disabled by default
+            setIsReceivingInput(true);
 
             {
                 const auto pActionEvents = getActionEventBindings();
@@ -1005,7 +1006,7 @@ TEST_CASE("input event callbacks and tick in Node is not triggered after despawn
     class MyNode : public Node {
     public:
         MyNode() {
-            setReceiveInput(true);
+            setIsReceivingInput(true);
             setIsCalledEveryFrame(true);
 
             {
@@ -1571,6 +1572,575 @@ TEST_CASE("enable \"is called every frame\" after despawn") {
         size_t iFramesPassed = 0;
         const size_t iFramesToWait = 10;
         gc<MyNode> pMyNode;
+    };
+
+    auto result = Window::getBuilder().withVisibility(false).build();
+    if (std::holds_alternative<Error>(result)) {
+        Error error = std::get<Error>(std::move(result));
+        error.addCurrentLocationToErrorStack();
+        INFO(error.getFullErrorMessage());
+        REQUIRE(false);
+    }
+
+    const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
+    pMainWindow->processEvents<TestGameInstance>();
+}
+
+TEST_CASE("disable receiving input while processing input") {
+    using namespace ne;
+
+    class MyNode : public Node {
+    public:
+        MyNode() {
+            REQUIRE(isReceivingInput() == false); // disabled by default
+            setIsReceivingInput(true);
+
+            {
+                const auto pActionEvents = getActionEventBindings();
+                std::scoped_lock guard(pActionEvents->first);
+
+                pActionEvents->second["action1"] = [&](KeyboardModifiers modifiers, bool bIsPressedDown) {
+                    action1(modifiers, bIsPressedDown);
+                };
+            }
+        }
+
+        size_t iAction1TriggerCount = 0;
+
+    private:
+        void action1(KeyboardModifiers modifiers, bool bIsPressedDown) {
+            iAction1TriggerCount += 1;
+
+            setIsReceivingInput(false);
+        }
+    };
+
+    class TestGameInstance : public GameInstance {
+    public:
+        TestGameInstance(Window* pGameWindow, GameManager* pGame, InputManager* pInputManager)
+            : GameInstance(pGameWindow, pGame, pInputManager) {}
+        virtual void onGameStarted() override {
+            createWorld([&](const std::optional<Error>& optionalWorldError) {
+                if (optionalWorldError.has_value()) {
+                    auto error = optionalWorldError.value();
+                    error.addCurrentLocationToErrorStack();
+                    INFO(error.getFullErrorMessage());
+                    REQUIRE(false);
+                }
+
+                // Spawn node.
+                pMyNode = gc_new<MyNode>();
+                getWorldRootNode()->addChildNode(pMyNode); // queues a deferred task to be added to world
+
+                // Register event.
+                auto optionalError = getInputManager()->addActionEvent("action1", {KeyboardKey::KEY_W});
+                if (optionalError.has_value()) {
+                    auto error = optionalError.value();
+                    error.addCurrentLocationToErrorStack();
+                    INFO(error.getFullErrorMessage());
+                    REQUIRE(false);
+                }
+            });
+        }
+        virtual void onBeforeNewFrame(float fTimeSincePrevCallInSec) override {
+            if (!bInitialTriggerFinished) {
+                // Simulate input.
+                getWindow()->onKeyboardInput(KeyboardKey::KEY_W, KeyboardModifiers(0), true);
+                REQUIRE(pMyNode->iAction1TriggerCount == 1);
+
+                // node should disable its input processing now using a deferred task
+                // wait 1 frame
+                bInitialTriggerFinished = true;
+                return;
+            }
+
+            // Simulate input again.
+            getWindow()->onKeyboardInput(KeyboardKey::KEY_W, KeyboardModifiers(0), false);
+            REQUIRE(pMyNode->iAction1TriggerCount == 1);
+
+            getWindow()->close();
+        }
+        virtual ~TestGameInstance() override {}
+
+    private:
+        gc<MyNode> pMyNode;
+        bool bInitialTriggerFinished = false;
+    };
+
+    auto result = Window::getBuilder().withVisibility(false).build();
+    if (std::holds_alternative<Error>(result)) {
+        Error error = std::get<Error>(std::move(result));
+        error.addCurrentLocationToErrorStack();
+        INFO(error.getFullErrorMessage());
+        REQUIRE(false);
+    }
+
+    const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
+    pMainWindow->processEvents<TestGameInstance>();
+}
+
+TEST_CASE("disable receiving input and despawn") {
+    using namespace ne;
+
+    class MyNode : public Node {
+    public:
+        MyNode() {
+            REQUIRE(isReceivingInput() == false); // disabled by default
+            setIsReceivingInput(true);
+
+            {
+                const auto pActionEvents = getActionEventBindings();
+                std::scoped_lock guard(pActionEvents->first);
+
+                pActionEvents->second["action1"] = [&](KeyboardModifiers modifiers, bool bIsPressedDown) {
+                    action1(modifiers, bIsPressedDown);
+                };
+            }
+        }
+
+        void test() {
+            setIsReceivingInput(false);
+            detachFromParentAndDespawn();
+        }
+
+        size_t iAction1TriggerCount = 0;
+
+    private:
+        void action1(KeyboardModifiers modifiers, bool bIsPressedDown) { iAction1TriggerCount += 1; }
+    };
+
+    class TestGameInstance : public GameInstance {
+    public:
+        TestGameInstance(Window* pGameWindow, GameManager* pGame, InputManager* pInputManager)
+            : GameInstance(pGameWindow, pGame, pInputManager) {}
+        virtual void onGameStarted() override {
+            createWorld([&](const std::optional<Error>& optionalWorldError) {
+                if (optionalWorldError.has_value()) {
+                    auto error = optionalWorldError.value();
+                    error.addCurrentLocationToErrorStack();
+                    INFO(error.getFullErrorMessage());
+                    REQUIRE(false);
+                }
+
+                // Spawn node.
+                pMyNode = gc_new<MyNode>();
+                getWorldRootNode()->addChildNode(pMyNode); // queues a deferred task to be added to world
+
+                // Register event.
+                auto optionalError = getInputManager()->addActionEvent("action1", {KeyboardKey::KEY_W});
+                if (optionalError.has_value()) {
+                    auto error = optionalError.value();
+                    error.addCurrentLocationToErrorStack();
+                    INFO(error.getFullErrorMessage());
+                    REQUIRE(false);
+                }
+            });
+        }
+        virtual void onBeforeNewFrame(float fTimeSincePrevCallInSec) override {
+            if (!bInitialTriggerFinished) {
+                // Simulate input.
+                getWindow()->onKeyboardInput(KeyboardKey::KEY_W, KeyboardModifiers(0), true);
+                REQUIRE(pMyNode->iAction1TriggerCount == 1);
+
+                pMyNode->test();
+
+                // node should disable its input processing now using a deferred task
+                // wait 1 frame
+
+                bInitialTriggerFinished = true;
+                return;
+            }
+
+            // Simulate input again.
+            getWindow()->onKeyboardInput(KeyboardKey::KEY_W, KeyboardModifiers(0), false);
+            REQUIRE(pMyNode->iAction1TriggerCount == 1);
+
+            getWindow()->close();
+        }
+        virtual ~TestGameInstance() override {}
+
+    private:
+        gc<MyNode> pMyNode;
+        bool bInitialTriggerFinished = false;
+    };
+
+    auto result = Window::getBuilder().withVisibility(false).build();
+    if (std::holds_alternative<Error>(result)) {
+        Error error = std::get<Error>(std::move(result));
+        error.addCurrentLocationToErrorStack();
+        INFO(error.getFullErrorMessage());
+        REQUIRE(false);
+    }
+
+    const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
+    pMainWindow->processEvents<TestGameInstance>();
+}
+
+TEST_CASE("enable receiving input and despawn") {
+    using namespace ne;
+
+    class MyNode : public Node {
+    public:
+        MyNode() {
+            REQUIRE(isReceivingInput() == false); // disabled by default
+
+            {
+                const auto pActionEvents = getActionEventBindings();
+                std::scoped_lock guard(pActionEvents->first);
+
+                pActionEvents->second["action1"] = [&](KeyboardModifiers modifiers, bool bIsPressedDown) {
+                    action1(modifiers, bIsPressedDown);
+                };
+            }
+        }
+
+        void test() {
+            setIsReceivingInput(true);
+            detachFromParentAndDespawn();
+        }
+
+        size_t iAction1TriggerCount = 0;
+
+    private:
+        void action1(KeyboardModifiers modifiers, bool bIsPressedDown) { iAction1TriggerCount += 1; }
+    };
+
+    class TestGameInstance : public GameInstance {
+    public:
+        TestGameInstance(Window* pGameWindow, GameManager* pGame, InputManager* pInputManager)
+            : GameInstance(pGameWindow, pGame, pInputManager) {}
+        virtual void onGameStarted() override {
+            createWorld([&](const std::optional<Error>& optionalWorldError) {
+                if (optionalWorldError.has_value()) {
+                    auto error = optionalWorldError.value();
+                    error.addCurrentLocationToErrorStack();
+                    INFO(error.getFullErrorMessage());
+                    REQUIRE(false);
+                }
+
+                // Spawn node.
+                pMyNode = gc_new<MyNode>();
+                getWorldRootNode()->addChildNode(pMyNode); // queues a deferred task to be added to world
+
+                // Register event.
+                auto optionalError = getInputManager()->addActionEvent("action1", {KeyboardKey::KEY_W});
+                if (optionalError.has_value()) {
+                    auto error = optionalError.value();
+                    error.addCurrentLocationToErrorStack();
+                    INFO(error.getFullErrorMessage());
+                    REQUIRE(false);
+                }
+            });
+        }
+        virtual void onBeforeNewFrame(float fTimeSincePrevCallInSec) override {
+            if (!bInitialTriggerFinished) {
+                // Simulate input.
+                getWindow()->onKeyboardInput(KeyboardKey::KEY_W, KeyboardModifiers(0), true);
+                REQUIRE(pMyNode->iAction1TriggerCount == 0);
+
+                pMyNode->test();
+
+                // wait 1 frame
+                bInitialTriggerFinished = true;
+                return;
+            }
+
+            // Simulate input again.
+            getWindow()->onKeyboardInput(KeyboardKey::KEY_W, KeyboardModifiers(0), false);
+            REQUIRE(pMyNode->iAction1TriggerCount == 0);
+
+            getWindow()->close();
+        }
+        virtual ~TestGameInstance() override {}
+
+    private:
+        gc<MyNode> pMyNode;
+        bool bInitialTriggerFinished = false;
+    };
+
+    auto result = Window::getBuilder().withVisibility(false).build();
+    if (std::holds_alternative<Error>(result)) {
+        Error error = std::get<Error>(std::move(result));
+        error.addCurrentLocationToErrorStack();
+        INFO(error.getFullErrorMessage());
+        REQUIRE(false);
+    }
+
+    const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
+    pMainWindow->processEvents<TestGameInstance>();
+}
+
+TEST_CASE("enable receiving input while spawned") {
+    using namespace ne;
+
+    class MyNode : public Node {
+    public:
+        MyNode() {
+            REQUIRE(isReceivingInput() == false); // disabled by default
+
+            {
+                const auto pActionEvents = getActionEventBindings();
+                std::scoped_lock guard(pActionEvents->first);
+
+                pActionEvents->second["action1"] = [&](KeyboardModifiers modifiers, bool bIsPressedDown) {
+                    action1(modifiers, bIsPressedDown);
+                };
+            }
+        }
+
+        void test() {
+            REQUIRE(isReceivingInput() == false);
+            setIsReceivingInput(true);
+        }
+
+        size_t iAction1TriggerCount = 0;
+
+    private:
+        void action1(KeyboardModifiers modifiers, bool bIsPressedDown) { iAction1TriggerCount += 1; }
+    };
+
+    class TestGameInstance : public GameInstance {
+    public:
+        TestGameInstance(Window* pGameWindow, GameManager* pGame, InputManager* pInputManager)
+            : GameInstance(pGameWindow, pGame, pInputManager) {}
+        virtual void onGameStarted() override {
+            createWorld([&](const std::optional<Error>& optionalWorldError) {
+                if (optionalWorldError.has_value()) {
+                    auto error = optionalWorldError.value();
+                    error.addCurrentLocationToErrorStack();
+                    INFO(error.getFullErrorMessage());
+                    REQUIRE(false);
+                }
+
+                // Spawn node.
+                pMyNode = gc_new<MyNode>();
+                getWorldRootNode()->addChildNode(pMyNode); // queues a deferred task to be added to world
+
+                // Register event.
+                auto optionalError = getInputManager()->addActionEvent("action1", {KeyboardKey::KEY_W});
+                if (optionalError.has_value()) {
+                    auto error = optionalError.value();
+                    error.addCurrentLocationToErrorStack();
+                    INFO(error.getFullErrorMessage());
+                    REQUIRE(false);
+                }
+            });
+        }
+        virtual void onBeforeNewFrame(float fTimeSincePrevCallInSec) override {
+            if (!bInitialTriggerFinished) {
+                // Simulate input.
+                getWindow()->onKeyboardInput(KeyboardKey::KEY_W, KeyboardModifiers(0), true);
+                REQUIRE(pMyNode->iAction1TriggerCount == 0);
+
+                pMyNode->test();
+
+                // wait 1 frame
+                bInitialTriggerFinished = true;
+                return;
+            }
+
+            // Simulate input again.
+            getWindow()->onKeyboardInput(KeyboardKey::KEY_W, KeyboardModifiers(0), false);
+            REQUIRE(pMyNode->iAction1TriggerCount == 1);
+
+            getWindow()->close();
+        }
+        virtual ~TestGameInstance() override {}
+
+    private:
+        gc<MyNode> pMyNode;
+        bool bInitialTriggerFinished = false;
+    };
+
+    auto result = Window::getBuilder().withVisibility(false).build();
+    if (std::holds_alternative<Error>(result)) {
+        Error error = std::get<Error>(std::move(result));
+        error.addCurrentLocationToErrorStack();
+        INFO(error.getFullErrorMessage());
+        REQUIRE(false);
+    }
+
+    const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
+    pMainWindow->processEvents<TestGameInstance>();
+}
+
+TEST_CASE("quickly enable receiving input and disable while spawned") {
+    using namespace ne;
+
+    class MyNode : public Node {
+    public:
+        MyNode() {
+            REQUIRE(isReceivingInput() == false); // disabled by default
+
+            {
+                const auto pActionEvents = getActionEventBindings();
+                std::scoped_lock guard(pActionEvents->first);
+
+                pActionEvents->second["action1"] = [&](KeyboardModifiers modifiers, bool bIsPressedDown) {
+                    action1(modifiers, bIsPressedDown);
+                };
+            }
+        }
+
+        void test() {
+            REQUIRE(isReceivingInput() == false);
+            setIsReceivingInput(true);
+            setIsReceivingInput(false);
+        }
+
+        size_t iAction1TriggerCount = 0;
+
+    private:
+        void action1(KeyboardModifiers modifiers, bool bIsPressedDown) { iAction1TriggerCount += 1; }
+    };
+
+    class TestGameInstance : public GameInstance {
+    public:
+        TestGameInstance(Window* pGameWindow, GameManager* pGame, InputManager* pInputManager)
+            : GameInstance(pGameWindow, pGame, pInputManager) {}
+        virtual void onGameStarted() override {
+            createWorld([&](const std::optional<Error>& optionalWorldError) {
+                if (optionalWorldError.has_value()) {
+                    auto error = optionalWorldError.value();
+                    error.addCurrentLocationToErrorStack();
+                    INFO(error.getFullErrorMessage());
+                    REQUIRE(false);
+                }
+
+                // Spawn node.
+                pMyNode = gc_new<MyNode>();
+                getWorldRootNode()->addChildNode(pMyNode); // queues a deferred task to be added to world
+
+                // Register event.
+                auto optionalError = getInputManager()->addActionEvent("action1", {KeyboardKey::KEY_W});
+                if (optionalError.has_value()) {
+                    auto error = optionalError.value();
+                    error.addCurrentLocationToErrorStack();
+                    INFO(error.getFullErrorMessage());
+                    REQUIRE(false);
+                }
+            });
+        }
+        virtual void onBeforeNewFrame(float fTimeSincePrevCallInSec) override {
+            if (!bInitialTriggerFinished) {
+                // Simulate input.
+                getWindow()->onKeyboardInput(KeyboardKey::KEY_W, KeyboardModifiers(0), true);
+                REQUIRE(pMyNode->iAction1TriggerCount == 0);
+
+                pMyNode->test();
+
+                // wait 1 frame
+                bInitialTriggerFinished = true;
+                return;
+            }
+
+            // Simulate input again.
+            getWindow()->onKeyboardInput(KeyboardKey::KEY_W, KeyboardModifiers(0), false);
+            REQUIRE(pMyNode->iAction1TriggerCount == 0);
+
+            getWindow()->close();
+        }
+        virtual ~TestGameInstance() override {}
+
+    private:
+        gc<MyNode> pMyNode;
+        bool bInitialTriggerFinished = false;
+    };
+
+    auto result = Window::getBuilder().withVisibility(false).build();
+    if (std::holds_alternative<Error>(result)) {
+        Error error = std::get<Error>(std::move(result));
+        error.addCurrentLocationToErrorStack();
+        INFO(error.getFullErrorMessage());
+        REQUIRE(false);
+    }
+
+    const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
+    pMainWindow->processEvents<TestGameInstance>();
+}
+
+TEST_CASE("quickly disable receiving input and enable while spawned") {
+    using namespace ne;
+
+    class MyNode : public Node {
+    public:
+        MyNode() {
+            REQUIRE(isReceivingInput() == false); // disabled by default
+            setIsReceivingInput(true);
+
+            {
+                const auto pActionEvents = getActionEventBindings();
+                std::scoped_lock guard(pActionEvents->first);
+
+                pActionEvents->second["action1"] = [&](KeyboardModifiers modifiers, bool bIsPressedDown) {
+                    action1(modifiers, bIsPressedDown);
+                };
+            }
+        }
+
+        void test() {
+            REQUIRE(isReceivingInput() == true);
+            setIsReceivingInput(false);
+            setIsReceivingInput(true);
+        }
+
+        size_t iAction1TriggerCount = 0;
+
+    private:
+        void action1(KeyboardModifiers modifiers, bool bIsPressedDown) { iAction1TriggerCount += 1; }
+    };
+
+    class TestGameInstance : public GameInstance {
+    public:
+        TestGameInstance(Window* pGameWindow, GameManager* pGame, InputManager* pInputManager)
+            : GameInstance(pGameWindow, pGame, pInputManager) {}
+        virtual void onGameStarted() override {
+            createWorld([&](const std::optional<Error>& optionalWorldError) {
+                if (optionalWorldError.has_value()) {
+                    auto error = optionalWorldError.value();
+                    error.addCurrentLocationToErrorStack();
+                    INFO(error.getFullErrorMessage());
+                    REQUIRE(false);
+                }
+
+                // Spawn node.
+                pMyNode = gc_new<MyNode>();
+                getWorldRootNode()->addChildNode(pMyNode); // queues a deferred task to be added to world
+
+                // Register event.
+                auto optionalError = getInputManager()->addActionEvent("action1", {KeyboardKey::KEY_W});
+                if (optionalError.has_value()) {
+                    auto error = optionalError.value();
+                    error.addCurrentLocationToErrorStack();
+                    INFO(error.getFullErrorMessage());
+                    REQUIRE(false);
+                }
+            });
+        }
+        virtual void onBeforeNewFrame(float fTimeSincePrevCallInSec) override {
+            if (!bInitialTriggerFinished) {
+                // Simulate input.
+                getWindow()->onKeyboardInput(KeyboardKey::KEY_W, KeyboardModifiers(0), true);
+                REQUIRE(pMyNode->iAction1TriggerCount == 1);
+
+                pMyNode->test();
+
+                // wait 1 frame
+                bInitialTriggerFinished = true;
+                return;
+            }
+
+            // Simulate input again.
+            getWindow()->onKeyboardInput(KeyboardKey::KEY_W, KeyboardModifiers(0), false);
+            REQUIRE(pMyNode->iAction1TriggerCount == 2);
+
+            getWindow()->close();
+        }
+        virtual ~TestGameInstance() override {}
+
+    private:
+        gc<MyNode> pMyNode;
+        bool bInitialTriggerFinished = false;
     };
 
     auto result = Window::getBuilder().withVisibility(false).build();

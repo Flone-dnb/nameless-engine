@@ -291,10 +291,10 @@ namespace ne {
 
             const auto pCalledEveryFrameNodes = mtxWorld.second->getCalledEveryFrameNodes();
 
-            auto callTick = [&](std::pair<std::recursive_mutex, std::vector<Node*>>* pTickGroup) {
+            auto callTick = [&](std::pair<std::recursive_mutex, std::unordered_set<Node*>>* pTickGroup) {
                 std::scoped_lock nodesGuard(pTickGroup->first);
 
-                std::vector<Node*>* pNodes = &pTickGroup->second;
+                std::unordered_set<Node*>* pNodes = &pTickGroup->second;
                 for (auto it = pNodes->begin(); it != pNodes->end(); ++it) {
                     (*it)->onBeforeNewFrame(timeSincePrevCallInSec);
                 }

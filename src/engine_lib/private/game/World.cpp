@@ -55,6 +55,15 @@ namespace ne {
                 "in the world",
                 iSpawnedNodeCount));
         }
+
+        // Make sure there are no ticking nodes.
+        const auto iCalledEveryFrameNodeCount = getCalledEveryFrameNodeCount();
+        if (iCalledEveryFrameNodeCount != 0) [[unlikely]] {
+            Logger::get().error(fmt::format(
+                "destructor for the world object is called but there are still {} \"called every frame\" "
+                "node(s) exist in the world",
+                iSpawnedNodeCount));
+        }
     }
 
     std::unique_ptr<World> World::createWorld(GameManager* pGameManager, size_t iWorldSize) {
@@ -328,18 +337,16 @@ namespace ne {
     void World::addNodeToCalledEveryFrameArrays(Node* pNode) {
         if (pNode->getTickGroup() == TickGroup::FIRST) {
             std::scoped_lock guard(calledEveryFrameNodes.mtxFirstTickGroup.first);
-            calledEveryFrameNodes.mtxFirstTickGroup.second.push_back(pNode);
+            calledEveryFrameNodes.mtxFirstTickGroup.second.insert(pNode);
         } else {
             std::scoped_lock guard(calledEveryFrameNodes.mtxSecondTickGroup.first);
-            calledEveryFrameNodes.mtxSecondTickGroup.second.push_back(pNode);
+            calledEveryFrameNodes.mtxSecondTickGroup.second.insert(pNode);
         }
     }
 
     bool World::removeNodeFromCalledEveryFrameArrays(Node* pNode) {
-        bool bFound = false;
-
         // Pick tick group that the node used.
-        std::pair<std::recursive_mutex, std::vector<Node*>>* pPairToUse = nullptr;
+        std::pair<std::recursive_mutex, std::unordered_set<Node*>>* pPairToUse = nullptr;
         if (pNode->getTickGroup() == TickGroup::FIRST) {
             pPairToUse = &calledEveryFrameNodes.mtxFirstTickGroup;
         } else {
@@ -348,14 +355,15 @@ namespace ne {
 
         // Remove from array.
         std::scoped_lock guard(pPairToUse->first);
-        for (auto it = pPairToUse->second.begin(); it != pPairToUse->second.end(); ++it) {
-            if ((*it) == pNode) {
-                pPairToUse->second.erase(it);
-                bFound = true;
-                break;
-            }
+        const auto it = pPairToUse->second.find(pNode);
+        if (it == pPairToUse->second.end()) {
+            // Not found.
+            return false;
         }
 
-        return bFound;
+        // Remove from array.
+        pPairToUse->second.erase(it);
+
+        return true;
     }
 } // namespace ne

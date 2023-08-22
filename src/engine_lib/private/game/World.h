@@ -6,6 +6,7 @@
 #include <string>
 #include <variant>
 #include <filesystem>
+#include <unordered_set>
 
 // Custom.
 #include "misc/GC.hpp"
@@ -23,9 +24,10 @@ namespace ne {
         CalledEveryFrameNodes& operator=(const CalledEveryFrameNodes&) = delete;
 
         /** Nodes of the first tick group. */
-        std::pair<std::recursive_mutex, std::vector<Node*>> mtxFirstTickGroup;
+        std::pair<std::recursive_mutex, std::unordered_set<Node*>> mtxFirstTickGroup;
+
         /** Nodes of the second tick group. */
-        std::pair<std::recursive_mutex, std::vector<Node*>> mtxSecondTickGroup;
+        std::pair<std::recursive_mutex, std::unordered_set<Node*>> mtxSecondTickGroup;
     };
 
     /**

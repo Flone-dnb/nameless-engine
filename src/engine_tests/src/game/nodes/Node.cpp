@@ -798,7 +798,7 @@ TEST_CASE("use deferred task with node's member function while the world is bein
     using namespace ne;
 
     // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    //          this is essential test, some engine systems rely on this
+    //          this is essential test, some engine parts rely on this
     // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
     class MyDerivedNode : public Node {
@@ -826,7 +826,7 @@ TEST_CASE("use deferred task with node's member function while the world is bein
         virtual void onGameStarted() override {
             createWorld([this](const std::optional<Error>& optionalWorldError1) {
                 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-                //          this is essential test, some engine systems rely on this
+                //          this is essential test, some engine parts rely on this
                 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
                 const auto iInitialObjectCount = gc_collector()->getAliveObjectsCount();
@@ -871,7 +871,7 @@ TEST_CASE("use deferred task with node's member function while the garbage colle
     using namespace ne;
 
     // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    //          this is essential test, some engine systems rely on this
+    //          this is essential test, some engine parts rely on this
     // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
     class MyDerivedNode : public Node {
@@ -899,7 +899,7 @@ TEST_CASE("use deferred task with node's member function while the garbage colle
         virtual void onGameStarted() override {
             createWorld([this](const std::optional<Error>& optionalWorldError1) {
                 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-                //          this is essential test, some engine systems rely on this
+                //          this is essential test, some engine parts rely on this
                 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
                 const auto iInitialObjectCount = gc_collector()->getAliveObjectsCount();
@@ -1124,6 +1124,452 @@ TEST_CASE("input event callbacks and tick in Node is not triggered after despawn
 
     private:
         size_t iTickCount = 0;
+        gc<MyNode> pMyNode;
+    };
+
+    auto result = Window::getBuilder().withVisibility(false).build();
+    if (std::holds_alternative<Error>(result)) {
+        Error error = std::get<Error>(std::move(result));
+        error.addCurrentLocationToErrorStack();
+        INFO(error.getFullErrorMessage());
+        REQUIRE(false);
+    }
+
+    const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
+    pMainWindow->processEvents<TestGameInstance>();
+}
+
+TEST_CASE("disable \"is called every frame\" in onBeforeNewFrame") {
+    using namespace ne;
+
+    class MyNode : public Node {
+    public:
+        MyNode() { setIsCalledEveryFrame(true); }
+
+        size_t iTickCallCount = 0;
+
+    protected:
+        virtual void onBeforeNewFrame(float delta) override {
+            iTickCallCount += 1;
+
+            setIsCalledEveryFrame(false);
+        }
+    };
+
+    class TestGameInstance : public GameInstance {
+    public:
+        TestGameInstance(Window* pGameWindow, GameManager* pGame, InputManager* pInputManager)
+            : GameInstance(pGameWindow, pGame, pInputManager) {}
+        virtual void onGameStarted() override {
+            createWorld([&](const std::optional<Error>& optionalWorldError) {
+                if (optionalWorldError.has_value()) {
+                    auto error = optionalWorldError.value();
+                    error.addCurrentLocationToErrorStack();
+                    INFO(error.getFullErrorMessage());
+                    REQUIRE(false);
+                }
+
+                // Spawn node.
+                pMyNode = gc_new<MyNode>();
+                getWorldRootNode()->addChildNode(pMyNode); // queues a deferred task to be added to world
+            });
+        }
+        virtual void onBeforeNewFrame(float fTimeSincePrevCallInSec) override {
+            if (pMyNode->iTickCallCount == 1) {
+                // Node ticked once and disabled it's ticking, wait a few frames to see that node's tick
+                // will not be called.
+                bWait = true;
+            }
+
+            if (!bWait) {
+                return;
+            }
+
+            iFramesPassed += 1;
+            if (iFramesPassed >= iFramesToWait) {
+                REQUIRE(pMyNode->iTickCallCount == 1);
+                getWindow()->close();
+            }
+        }
+        virtual ~TestGameInstance() override {}
+
+    private:
+        bool bWait = false;
+        size_t iFramesPassed = 0;
+        const size_t iFramesToWait = 10;
+        gc<MyNode> pMyNode;
+    };
+
+    auto result = Window::getBuilder().withVisibility(false).build();
+    if (std::holds_alternative<Error>(result)) {
+        Error error = std::get<Error>(std::move(result));
+        error.addCurrentLocationToErrorStack();
+        INFO(error.getFullErrorMessage());
+        REQUIRE(false);
+    }
+
+    const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
+    pMainWindow->processEvents<TestGameInstance>();
+}
+
+TEST_CASE("disable \"is called every frame\" in onBeforeNewFrame and despawn") {
+    using namespace ne;
+
+    // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    //      this is an important test as it tests a bug that we might have
+    //                (bug - node still ticking after being despawned)
+    // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+    class MyNode : public Node {
+    public:
+        MyNode() { setIsCalledEveryFrame(true); }
+
+        size_t iTickCallCount = 0;
+
+    protected:
+        virtual void onBeforeNewFrame(float delta) override {
+            iTickCallCount += 1;
+
+            setIsCalledEveryFrame(false);
+
+            detachFromParentAndDespawn();
+        }
+    };
+
+    class TestGameInstance : public GameInstance {
+    public:
+        TestGameInstance(Window* pGameWindow, GameManager* pGame, InputManager* pInputManager)
+            : GameInstance(pGameWindow, pGame, pInputManager) {}
+        virtual void onGameStarted() override {
+            createWorld([&](const std::optional<Error>& optionalWorldError) {
+                if (optionalWorldError.has_value()) {
+                    auto error = optionalWorldError.value();
+                    error.addCurrentLocationToErrorStack();
+                    INFO(error.getFullErrorMessage());
+                    REQUIRE(false);
+                }
+
+                // Spawn node.
+                pMyNode = gc_new<MyNode>();
+                getWorldRootNode()->addChildNode(pMyNode); // queues a deferred task to be added to world
+            });
+        }
+        virtual void onBeforeNewFrame(float fTimeSincePrevCallInSec) override {
+            if (pMyNode->iTickCallCount == 1) {
+                // Node ticked once and disabled it's ticking, wait a few frames to see that node's tick
+                // will not be called.
+                bWait = true;
+            }
+
+            if (!bWait) {
+                return;
+            }
+
+            iFramesPassed += 1;
+            if (iFramesPassed >= iFramesToWait) {
+                REQUIRE(pMyNode->iTickCallCount == 1);
+                getWindow()->close();
+            }
+        }
+        virtual ~TestGameInstance() override {}
+
+    private:
+        bool bWait = false;
+        size_t iFramesPassed = 0;
+        const size_t iFramesToWait = 10;
+        gc<MyNode> pMyNode;
+    };
+
+    auto result = Window::getBuilder().withVisibility(false).build();
+    if (std::holds_alternative<Error>(result)) {
+        Error error = std::get<Error>(std::move(result));
+        error.addCurrentLocationToErrorStack();
+        INFO(error.getFullErrorMessage());
+        REQUIRE(false);
+    }
+
+    const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
+    pMainWindow->processEvents<TestGameInstance>();
+}
+
+TEST_CASE("quickly enable and disable \"is called every frame\" while spawned") {
+    using namespace ne;
+
+    class MyNode : public Node {
+    public:
+        size_t iTickCallCount = 0;
+
+        void test() {
+            REQUIRE(isCalledEveryFrame() == false);
+            setIsCalledEveryFrame(true);
+            setIsCalledEveryFrame(false);
+        }
+
+    protected:
+        virtual void onBeforeNewFrame(float delta) override {
+            REQUIRE(false);
+            iTickCallCount += 1;
+        }
+    };
+
+    class TestGameInstance : public GameInstance {
+    public:
+        TestGameInstance(Window* pGameWindow, GameManager* pGame, InputManager* pInputManager)
+            : GameInstance(pGameWindow, pGame, pInputManager) {}
+        virtual void onGameStarted() override {
+            createWorld([&](const std::optional<Error>& optionalWorldError) {
+                if (optionalWorldError.has_value()) {
+                    auto error = optionalWorldError.value();
+                    error.addCurrentLocationToErrorStack();
+                    INFO(error.getFullErrorMessage());
+                    REQUIRE(false);
+                }
+
+                // Spawn node.
+                pMyNode = gc_new<MyNode>();
+                getWorldRootNode()->addChildNode(pMyNode); // queues a deferred task to be added to world
+            });
+        }
+        virtual void onBeforeNewFrame(float fTimeSincePrevCallInSec) override {
+            if (!bWait) {
+                pMyNode->test();
+                bWait = true;
+                REQUIRE(pMyNode->iTickCallCount == 0);
+                return;
+            }
+
+            iFramesPassed += 1;
+            if (iFramesPassed >= iFramesToWait) {
+                REQUIRE(pMyNode->iTickCallCount == 0);
+                getWindow()->close();
+            }
+        }
+        virtual ~TestGameInstance() override {}
+
+    private:
+        bool bWait = false;
+        size_t iFramesPassed = 0;
+        const size_t iFramesToWait = 10;
+        gc<MyNode> pMyNode;
+    };
+
+    auto result = Window::getBuilder().withVisibility(false).build();
+    if (std::holds_alternative<Error>(result)) {
+        Error error = std::get<Error>(std::move(result));
+        error.addCurrentLocationToErrorStack();
+        INFO(error.getFullErrorMessage());
+        REQUIRE(false);
+    }
+
+    const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
+    pMainWindow->processEvents<TestGameInstance>();
+}
+
+TEST_CASE("quickly enable, disable and enable \"is called every frame\" while spawned") {
+    using namespace ne;
+
+    class MyNode : public Node {
+    public:
+        size_t iTickCallCount = 0;
+
+        void test() {
+            REQUIRE(isCalledEveryFrame() == false);
+            setIsCalledEveryFrame(true);
+            setIsCalledEveryFrame(false);
+            setIsCalledEveryFrame(true);
+        }
+
+    protected:
+        virtual void onBeforeNewFrame(float delta) override { iTickCallCount += 1; }
+    };
+
+    class TestGameInstance : public GameInstance {
+    public:
+        TestGameInstance(Window* pGameWindow, GameManager* pGame, InputManager* pInputManager)
+            : GameInstance(pGameWindow, pGame, pInputManager) {}
+        virtual void onGameStarted() override {
+            createWorld([&](const std::optional<Error>& optionalWorldError) {
+                if (optionalWorldError.has_value()) {
+                    auto error = optionalWorldError.value();
+                    error.addCurrentLocationToErrorStack();
+                    INFO(error.getFullErrorMessage());
+                    REQUIRE(false);
+                }
+
+                // Spawn node.
+                pMyNode = gc_new<MyNode>();
+                getWorldRootNode()->addChildNode(pMyNode); // queues a deferred task to be added to world
+            });
+        }
+        virtual void onBeforeNewFrame(float fTimeSincePrevCallInSec) override {
+            if (!bWait) {
+                pMyNode->test();
+                bWait = true;
+                REQUIRE(pMyNode->iTickCallCount == 0);
+                return;
+            }
+
+            iFramesPassed += 1;
+            if (iFramesPassed >= iFramesToWait) {
+                REQUIRE(pMyNode->iTickCallCount > 0);
+                REQUIRE(pMyNode->isCalledEveryFrame());
+                getWindow()->close();
+            }
+        }
+        virtual ~TestGameInstance() override {}
+
+    private:
+        bool bWait = false;
+        size_t iFramesPassed = 0;
+        const size_t iFramesToWait = 10;
+        gc<MyNode> pMyNode;
+    };
+
+    auto result = Window::getBuilder().withVisibility(false).build();
+    if (std::holds_alternative<Error>(result)) {
+        Error error = std::get<Error>(std::move(result));
+        error.addCurrentLocationToErrorStack();
+        INFO(error.getFullErrorMessage());
+        REQUIRE(false);
+    }
+
+    const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
+    pMainWindow->processEvents<TestGameInstance>();
+}
+
+TEST_CASE("enable \"is called every frame\" while spawned and despawn") {
+    using namespace ne;
+
+    class MyNode : public Node {
+    public:
+        size_t iTickCallCount = 0;
+
+        void test() {
+            REQUIRE(isCalledEveryFrame() == false);
+            setIsCalledEveryFrame(true);
+            detachFromParentAndDespawn();
+        }
+
+    protected:
+        virtual void onBeforeNewFrame(float delta) override {
+            REQUIRE(false);
+            iTickCallCount += 1;
+        }
+    };
+
+    class TestGameInstance : public GameInstance {
+    public:
+        TestGameInstance(Window* pGameWindow, GameManager* pGame, InputManager* pInputManager)
+            : GameInstance(pGameWindow, pGame, pInputManager) {}
+        virtual void onGameStarted() override {
+            createWorld([&](const std::optional<Error>& optionalWorldError) {
+                if (optionalWorldError.has_value()) {
+                    auto error = optionalWorldError.value();
+                    error.addCurrentLocationToErrorStack();
+                    INFO(error.getFullErrorMessage());
+                    REQUIRE(false);
+                }
+
+                // Spawn node.
+                pMyNode = gc_new<MyNode>();
+                getWorldRootNode()->addChildNode(pMyNode); // queues a deferred task to be added to world
+            });
+        }
+        virtual void onBeforeNewFrame(float fTimeSincePrevCallInSec) override {
+            if (!bWait) {
+                pMyNode->test();
+                bWait = true;
+                REQUIRE(pMyNode->iTickCallCount == 0);
+                return;
+            }
+
+            iFramesPassed += 1;
+            if (iFramesPassed >= iFramesToWait) {
+                REQUIRE(pMyNode->iTickCallCount == 0);
+                REQUIRE(pMyNode->isCalledEveryFrame());
+                getWindow()->close();
+            }
+        }
+        virtual ~TestGameInstance() override {}
+
+    private:
+        bool bWait = false;
+        size_t iFramesPassed = 0;
+        const size_t iFramesToWait = 10;
+        gc<MyNode> pMyNode;
+    };
+
+    auto result = Window::getBuilder().withVisibility(false).build();
+    if (std::holds_alternative<Error>(result)) {
+        Error error = std::get<Error>(std::move(result));
+        error.addCurrentLocationToErrorStack();
+        INFO(error.getFullErrorMessage());
+        REQUIRE(false);
+    }
+
+    const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
+    pMainWindow->processEvents<TestGameInstance>();
+}
+
+TEST_CASE("enable \"is called every frame\" after despawn") {
+    using namespace ne;
+
+    class MyNode : public Node {
+    public:
+        size_t iTickCallCount = 0;
+
+        void test() {
+            REQUIRE(isCalledEveryFrame() == false);
+            detachFromParentAndDespawn();
+            setIsCalledEveryFrame(true);
+        }
+
+    protected:
+        virtual void onBeforeNewFrame(float delta) override {
+            REQUIRE(false);
+            iTickCallCount += 1;
+        }
+    };
+
+    class TestGameInstance : public GameInstance {
+    public:
+        TestGameInstance(Window* pGameWindow, GameManager* pGame, InputManager* pInputManager)
+            : GameInstance(pGameWindow, pGame, pInputManager) {}
+        virtual void onGameStarted() override {
+            createWorld([&](const std::optional<Error>& optionalWorldError) {
+                if (optionalWorldError.has_value()) {
+                    auto error = optionalWorldError.value();
+                    error.addCurrentLocationToErrorStack();
+                    INFO(error.getFullErrorMessage());
+                    REQUIRE(false);
+                }
+
+                // Spawn node.
+                pMyNode = gc_new<MyNode>();
+                getWorldRootNode()->addChildNode(pMyNode); // queues a deferred task to be added to world
+            });
+        }
+        virtual void onBeforeNewFrame(float fTimeSincePrevCallInSec) override {
+            if (!bWait) {
+                pMyNode->test();
+                bWait = true;
+                REQUIRE(pMyNode->iTickCallCount == 0);
+                return;
+            }
+
+            iFramesPassed += 1;
+            if (iFramesPassed >= iFramesToWait) {
+                REQUIRE(pMyNode->iTickCallCount == 0);
+                REQUIRE(pMyNode->isCalledEveryFrame());
+                getWindow()->close();
+            }
+        }
+        virtual ~TestGameInstance() override {}
+
+    private:
+        bool bWait = false;
+        size_t iFramesPassed = 0;
+        const size_t iFramesToWait = 10;
         gc<MyNode> pMyNode;
     };
 

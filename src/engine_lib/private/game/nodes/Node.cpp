@@ -38,6 +38,7 @@ namespace ne {
         mtxParentNode.second = nullptr;
         bIsSpawned = false;
         mtxChildNodes.second = gc_new_vector<Node>();
+        mtxIsCalledEveryFrame.second = false;
 
         // Log construction.
         const size_t iNodeCount = iTotalAliveNodeCount.fetch_add(1) + 1;
@@ -784,17 +785,27 @@ namespace ne {
         return bPathEqual;
     }
 
-    bool Node::isCalledEveryFrame() const { return bIsCalledEveryFrame; }
+    bool Node::isCalledEveryFrame() const { return mtxIsCalledEveryFrame.second; }
 
     void Node::setIsCalledEveryFrame(bool bEnable) {
-        std::scoped_lock guard(mtxSpawning);
-        if (bIsSpawned) {
-            Error error("this function should not be called while the node is spawned");
-            error.showError();
-            throw std::runtime_error(error.getFullErrorMessage());
+        std::scoped_lock guard(mtxSpawning, mtxIsCalledEveryFrame.first);
+
+        // Make sure the value is indeed changed.
+        if (bEnable == mtxIsCalledEveryFrame.second) {
+            // Nothing to do.
+            return;
         }
 
-        bIsCalledEveryFrame = bEnable;
+        // Change the setting.
+        mtxIsCalledEveryFrame.second = bEnable;
+
+        // Check if we are spawned.
+        if (!bIsSpawned) {
+            return;
+        }
+
+        // Notify the world.
+        pWorld->onSpawnedNodeChangedIsCalledEveryFrame(this);
     }
 
     void Node::setTickGroup(TickGroup tickGroup) {

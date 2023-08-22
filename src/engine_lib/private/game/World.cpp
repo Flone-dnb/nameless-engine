@@ -141,7 +141,7 @@ namespace ne {
             // Make sure the node ID is valid.
             if (!optionalNodeId.has_value()) [[unlikely]] {
                 Error error(fmt::format(
-                    "the node \"{}\" notified the world about being spawned but its ID is invalid",
+                    "node \"{}\" notified the world about being spawned but its ID is invalid",
                     pNode->getNodeName()));
                 error.showError();
                 throw std::runtime_error(error.getFullErrorMessage());
@@ -155,7 +155,7 @@ namespace ne {
             const auto it = mtxSpawnedNodes.second.find(iNodeId);
             if (it != mtxSpawnedNodes.second.end()) [[unlikely]] {
                 Error error(fmt::format(
-                    "the node \"{}\" with ID \"{}\" notified the world about being spawned but there is "
+                    "node \"{}\" with ID \"{}\" notified the world about being spawned but there is "
                     "already a spawned node with this ID",
                     pNode->getNodeName(),
                     iNodeId));
@@ -175,13 +175,7 @@ namespace ne {
         pGameManager->addDeferredTask([this, pNode]() {
             if (pNode->isCalledEveryFrame()) {
                 // Add node to array of nodes that should be called every frame.
-                if (pNode->getTickGroup() == TickGroup::FIRST) {
-                    std::scoped_lock guard(calledEveryFrameNodes.mtxFirstTickGroup.first);
-                    calledEveryFrameNodes.mtxFirstTickGroup.second.push_back(pNode);
-                } else {
-                    std::scoped_lock guard(calledEveryFrameNodes.mtxSecondTickGroup.first);
-                    calledEveryFrameNodes.mtxSecondTickGroup.second.push_back(pNode);
-                }
+                addNodeToCalledEveryFrameArrays(pNode);
             }
 
             if (pNode->receivesInput()) {
@@ -202,7 +196,7 @@ namespace ne {
             // Make sure the node ID is valid.
             if (!optionalNodeId.has_value()) [[unlikely]] {
                 Error error(fmt::format(
-                    "the node \"{}\" notified the world about being despawned but its ID is invalid",
+                    "node \"{}\" notified the world about being despawned but its ID is invalid",
                     pNode->getNodeName()));
                 error.showError();
                 throw std::runtime_error(error.getFullErrorMessage());
@@ -216,7 +210,7 @@ namespace ne {
             const auto it = mtxSpawnedNodes.second.find(iNodeId);
             if (it == mtxSpawnedNodes.second.end()) [[unlikely]] {
                 Error error(fmt::format(
-                    "the node \"{}\" with ID \"{}\" notified the world about being despawned but this node's "
+                    "node \"{}\" with ID \"{}\" notified the world about being despawned but this node's "
                     "ID is not found",
                     pNode->getNodeName(),
                     iNodeId));
@@ -232,33 +226,13 @@ namespace ne {
         // Additionally, engine guarantees that all deferred tasks will be finished before GC runs
         // so it's safe to do so.
         pGameManager->addDeferredTask([this, pNode]() {
-            if (pNode->isCalledEveryFrame()) {
-                // Remove node from array of nodes that should be called every frame.
-                bool bFound = false;
-
-                std::pair<std::recursive_mutex, std::vector<Node*>>* pPairToUse = nullptr;
-                if (pNode->getTickGroup() == TickGroup::FIRST) {
-                    pPairToUse = &calledEveryFrameNodes.mtxFirstTickGroup;
-                } else {
-                    pPairToUse = &calledEveryFrameNodes.mtxSecondTickGroup;
-                }
-
-                std::scoped_lock guard(pPairToUse->first);
-                for (auto it = pPairToUse->second.begin(); it != pPairToUse->second.end(); ++it) {
-                    if ((*it) == pNode) {
-                        pPairToUse->second.erase(it);
-                        bFound = true;
-                        break;
-                    }
-                }
-
-                if (!bFound) [[unlikely]] {
-                    Logger::get().error(fmt::format(
-                        "node \"{}\" is marked as \"should be called every frame\" but it does not exist "
-                        "in the array of nodes that should be called every frame",
-                        pNode->getNodeName()));
-                }
-            }
+            // Force iterate over all ticking nodes and remove this node if it's marked as ticking in our
+            // arrays.
+            // We don't check `Node::isCalledEveryFrame` here simply because the node can disable it
+            // and despawn right after disabling it. If we check `Node::isCalledEveryFrame` we
+            // might not remove the node from our arrays and it will continue ticking (error).
+            // We even have a test for this bug.
+            removeNodeFromCalledEveryFrameArrays(pNode);
 
             if (pNode->receivesInput()) {
                 // Remove node from array of nodes that receive input.
@@ -287,4 +261,101 @@ namespace ne {
         });
     }
 
+    void World::onSpawnedNodeChangedIsCalledEveryFrame(Node* pNode) {
+        // Get node ID.
+        const auto optionalNodeId = pNode->getNodeId();
+
+        // Make sure the node ID is valid.
+        if (!optionalNodeId.has_value()) [[unlikely]] {
+            Error error(fmt::format("spawned node \"{}\" ID is invalid", pNode->getNodeName()));
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+        }
+
+        // Save node ID.
+        const auto iNodeId = optionalNodeId.value();
+
+        // Save previous state.
+        const auto bPreviousIsCalledEveryFrame = !pNode->isCalledEveryFrame();
+
+        // Modify our arrays as deferred task (see onNodeSpawned for the reason).
+        // Additionally, engine guarantees that all deferred tasks will be finished before GC runs
+        // so it's safe to do so.
+        pGameManager->addDeferredTask([this, pNode, iNodeId, bPreviousIsCalledEveryFrame]() {
+            // Make sure this node is still spawned.
+            const auto bIsSpawned = isNodeSpawned(iNodeId);
+            if (!bIsSpawned) {
+                // If it had "is called every frame" enabled it was removed from our arrays during despawn.
+                return;
+            }
+
+            // Get current setting state.
+            const auto bIsCalledEveryFrame = pNode->isCalledEveryFrame();
+
+            if (bIsCalledEveryFrame == bPreviousIsCalledEveryFrame) {
+                // The node changed the setting back, nothing to do.
+                return;
+            }
+
+            if (!bPreviousIsCalledEveryFrame && bIsCalledEveryFrame) {
+                // Was disabled but now enabled.
+                // Add node to array of nodes that should be called every frame.
+                addNodeToCalledEveryFrameArrays(pNode);
+
+                // Log this event since the node is changing this while spawned (might be important to
+                // see/debug).
+                Logger::get().info(
+                    fmt::format("node \"{}\" is now called every frame", pNode->getNodeName()));
+                return;
+            }
+
+            if (bPreviousIsCalledEveryFrame && !bIsCalledEveryFrame) {
+                // Was enabled but now disabled.
+                bool bFound = removeNodeFromCalledEveryFrameArrays(pNode);
+
+                if (bFound) {
+                    // Log this event since the node is changing this while spawned (might be important to
+                    // see/debug).
+                    Logger::get().info(
+                        fmt::format("node \"{}\" is no longer called every frame", pNode->getNodeName()));
+                }
+                // else: this might happen if the node had the setting disabled and then quickly
+                // enabled and disabled it back
+            }
+        });
+    }
+
+    void World::addNodeToCalledEveryFrameArrays(Node* pNode) {
+        if (pNode->getTickGroup() == TickGroup::FIRST) {
+            std::scoped_lock guard(calledEveryFrameNodes.mtxFirstTickGroup.first);
+            calledEveryFrameNodes.mtxFirstTickGroup.second.push_back(pNode);
+        } else {
+            std::scoped_lock guard(calledEveryFrameNodes.mtxSecondTickGroup.first);
+            calledEveryFrameNodes.mtxSecondTickGroup.second.push_back(pNode);
+        }
+    }
+
+    bool World::removeNodeFromCalledEveryFrameArrays(Node* pNode) {
+        bool bFound = false;
+
+        // Pick tick group that the node used.
+        std::pair<std::recursive_mutex, std::vector<Node*>>* pPairToUse = nullptr;
+        if (pNode->getTickGroup() == TickGroup::FIRST) {
+            pPairToUse = &calledEveryFrameNodes.mtxFirstTickGroup;
+        } else {
+            pPairToUse = &calledEveryFrameNodes.mtxSecondTickGroup;
+        }
+
+        // Remove from array.
+        std::scoped_lock guard(pPairToUse->first);
+        for (auto it = pPairToUse->second.begin(); it != pPairToUse->second.end(); ++it) {
+            if ((*it) == pNode) {
+                pPairToUse->second.erase(it);
+                bFound = true;
+                break;
+            }
+        }
+
+        return bFound;
+    }
 } // namespace ne

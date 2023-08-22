@@ -312,10 +312,7 @@ namespace ne RNAMESPACE() {
          * Determines if the @ref onBeforeNewFrame should be called each frame or not
          * (disabled by default).
          *
-         * @remark Typically you should call this function in your node's constructor to determine
-         * if this node should "tick" each frame or not.
-         *
-         * @warning Calling this function while the node is spawned will cause an error to be shown.
+         * @remark Safe to call any time (while spawned/despawned).
          *
          * @param bEnable `true` to enable @ref onBeforeNewFrame, `false` to disable.
          */
@@ -528,7 +525,7 @@ namespace ne RNAMESPACE() {
          * @remark This function will only be called while this node is spawned.
          *
          * @warning If overriding you must call the parent's version of this function first
-         * (before executing your login) to execute parent's logic.
+         * (before executing your login) to execute parent's logic (if there is any).
          *
          * @param timeSincePrevCallInSec Time in seconds that has passed since the last call
          * to this function.
@@ -801,7 +798,7 @@ namespace ne RNAMESPACE() {
         bool bIsSpawned = false;
 
         /** Determines if the @ref onBeforeNewFrame should be called each frame or not. */
-        bool bIsCalledEveryFrame = false;
+        std::pair<std::recursive_mutex, bool> mtxIsCalledEveryFrame;
 
         /**
          * Determines if the input related functions, such as @ref onMouseMove, @ref onMouseScrollMove,

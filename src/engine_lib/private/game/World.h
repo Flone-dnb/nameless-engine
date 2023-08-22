@@ -34,6 +34,9 @@ namespace ne {
      * @warning @ref destroyWorld must be explicitly called before destroying this object.
      */
     class World {
+        // Nodes notify the world about being spawned/despawned.
+        friend class Node;
+
     public:
         World() = delete;
 
@@ -151,6 +154,17 @@ namespace ne {
          */
         bool isNodeSpawned(size_t iNodeId);
 
+    private:
+        /**
+         * Creates a new world with the specified root node.
+         *
+         * @param pGameManager GameManager object that owns this world.
+         * @param pRootNode    World's root node.
+         * @param iWorldSize   World size in game units. Must be power of 2
+         * (128, 256, 512, 1024, 2048, etc.).
+         */
+        World(GameManager* pGameManager, gc<Node> pRootNode, size_t iWorldSize);
+
         /**
          * Called from Node to notify the World about a new node being spawned.
          *
@@ -165,16 +179,34 @@ namespace ne {
          */
         void onNodeDespawned(Node* pNode);
 
-    private:
         /**
-         * Creates a new world with the specified root node.
+         * Called from Node to notify the World about a spawned node changed its "is called every frame"
+         * setting.
          *
-         * @param pGameManager GameManager object that owns this world.
-         * @param pRootNode    World's root node.
-         * @param iWorldSize   World size in game units. Must be power of 2
-         * (128, 256, 512, 1024, 2048, etc.).
+         * @warning Should be called AFTER the node has changed its setting and the new state should not
+         * be changed while this function is running.
+         *
+         * @param pNode Node that is changing its setting.
          */
-        World(GameManager* pGameManager, gc<Node> pRootNode, size_t iWorldSize);
+        void onSpawnedNodeChangedIsCalledEveryFrame(Node* pNode);
+
+        /**
+         * Adds the specified node to the arrays of "called every frame" nodes
+         * (see @ref calledEveryFrameNodes).
+         *
+         * @param pNode Node to add.
+         */
+        void addNodeToCalledEveryFrameArrays(Node* pNode);
+
+        /**
+         * Looks if the specified node exists in the arrays of "called every frame" nodes
+         * and removes the node from the arrays (see @ref calledEveryFrameNodes).
+         *
+         * @param pNode Node to remove.
+         *
+         * @return `true` if the specified node was found and removed, `false` otherwise.
+         */
+        bool removeNodeFromCalledEveryFrameArrays(Node* pNode);
 
         /** Do not delete. Owner GameManager object. */
         GameManager* pGameManager = nullptr;
@@ -192,7 +224,7 @@ namespace ne {
         std::pair<std::recursive_mutex, std::vector<Node*>> mtxReceivingInputNodes;
 
         /** Stores pairs of "Node ID" - "Spawned Node". */
-        std::pair<std::mutex, std::unordered_map<size_t, Node*>> mtxSpawnedNodes;
+        std::pair<std::recursive_mutex, std::unordered_map<size_t, Node*>> mtxSpawnedNodes;
 
         /** Total amount of nodes spawned. */
         std::atomic<size_t> iTotalSpawnedNodeCount{0};

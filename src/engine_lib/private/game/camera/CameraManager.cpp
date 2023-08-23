@@ -32,7 +32,7 @@ namespace ne {
         std::scoped_lock guard(mtxActiveCamera.first);
 
         // Make sure this node is spawned.
-        std::scoped_lock nodeSpawnGuard(pCameraNode->mtxSpawning);
+        std::scoped_lock nodeSpawnGuard(*pCameraNode->getSpawnDespawnMutex());
         if (!pCameraNode->isSpawned()) [[unlikely]] {
             Error error(fmt::format(
                 "camera node \"{}\" needs to be spawned in order to make it the active camera",

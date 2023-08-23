@@ -36,10 +36,10 @@ namespace ne {
     Node::Node(const std::string& sName) {
         this->sNodeName = sName;
         mtxParentNode.second = nullptr;
-        bIsSpawned = false;
         mtxChildNodes.second = gc_new_vector<Node>();
         mtxIsCalledEveryFrame.second = false;
         mtxIsReceivingInput.second = false;
+        mtxIsSpawned.second = false;
 
         // Log construction.
         const size_t iNodeCount = iTotalAliveNodeCount.fetch_add(1) + 1;
@@ -55,8 +55,8 @@ namespace ne {
     }
 
     Node::~Node() {
-        std::scoped_lock guard(mtxSpawning);
-        if (bIsSpawned) [[unlikely]] {
+        std::scoped_lock guard(mtxIsSpawned.first);
+        if (mtxIsSpawned.second) [[unlikely]] {
             // Unexpected.
             Logger::get().error(fmt::format(
                 "spawned node \"{}\" is being destructed without being despawned, continuing will most "
@@ -93,7 +93,7 @@ namespace ne {
             worldScale = pSpatialNode->getWorldScale();
         }
 
-        std::scoped_lock spawnGuard(mtxSpawning);
+        std::scoped_lock spawnGuard(mtxIsSpawned.first);
 
         // Make sure the specified node is valid.
         if (pNode == nullptr) [[unlikely]] {
@@ -205,7 +205,7 @@ namespace ne {
         }
 
         // Detach from parent.
-        std::scoped_lock guard(mtxSpawning, mtxParentNode.first);
+        std::scoped_lock guard(mtxIsSpawned.first, mtxParentNode.first);
         gc<Node> pSelf;
 
         if (mtxParentNode.second != nullptr) {
@@ -238,7 +238,7 @@ namespace ne {
 
         // don't unlock mutexes yet
 
-        if (bIsSpawned) {
+        if (mtxIsSpawned.second) {
             // Despawn.
             despawn();
         }
@@ -247,12 +247,12 @@ namespace ne {
     }
 
     bool Node::isSpawned() {
-        std::scoped_lock guard(mtxSpawning);
-        return bIsSpawned;
+        std::scoped_lock guard(mtxIsSpawned.first);
+        return mtxIsSpawned.second;
     }
 
     World* Node::findValidWorld() {
-        std::scoped_lock guard(mtxSpawning);
+        std::scoped_lock guard(mtxIsSpawned.first);
 
         if (pWorld != nullptr) {
             return pWorld;
@@ -273,9 +273,9 @@ namespace ne {
     }
 
     void Node::spawn() {
-        std::scoped_lock guard(mtxSpawning);
+        std::scoped_lock guard(mtxIsSpawned.first);
 
-        if (bIsSpawned) [[unlikely]] {
+        if (mtxIsSpawned.second) [[unlikely]] {
             Logger::get().warn(fmt::format(
                 "an attempt was made to spawn already spawned node \"{}\", aborting this operation",
                 getNodeName()));
@@ -295,7 +295,7 @@ namespace ne {
         }
 
         // Mark state.
-        bIsSpawned = true;
+        mtxIsSpawned.second = true;
 
         // Enable all created timers.
         {
@@ -336,9 +336,9 @@ namespace ne {
     }
 
     void Node::despawn() {
-        std::scoped_lock guard(mtxSpawning);
+        std::scoped_lock guard(mtxIsSpawned.first);
 
-        if (!bIsSpawned) [[unlikely]] {
+        if (!mtxIsSpawned.second) [[unlikely]] {
             Logger::get().warn(fmt::format(
                 "an attempt was made to despawn already despawned node \"{}\", aborting this operation",
                 getNodeName()));
@@ -379,7 +379,7 @@ namespace ne {
         onDespawning();
 
         // Mark state.
-        bIsSpawned = false;
+        mtxIsSpawned.second = false;
 
         // Notify world.
         pWorld->onNodeDespawned(this);
@@ -698,7 +698,7 @@ namespace ne {
     }
 
     gc<Node> Node::getWorldRootNode() {
-        std::scoped_lock guard(mtxSpawning);
+        std::scoped_lock guard(mtxIsSpawned.first);
 
         if (pWorld == nullptr) {
             return nullptr;
@@ -792,7 +792,7 @@ namespace ne {
     }
 
     void Node::setIsCalledEveryFrame(bool bEnable) {
-        std::scoped_lock guard(mtxSpawning, mtxIsCalledEveryFrame.first);
+        std::scoped_lock guard(mtxIsSpawned.first, mtxIsCalledEveryFrame.first);
 
         // Make sure the value is indeed changed.
         if (bEnable == mtxIsCalledEveryFrame.second) {
@@ -804,7 +804,7 @@ namespace ne {
         mtxIsCalledEveryFrame.second = bEnable;
 
         // Check if we are spawned.
-        if (!bIsSpawned) {
+        if (!mtxIsSpawned.second) {
             return;
         }
 
@@ -813,7 +813,7 @@ namespace ne {
     }
 
     void Node::setIsReceivingInput(bool bEnable) {
-        std::scoped_lock guard(mtxSpawning, mtxIsReceivingInput.first);
+        std::scoped_lock guard(mtxIsSpawned.first, mtxIsReceivingInput.first);
 
         // Make sure the value is indeed changed.
         if (bEnable == mtxIsReceivingInput.second) {
@@ -825,7 +825,7 @@ namespace ne {
         mtxIsReceivingInput.second = bEnable;
 
         // Check if we are spawned.
-        if (!bIsSpawned) {
+        if (!mtxIsSpawned.second) {
             return;
         }
 
@@ -834,8 +834,8 @@ namespace ne {
     }
 
     void Node::setTickGroup(TickGroup tickGroup) {
-        std::scoped_lock guard(mtxSpawning);
-        if (bIsSpawned) {
+        std::scoped_lock guard(mtxIsSpawned.first);
+        if (mtxIsSpawned.second) [[unlikely]] {
             Error error("this function should not be called while the node is spawned");
             error.showError();
             throw std::runtime_error(error.getFullErrorMessage());
@@ -898,8 +898,8 @@ namespace ne {
         pNewTimer->setEnable(false);
 
         {
-            std::scoped_lock spawnGuard(mtxSpawning);
-            if (bIsSpawned) {
+            std::scoped_lock spawnGuard(mtxIsSpawned.first);
+            if (mtxIsSpawned.second) {
                 if (enableTimer(pNewTimer.get(), true)) {
                     pNewTimer = nullptr;
                     return nullptr;
@@ -915,7 +915,7 @@ namespace ne {
     }
 
     bool Node::enableTimer(Timer* pTimer, bool bEnable) {
-        std::scoped_lock spawnGuard(mtxSpawning);
+        std::scoped_lock spawnGuard(mtxIsSpawned.first);
 
         if (pTimer->isEnabled() == bEnable) {
             // Already set.
@@ -923,7 +923,7 @@ namespace ne {
         }
 
         if (bEnable) {
-            if (!bIsSpawned) {
+            if (!mtxIsSpawned.second) {
                 Logger::get().error(fmt::format(
                     "node \"{}\" is not spawned but the timer \"{}\" was requested to be enabled - this "
                     "is an engine bug",
@@ -971,5 +971,7 @@ namespace ne {
     }
 
     std::optional<size_t> Node::getNodeId() const { return iNodeId; }
+
+    std::recursive_mutex* Node::getSpawnDespawnMutex() { return &mtxIsSpawned.first; }
 
 } // namespace ne

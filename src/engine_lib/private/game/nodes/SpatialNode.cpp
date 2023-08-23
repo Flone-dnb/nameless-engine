@@ -279,7 +279,7 @@ namespace ne {
 
 #if defined(DEBUG)
     void SpatialNode::warnIfExceedingWorldBounds() {
-        std::scoped_lock guard(mtxSpawning, mtxWorldMatrix.first);
+        std::scoped_lock guard(*getSpawnDespawnMutex(), mtxWorldMatrix.first);
         if (!isSpawned()) {
             return;
         }

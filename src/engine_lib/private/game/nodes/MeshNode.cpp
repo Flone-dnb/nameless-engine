@@ -38,7 +38,7 @@ namespace ne {
 
         // Also lock GPU resources here to make sure the CPU will wait in the `draw` function
         // until we finished updating our material AND our shader resources.
-        std::scoped_lock guard(mtxSpawning, mtxGpuResources.first);
+        std::scoped_lock guard(*getSpawnDespawnMutex(), mtxGpuResources.first);
 
         if (isSpawned()) {
             // Notify old material.
@@ -66,7 +66,7 @@ namespace ne {
     }
 
     std::shared_ptr<Material> MeshNode::getMaterial() {
-        std::scoped_lock guard(mtxSpawning);
+        std::scoped_lock guard(*getSpawnDespawnMutex());
         return pMaterial;
     }
 
@@ -263,7 +263,7 @@ namespace ne {
     }
 
     void MeshNode::allocateShaderResources() {
-        std::scoped_lock guard(mtxSpawning, mtxGpuResources.first);
+        std::scoped_lock guard(*getSpawnDespawnMutex(), mtxGpuResources.first);
 
         if (!isSpawned()) [[unlikely]] {
             Logger::get().warn(fmt::format(
@@ -282,7 +282,7 @@ namespace ne {
     }
 
     void MeshNode::deallocateShaderResources() {
-        std::scoped_lock guard(mtxSpawning, mtxGpuResources.first);
+        std::scoped_lock guard(*getSpawnDespawnMutex(), mtxGpuResources.first);
 
         if (!isSpawned()) [[unlikely]] {
             Logger::get().warn(fmt::format(
@@ -302,7 +302,7 @@ namespace ne {
     }
 
     void MeshNode::allocateGeometryBuffers() {
-        std::scoped_lock guard(mtxSpawning, mtxMeshData, mtxGpuResources.first);
+        std::scoped_lock guard(*getSpawnDespawnMutex(), mtxMeshData, mtxGpuResources.first);
 
         if (!isSpawned()) [[unlikely]] {
             Logger::get().warn(fmt::format(
@@ -371,7 +371,7 @@ namespace ne {
     }
 
     void MeshNode::deallocateGeometryBuffers() {
-        std::scoped_lock guard(mtxSpawning, mtxMeshData, mtxGpuResources.first);
+        std::scoped_lock guard(*getSpawnDespawnMutex(), mtxMeshData, mtxGpuResources.first);
 
         if (!isSpawned()) [[unlikely]] {
             Logger::get().warn(fmt::format(
@@ -401,7 +401,7 @@ namespace ne {
     }
 
     void MeshNode::onMeshDataChanged() {
-        std::scoped_lock guard(mtxMeshData, mtxSpawning);
+        std::scoped_lock guard(mtxMeshData, *getSpawnDespawnMutex());
         if (!isSpawned()) {
             return;
         }
@@ -500,7 +500,7 @@ namespace ne {
         size_t iResourceSizeInBytes,
         const std::function<void*()>& onStartedUpdatingResource,
         const std::function<void()>& onFinishedUpdatingResource) {
-        std::scoped_lock spawnGuard(mtxSpawning, mtxGpuResources.first);
+        std::scoped_lock spawnGuard(*getSpawnDespawnMutex(), mtxGpuResources.first);
 
         // Make sure the node is spawned.
         if (!isSpawned()) [[unlikely]] {
@@ -559,7 +559,7 @@ namespace ne {
         // intentionally because the user does not check for conditions to be met - it's simpler for the user
         // to write code this way. Moreover, unmet conditions are not errors in this function.
 
-        std::scoped_lock spawnGuard(mtxSpawning, mtxGpuResources.first);
+        std::scoped_lock spawnGuard(*getSpawnDespawnMutex(), mtxGpuResources.first);
 
         // Make sure the node is spawned.
         if (!isSpawned()) {
@@ -578,7 +578,8 @@ namespace ne {
     }
 
     void MeshNode::setIsVisible(bool bVisible) {
-        std::scoped_lock guard(mtxSpawning); // don't change visibility while we are being spawned/despawned
+        std::scoped_lock guard(
+            *getSpawnDespawnMutex()); // don't change visibility while we are being spawned/despawned
 
         if (bIsVisible == bVisible) {
             return;

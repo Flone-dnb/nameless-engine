@@ -412,7 +412,7 @@ namespace ne RNAMESPACE() {
          */
         template <typename FunctionType>
         NodeNotificationBroadcaster<FunctionType>* createNotificationBroadcaster() {
-            std::scoped_lock guard(mtxSpawning, mtxCreatedBroadcasters.first);
+            std::scoped_lock guard(mtxIsSpawned.first, mtxCreatedBroadcasters.first);
 
             // Create broadcaster.
             auto pNewBroadcaster = std::unique_ptr<NodeNotificationBroadcaster<FunctionType>>(
@@ -422,7 +422,7 @@ namespace ne RNAMESPACE() {
             // Add to our array.
             mtxCreatedBroadcasters.second.push_back(std::move(pNewBroadcaster));
 
-            if (bIsSpawned) {
+            if (mtxIsSpawned.second) {
                 // Get node ID.
                 if (!iNodeId.has_value()) [[unlikely]] {
                     Error error(fmt::format(
@@ -494,6 +494,15 @@ namespace ne RNAMESPACE() {
             std::recursive_mutex,
             std::unordered_map<std::string, std::function<void(KeyboardModifiers, float)>>>*
         getAxisEventBindings();
+
+        /**
+         * Returns mutex that is generally used to protect/prevent spawning/despawning.
+         *
+         * @remark Do not delete (free) returned pointer.
+         *
+         * @return Mutex.
+         */
+        std::recursive_mutex* getSpawnDespawnMutex();
 
         /**
          * Called when the window received mouse movement.
@@ -588,9 +597,6 @@ namespace ne RNAMESPACE() {
          * `false` if some node in the parent hierarchy was attached to a parent.
          */
         virtual void onAfterAttachedToNewParent(bool bThisNodeBeingAttached) {}
-
-        /** Mutex that will be used when spawning/despawning node (i.e. when changing @ref bIsSpawned). */
-        std::recursive_mutex mtxSpawning;
 
     private:
         /** Small helper struct to temporary hold a GC pointer for @ref serializeNodeTree. */
@@ -791,11 +797,8 @@ namespace ne RNAMESPACE() {
         /** Unique ID of the spawned node (initialized after the node is spawned). */
         std::optional<size_t> iNodeId;
 
-        /**
-         * Whether this node is spawned in the world or not.
-         * Should be used with @ref mtxSpawning when spawning/despawning.
-         */
-        bool bIsSpawned = false;
+        /** Whether this node is spawned in the world or not. */
+        std::pair<std::recursive_mutex, bool> mtxIsSpawned;
 
         /** Determines if the @ref onBeforeNewFrame should be called each frame or not. */
         std::pair<std::recursive_mutex, bool> mtxIsCalledEveryFrame;

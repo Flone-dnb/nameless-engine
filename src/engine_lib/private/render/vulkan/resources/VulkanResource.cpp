@@ -20,8 +20,9 @@ namespace ne {
         std::variant<VkBuffer, VkImage> pInternalResource,
         VmaAllocation pResourceMemory) {
         this->pResourceManager = pResourceManager;
-        this->pResourceMemory = pResourceMemory;
         this->sResourceName = sResourceName;
+
+        mtxResourceMemory.second = pResourceMemory;
 
         if (std::holds_alternative<VkBuffer>(pInternalResource)) {
             pBufferResource = std::get<VkBuffer>(pInternalResource);
@@ -55,14 +56,16 @@ namespace ne {
         // Make sure the GPU is not using this resource.
         pVulkanRenderer->waitForGpuToFinishWorkUpToThisPoint();
 
+        std::scoped_lock guard(mtxResourceMemory.first);
+
         if (pBufferResource != nullptr) {
             // Destroy the resource and its memory.
-            vmaDestroyBuffer(pResourceManager->pMemoryAllocator, pBufferResource, pResourceMemory);
+            vmaDestroyBuffer(pResourceManager->pMemoryAllocator, pBufferResource, mtxResourceMemory.second);
         } else {
             if (pImageView != nullptr) {
                 vkDestroyImageView(pLogicalDevice, pImageView, nullptr);
             }
-            vmaDestroyImage(pResourceManager->pMemoryAllocator, pImageResource, pResourceMemory);
+            vmaDestroyImage(pResourceManager->pMemoryAllocator, pImageResource, mtxResourceMemory.second);
         }
 
         // Decrement counter of alive objects.

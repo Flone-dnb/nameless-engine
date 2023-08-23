@@ -41,11 +41,13 @@ namespace ne {
             // Get memory allocator.
             const auto pMemoryAllocator = pVulkanResource->getResourceManager()->pMemoryAllocator;
 
+            // Lock resource memory.
+            const auto pMtxResourceMemory = pVulkanResource->getInternalResourceMemory();
+            std::scoped_lock guard(pMtxResourceMemory->first);
+
             // Map the resource.
             const auto result = vmaMapMemory(
-                pMemoryAllocator,
-                pVulkanResource->getInternalResourceMemory(),
-                reinterpret_cast<void**>(&pMappedResourceData));
+                pMemoryAllocator, pMtxResourceMemory->second, reinterpret_cast<void**>(&pMappedResourceData));
             if (result != VK_SUCCESS) [[unlikely]] {
                 Error error(fmt::format(
                     "failed to map memory of resource, error: {}",
@@ -77,8 +79,12 @@ namespace ne {
             // Get memory allocator.
             const auto pMemoryAllocator = pVulkanResource->getResourceManager()->pMemoryAllocator;
 
+            // Lock resource memory.
+            const auto pMtxResourceMemory = pVulkanResource->getInternalResourceMemory();
+            std::scoped_lock guard(pMtxResourceMemory->first);
+
             // Unmap the resource.
-            vmaUnmapMemory(pMemoryAllocator, pVulkanResource->getInternalResourceMemory());
+            vmaUnmapMemory(pMemoryAllocator, pMtxResourceMemory->second);
             pMappedResourceData = nullptr;
 
             return;

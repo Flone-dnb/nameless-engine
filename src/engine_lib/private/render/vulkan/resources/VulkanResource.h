@@ -3,6 +3,7 @@
 // Standard.
 #include <variant>
 #include <memory>
+#include <mutex>
 
 // Custom.
 #include "render/general/resources/GpuResource.h"
@@ -66,7 +67,9 @@ namespace ne {
          *
          * @return Memory allocation of the internal resource.
          */
-        inline VmaAllocation getInternalResourceMemory() const { return pResourceMemory; }
+        inline std::pair<std::recursive_mutex, VmaAllocation>* getInternalResourceMemory() {
+            return &mtxResourceMemory;
+        }
 
         /**
          * Returns resource manager that created the resource.
@@ -150,8 +153,12 @@ namespace ne {
         /** Optional view that references @ref pImageResource. */
         VkImageView pImageView = nullptr;
 
-        /** Allocated memory for created resource. */
-        VmaAllocation pResourceMemory = nullptr;
+        /**
+         * Allocated memory for created resource.
+         *
+         * @remark Using mutex because "access to a VmaAllocation object must be externally synchronized".
+         */
+        std::pair<std::recursive_mutex, VmaAllocation> mtxResourceMemory;
 
         /** Do not delete. Owner resource manager. */
         VulkanResourceManager* pResourceManager = nullptr;

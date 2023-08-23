@@ -312,7 +312,7 @@ namespace ne {
          *
          * @return Error if something went wrong.
          */
-        std::optional<Error> initialize(std::optional<RendererType> preferredRenderer);
+        [[nodiscard]] std::optional<Error> initialize(std::optional<RendererType> preferredRenderer);
 
         /**
          * Contains destructor logic: runs GC for the last time, destroys game instance, etc.

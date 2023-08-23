@@ -35,11 +35,15 @@ namespace ne {
          * Creates a new DirectX renderer.
          *
          * @param pGameManager GameManager object that owns this renderer.
+         * @param vBlacklistedGpuNames Names of GPUs that should not be used, generally this means
+         * that these GPUs were previously used to create the renderer but something went wrong.
          *
-         * @return Error if something went wrong (for ex. if the hardware does not support this
-         * renderer), otherwise created renderer.
+         * @return Created renderer if successful, otherwise multiple values in a pair: error and a
+         * name of the GPU that the renderer tried to use (can be empty if failed before picking a GPU
+         * or if all supported GPUs are blacklisted).
          */
-        static std::variant<std::unique_ptr<Renderer>, Error> create(GameManager* pGameManager);
+        static std::variant<std::unique_ptr<Renderer>, std::pair<Error, std::string>>
+        create(GameManager* pGameManager, const std::vector<std::string>& vBlacklistedGpuNames);
 
         /**
          * Looks for video adapters (GPUs) that support this renderer.
@@ -345,17 +349,24 @@ namespace ne {
          * @remark This function is usually called after constructing a new empty (uninitialized)
          * Vulkan renderer.
          *
+         * @param vBlacklistedGpuNames Names of GPUs that should not be used, generally this means
+         * that these GPUs were previously used to create the renderer but something went wrong.
+         *
          * @return Error if something went wrong (for ex. if the hardware does not support this
          * renderer).
          */
-        [[nodiscard]] std::optional<Error> initialize();
+        [[nodiscard]] std::optional<Error> initialize(const std::vector<std::string>& vBlacklistedGpuNames);
 
         /**
          * Initializes essential Vulkan entities.
          *
+         * @param vBlacklistedGpuNames Names of GPUs that should not be used, generally this means
+         * that these GPUs were previously used to create the renderer but something went wrong.
+         *
          * @return Error if something went wrong.
          */
-        [[nodiscard]] std::optional<Error> initializeVulkan();
+        [[nodiscard]] std::optional<Error>
+        initializeVulkan(const std::vector<std::string>& vBlacklistedGpuNames);
 
         /**
          * Creates Vulkan API instance.
@@ -443,9 +454,13 @@ namespace ne {
          *
          * @warning Expects @ref pInstance to be valid.
          *
+         * @param vBlacklistedGpuNames Names of GPUs that should not be used, generally this means
+         * that these GPUs were previously used to create the renderer but something went wrong.
+         *
          * @return Error if something went wrong.
          */
-        [[nodiscard]] std::optional<Error> pickPhysicalDevice();
+        [[nodiscard]] std::optional<Error>
+        pickPhysicalDevice(const std::vector<std::string>& vBlacklistedGpuNames);
 
         /**
          * Creates @ref pLogicalDevice.

@@ -51,7 +51,7 @@ namespace ne {
         return {HlslEngineShaders::meshNodeVertexShader, HlslEngineShaders::meshNodePixelShader};
     }
 
-    std::optional<Error> DirectXRenderer::initialize() {
+    std::optional<Error> DirectXRenderer::initialize(const std::vector<std::string>& vBlacklistedGpuNames) {
         std::scoped_lock frameGuard(*getRenderResourcesMutex());
 
         // Initialize the current fence value.
@@ -65,7 +65,7 @@ namespace ne {
         }
 
         // Initialize DirectX.
-        optionalError = initializeDirectX();
+        optionalError = initializeDirectX(vBlacklistedGpuNames);
         if (optionalError.has_value()) {
             optionalError->addCurrentLocationToErrorStack();
             return optionalError;
@@ -91,16 +91,17 @@ namespace ne {
         return {};
     }
 
-    std::variant<std::unique_ptr<Renderer>, Error> DirectXRenderer::create(GameManager* pGameManager) {
+    std::variant<std::unique_ptr<Renderer>, std::pair<Error, std::string>>
+    DirectXRenderer::create(GameManager* pGameManager, const std::vector<std::string>& vBlacklistedGpuNames) {
         // Create an empty (uninitialized) DirectX renderer.
         auto pRenderer = std::unique_ptr<DirectXRenderer>(new DirectXRenderer(pGameManager));
 
         // Initialize renderer.
-        const auto optionalError = pRenderer->initialize();
+        const auto optionalError = pRenderer->initialize(vBlacklistedGpuNames);
         if (optionalError.has_value()) {
             auto error = optionalError.value();
             error.addCurrentLocationToErrorStack();
-            return error;
+            return std::pair<Error, std::string>{error, pRenderer->sUsedVideoAdapter};
         }
 
         return pRenderer;
@@ -186,7 +187,8 @@ namespace ne {
         return {};
     }
 
-    std::optional<Error> DirectXRenderer::pickVideoAdapter() {
+    std::optional<Error>
+    DirectXRenderer::pickVideoAdapter(const std::vector<std::string>& vBlacklistedGpuNames) {
         // Prepare struct to store GPU info.
         struct GpuInfo {
             ComPtr<IDXGIAdapter3> pGpu;
@@ -237,6 +239,7 @@ namespace ne {
             ComPtr<IDXGIAdapter3> pGpu;
             size_t iScore = 0;
             std::string sGpuName;
+            bool bIsBlacklisted = false;
         };
         std::vector<GpuScore> vGpuScores;
 
@@ -274,12 +277,32 @@ namespace ne {
                 return scoreA.iScore > scoreB.iScore;
             });
 
-        // Log rated GPUs by score.
+        // Mark GPUs that are blacklisted and log scores.
         std::string sRating = fmt::format("found and rated {} suitable GPU(s):", vGpuScores.size());
         for (size_t i = 0; i < vGpuScores.size(); i++) {
-            sRating += fmt::format(
-                "\n{}. {}, suitability score: {}", i + 1, vGpuScores[i].sGpuName, vGpuScores[i].iScore);
+            // See if this GPU is blacklisted.
+            bool bIsBlacklisted = false;
+            for (const auto& sBlacklistedGpuName : vBlacklistedGpuNames) {
+                if (vGpuScores[i].sGpuName == sBlacklistedGpuName) {
+                    bIsBlacklisted = true;
+                    break;
+                }
+            }
+
+            // Add new entry in rating log.
+            sRating += fmt::format("\n{}. ", i + 1);
+
+            // Process status.
+            if (bIsBlacklisted) {
+                sRating += "[blacklisted] ";
+                vGpuScores[i].bIsBlacklisted = true;
+            }
+
+            // Append GPU name and score.
+            sRating += fmt::format("{}, suitability score: {}", vGpuScores[i].sGpuName, vGpuScores[i].iScore);
         }
+
+        // Print scores.
         Logger::get().info(sRating);
 
         // Get render settings.
@@ -315,6 +338,15 @@ namespace ne {
         for (size_t i = 0; i < vGpuScores.size(); i++) {
             const auto& currentGpuInfo = vGpuScores[i];
 
+            // Skip this GPU is it's blacklisted.
+            if (currentGpuInfo.bIsBlacklisted) {
+                Logger::get().info(fmt::format(
+                    "ignoring GPU \"{}\" because it's blacklisted (previously the renderer failed to "
+                    "initialize using this GPU)",
+                    currentGpuInfo.sGpuName));
+                continue;
+            }
+
             // Log used GPU.
             if (sGpuNameToUse == currentGpuInfo.sGpuName) {
                 Logger::get().info(fmt::format(
@@ -335,6 +367,12 @@ namespace ne {
             sUsedVideoAdapter = currentGpuInfo.sGpuName;
 
             break;
+        }
+
+        // Make sure we picked a GPU.
+        if (pVideoAdapter == nullptr) {
+            return Error(fmt::format(
+                "found {} suitable GPU(s) but no GPU was picked (see reason above)", vGpuScores.size()));
         }
 
         return {};
@@ -935,7 +973,8 @@ namespace ne {
         return {};
     }
 
-    std::optional<Error> DirectXRenderer::initializeDirectX() {
+    std::optional<Error>
+    DirectXRenderer::initializeDirectX(const std::vector<std::string>& vBlacklistedGpuNames) {
         // Enable debug layer in DEBUG mode.
         DWORD debugFactoryFlags = 0;
 #if defined(DEBUG)
@@ -961,7 +1000,7 @@ namespace ne {
         std::scoped_lock renderSettingsGuard(pMtxRenderSettings->first);
 
         // Pick a GPU.
-        auto optionalError = pickVideoAdapter();
+        auto optionalError = pickVideoAdapter(vBlacklistedGpuNames);
         if (optionalError.has_value()) {
             optionalError->addCurrentLocationToErrorStack();
             return optionalError;

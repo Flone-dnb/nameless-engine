@@ -436,12 +436,17 @@ namespace ne {
          *
          * @param type         Type of the renderer to create.
          * @param pGameManager Game manager object that will own this renderer.
+         * @param vBlacklistedGpuNames Names of GPUs that should not be used, generally this means
+         * that these GPUs were previously used to create the renderer but something went wrong.
          *
-         * @return Error if the hardware/OS does not support this type of renderer, otherwise
-         * created renderer.
+         * @return Created renderer if successful, otherwise multiple values in a pair: error and a
+         * name of the GPU that the renderer tried to use (can be empty if failed before picking a GPU
+         * or if all supported GPUs are blacklisted).
          */
-        static std::variant<std::unique_ptr<Renderer>, Error>
-        createRenderer(RendererType type, GameManager* pGameManager);
+        static std::variant<std::unique_ptr<Renderer>, std::pair<Error, std::string>> createRenderer(
+            RendererType type,
+            GameManager* pGameManager,
+            const std::vector<std::string>& vBlacklistedGpuNames);
 
         /**
          * Updates the current shader configuration (settings) based on the current value

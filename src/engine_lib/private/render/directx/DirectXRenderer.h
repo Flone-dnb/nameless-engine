@@ -40,12 +40,16 @@ namespace ne {
         /**
          * Creates a new DirectX renderer.
          *
-         * @param pGameManager GameManager object that owns this renderer.
+         * @param pGameManager         GameManager object that owns this renderer.
+         * @param vBlacklistedGpuNames Names of GPUs that should not be used, generally this means
+         * that these GPUs were previously used to create the renderer but something went wrong.
          *
-         * @return Error if something went wrong (for ex. if the hardware does not support this
-         * renderer), otherwise created renderer.
+         * @return Created renderer if successful, otherwise multiple values in a pair: error and a
+         * name of the GPU that the renderer tried to use (can be empty if failed before picking a GPU
+         * or if all supported GPUs are blacklisted).
          */
-        static std::variant<std::unique_ptr<Renderer>, Error> create(GameManager* pGameManager);
+        static std::variant<std::unique_ptr<Renderer>, std::pair<Error, std::string>>
+        create(GameManager* pGameManager, const std::vector<std::string>& vBlacklistedGpuNames);
 
         /**
          * Returns used back buffer format.
@@ -224,10 +228,13 @@ namespace ne {
          * @remark This function is usually called after constructing a new empty (uninitialized)
          * DirectX renderer.
          *
+         * @param vBlacklistedGpuNames Names of GPUs that should not be used, generally this means
+         * that these GPUs were previously used to create the renderer but something went wrong.
+         *
          * @return Error if something went wrong (for ex. if the hardware does not support this
          * renderer).
          */
-        [[nodiscard]] std::optional<Error> initialize();
+        [[nodiscard]] std::optional<Error> initialize(const std::vector<std::string>& vBlacklistedGpuNames);
 
         /**
          * Enables DX debug layer.
@@ -255,9 +262,13 @@ namespace ne {
          * Rates available GPUs and picks the best one to be used (also considers GPU specified in
          * RenderSettings).
          *
+         * @param vBlacklistedGpuNames Names of GPUs that should not be used, generally this means
+         * that these GPUs were previously used to create the renderer but something went wrong.
+         *
          * @return Error if something went wrong.
          */
-        [[nodiscard]] std::optional<Error> pickVideoAdapter();
+        [[nodiscard]] std::optional<Error>
+        pickVideoAdapter(const std::vector<std::string>& vBlacklistedGpuNames);
 
         /**
          * Rates the specified GPU and gives it a suitability score.
@@ -301,9 +312,13 @@ namespace ne {
         /**
          * Initializes DirectX.
          *
+         * @param vBlacklistedGpuNames Names of GPUs that should not be used, generally this means
+         * that these GPUs were previously used to create the renderer but something went wrong.
+         *
          * @return Error if something went wrong.
          */
-        [[nodiscard]] std::optional<Error> initializeDirectX();
+        [[nodiscard]] std::optional<Error>
+        initializeDirectX(const std::vector<std::string>& vBlacklistedGpuNames);
 
         /**
          * Setups everything for render commands to be recorded (updates frame constants, shader resources,

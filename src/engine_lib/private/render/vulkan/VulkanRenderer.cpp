@@ -134,7 +134,7 @@ namespace ne {
 
     uint32_t VulkanRenderer::getUsedVulkanVersion() { return iUsedVulkanVersion; }
 
-    std::optional<Error> VulkanRenderer::initialize() {
+    std::optional<Error> VulkanRenderer::initialize(const std::vector<std::string>& vBlacklistedGpuNames) {
         std::scoped_lock frameGuard(*getRenderResourcesMutex());
 
         // Initialize essential renderer entities (such as RenderSettings).
@@ -145,7 +145,7 @@ namespace ne {
         }
 
         // Initialize Vulkan.
-        optionalError = initializeVulkan();
+        optionalError = initializeVulkan(vBlacklistedGpuNames);
         if (optionalError.has_value()) {
             optionalError->addCurrentLocationToErrorStack();
             return optionalError;
@@ -154,7 +154,8 @@ namespace ne {
         return {};
     }
 
-    std::optional<Error> VulkanRenderer::initializeVulkan() {
+    std::optional<Error>
+    VulkanRenderer::initializeVulkan(const std::vector<std::string>& vBlacklistedGpuNames) {
         // Create Vulkan instance.
         auto optionalError = createVulkanInstance();
         if (optionalError.has_value()) {
@@ -170,7 +171,7 @@ namespace ne {
         }
 
         // Pick physical device.
-        optionalError = pickPhysicalDevice();
+        optionalError = pickPhysicalDevice(vBlacklistedGpuNames);
         if (optionalError.has_value()) {
             optionalError->addCurrentLocationToErrorStack();
             return optionalError;
@@ -751,7 +752,8 @@ namespace ne {
         return "";
     }
 
-    std::optional<Error> VulkanRenderer::pickPhysicalDevice() {
+    std::optional<Error>
+    VulkanRenderer::pickPhysicalDevice(const std::vector<std::string>& vBlacklistedGpuNames) {
         // Get total GPU count.
         uint32_t iSupportedGpuCount = 0;
         auto result = vkEnumeratePhysicalDevices(pInstance, &iSupportedGpuCount, nullptr);
@@ -786,6 +788,7 @@ namespace ne {
             size_t iScore = 0;
             VkPhysicalDevice pGpu = nullptr;
             std::string sGpuName;
+            bool bIsBlacklisted = false;
         };
         std::vector<GpuScore> vScores;
         vScores.reserve(vGpus.size());
@@ -826,12 +829,32 @@ namespace ne {
             return scoreA.iScore > scoreB.iScore;
         });
 
-        // Log rated GPUs by score.
+        // Mark GPUs that are blacklisted and log scores.
         std::string sRating = fmt::format("found and rated {} suitable GPU(s):", vScores.size());
         for (size_t i = 0; i < vScores.size(); i++) {
-            sRating +=
-                fmt::format("\n{}. {}, suitability score: {}", i + 1, vScores[i].sGpuName, vScores[i].iScore);
+            // See if this GPU is blacklisted.
+            bool bIsBlacklisted = false;
+            for (const auto& sBlacklistedGpuName : vBlacklistedGpuNames) {
+                if (vScores[i].sGpuName == sBlacklistedGpuName) {
+                    bIsBlacklisted = true;
+                    break;
+                }
+            }
+
+            // Add new entry in rating log.
+            sRating += fmt::format("\n{}. ", i + 1);
+
+            // Process status.
+            if (bIsBlacklisted) {
+                sRating += "[blacklisted] ";
+                vScores[i].bIsBlacklisted = true;
+            }
+
+            // Append GPU name and score.
+            sRating += fmt::format("{}, suitability score: {}", vScores[i].sGpuName, vScores[i].iScore);
         }
+
+        // Print scores.
         Logger::get().info(sRating);
 
         // Get render settings.
@@ -866,6 +889,15 @@ namespace ne {
         // Pick the best suiting GPU.
         for (size_t i = 0; i < vScores.size(); i++) {
             const auto& currentGpuInfo = vScores[i];
+
+            // Skip this GPU is it's blacklisted.
+            if (currentGpuInfo.bIsBlacklisted) {
+                Logger::get().info(fmt::format(
+                    "ignoring GPU \"{}\" because it's blacklisted (previously the renderer failed to "
+                    "initialize using this GPU)",
+                    currentGpuInfo.sGpuName));
+                continue;
+            }
 
             // Save (cache) queue family indices of this device.
             auto queueFamilyIndicesResult = queryQueueFamilyIndices(currentGpuInfo.pGpu);
@@ -902,9 +934,10 @@ namespace ne {
             break;
         }
 
-        if (pPhysicalDevice == nullptr) [[unlikely]] {
+        // Make sure we picked a GPU.
+        if (pPhysicalDevice == nullptr) {
             return Error(fmt::format(
-                "found {} suitable GPU(s) but failed to query queue family indices", vScores.size()));
+                "found {} suitable GPU(s) but no GPU was picked (see reason above)", vScores.size()));
         }
 
         return {};
@@ -1773,16 +1806,17 @@ namespace ne {
         return {};
     }
 
-    std::variant<std::unique_ptr<Renderer>, Error> VulkanRenderer::create(GameManager* pGameManager) {
+    std::variant<std::unique_ptr<Renderer>, std::pair<Error, std::string>>
+    VulkanRenderer::create(GameManager* pGameManager, const std::vector<std::string>& vBlacklistedGpuNames) {
         // Create an empty (uninitialized) Vulkan renderer.
         auto pRenderer = std::unique_ptr<VulkanRenderer>(new VulkanRenderer(pGameManager));
 
         // Initialize renderer.
-        const auto optionalError = pRenderer->initialize();
+        const auto optionalError = pRenderer->initialize(vBlacklistedGpuNames);
         if (optionalError.has_value()) {
             auto error = optionalError.value();
             error.addCurrentLocationToErrorStack();
-            return error;
+            return std::pair<Error, std::string>{error, pRenderer->sUsedGpuName};
         }
 
         return pRenderer;

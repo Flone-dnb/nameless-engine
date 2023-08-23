@@ -604,7 +604,12 @@ namespace ne {
     void Window::processEvents() {
         // Create game manager.
         pGameManager = std::unique_ptr<GameManager>(new GameManager(this));
-        pGameManager->initialize(preferredRenderer);
+        auto optionalError = pGameManager->initialize(preferredRenderer);
+        if (optionalError.has_value()) [[unlikely]] {
+            optionalError->addCurrentLocationToErrorStack();
+            optionalError->showError();
+            throw std::runtime_error(optionalError->getFullErrorMessage());
+        }
 
         // ... initialize other GameManager fields here ...
 

@@ -161,7 +161,9 @@ namespace ne {
     std::unique_ptr<Renderer>
     Renderer::createRenderer(GameManager* pGameManager, std::optional<RendererType> preferredRenderer) {
         // Describe default renderer preference.
-        std::array<RendererType, 2> vRendererPreferenceQueue = {RendererType::DIRECTX, RendererType::VULKAN};
+        constexpr size_t iRendererTypeCount = 2;
+        std::array<RendererType, iRendererTypeCount> vRendererPreferenceQueue = {
+            RendererType::DIRECTX, RendererType::VULKAN};
 
         if (!preferredRenderer.has_value()) {
             // See if config file has a special preference.
@@ -197,54 +199,83 @@ namespace ne {
         }
 
         // Create renderer using preference queue.
-        for (const auto& rendererType : vRendererPreferenceQueue) {
-            const auto pRendererName = rendererType == RendererType::DIRECTX ? "DirectX" : "Vulkan";
+        std::array<std::vector<std::string>, iRendererTypeCount> vBlacklistedGpuNames;
+        bool bLastGpuBlacklisted = false;
+        do {
+            for (const auto& rendererType : vRendererPreferenceQueue) {
+                // Prepare some variables.
+                const auto pRendererName = rendererType == RendererType::DIRECTX ? "DirectX" : "Vulkan";
+                bLastGpuBlacklisted = false;
 
-            // Log test.
-            Logger::get().info(fmt::format(
-                "attempting to initialize {} renderer to test if the hardware/OS supports it...",
-                pRendererName));
-
-            // Attempt to create a renderer.
-            auto result = createRenderer(rendererType, pGameManager);
-            if (std::holds_alternative<Error>(result)) {
-                auto error = std::get<Error>(std::move(result));
-
-                // Log failure (not an error).
+                // Log test.
                 Logger::get().info(fmt::format(
-                    "failed to initialize {} renderer, error: {}",
+                    "attempting to initialize {} renderer to test if the hardware/OS supports it...",
+                    pRendererName));
+
+                // Attempt to create a renderer.
+                auto result = createRenderer(
+                    rendererType, pGameManager, vBlacklistedGpuNames[static_cast<size_t>(rendererType)]);
+                if (std::holds_alternative<std::pair<Error, std::string>>(result)) {
+                    auto [error, sUsedGpuName] = std::get<std::pair<Error, std::string>>(std::move(result));
+
+                    if (sUsedGpuName.empty()) {
+                        // Log failure (not an error).
+                        Logger::get().info(fmt::format(
+                            "failed to initialize {} renderer, error: {}",
+                            pRendererName,
+                            error.getFullErrorMessage()));
+
+                        // Try the next renderer.
+                        Logger::get().info(
+                            "either no information about used GPU is available or all supported GPUs are "
+                            "blacklisted, attempting to use another renderer");
+                        continue;
+                    }
+
+                    // Log failure (not an error).
+                    Logger::get().info(fmt::format(
+                        "failed to initialize {} renderer using the GPU \"{}\", error: {}",
+                        pRendererName,
+                        sUsedGpuName,
+                        error.getFullErrorMessage()));
+
+                    // Mark this GPU as blacklisted for this renderer.
+                    vBlacklistedGpuNames[static_cast<size_t>(rendererType)].push_back(sUsedGpuName);
+                    bLastGpuBlacklisted = true;
+                    Logger::get().info(
+                        fmt::format("blacklisting the GPU \"{}\" for this renderer", sUsedGpuName));
+
+                    // Try the next renderer type, maybe it will be able to use this most suitable GPU
+                    // (instead of switching to a less powerful GPU and trying to use it on this renderer).
+                    continue;
+                }
+                auto pRenderer = std::get<std::unique_ptr<Renderer>>(std::move(result));
+
+                // Log success.
+                Logger::get().info(fmt::format(
+                    "successfully initialized {} renderer, using {} renderer (used API version: {})",
                     pRendererName,
-                    error.getFullErrorMessage()));
+                    pRendererName,
+                    pRenderer->getUsedApiVersion()));
 
-                // Try the next renderer.
-                continue;
+                return pRenderer;
             }
-            auto pRenderer = std::get<std::unique_ptr<Renderer>>(std::move(result));
-
-            // Log success.
-            Logger::get().info(fmt::format(
-                "successfully initialized {} renderer, using {} renderer (used API version: {})",
-                pRendererName,
-                pRendererName,
-                pRenderer->getUsedApiVersion()));
-
-            return pRenderer;
-        }
+        } while (bLastGpuBlacklisted);
 
         return nullptr;
     }
 
-    std::variant<std::unique_ptr<Renderer>, Error>
-    Renderer::createRenderer(RendererType type, GameManager* pGameManager) {
+    std::variant<std::unique_ptr<Renderer>, std::pair<Error, std::string>> Renderer::createRenderer(
+        RendererType type, GameManager* pGameManager, const std::vector<std::string>& vBlacklistedGpuNames) {
         if (type == RendererType::DIRECTX) {
 #if defined(WIN32)
-            return DirectXRenderer::create(pGameManager);
+            return DirectXRenderer::create(pGameManager, vBlacklistedGpuNames);
 #else
             return Error("DirectX renderer is not supported on this OS");
 #endif
         }
 
-        return VulkanRenderer::create(pGameManager);
+        return VulkanRenderer::create(pGameManager, vBlacklistedGpuNames);
     }
 
     std::variant<std::unique_ptr<Renderer>, Error>

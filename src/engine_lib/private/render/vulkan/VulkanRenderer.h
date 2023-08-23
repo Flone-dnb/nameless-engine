@@ -46,10 +46,10 @@ namespace ne {
          *
          * @remark Note that returned array might differ depending on the used renderer.
          *
-         * @return Error if can't find any GPU that supports this renderer,
+         * @return Empty array if no GPU supports used renderer,
          * otherwise array with GPU names that can be used for this renderer.
          */
-        virtual std::variant<std::vector<std::string>, Error> getSupportedGpuNames() const override;
+        virtual std::vector<std::string> getSupportedGpuNames() const override;
 
         /**
          * Returns a list of supported render resolution (pairs of width and height).

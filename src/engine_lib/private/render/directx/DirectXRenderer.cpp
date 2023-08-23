@@ -186,9 +186,15 @@ namespace ne {
         return {};
     }
 
-    std::variant<std::vector<std::string>, Error> DirectXRenderer::getSupportedGpuNames() const {
-        std::vector<std::string> vAddedVideoAdapters;
+    std::optional<Error> DirectXRenderer::pickVideoAdapter() {
+        // Prepare struct to store GPU info.
+        struct GpuInfo {
+            ComPtr<IDXGIAdapter3> pGpu;
+            DXGI_ADAPTER_DESC1 desc;
+        };
+        std::vector<GpuInfo> vGpus;
 
+        // Get information about the GPUs.
         for (UINT iAdapterIndex = 0;; iAdapterIndex++) {
             ComPtr<IDXGIAdapter3> pTestAdapter;
 
@@ -204,19 +210,137 @@ namespace ne {
                 pTestAdapter.Get(), rendererD3dFeatureLevel, _uuidof(ID3D12Device), nullptr);
             if (SUCCEEDED(hResult)) {
                 // Found supported adapter.
-                DXGI_ADAPTER_DESC desc;
-                pTestAdapter->GetDesc(&desc);
-                vAddedVideoAdapters.push_back(Globals::wstringToString(desc.Description));
+
+                // Get its description.
+                GpuInfo info;
+                const auto hResult = pTestAdapter->GetDesc1(&info.desc);
+                if (FAILED(hResult)) [[unlikely]] {
+                    Logger::get().info("failed to get video adapter description, skipping this GPU");
+                    continue;
+                }
+
+                // Save adapter pointer.
+                info.pGpu = pTestAdapter;
+
+                // Add to be considered.
+                vGpus.push_back(std::move(info));
             }
         }
 
-        if (vAddedVideoAdapters.empty()) {
-            return Error("could not find a GPU that supports used DirectX version and "
-                         "feature level");
+        // Make sure there is at least one GPU.
+        if (vGpus.empty()) {
+            return Error("could not find a GPU that supports used DirectX feature level");
         }
 
-        return vAddedVideoAdapters;
+        // Prepare a struct for GPU suitability score.
+        struct GpuScore {
+            ComPtr<IDXGIAdapter3> pGpu;
+            size_t iScore = 0;
+            std::string sGpuName;
+        };
+        std::vector<GpuScore> vGpuScores;
+
+        // Rate all GPUs.
+        vSupportedGpuNames.clear();
+        for (const auto& gpuInfo : vGpus) {
+            // Rate GPU.
+            GpuScore score;
+            score.iScore = rateGpuSuitability(gpuInfo.desc);
+
+            if (score.iScore == 0) {
+                // Skip not suitable GPUs.
+                continue;
+            }
+
+            // Save info.
+            score.sGpuName = Globals::wstringToString(gpuInfo.desc.Description);
+            score.pGpu = gpuInfo.pGpu;
+
+            // Add to be considered.
+            vGpuScores.push_back(score);
+
+            // Save to the list of supported GPUs.
+            vSupportedGpuNames.push_back(score.sGpuName);
+        }
+
+        // Make sure there is at least one GPU.
+        if (vGpuScores.empty()) {
+            return Error("failed to find a suitable GPU");
+        }
+
+        // Sort GPUs by score.
+        std::sort(
+            vGpuScores.begin(), vGpuScores.end(), [](const GpuScore& scoreA, const GpuScore& scoreB) -> bool {
+                return scoreA.iScore > scoreB.iScore;
+            });
+
+        // Log rated GPUs by score.
+        std::string sRating = fmt::format("found and rated {} suitable GPU(s):", vGpuScores.size());
+        for (size_t i = 0; i < vGpuScores.size(); i++) {
+            sRating += fmt::format(
+                "\n{}. {}, suitability score: {}", i + 1, vGpuScores[i].sGpuName, vGpuScores[i].iScore);
+        }
+        Logger::get().info(sRating);
+
+        // Get render settings.
+        const auto pMtxRenderSettings = getRenderSettings();
+        std::scoped_lock renderSettingsGuard(pMtxRenderSettings->first);
+
+        // Check if the GPU to use is set.
+        auto sGpuNameToUse = pMtxRenderSettings->second->getGpuToUse();
+        if (!sGpuNameToUse.empty()) {
+            // Find the GPU in the list of available GPUs.
+            std::optional<size_t> iFoundIndex{};
+            for (size_t i = 0; i < vGpuScores.size(); i++) {
+                if (vGpuScores[i].sGpuName == sGpuNameToUse) {
+                    iFoundIndex = i;
+                    break;
+                }
+            }
+            if (!iFoundIndex.has_value()) {
+                // Not found. Log event.
+                Logger::get().info(fmt::format(
+                    "unable to find the GPU \"{}\" (that was specified in the renderer's "
+                    "config file) in the list of available GPUs for this renderer",
+                    sGpuNameToUse));
+            } else if (iFoundIndex.value() > 0) {
+                // Put found GPU in the first place.
+                auto temp = vGpuScores[0];
+                vGpuScores[0] = vGpuScores[iFoundIndex.value()];
+                vGpuScores[iFoundIndex.value()] = temp;
+            }
+        }
+
+        // Pick the best suiting GPU.
+        for (size_t i = 0; i < vGpuScores.size(); i++) {
+            const auto& currentGpuInfo = vGpuScores[i];
+
+            // Log used GPU.
+            if (sGpuNameToUse == currentGpuInfo.sGpuName) {
+                Logger::get().info(fmt::format(
+                    "using the following GPU: \"{}\" (was specified as preferred in the renderer's "
+                    "config file)",
+                    currentGpuInfo.sGpuName));
+            } else {
+                Logger::get().info(fmt::format("using the following GPU: \"{}\"", currentGpuInfo.sGpuName));
+            }
+
+            // Select video adapter.
+            pVideoAdapter = currentGpuInfo.pGpu;
+
+            // Save GPU name in the settings.
+            pMtxRenderSettings->second->setGpuToUse(currentGpuInfo.sGpuName);
+
+            // Save GPU name.
+            sUsedVideoAdapter = currentGpuInfo.sGpuName;
+
+            break;
+        }
+
+        return {};
     }
+
+    std::vector<std::string> DirectXRenderer::getSupportedGpuNames() const { return vSupportedGpuNames; }
 
     std::variant<std::set<std::pair<unsigned int, unsigned int>>, Error>
     DirectXRenderer::getSupportedRenderResolutions() const {
@@ -656,36 +780,23 @@ namespace ne {
         }
     }
 
-    std::optional<Error> DirectXRenderer::setVideoAdapter(const std::string& sVideoAdapterName) {
-        for (UINT iAdapterIndex = 0;; iAdapterIndex++) {
-            ComPtr<IDXGIAdapter3> pTestAdapter;
-            if (pFactory->EnumAdapters(
-                    iAdapterIndex, reinterpret_cast<IDXGIAdapter**>(pTestAdapter.GetAddressOf())) ==
-                DXGI_ERROR_NOT_FOUND) {
-                // No more adapters to enumerate.
-                break;
-            }
-
-            DXGI_ADAPTER_DESC desc;
-            pTestAdapter->GetDesc(&desc);
-            if (Globals::wstringToString(desc.Description) == sVideoAdapterName) {
-                // Check if the adapter supports used D3D version, but don't create the actual device yet.
-                const HRESULT hResult = D3D12CreateDevice(
-                    pTestAdapter.Get(), rendererD3dFeatureLevel, _uuidof(ID3D12Device), nullptr);
-                if (SUCCEEDED(hResult)) {
-                    // Found supported adapter.
-                    pVideoAdapter = std::move(pTestAdapter);
-                    sUsedVideoAdapter = sVideoAdapterName;
-
-                    return {};
-                }
-
-                return Error("the specified video adapter does not support used DirectX "
-                             "version or feature level");
-            }
+    size_t DirectXRenderer::rateGpuSuitability(DXGI_ADAPTER_DESC1 adapterDesc) {
+        // Skip software adapters.
+        if ((adapterDesc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE) != 0) {
+            return 0;
         }
 
-        return Error("the specified video adapter was not found");
+        // Prepare a variable for the final score.
+        size_t iFinalScore = 0;
+
+        // Add score for dedicated video memory.
+        iFinalScore += adapterDesc.DedicatedVideoMemory;
+
+        // Add score for shared video memory (to not skip some integrated GPUs).
+        iFinalScore +=
+            adapterDesc.SharedSystemMemory / 1024 / 1024; // NOLINT: shared memory is less important
+
+        return iFinalScore;
     }
 
     std::optional<Error> DirectXRenderer::setOutputAdapter() {
@@ -845,40 +956,12 @@ namespace ne {
         }
 
         // Get render settings.
+        // Make sure render settings will not be changed from other frame during initialization.
         const auto pMtxRenderSettings = getRenderSettings();
         std::scoped_lock renderSettingsGuard(pMtxRenderSettings->first);
 
-        // Get supported video adapters.
-        auto result = DirectXRenderer::getSupportedGpuNames();
-        if (std::holds_alternative<Error>(result)) {
-            Error error = std::get<Error>(std::move(result));
-            error.addCurrentLocationToErrorStack();
-            return error;
-        }
-        const auto vSupportedVideoAdapters = std::get<std::vector<std::string>>(std::move(result));
-
-        // Check if the GPU to use is set.
-        auto sGpuNameToUse = pMtxRenderSettings->second->getGpuToUse();
-        if (!sGpuNameToUse.empty()) {
-            // Find the GPU in the list of available GPUs.
-            const auto it = std::ranges::find(vSupportedVideoAdapters, sGpuNameToUse);
-            if (it == vSupportedVideoAdapters.end()) {
-                // Not found. Just use the first GPU.
-                Logger::get().info(fmt::format(
-                    "unable to find the GPU \"{}\" (that was specified in the renderer's "
-                    "config file) in the list of available GPUs for this renderer",
-                    sGpuNameToUse));
-                sGpuNameToUse = vSupportedVideoAdapters[0];
-            }
-        } else {
-            sGpuNameToUse = vSupportedVideoAdapters[0];
-        }
-
-        // Save GPU name in the settings.
-        pMtxRenderSettings->second->setGpuToUse(sGpuNameToUse);
-
-        // Use video adapter.
-        std::optional<Error> optionalError = setVideoAdapter(sGpuNameToUse);
+        // Pick a GPU.
+        auto optionalError = pickVideoAdapter();
         if (optionalError.has_value()) {
             optionalError->addCurrentLocationToErrorStack();
             return optionalError;

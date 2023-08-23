@@ -1767,9 +1767,7 @@ namespace ne {
         return pRenderer;
     }
 
-    std::variant<std::vector<std::string>, Error> VulkanRenderer::getSupportedGpuNames() const {
-        return vSupportedGpuNames;
-    }
+    std::vector<std::string> VulkanRenderer::getSupportedGpuNames() const { return vSupportedGpuNames; }
 
     std::variant<std::set<std::pair<unsigned int, unsigned int>>, Error>
     VulkanRenderer::getSupportedRenderResolutions() const {

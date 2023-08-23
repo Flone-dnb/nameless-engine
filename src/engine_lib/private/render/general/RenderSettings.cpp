@@ -296,15 +296,7 @@ namespace ne {
         }
 
         // Get names of supported GPUs.
-        auto result = pRenderer->getSupportedGpuNames();
-        if (std::holds_alternative<Error>(result)) {
-            auto error = std::get<Error>(std::move(result));
-            error.addCurrentLocationToErrorStack();
-            Logger::get().error(fmt::format(
-                "failed to get the list of supported GPUs, error: \"{}\"", error.getFullErrorMessage()));
-            return;
-        }
-        const auto vSupportedGpuNames = std::get<std::vector<std::string>>(std::move(result));
+        const auto vSupportedGpuNames = pRenderer->getSupportedGpuNames();
 
         // Make sure we fit into the `unsigned int` range.
         if (vSupportedGpuNames.size() > UINT_MAX) [[unlikely]] {

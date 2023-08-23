@@ -66,10 +66,10 @@ namespace ne {
          *
          * @remark Note that returned array might differ depending on the used renderer.
          *
-         * @return Error if can't find any GPU that supports this renderer,
+         * @return Empty array if no GPU supports used renderer,
          * otherwise array with GPU names that can be used for this renderer.
          */
-        virtual std::variant<std::vector<std::string>, Error> getSupportedGpuNames() const override;
+        virtual std::vector<std::string> getSupportedGpuNames() const override;
 
         /**
          * Returns a list of supported render resolution (pairs of width and height).
@@ -252,16 +252,21 @@ namespace ne {
         [[nodiscard]] std::optional<Error> createDepthStencilBuffer();
 
         /**
-         * Sets the video adapter to be used.
+         * Rates available GPUs and picks the best one to be used (also considers GPU specified in
+         * RenderSettings).
          *
-         * @param sVideoAdapterName Name of the video adapter to use.
-         * You can query supported video adapters by using @ref getSupportedGpuNames.
-         *
-         * @return Error if something went wrong, for example, if an adapter with the specified
-         * name was not found, or if it was found but does not support used DirectX version
-         * or feature level.
+         * @return Error if something went wrong.
          */
-        [[nodiscard]] std::optional<Error> setVideoAdapter(const std::string& sVideoAdapterName);
+        [[nodiscard]] std::optional<Error> pickVideoAdapter();
+
+        /**
+         * Rates the specified GPU and gives it a suitability score.
+         *
+         * @param adapterDesc GPU description.
+         *
+         * @return 0 if the GPU is not suitable for the renderer, otherwise GPU's suitability score.
+         */
+        size_t rateGpuSuitability(DXGI_ADAPTER_DESC1 adapterDesc);
 
         /**
          * Sets first found output adapter (monitor).
@@ -392,6 +397,9 @@ namespace ne {
 
         /** Render target when MSAA is enabled because our swap chain does not support multisampling. */
         std::unique_ptr<DirectXResource> pMsaaRenderBuffer;
+
+        /** List of supported GPUs, filled during @ref pickVideoAdapter. */
+        std::vector<std::string> vSupportedGpuNames;
 
         /** The number of supported quality levels for the current MSAA sample count. */
         UINT iMsaaQualityLevelsCount = 0;

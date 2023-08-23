@@ -540,15 +540,11 @@ namespace ne {
 
     bool GameManager::isBeingDestroyed() const { return bIsBeingDestroyed; }
 
-    void GameManager::triggerActionEvents( // NOLINT
-        std::variant<KeyboardKey, MouseButton> key,
-        KeyboardModifiers modifiers,
-        bool bIsPressedDown) {
-        std::scoped_lock<std::recursive_mutex> guard(inputManager.mtxActionEvents);
-        if (inputManager.actionEvents.empty()) {
-            return;
-        }
+    void GameManager::triggerActionEvents(
+        std::variant<KeyboardKey, MouseButton> key, KeyboardModifiers modifiers, bool bIsPressedDown) {
+        std::scoped_lock guard(inputManager.mtxActionEvents);
 
+        // Make sure this key is registered in some action.
         const auto it = inputManager.actionEvents.find(key);
         if (it == inputManager.actionEvents.end()) {
             return;
@@ -562,82 +558,91 @@ namespace ne {
         // + update InputManager documentation.
         const auto actionsCopy = it->second;
         for (const auto& sActionName : actionsCopy) {
-            // Update state.
-            const auto stateIt = inputManager.actionState.find(sActionName);
-            if (stateIt == inputManager.actionState.end()) {
-                Logger::get().error(fmt::format(
-                    "input manager returned 0 "
-                    "states for '{}' action event",
-                    sActionName));
-            } else {
-                std::pair<std::vector<ActionState>, bool /* action state */>& statePair = stateIt->second;
+            // Get state of the action.
+            const auto actionStateIt = inputManager.actionState.find(sActionName);
+            if (actionStateIt == inputManager.actionState.end()) [[unlikely]] {
+                // Unexpected, nothing to process.
+                Logger::get().error(
+                    fmt::format("input manager returned 0 states for \"{}\" action event", sActionName));
+                continue;
+            }
 
-                // Mark state.
-                bool bSet = false;
-                for (auto& actionKey : statePair.first) {
-                    if (actionKey.key == key) {
-                        actionKey.bIsPressed = bIsPressedDown;
-                        bSet = true;
+            // Stores various keys that can activate this action (for example we can have
+            // buttons W and ArrowUp activating the same event named "moveForward").
+            std::pair<std::vector<ActionState>, bool /* action state */>& actionStatePair =
+                actionStateIt->second;
+
+            // Find an action key that matches the received one.
+            bool bFoundKey = false;
+            for (auto& actionKey : actionStatePair.first) {
+                if (actionKey.key == key) {
+                    // Mark key's state.
+                    actionKey.bIsPressed = bIsPressedDown;
+                    bFoundKey = true;
+                    break;
+                }
+            }
+
+            // Log an error if the key is not found.
+            if (!bFoundKey) [[unlikely]] {
+                if (std::holds_alternative<KeyboardKey>(key)) {
+                    Logger::get().error(fmt::format(
+                        "could not find the key `{}` in key states for \"{}\" action event",
+                        getKeyName(std::get<KeyboardKey>(key)),
+                        sActionName));
+                } else {
+                    Logger::get().error(fmt::format(
+                        "could not find mouse button `{}` in key states for \"{}\" action event",
+                        static_cast<int>(std::get<MouseButton>(key)),
+                        sActionName));
+                }
+            }
+
+            // Save received key state as action state.
+            bool bNewActionState = bIsPressedDown;
+
+            if (!bIsPressedDown) {
+                // The key is not pressed but this does not mean that we need to broadcast
+                // a notification about changed state. See if other button are pressed.
+                for (const auto actionKey : actionStatePair.first) {
+                    if (actionKey.bIsPressed) {
+                        // Save action state.
+                        bNewActionState = true;
                         break;
                     }
                 }
+            }
 
-                if (!bSet) {
-                    if (std::holds_alternative<KeyboardKey>(key)) {
-                        Logger::get().error(fmt::format(
-                            "could not find key '{}' in key "
-                            "states for '{}' action event",
-                            getKeyName(std::get<KeyboardKey>(key)),
-                            sActionName));
-                    } else {
-                        Logger::get().error(fmt::format(
-                            "could not find mouse button '{}' in key "
-                            "states for '{}' action event",
-                            static_cast<int>(std::get<MouseButton>(key)),
-                            sActionName));
-                    }
-                }
+            // See if action state is changed.
+            if (bNewActionState == actionStatePair.second) {
+                continue;
+            }
 
-                bool bNewState = bIsPressedDown;
+            // Action state was changed, notify the game.
 
-                if (!bIsPressedDown) {
-                    // See if other button are pressed.
-                    for (const auto actionKey : statePair.first) {
-                        if (actionKey.bIsPressed) {
-                            bNewState = true;
-                            break;
-                        }
-                    }
-                }
+            // Save new action state.
+            actionStatePair.second = bNewActionState;
 
-                if (bNewState != statePair.second) {
-                    statePair.second = bNewState;
-                    pGameInstance->onInputActionEvent(sActionName, modifiers, bNewState);
+            // Notify game instance.
+            pGameInstance->onInputActionEvent(sActionName, modifiers, bNewActionState);
 
-                    // Call on nodes that receive input.
-                    std::scoped_lock guard(mtxWorld.first);
-                    if (mtxWorld.second != nullptr) {
-                        const auto pReceivingInputNodes = mtxWorld.second->getReceivingInputNodes();
+            // Notify nodes that receive input.
+            std::scoped_lock guard(mtxWorld.first);
+            if (mtxWorld.second != nullptr) {
+                const auto pReceivingInputNodes = mtxWorld.second->getReceivingInputNodes();
 
-                        std::scoped_lock nodesGuard(pReceivingInputNodes->first);
-                        for (const auto& pNode : pReceivingInputNodes->second) {
-                            pNode->onInputActionEvent(sActionName, modifiers, bNewState);
-                        }
-                    }
+                std::scoped_lock nodesGuard(pReceivingInputNodes->first);
+                for (const auto& pNode : pReceivingInputNodes->second) {
+                    pNode->onInputActionEvent(sActionName, modifiers, bNewActionState);
                 }
             }
         }
     }
 
-    void GameManager::triggerAxisEvents( // NOLINT: too complex
-        KeyboardKey key,
-        KeyboardModifiers modifiers,
-        bool bIsPressedDown) {
+    void GameManager::triggerAxisEvents(KeyboardKey key, KeyboardModifiers modifiers, bool bIsPressedDown) {
         std::scoped_lock<std::recursive_mutex> guard(inputManager.mtxAxisEvents);
-        if (inputManager.axisEvents.empty()) {
-            return;
-        }
 
+        // Make sure this key is registered in some axis event.
         const auto it = inputManager.axisEvents.find(key);
         if (it == inputManager.axisEvents.end()) {
             return;
@@ -651,107 +656,86 @@ namespace ne {
         // + update InputManager documentation.
         const auto axisCopy = it->second;
         for (const auto& [sAxisName, iInput] : axisCopy) {
-            auto stateIt = inputManager.axisState.find(sAxisName);
-            if (stateIt == inputManager.axisState.end()) {
-                Logger::get().error(fmt::format(
-                    "input manager returned 0 "
-                    "states for '{}' axis event",
-                    sAxisName));
-                pGameInstance->onInputAxisEvent(
-                    sAxisName, modifiers, bIsPressedDown ? static_cast<float>(iInput) : 0.0F);
-
-                // Call on nodes that receive input.
-                std::scoped_lock guard(mtxWorld.first);
-                if (mtxWorld.second) {
-                    const auto pReceivingInputNodes = mtxWorld.second->getReceivingInputNodes();
-
-                    std::scoped_lock nodesGuard(pReceivingInputNodes->first);
-                    for (const auto& pNode : pReceivingInputNodes->second) {
-                        pNode->onInputAxisEvent(
-                            sAxisName, modifiers, bIsPressedDown ? static_cast<float>(iInput) : 0.0F);
-                    }
-                }
-
+            // Get state of the action.
+            auto axisStateIt = inputManager.axisState.find(sAxisName);
+            if (axisStateIt == inputManager.axisState.end()) [[unlikely]] {
+                // Unexpected.
+                Logger::get().error(
+                    fmt::format("input manager returned 0 states for \"{}\" axis event", sAxisName));
                 continue;
             }
 
-            // Mark current state.
-            bool bSet = false;
-            std::pair<std::vector<AxisState>, int /* last input */>& statePair = stateIt->second;
-            for (auto& state : statePair.first) {
+            // Stores various keys that can activate this action (for example we can have
+            // buttons W and ArrowUp activating the same event named "moveForward").
+            std::pair<std::vector<AxisState>, int /* last input */>& axisStatePair = axisStateIt->second;
+
+            // Find an action key that matches the received one.
+            bool bFound = false;
+            for (auto& state : axisStatePair.first) {
                 if (iInput == 1 && state.plusKey == key) {
-                    // Plus key.
+                    // Found it, it's registered as plus key.
+                    // Mark key's state.
                     state.bIsPlusKeyPressed = bIsPressedDown;
-                    bSet = true;
+                    bFound = true;
                     break;
                 }
 
                 if (iInput == -1 && state.minusKey == key) {
-                    // Minus key.
+                    // Found it, it's registered as minus key.
+                    // Mark key's state.
                     state.bIsMinusKeyPressed = bIsPressedDown;
-                    bSet = true;
+                    bFound = true;
                     break;
                 }
             }
-            if (!bSet) {
+
+            // Log an error if the key is not found.
+            if (!bFound) [[unlikely]] {
                 Logger::get().error(fmt::format(
-                    "could not find key '{}' in key "
-                    "states for '{}' axis event",
+                    "could not find key '{}' in key states for \"{}\" axis event",
                     getKeyName(key),
                     sAxisName));
-                pGameInstance->onInputAxisEvent(
-                    sAxisName, modifiers, bIsPressedDown ? static_cast<float>(iInput) : 0.0F);
-
-                // Call on nodes that receive input.
-                std::scoped_lock guard(mtxWorld.first);
-                if (mtxWorld.second) {
-                    const auto pReceivingInputNodes = mtxWorld.second->getReceivingInputNodes();
-
-                    std::scoped_lock nodesGuard(pReceivingInputNodes->first);
-                    for (const auto& pNode : pReceivingInputNodes->second) {
-                        pNode->onInputAxisEvent(
-                            sAxisName, modifiers, bIsPressedDown ? static_cast<float>(iInput) : 0.0F);
-                    }
-                }
-
                 continue;
             }
 
-            int iInputToPass = bIsPressedDown ? iInput : 0;
+            // Save action's state as key state.
+            int iAxisInputState = bIsPressedDown ? iInput : 0;
 
             if (!bIsPressedDown) {
-                // See if we need to pass 0 input value.
-                // See if other button are pressed.
-                for (const AxisState& state : statePair.first) {
-                    if (iInput == -1) {
-                        // Look for plus button.
-                        if (state.bIsPlusKeyPressed) {
-                            iInputToPass = 1;
-                            break;
-                        }
-                    } else {
-                        // Look for minus button.
-                        if (state.bIsMinusKeyPressed) {
-                            iInputToPass = -1;
-                            break;
-                        }
+                // The key is not pressed but this does not mean that we need to broadcast
+                // a notification about state being equal to 0. See if other button are pressed.
+                for (const AxisState& state : axisStatePair.first) {
+                    if (iInput == -1 && state.bIsPlusKeyPressed) { // Look for plus button.
+                        iAxisInputState = 1;
+                        break;
+                    } else if (state.bIsMinusKeyPressed) { // Input is `1`. Look for minus button.
+                        iAxisInputState = -1;
+                        break;
                     }
                 }
             }
 
-            if (iInputToPass != statePair.second) {
-                statePair.second = iInputToPass;
-                pGameInstance->onInputAxisEvent(sAxisName, modifiers, static_cast<float>(iInputToPass));
+            // See if axis state is changed.
+            if (iAxisInputState == axisStatePair.second) {
+                continue;
+            }
 
-                // Call on nodes that receive input.
-                std::scoped_lock guard(mtxWorld.first);
-                if (mtxWorld.second) {
-                    const auto pReceivingInputNodes = mtxWorld.second->getReceivingInputNodes();
+            // Axis state was changed, notify the game.
 
-                    std::scoped_lock nodesGuard(pReceivingInputNodes->first);
-                    for (const auto& pNode : pReceivingInputNodes->second) {
-                        pNode->onInputAxisEvent(sAxisName, modifiers, static_cast<float>(iInputToPass));
-                    }
+            // Save new axis state.
+            axisStatePair.second = iAxisInputState;
+
+            // Notify game instance.
+            pGameInstance->onInputAxisEvent(sAxisName, modifiers, static_cast<float>(iAxisInputState));
+
+            // Notify nodes that receive input.
+            std::scoped_lock guard(mtxWorld.first);
+            if (mtxWorld.second != nullptr) {
+                const auto pReceivingInputNodes = mtxWorld.second->getReceivingInputNodes();
+
+                std::scoped_lock nodesGuard(pReceivingInputNodes->first);
+                for (const auto& pNode : pReceivingInputNodes->second) {
+                    pNode->onInputAxisEvent(sAxisName, modifiers, static_cast<float>(iAxisInputState));
                 }
             }
         }

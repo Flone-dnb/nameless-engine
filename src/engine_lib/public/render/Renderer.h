@@ -134,6 +134,9 @@ namespace ne {
         /**
          * Returns total video memory (VRAM) size in megabytes.
          *
+         * @remark If integrated GPU is used this function might return shared video memory
+         * (includes both dedicated VRAM and system RAM).
+         *
          * @return Total video memory size in megabytes.
          */
         size_t getTotalVideoMemoryInMb() const;

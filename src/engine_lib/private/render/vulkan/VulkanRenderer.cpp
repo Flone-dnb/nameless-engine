@@ -443,6 +443,27 @@ namespace ne {
         // Add score for max texture dimension.
         iFinalScore += deviceProperties.limits.maxImageDimension2D;
 
+        // Get supported heap types.
+        VkPhysicalDeviceMemoryProperties gpuMemoryProperties;
+        vkGetPhysicalDeviceMemoryProperties(pGpuDevice, &gpuMemoryProperties);
+
+        // Find a heap with a DEVICE_LOCAL bit.
+        for (size_t i = 0; i < gpuMemoryProperties.memoryHeapCount; i++) {
+            if ((gpuMemoryProperties.memoryHeaps[i].flags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) != 0) {
+                // Found device local heap.
+                // Add memory to score.
+                if (deviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) {
+                    // Probably dedicated memory, more important.
+                    iFinalScore += gpuMemoryProperties.memoryHeaps[i].size;
+                } else {
+                    // Probably shared memory, less important.
+                    iFinalScore += gpuMemoryProperties.memoryHeaps[i].size / 1024 / 1024; // NOLINT
+                }
+
+                break;
+            }
+        }
+
         return iFinalScore;
     }
 

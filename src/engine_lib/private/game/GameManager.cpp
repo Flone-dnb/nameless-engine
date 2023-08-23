@@ -708,7 +708,9 @@ namespace ne {
                     if (iInput == -1 && state.bIsPlusKeyPressed) { // Look for plus button.
                         iAxisInputState = 1;
                         break;
-                    } else if (state.bIsMinusKeyPressed) { // Input is `1`. Look for minus button.
+                    }
+
+                    if (iInput == 1 && state.bIsMinusKeyPressed) { // Look for minus button.
                         iAxisInputState = -1;
                         break;
                     }

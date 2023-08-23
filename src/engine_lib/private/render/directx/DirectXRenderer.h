@@ -277,7 +277,7 @@ namespace ne {
          *
          * @return 0 if the GPU is not suitable for the renderer, otherwise GPU's suitability score.
          */
-        size_t rateGpuSuitability(DXGI_ADAPTER_DESC1 adapterDesc);
+        static size_t rateGpuSuitability(DXGI_ADAPTER_DESC1 adapterDesc);
 
         /**
          * Sets first found output adapter (monitor).

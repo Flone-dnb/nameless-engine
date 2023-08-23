@@ -108,7 +108,7 @@ TEST_CASE("timer callback is called") {
                 }
 
                 constexpr long long iWaitTime = 30;
-                constexpr size_t iCheckIntervalTimeInMs = 15;
+                constexpr size_t iCheckIntervalTimeInMs = 20;
                 using namespace std::chrono;
 
                 // Create timer.
@@ -164,7 +164,7 @@ TEST_CASE("timer callback validator prevents callback to be called after onWindo
         virtual ~TestGameInstance() override = default;
         virtual void onGameStarted() override {
             constexpr long long iWaitTime = 30;
-            constexpr size_t iCheckIntervalTimeInMs = 15;
+            constexpr size_t iCheckIntervalTimeInMs = 20;
             using namespace std::chrono;
 
             // Create timer.
@@ -228,7 +228,7 @@ TEST_CASE("timer callback validator prevents old (stopped) callback from being c
                 }
 
                 constexpr long long iWaitTime = 50;
-                constexpr size_t iCheckIntervalTimeInMs = 15;
+                constexpr size_t iCheckIntervalTimeInMs = 20;
                 using namespace std::chrono;
 
                 // Create timer.

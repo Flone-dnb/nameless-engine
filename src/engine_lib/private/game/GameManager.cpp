@@ -15,6 +15,7 @@
 #include "render/general/pipeline/PipelineManager.h"
 #include "io/FieldSerializerManager.h"
 #include "game/camera/CameraManager.h"
+#include "materials/ShaderManager.h"
 #include "game/nodes/Node.h"
 
 // External.
@@ -117,6 +118,17 @@ namespace ne {
         threadPool.stop(); // they might queue new deferred tasks
         bShouldAcceptNewDeferredTasks = false;
         executeDeferredTasks();
+
+        {
+            // Self check: make sure no thread pool task/deferred task created a new world.
+            std::scoped_lock guard(mtxWorld.first);
+            if (mtxWorld.second != nullptr) [[unlikely]] {
+                Error error("game is being destroyed and the last thread pool / deferred tasks were executed "
+                            "but some task has created a new world");
+                error.showError();
+                throw std::runtime_error(error.getFullErrorMessage());
+            }
+        }
 
         // Explicitly destroy the game instance before running the GC so that if the game instance holds
         // any GC pointers they will be cleared/removed.
@@ -383,8 +395,13 @@ namespace ne {
                 onLoaded(error);
                 return;
             }
-
             mtxWorld.second = std::get<std::unique_ptr<World>>(std::move(result));
+
+            // After new root node is spawned run garbage collection to make sure there is no garbage.
+            runGarbageCollection(true);
+
+            // Run shader manager self validation.
+            pRenderer->getShaderManager()->performSelfValidation();
 
             onLoaded({});
         });

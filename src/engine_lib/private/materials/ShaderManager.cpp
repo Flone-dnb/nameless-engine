@@ -254,11 +254,7 @@ namespace ne {
         struct SelfValidationResults {
             std::vector<std::string> vNotFoundShaders;
             std::vector<std::string> vRemovedFromToBeRemoved;
-            std::vector<std::string> vReleasedShaderBytecode;
-            bool isError() const {
-                return !vNotFoundShaders.empty() || !vRemovedFromToBeRemoved.empty() ||
-                       !vReleasedShaderBytecode.empty();
-            }
+            bool isError() const { return !vNotFoundShaders.empty() || !vRemovedFromToBeRemoved.empty(); }
             std::string toString() const {
                 std::string sResultText;
 
@@ -273,14 +269,6 @@ namespace ne {
                 if (!vRemovedFromToBeRemoved.empty()) {
                     sResultText += "[removed from \"to remove\" shaders (use count 1)]: ";
                     for (const auto& sShaderName : vRemovedFromToBeRemoved) {
-                        sResultText += fmt::format(" \"{}\"", sShaderName);
-                    }
-                    sResultText += "\n";
-                }
-
-                if (!vReleasedShaderBytecode.empty()) {
-                    sResultText += "[released shader bytecode]: ";
-                    for (const auto& sShaderName : vReleasedShaderBytecode) {
                         sResultText += fmt::format(" \"{}\"", sShaderName);
                     }
                     sResultText += "\n";
@@ -333,16 +321,6 @@ namespace ne {
                 if (*it == sShaderNameToRemove) {
                     mtxShaderData.second.vShadersToBeRemoved.erase(it);
                     break;
-                }
-            }
-        }
-
-        // Check shaders that were needed but no longer used.
-        for (const auto& [sShaderName, pShaderPack] : mtxShaderData.second.compiledShaders) {
-            if (pShaderPack.use_count() == 1) {
-                const bool bReleased = !pShaderPack->releaseShaderPackDataFromMemoryIfLoaded();
-                if (bReleased) {
-                    results.vReleasedShaderBytecode.push_back(sShaderName);
                 }
             }
         }

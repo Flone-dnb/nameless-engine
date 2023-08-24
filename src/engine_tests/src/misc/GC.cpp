@@ -3,6 +3,7 @@
 
 // Custom.
 #include "misc/GC.hpp"
+#include "game/nodes/Node.h"
 
 // External.
 #include "catch2/catch_test_macros.hpp"
@@ -436,6 +437,29 @@ TEST_CASE("storing an std::vector of objects that have gc fields and another std
         gc_collector()->fullCollect();
 
         REQUIRE(gc_collector()->getAliveObjectsCount() == iDataSize);
+    }
+
+    gc_collector()->fullCollect();
+
+    // No object should exist now.
+    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+}
+
+TEST_CASE("gc_vector copy is cheap because it's a pointer") {
+    using namespace ne;
+
+    // Make sure no GC object exists.
+    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+
+    {
+        auto vNodes = gc_new_vector<Node>();
+        REQUIRE(Node::getAliveNodeCount() == 0);
+
+        vNodes->push_back(gc_new<Node>());
+        REQUIRE(Node::getAliveNodeCount() == 1);
+
+        auto vNodes2 = vNodes;
+        REQUIRE(Node::getAliveNodeCount() == 1);
     }
 
     gc_collector()->fullCollect();

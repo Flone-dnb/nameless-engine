@@ -128,25 +128,12 @@ namespace ne {
         bool markShaderToBeRemoved(const std::string& sShaderName);
 
         /**
-         * Automatically called by the Game manager object (object that owns GameInstance) and has no point
-         * in being called from your game's code.
-         *
-         * Analyzes the current state to see if any errors have place.
-         * Fixes errors and reports them in log.
-         *
-         * @remark A call to this function may be ignored by the ShaderManager if
-         * the previous self validation was performed not so long ago.
+         * Analyzes the current state to see if any shader-related errors have place (like unused
+         * shaders in memory or etc.). Fixes errors and reports them in log.
          */
         void performSelfValidation();
 
     protected:
-        /**
-         * Returns path to the configuration file.
-         *
-         * @return Path to configuration file.
-         */
-        static std::filesystem::path getConfigurationFilePath();
-
         /**
          * Sets renderer's shader configuration for specific types of shaders.
          *
@@ -221,15 +208,6 @@ namespace ne {
         void removeShaderIfMarkedToBeRemoved(const std::string& sShaderName);
 
         /**
-         * Reads and applies configuration from disk.
-         * If any values from disk configuration were invalid/corrected will
-         * override old configuration with new/corrected values.
-         *
-         * @remark If no configuration file existed will create it.
-         */
-        void applyConfigurationFromDisk();
-
-        /**
          * Looks if any of the global shader cache parameters changed
          * (such as build mode, shader model, etc.), clears shader cache
          * directory and creates a fresh new shader cache directory with up to date info.
@@ -239,11 +217,6 @@ namespace ne {
          * @return An error if something went wrong.
          */
         [[nodiscard]] std::optional<Error> refreshShaderCache();
-
-        /**
-         * Writes current configuration to disk.
-         */
-        void writeConfigurationToDisk();
 
     private:
         /** Internal shader data. */
@@ -262,12 +235,6 @@ namespace ne {
              * are no longer used.
              */
             std::vector<std::string> vShadersToBeRemoved;
-
-            /** Last time self validation was performed. */
-            std::chrono::time_point<std::chrono::steady_clock> lastSelfValidationCheckTime;
-
-            /** Amount of time after which to perform self validation. */
-            long iSelfValidationIntervalInMin = 30; // NOLINT: don't do self validation too often
         };
 
         /** Do not delete. Parent renderer that uses this shader manager. */
@@ -305,13 +272,6 @@ namespace ne {
 
         /** Name of the key for renderer's type, used in global shader cache information. */
         static inline const std::string_view sGlobalShaderCacheRendererTypeKeyName = "renderer_type";
-
-        /** Name of the file in which we store configurable values. */
-        static inline const std::string_view sConfigurationFileName = "shader_manager";
-
-        /** Name of the key used in configuration file to store self validation interval. */
-        static inline const std::string_view sConfigurationSelfValidationIntervalKeyName =
-            "self_validation_interval_min";
 
         /**
          * Array of characters that can be used for shader name.

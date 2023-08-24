@@ -220,6 +220,15 @@ namespace ne {
         void setGarbageCollectorRunInterval(long long iGcRunIntervalInSec);
 
         /**
+         * Analyzes the current state to see if any shader-related errors have place (like unused
+         * shaders in memory or etc.). Fixes errors and reports them in log.
+         *
+         * @remark Generally should be called right before you let the player play the game (after
+         * all required nodes are spawned).
+         */
+        void executeShaderManagerSelfValidation();
+
+        /**
          * Returns a pointer to world's root node.
          *
          * @return nullptr if world is not created or was destroyed (see @ref createWorld), otherwise world's

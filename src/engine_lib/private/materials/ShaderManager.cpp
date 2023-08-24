@@ -20,13 +20,7 @@
 #include "fmt/core.h"
 
 namespace ne {
-    ShaderManager::ShaderManager(Renderer* pRenderer) {
-        this->pRenderer = pRenderer;
-
-        applyConfigurationFromDisk();
-
-        mtxShaderData.second.lastSelfValidationCheckTime = std::chrono::steady_clock::now();
-    }
+    ShaderManager::ShaderManager(Renderer* pRenderer) { this->pRenderer = pRenderer; }
 
     std::optional<std::shared_ptr<ShaderPack>> ShaderManager::getShader(const std::string& sShaderName) {
         std::scoped_lock guard(mtxShaderData.first);
@@ -88,44 +82,6 @@ namespace ne {
         // Remove the shader.
         mtxShaderData.second.compiledShaders.erase(shaderIt);
         mtxShaderData.second.vShadersToBeRemoved.erase(toBeRemovedIt);
-    }
-
-    void ShaderManager::applyConfigurationFromDisk() {
-        const auto configPath = getConfigurationFilePath();
-
-        // Check if the config file exists.
-        if (!std::filesystem::exists(configPath)) {
-            // Write new config file.
-            writeConfigurationToDisk();
-            return;
-        }
-
-        // Read the config file.
-        ConfigManager configManager;
-        auto optional = configManager.loadFile(configPath);
-        if (optional.has_value()) {
-            auto err = std::move(optional.value());
-            err.addCurrentLocationToErrorStack();
-            // don't show message as it's not a critical error
-            Logger::get().error(err.getFullErrorMessage());
-            return;
-        }
-
-        std::scoped_lock guard(mtxShaderData.first);
-
-        constexpr long iSelfValidationInternalMinimum = 15; // NOLINT: don't do self validation too often.
-        auto iNewSelfValidationIntervalInMin = configManager.getValue<long>(
-            "",
-            sConfigurationSelfValidationIntervalKeyName,
-            mtxShaderData.second.iSelfValidationIntervalInMin);
-        if (iNewSelfValidationIntervalInMin < iSelfValidationInternalMinimum) {
-            iNewSelfValidationIntervalInMin = iSelfValidationInternalMinimum;
-        }
-
-        mtxShaderData.second.iSelfValidationIntervalInMin = iNewSelfValidationIntervalInMin;
-
-        // Rewrite configuration on disk because we might correct some values.
-        writeConfigurationToDisk();
     }
 
     std::optional<Error> ShaderManager::refreshShaderCache() {
@@ -254,41 +210,6 @@ namespace ne {
         return {};
     }
 
-    void ShaderManager::writeConfigurationToDisk() {
-        std::scoped_lock guard(mtxShaderData.first);
-
-        const auto configPath = getConfigurationFilePath();
-
-        ConfigManager configManager;
-        configManager.setValue(
-            "",
-            sConfigurationSelfValidationIntervalKeyName,
-            mtxShaderData.second.iSelfValidationIntervalInMin,
-            "specified in minutes, interval can't be smaller than 15 minutes, for big games this might cause "
-            "small framerate drop each time self validation is performed but "
-            "this might find errors (if any occurred) and fix them which might result in slightly less RAM "
-            "usage");
-        auto optional = configManager.saveFile(configPath, false);
-        if (optional.has_value()) {
-            auto err = std::move(optional.value());
-            err.addCurrentLocationToErrorStack();
-            // don't show message as it's not a critical error
-            Logger::get().error(err.getFullErrorMessage());
-        }
-    }
-
-    std::filesystem::path ShaderManager::getConfigurationFilePath() {
-        std::filesystem::path configPath = ProjectPaths::getPathToEngineConfigsDirectory();
-        configPath /= sConfigurationFileName;
-
-        // Check extension.
-        if (!std::string_view(sConfigurationFileName).ends_with(ConfigManager::getConfigFormatExtension())) {
-            configPath += ConfigManager::getConfigFormatExtension();
-        }
-
-        return configPath;
-    }
-
     bool ShaderManager::isShaderNameCanBeUsed(const std::string& sShaderName) {
         std::scoped_lock guard(mtxShaderData.first);
 
@@ -329,14 +250,6 @@ namespace ne {
 
     void ShaderManager::performSelfValidation() { // NOLINT
         std::scoped_lock guard(mtxShaderData.first);
-
-        using namespace std::chrono;
-        const auto iDurationInMin =
-            duration_cast<minutes>(steady_clock::now() - mtxShaderData.second.lastSelfValidationCheckTime)
-                .count();
-        if (iDurationInMin < mtxShaderData.second.iSelfValidationIntervalInMin) {
-            return;
-        }
 
         struct SelfValidationResults {
             std::vector<std::string> vNotFoundShaders;
@@ -381,7 +294,7 @@ namespace ne {
 
         Logger::get().info("starting self validation...");
 
-        const auto start = steady_clock::now();
+        const auto start = std::chrono::steady_clock::now();
 
         // Look what shaders can be removed.
         for (const auto& sShaderToRemove : mtxShaderData.second.vShadersToBeRemoved) {
@@ -434,23 +347,23 @@ namespace ne {
             }
         }
 
-        const auto end = steady_clock::now();
+        // Measure the time it took to run garbage collector.
+        const auto end = std::chrono::steady_clock::now();
+        const auto timeTookInMs =
+            std::chrono::duration<float, std::chrono::milliseconds::period>(end - start).count();
 
-        const auto iTimeTookInMs = duration_cast<milliseconds>(end - start).count();
-
+        // Log results.
         if (results.isError()) {
             Logger::get().error(fmt::format(
-                "finished self validation (took {} ms), found and fixed the following "
-                "errors:\n"
+                "finished self validation (took {:.1F} ms), found and fixed the following "
+                "errors: (this should not happen)\n"
                 "\n{}",
-                iTimeTookInMs,
+                timeTookInMs,
                 results.toString()));
         } else {
             Logger::get().info(
-                fmt::format("finished self validation (took {} ms): everything is OK", iTimeTookInMs));
+                fmt::format("finished self validation (took {:.1F} ms): everything is OK", timeTookInMs));
         }
-
-        mtxShaderData.second.lastSelfValidationCheckTime = steady_clock::now();
     }
 
     void ShaderManager::setRendererConfigurationForShaders(

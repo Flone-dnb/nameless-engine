@@ -277,8 +277,6 @@ namespace ne {
         // Save delta time.
         timeSincePrevFrameInSec = timeSincePrevCallInSec;
 
-        pRenderer->getShaderManager()->performSelfValidation();
-
         // Call on game instance.
         pGameInstance->onBeforeNewFrame(timeSincePrevCallInSec);
 

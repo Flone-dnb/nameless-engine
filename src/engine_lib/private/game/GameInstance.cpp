@@ -4,6 +4,7 @@
 #include "game/GameManager.h"
 #include "misc/Timer.h"
 #include "io/Logger.h"
+#include "game/Window.h"
 
 namespace ne {
     GameInstance::GameInstance(Window* pGameWindow, GameManager* pGameManager, InputManager* pInputManager) {
@@ -119,6 +120,10 @@ namespace ne {
 
     void GameInstance::setGarbageCollectorRunInterval(long long iGcRunIntervalInSec) {
         pGameManager->setGarbageCollectorRunInterval(iGcRunIntervalInSec);
+    }
+
+    void GameInstance::executeShaderManagerSelfValidation() {
+        getWindow()->getRenderer()->getShaderManager()->performSelfValidation();
     }
 
     std::pair<

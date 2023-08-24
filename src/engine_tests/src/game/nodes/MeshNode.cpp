@@ -5,6 +5,7 @@
 #include "materials/Material.h"
 #include "materials/EngineShaderNames.hpp"
 #include "../../io/ReflectionTest.h"
+#include "misc/PrimitiveMeshGenerator.h"
 
 // External.
 #include "catch2/catch_test_macros.hpp"
@@ -724,6 +725,72 @@ TEST_CASE("shader read/write resources exist only when MeshNode is spawned") {
             });
         }
         virtual ~TestGameInstance() override {}
+    };
+
+    auto result = Window::getBuilder().withVisibility(false).build();
+    if (std::holds_alternative<Error>(result)) {
+        Error error = std::get<Error>(std::move(result));
+        error.addCurrentLocationToErrorStack();
+        INFO(error.getFullErrorMessage());
+        REQUIRE(false);
+    }
+
+    const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
+    pMainWindow->processEvents<TestGameInstance>();
+
+    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+    REQUIRE(Material::getCurrentAliveMaterialCount() == 0);
+}
+
+TEST_CASE("spawn mesh node in a thread pool task") {
+    using namespace ne;
+
+    class TestGameInstance : public GameInstance {
+    public:
+        TestGameInstance(Window* pGameWindow, GameManager* pGame, InputManager* pInputManager)
+            : GameInstance(pGameWindow, pGame, pInputManager) {}
+        virtual void onGameStarted() override {
+            createWorld([&](const std::optional<Error>& optionalWorldError) {
+                if (optionalWorldError.has_value()) {
+                    auto error = optionalWorldError.value();
+                    error.addCurrentLocationToErrorStack();
+                    INFO(error.getFullErrorMessage());
+                    REQUIRE(false);
+                }
+
+                addTaskToThreadPool([=]() {
+                    // Spawn sample mesh.
+                    const auto pMeshNode = gc_new<MeshNode>();
+                    const auto mtxMeshData = pMeshNode->getMeshData();
+                    {
+                        std::scoped_lock guard(*mtxMeshData.first);
+                        (*mtxMeshData.second) = PrimitiveMeshGenerator::createCube(1.0F);
+                    }
+
+                    getWorldRootNode()->addChildNode(
+                        pMeshNode, Node::AttachmentRule::KEEP_RELATIVE, Node::AttachmentRule::KEEP_RELATIVE);
+                    pMeshNode->setWorldLocation(glm::vec3(1.0F, 0.0F, 0.0F));
+
+                    bMeshSpawned = true;
+                });
+            });
+        }
+        virtual void onBeforeNewFrame(float delta) override {
+            if (!bMeshSpawned) {
+                return;
+            }
+
+            iFramesPassed += 1;
+            if (iFramesPassed >= iFramesToWait) {
+                getWindow()->close();
+            }
+        }
+        virtual ~TestGameInstance() override {}
+
+    private:
+        bool bMeshSpawned = false;
+        size_t iFramesPassed = 0;
+        const size_t iFramesToWait = 10;
     };
 
     auto result = Window::getBuilder().withVisibility(false).build();

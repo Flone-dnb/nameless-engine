@@ -37,7 +37,7 @@ namespace ne {
     protected:
         /**
          * Called after GameInstance's constructor is finished and created
-         * GameInstance object was saved in Game object (that owns GameInstance).
+         * GameInstance object was saved in GameManager (that owns GameInstance).
          *
          * At this point you can create and interact with the game world and etc.
          */

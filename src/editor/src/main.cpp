@@ -11,6 +11,7 @@
 // Custom.
 #include "EditorGameInstance.h"
 #include "game/Window.h"
+#include "misc/ProjectPaths.h"
 
 int main() {
 // Enable run-time memory check for debug builds.
@@ -21,11 +22,13 @@ int main() {
 #endif
     using namespace ne;
 
-    auto result = Window::getBuilder()
-                      .withTitle("Nameless Editor")
-                      .withMaximizedState(true)
-                      .withIcon("res/editor/nameless_editor_icon.png")
-                      .build();
+    auto result =
+        Window::getBuilder()
+            .withTitle("Nameless Editor")
+            .withMaximizedState(true)
+            .withIcon(
+                ProjectPaths::getPathToResDirectory(ResourceDirectory::EDITOR) / "nameless_editor_icon.png")
+            .build();
     if (std::holds_alternative<Error>(result)) {
         Error error = std::get<Error>(std::move(result));
         error.addCurrentLocationToErrorStack();

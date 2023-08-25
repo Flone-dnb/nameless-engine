@@ -1,0 +1,25 @@
+name: Deploy documentation to pages
+
+on:
+  push:
+    branches: [ master ]
+
+jobs:
+  build-documentation:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      - name: Run Doxygen
+        uses: mattnotmitt/doxygen-action@v1.9.5
+        with:
+          doxyfile-path: ./docs/Doxyfile
+      - name: Pages Deployment
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./docs/gen/html/
+          enable_jekyll: false
+          allow_empty_commit: false
+          force_orphan: true
+          publish_branch: github-pages

@@ -620,3 +620,214 @@ Don't try to trick this system as it will probably lead to exceptions, leaks and
 
 So if you're planning to use `gc` pointers on some type T, make sure this type T is not using multiple inheritance. Our reflection system can also have issues with multiple inheritance (in some special cases which we will talk about later), just note that.
 
+# Deferred tasks and thread pool
+
+The engine has 2 kind tasks you might be interested in:
+
+- a `deferred task` is a function/lambda that is executed on the main thread,
+    - you can submit deferred tasks from non-main thread to run some logic on the main thread,
+    - you can also submit deferred tasks while being on the main thread, this will just queue your task and execute in slightly later on the main thread
+    - deferred tasks are processed every time before a new frame is drawn
+
+- a `thread pool task` is a function/lambda that is executed inside of a thread pool (non-main thread), you can submit a function/lambda to a thread pool to run asynchronous logic
+
+The engine guarantees that:
+    - all deferred tasks and all thread pool tasks will be finished before your `GameInstance` is destroyed so you don't need to check whether the game is closing or not in your deferred/thread pool tasks
+    - all deferred tasks submitted from the main thread will be finished before garbage collector runs, this means that if you submit deferred tasks from the main thread you can pass raw node pointers (such as `Node*`) and use them in deferred tasks without risking to hit deleted memory
+
+Submitting a deferred task from a `non-main thread` where in deferred task you operate on a `gc` controlled object such as Node can be dangerous as you may operate on a deleted (freed) memory. The engine roughly speaking does the following:
+
+```Cpp
+executeDeferredTasks();
+runGarbageCollector();
+```
+
+and if you are submitting a deferred task from a non-main thread you might get into the following situation:
+
+```Cpp
+executeDeferredTasks();
+// your non-main thread added a new deferred task here
+runGarbageCollector();
+// or your non-main thread added a new deferred task here
+```
+
+In this case use additional checks in the beginning of your deferred task to check if the node you want to use is still valid:
+
+```Cpp
+// We are on a non-main thread inside of a node:
+addDeferredTask([this, iNodeId](){ // capturing `this` to use `Node` (self) functions, also capturing self ID
+    // We are inside of a deferred task (on the main thread) and we don't know if the node (`this`)
+    // was garbage collected or not because we submitted our task from a non-main thread.
+    // REMEMBER: we can't capture `gc` pointers in `std::function`, this is not supported
+    // and will cause memory leaks/crashes!
+
+    const auto pGameManager = GameManager::get(); // using engine's private class `GameManager`
+
+    // `pGameManager` is guaranteed to be valid inside of a deferred task.
+    // Otherwise, if running this code outside of a deferred task you need to do 2 checks:
+    // if (pGameManager == nullptr) return;
+    // if (pGameManager->isBeingDestroyed()) return;
+
+    if (!pGameManager->isNodeSpawned(iNodeId)){
+        // Node was despawned and it may be dangerous to run the callback.
+        return;
+    }
+
+    // Can safely interact with `this` (self) - we are on the main thread.
+});
+```
+
+# World creation
+
+## World axes and world units
+
+The engine uses a left handed coordinate system. +X is world "forward" direction, +Y is world "right" direction and +Z is world "up" direction. These directions are stored in `Globals::WorldDirection` (`misc/Globals.h`).
+
+Rotations are applied in the following order: ZYX, so "yaw" is applied first, then "pitch" and then "roll". If you need to do manual math with rotations you can use `MathHelpers::buildRotationMatrix` that builds a rotation matrix with correct rotation order.
+
+1 world unit is expected to be equal to 1 meter in your game.
+
+## Creating a world using C++
+
+Let's first make sure you know how to create a window, your `main.cpp` should generally look like this:
+
+```Cpp
+// Standard.
+#include <stdexcept>
+
+// Custom.
+#include "MyGameInstance.h"
+#include "game/Window.h"
+#include "misc/ProjectPaths.h"
+
+int main() {
+    using namespace ne;
+
+    // Create a game window.
+    auto result =
+        Window::getBuilder()
+            .withTitle("My Game")
+            .withMaximizedState(true)
+            .withIcon(
+                ProjectPaths::getPathToResDirectory(ResourceDirectory::GAME) / "my_game_icon.png")
+            .build();
+    if (std::holds_alternative<Error>(result)) {
+        Error error = std::get<Error>(std::move(result));
+        error.addCurrentLocationToErrorStack();
+        error.showError();
+        throw std::runtime_error(error.getFullErrorMessage());
+    }
+    auto pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
+
+    // Run game loop.
+    pMainWindow->processEvents<MyGameInstance>();
+
+    return 0;
+}
+```
+
+And your game instance would generally look like this:
+
+```Cpp
+#pragma once
+
+// Custom.
+#include "game/GameInstance.h"
+
+class Window;
+class GameManager;
+class InputManager;
+
+class MyGameInstance : public GameInstance {
+public:
+    MyGameInstance(Window* pWindow, GameManager* pGameManager, InputManager* pInputManager);
+    virtual ~MyGameInstance() override = default;
+
+protected:
+    virtual void onGameStarted() override;
+};
+```
+
+Now let's see how we can create a world in `onGameStarted`:
+
+```Cpp
+#include "MyGameInstance.h"
+
+// Custom.
+#include "game/nodes/MeshNode.h"
+#include "misc/PrimitiveMeshGenerator.h"
+
+MyGameInstance::MyGameInstance(
+    Window* pWindow, GameManager* pGameManager, InputManager* pInputManager)
+    : GameInstance(pWindow, pGameManager, pInputManager) {}
+
+void MyGameInstance::onGameStarted(){
+    // Create world.
+    createWorld([this](const std::optional<Error>& optionalWorldError) {
+        // Show error if failed.
+        if (optionalWorldError.has_value()) [[unlikely]] {
+            auto error = optionalWorldError.value();
+            error.addCurrentLocationToErrorStack();
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+        }
+
+        // Spawn sample mesh.
+        const auto pMeshNode = gc_new<MeshNode>();
+        const auto mtxMeshData = pMeshNode->getMeshData();
+        {
+            std::scoped_lock guard(*mtxMeshData.first);
+            (*mtxMeshData.second) = PrimitiveMeshGenerator::createCube(1.0F);
+        }
+        getWorldRootNode()->addChildNode(pMeshNode);
+
+        // Set mesh node location.
+        pMeshNode->setWorldLocation(glm::vec3(1.0F, 0.0F, 0.0F));
+    });
+}
+```
+
+The code from above creates a new world with just 2 nodes: a root node and a mesh node. As you can see you specify a callback function that will be called once the world is created.
+
+Unfortunatelly you would also need a camera to see your world but we will discuss this in the next section, for now let's talk about world creation.
+
+If you instead want to load some level/map as you new world you need to use `loadNodeTreeAsWorld` instead of `createWorld`, see an example:
+
+```Cpp
+#include "MyGameInstance.h"
+
+// Custom.
+#include "game/nodes/MeshNode.h"
+#include "misc/PrimitiveMeshGenerator.h"
+
+MyGameInstance::MyGameInstance(
+    Window* pWindow, GameManager* pGameManager, InputManager* pInputManager)
+    : GameInstance(pWindow, pGameManager, pInputManager) {}
+
+void MyGameInstance::onGameStarted(){
+    // Prepare path to your node tree to load.
+    const auto pathToMyLevel = ProjectPaths::getPathToResDirectory(ResourceDirectory::GAME) / "mylevel.toml";
+
+    // Deserialize world.
+    loadNodeTreeAsWorld(
+        [this](const std::optional<Error>& optionalWorldError) {
+            // Show error if failed.
+            if (optionalWorldError.has_value()) [[unlikely]] {
+                auto error = optionalWorldError.value();
+                error.addCurrentLocationToErrorStack();
+                error.showError();
+                throw std::runtime_error(error.getFullErrorMessage());
+            }
+            
+            // World is loaded.
+        },
+        pathToMyLevel);
+}
+```
+
+After your world is created you can create your player node with a camera.
+
+# Creating a first person character node
+
+## Creating a character node
+

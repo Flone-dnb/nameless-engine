@@ -226,7 +226,7 @@ namespace ne {
          * @remark Generally should be called right before you let the player play the game (after
          * all required nodes are spawned).
          */
-        void executeShaderManagerSelfValidation();
+        void executeShaderManagerSelfValidation() const;
 
         /**
          * Returns a pointer to world's root node.

@@ -122,7 +122,7 @@ namespace ne {
         pGameManager->setGarbageCollectorRunInterval(iGcRunIntervalInSec);
     }
 
-    void GameInstance::executeShaderManagerSelfValidation() {
+    void GameInstance::executeShaderManagerSelfValidation() const {
         getWindow()->getRenderer()->getShaderManager()->performSelfValidation();
     }
 

@@ -4,6 +4,8 @@ This is a manual - a step-by-step guide to introduce you to various aspects of t
 
 Note that this manual contains many sections and instead of scrolling this page you can click on a little arrow button in the left (navigation) panel, the little arrow button becomes visible once you hover your mouse cursor over a section name, by clicking on that litte arrow you can expand the section and see its subsections and quickly jump to needed sections.
 
+This manual expects that you have a solid knowledge in writing programs using C++ language.
+
 # Prerequisites
 
 First of all, check out repository's `README.md` file, specifically the `Prerequisites` section, make sure you have all required things installed.
@@ -45,6 +47,8 @@ Let's looks at the directories/files that a typical project will have:
 The `src` directory contains a directory per CMake target, for example: `editor` (executable CMake target), `editor_lib` (library CMake target) and some additional helper directories such as `.cmake` (contains helper CMake functions) and `.scripts` (contains Go scripts that we use in our CMake files).
 
 Inside of each CMake target directory will be a target-specific `CMakeLists.txt` file (for example: `src/editor_lib/CMakeLists.txt`), directories for source code and maybe a `.generated` directory that contains reflection code (we will talk about source code directories and reflection in one of the next sections).
+
+Note that generally you should add all functionality of your game into a library target (so that it can be used in other executable targets such as `tests`) while executable targets will generally will only have `main.cpp`.
 
 Your game target `CMakeLists.txt` is fully yours, it will have some configuration code inside of it but you are free to change it as you want (you can disable/change `doxygen`, `clang-tidy`, reflection generation and anything else you don't like).
 
@@ -171,7 +175,7 @@ Let's analyze the example from above:
     - here `RNAMESPACE` is a reflection macro (R stands for Reflected) that is used to mark a namespace to be added to reflection database
 - `class RCLASS(Guid("9ae433d9-2cba-497a-8061-26f2683b4f35")) PlayerConfig`
     - here `RCLASS` is a reflection macro that is used to mark class to be added to reflection database, if you have a struct you need to use `RSTRUCT` macro
-    - `Guid` is a property of `RCLASS` macro that is used to specify a unique GUID that the class should be associated with, for example when you serialize an object of this class into a file on the disk this GUID will be saved in the file to mark that `PlayerConfig` class is saved here, you can generate a GUID by simply searching something like "generate GUID" on the Internet, any GUID will be fine but if some type already uses this GUID the engine will let you know at startup, in debug builds the engine checks for GUID uniqueness
+    - `ne::Guid` is a property of `RCLASS` macro that is used to specify a unique GUID that the class should be associated with, for example when you serialize an object of this class into a file on the disk this GUID will be saved in the file to mark that `PlayerConfig` class is saved here, you can generate a GUID by simply searching something like "generate GUID" on the Internet, any GUID will be fine but if some type already uses this GUID the engine will let you know at startup, in debug builds the engine checks for GUID uniqueness
 - `RPROPERTY(Serialize)`
     - `RPROPERTY` is a macro that marks a field to be added to reflection database as part of the class, you can have this macro defined without other properties but in this case we use a property named `Serialize` - this property tells the engine that when an object of this class is being serialized the value of this field should also be serialized, additionally when you deserialize a file that value will be deserialized into this field
 - `mygame_PlayerConfig_GENERATED`
@@ -192,7 +196,7 @@ Let's sum up what you need to do in order to use reflection:
 1. Include `*filename*.generated.h` as the last include in your .h file (where *filename* is file name without extension).
 2. Include `*filename*.generated_impl.h`  as the last include in your .cpp file (where *filename*  is file name without extension).
 3. If you have a namespace add a `RNAMESPACE()` macro, for example: `namespace mygame RNAMESPACE()`.
-4. Mark your class/struct with `RCLASS`/`RSTRUCT` and add a `Guid` property with some random GUID, for example: `class RCLASS(Guid("9ae433d9-2cba-497a-8061-26f2683b4f35")) PlayerConfig`.
+4. Mark your class/struct with `RCLASS`/`RSTRUCT` and add a `ne::Guid` property with some random GUID, for example: `class RCLASS(Guid("9ae433d9-2cba-497a-8061-26f2683b4f35")) PlayerConfig`.
 5. In the end of your type (as the last line of your type) add a macro `*namespace*_*typename*_GENERATED` or just `*typename*_GENERATED` if you don't have a namespace, if you use nested types/namespaces this macro name will contain them all: `*outerouter*_*outerinner*_*typename*_GENERATED`, for example: `mygame_PlayerConfig_GENERATED`.
 6. In the end of your header file add a macro `File_*filename* _GENERATED` (where *filename*  is file name without extension), for example: `File_PlayerConfig_GENERATED`.
 
@@ -200,7 +204,7 @@ After this you can use reflection macros like `RPROPERTY`/`RFUNCTION`. We will t
 
 For more examples see `src/engine_tests/io/ReflectionTest.h`.
 
-## Common mistakes with reflection
+## Common mistakes when using reflection
 
 If you changed something in your header file and your IDE now shows errors in `GENERATED` macros just compile your project, it will run reflection generator and update reflection code, then the errors should disappear.
 
@@ -221,6 +225,10 @@ If you created/changes something in your header file related to reflection (rena
 [Info] (Re)generated metadata for 0 file(s) in 0.005000 seconds.
 [Info] Metadata of 1 file(s) up-to-date.
 ```
+
+If you get a compilation error like `Cannot open include file: '....generated.h': No such file or directory` this might either mean that the reflection generator was not run (see solution from the above) or that your CMake target does not have reflection generator enabled. Open your `CMakeLists.txt` file and make sure it has `add_refureku` command if there is no such command then reflection generator is not enabled and you might want to look at `CMakeLists.txt` of other targets to see how they use this command (not all CMake targets use reflection generator, generally only library targets use it).
+
+If you added the reflection code but your project fails to compile at the linking stage make sure your `.cpp` file includes `*filename*.generated_impl.h` as its last include file.
 
 In some rare cases you need to manually delete generated reflection files. For example if you made a typo and wrote `RPROPERTY(Serializable)` (while the correct macro/property is `RPROPERTY(Serialize)`), started compiling your project, the reflection generator run but there is a compilation error related to the reflection code. In this case even if you rename your macro/property to be correct you still might not be able to compile your project, if this is the case, go to the directory with generated code at `src/*yourtarget*/.generated` find a generated file named after your header file and delete 2 files `*yourfile*.generated.h` and `*yourfile*.generated_impl.h` (where *yourfile* is the file in which you had a mistake) then try to compile your project, it should succeed.
 
@@ -527,6 +535,16 @@ public:
 Another example:
 
 ```Cpp
+void MyNode::bar(){
+    foo(gc<MyNode>(this)); // <- constructing a gc pointer from `this` is fine
+}
+
+void foo(const gc<Node>& pNodeToProcess);
+```
+
+Another example:
+
+```Cpp
 class Collected {};
 
 struct MyData {
@@ -791,7 +809,7 @@ The code from above creates a new world with just 2 nodes: a root node and a mes
 
 Unfortunatelly you would also need a camera to see your world but we will discuss this in the next section, for now let's talk about world creation.
 
-If you instead want to load some level/map as you new world you need to use `loadNodeTreeAsWorld` instead of `createWorld`, see an example:
+If you instead want to load some level/map as your new world you need to use `loadNodeTreeAsWorld` instead of `createWorld`, see an example:
 
 ```Cpp
 #include "MyGameInstance.h"
@@ -827,7 +845,298 @@ void MyGameInstance::onGameStarted(){
 
 After your world is created you can create your player node with a camera.
 
-# Creating a first person character node
+# Creating a character for your game
 
-## Creating a character node
+## Creating a simple flying character node
+
+In this section we will start with the most simplest character node: a node that has a camera and can fly around using WASD and mouse movement.
+
+Let's create new files `FlyingCharacter.h` and `FlyingCharacter.cpp` inside of our new directory named `private/nodes` to our library target (we pick our library target since generally library targets will contain all functionality (so that it can be used in multiple executable targets such as `tests`) while executable targets generally will only contain `main.cpp`). Open `CMakeLists.txt` of your library target and add new files to `PROJECT_SOURCES`:
+
+```
+# `CMakeLists.txt`
+# ... some code here ...
+
+# Specify project sources.
+set(PROJECT_SOURCES
+    # ... some files here ...
+    private/nodes/FlyingCharacter.h
+    private/nodes/FlyingCharacter.cpp
+    # add your .h/.cpp files here
+)
+
+# Define target.
+add_library(${PROJECT_NAME} STATIC ${PROJECT_SOURCES})
+
+# ... some code here ...
+```
+
+Now make sure CMake configuration was run, for example, Qt Creator runs CMake configuration after your make modifications to a `CMakeLists.txt` file and save it.
+
+Now let's create our character node. We have two choises: we can derive our flying character node from `CameraNode` (it derives from `SpatialNode` so it has a location/rotation/scale in 3D world) or derive from `SpatialNode` and attach a `CameraNode` to it. Since more complicated characters will require multiple nodes such as: collision node, mesh node, camera node that will be somehow attached we will derive from `SpatialNode` and demonstrate how you can attach a `CameraNode`.
+
+We will start with the most basic node header file:
+
+```Cpp
+// FlyingCharacter.h
+
+#pragma once
+
+// Custom.
+#include "game/nodes/SpatialNode.h"
+
+// Using engine namespace.
+using namespace ne;
+
+class FlyingCharacterNode : public SpatialNode {
+public:
+    FlyingCharacterNode();
+    FlyingCharacterNode(const std::string& sNodeName);
+
+    virtual ~FlyingCharacterNode() override = default;
+};
+```
+
+As you can see we created 2 constructors, engine's node classes have 2 constructors (1 without a name and 1 with a name) so we will also define 2 constructors just to be consistent with the engine (although you are not required to do this).
+
+Now the .cpp file:
+
+```Cpp
+// FlyingCharacter.cpp
+
+#include "FlyingCharacter.h"
+
+FlyingCharacterNode::FlyingCharacterNode() : FlyingCharacterNode("Flying Character Node") {}
+
+FlyingCharacterNode::FlyingCharacterNode(const std::string& sNodeName) : SpatialNode(sNodeName) {
+    // constructor logic
+}
+
+```
+
+Engine's nodes do the same thing as we did here: their constructor without parameters is delegating constructor that calls constructor with a name and provides a default node name (and does nothing). The actual construction logic happens in the constructor that accepts a node name.
+
+Now let's add reflection to our node so that the editor will be able to recognize our node and the engine will be able to save/load our node when we are using it as part of some node tree.
+
+```Cpp
+// FlyingCharacter.h
+
+#pragma once
+
+// Custom.
+#include "game/nodes/SpatialNode.h"
+
+#include "FlyingCharacter.generated.h"
+
+using namespace ne;
+
+class RCLASS(Guid("0f84de3a-b5bb-42c7-aeea-aef89d31ed63")) FlyingCharacterNode : public SpatialNode {
+public:
+    FlyingCharacterNode();
+    FlyingCharacterNode(const std::string& sNodeName);
+
+    virtual ~FlyingCharacterNode() override = default;
+
+    FlyingCharacterNode_GENERATED
+};
+
+File_FlyingCharacter_GENERATED
+```
+
+Note
+> `FlyingCharacterNode_GENERATED` and `File_FlyingCharacter_GENERATED` are different, one describes a `Node` class and one defines a file name.
+
+We followed instructions from one of the previous sections in the manual where we discussed reflection. Also don't forget to update our `.cpp` file:
+
+```Cpp
+// FlyingCharacter.cpp
+
+#include "FlyingCharacter.h"
+
+#include "FlyingCharacter.generated_impl.h" // <- new include, should be last
+
+FlyingCharacterNode::FlyingCharacterNode() : FlyingCharacterNode("Flying Character Node") {}
+
+FlyingCharacterNode::FlyingCharacterNode(const std::string& sNodeName) : SpatialNode(sNodeName) {
+    // constructor logic
+}
+```
+
+As we said earlier your IDE might highlight new code as errors since the reflection headers were not generated yet. It's compile our project so that reflection headers will be generated.
+
+Node
+> If your compilation fails at `Cannot open include file: 'FlyingCharacter.generated.h': No such file or directory` this might indicate that either the reflection generator was not run or your CMake target does not have reflection generator enabled - see one of the previous sections about reflection for possible solutions.
+
+
+Now before moving to handling user input let's add a camera node. There are several ways on how we can do this and we will discuss various ways in one of the following sections, for now let's just create a camera node in our character's constructor. Let's create a new field in our class to store a `gc` pointer to the camera node:
+
+```Cpp
+// FlyingCharacter.h
+
+#pragma once
+
+// Custom.
+#include "game/nodes/SpatialNode.h"
+
+#include "FlyingCharacter.generated.h"
+
+using namespace ne;
+
+namespace ne {
+    class CameraNode;
+}
+
+class RCLASS(Guid("0f84de3a-b5bb-42c7-aeea-aef89d31ed63")) FlyingCharacterNode : public SpatialNode {
+public:
+    FlyingCharacterNode();
+
+    FlyingCharacterNode(const std::string& sNodeName);
+
+    virtual ~FlyingCharacterNode() override = default;
+
+private:
+    gc<CameraNode> pCameraNode;
+
+    FlyingCharacterNode_GENERATED
+};
+
+File_FlyingCharacter_GENERATED
+```
+
+Note
+> We also added forward declaration of the camera node type `class CameraNode;`.
+
+Since nodes only use `gc` pointers we use it instead of some other smart pointer types.
+
+Now let's create a camera node in our constructor:
+
+```Cpp
+#include "FlyingCharacter.h"
+
+// Custom.
+#include "game/nodes/CameraNode.h"
+
+#include "FlyingCharacter.generated_impl.h"
+
+FlyingCharacterNode::FlyingCharacterNode() : FlyingCharacterNode("Flying Character Node") {}
+
+FlyingCharacterNode::FlyingCharacterNode(const std::string& sNodeName) : SpatialNode(sNodeName) {
+    // Create our camera node.
+    pCameraNode = ::gc_new<CameraNode>("Player Camera");
+
+    // Attach the camera to the character.
+    addChildNode(pCameraNode, AttachmentRule::KEEP_RELATIVE, AttachmentRule::KEEP_RELATIVE);
+}
+```
+
+Note
+> I'm using `::%gc_new` instead of `gc_new` because of some name collision from Windows headers (this might not be the case for your project, I have some Windows headers included this might be the issue), if I would try to compile with `gc_new` I would get a weird error saying something about Microsoft extension.
+
+Now let's compile our program and make sure we have a world, in our `GameInstance::onGameStarted` create an empty world:
+
+```Cpp
+// MyGameInstance.cpp
+#include "MyGameInstance.h"
+
+#include "game/nodes/MeshNode.h"
+#include "misc/PrimitiveMeshGenerator.h"
+#include "nodes/FlyingCharacter.h"
+
+void MyGameInstance::onGameStarted() {
+    // Create world.
+    createWorld([this](const std::optional<Error>& optionalWorldError) {
+        // Check if there was an error.
+        if (optionalWorldError.has_value()) [[unlikely]] {
+            auto error = optionalWorldError.value();
+            error.addCurrentLocationToErrorStack();
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+        }
+
+        // Prepare a sample mesh.
+        const auto pMeshNode = gc_new<MeshNode>();
+        const auto mtxMeshData = pMeshNode->getMeshData();
+        {
+            std::scoped_lock guard(*mtxMeshData.first);
+            (*mtxMeshData.second) = PrimitiveMeshGenerator::createCube(1.0F);
+        }
+
+        // Spawn mesh node.
+        getWorldRootNode()->addChildNode(pMeshNode);
+        pMeshNode->setWorldLocation(glm::vec3(1.0F, 0.0F, 0.0F));
+
+        // Spawn character node.
+        const auto pCharacter = gc_new<FlyingCharacterNode>();
+        getWorldRootNode()->addChildNode(pCharacter);
+        pCharacter->setWorldLocation(glm::vec3(-1.0F, 0.0F, 0.0F));
+    });
+}
+```
+
+If you would compile and run your project now you still wouldn't be able to see anything. This is because we need to explicitly make character's camera active.
+
+The documentation for `CameraNode::makeActive` says that "Only spawned camera nodes can be primary (active), otherwise an error will be shown." let's then override `Node::onSpawning` in our character. Add the following code to our character's header file:
+
+```Cpp
+protected:
+    virtual void onSpawning() override;
+```
+
+The documentation for `Node::onSpawning` says "This node will be marked as spawned before this function is called." this means that when `Node::onSpawning` is called our node is already considered as spawned. Also the documentation says "If overriding you must call the parent's version of this function first (before executing your login) to execute parent's logic." so let's implement this function. In the `.cpp` file of your character add the following code:
+
+```Cpp
+void FlyingCharacterNode::onSpawning() {
+    SpatialNode::onSpawning(); // call super class
+
+    pCameraNode->makeActive(); // make camera active
+}
+```
+
+If you would compile and run your project now you will get an error saying "camera node "Player Camera" needs to be spawned in order to make it the active camera". If we would look at the documentation for `Node::onSpawning` again, we will see that it also says "This function is called before any of the child nodes are spawned. If you need to do some logic after child nodes are spawned use @ref onChildNodesSpawned." and since the camera node is a child node of our character when character node is spawning its child nodes are still waiting to be spawned. Thus let's use `onChildNodesSpawned` instead.
+
+Replace `onSpawning` function with `onChildNodesSpawned`:
+
+```Cpp
+void FlyingCharacterNode::onChildNodesSpawned() {
+    SpatialNode::onChildNodesSpawned();
+
+    pCameraNode->makeActive();
+}
+```
+
+Now compile and run your project. If you did everything correctly you should see a white cube on the black background. Now close your project, look at your console/logs and make sure there are no warnings/errors reported in the end.
+
+We can now continue and work on handling user input to allow our character to fly.
+
+## Working with user input
+
+### Input events
+
+The usual way to handle user input is by binding to action/axis events and doing your processing once these events are triggered.
+
+Each input event (action/axis event) is a pair:
+- action event contains:
+  - action name (for example "MoveForward")
+  - array of keys (for example key `W` and `ArrowUp`) that trigger the event
+- axis event contains:
+  - axis name (for example "MoveForward")
+  - array of key pairs (for example `W` and `S`, `ArrowUp` and `ArrowDown`) that trigger that event and define +1.0 and -1.0 states of the axis event
+
+Action events are used for input that can only have 2 states: pressed and not pressed (for example a jump action), and axis events are used for input that can have a "smooth"/floating state (from -1.0 to +1.0, think about gamepad thumbsticks or `W`/`S` button combination for moving forward/backward).
+
+Action events are a perfect case for, say, Jump or Fire/Shoot event since those can only have 2 states: on and off. So when you use an action event your input callback will receive input as a `bool` value (pressed/not pressed).
+
+Axis events can be used for gamepad input and to replace 2 keyboard action events. You can have 2 action events: "moveForward" on `W` and "moveBackward" on `S` or just 1 axis event "moveForward" with `W` as +1.0 input and `S` as -1.0 input. So when you use an axis event your input callback will receive input as a `float` value (from +1.0 to -1.0). 
+
+Let's consider 2 examples for axis events:
+    - If we have gamepad thumbstick we can use 2 axis events: one for X movement and one for Y movement. As you might expect the X movement axis event will trigger +1.0 value when you move your thumbstick fully to the right and your axis event will trigger -1.0 when your thumbstick is moved fully to the left. You will receive 0.0 input when the thumbstick remains in its default (centered) state.
+    - If you use a keyboard for moving your character you can use 2 axis events: one for right/left movement and one for forward/backward movement. When the user presses the button for moving forward you will receive +1.0 value and when the user presses the button for moving backward you will receive -1.0 value, same goes for right/left movement. When no button is pressed you will receive 0.0 value. For movement, since it has 2 directions on each axis it's better to use one axis event for each direction instead of 2 action events for each direction to simplify your code. In addition if in the future you will decide to add gamepad support if you have axis events for movement it will be very easy to bind gamepad input to movement while if you use action events you would have to rewrite them to use axis events.
+
+Note
+> A so-called "repeat" input is disabled in the engine. "Repeat" input happens when use hold some button, while you hold it the window keeps receiving "repeat" input events with this button but the engine will ignore them and so if you will hold a button only pressed/released events will be received by your code.
+
+Note
+> We don't have gamepad support yet.
+
+### Binding to input events in GameInstance
 

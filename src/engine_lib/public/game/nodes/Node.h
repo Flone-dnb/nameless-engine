@@ -536,10 +536,10 @@ namespace ne RNAMESPACE() {
          * @warning If overriding you must call the parent's version of this function first
          * (before executing your login) to execute parent's logic (if there is any).
          *
-         * @param timeSincePrevCallInSec Time in seconds that has passed since the last call
-         * to this function.
+         * @param timeSincePrevFrameInSec Also known as deltatime - time in seconds that has passed since
+         * the last frame was rendered.
          */
-        virtual void onBeforeNewFrame(float timeSincePrevCallInSec) {}
+        virtual void onBeforeNewFrame(float timeSincePrevFrameInSec) {}
 
         /**
          * Called when this node was not spawned previously and it was either attached to a parent node

@@ -266,7 +266,7 @@ namespace ne {
         CameraManager* getCameraManager() const;
 
         /**
-         * Returns the last time that was passed to onBeforeNewFrame function(s).
+         * Returns the last time value that was passed to @ref onBeforeNewFrame function(s).
          *
          * @return Delta time.
          */
@@ -487,7 +487,7 @@ namespace ne {
         /** Last time we run garbage collector. */
         std::chrono::steady_clock::time_point lastGcRunTime;
 
-        /** The last time that was passed to @ref onBeforeNewFrame. */
+        /** The last time value that was passed to @ref onBeforeNewFrame. */
         float timeSincePrevFrameInSec = 0.0F;
 
         /** Interval in seconds after which we need to run garbage collector again. */

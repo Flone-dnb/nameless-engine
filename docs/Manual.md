@@ -1138,5 +1138,257 @@ Note
 Note
 > We don't have gamepad support yet.
 
-### Binding to input events in GameInstance
+Mouse movement is handled using `GameInstance::onMouseMove` function or `Node::onMouseMove` function. There are other mouse related functions like `onMouseScrollMove` that you might find useful.
+
+### Binding to input events in game instance
+
+Let's see how we can bind to input events in our `GameInstance` class.
+
+```Cpp
+// MyGameInstance.cpp
+
+void MyGameInstance::onGameStarted() {
+    // Register action event.
+    auto optionalError = getInputManager()->addActionEvent("myActionEvent1", {KeyboardKey::KEY_F});
+    if (optionalError.has_value()) [[unlikely]] {
+        // ... handle error ...
+    }
+        
+    // Register axis event.
+    optionalError = getInputManager()->addAxisEvent("myAxisEvent1", {{KeyboardKey::KEY_A, KeyboardKey::KEY_D}});
+    if (optionalError.has_value()) [[unlikely]] {
+        // ... handle error ...
+    }
+
+    // Now let's bind callback functions to our events.
+
+    // Bind to action events.
+    {
+        const auto pActionEvents = getActionEventBindings();
+        std::scoped_lock guard(pActionEvents->first);
+
+        pActionEvents->second["myActionEvent1"] = [](KeyboardModifiers modifiers, bool bIsPressedDown) {
+            Logger::get().info(fmt::format("action event triggered, state: {}", bIsPressedDown));
+        };
+    }
+
+    // Bind to axis events.
+    {
+         const auto pAxisEvents = getAxisEventBindings();
+        std::scoped_lock guard(pAxisEvents->first);
+
+        pAxisEvents->second["myAxisEvent1"] = [](KeyboardModifiers modifiers, float input) {
+            Logger::get().info(fmt::format("axis event triggered, value: {}", input));
+        };
+    }
+}
+```
+
+At this point you will be able to trigger registered action/axis events by pressing the specified keyboard buttons.
+
+Note
+> Although you can process input events in `GameInstance` it's not really recommended because input events should generally be processed in nodes such as in your character node so that your nodes will be self-contained.
+
+Note
+> You can register/bind input events even when world does not exist or not created yet.
+
+Note
+> You can bind to input events before registering input events - this is perfectly fine.
+
+### Binding to input events in nodes
+
+This is the most common use case for input events. The usual workflow goes like this:
+1. Register action/axis events with some default keys in your `GameInstance`.
+2. Bind to input processing callbacks in your nodes.
+
+Let's register 2 axis events in our game instance: one for moving right/left and one for moving forward/backward:
+
+```Cpp
+void MyGameInstance::onGameStarted() {
+    // Register "moveRight" axis event.
+    auto optionalError =
+        getInputManager()->addAxisEvent("moveRight", {{KeyboardKey::KEY_D, KeyboardKey::KEY_A}});
+    if (optionalError.has_value()) [[unlikely]] {
+        optionalError->addCurrentLocationToErrorStack();
+        optionalError->showError();
+        throw std::runtime_error(optionalError->getFullErrorMessage());
+    }
+
+    // Register "moveForward" axis event.
+    optionalError =
+        getInputManager()->addAxisEvent("moveForward", {{KeyboardKey::KEY_W, KeyboardKey::KEY_S}});
+    if (optionalError.has_value()) [[unlikely]] {
+        optionalError->addCurrentLocationToErrorStack();
+        optionalError->showError();
+        throw std::runtime_error(optionalError->getFullErrorMessage());
+    }
+
+    // Register "closeApp" action event.
+    optionalError = getInputManager()->addActionEvent("closeApp", {KeyboardKey::KEY_ESCAPE});
+    if (optionalError.has_value()) [[unlikely]] {
+        optionalError->addCurrentLocationToErrorStack();
+        optionalError->showError();
+        throw std::runtime_error(optionalError->getFullErrorMessage());
+    }
+}
+```
+
+In our node create 2 new private fields and one new function that we will use:
+
+```Cpp
+protected:
+    virtual void onBeforeNewFrame(float timeSincePrevFrameInSec) override;
+
+private:
+    glm::vec2 lastInputDirection = glm::vec2(0.0F, 0.0F);
+
+    static constexpr float movementSpeed = 10.0F;
+```
+
+Now in our node's constructor let's bind to input events. We don't need to care about register/bind order because as we already said earlier you can bind to input events before registering input events - this is perfectly fine.
+
+```Cpp
+// FlyingCharacter.cpp
+
+#include "FlyingCharacter.h"
+
+// Custom.
+#include "game/nodes/CameraNode.h"
+
+#include "FlyingCharacter.generated_impl.h"
+
+FlyingCharacterNode::FlyingCharacterNode() : FlyingCharacterNode("Flying Character Node") {}
+
+FlyingCharacterNode::FlyingCharacterNode(const std::string& sNodeName) : SpatialNode(sNodeName) {
+    // Create our camera node.
+    pCameraNode = ::gc_new<CameraNode>("Player Camera");
+
+    // Attach the camera to the character.
+    addChildNode(pCameraNode, AttachmentRule::KEEP_RELATIVE, AttachmentRule::KEEP_RELATIVE);
+
+    // Make our node to receive user input. Input will be received only when the node is spawned.
+    setIsReceivingInput(true);
+
+    // Make our node to be called every frame so that we can apply input to movement.
+    // Node will be called every frame only while it's spawned.
+    setIsCalledEveryFrame(true);
+
+    // Bind to axis events.
+    {
+        const auto pAxisEvents = getAxisEventBindings();
+        std::scoped_lock guard(pAxisEvents->first);
+
+        pAxisEvents->second["moveRight"] = [this](KeyboardModifiers modifiers, float input) {
+            lastInputDirection.x = input;
+        };
+
+        pAxisEvents->second["moveForward"] = [this](KeyboardModifiers modifiers, float input) {
+            lastInputDirection.y = input;
+        };
+    }
+}
+
+void FlyingCharacterNode::onChildNodesSpawned() {
+    SpatialNode::onChildNodesSpawned();
+
+    pCameraNode->makeActive();
+}
+
+void FlyingCharacterNode::onBeforeNewFrame(float timeSincePrevFrameInSec) {
+    // Check if input is zero for early exit.
+    if (glm::all(glm::epsilonEqual(lastInputDirection, glm::vec2(0.0F, 0.0F), 0.0001F))) {
+        return;
+    }
+
+    // Normalize direction to avoid speed up on diagonal movement and apply speed.
+    const auto movementDirection =
+        glm::normalize(lastInputDirection) * timeSincePrevFrameInSec * movementSpeed;
+
+    // Get node's world location.
+    auto newWorldLocation = getWorldLocation();
+
+    // Calculate new world location.
+    newWorldLocation += getWorldRightDirection() * movementDirection.x;
+    newWorldLocation += getWorldForwardDirection() * movementDirection.y;
+
+    // Apply movement.
+    setWorldLocation(newWorldLocation);
+}
+```
+
+Note
+> We use hardcoded strings such as "moveForward" and "moveRight" for simplicity of our examples, we expect that in your code you would create a struct with static strings of action/axis event names and reference your input events using those fields instead of duplicating your input event names.
+
+As you can see we have decided to apply input movement not instantly but once a frame. The motivation for this is that we now have `timeSincePrevFrameInSec` (also known as deltatime - time in seconds that has passed since the last frame was rendered) and we can eliminate a speed up on diagonal movement (length of the vector becomes ~1.41 on diagonal movement while we expect the length of the vector to be in the range [0.0; 1.0]).
+
+In addition to this it may happen that a button is pressed/released multiple times during one frame (this is even more likely when use have a gamepad and use thumbsticks for movement) which will cause our input callbacks to be triggered multiple times during one frame, so if we process the movement instantly this might affect the performance. **Note that movement input is special because we can process it like that but it does not mean that all other input should be handled like this, for example an action to Fire/Shoot should be processed instantly or an action Open/Interact should also be processed instantly, in addition "look" or "rotation" mouse events should also be processed instantly.**
+
+Compile and run your project now, you can try modifying `movementSpeed` variable to fit your needs or even make it non-constant if you want.
+
+Let's now make our character to look/rotate using mouse movement. Add a new protected function and a private field in your node:
+
+```Cpp
+protected:
+    virtual void onMouseMove(int iXOffset, int iYOffset) override;
+
+private:
+    static constexpr float rotationSpeed = 0.1F;
+```
+
+And implementation:
+
+```Cpp
+void FlyingCharacterNode::onMouseMove(int iXOffset, int iYOffset) {
+    auto currentRotation = getRelativeRotation();
+    currentRotation.z += iXOffset * rotationSpeed; // modify "yaw"
+    currentRotation.y -= iYOffset * rotationSpeed; // modify "pitch"
+    setRelativeRotation(currentRotation);
+}
+```
+
+Note
+> Make sure to use relative rotation and not world rotation.
+
+And let's hide the cursor.
+
+```Cpp
+void FlyingCharacterNode::onChildNodesSpawned() {
+    SpatialNode::onChildNodesSpawned();
+
+    // Hide (lock) cursor.
+    getGameInstance()->getWindow()->setCursorVisibility(false);
+
+    // Enable camera.
+    pCameraNode->makeActive();
+}
+```
+
+Compile and run. You should be able to rotate our character using mouse input.
+
+As the final step let's finish by implementing "closeApp" action event, this one is very simple:
+
+```Cpp
+FlyingCharacterNode::FlyingCharacterNode(const std::string& sNodeName) : SpatialNode(sNodeName) {
+    // ... some code here ...
+
+    // Bind to axis events.
+    // ... some code here ...
+
+    // Bind to action events.
+    {
+        const auto pActionEvents = getActionEventBindings();
+        std::scoped_lock guard(pActionEvents->first);
+
+        pActionEvents->second["closeApp"] = [](KeyboardModifiers modifiers, bool bIsPressed) {
+            getGameInstance()->getWindow()->close();
+        };
+    }
+}
+```
+
+If you read the documentation for `Node::setIsReceivingInput` you would know that we can change whether we receive input or not while spawned. This can be handy if your game has (for example) a car that your character can drive, once your character enters a car you can use `PlayerNode::setIsReceivingInput(false)` and `CarNode::setIsReceivingInput(true)` and when the character leaves a car do the opposite `CarNode::setIsReceivingInput(false)` and `PlayerNode::setIsReceivingInput(true)`. Although if your character can still use some of his controls while driving a car you might want to implement some states like `bool bIsDrivingCar` and in some input callbacks in `PlayerNode` check this variable to decide whether an action should be executed or not.
+
+This will be enough for now. Later we will talk about using `InputManager` in a slightly better way and also talk about saving/loading inputs.
+
+# Tips to note when working with nodes
 

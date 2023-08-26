@@ -25,6 +25,16 @@ namespace ne RNAMESPACE() {
         virtual ~CameraNode() override = default;
 
         /**
+         * Makes the camera of this node to be the primary camera and you will see what this camera sees
+         * on the game window.
+         *
+         * @remark Only spawned camera nodes can be primary (active), otherwise an error will be shown.
+         *
+         * @remark Previously active camera (if there was one) will become inactive.
+         */
+        void makeActive();
+
+        /**
          * Sets how the camera can move and rotate.
          *
          * @param mode New mode.

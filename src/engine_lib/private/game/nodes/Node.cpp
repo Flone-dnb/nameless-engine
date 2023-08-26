@@ -333,6 +333,9 @@ namespace ne {
                 pChildNode->spawn();
             }
         }
+
+        // Notify user code.
+        onChildNodesSpawned();
     }
 
     void Node::despawn() {

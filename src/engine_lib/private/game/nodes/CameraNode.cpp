@@ -207,4 +207,8 @@ namespace ne {
         return localSpaceOriginInWorldSpace;
     }
 
+    void CameraNode::makeActive() {
+        getGameInstance()->getCameraManager()->setActiveCamera(gc<CameraNode>(this));
+    }
+
 } // namespace ne

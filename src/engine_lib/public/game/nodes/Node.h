@@ -546,12 +546,26 @@ namespace ne RNAMESPACE() {
          * that is spawned or set as world's root node to execute custom spawn logic.
          *
          * @remark This node will be marked as spawned before this function is called.
-         * @remark This function is called before any of the child nodes are spawned.
+         * @remark This function is called before any of the child nodes are spawned. If you
+         * need to do some logic after child nodes are spawned use @ref onChildNodesSpawned.
          *
          * @warning If overriding you must call the parent's version of this function first
          * (before executing your login) to execute parent's logic.
          */
         virtual void onSpawning() {}
+
+        /**
+         * Called after @ref onSpawning when this node and all of node's child nodes (at the moment
+         * of spawning) were spawned.
+         *
+         * @remark Generally you might want to prefer to use @ref onSpawning, this function
+         * is mostly used to do some logic related to child nodes after all child nodes were spawned
+         * (for example if you have a camera child node you can make it active in this function).
+         *
+         * @warning If overriding you must call the parent's version of this function first
+         * (before executing your login) to execute parent's logic.
+         */
+        virtual void onChildNodesSpawned() {}
 
         /**
          * Called before this node is despawned from the world to execute custom despawn logic.

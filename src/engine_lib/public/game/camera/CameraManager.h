@@ -34,6 +34,8 @@ namespace ne {
         /**
          * Takes a transient camera an makes it the primary camera.
          *
+         * @remark Previously active camera (if there was one) will become inactive.
+         *
          * @param pTransientCamera Camera to make active.
          */
         void setActiveCamera(std::shared_ptr<TransientCamera> pTransientCamera);
@@ -42,6 +44,8 @@ namespace ne {
          * Makes a camera node to be the primary camera.
          *
          * @remark Only spawned camera nodes can be used here, otherwise an error will be shown.
+         *
+         * @remark Previously active camera (if there was one) will become inactive.
          *
          * @param pCameraNode Spawned camera node to make active.
          */

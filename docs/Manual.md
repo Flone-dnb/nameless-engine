@@ -288,7 +288,7 @@ const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(st
 
 The engine has a simple `Logger` class (`io/Logger.h`) that you can use to write to log files and to console (note that logging to console is disabled in release builds).
 
-On Windows log files are located at `%localappdata%/nameless-engine/*yourtargetname*/logs`.
+On Windows log files are located at `%%localappdata%/nameless-engine/*yourtargetname*/logs`.
 On Linux log files are located at `~/.config/nameless-engine/*yourtargetname*/logs`.
 
 Here is an example of `Logger` usage:
@@ -1391,4 +1391,303 @@ If you read the documentation for `Node::setIsReceivingInput` you would know tha
 This will be enough for now. Later we will talk about using `InputManager` in a slightly better way and also talk about saving/loading inputs.
 
 # Tips to note when working with nodes
+
+Prefer to start your custom nodes like this:
+
+```Cpp
+MyDerivedNode() : MyDerivedNode("My Derived Node") {};
+MyDerivedNode(const std::string& sNodeName) : ParentNodeClass(sNodeName) {
+  // constructor logic
+}
+virtual ~MyDerivedNode() override = default;
+```
+
+If you override some `virtual` function in node it's very likely (read the documentation for the functions you are overriding) that **you need to call the parent's version**:
+
+```Cpp
+void FlyingCharacterNode::onChildNodesSpawned() {
+    SpatialNode::onChildNodesSpawned(); // <- calling parent's version
+
+    // ... your code ...
+}
+```
+
+Don't forget about `Node::getChildNodeOfType` and `Node::getParentNodeOfType` as they might be useful.
+
+**Remember that `World` is inaccessable when the node is not spawned and thus `Node::getWorldRootNode` is `nullptr`.**
+
+If you have a character node with some child nodes and you want the player to explore the world by walking on his feet or by riding a car you can use `pCarNode->addChildNode(pCharacterNode)` to attach your already spawned player (which is attached to the world's root node) to the car node when the player gets in the car or detach it from the car by using something like `getWorldRootNode()->addChildNode(pCharacterNode)` to make it attached to the world's root node again. By using `addChildNode` you can not only add child nodes but also attach and detach existing ones even if they already have a parent.
+
+The order in which `Node::onBeforeNewFrame` are called on nodes is kind of random. If you need a specific node's `onBeforeNewFrame` to be called before `onBeforeNewFrame` of some other node consider using `Node::setTickGroup`. For example if your game have a functionality to focus the camera on some world entity you might want to put the "focusing" logic in the later tick group to make sure that all world entities processed their movement before you rotate (focus) the camera.
+
+# Working with timers
+
+## Timers and GameInstance
+
+Let's consider an example where you need to trigger some logic after some time in your `GameInstance`:
+
+```Cpp
+void MyGameInstance::onGameStarted() override {
+    // Create a timer.
+    pTimer = createTimer("custom");
+
+    // (optional) Let's set timer to wait 1 second (1000 ms) before calling our callback.
+    pTimer->setCallbackForTimeout(1000, []() { 
+        Logger::get().info("Hello from timer callback!");
+
+        // Timer was not set as `looping` so there is no need to explicitly stop it.
+    });
+
+    // Start the timer.
+    pTimer->start();
+
+    // ... some code here ...
+
+    // Let's see how much time has passed.
+    const auto iTimePassedInMs = pTimer->getElapsedTimeInMs();
+}
+```
+
+As the documentation for `Timer::setCallbackForTimeout` says your callback will be called on the main thread so can safely use all engine functions from it. Moreover, the engine does some additional work for you and guarantees that this callback will never be called on deleted `GameInstance` (see function documentation for more details).
+
+We store a `Timer* pTimer = nullptr` in the header file of our game instance to reuse that timer. **There's currently no `removeTimer` function (and may even never be) so it might be a good idea to reuse your timers instead of creating new timers again and again.** Returned raw pointer `Timer*` is guaranteed to be valid while the game instance is valid.
+
+Using timer callbacks in game instance is pretty safe and you generally shouldn't worry about anything. And as always if you have any questions you might look at the documentation of the timer class and at the timer tests at `src/engine_tests/game/GameInstance.cpp`.
+
+## Timers and Node
+
+Same timer functions are used in nodes:
+
+```Cpp
+MyDerivedNode() {
+    // Create a timer in constructor to reuse it later.
+    pTimer = createTimer("custom");
+};
+
+void MyDerivedNode::onSpawning() override{
+    Node::onSpawning(); // don't forget to call parent's version
+
+    // (optional) Let's set timer to wait 1 second (1000 ms) before calling our callback.
+    pTimer->setCallbackForTimeout(1000, []() { 
+        Logger::get().info("Hello from timer callback!");
+
+        // Timer was not set as `looping` so there is no need to explicitly stop it.
+    });
+
+    // Start the timer.
+    pTimer->start();
+
+    // ... some code here ...
+
+    // Let's see how much time has passed.
+    const auto iTimePassedInMs = pTimer->getElapsedTimeInMs();
+}
+```
+
+Some things about timers in nodes:
+    - Timers in nodes can only be `Timer::start`ed while the node is spawned any attempt to start a timer while the node is despawned (or not spawned yet) will result in an error being logged.
+    - Created timers will be automatically stopped before `Node::onDespawning`.
+    - Timer's callback will only be called while the timer is running and your node is spawned. This means that when your timer's callback is started you know that the node is still spawned.
+    - Timer's callback will be called on the main thread.
+
+Again, we store a `Timer* pTimer = nullptr` in the header file of our node to reuse that timer. **There's currently no `removeTimer` function (and may even never be) so it might be a good idea to reuse your timers instead of creating new timers again and again.** Returned raw pointer `Timer*` is guaranteed to be valid while the node is valid.
+
+As with game instance using timer callbacks in nodes is pretty safe and you generally shouldn't worry about anything. And as always if you have any questions you might look at the documentation of the timer class and at the timer tests at `src/engine_tests/misc/Timer.cpp`.
+
+# Node callbacks (including asynchronous tasks)
+
+In your game you would most likelly want to use callbacks to trigger custom logic in nodes when some event happens, for example when your character's collision hits/overlaps with something you might want the collision node to notify the character node to do some custom logic.
+
+When you think of callbacks you might think of `std::function` but the problem is that `std::function` has no guarantees if the node is spawned or not, or if it was deleted (freed). In order to avoid issues like that the engine provides `NodeFunction` - it's an `std::function` wrapper used for `Node` functions/lambdas with an additional check (compared to the usual `std::function`): once the callback is called `NodeFunction` will first safely check if the node, the callback function points to, is still spawned or not, and if not spawned then the callback function will not be called to avoid running functions on despawned nodes or hitting deleted memory.
+
+That "safely check" means that the engine does not use your node for the check because the node might be deleted and calling any functions on it might lead to undefined behaviour.
+
+So when you need callbacks for triggering custom logic in `Node`s it's highly recommended to use the `NodeFunction` instead of the `std::function`.
+
+Additionally, when you use asynchronous requests (for example when you make asynchronous requests to remote backend server) for triggering some `Node` callbacks to process asynchronous results you should also use `NodeFunction`. This would protect you from running into despawned/deleted nodes if the asynchronous result was received unexpectedly late (for example) so you don't need to check if the node is still valid or not.
+Your code then will look like this:
+
+```Cpp
+// Inside of some `Node`:
+
+// note that `Node::getNodeId()` below will return empty if the node is not spawned and
+// we use `.value()` directly just to simplify our example
+auto onFinished = NodeFunction<void(bool, int)>(getNodeId().value(), [this](bool bSomeParameter, int iSomeParameter){
+    // Asynchronous call was finished successfully and `this` node is still spawned.
+    // Do some logic here.
+});
+
+SomeSystem->DoAsynchronousQuery(
+    someData,
+    [onFinished](bool bSomeParameter, int iSomeParameter){
+        onFinished(bSomeParameter, iSomeParameter); // won't call the callback if the node is despawned or deleted
+    });
+```
+
+# Safely using the publisher-subscriber pattern with nodes
+
+Every game has custom game events, in this engine some nodes can subscribe to a specific publisher object, this way subscriber nodes can be notified when a specific event happens. For example, if your character node wants to know when its collision hits something we can use the publisher-subscriber pattern. When the publisher object decides that the event has happend it notifies all subscriber nodes and calls `NodeFunction` callbacks of all subscribed nodes.
+
+In the engine the publisher-subscriber pattern is implemented by the `NodeNotificationBroadcaster` class. `Node` class already has a built-in functionality to use these broadcasters. You can use `Node::createNotificationBroadcaster` to create such broadcasters, allow other nodes to subscribe by specifying their `NodeFunction` callbacks and notify subscribers by calling the `broadcast` method. Here is a simplified example:
+
+```Cpp
+class MyNode : public Node{
+public:
+    MyNode(){
+        // Create broadcaster.
+        pEventBroadcaster = createNotificationBroadcaster<void(bool, int)>();
+    }
+    virtual ~MyNode() override = default;
+
+    // Allow other nodes to subscribe to the event.
+    // Return a unique binding ID if other node wants to unsubscribe later.
+    size_t subscribeToEvent(const NodeFunction<void(bool, int)>& callback){
+        return pEventBroadcaster->subscribe(callback);
+    }
+
+    // Allow other nodes to unsubscribe from the event.
+    void unsubscribeFromEvent(size_t iBindingId){
+        pEventBroadcaster->unsubscribe(iBindingId);
+    }
+
+private:
+    void onAfterSomeGameEvent(bool bSomeParameter, int iSomeParameter){
+        // Notify subscribers (queues a deferred task in which calls all subscribed callbacks).
+        pEventBroadcaster->broadcast(bSomeParameter, iSomeParameter);
+    }
+
+    NodeNotificationBroadcaster<void(bool, int)>* pEventBroadcaster = nullptr;
+}
+
+// inside of some other spawned (!) node (otherwise `getNodeId()` returns empty):
+const auto iBindingId = pPublisherNode->subscribeToEvent(
+    NodeFunction<void(bool, int)>(getNodeId().value(), [this](bool bSomeParameter, int iSomeParameter){
+    // event occurred
+}));
+
+// ... later (if we need to) ...
+
+pPublisherNode->unsubscribeFromEvent(iBindingId);
+```
+
+Note that you don't need to unsubscribe when your subscribed node is being despawned/destroyed as this is done automatically. Each `broadcast` call removes callbacks of despawned nodes.
+
+Note
+> Because `broadcast` call simply loops over all registered callbacks extra care should be taken when you subscribe to pair events such as "on started overlapping" / "on finished overlapping" because the order of these events may be incorrect in some special situations. When subscribing to such "pair" events it's recommended to add checks in the beginning of your callbacks that make sure the order is correct (as expected), otherwise show an error message so that you will instantly notice that and fix it.
+
+# Saving and loading user's input settings
+
+`InputManager` allows creating input events and axis events, i.e. allows binding names with multiple input keys. When working with input the workflow for creating, modifying, saving and loading inputs goes like this:
+
+```Cpp
+using namespace ne;
+
+void MyGameInstance::onGameStarted(){
+    // On each game start, create action/axis events with default keys.
+    const std::vector<std::pair<KeyboardKey, KeyboardKey>> vMoveForwardKeys = {
+    std::make_pair<KeyboardKey, KeyboardKey>(KeyboardKey::KEY_W, KeyboardKey::KEY_S),
+    std::make_pair<KeyboardKey, KeyboardKey>(KeyboardKey::KEY_UP, KeyboardKey::KEY_DOWN)};
+
+    auto optionalError = getInputManager()->addAxisEvent("MoveForward", vMoveForwardKeys);
+    if (optionalError.has_value()){
+        // ... handle error ...
+    }
+
+    // ... add more default events here ...
+
+    // After we defined all input events with default keys:
+    // Load modifications that the user previously saved (if exists).
+    constexpr auto pInputFilename = "input"; // filename "input" is just an example, you can use other filename
+    const auto pathToFile
+        = ConfigManager::getCategoryDirectory(ConfigCategory::SETTINGS) / pInputFilename
+            + ConfigManager::getConfigFormatExtension();
+    if (std::filesystem::exists(pathToFile)){
+        optionalError = getInputManager()->loadFromFile(pInputFilename);
+        if (optionalError.has_value()){
+            // ... handle error ...
+        }
+    }
+
+    // Finished.
+}
+
+// Later, the user modifies some keys:
+optionalError = getInputManager()->modifyAxisEventKey("MoveForward", oldKey, newKey);
+if (optionalError.has_value()){
+    // ... handle error ...
+}
+
+// The key is now modified in the memory (in the input manager) but if we restart our game the modified key will
+// be the same (non-modified), in order to fix this:
+
+// After a key is modified we save the modified inputs to the disk to load modified inputs on the next game start.
+optionalError = getInputManager()->saveToFile(pInputFilename);
+if (optionalError.has_value()){
+    // ... handle error ...
+}
+```
+
+As it was shown `InputManager` can be acquired using `GameInstance::getInputManager()`, so both game instance and nodes (using `getGameInstance()->getInputManager()`) can work with the input manager.
+
+# Configuring graphics settings
+
+Graphics settings are configured using the `RenderSettings` class. In order to get render settings from a game instance you need to use the following approach:
+
+```Cpp
+void MyGameInstance::foo(){
+    // Get renderer.
+    const auto pRenderer = getWindow()->getRenderer();
+
+    // Get render settings.
+    const auto pMtxRenderSettings = pRenderer->getRenderSettings();
+    std::scoped_lock guard(pMtxRenderSettings->first);
+
+    // Get supported render resolutions.
+    auto result = pRenderer->getSupportedRenderResolutions();
+    if (std::holds_alternative<Error>(result)){
+        // ... handle error ...
+    }
+    const auto supportedRenderResolutions = std::get<...>(std::move(result));
+
+    // ... display `supportedRenderResolutions` on screen ...
+
+    // Later, when user wants to change render resolution:
+    pMtxRenderSettings->second->setRenderResolution(someRenderResolution);
+}
+```
+
+When use change something in `RenderSettings` (for example render resolution) that change is instantly saved on the disk on the renderer config so you don't need to save them manually, on the next startup last applied settings will be restored.
+
+You can find renderer's config file at:
+    - (on Windows) `%%localappdata%/nameless-engine/*yourtarget*/engine/render.toml`
+    - (on Linux) `~/.config/nameless-engine/*yourtarget*/engine/render.toml`
+
+Note that some render settings might not be supported depending on the OS/renderer/hardware, as we shown above some `set` functions would have a special remark in their documentation saying about what function to use to query supported values. Let's consider another example, this one uses anti-aliasing:
+
+```Cpp
+void MyGameInstance::foo(){
+    // Get renderer.
+    const auto pRenderer = getWindow()->getRenderer();
+
+    // Get render settings.
+    const auto pMtxRenderSettings = pRenderer->getRenderSettings();
+    std::scoped_lock guard(pMtxRenderSettings->first);
+
+    // Get maximum supported AA quality.
+    auto result = pMtxRenderSettings->second->getMaxSupportedAntialiasingQuality();
+    if (std::holds_alternative<Error>(result)){
+        // ... handle error ...
+    }
+    const auto maxQuality = std::get<MsaaState>(result);
+
+    // ... display all `MsaaState` values but don't exceed `maxQuality` on the screen ...
+
+    // Later, when user wants to change AA:
+    pMtxRenderSettings->second->setAntialiasingState(selectedQuality);
+}
+```
+
+As always if you forget something or pass unsupported value the engine will let you know by logging an error so pay attention to the logs/console.
+
+# Saving and loading user's progress data
 

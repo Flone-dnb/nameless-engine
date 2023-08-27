@@ -58,7 +58,10 @@ namespace ne RNAMESPACE() {
         void setTextureFilteringMode(TextureFilteringMode mode);
 
         /**
-         * Sets the width and the height of the rendered images.
+         * Sets the width and the height of the render resolution.
+         *
+         * @remark Use `Renderer::getSupportedRenderResolutions` to query for available
+         * render resolutions.
          *
          * @param resolution Width and height in pixels.
          */

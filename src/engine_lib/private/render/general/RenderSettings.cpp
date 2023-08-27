@@ -200,6 +200,38 @@ namespace ne {
             return; // do nothing
         }
 
+        // Make sure this resolution is supported.
+        auto result = pRenderer->getSupportedRenderResolutions();
+        if (std::holds_alternative<Error>(result)) [[unlikely]] {
+            auto error = std::get<Error>(std::move(result));
+            error.addCurrentLocationToErrorStack();
+
+            // Not a critical error.
+            Logger::get().error(error.getFullErrorMessage());
+            return;
+        }
+        auto supportedResolutions =
+            std::get<std::set<std::pair<unsigned int, unsigned int>>>(std::move(result));
+
+        // Make sure the specified resolution is supported.
+        bool bFound = false;
+        for (const auto& supportedResolution : supportedResolutions) {
+            if (supportedResolution == resolution) {
+                bFound = true;
+                break;
+            }
+        }
+
+        // Make sure this resolution was found.
+        if (!bFound) [[unlikely]] {
+            Logger::get().error(fmt::format(
+                "failed to set render resolution {}x{} because it's not supported (read the docs on how to "
+                "query supported render resolutions)",
+                resolution.first,
+                resolution.second));
+            return;
+        }
+
         // Log change.
         Logger::get().info(fmt::format(
             "render resolution is being changed from \"{}x{}\" to \"{}x{}\"",

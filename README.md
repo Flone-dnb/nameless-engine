@@ -15,13 +15,17 @@ Click on any line below to show an example:
 <summary>Unreal Engine-like reflection via code generation</summary>
   
 ```C++
+// MyClass.cpp
+
+#include "MyClass.generated_impl.h"
+
 // MyClass.h
 
 // other includes
 
 #include "MyClass.generated.h" // should be included last
-
-class RCLASS(Guid("550ea9f9-dd8a-4089-a717-0fe4e351a681")) MyClass : public Serializable {
+ 
+class RCLASS() MyClass {
 public:
     MyClass() = default;
     virtual ~MyClass() override = default;
@@ -30,7 +34,7 @@ public:
     void Foo();
 
 private:
-    RPROPERTY(Serialize)
+    RPROPERTY()
     int iAnswer = 42;
 
     RPROPERTY()
@@ -78,7 +82,6 @@ gc_collector()->collect(); // this will be run regularly somewhere in the engine
 <summary>Easy to use serialization and deserialization for custom user types</summary>
   
 ```C++
-// PlayerSaveData.h
 // ---------------------------------------------------------------------------------
 // Example below shows a sample code for saving/loading player's data (such as name, level, inventory).
 // Class fields will be serialized to file and deserialized from file.
@@ -101,70 +104,23 @@ gc_collector()->collect(); // this will be run regularly somewhere in the engine
 
 using namespace ne;
 
+/// Stores character's inventory data that we will save to file and load from file.
 class RCLASS(Guid("a34a8047-d7b4-4c70-bb9a-429875a8cd26")) InventorySaveData : public Serializable {
 public:
     InventorySaveData() = default;
     virtual ~InventorySaveData() override = default;
-
-    /// Adds a specific item instance to the inventory.
-    void addOneItem(unsigned long long iItemId) {
-        const auto it = items.find(iItemId);
-
-        if (it == items.end()) {
-            items[iItemId] = 1;
-            return;
-        }
-
-        it->second += 1;
-    }
-
-    /// Removes a specific item instance from the inventory.
-    void removeOneItem(unsigned long long iItemId) {
-        const auto it = items.find(iItemId);
-        if (it == items.end())
-            return;
-
-        if (it->second <= 1) {
-            items.erase(it);
-            return;
-        }
-
-        it->second -= 1;
-    }
-
-    /// Returns amount of specific items in the inventory.
-    unsigned long long getItemAmount(unsigned long long iItemId) {
-        const auto it = items.find(iItemId);
-        if (it == items.end())
-            return 0;
-
-        return it->second;
-    }
-
-private:
+    
     /// Contains item ID as a key and item amount (in the inventory) as a value.
+    /// This data might not be your actual in-game inventory instead it may store some minimal data
+    /// that you can use to create an actual inventory when loading user's progress.
     RPROPERTY(Serialize)
     std::unordered_map<unsigned long long, unsigned long long> items;
 
     InventorySaveData_GENERATED
 };
 
-/// Some in-game character ability.
-class RCLASS(Guid("36063853-79b1-41e6-afa6-6923c8b24811")) Ability : public Serializable {
-public:
-    Ability() = default;
-    virtual ~Ability() override = default;
-
-    Ability(const std::string& sAbilityName) { this->sAbilityName = sAbilityName; }
-
-    RPROPERTY(Serialize)
-    std::string sAbilityName;
-
-    // ...
-
-    Ability_GENERATED
-};
-
+/// Type that we will serialize and deserialize.
+/// Contains objects of `InventorySaveData` type plus some additional data.
 class RCLASS(Guid("36063853-79b1-41e6-afa6-6923c8b24815")) PlayerSaveData : public Serializable {
 public:
     PlayerSaveData() = default;
@@ -176,15 +132,9 @@ public:
     RPROPERTY(Serialize)
     unsigned long long iCharacterLevel = 0;
 
-    RPROPERTY(Serialize)
-    unsigned long long iExperiencePoints = 0;
-
+    /// We can serialize fields of custom user types if they also derive from `Serializable`.
     RPROPERTY(Serialize)
     InventorySaveData inventory;
-
-    // Can also store types that derive from `Ability` without any serialization/deserialization issues.
-    RPROPERTY(Serialize)
-    std::vector<std::shared_ptr<Ability>> vAbilities;
 
     PlayerSaveData_GENERATED
 };
@@ -195,29 +145,26 @@ File_PlayerSaveData_GENERATED
 
 {
     // Somewhere in the game code.
-    gc<PlayerSaveData> pPlayerSaveData;
+    // (we can use either `std::shared_ptr` or `gc` pointer for deserialized data, you will see below)
+    std::shared_ptr<PlayerSaveData> pPlayerSaveData = nullptr;
 
     // ... if the user creates a new player profile ...
-    pPlayerSaveData = gc_new<PlayerSaveData>();
+    pPlayerSaveData = std::make_shared<PlayerSaveData>();
 
     // Fill save data with some information.
     pPlayerSaveData->sCharacterName = "Player 1";
     pPlayerSaveData->iCharacterLevel = 42;
-    pPlayerSaveData->iExperiencePoints = 200;
-    pPlayerSaveData->vAbilities = {std::make_shared<Ability>("Fire"), std::make_shared<Ability>("Wind")};
-    pPlayerSaveData->inventory.addOneItem(42);
-    pPlayerSaveData->inventory.addOneItem(42); // now have two items with ID "42"
-    pPlayerSaveData->inventory.addOneItem(102);
+    pPlayerSaveData->inventory[42] = 2;
 
-    // Prepare new file name.
+    // Prepare a new unique file name for the new save file.
     const std::string sNewProfileName = ConfigManager::getFreeProgressProfileName();
 
     // Serialize.
     const auto pathToFile =
         ConfigManager::getCategoryDirectory(ConfigCategory::PROGRESS) / sNewProfileName;
-    const auto optionalError = pPlayerSaveData->serialize(pathToFile, true);
-    if (optionalError.has_value()) {
-        // process error
+    const auto optionalError = pPlayerSaveData->serialize(pathToFile, true); // `true` to enable backup file
+    if (optionalError.has_value()) [[unlikely]] {
+        // ... handle error ...
     }
 }
 
@@ -233,22 +180,18 @@ File_PlayerSaveData_GENERATED
     // Deserialize.
     const auto pathToFile = ConfigManager::getCategoryDirectory(ConfigCategory::PROGRESS) / sProfileName;
     std::unordered_map<std::string, std::string> foundCustomAttributes;
-    const auto result = Serializable::deserialize<PlayerSaveData>(pathToFile, foundCustomAttributes);
-    if (std::holds_alternative<Error>(result)) {
-        // process error
+    const auto result =
+        Serializable::deserialize<std::shared_ptr, PlayerSaveData>(pathToFile, foundCustomAttributes);
+    if (std::holds_alternative<Error>(result)) [[unlikely]] {
+        // ... handle error ...
     }
 
-    gc<PlayerSaveData> pPlayerSaveData = std::get<gc<PlayerSaveData>>(result);
+    const auto pPlayerSaveData = std::get<std::shared_ptr<PlayerSaveData>>(result);
 
-    // Everything is loaded:
+    // Everything is deserialized:
     assert(pPlayerSaveData->sCharacterName == "Player 1");
     assert(pPlayerSaveData->iCharacterLevel == 42);
-    assert(pPlayerSaveData->iExperiencePoints == 200);
-    assert(pPlayerSaveData->vAbilities.size() == 2);
-    assert(pPlayerSaveData->vAbilities[0]->sAbilityName == "Fire");
-    assert(pPlayerSaveData->vAbilities[1]->sAbilityName == "Wind");
-    assert(pPlayerSaveData->inventory.getItemAmount(42) == 2);
-    assert(pPlayerSaveData->inventory.getItemAmount(102) == 1);
+    assert(pPlayerSaveData->inventory.find(42)->second == 2);
 }
 ```
 </details>

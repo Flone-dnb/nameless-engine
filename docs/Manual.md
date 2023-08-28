@@ -196,11 +196,14 @@ Let's sum up what you need to do in order to use reflection:
 1. Include `*filename*.generated.h` as the last include in your .h file (where *filename* is file name without extension).
 2. Include `*filename*.generated_impl.h`  as the last include in your .cpp file (where *filename*  is file name without extension).
 3. If you have a namespace add a `RNAMESPACE()` macro, for example: `namespace mygame RNAMESPACE()`.
-4. Mark your class/struct with `RCLASS`/`RSTRUCT` and add a `ne::Guid` property with some random GUID, for example: `class RCLASS(Guid("9ae433d9-2cba-497a-8061-26f2683b4f35")) PlayerConfig`.
+4. Mark your class/struct with `RCLASS`/`RSTRUCT`, for example: `class RCLASS() PlayerConfig`.
 5. In the end of your type (as the last line of your type) add a macro `*namespace*_*typename*_GENERATED` or just `*typename*_GENERATED` if you don't have a namespace, if you use nested types/namespaces this macro name will contain them all: `*outerouter*_*outerinner*_*typename*_GENERATED`, for example: `mygame_PlayerConfig_GENERATED`.
 6. In the end of your header file add a macro `File_*filename* _GENERATED` (where *filename*  is file name without extension), for example: `File_PlayerConfig_GENERATED`.
 
 After this you can use reflection macros like `RPROPERTY`/`RFUNCTION`. We will talk about reflection macros/properties in more details in one of the next sections.
+
+Note
+> Steps from above describe basic reflection usage and generally this will not be enough for engine-related things such as serialization and some editor features. Other sections of this manual will describe additional steps that you need to apply to your type in order to use various engine-related features that use reflection.
 
 For more examples see `src/engine_tests/io/ReflectionTest.h`.
 
@@ -1691,3 +1694,665 @@ As always if you forget something or pass unsupported value the engine will let 
 
 # Saving and loading user's progress data
 
+## Overview
+
+There are 2 ways to save/load custom data:
+    - using `ConfigManager` (`io/ConfigManager.h`) - this approach is generally used when you have just 1-2 simple variables that you want to save or when you don't want to / can't create a type and use reflection
+    - using reflection - this approach is generally used more often than `ConfigManager` and it provides great flexibility
+
+Let's start with the most commonly used approach.
+
+## Saving and loading data using reflection
+
+### Overview
+
+One of the previous sections of the manual taught you how to use reflection for your types so at this point you should know how to add reflection to your type. Now we will talk about additional steps that you need to do in order to use serialization/deserialization. As you might guess we will use some C++ types (that store some user data) and serialize them to file.
+
+Reflection serialization uses `TOML` file format so if you don't know how this format looks like you can search it right now on the Internet. `TOML` format generally looks like `INI` format but with more features.
+
+Let's consider an example that shows various serialization features and then explain some details:
+
+```Cpp
+// PlayerSaveData.cpp
+
+#include "PlayerSaveData.generated_impl.h"
+
+// PlayerSaveData.h
+
+#pragma once
+
+#include <string>
+#include <vector>
+#include <unordered_map>
+#include "io/Serializable.h"
+
+#include "PlayerSaveData.generated.h"
+
+using namespace ne;
+
+/// Stores character's inventory data that we will save to file and load from file.
+class RCLASS(Guid("a34a8047-d7b4-4c70-bb9a-429875a8cd26")) InventorySaveData : public Serializable {
+public:
+    InventorySaveData() = default;
+    virtual ~InventorySaveData() override = default;
+
+    /// Not required for serialization function to add a specific item instance to the inventory data
+    /// so that it will be saved to file.
+    void addOneItem(unsigned long long iItemId) {
+        const auto it = items.find(iItemId);
+
+        if (it == items.end()) {
+            items[iItemId] = 1;
+            return;
+        }
+
+        it->second += 1;
+    }
+
+    /// Not required for serialization function to remove a specific item instance from the inventory.
+    void removeOneItem(unsigned long long iItemId) {
+        const auto it = items.find(iItemId);
+        if (it == items.end())
+            return;
+
+        if (it->second <= 1) {
+            items.erase(it);
+            return;
+        }
+
+        it->second -= 1;
+    }
+
+    /// Not required for serialization function that returns the amount of specific items in the inventory.
+    unsigned long long getItemAmount(unsigned long long iItemId) {
+        const auto it = items.find(iItemId);
+        if (it == items.end())
+            return 0;
+
+        return it->second;
+    }
+
+private:
+    /// Contains item ID as a key and item amount (in the inventory) as a value.
+    /// This data might not be your actual in-game inventory instead it may store some minimal data
+    /// that you can use to create an actual inventory when loading user's progress.
+    RPROPERTY(Serialize)
+    std::unordered_map<unsigned long long, unsigned long long> items;
+
+    InventorySaveData_GENERATED
+};
+
+/// Some in-game character ability.
+class RCLASS(Guid("36063853-79b1-41e6-afa6-6923c8b24811")) Ability : public Serializable {
+public:
+    Ability() = default;
+    virtual ~Ability() override = default;
+
+    Ability(const std::string& sAbilityName) { this->sAbilityName = sAbilityName; }
+
+    RPROPERTY(Serialize)
+    std::string sAbilityName;
+
+    // ... maybe some other code/fields here ...
+
+    Ability_GENERATED
+};
+
+/// Type that we will serialize and deserialize.
+/// Contains objects of both `Ability` and `InventorySaveData` types plus some additional data.
+class RCLASS(Guid("36063853-79b1-41e6-afa6-6923c8b24815")) PlayerSaveData : public Serializable {
+public:
+    PlayerSaveData() = default;
+    virtual ~PlayerSaveData() override = default;
+
+    RPROPERTY(Serialize)
+    std::string sCharacterName;
+
+    RPROPERTY(Serialize)
+    unsigned long long iCharacterLevel = 0;
+
+    RPROPERTY(Serialize)
+    unsigned long long iExperiencePoints = 0;
+
+    /// We can serialize fields of custom user types if they also derive from `Serializable`.
+    RPROPERTY(Serialize)
+    InventorySaveData inventory;
+
+    /// Can also store objects of type that derive from `Ability` without any serialization/deserialization issues
+    /// (just as you would expect).
+    RPROPERTY(Serialize)
+    std::vector<std::shared_ptr<Ability>> vAbilities;
+
+    PlayerSaveData_GENERATED
+};
+
+File_PlayerSaveData_GENERATED
+
+// ---------------------------------------
+
+{
+    // Somewhere in the game code.
+    // (we can use either `std::shared_ptr` or `gc` pointer for deserialized data, you will see below)
+    std::shared_ptr<PlayerSaveData> pPlayerSaveData = nullptr;
+
+    // ... if the user creates a new player profile ...
+    pPlayerSaveData = std::make_shared<PlayerSaveData>();
+
+    // Fill save data with some information.
+    pPlayerSaveData->sCharacterName = "Player 1";
+    pPlayerSaveData->iCharacterLevel = 42;
+    pPlayerSaveData->iExperiencePoints = 200;
+    pPlayerSaveData->vAbilities = {std::make_shared<Ability>("Fire"), std::make_shared<Ability>("Wind")};
+    pPlayerSaveData->inventory.addOneItem(42);
+    pPlayerSaveData->inventory.addOneItem(42); // now have two items with ID "42"
+    pPlayerSaveData->inventory.addOneItem(102);
+
+    // Prepare a new unique file name for the new save file.
+    const std::string sNewProfileName = ConfigManager::getFreeProgressProfileName();
+
+    // Serialize.
+    const auto pathToFile =
+        ConfigManager::getCategoryDirectory(ConfigCategory::PROGRESS) / sNewProfileName;
+    const auto optionalError = pPlayerSaveData->serialize(pathToFile, true); // `true` to enable backup file
+    if (optionalError.has_value()) [[unlikely]] {
+        // ... handle error ...
+    }
+}
+
+// ... when the game is started next time ...
+
+{
+    // Get all save files.
+    const auto vProfiles = ConfigManager::getAllFileNames(ConfigCategory::PROGRESS);
+
+    // ... say the user picks the first profile ...
+    const auto sProfileName = vProfiles[0];
+
+    // Deserialize.
+    const auto pathToFile = ConfigManager::getCategoryDirectory(ConfigCategory::PROGRESS) / sProfileName;
+    std::unordered_map<std::string, std::string> foundCustomAttributes;
+    const auto result =
+        Serializable::deserialize<std::shared_ptr, PlayerSaveData>(pathToFile, foundCustomAttributes);
+    if (std::holds_alternative<Error>(result)) [[unlikely]] {
+        // ... handle error ...
+    }
+
+    const auto pPlayerSaveData = std::get<std::shared_ptr<PlayerSaveData>>(result);
+
+    // Everything is deserialized:
+    assert(pPlayerSaveData->sCharacterName == "Player 1");
+    assert(pPlayerSaveData->iCharacterLevel == 42);
+    assert(pPlayerSaveData->iExperiencePoints == 200);
+    assert(pPlayerSaveData->vAbilities.size() == 2);
+    assert(pPlayerSaveData->vAbilities[0]->sAbilityName == "Fire");
+    assert(pPlayerSaveData->vAbilities[1]->sAbilityName == "Wind");
+    assert(pPlayerSaveData->inventory.getItemAmount(42) == 2);
+    assert(pPlayerSaveData->inventory.getItemAmount(102) == 1);
+}
+```
+
+Let's now describe what needs to be do in order to use serialization and deserialization in your reflected type:
+1. Derive from `Serializable` (`io/Serializable.h`) in order to have `serialize`/`deserialize` and similar functions. Note that base `Node` class already derives from `Serializable` so you might already derive from this class.
+2. Make sure your type has a constructor without parameters (make sure that it's not deleted) as it's required for deserialization. Use can override `Serializable::onAfterDeserialized` to do post-deserialization logic (just make sure to read this function's docs first).
+3. Don't forget to override destructor, for example: `virtual ~T() override = default;`.
+3. Add `Guid` property to your type's `RCLASS`/`RSTRUCT` macro with a random GUID (just search something like "generate GUID" on the Internet), this GUID will be saved in the file so that when the engine reads the file it will know what type to use. In debug builds when the engine starts it checks uniqueness of all GUIDs so you shouldn't care about GUID uniqueness.
+3. Mark fields that you want to be serialized/deserialized with `Serialize` property on `RPROPERTY` macro.
+4. Make sure that all fields marked with `RPROPERTY(Serialize)` that have primitive types have initialization values, for example: `long long iCharacterLevel = 0;` otherwise you might serialize a "garbage value" (since primitive types don't have initialization unlike `std::string` for example) and then after deserialization be suprised to see a character of level `-123215315115` or something like that.
+
+And here are some notes about serialization/deserialization:
+- If you released your game and in some update you added a new `Serialize` field then everything (saving/loading) will work fine, the new field just needs to have initialization value for old save files that don't have this value (again, if it's a primitive type just initialize it otherwise you are fine).
+- If you released your game and in some update you removed/renamed some `Serialize` field then everything (saving/loading) will work fine and if some old save file will have that old removed/renamed field it will be ignored.
+- If you released your game it's highly recommended to not change your type's GUID otherwise the engine will not be able to deserialize the data since it will no longer know what type to use.
+
+If you look in the file `src/engine_lib/public/io/properties/SerializeProperty.h` you might find that `Serialize` has a constructor that accepts `FieldSerializationType` which is `FST_WITH_OWNER` by default and as the documentation says it means that "Field is serialized in the same file as the owner object". There is also an option to use `FST_AS_EXTERNAL_FILE` like so:
+
+```Cpp
+RPROPERTY(Serialize(FST_AS_EXTERNAL_FILE)) // allow VCSs to treat this file in a special way
+MeshData meshData;
+```
+
+And again, as the documentation says it means that "Field is serialized in a separate file located next to the file of owner object. Only fields of types that derive from `Serializable` can be marked with this type". Generally we use the default `FST_WITH_OWNER` but there might be situations where you might want to use additional options.
+
+There are various types that you can mark as `Serialize` as you can see you can mark some primitive types, `std::string`, `std::vector`, `std::unordered_map` and more, but note that when we talk about containers (such as `std::vector`) their serialization depends on the contained type. Here is a small description of **some types** that you can use for serialization:
+- `bool`
+- `int`
+- `unsigned int`
+- `long long`
+- `unsigned long long`
+- `float`
+- `double`
+- `std::string`
+- `T` (where `T` is any type that derives from Serializable)
+- and more!
+
+See the directory `src/engine_lib/public/io/serializers` for available field serializers (you don't need to use them directly, they will be automatically picked when you use `serialize` function).
+
+If you can't find some desired type in available field serializers don't worry, you can write your own field serializer (it's not that hard) to support new field types to be serialized/deserialized but we will talk about this later in one of the next sections.
+
+As it was previously said our reflection serialization system uses `TOML` file format so if you need even more flexibility you can serialize `toml::value` structures directly. Under the hood we use https://github.com/ToruNiina/toml11 for working with `TOML` files so if you want to serialize something very complicated in a very special way you can read the documentation for this library and serialize `toml::value`s yourself or use a combination of raw `toml::value`s and our serialization system by using various overloads of `Serializable::serialize` that use `toml::value`.
+
+In the end let's consider one more (this time very simplified) example where we serialize multiple objects into one file:
+
+```Cpp
+// Serialize 2 objects in 1 file.
+Node node1("My Cool Node 1");
+Node node2("My Cool Node 2");
+SerializableObjectInformation node1Info(&node1, "0", {{sNode1CustomAttributeName, "1"}}); // will have ID 0
+SerializableObjectInformation node2Info(&node2, "1", {{sNode2CustomAttributeName, "2"}}); // will have ID 1
+const auto optionalError = Serializable::serializeMultiple(pathToFile, {node1Info, node2Info}, false);
+if (optionalError.has_value()) {
+    // ... handle error ...
+}
+
+// Check IDs.
+const auto idResult = Serializable::getIdsFromFile(pathToFile);
+if (std::holds_alternative<Error>(idResult)) {
+    // ... handle error ...
+}
+const auto ids = std::get<std::set<std::string>>(idResult);
+// `ids` contains 2 values: "0" and "1", this information might be helpful.
+
+// Deserialize.
+const auto result = Serializable::deserializeMultiple<gc>(pathToFile, {"0", "1"}); // deserialize with IDs 0 and 1
+if (std::holds_alternative<Error>(result)) {
+    // ... handle error ...
+}
+auto vDeserializedObjects = std::get<std::vector<DeserializedObjectInformation<gc>>>(std::move(result));
+
+// Everything is deserialized.
+```
+
+### Reflection limitations
+
+Currently used version of the reflection library has some issues with multiple inheritance. If you are deriving from two classes one of which is `Serializable` (or a class/struct that derives from it) and the other is not an interface class (contains fields) then you might want to derive from `Serializable` first and then from that non-interface class. Example:
+
+```Cpp
+class IMyInterface{
+public:
+    virtual void foo() = 0;
+    virtual void bar() = 0;
+protected:
+    virtual void foo2() = 0;
+}
+
+class MyParentClass{
+public:
+    void myFoo();
+
+private:
+    int iAnswer = 42;
+}
+
+// might fail when attempting to get reflected fields' values (will just read garbage)
+class RCLASS(Guid("...")) MyClass : public MyParentClass, public Serializable{ 
+  ...
+}
+
+// should work fine
+class RCLASS(Guid("...")) MyClass : public Serializable, public IMyInterface{
+  ...
+}
+
+// should work fine
+class RCLASS(Guid("...")) MyClass : public Serializable, public MyParentClass{
+  ...
+}
+```
+
+Just keep this in mind when using reflection for serialization/deserialization.
+
+## Saving and loading data using ConfigManager
+
+`ConfigManager` (just like reflection serialization) uses `TOML` file format so if you don't know how this format looks like you can search it right now on the Internet. `TOML` format generally looks like `INI` format but with more features.
+
+Here is an example of how you can save and load data using `ConfigManager`:
+
+```Cpp
+#include "io/ConfigManager.h"
+
+using namespace ne;
+
+// Write some data.
+ConfigManager manager;
+manager.setValue<std::string>("section name", "key", "value", "optional comment");
+manager.setValue<bool>("section name", "my bool", true, "this should be true");
+manager.setValue<double>("section name", "my double", 3.14159, "this is a pi value");
+manager.setValue<int>("section name", "my long", 42); // notice no comment here
+
+// Save to file.
+auto optionalError = manager.saveFile(ConfigCategory::SETTINGS, "my file");
+if (optionalError.has_value()) {
+    // ... handle error ...
+}
+
+// -----------------------------------------
+// Let's say that somewhere in other place of your game you want to read these values:
+
+ConfigManager manager;
+auto optionalError = manager.loadFile(ConfigCategory::SETTINGS, "my file");
+if (optionalError.has_value()) {
+    // ... handle error ...
+}
+
+// Read string.
+const auto realString = manager.getValue<std::string>("section name", "key", "default value");
+assert(realString == "value");
+
+// Read bool.
+const auto realBool = manager.getValue<bool>("section name", "my bool", false);
+assert(realBool == true);
+
+const auto realDouble = manager.getValue<double>("section name", "my double", 0.0);
+assert(realDouble >= 3.13);
+
+const auto realLong = manager.getValue<int>("section name", "my long", 0);
+assert(realLong == 42);
+```
+
+As you can see `ConfigManager` is a very simple system for very simple tasks. Generally only primitive types and some STL types are supported, you can of course write a serializer for some STL type by using documentation from https://github.com/ToruNiina/toml11 as `ConfigManager` uses this library under the hood.
+
+`ConfigManager` also has support for backup files and some other interesting features (see documentation for `ConfigManager`).
+
+# Adding external dependencies
+
+In CMake we modify our `CMakeLists.txt` to add external dependencies. This generally comes down to something like this:
+
+```
+message(STATUS "${PROJECT_NAME}: adding external dependency \"FMT\"...")
+add_subdirectory(${RELATIVE_EXT_PATH}/fmt ${DEPENDENCY_BUILD_DIR_NAME}/fmt SYSTEM)
+target_link_libraries(${PROJECT_NAME} PUBLIC fmt)
+set_target_properties(fmt PROPERTIES FOLDER ${EXTERNAL_FOLDER})
+```
+
+Note
+> This manual expects that you know what the code from above does as it's a usual CMake usage.
+
+Note
+> As you can see we mark external dependencies with `SYSTEM` so that clang-tidy (enabled in release builds) will not analyze source code of external dependencies.
+
+As it was said earlier you might need to do one additional step: if your target uses reflection (has `add_refureku` command) then you also need to tell the reflection generator about included headers of your external dependency:
+
+```
+# Write project include directories for Refureku.
+set(REFUREKU_INCLUDE_DIRECTORIES
+    ${ABSOLUTE_EXT_PATH}
+    ${ABSOLUTE_EXT_PATH}/fmt/include     # <- new dependency
+    ${CMAKE_CURRENT_SOURCE_DIR}/public
+    ${CMAKE_CURRENT_SOURCE_DIR}/private
+)
+add_refureku(
+    # some code here
+```
+
+If you compile your project after adding a new external dependency and the compilation fails with something like this:
+
+```
+[Error] While processing the following file: .../MyHeaderThatUsesExternalDependency.h: 'fmt/core.h' file not found (.../MyHeaderThatUsesExternalDependency.h, line 10, column 10), : 0:0
+```
+
+this is because you forgot to tell the reflection generator about some directory of your external dependency.
+
+# Working with materials
+
+## Working with materials in C++
+
+Each `MeshNode` uses a default engine material (if other material is not specified). Default material does not use transparency so let's first learn how you can enable transparency:
+
+```Cpp
+#include "materials/Material.h"
+#include "materials/EngineShaderNames.h"
+
+auto result = Material::create(
+  EngineShaderNames::MeshNode::sVertexShaderName, // since we change `MeshNode`'s material we use `MeshNode` shaders
+  EngineShaderNames::MeshNode::sPixelShaderName,
+  true); // enable transparency
+if (std::holds_alternative<Error>(result)) {
+  // ... handle error ...
+}
+const auto pMaterial = std::get<std::shared_ptr<Material>>(std::move(result));
+
+// Set desired opacity.
+pMaterial->setOpacity(0.5F);
+
+// Assign this material to your mesh node.
+pMeshNode->setMaterial(pMaterial);
+```
+
+Note
+> Transparent materials have very serious impact on the performance so you might want to avoid using them.
+
+As you can see we just re-assigned a material and as you've noticed we reference shaders in materials. You might have heard the term "shader" from other games or game engines but if you haven't or have very little understanding in what a shader is, here is a very small description:
+> A shader is a small program (a function or a bunch of functions) written in a special shader language (like programming languages) that are executed on the GPU (unlike our C++ programs that are executed on the CPU). There are various types of shaders that are used for different tasks. For example there is a pixel/fragment shader - a function (that might call other functions) that calculates a color of a pixel that will be displayed on your monitor, this shader uses a bunch of data like to whom this pixel belongs (which mesh and which material uses the mesh), lighting information and etc. A material is a high-level abstraction of a shader, material allows modifying some values like diffuse texture/color that material then passes to the pixel/fragment shader to consider.
+
+Note: currently we are looking for a solution that will make writing custom shaders easier but right now writing custom shaders is not that simple:
+> Right now if you want to go beyond what Material provides to you and achieve some special look of your meshes you would have to write shaders in both HLSL and GLSL if you want your game to support both DirectX and Vulkan renderers that we have because each graphics API (like DirectX or Vulkan) has its own shading language. If you know that you don't want Vulkan support and don't care about Linux and other non-Windows platforms then you might just write a shader in HLSL and ignore GLSL, this would mean that any attempt to run your game using Vulkan renderer will fail with an error.
+
+Generally you would not need to write custom shader but we would anyway talk about writing custom shaders in one of the next sections.
+
+Let's continue and see how we can change the color of our material:
+
+```Cpp
+#include "materials/Material.h"
+
+// Get mesh material.
+const auto pMaterial = pMeshNode->getMaterial();
+
+// Set color to red.
+pMaterial->setDiffuseColor(glm::vec3(1.0F, 0.0F, 0.0F));
+```
+
+Your mesh will now be displayed with a red tint.
+
+# !!! Important things to keep in mind while developing a game !!!
+
+This section contains a list of important things that you need to regularly check while developing a game to minimize the amount of bugs/crashes in your game. All information listed below is documented in the manual and in the engine code (just duplicating the most important things here, see more details in other sections of the manual or in the engine code documentation).
+
+## General
+
+- always read the documentation for the functions you are using (documentation comments in the code), this generally saves you from all issues listed here
+- always check the logs, if something goes wrong the engine will let you know in the logs, after your game is closed if there were any warnings/errors the last message in the log (before the application is closed) will be the total number of warnings/errors produced (if there were any) so you don't have to scroll through the logs or use search every time
+
+## Garbage collection and GC pointers
+
+- never capture `gc` pointers in `std::function`, if your game crashes in GC code it's probably because you are capturing `gc` pointers in `std::function`
+- never store `gc` pointers in STL containers, store `gc` pointers only in "gc containers", for ex. instead of `std::vector<gc<Foo>>` use `gc_vector<Foo>` (and don't forget to initialize them properly, for ex. `gc_new_vector<Foo>()`), otherwise leaks may occur
+
+## World switching
+
+- if you are holding any `gc` pointers to nodes in game instance, make sure you set `nullptr` to them before calling `createWorld` or `loadNodeTreeAsWorld`, otherwise they will still exist in despawned (not spawned) state which might not be desired
+
+## Multiple inheritance
+
+- using `gc` pointers on types that use multiple inheritance is not supported and will cause exceptions, leaks and crashes
+- if you use multiple inheritance with serialization (not using `gc` pointers), make sure to derive from the `Serializable` class (or derived, for ex. `Node`) first and only then from other non `Serializable` classes (order matters, otherwise garbage data will be serialized instead of the actual data)
+
+## Serialization/deserialization
+
+- initialize almost all `RPROPERTY(Serialize)` fields, for example:
+```Cpp
+// MyHeader.h
+UPROPERTY(Serialize)
+long long iCharacterLevel = 0; // initialize because it can get garbage value
+
+UPROPERTY(Serialize)
+std::string sMyText; // `std::string` can't get garbage value since it's initialized in std::string's constructor
+```
+otherwise you might serialize a garbage value and then deserialize it as a garbage value which might cause unexpected reaction
+
+## Node
+
+- always check `getWorldRootNode` for `nullptr` before using it, `nullptr` here typically means that the node is not spawned or the world is being destroyed
+- always remember to call parent's virtual function in the beginning of your override (note that this is not always needed but is required for some `Node` functions)
+- use `NodeFunction` instead of `std::function` when you need callbacks in nodes
+- use `NodeNotificationBroadcaster` when you need publisher-subscriber pattern
+- it's highly recommended to not do any logic if the node is not spawned to avoid running into `nullptr`s (or deleted memory when on a non-main thread, use `getSpawnDespawnMutex()` mutex for non-main thread functions)
+
+## Multithreading
+
+- when using thread pool tasks remember that all thread pool tasks will be stopped during the game destruction before GameInstance is destroyed, there are no other checks for thread pool tasks to be stopped so in other cases you need to make sure your async task will not hit deleted memory:
+  - if you're using `Node` member functions in async task make sure the task is finished in your Node::onDespawning,
+  - if you're using `GameInstance` member functions in async task you only might care about world being changed, for this use promise/future or something else to guarantee that the callback won't be called on a deleted object
+- use `NodeFunction` instead of `std::function` when you need to process asynchronous results in nodes
+- submitting a deferred task from a **non-main thread** where in deferred task you operate on a `gc` controlled object such as Node can be dangerous as you may operate on a deleted (freed) memory, in this case use additional checks in the beginning of your deferred task to check if the node you want to use is still valid:
+```Cpp
+// We are on a non-main thread inside of a node:
+addDeferredTask([this, iNodeId](){ // capturing `this` to use `Node` (self) functions, also capturing self ID
+    // We are inside of a deferred task (on the main thread) and we don't know if the node (`this`)
+    // was garbage collected or not because we submitted our task from a non-main thread.
+    // REMEMBER: we can't capture `gc` pointers in `std::function`, this is not supported
+    // and will cause memory leaks/crashes!
+
+    const auto pGameManager = GameManager::get(); // using engine's private class `GameManager`
+
+    // `pGameManager` is guaranteed to be valid inside of a deferred task.
+    // Otherwise, if running this code outside of a deferred task you need to do 2 checks:
+    // if (pGameManager == nullptr) return;
+    // if (pGameManager->isBeingDestroyed()) return;
+
+    if (!pGameManager->isNodeSpawned(iNodeId)){
+        // Node was despawned and it may be dangerous to run the callback.
+        return;
+    }
+
+    // Can safely interact with `this` (self) - we are on the main thread.
+});
+```
+
+# Simulating input for automated tests
+
+Your game has a `..._tests` target for automated testing (which relies on https://github.com/catchorg/Catch2) and generally it will be very useful to simulate user input. Here is an example on how to do that:
+
+```Cpp
+// Simulate input.
+getWindow()->onKeyboardInput(KeyboardKey::KEY_A, KeyboardModifiers(0), true); // simulate keyboard "A" pressed
+getWindow()->onKeyboardInput(KeyboardKey::KEY_A, KeyboardModifiers(0), false); // simulate keyboard "A" released
+```
+
+Once such function is called it will trigger register input bindings in your game instance and nodes.
+
+There are also other `on...` function in `Window` that you might find handy in simulating user input.
+
+For more examples see `src/engine_tests/game/nodes/Node.cpp`, there are some tests that simulate user input.
+
+# Exporting your game
+
+If you want to distribute a version of your game you need to switch to the `release` build mode in your IDE to switch CMake to `release` build configuration (make sure CMake is now using a `release` configuration). Then build your project as usual, it will take much longer since we have `clang-tidy` enabled for `release` builds. `clang-tidy` can fail the build if it finds some issues in your code. It's expected that you build your game in `release` mode regularly to fix `clang-tidy` warnings/errors (if there are any).
+
+Once your project is built in `release` mode go to the directory where the root `CMakeLists.txt` file is located and directories like `ext` and `res`. Depending on your setup you need to open the directory where built binaries are located, this is typically `build` directory (or it may be called differently, for example `out`). Inside of this directory you will see a directory named `OUTPUT` - this is where all built CMake targets are located. Inside of the `OUTPUT` directory you should find a directory named after your game's target. Inside of that directory will be located the final executable (or it will be located in the directory named `Release`). If you would try to run that executable you will get an error saying that the `res` directory is not found. This is expected as there are some additional steps that you need to do.
+
+After you have your built executable you might notice a file named something like `COPY_UPDATED_RES_DIRECTORY_HERE` next to your game's executable. This is a "reminder" file that you need to manually copy the `res` directory from the root of your project directory next to the executable. Note that you need to make an actual copy, don't make symlinks and don't cut-paste it, you need to make a copy. This copy is a snapshot of the game's resources for this specific game version. After you've copied the `res` directory you can remove the "reminder" file named `COPY_UPDATED_RES_DIRECTORY_HERE`. At this point if you run the executable your game should start. The only thing left to do is to remove non-game related files from this directory.
+
+In order to remove non-game related files next to the built executable there will be a directory named `delete_nongame_files`, open it and you will find a Go script in it. Read the `README.md` file next to the script file and run the script. It will interactively ask you if you want to delete non-game related files and etc. Once the script is finished it will tell you that you can delete the directory with this script as it's no longer needed. You should now try starting your game using the built executable to see if everything works after all non-game related files were deleted.
+
+As you might have noticed next to the built executable of your game there is an `ext` directory. This directory contains license files of all external dependencies that you have in your project's root `ext` directory, plus there is a copy of engine's license file. You are required to distribute this directory as part of your build - do not delete this directory. You don't need to list these licenses in your EULA or somewhere else, you just need to distribute them as part of your build - nothing more.
+
+That's it! Your game is ready to be distributed. You can archive the directory with the built executable and send it to a friend or upload it on the Internet.
+
+At the time of writing this there is no compression/encryption of the game's resources. All game's resources are distributed as-is.
+
+# Advanced topics
+
+## Adding support for new types for serialization/deserialization
+
+When you use `Serializable::serialize` function all fields marked with `RPROPERTY(Serialize)` will be checked for serialization. Serialization for fields is achieved by implementing the `IFieldSerializer` interface. Thanks to field serializers you can, for example, serialize fields that have primitive types (bool, int, long long, etc.) because there is a `PrimitiveFieldSerializer` that implements `IFieldSerializer`. Field serializers are located in the `io/serializers` directory, you can look how they are implemented. Back to the beginning, when you use `serialize` function the engine goes through each reflected field marked with `Serialize` property and basically does this:
+
+```Cpp
+for (const auto& pSerializer : vFieldSerializers) {
+    if (pSerializer->isFieldTypeSupported(&field)) {
+        pSerializer->serializeField(&field);
+        break;
+    }
+}
+```
+
+So if you want to add support for a new field type for serialization, you just need to implement `IFieldSerializer` interface and register your serializer like so:
+
+```Cpp
+#include "io/FieldSerializerManager.h"
+
+FieldSerializerManager::addFieldSerializer(std::make_unique<MyFieldSerializer>());
+```
+
+After this, when you use `serialize` functions your serializer will be used.
+
+## Creating new reflection properties
+
+You can create custom reflection properties like `Guid` or `Serialize` that we currently have. All engine reflection properties are located at `io/properties` so you can look at them to see an example.
+
+You can find instructions for creating custom properties here: https://github.com/jsoysouvanh/Refureku/wiki/Create-custom-properties
+
+## Serialization internals
+
+Note:
+> Information described in this section might not be up to date, please notify the developers if something is not right / outdated.
+
+### General overview
+
+Most of the game assets are stored in the human-readable `TOML` format. This format is similar to `INI` format but has more features. This means that you can use any text editor to view or edit your asset files if you need to.
+
+When you serialize a serializable object (an object that derives from `Serializable`) the general TOML structure will look like this (comments start with #):
+
+```INI
+# <unique_id> is an integer, used to globally differentiate objects in the file
+# (in case they have the same type (same GUID)), if you are serializing only 1 object the ID is 0 by default
+["<unique_id>.<type_guid>"]       # section that describes an object with GUID
+<field_name> = <field_value>      # not all fields will have their values stored like that
+<field_name> = <field_value>
+
+
+["<unique_id>.<type_guid>"]       # some other object
+<field_name> = <field_value>      # some other field
+"..parent_node_id" = <unique_id>  # keys that start with two dots are "custom attributes" (user-specified)
+                                  # that you pass into `serialize`, they are used to store additional info
+<field_name> = "reflected type, see other sub-section"  # this field derives from `Serializable` and so we store
+                                                        # its data in a separate section
+
+
+["<unique_parent_object_id>.<unique_subobject_id>.<type_guid>"] # section of an object
+                                                                # <unique_subobject_id> is unique only within
+                                                                # the parent object
+".field_name" = <field_name>      # keys that start with one dot are "internal attributes" they are used for storing 
+                                  # internal info, in this case this key describes the name of the field this section 
+                                  # represents in `<unique_parent_object_id>` object
+```
+
+Here is a more specific example:
+
+```INI
+["0.2a721c37-3c22-450c-8dad-7b6985cbbd61"]
+sName = "Node"
+
+["1.550ea9f9-dd8a-4089-a717-0fe4e351a687"]
+bBoolValue2 = true
+"..parent_node_id" = "0"                              # means that this section describes a node that has
+                                                      # a parent node
+entity = "reflected type, see other sub-section"
+".path_relative_to_res" = "test/custom_node.toml"     # means that this section contains only changed fields compared
+                                                      # to the specified file (original entity)
+
+["1.0.550ea9f9-dd8a-4089-a717-0fe4e351a686"]
+iIntValue2 = 42
+".field_name" = "entity"
+vVectorValue2 = [
+"Hello",
+"World",
+]
+```
+
+### Storing only changed fields
+
+Some `Serializable::serialize` overloads allow you to specify `Serializable* pOriginalObject`, when such object is specified each field of the object that is being serialized will be compared to this original object and only fields that were changed compared to the original object will be serialized. To keep the information about all other fields in this case we add an internal attribute like so:
+
+```INI
+["1.550ea9f9-dd8a-4089-a717-0fe4e351a687"]
+bBoolValue2 = true
+".path_relative_to_res" = "test/custom_node.toml"
+```
+
+This attribute points to a file located in the `res` directory, specifically at `res/test/custom_node.toml`. This all will work only if the original object was previously deserialized from a file located in the `res` directory (see `Serializable::getPathDeserializedFromRelativeToRes`).
+
+### Referencing external node tree
+
+If your node tree uses another (external) node tree that is located in the `res` directory, this external node tree is saved in a special way, that is, only the root node of the external node tree is saved and information about all child nodes is stored as a path to the file that contains this node tree.
+
+This means that when we reference an external node tree, only changes to external node tree's root node will be saved.

@@ -5,6 +5,7 @@
 #include "materials/hlsl/HlslShader.h"
 #include "misc/Error.h"
 #include "render/directx/DirectXRenderer.h"
+#include "misc/Profiler.hpp"
 
 // External.
 #include "fmt/core.h"
@@ -13,6 +14,8 @@ namespace ne {
     std::variant<RootSignatureGenerator::CollectedInfo, Error>
     RootSignatureGenerator::collectInfoFromReflection(
         ID3D12Device* pDevice, const ComPtr<ID3D12ShaderReflection>& pShaderReflection) {
+        PROFILE_FUNC;
+
         // Get shader description from reflection.
         D3D12_SHADER_DESC shaderDesc;
         HRESULT hResult = pShaderReflection->GetDesc(&shaderDesc);
@@ -125,6 +128,8 @@ namespace ne {
 
     std::variant<RootSignatureGenerator::Generated, Error> RootSignatureGenerator::generate(
         Renderer* pRenderer, ID3D12Device* pDevice, HlslShader* pVertexShader, HlslShader* pPixelShader) {
+        PROFILE_FUNC;
+
         // Make sure that the vertex shader is indeed a vertex shader.
         if (pVertexShader->getShaderType() != ShaderType::VERTEX_SHADER) [[unlikely]] {
             return Error(fmt::format(

@@ -10,6 +10,7 @@
 #include "misc/Globals.h"
 #include "materials/ShaderFilesystemPaths.hpp"
 #include "game/nodes/MeshNode.h"
+#include "misc/Profiler.hpp"
 #include "render/vulkan/VulkanRenderer.h"
 
 namespace ne {
@@ -159,6 +160,8 @@ namespace ne {
     }
 
     bool GlslShader::releaseShaderDataFromMemoryIfLoaded() {
+        PROFILE_FUNC;
+
         std::scoped_lock guard(mtxSpirvBytecode.first, mtxDescriptorSetLayoutInfo.first);
 
         if (!mtxSpirvBytecode.second.empty()) {
@@ -265,6 +268,8 @@ namespace ne {
     }
 
     std::optional<Error> GlslShader::loadShaderDataFromDiskIfNotLoaded() {
+        PROFILE_FUNC;
+
         std::scoped_lock guard(mtxSpirvBytecode.first, mtxDescriptorSetLayoutInfo.first);
 
         if (mtxSpirvBytecode.second.empty()) {

@@ -27,6 +27,15 @@ if(WIN32)
     add_compile_definitions(_WIN32)
 endif()
 
+# Check for engine settings.
+set(PATH_TO_SETTINGS ${CMAKE_CURRENT_LIST_DIR}/../engine_settings.cmake)
+if (EXISTS ${PATH_TO_SETTINGS})
+    include(${PATH_TO_SETTINGS})
+    if (NOT IS_RELEASE_BUILD AND ENABLE_PROFILER)
+        add_compile_definitions(ENABLE_PROFILER)
+    endif()
+endif()
+
 # Set directory name for dependencies.
 set(DEPENDENCY_BUILD_DIR_NAME dep)
 

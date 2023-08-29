@@ -17,20 +17,30 @@
 #include "game/camera/CameraManager.h"
 #include "materials/ShaderManager.h"
 #include "game/nodes/Node.h"
+#include "misc/Profiler.hpp"
 
 // External.
 #include "fmt/core.h"
 
 namespace ne {
-    // Static pointer for accessing last created game.
+    // Static pointer for accessing last created game manager.
     static GameManager* pLastCreatedGameManager = nullptr;
 
     GameManager::GameManager(Window* pWindow) {
+        // Save window.
         this->pWindow = pWindow;
 
         // Update static pointer.
         Logger::get().info("new GameManager is created, updating static GameManager pointer");
         pLastCreatedGameManager = this;
+
+#if defined(ENABLE_PROFILER)
+        // Initialize profiler.
+        Profiler::initialize();
+        rmt_SetCurrentThreadName("Main Thread");
+        Logger::get().warn("profiler enabled, it may cause freezes and memory leaks (remember to turn off "
+                           "when finished profiling)");
+#endif
 
         // Log build mode.
 #if defined(DEBUG)
@@ -203,7 +213,11 @@ namespace ne {
         pGameInstance->onGameStarted();
     }
 
-    void GameManager::onTickFinished() { runGarbageCollection(); }
+    void GameManager::onTickFinished() {
+        PROFILE_FUNC;
+
+        runGarbageCollection();
+    }
 
     void GameManager::runGarbageCollection(bool bForce) {
         // Make sure this function is being executed on the main thread.
@@ -233,6 +247,8 @@ namespace ne {
                 return;
             }
         }
+
+        PROFILE_FUNC;
 
         // Finish all deferred tasks and lock them until not finished with garbage collector.
         // We want to finish all deferred tasks right now because there might be
@@ -286,6 +302,8 @@ namespace ne {
     }
 
     void GameManager::onBeforeNewFrame(float timeSincePrevCallInSec) {
+        PROFILE_FUNC;
+
         // Save delta time.
         timeSincePrevFrameInSec = timeSincePrevCallInSec;
 
@@ -293,6 +311,8 @@ namespace ne {
         pGameInstance->onBeforeNewFrame(timeSincePrevCallInSec);
 
         {
+            PROFILE_SCOPE(TriggerOnNodes);
+
             // Call on all tickable nodes.
             std::scoped_lock guard(mtxWorld.first);
             if (mtxWorld.second == nullptr) {
@@ -458,6 +478,8 @@ namespace ne {
     }
 
     void GameManager::onKeyboardInput(KeyboardKey key, KeyboardModifiers modifiers, bool bIsPressedDown) {
+        PROFILE_FUNC;
+
         pGameInstance->onKeyboardInput(key, modifiers, bIsPressedDown);
 
         triggerActionEvents(key, modifiers, bIsPressedDown);
@@ -466,12 +488,16 @@ namespace ne {
     }
 
     void GameManager::onMouseInput(MouseButton button, KeyboardModifiers modifiers, bool bIsPressedDown) {
+        PROFILE_FUNC;
+
         pGameInstance->onMouseInput(button, modifiers, bIsPressedDown);
 
         triggerActionEvents(button, modifiers, bIsPressedDown);
     }
 
     void GameManager::onMouseMove(int iXOffset, int iYOffset) {
+        PROFILE_FUNC;
+
         pGameInstance->onMouseMove(iXOffset, iYOffset);
 
         // Call on nodes that receive input.
@@ -488,6 +514,8 @@ namespace ne {
     }
 
     void GameManager::onMouseScrollMove(int iOffset) {
+        PROFILE_FUNC;
+
         pGameInstance->onMouseScrollMove(iOffset);
 
         // Call on nodes that receive input.
@@ -557,6 +585,8 @@ namespace ne {
 
     void GameManager::triggerActionEvents(
         std::variant<KeyboardKey, MouseButton> key, KeyboardModifiers modifiers, bool bIsPressedDown) {
+        PROFILE_FUNC;
+
         std::scoped_lock guard(inputManager.mtxActionEvents);
 
         // Make sure this key is registered in some action.
@@ -655,6 +685,8 @@ namespace ne {
     }
 
     void GameManager::triggerAxisEvents(KeyboardKey key, KeyboardModifiers modifiers, bool bIsPressedDown) {
+        PROFILE_FUNC;
+
         std::scoped_lock<std::recursive_mutex> guard(inputManager.mtxAxisEvents);
 
         // Make sure this key is registered in some axis event.

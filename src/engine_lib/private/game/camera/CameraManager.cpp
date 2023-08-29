@@ -4,6 +4,7 @@
 #include "io/Logger.h"
 #include "game/nodes/CameraNode.h"
 #include "game/camera/TransientCamera.h"
+#include "misc/Profiler.hpp"
 
 namespace ne {
 
@@ -98,6 +99,8 @@ namespace ne {
     }
 
     void CameraManager::onBeforeNewFrame(float timeSincePrevCallInSec) {
+        PROFILE_FUNC;
+
         std::scoped_lock guard(mtxActiveCamera.first);
 
         // Call on the currently active transient camera.

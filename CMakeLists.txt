@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.20)
 
 project(nameless)
 
+# Set build directory name.
 set(BUILD_DIRECTORY_NAME OUTPUT)
 
 # Add executable targets.

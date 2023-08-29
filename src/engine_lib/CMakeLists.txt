@@ -155,6 +155,7 @@ set(PROJECT_SOURCES
     public/misc/OpenLinkInBrowser.h
     private/misc/FileDialog.cpp
     public/misc/FileDialog.h
+    public/misc/Profiler.hpp
     private/materials/ShaderPack.h
     private/materials/ShaderPack.cpp
     private/materials/ShaderMacro.h
@@ -364,13 +365,25 @@ add_subdirectory(${RELATIVE_EXT_PATH}/SPIRV-Reflect ${DEPENDENCY_BUILD_DIR_NAME}
 target_link_libraries(${PROJECT_NAME} PUBLIC spirv-reflect-static)
 set_target_properties(spirv-reflect-static PROPERTIES FOLDER ${EXTERNAL_FOLDER})
 
+if(NOT IS_RELEASE_BUILD AND ENABLE_PROFILER)
+    # External: Remotery
+    message(STATUS "${PROJECT_NAME}: adding external dependency \"Remotery\"...")
+    set(REMOTERY_TARGET_NAME Remotery)
+    add_library(${REMOTERY_TARGET_NAME} STATIC
+        ${ABSOLUTE_EXT_PATH}/Remotery/lib/Remotery.c
+        ${ABSOLUTE_EXT_PATH}/Remotery/lib/Remotery.h)
+    set_target_properties(${REMOTERY_TARGET_NAME} PROPERTIES FOLDER ${EXTERNAL_FOLDER})
+    add_dependencies(${PROJECT_NAME} ${REMOTERY_TARGET_NAME})
+    target_link_libraries(${PROJECT_NAME} PUBLIC ${REMOTERY_TARGET_NAME})
+endif()
+
 # [TODO: temporary solution]: External: tgc
 message(STATUS "${PROJECT_NAME}: adding external dependency \"TGC\"...")
 set(TGC_TARGET_NAME tgc)
 add_library(${TGC_TARGET_NAME} STATIC
     ${TGC_CPP_FILE_PATH}
     ${TGC_H_FILE_PATH})
-set_target_properties(tgc PROPERTIES FOLDER ${EXTERNAL_FOLDER})
+set_target_properties(${TGC_TARGET_NAME} PROPERTIES FOLDER ${EXTERNAL_FOLDER})
 add_dependencies(${PROJECT_NAME} ${TGC_TARGET_NAME})
 target_link_libraries(${PROJECT_NAME} PUBLIC ${TGC_TARGET_NAME})
 if(NOT MSVC)
@@ -396,6 +409,7 @@ set(REFUREKU_INCLUDE_DIRECTORIES
     ${ABSOLUTE_EXT_PATH}/GLSL-Shader-Includes/src/project_lib/src
     ${ABSOLUTE_EXT_PATH}/shaderc/libshaderc/include
     ${ABSOLUTE_EXT_PATH}/SPIRV-Reflect
+    ${ABSOLUTE_EXT_PATH}/Remotery/lib
     ${Vulkan_INCLUDE_DIRS}
     ${CMAKE_CURRENT_SOURCE_DIR}/public
     ${CMAKE_CURRENT_SOURCE_DIR}/private

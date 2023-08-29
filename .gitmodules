@@ -46,3 +46,6 @@
 [submodule "ext/SPIRV-Reflect"]
 	path = ext/SPIRV-Reflect
 	url = https://github.com/KhronosGroup/SPIRV-Reflect.git
+[submodule "ext/Remotery"]
+	path = ext/Remotery
+	url = https://github.com/Celtoys/Remotery.git

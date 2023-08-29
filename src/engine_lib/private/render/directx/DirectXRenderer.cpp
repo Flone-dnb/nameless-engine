@@ -26,6 +26,7 @@
 #include "game/camera/TransientCamera.h"
 #include "materials/hlsl/HlslShaderResource.h"
 #include "render/directx/resources/DirectXFrameResource.h"
+#include "misc/Profiler.hpp"
 
 // DirectX.
 #pragma comment(lib, "D3D12.lib")
@@ -422,6 +423,8 @@ namespace ne {
     std::string DirectXRenderer::getCurrentlyUsedGpuName() const { return sUsedVideoAdapter; }
 
     std::optional<Error> DirectXRenderer::prepareForDrawingNextFrame(CameraProperties* pCameraProperties) {
+        PROFILE_FUNC;
+
         std::scoped_lock frameGuard(*getRenderResourcesMutex());
 
         // Waits for frame resource to be no longer used by the GPU.
@@ -437,17 +440,25 @@ namespace ne {
 
         const auto pCommandAllocator = pDirectXFrameResource->pCommandAllocator.Get();
 
+        PROFILE_SCOPE_START(ResetCommandAllocator);
+
         // Clear command allocator since the GPU is no longer using it.
         auto hResult = pCommandAllocator->Reset();
         if (FAILED(hResult)) [[unlikely]] {
             return Error(hResult);
         }
 
+        PROFILE_SCOPE_END;
+
+        PROFILE_SCOPE_START(ResetCommandList);
+
         // Open command list to record new commands.
         hResult = pCommandList->Reset(pCommandAllocator, nullptr);
         if (FAILED(hResult)) [[unlikely]] {
             return Error(hResult);
         }
+
+        PROFILE_SCOPE_END;
 
         // Set CBV/SRV/UAV descriptor heap.
         const auto pResourceManager = reinterpret_cast<DirectXResourceManager*>(getResourceManager());
@@ -504,6 +515,8 @@ namespace ne {
     }
 
     void DirectXRenderer::drawNextFrame() {
+        PROFILE_FUNC;
+
         // Get active camera.
         const auto pMtxActiveCamera = getGameManager()->getCameraManager()->getActiveCamera();
 
@@ -601,9 +614,13 @@ namespace ne {
     }
 
     std::optional<Error> DirectXRenderer::finishDrawingNextFrame() {
+        PROFILE_FUNC;
+
         std::scoped_lock guardFrame(*getRenderResourcesMutex());
 
         if (bIsUsingMsaaRenderTarget) {
+            PROFILE_SCOPE(ResolveMsaaTarget);
+
             // Resolve MSAA render buffer to swap chain buffer.
             const auto pCurrentSwapChainBuffer =
                 vSwapChainBuffers[pSwapChain->GetCurrentBackBufferIndex()].get();
@@ -639,6 +656,8 @@ namespace ne {
 
             pCommandList->ResourceBarrier(2, barriersToPresent);
         } else {
+            PROFILE_SCOPE(TransitionToPresent);
+
             // Transition render buffer from "render target" to "present".
             auto transition = CD3DX12_RESOURCE_BARRIER::Transition(
                 vSwapChainBuffers[pSwapChain->GetCurrentBackBufferIndex()]->getInternalResource(),
@@ -653,9 +672,15 @@ namespace ne {
             return Error(hResult);
         }
 
+        PROFILE_SCOPE_START(ExecuteCommandLists);
+
         // Add the command list to the command queue for execution.
         ID3D12CommandList* commandLists[] = {pCommandList.Get()};
         pCommandQueue->ExecuteCommandLists(_countof(commandLists), commandLists);
+
+        PROFILE_SCOPE_END;
+
+        PROFILE_SCOPE_START(Present);
 
         // Flip swap chain buffers.
         hResult = pSwapChain->Present(iPresentSyncInterval, iPresentFlags);
@@ -663,9 +688,13 @@ namespace ne {
             return Error(hResult);
         }
 
+        PROFILE_SCOPE_END;
+
         // Update fence value.
         UINT64 iNewFenceValue = 0;
         {
+            PROFILE_SCOPE(UpdateFenceValue);
+
             std::scoped_lock fenceGuard(mtxCurrentFenceValue.first);
             mtxCurrentFenceValue.second += 1;
             iNewFenceValue = mtxCurrentFenceValue.second;
@@ -747,6 +776,8 @@ namespace ne {
     }
 
     void DirectXRenderer::drawMeshNodes(Material* pMaterial, size_t iCurrentFrameResourceIndex) {
+        PROFILE_FUNC;
+
         const auto pMtxMeshNodes = pMaterial->getSpawnedMeshNodesThatUseThisMaterial();
 
         // Iterate over all visible mesh nodes that use this material.

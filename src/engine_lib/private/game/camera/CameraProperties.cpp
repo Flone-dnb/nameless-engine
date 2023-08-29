@@ -2,6 +2,7 @@
 
 // Custom.
 #include "misc/Error.h"
+#include "misc/Profiler.hpp"
 
 // External.
 #include "fmt/core.h"
@@ -138,6 +139,8 @@ namespace ne {
     }
 
     void CameraProperties::makeSureViewMatrixIsUpToDate() {
+        PROFILE_FUNC;
+
         std::scoped_lock guard(mtxData.first);
 
         // Only continue if the view matrix is marked as "needs update".
@@ -156,6 +159,8 @@ namespace ne {
     }
 
     void CameraProperties::makeSureProjectionMatrixAndClipPlanesAreUpToDate() {
+        PROFILE_FUNC;
+
         std::scoped_lock guard(mtxData.first);
 
         // Make sure that we actually need to recalculate it.

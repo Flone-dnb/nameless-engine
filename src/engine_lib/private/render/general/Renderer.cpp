@@ -13,6 +13,7 @@
 #include "render/general/pipeline/PipelineManager.h"
 #include "render/vulkan/VulkanRenderer.h"
 #include "game/camera/CameraProperties.h"
+#include "misc/Profiler.hpp"
 #if defined(WIN32)
 #include "render/directx/DirectXRenderer.h"
 #endif
@@ -90,6 +91,8 @@ namespace ne {
 
         // Wait synchronously (before user adds his shaders).
         try {
+            Logger::get().info("waiting for engine shaders to be compiled...");
+            Logger::get().flushToDisk();
             future.get();
         } catch (const std::exception& ex) {
             const Error err(ex.what());
@@ -486,6 +489,8 @@ namespace ne {
         unsigned int iRenderTargetWidth,
         unsigned int iRenderTargetHeight,
         CameraProperties* pCameraProperties) {
+        PROFILE_FUNC;
+
         std::scoped_lock frameGuard(*getRenderResourcesMutex());
 
         // Set camera's aspect ratio.
@@ -495,8 +500,12 @@ namespace ne {
         auto pMtxCurrentFrameResource = getFrameResourcesManager()->getCurrentFrameResource();
         std::scoped_lock frameResource(pMtxCurrentFrameResource->first);
 
-        // Wait for this frame resource to no longer be used by the GPU.
-        waitForGpuToFinishUsingFrameResource(pMtxCurrentFrameResource->second.pResource);
+        {
+            PROFILE_SCOPE(WaitForGpuToFinishUsingFrameResource);
+
+            // Wait for this frame resource to no longer be used by the GPU.
+            waitForGpuToFinishUsingFrameResource(pMtxCurrentFrameResource->second.pResource);
+        }
 
         // Copy new (up to date) data to frame data cbuffer to be used by the shaders.
         updateFrameConstantsBuffer(pMtxCurrentFrameResource->second.pResource, pCameraProperties);

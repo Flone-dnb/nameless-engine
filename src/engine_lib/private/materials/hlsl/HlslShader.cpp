@@ -11,6 +11,7 @@
 #include "render/directx/DirectXRenderer.h"
 #include "materials/ShaderFilesystemPaths.hpp"
 #include "game/nodes/MeshNode.h"
+#include "misc/Profiler.hpp"
 
 // External.
 #include "DirectXShaderCompiler/inc/d3d12shader.h"
@@ -391,6 +392,8 @@ namespace ne {
     std::string HlslShader::getShaderSourceFileHash() const { return sSourceFileHash; }
 
     bool HlslShader::releaseShaderDataFromMemoryIfLoaded() {
+        PROFILE_FUNC;
+
         std::scoped_lock guard(mtxCompiledBytecode.first, mtxRootSignatureInfo.first);
 
         // Release shader bytecode.
@@ -542,6 +545,8 @@ namespace ne {
     }
 
     std::optional<Error> HlslShader::loadShaderDataFromDiskIfNotLoaded() {
+        PROFILE_FUNC;
+
         std::scoped_lock guard(mtxCompiledBytecode.first, mtxRootSignatureInfo.first);
 
         // Get path to compiled shader.

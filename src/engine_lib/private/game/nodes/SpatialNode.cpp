@@ -3,6 +3,7 @@
 // Custom.
 #include "game/GameInstance.h"
 #include "math/MathHelpers.hpp"
+#include "misc/Profiler.hpp"
 
 #include "SpatialNode.generated_impl.h"
 
@@ -14,6 +15,8 @@ namespace ne {
     }
 
     void SpatialNode::setRelativeLocation(const glm::vec3& location) {
+        PROFILE_FUNC;
+
         std::scoped_lock guard(mtxWorldMatrix.first);
 
         relativeLocation = location;
@@ -23,6 +26,8 @@ namespace ne {
     }
 
     void SpatialNode::setRelativeRotation(const glm::vec3& rotation) {
+        PROFILE_FUNC;
+
         std::scoped_lock guard(mtxWorldMatrix.first);
 
         relativeRotation.x = MathHelpers::normalizeValue(rotation.x, -360.0F, 360.0F); // NOLINT
@@ -34,7 +39,10 @@ namespace ne {
     }
 
     void SpatialNode::setRelativeScale(const glm::vec3& scale) {
+        PROFILE_FUNC;
+
 #if defined(DEBUG)
+        // Make sure we don't have negative scale specified.
         if (scale.x < 0.0F || scale.y < 0.0F || scale.z < 0.0F) [[unlikely]] {
             Logger::get().warn("avoid using negative scale as it may cause issues");
         }
@@ -84,6 +92,8 @@ namespace ne {
     }
 
     void SpatialNode::setWorldLocation(const glm::vec3& location) {
+        PROFILE_FUNC;
+
         std::scoped_lock guard(mtxWorldMatrix.first, mtxSpatialParent.first);
 
         // See if we have a parent.
@@ -109,6 +119,8 @@ namespace ne {
     }
 
     void SpatialNode::setWorldRotation(const glm::vec3& rotation) {
+        PROFILE_FUNC;
+
         glm::vec3 targetWorldRotation;
         targetWorldRotation.x = MathHelpers::normalizeValue(rotation.x, -360.0F, 360.0F); // NOLINT
         targetWorldRotation.y = MathHelpers::normalizeValue(rotation.y, -360.0F, 360.0F); // NOLINT
@@ -134,7 +146,10 @@ namespace ne {
     }
 
     void SpatialNode::setWorldScale(const glm::vec3& scale) {
+        PROFILE_FUNC;
+
 #if defined(DEBUG)
+        // Make sure we don't have negative scale specified.
         if (scale.x < 0.0F || scale.y < 0.0F || scale.z < 0.0F) [[unlikely]] {
             Logger::get().warn("avoid using negative scale as it's not supported and may cause issues");
         }
@@ -170,6 +185,8 @@ namespace ne {
     }
 
     void SpatialNode::recalculateWorldMatrix(bool bNotifyChildren) {
+        PROFILE_FUNC;
+
         // Prepare some variables.
         glm::mat4x4 parentWorldMatrix = glm::identity<glm::mat4x4>();
         glm::quat parentWorldRotationQuat = glm::identity<glm::quat>();
@@ -320,6 +337,8 @@ namespace ne {
     }
 
     void SpatialNode::recalculateLocalMatrix() {
+        PROFILE_FUNC;
+
         std::scoped_lock guard(mtxLocalSpace.first);
 
         mtxLocalSpace.second.relativeRotationMatrix = MathHelpers::buildRotationMatrix(relativeRotation);

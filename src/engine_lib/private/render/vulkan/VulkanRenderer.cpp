@@ -19,6 +19,7 @@
 #include "materials/glsl/GlslShaderResource.h"
 #include "render/vulkan/resources/VulkanStorageResourceArrayManager.h"
 #include "game/camera/TransientCamera.h"
+#include "misc/Profiler.hpp"
 
 // External.
 #include "vulkan/vk_enum_string_helper.h"
@@ -1743,6 +1744,8 @@ namespace ne {
     }
 
     std::optional<Error> VulkanRenderer::prepareForDrawingNextFrame(CameraProperties* pCameraProperties) {
+        PROFILE_FUNC;
+
         std::scoped_lock frameGuard(*getRenderResourcesMutex());
 
         // Make sure swap chain extent is set.
@@ -1761,11 +1764,15 @@ namespace ne {
         const auto pVulkanFrameResource =
             reinterpret_cast<VulkanFrameResource*>(pMtxCurrentFrameResource->second.pResource);
 
+        PROFILE_SCOPE_START(ResetCommandBuffer);
+
         // Reset command buffer.
         auto result = vkResetCommandBuffer(pVulkanFrameResource->pCommandBuffer, 0);
         if (result != VK_SUCCESS) [[unlikely]] {
             return Error(fmt::format("failed to reset command buffer, error: {}", string_VkResult(result)));
         }
+
+        PROFILE_SCOPE_END;
 
         // Prepare to start recording commands.
         VkCommandBufferBeginInfo beginInfo{};
@@ -1999,6 +2006,8 @@ namespace ne {
     }
 
     void VulkanRenderer::drawNextFrame() {
+        PROFILE_FUNC;
+
         if (bIsWindowMinimized) {
             // Framebuffer size is zero and swap chain is invalid, wait until the window is
             // restored/maximized.
@@ -2150,6 +2159,8 @@ namespace ne {
         VulkanPipeline* pPipeline,
         VkCommandBuffer pCommandBuffer,
         size_t iCurrentFrameResourceIndex) {
+        PROFILE_FUNC;
+
         // Prepare vertex buffers.
         static constexpr size_t iVertexBufferCount = 1;
         std::array<VkBuffer, iVertexBufferCount> vVertexBuffers{};
@@ -2218,6 +2229,8 @@ namespace ne {
 
     std::optional<Error> VulkanRenderer::finishDrawingNextFrame(
         VulkanFrameResource* pCurrentFrameResource, size_t iCurrentFrameResourceIndex) {
+        PROFILE_FUNC;
+
         // Convert current frame resource.
         const auto pVulkanCurrentFrameResource =
             reinterpret_cast<VulkanFrameResource*>(pCurrentFrameResource);
@@ -2232,6 +2245,8 @@ namespace ne {
                 "failed to finish recording commands into a command buffer, error: {}",
                 string_VkResult(result)));
         }
+
+        PROFILE_SCOPE_START(AcquireNextImage);
 
         // Acquire an image from the swapchain.
         uint32_t iImageIndex = 0;
@@ -2267,6 +2282,8 @@ namespace ne {
                 fmt::format("failed to wait for acquired image fence, error: {}", string_VkResult(result)));
         }
 
+        PROFILE_SCOPE_END;
+
         // Mark the image as being used by this frame.
         vSwapChainImageFenceRefs[iImageIndex] = pVulkanCurrentFrameResource->pFence;
 
@@ -2301,12 +2318,16 @@ namespace ne {
             return Error(fmt::format("failed to reset a fence, error: {}", string_VkResult(result)));
         }
 
+        PROFILE_SCOPE_START(QueueSubmit);
+
         // Submit command buffer(s) to the queue for execution.
         result = vkQueueSubmit(pGraphicsQueue, 1, &submitInfo, pVulkanCurrentFrameResource->pFence);
         if (result != VK_SUCCESS) [[unlikely]] {
             return Error(fmt::format(
                 "failed to submit command buffer(s) for execution, error: {}", string_VkResult(result)));
         }
+
+        PROFILE_SCOPE_END;
 
         // Prepare for presenting.
         VkPresentInfoKHR presentInfo{};
@@ -2324,12 +2345,16 @@ namespace ne {
         // swapchain from `vkQueuePresentKHR`.
         presentInfo.pResults = nullptr;
 
+        PROFILE_SCOPE_START(Present);
+
         // Present.
         result = vkQueuePresentKHR(pPresentQueue, &presentInfo);
         if (result != VK_SUCCESS) [[unlikely]] {
             return Error(
                 fmt::format("failed to present a swapchain image, error: {}", string_VkResult(result)));
         }
+
+        PROFILE_SCOPE_END;
 
         return {};
     }

@@ -2218,6 +2218,66 @@ addDeferredTask([this, iNodeId](){ // capturing `this` to use `Node` (self) func
 });
 ```
 
+# Using profiler
+
+The engine has https://github.com/Celtoys/Remotery integrated and you can use this profiler in order to detect slow parts of your game.
+
+By default profiler is disabled in order to enable it you need to create a file at `*project_root*/src/engine_settings.cmake` and add the following variable to it:
+
+```
+set(ENABLE_PROFILER ON)
+```
+
+Then you need to re-run cmake configuration and if everything is correct during the configuration you might see a message like `adding external dependency "Remotery"`. Note that when `ENABLE_PROFILER` is set profiler will be enabled only in debug builds.
+
+Compile and run your project, during initialization you should see a message `profiler enabled` in the log.
+
+Here are a few examples on how to use profiler:
+
+```Cpp
+#include "misc/Profiler.hpp"
+
+using namespace ne;
+
+void MyNode::onBeforeNewFrame(float timeSincePrevFrameInSec){
+    Node::onBeforeNewFrame(timeSincePrevFrameInSec);
+
+    PROFILE_FUNC;
+
+    // ... some code here ...
+}
+
+void MyGameInstance::onMouseMove(int iXOffset, int iYOffset) {
+    PROFILE_FUNC;
+
+    // ... some code here ...
+
+    {
+        PROFILE_SCOPE(MyScope);
+
+        // ... some code here ...
+    }
+
+    PROFILE_SCOPE_START(MyScope); // same as `PROFILE_SCOPE(MyScope)` but needs to be finished with `PROFILE_SCOPE_END`
+
+    // ... some code here ...
+
+    PROFILE_SCOPE_END;
+}
+```
+
+You can use these macros interchangeably.
+
+After you add profiling macros you need to run your app and open `*project_root*/ext/Remotery/vis/index.html` in your browser. When your app is running with profiler enabled you will see time measurements for profiled functions.
+
+Note
+> If you don't see any time measurements you might need to refresh the page, then wait 5-10 seconds and try again if nothing shows up.
+
+In the browser page near the text "Main Thread" (in "Sample Timeline" panel) you can click on buttons "+" and "-" to show/hide hierarchy (inner time measurements). You can also click on "Pause" button in the top-right corner to pause receiving of the new data. You can also expand a panel named "Main Thread" (usually in the bottom-right corner) to view hierarchy of calls you selected in "Sample Timeline" and their time measurements.
+
+Note
+> It's recommended to use profiler for a short amount of time to identify slow parts of your code because the profiler has proved to cause freezes at startup and sometimes memory leaks.
+
 # Simulating input for automated tests
 
 Your game has a `..._tests` target for automated testing (which relies on https://github.com/catchorg/Catch2) and generally it will be very useful to simulate user input. Here is an example on how to do that:

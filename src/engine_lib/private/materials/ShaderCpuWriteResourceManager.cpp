@@ -8,6 +8,7 @@
 #endif
 #include "render/vulkan/VulkanRenderer.h"
 #include "materials/glsl/GlslShaderResource.h"
+#include "misc/Profiler.hpp"
 #include "render/general/pipeline/Pipeline.h"
 
 namespace ne {
@@ -76,6 +77,8 @@ namespace ne {
     }
 
     void ShaderCpuWriteResourceManager::updateResources(size_t iCurrentFrameResourceIndex) {
+        PROFILE_FUNC;
+
         std::scoped_lock shaderRwResourceGuard(mtxShaderCpuWriteResources.first);
 
         if (mtxShaderCpuWriteResources.second.toBeUpdated[iCurrentFrameResourceIndex].empty()) {
@@ -115,6 +118,8 @@ namespace ne {
     }
 
     void ShaderCpuWriteResourceManager::markResourceAsNeedsUpdate(ShaderCpuWriteResource* pResource) {
+        PROFILE_FUNC;
+
         std::scoped_lock guard(mtxShaderCpuWriteResources.first);
 
         // Self check: check if this resource even exists.
@@ -135,6 +140,8 @@ namespace ne {
     }
 
     void ShaderCpuWriteResourceManager::destroyResource(ShaderCpuWriteResource* pResourceToDestroy) {
+        PROFILE_FUNC;
+
         std::scoped_lock guard(mtxShaderCpuWriteResources.first);
 
         // Remove from "all" array.

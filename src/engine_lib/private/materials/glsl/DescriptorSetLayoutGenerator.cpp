@@ -3,6 +3,7 @@
 // Custom.
 #include "materials/glsl/GlslShader.h"
 #include "render/vulkan/VulkanRenderer.h"
+#include "misc/Profiler.hpp"
 
 // External.
 #include "spirv_reflect.h"
@@ -13,8 +14,10 @@ namespace ne {
 
     std::variant<DescriptorSetLayoutGenerator::Collected, Error>
     DescriptorSetLayoutGenerator::collectInfoFromBytecode(void* pSpirvBytecode, size_t iSizeInBytes) {
-        SpvReflectShaderModule module;
+        PROFILE_FUNC;
+
         // Create shader module.
+        SpvReflectShaderModule module;
         auto result = spvReflectCreateShaderModule(iSizeInBytes, pSpirvBytecode, &module);
         if (result != SPV_REFLECT_RESULT_SUCCESS) {
             return Error(fmt::format("failed to create shader module, error: {}", static_cast<int>(result)));
@@ -155,6 +158,8 @@ namespace ne {
 
     std::variant<DescriptorSetLayoutGenerator::Generated, Error> DescriptorSetLayoutGenerator::generate(
         Renderer* pRenderer, GlslShader* pVertexShader, GlslShader* pFragmentShader) {
+        PROFILE_FUNC;
+
         // Make sure we use Vulkan renderer.
         const auto pVulkanRenderer = dynamic_cast<VulkanRenderer*>(pRenderer);
         if (pVulkanRenderer == nullptr) [[unlikely]] {

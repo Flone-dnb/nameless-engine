@@ -11,6 +11,7 @@
 #include "game/GameManager.h"
 #include "misc/Timer.h"
 #include "game/nodes/SpatialNode.h"
+#include "misc/Profiler.hpp"
 
 #include "Node.generated_impl.h"
 
@@ -856,6 +857,8 @@ namespace ne {
 
     void Node::onInputActionEvent(
         const std::string& sActionName, KeyboardModifiers modifiers, bool bIsPressedDown) {
+        PROFILE_FUNC;
+
         std::scoped_lock guard(mtxBindedActionEvents.first);
 
         const auto it = mtxBindedActionEvents.second.find(sActionName);
@@ -867,6 +870,8 @@ namespace ne {
     }
 
     void Node::onInputAxisEvent(const std::string& sAxisName, KeyboardModifiers modifiers, float input) {
+        PROFILE_FUNC;
+
         std::scoped_lock guard(mtxBindedAxisEvents.first);
 
         const auto it = mtxBindedAxisEvents.second.find(sAxisName);

@@ -4,6 +4,7 @@
 #include "render/vulkan/resources/VulkanStorageResourceArray.h"
 #include "materials/glsl/GlslShaderResource.h"
 #include "render/vulkan/resources/VulkanResourceManager.h"
+#include "misc/Profiler.hpp"
 
 namespace ne {
 
@@ -129,6 +130,8 @@ namespace ne {
 
     std::optional<Error> VulkanStorageResourceArrayManager::bindDescriptorsToRecreatedPipelineResources(
         VulkanRenderer* pVulkanRenderer) {
+        PROFILE_FUNC;
+
         std::scoped_lock guard(mtxGlslShaderCpuWriteResources.first);
 
         // Update descriptors.
@@ -148,6 +151,8 @@ namespace ne {
         VulkanPipeline* pPipeline,
         const std::string& sShaderResourceName,
         unsigned int iBindingIndex) {
+        PROFILE_FUNC;
+
         std::scoped_lock guard(mtxGlslShaderCpuWriteResources.first);
 
         // Find storage array that handles the specified shader resource name.

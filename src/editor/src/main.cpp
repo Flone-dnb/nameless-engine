@@ -24,7 +24,7 @@ int main() {
 
     auto result =
         Window::getBuilder()
-            .withTitle("Nameless Editor")
+            .withTitle(EditorGameInstance::getEditorWindowTitle())
             .withMaximizedState(true)
             .withIcon(
                 ProjectPaths::getPathToResDirectory(ResourceDirectory::EDITOR) / "nameless_editor_icon.png")

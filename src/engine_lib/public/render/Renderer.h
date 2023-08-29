@@ -67,6 +67,22 @@ namespace ne {
         create(GameManager* pGameManager, std::optional<RendererType> preferredRenderer);
 
         /**
+         * Returns the number of frames that the renderer produced in the last second.
+         *
+         * @return Zero if not calculated yet (wait at least 1 second), otherwise FPS.
+         */
+        size_t getFramesPerSecond();
+
+        /**
+         * Returns time in milliseconds that was spent last frame waiting for GPU to catch up.
+         * If returned value is constantly bigger than zero then this might mean that you are GPU bound,
+         * if constantly zero (0.0F) then this might mean that you are CPU bound.
+         *
+         * @return Time in milliseconds.
+         */
+        float getTimeSpentLastFrameWaitingForGpu();
+
+        /**
          * Looks for video adapters (GPUs) that support this renderer.
          *
          * @remark Note that returned array might differ depending on the used renderer.
@@ -285,6 +301,14 @@ namespace ne {
         updateFrameConstantsBuffer(FrameResource* pCurrentFrameResource, CameraProperties* pCameraProperties);
 
         /**
+         * Calculates some frame-related statistics.
+         *
+         * @remark Must be called by derived renderers as the last function in `drawNextFrame`
+         * to notify the renderer to calculate some frame-related statistics.
+         */
+        void calculateFrameStatistics();
+
+        /**
          * Sets `nullptr` to resource manager's unique ptr to force destroy it (if exists).
          *
          * @warning Avoid using this function. Only use it if you need a special destruction order
@@ -414,6 +438,33 @@ namespace ne {
             CameraProperties* pCameraProperties);
 
     private:
+        /** Groups variables used to calculate frame-related statistics. */
+        struct FrameStatsData {
+            /**
+             * Time when the renderer has finished initializing or when
+             * @ref iFramesPerSecond was updated.
+             */
+            std::chrono::steady_clock::time_point timeAtLastFpsUpdate;
+
+            /**
+             * The number of times the renderer presented a new image since the last time we updated
+             * @ref iFramesPerSecond.
+             */
+            size_t iPresentCountSinceFpsUpdate = 0;
+
+            /** The number of frames that the renderer produced in the last second. */
+            size_t iFramesPerSecond = 0;
+
+            /**
+             * Time (in milliseconds) that was spent last frame waiting for the GPU to finish using
+             * the new frame resource.
+             *
+             * @remark If constantly bigger than zero then this might mean that you are GPU bound,
+             * if constantly zero then this might mean that you are CPU bound.
+             */
+            float timeSpentLastFrameWaitingForGpuInMs = 0.0F;
+        };
+
         /**
          * Creates a new renderer and nothing else.
          *
@@ -497,6 +548,9 @@ namespace ne {
 
         /** Up to date frame-global constant data. */
         std::pair<std::mutex, FrameConstants> mtxFrameConstants;
+
+        /** Frame-related statistics. */
+        FrameStatsData frameStats;
 
         /** Do not delete (free) this pointer. Game manager object that owns this renderer. */
         GameManager* pGameManager = nullptr;

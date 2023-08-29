@@ -131,6 +131,33 @@ namespace ne {
             0, &mtxFrameConstants.second, sizeof(mtxFrameConstants.second));
     }
 
+    void Renderer::calculateFrameStatistics() {
+        PROFILE_FUNC;
+
+        using namespace std::chrono;
+
+        // Get elapsed time.
+        const auto iElapsedTimeInSec =
+            duration_cast<seconds>(steady_clock::now() - frameStats.timeAtLastFpsUpdate).count();
+
+        // Count the new present call.
+        frameStats.iPresentCountSinceFpsUpdate += 1;
+
+        // See if 1 second has passed.
+        if (iElapsedTimeInSec < 1) {
+            return;
+        }
+
+        // Save FPS.
+        frameStats.iFramesPerSecond = frameStats.iPresentCountSinceFpsUpdate;
+
+        // Reset present count.
+        frameStats.iPresentCountSinceFpsUpdate = 0;
+
+        // Restart time.
+        frameStats.timeAtLastFpsUpdate = steady_clock::now();
+    }
+
     void Renderer::resetGpuResourceManager() {
         if (pResourceManager == nullptr) {
             return;
@@ -336,7 +363,16 @@ namespace ne {
             return optionalError.value();
         }
 
+        // Start the FPS timer.
+        pCreatedRenderer->frameStats.timeAtLastFpsUpdate = std::chrono::steady_clock::now();
+
         return pCreatedRenderer;
+    }
+
+    size_t Renderer::getFramesPerSecond() { return frameStats.iFramesPerSecond; }
+
+    float Renderer::getTimeSpentLastFrameWaitingForGpu() {
+        return frameStats.timeSpentLastFrameWaitingForGpuInMs;
     }
 
     std::pair<std::recursive_mutex, std::shared_ptr<RenderSettings>>* Renderer::getRenderSettings() {
@@ -503,8 +539,16 @@ namespace ne {
         {
             PROFILE_SCOPE(WaitForGpuToFinishUsingFrameResource);
 
+            // Mark start time.
+            const auto startTime = std::chrono::steady_clock::now();
+
             // Wait for this frame resource to no longer be used by the GPU.
             waitForGpuToFinishUsingFrameResource(pMtxCurrentFrameResource->second.pResource);
+
+            // Measure the time it took to wait.
+            const auto endTime = std::chrono::steady_clock::now();
+            frameStats.timeSpentLastFrameWaitingForGpuInMs =
+                std::chrono::duration<float, std::chrono::milliseconds::period>(endTime - startTime).count();
         }
 
         // Copy new (up to date) data to frame data cbuffer to be used by the shaders.

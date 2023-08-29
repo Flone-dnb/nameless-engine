@@ -2218,6 +2218,21 @@ addDeferredTask([this, iNodeId](){ // capturing `this` to use `Node` (self) func
 });
 ```
 
+# Frame statistics
+
+If you want to know your game's FPS you can use `Renderer::getFramesPerSecond`. For example, you can display the FPS on your game's UI for debugging purposes:
+
+```Cpp
+void MyUiNode::onBeforeNewFrame(float timeSincePrevCallInSec) {
+#if defined(DEBUG)
+    const auto iFps = getWindow()->getRenderer()->getFramesPerSecond();
+    // ... display on UI ...
+#endif
+}
+```
+
+You can also use `Renderer::getTimeSpentLastFrameWaitingForGpu` to determine if you are CPU or GPU bound.
+
 # Using profiler
 
 The engine has https://github.com/Celtoys/Remotery integrated and you can use this profiler in order to detect slow parts of your game.

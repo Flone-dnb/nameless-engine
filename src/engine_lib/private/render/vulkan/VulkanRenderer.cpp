@@ -2356,6 +2356,9 @@ namespace ne {
 
         PROFILE_SCOPE_END;
 
+        // Calculate frame-related statistics.
+        calculateFrameStatistics();
+
         return {};
     }
 

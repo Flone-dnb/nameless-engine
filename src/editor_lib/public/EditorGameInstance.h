@@ -13,6 +13,13 @@ namespace ne {
     class EditorGameInstance : public GameInstance {
     public:
         /**
+         * Returns title of the editor's window.
+         *
+         * @return Window title.
+         */
+        static const char* getEditorWindowTitle();
+
+        /**
          * Constructor.
          *
          * @remark There is no need to save window/input manager pointers
@@ -52,6 +59,16 @@ namespace ne {
          * minus if moved down).
          */
         virtual void onMouseMove(int iXOffset, int iYOffset) override;
+
+        /**
+         * Called before a new frame is rendered.
+         *
+         * @remark Called before nodes that should be called every frame.
+         *
+         * @param timeSincePrevCallInSec Time in seconds that has passed since the last call
+         * to this function.
+         */
+        virtual void onBeforeNewFrame(float timeSincePrevCallInSec) override;
 
     private:
         /** Stores unique names of input events. */
@@ -104,5 +121,8 @@ namespace ne {
 
         /** Camera speed multiplier when slow movement mode is enabled (for ex. Ctrl is pressed). */
         const float cameraSpeedDecreaseMultiplier = 0.5F;
+
+        /** Title of the editor's window. */
+        static constexpr auto pEditorWindowTitle = "Nameless Editor";
     };
 } // namespace ne

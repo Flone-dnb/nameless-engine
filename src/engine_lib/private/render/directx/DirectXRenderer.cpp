@@ -716,6 +716,9 @@ namespace ne {
         // to this `Signal` call.
         pCommandQueue->Signal(pFence.Get(), iNewFenceValue);
 
+        // Calculate frame-related statistics.
+        calculateFrameStatistics();
+
         return {};
     }
 

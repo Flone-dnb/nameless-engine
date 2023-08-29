@@ -9,6 +9,8 @@
 #include "misc/PrimitiveMeshGenerator.h"
 
 namespace ne {
+    const char* EditorGameInstance::getEditorWindowTitle() { return pEditorWindowTitle; }
+
     EditorGameInstance::EditorGameInstance(
         Window* pWindow, GameManager* pGameManager, InputManager* pInputManager)
         : GameInstance(pWindow, pGameManager, pInputManager) {}
@@ -59,6 +61,19 @@ namespace ne {
         currentRotation.z += iXOffset * cameraRotationSensitivity;
         currentRotation.y -= iYOffset * cameraRotationSensitivity;
         pEditorCamera->setFreeCameraRotation(currentRotation);
+    }
+
+    void EditorGameInstance::onBeforeNewFrame(float timeSincePrevCallInSec) {
+        // Get window and renderer.
+        const auto pWindow = getWindow();
+        const auto pRenderer = pWindow->getRenderer();
+
+        // Show FPS in window title.
+        pWindow->setTitle(fmt::format(
+            "{} (FPS: {}, waiting GPU: {:.1F} ms",
+            pEditorWindowTitle,
+            pRenderer->getFramesPerSecond(),
+            pRenderer->getTimeSpentLastFrameWaitingForGpu()));
     }
 
     void EditorGameInstance::bindCameraInput() {

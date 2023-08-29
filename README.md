@@ -260,7 +260,7 @@ Here is the list of base features that needs to be implemented in order for you 
 - [X] Handling user input events
 - [X] Config management (progress, settings, etc.)
 - [X] Node system (Godot-like ECS alternative)
-- [ ] Profiler
+- [X] Profiler
 - [ ] GLTF/GLB import
 - [ ] Rendering (features for both DirectX 12 and Vulkan renderers)
     - [ ] Forward rendering (temporary)

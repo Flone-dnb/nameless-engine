@@ -83,7 +83,7 @@ namespace ne {
 
         // Move forward.
         auto optionalError = pInputManager->addAxisEvent(
-            InputEventNames::moveForwardAxis, {std::make_pair(KeyboardKey::KEY_W, KeyboardKey::KEY_S)});
+            InputEventIds::Axis::iMoveForward, {std::make_pair(KeyboardKey::KEY_W, KeyboardKey::KEY_S)});
         if (optionalError.has_value()) [[unlikely]] {
             auto error = optionalError.value();
             error.addCurrentLocationToErrorStack();
@@ -93,7 +93,7 @@ namespace ne {
 
         // Move right.
         optionalError = pInputManager->addAxisEvent(
-            InputEventNames::moveRightAxis, {std::make_pair(KeyboardKey::KEY_D, KeyboardKey::KEY_A)});
+            InputEventIds::Axis::iMoveRight, {std::make_pair(KeyboardKey::KEY_D, KeyboardKey::KEY_A)});
         if (optionalError.has_value()) [[unlikely]] {
             auto error = optionalError.value();
             error.addCurrentLocationToErrorStack();
@@ -103,7 +103,7 @@ namespace ne {
 
         // Move up.
         optionalError = pInputManager->addAxisEvent(
-            InputEventNames::moveUpAxis, {std::make_pair(KeyboardKey::KEY_E, KeyboardKey::KEY_Q)});
+            InputEventIds::Axis::iMoveUp, {std::make_pair(KeyboardKey::KEY_E, KeyboardKey::KEY_Q)});
         if (optionalError.has_value()) [[unlikely]] {
             auto error = optionalError.value();
             error.addCurrentLocationToErrorStack();
@@ -113,7 +113,7 @@ namespace ne {
 
         // Capture mouse.
         optionalError =
-            pInputManager->addActionEvent(InputEventNames::captureMouseCursorAction, {MouseButton::RIGHT});
+            pInputManager->addActionEvent(InputEventIds::Action::iCaptureMouseCursor, {MouseButton::RIGHT});
         if (optionalError.has_value()) [[unlikely]] {
             auto error = optionalError.value();
             error.addCurrentLocationToErrorStack();
@@ -123,7 +123,7 @@ namespace ne {
 
         // Increase camera speed.
         optionalError = pInputManager->addActionEvent(
-            InputEventNames::increaseCameraSpeedAction, {KeyboardKey::KEY_LEFT_SHIFT});
+            InputEventIds::Action::iIncreaseCameraSpeed, {KeyboardKey::KEY_LEFT_SHIFT});
         if (optionalError.has_value()) [[unlikely]] {
             auto error = optionalError.value();
             error.addCurrentLocationToErrorStack();
@@ -133,7 +133,7 @@ namespace ne {
 
         // Decrease camera speed.
         optionalError = pInputManager->addActionEvent(
-            InputEventNames::decreaseCameraSpeedAction, {KeyboardKey::KEY_LEFT_CONTROL});
+            InputEventIds::Action::iDecreaseCameraSpeed, {KeyboardKey::KEY_LEFT_CONTROL});
         if (optionalError.has_value()) [[unlikely]] {
             auto error = optionalError.value();
             error.addCurrentLocationToErrorStack();
@@ -148,7 +148,7 @@ namespace ne {
             const auto pMtxAxisEventBindings = getAxisEventBindings();
             std::scoped_lock guard(pMtxAxisEventBindings->first);
 
-            pMtxAxisEventBindings->second[InputEventNames::moveForwardAxis] =
+            pMtxAxisEventBindings->second[InputEventIds::Axis::iMoveForward] =
                 [this](KeyboardModifiers modifiers, float input) {
                     if (!bIsMouseCursorCaptured) {
                         return;
@@ -156,7 +156,7 @@ namespace ne {
                     pEditorCamera->setFreeCameraForwardMovement(input);
                 };
 
-            pMtxAxisEventBindings->second[InputEventNames::moveRightAxis] =
+            pMtxAxisEventBindings->second[InputEventIds::Axis::iMoveRight] =
                 [this](KeyboardModifiers modifiers, float input) {
                     if (!bIsMouseCursorCaptured) {
                         return;
@@ -164,7 +164,7 @@ namespace ne {
                     pEditorCamera->setFreeCameraRightMovement(input);
                 };
 
-            pMtxAxisEventBindings->second[InputEventNames::moveUpAxis] =
+            pMtxAxisEventBindings->second[InputEventIds::Axis::iMoveUp] =
                 [this](KeyboardModifiers modifiers, float input) {
                     if (!bIsMouseCursorCaptured) {
                         return;
@@ -178,7 +178,7 @@ namespace ne {
             const auto pMtxActionEventBindings = getActionEventBindings();
             std::scoped_lock guard(pMtxActionEventBindings->first);
 
-            pMtxActionEventBindings->second[InputEventNames::captureMouseCursorAction] =
+            pMtxActionEventBindings->second[InputEventIds::Action::iCaptureMouseCursor] =
                 [this](KeyboardModifiers modifiers, bool bIsPressed) {
                     bIsMouseCursorCaptured = bIsPressed;
                     getWindow()->setCursorVisibility(!bIsMouseCursorCaptured);
@@ -190,13 +190,13 @@ namespace ne {
                     }
                 };
 
-            pMtxActionEventBindings->second[InputEventNames::increaseCameraSpeedAction] =
+            pMtxActionEventBindings->second[InputEventIds::Action::iIncreaseCameraSpeed] =
                 [this](KeyboardModifiers modifiers, bool bIsPressed) {
                     bShouldIncreaseCameraSpeed = bIsPressed;
                     updateCameraSpeed();
                 };
 
-            pMtxActionEventBindings->second[InputEventNames::decreaseCameraSpeedAction] =
+            pMtxActionEventBindings->second[InputEventIds::Action::iDecreaseCameraSpeed] =
                 [this](KeyboardModifiers modifiers, bool bIsPressed) {
                     bShouldDecreaseCameraSpeed = bIsPressed;
                     updateCameraSpeed();

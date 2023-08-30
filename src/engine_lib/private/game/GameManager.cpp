@@ -480,24 +480,28 @@ namespace ne {
     void GameManager::onKeyboardInput(KeyboardKey key, KeyboardModifiers modifiers, bool bIsPressedDown) {
         PROFILE_FUNC;
 
+        // Trigger raw (no events) input processing function.
         pGameInstance->onKeyboardInput(key, modifiers, bIsPressedDown);
 
+        // Trigger input events.
         triggerActionEvents(key, modifiers, bIsPressedDown);
-
         triggerAxisEvents(key, modifiers, bIsPressedDown);
     }
 
     void GameManager::onMouseInput(MouseButton button, KeyboardModifiers modifiers, bool bIsPressedDown) {
         PROFILE_FUNC;
 
+        // Trigger raw (no events) input processing function.
         pGameInstance->onMouseInput(button, modifiers, bIsPressedDown);
 
+        // Trigger input events.
         triggerActionEvents(button, modifiers, bIsPressedDown);
     }
 
     void GameManager::onMouseMove(int iXOffset, int iYOffset) {
         PROFILE_FUNC;
 
+        // Trigger game instance logic.
         pGameInstance->onMouseMove(iXOffset, iYOffset);
 
         // Call on nodes that receive input.
@@ -516,6 +520,7 @@ namespace ne {
     void GameManager::onMouseScrollMove(int iOffset) {
         PROFILE_FUNC;
 
+        // Trigger game instance logic.
         pGameInstance->onMouseScrollMove(iOffset);
 
         // Call on nodes that receive input.
@@ -595,20 +600,17 @@ namespace ne {
             return;
         }
 
-        // TODO: find a better approach:
-        // copying set of actions because it can be modified in onInputActionEvent by user code
+        // Copying array of actions because it can be modified in `onInputActionEvent` by user code
         // while we are iterating over it (the user should be able to modify it).
-        // This should not be that bad due to the fact that a key will usually have
-        // only one action associated with it.
-        // + update InputManager documentation.
-        const auto actionsCopy = it->second;
-        for (const auto& sActionName : actionsCopy) {
+        // This should not be that bad due to the fact that action events is just a small array of ints.
+        const auto vActionIds = it->second;
+        for (const auto& iActionId : vActionIds) {
             // Get state of the action.
-            const auto actionStateIt = inputManager.actionState.find(sActionName);
+            const auto actionStateIt = inputManager.actionState.find(iActionId);
             if (actionStateIt == inputManager.actionState.end()) [[unlikely]] {
                 // Unexpected, nothing to process.
                 Logger::get().error(
-                    fmt::format("input manager returned 0 states for \"{}\" action event", sActionName));
+                    fmt::format("input manager returned 0 states for action event with ID {}", iActionId));
                 continue;
             }
 
@@ -632,14 +634,14 @@ namespace ne {
             if (!bFoundKey) [[unlikely]] {
                 if (std::holds_alternative<KeyboardKey>(key)) {
                     Logger::get().error(fmt::format(
-                        "could not find the key `{}` in key states for \"{}\" action event",
+                        "could not find the key `{}` in key states for action event with ID {}",
                         getKeyName(std::get<KeyboardKey>(key)),
-                        sActionName));
+                        iActionId));
                 } else {
                     Logger::get().error(fmt::format(
-                        "could not find mouse button `{}` in key states for \"{}\" action event",
+                        "could not find mouse button `{}` in key states for action event with ID {}",
                         static_cast<int>(std::get<MouseButton>(key)),
-                        sActionName));
+                        iActionId));
                 }
             }
 
@@ -669,7 +671,7 @@ namespace ne {
             actionStatePair.second = bNewActionState;
 
             // Notify game instance.
-            pGameInstance->onInputActionEvent(sActionName, modifiers, bNewActionState);
+            pGameInstance->onInputActionEvent(iActionId, modifiers, bNewActionState);
 
             // Notify nodes that receive input.
             std::scoped_lock guard(mtxWorld.first);
@@ -678,7 +680,7 @@ namespace ne {
 
                 std::scoped_lock nodesGuard(pReceivingInputNodes->first);
                 for (const auto& pNode : pReceivingInputNodes->second) {
-                    pNode->onInputActionEvent(sActionName, modifiers, bNewActionState);
+                    pNode->onInputActionEvent(iActionId, modifiers, bNewActionState);
                 }
             }
         }
@@ -695,20 +697,17 @@ namespace ne {
             return;
         }
 
-        // TODO: find a better approach:
-        // copying set of axis because it can be modified in onInputAxisEvent by user code
+        // Copying array of axis events because it can be modified in `onInputAxisEvent` by user code
         // while we are iterating over it (the user should be able to modify it).
-        // This should not be that bad due to the fact that a key will usually have
-        // only one axis associated with it.
-        // + update InputManager documentation.
+        // This should not be that bad due to the fact that axis events is just a small array of ints.
         const auto axisCopy = it->second;
-        for (const auto& [sAxisName, iInput] : axisCopy) {
+        for (const auto& [iAxisEventId, bTriggersPlusInput] : axisCopy) {
             // Get state of the action.
-            auto axisStateIt = inputManager.axisState.find(sAxisName);
+            auto axisStateIt = inputManager.axisState.find(iAxisEventId);
             if (axisStateIt == inputManager.axisState.end()) [[unlikely]] {
                 // Unexpected.
                 Logger::get().error(
-                    fmt::format("input manager returned 0 states for \"{}\" axis event", sAxisName));
+                    fmt::format("input manager returned 0 states for axis event with ID {}", iAxisEventId));
                 continue;
             }
 
@@ -719,7 +718,7 @@ namespace ne {
             // Find an action key that matches the received one.
             bool bFound = false;
             for (auto& state : axisStatePair.first) {
-                if (iInput == 1 && state.plusKey == key) {
+                if (bTriggersPlusInput && state.plusKey == key) {
                     // Found it, it's registered as plus key.
                     // Mark key's state.
                     state.bIsPlusKeyPressed = bIsPressedDown;
@@ -727,7 +726,7 @@ namespace ne {
                     break;
                 }
 
-                if (iInput == -1 && state.minusKey == key) {
+                if (!bTriggersPlusInput && state.minusKey == key) {
                     // Found it, it's registered as minus key.
                     // Mark key's state.
                     state.bIsMinusKeyPressed = bIsPressedDown;
@@ -739,25 +738,25 @@ namespace ne {
             // Log an error if the key is not found.
             if (!bFound) [[unlikely]] {
                 Logger::get().error(fmt::format(
-                    "could not find key '{}' in key states for \"{}\" axis event",
+                    "could not find key `{}` in key states for axis event with ID {}",
                     getKeyName(key),
-                    sAxisName));
+                    iAxisEventId));
                 continue;
             }
 
             // Save action's state as key state.
-            int iAxisInputState = bIsPressedDown ? iInput : 0;
+            int iAxisInputState = bIsPressedDown ? (bTriggersPlusInput ? 1 : -1) : 0;
 
             if (!bIsPressedDown) {
                 // The key is not pressed but this does not mean that we need to broadcast
                 // a notification about state being equal to 0. See if other button are pressed.
                 for (const AxisState& state : axisStatePair.first) {
-                    if (iInput == -1 && state.bIsPlusKeyPressed) { // Look for plus button.
+                    if (!bTriggersPlusInput && state.bIsPlusKeyPressed) { // Look for plus button.
                         iAxisInputState = 1;
                         break;
                     }
 
-                    if (iInput == 1 && state.bIsMinusKeyPressed) { // Look for minus button.
+                    if (bTriggersPlusInput && state.bIsMinusKeyPressed) { // Look for minus button.
                         iAxisInputState = -1;
                         break;
                     }
@@ -775,7 +774,7 @@ namespace ne {
             axisStatePair.second = iAxisInputState;
 
             // Notify game instance.
-            pGameInstance->onInputAxisEvent(sAxisName, modifiers, static_cast<float>(iAxisInputState));
+            pGameInstance->onInputAxisEvent(iAxisEventId, modifiers, static_cast<float>(iAxisInputState));
 
             // Notify nodes that receive input.
             std::scoped_lock guard(mtxWorld.first);
@@ -784,7 +783,7 @@ namespace ne {
 
                 std::scoped_lock nodesGuard(pReceivingInputNodes->first);
                 for (const auto& pNode : pReceivingInputNodes->second) {
-                    pNode->onInputAxisEvent(sAxisName, modifiers, static_cast<float>(iAxisInputState));
+                    pNode->onInputAxisEvent(iAxisEventId, modifiers, static_cast<float>(iAxisInputState));
                 }
             }
         }

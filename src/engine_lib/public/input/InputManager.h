@@ -5,8 +5,8 @@
 #include <string>
 #include <variant>
 #include <optional>
-#include <set>
 #include <mutex>
+#include <vector>
 
 // Custom.
 #include "input/KeyboardKey.hpp"
@@ -37,15 +37,13 @@ namespace ne {
         std::variant<KeyboardKey, MouseButton> key;
     };
 
-    /**
-     * Holds current axis state.
-     */
+    /** Holds current axis event state. */
     class AxisState {
     public:
         AxisState() = delete;
 
         /**
-         * Initialize axis state.
+         * Initializes axis event state.
          *
          * @param plusKey  Key for '+1' input.
          * @param minusKey Key for '-1' input.
@@ -58,19 +56,21 @@ namespace ne {
             bIsMinusKeyPressed = false;
         }
 
-        /** Plus key (input value '+1'). */
+        /** Plus key (triggers input value '+1'). */
         KeyboardKey plusKey;
-        /** Plus key (input value '-1'). */
+
+        /** Plus key (triggers input value '-1'). */
         KeyboardKey minusKey;
 
-        /** Whether the plus key is pressed or not. */
+        /** Whether @ref plusKey is currently pressed or not. */
         bool bIsPlusKeyPressed;
-        /** Whether the minus key is pressed or not. */
+
+        /** Whether @ref minusKey is currently pressed or not. */
         bool bIsMinusKeyPressed;
     };
 
     /**
-     * Allows binding names with multiple input keys.
+     * Allows binding IDs with multiple input keys.
      *
      * Stored in GameInstance object.
      */
@@ -87,23 +87,23 @@ namespace ne {
          * Adds a new action event.
          *
          * Action event allows binding mouse button(s) and/or keyboard key(s)
-         * with a name. When one of the specified buttons is pressed you will receive
-         * an action event with the specified name.
+         * with an ID. When one of the specified buttons is pressed you will receive
+         * an action event with the specified ID.
          *
          * This way you can have an action "jump" with a space bar button
          * and can easily change input key space bar to something else if
          * the user wants to. For this, just call @ref modifyActionEventKey
          * to change one button of the action.
          *
-         * @param sActionName   Name of a new action.
-         * @param vKeys         Keyboard/mouse keys/buttons associated with this action.
+         * @param iActionId   Unique ID of the new action event.
+         * @param vKeys       Keyboard/mouse keys/buttons associated with this action.
          * If empty, no event will be added.
          *
          * @return Returns an error if passed 'vKeys' argument is empty or if an
-         * action with this name is already registered.
+         * action event with this ID is already registered.
          */
         [[nodiscard]] std::optional<Error> addActionEvent(
-            const std::string& sActionName, const std::vector<std::variant<KeyboardKey, MouseButton>>& vKeys);
+            unsigned int iActionId, const std::vector<std::variant<KeyboardKey, MouseButton>>& vKeys);
 
         /**
          * Adds a new axis event.
@@ -119,41 +119,41 @@ namespace ne {
          *
          * You can specify multiple pairs, for example: W/S buttons and up/down arrow keys.
          *
-         * @param sAxisName     Name of a new axis.
+         * @param iAxisEventId  Unique ID of the new axis event.
          * @param vAxis         A pair of keyboard buttons associated with this axis,
          * first button will be associated with '+1' input and the second with '-1' input.
          *
          * @return Returns an error if passed 'vAxis' argument is empty or if an
-         * axis event with this name is already registered.
+         * axis event with this ID is already registered.
          */
         [[nodiscard]] std::optional<Error> addAxisEvent(
-            const std::string& sAxisName, const std::vector<std::pair<KeyboardKey, KeyboardKey>>& vAxis);
+            unsigned int iAxisEventId, const std::vector<std::pair<KeyboardKey, KeyboardKey>>& vAxis);
 
         /**
          * Change action event's key.
          *
-         * @param sActionName             Name of the action event to modify.
-         * @param oldKey                  Key/button of the specified action event that you want to replace.
-         * @param newKey                  New key/button that should replace the old key.
+         * @param iActionId Unique ID of the action event to modify.
+         * @param oldKey    Key/button of the specified action event that you want to replace.
+         * @param newKey    New key/button that should replace the old key.
          *
          * @return Error if something went wrong.
          */
         [[nodiscard]] std::optional<Error> modifyActionEventKey(
-            const std::string& sActionName,
+            unsigned int iActionId,
             std::variant<KeyboardKey, MouseButton> oldKey,
             std::variant<KeyboardKey, MouseButton> newKey);
 
         /**
          * Change axis event's key.
          *
-         * @param sAxisName   Name of the axis event to modify.
-         * @param oldPair     A pair of buttons of the specified axis event that you want to replace.
-         * @param newPair     A new pair of buttons that should replace the old pair.
+         * @param iAxisEventId Unique ID of the axis event to modify.
+         * @param oldPair      A pair of buttons of the specified axis event that you want to replace.
+         * @param newPair      A new pair of buttons that should replace the old pair.
          *
          * @return Error if something went wrong.
          */
         [[nodiscard]] std::optional<Error> modifyAxisEventKey(
-            const std::string& sAxisName,
+            unsigned int iAxisEventId,
             std::pair<KeyboardKey, KeyboardKey> oldPair,
             std::pair<KeyboardKey, KeyboardKey> newPair);
 
@@ -191,7 +191,7 @@ namespace ne {
         [[nodiscard]] std::optional<Error> loadFromFile(std::string_view sFileName);
 
         /**
-         * Returns action and axis event names that the specified key is used in.
+         * Returns action and axis event IDs that the specified key is used in.
          *
          * You can use this function to detect conflicting keys. For example:
          * when the user wants to modify some event and you receive a 'newKey',
@@ -201,77 +201,77 @@ namespace ne {
          *
          * @param key A key to see where it's used.
          *
-         * @return A pair of action and axis event names that the specified key is used in.
+         * @return A pair of action and axis event IDs that the specified key is used in.
          */
-        std::pair<std::set<std::string>, std::set<std::string>>
+        std::pair<std::vector<unsigned int>, std::vector<unsigned int>>
         isKeyUsed(const std::variant<KeyboardKey, MouseButton>& key);
 
         /**
-         * Looks for an action event with the specified name, if one is found a copy of this action's
+         * Looks for an action event with the specified ID, if one is found a copy of this action's
          * keys will be returned. Changes made to the returned vector will not be applied to the
          * action, use @ref addActionEvent for this purpose.
          *
-         * @param sActionName   Name of the action to look for.
+         * @param iActionId Unique ID of an action to look for.
          *
-         * @return Keys associated with the action event if one was found.
+         * @return Empty if no keys were associated with this event, otherwise keys associated with the
+         * action event.
          */
-        std::optional<std::vector<std::variant<KeyboardKey, MouseButton>>>
-        getActionEvent(const std::string& sActionName);
+        std::vector<std::variant<KeyboardKey, MouseButton>> getActionEvent(unsigned int iActionId);
 
         /**
-         * Looks for an axis event with the specified name, if one is found a copy of this axis's
+         * Looks for an axis event with the specified ID, if one is found a copy of this axis's
          * keys will be returned. Changes made to the returned vector will not be applied to the
          * axis, use @ref addAxisEvent for this purpose.
          *
-         * @param sAxisName   Name of the axis to look for.
+         * @param iAxisEventId Unique ID of the axis event to look for.
          *
-         * @return Keys associated with the axis event if one was found.
+         * @return Empty if no keys were associated with this event, otherwise keys associated with the
+         * axis event.
          */
-        std::optional<std::vector<std::pair<KeyboardKey, KeyboardKey>>>
-        getAxisEvent(const std::string& sAxisName);
+        std::vector<std::pair<KeyboardKey, KeyboardKey>> getAxisEvent(unsigned int iAxisEventId);
 
         /**
          * Returns the current value of an axis event.
          * This value is equal to the last value passed to GameInstance::onInputAxisEvent.
          *
-         * @param sAxisName Name of the axis event that you used in @ref addAxisEvent.
+         * @param iAxisEventId Unique ID of the axis event that you used in @ref addAxisEvent.
          *
-         * @return Zero if axis event with this name does not exist, last input value otherwise.
+         * @return Zero if axis event with this ID does not exist, last input value otherwise.
          */
-        float getCurrentAxisEventState(const std::string& sAxisName);
+        float getCurrentAxisEventState(unsigned int iAxisEventId);
 
         /**
-         * Removes an action event with the specified name.
+         * Removes an action event with the specified ID.
          *
-         * @param sActionName   Name of the action to remove.
+         * @param iActionId Unique ID of the action to remove.
          *
          * @return `false` if the action was found and removed, `true` if not.
          */
-        bool removeActionEvent(const std::string& sActionName);
+        bool removeActionEvent(unsigned int iActionId);
 
         /**
-         * Removes an axis event with the specified name.
+         * Removes an axis event with the specified ID.
          *
-         * @param sAxisName   Name of the axis to remove.
+         * @param iAxisEventId Unique ID of the axis event to remove.
          *
          * @return `false` if the axis was found and removed, `true` if not.
          */
-        bool removeAxisEvent(const std::string& sAxisName);
+        bool removeAxisEvent(unsigned int iAxisEventId);
 
         /**
          * Returns all action events.
          *
-         * @return A copy of all actions.
+         * @return A copy of all action events.
          */
-        std::unordered_map<std::string, std::vector<std::variant<KeyboardKey, MouseButton>>>
+        std::unordered_map<unsigned int, std::vector<std::variant<KeyboardKey, MouseButton>>>
         getAllActionEvents();
 
         /**
          * Returns all axis events.
          *
-         * @return A copy of all axes.
+         * @return A copy of all axis events.
          */
-        std::unordered_map<std::string, std::vector<std::pair<KeyboardKey, KeyboardKey>>> getAllAxisEvents();
+        std::unordered_map<unsigned int, std::vector<std::pair<KeyboardKey, KeyboardKey>>> getAllAxisEvents();
 
         /**
          * Splits the string using a delimiter.
@@ -286,7 +286,7 @@ namespace ne {
 
     private:
         /**
-         * Adds a new action event. If an action with this name already exists it will be removed
+         * Adds a new action event. If an action with this ID already exists it will be removed
          * to register this new action event.
          *
          * @warning If this action is triggered with an old key right now
@@ -296,17 +296,17 @@ namespace ne {
          * associated with the key and then call these actions, because we operate
          * on a copy, removed elements will be reflected only on the next user input.
          *
-         * @param sActionName   Name of a new action.
-         * @param vKeys         Keyboard/mouse keys/buttons associated with this action.
+         * @param iActionId   Unique ID of an action event to overwrite.
+         * @param vKeys       Keyboard/mouse keys/buttons associated with this action.
          * If empty, no event will be added.
          *
-         * @return Returns an error if passed 'vKeys' argument is empty.
+         * @return Error if something went wrong.
          */
         [[nodiscard]] std::optional<Error> overwriteActionEvent(
-            const std::string& sActionName, const std::vector<std::variant<KeyboardKey, MouseButton>>& vKeys);
+            unsigned int iActionId, const std::vector<std::variant<KeyboardKey, MouseButton>>& vKeys);
 
         /**
-         * Adds a new axis event. If an axis event with this name already exists it will be removed
+         * Adds a new axis event. If an axis event with this ID already exists it will be removed
          * to register this new axis event.
          *
          * @warning If this axis event is triggered with an old key right now
@@ -316,39 +316,44 @@ namespace ne {
          * associated with the key and then call these axes, because we operate
          * on a copy, removed elements will be reflected only on the next user input.
          *
-         * @param sAxisName     Name of a new axis.
+         * @param iAxisEventId  Unique ID of an axis event to overwrite.
          * @param vAxis         A pair of keyboard buttons associated with this axis,
          * first button will be associated with '+1' input and the second with '-1' input.
          *
-         * @return Returns an error if passed 'vAxis' argument is empty or if an
-         * axis event with this name is already registered.
+         * @return Error if something went wrong.
          */
         [[nodiscard]] std::optional<Error> overwriteAxisEvent(
-            const std::string& sAxisName, const std::vector<std::pair<KeyboardKey, KeyboardKey>>& vAxis);
+            unsigned int iAxisEventId, const std::vector<std::pair<KeyboardKey, KeyboardKey>>& vAxis);
 
         /**
-         * Map of action events.
+         * Map that stores pairs of "key that triggers event" - "registered events".
+         *
          * TODO: add GamepadKey into variant when gamepad will be supported and save/load them in
          * TODO: saveToFile/loadFromFile (+ add tests).
          */
-        std::unordered_map<std::variant<KeyboardKey, MouseButton>, std::set<std::string>> actionEvents;
+        std::unordered_map<std::variant<KeyboardKey, MouseButton>, std::vector<unsigned int>> actionEvents;
 
-        /** Used to store current action state. TODO: gamepad */
-        std::unordered_map<std::string, std::pair<std::vector<ActionState>, bool /* action state */>>
+        /**
+         * Stores pairs of "action event ID" and a pair of "registered keys" - "last input
+         * (pressed/released)".
+         */
+        std::unordered_map<unsigned int, std::pair<std::vector<ActionState>, bool /* action state */>>
             actionState;
 
         /**
-         * Map of axis events.
-         * A pair of keyboard keys define values for +1 and -1 input.
-         * Map's key defines a keyboard key, map's value defines an array of actions with
-         * an input value (+1/-1).
+         * Map that stores pair of "keyboard key that triggers event" - "array of registered events
+         * with an input value that should be triggered (either +1 (`true`) or -1 (`false`))".
+         *
          * TODO: add GamepadAxis when gamepad will be supported and save/load
          * TODO: them in saveToFile/loadFromFile (+ add tests).
          */
-        std::unordered_map<KeyboardKey, std::set<std::pair<std::string, int>>> axisEvents;
+        std::unordered_map<KeyboardKey, std::vector<std::pair<unsigned int, bool>>> axisEvents;
 
-        /** Used to store current axis state. TODO: gamepad */
-        std::unordered_map<std::string, std::pair<std::vector<AxisState>, int /* axis state */>> axisState;
+        /**
+         * Stores pairs of "axis event ID" and a pair of "registered keys" - "last input in
+         * range [-1; 1]".
+         */
+        std::unordered_map<unsigned int, std::pair<std::vector<AxisState>, int /* axis state */>> axisState;
 
         /** Mutex for actions editing. */
         std::recursive_mutex mtxActionEvents;
@@ -357,9 +362,9 @@ namespace ne {
         std::recursive_mutex mtxAxisEvents;
 
         /** Section name to store action events, used in .toml files. */
-        const std::string_view sActionEventSectionName = "action event";
+        static inline const std::string_view sActionEventSectionName = "action event";
 
         /** Section name to store axis events, used in .toml files. */
-        const std::string_view sAxisEventSectionName = "axis event";
+        static inline const std::string_view sAxisEventSectionName = "axis event";
     };
 } // namespace ne

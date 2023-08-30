@@ -71,25 +71,31 @@ namespace ne {
         virtual void onBeforeNewFrame(float timeSincePrevCallInSec) override;
 
     private:
-        /** Stores unique names of input events. */
-        struct InputEventNames {
-            /** Name of the action event for capturing mouse cursor. */
-            static inline std::string captureMouseCursorAction = "captureMouseCursor";
+        /** Stores unique IDs of input events. */
+        struct InputEventIds {
+            /** Groups action events. */
+            struct Action {
+                /** ID of the action event for capturing mouse cursor. */
+                static constexpr unsigned int iCaptureMouseCursor = 0;
 
-            /** Name of the action event for increasing camera's speed. */
-            static inline std::string increaseCameraSpeedAction = "increaseCameraSpeed";
+                /** ID of the action event for increasing camera's speed. */
+                static constexpr unsigned int iIncreaseCameraSpeed = 1;
 
-            /** Name of the action event for decreasing camera's speed. */
-            static inline std::string decreaseCameraSpeedAction = "decreaseCameraSpeed";
+                /** ID of the action event for decreasing camera's speed. */
+                static constexpr unsigned int iDecreaseCameraSpeed = 2;
+            };
 
-            /** Name of the axis event for moving camera forward. */
-            static inline std::string moveForwardAxis = "moveEditorCameraForward";
+            /** Groups axis events. */
+            struct Axis {
+                /** ID of the axis event for moving camera forward. */
+                static constexpr unsigned int iMoveForward = 0;
 
-            /** Name of the axis event for moving camera right. */
-            static inline std::string moveRightAxis = "moveEditorCameraRight";
+                /** ID of the axis event for moving camera right. */
+                static constexpr unsigned int iMoveRight = 1;
 
-            /** Name of the axis event for moving camera up. */
-            static inline std::string moveUpAxis = "moveEditorCameraUp";
+                /** ID of the axis event for moving camera up. */
+                static constexpr unsigned int iMoveUp = 2;
+            };
         };
 
         /** Binds input events to control @ref pEditorCamera. */

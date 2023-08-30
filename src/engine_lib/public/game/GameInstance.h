@@ -281,7 +281,7 @@ namespace ne {
 
         /**
          * Returns a reference to the input manager this game instance is using.
-         * Input manager allows binding names with multiple input keys that
+         * Input manager allows binding IDs with multiple input keys that
          * you can receive in @ref onInputActionEvent.
          *
          * @return A pointer to the input manager, should not be deleted.
@@ -421,11 +421,11 @@ namespace ne {
          *
          * Example:
          * @code
-         * const auto sForwardActionName = "forward";
+         * const unsigned int iForwardActionId = 0;
          * const auto pMtxActionEvents = getActionEventBindings();
          *
          * std::scoped_lock guard(pMtxActionEvents->first);
-         * pMtxActionEvents->second[sForwardActionName] = [&](KeyboardModifiers modifiers, bool
+         * pMtxActionEvents->second[iForwardActionId] = [&](KeyboardModifiers modifiers, bool
          * bIsPressedDown) {
          *     moveForward(modifiers, bIsPressedDown);
          * };
@@ -435,7 +435,7 @@ namespace ne {
          */
         std::pair<
             std::recursive_mutex,
-            std::unordered_map<std::string, std::function<void(KeyboardModifiers, bool)>>>*
+            std::unordered_map<unsigned int, std::function<void(KeyboardModifiers, bool)>>>*
         getActionEventBindings();
 
         /**
@@ -450,11 +450,11 @@ namespace ne {
          *
          * Example:
          * @code
-         * const auto sForwardAxisName = "forward";
+         * const auto iForwardAxisEventId = 0;
          * const auto pMtxAxisEvents = getAxisEventBindings();
          *
          * std::scoped_lock guard(pMtxAxisEvents->first);
-         * pMtxAxisEvents->second[sForwardAxisName] = [&](KeyboardModifiers modifiers, float input) {
+         * pMtxAxisEvents->second[iForwardAxisEventId] = [&](KeyboardModifiers modifiers, float input) {
          *     moveForward(modifiers, input);
          * };
          * @endcode
@@ -465,7 +465,7 @@ namespace ne {
          */
         std::pair<
             std::recursive_mutex,
-            std::unordered_map<std::string, std::function<void(KeyboardModifiers, float)>>>*
+            std::unordered_map<unsigned int, std::function<void(KeyboardModifiers, float)>>>*
         getAxisEventBindings();
 
     private:
@@ -474,34 +474,33 @@ namespace ne {
          * input and the input key exists as an action event in the InputManager.
          * Called after @ref onKeyboardInput.
          *
-         * @param sActionName    Name of the input action event (from input manager).
+         * @param iActionId      Unique ID of the input action event (from input manager).
          * @param modifiers      Keyboard modifier keys.
          * @param bIsPressedDown Whether the key down event occurred or key up.
          */
-        void
-        onInputActionEvent(const std::string& sActionName, KeyboardModifiers modifiers, bool bIsPressedDown);
+        void onInputActionEvent(unsigned int iActionId, KeyboardModifiers modifiers, bool bIsPressedDown);
 
         /**
          * Called when a window that owns this game instance receives user
          * input and the input key exists as an axis event in the InputManager.
          * Called after @ref onKeyboardInput and after @ref onInputActionEvent.
          *
-         * @param sAxisName      Name of the input axis event (from input manager).
-         * @param modifiers      Keyboard modifier keys.
-         * @param input          A value in range [-1.0f; 1.0f] that describes input.
+         * @param iAxisEventId  Unique ID of the input axis event (from input manager).
+         * @param modifiers     Keyboard modifier keys.
+         * @param input         A value in range [-1.0f; 1.0f] that describes input.
          */
-        void onInputAxisEvent(const std::string& sAxisName, KeyboardModifiers modifiers, float input);
+        void onInputAxisEvent(unsigned int iAxisEventId, KeyboardModifiers modifiers, float input);
 
-        /** Map of action events that this GameInstance  is binded to. Must be used with mutex. */
+        /** Map of action events that this GameInstance is binded to. Must be used with mutex. */
         std::pair<
             std::recursive_mutex,
-            std::unordered_map<std::string, std::function<void(KeyboardModifiers, bool)>>>
+            std::unordered_map<unsigned int, std::function<void(KeyboardModifiers, bool)>>>
             mtxBindedActionEvents;
 
         /** Map of axis events that this GameInstance is binded to. Must be used with mutex. */
         std::pair<
             std::recursive_mutex,
-            std::unordered_map<std::string, std::function<void(KeyboardModifiers, float)>>>
+            std::unordered_map<unsigned int, std::function<void(KeyboardModifiers, float)>>>
             mtxBindedAxisEvents;
 
         /**

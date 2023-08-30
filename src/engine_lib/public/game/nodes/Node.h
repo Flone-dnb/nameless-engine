@@ -450,11 +450,11 @@ namespace ne RNAMESPACE() {
          *
          * Example:
          * @code
-         * const auto sForwardActionName = "forward";
+         * const auto iForwardActionId = 0;
          * const auto pActionEvents = getActionEventBindings();
          *
          * std::scoped_lock guard(pActionEvents->first);
-         * pActionEvents->second[sForwardActionName] = [&](KeyboardModifiers modifiers, bool bIsPressedDown) {
+         * pActionEvents->second[iForwardActionId] = [&](KeyboardModifiers modifiers, bool bIsPressedDown) {
          *     moveForward(modifiers, bIsPressedDown);
          * };
          * @endcode
@@ -463,7 +463,7 @@ namespace ne RNAMESPACE() {
          */
         std::pair<
             std::recursive_mutex,
-            std::unordered_map<std::string, std::function<void(KeyboardModifiers, bool)>>>*
+            std::unordered_map<unsigned int, std::function<void(KeyboardModifiers, bool)>>>*
         getActionEventBindings();
 
         /**
@@ -477,11 +477,11 @@ namespace ne RNAMESPACE() {
          *
          * Example:
          * @code
-         * const auto sForwardAxisName = "forward";
+         * const auto iForwardAxisEventId = 0;
          * const auto pAxisEvents = getAxisEventBindings();
          *
          * std::scoped_lock guard(pAxisEvents->first);
-         * pAxisEvents->second[sForwardAxisName] = [&](KeyboardModifiers modifiers, float input) {
+         * pAxisEvents->second[iForwardAxisEventId] = [&](KeyboardModifiers modifiers, float input) {
          *     moveForward(modifiers, input);
          * };
          * @endcode
@@ -492,7 +492,7 @@ namespace ne RNAMESPACE() {
          */
         std::pair<
             std::recursive_mutex,
-            std::unordered_map<std::string, std::function<void(KeyboardModifiers, float)>>>*
+            std::unordered_map<unsigned int, std::function<void(KeyboardModifiers, float)>>>*
         getAxisEventBindings();
 
         /**
@@ -659,12 +659,11 @@ namespace ne RNAMESPACE() {
          * @remark This function will not be called if @ref setIsReceivingInput was not enabled.
          * @remark This function will only be called while this node is spawned.
          *
-         * @param sActionName    Name of the input action event (from input manager).
+         * @param iActionId      Unique ID of the input action event (from input manager).
          * @param modifiers      Keyboard modifier keys.
          * @param bIsPressedDown Whether the key down event occurred or key up.
          */
-        void
-        onInputActionEvent(const std::string& sActionName, KeyboardModifiers modifiers, bool bIsPressedDown);
+        void onInputActionEvent(unsigned int iActionId, KeyboardModifiers modifiers, bool bIsPressedDown);
 
         /**
          * Called when a window that owns this game instance receives user
@@ -673,11 +672,11 @@ namespace ne RNAMESPACE() {
          * @remark This function will not be called if @ref setIsReceivingInput was not enabled.
          * @remark This function will only be called while this node is spawned.
          *
-         * @param sAxisName      Name of the input axis event (from input manager).
-         * @param modifiers      Keyboard modifier keys.
-         * @param input          A value in range [-1.0f; 1.0f] that describes input.
+         * @param iAxisEventId  Unique ID of the input axis event (from input manager).
+         * @param modifiers     Keyboard modifier keys.
+         * @param input         A value in range [-1.0f; 1.0f] that describes input.
          */
-        void onInputAxisEvent(const std::string& sAxisName, KeyboardModifiers modifiers, float input);
+        void onInputAxisEvent(unsigned int iAxisEventId, KeyboardModifiers modifiers, float input);
 
         /** Calls @ref onSpawning on this node and all of its child nodes. */
         void spawn();
@@ -766,13 +765,13 @@ namespace ne RNAMESPACE() {
         /** Map of action events that this node is binded to. Must be used with mutex. */
         std::pair<
             std::recursive_mutex,
-            std::unordered_map<std::string, std::function<void(KeyboardModifiers, bool)>>>
+            std::unordered_map<unsigned int, std::function<void(KeyboardModifiers, bool)>>>
             mtxBindedActionEvents;
 
         /** Map of axis events that this node is binded to. Must be used with mutex. */
         std::pair<
             std::recursive_mutex,
-            std::unordered_map<std::string, std::function<void(KeyboardModifiers, float)>>>
+            std::unordered_map<unsigned int, std::function<void(KeyboardModifiers, float)>>>
             mtxBindedAxisEvents;
 
         /**

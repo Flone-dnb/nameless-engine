@@ -855,43 +855,46 @@ namespace ne {
         return mtxIsReceivingInput.second;
     }
 
-    void Node::onInputActionEvent(
-        const std::string& sActionName, KeyboardModifiers modifiers, bool bIsPressedDown) {
+    void Node::onInputActionEvent(unsigned int iActionId, KeyboardModifiers modifiers, bool bIsPressedDown) {
         PROFILE_FUNC;
 
         std::scoped_lock guard(mtxBindedActionEvents.first);
 
-        const auto it = mtxBindedActionEvents.second.find(sActionName);
+        // See if this action event is registered.
+        const auto it = mtxBindedActionEvents.second.find(iActionId);
         if (it == mtxBindedActionEvents.second.end()) {
             return;
         }
 
+        // Trigger user logic.
         it->second(modifiers, bIsPressedDown);
     }
 
-    void Node::onInputAxisEvent(const std::string& sAxisName, KeyboardModifiers modifiers, float input) {
+    void Node::onInputAxisEvent(unsigned int iAxisEventId, KeyboardModifiers modifiers, float input) {
         PROFILE_FUNC;
 
         std::scoped_lock guard(mtxBindedAxisEvents.first);
 
-        const auto it = mtxBindedAxisEvents.second.find(sAxisName);
+        // See if this axis event is registered.
+        const auto it = mtxBindedAxisEvents.second.find(iAxisEventId);
         if (it == mtxBindedAxisEvents.second.end()) {
             return;
         }
 
+        // Trigger user logic.
         it->second(modifiers, input);
     }
 
     std::pair<
         std::recursive_mutex,
-        std::unordered_map<std::string, std::function<void(KeyboardModifiers, bool)>>>*
+        std::unordered_map<unsigned int, std::function<void(KeyboardModifiers, bool)>>>*
     Node::getActionEventBindings() {
         return &mtxBindedActionEvents;
     }
 
     std::pair<
         std::recursive_mutex,
-        std::unordered_map<std::string, std::function<void(KeyboardModifiers, float)>>>*
+        std::unordered_map<unsigned int, std::function<void(KeyboardModifiers, float)>>>*
     Node::getAxisEventBindings() {
         return &mtxBindedAxisEvents;
     }

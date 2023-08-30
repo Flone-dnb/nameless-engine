@@ -27,7 +27,7 @@ TEST_CASE("input event callbacks in GameInstance are triggered") {
                     const auto pActionEvents = getActionEventBindings();
                     std::scoped_lock guard(pActionEvents->first);
 
-                    pActionEvents->second["action1"] = [&](KeyboardModifiers modifiers, bool bIsPressedDown) {
+                    pActionEvents->second[0] = [&](KeyboardModifiers modifiers, bool bIsPressedDown) {
                         action1(modifiers, bIsPressedDown);
                     };
                 }
@@ -36,13 +36,13 @@ TEST_CASE("input event callbacks in GameInstance are triggered") {
                     const auto pAxisEvents = getAxisEventBindings();
                     std::scoped_lock guard(pAxisEvents->first);
 
-                    pAxisEvents->second["axis1"] = [&](KeyboardModifiers modifiers, float input) {
+                    pAxisEvents->second[0] = [&](KeyboardModifiers modifiers, float input) {
                         axis1(modifiers, input);
                     };
                 }
 
                 // Register events.
-                auto optionalError = getInputManager()->addActionEvent("action1", {KeyboardKey::KEY_W});
+                auto optionalError = getInputManager()->addActionEvent(0, {KeyboardKey::KEY_W});
                 if (optionalError.has_value()) {
                     auto error = optionalError.value();
                     error.addCurrentLocationToErrorStack();
@@ -50,7 +50,7 @@ TEST_CASE("input event callbacks in GameInstance are triggered") {
                     REQUIRE(false);
                 }
                 optionalError =
-                    getInputManager()->addAxisEvent("axis1", {{KeyboardKey::KEY_A, KeyboardKey::KEY_B}});
+                    getInputManager()->addAxisEvent(0, {{KeyboardKey::KEY_A, KeyboardKey::KEY_B}});
                 if (optionalError.has_value()) {
                     auto error = optionalError.value();
                     error.addCurrentLocationToErrorStack();

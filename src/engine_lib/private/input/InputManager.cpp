@@ -15,7 +15,8 @@
 
 namespace ne {
     std::optional<Error> InputManager::addActionEvent(
-        const std::string& sActionName, const std::vector<std::variant<KeyboardKey, MouseButton>>& vKeys) {
+        unsigned int iActionId, const std::vector<std::variant<KeyboardKey, MouseButton>>& vKeys) {
+        // Make sure there is an least one key specified to trigger this event.
         if (vKeys.empty()) {
             return Error("vKeys is empty");
         }
@@ -23,23 +24,25 @@ namespace ne {
         std::scoped_lock<std::recursive_mutex> guard(mtxActionEvents);
 
         // Check if an action with this name already exists.
-        auto vRegisteredActions = getAllActionEvents();
-
-        const auto action = vRegisteredActions.find(sActionName);
-        if (action != vRegisteredActions.end()) {
-            return Error(fmt::format("an action with the name '{}' already exists", sActionName));
+        const auto vRegisteredActions = getAllActionEvents();
+        const auto existingActionId = vRegisteredActions.find(iActionId);
+        if (existingActionId != vRegisteredActions.end()) {
+            return Error(fmt::format("an action with the ID {} already exists", iActionId));
         }
 
-        auto optional = overwriteActionEvent(sActionName, vKeys);
+        // Add action.
+        auto optional = overwriteActionEvent(iActionId, vKeys);
         if (optional.has_value()) {
             optional->addCurrentLocationToErrorStack();
             return std::move(optional.value());
         }
+
         return {};
     }
 
     std::optional<Error> InputManager::addAxisEvent(
-        const std::string& sAxisName, const std::vector<std::pair<KeyboardKey, KeyboardKey>>& vAxis) {
+        unsigned int iAxisEventId, const std::vector<std::pair<KeyboardKey, KeyboardKey>>& vAxis) {
+        // Make sure there is an least one key specified to trigger this event.
         if (vAxis.empty()) {
             return Error("vAxis is empty");
         }
@@ -49,12 +52,12 @@ namespace ne {
         // Check if an axis event with this name already exists.
         auto vRegisteredAxisEvents = getAllAxisEvents();
 
-        const auto action = vRegisteredAxisEvents.find(sAxisName);
+        const auto action = vRegisteredAxisEvents.find(iAxisEventId);
         if (action != vRegisteredAxisEvents.end()) {
-            return Error(fmt::format("an axis event with the name '{}' already exists", sAxisName));
+            return Error(fmt::format("an axis event with the ID {} already exists", iAxisEventId));
         }
 
-        auto optional = overwriteAxisEvent(sAxisName, vAxis);
+        auto optional = overwriteAxisEvent(iAxisEventId, vAxis);
         if (optional.has_value()) {
             optional->addCurrentLocationToErrorStack();
             return std::move(optional.value());
@@ -63,46 +66,48 @@ namespace ne {
     }
 
     std::optional<Error> InputManager::modifyActionEventKey(
-        const std::string& sActionName,
+        unsigned int iActionId,
         std::variant<KeyboardKey, MouseButton> oldKey,
         std::variant<KeyboardKey, MouseButton> newKey) {
         std::scoped_lock<std::recursive_mutex> guard(mtxActionEvents);
 
         // See if this action exists.
         auto actions = getAllActionEvents();
-        const auto it = actions.find(sActionName);
+        const auto it = actions.find(iActionId);
         if (it == actions.end()) {
-            return Error(fmt::format("no action with the name '{}' exists", sActionName));
+            return Error(fmt::format("no action with the ID {} exists", iActionId));
         }
 
-        auto vActionKeys = getActionEvent(sActionName).value();
+        auto vActionKeys = getActionEvent(iActionId);
 
         // Replace old key.
         std::ranges::replace(vActionKeys, oldKey, newKey);
 
         // Overwrite event with new keys.
-        auto optional = overwriteActionEvent(sActionName, vActionKeys);
+        auto optional = overwriteActionEvent(iActionId, vActionKeys);
         if (optional.has_value()) {
             optional->addCurrentLocationToErrorStack();
             return std::move(optional.value());
         }
+
         return {};
     }
 
     std::optional<Error> InputManager::modifyAxisEventKey(
-        const std::string& sAxisName,
+        unsigned int iAxisEventId,
         std::pair<KeyboardKey, KeyboardKey> oldPair,
         std::pair<KeyboardKey, KeyboardKey> newPair) {
         std::scoped_lock<std::recursive_mutex> guard(mtxAxisEvents);
 
         // See if this axis exists.
         auto axes = getAllAxisEvents();
-        const auto it = axes.find(sAxisName);
+        const auto it = axes.find(iAxisEventId);
         if (it == axes.end()) {
-            return Error(fmt::format("no axis with the name '{}' exists", sAxisName));
+            return Error(fmt::format("no axis event with the ID {} exists", iAxisEventId));
         }
 
-        auto vAxisKeys = getAxisEvent(sAxisName).value();
+        // Get keys of this event.
+        auto vAxisKeys = getAxisEvent(iAxisEventId);
 
         // See if old key exists.
         const auto foundIt =
@@ -115,7 +120,7 @@ namespace ne {
         std::ranges::replace(vAxisKeys, oldPair, newPair);
 
         // Overwrite event with new keys.
-        auto optional = overwriteAxisEvent(sAxisName, vAxisKeys);
+        auto optional = overwriteAxisEvent(iAxisEventId, vAxisKeys);
         if (optional.has_value()) {
             optional->addCurrentLocationToErrorStack();
             return std::move(optional.value());
@@ -125,13 +130,14 @@ namespace ne {
     }
 
     std::optional<Error> InputManager::saveToFile(std::string_view sFileName) {
+        // Get a copy of all registered events.
         const auto allActionEvents = getAllActionEvents();
         const auto allAxisEvents = getAllAxisEvents();
 
         ConfigManager manager;
 
         // Action events.
-        for (const auto& [sActionName, vActionKeys] : allActionEvents) {
+        for (const auto& [iActionId, vActionKeys] : allActionEvents) {
             std::string sActionKeysText;
 
             // Put all keys in a string.
@@ -147,11 +153,13 @@ namespace ne {
 
             sActionKeysText.pop_back(); // pop comma
 
-            manager.setValue<std::string>(sActionEventSectionName, sActionName, sActionKeysText);
+            // Set value.
+            manager.setValue<std::string>(
+                sActionEventSectionName, std::to_string(iActionId), sActionKeysText);
         }
 
         // Axis events.
-        for (const auto& [sAxisName, vAxisKeys] : allAxisEvents) {
+        for (const auto& [iAxisEventId, vAxisKeys] : allAxisEvents) {
             std::string sAxisKeysText;
 
             // Put all keys in a string.
@@ -164,7 +172,7 @@ namespace ne {
 
             sAxisKeysText.pop_back(); // pop comma
 
-            manager.setValue<std::string>(sAxisEventSectionName, sAxisName, sAxisKeysText);
+            manager.setValue<std::string>(sAxisEventSectionName, std::to_string(iAxisEventId), sAxisKeysText);
         }
 
         auto optional = manager.saveFile(ConfigCategory::SETTINGS, sFileName);
@@ -219,19 +227,42 @@ namespace ne {
                 error.addCurrentLocationToErrorStack();
                 return error;
             }
-            auto fileActionEvents = std::get<std::vector<std::string>>(std::move(variant));
+            auto vFileActionEventNames = std::get<std::vector<std::string>>(std::move(variant));
+
+            // Convert action event names to uints.
+            std::vector<unsigned int> vFileActionEvents;
+            for (const auto& sNumber : vFileActionEventNames) {
+                try {
+                    // First convert as unsigned long and see if it's out of range.
+                    const auto iUnsignedLong = std::stoul(sNumber);
+                    if (iUnsignedLong > UINT_MAX) {
+                        throw std::out_of_range(sNumber);
+                    }
+
+                    // Add new ID.
+                    vFileActionEvents.push_back(static_cast<unsigned int>(iUnsignedLong));
+                } catch (const std::exception& exception) {
+                    return Error(
+                        fmt::format("failed to convert \"{}\" to ID, error: {}", sNumber, exception.what()));
+                }
+            }
+
+            // Get a copy of all registered action events.
             auto currentActionEvents = getAllActionEvents();
 
             std::scoped_lock<std::recursive_mutex> guard(mtxActionEvents);
-            for (const auto& [sActionName, value] : currentActionEvents) {
-                // Look for this action in file.
-                auto it = std::ranges::find(fileActionEvents, sActionName);
-                if (it == fileActionEvents.end()) {
+
+            for (const auto& [iActionId, value] : currentActionEvents) {
+                // Look if this registered event exists in the events from file.
+                auto it = std::ranges::find(vFileActionEvents, iActionId);
+                if (it == vFileActionEvents.end()) {
+                    // We don't have such action event registered so don't import keys.
                     continue;
                 }
 
                 // Read keys from this action.
-                std::string keys = manager.getValue<std::string>(sActionEventSectionName, sActionName, "");
+                std::string keys =
+                    manager.getValue<std::string>(sActionEventSectionName, std::to_string(iActionId), "");
                 if (keys.empty()) {
                     continue;
                 }
@@ -272,7 +303,7 @@ namespace ne {
                 }
 
                 // Add keys (replace old ones).
-                optional = overwriteActionEvent(sActionName, vOutActionKeys);
+                optional = overwriteActionEvent(iActionId, vOutActionKeys);
                 if (optional.has_value()) {
                     optional->addCurrentLocationToErrorStack();
                     return std::move(optional.value());
@@ -288,19 +319,41 @@ namespace ne {
                 error.addCurrentLocationToErrorStack();
                 return error;
             }
-            auto fileAxisEvents = std::get<std::vector<std::string>>(std::move(variant));
-            auto currentAxisEvents = getAllAxisEvents();
+            auto vFileAxisEventNames = std::get<std::vector<std::string>>(std::move(variant));
+
+            // Convert axis event names to uints.
+            std::vector<unsigned int> vFileAxisEvents;
+            for (const auto& sNumber : vFileAxisEventNames) {
+                try {
+                    // First convert as unsigned long and see if it's out of range.
+                    const auto iUnsignedLong = std::stoul(sNumber);
+                    if (iUnsignedLong > UINT_MAX) {
+                        throw std::out_of_range(sNumber);
+                    }
+
+                    // Add new ID.
+                    vFileAxisEvents.push_back(static_cast<unsigned int>(iUnsignedLong));
+                } catch (const std::exception& exception) {
+                    return Error(
+                        fmt::format("failed to convert \"{}\" to ID, error: {}", sNumber, exception.what()));
+                }
+            }
+
+            // Get a copy of all registered axis events.
+            const auto currentAxisEvents = getAllAxisEvents();
 
             std::scoped_lock<std::recursive_mutex> guard(mtxAxisEvents);
-            for (const auto& [sAxisName, value] : currentAxisEvents) {
+
+            for (const auto& [iAxisEventId, value] : currentAxisEvents) {
                 // Look for this axis in file.
-                auto it = std::ranges::find(fileAxisEvents, sAxisName);
-                if (it == fileAxisEvents.end()) {
+                auto it = std::ranges::find(vFileAxisEvents, iAxisEventId);
+                if (it == vFileAxisEvents.end()) {
                     continue;
                 }
 
                 // Read keys from this axis.
-                std::string keys = manager.getValue<std::string>(sAxisEventSectionName, sAxisName, "");
+                std::string keys =
+                    manager.getValue<std::string>(sAxisEventSectionName, std::to_string(iAxisEventId), "");
                 if (keys.empty()) {
                     continue;
                 }
@@ -349,7 +402,7 @@ namespace ne {
                 }
 
                 // Add keys (replace old ones).
-                optional = overwriteAxisEvent(sAxisName, vOutAxisKeys);
+                optional = overwriteAxisEvent(iAxisEventId, vOutAxisKeys);
                 if (optional.has_value()) {
                     optional->addCurrentLocationToErrorStack();
                     return std::move(optional.value());
@@ -360,13 +413,13 @@ namespace ne {
         return {};
     }
 
-    std::pair<std::set<std::string>, std::set<std::string>>
+    std::pair<std::vector<unsigned int>, std::vector<unsigned int>>
     InputManager::isKeyUsed(const std::variant<KeyboardKey, MouseButton>& key) {
         std::scoped_lock<std::recursive_mutex> guard1(mtxActionEvents);
         std::scoped_lock<std::recursive_mutex> guard2(mtxAxisEvents);
 
-        std::set<std::string> vUsedActionEvents;
-        std::set<std::string> vUsedAxisEvents;
+        std::vector<unsigned int> vUsedActionEvents;
+        std::vector<unsigned int> vUsedAxisEvents;
 
         // Action events.
         const auto actionIt = actionEvents.find(key);
@@ -377,10 +430,11 @@ namespace ne {
         // Axis events.
         if (std::holds_alternative<KeyboardKey>(key)) {
             const auto keyboardKey = std::get<KeyboardKey>(key);
+
             const auto axisIt = axisEvents.find(keyboardKey);
             if (axisIt != axisEvents.end()) {
-                for (const auto& [sAxisName, value] : axisIt->second) {
-                    vUsedAxisEvents.insert(sAxisName);
+                for (const auto& [iAxisId, value] : axisIt->second) {
+                    vUsedAxisEvents.push_back(iAxisId);
                 }
             }
         }
@@ -388,42 +442,40 @@ namespace ne {
         return std::make_pair(vUsedActionEvents, vUsedAxisEvents);
     }
 
-    std::optional<std::vector<std::variant<KeyboardKey, MouseButton>>>
-    InputManager::getActionEvent(const std::string& sActionName) {
+    std::vector<std::variant<KeyboardKey, MouseButton>> InputManager::getActionEvent(unsigned int iActionId) {
         std::scoped_lock<std::recursive_mutex> guard(mtxActionEvents);
 
         std::vector<std::variant<KeyboardKey, MouseButton>> vKeys;
 
         // Look if this action exists, get all keys.
-        for (const auto& pair : actionEvents) {
-            auto foundIt = pair.second.find(sActionName);
-            if (foundIt == pair.second.end()) {
-                // Not found.
-                continue;
+        for (const auto& [key, vEvents] : actionEvents) {
+            for (const auto& iEventId : vEvents) {
+                if (iEventId == iActionId) {
+                    vKeys.push_back(key);
+                }
             }
-            vKeys.push_back(pair.first);
-        }
-
-        if (vKeys.empty()) {
-            return {};
         }
 
         return vKeys;
     }
 
-    std::optional<std::vector<std::pair<KeyboardKey, KeyboardKey>>>
-    InputManager::getAxisEvent(const std::string& sAxisName) {
+    std::vector<std::pair<KeyboardKey, KeyboardKey>> InputManager::getAxisEvent(unsigned int iAxisEventId) {
         std::scoped_lock<std::recursive_mutex> guard(mtxAxisEvents);
 
-        std::vector<std::pair<KeyboardKey, KeyboardKey>> vAxis;
+        std::vector<std::pair<KeyboardKey, KeyboardKey>> vAxisKeys;
 
         // Find only plus keys.
         std::vector<KeyboardKey> vPlusKeys;
-        for (const auto& pair : axisEvents) {
-            auto plusIt = pair.second.find(std::make_pair<std::string, int>(sAxisName.data(), 1));
+        for (const auto& [key, vEvents] : axisEvents) {
+            for (const auto& [iRegisteredAxisEventId, bTriggersPlusInput] : vEvents) {
+                if (!bTriggersPlusInput) {
+                    // Only looking at plus keys for now.
+                    continue;
+                }
 
-            if (plusIt != pair.second.end()) {
-                vPlusKeys.push_back(pair.first);
+                if (iRegisteredAxisEventId == iAxisEventId) {
+                    vPlusKeys.push_back(key);
+                }
             }
         }
 
@@ -433,43 +485,48 @@ namespace ne {
 
         // Add correct minus pair to each plus key using info from states.
         std::vector<KeyboardKey> vMinusKeys;
-        const std::pair<std::vector<AxisState>, int> currentState = axisState[sAxisName];
-        std::vector<AxisState> pairs = currentState.first;
+        const auto vAxisEventStates = axisState[iAxisEventId].first;
+
         for (const auto& plusKey : vPlusKeys) {
+            // Find a state that has this plus key.
             auto it = std::ranges::find_if(
-                pairs.begin(), pairs.end(), [&](const AxisState& item) { return item.plusKey == plusKey; });
-            if (it == pairs.end()) {
+                vAxisEventStates.begin(), vAxisEventStates.end(), [&](const AxisState& item) {
+                    return item.plusKey == plusKey;
+                });
+            if (it == vAxisEventStates.end()) [[unlikely]] {
                 Logger::get().error(
-                    fmt::format("can't find minus key for plus key in axis event '{}'", sAxisName));
+                    fmt::format("can't find minus key for plus key in axis event with ID {}", iAxisEventId));
                 return {};
             }
 
+            // Add found minus key from the state.
             vMinusKeys.push_back(it->minusKey);
         }
 
         // Check sizes.
-        if (vPlusKeys.size() != vMinusKeys.size()) {
+        if (vPlusKeys.size() != vMinusKeys.size()) [[unlikely]] {
             Logger::get().error(fmt::format(
                 "not equal size of plus and minus keys, found {} plus key(s) and {} minus(s) keys "
-                "for axis event {}",
+                "for axis event with ID {}",
                 vPlusKeys.size(),
                 vMinusKeys.size(),
-                sAxisName));
+                iAxisEventId));
             return {};
         }
 
         // Fill axis.
         for (size_t i = 0; i < vPlusKeys.size(); i++) {
-            vAxis.push_back(std::make_pair(vPlusKeys[i], vMinusKeys[i]));
+            vAxisKeys.push_back(std::make_pair(vPlusKeys[i], vMinusKeys[i]));
         }
 
-        return vAxis;
+        return vAxisKeys;
     }
 
-    float InputManager::getCurrentAxisEventState(const std::string& sAxisName) {
+    float InputManager::getCurrentAxisEventState(unsigned int iAxisEventId) {
         std::scoped_lock<std::recursive_mutex> guard(mtxAxisEvents);
 
-        const auto stateIt = axisState.find(sAxisName);
+        // Find the specified axis event by ID.
+        const auto stateIt = axisState.find(iAxisEventId);
         if (stateIt == axisState.end()) {
             return 0.0F;
         }
@@ -477,23 +534,34 @@ namespace ne {
         return static_cast<float>(stateIt->second.second);
     }
 
-    bool InputManager::removeActionEvent(const std::string& sActionName) {
+    bool InputManager::removeActionEvent(unsigned int iActionId) {
         std::scoped_lock<std::recursive_mutex> guard(mtxActionEvents);
 
         bool bFound = false;
 
         // Look if this action exists and remove all entries.
         for (auto it = actionEvents.begin(); it != actionEvents.end();) {
-            auto foundIt = it->second.find(sActionName);
-            if (foundIt == it->second.end()) {
-                // Not found.
-                ++it;
-                continue;
-            }
-            bFound = true;
-            it->second.erase(foundIt);
+            // Save the number of events right now.
+            const auto iSizeBefore = it->second.size();
 
+            // Remove all events with the specified ID.
+            const auto [first, last] = std::ranges::remove_if(
+                it->second, [&](const auto& iExistingActionId) { return iExistingActionId == iActionId; });
+            it->second.erase(first, last);
+
+            // Get the number of events right now.
+            const auto iSizeAfter = it->second.size();
+
+            // See if we removed something.
+            if (iSizeAfter < iSizeBefore) {
+                // Only change to `true`, don't do: `bFound = iSizeAfter < iSizeBefore` as this might
+                // change `bFound` from `true` to `false`.
+                bFound = true;
+            }
+
+            // Check if we need to remove this key from map.
             if (it->second.empty()) {
+                // Remove key for this event as there are no events registered to this key.
                 it = actionEvents.erase(it);
             } else {
                 ++it;
@@ -501,7 +569,7 @@ namespace ne {
         }
 
         // Remove action state.
-        const auto it = actionState.find(sActionName);
+        const auto it = actionState.find(iActionId);
         if (it != actionState.end()) {
             actionState.erase(it);
         }
@@ -509,30 +577,34 @@ namespace ne {
         return !bFound;
     }
 
-    bool InputManager::removeAxisEvent(const std::string& sAxisName) {
+    bool InputManager::removeAxisEvent(unsigned int iAxisEventId) {
         std::scoped_lock<std::recursive_mutex> guard(mtxAxisEvents);
 
         bool bFound = false;
 
         // Look for plus and minus keys.
         for (auto it = axisEvents.begin(); it != axisEvents.end();) {
-            auto plusIt = it->second.find(std::make_pair<std::string, int>(sAxisName.data(), 1));
-            auto minusIt = it->second.find(std::make_pair<std::string, int>(sAxisName.data(), -1));
-            if (plusIt == it->second.end() && minusIt == it->second.end()) {
-                // Not found.
-                ++it;
-                continue;
-            }
-            bFound = true;
+            // Save the number of events right now.
+            const auto iSizeBefore = it->second.size();
 
-            if (plusIt != it->second.end()) {
-                it->second.erase(plusIt);
-            }
-            if (minusIt != it->second.end()) {
-                it->second.erase(minusIt);
+            // Remove all events with the specified ID.
+            const auto [first, last] = std::ranges::remove_if(
+                it->second, [&](const auto& pair) { return pair.first == iAxisEventId; });
+            it->second.erase(first, last);
+
+            // Get the number of events right now.
+            const auto iSizeAfter = it->second.size();
+
+            // See if we removed something.
+            if (iSizeAfter < iSizeBefore) {
+                // Only change to `true`, don't do: `bFound = iSizeAfter < iSizeBefore` as this might
+                // change `bFound` from `true` to `false`.
+                bFound = true;
             }
 
+            // Check if we need to remove this key from map.
             if (it->second.empty()) {
+                // Remove key for this event as there are no events registered to this key.
                 it = axisEvents.erase(it);
             } else {
                 ++it;
@@ -540,7 +612,7 @@ namespace ne {
         }
 
         // Remove axis state.
-        const auto it = axisState.find(sAxisName);
+        const auto it = axisState.find(iAxisEventId);
         if (it != axisState.end()) {
             axisState.erase(it);
         }
@@ -548,11 +620,11 @@ namespace ne {
         return !bFound;
     }
 
-    std::unordered_map<std::string, std::vector<std::variant<KeyboardKey, MouseButton>>>
+    std::unordered_map<unsigned int, std::vector<std::variant<KeyboardKey, MouseButton>>>
     InputManager::getAllActionEvents() {
         std::scoped_lock<std::recursive_mutex> guard(mtxActionEvents);
 
-        std::unordered_map<std::string, std::vector<std::variant<KeyboardKey, MouseButton>>> actions;
+        std::unordered_map<unsigned int, std::vector<std::variant<KeyboardKey, MouseButton>>> actions;
 
         // Get all action names first.
         for (const auto& [key, sActionName] : actionEvents) {
@@ -573,23 +645,25 @@ namespace ne {
         return actions;
     }
 
-    std::unordered_map<std::string, std::vector<std::pair<KeyboardKey, KeyboardKey>>>
+    std::unordered_map<unsigned int, std::vector<std::pair<KeyboardKey, KeyboardKey>>>
     InputManager::getAllAxisEvents() {
         std::scoped_lock<std::recursive_mutex> guard(mtxAxisEvents);
 
-        std::unordered_map<std::string, std::vector<std::pair<KeyboardKey, KeyboardKey>>> axes;
+        std::unordered_map<unsigned int, std::vector<std::pair<KeyboardKey, KeyboardKey>>> axes;
 
         for (const auto& [key, keyAxisNames] : axisEvents) {
-            for (const auto& [sAxisName, value] : keyAxisNames) {
-                if (!axes.contains(sAxisName)) {
-                    // Get keys.
-                    auto option = getAxisEvent(sAxisName);
-                    if (option.has_value()) {
-                        axes[sAxisName] = std::move(option.value());
-                    } else {
-                        axes[sAxisName] = {};
-                        Logger::get().error(fmt::format("no axis event found by name '{}'", sAxisName));
-                    }
+            for (const auto& [iAxisId, value] : keyAxisNames) {
+                if (axes.contains(iAxisId)) {
+                    continue;
+                }
+
+                // Get keys of this axis event.
+                auto vKeys = getAxisEvent(iAxisId);
+                if (!vKeys.empty()) {
+                    axes[iAxisId] = std::move(vKeys);
+                } else {
+                    axes[iAxisId] = {};
+                    Logger::get().error(fmt::format("no axis event found by ID {}", iAxisId));
                 }
             }
         }
@@ -613,61 +687,65 @@ namespace ne {
     }
 
     std::optional<Error> InputManager::overwriteActionEvent(
-        const std::string& sActionName, const std::vector<std::variant<KeyboardKey, MouseButton>>& vKeys) {
+        unsigned int iActionId, const std::vector<std::variant<KeyboardKey, MouseButton>>& vKeys) {
         std::scoped_lock<std::recursive_mutex> guard(mtxActionEvents);
 
         // Remove all keys with this action if exists.
-        removeActionEvent(sActionName);
+        removeActionEvent(iActionId);
 
         // Add keys for actions.
         std::vector<ActionState> vActionState;
         for (const auto& key : vKeys) {
+            // Find action events that use this key.
             auto it = actionEvents.find(key);
             if (it == actionEvents.end()) {
-                actionEvents[key] = {sActionName};
+                actionEvents[key] = {iActionId};
             } else {
-                it->second.insert(sActionName);
+                it->second.push_back(iActionId);
             }
 
             vActionState.push_back(ActionState(key));
         }
 
-        // Add state.
-        actionState[sActionName] =
+        // Add/overwrite state.
+        actionState[iActionId] =
             std::make_pair<std::vector<ActionState>, bool>(std::move(vActionState), false);
 
         return {};
     }
 
     std::optional<Error> InputManager::overwriteAxisEvent(
-        const std::string& sAxisName, const std::vector<std::pair<KeyboardKey, KeyboardKey>>& vAxis) {
+        unsigned int iAxisEventId, const std::vector<std::pair<KeyboardKey, KeyboardKey>>& vAxis) {
         std::scoped_lock<std::recursive_mutex> guard(mtxAxisEvents);
 
         // Remove all axis with this name if exists.
-        removeAxisEvent(sAxisName);
+        removeAxisEvent(iAxisEventId);
 
         // Add keys.
         std::vector<AxisState> vAxisState;
         for (const auto& [plusKey, minusKey] : vAxis) {
+            // Find axis events that use this plus key.
             auto it = axisEvents.find(plusKey);
             if (it == axisEvents.end()) {
-                axisEvents[plusKey] = {std::make_pair<std::string, int>(sAxisName.data(), 1)};
+                axisEvents[plusKey] = std::vector<std::pair<unsigned int, bool>>{{iAxisEventId, true}};
             } else {
-                it->second.insert(std::make_pair<std::string, int>(sAxisName.data(), 1));
+                it->second.push_back(std::pair<unsigned int, bool>{iAxisEventId, true});
             }
 
+            // Find axis events that use this minus key.
             it = axisEvents.find(minusKey);
             if (it == axisEvents.end()) {
-                axisEvents[minusKey] = {std::make_pair<std::string, int>(sAxisName.data(), -1)};
+                axisEvents[minusKey] = std::vector<std::pair<unsigned int, bool>>{{iAxisEventId, false}};
             } else {
-                it->second.insert(std::make_pair<std::string, int>(sAxisName.data(), -1));
+                it->second.push_back(std::pair<unsigned int, bool>(iAxisEventId, false));
             }
 
+            // Add new keys to states.
             vAxisState.push_back(AxisState(plusKey, minusKey));
         }
 
-        // Add state.
-        axisState[sAxisName] = std::make_pair<std::vector<AxisState>, int>(std::move(vAxisState), 0);
+        // Add/overwrite event state.
+        axisState[iAxisEventId] = std::make_pair<std::vector<AxisState>, int>(std::move(vAxisState), 0);
 
         return {};
     }

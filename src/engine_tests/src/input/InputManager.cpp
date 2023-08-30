@@ -7,29 +7,29 @@
 TEST_CASE("add action") {
     using namespace ne;
 
-    const std::string sAction1Name = "test1";
+    const unsigned int iAction1Id = 0;
     const std::vector<std::variant<KeyboardKey, MouseButton>> vAction1Keys = {
         KeyboardKey::KEY_0, KeyboardKey::KEY_Z};
 
-    const std::string sAction2Name = "test2";
+    const unsigned int iAction2Id = 1;
     const std::vector<std::variant<KeyboardKey, MouseButton>> vAction2Keys = {MouseButton::LEFT};
 
     InputManager manager;
-    auto optional = manager.addActionEvent(sAction1Name, vAction1Keys);
+    auto optional = manager.addActionEvent(iAction1Id, vAction1Keys);
     REQUIRE(!optional.has_value());
-    optional = manager.addActionEvent(sAction2Name, vAction2Keys);
+    optional = manager.addActionEvent(iAction2Id, vAction2Keys);
     REQUIRE(!optional.has_value());
 
-    auto result1 = manager.getActionEvent(sAction1Name);
-    auto result2 = manager.getActionEvent(sAction2Name);
-    REQUIRE(result1.has_value());
-    REQUIRE(result2.has_value());
+    const auto vEvent1Keys = manager.getActionEvent(iAction1Id);
+    const auto vEvent2Keys = manager.getActionEvent(iAction2Id);
+    REQUIRE(!vEvent1Keys.empty());
+    REQUIRE(!vEvent2Keys.empty());
+
     // Compare keys (order may be different).
-    const auto vEvent1 = result1.value();
-    REQUIRE(vEvent1.size() == vAction1Keys.size());
+    REQUIRE(vEvent1Keys.size() == vAction1Keys.size());
     for (const auto& wantKey : vAction1Keys) {
         bool bFound = false;
-        for (const auto& foundKey : vEvent1) {
+        for (const auto& foundKey : vEvent1Keys) {
             if (foundKey == wantKey) {
                 bFound = true;
                 break;
@@ -37,12 +37,12 @@ TEST_CASE("add action") {
         }
         REQUIRE(bFound);
     }
+
     // Compare keys (order may be different).
-    const auto vEvent2 = result2.value();
-    REQUIRE(vEvent2.size() == vAction2Keys.size());
+    REQUIRE(vEvent2Keys.size() == vAction2Keys.size());
     for (const auto& wantKey : vAction2Keys) {
         bool bFound = false;
-        for (const auto& foundKey : vEvent2) {
+        for (const auto& foundKey : vEvent2Keys) {
             if (foundKey == wantKey) {
                 bFound = true;
                 break;
@@ -55,52 +55,52 @@ TEST_CASE("add action") {
 TEST_CASE("remove action") {
     using namespace ne;
 
-    const std::string sAction1Name = "test1";
+    const unsigned int iAction1Id = 0;
     const std::vector<std::variant<KeyboardKey, MouseButton>> vAction1Keys = {
         KeyboardKey::KEY_0, KeyboardKey::KEY_Z};
 
-    const std::string sAction2Name = "test2";
+    const unsigned int iAction2Id = 1;
     const std::vector<std::variant<KeyboardKey, MouseButton>> vAction2Keys = {MouseButton::LEFT};
 
     InputManager manager;
-    auto optional = manager.addActionEvent(sAction1Name, vAction1Keys);
+    auto optional = manager.addActionEvent(iAction1Id, vAction1Keys);
     REQUIRE(!optional.has_value());
-    optional = manager.addActionEvent(sAction2Name, vAction2Keys);
+    optional = manager.addActionEvent(iAction2Id, vAction2Keys);
     REQUIRE(!optional.has_value());
 
-    REQUIRE(!manager.removeActionEvent(sAction1Name));
+    REQUIRE(!manager.removeActionEvent(iAction1Id));
 
     REQUIRE(manager.getAllActionEvents().size() == 1);
 
-    auto result = manager.getActionEvent(sAction2Name);
-    REQUIRE(result.has_value());
-    REQUIRE(result.value() == vAction2Keys);
+    const auto vEventKeys = manager.getActionEvent(iAction2Id);
+    REQUIRE(!vEventKeys.empty());
+    REQUIRE(vEventKeys == vAction2Keys);
 }
 
-TEST_CASE("fail to add an action event with already used name") {
+TEST_CASE("fail to add an action event with already used ID") {
     using namespace ne;
 
-    const std::string sAction1Name = "test1";
+    const unsigned int iAction1Id = 0;
     const std::vector<std::variant<KeyboardKey, MouseButton>> vAction1Keys = {
         KeyboardKey::KEY_0, KeyboardKey::KEY_Z};
 
     const std::vector<std::variant<KeyboardKey, MouseButton>> vAction2Keys = {MouseButton::LEFT};
 
     InputManager manager;
-    auto optional = manager.addActionEvent(sAction1Name, vAction1Keys);
+    auto optional = manager.addActionEvent(iAction1Id, vAction1Keys);
     REQUIRE(!optional.has_value());
 
-    optional = manager.addActionEvent(sAction1Name, vAction2Keys);
+    optional = manager.addActionEvent(iAction1Id, vAction2Keys);
     REQUIRE(optional.has_value()); // should fail
 
-    const auto eventKeys = manager.getActionEvent(sAction1Name);
-    REQUIRE(eventKeys.has_value());
+    const auto vEventKeys = manager.getActionEvent(iAction1Id);
+    REQUIRE(!vEventKeys.empty());
+
     // Compare keys (order may be different).
-    const auto vEvent = eventKeys.value();
-    REQUIRE(vEvent.size() == vAction1Keys.size());
+    REQUIRE(vEventKeys.size() == vAction1Keys.size());
     for (const auto& wantKey : vAction1Keys) {
         bool bFound = false;
-        for (const auto& foundKey : vEvent) {
+        for (const auto& foundKey : vEventKeys) {
             if (foundKey == wantKey) {
                 bFound = true;
                 break;
@@ -113,7 +113,7 @@ TEST_CASE("fail to add an action event with already used name") {
 TEST_CASE("modify action") {
     using namespace ne;
 
-    const std::string sAction1Name = "test1";
+    const unsigned int iAction1Id = 0;
     const std::vector<std::variant<KeyboardKey, MouseButton>> vAction1Keys = {
         KeyboardKey::KEY_0, KeyboardKey::KEY_Z};
 
@@ -121,25 +121,23 @@ TEST_CASE("modify action") {
     const std::variant<KeyboardKey, MouseButton> newKey = MouseButton::LEFT;
 
     InputManager manager;
-    auto optional = manager.addActionEvent(sAction1Name, vAction1Keys);
+    auto optional = manager.addActionEvent(iAction1Id, vAction1Keys);
     REQUIRE(!optional.has_value());
 
-    optional = manager.modifyActionEventKey(sAction1Name, oldKey, newKey);
+    optional = manager.modifyActionEventKey(iAction1Id, oldKey, newKey);
     REQUIRE(!optional.has_value());
 
     const std::vector<std::variant<KeyboardKey, MouseButton>> vExpectedKeys = {
         KeyboardKey::KEY_0, MouseButton::LEFT};
 
-    const auto eventKeys = manager.getActionEvent(sAction1Name);
-    REQUIRE(eventKeys.has_value());
-
-    auto resultKeys = eventKeys.value();
+    const auto vEventKeys = manager.getActionEvent(iAction1Id);
+    REQUIRE(!vEventKeys.empty());
 
     // Compare keys (order may be different).
-    REQUIRE(resultKeys.size() == vExpectedKeys.size());
+    REQUIRE(vEventKeys.size() == vExpectedKeys.size());
     for (const auto& wantKey : vExpectedKeys) {
         bool bFound = false;
-        for (const auto& foundKey : resultKeys) {
+        for (const auto& foundKey : vEventKeys) {
             if (foundKey == wantKey) {
                 bFound = true;
                 break;
@@ -152,32 +150,32 @@ TEST_CASE("modify action") {
 TEST_CASE("add axis") {
     using namespace ne;
 
-    const std::string sAxis1Name = "test1";
+    const unsigned int iAxis1Id = 0;
     const std::vector<std::pair<KeyboardKey, KeyboardKey>> vAxes1 = {
         std::make_pair<KeyboardKey, KeyboardKey>(KeyboardKey::KEY_W, KeyboardKey::KEY_S)};
 
-    const std::string sAxis2Name = "test2";
+    const unsigned int iAxis2Id = 1;
     const std::vector<std::pair<KeyboardKey, KeyboardKey>> vAxes2 = {
         std::make_pair<KeyboardKey, KeyboardKey>(KeyboardKey::KEY_R, KeyboardKey::KEY_A),
         std::make_pair<KeyboardKey, KeyboardKey>(KeyboardKey::KEY_RIGHT, KeyboardKey::KEY_LEFT)};
 
     InputManager manager;
-    auto optional = manager.addAxisEvent(sAxis1Name, vAxes1);
+    auto optional = manager.addAxisEvent(iAxis1Id, vAxes1);
     REQUIRE(!optional.has_value());
-    optional = manager.addAxisEvent(sAxis2Name, vAxes2);
+    optional = manager.addAxisEvent(iAxis2Id, vAxes2);
     REQUIRE(!optional.has_value());
 
-    auto firstEvents = manager.getAxisEvent(sAxis1Name);
-    auto secondEvents = manager.getAxisEvent(sAxis2Name);
-    REQUIRE(firstEvents.has_value());
-    REQUIRE(secondEvents.has_value());
-    REQUIRE(firstEvents.value() == vAxes1);
+    auto vAxisEvent1Keys = manager.getAxisEvent(iAxis1Id);
+    auto vAxisEvent2Keys = manager.getAxisEvent(iAxis2Id);
+    REQUIRE(!vAxisEvent1Keys.empty());
+    REQUIRE(!vAxisEvent2Keys.empty());
+
     // Compare keys (order may be different).
-    const auto vEvent2 = secondEvents.value();
-    REQUIRE(vEvent2.size() == vAxes2.size());
+    REQUIRE(vAxisEvent1Keys == vAxes1);
+    REQUIRE(vAxisEvent2Keys.size() == vAxes2.size());
     for (const auto& wantAxis : vAxes2) {
         bool bFound = false;
-        for (const auto& foundAxis : vEvent2) {
+        for (const auto& foundAxis : vAxisEvent2Keys) {
             if (foundAxis == wantAxis) {
                 bFound = true;
                 break;
@@ -190,33 +188,33 @@ TEST_CASE("add axis") {
 TEST_CASE("remove axis") {
     using namespace ne;
 
-    const std::string sAxis1Name = "test1";
+    const unsigned int iAxis1Id = 0;
     const std::vector<std::pair<KeyboardKey, KeyboardKey>> vAxes1 = {
         std::make_pair<KeyboardKey, KeyboardKey>(KeyboardKey::KEY_W, KeyboardKey::KEY_S)};
 
-    const std::string sAxis2Name = "test2";
+    const unsigned int iAxis2Id = 1;
     const std::vector<std::pair<KeyboardKey, KeyboardKey>> vAxes2 = {
         std::make_pair<KeyboardKey, KeyboardKey>(KeyboardKey::KEY_R, KeyboardKey::KEY_A),
         std::make_pair<KeyboardKey, KeyboardKey>(KeyboardKey::KEY_RIGHT, KeyboardKey::KEY_LEFT)};
 
     InputManager manager;
-    auto optional = manager.addAxisEvent(sAxis1Name, vAxes1);
+    auto optional = manager.addAxisEvent(iAxis1Id, vAxes1);
     REQUIRE(!optional.has_value());
-    optional = manager.addAxisEvent(sAxis2Name, vAxes2);
+    optional = manager.addAxisEvent(iAxis2Id, vAxes2);
     REQUIRE(!optional.has_value());
 
-    REQUIRE(!manager.removeAxisEvent(sAxis1Name));
+    REQUIRE(!manager.removeAxisEvent(iAxis1Id));
 
     REQUIRE(manager.getAllAxisEvents().size() == 1);
 
-    auto result = manager.getAxisEvent(sAxis2Name);
-    REQUIRE(result.has_value());
+    auto vAxisEvent2keys = manager.getAxisEvent(iAxis2Id);
+    REQUIRE(!vAxisEvent2keys.empty());
+
     // Compare keys (order may be different).
-    const auto vEvent = result.value();
-    REQUIRE(vEvent.size() == vAxes2.size());
+    REQUIRE(vAxisEvent2keys.size() == vAxes2.size());
     for (const auto& wantAxis : vAxes2) {
         bool bFound = false;
-        for (const auto& foundAxis : vEvent) {
+        for (const auto& foundAxis : vAxisEvent2keys) {
             if (foundAxis == wantAxis) {
                 bFound = true;
                 break;
@@ -226,10 +224,10 @@ TEST_CASE("remove axis") {
     }
 }
 
-TEST_CASE("fail to add an axis event with already used name") {
+TEST_CASE("fail to add an axis event with already used ID") {
     using namespace ne;
 
-    const std::string sAxis1Name = "test1";
+    const unsigned int iAxis1Id = 0;
     const std::vector<std::pair<KeyboardKey, KeyboardKey>> vAxes1 = {
         std::make_pair<KeyboardKey, KeyboardKey>(KeyboardKey::KEY_W, KeyboardKey::KEY_S)};
 
@@ -238,21 +236,21 @@ TEST_CASE("fail to add an axis event with already used name") {
         std::make_pair<KeyboardKey, KeyboardKey>(KeyboardKey::KEY_RIGHT, KeyboardKey::KEY_LEFT)};
 
     InputManager manager;
-    auto optional = manager.addAxisEvent(sAxis1Name, vAxes1);
+    auto optional = manager.addAxisEvent(iAxis1Id, vAxes1);
     REQUIRE(!optional.has_value());
 
-    optional = manager.addAxisEvent(sAxis1Name, vAxes2);
+    optional = manager.addAxisEvent(iAxis1Id, vAxes2);
     REQUIRE(optional.has_value()); // should fail
 
-    const auto eventKeys = manager.getAxisEvent(sAxis1Name);
-    REQUIRE(eventKeys.has_value());
-    REQUIRE(eventKeys.value() == vAxes1);
+    const auto vEventKeys = manager.getAxisEvent(iAxis1Id);
+    REQUIRE(!vEventKeys.empty());
+    REQUIRE(vEventKeys == vAxes1);
 }
 
 TEST_CASE("modify axis") {
     using namespace ne;
 
-    const std::string sAxis1Name = "test1";
+    const unsigned int iAxis1Id = 0;
     const std::vector<std::pair<KeyboardKey, KeyboardKey>> vAxes1 = {
         std::make_pair<KeyboardKey, KeyboardKey>(KeyboardKey::KEY_W, KeyboardKey::KEY_S),
         std::make_pair<KeyboardKey, KeyboardKey>(KeyboardKey::KEY_UP, KeyboardKey::KEY_DOWN)};
@@ -263,25 +261,24 @@ TEST_CASE("modify axis") {
         std::make_pair<KeyboardKey, KeyboardKey>(KeyboardKey::KEY_A, KeyboardKey::KEY_D)};
 
     InputManager manager;
-    auto optional = manager.addAxisEvent(sAxis1Name, vAxes1);
+    auto optional = manager.addAxisEvent(iAxis1Id, vAxes1);
     REQUIRE(!optional.has_value());
 
-    optional = manager.modifyAxisEventKey(sAxis1Name, oldPair, newPair);
+    optional = manager.modifyAxisEventKey(iAxis1Id, oldPair, newPair);
     REQUIRE(!optional.has_value());
 
     const std::vector<std::pair<KeyboardKey, KeyboardKey>> vExpectedKeys = {
         std::make_pair<KeyboardKey, KeyboardKey>(KeyboardKey::KEY_A, KeyboardKey::KEY_D),
         std::make_pair<KeyboardKey, KeyboardKey>(KeyboardKey::KEY_UP, KeyboardKey::KEY_DOWN)};
 
-    const auto eventKeys = manager.getAxisEvent(sAxis1Name);
-    REQUIRE(eventKeys.has_value());
-    auto resultKeys = eventKeys.value();
+    const auto vEventKeys = manager.getAxisEvent(iAxis1Id);
+    REQUIRE(!vEventKeys.empty());
 
     // Compare keys (order may be different).
-    REQUIRE(resultKeys.size() == vExpectedKeys.size());
+    REQUIRE(vEventKeys.size() == vExpectedKeys.size());
     for (const auto& wantKey : vExpectedKeys) {
         bool bFound = false;
-        for (const auto& foundKey : resultKeys) {
+        for (const auto& foundKey : vEventKeys) {
             if (foundKey == wantKey) {
                 bFound = true;
                 break;
@@ -294,7 +291,7 @@ TEST_CASE("modify axis") {
 TEST_CASE("fail modify axis with wrong/flipped keys") {
     using namespace ne;
 
-    const std::string sAxis1Name = "test1";
+    const unsigned int iAxis1Id = 0;
     const std::vector<std::pair<KeyboardKey, KeyboardKey>> vAxes1 = {
         std::make_pair<KeyboardKey, KeyboardKey>(KeyboardKey::KEY_W, KeyboardKey::KEY_S),
         std::make_pair<KeyboardKey, KeyboardKey>(KeyboardKey::KEY_UP, KeyboardKey::KEY_DOWN)};
@@ -309,26 +306,25 @@ TEST_CASE("fail modify axis with wrong/flipped keys") {
         std::make_pair<KeyboardKey, KeyboardKey>(KeyboardKey::KEY_A, KeyboardKey::KEY_D)};
 
     InputManager manager;
-    auto optional = manager.addAxisEvent(sAxis1Name, vAxes1);
+    auto optional = manager.addAxisEvent(iAxis1Id, vAxes1);
     REQUIRE(!optional.has_value());
 
     // flipped pair
-    optional = manager.modifyAxisEventKey(sAxis1Name, oldPair1, newPair);
+    optional = manager.modifyAxisEventKey(iAxis1Id, oldPair1, newPair);
     REQUIRE(optional.has_value()); // should fail
 
     // wrong key
-    optional = manager.modifyAxisEventKey(sAxis1Name, oldPair2, newPair);
+    optional = manager.modifyAxisEventKey(iAxis1Id, oldPair2, newPair);
     REQUIRE(optional.has_value()); // should fail
 
-    const auto eventKeys = manager.getAxisEvent(sAxis1Name);
-    REQUIRE(eventKeys.has_value());
-    auto resultKeys = eventKeys.value();
+    const auto vEventKeys = manager.getAxisEvent(iAxis1Id);
+    REQUIRE(!vEventKeys.empty());
 
     // Compare keys (order may be different).
-    REQUIRE(resultKeys.size() == vAxes1.size());
+    REQUIRE(vEventKeys.size() == vAxes1.size());
     for (const auto& wantKey : vAxes1) {
         bool bFound = false;
-        for (const auto& foundKey : resultKeys) {
+        for (const auto& foundKey : vEventKeys) {
             if (foundKey == wantKey) {
                 bFound = true;
                 break;
@@ -342,14 +338,14 @@ TEST_CASE("test saving and loading") {
     using namespace ne;
 
     // Prepare default action/axis events.
-    const std::string sAction1Name = "action1";
+    const unsigned int iAction1Id = 0;
     const std::vector<std::variant<KeyboardKey, MouseButton>> vDefaultAction1Keys = {MouseButton::LEFT};
 
-    const std::string sAction2Name = "action2";
+    const unsigned int iAction2Id = 1;
     const std::vector<std::variant<KeyboardKey, MouseButton>> vDefaultAction2Keys = {
         MouseButton::RIGHT, KeyboardKey::KEY_R};
 
-    const std::string sAxis1Name = "axis1";
+    const unsigned int iAxis1Id = 0;
     const std::vector<std::pair<KeyboardKey, KeyboardKey>> vDefaultAxis1Keys = {
         std::make_pair<KeyboardKey, KeyboardKey>(KeyboardKey::KEY_A, KeyboardKey::KEY_D),
         std::make_pair<KeyboardKey, KeyboardKey>(KeyboardKey::KEY_UP, KeyboardKey::KEY_DOWN)};
@@ -378,17 +374,17 @@ TEST_CASE("test saving and loading") {
     {
         // Add default events to manager.
         InputManager manager;
-        auto optional = manager.addActionEvent(sAction1Name, vDefaultAction1Keys);
+        auto optional = manager.addActionEvent(iAction1Id, vDefaultAction1Keys);
         REQUIRE(!optional.has_value());
-        optional = manager.addActionEvent(sAction2Name, vDefaultAction2Keys);
+        optional = manager.addActionEvent(iAction2Id, vDefaultAction2Keys);
         REQUIRE(!optional.has_value());
-        optional = manager.addAxisEvent(sAxis1Name, vDefaultAxis1Keys);
+        optional = manager.addAxisEvent(iAxis1Id, vDefaultAxis1Keys);
         REQUIRE(!optional.has_value());
 
         // The user modifies some keys.
-        optional = manager.modifyActionEventKey(sAction2Name, oldAction2Key, newAction2Key);
+        optional = manager.modifyActionEventKey(iAction2Id, oldAction2Key, newAction2Key);
         REQUIRE(!optional.has_value());
-        optional = manager.modifyAxisEventKey(sAxis1Name, oldAxis1Key, newAxis1Key);
+        optional = manager.modifyAxisEventKey(iAxis1Id, oldAxis1Key, newAxis1Key);
         REQUIRE(!optional.has_value());
 
         // Save modified events.
@@ -404,11 +400,11 @@ TEST_CASE("test saving and loading") {
         // Next startup, we add default keys first.
         // Add default events to manager.
         InputManager manager;
-        auto optional = manager.addActionEvent(sAction1Name, vDefaultAction1Keys);
+        auto optional = manager.addActionEvent(iAction1Id, vDefaultAction1Keys);
         REQUIRE(!optional.has_value());
-        optional = manager.addActionEvent(sAction2Name, vDefaultAction2Keys);
+        optional = manager.addActionEvent(iAction2Id, vDefaultAction2Keys);
         REQUIRE(!optional.has_value());
-        optional = manager.addAxisEvent(sAxis1Name, vDefaultAxis1Keys);
+        optional = manager.addAxisEvent(iAxis1Id, vDefaultAxis1Keys);
         REQUIRE(!optional.has_value());
 
         // Load modified events.
@@ -422,10 +418,9 @@ TEST_CASE("test saving and loading") {
         // Check that keys are correct.
 
         // Action 1.
-        auto actionOptional = manager.getActionEvent(sAction1Name);
-        REQUIRE(actionOptional.has_value());
-        REQUIRE(actionOptional.value().size() == vExpectedAction1Keys.size());
-        auto vReadAction = actionOptional.value();
+        auto vReadAction = manager.getActionEvent(iAction1Id);
+        REQUIRE(!vReadAction.empty());
+        REQUIRE(vReadAction.size() == vExpectedAction1Keys.size());
 
         // Compare keys (order may be different).
         for (const auto& wantAction : vExpectedAction1Keys) {
@@ -440,10 +435,9 @@ TEST_CASE("test saving and loading") {
         }
 
         // Action 2.
-        actionOptional = manager.getActionEvent(sAction2Name);
-        REQUIRE(actionOptional.has_value());
-        REQUIRE(actionOptional.value().size() == vExpectedAction2Keys.size());
-        vReadAction = actionOptional.value();
+        vReadAction = manager.getActionEvent(iAction2Id);
+        REQUIRE(!vReadAction.empty());
+        REQUIRE(vReadAction.size() == vExpectedAction2Keys.size());
 
         // Compare keys (order may be different).
         for (const auto& wantAction : vExpectedAction2Keys) {
@@ -458,10 +452,9 @@ TEST_CASE("test saving and loading") {
         }
 
         // Axis 1.
-        auto axisOptional = manager.getAxisEvent(sAxis1Name);
-        REQUIRE(axisOptional.has_value());
-        REQUIRE(axisOptional.value().size() == vExpectedAxis1Keys.size());
-        auto vReadAxis = axisOptional.value();
+        auto vReadAxis = manager.getAxisEvent(iAxis1Id);
+        REQUIRE(!vReadAxis.empty());
+        REQUIRE(vReadAxis.size() == vExpectedAxis1Keys.size());
 
         // Compare keys (order may be different).
         for (const auto& wantAxis : vExpectedAxis1Keys) {
@@ -480,38 +473,62 @@ TEST_CASE("test saving and loading") {
 TEST_CASE("is key used") {
     using namespace ne;
 
-    const std::string sAction1Name = "test1";
+    const unsigned int iAction1Id = 0;
     const std::vector<std::variant<KeyboardKey, MouseButton>> vAction1Keys = {
         KeyboardKey::KEY_0, KeyboardKey::KEY_Z};
 
-    const std::string sAction2Name = "test2";
+    const unsigned int iAction2Id = 1;
     const std::vector<std::variant<KeyboardKey, MouseButton>> vAction2Keys = {KeyboardKey::KEY_LEFT};
 
-    const std::string sAxis2Name = "test2";
+    const unsigned int iAxis2Id = 0;
     const std::vector<std::pair<KeyboardKey, KeyboardKey>> vAxes2 = {
         std::make_pair<KeyboardKey, KeyboardKey>(KeyboardKey::KEY_R, KeyboardKey::KEY_A),
         std::make_pair<KeyboardKey, KeyboardKey>(KeyboardKey::KEY_RIGHT, KeyboardKey::KEY_LEFT)};
 
     InputManager manager;
-    auto optional = manager.addActionEvent(sAction1Name, vAction1Keys);
+    auto optional = manager.addActionEvent(iAction1Id, vAction1Keys);
     REQUIRE(!optional.has_value());
-    optional = manager.addActionEvent(sAction2Name, vAction2Keys);
+    optional = manager.addActionEvent(iAction2Id, vAction2Keys);
     REQUIRE(!optional.has_value());
-    optional = manager.addAxisEvent(sAxis2Name, vAxes2);
+    optional = manager.addAxisEvent(iAxis2Id, vAxes2);
     REQUIRE(!optional.has_value());
 
     // First test.
-    auto [actionEvents, axisEvents] = manager.isKeyUsed(KeyboardKey::KEY_LEFT);
-    REQUIRE(actionEvents.size() == 1);
-    REQUIRE(axisEvents.size() == 1);
+    auto [vActionEvent1Ids, vAxisEvents] = manager.isKeyUsed(KeyboardKey::KEY_LEFT);
+    REQUIRE(vActionEvent1Ids.size() == 1);
+    REQUIRE(vAxisEvents.size() == 1);
 
-    REQUIRE(actionEvents.find(sAction2Name) != actionEvents.end());
-    REQUIRE(axisEvents.find(sAxis2Name) != axisEvents.end());
+    // Find registered action event.
+    bool bFound = false;
+    for (const auto& iFoundActionId : vActionEvent1Ids) {
+        if (iFoundActionId == iAction2Id) {
+            bFound = true;
+            break;
+        }
+    }
+    REQUIRE(bFound);
+
+    // Find registered axis event.
+    for (const auto& iFoundActionId : vAxisEvents) {
+        if (iFoundActionId == iAxis2Id) {
+            bFound = true;
+            break;
+        }
+    }
+    REQUIRE(bFound);
 
     // Another test.
-    auto [actionEvents2, axisEvents2] = manager.isKeyUsed(KeyboardKey::KEY_0);
-    REQUIRE(actionEvents2.size() == 1);
-    REQUIRE(axisEvents2.empty());
+    auto [vActionEvent2Ids, vAxisEvents2] = manager.isKeyUsed(KeyboardKey::KEY_0);
+    REQUIRE(vActionEvent2Ids.size() == 1);
+    REQUIRE(vAxisEvents2.empty());
 
-    REQUIRE(actionEvents2.find(sAction1Name) != actionEvents2.end());
+    // Find registered action.
+    bFound = false;
+    for (const auto& iFoundActionId : vActionEvent2Ids) {
+        if (iFoundActionId == iAction1Id) {
+            bFound = true;
+            break;
+        }
+    }
+    REQUIRE(bFound);
 }

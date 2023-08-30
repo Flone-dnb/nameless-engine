@@ -1119,10 +1119,10 @@ The usual way to handle user input is by binding to action/axis events and doing
 
 Each input event (action/axis event) is a pair:
 - action event contains:
-  - action name (for example "MoveForward")
+  - action ID (`unsigned int`, for example 0, 1, 2, ...)
   - array of keys (for example key `W` and `ArrowUp`) that trigger the event
 - axis event contains:
-  - axis name (for example "MoveForward")
+  - axis ID (`unsigned int`, for example 0, 1, 2, ...)
   - array of key pairs (for example `W` and `S`, `ArrowUp` and `ArrowDown`) that trigger that event and define +1.0 and -1.0 states of the axis event
 
 Action events are used for input that can only have 2 states: pressed and not pressed (for example a jump action), and axis events are used for input that can have a "smooth"/floating state (from -1.0 to +1.0, think about gamepad thumbsticks or `W`/`S` button combination for moving forward/backward).
@@ -1145,6 +1145,20 @@ Mouse movement is handled using `GameInstance::onMouseMove` function or `Node::o
 
 ### Binding to input events in game instance
 
+Since input events are identified using unique IDs we should create a special struct for our input IDs:
+
+```Cpp
+struct InputEventIds {
+    struct Action {
+        static constexpr unsigned int iActionEvent1 = 0;
+    };
+
+    struct Axis {
+        static constexpr unsigned int iAxisEvent1 = 0;
+    };
+};
+```
+
 Let's see how we can bind to input events in our `GameInstance` class.
 
 ```Cpp
@@ -1152,13 +1166,13 @@ Let's see how we can bind to input events in our `GameInstance` class.
 
 void MyGameInstance::onGameStarted() {
     // Register action event.
-    auto optionalError = getInputManager()->addActionEvent("myActionEvent1", {KeyboardKey::KEY_F});
+    auto optionalError = getInputManager()->addActionEvent(InputEventIds::Action::iActionEvent1, {KeyboardKey::KEY_F});
     if (optionalError.has_value()) [[unlikely]] {
         // ... handle error ...
     }
-        
+    
     // Register axis event.
-    optionalError = getInputManager()->addAxisEvent("myAxisEvent1", {{KeyboardKey::KEY_A, KeyboardKey::KEY_D}});
+    optionalError = getInputManager()->addAxisEvent(InputEventIds::Axis::iAxisEvent1, {{KeyboardKey::KEY_A, KeyboardKey::KEY_D}});
     if (optionalError.has_value()) [[unlikely]] {
         // ... handle error ...
     }
@@ -1170,17 +1184,17 @@ void MyGameInstance::onGameStarted() {
         const auto pActionEvents = getActionEventBindings();
         std::scoped_lock guard(pActionEvents->first);
 
-        pActionEvents->second["myActionEvent1"] = [](KeyboardModifiers modifiers, bool bIsPressedDown) {
+        pActionEvents->second[InputEventIds::Action::iActionEvent1] = [](KeyboardModifiers modifiers, bool bIsPressedDown) {
             Logger::get().info(fmt::format("action event triggered, state: {}", bIsPressedDown));
         };
     }
 
     // Bind to axis events.
     {
-         const auto pAxisEvents = getAxisEventBindings();
+        const auto pAxisEvents = getAxisEventBindings();
         std::scoped_lock guard(pAxisEvents->first);
 
-        pAxisEvents->second["myAxisEvent1"] = [](KeyboardModifiers modifiers, float input) {
+        pAxisEvents->second[InputEventIds::Axis::iAxisEvent1] = [](KeyboardModifiers modifiers, float input) {
             Logger::get().info(fmt::format("axis event triggered, value: {}", input));
         };
     }
@@ -1207,10 +1221,21 @@ This is the most common use case for input events. The usual workflow goes like 
 Let's register 2 axis events in our game instance: one for moving right/left and one for moving forward/backward:
 
 ```Cpp
+struct InputEventIds {
+    struct Action {
+        static constexpr unsigned int iCloseApp = 0;
+    };
+
+    struct Axis {
+        static constexpr unsigned int iMoveRight = 0;
+        static constexpr unsigned int iMoveForward = 1;
+    };
+};
+
 void MyGameInstance::onGameStarted() {
     // Register "moveRight" axis event.
     auto optionalError =
-        getInputManager()->addAxisEvent("moveRight", {{KeyboardKey::KEY_D, KeyboardKey::KEY_A}});
+        getInputManager()->addAxisEvent(InputEventIds::Axis::iMoveRight, {{KeyboardKey::KEY_D, KeyboardKey::KEY_A}});
     if (optionalError.has_value()) [[unlikely]] {
         optionalError->addCurrentLocationToErrorStack();
         optionalError->showError();
@@ -1219,7 +1244,7 @@ void MyGameInstance::onGameStarted() {
 
     // Register "moveForward" axis event.
     optionalError =
-        getInputManager()->addAxisEvent("moveForward", {{KeyboardKey::KEY_W, KeyboardKey::KEY_S}});
+        getInputManager()->addAxisEvent(InputEventIds::Axis::iMoveForward, {{KeyboardKey::KEY_W, KeyboardKey::KEY_S}});
     if (optionalError.has_value()) [[unlikely]] {
         optionalError->addCurrentLocationToErrorStack();
         optionalError->showError();
@@ -1227,7 +1252,7 @@ void MyGameInstance::onGameStarted() {
     }
 
     // Register "closeApp" action event.
-    optionalError = getInputManager()->addActionEvent("closeApp", {KeyboardKey::KEY_ESCAPE});
+    optionalError = getInputManager()->addActionEvent(InputEventIds::Action::iCloseApp, {KeyboardKey::KEY_ESCAPE});
     if (optionalError.has_value()) [[unlikely]] {
         optionalError->addCurrentLocationToErrorStack();
         optionalError->showError();
@@ -1281,11 +1306,11 @@ FlyingCharacterNode::FlyingCharacterNode(const std::string& sNodeName) : Spatial
         const auto pAxisEvents = getAxisEventBindings();
         std::scoped_lock guard(pAxisEvents->first);
 
-        pAxisEvents->second["moveRight"] = [this](KeyboardModifiers modifiers, float input) {
+        pAxisEvents->second[InputEventIds::Axis::iMoveRight] = [this](KeyboardModifiers modifiers, float input) {
             lastInputDirection.x = input;
         };
 
-        pAxisEvents->second["moveForward"] = [this](KeyboardModifiers modifiers, float input) {
+        pAxisEvents->second[InputEventIds::Axis::iMoveForward] = [this](KeyboardModifiers modifiers, float input) {
             lastInputDirection.y = input;
         };
     }
@@ -1318,9 +1343,6 @@ void FlyingCharacterNode::onBeforeNewFrame(float timeSincePrevFrameInSec) {
     setWorldLocation(newWorldLocation);
 }
 ```
-
-Note
-> We use hardcoded strings such as "moveForward" and "moveRight" for simplicity of our examples, we expect that in your code you would create a struct with static strings of action/axis event names and reference your input events using those fields instead of duplicating your input event names.
 
 As you can see we have decided to apply input movement not instantly but once a frame. The motivation for this is that we now have `timeSincePrevFrameInSec` (also known as deltatime - time in seconds that has passed since the last frame was rendered) and we can eliminate a speed up on diagonal movement (length of the vector becomes ~1.41 on diagonal movement while we expect the length of the vector to be in the range [0.0; 1.0]).
 
@@ -1382,7 +1404,7 @@ FlyingCharacterNode::FlyingCharacterNode(const std::string& sNodeName) : Spatial
         const auto pActionEvents = getActionEventBindings();
         std::scoped_lock guard(pActionEvents->first);
 
-        pActionEvents->second["closeApp"] = [](KeyboardModifiers modifiers, bool bIsPressed) {
+        pActionEvents->second[InputEventIds::Action::iCloseApp] = [](KeyboardModifiers modifiers, bool bIsPressed) {
             getGameInstance()->getWindow()->close();
         };
     }
@@ -1591,7 +1613,7 @@ void MyGameInstance::onGameStarted(){
     std::make_pair<KeyboardKey, KeyboardKey>(KeyboardKey::KEY_W, KeyboardKey::KEY_S),
     std::make_pair<KeyboardKey, KeyboardKey>(KeyboardKey::KEY_UP, KeyboardKey::KEY_DOWN)};
 
-    auto optionalError = getInputManager()->addAxisEvent("MoveForward", vMoveForwardKeys);
+    auto optionalError = getInputManager()->addAxisEvent(InputEventIds::Axis::iMoveForward, vMoveForwardKeys);
     if (optionalError.has_value()){
         // ... handle error ...
     }
@@ -1615,7 +1637,7 @@ void MyGameInstance::onGameStarted(){
 }
 
 // Later, the user modifies some keys:
-optionalError = getInputManager()->modifyAxisEventKey("MoveForward", oldKey, newKey);
+optionalError = getInputManager()->modifyAxisEventKey(InputEventIds::Axis::iMoveForward, oldKey, newKey);
 if (optionalError.has_value()){
     // ... handle error ...
 }

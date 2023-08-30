@@ -70,26 +70,29 @@ namespace ne {
     }
 
     void GameInstance::onInputActionEvent(
-        const std::string& sActionName, KeyboardModifiers modifiers, bool bIsPressedDown) {
+        unsigned int iActionId, KeyboardModifiers modifiers, bool bIsPressedDown) {
         std::scoped_lock guard(mtxBindedActionEvents.first);
 
-        const auto it = mtxBindedActionEvents.second.find(sActionName);
+        // Find this event in the registered events.
+        const auto it = mtxBindedActionEvents.second.find(iActionId);
         if (it == mtxBindedActionEvents.second.end()) {
             return;
         }
 
+        // Call user logic.
         it->second(modifiers, bIsPressedDown);
     }
 
-    void
-    GameInstance::onInputAxisEvent(const std::string& sAxisName, KeyboardModifiers modifiers, float input) {
+    void GameInstance::onInputAxisEvent(unsigned int iAxisEventId, KeyboardModifiers modifiers, float input) {
         std::scoped_lock guard(mtxBindedAxisEvents.first);
 
-        const auto it = mtxBindedAxisEvents.second.find(sAxisName);
+        // Find this event in the registered events.
+        const auto it = mtxBindedAxisEvents.second.find(iAxisEventId);
         if (it == mtxBindedAxisEvents.second.end()) {
             return;
         }
 
+        // Call user logic.
         it->second(modifiers, input);
     }
 
@@ -128,14 +131,14 @@ namespace ne {
 
     std::pair<
         std::recursive_mutex,
-        std::unordered_map<std::string, std::function<void(KeyboardModifiers, bool)>>>*
+        std::unordered_map<unsigned int, std::function<void(KeyboardModifiers, bool)>>>*
     GameInstance::getActionEventBindings() {
         return &mtxBindedActionEvents;
     }
 
     std::pair<
         std::recursive_mutex,
-        std::unordered_map<std::string, std::function<void(KeyboardModifiers, float)>>>*
+        std::unordered_map<unsigned int, std::function<void(KeyboardModifiers, float)>>>*
     GameInstance::getAxisEventBindings() {
         return &mtxBindedAxisEvents;
     }

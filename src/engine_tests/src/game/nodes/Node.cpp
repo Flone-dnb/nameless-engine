@@ -706,7 +706,7 @@ TEST_CASE("input event callbacks in Node are triggered") {
                 const auto pActionEvents = getActionEventBindings();
                 std::scoped_lock guard(pActionEvents->first);
 
-                pActionEvents->second["action1"] = [&](KeyboardModifiers modifiers, bool bIsPressedDown) {
+                pActionEvents->second[0] = [&](KeyboardModifiers modifiers, bool bIsPressedDown) {
                     action1(modifiers, bIsPressedDown);
                 };
             }
@@ -715,7 +715,7 @@ TEST_CASE("input event callbacks in Node are triggered") {
                 const auto pAxisEvents = getAxisEventBindings();
                 std::scoped_lock guard(pAxisEvents->first);
 
-                pAxisEvents->second["axis1"] = [&](KeyboardModifiers modifiers, float input) {
+                pAxisEvents->second[0] = [&](KeyboardModifiers modifiers, float input) {
                     axis1(modifiers, input);
                 };
             }
@@ -750,7 +750,7 @@ TEST_CASE("input event callbacks in Node are triggered") {
                     Node::AttachmentRule::KEEP_RELATIVE); // queues a deferred task to be added to world
 
                 // Register events.
-                auto optionalError = getInputManager()->addActionEvent("action1", {KeyboardKey::KEY_W});
+                auto optionalError = getInputManager()->addActionEvent(0, {KeyboardKey::KEY_W});
                 if (optionalError.has_value()) {
                     auto error = optionalError.value();
                     error.addCurrentLocationToErrorStack();
@@ -758,7 +758,7 @@ TEST_CASE("input event callbacks in Node are triggered") {
                     REQUIRE(false);
                 }
                 optionalError =
-                    getInputManager()->addAxisEvent("axis1", {{KeyboardKey::KEY_A, KeyboardKey::KEY_B}});
+                    getInputManager()->addAxisEvent(0, {{KeyboardKey::KEY_A, KeyboardKey::KEY_B}});
                 if (optionalError.has_value()) {
                     auto error = optionalError.value();
                     error.addCurrentLocationToErrorStack();
@@ -1013,7 +1013,7 @@ TEST_CASE("input event callbacks and tick in Node is not triggered after despawn
                 const auto pActionEvents = getActionEventBindings();
                 std::scoped_lock guard(pActionEvents->first);
 
-                pActionEvents->second["action1"] = [&](KeyboardModifiers modifiers, bool bIsPressedDown) {
+                pActionEvents->second[0] = [&](KeyboardModifiers modifiers, bool bIsPressedDown) {
                     action1(modifiers, bIsPressedDown);
                 };
             }
@@ -1022,7 +1022,7 @@ TEST_CASE("input event callbacks and tick in Node is not triggered after despawn
                 const auto pAxisEvents = getAxisEventBindings();
                 std::scoped_lock guard(pAxisEvents->first);
 
-                pAxisEvents->second["axis1"] = [&](KeyboardModifiers modifiers, float input) {
+                pAxisEvents->second[0] = [&](KeyboardModifiers modifiers, float input) {
                     axis1(modifiers, input);
                 };
             }
@@ -1065,7 +1065,7 @@ TEST_CASE("input event callbacks and tick in Node is not triggered after despawn
                     Node::AttachmentRule::KEEP_RELATIVE); // queues a deferred task to be added to world
 
                 // Register events.
-                auto optionalError = getInputManager()->addActionEvent("action1", {KeyboardKey::KEY_W});
+                auto optionalError = getInputManager()->addActionEvent(0, {KeyboardKey::KEY_W});
                 if (optionalError.has_value()) {
                     auto error = optionalError.value();
                     error.addCurrentLocationToErrorStack();
@@ -1073,7 +1073,7 @@ TEST_CASE("input event callbacks and tick in Node is not triggered after despawn
                     REQUIRE(false);
                 }
                 optionalError =
-                    getInputManager()->addAxisEvent("axis1", {{KeyboardKey::KEY_A, KeyboardKey::KEY_B}});
+                    getInputManager()->addAxisEvent(0, {{KeyboardKey::KEY_A, KeyboardKey::KEY_B}});
                 if (optionalError.has_value()) {
                     auto error = optionalError.value();
                     error.addCurrentLocationToErrorStack();
@@ -1599,7 +1599,7 @@ TEST_CASE("disable receiving input while processing input") {
                 const auto pActionEvents = getActionEventBindings();
                 std::scoped_lock guard(pActionEvents->first);
 
-                pActionEvents->second["action1"] = [&](KeyboardModifiers modifiers, bool bIsPressedDown) {
+                pActionEvents->second[0] = [&](KeyboardModifiers modifiers, bool bIsPressedDown) {
                     action1(modifiers, bIsPressedDown);
                 };
             }
@@ -1633,7 +1633,7 @@ TEST_CASE("disable receiving input while processing input") {
                 getWorldRootNode()->addChildNode(pMyNode); // queues a deferred task to be added to world
 
                 // Register event.
-                auto optionalError = getInputManager()->addActionEvent("action1", {KeyboardKey::KEY_W});
+                auto optionalError = getInputManager()->addActionEvent(0, {KeyboardKey::KEY_W});
                 if (optionalError.has_value()) {
                     auto error = optionalError.value();
                     error.addCurrentLocationToErrorStack();
@@ -1692,7 +1692,7 @@ TEST_CASE("disable receiving input and despawn") {
                 const auto pActionEvents = getActionEventBindings();
                 std::scoped_lock guard(pActionEvents->first);
 
-                pActionEvents->second["action1"] = [&](KeyboardModifiers modifiers, bool bIsPressedDown) {
+                pActionEvents->second[0] = [&](KeyboardModifiers modifiers, bool bIsPressedDown) {
                     action1(modifiers, bIsPressedDown);
                 };
             }
@@ -1727,7 +1727,7 @@ TEST_CASE("disable receiving input and despawn") {
                 getWorldRootNode()->addChildNode(pMyNode); // queues a deferred task to be added to world
 
                 // Register event.
-                auto optionalError = getInputManager()->addActionEvent("action1", {KeyboardKey::KEY_W});
+                auto optionalError = getInputManager()->addActionEvent(0, {KeyboardKey::KEY_W});
                 if (optionalError.has_value()) {
                     auto error = optionalError.value();
                     error.addCurrentLocationToErrorStack();
@@ -1788,7 +1788,7 @@ TEST_CASE("enable receiving input and despawn") {
                 const auto pActionEvents = getActionEventBindings();
                 std::scoped_lock guard(pActionEvents->first);
 
-                pActionEvents->second["action1"] = [&](KeyboardModifiers modifiers, bool bIsPressedDown) {
+                pActionEvents->second[0] = [&](KeyboardModifiers modifiers, bool bIsPressedDown) {
                     action1(modifiers, bIsPressedDown);
                 };
             }
@@ -1823,7 +1823,7 @@ TEST_CASE("enable receiving input and despawn") {
                 getWorldRootNode()->addChildNode(pMyNode); // queues a deferred task to be added to world
 
                 // Register event.
-                auto optionalError = getInputManager()->addActionEvent("action1", {KeyboardKey::KEY_W});
+                auto optionalError = getInputManager()->addActionEvent(0, {KeyboardKey::KEY_W});
                 if (optionalError.has_value()) {
                     auto error = optionalError.value();
                     error.addCurrentLocationToErrorStack();
@@ -1882,7 +1882,7 @@ TEST_CASE("enable receiving input while spawned") {
                 const auto pActionEvents = getActionEventBindings();
                 std::scoped_lock guard(pActionEvents->first);
 
-                pActionEvents->second["action1"] = [&](KeyboardModifiers modifiers, bool bIsPressedDown) {
+                pActionEvents->second[0] = [&](KeyboardModifiers modifiers, bool bIsPressedDown) {
                     action1(modifiers, bIsPressedDown);
                 };
             }
@@ -1917,7 +1917,7 @@ TEST_CASE("enable receiving input while spawned") {
                 getWorldRootNode()->addChildNode(pMyNode); // queues a deferred task to be added to world
 
                 // Register event.
-                auto optionalError = getInputManager()->addActionEvent("action1", {KeyboardKey::KEY_W});
+                auto optionalError = getInputManager()->addActionEvent(0, {KeyboardKey::KEY_W});
                 if (optionalError.has_value()) {
                     auto error = optionalError.value();
                     error.addCurrentLocationToErrorStack();
@@ -1976,7 +1976,7 @@ TEST_CASE("quickly enable receiving input and disable while spawned") {
                 const auto pActionEvents = getActionEventBindings();
                 std::scoped_lock guard(pActionEvents->first);
 
-                pActionEvents->second["action1"] = [&](KeyboardModifiers modifiers, bool bIsPressedDown) {
+                pActionEvents->second[0] = [&](KeyboardModifiers modifiers, bool bIsPressedDown) {
                     action1(modifiers, bIsPressedDown);
                 };
             }
@@ -2012,7 +2012,7 @@ TEST_CASE("quickly enable receiving input and disable while spawned") {
                 getWorldRootNode()->addChildNode(pMyNode); // queues a deferred task to be added to world
 
                 // Register event.
-                auto optionalError = getInputManager()->addActionEvent("action1", {KeyboardKey::KEY_W});
+                auto optionalError = getInputManager()->addActionEvent(0, {KeyboardKey::KEY_W});
                 if (optionalError.has_value()) {
                     auto error = optionalError.value();
                     error.addCurrentLocationToErrorStack();
@@ -2072,7 +2072,7 @@ TEST_CASE("quickly disable receiving input and enable while spawned") {
                 const auto pActionEvents = getActionEventBindings();
                 std::scoped_lock guard(pActionEvents->first);
 
-                pActionEvents->second["action1"] = [&](KeyboardModifiers modifiers, bool bIsPressedDown) {
+                pActionEvents->second[0] = [&](KeyboardModifiers modifiers, bool bIsPressedDown) {
                     action1(modifiers, bIsPressedDown);
                 };
             }
@@ -2108,7 +2108,7 @@ TEST_CASE("quickly disable receiving input and enable while spawned") {
                 getWorldRootNode()->addChildNode(pMyNode); // queues a deferred task to be added to world
 
                 // Register event.
-                auto optionalError = getInputManager()->addActionEvent("action1", {KeyboardKey::KEY_W});
+                auto optionalError = getInputManager()->addActionEvent(0, {KeyboardKey::KEY_W});
                 if (optionalError.has_value()) {
                     auto error = optionalError.value();
                     error.addCurrentLocationToErrorStack();
@@ -2167,7 +2167,7 @@ TEST_CASE("input event callbacks are only triggered when input changed") {
                 const auto pActionEvents = getActionEventBindings();
                 std::scoped_lock guard(pActionEvents->first);
 
-                pActionEvents->second["action1"] = [&](KeyboardModifiers modifiers, bool bIsPressedDown) {
+                pActionEvents->second[0] = [&](KeyboardModifiers modifiers, bool bIsPressedDown) {
                     action1(modifiers, bIsPressedDown);
                 };
             }
@@ -2176,7 +2176,7 @@ TEST_CASE("input event callbacks are only triggered when input changed") {
                 const auto pAxisEvents = getAxisEventBindings();
                 std::scoped_lock guard(pAxisEvents->first);
 
-                pAxisEvents->second["axis1"] = [&](KeyboardModifiers modifiers, float input) {
+                pAxisEvents->second[0] = [&](KeyboardModifiers modifiers, float input) {
                     axis1(modifiers, input);
                 };
             }
@@ -2208,7 +2208,7 @@ TEST_CASE("input event callbacks are only triggered when input changed") {
                 getWorldRootNode()->addChildNode(pMyNode); // queues a deferred task to be added to world
 
                 // Register events.
-                auto optionalError = getInputManager()->addActionEvent("action1", {KeyboardKey::KEY_W});
+                auto optionalError = getInputManager()->addActionEvent(0, {KeyboardKey::KEY_W});
                 if (optionalError.has_value()) {
                     auto error = optionalError.value();
                     error.addCurrentLocationToErrorStack();
@@ -2216,7 +2216,7 @@ TEST_CASE("input event callbacks are only triggered when input changed") {
                     REQUIRE(false);
                 }
                 optionalError =
-                    getInputManager()->addAxisEvent("axis1", {{KeyboardKey::KEY_A, KeyboardKey::KEY_D}});
+                    getInputManager()->addAxisEvent(0, {{KeyboardKey::KEY_A, KeyboardKey::KEY_D}});
                 if (optionalError.has_value()) {
                     auto error = optionalError.value();
                     error.addCurrentLocationToErrorStack();

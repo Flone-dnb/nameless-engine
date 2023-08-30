@@ -419,9 +419,9 @@ namespace ne {
         return pCreatedRenderer;
     }
 
-    size_t Renderer::getFramesPerSecond() { return frameStats.iFramesPerSecond; }
+    size_t Renderer::getFramesPerSecond() const { return frameStats.iFramesPerSecond; }
 
-    float Renderer::getTimeSpentLastFrameWaitingForGpu() {
+    float Renderer::getTimeSpentLastFrameWaitingForGpu() const {
         return frameStats.timeSpentLastFrameWaitingForGpuInMs;
     }
 
@@ -491,16 +491,16 @@ namespace ne {
 
 #if defined(WIN32)
     void Renderer::nanosleep(long long iNanoseconds) {
-        iNanoseconds /= 100; // The time after which the state of the timer is to be set to signaled, in 100
-                             // nanosecond intervals.
+        iNanoseconds /= 100; // NOLINT: The time after which the state of the timer is to be set to signaled,
+                             // in 100 nanosecond intervals.
 
         // Prepare some variables to use.
-        HANDLE timer;
-        LARGE_INTEGER li;
+        HANDLE pTimer;
+        LARGE_INTEGER interval;
 
         // Create timer.
-        timer = CreateWaitableTimer(NULL, TRUE, NULL);
-        if (timer == NULL) [[unlikely]] {
+        pTimer = CreateWaitableTimer(NULL, TRUE, NULL);
+        if (pTimer == NULL) [[unlikely]] {
             Logger::get().error(fmt::format(
                 "failed to wait create a waitable timer for {} nanoseconds (error code: {})",
                 iNanoseconds,
@@ -508,9 +508,9 @@ namespace ne {
         }
 
         // Set timer.
-        li.QuadPart = -iNanoseconds;
-        if (SetWaitableTimer(timer, &li, 0, NULL, NULL, FALSE) == 0) [[unlikely]] {
-            CloseHandle(timer);
+        interval.QuadPart = -iNanoseconds;
+        if (SetWaitableTimer(pTimer, &interval, 0, NULL, NULL, FALSE) == 0) [[unlikely]] {
+            CloseHandle(pTimer);
             Logger::get().error(fmt::format(
                 "failed to set a waitable timer for {} nanoseconds (error code: {})",
                 iNanoseconds,
@@ -518,10 +518,10 @@ namespace ne {
         }
 
         // Wait for it to be signaled.
-        WaitForSingleObject(timer, INFINITE);
+        WaitForSingleObject(pTimer, INFINITE);
 
         // Delete timer.
-        CloseHandle(timer);
+        CloseHandle(pTimer);
     }
 #endif
 

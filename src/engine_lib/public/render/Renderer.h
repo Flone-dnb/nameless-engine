@@ -71,7 +71,7 @@ namespace ne {
          *
          * @return Zero if not calculated yet (wait at least 1 second), otherwise FPS.
          */
-        size_t getFramesPerSecond();
+        size_t getFramesPerSecond() const;
 
         /**
          * Returns time in milliseconds that was spent last frame waiting for GPU to catch up.
@@ -80,7 +80,7 @@ namespace ne {
          *
          * @return Time in milliseconds.
          */
-        float getTimeSpentLastFrameWaitingForGpu();
+        float getTimeSpentLastFrameWaitingForGpu() const;
 
         /**
          * Looks for video adapters (GPUs) that support this renderer.
@@ -507,6 +507,15 @@ namespace ne {
             GameManager* pGameManager,
             const std::vector<std::string>& vBlacklistedGpuNames);
 
+#if defined(WIN32)
+        /**
+         * Uses Windows' WaitableTimer to wait for the specified number of nanoseconds.
+         *
+         * @param iNanoseconds Nanoseconds to wait for.
+         */
+        static void nanosleep(long long iNanoseconds);
+#endif
+
         /** Looks for FPS limit setting in RenderSettings and update renderer's state. */
         void updateFpsLimitSetting();
 
@@ -521,15 +530,6 @@ namespace ne {
 
         /** Initializes @ref frameStats to be used. */
         void setupFrameStats();
-
-#if defined(WIN32)
-        /**
-         * Uses Windows' WaitableTimer to wait for the specified number of nanoseconds.
-         *
-         * @param iNanoseconds Nanoseconds to wait for.
-         */
-        void nanosleep(long long iNanoseconds);
-#endif
 
         /**
          * Initializes @ref mtxRenderSettings.

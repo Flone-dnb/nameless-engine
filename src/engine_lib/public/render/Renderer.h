@@ -365,9 +365,11 @@ namespace ne {
          * Called after some render setting is changed to recreate internal resources to match the current
          * settings.
          *
+         * @remark Derived classes must call parent's version first.
+         *
          * @return Error if something went wrong.
          */
-        [[nodiscard]] virtual std::optional<Error> onRenderSettingsChanged() = 0;
+        [[nodiscard]] virtual std::optional<Error> onRenderSettingsChanged();
 
         /**
          * Blocks the current thread until the GPU is finished using the specified frame resource.
@@ -455,6 +457,12 @@ namespace ne {
             /** The number of frames that the renderer produced in the last second. */
             size_t iFramesPerSecond = 0;
 
+            /** Time when last frame was started to be processed. */
+            std::chrono::steady_clock::time_point frameStartTime;
+
+            /** Not empty if FPS limit is set, defines time in nanoseconds that one frame should take. */
+            std::optional<double> timeToRenderFrameInNs = {};
+
             /**
              * Time (in milliseconds) that was spent last frame waiting for the GPU to finish using
              * the new frame resource.
@@ -499,6 +507,9 @@ namespace ne {
             GameManager* pGameManager,
             const std::vector<std::string>& vBlacklistedGpuNames);
 
+        /** Looks for FPS limit setting in RenderSettings and update renderer's state. */
+        void updateFpsLimitSetting();
+
         /**
          * Updates the current shader configuration (settings) based on the current value
          * from @ref getShaderConfiguration.
@@ -507,6 +518,18 @@ namespace ne {
          * will use new shader configuration.
          */
         void updateShaderConfiguration();
+
+        /** Initializes @ref frameStats to be used. */
+        void setupFrameStats();
+
+#if defined(WIN32)
+        /**
+         * Uses Windows' WaitableTimer to wait for the specified number of nanoseconds.
+         *
+         * @param iNanoseconds Nanoseconds to wait for.
+         */
+        void nanosleep(long long iNanoseconds);
+#endif
 
         /**
          * Initializes @ref mtxRenderSettings.

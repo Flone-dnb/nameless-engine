@@ -15,7 +15,11 @@
 #include "game/camera/CameraProperties.h"
 #include "misc/Profiler.hpp"
 #if defined(WIN32)
+#pragma comment(lib, "Winmm.lib")
 #include "render/directx/DirectXRenderer.h"
+#elif __linux__
+#include <unistd.h>
+#include <time.h>
 #endif
 
 // External.
@@ -137,25 +141,51 @@ namespace ne {
         using namespace std::chrono;
 
         // Get elapsed time.
-        const auto iElapsedTimeInSec =
+        const auto iTimeSinceFpsUpdateInSec =
             duration_cast<seconds>(steady_clock::now() - frameStats.timeAtLastFpsUpdate).count();
 
         // Count the new present call.
         frameStats.iPresentCountSinceFpsUpdate += 1;
 
         // See if 1 second has passed.
-        if (iElapsedTimeInSec < 1) {
-            return;
+        if (iTimeSinceFpsUpdateInSec >= 1) {
+            // Save FPS.
+            frameStats.iFramesPerSecond = frameStats.iPresentCountSinceFpsUpdate;
+
+            // Reset present count.
+            frameStats.iPresentCountSinceFpsUpdate = 0;
+
+            // Restart time.
+            frameStats.timeAtLastFpsUpdate = steady_clock::now();
         }
 
-        // Save FPS.
-        frameStats.iFramesPerSecond = frameStats.iPresentCountSinceFpsUpdate;
+        // Check if FPS limit is set.
+        if (frameStats.timeToRenderFrameInNs.has_value()) {
+            // Get frame time.
+            const auto frameTimeInNs =
+                duration<double, nanoseconds::period>(steady_clock::now() - frameStats.frameStartTime)
+                    .count();
 
-        // Reset present count.
-        frameStats.iPresentCountSinceFpsUpdate = 0;
+            // Check if the last frame was rendered too fast.
+            if (*frameStats.timeToRenderFrameInNs > frameTimeInNs) {
+                // Calculate time to wait.
+                const auto timeToWaitInNs = *frameStats.timeToRenderFrameInNs - frameTimeInNs;
 
-        // Restart time.
-        frameStats.timeAtLastFpsUpdate = steady_clock::now();
+#if defined(WIN32)
+                timeBeginPeriod(1);
+                nanosleep(static_cast<long long>(std::floor(timeToWaitInNs * 0.98))); // NOLINT
+                timeEndPeriod(1);
+#else
+                struct timespec tim, tim2;
+                tim.tv_sec = 0;
+                tim.tv_nsec = static_cast<long>(timeToWaitInNs);
+                nanosleep(&tim, &tim2);
+#endif
+            }
+        }
+
+        // Update frame start/end time.
+        frameStats.frameStartTime = steady_clock::now();
     }
 
     void Renderer::resetGpuResourceManager() {
@@ -186,6 +216,12 @@ namespace ne {
         Logger::get().info("explicitly resetting frame resources manager");
         Logger::get().flushToDisk();
         pFrameResourcesManager = nullptr;
+    }
+
+    std::optional<Error> Renderer::onRenderSettingsChanged() {
+        updateFpsLimitSetting();
+
+        return {};
     }
 
     std::unique_ptr<Renderer>
@@ -308,6 +344,20 @@ namespace ne {
         return VulkanRenderer::create(pGameManager, vBlacklistedGpuNames);
     }
 
+    void Renderer::updateFpsLimitSetting() {
+        // Get render setting.
+        const auto pMtxRenderSettings = getRenderSettings();
+        std::scoped_lock guard(pMtxRenderSettings->first);
+
+        // Update time to render a frame.
+        const auto iFpsLimit = pMtxRenderSettings->second->getFpsLimit();
+        if (iFpsLimit == 0) {
+            frameStats.timeToRenderFrameInNs = {};
+        } else {
+            frameStats.timeToRenderFrameInNs = 1000000000.0 / static_cast<double>(iFpsLimit); // NOLINT
+        }
+    }
+
     std::variant<std::unique_ptr<Renderer>, Error>
     Renderer::create(GameManager* pGameManager, std::optional<RendererType> preferredRenderer) {
         // Create a renderer.
@@ -363,8 +413,8 @@ namespace ne {
             return optionalError.value();
         }
 
-        // Start the FPS timer.
-        pCreatedRenderer->frameStats.timeAtLastFpsUpdate = std::chrono::steady_clock::now();
+        // Setup frame statistics.
+        pCreatedRenderer->setupFrameStats();
 
         return pCreatedRenderer;
     }
@@ -434,6 +484,47 @@ namespace ne {
         }
     }
 
+    void Renderer::setupFrameStats() {
+        frameStats.timeAtLastFpsUpdate = std::chrono::steady_clock::now();
+        frameStats.frameStartTime = std::chrono::steady_clock::now();
+    }
+
+#if defined(WIN32)
+    void Renderer::nanosleep(long long iNanoseconds) {
+        iNanoseconds /= 100; // The time after which the state of the timer is to be set to signaled, in 100
+                             // nanosecond intervals.
+
+        // Prepare some variables to use.
+        HANDLE timer;
+        LARGE_INTEGER li;
+
+        // Create timer.
+        timer = CreateWaitableTimer(NULL, TRUE, NULL);
+        if (timer == NULL) [[unlikely]] {
+            Logger::get().error(fmt::format(
+                "failed to wait create a waitable timer for {} nanoseconds (error code: {})",
+                iNanoseconds,
+                GetLastError()));
+        }
+
+        // Set timer.
+        li.QuadPart = -iNanoseconds;
+        if (SetWaitableTimer(timer, &li, 0, NULL, NULL, FALSE) == 0) [[unlikely]] {
+            CloseHandle(timer);
+            Logger::get().error(fmt::format(
+                "failed to set a waitable timer for {} nanoseconds (error code: {})",
+                iNanoseconds,
+                GetLastError()));
+        }
+
+        // Wait for it to be signaled.
+        WaitForSingleObject(timer, INFINITE);
+
+        // Delete timer.
+        CloseHandle(timer);
+    }
+#endif
+
     std::optional<Error> Renderer::initializeRenderSettings() {
         // Construct path to config file.
         const auto pathToConfigFile =
@@ -468,6 +559,9 @@ namespace ne {
 
         // Apply the configuration.
         mtxRenderSettings.second->notifyRendererAboutChangedSettings();
+
+        // Apply initial FPS limit setting.
+        updateFpsLimitSetting();
 
         return {};
     }

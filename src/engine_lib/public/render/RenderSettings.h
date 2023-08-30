@@ -41,6 +41,13 @@ namespace ne RNAMESPACE() {
         static std::filesystem::path getPathToConfigurationFile();
 
         /**
+         * Sets the maximum number of FPS that is allowed to be produced in a second.
+         *
+         * @param iNewFpsLimit Maximum allowed FPS, specify 0 to disable.
+         */
+        void setFpsLimit(unsigned int iNewFpsLimit);
+
+        /**
          * Sets anti-aliasing (AA) state.
          *
          * @warning Use @ref getMaxSupportedAntialiasingQuality to query for maximum supported AA quality,
@@ -102,6 +109,13 @@ namespace ne RNAMESPACE() {
          * @param preferredRenderer Renderer to prefer (test the first one) next time the game is started.
          */
         void setPreferredRenderer(RendererType preferredRenderer);
+
+        /**
+         * Returns the maximum number of FPS that is allowed to be produced in a second.
+         *
+         * @return Maximum allowed FPS, 0 means disabled.
+         */
+        unsigned int getFpsLimit() const;
 
         /**
          * Returns current anti-aliasing (AA) quality.
@@ -230,6 +244,14 @@ namespace ne RNAMESPACE() {
         /** Denominator of screen's refresh rate. */
         RPROPERTY(Serialize)
         unsigned int iRefreshRateDenominator = 0;
+
+        /**
+         * The maximum number of FPS that is allowed to be produced in a second.
+         *
+         * @remark Disabled if zero.
+         */
+        RPROPERTY(Serialize)
+        unsigned int iFpsLimit = 0;
 
         /** Name of the GPU to use. */
         RPROPERTY(Serialize)

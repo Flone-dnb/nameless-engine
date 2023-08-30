@@ -2427,8 +2427,15 @@ namespace ne {
         std::scoped_lock guard(*getRenderResourcesMutex());
         waitForGpuToFinishWorkUpToThisPoint();
 
+        // Call parent's version.
+        auto optionalError = Renderer::onRenderSettingsChanged();
+        if (optionalError.has_value()) [[unlikely]] {
+            optionalError->addCurrentLocationToErrorStack();
+            return optionalError;
+        }
+
         // Update MSAA sample count using render settings.
-        auto optionalError = updateMsaaSampleCount();
+        optionalError = updateMsaaSampleCount();
         if (optionalError.has_value()) {
             optionalError->addCurrentLocationToErrorStack();
             return optionalError;

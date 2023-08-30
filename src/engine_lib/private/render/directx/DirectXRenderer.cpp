@@ -1216,6 +1216,13 @@ namespace ne {
         std::scoped_lock guard(*getRenderResourcesMutex());
         waitForGpuToFinishWorkUpToThisPoint();
 
+        // Call parent's version.
+        auto optionalError = Renderer::onRenderSettingsChanged();
+        if (optionalError.has_value()) [[unlikely]] {
+            optionalError->addCurrentLocationToErrorStack();
+            return optionalError;
+        }
+
         // Get render settings.
         const auto pMtxRenderSettings = getRenderSettings();
         std::scoped_lock renderSettingsGuard(pMtxRenderSettings->first);
@@ -1224,7 +1231,7 @@ namespace ne {
         const auto iMsaaSampleCount = static_cast<int>(pMtxRenderSettings->second->getAntialiasingState());
 
         // Update supported AA quality level count.
-        auto optionalError = updateMsaaQualityLevelCount();
+        optionalError = updateMsaaQualityLevelCount();
         if (optionalError.has_value()) [[unlikely]] {
             optionalError->addCurrentLocationToErrorStack();
             return optionalError;

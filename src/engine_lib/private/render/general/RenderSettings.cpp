@@ -14,6 +14,31 @@ namespace ne {
         return ProjectPaths::getPathToEngineConfigsDirectory() / getConfigurationFileName(true);
     }
 
+    void RenderSettings::setFpsLimit(unsigned int iNewFpsLimit) {
+        if (iFpsLimit == iNewFpsLimit) {
+            return; // do nothing
+        }
+
+        // Log change.
+        Logger::get().info(fmt::format("FPS limit is being changed from {} to {}", iFpsLimit, iNewFpsLimit));
+
+        // Change.
+        iFpsLimit = iNewFpsLimit;
+
+        // Notify renderer.
+        notifyRendererAboutChangedSettings();
+
+        // Save.
+        auto optionalError = saveConfigurationToDisk();
+        if (optionalError.has_value()) {
+            auto error = optionalError.value();
+            error.addCurrentLocationToErrorStack();
+            Logger::get().error(fmt::format(
+                "failed to save new render setting configuration, error: \"{}\"",
+                error.getFullErrorMessage()));
+        }
+    }
+
     void RenderSettings::setAntialiasingState(MsaaState state) {
         const auto iNewSampleCount = static_cast<int>(state);
         if (iAntialiasingSampleCount == iNewSampleCount) {
@@ -155,7 +180,7 @@ namespace ne {
 
 #if defined(DEBUG)
         static_assert(
-            sizeof(RenderSettings) == 184, "consider adding new checks here"); // NOLINT: current class size
+            sizeof(RenderSettings) == 192, "consider adding new checks here"); // NOLINT: current class size
 #endif
     }
 
@@ -448,5 +473,7 @@ namespace ne {
 
         return {};
     }
+
+    unsigned int RenderSettings::getFpsLimit() const { return iFpsLimit; }
 
 } // namespace ne

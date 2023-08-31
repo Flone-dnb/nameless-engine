@@ -1,5 +1,8 @@
 #include "VulkanFrameResource.h"
 
+// Standard.
+#include <format>
+
 // Custom.
 #include "render/vulkan/VulkanRenderer.h"
 
@@ -85,7 +88,7 @@ namespace ne {
         // Create command buffers.
         auto result = vkAllocateCommandBuffers(pLogicalDevice, &commandBuffersInfo, &pCommandBuffer);
         if (result != VK_SUCCESS) [[unlikely]] {
-            return Error(fmt::format("failed to create command buffer, error: {}", string_VkResult(result)));
+            return Error(std::format("failed to create command buffer, error: {}", string_VkResult(result)));
         }
 
         // Describe fence.
@@ -96,7 +99,7 @@ namespace ne {
         // Create fence.
         result = vkCreateFence(pLogicalDevice, &fenceInfo, nullptr, &pFence);
         if (result != VK_SUCCESS) [[unlikely]] {
-            return Error(fmt::format("failed to create a fence, error: {}", string_VkResult(result)));
+            return Error(std::format("failed to create a fence, error: {}", string_VkResult(result)));
         }
 
         // Describe semaphore.
@@ -107,14 +110,14 @@ namespace ne {
         result =
             vkCreateSemaphore(pLogicalDevice, &semaphoreInfo, nullptr, &pSemaphoreSwapChainImageAcquired);
         if (result != VK_SUCCESS) [[unlikely]] {
-            return Error(fmt::format("failed to create a semaphore, error: {}", string_VkResult(result)));
+            return Error(std::format("failed to create a semaphore, error: {}", string_VkResult(result)));
         }
 
         // Create semaphore 2.
         result = vkCreateSemaphore(
             pLogicalDevice, &semaphoreInfo, nullptr, &pSemaphoreSwapChainImageDrawingFinished);
         if (result != VK_SUCCESS) [[unlikely]] {
-            return Error(fmt::format("failed to create a semaphore, error: {}", string_VkResult(result)));
+            return Error(std::format("failed to create a semaphore, error: {}", string_VkResult(result)));
         }
 
         // Save renderer.

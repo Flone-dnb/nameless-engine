@@ -2,6 +2,7 @@
 
 // Standard.
 #include <array>
+#include <format>
 
 // Custom.
 #include "game/GameManager.h"
@@ -21,9 +22,6 @@
 #include <unistd.h>
 #include <time.h>
 #endif
-
-// External.
-#include "fmt/core.h"
 
 namespace ne {
     Renderer::Renderer(GameManager* pGameManager) {
@@ -56,7 +54,7 @@ namespace ne {
         auto onProgress = [](size_t iCompiledShaderCount, size_t iTotalShadersToCompile) {};
         auto onError = [](ShaderDescription shaderDescription, std::variant<std::string, Error> error) {
             if (std::holds_alternative<std::string>(error)) {
-                const auto sErrorMessage = fmt::format(
+                const auto sErrorMessage = std::format(
                     "failed to compile shader \"{}\" due to the following compilation error:\n{}",
                     shaderDescription.sShaderName,
                     std::get<std::string>(std::move(error)));
@@ -65,7 +63,7 @@ namespace ne {
                 throw std::runtime_error(err.getFullErrorMessage());
             }
 
-            const auto sErrorMessage = fmt::format(
+            const auto sErrorMessage = std::format(
                 "failed to compile shader \"{}\" due to the following internal error:\n{}",
                 shaderDescription.sShaderName,
                 std::get<Error>(std::move(error)).getFullErrorMessage());
@@ -73,7 +71,7 @@ namespace ne {
             err.showError();
             MessageBox::info(
                 "Info",
-                fmt::format(
+                std::format(
                     "Try restarting the application or deleting the directory \"{}\", if this "
                     "does not help contact the developers.",
                     ShaderFilesystemPaths::getPathToShaderCacheDirectory().string()));
@@ -112,7 +110,7 @@ namespace ne {
             std::chrono::duration<float, std::chrono::seconds::period>(endTime - startTime).count();
 
         // Log time.
-        Logger::get().info(fmt::format("took {:.1f} sec. to compile engine shaders", timeTookInSec));
+        Logger::get().info(std::format("took {:.1f} sec. to compile engine shaders", timeTookInSec));
 
         return {};
     }
@@ -244,7 +242,7 @@ namespace ne {
                 if (std::holds_alternative<Error>(result)) {
                     auto error = std::get<Error>(std::move(result));
                     error.addCurrentLocationToErrorStack();
-                    Logger::get().error(fmt::format(
+                    Logger::get().error(std::format(
                         "failed to deserialize render settings from the file \"{}\", using default "
                         "settings instead, error: \"{}\"",
                         pathToConfigFile.string(),
@@ -274,7 +272,7 @@ namespace ne {
                 bLastGpuBlacklisted = false;
 
                 // Log test.
-                Logger::get().info(fmt::format(
+                Logger::get().info(std::format(
                     "attempting to initialize {} renderer to test if the hardware/OS supports it...",
                     pRendererName));
 
@@ -286,7 +284,7 @@ namespace ne {
 
                     if (sUsedGpuName.empty()) {
                         // Log failure (not an error).
-                        Logger::get().info(fmt::format(
+                        Logger::get().info(std::format(
                             "failed to initialize {} renderer, error: {}",
                             pRendererName,
                             error.getFullErrorMessage()));
@@ -299,7 +297,7 @@ namespace ne {
                     }
 
                     // Log failure (not an error).
-                    Logger::get().info(fmt::format(
+                    Logger::get().info(std::format(
                         "failed to initialize {} renderer using the GPU \"{}\", error: {}",
                         pRendererName,
                         sUsedGpuName,
@@ -309,7 +307,7 @@ namespace ne {
                     vBlacklistedGpuNames[static_cast<size_t>(rendererType)].push_back(sUsedGpuName);
                     bLastGpuBlacklisted = true;
                     Logger::get().info(
-                        fmt::format("blacklisting the GPU \"{}\" for this renderer", sUsedGpuName));
+                        std::format("blacklisting the GPU \"{}\" for this renderer", sUsedGpuName));
 
                     // Try the next renderer type, maybe it will be able to use this most suitable GPU
                     // (instead of switching to a less powerful GPU and trying to use it on this renderer).
@@ -318,7 +316,7 @@ namespace ne {
                 auto pRenderer = std::get<std::unique_ptr<Renderer>>(std::move(result));
 
                 // Log success.
-                Logger::get().info(fmt::format(
+                Logger::get().info(std::format(
                     "successfully initialized {} renderer, using {} renderer (used API version: {})",
                     pRendererName,
                     pRendererName,
@@ -363,7 +361,7 @@ namespace ne {
         // Create a renderer.
         auto pCreatedRenderer = createRenderer(pGameManager, preferredRenderer);
         if (pCreatedRenderer == nullptr) [[unlikely]] {
-            return Error(fmt::format(
+            return Error(std::format(
                 "unable to create a renderer because the hardware or the operating "
                 "system does not meet the engine requirements, make sure your "
                 "operating system and graphics drivers are updated and try again, "
@@ -372,10 +370,10 @@ namespace ne {
         }
 
         // Log amount of shader variants per shader pack.
-        Logger::get().info(fmt::format(
+        Logger::get().info(std::format(
             "using {} shader(s) per vertex shader pack",
             ShaderMacroConfigurations::validVertexShaderMacroConfigurations.size()));
-        Logger::get().info(fmt::format(
+        Logger::get().info(std::format(
             "using {} shader(s) per pixel shader pack",
             ShaderMacroConfigurations::validPixelShaderMacroConfigurations.size()));
 
@@ -501,7 +499,7 @@ namespace ne {
         // Create timer.
         pTimer = CreateWaitableTimer(NULL, TRUE, NULL);
         if (pTimer == NULL) [[unlikely]] {
-            Logger::get().error(fmt::format(
+            Logger::get().error(std::format(
                 "failed to wait create a waitable timer for {} nanoseconds (error code: {})",
                 iNanoseconds,
                 GetLastError()));
@@ -511,7 +509,7 @@ namespace ne {
         interval.QuadPart = -iNanoseconds;
         if (SetWaitableTimer(pTimer, &interval, 0, NULL, NULL, FALSE) == 0) [[unlikely]] {
             CloseHandle(pTimer);
-            Logger::get().error(fmt::format(
+            Logger::get().error(std::format(
                 "failed to set a waitable timer for {} nanoseconds (error code: {})",
                 iNanoseconds,
                 GetLastError()));
@@ -537,7 +535,7 @@ namespace ne {
             if (std::holds_alternative<Error>(result)) {
                 auto error = std::get<Error>(std::move(result));
                 error.addCurrentLocationToErrorStack();
-                Logger::get().error(fmt::format(
+                Logger::get().error(std::format(
                     "failed to deserialize render settings from the file \"{}\", using default "
                     "settings instead, error: \"{}\"",
                     pathToConfigFile.string(),

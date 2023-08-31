@@ -2,15 +2,13 @@
 
 // Standard.
 #include <ranges>
+#include <format>
 
 // Custom.
 #include "io/Logger.h"
 #include "materials/Shader.h"
 #include "materials/ShaderFilesystemPaths.hpp"
 #include "render/Renderer.h"
-
-// External.
-#include "fmt/core.h"
 
 namespace ne {
     std::variant<std::shared_ptr<ShaderPack>, Error> ShaderPack::createFromCache(
@@ -91,7 +89,7 @@ namespace ne {
 
         // Log finish.
         Logger::get().info(
-            fmt::format("successfully loaded shader \"{}\" from cache", shaderDescription.sShaderName));
+            std::format("successfully loaded shader \"{}\" from cache", shaderDescription.sShaderName));
 
         return pShaderPack;
     }
@@ -195,7 +193,7 @@ namespace ne {
 
         // Make sure the renderer's configuration was previously set.
         if (!mtxInternalResources.second.bIsRenderConfigurationSet) [[unlikely]] {
-            Error error(fmt::format(
+            Error error(std::format(
                 "render configuration for the shader \"{}\" was not set yet but the shader was already "
                 "requested",
                 sShaderName));
@@ -211,7 +209,7 @@ namespace ne {
             auto it = additionalConfiguration.find(macro);
             if (it != additionalConfiguration.end()) [[unlikely]] {
                 // Unexpected, potential error somewhere else.
-                Error error(fmt::format(
+                Error error(std::format(
                     "shader macro \"{}\" of the specified additional shader configuration "
                     "is already defined by the renderer",
                     convertShaderMacrosToText({macro})[0]));
@@ -233,7 +231,7 @@ namespace ne {
         auto it = mtxInternalResources.second.shadersInPack.find(targetShaderConfiguration);
         if (it == mtxInternalResources.second.shadersInPack.end()) [[unlikely]] {
             // Nothing found.
-            Error error(fmt::format(
+            Error error(std::format(
                 "unable to find a shader in shader pack \"{}\" that matches the specified shader "
                 "configuration: {}",
                 sShaderName,

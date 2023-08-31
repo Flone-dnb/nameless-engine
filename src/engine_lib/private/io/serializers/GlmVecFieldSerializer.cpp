@@ -1,10 +1,10 @@
 #include "io/serializers/GlmVecFieldSerializer.h"
 
+// Standard.
+#include <format>
+
 // Custom.
 #include "math/GLMath.hpp"
-
-// External.
-#include "fmt/core.h"
 
 namespace ne {
     bool GlmVecFieldSerializer::isFieldTypeSupported(const rfk::Field* pField) {
@@ -46,7 +46,7 @@ namespace ne {
             pTomlData->operator[](sSectionName).operator[](pFieldName) =
                 vecFloatToString(std::vector<float>{value.x, value.y, value.z, value.w});
         } else {
-            return Error(fmt::format(
+            return Error(std::format(
                 "The type \"{}\" of the specified field \"{}\" is not supported by this serializer.",
                 sFieldCanonicalTypeName,
                 pFieldName));
@@ -67,7 +67,7 @@ namespace ne {
         const auto pFieldName = pField->getName();
 
         if (!pTomlValue->is_array()) {
-            return Error(fmt::format(
+            return Error(std::format(
                 "The type \"{}\" of the specified field \"{}\" is supported by this serializer, "
                 "but the TOML value is not an array.",
                 sFieldCanonicalTypeName,
@@ -78,7 +78,7 @@ namespace ne {
             auto array = pTomlValue->as_array();
             std::vector<float> floatArray;
             if (array.size() != 2) {
-                return Error(fmt::format(
+                return Error(std::format(
                     "The type \"{}\" of the specified field \"{}\" is supported by this serializer, "
                     "but the TOML value (array) has incorrect size.",
                     sFieldCanonicalTypeName,
@@ -86,7 +86,7 @@ namespace ne {
             }
             for (const auto& item : array) {
                 if (!item.is_string()) {
-                    return Error(fmt::format(
+                    return Error(std::format(
                         "The type \"{}\" of the specified field \"{}\" is supported by this serializer, "
                         "but the TOML value is not string.",
                         sFieldCanonicalTypeName,
@@ -95,7 +95,7 @@ namespace ne {
                 try {
                     floatArray.push_back(std::stof(item.as_string().str));
                 } catch (std::exception& ex) {
-                    return Error(fmt::format(
+                    return Error(std::format(
                         "The type \"{}\" of the specified field \"{}\" is supported by this serializer, "
                         "but an exception occurred while trying to convert a string to a float: {}",
                         sFieldCanonicalTypeName,
@@ -113,7 +113,7 @@ namespace ne {
             auto array = pTomlValue->as_array();
             std::vector<float> floatArray;
             if (array.size() != 3) {
-                return Error(fmt::format(
+                return Error(std::format(
                     "The type \"{}\" of the specified field \"{}\" is supported by this serializer, "
                     "but the TOML value (array) has incorrect size.",
                     sFieldCanonicalTypeName,
@@ -121,7 +121,7 @@ namespace ne {
             }
             for (const auto& item : array) {
                 if (!item.is_string()) {
-                    return Error(fmt::format(
+                    return Error(std::format(
                         "The type \"{}\" of the specified field \"{}\" is supported by this serializer, "
                         "but the TOML value is not string.",
                         sFieldCanonicalTypeName,
@@ -130,7 +130,7 @@ namespace ne {
                 try {
                     floatArray.push_back(std::stof(item.as_string().str));
                 } catch (std::exception& ex) {
-                    return Error(fmt::format(
+                    return Error(std::format(
                         "The type \"{}\" of the specified field \"{}\" is supported by this serializer, "
                         "but an exception occurred while trying to convert a string to a float: {}",
                         sFieldCanonicalTypeName,
@@ -148,7 +148,7 @@ namespace ne {
             auto array = pTomlValue->as_array();
             std::vector<float> floatArray;
             if (array.size() != 4) {
-                return Error(fmt::format(
+                return Error(std::format(
                     "The type \"{}\" of the specified field \"{}\" is supported by this serializer, "
                     "but the TOML value (array) has incorrect size.",
                     sFieldCanonicalTypeName,
@@ -156,7 +156,7 @@ namespace ne {
             }
             for (const auto& item : array) {
                 if (!item.is_string()) {
-                    return Error(fmt::format(
+                    return Error(std::format(
                         "The type \"{}\" of the specified field \"{}\" is supported by this serializer, "
                         "but the TOML value is not float.",
                         sFieldCanonicalTypeName,
@@ -165,7 +165,7 @@ namespace ne {
                 try {
                     floatArray.push_back(std::stof(item.as_string().str));
                 } catch (std::exception& ex) {
-                    return Error(fmt::format(
+                    return Error(std::format(
                         "The type \"{}\" of the specified field \"{}\" is supported by this serializer, "
                         "but an exception occurred while trying to convert a string to a float: {}",
                         sFieldCanonicalTypeName,
@@ -180,7 +180,7 @@ namespace ne {
                 pData[i] = floatArray[i];
             }
         } else {
-            return Error(fmt::format(
+            return Error(std::format(
                 "The type \"{}\" of the specified field \"{}\" is not supported by this serializer.",
                 sFieldCanonicalTypeName,
                 pFieldName));
@@ -218,7 +218,7 @@ namespace ne {
             pVec->z = value.z;
             pVec->w = value.w;
         } else {
-            return Error(fmt::format(
+            return Error(std::format(
                 "The type \"{}\" of the specified field \"{}\" is not supported by this serializer.",
                 sFieldCanonicalTypeName,
                 pFromField->getName()));

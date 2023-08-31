@@ -3,6 +3,7 @@
 // Standard.
 #include <thread>
 #include <sstream>
+#include <format>
 
 // Custom.
 #include "io/Logger.h"
@@ -18,9 +19,6 @@
 #include "materials/ShaderManager.h"
 #include "game/nodes/Node.h"
 #include "misc/Profiler.hpp"
-
-// External.
-#include "fmt/core.h"
 
 namespace ne {
     // Static pointer for accessing last created game manager.
@@ -58,7 +56,7 @@ namespace ne {
         // Make sure that resources directory is set and exists.
         const auto pathToRes = ProjectPaths::getPathToResDirectory(ResourceDirectory::ROOT);
         if (!std::filesystem::exists(pathToRes)) [[unlikely]] {
-            return Error(fmt::format("expected resources directory to exist at \"{}\"", pathToRes.string()));
+            return Error(std::format("expected resources directory to exist at \"{}\"", pathToRes.string()));
         }
 
         // Save ID of this thread (should be main thread).
@@ -70,7 +68,7 @@ namespace ne {
         // Run GC for the first time to setup things (I guess, first scan is usually not that fast).
         gc_collector()->collect();
         lastGcRunTime = std::chrono::steady_clock::now();
-        Logger::get().info(fmt::format("garbage collector will run every {} seconds", iGcRunIntervalInSec));
+        Logger::get().info(std::format("garbage collector will run every {} seconds", iGcRunIntervalInSec));
 
 #if defined(DEBUG)
         SerializableObjectFieldSerializer::checkGuidUniqueness();
@@ -152,7 +150,7 @@ namespace ne {
                                        // about the time here
 
         // Log results.
-        Logger::get().info(fmt::format(
+        Logger::get().info(std::format(
             "garbage collector has finished, "
             "freed {} object(s) ({} left alive)",
             gc_collector()->getLastFreedObjectsCount(),
@@ -161,7 +159,7 @@ namespace ne {
         // Make sure there are no nodes alive.
         const auto iNodesAlive = Node::getAliveNodeCount();
         if (iNodesAlive != 0) [[unlikely]] {
-            Logger::get().error(fmt::format(
+            Logger::get().error(std::format(
                 "the game was destroyed and a full garbage collection was run but there are still "
                 "{} node(s) alive, here are a few reasons why this may happen:\n{}",
                 iNodesAlive,
@@ -171,7 +169,7 @@ namespace ne {
         // Make sure there are no GC objects alive.
         const auto iGcObjectsLeft = gc_collector()->getAliveObjectsCount();
         if (iGcObjectsLeft != 0) [[unlikely]] {
-            Logger::get().error(fmt::format(
+            Logger::get().error(std::format(
                 "the game was destroyed and a full garbage collection was run but there are still "
                 "{} gc object(s) alive, here are a few reasons why this may happen:\n{}",
                 iGcObjectsLeft,
@@ -189,7 +187,7 @@ namespace ne {
         // Make sure there are no shaders left in memory.
         const auto iTotalShadersInMemory = Shader::getCurrentAmountOfShadersInMemory();
         if (iTotalShadersInMemory != 0) [[unlikely]] {
-            Logger::get().error(fmt::format(
+            Logger::get().error(std::format(
                 "the renderer was destroyed but there are still {} shader(s) left in the memory",
                 iTotalShadersInMemory));
         }
@@ -197,7 +195,7 @@ namespace ne {
         // Make sure there are no materials exist.
         const auto iTotalMaterialCount = Material::getCurrentAliveMaterialCount();
         if (iTotalMaterialCount != 0) [[unlikely]] {
-            Logger::get().error(fmt::format(
+            Logger::get().error(std::format(
                 "the game was destroyed but there are still {} material(s) alive", iTotalMaterialCount));
         }
     }
@@ -229,7 +227,7 @@ namespace ne {
             std::stringstream mainThreadIdString;
             mainThreadIdString << mainThreadId;
 
-            Error err(fmt::format(
+            Error err(std::format(
                 "an attempt was made to call a function that should only be called on the main thread "
                 "in a non main thread (main thread ID: {}, current thread ID: {})",
                 mainThreadIdString.str(),
@@ -272,7 +270,7 @@ namespace ne {
             std::chrono::duration<float, std::chrono::milliseconds::period>(endTime - startTime).count();
 
         // Log results.
-        Logger::get().info(fmt::format(
+        Logger::get().info(std::format(
             "garbage collector has finished, took {:.1F} millisecond(s): "
             "freed {} object(s) ({} left alive)",
             timeTookInMs,
@@ -610,7 +608,7 @@ namespace ne {
             if (actionStateIt == inputManager.actionState.end()) [[unlikely]] {
                 // Unexpected, nothing to process.
                 Logger::get().error(
-                    fmt::format("input manager returned 0 states for action event with ID {}", iActionId));
+                    std::format("input manager returned 0 states for action event with ID {}", iActionId));
                 continue;
             }
 
@@ -633,12 +631,12 @@ namespace ne {
             // Log an error if the key is not found.
             if (!bFoundKey) [[unlikely]] {
                 if (std::holds_alternative<KeyboardKey>(key)) {
-                    Logger::get().error(fmt::format(
+                    Logger::get().error(std::format(
                         "could not find the key `{}` in key states for action event with ID {}",
                         getKeyName(std::get<KeyboardKey>(key)),
                         iActionId));
                 } else {
-                    Logger::get().error(fmt::format(
+                    Logger::get().error(std::format(
                         "could not find mouse button `{}` in key states for action event with ID {}",
                         static_cast<int>(std::get<MouseButton>(key)),
                         iActionId));
@@ -707,7 +705,7 @@ namespace ne {
             if (axisStateIt == inputManager.axisState.end()) [[unlikely]] {
                 // Unexpected.
                 Logger::get().error(
-                    fmt::format("input manager returned 0 states for axis event with ID {}", iAxisEventId));
+                    std::format("input manager returned 0 states for axis event with ID {}", iAxisEventId));
                 continue;
             }
 
@@ -737,7 +735,7 @@ namespace ne {
 
             // Log an error if the key is not found.
             if (!bFound) [[unlikely]] {
-                Logger::get().error(fmt::format(
+                Logger::get().error(std::format(
                     "could not find key `{}` in key states for axis event with ID {}",
                     getKeyName(key),
                     iAxisEventId));
@@ -817,7 +815,7 @@ namespace ne {
         // Make sure that all nodes were destroyed.
         const auto iAliveNodeCount = Node::getAliveNodeCount();
         if (iAliveNodeCount != 0) {
-            Logger::get().error(fmt::format(
+            Logger::get().error(std::format(
                 "the world was destroyed and garbage collection was finished but there are still "
                 "{} node(s) alive, here are a few reasons why this may happen:\n{}",
                 iAliveNodeCount,
@@ -829,13 +827,13 @@ namespace ne {
             pRenderer->getPipelineManager()->getCreatedGraphicsPipelineCount();
         const auto iComputePipelineCount = pRenderer->getPipelineManager()->getCreatedComputePipelineCount();
         if (iGraphicsPipelineCount != 0) {
-            Logger::get().error(fmt::format(
+            Logger::get().error(std::format(
                 "the world was destroyed and garbage collection was finished but there are still "
                 "{} graphics pipelines(s) exist",
                 iGraphicsPipelineCount));
         }
         if (iComputePipelineCount != 0) {
-            Logger::get().error(fmt::format(
+            Logger::get().error(std::format(
                 "the world was destroyed and garbage collection was finished but there are still "
                 "{} compute pipelines(s) exist",
                 iComputePipelineCount));

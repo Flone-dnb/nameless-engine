@@ -1,5 +1,8 @@
 #include "VulkanResourceManager.h"
 
+// Standard.
+#include <format>
+
 // Custom.
 #include "render/vulkan/VulkanRenderer.h"
 #include "io/Logger.h"
@@ -7,7 +10,6 @@
 #include "render/vulkan/resources/VulkanStorageResourceArrayManager.h"
 
 // External.
-#include "fmt/core.h"
 #define VMA_IMPLEMENTATION // define in only one .cpp file
 #include "VulkanMemoryAllocator/include/vk_mem_alloc.h"
 #include "vulkan/vk_enum_string_helper.h"
@@ -85,7 +87,7 @@ namespace ne {
         // (we do this check only in Vulkan because resources need memory allocator to be destroyed).
         const auto iTotalAliveResourceCount = iAliveResourceCount.load();
         if (iTotalAliveResourceCount != 0) [[unlikely]] {
-            Error error(fmt::format(
+            Error error(std::format(
                 "Vulkan resource manager is being destroyed but there are "
                 "still {} resource(s) alive, most likely you forgot to explicitly "
                 "reset/delete some GPU resources that are used in the VulkanRenderer class (only "
@@ -134,7 +136,7 @@ namespace ne {
         const auto result = vmaCreateAllocator(&createInfo, &pMemoryAllocator);
         if (result != VK_SUCCESS) [[unlikely]] {
             return Error(
-                fmt::format("failed to create memory allocator, error: {}", string_VkResult(result)));
+                std::format("failed to create memory allocator, error: {}", string_VkResult(result)));
         }
 
         return std::unique_ptr<VulkanResourceManager>(new VulkanResourceManager(pRenderer, pMemoryAllocator));
@@ -263,7 +265,7 @@ namespace ne {
 
                 // Check if the requested buffer size exceed UBO size limit.
                 if (iBufferSizeInBytes > deviceProperties.limits.maxUniformBufferRange) {
-                    return Error(fmt::format(
+                    return Error(std::format(
                         "unable to create the requested uniform buffer with the size {} bytes "
                         "because the GPU limit for uniform buffer sizes is {} bytes",
                         iBufferSizeInBytes,

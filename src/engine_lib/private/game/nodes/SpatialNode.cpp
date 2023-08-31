@@ -1,5 +1,8 @@
 #include "game/nodes/SpatialNode.h"
 
+// Standard.
+#include <format>
+
 // Custom.
 #include "game/GameInstance.h"
 #include "math/MathHelpers.hpp"
@@ -311,7 +314,7 @@ namespace ne {
         if (std::abs(mtxWorldMatrix.second.worldLocation.x) > iWorldSizeOneDimention ||
             std::abs(mtxWorldMatrix.second.worldLocation.y) > iWorldSizeOneDimention ||
             std::abs(mtxWorldMatrix.second.worldLocation.z) > iWorldSizeOneDimention) {
-            Logger::get().warn(fmt::format(
+            Logger::get().warn(std::format(
                 "[{}] spatial node \"{}\" is exceeding world bounds, node's world location: "
                 "({}, {}, {}), world size: {}",
                 Globals::getDebugOnlyLoggingPrefix(),

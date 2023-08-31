@@ -1,5 +1,8 @@
 ﻿#include "EditorGameInstance.h"
 
+// Standard.
+#include <format>
+
 // Custom.
 #include "game/camera/TransientCamera.h"
 #include "game/camera/CameraManager.h"
@@ -69,7 +72,7 @@ namespace ne {
         const auto pRenderer = pWindow->getRenderer();
 
         // Show FPS in window title.
-        pWindow->setTitle(fmt::format(
+        pWindow->setTitle(std::format(
             "{} (FPS: {}, waiting GPU: {:.1F} ms",
             pEditorWindowTitle,
             pRenderer->getFramesPerSecond(),

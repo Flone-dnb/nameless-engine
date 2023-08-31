@@ -1,5 +1,8 @@
 #include "game/nodes/MeshNode.h"
 
+// Standard.
+#include <format>
+
 // Custom.
 #include "materials/Material.h"
 #include "game/Window.h"
@@ -87,7 +90,7 @@ namespace ne {
         constexpr size_t iExpectedSize = 4;
         constexpr auto iActualSize = sizeof(MeshData::meshindex_t);
         if (iActualSize != iExpectedSize) [[unlikely]] {
-            Error error(fmt::format(
+            Error error(std::format(
                 "expected mesh index type to be {} bytes long, got: {}", iExpectedSize, iActualSize));
             error.showError();
             throw std::runtime_error(error.getFullErrorMessage());
@@ -157,14 +160,14 @@ namespace ne {
         const toml::value& data = pToml->at(sTomKeyName);
 
         if (!data.is_array()) [[unlikely]] {
-            return Error(fmt::format(
+            return Error(std::format(
                 "failed to deserialize mesh data: \"{}\" key does not contain array", sTomKeyName));
         }
 
         // Convert to array.
         const auto& array = data.as_array();
         if (array.size() % iGlmVecSize != 0) [[unlikely]] {
-            return Error(fmt::format(
+            return Error(std::format(
                 "failed to deserialize mesh data: \"{}\" array size is not multiple of {}",
                 sTomKeyName,
                 iGlmVecSize));
@@ -175,13 +178,13 @@ namespace ne {
         for (const auto& item : array) {
             // We are storing float as string for better precision.
             if (!item.is_string()) [[unlikely]] {
-                return Error(fmt::format(
+                return Error(std::format(
                     "failed to deserialize mesh data: \"{}\" array item is not string", sTomKeyName));
             }
             try {
                 vData.push_back(std::stof(item.as_string().str));
             } catch (std::exception& ex) {
-                return Error(fmt::format(
+                return Error(std::format(
                     "An exception occurred while trying to convert a string to a float: {}", ex.what()));
             }
         }
@@ -266,7 +269,7 @@ namespace ne {
         std::scoped_lock guard(*getSpawnDespawnMutex(), mtxGpuResources.first);
 
         if (!isSpawned()) [[unlikely]] {
-            Logger::get().warn(fmt::format(
+            Logger::get().warn(std::format(
                 "mesh node \"{}\" was requested to allocate shader resources but the node is not "
                 "spawned",
                 getNodeName()));
@@ -285,7 +288,7 @@ namespace ne {
         std::scoped_lock guard(*getSpawnDespawnMutex(), mtxGpuResources.first);
 
         if (!isSpawned()) [[unlikely]] {
-            Logger::get().warn(fmt::format(
+            Logger::get().warn(std::format(
                 "mesh node \"{}\" was requested to deallocate shader resources but the node is "
                 "not spawned",
                 getNodeName()));
@@ -305,7 +308,7 @@ namespace ne {
         std::scoped_lock guard(*getSpawnDespawnMutex(), mtxMeshData, mtxGpuResources.first);
 
         if (!isSpawned()) [[unlikely]] {
-            Logger::get().warn(fmt::format(
+            Logger::get().warn(std::format(
                 "mesh node \"{}\" was requested to allocate geometry buffers but the node is not "
                 "spawned",
                 getNodeName()));
@@ -314,7 +317,7 @@ namespace ne {
 
         if (mtxGpuResources.second.mesh.pVertexBuffer != nullptr ||
             mtxGpuResources.second.mesh.pIndexBuffer != nullptr) [[unlikely]] {
-            Logger::get().warn(fmt::format(
+            Logger::get().warn(std::format(
                 "mesh node \"{}\" was requested to deallocate geometry buffers but they are already "
                 "created",
                 getNodeName()));
@@ -324,14 +327,14 @@ namespace ne {
         if (meshData.getVertices()->empty()) [[unlikely]] {
             // This is a critical error because in the `draw` loop we will try to get the vertex
             // buffer but it will not exist.
-            Error error(fmt::format("mesh node \"{}\" has no mesh vertices", getNodeName()));
+            Error error(std::format("mesh node \"{}\" has no mesh vertices", getNodeName()));
             error.showError();
             throw std::runtime_error(error.getFullErrorMessage());
         }
         if (meshData.getIndices()->empty()) [[unlikely]] {
             // This is a critical error because in the `draw` loop we will try to get the index
             // buffer but it will not exist.
-            Error error(fmt::format("mesh node \"{}\" has no mesh indices", getNodeName()));
+            Error error(std::format("mesh node \"{}\" has no mesh indices", getNodeName()));
             error.showError();
             throw std::runtime_error(error.getFullErrorMessage());
         }
@@ -341,7 +344,7 @@ namespace ne {
 
         // Create vertex buffer.
         auto result = pResourceManager->createResourceWithData(
-            fmt::format("mesh node \"{}\" vertex buffer", getNodeName()),
+            std::format("mesh node \"{}\" vertex buffer", getNodeName()),
             meshData.getVertices()->data(),
             meshData.getVertices()->size() * sizeof(MeshVertex),
             ResourceUsageType::VERTEX_BUFFER,
@@ -356,7 +359,7 @@ namespace ne {
 
         // Create index buffer.
         result = pResourceManager->createResourceWithData(
-            fmt::format("mesh node \"{}\" index buffer", getNodeName()),
+            std::format("mesh node \"{}\" index buffer", getNodeName()),
             meshData.getIndices()->data(),
             meshData.getIndices()->size() * sizeof(MeshData::meshindex_t),
             ResourceUsageType::INDEX_BUFFER,
@@ -374,7 +377,7 @@ namespace ne {
         std::scoped_lock guard(*getSpawnDespawnMutex(), mtxMeshData, mtxGpuResources.first);
 
         if (!isSpawned()) [[unlikely]] {
-            Logger::get().warn(fmt::format(
+            Logger::get().warn(std::format(
                 "mesh node \"{}\" was requested to deallocate geometry buffers but the node is not "
                 "spawned",
                 getNodeName()));
@@ -383,7 +386,7 @@ namespace ne {
 
         if (mtxGpuResources.second.mesh.pVertexBuffer == nullptr ||
             mtxGpuResources.second.mesh.pIndexBuffer == nullptr) [[unlikely]] {
-            Logger::get().warn(fmt::format(
+            Logger::get().warn(std::format(
                 "mesh node \"{}\" was requested to deallocate geometry buffers but they were not "
                 "created previously",
                 getNodeName()));
@@ -410,7 +413,7 @@ namespace ne {
         const auto iVertexCount = meshData.getVertices()->size();
         if (iVertexCount > UINT_MAX) [[unlikely]] {
             // This will exceed type limit for DirectX vertex buffer view fields.
-            auto error = Error(fmt::format(
+            auto error = Error(std::format(
                 "the number of vertices in the mesh node \"{}\" has exceeded the maximum number of vertices "
                 "(maximum is {}), can't continue because an overflow will occur",
                 getNodeName(),
@@ -421,7 +424,7 @@ namespace ne {
         const auto iVertexBufferSize = iVertexCount * sizeof(MeshVertex);
         if (iVertexBufferSize > UINT_MAX) [[unlikely]] {
             // This will exceed type limit for DirectX vertex buffer view fields.
-            auto error = Error(fmt::format(
+            auto error = Error(std::format(
                 "size of the vertex buffer ({} bytes) for the mesh node \"{}\" will exceed the limit of {} "
                 "bytes ({} vertices * {} vertex size = {}), can't continue because an overflow will occur",
                 iVertexBufferSize,
@@ -439,7 +442,7 @@ namespace ne {
         const auto iIndexBufferSize = iIndexCount * sizeof(MeshData::meshindex_t);
         if (iIndexBufferSize > UINT_MAX) [[unlikely]] {
             // This will exceed type limit for DirectX vertex buffer view fields.
-            auto error = Error(fmt::format(
+            auto error = Error(std::format(
                 "size of the index buffer ({} bytes) for the mesh node \"{}\" will exceed the limit of {} "
                 "bytes ({} indices * {} index size = {}), can't continue because an overflow will occur",
                 iIndexBufferSize,
@@ -514,7 +517,7 @@ namespace ne {
         // Make sure material was initialized.
         const auto pUsedPipeline = pMaterial->getUsedPipeline();
         if (pUsedPipeline == nullptr) [[unlikely]] {
-            Error error(fmt::format(
+            Error error(std::format(
                 "unable to create shader resources for mesh node \"{}\" because material was not initialized",
                 getNodeName()));
             error.showError();
@@ -524,7 +527,7 @@ namespace ne {
         // Make sure there is no resource with this name.
         auto it = mtxGpuResources.second.shaderResources.shaderCpuWriteResources.find(sShaderResourceName);
         if (it != mtxGpuResources.second.shaderResources.shaderCpuWriteResources.end()) [[unlikely]] {
-            Error error(fmt::format(
+            Error error(std::format(
                 "mesh node \"{}\" already has a shader CPU write resource with the name \"{}\"",
                 getNodeName(),
                 sShaderResourceName));
@@ -537,7 +540,7 @@ namespace ne {
             getGameInstance()->getWindow()->getRenderer()->getShaderCpuWriteResourceManager();
         auto result = pShaderWriteResourceManager->createShaderCpuWriteResource(
             sShaderResourceName,
-            fmt::format("mesh node \"{}\"", getNodeName()),
+            std::format("mesh node \"{}\"", getNodeName()),
             iResourceSizeInBytes,
             pUsedPipeline,
             onStartedUpdatingResource,

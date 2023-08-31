@@ -7,7 +7,6 @@
 #include "io/serializers/IFieldSerializer.hpp"
 
 // External.
-#include "fmt/format.h"
 #define TOML11_PRESERVE_COMMENTS_BY_DEFAULT
 #include "toml11/toml.hpp"
 
@@ -34,13 +33,13 @@ namespace ne {
         constexpr auto iMaxPathLimit = MAX_PATH - iMaxPathLimitBound;
         const auto iFilePathLength = pathToFile.string().length();
         if (iFilePathLength > iMaxPathLimit - (iMaxPathLimitBound * 2) && iFilePathLength < iMaxPathLimit) {
-            Logger::get().warn(fmt::format(
+            Logger::get().warn(std::format(
                 "file path length {} is close to the platform limit of {} characters (path: {})",
                 iFilePathLength,
                 iMaxPathLimit,
                 pathToFile.string()));
         } else if (iFilePathLength >= iMaxPathLimit) {
-            return Error(fmt::format(
+            return Error(std::format(
                 "file path length {} exceeds the platform limit of {} characters (path: {})",
                 iFilePathLength,
                 iMaxPathLimit,
@@ -75,7 +74,7 @@ namespace ne {
         // Save TOML data to file.
         std::ofstream file(pathToFile, std::ios::binary);
         if (!file.is_open()) {
-            return Error(fmt::format(
+            return Error(std::format(
                 "failed to open the file \"{}\" (maybe because it's marked as read-only)",
                 pathToFile.string()));
         }
@@ -108,7 +107,7 @@ namespace ne {
             // Get GUID property.
             const auto pGuid = pDerivedEntity->getProperty<Guid>(false);
             if (pGuid == nullptr) {
-                const Error err(fmt::format(
+                const Error err(std::format(
                     "Type {} does not have a GUID assigned to it.\n\n"
                     "Here is an example of how to assign a GUID to your type:\n"
                     "class RCLASS(Guid(\"00000000-0000-0000-0000-000000000000\")) MyCoolClass "
@@ -137,7 +136,7 @@ namespace ne {
         const auto pSelfGuid = selfArchetype.getProperty<Guid>(false);
         if (pSelfGuid == nullptr) {
             const Error err(
-                fmt::format("Type {} does not have a GUID assigned to it.", selfArchetype.getName()));
+                std::format("Type {} does not have a GUID assigned to it.", selfArchetype.getName()));
             err.showError();
             throw std::runtime_error(err.getFullErrorMessage());
         }
@@ -175,7 +174,7 @@ namespace ne {
             tomlData = toml::parse(pathToFile);
         } catch (std::exception& exception) {
             return Error(
-                fmt::format("failed to load file \"{}\", error: {}", pathToFile.string(), exception.what()));
+                std::format("failed to load file \"{}\", error: {}", pathToFile.string(), exception.what()));
         }
 
         // Read all sections.
@@ -189,7 +188,7 @@ namespace ne {
 
         // Check that we have at least one section.
         if (vSections.empty()) {
-            return Error(fmt::format(
+            return Error(std::format(
                 "the specified file \"{}\" has 0 sections while expected at least 1 section",
                 pathToFile.string()));
         }
@@ -199,7 +198,7 @@ namespace ne {
         for (const auto& sSectionName : vSections) {
             const auto iFirstDotPos = sSectionName.find('.');
             if (iFirstDotPos == std::string::npos) {
-                return Error(fmt::format(
+                return Error(std::format(
                     "the specified file \"{}\" does not have dots in section names (corrupted file)",
                     pathToFile.string()));
             }
@@ -230,7 +229,7 @@ namespace ne {
             }
 
             if (objectData.sObjectUniqueId.contains('.')) [[unlikely]] {
-                return Error(fmt::format(
+                return Error(std::format(
                     "the specified object ID \"{}\" is not allowed to have dots in it",
                     objectData.sObjectUniqueId));
             }
@@ -273,13 +272,13 @@ namespace ne {
         constexpr auto iMaxPathLimit = MAX_PATH - iMaxPathLimitBound;
         const auto iFilePathLength = pathToFile.string().length();
         if (iFilePathLength > iMaxPathLimit - (iMaxPathLimitBound * 2) && iFilePathLength < iMaxPathLimit) {
-            Logger::get().warn(fmt::format(
+            Logger::get().warn(std::format(
                 "file path length {} is close to the platform limit of {} characters (path: {})",
                 iFilePathLength,
                 iMaxPathLimit,
                 pathToFile.string()));
         } else if (iFilePathLength >= iMaxPathLimit) {
-            return Error(fmt::format(
+            return Error(std::format(
                 "file path length {} exceeds the platform limit of {} characters (path: {})",
                 iFilePathLength,
                 iMaxPathLimit,
@@ -307,7 +306,7 @@ namespace ne {
         // Save TOML data to file.
         std::ofstream file(pathToFile, std::ios::binary);
         if (!file.is_open()) {
-            return Error(fmt::format(
+            return Error(std::format(
                 "failed to open the file \"{}\" (maybe because it's marked as read-only)",
                 pathToFile.string()));
         }
@@ -352,7 +351,7 @@ namespace ne {
         const auto pGuid = selfArchetype.getProperty<Guid>(false);
         if (pGuid == nullptr) {
             Error err(
-                fmt::format("type \"{}\" does not have a GUID assigned to it", selfArchetype.getName()));
+                std::format("type \"{}\" does not have a GUID assigned to it", selfArchetype.getName()));
             return err;
         }
 
@@ -362,7 +361,7 @@ namespace ne {
         // to the file they were deserialized from.
 
         // Create section.
-        const auto sSectionName = fmt::format("{}.{}", sEntityId, pGuid->getGuid());
+        const auto sSectionName = std::format("{}.{}", sEntityId, pGuid->getGuid());
 
         // Prepare data.
         struct Data {
@@ -419,7 +418,7 @@ namespace ne {
                         const auto pOriginalField = pData->pOriginalEntity->getArchetype().getFieldByName(
                             pFieldName, rfk::EFieldFlags::Default, true);
                         if (pOriginalField == nullptr) {
-                            pData->error = Error(fmt::format(
+                            pData->error = Error(std::format(
                                 "the field \"{}\" (maybe inherited) of type \"{}\" was not found "
                                 "in the original entity",
                                 field.getName(),
@@ -452,7 +451,7 @@ namespace ne {
                         }
 
                         if (!bIsFoundSerializer) {
-                            pData->error = Error(fmt::format(
+                            pData->error = Error(std::format(
                                 "failed to compare a value of the field \"{}\" of type \"{}\" "
                                 "with the field from the original file at \"{}\" (ID \"{}\"), reason: no "
                                 "serializer supports both field types (maybe we took the wrong field from "
@@ -493,7 +492,7 @@ namespace ne {
                         auto iLastDotPos = pData->sSectionName.rfind('.');
                         if (iLastDotPos == std::string::npos) [[unlikely]] {
                             pData->error =
-                                Error(fmt::format("section name \"{}\" is corrupted", pData->sSectionName));
+                                Error(std::format("section name \"{}\" is corrupted", pData->sSectionName));
                             return false;
                         }
                         // Will be something like: "entityId.subEntityId",
@@ -501,7 +500,7 @@ namespace ne {
                         const auto sEntityIdChain = pData->sSectionName.substr(0, iLastDotPos);
 
                         // Prepare path to the external file.
-                        const auto sExternalFileName = fmt::format(
+                        const auto sExternalFileName = std::format(
                             "{}.{}.{}{}",
                             pData->optionalPathToFile->stem().string(),
                             sEntityIdChain,
@@ -557,7 +556,7 @@ namespace ne {
                         }
                     }
 
-                    pData->error = Error(fmt::format(
+                    pData->error = Error(std::format(
                         "the field \"{}\" with type \"{}\" (maybe inherited) of type \"{}\" has unsupported "
                         "for serialization type",
                         field.getName(),
@@ -568,7 +567,7 @@ namespace ne {
 
                 // A field with this name in this section was found.
                 // If we continue it will get overwritten.
-                pData->error = Error(fmt::format(
+                pData->error = Error(std::format(
                     "found two fields with the same name \"{}\" in type \"{}\" (maybe inherited)",
                     pFieldName,
                     pData->selfArchetype->getName()));
@@ -598,7 +597,7 @@ namespace ne {
 
         // Write custom attributes, they will be written with two dots in the beginning.
         for (const auto& [key, value] : customAttributes) {
-            tomlData[sSectionName][fmt::format("..{}", key)] = value;
+            tomlData[sSectionName][std::format("..{}", key)] = value;
         }
 
         return sSectionName;

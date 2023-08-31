@@ -2,6 +2,7 @@
 
 // Standard.
 #include <set>
+#include <format>
 
 // Custom.
 #include "io/Logger.h"
@@ -39,7 +40,7 @@ namespace ne {
         }
 
         // Make sure the renderer is no longer using this PSO or its resources.
-        Logger::get().info(fmt::format(
+        Logger::get().info(std::format(
             "waiting for the GPU to finish work up to this point before destroying a pipeline "
             "with id \"{}\"",
             getUniquePipelineIdentifier()));
@@ -180,7 +181,7 @@ namespace ne {
             // Push constants names should be equal to resource name that they index into.
             const auto it = resourceBindings.find(sFieldName);
             if (it == resourceBindings.end()) [[unlikely]] {
-                return Error(fmt::format(
+                return Error(std::format(
                     "push constant \"{}\" is referencing a non-existing shader resource \"{}\", make sure "
                     "the name of your push constant is equal to the name of a shader resource you want "
                     "to index into",
@@ -216,7 +217,7 @@ namespace ne {
         // Make sure this index is the biggest globally.
         for (const auto& [sResourceName, iBindingIndex] : resourceBindings) {
             if (iBindingIndex > iBiggestReferencedBindingIndex) [[unlikely]] {
-                return Error(fmt::format(
+                return Error(std::format(
                     "shader resource named \"{}\" has binding index {} which is bigger than {} - biggest "
                     "binding index of resource referenced by push constants, binding indices of shader "
                     "resources referenced by push constants should be the biggest (last) in shader",
@@ -273,7 +274,7 @@ namespace ne {
 
         // Check if shaders were found.
         if (bVertexShaderNotFound || bFragmentShaderNotFound) [[unlikely]] {
-            return Error(fmt::format(
+            return Error(std::format(
                 "shaders not found in Shader Manager: vertex \"{}\" (found: {}), fragment \"{}\" "
                 "(found: {}) ",
                 sVertexShaderName,
@@ -401,7 +402,7 @@ namespace ne {
         if (result != VK_SUCCESS) [[unlikely]] {
             vkDestroyDescriptorPool(pLogicalDevice, generatedLayout.pDescriptorPool, nullptr);
             vkDestroyDescriptorSetLayout(pLogicalDevice, generatedLayout.pDescriptorSetLayout, nullptr);
-            return Error(fmt::format(
+            return Error(std::format(
                 "failed to create a vertex shader module \"{}\", error: {}",
                 pVertexShader->getShaderName(),
                 string_VkResult(result)));
@@ -422,7 +423,7 @@ namespace ne {
             vkDestroyShaderModule(pLogicalDevice, pVertexShaderModule, nullptr);
             vkDestroyDescriptorPool(pLogicalDevice, generatedLayout.pDescriptorPool, nullptr);
             vkDestroyDescriptorSetLayout(pLogicalDevice, generatedLayout.pDescriptorSetLayout, nullptr);
-            return Error(fmt::format(
+            return Error(std::format(
                 "failed to create a fragment shader module \"{}\", error: {}",
                 pFragmentShader->getShaderName(),
                 string_VkResult(result)));
@@ -598,7 +599,7 @@ namespace ne {
             vkDestroyShaderModule(pLogicalDevice, pFragmentShaderModule, nullptr);
             vkDestroyDescriptorPool(pLogicalDevice, generatedLayout.pDescriptorPool, nullptr);
             vkDestroyDescriptorSetLayout(pLogicalDevice, generatedLayout.pDescriptorSetLayout, nullptr);
-            return Error(fmt::format("failed to create pipeline layout, error: {}", string_VkResult(result)));
+            return Error(std::format("failed to create pipeline layout, error: {}", string_VkResult(result)));
         }
 
         // Describe graphics pipeline.
@@ -647,7 +648,7 @@ namespace ne {
             vkDestroyDescriptorPool(pLogicalDevice, generatedLayout.pDescriptorPool, nullptr);
             vkDestroyDescriptorSetLayout(pLogicalDevice, generatedLayout.pDescriptorSetLayout, nullptr);
             return Error(
-                fmt::format("failed to create graphics pipeline, error: {}", string_VkResult(result)));
+                std::format("failed to create graphics pipeline, error: {}", string_VkResult(result)));
         }
 
         // Destroy shader modules since we don't need them after the pipeline was created.
@@ -698,7 +699,7 @@ namespace ne {
         // Make sure frame resource count is equal to our number of descriptor sets.
         if (mtxAllFrameResource.second.size() != mtxInternalResources.second.vDescriptorSets.size())
             [[unlikely]] {
-            return Error(fmt::format(
+            return Error(std::format(
                 "expected frame resource count ({}) to be equal to descriptor set count ({})",
                 mtxAllFrameResource.second.size(),
                 mtxInternalResources.second.vDescriptorSets.size()));

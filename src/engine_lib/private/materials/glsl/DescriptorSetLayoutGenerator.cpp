@@ -1,5 +1,8 @@
 ﻿#include "DescriptorSetLayoutGenerator.h"
 
+// Standard.
+#include <format>
+
 // Custom.
 #include "materials/glsl/GlslShader.h"
 #include "render/vulkan/VulkanRenderer.h"
@@ -7,7 +10,6 @@
 
 // External.
 #include "spirv_reflect.h"
-#include "fmt/core.h"
 #include "vulkan/vk_enum_string_helper.h"
 
 namespace ne {
@@ -20,14 +22,14 @@ namespace ne {
         SpvReflectShaderModule module;
         auto result = spvReflectCreateShaderModule(iSizeInBytes, pSpirvBytecode, &module);
         if (result != SPV_REFLECT_RESULT_SUCCESS) {
-            return Error(fmt::format("failed to create shader module, error: {}", static_cast<int>(result)));
+            return Error(std::format("failed to create shader module, error: {}", static_cast<int>(result)));
         }
 
         // Get descriptor binding count.
         uint32_t iDescriptorBindingCount = 0;
         result = spvReflectEnumerateDescriptorBindings(&module, &iDescriptorBindingCount, nullptr);
         if (result != SPV_REFLECT_RESULT_SUCCESS) {
-            return Error(fmt::format(
+            return Error(std::format(
                 "failed to get shader descriptor binding count, error: {}", static_cast<int>(result)));
         }
 
@@ -37,7 +39,7 @@ namespace ne {
             &module, &iDescriptorBindingCount, vDescriptorBindings.data());
         if (result != SPV_REFLECT_RESULT_SUCCESS) {
             return Error(
-                fmt::format("failed to get shader descriptor bindings, error: {}", static_cast<int>(result)));
+                std::format("failed to get shader descriptor bindings, error: {}", static_cast<int>(result)));
         }
 
         std::unordered_set<std::string> usedNames;
@@ -45,7 +47,7 @@ namespace ne {
         for (const auto& descriptorBinding : vDescriptorBindings) {
             // Make sure binding name is valid.
             if (descriptorBinding->name == nullptr) [[unlikely]] {
-                return Error(fmt::format(
+                return Error(std::format(
                     "found {} binding(s) but one has unexpected `nullptr` name (was debug info generated "
                     "during compilation?)",
                     vDescriptorBindings.size()));
@@ -54,7 +56,7 @@ namespace ne {
             // Make sure there was no binding with this ID.
             auto bindingInfoIt = collected.bindingInfo.find(descriptorBinding->binding);
             if (bindingInfoIt != collected.bindingInfo.end()) [[unlikely]] {
-                return Error(fmt::format(
+                return Error(std::format(
                     "found two resources that use the same binding index {}, these are: \"{}\" and \"{}\"",
                     bindingInfoIt->first,
                     bindingInfoIt->second.sResourceName,
@@ -65,7 +67,7 @@ namespace ne {
             // differentiate resources in the engine.
             auto usedNamesIt = usedNames.find(descriptorBinding->name);
             if (usedNamesIt != usedNames.end()) [[unlikely]] {
-                return Error(fmt::format(
+                return Error(std::format(
                     "found two resources that have the same name \"{}\"", descriptorBinding->name));
             }
 
@@ -87,7 +89,7 @@ namespace ne {
             }
             default: {
                 return Error(
-                    fmt::format("type the resource \"{}\" is not supported", descriptorBinding->name));
+                    std::format("type the resource \"{}\" is not supported", descriptorBinding->name));
                 break;
             }
             }
@@ -101,7 +103,7 @@ namespace ne {
         result = spvReflectEnumeratePushConstantBlocks(&module, &iPushConstantCount, nullptr);
         if (result != SPV_REFLECT_RESULT_SUCCESS) {
             return Error(
-                fmt::format("failed to get shader push constant count, error: {}", static_cast<int>(result)));
+                std::format("failed to get shader push constant count, error: {}", static_cast<int>(result)));
         }
 
         // Process push constants here instead of doing this in pipeline to speed up pipeline generation.
@@ -112,13 +114,13 @@ namespace ne {
                 spvReflectEnumeratePushConstantBlocks(&module, &iPushConstantCount, vPushConstants.data());
             if (result != SPV_REFLECT_RESULT_SUCCESS) {
                 return Error(
-                    fmt::format("failed to get shader push constants, error: {}", static_cast<int>(result)));
+                    std::format("failed to get shader push constants, error: {}", static_cast<int>(result)));
             }
 
             // Make sure there is only 1 (as only 1 is allowed).
             if (vPushConstants.size() > 1) [[unlikely]] {
                 return Error(
-                    fmt::format("expected only 1 push constant but received {}", vPushConstants.size()));
+                    std::format("expected only 1 push constant but received {}", vPushConstants.size()));
             }
 
             const auto pPushConstant = vPushConstants[0];
@@ -135,12 +137,12 @@ namespace ne {
             for (const auto& memberInfo : vMembers) {
                 // Make sure it's a `uint` indeed.
                 if (memberInfo->size != sizeof(unsigned int)) [[unlikely]] {
-                    return Error(fmt::format(
+                    return Error(std::format(
                         "found a non `uint` field in push constants named \"{}\" - not supported",
                         memberInfo->name));
                 }
                 if (memberInfo->type_description->op != SpvOpTypeInt) [[unlikely]] {
-                    return Error(fmt::format(
+                    return Error(std::format(
                         "found a non `uint` field in push constants named \"{}\" - not supported",
                         memberInfo->name));
                 }
@@ -168,13 +170,13 @@ namespace ne {
 
         // Make sure that the vertex shader is indeed a vertex shader.
         if (pVertexShader->getShaderType() != ShaderType::VERTEX_SHADER) [[unlikely]] {
-            return Error(fmt::format(
+            return Error(std::format(
                 "the specified shader \"{}\" is not a vertex shader", pVertexShader->getShaderName()));
         }
 
         // Make sure that the fragment shader is indeed a fragment shader.
         if (pFragmentShader->getShaderType() != ShaderType::PIXEL_SHADER) [[unlikely]] {
-            return Error(fmt::format(
+            return Error(std::format(
                 "the specified shader \"{}\" is not a fragment shader", pFragmentShader->getShaderName()));
         }
 
@@ -188,13 +190,13 @@ namespace ne {
 
         // Make sure it's not empty.
         if (!pMtxFragmentDescriptorLayoutInfo->second.has_value()) [[unlikely]] {
-            return Error(fmt::format(
+            return Error(std::format(
                 "unable to merge descriptor layout of the fragment shader \"{}\" "
                 "because it does have descriptor layout info collected",
                 pFragmentShader->getShaderName()));
         }
         if (!pMtxVertexDescriptorLayoutInfo->second.has_value()) [[unlikely]] {
-            return Error(fmt::format(
+            return Error(std::format(
                 "unable to merge descriptor layout of the vertex shader \"{}\" "
                 "because it does have descriptor layout info collected",
                 pVertexShader->getShaderName()));
@@ -208,7 +210,7 @@ namespace ne {
         auto vertexFrameBufferIt =
             vertexShaderDescriptorLayoutInfo.bindingInfo.find(iFrameUniformBufferBindingIndex);
         if (vertexFrameBufferIt == vertexShaderDescriptorLayoutInfo.bindingInfo.end()) [[unlikely]] {
-            return Error(fmt::format(
+            return Error(std::format(
                 "expected to find a `uniform` buffer named \"{}\" at binding {} to be used in vertex "
                 "shader \"{}\"",
                 pFrameUniformBufferName,
@@ -230,7 +232,7 @@ namespace ne {
             // Make sure we don't have a resource with this name already.
             auto bindingIt = resourceBindings.find(bindingInfo.sResourceName);
             if (bindingIt != resourceBindings.end()) [[unlikely]] {
-                return Error(fmt::format(
+                return Error(std::format(
                     "fragment shader \"{}\" has two resources with the same name, "
                     "please make sure resource names are unique",
                     pFragmentShader->getShaderName()));
@@ -263,7 +265,7 @@ namespace ne {
                 if (alreadyDefinedBindingIt->second.iBindingIndex != iBindingIndex) [[unlikely]] {
                     // Error, we need unique names: we have 2 resources with the same name but
                     // different binding indices we will not be able to differentiate them later.
-                    return Error(fmt::format(
+                    return Error(std::format(
                         "vertex shader \"{}\" defines a resource named \"{}\" with binding index {} and "
                         "fragment shader \"{}\" also has a resource with this name but different binding "
                         "index {}, we will not be able to differentiate them since we use resource names "
@@ -282,7 +284,7 @@ namespace ne {
                     // Error, we need unique names: we have 2 resources with the same name and
                     // the same binding indices but with different types we will not be able to
                     // differentiate them later.
-                    return Error(fmt::format(
+                    return Error(std::format(
                         "vertex shader \"{}\" defines a resource named \"{}\" with binding index {} and "
                         "fragment shader \"{}\" also has a resource with this name with the same binding "
                         "index but different type, we will not be able to differentiate them since we use "
@@ -304,7 +306,7 @@ namespace ne {
                 fragmentShaderDescriptorLayoutInfo.bindingInfo.find(iBindingIndex);
             if (fragmentBindingInfoIt != fragmentShaderDescriptorLayoutInfo.bindingInfo.end()) [[unlikely]] {
                 // Error: this binding index is already in use by some other resource.
-                return Error(fmt::format(
+                return Error(std::format(
                     "vertex shader \"{}\" defines a resource named \"{}\" with binding index {} but "
                     "this binding index is already being used by some other fragment shader \"{}\" "
                     "resource named \"{}\", because these resources have different names they are "
@@ -341,10 +343,10 @@ namespace ne {
         // Make sure we have a "frameData" binding at expected index.
         const auto frameDataBindingIt = resourceBindings.find(pFrameUniformBufferName);
         if (frameDataBindingIt == resourceBindings.end()) [[unlikely]] {
-            return Error(fmt::format("expected to find \"{}\" binding", pFrameUniformBufferName));
+            return Error(std::format("expected to find \"{}\" binding", pFrameUniformBufferName));
         }
         if (frameDataBindingIt->second.iBindingIndex != iFrameUniformBufferBindingIndex) [[unlikely]] {
-            return Error(fmt::format(
+            return Error(std::format(
                 "expected \"{}\" resource to use the following binding index: {} (actual: {})",
                 pFrameUniformBufferName,
                 iFrameUniformBufferBindingIndex,
@@ -371,7 +373,7 @@ namespace ne {
             pLogicalDevice, &layoutInfo, nullptr, &generatedData.pDescriptorSetLayout);
         if (result != VK_SUCCESS) [[unlikely]] {
             return Error(
-                fmt::format("failed to create descriptor set layout, error: {}", string_VkResult(result)));
+                std::format("failed to create descriptor set layout, error: {}", string_VkResult(result)));
         }
 
         // Continue to create a descriptor pool.
@@ -405,7 +407,7 @@ namespace ne {
         result = vkCreateDescriptorPool(pLogicalDevice, &poolInfo, nullptr, &generatedData.pDescriptorPool);
         if (result != VK_SUCCESS) [[unlikely]] {
             vkDestroyDescriptorSetLayout(pLogicalDevice, generatedData.pDescriptorSetLayout, nullptr);
-            return Error(fmt::format("failed to create descriptor pool, error: {}", string_VkResult(result)));
+            return Error(std::format("failed to create descriptor pool, error: {}", string_VkResult(result)));
         }
 
         // Allocate descriptor sets.
@@ -425,7 +427,7 @@ namespace ne {
         if (descriptorSetAllocInfo.descriptorSetCount != generatedData.vDescriptorSets.size()) [[unlikely]] {
             vkDestroyDescriptorPool(pLogicalDevice, generatedData.pDescriptorPool, nullptr);
             vkDestroyDescriptorSetLayout(pLogicalDevice, generatedData.pDescriptorSetLayout, nullptr);
-            return Error(fmt::format(
+            return Error(std::format(
                 "attempting to allocate {} descriptor sets will fail because they will not fit into "
                 "the generated array of descriptor sets with size {}",
                 descriptorSetAllocInfo.descriptorSetCount,
@@ -438,7 +440,7 @@ namespace ne {
         if (result != VK_SUCCESS) [[unlikely]] {
             vkDestroyDescriptorPool(pLogicalDevice, generatedData.pDescriptorPool, nullptr);
             vkDestroyDescriptorSetLayout(pLogicalDevice, generatedData.pDescriptorSetLayout, nullptr);
-            return Error(fmt::format("failed to create descriptor sets, error: {}", string_VkResult(result)));
+            return Error(std::format("failed to create descriptor sets, error: {}", string_VkResult(result)));
         }
 
         // Fill resource bindings info.
@@ -497,7 +499,7 @@ namespace ne {
             break;
         }
         default: {
-            return Error(fmt::format("resource \"{}\" has unsupported type", bindingInfo.sResourceName));
+            return Error(std::format("resource \"{}\" has unsupported type", bindingInfo.sResourceName));
             break;
         }
         }

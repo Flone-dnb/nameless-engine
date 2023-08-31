@@ -1,5 +1,8 @@
 #include "io/serializers/SerializableObjectFieldSerializer.h"
 
+// Standard.
+#include <format>
+
 // Custom.
 #include "io/Serializable.h"
 #include "io/properties/GuidProperty.h"
@@ -7,9 +10,6 @@
 #include "misc/Globals.h"
 #include "misc/GC.hpp"
 #include "io/FieldSerializerManager.h"
-
-// External.
-#include "fmt/format.h"
 
 namespace ne {
     bool SerializableObjectFieldSerializer::isFieldTypeSupported(const rfk::Field* pField) {
@@ -29,7 +29,7 @@ namespace ne {
         const auto pFieldName = pField->getName();
 
         if (!isFieldTypeSupported(pField)) {
-            return Error(fmt::format(
+            return Error(std::format(
                 "The type \"{}\" of the specified field \"{}\" is not supported by this serializer.",
                 sFieldCanonicalTypeName,
                 pFieldName));
@@ -58,17 +58,17 @@ namespace ne {
         const auto pToGuid = toArchetype.getProperty<Guid>(false);
         if (pFromGuid == nullptr) {
             const Error err(
-                fmt::format("The type {} does not have a GUID assigned to it", fromArchetype.getName()));
+                std::format("The type {} does not have a GUID assigned to it", fromArchetype.getName()));
             return err;
         }
         if (pToGuid == nullptr) {
             const Error err(
-                fmt::format("The type {} does not have a GUID assigned to it", toArchetype.getName()));
+                std::format("The type {} does not have a GUID assigned to it", toArchetype.getName()));
             return err;
         }
 
         if (pFromGuid->getGuid() != pToGuid->getGuid()) {
-            return Error(fmt::format(
+            return Error(std::format(
                 "Types \"{}\" and \"{}\" are not the same", fromArchetype.getName(), toArchetype.getName()));
         }
 
@@ -93,7 +93,7 @@ namespace ne {
                 const auto* pFieldTo =
                     pData->pTo->getArchetype().getFieldByName(pFieldName, rfk::EFieldFlags::Default, true);
                 if (pFieldTo == nullptr) {
-                    pData->error = Error(fmt::format(
+                    pData->error = Error(std::format(
                         "Unable to find the field \"{}\" in type \"{}\".",
                         field.getName(),
                         pData->pTo->getArchetype().getName()));
@@ -116,7 +116,7 @@ namespace ne {
                 }
 
                 pData->error = Error(
-                    fmt::format("The field \"{}\" has unsupported for serialization type", field.getName()));
+                    std::format("The field \"{}\" has unsupported for serialization type", field.getName()));
                 return false;
             },
             &loopData,
@@ -145,7 +145,7 @@ namespace ne {
         const std::string& sEntityId,
         std::unordered_map<std::string, std::string>& customAttributes) {
         if (!pTomlDocument->is_table()) {
-            return Error(fmt::format(
+            return Error(std::format(
                 "The type of the specified field \"{}\" is supported by this serializer, "
                 "but the TOML document is not a table.",
                 sFieldName));
@@ -187,7 +187,7 @@ namespace ne {
             // Get entity ID chain.
             auto iLastDotPos = sSectionName.rfind('.');
             if (iLastDotPos == std::string::npos) {
-                return Error(fmt::format("section name \"{}\" is corrupted", sSectionName));
+                return Error(std::format("section name \"{}\" is corrupted", sSectionName));
             }
             // Will be something like: "entityId.subEntityId", "entityId.subEntityId.subSubEntityId"
             // or etc.
@@ -196,7 +196,7 @@ namespace ne {
             // Remove last entity id from chain because we don't know it.
             iLastDotPos = sEntityIdChain.rfind('.');
             if (iLastDotPos == std::string::npos) {
-                return Error(fmt::format("section name \"{}\" is corrupted", sSectionName));
+                return Error(std::format("section name \"{}\" is corrupted", sSectionName));
             }
             sEntityIdChain = sEntityIdChain.substr(0, iLastDotPos);
 
@@ -210,11 +210,11 @@ namespace ne {
             try {
                 entitySection = toml::find(*pTomlDocument, sSectionName);
             } catch (std::exception& ex) {
-                return Error(fmt::format("no section \"{}\" was found ({})", sOwnerSectionName, ex.what()));
+                return Error(std::format("no section \"{}\" was found ({})", sOwnerSectionName, ex.what()));
             }
 
             if (!entitySection.is_table()) {
-                return Error(fmt::format("found \"{}\" section is not a section", sOwnerSectionName));
+                return Error(std::format("found \"{}\" section is not a section", sOwnerSectionName));
             }
 
             // Look for a key that holds the field name.
@@ -228,7 +228,7 @@ namespace ne {
 
             if (!fieldKey.is_string()) {
                 return Error(
-                    fmt::format("found field name key \"{}\" is not a string", sSubEntityFieldNameKey));
+                    std::format("found field name key \"{}\" is not a string", sSubEntityFieldNameKey));
             }
 
             if (fieldKey.as_string() == sFieldName) {
@@ -238,7 +238,7 @@ namespace ne {
         }
 
         if (sSectionNameForField.empty()) {
-            return Error(fmt::format("could not find a section that represents field \"{}\"", sFieldName));
+            return Error(std::format("could not find a section that represents field \"{}\"", sFieldName));
         }
 
         // Cut field's GUID from the section name.
@@ -246,13 +246,13 @@ namespace ne {
         const auto iSubEntityGuidDotPos = sSectionNameForField.rfind('.');
         if (iSubEntityGuidDotPos == std::string::npos) [[unlikely]] {
             return Error(
-                fmt::format("sub entity does not have a GUID (section: \"{}\")", sSectionNameForField));
+                std::format("sub entity does not have a GUID (section: \"{}\")", sSectionNameForField));
         }
         if (iSubEntityGuidDotPos + 1 == sSectionNameForField.size()) [[unlikely]] {
-            return Error(fmt::format("section name \"{}\" does not have a GUID", sSectionNameForField));
+            return Error(std::format("section name \"{}\" does not have a GUID", sSectionNameForField));
         }
         if (iSubEntityGuidDotPos == 0) [[unlikely]] {
-            return Error(fmt::format("section \"{}\" is not full", sSectionNameForField));
+            return Error(std::format("section \"{}\" is not full", sSectionNameForField));
         }
         const auto sSubEntityId = sSectionNameForField.substr(0, iSubEntityGuidDotPos);
 
@@ -299,7 +299,7 @@ namespace ne {
                     pFieldName, rfk::EFieldFlags::Default, true);
                 if (pOtherField == nullptr) {
                     // Probably will never happen but still add a check.
-                    Logger::get().error(fmt::format(
+                    Logger::get().error(std::format(
                         "the field \"{}\" (maybe inherited) of type \"{}\" was not found "
                         "in the other entity of type \"{}\" (this is strange because "
                         "entities have equal canonical type name)",
@@ -326,7 +326,7 @@ namespace ne {
                     }
                 }
 
-                Logger::get().error(fmt::format(
+                Logger::get().error(std::format(
                     "failed to compare value of the field \"{}\" of type \"{}\" "
                     "with the field from other entity, reason: no serializer "
                     "supports both field types (maybe we took the wrong field from the "
@@ -346,7 +346,7 @@ namespace ne {
     SerializableObjectFieldSerializer::isTypeDerivesFromSerializable(const std::string& sCanonicalTypeName) {
         // Make sure the type has no templates (not supported).
         if (sCanonicalTypeName.contains('<')) [[unlikely]] {
-            Logger::get().error(fmt::format(
+            Logger::get().error(std::format(
                 "unable to check if type \"{}\" derives from Serializable because templates are not "
                 "supported",
                 sCanonicalTypeName));
@@ -355,7 +355,7 @@ namespace ne {
 
         // Make sure the type is not a raw pointer (not supported).
         if (sCanonicalTypeName.contains('*')) [[unlikely]] {
-            Logger::get().error(fmt::format(
+            Logger::get().error(std::format(
                 "unable to check if type \"{}\" derives from Serializable because pointer types are not "
                 "supported",
                 sCanonicalTypeName));
@@ -392,7 +392,7 @@ namespace ne {
             // Get GUID.
             return isTypeDerivesFromSerializable(sInnerType, pNamespace);
         } catch (std::exception& exception) {
-            Logger::get().error(fmt::format(
+            Logger::get().error(std::format(
                 "failed to get type GUID because namespace name \"{}\" is incorrectly formatted, error: "
                 "{}",
                 sNamespaceName,
@@ -492,7 +492,7 @@ namespace ne {
         const auto pFieldName = pField->getName();
 
         if (!isFieldTypeSupported(pField)) {
-            return Error(fmt::format(
+            return Error(std::format(
                 "The type \"{}\" of the specified field \"{}\" is not supported by this serializer.",
                 sFieldCanonicalTypeName,
                 pFieldName));
@@ -530,7 +530,7 @@ namespace ne {
         const auto pFieldName = pFromField->getName();
 
         if (!isFieldTypeSupported(pFromField)) {
-            return Error(fmt::format(
+            return Error(std::format(
                 "The type \"{}\" of the specified field \"{}\" is not supported by this serializer.",
                 sFieldCanonicalTypeName,
                 pFieldName));
@@ -587,7 +587,7 @@ namespace ne {
         const auto pSelfGuid = selfArchetype.getProperty<Guid>(false);
         if (pSelfGuid == nullptr) {
             const Error err(
-                fmt::format("type {} does not have a GUID assigned to it", selfArchetype.getName()));
+                std::format("type {} does not have a GUID assigned to it", selfArchetype.getName()));
             err.showError();
             throw std::runtime_error(err.getFullErrorMessage());
         }
@@ -605,7 +605,7 @@ namespace ne {
         std::stringstream durationStream;
         durationStream << std::fixed << std::setprecision(1) << timeTookInSec;
 
-        Logger::get().info(fmt::format(
+        Logger::get().info(std::format(
             "[{}] finished checking all GUID uniqueness, took: {} sec.",
             Globals::getDebugOnlyLoggingPrefix(),
             durationStream.str()));
@@ -617,7 +617,7 @@ namespace ne {
         for (const auto& pDerivedEntity : vDirectSubclasses) {
             const auto pGuid = pDerivedEntity->getProperty<Guid>(false);
             if (pGuid == nullptr) {
-                const Error err(fmt::format(
+                const Error err(std::format(
                     "type {} does not have a GUID assigned to it.\n\n"
                     "Here is an example of how to assign a GUID to your type:\n"
                     "class RCLASS(Guid(\"00000000-0000-0000-0000-000000000000\")) MyCoolClass "
@@ -630,7 +630,7 @@ namespace ne {
             // Look if this GUID is already used.
             const auto it = vAllGuids.find(pGuid->getGuid());
             if (it != vAllGuids.end()) [[unlikely]] {
-                const Error err(fmt::format(
+                const Error err(std::format(
                     "GUID of type {} is already used by type {}, please generate another GUID",
                     pDerivedEntity->getName(),
                     it->second));
@@ -659,7 +659,7 @@ namespace ne {
         pTomlData->operator[](sSectionName).operator[](sFieldName) = "reflected type, see other sub-section";
 
         // Serialize this field "under our ID".
-        const std::string sSubEntityIdSectionName = fmt::format("{}.{}", sEntityId, iSubEntityId);
+        const std::string sSubEntityIdSectionName = std::format("{}.{}", sEntityId, iSubEntityId);
 
         auto result = pObject->serialize(*pTomlData, pOriginalObject, sSubEntityIdSectionName);
         if (std::holds_alternative<Error>(result)) {

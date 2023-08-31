@@ -2,6 +2,7 @@
 
 // Standard.
 #include <stdexcept>
+#include <format>
 
 // Custom.
 #include "render/vulkan/resources/VulkanResourceManager.h"
@@ -9,7 +10,6 @@
 #include "render/vulkan/VulkanRenderer.h"
 
 // External.
-#include "fmt/core.h"
 #include "vulkan/vk_enum_string_helper.h"
 
 namespace ne {
@@ -95,7 +95,7 @@ namespace ne {
         const auto result = vmaCreateBuffer(
             pMemoryAllocator, &bufferInfo, &allocationInfo, &pCreatedBuffer, &pCreatedMemory, nullptr);
         if (result != VK_SUCCESS) [[unlikely]] {
-            return Error(fmt::format(
+            return Error(std::format(
                 "failed to create buffer \"{}\", error: {}", sResourceName, string_VkResult(result)));
         }
 
@@ -121,7 +121,7 @@ namespace ne {
         const auto result = vmaCreateImage(
             pMemoryAllocator, &imageInfo, &allocationInfo, &pCreatedImage, &pCreatedMemory, nullptr);
         if (result != VK_SUCCESS) [[unlikely]] {
-            return Error(fmt::format(
+            return Error(std::format(
                 "failed to create image \"{}\", error: {}", sResourceName, string_VkResult(result)));
         }
 
@@ -165,7 +165,7 @@ namespace ne {
             const auto result =
                 vkCreateImageView(pLogicalDevice, &viewInfo, nullptr, &pCreatedImageResource->pImageView);
             if (result != VK_SUCCESS) [[unlikely]] {
-                return Error(fmt::format("failed to create image view, error: {}", string_VkResult(result)));
+                return Error(std::format("failed to create image view, error: {}", string_VkResult(result)));
             }
         }
 

@@ -7,6 +7,7 @@
 #include <optional>
 #include <set>
 #include <ranges>
+#include <format>
 
 // Custom.
 #include "misc/Error.h"
@@ -21,7 +22,6 @@
 
 // External.
 #include "Refureku/Object.h"
-#include "fmt/core.h"
 
 #include "Serializable.generated.h"
 

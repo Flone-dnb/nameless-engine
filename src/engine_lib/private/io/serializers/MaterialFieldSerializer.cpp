@@ -1,12 +1,12 @@
 #include "io/serializers/MaterialFieldSerializer.h"
 
+// Standard.
+#include <format>
+
 // Custom.
 #include "io/Serializable.h"
 #include "materials/Material.h"
 #include "io/serializers/SerializableObjectFieldSerializer.h"
-
-// External.
-#include "fmt/core.h"
 
 namespace ne {
     bool MaterialFieldSerializer::isFieldTypeSupported(const rfk::Field* pField) {
@@ -26,7 +26,7 @@ namespace ne {
         const auto pFieldName = pField->getName();
 
         if (!isFieldTypeSupported(pField)) {
-            return Error(fmt::format(
+            return Error(std::format(
                 "The type \"{}\" of the specified field \"{}\" is not supported by this serializer.",
                 sFieldCanonicalTypeName,
                 pFieldName));
@@ -62,7 +62,7 @@ namespace ne {
         const auto pFieldName = pField->getName();
 
         if (!isFieldTypeSupported(pField)) {
-            return Error(fmt::format(
+            return Error(std::format(
                 "The type \"{}\" of the specified field \"{}\" is not supported by this serializer.",
                 sFieldCanonicalTypeName,
                 pFieldName));
@@ -102,7 +102,7 @@ namespace ne {
         const auto pFieldName = pFromField->getName();
 
         if (!isFieldTypeSupported(pFromField)) {
-            return Error(fmt::format(
+            return Error(std::format(
                 "the type \"{}\" of the specified field \"{}\" is not supported by this serializer",
                 sFieldCanonicalTypeName,
                 pFieldName));

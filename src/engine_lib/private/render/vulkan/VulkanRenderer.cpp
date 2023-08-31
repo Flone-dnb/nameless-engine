@@ -1,5 +1,8 @@
 #include "render/vulkan/VulkanRenderer.h"
 
+// Standard.
+#include <format>
+
 // Custom.
 #include "game/nodes/CameraNode.h"
 #include "render/general/pipeline/PipelineManager.h"
@@ -80,7 +83,7 @@ namespace ne {
             const auto result = vkDeviceWaitIdle(pLogicalDevice);
             if (result != VK_SUCCESS) [[unlikely]] {
                 Logger::get().error(
-                    fmt::format("failed to wait for device to be idle, error: {}", string_VkResult(result)));
+                    std::format("failed to wait for device to be idle, error: {}", string_VkResult(result)));
                 return;
             }
         }
@@ -286,7 +289,7 @@ namespace ne {
         VkDebugUtilsMessageTypeFlagsEXT messageType,
         const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
         void* pUserData) {
-        Logger::get().error(fmt::format("[validation layer] {}", pCallbackData->pMessage));
+        Logger::get().error(std::format("[validation layer] {}", pCallbackData->pMessage));
         return VK_FALSE;
     }
 
@@ -295,14 +298,14 @@ namespace ne {
         uint32_t iExtensionCount = 0;
         auto result = vkEnumerateInstanceExtensionProperties(nullptr, &iExtensionCount, nullptr);
         if (result != VK_SUCCESS) [[unlikely]] {
-            return Error(fmt::format(
+            return Error(std::format(
                 "failed to enumerate available Vulkan instance extension count, error: {}",
                 string_VkResult(result)));
         }
         std::vector<VkExtensionProperties> vExtensions(iExtensionCount);
         result = vkEnumerateInstanceExtensionProperties(nullptr, &iExtensionCount, vExtensions.data());
         if (result != VK_SUCCESS) [[unlikely]] {
-            return Error(fmt::format(
+            return Error(std::format(
                 "failed to enumerate available Vulkan instance extensions, error: {}",
                 string_VkResult(result)));
         }
@@ -346,7 +349,7 @@ namespace ne {
         // Set validation layers.
         createInfo.enabledLayerCount = static_cast<uint32_t>(vUsedValidationLayerNames.size());
         createInfo.ppEnabledLayerNames = vUsedValidationLayerNames.data();
-        Logger::get().info(fmt::format("{} validation layer(s) enabled", createInfo.enabledLayerCount));
+        Logger::get().info(std::format("{} validation layer(s) enabled", createInfo.enabledLayerCount));
 
         // Fill debug messenger creation info (to use our custom callback for validation layer messages).
         VkDebugUtilsMessengerCreateInfoEXT debugMessengerCreateInfo{};
@@ -367,7 +370,7 @@ namespace ne {
         // Create Vulkan instance.
         result = vkCreateInstance(&createInfo, nullptr, &pInstance);
         if (result != VK_SUCCESS) [[unlikely]] {
-            return Error(fmt::format(
+            return Error(std::format(
                 "failed to create Vulkan instance, make sure your GPU drivers are updated, error: {}",
                 string_VkResult(result)));
         }
@@ -377,7 +380,7 @@ namespace ne {
         result = createDebugUtilsMessengerEXT(
             pInstance, &debugMessengerCreateInfo, nullptr, &pValidationLayerDebugMessenger);
         if (result != VK_SUCCESS) [[unlikely]] {
-            return Error(fmt::format(
+            return Error(std::format(
                 "failed to create validation layer debug messenger, error: {}", string_VkResult(result)));
         }
 #endif
@@ -407,7 +410,7 @@ namespace ne {
         // Create window surface.
         const auto result = glfwCreateWindowSurface(pInstance, pGlfwWindow, nullptr, &pWindowSurface);
         if (result != VK_SUCCESS) [[unlikely]] {
-            return Error(fmt::format("failed to create window surface, error: {}", string_VkResult(result)));
+            return Error(std::format("failed to create window surface, error: {}", string_VkResult(result)));
         }
 
         return {};
@@ -422,7 +425,7 @@ namespace ne {
         auto result = isDeviceSuitable(pGpuDevice);
         if (std::holds_alternative<Error>(result)) {
             const auto error = std::get<Error>(std::move(result));
-            Logger::get().info(fmt::format(
+            Logger::get().info(std::format(
                 "failed to test if the GPU \"{}\" is suitable due to the following error: {}",
                 deviceProperties.deviceName,
                 error.getFullErrorMessage()));
@@ -430,7 +433,7 @@ namespace ne {
         }
         const auto sMissingSupportMessage = std::get<std::string>(std::move(result));
         if (!sMissingSupportMessage.empty()) {
-            Logger::get().info(fmt::format("{} and thus cannon be used", sMissingSupportMessage));
+            Logger::get().info(std::format("{} and thus cannon be used", sMissingSupportMessage));
             return 0;
         }
 
@@ -476,7 +479,7 @@ namespace ne {
 
         // Make sure this GPU supports used Vulkan version.
         if (deviceProperties.apiVersion < iUsedVulkanVersion) {
-            return fmt::format(
+            return std::format(
                 "GPU \"{}\" does not support used Vulkan version", deviceProperties.deviceName);
         }
 
@@ -489,7 +492,7 @@ namespace ne {
         }
         const auto queueFamiliesIndices = std::get<QueueFamilyIndices>(std::move(queueFamiliesResult));
         if (!queueFamiliesIndices.isComplete()) {
-            return fmt::format(
+            return std::format(
                 "GPU \"{}\" does not support all required queue families", deviceProperties.deviceName);
         }
 
@@ -502,7 +505,7 @@ namespace ne {
         }
         const auto sMissingDeviceExtension = std::get<std::string>(std::move(result));
         if (!sMissingDeviceExtension.empty()) {
-            return fmt::format(
+            return std::format(
                 "GPU \"{}\" does not support required device extension \"{}\"",
                 deviceProperties.deviceName,
                 sMissingDeviceExtension);
@@ -528,14 +531,14 @@ namespace ne {
         // Make sure anisotropic filtering is supported
         // (because RenderSettings don't check whether it's supported or not when deserialized/changed)
         if (supportedFeatures.samplerAnisotropy == VK_FALSE) {
-            return fmt::format(
+            return std::format(
                 "GPU \"{}\" does not support anisotropic filtering", deviceProperties.deviceName);
         }
 
         // Make sure that maximum push constants size that we use is supported.
         if (VulkanPushConstantsManager::getMaxPushConstantsSizeInBytes() >
             deviceProperties.limits.maxPushConstantsSize) {
-            return fmt::format(
+            return std::format(
                 "GPU \"{}\" max push constants size is only {} while we expect {}",
                 deviceProperties.deviceName,
                 deviceProperties.limits.maxPushConstantsSize,
@@ -558,7 +561,7 @@ namespace ne {
         auto result = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(
             pGpu, pWindowSurface, &swapChainSupportDetails.capabilities);
         if (result != VK_SUCCESS) [[unlikely]] {
-            return Error(fmt::format(
+            return Error(std::format(
                 "failed to query physical device capabilities, error: {}", string_VkResult(result)));
         }
 
@@ -566,7 +569,7 @@ namespace ne {
         uint32_t iSupportedFormatCount = 0;
         result = vkGetPhysicalDeviceSurfaceFormatsKHR(pGpu, pWindowSurface, &iSupportedFormatCount, nullptr);
         if (result != VK_SUCCESS) [[unlikely]] {
-            return Error(fmt::format(
+            return Error(std::format(
                 "failed to query supported physical device surface format count, error: {}",
                 string_VkResult(result)));
         }
@@ -581,7 +584,7 @@ namespace ne {
                 &iSupportedFormatCount,
                 swapChainSupportDetails.vSupportedFormats.data());
             if (result != VK_SUCCESS) [[unlikely]] {
-                return Error(fmt::format(
+                return Error(std::format(
                     "failed to query supported physical device surface formats, error: {}",
                     string_VkResult(result)));
             }
@@ -592,7 +595,7 @@ namespace ne {
         result = vkGetPhysicalDeviceSurfacePresentModesKHR(
             pGpu, pWindowSurface, &iSupportedPresentationModeCount, nullptr);
         if (result != VK_SUCCESS) [[unlikely]] {
-            return Error(fmt::format(
+            return Error(std::format(
                 "failed to query supported physical device present mode count, error: {}",
                 string_VkResult(result)));
         }
@@ -607,7 +610,7 @@ namespace ne {
                 &iSupportedPresentationModeCount,
                 swapChainSupportDetails.vSupportedPresentModes.data());
             if (result != VK_SUCCESS) [[unlikely]] {
-                return Error(fmt::format(
+                return Error(std::format(
                     "failed to query supported physical device present modes, error: {}",
                     string_VkResult(result)));
             }
@@ -651,7 +654,7 @@ namespace ne {
             const auto result = vkGetPhysicalDeviceSurfaceSupportKHR(
                 pGpu, iCurrentIndex, pWindowSurface, &iHasPresentationSupport);
             if (result != VK_SUCCESS) [[unlikely]] {
-                return Error(fmt::format(
+                return Error(std::format(
                     "failed to get physical device surface support details, error: {}",
                     string_VkResult(result)));
             }
@@ -690,7 +693,7 @@ namespace ne {
         // Make sure there is at least one supported swap chain image format and a presentation mode.
         if (swapChainSupportDetails.vSupportedFormats.empty() ||
             swapChainSupportDetails.vSupportedPresentModes.empty()) {
-            return fmt::format(
+            return std::format(
                 "GPU \"{}\" swap chain support lacks formats/present modes", deviceProperties.deviceName);
         }
 
@@ -704,7 +707,7 @@ namespace ne {
             }
         }
         if (!bFoundBackBufferFormat) {
-            return fmt::format(
+            return std::format(
                 "GPU \"{}\" swap chain does not support used back buffer format",
                 deviceProperties.deviceName);
         }
@@ -720,11 +723,11 @@ namespace ne {
             }
         }
         if (!bFoundImmediatePresentMode) {
-            return fmt::format(
+            return std::format(
                 "GPU \"{}\" swap chain does not support immediate present mode", deviceProperties.deviceName);
         }
         if (!bFoundDefaultFifoPresentMode) {
-            return fmt::format(
+            return std::format(
                 "GPU \"{}\" swap chain does not support default FIFO present mode",
                 deviceProperties.deviceName);
         }
@@ -732,7 +735,7 @@ namespace ne {
         // Make sure it supports used number of images in the swap chain.
         constexpr auto iSwapChainImageCount = getSwapChainBufferCount();
         if (iSwapChainImageCount < swapChainSupportDetails.capabilities.minImageCount) {
-            return fmt::format(
+            return std::format(
                 "GPU \"{}\" swap chain does not support used swap chain image count (used: {}, "
                 "supported min: {})",
                 deviceProperties.deviceName,
@@ -742,7 +745,7 @@ namespace ne {
         // 0 max image count means "no limit" so we only check if it's not 0
         if (swapChainSupportDetails.capabilities.maxImageCount > 0 &&
             iSwapChainImageCount > swapChainSupportDetails.capabilities.maxImageCount) {
-            return fmt::format(
+            return std::format(
                 "GPU \"{}\" swap chain does not support used swap chain image count (used: {}, "
                 "supported max: {})",
                 deviceProperties.deviceName,
@@ -760,7 +763,7 @@ namespace ne {
         auto result = vkEnumeratePhysicalDevices(pInstance, &iSupportedGpuCount, nullptr);
         if (result != VK_SUCCESS) [[unlikely]] {
             return Error(
-                fmt::format("failed to enumerate physical device count, error: {}", string_VkResult(result)));
+                std::format("failed to enumerate physical device count, error: {}", string_VkResult(result)));
         }
 
         // Make sure there is at least one GPU.
@@ -781,7 +784,7 @@ namespace ne {
         result = vkEnumeratePhysicalDevices(pInstance, &iSupportedGpuCount, vGpus.data());
         if (result != VK_SUCCESS) [[unlikely]] {
             return Error(
-                fmt::format("failed to enumerate physical devices, error: {}", string_VkResult(result)));
+                std::format("failed to enumerate physical devices, error: {}", string_VkResult(result)));
         }
 
         // Pick a GPU with the highest suitability score.
@@ -831,7 +834,7 @@ namespace ne {
         });
 
         // Mark GPUs that are blacklisted and log scores.
-        std::string sRating = fmt::format("found and rated {} suitable GPU(s):", vScores.size());
+        std::string sRating = std::format("found and rated {} suitable GPU(s):", vScores.size());
         for (size_t i = 0; i < vScores.size(); i++) {
             // See if this GPU is blacklisted.
             bool bIsBlacklisted = false;
@@ -843,7 +846,7 @@ namespace ne {
             }
 
             // Add new entry in rating log.
-            sRating += fmt::format("\n{}. ", i + 1);
+            sRating += std::format("\n{}. ", i + 1);
 
             // Process status.
             if (bIsBlacklisted) {
@@ -852,7 +855,7 @@ namespace ne {
             }
 
             // Append GPU name and score.
-            sRating += fmt::format("{}, suitability score: {}", vScores[i].sGpuName, vScores[i].iScore);
+            sRating += std::format("{}, suitability score: {}", vScores[i].sGpuName, vScores[i].iScore);
         }
 
         // Print scores.
@@ -875,7 +878,7 @@ namespace ne {
             }
             if (!iFoundIndex.has_value()) {
                 // Not found. Log event.
-                Logger::get().info(fmt::format(
+                Logger::get().info(std::format(
                     "unable to find the GPU \"{}\" (that was specified in the renderer's "
                     "config file) in the list of available GPUs for this renderer",
                     sGpuNameToUse));
@@ -893,7 +896,7 @@ namespace ne {
 
             // Skip this GPU is it's blacklisted.
             if (currentGpuInfo.bIsBlacklisted) {
-                Logger::get().info(fmt::format(
+                Logger::get().info(std::format(
                     "ignoring GPU \"{}\" because it's blacklisted (previously the renderer failed to "
                     "initialize using this GPU)",
                     currentGpuInfo.sGpuName));
@@ -905,7 +908,7 @@ namespace ne {
             if (std::holds_alternative<Error>(queueFamilyIndicesResult)) [[unlikely]] {
                 auto error = std::get<Error>(std::move(queueFamilyIndicesResult));
                 error.addCurrentLocationToErrorStack();
-                Logger::get().error(fmt::format(
+                Logger::get().error(std::format(
                     "failed to query queue family indices for the rated GPU \"{}\"",
                     currentGpuInfo.sGpuName));
                 continue;
@@ -915,12 +918,12 @@ namespace ne {
 
             // Log used GPU.
             if (sGpuNameToUse == currentGpuInfo.sGpuName) {
-                Logger::get().info(fmt::format(
+                Logger::get().info(std::format(
                     "using the following GPU: \"{}\" (was specified as preferred in the renderer's "
                     "config file)",
                     currentGpuInfo.sGpuName));
             } else {
-                Logger::get().info(fmt::format("using the following GPU: \"{}\"", currentGpuInfo.sGpuName));
+                Logger::get().info(std::format("using the following GPU: \"{}\"", currentGpuInfo.sGpuName));
             }
 
             // Select physical device.
@@ -937,7 +940,7 @@ namespace ne {
 
         // Make sure we picked a GPU.
         if (pPhysicalDevice == nullptr) {
-            return Error(fmt::format(
+            return Error(std::format(
                 "found {} suitable GPU(s) but no GPU was picked (see reason above)", vScores.size()));
         }
 
@@ -995,7 +998,7 @@ namespace ne {
         // Create device.
         const auto result = vkCreateDevice(pPhysicalDevice, &createInfo, nullptr, &pLogicalDevice);
         if (result != VK_SUCCESS) [[unlikely]] {
-            return Error(fmt::format("failed to create logical device, error: {}", string_VkResult(result)));
+            return Error(std::format("failed to create logical device, error: {}", string_VkResult(result)));
         }
 
         // Save reference to created graphics queue.
@@ -1088,20 +1091,20 @@ namespace ne {
         // Create swap chain.
         auto result = vkCreateSwapchainKHR(pLogicalDevice, &createInfo, nullptr, &pSwapChain);
         if (result != VK_SUCCESS) [[unlikely]] {
-            return Error(fmt::format("failed to create swap chain, error: {}", string_VkResult(result)));
+            return Error(std::format("failed to create swap chain, error: {}", string_VkResult(result)));
         }
 
         // Query image count in the created swap chain.
         uint32_t iActualSwapChainImageCount = 0;
         result = vkGetSwapchainImagesKHR(pLogicalDevice, pSwapChain, &iActualSwapChainImageCount, nullptr);
         if (result != VK_SUCCESS) [[unlikely]] {
-            return Error(fmt::format(
+            return Error(std::format(
                 "failed to save references to swap chain image count, error: {}", string_VkResult(result)));
         }
 
         // Make sure the requested number of images was created.
         if (iSwapChainImageCount != iActualSwapChainImageCount) [[unlikely]] {
-            return Error(fmt::format(
+            return Error(std::format(
                 "failed to created swap chain images, requested: {}, created: {}",
                 iSwapChainImageCount,
                 iActualSwapChainImageCount));
@@ -1111,7 +1114,7 @@ namespace ne {
         result = vkGetSwapchainImagesKHR(
             pLogicalDevice, pSwapChain, &iActualSwapChainImageCount, vSwapChainImages.data());
         if (result != VK_SUCCESS) [[unlikely]] {
-            return Error(fmt::format(
+            return Error(std::format(
                 "failed to save references to swap chain images, error: {}", string_VkResult(result)));
         }
 
@@ -1133,7 +1136,7 @@ namespace ne {
             const auto result =
                 vkCreateImageView(pLogicalDevice, &viewInfo, nullptr, &vSwapChainImageViews[i]);
             if (result != VK_SUCCESS) [[unlikely]] {
-                return Error(fmt::format("failed to create image view, error: {}", string_VkResult(result)));
+                return Error(std::format("failed to create image view, error: {}", string_VkResult(result)));
             }
         }
 
@@ -1150,7 +1153,7 @@ namespace ne {
         // Create command pool.
         const auto result = vkCreateCommandPool(pLogicalDevice, &poolInfo, nullptr, &pCommandPool);
         if (result != VK_SUCCESS) [[unlikely]] {
-            return Error(fmt::format("failed to create command pool, error: {}", string_VkResult(result)));
+            return Error(std::format("failed to create command pool, error: {}", string_VkResult(result)));
         }
 
         return {};
@@ -1304,7 +1307,7 @@ namespace ne {
         // Create render pass.
         const auto result = vkCreateRenderPass(pLogicalDevice, &renderPassInfo, nullptr, &pRenderPass);
         if (result != VK_SUCCESS) [[unlikely]] {
-            return Error(fmt::format("failed to create render pass, error: {}", string_VkResult(result)));
+            return Error(std::format("failed to create render pass, error: {}", string_VkResult(result)));
         }
 
         return {};
@@ -1426,7 +1429,7 @@ namespace ne {
         // Create sampler.
         const auto result = vkCreateSampler(pLogicalDevice, &samplerInfo, nullptr, &pTextureSampler);
         if (result != VK_SUCCESS) [[unlikely]] {
-            return Error(fmt::format("failed to create sampler, error: {}", string_VkResult(result)));
+            return Error(std::format("failed to create sampler, error: {}", string_VkResult(result)));
         }
 
         return {};
@@ -1578,7 +1581,7 @@ namespace ne {
         const auto result = vkDeviceWaitIdle(pLogicalDevice);
         if (result != VK_SUCCESS) [[unlikely]] {
             return Error(
-                fmt::format("failed to wait for device to be idle, error: {}", string_VkResult(result)));
+                std::format("failed to wait for device to be idle, error: {}", string_VkResult(result)));
         }
 
         {
@@ -1690,7 +1693,7 @@ namespace ne {
 
         // Make sure framebuffer array size is equal to image views array size.
         if (vSwapChainFramebuffers.size() != vSwapChainImageViews.size()) [[unlikely]] {
-            return Error(fmt::format(
+            return Error(std::format(
                 "swapchain framebuffer array size ({}) is not equal to swapchain image view array size ({}), "
                 "swapchain framebuffers wrap swapchain images thus framebuffer count "
                 "should be equal to swapchain image count",
@@ -1734,7 +1737,7 @@ namespace ne {
             const auto result =
                 vkCreateFramebuffer(pLogicalDevice, &framebufferInfo, nullptr, &vSwapChainFramebuffers[i]);
             if (result != VK_SUCCESS) [[unlikely]] {
-                return Error(fmt::format(
+                return Error(std::format(
                     "failed to create a framebuffer for a swapchain image view, error: {}",
                     string_VkResult(result)));
             }
@@ -1769,7 +1772,7 @@ namespace ne {
         // Reset command buffer.
         auto result = vkResetCommandBuffer(pVulkanFrameResource->pCommandBuffer, 0);
         if (result != VK_SUCCESS) [[unlikely]] {
-            return Error(fmt::format("failed to reset command buffer, error: {}", string_VkResult(result)));
+            return Error(std::format("failed to reset command buffer, error: {}", string_VkResult(result)));
         }
 
         PROFILE_SCOPE_END;
@@ -1783,7 +1786,7 @@ namespace ne {
         // Mark start of command recording.
         result = vkBeginCommandBuffer(pVulkanFrameResource->pCommandBuffer, &beginInfo);
         if (result != VK_SUCCESS) [[unlikely]] {
-            return Error(fmt::format(
+            return Error(std::format(
                 "failed to start recording commands into a command buffer, error: {}",
                 string_VkResult(result)));
         }
@@ -1897,7 +1900,7 @@ namespace ne {
         const auto result = vkWaitForFences(
             pLogicalDevice, static_cast<uint32_t>(vFences.size()), vFences.data(), VK_TRUE, UINT64_MAX);
         if (result != VK_SUCCESS) [[unlikely]] {
-            Error error(fmt::format("failed to wait for a fence, error: {}", string_VkResult(result)));
+            Error error(std::format("failed to wait for a fence, error: {}", string_VkResult(result)));
             error.showError();
             throw std::runtime_error(error.getFullErrorMessage());
         }
@@ -1934,7 +1937,7 @@ namespace ne {
         VkCommandBuffer pOneTimeSubmitCommandBuffer = nullptr;
         auto result = vkAllocateCommandBuffers(pLogicalDevice, &allocationInfo, &pOneTimeSubmitCommandBuffer);
         if (result != VK_SUCCESS) [[unlikely]] {
-            return Error(fmt::format(
+            return Error(std::format(
                 "failed to create a one-time submit command buffer, error: {}", string_VkResult(result)));
         }
 
@@ -1946,7 +1949,7 @@ namespace ne {
         // Start recording commands.
         result = vkBeginCommandBuffer(pOneTimeSubmitCommandBuffer, &beginInfo);
         if (result != VK_SUCCESS) [[unlikely]] {
-            return Error(fmt::format(
+            return Error(std::format(
                 "failed to start recording commands into a one-time submit command buffer, error: {}",
                 string_VkResult(result)));
         }
@@ -1959,7 +1962,7 @@ namespace ne {
         // Finish recording commands.
         auto result = vkEndCommandBuffer(pOneTimeSubmitCommandBuffer);
         if (result != VK_SUCCESS) [[unlikely]] {
-            return Error(fmt::format(
+            return Error(std::format(
                 "failed to finish recording commands into a one-time submit command buffer, error: {}",
                 string_VkResult(result)));
         }
@@ -1972,7 +1975,7 @@ namespace ne {
         VkFence pTemporaryFence = nullptr;
         result = vkCreateFence(pLogicalDevice, &fenceInfo, nullptr, &pTemporaryFence);
         if (result != VK_SUCCESS) [[unlikely]] {
-            return Error(fmt::format("failed to create a fence, error: {}", string_VkResult(result)));
+            return Error(std::format("failed to create a fence, error: {}", string_VkResult(result)));
         }
 
         // Prepare to execute the commands.
@@ -1984,7 +1987,7 @@ namespace ne {
         // Execute the commands.
         result = vkQueueSubmit(pGraphicsQueue, 1, &submitInfo, pTemporaryFence);
         if (result != VK_SUCCESS) [[unlikely]] {
-            return Error(fmt::format(
+            return Error(std::format(
                 "failed to submit commands of a one-time submit command buffer, error: {}",
                 string_VkResult(result)));
         }
@@ -1993,7 +1996,7 @@ namespace ne {
         result = vkWaitForFences(pLogicalDevice, 1, &pTemporaryFence, VK_TRUE, UINT64_MAX);
         if (result != VK_SUCCESS) [[unlikely]] {
             return Error(
-                fmt::format("failed to wait for a temporary fence, error: {}", string_VkResult(result)));
+                std::format("failed to wait for a temporary fence, error: {}", string_VkResult(result)));
         }
 
         // Destroy the fence.
@@ -2131,7 +2134,7 @@ namespace ne {
             const auto result = vkDeviceWaitIdle(pLogicalDevice);
             if (result != VK_SUCCESS) [[unlikely]] {
                 Error error(
-                    fmt::format("failed to wait for device to be idle, error: {}", string_VkResult(result)));
+                    std::format("failed to wait for device to be idle, error: {}", string_VkResult(result)));
                 error.showError();
                 throw std::runtime_error(error.getFullErrorMessage());
             }
@@ -2241,7 +2244,7 @@ namespace ne {
         // Mark end of command recording.
         auto result = vkEndCommandBuffer(pVulkanCurrentFrameResource->pCommandBuffer);
         if (result != VK_SUCCESS) [[unlikely]] {
-            return Error(fmt::format(
+            return Error(std::format(
                 "failed to finish recording commands into a command buffer, error: {}",
                 string_VkResult(result)));
         }
@@ -2259,13 +2262,13 @@ namespace ne {
             &iImageIndex);
         if (result != VK_SUCCESS) [[unlikely]] {
             return Error(
-                fmt::format("failed to acquire next swap chain image, error: {}", string_VkResult(result)));
+                std::format("failed to acquire next swap chain image, error: {}", string_VkResult(result)));
         }
 
         // Log if acquired image index is not expected.
         if (!bLoggedAboutUnexpectedSwapChainImageAcquired && (iImageIndex != iCurrentFrameResourceIndex))
             [[unlikely]] {
-            Logger::get().warn(fmt::format(
+            Logger::get().warn(std::format(
                 "acquired unexpected swap chain image with index {} while the current frame resource index "
                 "is {}, this might affect the performance",
                 iImageIndex,
@@ -2279,7 +2282,7 @@ namespace ne {
             vkWaitForFences(pLogicalDevice, 1, &vSwapChainImageFenceRefs[iImageIndex], VK_TRUE, UINT64_MAX);
         if (result != VK_SUCCESS) [[unlikely]] {
             return Error(
-                fmt::format("failed to wait for acquired image fence, error: {}", string_VkResult(result)));
+                std::format("failed to wait for acquired image fence, error: {}", string_VkResult(result)));
         }
 
         PROFILE_SCOPE_END;
@@ -2315,7 +2318,7 @@ namespace ne {
         // Make fence to be in "unsignaled" state.
         result = vkResetFences(pLogicalDevice, 1, &pVulkanCurrentFrameResource->pFence);
         if (result != VK_SUCCESS) [[unlikely]] {
-            return Error(fmt::format("failed to reset a fence, error: {}", string_VkResult(result)));
+            return Error(std::format("failed to reset a fence, error: {}", string_VkResult(result)));
         }
 
         PROFILE_SCOPE_START(QueueSubmit);
@@ -2323,7 +2326,7 @@ namespace ne {
         // Submit command buffer(s) to the queue for execution.
         result = vkQueueSubmit(pGraphicsQueue, 1, &submitInfo, pVulkanCurrentFrameResource->pFence);
         if (result != VK_SUCCESS) [[unlikely]] {
-            return Error(fmt::format(
+            return Error(std::format(
                 "failed to submit command buffer(s) for execution, error: {}", string_VkResult(result)));
         }
 
@@ -2351,7 +2354,7 @@ namespace ne {
         result = vkQueuePresentKHR(pPresentQueue, &presentInfo);
         if (result != VK_SUCCESS) [[unlikely]] {
             return Error(
-                fmt::format("failed to present a swapchain image, error: {}", string_VkResult(result)));
+                std::format("failed to present a swapchain image, error: {}", string_VkResult(result)));
         }
 
         PROFILE_SCOPE_END;
@@ -2396,7 +2399,7 @@ namespace ne {
         // Make sure this sample count is supported.
         if (iSampleCount > iMaxSampleCount) [[unlikely]] {
             // This should never happen as render settings guarantee that returned AA quality is supported.
-            return Error(fmt::format("expected the current AA quality {} to be supported", iSampleCount));
+            return Error(std::format("expected the current AA quality {} to be supported", iSampleCount));
         }
 
         // Save sample count.
@@ -2472,7 +2475,7 @@ namespace ne {
         const auto result =
             vkWaitForFences(pLogicalDevice, 1, &pVulkanFrameResource->pFence, VK_TRUE, UINT64_MAX);
         if (result != VK_SUCCESS) [[unlikely]] {
-            Error error(fmt::format("failed to wait for a fence, error: {}", string_VkResult(result)));
+            Error error(std::format("failed to wait for a fence, error: {}", string_VkResult(result)));
             error.showError();
             throw std::runtime_error(error.getFullErrorMessage());
         }
@@ -2513,7 +2516,7 @@ namespace ne {
         auto result = vkEnumerateDeviceExtensionProperties(
             pGpuDevice, nullptr, &iAvailableDeviceExtensionCount, nullptr);
         if (result != VK_SUCCESS) [[unlikely]] {
-            return Error(fmt::format(
+            return Error(std::format(
                 "failed to enumerate the number of available device extensions, error: {}",
                 string_VkResult(result)));
         }
@@ -2523,7 +2526,7 @@ namespace ne {
         result = vkEnumerateDeviceExtensionProperties(
             pGpuDevice, nullptr, &iAvailableDeviceExtensionCount, vAvailableDeviceExtensions.data());
         if (result != VK_SUCCESS) [[unlikely]] {
-            return Error(fmt::format(
+            return Error(std::format(
                 "failed to enumerate available device extensions, error: {}", string_VkResult(result)));
         }
 
@@ -2553,7 +2556,7 @@ namespace ne {
         uint32_t iAvailableValidationLayerCount = 0;
         auto result = vkEnumerateInstanceLayerProperties(&iAvailableValidationLayerCount, nullptr);
         if (result != VK_SUCCESS) [[unlikely]] {
-            return Error(fmt::format(
+            return Error(std::format(
                 "failed to enumerate available Vulkan instance validation layer count, error: {}",
                 string_VkResult(result)));
         }
@@ -2563,7 +2566,7 @@ namespace ne {
         result = vkEnumerateInstanceLayerProperties(
             &iAvailableValidationLayerCount, vAvailableValidationLayers.data());
         if (result != VK_SUCCESS) [[unlikely]] {
-            return Error(fmt::format(
+            return Error(std::format(
                 "failed to enumerate available Vulkan instance validation layers, error: {}",
                 string_VkResult(result)));
         }
@@ -2581,7 +2584,7 @@ namespace ne {
             }
 
             if (!bIsLayerAvailable) {
-                return Error(fmt::format(
+                return Error(std::format(
                     "Vulkan instance validation layer \"{}\" was requested but is not available",
                     sUsedValidationLayerName));
             }
@@ -2614,7 +2617,7 @@ namespace ne {
             return pFunction(pInstance, pDebugMessenger, pAllocator);
         }
 
-        Logger::get().error(fmt::format("unable to load \"vkDestroyDebugUtilsMessengerEXT\" function"));
+        Logger::get().error(std::format("unable to load \"vkDestroyDebugUtilsMessengerEXT\" function"));
     }
 #endif
 } // namespace ne

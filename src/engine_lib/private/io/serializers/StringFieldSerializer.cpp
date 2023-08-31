@@ -1,7 +1,7 @@
 #include "io/serializers/StringFieldSerializer.h"
 
-// External.
-#include "fmt/format.h"
+// Standard.
+#include <format>
 
 namespace ne {
     bool StringFieldSerializer::isFieldTypeSupported(const rfk::Field* pField) {
@@ -25,7 +25,7 @@ namespace ne {
             pTomlData->operator[](sSectionName).operator[](pFieldName) =
                 pField->getUnsafe<std::string>(pFieldOwner);
         } else {
-            return Error(fmt::format(
+            return Error(std::format(
                 "The type \"{}\" of the specified field \"{}\" is not supported by this serializer.",
                 sFieldCanonicalTypeName,
                 pFieldName));
@@ -49,13 +49,13 @@ namespace ne {
             auto fieldValue = pTomlValue->as_string().str;
             pField->setUnsafe<std::string>(pFieldOwner, std::move(fieldValue));
         } else if (!pTomlValue->is_string()) {
-            return Error(fmt::format(
+            return Error(std::format(
                 "The type \"{}\" of the specified field \"{}\" is supported by this serializer, "
                 "but the TOML value is not string.",
                 sFieldCanonicalTypeName,
                 pFieldName));
         } else {
-            return Error(fmt::format(
+            return Error(std::format(
                 "The type \"{}\" of the specified field \"{}\" is not supported by this serializer.",
                 sFieldCanonicalTypeName,
                 pFieldName));
@@ -75,7 +75,7 @@ namespace ne {
             auto value = pFromField->getUnsafe<std::string>(pFromInstance);
             pToField->setUnsafe<std::string>(pToInstance, std::move(value));
         } else {
-            return Error(fmt::format(
+            return Error(std::format(
                 "The type \"{}\" of the specified field \"{}\" is not supported by this serializer.",
                 sFieldCanonicalTypeName,
                 pFromField->getName()));

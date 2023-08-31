@@ -1,7 +1,7 @@
 #include "io/serializers/PrimitiveFieldSerializer.h"
 
-// External.
-#include "fmt/format.h"
+// Standard.
+#include <format>
 
 namespace ne {
     bool PrimitiveFieldSerializer::isFieldTypeSupported(const rfk::Field* pField) {
@@ -70,7 +70,7 @@ namespace ne {
             pTomlData->operator[](sSectionName).operator[](pFieldName) =
                 toml::format(toml::value(pField->getUnsafe<double>(pFieldOwner)));
         } else {
-            return Error(fmt::format(
+            return Error(std::format(
                 "The type \"{}\" of the specified field \"{}\" is not supported by this serializer.",
                 pField->getCanonicalTypeName(),
                 pFieldName));
@@ -116,7 +116,7 @@ namespace ne {
                 unsigned long long iValue = std::stoull(sValue);
                 pField->setUnsafe<unsigned long long>(pFieldOwner, std::move(iValue)); // NOLINT
             } catch (std::exception& ex) {
-                return Error(fmt::format(
+                return Error(std::format(
                     "Failed to convert string to unsigned long long for field \"{}\": {}",
                     pFieldName,
                     ex.what()));
@@ -127,7 +127,7 @@ namespace ne {
                 float fieldValue = std::stof(pTomlValue->as_string().str);
                 pField->setUnsafe<float>(pFieldOwner, std::move(fieldValue)); // NOLINT
             } catch (std::exception& ex) {
-                return Error(fmt::format(
+                return Error(std::format(
                     "Failed to convert string to double for field \"{}\": {}", pFieldName, ex.what()));
             }
         } else if (fieldType.match(rfk::getType<double>()) && pTomlValue->is_string()) {
@@ -136,11 +136,11 @@ namespace ne {
                 double fieldValue = std::stod(pTomlValue->as_string().str);
                 pField->setUnsafe<double>(pFieldOwner, std::move(fieldValue)); // NOLINT
             } catch (std::exception& ex) {
-                return Error(fmt::format(
+                return Error(std::format(
                     "Failed to convert string to double for field \"{}\": {}", pFieldName, ex.what()));
             }
         } else {
-            return Error(fmt::format(
+            return Error(std::format(
                 "The type \"{}\" of the specified field \"{}\" is not supported by this serializer.",
                 pField->getCanonicalTypeName(),
                 pFieldName));
@@ -177,7 +177,7 @@ namespace ne {
             auto value = pFromField->getUnsafe<double>(pFromInstance);
             pToField->setUnsafe<double>(pToInstance, std::move(value)); // NOLINT
         } else {
-            return Error(fmt::format(
+            return Error(std::format(
                 "The type \"{}\" of the specified field \"{}\" is not supported by this serializer.",
                 pFromField->getCanonicalTypeName(),
                 pFromField->getName()));

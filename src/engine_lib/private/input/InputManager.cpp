@@ -4,14 +4,12 @@
 #include <charconv>
 #include <string>
 #include <ranges>
+#include <format>
 #include <vector>
 
 // Custom.
 #include "io/Logger.h"
 #include "io/ConfigManager.h"
-
-// External.
-#include "fmt/core.h"
 
 namespace ne {
     std::optional<Error> InputManager::addActionEvent(
@@ -27,7 +25,7 @@ namespace ne {
         const auto vRegisteredActions = getAllActionEvents();
         const auto existingActionId = vRegisteredActions.find(iActionId);
         if (existingActionId != vRegisteredActions.end()) {
-            return Error(fmt::format("an action with the ID {} already exists", iActionId));
+            return Error(std::format("an action with the ID {} already exists", iActionId));
         }
 
         // Add action.
@@ -54,7 +52,7 @@ namespace ne {
 
         const auto action = vRegisteredAxisEvents.find(iAxisEventId);
         if (action != vRegisteredAxisEvents.end()) {
-            return Error(fmt::format("an axis event with the ID {} already exists", iAxisEventId));
+            return Error(std::format("an axis event with the ID {} already exists", iAxisEventId));
         }
 
         auto optional = overwriteAxisEvent(iAxisEventId, vAxis);
@@ -75,7 +73,7 @@ namespace ne {
         auto actions = getAllActionEvents();
         const auto it = actions.find(iActionId);
         if (it == actions.end()) {
-            return Error(fmt::format("no action with the ID {} exists", iActionId));
+            return Error(std::format("no action with the ID {} exists", iActionId));
         }
 
         auto vActionKeys = getActionEvent(iActionId);
@@ -103,7 +101,7 @@ namespace ne {
         auto axes = getAllAxisEvents();
         const auto it = axes.find(iAxisEventId);
         if (it == axes.end()) {
-            return Error(fmt::format("no axis event with the ID {} exists", iAxisEventId));
+            return Error(std::format("no axis event with the ID {} exists", iAxisEventId));
         }
 
         // Get keys of this event.
@@ -144,10 +142,10 @@ namespace ne {
             for (const auto& key : vActionKeys) {
                 if (std::holds_alternative<KeyboardKey>(key)) {
                     sActionKeysText +=
-                        fmt::format("k{},", std::to_string(static_cast<int>(std::get<KeyboardKey>(key))));
+                        std::format("k{},", std::to_string(static_cast<int>(std::get<KeyboardKey>(key))));
                 } else {
                     sActionKeysText +=
-                        fmt::format("m{},", std::to_string(static_cast<int>(std::get<MouseButton>(key))));
+                        std::format("m{},", std::to_string(static_cast<int>(std::get<MouseButton>(key))));
                 }
             }
 
@@ -164,7 +162,7 @@ namespace ne {
 
             // Put all keys in a string.
             for (const auto& pair : vAxisKeys) {
-                sAxisKeysText += fmt::format(
+                sAxisKeysText += std::format(
                     "{}-{},",
                     std::to_string(static_cast<int>(pair.first)),
                     std::to_string(static_cast<int>(pair.second)));
@@ -194,12 +192,12 @@ namespace ne {
         // Read sections.
         const auto vSections = manager.getAllSections();
         if (vSections.empty()) {
-            return Error(fmt::format("the specified file '{}' has no sections", sFileName));
+            return Error(std::format("the specified file '{}' has no sections", sFileName));
         }
 
         // Check that we only have 1 or 2 sections.
         if (vSections.size() > 2) {
-            return Error(fmt::format(
+            return Error(std::format(
                 "the specified file '{}' has {} sections, "
                 "while expected only 1 or 2 sections",
                 sFileName,
@@ -215,7 +213,7 @@ namespace ne {
             } else if (sSectionName == sAxisEventSectionName) {
                 bHasAxisEventsSection = true;
             } else {
-                return Error(fmt::format("section '{}' has unexpected name", sSectionName));
+                return Error(std::format("section '{}' has unexpected name", sSectionName));
             }
         }
 
@@ -243,7 +241,7 @@ namespace ne {
                     vFileActionEvents.push_back(static_cast<unsigned int>(iUnsignedLong));
                 } catch (const std::exception& exception) {
                     return Error(
-                        fmt::format("failed to convert \"{}\" to ID, error: {}", sNumber, exception.what()));
+                        std::format("failed to convert \"{}\" to ID, error: {}", sNumber, exception.what()));
                 }
             }
 
@@ -278,7 +276,7 @@ namespace ne {
                         auto [ptr, ec] = std::from_chars(
                             keyString.data(), keyString.data() + keyString.size(), iKeyboardKey);
                         if (ec != std::errc()) {
-                            return Error(fmt::format(
+                            return Error(std::format(
                                 "failed to convert '{}' to keyboard key code (error code: {})",
                                 keyString,
                                 static_cast<int>(ec)));
@@ -292,7 +290,7 @@ namespace ne {
                         auto [ptr, ec] = std::from_chars(
                             keyString.data(), keyString.data() + keyString.size(), iMouseButton);
                         if (ec != std::errc()) {
-                            return Error(fmt::format(
+                            return Error(std::format(
                                 "failed to convert '{}' to mouse button code (error code: {})",
                                 keyString,
                                 static_cast<int>(ec)));
@@ -335,7 +333,7 @@ namespace ne {
                     vFileAxisEvents.push_back(static_cast<unsigned int>(iUnsignedLong));
                 } catch (const std::exception& exception) {
                     return Error(
-                        fmt::format("failed to convert \"{}\" to ID, error: {}", sNumber, exception.what()));
+                        std::format("failed to convert \"{}\" to ID, error: {}", sNumber, exception.what()));
                 }
             }
 
@@ -365,7 +363,7 @@ namespace ne {
                     std::vector<std::string> vPlusMinusKeys = splitString(key, "-");
 
                     if (vPlusMinusKeys.size() != 2) {
-                        return Error(fmt::format("axis entry '{}' does not have 2 keys", key));
+                        return Error(std::format("axis entry '{}' does not have 2 keys", key));
                     }
 
                     // Convert the first one.
@@ -375,7 +373,7 @@ namespace ne {
                         vPlusMinusKeys[0].data() + vPlusMinusKeys[0].size(),
                         iKeyboardPlusKey);
                     if (ec1 != std::errc()) {
-                        return Error(fmt::format(
+                        return Error(std::format(
                             "failed to convert the first key of axis entry '{}' "
                             "to keyboard key code (error code: {})",
                             key,
@@ -389,7 +387,7 @@ namespace ne {
                         vPlusMinusKeys[1].data() + vPlusMinusKeys[1].size(),
                         iKeyboardMinusKey);
                     if (ec2 != std::errc()) {
-                        return Error(fmt::format(
+                        return Error(std::format(
                             "failed to convert the second key of axis entry '{}' "
                             "to keyboard key code (error code: {})",
                             key,
@@ -495,7 +493,7 @@ namespace ne {
                 });
             if (it == vAxisEventStates.end()) [[unlikely]] {
                 Logger::get().error(
-                    fmt::format("can't find minus key for plus key in axis event with ID {}", iAxisEventId));
+                    std::format("can't find minus key for plus key in axis event with ID {}", iAxisEventId));
                 return {};
             }
 
@@ -505,7 +503,7 @@ namespace ne {
 
         // Check sizes.
         if (vPlusKeys.size() != vMinusKeys.size()) [[unlikely]] {
-            Logger::get().error(fmt::format(
+            Logger::get().error(std::format(
                 "not equal size of plus and minus keys, found {} plus key(s) and {} minus(s) keys "
                 "for axis event with ID {}",
                 vPlusKeys.size(),
@@ -663,7 +661,7 @@ namespace ne {
                     axes[iAxisId] = std::move(vKeys);
                 } else {
                     axes[iAxisId] = {};
-                    Logger::get().error(fmt::format("no axis event found by ID {}", iAxisId));
+                    Logger::get().error(std::format("no axis event found by ID {}", iAxisId));
                 }
             }
         }

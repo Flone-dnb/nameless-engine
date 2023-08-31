@@ -1,7 +1,7 @@
 #include "io/serializers/UnorderedMapFieldSerializer.h"
 
-// External.
-#include "fmt/format.h"
+// Standard.
+#include <format>
 
 namespace ne {
     bool UnorderedMapFieldSerializer::isFieldTypeSupported(const rfk::Field* pField) {
@@ -9,7 +9,7 @@ namespace ne {
 
         // Define a helper macro...
 #define SUPPORTED_UNORDERED_MAP_TYPES(TYPEA, TYPEB)                                                          \
-    if (sFieldCanonicalTypeName == fmt::format("std::unordered_map<{}, {}>", #TYPEA, #TYPEB)) {              \
+    if (sFieldCanonicalTypeName == std::format("std::unordered_map<{}, {}>", #TYPEA, #TYPEB)) {              \
         return true;                                                                                         \
     }
 
@@ -49,19 +49,19 @@ namespace ne {
 
         // Define a helper macro...
 #define SERIALIZE_UNORDERED_MAP_TYPE(TYPEA, TYPEB)                                                           \
-    if (sFieldCanonicalTypeName == fmt::format("std::unordered_map<{}, {}>", #TYPEA, #TYPEB)) {              \
+    if (sFieldCanonicalTypeName == std::format("std::unordered_map<{}, {}>", #TYPEA, #TYPEB)) {              \
         const auto originalMap = pField->getUnsafe<std::unordered_map<TYPEA, TYPEB>>(pFieldOwner);           \
         if (std::string(#TYPEB) == "float" || std::string(#TYPEB) == "double" ||                             \
             std::string(#TYPEB) == "unsigned long long") {                                                   \
             std::unordered_map<std::string, std::string> map;                                                \
             for (const auto& [key, value] : originalMap) {                                                   \
-                map[fmt::format("{}", key)] = fmt::format("{}", value);                                      \
+                map[std::format("{}", key)] = std::format("{}", value);                                      \
             }                                                                                                \
             pTomlData->operator[](sSectionName).operator[](sFieldName) = map;                                \
         } else {                                                                                             \
             std::unordered_map<std::string, TYPEB> map;                                                      \
             for (const auto& [key, value] : originalMap) {                                                   \
-                map[fmt::format("{}", key)] = value;                                                         \
+                map[std::format("{}", key)] = value;                                                         \
             }                                                                                                \
             pTomlData->operator[](sSectionName).operator[](sFieldName) = map;                                \
         }                                                                                                    \
@@ -87,7 +87,7 @@ namespace ne {
         SERIALIZE_UNORDERED_MAP_TYPES(double)
         SERIALIZE_UNORDERED_MAP_TYPES(std::basic_string<char>)
 
-        return Error(fmt::format(
+        return Error(std::format(
             "The type \"{}\" of the specified field \"{}\" is not supported by this serializer.",
             sFieldCanonicalTypeName,
             sFieldName));
@@ -263,7 +263,7 @@ namespace ne {
         const auto sFieldName = pField->getName();
 
         if (!pTomlValue->is_table()) {
-            return Error(fmt::format(
+            return Error(std::format(
                 "The type \"{}\" of the specified field \"{}\" is supported by this serializer, "
                 "but the TOML value is not a table.",
                 sFieldCanonicalTypeName,
@@ -272,14 +272,14 @@ namespace ne {
 
 // Define another helper macro...
 #define DESERIALIZE_UNORDERED_MAP_TYPE(TYPEA, TYPEB)                                                         \
-    if (sFieldCanonicalTypeName == fmt::format("std::unordered_map<{}, {}>", #TYPEA, #TYPEB)) {              \
+    if (sFieldCanonicalTypeName == std::format("std::unordered_map<{}, {}>", #TYPEA, #TYPEB)) {              \
         auto fieldValue = pTomlValue->as_table();                                                            \
         std::unordered_map<TYPEA, TYPEB> map;                                                                \
         for (const auto& [sKey, value] : fieldValue) {                                                       \
             TYPEA castedKey;                                                                                 \
             const auto optionalKey = convertStringToType<TYPEA>(sKey);                                       \
             if (!optionalKey.has_value()) {                                                                  \
-                return Error(fmt::format(                                                                    \
+                return Error(std::format(                                                                    \
                     "The type \"{}\" of the specified field \"{}\" is supported by this serializer, "        \
                     "but deserializer failed to convert string to type {}",                                  \
                     sFieldCanonicalTypeName,                                                                 \
@@ -290,7 +290,7 @@ namespace ne {
             TYPEB castedValue;                                                                               \
             const auto optionalValue = convertTomlValueToType<TYPEB>(value);                                 \
             if (!optionalValue.has_value()) {                                                                \
-                return Error(fmt::format(                                                                    \
+                return Error(std::format(                                                                    \
                     "The type \"{}\" of the specified field \"{}\" is supported by this serializer, "        \
                     "but deserializer failed to convert TOML value to type {}",                              \
                     sFieldCanonicalTypeName,                                                                 \
@@ -324,7 +324,7 @@ namespace ne {
         DESERIALIZE_UNORDERED_MAP_TYPES(double)
         DESERIALIZE_UNORDERED_MAP_TYPES(std::basic_string<char>)
 
-        return Error(fmt::format(
+        return Error(std::format(
             "The type \"{}\" of the specified field \"{}\" is not supported by this serializer.",
             sFieldCanonicalTypeName,
             sFieldName));
@@ -340,7 +340,7 @@ namespace ne {
 
 // Define another helper macro...
 #define CLONE_UNORDERED_MAP_TYPE(TYPEA, TYPEB)                                                               \
-    if (sFieldCanonicalTypeName == fmt::format("std::unordered_map<{}, {}>", #TYPEA, #TYPEB)) {              \
+    if (sFieldCanonicalTypeName == std::format("std::unordered_map<{}, {}>", #TYPEA, #TYPEB)) {              \
         auto value = pFromField->getUnsafe<std::unordered_map<TYPEA, TYPEB>>(pFromInstance);                 \
         pToField->setUnsafe<std::unordered_map<TYPEA, TYPEB>>(pToInstance, std::move(value));                \
         return {};                                                                                           \
@@ -366,7 +366,7 @@ namespace ne {
         CLONE_UNORDERED_MAP_TYPES(double)
         CLONE_UNORDERED_MAP_TYPES(std::basic_string<char>)
 
-        return Error(fmt::format(
+        return Error(std::format(
             "The type \"{}\" of the specified field \"{}\" is not supported by this serializer.",
             sFieldCanonicalTypeName,
             pFieldName));
@@ -395,7 +395,7 @@ namespace ne {
         constexpr auto doubleDelta = 0.0000000000001;
 
 #define COMPARE_UNORDERED_MAPS(TYPEA, TYPEB)                                                                 \
-    if (sFieldACanonicalTypeName == fmt::format("std::unordered_map<{}, {}>", #TYPEA, #TYPEB)) {             \
+    if (sFieldACanonicalTypeName == std::format("std::unordered_map<{}, {}>", #TYPEA, #TYPEB)) {             \
         if (std::string_view(#TYPEA) == "float" || std::string_view(#TYPEA) == "double") {                   \
             Error error("`float` or `double` should not be used as map keys");                               \
             error.showError();                                                                               \

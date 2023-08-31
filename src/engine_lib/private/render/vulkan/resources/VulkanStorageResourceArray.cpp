@@ -1,5 +1,8 @@
 #include "VulkanStorageResourceArray.h"
 
+// Standard.
+#include <format>
+
 // Custom.
 #include "render/general/resources/GpuResourceManager.h"
 #include "render/vulkan/VulkanRenderer.h"
@@ -25,12 +28,12 @@ namespace ne {
 
         // Self check: make sure capacity step is not zero.
         if (iCapacityStepSize == 0) [[unlikely]] {
-            return Error(fmt::format("calculated capacity step size is 0 (array {})", sHandledResourceName));
+            return Error(std::format("calculated capacity step size is 0 (array {})", sHandledResourceName));
         }
 
         // Self check: make sure capacity step is even because we use INT / INT.
         if (iCapacityStepSize % 2 != 0) [[unlikely]] {
-            return Error(fmt::format(
+            return Error(std::format(
                 "calculated capacity step size ({}) is not even (array {})",
                 iCapacityStepSize,
                 sHandledResourceName));
@@ -55,7 +58,7 @@ namespace ne {
 
         // Make sure there are no active slots.
         if (!mtxInternalResources.second.activeSlots.empty()) [[unlikely]] {
-            Error error(fmt::format(
+            Error error(std::format(
                 "the storage array \"{}\" is being destroyed but it still has {} "
                 "active slot(s) (this is a bug, report to developers)",
                 sHandledResourceName,
@@ -66,7 +69,7 @@ namespace ne {
 
         // Make sure our size is zero.
         if (mtxInternalResources.second.iSize != 0) [[unlikely]] {
-            Error error(fmt::format(
+            Error error(std::format(
                 "the storage array \"{}\" is being destroyed but it's not empty (size = {}) "
                 "although there are no active slot(s) (this is a bug, report to developers)",
                 sHandledResourceName,
@@ -80,7 +83,7 @@ namespace ne {
     VulkanStorageResourceArray::insert(GlslShaderCpuWriteResource* pShaderResource) {
         // Self check: make sure array's handled resource name is equal to shader resource.
         if (pShaderResource->getResourceName() != sHandledResourceName) [[unlikely]] {
-            return Error(fmt::format(
+            return Error(std::format(
                 "shader resource \"{}\" requested to reserve a memory slot in the array "
                 "but this array only handles shader resources with name \"{}\" not \"{}\" "
                 "(this is a bug, report to developers)",
@@ -91,7 +94,7 @@ namespace ne {
 
         // Self check: make sure array's element size is equal to the requested one.
         if (iElementSizeInBytes != pShaderResource->getOriginalResourceSizeInBytes()) [[unlikely]] {
-            return Error(fmt::format(
+            return Error(std::format(
                 "shader resource \"{}\" requested to reserve a memory slot with size {} bytes in an array "
                 "but array's element size is {} bytes not {} bytes (this is a bug, report to developers)",
                 pShaderResource->getResourceName(),
@@ -174,7 +177,7 @@ namespace ne {
     }
 
     std::string VulkanStorageResourceArray::formatBytesToKilobytes(size_t iSizeInBytes) {
-        return fmt::format(
+        return std::format(
             "{:.1F} KB",
             static_cast<float>(iSizeInBytes) /
                 1024.0F); // NOLINT: magic number (size of one kilobyte in bytes)
@@ -219,7 +222,7 @@ namespace ne {
         // Make sure that the specified capacity step multiplier is equal or smaller than
         // frames in-flight.
         if (iCapacityStepSizeMultiplier > FrameResourcesManager::getFrameResourcesCount()) [[unlikely]] {
-            return Error(fmt::format(
+            return Error(std::format(
                 "the specified capacity step size multiplier {} is bigger than available frame resource "
                 "count {}",
                 iCapacityStepSizeMultiplier,
@@ -242,7 +245,7 @@ namespace ne {
         // Find the specified slot in the array of active slots.
         const auto it = mtxInternalResources.second.activeSlots.find(pSlot);
         if (it == mtxInternalResources.second.activeSlots.end()) [[unlikely]] {
-            Logger::get().error(fmt::format(
+            Logger::get().error(std::format(
                 "a slot with index {} has notified the storage array about no longer being used "
                 "but this slot does not exist in the array of active slots",
                 pSlot->iIndexInArray));
@@ -290,7 +293,7 @@ namespace ne {
         const auto iNewSizeInBytes = iCapacity * iElementSizeInBytes;
 
         // Log the fact that we will pause the rendering.
-        Logger::get().info(fmt::format(
+        Logger::get().info(std::format(
             "waiting for the GPU to finish work up to this point to (re)create the storage array "
             "\"{}\" from capacity {} ({}) to {} ({}) (current actual size: {})",
             sHandledResourceName,
@@ -309,7 +312,7 @@ namespace ne {
 
         // Create a new storage buffer.
         auto result = pResourceManager->createResourceWithCpuWriteAccess(
-            fmt::format("{} storage array", sHandledResourceName),
+            std::format("{} storage array", sHandledResourceName),
             iElementSizeInBytes,
             iCapacity,
             CpuVisibleShaderResourceUsageDetails(false));
@@ -328,7 +331,7 @@ namespace ne {
         // out of bounds.
         if (mtxInternalResources.second.activeSlots.size() != mtxInternalResources.second.iSize)
             [[unlikely]] {
-            return Error(fmt::format(
+            return Error(std::format(
                 "the storage array \"{}\" was recreated but its active slot count ({}) "
                 "is not equal to the size ({}) (this is a bug, report to developers)",
                 sHandledResourceName,
@@ -379,7 +382,7 @@ namespace ne {
 
         // Make sure the array is fully filled and there's no free space.
         if (mtxInternalResources.second.iSize != mtxInternalResources.second.iCapacity) [[unlikely]] {
-            return Error(fmt::format(
+            return Error(std::format(
                 "a request to expand the array \"{}\" of capacity {} while the actual size is {} "
                 "was rejected, reason: expand condition is not met (this is a bug, report to developers)",
                 sHandledResourceName,
@@ -389,7 +392,7 @@ namespace ne {
 
         // Make sure there are no unused indices.
         if (!mtxInternalResources.second.noLongerUsedArrayIndices.empty()) [[unlikely]] {
-            return Error(fmt::format(
+            return Error(std::format(
                 "requested to expand the array \"{}\" of capacity {} while there are not used "
                 "indices exist ({}) (actual size is {}) (this is a bug, report to developers)",
                 sHandledResourceName,
@@ -401,7 +404,7 @@ namespace ne {
         // Make sure our new capacity will not exceed type limit.
         constexpr auto iMaxArrayCapacity = std::numeric_limits<size_t>::max();
         if (iMaxArrayCapacity - iCapacityStepSize < mtxInternalResources.second.iCapacity) [[unlikely]] {
-            return Error(fmt::format(
+            return Error(std::format(
                 "a request to expand the array \"{}\" of capacity {} was rejected, reason: "
                 "array will exceed the type limit of {}",
                 sHandledResourceName,
@@ -431,7 +434,7 @@ namespace ne {
 
         // Make sure we can shrink (check that we are not on the minimum capacity).
         if (mtxInternalResources.second.iCapacity < iCapacityStepSize * 2) [[unlikely]] {
-            return Error(fmt::format(
+            return Error(std::format(
                 "a request to shrink the array \"{}\" of capacity {} with the actual size of {} was "
                 "rejected, reason: need at least the size of {} to shrink (this is a bug, report "
                 "to developers)",
@@ -445,7 +448,7 @@ namespace ne {
         // free space (i.e. we will not be on the edge to expand).
         if (mtxInternalResources.second.iSize >
             mtxInternalResources.second.iCapacity - iCapacityStepSize - iCapacityStepSize / 2) [[unlikely]] {
-            return Error(fmt::format(
+            return Error(std::format(
                 "a request to shrink the array \"{}\" of capacity {} with the actual size of {} was "
                 "rejected, reason: shrink condition is not met (this is a bug, report to developers)",
                 sHandledResourceName,
@@ -477,7 +480,7 @@ namespace ne {
         unsigned int iBindingIndex) {
         // Self check: make sure array's handled resource name is equal to shader resource.
         if (sShaderResourceName != sHandledResourceName) [[unlikely]] {
-            return Error(fmt::format(
+            return Error(std::format(
                 "this storage array does not handle shader resources with name \"{}\""
                 "(this is a bug, report to developers)",
                 sShaderResourceName));

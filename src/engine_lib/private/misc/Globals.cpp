@@ -13,9 +13,6 @@
 #include <cstdlib>
 #endif
 
-// External.
-#include "fmt/core.h"
-
 namespace ne {
     std::string Globals::getApplicationName() {
 #if defined(WIN32)

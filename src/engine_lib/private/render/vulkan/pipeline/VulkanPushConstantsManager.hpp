@@ -2,14 +2,12 @@
 
 // Standard.
 #include <stdexcept>
+#include <format>
 #include <vector>
 
 // Custom.
 #include "misc/Error.h"
 #include "io/Logger.h"
-
-// External.
-#include "fmt/core.h"
 
 namespace ne {
     /** Stores push constants. */
@@ -39,7 +37,7 @@ namespace ne {
             // Make sure we won't exceed maximum allowed size limit.
             const size_t iSizeInBytes = iSize * sizeof(unsigned int);
             if (iSizeInBytes > iMaxPushConstantsSizeInBytes) [[unlikely]] {
-                Error error(fmt::format(
+                Error error(std::format(
                     "failed to create push constants manager with size {} bytes because the maximum allowed "
                     "size is {} bytes",
                     iSizeInBytes,
@@ -68,7 +66,7 @@ namespace ne {
         inline void copyValueToPushConstant(size_t iPushConstantIndex, unsigned int iValueToCopy) {
             // Make sure we don't access out of bounds.
             if (iPushConstantIndex >= vPushConstantsData.size()) [[unlikely]] {
-                Logger::get().error(fmt::format(
+                Logger::get().error(std::format(
                     "the specified push constant index {} is out of bounds (max: {})",
                     iPushConstantIndex,
                     vPushConstantsData.size() - 1));

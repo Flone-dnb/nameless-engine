@@ -1,5 +1,8 @@
 #include "game/camera/CameraManager.h"
 
+// Standard.
+#include <format>
+
 // Custom.
 #include "io/Logger.h"
 #include "game/nodes/CameraNode.h"
@@ -35,7 +38,7 @@ namespace ne {
         // Make sure this node is spawned.
         std::scoped_lock nodeSpawnGuard(*pCameraNode->getSpawnDespawnMutex());
         if (!pCameraNode->isSpawned()) [[unlikely]] {
-            Error error(fmt::format(
+            Error error(std::format(
                 "camera node \"{}\" needs to be spawned in order to make it the active camera",
                 pCameraNode->getNodeName()));
             error.showError();
@@ -74,7 +77,7 @@ namespace ne {
 
         // Make sure there's an active camera.
         if (mtxActiveCamera.second.pCameraNode == nullptr) [[unlikely]] {
-            Logger::get().error(fmt::format(
+            Logger::get().error(std::format(
                 "the camera node \"{}\" notified the camera manager about it being despawned because "
                 "it thinks that it's the active camera but the camera manager has no active camera node",
                 pCameraNode->getNodeName()));
@@ -83,7 +86,7 @@ namespace ne {
 
         // See if this camera is used as the active one.
         if (&*mtxActiveCamera.second.pCameraNode != pCameraNode) [[unlikely]] {
-            Logger::get().error(fmt::format(
+            Logger::get().error(std::format(
                 "the camera node \"{}\" notified the camera manager about it being despawned because "
                 "it thinks that it's the active camera but it's not the active camera node",
                 pCameraNode->getNodeName()));

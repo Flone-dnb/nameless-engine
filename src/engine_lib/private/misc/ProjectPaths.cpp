@@ -1,11 +1,11 @@
 ﻿#include "misc/ProjectPaths.h"
 
+// Standard.
+#include <format>
+
 // Custom.
 #include "misc/Globals.h"
 #include "misc/Error.h"
-
-// External.
-#include "fmt/core.h"
 
 // OS.
 #if defined(WIN32)
@@ -61,7 +61,7 @@ namespace ne {
         };
 
         if (!std::filesystem::exists(path)) {
-            const Error err(fmt::format("expected directory \"{}\" to exist", path.string()));
+            const Error err(std::format("expected directory \"{}\" to exist", path.string()));
             err.showError();
             throw std::runtime_error(err.getFullErrorMessage());
         }
@@ -98,7 +98,7 @@ namespace ne {
             throw std::runtime_error(err.getError());
         }
 
-        basePath = fmt::format("{}/.config/", sHomePath);
+        basePath = std::format("{}/.config/", sHomePath);
 
 #else
         static_assert(false, "not implemented");
@@ -151,7 +151,7 @@ namespace ne {
         auto pathToRes = pathToExecutable.parent_path() / Globals::getResourcesDirectoryName();
         if (!std::filesystem::exists(pathToRes)) {
             const Error err(
-                fmt::format("expected resources directory to exist at \"{}\"", pathToRes.string()));
+                std::format("expected resources directory to exist at \"{}\"", pathToRes.string()));
             err.showError();
             throw std::runtime_error(err.getFullErrorMessage());
         }

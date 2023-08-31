@@ -295,12 +295,6 @@ add_subdirectory(${RELATIVE_EXT_PATH}/portable-file-dialogs ${DEPENDENCY_BUILD_D
 target_link_libraries(${PROJECT_NAME} PUBLIC portable_file_dialogs)
 set_target_properties(portable_file_dialogs PROPERTIES FOLDER ${EXTERNAL_FOLDER})
 
-# External: fmt
-message(STATUS "${PROJECT_NAME}: adding external dependency \"FMT\"...")
-add_subdirectory(${RELATIVE_EXT_PATH}/fmt ${DEPENDENCY_BUILD_DIR_NAME}/fmt SYSTEM)
-target_link_libraries(${PROJECT_NAME} PUBLIC fmt)
-set_target_properties(fmt PROPERTIES FOLDER ${EXTERNAL_FOLDER})
-
 # External: GLM
 message(STATUS "${PROJECT_NAME}: adding external dependency \"GLM\"...")
 add_subdirectory(${RELATIVE_EXT_PATH}/glm ${DEPENDENCY_BUILD_DIR_NAME}/glm SYSTEM)
@@ -405,7 +399,6 @@ set(REFUREKU_INCLUDE_DIRECTORIES
     ${ABSOLUTE_EXT_PATH}/DirectX-Headers/include
     ${ABSOLUTE_EXT_PATH}/spdlog/include
     ${ABSOLUTE_EXT_PATH}/source_location/include
-    ${ABSOLUTE_EXT_PATH}/fmt/include
     ${ABSOLUTE_EXT_PATH}/glm
     ${ABSOLUTE_EXT_PATH}/Refureku/build/Include
     ${ABSOLUTE_EXT_PATH}/GLSL-Shader-Includes/src/project_lib/src

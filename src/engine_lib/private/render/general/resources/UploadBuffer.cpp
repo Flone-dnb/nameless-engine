@@ -2,6 +2,7 @@
 
 // Standard.
 #include <stdexcept>
+#include <format>
 
 // Custom.
 #include "render/vulkan/resources/VulkanResource.h"
@@ -12,7 +13,6 @@
 
 // External.
 #include "vulkan/vk_enum_string_helper.h"
-#include "fmt/core.h"
 
 namespace ne {
 
@@ -49,7 +49,7 @@ namespace ne {
             const auto result = vmaMapMemory(
                 pMemoryAllocator, pMtxResourceMemory->second, reinterpret_cast<void**>(&pMappedResourceData));
             if (result != VK_SUCCESS) [[unlikely]] {
-                Error error(fmt::format(
+                Error error(std::format(
                     "failed to map memory of resource, error: {}",
                     pVulkanResource->getResourceName(),
                     string_VkResult(result)));

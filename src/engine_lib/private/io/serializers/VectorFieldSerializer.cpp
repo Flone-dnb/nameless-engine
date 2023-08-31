@@ -1,11 +1,11 @@
 #include "io/serializers/VectorFieldSerializer.h"
 
+// Standard.
+#include <format>
+
 // Custom.
 #include "game/nodes/MeshNode.h"
 #include "io/serializers/SerializableObjectFieldSerializer.h"
-
-// External.
-#include "fmt/format.h"
 
 namespace ne {
 
@@ -33,7 +33,7 @@ namespace ne {
         if (sFieldCanonicalTypeName == "std::vector<double>") {
             return true;
         }
-        if (sFieldCanonicalTypeName == fmt::format("std::vector<{}>", sStringCanonicalTypeName)) {
+        if (sFieldCanonicalTypeName == std::format("std::vector<{}>", sStringCanonicalTypeName)) {
             return true;
         }
         if (sFieldCanonicalTypeName == "std::vector<ne::MeshVertex>") {
@@ -96,7 +96,7 @@ namespace ne {
                 vStrArray[i] = toml::format(toml::value(vArray[i]));
             }
             pTomlData->operator[](sSectionName).operator[](pFieldName) = vStrArray;
-        } else if (sFieldCanonicalTypeName == fmt::format("std::vector<{}>", sStringCanonicalTypeName)) {
+        } else if (sFieldCanonicalTypeName == std::format("std::vector<{}>", sStringCanonicalTypeName)) {
             pTomlData->operator[](sSectionName).operator[](pFieldName) =
                 pField->getUnsafe<std::vector<std::string>>(pFieldOwner);
         } else if (sFieldCanonicalTypeName == "std::vector<ne::MeshVertex>") {
@@ -114,7 +114,7 @@ namespace ne {
         const auto& pSerializable = pArray->at(i);                                                           \
         const auto pGuid = pSerializable->getArchetype().getProperty<Guid>(false);                           \
         if (pGuid == nullptr) {                                                                              \
-            return Error(fmt::format(                                                                        \
+            return Error(std::format(                                                                        \
                 "type \"{}\" should have a GUID assigned to it", pSerializable->getArchetype().getName()));  \
         }                                                                                                    \
         toml::value data;                                                                                    \
@@ -124,7 +124,7 @@ namespace ne {
             error.addCurrentLocationToErrorStack();                                                          \
             return error;                                                                                    \
         }                                                                                                    \
-        table[fmt::format("{}[{}]", pFieldName, i)] = std::move(data);                                       \
+        table[std::format("{}[{}]", pFieldName, i)] = std::move(data);                                       \
     }                                                                                                        \
     pTomlData->operator[](sSectionName).operator[](pFieldName) = std::move(table);
 
@@ -133,13 +133,13 @@ namespace ne {
                     pField->getPtrUnsafe(pFieldOwner));
                 SERIALIZE_VECTOR_INNER_POINTER_SERIALIZABLE
             } else {
-                return Error(fmt::format(
+                return Error(std::format(
                     "the type \"{}\" of the specified array field \"{}\" has unsupported smart pointer type",
                     sFieldCanonicalTypeName,
                     pFieldName));
             }
         } else {
-            return Error(fmt::format(
+            return Error(std::format(
                 "the type \"{}\" of the specified field \"{}\" is not supported by this serializer",
                 sFieldCanonicalTypeName,
                 pFieldName));
@@ -161,7 +161,7 @@ namespace ne {
 
 #define GET_TOML_VALUE_AS_ARRAY_WITH_CHECK                                                                   \
     if (!pTomlValue->is_array()) {                                                                           \
-        return Error(fmt::format(                                                                            \
+        return Error(std::format(                                                                            \
             "The type \"{}\" of the specified field \"{}\" is supported by this serializer, "                \
             "but the TOML value is not an array.",                                                           \
             sFieldCanonicalTypeName,                                                                         \
@@ -171,7 +171,7 @@ namespace ne {
 
 #define GET_TOML_VALUE_AS_TABLE_WITH_CHECK                                                                   \
     if (!pTomlValue->is_table()) {                                                                           \
-        return Error(fmt::format(                                                                            \
+        return Error(std::format(                                                                            \
             "The type \"{}\" of the specified field \"{}\" is supported by this serializer, "                \
             "but the TOML value is not a table.",                                                            \
             sFieldCanonicalTypeName,                                                                         \
@@ -184,7 +184,7 @@ namespace ne {
             std::vector<bool> vArray;
             for (const auto& item : fieldValue) {
                 if (!item.is_boolean()) {
-                    return Error(fmt::format(
+                    return Error(std::format(
                         "The type \"{}\" of the specified field \"{}\" is supported by this serializer, "
                         "but the TOML value is not boolean.",
                         sFieldCanonicalTypeName,
@@ -198,7 +198,7 @@ namespace ne {
             std::vector<int> vArray;
             for (const auto& item : fieldValue) {
                 if (!item.is_integer()) {
-                    return Error(fmt::format(
+                    return Error(std::format(
                         "The type \"{}\" of the specified field \"{}\" is supported by this serializer, "
                         "but the TOML value is not integer.",
                         sFieldCanonicalTypeName,
@@ -212,7 +212,7 @@ namespace ne {
             std::vector<unsigned int> vArray;
             for (const auto& item : fieldValue) {
                 if (!item.is_integer()) {
-                    return Error(fmt::format(
+                    return Error(std::format(
                         "The type \"{}\" of the specified field \"{}\" is supported by this serializer, "
                         "but the TOML value is not integer.",
                         sFieldCanonicalTypeName,
@@ -233,7 +233,7 @@ namespace ne {
             std::vector<long long> vArray;
             for (const auto& item : fieldValue) {
                 if (!item.is_integer()) {
-                    return Error(fmt::format(
+                    return Error(std::format(
                         "The type \"{}\" of the specified field \"{}\" is supported by this serializer, "
                         "but the TOML value is not integer.",
                         sFieldCanonicalTypeName,
@@ -248,7 +248,7 @@ namespace ne {
             for (const auto& item : fieldValue) {
                 // Stored as string.
                 if (!item.is_string()) {
-                    return Error(fmt::format(
+                    return Error(std::format(
                         "The type \"{}\" of the specified field \"{}\" is supported by this serializer, "
                         "but the TOML value is not string.",
                         sFieldCanonicalTypeName,
@@ -258,7 +258,7 @@ namespace ne {
                     unsigned long long iValue = std::stoull(item.as_string());
                     vArray.push_back(iValue);
                 } catch (std::exception& ex) {
-                    return Error(fmt::format(
+                    return Error(std::format(
                         "Failed to convert string to unsigned long long for field \"{}\": {}",
                         pFieldName,
                         ex.what()));
@@ -271,7 +271,7 @@ namespace ne {
             std::vector<float> vArray;
             for (const auto& item : fieldValue) {
                 if (!item.is_string()) {
-                    return Error(fmt::format(
+                    return Error(std::format(
                         "The type \"{}\" of the specified field \"{}\" is supported by this serializer, "
                         "but the TOML value is not string.",
                         sFieldCanonicalTypeName,
@@ -280,7 +280,7 @@ namespace ne {
                 try {
                     vArray.push_back(std::stof(item.as_string().str));
                 } catch (std::exception& ex) {
-                    return Error(fmt::format(
+                    return Error(std::format(
                         "The type \"{}\" of the specified field \"{}\" is supported by this serializer, "
                         "but an exception occurred while trying to convert a string to a float: {}",
                         sFieldCanonicalTypeName,
@@ -295,7 +295,7 @@ namespace ne {
             std::vector<double> vArray;
             for (const auto& item : fieldValue) {
                 if (!item.is_string()) {
-                    return Error(fmt::format(
+                    return Error(std::format(
                         "The type \"{}\" of the specified field \"{}\" is supported by this serializer, "
                         "but the TOML value is not string.",
                         sFieldCanonicalTypeName,
@@ -304,7 +304,7 @@ namespace ne {
                 try {
                     vArray.push_back(std::stod(item.as_string().str));
                 } catch (std::exception& ex) {
-                    return Error(fmt::format(
+                    return Error(std::format(
                         "the type \"{}\" of the specified field \"{}\" is supported by this serializer, "
                         "but an exception occurred while trying to convert a string to a double: {}",
                         sFieldCanonicalTypeName,
@@ -313,12 +313,12 @@ namespace ne {
                 }
             }
             pField->setUnsafe<std::vector<double>>(pFieldOwner, std::move(vArray));
-        } else if (sFieldCanonicalTypeName == fmt::format("std::vector<{}>", sStringCanonicalTypeName)) {
+        } else if (sFieldCanonicalTypeName == std::format("std::vector<{}>", sStringCanonicalTypeName)) {
             GET_TOML_VALUE_AS_ARRAY_WITH_CHECK
             std::vector<std::string> vArray;
             for (const auto& item : fieldValue) {
                 if (!item.is_string()) {
-                    return Error(fmt::format(
+                    return Error(std::format(
                         "the type \"{}\" of the specified field \"{}\" is supported by this serializer, "
                         "but the TOML value is not string",
                         sFieldCanonicalTypeName,
@@ -345,7 +345,7 @@ namespace ne {
                     pField->getPtrUnsafe(pFieldOwner));
                 // Make sure target array is empty.
                 if (!pArray->empty()) [[unlikely]] {
-                    return Error(fmt::format(
+                    return Error(std::format(
                         "the type \"{}\" of the specified array field \"{}\" is supported by this "
                         "serializer, but this array should be empty before deserialization",
                         sFieldCanonicalTypeName,
@@ -364,13 +364,13 @@ namespace ne {
                     pArray->push_back(std::get<std::shared_ptr<Serializable>>(std::move(result)));
                 }
             } else {
-                return Error(fmt::format(
+                return Error(std::format(
                     "the type \"{}\" of the specified array field \"{}\" has unsupported smart pointer type",
                     sFieldCanonicalTypeName,
                     pFieldName));
             }
         } else {
-            return Error(fmt::format(
+            return Error(std::format(
                 "the type \"{}\" of the specified field \"{}\" is not supported by this serializer",
                 sFieldCanonicalTypeName,
                 pFieldName));
@@ -403,7 +403,7 @@ namespace ne {
         CLONE_VECTOR_FIELDS(std::vector<double>)
 
         // String.
-        if (sFieldCanonicalTypeName == fmt::format("std::vector<{}>", sStringCanonicalTypeName)) {
+        if (sFieldCanonicalTypeName == std::format("std::vector<{}>", sStringCanonicalTypeName)) {
             auto value = pFromField->getUnsafe<std::vector<std::string>>(pFromInstance);
             pToField->setUnsafe<std::vector<std::string>>(pToInstance, std::move(value));
             return {};
@@ -418,7 +418,7 @@ namespace ne {
     const auto pFromArray = reinterpret_cast<VectorType>(pFromField->getPtrUnsafe(pFromInstance));           \
     const auto pToArray = reinterpret_cast<VectorType>(pToField->getPtrUnsafe(pToInstance));                 \
     if (!pToArray->empty()) [[unlikely]] {                                                                   \
-        return Error(fmt::format(                                                                            \
+        return Error(std::format(                                                                            \
             "the specified field array \"{}\" needs to be empty", sFieldCanonicalTypeName, pFieldName));     \
     }                                                                                                        \
     pToArray->resize(pFromArray->size());                                                                    \
@@ -437,7 +437,7 @@ namespace ne {
                 CLONE_VECTOR_SMART_POINTER_SERIALIZABLE_FIELDS(
                     std::vector<std::shared_ptr<Serializable>>*, makeSharedInstance)
             } else {
-                return Error(fmt::format(
+                return Error(std::format(
                     "the type \"{}\" of the specified array field \"{}\" has unsupported smart pointer type",
                     sFieldCanonicalTypeName,
                     pFieldName));
@@ -445,7 +445,7 @@ namespace ne {
             return {};
         }
 
-        return Error(fmt::format(
+        return Error(std::format(
             "the type \"{}\" of the specified field \"{}\" is not supported by this serializer",
             sFieldCanonicalTypeName,
             pFieldName));
@@ -471,7 +471,7 @@ namespace ne {
         }
 
 #define COMPARE_VECTOR_FIELDS(INNERTYPE)                                                                     \
-    if (sFieldACanonicalTypeName == fmt::format("std::vector<{}>", #INNERTYPE)) {                            \
+    if (sFieldACanonicalTypeName == std::format("std::vector<{}>", #INNERTYPE)) {                            \
         const auto vFieldA = pFieldA->getUnsafe<std::vector<INNERTYPE>>(pFieldAOwner);                       \
         const auto vFieldB = pFieldB->getUnsafe<std::vector<INNERTYPE>>(pFieldBOwner);                       \
         return vFieldA == vFieldB;                                                                           \

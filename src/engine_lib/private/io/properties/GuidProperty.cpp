@@ -1,10 +1,10 @@
 ﻿#include "io/properties/GuidProperty.h"
 
+// Standard.
+#include <format>
+
 // Custom.
 #include "misc/Error.h"
-
-// External.
-#include "fmt/format.h"
 
 #include "GuidProperty.generated_impl.h"
 
@@ -17,7 +17,7 @@ namespace ne {
 
         // Check GUID length.
         if (sGuid.size() != iGuidLength) {
-            const Error err(fmt::format(
+            const Error err(std::format(
                 "The specified GUID \"{}\" should have a length of 36 characters.\n{}",
                 sGuid,
                 sGuidInformation));
@@ -28,14 +28,14 @@ namespace ne {
         // Check GUID format.
         if (sGuid[8] != '-' || sGuid[13] != '-' || sGuid[18] != '-' || sGuid[23] != '-') { // NOLINT
             const Error err(
-                fmt::format("The specified GUID \"{}\" has incorrect format.\n{}", sGuid, sGuidInformation));
+                std::format("The specified GUID \"{}\" has incorrect format.\n{}", sGuid, sGuidInformation));
             err.showError();
             throw std::runtime_error(err.getFullErrorMessage());
         }
 
         // Make sure we don't have dots in the GUID as we use them internally in serialized format.
         if (sGuid.contains('.')) {
-            const Error err(fmt::format(
+            const Error err(std::format(
                 "The specified GUID \"{}\" is invalid because it has dots in it.\n{}",
                 sGuid,
                 sGuidInformation));

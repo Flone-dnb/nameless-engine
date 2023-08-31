@@ -279,7 +279,7 @@ namespace ne {
             });
 
         // Mark GPUs that are blacklisted and log scores.
-        std::string sRating = fmt::format("found and rated {} suitable GPU(s):", vGpuScores.size());
+        std::string sRating = std::format("found and rated {} suitable GPU(s):", vGpuScores.size());
         for (size_t i = 0; i < vGpuScores.size(); i++) {
             // See if this GPU is blacklisted.
             bool bIsBlacklisted = false;
@@ -291,7 +291,7 @@ namespace ne {
             }
 
             // Add new entry in rating log.
-            sRating += fmt::format("\n{}. ", i + 1);
+            sRating += std::format("\n{}. ", i + 1);
 
             // Process status.
             if (bIsBlacklisted) {
@@ -300,7 +300,7 @@ namespace ne {
             }
 
             // Append GPU name and score.
-            sRating += fmt::format("{}, suitability score: {}", vGpuScores[i].sGpuName, vGpuScores[i].iScore);
+            sRating += std::format("{}, suitability score: {}", vGpuScores[i].sGpuName, vGpuScores[i].iScore);
         }
 
         // Print scores.
@@ -323,7 +323,7 @@ namespace ne {
             }
             if (!iFoundIndex.has_value()) {
                 // Not found. Log event.
-                Logger::get().info(fmt::format(
+                Logger::get().info(std::format(
                     "unable to find the GPU \"{}\" (that was specified in the renderer's "
                     "config file) in the list of available GPUs for this renderer",
                     sGpuNameToUse));
@@ -341,7 +341,7 @@ namespace ne {
 
             // Skip this GPU is it's blacklisted.
             if (currentGpuInfo.bIsBlacklisted) {
-                Logger::get().info(fmt::format(
+                Logger::get().info(std::format(
                     "ignoring GPU \"{}\" because it's blacklisted (previously the renderer failed to "
                     "initialize using this GPU)",
                     currentGpuInfo.sGpuName));
@@ -350,12 +350,12 @@ namespace ne {
 
             // Log used GPU.
             if (sGpuNameToUse == currentGpuInfo.sGpuName) {
-                Logger::get().info(fmt::format(
+                Logger::get().info(std::format(
                     "using the following GPU: \"{}\" (was specified as preferred in the renderer's "
                     "config file)",
                     currentGpuInfo.sGpuName));
             } else {
-                Logger::get().info(fmt::format("using the following GPU: \"{}\"", currentGpuInfo.sGpuName));
+                Logger::get().info(std::format("using the following GPU: \"{}\"", currentGpuInfo.sGpuName));
             }
 
             // Select video adapter.
@@ -372,7 +372,7 @@ namespace ne {
 
         // Make sure we picked a GPU.
         if (pVideoAdapter == nullptr) {
-            return Error(fmt::format(
+            return Error(std::format(
                 "found {} suitable GPU(s) but no GPU was picked (see reason above)", vGpuScores.size()));
         }
 
@@ -481,7 +481,7 @@ namespace ne {
         auto optionalRenderTargetDescritorHandle =
             pCurrentBackBufferResource->getBindedDescriptorHandle(DirectXDescriptorType::RTV);
         if (!optionalRenderTargetDescritorHandle.has_value()) [[unlikely]] {
-            return Error(fmt::format(
+            return Error(std::format(
                 "render target resource \"{}\" has no RTV binded to it",
                 pCurrentBackBufferResource->getResourceName()));
         }
@@ -491,7 +491,7 @@ namespace ne {
         auto optionalDepthStencilDescritorHandle =
             pDepthStencilBuffer->getBindedDescriptorHandle(DirectXDescriptorType::DSV);
         if (!optionalDepthStencilDescritorHandle.has_value()) [[unlikely]] {
-            return Error(fmt::format(
+            return Error(std::format(
                 "depth stencil resource \"{}\" has no DSV binded to it",
                 pDepthStencilBuffer->getResourceName()));
         }
@@ -755,7 +755,7 @@ namespace ne {
 
         // Make sure this sample count is supported.
         if (iSampleCount > iMaxSampleCount) [[unlikely]] {
-            return Error(fmt::format("expected the current AA quality {} to be supported", iSampleCount));
+            return Error(std::format("expected the current AA quality {} to be supported", iSampleCount));
         }
 
         // Prepare to get quality levels for this sample count.
@@ -1141,7 +1141,7 @@ namespace ne {
             }
 
             if (vFilteredModes.empty()) {
-                Logger::get().info(fmt::format(
+                Logger::get().info(std::format(
                     "video mode with resolution {}x{} and refresh rate "
                     "{}/{} is not supported, using default video mode",
                     preferredRenderResolution.first,
@@ -1154,7 +1154,7 @@ namespace ne {
                 // found specified display mode
                 pickedDisplayMode = vFilteredModes[0];
             } else {
-                std::string sErrorMessage = fmt::format(
+                std::string sErrorMessage = std::format(
                     "video mode with resolution {}x{} and refresh rate "
                     "{}/{} matched multiple supported modes:\n",
                     preferredRenderResolution.first,
@@ -1162,7 +1162,7 @@ namespace ne {
                     preferredRefreshRate.first,
                     preferredRefreshRate.second);
                 for (const auto& mode : vFilteredModes) {
-                    sErrorMessage += fmt::format(
+                    sErrorMessage += std::format(
                         "- resolution: {}x{}, refresh rate: {}/{}, format: {}, "
                         "scanline ordering: {}, scaling: {}",
                         mode.Width,
@@ -1173,7 +1173,7 @@ namespace ne {
                         static_cast<int>(mode.ScanlineOrdering),
                         static_cast<int>(mode.Scaling));
                 }
-                Logger::get().info(fmt::format("{}\nusing default video mode", sErrorMessage));
+                Logger::get().info(std::format("{}\nusing default video mode", sErrorMessage));
                 // use the last display mode
                 pickedDisplayMode = vVideoModes.back();
             }
@@ -1196,7 +1196,7 @@ namespace ne {
         }
 
         // Log used GPU name.
-        Logger::get().info(fmt::format("using the following GPU: \"{}\"", getCurrentlyUsedGpuName()));
+        Logger::get().info(std::format("using the following GPU: \"{}\"", getCurrentlyUsedGpuName()));
 
         bIsDirectXInitialized = true;
 

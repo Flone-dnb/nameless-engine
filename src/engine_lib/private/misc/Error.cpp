@@ -3,13 +3,11 @@
 // Standard.
 #include <string>
 #include <filesystem>
+#include <format>
 
 // Custom.
 #include "io/Logger.h"
 #include "misc/MessageBox.h"
-
-// External.
-#include "fmt/core.h"
 
 namespace ne {
     Error::Error(std::string_view sMessage, const nostd::source_location location) {
@@ -34,7 +32,7 @@ namespace ne {
         // Add error code to the beginning of the message.
         std::stringstream hexStream;
         hexStream << std::hex << hResult;
-        sMessage = fmt::format("0x{}: ", hexStream.str());
+        sMessage = std::format("0x{}: ", hexStream.str());
 
         if (pErrorText != nullptr) {
             sMessage += std::string_view(pErrorText);

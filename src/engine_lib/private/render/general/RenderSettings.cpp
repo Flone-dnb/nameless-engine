@@ -1,5 +1,9 @@
 #include "render/RenderSettings.h"
 
+// Standard.
+#include <format>
+
+// Custom.
 #include "render/Renderer.h"
 #include "render/general/pipeline/PipelineManager.h"
 #include "io/Logger.h"
@@ -20,7 +24,7 @@ namespace ne {
         }
 
         // Log change.
-        Logger::get().info(fmt::format("FPS limit is being changed from {} to {}", iFpsLimit, iNewFpsLimit));
+        Logger::get().info(std::format("FPS limit is being changed from {} to {}", iFpsLimit, iNewFpsLimit));
 
         // Change.
         iFpsLimit = iNewFpsLimit;
@@ -33,7 +37,7 @@ namespace ne {
         if (optionalError.has_value()) {
             auto error = optionalError.value();
             error.addCurrentLocationToErrorStack();
-            Logger::get().error(fmt::format(
+            Logger::get().error(std::format(
                 "failed to save new render setting configuration, error: \"{}\"",
                 error.getFullErrorMessage()));
         }
@@ -66,7 +70,7 @@ namespace ne {
 
         // Make sure this quality is supported.
         if (iNewSampleCount > iMaxSampleCount) [[unlikely]] {
-            Logger::get().error(fmt::format(
+            Logger::get().error(std::format(
                 "failed to set anti-aliasing sample count {} because it's not supported (max supported: {})",
                 iNewSampleCount,
                 iMaxSampleCount));
@@ -74,7 +78,7 @@ namespace ne {
         }
 
         // Log change.
-        Logger::get().info(fmt::format(
+        Logger::get().info(std::format(
             "AA sample count is being changed from \"{}\" to \"{}\"",
             iAntialiasingSampleCount,
             iNewSampleCount));
@@ -90,7 +94,7 @@ namespace ne {
         if (optionalError.has_value()) {
             auto error = optionalError.value();
             error.addCurrentLocationToErrorStack();
-            Logger::get().error(fmt::format(
+            Logger::get().error(std::format(
                 "failed to save new render setting configuration, error: \"{}\"",
                 error.getFullErrorMessage()));
         }
@@ -116,7 +120,7 @@ namespace ne {
         // Self check: make sure current AA sample count is supported (should be because RenderSettings
         // are expected to store valid AA sample count).
         if (static_cast<int>(iAntialiasingSampleCount) > static_cast<int>(maxState)) [[unlikely]] {
-            Logger::get().error(fmt::format(
+            Logger::get().error(std::format(
                 "expected the current AA sample count {} to be supported",
                 static_cast<int>(iAntialiasingSampleCount)));
         }
@@ -153,7 +157,7 @@ namespace ne {
             const auto iNewSampleCount = static_cast<int>(MsaaState::VERY_HIGH);
 
             // Log change.
-            Logger::get().warn(fmt::format(
+            Logger::get().warn(std::format(
                 "deserialized AA sample count \"{}\" is not a valid/supported value, changing to \"{}\"",
                 iAntialiasingSampleCount,
                 iNewSampleCount));
@@ -169,7 +173,7 @@ namespace ne {
             const auto iNewTextureFilteringMode = static_cast<int>(TextureFilteringMode::ANISOTROPIC);
 
             // Log change.
-            Logger::get().warn(fmt::format(
+            Logger::get().warn(std::format(
                 "deserialized texture filtering mode \"{}\" is not a valid parameter, changing to \"{}\"",
                 iTextureFilteringMode,
                 iNewTextureFilteringMode));
@@ -190,7 +194,7 @@ namespace ne {
         }
 
         // Log change.
-        Logger::get().info(fmt::format(
+        Logger::get().info(std::format(
             "texture filtering mode is being changed from \"{}\" to \"{}\"",
             iTextureFilteringMode,
             static_cast<int>(mode)));
@@ -206,7 +210,7 @@ namespace ne {
         if (optionalError.has_value()) {
             auto error = optionalError.value();
             error.addCurrentLocationToErrorStack();
-            Logger::get().error(fmt::format(
+            Logger::get().error(std::format(
                 "failed to save new render setting configuration, error: \"{}\"",
                 error.getFullErrorMessage()));
         }
@@ -249,7 +253,7 @@ namespace ne {
 
         // Make sure this resolution was found.
         if (!bFound) [[unlikely]] {
-            Logger::get().error(fmt::format(
+            Logger::get().error(std::format(
                 "failed to set render resolution {}x{} because it's not supported (read the docs on how to "
                 "query supported render resolutions)",
                 resolution.first,
@@ -258,7 +262,7 @@ namespace ne {
         }
 
         // Log change.
-        Logger::get().info(fmt::format(
+        Logger::get().info(std::format(
             "render resolution is being changed from \"{}x{}\" to \"{}x{}\"",
             iRenderResolutionWidth,
             iRenderResolutionHeight,
@@ -277,7 +281,7 @@ namespace ne {
         if (optionalError.has_value()) {
             auto error = optionalError.value();
             error.addCurrentLocationToErrorStack();
-            Logger::get().error(fmt::format(
+            Logger::get().error(std::format(
                 "failed to save new render setting configuration, error: \"{}\"",
                 error.getFullErrorMessage()));
         }
@@ -290,7 +294,7 @@ namespace ne {
 
         // Log change.
         Logger::get().info(
-            fmt::format("VSync state is being changed from \"{}\" to \"{}\"", bIsVsyncEnabled, bEnableVsync));
+            std::format("VSync state is being changed from \"{}\" to \"{}\"", bIsVsyncEnabled, bEnableVsync));
 
         // Change.
         bIsVsyncEnabled = bEnableVsync;
@@ -303,7 +307,7 @@ namespace ne {
         if (optionalError.has_value()) {
             auto error = optionalError.value();
             error.addCurrentLocationToErrorStack();
-            Logger::get().error(fmt::format(
+            Logger::get().error(std::format(
                 "failed to save new render setting configuration, error: \"{}\"",
                 error.getFullErrorMessage()));
         }
@@ -317,7 +321,7 @@ namespace ne {
         }
 
         // Log change.
-        Logger::get().info(fmt::format(
+        Logger::get().info(std::format(
             "refresh rate is being changed from \"{}/{}\" to \"{}/{}\"",
             iRefreshRateNumerator,
             iRefreshRateDenominator,
@@ -337,7 +341,7 @@ namespace ne {
         if (optionalError.has_value()) {
             auto error = optionalError.value();
             error.addCurrentLocationToErrorStack();
-            Logger::get().error(fmt::format(
+            Logger::get().error(std::format(
                 "failed to save new render setting configuration, error: \"{}\"",
                 error.getFullErrorMessage()));
         }
@@ -357,7 +361,7 @@ namespace ne {
 
         // Make sure we fit into the `unsigned int` range.
         if (vSupportedGpuNames.size() > UINT_MAX) [[unlikely]] {
-            Logger::get().error(fmt::format(
+            Logger::get().error(std::format(
                 "list of supported GPUs is too big to handle ({} items)", vSupportedGpuNames.size()));
             return;
         }
@@ -365,7 +369,7 @@ namespace ne {
         // Find supported GPU by this name.
         const auto it = std::ranges::find(vSupportedGpuNames, sGpuName);
         if (it == vSupportedGpuNames.end()) {
-            Logger::get().error(fmt::format(
+            Logger::get().error(std::format(
                 "failed to find the specified GPU \"{}\" in the list of supported GPUs",
                 vSupportedGpuNames.size()));
             return;
@@ -374,7 +378,7 @@ namespace ne {
         if (!sGpuToUse.empty()) {
             // Log change if the previous GPU name was set.
             Logger::get().info(
-                fmt::format("preferred GPU is being changed from \"{}\" to \"{}\"", sGpuToUse, sGpuName));
+                std::format("preferred GPU is being changed from \"{}\" to \"{}\"", sGpuToUse, sGpuName));
         }
 
         // Change.
@@ -387,7 +391,7 @@ namespace ne {
         if (optionalError.has_value()) {
             auto error = optionalError.value();
             error.addCurrentLocationToErrorStack();
-            Logger::get().error(fmt::format(
+            Logger::get().error(std::format(
                 "failed to save new render setting configuration, error: \"{}\"",
                 error.getFullErrorMessage()));
         }
@@ -425,7 +429,7 @@ namespace ne {
         }
 
         // Log change.
-        Logger::get().info(fmt::format(
+        Logger::get().info(std::format(
             "preferred renderer is being changed from \"{}\" to \"{}\"", iRendererType, iNewRendererType));
 
         // Change.
@@ -437,7 +441,7 @@ namespace ne {
         auto optionalError = saveConfigurationToDisk();
         if (optionalError.has_value()) {
             optionalError->addCurrentLocationToErrorStack();
-            Logger::get().error(fmt::format(
+            Logger::get().error(std::format(
                 "failed to save new render setting configuration, error: \"{}\"",
                 optionalError->getFullErrorMessage()));
         }
@@ -463,7 +467,7 @@ namespace ne {
         // Clamp sample count to max value.
         if (iAntialiasingSampleCount > iMaxSampleCount) {
             // Log change.
-            Logger::get().info(fmt::format(
+            Logger::get().info(std::format(
                 "AA sample count \"{}\" is not supported, changing to \"{}\"",
                 iAntialiasingSampleCount,
                 iMaxSampleCount));

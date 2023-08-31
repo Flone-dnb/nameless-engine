@@ -1,6 +1,7 @@
 #include "game/Window.h"
 
 // Standard.
+#include <format>
 #include <filesystem>
 
 // Custom.
@@ -8,7 +9,6 @@
 #include "io/Logger.h"
 
 // External.
-#include "fmt/core.h"
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb/stb_image.h"
 #if defined(WIN32)
@@ -299,7 +299,7 @@ namespace ne {
             std::stringstream mainThreadIdString;
             mainThreadIdString << mainThreadId;
 
-            Error err(fmt::format(
+            Error err(std::format(
                 "an attempt was made to call a function that should only be called on the main thread "
                 "in a non main thread (main thread ID: {}, current thread ID: {})",
                 mainThreadIdString.str(),
@@ -408,7 +408,7 @@ namespace ne {
         showErrorIfNotOnMainThread();
 
         if (!std::filesystem::exists(pathToIcon)) {
-            return Error(fmt::format("the specified file \"{}\" does not exist.", pathToIcon.string()));
+            return Error(std::format("the specified file \"{}\" does not exist.", pathToIcon.string()));
         }
 
         // Load image.
@@ -502,7 +502,7 @@ namespace ne {
     std::variant<std::unique_ptr<WindowCursor>, Error>
     WindowCursor::create(const std::filesystem::path& pathToIcon) {
         if (!std::filesystem::exists(pathToIcon)) {
-            return Error(fmt::format("the specified file \"{}\" does not exist.", pathToIcon.string()));
+            return Error(std::format("the specified file \"{}\" does not exist.", pathToIcon.string()));
         }
 
         // Load image.

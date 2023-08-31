@@ -1,11 +1,11 @@
 #include "game/camera/CameraProperties.h"
 
+// Standard.
+#include <format>
+
 // Custom.
 #include "misc/Error.h"
 #include "misc/Profiler.hpp"
-
-// External.
-#include "fmt/core.h"
 
 namespace ne {
 
@@ -38,7 +38,7 @@ namespace ne {
 
     void CameraProperties::setNearClipPlaneDistance(float nearClipPlaneDistance) {
         if (nearClipPlaneDistance < CameraProperties::Data::minimumClipPlaneDistance) [[unlikely]] {
-            Error error(fmt::format(
+            Error error(std::format(
                 "the specified near clip plane distance {} is lower than the minimum allowed clip plane "
                 "distance: {}",
                 nearClipPlaneDistance,
@@ -58,7 +58,7 @@ namespace ne {
 
     void CameraProperties::setFarClipPlaneDistance(float farClipPlaneDistance) {
         if (farClipPlaneDistance < CameraProperties::Data::minimumClipPlaneDistance) [[unlikely]] {
-            Error error(fmt::format(
+            Error error(std::format(
                 "the specified far clip plane distance {} is lower than the minimum allowed clip plane "
                 "distance: {}",
                 farClipPlaneDistance,

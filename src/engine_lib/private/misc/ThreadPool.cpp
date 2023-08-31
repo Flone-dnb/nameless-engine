@@ -1,6 +1,7 @@
 ﻿#include "ThreadPool.h"
 
 // Standard.
+#include <format>
 #include <thread>
 
 // Custom.
@@ -11,7 +12,7 @@ namespace ne {
         auto iThreadCount = std::thread::hardware_concurrency();
         if (iThreadCount == 0) {
             iThreadCount = iMinThreadCount;
-            Logger::get().error(fmt::format(
+            Logger::get().error(std::format(
                 "hardware concurrency information is not available, as a fallback creating {} thread(s) "
                 "for the thread pool",
                 iThreadCount));

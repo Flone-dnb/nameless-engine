@@ -1,5 +1,8 @@
 #include "World.h"
 
+// Standard.
+#include <format>
+
 // Custom.
 #include "io/Logger.h"
 #include "game/GameManager.h"
@@ -10,7 +13,7 @@ namespace ne {
     World::World(GameManager* pGameManager, gc<Node> pRootNode, size_t iWorldSize) : iWorldSize(iWorldSize) {
         // Check that world size is power of 2.
         if (!std::has_single_bit(iWorldSize)) {
-            Error err(fmt::format(
+            Error err(std::format(
                 "world size {} should be power of 2 (128, 256, 512, 1024, 2048, etc.).", iWorldSize));
             err.showError();
             throw std::runtime_error(err.getFullErrorMessage());
@@ -26,7 +29,7 @@ namespace ne {
             throw std::runtime_error(err.getFullErrorMessage());
         }
 
-        Logger::get().info(fmt::format("new world with size {} is created", iWorldSize));
+        Logger::get().info(std::format("new world with size {} is created", iWorldSize));
 
         // Initialize self.
         this->pGameManager = pGameManager;
@@ -50,7 +53,7 @@ namespace ne {
         // Make sure all nodes were despawned.
         const auto iSpawnedNodeCount = iTotalSpawnedNodeCount.load();
         if (iSpawnedNodeCount != 0) [[unlikely]] {
-            Logger::get().error(fmt::format(
+            Logger::get().error(std::format(
                 "destructor for the world object is called but there are still {} node(s) exist "
                 "in the world",
                 iSpawnedNodeCount));
@@ -59,7 +62,7 @@ namespace ne {
         // Make sure there are no ticking nodes.
         const auto iCalledEveryFrameNodeCount = getCalledEveryFrameNodeCount();
         if (iCalledEveryFrameNodeCount != 0) [[unlikely]] {
-            Logger::get().error(fmt::format(
+            Logger::get().error(std::format(
                 "destructor for the world object is called but there are still {} \"called every frame\" "
                 "node(s) exist in the world",
                 iSpawnedNodeCount));
@@ -149,7 +152,7 @@ namespace ne {
 
             // Make sure the node ID is valid.
             if (!optionalNodeId.has_value()) [[unlikely]] {
-                Error error(fmt::format(
+                Error error(std::format(
                     "node \"{}\" notified the world about being spawned but its ID is invalid",
                     pNode->getNodeName()));
                 error.showError();
@@ -163,7 +166,7 @@ namespace ne {
             // See if we already have a node with this ID.
             const auto it = mtxSpawnedNodes.second.find(iNodeId);
             if (it != mtxSpawnedNodes.second.end()) [[unlikely]] {
-                Error error(fmt::format(
+                Error error(std::format(
                     "node \"{}\" with ID \"{}\" notified the world about being spawned but there is "
                     "already a spawned node with this ID",
                     pNode->getNodeName(),
@@ -204,7 +207,7 @@ namespace ne {
 
             // Make sure the node ID is valid.
             if (!optionalNodeId.has_value()) [[unlikely]] {
-                Error error(fmt::format(
+                Error error(std::format(
                     "node \"{}\" notified the world about being despawned but its ID is invalid",
                     pNode->getNodeName()));
                 error.showError();
@@ -218,7 +221,7 @@ namespace ne {
             // See if we indeed have a node with this ID.
             const auto it = mtxSpawnedNodes.second.find(iNodeId);
             if (it == mtxSpawnedNodes.second.end()) [[unlikely]] {
-                Error error(fmt::format(
+                Error error(std::format(
                     "node \"{}\" with ID \"{}\" notified the world about being despawned but this node's "
                     "ID is not found",
                     pNode->getNodeName(),
@@ -256,7 +259,7 @@ namespace ne {
 
         // Make sure the node ID is valid.
         if (!optionalNodeId.has_value()) [[unlikely]] {
-            Error error(fmt::format("spawned node \"{}\" ID is invalid", pNode->getNodeName()));
+            Error error(std::format("spawned node \"{}\" ID is invalid", pNode->getNodeName()));
             error.showError();
             throw std::runtime_error(error.getFullErrorMessage());
         }
@@ -294,7 +297,7 @@ namespace ne {
                 // Log this event since the node is changing this while spawned (might be important to
                 // see/debug).
                 Logger::get().info(
-                    fmt::format("spawned node \"{}\" is now called every frame", pNode->getNodeName()));
+                    std::format("spawned node \"{}\" is now called every frame", pNode->getNodeName()));
                 return;
             }
 
@@ -305,7 +308,7 @@ namespace ne {
                 if (bFound) {
                     // Log this event since the node is changing this while spawned (might be important to
                     // see/debug).
-                    Logger::get().info(fmt::format(
+                    Logger::get().info(std::format(
                         "spawned node \"{}\" is no longer called every frame", pNode->getNodeName()));
                 }
                 // else: this might happen if the node had the setting disabled and then quickly
@@ -320,7 +323,7 @@ namespace ne {
 
         // Make sure the node ID is valid.
         if (!optionalNodeId.has_value()) [[unlikely]] {
-            Error error(fmt::format("spawned node \"{}\" ID is invalid", pNode->getNodeName()));
+            Error error(std::format("spawned node \"{}\" ID is invalid", pNode->getNodeName()));
             error.showError();
             throw std::runtime_error(error.getFullErrorMessage());
         }
@@ -359,7 +362,7 @@ namespace ne {
                 // Log this event since the node is changing this while spawned (might be important to
                 // see/debug).
                 Logger::get().info(
-                    fmt::format("spawned node \"{}\" is now receiving input", pNode->getNodeName()));
+                    std::format("spawned node \"{}\" is now receiving input", pNode->getNodeName()));
                 return;
             }
 
@@ -370,7 +373,7 @@ namespace ne {
                 if (bFound) {
                     // Log this event since the node is changing this while spawned (might be important to
                     // see/debug).
-                    Logger::get().info(fmt::format(
+                    Logger::get().info(std::format(
                         "spawned node \"{}\" is no longer receiving input", pNode->getNodeName()));
                 }
                 // else: this might happen if the node had the setting disabled and then quickly

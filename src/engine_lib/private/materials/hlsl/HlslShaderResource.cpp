@@ -1,12 +1,12 @@
 #include "HlslShaderResource.h"
 
+// Standard.
+#include <format>
+
 // Custom.
 #include "render/directx/pipeline/DirectXPso.h"
 #include "render/Renderer.h"
 #include "render/general/resources/GpuResourceManager.h"
-
-// External.
-#include "fmt/core.h"
 
 namespace ne {
 
@@ -34,7 +34,7 @@ namespace ne {
         for (unsigned int i = 0; i < FrameResourcesManager::getFrameResourcesCount(); i++) {
             auto result =
                 pUsedPipeline->getRenderer()->getResourceManager()->createResourceWithCpuWriteAccess(
-                    fmt::format(
+                    std::format(
                         "{} shader ({}/{}) CPU write resource \"{}\" frame #{}",
                         sResourceAdditionalInfo,
                         pUsedPipeline->getVertexShaderName(),
@@ -126,7 +126,7 @@ namespace ne {
         // Find this resource by name.
         auto it = pMtxInternalPsoResources->second.rootParameterIndices.find(sShaderResourceName);
         if (it == pMtxInternalPsoResources->second.rootParameterIndices.end()) [[unlikely]] {
-            return Error(fmt::format(
+            return Error(std::format(
                 "unable to find a shader resource by the specified name \"{}\", make sure the resource name "
                 "is correct and that this resource is actually being used inside of your shader (otherwise "
                 "the shader resource might be optimized out and the engine will not be able to see it)",

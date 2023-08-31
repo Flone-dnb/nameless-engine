@@ -4,6 +4,7 @@
 #include <fstream>
 #include <climits>
 #include <filesystem>
+#include <format>
 
 // Custom.
 #include "io/Logger.h"
@@ -82,7 +83,7 @@ namespace ne {
         // Read shader file.
         auto parseResult = ShaderIncluder::parseFullSourceCode(shaderDescription.pathToShaderFile);
         if (std::holds_alternative<ShaderIncluder::Error>(parseResult)) [[unlikely]] {
-            return Error(fmt::format(
+            return Error(std::format(
                 "failed to parse shader source code, error: {}",
                 convertShaderIncluderErrorToString(std::get<ShaderIncluder::Error>(parseResult))));
         }
@@ -146,7 +147,7 @@ namespace ne {
         pathToCompiledShader += sConfiguration;
         std::ofstream shaderCacheFile(pathToCompiledShader, std::ios::binary);
         if (!shaderCacheFile.is_open()) [[unlikely]] {
-            return Error(fmt::format(
+            return Error(std::format(
                 "failed to open the path \"{}\" for writing to save shader bytecode",
                 pathToCompiledShader.string()));
         }
@@ -285,7 +286,7 @@ namespace ne {
             // Open file.
             std::ifstream file(pathToCompiledShader, std::ifstream::ate | std::ios::binary);
             if (!file.is_open()) [[unlikely]] {
-                return Error(fmt::format("failed to open the file \"{}\"", pathToCompiledShader.string()));
+                return Error(std::format("failed to open the file \"{}\"", pathToCompiledShader.string()));
             }
 
             // Get file size.

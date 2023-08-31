@@ -1,5 +1,8 @@
 ﻿#include "Shader.h"
 
+// Standard.
+#include <format>
+
 // Custom.
 #include "misc/Error.h"
 #include "render/Renderer.h"
@@ -10,9 +13,6 @@
 #endif
 #include "render/vulkan/VulkanRenderer.h"
 #include "materials/glsl/GlslShader.h"
-
-// External.
-#include "fmt/core.h"
 
 /** Total amount of shader blobs loaded into the memory. */
 static std::atomic<size_t> iTotalShaderInMemoryCount{0};
@@ -51,13 +51,13 @@ namespace ne {
         const ShaderDescription& shaderDescription) {
         // Make sure the specified file exists.
         if (!std::filesystem::exists(shaderDescription.pathToShaderFile)) [[unlikely]] {
-            return Error(fmt::format(
+            return Error(std::format(
                 "the specified shader file {} does not exist", shaderDescription.pathToShaderFile.string()));
         }
 
         // Make sure the specified path is a file.
         if (std::filesystem::is_directory(shaderDescription.pathToShaderFile)) [[unlikely]] {
-            return Error(fmt::format(
+            return Error(std::format(
                 "the specified shader path {} is not a file", shaderDescription.pathToShaderFile.string()));
         }
 
@@ -125,7 +125,7 @@ namespace ne {
         const auto sCompiledFileHash =
             ShaderDescription::getFileHash(pathToCompiledShader, shaderDescription.sShaderName);
         if (sCompiledFileHash.empty()) [[unlikely]] {
-            return Error(fmt::format(
+            return Error(std::format(
                 "failed to calculate hash of compiled shader bytecode at \"{}\"",
                 pathToCompiledShader.string()));
         }
@@ -161,7 +161,7 @@ namespace ne {
         cacheInvalidationReason = {};
         // Make sure the specified path to compiled shader exists.
         if (!std::filesystem::exists(pathToCompiledShader)) {
-            return Error(fmt::format(
+            return Error(std::format(
                 "the specified path to shader cache \"{}\" does not exist", pathToCompiledShader.string()));
         }
 
@@ -171,7 +171,7 @@ namespace ne {
 
         // Make sure the metadata file exists.
         if (!std::filesystem::exists(shaderCacheConfigurationPath)) [[unlikely]] {
-            return Error(fmt::format(
+            return Error(std::format(
                 "cache metadata of the specified shader does not exist", shaderDescription.sShaderName));
         }
 
@@ -193,7 +193,7 @@ namespace ne {
         const auto reason = shaderDescription.isSerializableDataEqual(cachedShaderDescription);
         if (reason.has_value()) {
             // Something has changed, cache is no longer valid.
-            Error err(fmt::format(
+            Error err(std::format(
                 "invalidated cache for shader \"{}\" (reason: {})",
                 sShaderNameWithoutConfiguration,
                 ShaderCacheInvalidationReasonDescription::getDescription(reason.value())));
@@ -207,7 +207,7 @@ namespace ne {
         const auto sCompiledFileHash =
             ShaderDescription::getFileHash(pathToCompiledShader, shaderDescription.sShaderName);
         if (sCompiledFileHash.empty()) [[unlikely]] {
-            return Error(fmt::format(
+            return Error(std::format(
                 "failed to calculate hash of compiled shader bytecode at \"{}\"",
                 pathToCompiledShader.string()));
         }
@@ -220,7 +220,7 @@ namespace ne {
         if (sCompiledFileHash != sCachedCompiledFileHash) [[unlikely]] {
             // File was changed, cache is no longer valid.
             cacheInvalidationReason = ShaderCacheInvalidationReason::COMPILED_BINARY_CHANGED;
-            Error err(fmt::format(
+            Error err(std::format(
                 "invalidated cache for shader \"{}\" (reason: {})",
                 sShaderNameWithoutConfiguration,
                 ShaderCacheInvalidationReasonDescription::getDescription(cacheInvalidationReason.value())));
@@ -252,7 +252,7 @@ namespace ne {
 
         // Check if cache was invalidated.
         if (cacheInvalidationReason.has_value()) {
-            Error err(fmt::format(
+            Error err(std::format(
                 "invalidated cache for shader \"{}\" (reason: {})",
                 sShaderNameWithoutConfiguration,
                 ShaderCacheInvalidationReasonDescription::getDescription(cacheInvalidationReason.value())));
@@ -274,7 +274,7 @@ namespace ne {
             // were compiled from the same file.
             const auto sSourceFileHash = ShaderDescription::getFileHash(pathToSourceShaderFile, sShaderName);
             if (sSourceFileHash.empty()) {
-                return Error(fmt::format(
+                return Error(std::format(
                     "unable to calculate shader source file hash (shader path: \"{}\")",
                     pathToSourceShaderFile.string()));
             }
@@ -294,7 +294,7 @@ namespace ne {
 
     std::variant<std::filesystem::path, Error> Shader::getPathToCompiledShader() {
         if (!std::filesystem::exists(pathToCompiledShader)) [[unlikely]] {
-            const Error err(fmt::format(
+            const Error err(std::format(
                 "path to compiled shader \"{}\" no longer exists", pathToCompiledShader.string()));
             return err;
         }

@@ -1,14 +1,14 @@
 ﻿#include "RootSignatureGenerator.h"
 
+// Standard.
+#include <format>
+
 // Custom.
 #include "io/Logger.h"
 #include "materials/hlsl/HlslShader.h"
 #include "misc/Error.h"
 #include "render/directx/DirectXRenderer.h"
 #include "misc/Profiler.hpp"
-
-// External.
-#include "fmt/core.h"
 
 namespace ne {
     std::variant<RootSignatureGenerator::CollectedInfo, Error>
@@ -46,7 +46,7 @@ namespace ne {
 
             auto it = resourceNames.find(sName);
             if (it != resourceNames.end()) [[unlikely]] {
-                return Error(fmt::format(
+                return Error(std::format(
                     "found at least two shader resources with the same name \"{}\" - all shader "
                     "resources must have unique names",
                     resourceDesc.Name));
@@ -90,7 +90,7 @@ namespace ne {
             } else if (resourceDesc.Type == D3D_SIT_TEXTURE) {
                 // TODO
             } else [[unlikely]] {
-                return Error(fmt::format(
+                return Error(std::format(
                     "encountered unhandled resource type \"{}\" (not implemented)",
                     static_cast<int>(resourceDesc.Type)));
             }
@@ -101,7 +101,7 @@ namespace ne {
         for (const auto& [sResourceName, parameterInfo] : rootParameterIndices) {
             auto it = indices.find(parameterInfo.first);
             if (it != indices.end()) [[unlikely]] {
-                return Error(fmt::format(
+                return Error(std::format(
                     "at least two resources of the generated root signature have conflicting indices"
                     "for root parameter index {} (this is a bug, please report to developers)",
                     parameterInfo.first));
@@ -111,7 +111,7 @@ namespace ne {
 
         // Another self check.
         if (rootParameterIndices.size() != vRootParameters.size()) [[unlikely]] {
-            return Error(fmt::format(
+            return Error(std::format(
                 "sizes of generated root parameter arrays are different {} != {} (this is a bug, "
                 "please report to developers)",
                 rootParameterIndices.size(),
@@ -132,20 +132,20 @@ namespace ne {
 
         // Make sure that the vertex shader is indeed a vertex shader.
         if (pVertexShader->getShaderType() != ShaderType::VERTEX_SHADER) [[unlikely]] {
-            return Error(fmt::format(
+            return Error(std::format(
                 "the specified shader \"{}\" is not a vertex shader", pVertexShader->getShaderName()));
         }
 
         // Make sure that the pixel shader is indeed a pixel shader.
         if (pPixelShader->getShaderType() != ShaderType::PIXEL_SHADER) [[unlikely]] {
-            return Error(fmt::format(
+            return Error(std::format(
                 "the specified shader \"{}\" is not a pixel shader", pPixelShader->getShaderName()));
         }
 
         // Make sure that the shaders were compiled from the same source file.
         if (pVertexShader->getShaderSourceFileHash() != pPixelShader->getShaderSourceFileHash())
             [[unlikely]] {
-            return Error(fmt::format(
+            return Error(std::format(
                 "the vertex shader \"{}\" and the pixel shader \"{}\" were not compiled from the same shader "
                 "source file (source file hash is not equal: {} != {})",
                 pVertexShader->getShaderName(),
@@ -163,13 +163,13 @@ namespace ne {
 
         // Make sure it's not empty.
         if (!pMtxPixelRootInfo->second.has_value()) [[unlikely]] {
-            return Error(fmt::format(
+            return Error(std::format(
                 "unable to merge root signature of the pixel shader \"{}\" "
                 "because it does have root signature info collected",
                 pPixelShader->getShaderName()));
         }
         if (!pMtxVertexRootInfo->second.has_value()) [[unlikely]] {
-            return Error(fmt::format(
+            return Error(std::format(
                 "unable to merge root signature of the vertex shader \"{}\" "
                 "because it does have root signature info collected",
                 pVertexShader->getShaderName()));
@@ -187,7 +187,7 @@ namespace ne {
         auto vertexFrameBufferIt =
             vertexShaderRootSignatureInfo.rootParameterIndices.find(sFrameConstantBufferName);
         if (vertexFrameBufferIt == vertexShaderRootSignatureInfo.rootParameterIndices.end()) [[unlikely]] {
-            return Error(fmt::format(
+            return Error(std::format(
                 "expected to find `cbuffer` \"{}\" to be used in vertex shader \"{}\"",
                 sFrameConstantBufferName,
                 pVertexShader->getShaderName()));
@@ -237,7 +237,7 @@ namespace ne {
 
         // Make sure there are root parameters.
         if (vRootParameters.empty()) [[unlikely]] {
-            return Error(fmt::format(
+            return Error(std::format(
                 "at least 1 shader resource (written in the shader file for shader \"{}\") is need (expected "
                 "the shader to have at least `cbuffer` \"{}\")",
                 pVertexShader->getShaderName(),
@@ -326,7 +326,7 @@ namespace ne {
             // Make sure shader register is correct.
             if (samplerResourceDescription.BindPoint != static_cast<UINT>(StaticSamplerShaderRegister::BASIC))
                 [[unlikely]] {
-                return Error(fmt::format(
+                return Error(std::format(
                     "expected the sampler \"{}\" to use shader register {} instead of {}",
                     sResourceName,
                     static_cast<UINT>(StaticSamplerShaderRegister::BASIC),
@@ -338,7 +338,7 @@ namespace ne {
             // Make sure shader register is correct.
             if (samplerResourceDescription.BindPoint !=
                 static_cast<UINT>(StaticSamplerShaderRegister::COMPARISON)) [[unlikely]] {
-                return Error(fmt::format(
+                return Error(std::format(
                     "expected the sampler \"{}\" to use shader register {} instead of {}",
                     sResourceName,
                     static_cast<UINT>(StaticSamplerShaderRegister::COMPARISON),
@@ -347,7 +347,7 @@ namespace ne {
 
             typeToReturn = SamplerType::COMPARISON;
         } else [[unlikely]] {
-            return Error(fmt::format(
+            return Error(std::format(
                 "expected sampler \"{}\" to be named either as \"{}\" (for `SamplerState` type) or as "
                 "\"{}\" (for `SamplerComparisonState` type)",
                 sResourceName,
@@ -358,7 +358,7 @@ namespace ne {
         // Make sure shader register space is correct.
         if (samplerResourceDescription.Space != HlslShader::getStaticSamplerShaderRegisterSpace())
             [[unlikely]] {
-            return Error(fmt::format(
+            return Error(std::format(
                 "expected the sampler \"{}\" to use shader register space {} instead of {}",
                 sResourceName,
                 HlslShader::getStaticSamplerShaderRegisterSpace(),
@@ -376,7 +376,7 @@ namespace ne {
         // See if resource with this name already exists.
         auto it = mapToAddTo.find(sResourceName);
         if (it != mapToAddTo.end()) [[unlikely]] {
-            return Error(fmt::format(
+            return Error(std::format(
                 "found two shader resources with equal names - \"{}\" (see shader file), all shader "
                 "resources must have unique names",
                 sResourceName));

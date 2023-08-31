@@ -2,6 +2,7 @@
 
 // Standard.
 #include <ranges>
+#include <format>
 
 // Custom.
 #include "io/Logger.h"
@@ -45,10 +46,10 @@ namespace ne {
         // Log construction.
         const size_t iNodeCount = iTotalAliveNodeCount.fetch_add(1) + 1;
         Logger::get().info(
-            fmt::format("constructor for node \"{}\" is called (alive nodes now: {})", sName, iNodeCount));
+            std::format("constructor for node \"{}\" is called (alive nodes now: {})", sName, iNodeCount));
 
         if (iNodeCount + 1 == std::numeric_limits<size_t>::max()) [[unlikely]] {
-            Logger::get().warn(fmt::format(
+            Logger::get().warn(std::format(
                 "\"total alive nodes\" counter is at its maximum value: {}, another new node will cause "
                 "an overflow",
                 iNodeCount + 1));
@@ -59,7 +60,7 @@ namespace ne {
         std::scoped_lock guard(mtxIsSpawned.first);
         if (mtxIsSpawned.second) [[unlikely]] {
             // Unexpected.
-            Logger::get().error(fmt::format(
+            Logger::get().error(std::format(
                 "spawned node \"{}\" is being destructed without being despawned, continuing will most "
                 "likely cause undefined behavior",
                 sNodeName));
@@ -68,7 +69,7 @@ namespace ne {
 
         // Log destruction.
         const size_t iNodesLeft = iTotalAliveNodeCount.fetch_sub(1) - 1;
-        Logger::get().info(fmt::format(
+        Logger::get().info(std::format(
             "destructor for node \"{}\" is called (alive nodes left: {})", sNodeName, iNodesLeft));
     }
 
@@ -98,7 +99,7 @@ namespace ne {
 
         // Make sure the specified node is valid.
         if (pNode == nullptr) [[unlikely]] {
-            Logger::get().warn(fmt::format(
+            Logger::get().warn(std::format(
                 "an attempt was made to attach a nullptr node to the \"{}\" node, aborting this "
                 "operation",
                 getNodeName()));
@@ -107,7 +108,7 @@ namespace ne {
 
         // Make sure the specified node is not `this`.
         if (&*pNode == this) [[unlikely]] {
-            Logger::get().warn(fmt::format(
+            Logger::get().warn(std::format(
                 "an attempt was made to attach the \"{}\" node to itself, aborting this "
                 "operation",
                 getNodeName()));
@@ -119,7 +120,7 @@ namespace ne {
         // Make sure the specified node is not our direct child.
         for (const auto& pChildNode : *mtxChildNodes.second) {
             if (pChildNode == pNode) [[unlikely]] {
-                Logger::get().warn(fmt::format(
+                Logger::get().warn(std::format(
                     "an attempt was made to attach the \"{}\" node to the \"{}\" node but it's already "
                     "a direct child node of \"{}\", aborting this operation",
                     pNode->getNodeName(),
@@ -131,7 +132,7 @@ namespace ne {
 
         // Make sure the specified node is not our parent.
         if (pNode->isParentOf(this)) {
-            Logger::get().error(fmt::format(
+            Logger::get().error(std::format(
                 "an attempt was made to attach the \"{}\" node to the node \"{}\", "
                 "but the first node is a parent of the second node, "
                 "aborting this operation",
@@ -145,7 +146,7 @@ namespace ne {
         if (pNode->mtxParentNode.second != nullptr) {
             // Check if we are already this node's parent.
             if (&*pNode->mtxParentNode.second == this) {
-                Logger::get().warn(fmt::format(
+                Logger::get().warn(std::format(
                     "an attempt was made to attach the \"{}\" node to its parent again, "
                     "aborting this operation",
                     pNode->getNodeName()));
@@ -227,7 +228,7 @@ namespace ne {
             }
 
             if (!bFound) [[unlikely]] {
-                Logger::get().error(fmt::format(
+                Logger::get().error(std::format(
                     "node \"{}\" has a parent node but parent's children array "
                     "does not contain this node.",
                     getNodeName()));
@@ -262,7 +263,7 @@ namespace ne {
         // Ask parent node for the valid game instance and world pointers.
         std::scoped_lock parentGuard(mtxParentNode.first);
         if (!mtxParentNode.second) [[unlikely]] {
-            Error err(fmt::format(
+            Error err(std::format(
                 "node \"{}\" can't find a pointer to a valid world instance because "
                 "there is no parent node",
                 getNodeName()));
@@ -277,7 +278,7 @@ namespace ne {
         std::scoped_lock guard(mtxIsSpawned.first);
 
         if (mtxIsSpawned.second) [[unlikely]] {
-            Logger::get().warn(fmt::format(
+            Logger::get().warn(std::format(
                 "an attempt was made to spawn already spawned node \"{}\", aborting this operation",
                 getNodeName()));
             return;
@@ -289,7 +290,7 @@ namespace ne {
         // Get unique ID.
         iNodeId = iAvailableNodeId.fetch_add(1);
         if (iNodeId.value() + 1 == std::numeric_limits<size_t>::max()) [[unlikely]] {
-            Logger::get().warn(fmt::format(
+            Logger::get().warn(std::format(
                 "\"next available node ID\" is at its maximum value: {}, another spawned node will "
                 "cause an overflow",
                 iNodeId.value() + 1));
@@ -343,7 +344,7 @@ namespace ne {
         std::scoped_lock guard(mtxIsSpawned.first);
 
         if (!mtxIsSpawned.second) [[unlikely]] {
-            Logger::get().warn(fmt::format(
+            Logger::get().warn(std::format(
                 "an attempt was made to despawn already despawned node \"{}\", aborting this operation",
                 getNodeName()));
             return;
@@ -461,7 +462,7 @@ namespace ne {
             const auto pathToOriginalFile = ProjectPaths::getPathToResDirectory(ResourceDirectory::ROOT) /
                                             getPathDeserializedFromRelativeToRes().value().first;
             if (!std::filesystem::exists(pathToOriginalFile)) {
-                const Error error(fmt::format(
+                const Error error(std::format(
                     "object of type \"{}\" has the path it was deserialized from ({}, ID {}) but this "
                     "file \"{}\" does not exist",
                     getArchetype().getName(),
@@ -569,7 +570,7 @@ namespace ne {
             const auto pathToExternalNodeTree =
                 ProjectPaths::getPathToResDirectory(ResourceDirectory::ROOT) / it->second;
             if (!std::filesystem::exists(pathToExternalNodeTree)) {
-                Error error(fmt::format(
+                Error error(std::format(
                     "file storing external node tree \"{}\" does not exist",
                     pathToExternalNodeTree.string()));
                 return error;
@@ -616,14 +617,14 @@ namespace ne {
                 if (!pRootNode) {
                     pRootNode = gc<Node>(pNode);
                 } else {
-                    return Error(fmt::format(
+                    return Error(std::format(
                         "found non root node \"{}\" that does not have a parent", pNode->getNodeName()));
                 }
             } else {
                 try {
                     iParentNodeId = std::stoull(parentNodeAttributeIt->second);
                 } catch (std::exception& exception) {
-                    return Error(fmt::format(
+                    return Error(std::format(
                         "failed to convert attribute \"{}\" with value \"{}\" to integer, error: {}",
                         sParentNodeIdAttributeName,
                         parentNodeAttributeIt->second,
@@ -632,7 +633,7 @@ namespace ne {
 
                 // Check if this parent ID is outside of out array bounds.
                 if (iParentNodeId.value() >= vNodes.size()) [[unlikely]] {
-                    return Error(fmt::format(
+                    return Error(std::format(
                         "parsed parent node ID is outside of bounds: {} >= {}",
                         iParentNodeId.value(),
                         vNodes.size()));
@@ -644,7 +645,7 @@ namespace ne {
             try {
                 iNodeId = std::stoull(nodeInfo.sObjectUniqueId);
             } catch (std::exception& exception) {
-                return Error(fmt::format(
+                return Error(std::format(
                     "failed to convert ID \"{}\" to integer, error: {}",
                     nodeInfo.sObjectUniqueId,
                     exception.what()));
@@ -652,12 +653,12 @@ namespace ne {
 
             // Check if this ID is outside of out array bounds.
             if (iNodeId >= vNodes.size()) [[unlikely]] {
-                return Error(fmt::format("parsed ID is outside of bounds: {} >= {}", iNodeId, vNodes.size()));
+                return Error(std::format("parsed ID is outside of bounds: {} >= {}", iNodeId, vNodes.size()));
             }
 
             // Check if we already set a node in this index position.
             if (vNodes[iNodeId].first != nullptr) [[unlikely]] {
-                return Error(fmt::format("parsed ID {} was already used by some other node", iNodeId));
+                return Error(std::format("parsed ID {} was already used by some other node", iNodeId));
             }
 
             // Save node.
@@ -935,7 +936,7 @@ namespace ne {
 
         if (bEnable) {
             if (!mtxIsSpawned.second) {
-                Logger::get().error(fmt::format(
+                Logger::get().error(std::format(
                     "node \"{}\" is not spawned but the timer \"{}\" was requested to be enabled - this "
                     "is an engine bug",
                     sNodeName,
@@ -945,7 +946,7 @@ namespace ne {
 
             // Check that node's ID is initialized.
             if (!iNodeId.has_value()) [[unlikely]] {
-                Logger::get().error(fmt::format(
+                Logger::get().error(std::format(
                     "node \"{}\" is spawned but it's ID is invalid - this is an engine bug", sNodeName));
                 return true;
             }

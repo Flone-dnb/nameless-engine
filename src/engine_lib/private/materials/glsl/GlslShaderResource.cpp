@@ -1,14 +1,14 @@
 #include "GlslShaderResource.h"
 
+// Standard.
+#include <format>
+
 // Custom.
 #include "render/general/resources/GpuResourceManager.h"
 #include "render/vulkan/pipeline/VulkanPipeline.h"
 #include "render/vulkan/resources/VulkanResourceManager.h"
 #include "render/vulkan/resources/VulkanStorageResourceArrayManager.h"
 #include "render/vulkan/VulkanRenderer.h"
-
-// External.
-#include "fmt/core.h"
 
 namespace ne {
 
@@ -114,7 +114,7 @@ namespace ne {
         // Find a shader resource binding using our name.
         const auto bindingIt = pMtxPipelineResources->second.resourceBindings.find(sShaderResourceName);
         if (bindingIt == pMtxPipelineResources->second.resourceBindings.end()) [[unlikely]] {
-            return Error(fmt::format(
+            return Error(std::format(
                 "unable to find a shader resource by the specified name \"{}\", make sure the resource name "
                 "is correct and that this resource is actually being used inside of your shader (otherwise "
                 "the shader resource might be optimized out and the engine will not be able to see it)",
@@ -130,7 +130,7 @@ namespace ne {
             pMtxPipelineResources->second.pushConstantUintFieldNames->find(sShaderResourceName);
         if (referencedNameIt == pMtxPipelineResources->second.pushConstantUintFieldNames->end())
             [[unlikely]] {
-            return Error(fmt::format(
+            return Error(std::format(
                 "expected to find a shader resource \"{}\" to be referenced in push constants",
                 sShaderResourceName));
         }
@@ -148,7 +148,7 @@ namespace ne {
 
         // Make sure we won't go below zero.
         if (iBindingIndex < iSmallestBindingIndexReferencedByPushConstants) [[unlikely]] {
-            return Error(fmt::format(
+            return Error(std::format(
                 "failed to calculate push constant index because resulting index will be smaller than zero"));
         }
 

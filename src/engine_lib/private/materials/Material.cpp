@@ -1,5 +1,8 @@
 #include "materials/Material.h"
 
+// Standard.
+#include <format>
+
 // Custom.
 #include "game/GameManager.h"
 #include "game/Window.h"
@@ -41,7 +44,7 @@ namespace ne {
         // Make sure there are no nodes that reference this material.
         auto iMeshNodeCount = mtxSpawnedMeshNodesThatUseThisMaterial.second.getTotalSize();
         if (iMeshNodeCount != 0) [[unlikely]] {
-            Logger::get().error(fmt::format(
+            Logger::get().error(std::format(
                 "material \"{}\" is being destroyed but material's array of spawned mesh nodes "
                 "that use this material still has {} item(s)",
                 sMaterialName,
@@ -50,14 +53,14 @@ namespace ne {
 
         // Make sure pipeline was cleared.
         if (mtxInternalResources.second.pUsedPipeline.isInitialized()) [[unlikely]] {
-            Logger::get().error(fmt::format(
+            Logger::get().error(std::format(
                 "material \"{}\" is being destroyed but used pipeline was not cleared", sMaterialName));
             mtxInternalResources.second.pUsedPipeline.clear();
         }
 
         // Make sure shader resources were deallocated.
         if (bIsShaderResourcesAllocated) [[unlikely]] {
-            Logger::get().error(fmt::format(
+            Logger::get().error(std::format(
                 "material \"{}\" is being destroyed but shader resources were not deallocated",
                 sMaterialName));
         }
@@ -77,7 +80,7 @@ namespace ne {
 
         // Make sure we don't have this mesh node in our array.
         if (mtxSpawnedMeshNodesThatUseThisMaterial.second.isMeshNodeAdded(pMeshNode)) [[unlikely]] {
-            Logger::get().error(fmt::format(
+            Logger::get().error(std::format(
                 "mesh node \"{}\" notified used material about being spawned but this mesh node already "
                 "exists in material's array of spawned mesh nodes",
                 pMeshNode->getNodeName()));
@@ -117,7 +120,7 @@ namespace ne {
 
         // Make sure we have this mesh node in our array.
         if (!mtxSpawnedMeshNodesThatUseThisMaterial.second.isMeshNodeAdded(pMeshNode)) [[unlikely]] {
-            Logger::get().error(fmt::format(
+            Logger::get().error(std::format(
                 "mesh node \"{}\" notified used material about no longer being used but this mesh node "
                 "does not exist in material's array of spawned mesh nodes",
                 pMeshNode->getNodeName()));
@@ -168,13 +171,13 @@ namespace ne {
         // Check vertex shader.
         if (pShaderManager->isShaderNameCanBeUsed(sVertexShaderName)) {
             return Error(
-                fmt::format("vertex shader \"{}\" was not found in the shader manager", sVertexShaderName));
+                std::format("vertex shader \"{}\" was not found in the shader manager", sVertexShaderName));
         }
 
         // Check pixel shader.
         if (pShaderManager->isShaderNameCanBeUsed(sPixelShaderName)) {
             return Error(
-                fmt::format("pixel shader \"{}\" was not found in the shader manager", sPixelShaderName));
+                std::format("pixel shader \"{}\" was not found in the shader manager", sPixelShaderName));
         }
 
         // Create material.
@@ -198,7 +201,7 @@ namespace ne {
         std::scoped_lock guard(mtxSpawnedMeshNodesThatUseThisMaterial.first);
 
         if (bOldVisibility == pMeshNode->isVisible()) [[unlikely]] {
-            Logger::get().error(fmt::format(
+            Logger::get().error(std::format(
                 "mesh node \"{}\" notified used material about changed visibility but the visibility "
                 "of this mesh node was not changed",
                 pMeshNode->getNodeName()));
@@ -208,7 +211,7 @@ namespace ne {
         if (bOldVisibility) {
             auto it = mtxSpawnedMeshNodesThatUseThisMaterial.second.visibleMeshNodes.find(pMeshNode);
             if (it == mtxSpawnedMeshNodesThatUseThisMaterial.second.visibleMeshNodes.end()) [[unlikely]] {
-                Logger::get().error(fmt::format(
+                Logger::get().error(std::format(
                     "mesh node \"{}\" notified used material about changed visibility but this mesh node "
                     "does not exist in material's array of spawned mesh nodes",
                     pMeshNode->getNodeName()));
@@ -219,7 +222,7 @@ namespace ne {
         } else {
             auto it = mtxSpawnedMeshNodesThatUseThisMaterial.second.invisibleMeshNodes.find(pMeshNode);
             if (it == mtxSpawnedMeshNodesThatUseThisMaterial.second.invisibleMeshNodes.end()) [[unlikely]] {
-                Logger::get().error(fmt::format(
+                Logger::get().error(std::format(
                     "mesh node \"{}\" notified used material about changed visibility but this mesh node "
                     "does not exist in material's array of spawned mesh nodes",
                     pMeshNode->getNodeName()));
@@ -239,7 +242,7 @@ namespace ne {
 
         // Make sure resources were not allocated before.
         if (bIsShaderResourcesAllocated) [[unlikely]] {
-            Error error(fmt::format(
+            Error error(std::format(
                 "material \"{}\" was requested to allocate shader resources but shader resources already "
                 "allocated",
                 sMaterialName));
@@ -249,7 +252,7 @@ namespace ne {
 
         // Make sure pipeline is initialized.
         if (!mtxInternalResources.second.pUsedPipeline.isInitialized()) [[unlikely]] {
-            Error error(fmt::format(
+            Error error(std::format(
                 "material \"{}\" was requested to allocate shader resources but pipeline is not initialized",
                 sMaterialName));
             error.showError();
@@ -272,7 +275,7 @@ namespace ne {
 
         // Make sure shader resources were previously allocated.
         if (!bIsShaderResourcesAllocated) [[unlikely]] {
-            Error error(fmt::format(
+            Error error(std::format(
                 "material \"{}\" was requested to deallocate shader resources but shader resources were not "
                 "allocated yet",
                 sMaterialName));
@@ -282,7 +285,7 @@ namespace ne {
 
         // Make sure pipeline is initialized.
         if (!mtxInternalResources.second.pUsedPipeline.isInitialized()) [[unlikely]] {
-            Error error(fmt::format(
+            Error error(std::format(
                 "material \"{}\" was requested to deallocate shader resources but pipeline is not "
                 "initialized",
                 sMaterialName));
@@ -311,7 +314,7 @@ namespace ne {
 
         // Make sure shader resources allocated.
         if (!bIsShaderResourcesAllocated) [[unlikely]] {
-            Error error(fmt::format(
+            Error error(std::format(
                 "material \"{}\" was requested to set shader CPU write resource binding data all shader "
                 "resources were not allocated yet",
                 sMaterialName));
@@ -321,7 +324,7 @@ namespace ne {
 
         // Make sure pipeline is initialized.
         if (!mtxInternalResources.second.pUsedPipeline.isInitialized()) [[unlikely]] {
-            Error error(fmt::format(
+            Error error(std::format(
                 "material \"{}\" was requested to allocate shader resources but pipeline is not initialized",
                 sMaterialName));
             error.showError();
@@ -331,7 +334,7 @@ namespace ne {
         // Make sure there is no resource with this name.
         auto it = mtxGpuResources.second.shaderResources.shaderCpuWriteResources.find(sShaderResourceName);
         if (it != mtxGpuResources.second.shaderResources.shaderCpuWriteResources.end()) [[unlikely]] {
-            Error error(fmt::format(
+            Error error(std::format(
                 "material \"{}\" already has a shader CPU write resource with the name \"{}\"",
                 sMaterialName,
                 sShaderResourceName));
@@ -344,7 +347,7 @@ namespace ne {
             pPipelineManager->getRenderer()->getShaderCpuWriteResourceManager();
         auto result = pShaderWriteResourceManager->createShaderCpuWriteResource(
             sShaderResourceName,
-            fmt::format("material \"{}\"", sMaterialName),
+            std::format("material \"{}\"", sMaterialName),
             iResourceSizeInBytes,
             mtxInternalResources.second.pUsedPipeline.getPipeline(),
             onStartedUpdatingResource,
@@ -401,7 +404,7 @@ namespace ne {
 
     void Material::setOpacity(float opacity) {
         if (!bUseTransparency) [[unlikely]] {
-            Logger::get().error(fmt::format(
+            Logger::get().error(std::format(
                 "material \"{}\" was requested to set opacity but it does not use transparency",
                 sMaterialName));
             return;

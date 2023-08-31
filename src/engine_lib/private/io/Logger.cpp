@@ -3,6 +3,7 @@
 // Standard.
 #include <ctime>
 #include <fstream>
+#include <format>
 
 // Custom.
 #include "misc/Globals.h"
@@ -11,12 +12,11 @@
 // External.
 #include "spdlog/sinks/basic_file_sink.h"
 #include "spdlog/sinks/stdout_color_sinks.h"
-#include "fmt/core.h"
 
 namespace ne {
     Logger::~Logger() {
         if (iTotalWarningsProduced.load() > 0 || iTotalErrorsProduced.load() > 0) {
-            pSpdLogger->info(fmt::format(
+            pSpdLogger->info(std::format(
                 "\n---------------------------------------------------\n"
                 "Total WARNINGS produced: {}.\n"
                 "Total ERRORS produced: {}."
@@ -52,7 +52,7 @@ namespace ne {
             return;
         }
 
-        pSpdLogger->info(fmt::format(
+        pSpdLogger->info(std::format(
             "[{}, {}] {}",
             std::filesystem::path(location.file_name()).filename().string(),
             location.line(),
@@ -64,7 +64,7 @@ namespace ne {
             return;
         }
 
-        pSpdLogger->warn(fmt::format(
+        pSpdLogger->warn(std::format(
             "[{}:{}] {}",
             std::filesystem::path(location.file_name()).filename().string(),
             location.line(),
@@ -77,7 +77,7 @@ namespace ne {
             return;
         }
 
-        pSpdLogger->error(fmt::format(
+        pSpdLogger->error(std::format(
             "[{}:{}] {}",
             std::filesystem::path(location.file_name()).filename().string(),
             location.line(),
@@ -128,7 +128,7 @@ namespace ne {
 #if defined(WIN32)
         const auto iError = localtime_s(&tm, &now);
         if (iError != 0) {
-            get().error(fmt::format("failed to get localtime (error code {})", iError));
+            get().error(std::format("failed to get localtime (error code {})", iError));
         }
 #elif __linux__
         localtime_r(&now, &tm);
@@ -136,7 +136,7 @@ namespace ne {
         static_assert(false, "not implemented");
 #endif
 
-        return fmt::format("{}.{}_{}-{}-{}", 1 + tm.tm_mon, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
+        return std::format("{}.{}_{}-{}-{}", 1 + tm.tm_mon, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
     }
 
     void Logger::removeOldestLogFiles(const std::filesystem::path& sLogDirectory) {

@@ -1,5 +1,8 @@
 #include "VulkanStorageResourceArrayManager.h"
 
+// Standard.
+#include <format>
+
 // Custom.
 #include "render/vulkan/resources/VulkanStorageResourceArray.h"
 #include "materials/glsl/GlslShaderResource.h"
@@ -38,14 +41,14 @@ namespace ne {
             for (const auto& [sArrayName, pArray] : mtxGlslShaderCpuWriteResources.second) {
                 if (pArray == nullptr) [[unlikely]] {
                     Logger::get().error(
-                        fmt::format("found not erased `nullptr` array with the name \"{}\"", sArrayName));
+                        std::format("found not erased `nullptr` array with the name \"{}\"", sArrayName));
                     continue;
                 }
-                sNonEmptyArrayNames += fmt::format("- {} (size: {})\n", sArrayName, pArray->getSize());
+                sNonEmptyArrayNames += std::format("- {} (size: {})\n", sArrayName, pArray->getSize());
             }
 
             // Show an error.
-            Error error(fmt::format(
+            Error error(std::format(
                 "storage resource array manager is being destroyed but there are still {} array(s) "
                 "exist:\n{}",
                 mtxGlslShaderCpuWriteResources.second.size(),
@@ -84,7 +87,7 @@ namespace ne {
             }
 
             // Log creation.
-            Logger::get().info(fmt::format(
+            Logger::get().info(std::format(
                 "created a new storage array to handle \"{}\" shader CPU write resource data "
                 "(storage arrays now in total: {}, total size: {})",
                 pShaderResource->getResourceName(),
@@ -101,7 +104,7 @@ namespace ne {
             // We operate only on resource names here because once an array is being resized it
             // updates all descriptors (of all pipelines) which are used for a specific resource
             // name to reference a new (resized) VkBuffer.
-            return Error(fmt::format(
+            return Error(std::format(
                 "shader resource \"{}\" requested to reserve a memory slot with size {} bytes in an array "
                 "and a memory manager already has an array for handling slots of shader resources with name "
                 "\"{}\" but this array's element size is {} bytes not {} bytes, this might mean that you "
@@ -186,7 +189,7 @@ namespace ne {
     }
 
     std::string VulkanStorageResourceArrayManager::formatBytesToMegabytes(size_t iSizeInBytes) {
-        return fmt::format(
+        return std::format(
             "{:.4F} MB",
             static_cast<float>(iSizeInBytes) / 1024.0F / 1024.0F); // NOLINT: magic numbers
     }

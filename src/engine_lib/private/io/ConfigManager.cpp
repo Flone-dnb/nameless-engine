@@ -2,13 +2,11 @@
 
 // Standard.
 #include <ranges>
+#include <format>
 
 // Custom.
 #include "io/Logger.h"
 #include "misc/ProjectPaths.h"
-
-// External.
-#include "fmt/core.h"
 
 namespace ne {
     std::string ConfigManager::getConfigFormatExtension() { return ".toml"; }
@@ -152,7 +150,7 @@ namespace ne {
         try {
             tomlData = toml::parse(pathToConfigFile);
         } catch (std::exception& exception) {
-            return Error(fmt::format(
+            return Error(std::format(
                 "failed to load file {}, error: {}", pathToConfigFile.string(), exception.what()));
         }
 
@@ -180,11 +178,11 @@ namespace ne {
         try {
             section = toml::find(tomlData, sSection.data());
         } catch (std::exception& ex) {
-            return Error(fmt::format("no section \"{}\" was found ({})", sSection, ex.what()));
+            return Error(std::format("no section \"{}\" was found ({})", sSection, ex.what()));
         }
 
         if (!section.is_table()) {
-            return Error(fmt::format("found \"{}\" is not a section", sSection));
+            return Error(std::format("found \"{}\" is not a section", sSection));
         }
 
         const auto table = section.as_table();
@@ -232,13 +230,13 @@ namespace ne {
         constexpr auto iMaxPathLimit = MAX_PATH - iMaxPathLimitBound;
         const auto iFilePathLength = pathToConfigFile.string().length();
         if (iFilePathLength > iMaxPathLimit - (iMaxPathLimitBound * 2) && iFilePathLength < iMaxPathLimit) {
-            Logger::get().warn(fmt::format(
+            Logger::get().warn(std::format(
                 "file path length {} is close to the platform limit of {} characters (path: {})",
                 iFilePathLength,
                 iMaxPathLimit,
                 pathToConfigFile.string()));
         } else if (iFilePathLength >= iMaxPathLimit) {
-            return Error(fmt::format(
+            return Error(std::format(
                 "file path length {} exceeds the platform limit of {} characters (path: {})",
                 iFilePathLength,
                 iMaxPathLimit,
@@ -261,7 +259,7 @@ namespace ne {
 
         std::ofstream outFile(pathToConfigFile, std::ios::binary);
         if (!outFile.is_open()) {
-            return Error(fmt::format("failed to open file {} for writing", pathToConfigFile.string()));
+            return Error(std::format("failed to open file {} for writing", pathToConfigFile.string()));
         }
         outFile << tomlData;
         outFile.close();

@@ -4,6 +4,7 @@
 #include <fstream>
 #include <climits>
 #include <filesystem>
+#include <format>
 
 // Custom.
 #include "io/Logger.h"
@@ -160,7 +161,7 @@ namespace ne {
         const auto sSourceFileHash =
             ShaderDescription::getFileHash(shaderDescription.pathToShaderFile, shaderDescription.sShaderName);
         if (sSourceFileHash.empty()) {
-            return Error(fmt::format(
+            return Error(std::format(
                 "unable to calculate shader source file hash (shader path: \"{}\")",
                 shaderDescription.pathToShaderFile.string()));
         }
@@ -290,7 +291,7 @@ namespace ne {
         ComPtr<IDxcBlobUtf16> pShaderName = nullptr;
         pResults->GetOutput(DXC_OUT_OBJECT, IID_PPV_ARGS(&pCompiledShaderBlob), &pShaderName);
         if (pCompiledShaderBlob == nullptr) {
-            return Error(fmt::format(
+            return Error(std::format(
                 "no shader binary was generated for {}", shaderDescription.pathToShaderFile.string()));
         }
 
@@ -299,7 +300,7 @@ namespace ne {
         pathToCompiledShader += sConfiguration;
         std::ofstream shaderCacheFile(pathToCompiledShader, std::ios::binary);
         if (!shaderCacheFile.is_open()) [[unlikely]] {
-            return Error(fmt::format(
+            return Error(std::format(
                 "failed to open the path \"{}\" for writing to save shader bytecode",
                 pathToCompiledShader.string()));
         }
@@ -325,7 +326,7 @@ namespace ne {
             sShaderReflectionFileExtension;
         std::ofstream shaderReflectionFile(pathToShaderReflection, std::ios::binary);
         if (!shaderReflectionFile.is_open()) {
-            return Error(fmt::format("failed to save shader reflection data at {}", pathToShaderReflection));
+            return Error(std::format("failed to save shader reflection data at {}", pathToShaderReflection));
         }
         shaderReflectionFile.write(
             static_cast<char*>(pReflectionData->GetBufferPointer()),
@@ -339,12 +340,12 @@ namespace ne {
         pResults->GetOutput(DXC_OUT_PDB, IID_PPV_ARGS(&pShaderPdb), &pShaderPdbName);
         if (pShaderPdb == nullptr) {
             return Error(
-                fmt::format("no PDB was generated for {}", shaderDescription.pathToShaderFile.string()));
+                std::format("no PDB was generated for {}", shaderDescription.pathToShaderFile.string()));
         }
 
         std::ofstream shaderPdbFile(shaderPdbPath, std::ios::binary);
         if (!shaderPdbFile.is_open()) {
-            return Error(fmt::format("failed to save shader PDB at {}", shaderPdbPath.string()));
+            return Error(std::format("failed to save shader PDB at {}", shaderPdbPath.string()));
         }
         shaderPdbFile.write(
             static_cast<char*>(pShaderPdb->GetBufferPointer()),
@@ -400,7 +401,7 @@ namespace ne {
         if (mtxCompiledBytecode.second != nullptr) {
             const auto iNewRefCount = mtxCompiledBytecode.second.Reset();
             if (iNewRefCount != 0) [[unlikely]] {
-                Logger::get().error(fmt::format(
+                Logger::get().error(std::format(
                     "shader \"{}\" bytecode was requested to be released from the "
                     "memory but it's still being referenced (new ref count: {})",
                     getShaderName(),
@@ -466,7 +467,7 @@ namespace ne {
         // Open file.
         std::ifstream shaderBytecodeFile(pathToFile, std::ios::binary);
         if (!shaderBytecodeFile.is_open()) {
-            return Error(fmt::format("failed to open file at {}", pathToFile.string()));
+            return Error(std::format("failed to open file at {}", pathToFile.string()));
         }
 
         // Get file size.
@@ -518,7 +519,7 @@ namespace ne {
 
         // Make sure there is no extension (expecting the file to not have extension).
         if (pathToCompiledShader.has_extension()) [[unlikely]] {
-            return Error(fmt::format(
+            return Error(std::format(
                 "expected the shader bytecode file \"{}\" to not have an extension",
                 pathToCompiledShader.string()));
         }
@@ -530,7 +531,7 @@ namespace ne {
         // Make sure the reflection file exists.
         if (!std::filesystem::exists(pathToReflectionFile)) [[unlikely]] {
             return Error(
-                fmt::format("expected reflection file to exist at \"{}\"", pathToReflectionFile.string()));
+                std::format("expected reflection file to exist at \"{}\"", pathToReflectionFile.string()));
         }
 
         // Calculate hash of the reflection file.
@@ -538,7 +539,7 @@ namespace ne {
             ShaderDescription::getFileHash(pathToReflectionFile, getShaderName());
         if (sReflectionFileHash.empty()) [[unlikely]] {
             return Error(
-                fmt::format("failed to calculate hash of the file at \"{}\"", pathToReflectionFile.string()));
+                std::format("failed to calculate hash of the file at \"{}\"", pathToReflectionFile.string()));
         }
 
         return sReflectionFileHash;

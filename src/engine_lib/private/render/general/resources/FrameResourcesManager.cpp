@@ -1,5 +1,8 @@
 #include "FrameResourcesManager.h"
 
+// Standard.
+#include <format>
+
 // Custom.
 #if defined(WIN32)
 #include "render/directx/DirectXRenderer.h"
@@ -7,9 +10,6 @@
 #endif
 #include "render/vulkan/VulkanRenderer.h"
 #include "render/vulkan/resources/VulkanFrameResource.h"
-
-// External.
-#include "fmt/core.h"
 
 namespace ne {
 
@@ -58,7 +58,7 @@ namespace ne {
         for (unsigned int i = 0; i < getFrameResourcesCount(); i++) {
             // Create a constant buffer with frame-global data per frame.
             auto result = pRenderer->getResourceManager()->createResourceWithCpuWriteAccess(
-                fmt::format("frame constants #{}", i),
+                std::format("frame constants #{}", i),
                 sizeof(FrameConstants),
                 1,
                 CpuVisibleShaderResourceUsageDetails(true));

@@ -306,15 +306,15 @@ void foo(){
 }
 ```
 
-You can also combine `std::format` or `fmt::format` with logger:
+You can also combine `std::format` with logger:
 
 ```Cpp
 #include "misc/Logger.h"
-#include "fmt/core.h" // or #include <format> if your compiler supports it
+#include <format>
 
 void bar(){
     int iAnswer = 42;
-    Logger::get().info(fmt::format("the value of the variable is {}", iAnswer));
+    Logger::get().info(std::format("the value of the variable is {}", iAnswer));
 }
 ```
 
@@ -1185,7 +1185,7 @@ void MyGameInstance::onGameStarted() {
         std::scoped_lock guard(pActionEvents->first);
 
         pActionEvents->second[InputEventIds::Action::iActionEvent1] = [](KeyboardModifiers modifiers, bool bIsPressedDown) {
-            Logger::get().info(fmt::format("action event triggered, state: {}", bIsPressedDown));
+            Logger::get().info(std::format("action event triggered, state: {}", bIsPressedDown));
         };
     }
 
@@ -1195,7 +1195,7 @@ void MyGameInstance::onGameStarted() {
         std::scoped_lock guard(pAxisEvents->first);
 
         pAxisEvents->second[InputEventIds::Axis::iAxisEvent1] = [](KeyboardModifiers modifiers, float input) {
-            Logger::get().info(fmt::format("axis event triggered, value: {}", input));
+            Logger::get().info(std::format("axis event triggered, value: {}", input));
         };
     }
 }

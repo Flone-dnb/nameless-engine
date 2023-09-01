@@ -684,13 +684,6 @@ namespace ne {
          */
         std::array<VkFence, getSwapChainBufferCount()> vSwapChainImageFenceRefs;
 
-        /**
-         * Semaphores to signal that the rendering to a swapchain image was finished and the image is now
-         * ready for presenting.
-         */
-        std::array<VkSemaphore, FrameResourcesManager::getFrameResourcesCount()>
-            vSemaphoreSwapChainImageReadyForPresenting;
-
         /** List of supported GPUs, filled during @ref pickPhysicalDevice. */
         std::vector<std::string> vSupportedGpuNames;
 

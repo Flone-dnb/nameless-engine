@@ -1,7 +1,6 @@
 ﻿#include "io/ConfigManager.h"
 
 // Standard.
-#include <ranges>
 #include <format>
 
 // Custom.
@@ -13,38 +12,40 @@ namespace ne {
 
     std::string ConfigManager::getBackupFileExtension() { return sBackupFileExtension; }
 
-    std::vector<std::string> ConfigManager::getAllFileNames(ConfigCategory category) {
+    std::set<std::string> ConfigManager::getAllFileNames(ConfigCategory category) {
+        // Prepare some variables.
+        std::set<std::string> configFiles;
         const auto categoryDirectory = getCategoryDirectory(category);
-
-        std::vector<std::string> vConfigFiles;
         const auto directoryIterator = std::filesystem::directory_iterator(categoryDirectory);
-        for (const auto& entry : directoryIterator) {
-            if (entry.is_regular_file()) {
-                if (entry.path().extension().string() == sBackupFileExtension) {
-                    // Backup file. See if original file exists.
-                    auto originalFilePath = categoryDirectory;
-                    originalFilePath /= entry.path().stem().string(); // will return 'text.toml'
-                    if (!std::filesystem::exists(originalFilePath)) {
-                        // Backup file exists, but not the original file.
-                        // Copy backup file as the original.
-                        std::filesystem::copy_file(entry, originalFilePath);
-                    }
 
-                    // Check if we already added this file.
-                    if (std::ranges::find(vConfigFiles, originalFilePath.stem().string()) ==
-                        vConfigFiles.end()) {
-                        vConfigFiles.push_back(originalFilePath.stem().string());
-                    }
-                } else {
-                    // Check if we already added this file.
-                    if (std::ranges::find(vConfigFiles, entry.path().stem().string()) == vConfigFiles.end()) {
-                        vConfigFiles.push_back(entry.path().stem().string());
-                    }
+        // Prepare a helper lambda.
+
+        // Iterate over all entries of the directory.
+        for (const auto& entry : directoryIterator) {
+            // Skip directories.
+            if (!entry.is_regular_file()) {
+                continue;
+            }
+
+            if (entry.path().extension().string() == sBackupFileExtension) {
+                // Backup file. See if original file exists.
+                auto originalFilePath = categoryDirectory;
+                originalFilePath /= entry.path().stem().string(); // will return 'text.toml'
+                if (!std::filesystem::exists(originalFilePath)) {
+                    // Backup file exists, but not the original file.
+                    // Copy backup file as the original.
+                    std::filesystem::copy_file(entry, originalFilePath);
                 }
+
+                // Add original file name.
+                configFiles.insert(originalFilePath.stem().string());
+            } else {
+                // Add entry file name.
+                configFiles.insert(entry.path().stem().string());
             }
         }
 
-        return vConfigFiles;
+        return configFiles;
     }
 
     std::string ConfigManager::getFreeProgressProfileName() {
@@ -315,12 +316,12 @@ namespace ne {
     }
 
     std::string ConfigManager::generateFreeFileName(
-        const std::vector<std::string>& vUsedFileNames, const std::string& sFileNamePrefix) {
+        const std::set<std::string>& usedFileNames, const std::string& sFileNamePrefix) {
         for (size_t i = 0; i < SIZE_MAX; i++) {
             std::string sFileNameToUse = sFileNamePrefix + std::to_string(i);
             bool bIsFree = true;
 
-            for (const auto& sUsedFileName : vUsedFileNames) {
+            for (const auto& sUsedFileName : usedFileNames) {
                 if (sUsedFileName == sFileNameToUse) {
                     bIsFree = false;
                     break;
@@ -332,6 +333,6 @@ namespace ne {
             }
         }
 
-        return generateFreeFileName(vUsedFileNames, sFileNamePrefix + "0");
+        return generateFreeFileName(usedFileNames, sFileNamePrefix + "0");
     }
 } // namespace ne

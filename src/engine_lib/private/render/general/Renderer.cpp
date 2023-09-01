@@ -335,7 +335,7 @@ namespace ne {
 #if defined(WIN32)
             return DirectXRenderer::create(pGameManager, vBlacklistedGpuNames);
 #else
-            return Error("DirectX renderer is not supported on this OS");
+            return std::pair<Error, std::string>{Error("DirectX renderer is not supported on this OS"), ""};
 #endif
         }
 

@@ -7,6 +7,8 @@
 #include <variant>
 #include <filesystem>
 #include <unordered_set>
+#include <mutex>
+#include <atomic>
 
 // Custom.
 #include "misc/GC.hpp"

@@ -182,7 +182,7 @@ namespace ne {
         // Projection window width/height in normalized device coordinates.
         constexpr float projectionWindowDimensionSize = 2.0F; // because view space window is [-1; 1]
 
-        const auto tan = std::tanf(0.5F * verticalFovInRadians);
+        const auto tan = std::tan(0.5F * verticalFovInRadians);
 
         // Calculate clip planes height.
         mtxData.second.projectionData.nearClipPlaneHeight =

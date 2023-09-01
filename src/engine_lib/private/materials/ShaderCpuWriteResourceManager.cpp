@@ -98,12 +98,20 @@ namespace ne {
 
         // TODO: ugly but helps to avoid usage of virtual functions in this loop as it's executed
         // every frame with potentially lots of resources to be updated.
-        if (dynamic_cast<VulkanRenderer*>(pRenderer) != nullptr) {
+        // Prepare lambda to update resources.
+        auto updateGlslResources = [&]() {
             const auto pGlslResources = reinterpret_cast<std::unordered_set<GlslShaderCpuWriteResource*>*>(
                 &mtxShaderCpuWriteResources.second.toBeUpdated[iCurrentFrameResourceIndex]);
             for (const auto& pResource : *pGlslResources) {
                 pResource->updateResource(iCurrentFrameResourceIndex);
             }
+        };
+
+#if !defined(WIN32)
+        updateGlslResources();
+#else
+        if (dynamic_cast<VulkanRenderer*>(pRenderer) != nullptr) {
+            updateGlslResources();
         } else {
             const auto pHlslResources = reinterpret_cast<std::unordered_set<HlslShaderCpuWriteResource*>*>(
                 &mtxShaderCpuWriteResources.second.toBeUpdated[iCurrentFrameResourceIndex]);
@@ -111,6 +119,7 @@ namespace ne {
                 pResource->updateResource(iCurrentFrameResourceIndex);
             }
         }
+#endif
 
         // Clear array of resources to be updated for the current frame resource since
         // we updated all resources for the current frame resource.

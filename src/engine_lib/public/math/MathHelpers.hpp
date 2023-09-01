@@ -125,8 +125,8 @@ namespace ne {
 
         glm::vec3 worldRotation = glm::vec3(0.0F, 0.0F, 0.0F);
 
-        worldRotation.z = glm::degrees(std::atan2f(direction.y, direction.x));
-        worldRotation.y = glm::degrees(-std::asinf(direction.z));
+        worldRotation.z = glm::degrees(std::atan2(direction.y, direction.x));
+        worldRotation.y = glm::degrees(-std::asin(direction.z));
 
         // Check for NaNs.
         if (glm::isnan(worldRotation.z)) {
@@ -173,10 +173,10 @@ namespace ne {
         phi = glm::radians(phi);
         theta = glm::radians(theta);
 
-        const auto sinPhi = std::sinf(phi);
-        const auto sinTheta = std::sinf(theta);
-        const auto cosPhi = std::cosf(phi);
-        const auto cosTheta = std::cosf(theta);
+        const auto sinPhi = std::sin(phi);
+        const auto sinTheta = std::sin(theta);
+        const auto cosPhi = std::cos(phi);
+        const auto cosTheta = std::cos(theta);
         return glm::vec3(radius * sinPhi * cosTheta, radius * sinPhi * sinTheta, radius * cosPhi);
     }
 

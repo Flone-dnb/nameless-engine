@@ -2,6 +2,7 @@
 
 // Standard.
 #include <memory>
+#include <cstring>
 
 namespace ne {
     class GpuResource;

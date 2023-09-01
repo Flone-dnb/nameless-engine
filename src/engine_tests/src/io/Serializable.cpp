@@ -867,11 +867,11 @@ TEST_CASE("serialize and deserialize sample player save data") {
 
     {
         // Get all save files.
-        const auto vProfiles = ConfigManager::getAllFileNames(ConfigCategory::PROGRESS);
-        REQUIRE(!vProfiles.empty());
+        const auto profiles = ConfigManager::getAllFileNames(ConfigCategory::PROGRESS);
+        REQUIRE(!profiles.empty());
 
         // ... say the user picks the first profile ...
-        const auto sProfileName = vProfiles[0];
+        const auto sProfileName = *profiles.begin();
 
         // Deserialize.
         const auto pathToFile = ConfigManager::getCategoryDirectory(ConfigCategory::PROGRESS) / sProfileName;

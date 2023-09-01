@@ -1,8 +1,5 @@
 ﻿#include "ShaderUser.h"
 
-// Standard.
-#include <ranges>
-
 // Custom.
 #include "materials/ShaderManager.h"
 

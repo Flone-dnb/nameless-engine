@@ -1,7 +1,6 @@
 ﻿#include "game/nodes/Node.h"
 
 // Standard.
-#include <ranges>
 #include <format>
 
 // Custom.
@@ -502,7 +501,7 @@ namespace ne {
         iId += 1;
 
         if (bIncludeInformationAboutChildNodes) {
-            // Add child information.
+            // Get information about child nodes.
             std::scoped_lock guard(mtxChildNodes.first);
             for (const auto& pChildNode : *mtxChildNodes.second) {
                 auto result = pChildNode->getInformationForSerialization(iId, iMyId);
@@ -512,7 +511,11 @@ namespace ne {
                 }
                 auto vChildArray =
                     std::get<std::vector<SerializableObjectInformationWithGcPointer>>(std::move(result));
-                std::ranges::move(vChildArray, std::back_inserter(vNodesInfo));
+
+                // Add information about children.
+                for (auto& childInfo : vChildArray) {
+                    vNodesInfo.push_back(std::move(childInfo));
+                }
             }
         }
 

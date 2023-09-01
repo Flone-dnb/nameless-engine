@@ -3,7 +3,6 @@
 // Standard.
 #include <charconv>
 #include <string>
-#include <ranges>
 #include <format>
 #include <vector>
 
@@ -79,7 +78,11 @@ namespace ne {
         auto vActionKeys = getActionEvent(iActionId);
 
         // Replace old key.
-        std::ranges::replace(vActionKeys, oldKey, newKey);
+        for (auto& key : vActionKeys) {
+            if (key == oldKey) {
+                key = newKey;
+            }
+        }
 
         // Overwrite event with new keys.
         auto optional = overwriteActionEvent(iActionId, vActionKeys);
@@ -107,15 +110,17 @@ namespace ne {
         // Get keys of this event.
         auto vAxisKeys = getAxisEvent(iAxisEventId);
 
-        // See if old key exists.
-        const auto foundIt =
-            std::ranges::find_if(vAxisKeys, [&](const auto& pair) { return pair == oldPair; });
-        if (foundIt == vAxisKeys.end()) {
+        // Replace old key.
+        bool bOldKeyExists = false;
+        for (auto& pair : vAxisKeys) {
+            if (pair == oldPair) {
+                bOldKeyExists = true;
+                pair = newPair;
+            }
+        }
+        if (!bOldKeyExists) {
             return Error("the specified old key pair was not found");
         }
-
-        // Replace old key.
-        std::ranges::replace(vAxisKeys, oldPair, newPair);
 
         // Overwrite event with new keys.
         auto optional = overwriteAxisEvent(iAxisEventId, vAxisKeys);
@@ -252,8 +257,14 @@ namespace ne {
 
             for (const auto& [iActionId, value] : currentActionEvents) {
                 // Look if this registered event exists in the events from file.
-                auto it = std::ranges::find(vFileActionEvents, iActionId);
-                if (it == vFileActionEvents.end()) {
+                bool bFoundActionInFileActions = false;
+                for (const auto& iFileActionId : vFileActionEvents) {
+                    if (iFileActionId == iActionId) {
+                        bFoundActionInFileActions = true;
+                        break;
+                    }
+                }
+                if (!bFoundActionInFileActions) {
                     // We don't have such action event registered so don't import keys.
                     continue;
                 }
@@ -343,9 +354,16 @@ namespace ne {
             std::scoped_lock<std::recursive_mutex> guard(mtxAxisEvents);
 
             for (const auto& [iAxisEventId, value] : currentAxisEvents) {
-                // Look for this axis in file.
-                auto it = std::ranges::find(vFileAxisEvents, iAxisEventId);
-                if (it == vFileAxisEvents.end()) {
+                // Look for this axis event in file.
+                bool bFoundAxisEventInFileActions = false;
+                for (const auto& iFileAxisEventId : vFileAxisEvents) {
+                    if (iFileAxisEventId == iAxisEventId) {
+                        bFoundAxisEventInFileActions = true;
+                        break;
+                    }
+                }
+                if (!bFoundAxisEventInFileActions) {
+                    // We don't have such axis event registered so don't import keys.
                     continue;
                 }
 
@@ -487,18 +505,21 @@ namespace ne {
 
         for (const auto& plusKey : vPlusKeys) {
             // Find a state that has this plus key.
-            auto it = std::ranges::find_if(
-                vAxisEventStates.begin(), vAxisEventStates.end(), [&](const AxisState& item) {
-                    return item.plusKey == plusKey;
-                });
-            if (it == vAxisEventStates.end()) [[unlikely]] {
+            std::optional<KeyboardKey> foundMinusKey;
+            for (const auto& state : vAxisEventStates) {
+                if (state.plusKey == plusKey) {
+                    foundMinusKey = state.minusKey;
+                    break;
+                }
+            }
+            if (!foundMinusKey.has_value()) [[unlikely]] {
                 Logger::get().error(
                     std::format("can't find minus key for plus key in axis event with ID {}", iAxisEventId));
                 return {};
             }
 
             // Add found minus key from the state.
-            vMinusKeys.push_back(it->minusKey);
+            vMinusKeys.push_back(foundMinusKey.value());
         }
 
         // Check sizes.
@@ -539,19 +560,19 @@ namespace ne {
 
         // Look if this action exists and remove all entries.
         for (auto it = actionEvents.begin(); it != actionEvents.end();) {
-            // Save the number of events right now.
-            const auto iSizeBefore = it->second.size();
-
             // Remove all events with the specified ID.
-            const auto [first, last] = std::ranges::remove_if(
-                it->second, [&](const auto& iExistingActionId) { return iExistingActionId == iActionId; });
-            it->second.erase(first, last);
-
-            // Get the number of events right now.
-            const auto iSizeAfter = it->second.size();
+            size_t iErasedItemCount = 0;
+            for (auto eventIt = it->second.begin(); eventIt != it->second.end();) {
+                if (*eventIt == iActionId) {
+                    eventIt = it->second.erase(eventIt);
+                    iErasedItemCount += 1;
+                } else {
+                    ++eventIt;
+                }
+            }
 
             // See if we removed something.
-            if (iSizeAfter < iSizeBefore) {
+            if (iErasedItemCount > 0) {
                 // Only change to `true`, don't do: `bFound = iSizeAfter < iSizeBefore` as this might
                 // change `bFound` from `true` to `false`.
                 bFound = true;
@@ -582,19 +603,19 @@ namespace ne {
 
         // Look for plus and minus keys.
         for (auto it = axisEvents.begin(); it != axisEvents.end();) {
-            // Save the number of events right now.
-            const auto iSizeBefore = it->second.size();
-
             // Remove all events with the specified ID.
-            const auto [first, last] = std::ranges::remove_if(
-                it->second, [&](const auto& pair) { return pair.first == iAxisEventId; });
-            it->second.erase(first, last);
-
-            // Get the number of events right now.
-            const auto iSizeAfter = it->second.size();
+            size_t iErasedItemCount = 0;
+            for (auto eventIt = it->second.begin(); eventIt != it->second.end();) {
+                if (eventIt->first == iAxisEventId) {
+                    eventIt = it->second.erase(eventIt);
+                    iErasedItemCount += 1;
+                } else {
+                    ++eventIt;
+                }
+            }
 
             // See if we removed something.
-            if (iSizeAfter < iSizeBefore) {
+            if (iErasedItemCount > 0) {
                 // Only change to `true`, don't do: `bFound = iSizeAfter < iSizeBefore` as this might
                 // change `bFound` from `true` to `false`.
                 bFound = true;

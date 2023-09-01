@@ -36,7 +36,7 @@ namespace ne {
         if (readlink("/proc/self/exe", &buf[0], bufSize) == -1) {
             const Error err("failed to get path to the application");
             err.showError();
-            throw std::runtime_error(err.getError());
+            throw std::runtime_error(err.getFullErrorMessage());
         }
 
         return std::filesystem::path(buf).stem().string();

@@ -1,5 +1,8 @@
 #pragma once
 
+// Standard.
+#include <mutex>
+
 // Custom.
 #include "io/serializers/IFieldSerializer.hpp"
 

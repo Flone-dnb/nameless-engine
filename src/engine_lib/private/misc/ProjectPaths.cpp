@@ -93,9 +93,9 @@ namespace ne {
 
         const auto sHomePath = std::string(getenv("HOME"));
         if (sHomePath.empty()) {
-            const Error err("Environment variable HOME is not set.");
+            const Error err("environment variable HOME is not set");
             err.showError();
-            throw std::runtime_error(err.getError());
+            throw std::runtime_error(err.getFullErrorMessage());
         }
 
         basePath = std::format("{}/.config/", sHomePath);
@@ -138,7 +138,7 @@ namespace ne {
         if (readlink("/proc/self/exe", &buf[0], bufSize) == -1) {
             const Error err("failed to get path to the application");
             err.showError();
-            throw std::runtime_error(err.getError());
+            throw std::runtime_error(err.getFullErrorMessage());
         }
 
         pathToExecutable = std::filesystem::path(buf);

@@ -5,15 +5,6 @@
  #define __has_include(include) 0L
 #endif
 
-// #if (__cplusplus >= 202002L && __has_include(<source_location>)) || (_MSVC_LANG > 202002L) || (_MSC_VER > 1928 && _MSVC_LANG > 201703L)
-//   #include <source_location>
-//   using source_location = std::source_location;
-// #elif __cplusplus >= 201402L && __has_include(<experimental/source_location>) && !defined(__clang__)
-//   #include <experimental/source_location>
-//   using source_location = std::experimental::source_location;
-// #else
-namespace nostd
-{
 #if __cplusplus >= 201103L || _MSVC_LANG >= 201103L
 #include <cstdint>
 #define NOEXCEPT noexcept
@@ -27,6 +18,15 @@ namespace nostd
 #define __has_builtin(builtin) OL
 #endif
 
+// #if (__cplusplus >= 202002L && __has_include(<source_location>)) || (_MSVC_LANG > 202002L) || (_MSC_VER > 1928 && _MSVC_LANG > 201703L)
+//   #include <source_location>
+//   using source_location = std::source_location;
+// #elif __cplusplus >= 201402L && __has_include(<experimental/source_location>) && !defined(__clang__)
+//   #include <experimental/source_location>
+//   using source_location = std::experimental::source_location;
+// #else
+namespace nostd
+{
   class source_location
   {
   private:

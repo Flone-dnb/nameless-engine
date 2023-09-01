@@ -3,6 +3,7 @@
 // Standard.
 #include <variant>
 #include <optional>
+#include <set>
 #include <filesystem>
 
 // Custom.
@@ -66,7 +67,7 @@ namespace ne {
          *
          * @return All files in the specified category (backup files are excluded).
          */
-        static std::vector<std::string> getAllFileNames(ConfigCategory category);
+        static std::set<std::string> getAllFileNames(ConfigCategory category);
 
         /**
          * Goes through all existing (on disk) config files used for storing user's progress
@@ -335,13 +336,13 @@ namespace ne {
         /**
          * Generates a free (unused) file name (without extension).
          *
-         * @param vUsedFileNames   File names (without extension) that cannot be used.
+         * @param usedFileNames    File names (without extension) that cannot be used.
          * @param sFileNamePrefix  Prefix for generated file name. Final prefix may be different.
          *
          * @return Generated file name (without extension).
          */
         static std::string generateFreeFileName(
-            const std::vector<std::string>& vUsedFileNames, const std::string& sFileNamePrefix = "");
+            const std::set<std::string>& usedFileNames, const std::string& sFileNamePrefix = "");
 
         /** Config file structure */
         toml::value tomlData;

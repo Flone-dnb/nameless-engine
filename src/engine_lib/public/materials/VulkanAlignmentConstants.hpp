@@ -1,5 +1,8 @@
 ﻿#pragma once
 
+// Standard.
+#include <cstddef>
+
 namespace ne {
     /** Scalars have to be aligned by N (= 4 bytes given 32 bit floats). */
     static constexpr size_t iVkScalarAlignment = 4; // NOLINT

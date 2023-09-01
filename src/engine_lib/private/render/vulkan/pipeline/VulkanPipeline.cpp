@@ -127,9 +127,13 @@ namespace ne {
         mtxInternalResources.second.smallestBindingIndexReferencedByPushConstants = {};
         mtxInternalResources.second.pushConstantUintFieldNames = {};
 
-#if defined(DEBUG)
+#if defined(WIN32) && defined(DEBUG)
         static_assert(
             sizeof(InternalResources) == 240, // NOLINT: current struct size
+            "release new resources here");
+#elif defined(DEBUG)
+        static_assert(
+            sizeof(InternalResources) == 192, // NOLINT: current struct size
             "release new resources here");
 #endif
 

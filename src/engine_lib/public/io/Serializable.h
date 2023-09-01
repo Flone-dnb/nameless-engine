@@ -6,7 +6,6 @@
 #include <variant>
 #include <optional>
 #include <set>
-#include <ranges>
 #include <format>
 
 // Custom.

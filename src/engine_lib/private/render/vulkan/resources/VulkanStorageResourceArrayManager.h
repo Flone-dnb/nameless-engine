@@ -20,6 +20,7 @@ namespace ne {
     class GlslShaderCpuWriteResource;
     class VulkanRenderer;
     class VulkanPipeline;
+    class VulkanResourceManager;
 
     /** Manages arrays of resources of various CPU write shader resources. */
     class VulkanStorageResourceArrayManager {

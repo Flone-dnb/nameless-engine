@@ -182,9 +182,12 @@ namespace ne {
             iTextureFilteringMode = iNewTextureFilteringMode;
         }
 
-#if defined(DEBUG)
+#if defined(DEBUG) && defined(WIN32)
         static_assert(
             sizeof(RenderSettings) == 192, "consider adding new checks here"); // NOLINT: current class size
+#elif defined(DEBUG)
+        static_assert(
+            sizeof(RenderSettings) == 168, "consider adding new checks here"); // NOLINT: current class size
 #endif
     }
 

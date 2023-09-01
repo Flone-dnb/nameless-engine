@@ -16,7 +16,7 @@ function(enable_more_warnings)
     if(MSVC)
         target_compile_options(${PROJECT_NAME} PUBLIC /W3 /WX)
     else()
-        target_compile_options(${PROJECT_NAME} PUBLIC -Wall -Wextra -Werror -Wno-unused-parameter -Wno-unused-variable)
+        target_compile_options(${PROJECT_NAME} PUBLIC -Wall -Wextra -Werror -Wno-unused-parameter -Wno-unused-variable -Wno-missing-braces)
     endif()
 
     # Compiler specific flags.

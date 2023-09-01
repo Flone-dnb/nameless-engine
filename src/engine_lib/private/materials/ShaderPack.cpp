@@ -1,7 +1,6 @@
 ﻿#include "ShaderPack.h"
 
 // Standard.
-#include <ranges>
 #include <format>
 
 // Custom.

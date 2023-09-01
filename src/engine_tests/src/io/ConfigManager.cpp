@@ -347,7 +347,7 @@ TEST_CASE("remove file") {
     // See the only second file exists.
     auto vFiles = ConfigManager::getAllFileNames(ConfigCategory::PROGRESS);
     REQUIRE(vFiles.size() == 1);
-    REQUIRE(vFiles[0] == sSecondFileName);
+    REQUIRE(*vFiles.begin() == sSecondFileName);
 
     // Remove the second file using absolute path.
     ConfigManager::removeFile(secondFilePath);
@@ -383,7 +383,7 @@ TEST_CASE("get all config files of category (with backup test)") {
 
     auto vFiles = ConfigManager::getAllFileNames(ConfigCategory::PROGRESS);
     REQUIRE(vFiles.size() == 1);
-    REQUIRE(vFiles[0] == firstFilePath.stem().string()); // make sure there's no file extension
+    REQUIRE(*vFiles.begin() == firstFilePath.stem().string()); // make sure there's no file extension
 
     const std::string sSecondFileName = std::string(sTestConfigFileName) + "2";
 

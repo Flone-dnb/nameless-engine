@@ -1,7 +1,5 @@
 #include "io/FieldSerializerManager.h"
 
-
-
 // Custom.
 #include "io/serializers/PrimitiveFieldSerializer.h"
 #include "io/serializers/StringFieldSerializer.h"

@@ -668,21 +668,36 @@ namespace ne {
         VkDebugUtilsMessengerEXT pValidationLayerDebugMessenger = nullptr;
 #endif
 
-        /** Swap chain images. */
-        std::array<VkImage, getSwapChainBufferCount()> vSwapChainImages;
+        /**
+         * Swap chain images.
+         *
+         * @remark Size of this array is equal to @ref iSwapChainImageCount.
+         */
+        std::vector<VkImage> vSwapChainImages;
 
-        /** Views to @ref vSwapChainImages. */
-        std::array<VkImageView, getSwapChainBufferCount()> vSwapChainImageViews;
+        /**
+         * Views to @ref vSwapChainImages.
+         *
+         * @remark Size of this array is equal to @ref iSwapChainImageCount.
+         */
+        std::vector<VkImageView> vSwapChainImageViews;
 
-        /** Framebuffers that point to @ref vSwapChainImageViews. */
-        std::array<VkFramebuffer, getSwapChainBufferCount()> vSwapChainFramebuffers;
+        /**
+         * Framebuffers that point to @ref vSwapChainImageViews.
+         *
+         * @remark Size of this array is equal to @ref iSwapChainImageCount.
+         */
+        std::vector<VkFramebuffer> vSwapChainFramebuffers;
 
         /**
          * Stores references to fences from frame resources.
-         * Used to synchronize `vkAcquireNextImageKHR` calls and wait for a frame resource that uses
+         *
+         * @remark Used to synchronize `vkAcquireNextImageKHR` calls and wait for a frame resource that uses
          * the swap chain image.
+         *
+         * @remark Size of this array is equal to @ref iSwapChainImageCount.
          */
-        std::array<VkFence, getSwapChainBufferCount()> vSwapChainImageFenceRefs;
+        std::vector<VkFence> vSwapChainImageFenceRefs;
 
         /** List of supported GPUs, filled during @ref pickPhysicalDevice. */
         std::vector<std::string> vSupportedGpuNames;
@@ -698,6 +713,9 @@ namespace ne {
 
         /** Used MSAA sample count. */
         VkSampleCountFlagBits msaaSampleCount = VK_SAMPLE_COUNT_1_BIT;
+
+        /** The number of swap chain images that we have in @ref pSwapChain. */
+        uint32_t iSwapChainImageCount = 0;
 
         /** Tells if @ref initializeVulkan was finished successfully or not. */
         bool bIsVulkanInitialized = false;

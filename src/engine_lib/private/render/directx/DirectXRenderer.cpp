@@ -972,7 +972,7 @@ namespace ne {
         desc.SampleDesc.Quality = 0;
 
         desc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-        desc.BufferCount = getSwapChainBufferCount();
+        desc.BufferCount = getRecommendedSwapChainBufferCount();
 
         desc.Scaling = DXGI_SCALING_STRETCH;
         desc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL;
@@ -1239,7 +1239,7 @@ namespace ne {
 
         // Swapchain cannot be resized unless all outstanding buffer references have been released.
         vSwapChainBuffers.clear();
-        vSwapChainBuffers.resize(getSwapChainBufferCount());
+        vSwapChainBuffers.resize(getRecommendedSwapChainBufferCount());
 
         // Apply VSync state for `Present` calls.
         const auto iOldPresentSyncInterval = iPresentSyncInterval;
@@ -1264,7 +1264,7 @@ namespace ne {
 
         // Resize the swap chain.
         auto hResult = pSwapChain->ResizeBuffers(
-            getSwapChainBufferCount(),
+            getRecommendedSwapChainBufferCount(),
             renderResolution.first,
             renderResolution.second,
             backBufferFormat,
@@ -1277,7 +1277,7 @@ namespace ne {
         // Create RTV to swap chain buffers.
         auto swapChainResult =
             dynamic_cast<DirectXResourceManager*>(getResourceManager())
-                ->makeRtvResourcesFromSwapChainBuffer(pSwapChain.Get(), getSwapChainBufferCount());
+                ->makeRtvResourcesFromSwapChainBuffer(pSwapChain.Get(), getRecommendedSwapChainBufferCount());
         if (std::holds_alternative<Error>(swapChainResult)) {
             auto err = std::get<Error>(std::move(swapChainResult));
             err.addCurrentLocationToErrorStack();

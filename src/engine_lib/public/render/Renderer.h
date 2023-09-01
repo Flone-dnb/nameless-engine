@@ -264,11 +264,23 @@ namespace ne {
 
     protected:
         /**
-         * Returns the amount of buffers/images the swap chain has.
+         * Returns the number of swap chain buffers/images that we prefer to use.
          *
-         * @return The amount of buffers/images the swap chain has.
+         * @remark Frame resources expect that the number of swap chain images is equal to the number
+         * of frame resources because frame resources store synchronization objects such as
+         * fences and semaphores that expect one swap chain image per frame resource. If your renderer
+         * wants to use other number swap chain images you would might to implement a custom logic
+         * that will make sure everything is synchronized. For example, if you want to have less swap
+         * chain images than there is frame resources then you will need to store something like a
+         * pair of "swap chain image" - "frame resource" and each frame check if some swap chain image is
+         * used by some frame resource or not and wait if it's being used.
+         *
+         * @return The recommended number of swap chain buffers/images that will work without any additional
+         * logic.
          */
-        static consteval unsigned int getSwapChainBufferCount() { return iSwapChainBufferCount; }
+        static consteval unsigned int getRecommendedSwapChainBufferCount() {
+            return iRecommendedSwapChainBufferCount;
+        }
 
         /**
          * Constructor.
@@ -578,8 +590,8 @@ namespace ne {
         /** Do not delete (free) this pointer. Game manager object that owns this renderer. */
         GameManager* pGameManager = nullptr;
 
-        /** Number of buffers in swap chain. */
-        static constexpr unsigned int iSwapChainBufferCount = 2;
+        /** The number of buffers/images in swap chain that we prefer to use. */
+        static constexpr unsigned int iRecommendedSwapChainBufferCount = 2;
 
         /** Minimum value for depth. */
         static constexpr float minDepth = 0.0F;

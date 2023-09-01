@@ -242,9 +242,6 @@ namespace ne {
                 if (pVulkanFrameResource == nullptr) [[unlikely]] {
                     return Error("expected a Vulkan frame resource");
                 }
-
-                // Save refs to frame resource fences.
-                vSwapChainImageFenceRefs[i] = pVulkanFrameResource->pFence;
             }
         }
 
@@ -732,25 +729,19 @@ namespace ne {
                 deviceProperties.deviceName);
         }
 
-        // Make sure it supports used number of images in the swap chain.
-        constexpr auto iSwapChainImageCount = getSwapChainBufferCount();
-        if (iSwapChainImageCount < swapChainSupportDetails.capabilities.minImageCount) {
-            return std::format(
-                "GPU \"{}\" swap chain does not support used swap chain image count (used: {}, "
-                "supported min: {})",
-                deviceProperties.deviceName,
-                iSwapChainImageCount,
-                swapChainSupportDetails.capabilities.minImageCount);
-        }
+        const auto iRecommendedSwapChainImageCount = getRecommendedSwapChainBufferCount();
+
         // 0 max image count means "no limit" so we only check if it's not 0
-        if (swapChainSupportDetails.capabilities.maxImageCount > 0 &&
-            iSwapChainImageCount > swapChainSupportDetails.capabilities.maxImageCount) {
-            return std::format(
-                "GPU \"{}\" swap chain does not support used swap chain image count (used: {}, "
-                "supported max: {})",
-                deviceProperties.deviceName,
-                iSwapChainImageCount,
-                swapChainSupportDetails.capabilities.maxImageCount);
+        if (swapChainSupportDetails.capabilities.maxImageCount > 0) {
+            // Make sure we can have at least recommended number of swap chain images.
+            if (iRecommendedSwapChainImageCount > swapChainSupportDetails.capabilities.maxImageCount) {
+                return std::format(
+                    "GPU \"{}\" swap chain can't have {} swap chain images, instead this GPU can only "
+                    "have {} swap chain image(s) at max",
+                    deviceProperties.deviceName,
+                    iRecommendedSwapChainImageCount,
+                    swapChainSupportDetails.capabilities.minImageCount);
+            }
         }
 
         return "";
@@ -909,12 +900,54 @@ namespace ne {
                 auto error = std::get<Error>(std::move(queueFamilyIndicesResult));
                 error.addCurrentLocationToErrorStack();
                 Logger::get().error(std::format(
-                    "failed to query queue family indices for the rated GPU \"{}\"",
-                    currentGpuInfo.sGpuName));
+                    "failed to query queue family indices for the rated GPU \"{}\" (error: {})",
+                    currentGpuInfo.sGpuName,
+                    error.getFullErrorMessage()));
                 continue;
             }
             physicalDeviceQueueFamilyIndices =
                 std::get<QueueFamilyIndices>(std::move(queueFamilyIndicesResult));
+
+            // Get swap chain capabilities.
+            auto swapChainSupportResult = querySwapChainSupportDetails(currentGpuInfo.pGpu);
+            if (std::holds_alternative<Error>(swapChainSupportResult)) {
+                auto error = std::get<Error>(std::move(swapChainSupportResult));
+                error.addCurrentLocationToErrorStack();
+                Logger::get().error(std::format(
+                    "failed to query swap chain capabilities for the rated GPU \"{}\" (error: {})",
+                    currentGpuInfo.sGpuName,
+                    error.getFullErrorMessage()));
+                continue;
+            }
+            const auto swapChainSupportDetails =
+                std::get<SwapChainSupportDetails>(std::move(swapChainSupportResult));
+
+            // See how much swap chain images we will use.
+            const auto iRecommendedSwapChainImageCount = getRecommendedSwapChainBufferCount();
+            if (iRecommendedSwapChainImageCount < swapChainSupportDetails.capabilities.minImageCount) {
+                Logger::get().info(std::format(
+                    "GPU \"{}\" only allows to create {} swap chain images or more "
+                    "but we expected to create {} images, will try to use {} swap chain images",
+                    currentGpuInfo.sGpuName,
+                    swapChainSupportDetails.capabilities.minImageCount,
+                    iRecommendedSwapChainImageCount,
+                    swapChainSupportDetails.capabilities.minImageCount));
+                iSwapChainImageCount = swapChainSupportDetails.capabilities.minImageCount;
+            } else {
+                iSwapChainImageCount = iRecommendedSwapChainImageCount;
+            }
+
+            // Self check: make sure picked swap chain image count is not bigger than allowed max.
+            if (swapChainSupportDetails.capabilities.maxImageCount > 0 &&
+                iSwapChainImageCount > swapChainSupportDetails.capabilities.maxImageCount) {
+                Logger::get().error(std::format(
+                    "picked {} swap chain images for GPU \"{}\" but only {} is allowed (this is a bug, "
+                    "report to developers)",
+                    iSwapChainImageCount,
+                    currentGpuInfo.sGpuName,
+                    swapChainSupportDetails.capabilities.maxImageCount));
+                continue;
+            }
 
             // Log used GPU.
             if (sGpuNameToUse == currentGpuInfo.sGpuName) {
@@ -1021,6 +1054,11 @@ namespace ne {
             return Error("expected physical device to be initialized at this point");
         }
 
+        // Make sure the number of swap chain images to create is initialized.
+        if (iSwapChainImageCount == 0) [[unlikely]] {
+            return Error("the number of swap chain images to create is not initialized (zero)");
+        }
+
         // Prepare swap chain size.
         auto swapChainSupportDetailsResult = querySwapChainSupportDetails(pPhysicalDevice);
         if (std::holds_alternative<Error>(swapChainSupportDetailsResult)) {
@@ -1044,8 +1082,6 @@ namespace ne {
         VkSwapchainCreateInfoKHR createInfo{};
         createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
         createInfo.surface = pWindowSurface;
-
-        const auto iSwapChainImageCount = getSwapChainBufferCount();
 
         // Fill swap chain image related info.
         createInfo.minImageCount = iSwapChainImageCount;
@@ -1102,21 +1138,38 @@ namespace ne {
                 "failed to save references to swap chain image count, error: {}", string_VkResult(result)));
         }
 
-        // Make sure the requested number of images was created.
-        if (iSwapChainImageCount != iActualSwapChainImageCount) [[unlikely]] {
-            return Error(std::format(
-                "failed to created swap chain images, requested: {}, created: {}",
+        // Check how much images was created.
+        if (iActualSwapChainImageCount > iSwapChainImageCount) {
+            // Log this event.
+            Logger::get().info(std::format(
+                "{} swap chain images were created although we requested only {}, "
+                "will use all {} created images",
+                iActualSwapChainImageCount,
+                iSwapChainImageCount,
+                iActualSwapChainImageCount));
+
+            // Save new image count.
+            iSwapChainImageCount = iActualSwapChainImageCount;
+        } else if (iActualSwapChainImageCount < iSwapChainImageCount) [[unlikely]] {
+            return Error(fmt::format(
+                "failed to create swap chain images, requested: {}, created: {}",
                 iSwapChainImageCount,
                 iActualSwapChainImageCount));
         }
 
+        // Allocate swap chain image data.
+        vSwapChainImages.resize(iSwapChainImageCount);
+
         // Save references to swap chain images.
         result = vkGetSwapchainImagesKHR(
-            pLogicalDevice, pSwapChain, &iActualSwapChainImageCount, vSwapChainImages.data());
+            pLogicalDevice, pSwapChain, &iSwapChainImageCount, vSwapChainImages.data());
         if (result != VK_SUCCESS) [[unlikely]] {
             return Error(std::format(
                 "failed to save references to swap chain images, error: {}", string_VkResult(result)));
         }
+
+        // Allocate swap chain image views data.
+        vSwapChainImageViews.resize(iSwapChainImageCount);
 
         // Create image views to swap chain images.
         for (size_t i = 0; i < vSwapChainImages.size(); i++) {
@@ -1327,8 +1380,8 @@ namespace ne {
         // Destroy swap chain framebuffers.
         for (size_t i = 0; i < vSwapChainFramebuffers.size(); i++) {
             vkDestroyFramebuffer(pLogicalDevice, vSwapChainFramebuffers[i], nullptr);
-            vSwapChainFramebuffers[i] = nullptr;
         }
+        vSwapChainFramebuffers.clear();
 
         if (bDestroyPipelineManager) {
             // Make sure all pipelines were destroyed because they reference render pass.
@@ -1343,12 +1396,14 @@ namespace ne {
         // Destroy swap chain image views.
         for (size_t i = 0; i < vSwapChainImageViews.size(); i++) {
             vkDestroyImageView(pLogicalDevice, vSwapChainImageViews[i], nullptr);
-            vSwapChainImageViews[i] = nullptr;
         }
+        vSwapChainImageViews.clear();
 
         // Destroy swap chain.
         vkDestroySwapchainKHR(pLogicalDevice, pSwapChain, nullptr);
         pSwapChain = nullptr;
+        vSwapChainImages.clear();
+        vSwapChainImageFenceRefs.clear();
     }
 
     std::optional<Error> VulkanRenderer::createTextureSampler() {
@@ -1691,6 +1746,10 @@ namespace ne {
             }
         }
 
+        // Allocate framebuffers data.
+        vSwapChainFramebuffers.resize(iSwapChainImageCount);
+        vSwapChainImageFenceRefs.resize(iSwapChainImageCount);
+
         // Make sure framebuffer array size is equal to image views array size.
         if (vSwapChainFramebuffers.size() != vSwapChainImageViews.size()) [[unlikely]] {
             return Error(std::format(
@@ -1699,6 +1758,26 @@ namespace ne {
                 "should be equal to swapchain image count",
                 vSwapChainFramebuffers.size(),
                 vSwapChainImageViews.size()));
+        }
+
+        {
+            auto mtxAllFrameResource = getFrameResourcesManager()->getAllFrameResources();
+            std::scoped_lock frameResourceGuard(*mtxAllFrameResource.first);
+
+            // Make swap chain images reference frame resource fences.
+            size_t iFrameResourceIndex = 0;
+            for (auto& pFenceRef : vSwapChainImageFenceRefs) {
+                // Convert resource.
+                const auto pVulkanFrameResource =
+                    reinterpret_cast<VulkanFrameResource*>(mtxAllFrameResource.second[iFrameResourceIndex]);
+
+                // Save fence ref.
+                pFenceRef = pVulkanFrameResource->pFence;
+
+                // Pick next frame resource.
+                iFrameResourceIndex =
+                    (iFrameResourceIndex + 1) % FrameResourcesManager::getFrameResourcesCount();
+            }
         }
 
         for (size_t i = 0; i < vSwapChainImageViews.size(); i++) {
@@ -2270,7 +2349,7 @@ namespace ne {
             [[unlikely]] {
             Logger::get().warn(std::format(
                 "acquired unexpected swap chain image with index {} while the current frame resource index "
-                "is {}, this might affect the performance",
+                "is {}",
                 iImageIndex,
                 iCurrentFrameResourceIndex));
             bLoggedAboutUnexpectedSwapChainImageAcquired = true;

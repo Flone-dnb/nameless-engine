@@ -26,13 +26,13 @@
 namespace ne {
     Renderer::Renderer(GameManager* pGameManager) {
         // There should be at least 2 swap chain images.
-        static_assert(iSwapChainBufferCount >= 2);
+        static_assert(iRecommendedSwapChainBufferCount >= 2);
 
         // Make sure there are N swap chain images and N frame resources (frames in flight).
         // Frame resources expect that the number of swap chain images is equal to the number
         // of frame resources because frame resources store synchronization objects such as
         // fences and semaphores that expect one swap chain image per frame resource.
-        static_assert(iSwapChainBufferCount == FrameResourcesManager::getFrameResourcesCount());
+        static_assert(iRecommendedSwapChainBufferCount == FrameResourcesManager::getFrameResourcesCount());
 
         this->pGameManager = pGameManager;
 

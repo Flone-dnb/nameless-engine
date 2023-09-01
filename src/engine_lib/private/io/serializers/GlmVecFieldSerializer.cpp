@@ -9,9 +9,12 @@
 namespace ne {
     bool GlmVecFieldSerializer::isFieldTypeSupported(const rfk::Field* pField) {
         const auto sFieldCanonicalTypeName = std::string(pField->getCanonicalTypeName());
-        return sFieldCanonicalTypeName == sVec2CanonicalTypeName ||
-               sFieldCanonicalTypeName == sVec3CanonicalTypeName ||
-               sFieldCanonicalTypeName == sVec4CanonicalTypeName;
+        return sFieldCanonicalTypeName == sVec2CanonicalTypeName1 ||
+               sFieldCanonicalTypeName == sVec2CanonicalTypeName2 ||
+               sFieldCanonicalTypeName == sVec3CanonicalTypeName1 ||
+               sFieldCanonicalTypeName == sVec3CanonicalTypeName2 ||
+               sFieldCanonicalTypeName == sVec4CanonicalTypeName1 ||
+               sFieldCanonicalTypeName == sVec4CanonicalTypeName2;
     }
 
     std::vector<std::string> vecFloatToString(const std::vector<float>& vInitial) {
@@ -33,15 +36,20 @@ namespace ne {
         const auto sFieldCanonicalTypeName = std::string(pField->getCanonicalTypeName());
         const auto pFieldName = pField->getName();
 
-        if (sFieldCanonicalTypeName == sVec2CanonicalTypeName) {
+        if (sFieldCanonicalTypeName == sVec2CanonicalTypeName1 ||
+            sFieldCanonicalTypeName == sVec2CanonicalTypeName2) {
             const auto value = pField->getUnsafe<glm::vec2>(pFieldOwner);
             pTomlData->operator[](sSectionName).operator[](pFieldName) =
                 vecFloatToString(std::vector<float>{value.x, value.y});
-        } else if (sFieldCanonicalTypeName == sVec3CanonicalTypeName) {
+        } else if (
+            sFieldCanonicalTypeName == sVec3CanonicalTypeName1 ||
+            sFieldCanonicalTypeName == sVec3CanonicalTypeName2) {
             const auto value = pField->getUnsafe<glm::vec3>(pFieldOwner);
             pTomlData->operator[](sSectionName).operator[](pFieldName) =
                 vecFloatToString(std::vector<float>{value.x, value.y, value.z});
-        } else if (sFieldCanonicalTypeName == sVec4CanonicalTypeName) {
+        } else if (
+            sFieldCanonicalTypeName == sVec4CanonicalTypeName1 ||
+            sFieldCanonicalTypeName == sVec4CanonicalTypeName2) {
             const auto value = pField->getUnsafe<glm::vec4>(pFieldOwner);
             pTomlData->operator[](sSectionName).operator[](pFieldName) =
                 vecFloatToString(std::vector<float>{value.x, value.y, value.z, value.w});
@@ -74,7 +82,8 @@ namespace ne {
                 pFieldName));
         }
 
-        if (sFieldCanonicalTypeName == sVec2CanonicalTypeName) {
+        if (sFieldCanonicalTypeName == sVec2CanonicalTypeName1 ||
+            sFieldCanonicalTypeName == sVec2CanonicalTypeName2) {
             auto array = pTomlValue->as_array();
             std::vector<float> floatArray;
             if (array.size() != 2) {
@@ -109,7 +118,9 @@ namespace ne {
             for (size_t i = 0; i < floatArray.size(); i++) {
                 pData[i] = floatArray[i];
             }
-        } else if (sFieldCanonicalTypeName == sVec3CanonicalTypeName) {
+        } else if (
+            sFieldCanonicalTypeName == sVec3CanonicalTypeName1 ||
+            sFieldCanonicalTypeName == sVec3CanonicalTypeName2) {
             auto array = pTomlValue->as_array();
             std::vector<float> floatArray;
             if (array.size() != 3) {
@@ -144,7 +155,9 @@ namespace ne {
             for (size_t i = 0; i < floatArray.size(); i++) {
                 pData[i] = floatArray[i];
             }
-        } else if (sFieldCanonicalTypeName == sVec4CanonicalTypeName) {
+        } else if (
+            sFieldCanonicalTypeName == sVec4CanonicalTypeName1 ||
+            sFieldCanonicalTypeName == sVec4CanonicalTypeName2) {
             auto array = pTomlValue->as_array();
             std::vector<float> floatArray;
             if (array.size() != 4) {
@@ -196,20 +209,25 @@ namespace ne {
         const rfk::Field* pToField) {
         const auto sFieldCanonicalTypeName = std::string(pFromField->getCanonicalTypeName());
 
-        if (sFieldCanonicalTypeName == sVec2CanonicalTypeName) {
+        if (sFieldCanonicalTypeName == sVec2CanonicalTypeName1 ||
+            sFieldCanonicalTypeName == sVec2CanonicalTypeName2) {
             auto value = pFromField->getUnsafe<glm::vec2>(pFromInstance);
             // `setUnsafe` throws exception for `glm::vec` for some reason, thus use this approach
             auto pVec = reinterpret_cast<glm::vec2*>(pToField->getPtrUnsafe(pToInstance));
             pVec->x = value.x;
             pVec->y = value.y;
-        } else if (sFieldCanonicalTypeName == sVec3CanonicalTypeName) {
+        } else if (
+            sFieldCanonicalTypeName == sVec3CanonicalTypeName1 ||
+            sFieldCanonicalTypeName == sVec3CanonicalTypeName2) {
             auto value = pFromField->getUnsafe<glm::vec3>(pFromInstance);
             // `setUnsafe` throws exception for `glm::vec` for some reason, thus use this approach
             auto pVec = reinterpret_cast<glm::vec3*>(pToField->getPtrUnsafe(pToInstance));
             pVec->x = value.x;
             pVec->y = value.y;
             pVec->z = value.z;
-        } else if (sFieldCanonicalTypeName == sVec4CanonicalTypeName) {
+        } else if (
+            sFieldCanonicalTypeName == sVec4CanonicalTypeName1 ||
+            sFieldCanonicalTypeName == sVec4CanonicalTypeName2) {
             auto value = pFromField->getUnsafe<glm::vec4>(pFromInstance);
             // `setUnsafe` throws exception for `glm::vec` for some reason, thus use this approach
             auto pVec = reinterpret_cast<glm::vec4*>(pToField->getPtrUnsafe(pToInstance));
@@ -246,17 +264,20 @@ namespace ne {
             return false;
         }
 
-        if (sFieldACanonicalTypeName == sVec2CanonicalTypeName) {
+        if (sFieldACanonicalTypeName == sVec2CanonicalTypeName1 ||
+            sFieldACanonicalTypeName == sVec2CanonicalTypeName2) {
             const auto valueA = pFieldA->getUnsafe<glm::vec2>(pFieldAOwner);
             const auto valueB = pFieldB->getUnsafe<glm::vec2>(pFieldBOwner);
             return glm::all(glm::epsilonEqual(valueA, valueB, floatEpsilon));
         }
-        if (sFieldACanonicalTypeName == sVec3CanonicalTypeName) {
+        if (sFieldACanonicalTypeName == sVec3CanonicalTypeName1 ||
+            sFieldACanonicalTypeName == sVec3CanonicalTypeName2) {
             const auto valueA = pFieldA->getUnsafe<glm::vec3>(pFieldAOwner);
             const auto valueB = pFieldB->getUnsafe<glm::vec3>(pFieldBOwner);
             return glm::all(glm::epsilonEqual(valueA, valueB, floatEpsilon));
         }
-        if (sFieldACanonicalTypeName == sVec4CanonicalTypeName) {
+        if (sFieldACanonicalTypeName == sVec4CanonicalTypeName1 ||
+            sFieldACanonicalTypeName == sVec4CanonicalTypeName2) {
             const auto valueA = pFieldA->getUnsafe<glm::vec4>(pFieldAOwner);
             const auto valueB = pFieldB->getUnsafe<glm::vec4>(pFieldBOwner);
             return glm::all(glm::epsilonEqual(valueA, valueB, floatEpsilon));

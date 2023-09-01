@@ -106,14 +106,23 @@ namespace ne {
             const rfk::Field* pFieldB) override;
 
     private:
-        /** Canonical type name for `glm::vec2` fields. */
-        static inline const std::string sVec2CanonicalTypeName = "glm::vec<2, float, glm::packed_highp>";
+        /** Canonical type name for `glm::vec2` fields. Variant 1. */
+        static inline const std::string sVec2CanonicalTypeName1 = "glm::vec<2, float>";
 
-        /** Canonical type name for `glm::vec3` fields. */
-        static inline const std::string sVec3CanonicalTypeName = "glm::vec<3, float, glm::packed_highp>";
+        /** Canonical type name for `glm::vec2` fields. Variant 2. */
+        static inline const std::string sVec2CanonicalTypeName2 = "glm::vec<2, float, glm::packed_highp>";
 
-        /** Canonical type name for `glm::vec4` fields. */
-        static inline const std::string sVec4CanonicalTypeName = "glm::vec<4, float, glm::packed_highp>";
+        /** Canonical type name for `glm::vec3` fields. Variant 1. */
+        static inline const std::string sVec3CanonicalTypeName1 = "glm::vec<3, float>";
+
+        /** Canonical type name for `glm::vec3` fields. Variant 2. */
+        static inline const std::string sVec3CanonicalTypeName2 = "glm::vec<3, float, glm::packed_highp>";
+
+        /** Canonical type name for `glm::vec4` fields. Variant 1. */
+        static inline const std::string sVec4CanonicalTypeName1 = "glm::vec<4, float>";
+
+        /** Canonical type name for `glm::vec4` fields. Variant 2. */
+        static inline const std::string sVec4CanonicalTypeName2 = "glm::vec<4, float, glm::packed_highp>";
 
         /** Delta used when comparing floats. */
         static inline const float floatEpsilon = 0.00001f;

@@ -420,7 +420,8 @@ namespace ne {
     size_t Renderer::getFramesPerSecond() const { return frameStats.iFramesPerSecond; }
 
     float Renderer::getTimeSpentLastFrameWaitingForGpu() const {
-        return frameStats.timeSpentLastFrameWaitingForGpuInMs;
+        return frameStats.timeSpentLastFrameWaitingForGpuInMs +
+               getAdditionalTimeSpentLastFrameWaitingForGpu();
     }
 
     std::pair<std::recursive_mutex, std::shared_ptr<RenderSettings>>* Renderer::getRenderSettings() {

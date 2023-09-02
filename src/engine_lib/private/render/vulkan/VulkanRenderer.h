@@ -190,6 +190,15 @@ namespace ne {
         VulkanRenderer(GameManager* pGameManager);
 
         /**
+         * Can be used by derived classes to tell about additional time (in milliseconds) that was spent
+         * waiting for the GPU (in addition to the time that the base Renderer class spent waiting for
+         * the next frame resource in @ref updateResourcesForNextFrame).
+         *
+         * @return Time in milliseconds.
+         */
+        virtual float getAdditionalTimeSpentLastFrameWaitingForGpu() const override;
+
+        /**
          * Returns the maximum anti-aliasing quality that can be used on the picked
          * GPU (@ref getCurrentlyUsedGpuName).
          *
@@ -721,14 +730,14 @@ namespace ne {
         std::vector<VkFramebuffer> vSwapChainFramebuffers;
 
         /**
-         * Stores references to fences from frame resources.
+         * Stores pairs of "references to fences of a frame resources" - "frame resource index".
          *
          * @remark Used to synchronize `vkAcquireNextImageKHR` calls and wait for a frame resource that uses
          * the swap chain image.
          *
          * @remark Size of this array is equal to @ref iSwapChainImageCount.
          */
-        std::vector<VkFence> vSwapChainImageFenceRefs;
+        std::vector<std::pair<VkFence, size_t>> vSwapChainImageFenceRefs;
 
         /**
          * Semaphores related to swap chain images.
@@ -757,6 +766,21 @@ namespace ne {
 
         /** The number of swap chain images that we have in @ref pSwapChain. */
         uint32_t iSwapChainImageCount = 0;
+
+        /**
+         * Time in milliseconds that was spent last frame waiting for @ref vImageSemaphores to be in the
+         * unsignaled state.
+         */
+        float timeSpentLastFrameWaitingForSemaphoresInMs = 0.0F;
+
+        /**
+         * Time in milliseconds that was spent last frame waiting for acquired swap chain image to be
+         * no longer used by a frame resource that previously used it.
+         */
+        float timeSpentLastFrameWaitingForImageToBeUnusedInMs = 0.0F;
+
+        /** Whether we have logged a message about possible performance loss or not. */
+        bool bWarnedAboutUnexpectedAcquiredImage = false;
 
         /** Tells if @ref initializeVulkan was finished successfully or not. */
         bool bIsVulkanInitialized = false;

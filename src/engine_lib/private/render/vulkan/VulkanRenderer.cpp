@@ -40,6 +40,10 @@ namespace ne {
             "also change format in DirectX renderer for (visual) consistency");
     }
 
+    float VulkanRenderer::getAdditionalTimeSpentLastFrameWaitingForGpu() const {
+        return timeSpentLastFrameWaitingForSemaphoresInMs + timeSpentLastFrameWaitingForImageToBeUnusedInMs;
+    }
+
     std::variant<MsaaState, Error> VulkanRenderer::getMaxSupportedAntialiasingQuality() const {
         // Make sure physical device is valid.
         if (pPhysicalDevice == nullptr) [[unlikely]] {
@@ -927,7 +931,9 @@ namespace ne {
             if (iRecommendedSwapChainImageCount < swapChainSupportDetails.capabilities.minImageCount) {
                 Logger::get().info(std::format(
                     "GPU \"{}\" only allows to create {} swap chain images or more "
-                    "but we expected to create {} images, will try to use {} swap chain images",
+                    "but we expected to create {} images (this limitation is probably caused by old / low "
+                    "performance GPU / drivers), will try to use {} swap chain images but this will probably "
+                    "make the performance slightly worse",
                     currentGpuInfo.sGpuName,
                     swapChainSupportDetails.capabilities.minImageCount,
                     iRecommendedSwapChainImageCount,
@@ -1143,7 +1149,7 @@ namespace ne {
             // Log this event.
             Logger::get().info(std::format(
                 "{} swap chain images were created although we requested only {}, "
-                "will use all {} created images",
+                "will use all {} created images, this will probably make the performance slightly worse",
                 iActualSwapChainImageCount,
                 iSwapChainImageCount,
                 iActualSwapChainImageCount));
@@ -1151,7 +1157,7 @@ namespace ne {
             // Save new image count.
             iSwapChainImageCount = iActualSwapChainImageCount;
         } else if (iActualSwapChainImageCount < iSwapChainImageCount) [[unlikely]] {
-            return Error(fmt::format(
+            return Error(std::format(
                 "failed to create swap chain images, requested: {}, created: {}",
                 iSwapChainImageCount,
                 iActualSwapChainImageCount));
@@ -1806,13 +1812,14 @@ namespace ne {
 
             // Make swap chain images reference frame resource fences.
             size_t iFrameResourceIndex = 0;
-            for (auto& pFenceRef : vSwapChainImageFenceRefs) {
+            for (auto& [pFenceRef, iFrameIndex] : vSwapChainImageFenceRefs) {
                 // Convert resource.
                 const auto pVulkanFrameResource =
                     reinterpret_cast<VulkanFrameResource*>(mtxAllFrameResource.second[iFrameResourceIndex]);
 
-                // Save fence ref.
+                // Save fence ref and index.
                 pFenceRef = pVulkanFrameResource->pFence;
+                iFrameIndex = iFrameResourceIndex;
 
                 // Pick next frame resource.
                 iFrameResourceIndex =
@@ -1885,6 +1892,9 @@ namespace ne {
         const auto pFenceFrameResource = reinterpret_cast<VulkanFrameResource*>(
             mtxAllFrameResources.second[vImageSemaphores[iCurrentImageSemaphore].iUsedFrameResourceIndex]);
 
+        // Mark start time.
+        const auto startTime = std::chrono::steady_clock::now();
+
         // Wait for fence to be signaled.
         auto result = vkWaitForFences(pLogicalDevice, 1, &pFenceFrameResource->pFence, VK_TRUE, UINT64_MAX);
         if (result != VK_SUCCESS) [[unlikely]] {
@@ -1892,6 +1902,11 @@ namespace ne {
             error.showError();
             throw std::runtime_error(error.getFullErrorMessage());
         }
+
+        // Measure the time it took to wait.
+        const auto endTime = std::chrono::steady_clock::now();
+        timeSpentLastFrameWaitingForSemaphoresInMs =
+            std::chrono::duration<float, std::chrono::milliseconds::period>(endTime - startTime).count();
 
         PROFILE_SCOPE_END;
 
@@ -2411,20 +2426,44 @@ namespace ne {
 
         PROFILE_SCOPE_START(WaitForAcquiredImageToBeUnused);
 
+        // Mark start time.
+        const auto startTime = std::chrono::steady_clock::now();
+
         // Since the next acquired image might be not in the order we expect (i.e. it may be used
-        // by other frame resource - not the one we are using right now).
-        // Make sure this image is not used by the GPU.
+        // by other frame resource - not the one we are using right now) make sure this image is not used
+        // by the GPU.
         result = vkWaitForFences(
-            pLogicalDevice, 1, &vSwapChainImageFenceRefs[iAcquiredImageIndex], VK_TRUE, UINT64_MAX);
+            pLogicalDevice, 1, &vSwapChainImageFenceRefs[iAcquiredImageIndex].first, VK_TRUE, UINT64_MAX);
         if (result != VK_SUCCESS) [[unlikely]] {
             return Error(
                 std::format("failed to wait for acquired image fence, error: {}", string_VkResult(result)));
         }
 
+        // Measure the time it took to wait.
+        const auto endTime = std::chrono::steady_clock::now();
+        timeSpentLastFrameWaitingForImageToBeUnusedInMs =
+            std::chrono::duration<float, std::chrono::milliseconds::period>(endTime - startTime).count();
+
+        // Log a message about unexpected acquired image.
+        if (!bWarnedAboutUnexpectedAcquiredImage &&
+            iCurrentFrameResourceIndex != vSwapChainImageFenceRefs[iAcquiredImageIndex].second) [[unlikely]] {
+            // We were waiting for other (not current) frame resource.
+            Logger::get().info(std::format(
+                "waiting for a fence of other (not current) frame resource with index {} "
+                "to finish using acquired swap chain image with index {} while the current frame resource "
+                "index is {}, this will slightly make the performance worse (probably caused by the fact "
+                "that we are not using the number of swap chain images we wanted)",
+                vSwapChainImageFenceRefs[iAcquiredImageIndex].second,
+                iAcquiredImageIndex,
+                iCurrentFrameResourceIndex));
+            bWarnedAboutUnexpectedAcquiredImage = true;
+        }
+
         PROFILE_SCOPE_END;
 
         // Mark the image as being used by this frame resource.
-        vSwapChainImageFenceRefs[iAcquiredImageIndex] = pVulkanCurrentFrameResource->pFence;
+        vSwapChainImageFenceRefs[iAcquiredImageIndex].first = pVulkanCurrentFrameResource->pFence;
+        vSwapChainImageFenceRefs[iAcquiredImageIndex].second = iCurrentFrameResourceIndex;
 
         // Prepare to submit command buffer for execution.
         VkSubmitInfo submitInfo{};

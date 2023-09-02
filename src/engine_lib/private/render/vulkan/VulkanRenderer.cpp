@@ -1193,6 +1193,37 @@ namespace ne {
             }
         }
 
+        // Prepare to create semaphores for swap chain images.
+        vImageSemaphores.resize(iSwapChainImageCount);
+        iCurrentImageSemaphore = 0;
+
+        // Describe semaphore.
+        VkSemaphoreCreateInfo semaphoreInfo{};
+        semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+
+        size_t iFrameResourceIndex = 0;
+        for (size_t i = 0; i < iSwapChainImageCount; i++) {
+            // Create semaphore for `vkAcquireNextImage`.
+            result = vkCreateSemaphore(
+                pLogicalDevice, &semaphoreInfo, nullptr, &vImageSemaphores[i].pAcquireImageSemaphore);
+            if (result != VK_SUCCESS) [[unlikely]] {
+                return Error(std::format("failed to create a semaphore, error: {}", string_VkResult(result)));
+            }
+
+            // Create semaphore for `vkQueueSubmit`.
+            result = vkCreateSemaphore(
+                pLogicalDevice, &semaphoreInfo, nullptr, &vImageSemaphores[i].pQueueSubmitSemaphore);
+            if (result != VK_SUCCESS) [[unlikely]] {
+                return Error(std::format("failed to create a semaphore, error: {}", string_VkResult(result)));
+            }
+
+            // Save "fence to use" index.
+            vImageSemaphores[i].iUsedFrameResourceIndex = iFrameResourceIndex;
+
+            // Switch to the next fence index.
+            iFrameResourceIndex = (iFrameResourceIndex + 1) % FrameResourcesManager::getFrameResourcesCount();
+        }
+
         return {};
     }
 
@@ -1404,6 +1435,15 @@ namespace ne {
         pSwapChain = nullptr;
         vSwapChainImages.clear();
         vSwapChainImageFenceRefs.clear();
+
+        // Destroy semaphores/fence.
+        const auto iSemaphoreCount = vImageSemaphores.size();
+        for (size_t i = 0; i < iSemaphoreCount; i++) {
+            vkDestroySemaphore(pLogicalDevice, vImageSemaphores[i].pAcquireImageSemaphore, nullptr);
+            vkDestroySemaphore(pLogicalDevice, vImageSemaphores[i].pQueueSubmitSemaphore, nullptr);
+        }
+        vImageSemaphores.clear();
+        iCurrentImageSemaphore = 0;
     }
 
     std::optional<Error> VulkanRenderer::createTextureSampler() {
@@ -1825,7 +1865,8 @@ namespace ne {
         return {};
     }
 
-    std::optional<Error> VulkanRenderer::prepareForDrawingNextFrame(CameraProperties* pCameraProperties) {
+    std::optional<Error> VulkanRenderer::prepareForDrawingNextFrame(
+        CameraProperties* pCameraProperties, uint32_t& iAcquiredImageIndex) {
         PROFILE_FUNC;
 
         std::scoped_lock frameGuard(*getRenderResourcesMutex());
@@ -1835,7 +1876,43 @@ namespace ne {
             return Error("expected swap chain extent to be set at this point");
         }
 
-        // Waits for frame resource to be no longer used by the GPU.
+        PROFILE_SCOPE_START(WaitForFrameResourceFence);
+
+        // Make sure image semaphores are in the unsignaled state.
+        // Get frame resource that was used with current semaphores.
+        auto mtxAllFrameResources = getFrameResourcesManager()->getAllFrameResources();
+        std::scoped_lock allFrameResourcesGuard(*mtxAllFrameResources.first);
+        const auto pFenceFrameResource = reinterpret_cast<VulkanFrameResource*>(
+            mtxAllFrameResources.second[vImageSemaphores[iCurrentImageSemaphore].iUsedFrameResourceIndex]);
+
+        // Wait for fence to be signaled.
+        auto result = vkWaitForFences(pLogicalDevice, 1, &pFenceFrameResource->pFence, VK_TRUE, UINT64_MAX);
+        if (result != VK_SUCCESS) [[unlikely]] {
+            Error error(std::format("failed to wait for a fence, error: {}", string_VkResult(result)));
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+        }
+
+        PROFILE_SCOPE_END;
+
+        PROFILE_SCOPE_START(AcquireNextImage);
+
+        // Acquire an image from the swapchain.
+        result = vkAcquireNextImageKHR(
+            pLogicalDevice,
+            pSwapChain,
+            UINT64_MAX,
+            vImageSemaphores[iCurrentImageSemaphore].pAcquireImageSemaphore,
+            VK_NULL_HANDLE,
+            &iAcquiredImageIndex);
+        if (result != VK_SUCCESS) [[unlikely]] {
+            return Error(
+                std::format("failed to acquire next swap chain image, error: {}", string_VkResult(result)));
+        }
+
+        PROFILE_SCOPE_END;
+
+        // Waits for the next frame resource to be no longer used by the GPU.
         updateResourcesForNextFrame(swapChainExtent->width, swapChainExtent->height, pCameraProperties);
 
         // Get command buffer to reset it.
@@ -1843,13 +1920,13 @@ namespace ne {
         std::scoped_lock frameResourceGuard(pMtxCurrentFrameResource->first);
 
         // Convert frame resource.
-        const auto pVulkanFrameResource =
+        const auto pCurrentVulkanFrameResource =
             reinterpret_cast<VulkanFrameResource*>(pMtxCurrentFrameResource->second.pResource);
 
         PROFILE_SCOPE_START(ResetCommandBuffer);
 
         // Reset command buffer.
-        auto result = vkResetCommandBuffer(pVulkanFrameResource->pCommandBuffer, 0);
+        result = vkResetCommandBuffer(pCurrentVulkanFrameResource->pCommandBuffer, 0);
         if (result != VK_SUCCESS) [[unlikely]] {
             return Error(std::format("failed to reset command buffer, error: {}", string_VkResult(result)));
         }
@@ -1863,7 +1940,7 @@ namespace ne {
         beginInfo.pInheritanceInfo = nullptr;
 
         // Mark start of command recording.
-        result = vkBeginCommandBuffer(pVulkanFrameResource->pCommandBuffer, &beginInfo);
+        result = vkBeginCommandBuffer(pCurrentVulkanFrameResource->pCommandBuffer, &beginInfo);
         if (result != VK_SUCCESS) [[unlikely]] {
             return Error(std::format(
                 "failed to start recording commands into a command buffer, error: {}",
@@ -1874,8 +1951,7 @@ namespace ne {
         VkRenderPassBeginInfo renderPassInfo{};
         renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
         renderPassInfo.renderPass = pRenderPass;
-        renderPassInfo.framebuffer =
-            vSwapChainFramebuffers[pMtxCurrentFrameResource->second.iCurrentFrameResourceIndex];
+        renderPassInfo.framebuffer = vSwapChainFramebuffers[iAcquiredImageIndex];
 
         // Specify render area.
         renderPassInfo.renderArea.offset = {0, 0};
@@ -1890,7 +1966,7 @@ namespace ne {
 
         // Mark render pass start.
         vkCmdBeginRenderPass(
-            pVulkanFrameResource->pCommandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+            pCurrentVulkanFrameResource->pCommandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
         return {};
     }
@@ -2116,7 +2192,8 @@ namespace ne {
         // don't unlock active camera mutex until finished submitting the next frame for drawing
 
         // Setup.
-        auto optionalError = prepareForDrawingNextFrame(pActiveCameraProperties);
+        uint32_t iAcquiredImageIndex = 0;
+        auto optionalError = prepareForDrawingNextFrame(pActiveCameraProperties, iAcquiredImageIndex);
         if (optionalError.has_value()) [[unlikely]] {
             auto error = optionalError.value();
             error.addCurrentLocationToErrorStack();
@@ -2189,7 +2266,9 @@ namespace ne {
 
         // Do finish logic.
         optionalError = finishDrawingNextFrame(
-            pVulkanCurrentFrameResource, pMtxCurrentFrameResource->second.iCurrentFrameResourceIndex);
+            pVulkanCurrentFrameResource,
+            pMtxCurrentFrameResource->second.iCurrentFrameResourceIndex,
+            iAcquiredImageIndex);
         if (optionalError.has_value()) [[unlikely]] {
             auto error = optionalError.value();
             error.addCurrentLocationToErrorStack();
@@ -2310,7 +2389,9 @@ namespace ne {
     }
 
     std::optional<Error> VulkanRenderer::finishDrawingNextFrame(
-        VulkanFrameResource* pCurrentFrameResource, size_t iCurrentFrameResourceIndex) {
+        VulkanFrameResource* pCurrentFrameResource,
+        size_t iCurrentFrameResourceIndex,
+        uint32_t iAcquiredImageIndex) {
         PROFILE_FUNC;
 
         // Convert current frame resource.
@@ -2328,37 +2409,13 @@ namespace ne {
                 string_VkResult(result)));
         }
 
-        PROFILE_SCOPE_START(AcquireNextImage);
+        PROFILE_SCOPE_START(WaitForAcquiredImageToBeUnused);
 
-        // Acquire an image from the swapchain.
-        uint32_t iImageIndex = 0;
-        result = vkAcquireNextImageKHR(
-            pLogicalDevice,
-            pSwapChain,
-            UINT64_MAX,
-            pVulkanCurrentFrameResource->pSemaphoreSwapChainImageAcquired,
-            VK_NULL_HANDLE,
-            &iImageIndex);
-        if (result != VK_SUCCESS) [[unlikely]] {
-            return Error(
-                std::format("failed to acquire next swap chain image, error: {}", string_VkResult(result)));
-        }
-
-        // Log if acquired image index is not expected.
-        if (!bLoggedAboutUnexpectedSwapChainImageAcquired && (iImageIndex != iCurrentFrameResourceIndex))
-            [[unlikely]] {
-            Logger::get().warn(std::format(
-                "acquired unexpected swap chain image with index {} while the current frame resource index "
-                "is {}",
-                iImageIndex,
-                iCurrentFrameResourceIndex));
-            bLoggedAboutUnexpectedSwapChainImageAcquired = true;
-        }
-
-        // Since the next acquired image might be not in the order we expect:
+        // Since the next acquired image might be not in the order we expect (i.e. it may be used
+        // by other frame resource - not the one we are using right now).
         // Make sure this image is not used by the GPU.
-        result =
-            vkWaitForFences(pLogicalDevice, 1, &vSwapChainImageFenceRefs[iImageIndex], VK_TRUE, UINT64_MAX);
+        result = vkWaitForFences(
+            pLogicalDevice, 1, &vSwapChainImageFenceRefs[iAcquiredImageIndex], VK_TRUE, UINT64_MAX);
         if (result != VK_SUCCESS) [[unlikely]] {
             return Error(
                 std::format("failed to wait for acquired image fence, error: {}", string_VkResult(result)));
@@ -2366,8 +2423,8 @@ namespace ne {
 
         PROFILE_SCOPE_END;
 
-        // Mark the image as being used by this frame.
-        vSwapChainImageFenceRefs[iImageIndex] = pVulkanCurrentFrameResource->pFence;
+        // Mark the image as being used by this frame resource.
+        vSwapChainImageFenceRefs[iAcquiredImageIndex] = pVulkanCurrentFrameResource->pFence;
 
         // Prepare to submit command buffer for execution.
         VkSubmitInfo submitInfo{};
@@ -2375,7 +2432,7 @@ namespace ne {
 
         // Specify semaphores to wait for before starting execution.
         const std::array<VkSemaphore, 1> semaphoresToWaitFor = {
-            pVulkanCurrentFrameResource->pSemaphoreSwapChainImageAcquired};
+            vImageSemaphores[iCurrentImageSemaphore].pAcquireImageSemaphore};
         submitInfo.waitSemaphoreCount = static_cast<uint32_t>(semaphoresToWaitFor.size());
         submitInfo.pWaitSemaphores = semaphoresToWaitFor.data();
 
@@ -2390,7 +2447,7 @@ namespace ne {
 
         // Specify which semaphores will be signaled once the command buffer(s) have finished execution.
         std::array<VkSemaphore, 1> vSemaphoresAfterCommandBufferFinished = {
-            pVulkanCurrentFrameResource->pSemaphoreSwapChainImageDrawingFinished};
+            vImageSemaphores[iCurrentImageSemaphore].pQueueSubmitSemaphore};
         submitInfo.signalSemaphoreCount = static_cast<uint32_t>(vSemaphoresAfterCommandBufferFinished.size());
         submitInfo.pSignalSemaphores = vSemaphoresAfterCommandBufferFinished.data();
 
@@ -2403,6 +2460,7 @@ namespace ne {
         PROFILE_SCOPE_START(QueueSubmit);
 
         // Submit command buffer(s) to the queue for execution.
+        vImageSemaphores[iCurrentImageSemaphore].iUsedFrameResourceIndex = iCurrentFrameResourceIndex;
         result = vkQueueSubmit(pGraphicsQueue, 1, &submitInfo, pVulkanCurrentFrameResource->pFence);
         if (result != VK_SUCCESS) [[unlikely]] {
             return Error(std::format(
@@ -2421,7 +2479,7 @@ namespace ne {
         std::array<VkSwapchainKHR, 1> vSwapChains = {pSwapChain};
         presentInfo.swapchainCount = static_cast<uint32_t>(vSwapChains.size());
         presentInfo.pSwapchains = vSwapChains.data();
-        presentInfo.pImageIndices = &iImageIndex;
+        presentInfo.pImageIndices = &iAcquiredImageIndex;
 
         // No using multiple swapchains so leave `pResults` empty as we will get result for our single
         // swapchain from `vkQueuePresentKHR`.
@@ -2437,6 +2495,9 @@ namespace ne {
         }
 
         PROFILE_SCOPE_END;
+
+        // Switch to the next semaphores index.
+        iCurrentImageSemaphore = (iCurrentImageSemaphore + 1) % vImageSemaphores.size();
 
         // Calculate frame-related statistics.
         calculateFrameStatistics();

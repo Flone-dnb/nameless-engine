@@ -34,16 +34,6 @@ namespace ne {
             pFence = nullptr;
         }
 
-        // Destroy semaphores (if were created).
-        if (pSemaphoreSwapChainImageAcquired != nullptr) {
-            vkDestroySemaphore(pLogicalDevice, pSemaphoreSwapChainImageAcquired, nullptr);
-            pSemaphoreSwapChainImageAcquired = nullptr;
-        }
-        if (pSemaphoreSwapChainImageDrawingFinished != nullptr) {
-            vkDestroySemaphore(pLogicalDevice, pSemaphoreSwapChainImageDrawingFinished, nullptr);
-            pSemaphoreSwapChainImageDrawingFinished = nullptr;
-        }
-
         if (pCommandBuffer != nullptr) {
             // Get command pool.
             const auto pCommandPool = pVulkanRenderer->getCommandPool();
@@ -100,24 +90,6 @@ namespace ne {
         result = vkCreateFence(pLogicalDevice, &fenceInfo, nullptr, &pFence);
         if (result != VK_SUCCESS) [[unlikely]] {
             return Error(std::format("failed to create a fence, error: {}", string_VkResult(result)));
-        }
-
-        // Describe semaphore.
-        VkSemaphoreCreateInfo semaphoreInfo{};
-        semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-
-        // Create semaphore 1.
-        result =
-            vkCreateSemaphore(pLogicalDevice, &semaphoreInfo, nullptr, &pSemaphoreSwapChainImageAcquired);
-        if (result != VK_SUCCESS) [[unlikely]] {
-            return Error(std::format("failed to create a semaphore, error: {}", string_VkResult(result)));
-        }
-
-        // Create semaphore 2.
-        result = vkCreateSemaphore(
-            pLogicalDevice, &semaphoreInfo, nullptr, &pSemaphoreSwapChainImageDrawingFinished);
-        if (result != VK_SUCCESS) [[unlikely]] {
-            return Error(std::format("failed to create a semaphore, error: {}", string_VkResult(result)));
         }
 
         // Save renderer.

@@ -1,5 +1,8 @@
 #pragma once
 
+// Standard.
+#include <vector>
+
 // Custom.
 #include "render/Renderer.h"
 #include "render/general/resources/FrameResourcesManager.h"
@@ -284,6 +287,29 @@ namespace ne {
              * empty if not available.
              */
             std::optional<uint32_t> iPresentFamilyIndex;
+        };
+
+        /** Groups semaphores related to swap chain images. */
+        struct SwapChainImageSemaphores {
+            /**
+             * Array of semaphores that are passed to `vkAcquireNextImageKHR`.
+             *
+             * @remark Size of this array is equal to the number of swap chain images.
+             */
+            VkSemaphore pAcquireImageSemaphore = nullptr;
+
+            /**
+             * Array of semaphores that are passed to `vkQueueSubmit`.
+             *
+             * @remark Size of this array is equal to the number of swap chain images.
+             */
+            VkSemaphore pQueueSubmitSemaphore = nullptr;
+
+            /**
+             * Index of the frame resource to wait for its fence before using `vkAcquireNextImageKHR`
+             * to guarantee that @ref pAcquireImageSemaphore is in the unsignaled state.
+             */
+            size_t iUsedFrameResourceIndex = 0;
         };
 
         /**
@@ -585,11 +611,13 @@ namespace ne {
          * Setups everything for render commands to be recorded (updates frame constants, shader resources,
          * resets command buffers, starts render pass and etc.).
          *
-         * @param pCameraProperties Camera properties to use.
+         * @param pCameraProperties   Camera properties to use.
+         * @param iAcquiredImageIndex Index of the acquired swap chain image to use this frame.
          *
          * @return Error if something went wrong.
          */
-        [[nodiscard]] std::optional<Error> prepareForDrawingNextFrame(CameraProperties* pCameraProperties);
+        [[nodiscard]] std::optional<Error>
+        prepareForDrawingNextFrame(CameraProperties* pCameraProperties, uint32_t& iAcquiredImageIndex);
 
         /**
          * Adds draw commands to command buffer to draw all mesh nodes that use the specified material
@@ -608,14 +636,17 @@ namespace ne {
         /**
          * Does final logic in drawing next frame (ends render pass, ends command buffer, etc.).
          *
-         * @param pCurrentFrameResource Current frame resource. Expects that frame resources mutex is
+         * @param pCurrentFrameResource      Current frame resource. Expects that frame resources mutex is
          * locked and will not be unlocked until the function is finished.
          * @param iCurrentFrameResourceIndex Index of the current frame resource.
+         * @param iAcquiredImageIndex        Index of the acquired swap chain image to use this frame.
          *
          * @return Error if something went wrong.
          */
-        [[nodiscard]] std::optional<Error>
-        finishDrawingNextFrame(VulkanFrameResource* pCurrentFrameResource, size_t iCurrentFrameResourceIndex);
+        [[nodiscard]] std::optional<Error> finishDrawingNextFrame(
+            VulkanFrameResource* pCurrentFrameResource,
+            size_t iCurrentFrameResourceIndex,
+            uint32_t iAcquiredImageIndex);
 
         /**
          * Queries the current render settings for MSAA quality and updates @ref msaaSampleCount.
@@ -699,6 +730,16 @@ namespace ne {
          */
         std::vector<VkFence> vSwapChainImageFenceRefs;
 
+        /**
+         * Semaphores related to swap chain images.
+         *
+         * @remark Size of this array is equal to @ref iSwapChainImageCount.
+         */
+        std::vector<SwapChainImageSemaphores> vImageSemaphores;
+
+        /** Index into @ref vImageSemaphores. */
+        size_t iCurrentImageSemaphore = 0;
+
         /** List of supported GPUs, filled during @ref pickPhysicalDevice. */
         std::vector<std::string> vSupportedGpuNames;
 
@@ -725,9 +766,6 @@ namespace ne {
 
         /** Marked as `true` when entered destructor. */
         bool bIsBeingDestroyed = false;
-
-        /** Whether or not we logged that acquired swap chain image index is not expected. */
-        bool bLoggedAboutUnexpectedSwapChainImageAcquired = false;
 
         /** Index of the color attachment in @ref pRenderPass. */
         static constexpr size_t iRenderPassColorAttachmentIndex = 0;

@@ -171,6 +171,9 @@ namespace ne {
         /**
          * Whether a window should be shown in the fullscreen mode or not.
          *
+         * @remark Note that your application might have better performance
+         * and more stable frame pacing if you run it in fullscreen mode.
+         *
          * @param bEnableFullscreen Fullscreen mode.
          *
          * @return Builder.

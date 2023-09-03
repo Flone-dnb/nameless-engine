@@ -932,8 +932,8 @@ namespace ne {
                 Logger::get().info(std::format(
                     "GPU \"{}\" only allows to create {} swap chain images or more "
                     "but we expected to create {} images (this limitation is probably caused by old / low "
-                    "performance GPU / drivers), will try to use {} swap chain images but this will probably "
-                    "make the performance slightly worse",
+                    "performance GPU / drivers), will try to use {} swap chain images but this might "
+                    "make the performance just slightly worse",
                     currentGpuInfo.sGpuName,
                     swapChainSupportDetails.capabilities.minImageCount,
                     iRecommendedSwapChainImageCount,
@@ -1149,7 +1149,7 @@ namespace ne {
             // Log this event.
             Logger::get().info(std::format(
                 "{} swap chain images were created although we requested only {}, "
-                "will use all {} created images, this will probably make the performance slightly worse",
+                "will use all {} created images",
                 iActualSwapChainImageCount,
                 iSwapChainImageCount,
                 iActualSwapChainImageCount));
@@ -2468,21 +2468,6 @@ namespace ne {
         const auto endTime = std::chrono::steady_clock::now();
         timeSpentLastFrameWaitingForImageToBeUnusedInMs =
             std::chrono::duration<float, std::chrono::milliseconds::period>(endTime - startTime).count();
-
-        // Log a message about unexpected acquired image.
-        if (!bWarnedAboutUnexpectedAcquiredImage &&
-            iCurrentFrameResourceIndex != vSwapChainImageFenceRefs[iAcquiredImageIndex].second) [[unlikely]] {
-            // We were waiting for other (not current) frame resource.
-            Logger::get().info(std::format(
-                "waiting for a fence of other (not current) frame resource with index {} "
-                "to finish using acquired swap chain image with index {} while the current frame resource "
-                "index is {}, this will slightly make the performance worse (probably caused by the fact "
-                "that we are not using the number of swap chain images we wanted)",
-                vSwapChainImageFenceRefs[iAcquiredImageIndex].second,
-                iAcquiredImageIndex,
-                iCurrentFrameResourceIndex));
-            bWarnedAboutUnexpectedAcquiredImage = true;
-        }
 
         PROFILE_SCOPE_END;
 

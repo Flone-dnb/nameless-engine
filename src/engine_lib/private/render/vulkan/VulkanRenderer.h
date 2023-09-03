@@ -779,9 +779,6 @@ namespace ne {
          */
         float timeSpentLastFrameWaitingForImageToBeUnusedInMs = 0.0F;
 
-        /** Whether we have logged a message about possible performance loss or not. */
-        bool bWarnedAboutUnexpectedAcquiredImage = false;
-
         /** Tells if @ref initializeVulkan was finished successfully or not. */
         bool bIsVulkanInitialized = false;
 

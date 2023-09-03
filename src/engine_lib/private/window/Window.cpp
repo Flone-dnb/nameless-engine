@@ -330,6 +330,13 @@ namespace ne {
             params.iWindowHeight = pMode->height;
 
             glfwWindowHint(GLFW_DECORATED, GLFW_FALSE);
+
+#if defined(WIN32)
+            // We want to specify `nullptr` as monitor on Windows to have windowed fullscreen mode,
+            // it will look exactly as a regular fullscreen window.
+            // On Linux we need to specify the monitor to make the window look fullscreen.
+            pMonitor = nullptr;
+#endif
         } else if (params.bIsSplashScreen) {
             glfwWindowHint(GLFW_DECORATED, GLFW_FALSE);
         }
@@ -347,7 +354,7 @@ namespace ne {
 
         // Create GLFW window.
         auto pGLFWWindow = glfwCreateWindow(
-            params.iWindowWidth, params.iWindowHeight, sNewWindowTitle.c_str(), nullptr, nullptr);
+            params.iWindowWidth, params.iWindowHeight, sNewWindowTitle.c_str(), pMonitor, nullptr);
         if (pGLFWWindow == nullptr) {
             return Error("failed to create window");
         }

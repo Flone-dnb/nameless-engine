@@ -785,6 +785,12 @@ namespace ne {
         /** Tells if @ref initializeVulkan was finished successfully or not. */
         bool bIsVulkanInitialized = false;
 
+        /**
+         * `true` if we received `VK_SUBOPTIMAL_KHR` and need to re-create the swapchain,
+         * `false` otherwise.
+         */
+        bool bNeedToRecreateSwapchain = false;
+
         /** Whether the window that owns the renderer is minimized or not. */
         bool bIsWindowMinimized = false;
 

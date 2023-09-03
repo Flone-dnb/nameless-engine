@@ -1920,9 +1920,14 @@ namespace ne {
             vImageSemaphores[iCurrentImageSemaphore].pAcquireImageSemaphore,
             VK_NULL_HANDLE,
             &iAcquiredImageIndex);
-        if (result != VK_SUCCESS) [[unlikely]] {
-            return Error(
-                std::format("failed to acquire next swap chain image, error: {}", string_VkResult(result)));
+        if (result != VK_SUCCESS) {
+            if (result != VK_SUBOPTIMAL_KHR) {
+                return Error(std::format(
+                    "failed to acquire next swap chain image, error: {}", string_VkResult(result)));
+            }
+
+            // Mark swapchain as needs to be re-created.
+            bNeedToRecreateSwapchain = true;
         }
 
         PROFILE_SCOPE_END;
@@ -2185,6 +2190,26 @@ namespace ne {
             // Framebuffer size is zero and swap chain is invalid, wait until the window is
             // restored/maximized.
             return;
+        }
+
+        // See if we received `VK_SUBOPTIMAL_KHR` previously.
+        if (bNeedToRecreateSwapchain) {
+            // Log this event.
+            Logger::get().info("re-creating swapchain because received `VK_SUBOPTIMAL_KHR`");
+
+            // Make sure no resources are in use by the GPU.
+            waitForGpuToFinishWorkUpToThisPoint();
+
+            // Recreate swap chain and other window-size dependent resources.
+            auto optionalError = recreateSwapChainAndDependentResources();
+            if (optionalError.has_value()) [[unlikely]] {
+                optionalError->addCurrentLocationToErrorStack();
+                optionalError->showError();
+                throw std::runtime_error(optionalError->getFullErrorMessage());
+            }
+
+            // Mark as re-created.
+            bNeedToRecreateSwapchain = false;
         }
 
         // Get active camera.
@@ -2528,9 +2553,14 @@ namespace ne {
 
         // Present.
         result = vkQueuePresentKHR(pPresentQueue, &presentInfo);
-        if (result != VK_SUCCESS) [[unlikely]] {
-            return Error(
-                std::format("failed to present a swapchain image, error: {}", string_VkResult(result)));
+        if (result != VK_SUCCESS) {
+            if (result != VK_SUBOPTIMAL_KHR) {
+                return Error(
+                    std::format("failed to present a swapchain image, error: {}", string_VkResult(result)));
+            }
+
+            // Mark swapchain as needs to be re-created.
+            bNeedToRecreateSwapchain = true;
         }
 
         PROFILE_SCOPE_END;

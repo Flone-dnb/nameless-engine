@@ -9,6 +9,7 @@
 #if defined(WIN32)
 #include "render/directx/DirectXRenderer.h"
 #endif
+#include "render/vulkan/VulkanRenderer.h"
 
 // External.
 #include "catch2/catch_test_macros.hpp"
@@ -222,14 +223,12 @@ TEST_CASE("unused materials unload shaders from memory") {
         TestGameInstance(Window* pGameWindow, GameManager* pGame, InputManager* pInputManager)
             : GameInstance(pGameWindow, pGame, pInputManager) {}
         virtual void onGameStarted() override {
-#if defined(WIN32)
             // Make sure we are using DirectX renderer.
-            if (dynamic_cast<DirectXRenderer*>(getWindow()->getRenderer()) == nullptr) {
+            if (dynamic_cast<VulkanRenderer*>(getWindow()->getRenderer()) != nullptr) {
                 // Don't run this test on non-DirectX renderer.
                 getWindow()->close();
                 SKIP();
             }
-#endif
 
             std::vector<ShaderDescription> vShadersToCompile = {
                 ShaderDescription(

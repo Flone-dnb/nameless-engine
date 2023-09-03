@@ -94,7 +94,7 @@ namespace ne {
         // Wait synchronously (before user adds his shaders).
         try {
             Logger::get().info("waiting for engine shaders to be compiled...");
-            Logger::get().flushToDisk();
+            Logger::get().flushToDisk(); // flush to disk to see if we crashed while compiling
             future.get();
         } catch (const std::exception& ex) {
             const Error err(ex.what());
@@ -111,6 +111,7 @@ namespace ne {
 
         // Log time.
         Logger::get().info(std::format("took {:.1f} sec. to compile engine shaders", timeTookInSec));
+        Logger::get().flushToDisk(); // flush to disk to see that we successfully compiled shaders
 
         return {};
     }
@@ -174,7 +175,8 @@ namespace ne {
                 nanosleep(static_cast<long long>(std::floor(timeToWaitInNs * 0.98))); // NOLINT
                 timeEndPeriod(1);
 #else
-                struct timespec tim, tim2;
+                struct timespec tim;
+                struct timespec tim2;
                 tim.tv_sec = 0;
                 tim.tv_nsec = static_cast<long>(timeToWaitInNs);
                 nanosleep(&tim, &tim2);

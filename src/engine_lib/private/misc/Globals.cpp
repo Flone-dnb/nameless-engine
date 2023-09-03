@@ -1,5 +1,8 @@
 ﻿#include "misc/Globals.h"
 
+// Standard.
+#include <mutex>
+
 // Custom.
 #include "misc/Error.h"
 #if defined(WIN32)
@@ -11,6 +14,7 @@
 #include <sys/types.h>
 #include <cstddef>
 #include <cstdlib>
+#include <wchar.h>
 #endif
 
 namespace ne {
@@ -60,7 +64,11 @@ namespace ne {
 
 #elif __linux__
 
-        wcstombs(&sOutput[0], sText.c_str(), sOutput.size());
+        static std::mutex mtxWcstombs;
+        {
+            std::scoped_lock guard(mtxWcstombs);
+            wcstombs(sOutput.data(), sText.c_str(), sOutput.size()); // NOLINT: not thread safe
+        }
 
 #else
 
@@ -80,7 +88,7 @@ namespace ne {
         size_t iResultBytes;
         mbstowcs_s(&iResultBytes, sOutput.data(), sOutput.size() + 1, sText.c_str(), sText.size());
 #elif __linux__
-        mbstowcs(&sOutput[0], sText.c_str(), sOutput.size());
+        mbstowcs(sOutput.data(), sText.c_str(), sOutput.size());
 #else
         static_assert(false, "not implemented");
 #endif

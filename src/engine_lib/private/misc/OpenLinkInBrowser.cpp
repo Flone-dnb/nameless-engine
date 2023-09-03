@@ -4,6 +4,8 @@
 #include <Windows.h>
 #undef MessageBox
 #undef IGNORE
+#elif __linux__
+#include <stdio.h>
 #endif
 
 namespace ne {
@@ -11,7 +13,7 @@ namespace ne {
 #if defined(WIN32)
         ShellExecuteA(nullptr, "open", sLink.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
 #elif __linux__
-        system((std::string("xdg-open ") + sLink).c_str());
+        system((std::string("xdg-open ") + sLink).c_str()); // NOLINT: not thread safe
 #endif
     }
 } // namespace ne

@@ -380,7 +380,8 @@ namespace ne {
                     std::format("shader name \"{}\" must not end with a dot or a space", shader.sShaderName));
             }
             for (const auto& character : shader.sShaderName) {
-                const auto it = std::ranges::find(vValidCharactersForShaderName, character);
+                const auto it = // NOLINT: invalid case for `it`
+                    std::ranges::find(vValidCharactersForShaderName, character);
                 if (it == vValidCharactersForShaderName.end()) {
                     return Error(std::format(
                         "shader name \"{}\" contains forbidden character \"{}\"",

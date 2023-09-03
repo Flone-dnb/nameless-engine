@@ -2,6 +2,7 @@
 
 // Standard.
 #include <format>
+#include <mutex>
 
 // Custom.
 #include "misc/Globals.h"
@@ -91,14 +92,19 @@ namespace ne {
 
 #elif __linux__
 
-        const auto sHomePath = std::string(getenv("HOME"));
-        if (sHomePath.empty()) {
-            const Error err("environment variable HOME is not set");
-            err.showError();
-            throw std::runtime_error(err.getFullErrorMessage());
-        }
+        static std::mutex mtxGetenv;
+        {
+            std::scoped_lock guard(mtxGetenv);
 
-        basePath = std::format("{}/.config/", sHomePath);
+            const auto sHomePath = std::string(getenv("HOME")); // NOLINT: not thread safe
+            if (sHomePath.empty()) {
+                const Error err("environment variable HOME is not set");
+                err.showError();
+                throw std::runtime_error(err.getFullErrorMessage());
+            }
+
+            basePath = std::format("{}/.config/", sHomePath);
+        }
 
 #else
         static_assert(false, "not implemented");

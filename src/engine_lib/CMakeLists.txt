@@ -65,8 +65,6 @@ endif()
 
 # Engine general (cross-platform) sources.
 set(PROJECT_SOURCES
-    ${RELATIVE_EXT_PATH}/xxHash/xxhash.c
-    ${RELATIVE_EXT_PATH}/xxHash/xxhash.h
     private/misc/Error.cpp
     public/misc/Error.h
     private/misc/UniqueValueGenerator.h
@@ -370,6 +368,16 @@ if(NOT IS_RELEASE_BUILD AND ENABLE_PROFILER)
     add_dependencies(${PROJECT_NAME} ${REMOTERY_TARGET_NAME})
     target_link_libraries(${PROJECT_NAME} PUBLIC ${REMOTERY_TARGET_NAME})
 endif()
+
+# External: xxHash
+message(STATUS "${PROJECT_NAME}: adding external dependency \"xxHash\"...")
+set(XXHASH_TARGET_NAME xxHash)
+add_library(${XXHASH_TARGET_NAME} STATIC
+    ${RELATIVE_EXT_PATH}/xxHash/xxhash.c
+    ${RELATIVE_EXT_PATH}/xxHash/xxhash.h)
+set_target_properties(${XXHASH_TARGET_NAME} PROPERTIES FOLDER ${EXTERNAL_FOLDER})
+add_dependencies(${PROJECT_NAME} ${XXHASH_TARGET_NAME})
+target_link_libraries(${PROJECT_NAME} PUBLIC ${XXHASH_TARGET_NAME})
 
 # [TODO: temporary solution]: External: tgc
 message(STATUS "${PROJECT_NAME}: adding external dependency \"TGC\"...")

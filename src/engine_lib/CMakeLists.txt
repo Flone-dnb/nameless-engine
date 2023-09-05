@@ -141,6 +141,8 @@ set(PROJECT_SOURCES
     private/materials/glsl/GlslShaderResource.cpp
     private/materials/glsl/DescriptorSetLayoutGenerator.h
     private/materials/glsl/DescriptorSetLayoutGenerator.cpp
+    private/materials/TextureManager.cpp
+    public/materials/TextureManager.h
     private/misc/ThreadPool.h
     private/misc/ThreadPool.cpp
     private/misc/Timer.cpp
@@ -368,6 +370,29 @@ if(NOT IS_RELEASE_BUILD AND ENABLE_PROFILER)
     add_dependencies(${PROJECT_NAME} ${REMOTERY_TARGET_NAME})
     target_link_libraries(${PROJECT_NAME} PUBLIC ${REMOTERY_TARGET_NAME})
 endif()
+
+# External: Compressonator
+message(STATUS "${PROJECT_NAME}: adding external dependency \"Compressonator\"...")
+# Execute `Compressonator` setup repo script
+find_package (Python COMPONENTS Interpreter Development)
+if (NOT EXISTS ${Python_EXECUTABLE})
+    message(FATAL_ERROR "${PROJECT_NAME}: failed to find Python")
+endif()
+message(STATUS "${PROJECT_NAME}: fetching \"Compressonator\" dependencies, please wait it may take a while...")
+execute_process(
+    COMMAND "${Python_EXECUTABLE}" "${ABSOLUTE_EXT_PATH}/compressonator/build/fetch_dependencies.py"
+    WORKING_DIRECTORY "${ABSOLUTE_EXT_PATH}/compressonator/build"
+)
+add_subdirectory(${RELATIVE_EXT_PATH}/compressonator/cmp_compressonatorlib ${DEPENDENCY_BUILD_DIR_NAME}/cmp_compressonatorlib SYSTEM)
+target_link_libraries(${PROJECT_NAME} PUBLIC CMP_Compressonator)
+target_include_directories(${PROJECT_NAME} PUBLIC ${RELATIVE_EXT_PATH}/compressonator/cmp_compressonatorlib)
+set_target_properties(CMP_Compressonator PROPERTIES FOLDER ${EXTERNAL_FOLDER})
+add_subdirectory(${RELATIVE_EXT_PATH}/compressonator/cmp_core ${DEPENDENCY_BUILD_DIR_NAME}/cmp_core SYSTEM)
+target_link_libraries(${PROJECT_NAME} PUBLIC CMP_Core)
+set_target_properties(CMP_Core PROPERTIES FOLDER ${EXTERNAL_FOLDER})
+add_subdirectory(${RELATIVE_EXT_PATH}/compressonator/cmp_framework ${DEPENDENCY_BUILD_DIR_NAME}/cmp_framework SYSTEM)
+target_link_libraries(${PROJECT_NAME} PUBLIC CMP_Framework)
+set_target_properties(CMP_Framework PROPERTIES FOLDER ${EXTERNAL_FOLDER})
 
 # External: xxHash
 message(STATUS "${PROJECT_NAME}: adding external dependency \"xxHash\"...")

@@ -46,3 +46,6 @@
 [submodule "ext/Remotery"]
 	path = ext/Remotery
 	url = https://github.com/Celtoys/Remotery.git
+[submodule "ext/compressonator"]
+	path = ext/compressonator
+	url = https://github.com/Flone-dnb/compressonator.git

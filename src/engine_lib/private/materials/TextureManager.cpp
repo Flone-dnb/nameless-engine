@@ -28,8 +28,33 @@ namespace ne {
         CompressonatorSingleton() { CMP_InitFramework(); }
     };
 
+    CMP_FORMAT textureTypeToCmpFormat(ne::TextureType type) {
+        switch (type) {
+        case (ne::TextureType::DIFFUSE_TEXTURE): {
+            return CMP_FORMAT_BC3; // using BC3 instead of BC7 because Compressonator compresses to BC7 with
+                                   // errors on Linux, to be consistent across all platforms using BC3
+            break;
+        }
+        case (ne::TextureType::NORMAL_TEXTURE): {
+            return CMP_FORMAT_BC5;
+            break;
+        }
+        case (ne::TextureType::HDR_TEXTURE): {
+            return CMP_FORMAT_BC6H;
+            break;
+        }
+        default: {
+            Error error("unhandled case");
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+            break;
+        }
+        }
+    }
+
     std::optional<Error> TextureManager::importTexture(
         const std::filesystem::path& pathToTexture,
+        TextureType textureType,
         const std::string& sPathToOutputDirRelativeRes,
         const std::string& sOutputDirectoryName,
         ImportTextureCallback pCompressionStateCallback) {
@@ -100,9 +125,9 @@ namespace ne {
         // Prepare compression options.
         KernelOptions kernelOptions;
         std::memset(&kernelOptions, 0, sizeof(KernelOptions));
-        kernelOptions.format = CMP_FORMAT_BC7; // format to compress to
-        kernelOptions.fquality = 1.0F;         // use highest quality
-        kernelOptions.threads = 0;             // means automatically determine
+        kernelOptions.format = textureTypeToCmpFormat(textureType);
+        kernelOptions.fquality = 1.0F; // use highest quality
+        kernelOptions.threads = 0;     // means automatically determine
 
         // Compress the texture.
         CMP_MipSet compressedTextureMipSet;
@@ -133,8 +158,8 @@ namespace ne {
         const auto pathToKxt = pathToOutputDirectory / "0.ktx";
 
         // Save compressed texture.
-        // auto ddsSaveResult = CMP_SaveTexture(pathToDds.string().c_str(), &compressedTextureMipSet);
-        // auto kxtSaveResult = CMP_SaveTexture(pathToKxt.string().c_str(), &compressedTextureMipSet);
+        auto ddsSaveResult = CMP_SaveTexture(pathToDds.string().c_str(), &compressedTextureMipSet);
+        auto kxtSaveResult = CMP_SaveTexture(pathToKxt.string().c_str(), &compressedTextureMipSet);
         // check result later
 
         // Free images.
@@ -142,18 +167,18 @@ namespace ne {
         CMP_FreeMipSet(&compressedTextureMipSet);
 
         // Check final result.
-        //        if (ddsSaveResult != CMP_OK) {
-        //            return Error(std::format(
-        //                "failed to save the resulting texture at \"{}\", error code: {}",
-        //                pathToDds.string(),
-        //                static_cast<int>(ddsSaveResult)));
-        //        }
-        //        if (kxtSaveResult != CMP_OK) {
-        //            return Error(std::format(
-        //                "failed to save the resulting texture at \"{}\", error code: {}",
-        //                pathToKxt.string(),
-        //                static_cast<int>(kxtSaveResult)));
-        //        }
+        if (ddsSaveResult != CMP_OK) {
+            return Error(std::format(
+                "failed to save the resulting texture at \"{}\", error code: {}",
+                pathToDds.string(),
+                static_cast<int>(ddsSaveResult)));
+        }
+        if (kxtSaveResult != CMP_OK) {
+            return Error(std::format(
+                "failed to save the resulting texture at \"{}\", error code: {}",
+                pathToKxt.string(),
+                static_cast<int>(kxtSaveResult)));
+        }
 
         return {};
     }

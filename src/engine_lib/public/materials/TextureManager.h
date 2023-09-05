@@ -10,8 +10,19 @@
 
 namespace ne {
 
+#if defined(WIN32)
     typedef bool (*ImportTextureCallback)(
         float progress, unsigned long long iNotUsed1, unsigned long long iNotUsed2);
+#else
+    typedef bool (*ImportTextureCallback)(float progress, int* pNotUsed1, int* pNotUsed2);
+#endif
+
+    /** Describes texture format. */
+    enum class TextureType {
+        DIFFUSE_TEXTURE,
+        NORMAL_TEXTURE,
+        HDR_TEXTURE,
+    };
 
     /** Controls texture loading. */
     class TextureManager {
@@ -21,6 +32,7 @@ namespace ne {
          * and creates new textures in the specified directory relative to `res` directory.
          *
          * @param pathToTexture               Path to the texture image to convert.
+         * @param textureType                 Type of the texture image to convert.
          * @param sPathToOutputDirRelativeRes Path to a directory relative to the `res` directory that will
          * store results, for example: `game/player/textures` (located at `res/game/player/textures`).
          * @param sOutputDirectoryName        Name of the new directory that does not exists yet but
@@ -35,6 +47,7 @@ namespace ne {
          */
         [[nodiscard]] static std::optional<Error> importTexture(
             const std::filesystem::path& pathToTexture,
+            TextureType textureType,
             const std::string& sPathToOutputDirRelativeRes,
             const std::string& sOutputDirectoryName,
             ImportTextureCallback pCompressionStateCallback);

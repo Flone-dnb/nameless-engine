@@ -41,7 +41,8 @@ namespace ne {
          * @param pCompressionStateCallback   Callback that will be regularly called to tell the progress
          * of the compression operation (tells progress percent as `float` parameter). Returned value is
          * used to cancel the operation, return `false` to continue and `true` to abort, note that
-         * when you abort the compression operation this function will return `Error`.
+         * when you abort the compression operation this function will return `Error`. Note that this
+         * callback will be called multiple times after reaching 100% `float` parameter.
          *
          * @return Error if something went wrong.
          */

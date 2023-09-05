@@ -72,7 +72,7 @@ func main() {
 	copy_ext_libs(ext_directory, working_directory, output_build_directory)
 
 	// Copy external licenses to the build directory (if release build).
-	if is_release {
+	if !is_release {
 		fmt.Println(log_prefix, "copying external licenses to the build directory...")
 		copy_ext_licenses(ext_directory, output_build_directory)
 	} else {
@@ -508,6 +508,30 @@ func copy_ext_licenses(ext_directory string, build_directory string) {
 		}
 
 		if !found_license {
+			// Try again but look for directories right now.
+			for _, subitem := range subitems {
+				if !subitem.IsDir() {
+					continue
+				}
+
+				var subdirname = strings.ToUpper(subitem.Name())
+				if strings.Contains(subdirname, "LICENSE") {
+					fmt.Println(log_prefix, "found", dir_name, "license directory")
+					var src = filepath.Join(ext_directory, dir_name, subitem.Name())
+					var dst = filepath.Join(build_directory, dir_name)
+					var err = cp.Copy(src, dst)
+					if err != nil {
+						fmt.Println(log_prefix, err)
+						os.Exit(1)
+					}
+					copied_licenses_count += 1
+					found_license = true
+					break
+				}
+			}
+		}
+
+		if !found_license {
 			fmt.Println(log_prefix, "could not find a license file for dependency", dir_name)
 			os.Exit(1)
 		}
@@ -521,7 +545,7 @@ func copy_ext_licenses(ext_directory string, build_directory string) {
 	fmt.Println(log_prefix, "copied", copied_licenses_count, "license file(-s)")
 }
 
-// / Copies the `src` file's contents into the `dst` file.
+// Copies the `src` file's contents into the `dst` file.
 func copy(src string, dst string) {
 	sourceFileStat, err := os.Stat(src)
 	if err != nil {

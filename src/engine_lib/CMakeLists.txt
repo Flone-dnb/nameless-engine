@@ -493,4 +493,15 @@ if (WIN32)
     target_link_directories(${PROJECT_NAME} PUBLIC ${PATH_TO_DXC_DLL_DIR})
     target_link_directories(${PROJECT_NAME} PUBLIC ${PATH_TO_DXC_LIB_DIR})
     target_link_libraries(${PROJECT_NAME} PUBLIC ${PATH_TO_DXC_LIB_DIR}/dxcompiler.lib)
+
+    # External: DDSTextureLoader
+    message(STATUS "${PROJECT_NAME}: adding external dependency \"DDSTextureLoader\"...")
+    set(DDSTEXTURELOADER_TARGET_NAME DDSTextureLoader)
+    add_library(${DDSTEXTURELOADER_TARGET_NAME} STATIC
+        ${RELATIVE_EXT_PATH}/DirectXTex/DDSTextureLoader/DDSTextureLoader12.h
+        ${RELATIVE_EXT_PATH}/DirectXTex/DDSTextureLoader/DDSTextureLoader12.cpp)
+    target_include_directories(${DDSTEXTURELOADER_TARGET_NAME} PRIVATE ${ABSOLUTE_EXT_PATH}/DirectX-Headers/include/directx)
+    set_target_properties(${DDSTEXTURELOADER_TARGET_NAME} PROPERTIES FOLDER ${EXTERNAL_FOLDER})
+    add_dependencies(${PROJECT_NAME} ${DDSTEXTURELOADER_TARGET_NAME})
+    target_link_libraries(${PROJECT_NAME} PUBLIC ${DDSTEXTURELOADER_TARGET_NAME})
 endif()

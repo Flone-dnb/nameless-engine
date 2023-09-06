@@ -94,6 +94,17 @@ namespace ne {
             std::optional<VkImageAspectFlags> viewDescription);
 
         /**
+         * Loads a texture from a KTX file in the GPU memory.
+         *
+         * @param sResourceName     Resource name, used for logging.
+         * @param pathToTextureFile Path to the image file that stores texture data.
+         *
+         * @return Error if something went wrong, otherwise created GPU resource that stores texture data.
+         */
+        virtual std::variant<std::unique_ptr<GpuResource>, Error> loadTextureFromDisk(
+            const std::string& sResourceName, const std::filesystem::path& pathToTextureFile) override;
+
+        /**
          * Creates a new GPU resource (buffer) with available CPU write access (only write not read),
          * typically used for resources that needs to be frequently updated from the CPU side.
          *
@@ -129,7 +140,7 @@ namespace ne {
             std::optional<CpuVisibleShaderResourceUsageDetails> isUsedInShadersAsReadOnlyData) override;
 
         /**
-         * Creates a new GPU resource (buffer) and fills it with the specified data.
+         * Creates a new GPU resource (buffer, not a texture) and fills it with the specified data.
          *
          * Example:
          * @code

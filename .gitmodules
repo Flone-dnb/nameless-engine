@@ -49,3 +49,6 @@
 [submodule "ext/compressonator"]
 	path = ext/compressonator
 	url = https://github.com/Flone-dnb/compressonator.git
+[submodule "ext/DirectXTex"]
+	path = ext/DirectXTex
+	url = https://github.com/microsoft/DirectXTex.git

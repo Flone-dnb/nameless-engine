@@ -118,6 +118,14 @@ namespace ne {
                 static_cast<int>(result)));
         }
 
+        // Make sure texture width/height is a multiple of 4 since texture loaders will require that
+        // if BC3 or a similar format is used.
+        if (sourceTextureMipSet.m_nWidth % 4 != 0 || sourceTextureMipSet.m_nHeight % 4 != 0) [[unlikely]] {
+            return Error(std::format(
+                "width and height of the specified texture at \"{}\" should be a multiple of 4",
+                pathToTexture.string()));
+        }
+
         // Generate mip levels.
         static constexpr CMP_INT iMinMipLevelResolutionInPixels = 32; // NOLINT
         CMP_GenerateMIPLevels(&sourceTextureMipSet, iMinMipLevelResolutionInPixels);

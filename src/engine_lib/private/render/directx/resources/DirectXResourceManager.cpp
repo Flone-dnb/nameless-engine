@@ -7,6 +7,9 @@
 #include "render/general/resources/UploadBuffer.h"
 #include "render/directx/resources/DirectXFrameResource.h"
 
+// External.
+#include "DirectXTex/DDSTextureLoader/DDSTextureLoader12.h"
+
 namespace ne {
     std::variant<std::unique_ptr<DirectXResourceManager>, Error>
     DirectXResourceManager::create(DirectXRenderer* pRenderer) {
@@ -59,6 +62,66 @@ namespace ne {
             std::move(pCbvSrvUavHeapManager)));
     }
 
+    std::variant<std::unique_ptr<GpuResource>, Error> DirectXResourceManager::loadTextureFromDisk(
+        const std::string& sResourceName, const std::filesystem::path& pathToTextureFile) {
+        // Make sure the specified path exists.
+        if (!std::filesystem::exists(pathToTextureFile)) [[unlikely]] {
+            return Error(
+                std::format("the specified path \"{}\" does not exists", pathToTextureFile.string()));
+        }
+
+        // Make sure the specified path points to a file.
+        if (std::filesystem::is_directory(pathToTextureFile)) [[unlikely]] {
+            return Error(std::format(
+                "expected the specified path \"{}\" to point to a file", pathToTextureFile.string()));
+        }
+
+        // Make sure the file has the ".DDS" extension.
+        if (pathToTextureFile.extension() != ".DDS" && pathToTextureFile.extension() != ".dds") [[unlikely]] {
+            return Error(std::format(
+                "only DDS file extension is supported for texture loading, the path \"{}\" points to a "
+                "non-DDS file",
+                pathToTextureFile.string()));
+        }
+
+        // Get renderer.
+        const auto pDirectXRenderer = dynamic_cast<DirectXRenderer*>(getRenderer());
+        if (pDirectXRenderer == nullptr) [[unlikely]] {
+            return Error("expected a DirectX renderer");
+        }
+
+        // Load DDS file as a new resource.
+        ComPtr<ID3D12Resource> pCreatedResource;
+        std::unique_ptr<uint8_t[]> pDdsData;
+        std::vector<D3D12_SUBRESOURCE_DATA> vSubresources;
+        const auto hResult = DirectX::LoadDDSTextureFromFile(
+            pDirectXRenderer->getD3dDevice(),
+            pathToTextureFile.wstring().c_str(),
+            pCreatedResource.GetAddressOf(),
+            pDdsData,
+            vSubresources
+            // max size argument
+            // ... output arguments ...
+        );
+        if (FAILED(hResult)) [[unlikely]] {
+            return Error(hResult);
+        }
+
+        // Since DDSTextureLoader does not use our memory allocator we will just use created resource's
+        // description to create a new resource using memory allocator and delete the resource that
+        // DDSTextureLoader created.
+        const auto finalResourceDescription = pCreatedResource->GetDesc();
+
+        // Prepare upload resource description.
+        const UINT64 iUploadBufferSize =
+            GetRequiredIntermediateSize(pCreatedResource.Get(), 0, static_cast<UINT>(vSubresources.size()));
+        const auto uploadResourceDescription = CD3DX12_RESOURCE_DESC::Buffer(iUploadBufferSize);
+
+        // Create resource.
+        return createResourceWithData(
+            sResourceName, finalResourceDescription, vSubresources, uploadResourceDescription, true);
+    }
+
     std::variant<std::unique_ptr<UploadBuffer>, Error>
     DirectXResourceManager::createResourceWithCpuWriteAccess(
         const std::string& sResourceName,
@@ -102,131 +165,25 @@ namespace ne {
         size_t iDataSizeInBytes,
         ResourceUsageType usage,
         bool bIsShaderReadWriteResource) {
-        // In order to create a GPU resource with our data from the CPU
-        // we have to do a few steps:
-        // 1. Create a GPU resource with DEFAULT heap type (CPU read-only heap) AKA resulting resource.
-        // 2. Create a GPU resource with UPLOAD heap type (CPU read-write heap) AKA upload resource.
-        // 3. Copy our data from the CPU to the resulting resource by using the upload resource.
-        // 4. Wait for GPU to finish copying data and delete the upload resource.
-
-        // 1. Create the resulting resource.
-        D3D12MA::ALLOCATION_DESC allocationDesc = {};
-        allocationDesc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
-        D3D12_RESOURCE_DESC resourceDesc = CD3DX12_RESOURCE_DESC::Buffer(
+        // Prepare final resource description.
+        const auto finalResourceDescription = CD3DX12_RESOURCE_DESC::Buffer(
             iDataSizeInBytes,
             bIsShaderReadWriteResource ? D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS
                                        : D3D12_RESOURCE_FLAG_NONE);
-        D3D12_RESOURCE_STATES initialResourceState = D3D12_RESOURCE_STATE_COPY_DEST;
-        auto result = DirectXResource::create(
-            this,
-            sResourceName,
-            pMemoryAllocator.Get(),
-            allocationDesc,
-            resourceDesc,
-            initialResourceState,
-            {});
-        if (std::holds_alternative<Error>(result)) {
-            auto err = std::get<Error>(std::move(result));
-            err.addCurrentLocationToErrorStack();
-            return err;
-        }
-        auto pResultingResource = std::get<std::unique_ptr<DirectXResource>>(std::move(result));
 
-        // 2. Create the upload resource.
-        allocationDesc = {};
-        allocationDesc.HeapType = D3D12_HEAP_TYPE_UPLOAD;
-        resourceDesc = CD3DX12_RESOURCE_DESC::Buffer(iDataSizeInBytes);
-        initialResourceState = D3D12_RESOURCE_STATE_GENERIC_READ;
-        result = DirectXResource::create(
-            this,
-            fmt::format("upload resource for \"{}\"", sResourceName),
-            pMemoryAllocator.Get(),
-            allocationDesc,
-            resourceDesc,
-            initialResourceState,
-            {});
-        if (std::holds_alternative<Error>(result)) {
-            auto err = std::get<Error>(std::move(result));
-            err.addCurrentLocationToErrorStack();
-            return err;
-        }
-        auto pUploadResource = std::get<std::unique_ptr<DirectXResource>>(std::move(result));
-
-        // Get renderer.
-        const auto pRenderer = dynamic_cast<DirectXRenderer*>(getRenderer());
-        if (pRenderer == nullptr) [[unlikely]] {
-            return Error("expected a DirectX renderer");
-        }
-
-        // Stop rendering.
-        std::scoped_lock renderingGuard(*pRenderer->getRenderResourcesMutex());
-        pRenderer->waitForGpuToFinishWorkUpToThisPoint();
-
-        // Get command allocator from the current frame resource.
-        const auto pFrameResourcesManager = pRenderer->getFrameResourcesManager();
-        const auto pMtxCurrentFrameResource = pFrameResourcesManager->getCurrentFrameResource();
-        std::scoped_lock frameResourceGuard(pMtxCurrentFrameResource->first);
-
-        // Convert frame resource.
-        const auto pDirectXFrameResource =
-            dynamic_cast<DirectXFrameResource*>(pMtxCurrentFrameResource->second.pResource);
-        if (pDirectXFrameResource == nullptr) [[unlikely]] {
-            return Error("expected a DirectX frame resource");
-        }
-
-        const auto pCommandList = pRenderer->getD3dCommandList();
-        const auto pCommandQueue = pRenderer->getD3dCommandQueue();
-        const auto pCommandAllocator = pDirectXFrameResource->pCommandAllocator.Get();
-
-        // Clear command list allocator (because it's not used by the GPU now).
-        auto hResult = pCommandAllocator->Reset();
-        if (FAILED(hResult)) {
-            return Error(hResult);
-        }
-
-        // Open command list (it was closed).
-        hResult = pCommandList->Reset(pCommandAllocator, nullptr);
-        if (FAILED(hResult)) {
-            return Error(hResult);
-        }
-
-        // 3. Copy our data from the CPU to the resulting resource by using the upload resource.
+        // Prepare subresource to copy.
         D3D12_SUBRESOURCE_DATA subResourceData = {};
         subResourceData.pData = pBufferData;
         subResourceData.RowPitch = iDataSizeInBytes;
         subResourceData.SlicePitch = subResourceData.RowPitch;
-        // Queues a copy command using `ID3D12CommandList::CopySubresourceRegion`.
-        UpdateSubresources<1>(
-            pCommandList,
-            pResultingResource->getInternalResource(),
-            pUploadResource->getInternalResource(),
-            0,
-            0,
-            1,
-            &subResourceData);
+        std::vector<D3D12_SUBRESOURCE_DATA> vSubresourcesToCopy = {subResourceData};
 
-        // Queue resulting resource state change.
-        CD3DX12_RESOURCE_BARRIER transition = CD3DX12_RESOURCE_BARRIER::Transition(
-            pResultingResource->getInternalResource(),
-            D3D12_RESOURCE_STATE_COPY_DEST,
-            bIsShaderReadWriteResource ? D3D12_RESOURCE_STATE_UNORDERED_ACCESS
-                                       : D3D12_RESOURCE_STATE_GENERIC_READ);
-        pCommandList->ResourceBarrier(1, &transition);
+        // Prepare upload resource description.
+        const auto uploadResourceDescription = CD3DX12_RESOURCE_DESC::Buffer(iDataSizeInBytes);
 
-        // Close command list.
-        hResult = pCommandList->Close();
-        if (FAILED(hResult)) {
-            return Error(hResult);
-        }
-
-        // Add the command list to the command queue for execution.
-        ID3D12CommandList* commandLists[] = {pCommandList};
-        pCommandQueue->ExecuteCommandLists(_countof(commandLists), commandLists);
-
-        // 4. Wait for GPU to finish copying data and delete the upload resource.
-        pRenderer->waitForGpuToFinishWorkUpToThisPoint();
-
-        return pResultingResource;
+        // Create resource.
+        return createResourceWithData(
+            sResourceName, finalResourceDescription, vSubresourcesToCopy, uploadResourceDescription, false);
     }
 
     size_t DirectXResourceManager::getTotalVideoMemoryInMb() const {
@@ -307,5 +264,134 @@ namespace ne {
         this->pRtvHeap = std::move(pRtvHeap);
         this->pDsvHeap = std::move(pDsvHeap);
         this->pCbvSrvUavHeap = std::move(pCbvSrvUavHeap);
+    }
+
+    std::variant<std::unique_ptr<GpuResource>, Error> DirectXResourceManager::createResourceWithData(
+        const std::string& sResourceName,
+        const D3D12_RESOURCE_DESC& finalResourceDescription,
+        const std::vector<D3D12_SUBRESOURCE_DATA>& vSubresourcesToCopy,
+        const D3D12_RESOURCE_DESC& uploadResourceDescription,
+        bool bIsTextureResource) {
+        // In order to create a GPU resource with our data from the CPU
+        // we have to do a few steps:
+        // 1. Create a GPU resource with DEFAULT heap type (CPU read-only heap) AKA resulting resource.
+        // 2. Create a GPU resource with UPLOAD heap type (CPU read-write heap) AKA upload resource.
+        // 3. Copy our data from the CPU to the resulting resource by using the upload resource.
+        // 4. Wait for GPU to finish copying data and delete the upload resource.
+
+        // 1. Create the resulting resource.
+        D3D12MA::ALLOCATION_DESC allocationDesc = {};
+        allocationDesc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
+        const auto initialFinalResourceState = D3D12_RESOURCE_STATE_COPY_DEST;
+        auto result = DirectXResource::create(
+            this,
+            sResourceName,
+            pMemoryAllocator.Get(),
+            allocationDesc,
+            finalResourceDescription,
+            initialFinalResourceState,
+            {});
+        if (std::holds_alternative<Error>(result)) {
+            auto err = std::get<Error>(std::move(result));
+            err.addCurrentLocationToErrorStack();
+            return err;
+        }
+        auto pResultingResource = std::get<std::unique_ptr<DirectXResource>>(std::move(result));
+
+        // 2. Create the upload resource.
+        allocationDesc = {};
+        allocationDesc.HeapType = D3D12_HEAP_TYPE_UPLOAD;
+        const auto initialUploadResourceState = D3D12_RESOURCE_STATE_GENERIC_READ;
+        result = DirectXResource::create(
+            this,
+            fmt::format("upload resource for \"{}\"", sResourceName),
+            pMemoryAllocator.Get(),
+            allocationDesc,
+            uploadResourceDescription,
+            initialUploadResourceState,
+            {});
+        if (std::holds_alternative<Error>(result)) {
+            auto err = std::get<Error>(std::move(result));
+            err.addCurrentLocationToErrorStack();
+            return err;
+        }
+        auto pUploadResource = std::get<std::unique_ptr<DirectXResource>>(std::move(result));
+
+        // Get renderer.
+        const auto pRenderer = dynamic_cast<DirectXRenderer*>(getRenderer());
+        if (pRenderer == nullptr) [[unlikely]] {
+            return Error("expected a DirectX renderer");
+        }
+
+        // Stop rendering.
+        std::scoped_lock renderingGuard(*pRenderer->getRenderResourcesMutex());
+        pRenderer->waitForGpuToFinishWorkUpToThisPoint();
+
+        // Get command allocator from the current frame resource.
+        const auto pFrameResourcesManager = pRenderer->getFrameResourcesManager();
+        const auto pMtxCurrentFrameResource = pFrameResourcesManager->getCurrentFrameResource();
+        std::scoped_lock frameResourceGuard(pMtxCurrentFrameResource->first);
+
+        // Convert frame resource.
+        const auto pDirectXFrameResource =
+            dynamic_cast<DirectXFrameResource*>(pMtxCurrentFrameResource->second.pResource);
+        if (pDirectXFrameResource == nullptr) [[unlikely]] {
+            return Error("expected a DirectX frame resource");
+        }
+
+        const auto pCommandList = pRenderer->getD3dCommandList();
+        const auto pCommandQueue = pRenderer->getD3dCommandQueue();
+        const auto pCommandAllocator = pDirectXFrameResource->pCommandAllocator.Get();
+
+        // Clear command list allocator (because it's not used by the GPU now).
+        auto hResult = pCommandAllocator->Reset();
+        if (FAILED(hResult)) {
+            return Error(hResult);
+        }
+
+        // Open command list (it was closed).
+        hResult = pCommandList->Reset(pCommandAllocator, nullptr);
+        if (FAILED(hResult)) {
+            return Error(hResult);
+        }
+
+        // 3. Copy our data from the CPU to the resulting resource by using the upload resource.
+        UpdateSubresources(
+            pCommandList,
+            pResultingResource->getInternalResource(),
+            pUploadResource->getInternalResource(),
+            0,
+            0,
+            static_cast<UINT>(vSubresourcesToCopy.size()),
+            vSubresourcesToCopy.data());
+
+        // Determine final resource state.
+        D3D12_RESOURCE_STATES finalResourceState =
+            (finalResourceDescription.Flags & D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS) != 0
+                ? D3D12_RESOURCE_STATE_UNORDERED_ACCESS
+                : D3D12_RESOURCE_STATE_GENERIC_READ;
+        if (bIsTextureResource) {
+            finalResourceState = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+        }
+
+        // Queue resulting resource state change.
+        CD3DX12_RESOURCE_BARRIER transition = CD3DX12_RESOURCE_BARRIER::Transition(
+            pResultingResource->getInternalResource(), initialFinalResourceState, finalResourceState);
+        pCommandList->ResourceBarrier(1, &transition);
+
+        // Close command list.
+        hResult = pCommandList->Close();
+        if (FAILED(hResult)) {
+            return Error(hResult);
+        }
+
+        // Add the command list to the command queue for execution.
+        ID3D12CommandList* commandLists[] = {pCommandList};
+        pCommandQueue->ExecuteCommandLists(_countof(commandLists), commandLists);
+
+        // 4. Wait for GPU to finish copying data and delete the upload resource.
+        pRenderer->waitForGpuToFinishWorkUpToThisPoint();
+
+        return pResultingResource;
     }
 } // namespace ne

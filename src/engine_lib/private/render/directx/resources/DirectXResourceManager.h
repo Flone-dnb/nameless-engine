@@ -43,6 +43,17 @@ namespace ne {
         create(DirectXRenderer* pRenderer);
 
         /**
+         * Loads a texture from a DDS file in the GPU memory.
+         *
+         * @param sResourceName     Resource name, used for logging.
+         * @param pathToTextureFile Path to the image file that stores texture data.
+         *
+         * @return Error if something went wrong, otherwise created GPU resource that stores texture data.
+         */
+        virtual std::variant<std::unique_ptr<GpuResource>, Error> loadTextureFromDisk(
+            const std::string& sResourceName, const std::filesystem::path& pathToTextureFile) override;
+
+        /**
          * Creates a new GPU resource with available CPU write access (only write not read),
          * typically used for resources that needs to be frequently updated from the CPU side.
          *
@@ -81,7 +92,7 @@ namespace ne {
             std::optional<CpuVisibleShaderResourceUsageDetails> isUsedInShadersAsReadOnlyData) override;
 
         /**
-         * Creates a new GPU resource and fills it with the specified data.
+         * Creates a new GPU resource (buffer, not a texture) and fills it with the specified data.
          *
          * Example:
          * @code
@@ -217,6 +228,25 @@ namespace ne {
             // 512
             return (iNumber + 255) & ~255; // NOLINT
         }
+
+        /**
+         * Creates a new GPU resource and fills it with the specified data.
+         *
+         * @param finalResourceDescription   Description of the final resource to create.
+         * @param sResourceName              Resource name, used for logging.
+         * @param vSubresourcesToCopy        Describes the data that the resulting resource should have.
+         * @param uploadResourceDescription  Description of the upload/staging resource.
+         * @param bIsTextureResource         `true` if the final resource will be used as a read-only
+         * texture in pixel shader, `false` if the final resource is not a texture.
+         *
+         * @return Error if something went wrong, otherwise created resource with filled data.
+         */
+        std::variant<std::unique_ptr<GpuResource>, Error> createResourceWithData(
+            const std::string& sResourceName,
+            const D3D12_RESOURCE_DESC& finalResourceDescription,
+            const std::vector<D3D12_SUBRESOURCE_DATA>& vSubresourcesToCopy,
+            const D3D12_RESOURCE_DESC& uploadResourceDescription,
+            bool bIsTextureResource);
 
         /** Allocator for GPU resources. */
         ComPtr<D3D12MA::Allocator> pMemoryAllocator;

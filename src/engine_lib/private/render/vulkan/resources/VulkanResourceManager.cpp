@@ -409,6 +409,31 @@ namespace ne {
         return std::get<std::unique_ptr<VulkanResource>>(std::move(result));
     }
 
+    std::variant<std::unique_ptr<GpuResource>, Error> VulkanResourceManager::loadTextureFromDisk(
+        const std::string& sResourceName, const std::filesystem::path& pathToTextureFile) {
+        // Make sure the specified path exists.
+        if (!std::filesystem::exists(pathToTextureFile)) [[unlikely]] {
+            return Error(
+                std::format("the specified path \"{}\" does not exists", pathToTextureFile.string()));
+        }
+
+        // Make sure the specified path points to a file.
+        if (std::filesystem::is_directory(pathToTextureFile)) [[unlikely]] {
+            return Error(std::format(
+                "expected the specified path \"{}\" to point to a file", pathToTextureFile.string()));
+        }
+
+        // Make sure the file has the ".KTX" extension.
+        if (pathToTextureFile.extension() != ".KTX" && pathToTextureFile.extension() != ".ktx") [[unlikely]] {
+            return Error(std::format(
+                "only KTX file extension is supported for texture loading, the path \"{}\" points to a "
+                "non-KTX file",
+                pathToTextureFile.string()));
+        }
+
+        return Error("not implemented");
+    }
+
     VulkanStorageResourceArrayManager* VulkanResourceManager::getStorageResourceArrayManager() const {
         return pStorageResourceArrayManager.get();
     }

@@ -3,6 +3,7 @@
 // Standard.
 #include <variant>
 #include <memory>
+#include <filesystem>
 #include <optional>
 
 // Custom.
@@ -79,6 +80,17 @@ namespace ne {
         virtual size_t getUsedVideoMemoryInMb() const = 0;
 
         /**
+         * Loads a texture from the specified path in the GPU memory.
+         *
+         * @param sResourceName     Resource name, used for logging.
+         * @param pathToTextureFile Path to the image file that stores texture data.
+         *
+         * @return Error if something went wrong, otherwise created GPU resource that stores texture data.
+         */
+        virtual std::variant<std::unique_ptr<GpuResource>, Error> loadTextureFromDisk(
+            const std::string& sResourceName, const std::filesystem::path& pathToTextureFile) = 0;
+
+        /**
          * Creates a new GPU resource with available CPU write access (only write not read),
          * typically used for resources that needs to be frequently updated from the CPU side.
          *
@@ -114,7 +126,7 @@ namespace ne {
             std::optional<CpuVisibleShaderResourceUsageDetails> isUsedInShadersAsReadOnlyData) = 0;
 
         /**
-         * Creates a new GPU resource and fills it with the specified data.
+         * Creates a new GPU resource (buffer, not a texture) and fills it with the specified data.
          *
          * Example:
          * @code

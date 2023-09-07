@@ -117,7 +117,6 @@ namespace ne {
          * @param sResourceName     Name of the resource.
          * @param ktxTexture        Created KTX texture (already loaded in the GPU memory) that this resource
          * will wrap.
-         * @param pResourceMemory   Allocated memory for the created Vulkan resource.
          */
         VulkanResource(
             VulkanResourceManager* pResourceManager,
@@ -169,7 +168,6 @@ namespace ne {
          * @param sResourceName    Resource name, used for logging.
          * @param ktxTexture       Created KTX texture (already loaded in the GPU memory) that this resource
          * will wrap.
-         * @param pResourceMemory  Allocated memory for the created Vulkan resource.
          *
          * @return Error if something went wrong, otherwise created resource.
          */

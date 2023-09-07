@@ -92,9 +92,11 @@ namespace ne {
         VmaAllocationCreateInfo allocationInfo = {};
 
         // Check memory properties.
+        auto bUsingHostVisibleMemory = false;
         if ((physicalMemoryProperties.memoryTypes[pAllocationInfo->memoryTypeIndex].propertyFlags &
              VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) != 0) {
             // Use host visible memory.
+            bUsingHostVisibleMemory = true;
             allocationInfo.requiredFlags =
                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
         } else {
@@ -113,6 +115,16 @@ namespace ne {
             error.showError();
             throw std::runtime_error(error.getFullErrorMessage());
         }
+
+        // Set allocation name.
+        vmaSetAllocationName(
+            pMemoryAllocator,
+            pAllocation,
+            std::format(
+                "KTX texture allocation #{} {}",
+                iAllocationIdToUse,
+                bUsingHostVisibleMemory ? "(upload resource)" : "")
+                .c_str());
 
         // Add new allocation to the global map of allocations.
         mtxData.second.allocations[iAllocationIdToUse] = pAllocation;

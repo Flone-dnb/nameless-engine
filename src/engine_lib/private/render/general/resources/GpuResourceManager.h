@@ -9,6 +9,7 @@
 // Custom.
 #include "misc/Error.h"
 #include "render/general/resources/UploadBuffer.h"
+#include "materials/TextureManager.h"
 
 namespace ne {
     class Renderer;
@@ -63,6 +64,8 @@ namespace ne {
         friend class Renderer;
 
     public:
+        GpuResourceManager() = delete;
+
         virtual ~GpuResourceManager() = default;
 
         /**
@@ -164,6 +167,15 @@ namespace ne {
          */
         Renderer* getRenderer() const;
 
+        /**
+         * Returns texture manager.
+         *
+         * @remark Do not delete (free) returned pointer.
+         *
+         * @return Texture manager.
+         */
+        TextureManager* getTextureManager() const;
+
     protected:
         /**
          * Creates a new platform-specific resource manager.
@@ -181,7 +193,18 @@ namespace ne {
          */
         GpuResourceManager(Renderer* pRenderer);
 
+        /**
+         * Sets `nullptr` to texture manager's unique ptr to force destroy it (if exists).
+         *
+         * @warning Avoid using this function. Only use it if you need a special destruction order
+         * in your object.
+         */
+        void resetTextureManager();
+
     private:
+        /** Owns all texture GPU resources. */
+        std::unique_ptr<TextureManager> pTextureManager;
+
         /** Do not delete (free) this pointer. Renderer that owns this manager. */
         Renderer* pRenderer = nullptr;
     };

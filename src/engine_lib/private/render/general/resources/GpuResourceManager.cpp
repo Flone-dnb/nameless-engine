@@ -11,6 +11,8 @@ namespace ne {
 
     Renderer* GpuResourceManager::getRenderer() const { return pRenderer; }
 
+    TextureManager* GpuResourceManager::getTextureManager() const { return pTextureManager.get(); }
+
     std::variant<std::unique_ptr<GpuResourceManager>, Error> GpuResourceManager::create(Renderer* pRenderer) {
 #if defined(WIN32)
         if (auto pDirectXRenderer = dynamic_cast<DirectXRenderer*>(pRenderer)) {
@@ -41,6 +43,14 @@ namespace ne {
         return Error("unsupported renderer");
     }
 
-    GpuResourceManager::GpuResourceManager(Renderer* pRenderer) { this->pRenderer = pRenderer; }
+    GpuResourceManager::GpuResourceManager(Renderer* pRenderer) {
+        // Save renderer.
+        this->pRenderer = pRenderer;
+
+        // Create texture manager.
+        pTextureManager = std::make_unique<TextureManager>(this);
+    }
+
+    void GpuResourceManager::resetTextureManager() { pTextureManager = nullptr; }
 
 } // namespace ne

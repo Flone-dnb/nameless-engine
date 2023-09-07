@@ -85,7 +85,10 @@ namespace ne {
         // Explicitly destroy storage array manager so that it will free its GPU resources.
         pStorageResourceArrayManager = nullptr;
 
-        // Make sure there are no resources exist
+        // Explicitly destroy texture manager so that it will no longer reference any GPU resources.
+        resetTextureManager();
+
+        // Make sure no resources exist
         // (we do this check only in Vulkan because resources need memory allocator to be destroyed).
         const auto iTotalAliveResourceCount = iAliveResourceCount.load();
         const auto iKtxAllocationCount = KtxLoadingCallbackManager::getCurrentAllocationCount();

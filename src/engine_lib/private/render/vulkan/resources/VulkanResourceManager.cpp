@@ -2,12 +2,14 @@
 
 // Standard.
 #include <format>
+#include <atomic>
 
 // Custom.
 #include "render/vulkan/VulkanRenderer.h"
 #include "io/Logger.h"
 #include "render/vulkan/resources/VulkanResource.h"
 #include "render/vulkan/resources/VulkanStorageResourceArrayManager.h"
+#include "render/vulkan/resources/KtxLoadingCallbackManager.h"
 
 // External.
 #define VMA_IMPLEMENTATION // define in only one .cpp file
@@ -86,15 +88,17 @@ namespace ne {
         // Make sure there are no resources exist
         // (we do this check only in Vulkan because resources need memory allocator to be destroyed).
         const auto iTotalAliveResourceCount = iAliveResourceCount.load();
-        if (iTotalAliveResourceCount != 0) [[unlikely]] {
+        const auto iKtxAllocationCount = KtxLoadingCallbackManager::getCurrentAllocationCount();
+        if (iTotalAliveResourceCount != 0 || iKtxAllocationCount != 0) [[unlikely]] {
             Error error(std::format(
                 "Vulkan resource manager is being destroyed but there are "
-                "still {} resource(s) alive, most likely you forgot to explicitly "
+                "still {} resource(s) and {} KTX allocations alive, most likely you forgot to explicitly "
                 "reset/delete some GPU resources that are used in the VulkanRenderer class (only "
                 "resources inside of the VulkanRenderer class should be explicitly deleted before "
                 "the resource manager is destroyed, everything else is expected to be automatically "
                 "deleted by world destruction)",
-                iTotalAliveResourceCount));
+                iTotalAliveResourceCount,
+                iKtxAllocationCount));
             error.showError();
             return; // don't throw in destructor, just quit
         }
@@ -431,7 +435,75 @@ namespace ne {
                 pathToTextureFile.string()));
         }
 
-        return Error("not implemented");
+        // Get renderer.
+        const auto pVulkanRenderer = dynamic_cast<VulkanRenderer*>(getRenderer());
+        if (pVulkanRenderer == nullptr) [[unlikely]] {
+            return Error("expected a Vulkan renderer");
+        }
+
+        // Prepare device info for texture loading.
+        ktxVulkanDeviceInfo ktxDeviceInfo;
+        auto result = ktxVulkanDeviceInfo_Construct(
+            &ktxDeviceInfo,
+            pVulkanRenderer->getPhysicalDevice(),
+            pVulkanRenderer->getLogicalDevice(),
+            pVulkanRenderer->getGraphicsQueue(),
+            pVulkanRenderer->getCommandPool(),
+            nullptr);
+        if (result != KTX_SUCCESS) [[unlikely]] {
+            return Error(std::format(
+                "failed create device info to load texture from file \"{}\", error: {}",
+                pathToTextureFile.string(),
+                ktxErrorString(result)));
+        }
+
+        // Load texture from disk.
+        ktxTexture* pKtxUploadTexture = nullptr;
+        result = ktxTexture_CreateFromNamedFile(
+            pathToTextureFile.string().c_str(), KTX_TEXTURE_CREATE_NO_FLAGS, &pKtxUploadTexture);
+        if (result != KTX_SUCCESS) [[unlikely]] {
+            return Error(std::format(
+                "failed to load texture from file \"{}\", error: {}",
+                pathToTextureFile.string(),
+                ktxErrorString(result)));
+        }
+
+        // Prepare callbacks for loading texture.
+        auto subAllocCallbacks = KtxLoadingCallbackManager::getKtxSubAllocatorCallbacks();
+
+        // Load texture to the GPU memory.
+        ktxVulkanTexture textureData;
+        result = ktxTexture_VkUploadEx_WithSuballocator(
+            pKtxUploadTexture,
+            &ktxDeviceInfo,
+            &textureData,
+            VK_IMAGE_TILING_OPTIMAL,
+            VK_IMAGE_USAGE_SAMPLED_BIT,
+            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+            &subAllocCallbacks);
+        if (result != KTX_SUCCESS) [[unlikely]] {
+            return Error(std::format(
+                "failed to load texture from file \"{}\" to the GPU memory, error: {}",
+                pathToTextureFile.string(),
+                ktxErrorString(result)));
+        }
+
+        // Cleanup.
+        ktxTexture_Destroy(pKtxUploadTexture);
+        ktxVulkanDeviceInfo_Destruct(&ktxDeviceInfo);
+
+        // Wait for operations to be finished (just in case).
+        pVulkanRenderer->waitForGpuToFinishWorkUpToThisPoint();
+
+        // Wrap created texture data.
+        auto createResult = VulkanResource::create(this, sResourceName, textureData);
+        if (std::holds_alternative<Error>(createResult)) {
+            auto error = std::get<Error>(std::move(createResult));
+            error.addCurrentLocationToErrorStack();
+            return error;
+        }
+
+        return std::get<std::unique_ptr<VulkanResource>>(std::move(createResult));
     }
 
     VulkanStorageResourceArrayManager* VulkanResourceManager::getStorageResourceArrayManager() const {

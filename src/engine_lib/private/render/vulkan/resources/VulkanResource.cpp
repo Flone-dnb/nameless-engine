@@ -8,6 +8,7 @@
 #include "render/vulkan/resources/VulkanResourceManager.h"
 #include "io/Logger.h"
 #include "render/vulkan/VulkanRenderer.h"
+#include "render/vulkan/resources/KtxLoadingCallbackManager.h"
 
 // External.
 #include "vulkan/vk_enum_string_helper.h"
@@ -19,16 +20,36 @@ namespace ne {
         const std::string& sResourceName,
         std::variant<VkBuffer, VkImage> pInternalResource,
         VmaAllocation pResourceMemory) {
+        // Initialize fields.
         this->pResourceManager = pResourceManager;
         this->sResourceName = sResourceName;
-
         mtxResourceMemory.second = pResourceMemory;
 
+        // Save resource.
         if (std::holds_alternative<VkBuffer>(pInternalResource)) {
             pBufferResource = std::get<VkBuffer>(pInternalResource);
         } else {
             pImageResource = std::get<VkImage>(pInternalResource);
         }
+
+        // Increment counter of alive objects.
+        pResourceManager->iAliveResourceCount.fetch_add(1);
+    }
+
+    VulkanResource::VulkanResource(
+        VulkanResourceManager* pResourceManager,
+        const std::string& sResourceName,
+        ktxVulkanTexture ktxTexture) {
+        // Initialize fields.
+        this->pResourceManager = pResourceManager;
+        this->sResourceName = sResourceName;
+        mtxResourceMemory.second = nullptr;
+
+        // Save resource.
+        pImageResource = ktxTexture.image;
+
+        // Save KTX image data.
+        optionalKtxTexture = ktxTexture;
 
         // Increment counter of alive objects.
         pResourceManager->iAliveResourceCount.fetch_add(1);
@@ -58,14 +79,24 @@ namespace ne {
 
         std::scoped_lock guard(mtxResourceMemory.first);
 
-        if (pBufferResource != nullptr) {
-            // Destroy the resource and its memory.
-            vmaDestroyBuffer(pResourceManager->pMemoryAllocator, pBufferResource, mtxResourceMemory.second);
-        } else {
+        if (pImageResource != nullptr) {
+            // Destroy image view.
             if (pImageView != nullptr) {
                 vkDestroyImageView(pLogicalDevice, pImageView, nullptr);
             }
-            vmaDestroyImage(pResourceManager->pMemoryAllocator, pImageResource, mtxResourceMemory.second);
+
+            // Destroy image.
+            if (optionalKtxTexture.has_value()) {
+                auto callbacks = KtxLoadingCallbackManager::getKtxSubAllocatorCallbacks();
+                auto ktxTexture = optionalKtxTexture.value();
+                ktxVulkanTexture_Destruct_WithSuballocator(
+                    &ktxTexture, pVulkanRenderer->getLogicalDevice(), nullptr, &callbacks);
+            } else {
+                vmaDestroyImage(pResourceManager->pMemoryAllocator, pImageResource, mtxResourceMemory.second);
+            }
+        } else {
+            // Destroy the resource and its memory.
+            vmaDestroyBuffer(pResourceManager->pMemoryAllocator, pBufferResource, mtxResourceMemory.second);
         }
 
         // Decrement counter of alive objects.
@@ -170,6 +201,14 @@ namespace ne {
         }
 
         return pCreatedImageResource;
+    }
+
+    std::variant<std::unique_ptr<VulkanResource>, Error> VulkanResource::create(
+        VulkanResourceManager* pResourceManager,
+        const std::string& sResourceName,
+        ktxVulkanTexture ktxTexture) {
+        return std::unique_ptr<VulkanResource>(
+            new VulkanResource(pResourceManager, sResourceName, ktxTexture));
     }
 
 } // namespace ne

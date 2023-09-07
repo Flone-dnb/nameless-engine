@@ -52,3 +52,6 @@
 [submodule "ext/DirectXTex"]
 	path = ext/DirectXTex
 	url = https://github.com/microsoft/DirectXTex.git
+[submodule "ext/KTX-Software"]
+	path = ext/KTX-Software
+	url = https://github.com/Flone-dnb/KTX-Software.git

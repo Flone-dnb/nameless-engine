@@ -165,6 +165,13 @@ namespace ne {
         VkCommandPool getCommandPool() const;
 
         /**
+         * Returns Vulkan graphics queue used in the renderer.
+         *
+         * @return `nullptr` if graphics queue is not created yet, otherwise used graphics queue.
+         */
+        VkQueue getGraphicsQueue() const;
+
+        /**
          * Returns the size of images in the swap chain.
          *
          * @return Empty if the swap chain is not initialized, otherwise the size of images in

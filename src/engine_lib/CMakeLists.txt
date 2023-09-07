@@ -98,6 +98,8 @@ set(PROJECT_SOURCES
     private/render/general/resources/UploadBuffer.cpp
     private/render/vulkan/resources/VulkanResourceManager.cpp
     private/render/vulkan/resources/VulkanResourceManager.h
+    private/render/vulkan/resources/KtxLoadingCallbackManager.cpp
+    private/render/vulkan/resources/KtxLoadingCallbackManager.h
     private/render/vulkan/resources/VulkanResource.cpp
     private/render/vulkan/resources/VulkanResource.h
     private/render/vulkan/resources/VulkanStorageResourceArrayManager.h
@@ -310,7 +312,7 @@ if (NOT Vulkan_FOUND)
     message(FATAL_ERROR "Failed to find Vulkan SDK. Please install Vulkan SDK that defines VULKAN_SDK environment variable.")
 endif()
 message(STATUS "${PROJECT_NAME}: found Vulkan include dirs at: ${Vulkan_INCLUDE_DIRS}")
-target_include_directories(${PROJECT_NAME} PUBLIC ${Vulkan_INCLUDE_DIRS})
+target_include_directories(${PROJECT_NAME} SYSTEM PUBLIC ${Vulkan_INCLUDE_DIRS})
 target_link_libraries(${PROJECT_NAME} PUBLIC ${Vulkan_LIBRARIES})
 
 # External: GLSL Shader Includer
@@ -359,6 +361,18 @@ add_subdirectory(${RELATIVE_EXT_PATH}/SPIRV-Reflect ${DEPENDENCY_BUILD_DIR_NAME}
 target_link_libraries(${PROJECT_NAME} PUBLIC spirv-reflect-static)
 set_target_properties(spirv-reflect-static PROPERTIES FOLDER ${EXTERNAL_FOLDER})
 
+# External: KTX-Software
+message(STATUS "${PROJECT_NAME}: adding external dependency \"KTX-Software\"...")
+set(KTX_FEATURE_STATIC_LIBRARY ON CACHE BOOL "" FORCE)
+set(KTX_FEATURE_TESTS OFF CACHE BOOL "" FORCE)
+set(KTX_FEATURE_LOADTEST_APPS OFF CACHE BOOL "" FORCE)
+set(KTX_FEATURE_TOOLS OFF CACHE BOOL "" FORCE)
+set(KTX_FEATURE_GL_UPLOAD OFF CACHE BOOL "" FORCE)
+set(KTX_FEATURE_DOC OFF CACHE BOOL "" FORCE)
+add_subdirectory(${RELATIVE_EXT_PATH}/KTX-Software ${DEPENDENCY_BUILD_DIR_NAME}/KTX-Software SYSTEM)
+target_link_libraries(${PROJECT_NAME} PUBLIC ktx)
+set_target_properties(ktx PROPERTIES FOLDER ${EXTERNAL_FOLDER})
+
 if(NOT IS_RELEASE_BUILD AND ENABLE_PROFILER)
     # External: Remotery
     message(STATUS "${PROJECT_NAME}: adding external dependency \"Remotery\"...")
@@ -385,7 +399,7 @@ execute_process(
 )
 add_subdirectory(${RELATIVE_EXT_PATH}/compressonator/cmp_compressonatorlib ${DEPENDENCY_BUILD_DIR_NAME}/cmp_compressonatorlib SYSTEM)
 target_link_libraries(${PROJECT_NAME} PUBLIC CMP_Compressonator)
-target_include_directories(${PROJECT_NAME} PUBLIC ${RELATIVE_EXT_PATH}/compressonator/cmp_compressonatorlib)
+target_include_directories(${PROJECT_NAME} SYSTEM PUBLIC ${RELATIVE_EXT_PATH}/compressonator/cmp_compressonatorlib)
 set_target_properties(CMP_Compressonator PROPERTIES FOLDER ${EXTERNAL_FOLDER})
 add_subdirectory(${RELATIVE_EXT_PATH}/compressonator/cmp_core ${DEPENDENCY_BUILD_DIR_NAME}/cmp_core SYSTEM)
 target_link_libraries(${PROJECT_NAME} PUBLIC CMP_Core)
@@ -438,6 +452,7 @@ set(REFUREKU_INCLUDE_DIRECTORIES
     ${ABSOLUTE_EXT_PATH}/shaderc/libshaderc/include
     ${ABSOLUTE_EXT_PATH}/SPIRV-Reflect
     ${ABSOLUTE_EXT_PATH}/Remotery/lib
+    ${ABSOLUTE_EXT_PATH}/KTX-Software/include
     ${Vulkan_INCLUDE_DIRS}
     ${CMAKE_CURRENT_SOURCE_DIR}/public
     ${CMAKE_CURRENT_SOURCE_DIR}/private

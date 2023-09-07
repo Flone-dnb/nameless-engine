@@ -2091,6 +2091,8 @@ namespace ne {
 
     VkCommandPool VulkanRenderer::getCommandPool() const { return pCommandPool; }
 
+    VkQueue VulkanRenderer::getGraphicsQueue() const { return pGraphicsQueue; }
+
     std::optional<VkExtent2D> VulkanRenderer::getSwapChainExtent() const { return swapChainExtent; }
 
     VkSampleCountFlagBits VulkanRenderer::getMsaaSampleCount() const { return msaaSampleCount; }

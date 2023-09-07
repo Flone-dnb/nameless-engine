@@ -23,6 +23,9 @@ namespace ne {
         // Upload buffer needs access to memory allocator object for map/unmap operations.
         friend class UploadBuffer;
 
+        // Uses memory allocator to load KTX textures.
+        friend class KtxLoadingCallbackManager;
+
     public:
         VulkanResourceManager() = delete;
         VulkanResourceManager(const VulkanResourceManager&) = delete;

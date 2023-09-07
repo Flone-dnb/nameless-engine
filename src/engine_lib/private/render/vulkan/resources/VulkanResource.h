@@ -4,12 +4,14 @@
 #include <variant>
 #include <memory>
 #include <mutex>
+#include <format>
 
 // Custom.
 #include "render/general/resources/GpuResource.h"
 
 // External.
 #include "VulkanMemoryAllocator/include/vk_mem_alloc.h"
+#include "ktxvulkan.h"
 
 namespace ne {
     class VulkanResourceManager;
@@ -68,6 +70,19 @@ namespace ne {
          * @return Memory allocation of the internal resource.
          */
         inline std::pair<std::recursive_mutex, VmaAllocation>* getInternalResourceMemory() {
+            // Self check:
+            if (optionalKtxTexture.has_value()) [[unlikely]] {
+                Error error(std::format(
+                    "failed to query VmaAllocation of resource \"{}\" because "
+                    "this resource is a KTX texture that was loaded via external library "
+                    "(accessing VmaAllocation of such object is complicated, if you want "
+                    "to access VkDeviceMemory it's a good time to implement such a getter "
+                    "because VkDeviceMemory is available for KTX textures)",
+                    sResourceName));
+                error.showError();
+                throw std::runtime_error(error.getFullErrorMessage());
+            }
+
             return &mtxResourceMemory;
         }
 
@@ -94,6 +109,20 @@ namespace ne {
             const std::string& sResourceName,
             std::variant<VkBuffer, VkImage> pInternalResource,
             VmaAllocation pResourceMemory);
+
+        /**
+         * Constructor. Initializes resources as a wrapper for KTX image.
+         *
+         * @param pResourceManager  Owner resource manager.
+         * @param sResourceName     Name of the resource.
+         * @param ktxTexture        Created KTX texture (already loaded in the GPU memory) that this resource
+         * will wrap.
+         * @param pResourceMemory   Allocated memory for the created Vulkan resource.
+         */
+        VulkanResource(
+            VulkanResourceManager* pResourceManager,
+            const std::string& sResourceName,
+            ktxVulkanTexture ktxTexture);
 
         /**
          * Creates a new buffer resource.
@@ -133,8 +162,27 @@ namespace ne {
             const VmaAllocationCreateInfo& allocationInfo,
             std::optional<VkImageAspectFlags> viewDescription);
 
+        /**
+         * Creates a new image resource.
+         *
+         * @param pResourceManager Owner resource manager.
+         * @param sResourceName    Resource name, used for logging.
+         * @param ktxTexture       Created KTX texture (already loaded in the GPU memory) that this resource
+         * will wrap.
+         * @param pResourceMemory  Allocated memory for the created Vulkan resource.
+         *
+         * @return Error if something went wrong, otherwise created resource.
+         */
+        static std::variant<std::unique_ptr<VulkanResource>, Error> create(
+            VulkanResourceManager* pResourceManager,
+            const std::string& sResourceName,
+            ktxVulkanTexture ktxTexture);
+
         /** Name of the resource. */
         std::string sResourceName;
+
+        /** Not empty if the object was created as a wrapper around KTX texture. */
+        std::optional<ktxVulkanTexture> optionalKtxTexture;
 
         /**
          * Created buffer Vulkan resource.

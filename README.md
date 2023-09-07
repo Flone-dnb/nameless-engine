@@ -255,7 +255,7 @@ Currently the engine is in a very early development state and right now it's sti
 Here is the list of base features that needs to be implemented in order for you to be able to make games:
 
 - [X] Reflection system
-- [X] Serialization/Deserialization for game assets
+- [X] Serialization/deserialization for game assets
 - [X] Garbage collector
 - [X] Handling user input events
 - [X] Config management (progress, settings, etc.)

@@ -286,10 +286,15 @@ namespace ne {
         // See if no handle is referencing this resource now.
         if (it->second.iActiveTextureHandleCount == 0) {
             // Release this resource from the memory.
-            Logger::get().info(std::format(
-                "releasing texture resource for path \"{}\" from the memory because it's no longer used",
-                sPathToResourceRelativeRes));
             mtxTextureResources.second.erase(it);
+
+            // Log event.
+            Logger::get().info(std::format(
+                "released texture resource for path \"{}\" from the memory because it's no longer used, "
+                "textures in memory now: {}, currently used VRAM by renderer: {} MB",
+                sPathToResourceRelativeRes,
+                getTextureInMemoryCount(),
+                pResourceManager->getUsedVideoMemoryInMb()));
         }
     }
 
@@ -366,6 +371,14 @@ namespace ne {
             0; // leave as 0 because `createNewTextureHandle` will increment it
         resourceInfo.pTexture = std::move(pTexture);
         mtxTextureResources.second[sPathToResourceRelativeRes] = std::move(resourceInfo);
+
+        // Log event.
+        Logger::get().info(std::format(
+            "texture \"{}\" was loaded from disk into memory, textures in memory now: {}, currently used "
+            "VRAM by renderer: {} MB",
+            sPathToResourceRelativeRes,
+            getTextureInMemoryCount(),
+            pResourceManager->getUsedVideoMemoryInMb()));
 
         return createNewTextureHandle(sPathToResourceRelativeRes);
     }

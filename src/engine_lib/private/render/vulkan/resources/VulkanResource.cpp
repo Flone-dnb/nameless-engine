@@ -207,8 +207,42 @@ namespace ne {
         VulkanResourceManager* pResourceManager,
         const std::string& sResourceName,
         ktxVulkanTexture ktxTexture) {
-        return std::unique_ptr<VulkanResource>(
-            new VulkanResource(pResourceManager, sResourceName, ktxTexture));
+        // Create resource.
+        auto pCreatedResource =
+            std::unique_ptr<VulkanResource>(new VulkanResource(pResourceManager, sResourceName, ktxTexture));
+
+        // Convert renderer.
+        const auto pVulkanRenderer = dynamic_cast<VulkanRenderer*>(pResourceManager->getRenderer());
+        if (pVulkanRenderer == nullptr) [[unlikely]] {
+            return Error("expected a Vulkan renderer");
+        }
+
+        // Get logical device.
+        const auto pLogicalDevice = pVulkanRenderer->getLogicalDevice();
+        if (pLogicalDevice == nullptr) [[unlikely]] {
+            return Error("expected logical device to be valid");
+        }
+
+        // Describe image view.
+        VkImageViewCreateInfo viewInfo{};
+        viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+        viewInfo.image = pCreatedResource->pImageResource;
+        viewInfo.viewType = ktxTexture.viewType;
+        viewInfo.format = ktxTexture.imageFormat;
+        viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        viewInfo.subresourceRange.baseMipLevel = 0;
+        viewInfo.subresourceRange.levelCount = ktxTexture.levelCount;
+        viewInfo.subresourceRange.baseArrayLayer = 0;
+        viewInfo.subresourceRange.layerCount = ktxTexture.layerCount;
+
+        // Create image view.
+        const auto result =
+            vkCreateImageView(pLogicalDevice, &viewInfo, nullptr, &pCreatedResource->pImageView);
+        if (result != VK_SUCCESS) [[unlikely]] {
+            return Error(std::format("failed to create image view, error: {}", string_VkResult(result)));
+        }
+
+        return pCreatedResource;
     }
 
 } // namespace ne

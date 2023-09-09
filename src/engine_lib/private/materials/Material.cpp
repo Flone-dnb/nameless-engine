@@ -34,7 +34,7 @@ namespace ne {
 
         if (bUseTransparency) {
             mtxInternalResources.second.materialPixelShaderMacros.insert(
-                ShaderMacro::USE_MATERIAL_TRANSPARENCY);
+                ShaderMacro::PS_USE_MATERIAL_TRANSPARENCY);
         }
     }
 

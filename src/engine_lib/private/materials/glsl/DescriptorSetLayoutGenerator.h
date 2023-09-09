@@ -141,9 +141,10 @@ namespace ne {
          * @param iBindingIndex Index of the binding that was specified in the GLSL code.
          * @param bindingInfo   Information about the GLSL resource used in this binding.
          *
-         * @return Error if something went wrong, otherwise generated binding.
+         * @return Error if something went wrong, otherwise generated binding with flags.
          */
-        static std::variant<VkDescriptorSetLayoutBinding, Error> generateLayoutBinding(
+        static std::variant<std::pair<VkDescriptorSetLayoutBinding, VkDescriptorBindingFlags>, Error>
+        generateLayoutBinding(
             uint32_t iBindingIndex, const Collected::DescriptorSetLayoutBindingInfo& bindingInfo);
 
         /** Name of the `uniform` buffer used to store frame data in GLSL shaders. */

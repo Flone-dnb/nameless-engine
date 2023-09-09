@@ -125,6 +125,7 @@ set(PROJECT_SOURCES
     public/input/MouseButton.hpp
     public/materials/ShaderManager.h
     private/materials/ShaderManager.cpp
+    private/materials/DescriptorConstants.hpp
     private/materials/Shader.cpp
     private/materials/Shader.h
     public/materials/ShaderDescription.h

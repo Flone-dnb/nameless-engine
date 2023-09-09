@@ -9,11 +9,11 @@ namespace ne {
 
         for (const auto& macro : macros) {
             switch (macro) {
-            case (ShaderMacro::USE_DIFFUSE_TEXTURE):
-                vMacroNames.push_back("USE_DIFFUSE_TEXTURE");
+            case (ShaderMacro::PS_USE_DIFFUSE_TEXTURE):
+                vMacroNames.push_back("PS_USE_DIFFUSE_TEXTURE");
                 break;
-            case (ShaderMacro::USE_MATERIAL_TRANSPARENCY):
-                vMacroNames.push_back("USE_MATERIAL_TRANSPARENCY");
+            case (ShaderMacro::PS_USE_MATERIAL_TRANSPARENCY):
+                vMacroNames.push_back("PS_USE_MATERIAL_TRANSPARENCY");
                 break;
             }
         }

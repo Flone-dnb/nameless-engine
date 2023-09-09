@@ -27,7 +27,7 @@ namespace ne {
         // Make sure the renderer is no longer using this PSO or its resources.
         Logger::get().info(fmt::format(
             "waiting for the GPU to finish work up to this point before destroying a PSO with id \"{}\"",
-            getUniquePipelineIdentifier()));
+            getPipelineIdentifier()));
         getRenderer()->waitForGpuToFinishWorkUpToThisPoint();
     }
 
@@ -75,7 +75,7 @@ namespace ne {
                 "internal graphics PSO was requested to be released from the "
                 "memory but it's still being referenced (new ref count: {}) (PSO ID: {})",
                 iNewRefCount,
-                getUniquePipelineIdentifier()));
+                getPipelineIdentifier()));
         }
 
         // Release root signature.

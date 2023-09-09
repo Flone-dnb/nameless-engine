@@ -28,9 +28,6 @@ namespace ne {
         this->sPixelShaderName = sPixelShaderName;
 
         bIsUsingPixelBlending = bUsePixelBlending;
-
-        sUniquePipelineIdentifier =
-            constructUniquePipelineIdentifier(sVertexShaderName, sPixelShaderName, bUsePixelBlending);
     }
 
     void
@@ -38,15 +35,9 @@ namespace ne {
         usedShaderConfiguration[shaderType] = std::move(fullConfiguration);
     }
 
-    std::string Pipeline::constructUniquePipelineIdentifier(
-        const std::string& sVertexShaderName, const std::string& sPixelShaderName, bool bUsePixelBlending) {
-        // Prepare name.
-        std::string sUniqueId = sVertexShaderName + "|" + sPixelShaderName;
-        if (bUsePixelBlending) {
-            sUniqueId += "(transparent)";
-        }
-
-        return sUniqueId;
+    std::string Pipeline::constructPipelineIdentifier(
+        const std::string& sVertexShaderName, const std::string& sPixelShaderName) {
+        return sVertexShaderName + " / " + sPixelShaderName;
     }
 
     std::string Pipeline::getVertexShaderName() { return sVertexShaderName; }
@@ -133,7 +124,9 @@ namespace ne {
         return pCreatedPipeline;
     }
 
-    std::string Pipeline::getUniquePipelineIdentifier() const { return sUniquePipelineIdentifier; }
+    std::string Pipeline::getPipelineIdentifier() const {
+        return constructPipelineIdentifier(sVertexShaderName, sPixelShaderName);
+    }
 
     std::set<ShaderMacro> Pipeline::getAdditionalVertexShaderMacros() const {
         return additionalVertexShaderMacros;
@@ -151,10 +144,10 @@ namespace ne {
             const auto it = mtxMaterialsThatUseThisPipeline.second.find(pMaterial);
             if (it != mtxMaterialsThatUseThisPipeline.second.end()) [[unlikely]] {
                 Logger::get().error(fmt::format(
-                    "material \"{}\" notified the pipeline with ID \"{}\" of being used but this "
+                    "material \"{}\" notified the pipeline for shaders \"{}\" of being used but this "
                     "material already existed in the array of materials that use this pipeline",
                     pMaterial->getMaterialName(),
-                    sUniquePipelineIdentifier));
+                    getPipelineIdentifier()));
                 return;
             }
 
@@ -170,17 +163,18 @@ namespace ne {
             const auto it = mtxMaterialsThatUseThisPipeline.second.find(pMaterial);
             if (it == mtxMaterialsThatUseThisPipeline.second.end()) [[unlikely]] {
                 Logger::get().error(fmt::format(
-                    "material \"{}\" notified the pipeline with ID \"{}\" of no longer being used but this "
+                    "material \"{}\" notified the pipeline for shaders \"{}\" of no longer being used but "
+                    "this "
                     "material was not found in the array of materials that use this pipeline",
                     pMaterial->getMaterialName(),
-                    sUniquePipelineIdentifier));
+                    getPipelineIdentifier()));
                 return;
             }
 
             mtxMaterialsThatUseThisPipeline.second.erase(it);
         }
 
-        pPipelineManager->onPipelineNoLongerUsedByMaterial(sUniquePipelineIdentifier);
+        pPipelineManager->onPipelineNoLongerUsedByMaterial(getPipelineIdentifier());
     }
 
     Renderer* Pipeline::getRenderer() const { return pRenderer; }

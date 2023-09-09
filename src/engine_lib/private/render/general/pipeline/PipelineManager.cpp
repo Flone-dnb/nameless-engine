@@ -19,15 +19,18 @@ namespace ne {
         const std::set<ShaderMacro>& additionalVertexShaderMacros,
         const std::set<ShaderMacro>& additionalPixelShaderMacros,
         Material* pMaterial) {
+        // Save index into pipeline array that we should use.
         const size_t iIndex = bUsePixelBlending ? static_cast<size_t>(PipelineType::PT_TRANSPARENT)
                                                 : static_cast<size_t>(PipelineType::PT_OPAQUE);
 
         std::scoped_lock guard(vGraphicsPipelines[iIndex].first);
 
-        const auto it = vGraphicsPipelines[iIndex].second.find(Pipeline::constructUniquePipelineIdentifier(
-            sVertexShaderName, sPixelShaderName, bUsePixelBlending));
+        // Check if we already have pipelines that use these shaders.
+        const auto shaderPipelineIt = vGraphicsPipelines[iIndex].second.find(
+            Pipeline::constructPipelineIdentifier(sVertexShaderName, sPixelShaderName));
 
-        if (it == vGraphicsPipelines[iIndex].second.end()) {
+        if (shaderPipelineIt == vGraphicsPipelines[iIndex].second.end()) {
+            // There are no pipelines that use this shader combination.
             return createGraphicsPipelineForMaterial(
                 sVertexShaderName,
                 sPixelShaderName,
@@ -37,11 +40,31 @@ namespace ne {
                 pMaterial);
         }
 
-        return PipelineSharedPtr(it->second, pMaterial);
+        // Combine vertex/pixel macros of material into one set.
+        std::set<ShaderMacro> materialMacros = additionalVertexShaderMacros;
+        for (const auto& macro : additionalPixelShaderMacros) {
+            materialMacros.insert(macro);
+        }
+
+        // Check if we already have a pipeline that uses the same shader macro combination.
+        const auto pipelinesIt = shaderPipelineIt->second.shaderPipelines.find(materialMacros);
+        if (pipelinesIt == shaderPipelineIt->second.shaderPipelines.end()) {
+            // There is no pipeline that uses the same material-defined shader macros.
+            return createGraphicsPipelineForMaterial(
+                sVertexShaderName,
+                sPixelShaderName,
+                bUsePixelBlending,
+                additionalVertexShaderMacros,
+                additionalPixelShaderMacros,
+                pMaterial);
+        }
+
+        // Just create a new shared pointer to already existing pipeline.
+        return PipelineSharedPtr(pipelinesIt->second, pMaterial);
     }
 
     std::array<
-        std::pair<std::recursive_mutex, std::unordered_map<std::string, std::shared_ptr<Pipeline>>>,
+        std::pair<std::recursive_mutex, std::unordered_map<std::string, PipelineManager::ShaderPipelines>>,
         static_cast<size_t>(PipelineType::SIZE)>*
     PipelineManager::getGraphicsPipelines() {
         return &vGraphicsPipelines;
@@ -54,14 +77,6 @@ namespace ne {
             Logger::get().error(fmt::format(
                 "pipeline manager is being destroyed but there are still {} graphics pipeline(s) exist",
                 iCreatedGraphicsPipelineCount));
-        }
-
-        // Make sure all compute pipelines were destroyed.
-        const auto iCreatedComputePipelineCount = getCreatedComputePipelineCount();
-        if (iCreatedComputePipelineCount != 0) [[unlikely]] {
-            Logger::get().error(fmt::format(
-                "pipeline manager is being destroyed but there are still {} compute pipeline(s) exist",
-                iCreatedComputePipelineCount));
         }
     }
 
@@ -86,25 +101,49 @@ namespace ne {
             error.addCurrentLocationToErrorStack();
             return error;
         }
-
         auto pPipeline = std::get<std::shared_ptr<Pipeline>>(std::move(result));
 
-        // Add to array of created pipelines.
-        const size_t iIndex = bUsePixelBlending ? static_cast<size_t>(PipelineType::PT_TRANSPARENT)
-                                                : static_cast<size_t>(PipelineType::PT_OPAQUE);
+        // Determine which index into array of pipelines we should use.
+        const size_t iPipelineIndex = bUsePixelBlending ? static_cast<size_t>(PipelineType::PT_TRANSPARENT)
+                                                        : static_cast<size_t>(PipelineType::PT_OPAQUE);
 
-        const auto sUniquePipelineIdentifier = pPipeline->getUniquePipelineIdentifier();
-        std::scoped_lock guard(vGraphicsPipelines[iIndex].first);
+        // Get pipeline's ID (vertex/pixel shader combination name).
+        const auto sPipelineIdentifier = pPipeline->getPipelineIdentifier();
 
-        const auto it = vGraphicsPipelines[iIndex].second.find(sUniquePipelineIdentifier);
-        if (it != vGraphicsPipelines[iIndex].second.end()) [[unlikely]] {
-            Logger::get().error(fmt::format(
-                "created a pipeline with combined shader name \"{}\" but another pipeline already existed "
-                "with this combined shader name in the array of created pipelines",
-                sUniquePipelineIdentifier));
+        // Combine vertex/pixel macros of material into one set.
+        std::set<ShaderMacro> materialMacros = additionalVertexShaderMacros;
+        for (const auto& macro : additionalPixelShaderMacros) {
+            materialMacros.insert(macro);
         }
 
-        vGraphicsPipelines[iIndex].second[sUniquePipelineIdentifier] = pPipeline;
+        std::scoped_lock guard(vGraphicsPipelines[iPipelineIndex].first);
+        auto& graphicsPipelines = vGraphicsPipelines[iPipelineIndex].second;
+
+        // See if we already have pipelines that uses these shaders.
+        const auto pipelinesIt = graphicsPipelines.find(sPipelineIdentifier);
+        if (pipelinesIt == graphicsPipelines.end()) {
+            // This is the only pipeline that uses these shaders.
+
+            // Prepare pipeline map.
+            ShaderPipelines pipelines;
+            pipelines.shaderPipelines[materialMacros] = pPipeline;
+
+            // Add to all pipelines and return a shared pointer.
+            graphicsPipelines[sPipelineIdentifier] = std::move(pipelines);
+            return PipelineSharedPtr(pPipeline, pMaterial);
+        }
+
+        // Make sure there are no pipelines that uses the same macros (and shaders).
+        const auto shaderPipelinesIt = pipelinesIt->second.shaderPipelines.find(materialMacros);
+        if (shaderPipelinesIt != pipelinesIt->second.shaderPipelines.end()) [[unlikely]] {
+            return Error(std::format(
+                "expected that there are no pipelines that use the same material macros {} for shaders {}",
+                ShaderMacroConfigurations::convertConfigurationToText(materialMacros),
+                sPipelineIdentifier));
+        }
+
+        // Add pipeline.
+        pipelinesIt->second.shaderPipelines[materialMacros] = pPipeline;
 
         return PipelineSharedPtr(pPipeline, pMaterial);
     }
@@ -112,18 +151,17 @@ namespace ne {
     size_t PipelineManager::getCreatedGraphicsPipelineCount() {
         size_t iTotalCount = 0;
 
-        for (auto& [mutex, map] : vGraphicsPipelines) {
+        // Iterate over all graphics pipelines (of all types).
+        for (auto& [mutex, graphicsPipelines] : vGraphicsPipelines) {
             std::scoped_lock guard(mutex);
 
-            iTotalCount += map.size();
+            // Iterate over all graphics pipelines of specific type.
+            for (const auto& [sPipelineIdentifier, pipelines] : graphicsPipelines) {
+                iTotalCount += pipelines.shaderPipelines.size();
+            }
         }
 
         return iTotalCount;
-    }
-
-    size_t PipelineManager::getCreatedComputePipelineCount() {
-        std::scoped_lock guard(mtxComputePipelines.first);
-        return mtxComputePipelines.second.size();
     }
 
     Renderer* PipelineManager::getRenderer() const { return pRenderer; }
@@ -132,12 +170,18 @@ namespace ne {
         for (auto& [mutex, map] : vGraphicsPipelines) {
             mutex.lock(); // lock until resources where not restored
 
-            for (const auto& [sUniqueId, pGraphicsPipeline] : map) {
-                auto optionalError = pGraphicsPipeline->releaseInternalResources();
-                if (optionalError.has_value()) {
-                    auto error = optionalError.value();
-                    error.addCurrentLocationToErrorStack();
-                    return error;
+            // Iterate over all active shader combinations.
+            for (const auto& [sPipelineIdentifier, pipelines] : map) {
+
+                // Iterate over all active material macros combinations.
+                for (const auto& [materialMacros, pPipeline] : pipelines.shaderPipelines) {
+                    // Release resources.
+                    auto optionalError = pPipeline->releaseInternalResources();
+                    if (optionalError.has_value()) [[unlikely]] {
+                        auto error = std::move(optionalError.value());
+                        error.addCurrentLocationToErrorStack();
+                        return error;
+                    }
                 }
             }
         }
@@ -147,13 +191,16 @@ namespace ne {
 
     std::optional<Error> PipelineManager::restoreInternalGraphicsPipelinesResources() {
         for (auto& [mutex, map] : vGraphicsPipelines) {
-            {
-                std::scoped_lock guard(mutex);
 
-                for (const auto& [sUniqueId, pGraphicsPipeline] : map) {
-                    auto optionalError = pGraphicsPipeline->restoreInternalResources();
-                    if (optionalError.has_value()) {
-                        auto error = optionalError.value();
+            // Iterate over all active shader combinations.
+            for (const auto& [sPipelineIdentifier, pipelines] : map) {
+
+                // Iterate over all active material macros combinations.
+                for (const auto& [materialMacros, pPipeline] : pipelines.shaderPipelines) {
+                    // Restore resources.
+                    auto optionalError = pPipeline->restoreInternalResources();
+                    if (optionalError.has_value()) [[unlikely]] {
+                        auto error = std::move(optionalError.value());
                         error.addCurrentLocationToErrorStack();
                         return error;
                     }
@@ -166,28 +213,28 @@ namespace ne {
         return {};
     }
 
-    void PipelineManager::onPipelineNoLongerUsedByMaterial(const std::string& sUniquePipelineIdentifier) {
+    void PipelineManager::onPipelineNoLongerUsedByMaterial(const std::string& sPipelineIdentifier) {
         for (auto& [mutex, map] : vGraphicsPipelines) {
             std::scoped_lock guard(mutex);
 
             // Find this pipeline.
-            const auto it = map.find(sUniquePipelineIdentifier);
+            const auto it = map.find(sPipelineIdentifier);
             if (it == map.end()) {
                 continue;
             }
 
-            // Check if it's used by some ShaderUser.
-            if (it->second.use_count() > 1) {
-                // Still used by some ShaderUser.
-                return;
-            }
+            // Remove pipelines that are no longer used.
+            std::erase_if(
+                it->second.shaderPipelines, [](auto& item) { return item.second.use_count() == 1; });
 
-            map.erase(it);
+            // Remove entry for pipelines of this shader combination if there are no pipelines.
+            if (it->second.shaderPipelines.empty()) {
+                map.erase(it);
+            }
             return;
         }
 
-        Logger::get().error(
-            fmt::format("unable to find the specified pipeline \"{}\"", sUniquePipelineIdentifier));
+        Logger::get().error(fmt::format("unable to find the specified pipeline \"{}\"", sPipelineIdentifier));
     }
 
     void DelayedPipelineResourcesCreation::initialize() {

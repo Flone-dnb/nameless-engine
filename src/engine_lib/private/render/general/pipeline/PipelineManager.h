@@ -9,6 +9,7 @@
 
 // Custom.
 #include "render/general/pipeline/Pipeline.h"
+#include "materials/ShaderMacro.h"
 
 namespace ne {
     class Renderer;
@@ -205,6 +206,20 @@ namespace ne {
         friend class DelayedPipelineResourcesCreation;
 
     public:
+        /** Groups information about pipelines that use the same shaders. */
+        struct ShaderPipelines {
+            /**
+             * Map of pairs "material defined macros (combined both vertex and pixel macros)" and
+             * "pipelines that were created from the same shader to use these different macros".
+             *
+             * @remark Since shader macros have prefixes that define which shader stage they are
+             * valid for we won't have problems with same macros on different shader stages
+             * (because of combining and storing all macros in just one `std::set`).
+             */
+            std::unordered_map<std::set<ShaderMacro>, std::shared_ptr<Pipeline>, ShaderMacroSetHash>
+                shaderPipelines;
+        };
+
         /**
          * Creates a new pipeline manager.
          *
@@ -257,14 +272,14 @@ namespace ne {
             Material* pMaterial);
 
         /**
-         * Returns an array currently existing graphics pipelines that contains a map per pipeline type where
-         * each map contains a unique pipeline identifier string and a graphics pipeline.
-         * Must be used with mutex.
+         * Returns an array currently existing graphics pipelines that contains a map per pipeline type
+         * where each map contains a pipeline identifier string (vertex/pixel shader name combined)
+         * and pipelines that use these shaders. Must be used with mutex.
          *
          * @return Array of currently existing graphics pipelines.
          */
         std::array<
-            std::pair<std::recursive_mutex, std::unordered_map<std::string, std::shared_ptr<Pipeline>>>,
+            std::pair<std::recursive_mutex, std::unordered_map<std::string, ShaderPipelines>>,
             static_cast<size_t>(PipelineType::SIZE)>*
         getGraphicsPipelines();
 
@@ -274,13 +289,6 @@ namespace ne {
          * @return Amount of currently created graphics pipelines.
          */
         size_t getCreatedGraphicsPipelineCount();
-
-        /**
-         * Returns the total amount of currently created compute pipelines.
-         *
-         * @return Amount of currently created compute pipelines.
-         */
-        size_t getCreatedComputePipelineCount();
 
         /**
          * Returns renderer that owns this pipeline manager.
@@ -345,25 +353,19 @@ namespace ne {
          * Called from a pipeline when a material is no longer using a pipeline
          * (for ex. because changing shaders).
          *
-         * @param sUniquePipelineIdentifier Unique pipeline identifier string.
+         * @param sPipelineIdentifier Pipeline identifier.
          */
-        void onPipelineNoLongerUsedByMaterial(const std::string& sUniquePipelineIdentifier);
+        void onPipelineNoLongerUsedByMaterial(const std::string& sPipelineIdentifier);
 
         /**
-         * Array that contains a map per pipeline type where each map contains a unique pipeline
-         * identifier string and a graphics pipeline. Must be used with mutex.
+         * Array that stores a map of pipelines per pipeline type.
+         * Map stores pairs of "combination of vertex/pixel(fragment) shader names" and
+         * "pipelines that use that shaders".
          */
         std::array<
-            std::pair<std::recursive_mutex, std::unordered_map<std::string, std::shared_ptr<Pipeline>>>,
+            std::pair<std::recursive_mutex, std::unordered_map<std::string, ShaderPipelines>>,
             static_cast<size_t>(PipelineType::SIZE)>
             vGraphicsPipelines;
-
-        /**
-         * Map that contains compute shader name and a compute pipelines.
-         * Mutex be used with mutex.
-         */
-        std::pair<std::recursive_mutex, std::unordered_map<std::string, std::shared_ptr<Pipeline>>>
-            mtxComputePipelines;
 
         /** Do not delete (free) this pointer. Renderer that owns this pipeline manager. */
         Renderer* pRenderer;

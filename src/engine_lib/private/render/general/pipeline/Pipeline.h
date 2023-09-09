@@ -40,19 +40,18 @@ namespace ne {
         virtual ~Pipeline() override = default;
 
         /**
-         * Constructs a unique Pipeline identifier.
+         * Constructs a (not unique) pipeline identifier by combining used shader names.
          *
-         * @param sVertexShaderName  Name of the vertex shader that Pipeline is using.
-         * @param sPixelShaderName   Name of the pixel shader that Pipeline is using.
-         * @param bUsePixelBlending  Whether the pixels of the mesh that uses the Pipeline should blend
-         * with existing pixels on back buffer or not (for transparency).
+         * @remark This function exists to avoid duplicating the shader name combination
+         * formatting.
          *
-         * @return Unique Pipeline identifier.
+         * @param sVertexShaderName  Name of the vertex shader that pipeline is using.
+         * @param sPixelShaderName   Name of the pixel shader that pipeline is using.
+         *
+         * @return A (not unique) pipeline identifier.
          */
-        static std::string constructUniquePipelineIdentifier(
-            const std::string& sVertexShaderName,
-            const std::string& sPixelShaderName,
-            bool bUsePixelBlending);
+        static std::string constructPipelineIdentifier(
+            const std::string& sVertexShaderName, const std::string& sPixelShaderName);
 
         /**
          * Returns name of the vertex shader that this Pipeline is using.
@@ -129,11 +128,11 @@ namespace ne {
         void saveUsedShaderConfiguration(ShaderType shaderType, std::set<ShaderMacro>&& fullConfiguration);
 
         /**
-         * Returns unique identifier for this Pipeline.
+         * Constructs and returns identifier of this pipeline (uses @ref constructPipelineIdentifier).
          *
-         * @return Unique Pipeline identifier.
+         * @return A (not unique) pipeline identifier.
          */
-        std::string getUniquePipelineIdentifier() const;
+        std::string getPipelineIdentifier() const;
 
         /**
          * Returns additional macros that were specified during pipeline creation to be enabled for
@@ -254,12 +253,6 @@ namespace ne {
 
         /** Do not delete (free) this pointer. Current renderer. */
         Renderer* pRenderer = nullptr;
-
-        /**
-         * Contains combines used shader names, transparency setting and etc. that
-         * uniquely identifies the Pipeline.
-         */
-        std::string sUniquePipelineIdentifier;
 
         /** Name of the compiled vertex shader (see ShaderManager::compileShaders) that this Pipeline uses. */
         std::string sVertexShaderName;

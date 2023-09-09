@@ -43,7 +43,7 @@ namespace ne {
         Logger::get().info(std::format(
             "waiting for the GPU to finish work up to this point before destroying a pipeline "
             "with id \"{}\"",
-            getUniquePipelineIdentifier()));
+            getPipelineIdentifier()));
         pVulkanRenderer->waitForGpuToFinishWorkUpToThisPoint();
 
         // Release all resources.

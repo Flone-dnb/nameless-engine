@@ -560,48 +560,54 @@ namespace ne {
             return Error("pipeline manager is `nullptr`");
         }
 
-        // Goes through all graphics pipelines.
+        // Iterate through all graphics pipelines of all types (opaque, transparent).
         const auto pPipelines = pPipelineManager->getGraphicsPipelines();
-        for (auto& [mtx, map] : *pPipelines) {
+        for (auto& [mtx, graphicsPipelines] : *pPipelines) {
             std::scoped_lock pipelineTypeGuard(mtx);
-            for (const auto& [sPipelineName, pPipeline] : map) {
-                // Convert to a Vulkan pipeline.
-                const auto pVulkanPipeline = dynamic_cast<VulkanPipeline*>(pPipeline.get());
-                if (pVulkanPipeline == nullptr) [[unlikely]] {
-                    return Error("expected a Vulkan pipeline");
-                }
 
-                // Get pipeline's internal resources.
-                const auto pMtxPipelineInternalResources = pVulkanPipeline->getInternalResources();
-                std::scoped_lock pipelineResourcesGuard(pMtxPipelineInternalResources->first);
+            // Iterate over all graphics pipelines of specific type (opaque, for example).
+            for (const auto& [sPipelineName, pipelines] : graphicsPipelines) {
 
-                // See if this pipeline uses a resource we are handling.
-                auto it = pMtxPipelineInternalResources->second.resourceBindings.find(sHandledResourceName);
-                if (it == pMtxPipelineInternalResources->second.resourceBindings.end()) {
-                    continue;
-                }
+                for (const auto& [materialMacros, pPipeline] : pipelines.shaderPipelines) {
+                    // Convert to a Vulkan pipeline.
+                    const auto pVulkanPipeline = dynamic_cast<VulkanPipeline*>(pPipeline.get());
+                    if (pVulkanPipeline == nullptr) [[unlikely]] {
+                        return Error("expected a Vulkan pipeline");
+                    }
 
-                // Update one descriptor in set per frame resource.
-                for (unsigned int i = 0; i < FrameResourcesManager::getFrameResourcesCount(); i++) {
-                    // Prepare info to bind storage buffer slot to descriptor.
-                    VkDescriptorBufferInfo bufferInfo{};
-                    bufferInfo.buffer = pInternalVkBuffer;
-                    bufferInfo.offset = 0;
-                    bufferInfo.range = iElementSizeInBytes * mtxInternalResources.second.iCapacity;
+                    // Get pipeline's internal resources.
+                    const auto pMtxPipelineInternalResources = pVulkanPipeline->getInternalResources();
+                    std::scoped_lock pipelineResourcesGuard(pMtxPipelineInternalResources->first);
 
-                    // Bind reserved space to descriptor.
-                    VkWriteDescriptorSet descriptorUpdateInfo{};
-                    descriptorUpdateInfo.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-                    descriptorUpdateInfo.dstSet =
-                        pMtxPipelineInternalResources->second.vDescriptorSets[i]; // descriptor set to update
-                    descriptorUpdateInfo.dstBinding = it->second;                 // descriptor binding index
-                    descriptorUpdateInfo.dstArrayElement = 0; // first descriptor in array to update
-                    descriptorUpdateInfo.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-                    descriptorUpdateInfo.descriptorCount = 1;       // how much descriptors in array to update
-                    descriptorUpdateInfo.pBufferInfo = &bufferInfo; // descriptor refers to buffer data
+                    // See if this pipeline uses a resource we are handling.
+                    auto it =
+                        pMtxPipelineInternalResources->second.resourceBindings.find(sHandledResourceName);
+                    if (it == pMtxPipelineInternalResources->second.resourceBindings.end()) {
+                        continue;
+                    }
 
-                    // Update descriptor.
-                    vkUpdateDescriptorSets(pLogicalDevice, 1, &descriptorUpdateInfo, 0, nullptr);
+                    // Update one descriptor in set per frame resource.
+                    for (unsigned int i = 0; i < FrameResourcesManager::getFrameResourcesCount(); i++) {
+                        // Prepare info to bind storage buffer slot to descriptor.
+                        VkDescriptorBufferInfo bufferInfo{};
+                        bufferInfo.buffer = pInternalVkBuffer;
+                        bufferInfo.offset = 0;
+                        bufferInfo.range = iElementSizeInBytes * mtxInternalResources.second.iCapacity;
+
+                        // Bind reserved space to descriptor.
+                        VkWriteDescriptorSet descriptorUpdateInfo{};
+                        descriptorUpdateInfo.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+                        descriptorUpdateInfo.dstSet = pMtxPipelineInternalResources->second
+                                                          .vDescriptorSets[i]; // descriptor set to update
+                        descriptorUpdateInfo.dstBinding = it->second;          // descriptor binding index
+                        descriptorUpdateInfo.dstArrayElement = 0; // first descriptor in array to update
+                        descriptorUpdateInfo.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+                        descriptorUpdateInfo.descriptorCount = 1; // how much descriptors in array to update
+                        descriptorUpdateInfo.pBufferInfo = &bufferInfo; // descriptor refers to buffer data
+
+                        // Update descriptor.
+                        vkUpdateDescriptorSets(pLogicalDevice, 1, &descriptorUpdateInfo, 0, nullptr);
+                    }
                 }
             }
         }

@@ -7,6 +7,7 @@
 #include "materials/glsl/GlslShader.h"
 #include "render/vulkan/VulkanRenderer.h"
 #include "misc/Profiler.hpp"
+#include "materials/DescriptorConstants.hpp"
 
 // External.
 #include "spirv_reflect.h"
@@ -224,6 +225,7 @@ namespace ne {
             GlslResourceType descriptorType = GlslResourceType::COMBINED_SAMPLER;
         };
         std::vector<VkDescriptorSetLayoutBinding> vLayoutBindings; // will be used to create layout
+        std::vector<VkDescriptorBindingFlags> vLayoutBindingFlags; // will be used to create layout
         std::unordered_map<std::string, LayoutBindingInfo>
             resourceBindings; // will be used for `Generated` data
 
@@ -247,7 +249,11 @@ namespace ne {
             }
 
             // Add binding to be used in layout.
-            vLayoutBindings.push_back(std::get<VkDescriptorSetLayoutBinding>(layoutBindingResult));
+            auto [binding, bindingFlags] =
+                std::get<std::pair<VkDescriptorSetLayoutBinding, VkDescriptorBindingFlags>>(
+                    layoutBindingResult);
+            vLayoutBindings.push_back(binding);
+            vLayoutBindingFlags.push_back(bindingFlags);
 
             // Save binding info.
             LayoutBindingInfo info;
@@ -331,7 +337,11 @@ namespace ne {
             }
 
             // Add binding to be used in layout.
-            vLayoutBindings.push_back(std::get<VkDescriptorSetLayoutBinding>(std::move(layoutBindingResult)));
+            auto [binding, bindingFlags] =
+                std::get<std::pair<VkDescriptorSetLayoutBinding, VkDescriptorBindingFlags>>(
+                    layoutBindingResult);
+            vLayoutBindings.push_back(binding);
+            vLayoutBindingFlags.push_back(bindingFlags);
 
             // Save binding info.
             LayoutBindingInfo info;
@@ -353,11 +363,44 @@ namespace ne {
                 frameDataBindingIt->second.iBindingIndex));
         }
 
+        // Self check: make sure bindings and binding flags arrays have equal size.
+        if (vLayoutBindings.size() != vLayoutBindingFlags.size()) [[unlikely]] {
+            return Error(std::format(
+                "layout binding array size {} is not equal to layout binding flags array size {} (this is a "
+                "bug, report to developers",
+                vLayoutBindings.size(),
+                vLayoutBindingFlags.size()));
+        }
+
+        // Describe layout binding flags.
+        VkDescriptorSetLayoutBindingFlagsCreateInfo bindingFlags{};
+        bindingFlags.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO;
+        bindingFlags.pNext = nullptr;
+        bindingFlags.pBindingFlags = vLayoutBindingFlags.data();
+        bindingFlags.bindingCount = static_cast<uint32_t>(vLayoutBindingFlags.size());
+
+        // Check if some bindings use "update after bind" flag.
+        bool bUseUpdateAfterBind = false;
+        for (const auto& bindingFlags : vLayoutBindingFlags) {
+            if ((bindingFlags & VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT) != 0) {
+                bUseUpdateAfterBind = true;
+                break;
+            }
+        }
+
         // Describe descriptor set layout.
         VkDescriptorSetLayoutCreateInfo layoutInfo{};
         layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
         layoutInfo.bindingCount = static_cast<uint32_t>(vLayoutBindings.size());
         layoutInfo.pBindings = vLayoutBindings.data();
+
+        // Specify layout flags.
+        if (bUseUpdateAfterBind) {
+            layoutInfo.flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT;
+        }
+
+        // Specify binding flags.
+        layoutInfo.pNext = &bindingFlags;
 
         // Prepare output variable.
         Generated generatedData;
@@ -395,6 +438,11 @@ namespace ne {
         poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
         poolInfo.poolSizeCount = static_cast<uint32_t>(vPoolSizes.size());
         poolInfo.pPoolSizes = vPoolSizes.data();
+
+        // Specify flags.
+        if (bUseUpdateAfterBind) {
+            poolInfo.flags = VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT;
+        }
 
         // Specify the total amount of descriptor sets that can be allocated from the pool.
         poolInfo.maxSets = FrameResourcesManager::getFrameResourcesCount();
@@ -467,9 +515,11 @@ namespace ne {
         return generatedData;
     }
 
-    std::variant<VkDescriptorSetLayoutBinding, Error> DescriptorSetLayoutGenerator::generateLayoutBinding(
+    std::variant<std::pair<VkDescriptorSetLayoutBinding, VkDescriptorBindingFlags>, Error>
+    DescriptorSetLayoutGenerator::generateLayoutBinding(
         uint32_t iBindingIndex, const Collected::DescriptorSetLayoutBindingInfo& bindingInfo) {
-        VkDescriptorSetLayoutBinding layoutBinding;
+        VkDescriptorSetLayoutBinding layoutBinding{};
+        VkDescriptorBindingFlags bindingFlags{};
 
         // Set binding index.
         layoutBinding.binding = iBindingIndex;
@@ -494,6 +544,13 @@ namespace ne {
             layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
             layoutBinding.pImmutableSamplers = nullptr;
 
+            // Override descriptor count.
+            layoutBinding.descriptorCount = DescriptorConstants::iBindlessTextureArrayDescriptorCount;
+
+            // Specify flags for bindless bindings.
+            bindingFlags =
+                VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT;
+
             // Override stage.
             layoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
             break;
@@ -504,7 +561,7 @@ namespace ne {
         }
         }
 
-        return layoutBinding;
+        return std::pair<VkDescriptorSetLayoutBinding, VkDescriptorBindingFlags>{layoutBinding, bindingFlags};
     }
 
 } // namespace ne

@@ -826,7 +826,7 @@ namespace ne {
         static constexpr VkIndexType indexTypeFormat = VK_INDEX_TYPE_UINT32;
 
         /** Version of the Vulkan API that the renderer uses. */
-        static constexpr uint32_t iUsedVulkanVersion = VK_API_VERSION_1_1;
+        static constexpr uint32_t iUsedVulkanVersion = VK_API_VERSION_1_2;
 
         /** Array of physical device extensions that we use. */
         static inline const std::vector<const char*> vUsedDeviceExtensionNames = {

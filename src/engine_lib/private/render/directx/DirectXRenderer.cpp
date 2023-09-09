@@ -553,49 +553,61 @@ namespace ne {
         // TODO: this will be moved in some other place later
         pCommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-        // Iterate over all PSOs.
+        // Iterate over all graphics PSOs of all types (opaque, transparent).
         const auto pCreatedGraphicsPsos = getPipelineManager()->getGraphicsPipelines();
-        for (auto& [mtx, map] : *pCreatedGraphicsPsos) {
+        for (auto& [mtx, graphicsPipelines] : *pCreatedGraphicsPsos) {
             std::scoped_lock psoGuard(mtx);
 
-            for (const auto& [sPsoId, pPso] : map) {
-                auto pMtxPsoResources = reinterpret_cast<DirectXPso*>(pPso.get())->getInternalResources();
+            // Iterate over all graphics PSOs of specific type (opaque, for example).
+            for (const auto& [sPsoIdentifier, pipelines] : graphicsPipelines) {
 
-                std::scoped_lock guardPsoResources(pMtxPsoResources->first);
+                // Iterate over all active unique material macros combinations (for example:
+                // if we have 2 materials where one uses diffuse texture (defined DIFFUSE_TEXTURE
+                // macro for shaders) and the second one is not we will have 2 pipelines here).
+                for (const auto& [materialMacros, pPipeline] : pipelines.shaderPipelines) {
+                    // Get internal resources of this pipeline.
+                    auto pMtxPsoResources =
+                        reinterpret_cast<DirectXPso*>(pPipeline.get())->getInternalResources();
+                    std::scoped_lock guardPsoResources(pMtxPsoResources->first);
 
-                // Set PSO and root signature.
-                pCommandList->SetPipelineState(pMtxPsoResources->second.pGraphicsPso.Get());
-                pCommandList->SetGraphicsRootSignature(pMtxPsoResources->second.pRootSignature.Get());
+                    // Set PSO and root signature.
+                    pCommandList->SetPipelineState(pMtxPsoResources->second.pGraphicsPso.Get());
+                    pCommandList->SetGraphicsRootSignature(pMtxPsoResources->second.pRootSignature.Get());
 
-                // After setting root signature we can set root parameters.
+                    // After setting root signature we can set root parameters.
 
-                // Set CBV to frame constant buffer.
-                pCommandList->SetGraphicsRootConstantBufferView(
-                    RootSignatureGenerator::getFrameConstantBufferRootParameterIndex(),
-                    reinterpret_cast<DirectXResource*>(pMtxCurrentFrameResource->second.pResource
-                                                           ->pFrameConstantBuffer->getInternalResource())
-                        ->getInternalResource()
-                        ->GetGPUVirtualAddress());
+                    // Set CBV to frame constant buffer.
+                    pCommandList->SetGraphicsRootConstantBufferView(
+                        RootSignatureGenerator::getFrameConstantBufferRootParameterIndex(),
+                        reinterpret_cast<DirectXResource*>(pMtxCurrentFrameResource->second.pResource
+                                                               ->pFrameConstantBuffer->getInternalResource())
+                            ->getInternalResource()
+                            ->GetGPUVirtualAddress());
 
-                // Iterate over all materials that use this PSO.
-                const auto pMtxMaterials = pPso->getMaterialsThatUseThisPipeline();
-                std::scoped_lock materialsGuard(pMtxMaterials->first);
+                    // Iterate over all materials that use this PSO
+                    // (all these materials define the same set of shader macros but
+                    // each material can have different parameters such as different diffuse textures).
+                    const auto pMtxMaterials = pPipeline->getMaterialsThatUseThisPipeline();
+                    std::scoped_lock materialsGuard(pMtxMaterials->first);
 
-                for (const auto& pMaterial : pMtxMaterials->second) {
-                    // Get material's GPU resources.
-                    const auto pMtxMaterialGpuResources = pMaterial->getMaterialGpuResources();
-                    std::scoped_lock materialGpuResourcesGuard(pMtxMaterialGpuResources->first);
+                    for (const auto& pMaterial : pMtxMaterials->second) {
+                        // Get material's GPU resources.
+                        const auto pMtxMaterialGpuResources = pMaterial->getMaterialGpuResources();
+                        std::scoped_lock materialGpuResourcesGuard(pMtxMaterialGpuResources->first);
 
-                    // Set material's CPU write shader resources (`cbuffer`s for example).
-                    for (const auto& [sResourceName, pShaderCpuWriteResource] :
-                         pMtxMaterialGpuResources->second.shaderResources.shaderCpuWriteResources) {
-                        reinterpret_cast<HlslShaderCpuWriteResource*>(pShaderCpuWriteResource.getResource())
-                            ->setConstantBufferView(
-                                pCommandList, pMtxCurrentFrameResource->second.iCurrentFrameResourceIndex);
+                        // Set material's CPU write shader resources (`cbuffer`s for example).
+                        for (const auto& [sResourceName, pShaderCpuWriteResource] :
+                             pMtxMaterialGpuResources->second.shaderResources.shaderCpuWriteResources) {
+                            reinterpret_cast<HlslShaderCpuWriteResource*>(
+                                pShaderCpuWriteResource.getResource())
+                                ->setConstantBufferView(
+                                    pCommandList,
+                                    pMtxCurrentFrameResource->second.iCurrentFrameResourceIndex);
+                        }
+
+                        // Draw mesh nodes that use this material.
+                        drawMeshNodes(pMaterial, pMtxCurrentFrameResource->second.iCurrentFrameResourceIndex);
                     }
-
-                    // Draw mesh nodes.
-                    drawMeshNodes(pMaterial, pMtxCurrentFrameResource->second.iCurrentFrameResourceIndex);
                 }
             }
         }

@@ -481,7 +481,9 @@ namespace ne {
         // Make sure this GPU supports used Vulkan version.
         if (deviceProperties.apiVersion < iUsedVulkanVersion) {
             return std::format(
-                "GPU \"{}\" does not support used Vulkan version", deviceProperties.deviceName);
+                "GPU \"{}\" does not support used Vulkan version {}",
+                deviceProperties.deviceName,
+                getUsedApiVersion());
         }
 
         // Make sure this GPU has all needed queue families.
@@ -525,13 +527,22 @@ namespace ne {
             return sMissingSwapChainDetailDescription;
         }
 
+        // Describe extended (extension) features that we will query.
+        VkPhysicalDeviceDescriptorIndexingFeatures descriptorIndexingFeatures{};
+        descriptorIndexingFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES;
+        descriptorIndexingFeatures.pNext = nullptr;
+
+        // Prepare to query device features.
+        VkPhysicalDeviceFeatures2 deviceFeatures2{};
+        deviceFeatures2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
+        deviceFeatures2.pNext = &descriptorIndexingFeatures;
+
         // Get supported device features.
-        VkPhysicalDeviceFeatures supportedFeatures;
-        vkGetPhysicalDeviceFeatures(pGpu, &supportedFeatures);
+        vkGetPhysicalDeviceFeatures2(pGpu, &deviceFeatures2);
 
         // Make sure anisotropic filtering is supported
         // (because RenderSettings don't check whether it's supported or not when deserialized/changed)
-        if (supportedFeatures.samplerAnisotropy == VK_FALSE) {
+        if (deviceFeatures2.features.samplerAnisotropy == VK_FALSE) {
             return std::format(
                 "GPU \"{}\" does not support anisotropic filtering", deviceProperties.deviceName);
         }
@@ -544,6 +555,13 @@ namespace ne {
                 deviceProperties.deviceName,
                 deviceProperties.limits.maxPushConstantsSize,
                 VulkanPushConstantsManager::getMaxPushConstantsSizeInBytes());
+        }
+
+        // Make sure used indexing features are supported.
+        if (descriptorIndexingFeatures.shaderSampledImageArrayNonUniformIndexing == VK_FALSE ||
+            descriptorIndexingFeatures.descriptorBindingSampledImageUpdateAfterBind == VK_FALSE) {
+            return std::format(
+                "GPU \"{}\" does not support used indexing features", deviceProperties.deviceName);
         }
 
         return "";
@@ -1542,30 +1560,7 @@ namespace ne {
             return Error("expected logical device to be valid");
         }
 
-        // Get pipeline manager.
-        const auto pPipelineManager = getPipelineManager();
-        if (pPipelineManager == nullptr) [[unlikely]] {
-            return Error("expected pipeline manager to be valid");
-        }
-
-        // Goes through all graphics pipelines.
-        const auto pPipelines = pPipelineManager->getGraphicsPipelines();
-        for (auto& [mtx, map] : *pPipelines) {
-            std::scoped_lock pipelineTypeGuard(mtx);
-            for (const auto& [sPipelineName, pPipeline] : map) {
-                // Convert to a Vulkan pipeline.
-                const auto pVulkanPipeline = dynamic_cast<VulkanPipeline*>(pPipeline.get());
-                if (pVulkanPipeline == nullptr) [[unlikely]] {
-                    return Error("expected a Vulkan pipeline");
-                }
-
-                // Get pipeline's internal resources.
-                const auto pMtxPipelineInternalResources = pVulkanPipeline->getInternalResources();
-                std::scoped_lock pipelineResourcesGuard(pMtxPipelineInternalResources->first);
-
-                // TODO
-            }
-        }
+        // TODO: use shader resource manager to tell resource to rebind descriptors
 
         return {};
     }
@@ -2028,8 +2023,8 @@ namespace ne {
     RendererType VulkanRenderer::getType() const { return RendererType::VULKAN; }
 
     std::string VulkanRenderer::getUsedApiVersion() const {
-        static_assert(iUsedVulkanVersion == VK_API_VERSION_1_1, "update returned version string");
-        return "1.1";
+        static_assert(iUsedVulkanVersion == VK_API_VERSION_1_2, "update returned version string");
+        return "1.2";
     }
 
     std::string VulkanRenderer::getCurrentlyUsedGpuName() const { return sUsedGpuName; }
@@ -2249,59 +2244,69 @@ namespace ne {
         const auto pVulkanCurrentFrameResource =
             reinterpret_cast<VulkanFrameResource*>(pMtxCurrentFrameResource->second.pResource);
 
-        // Iterate over all pipelines.
+        // Iterate over all graphics pipelines of all types (opaque, transparent).
         const auto pCreatedGraphicsPipelines = getPipelineManager()->getGraphicsPipelines();
-        for (auto& [mtx, map] : *pCreatedGraphicsPipelines) {
+        for (auto& [mtx, graphicsPipelines] : *pCreatedGraphicsPipelines) {
             std::scoped_lock pipelineGuard(mtx);
 
-            for (const auto& [sPipelineId, pPipeline] : map) {
-                const auto pVulkanPipeline = reinterpret_cast<VulkanPipeline*>(pPipeline.get());
-                auto pMtxPipelineResources = pVulkanPipeline->getInternalResources();
+            // Iterate over all graphics pipelines of specific type (opaque, for example).
+            for (const auto& [sPipelineIdentifier, pipelines] : graphicsPipelines) {
 
-                std::scoped_lock guardPipelineResources(pMtxPipelineResources->first);
+                // Iterate over all active unique material macros combinations (for example:
+                // if we have 2 materials where one uses diffuse texture (defined DIFFUSE_TEXTURE
+                // macro for shaders) and the second one is not we will have 2 pipelines here).
+                for (const auto& [materialMacros, pPipeline] : pipelines.shaderPipelines) {
+                    // Get internal resources of this pipeline.
+                    const auto pVulkanPipeline = reinterpret_cast<VulkanPipeline*>(pPipeline.get());
+                    auto pMtxPipelineResources = pVulkanPipeline->getInternalResources();
+                    std::scoped_lock guardPipelineResources(pMtxPipelineResources->first);
 
-                // Bind pipeline.
-                vkCmdBindPipeline(
-                    pVulkanCurrentFrameResource->pCommandBuffer,
-                    VK_PIPELINE_BIND_POINT_GRAPHICS,
-                    pMtxPipelineResources->second.pPipeline);
-
-                // Bind descriptor sets.
-                vkCmdBindDescriptorSets(
-                    pVulkanCurrentFrameResource->pCommandBuffer,
-                    VK_PIPELINE_BIND_POINT_GRAPHICS,
-                    pMtxPipelineResources->second.pPipelineLayout,
-                    0,
-                    1,
-                    &pMtxPipelineResources->second
-                         .vDescriptorSets[pMtxCurrentFrameResource->second.iCurrentFrameResourceIndex],
-                    0,
-                    nullptr);
-
-                // Iterate over all materials that use this pipeline.
-                const auto pMtxMaterials = pPipeline->getMaterialsThatUseThisPipeline();
-                std::scoped_lock materialsGuard(pMtxMaterials->first);
-
-                for (const auto& pMaterial : pMtxMaterials->second) {
-                    // Set material's GPU resources.
-                    const auto pMtxMaterialGpuResources = pMaterial->getMaterialGpuResources();
-                    std::scoped_lock materialGpuResourcesGuard(pMtxMaterialGpuResources->first);
-
-                    // Set material's CPU write shader resources.
-                    for (const auto& [sResourceName, pShaderCpuWriteResource] :
-                         pMtxMaterialGpuResources->second.shaderResources.shaderCpuWriteResources) {
-                        reinterpret_cast<GlslShaderCpuWriteResource*>(pShaderCpuWriteResource.getResource())
-                            ->copyResourceIndexToPushConstants(
-                                pMtxPipelineResources->second.pPushConstantsManager.get(),
-                                pMtxCurrentFrameResource->second.iCurrentFrameResourceIndex);
-                    }
-
-                    // Draw mesh nodes.
-                    drawMeshNodes(
-                        pMaterial,
-                        pVulkanPipeline,
+                    // Bind pipeline.
+                    vkCmdBindPipeline(
                         pVulkanCurrentFrameResource->pCommandBuffer,
-                        pMtxCurrentFrameResource->second.iCurrentFrameResourceIndex);
+                        VK_PIPELINE_BIND_POINT_GRAPHICS,
+                        pMtxPipelineResources->second.pPipeline);
+
+                    // Bind descriptor sets.
+                    vkCmdBindDescriptorSets(
+                        pVulkanCurrentFrameResource->pCommandBuffer,
+                        VK_PIPELINE_BIND_POINT_GRAPHICS,
+                        pMtxPipelineResources->second.pPipelineLayout,
+                        0,
+                        1,
+                        &pMtxPipelineResources->second
+                             .vDescriptorSets[pMtxCurrentFrameResource->second.iCurrentFrameResourceIndex],
+                        0,
+                        nullptr);
+
+                    // Iterate over all materials that use this pipeline
+                    // (all these materials define the same set of shader macros but
+                    // each material can have different parameters such as different diffuse textures).
+                    const auto pMtxMaterials = pPipeline->getMaterialsThatUseThisPipeline();
+                    std::scoped_lock materialsGuard(pMtxMaterials->first);
+
+                    for (const auto& pMaterial : pMtxMaterials->second) {
+                        // Set material's GPU resources.
+                        const auto pMtxMaterialGpuResources = pMaterial->getMaterialGpuResources();
+                        std::scoped_lock materialGpuResourcesGuard(pMtxMaterialGpuResources->first);
+
+                        // Set material's CPU write shader resources.
+                        for (const auto& [sResourceName, pShaderCpuWriteResource] :
+                             pMtxMaterialGpuResources->second.shaderResources.shaderCpuWriteResources) {
+                            reinterpret_cast<GlslShaderCpuWriteResource*>(
+                                pShaderCpuWriteResource.getResource())
+                                ->copyResourceIndexToPushConstants(
+                                    pMtxPipelineResources->second.pPushConstantsManager.get(),
+                                    pMtxCurrentFrameResource->second.iCurrentFrameResourceIndex);
+                        }
+
+                        // Draw mesh nodes that use this material.
+                        drawMeshNodes(
+                            pMaterial,
+                            pVulkanPipeline,
+                            pVulkanCurrentFrameResource->pCommandBuffer,
+                            pMtxCurrentFrameResource->second.iCurrentFrameResourceIndex);
+                    }
                 }
             }
         }

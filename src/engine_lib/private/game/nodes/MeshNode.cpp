@@ -8,7 +8,7 @@
 #include "game/Window.h"
 #include "render/Renderer.h"
 #include "render/general/resources/GpuResourceManager.h"
-#include "materials/ShaderCpuWriteResourceManager.h"
+#include "materials/resources/ShaderCpuWriteResourceManager.h"
 #include "materials/EngineShaderNames.hpp"
 
 #include "MeshNode.generated_impl.h"

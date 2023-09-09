@@ -135,8 +135,8 @@ set(PROJECT_SOURCES
     private/materials/Material.cpp
     public/materials/Material.h
     private/materials/EngineShaderNames.hpp
-    private/materials/ShaderResource.h
-    private/materials/ShaderResource.cpp
+    private/materials/resources/ShaderResource.h
+    private/materials/resources/ShaderResource.cpp
     private/materials/glsl/GlslEngineShaders.hpp
     private/materials/glsl/GlslShader.h
     private/materials/glsl/GlslShader.cpp
@@ -164,10 +164,10 @@ set(PROJECT_SOURCES
     private/materials/ShaderMacro.h
     private/materials/ShaderMacro.cpp
     private/materials/ShaderFilesystemPaths.hpp
-    private/materials/ShaderCpuWriteResourceManager.cpp
-    private/materials/ShaderCpuWriteResourceManager.h
-    private/materials/ShaderCpuWriteResourceUniquePtr.cpp
-    private/materials/ShaderCpuWriteResourceUniquePtr.h
+    private/materials/resources/ShaderCpuWriteResourceManager.cpp
+    private/materials/resources/ShaderCpuWriteResourceManager.h
+    private/materials/resources/ShaderCpuWriteResourceUniquePtr.cpp
+    private/materials/resources/ShaderCpuWriteResourceUniquePtr.h
     public/materials/VulkanAlignmentConstants.hpp
     public/misc/ProjectPaths.h
     private/misc/ProjectPaths.cpp

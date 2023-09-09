@@ -6,7 +6,7 @@
 #include <variant>
 
 // Custom.
-#include "materials/ShaderResource.h"
+#include "materials/resources/ShaderResource.h"
 #include "render/vulkan/resources/VulkanResource.h"
 #include "render/general/resources/UploadBuffer.h"
 #include "render/vulkan/pipeline/VulkanPushConstantsManager.hpp"

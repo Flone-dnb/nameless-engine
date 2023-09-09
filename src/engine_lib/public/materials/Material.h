@@ -8,7 +8,7 @@
 #include "io/Serializable.h"
 #include "materials/ShaderMacro.h"
 #include "math/GLMath.hpp"
-#include "materials/ShaderCpuWriteResourceUniquePtr.h"
+#include "materials/resources/ShaderCpuWriteResourceUniquePtr.h"
 #include "materials/VulkanAlignmentConstants.hpp"
 
 #include "Material.generated.h"

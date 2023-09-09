@@ -8,8 +8,8 @@
 #include <unordered_set>
 
 // Custom.
-#include "materials/ShaderResource.h"
-#include "materials/ShaderCpuWriteResourceUniquePtr.h"
+#include "materials/resources/ShaderResource.h"
+#include "materials/resources/ShaderCpuWriteResourceUniquePtr.h"
 #include "render/general/resources/FrameResourcesManager.h"
 
 namespace ne {

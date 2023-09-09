@@ -8,7 +8,7 @@
 #include <memory>
 
 // Custom.
-#include "materials/ShaderCpuWriteResourceManager.h"
+#include "materials/resources/ShaderCpuWriteResourceManager.h"
 #include "misc/Error.h"
 #include "materials/ShaderManager.h"
 #include "render/general/resources/GpuResourceManager.h"

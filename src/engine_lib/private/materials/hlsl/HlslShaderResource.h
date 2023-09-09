@@ -6,7 +6,7 @@
 #include <variant>
 
 // Custom.
-#include "materials/ShaderResource.h"
+#include "materials/resources/ShaderResource.h"
 #include "render/directx/resources/DirectXResource.h"
 #include "render/general/resources/UploadBuffer.h"
 

@@ -24,7 +24,7 @@
 #include "game/camera/CameraManager.h"
 #include "game/nodes/CameraNode.h"
 #include "game/camera/TransientCamera.h"
-#include "materials/hlsl/HlslShaderResource.h"
+#include "materials/hlsl/HlslShaderCpuWriteResource.h"
 #include "render/directx/resources/DirectXFrameResource.h"
 #include "misc/Profiler.hpp"
 

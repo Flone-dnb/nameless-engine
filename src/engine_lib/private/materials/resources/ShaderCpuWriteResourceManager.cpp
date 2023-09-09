@@ -4,10 +4,10 @@
 #include "io/Logger.h"
 #if defined(WIN32)
 #include "render/directx/DirectXRenderer.h"
-#include "materials/hlsl/HlslShaderResource.h"
+#include "materials/hlsl/HlslShaderCpuWriteResource.h"
 #endif
 #include "render/vulkan/VulkanRenderer.h"
-#include "materials/glsl/GlslShaderResource.h"
+#include "materials/glsl/GlslShaderCpuWriteResource.h"
 #include "misc/Profiler.hpp"
 #include "render/general/pipeline/Pipeline.h"
 

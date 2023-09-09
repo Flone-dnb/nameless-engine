@@ -6,7 +6,7 @@
 // Custom.
 #include "render/general/resources/GpuResourceManager.h"
 #include "render/vulkan/VulkanRenderer.h"
-#include "materials/glsl/GlslShaderResource.h"
+#include "materials/glsl/GlslShaderCpuWriteResource.h"
 #include "render/general/pipeline/PipelineManager.h"
 #include "render/vulkan/pipeline/VulkanPipeline.h"
 

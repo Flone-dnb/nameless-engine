@@ -34,8 +34,8 @@ set(PROJECT_WIN32_SOURCES
     private/materials/hlsl/HlslEngineShaders.hpp
     private/materials/hlsl/RootSignatureGenerator.h
     private/materials/hlsl/RootSignatureGenerator.cpp
-    private/materials/hlsl/HlslShaderResource.h
-    private/materials/hlsl/HlslShaderResource.cpp
+    private/materials/hlsl/HlslShaderCpuWriteResource.h
+    private/materials/hlsl/HlslShaderCpuWriteResource.cpp
     private/render/directx/DirectXRenderer.h
     private/render/directx/DirectXRenderer.cpp
     private/render/directx/pipeline/DirectXPso.cpp
@@ -140,8 +140,8 @@ set(PROJECT_SOURCES
     private/materials/glsl/GlslEngineShaders.hpp
     private/materials/glsl/GlslShader.h
     private/materials/glsl/GlslShader.cpp
-    private/materials/glsl/GlslShaderResource.h
-    private/materials/glsl/GlslShaderResource.cpp
+    private/materials/glsl/GlslShaderCpuWriteResource.h
+    private/materials/glsl/GlslShaderCpuWriteResource.cpp
     private/materials/glsl/DescriptorSetLayoutGenerator.h
     private/materials/glsl/DescriptorSetLayoutGenerator.cpp
     private/materials/TextureManager.cpp

@@ -1,4 +1,4 @@
-#include "HlslShaderResource.h"
+#include "HlslShaderCpuWriteResource.h"
 
 // Standard.
 #include <format>

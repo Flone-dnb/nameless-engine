@@ -1,4 +1,4 @@
-#include "GlslShaderResource.h"
+#include "GlslShaderCpuWriteResource.h"
 
 // Standard.
 #include <format>

@@ -19,7 +19,7 @@
 #include "render/vulkan/pipeline/VulkanPipeline.h"
 #include "materials/Material.h"
 #include "game/nodes/MeshNode.h"
-#include "materials/glsl/GlslShaderCpuWriteResource.h"
+#include "materials/glsl/resources/GlslShaderCpuWriteResource.h"
 #include "render/vulkan/resources/VulkanStorageResourceArrayManager.h"
 #include "game/camera/TransientCamera.h"
 #include "misc/Profiler.hpp"

@@ -24,16 +24,6 @@ namespace ne {
         static size_t getCurrentAllocationCount();
 
         /**
-         * Attempts to find an active (not-freed) allocation by the specified ID.
-         *
-         * @param iAllocationId Unique ID of the allocation.
-         *
-         * @return `nullptr` if an allocation with the specified ID does not exists, otherwise
-         * valid allocation.
-         */
-        static VmaAllocation getAllocationById(uint64_t iAllocationId);
-
-        /**
          * Returns callbacks used with KTX images for KTX-Software (external dependency).
          *
          * @return Callbacks.
@@ -106,10 +96,10 @@ namespace ne {
         /** Groups internal data. */
         struct Data {
             /**
-             * Stores pairs of "allocation ID" - "allocation" of all currently active (not-freed)
+             * Stores pairs of "allocation ID" - "{allocation, map size}" of all currently active (not-freed)
              * allocations.
              */
-            std::unordered_map<uint64_t, VmaAllocation> allocations;
+            std::unordered_map<uint64_t, std::pair<VmaAllocation, VkDeviceSize>> allocations;
 
             /** Allocation ID that you can attempt to use on your new allocation for @ref allocations. */
             uint64_t iAllocationId = 0;

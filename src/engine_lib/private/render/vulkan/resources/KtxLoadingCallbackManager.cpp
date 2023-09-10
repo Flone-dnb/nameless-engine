@@ -20,18 +20,6 @@ namespace ne {
         return mtxData.second.allocations.size();
     }
 
-    VmaAllocation KtxLoadingCallbackManager::getAllocationById(uint64_t iAllocationId) {
-        std::scoped_lock guard(mtxData.first);
-
-        // Find allocation by the specified ID.
-        const auto it = mtxData.second.allocations.find(iAllocationId);
-        if (it == mtxData.second.allocations.end()) [[unlikely]] {
-            return nullptr;
-        }
-
-        return it->second;
-    }
-
     ktxVulkanTexture_subAllocatorCallbacks KtxLoadingCallbackManager::getKtxSubAllocatorCallbacks() {
         ktxVulkanTexture_subAllocatorCallbacks subAllocCallbacks;
         subAllocCallbacks.allocMemFuncPtr = allocMem;
@@ -127,7 +115,7 @@ namespace ne {
                 .c_str());
 
         // Add new allocation to the global map of allocations.
-        mtxData.second.allocations[iAllocationIdToUse] = pAllocation;
+        mtxData.second.allocations[iAllocationIdToUse] = {pAllocation, pMemoryRequirements->size};
 
         // Update `pageCount`.
         *pPageCount = 1;
@@ -154,7 +142,7 @@ namespace ne {
         }
 
         // Bind buffer.
-        const auto result = vmaBindBufferMemory(getMemoryAllocator(), it->second, pBuffer);
+        const auto result = vmaBindBufferMemory(getMemoryAllocator(), it->second.first, pBuffer);
         if (result != VK_SUCCESS) [[unlikely]] {
             Error error(std::format("failed to bind buffer memory, error: {}", string_VkResult(result)));
             error.showError();
@@ -176,7 +164,7 @@ namespace ne {
         }
 
         // Bind image.
-        const auto result = vmaBindImageMemory(getMemoryAllocator(), it->second, pImage);
+        const auto result = vmaBindImageMemory(getMemoryAllocator(), it->second.first, pImage);
         if (result != VK_SUCCESS) [[unlikely]] {
             Error error(std::format("failed to bind image memory, error: {}", string_VkResult(result)));
             error.showError();
@@ -198,8 +186,11 @@ namespace ne {
             throw std::runtime_error(error.getFullErrorMessage());
         }
 
+        // Specify map size.
+        *pMapLength = it->second.second;
+
         // Map memory.
-        const auto result = vmaMapMemory(getMemoryAllocator(), it->second, pData);
+        const auto result = vmaMapMemory(getMemoryAllocator(), it->second.first, pData);
         if (result != VK_SUCCESS) [[unlikely]] {
             Error error(std::format("failed to map memory, error: {}", string_VkResult(result)));
             error.showError();
@@ -220,7 +211,7 @@ namespace ne {
             throw std::runtime_error(error.getFullErrorMessage());
         }
 
-        vmaUnmapMemory(getMemoryAllocator(), it->second);
+        vmaUnmapMemory(getMemoryAllocator(), it->second.first);
     }
 
     void KtxLoadingCallbackManager::freeMem(uint64_t iAllocationId) {
@@ -235,7 +226,7 @@ namespace ne {
         }
 
         // Free memory.
-        vmaFreeMemory(getMemoryAllocator(), it->second);
+        vmaFreeMemory(getMemoryAllocator(), it->second.first);
 
         // Remove pointer from map of all allocations.
         mtxData.second.allocations.erase(it);

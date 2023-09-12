@@ -248,6 +248,9 @@ namespace ne {
                 error.addCurrentLocationToErrorStack();
                 return error;
             }
+
+            // Return created handle.
+            return std::get<std::unique_ptr<TextureHandle>>(std::move(result));
         }
 
         // Just create a new handle.
@@ -391,6 +394,10 @@ namespace ne {
         this->sPathToResourceRelativeRes = sPathToResourceRelativeRes;
         this->pTexture = pTexture;
     }
+
+    GpuResource* TextureHandle::getResource() { return pTexture; }
+
+    std::string TextureHandle::getPathToResourceRelativeRes() { return sPathToResourceRelativeRes; }
 
     TextureHandle::~TextureHandle() {
         pTextureManager->releaseTextureResourceIfNotUsed(sPathToResourceRelativeRes);

@@ -51,6 +51,20 @@ namespace ne {
         TextureHandle(TextureHandle&&) = delete;
         TextureHandle& operator=(TextureHandle&&) = delete;
 
+        /**
+         * Returns the underlying GPU resource.
+         *
+         * @return GPU resource.
+         */
+        GpuResource* getResource();
+
+        /**
+         * Path to texture (file/directory) relative to `res` directory.
+         *
+         * @return Path relative `res` directory.
+         */
+        std::string getPathToResourceRelativeRes();
+
         /** Notifies manager about handle no longer referencing the texture. */
         ~TextureHandle();
 

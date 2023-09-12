@@ -20,6 +20,7 @@
 #include "materials/Material.h"
 #include "game/nodes/MeshNode.h"
 #include "materials/glsl/resources/GlslShaderCpuWriteResource.h"
+#include "materials/glsl/resources/GlslShaderBindlessTextureResource.h"
 #include "render/vulkan/resources/VulkanStorageResourceArrayManager.h"
 #include "game/camera/TransientCamera.h"
 #include "misc/Profiler.hpp"
@@ -559,7 +560,9 @@ namespace ne {
 
         // Make sure used indexing features are supported.
         if (descriptorIndexingFeatures.shaderSampledImageArrayNonUniformIndexing == VK_FALSE ||
-            descriptorIndexingFeatures.descriptorBindingSampledImageUpdateAfterBind == VK_FALSE) {
+            descriptorIndexingFeatures.descriptorBindingSampledImageUpdateAfterBind == VK_FALSE ||
+            descriptorIndexingFeatures.descriptorBindingPartiallyBound == VK_FALSE ||
+            descriptorIndexingFeatures.runtimeDescriptorArray == VK_FALSE) {
             return std::format(
                 "GPU \"{}\" does not support used indexing features", deviceProperties.deviceName);
         }
@@ -1034,13 +1037,14 @@ namespace ne {
         // Specify features that we need.
         VkPhysicalDeviceFeatures deviceFeatures{};
         deviceFeatures.samplerAnisotropy = VK_TRUE;
+        // ... if adding new features add them to `isDeviceSuitable` function ...
 
         // Fill info to create a logical device.
         VkDeviceCreateInfo createInfo{};
         createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
         createInfo.queueCreateInfoCount = static_cast<uint32_t>(vQueueCreateInfo.size());
         createInfo.pQueueCreateInfos = vQueueCreateInfo.data();
-        createInfo.pEnabledFeatures = &deviceFeatures;
+        createInfo.pEnabledFeatures = nullptr; // NULL because we specify pNext below
 
         // Specify needed device extensions.
         createInfo.enabledExtensionCount = static_cast<uint32_t>(vUsedDeviceExtensionNames.size());
@@ -1051,6 +1055,25 @@ namespace ne {
         createInfo.enabledLayerCount = static_cast<uint32_t>(vUsedValidationLayerNames.size());
         createInfo.ppEnabledLayerNames = vUsedValidationLayerNames.data();
 #endif
+
+        // Describe extended (extension) features that we will use.
+        VkPhysicalDeviceDescriptorIndexingFeatures descriptorIndexingFeatures{};
+        descriptorIndexingFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES;
+        descriptorIndexingFeatures.pNext = nullptr;
+        descriptorIndexingFeatures.descriptorBindingSampledImageUpdateAfterBind = VK_TRUE;
+        descriptorIndexingFeatures.shaderSampledImageArrayNonUniformIndexing = VK_TRUE;
+        descriptorIndexingFeatures.descriptorBindingPartiallyBound = VK_TRUE;
+        descriptorIndexingFeatures.runtimeDescriptorArray = VK_TRUE;
+        // ... if adding new features add them to `isDeviceSuitable` function ...
+
+        // Prepare device features to enable
+        VkPhysicalDeviceFeatures2 deviceFeatures2{};
+        deviceFeatures2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
+        deviceFeatures2.pNext = &descriptorIndexingFeatures;
+        deviceFeatures2.features = deviceFeatures;
+
+        // Specify device features to enable.
+        createInfo.pNext = &deviceFeatures2;
 
         // Create device.
         const auto result = vkCreateDevice(pPhysicalDevice, &createInfo, nullptr, &pLogicalDevice);
@@ -1542,7 +1565,7 @@ namespace ne {
         // Specify mipmapping options.
         samplerInfo.mipmapMode = vkMipmapMode;
         samplerInfo.mipLodBias = 0.0F;
-        samplerInfo.minLod = 0.0F; // NOLINT
+        samplerInfo.minLod = 0.0F;
         samplerInfo.maxLod = VK_LOD_CLAMP_NONE;
 
         // Create sampler.
@@ -1550,17 +1573,6 @@ namespace ne {
         if (result != VK_SUCCESS) [[unlikely]] {
             return Error(std::format("failed to create sampler, error: {}", string_VkResult(result)));
         }
-
-        return {};
-    }
-
-    std::optional<Error> VulkanRenderer::updateTextureSamplerDescriptors() {
-        // Make sure logical device is valid.
-        if (pLogicalDevice == nullptr) [[unlikely]] {
-            return Error("expected logical device to be valid");
-        }
-
-        // TODO: use shader resource manager to tell resource to rebind descriptors
 
         return {};
     }
@@ -1702,22 +1714,15 @@ namespace ne {
         }
 
         // Now all pipeline resources were re-created.
-        // Descriptor sets were also re-created and we need to (re)bind/update them.
+        // Descriptor sets were also re-created and were notified but not everything is re-binded.
 
-        // Update descriptors that should point to storage arrays.
+        // Notify storage array manager to update descriptors that should point to storage arrays.
         const auto pVulkanResourceManager = dynamic_cast<VulkanResourceManager*>(getResourceManager());
         if (pVulkanResourceManager == nullptr) [[unlikely]] {
             return Error("expected a Vulkan resource manager");
         }
         auto optionalError = pVulkanResourceManager->getStorageResourceArrayManager()
                                  ->bindDescriptorsToRecreatedPipelineResources(this);
-        if (optionalError.has_value()) [[unlikely]] {
-            optionalError->addCurrentLocationToErrorStack();
-            return optionalError;
-        }
-
-        // Update descriptors that should point to texture sampler.
-        optionalError = updateTextureSamplerDescriptors();
         if (optionalError.has_value()) [[unlikely]] {
             optionalError->addCurrentLocationToErrorStack();
             return optionalError;
@@ -2001,6 +2006,8 @@ namespace ne {
 
         return pRenderer;
     }
+
+    VkSampler VulkanRenderer::getTextureSampler() { return pTextureSampler; }
 
     std::vector<std::string> VulkanRenderer::getSupportedGpuNames() const { return vSupportedGpuNames; }
 
@@ -2289,15 +2296,32 @@ namespace ne {
                         // Set material's GPU resources.
                         const auto pMtxMaterialGpuResources = pMaterial->getMaterialGpuResources();
                         std::scoped_lock materialGpuResourcesGuard(pMtxMaterialGpuResources->first);
+                        auto& materialShaderResources = pMtxMaterialGpuResources->second.shaderResources;
+
+                        // Note: if you will ever need it - don't lock material's internal resources mutex
+                        // here as it might cause a deadlock (see Material::setDiffuseTexture for example).
+
+                        // Save raw pointer to push constants manager to avoid re-typing this long line of
+                        // code below.
+                        const auto pPushConstantsManager =
+                            pMtxPipelineResources->second.pushConstantsData->pPushConstantsManager.get();
 
                         // Set material's CPU write shader resources.
                         for (const auto& [sResourceName, pShaderCpuWriteResource] :
-                             pMtxMaterialGpuResources->second.shaderResources.shaderCpuWriteResources) {
+                             materialShaderResources.shaderCpuWriteResources) {
                             reinterpret_cast<GlslShaderCpuWriteResource*>(
                                 pShaderCpuWriteResource.getResource())
                                 ->copyResourceIndexToPushConstants(
-                                    pMtxPipelineResources->second.pPushConstantsManager.get(),
+                                    pPushConstantsManager,
                                     pMtxCurrentFrameResource->second.iCurrentFrameResourceIndex);
+                        }
+
+                        // Set material's bindless texture resources.
+                        for (const auto& [sResourceName, pShaderTextureResource] :
+                             materialShaderResources.shaderBindlessTextureResources) {
+                            reinterpret_cast<GlslShaderBindlessTextureResource*>(
+                                pShaderTextureResource.getResource())
+                                ->copyResourceIndexToPushConstants(pPushConstantsManager);
                         }
 
                         // Draw mesh nodes that use this material.
@@ -2383,7 +2407,8 @@ namespace ne {
         // Lock material and pipeline resources.
         std::scoped_lock meshNodesGuard(pMtxMeshNodes->first, pMtxInternalResources->first);
 
-        const auto pPushConstantsManager = pMtxInternalResources->second.pPushConstantsManager.get();
+        const auto pPushConstantsManager =
+            pMtxInternalResources->second.pushConstantsData->pPushConstantsManager.get();
 
         // Iterate over all visible mesh nodes that use this material.
         for (const auto& pMeshNode : pMtxMeshNodes->second.visibleMeshNodes) {
@@ -2391,6 +2416,8 @@ namespace ne {
             auto pMtxMeshGpuResources = pMeshNode->getMeshGpuResources();
             auto mtxMeshData = pMeshNode->getMeshData();
 
+            // Note: if you will ever need it - don't lock mesh node's spawning/despawning mutex here
+            // as it might cause a deadlock (see MeshNode::setMaterial for example).
             std::scoped_lock geometryGuard(pMtxMeshGpuResources->first, *mtxMeshData.first);
 
             // Bind vertex buffers.

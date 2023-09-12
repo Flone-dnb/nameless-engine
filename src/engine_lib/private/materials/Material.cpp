@@ -136,7 +136,20 @@ namespace ne {
 
         // Check if need to free pipeline.
         if (mtxSpawnedMeshNodesThatUseThisMaterial.second.getTotalSize() == 0) {
+            // Self check: make sure our pipeline is initialized.
+            if (!mtxInternalResources.second.pUsedPipeline.isInitialized()) [[unlikely]] {
+                Error error(std::format(
+                    "no mesh is now referencing the material \"{}\" but material's pipeline pointer was not "
+                    "initialized previously",
+                    sMaterialName));
+                error.showError();
+                throw std::runtime_error(error.getFullErrorMessage());
+            }
+
+            // Deallocate all resources first (because they reference things from pipeline).
             deallocateShaderResources();
+
+            // Now the pipeline can be freed (if not used by anyone else).
             mtxInternalResources.second.pUsedPipeline.clear();
         }
     }
@@ -268,6 +281,12 @@ namespace ne {
             sizeof(MaterialShaderConstants),
             [this]() -> void* { return onStartUpdatingShaderMeshConstants(); },
             [this]() { return onFinishedUpdatingShaderMeshConstants(); });
+
+        // Set diffuse texture (if path is set).
+        if (!sDiffuseTexturePathRelativeRes.empty()) {
+            setShaderBindlessTextureResourceBindingData(
+                sMaterialShaderDiffuseTextureArrayName, sDiffuseTexturePathRelativeRes);
+        }
     }
 
     void Material::deallocateShaderResources() {
@@ -312,10 +331,10 @@ namespace ne {
         const std::function<void()>& onFinishedUpdatingResource) {
         std::scoped_lock guard(mtxInternalResources.first, mtxGpuResources.first);
 
-        // Make sure shader resources allocated.
+        // Make sure shader resources are allocated.
         if (!bIsShaderResourcesAllocated) [[unlikely]] {
             Error error(std::format(
-                "material \"{}\" was requested to set shader CPU write resource binding data all shader "
+                "material \"{}\" requested to set shader resource binding data but shader "
                 "resources were not allocated yet",
                 sMaterialName));
             error.showError();
@@ -325,7 +344,8 @@ namespace ne {
         // Make sure pipeline is initialized.
         if (!mtxInternalResources.second.pUsedPipeline.isInitialized()) [[unlikely]] {
             Error error(std::format(
-                "material \"{}\" was requested to allocate shader resources but pipeline is not initialized",
+                "material \"{}\" requested to set shader resources binding data but pipeline is not "
+                "initialized",
                 sMaterialName));
             error.showError();
             throw std::runtime_error(error.getFullErrorMessage());
@@ -362,6 +382,77 @@ namespace ne {
         // Add to be considered.
         mtxGpuResources.second.shaderResources.shaderCpuWriteResources[sShaderResourceName] =
             std::get<ShaderCpuWriteResourceUniquePtr>(std::move(result));
+    }
+
+    void Material::setShaderBindlessTextureResourceBindingData(
+        const std::string& sShaderResourceName, const std::string& sPathToTextureResourceRelativeRes) {
+        std::scoped_lock guard(mtxInternalResources.first, mtxGpuResources.first);
+
+        // Make sure shader resources are allocated.
+        if (!bIsShaderResourcesAllocated) [[unlikely]] {
+            Error error(std::format(
+                "material \"{}\" requested to set shader resource binding data but shader "
+                "resources were not allocated yet",
+                sMaterialName));
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+        }
+
+        // Make sure pipeline is initialized.
+        if (!mtxInternalResources.second.pUsedPipeline.isInitialized()) [[unlikely]] {
+            Error error(std::format(
+                "material \"{}\" requested to set shader resources binding data but pipeline is not "
+                "initialized",
+                sMaterialName));
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+        }
+
+        // Make sure there is no resource with this name.
+        auto it =
+            mtxGpuResources.second.shaderResources.shaderBindlessTextureResources.find(sShaderResourceName);
+        if (it != mtxGpuResources.second.shaderResources.shaderBindlessTextureResources.end()) [[unlikely]] {
+            Error error(std::format(
+                "material \"{}\" already has a shader bindless texture resource with the name \"{}\"",
+                sMaterialName,
+                sShaderResourceName));
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+        }
+
+        // Get texture manager.
+        const auto pRenderer = mtxInternalResources.second.pUsedPipeline->getRenderer();
+        const auto pTextureManager = pRenderer->getResourceManager()->getTextureManager();
+
+        // Get texture handle.
+        auto textureResult = pTextureManager->getTexture(sPathToTextureResourceRelativeRes);
+        if (std::holds_alternative<Error>(textureResult)) [[unlikely]] {
+            auto error = std::get<Error>(std::move(textureResult));
+            error.addCurrentLocationToErrorStack();
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+        }
+        auto pTextureHandle = std::get<std::unique_ptr<TextureHandle>>(std::move(textureResult));
+
+        // Get shader bindless texture resource manager.
+        const auto pShaderResourceManager = pRenderer->getShaderBindlessTextureResourceManager();
+
+        // Create a new shader resource.
+        auto shaderResourceResult = pShaderResourceManager->createShaderBindlessTextureResource(
+            sShaderResourceName,
+            std::format("material \"{}\"", sMaterialName),
+            mtxInternalResources.second.pUsedPipeline.getPipeline(),
+            std::move(pTextureHandle));
+        if (std::holds_alternative<Error>(shaderResourceResult)) [[unlikely]] {
+            auto error = std::get<Error>(std::move(shaderResourceResult));
+            error.addCurrentLocationToErrorStack();
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+        }
+
+        // Add to be considered.
+        mtxGpuResources.second.shaderResources.shaderBindlessTextureResources[sShaderResourceName] =
+            std::get<ShaderBindlessTextureResourceUniquePtr>(std::move(shaderResourceResult));
     }
 
     void Material::markShaderCpuWriteResourceAsNeedsUpdate(const std::string& sShaderResourceName) {
@@ -420,5 +511,145 @@ namespace ne {
     std::string Material::getVertexShaderName() const { return sVertexShaderName; }
 
     std::string Material::getPixelShaderName() const { return sPixelShaderName; }
+
+    void Material::setDiffuseTexture(const std::string& sTextureResourcePathRelativeRes) {
+        // See if this path is not equal to the current one.
+        const bool bPathToTextureResourceDifferent =
+            sTextureResourcePathRelativeRes != sDiffuseTexturePathRelativeRes;
+        if (!bPathToTextureResourceDifferent) {
+            // Nothing to do.
+            return;
+        }
+
+        // We can lock internal resources mutex before waiting for GPU to finish its work (see below,
+        // we make the renderer wait in some cases) because we don't use this mutex inside of our `draw`
+        // function - locking this mutex won't cause a deadlock).
+        std::scoped_lock internalResourcesGuard(mtxInternalResources.first);
+
+        // Set new diffuse texture path.
+        sDiffuseTexturePathRelativeRes = sTextureResourcePathRelativeRes;
+
+        if (!mtxInternalResources.second.pUsedPipeline.isInitialized()) {
+            // No more things to do here.
+            return;
+        }
+
+        // See if our current pipeline uses diffuse textures.
+        auto& pixelShaderMacros = mtxInternalResources.second.materialPixelShaderMacros;
+        const auto diffuseTextureMacroIt = pixelShaderMacros.find(ShaderMacro::PS_USE_DIFFUSE_TEXTURE);
+
+        bool bNeedNewPipeline = false;
+
+        if (!sTextureResourcePathRelativeRes.empty() && diffuseTextureMacroIt == pixelShaderMacros.end()) {
+            // Our current pipeline does not use diffuse textures, we need a new pipeline that
+            // uses diffuse textures.
+
+            // Add diffuse texture macro to our pixel/fragment shader macros.
+            pixelShaderMacros.insert(ShaderMacro::PS_USE_DIFFUSE_TEXTURE);
+
+            // Mark that we need a new pipeline.
+            bNeedNewPipeline = true;
+        } else if (
+            sTextureResourcePathRelativeRes.empty() && diffuseTextureMacroIt != pixelShaderMacros.end()) {
+            // Our current pipeline uses diffuse textures but we no longer need that, we need
+            // a new pipeline that does not use diffuse textures.
+
+            // Remove diffuse texture macro from our pixel/fragment shader macros.
+            pixelShaderMacros.erase(diffuseTextureMacroIt);
+
+            // Mark that we need a new pipeline.
+            bNeedNewPipeline = true;
+        }
+
+        // Get renderer.
+        const auto pRenderer = mtxInternalResources.second.pUsedPipeline->getRenderer();
+
+        // Make sure no rendering happens during the following process
+        // (since we might delete some resources and also want to avoid deleting resources in the
+        // middle of the `draw` function, any resource deletion will cause this thread to wait for
+        // renderer to finish its current `draw` function which might create deadlocks if not called
+        // right now).
+        std::scoped_lock drawGuard(*pRenderer->getRenderResourcesMutex());
+        pRenderer->waitForGpuToFinishWorkUpToThisPoint();
+
+        if (bNeedNewPipeline) {
+            // Deallocate shader resources before deinitializing our pipeline because
+            // shader resources reference pipeline resources.
+            deallocateShaderResources();
+
+            // Don't reference the current pipeline anymore. This might cause the pipeline to be
+            // destroyed.
+            mtxInternalResources.second.pUsedPipeline.clear();
+
+            // Get us a new pipeline.
+            auto result = pPipelineManager->getGraphicsPipelineForMaterial(
+                sVertexShaderName,
+                sPixelShaderName,
+                bUseTransparency,
+                mtxInternalResources.second.materialVertexShaderMacros,
+                mtxInternalResources.second.materialPixelShaderMacros,
+                this);
+            if (std::holds_alternative<Error>(result)) {
+                auto error = std::get<Error>(std::move(result));
+                error.addCurrentLocationToErrorStack();
+                error.showError();
+                throw std::runtime_error(error.getFullErrorMessage());
+            }
+            mtxInternalResources.second.pUsedPipeline = std::get<PipelineSharedPtr>(std::move(result));
+
+            // Create our shader resources.
+            allocateShaderResources();
+
+            return;
+        }
+
+        // Just change diffuse texture view.
+        std::scoped_lock guard(mtxGpuResources.first);
+
+        // Find a resource that handles diffuse textures.
+        auto& resources = mtxGpuResources.second.shaderResources.shaderBindlessTextureResources;
+        const auto it = resources.find(sMaterialShaderDiffuseTextureArrayName);
+        if (it == resources.end()) {
+            // Maybe it was deleted.
+            return;
+        }
+
+        // Get texture handle.
+        const auto pTextureManager = pRenderer->getResourceManager()->getTextureManager();
+        auto textureResult = pTextureManager->getTexture(sDiffuseTexturePathRelativeRes);
+        if (std::holds_alternative<Error>(textureResult)) [[unlikely]] {
+            auto error = std::get<Error>(std::move(textureResult));
+            error.addCurrentLocationToErrorStack();
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+        }
+        auto pTextureHandle = std::get<std::unique_ptr<TextureHandle>>(std::move(textureResult));
+
+        // Set new texture to be used.
+        auto optionalError = it->second.getResource()->useNewTexture(std::move(pTextureHandle));
+        if (optionalError.has_value()) [[unlikely]] {
+            optionalError->addCurrentLocationToErrorStack();
+            optionalError->showError();
+            throw std::runtime_error(optionalError->getFullErrorMessage());
+        }
+    }
+
+    glm::vec3 Material::getDiffuseColor() {
+        std::scoped_lock guard(mtxShaderMaterialDataConstants.first);
+
+        return mtxShaderMaterialDataConstants.second.diffuseColor;
+    }
+
+    float Material::getOpacity() {
+        std::scoped_lock guard(mtxShaderMaterialDataConstants.first);
+
+        return mtxShaderMaterialDataConstants.second.opacity;
+    }
+
+    std::string Material::getPathToDiffuseTextureResource() {
+        std::scoped_lock internalResourcesGuard(mtxInternalResources.first);
+
+        return sDiffuseTexturePathRelativeRes;
+    }
 
 } // namespace ne

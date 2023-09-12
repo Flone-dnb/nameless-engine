@@ -8,7 +8,8 @@
 #include <memory>
 
 // Custom.
-#include "materials/resources/ShaderCpuWriteResourceManager.h"
+#include "materials/resources/cpuwrite/ShaderCpuWriteResourceManager.h"
+#include "materials/resources/texture/ShaderBindlessTextureResourceManager.h"
 #include "misc/Error.h"
 #include "materials/ShaderManager.h"
 #include "render/general/resources/GpuResourceManager.h"
@@ -246,6 +247,15 @@ namespace ne {
          * @return Manager.
          */
         ShaderCpuWriteResourceManager* getShaderCpuWriteResourceManager() const;
+
+        /**
+         * Returns manager of shader resources that reference bindless texture arrays.
+         *
+         * @warning Do not delete (free) returned pointer.
+         *
+         * @return Manager.
+         */
+        ShaderBindlessTextureResourceManager* getShaderBindlessTextureResourceManager() const;
 
         /**
          * Returns mutex that is used when reading or writing to GPU resources that may be used
@@ -578,8 +588,11 @@ namespace ne {
         /** Stores all shader resources with CPU write access. */
         std::unique_ptr<ShaderCpuWriteResourceManager> pShaderCpuWriteResourceManager;
 
+        /** Stores all shader resources that reference bindless texture arrays. */
+        std::unique_ptr<ShaderBindlessTextureResourceManager> pShaderBindlessTextureResourceManager;
+
         /**
-         * Shader parameters.
+         * A bunch of shader macros that match renderer's configuration (render settings).
          * Must be used with mutex.
          */
         std::pair<std::recursive_mutex, std::unique_ptr<ShaderConfiguration>> mtxShaderConfiguration;

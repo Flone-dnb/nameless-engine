@@ -123,13 +123,11 @@ namespace ne {
         mtxInternalResources.second.resourceBindings.clear();
 
         // Clear push constants.
-        mtxInternalResources.second.pPushConstantsManager = nullptr;
-        mtxInternalResources.second.smallestBindingIndexReferencedByPushConstants = {};
-        mtxInternalResources.second.pushConstantUintFieldNames = {};
+        mtxInternalResources.second.pushConstantsData = {};
 
 #if defined(WIN32) && defined(DEBUG)
         static_assert(
-            sizeof(InternalResources) == 240, // NOLINT: current struct size
+            sizeof(InternalResources) == 312, // NOLINT: current struct size
             "release new resources here");
 #elif defined(DEBUG)
         static_assert(
@@ -167,9 +165,9 @@ namespace ne {
         const std::unordered_map<std::string, uint32_t>& resourceBindings) {
         std::scoped_lock guard(mtxInternalResources.first);
 
-        // Make sure push constants manager does not exist yet.
-        if (mtxInternalResources.second.pPushConstantsManager != nullptr) [[unlikely]] {
-            return Error("push constants manager already exists");
+        // Make sure push constants data do not exist yet.
+        if (mtxInternalResources.second.pushConstantsData.has_value()) [[unlikely]] {
+            return Error("push constants data already exists");
         }
 
         // Make sure push constants are specified.
@@ -177,10 +175,7 @@ namespace ne {
             return Error("received empty array of push constants");
         }
 
-        // In order to allow GLSL shader resources to correctly index into continuous push constants
-        // array (stored in push constants manager) we need to make sure that all binding indices
-        // are consecutive (for ex. 3, 4, 5, ... not 1, 4, 5, ...).
-        std::set<unsigned int> referencesBindingIndices;
+        // Make sure push constants referencing existing resources.
         for (const auto& sFieldName : pushConstantUintFieldNames) {
             // Push constants names should be equal to resource name that they index into.
             const auto it = resourceBindings.find(sFieldName);
@@ -192,57 +187,28 @@ namespace ne {
                     sFieldName,
                     sFieldName));
             }
-
-            // Add index to be considered.
-            referencesBindingIndices.insert(it->second);
         }
 
-        // Make sure all indices are consecutive.
-        unsigned int iPreviousBindingIndex = std::numeric_limits<unsigned int>::max();
-        for (const auto& iBindingIndex : referencesBindingIndices) {
-            if (iPreviousBindingIndex == std::numeric_limits<unsigned int>::max()) {
-                iPreviousBindingIndex = iBindingIndex;
-                continue;
-            }
+        // Create new push constants data.
+        mtxInternalResources.second.pushConstantsData = InternalResources::PushConstantsData{};
 
-            if (iBindingIndex != iPreviousBindingIndex + 1) [[unlikely]] {
-                return Error(
-                    "expected binding indices of shader resources referenced by push constants to be "
-                    "consecutive, make sure shader resources referenced by push constants have consecutive "
-                    "`binding` value in GLSL code, for example: 2, 3, 4 and not 1, 3, 4");
-            }
+        // Determine which resources will use which indices into push constants manager.
+        size_t iNextFreeIndex = 0;
+        for (const auto& sFieldName : pushConstantUintFieldNames) {
+            mtxInternalResources.second.pushConstantsData.value().uintFieldIndicesToUse[sFieldName] =
+                iNextFreeIndex;
+            iNextFreeIndex += 1;
         }
-
-        // Make sure binding indices of resources referenced in push constants are the last binding indices
-        // so that "derived" shaders can add new resources referenced by new push constants so that all
-        // binding indices will be consecutive.
-        unsigned int iBiggestReferencedBindingIndex = *referencesBindingIndices.rbegin();
-
-        // Make sure this index is the biggest globally.
-        for (const auto& [sResourceName, iBindingIndex] : resourceBindings) {
-            if (iBindingIndex > iBiggestReferencedBindingIndex) [[unlikely]] {
-                return Error(std::format(
-                    "shader resource named \"{}\" has binding index {} which is bigger than {} - biggest "
-                    "binding index of resource referenced by push constants, binding indices of shader "
-                    "resources referenced by push constants should be the biggest (last) in shader",
-                    sResourceName,
-                    iBindingIndex,
-                    iBiggestReferencedBindingIndex));
-            }
-        }
-
-        // Save smallest binding index from shader resources to calculate correct index into push constants.
-        mtxInternalResources.second.smallestBindingIndexReferencedByPushConstants =
-            *referencesBindingIndices.begin();
 
         // Create push constants manager.
-        mtxInternalResources.second.pPushConstantsManager =
-            std::make_unique<VulkanPushConstantsManager>(referencesBindingIndices.size());
+        mtxInternalResources.second.pushConstantsData.value().pPushConstantsManager =
+            std::make_unique<VulkanPushConstantsManager>(pushConstantUintFieldNames.size());
 
         // Specify range (not creating multiple ranges since it's very complicated to setup).
         VkPushConstantRange range{};
         range.offset = 0;
-        range.size = mtxInternalResources.second.pPushConstantsManager->getTotalSizeInBytes();
+        range.size = mtxInternalResources.second.pushConstantsData.value()
+                         .pPushConstantsManager->getTotalSizeInBytes();
         range.stageFlags = VK_SHADER_STAGE_ALL_GRAPHICS;
 
         return range;
@@ -664,10 +630,25 @@ namespace ne {
         mtxInternalResources.second.pDescriptorPool = generatedLayout.pDescriptorPool;
         mtxInternalResources.second.vDescriptorSets = generatedLayout.vDescriptorSets;
         mtxInternalResources.second.resourceBindings = std::move(generatedLayout.resourceBindings);
-        mtxInternalResources.second.pushConstantUintFieldNames =
-            std::move(generatedLayout.pushConstantUintFieldNames);
         mtxInternalResources.second.pPipelineLayout = pPipelineLayout;
         mtxInternalResources.second.pPipeline = pPipeline;
+
+        // Make sure map of bindless array index managers references only existing resources.
+        for (const auto& [sShaderResourceName, pIndexManager] :
+             mtxInternalResources.second.bindlessArrayIndexManagers) {
+            // Look if this shader resource name is used in this pipeline.
+            const auto it = mtxInternalResources.second.resourceBindings.find(sShaderResourceName);
+            if (it == mtxInternalResources.second.resourceBindings.end()) [[unlikely]] {
+                // Unexpected.
+                Error error(std::format(
+                    "pipeline \"{}\" restored its resources but some previously used index manager is "
+                    "now handling indices for non-existing (no longer used) shader resource \"{}\"",
+                    getPipelineIdentifier(),
+                    sShaderResourceName));
+                error.showError();
+                throw std::runtime_error(error.getFullErrorMessage());
+            }
+        }
 
         // Mark as ready to be used.
         mtxInternalResources.second.bIsReadyForUsage = true;

@@ -4,6 +4,7 @@
 #include <string>
 #include <memory>
 #include <variant>
+#include <mutex>
 
 // Custom.
 #include "materials/resources/ShaderResource.h"
@@ -11,6 +12,7 @@
 #include "render/general/resources/UploadBuffer.h"
 #include "render/vulkan/pipeline/VulkanPushConstantsManager.hpp"
 #include "render/vulkan/resources/VulkanStorageResourceArray.h"
+#include "render/general/resources/FrameResourcesManager.h"
 
 namespace ne {
     class Pipeline;
@@ -23,53 +25,11 @@ namespace ne {
      * that has CPU write access available (can be updated from the CPU side).
      */
     class GlslShaderCpuWriteResource : public ShaderCpuWriteResource {
-        // Only shader resource manager should be able to call `updateResource`.
+        // Only shader resource manager should be able to create such resources and call `updateResource`.
         friend class ShaderCpuWriteResourceManager;
 
     public:
         virtual ~GlslShaderCpuWriteResource() override;
-
-        /**
-         * Creates a GLSL shader resource.
-         *
-         * @param sShaderResourceName  Name of the resource we are referencing (should be exactly the same as
-         * the resource name written in the shader file we are referencing).
-         * @param sResourceAdditionalInfo Additional text that we will append to created resource name
-         * (used for logging).
-         * @param iResourceSizeInBytes Size of the data that this resource will contain. Note that
-         * this size will most likely be padded to be a multiple of 256 because of the hardware requirement
-         * for shader constant buffers.
-         * @param pUsedPipeline        Pipeline that uses the shader we are referencing (used to get
-         * render-specific information about this resource at initialization).
-         * @param onStartedUpdatingResource    Function that will be called when started updating resource
-         * data. Function returns pointer to data of the specified resource data size that needs to be copied
-         * into the resource.
-         * @param onFinishedUpdatingResource   Function that will be called when finished updating
-         * (usually used for unlocking resource data mutex).
-         *
-         * @return Error if something went wrong, otherwise created shader resource.
-         */
-        static std::variant<std::unique_ptr<ShaderCpuWriteResource>, Error> create(
-            const std::string& sShaderResourceName,
-            const std::string& sResourceAdditionalInfo,
-            size_t iResourceSizeInBytes,
-            Pipeline* pUsedPipeline,
-            const std::function<void*()>& onStartedUpdatingResource,
-            const std::function<void()>& onFinishedUpdatingResource);
-
-        /**
-         * Called after the shader was changed and we want to update the binding info
-         * to use this resource in the new shader without recreating the resource.
-         *
-         * @param pNewPipeline New pipeline object that is now being used instead of the old one.
-         *
-         * @remark Implementations will typically ask the new pipeline object about the shader resources
-         * by querying root signature or descriptor layout indices and saving the index for the resource
-         * with the name of this shader resource.
-         *
-         * @return Error if something went wrong.
-         */
-        [[nodiscard]] virtual std::optional<Error> updateBindingInfo(Pipeline* pNewPipeline) override;
 
         /**
          * Copies resource index (into shader arrays) to a push constant.
@@ -88,6 +48,8 @@ namespace ne {
          * Initializes everything except for @ref vResourceData which is expected to be initialized
          * afterwards.
          *
+         * @remark Used internally, for outside usage prefer to use @ref create.
+         *
          * @param sResourceName                Name of the resource we are referencing (should be exactly
          * the same as the resource name written in the shader file we are referencing).
          * @param iOriginalResourceSizeInBytes Size of the resource passed to @ref create (not padded).
@@ -96,24 +58,58 @@ namespace ne {
          * copied into the resource.
          * @param onFinishedUpdatingResource   Function that will be called when finished updating
          * (usually used for unlocking resource data mutex).
+         * @param pUsedPipeline                Pipeline that this resource references.
          */
         GlslShaderCpuWriteResource(
             const std::string& sResourceName,
             size_t iOriginalResourceSizeInBytes,
             const std::function<void*()>& onStartedUpdatingResource,
-            const std::function<void()>& onFinishedUpdatingResource);
+            const std::function<void()>& onFinishedUpdatingResource,
+            VulkanPipeline* pUsedPipeline);
+
+        /**
+         * Requires shader resource to fully (re)bind to a new/changed pipeline.
+         *
+         * @warning This function should not be called from outside of the class, it's only used for
+         * derived implementations.
+         *
+         * @remark This function is generally called when pipeline that shader resource references is
+         * changed or when render settings were changed and internal resources of all pipelines
+         * were re-created.
+         *
+         * @param pNewPipeline Pipeline to bind.
+         *
+         * @return Error if something went wrong.
+         */
+        [[nodiscard]] virtual std::optional<Error> bindToNewPipeline(Pipeline* pNewPipeline) override;
 
     private:
         /**
-         * Looks for a shader resource in the specified pipeline's descriptor set layout and returns
-         * resource's binding index.
+         * Creates a GLSL shader resource with CPU write access.
          *
-         * @param pVulkanPipeline Pipeline to scan.
+         * @param sShaderResourceName        Name of the resource we are referencing (should be exactly the
+         * same as the resource name written in the shader file we are referencing).
+         * @param sResourceAdditionalInfo    Additional text that we will append to created resource name
+         * (used for logging).
+         * @param iResourceSizeInBytes       Size of the data that this resource will contain. Note that
+         * this size will most likely be padded to be a multiple of 256 because of the hardware requirement
+         * for shader constant buffers.
+         * @param pUsedPipeline              Pipeline that uses the shader/parameters we are referencing.
+         * @param onStartedUpdatingResource  Function that will be called when started updating resource
+         * data. Function returns pointer to data of the specified resource data size that needs to be copied
+         * into the resource.
+         * @param onFinishedUpdatingResource Function that will be called when finished updating
+         * (usually used for unlocking resource data mutex).
          *
-         * @return Error if something went wrong, otherwise binding index of the shader resource from
-         * descriptor set layout.
+         * @return Error if something went wrong, otherwise created shader resource.
          */
-        [[nodiscard]] std::optional<Error> updatePushConstantIndex(VulkanPipeline* pVulkanPipeline);
+        static std::variant<std::unique_ptr<ShaderCpuWriteResource>, Error> create(
+            const std::string& sShaderResourceName,
+            const std::string& sResourceAdditionalInfo,
+            size_t iResourceSizeInBytes,
+            Pipeline* pUsedPipeline,
+            const std::function<void*()>& onStartedUpdatingResource,
+            const std::function<void()>& onFinishedUpdatingResource);
 
         /**
          * Copies up to date data to the GPU resource of the specified frame resource.

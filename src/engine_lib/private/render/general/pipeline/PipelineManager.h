@@ -368,6 +368,6 @@ namespace ne {
             vGraphicsPipelines;
 
         /** Do not delete (free) this pointer. Renderer that owns this pipeline manager. */
-        Renderer* pRenderer;
+        Renderer* pRenderer = nullptr;
     };
 } // namespace ne

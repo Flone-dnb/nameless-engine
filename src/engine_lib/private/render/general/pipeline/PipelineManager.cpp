@@ -207,7 +207,52 @@ namespace ne {
                 }
             }
 
-            mutex.unlock(); // unlock because resources were restored
+            // Log notification start.
+            Logger::get().info("notifying all shader resources about refreshed pipeline resources...");
+            Logger::get()
+                .flushToDisk(); // flush to disk to see if we crashed while notifying shader resources
+
+            // Get all shader resources.
+            const auto pShaderCpuWriteResourceManager = getRenderer()->getShaderCpuWriteResourceManager();
+            const auto pShaderBindlessTextureResourceManager =
+                getRenderer()->getShaderBindlessTextureResourceManager();
+
+            // Update shader CPU write resources.
+            {
+                const auto pMtxResources = pShaderCpuWriteResourceManager->getResources();
+                std::scoped_lock shaderResourceGuard(pMtxResources->first);
+
+                for (const auto& pResource : pMtxResources->second.all.vector) {
+                    // Notify.
+                    auto optionalError = pResource->onAfterAllPipelinesRefreshedResources();
+                    if (optionalError.has_value()) [[unlikely]] {
+                        optionalError->addCurrentLocationToErrorStack();
+                        return optionalError;
+                    }
+                }
+            }
+
+            // Update shader resources that reference bindless textures.
+            {
+                const auto pMtxResources = pShaderBindlessTextureResourceManager->getResources();
+                std::scoped_lock shaderResourceGuard(pMtxResources->first);
+
+                for (const auto& [pRawResource, pResource] : pMtxResources->second) {
+                    // Notify.
+                    auto optionalError = pResource->onAfterAllPipelinesRefreshedResources();
+                    if (optionalError.has_value()) [[unlikely]] {
+                        optionalError->addCurrentLocationToErrorStack();
+                        return optionalError;
+                    }
+                }
+            }
+
+            // Unlock the mutex because all pipeline resources were re-created.
+            mutex.unlock();
+
+            // Log notification end.
+            Logger::get().info("finished notifying all shader resources about refreshed pipeline resources");
+            Logger::get().flushToDisk();
         }
 
         return {};

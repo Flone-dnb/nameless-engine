@@ -93,6 +93,13 @@ namespace ne {
         std::pair<std::mutex, std::set<Material*>>* getMaterialsThatUseThisPipeline();
 
         /**
+         * Constructs and returns identifier of this pipeline (uses @ref constructPipelineIdentifier).
+         *
+         * @return A (not unique) pipeline identifier.
+         */
+        std::string getPipelineIdentifier() const;
+
+        /**
          * Returns renderer that owns this Pipeline.
          *
          * @return Renderer.
@@ -126,13 +133,6 @@ namespace ne {
          * @param fullConfiguration Shader's full (might include renderer's configuration) configuration.
          */
         void saveUsedShaderConfiguration(ShaderType shaderType, std::set<ShaderMacro>&& fullConfiguration);
-
-        /**
-         * Constructs and returns identifier of this pipeline (uses @ref constructPipelineIdentifier).
-         *
-         * @return A (not unique) pipeline identifier.
-         */
-        std::string getPipelineIdentifier() const;
 
         /**
          * Returns additional macros that were specified during pipeline creation to be enabled for

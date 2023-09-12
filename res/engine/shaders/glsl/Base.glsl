@@ -1,5 +1,6 @@
 #version 450
 #extension GL_ARB_separate_shader_objects : enable
+#extension GL_EXT_nonuniform_qualifier : enable
 
 /** Stores frame-global constants. */
 layout(binding = 0) uniform FrameData {

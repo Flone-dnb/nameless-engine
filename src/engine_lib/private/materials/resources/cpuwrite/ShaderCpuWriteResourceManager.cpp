@@ -60,6 +60,7 @@ namespace ne {
             return error;
         }
 
+        // Get results.
         auto pResource = std::get<std::unique_ptr<ShaderCpuWriteResource>>(std::move(result));
         auto pRawResource = pResource.get();
 
@@ -96,6 +97,9 @@ namespace ne {
                     FrameResourcesManager::getFrameResourcesCount()>>,
             "update reinterpret_casts");
 
+        // We now need to call `updateResource` function that has the same signature
+        // over all HLSL/GLSL shader resources types but I want to avoid using virtual
+        // functions here:
         // TODO: ugly but helps to avoid usage of virtual functions in this loop as it's executed
         // every frame with potentially lots of resources to be updated.
         // Prepare lambda to update resources.
@@ -184,5 +188,63 @@ namespace ne {
 
     ShaderCpuWriteResourceManager::ShaderCpuWriteResourceManager(Renderer* pRenderer) {
         this->pRenderer = pRenderer;
+    }
+
+    ShaderCpuWriteResourceManager::~ShaderCpuWriteResourceManager() {
+        std::scoped_lock guard(mtxShaderCpuWriteResources.first);
+
+        // Make sure there are no CPU write resources.
+        if (!mtxShaderCpuWriteResources.second.all.vector.empty()) [[unlikely]] {
+            // Prepare their names and count.
+            std::unordered_map<std::string, size_t> leftResources;
+            for (const auto& pResource : mtxShaderCpuWriteResources.second.all.vector) {
+                const auto it = leftResources.find(pResource->getResourceName());
+                if (it == leftResources.end()) {
+                    leftResources[pResource->getResourceName()] = 1;
+                } else {
+                    it->second += 1;
+                }
+            }
+
+            // Prepare output message.
+            std::string sLeftResources;
+            for (const auto& [sResourceName, iLeftCount] : leftResources) {
+                sLeftResources += std::format("- {}, left: {}", sResourceName, iLeftCount);
+            }
+
+            // Show error.
+            Error error(std::format(
+                "shader CPU write resource manager is being destroyed but there are still {} shader CPU "
+                "write resource(s) alive:\n{}",
+                mtxShaderCpuWriteResources.second.all.vector.size(),
+                sLeftResources));
+            error.showError();
+            return; // don't throw in destructor
+        }
+
+        // Make sure there are no resource references in the set.
+        if (!mtxShaderCpuWriteResources.second.all.set.empty()) [[unlikely]] {
+            // Show error.
+            Error error(std::format(
+                "shader CPU write resource manager is being destroyed but there are still {} raw references "
+                "to shader CPU write resource(s) stored in the manager",
+                mtxShaderCpuWriteResources.second.all.set.size()));
+            error.showError();
+            return; // don't throw in destructor
+        }
+
+        // Make sure there are no resource references in the "to update" array.
+        for (const auto& set : mtxShaderCpuWriteResources.second.toBeUpdated) {
+            if (!set.empty()) [[unlikely]] {
+                // Show error.
+                Error error(std::format(
+                    "shader CPU write resource manager is being destroyed but there are still {} raw "
+                    "references to shader CPU write resource(s) stored in the manager in the "
+                    "\"to be updated\" list",
+                    set.size()));
+                error.showError();
+                return; // don't throw in destructor
+            }
+        }
     }
 } // namespace ne

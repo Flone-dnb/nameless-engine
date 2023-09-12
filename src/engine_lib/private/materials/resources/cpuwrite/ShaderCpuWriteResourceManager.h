@@ -9,7 +9,7 @@
 
 // Custom.
 #include "materials/resources/ShaderResource.h"
-#include "materials/resources/ShaderCpuWriteResourceUniquePtr.h"
+#include "materials/resources/cpuwrite/ShaderCpuWriteResourceUniquePtr.h"
 #include "render/general/resources/FrameResourcesManager.h"
 
 namespace ne {
@@ -48,22 +48,24 @@ namespace ne {
         ShaderCpuWriteResourceManager(const ShaderCpuWriteResourceManager&) = delete;
         ShaderCpuWriteResourceManager& operator=(const ShaderCpuWriteResourceManager&) = delete;
 
+        /** Makes sure that no resource exists. */
+        ~ShaderCpuWriteResourceManager();
+
         /**
          * Creates a new render-specific shader resource.
          *
-         * @param sShaderResourceName      Name of the resource we are referencing (should be exactly the same
-         * as the resource name written in the shader file we are referencing).
-         * @param sResourceAdditionalInfo  Additional text that we will append to created resource name
+         * @param sShaderResourceName        Name of the resource we are referencing (should be exactly the
+         * same as the resource name written in the shader file we are referencing).
+         * @param sResourceAdditionalInfo    Additional text that we will append to created resource name
          * (used for logging).
-         * @param iResourceSizeInBytes     Size of the data that this resource will contain. Note that
+         * @param iResourceSizeInBytes       Size of the data that this resource will contain. Note that
          * this size will most likely be padded to be a multiple of 256 because of the hardware requirement
          * for shader constant buffers.
-         * @param pUsedPipeline            Pipeline that uses the shader we are referencing (used to get
-         * render-specific information about this resource at initialization).
-         * @param onStartedUpdatingResource    Function that will be called when started updating resource
+         * @param pUsedPipeline              Pipeline that uses the shader/parameters we are referencing.
+         * @param onStartedUpdatingResource  Function that will be called when started updating resource
          * data. Function returns pointer to data of the specified resource data size that needs to be copied
          * into the resource.
-         * @param onFinishedUpdatingResource   Function that will be called when finished updating
+         * @param onFinishedUpdatingResource Function that will be called when finished updating
          * (usually used for unlocking resource data mutex).
          *
          * @return Error if something went wrong, otherwise created shader resource.

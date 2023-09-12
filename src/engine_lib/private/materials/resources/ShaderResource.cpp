@@ -1,32 +1,76 @@
 #include "ShaderResource.h"
 
-// Custom.
-#include "render/general/resources/GpuResource.h"
-
 namespace ne {
 
-    ShaderResourceBase::ShaderResourceBase(const std::string& sResourceName) {
+    ShaderResourceBase::ShaderResourceBase(const std::string& sResourceName, Pipeline* pUsedPipeline) {
         this->sResourceName = sResourceName;
+        this->mtxCurrentPipeline.second = pUsedPipeline;
+    }
+
+    std::optional<Error> ShaderResourceBase::onAfterAllPipelinesRefreshedResources() {
+        std::scoped_lock guard(mtxCurrentPipeline.first);
+
+        // Call derived logic while pipeline is locked to avoid thread-races.
+        auto optionalError = useNewPipeline(mtxCurrentPipeline.second);
+        if (optionalError.has_value()) [[unlikely]] {
+            optionalError->addCurrentLocationToErrorStack();
+            return optionalError;
+        }
+
+        return {};
+    }
+
+    std::pair<std::recursive_mutex, Pipeline*>* ShaderResourceBase::getCurrentPipeline() {
+        return &mtxCurrentPipeline;
+    }
+
+    std::optional<Error> ShaderResourceBase::useNewPipeline(Pipeline* pNewPipeline) {
+        std::scoped_lock guard(mtxCurrentPipeline.first);
+
+        // Update pipeline.
+        mtxCurrentPipeline.second = pNewPipeline;
+
+        // Call derived logic while pipeline is locked to avoid thread-races.
+        auto optionalError = bindToNewPipeline(mtxCurrentPipeline.second);
+        if (optionalError.has_value()) [[unlikely]] {
+            optionalError->addCurrentLocationToErrorStack();
+            return optionalError;
+        }
+
+        return {};
     }
 
     std::string ShaderResourceBase::getResourceName() const { return sResourceName; }
 
-    ShaderResource::~ShaderResource() {}
+    std::optional<Error>
+    ShaderBindlessTextureResource::useNewTexture(std::unique_ptr<TextureHandle> pTextureToUse) {
+        // Get current pipeline.
+        const auto pMtxCurrentPipeline = getCurrentPipeline();
+        std::scoped_lock guard(pMtxCurrentPipeline->first);
 
-    ShaderResource::ShaderResource(
-        const std::string& sResourceName, std::unique_ptr<GpuResource> pResourceData)
-        : ShaderResourceBase(sResourceName) {
-        this->pResourceData = std::move(pResourceData);
+        // Update descriptor.
+        auto optionalError = updateTextureDescriptor(std::move(pTextureToUse), pMtxCurrentPipeline->second);
+        if (optionalError.has_value()) [[unlikely]] {
+            optionalError->addCurrentLocationToErrorStack();
+            return optionalError;
+        }
+
+        return {};
     }
+
+    ShaderBindlessTextureResource::ShaderBindlessTextureResource(
+        const std::string& sResourceName, Pipeline* pUsedPipeline)
+        : ShaderResourceBase(sResourceName, pUsedPipeline) {}
 
     ShaderCpuWriteResource::~ShaderCpuWriteResource() {}
 
     ShaderCpuWriteResource::ShaderCpuWriteResource(
         const std::string& sResourceName,
+        Pipeline* pUsedPipeline,
         size_t iOriginalResourceSizeInBytes,
         const std::function<void*()>& onStartedUpdatingResource,
         const std::function<void()>& onFinishedUpdatingResource)
-        : ShaderResourceBase(sResourceName) {
+        : ShaderResourceBase(sResourceName, pUsedPipeline) {
         this->iOriginalResourceSizeInBytes = iOriginalResourceSizeInBytes;
         this->onStartedUpdatingResource = onStartedUpdatingResource;
         this->onFinishedUpdatingResource = onFinishedUpdatingResource;

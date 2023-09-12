@@ -32,6 +32,7 @@ namespace ne {
         std::array<std::unique_ptr<UploadBuffer>, FrameResourcesManager::getFrameResourcesCount()>
             vResourceData;
         for (unsigned int i = 0; i < FrameResourcesManager::getFrameResourcesCount(); i++) {
+            // Create upload buffer.
             auto result =
                 pUsedPipeline->getRenderer()->getResourceManager()->createResourceWithCpuWriteAccess(
                     std::format(
@@ -72,6 +73,7 @@ namespace ne {
         // Create shader resource and return it.
         return std::unique_ptr<HlslShaderCpuWriteResource>(new HlslShaderCpuWriteResource(
             sShaderResourceName,
+            pUsedPipeline,
             iResourceSizeInBytes,
             std::move(vResourceData),
             onStartedUpdatingResource,
@@ -79,7 +81,26 @@ namespace ne {
             iRootParameterIndex));
     }
 
-    std::optional<Error> HlslShaderCpuWriteResource::updateBindingInfo(Pipeline* pNewPipeline) {
+    HlslShaderCpuWriteResource::HlslShaderCpuWriteResource(
+        const std::string& sResourceName,
+        Pipeline* pUsedPipeline,
+        size_t iOriginalResourceSizeInBytes,
+        std::array<std::unique_ptr<UploadBuffer>, FrameResourcesManager::getFrameResourcesCount()>
+            vResourceData,
+        const std::function<void*()>& onStartedUpdatingResource,
+        const std::function<void()>& onFinishedUpdatingResource,
+        UINT iRootParameterIndex)
+        : ShaderCpuWriteResource(
+              sResourceName,
+              pUsedPipeline,
+              iOriginalResourceSizeInBytes,
+              onStartedUpdatingResource,
+              onFinishedUpdatingResource) {
+        this->vResourceData = std::move(vResourceData);
+        this->iRootParameterIndex = iRootParameterIndex;
+    }
+
+    std::optional<Error> HlslShaderCpuWriteResource::bindToNewPipeline(Pipeline* pNewPipeline) {
         // Find a resource with the specified name in the root signature.
         auto result = getRootParameterIndexFromPipeline(pNewPipeline, getResourceName());
         if (std::holds_alternative<Error>(result)) [[unlikely]] {
@@ -92,23 +113,6 @@ namespace ne {
         iRootParameterIndex = std::get<UINT>(result);
 
         return {};
-    }
-
-    HlslShaderCpuWriteResource::HlslShaderCpuWriteResource(
-        const std::string& sResourceName,
-        size_t iOriginalResourceSizeInBytes,
-        std::array<std::unique_ptr<UploadBuffer>, FrameResourcesManager::getFrameResourcesCount()>
-            vResourceData,
-        const std::function<void*()>& onStartedUpdatingResource,
-        const std::function<void()>& onFinishedUpdatingResource,
-        UINT iRootParameterIndex)
-        : ShaderCpuWriteResource(
-              sResourceName,
-              iOriginalResourceSizeInBytes,
-              onStartedUpdatingResource,
-              onFinishedUpdatingResource) {
-        this->vResourceData = std::move(vResourceData);
-        this->iRootParameterIndex = iRootParameterIndex;
     }
 
     std::variant<UINT, Error> HlslShaderCpuWriteResource::getRootParameterIndexFromPipeline(

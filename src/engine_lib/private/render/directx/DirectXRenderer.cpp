@@ -594,10 +594,14 @@ namespace ne {
                         // Get material's GPU resources.
                         const auto pMtxMaterialGpuResources = pMaterial->getMaterialGpuResources();
                         std::scoped_lock materialGpuResourcesGuard(pMtxMaterialGpuResources->first);
+                        auto& materialResources = pMtxMaterialGpuResources->second.shaderResources;
+
+                        // Note: if you will ever need it - don't lock material's internal resources mutex
+                        // here as it might cause a deadlock (see Material::setDiffuseTexture for example).
 
                         // Set material's CPU write shader resources (`cbuffer`s for example).
                         for (const auto& [sResourceName, pShaderCpuWriteResource] :
-                             pMtxMaterialGpuResources->second.shaderResources.shaderCpuWriteResources) {
+                             materialResources.shaderCpuWriteResources) {
                             reinterpret_cast<HlslShaderCpuWriteResource*>(
                                 pShaderCpuWriteResource.getResource())
                                 ->setConstantBufferView(
@@ -802,6 +806,8 @@ namespace ne {
             auto pMtxMeshGpuResources = pMeshNode->getMeshGpuResources();
             auto mtxMeshData = pMeshNode->getMeshData();
 
+            // Note: if you will ever need it - don't lock mesh node's spawning/despawning mutex here
+            // as it might cause a deadlock (see MeshNode::setMaterial for example).
             std::scoped_lock geometryGuard(pMtxMeshGpuResources->first, *mtxMeshData.first);
 
             // Create vertex buffer view.

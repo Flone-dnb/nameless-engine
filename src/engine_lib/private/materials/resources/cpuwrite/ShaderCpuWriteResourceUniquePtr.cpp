@@ -1,7 +1,7 @@
 #include "ShaderCpuWriteResourceUniquePtr.h"
 
 // Custom.
-#include "materials/resources/ShaderCpuWriteResourceManager.h"
+#include "materials/resources/cpuwrite/ShaderCpuWriteResourceManager.h"
 
 namespace ne {
     ShaderCpuWriteResourceUniquePtr::ShaderCpuWriteResourceUniquePtr(

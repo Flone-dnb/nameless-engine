@@ -4,7 +4,6 @@
 #include <mutex>
 
 namespace ne {
-    class Node;
     class ShaderCpuWriteResourceManager;
     class ShaderCpuWriteResource;
 
@@ -58,6 +57,7 @@ namespace ne {
 
     private:
         /**
+         * Constructs a new unique pointer.
          *
          * @param pManager  Manager that owns the resource.
          * @param pResource Resource to point to.

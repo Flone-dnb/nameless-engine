@@ -9,6 +9,7 @@
 #include "render/vulkan/resources/VulkanResourceManager.h"
 #include "render/vulkan/resources/VulkanStorageResourceArrayManager.h"
 #include "render/vulkan/VulkanRenderer.h"
+#include "materials/glsl/resources/GlslShaderResourceHelpers.h"
 
 namespace ne {
 
@@ -50,18 +51,21 @@ namespace ne {
             sShaderResourceName,
             iResourceSizeInBytes,
             onStartedUpdatingResource,
-            onFinishedUpdatingResource));
+            onFinishedUpdatingResource,
+            pVulkanPipeline));
 
         // Find a resource with the specified name in the descriptor set layout and update our index.
-        auto optionalError = pShaderResource->updatePushConstantIndex(pVulkanPipeline);
-        if (optionalError.has_value()) {
-            auto error = std::move(optionalError.value());
+        auto pushConstantResult =
+            GlslShaderResourceHelpers::getPushConstantIndex(pVulkanPipeline, sShaderResourceName);
+        if (std::holds_alternative<Error>(pushConstantResult)) [[unlikely]] {
+            auto error = std::get<Error>(std::move(pushConstantResult));
             error.addCurrentLocationToErrorStack();
             return error;
         }
+        pShaderResource->iPushConstantIndex = std::get<size_t>(pushConstantResult);
 
+        // Reserve a space for this shader resource's data in a storage buffer per frame resource.
         for (unsigned int i = 0; i < FrameResourcesManager::getFrameResourcesCount(); i++) {
-            // Reserve a space for this shader resource's data in a storage buffer per frame resource.
             auto result = pStorageResourceArrayManager->reserveSlotsInArray(pShaderResource.get());
             if (std::holds_alternative<Error>(result)) [[unlikely]] {
                 auto error = std::get<Error>(std::move(result));
@@ -75,7 +79,20 @@ namespace ne {
         return pShaderResource;
     }
 
-    std::optional<Error> GlslShaderCpuWriteResource::updateBindingInfo(Pipeline* pNewPipeline) {
+    GlslShaderCpuWriteResource::GlslShaderCpuWriteResource(
+        const std::string& sResourceName,
+        size_t iOriginalResourceSizeInBytes,
+        const std::function<void*()>& onStartedUpdatingResource,
+        const std::function<void()>& onFinishedUpdatingResource,
+        VulkanPipeline* pUsedPipeline)
+        : ShaderCpuWriteResource(
+              sResourceName,
+              pUsedPipeline,
+              iOriginalResourceSizeInBytes,
+              onStartedUpdatingResource,
+              onFinishedUpdatingResource) {}
+
+    std::optional<Error> GlslShaderCpuWriteResource::bindToNewPipeline(Pipeline* pNewPipeline) {
         // Convert pipeline.
         const auto pVulkanPipeline = dynamic_cast<VulkanPipeline*>(pNewPipeline);
         if (pVulkanPipeline == nullptr) [[unlikely]] {
@@ -83,77 +100,14 @@ namespace ne {
         }
 
         // Find a resource with the specified name in the descriptor set layout and update our index.
-        auto optionalError = updatePushConstantIndex(pVulkanPipeline);
-        if (optionalError.has_value()) {
-            optionalError->addCurrentLocationToErrorStack();
-            return optionalError;
+        auto pushConstantResult =
+            GlslShaderResourceHelpers::getPushConstantIndex(pVulkanPipeline, getResourceName());
+        if (std::holds_alternative<Error>(pushConstantResult)) [[unlikely]] {
+            auto error = std::get<Error>(std::move(pushConstantResult));
+            error.addCurrentLocationToErrorStack();
+            return error;
         }
-
-        return {};
-    }
-
-    GlslShaderCpuWriteResource::GlslShaderCpuWriteResource(
-        const std::string& sResourceName,
-        size_t iOriginalResourceSizeInBytes,
-        const std::function<void*()>& onStartedUpdatingResource,
-        const std::function<void()>& onFinishedUpdatingResource)
-        : ShaderCpuWriteResource(
-              sResourceName,
-              iOriginalResourceSizeInBytes,
-              onStartedUpdatingResource,
-              onFinishedUpdatingResource) {}
-
-    [[nodiscard]] std::optional<Error>
-    GlslShaderCpuWriteResource::updatePushConstantIndex(VulkanPipeline* pVulkanPipeline) {
-        // Get pipeline's internal resources.
-        const auto pMtxPipelineResources = pVulkanPipeline->getInternalResources();
-        std::scoped_lock guard(pMtxPipelineResources->first);
-
-        const auto sShaderResourceName = getResourceName();
-
-        // Find a shader resource binding using our name.
-        const auto bindingIt = pMtxPipelineResources->second.resourceBindings.find(sShaderResourceName);
-        if (bindingIt == pMtxPipelineResources->second.resourceBindings.end()) [[unlikely]] {
-            return Error(std::format(
-                "unable to find a shader resource by the specified name \"{}\", make sure the resource name "
-                "is correct and that this resource is actually being used inside of your shader (otherwise "
-                "the shader resource might be optimized out and the engine will not be able to see it)",
-                sShaderResourceName));
-        }
-
-        // For now (maybe will be changed later), make sure our resource name is referenced in push constants
-        // since we will expect it during the rendering.
-        if (!pMtxPipelineResources->second.pushConstantUintFieldNames.has_value()) [[unlikely]] {
-            return Error("expected push constants to be used");
-        }
-        const auto referencedNameIt =
-            pMtxPipelineResources->second.pushConstantUintFieldNames->find(sShaderResourceName);
-        if (referencedNameIt == pMtxPipelineResources->second.pushConstantUintFieldNames->end())
-            [[unlikely]] {
-            return Error(std::format(
-                "expected to find a shader resource \"{}\" to be referenced in push constants",
-                sShaderResourceName));
-        }
-
-        // Make sure smallest binding index referenced by push constants is set.
-        if (!pMtxPipelineResources->second.smallestBindingIndexReferencedByPushConstants.has_value())
-            [[unlikely]] {
-            return Error("expected smallest binding index referenced by push constants to be set");
-        }
-
-        // Get values to calculate push constant index.
-        const auto iBindingIndex = bindingIt->second;
-        const auto iSmallestBindingIndexReferencedByPushConstants =
-            pMtxPipelineResources->second.smallestBindingIndexReferencedByPushConstants.value();
-
-        // Make sure we won't go below zero.
-        if (iBindingIndex < iSmallestBindingIndexReferencedByPushConstants) [[unlikely]] {
-            return Error(std::format(
-                "failed to calculate push constant index because resulting index will be smaller than zero"));
-        }
-
-        // Now calculate push constant index that we will update.
-        iPushConstantIndex = iBindingIndex - iSmallestBindingIndexReferencedByPushConstants;
+        iPushConstantIndex = std::get<size_t>(pushConstantResult);
 
         return {};
     }

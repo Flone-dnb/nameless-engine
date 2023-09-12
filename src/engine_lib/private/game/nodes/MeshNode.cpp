@@ -8,7 +8,7 @@
 #include "game/Window.h"
 #include "render/Renderer.h"
 #include "render/general/resources/GpuResourceManager.h"
-#include "materials/resources/ShaderCpuWriteResourceManager.h"
+#include "materials/resources/cpuwrite/ShaderCpuWriteResourceManager.h"
 #include "materials/EngineShaderNames.hpp"
 
 #include "MeshNode.generated_impl.h"
@@ -33,17 +33,30 @@ namespace ne {
     }
 
     void MeshNode::setMaterial(std::shared_ptr<Material> pMaterial) {
+        // Make sure the specified material is not a `nullptr`.
         if (pMaterial == nullptr) [[unlikely]] {
             auto error = Error("cannot use `nullptr` as a material");
             error.showError();
             throw std::runtime_error(error.getFullErrorMessage());
         }
 
-        // Also lock GPU resources here to make sure the CPU will wait in the `draw` function
-        // until we finished updating our material AND our shader resources.
-        std::scoped_lock guard(*getSpawnDespawnMutex(), mtxGpuResources.first);
+        // See if the node is spawned or not and lock spawning mutex
+        // (we can lock this mutex before waiting for GPU to finish its work because we don't
+        // use this mutex inside of our `draw` function - locking this mutex won't cause a deadlock).
+        std::scoped_lock spawnGuard(*getSpawnDespawnMutex());
+        const auto bIsSpawned = isSpawned();
 
-        if (isSpawned()) {
+        // Get renderer.
+        const auto pRenderer = getGameInstance()->getWindow()->getRenderer();
+
+        if (bIsSpawned) {
+            // Make sure no rendering happens during the material changing process
+            // (since we might delete some resources and also want to avoid deleting resources in the middle
+            // of the `draw` function, any resource deletion will cause this thread to wait for renderer
+            // to finish its current `draw` function which might create deadlocks if not called right now).
+            pRenderer->getRenderResourcesMutex()->lock();
+            pRenderer->waitForGpuToFinishWorkUpToThisPoint();
+
             // Notify old material.
             this->pMaterial->onSpawnedMeshNodeStoppedUsingMaterial(this);
 
@@ -55,16 +68,21 @@ namespace ne {
         this->pMaterial = std::move(pMaterial);
 
         // Update shader resources.
+        std::scoped_lock gpuResourcesGuard(mtxGpuResources.first);
         for (const auto& [sResourceName, shaderCpuWriteResource] :
              mtxGpuResources.second.shaderResources.shaderCpuWriteResources) {
             // Update binding info.
             auto optionalError =
-                shaderCpuWriteResource.getResource()->updateBindingInfo(this->pMaterial->getUsedPipeline());
+                shaderCpuWriteResource.getResource()->useNewPipeline(this->pMaterial->getUsedPipeline());
             if (optionalError.has_value()) [[unlikely]] {
                 optionalError->addCurrentLocationToErrorStack();
                 optionalError->showError();
                 throw std::runtime_error(optionalError->getFullErrorMessage());
             }
+        }
+
+        if (bIsSpawned) {
+            pRenderer->getRenderResourcesMutex()->unlock();
         }
     }
 
@@ -477,17 +495,23 @@ namespace ne {
     }
 
     void MeshNode::onDespawning() {
-        // Make sure no rendering happens during the despawn process.
+        // Make sure no rendering happens during the despawn process (since we will delete some resources
+        // and also want to avoid deleting resources in the middle of the `draw` function,
+        // any resource deletion will cause this thread to wait for renderer to finish its
+        // current `draw` function which might create deadlocks if not called right now).
         const auto pRenderer = getGameInstance()->getWindow()->getRenderer();
         std::scoped_lock drawGuard(*pRenderer->getRenderResourcesMutex());
         pRenderer->waitForGpuToFinishWorkUpToThisPoint();
 
         SpatialNode::onDespawning(); // now call super
 
-        // Notify the material so that the renderer will no longer render this mesh.
+        // Deallocate all resources first (because they reference things from pipeline).
+        deallocateShaderResources();
+
+        // Notify the material so that the renderer will no longer render this mesh
+        // and so that material can free its shader resources and possibly free the pipeline.
         pMaterial->onMeshNodeDespawned(this);
 
-        deallocateShaderResources();
         deallocateGeometryBuffers();
     }
 

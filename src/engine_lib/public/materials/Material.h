@@ -8,8 +8,10 @@
 #include "io/Serializable.h"
 #include "materials/ShaderMacro.h"
 #include "math/GLMath.hpp"
-#include "materials/resources/ShaderCpuWriteResourceUniquePtr.h"
+#include "materials/resources/cpuwrite/ShaderCpuWriteResourceUniquePtr.h"
+#include "materials/resources/texture/ShaderBindlessTextureResourceUniquePtr.h"
 #include "materials/VulkanAlignmentConstants.hpp"
+#include "materials/TextureManager.h"
 
 #include "Material.generated.h"
 
@@ -66,9 +68,9 @@ namespace ne RNAMESPACE() {
                 /** Shader single (non-array) resources with CPU write access. */
                 std::unordered_map<std::string, ShaderCpuWriteResourceUniquePtr> shaderCpuWriteResources;
 
-                // TODO: vShaderResources
-
-                // TODO: vShaderArrayResources
+                /** Shader resources that reference bindless texture arrays. */
+                std::unordered_map<std::string, ShaderBindlessTextureResourceUniquePtr>
+                    shaderBindlessTextureResources;
             };
 
             /** Shader GPU resources. */
@@ -116,6 +118,22 @@ namespace ne RNAMESPACE() {
         void setDiffuseColor(const glm::vec3& diffuseColor);
 
         /**
+         * Sets material's diffuse texture.
+         *
+         * Example:
+         * @code
+         * // Specify path to a directory that stores DDS and KTX files with player's diffuse texture.
+         * pMaterial->setDiffuseTexture(ProjectPaths::getPathToResDirectory(ResourceDirectory::GAME) /
+         * "player" / "diffuse";
+         * @endcode
+         *
+         * @param sTextureResourcePathRelativeRes Path to a texture resource (file/directory) relative
+         * to `res` directory that this material should now use. Specify empty string to clear the current
+         * diffuse texture (if any is set) and don't use diffuse texture at all.
+         */
+        void setDiffuseTexture(const std::string& sTextureResourcePathRelativeRes);
+
+        /**
          * Sets material's opacity.
          *
          * @remark Only works if the material has transparency enabled (see @ref create),
@@ -124,6 +142,28 @@ namespace ne RNAMESPACE() {
          * @param opacity Value in range [0.0F; 1.0F].
          */
         void setOpacity(float opacity = 1.0F);
+
+        /**
+         * Returns diffuse color of this material.
+         *
+         * @return Color in the RGB format.
+         */
+        glm::vec3 getDiffuseColor();
+
+        /**
+         * Returns path to a file/directory that stores currently used diffuse texture of this material.
+         *
+         * @return Empty if no diffuse texture is set, otherwise path to a file/directory relative to
+         * the `res` directory.
+         */
+        std::string getPathToDiffuseTextureResource();
+
+        /**
+         * Returns opacity of this material.
+         *
+         * @return Value in range [0.0F; 1.0F].
+         */
+        float getOpacity();
 
         /**
          * Returns array of mesh nodes that currently use this material.
@@ -319,6 +359,24 @@ namespace ne RNAMESPACE() {
             const std::function<void()>& onFinishedUpdatingResource);
 
         /**
+         * Setups a shader resource that references a bindless array of textures and binds a specific
+         * texture to one of array's descriptors that will be used in shaders when this material is
+         * rendered.
+         *
+         * @remark Expects that there is a push constant (named after the specified shader resource)
+         * that will store an index of descriptor in that array, otherwise an error will be shown.
+         *
+         * @remark Call this function in @ref allocateShaderResources to bind to shader resources, all
+         * bindings will be automatically removed in @ref deallocateShaderResources.
+         *
+         * @param sShaderResourceName               Name of the resource we are referencing (should be exactly
+         * the same as the resource name written in the shader file we are referencing).
+         * @param sPathToTextureResourceRelativeRes Path to file/directory with texture resource to use.
+         */
+        void setShaderBindlessTextureResourceBindingData(
+            const std::string& sShaderResourceName, const std::string& sPathToTextureResourceRelativeRes);
+
+        /**
          * Looks for binding created using @ref setShaderCpuWriteResourceBindingData and
          * notifies the engine that there is new (updated) data for shader CPU write resource to copy
          * to the GPU to be used by shaders.
@@ -379,6 +437,13 @@ namespace ne RNAMESPACE() {
         RPROPERTY(Serialize)
         std::string sMaterialName;
 
+        /**
+         * Empty if diffuse texture is not used, otherwise path to used diffuse texture relative
+         * to `res` directory.
+         */
+        RPROPERTY(Serialize)
+        std::string sDiffuseTexturePathRelativeRes;
+
         /** Whether this material will use transparency or not. */
         RPROPERTY(Serialize)
         bool bUseTransparency = false;
@@ -388,6 +453,9 @@ namespace ne RNAMESPACE() {
 
         /** Name of the constant buffer used to store material data in shaders. */
         static inline const auto sMaterialShaderConstantBufferName = "materialData";
+
+        /** Name of the array used to store diffuse textures in shaders. */
+        static inline const auto sMaterialShaderDiffuseTextureArrayName = "diffuseTextures";
 
         ne_Material_GENERATED
     };

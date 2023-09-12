@@ -8,6 +8,7 @@
 #include "render/general/pipeline/Pipeline.h"
 #include "render/general/resources/FrameResourcesManager.h"
 #include "render/vulkan/pipeline/VulkanPushConstantsManager.hpp"
+#include "materials/resources/ShaderBindlessArrayIndexManager.h"
 
 // External.
 #include "vulkan/vulkan.h"
@@ -21,6 +22,18 @@ namespace ne {
     public:
         /** Stores internal resources. */
         struct InternalResources {
+            /** Groups information related to push constants. */
+            struct PushConstantsData {
+                /** Stores push constants. `nullptr` if push constants are not used. */
+                std::unique_ptr<VulkanPushConstantsManager> pPushConstantsManager;
+
+                /**
+                 * Stores names of fields defined in GLSL as push constants (all with `uint` type)
+                 * and index into the @ref pPushConstantsManager to copy resource's array indices to.
+                 */
+                std::unordered_map<std::string, size_t> uintFieldIndicesToUse;
+            };
+
             /** Created pipeline layout. */
             VkPipelineLayout pPipelineLayout = nullptr;
 
@@ -33,7 +46,22 @@ namespace ne {
             /** Created descriptor pool. */
             VkDescriptorPool pDescriptorPool = nullptr;
 
-            /** Created descriptor set per each frame resource. */
+            /**
+             * Created descriptor set per each frame resource.
+             *
+             * @remark Initial motivation for 1 set per frame resource is for shader resources
+             * with CPU write access. For example we have 1 `uniform` buffer with frame constant data
+             * per frame resource, so if we have 3 frame resources we have 3 buffers with frame data
+             * and each descriptor set will point to a different buffer. Just like with other CPU write
+             * shader resources when we want to update such a resource we mark it as "needs update"
+             * but we don't update it immediately because it may be currently used by the GPU
+             * and so in order to not wait for the GPU and not halt the rendering we update
+             * all shader resources with CPU access marked as "needs update" in the beginning of the
+             * `draw` function and we only update shader resources of the current (next) frame resource
+             * (that is no longer being used). This way we don't need to halt the rendering when we want
+             * to update some shader resource with CPU write access, thus we have 1 descriptor set per
+             * frame resource.
+             */
             std::array<VkDescriptorSet, FrameResourcesManager::getFrameResourcesCount()> vDescriptorSets;
 
             /**
@@ -46,27 +74,29 @@ namespace ne {
              */
             std::unordered_map<std::string, uint32_t> resourceBindings;
 
-            /**
-             * Not empty if push constants are used.
-             * Stores names of fields defined in GLSL as push constants (all with `uint` type).
-             *
-             * @remark If a non `uint` fields is found an error is returned instead.
-             */
-            std::optional<std::unordered_set<std::string>> pushConstantUintFieldNames;
+            /** Not empty if push constants are used. */
+            std::optional<PushConstantsData> pushConstantsData;
 
             /**
-             * Smallest `binding` value of a shader resource (from GLSL code) that is referenced
-             * in push constants.
+             * Stores pairs of "shader resource name" - "bindless array index manager".
              *
-             * @remark Used by shader resources (from C++ code) to calculate the correct index into
-             * @ref pPushConstantsManager to update push constants.
+             * @warning Do not clear this map (and thus destroy index managers) when releasing
+             * internal resources to restore them later because there might be shader
+             * resources that reference indices of some index manager and if the index manager
+             * will be destroyed it will show an error that there are some active (used) indices
+             * that reference the index manager.
              *
-             * @remark Not empty if @ref pPushConstantsManager is valid.
+             * @remark Refers to bindless arrays from GLSL.
+             *
+             * @remark Since pipeline does not care which resources are bindless arrays and
+             * which are not, shader resources that reference bindless arrays must create new
+             * entries in this map when no index manager for requested shader resource is found.
+             * All descriptors for a bindless array are allocated per pipeline so shader resources
+             * that reference a bindless array in some pipeline can have just one index manager per
+             * bindless array.
              */
-            std::optional<unsigned int> smallestBindingIndexReferencedByPushConstants;
-
-            /** Stores push constants. `nullptr` if push constants are not used. */
-            std::unique_ptr<VulkanPushConstantsManager> pPushConstantsManager;
+            std::unordered_map<std::string, std::unique_ptr<ShaderBindlessArrayIndexManager>>
+                bindlessArrayIndexManagers;
 
             /** Whether resources were created or not. */
             bool bIsReadyForUsage = false;

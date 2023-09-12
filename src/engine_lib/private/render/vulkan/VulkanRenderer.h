@@ -49,6 +49,13 @@ namespace ne {
         create(GameManager* pGameManager, const std::vector<std::string>& vBlacklistedGpuNames);
 
         /**
+         * Returns sampler for textures.
+         *
+         * @return `nullptr` if not created yet, otherwise valid pointer.
+         */
+        VkSampler getTextureSampler();
+
+        /**
          * Looks for video adapters (GPUs) that support this renderer.
          *
          * @remark Note that returned array might differ depending on the used renderer.
@@ -569,15 +576,6 @@ namespace ne {
          * @return Error if something went wrong.
          */
         [[nodiscard]] std::optional<Error> createTextureSampler();
-
-        /**
-         * (Re)binds @ref pTextureSampler to sampler descriptors in all graphics pipelines.
-         *
-         * @warning Expects that @ref pLogicalDevice is valid.
-         *
-         * @return Error if something went wrong.
-         */
-        [[nodiscard]] std::optional<Error> updateTextureSamplerDescriptors();
 
         /**
          * Tells if @ref depthImageFormat is supported by the hardware.

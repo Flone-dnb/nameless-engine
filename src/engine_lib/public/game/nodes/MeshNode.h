@@ -8,7 +8,7 @@
 #include "math/GLMath.hpp"
 #include "render/general/resources/GpuResource.h"
 #include "materials/resources/ShaderResource.h"
-#include "materials/resources/ShaderCpuWriteResourceUniquePtr.h"
+#include "materials/resources/cpuwrite/ShaderCpuWriteResourceUniquePtr.h"
 #include "materials/VulkanAlignmentConstants.hpp"
 
 #include "MeshNode.generated.h"
@@ -173,12 +173,12 @@ namespace ne RNAMESPACE() {
 
             /** Stores resources used by shaders. */
             struct ShaderResources {
-                /** Shader single (non-array) resources with CPU write access. */
+                /**
+                 * Shader single (non-array) resources with CPU write access.
+                 *
+                 * @remark Empty if the node is not spawned.
+                 */
                 std::unordered_map<std::string, ShaderCpuWriteResourceUniquePtr> shaderCpuWriteResources;
-
-                // TODO: vShaderResources
-
-                // TODO: vShaderArrayResources
             };
 
             /** Mesh GPU resources. */

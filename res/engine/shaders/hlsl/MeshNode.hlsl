@@ -1,10 +1,10 @@
 #include "Base.hlsl"
 
-#ifdef USE_DIFFUSE_TEXTURE
+#ifdef PS_USE_DIFFUSE_TEXTURE
    SamplerState textureSampler : register(s0, space5);
 #endif
 
-#ifdef USE_DIFFUSE_TEXTURE
+#ifdef PS_USE_DIFFUSE_TEXTURE
     Texture2D diffuseTexture : register(t0, space5);
 #endif
 
@@ -50,11 +50,11 @@ float4 psMeshNode(VertexOut pin) : SV_Target
 {
     float4 outputColor = float4(diffuseColor, 1.0F);
 
-#ifdef USE_DIFFUSE_TEXTURE
+#ifdef PS_USE_DIFFUSE_TEXTURE
     outputColor *= diffuseTexture.Sample(textureSampler, pin.uv);
 #endif
 
-#ifdef USE_MATERIAL_TRANSPARENCY
+#ifdef PS_USE_MATERIAL_TRANSPARENCY
     outputColor.a *= opacity;
     // Early exit (if possible).
     clip(outputColor.a - 0.01F);

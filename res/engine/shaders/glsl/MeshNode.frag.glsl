@@ -2,8 +2,8 @@
 
 #include "MeshNodeConstants.glsl"
 
-#ifdef USE_DIFFUSE_TEXTURE
-    layout(binding = 1) uniform sampler2D diffuseTexture;
+#ifdef PS_USE_DIFFUSE_TEXTURE
+    layout(binding = 1) uniform sampler2D diffuseTextures[];
 #endif
 
 layout(location = 0) in vec4 fragmentViewPosition;
@@ -29,11 +29,11 @@ layout(std140, binding = 3) readonly buffer MaterialDataBuffer{
 void fsMeshNode(){
     outColor = vec4(materialData.array[arrayIndices.materialData].diffuseColor, 1.0F);
 
-#ifdef USE_DIFFUSE_TEXTURE
-    outColor *= texture(diffuseTexture, fragmentUv);
+#ifdef PS_USE_DIFFUSE_TEXTURE
+    outColor *= texture(diffuseTextures[arrayIndices.diffuseTextures], fragmentUv);
 #endif
 
-#ifdef USE_MATERIAL_TRANSPARENCY
+#ifdef PS_USE_MATERIAL_TRANSPARENCY
     outColor.a *= materialData.array[arrayIndices.materialData].opacity;
 #endif
 }

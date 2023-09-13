@@ -72,7 +72,7 @@ func main() {
 	copy_ext_libs(ext_directory, working_directory, output_build_directory)
 
 	// Copy external licenses to the build directory (if release build).
-	if !is_release {
+	if is_release {
 		fmt.Println(log_prefix, "copying external licenses to the build directory...")
 		copy_ext_licenses(ext_directory, output_build_directory)
 	} else {

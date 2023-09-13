@@ -94,7 +94,7 @@ namespace ne {
         this->iIndexIntoBindlessArray = iIndexIntoBindlessArray;
     }
 
-    unsigned int BindlessArrayIndex::getActualIndex() { return iIndexIntoBindlessArray; }
+    unsigned int BindlessArrayIndex::getActualIndex() const { return iIndexIntoBindlessArray; }
 
     BindlessArrayIndex::~BindlessArrayIndex() { pManager->onIndexNoLongerUsed(iIndexIntoBindlessArray); }
 

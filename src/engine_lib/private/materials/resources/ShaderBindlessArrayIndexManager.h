@@ -31,7 +31,7 @@ namespace ne {
          *
          * @return Index into the bindless array.
          */
-        unsigned int getActualIndex();
+        unsigned int getActualIndex() const;
 
         /** Notifies the manager (that created this index) about index no longer being used. */
         ~BindlessArrayIndex();

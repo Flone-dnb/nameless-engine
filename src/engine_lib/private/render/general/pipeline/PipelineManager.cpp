@@ -19,6 +19,25 @@ namespace ne {
         const std::set<ShaderMacro>& additionalVertexShaderMacros,
         const std::set<ShaderMacro>& additionalPixelShaderMacros,
         Material* pMaterial) {
+        {
+            // Self check: make sure vertex macros have "VS_" prefix and pixel macros "PS_" prefix.
+            const auto vVertexMacros = convertShaderMacrosToText(additionalVertexShaderMacros);
+            const auto vPixelMacros = convertShaderMacrosToText(additionalPixelShaderMacros);
+            for (const auto& sVertexMacro : vVertexMacros) {
+                if (!sVertexMacro.starts_with("VS_")) {
+                    return Error(std::format(
+                        "vertex shader macro \"{}\" that should start with \"VS_\" prefix", sVertexMacro));
+                }
+            }
+            for (const auto& sPixelMacro : vPixelMacros) {
+                if (!sPixelMacro.starts_with("PS_")) {
+                    return Error(std::format(
+                        "pixel/fragment shader macro \"{}\" that should start with \"PS_\" prefix",
+                        sPixelMacro));
+                }
+            }
+        }
+
         // Save index into pipeline array that we should use.
         const size_t iIndex = bUsePixelBlending ? static_cast<size_t>(PipelineType::PT_TRANSPARENT)
                                                 : static_cast<size_t>(PipelineType::PT_OPAQUE);

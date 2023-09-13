@@ -401,10 +401,46 @@ func remove_symlink_if_exists(symlink_location string) {
 }
 
 func create_symlink(target string, symlink_location string) {
-	var err = os.RemoveAll(symlink_location)
-	if err != nil {
-		fmt.Println(log_prefix, "failed to remove path at", symlink_location)
-		os.Exit(1)
+	// Check if path is directory (symlink).
+	stat, err := os.Stat(symlink_location)
+	if err == nil {
+		// Make sure this path is directory (probably symlink).
+		if !stat.IsDir() {
+			fmt.Println(log_prefix, "expected the path", symlink_location, "to be a symlink to "+
+				"the", res_dir_name, "directory, please check this path manually and remove the file")
+			os.Exit(1)
+		}
+
+		// Attempt to resolve this symlink.
+		path, err := filepath.EvalSymlinks(symlink_location)
+		if err != nil {
+			fmt.Println(log_prefix, "failed to evaluate symlink at",
+				symlink_location, "error:", err, "please check this path manually and remove "+
+					"the directory/symlink")
+			os.Exit(1)
+		}
+
+		// Convert expected and evaluated paths to absolute.
+		abs_target, err := filepath.Abs(target)
+		if err != nil {
+			fmt.Println(log_prefix, "failed to convert path", target, "to absolute, error:", err)
+			os.Exit(1)
+		}
+		abs_evaluated, err := filepath.Abs(path)
+		if err != nil {
+			fmt.Println(log_prefix, "failed to convert path", path, "to absolute, error:", err)
+			os.Exit(1)
+		}
+
+		// Make sure it's a symlink that evaluates to `res` directory.
+		if abs_evaluated != abs_target {
+			fmt.Println(log_prefix, "found a broken symlink at", symlink_location,
+				"please fix the path manually (remove file/directory)")
+			os.Exit(1)
+		}
+
+		// Symlink is already created, everything is fine.
+		return
 	}
 
 	err = os.Symlink(target, symlink_location)

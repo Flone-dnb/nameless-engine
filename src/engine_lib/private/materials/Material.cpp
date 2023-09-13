@@ -691,4 +691,25 @@ namespace ne {
         return sDiffuseTexturePathRelativeRes;
     }
 
+    void Material::onAfterDeserialized() {
+        Serializable::onAfterDeserialized();
+
+        std::scoped_lock internalResourcesGuard(mtxInternalResources.first);
+
+        // Define diffuse texture macro (if enabled).
+        if (!sDiffuseTexturePathRelativeRes.empty()) {
+            mtxInternalResources.second.materialPixelShaderMacros.insert(ShaderMacro::PS_USE_DIFFUSE_TEXTURE);
+        }
+
+        // Define transparency macro (if enabled).
+        if (bUseTransparency) {
+            mtxInternalResources.second.materialPixelShaderMacros.insert(
+                ShaderMacro::PS_USE_MATERIAL_TRANSPARENCY);
+        }
+
+#if defined(DEBUG)
+        static_assert(sizeof(Material) == 896, "consider checking new macros here"); // NOLINT: current size
+#endif
+    }
+
 } // namespace ne

@@ -219,6 +219,16 @@ namespace ne RNAMESPACE() {
          */
         std::string getPixelShaderName() const;
 
+    protected:
+        /**
+         * Called after the object was successfully deserialized.
+         * Used to execute post-deserialization logic.
+         *
+         * @warning If overriding you must call the parent's version of this function first
+         * (before executing your login) to execute parent's logic.
+         */
+        virtual void onAfterDeserialized() override;
+
     private:
         /** Groups internal data. */
         struct InternalResources {

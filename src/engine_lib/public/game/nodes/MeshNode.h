@@ -158,6 +158,9 @@ namespace ne RNAMESPACE() {
      * @remark Used for GPU optimized geometry - geometry that rarely (if ever) changes from the CPU side.
      */
     class RCLASS(Guid("d5407ca4-3c2e-4a5a-9ff3-1262b6a4d264")) MeshNode : public SpatialNode {
+        // Material notifies us when it changes its pipeline.
+        friend class Material;
+
     public:
         /** Stores internal GPU resources. */
         struct GpuResources {
@@ -399,6 +402,9 @@ namespace ne RNAMESPACE() {
 
         /** Called after finished copying data from @ref mtxShaderMeshDataConstants. */
         void onFinishedUpdatingShaderMeshConstants();
+
+        /** Called after @ref pMaterial changed its used pipeline. */
+        void onAfterMaterialChangedPipeline();
 
         /** Used material. Always contains a valid pointer. */
         RPROPERTY(Serialize)

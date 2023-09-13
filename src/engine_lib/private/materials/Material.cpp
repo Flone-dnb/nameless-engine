@@ -512,6 +512,69 @@ namespace ne {
 
     std::string Material::getPixelShaderName() const { return sPixelShaderName; }
 
+    void Material::updateToNewPipeline() {
+        std::scoped_lock guard(mtxInternalResources.first);
+
+        // Self check: make sure current pipeline is initialized.
+        if (!mtxInternalResources.second.pUsedPipeline.isInitialized()) [[unlikely]] {
+            Error error(
+                std::format("expected the pipeline to be initialized on material \"{}\"", sMaterialName));
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+        }
+
+        // Get renderer.
+        const auto pRenderer = mtxInternalResources.second.pUsedPipeline->getRenderer();
+
+        // Make sure no rendering happens during the following process
+        // (since we might delete some resources and also want to avoid deleting resources in the
+        // middle of the `draw` function, any resource deletion will cause this thread to wait for
+        // renderer to finish its current `draw` function which might create deadlocks if not called
+        // right now).
+        std::scoped_lock drawGuard(*pRenderer->getRenderResourcesMutex());
+        pRenderer->waitForGpuToFinishWorkUpToThisPoint();
+
+        // Deallocate shader resources before deinitializing our pipeline because
+        // shader resources reference pipeline resources.
+        deallocateShaderResources();
+
+        // Don't reference the current pipeline anymore. This might cause the pipeline to be
+        // destroyed.
+        mtxInternalResources.second.pUsedPipeline.clear();
+
+        // Get us a new pipeline.
+        auto result = pPipelineManager->getGraphicsPipelineForMaterial(
+            sVertexShaderName,
+            sPixelShaderName,
+            bUseTransparency,
+            mtxInternalResources.second.materialVertexShaderMacros,
+            mtxInternalResources.second.materialPixelShaderMacros,
+            this);
+        if (std::holds_alternative<Error>(result)) {
+            auto error = std::get<Error>(std::move(result));
+            error.addCurrentLocationToErrorStack();
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+        }
+        mtxInternalResources.second.pUsedPipeline = std::get<PipelineSharedPtr>(std::move(result));
+
+        // Create our shader resources.
+        allocateShaderResources();
+
+        // Notify mesh nodes about changed pipeline.
+        std::scoped_lock nodesGuard(mtxSpawnedMeshNodesThatUseThisMaterial.first);
+        for (const auto& pVisibleMeshNode : mtxSpawnedMeshNodesThatUseThisMaterial.second.visibleMeshNodes) {
+            pVisibleMeshNode->onAfterMaterialChangedPipeline();
+        }
+        for (const auto& pInvisibleMeshNode :
+             mtxSpawnedMeshNodesThatUseThisMaterial.second.invisibleMeshNodes) {
+            pInvisibleMeshNode->onAfterMaterialChangedPipeline();
+        }
+#if defined(DEBUG)
+        static_assert(sizeof(MeshNodesThatUseThisMaterial) == 48, "notify new nodes here");
+#endif
+    }
+
     void Material::setDiffuseTexture(const std::string& sTextureResourcePathRelativeRes) {
         // See if this path is not equal to the current one.
         const bool bPathToTextureResourceDifferent =
@@ -573,33 +636,7 @@ namespace ne {
         pRenderer->waitForGpuToFinishWorkUpToThisPoint();
 
         if (bNeedNewPipeline) {
-            // Deallocate shader resources before deinitializing our pipeline because
-            // shader resources reference pipeline resources.
-            deallocateShaderResources();
-
-            // Don't reference the current pipeline anymore. This might cause the pipeline to be
-            // destroyed.
-            mtxInternalResources.second.pUsedPipeline.clear();
-
-            // Get us a new pipeline.
-            auto result = pPipelineManager->getGraphicsPipelineForMaterial(
-                sVertexShaderName,
-                sPixelShaderName,
-                bUseTransparency,
-                mtxInternalResources.second.materialVertexShaderMacros,
-                mtxInternalResources.second.materialPixelShaderMacros,
-                this);
-            if (std::holds_alternative<Error>(result)) {
-                auto error = std::get<Error>(std::move(result));
-                error.addCurrentLocationToErrorStack();
-                error.showError();
-                throw std::runtime_error(error.getFullErrorMessage());
-            }
-            mtxInternalResources.second.pUsedPipeline = std::get<PipelineSharedPtr>(std::move(result));
-
-            // Create our shader resources.
-            allocateShaderResources();
-
+            updateToNewPipeline();
             return;
         }
 
@@ -609,8 +646,10 @@ namespace ne {
         // Find a resource that handles diffuse textures.
         auto& resources = mtxGpuResources.second.shaderResources.shaderBindlessTextureResources;
         const auto it = resources.find(sMaterialShaderDiffuseTextureArrayName);
-        if (it == resources.end()) {
-            // Maybe it was deleted.
+        if (it == resources.end()) [[unlikely]] {
+            // Some other thread changed GPU resources?
+            Logger::get().error(std::format(
+                "expected shader resource \"{}\" to exist", sMaterialShaderDiffuseTextureArrayName));
             return;
         }
 

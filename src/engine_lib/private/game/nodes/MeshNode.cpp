@@ -67,20 +67,6 @@ namespace ne {
         // Update used material.
         this->pMaterial = std::move(pMaterial);
 
-        // Update shader resources.
-        std::scoped_lock gpuResourcesGuard(mtxGpuResources.first);
-        for (const auto& [sResourceName, shaderCpuWriteResource] :
-             mtxGpuResources.second.shaderResources.shaderCpuWriteResources) {
-            // Update binding info.
-            auto optionalError =
-                shaderCpuWriteResource.getResource()->useNewPipeline(this->pMaterial->getUsedPipeline());
-            if (optionalError.has_value()) [[unlikely]] {
-                optionalError->addCurrentLocationToErrorStack();
-                optionalError->showError();
-                throw std::runtime_error(optionalError->getFullErrorMessage());
-            }
-        }
-
         if (bIsSpawned) {
             pRenderer->getRenderResourcesMutex()->unlock();
         }
@@ -625,4 +611,25 @@ namespace ne {
 
     std::vector<MeshVertex>* MeshData::getVertices() { return &vVertices; }
 
-} // namespace ne
+    void MeshNode::onAfterMaterialChangedPipeline() {
+        std::scoped_lock gpuResourcesGuard(mtxGpuResources.first);
+
+        // Update shader CPU write resources.
+        for (const auto& [sResourceName, shaderCpuWriteResource] :
+             mtxGpuResources.second.shaderResources.shaderCpuWriteResources) {
+            // Update binding info.
+            auto optionalError =
+                shaderCpuWriteResource.getResource()->useNewPipeline(this->pMaterial->getUsedPipeline());
+            if (optionalError.has_value()) [[unlikely]] {
+                optionalError->addCurrentLocationToErrorStack();
+                optionalError->showError();
+                throw std::runtime_error(optionalError->getFullErrorMessage());
+            }
+        }
+
+#if defined(DEBUG)
+        static_assert(sizeof(GpuResources::ShaderResources) == 80, "update new resources here");
+#endif
+    }
+
+}

@@ -398,6 +398,12 @@ namespace ne RNAMESPACE() {
         void markShaderCpuWriteResourceAsNeedsUpdate(const std::string& sShaderResourceName);
 
         /**
+         * Releases all shader resources, requests a new pipeline according to currently defined
+         * shader macros, allocates all shader resources and notifies all mesh nodes that use this material.
+         */
+        void updateToNewPipeline();
+
+        /**
          * Called to copy data from @ref mtxShaderMaterialDataConstants.
          *
          * @return Pointer to data in @ref mtxShaderMaterialDataConstants.

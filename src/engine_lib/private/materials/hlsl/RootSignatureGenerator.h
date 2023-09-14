@@ -4,6 +4,7 @@
 #include <variant>
 #include <optional>
 #include <unordered_map>
+#include <stdexcept>
 #include <set>
 
 // Custom.
@@ -37,20 +38,90 @@ namespace ne {
         RootSignatureGenerator(const RootSignatureGenerator&) = delete;
         RootSignatureGenerator& operator=(const RootSignatureGenerator&) = delete;
 
+        /** Wrapper for D3D root parameter type. */
+        class RootParameter {
+        public:
+            /** Describes a root parameter type. */
+            enum class Type { CBV, SRV, UAV };
+
+            /** Creates uninitialized parameter. */
+            RootParameter() = default;
+
+            /**
+             * Initializes a root parameter.
+             *
+             * @param iBindPoint       Register binding index.
+             * @param iSpace           Register space.
+             * @param type             Root parameter type.
+             * @param iDescriptorCount Specify `1` to initialize as single descriptor and more than
+             * 1 if you need to initialize as table of descriptors.
+             */
+            RootParameter(UINT iBindPoint, UINT iSpace, Type type, UINT iDescriptorCount = 1);
+
+            /**
+             * Generates root parameter description that describes a single descriptor.
+             *
+             * @remark Shows error if this parameter was initialized as descriptor table.
+             *
+             * @return Root parameter description.
+             */
+            CD3DX12_ROOT_PARAMETER generateSingleDescriptorDescription() const;
+
+            /**
+             * Generates root table range description.
+             *
+             * @remark Shows error if this parameter was initialized as a single root parameter.
+             *
+             * @return Root table range description.
+             */
+            CD3DX12_DESCRIPTOR_RANGE generateTableRange() const;
+
+            /**
+             * Returns visibility of this parameter.
+             *
+             * @return Visibility.
+             */
+            D3D12_SHADER_VISIBILITY getVisibility() const;
+
+            /**
+             * Tells whether this parameter describes a descriptor table or just a single view.
+             *
+             * @return `true` if @ref generateTableRange should be used, otherwise
+             * @ref generateSingleDescriptorDescription.
+             */
+            bool isTable() const;
+
+        private:
+            /** Binding register index. */
+            UINT iBindPoint = 0;
+
+            /** Binding register space. */
+            UINT iSpace = 0;
+
+            /** Parameter type. */
+            Type type;
+
+            /** If more than 1 describes a descriptor table. */
+            UINT iDescriptorCount = 0;
+
+            /** Visibility of this parameter. */
+            D3D12_SHADER_VISIBILITY visibility = D3D12_SHADER_VISIBILITY_ALL;
+        };
+
         /** Contains collected root signature info. */
         struct CollectedInfo {
             /** Static samplers of root signature. */
             std::set<SamplerType> staticSamplers;
 
             /** Root parameters that were used in creation of the root signature. */
-            std::vector<CD3DX12_ROOT_PARAMETER> vRootParameters;
+            std::vector<RootParameter> vRootParameters;
 
             /**
              * Stores pairs of `shader resource name` - `root parameter index / root parameter`,
              * allows determining what resource is binded to what root parameter index
              * (by using resource name taken from shader file).
              */
-            std::unordered_map<std::string, std::pair<UINT, CD3DX12_ROOT_PARAMETER>> rootParameterIndices;
+            std::unordered_map<std::string, std::pair<UINT, RootParameter>> rootParameterIndices;
         };
 
         /** Contains data that was generated during the process of merging two root signatures. */
@@ -135,10 +206,10 @@ namespace ne {
          * @return Error if a resource with this name already exists in the map.
          */
         static std::optional<Error> addUniquePairResourceNameRootParameterIndex(
-            std::unordered_map<std::string, std::pair<UINT, CD3DX12_ROOT_PARAMETER>>& mapToAddTo,
+            std::unordered_map<std::string, std::pair<UINT, RootParameter>>& mapToAddTo,
             const std::string& sResourceName,
             UINT iRootParameterIndex,
-            const CD3DX12_ROOT_PARAMETER& parameter);
+            const RootParameter& parameter);
 
         /**
          * Adds a `cbuffer` shader resource to root parameters.
@@ -150,8 +221,22 @@ namespace ne {
          * @return Error if something went wrong.
          */
         static std::optional<Error> addCbufferRootParameter(
-            std::vector<CD3DX12_ROOT_PARAMETER>& vRootParameters,
-            std::unordered_map<std::string, std::pair<UINT, CD3DX12_ROOT_PARAMETER>>& rootParameterIndices,
+            std::vector<RootParameter>& vRootParameters,
+            std::unordered_map<std::string, std::pair<UINT, RootParameter>>& rootParameterIndices,
+            const D3D12_SHADER_INPUT_BIND_DESC& resourceDescription);
+
+        /**
+         * Adds a `Texture2D` array shader resource to root parameters.
+         *
+         * @param vRootParameters      Parameters to add the new resource to.
+         * @param rootParameterIndices Map to add new parameter to.
+         * @param resourceDescription  Shader resource description.
+         *
+         * @return Error if something went wrong.
+         */
+        static std::optional<Error> addTexture2DArrayRootParameter(
+            std::vector<RootParameter>& vRootParameters,
+            std::unordered_map<std::string, std::pair<UINT, RootParameter>>& rootParameterIndices,
             const D3D12_SHADER_INPUT_BIND_DESC& resourceDescription);
 
         /** Name of the `cbuffer` resource used to store frame data in HLSL shaders. */

@@ -33,7 +33,7 @@ namespace ne {
         /** Stores information about root signature. */
         struct RootSignatureInfo {
             /** Root parameters that were used in creation of the root signature. */
-            std::vector<CD3DX12_ROOT_PARAMETER> vRootParameters;
+            std::vector<RootSignatureGenerator::RootParameter> vRootParameters;
 
             /** Static samplers that were used in creation of the root signature. */
             std::set<SamplerType> staticSamplers;
@@ -42,7 +42,8 @@ namespace ne {
              * Stores pairs of `shader resource name` (taken from shader file) -
              * `root parameter index / root parameter`.
              */
-            std::unordered_map<std::string, std::pair<UINT, CD3DX12_ROOT_PARAMETER>> rootParameterIndices;
+            std::unordered_map<std::string, std::pair<UINT, RootSignatureGenerator::RootParameter>>
+                rootParameterIndices;
         };
 
         /**

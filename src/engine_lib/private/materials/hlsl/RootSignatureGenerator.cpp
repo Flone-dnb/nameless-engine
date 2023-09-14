@@ -8,6 +8,7 @@
 #include "materials/hlsl/HlslShader.h"
 #include "misc/Error.h"
 #include "render/directx/DirectXRenderer.h"
+#include "materials/DescriptorConstants.hpp"
 #include "misc/Profiler.hpp"
 
 namespace ne {
@@ -57,9 +58,9 @@ namespace ne {
 
         // Setup variables to fill root signature info from reflection data.
         // Each root parameter can be a table, a root descriptor or a root constant.
-        std::vector<CD3DX12_ROOT_PARAMETER> vRootParameters;
+        std::vector<RootParameter> vRootParameters;
         std::set<SamplerType> staticSamplersToBind;
-        std::unordered_map<std::string, std::pair<UINT, CD3DX12_ROOT_PARAMETER>> rootParameterIndices;
+        std::unordered_map<std::string, std::pair<UINT, RootParameter>> rootParameterIndices;
 
         // Now iterate over all shader resources and add them to root parameters.
         for (const auto& resourceDesc : vResourcesDescription) {
@@ -88,7 +89,13 @@ namespace ne {
 
                 staticSamplersToBind.insert(std::get<SamplerType>(result));
             } else if (resourceDesc.Type == D3D_SIT_TEXTURE) {
-                // TODO
+                auto optionalError =
+                    addTexture2DArrayRootParameter(vRootParameters, rootParameterIndices, resourceDesc);
+                if (optionalError.has_value()) [[unlikely]] {
+                    auto error = optionalError.value();
+                    error.addCurrentLocationToErrorStack();
+                    return error;
+                }
             } else [[unlikely]] {
                 return Error(std::format(
                     "encountered unhandled resource type \"{}\" (not implemented)",
@@ -180,7 +187,7 @@ namespace ne {
         auto staticSamplers = pixelShaderRootSignatureInfo.staticSamplers;
 
         std::unordered_map<std::string, UINT> rootParameterIndices;
-        std::vector<CD3DX12_ROOT_PARAMETER> vRootParameters;
+        std::vector<CD3DX12_ROOT_PARAMETER> vRootParameters; // will be used to generate root signature
         std::set<std::string> addedRootParameterNames;
 
         // Check that vertex shader uses frame constant buffer as first root parameter.
@@ -199,7 +206,7 @@ namespace ne {
             "frame cbuffer is expected to be the first root parameter");
 
         // Add first root parameter (frame constants).
-        vRootParameters.push_back(vertexFrameBufferIt->second.second);
+        vRootParameters.push_back(vertexFrameBufferIt->second.second.generateSingleDescriptorDescription());
         addedRootParameterNames.insert(sFrameConstantBufferName);
         rootParameterIndices[sFrameConstantBufferName] = 0;
 
@@ -215,10 +222,17 @@ namespace ne {
             }
         }
 
-        // Then, add root parameters.
+        // Prepare array of descriptor table ranges for root parameters to reference them since D3D stores
+        // raw pointers to descriptor range objects.
+        std::vector<CD3DX12_DESCRIPTOR_RANGE> vTableRanges;
+        vTableRanges.reserve(
+            pixelShaderRootSignatureInfo.rootParameterIndices.size() +
+            vertexShaderRootSignatureInfo.rootParameterIndices.size());
+        const auto iInitialCapacity = vTableRanges.capacity();
+
+        // Then, add other root parameters.
         auto addRootParameters =
-            [&](const std::unordered_map<std::string, std::pair<UINT, CD3DX12_ROOT_PARAMETER>>&
-                    rootParametersToAdd) {
+            [&](const std::unordered_map<std::string, std::pair<UINT, RootParameter>>& rootParametersToAdd) {
                 for (const auto& [sResourceName, resourceInfo] : rootParametersToAdd) {
                     // See if we already added this resource.
                     auto it = addedRootParameterNames.find(sResourceName);
@@ -226,14 +240,35 @@ namespace ne {
                         continue;
                     }
 
-                    // Add it.
+                    // Add this resource.
                     rootParameterIndices[sResourceName] = static_cast<UINT>(vRootParameters.size());
-                    vRootParameters.push_back(resourceInfo.second);
                     addedRootParameterNames.insert(sResourceName);
+
+                    if (resourceInfo.second.isTable()) {
+                        // Add descriptor table.
+                        vTableRanges.push_back(resourceInfo.second.generateTableRange());
+                        CD3DX12_ROOT_PARAMETER newParameter{};
+                        newParameter.InitAsDescriptorTable(
+                            1, &vTableRanges.back(), resourceInfo.second.getVisibility());
+                        vRootParameters.push_back(newParameter);
+                    } else {
+                        // Add single descriptor.
+                        vRootParameters.push_back(resourceInfo.second.generateSingleDescriptorDescription());
+                    }
                 }
             };
         addRootParameters(pixelShaderRootSignatureInfo.rootParameterIndices);
         addRootParameters(vertexShaderRootSignatureInfo.rootParameterIndices);
+
+        // Self check: make sure ranges were not moved to other place in memory.
+        if (vTableRanges.capacity() != iInitialCapacity) [[unlikely]] {
+            Error error(std::format(
+                "table range array capacity changed from {} to {}",
+                iInitialCapacity,
+                vTableRanges.capacity()));
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+        }
 
         // Make sure there are root parameters.
         if (vRootParameters.empty()) [[unlikely]] {
@@ -369,10 +404,10 @@ namespace ne {
     }
 
     std::optional<Error> RootSignatureGenerator::addUniquePairResourceNameRootParameterIndex(
-        std::unordered_map<std::string, std::pair<UINT, CD3DX12_ROOT_PARAMETER>>& mapToAddTo,
+        std::unordered_map<std::string, std::pair<UINT, RootParameter>>& mapToAddTo,
         const std::string& sResourceName,
         UINT iRootParameterIndex,
-        const CD3DX12_ROOT_PARAMETER& parameter) {
+        const RootParameter& parameter) {
         // See if resource with this name already exists.
         auto it = mapToAddTo.find(sResourceName);
         if (it != mapToAddTo.end()) [[unlikely]] {
@@ -383,18 +418,19 @@ namespace ne {
         }
 
         // Add to map.
-        mapToAddTo[sResourceName] = std::make_pair(iRootParameterIndex, parameter);
+        mapToAddTo[sResourceName] =
+            std::pair<UINT, RootSignatureGenerator::RootParameter>{iRootParameterIndex, parameter};
 
         return {};
     }
 
     std::optional<Error> RootSignatureGenerator::addCbufferRootParameter(
-        std::vector<CD3DX12_ROOT_PARAMETER>& vRootParameters,
-        std::unordered_map<std::string, std::pair<UINT, CD3DX12_ROOT_PARAMETER>>& rootParameterIndices,
+        std::vector<RootParameter>& vRootParameters,
+        std::unordered_map<std::string, std::pair<UINT, RootParameter>>& rootParameterIndices,
         const D3D12_SHADER_INPUT_BIND_DESC& resourceDescription) {
         // Prepare root parameter description.
-        auto newRootParameter = CD3DX12_ROOT_PARAMETER{};
-        newRootParameter.InitAsConstantBufferView(resourceDescription.BindPoint, resourceDescription.Space);
+        auto newRootParameter =
+            RootParameter(resourceDescription.BindPoint, resourceDescription.Space, RootParameter::Type::CBV);
 
         // Make sure this resource name is unique, save its root index.
         auto optionalError = addUniquePairResourceNameRootParameterIndex(
@@ -413,4 +449,131 @@ namespace ne {
 
         return {};
     }
+
+    std::optional<Error> RootSignatureGenerator::addTexture2DArrayRootParameter(
+        std::vector<RootParameter>& vRootParameters,
+        std::unordered_map<std::string, std::pair<UINT, RootParameter>>& rootParameterIndices,
+        const D3D12_SHADER_INPUT_BIND_DESC& resourceDescription) {
+        auto newRootParameter = RootParameter(
+            resourceDescription.BindPoint,
+            resourceDescription.Space,
+            RootParameter::Type::SRV,
+            DescriptorConstants::iBindlessTextureArrayDescriptorCount);
+
+        // Make sure this resource name is unique, save its root index.
+        auto optionalError = addUniquePairResourceNameRootParameterIndex(
+            rootParameterIndices,
+            resourceDescription.Name,
+            static_cast<UINT>(vRootParameters.size()),
+            newRootParameter);
+        if (optionalError.has_value()) [[unlikely]] {
+            auto error = optionalError.value();
+            error.addCurrentLocationToErrorStack();
+            return error;
+        }
+
+        // Add to root parameters.
+        vRootParameters.push_back(newRootParameter);
+
+        return {};
+    }
+
+    RootSignatureGenerator::RootParameter::RootParameter(
+        UINT iBindPoint, UINT iSpace, RootParameter::Type type, UINT iDescriptorCount) {
+        this->iBindPoint = iBindPoint;
+        this->iSpace = iSpace;
+        this->type = type;
+        this->iDescriptorCount = iDescriptorCount;
+
+        // Self check: make sure descriptor count is not zero.
+        if (iDescriptorCount == 0) [[unlikely]] {
+            Error error("root parameter descriptor count cannot be zero");
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+        }
+
+        // Set visibility.
+        if (type == RootParameter::Type::SRV) {
+            visibility = D3D12_SHADER_VISIBILITY_PIXEL;
+        }
+    }
+
+    CD3DX12_ROOT_PARAMETER
+    RootSignatureGenerator::RootParameter::generateSingleDescriptorDescription() const {
+        // Self check: make sure descriptor count is 1.
+        if (iDescriptorCount != 1) [[unlikely]] {
+            Error error("attempted to generate descriptor description but descriptor count is not 1");
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+        }
+
+        auto rootParameter = CD3DX12_ROOT_PARAMETER{};
+
+        switch (type) {
+        case (RootParameter::Type::CBV): {
+            rootParameter.InitAsConstantBufferView(iBindPoint, iSpace, visibility);
+            break;
+        }
+        case (RootParameter::Type::SRV): {
+            rootParameter.InitAsShaderResourceView(iBindPoint, iSpace, visibility);
+            break;
+        }
+        case (RootParameter::Type::UAV): {
+            rootParameter.InitAsUnorderedAccessView(iBindPoint, iSpace, visibility);
+            break;
+        }
+        default: {
+            Error error("unhandled case");
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+            break;
+        }
+        }
+
+        return rootParameter;
+    }
+
+    CD3DX12_DESCRIPTOR_RANGE RootSignatureGenerator::RootParameter::generateTableRange() const {
+        // Self check: make sure descriptor count is not zero.
+        if (iDescriptorCount > 1) [[unlikely]] {
+            Error error("attempted to generate descriptor table range but descriptor count is less than 2");
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+        }
+
+        auto table = CD3DX12_DESCRIPTOR_RANGE{};
+
+        D3D12_DESCRIPTOR_RANGE_TYPE rangeType;
+        switch (type) {
+        case (RootParameter::Type::CBV): {
+            rangeType = D3D12_DESCRIPTOR_RANGE_TYPE_CBV;
+            break;
+        }
+        case (RootParameter::Type::SRV): {
+            rangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+            break;
+        }
+        case (RootParameter::Type::UAV): {
+            rangeType = D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
+            break;
+        }
+        default: {
+            Error error("unhandled case");
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+            break;
+        }
+        }
+
+        table.Init(rangeType, iDescriptorCount, iBindPoint, iSpace);
+
+        return table;
+    }
+
+    D3D12_SHADER_VISIBILITY RootSignatureGenerator::RootParameter::getVisibility() const {
+        return visibility;
+    }
+
+    bool RootSignatureGenerator::RootParameter::isTable() const { return iDescriptorCount > 1; }
+
 } // namespace ne

@@ -53,10 +53,12 @@ namespace ne {
              * @param iBindPoint       Register binding index.
              * @param iSpace           Register space.
              * @param type             Root parameter type.
-             * @param iDescriptorCount Specify `1` to initialize as single descriptor and more than
-             * 1 if you need to initialize as table of descriptors.
+             * @param bIsTable         `true` to initialize this parameter as descriptor table
+             * (even if descriptor count is 1), otherwise `false` to initialize it as just one descriptor.
+             * @param iDescriptorCount Number of descriptors this parameter stores.
              */
-            RootParameter(UINT iBindPoint, UINT iSpace, Type type, UINT iDescriptorCount = 1);
+            RootParameter(
+                UINT iBindPoint, UINT iSpace, Type type, bool bIsTable = false, UINT iDescriptorCount = 1);
 
             /**
              * Generates root parameter description that describes a single descriptor.
@@ -70,7 +72,7 @@ namespace ne {
             /**
              * Generates root table range description.
              *
-             * @remark Shows error if this parameter was initialized as a single root parameter.
+             * @remark Shows error if this parameter was initialized as a single descriptor.
              *
              * @return Root table range description.
              */
@@ -101,8 +103,11 @@ namespace ne {
             /** Parameter type. */
             Type type;
 
-            /** If more than 1 describes a descriptor table. */
+            /** Descriptors in this parameter. */
             UINT iDescriptorCount = 0;
+
+            /** Whether this parameter should be initialized as descriptor table or not. */
+            bool bIsTable = false;
 
             /** Visibility of this parameter. */
             D3D12_SHADER_VISIBILITY visibility = D3D12_SHADER_VISIBILITY_ALL;
@@ -226,7 +231,7 @@ namespace ne {
             const D3D12_SHADER_INPUT_BIND_DESC& resourceDescription);
 
         /**
-         * Adds a `Texture2D` array shader resource to root parameters.
+         * Adds a `Texture2D` shader resource to root parameters.
          *
          * @param vRootParameters      Parameters to add the new resource to.
          * @param rootParameterIndices Map to add new parameter to.
@@ -234,7 +239,7 @@ namespace ne {
          *
          * @return Error if something went wrong.
          */
-        static std::optional<Error> addTexture2DArrayRootParameter(
+        static std::optional<Error> addTexture2DRootParameter(
             std::vector<RootParameter>& vRootParameters,
             std::unordered_map<std::string, std::pair<UINT, RootParameter>>& rootParameterIndices,
             const D3D12_SHADER_INPUT_BIND_DESC& resourceDescription);

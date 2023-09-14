@@ -25,6 +25,7 @@
 #include "game/nodes/CameraNode.h"
 #include "game/camera/TransientCamera.h"
 #include "materials/hlsl/resources/HlslShaderCpuWriteResource.h"
+#include "materials/hlsl/resources/HlslShaderTextureResource.h"
 #include "render/directx/resources/DirectXFrameResource.h"
 #include "misc/Profiler.hpp"
 
@@ -607,6 +608,13 @@ namespace ne {
                                 ->setConstantBufferView(
                                     pCommandList,
                                     pMtxCurrentFrameResource->second.iCurrentFrameResourceIndex);
+                        }
+
+                        // Set material's texture shader resources (`Texture2D`s for example).
+                        for (const auto& [sResourceName, pShaderTextureResource] :
+                             materialResources.shaderTextureResources) {
+                            reinterpret_cast<HlslShaderTextureResource*>(pShaderTextureResource.getResource())
+                                ->setShaderResourceView(pCommandList);
                         }
 
                         // Draw mesh nodes that use this material.

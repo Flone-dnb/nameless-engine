@@ -67,9 +67,11 @@ namespace ne {
     }
 
     std::optional<D3D12_CPU_DESCRIPTOR_HANDLE>
-    DirectXResource::getBindedDescriptorHandle(DirectXDescriptorType descriptorType) const {
+    DirectXResource::getBindedDescriptorHandle(DirectXDescriptorType descriptorType) {
+        std::scoped_lock guard(mtxHeapDescriptors.first);
+
         // Get descriptor.
-        const auto pOptionalDescriptor = &vHeapDescriptors[static_cast<size_t>(descriptorType)];
+        const auto pOptionalDescriptor = &mtxHeapDescriptors.second[static_cast<size_t>(descriptorType)];
 
         // Make sure it was binded previously.
         if (!pOptionalDescriptor->has_value()) {
@@ -92,6 +94,20 @@ namespace ne {
             pHeap->getDescriptorSize());
     }
 
+    DirectXDescriptor* DirectXResource::getDescriptor(DirectXDescriptorType descriptorType) {
+        std::scoped_lock guard(mtxHeapDescriptors.first);
+
+        // Get descriptor.
+        const auto pOptionalDescriptor = &mtxHeapDescriptors.second[static_cast<size_t>(descriptorType)];
+
+        // Make sure it was binded previously.
+        if (!pOptionalDescriptor->has_value()) {
+            return nullptr;
+        }
+
+        return &pOptionalDescriptor->value();
+    }
+
     std::string DirectXResource::getResourceName() const {
         if (pAllocatedResource != nullptr) {
             return Globals::wstringToString(std::wstring(pAllocatedResource->GetName()));
@@ -102,7 +118,7 @@ namespace ne {
 
     DirectXResource::DirectXResource(const DirectXResourceManager* pResourceManager) {
         this->pResourceManager = pResourceManager;
-        vHeapDescriptors.resize(static_cast<int>(DirectXDescriptorType::END));
+        mtxHeapDescriptors.second.resize(static_cast<int>(DirectXDescriptorType::END));
     }
 
     DirectXResource::~DirectXResource() {
@@ -113,6 +129,14 @@ namespace ne {
     }
 
     std::optional<Error> DirectXResource::bindDescriptor(DirectXDescriptorType descriptorType) {
+        std::scoped_lock guard(mtxHeapDescriptors.first);
+
+        // Check if we already have descriptor of this type binded.
+        if (mtxHeapDescriptors.second[static_cast<int>(descriptorType)].has_value()) {
+            // Nothing to do.
+            return {};
+        }
+
         DirectXDescriptorHeap* pHeap = nullptr;
 
         switch (descriptorType) {

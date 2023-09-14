@@ -90,7 +90,7 @@ namespace ne {
                 staticSamplersToBind.insert(std::get<SamplerType>(result));
             } else if (resourceDesc.Type == D3D_SIT_TEXTURE) {
                 auto optionalError =
-                    addTexture2DArrayRootParameter(vRootParameters, rootParameterIndices, resourceDesc);
+                    addTexture2DRootParameter(vRootParameters, rootParameterIndices, resourceDesc);
                 if (optionalError.has_value()) [[unlikely]] {
                     auto error = optionalError.value();
                     error.addCurrentLocationToErrorStack();
@@ -450,15 +450,12 @@ namespace ne {
         return {};
     }
 
-    std::optional<Error> RootSignatureGenerator::addTexture2DArrayRootParameter(
+    std::optional<Error> RootSignatureGenerator::addTexture2DRootParameter(
         std::vector<RootParameter>& vRootParameters,
         std::unordered_map<std::string, std::pair<UINT, RootParameter>>& rootParameterIndices,
         const D3D12_SHADER_INPUT_BIND_DESC& resourceDescription) {
         auto newRootParameter = RootParameter(
-            resourceDescription.BindPoint,
-            resourceDescription.Space,
-            RootParameter::Type::SRV,
-            DescriptorConstants::iBindlessTextureArrayDescriptorCount);
+            resourceDescription.BindPoint, resourceDescription.Space, RootParameter::Type::SRV, true);
 
         // Make sure this resource name is unique, save its root index.
         auto optionalError = addUniquePairResourceNameRootParameterIndex(
@@ -479,10 +476,11 @@ namespace ne {
     }
 
     RootSignatureGenerator::RootParameter::RootParameter(
-        UINT iBindPoint, UINT iSpace, RootParameter::Type type, UINT iDescriptorCount) {
+        UINT iBindPoint, UINT iSpace, RootParameter::Type type, bool bIsTable, UINT iDescriptorCount) {
         this->iBindPoint = iBindPoint;
         this->iSpace = iSpace;
         this->type = type;
+        this->bIsTable = bIsTable;
         this->iDescriptorCount = iDescriptorCount;
 
         // Self check: make sure descriptor count is not zero.
@@ -500,9 +498,11 @@ namespace ne {
 
     CD3DX12_ROOT_PARAMETER
     RootSignatureGenerator::RootParameter::generateSingleDescriptorDescription() const {
-        // Self check: make sure descriptor count is 1.
-        if (iDescriptorCount != 1) [[unlikely]] {
-            Error error("attempted to generate descriptor description but descriptor count is not 1");
+        // Self check: make sure it's not a descriptor table.
+        if (bIsTable) [[unlikely]] {
+            Error error(
+                "attempted to generate descriptor description but this root parameter was initialized "
+                "as descriptor table");
             error.showError();
             throw std::runtime_error(error.getFullErrorMessage());
         }
@@ -534,9 +534,11 @@ namespace ne {
     }
 
     CD3DX12_DESCRIPTOR_RANGE RootSignatureGenerator::RootParameter::generateTableRange() const {
-        // Self check: make sure descriptor count is not zero.
-        if (iDescriptorCount > 1) [[unlikely]] {
-            Error error("attempted to generate descriptor table range but descriptor count is less than 2");
+        // Self check: make sure it's a descriptor table.
+        if (!bIsTable) [[unlikely]] {
+            Error error(
+                "attempted to generate descriptor table range but this root parameter was initialized "
+                "as a single descriptor (not a table)");
             error.showError();
             throw std::runtime_error(error.getFullErrorMessage());
         }
@@ -574,6 +576,6 @@ namespace ne {
         return visibility;
     }
 
-    bool RootSignatureGenerator::RootParameter::isTable() const { return iDescriptorCount > 1; }
+    bool RootSignatureGenerator::RootParameter::isTable() const { return bIsTable; }
 
 } // namespace ne

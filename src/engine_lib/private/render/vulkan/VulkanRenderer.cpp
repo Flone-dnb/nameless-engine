@@ -20,7 +20,7 @@
 #include "materials/Material.h"
 #include "game/nodes/MeshNode.h"
 #include "materials/glsl/resources/GlslShaderCpuWriteResource.h"
-#include "materials/glsl/resources/GlslShaderBindlessTextureResource.h"
+#include "materials/glsl/resources/GlslShaderTextureResource.h"
 #include "render/vulkan/resources/VulkanStorageResourceArrayManager.h"
 #include "game/camera/TransientCamera.h"
 #include "misc/Profiler.hpp"
@@ -2316,11 +2316,10 @@ namespace ne {
                                     pMtxCurrentFrameResource->second.iCurrentFrameResourceIndex);
                         }
 
-                        // Set material's bindless texture resources.
+                        // Set material's texture resources.
                         for (const auto& [sResourceName, pShaderTextureResource] :
-                             materialShaderResources.shaderBindlessTextureResources) {
-                            reinterpret_cast<GlslShaderBindlessTextureResource*>(
-                                pShaderTextureResource.getResource())
+                             materialShaderResources.shaderTextureResources) {
+                            reinterpret_cast<GlslShaderTextureResource*>(pShaderTextureResource.getResource())
                                 ->copyResourceIndexToPushConstants(pPushConstantsManager);
                         }
 

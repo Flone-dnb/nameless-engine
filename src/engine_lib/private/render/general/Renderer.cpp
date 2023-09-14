@@ -457,8 +457,8 @@ namespace ne {
         return pShaderCpuWriteResourceManager.get();
     }
 
-    ShaderBindlessTextureResourceManager* Renderer::getShaderBindlessTextureResourceManager() const {
-        return pShaderBindlessTextureResourceManager.get();
+    ShaderTextureResourceManager* Renderer::getShaderTextureResourceManager() const {
+        return pShaderTextureResourceManager.get();
     }
 
     std::recursive_mutex* Renderer::getRenderResourcesMutex() { return &mtxRwRenderResources; }
@@ -605,9 +605,9 @@ namespace ne {
         pShaderCpuWriteResourceManager =
             std::unique_ptr<ShaderCpuWriteResourceManager>(new ShaderCpuWriteResourceManager(this));
 
-        // Create shader bindless texture resource manager.
-        pShaderBindlessTextureResourceManager = std::unique_ptr<ShaderBindlessTextureResourceManager>(
-            new ShaderBindlessTextureResourceManager(this));
+        // Create shader texture resource manager.
+        pShaderTextureResourceManager =
+            std::unique_ptr<ShaderTextureResourceManager>(new ShaderTextureResourceManager(this));
 
         return {};
     }

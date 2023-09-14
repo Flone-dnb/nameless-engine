@@ -1,4 +1,4 @@
-#include "GlslShaderBindlessTextureResource.h"
+#include "GlslShaderTextureResource.h"
 
 // Standard.
 #include <format>
@@ -10,11 +10,10 @@
 #include "materials/DescriptorConstants.hpp"
 
 namespace ne {
-
-    std::variant<std::unique_ptr<ShaderBindlessTextureResource>, Error>
-    GlslShaderBindlessTextureResource::create(
+    
+    std::variant<std::unique_ptr<ShaderTextureResource>, Error>
+    GlslShaderTextureResource::create(
         const std::string& sShaderResourceName,
-        const std::string& sResourceAdditionalInfo,
         Pipeline* pUsedPipeline,
         std::unique_ptr<TextureHandle> pTextureToUse) {
         // Convert pipeline.
@@ -63,7 +62,7 @@ namespace ne {
             return error;
         }
 
-        return std::unique_ptr<GlslShaderBindlessTextureResource>(new GlslShaderBindlessTextureResource(
+        return std::unique_ptr<GlslShaderTextureResource>(new GlslShaderTextureResource(
             sShaderResourceName,
             pVulkanPipeline,
             std::move(pTextureToUse),
@@ -72,7 +71,7 @@ namespace ne {
     }
 
     std::variant<std::unique_ptr<BindlessArrayIndex>, Error>
-    GlslShaderBindlessTextureResource::getTextureIndexInBindlessArray(
+    GlslShaderTextureResource::getTextureIndexInBindlessArray(
         const std::string& sShaderResourceName, VulkanPipeline* pPipelineToLookIn) {
         // Get pipeline's internal resources.
         const auto pMtxPipelineResources = pPipelineToLookIn->getInternalResources();
@@ -101,7 +100,7 @@ namespace ne {
         return it->second->getNewIndex();
     }
 
-    std::optional<Error> GlslShaderBindlessTextureResource::bindTextureToBindlessDescriptorArray(
+    std::optional<Error> GlslShaderTextureResource::bindTextureToBindlessDescriptorArray(
         const std::string& sShaderResourceName,
         VulkanPipeline* pPipelineWithDescriptors,
         VkImageView pTextureView,
@@ -165,7 +164,7 @@ namespace ne {
         return {};
     }
 
-    std::optional<Error> GlslShaderBindlessTextureResource::bindToNewPipeline(Pipeline* pNewPipeline) {
+    std::optional<Error> GlslShaderTextureResource::bindToNewPipeline(Pipeline* pNewPipeline) {
         // Convert pipeline.
         const auto pVulkanPipeline = dynamic_cast<VulkanPipeline*>(pNewPipeline);
         if (pVulkanPipeline == nullptr) [[unlikely]] {
@@ -206,7 +205,7 @@ namespace ne {
         return {};
     }
 
-    std::optional<Error> GlslShaderBindlessTextureResource::updateTextureDescriptor(
+    std::optional<Error> GlslShaderTextureResource::updateTextureDescriptor(
         std::unique_ptr<TextureHandle> pTextureToUse, Pipeline* pUsedPipeline) {
         // Convert pipeline.
         const auto pVulkanPipeline = dynamic_cast<VulkanPipeline*>(pUsedPipeline);
@@ -240,19 +239,19 @@ namespace ne {
         return {};
     }
 
-    std::string GlslShaderBindlessTextureResource::getPathToTextureResource() {
+    std::string GlslShaderTextureResource::getPathToTextureResource() {
         std::scoped_lock guard(mtxUsedTexture.first);
 
         return mtxUsedTexture.second->getPathToResourceRelativeRes();
     }
 
-    GlslShaderBindlessTextureResource::GlslShaderBindlessTextureResource(
+    GlslShaderTextureResource::GlslShaderTextureResource(
         const std::string& sResourceName,
         VulkanPipeline* pUsedPipeline,
         std::unique_ptr<TextureHandle> pTextureToUse,
         std::unique_ptr<BindlessArrayIndex> pBindlessArrayIndex,
         size_t iPushConstantIndex)
-        : ShaderBindlessTextureResource(sResourceName, pUsedPipeline) {
+        : ShaderTextureResource(sResourceName, pUsedPipeline) {
         this->pBindlessArrayIndex = std::move(pBindlessArrayIndex);
         this->iPushConstantIndex = iPushConstantIndex;
 

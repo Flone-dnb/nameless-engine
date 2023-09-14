@@ -117,13 +117,10 @@ namespace ne {
         std::string sResourceName;
     };
 
-    /**
-     * References some bindless array/table from shader code and allows reserving a slot (space)
-     * in this bindless array/table to be used for some custom-provided descriptors/views.
-     */
-    class ShaderBindlessTextureResource : public ShaderResourceBase {
+    /** References some texture (maybe bindless array/table) from shader code. */
+    class ShaderTextureResource : public ShaderResourceBase {
     public:
-        virtual ~ShaderBindlessTextureResource() override = default;
+        virtual ~ShaderTextureResource() override = default;
 
         /**
          * Makes the shader resource to reference the new (specified) texture.
@@ -146,7 +143,7 @@ namespace ne {
          * the resource name written in the shader file we are referencing).
          * @param pUsedPipeline that this shader resource is using.
          */
-        ShaderBindlessTextureResource(const std::string& sResourceName, Pipeline* pUsedPipeline);
+        ShaderTextureResource(const std::string& sResourceName, Pipeline* pUsedPipeline);
 
         /**
          * Called to update the descriptor so that it will reference the new (specified) texture.

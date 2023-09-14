@@ -114,18 +114,6 @@ namespace ne {
             const std::function<void()>& onFinishedUpdatingResource);
 
         /**
-         * Looks for a root parameter that is used for the resource with the specified name.
-         *
-         * @param pPipeline           Pipeline to look for resource.
-         * @param sShaderResourceName Resource name to look for.
-         *
-         * @return Error if something went wrong, otherwise root parameter index of the resource with
-         * the specified name.
-         */
-        static std::variant<UINT, Error>
-        getRootParameterIndexFromPipeline(Pipeline* pPipeline, const std::string& sShaderResourceName);
-
-        /**
          * Copies up to date data to the GPU resource of the specified frame resource.
          *
          * @remark Should only be called when resource actually needs an update, otherwise

@@ -35,16 +35,17 @@ namespace ne {
                 static_cast<int>(descriptorType)));
         }
 
+        // Lock both heap and resource descriptors.
+        std::scoped_lock guard(mtxInternalResources.first, pResource->mtxHeapDescriptors.first);
+
         // Check if the resource already has descriptor of this type.
-        if (pResource->vHeapDescriptors[static_cast<int>(descriptorType)].has_value()) [[unlikely]] {
+        if (pResource->mtxHeapDescriptors.second[static_cast<int>(descriptorType)].has_value()) [[unlikely]] {
             return Error(fmt::format(
                 "resource already has this descriptor assigned (descriptor type {})",
                 static_cast<int>(descriptorType)));
         }
 
         // Add a new descriptor to the heap.
-
-        std::scoped_lock guard(mtxInternalResources.first);
 
         // Expand the heap if needed.
         if (mtxInternalResources.second.iHeapSize == mtxInternalResources.second.iHeapCapacity) {
@@ -78,7 +79,7 @@ namespace ne {
 
         // Save binding information.
         mtxInternalResources.second.bindedResources.insert(pResource);
-        pResource->vHeapDescriptors[static_cast<int>(descriptorType)] =
+        pResource->mtxHeapDescriptors.second[static_cast<int>(descriptorType)] =
             DirectXDescriptor(this, descriptorType, pResource, iDescriptorIndex);
 
         return {};
@@ -148,8 +149,9 @@ namespace ne {
     }
 
     void DirectXDescriptorHeap::markDescriptorAsNoLongerBeingUsed(DirectXResource* pResource) {
-        std::scoped_lock guard(mtxInternalResources.first);
+        std::scoped_lock guard(mtxInternalResources.first, pResource->mtxHeapDescriptors.first);
 
+        // Make sure the specified resource actually exists in our "database".
         const auto it = mtxInternalResources.second.bindedResources.find(pResource);
         if (it == mtxInternalResources.second.bindedResources.end()) {
             Logger::get().error(
@@ -157,11 +159,12 @@ namespace ne {
             return;
         }
 
+        // Remove this resource from our "database".
         mtxInternalResources.second.bindedResources.erase(it);
 
         // Save indexes of no longer used descriptors.
         const auto vHandledDescriptorTypes = getDescriptorTypesHandledByThisHeap();
-        for (auto& descriptor : pResource->vHeapDescriptors) {
+        for (auto& descriptor : pResource->mtxHeapDescriptors.second) {
             if (!descriptor.has_value()) {
                 continue;
             }
@@ -320,39 +323,38 @@ namespace ne {
             cbvDesc.BufferLocation = resourceGpuVirtualAddress;
             cbvDesc.SizeInBytes = static_cast<UINT>(pResource->getInternalResource()->GetDesc().Width);
 
+            // Create CBV.
             pRenderer->getD3dDevice()->CreateConstantBufferView(&cbvDesc, heapHandle);
             break;
         }
         case (DirectXDescriptorType::SRV): {
             const auto resourceDesc = pResource->getInternalResource()->GetDesc();
 
-            // Determine SRV dimension.
-            D3D12_SRV_DIMENSION srvDimension = D3D12_SRV_DIMENSION_UNKNOWN;
+            // Prepare SRV description.
+            D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+
+            // Setup SRV depending on the dimension.
             switch (resourceDesc.Dimension) {
-            case (D3D12_RESOURCE_DIMENSION_UNKNOWN):
-                srvDimension = D3D12_SRV_DIMENSION_UNKNOWN;
-                break;
-            case (D3D12_RESOURCE_DIMENSION_BUFFER):
-                srvDimension = D3D12_SRV_DIMENSION_BUFFER;
-                break;
-            case (D3D12_RESOURCE_DIMENSION_TEXTURE1D):
-                srvDimension = D3D12_SRV_DIMENSION_TEXTURE1D;
-                break;
-            case (D3D12_RESOURCE_DIMENSION_TEXTURE2D):
-                srvDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-                break;
-            case (D3D12_RESOURCE_DIMENSION_TEXTURE3D):
-                srvDimension = D3D12_SRV_DIMENSION_TEXTURE3D;
+            case (D3D12_RESOURCE_DIMENSION_TEXTURE2D): {
+                srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+                srvDesc.Texture2D.MostDetailedMip = 0;
+                srvDesc.Texture2D.MipLevels = resourceDesc.MipLevels;
                 break;
             }
+            default: {
+                Error error(std::format(
+                    "unsupported resource dimension of resource \"{}\"", pResource->getResourceName()));
+                error.showError();
+                throw std::runtime_error(error.getFullErrorMessage());
+                break;
+            }
+            }
 
-            D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+            // Fill general info.
             srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
             srvDesc.Format = resourceDesc.Format;
-            srvDesc.ViewDimension = srvDimension;
-            srvDesc.Texture2D.MostDetailedMip = 0;
-            srvDesc.Texture2D.MipLevels = resourceDesc.MipLevels;
 
+            // Create SRV.
             pRenderer->getD3dDevice()->CreateShaderResourceView(
                 pResource->getInternalResource(), &srvDesc, heapHandle);
             break;
@@ -385,6 +387,7 @@ namespace ne {
             uavDesc.ViewDimension = uavDimension;
             uavDesc.Texture2D.MipSlice = 0;
 
+            // Create UAV.
             pRenderer->getD3dDevice()->CreateUnorderedAccessView(
                 pResource->getInternalResource(), nullptr, &uavDesc, heapHandle);
             break;
@@ -461,7 +464,9 @@ namespace ne {
         const auto vHandledDescriptorTypes = getDescriptorTypesHandledByThisHeap();
 
         for (const auto& pResource : mtxInternalResources.second.bindedResources) {
-            for (const auto& descriptor : pResource->vHeapDescriptors) {
+            std::scoped_lock resourceDescriptorsGuard(pResource->mtxHeapDescriptors.first);
+
+            for (const auto& descriptor : pResource->mtxHeapDescriptors.second) {
                 if (!descriptor.has_value()) {
                     continue;
                 }
@@ -475,7 +480,7 @@ namespace ne {
                 }
 
                 createView(heapHandle, pResource, descriptor->descriptorType);
-                pResource->vHeapDescriptors[static_cast<int>(descriptor->descriptorType)]
+                pResource->mtxHeapDescriptors.second[static_cast<int>(descriptor->descriptorType)]
                     ->iDescriptorOffsetInDescriptors = iCurrentHeapIndex;
 
                 heapHandle.Offset(1, iDescriptorSize);

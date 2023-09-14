@@ -4,6 +4,7 @@
 #include <variant>
 #include <memory>
 #include <optional>
+#include <mutex>
 
 // Custom.
 #include "misc/Error.h"
@@ -44,6 +45,8 @@ namespace ne {
         /**
          * Creates a new descriptor and binds it to this resource.
          *
+         * @remark Does nothing if a descriptor of this type is already binded.
+         *
          * @param descriptorType Type of descriptor to bind.
          *
          * @return Error if something went wrong.
@@ -59,7 +62,7 @@ namespace ne {
          * descriptor handle.
          */
         std::optional<D3D12_CPU_DESCRIPTOR_HANDLE>
-        getBindedDescriptorHandle(DirectXDescriptorType descriptorType) const;
+        getBindedDescriptorHandle(DirectXDescriptorType descriptorType);
 
         /**
          * Returns internal resource.
@@ -71,6 +74,18 @@ namespace ne {
          * @return Internal resource.
          */
         inline ID3D12Resource* getInternalResource() const { return pInternalResource; }
+
+        /**
+         * Returns a raw (non-owning) pointer to a binded descriptor.
+         *
+         * @remark Do not delete (free) returned pointer.
+         *
+         * @param descriptorType Type of descriptor to query.
+         *
+         * @return `nullptr` if a descriptor of this type was not binded to this resource,
+         * otherwise valid pointer.
+         */
+        DirectXDescriptor* getDescriptor(DirectXDescriptorType descriptorType);
 
         /**
          * Returns resource name.
@@ -132,7 +147,7 @@ namespace ne {
          * Will have size of DescriptorType enum elements.
          * Access elements like this: "vHeapDescriptors[DescriptorType::SRV]".
          */
-        std::vector<std::optional<DirectXDescriptor>> vHeapDescriptors;
+        std::pair<std::recursive_mutex, std::vector<std::optional<DirectXDescriptor>>> mtxHeapDescriptors;
 
         /** Created resource (can be empty if @ref pSwapChainBuffer is used). */
         ComPtr<D3D12MA::Allocation> pAllocatedResource;

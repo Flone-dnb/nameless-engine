@@ -9,7 +9,7 @@
 #include "materials/ShaderMacro.h"
 #include "math/GLMath.hpp"
 #include "materials/resources/cpuwrite/ShaderCpuWriteResourceUniquePtr.h"
-#include "materials/resources/texture/ShaderBindlessTextureResourceUniquePtr.h"
+#include "materials/resources/texture/ShaderTextureResourceUniquePtr.h"
 #include "materials/VulkanAlignmentConstants.hpp"
 #include "materials/TextureManager.h"
 
@@ -68,9 +68,8 @@ namespace ne RNAMESPACE() {
                 /** Shader single (non-array) resources with CPU write access. */
                 std::unordered_map<std::string, ShaderCpuWriteResourceUniquePtr> shaderCpuWriteResources;
 
-                /** Shader resources that reference bindless texture arrays. */
-                std::unordered_map<std::string, ShaderBindlessTextureResourceUniquePtr>
-                    shaderBindlessTextureResources;
+                /** Shader resources that reference textures. */
+                std::unordered_map<std::string, ShaderTextureResourceUniquePtr> shaderTextureResources;
             };
 
             /** Shader GPU resources. */
@@ -369,12 +368,8 @@ namespace ne RNAMESPACE() {
             const std::function<void()>& onFinishedUpdatingResource);
 
         /**
-         * Setups a shader resource that references a bindless array of textures and binds a specific
-         * texture to one of array's descriptors that will be used in shaders when this material is
-         * rendered.
-         *
-         * @remark Expects that there is a push constant (named after the specified shader resource)
-         * that will store an index of descriptor in that array, otherwise an error will be shown.
+         * Setups a shader resource that references a texture  that will be used in shaders when
+         * this material is rendered.
          *
          * @remark Call this function in @ref allocateShaderResources to bind to shader resources, all
          * bindings will be automatically removed in @ref deallocateShaderResources.
@@ -383,7 +378,7 @@ namespace ne RNAMESPACE() {
          * the same as the resource name written in the shader file we are referencing).
          * @param sPathToTextureResourceRelativeRes Path to file/directory with texture resource to use.
          */
-        void setShaderBindlessTextureResourceBindingData(
+        void setShaderTextureResourceBindingData(
             const std::string& sShaderResourceName, const std::string& sPathToTextureResourceRelativeRes);
 
         /**
@@ -470,8 +465,8 @@ namespace ne RNAMESPACE() {
         /** Name of the constant buffer used to store material data in shaders. */
         static inline const auto sMaterialShaderConstantBufferName = "materialData";
 
-        /** Name of the array used to store diffuse textures in shaders. */
-        static inline const auto sMaterialShaderDiffuseTextureArrayName = "diffuseTextures";
+        /** Name of the resource used to store diffuse texture in shaders. */
+        static inline const auto sMaterialShaderDiffuseTextureName = "diffuseTextures";
 
         ne_Material_GENERATED
     };

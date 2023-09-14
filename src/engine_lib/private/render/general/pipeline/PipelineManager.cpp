@@ -233,8 +233,7 @@ namespace ne {
 
             // Get all shader resources.
             const auto pShaderCpuWriteResourceManager = getRenderer()->getShaderCpuWriteResourceManager();
-            const auto pShaderBindlessTextureResourceManager =
-                getRenderer()->getShaderBindlessTextureResourceManager();
+            const auto pShaderTextureResourceManager = getRenderer()->getShaderTextureResourceManager();
 
             // Update shader CPU write resources.
             {
@@ -251,9 +250,9 @@ namespace ne {
                 }
             }
 
-            // Update shader resources that reference bindless textures.
+            // Update shader resources that reference textures.
             {
-                const auto pMtxResources = pShaderBindlessTextureResourceManager->getResources();
+                const auto pMtxResources = pShaderTextureResourceManager->getResources();
                 std::scoped_lock shaderResourceGuard(pMtxResources->first);
 
                 for (const auto& [pRawResource, pResource] : pMtxResources->second) {

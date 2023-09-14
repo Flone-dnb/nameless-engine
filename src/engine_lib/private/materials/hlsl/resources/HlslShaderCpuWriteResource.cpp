@@ -5,6 +5,7 @@
 
 // Custom.
 #include "render/directx/pipeline/DirectXPso.h"
+#include "materials/hlsl/resources/HlslShaderResourceHelpers.h"
 #include "render/Renderer.h"
 #include "render/general/resources/GpuResourceManager.h"
 
@@ -20,7 +21,8 @@ namespace ne {
         const std::function<void*()>& onStartedUpdatingResource,
         const std::function<void()>& onFinishedUpdatingResource) {
         // Find a resource with the specified name in the root signature.
-        auto result = getRootParameterIndexFromPipeline(pUsedPipeline, sShaderResourceName);
+        auto result =
+            HlslShaderResourceHelpers::getRootParameterIndexFromPipeline(pUsedPipeline, sShaderResourceName);
         if (std::holds_alternative<Error>(result)) {
             auto error = std::get<Error>(std::move(result));
             error.addCurrentLocationToErrorStack();
@@ -102,7 +104,8 @@ namespace ne {
 
     std::optional<Error> HlslShaderCpuWriteResource::bindToNewPipeline(Pipeline* pNewPipeline) {
         // Find a resource with the specified name in the root signature.
-        auto result = getRootParameterIndexFromPipeline(pNewPipeline, getResourceName());
+        auto result =
+            HlslShaderResourceHelpers::getRootParameterIndexFromPipeline(pNewPipeline, getResourceName());
         if (std::holds_alternative<Error>(result)) [[unlikely]] {
             auto error = std::get<Error>(std::move(result));
             error.addCurrentLocationToErrorStack();
@@ -113,31 +116,6 @@ namespace ne {
         iRootParameterIndex = std::get<UINT>(result);
 
         return {};
-    }
-
-    std::variant<UINT, Error> HlslShaderCpuWriteResource::getRootParameterIndexFromPipeline(
-        Pipeline* pPipeline, const std::string& sShaderResourceName) {
-        // Make sure PSO has correct type.
-        const auto pDirectXPso = dynamic_cast<DirectXPso*>(pPipeline);
-        if (pDirectXPso == nullptr) [[unlikely]] {
-            return Error("expected DirectX PSO");
-        }
-
-        // Get PSO internal resources.
-        auto pMtxInternalPsoResources = pDirectXPso->getInternalResources();
-        std::scoped_lock psoGuard(pMtxInternalPsoResources->first);
-
-        // Find this resource by name.
-        auto it = pMtxInternalPsoResources->second.rootParameterIndices.find(sShaderResourceName);
-        if (it == pMtxInternalPsoResources->second.rootParameterIndices.end()) [[unlikely]] {
-            return Error(std::format(
-                "unable to find a shader resource by the specified name \"{}\", make sure the resource name "
-                "is correct and that this resource is actually being used inside of your shader (otherwise "
-                "the shader resource might be optimized out and the engine will not be able to see it)",
-                sShaderResourceName));
-        }
-
-        return it->second;
     }
 
 } // namespace ne

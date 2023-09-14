@@ -17,7 +17,21 @@ static std::atomic<size_t> iTotalAliveMaterialCount{0};
 
 namespace ne {
 
-    Material::Material() { iTotalAliveMaterialCount.fetch_add(1); }
+    Material::Material() {
+        iTotalAliveMaterialCount.fetch_add(1);
+
+        // Self check: make sure reinterpret_casts will work.
+        static_assert(
+            std::is_same_v<
+                decltype(mtxGpuResources.second.shaderResources.shaderCpuWriteResources),
+                std::unordered_map<std::string, ShaderCpuWriteResourceUniquePtr>>,
+            "update reinterpret_casts in both renderers (in draw function)");
+        static_assert(
+            std::is_same_v<
+                decltype(mtxGpuResources.second.shaderResources.shaderTextureResources),
+                std::unordered_map<std::string, ShaderTextureResourceUniquePtr>>,
+            "update reinterpret_casts in both renderers (in draw function)");
+    }
 
     Material::Material(
         const std::string& sVertexShaderName,
@@ -284,8 +298,8 @@ namespace ne {
 
         // Set diffuse texture (if path is set).
         if (!sDiffuseTexturePathRelativeRes.empty()) {
-            setShaderBindlessTextureResourceBindingData(
-                sMaterialShaderDiffuseTextureArrayName, sDiffuseTexturePathRelativeRes);
+            setShaderTextureResourceBindingData(
+                sMaterialShaderDiffuseTextureName, sDiffuseTexturePathRelativeRes);
         }
     }
 
@@ -384,7 +398,7 @@ namespace ne {
             std::get<ShaderCpuWriteResourceUniquePtr>(std::move(result));
     }
 
-    void Material::setShaderBindlessTextureResourceBindingData(
+    void Material::setShaderTextureResourceBindingData(
         const std::string& sShaderResourceName, const std::string& sPathToTextureResourceRelativeRes) {
         std::scoped_lock guard(mtxInternalResources.first, mtxGpuResources.first);
 
@@ -409,11 +423,10 @@ namespace ne {
         }
 
         // Make sure there is no resource with this name.
-        auto it =
-            mtxGpuResources.second.shaderResources.shaderBindlessTextureResources.find(sShaderResourceName);
-        if (it != mtxGpuResources.second.shaderResources.shaderBindlessTextureResources.end()) [[unlikely]] {
+        auto it = mtxGpuResources.second.shaderResources.shaderTextureResources.find(sShaderResourceName);
+        if (it != mtxGpuResources.second.shaderResources.shaderTextureResources.end()) [[unlikely]] {
             Error error(std::format(
-                "material \"{}\" already has a shader bindless texture resource with the name \"{}\"",
+                "material \"{}\" already has a shader texture resource with the name \"{}\"",
                 sMaterialName,
                 sShaderResourceName));
             error.showError();
@@ -434,11 +447,11 @@ namespace ne {
         }
         auto pTextureHandle = std::get<std::unique_ptr<TextureHandle>>(std::move(textureResult));
 
-        // Get shader bindless texture resource manager.
-        const auto pShaderResourceManager = pRenderer->getShaderBindlessTextureResourceManager();
+        // Get shader texture resource manager.
+        const auto pShaderResourceManager = pRenderer->getShaderTextureResourceManager();
 
         // Create a new shader resource.
-        auto shaderResourceResult = pShaderResourceManager->createShaderBindlessTextureResource(
+        auto shaderResourceResult = pShaderResourceManager->createShaderTextureResource(
             sShaderResourceName,
             std::format("material \"{}\"", sMaterialName),
             mtxInternalResources.second.pUsedPipeline.getPipeline(),
@@ -451,8 +464,8 @@ namespace ne {
         }
 
         // Add to be considered.
-        mtxGpuResources.second.shaderResources.shaderBindlessTextureResources[sShaderResourceName] =
-            std::get<ShaderBindlessTextureResourceUniquePtr>(std::move(shaderResourceResult));
+        mtxGpuResources.second.shaderResources.shaderTextureResources[sShaderResourceName] =
+            std::get<ShaderTextureResourceUniquePtr>(std::move(shaderResourceResult));
     }
 
     void Material::markShaderCpuWriteResourceAsNeedsUpdate(const std::string& sShaderResourceName) {
@@ -592,12 +605,7 @@ namespace ne {
         // Set new diffuse texture path.
         sDiffuseTexturePathRelativeRes = sTextureResourcePathRelativeRes;
 
-        if (!mtxInternalResources.second.pUsedPipeline.isInitialized()) {
-            // No more things to do here.
-            return;
-        }
-
-        // See if our current pipeline uses diffuse textures.
+        // Update our macros.
         auto& pixelShaderMacros = mtxInternalResources.second.materialPixelShaderMacros;
         const auto diffuseTextureMacroIt = pixelShaderMacros.find(ShaderMacro::PS_USE_DIFFUSE_TEXTURE);
 
@@ -624,6 +632,12 @@ namespace ne {
             bNeedNewPipeline = true;
         }
 
+        // See if we need to re-request a pipeline.
+        if (!mtxInternalResources.second.pUsedPipeline.isInitialized()) {
+            // No more things to do here.
+            return;
+        }
+
         // Get renderer.
         const auto pRenderer = mtxInternalResources.second.pUsedPipeline->getRenderer();
 
@@ -644,12 +658,12 @@ namespace ne {
         std::scoped_lock guard(mtxGpuResources.first);
 
         // Find a resource that handles diffuse textures.
-        auto& resources = mtxGpuResources.second.shaderResources.shaderBindlessTextureResources;
-        const auto it = resources.find(sMaterialShaderDiffuseTextureArrayName);
+        auto& resources = mtxGpuResources.second.shaderResources.shaderTextureResources;
+        const auto it = resources.find(sMaterialShaderDiffuseTextureName);
         if (it == resources.end()) [[unlikely]] {
             // Some other thread changed GPU resources?
-            Logger::get().error(std::format(
-                "expected shader resource \"{}\" to exist", sMaterialShaderDiffuseTextureArrayName));
+            Logger::get().error(
+                std::format("expected shader resource \"{}\" to exist", sMaterialShaderDiffuseTextureName));
             return;
         }
 

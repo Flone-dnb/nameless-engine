@@ -18,16 +18,13 @@ namespace ne {
     class Pipeline;
     class VulkanPipeline;
 
-    /**
-     * References some bindless array/table from shader code and allows reserving a slot (space)
-     * in this bindless array/table to be used for some custom-provided descriptors/views.
-     */
-    class GlslShaderBindlessTextureResource : public ShaderBindlessTextureResource {
+    /** References some texture from shader code. */
+    class GlslShaderTextureResource : public ShaderTextureResource {
         // Only shader resource manager should be able to create such resources.
-        friend class ShaderBindlessTextureResourceManager;
+        friend class ShaderTextureResourceManager;
 
     public:
-        virtual ~GlslShaderBindlessTextureResource() override = default;
+        virtual ~GlslShaderTextureResource() override = default;
 
         /**
          * Returns path to a file/directory that stores used texture resource.
@@ -61,7 +58,7 @@ namespace ne {
          * constants.
          * @param iPushConstantIndex   Index of push constant to copy texture index to.
          */
-        GlslShaderBindlessTextureResource(
+        GlslShaderTextureResource(
             const std::string& sResourceName,
             VulkanPipeline* pUsedPipeline,
             std::unique_ptr<TextureHandle> pTextureToUse,
@@ -104,16 +101,13 @@ namespace ne {
          *
          * @param sShaderResourceName     Name of the resource we are referencing (should be exactly the
          * same as the resource name written in the shader file we are referencing).
-         * @param sResourceAdditionalInfo Additional text that we will append to created resource name
-         * (used for logging).
          * @param pUsedPipeline           Pipeline that uses the shader/parameters we are referencing.
          * @param pTextureToUse           Texture that should be binded to a descriptor in bindless array.
          *
          * @return Error if something went wrong, otherwise created shader resource.
          */
-        static std::variant<std::unique_ptr<ShaderBindlessTextureResource>, Error> create(
+        static std::variant<std::unique_ptr<ShaderTextureResource>, Error> create(
             const std::string& sShaderResourceName,
-            const std::string& sResourceAdditionalInfo,
             Pipeline* pUsedPipeline,
             std::unique_ptr<TextureHandle> pTextureToUse);
 

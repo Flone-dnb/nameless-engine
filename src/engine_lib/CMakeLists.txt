@@ -36,6 +36,10 @@ set(PROJECT_WIN32_SOURCES
     private/materials/hlsl/RootSignatureGenerator.cpp
     private/materials/hlsl/resources/HlslShaderCpuWriteResource.h
     private/materials/hlsl/resources/HlslShaderCpuWriteResource.cpp
+    private/materials/hlsl/resources/HlslShaderTextureResource.h
+    private/materials/hlsl/resources/HlslShaderTextureResource.cpp
+    private/materials/hlsl/resources/HlslShaderResourceHelpers.h
+    private/materials/hlsl/resources/HlslShaderResourceHelpers.cpp
     private/render/directx/DirectXRenderer.h
     private/render/directx/DirectXRenderer.cpp
     private/render/directx/pipeline/DirectXPso.cpp
@@ -144,8 +148,8 @@ set(PROJECT_SOURCES
     private/materials/glsl/GlslShader.cpp
     private/materials/glsl/resources/GlslShaderCpuWriteResource.h
     private/materials/glsl/resources/GlslShaderCpuWriteResource.cpp
-    private/materials/glsl/resources/GlslShaderBindlessTextureResource.h
-    private/materials/glsl/resources/GlslShaderBindlessTextureResource.cpp
+    private/materials/glsl/resources/GlslShaderTextureResource.h
+    private/materials/glsl/resources/GlslShaderTextureResource.cpp
     private/materials/glsl/resources/GlslShaderResourceHelpers.h
     private/materials/glsl/resources/GlslShaderResourceHelpers.cpp
     private/materials/glsl/DescriptorSetLayoutGenerator.h
@@ -174,10 +178,10 @@ set(PROJECT_SOURCES
     private/materials/resources/cpuwrite/ShaderCpuWriteResourceManager.h
     private/materials/resources/cpuwrite/ShaderCpuWriteResourceUniquePtr.cpp
     private/materials/resources/cpuwrite/ShaderCpuWriteResourceUniquePtr.h
-    private/materials/resources/texture/ShaderBindlessTextureResourceManager.cpp
-    private/materials/resources/texture/ShaderBindlessTextureResourceManager.h
-    private/materials/resources/texture/ShaderBindlessTextureResourceUniquePtr.cpp
-    private/materials/resources/texture/ShaderBindlessTextureResourceUniquePtr.h
+    private/materials/resources/texture/ShaderTextureResourceManager.cpp
+    private/materials/resources/texture/ShaderTextureResourceManager.h
+    private/materials/resources/texture/ShaderTextureResourceUniquePtr.cpp
+    private/materials/resources/texture/ShaderTextureResourceUniquePtr.h
     public/materials/VulkanAlignmentConstants.hpp
     public/misc/ProjectPaths.h
     private/misc/ProjectPaths.cpp

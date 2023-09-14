@@ -5,7 +5,7 @@
 #endif
 
 #ifdef PS_USE_DIFFUSE_TEXTURE
-    Texture2D diffuseTexture : register(t0, space5);
+    Texture2D diffuseTextures : register(t0, space5);
 #endif
 
 /** Describes MeshNode's constants. */
@@ -51,7 +51,7 @@ float4 psMeshNode(VertexOut pin) : SV_Target
     float4 outputColor = float4(diffuseColor, 1.0F);
 
 #ifdef PS_USE_DIFFUSE_TEXTURE
-    outputColor *= diffuseTexture.Sample(textureSampler, pin.uv);
+    outputColor *= diffuseTextures.Sample(textureSampler, pin.uv);
 #endif
 
 #ifdef PS_USE_MATERIAL_TRANSPARENCY

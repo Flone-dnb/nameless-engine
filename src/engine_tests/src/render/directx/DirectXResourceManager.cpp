@@ -272,9 +272,9 @@ TEST_CASE("assign multiple descriptors to one resource") {
             }
 
             // Assign a SRV descriptor to this resource (again).
-            // (should fail because descriptor of this type is already added)
+            // (should not fail, will be just ignored).
             optionalError = pResource->bindDescriptor(DirectXDescriptorType::SRV);
-            REQUIRE(optionalError.has_value());
+            REQUIRE(!optionalError.has_value());
 
             pGameWindow->close();
         }

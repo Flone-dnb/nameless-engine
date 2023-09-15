@@ -466,7 +466,7 @@ namespace ne RNAMESPACE() {
         static inline const auto sMaterialShaderConstantBufferName = "materialData";
 
         /** Name of the resource used to store diffuse texture in shaders. */
-        static inline const auto sMaterialShaderDiffuseTextureName = "diffuseTextures";
+        static inline const auto sMaterialShaderDiffuseTextureName = "diffuseTexture";
 
         ne_Material_GENERATED
     };

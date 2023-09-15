@@ -49,11 +49,22 @@ namespace ne {
 
             /**
              * Not empty if push constants are used.
-             * Stores names of fields defined in GLSL as push constants (all with `uint` type).
+             * Stores pairs of "name of field defined in GLSL push constants" (all with `uint` type)
+             * and "offset from the beginning of the push constants struct (in `uint`s not bytes)".
+             *
+             * Example:
+             * @code
+             * layout(push_constant) uniform MeshIndices{
+             *     uint meshData;
+             *     uint materialData;
+             * }
+             *
+             * will generate pairs: "meshData" - "0", "materialData" - "1".
+             * @endcode
              *
              * @remark If a non `uint` fields is found an error is returned instead.
              */
-            std::optional<std::unordered_set<std::string>> pushConstantUintFieldNames;
+            std::optional<std::unordered_map<std::string, size_t>> pushConstantUintFieldOffsets;
         };
 
         /** Groups generated data. */
@@ -79,11 +90,22 @@ namespace ne {
 
             /**
              * Not empty if push constants are used.
-             * Stores names of fields defined in GLSL as push constants (all with `uint` type).
+             * Stores pairs of "name of field defined in GLSL push constants" (all with `uint` type)
+             * and "offset from the beginning of the push constants struct (in `uint`s not bytes)".
+             *
+             * Example:
+             * @code
+             * layout(push_constant) uniform MeshIndices{
+             *     uint meshData;
+             *     uint materialData;
+             * }
+             *
+             * will generate pairs: "meshData" - "0", "materialData" - "1".
+             * @endcode
              *
              * @remark If a non `uint` fields is found an error is returned instead.
              */
-            std::optional<std::unordered_set<std::string>> pushConstantUintFieldNames;
+            std::optional<std::unordered_map<std::string, size_t>> pushConstantUintFieldOffsets;
         };
 
         DescriptorSetLayoutGenerator() = delete;

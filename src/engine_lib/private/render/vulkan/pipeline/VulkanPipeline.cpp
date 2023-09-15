@@ -161,7 +161,7 @@ namespace ne {
     }
 
     std::variant<VkPushConstantRange, Error> VulkanPipeline::definePushConstants(
-        const std::unordered_set<std::string>& pushConstantUintFieldNames,
+        const std::unordered_map<std::string, size_t>& pushConstantUintFieldOffsets,
         const std::unordered_map<std::string, uint32_t>& resourceBindings) {
         std::scoped_lock guard(mtxInternalResources.first);
 
@@ -171,12 +171,12 @@ namespace ne {
         }
 
         // Make sure push constants are specified.
-        if (pushConstantUintFieldNames.empty()) {
+        if (pushConstantUintFieldOffsets.empty()) {
             return Error("received empty array of push constants");
         }
 
         // Make sure push constants referencing existing resources.
-        for (const auto& sFieldName : pushConstantUintFieldNames) {
+        for (const auto& [sFieldName, iOffsetInUints] : pushConstantUintFieldOffsets) {
             // Push constants names should be equal to resource name that they index into.
             const auto it = resourceBindings.find(sFieldName);
             if (it == resourceBindings.end()) [[unlikely]] {
@@ -192,17 +192,13 @@ namespace ne {
         // Create new push constants data.
         mtxInternalResources.second.pushConstantsData = InternalResources::PushConstantsData{};
 
-        // Determine which resources will use which indices into push constants manager.
-        size_t iNextFreeIndex = 0;
-        for (const auto& sFieldName : pushConstantUintFieldNames) {
-            mtxInternalResources.second.pushConstantsData.value().uintFieldIndicesToUse[sFieldName] =
-                iNextFreeIndex;
-            iNextFreeIndex += 1;
-        }
+        // Save info about which resources will use which indices into push constants manager.
+        mtxInternalResources.second.pushConstantsData.value().uintFieldIndicesToUse =
+            pushConstantUintFieldOffsets;
 
         // Create push constants manager.
         mtxInternalResources.second.pushConstantsData.value().pPushConstantsManager =
-            std::make_unique<VulkanPushConstantsManager>(pushConstantUintFieldNames.size());
+            std::make_unique<VulkanPushConstantsManager>(pushConstantUintFieldOffsets.size());
 
         // Specify range (not creating multiple ranges since it's very complicated to setup).
         VkPushConstantRange range{};
@@ -545,10 +541,10 @@ namespace ne {
 
         // Specify push constants (if used).
         VkPushConstantRange pushConstants{};
-        if (generatedLayout.pushConstantUintFieldNames.has_value()) {
+        if (generatedLayout.pushConstantUintFieldOffsets.has_value()) {
             // Process push constants.
             auto pushConstantsResult = definePushConstants(
-                generatedLayout.pushConstantUintFieldNames.value(), generatedLayout.resourceBindings);
+                generatedLayout.pushConstantUintFieldOffsets.value(), generatedLayout.resourceBindings);
             if (std::holds_alternative<Error>(pushConstantsResult)) [[unlikely]] {
                 auto error = std::get<Error>(std::move(pushConstantsResult));
                 error.addCurrentLocationToErrorStack();

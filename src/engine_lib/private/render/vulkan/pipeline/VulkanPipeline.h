@@ -240,15 +240,16 @@ namespace ne {
         /**
          * Initializes internal push constants manager and returns push constants description.
          *
-         * @param pushConstantUintFieldNames Stores names of fields defined in GLSL as push constants
-         * (all with `uint` type).
+         * @param pushConstantUintFieldOffsets Stores pairs of "name of field defined in GLSL push constants"
+         * (all with `uint` type) and "offset from the beginning of the push constants struct
+         * (in `uint`s not bytes)".
          * @param resourceBindings           Map of pairs "resource name" (from GLSL code) - "layout
          * binding index".
          *
          * @return Error if something went wrong, otherwise push constants range.
          */
         std::variant<VkPushConstantRange, Error> definePushConstants(
-            const std::unordered_set<std::string>& pushConstantUintFieldNames,
+            const std::unordered_map<std::string, size_t>& pushConstantUintFieldOffsets,
             const std::unordered_map<std::string, uint32_t>& resourceBindings);
 
         /**

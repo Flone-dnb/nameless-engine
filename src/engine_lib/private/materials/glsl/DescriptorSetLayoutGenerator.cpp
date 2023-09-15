@@ -134,7 +134,7 @@ namespace ne {
             }
 
             // Go through each field.
-            std::unordered_set<std::string> uintFieldNames;
+            std::unordered_map<std::string, size_t> uintFieldOffsets;
             for (const auto& memberInfo : vMembers) {
                 // Make sure it's a `uint` indeed.
                 if (memberInfo->size != sizeof(unsigned int)) [[unlikely]] {
@@ -148,9 +148,21 @@ namespace ne {
                         memberInfo->name));
                 }
 
-                uintFieldNames.insert(memberInfo->name);
+                // Make sure its absolute offset is a multiple of 4 (sizeof uint).
+                if (memberInfo->absolute_offset % 4 != 0) [[unlikely]] {
+                    return Error(std::format(
+                        "found a field in push constants named \"{}\" with absolute "
+                        "offset not being multiple of 4 (absolute offset: {})",
+                        memberInfo->name,
+                        memberInfo->absolute_offset));
+                }
+
+                // Save info.
+                uintFieldOffsets[memberInfo->name] = memberInfo->absolute_offset / 4;
             }
-            collected.pushConstantUintFieldNames = std::move(uintFieldNames);
+
+            // Save collected info.
+            collected.pushConstantUintFieldOffsets = std::move(uintFieldOffsets);
         }
 
         // Destroy shader module.
@@ -498,19 +510,23 @@ namespace ne {
         }
 
         // Merge push constants (if used).
-        std::unordered_set<std::string> pushConstantUintFieldNames;
-        if (vertexShaderDescriptorLayoutInfo.pushConstantUintFieldNames.has_value()) {
-            for (const auto& sFieldName : *vertexShaderDescriptorLayoutInfo.pushConstantUintFieldNames) {
-                pushConstantUintFieldNames.insert(sFieldName);
+        std::unordered_map<std::string, size_t> pushConstantUintFieldOffsets;
+        if (vertexShaderDescriptorLayoutInfo.pushConstantUintFieldOffsets.has_value()) {
+            for (const auto& [sFieldName, iOffsetInUints] :
+                 *vertexShaderDescriptorLayoutInfo.pushConstantUintFieldOffsets) {
+                pushConstantUintFieldOffsets[sFieldName] = iOffsetInUints;
             }
         }
-        if (fragmentShaderDescriptorLayoutInfo.pushConstantUintFieldNames.has_value()) {
-            for (const auto& sFieldName : *fragmentShaderDescriptorLayoutInfo.pushConstantUintFieldNames) {
-                pushConstantUintFieldNames.insert(sFieldName);
+        if (fragmentShaderDescriptorLayoutInfo.pushConstantUintFieldOffsets.has_value()) {
+            for (const auto& [sFieldName, iOffsetInUints] :
+                 *fragmentShaderDescriptorLayoutInfo.pushConstantUintFieldOffsets) {
+                pushConstantUintFieldOffsets[sFieldName] = iOffsetInUints;
             }
         }
-        if (!pushConstantUintFieldNames.empty()) {
-            generatedData.pushConstantUintFieldNames = std::move(pushConstantUintFieldNames);
+
+        // Save info.
+        if (!pushConstantUintFieldOffsets.empty()) {
+            generatedData.pushConstantUintFieldOffsets = std::move(pushConstantUintFieldOffsets);
         }
 
         return generatedData;

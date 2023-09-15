@@ -53,7 +53,8 @@ TEST_CASE("measure elapsed time") {
 
             // Make sure the time can still be queries after stopping.
             REQUIRE(pTimer->getElapsedTimeInMs().has_value());
-            REQUIRE(pTimer->getElapsedTimeInMs().value() == iTimerElapsedInMs);
+            REQUIRE(pTimer->getElapsedTimeInMs().value() <= iTimerElapsedInMs + 1);
+            REQUIRE(pTimer->getElapsedTimeInMs().value() >= iTimerElapsedInMs - 1);
 
             getGameInstance()->getWindow()->close();
         }

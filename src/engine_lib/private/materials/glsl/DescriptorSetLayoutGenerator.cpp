@@ -430,7 +430,8 @@ namespace ne {
             descriptorPoolSize.type = vLayoutBindings[i].descriptorType;
 
             // Specify how much descriptors of this type can be allocated using the pool.
-            descriptorPoolSize.descriptorCount = FrameResourcesManager::getFrameResourcesCount();
+            descriptorPoolSize.descriptorCount =
+                vLayoutBindings[i].descriptorCount * FrameResourcesManager::getFrameResourcesCount();
         }
 
         // Describe descriptor pool.

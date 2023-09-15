@@ -28,9 +28,9 @@ namespace ne {
 
     /** Describes texture format. */
     enum class TextureType {
-        DIFFUSE_TEXTURE,
-        NORMAL_TEXTURE,
-        HDR_TEXTURE,
+        DIFFUSE,
+        NORMAL,
+        HDR,
     };
 
     /**

@@ -33,7 +33,7 @@ namespace ne {
 
     CMP_FORMAT textureTypeToCmpFormat(ne::TextureType type) {
         switch (type) {
-        case (ne::TextureType::DIFFUSE_TEXTURE): {
+        case (ne::TextureType::DIFFUSE): {
             return CMP_FORMAT_BC3; // using BC3 instead of BC7 because:
                                    // 1. Compressonator compresses to BC7 with errors on Linux so to
                                    // be consistent across all platforms using BC3,
@@ -41,11 +41,11 @@ namespace ne {
                                    // textures such as 4K
             break;
         }
-        case (ne::TextureType::NORMAL_TEXTURE): {
+        case (ne::TextureType::NORMAL): {
             return CMP_FORMAT_BC5;
             break;
         }
-        case (ne::TextureType::HDR_TEXTURE): {
+        case (ne::TextureType::HDR): {
             return CMP_FORMAT_BC6H;
             break;
         }

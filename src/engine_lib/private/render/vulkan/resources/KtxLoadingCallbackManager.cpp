@@ -78,6 +78,7 @@ namespace ne {
 
         // Prepare allocation info.
         VmaAllocationCreateInfo allocationInfo = {};
+        allocationInfo.memoryTypeBits = pMemoryRequirements->memoryTypeBits;
 
         // Check memory properties.
         auto bUsingHostVisibleMemory = false;
@@ -85,11 +86,11 @@ namespace ne {
              VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) != 0) {
             // Use host visible memory.
             bUsingHostVisibleMemory = true;
-            allocationInfo.requiredFlags =
-                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+            allocationInfo.usage = VMA_MEMORY_USAGE_CPU_TO_GPU;
+            allocationInfo.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
         } else {
             // Use dedicated memory.
-            allocationInfo.flags = VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
+            allocationInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
         }
 
         // Allocate memory.

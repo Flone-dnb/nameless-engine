@@ -10,9 +10,8 @@
 #include "materials/DescriptorConstants.hpp"
 
 namespace ne {
-    
-    std::variant<std::unique_ptr<ShaderTextureResource>, Error>
-    GlslShaderTextureResource::create(
+
+    std::variant<std::unique_ptr<ShaderTextureResource>, Error> GlslShaderTextureResource::create(
         const std::string& sShaderResourceName,
         Pipeline* pUsedPipeline,
         std::unique_ptr<TextureHandle> pTextureToUse) {

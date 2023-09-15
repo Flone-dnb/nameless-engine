@@ -42,8 +42,7 @@ namespace ne {
 
     std::string ShaderResourceBase::getResourceName() const { return sResourceName; }
 
-    std::optional<Error>
-    ShaderTextureResource::useNewTexture(std::unique_ptr<TextureHandle> pTextureToUse) {
+    std::optional<Error> ShaderTextureResource::useNewTexture(std::unique_ptr<TextureHandle> pTextureToUse) {
         // Get current pipeline.
         const auto pMtxCurrentPipeline = getCurrentPipeline();
         std::scoped_lock guard(pMtxCurrentPipeline->first);
@@ -57,9 +56,8 @@ namespace ne {
 
         return {};
     }
-    
-    ShaderTextureResource::ShaderTextureResource(
-        const std::string& sResourceName, Pipeline* pUsedPipeline)
+
+    ShaderTextureResource::ShaderTextureResource(const std::string& sResourceName, Pipeline* pUsedPipeline)
         : ShaderResourceBase(sResourceName, pUsedPipeline) {}
 
     ShaderCpuWriteResource::~ShaderCpuWriteResource() {}

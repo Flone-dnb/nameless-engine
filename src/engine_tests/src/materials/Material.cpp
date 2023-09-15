@@ -859,3 +859,174 @@ TEST_CASE("serialize and deserialize a node tree with materials") {
     REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
     REQUIRE(Material::getCurrentAliveMaterialCount() == 0);
 }
+
+TEST_CASE("changing diffuse texture from non-main thread should not cause deadlock") {
+    using namespace ne;
+
+    class TestGameInstance : public GameInstance {
+    public:
+        TestGameInstance(Window* pGameWindow, GameManager* pGame, InputManager* pInputManager)
+            : GameInstance(pGameWindow, pGame, pInputManager) {}
+        virtual void onGameStarted() override {
+            createWorld([this](const std::optional<Error>& optionalError) {
+                if (optionalError.has_value()) {
+                    auto error = optionalError.value();
+                    error.addCurrentLocationToErrorStack();
+                    INFO(error.getFullErrorMessage());
+                    REQUIRE(false);
+                }
+
+                // Prepare textures.
+                if (!prepareDiffuseTextures()) {
+                    REQUIRE(false);
+                }
+
+                // Spawn sample mesh.
+                const auto pMeshNode = gc_new<MeshNode>();
+                auto mtxMeshData = pMeshNode->getMeshData();
+                {
+                    std::scoped_lock guard(*mtxMeshData.first);
+                    (*mtxMeshData.second) = PrimitiveMeshGenerator::createCube(1.0F);
+                }
+
+                // Set texture before spawning.
+                pMeshNode->getMaterial()->setDiffuseTexture(sImportedTexture1PathRelativeRes);
+
+                getWorldRootNode()->addChildNode(pMeshNode);
+                pMeshNode->setWorldLocation(glm::vec3(1.0F, 0.0F, 0.0F));
+
+                addTaskToThreadPool([this, pRawMeshNode = &*pMeshNode]() {
+                    const auto iFramesBefore = iFramesRendered;
+
+                    do {
+                        Logger::get().info("attempting to test a deadlock...");
+                        constexpr size_t iTryCont = 1000;
+                        for (size_t i = 0; i < iTryCont; i++) {
+                            if (i % 2 == 0) {
+                                pRawMeshNode->getMaterial()->setDiffuseTexture(
+                                    sImportedTexture2PathRelativeRes);
+                            } else {
+                                pRawMeshNode->getMaterial()->setDiffuseTexture(
+                                    sImportedTexture1PathRelativeRes);
+                            }
+
+                            if (i % (iTryCont / 10) == 0) {
+                                Logger::get().info(std::format(
+                                    "testing deadlock: {}%",
+                                    static_cast<size_t>(
+                                        static_cast<float>(i) / static_cast<float>(iTryCont) * 100.0F)));
+                            }
+                        }
+                    } while (iFramesRendered <= iFramesBefore + 1);
+
+                    Logger::get().info("finished testing a deadlock");
+
+                    getWindow()->close();
+                });
+            });
+        }
+        virtual ~TestGameInstance() override {}
+
+        virtual void onBeforeNewFrame(float delta) override { iFramesRendered += 1; }
+
+    private:
+        size_t iFramesRendered = 0;
+    };
+
+    auto result = Window::getBuilder().withVisibility(false).build();
+    if (std::holds_alternative<Error>(result)) {
+        Error error = std::get<Error>(std::move(result));
+        error.addCurrentLocationToErrorStack();
+        INFO(error.getFullErrorMessage());
+        REQUIRE(false);
+    }
+
+    const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
+    pMainWindow->processEvents<TestGameInstance>();
+
+    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+    REQUIRE(Material::getCurrentAliveMaterialCount() == 0);
+}
+
+TEST_CASE("using 1 texture in 2 material has only 1 texture in memory") {
+    using namespace ne;
+
+    class TestGameInstance : public GameInstance {
+    public:
+        TestGameInstance(Window* pGameWindow, GameManager* pGame, InputManager* pInputManager)
+            : GameInstance(pGameWindow, pGame, pInputManager) {}
+        virtual void onGameStarted() override {
+            createWorld([this](const std::optional<Error>& optionalError) {
+                if (optionalError.has_value()) {
+                    auto error = optionalError.value();
+                    error.addCurrentLocationToErrorStack();
+                    INFO(error.getFullErrorMessage());
+                    REQUIRE(false);
+                }
+
+                // Prepare textures.
+                if (!prepareDiffuseTextures()) {
+                    REQUIRE(false);
+                }
+
+                {
+                    // Spawn sample mesh.
+                    const auto pMeshNode = gc_new<MeshNode>();
+                    auto mtxMeshData = pMeshNode->getMeshData();
+                    {
+                        std::scoped_lock guard(*mtxMeshData.first);
+                        (*mtxMeshData.second) = PrimitiveMeshGenerator::createCube(1.0F);
+                    }
+
+                    // Set texture before spawning.
+                    pMeshNode->getMaterial()->setDiffuseTexture(sImportedTexture1PathRelativeRes);
+
+                    getWorldRootNode()->addChildNode(pMeshNode);
+                    pMeshNode->setWorldLocation(glm::vec3(1.0F, 0.0F, 0.0F));
+                }
+
+                {
+                    // Spawn sample mesh.
+                    const auto pMeshNode = gc_new<MeshNode>();
+                    auto mtxMeshData = pMeshNode->getMeshData();
+                    {
+                        std::scoped_lock guard(*mtxMeshData.first);
+                        (*mtxMeshData.second) = PrimitiveMeshGenerator::createCube(1.0F);
+                    }
+
+                    // Set texture before spawning.
+                    // Use the same texture.
+                    pMeshNode->getMaterial()->setDiffuseTexture(sImportedTexture1PathRelativeRes);
+
+                    getWorldRootNode()->addChildNode(pMeshNode);
+                    pMeshNode->setWorldLocation(glm::vec3(1.0F, 0.0F, 0.0F));
+                }
+
+                // Make sure there's only 1 texture in memory.
+                REQUIRE(
+                    getWindow()
+                        ->getRenderer()
+                        ->getResourceManager()
+                        ->getTextureManager()
+                        ->getTextureInMemoryCount() == 1);
+
+                getWindow()->close();
+            });
+        }
+        virtual ~TestGameInstance() override {}
+    };
+
+    auto result = Window::getBuilder().withVisibility(false).build();
+    if (std::holds_alternative<Error>(result)) {
+        Error error = std::get<Error>(std::move(result));
+        error.addCurrentLocationToErrorStack();
+        INFO(error.getFullErrorMessage());
+        REQUIRE(false);
+    }
+
+    const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
+    pMainWindow->processEvents<TestGameInstance>();
+
+    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+    REQUIRE(Material::getCurrentAliveMaterialCount() == 0);
+}

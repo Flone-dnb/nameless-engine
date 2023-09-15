@@ -524,6 +524,21 @@ namespace ne {
             }
         }
 
+        // Make sure fields have unique offsets.
+        std::unordered_set<size_t> fieldOffsets;
+        for (const auto& [sFieldName, iOffsetInUints] : pushConstantUintFieldOffsets) {
+            const auto it = fieldOffsets.find(iOffsetInUints);
+            if (it != fieldOffsets.end()) [[unlikely]] {
+                return Error(std::format(
+                    "found 2 fields in push constants with different names but the same "
+                    "offsets from struct start, conflicting offset: {} (found on field: {})",
+                    iOffsetInUints,
+                    sFieldName));
+            }
+
+            fieldOffsets.insert(iOffsetInUints);
+        }
+
         // Save info.
         if (!pushConstantUintFieldOffsets.empty()) {
             generatedData.pushConstantUintFieldOffsets = std::move(pushConstantUintFieldOffsets);

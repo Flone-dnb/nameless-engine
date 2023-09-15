@@ -284,11 +284,11 @@ namespace ne {
         getGraphicsPipelines();
 
         /**
-         * Returns the total amount of currently created graphics pipelines.
+         * Returns the total number of currently existing graphics pipelines.
          *
-         * @return Amount of currently created graphics pipelines.
+         * @return The total number of currently existing graphics pipelines.
          */
-        size_t getCreatedGraphicsPipelineCount();
+        size_t getCurrentGraphicsPipelineCount();
 
         /**
          * Returns renderer that owns this pipeline manager.

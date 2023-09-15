@@ -824,7 +824,7 @@ namespace ne {
 
         // Make sure all pipelines were destroyed.
         const auto iGraphicsPipelineCount =
-            pRenderer->getPipelineManager()->getCreatedGraphicsPipelineCount();
+            pRenderer->getPipelineManager()->getCurrentGraphicsPipelineCount();
         if (iGraphicsPipelineCount != 0) {
             Logger::get().error(std::format(
                 "the world was destroyed and garbage collection was finished but there are still "

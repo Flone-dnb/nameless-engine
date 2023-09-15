@@ -91,7 +91,7 @@ namespace ne {
 
     PipelineManager::~PipelineManager() {
         // Make sure all graphics pipelines were destroyed.
-        const auto iCreatedGraphicsPipelineCount = getCreatedGraphicsPipelineCount();
+        const auto iCreatedGraphicsPipelineCount = getCurrentGraphicsPipelineCount();
         if (iCreatedGraphicsPipelineCount != 0) [[unlikely]] {
             Logger::get().error(fmt::format(
                 "pipeline manager is being destroyed but there are still {} graphics pipeline(s) exist",
@@ -167,7 +167,7 @@ namespace ne {
         return PipelineSharedPtr(pPipeline, pMaterial);
     }
 
-    size_t PipelineManager::getCreatedGraphicsPipelineCount() {
+    size_t PipelineManager::getCurrentGraphicsPipelineCount() {
         size_t iTotalCount = 0;
 
         // Iterate over all graphics pipelines (of all types).

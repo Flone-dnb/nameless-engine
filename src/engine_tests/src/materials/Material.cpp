@@ -135,7 +135,7 @@ TEST_CASE("create engine default materials") {
 
                 // There should be no PSOs created since no material is spawned.
                 REQUIRE(
-                    getWindow()->getRenderer()->getPipelineManager()->getCreatedGraphicsPipelineCount() == 0);
+                    getWindow()->getRenderer()->getPipelineManager()->getCurrentGraphicsPipelineCount() == 0);
 
                 // Spawn.
                 getWorldRootNode()->addChildNode(pMeshNodeOpaque);
@@ -144,13 +144,13 @@ TEST_CASE("create engine default materials") {
                 // Check everything.
                 REQUIRE(Material::getCurrentAliveMaterialCount() == 2);
                 REQUIRE(
-                    getWindow()->getRenderer()->getPipelineManager()->getCreatedGraphicsPipelineCount() == 2);
+                    getWindow()->getRenderer()->getPipelineManager()->getCurrentGraphicsPipelineCount() == 2);
 
                 // Despawn one node.
                 pMeshNodeOpaque->detachFromParentAndDespawn();
                 REQUIRE(Material::getCurrentAliveMaterialCount() == 2);
                 REQUIRE(
-                    getWindow()->getRenderer()->getPipelineManager()->getCreatedGraphicsPipelineCount() == 1);
+                    getWindow()->getRenderer()->getPipelineManager()->getCurrentGraphicsPipelineCount() == 1);
 
                 // Despawn all nodes.
                 createWorld([&](const std::optional<Error>& optionalError) {
@@ -163,7 +163,7 @@ TEST_CASE("create engine default materials") {
                     // Check that everything is cleaned up.
                     REQUIRE(Material::getCurrentAliveMaterialCount() == 0);
                     REQUIRE(
-                        getWindow()->getRenderer()->getPipelineManager()->getCreatedGraphicsPipelineCount() ==
+                        getWindow()->getRenderer()->getPipelineManager()->getCurrentGraphicsPipelineCount() ==
                         0);
 
                     getWindow()->close();
@@ -439,7 +439,7 @@ TEST_CASE("2 meshes with 2 materials (different diffuse textures no transparency
                 const auto pPipelineManager = getWindow()->getRenderer()->getPipelineManager();
 
                 // No pipelines should exist.
-                REQUIRE(pPipelineManager->getCreatedGraphicsPipelineCount() == 0);
+                REQUIRE(pPipelineManager->getCurrentGraphicsPipelineCount() == 0);
 
                 // Spawn sample mesh 1.
                 const auto pMeshNode1 = gc_new<MeshNode>();
@@ -481,7 +481,7 @@ TEST_CASE("2 meshes with 2 materials (different diffuse textures no transparency
                     pMeshNode2->getMaterial()->getPathToDiffuseTextureResource());
 
                 // Only 1 pipeline should exist (2 materials with different textures).
-                REQUIRE(pPipelineManager->getCreatedGraphicsPipelineCount() == 1);
+                REQUIRE(pPipelineManager->getCurrentGraphicsPipelineCount() == 1);
 
                 // Remove diffuse texture from one mesh.
                 pMeshNode1->getMaterial()->setDiffuseTexture("");
@@ -490,19 +490,19 @@ TEST_CASE("2 meshes with 2 materials (different diffuse textures no transparency
                 REQUIRE(pMeshNode1->getMaterial()->getPathToDiffuseTextureResource().empty());
 
                 // There should now be 2 pipelines (2 materials one with diffuse texture and one without).
-                REQUIRE(pPipelineManager->getCreatedGraphicsPipelineCount() == 2);
+                REQUIRE(pPipelineManager->getCurrentGraphicsPipelineCount() == 2);
 
                 // Now despawn 1 mesh.
                 pMeshNode1->detachFromParentAndDespawn();
 
                 // There should now be just 1 pipeline.
-                REQUIRE(pPipelineManager->getCreatedGraphicsPipelineCount() == 1);
+                REQUIRE(pPipelineManager->getCurrentGraphicsPipelineCount() == 1);
 
                 // Despawn second mesh.
                 pMeshNode2->detachFromParentAndDespawn();
 
                 // No pipeline should exist now.
-                REQUIRE(pPipelineManager->getCreatedGraphicsPipelineCount() == 0);
+                REQUIRE(pPipelineManager->getCurrentGraphicsPipelineCount() == 0);
 
                 getWindow()->close();
             });
@@ -545,7 +545,7 @@ TEST_CASE("make sure there are no transparency macros in opaque pipelines") {
                 const auto pPipelineManager = getWindow()->getRenderer()->getPipelineManager();
 
                 // No pipelines should exist.
-                REQUIRE(pPipelineManager->getCreatedGraphicsPipelineCount() == 0);
+                REQUIRE(pPipelineManager->getCurrentGraphicsPipelineCount() == 0);
 
                 // Spawn sample mesh 1.
                 const auto pMeshNode1 = gc_new<MeshNode>();
@@ -585,7 +585,7 @@ TEST_CASE("make sure there are no transparency macros in opaque pipelines") {
                 pMeshNode2->setWorldLocation(glm::vec3(1.0F, 0.0F, 0.0F));
 
                 // There should now be 2 pipelines (2 materials one with transparency and one without).
-                REQUIRE(pPipelineManager->getCreatedGraphicsPipelineCount() == 2);
+                REQUIRE(pPipelineManager->getCurrentGraphicsPipelineCount() == 2);
 
                 {
                     const auto pGraphicsPipelines = pPipelineManager->getGraphicsPipelines();
@@ -835,7 +835,7 @@ TEST_CASE("serialize and deserialize a node tree with materials") {
                         pRenderer->getResourceManager()->getTextureManager()->getTextureInMemoryCount() == 2);
 
                     // Make sure there's only 1 pipeline.
-                    REQUIRE(pRenderer->getPipelineManager()->getCreatedGraphicsPipelineCount() == 1);
+                    REQUIRE(pRenderer->getPipelineManager()->getCurrentGraphicsPipelineCount() == 1);
 
                     getWindow()->close();
                 });

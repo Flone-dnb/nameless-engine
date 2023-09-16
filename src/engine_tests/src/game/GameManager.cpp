@@ -77,3 +77,38 @@ TEST_CASE("create world in deferred task during game destruction") {
     const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
     pMainWindow->processEvents<TestGameInstance>();
 }
+
+TEST_CASE("create world (load node tree) in deferred task during game destruction") {
+    using namespace ne;
+
+    class TestGameInstance : public GameInstance {
+    public:
+        TestGameInstance(Window* pGameWindow, GameManager* pGame, InputManager* pInputManager)
+            : GameInstance(pGameWindow, pGame, pInputManager) {}
+        virtual void onGameStarted() override {
+            const std::filesystem::path pathToFileInTemp =
+                ProjectPaths::getPathToResDirectory(ResourceDirectory::ROOT) / "test" / "meshnode" /
+                "MeshNodeSerializationTestForBackwardsCompatibility.toml";
+
+            getWindow()->close();
+
+            addDeferredTask([this, pathToFileInTemp]() {
+                loadNodeTreeAsWorld(
+                    [](const std::optional<Error>& optionalError) { REQUIRE(!optionalError.has_value()); },
+                    pathToFileInTemp);
+            });
+        }
+        virtual ~TestGameInstance() override = default;
+    };
+
+    auto result = Window::getBuilder().withVisibility(false).build();
+    if (std::holds_alternative<Error>(result)) {
+        Error error = std::get<Error>(std::move(result));
+        error.addCurrentLocationToErrorStack();
+        INFO(error.getFullErrorMessage());
+        REQUIRE(false);
+    }
+
+    const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
+    pMainWindow->processEvents<TestGameInstance>();
+}

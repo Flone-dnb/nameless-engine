@@ -390,6 +390,11 @@ namespace ne {
 
             destroyAndCleanExistingWorld();
 
+            // Don't create new world if the game is being destroyed.
+            if (bIsBeingDestroyed) {
+                return;
+            }
+
             mtxWorld.second = World::createWorld(this, iWorldSize);
 
             onCreated({});
@@ -404,6 +409,11 @@ namespace ne {
             std::scoped_lock guard(mtxWorld.first);
 
             destroyAndCleanExistingWorld();
+
+            // Don't create new world if the game is being destroyed.
+            if (bIsBeingDestroyed) {
+                return;
+            }
 
             // Load new world.
             auto result = World::loadNodeTreeAsWorld(this, pathToNodeTree, iWorldSize);

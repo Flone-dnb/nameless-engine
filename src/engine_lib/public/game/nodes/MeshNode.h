@@ -403,6 +403,9 @@ namespace ne RNAMESPACE() {
         /** Called after finished copying data from @ref mtxShaderMeshDataConstants. */
         void onFinishedUpdatingShaderMeshConstants();
 
+        /** Called after we change our material. */
+        void makeAllShaderResourcesRebindToNewPipeline();
+
         /** Called after @ref pMaterial changed its used pipeline. */
         void onAfterMaterialChangedPipeline();
 

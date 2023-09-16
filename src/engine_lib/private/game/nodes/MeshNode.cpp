@@ -68,6 +68,7 @@ namespace ne {
         this->pMaterial = std::move(pMaterial);
 
         if (bIsSpawned) {
+            makeAllShaderResourcesRebindToNewPipeline();
             pRenderer->getRenderResourcesMutex()->unlock();
         }
     }
@@ -611,7 +612,9 @@ namespace ne {
 
     std::vector<MeshVertex>* MeshData::getVertices() { return &vVertices; }
 
-    void MeshNode::onAfterMaterialChangedPipeline() {
+    void MeshNode::onAfterMaterialChangedPipeline() { makeAllShaderResourcesRebindToNewPipeline(); }
+
+    void MeshNode::makeAllShaderResourcesRebindToNewPipeline() {
         std::scoped_lock gpuResourcesGuard(mtxGpuResources.first);
 
         // Update shader CPU write resources.

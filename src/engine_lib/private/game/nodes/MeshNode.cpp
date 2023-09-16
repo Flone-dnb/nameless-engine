@@ -627,8 +627,10 @@ namespace ne {
             }
         }
 
-#if defined(DEBUG)
-        static_assert(sizeof(GpuResources::ShaderResources) == 80, "update new resources here");
+#if defined(WIN32) && defined(DEBUG)
+        static_assert(sizeof(GpuResources::ShaderResources) == 80, "update new resources here"); // NOLINT
+#elif defined(DEBUG)
+        static_assert(sizeof(GpuResources::ShaderResources) == 56, "update new resources here"); // NOLINT
 #endif
     }
 

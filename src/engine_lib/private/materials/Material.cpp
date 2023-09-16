@@ -583,8 +583,10 @@ namespace ne {
              mtxSpawnedMeshNodesThatUseThisMaterial.second.invisibleMeshNodes) {
             pInvisibleMeshNode->onAfterMaterialChangedPipeline();
         }
-#if defined(DEBUG)
+#if defined(WIN32) && defined(DEBUG)
         static_assert(sizeof(MeshNodesThatUseThisMaterial) == 48, "notify new nodes here");
+#elif defined(DEBUG)
+        static_assert(sizeof(MeshNodesThatUseThisMaterial) == 96, "notify new nodes here");
 #endif
     }
 
@@ -721,8 +723,10 @@ namespace ne {
                 ShaderMacro::PS_USE_MATERIAL_TRANSPARENCY);
         }
 
-#if defined(DEBUG)
+#if defined(WIN32) && defined(DEBUG)
         static_assert(sizeof(Material) == 896, "consider checking new macros here"); // NOLINT: current size
+#elif defined(DEBUG)
+        static_assert(sizeof(Material) == 736, "consider checking new macros here"); // NOLINT: current size
 #endif
     }
 

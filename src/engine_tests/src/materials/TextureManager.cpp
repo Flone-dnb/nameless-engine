@@ -10,7 +10,11 @@
 // External.
 #include "catch2/catch_test_macros.hpp"
 
+#if defined(WIN32)
 inline bool textureImportProcess(float percent, unsigned long long, unsigned long long) {
+#else
+inline bool textureImportProcess(float percent, int*, int*) {
+#endif
     using namespace ne;
 
     Logger::get().info(std::format("importing texture, progress: {}", percent));

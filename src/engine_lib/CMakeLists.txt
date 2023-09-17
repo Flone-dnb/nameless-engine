@@ -333,6 +333,7 @@ target_link_libraries(${PROJECT_NAME} PUBLIC ${Vulkan_LIBRARIES})
 # External: GLSL Shader Includer
 message(STATUS "${PROJECT_NAME}: adding external dependency \"GLSL Shader Includer\"...")
 set(GLSL_SHADER_INCLUDER_ENABLE_TESTS OFF CACHE BOOL "" FORCE)
+set(GLSL_SHADER_INCLUDER_ENABLE_DOXYGEN OFF CACHE BOOL "" FORCE)
 add_subdirectory(${RELATIVE_EXT_PATH}/GLSL-Shader-Includes ${DEPENDENCY_BUILD_DIR_NAME}/GLSL-Shader-Includes SYSTEM)
 target_link_libraries(${PROJECT_NAME} PUBLIC GlslShaderIncluderLib)
 set_target_properties(GlslShaderIncluderLib PROPERTIES FOLDER ${EXTERNAL_FOLDER})

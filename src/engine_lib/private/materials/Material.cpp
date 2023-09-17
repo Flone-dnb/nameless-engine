@@ -590,6 +590,45 @@ namespace ne {
 #endif
     }
 
+    void Material::setEnableTransparency(bool bEnable) {
+        std::scoped_lock internalResourcesGuard(mtxInternalResources.first);
+
+        if (bUseTransparency == bEnable) {
+            // Nothing to do.
+            return;
+        }
+
+        // Update our macros.
+        auto& pixelShaderMacros = mtxInternalResources.second.materialPixelShaderMacros;
+        if (bEnable) {
+            pixelShaderMacros.insert(ShaderMacro::PS_USE_MATERIAL_TRANSPARENCY);
+        } else {
+            pixelShaderMacros.erase(ShaderMacro::PS_USE_MATERIAL_TRANSPARENCY);
+        }
+
+        // Save new transparency option.
+        bUseTransparency = bEnable;
+
+        // See if we need to re-request a pipeline.
+        if (!mtxInternalResources.second.pUsedPipeline.isInitialized()) {
+            // No more things to do here.
+            return;
+        }
+
+        // Get renderer.
+        const auto pRenderer = mtxInternalResources.second.pUsedPipeline->getRenderer();
+
+        // Make sure no rendering happens during the following process
+        // (since we might delete some resources and also want to avoid deleting resources in the
+        // middle of the `draw` function, any resource deletion will cause this thread to wait for
+        // renderer to finish its current `draw` function which might create deadlocks if not called
+        // right now).
+        std::scoped_lock drawGuard(*pRenderer->getRenderResourcesMutex());
+        pRenderer->waitForGpuToFinishWorkUpToThisPoint();
+
+        updateToNewPipeline();
+    }
+
     void Material::setDiffuseTexture(const std::string& sTextureResourcePathRelativeRes) {
         // See if this path is not equal to the current one.
         const bool bPathToTextureResourceDifferent =
@@ -728,6 +767,12 @@ namespace ne {
 #elif defined(DEBUG)
         static_assert(sizeof(Material) == 736, "consider checking new macros here"); // NOLINT: current size
 #endif
+    }
+
+    bool Material::isTransparencyEnabled() {
+        std::scoped_lock internalResourcesGuard(mtxInternalResources.first);
+
+        return bUseTransparency;
     }
 
 } // namespace ne

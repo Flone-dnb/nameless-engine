@@ -98,7 +98,8 @@ namespace ne RNAMESPACE() {
          * (see ShaderManager::compileShaders) to use.
          * @param sPixelShaderName  Name of the compiled pixel shader
          * (see ShaderManager::compileShaders) to use.
-         * @param bUseTransparency  Whether this material will use transparency or not.
+         * @param bUseTransparency  Whether this material should enable transparency after being created or
+         * not (see @ref setEnableTransparency).
          * @param sMaterialName     Name of this material.
          *
          * @return Error if something went wrong, otherwise created material.
@@ -108,6 +109,13 @@ namespace ne RNAMESPACE() {
             const std::string& sPixelShaderName,
             bool bUseTransparency,
             const std::string& sMaterialName = "Material");
+
+        /**
+         * Enables/disables transparency.
+         *
+         * @param bEnable Whether to enable transparency or not.
+         */
+        void setEnableTransparency(bool bEnable);
 
         /**
          * Sets material's fill color.
@@ -135,12 +143,19 @@ namespace ne RNAMESPACE() {
         /**
          * Sets material's opacity.
          *
-         * @remark Only works if the material has transparency enabled (see @ref create),
-         * otherwise logs an error.
+         * @remark Only works if the material has transparency enabled (see @ref create or
+         * @ref setEnableTransparency), otherwise logs an error.
          *
          * @param opacity Value in range [0.0F; 1.0F].
          */
         void setOpacity(float opacity = 1.0F);
+
+        /**
+         * Tells whether transparency on this material is enabled or not.
+         *
+         * @return `true` if enabled, `false` otherwise.
+         */
+        bool isTransparencyEnabled();
 
         /**
          * Returns diffuse color of this material.

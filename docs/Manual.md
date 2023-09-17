@@ -2118,7 +2118,17 @@ this is because you forgot to tell the reflection generator about some directory
 
 ## Working with materials in C++
 
-Each `MeshNode` uses a default engine material (if other material is not specified). Default material does not use transparency so let's first learn how you can enable transparency:
+Each `MeshNode` uses a default engine material (if other material is not specified) which means that if we have a `MeshNode` it already has a material.
+
+```Cpp
+#include "materials/Material.h"
+#include "materials/EngineShaderNames.h"
+
+// Set mesh's diffuse color to red.
+pMeshNode->getMaterial()->setDiffuseColor(glm::vec(1.0F, 0.0F, 0.0F));
+```
+
+You can also assign a new material to your `MeshNode`:
 
 ```Cpp
 #include "materials/Material.h"
@@ -2127,43 +2137,39 @@ Each `MeshNode` uses a default engine material (if other material is not specifi
 auto result = Material::create(
   EngineShaderNames::MeshNode::sVertexShaderName, // since we change `MeshNode`'s material we use `MeshNode` shaders
   EngineShaderNames::MeshNode::sPixelShaderName,
-  true); // enable transparency
+  false); // create with transparency disabled
 if (std::holds_alternative<Error>(result)) {
   // ... handle error ...
 }
 const auto pMaterial = std::get<std::shared_ptr<Material>>(std::move(result));
 
-// Set desired opacity.
-pMaterial->setOpacity(0.5F);
-
 // Assign this material to your mesh node.
 pMeshNode->setMaterial(pMaterial);
+
+// Set mesh's diffuse color to red.
+pMeshNode->getMaterial()->setDiffuseColor(glm::vec(1.0F, 0.0F, 0.0F));
+```
+
+As you can see you can specify custom shaders when creating a new material (use will talk about custom shaders in another section).
+
+In order to enable transparency and use `Material::setOpacity` function you need to either create a material with transparency enabled (see example from above) or enable transparency using `Material::setEnableTransparency`:
+
+```Cpp
+#include "materials/Material.h"
+#include "materials/EngineShaderNames.h"
+
+// Enable transparency.
+pMeshNode->getMaterial()->setEnableTransparency(true);
+
+// Set opacity.
+pMeshNode->getMaterial()->setOpacity(0.5F);
+
+// Set mesh's diffuse color to red.
+pMeshNode->getMaterial()->setDiffuseColor(glm::vec(1.0F, 0.0F, 0.0F));
 ```
 
 Note
 > Transparent materials have very serious impact on the performance so you might want to avoid using them.
-
-As you can see we just re-assigned a material and as you've noticed we reference shaders in materials. You might have heard the term "shader" from other games or game engines but if you haven't or have very little understanding in what a shader is, here is a very small description:
-> A shader is a small program (a function or a bunch of functions) written in a special shader language (like programming languages) that are executed on the GPU (unlike our C++ programs that are executed on the CPU). There are various types of shaders that are used for different tasks. For example there is a pixel/fragment shader - a function (that might call other functions) that calculates a color of a pixel that will be displayed on your monitor, this shader uses a bunch of data like to whom this pixel belongs (which mesh and which material uses the mesh), lighting information and etc. A material is a high-level abstraction of a shader, material allows modifying some values like diffuse texture/color that material then passes to the pixel/fragment shader to consider.
-
-Note: currently we are looking for a solution that will make writing custom shaders easier but right now writing custom shaders is not that simple:
-> Right now if you want to go beyond what Material provides to you and achieve some special look of your meshes you would have to write shaders in both HLSL and GLSL if you want your game to support both DirectX and Vulkan renderers that we have because each graphics API (like DirectX or Vulkan) has its own shading language. If you know that you don't want Vulkan support and don't care about Linux and other non-Windows platforms then you might just write a shader in HLSL and ignore GLSL, this would mean that any attempt to run your game using Vulkan renderer will fail with an error.
-
-Generally you would not need to write custom shader but we would anyway talk about writing custom shaders in one of the next sections.
-
-Let's continue and see how we can change the color of our material:
-
-```Cpp
-#include "materials/Material.h"
-
-// Get mesh material.
-const auto pMaterial = pMeshNode->getMaterial();
-
-// Set color to red.
-pMaterial->setDiffuseColor(glm::vec3(1.0F, 0.0F, 0.0F));
-```
-
-Your mesh will now be displayed with a red tint.
 
 # !!! Important things to keep in mind while developing a game !!!
 
@@ -2239,6 +2245,14 @@ addDeferredTask([this, iNodeId](){ // capturing `this` to use `Node` (self) func
     // Can safely interact with `this` (self) - we are on the main thread.
 });
 ```
+
+# Writing custom shaders
+
+You might have heard the term "shader" from other games or game engines but if you have very little understanding in what a shader is, here is a very small description:
+> A shader is a small program (a function or a bunch of functions) written in a special shader language (like programming languages) that are executed on the GPU (unlike our C++ programs that are executed on the CPU). There are various types of shaders that are used for different tasks. For example there is a pixel/fragment shader - a function (that might call other functions) that calculates a color of a pixel that will be displayed on your monitor, this shader uses a bunch of data like to whom this pixel belongs (which mesh and which material uses the mesh), lighting information and etc. A material is a high-level abstraction of a shader, material allows modifying some values like diffuse texture/color that material then passes to the pixel/fragment shader to consider.
+
+Note: currently we are looking for a solution that will make writing custom shaders easier but right now writing custom shaders is not that simple:
+> Right now if you want to go beyond what Material provides to you and achieve some special look of your meshes you would have to write shaders in both HLSL and GLSL if you want your game to support both DirectX and Vulkan renderers that we have because each graphics API (like DirectX or Vulkan) has its own shading language. If you know that you don't want Vulkan support and don't care about Linux and other non-Windows platforms then you might just write a shader in HLSL and ignore GLSL, this would mean that any attempt to run your game using Vulkan renderer will fail with an error.
 
 # Frame statistics
 

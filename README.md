@@ -317,7 +317,7 @@ Here is the list of base features that needs to be implemented in order for you 
     - [ ] GUI
 - [ ] Skeletal animations
 - [ ] Minimal scripting using [AngelScript](https://www.angelcode.com/angelscript/)
-- [ ] Editor
+- [ ] Editor (integrate [ImGui](https://github.com/ocornut/imgui))
     - [ ] Content management
     - [ ] Script debugging
     - [ ] Script syntax highlighting, scripting helpers

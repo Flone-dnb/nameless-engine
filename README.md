@@ -267,9 +267,9 @@ Here is the list of base features that needs to be implemented in order for you 
     - [ ] Forward rendering (temporary)
         - [X] MSAA (Multisample anti-aliasing)
         - [X] Transparent materials
-        - [ ] Frustum culling
-        - [ ] Diffuse textures
+        - [X] Diffuse textures
         - [ ] Multiple materials per mesh
+        - [ ] Frustum culling
     - [ ] Forward+ rendering
         - [ ] Transparent materials
         - [ ] AA (Anti-aliasing)

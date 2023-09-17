@@ -130,8 +130,7 @@ namespace ne RNAMESPACE() {
          * Example:
          * @code
          * // Specify path to a directory that stores DDS and KTX files with player's diffuse texture.
-         * pMaterial->setDiffuseTexture(ProjectPaths::getPathToResDirectory(ResourceDirectory::GAME) /
-         * "player" / "diffuse";
+         * pMaterial->setDiffuseTexture("game/player/textures/diffuse");
          * @endcode
          *
          * @param sTextureResourcePathRelativeRes Path to a texture resource (file/directory) relative

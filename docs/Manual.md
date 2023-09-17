@@ -2171,6 +2171,48 @@ pMeshNode->getMaterial()->setDiffuseColor(glm::vec(1.0F, 0.0F, 0.0F));
 Note
 > Transparent materials have very serious impact on the performance so you might want to avoid using them.
 
+In order to use textures in your material you need to first import the textures you want to use. Most of the time you will import new textures through the editor using its GUI but we will show how to do it in C++:
+
+```Cpp
+#include "materials/TextureManager.h"
+
+using namespace ne;
+
+// Define a function that will print texture import progress.
+#if defined(WIN32)
+inline bool textureImportProcess(float percent, unsigned long long, unsigned long long) {
+#else
+inline bool textureImportProcess(float percent, int*, int*) {
+#endif
+    Logger::get().info(std::format("importing texture, progress: {}", percent));
+
+    return false; // `false` to not cancel the import process
+}
+
+// Import some texture to be used as a diffuse texture in our materials
+// - path to the original image that will be imported: "C:\\somefolder\\textures\\mytexture.png"
+// - path to the directory where the image will be imported: "res/game/player/textures"
+// - path where resulting (imported) textures will be located: "res/game/player/textures/diffuse"
+// (the directory `diffuse` will be created during the import process)
+auto optionalError = TextureManager::importTexture("C:\\somedirectory\\textures\\mytexture.png", TextureType::DIFFUSE, "game/player/textures", "diffuse", process);
+if (optionalError.has_value()){
+    // ... process error ...
+}
+// texture is imported
+```
+
+In the example above after the image is imported the directory `res/game/player/textures/diffuse` will have multiple files with `DDS` and `KTX` extensions. Both formats are special GPU image formats with compression and mipmaps (if you heard about them). The `DDS` files are used by the DirectX renderer and the `KTX` files are used by the Vulkan renderer. Files in the resulting directory will have names like `0.dds`, `0.ktx`, `1.dds`, `1.ktx` and so on. Numbers 0, 1, 2, etc. are used for `RenderSettings::setTextureQuality` so `0.dds`/`0.ktx` file stores texture with highest quality, then `1.dds`/`1.ktx` stores texture with slightly worse quality and so on.
+
+Let's now see how we can use this texture in our material:
+
+```Cpp
+pMeshNode->getMaterial()->setDiffuseTexture("game/player/textures/diffuse");
+```
+
+As you can see we specify a path to the directory with `DDS` and `KTX` files relative to our `res` directory and we don't need to point to a specific file because the engine will automatically use the appropriate file according to the currently used renderer.
+
+Note if a texture is requested it will be loaded from disk, then if some other part of the game needs this texture it won't be loaded from disk again, it will just be used from the memory and finally when all parts of your game finish using a specific texture so that it's no longer used the texture will be automatically released from the memory.
+
 # !!! Important things to keep in mind while developing a game !!!
 
 This section contains a list of important things that you need to regularly check while developing a game to minimize the amount of bugs/crashes in your game. All information listed below is documented in the manual and in the engine code (just duplicating the most important things here, see more details in other sections of the manual or in the engine code documentation).

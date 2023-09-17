@@ -316,17 +316,17 @@ Here is the list of base features that needs to be implemented in order for you 
         - [ ] Emissive materials
     - [ ] GUI
 - [ ] Skeletal animations
-- [ ] Minimal scripting using AngelScript
+- [ ] Minimal scripting using [AngelScript](https://www.angelcode.com/angelscript/)
 - [ ] Editor
     - [ ] Content management
     - [ ] Script debugging
     - [ ] Script syntax highlighting, scripting helpers
-- [ ] Audio engine
+- [ ] Audio engine (integrate [SoLoud](https://github.com/jarikomppa/soloud))
     - [ ] 2D audio
     - [ ] 3D audio
     - [ ] Audio streaming
     - [ ] Sound effects
-- [ ] Physics engine
+- [ ] Physics engine (integrate [Jolt](https://github.com/jrouwe/JoltPhysics) or [Bullet3](https://github.com/bulletphysics/bullet3))
     - [ ] Rigid body
     - [ ] Ragdoll
     - [ ] Soft body

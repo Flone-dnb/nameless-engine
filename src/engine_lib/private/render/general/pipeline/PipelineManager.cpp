@@ -240,7 +240,7 @@ namespace ne {
                 const auto pMtxResources = pShaderCpuWriteResourceManager->getResources();
                 std::scoped_lock shaderResourceGuard(pMtxResources->first);
 
-                for (const auto& pResource : pMtxResources->second.all.vector) {
+                for (const auto& [pRawResource, pResource] : pMtxResources->second.all) {
                     // Notify.
                     auto optionalError = pResource->onAfterAllPipelinesRefreshedResources();
                     if (optionalError.has_value()) [[unlikely]] {

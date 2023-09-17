@@ -5,6 +5,7 @@
 #include <memory>
 #include <mutex>
 #include <array>
+#include <unordered_map>
 #include <unordered_set>
 
 // Custom.
@@ -24,17 +25,13 @@ namespace ne {
     public:
         /** Groups shader CPU write resources. */
         struct Resources {
-            /** All shader CPU write resources. */
-            struct All {
-                /** All created shader CPU write resources. */
-                std::vector<std::unique_ptr<ShaderCpuWriteResource>> vector;
-
-                /** Equals to @ref vector but stores raw pointers for quick search. */
-                std::unordered_set<ShaderCpuWriteResource*> set;
-            };
-
-            /** All shader CPU write resources. */
-            All all;
+            /**
+             * All shader CPU write resources.
+             *
+             * @remark Storing pairs of "raw pointer" - "unique pointer" to quickly find needed resources
+             * when need to destroy some resource given a raw pointer.
+             */
+            std::unordered_map<ShaderCpuWriteResource*, std::unique_ptr<ShaderCpuWriteResource>> all;
 
             /** Shader CPU write resources that needs to be updated. */
             std::array<

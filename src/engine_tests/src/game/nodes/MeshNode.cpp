@@ -672,8 +672,7 @@ TEST_CASE("shader read/write resources exist only when MeshNode is spawned") {
 
                 // Make sure no shader read/write resources created.
                 std::scoped_lock shaderCpuWriteResourcesGuard(pMtxResources->first);
-                REQUIRE(pMtxResources->second.all.vector.empty());
-                REQUIRE(pMtxResources->second.all.set.empty());
+                REQUIRE(pMtxResources->second.all.empty());
                 for (const auto& set : pMtxResources->second.toBeUpdated) {
                     REQUIRE(set.empty());
                 }
@@ -686,8 +685,7 @@ TEST_CASE("shader read/write resources exist only when MeshNode is spawned") {
                     pMeshNode, Node::AttachmentRule::KEEP_RELATIVE, Node::AttachmentRule::KEEP_RELATIVE);
 
                 // Make sure there are 2 resources (meshData and materialData).
-                REQUIRE(pMtxResources->second.all.vector.size() == 2);
-                REQUIRE(pMtxResources->second.all.set.size() == 2);
+                REQUIRE(pMtxResources->second.all.size() == 2);
                 for (const auto& set : pMtxResources->second.toBeUpdated) {
                     REQUIRE(set.size() == 2);
                 }
@@ -711,8 +709,7 @@ TEST_CASE("shader read/write resources exist only when MeshNode is spawned") {
                 pMeshNode->detachFromParentAndDespawn();
 
                 // Make sure resources were freed.
-                REQUIRE(pMtxResources->second.all.vector.empty());
-                REQUIRE(pMtxResources->second.all.set.empty());
+                REQUIRE(pMtxResources->second.all.empty());
                 for (const auto& set : pMtxResources->second.toBeUpdated) {
                     REQUIRE(set.empty());
                 }

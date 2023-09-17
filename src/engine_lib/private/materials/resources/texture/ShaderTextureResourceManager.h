@@ -98,7 +98,7 @@ namespace ne {
          * Shader texture resources.
          *
          * @remark Storing pairs of "raw pointer" - "unique pointer" to quickly find needed resources
-         * when needed to destroy some resource and given a raw pointer.
+         * when need to destroy some resource given a raw pointer.
          */
         std::pair<
             std::recursive_mutex,

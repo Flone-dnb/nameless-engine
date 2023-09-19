@@ -4,6 +4,7 @@
 #include <memory>
 #include <mutex>
 #include <unordered_map>
+#include <unordered_set>
 
 // Custom.
 #include "materials/resources/ShaderResource.h"
@@ -43,7 +44,7 @@ namespace ne {
          * as the resource name written in the shader file we are referencing).
          * @param sResourceAdditionalInfo Additional text that we will append to created resource name
          * (used for logging).
-         * @param pUsedPipeline           Pipeline that uses the shader/parameters we are referencing.
+         * @param pipelinesToUse          Pipelines that use shader/parameters we are referencing.
          * @param pTextureToUse           Texture that should be binded to a descriptor.
          *
          * @return Error if something went wrong, otherwise created shader resource.
@@ -51,7 +52,7 @@ namespace ne {
         std::variant<ShaderTextureResourceUniquePtr, Error> createShaderTextureResource(
             const std::string& sShaderResourceName,
             const std::string& sResourceAdditionalInfo,
-            Pipeline* pUsedPipeline,
+            std::unordered_set<Pipeline*> pipelinesToUse,
             std::unique_ptr<TextureHandle> pTextureToUse);
 
         /**

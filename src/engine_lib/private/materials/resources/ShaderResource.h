@@ -6,6 +6,7 @@
 #include <variant>
 #include <functional>
 #include <mutex>
+#include <unordered_set>
 #include <optional>
 
 // Custom.
@@ -33,9 +34,9 @@ namespace ne {
         virtual ~ShaderResourceBase() = default;
 
         /**
-         * Called to make the resource use some other pipeline.
+         * Called to make the resource to use some other pipeline of a material.
          *
-         * @warning Expects that the called is using some mutex to protect this shader resource
+         * @warning Expects that the caller is using some mutex to protect this shader resource
          * from being used in the `draw` function while this function is not finished
          * (i.e. make sure the CPU will not queue a new frame while this function is not finished).
          *
@@ -47,11 +48,33 @@ namespace ne {
          * is still there and possibly re-bind to pipeline's descriptors since these might have
          * been also re-created.
          *
-         * @param pNewPipeline New pipeline object that is now being used instead of the old one.
+         * @param pDeletedPipeline Old pipeline that was used and is probably deleted so don't dereference
+         * or call member functions using this pointer. Only use it for things like `find` to replace
+         * old pointer.
+         * @param pNewPipeline     New pipeline to use instead of the old one.
          *
          * @return Error if something went wrong.
          */
-        [[nodiscard]] std::optional<Error> useNewPipeline(Pipeline* pNewPipeline);
+        [[nodiscard]] virtual std::optional<Error>
+        bindToChangedPipelineOfMaterial(Pipeline* pDeletedPipeline, Pipeline* pNewPipeline) = 0;
+
+        /**
+         * Called to make the resource to discard currently used pipelines and bind/reference
+         * other pipelines.
+         *
+         * @warning Expects that the caller is using some mutex to protect this shader resource
+         * from being used in the `draw` function while this function is not finished
+         * (i.e. make sure the CPU will not queue a new frame while this function is not finished).
+         *
+         * @remark For example, for this function can be called from a mesh node that changed
+         * its geometry and thus added/removed some material slots.
+         *
+         * @param pipelinesToUse Pipelines to use instead of the current ones.
+         *
+         * @return Error if something went wrong.
+         */
+        [[nodiscard]] virtual std::optional<Error>
+        changeUsedPipelines(std::unordered_set<Pipeline*> pipelinesToUse) = 0;
 
         /**
          * Returns name of this resource.
@@ -66,9 +89,8 @@ namespace ne {
          *
          * @param sResourceName Name of the resource we are referencing (should be exactly the same as
          * the resource name written in the shader file we are referencing).
-         * @param pUsedPipeline Pipeline that this shader resource is using.
          */
-        ShaderResourceBase(const std::string& sResourceName, Pipeline* pUsedPipeline);
+        ShaderResourceBase(const std::string& sResourceName);
 
         /**
          * Called from pipeline manager to notify that all pipelines released their internal resources
@@ -79,40 +101,9 @@ namespace ne {
          *
          * @return Error if something went wrong.
          */
-        [[nodiscard]] std::optional<Error> onAfterAllPipelinesRefreshedResources();
-
-        /**
-         * Requires shader resource to fully (re)bind to a new/changed pipeline.
-         *
-         * @warning This function should not be called from outside of the class, it's only used for
-         * derived implementations (called from @ref useNewPipeline). Instead use
-         * @ref onAfterAllPipelinesRefreshedResources or @ref useNewPipeline.
-         *
-         * @remark Derived shader resources must refresh all of their variables received from
-         * a previous pipeline because the specified (possibly new) pipeline might be completely
-         * different.
-         *
-         * @remark This function is generally called when pipeline that shader resource references is
-         * changed or when render settings were changed and internal resources of all pipelines
-         * were re-created.
-         *
-         * @param pNewPipeline Pipeline to bind.
-         *
-         * @return Error if something went wrong.
-         */
-        [[nodiscard]] virtual std::optional<Error> bindToNewPipeline(Pipeline* pNewPipeline) = 0;
-
-        /**
-         * Returns currently used pipeline.
-         *
-         * @return Current pipeline.
-         */
-        std::pair<std::recursive_mutex, Pipeline*>* getCurrentPipeline();
+        [[nodiscard]] virtual std::optional<Error> onAfterAllPipelinesRefreshedResources() = 0;
 
     private:
-        /** Current pipeline that this resource references. */
-        std::pair<std::recursive_mutex, Pipeline*> mtxCurrentPipeline;
-
         /** Name of the resource we are referencing. */
         std::string sResourceName;
     };
@@ -125,7 +116,7 @@ namespace ne {
         /**
          * Makes the shader resource to reference the new (specified) texture.
          *
-         * @warning Expects that the called is using some mutex to protect this shader resource
+         * @warning Expects that the caller is using some mutex to protect this shader resource
          * from being used in the `draw` function while this function is not finished
          * (i.e. make sure the CPU will not queue a new frame while this function is not finished).
          *
@@ -133,7 +124,8 @@ namespace ne {
          *
          * @return Error if something went wrong.
          */
-        [[nodiscard]] std::optional<Error> useNewTexture(std::unique_ptr<TextureHandle> pTextureToUse);
+        [[nodiscard]] virtual std::optional<Error>
+        useNewTexture(std::unique_ptr<TextureHandle> pTextureToUse) = 0;
 
     protected:
         /**
@@ -141,23 +133,8 @@ namespace ne {
          *
          * @param sResourceName Name of the resource we are referencing (should be exactly the same as
          * the resource name written in the shader file we are referencing).
-         * @param pUsedPipeline that this shader resource is using.
          */
-        ShaderTextureResource(const std::string& sResourceName, Pipeline* pUsedPipeline);
-
-        /**
-         * Called to update the descriptor so that it will reference the new (specified) texture.
-         *
-         * @warning This function should not be called from outside of the class, it's only used for
-         * derived implementations (called from @ref useNewTexture). Instead use @ref useNewTexture.
-         *
-         * @param pTextureToUse Texture to reference.
-         * @param pUsedPipeline Pipeline that this shader resource is using.
-         *
-         * @return Error if something went wrong.
-         */
-        [[nodiscard]] virtual std::optional<Error>
-        updateTextureDescriptor(std::unique_ptr<TextureHandle> pTextureToUse, Pipeline* pUsedPipeline) = 0;
+        ShaderTextureResource(const std::string& sResourceName);
     };
 
     /**
@@ -169,7 +146,7 @@ namespace ne {
         friend class ShaderCpuWriteResourceManager;
 
     public:
-        virtual ~ShaderCpuWriteResource() override;
+        virtual ~ShaderCpuWriteResource() override = default;
 
         /**
          * Returns original size of the resource (not padded).
@@ -184,7 +161,6 @@ namespace ne {
          *
          * @param sResourceName                Name of the resource we are referencing (should be exactly the
          * same as the resource name written in the shader file we are referencing).
-         * @param pUsedPipeline                Pipeline that this shader resource is using.
          * @param iOriginalResourceSizeInBytes Original size of the resource (not padded).
          * @param onStartedUpdatingResource    Function that will be called when started updating resource
          * data. Function returns pointer to data of the specified resource data size that needs to be copied
@@ -194,7 +170,6 @@ namespace ne {
          */
         ShaderCpuWriteResource(
             const std::string& sResourceName,
-            Pipeline* pUsedPipeline,
             size_t iOriginalResourceSizeInBytes,
             const std::function<void*()>& onStartedUpdatingResource,
             const std::function<void()>& onFinishedUpdatingResource);

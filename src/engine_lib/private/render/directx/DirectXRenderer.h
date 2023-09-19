@@ -27,6 +27,7 @@ namespace ne {
     class DirectXResourceManager;
     class Material;
     class CameraProperties;
+    class DirectXPso;
 
     /** Renderer made with DirectX 12 API. */
     class DirectXRenderer : public Renderer {
@@ -348,9 +349,10 @@ namespace ne {
          * Adds draw commands to command list to draw all mesh nodes that use the specified material
          *
          * @param pMaterial                  Material that mesh nodes use.
+         * @param pPipeline                  Current pipeline.
          * @param iCurrentFrameResourceIndex Index of the current frame resource.
          */
-        void drawMeshNodes(Material* pMaterial, size_t iCurrentFrameResourceIndex);
+        void drawMeshNodes(Material* pMaterial, DirectXPso* pPipeline, size_t iCurrentFrameResourceIndex);
 
         /**
          * Waits until the GPU has completed commands up to the specified fence point.

@@ -4,6 +4,7 @@
 #include <string>
 #include <memory>
 #include <variant>
+#include <unordered_set>
 
 // Custom.
 #include "materials/resources/ShaderResource.h"
@@ -23,6 +24,40 @@ namespace ne {
         // Only shader resource manager should be able to create such resources.
         friend class ShaderTextureResourceManager;
 
+        /** Groups information about specific push constant. */
+        struct PushConstantIndices {
+            /** Creates uninitialized object. */
+            PushConstantIndices() = default;
+
+            /**
+             * Initializes object.
+             *
+             * @param iPushConstantIndex  Index of the push constant to copy @ref pBindlessArrayIndex.
+             * @param pBindlessArrayIndex Index into bindless array to copy to shaders.
+             */
+            PushConstantIndices(
+                size_t iPushConstantIndex, std::unique_ptr<BindlessArrayIndex> pBindlessArrayIndex) {
+                this->iPushConstantIndex = iPushConstantIndex;
+                this->pBindlessArrayIndex = std::move(pBindlessArrayIndex);
+            }
+
+            /** Move constructor. */
+            PushConstantIndices(PushConstantIndices&&) = default;
+
+            /**
+             * Move assignment operator.
+             *
+             * @return this
+             */
+            PushConstantIndices& operator=(PushConstantIndices&&) = default;
+
+            /** Index of the push constant to copy @ref pBindlessArrayIndex. */
+            size_t iPushConstantIndex = 0;
+
+            /** Index into bindless array to copy to shaders. */
+            std::unique_ptr<BindlessArrayIndex> pBindlessArrayIndex;
+        };
+
     public:
         virtual ~GlslShaderTextureResource() override = default;
 
@@ -36,12 +71,122 @@ namespace ne {
         /**
          * Copies resource index (into shader arrays) to a push constant.
          *
+         * @warning Expects that this shader resource uses only 1 pipeline. Generally used for
+         * material's resources because material can only reference 1 pipeline unlike mesh nodes.
+         *
          * @param pPushConstantsManager Push constants manager.
          */
-        inline void copyResourceIndexToPushConstants(VulkanPushConstantsManager* pPushConstantsManager) {
+        inline void
+        copyResourceIndexOfOnlyPipelineToPushConstants(VulkanPushConstantsManager* pPushConstantsManager) {
+            // Since pipelines won't change here (because we are inside of the `draw` function)
+            // we don't need to lock the mutex here.
+
+#if defined(DEBUG)
+            // Self check: make sure there is indeed just 1 pipeline.
+            if (mtxPushConstantIndices.second.size() != 1) [[unlikely]] {
+                Error error(std::format(
+                    "shader resource \"{}\" was requested to set its push constant "
+                    "index of the only used pipeline but this shader resource references "
+                    "{} pipeline(s)",
+                    getResourceName(),
+                    mtxPushConstantIndices.second.size()));
+                error.showError();
+                throw std::runtime_error(error.getFullErrorMessage());
+            }
+#endif
+
+            // Save iterator to the first item.
+            const auto it = mtxPushConstantIndices.second.begin();
+
+            // Copy value to push constants.
             pPushConstantsManager->copyValueToPushConstant(
-                iPushConstantIndex, pBindlessArrayIndex->getActualIndex());
+                it->second.iPushConstantIndex, it->second.pBindlessArrayIndex->getActualIndex());
         }
+
+        /**
+         * Copies resource index (into shader arrays) to a push constant.
+         *
+         * @param pPushConstantsManager Push constants manager.
+         * @param pUsedPipeline         Current pipeline.
+         */
+        inline void copyResourceIndexOfPipelineToPushConstants(
+            VulkanPushConstantsManager* pPushConstantsManager, VulkanPipeline* pUsedPipeline) {
+            // Since pipelines won't change here (because we are inside of the `draw` function)
+            // we don't need to lock the mutex here.
+
+            // Find push constant index of this pipeline.
+            const auto it = mtxPushConstantIndices.second.find(pUsedPipeline);
+            if (it == mtxPushConstantIndices.second.end()) [[unlikely]] {
+                Error error(std::format(
+                    "shader resource \"{}\" was requested to set its push constant "
+                    "index but this shader resource does not reference the specified pipeline",
+                    getResourceName(),
+                    mtxPushConstantIndices.second.size()));
+                error.showError();
+                throw std::runtime_error(error.getFullErrorMessage());
+            }
+
+            // Copy value to push constants.
+            pPushConstantsManager->copyValueToPushConstant(
+                it->second.iPushConstantIndex, it->second.pBindlessArrayIndex->getActualIndex());
+        }
+
+        /**
+         * Called to make the resource to use some other pipeline of a material.
+         *
+         * @warning Expects that the caller is using some mutex to protect this shader resource
+         * from being used in the `draw` function while this function is not finished
+         * (i.e. make sure the CPU will not queue a new frame while this function is not finished).
+         *
+         * @remark For example, this function can be called from a mesh node on a shader resource
+         * that references mesh's constant shader data (that stores mesh's world matrix and etc)
+         * after spawned mesh node changed its material (and thus most likely the PSO too).
+         *
+         * @remark Shader resource now needs to check that everything that it needs
+         * is still there and possibly re-bind to pipeline's descriptors since these might have
+         * been also re-created.
+         *
+         * @param pDeletedPipeline Old pipeline that was used and is probably deleted so don't dereference
+         * or call member functions using this pointer. Only use it for things like `find` to replace
+         * old pointer.
+         * @param pNewPipeline     New pipeline to use instead of the old one.
+         *
+         * @return Error if something went wrong.
+         */
+        [[nodiscard]] virtual std::optional<Error>
+        bindToChangedPipelineOfMaterial(Pipeline* pDeletedPipeline, Pipeline* pNewPipeline) override;
+
+        /**
+         * Makes the shader resource to reference the new (specified) texture.
+         *
+         * @warning Expects that the caller is using some mutex to protect this shader resource
+         * from being used in the `draw` function while this function is not finished
+         * (i.e. make sure the CPU will not queue a new frame while this function is not finished).
+         *
+         * @param pTextureToUse Texture to reference.
+         *
+         * @return Error if something went wrong.
+         */
+        [[nodiscard]] virtual std::optional<Error>
+        useNewTexture(std::unique_ptr<TextureHandle> pTextureToUse) override;
+
+        /**
+         * Called to make the resource to discard currently used pipelines and bind/reference
+         * other pipelines.
+         *
+         * @warning Expects that the caller is using some mutex to protect this shader resource
+         * from being used in the `draw` function while this function is not finished
+         * (i.e. make sure the CPU will not queue a new frame while this function is not finished).
+         *
+         * @remark For example, for this function can be called from a mesh node that changed
+         * its geometry and thus added/removed some material slots.
+         *
+         * @param pipelinesToUse Pipelines to use instead of the current ones.
+         *
+         * @return Error if something went wrong.
+         */
+        [[nodiscard]] virtual std::optional<Error>
+        changeUsedPipelines(std::unordered_set<Pipeline*> pipelinesToUse) override;
 
     protected:
         /**
@@ -51,49 +196,25 @@ namespace ne {
          *
          * @param sResourceName        Name of the resource we are referencing (should be exactly
          * the same as the resource name written in the shader file we are referencing).
-         * @param pUsedPipeline        Pipeline that uses the shader/parameters we are referencing.
          * @param pTextureToUse        Texture that should be binded to a descriptor in bindless
          * array.
-         * @param pBindlessArrayIndex  Index into bindless array of textures that we copy to push
-         * constants.
-         * @param iPushConstantIndex   Index of push constant to copy texture index to.
+         * @param pushConstantIndices Indices of push constants (per-pipeline) to copy texture index to.
          */
         GlslShaderTextureResource(
             const std::string& sResourceName,
-            VulkanPipeline* pUsedPipeline,
             std::unique_ptr<TextureHandle> pTextureToUse,
-            std::unique_ptr<BindlessArrayIndex> pBindlessArrayIndex,
-            size_t iPushConstantIndex);
+            std::unordered_map<VulkanPipeline*, PushConstantIndices> pushConstantIndices);
 
         /**
-         * Requires shader resource to fully (re)bind to a new/changed pipeline.
-         *
-         * @warning This function should not be called from outside of the class, it's only used for
-         * derived implementations.
-         *
-         * @remark This function is generally called when pipeline that shader resource references is
-         * changed or when render settings were changed and internal resources of all pipelines
-         * were re-created.
-         *
-         * @param pNewPipeline Pipeline to bind.
+         * Called from pipeline manager to notify that all pipelines released their internal resources
+         * and now restored them so their internal resources (for example push constants) might
+         * be different now and shader resource now needs to check that everything that it needs
+         * is still there and possibly re-bind to pipeline's descriptors since these might have
+         * been also re-created.
          *
          * @return Error if something went wrong.
          */
-        [[nodiscard]] virtual std::optional<Error> bindToNewPipeline(Pipeline* pNewPipeline) override;
-
-        /**
-         * Called to update the descriptor so that it will reference the new (specified) texture.
-         *
-         * @warning This function should not be called from outside of the class, it's only used for
-         * derived implementations.
-         *
-         * @param pTextureToUse Texture to reference.
-         * @param pUsedPipeline Pipeline that this shader resource is using.
-         *
-         * @return Error if something went wrong.
-         */
-        [[nodiscard]] virtual std::optional<Error> updateTextureDescriptor(
-            std::unique_ptr<TextureHandle> pTextureToUse, Pipeline* pUsedPipeline) override;
+        [[nodiscard]] virtual std::optional<Error> onAfterAllPipelinesRefreshedResources() override;
 
     private:
         /**
@@ -101,14 +222,14 @@ namespace ne {
          *
          * @param sShaderResourceName     Name of the resource we are referencing (should be exactly the
          * same as the resource name written in the shader file we are referencing).
-         * @param pUsedPipeline           Pipeline that uses the shader/parameters we are referencing.
+         * @param pipelinesToUse          Pipelines that use shader/parameters we are referencing.
          * @param pTextureToUse           Texture that should be binded to a descriptor in bindless array.
          *
          * @return Error if something went wrong, otherwise created shader resource.
          */
         static std::variant<std::unique_ptr<ShaderTextureResource>, Error> create(
             const std::string& sShaderResourceName,
-            Pipeline* pUsedPipeline,
+            std::unordered_set<Pipeline*> pipelinesToUse,
             std::unique_ptr<TextureHandle> pTextureToUse);
 
         /**
@@ -143,10 +264,8 @@ namespace ne {
         /** Texture that we bind to descriptor. */
         std::pair<std::mutex, std::unique_ptr<TextureHandle>> mtxUsedTexture;
 
-        /** Index into bindless array. */
-        std::unique_ptr<BindlessArrayIndex> pBindlessArrayIndex;
-
-        /** Index of push constant to copy @ref pBindlessArrayIndex to. */
-        size_t iPushConstantIndex = 0;
+        /** Index of push constant (per-pipeline) to copy index into bindless array. */
+        std::pair<std::recursive_mutex, std::unordered_map<VulkanPipeline*, PushConstantIndices>>
+            mtxPushConstantIndices;
     };
 } // namespace ne

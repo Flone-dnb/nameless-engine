@@ -11,42 +11,60 @@
 
 namespace ne {
 
-    HlslShaderCpuWriteResource::~HlslShaderCpuWriteResource() {}
-
     std::variant<std::unique_ptr<ShaderCpuWriteResource>, Error> HlslShaderCpuWriteResource::create(
         const std::string& sShaderResourceName,
         const std::string& sResourceAdditionalInfo,
         size_t iResourceSizeInBytes,
-        Pipeline* pUsedPipeline,
+        std::unordered_set<Pipeline*> pipelinesToUse,
         const std::function<void*()>& onStartedUpdatingResource,
         const std::function<void()>& onFinishedUpdatingResource) {
-        // Find a resource with the specified name in the root signature.
-        auto result =
-            HlslShaderResourceHelpers::getRootParameterIndexFromPipeline(pUsedPipeline, sShaderResourceName);
-        if (std::holds_alternative<Error>(result)) {
-            auto error = std::get<Error>(std::move(result));
-            error.addCurrentLocationToErrorStack();
-            return error;
+        // Make sure at least one pipeline is specified.
+        if (pipelinesToUse.empty()) [[unlikely]] {
+            return Error("expected at least one pipeline to be specified");
         }
-        const auto iRootParameterIndex = std::get<UINT>(result);
+
+        // Get resource manager.
+        const auto pResourceManager = (*pipelinesToUse.begin())->getRenderer()->getResourceManager();
+        if (pResourceManager == nullptr) [[unlikely]] {
+            return Error("resource manager is `nullptr`");
+        }
+
+        // Find a root parameter index for each pipeline.
+        std::unordered_map<DirectXPso*, UINT> rootParameterIndices;
+        for (const auto& pPipeline : pipelinesToUse) {
+            // Convert pipeline.
+            const auto pDirectXPso = dynamic_cast<DirectXPso*>(pPipeline);
+            if (pDirectXPso == nullptr) [[unlikely]] {
+                return Error("expected a DirectX PSO");
+            }
+
+            // Find a resource with the specified name in the root signature.
+            auto result =
+                HlslShaderResourceHelpers::getRootParameterIndexFromPipeline(pPipeline, sShaderResourceName);
+            if (std::holds_alternative<Error>(result)) [[unlikely]] {
+                auto error = std::get<Error>(std::move(result));
+                error.addCurrentLocationToErrorStack();
+                return error;
+            }
+
+            // Save pair.
+            rootParameterIndices[pDirectXPso] = std::get<UINT>(result);
+        }
 
         // Create upload buffer per frame resource.
         std::array<std::unique_ptr<UploadBuffer>, FrameResourcesManager::getFrameResourcesCount()>
             vResourceData;
         for (unsigned int i = 0; i < FrameResourcesManager::getFrameResourcesCount(); i++) {
             // Create upload buffer.
-            auto result =
-                pUsedPipeline->getRenderer()->getResourceManager()->createResourceWithCpuWriteAccess(
-                    std::format(
-                        "{} shader ({}/{}) CPU write resource \"{}\" frame #{}",
-                        sResourceAdditionalInfo,
-                        pUsedPipeline->getVertexShaderName(),
-                        pUsedPipeline->getPixelShaderName(),
-                        sShaderResourceName,
-                        i),
-                    iResourceSizeInBytes,
-                    1,
-                    CpuVisibleShaderResourceUsageDetails(false));
+            auto result = pResourceManager->createResourceWithCpuWriteAccess(
+                std::format(
+                    "{} shader CPU write resource \"{}\" frame #{}",
+                    sResourceAdditionalInfo,
+                    sShaderResourceName,
+                    i),
+                iResourceSizeInBytes,
+                1,
+                CpuVisibleShaderResourceUsageDetails(false));
             if (std::holds_alternative<Error>(result)) [[unlikely]] {
                 auto error = std::get<Error>(std::move(result));
                 error.addCurrentLocationToErrorStack();
@@ -75,45 +93,125 @@ namespace ne {
         // Create shader resource and return it.
         return std::unique_ptr<HlslShaderCpuWriteResource>(new HlslShaderCpuWriteResource(
             sShaderResourceName,
-            pUsedPipeline,
             iResourceSizeInBytes,
             std::move(vResourceData),
             onStartedUpdatingResource,
             onFinishedUpdatingResource,
-            iRootParameterIndex));
+            rootParameterIndices));
     }
 
     HlslShaderCpuWriteResource::HlslShaderCpuWriteResource(
         const std::string& sResourceName,
-        Pipeline* pUsedPipeline,
         size_t iOriginalResourceSizeInBytes,
         std::array<std::unique_ptr<UploadBuffer>, FrameResourcesManager::getFrameResourcesCount()>
             vResourceData,
         const std::function<void*()>& onStartedUpdatingResource,
         const std::function<void()>& onFinishedUpdatingResource,
-        UINT iRootParameterIndex)
+        std::unordered_map<DirectXPso*, UINT> rootParameterIndices)
         : ShaderCpuWriteResource(
               sResourceName,
-              pUsedPipeline,
               iOriginalResourceSizeInBytes,
               onStartedUpdatingResource,
               onFinishedUpdatingResource) {
+        // Save data.
         this->vResourceData = std::move(vResourceData);
-        this->iRootParameterIndex = iRootParameterIndex;
+
+        // Save indices.
+        mtxRootParameterIndices.second = rootParameterIndices;
     }
 
-    std::optional<Error> HlslShaderCpuWriteResource::bindToNewPipeline(Pipeline* pNewPipeline) {
-        // Find a resource with the specified name in the root signature.
+    std::optional<Error> HlslShaderCpuWriteResource::bindToChangedPipelineOfMaterial(
+        Pipeline* pDeletedPipeline, Pipeline* pNewPipeline) {
+        std::scoped_lock guard(mtxRootParameterIndices.first);
+
+        // Convert pipeline.
+        const auto pDeletedDirectXPipeline = dynamic_cast<DirectXPso*>(pDeletedPipeline);
+        if (pDeletedDirectXPipeline == nullptr) [[unlikely]] {
+            return Error("expected a DirectX PSO");
+        }
+
+        // Find deleted pipeline.
+        const auto it = mtxRootParameterIndices.second.find(pDeletedDirectXPipeline);
+        if (it == mtxRootParameterIndices.second.end()) [[unlikely]] {
+            return Error("unable to find the specified old pipeline to replace it with a new one");
+        }
+
+        // Remove deleted pipeline.
+        mtxRootParameterIndices.second.erase(it);
+
+        // Convert pipeline.
+        const auto pDirectXPipeline = dynamic_cast<DirectXPso*>(pNewPipeline);
+        if (pDirectXPipeline == nullptr) [[unlikely]] {
+            return Error("expected a DirectX PSO");
+        }
+
+        // Find a resource with our name in the root signature.
         auto result =
-            HlslShaderResourceHelpers::getRootParameterIndexFromPipeline(pNewPipeline, getResourceName());
+            HlslShaderResourceHelpers::getRootParameterIndexFromPipeline(pDirectXPipeline, getResourceName());
         if (std::holds_alternative<Error>(result)) [[unlikely]] {
             auto error = std::get<Error>(std::move(result));
             error.addCurrentLocationToErrorStack();
             return error;
         }
 
-        // Save found resource index.
-        iRootParameterIndex = std::get<UINT>(result);
+        // Save new pair.
+        mtxRootParameterIndices.second[pDirectXPipeline] = std::get<UINT>(result);
+
+        return {};
+    }
+
+    std::optional<Error>
+    HlslShaderCpuWriteResource::changeUsedPipelines(std::unordered_set<Pipeline*> pipelinesToUse) {
+        std::scoped_lock guard(mtxRootParameterIndices.first);
+
+        // Make sure at least one pipeline is specified.
+        if (pipelinesToUse.empty()) [[unlikely]] {
+            return Error("expected at least one pipeline to be specified");
+        }
+
+        // Clear currently used pipelines.
+        mtxRootParameterIndices.second.clear();
+
+        for (const auto& pPipeline : pipelinesToUse) {
+            // Convert pipeline.
+            const auto pDirectXPso = dynamic_cast<DirectXPso*>(pPipeline);
+            if (pDirectXPso == nullptr) [[unlikely]] {
+                return Error("expected a DirectX PSO");
+            }
+
+            // Find a resource with our name in the root signature.
+            auto result =
+                HlslShaderResourceHelpers::getRootParameterIndexFromPipeline(pPipeline, getResourceName());
+            if (std::holds_alternative<Error>(result)) [[unlikely]] {
+                auto error = std::get<Error>(std::move(result));
+                error.addCurrentLocationToErrorStack();
+                return error;
+            }
+
+            // Save pair.
+            mtxRootParameterIndices.second[pDirectXPso] = std::get<UINT>(result);
+        }
+
+        return {};
+    }
+
+    std::optional<Error> HlslShaderCpuWriteResource::onAfterAllPipelinesRefreshedResources() {
+        std::scoped_lock guard(mtxRootParameterIndices.first);
+
+        // Update root parameter indices of all used pipelines.
+        for (auto& [pPipeline, iRootParameterIndex] : mtxRootParameterIndices.second) {
+            // Find a resource with our name in the root signature.
+            auto result =
+                HlslShaderResourceHelpers::getRootParameterIndexFromPipeline(pPipeline, getResourceName());
+            if (std::holds_alternative<Error>(result)) [[unlikely]] {
+                auto error = std::get<Error>(std::move(result));
+                error.addCurrentLocationToErrorStack();
+                return error;
+            }
+
+            // Save new index.
+            iRootParameterIndex = std::get<UINT>(result);
+        }
 
         return {};
     }

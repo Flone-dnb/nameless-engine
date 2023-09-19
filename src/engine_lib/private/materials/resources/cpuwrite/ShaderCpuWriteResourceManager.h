@@ -58,7 +58,7 @@ namespace ne {
          * @param iResourceSizeInBytes       Size of the data that this resource will contain. Note that
          * this size will most likely be padded to be a multiple of 256 because of the hardware requirement
          * for shader constant buffers.
-         * @param pUsedPipeline              Pipeline that uses the shader/parameters we are referencing.
+         * @param pipelinesToUse             Pipelines that use shader/parameters we are referencing.
          * @param onStartedUpdatingResource  Function that will be called when started updating resource
          * data. Function returns pointer to data of the specified resource data size that needs to be copied
          * into the resource.
@@ -71,7 +71,7 @@ namespace ne {
             const std::string& sShaderResourceName,
             const std::string& sResourceAdditionalInfo,
             size_t iResourceSizeInBytes,
-            Pipeline* pUsedPipeline,
+            std::unordered_set<Pipeline*> pipelinesToUse,
             const std::function<void*()>& onStartedUpdatingResource,
             const std::function<void()>& onFinishedUpdatingResource);
 

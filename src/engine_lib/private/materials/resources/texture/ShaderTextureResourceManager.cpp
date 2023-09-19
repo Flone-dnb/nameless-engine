@@ -16,19 +16,19 @@ namespace ne {
     ShaderTextureResourceManager::createShaderTextureResource(
         const std::string& sShaderResourceName,
         const std::string& sResourceAdditionalInfo,
-        Pipeline* pUsedPipeline,
+        std::unordered_set<Pipeline*> pipelinesToUse,
         std::unique_ptr<TextureHandle> pTextureToUse) {
         // Create new resource.
 #if defined(WIN32)
         if (dynamic_cast<DirectXRenderer*>(pRenderer) != nullptr) {
             auto result = HlslShaderTextureResource::create(
-                sShaderResourceName, pUsedPipeline, std::move(pTextureToUse));
+                sShaderResourceName, pipelinesToUse, std::move(pTextureToUse));
             return handleResourceCreation(std::move(result));
         }
 #endif
         if (dynamic_cast<VulkanRenderer*>(pRenderer) != nullptr) {
             auto result = GlslShaderTextureResource::create(
-                sShaderResourceName, pUsedPipeline, std::move(pTextureToUse));
+                sShaderResourceName, pipelinesToUse, std::move(pTextureToUse));
             return handleResourceCreation(std::move(result));
         }
 

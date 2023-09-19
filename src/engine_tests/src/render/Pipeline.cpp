@@ -27,7 +27,7 @@ TEST_CASE("make sure used vertex/pixel shader configuration of MeshNode is corre
                 // Create sample mesh data.
                 MeshData meshData;
                 meshData.getVertices()->push_back(MeshVertex());
-                meshData.getIndices()->push_back(0);
+                meshData.getIndices()->push_back({0});
 
                 // Create node and initialize.
                 const auto pMeshNode = gc_new<MeshNode>();

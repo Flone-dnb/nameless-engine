@@ -2311,7 +2311,7 @@ namespace ne {
                              materialShaderResources.shaderCpuWriteResources) {
                             reinterpret_cast<GlslShaderCpuWriteResource*>(
                                 pShaderCpuWriteResource.getResource())
-                                ->copyResourceIndexToPushConstants(
+                                ->copyResourceIndexOfOnlyPipelineToPushConstants(
                                     pPushConstantsManager,
                                     pMtxCurrentFrameResource->second.iCurrentFrameResourceIndex);
                         }
@@ -2320,7 +2320,7 @@ namespace ne {
                         for (const auto& [sResourceName, pShaderTextureResource] :
                              materialShaderResources.shaderTextureResources) {
                             reinterpret_cast<GlslShaderTextureResource*>(pShaderTextureResource.getResource())
-                                ->copyResourceIndexToPushConstants(pPushConstantsManager);
+                                ->copyResourceIndexOfOnlyPipelineToPushConstants(pPushConstantsManager);
                         }
 
                         // Draw mesh nodes that use this material.
@@ -2392,25 +2392,24 @@ namespace ne {
         size_t iCurrentFrameResourceIndex) {
         PROFILE_FUNC;
 
-        // Prepare vertex buffers.
+        // Prepare vertex buffer.
         static constexpr size_t iVertexBufferCount = 1;
         std::array<VkBuffer, iVertexBufferCount> vVertexBuffers{};
         const std::array<VkDeviceSize, iVertexBufferCount> vOffsets = {0};
 
-        // Get pipeline's internal resources.
+        // Prepare some variables.
         const auto pMtxInternalResources = pPipeline->getInternalResources();
-
-        // Get all mesh nodes that the material uses.
         const auto pMtxMeshNodes = pMaterial->getSpawnedMeshNodesThatUseThisMaterial();
 
         // Lock material and pipeline resources.
         std::scoped_lock meshNodesGuard(pMtxMeshNodes->first, pMtxInternalResources->first);
 
+        // Get push constants manager.
         const auto pPushConstantsManager =
             pMtxInternalResources->second.pushConstantsData->pPushConstantsManager.get();
 
         // Iterate over all visible mesh nodes that use this material.
-        for (const auto& pMeshNode : pMtxMeshNodes->second.visibleMeshNodes) {
+        for (const auto& [pMeshNode, vIndexBuffers] : pMtxMeshNodes->second.visibleMeshNodes) {
             // Get mesh data.
             auto pMtxMeshGpuResources = pMeshNode->getMeshGpuResources();
             auto mtxMeshData = pMeshNode->getMeshData();
@@ -2419,7 +2418,15 @@ namespace ne {
             // as it might cause a deadlock (see MeshNode::setMaterial for example).
             std::scoped_lock geometryGuard(pMtxMeshGpuResources->first, *mtxMeshData.first);
 
-            // Bind vertex buffers.
+            // Set mesh's shader CPU write resources.
+            for (const auto& [sResourceName, pShaderCpuWriteResource] :
+                 pMtxMeshGpuResources->second.shaderResources.shaderCpuWriteResources) {
+                reinterpret_cast<GlslShaderCpuWriteResource*>(pShaderCpuWriteResource.getResource())
+                    ->copyResourceIndexOfPipelineToPushConstants(
+                        pPushConstantsManager, pPipeline, iCurrentFrameResourceIndex);
+            }
+
+            // Bind vertex buffer.
             vVertexBuffers[0] = {
                 reinterpret_cast<VulkanResource*>(pMtxMeshGpuResources->second.mesh.pVertexBuffer.get())
                     ->getInternalBufferResource()};
@@ -2430,22 +2437,6 @@ namespace ne {
                 vVertexBuffers.data(),
                 vOffsets.data());
 
-            // Bind index buffer.
-            static_assert(sizeof(MeshData::meshindex_t) == sizeof(unsigned int), "change `indexTypeFormat`");
-            vkCmdBindIndexBuffer(
-                pCommandBuffer,
-                reinterpret_cast<VulkanResource*>(pMtxMeshGpuResources->second.mesh.pIndexBuffer.get())
-                    ->getInternalBufferResource(),
-                0,
-                indexTypeFormat);
-
-            // Set CPU write shader resources.
-            for (const auto& [sResourceName, pShaderCpuWriteResource] :
-                 pMtxMeshGpuResources->second.shaderResources.shaderCpuWriteResources) {
-                reinterpret_cast<GlslShaderCpuWriteResource*>(pShaderCpuWriteResource.getResource())
-                    ->copyResourceIndexToPushConstants(pPushConstantsManager, iCurrentFrameResourceIndex);
-            }
-
             // Set push constants.
             vkCmdPushConstants(
                 pCommandBuffer,
@@ -2455,9 +2446,21 @@ namespace ne {
                 pPushConstantsManager->getTotalSizeInBytes(),
                 pPushConstantsManager->getData());
 
-            // Queue a draw command.
-            vkCmdDrawIndexed(
-                pCommandBuffer, static_cast<uint32_t>(mtxMeshData.second->getIndices()->size()), 1, 0, 0, 0);
+            // Iterate over all index buffers of a specific mesh node that use this material.
+            for (const auto& indexBufferInfo : vIndexBuffers) {
+                // Bind index buffer.
+                static_assert(
+                    sizeof(MeshData::meshindex_t) == sizeof(unsigned int), "change `indexTypeFormat`");
+                vkCmdBindIndexBuffer(
+                    pCommandBuffer,
+                    reinterpret_cast<VulkanResource*>(indexBufferInfo.pIndexBuffer)
+                        ->getInternalBufferResource(),
+                    0,
+                    indexTypeFormat);
+
+                // Add a draw command.
+                vkCmdDrawIndexed(pCommandBuffer, indexBufferInfo.iIndexCount, 1, 0, 0, 0);
+            }
         }
     }
 

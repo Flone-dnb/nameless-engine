@@ -18,7 +18,7 @@ namespace ne {
         const std::string& sShaderResourceName,
         const std::string& sResourceAdditionalInfo,
         size_t iResourceSizeInBytes,
-        Pipeline* pUsedPipeline,
+        std::unordered_set<Pipeline*> pipelinesToUse,
         const std::function<void*()>& onStartedUpdatingResource,
         const std::function<void()>& onFinishedUpdatingResource) {
         // Create new resource.
@@ -28,7 +28,7 @@ namespace ne {
                 sShaderResourceName,
                 sResourceAdditionalInfo,
                 iResourceSizeInBytes,
-                pUsedPipeline,
+                pipelinesToUse,
                 onStartedUpdatingResource,
                 onFinishedUpdatingResource);
             return handleResourceCreation(std::move(result));
@@ -39,7 +39,7 @@ namespace ne {
                 sShaderResourceName,
                 sResourceAdditionalInfo,
                 iResourceSizeInBytes,
-                pUsedPipeline,
+                pipelinesToUse,
                 onStartedUpdatingResource,
                 onFinishedUpdatingResource);
             return handleResourceCreation(std::move(result));

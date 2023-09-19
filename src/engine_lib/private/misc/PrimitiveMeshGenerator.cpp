@@ -105,7 +105,8 @@ namespace ne {
         meshData.getVertices()->at(23) = vertex;
 
         // Indices:
-        (*meshData.getIndices()) = {
+        meshData.getIndices()->resize(1); // 1 material slot
+        meshData.getIndices()->at(0) = {
             0,  1,  2,  3,  2,  1,  // +X face.
             4,  5,  6,  7,  6,  5,  // -X face.
             8,  9,  10, 11, 10, 9,  // +Y face.

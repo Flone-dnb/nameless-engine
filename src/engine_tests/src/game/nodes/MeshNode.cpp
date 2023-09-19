@@ -56,8 +56,7 @@ TEST_CASE("serialize and deserialize MeshNode") {
                     MeshData meshData;
                     meshData.getVertices()->push_back(vertex1);
                     meshData.getVertices()->push_back(vertex2);
-                    meshData.getIndices()->push_back(0);
-                    meshData.getIndices()->push_back(1);
+                    meshData.getIndices()->push_back({0, 1});
 
                     // Create node and initialize.
                     const auto pMeshNode = gc_new<MeshNode>("My cool node");
@@ -105,11 +104,12 @@ TEST_CASE("serialize and deserialize MeshNode") {
                     const auto mtxMeshData = pMeshNode->getMeshData();
                     std::scoped_lock guard(*mtxMeshData.first);
                     REQUIRE(mtxMeshData.second->getVertices()->size() == 2);
-                    REQUIRE(mtxMeshData.second->getIndices()->size() == 2);
+                    REQUIRE(mtxMeshData.second->getIndices()->size() == 1);
                     REQUIRE(mtxMeshData.second->getVertices()->at(0) == vertex1);
                     REQUIRE(mtxMeshData.second->getVertices()->at(1) == vertex2);
-                    REQUIRE(mtxMeshData.second->getIndices()->at(0) == 0);
-                    REQUIRE(mtxMeshData.second->getIndices()->at(1) == 1);
+                    REQUIRE(mtxMeshData.second->getIndices()->at(0).size() == 2);
+                    REQUIRE(mtxMeshData.second->getIndices()->at(0)[0] == 0);
+                    REQUIRE(mtxMeshData.second->getIndices()->at(0)[1] == 1);
                 }
 
                 gc_collector()->collect();
@@ -243,8 +243,7 @@ TEST_CASE("serialize and deserialize MeshNode as part of a node tree") {
                     MeshData meshData;
                     meshData.getVertices()->push_back(vertex1);
                     meshData.getVertices()->push_back(vertex2);
-                    meshData.getIndices()->push_back(0);
-                    meshData.getIndices()->push_back(1);
+                    meshData.getIndices()->push_back({0, 1});
 
                     // Create node and initialize.
                     const auto pMeshNode = gc_new<MeshNode>("My cool node");
@@ -298,11 +297,12 @@ TEST_CASE("serialize and deserialize MeshNode as part of a node tree") {
                     const auto mtxMeshData = pMeshNode->getMeshData();
                     std::scoped_lock guard(*mtxMeshData.first);
                     REQUIRE(mtxMeshData.second->getVertices()->size() == 2);
-                    REQUIRE(mtxMeshData.second->getIndices()->size() == 2);
+                    REQUIRE(mtxMeshData.second->getIndices()->size() == 1);
                     REQUIRE(mtxMeshData.second->getVertices()->at(0) == vertex1);
                     REQUIRE(mtxMeshData.second->getVertices()->at(1) == vertex2);
-                    REQUIRE(mtxMeshData.second->getIndices()->at(0) == 0);
-                    REQUIRE(mtxMeshData.second->getIndices()->at(1) == 1);
+                    REQUIRE(mtxMeshData.second->getIndices()->at(0).size() == 2);
+                    REQUIRE(mtxMeshData.second->getIndices()->at(0)[0] == 0);
+                    REQUIRE(mtxMeshData.second->getIndices()->at(0)[1] == 1);
                 }
 
                 gc_collector()->collect();
@@ -386,8 +386,7 @@ TEST_CASE("serialize and deserialize MeshNode as part of a node tree with origin
                     MeshData meshData;
                     meshData.getVertices()->push_back(vertex1);
                     meshData.getVertices()->push_back(vertex2);
-                    meshData.getIndices()->push_back(0);
-                    meshData.getIndices()->push_back(1);
+                    meshData.getIndices()->push_back({0, 1});
 
                     // Create node and initialize.
                     const auto pMeshNode = gc_new<MeshNode>("My cool node");
@@ -452,9 +451,7 @@ TEST_CASE("serialize and deserialize MeshNode as part of a node tree with origin
                     meshData.getVertices()->push_back(vertex1);
                     meshData.getVertices()->push_back(vertex2);
                     meshData.getVertices()->push_back(vertex3);
-                    meshData.getIndices()->push_back(0);
-                    meshData.getIndices()->push_back(1);
-                    meshData.getIndices()->push_back(2);
+                    meshData.getIndices()->push_back({0, 1, 2});
 
                     pMeshNode->setMeshData(meshData);
 
@@ -502,13 +499,14 @@ TEST_CASE("serialize and deserialize MeshNode as part of a node tree with origin
                     const auto mtxMeshData = pMeshNode->getMeshData();
                     std::scoped_lock guard(*mtxMeshData.first);
                     REQUIRE(mtxMeshData.second->getVertices()->size() == 3);
-                    REQUIRE(mtxMeshData.second->getIndices()->size() == 3);
+                    REQUIRE(mtxMeshData.second->getIndices()->size() == 1);
                     REQUIRE(mtxMeshData.second->getVertices()->at(0) == vertex1);
                     REQUIRE(mtxMeshData.second->getVertices()->at(1) == vertex2);
                     REQUIRE(mtxMeshData.second->getVertices()->at(2) == vertex3);
-                    REQUIRE(mtxMeshData.second->getIndices()->at(0) == 0);
-                    REQUIRE(mtxMeshData.second->getIndices()->at(1) == 1);
-                    REQUIRE(mtxMeshData.second->getIndices()->at(2) == 2);
+                    REQUIRE(mtxMeshData.second->getIndices()->at(0).size() == 3);
+                    REQUIRE(mtxMeshData.second->getIndices()->at(0)[0] == 0);
+                    REQUIRE(mtxMeshData.second->getIndices()->at(0)[1] == 1);
+                    REQUIRE(mtxMeshData.second->getIndices()->at(0)[2] == 2);
                 }
 
                 gc_collector()->collect();
@@ -588,11 +586,12 @@ TEST_CASE("MeshNode's meshdata deserialization backwards compatibility") {
                 const auto mtxMeshData = pMeshNode->getMeshData();
                 std::scoped_lock guard(*mtxMeshData.first);
                 REQUIRE(mtxMeshData.second->getVertices()->size() == 2);
-                REQUIRE(mtxMeshData.second->getIndices()->size() == 2);
+                REQUIRE(mtxMeshData.second->getIndices()->size() == 1);
                 REQUIRE(mtxMeshData.second->getVertices()->at(0) == vertex1);
                 REQUIRE(mtxMeshData.second->getVertices()->at(1) == vertex2);
-                REQUIRE(mtxMeshData.second->getIndices()->at(0) == 0);
-                REQUIRE(mtxMeshData.second->getIndices()->at(1) == 1);
+                REQUIRE(mtxMeshData.second->getIndices()->at(0).size() == 2);
+                REQUIRE(mtxMeshData.second->getIndices()->at(0)[0] == 0);
+                REQUIRE(mtxMeshData.second->getIndices()->at(0)[1] == 1);
 
                 getWindow()->close();
             });
@@ -654,10 +653,11 @@ TEST_CASE("shader read/write resources exist only when MeshNode is spawned") {
                 MeshData meshData;
                 constexpr size_t iSize = 5000000;
                 meshData.getVertices()->resize(iSize);
-                meshData.getIndices()->resize(iSize);
+                meshData.getIndices()->resize(1);
+                meshData.getIndices()->at(0).resize(iSize);
                 for (size_t i = 0; i < iSize; i++) {
                     meshData.getVertices()->at(i) = vertex1;
-                    meshData.getIndices()->at(i) = static_cast<unsigned int>(i);
+                    meshData.getIndices()->at(0).at(i) = static_cast<unsigned int>(i);
                 }
 
                 // Create node and initialize.

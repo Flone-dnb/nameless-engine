@@ -10,6 +10,7 @@
 #include "materials/resources/ShaderResource.h"
 #include "materials/resources/cpuwrite/ShaderCpuWriteResourceUniquePtr.h"
 #include "materials/VulkanAlignmentConstants.hpp"
+#include "materials/Material.h"
 
 #include "MeshNode.generated.h"
 
@@ -134,20 +135,28 @@ namespace ne RNAMESPACE() {
         std::vector<MeshVertex>* getVertices();
 
         /**
-         * Returns mesh indices.
+         * Returns array of mesh indices per material slot so first element in the array
+         * stores indices of the mesh that use material slot 0, then indices that use material
+         * slot 1 and so on.
          *
          * @return Mesh indices.
          */
-        std::vector<meshindex_t>* getIndices();
+        std::vector<std::vector<meshindex_t>>* getIndices();
 
     private:
         /** Mesh vertices. */
         RPROPERTY(Serialize)
         std::vector<MeshVertex> vVertices;
 
-        /** Stores mesh indices. */
+        /**
+         * Stores array of mesh indices per material slot so first element in the array
+         * stores indices of the mesh that use material slot 0, then indices that use material
+         * slot 1 and so on.
+         *
+         * @remark This array defines how much material slots will be available.
+         */
         RPROPERTY(Serialize)
-        std::vector<meshindex_t> vIndices;
+        std::vector<std::vector<meshindex_t>> vIndices;
 
         ne_MeshData_GENERATED
     };
@@ -170,8 +179,8 @@ namespace ne RNAMESPACE() {
                 /** Stores mesh vertices. */
                 std::unique_ptr<GpuResource> pVertexBuffer;
 
-                /** Stores mesh indices. */
-                std::unique_ptr<GpuResource> pIndexBuffer;
+                /** Stores one index buffer per material slot. */
+                std::vector<std::unique_ptr<GpuResource>> vIndexBuffers;
             };
 
             /** Stores resources used by shaders. */
@@ -207,12 +216,19 @@ namespace ne RNAMESPACE() {
          *
          * @remark Replaces old (previously used) material.
          *
-         * @param pMaterial Material to use.
+         * @remark Logs an error if the specified material slot does not exist (see
+         * @ref getAvailableMaterialSlotCount).
+         *
+         * @param pMaterial     Material to use.
+         * @param iMaterialSlot Index of the material slot to set this new material to.
+         * By default all meshes have 1 material at slot 0 and mesh's geometry uses only this slot.
          */
-        void setMaterial(std::shared_ptr<Material> pMaterial);
+        void setMaterial(std::shared_ptr<Material> pMaterial, size_t iMaterialSlot = 0);
 
         /**
          * Sets mesh data (geometry) to use.
+         *
+         * @remark The number of available material slots will be changed according to the mesh data.
          *
          * @param meshData Mesh geometry.
          */
@@ -220,6 +236,8 @@ namespace ne RNAMESPACE() {
 
         /**
          * Sets mesh data (geometry) to use.
+         *
+         * @remark The number of available material slots will be changed according to the mesh data.
          *
          * @param meshData Mesh geometry.
          */
@@ -238,9 +256,20 @@ namespace ne RNAMESPACE() {
         /**
          * Returns material used by this name.
          *
-         * @return Material.
+         * @param iMaterialSlot Slot from which requested material is taken from.
+         *
+         * @return `nullptr` if the specified slot does not exist (see @ref getAvailableMaterialSlotCount),
+         * otherwise used material.
          */
-        std::shared_ptr<Material> getMaterial();
+        std::shared_ptr<Material> getMaterial(size_t iMaterialSlot = 0);
+
+        /**
+         * Returns the total number of available material slots that the current mesh data (see
+         * @ref setMeshData) provides.
+         *
+         * @return The number of available material slots.
+         */
+        size_t getAvailableMaterialSlotCount();
 
         /**
          * Returns mesh geometry for read/write operations.
@@ -289,6 +318,15 @@ namespace ne RNAMESPACE() {
 
             // don't forget to add padding to 4 floats (if needed) for HLSL packing rules
         };
+
+        /**
+         * Called after the object was successfully deserialized.
+         * Used to execute post-deserialization logic.
+         *
+         * @warning If overriding you must call the parent's version of this function first
+         * (before executing your login) to execute parent's logic.
+         */
+        virtual void onAfterDeserialized() override;
 
         /**
          * Called when this node was not spawned previously and it was either attached to a parent node
@@ -378,9 +416,16 @@ namespace ne RNAMESPACE() {
 
     private:
         /**
+         * Returns default mesh node material.
+         *
+         * @return Default material for mesh node.
+         */
+        static std::shared_ptr<Material> getDefaultMaterial();
+
+        /**
          * Allocates shader resources (see @ref mtxGpuResources).
          *
-         * @warning Expects @ref pMaterial to have initialized PSO.
+         * @warning Expects that @ref vMaterials to have initialized PSOs.
          */
         void allocateShaderResources();
 
@@ -403,15 +448,52 @@ namespace ne RNAMESPACE() {
         /** Called after finished copying data from @ref mtxShaderMeshDataConstants. */
         void onFinishedUpdatingShaderMeshConstants();
 
-        /** Called after we change our material. */
-        void makeAllShaderResourcesRebindToNewPipeline();
+        /**
+         * Called after some material (see @ref vMaterials) changed its used pipeline.
+         *
+         * @warning Expects that the caller is using some mutex to protect this shader resource
+         * from being used in the `draw` function while this function is not finished
+         * (i.e. make sure the CPU will not queue a new frame while this function is not finished).
+         *
+         * @param pDeletedPipeline Old pipeline that was used and is probably deleted so don't
+         * dereference or call member functions using this pointer. Only use it for things like `find` to
+         * replace old pointer.
+         * @param pNewPipeline     New pipeline of a material.
+         */
+        void onAfterMaterialChangedPipeline(Pipeline* pDeletedPipeline, Pipeline* pNewPipeline);
 
-        /** Called after @ref pMaterial changed its used pipeline. */
-        void onAfterMaterialChangedPipeline();
+        /**
+         * Called after @ref vMaterials is changed (some slots are added/removed) to notify
+         * all shader resources.
+         *
+         * @warning Expects that the caller is using some mutex to protect this shader resource
+         * from being used in the `draw` function while this function is not finished
+         * (i.e. make sure the CPU will not queue a new frame while this function is not finished).
+         *
+         * @warning Expects that the node is spawned and all @ref vMaterials have pipelines initialized.
+         */
+        void updateShaderResourcesToUseChangedMaterialPipelines();
 
-        /** Used material. Always contains a valid pointer. */
+        /**
+         * Returns information about an index buffer for the specified material slot.
+         *
+         * @warning Shows an error and throws an exception if the index buffer at the specified
+         * index cannon be found.
+         *
+         * @param iMaterialSlot Material slot that corresponds with an index buffer to look for.
+         *
+         * @return Information about an index buffer at the specified material slot.
+         */
+        MeshIndexBufferInfo getIndexBufferInfoForMaterialSlot(size_t iMaterialSlot);
+
+        /**
+         * Stores materials of the mesh. Material at index 0 used by index buffer 0, material
+         * at index 1 used by index buffer 1 and so on (@ref meshData defines available slots).
+         *
+         * @remark Always contains valid pointers.
+         */
         RPROPERTY(Serialize)
-        std::shared_ptr<Material> pMaterial;
+        std::vector<std::shared_ptr<Material>> vMaterials;
 
         /**
          * Mesh geometry.

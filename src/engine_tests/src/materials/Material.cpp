@@ -125,7 +125,7 @@ TEST_CASE("create engine default materials") {
                 MeshVertex vertex;
                 MeshData meshData;
                 meshData.getVertices()->push_back(vertex);
-                meshData.getIndices()->push_back(0);
+                meshData.getIndices()->push_back({0});
 
                 // Create nodes.
                 auto pMeshNodeTransparent = gc_new<MeshNode>("Transparent material node");
@@ -351,7 +351,7 @@ TEST_CASE("unused materials unload shaders from memory") {
                         MeshVertex vertex;
                         MeshData meshData;
                         meshData.getVertices()->push_back(vertex);
-                        meshData.getIndices()->push_back(0);
+                        meshData.getIndices()->push_back({0});
 
                         // Create nodes with custom material.
                         auto pCustomMeshNode1 = gc_new<MeshNode>();

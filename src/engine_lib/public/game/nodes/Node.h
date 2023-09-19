@@ -546,6 +546,9 @@ namespace ne RNAMESPACE() {
          * that is spawned or set as world's root node to execute custom spawn logic.
          *
          * @remark This node will be marked as spawned before this function is called.
+         *
+         * @remark @ref getSpawnDespawnMutex is locked while this function is called.
+         *
          * @remark This function is called before any of the child nodes are spawned. If you
          * need to do some logic after child nodes are spawned use @ref onChildNodesSpawned.
          *
@@ -571,8 +574,12 @@ namespace ne RNAMESPACE() {
          * Called before this node is despawned from the world to execute custom despawn logic.
          *
          * @remark This node will be marked as despawned after this function is called.
+         *
          * @remark This function is called after all child nodes were despawned.
+         *
          * @remark If node's destructor is called but node is still spawned it will be despawned.
+         *
+         * @remark @ref getSpawnDespawnMutex is locked while this function is called.
          *
          * @warning If overriding you must call the parent's version of this function first
          * (before executing your login) to execute parent's logic.

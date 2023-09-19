@@ -13,17 +13,20 @@
 
 namespace ne {
 
-    GlslShaderCpuWriteResource::~GlslShaderCpuWriteResource() {}
-
     std::variant<std::unique_ptr<ShaderCpuWriteResource>, Error> GlslShaderCpuWriteResource::create(
         const std::string& sShaderResourceName,
         const std::string& sResourceAdditionalInfo,
         size_t iResourceSizeInBytes,
-        Pipeline* pUsedPipeline,
+        std::unordered_set<Pipeline*> pipelinesToUse,
         const std::function<void*()>& onStartedUpdatingResource,
         const std::function<void()>& onFinishedUpdatingResource) {
+        // Make sure at least one pipeline is specified.
+        if (pipelinesToUse.empty()) [[unlikely]] {
+            return Error("expected at least one pipeline to be specified");
+        }
+
         // Convert pipeline.
-        const auto pVulkanPipeline = dynamic_cast<VulkanPipeline*>(pUsedPipeline);
+        const auto pVulkanPipeline = dynamic_cast<VulkanPipeline*>(*pipelinesToUse.begin());
         if (pVulkanPipeline == nullptr) [[unlikely]] {
             return Error("expected a Vulkan pipeline");
         }
@@ -46,23 +49,35 @@ namespace ne {
             return Error("storage resource array manager is `nullptr`");
         }
 
+        // Find push constant indices to use.
+        std::unordered_map<VulkanPipeline*, size_t> pushConstantIndices;
+        for (const auto& pPipeline : pipelinesToUse) {
+            // Convert pipeline.
+            const auto pVulkanPipeline = dynamic_cast<VulkanPipeline*>(pPipeline);
+            if (pVulkanPipeline == nullptr) [[unlikely]] {
+                return Error("expected a Vulkan pipeline");
+            }
+
+            // Find a resource with the specified name in the descriptor set layout and update save index.
+            auto pushConstantResult =
+                GlslShaderResourceHelpers::getPushConstantIndex(pVulkanPipeline, sShaderResourceName);
+            if (std::holds_alternative<Error>(pushConstantResult)) [[unlikely]] {
+                auto error = std::get<Error>(std::move(pushConstantResult));
+                error.addCurrentLocationToErrorStack();
+                return error;
+            }
+
+            // Save a pair of "pipeline" - "index of push constant".
+            pushConstantIndices[pVulkanPipeline] = std::get<size_t>(pushConstantResult);
+        }
+
         // Create shader resource.
         auto pShaderResource = std::unique_ptr<GlslShaderCpuWriteResource>(new GlslShaderCpuWriteResource(
             sShaderResourceName,
             iResourceSizeInBytes,
             onStartedUpdatingResource,
             onFinishedUpdatingResource,
-            pVulkanPipeline));
-
-        // Find a resource with the specified name in the descriptor set layout and update our index.
-        auto pushConstantResult =
-            GlslShaderResourceHelpers::getPushConstantIndex(pVulkanPipeline, sShaderResourceName);
-        if (std::holds_alternative<Error>(pushConstantResult)) [[unlikely]] {
-            auto error = std::get<Error>(std::move(pushConstantResult));
-            error.addCurrentLocationToErrorStack();
-            return error;
-        }
-        pShaderResource->iPushConstantIndex = std::get<size_t>(pushConstantResult);
+            pushConstantIndices));
 
         // Reserve a space for this shader resource's data in a storage buffer per frame resource.
         for (unsigned int i = 0; i < FrameResourcesManager::getFrameResourcesCount(); i++) {
@@ -84,22 +99,42 @@ namespace ne {
         size_t iOriginalResourceSizeInBytes,
         const std::function<void*()>& onStartedUpdatingResource,
         const std::function<void()>& onFinishedUpdatingResource,
-        VulkanPipeline* pUsedPipeline)
+        std::unordered_map<VulkanPipeline*, size_t> pushConstantIndices)
         : ShaderCpuWriteResource(
               sResourceName,
-              pUsedPipeline,
               iOriginalResourceSizeInBytes,
               onStartedUpdatingResource,
-              onFinishedUpdatingResource) {}
+              onFinishedUpdatingResource) {
+        // Save push constant indices.
+        mtxPushConstantIndices.second = pushConstantIndices;
+    }
 
-    std::optional<Error> GlslShaderCpuWriteResource::bindToNewPipeline(Pipeline* pNewPipeline) {
+    std::optional<Error> GlslShaderCpuWriteResource::bindToChangedPipelineOfMaterial(
+        Pipeline* pDeletedPipeline, Pipeline* pNewPipeline) {
+        std::scoped_lock guard(mtxPushConstantIndices.first);
+
+        // Convert pipeline.
+        const auto pDeletedVulkanPipeline = dynamic_cast<VulkanPipeline*>(pDeletedPipeline);
+        if (pDeletedVulkanPipeline == nullptr) [[unlikely]] {
+            return Error("expected a Vulkan pipeline");
+        }
+
+        // Find deleted pipeline.
+        const auto it = mtxPushConstantIndices.second.find(pDeletedVulkanPipeline);
+        if (it == mtxPushConstantIndices.second.end()) [[unlikely]] {
+            return Error("unable to find the specified old pipeline to replace it with a new one");
+        }
+
+        // Remove deleted pipeline.
+        mtxPushConstantIndices.second.erase(it);
+
         // Convert pipeline.
         const auto pVulkanPipeline = dynamic_cast<VulkanPipeline*>(pNewPipeline);
         if (pVulkanPipeline == nullptr) [[unlikely]] {
             return Error("expected a Vulkan pipeline");
         }
 
-        // Find a resource with the specified name in the descriptor set layout and update our index.
+        // Find a resource with our name in the descriptor set layout and update our index.
         auto pushConstantResult =
             GlslShaderResourceHelpers::getPushConstantIndex(pVulkanPipeline, getResourceName());
         if (std::holds_alternative<Error>(pushConstantResult)) [[unlikely]] {
@@ -107,7 +142,72 @@ namespace ne {
             error.addCurrentLocationToErrorStack();
             return error;
         }
-        iPushConstantIndex = std::get<size_t>(pushConstantResult);
+
+        // Save new pair.
+        mtxPushConstantIndices.second[pVulkanPipeline] = std::get<size_t>(pushConstantResult);
+
+        return {};
+    }
+
+    std::optional<Error>
+    GlslShaderCpuWriteResource::changeUsedPipelines(std::unordered_set<Pipeline*> pipelinesToUse) {
+        std::scoped_lock guard(mtxPushConstantIndices.first);
+
+        // Make sure at least one pipeline is specified.
+        if (pipelinesToUse.empty()) [[unlikely]] {
+            return Error("expected at least one pipeline to be specified");
+        }
+
+        // Clear currently used pipelines.
+        mtxPushConstantIndices.second.clear();
+
+        // Find push constant indices to use.
+        for (const auto& pPipeline : pipelinesToUse) {
+            // Convert pipeline.
+            const auto pVulkanPipeline = dynamic_cast<VulkanPipeline*>(pPipeline);
+            if (pVulkanPipeline == nullptr) [[unlikely]] {
+                return Error("expected a Vulkan pipeline");
+            }
+
+            // Find a resource with our name in the descriptor set layout.
+            auto pushConstantResult =
+                GlslShaderResourceHelpers::getPushConstantIndex(pVulkanPipeline, getResourceName());
+            if (std::holds_alternative<Error>(pushConstantResult)) [[unlikely]] {
+                auto error = std::get<Error>(std::move(pushConstantResult));
+                error.addCurrentLocationToErrorStack();
+                return error;
+            }
+
+            // Save a pair of "pipeline" - "index of push constant".
+            mtxPushConstantIndices.second[pVulkanPipeline] = std::get<size_t>(pushConstantResult);
+        }
+
+        return {};
+    }
+
+    std::optional<Error> GlslShaderCpuWriteResource::onAfterAllPipelinesRefreshedResources() {
+        std::scoped_lock guard(mtxPushConstantIndices.first);
+
+        // Update push constant indices of all used pipelines.
+        for (auto& [pPipeline, iPushConstantIndex] : mtxPushConstantIndices.second) {
+            // Convert pipeline.
+            const auto pVulkanPipeline = dynamic_cast<VulkanPipeline*>(pPipeline);
+            if (pVulkanPipeline == nullptr) [[unlikely]] {
+                return Error("expected a Vulkan pipeline");
+            }
+
+            // Find a resource with the our name in the descriptor set layout and update our index.
+            auto pushConstantResult =
+                GlslShaderResourceHelpers::getPushConstantIndex(pVulkanPipeline, getResourceName());
+            if (std::holds_alternative<Error>(pushConstantResult)) [[unlikely]] {
+                auto error = std::get<Error>(std::move(pushConstantResult));
+                error.addCurrentLocationToErrorStack();
+                return error;
+            }
+
+            // Save new index.
+            iPushConstantIndex = std::get<size_t>(pushConstantResult);
+        }
 
         return {};
     }

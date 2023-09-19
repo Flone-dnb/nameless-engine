@@ -3,6 +3,7 @@
 // Standard.
 #include <string>
 #include <memory>
+#include <unordered_set>
 #include <variant>
 
 // Custom.
@@ -13,6 +14,7 @@
 
 namespace ne {
     class Pipeline;
+    class DirectXPso;
 
     /**
      * References a single (non-array) shader resource (that is written in a shader file)
@@ -23,23 +25,122 @@ namespace ne {
         friend class ShaderCpuWriteResourceManager;
 
     public:
-        virtual ~HlslShaderCpuWriteResource() override;
+        virtual ~HlslShaderCpuWriteResource() override = default;
 
         /**
          * Adds a new command to the specified command list to use this shader resource.
          *
+         * @warning Expects that this shader resource uses only 1 pipeline. Generally used for
+         * material's resources because material can only reference 1 pipeline unlike mesh nodes.
+         *
          * @param pCommandList               Command list to add new command to.
          * @param iCurrentFrameResourceIndex Index of current frame resource.
          */
-        inline void setConstantBufferView(
+        inline void setConstantBufferViewOfOnlyPipeline(
             const ComPtr<ID3D12GraphicsCommandList>& pCommandList, size_t iCurrentFrameResourceIndex) {
+            // Since pipelines won't change here (because we are inside of the `draw` function)
+            // we don't need to lock the mutex here.
+
+#if defined(DEBUG)
+            // Self check: make sure there is indeed just 1 pipeline.
+            if (mtxRootParameterIndices.second.size() != 1) [[unlikely]] {
+                Error error(std::format(
+                    "shader resource \"{}\" was requested to set its constant buffer "
+                    "view of the only used pipeline but this shader resource references "
+                    "{} pipeline(s)",
+                    getResourceName(),
+                    mtxRootParameterIndices.second.size()));
+                error.showError();
+                throw std::runtime_error(error.getFullErrorMessage());
+            }
+#endif
+
+            // Set view.
             pCommandList->SetGraphicsRootConstantBufferView(
-                iRootParameterIndex,
+                mtxRootParameterIndices.second.begin()->second,
                 reinterpret_cast<DirectXResource*>(
                     vResourceData[iCurrentFrameResourceIndex]->getInternalResource())
                     ->getInternalResource()
                     ->GetGPUVirtualAddress());
         }
+
+        /**
+         * Adds a new command to the specified command list to use this shader resource.
+         *
+         * @param pCommandList               Command list to add new command to.
+         * @param pUsedPipeline              Current pipeline.
+         * @param iCurrentFrameResourceIndex Index of current frame resource.
+         */
+        inline void setConstantBufferViewOfPipeline(
+            const ComPtr<ID3D12GraphicsCommandList>& pCommandList,
+            DirectXPso* pUsedPipeline,
+            size_t iCurrentFrameResourceIndex) {
+            // Since pipelines won't change here (because we are inside of the `draw` function)
+            // we don't need to lock the mutex here.
+
+            // Find root parameter index of this pipeline.
+            const auto it = mtxRootParameterIndices.second.find(pUsedPipeline);
+            if (it == mtxRootParameterIndices.second.end()) [[unlikely]] {
+                Error error(std::format(
+                    "shader resource \"{}\" was requested to set its constant buffer view "
+                    "but this shader resource does not reference the specified pipeline",
+                    getResourceName(),
+                    mtxRootParameterIndices.second.size()));
+                error.showError();
+                throw std::runtime_error(error.getFullErrorMessage());
+            }
+
+            // Set view.
+            pCommandList->SetGraphicsRootConstantBufferView(
+                it->second,
+                reinterpret_cast<DirectXResource*>(
+                    vResourceData[iCurrentFrameResourceIndex]->getInternalResource())
+                    ->getInternalResource()
+                    ->GetGPUVirtualAddress());
+        }
+
+        /**
+         * Called to make the resource to use some other pipeline of a material.
+         *
+         * @warning Expects that the caller is using some mutex to protect this shader resource
+         * from being used in the `draw` function while this function is not finished
+         * (i.e. make sure the CPU will not queue a new frame while this function is not finished).
+         *
+         * @remark For example, this function can be called from a mesh node on a shader resource
+         * that references mesh's constant shader data (that stores mesh's world matrix and etc)
+         * after spawned mesh node changed its material (and thus most likely the PSO too).
+         *
+         * @remark Shader resource now needs to check that everything that it needs
+         * is still there and possibly re-bind to pipeline's descriptors since these might have
+         * been also re-created.
+         *
+         * @param pDeletedPipeline Old pipeline that was used and is probably deleted so don't dereference
+         * or call member functions using this pointer. Only use it for things like `find` to replace
+         * old pointer.
+         * @param pNewPipeline     New pipeline to use instead of the old one.
+         *
+         * @return Error if something went wrong.
+         */
+        [[nodiscard]] virtual std::optional<Error>
+        bindToChangedPipelineOfMaterial(Pipeline* pDeletedPipeline, Pipeline* pNewPipeline) override;
+
+        /**
+         * Called to make the resource to discard currently used pipelines and bind/reference
+         * other pipelines.
+         *
+         * @warning Expects that the caller is using some mutex to protect this shader resource
+         * from being used in the `draw` function while this function is not finished
+         * (i.e. make sure the CPU will not queue a new frame while this function is not finished).
+         *
+         * @remark For example, for this function can be called from a mesh node that changed
+         * its geometry and thus added/removed some material slots.
+         *
+         * @param pipelinesToUse Pipelines to use instead of the current ones.
+         *
+         * @return Error if something went wrong.
+         */
+        [[nodiscard]] virtual std::optional<Error>
+        changeUsedPipelines(std::unordered_set<Pipeline*> pipelinesToUse) override;
 
     protected:
         /**
@@ -49,7 +150,6 @@ namespace ne {
          *
          * @param sResourceName                Name of the resource we are referencing (should be exactly the
          * same as the resource name written in the shader file we are referencing).
-         * @param pUsedPipeline                Pipeline that this resource references.
          * @param iOriginalResourceSizeInBytes Size of the resource passed to @ref create (not padded).
          * @param vResourceData                Data that will be binded to this shader resource.
          * @param onStartedUpdatingResource    Function that will be called when started updating resource
@@ -57,33 +157,27 @@ namespace ne {
          * into the resource.
          * @param onFinishedUpdatingResource   Function that will be called when finished updating
          * (usually used for unlocking resource data mutex).
-         * @param iRootParameterIndex          Index of this resource in root signature.
+         * @param rootParameterIndices         Indices of this resource in root signature.
          */
         HlslShaderCpuWriteResource(
             const std::string& sResourceName,
-            Pipeline* pUsedPipeline,
             size_t iOriginalResourceSizeInBytes,
             std::array<std::unique_ptr<UploadBuffer>, FrameResourcesManager::getFrameResourcesCount()>
                 vResourceData,
             const std::function<void*()>& onStartedUpdatingResource,
             const std::function<void()>& onFinishedUpdatingResource,
-            UINT iRootParameterIndex);
+            std::unordered_map<DirectXPso*, UINT> rootParameterIndices);
 
         /**
-         * Requires shader resource to fully (re)bind to a new/changed pipeline.
-         *
-         * @warning This function should not be called from outside of the class, it's only used for
-         * derived implementations.
-         *
-         * @remark This function is generally called when pipeline that shader resource references is
-         * changed or when render settings were changed and internal resources of all pipelines
-         * were re-created.
-         *
-         * @param pNewPipeline Pipeline to bind.
+         * Called from pipeline manager to notify that all pipelines released their internal resources
+         * and now restored them so their internal resources (for example push constants) might
+         * be different now and shader resource now needs to check that everything that it needs
+         * is still there and possibly re-bind to pipeline's descriptors since these might have
+         * been also re-created.
          *
          * @return Error if something went wrong.
          */
-        [[nodiscard]] virtual std::optional<Error> bindToNewPipeline(Pipeline* pNewPipeline) override;
+        [[nodiscard]] virtual std::optional<Error> onAfterAllPipelinesRefreshedResources() override;
 
     private:
         /**
@@ -96,7 +190,7 @@ namespace ne {
          * @param iResourceSizeInBytes       Size of the data that this resource will contain. Note that
          * this size will most likely be padded to be a multiple of 256 because of the hardware requirement
          * for shader constant buffers.
-         * @param pUsedPipeline              Pipeline that uses the shader/parameters we are referencing.
+         * @param pipelinesToUse             Pipelines that use shader/parameters we are referencing.
          * @param onStartedUpdatingResource  Function that will be called when started updating resource
          * data. Function returns pointer to data of the specified resource data size that needs to be copied
          * into the resource.
@@ -109,7 +203,7 @@ namespace ne {
             const std::string& sShaderResourceName,
             const std::string& sResourceAdditionalInfo,
             size_t iResourceSizeInBytes,
-            Pipeline* pUsedPipeline,
+            std::unordered_set<Pipeline*> pipelinesToUse,
             const std::function<void*()>& onStartedUpdatingResource,
             const std::function<void()>& onFinishedUpdatingResource);
 
@@ -136,7 +230,7 @@ namespace ne {
         std::array<std::unique_ptr<UploadBuffer>, FrameResourcesManager::getFrameResourcesCount()>
             vResourceData;
 
-        /** Index of this resource in root signature to bind this resource during the draw operation. */
-        UINT iRootParameterIndex = 0;
+        /** Indices of this resource in root signature to bind this resource during the draw operation. */
+        std::pair<std::recursive_mutex, std::unordered_map<DirectXPso*, UINT>> mtxRootParameterIndices;
     };
 } // namespace ne

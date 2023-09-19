@@ -2,6 +2,7 @@
 
 // Standard.
 #include <string>
+#include <unordered_map>
 
 // Custom.
 #include "render/general/pipeline/PipelineManager.h"
@@ -17,6 +18,30 @@
 
 namespace ne RNAMESPACE() {
     class MeshNode;
+    class GpuResource;
+
+    /** Groups information about an index buffer of a mesh. */
+    struct MeshIndexBufferInfo {
+        /** Creates uninitialized object. */
+        MeshIndexBufferInfo() = default;
+
+        /**
+         * Initializes the object.
+         *
+         * @param pIndexBuffer Index buffer that this material should display.
+         * @param iIndexCount  The total number of indices stores in the specified index buffer.
+         */
+        MeshIndexBufferInfo(GpuResource* pIndexBuffer, unsigned int iIndexCount) {
+            this->pIndexBuffer = pIndexBuffer;
+            this->iIndexCount = iIndexCount;
+        }
+
+        /** A non-owning pointer to mesh's index buffer. */
+        GpuResource* pIndexBuffer = nullptr;
+
+        /** The total number of indices stores in @ref pIndexBuffer. */
+        unsigned int iIndexCount = 0;
+    };
 
     /** Groups mesh nodes by visibility. */
     struct MeshNodesThatUseThisMaterial {
@@ -48,11 +73,11 @@ namespace ne RNAMESPACE() {
             return false;
         }
 
-        /** Visible nodes. */
-        std::set<MeshNode*> visibleMeshNodes;
+        /** Stores pairs of "visible mesh node" - "index buffers of that mesh that use this material". */
+        std::unordered_map<MeshNode*, std::vector<MeshIndexBufferInfo>> visibleMeshNodes;
 
-        /** Invisible nodes. */
-        std::set<MeshNode*> invisibleMeshNodes;
+        /** Stores pairs of "invisible mesh node" - "index buffers of that mesh that use this material". */
+        std::unordered_map<MeshNode*, std::vector<MeshIndexBufferInfo>> invisibleMeshNodes;
     };
 
     /** Defines visual aspects of a mesh. */
@@ -259,8 +284,6 @@ namespace ne RNAMESPACE() {
              * texture).
              */
             std::set<ShaderMacro> materialPixelShaderMacros;
-
-            // TODO: texture resources go here
         };
 
         /**
@@ -300,20 +323,44 @@ namespace ne RNAMESPACE() {
         /**
          * Called from MeshNode when a mesh node that uses this material is being spawned.
          *
-         * @param pMeshNode Mesh node that is currently being spawned.
+         * @warning Expects that the mesh will not change its visibility while calling this function.
+         *
+         * @param pMeshNode            Mesh node that is currently being spawned.
+         * @param indexBufferToDisplay Index buffer that this material should display.
          */
-        void onMeshNodeSpawned(MeshNode* pMeshNode);
+        void onMeshNodeSpawning(MeshNode* pMeshNode, const MeshIndexBufferInfo& indexBufferToDisplay);
 
         /**
          * Called from MeshNode when a spawned mesh node changed its material and started using
          * this material now.
          *
-         * @param pMeshNode Spawned mesh node that is using this material.
+         * @warning Expects that the mesh will not change its visibility while calling this function.
+         *
+         * @param pMeshNode            Spawned mesh node that is using this material.
+         * @param indexBufferToDisplay Index buffer that this material should display.
          */
-        void onSpawnedMeshNodeStartedUsingMaterial(MeshNode* pMeshNode);
+        void onSpawnedMeshNodeStartedUsingMaterial(
+            MeshNode* pMeshNode, const MeshIndexBufferInfo& indexBufferToDisplay);
+
+        /**
+         * Called from MeshNode when a spawned mesh node re-created some index buffer
+         * and now wants to notify the material about it.
+         *
+         * @warning Expects that the mesh will not change its visibility while calling this function.
+         *
+         * @param pMeshNode          Spawned mesh node that is using this material.
+         * @param deletedIndexBuffer Index buffer that was deleted.
+         * @param newIndexBuffer     Index buffer that this material should display now.
+         */
+        void onSpawnedMeshNodeRecreatedIndexBuffer(
+            MeshNode* pMeshNode,
+            const MeshIndexBufferInfo& deletedIndexBuffer,
+            const MeshIndexBufferInfo& newIndexBuffer);
 
         /**
          * Called from MeshNode when a spawned mesh node changed its visibility.
+         *
+         * @warning Expects that the mesh will not change its visibility while calling this function.
          *
          * @param pMeshNode      Spawned mesh node that is using this material.
          * @param bOldVisibility Old visibility of the mesh.
@@ -324,16 +371,23 @@ namespace ne RNAMESPACE() {
          * Called from MeshNode when a spawned mesh node changed its material and now no longer
          * using this material.
          *
-         * @param pMeshNode Spawned mesh node that stopped using this material.
+         * @warning Expects that the mesh will not change its visibility while calling this function.
+         *
+         * @param pMeshNode            Spawned mesh node that stopped using this material.
+         * @param indexBufferDisplayed Index buffer that this material was displaying.
          */
-        void onSpawnedMeshNodeStoppedUsingMaterial(MeshNode* pMeshNode);
+        void onSpawnedMeshNodeStoppedUsingMaterial(
+            MeshNode* pMeshNode, const MeshIndexBufferInfo& indexBufferDisplayed);
 
         /**
          * Called from MeshNode when a spawned mesh node that uses this material is being despawned.
          *
-         * @param pMeshNode Spawned mesh node that is being despawned.
+         * @warning Expects that the mesh will not change its visibility while calling this function.
+         *
+         * @param pMeshNode            Spawned mesh node that is being despawned.
+         * @param indexBufferDisplayed Index buffer that this material was displaying.
          */
-        void onMeshNodeDespawned(MeshNode* pMeshNode);
+        void onMeshNodeDespawning(MeshNode* pMeshNode, const MeshIndexBufferInfo& indexBufferDisplayed);
 
         /**
          * Creates shader resources such as material's constant buffer.

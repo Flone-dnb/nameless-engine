@@ -12,7 +12,7 @@
 
 #include "Material.generated_impl.h"
 
-/** Total amount of alive material objects. */
+/** The total number of alive material objects. */
 static std::atomic<size_t> iTotalAliveMaterialCount{0};
 
 namespace ne {
@@ -20,7 +20,7 @@ namespace ne {
     Material::Material() {
         iTotalAliveMaterialCount.fetch_add(1);
 
-        // Self check: make sure reinterpret_casts will work.
+        // Self check: make sure reinterpret_casts in `draw` will work.
         static_assert(
             std::is_same_v<
                 decltype(mtxGpuResources.second.shaderResources.shaderCpuWriteResources),
@@ -31,6 +31,16 @@ namespace ne {
                 decltype(mtxGpuResources.second.shaderResources.shaderTextureResources),
                 std::unordered_map<std::string, ShaderTextureResourceUniquePtr>>,
             "update reinterpret_casts in both renderers (in draw function)");
+
+#if defined(WIN32) && defined(DEBUG)
+        static_assert(
+            sizeof(GpuResources::ShaderResources) == 160, // NOLINT
+            "add new static asserts for resources here");
+#elif defined(DEBUG)
+        static_assert(
+            sizeof(GpuResources::ShaderResources) == 56, // NOLINT
+            "add new static asserts for resources here");
+#endif
     }
 
     Material::Material(
@@ -85,27 +95,95 @@ namespace ne {
 
     size_t Material::getCurrentAliveMaterialCount() { return iTotalAliveMaterialCount.load(); }
 
-    void Material::onMeshNodeSpawned(MeshNode* pMeshNode) {
-        onSpawnedMeshNodeStartedUsingMaterial(pMeshNode);
-    }
-
-    void Material::onSpawnedMeshNodeStartedUsingMaterial(MeshNode* pMeshNode) {
+    void Material::onSpawnedMeshNodeRecreatedIndexBuffer(
+        MeshNode* pMeshNode,
+        const MeshIndexBufferInfo& deletedIndexBuffer,
+        const MeshIndexBufferInfo& newIndexBuffer) {
         std::scoped_lock guard(mtxSpawnedMeshNodesThatUseThisMaterial.first, mtxInternalResources.first);
 
-        // Make sure we don't have this mesh node in our array.
-        if (mtxSpawnedMeshNodesThatUseThisMaterial.second.isMeshNodeAdded(pMeshNode)) [[unlikely]] {
-            Logger::get().error(std::format(
-                "mesh node \"{}\" notified used material about being spawned but this mesh node already "
-                "exists in material's array of spawned mesh nodes",
-                pMeshNode->getNodeName()));
-            return;
+        // Depending on the node's visibility pick a map to modify.
+        std::unordered_map<MeshNode*, std::vector<MeshIndexBufferInfo>>* pNodeMap = nullptr;
+        if (pMeshNode->isVisible()) {
+            pNodeMap = &mtxSpawnedMeshNodesThatUseThisMaterial.second.visibleMeshNodes;
+        } else {
+            pNodeMap = &mtxSpawnedMeshNodesThatUseThisMaterial.second.invisibleMeshNodes;
         }
 
-        // Add node to be considered.
+        // Find this mesh node.
+        const auto nodeIt = pNodeMap->find(pMeshNode);
+        if (nodeIt == pNodeMap->end()) [[unlikely]] {
+            Error error(std::format(
+                "spawned mesh node \"{}\" notified the material \"{}\" about re-created index buffer "
+                "but this material is not displaying any index buffer of this mesh",
+                pMeshNode->getNodeName(),
+                getMaterialName()));
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+        }
+
+        // Find and replace old index buffer.
+        bool bReplaced = false;
+        for (size_t i = 0; i < nodeIt->second.size(); i++) {
+            if (nodeIt->second[i].pIndexBuffer != deletedIndexBuffer.pIndexBuffer) {
+                continue;
+            }
+
+            bReplaced = true;
+            nodeIt->second[i] = newIndexBuffer;
+            break;
+        }
+
+        // Make sure we replaced the index buffer.
+        if (!bReplaced) [[unlikely]] {
+            Error error(std::format(
+                "spawned mesh node \"{}\" notified the material \"{}\" about re-created index buffer "
+                "but although this material is displaying some index buffer(s) of this mesh the material "
+                "was unable to find the specified deleted index buffer to replace it",
+                pMeshNode->getNodeName(),
+                getMaterialName()));
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+        }
+    }
+
+    void Material::onMeshNodeSpawning(MeshNode* pMeshNode, const MeshIndexBufferInfo& indexBufferToDisplay) {
+        onSpawnedMeshNodeStartedUsingMaterial(pMeshNode, indexBufferToDisplay);
+    }
+
+    void Material::onSpawnedMeshNodeStartedUsingMaterial(
+        MeshNode* pMeshNode, const MeshIndexBufferInfo& indexBufferToDisplay) {
+        std::scoped_lock guard(mtxSpawnedMeshNodesThatUseThisMaterial.first, mtxInternalResources.first);
+
+        // Depending on the node's visibility pick a map to modify.
+        std::unordered_map<MeshNode*, std::vector<MeshIndexBufferInfo>>* pNodeMap = nullptr;
         if (pMeshNode->isVisible()) {
-            mtxSpawnedMeshNodesThatUseThisMaterial.second.visibleMeshNodes.insert(pMeshNode);
+            pNodeMap = &mtxSpawnedMeshNodesThatUseThisMaterial.second.visibleMeshNodes;
         } else {
-            mtxSpawnedMeshNodesThatUseThisMaterial.second.invisibleMeshNodes.insert(pMeshNode);
+            pNodeMap = &mtxSpawnedMeshNodesThatUseThisMaterial.second.invisibleMeshNodes;
+        }
+
+        // See if this mesh node is already displaying some index buffer using this material.
+        const auto it = pNodeMap->find(pMeshNode);
+        if (it == pNodeMap->end()) {
+            // Add node to be considered.
+            pNodeMap->operator[](pMeshNode) = {indexBufferToDisplay};
+        } else {
+            // Some index buffer of this mesh is already displayed using this material.
+            // Make sure this index buffer is not registered yet.
+            for (const auto& indexBufferInfo : it->second) {
+                if (indexBufferInfo.pIndexBuffer == indexBufferToDisplay.pIndexBuffer) [[unlikely]] {
+                    Error error(std::format(
+                        "spawned mesh node \"{}\" notified the material \"{}\" about using it to display an "
+                        "index buffer but this index buffer is already displayed by this material",
+                        pMeshNode->getNodeName(),
+                        getMaterialName()));
+                    error.showError();
+                    throw std::runtime_error(error.getFullErrorMessage());
+                }
+            }
+
+            // Add this new index buffer to be considered.
+            it->second.push_back(indexBufferToDisplay);
         }
 
         // Initialize pipeline if needed.
@@ -129,24 +207,61 @@ namespace ne {
         }
     }
 
-    void Material::onSpawnedMeshNodeStoppedUsingMaterial(MeshNode* pMeshNode) {
+    void Material::onSpawnedMeshNodeStoppedUsingMaterial(
+        MeshNode* pMeshNode, const MeshIndexBufferInfo& indexBufferDisplayed) {
         std::scoped_lock guard(mtxSpawnedMeshNodesThatUseThisMaterial.first, mtxInternalResources.first);
 
-        // Make sure we have this mesh node in our array.
-        if (!mtxSpawnedMeshNodesThatUseThisMaterial.second.isMeshNodeAdded(pMeshNode)) [[unlikely]] {
-            Logger::get().error(std::format(
-                "mesh node \"{}\" notified used material about no longer being used but this mesh node "
-                "does not exist in material's array of spawned mesh nodes",
-                pMeshNode->getNodeName()));
+        // Depending on the node's visibility pick a map to modify.
+        std::unordered_map<MeshNode*, std::vector<MeshIndexBufferInfo>>* pNodeMap = nullptr;
+        if (pMeshNode->isVisible()) {
+            pNodeMap = &mtxSpawnedMeshNodesThatUseThisMaterial.second.visibleMeshNodes;
+        } else {
+            pNodeMap = &mtxSpawnedMeshNodesThatUseThisMaterial.second.invisibleMeshNodes;
+        }
+
+        // Find this mesh node in our map.
+        const auto nodeIt = pNodeMap->find(pMeshNode);
+        if (nodeIt == pNodeMap->end()) [[unlikely]] {
+            Error error(std::format(
+                "spawned mesh node \"{}\" notified the material \"{}\" about no longer using this material "
+                "to display some index buffer but this material is not displaying any index "
+                "buffer of this mesh",
+                pMeshNode->getNodeName(),
+                getMaterialName()));
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+        }
+
+        // Find this index buffer.
+        bool bFound = false;
+        for (auto it = nodeIt->second.begin(); it != nodeIt->second.end(); ++it) {
+            if (it->pIndexBuffer != indexBufferDisplayed.pIndexBuffer) {
+                continue;
+            }
+
+            bFound = true;
+            nodeIt->second.erase(it);
+            break;
+        }
+        if (!bFound) [[unlikely]] {
+            Error error(std::format(
+                "spawned mesh node \"{}\" notified the material \"{}\" about no longer using this material "
+                "to display some index buffer but although this material is displaying some index "
+                "buffer(s) of this mesh the material was unable to find the specified index buffer",
+                pMeshNode->getNodeName(),
+                getMaterialName()));
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+        }
+
+        // See if index buffer array is now empty.
+        if (!nodeIt->second.empty()) {
+            // Nothing more to do.
             return;
         }
 
-        // Remove node from consideration.
-        if (pMeshNode->isVisible()) {
-            mtxSpawnedMeshNodesThatUseThisMaterial.second.visibleMeshNodes.erase(pMeshNode);
-        } else {
-            mtxSpawnedMeshNodesThatUseThisMaterial.second.invisibleMeshNodes.erase(pMeshNode);
-        }
+        // Remove this node from consideration.
+        pNodeMap->erase(nodeIt);
 
         // Check if need to free pipeline.
         if (mtxSpawnedMeshNodesThatUseThisMaterial.second.getTotalSize() == 0) {
@@ -168,8 +283,9 @@ namespace ne {
         }
     }
 
-    void Material::onMeshNodeDespawned(MeshNode* pMeshNode) {
-        onSpawnedMeshNodeStoppedUsingMaterial(pMeshNode);
+    void
+    Material::onMeshNodeDespawning(MeshNode* pMeshNode, const MeshIndexBufferInfo& indexBufferDisplayed) {
+        onSpawnedMeshNodeStoppedUsingMaterial(pMeshNode, indexBufferDisplayed);
     }
 
     std::variant<std::shared_ptr<Material>, Error> Material::create(
@@ -227,6 +343,7 @@ namespace ne {
     void Material::onSpawnedMeshNodeChangedVisibility(MeshNode* pMeshNode, bool bOldVisibility) {
         std::scoped_lock guard(mtxSpawnedMeshNodesThatUseThisMaterial.first);
 
+        // Make sure the visibility actually changed.
         if (bOldVisibility == pMeshNode->isVisible()) [[unlikely]] {
             Logger::get().error(std::format(
                 "mesh node \"{}\" notified used material about changed visibility but the visibility "
@@ -236,7 +353,9 @@ namespace ne {
         }
 
         if (bOldVisibility) {
-            auto it = mtxSpawnedMeshNodesThatUseThisMaterial.second.visibleMeshNodes.find(pMeshNode);
+            // Became invisible.
+            // Find in visible nodes.
+            const auto it = mtxSpawnedMeshNodesThatUseThisMaterial.second.visibleMeshNodes.find(pMeshNode);
             if (it == mtxSpawnedMeshNodesThatUseThisMaterial.second.visibleMeshNodes.end()) [[unlikely]] {
                 Logger::get().error(std::format(
                     "mesh node \"{}\" notified used material about changed visibility but this mesh node "
@@ -244,10 +363,20 @@ namespace ne {
                     pMeshNode->getNodeName()));
                 return;
             }
+
+            // Save index buffers to display.
+            auto vIndexBuffersToDisplay = std::move(it->second);
+
+            // Remove from visible.
             mtxSpawnedMeshNodesThatUseThisMaterial.second.visibleMeshNodes.erase(it);
-            mtxSpawnedMeshNodesThatUseThisMaterial.second.invisibleMeshNodes.insert(pMeshNode);
+
+            // Add to invisible nodes.
+            mtxSpawnedMeshNodesThatUseThisMaterial.second.invisibleMeshNodes[pMeshNode] =
+                std::move(vIndexBuffersToDisplay);
         } else {
-            auto it = mtxSpawnedMeshNodesThatUseThisMaterial.second.invisibleMeshNodes.find(pMeshNode);
+            // Became visible.
+            // Find in invisible nodes.
+            const auto it = mtxSpawnedMeshNodesThatUseThisMaterial.second.invisibleMeshNodes.find(pMeshNode);
             if (it == mtxSpawnedMeshNodesThatUseThisMaterial.second.invisibleMeshNodes.end()) [[unlikely]] {
                 Logger::get().error(std::format(
                     "mesh node \"{}\" notified used material about changed visibility but this mesh node "
@@ -255,8 +384,16 @@ namespace ne {
                     pMeshNode->getNodeName()));
                 return;
             }
+
+            // Save index buffers to display.
+            auto vIndexBuffersToDisplay = std::move(it->second);
+
+            // Remove from invisible nodes.
             mtxSpawnedMeshNodesThatUseThisMaterial.second.invisibleMeshNodes.erase(it);
-            mtxSpawnedMeshNodesThatUseThisMaterial.second.visibleMeshNodes.insert(pMeshNode);
+
+            // Add to visible nodes.
+            mtxSpawnedMeshNodesThatUseThisMaterial.second.visibleMeshNodes[pMeshNode] =
+                std::move(vIndexBuffersToDisplay);
         }
     }
 
@@ -383,7 +520,7 @@ namespace ne {
             sShaderResourceName,
             std::format("material \"{}\"", sMaterialName),
             iResourceSizeInBytes,
-            mtxInternalResources.second.pUsedPipeline.getPipeline(),
+            {mtxInternalResources.second.pUsedPipeline.getPipeline()},
             onStartedUpdatingResource,
             onFinishedUpdatingResource);
         if (std::holds_alternative<Error>(result)) {
@@ -454,7 +591,7 @@ namespace ne {
         auto shaderResourceResult = pShaderResourceManager->createShaderTextureResource(
             sShaderResourceName,
             std::format("material \"{}\"", sMaterialName),
-            mtxInternalResources.second.pUsedPipeline.getPipeline(),
+            {mtxInternalResources.second.pUsedPipeline.getPipeline()},
             std::move(pTextureHandle));
         if (std::holds_alternative<Error>(shaderResourceResult)) [[unlikely]] {
             auto error = std::get<Error>(std::move(shaderResourceResult));
@@ -551,6 +688,9 @@ namespace ne {
         // shader resources reference pipeline resources.
         deallocateShaderResources();
 
+        // Save old pipeline to pass to shader resources later.
+        const auto pDeletedPipeline = mtxInternalResources.second.pUsedPipeline.getPipeline();
+
         // Don't reference the current pipeline anymore. This might cause the pipeline to be
         // destroyed.
         mtxInternalResources.second.pUsedPipeline.clear();
@@ -563,7 +703,7 @@ namespace ne {
             mtxInternalResources.second.materialVertexShaderMacros,
             mtxInternalResources.second.materialPixelShaderMacros,
             this);
-        if (std::holds_alternative<Error>(result)) {
+        if (std::holds_alternative<Error>(result)) [[unlikely]] {
             auto error = std::get<Error>(std::move(result));
             error.addCurrentLocationToErrorStack();
             error.showError();
@@ -574,17 +714,21 @@ namespace ne {
         // Create our shader resources.
         allocateShaderResources();
 
+        // Get new pipeline.
+        const auto pNewPipeline = mtxInternalResources.second.pUsedPipeline.getPipeline();
+
         // Notify mesh nodes about changed pipeline.
         std::scoped_lock nodesGuard(mtxSpawnedMeshNodesThatUseThisMaterial.first);
-        for (const auto& pVisibleMeshNode : mtxSpawnedMeshNodesThatUseThisMaterial.second.visibleMeshNodes) {
-            pVisibleMeshNode->onAfterMaterialChangedPipeline();
+        for (const auto& [pVisibleMeshNode, vIndexBuffersToDisplay] :
+             mtxSpawnedMeshNodesThatUseThisMaterial.second.visibleMeshNodes) {
+            pVisibleMeshNode->onAfterMaterialChangedPipeline(pDeletedPipeline, pNewPipeline);
         }
-        for (const auto& pInvisibleMeshNode :
+        for (const auto& [pInvisibleMeshNode, vIndexBuffersToDisplay] :
              mtxSpawnedMeshNodesThatUseThisMaterial.second.invisibleMeshNodes) {
-            pInvisibleMeshNode->onAfterMaterialChangedPipeline();
+            pInvisibleMeshNode->onAfterMaterialChangedPipeline(pDeletedPipeline, pNewPipeline);
         }
 #if defined(WIN32) && defined(DEBUG)
-        static_assert(sizeof(MeshNodesThatUseThisMaterial) == 48, "notify new nodes here");
+        static_assert(sizeof(MeshNodesThatUseThisMaterial) == 160, "notify new nodes here");
 #elif defined(DEBUG)
         static_assert(sizeof(MeshNodesThatUseThisMaterial) == 96, "notify new nodes here");
 #endif
@@ -763,7 +907,7 @@ namespace ne {
         }
 
 #if defined(WIN32) && defined(DEBUG)
-        static_assert(sizeof(Material) == 896, "consider checking new macros here"); // NOLINT: current size
+        static_assert(sizeof(Material) == 1008, "consider checking new macros here"); // NOLINT: current size
 #elif defined(DEBUG)
         static_assert(sizeof(Material) == 736, "consider checking new macros here"); // NOLINT: current size
 #endif

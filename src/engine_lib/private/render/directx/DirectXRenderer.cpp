@@ -567,8 +567,8 @@ namespace ne {
                 // macro for shaders) and the second one is not we will have 2 pipelines here).
                 for (const auto& [materialMacros, pPipeline] : pipelines.shaderPipelines) {
                     // Get internal resources of this pipeline.
-                    auto pMtxPsoResources =
-                        reinterpret_cast<DirectXPso*>(pPipeline.get())->getInternalResources();
+                    const auto pDirectXPso = reinterpret_cast<DirectXPso*>(pPipeline.get());
+                    auto pMtxPsoResources = pDirectXPso->getInternalResources();
                     std::scoped_lock guardPsoResources(pMtxPsoResources->first);
 
                     // Set PSO and root signature.
@@ -605,7 +605,7 @@ namespace ne {
                              materialResources.shaderCpuWriteResources) {
                             reinterpret_cast<HlslShaderCpuWriteResource*>(
                                 pShaderCpuWriteResource.getResource())
-                                ->setConstantBufferView(
+                                ->setConstantBufferViewOfOnlyPipeline(
                                     pCommandList,
                                     pMtxCurrentFrameResource->second.iCurrentFrameResourceIndex);
                         }
@@ -614,11 +614,14 @@ namespace ne {
                         for (const auto& [sResourceName, pShaderTextureResource] :
                              materialResources.shaderTextureResources) {
                             reinterpret_cast<HlslShaderTextureResource*>(pShaderTextureResource.getResource())
-                                ->setShaderResourceView(pCommandList);
+                                ->setGraphicsRootDescriptorTableOfOnlyPipeline(pCommandList);
                         }
 
                         // Draw mesh nodes that use this material.
-                        drawMeshNodes(pMaterial, pMtxCurrentFrameResource->second.iCurrentFrameResourceIndex);
+                        drawMeshNodes(
+                            pMaterial,
+                            pDirectXPso,
+                            pMtxCurrentFrameResource->second.iCurrentFrameResourceIndex);
                     }
                 }
             }
@@ -802,14 +805,16 @@ namespace ne {
         return {};
     }
 
-    void DirectXRenderer::drawMeshNodes(Material* pMaterial, size_t iCurrentFrameResourceIndex) {
+    void DirectXRenderer::drawMeshNodes(
+        Material* pMaterial, DirectXPso* pPipeline, size_t iCurrentFrameResourceIndex) {
         PROFILE_FUNC;
 
+        // Prepare some variables.
         const auto pMtxMeshNodes = pMaterial->getSpawnedMeshNodesThatUseThisMaterial();
 
         // Iterate over all visible mesh nodes that use this material.
         std::scoped_lock meshNodesGuard(pMtxMeshNodes->first);
-        for (const auto& pMeshNode : pMtxMeshNodes->second.visibleMeshNodes) {
+        for (const auto& [pMeshNode, vIndexBuffers] : pMtxMeshNodes->second.visibleMeshNodes) {
             // Get mesh data.
             auto pMtxMeshGpuResources = pMeshNode->getMeshGpuResources();
             auto mtxMeshData = pMeshNode->getMeshData();
@@ -818,7 +823,14 @@ namespace ne {
             // as it might cause a deadlock (see MeshNode::setMaterial for example).
             std::scoped_lock geometryGuard(pMtxMeshGpuResources->first, *mtxMeshData.first);
 
-            // Create vertex buffer view.
+            // Set mesh's shader CPU write resources (`cbuffer`s for example).
+            for (const auto& [sResourceName, pShaderCpuWriteResource] :
+                 pMtxMeshGpuResources->second.shaderResources.shaderCpuWriteResources) {
+                reinterpret_cast<HlslShaderCpuWriteResource*>(pShaderCpuWriteResource.getResource())
+                    ->setConstantBufferViewOfPipeline(pCommandList, pPipeline, iCurrentFrameResourceIndex);
+            }
+
+            // Prepare vertex buffer view.
             D3D12_VERTEX_BUFFER_VIEW vertexBufferView;
             vertexBufferView.BufferLocation =
                 reinterpret_cast<DirectXResource*>(pMtxMeshGpuResources->second.mesh.pVertexBuffer.get())
@@ -828,31 +840,28 @@ namespace ne {
             vertexBufferView.SizeInBytes =
                 static_cast<UINT>(mtxMeshData.second->getVertices()->size() * vertexBufferView.StrideInBytes);
 
-            // Create index buffer view.
-            static_assert(sizeof(MeshData::meshindex_t) == sizeof(unsigned int), "change `Format`");
-            D3D12_INDEX_BUFFER_VIEW indexBufferView;
-            indexBufferView.BufferLocation =
-                reinterpret_cast<DirectXResource*>(pMtxMeshGpuResources->second.mesh.pIndexBuffer.get())
-                    ->getInternalResource()
-                    ->GetGPUVirtualAddress();
-            indexBufferView.Format = DXGI_FORMAT_R32_UINT;
-            indexBufferView.SizeInBytes =
-                static_cast<UINT>(mtxMeshData.second->getIndices()->size() * sizeof(MeshData::meshindex_t));
-
-            // Set vertex/index buffer.
+            // Set vertex buffer view.
             pCommandList->IASetVertexBuffers(0, 1, &vertexBufferView);
-            pCommandList->IASetIndexBuffer(&indexBufferView);
 
-            // Set CPU write shader resources (`cbuffer`s for example).
-            for (const auto& [sResourceName, pShaderCpuWriteResource] :
-                 pMtxMeshGpuResources->second.shaderResources.shaderCpuWriteResources) {
-                reinterpret_cast<HlslShaderCpuWriteResource*>(pShaderCpuWriteResource.getResource())
-                    ->setConstantBufferView(pCommandList, iCurrentFrameResourceIndex);
+            // Iterate over all index buffers of a specific mesh node that use this material.
+            for (const auto& indexBufferInfo : vIndexBuffers) {
+                // Prepare index buffer view.
+                static_assert(sizeof(MeshData::meshindex_t) == sizeof(unsigned int), "change `Format`");
+                D3D12_INDEX_BUFFER_VIEW indexBufferView;
+                indexBufferView.BufferLocation =
+                    reinterpret_cast<DirectXResource*>(indexBufferInfo.pIndexBuffer)
+                        ->getInternalResource()
+                        ->GetGPUVirtualAddress();
+                indexBufferView.Format = DXGI_FORMAT_R32_UINT;
+                indexBufferView.SizeInBytes =
+                    static_cast<UINT>(indexBufferInfo.iIndexCount * sizeof(MeshData::meshindex_t));
+
+                // Set vertex/index buffer.
+                pCommandList->IASetIndexBuffer(&indexBufferView);
+
+                // Add a draw command.
+                pCommandList->DrawIndexedInstanced(indexBufferInfo.iIndexCount, 1, 0, 0, 0);
             }
-
-            // Add a draw command.
-            pCommandList->DrawIndexedInstanced(
-                static_cast<UINT>(mtxMeshData.second->getIndices()->size()), 1, 0, 0, 0);
         }
     }
 

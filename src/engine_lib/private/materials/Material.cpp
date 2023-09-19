@@ -97,8 +97,8 @@ namespace ne {
 
     void Material::onSpawnedMeshNodeRecreatedIndexBuffer(
         MeshNode* pMeshNode,
-        const MeshIndexBufferInfo& deletedIndexBuffer,
-        const MeshIndexBufferInfo& newIndexBuffer) {
+        const std::pair<GpuResource*, unsigned int>& deletedIndexBuffer,
+        const std::pair<GpuResource*, unsigned int>& newIndexBuffer) {
         std::scoped_lock guard(mtxSpawnedMeshNodesThatUseThisMaterial.first, mtxInternalResources.first);
 
         // Depending on the node's visibility pick a map to modify.
@@ -124,12 +124,12 @@ namespace ne {
         // Find and replace old index buffer.
         bool bReplaced = false;
         for (size_t i = 0; i < nodeIt->second.size(); i++) {
-            if (nodeIt->second[i].pIndexBuffer != deletedIndexBuffer.pIndexBuffer) {
+            if (nodeIt->second[i].pIndexBuffer != deletedIndexBuffer.first) {
                 continue;
             }
 
             bReplaced = true;
-            nodeIt->second[i] = newIndexBuffer;
+            nodeIt->second[i] = MeshIndexBufferInfo(newIndexBuffer.first, newIndexBuffer.second);
             break;
         }
 
@@ -146,12 +146,13 @@ namespace ne {
         }
     }
 
-    void Material::onMeshNodeSpawning(MeshNode* pMeshNode, const MeshIndexBufferInfo& indexBufferToDisplay) {
+    void Material::onMeshNodeSpawning(
+        MeshNode* pMeshNode, const std::pair<GpuResource*, unsigned int>& indexBufferToDisplay) {
         onSpawnedMeshNodeStartedUsingMaterial(pMeshNode, indexBufferToDisplay);
     }
 
     void Material::onSpawnedMeshNodeStartedUsingMaterial(
-        MeshNode* pMeshNode, const MeshIndexBufferInfo& indexBufferToDisplay) {
+        MeshNode* pMeshNode, const std::pair<GpuResource*, unsigned int>& indexBufferToDisplay) {
         std::scoped_lock guard(mtxSpawnedMeshNodesThatUseThisMaterial.first, mtxInternalResources.first);
 
         // Depending on the node's visibility pick a map to modify.
@@ -166,12 +167,13 @@ namespace ne {
         const auto it = pNodeMap->find(pMeshNode);
         if (it == pNodeMap->end()) {
             // Add node to be considered.
-            pNodeMap->operator[](pMeshNode) = {indexBufferToDisplay};
+            pNodeMap->operator[](pMeshNode) = {
+                MeshIndexBufferInfo(indexBufferToDisplay.first, indexBufferToDisplay.second)};
         } else {
             // Some index buffer of this mesh is already displayed using this material.
             // Make sure this index buffer is not registered yet.
             for (const auto& indexBufferInfo : it->second) {
-                if (indexBufferInfo.pIndexBuffer == indexBufferToDisplay.pIndexBuffer) [[unlikely]] {
+                if (indexBufferInfo.pIndexBuffer == indexBufferToDisplay.first) [[unlikely]] {
                     Error error(std::format(
                         "spawned mesh node \"{}\" notified the material \"{}\" about using it to display an "
                         "index buffer but this index buffer is already displayed by this material",
@@ -183,7 +185,8 @@ namespace ne {
             }
 
             // Add this new index buffer to be considered.
-            it->second.push_back(indexBufferToDisplay);
+            it->second.push_back(
+                MeshIndexBufferInfo(indexBufferToDisplay.first, indexBufferToDisplay.second));
         }
 
         // Initialize pipeline if needed.
@@ -208,7 +211,7 @@ namespace ne {
     }
 
     void Material::onSpawnedMeshNodeStoppedUsingMaterial(
-        MeshNode* pMeshNode, const MeshIndexBufferInfo& indexBufferDisplayed) {
+        MeshNode* pMeshNode, const std::pair<GpuResource*, unsigned int>& indexBufferDisplayed) {
         std::scoped_lock guard(mtxSpawnedMeshNodesThatUseThisMaterial.first, mtxInternalResources.first);
 
         // Depending on the node's visibility pick a map to modify.
@@ -235,7 +238,7 @@ namespace ne {
         // Find this index buffer.
         bool bFound = false;
         for (auto it = nodeIt->second.begin(); it != nodeIt->second.end(); ++it) {
-            if (it->pIndexBuffer != indexBufferDisplayed.pIndexBuffer) {
+            if (it->pIndexBuffer != indexBufferDisplayed.first) {
                 continue;
             }
 
@@ -283,8 +286,8 @@ namespace ne {
         }
     }
 
-    void
-    Material::onMeshNodeDespawning(MeshNode* pMeshNode, const MeshIndexBufferInfo& indexBufferDisplayed) {
+    void Material::onMeshNodeDespawning(
+        MeshNode* pMeshNode, const std::pair<GpuResource*, unsigned int>& indexBufferDisplayed) {
         onSpawnedMeshNodeStoppedUsingMaterial(pMeshNode, indexBufferDisplayed);
     }
 

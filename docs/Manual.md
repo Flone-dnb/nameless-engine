@@ -2221,6 +2221,7 @@ This section contains a list of important things that you need to regularly chec
 
 - always read the documentation for the functions you are using (documentation comments in the code), this generally saves you from all issues listed here
 - always check the logs, if something goes wrong the engine will let you know in the logs, after your game is closed if there were any warnings/errors the last message in the log (before the application is closed) will be the total number of warnings/errors produced (if there were any) so you don't have to scroll through the logs or use search every time
+- from time to time check your console output's beginning when you start your game for special warnings like `[Refureku] WARNING: Double registration detected` which are not captured by our logging system, these might occur in very special cases, report these if found
 
 ## Garbage collection and GC pointers
 

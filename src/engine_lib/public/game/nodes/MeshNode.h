@@ -10,7 +10,6 @@
 #include "materials/resources/ShaderResource.h"
 #include "materials/resources/cpuwrite/ShaderCpuWriteResourceUniquePtr.h"
 #include "materials/VulkanAlignmentConstants.hpp"
-#include "materials/Material.h"
 
 #include "MeshNode.generated.h"
 
@@ -484,7 +483,7 @@ namespace ne RNAMESPACE() {
          *
          * @return Information about an index buffer at the specified material slot.
          */
-        MeshIndexBufferInfo getIndexBufferInfoForMaterialSlot(size_t iMaterialSlot);
+        std::pair<GpuResource*, unsigned int> getIndexBufferInfoForMaterialSlot(size_t iMaterialSlot);
 
         /**
          * Stores materials of the mesh. Material at index 0 used by index buffer 0, material

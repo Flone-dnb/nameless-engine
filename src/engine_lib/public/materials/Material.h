@@ -328,7 +328,8 @@ namespace ne RNAMESPACE() {
          * @param pMeshNode            Mesh node that is currently being spawned.
          * @param indexBufferToDisplay Index buffer that this material should display.
          */
-        void onMeshNodeSpawning(MeshNode* pMeshNode, const MeshIndexBufferInfo& indexBufferToDisplay);
+        void onMeshNodeSpawning(
+            MeshNode* pMeshNode, const std::pair<GpuResource*, unsigned int>& indexBufferToDisplay);
 
         /**
          * Called from MeshNode when a spawned mesh node changed its material and started using
@@ -340,7 +341,7 @@ namespace ne RNAMESPACE() {
          * @param indexBufferToDisplay Index buffer that this material should display.
          */
         void onSpawnedMeshNodeStartedUsingMaterial(
-            MeshNode* pMeshNode, const MeshIndexBufferInfo& indexBufferToDisplay);
+            MeshNode* pMeshNode, const std::pair<GpuResource*, unsigned int>& indexBufferToDisplay);
 
         /**
          * Called from MeshNode when a spawned mesh node re-created some index buffer
@@ -354,8 +355,8 @@ namespace ne RNAMESPACE() {
          */
         void onSpawnedMeshNodeRecreatedIndexBuffer(
             MeshNode* pMeshNode,
-            const MeshIndexBufferInfo& deletedIndexBuffer,
-            const MeshIndexBufferInfo& newIndexBuffer);
+            const std::pair<GpuResource*, unsigned int>& deletedIndexBuffer,
+            const std::pair<GpuResource*, unsigned int>& newIndexBuffer);
 
         /**
          * Called from MeshNode when a spawned mesh node changed its visibility.
@@ -377,7 +378,7 @@ namespace ne RNAMESPACE() {
          * @param indexBufferDisplayed Index buffer that this material was displaying.
          */
         void onSpawnedMeshNodeStoppedUsingMaterial(
-            MeshNode* pMeshNode, const MeshIndexBufferInfo& indexBufferDisplayed);
+            MeshNode* pMeshNode, const std::pair<GpuResource*, unsigned int>& indexBufferDisplayed);
 
         /**
          * Called from MeshNode when a spawned mesh node that uses this material is being despawned.
@@ -387,7 +388,8 @@ namespace ne RNAMESPACE() {
          * @param pMeshNode            Spawned mesh node that is being despawned.
          * @param indexBufferDisplayed Index buffer that this material was displaying.
          */
-        void onMeshNodeDespawning(MeshNode* pMeshNode, const MeshIndexBufferInfo& indexBufferDisplayed);
+        void onMeshNodeDespawning(
+            MeshNode* pMeshNode, const std::pair<GpuResource*, unsigned int>& indexBufferDisplayed);
 
         /**
          * Creates shader resources such as material's constant buffer.

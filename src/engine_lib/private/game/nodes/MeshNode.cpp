@@ -566,7 +566,7 @@ namespace ne {
 
         // Prepare an array of index buffers that will be deleted to pass pointers of deleted
         // index buffers to materials that we no longer use.
-        std::vector<MeshIndexBufferInfo> vDeletedIndexBuffers;
+        std::vector<std::pair<GpuResource*, unsigned int>> vDeletedIndexBuffers;
 
         if (bIsSpawned) {
             // Make sure no rendering happens during the material changing process
@@ -926,7 +926,7 @@ namespace ne {
         onMeshDataChanged();
     }
 
-    MeshIndexBufferInfo MeshNode::getIndexBufferInfoForMaterialSlot(size_t iMaterialSlot) {
+    std::pair<GpuResource*, unsigned int> MeshNode::getIndexBufferInfoForMaterialSlot(size_t iMaterialSlot) {
         std::scoped_lock guard(*getSpawnDespawnMutex(), mtxGpuResources.first, mtxMeshData);
 
         // Make sure we are spawned.
@@ -975,7 +975,7 @@ namespace ne {
             throw std::runtime_error(error.getFullErrorMessage());
         }
 
-        return MeshIndexBufferInfo(pIndexBuffer, iIndexCount);
+        return {pIndexBuffer, iIndexCount};
     }
 
 }

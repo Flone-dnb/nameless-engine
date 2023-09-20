@@ -7,7 +7,6 @@
 #include "io/serializers/UnorderedMapFieldSerializer.h"
 #include "io/serializers/SerializableObjectFieldSerializer.h"
 #include "io/serializers/GlmVecFieldSerializer.h"
-#include "io/serializers/MaterialFieldSerializer.h"
 
 namespace ne {
 
@@ -18,7 +17,6 @@ namespace ne {
         addFieldSerializer(std::make_unique<UnorderedMapFieldSerializer>());
         addFieldSerializer(std::make_unique<SerializableObjectFieldSerializer>());
         addFieldSerializer(std::make_unique<GlmVecFieldSerializer>());
-        addFieldSerializer(std::make_unique<MaterialFieldSerializer>());
     }
 
     void FieldSerializerManager::addFieldSerializer(std::unique_ptr<IFieldSerializer> pFieldSerializer) {

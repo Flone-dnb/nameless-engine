@@ -385,13 +385,10 @@ namespace ne {
             if (sFieldCanonicalTypeName.contains("std::shared_ptr<")) {
                 const auto pArray = reinterpret_cast<std::vector<std::shared_ptr<Serializable>>*>(
                     pField->getPtrUnsafe(pFieldOwner));
+
                 // Make sure target array is empty.
-                if (!pArray->empty()) [[unlikely]] {
-                    return Error(std::format(
-                        "the type \"{}\" of the specified array field \"{}\" is supported by this "
-                        "serializer, but this array should be empty before deserialization",
-                        sFieldCanonicalTypeName,
-                        pFieldName));
+                if (!pArray->empty()) {
+                    pArray->clear();
                 }
 
                 for (const auto& [key, value] : fieldValue) {

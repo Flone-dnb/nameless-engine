@@ -302,6 +302,20 @@ namespace ne RNAMESPACE() {
         };
 
         /**
+         * Returns pipeline manager.
+         *
+         * @remark Generally called before creating a new material to get pipeline manager and
+         * also check that selected shader names indeed exist.
+         *
+         * @param sVertexShaderName Name of the vertex shader that the material is using.
+         * @param sPixelShaderName  Name of the pixel shader that the material is using.
+         *
+         * @return Error if something went wrong, otherwise pipeline manager.
+         */
+        static std::variant<PipelineManager*, Error> getPipelineManagerForNewMaterial(
+            const std::string& sVertexShaderName, const std::string& sPixelShaderName);
+
+        /**
          * Creates a new material with the specified name.
          *
          * @remark This constructor should only be used internally (only by this class), use @ref

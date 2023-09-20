@@ -1,6 +1,5 @@
 
 ["0.d5407ca4-3c2e-4a5a-9ff3-1262b6a4d264"]
-pMaterial = "reflected type, see other sub-section"
 relativeLocation = [
 "0.0",
 "0.0",
@@ -19,10 +18,14 @@ relativeScale = [
 ]
 sNodeName = "Mesh Node"
 
-["0.0.a603fa3a-e9c2-4c38-bb4c-76384ef001f4"]
-sVertexShaderName = "engine.default.vs"
+["0.d5407ca4-3c2e-4a5a-9ff3-1262b6a4d264".vMaterials]
+
+["0.d5407ca4-3c2e-4a5a-9ff3-1262b6a4d264".vMaterials."vMaterials[0]"]
+
+["0.d5407ca4-3c2e-4a5a-9ff3-1262b6a4d264".vMaterials."vMaterials[0]"."0.a603fa3a-e9c2-4c38-bb4c-76384ef001f4"]
 bUseTransparency = false
-sPixelShaderName = "engine.default.ps"
-sMaterialName = "Material"
-".field_name" = "pMaterial"
+sDiffuseTexturePathRelativeRes = ""
+sVertexShaderName = "engine.meshnode.vs"
+sMaterialName = "Mesh Node's default material"
+sPixelShaderName = "engine.meshnode.ps"
 

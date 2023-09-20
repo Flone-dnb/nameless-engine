@@ -225,8 +225,6 @@ set(PROJECT_SOURCES
     public/io/serializers/SerializableObjectFieldSerializer.h
     private/io/serializers/GlmVecFieldSerializer.cpp
     public/io/serializers/GlmVecFieldSerializer.h
-    private/io/serializers/MaterialFieldSerializer.cpp
-    public/io/serializers/MaterialFieldSerializer.h
     public/math/MathHelpers.hpp
     public/math/GLMath.hpp
     # add general (cross-platform) sources here...

@@ -297,43 +297,18 @@ namespace ne {
         const std::string& sPixelShaderName,
         bool bUseTransparency,
         const std::string& sMaterialName) {
-        // Get shader manager.
-        const auto pGame = GameManager::get();
-        if (pGame == nullptr) [[unlikely]] {
-            return Error("unable to create material when game object is not created");
+        // Get pipeline manager.
+        auto result = getPipelineManagerForNewMaterial(sVertexShaderName, sPixelShaderName);
+        if (std::holds_alternative<Error>(result)) [[unlikely]] {
+            auto error = std::get<Error>(std::move(result));
+            error.addCurrentLocationToErrorStack();
+            return error;
         }
-
-        if (pGame->isBeingDestroyed()) [[unlikely]] {
-            return Error("unable to create material when game object is being destroyed");
-        }
-
-        const auto pRenderer = pGame->getWindow()->getRenderer();
-        if (pRenderer == nullptr) {
-            return Error("unable to create material when renderer is not created");
-        }
-
-        const auto pShaderManager = pRenderer->getShaderManager();
-
-        // Check that the specified shaders exist.
-        // Check vertex shader.
-        if (pShaderManager->isShaderNameCanBeUsed(sVertexShaderName)) {
-            return Error(
-                std::format("vertex shader \"{}\" was not found in the shader manager", sVertexShaderName));
-        }
-
-        // Check pixel shader.
-        if (pShaderManager->isShaderNameCanBeUsed(sPixelShaderName)) {
-            return Error(
-                std::format("pixel shader \"{}\" was not found in the shader manager", sPixelShaderName));
-        }
+        const auto pPipelineManager = std::get<PipelineManager*>(result);
 
         // Create material.
         return std::shared_ptr<Material>(new Material(
-            sVertexShaderName,
-            sPixelShaderName,
-            bUseTransparency,
-            pRenderer->getPipelineManager(),
-            sMaterialName));
+            sVertexShaderName, sPixelShaderName, bUseTransparency, pPipelineManager, sMaterialName));
     }
 
     std::pair<std::mutex, MeshNodesThatUseThisMaterial>* Material::getSpawnedMeshNodesThatUseThisMaterial() {
@@ -893,6 +868,16 @@ namespace ne {
 
         std::scoped_lock internalResourcesGuard(mtxInternalResources.first);
 
+        // Save pipeline manager.
+        auto result = getPipelineManagerForNewMaterial(sVertexShaderName, sPixelShaderName);
+        if (std::holds_alternative<Error>(result)) [[unlikely]] {
+            auto error = std::get<Error>(std::move(result));
+            error.addCurrentLocationToErrorStack();
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+        }
+        pPipelineManager = std::get<PipelineManager*>(result);
+
         // Define diffuse texture macro (if enabled).
         if (!sDiffuseTexturePathRelativeRes.empty()) {
             mtxInternalResources.second.materialPixelShaderMacros.insert(ShaderMacro::PS_USE_DIFFUSE_TEXTURE);
@@ -915,6 +900,43 @@ namespace ne {
         std::scoped_lock internalResourcesGuard(mtxInternalResources.first);
 
         return bUseTransparency;
+    }
+
+    std::variant<PipelineManager*, Error> Material::getPipelineManagerForNewMaterial(
+        const std::string& sVertexShaderName, const std::string& sPixelShaderName) {
+        // Get shader manager.
+        const auto pGame = GameManager::get();
+        if (pGame == nullptr) [[unlikely]] {
+            return Error("unable to create material when game object is not created");
+        }
+
+        // Make sure the game is not being destroyed.
+        if (pGame->isBeingDestroyed()) [[unlikely]] {
+            return Error("unable to create material when game object is being destroyed");
+        }
+
+        // Get renderer.
+        const auto pRenderer = pGame->getWindow()->getRenderer();
+        if (pRenderer == nullptr) {
+            return Error("unable to create material when renderer is not created");
+        }
+
+        const auto pShaderManager = pRenderer->getShaderManager();
+
+        // Check that the specified shaders exist.
+        // Check vertex shader.
+        if (pShaderManager->isShaderNameCanBeUsed(sVertexShaderName)) {
+            return Error(
+                std::format("vertex shader \"{}\" was not found in the shader manager", sVertexShaderName));
+        }
+
+        // Check pixel shader.
+        if (pShaderManager->isShaderNameCanBeUsed(sPixelShaderName)) {
+            return Error(
+                std::format("pixel shader \"{}\" was not found in the shader manager", sPixelShaderName));
+        }
+
+        return pRenderer->getPipelineManager();
     }
 
 } // namespace ne

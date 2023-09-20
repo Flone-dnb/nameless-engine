@@ -93,9 +93,41 @@ namespace ne {
         // Make sure all graphics pipelines were destroyed.
         const auto iCreatedGraphicsPipelineCount = getCurrentGraphicsPipelineCount();
         if (iCreatedGraphicsPipelineCount != 0) [[unlikely]] {
+            // Log error.
             Logger::get().error(fmt::format(
-                "pipeline manager is being destroyed but there are still {} graphics pipeline(s) exist",
+                "pipeline manager is being destroyed but {} graphics pipeline(s) exist:",
                 iCreatedGraphicsPipelineCount));
+
+            // Iterate over all graphics pipelines (of all types).
+            for (auto& [mutex, graphicsPipelines] : vGraphicsPipelines) {
+                std::scoped_lock guard(mutex);
+
+                // Iterate over all graphics pipelines of specific type.
+                for (const auto& [sPipelineIdentifier, pipelines] : graphicsPipelines) {
+                    Logger::get().error(fmt::format(
+                        "- \"{}\" ({} pipeline(s))", sPipelineIdentifier, pipelines.shaderPipelines.size()));
+
+                    // Iterate over all pipelines that use these shaders.
+                    for (const auto& [materialMacros, pPipeline] : pipelines.shaderPipelines) {
+                        // Convert macros to text.
+                        const auto vMacros = convertShaderMacrosToText(materialMacros);
+                        std::string sMacros;
+                        if (!vMacros.empty()) {
+                            for (const auto& sMacro : vMacros) {
+                                sMacros += std::format("{}, ", sMacro);
+                            }
+                            sMacros.pop_back(); // pop space
+                            sMacros.pop_back(); // pop comma
+                        }
+
+                        // Log macros.
+                        Logger::get().error(fmt::format(
+                            "-- macros: {}, active references: {} (including this manager)",
+                            sMacros,
+                            pPipeline.use_count()));
+                    }
+                }
+            }
         }
     }
 
@@ -277,6 +309,8 @@ namespace ne {
     }
 
     void PipelineManager::onPipelineNoLongerUsedByMaterial(const std::string& sPipelineIdentifier) {
+        // Iterate over all types of pipelines (opaque, transparent).
+        bool bFound = false;
         for (auto& [mutex, map] : vGraphicsPipelines) {
             std::scoped_lock guard(mutex);
 
@@ -286,18 +320,24 @@ namespace ne {
                 continue;
             }
 
+            // Mark that we found something.
+            bFound = true;
+
             // Remove pipelines that are no longer used.
             std::erase_if(
-                it->second.shaderPipelines, [](auto& item) { return item.second.use_count() == 1; });
+                it->second.shaderPipelines, [](const auto& pair) { return pair.second.use_count() == 1; });
 
             // Remove entry for pipelines of this shader combination if there are no pipelines.
             if (it->second.shaderPipelines.empty()) {
                 map.erase(it);
             }
-            return;
         }
 
-        Logger::get().error(fmt::format("unable to find the specified pipeline \"{}\"", sPipelineIdentifier));
+        // Self check: make sure we found something.
+        if (!bFound) [[unlikely]] {
+            Logger::get().error(
+                fmt::format("unable to find the specified pipeline \"{}\"", sPipelineIdentifier));
+        }
     }
 
     void DelayedPipelineResourcesCreation::initialize() {

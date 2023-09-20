@@ -281,7 +281,8 @@ namespace ne {
             // Deallocate all resources first (because they reference things from pipeline).
             deallocateShaderResources();
 
-            // Now the pipeline can be freed (if not used by anyone else).
+            // Don't reference our pipeline anymore since we don't need it
+            // (so it may be freed).
             mtxInternalResources.second.pUsedPipeline.clear();
         }
     }
@@ -691,9 +692,6 @@ namespace ne {
         // shader resources reference pipeline resources.
         deallocateShaderResources();
 
-        // Save old pipeline to pass to shader resources later.
-        const auto pDeletedPipeline = mtxInternalResources.second.pUsedPipeline.getPipeline();
-
         // Don't reference the current pipeline anymore. This might cause the pipeline to be
         // destroyed.
         mtxInternalResources.second.pUsedPipeline.clear();
@@ -717,18 +715,15 @@ namespace ne {
         // Create our shader resources.
         allocateShaderResources();
 
-        // Get new pipeline.
-        const auto pNewPipeline = mtxInternalResources.second.pUsedPipeline.getPipeline();
-
         // Notify mesh nodes about changed pipeline.
         std::scoped_lock nodesGuard(mtxSpawnedMeshNodesThatUseThisMaterial.first);
         for (const auto& [pVisibleMeshNode, vIndexBuffersToDisplay] :
              mtxSpawnedMeshNodesThatUseThisMaterial.second.visibleMeshNodes) {
-            pVisibleMeshNode->onAfterMaterialChangedPipeline(pDeletedPipeline, pNewPipeline);
+            pVisibleMeshNode->updateShaderResourcesToUseChangedMaterialPipelines();
         }
         for (const auto& [pInvisibleMeshNode, vIndexBuffersToDisplay] :
              mtxSpawnedMeshNodesThatUseThisMaterial.second.invisibleMeshNodes) {
-            pInvisibleMeshNode->onAfterMaterialChangedPipeline(pDeletedPipeline, pNewPipeline);
+            pInvisibleMeshNode->updateShaderResourcesToUseChangedMaterialPipelines();
         }
 #if defined(WIN32) && defined(DEBUG)
         static_assert(sizeof(MeshNodesThatUseThisMaterial) == 160, "notify new nodes here");

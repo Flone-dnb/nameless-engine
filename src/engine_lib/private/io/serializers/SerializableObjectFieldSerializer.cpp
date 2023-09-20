@@ -387,7 +387,7 @@ namespace ne {
             }
 
             // Get inner type name.
-            const auto sInnerType = sCanonicalTypeName.substr(iFoundNamespaceEndPosition + 1);
+            const auto sInnerType = sCanonicalTypeName.substr(iFoundNamespaceEndPosition + 2);
 
             // Get GUID.
             return isTypeDerivesFromSerializable(sInnerType, pNamespace);

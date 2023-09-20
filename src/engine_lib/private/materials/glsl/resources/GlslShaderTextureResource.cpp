@@ -225,69 +225,6 @@ namespace ne {
         return mtxUsedTexture.second->getPathToResourceRelativeRes();
     }
 
-    std::optional<Error> GlslShaderTextureResource::bindToChangedPipelineOfMaterial(
-        Pipeline* pDeletedPipeline, Pipeline* pNewPipeline) {
-        std::scoped_lock guard(mtxPushConstantIndices.first, mtxUsedTexture.first);
-
-        // Convert pipeline.
-        const auto pDeletedVulkanPipeline = dynamic_cast<VulkanPipeline*>(pDeletedPipeline);
-        if (pDeletedVulkanPipeline == nullptr) [[unlikely]] {
-            return Error("expected a Vulkan pipeline");
-        }
-
-        // Find deleted pipeline.
-        const auto it = mtxPushConstantIndices.second.find(pDeletedVulkanPipeline);
-        if (it == mtxPushConstantIndices.second.end()) [[unlikely]] {
-            return Error("unable to find the specified old pipeline to replace it with a new one");
-        }
-
-        // Save index into bindless array.
-        auto pBindlessArrayIndex = std::move(it->second.pBindlessArrayIndex);
-
-        // Remove deleted pipeline.
-        mtxPushConstantIndices.second.erase(it);
-
-        // Convert pipeline.
-        const auto pVulkanPipeline = dynamic_cast<VulkanPipeline*>(pNewPipeline);
-        if (pVulkanPipeline == nullptr) [[unlikely]] {
-            return Error("expected a Vulkan pipeline");
-        }
-
-        // Find a resource with our name in the descriptor set layout and update our index.
-        auto pushConstantResult =
-            GlslShaderResourceHelpers::getPushConstantIndex(pVulkanPipeline, getResourceName());
-        if (std::holds_alternative<Error>(pushConstantResult)) [[unlikely]] {
-            auto error = std::get<Error>(std::move(pushConstantResult));
-            error.addCurrentLocationToErrorStack();
-            return error;
-        }
-        const auto iPushConstantIndex = std::get<size_t>(pushConstantResult);
-
-        // Get texture image view.
-        const auto pTextureResource = dynamic_cast<VulkanResource*>(mtxUsedTexture.second->getResource());
-        if (pTextureResource == nullptr) [[unlikely]] {
-            return Error("expected a Vulkan resource");
-        }
-        const auto pImageView = pTextureResource->getInternalImageView();
-        if (pImageView == nullptr) [[unlikely]] {
-            return Error("expected the texture's image view to be valid");
-        }
-
-        // Re-bind descriptors because they were re-created.
-        auto optionalError = bindTextureToBindlessDescriptorArray(
-            getResourceName(), pVulkanPipeline, pImageView, pBindlessArrayIndex->getActualIndex());
-        if (optionalError.has_value()) [[unlikely]] {
-            optionalError->addCurrentLocationToErrorStack();
-            return optionalError;
-        }
-
-        // Save new pair.
-        mtxPushConstantIndices.second[pVulkanPipeline] =
-            PushConstantIndices(iPushConstantIndex, std::move(pBindlessArrayIndex));
-
-        return {};
-    }
-
     std::optional<Error>
     GlslShaderTextureResource::useNewTexture(std::unique_ptr<TextureHandle> pTextureToUse) {
         std::scoped_lock guard(mtxPushConstantIndices.first, mtxUsedTexture.first);
@@ -322,7 +259,7 @@ namespace ne {
     }
 
     std::optional<Error>
-    GlslShaderTextureResource::changeUsedPipelines(std::unordered_set<Pipeline*> pipelinesToUse) {
+    GlslShaderTextureResource::changeUsedPipelines(const std::unordered_set<Pipeline*>& pipelinesToUse) {
         std::scoped_lock guard(mtxPushConstantIndices.first, mtxUsedTexture.first);
 
         // Make sure at least one pipeline is specified.

@@ -120,48 +120,8 @@ namespace ne {
         mtxRootParameterIndices.second = rootParameterIndices;
     }
 
-    std::optional<Error> HlslShaderCpuWriteResource::bindToChangedPipelineOfMaterial(
-        Pipeline* pDeletedPipeline, Pipeline* pNewPipeline) {
-        std::scoped_lock guard(mtxRootParameterIndices.first);
-
-        // Convert pipeline.
-        const auto pDeletedDirectXPipeline = dynamic_cast<DirectXPso*>(pDeletedPipeline);
-        if (pDeletedDirectXPipeline == nullptr) [[unlikely]] {
-            return Error("expected a DirectX PSO");
-        }
-
-        // Find deleted pipeline.
-        const auto it = mtxRootParameterIndices.second.find(pDeletedDirectXPipeline);
-        if (it == mtxRootParameterIndices.second.end()) [[unlikely]] {
-            return Error("unable to find the specified old pipeline to replace it with a new one");
-        }
-
-        // Remove deleted pipeline.
-        mtxRootParameterIndices.second.erase(it);
-
-        // Convert pipeline.
-        const auto pDirectXPipeline = dynamic_cast<DirectXPso*>(pNewPipeline);
-        if (pDirectXPipeline == nullptr) [[unlikely]] {
-            return Error("expected a DirectX PSO");
-        }
-
-        // Find a resource with our name in the root signature.
-        auto result =
-            HlslShaderResourceHelpers::getRootParameterIndexFromPipeline(pDirectXPipeline, getResourceName());
-        if (std::holds_alternative<Error>(result)) [[unlikely]] {
-            auto error = std::get<Error>(std::move(result));
-            error.addCurrentLocationToErrorStack();
-            return error;
-        }
-
-        // Save new pair.
-        mtxRootParameterIndices.second[pDirectXPipeline] = std::get<UINT>(result);
-
-        return {};
-    }
-
     std::optional<Error>
-    HlslShaderCpuWriteResource::changeUsedPipelines(std::unordered_set<Pipeline*> pipelinesToUse) {
+    HlslShaderCpuWriteResource::changeUsedPipelines(const std::unordered_set<Pipeline*>& pipelinesToUse) {
         std::scoped_lock guard(mtxRootParameterIndices.first);
 
         // Make sure at least one pipeline is specified.

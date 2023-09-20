@@ -39,6 +39,9 @@ namespace ne {
         if (sFieldCanonicalTypeName == "std::vector<ne::MeshVertex>") {
             return true;
         }
+        if (sFieldCanonicalTypeName == "std::vector<std::vector<unsigned int>>") {
+            return true;
+        }
         if (sFieldCanonicalTypeName.starts_with("std::vector<") &&
             isMostInnerTypeSerializable(sFieldCanonicalTypeName)) {
             return sFieldCanonicalTypeName.contains("std::shared_ptr<");
@@ -61,15 +64,19 @@ namespace ne {
         if (sFieldCanonicalTypeName == "std::vector<bool>") {
             pTomlData->operator[](sSectionName).operator[](pFieldName) =
                 pField->getUnsafe<std::vector<bool>>(pFieldOwner);
+
         } else if (sFieldCanonicalTypeName == "std::vector<int>") {
             pTomlData->operator[](sSectionName).operator[](pFieldName) =
                 pField->getUnsafe<std::vector<int>>(pFieldOwner);
+
         } else if (sFieldCanonicalTypeName == "std::vector<unsigned int>") {
             pTomlData->operator[](sSectionName).operator[](pFieldName) =
                 pField->getUnsafe<std::vector<unsigned int>>(pFieldOwner);
+
         } else if (sFieldCanonicalTypeName == "std::vector<long long>") {
             pTomlData->operator[](sSectionName).operator[](pFieldName) =
                 pField->getUnsafe<std::vector<long long>>(pFieldOwner);
+
         } else if (sFieldCanonicalTypeName == "std::vector<unsigned long long>") {
             const auto vOriginalArray = pField->getUnsafe<std::vector<unsigned long long>>(pFieldOwner);
             std::vector<std::string> vArray;
@@ -80,6 +87,7 @@ namespace ne {
                 vArray.push_back(sValue);
             }
             pTomlData->operator[](sSectionName).operator[](pFieldName) = vArray;
+
         } else if (sFieldCanonicalTypeName == "std::vector<float>") {
             const std::vector<float> vArray = pField->getUnsafe<std::vector<float>>(pFieldOwner);
             // Store float as string for better precision.
@@ -88,6 +96,7 @@ namespace ne {
                 vStrArray[i] = toml::format(toml::value(vArray[i]));
             }
             pTomlData->operator[](sSectionName).operator[](pFieldName) = vStrArray;
+
         } else if (sFieldCanonicalTypeName == "std::vector<double>") {
             const std::vector<double> vArray = pField->getUnsafe<std::vector<double>>(pFieldOwner);
             // Store double as string for better precision.
@@ -96,14 +105,21 @@ namespace ne {
                 vStrArray[i] = toml::format(toml::value(vArray[i]));
             }
             pTomlData->operator[](sSectionName).operator[](pFieldName) = vStrArray;
+
         } else if (sFieldCanonicalTypeName == std::format("std::vector<{}>", sStringCanonicalTypeName)) {
             pTomlData->operator[](sSectionName).operator[](pFieldName) =
                 pField->getUnsafe<std::vector<std::string>>(pFieldOwner);
+
         } else if (sFieldCanonicalTypeName == "std::vector<ne::MeshVertex>") {
             MeshVertex::serializeVec(
                 reinterpret_cast<std::vector<MeshVertex>*>(pField->getPtrUnsafe(pFieldOwner)),
                 &pTomlData->operator[](sSectionName),
                 pFieldName);
+
+        } else if (sFieldCanonicalTypeName == "std::vector<std::vector<unsigned int>>") {
+            pTomlData->operator[](sSectionName).operator[](pFieldName) =
+                pField->getUnsafe<std::vector<std::vector<unsigned int>>>(pFieldOwner);
+
         } else if (
             sFieldCanonicalTypeName.starts_with("std::vector<") &&
             isMostInnerTypeSerializable(sFieldCanonicalTypeName)) {
@@ -335,6 +351,32 @@ namespace ne {
                 error.addCurrentLocationToErrorStack();
                 return error;
             }
+        } else if (sFieldCanonicalTypeName == "std::vector<std::vector<unsigned int>>") {
+            GET_TOML_VALUE_AS_ARRAY_WITH_CHECK
+            std::vector<std::vector<unsigned int>> vDoubleArray;
+            for (const auto& item : fieldValue) {
+                if (!item.is_array()) [[unlikely]] {
+                    return Error(std::format(
+                        "the type \"{}\" of the specified field \"{}\" is supported by this serializer, "
+                        "but the TOML value is not array",
+                        sFieldCanonicalTypeName,
+                        pFieldName));
+                }
+                auto innerArray = item.as_array();
+                std::vector<unsigned int> vInnerArray;
+                for (const auto& innerItem : innerArray) {
+                    if (!innerItem.is_integer()) [[unlikely]] {
+                        return Error(std::format(
+                            "the type \"{}\" of the specified field \"{}\" is supported by this serializer, "
+                            "but the TOML value is not integer",
+                            sFieldCanonicalTypeName,
+                            pFieldName));
+                    }
+                    vInnerArray.push_back(static_cast<unsigned int>(innerItem.as_integer()));
+                }
+                vDoubleArray.push_back(std::move(vInnerArray));
+            }
+            pField->setUnsafe<std::vector<std::vector<unsigned int>>>(pFieldOwner, std::move(vDoubleArray));
         } else if (
             sFieldCanonicalTypeName.starts_with("std::vector<") &&
             isMostInnerTypeSerializable(sFieldCanonicalTypeName)) {
@@ -401,6 +443,7 @@ namespace ne {
         CLONE_VECTOR_FIELDS(std::vector<unsigned long long>)
         CLONE_VECTOR_FIELDS(std::vector<float>)
         CLONE_VECTOR_FIELDS(std::vector<double>)
+        CLONE_VECTOR_FIELDS(std::vector<std::vector<unsigned int>>)
 
         // String.
         if (sFieldCanonicalTypeName == std::format("std::vector<{}>", sStringCanonicalTypeName)) {
@@ -486,6 +529,7 @@ namespace ne {
         COMPARE_VECTOR_FIELDS(double)
         COMPARE_VECTOR_FIELDS(std::basic_string<char>)
         COMPARE_VECTOR_FIELDS(ne::MeshVertex)
+        COMPARE_VECTOR_FIELDS(std::vector<unsigned int>)
 
         // Serializable pointers.
         if (sFieldACanonicalTypeName.starts_with("std::vector<") &&

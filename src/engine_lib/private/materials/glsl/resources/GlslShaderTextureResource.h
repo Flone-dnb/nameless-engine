@@ -132,31 +132,6 @@ namespace ne {
         }
 
         /**
-         * Called to make the resource to use some other pipeline of a material.
-         *
-         * @warning Expects that the caller is using some mutex to protect this shader resource
-         * from being used in the `draw` function while this function is not finished
-         * (i.e. make sure the CPU will not queue a new frame while this function is not finished).
-         *
-         * @remark For example, this function can be called from a mesh node on a shader resource
-         * that references mesh's constant shader data (that stores mesh's world matrix and etc)
-         * after spawned mesh node changed its material (and thus most likely the PSO too).
-         *
-         * @remark Shader resource now needs to check that everything that it needs
-         * is still there and possibly re-bind to pipeline's descriptors since these might have
-         * been also re-created.
-         *
-         * @param pDeletedPipeline Old pipeline that was used and is probably deleted so don't dereference
-         * or call member functions using this pointer. Only use it for things like `find` to replace
-         * old pointer.
-         * @param pNewPipeline     New pipeline to use instead of the old one.
-         *
-         * @return Error if something went wrong.
-         */
-        [[nodiscard]] virtual std::optional<Error>
-        bindToChangedPipelineOfMaterial(Pipeline* pDeletedPipeline, Pipeline* pNewPipeline) override;
-
-        /**
          * Makes the shader resource to reference the new (specified) texture.
          *
          * @warning Expects that the caller is using some mutex to protect this shader resource
@@ -179,14 +154,15 @@ namespace ne {
          * (i.e. make sure the CPU will not queue a new frame while this function is not finished).
          *
          * @remark For example, for this function can be called from a mesh node that changed
-         * its geometry and thus added/removed some material slots.
+         * its geometry and thus added/removed some material slots, or if some material that mesh node
+         * is using changed its pipeline.
          *
          * @param pipelinesToUse Pipelines to use instead of the current ones.
          *
          * @return Error if something went wrong.
          */
         [[nodiscard]] virtual std::optional<Error>
-        changeUsedPipelines(std::unordered_set<Pipeline*> pipelinesToUse) override;
+        changeUsedPipelines(const std::unordered_set<Pipeline*>& pipelinesToUse) override;
 
     protected:
         /**

@@ -109,48 +109,8 @@ namespace ne {
         mtxPushConstantIndices.second = pushConstantIndices;
     }
 
-    std::optional<Error> GlslShaderCpuWriteResource::bindToChangedPipelineOfMaterial(
-        Pipeline* pDeletedPipeline, Pipeline* pNewPipeline) {
-        std::scoped_lock guard(mtxPushConstantIndices.first);
-
-        // Convert pipeline.
-        const auto pDeletedVulkanPipeline = dynamic_cast<VulkanPipeline*>(pDeletedPipeline);
-        if (pDeletedVulkanPipeline == nullptr) [[unlikely]] {
-            return Error("expected a Vulkan pipeline");
-        }
-
-        // Find deleted pipeline.
-        const auto it = mtxPushConstantIndices.second.find(pDeletedVulkanPipeline);
-        if (it == mtxPushConstantIndices.second.end()) [[unlikely]] {
-            return Error("unable to find the specified old pipeline to replace it with a new one");
-        }
-
-        // Remove deleted pipeline.
-        mtxPushConstantIndices.second.erase(it);
-
-        // Convert pipeline.
-        const auto pVulkanPipeline = dynamic_cast<VulkanPipeline*>(pNewPipeline);
-        if (pVulkanPipeline == nullptr) [[unlikely]] {
-            return Error("expected a Vulkan pipeline");
-        }
-
-        // Find a resource with our name in the descriptor set layout and update our index.
-        auto pushConstantResult =
-            GlslShaderResourceHelpers::getPushConstantIndex(pVulkanPipeline, getResourceName());
-        if (std::holds_alternative<Error>(pushConstantResult)) [[unlikely]] {
-            auto error = std::get<Error>(std::move(pushConstantResult));
-            error.addCurrentLocationToErrorStack();
-            return error;
-        }
-
-        // Save new pair.
-        mtxPushConstantIndices.second[pVulkanPipeline] = std::get<size_t>(pushConstantResult);
-
-        return {};
-    }
-
     std::optional<Error>
-    GlslShaderCpuWriteResource::changeUsedPipelines(std::unordered_set<Pipeline*> pipelinesToUse) {
+    GlslShaderCpuWriteResource::changeUsedPipelines(const std::unordered_set<Pipeline*>& pipelinesToUse) {
         std::scoped_lock guard(mtxPushConstantIndices.first);
 
         // Make sure at least one pipeline is specified.

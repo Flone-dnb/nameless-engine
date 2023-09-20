@@ -70,7 +70,6 @@ namespace ne {
         // Get renderer.
         const auto pRenderer = getGameInstance()->getWindow()->getRenderer();
 
-        Pipeline* pOldPipeline = nullptr;
         if (bIsSpawned) {
             // Make sure no rendering happens during the material changing process
             // (since we might delete some resources and also want to avoid deleting resources in the middle
@@ -78,19 +77,6 @@ namespace ne {
             // to finish its current `draw` function which might create deadlocks if not called right now).
             pRenderer->getRenderResourcesMutex()->lock();
             pRenderer->waitForGpuToFinishWorkUpToThisPoint();
-
-            // Get old pipeline to pass it to shader resources later.
-            pOldPipeline = vMaterials[iMaterialSlot]->getUsedPipeline();
-
-            // Self check: make sure old pipeline is initialized.
-            if (pOldPipeline == nullptr) [[unlikely]] {
-                Error error(std::format(
-                    "mesh node \"{}\" expected that the pipeline of material \"{}\" is valid",
-                    getNodeName(),
-                    vMaterials[iMaterialSlot]->getMaterialName()));
-                error.showError();
-                throw std::runtime_error(error.getFullErrorMessage());
-            }
 
             // Get info about an index buffer that changes material.
             const auto indexBufferToDisplay = getIndexBufferInfoForMaterialSlot(iMaterialSlot);
@@ -106,18 +92,7 @@ namespace ne {
         vMaterials[iMaterialSlot] = std::move(pMaterial);
 
         if (bIsSpawned) {
-            // Get new pipeline.
-            const auto pNewPipeline = vMaterials[iMaterialSlot]->getUsedPipeline();
-            if (pNewPipeline == nullptr) [[unlikely]] {
-                Error error(std::format(
-                    "mesh node \"{}\" expected that the pipeline of material \"{}\" is valid",
-                    getNodeName(),
-                    vMaterials[iMaterialSlot]->getMaterialName()));
-                error.showError();
-                throw std::runtime_error(error.getFullErrorMessage());
-            }
-
-            onAfterMaterialChangedPipeline(pOldPipeline, pNewPipeline);
+            updateShaderResourcesToUseChangedMaterialPipelines();
             pRenderer->getRenderResourcesMutex()->unlock();
         }
     }
@@ -829,29 +804,6 @@ namespace ne {
     std::vector<std::vector<MeshData::meshindex_t>>* MeshData::getIndices() { return &vIndices; }
 
     std::vector<MeshVertex>* MeshData::getVertices() { return &vVertices; }
-
-    void MeshNode::onAfterMaterialChangedPipeline(Pipeline* pDeletedPipeline, Pipeline* pNewPipeline) {
-        std::scoped_lock gpuResourcesGuard(mtxGpuResources.first, *getSpawnDespawnMutex());
-
-        // Update shader CPU write resources.
-        for (const auto& [sResourceName, shaderCpuWriteResource] :
-             mtxGpuResources.second.shaderResources.shaderCpuWriteResources) {
-            // Update binding info.
-            auto optionalError = shaderCpuWriteResource.getResource()->bindToChangedPipelineOfMaterial(
-                pDeletedPipeline, pNewPipeline);
-            if (optionalError.has_value()) [[unlikely]] {
-                optionalError->addCurrentLocationToErrorStack();
-                optionalError->showError();
-                throw std::runtime_error(optionalError->getFullErrorMessage());
-            }
-        }
-
-#if defined(WIN32) && defined(DEBUG)
-        static_assert(sizeof(GpuResources::ShaderResources) == 80, "update new resources here"); // NOLINT
-#elif defined(DEBUG)
-        static_assert(sizeof(GpuResources::ShaderResources) == 56, "update new resources here"); // NOLINT
-#endif
-    }
 
     void MeshNode::updateShaderResourcesToUseChangedMaterialPipelines() {
         std::scoped_lock gpuResourcesGuard(mtxGpuResources.first, *getSpawnDespawnMutex());

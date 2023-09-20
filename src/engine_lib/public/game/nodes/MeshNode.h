@@ -448,20 +448,6 @@ namespace ne RNAMESPACE() {
         void onFinishedUpdatingShaderMeshConstants();
 
         /**
-         * Called after some material (see @ref vMaterials) changed its used pipeline.
-         *
-         * @warning Expects that the caller is using some mutex to protect this shader resource
-         * from being used in the `draw` function while this function is not finished
-         * (i.e. make sure the CPU will not queue a new frame while this function is not finished).
-         *
-         * @param pDeletedPipeline Old pipeline that was used and is probably deleted so don't
-         * dereference or call member functions using this pointer. Only use it for things like `find` to
-         * replace old pointer.
-         * @param pNewPipeline     New pipeline of a material.
-         */
-        void onAfterMaterialChangedPipeline(Pipeline* pDeletedPipeline, Pipeline* pNewPipeline);
-
-        /**
          * Called after @ref vMaterials is changed (some slots are added/removed) to notify
          * all shader resources.
          *

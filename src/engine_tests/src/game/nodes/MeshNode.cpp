@@ -738,3 +738,284 @@ TEST_CASE("shader read/write resources exist only when MeshNode is spawned") {
     REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
     REQUIRE(Material::getCurrentAliveMaterialCount() == 0);
 }
+
+TEST_CASE("change spawned mesh from 2 to 1 to 3 to 3 (again) material slots") {
+    using namespace ne;
+
+    class TestGameInstance : public GameInstance {
+    public:
+        TestGameInstance(Window* pGameWindow, GameManager* pGame, InputManager* pInputManager)
+            : GameInstance(pGameWindow, pGame, pInputManager) {}
+        virtual void onGameStarted() override {
+            createWorld([&](const std::optional<Error>& optionalWorldError) {
+                if (optionalWorldError.has_value()) {
+                    auto error = optionalWorldError.value();
+                    error.addCurrentLocationToErrorStack();
+                    INFO(error.getFullErrorMessage());
+                    REQUIRE(false);
+                }
+
+                // Spawn sample mesh.
+                pMeshNode = gc_new<MeshNode>();
+
+                auto meshData = PrimitiveMeshGenerator::createCube(1.0F);
+                meshData.getIndices()->at(0) = {
+                    0,  1,  2,  3,  2,  1,  // +X face.
+                    8,  9,  10, 11, 10, 9,  // +Y face.
+                    12, 13, 14, 15, 14, 13, // -Y face.
+                    16, 17, 18, 19, 18, 17, // +Z face.
+                    20, 21, 22, 23, 22, 21  // -Z face.
+                };
+                meshData.getIndices()->push_back({4, 5, 6, 7, 6, 5});
+                pMeshNode->setMeshData(meshData);
+                REQUIRE(pMeshNode->getAvailableMaterialSlotCount() == 2);
+
+                getWorldRootNode()->addChildNode(pMeshNode);
+                pMeshNode->setWorldLocation(glm::vec3(1.0F, 3.0F, 0.0F));
+
+                pMeshNode->getMaterial(0)->setDiffuseColor(glm::vec3(1.0F, 0.0F, 0.0F));
+                pMeshNode->getMaterial(1)->setDiffuseColor(glm::vec3(0.0F, 1.0F, 0.0F));
+
+                iFrameCount = 0;
+
+                getWindow()->close();
+            });
+        }
+        virtual ~TestGameInstance() override {}
+
+        virtual void onBeforeNewFrame(float delta) override {
+            iFrameCount += 1;
+
+            if (iFrameCount == 2) {
+                // Use mesh with just 1 material slot.
+                pMeshNode->setMeshData(PrimitiveMeshGenerator::createCube(1.0F));
+
+                REQUIRE(pMeshNode->getAvailableMaterialSlotCount() == 1);
+                REQUIRE(pMeshNode->isSpawned());
+            }
+
+            if (iFrameCount == 4) {
+                // Use mesh with 3 material slots.
+                auto meshData = PrimitiveMeshGenerator::createCube(1.0F);
+                meshData.getIndices()->at(0) = {
+                    0,  1,  2,  3,  2,  1,  // +X face.
+                    12, 13, 14, 15, 14, 13, // -Y face.
+                    16, 17, 18, 19, 18, 17, // +Z face.
+                    20, 21, 22, 23, 22, 21  // -Z face.
+                };
+                meshData.getIndices()->push_back({4, 5, 6, 7, 6, 5});
+                meshData.getIndices()->push_back({8, 9, 10, 11, 10, 9});
+                pMeshNode->setMeshData(meshData);
+
+                REQUIRE(pMeshNode->getAvailableMaterialSlotCount() == 3);
+                REQUIRE(pMeshNode->isSpawned());
+
+                // Enable transparency on one slot.
+                pMeshNode->getMaterial(2)->setEnableTransparency(true);
+            }
+
+            if (iFrameCount == 6) {
+                // Change mesh but still 3 slots.
+                auto meshData = PrimitiveMeshGenerator::createCube(1.0F);
+                meshData.getIndices()->at(0) = {0,  1,  2,  3,  2,  1,  12, 13, 14, 15, 14, 13,
+                                                16, 17, 18, 19, 18, 17, 8,  9,  10, 11, 10, 9};
+                meshData.getIndices()->push_back({4, 5, 6, 7, 6, 5});
+                meshData.getIndices()->push_back({20, 21, 22, 23, 22, 21});
+                pMeshNode->setMeshData(meshData);
+
+                REQUIRE(pMeshNode->getAvailableMaterialSlotCount() == 3);
+                REQUIRE(pMeshNode->isSpawned());
+                REQUIRE(pMeshNode->getMaterial(2)->isTransparencyEnabled());
+            }
+
+            if (iFrameCount == 8) {
+                getWindow()->close();
+            }
+        }
+
+    private:
+        size_t iFrameCount = 0;
+        gc<MeshNode> pMeshNode;
+    };
+
+    auto result = Window::getBuilder().withVisibility(false).build();
+    if (std::holds_alternative<Error>(result)) {
+        Error error = std::get<Error>(std::move(result));
+        error.addCurrentLocationToErrorStack();
+        INFO(error.getFullErrorMessage());
+        REQUIRE(false);
+    }
+
+    const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
+    pMainWindow->processEvents<TestGameInstance>();
+
+    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+    REQUIRE(Material::getCurrentAliveMaterialCount() == 0);
+}
+
+TEST_CASE("check the number of pipelines on spawned mesh material slots") {
+    using namespace ne;
+
+    class TestGameInstance : public GameInstance {
+    public:
+        TestGameInstance(Window* pGameWindow, GameManager* pGame, InputManager* pInputManager)
+            : GameInstance(pGameWindow, pGame, pInputManager) {}
+        virtual void onGameStarted() override {
+            createWorld([&](const std::optional<Error>& optionalWorldError) {
+                if (optionalWorldError.has_value()) {
+                    auto error = optionalWorldError.value();
+                    error.addCurrentLocationToErrorStack();
+                    INFO(error.getFullErrorMessage());
+                    REQUIRE(false);
+                }
+
+                const auto pPipelineManager = getWindow()->getRenderer()->getPipelineManager();
+
+                {
+                    // Spawn sample mesh.
+                    const auto pMeshNode = gc_new<MeshNode>();
+                    auto meshData = PrimitiveMeshGenerator::createCube(1.0F);
+                    meshData.getIndices()->at(0) = {
+                        0,  1,  2,  3,  2,  1,  // +X face.
+                        12, 13, 14, 15, 14, 13, // -Y face.
+                        16, 17, 18, 19, 18, 17, // +Z face.
+                        20, 21, 22, 23, 22, 21  // -Z face.
+                    };
+                    meshData.getIndices()->push_back({4, 5, 6, 7, 6, 5});
+                    pMeshNode->setMeshData(meshData);
+                    REQUIRE(pMeshNode->getAvailableMaterialSlotCount() == 2);
+
+                    getWorldRootNode()->addChildNode(pMeshNode);
+                    pMeshNode->setWorldLocation(glm::vec3(1.0F, 3.0F, 0.0F));
+
+                    // There should only be 1 pipeline.
+                    REQUIRE(pPipelineManager->getCurrentGraphicsPipelineCount() == 1);
+
+                    // Enable transparency on the second material slot.
+                    pMeshNode->getMaterial(1)->setEnableTransparency(true);
+
+                    // There should now be 2 pipelines.
+                    REQUIRE(pPipelineManager->getCurrentGraphicsPipelineCount() == 2);
+                }
+
+                {
+                    // Spawn another mesh.
+                    const auto pMeshNode = gc_new<MeshNode>();
+                    pMeshNode->setMeshData(PrimitiveMeshGenerator::createCube(1.0F));
+                    REQUIRE(pMeshNode->getAvailableMaterialSlotCount() == 1);
+
+                    getWorldRootNode()->addChildNode(pMeshNode);
+                    pMeshNode->setWorldLocation(glm::vec3(1.0F, 3.0F, 0.0F));
+
+                    // There should still be 2 pipelines.
+                    REQUIRE(pPipelineManager->getCurrentGraphicsPipelineCount() == 2);
+                }
+
+                getWindow()->close();
+            });
+        }
+        virtual ~TestGameInstance() override {}
+    };
+
+    auto result = Window::getBuilder().withVisibility(false).build();
+    if (std::holds_alternative<Error>(result)) {
+        Error error = std::get<Error>(std::move(result));
+        error.addCurrentLocationToErrorStack();
+        INFO(error.getFullErrorMessage());
+        REQUIRE(false);
+    }
+
+    const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
+    pMainWindow->processEvents<TestGameInstance>();
+
+    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+    REQUIRE(Material::getCurrentAliveMaterialCount() == 0);
+}
+
+TEST_CASE("serialize and deserialize mesh with 2 material slots") {
+    using namespace ne;
+
+    class TestGameInstance : public GameInstance {
+    public:
+        TestGameInstance(Window* pGameWindow, GameManager* pGame, InputManager* pInputManager)
+            : GameInstance(pGameWindow, pGame, pInputManager) {}
+        virtual void onGameStarted() override {
+            createWorld([&](const std::optional<Error>& optionalWorldError) {
+                if (optionalWorldError.has_value()) {
+                    auto error = optionalWorldError.value();
+                    error.addCurrentLocationToErrorStack();
+                    INFO(error.getFullErrorMessage());
+                    REQUIRE(false);
+                }
+
+                const std::filesystem::path pathToFileInTemp =
+                    ProjectPaths::getPathToResDirectory(ResourceDirectory::ROOT) / "test" / "temp" /
+                    "TESTING_MeshNodeSerializationMaterialSlots_TESTING.toml";
+
+                {
+                    // Spawn sample mesh.
+                    const auto pMeshNode = gc_new<MeshNode>();
+                    auto meshData = PrimitiveMeshGenerator::createCube(1.0F);
+                    meshData.getIndices()->at(0) = {
+                        0,  1,  2,  3,  2,  1,  // +X face.
+                        12, 13, 14, 15, 14, 13, // -Y face.
+                        16, 17, 18, 19, 18, 17, // +Z face.
+                        20, 21, 22, 23, 22, 21  // -Z face.
+                    };
+                    meshData.getIndices()->push_back({4, 5, 6, 7, 6, 5});
+                    pMeshNode->setMeshData(meshData);
+                    REQUIRE(pMeshNode->getAvailableMaterialSlotCount() == 2);
+
+                    getWorldRootNode()->addChildNode(pMeshNode);
+                    pMeshNode->setWorldLocation(glm::vec3(1.0F, 3.0F, 0.0F));
+
+                    // Enable transparency on the second material slot.
+                    pMeshNode->getMaterial(1)->setEnableTransparency(true);
+
+                    // Serialize.
+                    auto optionalError = pMeshNode->serialize(pathToFileInTemp, false);
+                    if (optionalError.has_value()) {
+                        optionalError->addCurrentLocationToErrorStack();
+                        INFO(optionalError->getFullErrorMessage());
+                        REQUIRE(false);
+                    }
+                }
+
+                // Deserialize.
+                auto result = Serializable::deserialize<gc, MeshNode>(pathToFileInTemp);
+                if (std::holds_alternative<Error>(result)) {
+                    auto error = std::get<Error>(std::move(result));
+                    error.addCurrentLocationToErrorStack();
+                    INFO(error.getFullErrorMessage());
+                    REQUIRE(false);
+                }
+                auto pMeshNode = std::get<gc<MeshNode>>(std::move(result));
+
+                // Make sure there are 2 slots.
+                REQUIRE(pMeshNode->getMeshData().second->getIndices()->size() == 2);
+                REQUIRE(pMeshNode->getAvailableMaterialSlotCount() == 2);
+
+                // Check transparency.
+                REQUIRE(!pMeshNode->getMaterial(0)->isTransparencyEnabled());
+                REQUIRE(pMeshNode->getMaterial(1)->isTransparencyEnabled());
+
+                getWindow()->close();
+            });
+        }
+        virtual ~TestGameInstance() override {}
+    };
+
+    auto result = Window::getBuilder().withVisibility(false).build();
+    if (std::holds_alternative<Error>(result)) {
+        Error error = std::get<Error>(std::move(result));
+        error.addCurrentLocationToErrorStack();
+        INFO(error.getFullErrorMessage());
+        REQUIRE(false);
+    }
+
+    const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
+    pMainWindow->processEvents<TestGameInstance>();
+
+    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+    REQUIRE(Material::getCurrentAliveMaterialCount() == 0);
+}

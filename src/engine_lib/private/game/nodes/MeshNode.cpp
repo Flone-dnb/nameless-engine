@@ -552,9 +552,9 @@ namespace ne {
             pRenderer->waitForGpuToFinishWorkUpToThisPoint();
 
             // Gather index buffers that will be deleted.
-            vDeletedIndexBuffers.resize(vMaterials.size());
-            for (size_t i = 0; i < vMaterials.size(); i++) {
-                vDeletedIndexBuffers[i] = getIndexBufferInfoForMaterialSlot(i);
+            vDeletedIndexBuffers.resize(mtxGpuResources.second.mesh.vIndexBuffers.size());
+            for (size_t i = 0; i < mtxGpuResources.second.mesh.vIndexBuffers.size(); i++) {
+                vDeletedIndexBuffers[i] = {mtxGpuResources.second.mesh.vIndexBuffers[i].get(), 0};
             }
 
             // Re-create our vertex/index buffers and allocate an index buffer per material slot
@@ -603,7 +603,7 @@ namespace ne {
                 // Then notify material to properly get information about index buffer for material slot.
                 if (bIsSpawned) {
                     pNewMaterial->onSpawnedMeshNodeStartedUsingMaterial(
-                        this, getIndexBufferInfoForMaterialSlot(i));
+                        this, getIndexBufferInfoForMaterialSlot(vMaterials.size() - 1));
                 }
             }
 

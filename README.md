@@ -316,6 +316,7 @@ Here is the list of base features that needs to be implemented in order for you 
         - [ ] Emissive materials
     - [ ] GUI
 - [ ] Skeletal animations
+- [ ] Rewrite garbage collector [tgc2](https://github.com/Flone-dnb/tgc2) (to fix some major issues)
 - [ ] Minimal scripting using [AngelScript](https://www.angelcode.com/angelscript/)
 - [ ] Editor (integrate [ImGui](https://github.com/ocornut/imgui))
     - [ ] Content management

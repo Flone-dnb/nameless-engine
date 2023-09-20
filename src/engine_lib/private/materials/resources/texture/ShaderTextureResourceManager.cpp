@@ -16,7 +16,7 @@ namespace ne {
     ShaderTextureResourceManager::createShaderTextureResource(
         const std::string& sShaderResourceName,
         const std::string& sResourceAdditionalInfo,
-        std::unordered_set<Pipeline*> pipelinesToUse,
+        const std::unordered_set<Pipeline*>& pipelinesToUse,
         std::unique_ptr<TextureHandle> pTextureToUse) {
         // Create new resource.
 #if defined(WIN32)

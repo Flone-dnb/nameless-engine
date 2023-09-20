@@ -15,7 +15,7 @@ namespace ne {
 
     std::variant<std::unique_ptr<ShaderTextureResource>, Error> HlslShaderTextureResource::create(
         const std::string& sShaderResourceName,
-        std::unordered_set<Pipeline*> pipelinesToUse,
+        const std::unordered_set<Pipeline*>& pipelinesToUse,
         std::unique_ptr<TextureHandle> pTextureToUse) {
         // Make sure at least one pipeline is specified.
         if (pipelinesToUse.empty()) [[unlikely]] {
@@ -66,7 +66,7 @@ namespace ne {
     HlslShaderTextureResource::HlslShaderTextureResource(
         const std::string& sResourceName,
         std::unique_ptr<TextureHandle> pTextureToUse,
-        std::unordered_map<DirectXPso*, UINT> rootParameterIndices)
+        const std::unordered_map<DirectXPso*, UINT>&  rootParameterIndices)
         : ShaderTextureResource(sResourceName) {
         // Save parameters.
         mtxUsedTexture.second = std::move(pTextureToUse);

@@ -17,7 +17,7 @@ namespace ne {
         const std::string& sShaderResourceName,
         const std::string& sResourceAdditionalInfo,
         size_t iResourceSizeInBytes,
-        std::unordered_set<Pipeline*> pipelinesToUse,
+        const std::unordered_set<Pipeline*>& pipelinesToUse,
         const std::function<void*()>& onStartedUpdatingResource,
         const std::function<void()>& onFinishedUpdatingResource) {
         // Make sure at least one pipeline is specified.
@@ -99,7 +99,7 @@ namespace ne {
         size_t iOriginalResourceSizeInBytes,
         const std::function<void*()>& onStartedUpdatingResource,
         const std::function<void()>& onFinishedUpdatingResource,
-        std::unordered_map<VulkanPipeline*, size_t> pushConstantIndices)
+        const std::unordered_map<VulkanPipeline*, size_t>& pushConstantIndices)
         : ShaderCpuWriteResource(
               sResourceName,
               iOriginalResourceSizeInBytes,

@@ -142,7 +142,7 @@ namespace ne {
                 vResourceData,
             const std::function<void*()>& onStartedUpdatingResource,
             const std::function<void()>& onFinishedUpdatingResource,
-            std::unordered_map<DirectXPso*, UINT> rootParameterIndices);
+            const std::unordered_map<DirectXPso*, UINT>& rootParameterIndices);
 
         /**
          * Called from pipeline manager to notify that all pipelines released their internal resources
@@ -179,7 +179,7 @@ namespace ne {
             const std::string& sShaderResourceName,
             const std::string& sResourceAdditionalInfo,
             size_t iResourceSizeInBytes,
-            std::unordered_set<Pipeline*> pipelinesToUse,
+            const std::unordered_set<Pipeline*>& pipelinesToUse,
             const std::function<void*()>& onStartedUpdatingResource,
             const std::function<void()>& onFinishedUpdatingResource);
 

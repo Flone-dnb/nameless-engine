@@ -13,7 +13,7 @@ namespace ne {
 
     std::variant<std::unique_ptr<ShaderTextureResource>, Error> GlslShaderTextureResource::create(
         const std::string& sShaderResourceName,
-        std::unordered_set<Pipeline*> pipelinesToUse,
+        const std::unordered_set<Pipeline*>& pipelinesToUse,
         std::unique_ptr<TextureHandle> pTextureToUse) {
         // Make sure at least one pipeline is specified.
         if (pipelinesToUse.empty()) [[unlikely]] {

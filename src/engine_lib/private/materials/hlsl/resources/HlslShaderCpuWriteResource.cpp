@@ -15,7 +15,7 @@ namespace ne {
         const std::string& sShaderResourceName,
         const std::string& sResourceAdditionalInfo,
         size_t iResourceSizeInBytes,
-        std::unordered_set<Pipeline*> pipelinesToUse,
+        const std::unordered_set<Pipeline*>& pipelinesToUse,
         const std::function<void*()>& onStartedUpdatingResource,
         const std::function<void()>& onFinishedUpdatingResource) {
         // Make sure at least one pipeline is specified.
@@ -107,7 +107,7 @@ namespace ne {
             vResourceData,
         const std::function<void*()>& onStartedUpdatingResource,
         const std::function<void()>& onFinishedUpdatingResource,
-        std::unordered_map<DirectXPso*, UINT> rootParameterIndices)
+        const std::unordered_map<DirectXPso*, UINT>&  rootParameterIndices)
         : ShaderCpuWriteResource(
               sResourceName,
               iOriginalResourceSizeInBytes,

@@ -167,7 +167,7 @@ namespace ne {
         HlslShaderTextureResource(
             const std::string& sResourceName,
             std::unique_ptr<TextureHandle> pTextureToUse,
-            std::unordered_map<DirectXPso*, UINT> rootParameterIndices);
+            const std::unordered_map<DirectXPso*, UINT>&  rootParameterIndices);
 
         /**
          * Called from pipeline manager to notify that all pipelines released their internal resources
@@ -193,7 +193,7 @@ namespace ne {
          */
         static std::variant<std::unique_ptr<ShaderTextureResource>, Error> create(
             const std::string& sShaderResourceName,
-            std::unordered_set<Pipeline*> pipelinesToUse,
+            const std::unordered_set<Pipeline*>& pipelinesToUse,
             std::unique_ptr<TextureHandle> pTextureToUse);
 
         /** Texture to which a descriptor should be binded. */

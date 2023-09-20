@@ -205,7 +205,7 @@ namespace ne {
          */
         static std::variant<std::unique_ptr<ShaderTextureResource>, Error> create(
             const std::string& sShaderResourceName,
-            std::unordered_set<Pipeline*> pipelinesToUse,
+            const std::unordered_set<Pipeline*>& pipelinesToUse,
             std::unique_ptr<TextureHandle> pTextureToUse);
 
         /**

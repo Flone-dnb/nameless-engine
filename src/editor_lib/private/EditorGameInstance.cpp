@@ -43,14 +43,8 @@ namespace ne {
 
             // Spawn sample mesh.
             const auto pMeshNode = gc_new<MeshNode>();
-            const auto mtxMeshData = pMeshNode->getMeshData();
-            {
-                std::scoped_lock guard(*mtxMeshData.first);
-                (*mtxMeshData.second) = PrimitiveMeshGenerator::createCube(1.0F);
-            }
-
-            getWorldRootNode()->addChildNode(
-                pMeshNode, Node::AttachmentRule::KEEP_RELATIVE, Node::AttachmentRule::KEEP_RELATIVE);
+            pMeshNode->setMeshData(PrimitiveMeshGenerator::createCube(1.0F));
+            getWorldRootNode()->addChildNode(pMeshNode);
             pMeshNode->setWorldLocation(glm::vec3(1.0F, 0.0F, 0.0F));
         });
     }

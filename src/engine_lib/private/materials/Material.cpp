@@ -38,7 +38,7 @@ namespace ne {
             "add new static asserts for resources here");
 #elif defined(DEBUG)
         static_assert(
-            sizeof(GpuResources::ShaderResources) == 56, // NOLINT
+            sizeof(GpuResources::ShaderResources) == 112, // NOLINT
             "add new static asserts for resources here");
 #endif
     }
@@ -703,7 +703,7 @@ namespace ne {
 #if defined(WIN32) && defined(DEBUG)
         static_assert(sizeof(MeshNodesThatUseThisMaterial) == 160, "notify new nodes here");
 #elif defined(DEBUG)
-        static_assert(sizeof(MeshNodesThatUseThisMaterial) == 96, "notify new nodes here");
+        static_assert(sizeof(MeshNodesThatUseThisMaterial) == 112, "notify new nodes here");
 #endif
     }
 
@@ -892,7 +892,7 @@ namespace ne {
 #if defined(WIN32) && defined(DEBUG)
         static_assert(sizeof(Material) == 1008, "consider checking new macros here"); // NOLINT: current size
 #elif defined(DEBUG)
-        static_assert(sizeof(Material) == 736, "consider checking new macros here"); // NOLINT: current size
+        static_assert(sizeof(Material) == 752, "consider checking new macros here"); // NOLINT: current size
 #endif
     }
 

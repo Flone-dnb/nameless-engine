@@ -795,11 +795,7 @@ void MyGameInstance::onGameStarted(){
 
         // Spawn sample mesh.
         const auto pMeshNode = gc_new<MeshNode>();
-        const auto mtxMeshData = pMeshNode->getMeshData();
-        {
-            std::scoped_lock guard(*mtxMeshData.first);
-            (*mtxMeshData.second) = PrimitiveMeshGenerator::createCube(1.0F);
-        }
+        pMeshNode->setMeshData(PrimitiveMeshGenerator::createCube(1.0F));
         getWorldRootNode()->addChildNode(pMeshNode);
 
         // Set mesh node location.
@@ -1058,11 +1054,7 @@ void MyGameInstance::onGameStarted() {
 
         // Prepare a sample mesh.
         const auto pMeshNode = gc_new<MeshNode>();
-        const auto mtxMeshData = pMeshNode->getMeshData();
-        {
-            std::scoped_lock guard(*mtxMeshData.first);
-            (*mtxMeshData.second) = PrimitiveMeshGenerator::createCube(1.0F);
-        }
+        pMeshNode->setMeshData(PrimitiveMeshGenerator::createCube(1.0F));
 
         // Spawn mesh node.
         getWorldRootNode()->addChildNode(pMeshNode);
@@ -2212,6 +2204,70 @@ pMeshNode->getMaterial()->setDiffuseTexture("game/player/textures/diffuse");
 As you can see we specify a path to the directory with `DDS` and `KTX` files relative to our `res` directory and we don't need to point to a specific file because the engine will automatically use the appropriate file according to the currently used renderer.
 
 Note if a texture is requested it will be loaded from disk, then if some other part of the game needs this texture it won't be loaded from disk again, it will just be used from the memory and finally when all parts of your game finish using a specific texture so that it's no longer used the texture will be automatically released from the memory.
+
+Mesh nodes can have multiple materials assigned to different parts of the mesh. Both `MeshNode::getMaterial` and `MeshNode::setMaterial` have a default argument `iMaterialSlot = 0`. Each parts of the mesh that needs to have a separate material defines its own material slot, default cube only uses 1 material so it only has 1 material slot.
+
+In order to query available material slots use `MeshNode::getAvailableMaterialSlotCount`. In order to create more material slots you need to define mesh that has multiple "parts". Information about these "parts" is stored in `MeshData`, here is an example:
+
+```Cpp
+// Create mesh node.
+const auto pMeshNode = gc_new<MeshNode>();
+
+// Generate cube mesh data.
+auto meshData = PrimitiveMeshGenerator::createCube(1.0F);
+
+// Most importantly `MeshData` stores:
+// - `std::vector<MeshVertex>` vVertices - vertices of the mesh
+// - `std::vector<std::vector<meshindex_t>>` vIndices - array that stores indices of the mesh per material slot
+
+// Generated cube only has 1 material slot...
+assert(meshData.getIndices()->size() == 1);
+
+// ... and it has some indices in this slot (which is what we expect).
+assert(meshData.getIndices()->at(0)->size() > 0);
+
+// Set mesh data to our mesh node.
+pMeshNode->setMeshData(std::move(meshData));
+
+// Mesh data that we set has only 1 material slot so our mesh node now has only 1 material slot available
+// (all new slots use engine default material).
+assert(pMeshNode->getAvailableMaterialSlotCount() == 1);
+
+// Spawn mesh node.
+getWorldRootNode()->addChildNode(pMeshNode);
+```
+
+Now let's split the cube in 2 material slots so that 1 special face of the cube will use one material and other faces will use other material:
+
+```Cpp
+auto meshData = PrimitiveMeshGenerator::createCube(1.0F);
+meshData.getIndices()->at(0) =  {
+    0,  1,  2,  3,  2,  1,  // +X face.
+    8,  9,  10, 11, 10, 9,  // +Y face.
+    12, 13, 14, 15, 14, 13, // -Y face.
+    16, 17, 18, 19, 18, 17, // +Z face.
+    20, 21, 22, 23, 22, 21  // -Z face.
+};
+meshData.getIndices()->push_back({4,  5,  6,  7,  6,  5}); // -X face.
+
+// Set mesh data to our mesh node.
+pMeshNode->setMeshData(std::move(meshData));
+
+// We now have 2 material slots.
+assert(pMeshNode->getAvailableMaterialSlotCount() == 2);
+
+// Modify first material slot.
+pMeshNode->getMaterial(0)->setDiffuseColor(glm::vec3(1.0F, 0.0F, 0.0F));
+
+// Modify second material slot.
+pMeshNode->getMaterial(1)->setDiffuseColor(glm::vec3(0.0F, 1.0F, 0.0F));
+pMeshNode->getMaterial(1)->setEnableTransparency(true);
+
+// Spawn mesh node.
+getWorldRootNode()->addChildNode(pMeshNode);
+```
+
+Generally you won't need to directly modify mesh data or material slots as this will happen automatically when you import some mesh from a (for example) GLTF/GLB file but it's good if you know what they are and where there are created/stored.
 
 # !!! Important things to keep in mind while developing a game !!!
 

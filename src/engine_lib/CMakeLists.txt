@@ -124,6 +124,8 @@ set(PROJECT_SOURCES
     private/misc/Globals.cpp
     private/io/ConfigManager.cpp
     public/io/ConfigManager.h
+    private/io/MeshImporter.cpp
+    public/io/MeshImporter.h
     private/input/InputManager.cpp
     public/input/InputManager.h
     public/input/MouseButton.hpp
@@ -431,6 +433,16 @@ add_library(${XXHASH_TARGET_NAME} STATIC
 set_target_properties(${XXHASH_TARGET_NAME} PROPERTIES FOLDER ${EXTERNAL_FOLDER})
 add_dependencies(${PROJECT_NAME} ${XXHASH_TARGET_NAME})
 target_link_libraries(${PROJECT_NAME} PUBLIC ${XXHASH_TARGET_NAME})
+
+# External: tinygltf
+message(STATUS "${PROJECT_NAME}: adding external dependency \"tinygltf\"...")
+set(TINYGLTF_HEADER_ONLY ON CACHE BOOL "" FORCE)
+set(TINYGLTF_INSTALL OFF CACHE BOOL "" FORCE)
+set(TINYGLTF_INSTALL OFF CACHE BOOL "" FORCE)
+add_subdirectory(${RELATIVE_EXT_PATH}/tinygltf ${DEPENDENCY_BUILD_DIR_NAME}/tinygltf SYSTEM)
+target_link_libraries(${PROJECT_NAME} PUBLIC tinygltf)
+set_target_properties(tinygltf PROPERTIES FOLDER ${EXTERNAL_FOLDER})
+add_dependencies(${PROJECT_NAME} tinygltf)
 
 # [TODO: temporary solution]: External: tgc
 message(STATUS "${PROJECT_NAME}: adding external dependency \"TGC\"...")

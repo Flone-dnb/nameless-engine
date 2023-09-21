@@ -55,3 +55,6 @@
 [submodule "ext/KTX-Software"]
 	path = ext/KTX-Software
 	url = https://github.com/Flone-dnb/KTX-Software.git
+[submodule "ext/tinygltf"]
+	path = ext/tinygltf
+	url = https://github.com/syoyo/tinygltf.git

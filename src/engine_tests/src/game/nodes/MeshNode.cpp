@@ -2,6 +2,8 @@
 #include "game/nodes/MeshNode.h"
 #include "game/GameInstance.h"
 #include "game/Window.h"
+#include "game/camera/CameraManager.h"
+#include "game/camera/TransientCamera.h"
 #include "materials/Material.h"
 #include "materials/EngineShaderNames.hpp"
 #include "../../io/ReflectionTest.h"
@@ -755,6 +757,13 @@ TEST_CASE("change spawned mesh from 2 to 1 to 3 to 3 (again) material slots") {
                     REQUIRE(false);
                 }
 
+                // Create and setup camera.
+                auto pCamera = std::make_shared<TransientCamera>();
+                pCamera->setLocation(glm::vec3(-1.0F, 0.0F, 0.0F));
+
+                // Make it active.
+                getCameraManager()->setActiveCamera(pCamera);
+
                 // Spawn sample mesh.
                 pMeshNode = gc_new<MeshNode>();
 
@@ -787,6 +796,9 @@ TEST_CASE("change spawned mesh from 2 to 1 to 3 to 3 (again) material slots") {
             iFrameCount += 1;
 
             if (iFrameCount == 2) {
+                // Make sure something was rendered (in case we forgot the camera).
+                REQUIRE(getWindow()->getRenderer()->getLastFrameDrawCallCount() > 0);
+
                 // Use mesh with just 1 material slot.
                 pMeshNode->setMeshData(PrimitiveMeshGenerator::createCube(1.0F));
 
@@ -1003,6 +1015,86 @@ TEST_CASE("serialize and deserialize mesh with 2 material slots") {
             });
         }
         virtual ~TestGameInstance() override {}
+    };
+
+    auto result = Window::getBuilder().withVisibility(false).build();
+    if (std::holds_alternative<Error>(result)) {
+        Error error = std::get<Error>(std::move(result));
+        error.addCurrentLocationToErrorStack();
+        INFO(error.getFullErrorMessage());
+        REQUIRE(false);
+    }
+
+    const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
+    pMainWindow->processEvents<TestGameInstance>();
+
+    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+    REQUIRE(Material::getCurrentAliveMaterialCount() == 0);
+}
+
+TEST_CASE("check draw call count with invisibility") {
+    using namespace ne;
+
+    class TestGameInstance : public GameInstance {
+    public:
+        TestGameInstance(Window* pGameWindow, GameManager* pGame, InputManager* pInputManager)
+            : GameInstance(pGameWindow, pGame, pInputManager) {}
+        virtual void onGameStarted() override {
+            createWorld([&](const std::optional<Error>& optionalWorldError) {
+                if (optionalWorldError.has_value()) {
+                    auto error = optionalWorldError.value();
+                    error.addCurrentLocationToErrorStack();
+                    INFO(error.getFullErrorMessage());
+                    REQUIRE(false);
+                }
+
+                // Create and setup camera.
+                auto pCamera = std::make_shared<TransientCamera>();
+                pCamera->setLocation(glm::vec3(-1.0F, 0.0F, 0.0F));
+
+                // Make it active.
+                getCameraManager()->setActiveCamera(pCamera);
+
+                // Spawn sample mesh.
+                const auto pMeshNode = gc_new<MeshNode>();
+                pMeshNode->setMeshData(PrimitiveMeshGenerator::createCube(1.0F));
+                getWorldRootNode()->addChildNode(pMeshNode);
+                pMeshNode->setWorldLocation(glm::vec3(1.0F, 0.0F, 0.0F));
+
+                iFrameCount = 0;
+            });
+        }
+        virtual ~TestGameInstance() override {}
+
+        virtual void onBeforeNewFrame(float delta) override {
+            iFrameCount += 1;
+
+            if (iFrameCount == 3) {
+                REQUIRE(getWindow()->getRenderer()->getLastFrameDrawCallCount() == 1);
+
+                // Spawn another sample mesh.
+                pSomeMeshNode = gc_new<MeshNode>();
+                pSomeMeshNode->setMeshData(PrimitiveMeshGenerator::createCube(1.0F));
+                getWorldRootNode()->addChildNode(pSomeMeshNode);
+                pSomeMeshNode->setWorldLocation(glm::vec3(1.0F, 3.0F, 0.0F));
+            }
+
+            if (iFrameCount == 5) {
+                REQUIRE(getWindow()->getRenderer()->getLastFrameDrawCallCount() == 2);
+
+                // Make one mesh invisible.
+                pSomeMeshNode->setIsVisible(false);
+            }
+
+            if (iFrameCount == 7) {
+                REQUIRE(getWindow()->getRenderer()->getLastFrameDrawCallCount() == 1);
+                getWindow()->close();
+            }
+        }
+
+    private:
+        size_t iFrameCount = 0;
+        gc<MeshNode> pSomeMeshNode;
     };
 
     auto result = Window::getBuilder().withVisibility(false).build();

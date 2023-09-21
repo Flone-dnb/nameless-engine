@@ -1,8 +1,10 @@
 // Custom.
+#include "game/camera/TransientCamera.h"
 #include "game/nodes/MeshNode.h"
 #include "game/GameInstance.h"
 #include "game/Window.h"
 #include "misc/PrimitiveMeshGenerator.h"
+#include "game/camera/CameraManager.h"
 #include "render/RenderSettings.h"
 
 // External.
@@ -34,6 +36,13 @@ TEST_CASE(
                     INFO(error.getFullErrorMessage());
                     REQUIRE(false);
                 }
+
+                // Create and setup camera.
+                auto pCamera = std::make_shared<TransientCamera>();
+                pCamera->setLocation(glm::vec3(-1.0F, 0.0F, 0.0F));
+
+                // Make it active.
+                getCameraManager()->setActiveCamera(pCamera);
 
                 // Create node and initialize.
                 const auto pMeshNode = gc_new<MeshNode>();

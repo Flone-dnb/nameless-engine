@@ -811,6 +811,7 @@ namespace ne {
 
         // Prepare some variables.
         const auto pMtxMeshNodes = pMaterial->getSpawnedMeshNodesThatUseThisMaterial();
+        const auto pDrawCallCounter = getDrawCallCounter();
 
         // Iterate over all visible mesh nodes that use this material.
         std::scoped_lock meshNodesGuard(pMtxMeshNodes->first);
@@ -861,6 +862,9 @@ namespace ne {
 
                 // Add a draw command.
                 pCommandList->DrawIndexedInstanced(indexBufferInfo.iIndexCount, 1, 0, 0, 0);
+
+                // Increment draw call counter.
+                *pDrawCallCounter += 1;
             }
         }
     }

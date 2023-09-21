@@ -67,9 +67,10 @@ namespace ne {
 
         // Show FPS in window title.
         pWindow->setTitle(std::format(
-            "{} (FPS: {}, waiting GPU: {:.1F} ms",
+            "{} (FPS: {}, draw calls: {}, waiting GPU: {:.1F} ms",
             pEditorWindowTitle,
             pRenderer->getFramesPerSecond(),
+            pRenderer->getLastFrameDrawCallCount(),
             pRenderer->getTimeSpentLastFrameWaitingForGpu()));
     }
 

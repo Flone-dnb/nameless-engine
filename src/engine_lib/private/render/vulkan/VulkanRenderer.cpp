@@ -2400,6 +2400,7 @@ namespace ne {
         // Prepare some variables.
         const auto pMtxInternalResources = pPipeline->getInternalResources();
         const auto pMtxMeshNodes = pMaterial->getSpawnedMeshNodesThatUseThisMaterial();
+        const auto pDrawCallCounter = getDrawCallCounter();
 
         // Lock material and pipeline resources.
         std::scoped_lock meshNodesGuard(pMtxMeshNodes->first, pMtxInternalResources->first);
@@ -2460,6 +2461,9 @@ namespace ne {
 
                 // Add a draw command.
                 vkCmdDrawIndexed(pCommandBuffer, indexBufferInfo.iIndexCount, 1, 0, 0, 0);
+
+                // Increment draw call counter.
+                *pDrawCallCounter += 1;
             }
         }
     }

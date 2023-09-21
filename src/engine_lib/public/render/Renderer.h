@@ -75,6 +75,13 @@ namespace ne {
         size_t getFramesPerSecond() const;
 
         /**
+         * Returns the total number of draw calls made last frame.
+         *
+         * @return Draw call count.
+         */
+        size_t getLastFrameDrawCallCount() const;
+
+        /**
          * Returns time in milliseconds that was spent last frame waiting for GPU to catch up.
          * If returned value is constantly bigger than zero then this might mean that you are GPU bound,
          * if constantly zero (0.0F) then this might mean that you are CPU bound.
@@ -470,6 +477,15 @@ namespace ne {
             unsigned int iRenderTargetHeight,
             CameraProperties* pCameraProperties);
 
+        /**
+         * Returns counter for draw calls.
+         *
+         * @remark Must be used by derived classes to increment draw call counter.
+         *
+         * @return Draw call counter.
+         */
+        size_t* getDrawCallCounter();
+
     private:
         /** Groups variables used to calculate frame-related statistics. */
         struct FrameStatsData {
@@ -502,6 +518,9 @@ namespace ne {
              * if constantly zero then this might mean that you are CPU bound.
              */
             float timeSpentLastFrameWaitingForGpuInMs = 0.0F;
+
+            /** The total number of draw calls made during the last frame. */
+            size_t iLastFrameDrawCallCount = 0;
         };
 
         /**
@@ -602,6 +621,9 @@ namespace ne {
          * Must be used with mutex.
          */
         std::pair<std::recursive_mutex, std::shared_ptr<RenderSettings>> mtxRenderSettings;
+
+        /** Stores the total number of draw calls made last frame. */
+        size_t iLastFrameDrawCallCount = 0;
 
         /** Up to date frame-global constant data. */
         std::pair<std::mutex, FrameConstants> mtxFrameConstants;

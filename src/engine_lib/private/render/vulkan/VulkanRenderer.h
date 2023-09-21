@@ -641,7 +641,7 @@ namespace ne {
          * @param pCommandBuffer             Command buffer to add commands to.
          * @param iCurrentFrameResourceIndex Index of the current frame resource.
          */
-        static void drawMeshNodes(
+        void drawMeshNodes(
             Material* pMaterial,
             VulkanPipeline* pPipeline,
             VkCommandBuffer pCommandBuffer,

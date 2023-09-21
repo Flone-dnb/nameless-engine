@@ -2,10 +2,12 @@
 #include "materials/Material.h"
 #include "game/GameInstance.h"
 #include "game/Window.h"
+#include "game/camera/TransientCamera.h"
 #include "game/nodes/MeshNode.h"
 #include "misc/ProjectPaths.h"
 #include "materials/EngineShaderNames.hpp"
 #include "misc/PrimitiveMeshGenerator.h"
+#include "game/camera/CameraManager.h"
 #include "materials/Shader.h"
 #if defined(WIN32)
 #include "render/directx/DirectXRenderer.h"
@@ -644,6 +646,13 @@ TEST_CASE("change texture while spawned") {
                     REQUIRE(false);
                 }
 
+                // Create and setup camera.
+                auto pCamera = std::make_shared<TransientCamera>();
+                pCamera->setLocation(glm::vec3(-1.0F, 0.0F, 0.0F));
+
+                // Make it active.
+                getCameraManager()->setActiveCamera(pCamera);
+
                 // Prepare textures.
                 if (!prepareDiffuseTextures()) {
                     REQUIRE(false);
@@ -678,6 +687,9 @@ TEST_CASE("change texture while spawned") {
             iFramesSpentWaiting += 1;
 
             if (iFramesSpentWaiting >= iFramesToWait) {
+                // Make sure something was rendered (in case we forgot the camera).
+                REQUIRE(getWindow()->getRenderer()->getLastFrameDrawCallCount() > 0);
+
                 if (!bChangedTexture) {
                     // Change texture.
                     pMeshNode->getMaterial()->setDiffuseTexture(sImportedTexture2PathRelativeRes);
@@ -880,6 +892,13 @@ TEST_CASE("changing diffuse texture from non-main thread should not cause deadlo
                     REQUIRE(false);
                 }
 
+                // Create and setup camera.
+                auto pCamera = std::make_shared<TransientCamera>();
+                pCamera->setLocation(glm::vec3(-1.0F, 0.0F, 0.0F));
+
+                // Make it active.
+                getCameraManager()->setActiveCamera(pCamera);
+
                 // Prepare textures.
                 if (!prepareDiffuseTextures()) {
                     REQUIRE(false);
@@ -887,11 +906,7 @@ TEST_CASE("changing diffuse texture from non-main thread should not cause deadlo
 
                 // Spawn sample mesh.
                 const auto pMeshNode = gc_new<MeshNode>();
-                auto mtxMeshData = pMeshNode->getMeshData();
-                {
-                    std::scoped_lock guard(*mtxMeshData.first);
-                    (*mtxMeshData.second) = PrimitiveMeshGenerator::createCube(1.0F);
-                }
+                pMeshNode->setMeshData(PrimitiveMeshGenerator::createCube(1.0F));
 
                 // Set texture before spawning.
                 pMeshNode->getMaterial()->setDiffuseTexture(sImportedTexture1PathRelativeRes);
@@ -903,7 +918,7 @@ TEST_CASE("changing diffuse texture from non-main thread should not cause deadlo
                     const auto iFramesBefore = iFramesRendered;
 
                     do {
-                        Logger::get().info("attempting to test a deadlock...");
+                        Logger::get().info("attempting to test a deadlock, waiting for frame");
                         constexpr size_t iTryCont = 1000;
                         for (size_t i = 0; i < iTryCont; i++) {
                             if (i % 2 == 0) {
@@ -921,6 +936,7 @@ TEST_CASE("changing diffuse texture from non-main thread should not cause deadlo
                                         static_cast<float>(i) / static_cast<float>(iTryCont) * 100.0F)));
                             }
                         }
+
                     } while (iFramesRendered <= iFramesBefore + 1);
 
                     Logger::get().info("finished testing a deadlock");

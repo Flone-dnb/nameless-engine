@@ -139,6 +139,10 @@ namespace ne {
 
         using namespace std::chrono;
 
+        // Save draw call count.
+        frameStats.iLastFrameDrawCallCount = iLastFrameDrawCallCount;
+        iLastFrameDrawCallCount = 0;
+
         // Get elapsed time.
         const auto iTimeSinceFpsUpdateInSec =
             duration_cast<seconds>(steady_clock::now() - frameStats.timeAtLastFpsUpdate).count();
@@ -421,6 +425,8 @@ namespace ne {
 
     size_t Renderer::getFramesPerSecond() const { return frameStats.iFramesPerSecond; }
 
+    size_t Renderer::getLastFrameDrawCallCount() const { return frameStats.iLastFrameDrawCallCount; }
+
     float Renderer::getTimeSpentLastFrameWaitingForGpu() const {
         return frameStats.timeSpentLastFrameWaitingForGpuInMs +
                getAdditionalTimeSpentLastFrameWaitingForGpu();
@@ -661,5 +667,7 @@ namespace ne {
         getShaderCpuWriteResourceManager()->updateResources(
             pMtxCurrentFrameResource->second.iCurrentFrameResourceIndex);
     }
+
+    size_t* Renderer::getDrawCallCounter() { return &iLastFrameDrawCallCount; }
 
 } // namespace ne

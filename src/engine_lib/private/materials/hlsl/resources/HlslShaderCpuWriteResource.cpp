@@ -107,7 +107,7 @@ namespace ne {
             vResourceData,
         const std::function<void*()>& onStartedUpdatingResource,
         const std::function<void()>& onFinishedUpdatingResource,
-        const std::unordered_map<DirectXPso*, UINT>&  rootParameterIndices)
+        const std::unordered_map<DirectXPso*, UINT>& rootParameterIndices)
         : ShaderCpuWriteResource(
               sResourceName,
               iOriginalResourceSizeInBytes,

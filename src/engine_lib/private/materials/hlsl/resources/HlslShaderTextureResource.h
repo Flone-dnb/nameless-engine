@@ -167,7 +167,7 @@ namespace ne {
         HlslShaderTextureResource(
             const std::string& sResourceName,
             std::unique_ptr<TextureHandle> pTextureToUse,
-            const std::unordered_map<DirectXPso*, UINT>&  rootParameterIndices);
+            const std::unordered_map<DirectXPso*, UINT>& rootParameterIndices);
 
         /**
          * Called from pipeline manager to notify that all pipelines released their internal resources

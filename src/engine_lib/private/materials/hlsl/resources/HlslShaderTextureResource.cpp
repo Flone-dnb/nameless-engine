@@ -66,7 +66,7 @@ namespace ne {
     HlslShaderTextureResource::HlslShaderTextureResource(
         const std::string& sResourceName,
         std::unique_ptr<TextureHandle> pTextureToUse,
-        const std::unordered_map<DirectXPso*, UINT>&  rootParameterIndices)
+        const std::unordered_map<DirectXPso*, UINT>& rootParameterIndices)
         : ShaderTextureResource(sResourceName) {
         // Save parameters.
         mtxUsedTexture.second = std::move(pTextureToUse);

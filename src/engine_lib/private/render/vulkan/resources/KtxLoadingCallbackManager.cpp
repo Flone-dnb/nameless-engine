@@ -82,8 +82,10 @@ namespace ne {
 
         // Check memory properties.
         auto bUsingHostVisibleMemory = false;
-        if ((physicalMemoryProperties.memoryTypes[pAllocationInfo->memoryTypeIndex].propertyFlags &
-             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) != 0) {
+        if (((physicalMemoryProperties.memoryTypes[pAllocationInfo->memoryTypeIndex].propertyFlags &
+              VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) != 0) ||
+            ((physicalMemoryProperties.memoryTypes[pAllocationInfo->memoryTypeIndex].propertyFlags &
+              VK_MEMORY_PROPERTY_HOST_COHERENT_BIT) != 0)) {
             // Use host visible memory.
             bUsingHostVisibleMemory = true;
             allocationInfo.usage = VMA_MEMORY_USAGE_CPU_TO_GPU;

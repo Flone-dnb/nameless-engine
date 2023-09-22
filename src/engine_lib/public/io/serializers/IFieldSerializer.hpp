@@ -17,7 +17,7 @@ namespace ne {
     /**
      * Interface for implementing support for serialization of new field types.
      *
-     * By implementing this interface and registering it in the Serializable class you can
+     * By implementing this interface and registering it in the FieldSerializerManager class you can
      * add support for serialization/deserialization of new field types and extend
      * serialization/deserialization functionality for Serializable derived classes.
      */

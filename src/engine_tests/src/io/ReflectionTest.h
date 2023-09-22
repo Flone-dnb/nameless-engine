@@ -15,15 +15,26 @@
 
 using namespace ne;
 
-class RCLASS(Guid("9ae433d9-2cba-497a-8061-26f2683b4f35")) MeshVertices : public Serializable {
+class RCLASS(Guid("9ae433d9-2cba-497a-8061-26f2683b4f34")) ExternalEntity : public Serializable {
 public:
-    MeshVertices() = default;
-    virtual ~MeshVertices() override = default;
+    RPROPERTY(Serialize)
+    int iAnswer = 42;
+
+    ExternalEntity_GENERATED
+};
+
+class RCLASS(Guid("9ae433d9-2cba-497a-8061-26f2683b4f35")) EntityWithExternalFile : public Serializable {
+public:
+    EntityWithExternalFile() = default;
+    virtual ~EntityWithExternalFile() override = default;
+
+    RPROPERTY(Serialize(FST_AS_EXTERNAL_FILE))
+    ExternalEntity external;
 
     RPROPERTY(Serialize)
-    std::vector<MeshVertex> vVertices;
+    int iValue = 123;
 
-    MeshVertices_GENERATED
+    EntityWithExternalFile_GENERATED
 };
 
 class RCLASS(Guid("550ea9f9-dd8a-4089-a717-0fe4e351a686")) ReflectionTestEntity : public Serializable {

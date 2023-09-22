@@ -384,6 +384,13 @@ namespace ne {
                 "the specified path \"{}\" does not exists", pathToOutputDirectoryParent.string()));
         }
 
+        // Make sure it's indeed a directory.
+        if (!std::filesystem::is_directory(pathToOutputDirectoryParent)) [[unlikely]] {
+            return Error(std::format(
+                "expected the specified path \"{}\" to point to a directory",
+                pathToOutputDirectoryParent.string()));
+        }
+
         // Make sure the specified directory name is not very long
         // to avoid creating long paths which might be an issue under Windows.
         static constexpr size_t iMaxOutputDirectoryNameLength = 10; // NOLINT

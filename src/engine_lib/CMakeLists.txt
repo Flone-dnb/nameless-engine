@@ -215,6 +215,7 @@ set(PROJECT_SOURCES
     private/game/World.cpp
     public/misc/GC.hpp
     public/io/serializers/IFieldSerializer.hpp
+    public/io/serializers/IBinaryFieldSerializer.hpp
     public/io/serializers/PrimitiveFieldSerializer.h
     private/io/serializers/PrimitiveFieldSerializer.cpp
     public/io/serializers/StringFieldSerializer.h
@@ -227,6 +228,8 @@ set(PROJECT_SOURCES
     public/io/serializers/SerializableObjectFieldSerializer.h
     private/io/serializers/GlmVecFieldSerializer.cpp
     public/io/serializers/GlmVecFieldSerializer.h
+    private/io/serializers/MeshDataBinaryFieldSerializer.cpp
+    public/io/serializers/MeshDataBinaryFieldSerializer.h
     public/math/MathHelpers.hpp
     public/math/GLMath.hpp
     # add general (cross-platform) sources here...

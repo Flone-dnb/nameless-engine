@@ -362,6 +362,96 @@ TEST_CASE("deserialize a node tree that references external node") {
     REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
 }
 
+TEST_CASE("serialize and deserialize type with external file") {
+    using namespace ne;
+
+    class TestGameInstance : public GameInstance {
+    public:
+        TestGameInstance(Window* pGameWindow, GameManager* pGame, InputManager* pInputManager)
+            : GameInstance(pGameWindow, pGame, pInputManager) {}
+        virtual void onGameStarted() override {
+            createWorld([&](const std::optional<Error>& optionalWorldError) {
+                if (optionalWorldError.has_value()) {
+                    auto error = optionalWorldError.value();
+                    error.addCurrentLocationToErrorStack();
+                    INFO(error.getFullErrorMessage());
+                    REQUIRE(false);
+                }
+
+                const std::filesystem::path pathToFileInTemp =
+                    ProjectPaths::getPathToResDirectory(ResourceDirectory::ROOT) / "test" / "temp" /
+                    "TESTING_EntityWithExternalFileSerialization_TESTING.toml";
+
+                {
+                    EntityWithExternalFile entity;
+                    entity.iValue = 123;
+                    entity.external.iAnswer = 42;
+
+                    // Serialize node.
+                    auto optionalError = entity.serialize(pathToFileInTemp, true); // use backup file
+                    if (optionalError.has_value()) {
+                        auto error = optionalError.value();
+                        error.addCurrentLocationToErrorStack();
+                        INFO(error.getFullErrorMessage());
+                        REQUIRE(false);
+                    }
+                }
+
+                const auto pathToExternalFile =
+                    pathToFileInTemp.parent_path() / (pathToFileInTemp.stem().string() + ".0.external.toml");
+                REQUIRE(std::filesystem::exists(pathToExternalFile));
+
+                // Delete original external file (backup file should be used).
+                std::filesystem::remove(pathToExternalFile);
+
+                {
+                    // Deserialize.
+                    auto result =
+                        Serializable::deserialize<std::shared_ptr, EntityWithExternalFile>(pathToFileInTemp);
+                    if (std::holds_alternative<Error>(result)) {
+                        Error error = std::get<Error>(std::move(result));
+                        error.addCurrentLocationToErrorStack();
+                        INFO(error.getFullErrorMessage());
+                        REQUIRE(false);
+                    }
+                    const auto pEntity = std::get<std::shared_ptr<EntityWithExternalFile>>(std::move(result));
+
+                    // Original file should be restored.
+                    REQUIRE(std::filesystem::exists(pathToExternalFile));
+
+                    // Check.
+                    REQUIRE(pEntity->external.iAnswer == 42);
+                    REQUIRE(pEntity->iValue == 123);
+                }
+
+                // Cleanup.
+                if (std::filesystem::exists(pathToFileInTemp)) {
+                    ConfigManager::removeFile(pathToFileInTemp);
+                }
+                if (std::filesystem::exists(pathToExternalFile)) {
+                    ConfigManager::removeFile(pathToExternalFile);
+                }
+
+                getWindow()->close();
+            });
+        }
+        virtual ~TestGameInstance() override {}
+    };
+
+    auto result = Window::getBuilder().withVisibility(false).build();
+    if (std::holds_alternative<Error>(result)) {
+        Error error = std::get<Error>(std::move(result));
+        error.addCurrentLocationToErrorStack();
+        INFO(error.getFullErrorMessage());
+        REQUIRE(false);
+    }
+
+    const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
+    pMainWindow->processEvents<TestGameInstance>();
+
+    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+}
+
 TEST_CASE("deserialize a node tree that references external node tree") {
     // Prepare paths.
     const std::string sNodeTreeRelativePathToFile = "test/node_tree.toml";

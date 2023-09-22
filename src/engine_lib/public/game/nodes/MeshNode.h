@@ -55,26 +55,6 @@ namespace ne RNAMESPACE() {
          */
         bool operator==(const MeshVertex& other) const;
 
-        /**
-         * Serializes array of vertices into the specified section.
-         *
-         * @param pFrom         Array of vertices to serialize.
-         * @param pToml         TOML value to serialize to.
-         * @param sSectionName  Name of the section to serialize to.
-         */
-        static void
-        serializeVec(std::vector<MeshVertex>* pFrom, toml::value* pToml, const std::string& sSectionName);
-
-        /**
-         * Deserializes TOML value to array of vertices.
-         *
-         * @param pTo     Array of vertices to deserialize to.
-         * @param pToml   TOML value to deserialize.
-         *
-         * @return Error if something went wrong.
-         */
-        static std::optional<Error> deserializeVec(std::vector<MeshVertex>* pTo, const toml::value* pToml);
-
         // --------------------------------------------------------------------------------------
 
         /** Position of the vertex in a 3D space. */
@@ -89,8 +69,6 @@ namespace ne RNAMESPACE() {
         // --------------------------------------------------------------------------------------
 
         // ! only vertex related fields (same as in shader) can be added here !
-        // ! add new fields to `serializeVec`, `deserializeVec` and `operator==` !
-        // ! and to unit test !
         // (not deriving from `Serializable` to avoid extra fields that are not related to vertex)
 
         // --------------------------------------------------------------------------------------
@@ -483,9 +461,9 @@ namespace ne RNAMESPACE() {
         /**
          * Mesh geometry.
          *
-         * @warning Use with @ref mtxMeshData;
+         * @warning Use with @ref mtxMeshData.
          */
-        RPROPERTY(Serialize(FST_AS_EXTERNAL_FILE)) // allow VCSs to treat this file in a special way
+        RPROPERTY(Serialize(FST_AS_EXTERNAL_BINARY_FILE)) // allow VCSs to treat this file in a special way
         MeshData meshData;
 
         /** Mutex for @ref meshData. */

@@ -1,11 +1,12 @@
 
 ["0.d5407ca4-3c2e-4a5a-9ff3-1262b6a4d264"]
+sNodeName = "Mesh Node"
+meshData = "MeshNodeDeserializationCompatibility.0.meshData.mbin"
 relativeLocation = [
 "0.0",
 "0.0",
 "0.0",
 ]
-meshData = "MeshNodeSerializationTestForBackwardsCompatibility.0.meshData.toml"
 relativeRotation = [
 "0.0",
 "0.0",
@@ -16,7 +17,6 @@ relativeScale = [
 "1.0",
 "1.0",
 ]
-sNodeName = "Mesh Node"
 
 ["0.d5407ca4-3c2e-4a5a-9ff3-1262b6a4d264".vMaterials]
 
@@ -28,4 +28,14 @@ sDiffuseTexturePathRelativeRes = ""
 sVertexShaderName = "engine.meshnode.vs"
 sMaterialName = "Mesh Node's default material"
 sPixelShaderName = "engine.meshnode.ps"
+
+["0.d5407ca4-3c2e-4a5a-9ff3-1262b6a4d264".vMaterials."vMaterials[1]"]
+
+["0.d5407ca4-3c2e-4a5a-9ff3-1262b6a4d264".vMaterials."vMaterials[1]"."0.a603fa3a-e9c2-4c38-bb4c-76384ef001f4"]
+bUseTransparency = false
+sDiffuseTexturePathRelativeRes = ""
+sVertexShaderName = "engine.meshnode.vs"
+sMaterialName = "Mesh Node's default material"
+sPixelShaderName = "engine.meshnode.ps"
+
 

@@ -1918,14 +1918,14 @@ And here are some notes about serialization/deserialization:
 - If you released your game and in some update you removed/renamed some `Serialize` field then everything (saving/loading) will work fine and if some old save file will have that old removed/renamed field it will be ignored.
 - If you released your game it's highly recommended to not change your type's GUID otherwise the engine will not be able to deserialize the data since it will no longer know what type to use.
 
-If you look in the file `src/engine_lib/public/io/properties/SerializeProperty.h` you might find that `Serialize` has a constructor that accepts `FieldSerializationType` which is `FST_WITH_OWNER` by default and as the documentation says it means that "Field is serialized in the same file as the owner object". There is also an option to use `FST_AS_EXTERNAL_FILE` like so:
+If you look in the file `src/engine_lib/public/io/properties/SerializeProperty.h` you might find that `Serialize` has a constructor that accepts `FieldSerializationType` which is `FST_WITH_OWNER` by default and as the documentation says it means that "Field is serialized in the same file as the owner object". There is also an option to use `FST_AS_EXTERNAL_FILE` or `FST_AS_EXTERNAL_BINARY_FILE` like so:
 
 ```Cpp
-RPROPERTY(Serialize(FST_AS_EXTERNAL_FILE)) // allow VCSs to treat this file in a special way
+RPROPERTY(Serialize(FST_AS_EXTERNAL_BINARY_FILE)) // allow VCSs to treat this file in a special way
 MeshData meshData;
 ```
 
-And again, as the documentation says it means that "Field is serialized in a separate file located next to the file of owner object. Only fields of types that derive from `Serializable` can be marked with this type". Generally we use the default `FST_WITH_OWNER` but there might be situations where you might want to use additional options.
+And again, as the documentation says it means that "Field is serialized in a separate file located next to the file of owner object. The only difference between these two is that `FST_AS_EXTERNAL_FILE` serializes into a `TOML` file and `FST_AS_EXTERNAL_BINARY_FILE` serializes into a binary file using special binary field serilaizers. Some fields from engine types are stored as external binary files in order to provide smaller file size and faster deserialization (although sacrificing readability of the file). Only fields of types that derive from `Serializable` can be marked with this type". Generally we use the default `FST_WITH_OWNER` but there might be situations where you might want to use additional options.
 
 There are various types that you can mark as `Serialize` as you can see you can mark some primitive types, `std::string`, `std::vector`, `std::unordered_map` and more, but note that when we talk about containers (such as `std::vector`) their serialization depends on the contained type. Here is a small description of **some types** that you can use for serialization:
 - `bool`
@@ -2305,6 +2305,7 @@ UPROPERTY(Serialize)
 std::string sMyText; // `std::string` can't get garbage value since it's initialized in std::string's constructor
 ```
 otherwise you might serialize a garbage value and then deserialize it as a garbage value which might cause unexpected reaction
+- if you serialize data with large arrays (for example if your player progress file can have arrays of 200+ `int`s) then deserialization speed might be slower (because of parsing large arrays), if you think that loading of your game or user progress takes absurdly long time you might want to check if the deserialization speed is the issue (because of parsing large arrays) and maybe consider storing your data in binary format using `Serialize(FST_AS_EXTERNAL_BINARY_FILE)`
 
 ## Node
 
@@ -2484,6 +2485,8 @@ FieldSerializerManager::addFieldSerializer(std::make_unique<MyFieldSerializer>()
 ```
 
 After this, when you use `serialize` functions your serializer will be used.
+
+In addition to the usual `IFieldSerializer` serializers we also have `IBinaryFieldSerializer` interface that works the same way but used for fields marked as `FST_AS_EXTERNAL_BINARY_FILE` and serializes into a binary file for smaller file size and faster deserialization.
 
 ## Creating new reflection properties
 

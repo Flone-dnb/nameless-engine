@@ -709,7 +709,9 @@ namespace ne RNAMESPACE() {
             }
         }
 
+        // Get field serializers.
         const auto vFieldSerializers = FieldSerializerManager::getFieldSerializers();
+        const auto vBinaryFieldSerializers = FieldSerializerManager::getBinaryFieldSerializers();
 
         // Deserialize fields.
         for (auto& sFieldName : keys) {
@@ -749,7 +751,9 @@ namespace ne RNAMESPACE() {
 
             // Check if we need to deserialize from external file.
             const auto pSerializeProperty = pField->getProperty<Serialize>();
-            if (pSerializeProperty->getSerializationType() == FieldSerializationType::FST_AS_EXTERNAL_FILE) {
+            if (pSerializeProperty->getSerializationType() == FieldSerializationType::FST_AS_EXTERNAL_FILE ||
+                pSerializeProperty->getSerializationType() ==
+                    FieldSerializationType::FST_AS_EXTERNAL_BINARY_FILE) {
                 // Make sure this field derives from `Serializable`.
                 if (!SerializableObjectFieldSerializer::isDerivedFromSerializable(
                         pField->getType().getArchetype())) [[unlikely]] {
@@ -776,33 +780,73 @@ namespace ne RNAMESPACE() {
                 const auto sEntityIdChain = sTargetSection.substr(0, iLastDotPos);
 
                 // Prepare path to the external file.
-                const auto sExternalFileName = fmt::format(
-                    "{}.{}.{}{}",
-                    optionalPathToFile->stem().string(),
-                    sEntityIdChain,
-                    pField->getName(),
-                    ConfigManager::getConfigFormatExtension());
+                if (!value.is_string()) [[unlikely]] {
+                    return Error(std::format(
+                        "expected field \"{}\" to store external filename in file \"{}\"",
+                        pField->getName(),
+                        optionalPathToFile.value().string()));
+                }
+                const auto sExternalFileName = value.as_string().str;
                 const auto pathToExternalFile = optionalPathToFile.value().parent_path() / sExternalFileName;
 
-                // Deserialize external file.
-                auto result = deserialize<std::shared_ptr, Serializable>(pathToExternalFile);
-                if (std::holds_alternative<Error>(result)) {
-                    auto error = std::get<Error>(std::move(result));
-                    error.addCurrentLocationToErrorStack();
-                    return error;
-                }
-                const auto pDeserializedExternalField =
-                    std::get<std::shared_ptr<Serializable>>(std::move(result));
-
-                // Clone deserialized data to field.
-                Serializable* pFieldObject =
+                // Get field object.
+                const auto pFieldObject =
                     reinterpret_cast<Serializable*>(pField->getPtrUnsafe(&*pSmartPointerInstance));
-                auto optionalError = SerializableObjectFieldSerializer::cloneSerializableObject(
-                    pDeserializedExternalField.get(), pFieldObject, false);
-                if (optionalError.has_value()) {
-                    auto error = optionalError.value();
-                    error.addCurrentLocationToErrorStack();
-                    return error;
+
+                if (pSerializeProperty->getSerializationType() == FST_AS_EXTERNAL_FILE) {
+                    // Deserialize external file.
+                    auto result = deserialize<std::shared_ptr, Serializable>(pathToExternalFile);
+                    if (std::holds_alternative<Error>(result)) {
+                        auto error = std::get<Error>(std::move(result));
+                        error.addCurrentLocationToErrorStack();
+                        return error;
+                    }
+                    const auto pDeserializedExternalField =
+                        std::get<std::shared_ptr<Serializable>>(std::move(result));
+
+                    // Clone deserialized data to field.
+                    auto optionalError = SerializableObjectFieldSerializer::cloneSerializableObject(
+                        pDeserializedExternalField.get(), pFieldObject, false);
+                    if (optionalError.has_value()) [[unlikely]] {
+                        auto error = optionalError.value();
+                        error.addCurrentLocationToErrorStack();
+                        return error;
+                    }
+                } else if (pSerializeProperty->getSerializationType() == FST_AS_EXTERNAL_BINARY_FILE) {
+                    // Deserialize binary file.
+                    bool bDeserialized = false;
+                    for (const auto& pBinarySerializer : vBinaryFieldSerializers) {
+                        if (!pBinarySerializer->isFieldTypeSupported(pField)) {
+                            continue;
+                        }
+
+                        // Deserialize as binary.
+                        auto optionalError = pBinarySerializer->deserializeField(
+                            pathToExternalFile, &*pSmartPointerInstance, pField);
+                        if (optionalError.has_value()) [[unlikely]] {
+                            auto error = optionalError.value();
+                            error.addCurrentLocationToErrorStack();
+                            return error;
+                        }
+
+                        // Finished.
+                        bDeserialized = true;
+                        break;
+                    }
+
+                    // Make sure we deserialized this field.
+                    if (!bDeserialized) [[unlikely]] {
+                        return Error(std::format(
+                            "the field \"{}\" with type \"{}\" (maybe inherited) has "
+                            "unsupported for deserialization type",
+                            pField->getName(),
+                            pField->getCanonicalTypeName()));
+                    }
+
+                    // Notify about deserialization.
+                    pFieldObject->onAfterDeserialized();
+                } else [[unlikely]] {
+                    return Error(std::format("unhandled case on field \"{}\"", pField->getName()));
                 }
 
                 continue;

@@ -36,9 +36,6 @@ namespace ne {
         if (sFieldCanonicalTypeName == std::format("std::vector<{}>", sStringCanonicalTypeName)) {
             return true;
         }
-        if (sFieldCanonicalTypeName == "std::vector<ne::MeshVertex>") {
-            return true;
-        }
         if (sFieldCanonicalTypeName == "std::vector<std::vector<unsigned int>>") {
             return true;
         }
@@ -109,12 +106,6 @@ namespace ne {
         } else if (sFieldCanonicalTypeName == std::format("std::vector<{}>", sStringCanonicalTypeName)) {
             pTomlData->operator[](sSectionName).operator[](pFieldName) =
                 pField->getUnsafe<std::vector<std::string>>(pFieldOwner);
-
-        } else if (sFieldCanonicalTypeName == "std::vector<ne::MeshVertex>") {
-            MeshVertex::serializeVec(
-                reinterpret_cast<std::vector<MeshVertex>*>(pField->getPtrUnsafe(pFieldOwner)),
-                &pTomlData->operator[](sSectionName),
-                pFieldName);
 
         } else if (sFieldCanonicalTypeName == "std::vector<std::vector<unsigned int>>") {
             pTomlData->operator[](sSectionName).operator[](pFieldName) =
@@ -343,14 +334,6 @@ namespace ne {
                 vArray.push_back(item.as_string());
             }
             pField->setUnsafe<std::vector<std::string>>(pFieldOwner, std::move(vArray));
-        } else if (sFieldCanonicalTypeName == "std::vector<ne::MeshVertex>") {
-            auto optionalError = MeshVertex::deserializeVec(
-                reinterpret_cast<std::vector<MeshVertex>*>(pField->getPtrUnsafe(pFieldOwner)), pTomlValue);
-            if (optionalError.has_value()) {
-                auto error = optionalError.value();
-                error.addCurrentLocationToErrorStack();
-                return error;
-            }
         } else if (sFieldCanonicalTypeName == "std::vector<std::vector<unsigned int>>") {
             GET_TOML_VALUE_AS_ARRAY_WITH_CHECK
             std::vector<std::vector<unsigned int>> vDoubleArray;
@@ -449,8 +432,6 @@ namespace ne {
             return {};
         }
 
-        CLONE_VECTOR_FIELDS(std::vector<ne::MeshVertex>)
-
         // Serializable pointer.
         if (sFieldCanonicalTypeName.starts_with("std::vector<") &&
             isMostInnerTypeSerializable(sFieldCanonicalTypeName)) {
@@ -525,7 +506,6 @@ namespace ne {
         COMPARE_VECTOR_FIELDS(float)
         COMPARE_VECTOR_FIELDS(double)
         COMPARE_VECTOR_FIELDS(std::basic_string<char>)
-        COMPARE_VECTOR_FIELDS(ne::MeshVertex)
         COMPARE_VECTOR_FIELDS(std::vector<unsigned int>)
 
         // Serializable pointers.

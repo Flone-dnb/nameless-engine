@@ -370,6 +370,7 @@ namespace ne {
             toml::value* pTomlData = nullptr;
             std::string sSectionName;
             std::vector<IFieldSerializer*> vFieldSerializers;
+            std::vector<IBinaryFieldSerializer*> vBinaryFieldSerializers;
             std::optional<Error> error;
             std::string sEntityId;
             Serializable* pOriginalEntity = nullptr;
@@ -386,6 +387,7 @@ namespace ne {
             &tomlData,
             sSectionName,
             FieldSerializerManager::getFieldSerializers(),
+            FieldSerializerManager::getBinaryFieldSerializers(),
             {},
             sEntityId,
             pOriginalObject,
@@ -412,7 +414,11 @@ namespace ne {
 
                     // Check if there was an original (previously deserialized) object.
                     Serializable* pOriginalFieldObject = nullptr;
-                    if (pData->pOriginalEntity != nullptr) {
+                    const auto pSerializeProperty = field.getProperty<Serialize>();
+                    if (pData->pOriginalEntity != nullptr &&
+                        pSerializeProperty->getSerializationType() !=
+                            FieldSerializationType::FST_AS_EXTERNAL_BINARY_FILE) { // don't compare binary
+                                                                                   // data
                         // Check if this field's value was changed compared to the value
                         // in the original file.
                         const auto pOriginalField = pData->pOriginalEntity->getArchetype().getFieldByName(
@@ -454,7 +460,8 @@ namespace ne {
                             pData->error = Error(std::format(
                                 "failed to compare a value of the field \"{}\" of type \"{}\" "
                                 "with the field from the original file at \"{}\" (ID \"{}\"), reason: no "
-                                "serializer supports both field types (maybe we took the wrong field from "
+                                "serializer supports both field types (maybe we took the wrong field "
+                                "from "
                                 "the original file)",
                                 field.getName(),
                                 pData->selfArchetype->getName(),
@@ -467,9 +474,10 @@ namespace ne {
                     }
 
                     // Check if need to serialize as external file.
-                    const auto pSerializeProperty = field.getProperty<Serialize>();
                     if (pSerializeProperty->getSerializationType() ==
-                        FieldSerializationType::FST_AS_EXTERNAL_FILE) {
+                            FieldSerializationType::FST_AS_EXTERNAL_FILE ||
+                        pSerializeProperty->getSerializationType() ==
+                            FieldSerializationType::FST_AS_EXTERNAL_BINARY_FILE) {
                         // Make sure this field derives from `Serializable`.
                         if (!SerializableObjectFieldSerializer::isDerivedFromSerializable(
                                 field.getType().getArchetype())) [[unlikely]] {
@@ -500,23 +508,72 @@ namespace ne {
                         const auto sEntityIdChain = pData->sSectionName.substr(0, iLastDotPos);
 
                         // Prepare path to the external file.
-                        const auto sExternalFileName = std::format(
-                            "{}.{}.{}{}",
+                        const auto sExternalFileNameWithoutExtension = std::format(
+                            "{}.{}.{}",
                             pData->optionalPathToFile->stem().string(),
                             sEntityIdChain,
-                            field.getName(),
-                            ConfigManager::getConfigFormatExtension());
+                            field.getName());
+                        auto sExternalFileName =
+                            sExternalFileNameWithoutExtension + ConfigManager::getConfigFormatExtension();
                         const auto pathToExternalFile =
                             pData->optionalPathToFile.value().parent_path() / sExternalFileName;
 
                         // Serialize as external file.
-                        Serializable* pFieldObject =
-                            reinterpret_cast<Serializable*>(field.getPtrUnsafe(pData->self));
-                        auto optionalError =
-                            pFieldObject->serialize(pathToExternalFile, pData->bEnableBackup);
-                        if (optionalError.has_value()) {
-                            pData->error = optionalError.value();
-                            pData->error->addCurrentLocationToErrorStack();
+                        if (pSerializeProperty->getSerializationType() == FST_AS_EXTERNAL_FILE) {
+                            // Get field object.
+                            const auto pFieldObject =
+                                reinterpret_cast<Serializable*>(field.getPtrUnsafe(pData->self));
+
+                            // Serialize as TOML.
+                            auto optionalError =
+                                pFieldObject->serialize(pathToExternalFile, pData->bEnableBackup);
+                            if (optionalError.has_value()) {
+                                pData->error = optionalError.value();
+                                pData->error->addCurrentLocationToErrorStack();
+                                return false;
+                            }
+                        } else if (
+                            pSerializeProperty->getSerializationType() == FST_AS_EXTERNAL_BINARY_FILE) {
+                            // Serialize as binary file.
+                            bool bSerialized = false;
+                            for (const auto& pBinarySerializer : pData->vBinaryFieldSerializers) {
+                                if (!pBinarySerializer->isFieldTypeSupported(&field)) {
+                                    continue;
+                                }
+
+                                // Serialize as binary.
+                                auto result = pBinarySerializer->serializeField(
+                                    pathToExternalFile.parent_path(),
+                                    sExternalFileNameWithoutExtension,
+                                    pData->self,
+                                    &field);
+                                if (std::holds_alternative<Error>(result)) [[unlikely]] {
+                                    pData->error = std::get<Error>(std::move(result));
+                                    pData->error->addCurrentLocationToErrorStack();
+                                    return false;
+                                }
+
+                                // Save new name.
+                                sExternalFileName = std::get<std::string>(std::move(result));
+
+                                // Finished.
+                                bSerialized = true;
+                                break;
+                            }
+
+                            // Make sure we serialized this field.
+                            if (!bSerialized) [[unlikely]] {
+                                pData->error = Error(std::format(
+                                    "the field \"{}\" with type \"{}\" (maybe inherited) of type \"{}\" has "
+                                    "unsupported for serialization type",
+                                    field.getName(),
+                                    field.getCanonicalTypeName(),
+                                    pData->selfArchetype->getName()));
+                                return false;
+                            }
+                        } else [[unlikely]] {
+                            pData->error =
+                                Error(std::format("unhandled case on field \"{}\"", field.getName()));
                             return false;
                         }
 

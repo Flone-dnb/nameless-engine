@@ -20,6 +20,11 @@ namespace ne RNAMESPACE() {
                               ///< section name (without GUID) of the owner object.
                               ///< For example, the resulting external file name might look like this:
                               ///< "savedata.0.1.test.toml".
+        FST_AS_EXTERNAL_BINARY_FILE, ///< Same as "AS_EXTERNAL_FILE" but when serializing the engine will look
+                                     ///< for a binary serializer that supports the type of the field, so
+                                     ///< the field will be serialized into a separate binary file (smaller
+                                     ///< size, faster deserialization but sacrificing readability of the
+                                     ///< file).
     };
 
     /**

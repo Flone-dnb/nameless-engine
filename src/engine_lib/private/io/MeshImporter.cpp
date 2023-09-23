@@ -6,6 +6,7 @@
 // Custom.
 #include "misc/ProjectPaths.h"
 #include "game/nodes/MeshNode.h"
+#include "materials/Material.h"
 
 // External.
 #define TINYGLTF_IMPLEMENTATION
@@ -14,24 +15,82 @@
 
 namespace ne {
 
-    std::variant<Error, std::vector<MeshData>> processGltfMesh(
+#if defined(WIN32)
+    inline bool textureImportProcess(float percent, unsigned long long, unsigned long long) {
+#else
+    inline bool textureImportProcess(float percent, int*, int*) {
+#endif
+        return false;
+    }
+
+    inline bool
+    writeGltfTextureToDisk(const tinygltf::Image& image, const std::filesystem::path& pathToImage) {
+        // Prepare callbacks.
+        tinygltf::FsCallbacks fs = {
+            &tinygltf::FileExists,
+            &tinygltf::ExpandFilePath,
+            &tinygltf::ReadWholeFile,
+            &tinygltf::WriteWholeFile,
+            nullptr};
+        tinygltf::URICallbacks uriCallbacks;
+        uriCallbacks.encode = nullptr;
+        uriCallbacks.decode = [](const std::string& in_uri, std::string* out_uri, void* user_data) -> bool {
+            *out_uri = in_uri;
+            return true;
+        };
+
+        // Prepare paths.
+        const auto sFilename = pathToImage.stem().string() + pathToImage.extension().string();
+        const auto sBasePath = pathToImage.parent_path().string();
+        std::string sOutputUri;
+
+        // Write image to disk.
+        return tinygltf::WriteImageData(
+            &sBasePath, &sFilename, &image, false, &uriCallbacks, &sOutputUri, &fs);
+    }
+
+    inline std::variant<Error, gc_vector<MeshNode>> processGltfMesh(
         const tinygltf::Model& model,
         const tinygltf::Mesh& mesh,
+        const std::filesystem::path& pathToOutputFile,
+        const std::string& sPathToOutputDirRelativeRes,
         const std::function<void(float, const std::string&)>& onProgress,
         size_t& iGltfNodeProcessedCount) {
-        // Prepare a mesh data to fill.
-        std::vector<MeshData> vMeshData;
+        // Prepare an array to fill.
+        gc_vector<MeshNode> vMeshNodes = gc_new_vector<MeshNode>();
 
-        // Prepare variable for marking progress.
+        // Prepare variables.
         const auto gltfNodePercentRange = 100.0F / static_cast<float>(model.nodes.size());
+        const std::string sTexturesDirectoryName = "textures";
+        const std::string sImageExtension = ".png";
+        const std::string sDiffuseTextureName = "diffuse";
+        std::string sPathToImportTexturesRelativeRes = sPathToOutputDirRelativeRes;
+        if (!sPathToImportTexturesRelativeRes.ends_with('/')) {
+            sPathToImportTexturesRelativeRes += "/";
+        }
+        sPathToImportTexturesRelativeRes += sTexturesDirectoryName;
+
+        // Prepare paths.
+        const std::filesystem::path pathToTempFiles =
+            ProjectPaths::getPathToResDirectory(ResourceDirectory::ROOT) / sPathToOutputDirRelativeRes /
+            "temp";
+        const std::filesystem::path pathToImportTextures =
+            ProjectPaths::getPathToResDirectory(ResourceDirectory::ROOT) / sPathToImportTexturesRelativeRes;
+        if (std::filesystem::exists(pathToTempFiles)) {
+            std::filesystem::remove_all(pathToTempFiles);
+        }
+        std::filesystem::create_directory(pathToTempFiles);
+        if (std::filesystem::exists(pathToImportTextures)) {
+            std::filesystem::remove_all(pathToImportTextures);
+        }
+        std::filesystem::create_directory(pathToImportTextures);
 
         // Go through each mesh in this node.
         for (size_t iPrimitive = 0; iPrimitive < mesh.primitives.size(); iPrimitive++) {
             auto& primitive = mesh.primitives[iPrimitive];
 
             // Allocate a new mesh data.
-            vMeshData.push_back(MeshData());
-            auto& meshData = vMeshData[iPrimitive];
+            MeshData meshData;
 
             {
                 // Add indices.
@@ -296,14 +355,97 @@ namespace ne {
 
                 Logger::get().warn(std::format("skipping unsupported GLTF attribute \"{}\"", sAttributeName));
             }
+
+            // See if we generated some mesh data.
+            if (meshData.getVertices()->empty() || meshData.getIndices()->empty()) {
+                continue;
+            }
+
+            // Create a new mesh node with the specified data.
+            auto pMeshNode = gc_new<MeshNode>(mesh.name);
+            pMeshNode->setMeshData(std::move(meshData));
+
+            // Process material.
+            auto& material = model.materials[primitive.material];
+            const auto pMeshMaterial = pMeshNode->getMaterial();
+
+            // Check material transparency.
+            if (material.alphaMode == "MASK") {
+                pMeshMaterial->setEnableTransparency(true);
+                pMeshMaterial->setOpacity(
+                    1.0F - static_cast<float>(std::clamp(material.alphaCutoff, 0.0, 1.0)));
+            }
+
+            // Process base color.
+            pMeshMaterial->setDiffuseColor(glm::vec3(
+                material.pbrMetallicRoughness.baseColorFactor[0],
+                material.pbrMetallicRoughness.baseColorFactor[1],
+                material.pbrMetallicRoughness.baseColorFactor[2]));
+
+            // Process diffuse texture.
+            auto& diffuseTexture = model.textures[material.pbrMetallicRoughness.baseColorTexture.index];
+            if (diffuseTexture.source >= 0) {
+                // Get image.
+                auto& diffuseImage = model.images[diffuseTexture.source];
+
+                // Prepare path to export the image to.
+                const auto pathToDiffuseImage = pathToTempFiles / (sDiffuseTextureName + sImageExtension);
+
+                // Mark progress.
+                onProgress(
+                    static_cast<float>(iGltfNodeProcessedCount) / static_cast<float>(model.nodes.size()) *
+                            100.0F +
+                        gltfNodePercentRange,
+                    std::format(
+                        "processing GLTF nodes {}/{} (importing diffuse texture)",
+                        iGltfNodeProcessedCount,
+                        model.nodes.size()));
+
+                // Write image to disk.
+                if (!writeGltfTextureToDisk(diffuseImage, pathToDiffuseImage)) {
+                    return Error(std::format(
+                        "failed to write GLTF image to path \"{}\"", pathToDiffuseImage.string()));
+                }
+
+                // Import texture.
+                auto optionalError = TextureManager::importTexture(
+                    pathToDiffuseImage,
+                    TextureType::DIFFUSE,
+                    sPathToImportTexturesRelativeRes,
+                    sDiffuseTextureName,
+                    textureImportProcess);
+                if (optionalError.has_value()) [[unlikely]] {
+                    auto error = std::move(optionalError.value());
+                    error.addCurrentLocationToErrorStack();
+                    return error;
+                }
+
+                // Construct path to imported texture directory.
+                std::string sPathDiffuseTextureRelativeRes = sPathToImportTexturesRelativeRes;
+                if (!sPathDiffuseTextureRelativeRes.ends_with('/')) {
+                    sPathDiffuseTextureRelativeRes += "/";
+                }
+                sPathDiffuseTextureRelativeRes += sDiffuseTextureName;
+
+                // Specify texture path.
+                pMeshMaterial->setDiffuseTexture(sPathDiffuseTextureRelativeRes);
+            }
+
+            // Add this new mesh node to results.
+            vMeshNodes->push_back(std::move(pMeshNode));
         }
 
-        return vMeshData;
+        // Cleanup.
+        std::filesystem::remove_all(pathToTempFiles);
+
+        return vMeshNodes;
     }
 
-    std::optional<Error> processGltfNode(
+    inline std::optional<Error> processGltfNode(
         const tinygltf::Node& node,
         const tinygltf::Model& model,
+        const std::filesystem::path& pathToOutputFile,
+        const std::string& sPathToOutputDirRelativeRes,
         Node* pParentNode,
         const std::function<void(float, const std::string&)>& onProgress,
         size_t& iGltfNodeProcessedCount) {
@@ -313,35 +455,32 @@ namespace ne {
         // See if this node stores a mesh.
         if ((node.mesh >= 0) && (node.mesh < model.meshes.size())) {
             // Process mesh.
-            auto result =
-                processGltfMesh(model, model.meshes[node.mesh], onProgress, iGltfNodeProcessedCount);
+            auto result = processGltfMesh(
+                model,
+                model.meshes[node.mesh],
+                pathToOutputFile,
+                sPathToOutputDirRelativeRes,
+                onProgress,
+                iGltfNodeProcessedCount);
             if (std::holds_alternative<Error>(result)) [[unlikely]] {
                 auto error = std::get<Error>(std::move(result));
                 error.addCurrentLocationToErrorStack();
                 return error;
             }
-            auto vMeshData = std::get<std::vector<MeshData>>(std::move(result));
+            auto vMeshNodes = std::get<gc_vector<MeshNode>>(std::move(result));
 
-            // Self check: make sure there is only 1 mesh data.
-            if (vMeshData.size() != 1) {
-                return Error(std::format("unexpected a GLTF mesh node mesh count: {}", vMeshData.size()));
+            // Attach new nodes to parent.
+            for (const auto& pMeshNode : *vMeshNodes) {
+                // Attach to parent node.
+                pParentNode->addChildNode(
+                    pMeshNode,
+                    Node::AttachmentRule::KEEP_RELATIVE,  // don't change relative location
+                    Node::AttachmentRule::KEEP_RELATIVE,  // don't change relative rotation
+                    Node::AttachmentRule::KEEP_RELATIVE); // don't change relative scale
+
+                // Mark this node as parent for child GLTF nodes.
+                pThisNode = &*pMeshNode;
             }
-
-            // Create mesh node.
-            auto pMeshNode = gc_new<MeshNode>(node.name);
-
-            // Set mesh data.
-            pMeshNode->setMeshData(std::move(vMeshData[0]));
-
-            // Attach to parent node.
-            pParentNode->addChildNode(
-                pMeshNode,
-                Node::AttachmentRule::KEEP_RELATIVE,  // don't change relative location
-                Node::AttachmentRule::KEEP_RELATIVE,  // don't change relative rotation
-                Node::AttachmentRule::KEEP_RELATIVE); // don't change relative scale
-
-            // Mark this node as parent for child GLTF nodes.
-            pThisNode = &*pMeshNode;
         }
 
         // Mark node as processed.
@@ -353,8 +492,14 @@ namespace ne {
         // Process child nodes.
         for (const auto& iNode : node.children) {
             // Process child node.
-            auto optionalError =
-                processGltfNode(model.nodes[iNode], model, pThisNode, onProgress, iGltfNodeProcessedCount);
+            auto optionalError = processGltfNode(
+                model.nodes[iNode],
+                model,
+                pathToOutputFile,
+                sPathToOutputDirRelativeRes,
+                pThisNode,
+                onProgress,
+                iGltfNodeProcessedCount);
             if (optionalError.has_value()) [[unlikely]] {
                 optionalError->addCurrentLocationToErrorStack();
                 return optionalError;
@@ -367,7 +512,7 @@ namespace ne {
     std::optional<Error> MeshImporter::importMesh(
         const std::filesystem::path& pathToFile,
         const std::string& sPathToOutputDirRelativeRes,
-        const std::string& sOutputDirectoryName,
+        const std::string& sOutputFileName,
         const std::function<void(float, const std::string&)>& onProgress) {
         // Make sure the specified path to the file exists.
         if (!std::filesystem::exists(pathToFile)) [[unlikely]] {
@@ -391,33 +536,39 @@ namespace ne {
                 pathToOutputDirectoryParent.string()));
         }
 
-        // Make sure the specified directory name is not very long
+        // Make sure the specified file name is not empty.
+        if (sOutputFileName.empty()) [[unlikely]] {
+            return Error("expected the specified file name to not be empty");
+        }
+
+        // Make sure the specified file name is not very long
         // to avoid creating long paths which might be an issue under Windows.
         static constexpr size_t iMaxOutputDirectoryNameLength = 10; // NOLINT
-        if (sOutputDirectoryName.size() > iMaxOutputDirectoryNameLength) [[unlikely]] {
+        if (sOutputFileName.size() > iMaxOutputDirectoryNameLength) [[unlikely]] {
             return Error(std::format(
                 "the specified name \"{}\" is too long (only {} characters allowed)",
-                sOutputDirectoryName,
+                sOutputFileName,
                 iMaxOutputDirectoryNameLength));
         }
 
-        // Make sure the specified directory name is valid (A-z, 0-9).
-        for (const auto& character : sOutputDirectoryName) {
+        // Make sure the specified file name is valid (A-z, 0-9).
+        for (const auto& character : sOutputFileName) {
             const auto iAsciiCode = static_cast<int>(character);
             if (iAsciiCode < 48 || (iAsciiCode > 57 && iAsciiCode < 65) ||               // NOLINT
                 (iAsciiCode > 90 && iAsciiCode < 97) || iAsciiCode > 122) [[unlikely]] { // NOLINT
                 return Error(std::format(
                     "character \"{}\" in the name \"{}\" is forbidden and cannon be used",
                     character,
-                    sOutputDirectoryName));
+                    sOutputFileName));
             }
         }
 
-        // Make sure the specified resulting directory does not exists yet.
-        const auto pathToOutputDirectory = pathToOutputDirectoryParent / sOutputDirectoryName;
-        if (std::filesystem::exists(pathToOutputDirectory)) [[unlikely]] {
-            return Error(std::format(
-                "expected the resulting directory \"{}\" to not exist", pathToOutputDirectory.string()));
+        // Make sure the specified resulting file does not exists yet.
+        const auto pathToOutputFile =
+            pathToOutputDirectoryParent / (sOutputFileName + ConfigManager::getConfigFormatExtension());
+        if (std::filesystem::exists(pathToOutputFile)) [[unlikely]] {
+            return Error(
+                std::format("expected the resulting file \"{}\" to not exist", pathToOutputFile.string()));
         }
 
         // Make sure the file has ".GLTF" or ".GLB" extension.
@@ -492,21 +643,24 @@ namespace ne {
 
             // Process node.
             auto optionalError = processGltfNode(
-                model.nodes[iNode], model, &*pSceneRootNode, onProgress, iTotalNodeProcessedCount);
+                model.nodes[iNode],
+                model,
+                pathToOutputFile,
+                sPathToOutputDirRelativeRes,
+                &*pSceneRootNode,
+                onProgress,
+                iTotalNodeProcessedCount);
             if (optionalError.has_value()) [[unlikely]] {
                 optionalError->addCurrentLocationToErrorStack();
                 return optionalError;
             }
         }
 
-        // Create output directory.
-        std::filesystem::create_directory(pathToOutputDirectory);
-
         // Mark progress.
         onProgress(100.0F, "serializing resulting node tree");
 
         // Serialize scene node tree.
-        auto optionalError = pSceneRootNode->serializeNodeTree(pathToOutputDirectory / "tree.toml", false);
+        auto optionalError = pSceneRootNode->serializeNodeTree(pathToOutputFile, false);
         if (optionalError.has_value()) [[unlikely]] {
             optionalError->addCurrentLocationToErrorStack();
             return optionalError;

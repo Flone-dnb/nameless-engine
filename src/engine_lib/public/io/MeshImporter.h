@@ -24,9 +24,9 @@ namespace ne {
          * @param pathToFile                  Path to the file to import.
          * @param sPathToOutputDirRelativeRes Path to a directory relative to the `res` directory that will
          * store results, for example: `game/player` (located at `res/game/player`).
-         * @param sOutputDirectoryName        Name of the new directory that does not exists yet but
-         * will be created in the specified directory (relative to the `res`) to store the results
-         * (allowed characters A-z and numbers 0-9, maximum length is 10 characters), for example: `mesh`.
+         * @param sOutputFileName             Name of the new file (without extension) that does not exists
+         * yet but will be created in the specified directory (allowed characters A-z and numbers 0-9, maximum
+         * length is 10 characters), for example: `mesh`.
          * @param onProgress                  Callback that will be called to report progress (percent) and
          * some text description of the current import stage.
          *
@@ -35,7 +35,7 @@ namespace ne {
         [[nodiscard]] static std::optional<Error> importMesh(
             const std::filesystem::path& pathToFile,
             const std::string& sPathToOutputDirRelativeRes,
-            const std::string& sOutputDirectoryName,
+            const std::string& sOutputFileName,
             const std::function<void(float, const std::string&)>& onProgress);
     };
 }

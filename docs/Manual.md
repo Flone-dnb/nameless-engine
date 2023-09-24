@@ -2530,7 +2530,7 @@ Note: currently we are looking for a solution that will make writing custom shad
 Here are the steps to create a new custom shader:
 
 1. Create a new shader file somewhere in the `res` directory, for example: `res/game/shaders/hlsl/Custom.hlsl`.
-2. `#include` an engine shader file that you shader "derives" from. For example if you want to create a custom shader for `MeshNode` you need to include `MeshNode.hlsl`. For example: `#include "../../../engine/shaders/hlsl/MeshNode.hlsl`.
+2. `#include` an engine shader file that you shader "derives" from. For example if you want to create a custom shader for `MeshNode` you need to include `MeshNode.hlsl`. For example: `#include "../../../engine/shaders/hlsl/MeshNode.hlsl"`.
     2. 1. For GLSL you need to include shader files that end with `.glsl`, for example: `#include "MeshNode.frag.glsl"`.
 3. Define vertex/pixel shader functions, you can copy-paste their signature from the included engine shader file, they may be named as `vsMeshNode`, `psMeshNode` or `fsMeshNode`.
 4. As the first line of your shader function call a function from the included engine shader for your shader stage (vertex/pixel/fragment), again it may be named as `vsMeshNode`, `psMeshNode` or `fsMeshNode`, and pass any input parameters if your function has them.

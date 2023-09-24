@@ -115,7 +115,7 @@ namespace ne {
         std::scoped_lock guard(mtxShaderMeshDataConstants.first);
         mtxShaderMeshDataConstants.second.world = getWorldMatrix();
 
-        // Mark as shader constants resources as "needs update".
+        // Mark mesh constants as "needs update".
         markShaderCpuWriteResourceAsNeedsUpdate(sMeshShaderConstantBufferName);
     }
 

@@ -273,14 +273,14 @@ Here is the list of base features that needs to be implemented in order for you 
     - [ ] Forward+ rendering
         - [ ] Transparent materials
         - [ ] AA (Anti-aliasing)
-        - [ ] Frustum culling
-        - [ ] Instancing
         - [ ] Light sources
             - [ ] Point light
             - [ ] Spot light
             - [ ] Directional light
             - [ ] Rectangular light
         - [ ] Shadow mapping (for all light sources)
+        - [ ] Instancing
+        - [ ] Frustum culling
         - [ ] Cascading shadow maps
         - [ ] Normal mapping
         - [ ] Cube mapping

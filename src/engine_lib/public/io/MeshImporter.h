@@ -23,7 +23,7 @@ namespace ne {
          *
          * @param pathToFile                  Path to the file to import.
          * @param sPathToOutputDirRelativeRes Path to a directory relative to the `res` directory that will
-         * store results, for example: `game/player` (located at `res/game/player`).
+         * store results (should not exist yet), for example: `game/player` (located at `res/game/player`).
          * @param sOutputFileName             Name of the new file (without extension) that does not exists
          * yet but will be created in the specified directory (allowed characters A-z and numbers 0-9, maximum
          * length is 10 characters), for example: `mesh`.

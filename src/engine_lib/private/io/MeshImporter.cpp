@@ -102,56 +102,45 @@ namespace ne {
                 const auto& indexBuffer = model.buffers[indexBufferView.buffer];
 
                 // Make sure index is stored as scalar`.
-                if (indexAccessor.type != TINYGLTF_TYPE_SCALAR) {
+                if (indexAccessor.type != TINYGLTF_TYPE_SCALAR) [[unlikely]] {
                     return Error(std::format(
                         "expected indices of mesh to be stored as `scalar`, actual type: {}",
                         indexAccessor.type));
                 }
-                // Make sure that component type is `unsigned int`.
+
+                // Prepare variables to read indices.
+                auto pCurrentIndex =
+                    indexBuffer.data.data() + indexBufferView.byteOffset + indexAccessor.byteOffset;
+                std::vector<MeshData::meshindex_t> vIndices(indexAccessor.count);
+
+                // Allocate indices depending on their type.
                 if (indexAccessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT) {
                     using index_t = unsigned int;
 
-                    // Make sure data length is correct.
-                    const auto iIndexElementSizeInBytes = sizeof(index_t);
-                    if (indexBufferView.byteLength % iIndexElementSizeInBytes != 0) {
-                        return Error(std::format(
-                            "expected indices length to be a multiple of {}, length: {}",
-                            iIndexElementSizeInBytes,
-                            indexBufferView.byteLength));
-                    }
-
-                    // Get indices.
-                    const auto iIndexCount = indexBufferView.byteLength / iIndexElementSizeInBytes;
-                    const auto pIndices = reinterpret_cast<const index_t*>(
-                        indexBuffer.data.data() + indexBufferView.byteOffset);
+                    const auto iStride =
+                        indexBufferView.byteStride == 0 ? sizeof(index_t) : indexBufferView.byteStride;
 
                     // Set indices.
-                    meshData.getIndices()->push_back(std::vector<index_t>(iIndexCount));
-                    std::memcpy(
-                        meshData.getIndices()->at(0).data(),
-                        pIndices,
-                        iIndexCount * iIndexElementSizeInBytes);
+                    for (size_t i = 0; i < vIndices.size(); i++) {
+                        // Set value.
+                        vIndices[i] = reinterpret_cast<const index_t*>(pCurrentIndex)[0];
+
+                        // Switch to the next item.
+                        pCurrentIndex += iStride;
+                    }
                 } else if (indexAccessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT) {
                     using index_t = unsigned short;
 
-                    // Make sure data length is correct.
-                    const auto iIndexElementSizeInBytes = sizeof(index_t);
-                    if (indexBufferView.byteLength % iIndexElementSizeInBytes != 0) {
-                        return Error(std::format(
-                            "expected indices length to be a multiple of {}, length: {}",
-                            iIndexElementSizeInBytes,
-                            indexBufferView.byteLength));
-                    }
-
-                    // Get indices.
-                    const auto iIndexCount = indexBufferView.byteLength / iIndexElementSizeInBytes;
-                    const auto pIndices = reinterpret_cast<const index_t*>(
-                        indexBuffer.data.data() + indexBufferView.byteOffset);
+                    const auto iStride =
+                        indexBufferView.byteStride == 0 ? sizeof(index_t) : indexBufferView.byteStride;
 
                     // Set indices.
-                    meshData.getIndices()->push_back(std::vector<unsigned int>(iIndexCount));
-                    for (size_t i = 0; i < iIndexCount; i++) {
-                        meshData.getIndices()->at(0).at(i) = static_cast<unsigned int>(pIndices[i]);
+                    for (size_t i = 0; i < vIndices.size(); i++) {
+                        // Set value.
+                        vIndices[i] = reinterpret_cast<const index_t*>(pCurrentIndex)[0];
+
+                        // Switch to the next item.
+                        pCurrentIndex += iStride;
                     }
                 } else {
                     return Error(std::format(
@@ -159,9 +148,10 @@ namespace ne {
                         "actual type: {}",
                         indexAccessor.componentType));
                 }
-            }
 
-            using position_t = glm::vec3;
+                // Allocate a material slot with indices.
+                meshData.getIndices()->push_back(std::move(vIndices));
+            }
 
             {
                 // Find a position attribute to know how much vertices there will be.
@@ -171,28 +161,11 @@ namespace ne {
                 }
                 const auto iPositionAccessorIndex = it->second;
 
-                // Get accessor and buffer view.
+                // Get accessor.
                 const auto& positionAccessor = model.accessors[iPositionAccessorIndex];
-                const auto& attributeBufferView = model.bufferViews[positionAccessor.bufferView];
-
-                // Make sure position is stored as `vec3`.
-                if (positionAccessor.type != TINYGLTF_TYPE_VEC3) {
-                    return Error(std::format(
-                        "expected POSITION mesh attribute to be stored as `vec3`, actual type: {}",
-                        positionAccessor.type));
-                }
-                // Make sure data length is correct.
-                const auto iElementSizeInBytes = sizeof(position_t);
-                if (attributeBufferView.byteLength % iElementSizeInBytes != 0) {
-                    return Error(std::format(
-                        "expected POSITION mesh attribute length to be a multiple of {}, length: {}",
-                        iElementSizeInBytes,
-                        attributeBufferView.byteLength));
-                }
-                const auto iPositionCount = attributeBufferView.byteLength / iElementSizeInBytes;
 
                 // Allocate vertices.
-                meshData.getVertices()->resize(iPositionCount);
+                meshData.getVertices()->resize(positionAccessor.count);
             }
 
             // Process attributes.
@@ -220,43 +193,35 @@ namespace ne {
                 const auto& attributeBuffer = model.buffers[attributeBufferView.buffer];
 
                 if (sAttributeName == "POSITION") {
+                    using position_t = glm::vec3;
+
                     // Make sure position is stored as `vec3`.
-                    if (attributeAccessor.type != TINYGLTF_TYPE_VEC3) {
+                    if (attributeAccessor.type != TINYGLTF_TYPE_VEC3) [[unlikely]] {
                         return Error(std::format(
                             "expected POSITION mesh attribute to be stored as `vec3`, actual type: {}",
                             attributeAccessor.type));
                     }
                     // Make sure that component type is `float`.
-                    if (attributeAccessor.componentType != TINYGLTF_COMPONENT_TYPE_FLOAT) {
+                    if (attributeAccessor.componentType != TINYGLTF_COMPONENT_TYPE_FLOAT) [[unlikely]] {
                         return Error(std::format(
                             "expected POSITION mesh attribute component type to be `float`, actual type: {}",
                             attributeAccessor.componentType));
                     }
-                    // Make sure data length is correct.
-                    const auto iElementSizeInBytes = sizeof(position_t);
-                    if (attributeBufferView.byteLength % iElementSizeInBytes != 0) {
-                        return Error(std::format(
-                            "expected POSITION mesh attribute length to be a multiple of {}, length: {}",
-                            iElementSizeInBytes,
-                            attributeBufferView.byteLength));
-                    }
 
-                    // Get positions.
-                    const auto iPositionCount = attributeBufferView.byteLength / iElementSizeInBytes;
-                    const auto pPositions = reinterpret_cast<const position_t*>(
-                        attributeBuffer.data.data() + attributeBufferView.byteOffset);
-
-                    // Make sure we won't go out of vertices bounds.
-                    if (iPositionCount > meshData.getVertices()->size()) {
-                        return Error(std::format(
-                            "unexpected position count {} to exceed allocated limits {}",
-                            iPositionCount,
-                            meshData.getVertices()->size()));
-                    }
+                    // Prepare variables.
+                    auto pCurrentPosition = attributeBuffer.data.data() + attributeBufferView.byteOffset +
+                                            attributeAccessor.byteOffset;
+                    const auto iStride = attributeBufferView.byteStride == 0 ? sizeof(position_t)
+                                                                             : attributeBufferView.byteStride;
 
                     // Set positions to mesh data.
-                    for (size_t i = 0; i < iPositionCount; i++) {
-                        meshData.getVertices()->at(i).position = pPositions[i];
+                    for (size_t i = 0; i < meshData.getVertices()->size(); i++) {
+                        // Set value.
+                        meshData.getVertices()->at(i).position =
+                            reinterpret_cast<const position_t*>(pCurrentPosition)[0];
+
+                        // Switch to the next item.
+                        pCurrentPosition += iStride;
                     }
 
                     // Process next attribute.
@@ -267,42 +232,32 @@ namespace ne {
                     using normal_t = glm::vec3;
 
                     // Make sure normal is stored as `vec3`.
-                    if (attributeAccessor.type != TINYGLTF_TYPE_VEC3) {
+                    if (attributeAccessor.type != TINYGLTF_TYPE_VEC3) [[unlikely]] {
                         return Error(std::format(
                             "expected NORMAL mesh attribute to be stored as `vec3`, actual type: {}",
                             attributeAccessor.type));
                     }
                     // Make sure that component type is `float`.
-                    if (attributeAccessor.componentType != TINYGLTF_COMPONENT_TYPE_FLOAT) {
+                    if (attributeAccessor.componentType != TINYGLTF_COMPONENT_TYPE_FLOAT) [[unlikely]] {
                         return Error(std::format(
                             "expected NORMAL mesh attribute component type to be `float`, actual type: {}",
                             attributeAccessor.componentType));
                     }
-                    // Make sure data length is correct.
-                    const auto iElementSizeInBytes = sizeof(normal_t);
-                    if (attributeBufferView.byteLength % iElementSizeInBytes != 0) {
-                        return Error(std::format(
-                            "expected NORMAL mesh attribute length to be a multiple of {}, length: {}",
-                            iElementSizeInBytes,
-                            attributeBufferView.byteLength));
-                    }
 
-                    // Get normals.
-                    const auto iNormalCount = attributeBufferView.byteLength / iElementSizeInBytes;
-                    const auto pNormals = reinterpret_cast<const normal_t*>(
-                        attributeBuffer.data.data() + attributeBufferView.byteOffset);
-
-                    // Make sure we won't go out of vertices bounds.
-                    if (iNormalCount > meshData.getVertices()->size()) {
-                        return Error(std::format(
-                            "unexpected normal count {} to exceed allocated limits {}",
-                            iNormalCount,
-                            meshData.getVertices()->size()));
-                    }
+                    // Prepare variables.
+                    auto pCurrentNormal = attributeBuffer.data.data() + attributeBufferView.byteOffset +
+                                          attributeAccessor.byteOffset;
+                    const auto iStride = attributeBufferView.byteStride == 0 ? sizeof(normal_t)
+                                                                             : attributeBufferView.byteStride;
 
                     // Set normals to mesh data.
-                    for (size_t i = 0; i < iNormalCount; i++) {
-                        meshData.getVertices()->at(i).normal = pNormals[i];
+                    for (size_t i = 0; i < meshData.getVertices()->size(); i++) {
+                        // Set value.
+                        meshData.getVertices()->at(i).normal =
+                            reinterpret_cast<const normal_t*>(pCurrentNormal)[0];
+
+                        // Switch to the next item.
+                        pCurrentNormal += iStride;
                     }
 
                     // Process next attribute.
@@ -310,43 +265,34 @@ namespace ne {
                 }
 
                 if (sAttributeName == "TEXCOORD_0") {
+                    using uv_t = glm::vec2;
+
                     // Make sure UV is stored as `vec2`.
-                    if (attributeAccessor.type != TINYGLTF_TYPE_VEC2) {
+                    if (attributeAccessor.type != TINYGLTF_TYPE_VEC2) [[unlikely]] {
                         return Error(std::format(
                             "expected TEXCOORD mesh attribute to be stored as `vec2`, actual type: {}",
                             attributeAccessor.type));
                     }
                     // Make sure that component type is `float`.
-                    if (attributeAccessor.componentType != TINYGLTF_COMPONENT_TYPE_FLOAT) {
+                    if (attributeAccessor.componentType != TINYGLTF_COMPONENT_TYPE_FLOAT) [[unlikely]] {
                         return Error(std::format(
                             "expected TEXCOORD mesh attribute component type to be `float`, actual type: {}",
                             attributeAccessor.componentType));
                     }
-                    // Make sure data length is correct.
-                    const auto iElementSizeInBytes = sizeof(glm::vec2);
-                    if (attributeBufferView.byteLength % iElementSizeInBytes != 0) {
-                        return Error(std::format(
-                            "expected TEXCOORD mesh attribute length to be a multiple of {}, length: {}",
-                            iElementSizeInBytes,
-                            attributeBufferView.byteLength));
-                    }
 
-                    // Get UVs.
-                    const auto iUvCount = attributeBufferView.byteLength / iElementSizeInBytes;
-                    const auto pUvs = reinterpret_cast<const glm::vec2*>(
-                        attributeBuffer.data.data() + attributeBufferView.byteOffset);
-
-                    // Make sure we won't go out of vertices bounds.
-                    if (iUvCount > meshData.getVertices()->size()) {
-                        return Error(std::format(
-                            "unexpected UV count {} to exceed allocated limits {}",
-                            iUvCount,
-                            meshData.getVertices()->size()));
-                    }
+                    // Prepare variables.
+                    auto pCurrentUv = attributeBuffer.data.data() + attributeBufferView.byteOffset +
+                                      attributeAccessor.byteOffset;
+                    const auto iStride =
+                        attributeBufferView.byteStride == 0 ? sizeof(uv_t) : attributeBufferView.byteStride;
 
                     // Set UVs to mesh data.
-                    for (size_t i = 0; i < iUvCount; i++) {
-                        meshData.getVertices()->at(i).uv = pUvs[i];
+                    for (size_t i = 0; i < meshData.getVertices()->size(); i++) {
+                        // Set value.
+                        meshData.getVertices()->at(i).uv = reinterpret_cast<const uv_t*>(pCurrentUv)[0];
+
+                        // Switch to the next item.
+                        pCurrentUv += iStride;
                     }
 
                     // Process next attribute.
@@ -365,70 +311,72 @@ namespace ne {
             auto pMeshNode = gc_new<MeshNode>(mesh.name);
             pMeshNode->setMeshData(std::move(meshData));
 
-            // Process material.
-            auto& material = model.materials[primitive.material];
-            const auto pMeshMaterial = pMeshNode->getMaterial();
+            if (primitive.material >= 0) {
+                // Process material.
+                auto& material = model.materials[primitive.material];
+                const auto pMeshMaterial = pMeshNode->getMaterial();
 
-            // Check material transparency.
-            if (material.alphaMode == "MASK") {
-                pMeshMaterial->setEnableTransparency(true);
-                pMeshMaterial->setOpacity(
-                    1.0F - static_cast<float>(std::clamp(material.alphaCutoff, 0.0, 1.0)));
-            }
-
-            // Process base color.
-            pMeshMaterial->setDiffuseColor(glm::vec3(
-                material.pbrMetallicRoughness.baseColorFactor[0],
-                material.pbrMetallicRoughness.baseColorFactor[1],
-                material.pbrMetallicRoughness.baseColorFactor[2]));
-
-            // Process diffuse texture.
-            auto& diffuseTexture = model.textures[material.pbrMetallicRoughness.baseColorTexture.index];
-            if (diffuseTexture.source >= 0) {
-                // Get image.
-                auto& diffuseImage = model.images[diffuseTexture.source];
-
-                // Prepare path to export the image to.
-                const auto pathToDiffuseImage = pathToTempFiles / (sDiffuseTextureName + sImageExtension);
-
-                // Mark progress.
-                onProgress(
-                    static_cast<float>(iGltfNodeProcessedCount) / static_cast<float>(model.nodes.size()) *
-                            100.0F +
-                        gltfNodePercentRange,
-                    std::format(
-                        "processing GLTF nodes {}/{} (importing diffuse texture)",
-                        iGltfNodeProcessedCount,
-                        model.nodes.size()));
-
-                // Write image to disk.
-                if (!writeGltfTextureToDisk(diffuseImage, pathToDiffuseImage)) {
-                    return Error(std::format(
-                        "failed to write GLTF image to path \"{}\"", pathToDiffuseImage.string()));
+                // Check material transparency.
+                if (material.alphaMode == "MASK") {
+                    pMeshMaterial->setEnableTransparency(true);
+                    pMeshMaterial->setOpacity(
+                        1.0F - static_cast<float>(std::clamp(material.alphaCutoff, 0.0, 1.0)));
                 }
 
-                // Import texture.
-                auto optionalError = TextureManager::importTexture(
-                    pathToDiffuseImage,
-                    TextureType::DIFFUSE,
-                    sPathToImportTexturesRelativeRes,
-                    sDiffuseTextureName,
-                    textureImportProcess);
-                if (optionalError.has_value()) [[unlikely]] {
-                    auto error = std::move(optionalError.value());
-                    error.addCurrentLocationToErrorStack();
-                    return error;
-                }
+                // Process base color.
+                pMeshMaterial->setDiffuseColor(glm::vec3(
+                    material.pbrMetallicRoughness.baseColorFactor[0],
+                    material.pbrMetallicRoughness.baseColorFactor[1],
+                    material.pbrMetallicRoughness.baseColorFactor[2]));
 
-                // Construct path to imported texture directory.
-                std::string sPathDiffuseTextureRelativeRes = sPathToImportTexturesRelativeRes;
-                if (!sPathDiffuseTextureRelativeRes.ends_with('/')) {
-                    sPathDiffuseTextureRelativeRes += "/";
-                }
-                sPathDiffuseTextureRelativeRes += sDiffuseTextureName;
+                // Process diffuse texture.
+                auto& diffuseTexture = model.textures[material.pbrMetallicRoughness.baseColorTexture.index];
+                if (diffuseTexture.source >= 0) {
+                    // Get image.
+                    auto& diffuseImage = model.images[diffuseTexture.source];
 
-                // Specify texture path.
-                pMeshMaterial->setDiffuseTexture(sPathDiffuseTextureRelativeRes);
+                    // Prepare path to export the image to.
+                    const auto pathToDiffuseImage = pathToTempFiles / (sDiffuseTextureName + sImageExtension);
+
+                    // Mark progress.
+                    onProgress(
+                        static_cast<float>(iGltfNodeProcessedCount) / static_cast<float>(model.nodes.size()) *
+                                100.0F +
+                            gltfNodePercentRange,
+                        std::format(
+                            "processing GLTF nodes {}/{} (importing diffuse texture)",
+                            iGltfNodeProcessedCount,
+                            model.nodes.size()));
+
+                    // Write image to disk.
+                    if (!writeGltfTextureToDisk(diffuseImage, pathToDiffuseImage)) {
+                        return Error(std::format(
+                            "failed to write GLTF image to path \"{}\"", pathToDiffuseImage.string()));
+                    }
+
+                    // Import texture.
+                    auto optionalError = TextureManager::importTexture(
+                        pathToDiffuseImage,
+                        TextureType::DIFFUSE,
+                        sPathToImportTexturesRelativeRes,
+                        sDiffuseTextureName,
+                        textureImportProcess);
+                    if (optionalError.has_value()) [[unlikely]] {
+                        auto error = std::move(optionalError.value());
+                        error.addCurrentLocationToErrorStack();
+                        return error;
+                    }
+
+                    // Construct path to imported texture directory.
+                    std::string sPathDiffuseTextureRelativeRes = sPathToImportTexturesRelativeRes;
+                    if (!sPathDiffuseTextureRelativeRes.ends_with('/')) {
+                        sPathDiffuseTextureRelativeRes += "/";
+                    }
+                    sPathDiffuseTextureRelativeRes += sDiffuseTextureName;
+
+                    // Specify texture path.
+                    pMeshMaterial->setDiffuseTexture(sPathDiffuseTextureRelativeRes);
+                }
             }
 
             // Add this new mesh node to results.
@@ -523,18 +471,15 @@ namespace ne {
         const auto pathToOutputDirectoryParent =
             ProjectPaths::getPathToResDirectory(ResourceDirectory::ROOT) / sPathToOutputDirRelativeRes;
 
-        // Make sure the path to output directory exists.
-        if (!std::filesystem::exists(pathToOutputDirectoryParent)) [[unlikely]] {
+        // Make sure the output directory does not exists.
+        if (std::filesystem::exists(pathToOutputDirectoryParent)) [[unlikely]] {
             return Error(std::format(
-                "the specified path \"{}\" does not exists", pathToOutputDirectoryParent.string()));
-        }
-
-        // Make sure it's indeed a directory.
-        if (!std::filesystem::is_directory(pathToOutputDirectoryParent)) [[unlikely]] {
-            return Error(std::format(
-                "expected the specified path \"{}\" to point to a directory",
+                "expected the specified path output directory \"{}\" to not exist",
                 pathToOutputDirectoryParent.string()));
         }
+
+        // Create directory for results.
+        std::filesystem::create_directories(pathToOutputDirectoryParent);
 
         // Make sure the specified file name is not empty.
         if (sOutputFileName.empty()) [[unlikely]] {

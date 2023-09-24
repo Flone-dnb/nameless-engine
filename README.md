@@ -261,7 +261,7 @@ Here is the list of base features that needs to be implemented in order for you 
 - [X] Config management (progress, settings, etc.)
 - [X] Node system (Godot-like ECS alternative)
 - [X] Profiler
-- [ ] GLTF/GLB import
+- [X] GLTF/GLB import
 - [ ] Rendering (features for both DirectX 12 and Vulkan renderers)
     - [X] Automatically test and pick the most suitable renderer/GPU based on the OS/hardware capabilities/user preferences at runtime
     - [ ] Forward rendering (temporary)

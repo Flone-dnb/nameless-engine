@@ -460,8 +460,17 @@ namespace ne {
     std::optional<Error> MeshImporter::importMesh(
         const std::filesystem::path& pathToFile,
         const std::string& sPathToOutputDirRelativeRes,
-        const std::string& sOutputFileName,
+        const std::string& sOutputDirectoryName,
         const std::function<void(float, const std::string&)>& onProgress) {
+        // Make sure the file has ".GLTF" or ".GLB" extension.
+        if (pathToFile.extension() != ".GLTF" && pathToFile.extension() != ".gltf" &&
+            pathToFile.extension() != ".GLB" && pathToFile.extension() != ".glb") [[unlikely]] {
+            return Error(std::format(
+                "only GLTF/GLB file extension is supported for mesh import, the path \"{}\" points to a "
+                "non-GLTF file",
+                pathToFile.string()));
+        }
+
         // Make sure the specified path to the file exists.
         if (!std::filesystem::exists(pathToFile)) [[unlikely]] {
             return Error(std::format("the specified path \"{}\" does not exists", pathToFile.string()));
@@ -471,59 +480,51 @@ namespace ne {
         const auto pathToOutputDirectoryParent =
             ProjectPaths::getPathToResDirectory(ResourceDirectory::ROOT) / sPathToOutputDirRelativeRes;
 
-        // Make sure the output directory does not exists.
-        if (std::filesystem::exists(pathToOutputDirectoryParent)) [[unlikely]] {
+        // Make sure the output directory exists.
+        if (!std::filesystem::exists(pathToOutputDirectoryParent)) [[unlikely]] {
             return Error(std::format(
-                "expected the specified path output directory \"{}\" to not exist",
+                "expected the specified path output directory \"{}\" to exist",
                 pathToOutputDirectoryParent.string()));
         }
 
-        // Create directory for results.
-        std::filesystem::create_directories(pathToOutputDirectoryParent);
-
-        // Make sure the specified file name is not empty.
-        if (sOutputFileName.empty()) [[unlikely]] {
-            return Error("expected the specified file name to not be empty");
+        // Make sure the specified directory name is not empty.
+        if (sOutputDirectoryName.empty()) [[unlikely]] {
+            return Error("expected the specified directory name to not be empty");
         }
 
-        // Make sure the specified file name is not very long
+        // Make sure the specified directory name is not very long
         // to avoid creating long paths which might be an issue under Windows.
         static constexpr size_t iMaxOutputDirectoryNameLength = 10; // NOLINT
-        if (sOutputFileName.size() > iMaxOutputDirectoryNameLength) [[unlikely]] {
+        if (sOutputDirectoryName.size() > iMaxOutputDirectoryNameLength) [[unlikely]] {
             return Error(std::format(
                 "the specified name \"{}\" is too long (only {} characters allowed)",
-                sOutputFileName,
+                sOutputDirectoryName,
                 iMaxOutputDirectoryNameLength));
         }
 
-        // Make sure the specified file name is valid (A-z, 0-9).
-        for (const auto& character : sOutputFileName) {
+        // Make sure the specified directory name is valid (A-z, 0-9).
+        for (const auto& character : sOutputDirectoryName) {
             const auto iAsciiCode = static_cast<int>(character);
             if (iAsciiCode < 48 || (iAsciiCode > 57 && iAsciiCode < 65) ||               // NOLINT
                 (iAsciiCode > 90 && iAsciiCode < 97) || iAsciiCode > 122) [[unlikely]] { // NOLINT
                 return Error(std::format(
                     "character \"{}\" in the name \"{}\" is forbidden and cannon be used",
                     character,
-                    sOutputFileName));
+                    sOutputDirectoryName));
             }
         }
 
-        // Make sure the specified resulting file does not exists yet.
-        const auto pathToOutputFile =
-            pathToOutputDirectoryParent / (sOutputFileName + ConfigManager::getConfigFormatExtension());
-        if (std::filesystem::exists(pathToOutputFile)) [[unlikely]] {
-            return Error(
-                std::format("expected the resulting file \"{}\" to not exist", pathToOutputFile.string()));
+        // Make sure the specified resulting directory does not exists yet.
+        const auto pathToOutputDirectory = pathToOutputDirectoryParent / sOutputDirectoryName;
+        const auto pathToOutputFile = pathToOutputDirectoryParent / sOutputDirectoryName /
+                                      (sOutputDirectoryName + ConfigManager::getConfigFormatExtension());
+        if (std::filesystem::exists(pathToOutputDirectory)) [[unlikely]] {
+            return Error(std::format(
+                "expected the resulting directory \"{}\" to not exist", pathToOutputDirectory.string()));
         }
 
-        // Make sure the file has ".GLTF" or ".GLB" extension.
-        if (pathToFile.extension() != ".GLTF" && pathToFile.extension() != ".gltf" &&
-            pathToFile.extension() != ".GLB" && pathToFile.extension() != ".glb") [[unlikely]] {
-            return Error(std::format(
-                "only GLTF/GLB file extension is supported for mesh import, the path \"{}\" points to a "
-                "non-GLTF file",
-                pathToFile.string()));
-        }
+        // Create resulting directory.
+        std::filesystem::create_directory(pathToOutputDirectory);
 
         // See if we have a binary GTLF file or not.
         bool bIsGlb = false;
@@ -591,7 +592,7 @@ namespace ne {
                 model.nodes[iNode],
                 model,
                 pathToOutputFile,
-                sPathToOutputDirRelativeRes,
+                sPathToOutputDirRelativeRes + "/" + sOutputDirectoryName,
                 &*pSceneRootNode,
                 onProgress,
                 iTotalNodeProcessedCount);

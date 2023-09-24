@@ -2106,6 +2106,68 @@ If you compile your project after adding a new external dependency and the compi
 
 this is because you forgot to tell the reflection generator about some directory of your external dependency.
 
+# Importing custom meshes
+
+Generally you would import meshes using the editor but we will show how to do it in C++.
+
+Note
+> We only support import from GLTF/GLB format.
+
+In order to import your file you need to use `MeshImporter` like so:
+
+```Cpp
+#include "io/MeshImporter.h"
+
+using namespace ne;
+
+auto optionalError = MeshImporter::importMesh(
+    "C:\\models\\DamagedHelmet.glb",       // importing GLB as an example, you can import GLTF in the same way
+    "game/models",                         // path to the output directory relative `res` (should exist)
+    "helmet",                              // name of the new directory that will be created (should not exist yet)
+    [](float percent, const std::string& sState) {
+        Logger::get().info(std::format("importing model {}%: {}", percent, sState));
+    });
+if (optionalError.has_value()) [[unlikely]] {
+    // ... process error ...
+}
+```
+
+If the import process went without errors you can then find your imported model in form of a node tree inside of the resulting directory. You can then deserialize that node tree and use it in your game using the following code:
+
+```Cpp
+// Deserialize node tree.
+auto result = Node::deserializeNodeTree(
+    ProjectPaths::getPathToResDirectory(ResourceDirectory::ROOT) / "game/models/helmet/helmet.toml");
+if (std::holds_alternative<Error>(result)) {
+    // ... process errorr ...
+}
+auto pImportedRootNode = std::get<gc<Node>>(std::move(result));
+
+// Spawn node tree.
+getWorldRootNode()->addChildNode(pImportedRootNode);
+```
+
+## Configuring export settings for your mesh in Blender
+
+Usually the only thing that you need to do is to untick the "+Y up" checkbox in "Transform" section (since we use +Z as our UP axis).
+
+# Procedurally generating meshes
+
+The most simple example of procedurally generated geometry is the following:
+
+```Cpp
+#include "misc/PrimitiveMeshGenerator.h"
+
+using namespace ne;
+
+// Spawn procedural cube mesh.
+const auto pMeshNode = gc_new<MeshNode>();
+pMeshNode->setMeshData(PrimitiveMeshGenerator::createCube(1.0F));
+getWorldRootNode()->addChildNode(pMeshNode);
+```
+
+If you would look into how `PrimitiveMeshGenerator::createCube` is implemented you would see that it just constructs a `MeshData` by filling all positions, normals, UVs, etc. In the same way you can create a procedural mesh by constructing a `MeshData` object. After we assigned a new mesh data to our mesh node we can set materials and shaders to it.
+
 # Working with materials
 
 ## Working with materials in C++
@@ -2346,14 +2408,6 @@ addDeferredTask([this, iNodeId](){ // capturing `this` to use `Node` (self) func
 });
 ```
 
-# Writing custom shaders
-
-You might have heard the term "shader" from other games or game engines but if you have very little understanding in what a shader is, here is a very small description:
-> A shader is a small program (a function or a bunch of functions) written in a special shader language (like programming languages) that are executed on the GPU (unlike our C++ programs that are executed on the CPU). There are various types of shaders that are used for different tasks. For example there is a pixel/fragment shader - a function (that might call other functions) that calculates a color of a pixel that will be displayed on your monitor, this shader uses a bunch of data like to whom this pixel belongs (which mesh and which material uses the mesh), lighting information and etc. A material is a high-level abstraction of a shader, material allows modifying some values like diffuse texture/color that material then passes to the pixel/fragment shader to consider.
-
-Note: currently we are looking for a solution that will make writing custom shaders easier but right now writing custom shaders is not that simple:
-> Right now if you want to go beyond what Material provides to you and achieve some special look of your meshes you would have to write shaders in both HLSL and GLSL if you want your game to support both DirectX and Vulkan renderers that we have because each graphics API (like DirectX or Vulkan) has its own shading language. If you know that you don't want Vulkan support and don't care about Linux and other non-Windows platforms then you might just write a shader in HLSL and ignore GLSL, this would mean that any attempt to run your game using Vulkan renderer will fail with an error.
-
 # Frame statistics
 
 If you want to know your game's FPS you can use `Renderer::getFramesPerSecond`. For example, you can display the FPS on your game's UI for debugging purposes:
@@ -2462,6 +2516,193 @@ That's it! Your game is ready to be distributed. You can archive the directory w
 At the time of writing this there is no compression/encryption of the game's resources. All game's resources are distributed as-is.
 
 # Advanced topics
+
+## Writing custom shaders
+
+This section expects that you have knowledge in writing programs in HLSL and/or GLSL.
+
+You might have heard the term "shader" from other games or game engines but if you have very little understanding in what a shader is, here is a very small description:
+> A shader is a small program (a function or a bunch of functions) written in a special shader language (like programming languages) that are executed on the GPU (unlike our C++ programs that are executed on the CPU). There are various types of shaders that are used for different tasks. For example there is a pixel/fragment shader - a function (that might call other functions) that calculates a color of a pixel that will be displayed on your monitor, this shader uses a bunch of data like to whom this pixel belongs (which mesh and which material uses the mesh), lighting information and etc. A material is a high-level abstraction of a shader, material allows modifying some values like diffuse texture/color that material then passes to the pixel/fragment shader to consider.
+
+Note: currently we are looking for a solution that will make writing custom shaders easier but right now writing custom shaders is not that simple:
+> Right now if you want to go beyond what Material provides to you and achieve some special look of your meshes you would have to write shaders in both HLSL and GLSL if you want your game to support both DirectX and Vulkan renderers that we have because each graphics API (like DirectX or Vulkan) has its own shading language. If you know that you don't want Vulkan support and don't care about Linux and other non-Windows platforms then you might just write a shader in HLSL and ignore GLSL, this would mean that any attempt to run your game using Vulkan renderer will fail with an error.
+
+Here are the steps to create a new custom shader:
+
+1. Create a new shader file somewhere in the `res` directory, for example: `res/game/shaders/hlsl/Custom.hlsl`.
+2. `#include` an engine shader file that you shader "derives" from. For example if you want to create a custom shader for `MeshNode` you need to include `MeshNode.hlsl`. For example: `#include "../../../engine/shaders/hlsl/MeshNode.hlsl`.
+    2. 1. For GLSL you need to include shader files that end with `.glsl`, for example: `#include "MeshNode.frag.glsl"`.
+3. Define vertex/pixel shader functions, you can copy-paste their signature from the included engine shader file, they may be named as `vsMeshNode`, `psMeshNode` or `fsMeshNode`.
+4. As the first line of your shader function call a function from the included engine shader for your shader stage (vertex/pixel/fragment), again it may be named as `vsMeshNode`, `psMeshNode` or `fsMeshNode`, and pass any input parameters if your function has them.
+5. Modify resulting data as you want.
+
+In order to compile your shader you need to use the `ShaderManager` object, here is an example how to do it using HLSL shaders:
+
+```Cpp
+#include "materials/ShaderManager.h"
+
+using namespace ne;
+
+void MyGameInstance::onGameStarted(){
+    const auto vertexShader = ShaderDescription(
+        "game.custom.vs",                    // global unique shader name
+        "res/game/shaders/hlsl/Custom.hlsl", // path to shader file
+        ShaderType::VERTEX_SHADER,           // shader type
+        "vsDefault",                         // shader entry function name
+        {});                                 // custom defined shader macros (don't define macros for engine shader files as 
+                                             // they will be automatically defined when needed)
+
+    const auto pixelShader = ShaderDescription(
+        "game.custom.ps",                    // global unique shader name
+        "res/game/shaders/hlsl/Custom.hlsl", // path to shader file
+        ShaderType::PIXEL_SHADER,            // shader type
+        "psDefault",                         // shader entry function name
+        {});                                 // custom defined shader macros (don't define macros for engine shader files as 
+                                             // they will be automatically defined when needed)
+
+    std::vector vShaders = {vertexShader, pixelShader};
+
+    auto onProgress = [](size_t iCompiledShaderCount, size_t iTotalShadersToCompile) {
+        // show progress here
+    };
+    auto onError = [](ShaderDescription shaderDescription, std::variant<std::string, Error> error) {
+        if (std::holds_alternative<std::string>(error)){
+            // shader compilation error
+        }else{
+            // internal error
+        }
+    }
+    auto onCompleted = []() {
+        // do final logic here
+    };
+
+    // shader compilation is done using multiple threads via a thread pool
+    getWindow()->getRenderer()->getShaderManager()->compileShaders(
+        vShaders,
+        onProgress,
+        onError,
+        onCompleted
+    );
+}
+```
+
+For GLSL you would do the same thing (`ShaderType::PIXEL_SHADER` is considered as "fragment shader" when compiling GLSL shaders).
+
+You should not remove the code to compile your shaders (`ShaderManager::compileShaders`) from your game. This code not only compiles the shaders but also adds them to the global "shader registry". If some shader was previously compiled then this means that the results of that compilation were cached and the next time you will call `compileShaders` instead of compiling it again the results will be retrived from the cache. If you change your shader code or something else the cache might be automatically invalidated (inside `ShaderManager::compileShaders`) and your shader will be automatically recompiled so if you do any changes in the shader file (or in any files that your shader includes) you just need to restart the game to see your changes.
+
+Please note:
+> If you got an idea of displaying a splash screen using a separate `GameInstance` (before starting your game's `GameInstance`) in order to compile your shaders inside of that splash screen game instance it would be a bad idea because `compileShaders` will be called twice (inside of your splash screen game instance and inside of your game's game instance) which means that even if no shader was changed the shader cache will be checked twice which might take some time if you have lots of shaders.
+
+### Debugging custom shaders
+
+You can use your usual shader debugging software (`PIX`, `RenderDoc`, etc.) to debug your custom shaders. Just make sure your game is built in `Debug` mode.
+
+### Using custom shader resources
+
+Let's consider a simple example of passing a buffer from C++ into your custom shader which looks like this:
+
+```HLSL
+#include "../../../engine/shaders/hlsl/MeshNode.hlsl"
+
+cbuffer customData : register(b1) // using a random free register index/space (you can use different)
+{
+    float4x4 somematrix;
+    // don't forget to pad to 4 floats (if needed)
+};
+
+VertexOut vsCustomMeshNode(VertexIn vertexIn){
+    return vsMeshNode(vertexIn);
+}
+
+float4 psCustomMeshNode(VertexOut pin) : SV_Target{
+    return psMeshNode(pin);
+}
+```
+
+```GLSL
+#include "../../../engine/shaders/glsl/MeshNode.frag.glsl"
+
+#additional_push_constants
+{
+	uint customData; // named as your `readonly buffer`, specified internally
+}
+
+struct CustomData {
+    mat4 somematrix; 
+};
+layout(std140, binding = 9) readonly buffer CustomDataBuffer{ // using a random free binding index (you can use different)
+    CustomData array[];
+} customData;
+
+void main() {
+    fsMeshNode();
+
+    // Access our matrix.
+    glm::mat4x4 myMatrix = array[arrayIndices.customData];
+}
+```
+
+Then in C++:
+
+```Cpp
+#include "materials/VulkanAlignmentConstants.hpp"
+#include "math/GLMath.hpp"
+
+using namespace ne;
+
+struct CustomMeshShaderConstants {
+    alignas(iVkMat4Alignment) glm::mat4x4 somematrix = glm::identity<glm::mat4x4>();
+    // don't forget to add padding to 4 floats (if needed) for HLSL packing rules
+};
+
+// using mutex for example purposes, you are not required to use mutex here
+std::pair<std::recursive_mutex, CustomMeshShaderConstants> mtxShaderData;
+```
+
+As you can see we use `alignas` for Vulkan aligning requirements and at the same time keep track of HLSL packing rules. If you only want to stick with some specific shading language (only GLSL or only HLSL) then you just need to keep track of your language specific packing rules.
+
+Then let's tell the engine how to use pass your buffer to shaders:
+
+```Cpp
+void CustomMeshNode::onSpawning(){
+    SpatialNode::onSpawning();
+
+    setShaderCpuWriteResourceBindingData( // please call this function only in `onSpawning`
+        "customData",                     // name of the resource written in your shader file
+        sizeof(CustomMeshShaderConstants),
+        [this]() -> void* { return onStartedUpdatingShaderConstants(); },
+        [this]() { onFinishedUpdatingShaderConstants(); }
+    );
+}
+```
+
+Then implement "updating" functions that will be automatically called by the engine when it needs to copy our data from RAM to VRAM:
+
+```Cpp
+void* CustomMeshNode::onStartedUpdatingShaderConstants() {
+    mtxShaderData.first.lock();  // don't unlock yet
+    return &mtxShaderData.second;
+}
+
+void CustomMeshNode::onFinishedUpdatingShaderConstants() {
+    mtxShaderData.first.unlock(); // copying is finished
+}
+```
+
+Then in any place of your custom mesh node (even when it's not spawned yet) when you need to copy your data to shaders:
+
+```Cpp
+void CustomMeshNode::onSomeEvent() {
+    // Update our data.
+    std::scoped_lock guard(mtxShaderData.first);
+    mtxShaderData.second.somematrix = getSomeMatrix();
+
+    // Mark resource as "needs update".
+    markShaderCpuWriteResourceAsNeedsUpdate("customData");
+}
+```
+
+If you assigned your custom shaders to the material of your `CustomMeshNode` than we don't need to do anything else.
 
 ## Adding support for new types for serialization/deserialization
 

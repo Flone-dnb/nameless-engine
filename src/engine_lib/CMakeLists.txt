@@ -171,6 +171,8 @@ set(PROJECT_SOURCES
     private/misc/FileDialog.cpp
     public/misc/FileDialog.h
     public/misc/Profiler.hpp
+    private/misc/AABB.cpp
+    public/misc/AABB.h
     private/materials/ShaderPack.h
     private/materials/ShaderPack.cpp
     private/materials/ShaderMacro.h

@@ -23,6 +23,7 @@ namespace ne {
     class ShaderConfiguration;
     class RenderSettings;
     class CameraProperties;
+    struct AABB;
 
     /** Defines a base class for renderers to implement. */
     class Renderer {
@@ -89,6 +90,17 @@ namespace ne {
          * @return Time in milliseconds.
          */
         float getTimeSpentLastFrameWaitingForGpu() const;
+
+#if defined(DEBUG)
+        /**
+         * Returns time in milliseconds that was spent last frame doing frustum culling.
+         *
+         * @remark This function is only available in DEBUG builds.
+         *
+         * @return Time in milliseconds.
+         */
+        float getDebugTimeSpentLastFrameOnFrustumCulling() const;
+#endif
 
         /**
          * Looks for video adapters (GPUs) that support this renderer.
@@ -334,8 +346,11 @@ namespace ne {
          *
          * @remark Must be called by derived renderers as the last function in `drawNextFrame`
          * to notify the renderer to calculate some frame-related statistics.
+         *
+         * @param timeSpentOnFrustumCullingInMs Time (in milliseconds) that was spent on frustum culling
+         * in total. Ignored in RELEASE builds.
          */
-        void calculateFrameStatistics();
+        void calculateFrameStatistics(float timeSpentOnFrustumCullingInMs);
 
         /**
          * Sets `nullptr` to resource manager's unique ptr to force destroy it (if exists).
@@ -478,6 +493,25 @@ namespace ne {
             CameraProperties* pCameraProperties);
 
         /**
+         * Tests whether the specified axis-aligned bounding box is inside/intersects a frustum.
+         *
+         * @param pAabb                Axis-aligned bounding box to test.
+         * @param worldMatrix          AABB's world matrix.
+         * @param viewProjectionMatrix Camera's view and projection matrices multiplied.
+         *
+         * @return `true` if the AABB inside/intersects the specified frustum, `false` otherwise.
+         */
+        bool
+        isAabbInFrustum(AABB* pAabb, const glm::mat4x4& worldMatrix, const glm::mat4x4& viewProjectionMatrix);
+
+        /**
+         * Returns frame constants.
+         *
+         * @return Frame constants.
+         */
+        inline std::pair<std::mutex, FrameConstants>* getFrameConstants() { return &mtxFrameConstants; }
+
+        /**
          * Returns counter for draw calls.
          *
          * @remark Must be used by derived classes to increment draw call counter.
@@ -518,6 +552,15 @@ namespace ne {
              * if constantly zero then this might mean that you are CPU bound.
              */
             float timeSpentLastFrameWaitingForGpuInMs = 0.0F;
+
+#if defined(DEBUG)
+            /**
+             * Total time that was spent last frame doing frustum culling.
+             *
+             * @remark Only available in DEBUG builds.
+             */
+            float debugTimeSpentLastFrameOnFrustumCullingInMs = 0.0F;
+#endif
 
             /** The total number of draw calls made during the last frame. */
             size_t iLastFrameDrawCallCount = 0;

@@ -10,6 +10,7 @@
 #include "materials/resources/ShaderResource.h"
 #include "materials/resources/cpuwrite/ShaderCpuWriteResourceUniquePtr.h"
 #include "materials/VulkanAlignmentConstants.hpp"
+#include "misc/AABB.h"
 
 #include "MeshNode.generated.h"
 
@@ -148,6 +149,18 @@ namespace ne RNAMESPACE() {
         friend class Material;
 
     public:
+        /**
+         * Constants used by shaders.
+         *
+         * @remark Should be exactly the same as constant buffer in shaders.
+         */
+        struct MeshShaderConstants {
+            /** World matrix. */
+            alignas(iVkMat4Alignment) glm::mat4x4 world = glm::identity<glm::mat4x4>();
+
+            // don't forget to add padding to 4 floats (if needed) for HLSL packing rules
+        };
+
         /** Stores internal GPU resources. */
         struct GpuResources {
 
@@ -277,6 +290,25 @@ namespace ne RNAMESPACE() {
         }
 
         /**
+         * Returns shader constants (copied to GPU).
+         *
+         * @remark Changes made this returned object will not be copied to the GPU, this getter
+         * only exists read access.
+         *
+         * @return Mesh constants.
+         */
+        inline std::pair<std::recursive_mutex, MeshShaderConstants>* getMeshShaderConstants() {
+            return &mtxShaderMeshDataConstants;
+        }
+
+        /**
+         * Returns pointer to axis-aligned bounding box of this mesh.
+         *
+         * @return Axis-aligned bounding box.
+         */
+        inline AABB* getAABB() { return &aabb; }
+
+        /**
          * Tells whether this mesh is currently visible or not.
          *
          * @return Whether the mesh is visible or not.
@@ -284,18 +316,6 @@ namespace ne RNAMESPACE() {
         bool isVisible() const;
 
     protected:
-        /**
-         * Constants used by shaders.
-         *
-         * @remark Should be exactly the same as constant buffer in shaders.
-         */
-        struct MeshShaderConstants {
-            /** World matrix. */
-            alignas(iVkMat4Alignment) glm::mat4x4 world = glm::identity<glm::mat4x4>();
-
-            // don't forget to add padding to 4 floats (if needed) for HLSL packing rules
-        };
-
         /**
          * Called after the object was successfully deserialized.
          * Used to execute post-deserialization logic.
@@ -465,6 +485,9 @@ namespace ne RNAMESPACE() {
          */
         RPROPERTY(Serialize(FST_AS_EXTERNAL_BINARY_FILE)) // allow VCSs to treat this file in a special way
         MeshData meshData;
+
+        /** Axis-aligned bounding box for @ref meshData. */
+        AABB aabb;
 
         /** Mutex for @ref meshData. */
         std::recursive_mutex mtxMeshData;

@@ -436,6 +436,11 @@ namespace ne {
         /** Used to prevent tearing when VSync is enabled. */
         UINT iPresentFlags = 0;
 
+#if defined(DEBUG)
+        /** Total time spent last frame on frustum culling (in milliseconds). */
+        float timeSpentLastFrameOnFrustumCullingInMs = 0.0F;
+#endif
+
         /**
          * Whether MSAA enabled and we use @ref pMsaaRenderBuffer as render buffer or not
          * and we use @ref pSwapChain as render buffer.

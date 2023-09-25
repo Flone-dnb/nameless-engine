@@ -65,13 +65,30 @@ namespace ne {
         const auto pWindow = getWindow();
         const auto pRenderer = pWindow->getRenderer();
 
-        // Show FPS in window title.
-        pWindow->setTitle(std::format(
-            "{} (FPS: {}, draw calls: {}, waiting GPU: {:.1F} ms",
+        // Prepare window title to display.
+        std::string sTitleMessage;
+#if defined(DEBUG)
+        sTitleMessage = std::format(
+            "{} FPS: {}, draw calls: {}, frustum culling: {:.1F} ms (~{:.1F}% of frame time), waiting GPU: "
+            "{:.1F} ms",
             pEditorWindowTitle,
             pRenderer->getFramesPerSecond(),
             pRenderer->getLastFrameDrawCallCount(),
-            pRenderer->getTimeSpentLastFrameWaitingForGpu()));
+            pRenderer->getDebugTimeSpentLastFrameOnFrustumCulling(),
+            pRenderer->getDebugTimeSpentLastFrameOnFrustumCulling() /
+                (1000.0F / static_cast<float>(pRenderer->getFramesPerSecond())) * 100.0F,
+            pRenderer->getTimeSpentLastFrameWaitingForGpu());
+#else
+        sTitleMessage = std::format(
+            "{} FPS: {}, draw calls: {}, waiting GPU: {:.1F} ms",
+            pEditorWindowTitle,
+            pRenderer->getFramesPerSecond(),
+            pRenderer->getLastFrameDrawCallCount(),
+            pRenderer->getTimeSpentLastFrameWaitingForGpu());
+#endif
+
+        // Show FPS in window title.
+        pWindow->setTitle(sTitleMessage);
     }
 
     void EditorGameInstance::bindCameraInput() {

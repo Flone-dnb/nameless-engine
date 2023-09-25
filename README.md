@@ -264,12 +264,12 @@ Here is the list of base features that needs to be implemented in order for you 
 - [X] GLTF/GLB import
 - [ ] Rendering (features for both DirectX 12 and Vulkan renderers)
     - [X] Automatically test and pick the most suitable renderer/GPU based on the OS/hardware capabilities/user preferences at runtime
-    - [ ] Forward rendering (temporary)
+    - [X] Forward rendering (temporary)
         - [X] MSAA (Multisample anti-aliasing)
         - [X] Transparent materials
         - [X] Diffuse textures
         - [X] Multiple materials per mesh
-        - [ ] Frustum culling
+        - [X] Simple frustum culling
     - [ ] Forward+ rendering
         - [ ] Transparent materials
         - [ ] AA (Anti-aliasing)
@@ -280,7 +280,7 @@ Here is the list of base features that needs to be implemented in order for you 
             - [ ] Rectangular light
         - [ ] Shadow mapping (for all light sources)
         - [ ] Instancing
-        - [ ] Frustum culling
+        - [ ] Simple frustum culling
         - [ ] Cascading shadow maps
         - [ ] Normal mapping
         - [ ] Cube mapping
@@ -290,8 +290,10 @@ Here is the list of base features that needs to be implemented in order for you 
         - [ ] PBR (Physically based rendering)
         - [ ] HDR (High dynamic range)
         - [ ] Decals
-        - [ ] Transparent objects drawing order fix (either draw back-to-front or use some order-independent method)
+        - [ ] Order independent transparency
+        - [ ] Occlusion culling
         - [ ] Emissive materials
+        - [ ] Space partitionning for frustum culling
     - [ ] Deferred rendering
         - [ ] Transparent materials
         - [ ] AA (Anti-aliasing)
@@ -312,8 +314,10 @@ Here is the list of base features that needs to be implemented in order for you 
         - [ ] PBR (Physically based rendering)
         - [ ] HDR (High dynamic range)
         - [ ] Decals
-        - [ ] Transparent objects drawing order fix (either draw back-to-front or use some order-independent method)
+        - [ ] Order independent transparency
+        - [ ] Occlusion culling
         - [ ] Emissive materials
+        - [ ] Space partitionning for frustum culling
     - [ ] GUI
 - [ ] Skeletal animations
 - [ ] Rewrite garbage collector [tgc2](https://github.com/Flone-dnb/tgc2) (to fix some major issues)

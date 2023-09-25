@@ -784,6 +784,11 @@ namespace ne {
          */
         float timeSpentLastFrameWaitingForImageToBeUnusedInMs = 0.0F;
 
+#if defined(DEBUG)
+        /** Total time spent last frame on frustum culling (in milliseconds). */
+        float timeSpentLastFrameOnFrustumCullingInMs = 0.0F;
+#endif
+
         /** Tells if @ref initializeVulkan was finished successfully or not. */
         bool bIsVulkanInitialized = false;
 

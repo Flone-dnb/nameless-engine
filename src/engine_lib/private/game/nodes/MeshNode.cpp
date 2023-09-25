@@ -482,6 +482,9 @@ namespace ne {
             }
         }
 
+        // Update AABB.
+        aabb = AABB::createFromVertices(meshData.getVertices());
+
         if (!bIsSpawned) {
             // Nothing else to do here.
             return;

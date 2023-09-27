@@ -348,11 +348,16 @@ namespace ne {
         /**
          * Adds draw commands to command list to draw all mesh nodes that use the specified material
          *
+         * @param pActiveCameraProperties    Camera properties of the active camera.
          * @param pMaterial                  Material that mesh nodes use.
          * @param pPipeline                  Current pipeline.
          * @param iCurrentFrameResourceIndex Index of the current frame resource.
          */
-        void drawMeshNodes(Material* pMaterial, DirectXPso* pPipeline, size_t iCurrentFrameResourceIndex);
+        void drawMeshNodes(
+            CameraProperties* pActiveCameraProperties,
+            Material* pMaterial,
+            DirectXPso* pPipeline,
+            size_t iCurrentFrameResourceIndex);
 
         /**
          * Waits until the GPU has completed commands up to the specified fence point.
@@ -435,11 +440,6 @@ namespace ne {
 
         /** Used to prevent tearing when VSync is enabled. */
         UINT iPresentFlags = 0;
-
-#if defined(DEBUG)
-        /** Total time spent last frame on frustum culling (in milliseconds). */
-        float timeSpentLastFrameOnFrustumCullingInMs = 0.0F;
-#endif
 
         /**
          * Whether MSAA enabled and we use @ref pMsaaRenderBuffer as render buffer or not

@@ -171,8 +171,12 @@ set(PROJECT_SOURCES
     private/misc/FileDialog.cpp
     public/misc/FileDialog.h
     public/misc/Profiler.hpp
-    private/misc/AABB.cpp
-    public/misc/AABB.h
+    private/misc/shapes/AABB.cpp
+    public/misc/shapes/AABB.h
+    private/misc/shapes/Frustum.cpp
+    public/misc/shapes/Frustum.h
+    private/misc/shapes/Plane.cpp
+    public/misc/shapes/Plane.h
     private/materials/ShaderPack.h
     private/materials/ShaderPack.cpp
     private/materials/ShaderMacro.h

@@ -148,13 +148,16 @@ namespace ne {
             return;
         }
 
-        // Calculate view matrix.
-        mtxData.second.viewData.viewMatrix = glm::lookAtLH(
-            mtxData.second.viewData.worldLocation,
-            mtxData.second.viewData.targetPointWorldLocation,
-            mtxData.second.viewData.worldUpDirection);
+        auto& viewData = mtxData.second.viewData;
 
-        // Mark view matrix as "updated".
+        // Calculate view matrix.
+        viewData.viewMatrix = glm::lookAtLH(
+            viewData.worldLocation, viewData.targetPointWorldLocation, viewData.worldUpDirection);
+
+        // Since we finished updating view data - recalculate frustum.
+        recalculateFrustum();
+
+        // Mark view data as updated.
         mtxData.second.viewData.bViewMatrixNeedsUpdate = false;
     }
 
@@ -163,35 +166,114 @@ namespace ne {
 
         std::scoped_lock guard(mtxData.first);
 
+        auto& projectionData = mtxData.second.projectionData;
+
         // Make sure that we actually need to recalculate it.
-        if (!mtxData.second.projectionData.bProjectionMatrixNeedsUpdate) {
+        if (!projectionData.bProjectionMatrixNeedsUpdate) {
             return;
         }
 
-        const auto verticalFovInRadians =
-            glm::radians(static_cast<float>(mtxData.second.projectionData.iVerticalFov));
+        const auto verticalFovInRadians = glm::radians(static_cast<float>(projectionData.iVerticalFov));
 
         // Calculate projection matrix.
-        mtxData.second.projectionData.projectionMatrix = glm::perspectiveFovLH(
+        projectionData.projectionMatrix = glm::perspectiveFovLH(
             verticalFovInRadians,
-            static_cast<float>(mtxData.second.projectionData.iRenderTargetWidth),
-            static_cast<float>(mtxData.second.projectionData.iRenderTargetHeight),
-            mtxData.second.projectionData.nearClipPlaneDistance,
-            mtxData.second.projectionData.farClipPlaneDistance);
+            static_cast<float>(projectionData.iRenderTargetWidth),
+            static_cast<float>(projectionData.iRenderTargetHeight),
+            projectionData.nearClipPlaneDistance,
+            projectionData.farClipPlaneDistance);
 
         // Projection window width/height in normalized device coordinates.
         constexpr float projectionWindowDimensionSize = 2.0F; // because view space window is [-1; 1]
 
-        const auto tan = std::tan(0.5F * verticalFovInRadians);
+        const auto tanHalfFov = std::tan(0.5F * verticalFovInRadians);
 
         // Calculate clip planes height.
-        mtxData.second.projectionData.nearClipPlaneHeight =
-            projectionWindowDimensionSize * mtxData.second.projectionData.nearClipPlaneDistance * tan;
-        mtxData.second.projectionData.farClipPlaneHeight =
-            projectionWindowDimensionSize * mtxData.second.projectionData.farClipPlaneDistance * tan;
+        projectionData.nearClipPlaneHeight =
+            projectionWindowDimensionSize * projectionData.nearClipPlaneDistance * tanHalfFov;
+        projectionData.farClipPlaneHeight =
+            projectionWindowDimensionSize * projectionData.farClipPlaneDistance * tanHalfFov;
 
-        // Change flag.
-        mtxData.second.projectionData.bProjectionMatrixNeedsUpdate = false;
+        // Since we finished updating projection data - recalculate frustum.
+        recalculateFrustum();
+
+        // Mark projection data as updated.
+        projectionData.bProjectionMatrixNeedsUpdate = false;
+    }
+
+    void CameraProperties::recalculateFrustum() {
+        PROFILE_FUNC;
+
+        std::scoped_lock guard(mtxData.first);
+
+        // Prepare some variables.
+        auto& viewData = mtxData.second.viewData;
+        auto& projectionData = mtxData.second.projectionData;
+        auto& frustum = mtxData.second.frustum;
+        const auto verticalFovInRadians = glm::radians(static_cast<float>(projectionData.iVerticalFov));
+
+        // Precalculate `tan(fov/2)` because we will need it multiple times.
+        // By using the following rule: tan(X) = opposite side / adjacent side
+        // this value gives us: far clip plane half height / z far
+        //                  /|
+        //                 / |
+        //                /  |  <- camera frustum from side view (not top view)
+        //               /   |
+        // camera:   fov ----- zFar
+        //               \   |
+        //                \  |  <- frustum half height
+        //                 \ |
+        //                  \|
+        const auto tanHalfFov = std::tan(0.5F * verticalFovInRadians);
+        const auto farClipPlaneHalfHeight = projectionData.farClipPlaneDistance * tanHalfFov;
+        const auto farClipPlaneHalfWidth =
+            farClipPlaneHalfHeight * (static_cast<float>(projectionData.iRenderTargetWidth) /
+                                      static_cast<float>(projectionData.iRenderTargetHeight));
+
+        // Prepare some camera directions in world space to recalculate frustum.
+        const auto cameraWorldForward = glm::normalize(
+            mtxData.second.viewData.targetPointWorldLocation - mtxData.second.viewData.worldLocation);
+        const auto cameraWorldRight =
+            glm::normalize(glm::cross(mtxData.second.viewData.worldUpDirection, cameraWorldForward));
+        const auto toFarPlaneRelativeCameraLocation =
+            projectionData.farClipPlaneDistance * cameraWorldForward;
+
+        // Update frustum near face.
+        frustum.nearFace = Plane(
+            cameraWorldForward,
+            viewData.worldLocation + projectionData.nearClipPlaneDistance * cameraWorldForward);
+
+        // Update frustum far face.
+        frustum.farFace =
+            Plane(-cameraWorldForward, viewData.worldLocation + toFarPlaneRelativeCameraLocation);
+
+        // Update frustum right face.
+        frustum.rightFace = Plane(
+            glm::normalize(glm::cross(
+                toFarPlaneRelativeCameraLocation + cameraWorldRight * farClipPlaneHalfWidth,
+                viewData.worldUpDirection)),
+            viewData.worldLocation);
+
+        // Update frustum left face.
+        frustum.leftFace = Plane(
+            glm::normalize(glm::cross(
+                viewData.worldUpDirection,
+                toFarPlaneRelativeCameraLocation - cameraWorldRight * farClipPlaneHalfWidth)),
+            viewData.worldLocation);
+
+        // Update frustum top face.
+        frustum.topFace = Plane(
+            glm::normalize(glm::cross(
+                cameraWorldRight,
+                toFarPlaneRelativeCameraLocation + viewData.worldUpDirection * farClipPlaneHalfHeight)),
+            viewData.worldLocation);
+
+        // Update frustum bottom face.
+        frustum.bottomFace = Plane(
+            glm::normalize(glm::cross(
+                toFarPlaneRelativeCameraLocation - viewData.worldUpDirection * farClipPlaneHalfHeight,
+                cameraWorldRight)),
+            viewData.worldLocation);
     }
 
 } // namespace ne

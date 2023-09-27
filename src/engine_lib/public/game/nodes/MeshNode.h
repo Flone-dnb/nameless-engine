@@ -10,7 +10,7 @@
 #include "materials/resources/ShaderResource.h"
 #include "materials/resources/cpuwrite/ShaderCpuWriteResourceUniquePtr.h"
 #include "materials/VulkanAlignmentConstants.hpp"
-#include "misc/AABB.h"
+#include "misc/shapes/AABB.h"
 
 #include "MeshNode.generated.h"
 

@@ -2325,6 +2325,7 @@ namespace ne {
 
                         // Draw mesh nodes that use this material.
                         drawMeshNodes(
+                            pActiveCameraProperties,
                             pMaterial,
                             pVulkanPipeline,
                             pVulkanCurrentFrameResource->pCommandBuffer,
@@ -2386,6 +2387,7 @@ namespace ne {
     }
 
     void VulkanRenderer::drawMeshNodes(
+        CameraProperties* pActiveCameraProperties,
         Material* pMaterial,
         VulkanPipeline* pPipeline,
         VkCommandBuffer pCommandBuffer,
@@ -2401,7 +2403,6 @@ namespace ne {
         const auto pMtxInternalResources = pPipeline->getInternalResources();
         const auto pMtxMeshNodes = pMaterial->getSpawnedMeshNodesThatUseThisMaterial();
         const auto pDrawCallCounter = getDrawCallCounter();
-        const auto pMtxFrameConstants = getFrameConstants(); // should be updated at this point
 
         // Lock material and pipeline resources.
         std::scoped_lock meshNodesGuard(pMtxMeshNodes->first, pMtxInternalResources->first);
@@ -2412,27 +2413,6 @@ namespace ne {
 
         // Iterate over all visible mesh nodes that use this material.
         for (const auto& [pMeshNode, vIndexBuffers] : pMtxMeshNodes->second.visibleMeshNodes) {
-            // Do frustum culling.
-            using namespace std::chrono;
-#if defined(DEBUG)
-            const auto startTime = steady_clock::now();
-#endif
-            if (!isAabbInFrustum(
-                    pMeshNode->getAABB(),
-                    pMeshNode->getMeshShaderConstants()->second.world,
-                    pMtxFrameConstants->second.viewProjectionMatrix)) {
-                // This mesh is outside of camera's frustum.
-#if defined(DEBUG)
-                timeSpentLastFrameOnFrustumCullingInMs +=
-                    duration<float, milliseconds::period>(steady_clock::now() - startTime).count();
-#endif
-                continue;
-            }
-#if defined(DEBUG)
-            timeSpentLastFrameOnFrustumCullingInMs +=
-                duration<float, milliseconds::period>(steady_clock::now() - startTime).count();
-#endif
-
             // Get mesh data.
             auto pMtxMeshGpuResources = pMeshNode->getMeshGpuResources();
             auto mtxMeshData = pMeshNode->getMeshData();
@@ -2440,6 +2420,20 @@ namespace ne {
             // Note: if you will ever need it - don't lock mesh node's spawning/despawning mutex here
             // as it might cause a deadlock (see MeshNode::setMaterial for example).
             std::scoped_lock geometryGuard(pMtxMeshGpuResources->first, *mtxMeshData.first);
+
+            {
+                // Do frustum culling.
+                const auto pMtxMeshShaderConstants = pMeshNode->getMeshShaderConstants();
+                std::scoped_lock meshConstantsGuard(pMtxMeshShaderConstants->first);
+
+                if (isAabbOutsideCameraFrustum(
+                        pActiveCameraProperties,
+                        *pMeshNode->getAABB(),
+                        pMtxMeshShaderConstants->second.world)) {
+                    // This mesh is outside of camera's frustum.
+                    continue;
+                }
+            }
 
             // Set mesh's shader CPU write resources.
             for (const auto& [sResourceName, pShaderCpuWriteResource] :
@@ -2615,13 +2609,8 @@ namespace ne {
         // Switch to the next semaphores index.
         iCurrentImageSemaphore = (iCurrentImageSemaphore + 1) % vImageSemaphores.size();
 
-#if defined(DEBUG)
         // Calculate frame-related statistics.
-        calculateFrameStatistics(timeSpentLastFrameOnFrustumCullingInMs);
-        timeSpentLastFrameOnFrustumCullingInMs = 0.0F;
-#else
-        calculateFrameStatistics(0.0F);
-#endif
+        calculateFrameStatistics();
 
         return {};
     }

@@ -7,6 +7,7 @@
 // Custom.
 #include "math/GLMath.hpp"
 #include "misc/Globals.h"
+#include "misc/shapes/Frustum.h"
 
 namespace ne {
     /** Defines how camera can move and rotate. */
@@ -116,6 +117,9 @@ namespace ne {
              * matrix.
              */
             ProjectionData projectionData;
+
+            /** Camera's frustum. */
+            Frustum frustum;
 
             /** Defines how camera can move and rotate. */
             CameraMode currentCameraMode = CameraMode::FREE;
@@ -229,6 +233,21 @@ namespace ne {
          */
         glm::mat4x4 getProjectionMatrix();
 
+        /**
+         * Returns camera's frustum for fast read-only access.
+         *
+         * @warning Returned frustum may be outdated (does not include changes made during the last frame),
+         * generally you would use this function when you know that frustum is updated (contains latest
+         * changes), if not sure call @ref getViewMatrix or @ref getProjectionMatrix that will make sure
+         * frustum is updated but since you would call a different function this might have a small
+         * performance penalty.
+         *
+         * @remark Do not delete (free) returned pointer.
+         *
+         * @return Camera's frustum.
+         */
+        inline Frustum* getCameraFrustum() { return &mtxData.second.frustum; }
+
     private:
         /**
          * Recalculates camera's view matrix if it needs to be updated.
@@ -238,11 +257,18 @@ namespace ne {
         void makeSureViewMatrixIsUpToDate();
 
         /**
-         * Recalculates camera's projection matrix and clip plane heights if it needs to be updated.
+         * Recalculates camera's projection matrix and clip plane heights if they need to be updated.
          *
-         * @remark This function can ignore the call if there's no need to recalculate projection matrix.
+         * @remark This function can ignore the call if there's no need to recalculate this data.
          */
         void makeSureProjectionMatrixAndClipPlanesAreUpToDate();
+
+        /**
+         * Recalculates camera's frustum.
+         *
+         * @remark Called after view or projection data is updated.
+         */
+        void recalculateFrustum();
 
         /** Internal properties. */
         std::pair<std::recursive_mutex, Data> mtxData{};

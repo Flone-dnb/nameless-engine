@@ -15,6 +15,8 @@
 #include "render/general/resources/GpuResourceManager.h"
 #include "render/general/resources/FrameResourcesManager.h"
 #include "render/RenderSettings.h"
+#include "game/camera/CameraProperties.h"
+#include "misc/shapes/AABB.h"
 
 namespace ne {
     class GameManager;
@@ -22,8 +24,6 @@ namespace ne {
     class PipelineManager;
     class ShaderConfiguration;
     class RenderSettings;
-    class CameraProperties;
-    struct AABB;
 
     /** Defines a base class for renderers to implement. */
     class Renderer {
@@ -91,16 +91,20 @@ namespace ne {
          */
         float getTimeSpentLastFrameWaitingForGpu() const;
 
-#if defined(DEBUG)
         /**
          * Returns time in milliseconds that was spent last frame doing frustum culling.
          *
-         * @remark This function is only available in DEBUG builds.
-         *
          * @return Time in milliseconds.
          */
-        float getDebugTimeSpentLastFrameOnFrustumCulling() const;
-#endif
+        float getTimeSpentLastFrameOnFrustumCulling() const;
+
+        /**
+         * Returns the total number of objects (draw entities) that were discarded from submitting to
+         * rendering during the last frame.
+         *
+         * @return Object count.
+         */
+        size_t getLastFrameCulledObjectCount() const;
 
         /**
          * Looks for video adapters (GPUs) that support this renderer.
@@ -346,11 +350,8 @@ namespace ne {
          *
          * @remark Must be called by derived renderers as the last function in `drawNextFrame`
          * to notify the renderer to calculate some frame-related statistics.
-         *
-         * @param timeSpentOnFrustumCullingInMs Time (in milliseconds) that was spent on frustum culling
-         * in total. Ignored in RELEASE builds.
          */
-        void calculateFrameStatistics(float timeSpentOnFrustumCullingInMs);
+        void calculateFrameStatistics();
 
         /**
          * Sets `nullptr` to resource manager's unique ptr to force destroy it (if exists).
@@ -493,18 +494,6 @@ namespace ne {
             CameraProperties* pCameraProperties);
 
         /**
-         * Tests whether the specified axis-aligned bounding box is inside/intersects a frustum.
-         *
-         * @param pAabb                Axis-aligned bounding box to test.
-         * @param worldMatrix          AABB's world matrix.
-         * @param viewProjectionMatrix Camera's view and projection matrices multiplied.
-         *
-         * @return `true` if the AABB inside/intersects the specified frustum, `false` otherwise.
-         */
-        bool
-        isAabbInFrustum(AABB* pAabb, const glm::mat4x4& worldMatrix, const glm::mat4x4& viewProjectionMatrix);
-
-        /**
          * Returns frame constants.
          *
          * @return Frame constants.
@@ -516,9 +505,43 @@ namespace ne {
          *
          * @remark Must be used by derived classes to increment draw call counter.
          *
+         * @remark Automatically resets in @ref calculateFrameStatistics.
+         *
          * @return Draw call counter.
          */
         size_t* getDrawCallCounter();
+
+        /**
+         * Tests frustum culling on the specified AABB.
+         *
+         * @warning Expects that camera's frustum is updated (contains up to date data).
+         *
+         * @param pActiveCameraProperties Camera properties of the active camera.
+         * @param aabb                    AABB in model space.
+         * @param worldMatrix             Matrix that transforms AABB to world space.
+         *
+         * @return `true` if this AABB is outside of camera's frustum and it the object should not be
+         * rendered, `false` otherwise.
+         */
+        inline bool isAabbOutsideCameraFrustum(
+            CameraProperties* pActiveCameraProperties, const AABB& aabb, const glm::mat4x4& worldMatrix) {
+            using namespace std::chrono;
+
+            const auto startFrustumCullingTime = steady_clock::now();
+
+            // (camera's frustum should be updated at this point)
+            const auto bIsVisible =
+                pActiveCameraProperties->getCameraFrustum()->isAabbInFrustum(aabb, worldMatrix);
+
+            // Increment total time spent in frustum culling.
+            accumulatedTimeSpentLastFrameOnFrustumCullingInMs +=
+                duration<float, milliseconds::period>(steady_clock::now() - startFrustumCullingTime).count();
+
+            // Increment culled object count.
+            iLastFrameCulledObjectCount += static_cast<size_t>(!bIsVisible);
+
+            return !bIsVisible;
+        }
 
     private:
         /** Groups variables used to calculate frame-related statistics. */
@@ -553,14 +576,19 @@ namespace ne {
              */
             float timeSpentLastFrameWaitingForGpuInMs = 0.0F;
 
-#if defined(DEBUG)
             /**
              * Total time that was spent last frame doing frustum culling.
              *
-             * @remark Only available in DEBUG builds.
+             * @remark Updated only after a frame is submitted.
              */
-            float debugTimeSpentLastFrameOnFrustumCullingInMs = 0.0F;
-#endif
+            float timeSpentLastFrameOnFrustumCullingInMs = 0.0F;
+
+            /**
+             * Total number of objects (draw entries) discarded from submitting due to frustum culling.
+             *
+             * @remark Updated only after a frame is submitted.
+             */
+            size_t iLastFrameCulledObjectCount = 0;
 
             /** The total number of draw calls made during the last frame. */
             size_t iLastFrameDrawCallCount = 0;
@@ -664,6 +692,20 @@ namespace ne {
          * Must be used with mutex.
          */
         std::pair<std::recursive_mutex, std::shared_ptr<RenderSettings>> mtxRenderSettings;
+
+        /**
+         * Time in milliseconds spent last frame on frustum culling.
+         *
+         * @remark Accumulated in @ref isAabbOutsideCameraFrustum.
+         */
+        float accumulatedTimeSpentLastFrameOnFrustumCullingInMs = 0.0F;
+
+        /**
+         * Total number of objects (draw entries) discarded from submitting due to frustum culling.
+         *
+         * @remark Incremented in @ref isAabbOutsideCameraFrustum.
+         */
+        size_t iLastFrameCulledObjectCount = 0;
 
         /** Stores the total number of draw calls made last frame. */
         size_t iLastFrameDrawCallCount = 0;

@@ -636,12 +636,14 @@ namespace ne {
         /**
          * Adds draw commands to command buffer to draw all mesh nodes that use the specified material
          *
+         * @param pActiveCameraProperties    Camera properties of the active camera.
          * @param pMaterial                  Material that mesh nodes use.
          * @param pPipeline                  Pipeline that the material uses.
          * @param pCommandBuffer             Command buffer to add commands to.
          * @param iCurrentFrameResourceIndex Index of the current frame resource.
          */
         void drawMeshNodes(
+            CameraProperties* pActiveCameraProperties,
             Material* pMaterial,
             VulkanPipeline* pPipeline,
             VkCommandBuffer pCommandBuffer,
@@ -783,11 +785,6 @@ namespace ne {
          * no longer used by a frame resource that previously used it.
          */
         float timeSpentLastFrameWaitingForImageToBeUnusedInMs = 0.0F;
-
-#if defined(DEBUG)
-        /** Total time spent last frame on frustum culling (in milliseconds). */
-        float timeSpentLastFrameOnFrustumCullingInMs = 0.0F;
-#endif
 
         /** Tells if @ref initializeVulkan was finished successfully or not. */
         bool bIsVulkanInitialized = false;

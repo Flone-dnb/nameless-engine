@@ -13,9 +13,7 @@
 #include "materials/ShaderMacro.h"
 #include "render/general/pipeline/PipelineManager.h"
 #include "render/vulkan/VulkanRenderer.h"
-#include "game/camera/CameraProperties.h"
 #include "misc/Profiler.hpp"
-#include "misc/AABB.h"
 #if defined(WIN32)
 #pragma comment(lib, "Winmm.lib")
 #include "render/directx/DirectXRenderer.h"
@@ -135,15 +133,18 @@ namespace ne {
             0, &mtxFrameConstants.second, sizeof(mtxFrameConstants.second));
     }
 
-    void Renderer::calculateFrameStatistics(float timeSpentOnFrustumCullingInMs) {
+    void Renderer::calculateFrameStatistics() {
         PROFILE_FUNC;
 
         using namespace std::chrono;
 
-#if defined(DEBUG)
         // Save time spent on frustum culling.
-        frameStats.debugTimeSpentLastFrameOnFrustumCullingInMs = timeSpentOnFrustumCullingInMs;
-#endif
+        frameStats.timeSpentLastFrameOnFrustumCullingInMs = accumulatedTimeSpentLastFrameOnFrustumCullingInMs;
+        accumulatedTimeSpentLastFrameOnFrustumCullingInMs = 0.0F; // reset accumulated time
+
+        // Save culled object count.
+        frameStats.iLastFrameCulledObjectCount = iLastFrameCulledObjectCount;
+        iLastFrameCulledObjectCount = 0;
 
         // Save draw call count.
         frameStats.iLastFrameDrawCallCount = iLastFrameDrawCallCount;
@@ -438,11 +439,11 @@ namespace ne {
                getAdditionalTimeSpentLastFrameWaitingForGpu();
     }
 
-#if defined(DEBUG)
-    float Renderer::getDebugTimeSpentLastFrameOnFrustumCulling() const {
-        return frameStats.debugTimeSpentLastFrameOnFrustumCullingInMs;
+    float Renderer::getTimeSpentLastFrameOnFrustumCulling() const {
+        return frameStats.timeSpentLastFrameOnFrustumCullingInMs;
     }
-#endif
+
+    size_t Renderer::getLastFrameCulledObjectCount() const { return frameStats.iLastFrameCulledObjectCount; }
 
     std::pair<std::recursive_mutex, std::shared_ptr<RenderSettings>>* Renderer::getRenderSettings() {
         return &mtxRenderSettings;
@@ -678,48 +679,6 @@ namespace ne {
         // Update shader CPU write resources marked as "needs update".
         getShaderCpuWriteResourceManager()->updateResources(
             pMtxCurrentFrameResource->second.iCurrentFrameResourceIndex);
-    }
-
-    bool Renderer::isAabbInFrustum(
-        AABB* pAabb, const glm::mat4x4& worldMatrix, const glm::mat4x4& viewProjectionMatrix) {
-        // Prepare AABB corner points.
-        const std::array<glm::vec4, 8> vAabbPoints = {
-            // Lower AABB corner points:
-            glm::vec4(pAabb->min.x, pAabb->min.y, pAabb->min.z, 1.0F),
-            glm::vec4(pAabb->max.x, pAabb->min.y, pAabb->min.z, 1.0F),
-            glm::vec4(pAabb->min.x, pAabb->max.y, pAabb->min.z, 1.0F),
-            glm::vec4(pAabb->max.x, pAabb->max.y, pAabb->min.z, 1.0F),
-            // Upper AABB corner points:
-            glm::vec4(pAabb->min.x, pAabb->min.y, pAabb->max.z, 1.0F),
-            glm::vec4(pAabb->max.x, pAabb->min.y, pAabb->max.z, 1.0F),
-            glm::vec4(pAabb->min.x, pAabb->max.y, pAabb->max.z, 1.0F),
-            glm::vec4(pAabb->max.x, pAabb->max.y, pAabb->max.z, 1.0F),
-        };
-
-        // Prepare some variables.
-        const auto worldViewProjectionMatrix = viewProjectionMatrix * worldMatrix;
-        bool bVisible = false;
-
-        // Prepare a helper lambda to simplify our code below.
-        const auto within = [](float min, float x, float max) -> bool { return min <= x && x <= max; };
-
-        // Do a very basic frustum AABB intersection test:
-        for (const auto& aabbPoint : vAabbPoints) {
-            // Transform AABB corner point to clip space.
-            const auto pointClipSpace = worldViewProjectionMatrix * aabbPoint;
-
-            // Compare this point against clip space bounds.
-            // Since clip space is a volume where a point (x, y, z) belongs to this volume only if:
-            // -W <= X <= W
-            // -W <= Y <= W
-            //  0 <= Z <= W
-            // we do these 3 checks below to see if this point will be located in our clip space or not.
-            bVisible = bVisible || (within(-pointClipSpace.w, pointClipSpace.x, pointClipSpace.w) &&
-                                    within(-pointClipSpace.w, pointClipSpace.y, pointClipSpace.w) &&
-                                    within(0.0F, pointClipSpace.z, pointClipSpace.w));
-        }
-
-        return bVisible;
     }
 
     size_t* Renderer::getDrawCallCounter() { return &iLastFrameDrawCallCount; }

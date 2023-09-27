@@ -897,3 +897,78 @@ TEST_CASE("check draw call count with invisibility") {
     REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
     REQUIRE(Material::getCurrentAliveMaterialCount() == 0);
 }
+
+TEST_CASE("check draw call count with frustum culling") {
+    using namespace ne;
+
+    class TestGameInstance : public GameInstance {
+    public:
+        TestGameInstance(Window* pGameWindow, GameManager* pGame, InputManager* pInputManager)
+            : GameInstance(pGameWindow, pGame, pInputManager) {}
+        virtual void onGameStarted() override {
+            createWorld([&](const std::optional<Error>& optionalWorldError) {
+                if (optionalWorldError.has_value()) {
+                    auto error = optionalWorldError.value();
+                    error.addCurrentLocationToErrorStack();
+                    INFO(error.getFullErrorMessage());
+                    REQUIRE(false);
+                }
+
+                // Create and setup camera.
+                pCamera = std::make_shared<TransientCamera>();
+                pCamera->setLocation(glm::vec3(-1.0F, 0.0F, 0.0F));
+
+                // Make it active.
+                getCameraManager()->setActiveCamera(pCamera);
+
+                // Spawn sample mesh.
+                const auto pMeshNode = gc_new<MeshNode>();
+                pMeshNode->setMeshData(PrimitiveMeshGenerator::createCube(1.0F));
+                getWorldRootNode()->addChildNode(pMeshNode);
+                pMeshNode->setWorldLocation(glm::vec3(1.0F, 0.0F, 0.0F));
+
+                iFrameCount = 0;
+            });
+        }
+        virtual ~TestGameInstance() override {}
+
+        virtual void onBeforeNewFrame(float delta) override {
+            iFrameCount += 1;
+
+            const auto pRenderer = getWindow()->getRenderer();
+
+            if (iFrameCount == 2) {
+                REQUIRE(pRenderer->getLastFrameDrawCallCount() == 1);
+                REQUIRE(pRenderer->getLastFrameCulledObjectCount() == 0);
+
+                // Rotate the camera 180 degrees.
+                pCamera->setFreeCameraRotation(glm::vec3(0.0F, 0.0F, 180.0F));
+            }
+
+            if (iFrameCount == 3) {
+                REQUIRE(pRenderer->getLastFrameDrawCallCount() == 0);
+                REQUIRE(pRenderer->getLastFrameCulledObjectCount() == 1);
+
+                getWindow()->close();
+            }
+        }
+
+    private:
+        size_t iFrameCount = 0;
+        std::shared_ptr<TransientCamera> pCamera;
+    };
+
+    auto result = Window::getBuilder().withVisibility(false).build();
+    if (std::holds_alternative<Error>(result)) {
+        Error error = std::get<Error>(std::move(result));
+        error.addCurrentLocationToErrorStack();
+        INFO(error.getFullErrorMessage());
+        REQUIRE(false);
+    }
+
+    const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
+    pMainWindow->processEvents<TestGameInstance>();
+
+    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+    REQUIRE(Material::getCurrentAliveMaterialCount() == 0);
+}

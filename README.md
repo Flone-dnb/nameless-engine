@@ -280,7 +280,7 @@ Here is the list of base features that needs to be implemented in order for you 
             - [ ] Rectangular light
         - [ ] Shadow mapping (for all light sources)
         - [ ] Instancing
-        - [ ] Simple frustum culling
+        - [ ] Frustum culling
         - [ ] Cascading shadow maps
         - [ ] Normal mapping
         - [ ] Cube mapping

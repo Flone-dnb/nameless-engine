@@ -138,8 +138,7 @@ namespace ne {
         }
 
         // Generate mip levels.
-        static constexpr CMP_INT iMinMipLevelResolutionInPixels = 32; // NOLINT
-        CMP_GenerateMIPLevels(&sourceTextureMipSet, iMinMipLevelResolutionInPixels);
+        CMP_GenerateMIPLevels(&sourceTextureMipSet, 1);
 
         // Prepare compression options.
         KernelOptions kernelOptions;

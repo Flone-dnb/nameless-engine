@@ -483,7 +483,6 @@ namespace ne {
         // Get settings.
         const auto pRenderSettings = getRenderer()->getRenderSettings();
         std::scoped_lock resourcesGuard(mtxInternalResources.first, pRenderSettings->first);
-        const auto msaaState = pRenderSettings->second->getAntialiasingState();
 
         // Describe multisampling.
         VkPipelineMultisampleStateCreateInfo multisamplingStateInfo{};
@@ -494,9 +493,6 @@ namespace ne {
         multisamplingStateInfo.pSampleMask = nullptr;
         multisamplingStateInfo.alphaToOneEnable = VK_FALSE;
         multisamplingStateInfo.alphaToCoverageEnable = VK_FALSE;
-        if (bUsePixelBlending && msaaState != MsaaState::DISABLED) {
-            multisamplingStateInfo.alphaToCoverageEnable = VK_TRUE;
-        }
 
         // Describe depth and stencil state.
         VkPipelineDepthStencilStateCreateInfo depthStencilStateInfo{};

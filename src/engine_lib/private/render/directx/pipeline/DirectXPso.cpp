@@ -242,7 +242,7 @@ namespace ne {
             blendDesc.LogicOp = D3D12_LOGIC_OP_NOOP;
             blendDesc.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
             psoDesc.BlendState.RenderTarget[0] = blendDesc;
-            psoDesc.BlendState.AlphaToCoverageEnable = msaaState != MsaaState::DISABLED ? 1 : 0;
+            psoDesc.BlendState.AlphaToCoverageEnable = 0;
         }
 
         // Finalize PSO description.

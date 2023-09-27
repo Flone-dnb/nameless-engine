@@ -76,7 +76,7 @@ namespace ne {
             pRenderer->getTimeSpentLastFrameOnFrustumCulling(),
             static_cast<size_t>(
                 pRenderer->getTimeSpentLastFrameOnFrustumCulling() /
-                (1000.0F / static_cast<float>(pRenderer->getFramesPerSecond())) * 100.0F),
+                (1000.0F / static_cast<float>(pRenderer->getFramesPerSecond())) * 100.0F), // NOLINT
             pRenderer->getTimeSpentLastFrameWaitingForGpu()));
     }
 

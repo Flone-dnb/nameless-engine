@@ -30,7 +30,7 @@ namespace ne {
          * @return `true` if this AABB intersects the specified plane or lays in front of the specified plane,
          * `false` otherwise.
          */
-        bool isIntersectsOrInFrontOfPlane(const Plane& plane);
+        bool isIntersectsOrInFrontOfPlane(const Plane& plane) const;
 
         /** Center of the AABB in model space. */
         glm::vec3 center = glm::vec3(0.0F, 0.0F, 0.0F);

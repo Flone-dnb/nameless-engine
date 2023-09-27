@@ -60,7 +60,7 @@ namespace ne {
 
         // Create shader resource and return it.
         return std::unique_ptr<HlslShaderTextureResource>(new HlslShaderTextureResource(
-            sShaderResourceName, std::move(pTextureToUse), std::move(rootParameterIndices)));
+            sShaderResourceName, std::move(pTextureToUse), rootParameterIndices));
     }
 
     HlslShaderTextureResource::HlslShaderTextureResource(

@@ -16,9 +16,9 @@
 namespace ne {
 
 #if defined(WIN32)
-    inline bool textureImportProcess(float percent, unsigned long long, unsigned long long) {
+    inline bool textureImportProcess(float percent, unsigned long long, unsigned long long) { // NOLINT
 #else
-    inline bool textureImportProcess(float percent, int*, int*) {
+    inline bool textureImportProcess(float percent, int*, int*) { // NOLINT
 #endif
         return false;
     }
@@ -26,7 +26,7 @@ namespace ne {
     inline bool
     writeGltfTextureToDisk(const tinygltf::Image& image, const std::filesystem::path& pathToImage) {
         // Prepare callbacks.
-        tinygltf::FsCallbacks fs = {
+        tinygltf::FsCallbacks fsCallbacks = {
             &tinygltf::FileExists,
             &tinygltf::ExpandFilePath,
             &tinygltf::ReadWholeFile,
@@ -34,8 +34,8 @@ namespace ne {
             nullptr};
         tinygltf::URICallbacks uriCallbacks;
         uriCallbacks.encode = nullptr;
-        uriCallbacks.decode = [](const std::string& in_uri, std::string* out_uri, void* user_data) -> bool {
-            *out_uri = in_uri;
+        uriCallbacks.decode = [](const std::string& sInUri, std::string* pOutUri, void* pUserData) -> bool {
+            *pOutUri = sInUri;
             return true;
         };
 
@@ -46,10 +46,10 @@ namespace ne {
 
         // Write image to disk.
         return tinygltf::WriteImageData(
-            &sBasePath, &sFilename, &image, false, &uriCallbacks, &sOutputUri, &fs);
+            &sBasePath, &sFilename, &image, false, &uriCallbacks, &sOutputUri, &fsCallbacks);
     }
 
-    inline std::variant<Error, gc_vector<MeshNode>> processGltfMesh(
+    inline std::variant<Error, gc_vector<MeshNode>> processGltfMesh( // NOLINT: too complex
         const tinygltf::Model& model,
         const tinygltf::Mesh& mesh,
         const std::filesystem::path& pathToOutputFile,
@@ -592,7 +592,7 @@ namespace ne {
                 model.nodes[iNode],
                 model,
                 pathToOutputFile,
-                sPathToOutputDirRelativeRes + "/" + sOutputDirectoryName,
+                std::format("{}/{}", sPathToOutputDirRelativeRes, sOutputDirectoryName),
                 &*pSceneRootNode,
                 onProgress,
                 iTotalNodeProcessedCount);

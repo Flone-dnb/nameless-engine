@@ -293,7 +293,7 @@ Here is the list of base features that needs to be implemented in order for you 
         - [ ] Order independent transparency
         - [ ] Occlusion culling
         - [ ] Emissive materials
-        - [ ] Space partitionning for frustum culling
+        - [ ] Space partitioning for frustum culling
     - [ ] Deferred rendering
         - [ ] Transparent materials
         - [ ] AA (Anti-aliasing)
@@ -317,7 +317,7 @@ Here is the list of base features that needs to be implemented in order for you 
         - [ ] Order independent transparency
         - [ ] Occlusion culling
         - [ ] Emissive materials
-        - [ ] Space partitionning for frustum culling
+        - [ ] Space partitioning for frustum culling
     - [ ] GUI
 - [ ] Skeletal animations
 - [ ] Rewrite garbage collector [tgc2](https://github.com/Flone-dnb/tgc2) (to fix some major issues)

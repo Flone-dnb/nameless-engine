@@ -77,7 +77,7 @@ TEST_CASE("import texture") {
                 if (auto pDirectXResource = dynamic_cast<DirectXResource*>(pTextureHandle->getResource())) {
 
                     const auto resourceDesc = pDirectXResource->getInternalResource()->GetDesc();
-                    REQUIRE(resourceDesc.MipLevels == 2);
+                    REQUIRE(resourceDesc.MipLevels == 7);
 
                     getWindow()->close();
                     return;

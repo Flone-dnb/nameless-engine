@@ -330,52 +330,56 @@ namespace ne {
                     material.pbrMetallicRoughness.baseColorFactor[2]));
 
                 // Process diffuse texture.
-                auto& diffuseTexture = model.textures[material.pbrMetallicRoughness.baseColorTexture.index];
-                if (diffuseTexture.source >= 0) {
-                    // Get image.
-                    auto& diffuseImage = model.images[diffuseTexture.source];
+                const auto iDiffuseTextureIndex = material.pbrMetallicRoughness.baseColorTexture.index;
+                if (iDiffuseTextureIndex >= 0) {
+                    auto& diffuseTexture = model.textures[iDiffuseTextureIndex];
+                    if (diffuseTexture.source >= 0) {
+                        // Get image.
+                        auto& diffuseImage = model.images[diffuseTexture.source];
 
-                    // Prepare path to export the image to.
-                    const auto pathToDiffuseImage = pathToTempFiles / (sDiffuseTextureName + sImageExtension);
+                        // Prepare path to export the image to.
+                        const auto pathToDiffuseImage =
+                            pathToTempFiles / (sDiffuseTextureName + sImageExtension);
 
-                    // Mark progress.
-                    onProgress(
-                        static_cast<float>(iGltfNodeProcessedCount) / static_cast<float>(model.nodes.size()) *
-                                100.0F +
-                            gltfNodePercentRange,
-                        std::format(
-                            "processing GLTF nodes {}/{} (importing diffuse texture)",
-                            iGltfNodeProcessedCount,
-                            model.nodes.size()));
+                        // Mark progress.
+                        onProgress(
+                            static_cast<float>(iGltfNodeProcessedCount) /
+                                    static_cast<float>(model.nodes.size()) * 100.0F +
+                                gltfNodePercentRange,
+                            std::format(
+                                "processing GLTF nodes {}/{} (importing diffuse texture)",
+                                iGltfNodeProcessedCount,
+                                model.nodes.size()));
 
-                    // Write image to disk.
-                    if (!writeGltfTextureToDisk(diffuseImage, pathToDiffuseImage)) {
-                        return Error(std::format(
-                            "failed to write GLTF image to path \"{}\"", pathToDiffuseImage.string()));
+                        // Write image to disk.
+                        if (!writeGltfTextureToDisk(diffuseImage, pathToDiffuseImage)) {
+                            return Error(std::format(
+                                "failed to write GLTF image to path \"{}\"", pathToDiffuseImage.string()));
+                        }
+
+                        // Import texture.
+                        auto optionalError = TextureManager::importTexture(
+                            pathToDiffuseImage,
+                            TextureType::DIFFUSE,
+                            sPathToImportTexturesRelativeRes,
+                            sDiffuseTextureName,
+                            textureImportProcess);
+                        if (optionalError.has_value()) [[unlikely]] {
+                            auto error = std::move(optionalError.value());
+                            error.addCurrentLocationToErrorStack();
+                            return error;
+                        }
+
+                        // Construct path to imported texture directory.
+                        std::string sPathDiffuseTextureRelativeRes = sPathToImportTexturesRelativeRes;
+                        if (!sPathDiffuseTextureRelativeRes.ends_with('/')) {
+                            sPathDiffuseTextureRelativeRes += "/";
+                        }
+                        sPathDiffuseTextureRelativeRes += sDiffuseTextureName;
+
+                        // Specify texture path.
+                        pMeshMaterial->setDiffuseTexture(sPathDiffuseTextureRelativeRes);
                     }
-
-                    // Import texture.
-                    auto optionalError = TextureManager::importTexture(
-                        pathToDiffuseImage,
-                        TextureType::DIFFUSE,
-                        sPathToImportTexturesRelativeRes,
-                        sDiffuseTextureName,
-                        textureImportProcess);
-                    if (optionalError.has_value()) [[unlikely]] {
-                        auto error = std::move(optionalError.value());
-                        error.addCurrentLocationToErrorStack();
-                        return error;
-                    }
-
-                    // Construct path to imported texture directory.
-                    std::string sPathDiffuseTextureRelativeRes = sPathToImportTexturesRelativeRes;
-                    if (!sPathDiffuseTextureRelativeRes.ends_with('/')) {
-                        sPathDiffuseTextureRelativeRes += "/";
-                    }
-                    sPathDiffuseTextureRelativeRes += sDiffuseTextureName;
-
-                    // Specify texture path.
-                    pMeshMaterial->setDiffuseTexture(sPathDiffuseTextureRelativeRes);
                 }
             }
 

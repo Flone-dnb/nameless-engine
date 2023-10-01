@@ -53,12 +53,12 @@ namespace ne {
         /**
          * Called when the window received mouse movement.
          *
-         * @param iXOffset  Mouse X movement delta in pixels (plus if moved to the right,
+         * @param xOffset  Mouse X movement delta in pixels (plus if moved to the right,
          * minus if moved to the left).
-         * @param iYOffset  Mouse Y movement delta in pixels (plus if moved up,
+         * @param yOffset  Mouse Y movement delta in pixels (plus if moved up,
          * minus if moved down).
          */
-        virtual void onMouseMove(int iXOffset, int iYOffset) override;
+        virtual void onMouseMove(double xOffset, double yOffset) override;
 
         /**
          * Called before a new frame is rendered.
@@ -111,7 +111,7 @@ namespace ne {
         float cameraMovementSpeed = 3.0F; // NOLINT: default value
 
         /** Rotation multiplier for @ref pEditorCamera. */
-        float cameraRotationSensitivity = 0.1F; // NOLINT: default value
+        double cameraRotationSensitivity = 0.1; // NOLINT: default value
 
         /** Determines whether @ref cameraSpeedIncreaseMultiplier should be used or not. */
         bool bShouldIncreaseCameraSpeed = false;

@@ -506,11 +506,11 @@ namespace ne {
         triggerActionEvents(button, modifiers, bIsPressedDown);
     }
 
-    void GameManager::onMouseMove(int iXOffset, int iYOffset) {
+    void GameManager::onMouseMove(double xOffset, double yOffset) {
         PROFILE_FUNC;
 
         // Trigger game instance logic.
-        pGameInstance->onMouseMove(iXOffset, iYOffset);
+        pGameInstance->onMouseMove(xOffset, yOffset);
 
         // Call on nodes that receive input.
         std::scoped_lock guard(mtxWorld.first);
@@ -520,7 +520,7 @@ namespace ne {
             std::scoped_lock nodesGuard(pReceivingInputNodes->first);
             std::unordered_set<Node*>* pNodes = &pReceivingInputNodes->second;
             for (auto it = pNodes->begin(); it != pNodes->end(); ++it) {
-                (*it)->onMouseMove(iXOffset, iYOffset);
+                (*it)->onMouseMove(xOffset, yOffset);
             }
         }
     }

@@ -510,12 +510,12 @@ namespace ne RNAMESPACE() {
          * @remark This function will not be called if @ref setIsReceivingInput was not enabled.
          * @remark This function will only be called while this node is spawned.
          *
-         * @param iXOffset  Mouse X movement delta in pixels (plus if moved to the right,
+         * @param xOffset  Mouse X movement delta in pixels (plus if moved to the right,
          * minus if moved to the left).
-         * @param iYOffset  Mouse Y movement delta in pixels (plus if moved up,
+         * @param yOffset  Mouse Y movement delta in pixels (plus if moved up,
          * minus if moved down).
          */
-        virtual void onMouseMove(int iXOffset, int iYOffset) {}
+        virtual void onMouseMove(double xOffset, double yOffset) {}
 
         /**
          * Called when the window receives mouse scroll movement.

@@ -49,14 +49,14 @@ namespace ne {
         });
     }
 
-    void EditorGameInstance::onMouseMove(int iXOffset, int iYOffset) {
+    void EditorGameInstance::onMouseMove(double xOffset, double yOffset) {
         if (!bIsMouseCursorCaptured) {
             return;
         }
 
         auto currentRotation = pEditorCamera->getFreeCameraRotation();
-        currentRotation.z += iXOffset * cameraRotationSensitivity;
-        currentRotation.y -= iYOffset * cameraRotationSensitivity;
+        currentRotation.z += static_cast<float>(xOffset * cameraRotationSensitivity);
+        currentRotation.y -= static_cast<float>(yOffset * cameraRotationSensitivity);
         pEditorCamera->setFreeCameraRotation(currentRotation);
     }
 

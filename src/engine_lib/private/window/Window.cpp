@@ -80,7 +80,7 @@ namespace ne {
         return std::make_pair(iWidth, iHeight);
     }
 
-    std::pair<float, float> Window::getCursorPosition() const {
+    std::pair<double, double> Window::getCursorPosition() const {
         showErrorIfNotOnMainThread();
 
         double xPos = 0.0;
@@ -94,8 +94,7 @@ namespace ne {
         }
 
         return std::make_pair(
-            static_cast<float>(xPos) / static_cast<float>(size.first),
-            static_cast<float>(yPos) / static_cast<float>(size.second));
+            xPos / static_cast<double>(size.first), yPos / static_cast<double>(size.second));
     }
 
     std::string Window::getTitle() const { return sWindowTitle; }
@@ -124,13 +123,13 @@ namespace ne {
         pGameManager->onMouseInput(button, modifiers, bIsPressedDown);
     }
 
-    void Window::onMouseMove(int iXPos, int iYPos) {
-        const int iDeltaX = iXPos - iLastMouseXPos;
-        const int iDeltaY = iLastMouseYPos - iYPos;
-        pGameManager->onMouseMove(iDeltaX, iDeltaY);
+    void Window::onMouseMove(double xPos, double yPos) {
+        const auto deltaX = xPos - lastMouseXPos;
+        const auto deltaY = lastMouseYPos - yPos;
+        pGameManager->onMouseMove(deltaX, deltaY);
 
-        iLastMouseXPos = static_cast<int>(iXPos);
-        iLastMouseYPos = static_cast<int>(iYPos);
+        lastMouseXPos = xPos;
+        lastMouseYPos = yPos;
     }
 
     void Window::onMouseScrollMove(int iOffset) const { pGameManager->onMouseScrollMove(iOffset); }

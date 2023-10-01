@@ -371,12 +371,12 @@ namespace ne {
         /**
          * Called when the window received mouse movement.
          *
-         * @param iXOffset  Mouse X movement delta in pixels (plus if moved to the right,
+         * @param xOffset  Mouse X movement delta in pixels (plus if moved to the right,
          * minus if moved to the left).
-         * @param iYOffset  Mouse Y movement delta in pixels (plus if moved up,
+         * @param yOffset  Mouse Y movement delta in pixels (plus if moved up,
          * minus if moved down).
          */
-        void onMouseMove(int iXOffset, int iYOffset);
+        void onMouseMove(double xOffset, double yOffset);
 
         /**
          * Called when the window receives mouse scroll movement.

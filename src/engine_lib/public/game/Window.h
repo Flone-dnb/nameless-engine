@@ -387,7 +387,7 @@ namespace ne {
          * @return A pair of X and Y coordinates in range [0.0; 1.0]
          * relative to the upper-left corner of the window.
          */
-        std::pair<float, float> getCursorPosition() const;
+        std::pair<double, double> getCursorPosition() const;
 
         /**
          * Returns the title of this window.
@@ -540,10 +540,10 @@ namespace ne {
         /**
          * Called when the window receives mouse movement.
          *
-         * @param iXPos    Mouse X position in pixels.
-         * @param iYPos    Mouse Y position in pixels.
+         * @param xPos Mouse X position in pixels.
+         * @param yPos Mouse Y position in pixels.
          */
-        void onMouseMove(int iXPos, int iYPos);
+        void onMouseMove(double xPos, double yPos);
 
         /**
          * Called when the window focus was changed.
@@ -596,10 +596,10 @@ namespace ne {
         std::optional<RendererType> preferredRenderer;
 
         /** Last mouse X position, used for calculating delta movement. */
-        int iLastMouseXPos = 0;
+        double lastMouseXPos = 0.0;
 
         /** Last mouse Y position, used for calculating delta movement. */
-        int iLastMouseYPos = 0;
+        double lastMouseYPos = 0.0;
     };
 
     template <typename MyGameInstance>

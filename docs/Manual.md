@@ -1346,19 +1346,19 @@ Let's now make our character to look/rotate using mouse movement. Add a new prot
 
 ```Cpp
 protected:
-    virtual void onMouseMove(int iXOffset, int iYOffset) override;
+    virtual void onMouseMove(double xOffset, double yOffset) override;
 
 private:
-    static constexpr float rotationSpeed = 0.1F;
+    static constexpr double rotationSpeed = 0.1;
 ```
 
 And implementation:
 
 ```Cpp
-void FlyingCharacterNode::onMouseMove(int iXOffset, int iYOffset) {
+void FlyingCharacterNode::onMouseMove(double xOffset, double yOffset) {
     auto currentRotation = getRelativeRotation();
-    currentRotation.z += iXOffset * rotationSpeed; // modify "yaw"
-    currentRotation.y -= iYOffset * rotationSpeed; // modify "pitch"
+    currentRotation.z += static_cast<float>(xOffset * rotationSpeed); // modify "yaw"
+    currentRotation.y -= static_cast<float>(yOffset * rotationSpeed); // modify "pitch"
     setRelativeRotation(currentRotation);
 }
 ```
@@ -2452,7 +2452,7 @@ void MyNode::onBeforeNewFrame(float timeSincePrevFrameInSec){
     // ... some code here ...
 }
 
-void MyGameInstance::onMouseMove(int iXOffset, int iYOffset) {
+void MyGameInstance::onMouseMove(double xOffset, double yOffset) {
     PROFILE_FUNC;
 
     // ... some code here ...

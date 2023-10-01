@@ -630,8 +630,8 @@ namespace ne {
         const auto pRenderer = getRenderer();
 
         // Used for tick.
-        float fCurrentTimeInSec = 0.0f;
-        float fPrevTimeInSec = static_cast<float>(glfwGetTime());
+        float currentTimeInSec = 0.0f;
+        float prevTimeInSec = static_cast<float>(glfwGetTime());
 
         while (!glfwWindowShouldClose(pGlfwWindow)) {
             // Execute deferred tasks before processing input and ticking
@@ -643,9 +643,9 @@ namespace ne {
             glfwPollEvents();
 
             // Tick.
-            fCurrentTimeInSec = static_cast<float>(glfwGetTime());
-            pGameManager->onBeforeNewFrame(fCurrentTimeInSec - fPrevTimeInSec);
-            fPrevTimeInSec = fCurrentTimeInSec;
+            currentTimeInSec = static_cast<float>(glfwGetTime());
+            pGameManager->onBeforeNewFrame(currentTimeInSec - prevTimeInSec);
+            prevTimeInSec = currentTimeInSec;
 
             // Draw next frame.
             pRenderer->drawNextFrame();

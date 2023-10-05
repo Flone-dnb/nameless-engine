@@ -2702,7 +2702,9 @@ void CustomMeshNode::onSomeEvent() {
 }
 ```
 
-If you assigned your custom shaders to the material of your `CustomMeshNode` than we don't need to do anything else.
+`markShaderCpuWriteResourceAsNeedsUpdate` will notify the engine if your node is spawned, otherwise it won't do anything so that your "update" functions will only be called while your node is spawned.
+
+If you assigned your custom shaders to the material of your `CustomMeshNode` then we don't need to do anything else.
 
 ## Adding support for new types for serialization/deserialization
 

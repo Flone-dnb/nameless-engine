@@ -574,10 +574,7 @@ namespace ne RNAMESPACE() {
          * Called before this node is despawned from the world to execute custom despawn logic.
          *
          * @remark This node will be marked as despawned after this function is called.
-         *
          * @remark This function is called after all child nodes were despawned.
-         *
-         * @remark If node's destructor is called but node is still spawned it will be despawned.
          *
          * @remark @ref getSpawnDespawnMutex is locked while this function is called.
          *

@@ -119,7 +119,6 @@ namespace ne RNAMESPACE() {
          *
          * @remark This node will be marked as despawned after this function is called.
          * @remark This function is called after all child nodes were despawned.
-         * @remark If node's destructor is called but node is still spawned it will be despawned.
          *
          * @warning If overriding you must call the parent's version of this function first
          * (before executing your login) to execute parent's logic.

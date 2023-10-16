@@ -24,6 +24,7 @@ namespace ne {
     class PipelineManager;
     class ShaderConfiguration;
     class RenderSettings;
+    class EnvironmentNode;
 
     /** Defines a base class for renderers to implement. */
     class Renderer {
@@ -35,6 +36,10 @@ namespace ne {
 
         // Settings will modify renderer's state.
         friend class RenderSettings;
+
+        // This node sets itself to the renderer when spawned so that its parameters will be used
+        // in the rendering (also removes itself when despawned).
+        friend class EnvironmentNode;
 
     public:
         Renderer() = delete;
@@ -709,6 +714,9 @@ namespace ne {
 
         /** Stores the total number of draw calls made last frame. */
         size_t iLastFrameDrawCallCount = 0;
+
+        /** Spawned environment node which parameters are used in the rendering. */
+        std::pair<std::mutex, EnvironmentNode*> mtxSpawnedEnvironmentNode;
 
         /** Up to date frame-global constant data. */
         std::pair<std::mutex, FrameConstants> mtxFrameConstants;

@@ -6,6 +6,9 @@ cbuffer frameData : register(b0, space5)
 
     /** Camera's world location. */
     float3 cameraPosition;
+    
+    /** Light color intensity of ambient lighting. */
+    float3 ambientLight;
 
     /** Time that has passed since the last frame in seconds (i.e. delta time). */
     float timeSincePrevFrameInSec;

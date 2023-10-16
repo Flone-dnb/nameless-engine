@@ -11,7 +11,7 @@ layout(location = 1) in vec4 fragmentWorldPosition;
 layout(location = 2) in vec3 fragmentNormal;
 layout(location = 3) in vec2 fragmentUv;
 
-layout(location = 0) out vec4 outColor;
+layout(location = 0) out vec4 outputColor;
 
 /** Describes Material's constants. */
 struct MaterialData
@@ -27,13 +27,19 @@ layout(std140, binding = 3) readonly buffer MaterialDataBuffer{
 } materialData;
 
 void fsMeshNode(){
-    outColor = vec4(materialData.array[arrayIndices.materialData].diffuseColor, 1.0F);
+    // Set diffuse color.
+    outputColor = vec4(materialData.array[arrayIndices.materialData].diffuseColor, 1.0F);
 
 #ifdef PS_USE_DIFFUSE_TEXTURE
-    outColor *= texture(diffuseTexture[arrayIndices.diffuseTexture], fragmentUv);
+    // Apply diffuse texture.
+    outputColor *= texture(diffuseTexture[arrayIndices.diffuseTexture], fragmentUv);
 #endif
 
+    // Apply ambient light.
+    outputColor.rgb *= frameData.ambientLight;
+
 #ifdef PS_USE_MATERIAL_TRANSPARENCY
-    outColor.a *= materialData.array[arrayIndices.materialData].opacity;
+    // Apply opacity.
+    outputColor.a *= materialData.array[arrayIndices.materialData].opacity;
 #endif
 }

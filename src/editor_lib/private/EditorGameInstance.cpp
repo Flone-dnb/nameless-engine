@@ -10,6 +10,7 @@
 #include "game/Window.h"
 #include "input/InputManager.h"
 #include "misc/PrimitiveMeshGenerator.h"
+#include "game/nodes/EnvironmentNode.h"
 
 namespace ne {
     const char* EditorGameInstance::getEditorWindowTitle() { return pEditorWindowTitle; }
@@ -40,6 +41,10 @@ namespace ne {
                 error.showError();
                 throw std::runtime_error(error.getFullErrorMessage());
             }
+
+            // Spawn environment node.
+            const auto pEnvironmentNode = gc_new<EnvironmentNode>();
+            getWorldRootNode()->addChildNode(pEnvironmentNode);
 
             // Spawn sample mesh.
             const auto pMeshNode = gc_new<MeshNode>();

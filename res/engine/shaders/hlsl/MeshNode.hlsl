@@ -48,13 +48,19 @@ VertexOut vsMeshNode(VertexIn vertexIn)
 
 float4 psMeshNode(VertexOut pin) : SV_Target
 {
+    // Set diffuse color.
     float4 outputColor = float4(diffuseColor, 1.0F);
 
 #ifdef PS_USE_DIFFUSE_TEXTURE
+    // Apply diffuse texture.
     outputColor *= diffuseTexture.Sample(textureSampler, pin.uv);
 #endif
 
+    // Apply ambient light.
+    outputColor.rgb *= ambientLight;
+
 #ifdef PS_USE_MATERIAL_TRANSPARENCY
+    // Apply opacity.
     outputColor.a *= opacity;
 #endif
 

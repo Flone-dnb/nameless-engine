@@ -10,6 +10,9 @@ layout(binding = 0) uniform FrameData {
     /** Camera's world location. */
     vec3 cameraPosition;
 
+    /** Light color intensity of ambient lighting. */
+    vec3 ambientLight;
+
     /** Time that has passed since the last frame in seconds (i.e. delta time). */
     float timeSincePrevFrameInSec;
 

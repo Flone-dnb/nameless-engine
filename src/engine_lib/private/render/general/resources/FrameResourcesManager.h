@@ -25,6 +25,9 @@ namespace ne {
         /** Camera's world location. */
         alignas(iVkVec3Alignment) glm::vec3 cameraPosition = glm::vec3(0.0F, 0.0F, 0.0F);
 
+        /** Light color intensity of ambient lighting. */
+        alignas(iVkVec3Alignment) glm::vec3 ambientLight = glm::vec3(0.0F, 0.0F, 0.0F);
+
         /** Time that has passed since the last frame in seconds (i.e. delta time). */
         alignas(iVkScalarAlignment) float timeSincePrevFrameInSec = 0.0F;
 

@@ -213,6 +213,8 @@ set(PROJECT_SOURCES
     public/game/nodes/MeshNode.h
     private/game/nodes/CameraNode.cpp
     public/game/nodes/CameraNode.h
+    private/game/nodes/EnvironmentNode.cpp
+    public/game/nodes/EnvironmentNode.h
     public/io/properties/SerializeProperty.h
     private/io/properties/SerializeProperty.cpp
     private/io/properties/GuidProperty.cpp

@@ -14,6 +14,7 @@
 #include "render/general/pipeline/PipelineManager.h"
 #include "render/vulkan/VulkanRenderer.h"
 #include "misc/Profiler.hpp"
+#include "game/nodes/EnvironmentNode.h"
 #if defined(WIN32)
 #pragma comment(lib, "Winmm.lib")
 #include "render/directx/DirectXRenderer.h"
@@ -33,7 +34,11 @@ namespace ne {
         // fences and semaphores that expect one swap chain image per frame resource.
         static_assert(iRecommendedSwapChainBufferCount == FrameResourcesManager::getFrameResourcesCount());
 
+        // Save game manager.
         this->pGameManager = pGameManager;
+
+        // Initialize some objects.
+        mtxSpawnedEnvironmentNode.second = nullptr;
 
         // Create some objects.
         pShaderManager = std::make_unique<ShaderManager>(this);
@@ -117,7 +122,8 @@ namespace ne {
 
     void Renderer::updateFrameConstantsBuffer(
         FrameResource* pCurrentFrameResource, CameraProperties* pCameraProperties) {
-        std::scoped_lock guard(mtxFrameConstants.first);
+        // Lock frame constants and environment.
+        std::scoped_lock guard(mtxFrameConstants.first, mtxSpawnedEnvironmentNode.first);
 
         // Set camera properties.
         mtxFrameConstants.second.cameraPosition = pCameraProperties->getWorldLocation();
@@ -127,6 +133,13 @@ namespace ne {
         // Set time parameters.
         mtxFrameConstants.second.timeSincePrevFrameInSec = getGameManager()->getTimeSincePrevFrameInSec();
         mtxFrameConstants.second.totalTimeInSec = GameInstance::getTotalApplicationTimeInSec();
+
+        // Set environment parameters.
+        if (mtxSpawnedEnvironmentNode.second != nullptr) {
+            mtxFrameConstants.second.ambientLight = mtxSpawnedEnvironmentNode.second->getAmbientLight();
+        } else {
+            mtxFrameConstants.second.ambientLight = glm::vec3(0.0F, 0.0F, 0.0F);
+        }
 
         // Copy to GPU.
         pCurrentFrameResource->pFrameConstantBuffer->copyDataToElement(

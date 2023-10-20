@@ -2659,16 +2659,32 @@ struct CustomMeshShaderConstants {
 std::pair<std::recursive_mutex, CustomMeshShaderConstants> mtxShaderData;
 ```
 
-As you can see we use `alignas` for Vulkan aligning requirements and at the same time keep track of HLSL packing rules. If you only want to stick with some specific shading language (only GLSL or only HLSL) then you just need to keep track of your language specific packing rules.
+As you can see we use `alignas` to satisfy Vulkan aligning requirements and at the same time keep track of HLSL packing rules. If you only want to stick with some specific shading language (only GLSL or only HLSL) then you just need to keep track of your language specific packing rules.
 
-Then let's tell the engine how to use pass your buffer to shaders:
+Generally if you specify `alignas` to all fields (of a type that will be directly copied to the GPU) you should be pretty safe in terms of both Vulkan alignment requirement and HLSL packing rules. The only thing that you might want to keep track of is the padding that `alignas` might introduce, for example:
+
+```Cpp
+struct CustomMeshShaderConstants {
+    alignas(iVkScalarAlignment) float test = 0.0F;    // has 12 bytes of padding to satisfy next `iVkMat4Alignment`
+
+    alignas(iVkMat4Alignment) glm::mat4x4 somematrix = glm::identity<glm::mat4x4>();
+    // don't forget to add padding to 4 floats (if needed) for HLSL packing rules
+};
+```
+
+Note
+> If you are using Qt Creator IDE you can see field alignment (plus padding if there is one) by hovering your mouse cursor over a field's name, which is very useful for such cases.
+
+In order to avoid this you might want to prefer to put "big types" (types with bigger alignment such as `mat`s and `vec`s) first and only then "small types" (such as `float`s and etc). Otherwise you might have lots of unused padding bytes that might bloat your data.
+
+Now let's tell the engine how to pass your buffer to shaders:
 
 ```Cpp
 void CustomMeshNode::onSpawning(){
     SpatialNode::onSpawning();
 
-    setShaderCpuWriteResourceBindingData( // please call this function only in `onSpawning`
-        "customData",                     // name of the resource written in your shader file
+    setShaderCpuWriteResourceBindingData( // please call this function only in `onSpawning`, see function docs for more
+        "customData",                     // name of the resource written in your shader file (HLSL/GLSL)
         sizeof(CustomMeshShaderConstants),
         [this]() -> void* { return onStartedUpdatingShaderConstants(); },
         [this]() { onFinishedUpdatingShaderConstants(); }

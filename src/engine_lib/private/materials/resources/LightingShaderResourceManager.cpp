@@ -133,6 +133,10 @@ namespace ne {
         return pNewSlot;
     }
 
+    std::pair<std::recursive_mutex, ShaderLightArray::Resources>* ShaderLightArray::getInternalResources() {
+        return &mtxResources;
+    }
+
     void ShaderLightArray::freeSlot(ShaderLightArraySlot* pSlot) {
         // Pause the rendering and make sure our resources are not used by the GPU
         // (locking both mutexes to avoid a deadlock that might occur below).
@@ -586,6 +590,11 @@ namespace ne {
         }
 
         return {};
+    }
+
+    std::pair<std::recursive_mutex, LightingShaderResourceManager::GpuData>*
+    LightingShaderResourceManager::getInternalResources() {
+        return &mtxGpuData;
     }
 
     void LightingShaderResourceManager::updateResources(size_t iCurrentFrameResourceIndex) {

@@ -100,6 +100,35 @@ namespace ne {
         friend class LightingShaderResourceManager;
 
     public:
+        /** Groups used resources. */
+        struct Resources {
+            /**
+             * GPU resource per frame "in-flight" that stores array of light data.
+             *
+             * @remark Resources in this array have equal sizes.
+             *
+             * @remark Resources in this array are always valid and always have space for at least one slot
+             * (even if there are no slots active) to avoid hitting `nullptr` or have branching
+             * when binding resources (when there are no active slots these resources will not be
+             * used since counter for light sources will be zero but we will have a valid binding).
+             *
+             * @remark Storing a resource per frame "in-flight" because we should not update a resource
+             * that is currently being used by the GPU but we also don't want to stop the rendering when
+             * we need an update.
+             */
+            std::array<std::unique_ptr<UploadBuffer>, FrameResourcesManager::getFrameResourcesCount()>
+                vGpuResources;
+
+            /** Slots (elements) in arrays from @ref vGpuResources that needs to be updated. */
+            std::array<
+                std::unordered_set<ShaderLightArraySlot*>,
+                FrameResourcesManager::getFrameResourcesCount()>
+                vSlotsToBeUpdated;
+
+            /** All currently active (existing) slots. */
+            std::unordered_set<ShaderLightArraySlot*> activeSlots;
+        };
+
         ShaderLightArray() = delete;
 
         /** Makes sure there are no active slots. */
@@ -146,36 +175,16 @@ namespace ne {
             const std::function<void*()>& startUpdateCallback,
             const std::function<void()>& finishUpdateCallback);
 
+        /**
+         * Returns internal resources of this array.
+         *
+         * @remark Generally used for tests (read-only), you should not modify them.
+         *
+         * @return Internal resources.
+         */
+        std::pair<std::recursive_mutex, Resources>* getInternalResources();
+
     private:
-        /** Groups used resources. */
-        struct Resources {
-            /**
-             * GPU resource per frame "in-flight" that stores array of light data.
-             *
-             * @remark Resources in this array have equal sizes.
-             *
-             * @remark Resources in this array are always valid and always have space for at least one slot
-             * (even if there are no slots active) to avoid hitting `nullptr` or have branching
-             * when binding resources (when there are no active slots these resources will not be
-             * used since counter for light sources will be zero but we will have a valid binding).
-             *
-             * @remark Storing a resource per frame "in-flight" because we should not update a resource
-             * that is currently being used by the GPU but we also don't want to stop the rendering when
-             * we need an update.
-             */
-            std::array<std::unique_ptr<UploadBuffer>, FrameResourcesManager::getFrameResourcesCount()>
-                vGpuResources;
-
-            /** Slots (elements) in arrays from @ref vGpuResources that needs to be updated. */
-            std::array<
-                std::unordered_set<ShaderLightArraySlot*>,
-                FrameResourcesManager::getFrameResourcesCount()>
-                vSlotsToBeUpdated;
-
-            /** All currently active (existing) slots. */
-            std::unordered_set<ShaderLightArraySlot*> activeSlots;
-        };
-
         /**
          * Creates a new array.
          *
@@ -276,6 +285,31 @@ namespace ne {
         friend class Renderer;
 
     public:
+        /** Data that will be directly copied into shaders. */
+        struct GeneralLightingShaderData {
+            /** Light color intensity of ambient lighting. */
+            alignas(iVkVec3Alignment) glm::vec3 ambientLight = glm::vec3(0.0F, 0.0F, 0.0F);
+
+            /** Total number of spawned point lights. */
+            alignas(iVkScalarAlignment) unsigned int iPointLightCount = 0;
+
+            // don't forget to add padding to 4 floats (if needed) for HLSL packing rules
+        };
+
+        /** Groups GPU related data. */
+        struct GpuData {
+            /** Stores data from @ref generalData in the GPU memory. */
+            std::array<std::unique_ptr<UploadBuffer>, FrameResourcesManager::getFrameResourcesCount()>
+                vGeneralDataGpuResources;
+
+            /**
+             * Stores general (not related to a specific light source type) lighting data.
+             *
+             * @remark Stores data that is copied in @ref vGeneralDataGpuResources.
+             */
+            GeneralLightingShaderData generalData;
+        };
+
         LightingShaderResourceManager() = delete;
 
         ~LightingShaderResourceManager();
@@ -324,6 +358,15 @@ namespace ne {
          * @return Error if something went wrong.
          */
         [[nodiscard]] std::optional<Error> updateDescriptorsForPipelineResource(Pipeline* pPipeline);
+
+        /**
+         * Returns manager's internal resources.
+         *
+         * @remark Generally used for tests (read-only), you should not modify them.
+         *
+         * @return Internal resources.
+         */
+        std::pair<std::recursive_mutex, GpuData>* getInternalResources();
 
 #if defined(WIN32)
         /**
@@ -407,31 +450,6 @@ namespace ne {
 #endif
 
     private:
-        /** Data that will be directly copied into shaders. */
-        struct GeneralLightingShaderData {
-            /** Light color intensity of ambient lighting. */
-            alignas(iVkVec3Alignment) glm::vec3 ambientLight = glm::vec3(0.0F, 0.0F, 0.0F);
-
-            /** Total number of spawned point lights. */
-            alignas(iVkScalarAlignment) unsigned int iPointLightCount = 0;
-
-            // don't forget to add padding to 4 floats (if needed) for HLSL packing rules
-        };
-
-        /** Groups GPU related data. */
-        struct GpuData {
-            /** Stores data from @ref generalData in the GPU memory. */
-            std::array<std::unique_ptr<UploadBuffer>, FrameResourcesManager::getFrameResourcesCount()>
-                vGeneralDataGpuResources;
-
-            /**
-             * Stores general (not related to a specific light source type) lighting data.
-             *
-             * @remark Stores data that is copied in @ref vGeneralDataGpuResources.
-             */
-            GeneralLightingShaderData generalData;
-        };
-
         /**
          * Creates a new manager.
          *

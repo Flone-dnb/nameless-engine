@@ -76,9 +76,11 @@ namespace ne {
             const std::function<void()>& onFinishedUpdatingResource);
 
         /**
-         * Updates all resources that marked as "needs update".
+         * Updates all resources marked as "needs update" and copies new (updated) data to the GPU resource
+         * of the specified frame resource.
          *
-         * @param iCurrentFrameResourceIndex Index of current frame resource.
+         * @param iCurrentFrameResourceIndex Index of the frame resource that will be used to submit the next
+         * frame.
          */
         void updateResources(size_t iCurrentFrameResourceIndex);
 

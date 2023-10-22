@@ -107,6 +107,7 @@ namespace ne {
             // Also delete frame resources before GPU resource manager because they use memory allocator
             // for destruction.
             resetFrameResourcesManager();
+            resetLightingShaderResourceManager(); // also stores some GPU resources
 
             // Explicitly delete memory allocator before all essential Vulkan objects.
             resetGpuResourceManager();

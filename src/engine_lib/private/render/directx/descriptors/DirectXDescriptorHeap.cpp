@@ -339,6 +339,24 @@ namespace ne {
                 srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
                 srvDesc.Texture2D.MostDetailedMip = 0;
                 srvDesc.Texture2D.MipLevels = resourceDesc.MipLevels;
+                srvDesc.Format = resourceDesc.Format;
+                break;
+            }
+            case (D3D12_RESOURCE_DIMENSION_BUFFER): {
+                // Make sure element size / count are specified.
+                if (pResource->iElementSizeInBytes == 0 || pResource->iElementCount == 0) {
+                    Error error(std::format(
+                        "unable to create an SRV for resource \"{}\" because its element size/count were not "
+                        "specified",
+                        pResource->getResourceName()));
+                    error.showError();
+                    throw std::runtime_error(error.getFullErrorMessage());
+                }
+                srvDesc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
+                srvDesc.Buffer.FirstElement = 0;
+                srvDesc.Buffer.StructureByteStride = pResource->iElementSizeInBytes;
+                srvDesc.Buffer.NumElements = pResource->iElementCount;
+                srvDesc.Format = DXGI_FORMAT_UNKNOWN; // must be `UNKNOWN` if `StructureByteStride` is not 0
                 break;
             }
             default: {
@@ -352,7 +370,6 @@ namespace ne {
 
             // Fill general info.
             srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-            srvDesc.Format = resourceDesc.Format;
 
             // Create SRV.
             pRenderer->getD3dDevice()->CreateShaderResourceView(

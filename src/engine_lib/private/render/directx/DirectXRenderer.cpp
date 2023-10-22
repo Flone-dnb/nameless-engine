@@ -585,6 +585,12 @@ namespace ne {
                             ->getInternalResource()
                             ->GetGPUVirtualAddress());
 
+                    // Bind lighting resources.
+                    getLightingShaderResourceManager()->setResourceViewToCommandList(
+                        pDirectXPso,
+                        pCommandList,
+                        pMtxCurrentFrameResource->second.iCurrentFrameResourceIndex);
+
                     // Iterate over all materials that use this PSO
                     // (all these materials define the same set of shader macros but
                     // each material can have different parameters such as different diffuse textures).

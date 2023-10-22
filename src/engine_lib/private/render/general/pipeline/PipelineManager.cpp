@@ -181,20 +181,30 @@ namespace ne {
 
             // Add to all pipelines and return a shared pointer.
             graphicsPipelines[sPipelineIdentifier] = std::move(pipelines);
-            return PipelineSharedPtr(pPipeline, pMaterial);
+        } else {
+            // Make sure there are no pipelines that uses the same macros (and shaders).
+            const auto shaderPipelinesIt = pipelinesIt->second.shaderPipelines.find(materialMacros);
+            if (shaderPipelinesIt != pipelinesIt->second.shaderPipelines.end()) [[unlikely]] {
+                return Error(std::format(
+                    "expected that there are no pipelines that use the same material macros {} for shaders "
+                    "{}",
+                    ShaderMacroConfigurations::convertConfigurationToText(materialMacros),
+                    sPipelineIdentifier));
+            }
+
+            // Add pipeline.
+            pipelinesIt->second.shaderPipelines[materialMacros] = pPipeline;
         }
 
-        // Make sure there are no pipelines that uses the same macros (and shaders).
-        const auto shaderPipelinesIt = pipelinesIt->second.shaderPipelines.find(materialMacros);
-        if (shaderPipelinesIt != pipelinesIt->second.shaderPipelines.end()) [[unlikely]] {
-            return Error(std::format(
-                "expected that there are no pipelines that use the same material macros {} for shaders {}",
-                ShaderMacroConfigurations::convertConfigurationToText(materialMacros),
-                sPipelineIdentifier));
+        // Bind GPU lighting resources to pipeline descriptors (if this pipeline uses them).
+        auto optionalError =
+            getRenderer()->getLightingShaderResourceManager()->updateDescriptorsForPipelineResource(
+                pPipeline.get());
+        if (optionalError.has_value()) [[unlikely]] {
+            auto error = std::move(optionalError.value());
+            error.addCurrentLocationToErrorStack();
+            return error;
         }
-
-        // Add pipeline.
-        pipelinesIt->second.shaderPipelines[materialMacros] = pPipeline;
 
         return PipelineSharedPtr(pPipeline, pMaterial);
     }
@@ -266,6 +276,7 @@ namespace ne {
             // Get all shader resources.
             const auto pShaderCpuWriteResourceManager = getRenderer()->getShaderCpuWriteResourceManager();
             const auto pShaderTextureResourceManager = getRenderer()->getShaderTextureResourceManager();
+            const auto pLightingShaderResourceManager = getRenderer()->getLightingShaderResourceManager();
 
             // Update shader CPU write resources.
             {
@@ -295,6 +306,14 @@ namespace ne {
                         return optionalError;
                     }
                 }
+            }
+
+            // Update lighting shader resources.
+            auto optionalError =
+                pLightingShaderResourceManager->bindDescriptorsToRecreatedPipelineResources();
+            if (optionalError.has_value()) [[unlikely]] {
+                optionalError->addCurrentLocationToErrorStack();
+                return optionalError;
             }
 
             // Unlock the mutex because all pipeline resources were re-created.
@@ -344,7 +363,11 @@ namespace ne {
         const auto pRenderer = pPipelineManager->getRenderer();
 
         // Make sure no drawing is happening and the GPU is not referencing any resources.
-        std::scoped_lock guard(*pRenderer->getRenderResourcesMutex());
+        std::scoped_lock guard(
+            *pRenderer->getRenderResourcesMutex()); // we don't need to hold this lock until destroyed since
+                                                    // pipeline manager will hold its lock until all resources
+                                                    // are not restored (which will not allow new frames to be
+                                                    // rendered)
         pRenderer->waitForGpuToFinishWorkUpToThisPoint();
 
         // Release resources.
@@ -359,6 +382,7 @@ namespace ne {
 
     void DelayedPipelineResourcesCreation::destroy() {
         if (!bIsValid) {
+            // This object was moved.
             return;
         }
 

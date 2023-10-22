@@ -16,7 +16,7 @@ struct MeshData {
     /** Matrix that transforms vertices from mesh local space to world space. */
     mat4 worldMatrix; 
 };
-layout(std140, binding = 2) readonly buffer MeshDataBuffer{
+layout(std140, binding = 3) readonly buffer MeshDataBuffer{
     MeshData array[];
 } meshData;
 

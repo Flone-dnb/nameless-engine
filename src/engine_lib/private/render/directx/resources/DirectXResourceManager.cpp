@@ -147,7 +147,9 @@ namespace ne {
             allocationDesc,
             resourceDesc,
             D3D12_RESOURCE_STATE_GENERIC_READ,
-            {});
+            {},
+            iElementSizeInBytes,
+            iElementCount);
         if (std::holds_alternative<Error>(result)) {
             auto err = std::get<Error>(std::move(result));
             err.addCurrentLocationToErrorStack();

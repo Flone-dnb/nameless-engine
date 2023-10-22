@@ -17,6 +17,7 @@
 #include "render/RenderSettings.h"
 #include "game/camera/CameraProperties.h"
 #include "misc/shapes/AABB.h"
+#include "materials/resources/LightingShaderResourceManager.h"
 
 namespace ne {
     class GameManager;
@@ -286,6 +287,15 @@ namespace ne {
         ShaderTextureResourceManager* getShaderTextureResourceManager() const;
 
         /**
+         * Returns manager that controls GPU resources of lighting shader resources.
+         *
+         * @warning Do not delete (free) returned pointer.
+         *
+         * @return Manager.
+         */
+        LightingShaderResourceManager* getLightingShaderResourceManager() const;
+
+        /**
          * Returns mutex that is used when reading or writing to GPU resources that may be used
          * by the GPU.
          *
@@ -381,6 +391,14 @@ namespace ne {
          * in your renderer.
          */
         void resetFrameResourcesManager();
+
+        /**
+         * Sets `nullptr` to lighting shader resource manager's unique ptr to force destroy it (if exists).
+         *
+         * @warning Avoid using this function. Only use it if you need a special destruction order
+         * in your renderer.
+         */
+        void resetLightingShaderResourceManager();
 
         /**
          * Can be used by derived classes to tell about additional time (in milliseconds) that was spent
@@ -685,6 +703,9 @@ namespace ne {
 
         /** Stores all shader resources that reference textures. */
         std::unique_ptr<ShaderTextureResourceManager> pShaderTextureResourceManager;
+
+        /** Stores data of all spawned light sources that is used in shaders. */
+        std::unique_ptr<LightingShaderResourceManager> pLightingShaderResourceManager;
 
         /**
          * A bunch of shader macros that match renderer's configuration (render settings).

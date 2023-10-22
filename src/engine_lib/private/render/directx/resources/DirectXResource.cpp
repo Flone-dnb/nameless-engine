@@ -15,9 +15,31 @@ namespace ne {
         const D3D12MA::ALLOCATION_DESC& allocationDesc,
         const D3D12_RESOURCE_DESC& resourceDesc,
         const D3D12_RESOURCE_STATES& initialResourceState,
-        std::optional<D3D12_CLEAR_VALUE> resourceClearValue) {
-        auto pCreatedResource = std::unique_ptr<DirectXResource>(new DirectXResource(pResourceManager));
+        std::optional<D3D12_CLEAR_VALUE> resourceClearValue,
+        size_t iElementSizeInBytes,
+        size_t iElementCount) {
+        // Make sure element size/count will fit type limit.
+        if (iElementSizeInBytes > std::numeric_limits<unsigned int>::max()) [[unlikely]] {
+            Error error(std::format(
+                "unable to create resource \"{}\" because its element size ({}) will exceed type limit",
+                sResourceName,
+                iElementSizeInBytes));
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+        } else if (iElementCount > std::numeric_limits<unsigned int>::max()) [[unlikely]] {
+            Error error(std::format(
+                "unable to create resource \"{}\" because its element count ({}) will exceed type limit",
+                sResourceName,
+                iElementCount));
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+        }
 
+        // Create resource.
+        auto pCreatedResource = std::unique_ptr<DirectXResource>(new DirectXResource(
+            pResourceManager, static_cast<UINT>(iElementSizeInBytes), static_cast<UINT>(iElementCount)));
+
+        // Prepare clear value.
         const D3D12_CLEAR_VALUE* pClearValue = nullptr;
         if (resourceClearValue.has_value()) {
             pClearValue = &resourceClearValue.value();
@@ -116,7 +138,9 @@ namespace ne {
         return "swap chain buffer resource";
     }
 
-    DirectXResource::DirectXResource(const DirectXResourceManager* pResourceManager) {
+    DirectXResource::DirectXResource(
+        const DirectXResourceManager* pResourceManager, UINT iElementSizeInBytes, UINT iElementCount)
+        : iElementSizeInBytes(iElementSizeInBytes), iElementCount(iElementCount) {
         this->pResourceManager = pResourceManager;
         mtxHeapDescriptors.second.resize(static_cast<int>(DirectXDescriptorType::END));
     }

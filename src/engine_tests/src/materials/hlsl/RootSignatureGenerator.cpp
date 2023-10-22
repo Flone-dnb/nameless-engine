@@ -57,7 +57,7 @@ TEST_CASE("root signature merge is correct") {
                     std::scoped_lock guard(pMtxPsoInternalResources->first);
                     auto& params = pMtxPsoInternalResources->second.rootParameterIndices;
 
-                    REQUIRE(params.size() == 3);
+                    REQUIRE(params.size() >= 3);
 
                     auto it = params.find("frameData");
                     REQUIRE(it != params.end());

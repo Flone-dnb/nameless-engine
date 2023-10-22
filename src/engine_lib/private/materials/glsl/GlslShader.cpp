@@ -15,6 +15,36 @@
 #include "render/vulkan/VulkanRenderer.h"
 
 namespace ne {
+    std::string getLineFromText(const std::string& sText, size_t iLineNumber) {
+        // Prepare some variables.
+        size_t iCurrentLineNumber = 1;
+        size_t iLineStartPosition = 0;
+
+        // Find requested line.
+        do {
+            iLineStartPosition = sText.find('\n', iLineStartPosition);
+            if (iLineStartPosition == std::string::npos) {
+                return "failed to get line text";
+            }
+            iLineStartPosition += 1;
+
+            iCurrentLineNumber += 1;
+        } while (iCurrentLineNumber != iLineNumber);
+
+        // Make sure we have some text to copy.
+        if (iLineStartPosition >= sText.size()) {
+            return "failed to get line text";
+        }
+
+        // Find end of this line.
+        const auto iLineEndPosition = sText.find('\n', iLineStartPosition);
+        if (iLineEndPosition == std::string::npos) {
+            return "failed to get line text";
+        }
+
+        return sText.substr(iLineStartPosition, iLineEndPosition - iLineStartPosition);
+    }
+
     GlslShader::GlslShader(
         Renderer* pRenderer,
         std::filesystem::path pathToCompiledShader,
@@ -126,7 +156,33 @@ namespace ne {
 
         // Check if there were compilation warnings/errors.
         if (compilationResult.GetCompilationStatus() != shaderc_compilation_status_success) {
-            return compilationResult.GetErrorMessage();
+            auto sCompilationErrorMessage = compilationResult.GetErrorMessage();
+            // Since compilation error usually points to a line number but we combine all included files
+            // into one it may be hard to read error messages, thus if a message has a line number specified
+            // append this line to the error message.
+            // Find line where it says file name and error line, example: `MeshNode:98: error:`.
+            const auto sFileLineText = sShaderSourceFileName + ":";
+            const auto iFileLinePos = sCompilationErrorMessage.find(sFileLineText);
+            if (iFileLinePos == std::string::npos) {
+                return sCompilationErrorMessage;
+            }
+            // Find the second semicolon.
+            const auto iLineTextStartPos = iFileLinePos + sFileLineText.size();
+            const auto iSecondSemicolonPos = sCompilationErrorMessage.find(':', iLineTextStartPos);
+            if (iSecondSemicolonPos == std::string::npos) {
+                return sCompilationErrorMessage;
+            }
+            const auto sLineText =
+                sCompilationErrorMessage.substr(iLineTextStartPos, iSecondSemicolonPos - iLineTextStartPos);
+            try {
+                const auto iLineNumber = std::stoull(sLineText);
+                sCompilationErrorMessage += std::format(
+                    "\nline {}: {}", iLineNumber, getLineFromText(sFullShaderSourceCode, iLineNumber));
+            } catch (...) {
+                return sCompilationErrorMessage;
+            }
+
+            return sCompilationErrorMessage;
         }
 
         // Get compiled SPIR-V bytecode.

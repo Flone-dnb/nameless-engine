@@ -11,6 +11,7 @@
 #include "input/InputManager.h"
 #include "misc/PrimitiveMeshGenerator.h"
 #include "game/nodes/EnvironmentNode.h"
+#include "game/nodes/light/PointLightNode.h"
 
 namespace ne {
     const char* EditorGameInstance::getEditorWindowTitle() { return pEditorWindowTitle; }
@@ -45,6 +46,11 @@ namespace ne {
             // Spawn environment node.
             const auto pEnvironmentNode = gc_new<EnvironmentNode>();
             getWorldRootNode()->addChildNode(pEnvironmentNode);
+
+            // Spawn point light.
+            const auto pPointLightNode = gc_new<PointLightNode>();
+            getWorldRootNode()->addChildNode(pPointLightNode);
+            pPointLightNode->setWorldLocation(glm::vec3(-1.0F, 5.0F, 5.0F));
 
             // Spawn sample mesh.
             const auto pMeshNode = gc_new<MeshNode>();

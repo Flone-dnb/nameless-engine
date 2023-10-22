@@ -98,9 +98,16 @@ namespace ne {
         /**
          * Constructor. Creates an empty resource.
          *
-         * @param pResourceManager Owner resource manager.
+         * @param pResourceManager     Owner resource manager.
+         * @param iElementSizeInBytes  Optional parameter. Specify if this resource represents
+         * an array. Used for SRV creation.
+         * @param iElementCount        Optional parameter. Specify if this resource represents
+         * an array. Used for SRV creation.
          */
-        DirectXResource(const DirectXResourceManager* pResourceManager);
+        DirectXResource(
+            const DirectXResourceManager* pResourceManager,
+            UINT iElementSizeInBytes = 0,
+            UINT iElementCount = 0);
 
         /**
          * Creates a new resource (without binding a descriptor to it).
@@ -113,6 +120,10 @@ namespace ne {
          * @param initialResourceState Initial state of this resource.
          * @param resourceClearValue   Optimized clear value. Pass empty if creating
          * CBV/SRV/UAV resource.
+         * @param iElementSizeInBytes  Optional parameter. Specify if this resource represents
+         * an array. Used for SRV creation.
+         * @param iElementCount        Optional parameter. Specify if this resource represents
+         * an array. Used for SRV creation.
          *
          * @return Error if something went wrong, otherwise created resource.
          */
@@ -123,7 +134,9 @@ namespace ne {
             const D3D12MA::ALLOCATION_DESC& allocationDesc,
             const D3D12_RESOURCE_DESC& resourceDesc,
             const D3D12_RESOURCE_STATES& initialResourceState,
-            std::optional<D3D12_CLEAR_VALUE> resourceClearValue);
+            std::optional<D3D12_CLEAR_VALUE> resourceClearValue,
+            size_t iElementSizeInBytes = 0,
+            size_t iElementCount = 0);
 
         /**
          * Creates a new resource instance by wrapping existing swap chain buffer,
@@ -163,5 +176,19 @@ namespace ne {
          * to internal resource.
          */
         ID3D12Resource* pInternalResource = nullptr;
+
+        /**
+         * Not zero if this resource represents an array (for ex. StructuredBuffer).
+         *
+         * @remark Used for SRV creation.
+         */
+        const UINT iElementSizeInBytes = 0;
+
+        /**
+         * Not zero if this resource represents an array (for ex. StructuredBuffer).
+         *
+         * @remark Used for SRV creation.
+         */
+        const UINT iElementCount = 0;
     };
 } // namespace ne

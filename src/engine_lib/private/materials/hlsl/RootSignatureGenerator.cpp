@@ -10,6 +10,7 @@
 #include "render/directx/DirectXRenderer.h"
 #include "materials/DescriptorConstants.hpp"
 #include "misc/Profiler.hpp"
+#include "materials/resources/LightingShaderResourceManager.h"
 
 namespace ne {
     std::variant<RootSignatureGenerator::CollectedInfo, Error>
@@ -91,6 +92,14 @@ namespace ne {
             } else if (resourceDesc.Type == D3D_SIT_TEXTURE) {
                 auto optionalError =
                     addTexture2DRootParameter(vRootParameters, rootParameterIndices, resourceDesc);
+                if (optionalError.has_value()) [[unlikely]] {
+                    auto error = optionalError.value();
+                    error.addCurrentLocationToErrorStack();
+                    return error;
+                }
+            } else if (resourceDesc.Type == D3D_SIT_STRUCTURED) {
+                auto optionalError =
+                    addStructuredBufferRootParameter(vRootParameters, rootParameterIndices, resourceDesc);
                 if (optionalError.has_value()) [[unlikely]] {
                     auto error = optionalError.value();
                     error.addCurrentLocationToErrorStack();
@@ -191,7 +200,7 @@ namespace ne {
         std::set<std::string> addedRootParameterNames;
 
         // Check that vertex shader uses frame constant buffer as first root parameter.
-        auto vertexFrameBufferIt =
+        const auto vertexFrameBufferIt =
             vertexShaderRootSignatureInfo.rootParameterIndices.find(sFrameConstantBufferName);
         if (vertexFrameBufferIt == vertexShaderRootSignatureInfo.rootParameterIndices.end()) [[unlikely]] {
             return Error(std::format(
@@ -200,15 +209,43 @@ namespace ne {
                 pVertexShader->getShaderName()));
         }
 
-        // Save only first root parameter, this should be frame resources.
-        static_assert(
-            iFrameConstantBufferRootParameterIndex == 0,
-            "frame cbuffer is expected to be the first root parameter");
-
         // Add first root parameter (frame constants).
+        static_assert(
+            iFrameConstantBufferRootParameterIndex == 0, "change order in which we add to `vRootParameters`");
         vRootParameters.push_back(vertexFrameBufferIt->second.second.generateSingleDescriptorDescription());
         addedRootParameterNames.insert(sFrameConstantBufferName);
-        rootParameterIndices[sFrameConstantBufferName] = 0;
+        rootParameterIndices[sFrameConstantBufferName] = iFrameConstantBufferRootParameterIndex;
+
+        // Prepare a lambda to add some fixed root parameter indices.
+        auto addLightingResourceRootParameter = [&](const std::string& sLightingShaderResourceName,
+                                                    UINT iLightingResourceRootParameterIndex) {
+            // See if this resource is used.
+            const auto rootParameterIndexIt =
+                pixelShaderRootSignatureInfo.rootParameterIndices.find(sLightingShaderResourceName);
+
+            if (rootParameterIndexIt != pixelShaderRootSignatureInfo.rootParameterIndices.end()) {
+                // Add root parameter.
+                vRootParameters.push_back(
+                    rootParameterIndexIt->second.second.generateSingleDescriptorDescription());
+                addedRootParameterNames.insert(sLightingShaderResourceName);
+                rootParameterIndices[sLightingShaderResourceName] = iLightingResourceRootParameterIndex;
+            }
+        };
+
+        // Check if general lighting data is used and then assign it a fixed root parameter index.
+        static_assert(
+            iGeneralLightingConstantBufferRootParameterIndex == 1,
+            "change order in which we add to `vRootParameters`");
+        addLightingResourceRootParameter(
+            LightingShaderResourceManager::getGeneralLightingDataShaderResourceName(),
+            iGeneralLightingConstantBufferRootParameterIndex);
+
+        // Check if point lights are used and then assign it a fixed root parameter index.
+        static_assert(
+            iPointLightsBufferRootParameterIndex == 2, "change order in which we add to `vRootParameters`");
+        addLightingResourceRootParameter(
+            LightingShaderResourceManager::getPointLightsShaderResourceName(),
+            iPointLightsBufferRootParameterIndex);
 
         // Do some basic checks to add parameters/samplers that don't exist in pixel shader.
 
@@ -456,6 +493,31 @@ namespace ne {
         const D3D12_SHADER_INPUT_BIND_DESC& resourceDescription) {
         auto newRootParameter = RootParameter(
             resourceDescription.BindPoint, resourceDescription.Space, RootParameter::Type::SRV, true);
+
+        // Make sure this resource name is unique, save its root index.
+        auto optionalError = addUniquePairResourceNameRootParameterIndex(
+            rootParameterIndices,
+            resourceDescription.Name,
+            static_cast<UINT>(vRootParameters.size()),
+            newRootParameter);
+        if (optionalError.has_value()) [[unlikely]] {
+            auto error = optionalError.value();
+            error.addCurrentLocationToErrorStack();
+            return error;
+        }
+
+        // Add to root parameters.
+        vRootParameters.push_back(newRootParameter);
+
+        return {};
+    }
+
+    std::optional<Error> RootSignatureGenerator::addStructuredBufferRootParameter(
+        std::vector<RootParameter>& vRootParameters,
+        std::unordered_map<std::string, std::pair<UINT, RootParameter>>& rootParameterIndices,
+        const D3D12_SHADER_INPUT_BIND_DESC& resourceDescription) {
+        auto newRootParameter =
+            RootParameter(resourceDescription.BindPoint, resourceDescription.Space, RootParameter::Type::SRV);
 
         // Make sure this resource name is unique, save its root index.
         auto optionalError = addUniquePairResourceNameRootParameterIndex(

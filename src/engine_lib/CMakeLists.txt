@@ -156,6 +156,8 @@ set(PROJECT_SOURCES
     private/materials/glsl/resources/GlslShaderResourceHelpers.cpp
     private/materials/glsl/DescriptorSetLayoutGenerator.h
     private/materials/glsl/DescriptorSetLayoutGenerator.cpp
+    private/materials/resources/LightingShaderResourceManager.h
+    private/materials/resources/LightingShaderResourceManager.cpp
     private/materials/TextureManager.cpp
     public/materials/TextureManager.h
     private/misc/ThreadPool.h
@@ -215,6 +217,8 @@ set(PROJECT_SOURCES
     public/game/nodes/CameraNode.h
     private/game/nodes/EnvironmentNode.cpp
     public/game/nodes/EnvironmentNode.h
+    private/game/nodes/light/PointLightNode.cpp
+    public/game/nodes/light/PointLightNode.h
     public/io/properties/SerializeProperty.h
     private/io/properties/SerializeProperty.cpp
     private/io/properties/GuidProperty.cpp

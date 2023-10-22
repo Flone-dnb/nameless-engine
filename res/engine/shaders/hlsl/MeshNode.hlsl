@@ -1,15 +1,16 @@
 #include "Base.hlsl"
+#include "Lighting.hlsl"
 
 #ifdef PS_USE_DIFFUSE_TEXTURE
    SamplerState textureSampler : register(s0, space5);
 #endif
 
 #ifdef PS_USE_DIFFUSE_TEXTURE
-    Texture2D diffuseTexture : register(t0, space5);
+    Texture2D diffuseTexture : register(t1, space5);
 #endif
 
 /** Describes MeshNode's constants. */
-cbuffer meshData : register(b1, space5)
+cbuffer meshData : register(b2, space5)
 {
     /** Matrix that transforms vertices from mesh local space to world space. */
     float4x4 worldMatrix; 
@@ -18,7 +19,7 @@ cbuffer meshData : register(b1, space5)
 };
 
 /** Describes Material's constants. */
-cbuffer materialData : register(b2, space5)
+cbuffer materialData : register(b3, space5)
 {
     /** Fill color. */
     float3 diffuseColor;
@@ -48,19 +49,32 @@ VertexOut vsMeshNode(VertexIn vertexIn)
 
 float4 psMeshNode(VertexOut pin) : SV_Target
 {
-    // Set diffuse color.
-    float4 outputColor = float4(diffuseColor, 1.0F);
+    // Normals may be unnormalized after the rasterization (when they are interpolated).
+    float3 pixelNormalUnit = normalize(pin.worldNormal);
 
+    // Set initial (unlit) color.
+    float4 outputColor = float4(0.0F, 0.0F, 0.0F, 1.0F);
+
+    // Prepare diffuse color.
+    float3 pixelDiffuseColor = diffuseColor;
 #ifdef PS_USE_DIFFUSE_TEXTURE
-    // Apply diffuse texture.
-    outputColor *= diffuseTexture.Sample(textureSampler, pin.uv);
+    float4 diffuseTextureSample = diffuseTexture.Sample(textureSampler, pin.uv);
+    pixelDiffuseColor *= diffuseTextureSample.rgb;
 #endif
 
+    // Calculate light from point lights.
+    for (uint i = 0; i < iPointLightCount; i++){
+        outputColor.rgb += float3(pointLights[i].intensity, pointLights[i].intensity, pointLights[i].intensity); // testing code
+    }
+
     // Apply ambient light.
-    outputColor.rgb *= ambientLight;
+    outputColor.rgb += ambientLight * pixelDiffuseColor;
 
 #ifdef PS_USE_MATERIAL_TRANSPARENCY
-    // Apply opacity.
+    // Apply transparency.
+#ifdef PS_USE_DIFFUSE_TEXTURE
+    outputColor.a = diffuseTextureSample.a;
+#endif
     outputColor.a *= opacity;
 #endif
 

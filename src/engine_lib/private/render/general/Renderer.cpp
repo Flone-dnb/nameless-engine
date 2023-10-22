@@ -134,13 +134,6 @@ namespace ne {
         mtxFrameConstants.second.timeSincePrevFrameInSec = getGameManager()->getTimeSincePrevFrameInSec();
         mtxFrameConstants.second.totalTimeInSec = GameInstance::getTotalApplicationTimeInSec();
 
-        // Set environment parameters.
-        if (mtxSpawnedEnvironmentNode.second != nullptr) {
-            mtxFrameConstants.second.ambientLight = mtxSpawnedEnvironmentNode.second->getAmbientLight();
-        } else {
-            mtxFrameConstants.second.ambientLight = glm::vec3(0.0F, 0.0F, 0.0F);
-        }
-
         // Copy to GPU.
         pCurrentFrameResource->pFrameConstantBuffer->copyDataToElement(
             0, &mtxFrameConstants.second, sizeof(mtxFrameConstants.second));
@@ -240,6 +233,16 @@ namespace ne {
         Logger::get().info("explicitly resetting frame resources manager");
         Logger::get().flushToDisk();
         pFrameResourcesManager = nullptr;
+    }
+
+    void Renderer::resetLightingShaderResourceManager() {
+        if (pLightingShaderResourceManager == nullptr) {
+            return;
+        }
+
+        Logger::get().info("explicitly resetting lighting shader resource manager");
+        Logger::get().flushToDisk();
+        pLightingShaderResourceManager = nullptr;
     }
 
     std::optional<Error> Renderer::onRenderSettingsChanged() {
@@ -493,6 +496,10 @@ namespace ne {
         return pShaderTextureResourceManager.get();
     }
 
+    LightingShaderResourceManager* Renderer::getLightingShaderResourceManager() const {
+        return pLightingShaderResourceManager.get();
+    }
+
     std::recursive_mutex* Renderer::getRenderResourcesMutex() { return &mtxRwRenderResources; }
 
     void Renderer::updateShaderConfiguration() {
@@ -641,6 +648,9 @@ namespace ne {
         pShaderTextureResourceManager =
             std::unique_ptr<ShaderTextureResourceManager>(new ShaderTextureResourceManager(this));
 
+        // Create lighting shader resource manager.
+        pLightingShaderResourceManager = LightingShaderResourceManager::create(this);
+
         return {};
     }
 
@@ -662,9 +672,10 @@ namespace ne {
         CameraProperties* pCameraProperties) {
         PROFILE_FUNC;
 
+        // Don't allow new frames to be submitted.
         std::scoped_lock frameGuard(*getRenderResourcesMutex());
 
-        // Set camera's aspect ratio.
+        // Update camera's aspect ratio (if it was changed).
         pCameraProperties->setAspectRatio(iRenderTargetWidth, iRenderTargetHeight);
 
         // Get current frame resource.
@@ -686,11 +697,27 @@ namespace ne {
                 std::chrono::duration<float, std::chrono::milliseconds::period>(endTime - startTime).count();
         }
 
-        // Copy new (up to date) data to frame data cbuffer to be used by the shaders.
+        // Copy new (up to date) data to frame data GPU resource to be used by shaders.
         updateFrameConstantsBuffer(pMtxCurrentFrameResource->second.pResource, pCameraProperties);
 
         // Update shader CPU write resources marked as "needs update".
         getShaderCpuWriteResourceManager()->updateResources(
+            pMtxCurrentFrameResource->second.iCurrentFrameResourceIndex);
+
+        // Before updating lighting shader resources update general lighting parameters.
+        {
+            std::scoped_lock environmentGuard(mtxSpawnedEnvironmentNode.first);
+
+            if (mtxSpawnedEnvironmentNode.second != nullptr) {
+                pLightingShaderResourceManager->setAmbientLight(
+                    mtxSpawnedEnvironmentNode.second->getAmbientLight());
+            } else {
+                pLightingShaderResourceManager->setAmbientLight(glm::vec3(0.0F, 0.0F, 0.0F));
+            }
+        }
+
+        // Update lighting shader resources marked as "needs update".
+        pLightingShaderResourceManager->updateResources(
             pMtxCurrentFrameResource->second.iCurrentFrameResourceIndex);
     }
 

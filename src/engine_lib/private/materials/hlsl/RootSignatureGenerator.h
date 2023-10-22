@@ -187,6 +187,24 @@ namespace ne {
             return iFrameConstantBufferRootParameterIndex;
         }
 
+        /**
+         * Returns index of the root parameter that points to `cbuffer` with general lighting constants.
+         *
+         * @return Root parameter index.
+         */
+        static constexpr UINT getGeneralLightingConstantBufferRootParameterIndex() {
+            return iGeneralLightingConstantBufferRootParameterIndex;
+        }
+
+        /**
+         * Returns index of the root parameter that points to a shader resource that stores point lights.
+         *
+         * @return Root parameter index.
+         */
+        static constexpr UINT getPointLightsBufferRootParameterIndex() {
+            return iPointLightsBufferRootParameterIndex;
+        }
+
     private:
         /**
          * Finds static sampler for the specified sampler resource.
@@ -244,10 +262,30 @@ namespace ne {
             std::unordered_map<std::string, std::pair<UINT, RootParameter>>& rootParameterIndices,
             const D3D12_SHADER_INPUT_BIND_DESC& resourceDescription);
 
+        /**
+         * Adds a `StructuredBuffer` shader resource to root parameters.
+         *
+         * @param vRootParameters      Parameters to add the new resource to.
+         * @param rootParameterIndices Map to add new parameter to.
+         * @param resourceDescription  Shader resource description.
+         *
+         * @return Error if something went wrong.
+         */
+        static std::optional<Error> addStructuredBufferRootParameter(
+            std::vector<RootParameter>& vRootParameters,
+            std::unordered_map<std::string, std::pair<UINT, RootParameter>>& rootParameterIndices,
+            const D3D12_SHADER_INPUT_BIND_DESC& resourceDescription);
+
         /** Name of the `cbuffer` resource used to store frame data in HLSL shaders. */
         static inline const std::string sFrameConstantBufferName = "frameData";
 
         /** Index of the root parameter that points to `cbuffer` with frame constants. */
         static constexpr UINT iFrameConstantBufferRootParameterIndex = 0;
+
+        /** Index of the root parameter that points to `cbuffer` with general lighting constants. */
+        static constexpr UINT iGeneralLightingConstantBufferRootParameterIndex = 1;
+
+        /** Index of the root parameter that points to a shader resource that stores point lights. */
+        static constexpr UINT iPointLightsBufferRootParameterIndex = 2;
     };
 } // namespace ne

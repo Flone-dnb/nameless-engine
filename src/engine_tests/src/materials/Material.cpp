@@ -449,11 +449,7 @@ TEST_CASE("2 meshes with 2 materials (different diffuse textures no transparency
 
                 // Spawn sample mesh 1.
                 const auto pMeshNode1 = gc_new<MeshNode>();
-                auto mtxMeshData = pMeshNode1->getMeshData();
-                {
-                    std::scoped_lock guard(*mtxMeshData.first);
-                    (*mtxMeshData.second) = PrimitiveMeshGenerator::createCube(1.0F);
-                }
+                pMeshNode1->setMeshData(PrimitiveMeshGenerator::createCube(1.0F));
 
                 getWorldRootNode()->addChildNode(
                     pMeshNode1, Node::AttachmentRule::KEEP_RELATIVE, Node::AttachmentRule::KEEP_RELATIVE);
@@ -464,11 +460,7 @@ TEST_CASE("2 meshes with 2 materials (different diffuse textures no transparency
 
                 // Spawn sample mesh 2.
                 const auto pMeshNode2 = gc_new<MeshNode>();
-                mtxMeshData = pMeshNode2->getMeshData();
-                {
-                    std::scoped_lock guard(*mtxMeshData.first);
-                    (*mtxMeshData.second) = PrimitiveMeshGenerator::createCube(1.0F);
-                }
+                pMeshNode2->setMeshData(PrimitiveMeshGenerator::createCube(1.0F));
 
                 // Set texture before spawning.
                 pMeshNode2->getMaterial()->setDiffuseTexture(sImportedTexture2PathRelativeRes);

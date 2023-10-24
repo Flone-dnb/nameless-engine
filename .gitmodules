@@ -34,9 +34,6 @@
 [submodule "ext/VulkanMemoryAllocator"]
 	path = ext/VulkanMemoryAllocator
 	url = https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator.git
-[submodule "ext/GLSL-Shader-Includes"]
-	path = ext/GLSL-Shader-Includes
-	url = https://github.com/Flone-dnb/GLSL-Shader-Includes.git
 [submodule "ext/shaderc"]
 	path = ext/shaderc
 	url = https://github.com/Flone-dnb/shaderc.git

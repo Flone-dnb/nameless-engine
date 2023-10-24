@@ -1,5 +1,5 @@
 /** Stores frame-global constants. */
-cbuffer frameData : register(b0, space5)
+struct FrameData
 {
     /** Camera's view matrix multiplied by camera's projection matrix. */
     float4x4 viewProjectionMatrix;
@@ -12,9 +12,8 @@ cbuffer frameData : register(b0, space5)
 
     /** Time since the first window was created (in seconds). */
     float totalTimeInSec;
-
-    // don't forget to pad to 4 floats (if needed)
-}
+};
+ConstantBuffer<FrameData> frameData : register(b0, space5);
 
 /** Describes vertex shader input data. */
 struct VertexIn

@@ -1,15 +1,14 @@
 /// Include this file if you need to have information about spawned light sources and/or general lighting.
 
 /** Stores general lighting related data. */
-cbuffer generalLightingData : register(b1, space5){
+struct GeneralLightingData{
     /** Light color intensity of ambient lighting. */
     float3 ambientLight;
 
     /** Total number of spawned point lights. */
     uint iPointLightCount;
-    
-    // don't forget to pad to 4 floats (if needed)
 };
+ConstantBuffer<GeneralLightingData> generalLightingData : register(b1, space5);
 
 /** Point light parameters. */
 struct PointLight{

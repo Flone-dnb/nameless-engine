@@ -1,5 +1,5 @@
-#include "Base.hlsl"
-#include "Lighting.hlsl"
+#include "../Base.glsl"
+#include "../Lighting.glsl"
 
 #ifdef PS_USE_DIFFUSE_TEXTURE
    SamplerState textureSampler : register(s0, space5);
@@ -8,14 +8,6 @@
 #ifdef PS_USE_DIFFUSE_TEXTURE
     Texture2D diffuseTexture : register(t1, space5);
 #endif
-
-/** Describes MeshNode's constants. */
-struct MeshData
-{
-    /** Matrix that transforms vertices from mesh local space to world space. */
-    float4x4 worldMatrix; 
-};
-ConstantBuffer<MeshData> meshData : register(b2, space5);
 
 /** Describes Material's constants. */
 struct MaterialData
@@ -28,23 +20,7 @@ struct MaterialData
 };
 ConstantBuffer<MaterialData> materialData : register(b3, space5);
 
-VertexOut vsMeshNode(VertexIn vertexIn)
-{
-    VertexOut vertexOut;
-
-    // Calculate world position and normal.
-    vertexOut.worldPosition = mul(meshData.worldMatrix, float4(vertexIn.localPosition, 1.0F));
-    vertexOut.worldNormal = normalize(mul((float3x3)meshData.worldMatrix, vertexIn.localNormal));
-
-    // Transform position to homogeneous clip space.
-    vertexOut.viewPosition = mul(frameData.viewProjectionMatrix, vertexOut.worldPosition);
-
-    // Copy UV.
-    vertexOut.uv = vertexIn.uv;
-
-    return vertexOut;
-}
-
+/** Pixel shader. */
 float4 psMeshNode(VertexOut pin) : SV_Target
 {
     // Normals may be unnormalized after the rasterization (when they are interpolated).

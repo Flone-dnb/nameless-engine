@@ -14,7 +14,8 @@ namespace ne {
         /** Mesh node's vertex shader. */
         static inline const auto meshNodeVertexShader = ShaderDescription(
             EngineShaderNames::MeshNode::sVertexShaderName,
-            ProjectPaths::getPathToResDirectory(ResourceDirectory::ENGINE) / "shaders/hlsl/MeshNode.hlsl",
+            ProjectPaths::getPathToResDirectory(ResourceDirectory::ENGINE) /
+                "shaders/hlsl/MeshNode.vert.hlsl",
             ShaderType::VERTEX_SHADER,
             "vsMeshNode",
             {});
@@ -22,7 +23,8 @@ namespace ne {
         /** Mesh node's pixel shader. */
         static inline const auto meshNodePixelShader = ShaderDescription(
             EngineShaderNames::MeshNode::sPixelShaderName,
-            ProjectPaths::getPathToResDirectory(ResourceDirectory::ENGINE) / "shaders/hlsl/MeshNode.hlsl",
+            ProjectPaths::getPathToResDirectory(ResourceDirectory::ENGINE) /
+                "shaders/hlsl/MeshNode.frag.hlsl",
             ShaderType::PIXEL_SHADER,
             "psMeshNode",
             {});

@@ -10,7 +10,6 @@
 #include "materials/glsl/DescriptorSetLayoutGenerator.h"
 
 // External.
-#include "ShaderIncluder.h"
 #include "shaderc/shaderc.hpp"
 #include "vulkan/vulkan.h"
 
@@ -141,15 +140,6 @@ namespace ne {
          * @return Shader kind.
          */
         static shaderc_shader_kind convertShaderTypeToShadercShaderKind(ShaderType shaderType);
-
-        /**
-         * Converts error returned by ShaderIncluder to a string.
-         *
-         * @param error Error returned by ShaderIncluder.
-         *
-         * @return Text representation of the error.
-         */
-        static std::string convertShaderIncluderErrorToString(ShaderIncluder::Error error);
 
         /**
          * Loads shader data (bytecode, descriptor set layout info, etc.) from disk cache

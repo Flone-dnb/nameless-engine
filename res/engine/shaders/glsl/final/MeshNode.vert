@@ -1,4 +1,4 @@
-#include "MeshNode.vert.glsl"
+#include "../MeshNode.vert.glsl"
 
 void main(){
     vsMeshNode();

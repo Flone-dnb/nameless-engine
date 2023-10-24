@@ -1,4 +1,4 @@
-#include "MeshNode.frag.glsl"
+#include "../MeshNode.frag.glsl"
 
 void main() {
     fsMeshNode();

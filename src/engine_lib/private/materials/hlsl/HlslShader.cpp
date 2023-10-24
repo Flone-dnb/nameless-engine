@@ -15,6 +15,7 @@
 #include "misc/Profiler.hpp"
 
 // External.
+#include "CombinedShaderLanguageParser.h"
 #include "DirectXShaderCompiler/inc/d3d12shader.h"
 #pragma comment(lib, "dxcompiler.lib")
 
@@ -157,7 +158,7 @@ namespace ne {
             return Error("the specified renderer is not a DirectX renderer");
         }
 
-        // Calculate source file hash.
+        // Calculate source file hash (to use later).
         const auto sSourceFileHash =
             ShaderDescription::getFileHash(shaderDescription.pathToShaderFile, shaderDescription.sShaderName);
         if (sSourceFileHash.empty()) {
@@ -230,9 +231,24 @@ namespace ne {
             vArgs.push_back(Globals::stringToWstring(macroDefine));
         }
 
-        // Open source file.
+        // Parse source code.
+        auto parseResult = CombinedShaderLanguageParser::parseHlsl(shaderDescription.pathToShaderFile);
+        if (std::holds_alternative<CombinedShaderLanguageParser::Error>(parseResult)) [[unlikely]] {
+            auto error = std::get<CombinedShaderLanguageParser::Error>(parseResult);
+            return Error(std::format(
+                "failed to parse shader source code, error: {} (while processing file: {})",
+                error.sErrorMessage,
+                error.pathToErrorFile.string()));
+        }
+        const auto sFullShaderSourceCode = std::get<std::string>(std::move(parseResult));
+
+        // Load source code.
         ComPtr<IDxcBlobEncoding> pSource = nullptr;
-        hResult = pUtils->LoadFile(shaderDescription.pathToShaderFile.c_str(), nullptr, &pSource);
+        hResult = pUtils->CreateBlob(
+            sFullShaderSourceCode.data(),
+            static_cast<UINT32>(sFullShaderSourceCode.size()),
+            iShaderFileCodepage,
+            &pSource);
         if (FAILED(hResult)) {
             return Error(hResult);
         }

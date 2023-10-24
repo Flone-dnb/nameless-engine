@@ -345,13 +345,13 @@ message(STATUS "${PROJECT_NAME}: found Vulkan include dirs at: ${Vulkan_INCLUDE_
 target_include_directories(${PROJECT_NAME} SYSTEM PUBLIC ${Vulkan_INCLUDE_DIRS})
 target_link_libraries(${PROJECT_NAME} PUBLIC ${Vulkan_LIBRARIES})
 
-# External: GLSL Shader Includer
-message(STATUS "${PROJECT_NAME}: adding external dependency \"GLSL Shader Includer\"...")
-set(GLSL_SHADER_INCLUDER_ENABLE_TESTS OFF CACHE BOOL "" FORCE)
-set(GLSL_SHADER_INCLUDER_ENABLE_DOXYGEN OFF CACHE BOOL "" FORCE)
-add_subdirectory(${RELATIVE_EXT_PATH}/GLSL-Shader-Includes ${DEPENDENCY_BUILD_DIR_NAME}/GLSL-Shader-Includes SYSTEM)
-target_link_libraries(${PROJECT_NAME} PUBLIC GlslShaderIncluderLib)
-set_target_properties(GlslShaderIncluderLib PROPERTIES FOLDER ${EXTERNAL_FOLDER})
+# External: combined-shader-language-parser
+message(STATUS "${PROJECT_NAME}: adding external dependency \"Combined Shader Language Parser\"...")
+set(CSL_ENABLE_TESTS OFF CACHE BOOL "" FORCE)
+set(CSL_ENABLE_DOXYGEN OFF CACHE BOOL "" FORCE)
+add_subdirectory(${RELATIVE_EXT_PATH}/combined-shader-language-parser ${DEPENDENCY_BUILD_DIR_NAME}/combined-shader-language-parser SYSTEM)
+target_link_libraries(${PROJECT_NAME} PUBLIC CombinedShaderLanguageParserLib)
+set_target_properties(CombinedShaderLanguageParserLib PROPERTIES FOLDER ${EXTERNAL_FOLDER})
 
 # Add "shaderc".
 message(STATUS "${PROJECT_NAME}: adding external dependency \"shaderc\"...")
@@ -489,7 +489,7 @@ set(REFUREKU_INCLUDE_DIRECTORIES
     ${ABSOLUTE_EXT_PATH}/source_location/include
     ${ABSOLUTE_EXT_PATH}/glm
     ${ABSOLUTE_EXT_PATH}/Refureku/build/Include
-    ${ABSOLUTE_EXT_PATH}/GLSL-Shader-Includes/src/project_lib/src
+    ${ABSOLUTE_EXT_PATH}/combined-shader-language-parser/src/csl_lib/src
     ${ABSOLUTE_EXT_PATH}/shaderc/libshaderc/include
     ${ABSOLUTE_EXT_PATH}/SPIRV-Reflect
     ${ABSOLUTE_EXT_PATH}/Remotery/lib

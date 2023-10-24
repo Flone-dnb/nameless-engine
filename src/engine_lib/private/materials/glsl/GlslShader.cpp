@@ -14,6 +14,9 @@
 #include "misc/Profiler.hpp"
 #include "render/vulkan/VulkanRenderer.h"
 
+// External.
+#include "CombinedShaderLanguageParser.h"
+
 namespace ne {
     std::string getLineFromText(const std::string& sText, size_t iLineNumber) {
         // Prepare some variables.
@@ -111,11 +114,13 @@ namespace ne {
         }
 
         // Read shader file.
-        auto parseResult = ShaderIncluder::parseFullSourceCode(shaderDescription.pathToShaderFile);
-        if (std::holds_alternative<ShaderIncluder::Error>(parseResult)) [[unlikely]] {
+        auto parseResult = CombinedShaderLanguageParser::parseGlsl(shaderDescription.pathToShaderFile);
+        if (std::holds_alternative<CombinedShaderLanguageParser::Error>(parseResult)) [[unlikely]] {
+            auto error = std::get<CombinedShaderLanguageParser::Error>(parseResult);
             return Error(std::format(
-                "failed to parse shader source code, error: {}",
-                convertShaderIncluderErrorToString(std::get<ShaderIncluder::Error>(parseResult))));
+                "failed to parse shader source code, error: {} (while processing file: {})",
+                error.sErrorMessage,
+                error.pathToErrorFile.string()));
         }
         const auto sFullShaderSourceCode = std::get<std::string>(std::move(parseResult));
 
@@ -278,43 +283,6 @@ namespace ne {
         }
         case (ShaderType::COMPUTE_SHADER): {
             return shaderc_glsl_compute_shader;
-            break;
-        }
-        }
-
-        Error err("unhandled case");
-        err.showError();
-        throw std::runtime_error(err.getFullErrorMessage());
-    }
-
-    std::string GlslShader::convertShaderIncluderErrorToString(ShaderIncluder::Error error) {
-        switch (error) {
-        case (ShaderIncluder::Error::CANT_OPEN_FILE): {
-            return "can't open the specified shader file or some included shader file";
-            break;
-        }
-        case (ShaderIncluder::Error::MISSING_QUOTES): {
-            return "the specified shader file or some included shader file has `#include` keyword with "
-                   "missing double quotes";
-            break;
-        }
-        case (ShaderIncluder::Error::NOTHING_AFTER_INCLUDE): {
-            return "the specified shader file or some included shader file has `#include` keyword with "
-                   "nothing after it";
-            break;
-        }
-        case (ShaderIncluder::Error::NO_SPACE_AFTER_KEYWORD): {
-            return "the specified shader file or some included shader file has `#include` keyword "
-                   "without a space after it";
-            break;
-        }
-        case (ShaderIncluder::Error::PATH_HAS_NO_PARENT_PATH): {
-            return "the specified shader file or some included shader file has `#include` keyword "
-                   "that points to a path that has no parent directory";
-            break;
-        }
-        case (ShaderIncluder::Error::PATH_IS_NOT_A_FILE): {
-            return "the specified shader path or some included shader path is not a file";
             break;
         }
         }

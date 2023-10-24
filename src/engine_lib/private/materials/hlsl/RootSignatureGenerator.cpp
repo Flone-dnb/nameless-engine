@@ -158,18 +158,6 @@ namespace ne {
                 "the specified shader \"{}\" is not a pixel shader", pPixelShader->getShaderName()));
         }
 
-        // Make sure that the shaders were compiled from the same source file.
-        if (pVertexShader->getShaderSourceFileHash() != pPixelShader->getShaderSourceFileHash())
-            [[unlikely]] {
-            return Error(std::format(
-                "the vertex shader \"{}\" and the pixel shader \"{}\" were not compiled from the same shader "
-                "source file (source file hash is not equal: {} != {})",
-                pVertexShader->getShaderName(),
-                pPixelShader->getShaderName(),
-                pVertexShader->getShaderSourceFileHash(),
-                pPixelShader->getShaderSourceFileHash()));
-        }
-
         // Get shaders used root parameters and used static samplers.
         auto pMtxPixelRootInfo = pPixelShader->getRootSignatureInfo();
         auto pMtxVertexRootInfo = pVertexShader->getRootSignatureInfo();

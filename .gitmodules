@@ -55,3 +55,6 @@
 [submodule "ext/tinygltf"]
 	path = ext/tinygltf
 	url = https://github.com/syoyo/tinygltf.git
+[submodule "ext/combined-shader-language-parser"]
+	path = ext/combined-shader-language-parser
+	url = https://github.com/Flone-dnb/combined-shader-language-parser.git

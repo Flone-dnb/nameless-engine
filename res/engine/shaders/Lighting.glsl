@@ -1,13 +1,15 @@
 /// Include this file if you need to have information about spawned light sources and/or general lighting.
 
 /** Stores general lighting related data. */
-layout(binding = 1) uniform GeneralLightingData{
+#glsl layout(binding = 1) uniform GeneralLightingData{
+#hlsl struct GeneralLightingData{
     /** Light color intensity of ambient lighting. */
     vec3 ambientLight;
 
     /** Total number of spawned point lights. */
     uint iPointLightCount;
-} generalLightingData;
+#glsl } generalLightingData;
+#hlsl }; ConstantBuffer<GeneralLightingData> generalLightingData : register(b1, space5);
 
 /** Point light parameters. */
 struct PointLight{
@@ -28,6 +30,9 @@ struct PointLight{
 };
 
 /** All spawned point lights. */
+#glsl{
 layout(std140, binding = 2) readonly buffer PointLightsBuffer{
     PointLight array[];
 } pointLights;
+}
+#hlsl StructuredBuffer<PointLight> pointLights : register(t0, space5);

@@ -305,14 +305,14 @@ TEST_CASE("unused materials unload shaders from memory") {
                 ShaderDescription(
                     "test.custom_mesh_node.vs",
                     ProjectPaths::getPathToResDirectory(ResourceDirectory::ROOT) /
-                        "test/shaders/hlsl/CustomMeshNode.hlsl",
+                        "test/shaders/hlsl/CustomMeshNode.vert.hlsl",
                     ShaderType::VERTEX_SHADER,
                     "vsCustomMeshNode",
                     {}),
                 ShaderDescription(
                     "test.custom_mesh_node.ps",
                     ProjectPaths::getPathToResDirectory(ResourceDirectory::ROOT) /
-                        "test/shaders/hlsl/CustomMeshNode.hlsl",
+                        "test/shaders/hlsl/CustomMeshNode.frag.hlsl",
                     ShaderType::PIXEL_SHADER,
                     "psCustomMeshNode",
                     {})};

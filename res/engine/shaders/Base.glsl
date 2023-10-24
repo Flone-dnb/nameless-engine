@@ -1,20 +1,29 @@
+// This file is expected to be included by all shaders.
+
+#glsl{
+#version 450
+#extension GL_ARB_separate_shader_objects : enable
+#extension GL_EXT_nonuniform_qualifier : enable
+}
+
 /** Stores frame-global constants. */
-struct FrameData
-{
+#glsl layout(binding = 0) uniform FrameData {
+#hlsl struct FrameData{
     /** Camera's view matrix multiplied by camera's projection matrix. */
-    float4x4 viewProjectionMatrix;
+    mat4 viewProjectionMatrix;
 
     /** Camera's world location. */
-    float3 cameraPosition;
+    vec3 cameraPosition;
 
     /** Time that has passed since the last frame in seconds (i.e. delta time). */
     float timeSincePrevFrameInSec;
 
     /** Time since the first window was created (in seconds). */
     float totalTimeInSec;
-};
-ConstantBuffer<FrameData> frameData : register(b0, space5);
+#glsl } frameData;
+#hlsl }; ConstantBuffer<FrameData> frameData : register(b0, space5);
 
+#hlsl{
 /** Describes vertex shader input data. */
 struct VertexIn
 {
@@ -31,3 +40,4 @@ struct VertexOut
     float3 worldNormal             : NORMAL;      // normal in world space
     float2 uv                      : UV;
 };
+}

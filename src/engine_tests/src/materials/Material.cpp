@@ -214,6 +214,9 @@ TEST_CASE("serialize and deserialize Material") {
                     ProjectPaths::getPathToResDirectory(ResourceDirectory::ROOT) / "test" / "temp" /
                     "TESTING_MaterialSerialization_TESTING.toml";
 
+                const auto diffuseColor = glm::vec3(0.0F, 1.0F, 0.0F);
+                const auto opacity = 0.6F;
+
                 {
                     // Create material.
                     auto result = Material::create(
@@ -227,9 +230,13 @@ TEST_CASE("serialize and deserialize Material") {
                         INFO(error.getFullErrorMessage());
                         REQUIRE(false);
                     }
+                    const auto pMaterial = std::get<std::shared_ptr<Material>>(std::move(result));
+
+                    // Customize.
+                    pMaterial->setDiffuseColor(diffuseColor);
+                    pMaterial->setOpacity(opacity);
 
                     // Serialize.
-                    const auto pMaterial = std::get<std::shared_ptr<Material>>(std::move(result));
                     auto optionalError = pMaterial->serialize(pathToFileInTemp, false);
                     if (optionalError.has_value()) {
                         auto error = optionalError.value();
@@ -256,6 +263,8 @@ TEST_CASE("serialize and deserialize Material") {
                     // Check.
                     REQUIRE(pMaterial->getMaterialName() == "My Material");
                     REQUIRE(pMaterial->isUsingTransparency());
+                    REQUIRE(glm::all(glm::epsilonEqual(pMaterial->getDiffuseColor(), diffuseColor, 0.001F)));
+                    REQUIRE(std::abs(pMaterial->getOpacity() - opacity) < 0.001F);
                 }
 
                 REQUIRE(Material::getCurrentAliveMaterialCount() == 0);

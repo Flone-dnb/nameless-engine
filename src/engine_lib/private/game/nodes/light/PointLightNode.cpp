@@ -23,6 +23,9 @@ namespace ne {
         mtxShaderData.second.shaderData.color = glm::vec4(color, 1.0F);
         mtxShaderData.second.shaderData.intensity = intensity;
         mtxShaderData.second.shaderData.halfDistance = halfDistance;
+#if defined(DEBUG)
+        static_assert(sizeof(PointLightShaderData) == 48, "consider copying new parameters here");
+#endif
 
         // Reserve a slot in the point light shader data array
         // so that our parameters will be available in the shaders.

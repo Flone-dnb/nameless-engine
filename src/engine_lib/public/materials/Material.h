@@ -168,9 +168,9 @@ namespace ne RNAMESPACE() {
          * Sets material's opacity.
          *
          * @remark Only works if the material has transparency enabled (see @ref create or
-         * @ref setEnableTransparency), otherwise logs an error.
+         * @ref setEnableTransparency).
          *
-         * @param opacity Value in range [0.0F; 1.0F].
+         * @param opacity Value in range [0.0F; 1.0F], will be clamped if outside of this range.
          */
         void setOpacity(float opacity = 1.0F);
 
@@ -533,6 +533,18 @@ namespace ne RNAMESPACE() {
          */
         RPROPERTY(Serialize)
         std::string sDiffuseTexturePathRelativeRes;
+
+        /** Diffuse (fill) color. */
+        RPROPERTY(Serialize)
+        glm::vec3 diffuseColor = glm::vec3(1.0F, 1.0F, 1.0F);
+
+        /**
+         * Opacity in range [0.0; 1.0].
+         *
+         * @remark Only used when @ref bUseTransparency is enabled.
+         */
+        RPROPERTY(Serialize)
+        float opacity = 1.0F;
 
         /** Whether this material will use transparency or not. */
         RPROPERTY(Serialize)

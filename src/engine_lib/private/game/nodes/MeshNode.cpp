@@ -737,6 +737,11 @@ namespace ne {
     }
 
     void MeshNode::onAfterDeserialized() {
+#if defined(DEBUG)
+        static_assert(
+            sizeof(MeshShaderConstants) == 128, "consider copying deserialized data to shader struct");
+#endif
+
         // Apply any deserialized mesh data.
         onMeshDataChanged();
     }

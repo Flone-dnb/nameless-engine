@@ -617,7 +617,10 @@ namespace ne {
     void Material::setDiffuseColor(const glm::vec3& diffuseColor) {
         std::scoped_lock guard(mtxShaderMaterialDataConstants.first);
 
-        // Save new diffuse color (4th component stores opacity).
+        // Save new diffuse color (to serialize).
+        this->diffuseColor = diffuseColor;
+
+        // Save new diffuse color for shaders (4th component stores opacity).
         mtxShaderMaterialDataConstants.second.diffuseColor.x = diffuseColor.x;
         mtxShaderMaterialDataConstants.second.diffuseColor.y = diffuseColor.y;
         mtxShaderMaterialDataConstants.second.diffuseColor.z = diffuseColor.z;
@@ -626,17 +629,13 @@ namespace ne {
     }
 
     void Material::setOpacity(float opacity) {
-        if (!bUseTransparency) [[unlikely]] {
-            Logger::get().error(std::format(
-                "material \"{}\" was requested to set opacity but it does not use transparency",
-                sMaterialName));
-            return;
-        }
-
         std::scoped_lock guard(mtxShaderMaterialDataConstants.first);
 
-        // Save new opacity.
-        mtxShaderMaterialDataConstants.second.diffuseColor.w = std::clamp(opacity, 0.0F, 1.0F);
+        // Save new opacity (to serialize).
+        this->opacity = std::clamp(opacity, 0.0F, 1.0F);
+
+        // Save new opacity for shaders.
+        mtxShaderMaterialDataConstants.second.diffuseColor.w = this->opacity;
 
         markShaderCpuWriteResourceAsNeedsUpdate(sMaterialShaderConstantBufferName);
     }
@@ -849,17 +848,9 @@ namespace ne {
         }
     }
 
-    glm::vec3 Material::getDiffuseColor() {
-        std::scoped_lock guard(mtxShaderMaterialDataConstants.first);
+    glm::vec3 Material::getDiffuseColor() { return diffuseColor; }
 
-        return mtxShaderMaterialDataConstants.second.diffuseColor;
-    }
-
-    float Material::getOpacity() {
-        std::scoped_lock guard(mtxShaderMaterialDataConstants.first);
-
-        return mtxShaderMaterialDataConstants.second.diffuseColor.w;
-    }
+    float Material::getOpacity() { return opacity; }
 
     std::string Material::getPathToDiffuseTextureResource() {
         std::scoped_lock internalResourcesGuard(mtxInternalResources.first);
@@ -872,7 +863,7 @@ namespace ne {
 
         std::scoped_lock internalResourcesGuard(mtxInternalResources.first);
 
-        // Save pipeline manager.
+        // Save pointer to pipeline manager.
         auto result = getPipelineManagerForNewMaterial(sVertexShaderName, sPixelShaderName);
         if (std::holds_alternative<Error>(result)) [[unlikely]] {
             auto error = std::get<Error>(std::move(result));
@@ -882,7 +873,16 @@ namespace ne {
         }
         pPipelineManager = std::get<PipelineManager*>(result);
 
-        // Define diffuse texture macro (if enabled).
+        // Apply deserialized values to shaders.
+        setDiffuseColor(diffuseColor);
+        setOpacity(opacity);
+#if defined(WIN32) && defined(DEBUG)
+        static_assert(
+            sizeof(MaterialShaderConstants) == 16,
+            "consider copying new data to shaders here"); // NOLINT: current size
+#endif
+
+        // Define diffuse texture macro (if texture is set).
         if (!sDiffuseTexturePathRelativeRes.empty()) {
             mtxInternalResources.second.materialPixelShaderMacros.insert(ShaderMacro::PS_USE_DIFFUSE_TEXTURE);
         }
@@ -894,7 +894,7 @@ namespace ne {
         }
 
 #if defined(WIN32) && defined(DEBUG)
-        static_assert(sizeof(Material) == 1008, "consider checking new macros here"); // NOLINT: current size
+        static_assert(sizeof(Material) == 1024, "consider checking new macros here"); // NOLINT: current size
 #elif defined(DEBUG)
         static_assert(sizeof(Material) == 752, "consider checking new macros here"); // NOLINT: current size
 #endif

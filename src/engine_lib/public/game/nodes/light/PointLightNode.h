@@ -126,8 +126,6 @@ namespace ne RNAMESPACE() {
 
             /** Distance where intensity is half the maximum. */
             alignas(iVkScalarAlignment) float halfDistance = 5.0F; // NOLINT
-
-            // don't forget to add padding to 4 floats (if needed) for HLSL packing rules
         };
 
         /** Groups data related to shaders. */

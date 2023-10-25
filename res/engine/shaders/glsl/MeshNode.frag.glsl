@@ -34,9 +34,22 @@ void fsMeshNode(){
     fragmentDiffuseColor *= diffuseTextureSample.rgb;
 #endif
 
+    // Prepare specular color.
+    vec3 fragmentSpecularColor = vec3(1.0F, 1.0F, 1.0F);
+
+    // Prepare material shininess.
+    float materialShininess = 32.0F;
+
     // Calculate light from point lights.
     for (uint i = 0; i < generalLightingData.iPointLightCount; i++){
-        outputColor.rgb += vec3(pointLights.array[i].intensity); // testing code
+        outputColor.rgb += calculateColorFromPointLight(
+            pointLights.array[i],
+            frameData.cameraPosition,
+            vec3(fragmentWorldPosition),
+            fragmentWorldNormalUnit,
+            fragmentDiffuseColor,
+            fragmentSpecularColor,
+            materialShininess);
     }
 
     // Apply ambient light.

@@ -115,11 +115,11 @@ namespace ne RNAMESPACE() {
     private:
         /** Data that will be directly copied into shaders. */
         struct PointLightShaderData {
-            /** Light position in world space. */
-            alignas(iVkVec3Alignment) glm::vec3 position = glm::vec3(0.0F, 0.0F, 0.0F);
+            /** Light position in world space. 4th component is not used. */
+            alignas(iVkVec4Alignment) glm::vec4 position = glm::vec4(0.0F, 0.0F, 0.0F, 1.0F);
 
-            /** Light color. */
-            alignas(iVkVec3Alignment) glm::vec3 color = glm::vec3(1.0F, 1.0F, 1.0F);
+            /** Light color. 4th component is not used. */
+            alignas(iVkVec4Alignment) glm::vec4 color = glm::vec4(1.0F, 1.0F, 1.0F, 1.0F);
 
             /** Light intensity. */
             alignas(iVkScalarAlignment) float intensity = 1.0F;

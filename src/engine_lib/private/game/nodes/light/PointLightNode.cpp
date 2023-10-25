@@ -19,8 +19,8 @@ namespace ne {
         std::scoped_lock guard(mtxShaderData.first);
 
         // Copy up to date parameters.
-        mtxShaderData.second.shaderData.position = getWorldLocation();
-        mtxShaderData.second.shaderData.color = color;
+        mtxShaderData.second.shaderData.position = glm::vec4(getWorldLocation(), 1.0F);
+        mtxShaderData.second.shaderData.color = glm::vec4(color, 1.0F);
         mtxShaderData.second.shaderData.intensity = intensity;
         mtxShaderData.second.shaderData.halfDistance = halfDistance;
 
@@ -62,7 +62,7 @@ namespace ne {
         this->color = color;
 
         // Update shader data.
-        mtxShaderData.second.shaderData.color = this->color;
+        mtxShaderData.second.shaderData.color = glm::vec4(this->color, 1.0F);
 
         // Mark updated shader data to be later copied to the GPU resource.
         markShaderDataToBeCopiedToGpu();
@@ -136,7 +136,7 @@ namespace ne {
         std::scoped_lock guard(mtxShaderData.first);
 
         // Update shader data.
-        mtxShaderData.second.shaderData.position = getWorldLocation();
+        mtxShaderData.second.shaderData.position = glm::vec4(getWorldLocation(), 1.0F);
 
         // Mark updated shader data to be later copied to the GPU resource.
         markShaderDataToBeCopiedToGpu();

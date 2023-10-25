@@ -114,6 +114,8 @@ namespace ne {
         // Update shader constants.
         std::scoped_lock guard(mtxShaderMeshDataConstants.first);
         mtxShaderMeshDataConstants.second.world = getWorldMatrix();
+        mtxShaderMeshDataConstants.second.normal =
+            glm::transpose(glm::inverse(mtxShaderMeshDataConstants.second.world));
 
         // Mark mesh constants as "needs update".
         markShaderCpuWriteResourceAsNeedsUpdate(sMeshShaderConstantBufferName);

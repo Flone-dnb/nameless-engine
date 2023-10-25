@@ -1,43 +1,34 @@
 #include "../Base.glsl"
 #include "../Lighting.glsl"
+#include "../MaterialData.glsl"
 #include "MeshNodePushConstants.glsl"
 
 /** Input parameters. */
 layout(location = 0) in vec4 fragmentViewPosition;
 layout(location = 1) in vec4 fragmentWorldPosition;
-layout(location = 2) in vec3 fragmentNormal;
+layout(location = 2) in vec3 fragmentWorldNormal;
 layout(location = 3) in vec2 fragmentUv;
 
 /** Output parameters. */
 layout(location = 0) out vec4 outputColor;
 
-/** Shader resources. */
 #ifdef PS_USE_DIFFUSE_TEXTURE
     layout(binding = 4) uniform sampler2D diffuseTexture[]; // "bindless binding", stores all diffuse textures
 #endif
 
-/** Describes Material's constants. */
-struct MaterialData{
-    /** Fill color. */
-    vec3 diffuseColor;
-
-    /** Opacity (when material transparency is used). */
-    float opacity;
-};
-layout(std140, binding = 5) readonly buffer MaterialDataBuffer{
-    MaterialData array[];
-} materialData;
-
 /** Fragment shader. */
 void fsMeshNode(){
+    // Prepare a short macro to access material data.
+#define MATERIAL_DATA materialData.array[arrayIndices.materialData]
+
     // Normals may be unnormalized after the rasterization (when they are interpolated).
-    vec3 fragmentNormalUnit = normalize(fragmentNormal);
+    vec3 fragmentWorldNormalUnit = normalize(fragmentWorldNormal);
 
     // Set initial (unlit) color.
     outputColor = vec4(0.0F, 0.0F, 0.0F, 1.0F);
 
     // Prepare diffuse color.
-    vec3 fragmentDiffuseColor = materialData.array[arrayIndices.materialData].diffuseColor;
+    vec3 fragmentDiffuseColor = MATERIAL_DATA.diffuseColor;
 #ifdef PS_USE_DIFFUSE_TEXTURE
     vec4 diffuseTextureSample = texture(diffuseTexture[arrayIndices.diffuseTexture], fragmentUv);
     fragmentDiffuseColor *= diffuseTextureSample.rgb;
@@ -54,8 +45,8 @@ void fsMeshNode(){
 #ifdef PS_USE_MATERIAL_TRANSPARENCY
     // Apply opacity.
 #ifdef PS_USE_DIFFUSE_TEXTURE
-    outputColor.a = diffuseTextureSample.a;
+    outputColor.a = diffuseTextureSample.a; // Get opacity from diffuse texture.
 #endif
-    outputColor.a *= materialData.array[arrayIndices.materialData].opacity;
+    outputColor.a *= MATERIAL_DATA.opacity;
 #endif
 }

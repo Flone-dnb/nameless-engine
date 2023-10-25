@@ -1,19 +1,10 @@
 #include "../Base.glsl"
-
-/** Describes MeshNode's constants. */
-struct MeshData
-{
-    /** Matrix that transforms positions from model space to world space. */
-    float4x4 worldMatrix; 
-
-    /** 3x3 matrix (using 4x4 for shader alignment/packing simpicity) that transforms normals from model space to world space. */ 
-    float4x4 normalMatrix;
-};
-ConstantBuffer<MeshData> meshData : register(b2, space5);
+#include "../MeshData.glsl"
 
 /** Vertex shader. */
 VertexOut vsMeshNode(VertexIn vertexIn)
 {
+    // Prepare output variable.
     VertexOut vertexOut;
 
     // Calculate world position and normal.

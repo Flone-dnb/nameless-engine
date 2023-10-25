@@ -1,5 +1,6 @@
 #include "../Base.glsl"
 #include "../Lighting.glsl"
+#include "../MaterialData.glsl"
 
 #ifdef PS_USE_DIFFUSE_TEXTURE
    SamplerState textureSampler : register(s0, space5);
@@ -8,17 +9,6 @@
 #ifdef PS_USE_DIFFUSE_TEXTURE
     Texture2D diffuseTexture : register(t1, space5);
 #endif
-
-/** Describes Material's constants. */
-struct MaterialData
-{
-    /** Fill color. */
-    float3 diffuseColor;
-
-    /** Opacity (when material transparency is used). */
-    float opacity;
-};
-ConstantBuffer<MaterialData> materialData : register(b3, space5);
 
 /** Pixel shader. */
 float4 psMeshNode(VertexOut pin) : SV_Target

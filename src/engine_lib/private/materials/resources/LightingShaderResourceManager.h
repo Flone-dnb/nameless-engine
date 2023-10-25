@@ -287,8 +287,8 @@ namespace ne {
     public:
         /** Data that will be directly copied into shaders. */
         struct GeneralLightingShaderData {
-            /** Light color intensity of ambient lighting. */
-            alignas(iVkVec3Alignment) glm::vec3 ambientLight = glm::vec3(0.0F, 0.0F, 0.0F);
+            /** Light color intensity of ambient lighting. 4th component is not used. */
+            alignas(iVkVec4Alignment) glm::vec4 ambientLight = glm::vec4(0.0F, 0.0F, 0.0F, 1.0F);
 
             /** Total number of spawned point lights. */
             alignas(iVkScalarAlignment) unsigned int iPointLightCount = 0;
@@ -444,7 +444,7 @@ namespace ne {
 
 #if defined(DEBUG)
             static_assert(
-                sizeof(LightingShaderResourceManager) == 144, "consider adding new arrays here"); // NOLINT
+                sizeof(LightingShaderResourceManager) == 160, "consider adding new arrays here"); // NOLINT
 #endif
         }
 #endif

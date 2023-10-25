@@ -20,7 +20,7 @@ float4 psMeshNode(VertexOut pin) : SV_Target
     float4 outputColor = float4(0.0F, 0.0F, 0.0F, 1.0F);
 
     // Prepare diffuse color.
-    float3 pixelDiffuseColor = materialData.diffuseColor;
+    float3 pixelDiffuseColor = materialData.diffuseColor.rgb;
 #ifdef PS_USE_DIFFUSE_TEXTURE
     float4 diffuseTextureSample = diffuseTexture.Sample(textureSampler, pin.uv);
     pixelDiffuseColor *= diffuseTextureSample.rgb;
@@ -36,7 +36,7 @@ float4 psMeshNode(VertexOut pin) : SV_Target
     for (uint i = 0; i < generalLightingData.iPointLightCount; i++){
         outputColor.rgb += calculateColorFromPointLight(
             pointLights[i],
-            frameData.cameraPosition,
+            (float3)frameData.cameraPosition,
             (float3)pin.worldPosition,
             pixelNormalUnit,
             pixelDiffuseColor,
@@ -45,14 +45,14 @@ float4 psMeshNode(VertexOut pin) : SV_Target
     }
 
     // Apply ambient light.
-    outputColor.rgb += generalLightingData.ambientLight * pixelDiffuseColor;
+    outputColor.rgb += generalLightingData.ambientLight.rgb * pixelDiffuseColor;
 
 #ifdef PS_USE_MATERIAL_TRANSPARENCY
     // Apply transparency.
 #ifdef PS_USE_DIFFUSE_TEXTURE
     outputColor.a = diffuseTextureSample.a;
 #endif
-    outputColor.a *= materialData.opacity;
+    outputColor.a *= materialData.diffuseColor.a;
 #endif
 
     return outputColor;

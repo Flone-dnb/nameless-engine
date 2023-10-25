@@ -22,8 +22,8 @@ namespace ne {
         /** Camera's view matrix multiplied by camera's projection matrix. */
         alignas(iVkMat4Alignment) glm::mat4x4 viewProjectionMatrix = glm::identity<glm::mat4x4>();
 
-        /** Camera's world location. */
-        alignas(iVkVec3Alignment) glm::vec3 cameraPosition = glm::vec3(0.0F, 0.0F, 0.0F);
+        /** Camera's world location. 4th component is not used */
+        alignas(iVkVec4Alignment) glm::vec4 cameraPosition = glm::vec4(0.0F, 0.0F, 0.0F, 0.0F);
 
         /** Time that has passed since the last frame in seconds (i.e. delta time). */
         alignas(iVkScalarAlignment) float timeSincePrevFrameInSec = 0.0F;

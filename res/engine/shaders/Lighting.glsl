@@ -3,8 +3,8 @@
 /** Stores general lighting related data. */
 #glsl layout(binding = 1) uniform GeneralLightingData{
 #hlsl struct GeneralLightingData{
-    /** Light color intensity of ambient lighting. */
-    vec3 ambientLight;
+    /** Light color intensity of ambient lighting. 4th component is not used. */
+    vec4 ambientLight;
 
     /** Total number of spawned point lights. */
     uint iPointLightCount;

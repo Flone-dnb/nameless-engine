@@ -12,8 +12,8 @@
     /** Camera's view matrix multiplied by camera's projection matrix. */
     mat4 viewProjectionMatrix;
 
-    /** Camera's world location. */
-    vec3 cameraPosition;
+    /** Camera's world location. 4th component is not used. */
+    vec4 cameraPosition;
 
     /** Time that has passed since the last frame in seconds (i.e. delta time). */
     float timeSincePrevFrameInSec;

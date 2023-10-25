@@ -555,7 +555,7 @@ namespace ne {
 
 #if defined(DEBUG)
         static_assert(
-            sizeof(LightingShaderResourceManager) == 144, "consider notifying new arrays here"); // NOLINT
+            sizeof(LightingShaderResourceManager) == 160, "consider notifying new arrays here"); // NOLINT
 #endif
 
         // Rebind general lighting data.
@@ -579,7 +579,7 @@ namespace ne {
 
 #if defined(DEBUG)
         static_assert(
-            sizeof(LightingShaderResourceManager) == 144, "consider notifying new arrays here"); // NOLINT
+            sizeof(LightingShaderResourceManager) == 160, "consider notifying new arrays here"); // NOLINT
 #endif
 
         // Rebind general lighting data.
@@ -603,7 +603,7 @@ namespace ne {
 
 #if defined(DEBUG)
         static_assert(
-            sizeof(LightingShaderResourceManager) == 144, "consider notifying new arrays here"); // NOLINT
+            sizeof(LightingShaderResourceManager) == 160, "consider notifying new arrays here"); // NOLINT
 #endif
 
         // Copy general lighting info (maybe changed, since that data is very small it should be OK to
@@ -915,7 +915,7 @@ namespace ne {
     void LightingShaderResourceManager::setAmbientLight(const glm::vec3& ambientLight) {
         std::scoped_lock guard(mtxGpuData.first);
 
-        mtxGpuData.second.generalData.ambientLight = ambientLight;
+        mtxGpuData.second.generalData.ambientLight = glm::vec4(ambientLight, 1.0F);
     }
 
     LightingShaderResourceManager::~LightingShaderResourceManager() {
@@ -925,7 +925,7 @@ namespace ne {
 
 #if defined(DEBUG)
         static_assert(
-            sizeof(LightingShaderResourceManager) == 144, "consider resetting new arrays here"); // NOLINT
+            sizeof(LightingShaderResourceManager) == 160, "consider resetting new arrays here"); // NOLINT
 #endif
     }
 

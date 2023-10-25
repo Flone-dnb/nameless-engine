@@ -292,13 +292,8 @@ namespace ne RNAMESPACE() {
          * @remark Should be exactly the same as constant buffer in shaders.
          */
         struct MaterialShaderConstants {
-            /** Fill color. */
-            alignas(iVkVec3Alignment) glm::vec3 diffuseColor = glm::vec3(1.0F, 1.0F, 1.0F);
-
-            /** Opacity (when material transparency is used). */
-            alignas(iVkScalarAlignment) float opacity = 1.0F;
-
-            // don't forget to add padding to 4 floats (if needed) for HLSL packing rules
+            /** Fill color. 4th component stores opacity when transparency is used. */
+            alignas(iVkVec4Alignment) glm::vec4 diffuseColor = glm::vec4(1.0F, 1.0F, 1.0F, 1.0F);
         };
 
         /**

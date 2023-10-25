@@ -28,7 +28,7 @@ void fsMeshNode(){
     outputColor = vec4(0.0F, 0.0F, 0.0F, 1.0F);
 
     // Prepare diffuse color.
-    vec3 fragmentDiffuseColor = MATERIAL_DATA.diffuseColor;
+    vec3 fragmentDiffuseColor = MATERIAL_DATA.diffuseColor.rgb;
 #ifdef PS_USE_DIFFUSE_TEXTURE
     vec4 diffuseTextureSample = texture(diffuseTexture[arrayIndices.diffuseTexture], fragmentUv);
     fragmentDiffuseColor *= diffuseTextureSample.rgb;
@@ -44,7 +44,7 @@ void fsMeshNode(){
     for (uint i = 0; i < generalLightingData.iPointLightCount; i++){
         outputColor.rgb += calculateColorFromPointLight(
             pointLights.array[i],
-            frameData.cameraPosition,
+            vec3(frameData.cameraPosition),
             vec3(fragmentWorldPosition),
             fragmentWorldNormalUnit,
             fragmentDiffuseColor,
@@ -53,13 +53,13 @@ void fsMeshNode(){
     }
 
     // Apply ambient light.
-    outputColor.rgb += generalLightingData.ambientLight * fragmentDiffuseColor;
+    outputColor.rgb += generalLightingData.ambientLight.rgb * fragmentDiffuseColor;
 
 #ifdef PS_USE_MATERIAL_TRANSPARENCY
     // Apply opacity.
 #ifdef PS_USE_DIFFUSE_TEXTURE
     outputColor.a = diffuseTextureSample.a; // Get opacity from diffuse texture.
 #endif
-    outputColor.a *= MATERIAL_DATA.opacity;
+    outputColor.a *= MATERIAL_DATA.diffuseColor.a;
 #endif
 }

@@ -161,11 +161,9 @@ namespace ne RNAMESPACE() {
             /**
              * 3x3 matrix for transforming normals from model space to world space.
              *
-             * @remark Using 4x4 matrix just shader alignment/packing simplicity.
+             * @remark Using 4x4 matrix for shader alignment/packing simplicity.
              */
             alignas(iVkMat4Alignment) glm::mat4x4 normal = glm::identity<glm::mat4x4>();
-
-            // don't forget to add padding to 4 floats (if needed) for HLSL packing rules
         };
 
         /** Stores internal GPU resources. */

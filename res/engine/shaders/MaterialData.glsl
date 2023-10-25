@@ -2,11 +2,8 @@
 
 /** Describes Material's constants. */
 struct MaterialData{
-    /** Fill color. */
-    vec3 diffuseColor;
-
-    /** Opacity (when material transparency is used). */
-    float opacity;
+    /** Fill color. 4th component stores opacity (when material transparency is used). */
+    vec4 diffuseColor;
 };
 
 #hlsl ConstantBuffer<MaterialData> materialData : register(b3, space5);

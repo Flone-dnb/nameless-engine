@@ -617,7 +617,10 @@ namespace ne {
     void Material::setDiffuseColor(const glm::vec3& diffuseColor) {
         std::scoped_lock guard(mtxShaderMaterialDataConstants.first);
 
-        mtxShaderMaterialDataConstants.second.diffuseColor = diffuseColor;
+        // Save new diffuse color (4th component stores opacity).
+        mtxShaderMaterialDataConstants.second.diffuseColor.x = diffuseColor.x;
+        mtxShaderMaterialDataConstants.second.diffuseColor.y = diffuseColor.y;
+        mtxShaderMaterialDataConstants.second.diffuseColor.z = diffuseColor.z;
 
         markShaderCpuWriteResourceAsNeedsUpdate(sMaterialShaderConstantBufferName);
     }
@@ -632,7 +635,8 @@ namespace ne {
 
         std::scoped_lock guard(mtxShaderMaterialDataConstants.first);
 
-        mtxShaderMaterialDataConstants.second.opacity = std::clamp(opacity, 0.0F, 1.0F);
+        // Save new opacity.
+        mtxShaderMaterialDataConstants.second.diffuseColor.w = std::clamp(opacity, 0.0F, 1.0F);
 
         markShaderCpuWriteResourceAsNeedsUpdate(sMaterialShaderConstantBufferName);
     }
@@ -854,7 +858,7 @@ namespace ne {
     float Material::getOpacity() {
         std::scoped_lock guard(mtxShaderMaterialDataConstants.first);
 
-        return mtxShaderMaterialDataConstants.second.opacity;
+        return mtxShaderMaterialDataConstants.second.diffuseColor.w;
     }
 
     std::string Material::getPathToDiffuseTextureResource() {

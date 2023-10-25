@@ -11,10 +11,7 @@ namespace ne {
     static constexpr size_t iVkVec2Alignment = 8; // NOLINT
 
     /** A vec3 or vec4 must be aligned by 4N (= 16 bytes). */
-    static constexpr size_t iVkVec3Alignment = 16; // NOLINT
-
-    /** A vec3 or vec4 must be aligned by 4N (= 16 bytes). */
-    static constexpr size_t iVkVec4Alignment = iVkVec3Alignment;
+    static constexpr size_t iVkVec4Alignment = 16; // NOLINT
 
     /** A mat4 matrix must have the same alignment as a vec4. */
     static constexpr size_t iVkMat4Alignment = iVkVec4Alignment;

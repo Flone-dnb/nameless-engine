@@ -126,7 +126,7 @@ namespace ne {
         std::scoped_lock guard(mtxFrameConstants.first, mtxSpawnedEnvironmentNode.first);
 
         // Set camera properties.
-        mtxFrameConstants.second.cameraPosition = pCameraProperties->getWorldLocation();
+        mtxFrameConstants.second.cameraPosition = glm::vec4(pCameraProperties->getWorldLocation(), 1.0F);
         mtxFrameConstants.second.viewProjectionMatrix =
             pCameraProperties->getProjectionMatrix() * pCameraProperties->getViewMatrix();
 

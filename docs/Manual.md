@@ -2658,6 +2658,8 @@ std::pair<std::recursive_mutex, CustomMeshShaderConstants> mtxShaderData;
 
 As you can see we use `alignas` to satisfy Vulkan aligning requirements and at the same time keep track of HLSL packing rules. If you only want to stick with some specific shading language (only GLSL or only HLSL) then you just need to keep track of your language specific packing rules.
 
+Note that if you don't find `iVk...Alignment` variable matching your type's name this means that you should avoid using this type, this includes types such as `vec3` and `mat3`, instead use `vec4` and `mat4` so you will avoid a bunch of alignment/packing issues.
+
 Generally if you specify `alignas` to all fields (of a type that will be directly copied to the GPU) you should be pretty safe in terms of both Vulkan alignment requirements and HLSL packing rules. The only thing that you might want to keep track of is the padding that `alignas` might introduce, for example:
 
 ```Cpp

@@ -205,6 +205,16 @@ namespace ne {
             return iPointLightsBufferRootParameterIndex;
         }
 
+        /**
+         * Returns index of the root parameter that points to a shader resource that stores directional
+         * lights.
+         *
+         * @return Root parameter index.
+         */
+        static constexpr UINT getDirectionalLightsBufferRootParameterIndex() {
+            return iDirectionalLightsBufferRootParameterIndex;
+        }
+
     private:
         /**
          * Finds static sampler for the specified sampler resource.
@@ -287,5 +297,8 @@ namespace ne {
 
         /** Index of the root parameter that points to a shader resource that stores point lights. */
         static constexpr UINT iPointLightsBufferRootParameterIndex = 2;
+
+        /** Index of the root parameter that points to a shader resource that stores directional lights. */
+        static constexpr UINT iDirectionalLightsBufferRootParameterIndex = 3;
     };
 } // namespace ne

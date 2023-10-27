@@ -293,7 +293,8 @@ namespace ne {
             /** Total number of spawned point lights. */
             alignas(iVkScalarAlignment) unsigned int iPointLightCount = 0;
 
-            // don't forget to add padding to 4 floats (if needed) for HLSL packing rules
+            /** Total number of spawned directional lights. */
+            alignas(iVkScalarAlignment) unsigned int iDirectionalLightCount = 0;
         };
 
         /** Groups GPU related data. */
@@ -329,6 +330,64 @@ namespace ne {
         static std::string getPointLightsShaderResourceName();
 
         /**
+         * Return name of the shader resource that stores array of directional lights (name from shader code).
+         *
+         * @return Name of the shader resource.
+         */
+        static std::string getDirectionalLightsShaderResourceName();
+
+#if defined(WIN32)
+        /**
+         * Sets resource view of the specified lighting array to the specified command list.
+         *
+         * @warning Expects that the specified pipeline's shaders indeed use lighting resources.
+         *
+         * @warning Expects that the specified pipeline's internal resources mutex is locked.
+         *
+         * @param pPso                       In debug builds used to make sure the resource is actually used.
+         * @param pCommandList               Command list to set view to.
+         * @param iCurrentFrameResourceIndex Index of the frame resource that is currently being used to
+         * submit a new frame.
+         * @param pArray                     Lighting array to bind.
+         * @param sArrayNameInShaders        Name of the shader resources used for this lighting array.
+         * @param iArrayRootParameterIndex   Index of this resource in the root signature.
+         */
+        static inline void setLightingArrayViewToCommandList(
+            DirectXPso* pPso,
+            const ComPtr<ID3D12GraphicsCommandList>& pCommandList,
+            size_t iCurrentFrameResourceIndex,
+            const std::unique_ptr<ShaderLightArray>& pArray,
+            const std::string& sArrayNameInShaders,
+            UINT iArrayRootParameterIndex) {
+            std::scoped_lock lightsGuard(pArray->mtxResources.first);
+
+#if defined(DEBUG)
+            // Self check: make sure this resource is actually being used in the PSO.
+            if (pPso->getInternalResources()->second.rootParameterIndices.find(sArrayNameInShaders) ==
+                pPso->getInternalResources()->second.rootParameterIndices.end()) [[unlikely]] {
+                Error error(std::format(
+                    "shader resource \"{}\" is not used in the shaders of the specified PSO \"{}\" "
+                    "but you are attempting to set this resource to a command list",
+                    sArrayNameInShaders,
+                    pPso->getPipelineIdentifier()));
+                error.showError();
+                throw std::runtime_error(error.getFullErrorMessage());
+            }
+#endif
+
+            // Bind lights array
+            // (resource is guaranteed to be not `nullptr`, see field docs).
+            pCommandList->SetGraphicsRootShaderResourceView(
+                iArrayRootParameterIndex,
+                reinterpret_cast<DirectXResource*>(
+                    pArray->mtxResources.second.vGpuResources[iCurrentFrameResourceIndex]
+                        ->getInternalResource())
+                    ->getInternalResource()
+                    ->GetGPUVirtualAddress());
+        }
+#endif
+
+        /**
          * Returns a non-owning reference to an array that stores data of all spawned point lights.
          *
          * @warning Do not delete (free) returned pointer.
@@ -336,6 +395,15 @@ namespace ne {
          * @return Array that stores data of all spawned point light.
          */
         ShaderLightArray* getPointLightDataArray();
+
+        /**
+         * Returns a non-owning reference to an array that stores data of all spawned directional lights.
+         *
+         * @warning Do not delete (free) returned pointer.
+         *
+         * @return Array that stores data of all spawned point light.
+         */
+        ShaderLightArray* getDirectionalLightDataArray();
 
         /**
          * Updates descriptors in all graphics pipelines to make descriptors reference the underlying
@@ -412,35 +480,23 @@ namespace ne {
                     ->getInternalResource()
                     ->GetGPUVirtualAddress());
 
-            {
-                // Bind point lights array.
-                std::scoped_lock pointLightsGuard(pPointLightDataArray->mtxResources.first);
+            // Bind point lights array.
+            setLightingArrayViewToCommandList(
+                pPso,
+                pCommandList,
+                iCurrentFrameResourceIndex,
+                pPointLightDataArray,
+                sPointLightsShaderResourceName,
+                RootSignatureGenerator::getPointLightsBufferRootParameterIndex());
 
-#if defined(DEBUG)
-                // Self check: make sure this resource is actually being used in the PSO.
-                if (pPso->getInternalResources()->second.rootParameterIndices.find(
-                        sPointLightsShaderResourceName) ==
-                    pPso->getInternalResources()->second.rootParameterIndices.end()) [[unlikely]] {
-                    Error error(std::format(
-                        "shader resource \"{}\" is not used in the shaders of the specified PSO \"{}\" "
-                        "but you are attempting to set this resource to a command list",
-                        sPointLightsShaderResourceName,
-                        pPso->getPipelineIdentifier()));
-                    error.showError();
-                    throw std::runtime_error(error.getFullErrorMessage());
-                }
-#endif
-
-                // Bind point lights array
-                // (resource is guaranteed to be not `nullptr`, see field docs).
-                pCommandList->SetGraphicsRootShaderResourceView(
-                    RootSignatureGenerator::getPointLightsBufferRootParameterIndex(),
-                    reinterpret_cast<DirectXResource*>(
-                        pPointLightDataArray->mtxResources.second.vGpuResources[iCurrentFrameResourceIndex]
-                            ->getInternalResource())
-                        ->getInternalResource()
-                        ->GetGPUVirtualAddress());
-            }
+            // Bind directional lights array.
+            setLightingArrayViewToCommandList(
+                pPso,
+                pCommandList,
+                iCurrentFrameResourceIndex,
+                pDirectionalLightDataArray,
+                sDirectionalLightsShaderResourceName,
+                RootSignatureGenerator::getDirectionalLightsBufferRootParameterIndex());
 
 #if defined(DEBUG)
             static_assert(
@@ -494,6 +550,13 @@ namespace ne {
         void onPointLightArraySizeChanged(size_t iNewSize);
 
         /**
+         * Called after @ref pDirectionalLightDataArray changed its size.
+         *
+         * @param iNewSize New size of the array that stores GPU data for spawned directional lights.
+         */
+        void onDirectionalLightArraySizeChanged(size_t iNewSize);
+
+        /**
          * Copies data from @ref mtxGpuData to the GPU resource of the current frame resource.
          *
          * @param iCurrentFrameResourceIndex Index of the frame resource that will be used to submit the
@@ -526,6 +589,9 @@ namespace ne {
         /** Stores data of all spawned point lights. */
         std::unique_ptr<ShaderLightArray> pPointLightDataArray;
 
+        /** Stores data of all spawned directional lights. */
+        std::unique_ptr<ShaderLightArray> pDirectionalLightDataArray;
+
         /** Groups GPU related data. */
         std::pair<std::recursive_mutex, GpuData> mtxGpuData;
 
@@ -537,6 +603,9 @@ namespace ne {
 
         /** Name of the resource that stores array of point lights. */
         static inline const std::string sPointLightsShaderResourceName = "pointLights";
+
+        /** Name of the resource that stores array of directional lights. */
+        static inline const std::string sDirectionalLightsShaderResourceName = "directionalLights";
 
         /** Type of the descriptor used to store data from @ref mtxGpuData. */
         static constexpr auto generalLightingDataDescriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;

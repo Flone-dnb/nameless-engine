@@ -7,7 +7,7 @@
 #endif
 
 #ifdef PS_USE_DIFFUSE_TEXTURE
-    Texture2D diffuseTexture : register(t1, space5);
+    Texture2D diffuseTexture : register(t2, space5);
 #endif
 
 /** Pixel shader. */
@@ -36,6 +36,18 @@ float4 psMeshNode(VertexOut pin) : SV_Target
     for (uint i = 0; i < generalLightingData.iPointLightCount; i++){
         outputColor.rgb += calculateColorFromPointLight(
             pointLights[i],
+            (float3)frameData.cameraPosition,
+            (float3)pin.worldPosition,
+            pixelNormalUnit,
+            pixelDiffuseColor,
+            pixelSpecularColor,
+            materialShininess);
+    }
+
+    // Calculate light from directional lights.
+    for (uint i = 0; i < generalLightingData.iDirectionalLightCount; i++){
+        outputColor.rgb += calculateColorFromDirectionalLight(
+            directionalLights[i],
             (float3)frameData.cameraPosition,
             (float3)pin.worldPosition,
             pixelNormalUnit,

@@ -545,9 +545,20 @@ namespace ne {
         return pPointLightDataArray.get();
     }
 
+    ShaderLightArray* LightingShaderResourceManager::getDirectionalLightDataArray() {
+        return pDirectionalLightDataArray.get();
+    }
+
     std::optional<Error> LightingShaderResourceManager::bindDescriptorsToRecreatedPipelineResources() {
         // Notify point light array.
         auto optionalError = pPointLightDataArray->updateBindingsInAllPipelines();
+        if (optionalError.has_value()) [[unlikely]] {
+            optionalError->addCurrentLocationToErrorStack();
+            return optionalError;
+        }
+
+        // Notify directional light array.
+        optionalError = pDirectionalLightDataArray->updateBindingsInAllPipelines();
         if (optionalError.has_value()) [[unlikely]] {
             optionalError->addCurrentLocationToErrorStack();
             return optionalError;
@@ -577,6 +588,13 @@ namespace ne {
             return optionalError;
         }
 
+        // Notify directional light array.
+        optionalError = pDirectionalLightDataArray->updatePipelineBinding(pPipeline);
+        if (optionalError.has_value()) [[unlikely]] {
+            optionalError->addCurrentLocationToErrorStack();
+            return optionalError;
+        }
+
 #if defined(DEBUG)
         static_assert(
             sizeof(LightingShaderResourceManager) == 160, "consider notifying new arrays here"); // NOLINT
@@ -598,8 +616,9 @@ namespace ne {
     }
 
     void LightingShaderResourceManager::updateResources(size_t iCurrentFrameResourceIndex) {
-        // Notify point light array.
+        // Notify light arrays.
         pPointLightDataArray->updateSlotsMarkedAsNeedsUpdate(iCurrentFrameResourceIndex);
+        pDirectionalLightDataArray->updateSlotsMarkedAsNeedsUpdate(iCurrentFrameResourceIndex);
 
 #if defined(DEBUG)
         static_assert(
@@ -628,6 +647,31 @@ namespace ne {
 
         // Update total point light count.
         mtxGpuData.second.generalData.iPointLightCount = static_cast<unsigned int>(iNewSize);
+
+        // Copy updated data to the GPU resources.
+        for (size_t i = 0; i < mtxGpuData.second.vGeneralDataGpuResources.size(); i++) {
+            copyDataToGpu(i);
+        }
+    }
+
+    void LightingShaderResourceManager::onDirectionalLightArraySizeChanged(size_t iNewSize) {
+        // Pause the rendering and make sure our resources are not used by the GPU
+        // because we will update data in all GPU resources
+        // (locking both mutexes to avoid a deadlock)
+        // (most likely light array resizing already did that but do it again just to be extra sure).
+        std::scoped_lock drawingGuard(*pRenderer->getRenderResourcesMutex(), mtxGpuData.first);
+        pRenderer->waitForGpuToFinishWorkUpToThisPoint();
+
+        // Self check: make sure the number of light sources will not hit type limit.
+        if (iNewSize >= std::numeric_limits<unsigned int>::max()) [[unlikely]] {
+            Error error(
+                std::format("new directional light array size of {} will exceed type limit", iNewSize));
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+        }
+
+        // Update total directional light count.
+        mtxGpuData.second.generalData.iDirectionalLightCount = static_cast<unsigned int>(iNewSize);
 
         // Copy updated data to the GPU resources.
         for (size_t i = 0; i < mtxGpuData.second.vGeneralDataGpuResources.size(); i++) {
@@ -910,6 +954,17 @@ namespace ne {
             ShaderLightArray::create(pRenderer, sPointLightsShaderResourceName, [this](size_t iNewSize) {
                 onPointLightArraySizeChanged(iNewSize);
             });
+
+        // Create directional light array.
+        pDirectionalLightDataArray = ShaderLightArray::create(
+            pRenderer, sDirectionalLightsShaderResourceName, [this](size_t iNewSize) {
+                onDirectionalLightArraySizeChanged(iNewSize);
+            });
+
+#if defined(DEBUG)
+        static_assert(
+            sizeof(LightingShaderResourceManager) == 160, "consider resetting new arrays here"); // NOLINT
+#endif
     }
 
     void LightingShaderResourceManager::setAmbientLight(const glm::vec3& ambientLight) {
@@ -922,6 +977,7 @@ namespace ne {
         // Explicitly reset array pointers here to make double sure they will not trigger callback after
         // the manager is destroyed or is being destroyed.
         pPointLightDataArray = nullptr;
+        pDirectionalLightDataArray = nullptr;
 
 #if defined(DEBUG)
         static_assert(
@@ -935,6 +991,10 @@ namespace ne {
 
     std::string LightingShaderResourceManager::getPointLightsShaderResourceName() {
         return sPointLightsShaderResourceName;
+    }
+
+    std::string LightingShaderResourceManager::getDirectionalLightsShaderResourceName() {
+        return sDirectionalLightsShaderResourceName;
     }
 
     std::unique_ptr<LightingShaderResourceManager>

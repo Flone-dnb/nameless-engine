@@ -105,6 +105,10 @@ namespace ne {
 
         // Make sure our half distance is not zero or negative.
         halfDistance = std::max(halfDistance, minimumHalfDistance);
+
+#if defined(DEBUG)
+        static_assert(sizeof(PointLightShaderData) == 48, "consider clamping new parameters here");
+#endif
     }
 
     void* PointLightNode::onStartedUpdatingShaderData() {

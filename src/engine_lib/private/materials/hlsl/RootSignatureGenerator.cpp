@@ -235,6 +235,14 @@ namespace ne {
             LightingShaderResourceManager::getPointLightsShaderResourceName(),
             iPointLightsBufferRootParameterIndex);
 
+        // Check if directional lights are used and then assign it a fixed root parameter index.
+        static_assert(
+            iDirectionalLightsBufferRootParameterIndex == 3,
+            "change order in which we add to `vRootParameters`");
+        addLightingResourceRootParameter(
+            LightingShaderResourceManager::getDirectionalLightsShaderResourceName(),
+            iDirectionalLightsBufferRootParameterIndex);
+
         // Do some basic checks to add parameters/samplers that don't exist in pixel shader.
 
         // First, add static samplers.

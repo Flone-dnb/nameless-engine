@@ -178,7 +178,7 @@ namespace ne RNAMESPACE() {
         float halfDistance = 5.0F; // NOLINT: seems like a pretty good default value
 
         /** Minimum value for @ref halfDistance to avoid division by zero in shaders. */
-        static constexpr float minimumHalfDistance = 0.01F; // NOLINT
+        static constexpr float minimumHalfDistance = 0.001F; // NOLINT
 
         ne_PointLightNode_GENERATED
     };

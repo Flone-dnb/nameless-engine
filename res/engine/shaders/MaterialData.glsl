@@ -5,6 +5,9 @@ struct MaterialData{
     /** Fill color. 4th component stores opacity (when material transparency is used). */
     vec4 diffuseColor;
 
+    /** Reflected color. 4th component is not used. */
+    vec4 specularColor;
+
     /** Defines how much specular light will be reflected (value in range [0.0F; 1.0F]). */
     float roughness;
 };

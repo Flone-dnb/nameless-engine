@@ -628,6 +628,20 @@ namespace ne {
         markShaderCpuWriteResourceAsNeedsUpdate(sMaterialShaderConstantBufferName);
     }
 
+    void Material::setSpecularColor(const glm::vec3& specularColor) {
+        std::scoped_lock guard(mtxShaderMaterialDataConstants.first);
+
+        // Save new specular color (to serialize).
+        this->specularColor = specularColor;
+
+        // Save new specular color for shaders (4th component is not used).
+        mtxShaderMaterialDataConstants.second.specularColor.x = specularColor.x;
+        mtxShaderMaterialDataConstants.second.specularColor.y = specularColor.y;
+        mtxShaderMaterialDataConstants.second.specularColor.z = specularColor.z;
+
+        markShaderCpuWriteResourceAsNeedsUpdate(sMaterialShaderConstantBufferName);
+    }
+
     void Material::setRoughness(float roughness) {
         std::scoped_lock guard(mtxShaderMaterialDataConstants.first);
 
@@ -887,11 +901,12 @@ namespace ne {
 
         // Apply deserialized values to shaders.
         setDiffuseColor(diffuseColor);
+        setSpecularColor(specularColor);
         setOpacity(opacity);
         setRoughness(roughness);
 #if defined(WIN32) && defined(DEBUG)
         static_assert(
-            sizeof(MaterialShaderConstants) == 32,
+            sizeof(MaterialShaderConstants) == 48,
             "consider copying new data to shaders here"); // NOLINT: current size
 #endif
 
@@ -907,7 +922,7 @@ namespace ne {
         }
 
 #if defined(WIN32) && defined(DEBUG)
-        static_assert(sizeof(Material) == 1040, "consider checking new macros here"); // NOLINT: current size
+        static_assert(sizeof(Material) == 1072, "consider checking new macros here"); // NOLINT: current size
 #elif defined(DEBUG)
         static_assert(sizeof(Material) == 752, "consider checking new macros here"); // NOLINT: current size
 #endif
@@ -957,5 +972,7 @@ namespace ne {
     }
 
     float Material::getRoughness() const { return roughness; }
+
+    glm::vec3 Material::getSpecularColor() const { return specularColor; }
 
 } // namespace ne

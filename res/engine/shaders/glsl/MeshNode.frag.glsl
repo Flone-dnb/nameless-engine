@@ -35,7 +35,7 @@ void fsMeshNode(){
 #endif
 
     // Prepare specular color.
-    vec3 fragmentSpecularColor = vec3(1.0F, 1.0F, 1.0F);
+    vec3 fragmentSpecularColor = MATERIAL_DATA.specularColor.rgb;
 
     // Calculate light from point lights.
     for (uint i = 0; i < generalLightingData.iPointLightCount; i++){

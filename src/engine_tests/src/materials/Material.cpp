@@ -215,6 +215,8 @@ TEST_CASE("serialize and deserialize Material") {
                     "TESTING_MaterialSerialization_TESTING.toml";
 
                 const auto diffuseColor = glm::vec3(0.0F, 1.0F, 0.0F);
+                const auto specularColor = glm::vec3(0.0F, 0.0F, 1.0F);
+                const auto roughness = 0.9F;
                 const auto opacity = 0.6F;
 
                 {
@@ -234,6 +236,8 @@ TEST_CASE("serialize and deserialize Material") {
 
                     // Customize.
                     pMaterial->setDiffuseColor(diffuseColor);
+                    pMaterial->setSpecularColor(specularColor);
+                    pMaterial->setRoughness(roughness);
                     pMaterial->setOpacity(opacity);
 
                     // Serialize.
@@ -264,7 +268,10 @@ TEST_CASE("serialize and deserialize Material") {
                     REQUIRE(pMaterial->getMaterialName() == "My Material");
                     REQUIRE(pMaterial->isUsingTransparency());
                     REQUIRE(glm::all(glm::epsilonEqual(pMaterial->getDiffuseColor(), diffuseColor, 0.001F)));
+                    REQUIRE(
+                        glm::all(glm::epsilonEqual(pMaterial->getSpecularColor(), specularColor, 0.001F)));
                     REQUIRE(std::abs(pMaterial->getOpacity() - opacity) < 0.001F);
+                    REQUIRE(std::abs(pMaterial->getRoughness() - roughness) < 0.001F);
                 }
 
                 REQUIRE(Material::getCurrentAliveMaterialCount() == 0);

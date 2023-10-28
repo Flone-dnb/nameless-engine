@@ -27,7 +27,7 @@ float4 psMeshNode(VertexOut pin) : SV_Target
 #endif
 
     // Prepare specular color.
-    float3 pixelSpecularColor = float3(1.0F, 1.0F, 1.0F);
+    float3 pixelSpecularColor = materialData.specularColor.rgb;
 
     // Calculate light from point lights.
     for (uint i = 0; i < generalLightingData.iPointLightCount; i++){

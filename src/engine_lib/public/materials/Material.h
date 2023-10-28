@@ -165,6 +165,13 @@ namespace ne RNAMESPACE() {
         void setDiffuseTexture(const std::string& sTextureResourcePathRelativeRes);
 
         /**
+         * Sets material's reflected color.
+         *
+         * @param specularColor Color in the RGB format.
+         */
+        void setSpecularColor(const glm::vec3& specularColor);
+
+        /**
          * Sets factor that defines how much specular light will be reflected
          * (i.e. how rough or smooth the surface is).
          *
@@ -190,11 +197,18 @@ namespace ne RNAMESPACE() {
         bool isTransparencyEnabled();
 
         /**
-         * Returns diffuse color of this material.
+         * Returns fill color of this material.
          *
          * @return Color in the RGB format.
          */
         glm::vec3 getDiffuseColor() const;
+
+        /**
+         * Returns reflected color of this material.
+         *
+         * @return Color in the RGB format.
+         */
+        glm::vec3 getSpecularColor() const;
 
         /**
          * Returns path to a file/directory that stores currently used diffuse texture of this material.
@@ -309,6 +323,9 @@ namespace ne RNAMESPACE() {
         struct MaterialShaderConstants {
             /** Fill color. 4th component stores opacity when transparency is used. */
             alignas(iVkVec4Alignment) glm::vec4 diffuseColor = glm::vec4(1.0F, 1.0F, 1.0F, 1.0F);
+
+            /** Reflected color. 4th component is not used. */
+            alignas(iVkVec4Alignment) glm::vec4 specularColor = glm::vec4(1.0F, 1.0F, 1.0F, 1.0F);
 
             /** Defines how much specular light will be reflected. */
             alignas(iVkScalarAlignment) float roughness = 0.5F;
@@ -552,9 +569,13 @@ namespace ne RNAMESPACE() {
         RPROPERTY(Serialize)
         std::string sDiffuseTexturePathRelativeRes;
 
-        /** Diffuse (fill) color. */
+        /** Fill color. */
         RPROPERTY(Serialize)
         glm::vec3 diffuseColor = glm::vec3(1.0F, 1.0F, 1.0F);
+
+        /** Reflected color. */
+        RPROPERTY(Serialize)
+        glm::vec3 specularColor = glm::vec3(1.0F, 1.0F, 1.0F);
 
         /** Defines how much specular light will be reflected. Value in range [0.0F; 1.0F]. */
         RPROPERTY(Serialize)

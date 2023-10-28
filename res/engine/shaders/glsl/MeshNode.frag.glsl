@@ -13,7 +13,7 @@ layout(location = 3) in vec2 fragmentUv;
 layout(location = 0) out vec4 outputColor;
 
 #ifdef PS_USE_DIFFUSE_TEXTURE
-    layout(binding = 6) uniform sampler2D diffuseTexture[]; // "bindless binding", stores all diffuse textures
+    layout(binding = 7) uniform sampler2D diffuseTexture[]; // "bindless binding", stores all diffuse textures
 #endif
 
 /** Fragment shader. */
@@ -37,6 +37,9 @@ void fsMeshNode(){
     // Prepare specular color.
     vec3 fragmentSpecularColor = MATERIAL_DATA.specularColor.rgb;
 
+    // Prepare material roughness.
+    float materialRoughness = MATERIAL_DATA.roughness; 
+
     // Calculate light from point lights.
     for (uint i = 0; i < generalLightingData.iPointLightCount; i++){
         outputColor.rgb += calculateColorFromPointLight(
@@ -46,7 +49,7 @@ void fsMeshNode(){
             fragmentWorldNormalUnit,
             fragmentDiffuseColor,
             fragmentSpecularColor,
-            MATERIAL_DATA.roughness);
+            materialRoughness);
     }
 
     // Calculate light from directional lights.
@@ -58,7 +61,19 @@ void fsMeshNode(){
             fragmentWorldNormalUnit,
             fragmentDiffuseColor,
             fragmentSpecularColor,
-            MATERIAL_DATA.roughness);
+            materialRoughness);
+    }
+
+    // Calculate light from spotlights.
+    for (uint i = 0; i < generalLightingData.iSpotlightCount; i++){
+        outputColor.rgb += calculateColorFromSpotlight(
+            spotlights.array[i],
+            vec3(frameData.cameraPosition),
+            vec3(fragmentWorldPosition),
+            fragmentWorldNormalUnit,
+            fragmentDiffuseColor,
+            fragmentSpecularColor,
+            materialRoughness);
     }
 
     // Apply ambient light.

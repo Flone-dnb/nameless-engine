@@ -221,6 +221,8 @@ set(PROJECT_SOURCES
     public/game/nodes/light/PointLightNode.h
     private/game/nodes/light/DirectionalLightNode.cpp
     public/game/nodes/light/DirectionalLightNode.h
+    private/game/nodes/light/SpotlightNode.cpp
+    public/game/nodes/light/SpotlightNode.h
     public/io/properties/SerializeProperty.h
     private/io/properties/SerializeProperty.cpp
     private/io/properties/GuidProperty.cpp

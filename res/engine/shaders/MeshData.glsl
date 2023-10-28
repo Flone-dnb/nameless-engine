@@ -12,7 +12,7 @@ struct MeshData {
 #hlsl ConstantBuffer<MeshData> meshData : register(b2, space5);
 
 #glsl{
-layout(std140, binding = 4) readonly buffer MeshDataBuffer{
+layout(std140, binding = 5) readonly buffer MeshDataBuffer{
     MeshData array[];
 } meshData;
 }

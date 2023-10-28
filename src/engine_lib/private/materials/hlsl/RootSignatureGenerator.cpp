@@ -243,6 +243,13 @@ namespace ne {
             LightingShaderResourceManager::getDirectionalLightsShaderResourceName(),
             iDirectionalLightsBufferRootParameterIndex);
 
+        // Check if spotlights are used and then assign it a fixed root parameter index.
+        static_assert(
+            iSpotlightsBufferRootParameterIndex == 4, "change order in which we add to `vRootParameters`");
+        addLightingResourceRootParameter(
+            LightingShaderResourceManager::getSpotlightsShaderResourceName(),
+            iSpotlightsBufferRootParameterIndex);
+
         // Do some basic checks to add parameters/samplers that don't exist in pixel shader.
 
         // First, add static samplers.

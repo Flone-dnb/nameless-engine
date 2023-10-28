@@ -295,6 +295,9 @@ namespace ne {
 
             /** Total number of spawned directional lights. */
             alignas(iVkScalarAlignment) unsigned int iDirectionalLightCount = 0;
+
+            /** Total number of spawned spotlights. */
+            alignas(iVkScalarAlignment) unsigned int iSpotlightCount = 0;
         };
 
         /** Groups GPU related data. */
@@ -335,6 +338,13 @@ namespace ne {
          * @return Name of the shader resource.
          */
         static std::string getDirectionalLightsShaderResourceName();
+
+        /**
+         * Return name of the shader resource that stores array of spotlights (name from shader code).
+         *
+         * @return Name of the shader resource.
+         */
+        static std::string getSpotlightsShaderResourceName();
 
 #if defined(WIN32)
         /**
@@ -392,7 +402,7 @@ namespace ne {
          *
          * @warning Do not delete (free) returned pointer.
          *
-         * @return Array that stores data of all spawned point light.
+         * @return Array that stores data of all spawned point lights.
          */
         ShaderLightArray* getPointLightDataArray();
 
@@ -401,9 +411,18 @@ namespace ne {
          *
          * @warning Do not delete (free) returned pointer.
          *
-         * @return Array that stores data of all spawned point light.
+         * @return Array that stores data of all spawned directional lights.
          */
         ShaderLightArray* getDirectionalLightDataArray();
+
+        /**
+         * Returns a non-owning reference to an array that stores data of all spawned spotlights.
+         *
+         * @warning Do not delete (free) returned pointer.
+         *
+         * @return Array that stores data of all spawned spotlights.
+         */
+        ShaderLightArray* getSpotlightDataArray();
 
         /**
          * Updates descriptors in all graphics pipelines to make descriptors reference the underlying
@@ -498,9 +517,18 @@ namespace ne {
                 sDirectionalLightsShaderResourceName,
                 RootSignatureGenerator::getDirectionalLightsBufferRootParameterIndex());
 
+            // Bind spotlights array.
+            setLightingArrayViewToCommandList(
+                pPso,
+                pCommandList,
+                iCurrentFrameResourceIndex,
+                pSpotlightDataArray,
+                sSpotlightsShaderResourceName,
+                RootSignatureGenerator::getSpotlightsBufferRootParameterIndex());
+
 #if defined(DEBUG)
             static_assert(
-                sizeof(LightingShaderResourceManager) == 160, "consider adding new arrays here"); // NOLINT
+                sizeof(LightingShaderResourceManager) == 176, "consider adding new arrays here"); // NOLINT
 #endif
         }
 #endif
@@ -557,6 +585,13 @@ namespace ne {
         void onDirectionalLightArraySizeChanged(size_t iNewSize);
 
         /**
+         * Called after @ref pSpotlightDataArray changed its size.
+         *
+         * @param iNewSize New size of the array that stores GPU data for spawned spotlights.
+         */
+        void onSpotlightArraySizeChanged(size_t iNewSize);
+
+        /**
          * Copies data from @ref mtxGpuData to the GPU resource of the current frame resource.
          *
          * @param iCurrentFrameResourceIndex Index of the frame resource that will be used to submit the
@@ -592,6 +627,9 @@ namespace ne {
         /** Stores data of all spawned directional lights. */
         std::unique_ptr<ShaderLightArray> pDirectionalLightDataArray;
 
+        /** Stores data of all spawned spotlights. */
+        std::unique_ptr<ShaderLightArray> pSpotlightDataArray;
+
         /** Groups GPU related data. */
         std::pair<std::recursive_mutex, GpuData> mtxGpuData;
 
@@ -606,6 +644,9 @@ namespace ne {
 
         /** Name of the resource that stores array of directional lights. */
         static inline const std::string sDirectionalLightsShaderResourceName = "directionalLights";
+
+        /** Name of the resource that stores array of spotlights. */
+        static inline const std::string sSpotlightsShaderResourceName = "spotlights";
 
         /** Type of the descriptor used to store data from @ref mtxGpuData. */
         static constexpr auto generalLightingDataDescriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;

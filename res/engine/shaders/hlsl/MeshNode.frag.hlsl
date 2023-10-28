@@ -7,7 +7,7 @@
 #endif
 
 #ifdef PS_USE_DIFFUSE_TEXTURE
-    Texture2D diffuseTexture : register(t2, space5);
+    Texture2D diffuseTexture : register(t3, space5);
 #endif
 
 /** Pixel shader. */
@@ -29,6 +29,9 @@ float4 psMeshNode(VertexOut pin) : SV_Target
     // Prepare specular color.
     float3 pixelSpecularColor = materialData.specularColor.rgb;
 
+    // Prepare material roughness.
+    float materialRoughness = materialData.roughness;
+
     // Calculate light from point lights.
     for (uint i = 0; i < generalLightingData.iPointLightCount; i++){
         outputColor.rgb += calculateColorFromPointLight(
@@ -38,7 +41,7 @@ float4 psMeshNode(VertexOut pin) : SV_Target
             pixelNormalUnit,
             pixelDiffuseColor,
             pixelSpecularColor,
-            materialData.roughness);
+            materialRoughness);
     }
 
     // Calculate light from directional lights.
@@ -50,7 +53,19 @@ float4 psMeshNode(VertexOut pin) : SV_Target
             pixelNormalUnit,
             pixelDiffuseColor,
             pixelSpecularColor,
-            materialData.roughness);
+            materialRoughness);
+    }
+
+    // Calculate light from spotlights.
+    for (uint i = 0; i < generalLightingData.iSpotlightCount; i++){
+        outputColor.rgb += calculateColorFromSpotlight(
+            spotlights[i],
+            (float3)frameData.cameraPosition,
+            (float3)pin.worldPosition,
+            pixelNormalUnit,
+            pixelDiffuseColor,
+            pixelSpecularColor,
+            materialRoughness);
     }
 
     // Apply ambient light.

@@ -15,7 +15,7 @@ struct MaterialData{
 #hlsl ConstantBuffer<MaterialData> materialData : register(b3, space5);
 
 #glsl{
-layout(std140, binding = 5) readonly buffer MaterialDataBuffer{
+layout(std140, binding = 6) readonly buffer MaterialDataBuffer{
     MaterialData array[];
 } materialData;
 }

@@ -549,6 +549,10 @@ namespace ne {
         return pDirectionalLightDataArray.get();
     }
 
+    ShaderLightArray* LightingShaderResourceManager::getSpotlightDataArray() {
+        return pSpotlightDataArray.get();
+    }
+
     std::optional<Error> LightingShaderResourceManager::bindDescriptorsToRecreatedPipelineResources() {
         // Notify point light array.
         auto optionalError = pPointLightDataArray->updateBindingsInAllPipelines();
@@ -564,9 +568,16 @@ namespace ne {
             return optionalError;
         }
 
+        // Notify spotlight array.
+        optionalError = pSpotlightDataArray->updateBindingsInAllPipelines();
+        if (optionalError.has_value()) [[unlikely]] {
+            optionalError->addCurrentLocationToErrorStack();
+            return optionalError;
+        }
+
 #if defined(DEBUG)
         static_assert(
-            sizeof(LightingShaderResourceManager) == 160, "consider notifying new arrays here"); // NOLINT
+            sizeof(LightingShaderResourceManager) == 176, "consider notifying new arrays here"); // NOLINT
 #endif
 
         // Rebind general lighting data.
@@ -595,9 +606,16 @@ namespace ne {
             return optionalError;
         }
 
+        // Notify spotlight array.
+        optionalError = pSpotlightDataArray->updatePipelineBinding(pPipeline);
+        if (optionalError.has_value()) [[unlikely]] {
+            optionalError->addCurrentLocationToErrorStack();
+            return optionalError;
+        }
+
 #if defined(DEBUG)
         static_assert(
-            sizeof(LightingShaderResourceManager) == 160, "consider notifying new arrays here"); // NOLINT
+            sizeof(LightingShaderResourceManager) == 176, "consider notifying new arrays here"); // NOLINT
 #endif
 
         // Rebind general lighting data.
@@ -619,10 +637,11 @@ namespace ne {
         // Notify light arrays.
         pPointLightDataArray->updateSlotsMarkedAsNeedsUpdate(iCurrentFrameResourceIndex);
         pDirectionalLightDataArray->updateSlotsMarkedAsNeedsUpdate(iCurrentFrameResourceIndex);
+        pSpotlightDataArray->updateSlotsMarkedAsNeedsUpdate(iCurrentFrameResourceIndex);
 
 #if defined(DEBUG)
         static_assert(
-            sizeof(LightingShaderResourceManager) == 160, "consider notifying new arrays here"); // NOLINT
+            sizeof(LightingShaderResourceManager) == 176, "consider notifying new arrays here"); // NOLINT
 #endif
 
         // Copy general lighting info (maybe changed, since that data is very small it should be OK to
@@ -672,6 +691,30 @@ namespace ne {
 
         // Update total directional light count.
         mtxGpuData.second.generalData.iDirectionalLightCount = static_cast<unsigned int>(iNewSize);
+
+        // Copy updated data to the GPU resources.
+        for (size_t i = 0; i < mtxGpuData.second.vGeneralDataGpuResources.size(); i++) {
+            copyDataToGpu(i);
+        }
+    }
+
+    void LightingShaderResourceManager::onSpotlightArraySizeChanged(size_t iNewSize) {
+        // Pause the rendering and make sure our resources are not used by the GPU
+        // because we will update data in all GPU resources
+        // (locking both mutexes to avoid a deadlock)
+        // (most likely light array resizing already did that but do it again just to be extra sure).
+        std::scoped_lock drawingGuard(*pRenderer->getRenderResourcesMutex(), mtxGpuData.first);
+        pRenderer->waitForGpuToFinishWorkUpToThisPoint();
+
+        // Self check: make sure the number of light sources will not hit type limit.
+        if (iNewSize >= std::numeric_limits<unsigned int>::max()) [[unlikely]] {
+            Error error(std::format("new spotlight array size of {} will exceed type limit", iNewSize));
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+        }
+
+        // Update total spotlight count.
+        mtxGpuData.second.generalData.iSpotlightCount = static_cast<unsigned int>(iNewSize);
 
         // Copy updated data to the GPU resources.
         for (size_t i = 0; i < mtxGpuData.second.vGeneralDataGpuResources.size(); i++) {
@@ -961,9 +1004,15 @@ namespace ne {
                 onDirectionalLightArraySizeChanged(iNewSize);
             });
 
+        // Create spotlight array.
+        pSpotlightDataArray =
+            ShaderLightArray::create(pRenderer, sSpotlightsShaderResourceName, [this](size_t iNewSize) {
+                onSpotlightArraySizeChanged(iNewSize);
+            });
+
 #if defined(DEBUG)
         static_assert(
-            sizeof(LightingShaderResourceManager) == 160, "consider resetting new arrays here"); // NOLINT
+            sizeof(LightingShaderResourceManager) == 176, "consider resetting new arrays here"); // NOLINT
 #endif
     }
 
@@ -978,10 +1027,11 @@ namespace ne {
         // the manager is destroyed or is being destroyed.
         pPointLightDataArray = nullptr;
         pDirectionalLightDataArray = nullptr;
+        pSpotlightDataArray = nullptr;
 
 #if defined(DEBUG)
         static_assert(
-            sizeof(LightingShaderResourceManager) == 160, "consider resetting new arrays here"); // NOLINT
+            sizeof(LightingShaderResourceManager) == 176, "consider resetting new arrays here"); // NOLINT
 #endif
     }
 
@@ -995,6 +1045,10 @@ namespace ne {
 
     std::string LightingShaderResourceManager::getDirectionalLightsShaderResourceName() {
         return sDirectionalLightsShaderResourceName;
+    }
+
+    std::string LightingShaderResourceManager::getSpotlightsShaderResourceName() {
+        return sSpotlightsShaderResourceName;
     }
 
     std::unique_ptr<LightingShaderResourceManager>

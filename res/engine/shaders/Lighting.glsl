@@ -11,6 +11,9 @@
 
     /** Total number of spawned directional lights. */
     uint iDirectionalLightCount;
+
+    /** Total number of spawned spotlights. */
+    uint iSpotlightCount;
 #glsl } generalLightingData;
 #hlsl }; ConstantBuffer<GeneralLightingData> generalLightingData : register(b1, space5);
 
@@ -59,6 +62,51 @@ layout(std140, binding = 3) readonly buffer DirectionalLightsBuffer{
 } directionalLights;
 }
 #hlsl StructuredBuffer<DirectionalLight> directionalLights : register(t1, space5);
+
+/** Spotlight parameters. */
+struct Spotlight{
+    /** Light position in world space. 4th component is not used. */
+    vec4 position;
+
+    /** Light forward unit vector (direction). 4th component is not used. */
+    vec4 direction;
+
+    /** Color of the light source. 4th component is not used. */
+    vec4 color;
+
+    /** Light intensity, valid values range is [0.0F; 1.0F]. */
+    float intensity;
+
+    /**
+     * Distance where the light intensity is half the maximal intensity,
+     * valid values range is [0.001F; +inf].
+     */
+    float halfDistance;
+
+    /**
+     * Cosine of the spotlight's inner cone angle (cutoff).
+     *
+     * @remark Represents cosine of the cutoff angle on one side from the light direction
+     * (not both sides), i.e. this is a cosine of value [0-90] degrees.
+     */
+    float cosInnerConeAngle;
+
+    /**
+     * Cosine of the spotlight's outer cone angle (cutoff).
+     *
+     * @remark Represents cosine of the cutoff angle on one side from the light direction
+     * (not both sides), i.e. this is a cosine of value [0-90] degrees.
+     */
+    float cosOuterConeAngle;
+};
+
+/** All spawned spotlights. */
+#glsl{
+layout(std140, binding = 4) readonly buffer SpotlightsBuffer{
+    Spotlight array[];
+} spotlights;
+}
+#hlsl StructuredBuffer<Spotlight> spotlights : register(t2, space5);
 
 /**
  * Calculates light reflected to the camera (Fresnel effect).
@@ -132,16 +180,17 @@ vec3 calculateColorFromLightSource(
 }
 
 /**
- * Calculates attenuation factor for a point light source.
+ * Calculates attenuation factor for a point/spot light sources.
  *
  * @param distanceToLightSource Distance between pixel/fragment and the light source.
- * @param lightSource           Light source data.
+ * @param lightIntensity        Light intensity, valid values range is [0.0F; 1.0F].
+ * @param lightHalfDistance     Distance where the light intensity is half the maximal intensity, valid values range is [0.001F; +inf].
  *
  * @return Factor in range [0.0; 1.0] where 0.0 means "no light is received" and 1.0 means "full light is received".
  */
-float calculatePointLightAttenuation(float distanceToLightSource, PointLight lightSource){
-    float distanceToLightDivHalfRadius = distanceToLightSource / lightSource.halfDistance;
-    return lightSource.intensity / (1.0F + distanceToLightDivHalfRadius * distanceToLightDivHalfRadius);
+float calculateLightAttenuation(float distanceToLightSource, float lightIntensity, float lightHalfDistance){
+    float distanceToLightDivHalfRadius = distanceToLightSource / lightHalfDistance;
+    return lightIntensity / (1.0F + distanceToLightDivHalfRadius * distanceToLightDivHalfRadius);
 }
 
 /**
@@ -153,7 +202,7 @@ float calculatePointLightAttenuation(float distanceToLightSource, PointLight lig
  * @param fragmentNormalUnit    Pixel/fragment's unit normal vector (interpolated vertex normal or normal from normal texture).
  * @param fragmentDiffuseColor  Pixel/fragment's diffuse color (interpolated vertex color or color from diffuse texture).
  * @param fragmentSpecularColor Pixel/fragment's specular color (interpolated vertex specular or specular from texture).
- * @param materialShininess     Roughness parameter of pixel/fragment's material.
+ * @param materialRoughness     Roughness parameter of pixel/fragment's material.
  *
  * @return Color that pixel/fragment receives from the specified light source.
  */
@@ -167,7 +216,8 @@ vec3 calculateColorFromPointLight(
     float materialRoughness){
     // Calculate light attenuation.
     float fragmentDistanceToLight = length(lightSource.position.xyz - fragmentPosition);
-    vec3 attenuatedLightColor = lightSource.color.rgb * calculatePointLightAttenuation(fragmentDistanceToLight, lightSource);
+    vec3 attenuatedLightColor = lightSource.color.rgb
+        * calculateLightAttenuation(fragmentDistanceToLight, lightSource.intensity, lightSource.halfDistance);
 
     return calculateColorFromLightSource(
         attenuatedLightColor,
@@ -203,6 +253,54 @@ vec3 calculateColorFromDirectionalLight(
     float materialRoughness){
     // Calculate light attenuation.
     vec3 attenuatedLightColor = lightSource.color.rgb * lightSource.intensity;
+
+    return calculateColorFromLightSource(
+        attenuatedLightColor,
+        lightSource.direction.xyz,
+        cameraPosition,
+        fragmentPosition,
+        fragmentNormalUnit,
+        fragmentDiffuseColor,
+        fragmentSpecularColor,
+        materialRoughness);
+}
+
+/**
+ * Calculates light that a pixel/fragment receives from a spotlight.
+ *
+ * @param lightSource           Light source data.
+ * @param cameraPosition        Camera position in world space.
+ * @param fragmentPosition      Position of the pixel/fragment in world space.
+ * @param fragmentNormalUnit    Pixel/fragment's unit normal vector (interpolated vertex normal or normal from normal texture).
+ * @param fragmentDiffuseColor  Pixel/fragment's diffuse color (interpolated vertex color or color from diffuse texture).
+ * @param fragmentSpecularColor Pixel/fragment's specular color (interpolated vertex specular or specular from texture).
+ * @param materialRoughness     Roughness parameter of pixel/fragment's material.
+ *
+ * @return Color that pixel/fragment receives from the specified light source.
+ */
+vec3 calculateColorFromSpotlight(
+    Spotlight lightSource,
+    vec3 cameraPosition,
+    vec3 fragmentPosition,
+    vec3 fragmentNormalUnit,
+    vec3 fragmentDiffuseColor,
+    vec3 fragmentSpecularColor,
+    float materialRoughness){
+    // Calculate light attenuation.
+    float fragmentDistanceToLight = length(lightSource.position.xyz - fragmentPosition);
+    vec3 attenuatedLightColor = lightSource.color.rgb
+        * calculateLightAttenuation(fragmentDistanceToLight, lightSource.intensity, lightSource.halfDistance);
+
+    // Calculate angle between light direction and direction from fragment to light source
+    // to see if this fragment is inside of the light cone or not.
+    vec3 fragmentToLightDirectionUnit = normalize(lightSource.position.xyz - fragmentPosition);
+    float cosDirectionAngle = dot(fragmentToLightDirectionUnit, -lightSource.direction.xyz);
+
+    // Calculate intensity based on inner/outer cone to attenuate light.
+    float lightIntensity
+        = clamp((cosDirectionAngle - lightSource.cosOuterConeAngle) / (lightSource.cosInnerConeAngle - lightSource.cosOuterConeAngle),
+            0.0F, 1.0F);
+    attenuatedLightColor *= lightIntensity;
 
     return calculateColorFromLightSource(
         attenuatedLightColor,

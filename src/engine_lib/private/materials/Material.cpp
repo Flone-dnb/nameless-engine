@@ -628,6 +628,18 @@ namespace ne {
         markShaderCpuWriteResourceAsNeedsUpdate(sMaterialShaderConstantBufferName);
     }
 
+    void Material::setRoughness(float roughness) {
+        std::scoped_lock guard(mtxShaderMaterialDataConstants.first);
+
+        // Save new roughness (to serialize).
+        this->roughness = std::clamp(roughness, 0.0F, 1.0F);
+
+        // Save new opacity for shaders.
+        mtxShaderMaterialDataConstants.second.roughness = this->roughness;
+
+        markShaderCpuWriteResourceAsNeedsUpdate(sMaterialShaderConstantBufferName);
+    }
+
     void Material::setOpacity(float opacity) {
         std::scoped_lock guard(mtxShaderMaterialDataConstants.first);
 
@@ -848,9 +860,9 @@ namespace ne {
         }
     }
 
-    glm::vec3 Material::getDiffuseColor() { return diffuseColor; }
+    glm::vec3 Material::getDiffuseColor() const { return diffuseColor; }
 
-    float Material::getOpacity() { return opacity; }
+    float Material::getOpacity() const { return opacity; }
 
     std::string Material::getPathToDiffuseTextureResource() {
         std::scoped_lock internalResourcesGuard(mtxInternalResources.first);
@@ -876,9 +888,10 @@ namespace ne {
         // Apply deserialized values to shaders.
         setDiffuseColor(diffuseColor);
         setOpacity(opacity);
+        setRoughness(roughness);
 #if defined(WIN32) && defined(DEBUG)
         static_assert(
-            sizeof(MaterialShaderConstants) == 16,
+            sizeof(MaterialShaderConstants) == 32,
             "consider copying new data to shaders here"); // NOLINT: current size
 #endif
 
@@ -894,7 +907,7 @@ namespace ne {
         }
 
 #if defined(WIN32) && defined(DEBUG)
-        static_assert(sizeof(Material) == 1024, "consider checking new macros here"); // NOLINT: current size
+        static_assert(sizeof(Material) == 1040, "consider checking new macros here"); // NOLINT: current size
 #elif defined(DEBUG)
         static_assert(sizeof(Material) == 752, "consider checking new macros here"); // NOLINT: current size
 #endif
@@ -942,5 +955,7 @@ namespace ne {
 
         return pRenderer->getPipelineManager();
     }
+
+    float Material::getRoughness() const { return roughness; }
 
 } // namespace ne

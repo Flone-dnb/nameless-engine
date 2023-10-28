@@ -61,9 +61,28 @@ layout(std140, binding = 3) readonly buffer DirectionalLightsBuffer{
 #hlsl StructuredBuffer<DirectionalLight> directionalLights : register(t1, space5);
 
 /**
+ * Calculates light reflected to the camera (Fresnel effect).
+ *
+ * @param fragmentSpecularColor Pixel/fragment's specular color (interpolated vertex specular or specular from texture).
+ * @param fragmentHalfwayVector Halfway vector from Blinn-Phong shading, similar to surface normal.
+ * @param lightDirectionUnit    Normalized direction of the lighting (this can be direction to pixel/fragment for point lights or
+ * direction of the light source for directional lights).
+ *
+ * @return Reflected light.
+ */
+vec3 calculateSpecularLight(vec3 fragmentSpecularColor, vec3 fragmentHalfwayVector, vec3 lightDirectionUnit)
+{
+    // Using Schlick's approximation to Fresnel effect.
+    float cosIncidentLight = max(dot(fragmentHalfwayVector, -lightDirectionUnit), 0.0F);
+    float oneMinusCos = 1.0F - cosIncidentLight;
+    
+    return fragmentSpecularColor + (1.0F - fragmentSpecularColor) * (oneMinusCos * oneMinusCos * oneMinusCos * oneMinusCos * oneMinusCos);
+}
+
+/**
  * Calculates light that a pixel/fragment receives from light source.
  *
- * @param attenuatedLightColor  Color of the light source's light with attenuation applied.
+ * @param attenuatedLightColor  Color of the light source's light with attenuation (using distance not angle) applied.
  * @param lightDirectionUnit    Normalized direction of the lighting (this can be direction to pixel/fragment for point lights or
  * direction of the light source for directional lights).
  * @param cameraPosition        Camera position in world space.
@@ -71,7 +90,7 @@ layout(std140, binding = 3) readonly buffer DirectionalLightsBuffer{
  * @param fragmentNormalUnit    Pixel/fragment's unit normal vector (interpolated vertex normal or normal from normal texture).
  * @param fragmentDiffuseColor  Pixel/fragment's diffuse color (interpolated vertex color or color from diffuse texture).
  * @param fragmentSpecularColor Pixel/fragment's specular color (interpolated vertex specular or specular from texture).
- * @param materialShininess     Shininess parameter of pixel/fragment's material.
+ * @param materialRoughness     Roughness parameter of pixel/fragment's material.
  *
  * @return Color that pixel/fragment receives from the specified light source.
  */
@@ -83,20 +102,33 @@ vec3 calculateColorFromLightSource(
     vec3 fragmentNormalUnit,
     vec3 fragmentDiffuseColor,
     vec3 fragmentSpecularColor,
-    float materialShininess){
+    float materialRoughness){
     // Using Blinn-Phong shading.
-    // Calculate diffuse color.
+
+    // Calculate angle of incidence of the light (Lambertian reflection, Lambert's cosine law)
+    // to scale down light depending on the angle.
     vec3 fragmentToLightDirectionUnit = -lightDirectionUnit;
     float cosFragmentToLight = max(dot(fragmentNormalUnit, fragmentToLightDirectionUnit), 0.0F);
-    vec3 diffuseLight = cosFragmentToLight * fragmentDiffuseColor * attenuatedLightColor;
+    attenuatedLightColor *= cosFragmentToLight;
 
-    // Calculate specular color.
+    // Calculate roughness factor using microfacet shading.
     vec3 fragmentToCameraDirectionUnit = normalize(cameraPosition - fragmentPosition);
     vec3 fragmentLightHalfwayDirectionUnit = normalize(fragmentToLightDirectionUnit + fragmentToCameraDirectionUnit);
-    float specularFactor = pow(max(dot(fragmentNormalUnit, fragmentLightHalfwayDirectionUnit), 0.0), materialShininess);
-    vec3 specularColor = attenuatedLightColor * (specularFactor * fragmentSpecularColor);
+    float smoothness = max((1.0F - materialRoughness) * 256.0F, 1.0F); // avoid smoothness < 1 for `pow` below
+    float roughnessFactor
+        = (smoothness + 8.0F) * pow(max(dot(fragmentLightHalfwayDirectionUnit, fragmentNormalUnit), 0.0F ), smoothness) / 8.0F;
 
-    return diffuseLight + specularColor;
+    // Calculate light reflected due to Fresnel effect.
+    vec3 specularLight = calculateSpecularLight(fragmentSpecularColor, fragmentLightHalfwayDirectionUnit, lightDirectionUnit);
+
+    // Combine Fresnel effect and microfacet roughness.
+    vec3 specularColor = specularLight * roughnessFactor;
+
+    // Specular formula above goes outside [0.0; 1.0] range,
+    // but because we are doing LDR rendering scale spacular color down a bit.
+    specularColor = specularColor / (specularColor + 1.0F);
+
+    return (fragmentDiffuseColor + specularColor) * attenuatedLightColor;
 }
 
 /**
@@ -121,7 +153,7 @@ float calculatePointLightAttenuation(float distanceToLightSource, PointLight lig
  * @param fragmentNormalUnit    Pixel/fragment's unit normal vector (interpolated vertex normal or normal from normal texture).
  * @param fragmentDiffuseColor  Pixel/fragment's diffuse color (interpolated vertex color or color from diffuse texture).
  * @param fragmentSpecularColor Pixel/fragment's specular color (interpolated vertex specular or specular from texture).
- * @param materialShininess     Shininess parameter of pixel/fragment's material.
+ * @param materialShininess     Roughness parameter of pixel/fragment's material.
  *
  * @return Color that pixel/fragment receives from the specified light source.
  */
@@ -132,7 +164,7 @@ vec3 calculateColorFromPointLight(
     vec3 fragmentNormalUnit,
     vec3 fragmentDiffuseColor,
     vec3 fragmentSpecularColor,
-    float materialShininess){
+    float materialRoughness){
     // Calculate light attenuation.
     float fragmentDistanceToLight = length(lightSource.position.xyz - fragmentPosition);
     vec3 attenuatedLightColor = lightSource.color.rgb * calculatePointLightAttenuation(fragmentDistanceToLight, lightSource);
@@ -145,7 +177,7 @@ vec3 calculateColorFromPointLight(
         fragmentNormalUnit,
         fragmentDiffuseColor,
         fragmentSpecularColor,
-        materialShininess);
+        materialRoughness);
 }
 
 /**
@@ -157,7 +189,7 @@ vec3 calculateColorFromPointLight(
  * @param fragmentNormalUnit    Pixel/fragment's unit normal vector (interpolated vertex normal or normal from normal texture).
  * @param fragmentDiffuseColor  Pixel/fragment's diffuse color (interpolated vertex color or color from diffuse texture).
  * @param fragmentSpecularColor Pixel/fragment's specular color (interpolated vertex specular or specular from texture).
- * @param materialShininess     Shininess parameter of pixel/fragment's material.
+ * @param materialRoughness     Roughness parameter of pixel/fragment's material.
  *
  * @return Color that pixel/fragment receives from the specified light source.
  */
@@ -168,7 +200,7 @@ vec3 calculateColorFromDirectionalLight(
     vec3 fragmentNormalUnit,
     vec3 fragmentDiffuseColor,
     vec3 fragmentSpecularColor,
-    float materialShininess){
+    float materialRoughness){
     // Calculate light attenuation.
     vec3 attenuatedLightColor = lightSource.color.rgb * lightSource.intensity;
 
@@ -180,5 +212,5 @@ vec3 calculateColorFromDirectionalLight(
         fragmentNormalUnit,
         fragmentDiffuseColor,
         fragmentSpecularColor,
-        materialShininess);
+        materialRoughness);
 }

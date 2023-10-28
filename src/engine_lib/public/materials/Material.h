@@ -165,6 +165,14 @@ namespace ne RNAMESPACE() {
         void setDiffuseTexture(const std::string& sTextureResourcePathRelativeRes);
 
         /**
+         * Sets factor that defines how much specular light will be reflected
+         * (i.e. how rough or smooth the surface is).
+         *
+         * @param roughness Value in range [0.0F; 1.0F], will be clamped if outside of this range.
+         */
+        void setRoughness(float roughness);
+
+        /**
          * Sets material's opacity.
          *
          * @remark Only works if the material has transparency enabled (see @ref create or
@@ -186,7 +194,7 @@ namespace ne RNAMESPACE() {
          *
          * @return Color in the RGB format.
          */
-        glm::vec3 getDiffuseColor();
+        glm::vec3 getDiffuseColor() const;
 
         /**
          * Returns path to a file/directory that stores currently used diffuse texture of this material.
@@ -197,11 +205,18 @@ namespace ne RNAMESPACE() {
         std::string getPathToDiffuseTextureResource();
 
         /**
+         * Returns roughness of this material.
+         *
+         * @return Value in range [0.0F; 1.0F].
+         */
+        float getRoughness() const;
+
+        /**
          * Returns opacity of this material.
          *
          * @return Value in range [0.0F; 1.0F].
          */
-        float getOpacity();
+        float getOpacity() const;
 
         /**
          * Returns array of mesh nodes that currently use this material.
@@ -294,6 +309,9 @@ namespace ne RNAMESPACE() {
         struct MaterialShaderConstants {
             /** Fill color. 4th component stores opacity when transparency is used. */
             alignas(iVkVec4Alignment) glm::vec4 diffuseColor = glm::vec4(1.0F, 1.0F, 1.0F, 1.0F);
+
+            /** Defines how much specular light will be reflected. */
+            alignas(iVkScalarAlignment) float roughness = 0.5F;
         };
 
         /**
@@ -537,6 +555,10 @@ namespace ne RNAMESPACE() {
         /** Diffuse (fill) color. */
         RPROPERTY(Serialize)
         glm::vec3 diffuseColor = glm::vec3(1.0F, 1.0F, 1.0F);
+
+        /** Defines how much specular light will be reflected. Value in range [0.0F; 1.0F]. */
+        RPROPERTY(Serialize)
+        float roughness = 0.4F;
 
         /**
          * Opacity in range [0.0; 1.0].

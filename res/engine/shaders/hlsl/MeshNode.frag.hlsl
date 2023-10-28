@@ -29,9 +29,6 @@ float4 psMeshNode(VertexOut pin) : SV_Target
     // Prepare specular color.
     float3 pixelSpecularColor = float3(1.0F, 1.0F, 1.0F);
 
-    // Prepare material shininess.
-    float materialShininess = 32.0F;
-
     // Calculate light from point lights.
     for (uint i = 0; i < generalLightingData.iPointLightCount; i++){
         outputColor.rgb += calculateColorFromPointLight(
@@ -41,7 +38,7 @@ float4 psMeshNode(VertexOut pin) : SV_Target
             pixelNormalUnit,
             pixelDiffuseColor,
             pixelSpecularColor,
-            materialShininess);
+            materialData.roughness);
     }
 
     // Calculate light from directional lights.
@@ -53,7 +50,7 @@ float4 psMeshNode(VertexOut pin) : SV_Target
             pixelNormalUnit,
             pixelDiffuseColor,
             pixelSpecularColor,
-            materialShininess);
+            materialData.roughness);
     }
 
     // Apply ambient light.

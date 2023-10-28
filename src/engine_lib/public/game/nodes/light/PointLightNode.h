@@ -40,7 +40,7 @@ namespace ne RNAMESPACE() {
         /**
          * Sets distance where the light intensity is half the maximum intensity (see @ref setLightIntensity).
          *
-         * @param halfDistance Distance where intensity is half the maximum in range is [0.01; +inf]
+         * @param halfDistance Distance where intensity is half the maximum in range is [0.0; +inf]
          * (will be clamped of outside of the range).
          */
         void setLightHalfDistance(float halfDistance);
@@ -62,7 +62,7 @@ namespace ne RNAMESPACE() {
         /**
          * Returns distance where the light intensity is half the maximum intensity.
          *
-         * @return Distance in range [0.01; +inf].
+         * @return Distance in range [0.0; +inf].
          */
         float getLightHalfDistance() const;
 
@@ -172,7 +172,7 @@ namespace ne RNAMESPACE() {
 
         /**
          * Distance where the light intensity is half the maximal intensity,
-         * valid values range is [0.01F; +inf].
+         * valid values range is [@ref minimumHalfDistance; +inf].
          */
         RPROPERTY(Serialize)
         float halfDistance = 5.0F; // NOLINT: seems like a pretty good default value

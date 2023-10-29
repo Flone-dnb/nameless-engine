@@ -45,6 +45,7 @@ namespace ne {
 
             // Spawn environment node.
             const auto pEnvironmentNode = gc_new<EnvironmentNode>();
+            pEnvironmentNode->setAmbientLight(glm::vec3(0.05F, 0.05F, 0.05F));
             getWorldRootNode()->addChildNode(pEnvironmentNode);
 
             // Spawn point light.

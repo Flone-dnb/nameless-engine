@@ -64,7 +64,7 @@ namespace ne RNAMESPACE() {
     private:
         /** Intensity and color of the ambient lighting. */
         RPROPERTY(Serialize)
-        glm::vec3 ambientLight = glm::vec3(0.1F, 0.1F, 0.1F);
+        glm::vec3 ambientLight = glm::vec3(0.0F, 0.0F, 0.0F);
 
         ne_EnvironmentNode_GENERATED
     };

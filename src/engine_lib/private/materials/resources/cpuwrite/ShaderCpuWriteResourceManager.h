@@ -37,7 +37,7 @@ namespace ne {
             std::array<
                 std::unordered_set<ShaderCpuWriteResource*>,
                 FrameResourcesManager::getFrameResourcesCount()>
-                toBeUpdated;
+                vToBeUpdated;
         };
 
         ShaderCpuWriteResourceManager() = delete;

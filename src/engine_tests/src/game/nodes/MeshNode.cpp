@@ -461,7 +461,7 @@ TEST_CASE("shader read/write resources exist only when MeshNode is spawned") {
                 // Make sure no shader read/write resources created.
                 std::scoped_lock shaderCpuWriteResourcesGuard(pMtxResources->first);
                 REQUIRE(pMtxResources->second.all.empty());
-                for (const auto& set : pMtxResources->second.toBeUpdated) {
+                for (const auto& set : pMtxResources->second.vToBeUpdated) {
                     REQUIRE(set.empty());
                 }
 
@@ -474,7 +474,7 @@ TEST_CASE("shader read/write resources exist only when MeshNode is spawned") {
 
                 // Make sure there are 2 resources (meshData and materialData).
                 REQUIRE(pMtxResources->second.all.size() == 2);
-                for (const auto& set : pMtxResources->second.toBeUpdated) {
+                for (const auto& set : pMtxResources->second.vToBeUpdated) {
                     REQUIRE(set.size() == 2);
                 }
 
@@ -498,7 +498,7 @@ TEST_CASE("shader read/write resources exist only when MeshNode is spawned") {
 
                 // Make sure resources were freed.
                 REQUIRE(pMtxResources->second.all.empty());
-                for (const auto& set : pMtxResources->second.toBeUpdated) {
+                for (const auto& set : pMtxResources->second.vToBeUpdated) {
                     REQUIRE(set.empty());
                 }
 

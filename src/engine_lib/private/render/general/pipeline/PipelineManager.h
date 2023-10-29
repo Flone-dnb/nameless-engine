@@ -145,6 +145,10 @@ namespace ne {
         DelayedPipelineResourcesCreation(const DelayedPipelineResourcesCreation&) = delete;
         DelayedPipelineResourcesCreation& operator=(const DelayedPipelineResourcesCreation&) = delete;
 
+        DelayedPipelineResourcesCreation(DelayedPipelineResourcesCreation&& other) noexcept = delete;
+        DelayedPipelineResourcesCreation&
+        operator=(DelayedPipelineResourcesCreation&& other) noexcept = delete;
+
         /**
          * Constructor.
          *
@@ -154,31 +158,8 @@ namespace ne {
             this->pPipelineManager = pPipelineManager;
             initialize();
         }
+
         ~DelayedPipelineResourcesCreation() { destroy(); }
-
-        /**
-         * Move constructor.
-         *
-         * @param other Other object.
-         */
-        DelayedPipelineResourcesCreation(DelayedPipelineResourcesCreation&& other) noexcept {
-            *this = std::move(other);
-        }
-
-        /**
-         * Move assignment operator.
-         *
-         * @param other Other object.
-         *
-         * @return Resulting object.
-         */
-        DelayedPipelineResourcesCreation& operator=(DelayedPipelineResourcesCreation&& other) noexcept {
-            if (this != &other) {
-                other.bIsValid = false;
-            }
-
-            return *this;
-        }
 
     private:
         /** Does initialization logic. */
@@ -189,12 +170,6 @@ namespace ne {
 
         /** Do not delete (free) this pointer. Non-owning reference to pipeline manager. */
         PipelineManager* pPipelineManager = nullptr;
-
-        /**
-         * Marks the object as valid (not moved) or invalid (moved).
-         * Determines whether @ref destroy logic should be called on destruction or not.
-         */
-        bool bIsValid = true;
     };
 
     /** Base class for managing render specific pipelines. */

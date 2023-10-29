@@ -381,11 +381,6 @@ namespace ne {
     }
 
     void DelayedPipelineResourcesCreation::destroy() {
-        if (!bIsValid) {
-            // This object was moved.
-            return;
-        }
-
         // Restore resources.
         auto optionalError = pPipelineManager->restoreInternalGraphicsPipelinesResources();
         if (optionalError.has_value()) {

@@ -35,7 +35,7 @@ struct VertexIn
 /** Describes pixel shader input data. */
 struct VertexOut
 {
-    float4 viewPosition            : SV_POSITION; // position in view space
+    float4 clipSpacePosition       : SV_POSITION; // position in homogeneous clip space
     float4 worldPosition           : POSITION;    // position in world space
     float3 worldNormal             : NORMAL;      // normal in world space
     float2 uv                      : UV;

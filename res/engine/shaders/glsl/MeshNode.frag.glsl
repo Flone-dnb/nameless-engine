@@ -4,7 +4,7 @@
 #include "MeshNodePushConstants.glsl"
 
 /** Input parameters. */
-layout(location = 0) in vec4 fragmentViewPosition;
+layout(location = 0) in vec4 fragmentClipSpacePosition;
 layout(location = 1) in vec4 fragmentWorldPosition;
 layout(location = 2) in vec3 fragmentWorldNormal;
 layout(location = 3) in vec2 fragmentUv;

@@ -4,7 +4,7 @@
 #include "render/Renderer.h"
 #include "io/Logger.h"
 #include "render/general/pipeline/PipelineManager.h"
-#include "materials/Material.h"
+#include "material/Material.h"
 #if defined(WIN32)
 #include "render/directx/DirectXRenderer.h"
 #include "render/directx/pipeline/DirectXPso.h"

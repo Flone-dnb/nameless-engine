@@ -9,7 +9,7 @@
 
 // Custom.
 #include "render/general/pipeline/Pipeline.h"
-#include "materials/ShaderMacro.h"
+#include "material/ShaderMacro.h"
 
 namespace ne {
     class Renderer;

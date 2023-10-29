@@ -6,7 +6,7 @@
 // Custom.
 #include "misc/ProjectPaths.h"
 #include "game/nodes/MeshNode.h"
-#include "materials/Material.h"
+#include "material/Material.h"
 
 // External.
 #define TINYGLTF_IMPLEMENTATION

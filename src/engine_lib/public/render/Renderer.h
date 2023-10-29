@@ -8,16 +8,16 @@
 #include <memory>
 
 // Custom.
-#include "materials/resources/cpuwrite/ShaderCpuWriteResourceManager.h"
-#include "materials/resources/texture/ShaderTextureResourceManager.h"
+#include "material/resources/cpuwrite/ShaderCpuWriteResourceManager.h"
+#include "material/resources/texture/ShaderTextureResourceManager.h"
 #include "misc/Error.h"
-#include "materials/ShaderManager.h"
+#include "material/ShaderManager.h"
 #include "render/general/resources/GpuResourceManager.h"
 #include "render/general/resources/FrameResourcesManager.h"
 #include "render/RenderSettings.h"
 #include "game/camera/CameraProperties.h"
 #include "misc/shapes/AABB.h"
-#include "materials/resources/LightingShaderResourceManager.h"
+#include "material/resources/LightingShaderResourceManager.h"
 
 namespace ne {
     class GameManager;

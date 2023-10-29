@@ -7,11 +7,11 @@
 // Custom.
 #include "io/Logger.h"
 #include "render/vulkan/VulkanRenderer.h"
-#include "materials/glsl/GlslShader.h"
-#include "materials/EngineShaderNames.hpp"
+#include "material/glsl/GlslShader.h"
+#include "material/EngineShaderNames.hpp"
 #include "render/vulkan/resources/VulkanResourceManager.h"
 #include "render/vulkan/resources/VulkanStorageResourceArrayManager.h"
-#include "materials/glsl/DescriptorSetLayoutGenerator.h"
+#include "material/glsl/DescriptorSetLayoutGenerator.h"
 
 // External.
 #include "vulkan/vk_enum_string_helper.h"

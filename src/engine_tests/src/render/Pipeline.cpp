@@ -1,5 +1,5 @@
 // Custom.
-#include "materials/Material.h"
+#include "material/Material.h"
 #include "game/GameInstance.h"
 #include "game/Window.h"
 #include "game/nodes/MeshNode.h"

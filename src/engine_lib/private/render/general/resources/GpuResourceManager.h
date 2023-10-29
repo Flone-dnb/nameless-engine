@@ -9,7 +9,7 @@
 // Custom.
 #include "misc/Error.h"
 #include "render/general/resources/UploadBuffer.h"
-#include "materials/TextureManager.h"
+#include "material/TextureManager.h"
 
 namespace ne {
     class Renderer;

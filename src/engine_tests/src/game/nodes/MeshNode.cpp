@@ -4,8 +4,8 @@
 #include "game/Window.h"
 #include "game/camera/CameraManager.h"
 #include "game/camera/TransientCamera.h"
-#include "materials/Material.h"
-#include "materials/EngineShaderNames.hpp"
+#include "material/Material.h"
+#include "material/EngineShaderNames.hpp"
 #include "../../io/ReflectionTest.h"
 #include "misc/PrimitiveMeshGenerator.h"
 

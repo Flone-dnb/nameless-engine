@@ -10,7 +10,7 @@
 // Custom.
 #include "misc/Error.h"
 #include "math/GLMath.hpp"
-#include "materials/VulkanAlignmentConstants.hpp"
+#include "material/VulkanAlignmentConstants.hpp"
 #include "render/general/resources/FrameResource.h"
 
 namespace ne {

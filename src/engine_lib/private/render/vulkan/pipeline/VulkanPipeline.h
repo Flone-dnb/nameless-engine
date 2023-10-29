@@ -8,7 +8,7 @@
 #include "render/general/pipeline/Pipeline.h"
 #include "render/general/resources/FrameResourcesManager.h"
 #include "render/vulkan/pipeline/VulkanPushConstantsManager.hpp"
-#include "materials/resources/ShaderBindlessArrayIndexManager.h"
+#include "material/resources/ShaderBindlessArrayIndexManager.h"
 
 // External.
 #include "vulkan/vulkan.h"

@@ -2282,8 +2282,8 @@ If you would look into how `PrimitiveMeshGenerator::createCube` is implemented y
 Each `MeshNode` uses a default engine material (if other material is not specified) which means that if we have a `MeshNode` it already has a material.
 
 ```Cpp
-#include "materials/Material.h"
-#include "materials/EngineShaderNames.h"
+#include "material/Material.h"
+#include "material/EngineShaderNames.h"
 
 // Set mesh's diffuse color to red.
 pMeshNode->getMaterial()->setDiffuseColor(glm::vec(1.0F, 0.0F, 0.0F));
@@ -2292,8 +2292,8 @@ pMeshNode->getMaterial()->setDiffuseColor(glm::vec(1.0F, 0.0F, 0.0F));
 You can also assign a new material to your `MeshNode`:
 
 ```Cpp
-#include "materials/Material.h"
-#include "materials/EngineShaderNames.h"
+#include "material/Material.h"
+#include "material/EngineShaderNames.h"
 
 auto result = Material::create(
   EngineShaderNames::MeshNode::sVertexShaderName, // since we change `MeshNode`'s material we use `MeshNode` shaders
@@ -2316,8 +2316,8 @@ As you can see you can specify custom shaders when creating a new material (use 
 In order to enable transparency and use `Material::setOpacity` function you need to either create a material with transparency enabled (see example from above) or enable transparency using `Material::setEnableTransparency`:
 
 ```Cpp
-#include "materials/Material.h"
-#include "materials/EngineShaderNames.h"
+#include "material/Material.h"
+#include "material/EngineShaderNames.h"
 
 // Enable transparency.
 pMeshNode->getMaterial()->setEnableTransparency(true);
@@ -2335,7 +2335,7 @@ Note
 In order to use textures in your material you need to first import the textures you want to use. Most of the time you will import new textures through the editor using its GUI but we will show how to do it in C++:
 
 ```Cpp
-#include "materials/TextureManager.h"
+#include "material/TextureManager.h"
 
 using namespace ne;
 
@@ -2646,7 +2646,7 @@ Here are the steps to create a new custom shader:
 In order to compile your shader you need to use the `ShaderManager` object, here is an example how to do it using HLSL shaders:
 
 ```Cpp
-#include "materials/ShaderManager.h"
+#include "material/ShaderManager.h"
 
 using namespace ne;
 
@@ -2750,7 +2750,7 @@ void main() {
 Then in C++:
 
 ```Cpp
-#include "materials/VulkanAlignmentConstants.hpp"
+#include "material/VulkanAlignmentConstants.hpp"
 #include "math/GLMath.hpp"
 
 using namespace ne;

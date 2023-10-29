@@ -4,12 +4,12 @@
 #include <format>
 
 // Custom.
-#include "materials/Material.h"
+#include "material/Material.h"
 #include "game/Window.h"
 #include "render/Renderer.h"
 #include "render/general/resources/GpuResourceManager.h"
-#include "materials/resources/cpuwrite/ShaderCpuWriteResourceManager.h"
-#include "materials/EngineShaderNames.hpp"
+#include "material/resources/cpuwrite/ShaderCpuWriteResourceManager.h"
+#include "material/EngineShaderNames.hpp"
 #include "misc/PrimitiveMeshGenerator.h"
 
 #include "MeshNode.generated_impl.h"

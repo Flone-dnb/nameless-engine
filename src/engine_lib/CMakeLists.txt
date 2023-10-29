@@ -29,17 +29,17 @@ include(${RELATIVE_CMAKE_HELPERS_PATH}/utils.cmake)
 
 # Windows specific sources.
 set(PROJECT_WIN32_SOURCES
-    private/materials/hlsl/HlslShader.h
-    private/materials/hlsl/HlslShader.cpp
-    private/materials/hlsl/HlslEngineShaders.hpp
-    private/materials/hlsl/RootSignatureGenerator.h
-    private/materials/hlsl/RootSignatureGenerator.cpp
-    private/materials/hlsl/resources/HlslShaderCpuWriteResource.h
-    private/materials/hlsl/resources/HlslShaderCpuWriteResource.cpp
-    private/materials/hlsl/resources/HlslShaderTextureResource.h
-    private/materials/hlsl/resources/HlslShaderTextureResource.cpp
-    private/materials/hlsl/resources/HlslShaderResourceHelpers.h
-    private/materials/hlsl/resources/HlslShaderResourceHelpers.cpp
+    private/material/hlsl/HlslShader.h
+    private/material/hlsl/HlslShader.cpp
+    private/material/hlsl/HlslEngineShaders.hpp
+    private/material/hlsl/RootSignatureGenerator.h
+    private/material/hlsl/RootSignatureGenerator.cpp
+    private/material/hlsl/resources/HlslShaderCpuWriteResource.h
+    private/material/hlsl/resources/HlslShaderCpuWriteResource.cpp
+    private/material/hlsl/resources/HlslShaderTextureResource.h
+    private/material/hlsl/resources/HlslShaderTextureResource.cpp
+    private/material/hlsl/resources/HlslShaderResourceHelpers.h
+    private/material/hlsl/resources/HlslShaderResourceHelpers.cpp
     private/render/directx/DirectXRenderer.h
     private/render/directx/DirectXRenderer.cpp
     private/render/directx/pipeline/DirectXPso.cpp
@@ -129,37 +129,37 @@ set(PROJECT_SOURCES
     private/input/InputManager.cpp
     public/input/InputManager.h
     public/input/MouseButton.hpp
-    public/materials/ShaderManager.h
-    private/materials/ShaderManager.cpp
-    private/materials/DescriptorConstants.hpp
-    private/materials/Shader.cpp
-    private/materials/Shader.h
-    public/materials/ShaderDescription.h
-    private/materials/ShaderDescription.cpp
-    private/materials/ShaderUser.h
-    private/materials/ShaderUser.cpp
-    private/materials/Material.cpp
-    public/materials/Material.h
-    private/materials/EngineShaderNames.hpp
-    private/materials/resources/ShaderResource.h
-    private/materials/resources/ShaderResource.cpp
-    private/materials/resources/ShaderBindlessArrayIndexManager.h
-    private/materials/resources/ShaderBindlessArrayIndexManager.cpp
-    private/materials/glsl/GlslEngineShaders.hpp
-    private/materials/glsl/GlslShader.h
-    private/materials/glsl/GlslShader.cpp
-    private/materials/glsl/resources/GlslShaderCpuWriteResource.h
-    private/materials/glsl/resources/GlslShaderCpuWriteResource.cpp
-    private/materials/glsl/resources/GlslShaderTextureResource.h
-    private/materials/glsl/resources/GlslShaderTextureResource.cpp
-    private/materials/glsl/resources/GlslShaderResourceHelpers.h
-    private/materials/glsl/resources/GlslShaderResourceHelpers.cpp
-    private/materials/glsl/DescriptorSetLayoutGenerator.h
-    private/materials/glsl/DescriptorSetLayoutGenerator.cpp
-    private/materials/resources/LightingShaderResourceManager.h
-    private/materials/resources/LightingShaderResourceManager.cpp
-    private/materials/TextureManager.cpp
-    public/materials/TextureManager.h
+    public/material/ShaderManager.h
+    private/material/ShaderManager.cpp
+    private/material/DescriptorConstants.hpp
+    private/material/Shader.cpp
+    private/material/Shader.h
+    public/material/ShaderDescription.h
+    private/material/ShaderDescription.cpp
+    private/material/ShaderUser.h
+    private/material/ShaderUser.cpp
+    private/material/Material.cpp
+    public/material/Material.h
+    private/material/EngineShaderNames.hpp
+    private/material/resources/ShaderResource.h
+    private/material/resources/ShaderResource.cpp
+    private/material/resources/ShaderBindlessArrayIndexManager.h
+    private/material/resources/ShaderBindlessArrayIndexManager.cpp
+    private/material/glsl/GlslEngineShaders.hpp
+    private/material/glsl/GlslShader.h
+    private/material/glsl/GlslShader.cpp
+    private/material/glsl/resources/GlslShaderCpuWriteResource.h
+    private/material/glsl/resources/GlslShaderCpuWriteResource.cpp
+    private/material/glsl/resources/GlslShaderTextureResource.h
+    private/material/glsl/resources/GlslShaderTextureResource.cpp
+    private/material/glsl/resources/GlslShaderResourceHelpers.h
+    private/material/glsl/resources/GlslShaderResourceHelpers.cpp
+    private/material/glsl/DescriptorSetLayoutGenerator.h
+    private/material/glsl/DescriptorSetLayoutGenerator.cpp
+    private/material/resources/LightingShaderResourceManager.h
+    private/material/resources/LightingShaderResourceManager.cpp
+    private/material/TextureManager.cpp
+    public/material/TextureManager.h
     private/misc/ThreadPool.h
     private/misc/ThreadPool.cpp
     private/misc/Timer.cpp
@@ -179,20 +179,20 @@ set(PROJECT_SOURCES
     public/misc/shapes/Frustum.h
     private/misc/shapes/Plane.cpp
     public/misc/shapes/Plane.h
-    private/materials/ShaderPack.h
-    private/materials/ShaderPack.cpp
-    private/materials/ShaderMacro.h
-    private/materials/ShaderMacro.cpp
-    private/materials/ShaderFilesystemPaths.hpp
-    private/materials/resources/cpuwrite/ShaderCpuWriteResourceManager.cpp
-    private/materials/resources/cpuwrite/ShaderCpuWriteResourceManager.h
-    private/materials/resources/cpuwrite/ShaderCpuWriteResourceUniquePtr.cpp
-    private/materials/resources/cpuwrite/ShaderCpuWriteResourceUniquePtr.h
-    private/materials/resources/texture/ShaderTextureResourceManager.cpp
-    private/materials/resources/texture/ShaderTextureResourceManager.h
-    private/materials/resources/texture/ShaderTextureResourceUniquePtr.cpp
-    private/materials/resources/texture/ShaderTextureResourceUniquePtr.h
-    public/materials/VulkanAlignmentConstants.hpp
+    private/material/ShaderPack.h
+    private/material/ShaderPack.cpp
+    private/material/ShaderMacro.h
+    private/material/ShaderMacro.cpp
+    private/material/ShaderFilesystemPaths.hpp
+    private/material/resources/cpuwrite/ShaderCpuWriteResourceManager.cpp
+    private/material/resources/cpuwrite/ShaderCpuWriteResourceManager.h
+    private/material/resources/cpuwrite/ShaderCpuWriteResourceUniquePtr.cpp
+    private/material/resources/cpuwrite/ShaderCpuWriteResourceUniquePtr.h
+    private/material/resources/texture/ShaderTextureResourceManager.cpp
+    private/material/resources/texture/ShaderTextureResourceManager.h
+    private/material/resources/texture/ShaderTextureResourceUniquePtr.cpp
+    private/material/resources/texture/ShaderTextureResourceUniquePtr.h
+    public/material/VulkanAlignmentConstants.hpp
     public/misc/ProjectPaths.h
     private/misc/ProjectPaths.cpp
     public/misc/PrimitiveMeshGenerator.h

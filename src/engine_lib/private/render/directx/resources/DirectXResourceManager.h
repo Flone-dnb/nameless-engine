@@ -67,21 +67,20 @@ namespace ne {
          *     "object constant data",
          *     sizeof(ObjectData),
          *     1,
-         *     CpuVisibleShaderResourceUsageDetails(true));
+         *     false);
          * @endcode
          *
          * @remark This resource can be used as a `cbuffer` in shaders if `bIsUsedInShadersAsReadOnlyData`
          * is `true`.
          *
-         * @param sResourceName                 Resource name, used for logging.
-         * @param iElementSizeInBytes           Size of one buffer element in bytes.
-         * @param iElementCount                 Amount of elements in the resulting buffer.
-         * @param isUsedInShadersAsReadOnlyData Determines whether this resource will be used to store
-         * shader read-only data (cannon be modified from shaders) or not going to be used in shaders
-         * at all (specify empty). You need to specify this because in some internal implementations
-         * might pad the specified element size to be a multiple of 256 because of some
-         * hardware requirements. Otherwise if you don't plan to use this buffer
-         * in shaders (for ex. you can use it as a staging/upload buffer) specify empty.
+         * @param sResourceName                  Resource name, used for logging.
+         * @param iElementSizeInBytes            Size of one buffer element in bytes.
+         * @param iElementCount                  Number of elements in the resulting buffer.
+         * @param isUsedInShadersAsArrayResource Specify `empty` if this resource is not going to be
+         * used in shaders, `false` if this resource will be used in shaders as a single (non-array)
+         * resource (cbuffer, uniform, might cause padding to 256 bytes and size limitation up to 64 KB) and
+         * `true` if this resource will be used in shaders as an array resource (StructuredBuffer, storage
+         * buffer).
          *
          * @return Error if something went wrong, otherwise created resource.
          */
@@ -89,7 +88,7 @@ namespace ne {
             const std::string& sResourceName,
             size_t iElementSizeInBytes,
             size_t iElementCount,
-            std::optional<CpuVisibleShaderResourceUsageDetails> isUsedInShadersAsReadOnlyData) override;
+            std::optional<bool> isUsedInShadersAsArrayResource) override;
 
         /**
          * Creates a new GPU resource (buffer, not a texture) and fills it with the specified data.

@@ -127,8 +127,8 @@ namespace ne {
         const std::string& sResourceName,
         size_t iElementSizeInBytes,
         size_t iElementCount,
-        std::optional<CpuVisibleShaderResourceUsageDetails> isUsedInShadersAsReadOnlyData) {
-        if (isUsedInShadersAsReadOnlyData.has_value()) {
+        std::optional<bool> isUsedInShadersAsArrayResource) {
+        if (isUsedInShadersAsArrayResource.has_value() && !isUsedInShadersAsArrayResource.value()) {
             // Constant buffers must be multiple of 256 (hardware requirement).
             iElementSizeInBytes = makeMultipleOf256(iElementSizeInBytes);
         }

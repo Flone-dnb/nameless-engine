@@ -33,6 +33,8 @@ struct PointLight{
      * valid values range is [0.01F; +inf].
      */
     float halfDistance;
+
+#hlsl float2 pad1; // to pack as in Vulkan
 };
 
 /** All spawned point lights. */
@@ -53,6 +55,8 @@ struct DirectionalLight{
 
     /** Light intensity, valid values range is [0.0F; 1.0F]. */
     float intensity;
+
+#hlsl float3 pad1; // to pack as in Vulkan
 };
 
 /** All spawned directional lights. */

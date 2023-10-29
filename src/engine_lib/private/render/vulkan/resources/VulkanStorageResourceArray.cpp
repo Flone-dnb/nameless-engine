@@ -312,10 +312,7 @@ namespace ne {
 
         // Create a new storage buffer.
         auto result = pResourceManager->createResourceWithCpuWriteAccess(
-            std::format("{} storage array", sHandledResourceName),
-            iElementSizeInBytes,
-            iCapacity,
-            CpuVisibleShaderResourceUsageDetails(false));
+            std::format("{} storage array", sHandledResourceName), iElementSizeInBytes, iCapacity, true);
         if (std::holds_alternative<Error>(result)) {
             auto error = std::get<Error>(std::move(result));
             error.addCurrentLocationToErrorStack();

@@ -64,7 +64,7 @@ namespace ne {
                     i),
                 iResourceSizeInBytes,
                 1,
-                CpuVisibleShaderResourceUsageDetails(false));
+                false);
             if (std::holds_alternative<Error>(result)) [[unlikely]] {
                 auto error = std::get<Error>(std::move(result));
                 error.addCurrentLocationToErrorStack();

@@ -58,10 +58,7 @@ namespace ne {
         for (unsigned int i = 0; i < getFrameResourcesCount(); i++) {
             // Create a constant buffer with frame-global data per frame.
             auto result = pRenderer->getResourceManager()->createResourceWithCpuWriteAccess(
-                std::format("frame constants #{}", i),
-                sizeof(FrameConstants),
-                1,
-                CpuVisibleShaderResourceUsageDetails(true));
+                std::format("frame constants #{}", i), sizeof(FrameConstants), 1, false);
             if (std::holds_alternative<Error>(result)) {
                 auto error = std::get<Error>(std::move(result));
                 error.addCurrentLocationToErrorStack();

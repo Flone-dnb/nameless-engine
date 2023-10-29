@@ -246,12 +246,12 @@ namespace ne {
         const std::string& sResourceName,
         size_t iElementSizeInBytes,
         size_t iElementCount,
-        std::optional<CpuVisibleShaderResourceUsageDetails> isUsedInShadersAsReadOnlyData) {
+        std::optional<bool> isUsedInShadersAsArrayResource) {
         const size_t iBufferSizeInBytes = iElementSizeInBytes * iElementCount;
         auto usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
 
-        if (isUsedInShadersAsReadOnlyData.has_value()) {
-            if (isUsedInShadersAsReadOnlyData->bForceFastResourceType) {
+        if (isUsedInShadersAsArrayResource.has_value()) {
+            if (!isUsedInShadersAsArrayResource.value()) {
                 usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
 
                 // Get renderer.

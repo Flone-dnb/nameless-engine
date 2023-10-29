@@ -249,7 +249,7 @@ namespace ne {
                 std::format("{} frame #{}", sShaderLightResourceName, i),
                 iArrayElementSize,
                 iArraySize,
-                CpuVisibleShaderResourceUsageDetails(false));
+                true);
             if (std::holds_alternative<Error>(result)) [[unlikely]] {
                 auto error = std::get<Error>(std::move(result));
                 error.addCurrentLocationToErrorStack();
@@ -944,7 +944,7 @@ namespace ne {
                 std::format("lighting general data frame #{}", i),
                 iDataSizeInBytes,
                 1,
-                CpuVisibleShaderResourceUsageDetails(bUseFastButSmallShaderResource));
+                !bUseFastButSmallShaderResource);
             if (std::holds_alternative<Error>(result)) [[unlikely]] {
                 auto error = std::get<Error>(std::move(result));
                 error.addCurrentLocationToErrorStack();

@@ -842,7 +842,81 @@ void MyGameInstance::onGameStarted(){
 }
 ```
 
-After your world is created you can create your player node with a camera.
+# Lighting
+
+Light source nodes (such as point/spot/directional) are stored in `game/nodes/light`. Just spawn one of these nodes and configure their setting using `setLight...` functions and `setWorldLocation`/`setWorldRotation`. Here is an example:
+
+```Cpp
+#include "game/nodes/light/PointLightNode.h"
+
+void MyGameInstance::onGameStarted(){
+    // Create world.
+    createWorld([this](const std::optional<Error>& optionalWorldError) {
+        // Show error if failed.
+        if (optionalWorldError.has_value()) [[unlikely]] {
+            auto error = optionalWorldError.value();
+            error.addCurrentLocationToErrorStack();
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+        }
+
+        // Spawn sample mesh.
+        const auto pMeshNode = gc_new<MeshNode>();
+        pMeshNode->setMeshData(PrimitiveMeshGenerator::createCube(1.0F));
+        getWorldRootNode()->addChildNode(pMeshNode);
+
+        // Set mesh node location.
+        pMeshNode->setWorldLocation(glm::vec3(1.0F, 0.0F, 0.0F));
+
+        // Spawn point light.
+        const auto pPointLightNode = gc_new<PointLightNode>();
+        getWorldRootNode()->addChildNode(pPointLightNode);
+
+        // Configure point light.
+        pPointLightNode->setLightColor(glm::vec3(0.0F, 1.0F, 0.0F));      // emit green light
+        pPointLightNode->setLightHalfDistance(20.0F);                     // change light radius
+        pPointLightNode->setWorldLocation(glm::vec3(-1.0F, 5.0F, 5.0F));  // move the light
+    });
+}
+```
+
+# Environment
+
+Using `EnvironmentNode` you can configure environment settings such as ambient light, skybox, etc. Here is an example:
+
+```Cpp
+#include "game/nodes/EnvironmentNode.h"
+
+void MyGameInstance::onGameStarted(){
+    // Create world.
+    createWorld([this](const std::optional<Error>& optionalWorldError) {
+        // Show error if failed.
+        if (optionalWorldError.has_value()) [[unlikely]] {
+            auto error = optionalWorldError.value();
+            error.addCurrentLocationToErrorStack();
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+        }
+
+        // Spawn sample mesh.
+        const auto pMeshNode = gc_new<MeshNode>();
+        pMeshNode->setMeshData(PrimitiveMeshGenerator::createCube(1.0F));
+        getWorldRootNode()->addChildNode(pMeshNode);
+
+        // Set mesh node location.
+        pMeshNode->setWorldLocation(glm::vec3(1.0F, 0.0F, 0.0F));
+
+        // Spawn environment node.
+        const auto pEnvironmentNode = gc_new<EnvironmentNode>();
+        getWorldRootNode()->addChildNode(pEnvironmentNode);
+
+        // Configure environment settings.
+        pEnvironmentNode->setAmbientLight(glm::vec3(0.1F, 0.1F, 0.1F)); // add small ambient lighting
+    });
+}
+```
+
+Note that your world can only have 1 active environment node. If you will spawn another environment node you will get a warning in the logs that will tell you that settings of your newly spawned environment node will be ignored.
 
 # Creating a character for your game
 
@@ -1077,7 +1151,7 @@ protected:
     virtual void onSpawning() override;
 ```
 
-The documentation for `Node::onSpawning` says "This node will be marked as spawned before this function is called." this means that when `Node::onSpawning` is called our node is already considered as spawned. Also the documentation says "If overriding you must call the parent's version of this function first (before executing your login) to execute parent's logic." so let's implement this function. In the `.cpp` file of your character add the following code:
+The documentation for `Node::onSpawning` says "This node will be marked as spawned before this function is called." this means that when `Node::onSpawning` is called our node is already considered as spawned. Also the documentation says "If overriding you must call the parent's version of this function first (before executing your login) to execute parent's logic." so let's implement this function. In the `.cpp` file of our character add the following code:
 
 ```Cpp
 void FlyingCharacterNode::onSpawning() {
@@ -1093,13 +1167,46 @@ Replace `onSpawning` function with `onChildNodesSpawned`:
 
 ```Cpp
 void FlyingCharacterNode::onChildNodesSpawned() {
-    SpatialNode::onChildNodesSpawned();
+    SpatialNode::onChildNodesSpawned(); // also change super call
 
     pCameraNode->makeActive();
 }
 ```
 
-Now compile and run your project. If you did everything correctly you should see a white cube on the black background. Now close your project, look at your console/logs and make sure there are no warnings/errors reported in the end.
+Now compile and run your project. There should be no errors but still black screen. This is because we forgot about the lighting. Let's create the Sun for our world. In our game instance add code to spawn a directional light:
+
+```Cpp
+// MyGameInstance.cpp
+#include "MyGameInstance.h"
+
+#include "game/nodes/MeshNode.h"
+#include "misc/PrimitiveMeshGenerator.h"
+#include "nodes/FlyingCharacter.h"
+#include "game/nodes/light/DirectionalLightNode.h" // <- new include
+#include "math/MathHelpers.hpp"                    // <- new include
+
+void MyGameInstance::onGameStarted() {
+    // Create world.
+    createWorld([this](const std::optional<Error>& optionalWorldError) {
+        // ... some code here ...
+
+        // Spawn character node.
+        const auto pCharacter = gc_new<FlyingCharacterNode>();
+        getWorldRootNode()->addChildNode(pCharacter);
+        pCharacter->setWorldLocation(glm::vec3(-1.0F, 0.0F, 0.0F));
+
+        // Spawn directional light.
+        const auto pDirectionalLightNode = gc_new<DirectionalLightNode>();
+        pDirectionalLightNode->setWorldRotation(
+            MathHelpers::convertDirectionToRollPitchYaw(glm::normalize(glm::vec3(1.0F, -1.0F, -1.0F))));
+        getWorldRootNode()->addChildNode(pDirectionalLightNode);
+    });
+}
+```
+
+You can also add other types of light sources or configure ambient lighting using `EnvironmentNode` but we will stick with the minimum for now.
+
+If you run your project now you should see a cube. Now close your project, look at your console/logs and make sure there are no warnings/errors reported in the end.
 
 We can now continue and work on handling user input to allow our character to fly.
 

@@ -45,13 +45,13 @@ namespace ne {
 
             // Spawn environment node.
             const auto pEnvironmentNode = gc_new<EnvironmentNode>();
-            pEnvironmentNode->setAmbientLight(glm::vec3(0.05F, 0.05F, 0.05F));
+            pEnvironmentNode->setAmbientLight(glm::vec3(0.05F, 0.05F, 0.05F)); // NOLINT: magic numbers
             getWorldRootNode()->addChildNode(pEnvironmentNode);
 
             // Spawn point light.
             const auto pPointLightNode = gc_new<PointLightNode>();
             getWorldRootNode()->addChildNode(pPointLightNode);
-            pPointLightNode->setWorldLocation(glm::vec3(-1.0F, 5.0F, 5.0F));
+            pPointLightNode->setWorldLocation(glm::vec3(-1.0F, 5.0F, 5.0F)); // NOLINT: magic numbers
 
             // Spawn sample mesh.
             const auto pMeshNode = gc_new<MeshNode>();

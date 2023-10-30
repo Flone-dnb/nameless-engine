@@ -169,7 +169,7 @@ namespace ne {
             slots.erase(it);
         }
 
-        if (mtxResources.second.activeSlots.size() == 0) {
+        if (mtxResources.second.activeSlots.empty()) {
             // Self check: make sure "to be updated" array is empty.
             for (const auto& slots : mtxResources.second.vSlotsToBeUpdated) {
                 if (!slots.empty()) [[unlikely]] {
@@ -933,9 +933,9 @@ namespace ne {
         const auto iDataSizeInBytes = sizeof(GeneralLightingShaderData);
         constexpr auto bUseFastButSmallShaderResource = true;
         static_assert(
-            iDataSizeInBytes < 1024 * 62 && bUseFastButSmallShaderResource == true &&
+            iDataSizeInBytes < 1024 * 62 && bUseFastButSmallShaderResource == true && // NOLINT
                 generalLightingDataDescriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-            "we can no longer use fast shader resource: update boolean and descriptor type"); // NOLINT
+            "we can no longer use fast shader resource: update boolean and descriptor type");
 
         // Create GPU resources.
         for (size_t i = 0; i < mtxGpuData.second.vGeneralDataGpuResources.size(); i++) {

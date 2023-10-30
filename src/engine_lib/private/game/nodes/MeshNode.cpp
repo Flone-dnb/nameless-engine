@@ -257,7 +257,8 @@ namespace ne {
         auto result = pResourceManager->createResourceWithData(
             std::format("mesh node \"{}\" vertex buffer", getNodeName()),
             meshData.getVertices()->data(),
-            meshData.getVertices()->size() * sizeof(MeshVertex),
+            sizeof(MeshVertex),
+            meshData.getVertices()->size(),
             ResourceUsageType::VERTEX_BUFFER,
             true);
         if (std::holds_alternative<Error>(result)) {
@@ -274,7 +275,8 @@ namespace ne {
             result = pResourceManager->createResourceWithData(
                 std::format("mesh node \"{}\" index buffer for material slot {}", getNodeName(), i),
                 pIndices->at(i).data(),
-                pIndices->at(i).size() * sizeof(MeshData::meshindex_t),
+                sizeof(MeshData::meshindex_t),
+                pIndices->at(i).size(),
                 ResourceUsageType::INDEX_BUFFER,
                 true);
             if (std::holds_alternative<Error>(result)) {

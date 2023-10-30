@@ -299,9 +299,13 @@ namespace ne {
     std::variant<std::unique_ptr<GpuResource>, Error> VulkanResourceManager::createResourceWithData(
         const std::string& sResourceName,
         const void* pBufferData,
-        size_t iDataSizeInBytes,
+        size_t iElementSizeInBytes,
+        size_t iElementCount,
         ResourceUsageType usage,
         bool bIsShaderReadWriteResource) {
+        // Calculate final data size.
+        const auto iDataSizeInBytes = iElementSizeInBytes * iElementCount;
+
         // Create an upload resource for uploading data.
         auto uploadResourceResult = createResourceWithCpuWriteAccess(sResourceName, iDataSizeInBytes, 1, {});
         if (std::holds_alternative<Error>(uploadResourceResult)) {

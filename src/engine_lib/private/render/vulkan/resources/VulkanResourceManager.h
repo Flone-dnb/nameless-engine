@@ -151,13 +151,15 @@ namespace ne {
          * auto result = pResourceManager->createResourceWithData(
          *     "mesh vertex buffer",
          *     vVertices.data(),
-         *     vVertices.size() * sizeof(glm::vec3),
+         *     sizeof(glm::vec3),
+         *     vVertices.size(),
          *     true);
          * @endcode
          *
          * @param sResourceName              Resource name, used for logging.
          * @param pBufferData                Pointer to the data that the new resource will contain.
-         * @param iDataSizeInBytes           Size in bytes of the data (resource size).
+         * @param iElementSizeInBytes        Size of one buffer element in bytes.
+         * @param iElementCount              Number of elements in the resulting buffer.
          * @param usage                      Describes how you plan to use this resource.
          * @param bIsShaderReadWriteResource Specify `true` if you plan to modify the resource
          * from shaders, otherwise `false`.
@@ -167,7 +169,8 @@ namespace ne {
         virtual std::variant<std::unique_ptr<GpuResource>, Error> createResourceWithData(
             const std::string& sResourceName,
             const void* pBufferData,
-            size_t iDataSizeInBytes,
+            size_t iElementSizeInBytes,
+            size_t iElementCount,
             ResourceUsageType usage,
             bool bIsShaderReadWriteResource) override;
 

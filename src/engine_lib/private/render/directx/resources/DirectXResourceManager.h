@@ -54,7 +54,7 @@ namespace ne {
             const std::string& sResourceName, const std::filesystem::path& pathToTextureFile) override;
 
         /**
-         * Creates a new GPU resource with available CPU write access (only write not read),
+         * Creates a new GPU resource with available CPU write access (only CPU write not read),
          * typically used for resources that needs to be frequently updated from the CPU side.
          *
          * Example:
@@ -100,22 +100,26 @@ namespace ne {
          * auto result = pResourceManager->createResourceWithData(
          *     "mesh vertex buffer",
          *     vVertices.data(),
-         *     vVertices.size() * sizeof(glm::vec3),
+         *     sizeof(glm::vec3),
+         *     vVertices.size(),
          *     true);
          * @endcode
          *
          * @param sResourceName              Resource name, used for logging.
          * @param pBufferData                Pointer to the data that the new resource will contain.
-         * @param iDataSizeInBytes           Size in bytes of the data (resource size).
-         * @param usage                      Ignored.
-         * @param bIsShaderReadWriteResource Whether the new resource allows unordered access or not.
+         * @param iElementSizeInBytes        Size of one buffer element in bytes.
+         * @param iElementCount              Number of elements in the resulting buffer.
+         * @param usage                      Describes how you plan to use this resource.
+         * @param bIsShaderReadWriteResource Specify `true` if you plan to modify the resource
+         * from shaders, otherwise `false`.
          *
          * @return Error if something went wrong, otherwise created resource with filled data.
          */
         virtual std::variant<std::unique_ptr<GpuResource>, Error> createResourceWithData(
             const std::string& sResourceName,
             const void* pBufferData,
-            size_t iDataSizeInBytes,
+            size_t iElementSizeInBytes,
+            size_t iElementCount,
             ResourceUsageType usage,
             bool bIsShaderReadWriteResource) override;
 
@@ -231,12 +235,14 @@ namespace ne {
         /**
          * Creates a new GPU resource and fills it with the specified data.
          *
-         * @param finalResourceDescription   Description of the final resource to create.
          * @param sResourceName              Resource name, used for logging.
+         * @param finalResourceDescription   Description of the final resource to create.
          * @param vSubresourcesToCopy        Describes the data that the resulting resource should have.
          * @param uploadResourceDescription  Description of the upload/staging resource.
          * @param bIsTextureResource         `true` if the final resource will be used as a read-only
          * texture in pixel shader, `false` if the final resource is not a texture.
+         * @param iElementSizeInBytes        Optional size of one buffer element in bytes.
+         * @param iElementCount              Optional number of elements in the resulting buffer.
          *
          * @return Error if something went wrong, otherwise created resource with filled data.
          */
@@ -245,7 +251,9 @@ namespace ne {
             const D3D12_RESOURCE_DESC& finalResourceDescription,
             const std::vector<D3D12_SUBRESOURCE_DATA>& vSubresourcesToCopy,
             const D3D12_RESOURCE_DESC& uploadResourceDescription,
-            bool bIsTextureResource);
+            bool bIsTextureResource,
+            size_t iElementSizeInBytes = 0,
+            size_t iElementCount = 0);
 
         /** Allocator for GPU resources. */
         ComPtr<D3D12MA::Allocator> pMemoryAllocator;

@@ -164,9 +164,13 @@ namespace ne {
     std::variant<std::unique_ptr<GpuResource>, Error> DirectXResourceManager::createResourceWithData(
         const std::string& sResourceName,
         const void* pBufferData,
-        size_t iDataSizeInBytes,
+        size_t iElementSizeInBytes,
+        size_t iElementCount,
         ResourceUsageType usage,
         bool bIsShaderReadWriteResource) {
+        // Calculate final resource size.
+        const auto iDataSizeInBytes = iElementSizeInBytes * iElementCount;
+
         // Prepare final resource description.
         const auto finalResourceDescription = CD3DX12_RESOURCE_DESC::Buffer(
             iDataSizeInBytes,
@@ -185,7 +189,13 @@ namespace ne {
 
         // Create resource.
         return createResourceWithData(
-            sResourceName, finalResourceDescription, vSubresourcesToCopy, uploadResourceDescription, false);
+            sResourceName,
+            finalResourceDescription,
+            vSubresourcesToCopy,
+            uploadResourceDescription,
+            false,
+            iElementSizeInBytes,
+            iElementCount);
     }
 
     size_t DirectXResourceManager::getTotalVideoMemoryInMb() const {
@@ -273,7 +283,9 @@ namespace ne {
         const D3D12_RESOURCE_DESC& finalResourceDescription,
         const std::vector<D3D12_SUBRESOURCE_DATA>& vSubresourcesToCopy,
         const D3D12_RESOURCE_DESC& uploadResourceDescription,
-        bool bIsTextureResource) {
+        bool bIsTextureResource,
+        size_t iElementSizeInBytes,
+        size_t iElementCount) {
         // In order to create a GPU resource with our data from the CPU
         // we have to do a few steps:
         // 1. Create a GPU resource with DEFAULT heap type (CPU read-only heap) AKA resulting resource.
@@ -292,7 +304,9 @@ namespace ne {
             allocationDesc,
             finalResourceDescription,
             initialFinalResourceState,
-            {});
+            {},
+            iElementSizeInBytes,
+            iElementCount);
         if (std::holds_alternative<Error>(result)) {
             auto err = std::get<Error>(std::move(result));
             err.addCurrentLocationToErrorStack();
@@ -311,7 +325,9 @@ namespace ne {
             allocationDesc,
             uploadResourceDescription,
             initialUploadResourceState,
-            {});
+            {},
+            iElementSizeInBytes,
+            iElementCount);
         if (std::holds_alternative<Error>(result)) {
             auto err = std::get<Error>(std::move(result));
             err.addCurrentLocationToErrorStack();

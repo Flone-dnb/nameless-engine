@@ -4,7 +4,7 @@
 #include <set>
 
 // Custom.
-#include "material/ShaderUser.h"
+#include "shader/general/ShaderUser.h"
 
 namespace ne {
     class Renderer;

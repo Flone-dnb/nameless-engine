@@ -8,8 +8,8 @@
 #include "game/Window.h"
 #include "render/Renderer.h"
 #include "render/general/resources/GpuResourceManager.h"
-#include "material/resources/cpuwrite/ShaderCpuWriteResourceManager.h"
-#include "material/EngineShaderNames.hpp"
+#include "shader/general/resources/cpuwrite/ShaderCpuWriteResourceManager.h"
+#include "shader/general/EngineShaderNames.hpp"
 #include "misc/PrimitiveMeshGenerator.h"
 
 #include "MeshNode.generated_impl.h"

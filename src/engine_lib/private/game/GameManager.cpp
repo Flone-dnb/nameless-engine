@@ -12,11 +12,11 @@
 #include "misc/GC.hpp"
 #include "render/Renderer.h"
 #include "material/Material.h"
-#include "material/Shader.h"
+#include "shader/general/Shader.h"
 #include "render/general/pipeline/PipelineManager.h"
 #include "io/FieldSerializerManager.h"
 #include "game/camera/CameraManager.h"
-#include "material/ShaderManager.h"
+#include "shader/ShaderManager.h"
 #include "game/nodes/Node.h"
 #include "misc/Profiler.hpp"
 

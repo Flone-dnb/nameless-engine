@@ -8,7 +8,7 @@
 #include "game/Window.h"
 #include "io/Logger.h"
 #include "game/nodes/MeshNode.h"
-#include "material/EngineShaderNames.hpp"
+#include "shader/general/EngineShaderNames.hpp"
 
 #include "Material.generated_impl.h"
 

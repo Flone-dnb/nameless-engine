@@ -20,7 +20,7 @@ include(${RELATIVE_CMAKE_HELPERS_PATH}/utils.cmake)
 
 set(PROJECT_WIN32_SOURCES
     src/render/directx/DirectXResourceManager.cpp
-    src/material/hlsl/RootSignatureGenerator.cpp
+    src/shader/hlsl/RootSignatureGenerator.cpp
     # add Windows specific test files here...
 )
 
@@ -33,12 +33,12 @@ set(PROJECT_SOURCES
     src/input/InputManager.cpp
     src/misc/Timer.cpp
     src/misc/GC.cpp
-    src/material/ShaderPack.cpp
+    src/shader/general/ShaderPack.cpp
     src/material/Material.cpp
-    src/material/ShaderManager.cpp
+    src/shader/general/ShaderManager.cpp
     src/material/TextureManager.cpp
-    src/material/glsl/DescriptorSetLayoutGenerator.cpp
-    src/material/LightingShaderResourceManager.cpp
+    src/shader/glsl/DescriptorSetLayoutGenerator.cpp
+    src/shader/general/LightingShaderResourceManager.cpp
     src/io/Serializable.cpp
     src/render/RenderSettings.cpp
     src/render/vulkan/VulkanStorageResourceArray.cpp

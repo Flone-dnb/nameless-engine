@@ -5,7 +5,7 @@
 #include "game/camera/CameraManager.h"
 #include "game/camera/TransientCamera.h"
 #include "material/Material.h"
-#include "material/EngineShaderNames.hpp"
+#include "shader/general/EngineShaderNames.hpp"
 #include "../../io/ReflectionTest.h"
 #include "misc/PrimitiveMeshGenerator.h"
 

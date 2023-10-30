@@ -5,7 +5,7 @@
 
 // Custom.
 #include "render/vulkan/resources/VulkanStorageResourceArray.h"
-#include "material/glsl/resources/GlslShaderCpuWriteResource.h"
+#include "shader/glsl/resources/GlslShaderCpuWriteResource.h"
 #include "render/vulkan/resources/VulkanResourceManager.h"
 #include "misc/Profiler.hpp"
 

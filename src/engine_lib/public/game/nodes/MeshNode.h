@@ -7,9 +7,9 @@
 #include "game/nodes/SpatialNode.h"
 #include "math/GLMath.hpp"
 #include "render/general/resources/GpuResource.h"
-#include "material/resources/ShaderResource.h"
-#include "material/resources/cpuwrite/ShaderCpuWriteResourceUniquePtr.h"
-#include "material/VulkanAlignmentConstants.hpp"
+#include "shader/general/resources/ShaderResource.h"
+#include "shader/general/resources/cpuwrite/ShaderCpuWriteResourceUniquePtr.h"
+#include "shader/VulkanAlignmentConstants.hpp"
 #include "misc/shapes/AABB.h"
 
 #include "MeshNode.generated.h"

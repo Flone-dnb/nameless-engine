@@ -1,9 +1,9 @@
 ﻿#include "DirectXPso.h"
 
 // Custom.
-#include "material/hlsl/HlslShader.h"
+#include "shader/hlsl/HlslShader.h"
 #include "render/directx/DirectXRenderer.h"
-#include "material/hlsl/RootSignatureGenerator.h"
+#include "shader/hlsl/RootSignatureGenerator.h"
 #include "io/Logger.h"
 #include "render/RenderSettings.h"
 

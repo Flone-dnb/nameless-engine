@@ -7,11 +7,11 @@
 // Custom.
 #include "render/general/pipeline/PipelineManager.h"
 #include "io/Serializable.h"
-#include "material/ShaderMacro.h"
+#include "shader/general/ShaderMacro.h"
 #include "math/GLMath.hpp"
-#include "material/resources/cpuwrite/ShaderCpuWriteResourceUniquePtr.h"
-#include "material/resources/texture/ShaderTextureResourceUniquePtr.h"
-#include "material/VulkanAlignmentConstants.hpp"
+#include "shader/general/resources/cpuwrite/ShaderCpuWriteResourceUniquePtr.h"
+#include "shader/general/resources/texture/ShaderTextureResourceUniquePtr.h"
+#include "shader/VulkanAlignmentConstants.hpp"
 #include "material/TextureManager.h"
 
 #include "Material.generated.h"

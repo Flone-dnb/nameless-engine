@@ -3,8 +3,8 @@
 // Custom.
 #include "game/nodes/SpatialNode.h"
 #include "math/GLMath.hpp"
-#include "material/VulkanAlignmentConstants.hpp"
-#include "material/resources/LightingShaderResourceManager.h"
+#include "shader/VulkanAlignmentConstants.hpp"
+#include "shader/general/resources/LightingShaderResourceManager.h"
 
 #include "SpotlightNode.generated.h"
 

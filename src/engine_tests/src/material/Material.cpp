@@ -5,10 +5,10 @@
 #include "game/camera/TransientCamera.h"
 #include "game/nodes/MeshNode.h"
 #include "misc/ProjectPaths.h"
-#include "material/EngineShaderNames.hpp"
+#include "shader/general/EngineShaderNames.hpp"
 #include "misc/PrimitiveMeshGenerator.h"
 #include "game/camera/CameraManager.h"
-#include "material/Shader.h"
+#include "shader/general/Shader.h"
 #if defined(WIN32)
 #include "render/directx/DirectXRenderer.h"
 #endif

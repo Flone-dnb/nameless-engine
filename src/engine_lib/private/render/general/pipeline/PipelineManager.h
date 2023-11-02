@@ -6,6 +6,7 @@
 #include <unordered_map>
 #include <memory>
 #include <atomic>
+#include <unordered_set>
 
 // Custom.
 #include "render/general/pipeline/Pipeline.h"
@@ -15,6 +16,7 @@ namespace ne {
     class Renderer;
     class Material;
     class MeshNode;
+    class ComputeShaderInterface;
 
     /**
      * Small wrapper class for `std::shared_ptr<Pipeline>` to do some extra work
@@ -23,7 +25,7 @@ namespace ne {
     class PipelineSharedPtr {
     public:
         /**
-         * Constructs the pointer.
+         * Constructs a new pointer for a material that uses a pipeline.
          *
          * @param pPipeline                 Pipeline to store.
          * @param pMaterialThatUsesPipeline Material that stores this pointer.
@@ -32,7 +34,18 @@ namespace ne {
             initialize(std::move(pPipeline), pMaterialThatUsesPipeline);
         }
 
-        /** Leaves the internal pointers uninitialized. */
+        /**
+         * Constructs a new pointer for a compute shader interface that uses a pipeline.
+         *
+         * @param pPipeline                      Pipeline to store.
+         * @param pComputeShaderThatUsesPipeline Compute interface that stores this pointer.
+         */
+        explicit PipelineSharedPtr(
+            std::shared_ptr<Pipeline> pPipeline, ComputeShaderInterface* pComputeShaderThatUsesPipeline) {
+            initialize(std::move(pPipeline), pComputeShaderThatUsesPipeline);
+        }
+
+        /** Leaves the internal pointers initialized as `nullptr`. */
         PipelineSharedPtr() = default;
 
         ~PipelineSharedPtr() { clearPointerAndNotifyPipeline(); }
@@ -62,7 +75,10 @@ namespace ne {
                 }
 
                 pMaterialThatUsesPipeline = other.pMaterialThatUsesPipeline;
+                pComputeShaderThatUsesPipeline = other.pComputeShaderThatUsesPipeline;
+
                 other.pMaterialThatUsesPipeline = nullptr;
+                other.pComputeShaderThatUsesPipeline = nullptr;
             }
 
             return *this;
@@ -108,10 +124,23 @@ namespace ne {
     private:
         /** Clears stored shared pointer and notifies the Pipeline that we no longer reference it. */
         void clearPointerAndNotifyPipeline() {
-            if (this->pPipeline != nullptr) {
-                Pipeline* pPipelineRaw = this->pPipeline.get();
-                this->pPipeline = nullptr; // clear shared pointer before calling notify function
+            if (pPipeline == nullptr) {
+                // This object was moved.
+                return;
+            }
+
+            auto pPipelineRaw = pPipeline.get();
+            pPipeline = nullptr; // clear shared pointer before calling notify function
+
+            if (pMaterialThatUsesPipeline != nullptr) {
                 pPipelineRaw->onMaterialNoLongerUsingPipeline(pMaterialThatUsesPipeline);
+            } else if (pComputeShaderThatUsesPipeline != nullptr) {
+                pPipelineRaw->onComputeShaderNoLongerUsingPipeline(pComputeShaderThatUsesPipeline);
+            } else [[unlikely]] {
+                Error error(std::format(
+                    "pipeline shared pointer to pipeline \"{}\" is being destroyed but "
+                    "pointers to material and compute interface are `nullptr` - unable to notify manager",
+                    pPipelineRaw->getPipelineIdentifier()));
             }
         }
 
@@ -124,14 +153,42 @@ namespace ne {
         void initialize(std::shared_ptr<Pipeline> pPipeline, Material* pMaterialThatUsesPipeline) {
             this->pPipeline = std::move(pPipeline);
             this->pMaterialThatUsesPipeline = pMaterialThatUsesPipeline;
+
+            // Notify pipeline.
             this->pPipeline->onMaterialUsingPipeline(pMaterialThatUsesPipeline);
+        }
+
+        /**
+         * Initializes internal state.
+         *
+         * @param pPipeline                      Pipeline to store.
+         * @param pComputeShaderThatUsesPipeline Compute interface that stores this pointer.
+         */
+        void initialize(
+            std::shared_ptr<Pipeline> pPipeline, ComputeShaderInterface* pComputeShaderThatUsesPipeline) {
+            this->pPipeline = std::move(pPipeline);
+            this->pComputeShaderThatUsesPipeline = pComputeShaderThatUsesPipeline;
+
+            // Notify pipeline.
+            this->pPipeline->onComputeShaderUsingPipeline(pComputeShaderThatUsesPipeline);
         }
 
         /** Internally stored pipeline */
         std::shared_ptr<Pipeline> pPipeline = nullptr;
 
-        /** Material that stores this pointer. */
+        /**
+         * Material that stores this pointer.
+         *
+         * @remark If `nullptr` then @ref pComputeShaderThatUsesPipeline is valid.
+         */
         Material* pMaterialThatUsesPipeline = nullptr;
+
+        /**
+         * Compute shader interface that stores this pointer.
+         *
+         * @remark If `nullptr` then @ref pMaterialThatUsesPipeline is valid.
+         */
+        ComputeShaderInterface* pComputeShaderThatUsesPipeline = nullptr;
     };
 
     /**
@@ -180,6 +237,9 @@ namespace ne {
         // Releases/restores internal Pipeline's resources.
         friend class DelayedPipelineResourcesCreation;
 
+        // Compute interfaces request compute pipelines and queue for execution.
+        friend class ComputeShaderInterface;
+
     public:
         /** Groups information about pipelines that use the same shaders. */
         struct ShaderPipelines {
@@ -193,6 +253,42 @@ namespace ne {
              */
             std::unordered_map<std::set<ShaderMacro>, std::shared_ptr<Pipeline>, ShaderMacroSetHash>
                 shaderPipelines;
+        };
+
+        /**
+         * Groups pointers to compute shader interfaces that were queued for execution and pipelines that they
+         * use.
+         *
+         * @remark Only references compute shaders that use graphics queue to provide a fast access for the
+         * renderer to submit those shaders (the renderer does not submit compute shaders that use
+         * compute queue - they are submitted from compute shader interfaces directly).
+         */
+        struct QueuedForExecutionComputeShaders {
+            /**
+             * Stores compute pipelines and compute shader interfaces that use these pipelines and were queued
+             * for execution before a frame is rendered.
+             *
+             * @remark Compute shaders will be retrieved from pipeline.
+             *
+             * @remark When the renderer submits all compute shaders from this map it clears it.
+             *
+             * @remark Using `unordered_set` to avoid executing a compute shader multiple times.
+             */
+            std::unordered_map<Pipeline*, std::unordered_set<ComputeShaderInterface*>>
+                graphicsQueuePreFrameShaders;
+
+            /**
+             * Stores compute pipelines and compute shader interfaces that use these pipelines and were queued
+             * for execution after a frame is rendered.
+             *
+             * @remark Compute shaders will be retrieved from pipeline.
+             *
+             * @remark When the renderer submits all compute shaders from this map it clears it.
+             *
+             * @remark Using `unordered_set` to avoid executing a compute shader multiple times.
+             */
+            std::unordered_map<Pipeline*, std::unordered_set<ComputeShaderInterface*>>
+                graphicsQueuePostFrameShaders;
         };
 
         /**
@@ -259,6 +355,18 @@ namespace ne {
         getGraphicsPipelines();
 
         /**
+         * Returns all compute shaders and their pipelines to be executed on the graphics queue.
+         *
+         * @warning Do not delete (free) returned pointers.
+         *
+         * @return Shaders and pipelines.
+         */
+        inline std::pair<std::mutex*, QueuedForExecutionComputeShaders*>
+        getComputeShadersForGraphicsQueueExecution() {
+            return computePipelines.getComputeShadersForGraphicsQueueExecution();
+        }
+
+        /**
          * Returns the total number of currently existing graphics pipelines.
          *
          * @return The total number of currently existing graphics pipelines.
@@ -273,6 +381,122 @@ namespace ne {
         Renderer* getRenderer() const;
 
     private:
+        /** Groups information about compute pipelines. */
+        struct ComputePipelines {
+            /** Groups mutex guarded data. */
+            struct Resources {
+                /** Stores pairs of "compute shader name" - "compute pipeline". */
+                std::unordered_map<std::string, std::shared_ptr<Pipeline>> pipelines;
+
+                /** Compute shader interfaces that reference pipelines from @ref pipelines. */
+                QueuedForExecutionComputeShaders queuedComputeShaders;
+            };
+
+            ComputePipelines() = default;
+
+            ComputePipelines(const ComputePipelines&) = delete;
+            ComputePipelines& operator=(const ComputePipelines&) = delete;
+
+            /**
+             * Look for already created pipeline that uses the specified shader and returns it,
+             * otherwise creates a new pipeline.
+             *
+             * @remark If creating a new pipeline, loads the specified shader from disk into the memory,
+             * it will be released from the memory once the pipeline object is destroyed (not the shared
+             * pointer) and no other object is using it.
+             *
+             * @param pPipelineManager        Pipeline manager.
+             * @param pComputeShaderInterface Compute shader interface to add.
+             *
+             * @return Error if something went wrong, otherwise compute pipeline.
+             */
+            std::variant<PipelineSharedPtr, Error> getComputePipelineForShader(
+                PipelineManager* pPipelineManager, ComputeShaderInterface* pComputeShaderInterface);
+
+            /**
+             * Removes the specified compute shader interface and if no other interface references the compute
+             * pipeline (that the shader used) also destroys the pipeline.
+             *
+             * @remark If you used @ref getComputePipelineForShader to get a compute pipeline for your shader
+             * you don't need to call this function as it will be automatically called by
+             * `PipelineSharedPtr`'s destructor.
+             *
+             * @param sComputeShaderName      Name of the compute shader that compute pipeline uses.
+             * @param pComputeShaderInterface Compute shader interface to remove.
+             *
+             * @return Error if something went wrong.
+             */
+            [[nodiscard]] std::optional<Error> onPipelineNoLongerUsedByComputeShaderInterface(
+                const std::string& sComputeShaderName, ComputeShaderInterface* pComputeShaderInterface);
+
+            /**
+             * Adds a compute shader interface to be executed on the graphics queue before a frame is
+             * rendered.
+             *
+             * @remark Added shader will be executed only once, if you want your shader to be executed again
+             * you would need to call this function again but later after a frame was submitted (if you call
+             * it right now nothing will happen as it's already queued).
+             *
+             * @param pComputeShaderInterface Compute shader interface to queue for execution.
+             *
+             * @return Error if something went wrong.
+             */
+            [[nodiscard]] std::optional<Error>
+            queueShaderExecutionOnGraphicsQueuePreFrame(ComputeShaderInterface* pComputeShaderInterface);
+
+            /**
+             * Adds a compute shader interface to be executed on the graphics queue after a frame is
+             * rendered.
+             *
+             * @remark Added shader will be executed only once, if you want your shader to be executed again
+             * you would need to call this function again but later after a frame was submitted (if you call
+             * it right now nothing will happen as it's already queued).
+             *
+             * @param pComputeShaderInterface Compute shader interface to queue for execution.
+             *
+             * @return Error if something went wrong.
+             */
+            [[nodiscard]] std::optional<Error>
+            queueShaderExecutionOnGraphicsQueuePostFrame(ComputeShaderInterface* pComputeShaderInterface);
+
+            /**
+             * Returns the total number of existing compute pipelines.
+             *
+             * @return Number of compute pipelines.
+             */
+            size_t getComputePipelineCount();
+
+            /**
+             * Returns all compute shaders and their pipelines to be executed on the graphics queue.
+             *
+             * @warning Do not delete (free) returned pointers.
+             *
+             * @return Shaders and pipelines.
+             */
+            inline std::pair<std::mutex*, QueuedForExecutionComputeShaders*>
+            getComputeShadersForGraphicsQueueExecution() {
+                return std::make_pair(&mtxResources.first, &mtxResources.second.queuedComputeShaders);
+            }
+
+        private:
+            /**
+             * Adds a compute shader interface to the specified map to be executed.
+             *
+             * @warning Expects that @ref mtxResources is locked during the function call.
+             *
+             * @param pipelineShaders          Map to add the new interface to.
+             * @param pComputeShaderInterface  Interface to add.
+             *
+             * @return Error if something went wrong.
+             */
+            [[nodiscard]] std::optional<Error> queueComputeShaderInterfaceForExecution(
+                std::unordered_map<Pipeline*, std::unordered_set<ComputeShaderInterface*>>& pipelineShaders,
+                ComputeShaderInterface* pComputeShaderInterface);
+
+            /** Pipeline data. */
+            std::pair<std::mutex, Resources> mtxResources;
+        };
+
         /**
          * Releases internal resources (such as root signature, internal pipeline, etc.) from all
          * created graphics pipelines.
@@ -292,10 +516,11 @@ namespace ne {
         [[nodiscard]] std::optional<Error> releaseInternalGraphicsPipelinesResources();
 
         /**
-         * Creates internal resources for all created graphics pipelines using their current configuration.
+         * Creates internal resources for all created graphics pipelines using their current
+         * configuration.
          *
-         * @remark Called after @ref releaseInternalGraphicsPipelinesResources to create resources that will
-         * now reference changed (new) resources.
+         * @remark Called after @ref releaseInternalGraphicsPipelinesResources to create resources that
+         * will now reference changed (new) resources.
          *
          * @return Error if something went wrong.
          */
@@ -305,11 +530,14 @@ namespace ne {
          * Assigns vertex and pixel shaders to create a render specific graphics pipeline (for usual
          * rendering).
          *
-         * @param sVertexShaderName    Name of the compiled vertex shader (see ShaderManager::compileShaders).
-         * @param sPixelShaderName     Name of the compiled pixel shader (see ShaderManager::compileShaders).
+         * @param sVertexShaderName    Name of the compiled vertex shader (see
+         * ShaderManager::compileShaders).
+         * @param sPixelShaderName     Name of the compiled pixel shader (see
+         * ShaderManager::compileShaders).
          * @param bUsePixelBlending    Whether the pixels of the mesh that uses this pipeline should blend
          * with existing pixels on back buffer or not (for transparency).
-         * @param additionalVertexShaderMacros Additional macros to enable for vertex shader configuration.
+         * @param additionalVertexShaderMacros Additional macros to enable for vertex shader
+         * configuration.
          * @param additionalPixelShaderMacros  Additional macros to enable for pixel shader configuration.
          * @param pMaterial            Material that requests the pipeline.
          *
@@ -333,14 +561,26 @@ namespace ne {
         void onPipelineNoLongerUsedByMaterial(const std::string& sPipelineIdentifier);
 
         /**
+         * Called from a pipeline when a compute shader interface is no longer using a pipeline.
+         *
+         * @param sComputeShaderName      Name of the compute shader that the pipeline uses.
+         * @param pComputeShaderInterface Compute shader interface that stopped using the pipeline.
+         */
+        void onPipelineNoLongerUsedByComputeShaderInterface(
+            const std::string& sComputeShaderName, ComputeShaderInterface* pComputeShaderInterface);
+
+        /**
          * Array that stores a map of pipelines per pipeline type.
          * Map stores pairs of "combination of vertex/pixel(fragment) shader names" and
-         * "pipelines that use that shaders".
+         * "pipelines that use these shaders".
          */
         std::array<
             std::pair<std::recursive_mutex, std::unordered_map<std::string, ShaderPipelines>>,
             static_cast<size_t>(PipelineType::SIZE)>
             vGraphicsPipelines;
+
+        /** Stores all compute pipelines. */
+        ComputePipelines computePipelines;
 
         /** Do not delete (free) this pointer. Renderer that owns this pipeline manager. */
         Renderer* pRenderer = nullptr;

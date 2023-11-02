@@ -625,6 +625,8 @@ namespace ne {
          * Setups everything for render commands to be recorded (updates frame constants, shader resources,
          * resets command buffers, starts render pass and etc.).
          *
+         * @warning Expects that render resources mutex is locked.
+         *
          * @param pCameraProperties   Camera properties to use.
          * @param iAcquiredImageIndex Index of the acquired swap chain image to use this frame.
          *
@@ -651,6 +653,8 @@ namespace ne {
 
         /**
          * Does final logic in drawing next frame (ends render pass, ends command buffer, etc.).
+         *
+         * @warning Expects that render resources mutex is locked.
          *
          * @param pCurrentFrameResource      Current frame resource. Expects that frame resources mutex is
          * locked and will not be unlocked until the function is finished.

@@ -40,6 +40,8 @@ set(PROJECT_WIN32_SOURCES
     private/shader/hlsl/resources/HlslShaderTextureResource.cpp
     private/shader/hlsl/resources/HlslShaderResourceHelpers.h
     private/shader/hlsl/resources/HlslShaderResourceHelpers.cpp
+    private/shader/hlsl/HlslComputeShaderInterface.cpp
+    private/shader/hlsl/HlslComputeShaderInterface.h
     private/render/directx/DirectXRenderer.h
     private/render/directx/DirectXRenderer.cpp
     private/render/directx/pipeline/DirectXPso.cpp
@@ -158,6 +160,8 @@ set(PROJECT_SOURCES
     private/shader/glsl/DescriptorSetLayoutGenerator.cpp
     private/shader/general/resources/LightingShaderResourceManager.h
     private/shader/general/resources/LightingShaderResourceManager.cpp
+    public/shader/ComputeShaderInterface.h
+    private/shader/general/ComputeShaderInterface.cpp
     private/material/TextureManager.cpp
     public/material/TextureManager.h
     private/misc/ThreadPool.h

@@ -2,6 +2,7 @@
 
 // Standard.
 #include <set>
+#include <unordered_set>
 
 // Custom.
 #include "shader/general/ShaderUser.h"
@@ -10,6 +11,7 @@ namespace ne {
     class Renderer;
     class PipelineManager;
     class Material;
+    class ComputeShaderInterface;
 
     enum class PipelineType : size_t {
         // !!! order of entries in this enum defines draw order !!!
@@ -110,11 +112,12 @@ namespace ne {
         /**
          * Creates a new uninitialized Pipeline.
          *
-         * @param pRenderer         Current renderer.
-         * @param pPipelineManager  Pipeline manager that owns this Pipeline.
-         * @param sVertexShaderName Name of the compiled vertex shader (see ShaderManager::compileShaders).
-         * @param sPixelShaderName  Name of the compiled pixel shader (see ShaderManager::compileShaders).
-         * @param bUsePixelBlending Whether the pixels of the mesh that uses this Pipeline should blend
+         * @param pRenderer          Current renderer.
+         * @param pPipelineManager   Pipeline manager that owns this Pipeline.
+         * @param sVertexShaderName  Name of the compiled vertex shader to use (empty if compute pipeline).
+         * @param sPixelShaderName   Name of the compiled pixel shader to use (empty if compute pipeline).
+         * @param sComputeShaderName Name of the compiled compute shader to use (empty if graphics pipeline).
+         * @param bUsePixelBlending  Whether the pixels of the mesh that uses this Pipeline should blend
          * with existing pixels on back buffer or not (for transparency).
          */
         Pipeline(
@@ -122,7 +125,8 @@ namespace ne {
             PipelineManager* pPipelineManager,
             const std::string& sVertexShaderName,
             const std::string& sPixelShaderName,
-            bool bUsePixelBlending);
+            const std::string& sComputeShaderName,
+            bool bUsePixelBlending = false);
 
         /**
          * Saves shader configuration of the currently used shader.
@@ -202,32 +206,77 @@ namespace ne {
             const std::set<ShaderMacro>& additionalPixelShaderMacros);
 
         /**
-         * Called to notify this Pipeline that a material started storing
-         * a shared pointer to this Pipeline.
+         * Assigns compute shader to create a render specific compute pipeline.
          *
-         * @param pMaterial Material that started using this Pipeline.
+         * @param pRenderer            Parent renderer that owns this pipeline.
+         * @param pPipelineManager     Pipeline manager that owns this pipeline.
+         * @param sComputeShaderName   Name of the compiled compute shader (see
+         * ShaderManager::compileShaders).
+         *
+         * @return Error if shader was not found in ShaderManager or if failed to generate Pipeline,
+         * otherwise created Pipeline.
+         */
+        static std::variant<std::shared_ptr<Pipeline>, Error> createComputePipeline(
+            Renderer* pRenderer, PipelineManager* pPipelineManager, const std::string& sComputeShaderName);
+
+        /**
+         * Called to notify this pipeline that a material started storing
+         * a shared pointer to this pipeline.
          *
          * @remark When a material is no longer references the Pipeline use
          * @ref onMaterialNoLongerUsingPipeline.
+         *
+         * @param pMaterial Material that started using this pipeline.
          */
         void onMaterialUsingPipeline(Material* pMaterial);
 
         /**
-         * Called to notify this Pipeline that the shared pointer to this Pipeline
+         * Called to notify this Pipeline that the shared pointer to this pipeline
          * (that Material stores) is now `nullptr`.
-         *
-         * @param pMaterial Material that stopped using this Pipeline.
          *
          * @warning Call this function after clearing (setting to `nullptr`) the shared pointer,
          * not before.
+         *
+         * @param pMaterial Material that stopped using this pipeline.
          */
         void onMaterialNoLongerUsingPipeline(Material* pMaterial);
 
         /**
-         * Array of materials that currently reference this Pipeline.
-         * Must be used with mutex.
+         * Called to notify this pipeline that a compute shader interface started storing
+         * a shared pointer to this pipeline.
+         *
+         * @remark When a compute interface is no longer references the pipeline use
+         * @ref onComputeShaderNoLongerUsingPipeline.
+         *
+         * @param pComputeShaderInterface Compute shader interface that started using this pipeline.
+         */
+        void onComputeShaderUsingPipeline(ComputeShaderInterface* pComputeShaderInterface);
+
+        /**
+         * Called to notify this pipeline that the shared pointer to this pipeline
+         * (that compute shader interface stores) is now `nullptr`.
+         *
+         * @warning Call this function after clearing (setting to `nullptr`) the shared pointer,
+         * not before.
+         *
+         * @param pComputeShaderInterface Compute shader interface that stopped using this pipeline.
+         */
+        void onComputeShaderNoLongerUsingPipeline(ComputeShaderInterface* pComputeShaderInterface);
+
+        /**
+         * Array of materials that currently reference this graphics pipeline.
+         *
+         * @remark Must be used with mutex.
          */
         std::pair<std::mutex, std::set<Material*>> mtxMaterialsThatUseThisPipeline;
+
+        /**
+         * Array of compute shader interfaces that currently reference this compute pipeline.
+         *
+         * @remark Must be used with mutex.
+         */
+        std::pair<std::mutex, std::unordered_set<ComputeShaderInterface*>>
+            mtxComputeShadersThatUseThisPipeline;
 
         /**
          * Additional macros that were specified during pipeline creation to be enabled for
@@ -254,11 +303,14 @@ namespace ne {
         /** Do not delete (free) this pointer. Current renderer. */
         Renderer* pRenderer = nullptr;
 
-        /** Name of the compiled vertex shader (see ShaderManager::compileShaders) that this Pipeline uses. */
-        std::string sVertexShaderName;
+        /** Name of the compiled vertex shader that this Pipeline uses (empty if compute pipeline). */
+        const std::string sVertexShaderName;
 
-        /** Name of the compiled pixel shader (see ShaderManager::compileShaders) that this Pipeline uses. */
-        std::string sPixelShaderName;
+        /** Name of the compiled pixel shader that this Pipeline uses (empty if compute pipeline). */
+        const std::string sPixelShaderName;
+
+        /** Name of the compiled compute shader that this Pipeline uses (empty if graphics pipeline). */
+        const std::string sComputeShaderName;
 
         /** Whether this Pipeline is using pixel blending or not. */
         bool bIsUsingPixelBlending = false;

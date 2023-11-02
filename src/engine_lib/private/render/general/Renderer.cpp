@@ -405,6 +405,9 @@ namespace ne {
         Logger::get().info(std::format(
             "using {} shader(s) per pixel shader pack",
             ShaderMacroConfigurations::validPixelShaderMacroConfigurations.size()));
+        Logger::get().info(std::format(
+            "using {} shader(s) per compute shader pack",
+            ShaderMacroConfigurations::validComputeShaderMacroConfigurations.size()));
 
         // Update render settings (maybe they were fixed/clamped during the renderer initialization).
         const auto pMtxRenderSettings = pCreatedRenderer->getRenderSettings();

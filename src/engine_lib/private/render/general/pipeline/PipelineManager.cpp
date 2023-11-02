@@ -3,6 +3,7 @@
 // Custom.
 #include "io/Logger.h"
 #include "render/Renderer.h"
+#include "shader/ComputeShaderInterface.h"
 
 namespace ne {
     PipelineManager::PipelineManager(Renderer* pRenderer) { this->pRenderer = pRenderer; }
@@ -128,6 +129,15 @@ namespace ne {
                     }
                 }
             }
+        }
+
+        // Make sure all compute pipelines were destroyed.
+        const auto iActiveComputePipelines = computePipelines.getComputePipelineCount();
+        if (iActiveComputePipelines != 0) [[unlikely]] {
+            // Log error.
+            Logger::get().error(fmt::format(
+                "pipeline manager is being destroyed but {} compute pipeline(s) still exist",
+                iActiveComputePipelines));
         }
     }
 
@@ -359,6 +369,18 @@ namespace ne {
         }
     }
 
+    void PipelineManager::onPipelineNoLongerUsedByComputeShaderInterface(
+        const std::string& sComputeShaderName, ComputeShaderInterface* pComputeShaderInterface) {
+        auto optionalError = computePipelines.onPipelineNoLongerUsedByComputeShaderInterface(
+            sComputeShaderName, pComputeShaderInterface);
+        if (optionalError.has_value()) [[unlikely]] {
+            auto error = std::move(optionalError.value());
+            error.addCurrentLocationToErrorStack();
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+        }
+    }
+
     void DelayedPipelineResourcesCreation::initialize() {
         const auto pRenderer = pPipelineManager->getRenderer();
 
@@ -389,6 +411,142 @@ namespace ne {
             error.showError();
             throw std::runtime_error(error.getFullErrorMessage());
         }
+    }
+
+    size_t PipelineManager::ComputePipelines::getComputePipelineCount() {
+        std::scoped_lock guard(mtxResources.first);
+        return mtxResources.second.pipelines.size();
+    }
+
+    std::variant<PipelineSharedPtr, Error> PipelineManager::ComputePipelines::getComputePipelineForShader(
+        PipelineManager* pPipelineManager, ComputeShaderInterface* pComputeShaderInterface) {
+        std::scoped_lock guard(mtxResources.first);
+
+        // See if a pipeline for this shader already exist.
+        const auto pipelineIt =
+            mtxResources.second.pipelines.find(pComputeShaderInterface->getComputeShaderName());
+        if (pipelineIt == mtxResources.second.pipelines.end()) {
+            // Create a new compute pipeline.
+            auto result = Pipeline::createComputePipeline(
+                pPipelineManager->getRenderer(),
+                pPipelineManager,
+                pComputeShaderInterface->getComputeShaderName());
+            if (std::holds_alternative<Error>(result)) {
+                auto error = std::get<Error>(std::move(result));
+                error.addCurrentLocationToErrorStack();
+                return error;
+            }
+            auto pPipeline = std::get<std::shared_ptr<Pipeline>>(std::move(result));
+
+            // Add this new pipeline to the map of pipelines.
+            mtxResources.second.pipelines[pComputeShaderInterface->getComputeShaderName()] = pPipeline;
+
+            // Return newly created pipeline.
+            return PipelineSharedPtr(pPipeline, pComputeShaderInterface);
+        }
+
+        // Return found pipeline.
+        return PipelineSharedPtr(pipelineIt->second, pComputeShaderInterface);
+    }
+
+    std::optional<Error> PipelineManager::ComputePipelines::onPipelineNoLongerUsedByComputeShaderInterface(
+        const std::string& sComputeShaderName, ComputeShaderInterface* pComputeShaderInterface) {
+        std::scoped_lock guard(mtxResources.first);
+
+        // Find a pipeline for the specified shader.
+        const auto computeIt = mtxResources.second.pipelines.find(sComputeShaderName);
+        if (computeIt == mtxResources.second.pipelines.end()) [[unlikely]] {
+            return Error(
+                std::format("failed to find a compute pipeline for shader \"{}\"", sComputeShaderName));
+        }
+
+        // Make sure this pipeline is no longer used.
+        if (computeIt->second.use_count() != 1) {
+            // Still used by someone else (not including us).
+            return {};
+        }
+
+        // Save raw pointer to pipeline.
+        const auto pPipelineRaw = computeIt->second.get();
+
+        // Remove pipeline from "queued" pipelines arrays.
+        mtxResources.second.queuedComputeShaders.graphicsQueuePreFrameShaders.erase(pPipelineRaw);
+        mtxResources.second.queuedComputeShaders.graphicsQueuePostFrameShaders.erase(pPipelineRaw);
+#if defined(DEBUG)
+        static_assert(sizeof(QueuedForExecutionComputeShaders) == 160, "erase from new arrays");
+#endif
+
+        // Destroy pipeline.
+        mtxResources.second.pipelines.erase(computeIt);
+
+        return {};
+    }
+
+    std::optional<Error> PipelineManager::ComputePipelines::queueShaderExecutionOnGraphicsQueuePreFrame(
+        ComputeShaderInterface* pComputeShaderInterface) {
+        std::scoped_lock guard(mtxResources.first);
+
+        // Add to be executed.
+        auto optionalError = queueComputeShaderInterfaceForExecution(
+            mtxResources.second.queuedComputeShaders.graphicsQueuePreFrameShaders, pComputeShaderInterface);
+        if (optionalError.has_value()) [[unlikely]] {
+            optionalError->addCurrentLocationToErrorStack();
+            return optionalError;
+        }
+
+        return {};
+    }
+
+    std::optional<Error> PipelineManager::ComputePipelines::queueShaderExecutionOnGraphicsQueuePostFrame(
+        ComputeShaderInterface* pComputeShaderInterface) {
+        std::scoped_lock guard(mtxResources.first);
+
+        // Add to be executed.
+        auto optionalError = queueComputeShaderInterfaceForExecution(
+            mtxResources.second.queuedComputeShaders.graphicsQueuePostFrameShaders, pComputeShaderInterface);
+        if (optionalError.has_value()) [[unlikely]] {
+            optionalError->addCurrentLocationToErrorStack();
+            return optionalError;
+        }
+
+        return {};
+    }
+
+    std::optional<Error> PipelineManager::ComputePipelines::queueComputeShaderInterfaceForExecution(
+        std::unordered_map<Pipeline*, std::unordered_set<ComputeShaderInterface*>>& pipelineShaders,
+        ComputeShaderInterface* pComputeShaderInterface) {
+        // Expecting that resources mutex is locked.
+
+        // Get pipeline of this compute shader interface.
+        const auto pPipeline = pComputeShaderInterface->getUsedPipeline();
+        if (pPipeline == nullptr) [[unlikely]] {
+            return Error(std::format(
+                "expected the pipeline of the compute shader interface \"{}\" to be valid",
+                pComputeShaderInterface->getComputeShaderName()));
+        }
+
+        // See if there are already some interfaces that were queued using this pipeline.
+        const auto pipelineShadersIt = pipelineShaders.find(pPipeline);
+        if (pipelineShadersIt == pipelineShaders.end()) {
+            // Add a new entry.
+            pipelineShaders[pPipeline] = {pComputeShaderInterface};
+
+            // Done.
+            return {};
+        }
+
+        // Self check: make sure array of interfaces is not empty since we have a pipeline entry.
+        if (pipelineShadersIt->second.empty()) [[unlikely]] {
+            return Error(std::format(
+                "array of compute interfaces was empty but a pipeline entry was still valid while compute "
+                "shader interface \"{}\" was being queued for execution",
+                pComputeShaderInterface->getComputeShaderName()));
+        }
+
+        // Add a new interface.
+        pipelineShadersIt->second.insert(pComputeShaderInterface);
+
+        return {};
     }
 
 } // namespace ne

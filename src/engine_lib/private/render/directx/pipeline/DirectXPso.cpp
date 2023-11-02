@@ -13,8 +13,15 @@ namespace ne {
         PipelineManager* pPipelineManager,
         const std::string& sVertexShaderName,
         const std::string& sPixelShaderName,
+        const std::string& sComputeShaderName,
         bool bUsePixelBlending)
-        : Pipeline(pRenderer, pPipelineManager, sVertexShaderName, sPixelShaderName, bUsePixelBlending) {}
+        : Pipeline(
+              pRenderer,
+              pPipelineManager,
+              sVertexShaderName,
+              sPixelShaderName,
+              sComputeShaderName,
+              bUsePixelBlending) {}
 
     DirectXPso::~DirectXPso() {
         std::scoped_lock guard(mtxInternalResources.first);
@@ -41,7 +48,7 @@ namespace ne {
         const std::set<ShaderMacro>& additionalPixelShaderMacros) {
         // Create PSO.
         auto pPso = std::shared_ptr<DirectXPso>(new DirectXPso(
-            pRenderer, pPipelineManager, sVertexShaderName, sPixelShaderName, bUsePixelBlending));
+            pRenderer, pPipelineManager, sVertexShaderName, sPixelShaderName, "", bUsePixelBlending));
 
         // Generate DirectX PSO.
         auto optionalError = pPso->generateGraphicsPsoForShaders(
@@ -50,6 +57,22 @@ namespace ne {
             bUsePixelBlending,
             additionalVertexShaderMacros,
             additionalPixelShaderMacros);
+        if (optionalError.has_value()) {
+            optionalError->addCurrentLocationToErrorStack();
+            return optionalError.value();
+        }
+
+        return pPso;
+    }
+
+    std::variant<std::shared_ptr<DirectXPso>, Error> DirectXPso::createComputePso(
+        Renderer* pRenderer, PipelineManager* pPipelineManager, const std::string& sComputeShaderName) {
+        // Create PSO.
+        auto pPso = std::shared_ptr<DirectXPso>(
+            new DirectXPso(pRenderer, pPipelineManager, "", "", sComputeShaderName));
+
+        // Generate DirectX PSO.
+        auto optionalError = pPso->generateComputePsoForShader(sComputeShaderName);
         if (optionalError.has_value()) {
             optionalError->addCurrentLocationToErrorStack();
             return optionalError.value();
@@ -69,7 +92,7 @@ namespace ne {
         }
 
         // Release graphics PSO.
-        auto iNewRefCount = mtxInternalResources.second.pGraphicsPso.Reset();
+        auto iNewRefCount = mtxInternalResources.second.pPso.Reset();
         if (iNewRefCount != 0) {
             return Error(fmt::format(
                 "internal graphics PSO was requested to be released from the "
@@ -258,7 +281,7 @@ namespace ne {
 
         // Create PSO.
         HRESULT hResult = pDirectXRenderer->getD3dDevice()->CreateGraphicsPipelineState(
-            &psoDesc, IID_PPV_ARGS(mtxInternalResources.second.pGraphicsPso.GetAddressOf()));
+            &psoDesc, IID_PPV_ARGS(mtxInternalResources.second.pPso.GetAddressOf()));
         if (FAILED(hResult)) {
             return Error(hResult);
         }
@@ -269,5 +292,76 @@ namespace ne {
         saveUsedShaderConfiguration(ShaderType::PIXEL_SHADER, std::move(fullPixelShaderConfiguration));
 
         return {};
-    } // namespace ne
-} // namespace ne
+    }
+
+    std::optional<Error> DirectXPso::generateComputePsoForShader(const std::string& sComputeShaderName) {
+        // Make sure the pipeline is not initialized yet.
+        if (mtxInternalResources.second.bIsReadyForUsage) [[unlikely]] {
+            Logger::get().warn(
+                "PSO was requested to generate internal PSO resources but internal resources are already "
+                "created, ignoring this request");
+            return {};
+        }
+
+        // Assign new shaders.
+        const bool bComputeShaderNotFound = addShader(sComputeShaderName);
+
+        // Make sure that shader was found.
+        if (bComputeShaderNotFound) [[unlikely]] {
+            return Error(fmt::format("shader \"{}\" was not found in Shader Manager", sComputeShaderName));
+        }
+
+        // Get assigned shader pack.
+        const auto pComputeShaderPack = getShader(ShaderType::COMPUTE_SHADER).value();
+
+        // Get shader.
+        std::set<ShaderMacro> fullComputeShaderConfiguration;
+        auto pComputeShader = std::dynamic_pointer_cast<HlslShader>(
+            pComputeShaderPack->getShader({}, fullComputeShaderConfiguration));
+
+        // Get DirectX renderer.
+        auto pDirectXRenderer = dynamic_cast<DirectXRenderer*>(getRenderer());
+        if (pDirectXRenderer == nullptr) [[unlikely]] {
+            return Error("expected a DirectX renderer");
+        }
+
+        // Get vertex shader bytecode and generate its root signature.
+        auto shaderBytecode = pComputeShader->getCompiledBlob();
+        if (std::holds_alternative<Error>(shaderBytecode)) [[unlikely]] {
+            auto err = std::get<Error>(std::move(shaderBytecode));
+            err.addCurrentLocationToErrorStack();
+            return err;
+        }
+        const ComPtr<IDxcBlob> pComputeShaderBytecode = std::get<ComPtr<IDxcBlob>>(std::move(shaderBytecode));
+
+        // Generate one root signature from both shaders.
+        auto result = RootSignatureGenerator::generate(
+            pDirectXRenderer, pDirectXRenderer->getD3dDevice(), pComputeShader.get());
+        if (std::holds_alternative<Error>(result)) [[unlikely]] {
+            auto err = std::get<Error>(std::move(result));
+            err.addCurrentLocationToErrorStack();
+            return err;
+        }
+        auto generatedRootSignature = std::get<RootSignatureGenerator::Generated>(std::move(result));
+        mtxInternalResources.second.pRootSignature = std::move(generatedRootSignature.pRootSignature);
+        mtxInternalResources.second.rootParameterIndices =
+            std::move(generatedRootSignature.rootParameterIndices);
+
+        // Prepare to create a PSO using these shaders.
+        D3D12_COMPUTE_PIPELINE_STATE_DESC psoDesc = {};
+        psoDesc.pRootSignature = mtxInternalResources.second.pRootSignature.Get();
+        psoDesc.CS = {pComputeShaderBytecode->GetBufferPointer(), pComputeShaderBytecode->GetBufferSize()};
+
+        // Create PSO.
+        HRESULT hResult = pDirectXRenderer->getD3dDevice()->CreateComputePipelineState(
+            &psoDesc, IID_PPV_ARGS(mtxInternalResources.second.pPso.GetAddressOf()));
+        if (FAILED(hResult)) {
+            return Error(hResult);
+        }
+
+        // Done.
+        mtxInternalResources.second.bIsReadyForUsage = true;
+
+        return {};
+    }
+}

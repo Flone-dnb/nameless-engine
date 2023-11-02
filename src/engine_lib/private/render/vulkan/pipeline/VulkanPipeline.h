@@ -113,10 +113,8 @@ namespace ne {
          *
          * @param pRenderer              Used renderer.
          * @param pPipelineManager       Pipeline manager that owns this pipeline.
-         * @param sVertexShaderName      Name of the compiled vertex shader (see
-         * ShaderManager::compileShaders).
-         * @param sFragmentShaderName    Name of the compiled fragment shader (see
-         * ShaderManager::compileShaders).
+         * @param sVertexShaderName      Name of the compiled vertex shader to use.
+         * @param sFragmentShaderName    Name of the compiled pixel shader to use.
          * @param bUsePixelBlending      Whether the pixels of the mesh that uses this pipeline should
          * blend with existing pixels on back buffer or not (for transparency).
          * @param additionalVertexShaderMacros   Additional macros to enable for vertex shader configuration.
@@ -174,9 +172,9 @@ namespace ne {
          *
          * @param pRenderer           Used renderer.
          * @param pPipelineManager    Pipeline manager that owns this pipeline.
-         * @param sVertexShaderName   Name of the compiled vertex shader (see ShaderManager::compileShaders).
-         * @param sFragmentShaderName Name of the compiled fragment shader (see
-         * ShaderManager::compileShaders).
+         * @param sVertexShaderName   Name of the compiled vertex shader to use (empty if compute pipeline).
+         * @param sFragmentShaderName Name of the compiled pixel shader to use (empty if compute pipeline).
+         * @param sComputeShaderName  Name of the compiled compute shader to use (empty if graphics pipeline).
          * @param bUsePixelBlending   Whether the pixels of the mesh that uses this pipeline should blend with
          * existing pixels on back buffer or not (for transparency).
          */
@@ -185,6 +183,7 @@ namespace ne {
             PipelineManager* pPipelineManager,
             const std::string& sVertexShaderName,
             const std::string& sFragmentShaderName,
+            const std::string& sComputeShaderName,
             bool bUsePixelBlending);
 
         /**

@@ -1877,8 +1877,6 @@ namespace ne {
         CameraProperties* pCameraProperties, uint32_t& iAcquiredImageIndex) {
         PROFILE_FUNC;
 
-        std::scoped_lock frameGuard(*getRenderResourcesMutex());
-
         // Make sure swap chain extent is set.
         if (!swapChainExtent.has_value()) [[unlikely]] {
             return Error("expected swap chain extent to be set at this point");
@@ -2220,8 +2218,12 @@ namespace ne {
         // Get active camera.
         const auto pMtxActiveCamera = getGameManager()->getCameraManager()->getActiveCamera();
 
-        // Lock both camera and draw mutex.
-        std::scoped_lock renderGuard(pMtxActiveCamera->first, *getRenderResourcesMutex());
+        // Get current frame resource.
+        auto pMtxCurrentFrameResource = getFrameResourcesManager()->getCurrentFrameResource();
+
+        // Lock mutexes together to minimize deadlocks.
+        std::scoped_lock renderGuard(
+            pMtxActiveCamera->first, *getRenderResourcesMutex(), pMtxCurrentFrameResource->first);
 
         // Get camera properties of the active camera.
         CameraProperties* pActiveCameraProperties = nullptr;
@@ -2236,6 +2238,10 @@ namespace ne {
 
         // don't unlock active camera mutex until finished submitting the next frame for drawing
 
+        // Convert frame resource.
+        const auto pVulkanCurrentFrameResource =
+            reinterpret_cast<VulkanFrameResource*>(pMtxCurrentFrameResource->second.pResource);
+
         // Setup.
         uint32_t iAcquiredImageIndex = 0;
         auto optionalError = prepareForDrawingNextFrame(pActiveCameraProperties, iAcquiredImageIndex);
@@ -2245,12 +2251,6 @@ namespace ne {
             error.showError();
             throw std::runtime_error(error.getFullErrorMessage());
         }
-
-        // Lock frame resources to use them (see below).
-        auto pMtxCurrentFrameResource = getFrameResourcesManager()->getCurrentFrameResource();
-        std::scoped_lock frameResourceGuard(pMtxCurrentFrameResource->first);
-        const auto pVulkanCurrentFrameResource =
-            reinterpret_cast<VulkanFrameResource*>(pMtxCurrentFrameResource->second.pResource);
 
         // Iterate over all graphics pipelines of all types (opaque, transparent).
         const auto pCreatedGraphicsPipelines = getPipelineManager()->getGraphicsPipelines();

@@ -158,8 +158,6 @@ namespace ne {
         /**
          * Generates a new root signature using the vertex and pixel shader info.
          *
-         * @remark Shaders must be compiled from one shader source file.
-         *
          * @remark Expects that root signature information is already collected for both
          * shaders (see @ref collectInfoFromReflection), otherwise returns error.
          *
@@ -177,6 +175,21 @@ namespace ne {
          */
         static std::variant<Generated, Error> generate(
             Renderer* pRenderer, ID3D12Device* pDevice, HlslShader* pVertexShader, HlslShader* pPixelShader);
+
+        /**
+         * Generates a new root signature using the compute shader info.
+         *
+         * @remark Expects that root signature information is already collected for
+         * shader (see @ref collectInfoFromReflection), otherwise returns error.
+         *
+         * @param pRenderer      Current renderer.
+         * @param pDevice        DirectX device.
+         * @param pComputeShader Compute shader.
+         *
+         * @return Error if something went wrong, otherwise generated root signature.
+         */
+        static std::variant<Generated, Error>
+        generate(Renderer* pRenderer, ID3D12Device* pDevice, HlslShader* pComputeShader);
 
         /**
          * Returns index of the root parameter that points to `cbuffer` with frame constants.

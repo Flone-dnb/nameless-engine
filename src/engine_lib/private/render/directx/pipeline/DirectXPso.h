@@ -31,8 +31,8 @@ namespace ne {
              */
             std::unordered_map<std::string, UINT> rootParameterIndices;
 
-            /** Graphics PSO, created using @ref createGraphicsPso. */
-            ComPtr<ID3D12PipelineState> pGraphicsPso;
+            /** Created PSO. */
+            ComPtr<ID3D12PipelineState> pPso;
 
             // !!! new internal resources go here !!!
             // !!! don't forget to update @ref releaseInternalResources !!!
@@ -74,6 +74,19 @@ namespace ne {
             const std::set<ShaderMacro>& additionalPixelShaderMacros);
 
         /**
+         * Assigns compute shader to create a compute PSO.
+         *
+         * @param pRenderer          Used renderer.
+         * @param pPipelineManager   Pipeline manager that owns this PSO.
+         * @param sComputeShaderName Name of the compiled compute shader (see ShaderManager::compileShaders).
+         *
+         * @return Error if shader was not found in ShaderManager or if failed to generate PSO,
+         * otherwise created PSO.
+         */
+        static std::variant<std::shared_ptr<DirectXPso>, Error> createComputePso(
+            Renderer* pRenderer, PipelineManager* pPipelineManager, const std::string& sComputeShaderName);
+
+        /**
          * Returns internal resources that this PSO uses.
          *
          * @return Internal resources.
@@ -110,11 +123,12 @@ namespace ne {
         /**
          * Constructs uninitialized pipeline.
          *
-         * @param pRenderer         Used renderer.
-         * @param pPipelineManager  Pipeline manager that owns this PSO.
-         * @param sVertexShaderName Name of the compiled vertex shader (see ShaderManager::compileShaders).
-         * @param sPixelShaderName  Name of the compiled pixel shader (see ShaderManager::compileShaders).
-         * @param bUsePixelBlending Whether the pixels of the mesh that uses this PSO should blend with
+         * @param pRenderer          Used renderer.
+         * @param pPipelineManager   Pipeline manager that owns this PSO.
+         * @param sVertexShaderName  Name of the compiled vertex shader to use (empty if compute pipeline).
+         * @param sPixelShaderName   Name of the compiled pixel shader to use (empty if compute pipeline).
+         * @param sComputeShaderName Name of the compiled compute shader to use (empty if graphics pipeline).
+         * @param bUsePixelBlending  Whether the pixels of the mesh that uses this PSO should blend with
          * existing pixels on back buffer or not (for transparency).
          */
         DirectXPso(
@@ -122,7 +136,8 @@ namespace ne {
             PipelineManager* pPipelineManager,
             const std::string& sVertexShaderName,
             const std::string& sPixelShaderName,
-            bool bUsePixelBlending);
+            const std::string& sComputeShaderName,
+            bool bUsePixelBlending = false);
 
         /**
          * (Re)generates DirectX graphics pipeline state object for the specified shaders.
@@ -147,6 +162,19 @@ namespace ne {
             bool bUsePixelBlending,
             const std::set<ShaderMacro>& additionalVertexShaderMacros,
             const std::set<ShaderMacro>& additionalPixelShaderMacros);
+
+        /**
+         * (Re)generates DirectX compute pipeline state object for the specified shader.
+         *
+         * @warning If a shader of some type was already added it will be replaced with the new one.
+         * When shader is replaced the old shader gets freed from the memory and
+         * a new PSO is immediately generated. Make sure the GPU is not using old shader/PSO.
+         *
+         * @param sComputeShaderName Name of the compiled compute shader (see ShaderManager::compileShaders).
+         *
+         * @return Error if failed to generate PSO.
+         */
+        [[nodiscard]] std::optional<Error> generateComputePsoForShader(const std::string& sComputeShaderName);
 
         /**
          * Internal resources.

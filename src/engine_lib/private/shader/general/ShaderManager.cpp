@@ -539,15 +539,7 @@ namespace ne {
                     break;
                 }
                 case (ShaderType::COMPUTE_SHADER): {
-                    Error err(std::format(
-                        "failed to set the initial shader configuration for the shader \"{}\" (unsupported "
-                        "shader type)",
-                        shaderDescription.sShaderName));
-                    Logger::get().error(
-                        std::format("shader compilation query #{}: {}", iQueryId, err.getFullErrorMessage()));
-                    pRenderer->getGameManager()->addDeferredTask([onError, shaderDescription, err]() mutable {
-                        onError(std::move(shaderDescription), err);
-                    });
+                    pShaderPack->setRendererConfiguration({});
                     break;
                 }
                 }

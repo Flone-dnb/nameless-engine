@@ -28,6 +28,8 @@ namespace ne {
     class Material;
     class CameraProperties;
     class DirectXPso;
+    class ComputeShaderInterface;
+    struct DirectXFrameResource;
 
     /** Renderer made with DirectX 12 API. */
     class DirectXRenderer : public Renderer {
@@ -325,18 +327,34 @@ namespace ne {
          * Setups everything for render commands to be recorded (updates frame constants, shader resources,
          * resets lists, binds RTV/DSV, etc.).
          *
-         * @param pCameraProperties Camera properties to use.
+         * @warning Expects that render resources mutex is locked.
+         *
+         * @param pCameraProperties            Camera properties to use.
+         * @param pCurrentFrameResource        Current frame resource.
+         * @param graphicsQueuePreFrameShaders Compute shaders to dispatch.
          *
          * @return Error if something went wrong.
          */
-        [[nodiscard]] std::optional<Error> prepareForDrawingNextFrame(CameraProperties* pCameraProperties);
+        [[nodiscard]] std::optional<Error> prepareForDrawingNextFrame(
+            CameraProperties* pCameraProperties,
+            DirectXFrameResource* pCurrentFrameResource,
+            std::unordered_map<Pipeline*, std::unordered_set<ComputeShaderInterface*>>&
+                graphicsQueuePreFrameShaders);
 
         /**
          * Does final logic in drawing next frame (closes lists, executes lists, etc.).
          *
+         * @warning Expects that render resources mutex is locked.
+         *
+         * @param pCurrentFrameResource         Current frame resource.
+         * @param graphicsQueuePostFrameShaders Compute shaders to dispatch.
+         *
          * @return Error if something went wrong.
          */
-        [[nodiscard]] std::optional<Error> finishDrawingNextFrame();
+        [[nodiscard]] std::optional<Error> finishDrawingNextFrame(
+            DirectXFrameResource* pCurrentFrameResource,
+            std::unordered_map<Pipeline*, std::unordered_set<ComputeShaderInterface*>>&
+                graphicsQueuePostFrameShaders);
 
         /**
          * Queries the current render settings for MSAA quality and updates @ref iMsaaQualityLevelsCount.
@@ -365,6 +383,17 @@ namespace ne {
          * @param iFenceToWaitFor Fence value to wait for.
          */
         void waitForFenceValue(UINT64 iFenceToWaitFor);
+
+        /**
+         * Submits compute dispatch commands using @ref pCommandQueue.
+         *
+         * @param pCommandAllocator        Command allocator to reset @ref pComputeCommandList.
+         * @param computePipelinesToSubmit Compute shaders and their pipelines to dispatch.
+         */
+        void dispatchComputeShadersOnGraphicsQueue(
+            ID3D12CommandAllocator* pCommandAllocator,
+            std::unordered_map<Pipeline*, std::unordered_set<ComputeShaderInterface*>>&
+                computePipelinesToSubmit);
 
         /**
          * Returns a vector of display modes that the current output adapter
@@ -401,6 +430,9 @@ namespace ne {
 
         /** Contains commands for the GPU. */
         ComPtr<ID3D12GraphicsCommandList> pCommandList;
+
+        /** Command list for @ref dispatchComputeShadersOnGraphicsQueue. */
+        ComPtr<ID3D12GraphicsCommandList> pComputeCommandList;
 
         /** Fence object. */
         ComPtr<ID3D12Fence> pFence;

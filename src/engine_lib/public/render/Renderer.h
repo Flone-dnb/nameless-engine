@@ -198,9 +198,10 @@ namespace ne {
         size_t getUsedVideoMemoryInMb() const;
 
         /**
-         * Blocks the current thread until the GPU finishes executing all queued commands up to this point.
+         * Blocks the current thread until the GPU finishes executing all queued graphics commands up to this
+         * point.
          *
-         * @remark Typically used with @ref getRenderResourcesMutex.
+         * @remark Typically used while @ref getRenderResourcesMutex is locked.
          */
         virtual void waitForGpuToFinishWorkUpToThisPoint() = 0;
 

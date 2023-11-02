@@ -389,6 +389,110 @@ namespace ne {
         return merged;
     }
 
+    std::variant<RootSignatureGenerator::Generated, Error>
+    RootSignatureGenerator::generate(Renderer* pRenderer, ID3D12Device* pDevice, HlslShader* pComputeShader) {
+        PROFILE_FUNC;
+
+        // Make sure that the compute shader is indeed a vertex shader.
+        if (pComputeShader->getShaderType() != ShaderType::COMPUTE_SHADER) [[unlikely]] {
+            return Error(std::format(
+                "the specified shader \"{}\" is not a compute shader", pComputeShader->getShaderName()));
+        }
+
+        // Get used root parameters.
+        auto pMtxRootInfo = pComputeShader->getRootSignatureInfo();
+
+        // Lock info.
+        std::scoped_lock shaderRootSignatureInfoGuard(pMtxRootInfo->first);
+
+        // Make sure it's not empty.
+        if (!pMtxRootInfo->second.has_value()) [[unlikely]] {
+            return Error(std::format(
+                "unable to generate root signature of the compute shader \"{}\" "
+                "because it does have root signature info collected",
+                pComputeShader->getShaderName()));
+        }
+
+        auto& shaderRootSignatureInfo = pMtxRootInfo->second.value();
+
+        std::unordered_map<std::string, UINT> rootParameterIndices;
+        std::vector<CD3DX12_ROOT_PARAMETER> vRootParameters; // will be used to generate root signature
+        std::set<std::string> addedRootParameterNames;
+
+        // Prepare array of descriptor table ranges for root parameters to reference them since D3D stores
+        // raw pointers to descriptor range objects.
+        std::vector<CD3DX12_DESCRIPTOR_RANGE> vTableRanges;
+        vTableRanges.reserve(shaderRootSignatureInfo.rootParameterIndices.size());
+
+        // Add root parameters.
+        for (const auto& [sResourceName, resourceInfo] : shaderRootSignatureInfo.rootParameterIndices) {
+            // See if we already added this resource.
+            auto it = addedRootParameterNames.find(sResourceName);
+            if (it != addedRootParameterNames.end()) {
+                continue;
+            }
+
+            // Add this resource.
+            rootParameterIndices[sResourceName] = static_cast<UINT>(vRootParameters.size());
+            addedRootParameterNames.insert(sResourceName);
+
+            if (resourceInfo.second.isTable()) {
+                // Add descriptor table.
+                vTableRanges.push_back(resourceInfo.second.generateTableRange());
+                CD3DX12_ROOT_PARAMETER newParameter{};
+                newParameter.InitAsDescriptorTable(
+                    1, &vTableRanges.back(), resourceInfo.second.getVisibility());
+                vRootParameters.push_back(newParameter);
+            } else {
+                // Add single descriptor.
+                vRootParameters.push_back(resourceInfo.second.generateSingleDescriptorDescription());
+            }
+        }
+
+        // Create root signature description.
+        // A root signature is an array of root parameters.
+        const CD3DX12_ROOT_SIGNATURE_DESC rootSignatureDesc(
+            static_cast<UINT>(vRootParameters.size()),
+            vRootParameters.data(),
+            0,
+            nullptr,
+            D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+
+        // Serialize root signature in order to create it.
+        ComPtr<ID3DBlob> pSerializedRootSignature = nullptr;
+        ComPtr<ID3DBlob> pSerializerErrorMessage = nullptr;
+
+        HRESULT hResult = D3D12SerializeRootSignature(
+            &rootSignatureDesc,
+            D3D_ROOT_SIGNATURE_VERSION_1,
+            pSerializedRootSignature.GetAddressOf(),
+            pSerializerErrorMessage.GetAddressOf());
+        if (FAILED(hResult)) [[unlikely]] {
+            return Error(hResult);
+        }
+        if (pSerializerErrorMessage != nullptr) [[unlikely]] {
+            return Error(std::string(
+                static_cast<char*>(pSerializerErrorMessage->GetBufferPointer()),
+                pSerializerErrorMessage->GetBufferSize()));
+        }
+
+        // Create root signature.
+        ComPtr<ID3D12RootSignature> pRootSignature;
+        hResult = pDevice->CreateRootSignature(
+            0,
+            pSerializedRootSignature->GetBufferPointer(),
+            pSerializedRootSignature->GetBufferSize(),
+            IID_PPV_ARGS(&pRootSignature));
+        if (FAILED(hResult)) [[unlikely]] {
+            return Error(hResult);
+        }
+
+        Generated generated;
+        generated.pRootSignature = std::move(pRootSignature);
+        generated.rootParameterIndices = std::move(rootParameterIndices);
+        return generated;
+    }
+
     std::variant<SamplerType, Error> RootSignatureGenerator::findStaticSamplerForSamplerResource(
         const D3D12_SHADER_INPUT_BIND_DESC& samplerResourceDescription) {
         const auto sResourceName = std::string(samplerResourceDescription.Name);

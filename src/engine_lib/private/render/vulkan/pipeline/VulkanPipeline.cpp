@@ -65,7 +65,7 @@ namespace ne {
         const std::set<ShaderMacro>& additionalFragmentShaderMacros) {
         // Create pipeline.
         auto pPipeline = std::shared_ptr<VulkanPipeline>(new VulkanPipeline(
-            pRenderer, pPipelineManager, sVertexShaderName, sFragmentShaderName, bUsePixelBlending));
+            pRenderer, pPipelineManager, sVertexShaderName, sFragmentShaderName, "", bUsePixelBlending));
 
         // Generate Vulkan pipeline.
         auto optionalError = pPipeline->generateGraphicsPipelineForShaders(
@@ -215,8 +215,15 @@ namespace ne {
         PipelineManager* pPipelineManager,
         const std::string& sVertexShaderName,
         const std::string& sFragmentShaderName,
+        const std::string& sComputeShaderName,
         bool bUsePixelBlending)
-        : Pipeline(pRenderer, pPipelineManager, sVertexShaderName, sFragmentShaderName, bUsePixelBlending) {}
+        : Pipeline(
+              pRenderer,
+              pPipelineManager,
+              sVertexShaderName,
+              sFragmentShaderName,
+              sComputeShaderName,
+              bUsePixelBlending) {}
 
     std::optional<Error> VulkanPipeline::generateGraphicsPipelineForShaders(
         const std::string& sVertexShaderName,

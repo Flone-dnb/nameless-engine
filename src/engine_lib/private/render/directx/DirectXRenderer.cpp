@@ -27,6 +27,7 @@
 #include "shader/hlsl/resources/HlslShaderCpuWriteResource.h"
 #include "shader/hlsl/resources/HlslShaderTextureResource.h"
 #include "render/directx/resources/DirectXFrameResource.h"
+#include "shader/hlsl/HlslComputeShaderInterface.h"
 #include "misc/Profiler.hpp"
 
 // DirectX.
@@ -423,23 +424,18 @@ namespace ne {
 
     std::string DirectXRenderer::getCurrentlyUsedGpuName() const { return sUsedVideoAdapter; }
 
-    std::optional<Error> DirectXRenderer::prepareForDrawingNextFrame(CameraProperties* pCameraProperties) {
+    std::optional<Error> DirectXRenderer::prepareForDrawingNextFrame(
+        CameraProperties* pCameraProperties,
+        DirectXFrameResource* pCurrentFrameResource,
+        std::unordered_map<Pipeline*, std::unordered_set<ComputeShaderInterface*>>&
+            graphicsQueuePreFrameShaders) {
         PROFILE_FUNC;
-
-        std::scoped_lock frameGuard(*getRenderResourcesMutex());
 
         // Waits for frame resource to be no longer used by the GPU.
         updateResourcesForNextFrame(scissorRect.right, scissorRect.bottom, pCameraProperties);
 
-        // Get command allocator to open command list.
-        auto pMtxCurrentFrameResource = getFrameResourcesManager()->getCurrentFrameResource();
-        std::scoped_lock frameResourceGuard(pMtxCurrentFrameResource->first);
-
-        // Convert frame resource.
-        const auto pDirectXFrameResource =
-            reinterpret_cast<DirectXFrameResource*>(pMtxCurrentFrameResource->second.pResource);
-
-        const auto pCommandAllocator = pDirectXFrameResource->pCommandAllocator.Get();
+        // Get command allocator.
+        const auto pCommandAllocator = pCurrentFrameResource->pCommandAllocator.Get();
 
         PROFILE_SCOPE_START(ResetCommandAllocator);
 
@@ -448,6 +444,13 @@ namespace ne {
         if (FAILED(hResult)) [[unlikely]] {
             return Error(hResult);
         }
+
+        PROFILE_SCOPE_END;
+
+        PROFILE_SCOPE_START(DispatchPreFrameComputeShaders);
+
+        // Process compute shaders that should be submitted before rendering.
+        dispatchComputeShadersOnGraphicsQueue(pCommandAllocator, graphicsQueuePreFrameShaders);
 
         PROFILE_SCOPE_END;
 
@@ -518,11 +521,24 @@ namespace ne {
     void DirectXRenderer::drawNextFrame() {
         PROFILE_FUNC;
 
+        // Get pipeline manager and compute shaders to dispatch.
+        const auto pPipelineManager = getPipelineManager();
+        auto mtxQueuedComputeShader = pPipelineManager->getComputeShadersForGraphicsQueueExecution();
+
         // Get active camera.
         const auto pMtxActiveCamera = getGameManager()->getCameraManager()->getActiveCamera();
 
-        // Lock both camera and draw mutex.
-        std::scoped_lock renderGuard(pMtxActiveCamera->first, *getRenderResourcesMutex());
+        // Get current frame resource.
+        auto pMtxCurrentFrameResource = getFrameResourcesManager()->getCurrentFrameResource();
+        const auto pCurrentFrameResource =
+            reinterpret_cast<DirectXFrameResource*>(pMtxCurrentFrameResource->second.pResource);
+
+        // Lock mutexes together to minimize deadlocks.
+        std::scoped_lock renderGuard(
+            pMtxActiveCamera->first,
+            *getRenderResourcesMutex(),
+            pMtxCurrentFrameResource->first,
+            *mtxQueuedComputeShader.first);
 
         // Get camera properties of the active camera.
         CameraProperties* pActiveCameraProperties = nullptr;
@@ -538,7 +554,10 @@ namespace ne {
         // don't unlock active camera mutex until finished submitting the next frame for drawing
 
         // Setup.
-        auto optionalError = prepareForDrawingNextFrame(pActiveCameraProperties);
+        auto optionalError = prepareForDrawingNextFrame(
+            pActiveCameraProperties,
+            pCurrentFrameResource,
+            mtxQueuedComputeShader.second->graphicsQueuePreFrameShaders);
         if (optionalError.has_value()) [[unlikely]] {
             auto error = optionalError.value();
             error.addCurrentLocationToErrorStack();
@@ -546,16 +565,12 @@ namespace ne {
             throw std::runtime_error(error.getFullErrorMessage());
         }
 
-        // Lock frame resources to use them (see below).
-        auto pMtxCurrentFrameResource = getFrameResourcesManager()->getCurrentFrameResource();
-        std::scoped_lock frameResourceGuard(pMtxCurrentFrameResource->first);
-
         // Set topology type.
         // TODO: this will be moved in some other place later
         pCommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
         // Iterate over all graphics PSOs of all types (opaque, transparent).
-        const auto pCreatedGraphicsPsos = getPipelineManager()->getGraphicsPipelines();
+        const auto pCreatedGraphicsPsos = pPipelineManager->getGraphicsPipelines();
         for (auto& [mtx, graphicsPipelines] : *pCreatedGraphicsPsos) {
             std::scoped_lock psoGuard(mtx);
 
@@ -572,7 +587,7 @@ namespace ne {
                     std::scoped_lock guardPsoResources(pMtxPsoResources->first);
 
                     // Set PSO and root signature.
-                    pCommandList->SetPipelineState(pMtxPsoResources->second.pGraphicsPso.Get());
+                    pCommandList->SetPipelineState(pMtxPsoResources->second.pPso.Get());
                     pCommandList->SetGraphicsRootSignature(pMtxPsoResources->second.pRootSignature.Get());
 
                     // After setting root signature we can set root parameters.
@@ -634,8 +649,9 @@ namespace ne {
             }
         }
 
-        // Do finish logic.
-        optionalError = finishDrawingNextFrame();
+        // Do finish logic (execute command list).
+        optionalError = finishDrawingNextFrame(
+            pCurrentFrameResource, mtxQueuedComputeShader.second->graphicsQueuePostFrameShaders);
         if (optionalError.has_value()) [[unlikely]] {
             auto error = optionalError.value();
             error.addCurrentLocationToErrorStack();
@@ -647,10 +663,11 @@ namespace ne {
         getFrameResourcesManager()->switchToNextFrameResource();
     }
 
-    std::optional<Error> DirectXRenderer::finishDrawingNextFrame() {
+    std::optional<Error> DirectXRenderer::finishDrawingNextFrame(
+        DirectXFrameResource* pCurrentFrameResource,
+        std::unordered_map<Pipeline*, std::unordered_set<ComputeShaderInterface*>>&
+            graphicsQueuePostFrameShaders) {
         PROFILE_FUNC;
-
-        std::scoped_lock guardFrame(*getRenderResourcesMutex());
 
         if (bIsUsingMsaaRenderTarget) {
             PROFILE_SCOPE(ResolveMsaaTarget);
@@ -709,8 +726,16 @@ namespace ne {
         PROFILE_SCOPE_START(ExecuteCommandLists);
 
         // Add the command list to the command queue for execution.
-        ID3D12CommandList* commandLists[] = {pCommandList.Get()};
-        pCommandQueue->ExecuteCommandLists(_countof(commandLists), commandLists);
+        const std::array<ID3D12CommandList*, 1> vCommandLists = {pCommandList.Get()};
+        pCommandQueue->ExecuteCommandLists(static_cast<UINT>(vCommandLists.size()), vCommandLists.data());
+
+        PROFILE_SCOPE_END;
+
+        PROFILE_SCOPE_START(DispatchPostFrameComputeShaders);
+
+        // Process compute shaders that should be submitted before rendering.
+        dispatchComputeShadersOnGraphicsQueue(
+            pCurrentFrameResource->pCommandAllocator.Get(), graphicsQueuePostFrameShaders);
 
         PROFILE_SCOPE_END;
 
@@ -734,16 +759,8 @@ namespace ne {
             iNewFenceValue = mtxCurrentFenceValue.second;
         }
 
-        // Get current frame resource.
-        auto pMtxCurrentFrameResource = getFrameResourcesManager()->getCurrentFrameResource();
-        std::scoped_lock frameResourceGuard(pMtxCurrentFrameResource->first);
-
-        // Convert frame resource.
-        const auto pDirectXFrameResource =
-            reinterpret_cast<DirectXFrameResource*>(pMtxCurrentFrameResource->second.pResource);
-
         // Save new fence value in the current frame resource.
-        pDirectXFrameResource->iFence = iNewFenceValue;
+        pCurrentFrameResource->iFence = iNewFenceValue;
 
         // Add an instruction to the command queue to set a new fence point.
         // This fence point won't be set until the GPU finishes processing all the commands prior
@@ -915,6 +932,61 @@ namespace ne {
         }
     }
 
+    void DirectXRenderer::dispatchComputeShadersOnGraphicsQueue(
+        ID3D12CommandAllocator* pCommandAllocator,
+        std::unordered_map<Pipeline*, std::unordered_set<ComputeShaderInterface*>>&
+            computePipelinesToSubmit) {
+        // Make sure we have shaders to dispatch.
+        if (computePipelinesToSubmit.empty()) {
+            return;
+        }
+
+        // Open command list to record new commands.
+        auto hResult = pComputeCommandList->Reset(pCommandAllocator, nullptr);
+        if (FAILED(hResult)) [[unlikely]] {
+            Error error(hResult);
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+        }
+
+        // Set CBV/SRV/UAV descriptor heap.
+        const auto pResourceManager = reinterpret_cast<DirectXResourceManager*>(getResourceManager());
+        ID3D12DescriptorHeap* pDescriptorHeaps[] = {pResourceManager->getCbvSrvUavHeap()->getInternalHeap()};
+        pComputeCommandList->SetDescriptorHeaps(_countof(pDescriptorHeaps), pDescriptorHeaps);
+
+        for (const auto& [pPipeline, computeShaders] : computePipelinesToSubmit) {
+            // Get internal resources of this pipeline.
+            const auto pDirectXPso = reinterpret_cast<DirectXPso*>(pPipeline);
+            auto pMtxPsoResources = pDirectXPso->getInternalResources();
+            std::scoped_lock guardPsoResources(pMtxPsoResources->first);
+
+            // Set PSO and root signature.
+            pComputeCommandList->SetPipelineState(pMtxPsoResources->second.pPso.Get());
+            pComputeCommandList->SetComputeRootSignature(pMtxPsoResources->second.pRootSignature.Get());
+
+            // Dispatch each compute shader.
+            for (const auto& pComputeInterface : computeShaders) {
+                reinterpret_cast<HlslComputeShaderInterface*>(pComputeInterface)
+                    ->dispatchOnGraphicsQueue(pComputeCommandList.Get());
+            }
+        }
+
+        // Close command list.
+        hResult = pComputeCommandList->Close();
+        if (FAILED(hResult)) [[unlikely]] {
+            Error error(hResult);
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+        }
+
+        // Add the command list to the command queue for execution.
+        const std::array<ID3D12CommandList*, 1> vCommandLists = {pComputeCommandList.Get()};
+        pCommandQueue->ExecuteCommandLists(static_cast<UINT>(vCommandLists.size()), vCommandLists.data());
+
+        // Clear map because we submitted all shaders.
+        computePipelinesToSubmit.clear();
+    }
+
     size_t DirectXRenderer::rateGpuSuitability(DXGI_ADAPTER_DESC1 adapterDesc) {
         // Skip software adapters.
         if ((adapterDesc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE) != 0) {
@@ -1008,6 +1080,19 @@ namespace ne {
         // to the command list (later) we will Reset() it (put in 'Open' state), and in order
         // for Reset() to work, command list should be in closed state.
         pCommandList->Close();
+
+        // Create a separate command list to submit compute work without using the rendering command list.
+        hResult = pDevice->CreateCommandList(
+            0,
+            D3D12_COMMAND_LIST_TYPE_DIRECT,
+            pDirectXFrameResource->pCommandAllocator.Get(),
+            nullptr,
+            IID_PPV_ARGS(pComputeCommandList.GetAddressOf()));
+        if (FAILED(hResult)) {
+            return Error(hResult);
+        }
+
+        pComputeCommandList->Close();
 
         return {};
     }
@@ -1487,8 +1572,9 @@ namespace ne {
 
         UINT64 iFenceToWait = 0;
         {
-            // Update fence.
-            std::scoped_lock fenceGuard(mtxCurrentFenceValue.first);
+            // Make sure we are not submitting a new frame right now.
+            std::scoped_lock guard(*getRenderResourcesMutex(), mtxCurrentFenceValue.first);
+
             mtxCurrentFenceValue.second += 1;
             iFenceToWait = mtxCurrentFenceValue.second;
         }

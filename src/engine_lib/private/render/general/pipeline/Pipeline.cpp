@@ -136,32 +136,26 @@ namespace ne {
                 return error;
             }
 
-            pCreatedPipeline =
-                std::dynamic_pointer_cast<Pipeline>(std::get<std::shared_ptr<DirectXPso>>(result));
+            return std::dynamic_pointer_cast<Pipeline>(std::get<std::shared_ptr<DirectXPso>>(result));
         }
 #endif
 
-        if (pCreatedPipeline == nullptr && dynamic_cast<VulkanRenderer*>(pRenderer) != nullptr) {
+        if (dynamic_cast<VulkanRenderer*>(pRenderer) != nullptr) {
             // Create Vulkan pipeline.
-            //            auto result =
-            //                VulkanPipeline::createComputePipeline(pRenderer, pPipelineManager,
-            //                sComputeShaderName);
-            //            if (std::holds_alternative<Error>(result)) {
-            //                auto error = std::get<Error>(std::move(result));
-            //                error.addCurrentLocationToErrorStack();
-            //                return error;
-            //            }
+            auto result =
+                VulkanPipeline::createComputePipeline(pRenderer, pPipelineManager, sComputeShaderName);
+            if (std::holds_alternative<Error>(result)) {
+                auto error = std::get<Error>(std::move(result));
+                error.addCurrentLocationToErrorStack();
+                return error;
+            }
 
-            //            pCreatedPipeline =
-            //                std::dynamic_pointer_cast<Pipeline>(std::get<std::shared_ptr<VulkanPipeline>>(result));
+            return std::dynamic_pointer_cast<Pipeline>(std::get<std::shared_ptr<VulkanPipeline>>(result));
         }
 
-        // Make sure the pipeline was created.
-        if (pCreatedPipeline == nullptr) [[unlikely]] {
-            Error err("no renderer for this platform");
-            err.showError();
-            throw std::runtime_error(err.getFullErrorMessage());
-        }
+        Error err("unsupported renderer");
+        err.showError();
+        throw std::runtime_error(err.getFullErrorMessage());
 
         return pCreatedPipeline;
     }

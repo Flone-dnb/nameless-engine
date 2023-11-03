@@ -5,6 +5,7 @@
 #include "render/directx/DirectXRenderer.h"
 #include "shader/hlsl/HlslComputeShaderInterface.h"
 #endif
+#include "shader/glsl/GlslComputeShaderInterface.h"
 #include "render/vulkan/VulkanRenderer.h"
 
 namespace ne {
@@ -37,6 +38,11 @@ namespace ne {
                 new HlslComputeShaderInterface(pRenderer, sComputeShaderName, bRunBeforeFrameRendering));
         }
 #endif
+
+        if (dynamic_cast<VulkanRenderer*>(pRenderer) != nullptr) {
+            return std::unique_ptr<GlslComputeShaderInterface>(
+                new GlslComputeShaderInterface(pRenderer, sComputeShaderName, bRunBeforeFrameRendering));
+        }
 
         Error error("unsupported renderer");
         error.showError();

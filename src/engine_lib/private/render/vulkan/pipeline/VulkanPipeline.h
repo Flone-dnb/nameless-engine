@@ -134,6 +134,19 @@ namespace ne {
             const std::set<ShaderMacro>& additionalFragmentShaderMacros);
 
         /**
+         * Assigns compute shader to create a compute pipeline.
+         *
+         * @param pRenderer          Used renderer.
+         * @param pPipelineManager   Pipeline manager that owns this pipeline.
+         * @param sComputeShaderName Name of the compiled compute shader (see ShaderManager::compileShaders).
+         *
+         * @return Error if shader was not found in ShaderManager or if failed to generate pipeline,
+         * otherwise created pipeline.
+         */
+        static std::variant<std::shared_ptr<VulkanPipeline>, Error> createComputePipeline(
+            Renderer* pRenderer, PipelineManager* pPipelineManager, const std::string& sComputeShaderName);
+
+        /**
          * Returns internal resources that this pipeline uses.
          *
          * @return Internal resources.
@@ -211,6 +224,20 @@ namespace ne {
             const std::set<ShaderMacro>& additionalFragmentShaderMacros);
 
         /**
+         * (Re)generates Vulkan compute pipeline and pipeline layout for the specified shader.
+         *
+         * @warning If a shader of some type was already added it will be replaced with the new one.
+         * When shader is replaced the old shader gets freed from the memory and
+         * a new pipeline is immediately generated. Make sure the GPU is not using old shader/pipeline.
+         *
+         * @param sComputeShaderName Name of the compiled compute shader (see ShaderManager::compileShaders).
+         *
+         * @return Error if failed to generate pipeline.
+         */
+        [[nodiscard]] std::optional<Error>
+        generateComputePipelineForShader(const std::string& sComputeShaderName);
+
+        /**
          * Fully initializes @ref mtxInternalResources by creating a graphics pipeline for the specified
          * shaders.
          *
@@ -226,6 +253,18 @@ namespace ne {
             GlslShader* pVertexShader,
             GlslShader* pFragmentShader,
             bool bUsePixelBlending);
+
+        /**
+         * Fully initializes @ref mtxInternalResources by creating a compute pipeline for the specified
+         * shader.
+         *
+         * @param pVulkanRenderer Vulkan renderer.
+         * @param pComputeShader  Compute shader to use in the pipeline.
+         *
+         * @return Error if something went wrong.
+         */
+        [[nodiscard]] std::optional<Error>
+        createComputePipeline(VulkanRenderer* pVulkanRenderer, GlslShader* pComputeShader);
 
         /**
          * Binds descriptors that reference "frameData" shader resource to frame resources' uniform buffers.

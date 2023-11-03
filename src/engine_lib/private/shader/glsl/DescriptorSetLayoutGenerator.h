@@ -156,6 +156,19 @@ namespace ne {
         static std::variant<Generated, Error>
         generate(Renderer* pRenderer, GlslShader* pVertexShader, GlslShader* pFragmentShader);
 
+        /**
+         * Generates a new descriptor layout, pool and descriptor sets using the specified compute shader.
+         *
+         * @remark Expects that descriptor layout information is already collected for both
+         * shaders (see @ref collectInfoFromBytecode), otherwise returns error.
+         *
+         * @param pRenderer       Current renderer.
+         * @param pComputeShader  Compute shader.
+         *
+         * @return Error if something went wrong, otherwise generated descriptor layout data.
+         */
+        static std::variant<Generated, Error> generate(Renderer* pRenderer, GlslShader* pComputeShader);
+
     private:
         /**
          * Generates Vulkan layout binding that could be used to create a descriptor set layout.

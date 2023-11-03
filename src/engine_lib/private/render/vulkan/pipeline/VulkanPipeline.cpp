@@ -82,6 +82,22 @@ namespace ne {
         return pPipeline;
     }
 
+    std::variant<std::shared_ptr<VulkanPipeline>, Error> VulkanPipeline::createComputePipeline(
+        Renderer* pRenderer, PipelineManager* pPipelineManager, const std::string& sComputeShaderName) {
+        // Create pipeline.
+        auto pPipeline = std::shared_ptr<VulkanPipeline>(
+            new VulkanPipeline(pRenderer, pPipelineManager, "", "", sComputeShaderName, false));
+
+        // Generate Vulkan pipeline.
+        auto optionalError = pPipeline->generateComputePipelineForShader(sComputeShaderName);
+        if (optionalError.has_value()) {
+            optionalError->addCurrentLocationToErrorStack();
+            return optionalError.value();
+        }
+
+        return pPipeline;
+    }
+
     std::optional<Error> VulkanPipeline::releaseInternalResources() {
         std::scoped_lock resourcesGuard(mtxInternalResources.first);
 
@@ -236,7 +252,7 @@ namespace ne {
         // Make sure the pipeline is not initialized yet.
         if (mtxInternalResources.second.bIsReadyForUsage) [[unlikely]] {
             Logger::get().warn(
-                "pipeline was requested to generate internal PSO resources but internal resources are"
+                "pipeline was requested to generate internal pipeline resources but internal resources are"
                 "already created, ignoring this request");
             return {};
         }
@@ -311,6 +327,51 @@ namespace ne {
                 error.addCurrentLocationToErrorStack();
                 return error;
             }
+        }
+
+        return {};
+    }
+
+    std::optional<Error>
+    VulkanPipeline::generateComputePipelineForShader(const std::string& sComputeShaderName) {
+        std::scoped_lock resourcesGuard(mtxInternalResources.first);
+
+        // Make sure the pipeline is not initialized yet.
+        if (mtxInternalResources.second.bIsReadyForUsage) [[unlikely]] {
+            Logger::get().warn(
+                "pipeline was requested to generate internal pipeline resources but internal resources are"
+                "already created, ignoring this request");
+            return {};
+        }
+
+        // Assign new shader.
+        const bool bComputeShaderNotFound = addShader(sComputeShaderName);
+
+        // Make sure shader was found.
+        if (bComputeShaderNotFound) [[unlikely]] {
+            return Error(std::format("shader \"{}\" not found in Shader Manager", sComputeShaderName));
+        }
+
+        // Get assigned shader packs.
+        const auto pComputeShaderPack = getShader(ShaderType::COMPUTE_SHADER).value();
+
+        // Get shader.
+        std::set<ShaderMacro> fullComputeShaderConfiguration;
+        auto pComputeShader = std::dynamic_pointer_cast<GlslShader>(
+            pComputeShaderPack->getShader({}, fullComputeShaderConfiguration));
+
+        // Get Vulkan renderer.
+        const auto pVulkanRenderer = dynamic_cast<VulkanRenderer*>(getRenderer());
+        if (pVulkanRenderer == nullptr) [[unlikely]] {
+            return Error("expected a Vulkan renderer");
+        }
+
+        // Create graphics pipeline.
+        auto optionalError = createComputePipeline(pVulkanRenderer, pComputeShader.get());
+        if (optionalError.has_value()) [[unlikely]] {
+            auto error = std::move(optionalError.value());
+            error.addCurrentLocationToErrorStack();
+            return error;
         }
 
         return {};
@@ -652,6 +713,122 @@ namespace ne {
                 throw std::runtime_error(error.getFullErrorMessage());
             }
         }
+
+        // Mark as ready to be used.
+        mtxInternalResources.second.bIsReadyForUsage = true;
+
+        return {};
+    }
+
+    std::optional<Error>
+    VulkanPipeline::createComputePipeline(VulkanRenderer* pVulkanRenderer, GlslShader* pComputeShader) {
+        // Get shader bytecode.
+        auto shaderBytecode = pComputeShader->getCompiledBytecode();
+        if (std::holds_alternative<Error>(shaderBytecode)) [[unlikely]] {
+            auto err = std::get<Error>(std::move(shaderBytecode));
+            err.addCurrentLocationToErrorStack();
+            return err;
+        }
+        const auto pMtxComputeShaderBytecode =
+            std::get<std::pair<std::recursive_mutex, std::vector<char>>*>(std::move(shaderBytecode));
+
+        // Generate descriptor layout.
+        auto layoutResult = DescriptorSetLayoutGenerator::generate(pVulkanRenderer, pComputeShader);
+        if (std::holds_alternative<Error>(layoutResult)) [[unlikely]] {
+            auto error = std::get<Error>(std::move(layoutResult));
+            error.addCurrentLocationToErrorStack();
+            return error;
+        }
+        auto generatedLayout = std::get<DescriptorSetLayoutGenerator::Generated>(std::move(layoutResult));
+
+        // Get logical device.
+        const auto pLogicalDevice = pVulkanRenderer->getLogicalDevice();
+        if (pLogicalDevice == nullptr) [[unlikely]] {
+            vkDestroyDescriptorPool(pLogicalDevice, generatedLayout.pDescriptorPool, nullptr);
+            vkDestroyDescriptorSetLayout(pLogicalDevice, generatedLayout.pDescriptorSetLayout, nullptr);
+            return Error("expected logical device to be valid");
+        }
+
+        std::scoped_lock bytecodeGuard(pMtxComputeShaderBytecode->first);
+
+        // Describe compute shader module.
+        VkShaderModuleCreateInfo computeShaderModuleInfo{};
+        computeShaderModuleInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+        computeShaderModuleInfo.codeSize = pMtxComputeShaderBytecode->second.size();
+        computeShaderModuleInfo.pCode =
+            reinterpret_cast<const uint32_t*>(pMtxComputeShaderBytecode->second.data());
+
+        // Create compute shader module.
+        VkShaderModule pComputeShaderModule = nullptr;
+        auto result =
+            vkCreateShaderModule(pLogicalDevice, &computeShaderModuleInfo, nullptr, &pComputeShaderModule);
+        if (result != VK_SUCCESS) [[unlikely]] {
+            vkDestroyDescriptorPool(pLogicalDevice, generatedLayout.pDescriptorPool, nullptr);
+            vkDestroyDescriptorSetLayout(pLogicalDevice, generatedLayout.pDescriptorSetLayout, nullptr);
+            return Error(std::format(
+                "failed to create a compute shader module \"{}\", error: {}",
+                pComputeShader->getShaderName(),
+                string_VkResult(result)));
+        }
+
+        // Describe compute shader pipeline stage.
+        VkPipelineShaderStageCreateInfo computeShaderStageInfo{};
+        computeShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+        computeShaderStageInfo.stage = VK_SHADER_STAGE_COMPUTE_BIT;
+        computeShaderStageInfo.module = pComputeShaderModule;
+        computeShaderStageInfo.pName = "main";
+
+        // Describe pipeline layout.
+        VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
+        pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+        pipelineLayoutInfo.pushConstantRangeCount = 0;
+        pipelineLayoutInfo.pPushConstantRanges = nullptr;
+        pipelineLayoutInfo.setLayoutCount = 1;
+        pipelineLayoutInfo.pSetLayouts = &generatedLayout.pDescriptorSetLayout;
+
+        // Create pipeline layout.
+        VkPipelineLayout pPipelineLayout = nullptr;
+        result = vkCreatePipelineLayout(pLogicalDevice, &pipelineLayoutInfo, nullptr, &pPipelineLayout);
+        if (result != VK_SUCCESS) [[unlikely]] {
+            vkDestroyShaderModule(pLogicalDevice, pComputeShaderModule, nullptr);
+            vkDestroyDescriptorPool(pLogicalDevice, generatedLayout.pDescriptorPool, nullptr);
+            vkDestroyDescriptorSetLayout(pLogicalDevice, generatedLayout.pDescriptorSetLayout, nullptr);
+            return Error(std::format("failed to create pipeline layout, error: {}", string_VkResult(result)));
+        }
+
+        // Describe compute pipeline.
+        VkComputePipelineCreateInfo pipelineInfo{};
+        pipelineInfo.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
+        pipelineInfo.stage = computeShaderStageInfo;
+        pipelineInfo.layout = pPipelineLayout;
+
+        // Specify parent pipeline.
+        pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
+        pipelineInfo.basePipelineIndex = -1;
+
+        // Create compute pipeline.
+        VkPipeline pPipeline = nullptr;
+        result =
+            vkCreateComputePipelines(pLogicalDevice, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pPipeline);
+        if (result != VK_SUCCESS) [[unlikely]] {
+            vkDestroyPipelineLayout(pLogicalDevice, pPipelineLayout, nullptr);
+            vkDestroyShaderModule(pLogicalDevice, pComputeShaderModule, nullptr);
+            vkDestroyDescriptorPool(pLogicalDevice, generatedLayout.pDescriptorPool, nullptr);
+            vkDestroyDescriptorSetLayout(pLogicalDevice, generatedLayout.pDescriptorSetLayout, nullptr);
+            return Error(
+                std::format("failed to create compute pipeline, error: {}", string_VkResult(result)));
+        }
+
+        // Destroy shader module since we don't need it after the pipeline was created.
+        vkDestroyShaderModule(pLogicalDevice, pComputeShaderModule, nullptr);
+
+        // Save created resources.
+        mtxInternalResources.second.pDescriptorSetLayout = generatedLayout.pDescriptorSetLayout;
+        mtxInternalResources.second.pDescriptorPool = generatedLayout.pDescriptorPool;
+        mtxInternalResources.second.vDescriptorSets = generatedLayout.vDescriptorSets;
+        mtxInternalResources.second.resourceBindings = std::move(generatedLayout.resourceBindings);
+        mtxInternalResources.second.pPipelineLayout = pPipelineLayout;
+        mtxInternalResources.second.pPipeline = pPipeline;
 
         // Mark as ready to be used.
         mtxInternalResources.second.bIsReadyForUsage = true;

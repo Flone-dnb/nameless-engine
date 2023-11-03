@@ -627,13 +627,17 @@ namespace ne {
          *
          * @warning Expects that render resources mutex is locked.
          *
-         * @param pCameraProperties   Camera properties to use.
-         * @param iAcquiredImageIndex Index of the acquired swap chain image to use this frame.
+         * @param pCameraProperties            Camera properties to use.
+         * @param iAcquiredImageIndex          Index of the acquired swap chain image to use this frame.
+         * @param graphicsQueuePreFrameShaders Compute shaders to dispatch.
          *
          * @return Error if something went wrong.
          */
-        [[nodiscard]] std::optional<Error>
-        prepareForDrawingNextFrame(CameraProperties* pCameraProperties, uint32_t& iAcquiredImageIndex);
+        [[nodiscard]] std::optional<Error> prepareForDrawingNextFrame(
+            CameraProperties* pCameraProperties,
+            uint32_t& iAcquiredImageIndex,
+            std::unordered_map<Pipeline*, std::unordered_set<ComputeShaderInterface*>>&
+                graphicsQueuePreFrameShaders);
 
         /**
          * Adds draw commands to command buffer to draw all mesh nodes that use the specified material
@@ -656,17 +660,20 @@ namespace ne {
          *
          * @warning Expects that render resources mutex is locked.
          *
-         * @param pCurrentFrameResource      Current frame resource. Expects that frame resources mutex is
+         * @param pCurrentFrameResource         Current frame resource. Expects that frame resources mutex is
          * locked and will not be unlocked until the function is finished.
-         * @param iCurrentFrameResourceIndex Index of the current frame resource.
-         * @param iAcquiredImageIndex        Index of the acquired swap chain image to use this frame.
+         * @param iCurrentFrameResourceIndex    Index of the current frame resource.
+         * @param iAcquiredImageIndex           Index of the acquired swap chain image to use this frame.
+         * @param graphicsQueuePostFrameShaders Compute shaders to dispatch.
          *
          * @return Error if something went wrong.
          */
         [[nodiscard]] std::optional<Error> finishDrawingNextFrame(
             VulkanFrameResource* pCurrentFrameResource,
             size_t iCurrentFrameResourceIndex,
-            uint32_t iAcquiredImageIndex);
+            uint32_t iAcquiredImageIndex,
+            std::unordered_map<Pipeline*, std::unordered_set<ComputeShaderInterface*>>&
+                graphicsQueuePostFrameShaders);
 
         /**
          * Queries the current render settings for MSAA quality and updates @ref msaaSampleCount.
@@ -674,6 +681,21 @@ namespace ne {
          * @return Error if something went wrong.
          */
         [[nodiscard]] std::optional<Error> updateMsaaSampleCount();
+
+        /**
+         * Submits compute dispatch commands using @ref pGraphicsQueue.
+         *
+         * @param pCurrentFrameResource      Current frame resource.
+         * @param iCurrentFrameResourceIndex Index of the current frame resource.
+         * @param computePipelinesToSubmit   Compute shaders and their pipelines to dispatch.
+         *
+         * @return `true` if dispatched some shaders, `false` if nothing to dispatch.
+         */
+        bool dispatchComputeShadersOnGraphicsQueue(
+            VulkanFrameResource* pCurrentFrameResource,
+            size_t iCurrentFrameResourceIndex,
+            std::unordered_map<Pipeline*, std::unordered_set<ComputeShaderInterface*>>&
+                computePipelinesToSubmit);
 
         /** Vulkan API instance. */
         VkInstance pInstance = nullptr;

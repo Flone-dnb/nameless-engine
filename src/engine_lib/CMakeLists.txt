@@ -158,6 +158,8 @@ set(PROJECT_SOURCES
     private/shader/glsl/resources/GlslShaderResourceHelpers.cpp
     private/shader/glsl/DescriptorSetLayoutGenerator.h
     private/shader/glsl/DescriptorSetLayoutGenerator.cpp
+    private/shader/glsl/GlslComputeShaderInterface.cpp
+    private/shader/glsl/GlslComputeShaderInterface.h
     private/shader/general/resources/LightingShaderResourceManager.h
     private/shader/general/resources/LightingShaderResourceManager.cpp
     public/shader/ComputeShaderInterface.h

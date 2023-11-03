@@ -547,6 +547,235 @@ namespace ne {
         return generatedData;
     }
 
+    std::variant<DescriptorSetLayoutGenerator::Generated, Error>
+    DescriptorSetLayoutGenerator::generate(Renderer* pRenderer, GlslShader* pComputeShader) {
+        PROFILE_FUNC;
+
+        // Make sure we use Vulkan renderer.
+        const auto pVulkanRenderer = dynamic_cast<VulkanRenderer*>(pRenderer);
+        if (pVulkanRenderer == nullptr) [[unlikely]] {
+            return Error("expected a Vulkan renderer");
+        }
+
+        // Make sure that the compute shader is indeed a compute shader.
+        if (pComputeShader->getShaderType() != ShaderType::COMPUTE_SHADER) [[unlikely]] {
+            return Error(std::format(
+                "the specified shader \"{}\" is not a compute shader", pComputeShader->getShaderName()));
+        }
+
+        // Get shader's descriptor layout info.
+        auto pMtxDescriptorLayoutInfo = pComputeShader->getDescriptorSetLayoutInfo();
+        std::scoped_lock shaderDescriptorLayoutInfoGuard(pMtxDescriptorLayoutInfo->first);
+
+        // Make sure it's not empty.
+        if (!pMtxDescriptorLayoutInfo->second.has_value()) [[unlikely]] {
+            return Error(std::format(
+                "unable to generate descriptor layout of the compute shader \"{}\" "
+                "because it does have descriptor layout info collected",
+                pComputeShader->getShaderName()));
+        }
+
+        // Get layout info.
+        auto& descriptorLayoutInfo = pMtxDescriptorLayoutInfo->second.value();
+
+        // Prepare some data to be used.
+        struct LayoutBindingInfo {
+            uint32_t iBindingIndex = 0;
+            GlslResourceType descriptorType = GlslResourceType::COMBINED_SAMPLER;
+        };
+        std::vector<VkDescriptorSetLayoutBinding> vLayoutBindings; // will be used to create layout
+        std::vector<VkDescriptorBindingFlags> vLayoutBindingFlags; // will be used to create layout
+        std::unordered_map<std::string, LayoutBindingInfo>
+            resourceBindings; // will be used for `Generated` data
+        std::unordered_set<unsigned int> usedBindingIndices;
+
+        // Add all bindings used in compute shader.
+        for (const auto& [iBindingIndex, bindingInfo] : descriptorLayoutInfo.bindingInfo) {
+            // Make sure we don't have a resource with this name already.
+            auto bindingIt = resourceBindings.find(bindingInfo.sResourceName);
+            if (bindingIt != resourceBindings.end()) [[unlikely]] {
+                return Error(std::format(
+                    "compute shader \"{}\" has two resources with the same name, "
+                    "please make sure resource names are unique",
+                    pComputeShader->getShaderName()));
+            }
+
+            // See if this binding index is already used by some other resource.
+            const auto usedBindingIndexIt = usedBindingIndices.find(iBindingIndex);
+            if (usedBindingIndexIt != usedBindingIndices.end()) [[unlikely]] {
+                // Error: this binding index is already in use by some other resource.
+                return Error(std::format(
+                    "found 2 resources that use the same binding index {} in compute shader \"{}\"",
+                    iBindingIndex,
+                    pComputeShader->getShaderName()));
+            }
+
+            // Generate layout binding.
+            auto layoutBindingResult = generateLayoutBinding(iBindingIndex, bindingInfo);
+            if (std::holds_alternative<Error>(layoutBindingResult)) [[unlikely]] {
+                auto error = std::get<Error>(std::move(layoutBindingResult));
+                error.addCurrentLocationToErrorStack();
+                return error;
+            }
+
+            // Add binding to be used in layout.
+            auto [binding, bindingFlags] =
+                std::get<std::pair<VkDescriptorSetLayoutBinding, VkDescriptorBindingFlags>>(
+                    layoutBindingResult);
+            vLayoutBindings.push_back(binding);
+            vLayoutBindingFlags.push_back(bindingFlags);
+
+            // Save binding info.
+            LayoutBindingInfo info;
+            info.iBindingIndex = iBindingIndex;
+            info.descriptorType = bindingInfo.resourceType;
+            resourceBindings[bindingInfo.sResourceName] = info;
+
+            // Mark binding index as used.
+            usedBindingIndices.insert(iBindingIndex);
+        }
+
+        // Self check: make sure bindings and binding flags arrays have equal size.
+        if (vLayoutBindings.size() != vLayoutBindingFlags.size()) [[unlikely]] {
+            return Error(std::format(
+                "layout binding array size {} is not equal to layout binding flags array size {} (this is a "
+                "bug, report to developers",
+                vLayoutBindings.size(),
+                vLayoutBindingFlags.size()));
+        }
+
+        // Describe layout binding flags.
+        VkDescriptorSetLayoutBindingFlagsCreateInfo bindingFlags{};
+        bindingFlags.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO;
+        bindingFlags.pNext = nullptr;
+        bindingFlags.pBindingFlags = vLayoutBindingFlags.data();
+        bindingFlags.bindingCount = static_cast<uint32_t>(vLayoutBindingFlags.size());
+
+        // Check if some bindings use "update after bind" flag.
+        bool bUseUpdateAfterBind = false;
+        for (const auto& bindingFlags : vLayoutBindingFlags) {
+            if ((bindingFlags & VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT) != 0) {
+                bUseUpdateAfterBind = true;
+                break;
+            }
+        }
+
+        // Describe descriptor set layout.
+        VkDescriptorSetLayoutCreateInfo layoutInfo{};
+        layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+        layoutInfo.bindingCount = static_cast<uint32_t>(vLayoutBindings.size());
+        layoutInfo.pBindings = vLayoutBindings.data();
+
+        // Make sure we don't use "update after bind" because it's currently not handled properly for compute
+        // shaders.
+        if (bUseUpdateAfterBind) [[unlikely]] {
+            return Error(std::format(
+                "unexpected compute shader \"{}\" to use \"update after bind\"",
+                pComputeShader->getShaderName()));
+        }
+
+        // Specify binding flags.
+        layoutInfo.pNext = &bindingFlags;
+
+        // Prepare output variable.
+        Generated generatedData;
+
+        // Get logical device.
+        const auto pLogicalDevice = pVulkanRenderer->getLogicalDevice();
+        if (pLogicalDevice == nullptr) [[unlikely]] {
+            return Error("expected logical device to be valid");
+        }
+
+        // Create descriptor set layout.
+        auto result = vkCreateDescriptorSetLayout(
+            pLogicalDevice, &layoutInfo, nullptr, &generatedData.pDescriptorSetLayout);
+        if (result != VK_SUCCESS) [[unlikely]] {
+            return Error(
+                std::format("failed to create descriptor set layout, error: {}", string_VkResult(result)));
+        }
+
+        // Continue to create a descriptor pool.
+
+        // Describe descriptor types that our descriptor sets will contain.
+        std::vector<VkDescriptorPoolSize> vPoolSizes(vLayoutBindings.size());
+        for (size_t i = 0; i < vPoolSizes.size(); i++) {
+            auto& descriptorPoolSize = vPoolSizes[i];
+
+            // Specify descriptor type.
+            descriptorPoolSize.type = vLayoutBindings[i].descriptorType;
+
+            // Specify how much descriptors of this type can be allocated using the pool.
+            descriptorPoolSize.descriptorCount =
+                vLayoutBindings[i].descriptorCount *
+                FrameResourcesManager::getFrameResourcesCount(); // also use frame resources just like in
+                                                                 // graphics pipelines to be consistent
+                                                                 // although we don't need that much
+                                                                 // descriptors
+        }
+
+        // Describe descriptor pool.
+        VkDescriptorPoolCreateInfo poolInfo{};
+        poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+        poolInfo.poolSizeCount = static_cast<uint32_t>(vPoolSizes.size());
+        poolInfo.pPoolSizes = vPoolSizes.data();
+
+        // Specify flags.
+        if (bUseUpdateAfterBind) {
+            poolInfo.flags = VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT;
+        }
+
+        // Specify the total amount of descriptor sets that can be allocated from the pool.
+        poolInfo.maxSets =
+            FrameResourcesManager::getFrameResourcesCount(); // same as in graphics to be consistent
+
+        // Create descriptor pool.
+        result = vkCreateDescriptorPool(pLogicalDevice, &poolInfo, nullptr, &generatedData.pDescriptorPool);
+        if (result != VK_SUCCESS) [[unlikely]] {
+            vkDestroyDescriptorSetLayout(pLogicalDevice, generatedData.pDescriptorSetLayout, nullptr);
+            return Error(std::format("failed to create descriptor pool, error: {}", string_VkResult(result)));
+        }
+
+        // Allocate descriptor sets.
+
+        // Prepare layout for each descriptor set to create.
+        std::array<VkDescriptorSetLayout, FrameResourcesManager::getFrameResourcesCount()>
+            vDescriptorLayouts = {generatedData.pDescriptorSetLayout, generatedData.pDescriptorSetLayout};
+
+        // Allocate descriptor sets.
+        VkDescriptorSetAllocateInfo descriptorSetAllocInfo{};
+        descriptorSetAllocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+        descriptorSetAllocInfo.descriptorPool = generatedData.pDescriptorPool;
+        descriptorSetAllocInfo.descriptorSetCount = static_cast<uint32_t>(vDescriptorLayouts.size());
+        descriptorSetAllocInfo.pSetLayouts = vDescriptorLayouts.data();
+
+        // Make sure allocated descriptor set count will fit into our generated descriptor set array.
+        if (descriptorSetAllocInfo.descriptorSetCount != generatedData.vDescriptorSets.size()) [[unlikely]] {
+            vkDestroyDescriptorPool(pLogicalDevice, generatedData.pDescriptorPool, nullptr);
+            vkDestroyDescriptorSetLayout(pLogicalDevice, generatedData.pDescriptorSetLayout, nullptr);
+            return Error(std::format(
+                "attempting to allocate {} descriptor sets will fail because they will not fit into "
+                "the generated array of descriptor sets with size {}",
+                descriptorSetAllocInfo.descriptorSetCount,
+                generatedData.vDescriptorSets.size()));
+        }
+
+        // Allocate descriptor sets.
+        result = vkAllocateDescriptorSets(
+            pLogicalDevice, &descriptorSetAllocInfo, generatedData.vDescriptorSets.data());
+        if (result != VK_SUCCESS) [[unlikely]] {
+            vkDestroyDescriptorPool(pLogicalDevice, generatedData.pDescriptorPool, nullptr);
+            vkDestroyDescriptorSetLayout(pLogicalDevice, generatedData.pDescriptorSetLayout, nullptr);
+            return Error(std::format("failed to create descriptor sets, error: {}", string_VkResult(result)));
+        }
+
+        // Fill resource bindings info.
+        for (const auto& [sResourceName, bindingInfo] : resourceBindings) {
+            generatedData.resourceBindings[sResourceName] = bindingInfo.iBindingIndex;
+        }
+
+        return generatedData;
+    }
+
     std::variant<std::pair<VkDescriptorSetLayoutBinding, VkDescriptorBindingFlags>, Error>
     DescriptorSetLayoutGenerator::generateLayoutBinding(
         uint32_t iBindingIndex, const Collected::DescriptorSetLayoutBindingInfo& bindingInfo) {

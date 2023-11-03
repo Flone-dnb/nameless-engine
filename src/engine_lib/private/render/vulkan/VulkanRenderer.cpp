@@ -23,6 +23,7 @@
 #include "shader/glsl/resources/GlslShaderTextureResource.h"
 #include "render/vulkan/resources/VulkanStorageResourceArrayManager.h"
 #include "game/camera/TransientCamera.h"
+#include "shader/glsl/GlslComputeShaderInterface.h"
 #include "misc/Profiler.hpp"
 
 // External.
@@ -1874,7 +1875,10 @@ namespace ne {
     }
 
     std::optional<Error> VulkanRenderer::prepareForDrawingNextFrame(
-        CameraProperties* pCameraProperties, uint32_t& iAcquiredImageIndex) {
+        CameraProperties* pCameraProperties,
+        uint32_t& iAcquiredImageIndex,
+        std::unordered_map<Pipeline*, std::unordered_set<ComputeShaderInterface*>>&
+            graphicsQueuePreFrameShaders) {
         PROFILE_FUNC;
 
         // Make sure swap chain extent is set.
@@ -1965,6 +1969,30 @@ namespace ne {
                 "failed to start recording commands into a command buffer, error: {}",
                 string_VkResult(result)));
         }
+
+        PROFILE_SCOPE_START(DispatchPreFrameComputeShaders);
+
+        // Dispatch compute shaders.
+        if (dispatchComputeShadersOnGraphicsQueue(
+                pCurrentVulkanFrameResource,
+                pMtxCurrentFrameResource->second.iCurrentFrameResourceIndex,
+                graphicsQueuePreFrameShaders)) {
+            // Insert a synchronization barrier.
+            vkCmdPipelineBarrier(
+                pCurrentVulkanFrameResource->pCommandBuffer,
+                VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, // run all compute shaders before this barrier
+                VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT,   // make all next graphics commands to wait for this
+                                                      // barrier
+                0,
+                0,
+                nullptr,
+                0,
+                nullptr,
+                0,
+                nullptr);
+        }
+
+        PROFILE_SCOPE_END;
 
         // Prepare to begin render pass.
         VkRenderPassBeginInfo renderPassInfo{};
@@ -2215,6 +2243,10 @@ namespace ne {
             bNeedToRecreateSwapchain = false;
         }
 
+        // Get pipeline manager and compute shaders to dispatch.
+        const auto pPipelineManager = getPipelineManager();
+        auto mtxQueuedComputeShader = pPipelineManager->getComputeShadersForGraphicsQueueExecution();
+
         // Get active camera.
         const auto pMtxActiveCamera = getGameManager()->getCameraManager()->getActiveCamera();
 
@@ -2223,7 +2255,10 @@ namespace ne {
 
         // Lock mutexes together to minimize deadlocks.
         std::scoped_lock renderGuard(
-            pMtxActiveCamera->first, *getRenderResourcesMutex(), pMtxCurrentFrameResource->first);
+            pMtxActiveCamera->first,
+            *getRenderResourcesMutex(),
+            pMtxCurrentFrameResource->first,
+            *mtxQueuedComputeShader.first);
 
         // Get camera properties of the active camera.
         CameraProperties* pActiveCameraProperties = nullptr;
@@ -2244,7 +2279,10 @@ namespace ne {
 
         // Setup.
         uint32_t iAcquiredImageIndex = 0;
-        auto optionalError = prepareForDrawingNextFrame(pActiveCameraProperties, iAcquiredImageIndex);
+        auto optionalError = prepareForDrawingNextFrame(
+            pActiveCameraProperties,
+            iAcquiredImageIndex,
+            mtxQueuedComputeShader.second->graphicsQueuePreFrameShaders);
         if (optionalError.has_value()) [[unlikely]] {
             auto error = optionalError.value();
             error.addCurrentLocationToErrorStack();
@@ -2340,7 +2378,8 @@ namespace ne {
         optionalError = finishDrawingNextFrame(
             pVulkanCurrentFrameResource,
             pMtxCurrentFrameResource->second.iCurrentFrameResourceIndex,
-            iAcquiredImageIndex);
+            iAcquiredImageIndex,
+            mtxQueuedComputeShader.second->graphicsQueuePostFrameShaders);
         if (optionalError.has_value()) [[unlikely]] {
             auto error = optionalError.value();
             error.addCurrentLocationToErrorStack();
@@ -2488,7 +2527,9 @@ namespace ne {
     std::optional<Error> VulkanRenderer::finishDrawingNextFrame(
         VulkanFrameResource* pCurrentFrameResource,
         size_t iCurrentFrameResourceIndex,
-        uint32_t iAcquiredImageIndex) {
+        uint32_t iAcquiredImageIndex,
+        std::unordered_map<Pipeline*, std::unordered_set<ComputeShaderInterface*>>&
+            graphicsQueuePostFrameShaders) {
         PROFILE_FUNC;
 
         // Convert current frame resource.
@@ -2497,6 +2538,31 @@ namespace ne {
 
         // Mark render pass end.
         vkCmdEndRenderPass(pVulkanCurrentFrameResource->pCommandBuffer);
+
+        PROFILE_SCOPE_START(DispatchPostFrameComputeShaders);
+
+        // See if we have compute shaders to dispatch.
+        if (!graphicsQueuePostFrameShaders.empty()) {
+            // Insert a synchronization barrier.
+            vkCmdPipelineBarrier(
+                pVulkanCurrentFrameResource->pCommandBuffer,
+                VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT,   // run all graphics commands before this barrier
+                VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, // make all next compute commands to wait for this
+                                                      // barrier
+                0,
+                0,
+                nullptr,
+                0,
+                nullptr,
+                0,
+                nullptr);
+
+            // Dispatch compute shaders.
+            dispatchComputeShadersOnGraphicsQueue(
+                pVulkanCurrentFrameResource, iCurrentFrameResourceIndex, graphicsQueuePostFrameShaders);
+        }
+
+        PROFILE_SCOPE_END;
 
         // Mark end of command recording.
         auto result = vkEndCommandBuffer(pVulkanCurrentFrameResource->pCommandBuffer);
@@ -2674,6 +2740,54 @@ namespace ne {
         }
 
         return {};
+    }
+
+    bool VulkanRenderer::dispatchComputeShadersOnGraphicsQueue(
+        VulkanFrameResource* pCurrentFrameResource,
+        size_t iCurrentFrameResourceIndex,
+        std::unordered_map<Pipeline*, std::unordered_set<ComputeShaderInterface*>>&
+            computePipelinesToSubmit) {
+        // Make sure we have shaders to dispatch.
+        if (computePipelinesToSubmit.empty()) {
+            return false;
+        }
+
+        // Execution order synchronization is done outside of this function.
+
+        for (const auto& [pPipeline, computeShaders] : computePipelinesToSubmit) {
+            // Get internal resources of this pipeline.
+            const auto pVulkanPipeline = reinterpret_cast<VulkanPipeline*>(pPipeline);
+            auto pMtxPipelineResources = pVulkanPipeline->getInternalResources();
+            std::scoped_lock guardPipelineResources(pMtxPipelineResources->first);
+
+            // Bind pipeline.
+            vkCmdBindPipeline(
+                pCurrentFrameResource->pCommandBuffer,
+                VK_PIPELINE_BIND_POINT_COMPUTE,
+                pMtxPipelineResources->second.pPipeline);
+
+            // Bind descriptor sets.
+            vkCmdBindDescriptorSets(
+                pCurrentFrameResource->pCommandBuffer,
+                VK_PIPELINE_BIND_POINT_COMPUTE,
+                pMtxPipelineResources->second.pPipelineLayout,
+                0,
+                1,
+                &pMtxPipelineResources->second.vDescriptorSets[iCurrentFrameResourceIndex],
+                0,
+                nullptr);
+
+            // Dispatch each compute shader.
+            for (const auto& pComputeInterface : computeShaders) {
+                reinterpret_cast<GlslComputeShaderInterface*>(pComputeInterface)
+                    ->dispatchOnGraphicsQueue(pCurrentFrameResource->pCommandBuffer);
+            }
+        }
+
+        // Clear map because we submitted all shaders.
+        computePipelinesToSubmit.clear();
+
+        return true;
     }
 
     std::optional<Error> VulkanRenderer::onRenderSettingsChanged() {

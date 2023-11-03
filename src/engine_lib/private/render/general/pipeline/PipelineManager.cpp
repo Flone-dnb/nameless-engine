@@ -132,7 +132,7 @@ namespace ne {
         }
 
         // Make sure all compute pipelines were destroyed.
-        const auto iActiveComputePipelines = computePipelines.getComputePipelineCount();
+        const auto iActiveComputePipelines = getCurrentComputePipelineCount();
         if (iActiveComputePipelines != 0) [[unlikely]] {
             // Log error.
             Logger::get().error(fmt::format(
@@ -233,6 +233,10 @@ namespace ne {
         }
 
         return iTotalCount;
+    }
+
+    size_t PipelineManager::getCurrentComputePipelineCount() {
+        return computePipelines.getComputePipelineCount();
     }
 
     Renderer* PipelineManager::getRenderer() const { return pRenderer; }

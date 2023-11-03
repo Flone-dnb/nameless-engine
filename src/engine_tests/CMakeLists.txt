@@ -43,6 +43,7 @@ set(PROJECT_SOURCES
     src/render/RenderSettings.cpp
     src/render/vulkan/VulkanStorageResourceArray.cpp
     src/render/Pipeline.cpp
+    src/render/PipelineManager.cpp
     src/math/GLMath.cpp
     src/math/MathHelpers.cpp
     src/game/GameManager.cpp

@@ -374,6 +374,13 @@ namespace ne {
         size_t getCurrentGraphicsPipelineCount();
 
         /**
+         * Returns the total number of currently existing compute pipelines.
+         *
+         * @return The total number of currently existing compute pipelines.
+         */
+        size_t getCurrentComputePipelineCount();
+
+        /**
          * Returns renderer that owns this pipeline manager.
          *
          * @return Renderer.

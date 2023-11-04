@@ -19,7 +19,10 @@ namespace ne {
         VulkanResourceManager* pResourceManager,
         const std::string& sResourceName,
         std::variant<VkBuffer, VkImage> pInternalResource,
-        VmaAllocation pResourceMemory) {
+        VmaAllocation pResourceMemory,
+        unsigned int iElementSizeInBytes,
+        unsigned int iElementCount)
+        : GpuResource(iElementSizeInBytes, iElementCount) {
         // Initialize fields.
         this->pResourceManager = pResourceManager;
         this->sResourceName = sResourceName;
@@ -39,7 +42,8 @@ namespace ne {
     VulkanResource::VulkanResource(
         VulkanResourceManager* pResourceManager,
         const std::string& sResourceName,
-        ktxVulkanTexture ktxTexture) {
+        ktxVulkanTexture ktxTexture)
+        : GpuResource(0, 0) {
         // Initialize fields.
         this->pResourceManager = pResourceManager;
         this->sResourceName = sResourceName;
@@ -117,7 +121,9 @@ namespace ne {
         const std::string& sResourceName,
         VmaAllocator pMemoryAllocator,
         const VkBufferCreateInfo& bufferInfo,
-        const VmaAllocationCreateInfo& allocationInfo) {
+        const VmaAllocationCreateInfo& allocationInfo,
+        unsigned int iElementSizeInBytes,
+        unsigned int iElementCount) {
         // Prepare variables for created data.
         VkBuffer pCreatedBuffer = nullptr;
         VmaAllocation pCreatedMemory = nullptr;
@@ -133,8 +139,13 @@ namespace ne {
         // Set allocation name.
         vmaSetAllocationName(pMemoryAllocator, pCreatedMemory, sResourceName.c_str());
 
-        return std::unique_ptr<VulkanResource>(
-            new VulkanResource(pResourceManager, sResourceName, pCreatedBuffer, pCreatedMemory));
+        return std::unique_ptr<VulkanResource>(new VulkanResource(
+            pResourceManager,
+            sResourceName,
+            pCreatedBuffer,
+            pCreatedMemory,
+            iElementSizeInBytes,
+            iElementCount));
     }
 
     std::variant<std::unique_ptr<VulkanResource>, Error> VulkanResource::create(
@@ -160,7 +171,7 @@ namespace ne {
         vmaSetAllocationName(pMemoryAllocator, pCreatedMemory, sResourceName.c_str());
 
         auto pCreatedImageResource = std::unique_ptr<VulkanResource>(
-            new VulkanResource(pResourceManager, sResourceName, pCreatedImage, pCreatedMemory));
+            new VulkanResource(pResourceManager, sResourceName, pCreatedImage, pCreatedMemory, 0, 0));
 
         if (viewDescription.has_value()) {
             // Convert renderer.

@@ -99,15 +99,13 @@ namespace ne {
          * Constructor. Creates an empty resource.
          *
          * @param pResourceManager     Owner resource manager.
-         * @param iElementSizeInBytes  Optional parameter. Specify if this resource represents
-         * an array. Used for SRV creation.
-         * @param iElementCount        Optional parameter. Specify if this resource represents
-         * an array. Used for SRV creation.
+         * @param iElementSizeInBytes  Resource size information. Size of one array element (if array),
+         * otherwise specify size of the whole resource.
+         * @param iElementCount        Resource size information. Total number of elements in the array (if
+         * array), otherwise specify 1.
          */
         DirectXResource(
-            const DirectXResourceManager* pResourceManager,
-            UINT iElementSizeInBytes = 0,
-            UINT iElementCount = 0);
+            const DirectXResourceManager* pResourceManager, UINT iElementSizeInBytes, UINT iElementCount);
 
         /**
          * Creates a new resource (without binding a descriptor to it).
@@ -176,19 +174,5 @@ namespace ne {
          * to internal resource.
          */
         ID3D12Resource* pInternalResource = nullptr;
-
-        /**
-         * Not zero if this resource represents an array (for ex. StructuredBuffer).
-         *
-         * @remark Used for SRV creation.
-         */
-        const UINT iElementSizeInBytes = 0;
-
-        /**
-         * Not zero if this resource represents an array (for ex. StructuredBuffer).
-         *
-         * @remark Used for SRV creation.
-         */
-        const UINT iElementCount = 0;
     };
 } // namespace ne

@@ -16,7 +16,12 @@ namespace ne {
     class GpuResource;
 
     /** Describes how a resource will be used. */
-    enum class ResourceUsageType { VERTEX_BUFFER, INDEX_BUFFER, OTHER };
+    enum class ResourceUsageType {
+        VERTEX_BUFFER, ///< Vertex buffer.
+        INDEX_BUFFER,  ///< Index buffer.
+        ARRAY_BUFFER,  ///< `(RW)StructuredBuffer` or storage buffer (`(readonly) buffer`).
+        OTHER
+    };
 
     /** Allows creating GPU resources. */
     class GpuResourceManager {

@@ -62,13 +62,19 @@ namespace ne {
          * @param sResourceName   Name of the created resource.
          * @param bufferInfo      Description of the created buffer resource.
          * @param allocationInfo  Description of created buffer's memory allocation.
+         * @param iElementSizeInBytes  Resource size information. Size of one array element (if array),
+         * otherwise specify size of the whole resource.
+         * @param iElementCount        Resource size information. Total number of elements in the array (if
+         * array), otherwise specify 1.
          *
          * @return Error if something went wrong, otherwise created buffer resource.
          */
         std::variant<std::unique_ptr<VulkanResource>, Error> createBuffer(
             const std::string& sResourceName,
             const VkBufferCreateInfo& bufferInfo,
-            const VmaAllocationCreateInfo& allocationInfo);
+            const VmaAllocationCreateInfo& allocationInfo,
+            unsigned int iElementSizeInBytes,
+            unsigned int iElementCount);
 
         /**
          * Creates a new image and allocates a new memory for it.
@@ -212,6 +218,10 @@ namespace ne {
          * @param bAllowCpuWrite  Describes memory properties of the created buffer.
          * If `true` the memory will be `HOST_VISIBLE`, `HOST_COHERENT`,
          * otherwise `DEVICE_LOCAL`.
+         * @param iElementSizeInBytes  Resource size information. Size of one array element (if array),
+         * otherwise specify size of the whole resource.
+         * @param iElementCount        Resource size information. Total number of elements in the array (if
+         * array), otherwise specify 1.
          *
          * @return Error if something went wrong, otherwise created resource.
          */
@@ -219,7 +229,9 @@ namespace ne {
             const std::string& sResourceName,
             VkDeviceSize iBufferSize,
             VkBufferUsageFlags bufferUsage,
-            bool bAllowCpuWrite);
+            bool bAllowCpuWrite,
+            unsigned int iElementSizeInBytes,
+            unsigned int iElementCount);
 
         /** Total number of created resources that were not destroyed yet. */
         std::atomic<size_t> iAliveResourceCount{0};

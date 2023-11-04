@@ -103,12 +103,18 @@ namespace ne {
          * @param sResourceName     Name of the resource.
          * @param pInternalResource Created Vulkan resource.
          * @param pResourceMemory   Allocated memory for the created Vulkan resource.
+         * @param iElementSizeInBytes  Resource size information. Size of one array element (if array),
+         * otherwise specify size of the whole resource.
+         * @param iElementCount        Resource size information. Total number of elements in the array (if
+         * array), otherwise specify 1.
          */
         VulkanResource(
             VulkanResourceManager* pResourceManager,
             const std::string& sResourceName,
             std::variant<VkBuffer, VkImage> pInternalResource,
-            VmaAllocation pResourceMemory);
+            VmaAllocation pResourceMemory,
+            unsigned int iElementSizeInBytes,
+            unsigned int iElementCount);
 
         /**
          * Constructor. Initializes resources as a wrapper for KTX image.
@@ -131,6 +137,10 @@ namespace ne {
          * @param pMemoryAllocator Allocator to create resource.
          * @param bufferInfo       Buffer creation info.
          * @param allocationInfo   Allocation creation info.
+         * @param iElementSizeInBytes  Resource size information. Size of one array element (if array),
+         * otherwise specify size of the whole resource.
+         * @param iElementCount        Resource size information. Total number of elements in the array (if
+         * array), otherwise specify 1.
          *
          * @return Error if something went wrong, otherwise created resource.
          */
@@ -139,7 +149,9 @@ namespace ne {
             const std::string& sResourceName,
             VmaAllocator pMemoryAllocator,
             const VkBufferCreateInfo& bufferInfo,
-            const VmaAllocationCreateInfo& allocationInfo);
+            const VmaAllocationCreateInfo& allocationInfo,
+            unsigned int iElementSizeInBytes,
+            unsigned int iElementCount);
 
         /**
          * Creates a new image resource.

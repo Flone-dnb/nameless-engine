@@ -98,8 +98,16 @@ namespace ne {
                     return error;
                 }
             } else if (resourceDesc.Type == D3D_SIT_STRUCTURED) {
-                auto optionalError =
-                    addStructuredBufferRootParameter(vRootParameters, rootParameterIndices, resourceDesc);
+                auto optionalError = addStructuredBufferRootParameter(
+                    vRootParameters, rootParameterIndices, resourceDesc, false);
+                if (optionalError.has_value()) [[unlikely]] {
+                    auto error = optionalError.value();
+                    error.addCurrentLocationToErrorStack();
+                    return error;
+                }
+            } else if (resourceDesc.Type == D3D_SIT_UAV_RWSTRUCTURED) {
+                auto optionalError = addStructuredBufferRootParameter(
+                    vRootParameters, rootParameterIndices, resourceDesc, true);
                 if (optionalError.has_value()) [[unlikely]] {
                     auto error = optionalError.value();
                     error.addCurrentLocationToErrorStack();
@@ -107,7 +115,7 @@ namespace ne {
                 }
             } else [[unlikely]] {
                 return Error(std::format(
-                    "encountered unhandled resource type \"{}\" (not implemented)",
+                    "encountered unhandled shader resource type \"{}\" (not implemented)",
                     static_cast<int>(resourceDesc.Type)));
             }
         }
@@ -622,9 +630,12 @@ namespace ne {
     std::optional<Error> RootSignatureGenerator::addStructuredBufferRootParameter(
         std::vector<RootParameter>& vRootParameters,
         std::unordered_map<std::string, std::pair<UINT, RootParameter>>& rootParameterIndices,
-        const D3D12_SHADER_INPUT_BIND_DESC& resourceDescription) {
-        auto newRootParameter =
-            RootParameter(resourceDescription.BindPoint, resourceDescription.Space, RootParameter::Type::SRV);
+        const D3D12_SHADER_INPUT_BIND_DESC& resourceDescription,
+        bool bIsReadWrite) {
+        auto newRootParameter = RootParameter(
+            resourceDescription.BindPoint,
+            resourceDescription.Space,
+            bIsReadWrite ? RootParameter::Type::UAV : RootParameter::Type::SRV);
 
         // Make sure this resource name is unique, save its root index.
         auto optionalError = addUniquePairResourceNameRootParameterIndex(
@@ -657,11 +668,6 @@ namespace ne {
             Error error("root parameter descriptor count cannot be zero");
             error.showError();
             throw std::runtime_error(error.getFullErrorMessage());
-        }
-
-        // Set visibility.
-        if (type == RootParameter::Type::SRV) {
-            visibility = D3D12_SHADER_VISIBILITY_PIXEL;
         }
     }
 

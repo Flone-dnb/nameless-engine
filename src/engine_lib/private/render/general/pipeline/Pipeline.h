@@ -95,7 +95,8 @@ namespace ne {
         std::pair<std::mutex, std::set<Material*>>* getMaterialsThatUseThisPipeline();
 
         /**
-         * Constructs and returns identifier of this pipeline (uses @ref constructPipelineIdentifier).
+         * Constructs and returns identifier of this pipeline (uses @ref constructPipelineIdentifier
+         * if vertex/pixel/fragment shaders are used, otherwise might just return used shader name).
          *
          * @return A (not unique) pipeline identifier.
          */

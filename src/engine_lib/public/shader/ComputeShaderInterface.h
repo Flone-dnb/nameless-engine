@@ -3,15 +3,23 @@
 // Standard.
 #include <string>
 #include <memory>
+#include <vector>
 #include <variant>
 #include <functional>
 
 // Custom.
 #include "misc/Error.h"
 #include "render/general/pipeline/PipelineManager.h"
+#include "render/general/resources/GpuResource.h"
 
 namespace ne {
     class Renderer;
+
+    /** Describes usage of a resource. */
+    enum class ComputeResourceUsage {
+        READ_ONLY_ARRAY_BUFFER,  //< `StructuredBuffer` in HLSL, `readonly buffer` in GLSL.
+        READ_WRITE_ARRAY_BUFFER, //< `RWStructuredBuffer` in HLSL, `buffer` in GLSL.
+    };
 
     /** Interface to configure and run a compute shader. */
     class ComputeShaderInterface {
@@ -46,6 +54,36 @@ namespace ne {
             Renderer* pRenderer,
             const std::string& sCompiledComputeShaderName,
             bool bRunBeforeFrameRendering);
+
+        /**
+         * Takes ownership of the specified resource and binds it to be available in compute shader.
+         *
+         * @param pResource           Resource to bind to compute shader.
+         * @param sShaderResourceName Resource name from shader.
+         * @param usage               Resource usage.
+         *
+         * @return Error if something went wrong.
+         */
+        [[nodiscard]] std::optional<Error> bindResource(
+            std::unique_ptr<GpuResource> pResource,
+            const std::string& sShaderResourceName,
+            ComputeResourceUsage usage);
+
+        /**
+         * Binds the specified resource to be available in compute shaders.
+         *
+         * @warning This overload is used in cases where you cannot transfer resource ownership to the
+         * compute shader interface. In this case you must guarantee that the resource will not be deleted
+         * while this compute shader interface exists and while the GPU is processing this compute shader.
+         *
+         * @param pResource           Resource to bind to compute shader.
+         * @param sShaderResourceName Resource name from shader.
+         * @param usage               Resource usage.
+         *
+         * @return Error if something went wrong.
+         */
+        [[nodiscard]] virtual std::optional<Error> bindResource(
+            GpuResource* pResource, const std::string& sShaderResourceName, ComputeResourceUsage usage) = 0;
 
         /**
          * Adds this compute shader to the GPU queue to be executed.
@@ -158,6 +196,9 @@ namespace ne {
         inline unsigned int getThreadGroupCountZ() const { return iThreadGroupCountZ; }
 
     private:
+        /** Resources that this compute interface took ownership of. */
+        std::vector<std::unique_ptr<GpuResource>> vOwnedResources;
+
         /** Do not delete (free) this pointer. A non-owning pointer to the renderer. */
         Renderer* pRenderer = nullptr;
 

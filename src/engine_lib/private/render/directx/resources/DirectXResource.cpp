@@ -71,7 +71,7 @@ namespace ne {
         const DirectXResourceManager* pResourceManager,
         DirectXDescriptorHeap* pRtvHeap,
         const ComPtr<ID3D12Resource>& pSwapChainBuffer) {
-        auto pCreatedResource = std::unique_ptr<DirectXResource>(new DirectXResource(pResourceManager));
+        auto pCreatedResource = std::unique_ptr<DirectXResource>(new DirectXResource(pResourceManager, 0, 0));
 
         pCreatedResource->pSwapChainBuffer = pSwapChainBuffer;
 
@@ -140,7 +140,7 @@ namespace ne {
 
     DirectXResource::DirectXResource(
         const DirectXResourceManager* pResourceManager, UINT iElementSizeInBytes, UINT iElementCount)
-        : iElementSizeInBytes(iElementSizeInBytes), iElementCount(iElementCount) {
+        : GpuResource(iElementSizeInBytes, iElementCount) {
         this->pResourceManager = pResourceManager;
         mtxHeapDescriptors.second.resize(static_cast<int>(DirectXDescriptorType::END));
     }

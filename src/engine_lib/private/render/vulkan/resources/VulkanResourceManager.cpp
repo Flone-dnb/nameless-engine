@@ -30,7 +30,9 @@ namespace ne {
         const std::string& sResourceName,
         VkDeviceSize iBufferSize,
         VkBufferUsageFlags bufferUsage,
-        bool bAllowCpuWrite) {
+        bool bAllowCpuWrite,
+        unsigned int iElementSizeInBytes,
+        unsigned int iElementCount) {
         // Describe buffer.
         VkBufferCreateInfo bufferInfo{};
         bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -49,7 +51,8 @@ namespace ne {
         }
 
         // Create resource.
-        auto result = createBuffer(sResourceName, bufferInfo, allocationCreateInfo);
+        auto result =
+            createBuffer(sResourceName, bufferInfo, allocationCreateInfo, iElementSizeInBytes, iElementCount);
         if (std::holds_alternative<Error>(result)) {
             auto error = std::get<Error>(std::move(result));
             error.addCurrentLocationToErrorStack();
@@ -68,6 +71,10 @@ namespace ne {
         }
         case (ResourceUsageType::INDEX_BUFFER): {
             return VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+            break;
+        }
+        case (ResourceUsageType::ARRAY_BUFFER): {
+            return VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
             break;
         }
         case (ResourceUsageType::OTHER): {
@@ -230,9 +237,17 @@ namespace ne {
     std::variant<std::unique_ptr<VulkanResource>, Error> VulkanResourceManager::createBuffer(
         const std::string& sResourceName,
         const VkBufferCreateInfo& bufferInfo,
-        const VmaAllocationCreateInfo& allocationInfo) {
-        auto result =
-            VulkanResource::create(this, sResourceName, pMemoryAllocator, bufferInfo, allocationInfo);
+        const VmaAllocationCreateInfo& allocationInfo,
+        unsigned int iElementSizeInBytes,
+        unsigned int iElementCount) {
+        auto result = VulkanResource::create(
+            this,
+            sResourceName,
+            pMemoryAllocator,
+            bufferInfo,
+            allocationInfo,
+            iElementSizeInBytes,
+            iElementCount);
         if (std::holds_alternative<Error>(result)) {
             auto error = std::get<Error>(std::move(result));
             error.addCurrentLocationToErrorStack();
@@ -283,8 +298,20 @@ namespace ne {
             }
         }
 
+        // Make sure resource information will not hit type limit.
+        if (iElementSizeInBytes > std::numeric_limits<unsigned int>::max() ||
+            iElementCount > std::numeric_limits<unsigned int>::max()) [[unlikely]] {
+            return Error("resource size is too big");
+        }
+
         // Create buffer.
-        auto result = createBuffer(sResourceName, iBufferSizeInBytes, usage, true);
+        auto result = createBuffer(
+            sResourceName,
+            iBufferSizeInBytes,
+            usage,
+            true,
+            static_cast<unsigned int>(iElementSizeInBytes),
+            static_cast<unsigned int>(iElementCount));
         if (std::holds_alternative<Error>(result)) {
             auto error = std::get<Error>(std::move(result));
             error.addCurrentLocationToErrorStack();
@@ -324,8 +351,20 @@ namespace ne {
                                        ? VK_BUFFER_USAGE_TRANSFER_DST_BIT | optionalResourceUsage.value()
                                        : VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 
+        // Make sure resource information will not hit type limit.
+        if (iElementSizeInBytes > std::numeric_limits<unsigned int>::max() ||
+            iElementCount > std::numeric_limits<unsigned int>::max()) [[unlikely]] {
+            return Error("resource size is too big");
+        }
+
         // Create the final GPU resource to copy the data to.
-        auto finalResourceResult = createBuffer(sResourceName, iDataSizeInBytes, resourceUsage, false);
+        auto finalResourceResult = createBuffer(
+            sResourceName,
+            iDataSizeInBytes,
+            resourceUsage,
+            false,
+            static_cast<unsigned int>(iElementSizeInBytes),
+            static_cast<unsigned int>(iElementCount));
         if (std::holds_alternative<Error>(finalResourceResult)) {
             auto error = std::get<Error>(std::move(finalResourceResult));
             error.addCurrentLocationToErrorStack();

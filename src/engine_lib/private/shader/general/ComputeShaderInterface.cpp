@@ -17,6 +17,18 @@ namespace ne {
     }
 
     ComputeShaderInterface::~ComputeShaderInterface() {
+#if defined(DEBUG)
+        static_assert(
+            sizeof(ComputeShaderInterface) == 136,
+            "if added support for running using compute queue add a branch here and don't wait for graphics "
+            "queue instead wait for compute queue");
+#endif
+        // Make sure the GPU is not using our resources.
+        pRenderer->waitForGpuToFinishWorkUpToThisPoint();
+
+        // Destroy all resources.
+        vOwnedResources.clear();
+
         // Explicitly reset used pipeline to notify pipeline manager
         // in case the manager would want to use our member functions so that
         // these calls will still be valid.
@@ -27,6 +39,23 @@ namespace ne {
     ComputeShaderInterface::createUsingGraphicsQueue(
         Renderer* pRenderer, const std::string& sCompiledComputeShaderName, bool bRunBeforeFrameRendering) {
         return createRenderSpecificInterface(pRenderer, sCompiledComputeShaderName, bRunBeforeFrameRendering);
+    }
+
+    std::optional<Error> ComputeShaderInterface::bindResource(
+        std::unique_ptr<GpuResource> pResource,
+        const std::string& sShaderResourceName,
+        ComputeResourceUsage usage) {
+        // Call derived logic.
+        auto optionalError = bindResource(pResource.get(), sShaderResourceName, usage);
+        if (optionalError.has_value()) [[unlikely]] {
+            optionalError->addCurrentLocationToErrorStack();
+            return optionalError;
+        }
+
+        // Add resource to the array of owned resources.
+        vOwnedResources.push_back(std::move(pResource));
+
+        return {};
     }
 
     std::unique_ptr<ComputeShaderInterface>

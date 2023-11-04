@@ -789,7 +789,7 @@ namespace ne {
         layoutBinding.descriptorCount = 1;
 
         // Set stage.
-        layoutBinding.stageFlags = VK_SHADER_STAGE_ALL_GRAPHICS;
+        layoutBinding.stageFlags = VK_SHADER_STAGE_ALL;
 
         // Set descriptor type.
         switch (bindingInfo.resourceType) {
@@ -811,9 +811,6 @@ namespace ne {
             // Specify flags for bindless bindings.
             bindingFlags =
                 VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT;
-
-            // Override stage.
-            layoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
             break;
         }
         default: {

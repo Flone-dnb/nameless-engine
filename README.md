@@ -270,7 +270,9 @@ Here is the list of base features that needs to be implemented in order for you 
         - [X] Diffuse textures
         - [X] Multiple materials per mesh
         - [X] Frustum culling
+        - [X] Custom vertex/pixel/fragment shaders
     - [ ] Forward+ (Tiled Forward) rendering
+        - [X] Custom compute shaders
         - [ ] Transparent materials
         - [ ] AA (Anti-aliasing)
         - [ ] Light sources

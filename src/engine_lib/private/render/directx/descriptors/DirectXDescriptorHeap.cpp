@@ -344,7 +344,7 @@ namespace ne {
             }
             case (D3D12_RESOURCE_DIMENSION_BUFFER): {
                 // Make sure element size / count are specified.
-                if (pResource->iElementSizeInBytes == 0 || pResource->iElementCount == 0) {
+                if (pResource->getElementSizeInBytes() == 0 || pResource->getElementCount() == 0) {
                     Error error(std::format(
                         "unable to create an SRV for resource \"{}\" because its element size/count were not "
                         "specified",
@@ -354,8 +354,8 @@ namespace ne {
                 }
                 srvDesc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
                 srvDesc.Buffer.FirstElement = 0;
-                srvDesc.Buffer.StructureByteStride = pResource->iElementSizeInBytes;
-                srvDesc.Buffer.NumElements = pResource->iElementCount;
+                srvDesc.Buffer.StructureByteStride = pResource->getElementSizeInBytes();
+                srvDesc.Buffer.NumElements = pResource->getElementCount();
                 srvDesc.Format = DXGI_FORMAT_UNKNOWN; // must be `UNKNOWN` if `StructureByteStride` is not 0
                 break;
             }
@@ -379,6 +379,11 @@ namespace ne {
         case (DirectXDescriptorType::UAV): {
             const auto resourceDesc = pResource->getInternalResource()->GetDesc();
 
+            // Prepare base description.
+            D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc = {};
+            uavDesc.Format = resourceDesc.Format;
+            uavDesc.Texture2D.MipSlice = 0;
+
             // Determine UAV dimension.
             D3D12_UAV_DIMENSION uavDimension = D3D12_UAV_DIMENSION_UNKNOWN;
             switch (resourceDesc.Dimension) {
@@ -399,10 +404,26 @@ namespace ne {
                 break;
             }
 
-            D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc = {};
-            uavDesc.Format = resourceDesc.Format;
+            if (resourceDesc.Dimension == D3D12_RESOURCE_DIMENSION_UNKNOWN ||
+                D3D12_RESOURCE_DIMENSION_BUFFER) {
+                // Make sure element size / count are specified.
+                if (pResource->getElementSizeInBytes() == 0 || pResource->getElementCount() == 0) {
+                    Error error(std::format(
+                        "unable to create an SRV for resource \"{}\" because its element size/count were not "
+                        "specified",
+                        pResource->getResourceName()));
+                    error.showError();
+                    throw std::runtime_error(error.getFullErrorMessage());
+                }
+
+                uavDesc.Buffer.FirstElement = 0;
+                uavDesc.Buffer.StructureByteStride = pResource->getElementSizeInBytes();
+                uavDesc.Buffer.NumElements = pResource->getElementCount();
+                uavDesc.Format = DXGI_FORMAT_UNKNOWN; // must be `UNKNOWN` if `StructureByteStride` is not 0
+            }
+
+            // Set view dimension.
             uavDesc.ViewDimension = uavDimension;
-            uavDesc.Texture2D.MipSlice = 0;
 
             // Create UAV.
             pRenderer->getD3dDevice()->CreateUnorderedAccessView(

@@ -2626,6 +2626,8 @@ At the time of writing this there is no compression/encryption of the game's res
 
 ## Writing custom shaders
 
+### Introduction
+
 This section expects that you have knowledge in writing programs in HLSL and/or GLSL.
 
 You might have heard the term "shader" from other games or game engines but if you have very little understanding in what a shader is, here is a very small description:
@@ -2633,6 +2635,8 @@ You might have heard the term "shader" from other games or game engines but if y
 
 Note: currently we are looking for a solution that will make writing custom shaders easier but right now writing custom shaders is not that simple:
 > Right now if you want to go beyond what Material provides to you and achieve some special look of your meshes you would have to write shaders in both HLSL and GLSL if you want your game to support both DirectX and Vulkan renderers that we have because each graphics API (like DirectX or Vulkan) has its own shading language. If you know that you don't want Vulkan support and don't care about Linux and other non-Windows platforms then you might just write a shader in HLSL and ignore GLSL, this would mean that any attempt to run your game using Vulkan renderer will fail with an error.
+
+### Writing custom vertex/pixel/fragment shaders
 
 Here are the steps to create a new custom shader:
 
@@ -2701,6 +2705,50 @@ Please note:
 > If you got an idea of displaying a splash screen using a separate `GameInstance` (before starting your game's `GameInstance`) in order to compile your shaders inside of that splash screen game instance it would be a bad idea because `compileShaders` will be called twice (inside of your splash screen game instance and inside of your game's game instance) which means that even if no shader was changed the shader cache will be checked twice which might take some time if you have lots of shaders.
 
 As you might have noticed in the `res/engine/shaders` directory there are `.glsl` shaders outside of the `glsl`/`hlsl` directory. These shaders contain code that can be used in both HLSL and GLSL. Before passing shader code to a shader compiler we parse the code from disk using a special but simple parser (see https://github.com/Flone-dnb/combined-shader-language-parser). It allows mixing HLSL and GLSL code. You can also use such functionality and have just one shader file instead of separate HLSL and GLSL files if you want.
+
+### Writing custom compute shaders
+
+Shader compilation for compute shaders is the same as from the previous section that described custom vertex/pixel/fragment shaders. What's different is how we interact with compute shaders.
+
+After you have compiled your compute shader you need to create a special "interface" object to interact with your compute shader (specify input/output resources, dispatch it and etc.). Let's consider an example where you want to calculate some data (stored in a resource) that will be used during the rendering:
+
+```Cpp
+#include "shader/ComputeShaderInterface.h"
+
+void MyGameInstance::onGameStarted(){
+    // ... compile compute shader ...
+    // on compilation finished:
+
+    // Create shader interface.
+    auto computeInterfaceResult = ComputeShaderInterface::createUsingGraphicsQueue(
+        getWindow()->getRenderer(),  // renderer
+        "my.compute.shader.name",    // shader name
+        true);                       // `true` to run it before we start drawing the world
+    if (std::holds_alternative<Error>(computeInterfaceResult)) {
+        // ... handle error ...
+    }
+    pComputeShaderInterface = std::get<std::unique_ptr<ComputeShaderInterface>>(std::move(computeInterfaceResult));
+
+    // Create a resource that we will use in compute shader.
+    auto resourceCreationResult = getWindow()->getRenderer()->getResourceManager()->createResourceWithData(...);
+    if (std::holds_alternative<Error>(resourceCreationResult)) {
+        // ... handle error ...
+    }
+    auto pComputeResource = std::get<std::unique_ptr<GpuResource>>(std::move(resourceCreationResult));
+
+    // Bind resource to be available in compute shader.
+    optionalError = pComputeShaderInterface->bindResource(
+        pComputeResource.get(), "result", ComputeResourceUsage::READ_WRITE_ARRAY_BUFFER);
+    if (optionalError.has_value()) {
+        // ... handle error ...
+    }
+
+    // Submit our shader.
+    pComputeShaderInterface->submitForExecution(1, 2, 3);
+}
+```
+
+Here our shader will be run only once before the first frame is rendered, if you want to regularly run your shader you just need to re`submitForExecution` it in your `onBeforeNewFrame` (for example). For more information, see function documentation.
 
 ### Debugging custom shaders
 

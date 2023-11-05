@@ -691,7 +691,7 @@ namespace ne {
          *
          * @return `true` if dispatched some shaders, `false` if nothing to dispatch.
          */
-        bool dispatchComputeShadersOnGraphicsQueue(
+        static bool dispatchComputeShadersOnGraphicsQueue(
             VulkanFrameResource* pCurrentFrameResource,
             size_t iCurrentFrameResourceIndex,
             std::unordered_map<Pipeline*, std::unordered_set<ComputeShaderInterface*>>&

@@ -496,7 +496,7 @@ namespace ne {
              *
              * @return Error if something went wrong.
              */
-            [[nodiscard]] std::optional<Error> queueComputeShaderInterfaceForExecution(
+            [[nodiscard]] static std::optional<Error> queueComputeShaderInterfaceForExecution(
                 std::unordered_map<Pipeline*, std::unordered_set<ComputeShaderInterface*>>& pipelineShaders,
                 ComputeShaderInterface* pComputeShaderInterface);
 

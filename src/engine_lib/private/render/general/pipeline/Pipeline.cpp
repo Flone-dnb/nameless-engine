@@ -54,7 +54,7 @@ namespace ne {
 
     bool Pipeline::isUsingPixelBlending() const { return bIsUsingPixelBlending; }
 
-    std::pair<std::mutex, std::set<Material*>>* Pipeline::getMaterialsThatUseThisPipeline() {
+    std::pair<std::mutex, std::unordered_set<Material*>>* Pipeline::getMaterialsThatUseThisPipeline() {
         return &mtxMaterialsThatUseThisPipeline;
     }
 

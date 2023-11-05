@@ -92,7 +92,7 @@ namespace ne {
          *
          * @return Array of materials that currently reference this Pipeline.
          */
-        std::pair<std::mutex, std::set<Material*>>* getMaterialsThatUseThisPipeline();
+        std::pair<std::mutex, std::unordered_set<Material*>>* getMaterialsThatUseThisPipeline();
 
         /**
          * Constructs and returns identifier of this pipeline (uses @ref constructPipelineIdentifier
@@ -269,7 +269,7 @@ namespace ne {
          *
          * @remark Must be used with mutex.
          */
-        std::pair<std::mutex, std::set<Material*>> mtxMaterialsThatUseThisPipeline;
+        std::pair<std::mutex, std::unordered_set<Material*>> mtxMaterialsThatUseThisPipeline;
 
         /**
          * Array of compute shader interfaces that currently reference this compute pipeline.

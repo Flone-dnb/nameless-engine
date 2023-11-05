@@ -575,9 +575,12 @@ namespace ne {
             return optionalError;
         }
 
-#if defined(DEBUG)
+#if defined(DEBUG) && defined(WIN32)
         static_assert(
             sizeof(LightingShaderResourceManager) == 176, "consider notifying new arrays here"); // NOLINT
+#elif defined(DEBUG)
+        static_assert(
+            sizeof(LightingShaderResourceManager) == 144, "consider notifying new arrays here"); // NOLINT
 #endif
 
         // Rebind general lighting data.
@@ -613,9 +616,12 @@ namespace ne {
             return optionalError;
         }
 
-#if defined(DEBUG)
+#if defined(DEBUG) && defined(WIN32)
         static_assert(
             sizeof(LightingShaderResourceManager) == 176, "consider notifying new arrays here"); // NOLINT
+#elif defined(DEBUG)
+        static_assert(
+            sizeof(LightingShaderResourceManager) == 144, "consider notifying new arrays here"); // NOLINT
 #endif
 
         // Rebind general lighting data.
@@ -639,9 +645,12 @@ namespace ne {
         pDirectionalLightDataArray->updateSlotsMarkedAsNeedsUpdate(iCurrentFrameResourceIndex);
         pSpotlightDataArray->updateSlotsMarkedAsNeedsUpdate(iCurrentFrameResourceIndex);
 
-#if defined(DEBUG)
+#if defined(DEBUG) && defined(WIN32)
         static_assert(
             sizeof(LightingShaderResourceManager) == 176, "consider notifying new arrays here"); // NOLINT
+#elif defined(DEBUG)
+        static_assert(
+            sizeof(LightingShaderResourceManager) == 144, "consider notifying new arrays here"); // NOLINT
 #endif
 
         // Copy general lighting info (maybe changed, since that data is very small it should be OK to
@@ -1010,9 +1019,12 @@ namespace ne {
                 onSpotlightArraySizeChanged(iNewSize);
             });
 
-#if defined(DEBUG)
+#if defined(DEBUG) && defined(WIN32)
         static_assert(
             sizeof(LightingShaderResourceManager) == 176, "consider resetting new arrays here"); // NOLINT
+#elif defined(DEBUG)
+        static_assert(
+            sizeof(LightingShaderResourceManager) == 144, "consider resetting new arrays here"); // NOLINT
 #endif
     }
 
@@ -1029,9 +1041,12 @@ namespace ne {
         pDirectionalLightDataArray = nullptr;
         pSpotlightDataArray = nullptr;
 
-#if defined(DEBUG)
+#if defined(DEBUG) && defined(WIN32)
         static_assert(
             sizeof(LightingShaderResourceManager) == 176, "consider resetting new arrays here"); // NOLINT
+#elif defined(DEBUG)
+        static_assert(
+            sizeof(LightingShaderResourceManager) == 144, "consider resetting new arrays here"); // NOLINT
 #endif
     }
 

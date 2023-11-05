@@ -347,8 +347,10 @@ TEST_CASE("MeshNode's meshdata deserialization backwards compatibility") {
                 vertex2.normal = glm::vec3(-1.0f, 0.0f, 0.0f);
                 vertex2.uv = glm::vec2(-1.0f, -2.0f);
 
-#if defined(DEBUG)
-                static_assert(sizeof(MeshData) == 160, "add new fields here");
+#if defined(DEBUG) && defined(WIN32)
+                static_assert(sizeof(MeshData) == 160, "add new fields here"); // NOLINT
+#elif defined(DEBUG)
+                static_assert(sizeof(MeshData) == 128, "add new fields here"); // NOLINT
 #endif
 
                 // Deserialize.

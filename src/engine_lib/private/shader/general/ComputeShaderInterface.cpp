@@ -17,9 +17,14 @@ namespace ne {
     }
 
     ComputeShaderInterface::~ComputeShaderInterface() {
-#if defined(DEBUG)
+#if defined(DEBUG) && defined(WIN32)
         static_assert(
             sizeof(ComputeShaderInterface) == 136,
+            "if added support for running using compute queue add a branch here and don't wait for graphics "
+            "queue instead wait for compute queue");
+#elif defined(DEBUG)
+        static_assert(
+            sizeof(ComputeShaderInterface) == 120,
             "if added support for running using compute queue add a branch here and don't wait for graphics "
             "queue instead wait for compute queue");
 #endif

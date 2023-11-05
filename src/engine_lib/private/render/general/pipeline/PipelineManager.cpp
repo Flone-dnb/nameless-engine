@@ -476,8 +476,10 @@ namespace ne {
         // Remove pipeline from "queued" pipelines arrays.
         mtxResources.second.queuedComputeShaders.graphicsQueuePreFrameShaders.erase(pPipelineRaw);
         mtxResources.second.queuedComputeShaders.graphicsQueuePostFrameShaders.erase(pPipelineRaw);
-#if defined(DEBUG)
+#if defined(DEBUG) && defined(WIN32)
         static_assert(sizeof(QueuedForExecutionComputeShaders) == 160, "erase from new arrays");
+#elif defined(DEBUG)
+        static_assert(sizeof(QueuedForExecutionComputeShaders) == 112, "erase from new arrays");
 #endif
 
         // Destroy pipeline.

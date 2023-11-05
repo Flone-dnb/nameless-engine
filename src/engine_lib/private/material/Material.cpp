@@ -924,7 +924,7 @@ namespace ne {
 #if defined(WIN32) && defined(DEBUG)
         static_assert(sizeof(Material) == 1072, "consider checking new macros here"); // NOLINT: current size
 #elif defined(DEBUG)
-        static_assert(sizeof(Material) == 752, "consider checking new macros here"); // NOLINT: current size
+        static_assert(sizeof(Material) == 832, "consider checking new macros here"); // NOLINT: current size
 #endif
     }
 

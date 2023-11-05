@@ -17,6 +17,7 @@ namespace ne {
     class Material;
     class VulkanPipeline;
     struct VulkanFrameResource;
+    class ComputeShaderInterface;
 
     /** Renderer made with Vulkan API. */
     class VulkanRenderer : public Renderer {

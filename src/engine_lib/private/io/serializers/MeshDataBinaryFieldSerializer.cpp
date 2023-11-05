@@ -54,8 +54,10 @@ namespace ne {
             return Error("failed to cast field object to MeshData");
         }
 
-#if defined(DEBUG)
-        static_assert(sizeof(MeshData) == 160, "update serialization");
+#if defined(DEBUG) && defined(WIN32)
+        static_assert(sizeof(MeshData) == 160, "update serialization"); // NOLINT
+#elif defined(DEBUG)
+        static_assert(sizeof(MeshData) == 128, "update serialization");   // NOLINT
 #endif
 
         // Create the resulting file.
@@ -138,8 +140,10 @@ namespace ne {
             return Error("failed to cast field object to MeshData");
         }
 
-#if defined(DEBUG)
-        static_assert(sizeof(MeshData) == 160, "update deserialization");
+#if defined(DEBUG) && defined(WIN32)
+        static_assert(sizeof(MeshData) == 160, "update deserialization"); // NOLINT
+#elif defined(DEBUG)
+        static_assert(sizeof(MeshData) == 128, "update deserialization"); // NOLINT
 #endif
 
         // Clear any existing data.

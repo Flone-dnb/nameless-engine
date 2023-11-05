@@ -31,6 +31,7 @@ namespace ne {
             &tinygltf::ExpandFilePath,
             &tinygltf::ReadWholeFile,
             &tinygltf::WriteWholeFile,
+            &tinygltf::GetFileSizeInBytes,
             nullptr};
         tinygltf::URICallbacks uriCallbacks;
         uriCallbacks.encode = nullptr;
@@ -405,7 +406,7 @@ namespace ne {
         Node* pThisNode = pParentNode;
 
         // See if this node stores a mesh.
-        if ((node.mesh >= 0) && (node.mesh < model.meshes.size())) {
+        if ((node.mesh >= 0) && (node.mesh < static_cast<int>(model.meshes.size()))) {
             // Process mesh.
             auto result = processGltfMesh(
                 model,
@@ -584,7 +585,7 @@ namespace ne {
             if (iNode < 0) [[unlikely]] {
                 return Error(std::format("found a negative node index of {} in default scene", iNode));
             }
-            if (iNode >= model.nodes.size()) [[unlikely]] {
+            if (iNode >= static_cast<int>(model.nodes.size())) [[unlikely]] {
                 return Error(std::format(
                     "found an out of bounds node index of {} while model nodes only has {} entries",
                     iNode,

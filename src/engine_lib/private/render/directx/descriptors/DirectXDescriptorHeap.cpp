@@ -405,11 +405,11 @@ namespace ne {
             }
 
             if (resourceDesc.Dimension == D3D12_RESOURCE_DIMENSION_UNKNOWN ||
-                D3D12_RESOURCE_DIMENSION_BUFFER) {
+                resourceDesc.Dimension == D3D12_RESOURCE_DIMENSION_BUFFER) {
                 // Make sure element size / count are specified.
                 if (pResource->getElementSizeInBytes() == 0 || pResource->getElementCount() == 0) {
                     Error error(std::format(
-                        "unable to create an SRV for resource \"{}\" because its element size/count were not "
+                        "unable to create an UAV for resource \"{}\" because its element size/count were not "
                         "specified",
                         pResource->getResourceName()));
                     error.showError();

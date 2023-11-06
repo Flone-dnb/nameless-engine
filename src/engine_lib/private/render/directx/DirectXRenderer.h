@@ -28,6 +28,7 @@ namespace ne {
     class Material;
     class CameraProperties;
     class DirectXPso;
+    struct QueuedForExecutionComputeShaders;
     class ComputeShaderInterface;
     struct DirectXFrameResource;
 
@@ -329,32 +330,30 @@ namespace ne {
          *
          * @warning Expects that render resources mutex is locked.
          *
-         * @param pCameraProperties            Camera properties to use.
-         * @param pCurrentFrameResource        Current frame resource.
-         * @param graphicsQueuePreFrameShaders Compute shaders to dispatch.
+         * @param pCameraProperties     Camera properties to use.
+         * @param pCurrentFrameResource Current frame resource.
+         * @param pQueuedComputeShaders Queued shaders to dispatch.
          *
          * @return Error if something went wrong.
          */
         [[nodiscard]] std::optional<Error> prepareForDrawingNextFrame(
             CameraProperties* pCameraProperties,
             DirectXFrameResource* pCurrentFrameResource,
-            std::unordered_map<Pipeline*, std::unordered_set<ComputeShaderInterface*>>&
-                graphicsQueuePreFrameShaders);
+            QueuedForExecutionComputeShaders* pQueuedComputeShaders);
 
         /**
          * Does final logic in drawing next frame (closes lists, executes lists, etc.).
          *
          * @warning Expects that render resources mutex is locked.
          *
-         * @param pCurrentFrameResource         Current frame resource.
-         * @param graphicsQueuePostFrameShaders Compute shaders to dispatch.
+         * @param pCurrentFrameResource Current frame resource.
+         * @param pQueuedComputeShaders Queued shaders to dispatch.
          *
          * @return Error if something went wrong.
          */
         [[nodiscard]] std::optional<Error> finishDrawingNextFrame(
             DirectXFrameResource* pCurrentFrameResource,
-            std::unordered_map<Pipeline*, std::unordered_set<ComputeShaderInterface*>>&
-                graphicsQueuePostFrameShaders);
+            QueuedForExecutionComputeShaders* pQueuedComputeShaders);
 
         /**
          * Queries the current render settings for MSAA quality and updates @ref iMsaaQualityLevelsCount.

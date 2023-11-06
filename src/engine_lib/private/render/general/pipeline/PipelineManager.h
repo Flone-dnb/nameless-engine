@@ -229,6 +229,45 @@ namespace ne {
         PipelineManager* pPipelineManager = nullptr;
     };
 
+    /**
+     * Groups pointers to compute shader interfaces that were queued for execution and pipelines that they
+     * use.
+     *
+     * @remark Only references compute shaders that use graphics queue to provide a fast access for the
+     * renderer to submit those shaders (the renderer does not submit compute shaders that use
+     * compute queue - they are submitted from compute shader interfaces directly).
+     */
+    struct QueuedForExecutionComputeShaders {
+/** Number of elements in the `ComputeExecutionGroup` enum. */
+#define COMPUTE_EXECUTION_GROUP_COUNT 2
+
+        /**
+         * Stores compute pipelines and compute shader interfaces that use these pipelines and were queued
+         * for execution before a frame is rendered (one map per compute execution group).
+         *
+         * @remark When the renderer submits all compute shaders from this map it clears it.
+         *
+         * @remark Using `unordered_set` to avoid executing a compute shader multiple times.
+         */
+        std::array<
+            std::unordered_map<Pipeline*, std::unordered_set<ComputeShaderInterface*>>,
+            COMPUTE_EXECUTION_GROUP_COUNT>
+            graphicsQueuePreFrameShadersGroups;
+
+        /**
+         * Stores compute pipelines and compute shader interfaces that use these pipelines and were queued
+         * for execution after a frame is rendered (one map per compute execution group).
+         *
+         * @remark When the renderer submits all compute shaders from this map it clears it.
+         *
+         * @remark Using `unordered_set` to avoid executing a compute shader multiple times.
+         */
+        std::array<
+            std::unordered_map<Pipeline*, std::unordered_set<ComputeShaderInterface*>>,
+            COMPUTE_EXECUTION_GROUP_COUNT>
+            graphicsQueuePostFrameShadersGroups;
+    };
+
     /** Base class for managing render specific pipelines. */
     class PipelineManager {
         // Pipeline notifies the manager when a material stops referencing it.
@@ -253,42 +292,6 @@ namespace ne {
              */
             std::unordered_map<std::set<ShaderMacro>, std::shared_ptr<Pipeline>, ShaderMacroSetHash>
                 shaderPipelines;
-        };
-
-        /**
-         * Groups pointers to compute shader interfaces that were queued for execution and pipelines that they
-         * use.
-         *
-         * @remark Only references compute shaders that use graphics queue to provide a fast access for the
-         * renderer to submit those shaders (the renderer does not submit compute shaders that use
-         * compute queue - they are submitted from compute shader interfaces directly).
-         */
-        struct QueuedForExecutionComputeShaders {
-            /**
-             * Stores compute pipelines and compute shader interfaces that use these pipelines and were queued
-             * for execution before a frame is rendered.
-             *
-             * @remark Compute shaders will be retrieved from pipeline.
-             *
-             * @remark When the renderer submits all compute shaders from this map it clears it.
-             *
-             * @remark Using `unordered_set` to avoid executing a compute shader multiple times.
-             */
-            std::unordered_map<Pipeline*, std::unordered_set<ComputeShaderInterface*>>
-                graphicsQueuePreFrameShaders;
-
-            /**
-             * Stores compute pipelines and compute shader interfaces that use these pipelines and were queued
-             * for execution after a frame is rendered.
-             *
-             * @remark Compute shaders will be retrieved from pipeline.
-             *
-             * @remark When the renderer submits all compute shaders from this map it clears it.
-             *
-             * @remark Using `unordered_set` to avoid executing a compute shader multiple times.
-             */
-            std::unordered_map<Pipeline*, std::unordered_set<ComputeShaderInterface*>>
-                graphicsQueuePostFrameShaders;
         };
 
         /**

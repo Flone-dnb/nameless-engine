@@ -427,8 +427,7 @@ namespace ne {
     std::optional<Error> DirectXRenderer::prepareForDrawingNextFrame(
         CameraProperties* pCameraProperties,
         DirectXFrameResource* pCurrentFrameResource,
-        std::unordered_map<Pipeline*, std::unordered_set<ComputeShaderInterface*>>&
-            graphicsQueuePreFrameShaders) {
+        QueuedForExecutionComputeShaders* pQueuedComputeShaders) {
         PROFILE_FUNC;
 
         // Waits for frame resource to be no longer used by the GPU.
@@ -449,8 +448,10 @@ namespace ne {
 
         PROFILE_SCOPE_START(DispatchPreFrameComputeShaders);
 
-        // Process compute shaders that should be submitted before rendering.
-        dispatchComputeShadersOnGraphicsQueue(pCommandAllocator, graphicsQueuePreFrameShaders);
+        // Dispatch pre-frame compute shaders.
+        for (auto& group : pQueuedComputeShaders->graphicsQueuePreFrameShadersGroups) {
+            dispatchComputeShadersOnGraphicsQueue(pCommandAllocator, group);
+        }
 
         PROFILE_SCOPE_END;
 
@@ -555,9 +556,7 @@ namespace ne {
 
         // Setup.
         auto optionalError = prepareForDrawingNextFrame(
-            pActiveCameraProperties,
-            pCurrentFrameResource,
-            mtxQueuedComputeShader.second->graphicsQueuePreFrameShaders);
+            pActiveCameraProperties, pCurrentFrameResource, mtxQueuedComputeShader.second);
         if (optionalError.has_value()) [[unlikely]] {
             auto error = optionalError.value();
             error.addCurrentLocationToErrorStack();
@@ -650,8 +649,7 @@ namespace ne {
         }
 
         // Do finish logic (execute command list).
-        optionalError = finishDrawingNextFrame(
-            pCurrentFrameResource, mtxQueuedComputeShader.second->graphicsQueuePostFrameShaders);
+        optionalError = finishDrawingNextFrame(pCurrentFrameResource, mtxQueuedComputeShader.second);
         if (optionalError.has_value()) [[unlikely]] {
             auto error = optionalError.value();
             error.addCurrentLocationToErrorStack();
@@ -665,8 +663,7 @@ namespace ne {
 
     std::optional<Error> DirectXRenderer::finishDrawingNextFrame(
         DirectXFrameResource* pCurrentFrameResource,
-        std::unordered_map<Pipeline*, std::unordered_set<ComputeShaderInterface*>>&
-            graphicsQueuePostFrameShaders) {
+        QueuedForExecutionComputeShaders* pQueuedComputeShaders) {
         PROFILE_FUNC;
 
         if (bIsUsingMsaaRenderTarget) {
@@ -733,9 +730,10 @@ namespace ne {
 
         PROFILE_SCOPE_START(DispatchPostFrameComputeShaders);
 
-        // Process compute shaders that should be submitted before rendering.
-        dispatchComputeShadersOnGraphicsQueue(
-            pCurrentFrameResource->pCommandAllocator.Get(), graphicsQueuePostFrameShaders);
+        // Dispatch all post-frame compute shaders.
+        for (auto& group : pQueuedComputeShaders->graphicsQueuePostFrameShadersGroups) {
+            dispatchComputeShadersOnGraphicsQueue(pCurrentFrameResource->pCommandAllocator.Get(), group);
+        }
 
         PROFILE_SCOPE_END;
 

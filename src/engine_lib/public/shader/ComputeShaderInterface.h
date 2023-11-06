@@ -21,6 +21,12 @@ namespace ne {
         READ_WRITE_ARRAY_BUFFER, //< `RWStructuredBuffer` in HLSL, `buffer` in GLSL.
     };
 
+    /**
+     * Splits compute shaders into groups where shaders of the first group will be executed before shaders
+     * from the second group and so on.
+     */
+    enum class ComputeExecutionGroup { FIRST = 0, SECOND };
+
     /** Interface to configure and run a compute shader. */
     class ComputeShaderInterface {
     public:
@@ -47,13 +53,16 @@ namespace ne {
          * calculates some data that the frame rendering will use). Specify `false` if you want your
          * compute shader to be run strictly after the frame is rendered (this can be useful if your
          * compute shader does some post-processing for the rendered frame).
+         * @param executionGroup             Determines execution group of this shader where shaders of the
+         * first group will be executed before shaders from the second group and so on.
          *
          * @return Error if something went wrong, otherwise created interface.
          */
         static std::variant<std::unique_ptr<ComputeShaderInterface>, Error> createUsingGraphicsQueue(
             Renderer* pRenderer,
             const std::string& sCompiledComputeShaderName,
-            bool bRunBeforeFrameRendering);
+            bool bRunBeforeFrameRendering,
+            ComputeExecutionGroup executionGroup = ComputeExecutionGroup::FIRST);
 
         /**
          * Takes ownership of the specified resource and binds it to be available in compute shader.
@@ -105,6 +114,14 @@ namespace ne {
             unsigned int iThreadGroupCountZ);
 
         /**
+         * Returns execution group of this shader where shaders of the first group will be executed before
+         * shaders from the second group and so on.
+         *
+         * @return Execution group.
+         */
+        ComputeExecutionGroup getExecutionGroup() const;
+
+        /**
          * Returns name of the compiled compute shader that this interface uses.
          *
          * @return Compute shader name.
@@ -126,11 +143,16 @@ namespace ne {
          * @param sComputeShaderName       Name of the compiled compute shader to use.
          * @param bRunBeforeFrameRendering Determines whether this compute shader should run before frame
          * rendering or after a frame is rendered on the GPU. Only valid when using graphics queue.
+         * @param executionGroup           Determines execution group of this shader where shaders of the
+         * first group will be executed before shaders from the second group and so on.
          *
          * @return Error if something went wrong, otherwise created interface.
          */
         static std::variant<std::unique_ptr<ComputeShaderInterface>, Error> createRenderSpecificInterface(
-            Renderer* pRenderer, const std::string& sComputeShaderName, bool bRunBeforeFrameRendering = true);
+            Renderer* pRenderer,
+            const std::string& sComputeShaderName,
+            bool bRunBeforeFrameRendering,
+            ComputeExecutionGroup executionGroup);
 
         /**
          * Creates a new interface and initializes everything except for @ref pPipeline which is expected to
@@ -140,11 +162,16 @@ namespace ne {
          * @param sComputeShaderName       Name of the compiled compute shader to use.
          * @param bRunBeforeFrameRendering Determines whether this compute shader should run before frame
          * rendering or after a frame is rendered on the GPU. Only valid when using graphics queue.
+         * @param executionGroup           Determines execution group of this shader where shaders of the
+         * first group will be executed before shaders from the second group and so on.
          *
          * @return Created interface.
          */
         static std::unique_ptr<ComputeShaderInterface> createPartiallyInitializedRenderSpecificInterface(
-            Renderer* pRenderer, const std::string& sComputeShaderName, bool bRunBeforeFrameRendering = true);
+            Renderer* pRenderer,
+            const std::string& sComputeShaderName,
+            bool bRunBeforeFrameRendering,
+            ComputeExecutionGroup executionGroup);
 
         /**
          * Initializes everything except for @ref pPipeline which is expected to be initialized right after
@@ -154,9 +181,13 @@ namespace ne {
          * @param sComputeShaderName       Name of the compiled compute shader to use.
          * @param bRunBeforeFrameRendering Determines whether this compute shader should run before frame
          * rendering or after a frame is rendered on the GPU. Only valid when using graphics queue.
+         * @param executionGroup           Execution order.
          */
         ComputeShaderInterface(
-            Renderer* pRenderer, const std::string& sComputeShaderName, bool bRunBeforeFrameRendering = true);
+            Renderer* pRenderer,
+            const std::string& sComputeShaderName,
+            bool bRunBeforeFrameRendering,
+            ComputeExecutionGroup executionGroup);
 
         /**
          * Returns used renderer.
@@ -213,6 +244,9 @@ namespace ne {
 
         /** The number of thread groups dispatched in the Z direction. */
         unsigned int iThreadGroupCountZ = 0;
+
+        /** Order of execution. */
+        const ComputeExecutionGroup executionGroup = ComputeExecutionGroup::FIRST;
 
         /**
          * Determines whether this compute shader should run before frame rendering or after a frame is

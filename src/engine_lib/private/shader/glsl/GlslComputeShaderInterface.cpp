@@ -7,8 +7,11 @@
 
 namespace ne {
     GlslComputeShaderInterface::GlslComputeShaderInterface(
-        Renderer* pRenderer, const std::string& sComputeShaderName, bool bRunBeforeFrameRendering)
-        : ComputeShaderInterface(pRenderer, sComputeShaderName, bRunBeforeFrameRendering) {}
+        Renderer* pRenderer,
+        const std::string& sComputeShaderName,
+        bool bRunBeforeFrameRendering,
+        ComputeExecutionGroup executionGroup)
+        : ComputeShaderInterface(pRenderer, sComputeShaderName, bRunBeforeFrameRendering, executionGroup) {}
 
     std::optional<Error> GlslComputeShaderInterface::bindResource(
         GpuResource* pResource, const std::string& sShaderResourceName, ComputeResourceUsage usage) {

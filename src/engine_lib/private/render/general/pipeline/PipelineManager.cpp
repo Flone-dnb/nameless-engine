@@ -474,10 +474,14 @@ namespace ne {
         const auto pPipelineRaw = computeIt->second.get();
 
         // Remove pipeline from "queued" pipelines arrays.
-        mtxResources.second.queuedComputeShaders.graphicsQueuePreFrameShaders.erase(pPipelineRaw);
-        mtxResources.second.queuedComputeShaders.graphicsQueuePostFrameShaders.erase(pPipelineRaw);
+        for (auto& group : mtxResources.second.queuedComputeShaders.graphicsQueuePreFrameShadersGroups) {
+            group.erase(pPipelineRaw);
+        }
+        for (auto& group : mtxResources.second.queuedComputeShaders.graphicsQueuePostFrameShadersGroups) {
+            group.erase(pPipelineRaw);
+        }
 #if defined(DEBUG) && defined(WIN32)
-        static_assert(sizeof(QueuedForExecutionComputeShaders) == 160, "erase from new arrays");
+        static_assert(sizeof(QueuedForExecutionComputeShaders) == 320, "erase from new arrays");
 #elif defined(DEBUG)
         static_assert(sizeof(QueuedForExecutionComputeShaders) == 112, "erase from new arrays");
 #endif
@@ -492,9 +496,15 @@ namespace ne {
         ComputeShaderInterface* pComputeShaderInterface) {
         std::scoped_lock guard(mtxResources.first);
 
+        // Prepare a reference to make code simpler.
+        auto& queued = mtxResources.second.queuedComputeShaders;
+
+        // Prepare group to modify.
+        auto& groupToUse = queued.graphicsQueuePreFrameShadersGroups[static_cast<size_t>(
+            pComputeShaderInterface->getExecutionGroup())];
+
         // Add to be executed.
-        auto optionalError = queueComputeShaderInterfaceForExecution(
-            mtxResources.second.queuedComputeShaders.graphicsQueuePreFrameShaders, pComputeShaderInterface);
+        auto optionalError = queueComputeShaderInterfaceForExecution(groupToUse, pComputeShaderInterface);
         if (optionalError.has_value()) [[unlikely]] {
             optionalError->addCurrentLocationToErrorStack();
             return optionalError;
@@ -507,9 +517,15 @@ namespace ne {
         ComputeShaderInterface* pComputeShaderInterface) {
         std::scoped_lock guard(mtxResources.first);
 
+        // Prepare a reference to make code simpler.
+        auto& queued = mtxResources.second.queuedComputeShaders;
+
+        // Prepare group to modify.
+        auto& groupToUse = queued.graphicsQueuePostFrameShadersGroups[static_cast<size_t>(
+            pComputeShaderInterface->getExecutionGroup())];
+
         // Add to be executed.
-        auto optionalError = queueComputeShaderInterfaceForExecution(
-            mtxResources.second.queuedComputeShaders.graphicsQueuePostFrameShaders, pComputeShaderInterface);
+        auto optionalError = queueComputeShaderInterfaceForExecution(groupToUse, pComputeShaderInterface);
         if (optionalError.has_value()) [[unlikely]] {
             optionalError->addCurrentLocationToErrorStack();
             return optionalError;

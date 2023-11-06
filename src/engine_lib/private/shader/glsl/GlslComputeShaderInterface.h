@@ -58,8 +58,13 @@ namespace ne {
          * @param sComputeShaderName       Name of the compiled compute shader to use.
          * @param bRunBeforeFrameRendering Determines whether this compute shader should run before frame
          * rendering or after a frame is rendered on the GPU. Only valid when using graphics queue.
+         * @param executionGroup           Determines execution group of this shader where shaders of the
+         * first group will be executed before shaders from the second group and so on.
          */
         GlslComputeShaderInterface(
-            Renderer* pRenderer, const std::string& sComputeShaderName, bool bRunBeforeFrameRendering = true);
+            Renderer* pRenderer,
+            const std::string& sComputeShaderName,
+            bool bRunBeforeFrameRendering,
+            ComputeExecutionGroup executionGroup);
     };
 }

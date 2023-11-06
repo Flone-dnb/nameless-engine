@@ -1877,8 +1877,7 @@ namespace ne {
     std::optional<Error> VulkanRenderer::prepareForDrawingNextFrame(
         CameraProperties* pCameraProperties,
         uint32_t& iAcquiredImageIndex,
-        std::unordered_map<Pipeline*, std::unordered_set<ComputeShaderInterface*>>&
-            graphicsQueuePreFrameShaders) {
+        QueuedForExecutionComputeShaders* pQueuedComputeShaders) {
         PROFILE_FUNC;
 
         // Make sure swap chain extent is set.
@@ -1972,24 +1971,27 @@ namespace ne {
 
         PROFILE_SCOPE_START(DispatchPreFrameComputeShaders);
 
-        // Dispatch compute shaders.
-        if (dispatchComputeShadersOnGraphicsQueue(
-                pCurrentVulkanFrameResource,
-                pMtxCurrentFrameResource->second.iCurrentFrameResourceIndex,
-                graphicsQueuePreFrameShaders)) {
-            // Insert a synchronization barrier.
-            vkCmdPipelineBarrier(
-                pCurrentVulkanFrameResource->pCommandBuffer,
-                VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, // run all compute shaders before this barrier
-                VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT,   // make all next graphics commands to wait for this
-                                                      // barrier
-                0,
-                0,
-                nullptr,
-                0,
-                nullptr,
-                0,
-                nullptr);
+        // Dispatch pre-frame compute shaders.
+        for (auto& group : pQueuedComputeShaders->graphicsQueuePreFrameShadersGroups) {
+            if (dispatchComputeShadersOnGraphicsQueue(
+                    pCurrentVulkanFrameResource,
+                    pMtxCurrentFrameResource->second.iCurrentFrameResourceIndex,
+                    group)) {
+                // Insert a synchronization barrier.
+                vkCmdPipelineBarrier(
+                    pCurrentVulkanFrameResource->pCommandBuffer,
+                    VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,   // run all compute commands before this barrier
+                    VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT |  // make all next compute/graphics commands to wait
+                        VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT, // for this barrier
+
+                    0,
+                    0,
+                    nullptr,
+                    0,
+                    nullptr,
+                    0,
+                    nullptr);
+            }
         }
 
         PROFILE_SCOPE_END;
@@ -2280,9 +2282,7 @@ namespace ne {
         // Setup.
         uint32_t iAcquiredImageIndex = 0;
         auto optionalError = prepareForDrawingNextFrame(
-            pActiveCameraProperties,
-            iAcquiredImageIndex,
-            mtxQueuedComputeShader.second->graphicsQueuePreFrameShaders);
+            pActiveCameraProperties, iAcquiredImageIndex, mtxQueuedComputeShader.second);
         if (optionalError.has_value()) [[unlikely]] {
             auto error = optionalError.value();
             error.addCurrentLocationToErrorStack();
@@ -2379,7 +2379,7 @@ namespace ne {
             pVulkanCurrentFrameResource,
             pMtxCurrentFrameResource->second.iCurrentFrameResourceIndex,
             iAcquiredImageIndex,
-            mtxQueuedComputeShader.second->graphicsQueuePostFrameShaders);
+            mtxQueuedComputeShader.second);
         if (optionalError.has_value()) [[unlikely]] {
             auto error = optionalError.value();
             error.addCurrentLocationToErrorStack();
@@ -2528,8 +2528,7 @@ namespace ne {
         VulkanFrameResource* pCurrentFrameResource,
         size_t iCurrentFrameResourceIndex,
         uint32_t iAcquiredImageIndex,
-        std::unordered_map<Pipeline*, std::unordered_set<ComputeShaderInterface*>>&
-            graphicsQueuePostFrameShaders) {
+        QueuedForExecutionComputeShaders* pQueuedComputeShaders) {
         PROFILE_FUNC;
 
         // Convert current frame resource.
@@ -2541,25 +2540,30 @@ namespace ne {
 
         PROFILE_SCOPE_START(DispatchPostFrameComputeShaders);
 
-        // See if we have compute shaders to dispatch.
-        if (!graphicsQueuePostFrameShaders.empty()) {
-            // Insert a synchronization barrier.
-            vkCmdPipelineBarrier(
-                pVulkanCurrentFrameResource->pCommandBuffer,
-                VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT,   // run all graphics commands before this barrier
-                VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, // make all next compute commands to wait for this
-                                                      // barrier
-                0,
-                0,
-                nullptr,
-                0,
-                nullptr,
-                0,
-                nullptr);
+        // Dispatch post-frame compute shaders.
+        for (auto& group : pQueuedComputeShaders->graphicsQueuePostFrameShadersGroups) {
+            // See if we have compute shaders to dispatch.
+            if (!group.empty()) {
+                // Insert a synchronization barrier.
+                vkCmdPipelineBarrier(
+                    pVulkanCurrentFrameResource->pCommandBuffer,
+                    VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT |
+                        VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT, // run all already recorded compute/graphics
+                                                            // commands before this barrier
+                    VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,   // make all next compute commands to wait for this
+                                                            // barrier
+                    0,
+                    0,
+                    nullptr,
+                    0,
+                    nullptr,
+                    0,
+                    nullptr);
 
-            // Dispatch compute shaders.
-            dispatchComputeShadersOnGraphicsQueue(
-                pVulkanCurrentFrameResource, iCurrentFrameResourceIndex, graphicsQueuePostFrameShaders);
+                // Dispatch compute shaders.
+                dispatchComputeShadersOnGraphicsQueue(
+                    pVulkanCurrentFrameResource, iCurrentFrameResourceIndex, group);
+            }
         }
 
         PROFILE_SCOPE_END;

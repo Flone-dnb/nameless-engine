@@ -11,20 +11,24 @@
 namespace ne {
 
     ComputeShaderInterface::ComputeShaderInterface(
-        Renderer* pRenderer, const std::string& sComputeShaderName, bool bRunBeforeFrameRendering)
-        : bRunBeforeFrameRendering(bRunBeforeFrameRendering), sComputeShaderName(sComputeShaderName) {
+        Renderer* pRenderer,
+        const std::string& sComputeShaderName,
+        bool bRunBeforeFrameRendering,
+        ComputeExecutionGroup executionGroup)
+        : executionGroup(executionGroup), bRunBeforeFrameRendering(bRunBeforeFrameRendering),
+          sComputeShaderName(sComputeShaderName) {
         this->pRenderer = pRenderer;
     }
 
     ComputeShaderInterface::~ComputeShaderInterface() {
 #if defined(DEBUG) && defined(WIN32)
         static_assert(
-            sizeof(ComputeShaderInterface) == 136,
+            sizeof(ComputeShaderInterface) == 144,
             "if added support for running using compute queue add a branch here and don't wait for graphics "
             "queue instead wait for compute queue");
 #elif defined(DEBUG)
         static_assert(
-            sizeof(ComputeShaderInterface) == 120,
+            sizeof(ComputeShaderInterface) == 128,
             "if added support for running using compute queue add a branch here and don't wait for graphics "
             "queue instead wait for compute queue");
 #endif
@@ -42,8 +46,12 @@ namespace ne {
 
     std::variant<std::unique_ptr<ComputeShaderInterface>, Error>
     ComputeShaderInterface::createUsingGraphicsQueue(
-        Renderer* pRenderer, const std::string& sCompiledComputeShaderName, bool bRunBeforeFrameRendering) {
-        return createRenderSpecificInterface(pRenderer, sCompiledComputeShaderName, bRunBeforeFrameRendering);
+        Renderer* pRenderer,
+        const std::string& sCompiledComputeShaderName,
+        bool bRunBeforeFrameRendering,
+        ComputeExecutionGroup executionGroup) {
+        return createRenderSpecificInterface(
+            pRenderer, sCompiledComputeShaderName, bRunBeforeFrameRendering, executionGroup);
     }
 
     std::optional<Error> ComputeShaderInterface::bindResource(
@@ -65,17 +73,20 @@ namespace ne {
 
     std::unique_ptr<ComputeShaderInterface>
     ComputeShaderInterface::createPartiallyInitializedRenderSpecificInterface(
-        Renderer* pRenderer, const std::string& sComputeShaderName, bool bRunBeforeFrameRendering) {
+        Renderer* pRenderer,
+        const std::string& sComputeShaderName,
+        bool bRunBeforeFrameRendering,
+        ComputeExecutionGroup executionGroup) {
 #if defined(WIN32)
         if (dynamic_cast<DirectXRenderer*>(pRenderer) != nullptr) {
-            return std::unique_ptr<HlslComputeShaderInterface>(
-                new HlslComputeShaderInterface(pRenderer, sComputeShaderName, bRunBeforeFrameRendering));
+            return std::unique_ptr<HlslComputeShaderInterface>(new HlslComputeShaderInterface(
+                pRenderer, sComputeShaderName, bRunBeforeFrameRendering, executionGroup));
         }
 #endif
 
         if (dynamic_cast<VulkanRenderer*>(pRenderer) != nullptr) {
-            return std::unique_ptr<GlslComputeShaderInterface>(
-                new GlslComputeShaderInterface(pRenderer, sComputeShaderName, bRunBeforeFrameRendering));
+            return std::unique_ptr<GlslComputeShaderInterface>(new GlslComputeShaderInterface(
+                pRenderer, sComputeShaderName, bRunBeforeFrameRendering, executionGroup));
         }
 
         Error error("unsupported renderer");
@@ -85,10 +96,13 @@ namespace ne {
 
     std::variant<std::unique_ptr<ComputeShaderInterface>, Error>
     ComputeShaderInterface::createRenderSpecificInterface(
-        Renderer* pRenderer, const std::string& sComputeShaderName, bool bRunBeforeFrameRendering) {
+        Renderer* pRenderer,
+        const std::string& sComputeShaderName,
+        bool bRunBeforeFrameRendering,
+        ComputeExecutionGroup executionGroup) {
         // Create a new partially initialized render-specific interface.
         auto pNewInterface = createPartiallyInitializedRenderSpecificInterface(
-            pRenderer, sComputeShaderName, bRunBeforeFrameRendering);
+            pRenderer, sComputeShaderName, bRunBeforeFrameRendering, executionGroup);
 
         // Get pipeline manager.
         const auto pPipelineManager = pRenderer->getPipelineManager();
@@ -134,6 +148,8 @@ namespace ne {
         // The renderer will call a non-virtual function on derived (render-specific) class for graphics
         // queue dispatch during the draw operation.
     }
+
+    ComputeExecutionGroup ComputeShaderInterface::getExecutionGroup() const { return executionGroup; }
 
     std::string ComputeShaderInterface::getComputeShaderName() const { return sComputeShaderName; }
 

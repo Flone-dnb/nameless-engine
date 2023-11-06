@@ -24,9 +24,6 @@ void fsMeshNode(){
     // Normals may be unnormalized after the rasterization (when they are interpolated).
     vec3 fragmentWorldNormalUnit = normalize(fragmentWorldNormal);
 
-    // Set initial (unlit) color.
-    outputColor = vec4(0.0F, 0.0F, 0.0F, 1.0F);
-
     // Prepare diffuse color.
     vec3 fragmentDiffuseColor = MATERIAL_DATA.diffuseColor.rgb;
 #ifdef PS_USE_DIFFUSE_TEXTURE
@@ -40,44 +37,17 @@ void fsMeshNode(){
     // Prepare material roughness.
     float materialRoughness = MATERIAL_DATA.roughness; 
 
-    // Calculate light from point lights.
-    for (uint i = 0; i < generalLightingData.iPointLightCount; i++){
-        outputColor.rgb += calculateColorFromPointLight(
-            pointLights.array[i],
-            vec3(frameData.cameraPosition),
-            vec3(fragmentWorldPosition),
-            fragmentWorldNormalUnit,
-            fragmentDiffuseColor,
-            fragmentSpecularColor,
-            materialRoughness);
-    }
+    // Set initial (unlit) color.
+    outputColor = vec4(0.0F, 0.0F, 0.0F, 1.0F);
 
-    // Calculate light from directional lights.
-    for (uint i = 0; i < generalLightingData.iDirectionalLightCount; i++){
-        outputColor.rgb += calculateColorFromDirectionalLight(
-            directionalLights.array[i],
-            vec3(frameData.cameraPosition),
-            vec3(fragmentWorldPosition),
-            fragmentWorldNormalUnit,
-            fragmentDiffuseColor,
-            fragmentSpecularColor,
-            materialRoughness);
-    }
-
-    // Calculate light from spotlights.
-    for (uint i = 0; i < generalLightingData.iSpotlightCount; i++){
-        outputColor.rgb += calculateColorFromSpotlight(
-            spotlights.array[i],
-            vec3(frameData.cameraPosition),
-            vec3(fragmentWorldPosition),
-            fragmentWorldNormalUnit,
-            fragmentDiffuseColor,
-            fragmentSpecularColor,
-            materialRoughness);
-    }
-
-    // Apply ambient light.
-    outputColor.rgb += generalLightingData.ambientLight.rgb * fragmentDiffuseColor;
+    // Calculate light.
+    outputColor.rgb += calculateColorFromLights(
+        vec3(frameData.cameraPosition),
+        vec3(fragmentWorldPosition),
+        fragmentWorldNormalUnit,
+        fragmentDiffuseColor,
+        fragmentSpecularColor,
+        materialRoughness);
 
 #ifdef PS_USE_MATERIAL_TRANSPARENCY
     // Apply opacity.

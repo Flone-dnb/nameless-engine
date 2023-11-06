@@ -16,9 +16,6 @@ float4 psMeshNode(VertexOut pin) : SV_Target
     // Normals may be unnormalized after the rasterization (when they are interpolated).
     float3 pixelNormalUnit = normalize(pin.worldNormal);
 
-    // Set initial (unlit) color.
-    float4 outputColor = float4(0.0F, 0.0F, 0.0F, 1.0F);
-
     // Prepare diffuse color.
     float3 pixelDiffuseColor = materialData.diffuseColor.rgb;
 #ifdef PS_USE_DIFFUSE_TEXTURE
@@ -32,44 +29,17 @@ float4 psMeshNode(VertexOut pin) : SV_Target
     // Prepare material roughness.
     float materialRoughness = materialData.roughness;
 
-    // Calculate light from point lights.
-    for (uint i = 0; i < generalLightingData.iPointLightCount; i++){
-        outputColor.rgb += calculateColorFromPointLight(
-            pointLights[i],
-            (float3)frameData.cameraPosition,
-            (float3)pin.worldPosition,
-            pixelNormalUnit,
-            pixelDiffuseColor,
-            pixelSpecularColor,
-            materialRoughness);
-    }
+    // Set initial (unlit) color.
+    float4 outputColor = float4(0.0F, 0.0F, 0.0F, 1.0F);
 
-    // Calculate light from directional lights.
-    for (uint i = 0; i < generalLightingData.iDirectionalLightCount; i++){
-        outputColor.rgb += calculateColorFromDirectionalLight(
-            directionalLights[i],
-            (float3)frameData.cameraPosition,
-            (float3)pin.worldPosition,
-            pixelNormalUnit,
-            pixelDiffuseColor,
-            pixelSpecularColor,
-            materialRoughness);
-    }
-
-    // Calculate light from spotlights.
-    for (uint i = 0; i < generalLightingData.iSpotlightCount; i++){
-        outputColor.rgb += calculateColorFromSpotlight(
-            spotlights[i],
-            (float3)frameData.cameraPosition,
-            (float3)pin.worldPosition,
-            pixelNormalUnit,
-            pixelDiffuseColor,
-            pixelSpecularColor,
-            materialRoughness);
-    }
-
-    // Apply ambient light.
-    outputColor.rgb += generalLightingData.ambientLight.rgb * pixelDiffuseColor;
+    // Calculate light.
+    outputColor.rgb += calculateColorFromLights(
+        (float3)frameData.cameraPosition,
+        (float3)pin.worldPosition,
+        pixelNormalUnit,
+        pixelDiffuseColor,
+        pixelSpecularColor,
+        materialRoughness);
 
 #ifdef PS_USE_MATERIAL_TRANSPARENCY
     // Apply transparency.

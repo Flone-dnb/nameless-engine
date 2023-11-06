@@ -316,3 +316,72 @@ vec3 calculateColorFromSpotlight(
         fragmentSpecularColor,
         materialRoughness);
 }
+
+/**
+ * Calculates light that a pixel/fragment receives from world's light sources.
+ *
+ * @remark Also includes ambient light.
+ *
+ * @param cameraPosition        Camera position in world space.
+ * @param fragmentPosition      Position of the pixel/fragment in world space.
+ * @param fragmentNormalUnit    Pixel/fragment's unit normal vector (interpolated vertex normal or normal from normal texture).
+ * @param fragmentDiffuseColor  Pixel/fragment's diffuse color (interpolated vertex color or color from diffuse texture).
+ * @param fragmentSpecularColor Pixel/fragment's specular color (interpolated vertex specular or specular from texture).
+ * @param materialRoughness     Roughness parameter of pixel/fragment's material.
+ *
+ * @return Color that pixel/fragment receives from world's light sources.
+ */
+vec3 calculateColorFromLights(
+    vec3 cameraPosition,
+    vec3 fragmentPosition,
+    vec3 fragmentNormalUnit,
+    vec3 fragmentDiffuseColor,
+    vec3 fragmentSpecularColor,
+    float materialRoughness){
+    // Prepare final color.
+    vec3 outputColor = vec3(0.0F, 0.0F, 0.0F);
+
+    // Calculate light from point lights.
+    for (uint i = 0; i < generalLightingData.iPointLightCount; i++){
+        outputColor += calculateColorFromPointLight(
+#glsl       pointLights.array[i],
+#hlsl       pointLights[i],
+            cameraPosition,
+            fragmentPosition,
+            fragmentNormalUnit,
+            fragmentDiffuseColor,
+            fragmentSpecularColor,
+            materialRoughness);
+    }
+
+    // Calculate light from directional lights.
+    for (uint i = 0; i < generalLightingData.iDirectionalLightCount; i++){
+        outputColor += calculateColorFromDirectionalLight(
+#glsl       directionalLights.array[i],
+#hlsl       directionalLights[i],
+            cameraPosition,
+            fragmentPosition,
+            fragmentNormalUnit,
+            fragmentDiffuseColor,
+            fragmentSpecularColor,
+            materialRoughness);
+    }
+
+    // Calculate light from spotlights.
+    for (uint i = 0; i < generalLightingData.iSpotlightCount; i++){
+        outputColor += calculateColorFromSpotlight(
+#glsl       spotlights.array[i],
+#hlsl       spotlights[i],
+            cameraPosition,
+            fragmentPosition,
+            fragmentNormalUnit,
+            fragmentDiffuseColor,
+            fragmentSpecularColor,
+            materialRoughness);
+    }
+
+    // Apply ambient light.
+    outputColor += generalLightingData.ambientLight.rgb * fragmentDiffuseColor;
+
+    return outputColor;
+}

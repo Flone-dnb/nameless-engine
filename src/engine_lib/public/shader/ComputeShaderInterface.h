@@ -19,6 +19,7 @@ namespace ne {
     enum class ComputeResourceUsage {
         READ_ONLY_ARRAY_BUFFER,  //< `StructuredBuffer` in HLSL, `readonly buffer` in GLSL.
         READ_WRITE_ARRAY_BUFFER, //< `RWStructuredBuffer` in HLSL, `buffer` in GLSL.
+        CONSTANT_BUFFER,         //< `cbuffer` in HLSL, `uniform` in GLSL.
     };
 
     /**

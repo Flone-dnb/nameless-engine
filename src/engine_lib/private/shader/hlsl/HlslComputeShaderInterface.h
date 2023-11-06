@@ -50,6 +50,12 @@ namespace ne {
          * @param pCommandList Graphics command list.
          */
         inline void dispatchOnGraphicsQueue(ID3D12GraphicsCommandList* pCommandList) {
+            // Bind CBV resources.
+            for (const auto& [iRootParameterIndex, pResource] : cbvResources) {
+                pCommandList->SetComputeRootConstantBufferView(
+                    iRootParameterIndex, pResource->getInternalResource()->GetGPUVirtualAddress());
+            }
+
             // Bind UAV resources.
             for (const auto& [iRootParameterIndex, pResource] : uavResources) {
                 pCommandList->SetComputeRootUnorderedAccessView(
@@ -82,6 +88,9 @@ namespace ne {
             const std::string& sComputeShaderName,
             bool bRunBeforeFrameRendering,
             ComputeExecutionGroup executionGroup);
+
+        /** Stores pairs of "root parameter index" - "resource to bind as CBV". */
+        std::unordered_map<UINT, DirectXResource*> cbvResources;
 
         /** Stores pairs of "root parameter index" - "resource to bind as UAV". */
         std::unordered_map<UINT, DirectXResource*> uavResources;

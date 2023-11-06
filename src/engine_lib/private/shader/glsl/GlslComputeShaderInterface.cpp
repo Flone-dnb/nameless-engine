@@ -64,6 +64,11 @@ namespace ne {
             return Error("logical device is `nullptr`");
         }
 
+        // Prepare descriptor type.
+        const auto descriptorType = usage == ComputeResourceUsage::CONSTANT_BUFFER
+                                        ? VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER
+                                        : VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+
         // Update one descriptor in set per frame resource.
         for (unsigned int i = 0; i < FrameResourcesManager::getFrameResourcesCount(); i++) {
             // Prepare info to bind storage buffer slot to descriptor.
@@ -79,7 +84,7 @@ namespace ne {
                 pMtxPipelineInternalResources->second.vDescriptorSets[i]; // descriptor set to update
             descriptorUpdateInfo.dstBinding = iBindingIndex;              // descriptor binding index
             descriptorUpdateInfo.dstArrayElement = 0; // first descriptor in array to update
-            descriptorUpdateInfo.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+            descriptorUpdateInfo.descriptorType = descriptorType;
             descriptorUpdateInfo.descriptorCount = 1;       // how much descriptors in array to update
             descriptorUpdateInfo.pBufferInfo = &bufferInfo; // descriptor refers to buffer data
 

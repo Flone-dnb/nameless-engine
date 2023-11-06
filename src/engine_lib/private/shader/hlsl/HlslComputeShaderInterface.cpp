@@ -72,6 +72,18 @@ namespace ne {
             uavResources[iRootParameterIndex] = pDirectXResource;
             break;
         }
+        case (ComputeResourceUsage::CONSTANT_BUFFER): {
+            // Bind CBV.
+            auto optionalError = pDirectXResource->bindDescriptor(DirectXDescriptorType::CBV);
+            if (optionalError.has_value()) [[unlikely]] {
+                optionalError->addCurrentLocationToErrorStack();
+                return optionalError;
+            }
+
+            // Add to CBV array.
+            cbvResources[iRootParameterIndex] = pDirectXResource;
+            break;
+        }
         default: {
             return Error("unhandled case");
             break;

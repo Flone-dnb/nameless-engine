@@ -149,7 +149,8 @@ namespace ne {
          *
          * @param pRenderer       Current renderer.
          * @param pVertexShader   Vertex shader.
-         * @param pFragmentShader Fragment shader.
+         * @param pFragmentShader Fragment shader. Specify `nullptr` to generate descriptor layout only for
+         * vertex shader.
          *
          * @return Error if something went wrong, otherwise generated descriptor layout data.
          */

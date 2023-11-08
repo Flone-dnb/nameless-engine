@@ -2290,18 +2290,21 @@ namespace ne {
             throw std::runtime_error(error.getFullErrorMessage());
         }
 
-        // Iterate over all graphics pipelines of all types (opaque, transparent).
-        const auto pCreatedGraphicsPipelines = getPipelineManager()->getGraphicsPipelines();
-        for (auto& [mtx, graphicsPipelines] : *pCreatedGraphicsPipelines) {
-            std::scoped_lock pipelineGuard(mtx);
+        // Get graphics pipelines.
+        const auto pMtxGraphicsPipelines = pPipelineManager->getGraphicsPipelines();
+        std::scoped_lock pipelinesGuard(pMtxGraphicsPipelines->first);
 
-            // Iterate over all graphics pipelines of specific type (opaque, for example).
-            for (const auto& [sPipelineIdentifier, pipelines] : graphicsPipelines) {
+        // Iterate over graphics pipelines of all types.
+        for (auto& pipelinesOfSpecificType : pMtxGraphicsPipelines->second.vPipelineTypes) {
+
+            // Iterate over all active shader combinations.
+            for (const auto& [sShaderNames, pipelines] : pipelinesOfSpecificType) {
 
                 // Iterate over all active unique material macros combinations (for example:
                 // if we have 2 materials where one uses diffuse texture (defined DIFFUSE_TEXTURE
                 // macro for shaders) and the second one is not we will have 2 pipelines here).
                 for (const auto& [materialMacros, pPipeline] : pipelines.shaderPipelines) {
+
                     // Get internal resources of this pipeline.
                     const auto pVulkanPipeline = reinterpret_cast<VulkanPipeline*>(pPipeline.get());
                     auto pMtxPipelineResources = pVulkanPipeline->getInternalResources();

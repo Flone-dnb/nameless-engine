@@ -13,19 +13,6 @@ namespace ne {
     class Material;
     class ComputeShaderInterface;
 
-    enum class PipelineType : size_t {
-        // !!! order of entries in this enum defines draw order !!!
-
-        PT_OPAQUE = 0,  // OPAQUE is a Windows macro, thus adding a prefix
-        PT_TRANSPARENT, // TRANSPARENT is a Windows macro, thus adding a prefix
-
-        // !!! new Pipeline types go here !!!
-
-        // !!! order of entries in this enum defines draw order !!!
-
-        SIZE ///< marks the size of this enum, should be the last entry
-    };
-
     /** Base class for render specific pipeline objects. */
     class Pipeline : public ShaderUser {
         // Only Pipeline manager should be able to create Pipeline.
@@ -42,7 +29,7 @@ namespace ne {
         virtual ~Pipeline() override = default;
 
         /**
-         * Constructs a (not unique) pipeline identifier by combining used shader names.
+         * Combines shader names into one string.
          *
          * @remark This function exists to avoid duplicating the shader name combination
          * formatting.
@@ -52,8 +39,8 @@ namespace ne {
          *
          * @return A (not unique) pipeline identifier.
          */
-        static std::string constructPipelineIdentifier(
-            const std::string& sVertexShaderName, const std::string& sPixelShaderName);
+        static std::string
+        combineShaderNames(const std::string& sVertexShaderName, const std::string& sPixelShaderName);
 
         /**
          * Returns name of the vertex shader that this Pipeline is using.
@@ -95,8 +82,7 @@ namespace ne {
         std::pair<std::mutex, std::unordered_set<Material*>>* getMaterialsThatUseThisPipeline();
 
         /**
-         * Constructs and returns identifier of this pipeline (uses @ref constructPipelineIdentifier
-         * if vertex/pixel/fragment shaders are used, otherwise might just return used shader name).
+         * Constructs and returns a non unique identifier of this pipeline that contains used shader names.
          *
          * @return A (not unique) pipeline identifier.
          */
@@ -187,8 +173,9 @@ namespace ne {
          *
          * @param pRenderer            Parent renderer that owns this pipeline.
          * @param pPipelineManager     Pipeline manager that owns this pipeline.
-         * @param sVertexShaderName    Name of the compiled vertex shader (see ShaderManager::compileShaders).
-         * @param sPixelShaderName     Name of the compiled pixel shader (see ShaderManager::compileShaders).
+         * @param sVertexShaderName    Name of the compiled vertex shader.
+         * @param sPixelShaderName     Name of the compiled pixel shader to use. Specify empty string if
+         * you want to create a depth only pipeline (used for z-prepass).
          * @param bUsePixelBlending    Whether the pixels of the mesh that uses this Pipeline should
          * blend with existing pixels on back buffer or not (for transparency).
          * @param additionalVertexShaderMacros Additional macros to enable for vertex shader configuration.

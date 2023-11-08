@@ -18,6 +18,16 @@ namespace ne {
     class MeshNode;
     class ComputeShaderInterface;
 
+    enum class PipelineType : size_t {
+        PT_OPAQUE = 0,  // OPAQUE is a Windows macro, thus adding a prefix
+        PT_TRANSPARENT, // TRANSPARENT is a Windows macro, thus adding a prefix
+        PT_DEPTH_ONLY,  // vertex shader only
+
+        // !!! new Pipeline types go here !!!
+
+        SIZE ///< marks the size of this enum, should be the last entry
+    };
+
     /**
      * Small wrapper class for `std::shared_ptr<Pipeline>` to do some extra work
      * when started/stopped referencing a pipeline.
@@ -283,7 +293,7 @@ namespace ne {
         /** Groups information about pipelines that use the same shaders. */
         struct ShaderPipelines {
             /**
-             * Map of pairs "material defined macros (combined both vertex and pixel macros)" and
+             * Map of pairs "material defined macros" and
              * "pipelines that were created from the same shader to use these different macros".
              *
              * @remark Since shader macros have prefixes that define which shader stage they are
@@ -292,6 +302,15 @@ namespace ne {
              */
             std::unordered_map<std::set<ShaderMacro>, std::shared_ptr<Pipeline>, ShaderMacroSetHash>
                 shaderPipelines;
+        };
+
+        /** Stores pipelines of different types. */
+        struct GraphicsPipelineRegistry {
+            /** Map key is vertex (and pixel if specified) shader name(s). */
+            std::array<
+                std::unordered_map<std::string, ShaderPipelines>,
+                static_cast<size_t>(PipelineType::SIZE)>
+                vPipelineTypes;
         };
 
         /**
@@ -326,8 +345,9 @@ namespace ne {
          * they will be released from the memory once the pipeline object is destroyed (not the shared
          * pointer) and no other object is using them.
          *
-         * @param sVertexShaderName    Name of the compiled vertex shader (see ShaderManager::compileShaders).
-         * @param sPixelShaderName     Name of the compiled pixel shader (see ShaderManager::compileShaders).
+         * @param sVertexShaderName    Name of the compiled vertex shader.
+         * @param sPixelShaderName     Name of the compiled pixel shader to use. Specify empty string if
+         * you want to create a depth only pipeline (used for z-prepass).
          * @param bUsePixelBlending    Whether the pixels of the mesh that uses this pipeline should blend
          * with existing pixels on back buffer or not (for transparency).
          * @param additionalVertexShaderMacros Additional macros to enable for vertex shader configuration.
@@ -346,18 +366,6 @@ namespace ne {
             Material* pMaterial);
 
         /**
-         * Returns an array currently existing graphics pipelines that contains a map per pipeline type
-         * where each map contains a pipeline identifier string (vertex/pixel shader name combined)
-         * and pipelines that use these shaders. Must be used with mutex.
-         *
-         * @return Array of currently existing graphics pipelines.
-         */
-        std::array<
-            std::pair<std::recursive_mutex, std::unordered_map<std::string, ShaderPipelines>>,
-            static_cast<size_t>(PipelineType::SIZE)>*
-        getGraphicsPipelines();
-
-        /**
          * Returns all compute shaders and their pipelines to be executed on the graphics queue.
          *
          * @warning Do not delete (free) returned pointers.
@@ -367,6 +375,17 @@ namespace ne {
         inline std::pair<std::mutex*, QueuedForExecutionComputeShaders*>
         getComputeShadersForGraphicsQueueExecution() {
             return computePipelines.getComputeShadersForGraphicsQueueExecution();
+        }
+
+        /**
+         * Returns all vertex/pixel shaders and their graphics pipelines.
+         *
+         * @warning Do not delete (free) returned pointers.
+         *
+         * @return Shaders and pipelines.
+         */
+        inline std::pair<std::recursive_mutex, GraphicsPipelineRegistry>* getGraphicsPipelines() {
+            return &mtxGraphicsPipelines;
         }
 
         /**
@@ -540,10 +559,12 @@ namespace ne {
          * Assigns vertex and pixel shaders to create a render specific graphics pipeline (for usual
          * rendering).
          *
-         * @param sVertexShaderName    Name of the compiled vertex shader (see
-         * ShaderManager::compileShaders).
-         * @param sPixelShaderName     Name of the compiled pixel shader (see
-         * ShaderManager::compileShaders).
+         * @param pipelines            Pipelines of specific type to look in.
+         * @param sShaderNames         Shader or shaders (map key value) for target pipeline.
+         * @param macrosToUse          Macros that are set (can be only vertex or combined).
+         * @param sVertexShaderName    Name of the compiled vertex shader.
+         * @param sPixelShaderName     Name of the compiled pixel shader to use. Specify empty string if
+         * you want to create a depth only pipeline (used for z-prepass).
          * @param bUsePixelBlending    Whether the pixels of the mesh that uses this pipeline should blend
          * with existing pixels on back buffer or not (for transparency).
          * @param additionalVertexShaderMacros Additional macros to enable for vertex shader
@@ -555,6 +576,9 @@ namespace ne {
          * otherwise created pipeline.
          */
         std::variant<PipelineSharedPtr, Error> createGraphicsPipelineForMaterial(
+            std::unordered_map<std::string, ShaderPipelines>& pipelines,
+            const std::string& sShaderNames,
+            const std::set<ShaderMacro>& macrosToUse,
             const std::string& sVertexShaderName,
             const std::string& sPixelShaderName,
             bool bUsePixelBlending,
@@ -580,14 +604,33 @@ namespace ne {
             const std::string& sComputeShaderName, ComputeShaderInterface* pComputeShaderInterface);
 
         /**
-         * Array that stores a map of pipelines per pipeline type.
-         * Map stores pairs of "combination of vertex/pixel(fragment) shader names" and
-         * "pipelines that use these shaders".
+         * Looks for a pipeline and returns it if found, otherwise creates and return it.
+         *
+         * @param pipelines                    Pipelines of specific type to look in.
+         * @param sKeyToLookFor                Shader or shaders (map key value) for target pipeline.
+         * @param macrosToLookFor              Macros that are set (can be only vertex or combined).
+         * @param sVertexShaderName            Pipeline's vertex shader.
+         * @param sPixelShaderName             Pipeline's pixel shader (can be empty).
+         * @param bUsePixelBlending            Whether pixel blending is enabled or not.
+         * @param additionalVertexShaderMacros Vertex shader macros to define.
+         * @param additionalPixelShaderMacros  Pixel shader macros to define.
+         * @param pMaterial                    Material that requests the pipeline.
+         *
+         * @return Error if something went wrong, otherwise valid pipeline pointer.
          */
-        std::array<
-            std::pair<std::recursive_mutex, std::unordered_map<std::string, ShaderPipelines>>,
-            static_cast<size_t>(PipelineType::SIZE)>
-            vGraphicsPipelines;
+        std::variant<PipelineSharedPtr, Error> findOrCreatePipeline(
+            std::unordered_map<std::string, ShaderPipelines>& pipelines,
+            const std::string& sKeyToLookFor,
+            const std::set<ShaderMacro>& macrosToLookFor,
+            const std::string& sVertexShaderName,
+            const std::string& sPixelShaderName,
+            bool bUsePixelBlending,
+            const std::set<ShaderMacro>& additionalVertexShaderMacros,
+            const std::set<ShaderMacro>& additionalPixelShaderMacros,
+            Material* pMaterial);
+
+        /** Groups all graphics pipelines. */
+        std::pair<std::recursive_mutex, GraphicsPipelineRegistry> mtxGraphicsPipelines;
 
         /** Stores all compute pipelines. */
         ComputePipelines computePipelines;

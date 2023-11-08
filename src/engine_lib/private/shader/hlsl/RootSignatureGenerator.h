@@ -169,7 +169,8 @@ namespace ne {
          * @param pRenderer     Current renderer.
          * @param pDevice       DirectX device.
          * @param pVertexShader Vertex shader.
-         * @param pPixelShader  Pixel shader.
+         * @param pPixelShader  Pixel shader. Specify `nullptr` to generate root signature only for vertex
+         * shader.
          *
          * @return Error if something went wrong, otherwise generated root signature.
          */

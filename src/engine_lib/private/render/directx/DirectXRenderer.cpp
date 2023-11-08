@@ -514,7 +514,7 @@ namespace ne {
 
         // Bind RTV and DSV to use to pipeline.
         pCommandList->OMSetRenderTargets(
-            1, &renderTargetDescriptorHandle, TRUE, &depthStencilDescriptorHandle);
+            1, &renderTargetDescriptorHandle, FALSE, &depthStencilDescriptorHandle);
 
         return {};
     }
@@ -568,13 +568,15 @@ namespace ne {
         // TODO: this will be moved in some other place later
         pCommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-        // Iterate over all graphics PSOs of all types (opaque, transparent).
-        const auto pCreatedGraphicsPsos = pPipelineManager->getGraphicsPipelines();
-        for (auto& [mtx, graphicsPipelines] : *pCreatedGraphicsPsos) {
-            std::scoped_lock psoGuard(mtx);
+        // Get graphics pipelines.
+        const auto pMtxGraphicsPipelines = pPipelineManager->getGraphicsPipelines();
+        std::scoped_lock pipelinesGuard(pMtxGraphicsPipelines->first);
 
-            // Iterate over all graphics PSOs of specific type (opaque, for example).
-            for (const auto& [sPsoIdentifier, pipelines] : graphicsPipelines) {
+        // Iterate over graphics pipelines of all types.
+        for (auto& pipelinesOfSpecificType : pMtxGraphicsPipelines->second.vPipelineTypes) {
+
+            // Iterate over all active shader combinations.
+            for (const auto& [sShaderNames, pipelines] : pipelinesOfSpecificType) {
 
                 // Iterate over all active unique material macros combinations (for example:
                 // if we have 2 materials where one uses diffuse texture (defined DIFFUSE_TEXTURE

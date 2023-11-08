@@ -34,8 +34,11 @@ namespace ne {
         usedShaderConfiguration[shaderType] = std::move(fullConfiguration);
     }
 
-    std::string Pipeline::constructPipelineIdentifier(
-        const std::string& sVertexShaderName, const std::string& sPixelShaderName) {
+    std::string
+    Pipeline::combineShaderNames(const std::string& sVertexShaderName, const std::string& sPixelShaderName) {
+        if (sPixelShaderName.empty()) {
+            return sVertexShaderName;
+        }
         return sVertexShaderName + " / " + sPixelShaderName;
     }
 
@@ -164,7 +167,7 @@ namespace ne {
         if (!sComputeShaderName.empty()) {
             return sComputeShaderName;
         }
-        return constructPipelineIdentifier(sVertexShaderName, sPixelShaderName);
+        return combineShaderNames(sVertexShaderName, sPixelShaderName);
     }
 
     std::set<ShaderMacro> Pipeline::getAdditionalVertexShaderMacros() const {

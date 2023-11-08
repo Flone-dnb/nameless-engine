@@ -187,26 +187,41 @@ namespace ne {
                 "the specified shader \"{}\" is not a vertex shader", pVertexShader->getShaderName()));
         }
 
-        // Make sure that the fragment shader is indeed a fragment shader.
-        if (pFragmentShader->getShaderType() != ShaderType::PIXEL_SHADER) [[unlikely]] {
-            return Error(std::format(
-                "the specified shader \"{}\" is not a fragment shader", pFragmentShader->getShaderName()));
+        if (pFragmentShader != nullptr) {
+            // Make sure that the fragment shader is indeed a fragment shader.
+            if (pFragmentShader->getShaderType() != ShaderType::PIXEL_SHADER) [[unlikely]] {
+                return Error(std::format(
+                    "the specified shader \"{}\" is not a fragment shader",
+                    pFragmentShader->getShaderName()));
+            }
         }
 
+        // Prepare a dummy mutex for fragment shader in case fragment shader is not specified in order
+        // for scoped_lock below to work.
+        std::mutex mtxDummy;
+        std::mutex* pFragmentDescriptorLayoutInfoMutex = &mtxDummy;
+
         // Get shaders used descriptor layout info.
-        auto pMtxFragmentDescriptorLayoutInfo = pFragmentShader->getDescriptorSetLayoutInfo();
+        std::pair<std::mutex, std::optional<DescriptorSetLayoutGenerator::Collected>>*
+            pMtxFragmentDescriptorLayoutInfo = nullptr;
+        if (pFragmentShader != nullptr) {
+            pMtxFragmentDescriptorLayoutInfo = pFragmentShader->getDescriptorSetLayoutInfo();
+            pFragmentDescriptorLayoutInfoMutex = &pMtxFragmentDescriptorLayoutInfo->first;
+        }
         auto pMtxVertexDescriptorLayoutInfo = pVertexShader->getDescriptorSetLayoutInfo();
 
         // Lock info.
         std::scoped_lock shaderDescriptorLayoutInfoGuard(
-            pMtxFragmentDescriptorLayoutInfo->first, pMtxVertexDescriptorLayoutInfo->first);
+            *pFragmentDescriptorLayoutInfoMutex, pMtxVertexDescriptorLayoutInfo->first);
 
         // Make sure it's not empty.
-        if (!pMtxFragmentDescriptorLayoutInfo->second.has_value()) [[unlikely]] {
-            return Error(std::format(
-                "unable to merge descriptor layout of the fragment shader \"{}\" "
-                "because it does have descriptor layout info collected",
-                pFragmentShader->getShaderName()));
+        if (pMtxFragmentDescriptorLayoutInfo != nullptr) {
+            if (!pMtxFragmentDescriptorLayoutInfo->second.has_value()) [[unlikely]] {
+                return Error(std::format(
+                    "unable to merge descriptor layout of the fragment shader \"{}\" "
+                    "because it does have descriptor layout info collected",
+                    pFragmentShader->getShaderName()));
+            }
         }
         if (!pMtxVertexDescriptorLayoutInfo->second.has_value()) [[unlikely]] {
             return Error(std::format(
@@ -216,7 +231,10 @@ namespace ne {
         }
 
         // Get layout info.
-        auto& fragmentShaderDescriptorLayoutInfo = pMtxFragmentDescriptorLayoutInfo->second.value();
+        DescriptorSetLayoutGenerator::Collected* pFragmentShaderDescriptorLayoutInfo = nullptr;
+        if (pMtxFragmentDescriptorLayoutInfo != nullptr) {
+            pFragmentShaderDescriptorLayoutInfo = &(*pMtxFragmentDescriptorLayoutInfo->second);
+        }
         auto& vertexShaderDescriptorLayoutInfo = pMtxVertexDescriptorLayoutInfo->second.value();
 
         // Make sure that vertex shader uses frame uniform buffer on expected binding index.
@@ -241,37 +259,40 @@ namespace ne {
         std::unordered_map<std::string, LayoutBindingInfo>
             resourceBindings; // will be used for `Generated` data
 
-        // First, add all bindings used in fragment shader.
-        for (const auto& [iBindingIndex, bindingInfo] : fragmentShaderDescriptorLayoutInfo.bindingInfo) {
-            // Make sure we don't have a resource with this name already.
-            auto bindingIt = resourceBindings.find(bindingInfo.sResourceName);
-            if (bindingIt != resourceBindings.end()) [[unlikely]] {
-                return Error(std::format(
-                    "fragment shader \"{}\" has two resources with the same name, "
-                    "please make sure resource names are unique",
-                    pFragmentShader->getShaderName()));
+        if (pFragmentShaderDescriptorLayoutInfo != nullptr) {
+            // First, add all bindings used in fragment shader.
+            for (const auto& [iBindingIndex, bindingInfo] :
+                 pFragmentShaderDescriptorLayoutInfo->bindingInfo) {
+                // Make sure we don't have a resource with this name already.
+                auto bindingIt = resourceBindings.find(bindingInfo.sResourceName);
+                if (bindingIt != resourceBindings.end()) [[unlikely]] {
+                    return Error(std::format(
+                        "fragment shader \"{}\" has two resources with the same name, "
+                        "please make sure resource names are unique",
+                        pFragmentShader->getShaderName()));
+                }
+
+                // Generate layout binding.
+                auto layoutBindingResult = generateLayoutBinding(iBindingIndex, bindingInfo);
+                if (std::holds_alternative<Error>(layoutBindingResult)) [[unlikely]] {
+                    auto error = std::get<Error>(std::move(layoutBindingResult));
+                    error.addCurrentLocationToErrorStack();
+                    return error;
+                }
+
+                // Add binding to be used in layout.
+                auto [binding, bindingFlags] =
+                    std::get<std::pair<VkDescriptorSetLayoutBinding, VkDescriptorBindingFlags>>(
+                        layoutBindingResult);
+                vLayoutBindings.push_back(binding);
+                vLayoutBindingFlags.push_back(bindingFlags);
+
+                // Save binding info.
+                LayoutBindingInfo info;
+                info.iBindingIndex = iBindingIndex;
+                info.descriptorType = bindingInfo.resourceType;
+                resourceBindings[bindingInfo.sResourceName] = info;
             }
-
-            // Generate layout binding.
-            auto layoutBindingResult = generateLayoutBinding(iBindingIndex, bindingInfo);
-            if (std::holds_alternative<Error>(layoutBindingResult)) [[unlikely]] {
-                auto error = std::get<Error>(std::move(layoutBindingResult));
-                error.addCurrentLocationToErrorStack();
-                return error;
-            }
-
-            // Add binding to be used in layout.
-            auto [binding, bindingFlags] =
-                std::get<std::pair<VkDescriptorSetLayoutBinding, VkDescriptorBindingFlags>>(
-                    layoutBindingResult);
-            vLayoutBindings.push_back(binding);
-            vLayoutBindingFlags.push_back(bindingFlags);
-
-            // Save binding info.
-            LayoutBindingInfo info;
-            info.iBindingIndex = iBindingIndex;
-            info.descriptorType = bindingInfo.resourceType;
-            resourceBindings[bindingInfo.sResourceName] = info;
         }
 
         // Now add all bindings used in vertex shader but avoid duplicates.
@@ -319,25 +340,28 @@ namespace ne {
                 continue;
             }
 
-            // See if this binding index is already used by some other resource.
-            const auto fragmentBindingInfoIt =
-                fragmentShaderDescriptorLayoutInfo.bindingInfo.find(iBindingIndex);
-            if (fragmentBindingInfoIt != fragmentShaderDescriptorLayoutInfo.bindingInfo.end()) [[unlikely]] {
-                // Error: this binding index is already in use by some other resource.
-                return Error(std::format(
-                    "vertex shader \"{}\" defines a resource named \"{}\" with binding index {} but "
-                    "this binding index is already being used by some other fragment shader \"{}\" "
-                    "resource named \"{}\", because these resources have different names they are "
-                    "considered different and should use different binding indices, please change "
-                    "binding indices in vertex or fragment shader so that they will not conflict, "
-                    "otherwise if these resources are the same (have the same type and used for the same"
-                    "purpose) please make sure that these resources will have the same name in both "
-                    "vertex and fragment shader",
-                    pVertexShader->getShaderName(),
-                    bindingInfo.sResourceName,
-                    iBindingIndex,
-                    pFragmentShader->getShaderName(),
-                    fragmentBindingInfoIt->second.sResourceName));
+            if (pFragmentShaderDescriptorLayoutInfo != nullptr) {
+                // See if this binding index is already used by some other resource.
+                const auto fragmentBindingInfoIt =
+                    pFragmentShaderDescriptorLayoutInfo->bindingInfo.find(iBindingIndex);
+                if (fragmentBindingInfoIt != pFragmentShaderDescriptorLayoutInfo->bindingInfo.end())
+                    [[unlikely]] {
+                    // Error: this binding index is already in use by some other resource.
+                    return Error(std::format(
+                        "vertex shader \"{}\" defines a resource named \"{}\" with binding index {} but "
+                        "this binding index is already being used by some other fragment shader \"{}\" "
+                        "resource named \"{}\", because these resources have different names they are "
+                        "considered different and should use different binding indices, please change "
+                        "binding indices in vertex or fragment shader so that they will not conflict, "
+                        "otherwise if these resources are the same (have the same type and used for the same"
+                        "purpose) please make sure that these resources will have the same name in both "
+                        "vertex and fragment shader",
+                        pVertexShader->getShaderName(),
+                        bindingInfo.sResourceName,
+                        iBindingIndex,
+                        pFragmentShader->getShaderName(),
+                        fragmentBindingInfoIt->second.sResourceName));
+                }
             }
 
             // Generate layout binding.
@@ -517,10 +541,12 @@ namespace ne {
                 pushConstantUintFieldOffsets[sFieldName] = iOffsetInUints;
             }
         }
-        if (fragmentShaderDescriptorLayoutInfo.pushConstantUintFieldOffsets.has_value()) {
-            for (const auto& [sFieldName, iOffsetInUints] :
-                 *fragmentShaderDescriptorLayoutInfo.pushConstantUintFieldOffsets) {
-                pushConstantUintFieldOffsets[sFieldName] = iOffsetInUints;
+        if (pFragmentShaderDescriptorLayoutInfo != nullptr) {
+            if (pFragmentShaderDescriptorLayoutInfo->pushConstantUintFieldOffsets.has_value()) {
+                for (const auto& [sFieldName, iOffsetInUints] :
+                     *pFragmentShaderDescriptorLayoutInfo->pushConstantUintFieldOffsets) {
+                    pushConstantUintFieldOffsets[sFieldName] = iOffsetInUints;
+                }
             }
         }
 

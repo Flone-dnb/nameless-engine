@@ -52,10 +52,9 @@ namespace ne {
          *
          * @param pRenderer              Used renderer.
          * @param pPipelineManager       Pipeline manager that owns this PSO.
-         * @param sVertexShaderName      Name of the compiled vertex shader (see
-         * ShaderManager::compileShaders).
-         * @param sPixelShaderName       Name of the compiled pixel shader (see
-         * ShaderManager::compileShaders).
+         * @param sVertexShaderName      Name of the compiled vertex shader.
+         * @param sPixelShaderName       Name of the compiled pixel shader to use. Specify empty string if
+         * you want to create a depth only pipeline (used for z-prepass).
          * @param bUsePixelBlending      Whether the pixels of the mesh that uses this PSO should blend with
          * existing pixels on back buffer or not (for transparency).
          * @param additionalVertexShaderMacros Additional macros to enable for vertex shader configuration.
@@ -146,10 +145,9 @@ namespace ne {
          * When shader is replaced the old shader gets freed from the memory and
          * a new PSO is immediately generated. Make sure the GPU is not using old shader/PSO.
          *
-         * @param sVertexShaderName      Name of the compiled vertex shader (see
-         * ShaderManager::compileShaders).
-         * @param sPixelShaderName       Name of the compiled pixel shader (see
-         * ShaderManager::compileShaders).
+         * @param sVertexShaderName      Name of the compiled vertex shader.
+         * @param sPixelShaderName       Name of the compiled pixel shader to use. Specify empty string if
+         * you want to create a depth only pipeline (used for z-prepass).
          * @param bUsePixelBlending      Whether the PSO should use blending or not (for transparency).
          * @param additionalVertexShaderMacros Additional macros to enable for vertex shader.
          * @param additionalPixelShaderMacros  Additional macros to enable for pixel shader.

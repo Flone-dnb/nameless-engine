@@ -178,7 +178,8 @@ namespace ne {
 
     std::variant<VkPushConstantRange, Error> VulkanPipeline::definePushConstants(
         const std::unordered_map<std::string, size_t>& pushConstantUintFieldOffsets,
-        const std::unordered_map<std::string, uint32_t>& resourceBindings) {
+        const std::unordered_map<std::string, uint32_t>& resourceBindings,
+        bool bMakeSureReferencingOnlyExistingResources) {
         std::scoped_lock guard(mtxInternalResources.first);
 
         // Make sure push constants data do not exist yet.
@@ -191,17 +192,20 @@ namespace ne {
             return Error("received empty array of push constants");
         }
 
-        // Make sure push constants referencing existing resources.
-        for (const auto& [sFieldName, iOffsetInUints] : pushConstantUintFieldOffsets) {
-            // Push constants names should be equal to resource name that they index into.
-            const auto it = resourceBindings.find(sFieldName);
-            if (it == resourceBindings.end()) [[unlikely]] {
-                return Error(std::format(
-                    "push constant \"{}\" is referencing a non-existing shader resource \"{}\", make sure "
-                    "the name of your push constant is equal to the name of a shader resource you want "
-                    "to index into",
-                    sFieldName,
-                    sFieldName));
+        if (bMakeSureReferencingOnlyExistingResources) {
+            // Make sure push constants referencing existing resources.
+            for (const auto& [sFieldName, iOffsetInUints] : pushConstantUintFieldOffsets) {
+                // Push constants names should be equal to resource name that they index into.
+                const auto it = resourceBindings.find(sFieldName);
+                if (it == resourceBindings.end()) [[unlikely]] {
+                    return Error(std::format(
+                        "push constant \"{}\" is referencing a non-existing shader resource \"{}\", make "
+                        "sure "
+                        "the name of your push constant is equal to the name of a shader resource you want "
+                        "to index into",
+                        sFieldName,
+                        sFieldName));
+                }
             }
         }
 
@@ -247,6 +251,17 @@ namespace ne {
         bool bUsePixelBlending,
         const std::set<ShaderMacro>& additionalVertexShaderMacros,
         const std::set<ShaderMacro>& additionalFragmentShaderMacros) {
+        // Make sure pixel shader is specified when blending is enabled.
+        if (bUsePixelBlending && sFragmentShaderName.empty()) [[unlikely]] {
+            return Error(std::format(
+                "unable to create a pipeline with pixel blending because fragment shader is not specified "
+                "(vertex shader \"{}\")",
+                sVertexShaderName));
+        }
+
+        // Prepare pipeline type.
+        const auto bDepthOnlyPipeline = sFragmentShaderName.empty();
+
         std::scoped_lock resourcesGuard(mtxInternalResources.first);
 
         // Make sure the pipeline is not initialized yet.
@@ -257,32 +272,32 @@ namespace ne {
             return {};
         }
 
-        // Assign new shaders.
-        const bool bVertexShaderNotFound = addShader(sVertexShaderName);
-        const bool bFragmentShaderNotFound = addShader(sFragmentShaderName);
-
-        // Check if shaders were found.
-        if (bVertexShaderNotFound || bFragmentShaderNotFound) [[unlikely]] {
-            return Error(std::format(
-                "shaders not found in Shader Manager: vertex \"{}\" (found: {}), fragment \"{}\" "
-                "(found: {}) ",
-                sVertexShaderName,
-                !bVertexShaderNotFound,
-                bFragmentShaderNotFound,
-                !bFragmentShaderNotFound));
+        // Assign vertex shader.
+        if (addShader(sVertexShaderName)) {
+            return Error(fmt::format("unable to find a shader named \"{}\"", sVertexShaderName));
         }
 
-        // Get assigned shader packs.
-        const auto pVertexShaderPack = getShader(ShaderType::VERTEX_SHADER).value();
-        const auto pFragmentShaderPack = getShader(ShaderType::PIXEL_SHADER).value();
+        if (!bDepthOnlyPipeline) {
+            if (addShader(sFragmentShaderName)) {
+                return Error(fmt::format("unable to find a shader named \"{}\"", sVertexShaderName));
+            }
+        }
 
-        // Get shaders for the current configuration.
+        // Prepare full configuration to be filled.
         std::set<ShaderMacro> fullVertexShaderConfiguration;
         std::set<ShaderMacro> fullFragmentShaderConfiguration;
+
+        // Get vertex shader.
+        const auto pVertexShaderPack = getShader(ShaderType::VERTEX_SHADER).value();
         auto pVertexShader = std::dynamic_pointer_cast<GlslShader>(
             pVertexShaderPack->getShader(additionalVertexShaderMacros, fullVertexShaderConfiguration));
-        auto pFragmentShader = std::dynamic_pointer_cast<GlslShader>(
-            pFragmentShaderPack->getShader(additionalFragmentShaderMacros, fullFragmentShaderConfiguration));
+
+        std::shared_ptr<GlslShader> pFragmentShader;
+        if (!bDepthOnlyPipeline) {
+            const auto pFragmentShaderPack = getShader(ShaderType::PIXEL_SHADER).value();
+            pFragmentShader = std::dynamic_pointer_cast<GlslShader>(pFragmentShaderPack->getShader(
+                additionalFragmentShaderMacros, fullFragmentShaderConfiguration));
+        }
 
         // Get Vulkan renderer.
         const auto pVulkanRenderer = dynamic_cast<VulkanRenderer*>(getRenderer());
@@ -301,7 +316,9 @@ namespace ne {
 
         // Done generating pipeline.
         saveUsedShaderConfiguration(ShaderType::VERTEX_SHADER, std::move(fullVertexShaderConfiguration));
-        saveUsedShaderConfiguration(ShaderType::PIXEL_SHADER, std::move(fullFragmentShaderConfiguration));
+        if (!bDepthOnlyPipeline) {
+            saveUsedShaderConfiguration(ShaderType::PIXEL_SHADER, std::move(fullFragmentShaderConfiguration));
+        }
 
         // Bind "frameData" descriptors to frame uniform buffer.
         optionalError = bindFrameDataDescriptors();
@@ -382,7 +399,7 @@ namespace ne {
         GlslShader* pVertexShader,
         GlslShader* pFragmentShader,
         bool bUsePixelBlending) {
-        // Get vertex shader bytecode and generate its descriptor layout.
+        // Get vertex shader bytecode.
         auto shaderBytecode = pVertexShader->getCompiledBytecode();
         if (std::holds_alternative<Error>(shaderBytecode)) [[unlikely]] {
             auto err = std::get<Error>(std::move(shaderBytecode));
@@ -392,15 +409,25 @@ namespace ne {
         const auto pMtxVertexShaderBytecode =
             std::get<std::pair<std::recursive_mutex, std::vector<char>>*>(std::move(shaderBytecode));
 
-        // Get fragment shader bytecode and generate its descriptor layout.
-        shaderBytecode = pFragmentShader->getCompiledBytecode();
-        if (std::holds_alternative<Error>(shaderBytecode)) [[unlikely]] {
-            auto err = std::get<Error>(std::move(shaderBytecode));
-            err.addCurrentLocationToErrorStack();
-            return err;
+        // Create a dummy mutex to use it when fragment shader is not specified in order for scoped lock
+        // below to work.
+        std::recursive_mutex mtxDummy;
+        std::recursive_mutex* pFragmentShaderBytecodeMutex = &mtxDummy;
+        std::pair<std::recursive_mutex, std::vector<char>>* pMtxFragmentShaderBytecode = nullptr;
+
+        if (pFragmentShader != nullptr) {
+            // Get fragment shader bytecode.
+            shaderBytecode = pFragmentShader->getCompiledBytecode();
+            if (std::holds_alternative<Error>(shaderBytecode)) [[unlikely]] {
+                auto err = std::get<Error>(std::move(shaderBytecode));
+                err.addCurrentLocationToErrorStack();
+                return err;
+            }
+            pMtxFragmentShaderBytecode =
+                std::get<std::pair<std::recursive_mutex, std::vector<char>>*>(std::move(shaderBytecode));
+
+            pFragmentShaderBytecodeMutex = &pMtxVertexShaderBytecode->first;
         }
-        const auto pMtxFragmentShaderBytecode =
-            std::get<std::pair<std::recursive_mutex, std::vector<char>>*>(std::move(shaderBytecode));
 
         // Generate one descriptor layout from both shaders.
         auto layoutResult =
@@ -420,7 +447,7 @@ namespace ne {
             return Error("expected logical device to be valid");
         }
 
-        std::scoped_lock bytecodeGuard(pMtxVertexShaderBytecode->first, pMtxFragmentShaderBytecode->first);
+        std::scoped_lock bytecodeGuard(pMtxVertexShaderBytecode->first, *pFragmentShaderBytecodeMutex);
 
         // Describe vertex shader module.
         VkShaderModuleCreateInfo vertexShaderModuleInfo{};
@@ -442,25 +469,27 @@ namespace ne {
                 string_VkResult(result)));
         }
 
-        // Describe fragment shader module.
-        VkShaderModuleCreateInfo fragmentShaderModuleInfo{};
-        fragmentShaderModuleInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-        fragmentShaderModuleInfo.codeSize = pMtxFragmentShaderBytecode->second.size();
-        fragmentShaderModuleInfo.pCode =
-            reinterpret_cast<const uint32_t*>(pMtxFragmentShaderBytecode->second.data());
-
-        // Create fragment shader module.
         VkShaderModule pFragmentShaderModule = nullptr;
-        result =
-            vkCreateShaderModule(pLogicalDevice, &fragmentShaderModuleInfo, nullptr, &pFragmentShaderModule);
-        if (result != VK_SUCCESS) [[unlikely]] {
-            vkDestroyShaderModule(pLogicalDevice, pVertexShaderModule, nullptr);
-            vkDestroyDescriptorPool(pLogicalDevice, generatedLayout.pDescriptorPool, nullptr);
-            vkDestroyDescriptorSetLayout(pLogicalDevice, generatedLayout.pDescriptorSetLayout, nullptr);
-            return Error(std::format(
-                "failed to create a fragment shader module \"{}\", error: {}",
-                pFragmentShader->getShaderName(),
-                string_VkResult(result)));
+        if (pFragmentShader != nullptr) {
+            // Describe fragment shader module.
+            VkShaderModuleCreateInfo fragmentShaderModuleInfo{};
+            fragmentShaderModuleInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+            fragmentShaderModuleInfo.codeSize = pMtxFragmentShaderBytecode->second.size();
+            fragmentShaderModuleInfo.pCode =
+                reinterpret_cast<const uint32_t*>(pMtxFragmentShaderBytecode->second.data());
+
+            // Create fragment shader module.
+            result = vkCreateShaderModule(
+                pLogicalDevice, &fragmentShaderModuleInfo, nullptr, &pFragmentShaderModule);
+            if (result != VK_SUCCESS) [[unlikely]] {
+                vkDestroyShaderModule(pLogicalDevice, pVertexShaderModule, nullptr);
+                vkDestroyDescriptorPool(pLogicalDevice, generatedLayout.pDescriptorPool, nullptr);
+                vkDestroyDescriptorSetLayout(pLogicalDevice, generatedLayout.pDescriptorSetLayout, nullptr);
+                return Error(std::format(
+                    "failed to create a fragment shader module \"{}\", error: {}",
+                    pFragmentShader->getShaderName(),
+                    string_VkResult(result)));
+            }
         }
 
         // Describe vertex shader pipeline stage.
@@ -478,8 +507,10 @@ namespace ne {
         fragmentShaderStageInfo.pName = "main";
 
         // Group shader stages.
-        const std::array<VkPipelineShaderStageCreateInfo, 2> shaderStages = {
-            vertexShaderStageInfo, fragmentShaderStageInfo};
+        std::vector<VkPipelineShaderStageCreateInfo> vShaderStages = {vertexShaderStageInfo};
+        if (pFragmentShader != nullptr) {
+            vShaderStages.push_back(fragmentShaderStageInfo);
+        }
 
         // Get bindings and attributes.
         const auto bindingDescription = GlslShader::getVertexBindingDescription();
@@ -504,7 +535,9 @@ namespace ne {
         auto optionalSwapChainExtent = pVulkanRenderer->getSwapChainExtent();
         if (!optionalSwapChainExtent.has_value()) [[unlikely]] {
             vkDestroyShaderModule(pLogicalDevice, pVertexShaderModule, nullptr);
-            vkDestroyShaderModule(pLogicalDevice, pFragmentShaderModule, nullptr);
+            if (pFragmentShaderModule != nullptr) {
+                vkDestroyShaderModule(pLogicalDevice, pFragmentShaderModule, nullptr);
+            }
             vkDestroyDescriptorPool(pLogicalDevice, generatedLayout.pDescriptorPool, nullptr);
             vkDestroyDescriptorSetLayout(pLogicalDevice, generatedLayout.pDescriptorSetLayout, nullptr);
             return Error("failed to get swap chain extent");
@@ -612,7 +645,9 @@ namespace ne {
         if (generatedLayout.pushConstantUintFieldOffsets.has_value()) {
             // Process push constants.
             auto pushConstantsResult = definePushConstants(
-                generatedLayout.pushConstantUintFieldOffsets.value(), generatedLayout.resourceBindings);
+                generatedLayout.pushConstantUintFieldOffsets.value(),
+                generatedLayout.resourceBindings,
+                pFragmentShader != nullptr);
             if (std::holds_alternative<Error>(pushConstantsResult)) [[unlikely]] {
                 auto error = std::get<Error>(std::move(pushConstantsResult));
                 error.addCurrentLocationToErrorStack();
@@ -630,7 +665,9 @@ namespace ne {
         result = vkCreatePipelineLayout(pLogicalDevice, &pipelineLayoutInfo, nullptr, &pPipelineLayout);
         if (result != VK_SUCCESS) [[unlikely]] {
             vkDestroyShaderModule(pLogicalDevice, pVertexShaderModule, nullptr);
-            vkDestroyShaderModule(pLogicalDevice, pFragmentShaderModule, nullptr);
+            if (pFragmentShaderModule != nullptr) {
+                vkDestroyShaderModule(pLogicalDevice, pFragmentShaderModule, nullptr);
+            }
             vkDestroyDescriptorPool(pLogicalDevice, generatedLayout.pDescriptorPool, nullptr);
             vkDestroyDescriptorSetLayout(pLogicalDevice, generatedLayout.pDescriptorSetLayout, nullptr);
             return Error(std::format("failed to create pipeline layout, error: {}", string_VkResult(result)));
@@ -641,8 +678,8 @@ namespace ne {
         pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
 
         // Specify shader stages.
-        pipelineInfo.stageCount = static_cast<uint32_t>(shaderStages.size());
-        pipelineInfo.pStages = shaderStages.data();
+        pipelineInfo.stageCount = static_cast<uint32_t>(vShaderStages.size());
+        pipelineInfo.pStages = vShaderStages.data();
 
         // Specify fixed-function stages.
         pipelineInfo.pVertexInputState = &vertexInputStateInfo;
@@ -678,7 +715,9 @@ namespace ne {
         if (result != VK_SUCCESS) [[unlikely]] {
             vkDestroyPipelineLayout(pLogicalDevice, pPipelineLayout, nullptr);
             vkDestroyShaderModule(pLogicalDevice, pVertexShaderModule, nullptr);
-            vkDestroyShaderModule(pLogicalDevice, pFragmentShaderModule, nullptr);
+            if (pFragmentShaderModule != nullptr) {
+                vkDestroyShaderModule(pLogicalDevice, pFragmentShaderModule, nullptr);
+            }
             vkDestroyDescriptorPool(pLogicalDevice, generatedLayout.pDescriptorPool, nullptr);
             vkDestroyDescriptorSetLayout(pLogicalDevice, generatedLayout.pDescriptorSetLayout, nullptr);
             return Error(
@@ -687,7 +726,9 @@ namespace ne {
 
         // Destroy shader modules since we don't need them after the pipeline was created.
         vkDestroyShaderModule(pLogicalDevice, pVertexShaderModule, nullptr);
-        vkDestroyShaderModule(pLogicalDevice, pFragmentShaderModule, nullptr);
+        if (pFragmentShaderModule != nullptr) {
+            vkDestroyShaderModule(pLogicalDevice, pFragmentShaderModule, nullptr);
+        }
 
         // Save created resources.
         mtxInternalResources.second.pDescriptorSetLayout = generatedLayout.pDescriptorSetLayout;
@@ -697,20 +738,23 @@ namespace ne {
         mtxInternalResources.second.pPipelineLayout = pPipelineLayout;
         mtxInternalResources.second.pPipeline = pPipeline;
 
-        // Make sure map of bindless array index managers references only existing resources.
-        for (const auto& [sShaderResourceName, pIndexManager] :
-             mtxInternalResources.second.bindlessArrayIndexManagers) {
-            // Look if this shader resource name is used in this pipeline.
-            const auto it = mtxInternalResources.second.resourceBindings.find(sShaderResourceName);
-            if (it == mtxInternalResources.second.resourceBindings.end()) [[unlikely]] {
-                // Unexpected.
-                Error error(std::format(
-                    "pipeline \"{}\" restored its resources but some previously used index manager is "
-                    "now handling indices for non-existing (no longer used) shader resource \"{}\"",
-                    getPipelineIdentifier(),
-                    sShaderResourceName));
-                error.showError();
-                throw std::runtime_error(error.getFullErrorMessage());
+        if (pFragmentShader != nullptr) {
+            // Make sure map of bindless array index managers references only existing resources
+            // (without fragment shader it will probably reference non-existing resources).
+            for (const auto& [sShaderResourceName, pIndexManager] :
+                 mtxInternalResources.second.bindlessArrayIndexManagers) {
+                // Look if this shader resource name is used in this pipeline.
+                const auto it = mtxInternalResources.second.resourceBindings.find(sShaderResourceName);
+                if (it == mtxInternalResources.second.resourceBindings.end()) [[unlikely]] {
+                    // Unexpected.
+                    Error error(std::format(
+                        "pipeline \"{}\" restored its resources but some previously used index manager is "
+                        "now handling indices for non-existing (no longer used) shader resource \"{}\"",
+                        getPipelineIdentifier(),
+                        sShaderResourceName));
+                    error.showError();
+                    throw std::runtime_error(error.getFullErrorMessage());
+                }
             }
         }
 

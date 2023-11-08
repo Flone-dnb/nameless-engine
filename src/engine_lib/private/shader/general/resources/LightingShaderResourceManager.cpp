@@ -395,16 +395,21 @@ namespace ne {
             return Error("pipeline manager is `nullptr`");
         }
 
-        // Iterate through all graphics pipelines of all types (opaque, transparent).
-        const auto pPipelines = pPipelineManager->getGraphicsPipelines();
-        for (auto& [mtx, graphicsPipelines] : *pPipelines) {
-            std::scoped_lock pipelineTypeGuard(mtx);
+        // Get graphics pipelines.
+        const auto pMtxGraphicsPipelines = pPipelineManager->getGraphicsPipelines();
+        std::scoped_lock pipelinesGuard(pMtxGraphicsPipelines->first);
 
-            // Iterate over all graphics pipelines of specific type (opaque, for example).
-            for (const auto& [sPipelineName, pipelines] : graphicsPipelines) {
+        // Iterate over graphics pipelines of all types.
+        for (auto& pipelinesOfSpecificType : pMtxGraphicsPipelines->second.vPipelineTypes) {
 
-                // Iterate over all active unique material macros combinations.
+            // Iterate over all active shader combinations.
+            for (const auto& [sShaderNames, pipelines] : pipelinesOfSpecificType) {
+
+                // Iterate over all active unique material macros combinations (for example:
+                // if we have 2 materials where one uses diffuse texture (defined DIFFUSE_TEXTURE
+                // macro for shaders) and the second one is not we will have 2 pipelines here).
                 for (const auto& [materialMacros, pPipeline] : pipelines.shaderPipelines) {
+
                     // Convert to a Vulkan pipeline.
                     const auto pVulkanPipeline = dynamic_cast<VulkanPipeline*>(pPipeline.get());
                     if (pVulkanPipeline == nullptr) [[unlikely]] {
@@ -783,16 +788,21 @@ namespace ne {
             return Error("pipeline manager is `nullptr`");
         }
 
-        // Iterate through all graphics pipelines of all types (opaque, transparent).
-        const auto pPipelines = pPipelineManager->getGraphicsPipelines();
-        for (auto& [mtx, graphicsPipelines] : *pPipelines) {
-            std::scoped_lock pipelineTypeGuard(mtx);
+        // Get graphics pipelines.
+        const auto pMtxGraphicsPipelines = pPipelineManager->getGraphicsPipelines();
+        std::scoped_lock pipelinesGuard(pMtxGraphicsPipelines->first);
 
-            // Iterate over all graphics pipelines of specific type (opaque, for example).
-            for (const auto& [sPipelineName, pipelines] : graphicsPipelines) {
+        // Iterate over graphics pipelines of all types.
+        for (auto& pipelinesOfSpecificType : pMtxGraphicsPipelines->second.vPipelineTypes) {
 
-                // Iterate over all active unique material macros combinations.
+            // Iterate over all active shader combinations.
+            for (const auto& [sShaderNames, pipelines] : pipelinesOfSpecificType) {
+
+                // Iterate over all active unique material macros combinations (for example:
+                // if we have 2 materials where one uses diffuse texture (defined DIFFUSE_TEXTURE
+                // macro for shaders) and the second one is not we will have 2 pipelines here).
                 for (const auto& [materialMacros, pPipeline] : pipelines.shaderPipelines) {
+
                     // Convert to a Vulkan pipeline.
                     const auto pVulkanPipeline = dynamic_cast<VulkanPipeline*>(pPipeline.get());
                     if (pVulkanPipeline == nullptr) [[unlikely]] {

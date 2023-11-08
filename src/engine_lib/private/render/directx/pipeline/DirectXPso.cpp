@@ -154,6 +154,17 @@ namespace ne {
         bool bUsePixelBlending,
         const std::set<ShaderMacro>& additionalVertexShaderMacros,
         const std::set<ShaderMacro>& additionalPixelShaderMacros) {
+        // Make sure pixel shader is specified when blending is enabled.
+        if (bUsePixelBlending && sPixelShaderName.empty()) [[unlikely]] {
+            return Error(std::format(
+                "unable to create a pipeline with pixel blending because pixel shader is not specified "
+                "(vertex shader \"{}\")",
+                sVertexShaderName));
+        }
+
+        // Prepare pipeline type.
+        const auto bDepthOnlyPipeline = sPixelShaderName.empty();
+
         // Get settings.
         const auto pRenderSettings = getRenderer()->getRenderSettings();
         std::scoped_lock resourcesGuard(mtxInternalResources.first, pRenderSettings->first);
@@ -170,39 +181,25 @@ namespace ne {
             return {};
         }
 
-        // Assign new shaders.
-        const bool bVertexShaderNotFound = addShader(sVertexShaderName);
-        const bool bPixelShaderNotFound = addShader(sPixelShaderName);
-
-        // Check if shaders were found.
-        if (bVertexShaderNotFound || bPixelShaderNotFound) [[unlikely]] {
-            return Error(fmt::format(
-                "shaders not found in Shader Manager: vertex \"{}\" (found: {}), pixel \"{}\" (found: {})",
-                sVertexShaderName,
-                !bVertexShaderNotFound,
-                sPixelShaderName,
-                !bPixelShaderNotFound));
+        // Assign vertex shader.
+        if (addShader(sVertexShaderName)) [[unlikely]] {
+            return Error(fmt::format("unable to find a shader named \"{}\"", sVertexShaderName));
         }
 
-        // Get assigned shader packs.
-        const auto pVertexShaderPack = getShader(ShaderType::VERTEX_SHADER).value();
-        const auto pPixelShaderPack = getShader(ShaderType::PIXEL_SHADER).value();
+        // Assign pixel shader.
+        if (!bDepthOnlyPipeline) {
+            if (addShader(sPixelShaderName)) [[unlikely]] {
+                return Error(fmt::format("unable to find a shader named \"{}\"", sVertexShaderName));
+            }
+        }
 
-        // Get shaders for the current configuration.
+        // Get assigned vertex shader.
+        const auto pVertexShaderPack = getShader(ShaderType::VERTEX_SHADER).value();
         std::set<ShaderMacro> fullVertexShaderConfiguration;
-        std::set<ShaderMacro> fullPixelShaderConfiguration;
         auto pVertexShader = std::dynamic_pointer_cast<HlslShader>(
             pVertexShaderPack->getShader(additionalVertexShaderMacros, fullVertexShaderConfiguration));
-        auto pPixelShader = std::dynamic_pointer_cast<HlslShader>(
-            pPixelShaderPack->getShader(additionalPixelShaderMacros, fullPixelShaderConfiguration));
 
-        // Get DirectX renderer.
-        auto pDirectXRenderer = dynamic_cast<DirectXRenderer*>(getRenderer());
-        if (pDirectXRenderer == nullptr) [[unlikely]] {
-            return Error("expected a DirectX renderer");
-        }
-
-        // Get vertex shader bytecode and generate its root signature.
+        // Get vertex shader bytecode.
         auto shaderBytecode = pVertexShader->getCompiledBlob();
         if (std::holds_alternative<Error>(shaderBytecode)) [[unlikely]] {
             auto err = std::get<Error>(std::move(shaderBytecode));
@@ -211,16 +208,33 @@ namespace ne {
         }
         const ComPtr<IDxcBlob> pVertexShaderBytecode = std::get<ComPtr<IDxcBlob>>(std::move(shaderBytecode));
 
-        // Get pixel shader bytecode and generate its root signature.
-        shaderBytecode = pPixelShader->getCompiledBlob();
-        if (std::holds_alternative<Error>(shaderBytecode)) [[unlikely]] {
-            auto err = std::get<Error>(std::move(shaderBytecode));
-            err.addCurrentLocationToErrorStack();
-            return err;
-        }
-        const ComPtr<IDxcBlob> pPixelShaderBytecode = std::get<ComPtr<IDxcBlob>>(std::move(shaderBytecode));
+        // Prepare pixel shader.
+        std::shared_ptr<HlslShader> pPixelShader;
+        ComPtr<IDxcBlob> pPixelShaderBytecode;
+        std::set<ShaderMacro> fullPixelShaderConfiguration;
+        if (!bDepthOnlyPipeline) {
+            // Get assigned pixel shader.
+            const auto pPixelShaderPack = getShader(ShaderType::PIXEL_SHADER).value();
+            pPixelShader = std::dynamic_pointer_cast<HlslShader>(
+                pPixelShaderPack->getShader(additionalPixelShaderMacros, fullPixelShaderConfiguration));
 
-        // Generate one root signature from both shaders.
+            // Get pixel shader bytecode and generate its root signature.
+            shaderBytecode = pPixelShader->getCompiledBlob();
+            if (std::holds_alternative<Error>(shaderBytecode)) [[unlikely]] {
+                auto err = std::get<Error>(std::move(shaderBytecode));
+                err.addCurrentLocationToErrorStack();
+                return err;
+            }
+            pPixelShaderBytecode = std::get<ComPtr<IDxcBlob>>(std::move(shaderBytecode));
+        }
+
+        // Get DirectX renderer.
+        auto pDirectXRenderer = dynamic_cast<DirectXRenderer*>(getRenderer());
+        if (pDirectXRenderer == nullptr) [[unlikely]] {
+            return Error("expected a DirectX renderer");
+        }
+
+        // Generate root signature from shaders.
         auto result = RootSignatureGenerator::generate(
             pDirectXRenderer, pDirectXRenderer->getD3dDevice(), pVertexShader.get(), pPixelShader.get());
         if (std::holds_alternative<Error>(result)) [[unlikely]] {
@@ -241,7 +255,9 @@ namespace ne {
         psoDesc.InputLayout = {vInputLayout.data(), static_cast<UINT>(vInputLayout.size())};
         psoDesc.pRootSignature = mtxInternalResources.second.pRootSignature.Get();
         psoDesc.VS = {pVertexShaderBytecode->GetBufferPointer(), pVertexShaderBytecode->GetBufferSize()};
-        psoDesc.PS = {pPixelShaderBytecode->GetBufferPointer(), pPixelShaderBytecode->GetBufferSize()};
+        if (!bDepthOnlyPipeline) {
+            psoDesc.PS = {pPixelShaderBytecode->GetBufferPointer(), pPixelShaderBytecode->GetBufferSize()};
+        }
 
         // Setup rasterizer description.
         CD3DX12_RASTERIZER_DESC rasterizerDesc(D3D12_DEFAULT);
@@ -272,12 +288,18 @@ namespace ne {
         psoDesc.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
         psoDesc.SampleMask = UINT_MAX;
         psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-        psoDesc.NumRenderTargets = 1;
-        psoDesc.RTVFormats[0] = DirectXRenderer::getBackBufferFormat();
         psoDesc.SampleDesc.Count = iMsaaSampleCount;
         psoDesc.SampleDesc.Quality =
             msaaState != MsaaState::DISABLED ? (pDirectXRenderer->getMsaaQualityLevel() - 1) : 0;
         psoDesc.DSVFormat = DirectXRenderer::getDepthStencilBufferFormat();
+
+        // Specify render target.
+        if (!bDepthOnlyPipeline) {
+            psoDesc.NumRenderTargets = 1;
+            psoDesc.RTVFormats[0] = DirectXRenderer::getBackBufferFormat();
+        } else {
+            psoDesc.NumRenderTargets = 0;
+        }
 
         // Create PSO.
         HRESULT hResult = pDirectXRenderer->getD3dDevice()->CreateGraphicsPipelineState(
@@ -289,7 +311,9 @@ namespace ne {
         // Done.
         mtxInternalResources.second.bIsReadyForUsage = true;
         saveUsedShaderConfiguration(ShaderType::VERTEX_SHADER, std::move(fullVertexShaderConfiguration));
-        saveUsedShaderConfiguration(ShaderType::PIXEL_SHADER, std::move(fullPixelShaderConfiguration));
+        if (!bDepthOnlyPipeline) {
+            saveUsedShaderConfiguration(ShaderType::PIXEL_SHADER, std::move(fullPixelShaderConfiguration));
+        }
 
         return {};
     }

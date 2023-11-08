@@ -160,168 +160,207 @@ namespace ne {
                 "the specified shader \"{}\" is not a vertex shader", pVertexShader->getShaderName()));
         }
 
-        // Make sure that the pixel shader is indeed a pixel shader.
-        if (pPixelShader->getShaderType() != ShaderType::PIXEL_SHADER) [[unlikely]] {
-            return Error(std::format(
-                "the specified shader \"{}\" is not a pixel shader", pPixelShader->getShaderName()));
+        if (pPixelShader != nullptr) {
+            // Make sure that the pixel shader is indeed a pixel shader.
+            if (pPixelShader->getShaderType() != ShaderType::PIXEL_SHADER) [[unlikely]] {
+                return Error(std::format(
+                    "the specified shader \"{}\" is not a pixel shader", pPixelShader->getShaderName()));
+            }
         }
 
-        // Get shaders used root parameters and used static samplers.
-        auto pMtxPixelRootInfo = pPixelShader->getRootSignatureInfo();
+        // Get vertex shader root signature info.
         auto pMtxVertexRootInfo = pVertexShader->getRootSignatureInfo();
 
-        // Lock info.
-        std::scoped_lock shaderRootSignatureInfoGuard(pMtxPixelRootInfo->first, pMtxVertexRootInfo->first);
+        // Since pixel shader may be empty prepare a dummy mutex for scoped lock below to work.
+        std::mutex mtxDummy;
+        std::mutex* pPixelRootInfoMutex = &mtxDummy;
 
-        // Make sure it's not empty.
-        if (!pMtxPixelRootInfo->second.has_value()) [[unlikely]] {
-            return Error(std::format(
-                "unable to merge root signature of the pixel shader \"{}\" "
-                "because it does have root signature info collected",
-                pPixelShader->getShaderName()));
-        }
-        if (!pMtxVertexRootInfo->second.has_value()) [[unlikely]] {
-            return Error(std::format(
-                "unable to merge root signature of the vertex shader \"{}\" "
-                "because it does have root signature info collected",
-                pVertexShader->getShaderName()));
+        // Get pixel shader root signature info.
+        std::pair<std::mutex, std::optional<HlslShader::RootSignatureInfo>>* pMtxPixelRootInfo = nullptr;
+        if (pPixelShader != nullptr) {
+            pMtxPixelRootInfo = pPixelShader->getRootSignatureInfo();
+            pPixelRootInfoMutex = &pMtxPixelRootInfo->first;
         }
 
-        auto& pixelShaderRootSignatureInfo = pMtxPixelRootInfo->second.value();
-        auto& vertexShaderRootSignatureInfo = pMtxVertexRootInfo->second.value();
-        auto staticSamplers = pixelShaderRootSignatureInfo.staticSamplers;
-
+        // Prepare variables to create root signature.
+        std::set<SamplerType> staticSamplers;
         std::unordered_map<std::string, UINT> rootParameterIndices;
-        std::vector<CD3DX12_ROOT_PARAMETER> vRootParameters; // will be used to generate root signature
+        std::vector<CD3DX12_ROOT_PARAMETER> vRootParameters;
         std::set<std::string> addedRootParameterNames;
 
-        // Check that vertex shader uses frame constant buffer as first root parameter.
-        const auto vertexFrameBufferIt =
-            vertexShaderRootSignatureInfo.rootParameterIndices.find(sFrameConstantBufferName);
-        if (vertexFrameBufferIt == vertexShaderRootSignatureInfo.rootParameterIndices.end()) [[unlikely]] {
-            return Error(std::format(
-                "expected to find `cbuffer` \"{}\" to be used in vertex shader \"{}\"",
-                sFrameConstantBufferName,
-                pVertexShader->getShaderName()));
-        }
+        {
+            // Lock shader root signature info.
+            std::scoped_lock shaderRootSignatureInfoGuard(pMtxVertexRootInfo->first, *pPixelRootInfoMutex);
 
-        // Add first root parameter (frame constants).
-        static_assert(
-            iFrameConstantBufferRootParameterIndex == 0, "change order in which we add to `vRootParameters`");
-        vRootParameters.push_back(vertexFrameBufferIt->second.second.generateSingleDescriptorDescription());
-        addedRootParameterNames.insert(sFrameConstantBufferName);
-        rootParameterIndices[sFrameConstantBufferName] = iFrameConstantBufferRootParameterIndex;
-
-        // Prepare a lambda to add some fixed root parameter indices.
-        auto addLightingResourceRootParameter = [&](const std::string& sLightingShaderResourceName,
-                                                    UINT iLightingResourceRootParameterIndex) {
-            // See if this resource is used.
-            const auto rootParameterIndexIt =
-                pixelShaderRootSignatureInfo.rootParameterIndices.find(sLightingShaderResourceName);
-
-            if (rootParameterIndexIt != pixelShaderRootSignatureInfo.rootParameterIndices.end()) {
-                // Add root parameter.
-                vRootParameters.push_back(
-                    rootParameterIndexIt->second.second.generateSingleDescriptorDescription());
-                addedRootParameterNames.insert(sLightingShaderResourceName);
-                rootParameterIndices[sLightingShaderResourceName] = iLightingResourceRootParameterIndex;
+            // Make sure it's not empty.
+            if (!pMtxVertexRootInfo->second.has_value()) [[unlikely]] {
+                return Error(std::format(
+                    "unable to merge root signature of the vertex shader \"{}\" "
+                    "because it does have root signature info collected",
+                    pVertexShader->getShaderName()));
             }
-        };
-
-        // Check if general lighting data is used and then assign it a fixed root parameter index.
-        static_assert(
-            iGeneralLightingConstantBufferRootParameterIndex == 1,
-            "change order in which we add to `vRootParameters`");
-        addLightingResourceRootParameter(
-            LightingShaderResourceManager::getGeneralLightingDataShaderResourceName(),
-            iGeneralLightingConstantBufferRootParameterIndex);
-
-        // Check if point lights are used and then assign it a fixed root parameter index.
-        static_assert(
-            iPointLightsBufferRootParameterIndex == 2, "change order in which we add to `vRootParameters`");
-        addLightingResourceRootParameter(
-            LightingShaderResourceManager::getPointLightsShaderResourceName(),
-            iPointLightsBufferRootParameterIndex);
-
-        // Check if directional lights are used and then assign it a fixed root parameter index.
-        static_assert(
-            iDirectionalLightsBufferRootParameterIndex == 3,
-            "change order in which we add to `vRootParameters`");
-        addLightingResourceRootParameter(
-            LightingShaderResourceManager::getDirectionalLightsShaderResourceName(),
-            iDirectionalLightsBufferRootParameterIndex);
-
-        // Check if spotlights are used and then assign it a fixed root parameter index.
-        static_assert(
-            iSpotlightsBufferRootParameterIndex == 4, "change order in which we add to `vRootParameters`");
-        addLightingResourceRootParameter(
-            LightingShaderResourceManager::getSpotlightsShaderResourceName(),
-            iSpotlightsBufferRootParameterIndex);
-
-        // Do some basic checks to add parameters/samplers that don't exist in pixel shader.
-
-        // First, add static samplers.
-        for (const auto& samplerType : vertexShaderRootSignatureInfo.staticSamplers) {
-            // Check if we already use this sampler.
-            const auto it = staticSamplers.find(samplerType);
-            if (it == staticSamplers.end()) {
-                // This sampler is new, add it.
-                staticSamplers.insert(samplerType);
-            }
-        }
-
-        // Prepare array of descriptor table ranges for root parameters to reference them since D3D stores
-        // raw pointers to descriptor range objects.
-        std::vector<CD3DX12_DESCRIPTOR_RANGE> vTableRanges;
-        vTableRanges.reserve(
-            pixelShaderRootSignatureInfo.rootParameterIndices.size() +
-            vertexShaderRootSignatureInfo.rootParameterIndices.size());
-        const auto iInitialCapacity = vTableRanges.capacity();
-
-        // Then, add other root parameters.
-        auto addRootParameters =
-            [&](const std::unordered_map<std::string, std::pair<UINT, RootParameter>>& rootParametersToAdd) {
-                for (const auto& [sResourceName, resourceInfo] : rootParametersToAdd) {
-                    // See if we already added this resource.
-                    auto it = addedRootParameterNames.find(sResourceName);
-                    if (it != addedRootParameterNames.end()) {
-                        continue;
-                    }
-
-                    // Add this resource.
-                    rootParameterIndices[sResourceName] = static_cast<UINT>(vRootParameters.size());
-                    addedRootParameterNames.insert(sResourceName);
-
-                    if (resourceInfo.second.isTable()) {
-                        // Add descriptor table.
-                        vTableRanges.push_back(resourceInfo.second.generateTableRange());
-                        CD3DX12_ROOT_PARAMETER newParameter{};
-                        newParameter.InitAsDescriptorTable(
-                            1, &vTableRanges.back(), resourceInfo.second.getVisibility());
-                        vRootParameters.push_back(newParameter);
-                    } else {
-                        // Add single descriptor.
-                        vRootParameters.push_back(resourceInfo.second.generateSingleDescriptorDescription());
-                    }
+            if (pMtxPixelRootInfo != nullptr) {
+                if (!pMtxPixelRootInfo->second.has_value()) [[unlikely]] {
+                    return Error(std::format(
+                        "unable to merge root signature of the pixel shader \"{}\" "
+                        "because it does have root signature info collected",
+                        pPixelShader->getShaderName()));
                 }
-            };
-        addRootParameters(pixelShaderRootSignatureInfo.rootParameterIndices);
-        addRootParameters(vertexShaderRootSignatureInfo.rootParameterIndices);
+            }
 
-        // Self check: make sure ranges were not moved to other place in memory.
-        if (vTableRanges.capacity() != iInitialCapacity) [[unlikely]] {
-            Error error(std::format(
-                "table range array capacity changed from {} to {}",
-                iInitialCapacity,
-                vTableRanges.capacity()));
-            error.showError();
-            throw std::runtime_error(error.getFullErrorMessage());
+            // Get shaders root signature info.
+            HlslShader::RootSignatureInfo* pPixelShaderRootSignatureInfo = nullptr;
+            auto& vertexShaderRootSignatureInfo = pMtxVertexRootInfo->second.value();
+            if (pMtxPixelRootInfo != nullptr) {
+                pPixelShaderRootSignatureInfo = &(*pMtxPixelRootInfo->second);
+                staticSamplers = pPixelShaderRootSignatureInfo->staticSamplers;
+            }
+
+            // Check that vertex shader uses frame constant buffer as first root parameter.
+            const auto vertexFrameBufferIt =
+                vertexShaderRootSignatureInfo.rootParameterIndices.find(sFrameConstantBufferName);
+            if (vertexFrameBufferIt == vertexShaderRootSignatureInfo.rootParameterIndices.end())
+                [[unlikely]] {
+                return Error(std::format(
+                    "expected to find `cbuffer` \"{}\" to be used in vertex shader \"{}\"",
+                    sFrameConstantBufferName,
+                    pVertexShader->getShaderName()));
+            }
+
+            // Add first root parameter (frame constants).
+            static_assert(
+                iFrameConstantBufferRootParameterIndex == 0,
+                "change order in which we add to `vRootParameters`");
+            vRootParameters.push_back(
+                vertexFrameBufferIt->second.second.generateSingleDescriptorDescription());
+            addedRootParameterNames.insert(sFrameConstantBufferName);
+            rootParameterIndices[sFrameConstantBufferName] = iFrameConstantBufferRootParameterIndex;
+
+            if (pPixelShaderRootSignatureInfo != nullptr) {
+                // Prepare a lambda to add some fixed root parameter indices for light resources.
+                auto addLightingResourceRootParameter = [&](const std::string& sLightingShaderResourceName,
+                                                            UINT iLightingResourceRootParameterIndex) {
+                    // See if this resource is used.
+                    const auto rootParameterIndexIt =
+                        pPixelShaderRootSignatureInfo->rootParameterIndices.find(sLightingShaderResourceName);
+
+                    if (rootParameterIndexIt != pPixelShaderRootSignatureInfo->rootParameterIndices.end()) {
+                        // Add root parameter.
+                        vRootParameters.push_back(
+                            rootParameterIndexIt->second.second.generateSingleDescriptorDescription());
+                        addedRootParameterNames.insert(sLightingShaderResourceName);
+                        rootParameterIndices[sLightingShaderResourceName] =
+                            iLightingResourceRootParameterIndex;
+                    }
+                };
+
+                // Check if general lighting data is used and then assign it a fixed root parameter index.
+                static_assert(
+                    iGeneralLightingConstantBufferRootParameterIndex == 1,
+                    "change order in which we add to `vRootParameters`");
+                addLightingResourceRootParameter(
+                    LightingShaderResourceManager::getGeneralLightingDataShaderResourceName(),
+                    iGeneralLightingConstantBufferRootParameterIndex);
+
+                // Check if point lights are used and then assign it a fixed root parameter index.
+                static_assert(
+                    iPointLightsBufferRootParameterIndex == 2,
+                    "change order in which we add to `vRootParameters`");
+                addLightingResourceRootParameter(
+                    LightingShaderResourceManager::getPointLightsShaderResourceName(),
+                    iPointLightsBufferRootParameterIndex);
+
+                // Check if directional lights are used and then assign it a fixed root parameter index.
+                static_assert(
+                    iDirectionalLightsBufferRootParameterIndex == 3,
+                    "change order in which we add to `vRootParameters`");
+                addLightingResourceRootParameter(
+                    LightingShaderResourceManager::getDirectionalLightsShaderResourceName(),
+                    iDirectionalLightsBufferRootParameterIndex);
+
+                // Check if spotlights are used and then assign it a fixed root parameter index.
+                static_assert(
+                    iSpotlightsBufferRootParameterIndex == 4,
+                    "change order in which we add to `vRootParameters`");
+                addLightingResourceRootParameter(
+                    LightingShaderResourceManager::getSpotlightsShaderResourceName(),
+                    iSpotlightsBufferRootParameterIndex);
+            }
+
+            // Do some basic checks to add parameters/samplers that don't exist in pixel shader.
+
+            // First, add static samplers.
+            for (const auto& samplerType : vertexShaderRootSignatureInfo.staticSamplers) {
+                // Check if we already use this sampler.
+                const auto it = staticSamplers.find(samplerType);
+                if (it == staticSamplers.end()) {
+                    // This sampler is new, add it.
+                    staticSamplers.insert(samplerType);
+                }
+            }
+
+            // Sum vertex/pixel root parameter count.
+            size_t iMaxRootParameterCount = vertexShaderRootSignatureInfo.rootParameterIndices.size();
+            if (pPixelShaderRootSignatureInfo != nullptr) {
+                iMaxRootParameterCount += pPixelShaderRootSignatureInfo->rootParameterIndices.size();
+            }
+
+            // Prepare array of descriptor table ranges for root parameters to reference them since D3D
+            // stores raw pointers to descriptor range objects.
+            std::vector<CD3DX12_DESCRIPTOR_RANGE> vTableRanges;
+            vTableRanges.reserve(iMaxRootParameterCount);
+            const auto iInitialCapacity = vTableRanges.capacity();
+
+            // Then, add other root parameters.
+            auto addRootParameters =
+                [&](const std::unordered_map<std::string, std::pair<UINT, RootParameter>>&
+                        rootParametersToAdd) {
+                    for (const auto& [sResourceName, resourceInfo] : rootParametersToAdd) {
+                        // See if we already added this resource.
+                        auto it = addedRootParameterNames.find(sResourceName);
+                        if (it != addedRootParameterNames.end()) {
+                            continue;
+                        }
+
+                        // Add this resource.
+                        rootParameterIndices[sResourceName] = static_cast<UINT>(vRootParameters.size());
+                        addedRootParameterNames.insert(sResourceName);
+
+                        if (resourceInfo.second.isTable()) {
+                            // Add descriptor table.
+                            vTableRanges.push_back(resourceInfo.second.generateTableRange());
+                            CD3DX12_ROOT_PARAMETER newParameter{};
+                            newParameter.InitAsDescriptorTable(
+                                1, &vTableRanges.back(), resourceInfo.second.getVisibility());
+                            vRootParameters.push_back(newParameter);
+                        } else {
+                            // Add single descriptor.
+                            vRootParameters.push_back(
+                                resourceInfo.second.generateSingleDescriptorDescription());
+                        }
+                    }
+                };
+            if (pPixelShaderRootSignatureInfo != nullptr) {
+                addRootParameters(pPixelShaderRootSignatureInfo->rootParameterIndices);
+            }
+            addRootParameters(vertexShaderRootSignatureInfo.rootParameterIndices);
+
+            // Self check: make sure ranges were not moved to other place in memory.
+            if (vTableRanges.capacity() != iInitialCapacity) [[unlikely]] {
+                Error error(std::format(
+                    "table range array capacity changed from {} to {}",
+                    iInitialCapacity,
+                    vTableRanges.capacity()));
+                error.showError();
+                throw std::runtime_error(error.getFullErrorMessage());
+            }
         }
 
         // Make sure there are root parameters.
         if (vRootParameters.empty()) [[unlikely]] {
             return Error(std::format(
-                "at least 1 shader resource (written in the shader file for shader \"{}\") is need (expected "
+                "at least 1 shader resource (written in the shader file for shader \"{}\") is need "
+                "(expected "
                 "the shader to have at least `cbuffer` \"{}\")",
                 pVertexShader->getShaderName(),
                 sFrameConstantBufferName));
@@ -354,7 +393,6 @@ namespace ne {
         }
 
         // Create root signature description.
-        // A root signature is an array of root parameters.
         const CD3DX12_ROOT_SIGNATURE_DESC rootSignatureDesc(
             static_cast<UINT>(vRootParameters.size()),
             vRootParameters.data(),

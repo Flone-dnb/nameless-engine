@@ -113,8 +113,9 @@ namespace ne {
          *
          * @param pRenderer              Used renderer.
          * @param pPipelineManager       Pipeline manager that owns this pipeline.
-         * @param sVertexShaderName      Name of the compiled vertex shader to use.
-         * @param sFragmentShaderName    Name of the compiled pixel shader to use.
+         * @param sVertexShaderName      Name of the compiled vertex shader.
+         * @param sFragmentShaderName    Name of the compiled fragment shader to use. Specify empty string if
+         * you want to create a depth only pipeline (used for z-prepass).
          * @param bUsePixelBlending      Whether the pixels of the mesh that uses this pipeline should
          * blend with existing pixels on back buffer or not (for transparency).
          * @param additionalVertexShaderMacros   Additional macros to enable for vertex shader configuration.
@@ -206,10 +207,9 @@ namespace ne {
          * When shader is replaced the old shader gets freed from the memory and
          * a new pipeline is immediately generated. Make sure the GPU is not using old shader/pipeline.
          *
-         * @param sVertexShaderName      Name of the compiled vertex shader (see
-         * ShaderManager::compileShaders).
-         * @param sFragmentShaderName    Name of the compiled fragment shader (see
-         * ShaderManager::compileShaders).
+         * @param sVertexShaderName      Name of the compiled vertex shader.
+         * @param sFragmentShaderName    Name of the compiled fragment shader to use. Specify empty string if
+         * you want to create a depth only pipeline (used for z-prepass).
          * @param bUsePixelBlending      Whether the pipeline should use blending or not (for transparency).
          * @param additionalVertexShaderMacros   Additional macros to enable for vertex shader.
          * @param additionalFragmentShaderMacros Additional macros to enable for fragment shader.
@@ -243,7 +243,8 @@ namespace ne {
          *
          * @param pVulkanRenderer   Vulkan renderer.
          * @param pVertexShader     Vertex shader to use in the pipeline.
-         * @param pFragmentShader   Fragment shader to use in the pipeline.
+         * @param pFragmentShader   Fragment shader to use in the pipeline. Specify `nullptr` if you want
+         * to create depth only pipeline (used for z-prepass).
          * @param bUsePixelBlending Whether the pipeline should use blending or not (for transparency).
          *
          * @return Error if something went wrong.
@@ -281,14 +282,19 @@ namespace ne {
          * @param pushConstantUintFieldOffsets Stores pairs of "name of field defined in GLSL push constants"
          * (all with `uint` type) and "offset from the beginning of the push constants struct
          * (in `uint`s not bytes)".
-         * @param resourceBindings           Map of pairs "resource name" (from GLSL code) - "layout
+         * @param resourceBindings             Map of pairs "resource name" (from GLSL code) - "layout
          * binding index".
+         * @param bMakeSureReferencingOnlyExistingResources Specify `true` if you want this function
+         * to also check that all push constants are referencing only existing resources,
+         * you might want to specify `false` here if you don't have a fragment shader (for example)
+         * and thus most likely some push constants will reference non-existing resources.
          *
          * @return Error if something went wrong, otherwise push constants range.
          */
         std::variant<VkPushConstantRange, Error> definePushConstants(
             const std::unordered_map<std::string, size_t>& pushConstantUintFieldOffsets,
-            const std::unordered_map<std::string, uint32_t>& resourceBindings);
+            const std::unordered_map<std::string, uint32_t>& resourceBindings,
+            bool bMakeSureReferencingOnlyExistingResources);
 
         /**
          * Internal resources.

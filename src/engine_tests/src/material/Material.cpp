@@ -602,14 +602,15 @@ TEST_CASE("make sure there are no transparency macros in opaque pipelines") {
                 REQUIRE(pPipelineManager->getCurrentGraphicsPipelineCount() == 2);
 
                 {
-                    const auto pGraphicsPipelines = pPipelineManager->getGraphicsPipelines();
-                    auto& mtxOpaquePipelines =
-                        pGraphicsPipelines->at(static_cast<size_t>(PipelineType::PT_OPAQUE));
+                    const auto pMtxGraphicsPipelines = pPipelineManager->getGraphicsPipelines();
+                    std::scoped_lock pipelineGuard(pMtxGraphicsPipelines->first);
 
-                    std::scoped_lock guard(mtxOpaquePipelines.first);
+                    auto& mtxOpaquePipelines =
+                        pMtxGraphicsPipelines->second
+                            .vPipelineTypes[static_cast<size_t>(PipelineType::PT_OPAQUE)];
 
                     // Make sure opaque pipelines don't have transparency macro defined.
-                    for (const auto& [sPipelineIdentifier, pipelines] : mtxOpaquePipelines.second) {
+                    for (const auto& [sShaderNames, pipelines] : mtxOpaquePipelines) {
                         for (const auto& [materialMacros, pPipeline] : pipelines.shaderPipelines) {
                             const auto it = materialMacros.find(ShaderMacro::PS_USE_MATERIAL_TRANSPARENCY);
                             REQUIRE(it == materialMacros.end());

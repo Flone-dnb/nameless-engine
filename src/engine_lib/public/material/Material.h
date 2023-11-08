@@ -264,6 +264,16 @@ namespace ne RNAMESPACE() {
         Pipeline* getUsedPipeline() const;
 
         /**
+         * Returns pipeline that only has vertex shader (used for depth only passes).
+         *
+         * @warning Do not delete returned pointer.
+         *
+         * @return `nullptr` if pipeline was not initialized yet or if @ref isUsingTransparency is enabled,
+         * otherwise used pipeline.
+         */
+        Pipeline* getDepthOnlyPipeline() const;
+
+        /**
          * Returns GPU resources that this material uses.
          *
          * @return GPU resources.
@@ -299,8 +309,20 @@ namespace ne RNAMESPACE() {
     private:
         /** Groups internal data. */
         struct InternalResources {
-            /** Used pipeline, only valid when the mesh that is using this material is spawned. */
+            /**
+             * Used pipeline.
+             *
+             * @remark Only valid when the mesh that is using this material is spawned.
+             */
             PipelineSharedPtr pUsedPipeline;
+
+            /**
+             * @ref pUsedPipeline but with only vertex shader (used for depth only passes).
+             *
+             * @remark Only valid when the mesh that is using this material is spawned.
+             * @remark Only valid when material does not use transparency.
+             */
+            PipelineSharedPtr pDepthOnlyPipeline;
 
             /**
              * Vertex shader macros that this material enables (i.e. DIFFUSE_TEXTURE if using a diffuse

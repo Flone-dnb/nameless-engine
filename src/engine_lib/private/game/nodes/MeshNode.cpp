@@ -518,6 +518,9 @@ namespace ne {
 
         // After material was notified (because materials initialize PSOs that shader resources need).
         allocateShaderResources();
+
+        // Bind some shader resources to depth pipelines of our materials.
+        updateShaderResourcesToUseChangedMaterialPipelines();
     }
 
     void MeshNode::onDespawning() {
@@ -682,6 +685,7 @@ namespace ne {
 
         // Collect pipelines of all materials.
         std::unordered_set<Pipeline*> pipelinesToUse;
+        std::unordered_set<Pipeline*> depthOnlyPipelines;
         for (const auto& pMaterial : vMaterials) {
             // Get material's used pipeline.
             const auto pPipeline = pMaterial->getUsedPipeline();
@@ -694,6 +698,15 @@ namespace ne {
 
             // Add for shader resources.
             pipelinesToUse.insert(pPipeline);
+
+            // Check if this material also has depth only pipeline.
+            const auto pDepthOnlyPipeline = pMaterial->getDepthOnlyPipeline();
+            if (pDepthOnlyPipeline == nullptr) {
+                continue;
+            }
+
+            // Add it to later bind some special resources to it.
+            depthOnlyPipelines.insert(pDepthOnlyPipeline);
         }
 
         // Update shader CPU write resources.
@@ -701,6 +714,36 @@ namespace ne {
              mtxGpuResources.second.shaderResources.shaderCpuWriteResources) {
             // Update binding info.
             auto optionalError = shaderCpuWriteResource.getResource()->changeUsedPipelines(pipelinesToUse);
+            if (optionalError.has_value()) [[unlikely]] {
+                optionalError->addCurrentLocationToErrorStack();
+                optionalError->showError();
+                throw std::runtime_error(optionalError->getFullErrorMessage());
+            }
+        }
+
+        if (!depthOnlyPipelines.empty()) {
+            // Additionally, bind mesh data shader resource to depth only pipelines for depth prepass
+            // since in depth prepass (only vertex shader) only mesh data is used.
+
+            // Combine usual and depth only pipelines.
+            std::unordered_set<Pipeline*> combinedPipelines = pipelinesToUse;
+            for (const auto& pPipeline : depthOnlyPipelines) {
+                combinedPipelines.insert(pPipeline);
+            }
+
+            // Find mesh data shader resource.
+            const auto meshDataIt = mtxGpuResources.second.shaderResources.shaderCpuWriteResources.find(
+                sMeshShaderConstantBufferName);
+            if (meshDataIt == mtxGpuResources.second.shaderResources.shaderCpuWriteResources.end())
+                [[unlikely]] {
+                Error error(
+                    std::format("expected to find \"{}\" shader resource", sMeshShaderConstantBufferName));
+                error.showError();
+                throw std::runtime_error(error.getFullErrorMessage());
+            }
+
+            // Bind it to all pipelines (including depth only).
+            auto optionalError = meshDataIt->second.getResource()->changeUsedPipelines(combinedPipelines);
             if (optionalError.has_value()) [[unlikely]] {
                 optionalError->addCurrentLocationToErrorStack();
                 optionalError->showError();

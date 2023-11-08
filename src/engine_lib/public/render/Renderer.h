@@ -16,8 +16,10 @@
 #include "render/general/resources/FrameResourcesManager.h"
 #include "render/RenderSettings.h"
 #include "game/camera/CameraProperties.h"
+#include "render/general/pipeline/PipelineManager.h"
 #include "misc/shapes/AABB.h"
 #include "shader/general/resources/LightingShaderResourceManager.h"
+#include "material/Material.h"
 
 namespace ne {
     class GameManager;
@@ -26,6 +28,9 @@ namespace ne {
     class ShaderConfiguration;
     class RenderSettings;
     class EnvironmentNode;
+    class MeshNode;
+    class Material;
+    class Pipeline;
 
     /** Defines a base class for renderers to implement. */
     class Renderer {
@@ -518,6 +523,26 @@ namespace ne {
             CameraProperties* pCameraProperties);
 
         /**
+         * Iterates over all meshes and returns only meshes inside of the camera's frustum
+         * (and their pipelines).
+         *
+         * @param pActiveCameraProperties Properties of the currently active camera.
+         * @param pGraphicsPipelines      Graphics pipelines.
+         *
+         * @return Pipelines, material and meshes inside camera's frustum.
+         */
+        std::array<
+            std::unordered_map<
+                Pipeline*,
+                std::unordered_map<
+                    Material*,
+                    std::unordered_map<MeshNode*, std::vector<MeshIndexBufferInfo>>>>,
+            static_cast<size_t>(PipelineType::SIZE)>
+        getMeshesInFrustum(
+            CameraProperties* pActiveCameraProperties,
+            PipelineManager::GraphicsPipelineRegistry* pGraphicsPipelines);
+
+        /**
          * Returns frame constants.
          *
          * @return Frame constants.
@@ -533,39 +558,7 @@ namespace ne {
          *
          * @return Draw call counter.
          */
-        size_t* getDrawCallCounter();
-
-        /**
-         * Tests frustum culling on the specified AABB.
-         *
-         * @warning Expects that camera's frustum is updated (contains up to date data).
-         *
-         * @param pActiveCameraProperties Camera properties of the active camera.
-         * @param aabb                    AABB in model space.
-         * @param worldMatrix             Matrix that transforms AABB to world space.
-         *
-         * @return `true` if this AABB is outside of camera's frustum and it the object should not be
-         * rendered, `false` otherwise.
-         */
-        inline bool isAabbOutsideCameraFrustum(
-            CameraProperties* pActiveCameraProperties, const AABB& aabb, const glm::mat4x4& worldMatrix) {
-            using namespace std::chrono;
-
-            const auto startFrustumCullingTime = steady_clock::now();
-
-            // (camera's frustum should be updated at this point)
-            const auto bIsVisible =
-                pActiveCameraProperties->getCameraFrustum()->isAabbInFrustum(aabb, worldMatrix);
-
-            // Increment total time spent in frustum culling.
-            accumulatedTimeSpentLastFrameOnFrustumCullingInMs +=
-                duration<float, milliseconds::period>(steady_clock::now() - startFrustumCullingTime).count();
-
-            // Increment culled object count.
-            iLastFrameCulledObjectCount += static_cast<size_t>(!bIsVisible);
-
-            return !bIsVisible;
-        }
+        inline size_t* getDrawCallCounter() { return &iLastFrameDrawCallCount; }
 
     private:
         /** Groups variables used to calculate frame-related statistics. */
@@ -661,6 +654,38 @@ namespace ne {
         static void nanosleep(long long iNanoseconds);
 #endif
 
+        /**
+         * Tests frustum culling on the specified AABB.
+         *
+         * @warning Expects that camera's frustum is updated (contains up to date data).
+         *
+         * @param pActiveCameraProperties Camera properties of the active camera.
+         * @param aabb                    AABB in model space.
+         * @param worldMatrix             Matrix that transforms AABB to world space.
+         *
+         * @return `true` if this AABB is outside of camera's frustum and it the object should not be
+         * rendered, `false` otherwise.
+         */
+        inline bool isAabbOutsideCameraFrustum(
+            CameraProperties* pActiveCameraProperties, const AABB& aabb, const glm::mat4x4& worldMatrix) {
+            using namespace std::chrono;
+
+            const auto startFrustumCullingTime = steady_clock::now();
+
+            // (camera's frustum should be updated at this point)
+            const auto bIsVisible =
+                pActiveCameraProperties->getCameraFrustum()->isAabbInFrustum(aabb, worldMatrix);
+
+            // Increment total time spent in frustum culling.
+            accumulatedTimeSpentLastFrameOnFrustumCullingInMs +=
+                duration<float, milliseconds::period>(steady_clock::now() - startFrustumCullingTime).count();
+
+            // Increment culled object count.
+            iLastFrameCulledObjectCount += static_cast<size_t>(!bIsVisible);
+
+            return !bIsVisible;
+        }
+
         /** Looks for FPS limit setting in RenderSettings and update renderer's state. */
         void updateFpsLimitSetting();
 
@@ -683,8 +708,10 @@ namespace ne {
          */
         std::optional<Error> initializeRenderSettings();
 
-        /** Lock when reading or writing to render resources. Usually used with @ref
-         * waitForGpuToFinishWorkUpToThisPoint. */
+        /**
+         * Lock when reading or writing to render resources. Usually used with @ref
+         * waitForGpuToFinishWorkUpToThisPoint.
+         */
         std::recursive_mutex mtxRwRenderResources;
 
         /** Used to create various GPU resources. */

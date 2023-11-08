@@ -474,7 +474,7 @@ namespace ne {
         pCommandList->RSSetViewports(1, &screenViewport);
         pCommandList->RSSetScissorRects(1, &scissorRect);
 
-        // Change render target buffer's state from "Present" to "render target.
+        // Change render target buffer's state from "Present" to "render target".
         const auto pCurrentBackBufferResource = getCurrentBackBufferResource();
         CD3DX12_RESOURCE_BARRIER transition = CD3DX12_RESOURCE_BARRIER::Transition(
             pCurrentBackBufferResource->getInternalResource(),
@@ -511,10 +511,6 @@ namespace ne {
             0,
             0,
             nullptr);
-
-        // Bind RTV and DSV to use to pipeline.
-        pCommandList->OMSetRenderTargets(
-            1, &renderTargetDescriptorHandle, FALSE, &depthStencilDescriptorHandle);
 
         return {};
     }
@@ -564,93 +560,60 @@ namespace ne {
             throw std::runtime_error(error.getFullErrorMessage());
         }
 
-        // Set topology type.
-        // TODO: this will be moved in some other place later
-        pCommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+        // Get RTV/DSV handles to be used later.
+        const auto pCurrentBackBufferResource = getCurrentBackBufferResource();
+        const auto renderTargetDescriptorHandle =
+            *pCurrentBackBufferResource->getBindedDescriptorHandle(DirectXDescriptorType::RTV);
+        const auto depthStencilDescriptorHandle =
+            *pDepthStencilBuffer->getBindedDescriptorHandle(DirectXDescriptorType::DSV);
 
         // Get graphics pipelines.
         const auto pMtxGraphicsPipelines = pPipelineManager->getGraphicsPipelines();
         std::scoped_lock pipelinesGuard(pMtxGraphicsPipelines->first);
 
-        // Iterate over graphics pipelines of all types.
-        for (auto& pipelinesOfSpecificType : pMtxGraphicsPipelines->second.vPipelineTypes) {
+        // Do frustum culling.
+        const auto vMeshPipelinesInFrustum =
+            getMeshesInFrustum(pActiveCameraProperties, &pMtxGraphicsPipelines->second);
 
-            // Iterate over all active shader combinations.
-            for (const auto& [sShaderNames, pipelines] : pipelinesOfSpecificType) {
+        // Set topology type.
+        // TODO: this will be moved in some other place later
+        pCommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-                // Iterate over all active unique material macros combinations (for example:
-                // if we have 2 materials where one uses diffuse texture (defined DIFFUSE_TEXTURE
-                // macro for shaders) and the second one is not we will have 2 pipelines here).
-                for (const auto& [materialMacros, pPipeline] : pipelines.shaderPipelines) {
-                    // Get internal resources of this pipeline.
-                    const auto pDirectXPso = reinterpret_cast<DirectXPso*>(pPipeline.get());
-                    auto pMtxPsoResources = pDirectXPso->getInternalResources();
-                    std::scoped_lock guardPsoResources(pMtxPsoResources->first);
+        // Get pipelines for depth prepass.
+        const auto& depthOnlyPipelines =
+            vMeshPipelinesInFrustum[static_cast<size_t>(PipelineType::PT_DEPTH_ONLY)];
 
-                    // Set PSO and root signature.
-                    pCommandList->SetPipelineState(pMtxPsoResources->second.pPso.Get());
-                    pCommandList->SetGraphicsRootSignature(pMtxPsoResources->second.pRootSignature.Get());
+        // Bind only DSV for depth prepass.
+        pCommandList->OMSetRenderTargets(0, nullptr, FALSE, &depthStencilDescriptorHandle);
 
-                    // After setting root signature we can set root parameters.
+        // Draw depth prepass.
+        drawMeshesDepthPrepass(
+            pCurrentFrameResource,
+            pMtxCurrentFrameResource->second.iCurrentFrameResourceIndex,
+            depthOnlyPipelines);
 
-                    // Set CBV to frame constant buffer.
-                    pCommandList->SetGraphicsRootConstantBufferView(
-                        RootSignatureGenerator::getFrameConstantBufferRootParameterIndex(),
-                        reinterpret_cast<DirectXResource*>(pMtxCurrentFrameResource->second.pResource
-                                                               ->pFrameConstantBuffer->getInternalResource())
-                            ->getInternalResource()
-                            ->GetGPUVirtualAddress());
+        // Bind both RTV and DSV for main pass.
+        pCommandList->OMSetRenderTargets(
+            1, &renderTargetDescriptorHandle, FALSE, &depthStencilDescriptorHandle);
 
-                    // Bind lighting resources.
-                    getLightingShaderResourceManager()->setResourceViewToCommandList(
-                        pDirectXPso,
-                        pCommandList,
-                        pMtxCurrentFrameResource->second.iCurrentFrameResourceIndex);
+        // Get pipelines for main pass.
+        const auto& opaquePipelines = vMeshPipelinesInFrustum[static_cast<size_t>(PipelineType::PT_OPAQUE)];
+        const auto& transparentPipelines =
+            vMeshPipelinesInFrustum[static_cast<size_t>(PipelineType::PT_TRANSPARENT)];
 
-                    // Iterate over all materials that use this PSO
-                    // (all these materials define the same set of shader macros but
-                    // each material can have different parameters such as different diffuse textures).
-                    const auto pMtxMaterials = pPipeline->getMaterialsThatUseThisPipeline();
-                    std::scoped_lock materialsGuard(pMtxMaterials->first);
+        // Draw opaque meshes.
+        drawMeshesMainPass(
+            pCurrentFrameResource,
+            pMtxCurrentFrameResource->second.iCurrentFrameResourceIndex,
+            opaquePipelines);
 
-                    for (const auto& pMaterial : pMtxMaterials->second) {
-                        // Get material's GPU resources.
-                        const auto pMtxMaterialGpuResources = pMaterial->getMaterialGpuResources();
-                        std::scoped_lock materialGpuResourcesGuard(pMtxMaterialGpuResources->first);
-                        auto& materialResources = pMtxMaterialGpuResources->second.shaderResources;
+        // Draw transparent meshes.
+        drawMeshesMainPass(
+            pCurrentFrameResource,
+            pMtxCurrentFrameResource->second.iCurrentFrameResourceIndex,
+            transparentPipelines);
 
-                        // Note: if you will ever need it - don't lock material's internal resources mutex
-                        // here as it might cause a deadlock (see Material::setDiffuseTexture for example).
-
-                        // Set material's CPU write shader resources (`cbuffer`s for example).
-                        for (const auto& [sResourceName, pShaderCpuWriteResource] :
-                             materialResources.shaderCpuWriteResources) {
-                            reinterpret_cast<HlslShaderCpuWriteResource*>(
-                                pShaderCpuWriteResource.getResource())
-                                ->setConstantBufferViewOfOnlyPipeline(
-                                    pCommandList,
-                                    pMtxCurrentFrameResource->second.iCurrentFrameResourceIndex);
-                        }
-
-                        // Set material's texture shader resources (`Texture2D`s for example).
-                        for (const auto& [sResourceName, pShaderTextureResource] :
-                             materialResources.shaderTextureResources) {
-                            reinterpret_cast<HlslShaderTextureResource*>(pShaderTextureResource.getResource())
-                                ->setGraphicsRootDescriptorTableOfOnlyPipeline(pCommandList);
-                        }
-
-                        // Draw mesh nodes that use this material.
-                        drawMeshNodes(
-                            pActiveCameraProperties,
-                            pMaterial,
-                            pDirectXPso,
-                            pMtxCurrentFrameResource->second.iCurrentFrameResourceIndex);
-                    }
-                }
-            }
-        }
-
-        // Do finish logic (execute command list).
+        // Do frame end logic.
         optionalError = finishDrawingNextFrame(pCurrentFrameResource, mtxQueuedComputeShader.second);
         if (optionalError.has_value()) [[unlikely]] {
             auto error = optionalError.value();
@@ -661,6 +624,224 @@ namespace ne {
 
         // Switch to the next frame resource.
         getFrameResourcesManager()->switchToNextFrameResource();
+    }
+
+    void DirectXRenderer::drawMeshesDepthPrepass(
+        DirectXFrameResource* pCurrentFrameResource,
+        size_t iCurrentFrameResourceIndex,
+        const std::unordered_map<
+            Pipeline*,
+            std::unordered_map<Material*, std::unordered_map<MeshNode*, std::vector<MeshIndexBufferInfo>>>>&
+            depthOnlyPipelines) {
+        // Prepare draw call counter to be used later.
+        const auto pDrawCallCounter = getDrawCallCounter();
+
+        for (const auto& [pPipeline, materialMeshes] : depthOnlyPipelines) {
+            // Get internal resources of this pipeline.
+            const auto pDirectXPso = reinterpret_cast<DirectXPso*>(pPipeline);
+            auto pMtxPsoResources = pDirectXPso->getInternalResources();
+            std::scoped_lock guardPsoResources(pMtxPsoResources->first);
+
+            // Set PSO and root signature.
+            pCommandList->SetPipelineState(pMtxPsoResources->second.pPso.Get());
+            pCommandList->SetGraphicsRootSignature(pMtxPsoResources->second.pRootSignature.Get());
+
+            // After setting root signature we can set root parameters.
+
+            // Set CBV to frame constant buffer.
+            pCommandList->SetGraphicsRootConstantBufferView(
+                RootSignatureGenerator::getFrameConstantBufferRootParameterIndex(),
+                reinterpret_cast<DirectXResource*>(
+                    pCurrentFrameResource->pFrameConstantBuffer->getInternalResource())
+                    ->getInternalResource()
+                    ->GetGPUVirtualAddress());
+
+            for (const auto& [pMaterial, meshNodes] : materialMeshes) {
+                for (const auto& [pMeshNode, vIndexBuffers] : meshNodes) {
+                    // Get mesh data.
+                    auto pMtxMeshGpuResources = pMeshNode->getMeshGpuResources();
+                    auto mtxMeshData = pMeshNode->getMeshData();
+
+                    // Note: if you will ever need it - don't lock mesh node's spawning/despawning mutex
+                    // here as it might cause a deadlock (see MeshNode::setMaterial for example).
+                    std::scoped_lock geometryGuard(pMtxMeshGpuResources->first, *mtxMeshData.first);
+
+                    // Find and bind mesh data resource since only it is used in vertex shader.
+                    const auto& meshDataIt =
+                        pMtxMeshGpuResources->second.shaderResources.shaderCpuWriteResources.find(
+                            MeshNode::getMeshShaderConstantBufferName());
+#if defined(DEBUG)
+                    if (meshDataIt ==
+                        pMtxMeshGpuResources->second.shaderResources.shaderCpuWriteResources.end())
+                        [[unlikely]] {
+                        Error error(std::format(
+                            "expected to find \"{}\" shader resource",
+                            MeshNode::getMeshShaderConstantBufferName()));
+                        error.showError();
+                        throw std::runtime_error(error.getFullErrorMessage());
+                    }
+#endif
+                    // Set resource.
+                    reinterpret_cast<HlslShaderCpuWriteResource*>(meshDataIt->second.getResource())
+                        ->setConstantBufferViewOfPipeline(
+                            pCommandList, pDirectXPso, iCurrentFrameResourceIndex);
+
+                    // Prepare vertex buffer view.
+                    D3D12_VERTEX_BUFFER_VIEW vertexBufferView;
+                    vertexBufferView.BufferLocation =
+                        reinterpret_cast<DirectXResource*>(
+                            pMtxMeshGpuResources->second.mesh.pVertexBuffer.get())
+                            ->getInternalResource()
+                            ->GetGPUVirtualAddress();
+                    vertexBufferView.StrideInBytes = sizeof(MeshVertex);
+                    vertexBufferView.SizeInBytes = static_cast<UINT>(
+                        mtxMeshData.second->getVertices()->size() * vertexBufferView.StrideInBytes);
+
+                    // Set vertex buffer view.
+                    pCommandList->IASetVertexBuffers(0, 1, &vertexBufferView);
+
+                    // Iterate over all index buffers of a specific mesh node that use this material.
+                    for (const auto& indexBufferInfo : vIndexBuffers) {
+                        // Prepare index buffer view.
+                        static_assert(
+                            sizeof(MeshData::meshindex_t) == sizeof(unsigned int), "change `Format`");
+                        D3D12_INDEX_BUFFER_VIEW indexBufferView;
+                        indexBufferView.BufferLocation =
+                            reinterpret_cast<DirectXResource*>(indexBufferInfo.pIndexBuffer)
+                                ->getInternalResource()
+                                ->GetGPUVirtualAddress();
+                        indexBufferView.Format = DXGI_FORMAT_R32_UINT;
+                        indexBufferView.SizeInBytes =
+                            static_cast<UINT>(indexBufferInfo.iIndexCount * sizeof(MeshData::meshindex_t));
+
+                        // Set vertex/index buffer.
+                        pCommandList->IASetIndexBuffer(&indexBufferView);
+
+                        // Add a draw command.
+                        pCommandList->DrawIndexedInstanced(indexBufferInfo.iIndexCount, 1, 0, 0, 0);
+
+                        // Increment draw call counter.
+                        *pDrawCallCounter += 1;
+                    }
+                }
+            }
+        }
+    }
+
+    void DirectXRenderer::drawMeshesMainPass(
+        DirectXFrameResource* pCurrentFrameResource,
+        size_t iCurrentFrameResourceIndex,
+        const std::unordered_map<
+            Pipeline*,
+            std::unordered_map<Material*, std::unordered_map<MeshNode*, std::vector<MeshIndexBufferInfo>>>>&
+            pipelinesOfSpecificType) {
+        // Prepare draw call counter to be used later.
+        const auto pDrawCallCounter = getDrawCallCounter();
+
+        for (const auto& [pPipeline, materialMeshes] : pipelinesOfSpecificType) {
+            // Get internal resources of this pipeline.
+            const auto pDirectXPso = reinterpret_cast<DirectXPso*>(pPipeline);
+            auto pMtxPsoResources = pDirectXPso->getInternalResources();
+            std::scoped_lock guardPsoResources(pMtxPsoResources->first);
+
+            // Set PSO and root signature.
+            pCommandList->SetPipelineState(pMtxPsoResources->second.pPso.Get());
+            pCommandList->SetGraphicsRootSignature(pMtxPsoResources->second.pRootSignature.Get());
+
+            // After setting root signature we can set root parameters.
+
+            // Set CBV to frame constant buffer.
+            pCommandList->SetGraphicsRootConstantBufferView(
+                RootSignatureGenerator::getFrameConstantBufferRootParameterIndex(),
+                reinterpret_cast<DirectXResource*>(
+                    pCurrentFrameResource->pFrameConstantBuffer->getInternalResource())
+                    ->getInternalResource()
+                    ->GetGPUVirtualAddress());
+
+            // Bind lighting resources.
+            getLightingShaderResourceManager()->setResourceViewToCommandList(
+                pDirectXPso, pCommandList, iCurrentFrameResourceIndex);
+
+            for (const auto& [pMaterial, meshNodes] : materialMeshes) {
+                // Get material's GPU resources.
+                const auto pMtxMaterialGpuResources = pMaterial->getMaterialGpuResources();
+                std::scoped_lock materialGpuResourcesGuard(pMtxMaterialGpuResources->first);
+                auto& materialResources = pMtxMaterialGpuResources->second.shaderResources;
+
+                // Note: if you will ever need it - don't lock material's internal resources mutex
+                // here as it might cause a deadlock (see Material::setDiffuseTexture for example).
+
+                // Set material's CPU write shader resources (`cbuffer`s for example).
+                for (const auto& [sResourceName, pShaderCpuWriteResource] :
+                     materialResources.shaderCpuWriteResources) {
+                    reinterpret_cast<HlslShaderCpuWriteResource*>(pShaderCpuWriteResource.getResource())
+                        ->setConstantBufferViewOfOnlyPipeline(pCommandList, iCurrentFrameResourceIndex);
+                }
+
+                // Set material's texture shader resources (`Texture2D`s for example).
+                for (const auto& [sResourceName, pShaderTextureResource] :
+                     materialResources.shaderTextureResources) {
+                    reinterpret_cast<HlslShaderTextureResource*>(pShaderTextureResource.getResource())
+                        ->setGraphicsRootDescriptorTableOfOnlyPipeline(pCommandList);
+                }
+
+                for (const auto& [pMeshNode, vIndexBuffers] : meshNodes) {
+                    // Get mesh data.
+                    auto pMtxMeshGpuResources = pMeshNode->getMeshGpuResources();
+                    auto mtxMeshData = pMeshNode->getMeshData();
+
+                    // Note: if you will ever need it - don't lock mesh node's spawning/despawning mutex here
+                    // as it might cause a deadlock (see MeshNode::setMaterial for example).
+                    std::scoped_lock geometryGuard(pMtxMeshGpuResources->first, *mtxMeshData.first);
+
+                    // Set mesh's shader CPU write resources (`cbuffer`s for example).
+                    for (const auto& [sResourceName, pShaderCpuWriteResource] :
+                         pMtxMeshGpuResources->second.shaderResources.shaderCpuWriteResources) {
+                        reinterpret_cast<HlslShaderCpuWriteResource*>(pShaderCpuWriteResource.getResource())
+                            ->setConstantBufferViewOfPipeline(
+                                pCommandList, pDirectXPso, iCurrentFrameResourceIndex);
+                    }
+
+                    // Prepare vertex buffer view.
+                    D3D12_VERTEX_BUFFER_VIEW vertexBufferView;
+                    vertexBufferView.BufferLocation =
+                        reinterpret_cast<DirectXResource*>(
+                            pMtxMeshGpuResources->second.mesh.pVertexBuffer.get())
+                            ->getInternalResource()
+                            ->GetGPUVirtualAddress();
+                    vertexBufferView.StrideInBytes = sizeof(MeshVertex);
+                    vertexBufferView.SizeInBytes = static_cast<UINT>(
+                        mtxMeshData.second->getVertices()->size() * vertexBufferView.StrideInBytes);
+
+                    // Set vertex buffer view.
+                    pCommandList->IASetVertexBuffers(0, 1, &vertexBufferView);
+
+                    // Iterate over all index buffers of a specific mesh node that use this material.
+                    for (const auto& indexBufferInfo : vIndexBuffers) {
+                        // Prepare index buffer view.
+                        static_assert(
+                            sizeof(MeshData::meshindex_t) == sizeof(unsigned int), "change `Format`");
+                        D3D12_INDEX_BUFFER_VIEW indexBufferView;
+                        indexBufferView.BufferLocation =
+                            reinterpret_cast<DirectXResource*>(indexBufferInfo.pIndexBuffer)
+                                ->getInternalResource()
+                                ->GetGPUVirtualAddress();
+                        indexBufferView.Format = DXGI_FORMAT_R32_UINT;
+                        indexBufferView.SizeInBytes =
+                            static_cast<UINT>(indexBufferInfo.iIndexCount * sizeof(MeshData::meshindex_t));
+
+                        // Set vertex/index buffer.
+                        pCommandList->IASetIndexBuffer(&indexBufferView);
+
+                        // Add a draw command.
+                        pCommandList->DrawIndexedInstanced(indexBufferInfo.iIndexCount, 1, 0, 0, 0);
+
+                        // Increment draw call counter.
+                        *pDrawCallCounter += 1;
+                    }
+                }
+            }
+        }
     }
 
     std::optional<Error> DirectXRenderer::finishDrawingNextFrame(
@@ -827,87 +1008,6 @@ namespace ne {
         iMsaaQualityLevelsCount = msQualityLevels.NumQualityLevels;
 
         return {};
-    }
-
-    void DirectXRenderer::drawMeshNodes(
-        CameraProperties* pActiveCameraProperties,
-        Material* pMaterial,
-        DirectXPso* pPipeline,
-        size_t iCurrentFrameResourceIndex) {
-        PROFILE_FUNC;
-
-        // Prepare some variables.
-        const auto pMtxMeshNodes = pMaterial->getSpawnedMeshNodesThatUseThisMaterial();
-        const auto pDrawCallCounter = getDrawCallCounter();
-
-        // Iterate over all visible mesh nodes that use this material.
-        std::scoped_lock meshNodesGuard(pMtxMeshNodes->first);
-        for (const auto& [pMeshNode, vIndexBuffers] : pMtxMeshNodes->second.visibleMeshNodes) {
-            // Get mesh data.
-            auto pMtxMeshGpuResources = pMeshNode->getMeshGpuResources();
-            auto mtxMeshData = pMeshNode->getMeshData();
-
-            // Note: if you will ever need it - don't lock mesh node's spawning/despawning mutex here
-            // as it might cause a deadlock (see MeshNode::setMaterial for example).
-            std::scoped_lock geometryGuard(pMtxMeshGpuResources->first, *mtxMeshData.first);
-
-            {
-                // Do frustum culling.
-                const auto pMtxMeshShaderConstants = pMeshNode->getMeshShaderConstants();
-                std::scoped_lock meshConstantsGuard(pMtxMeshShaderConstants->first);
-
-                if (isAabbOutsideCameraFrustum(
-                        pActiveCameraProperties,
-                        *pMeshNode->getAABB(),
-                        pMtxMeshShaderConstants->second.world)) {
-                    // This mesh is outside of camera's frustum.
-                    continue;
-                }
-            }
-
-            // Set mesh's shader CPU write resources (`cbuffer`s for example).
-            for (const auto& [sResourceName, pShaderCpuWriteResource] :
-                 pMtxMeshGpuResources->second.shaderResources.shaderCpuWriteResources) {
-                reinterpret_cast<HlslShaderCpuWriteResource*>(pShaderCpuWriteResource.getResource())
-                    ->setConstantBufferViewOfPipeline(pCommandList, pPipeline, iCurrentFrameResourceIndex);
-            }
-
-            // Prepare vertex buffer view.
-            D3D12_VERTEX_BUFFER_VIEW vertexBufferView;
-            vertexBufferView.BufferLocation =
-                reinterpret_cast<DirectXResource*>(pMtxMeshGpuResources->second.mesh.pVertexBuffer.get())
-                    ->getInternalResource()
-                    ->GetGPUVirtualAddress();
-            vertexBufferView.StrideInBytes = sizeof(MeshVertex);
-            vertexBufferView.SizeInBytes =
-                static_cast<UINT>(mtxMeshData.second->getVertices()->size() * vertexBufferView.StrideInBytes);
-
-            // Set vertex buffer view.
-            pCommandList->IASetVertexBuffers(0, 1, &vertexBufferView);
-
-            // Iterate over all index buffers of a specific mesh node that use this material.
-            for (const auto& indexBufferInfo : vIndexBuffers) {
-                // Prepare index buffer view.
-                static_assert(sizeof(MeshData::meshindex_t) == sizeof(unsigned int), "change `Format`");
-                D3D12_INDEX_BUFFER_VIEW indexBufferView;
-                indexBufferView.BufferLocation =
-                    reinterpret_cast<DirectXResource*>(indexBufferInfo.pIndexBuffer)
-                        ->getInternalResource()
-                        ->GetGPUVirtualAddress();
-                indexBufferView.Format = DXGI_FORMAT_R32_UINT;
-                indexBufferView.SizeInBytes =
-                    static_cast<UINT>(indexBufferInfo.iIndexCount * sizeof(MeshData::meshindex_t));
-
-                // Set vertex/index buffer.
-                pCommandList->IASetIndexBuffer(&indexBufferView);
-
-                // Add a draw command.
-                pCommandList->DrawIndexedInstanced(indexBufferInfo.iIndexCount, 1, 0, 0, 0);
-
-                // Increment draw call counter.
-                *pDrawCallCounter += 1;
-            }
-        }
     }
 
     void DirectXRenderer::waitForFenceValue(UINT64 iFenceToWaitFor) {

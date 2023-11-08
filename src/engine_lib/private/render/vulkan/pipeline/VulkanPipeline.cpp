@@ -608,6 +608,15 @@ namespace ne {
         depthStencilStateInfo.front = {}; // for stencil
         depthStencilStateInfo.back = {};  // for stencil
 
+        if (!bUsePixelBlending && pFragmentShader != nullptr) {
+            // Disable depth writes because depth buffer will be filled during depth prepass.
+            depthStencilStateInfo.depthWriteEnable = VK_FALSE;
+
+            // Keep depth-testing enabled but add `equal` to depth comparison because some depths will be
+            // equal now since we render the same thing again.
+            depthStencilStateInfo.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
+        }
+
         // Describe color blending per attached framebuffer.
         VkPipelineColorBlendAttachmentState colorBlendAttachmentStateInfo{};
         colorBlendAttachmentStateInfo.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |

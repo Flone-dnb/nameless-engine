@@ -195,6 +195,13 @@ namespace ne RNAMESPACE() {
             ShaderResources shaderResources;
         };
 
+        /**
+         * Returns name of the constant buffer that stores mesh constants.
+         *
+         * @return Name of shader resource.
+         */
+        static inline const char* getMeshShaderConstantBufferName() { return sMeshShaderConstantBufferName; }
+
         MeshNode();
 
         /**

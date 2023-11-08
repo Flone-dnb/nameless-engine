@@ -2464,20 +2464,6 @@ namespace ne {
             // as it might cause a deadlock (see MeshNode::setMaterial for example).
             std::scoped_lock geometryGuard(pMtxMeshGpuResources->first, *mtxMeshData.first);
 
-            {
-                // Do frustum culling.
-                const auto pMtxMeshShaderConstants = pMeshNode->getMeshShaderConstants();
-                std::scoped_lock meshConstantsGuard(pMtxMeshShaderConstants->first);
-
-                if (isAabbOutsideCameraFrustum(
-                        pActiveCameraProperties,
-                        *pMeshNode->getAABB(),
-                        pMtxMeshShaderConstants->second.world)) {
-                    // This mesh is outside of camera's frustum.
-                    continue;
-                }
-            }
-
             // Set mesh's shader CPU write resources.
             for (const auto& [sResourceName, pShaderCpuWriteResource] :
                  pMtxMeshGpuResources->second.shaderResources.shaderCpuWriteResources) {

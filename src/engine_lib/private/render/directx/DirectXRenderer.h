@@ -186,6 +186,40 @@ namespace ne {
         virtual void drawNextFrame() override;
 
         /**
+         * Submits commands to draw meshes and the specified depth only (vertex shader only) pipelines.
+         *
+         * @param pCurrentFrameResource      Frame resource of the frame being submitted.
+         * @param iCurrentFrameResourceIndex Index of the current frame resource.
+         * @param depthOnlyPipelines         Pipelines that only have vertex shader and their meshes in
+         * frustum.
+         */
+        void drawMeshesDepthPrepass(
+            DirectXFrameResource* pCurrentFrameResource,
+            size_t iCurrentFrameResourceIndex,
+            const std::unordered_map<
+                Pipeline*,
+                std::unordered_map<
+                    Material*,
+                    std::unordered_map<MeshNode*, std::vector<MeshIndexBufferInfo>>>>& depthOnlyPipelines);
+
+        /**
+         * Submits commands to draw meshes and pipelines of specific types (only opaque or transparent).
+         *
+         * @param pCurrentFrameResource      Frame resource of the frame being submitted.
+         * @param iCurrentFrameResourceIndex Index of the current frame resource.
+         * @param pipelinesOfSpecificType    Pipelines to use.
+         */
+        void drawMeshesMainPass(
+            DirectXFrameResource* pCurrentFrameResource,
+            size_t iCurrentFrameResourceIndex,
+            const std::unordered_map<
+                Pipeline*,
+                std::unordered_map<
+                    Material*,
+                    std::unordered_map<MeshNode*, std::vector<MeshIndexBufferInfo>>>>&
+                pipelinesOfSpecificType);
+
+        /**
          * Called after some render setting is changed to recreate internal resources to match the current
          * settings.
          *
@@ -361,20 +395,6 @@ namespace ne {
          * @return Error if something went wrong.
          */
         [[nodiscard]] std::optional<Error> updateMsaaQualityLevelCount();
-
-        /**
-         * Adds draw commands to command list to draw all mesh nodes that use the specified material
-         *
-         * @param pActiveCameraProperties    Camera properties of the active camera.
-         * @param pMaterial                  Material that mesh nodes use.
-         * @param pPipeline                  Current pipeline.
-         * @param iCurrentFrameResourceIndex Index of the current frame resource.
-         */
-        void drawMeshNodes(
-            CameraProperties* pActiveCameraProperties,
-            Material* pMaterial,
-            DirectXPso* pPipeline,
-            size_t iCurrentFrameResourceIndex);
 
         /**
          * Waits until the GPU has completed commands up to the specified fence point.

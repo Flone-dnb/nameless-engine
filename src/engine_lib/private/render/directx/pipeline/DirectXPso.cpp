@@ -284,8 +284,18 @@ namespace ne {
             psoDesc.BlendState.AlphaToCoverageEnable = 0;
         }
 
-        // Finalize PSO description.
+        // Describe depth stencil state.
         psoDesc.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
+        if (!bUsePixelBlending && !bDepthOnlyPipeline) {
+            // Disable depth writes because depth buffer will be filled during depth prepass.
+            psoDesc.DepthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ZERO;
+
+            // Keep depth-testing enabled but add `equal` to depth comparison because some depths will be
+            // equal now since we render the same thing again.
+            psoDesc.DepthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
+        }
+
+        // Finalize PSO description.
         psoDesc.SampleMask = UINT_MAX;
         psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
         psoDesc.SampleDesc.Count = iMsaaSampleCount;

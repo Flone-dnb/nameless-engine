@@ -1064,3 +1064,66 @@ TEST_CASE("using 1 texture in 2 material has only 1 texture in memory") {
     REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
     REQUIRE(Material::getCurrentAliveMaterialCount() == 0);
 }
+
+TEST_CASE("only opaque materials have depth only pipelines") {
+    using namespace ne;
+
+    class TestGameInstance : public GameInstance {
+    public:
+        TestGameInstance(Window* pGameWindow, GameManager* pGame, InputManager* pInputManager)
+            : GameInstance(pGameWindow, pGame, pInputManager) {}
+        virtual void onGameStarted() override {
+            createWorld([this](const std::optional<Error>& optionalWorldError) {
+                if (optionalWorldError.has_value()) {
+                    auto error = optionalWorldError.value();
+                    error.addCurrentLocationToErrorStack();
+                    INFO(error.getFullErrorMessage());
+                    REQUIRE(false);
+                }
+
+                // Prepare mesh.
+                const auto pMeshNode = gc_new<MeshNode>();
+                pMeshNode->setMeshData(PrimitiveMeshGenerator::createCube(1.0F));
+
+                // Spawn nodes.
+                getWorldRootNode()->addChildNode(pMeshNode);
+
+                // Make sure material's depth pipeline is valid.
+                REQUIRE(pMeshNode->getMaterial()->getDepthOnlyPipeline() != nullptr);
+
+                // Enable transparency.
+                pMeshNode->getMaterial()->setEnableTransparency(true);
+
+                // Make sure material's depth pipeline is no longer valid.
+                REQUIRE(pMeshNode->getMaterial()->getDepthOnlyPipeline() == nullptr);
+
+                // Despawn mesh.
+                pMeshNode->detachFromParentAndDespawn();
+
+                // Now spawn with transparency enabled.
+                getWorldRootNode()->addChildNode(pMeshNode);
+
+                // Make sure material's depth pipeline is no longer valid.
+                REQUIRE(pMeshNode->getMaterial()->getDepthOnlyPipeline() == nullptr);
+
+                getWindow()->close();
+            });
+        }
+
+        virtual ~TestGameInstance() override {}
+    };
+
+    auto result = Window::getBuilder().withVisibility(false).build();
+    if (std::holds_alternative<Error>(result)) {
+        Error error = std::get<Error>(std::move(result));
+        error.addCurrentLocationToErrorStack();
+        INFO(error.getFullErrorMessage());
+        REQUIRE(false);
+    }
+
+    const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
+    pMainWindow->processEvents<TestGameInstance>();
+
+    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+    REQUIRE(Material::getCurrentAliveMaterialCount() == 0);
+}

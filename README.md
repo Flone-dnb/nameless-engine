@@ -273,6 +273,9 @@ Here is the list of base features that needs to be implemented in order for you 
         - [X] Custom vertex/pixel/fragment shaders
     - [ ] Forward+ (Tiled Forward) rendering
         - [X] Custom compute shaders
+        - [X] Frustum culling
+        - [X] Z-prepass
+        - [ ] Tiled light culling
         - [ ] Transparent materials
         - [ ] AA (Anti-aliasing)
         - [ ] Light sources
@@ -280,17 +283,15 @@ Here is the list of base features that needs to be implemented in order for you 
             - [ ] Spot light
             - [ ] Directional light
             - [ ] Rectangular light
+        - [ ] Post-processing effects
+        - [ ] HDR (High dynamic range)
         - [ ] Shadow mapping (for all light sources)
-        - [ ] Instancing
-        - [ ] Frustum culling
         - [ ] Cascading shadow maps
         - [ ] Normal mapping
         - [ ] Cube mapping
-        - [ ] Z-prepass
+        - [ ] Instancing
         - [ ] SSAO (Screen space ambient occlusion)
-        - [ ] Post-processing effects
         - [ ] PBR (Physically based rendering)
-        - [ ] HDR (High dynamic range)
         - [ ] Decals
         - [ ] Order independent transparency
         - [ ] Occlusion culling

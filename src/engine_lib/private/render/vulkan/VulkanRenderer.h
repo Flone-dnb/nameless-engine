@@ -7,6 +7,7 @@
 #include "render/Renderer.h"
 #include "render/general/resources/FrameResourcesManager.h"
 #include "render/vulkan/resources/VulkanResource.h"
+#include "material/Material.h"
 
 // External.
 #include "vulkan/vulkan.h"
@@ -14,11 +15,12 @@
 
 namespace ne {
     class CameraProperties;
-    class Material;
     class VulkanPipeline;
     struct VulkanFrameResource;
     struct QueuedForExecutionComputeShaders;
     class ComputeShaderInterface;
+    class MeshNode;
+    class Pipeline;
 
     /** Renderer made with Vulkan API. */
     class VulkanRenderer : public Renderer {
@@ -160,11 +162,18 @@ namespace ne {
         VkInstance getInstance() const;
 
         /**
-         * Returns Vulkan render pass used in the renderer.
+         * Returns main render pass.
          *
-         * @return `nullptr` if render pass is not created yet, otherwise used render pass.
+         * @return `nullptr` if render pass is not created yet, otherwise valid pointer.
          */
-        VkRenderPass getRenderPass() const;
+        VkRenderPass getMainRenderPass() const;
+
+        /**
+         * Returns depth only render pass (z-prepass).
+         *
+         * @return `nullptr` if render pass is not created yet, otherwise valid pointer.
+         */
+        VkRenderPass getDepthOnlyRenderPass() const;
 
         /**
          * Returns Vulkan command pool used in the renderer.
@@ -551,13 +560,31 @@ namespace ne {
         pickSwapChainExtent(const VkSurfaceCapabilitiesKHR& surfaceCapabilities);
 
         /**
-         * Creates @ref pRenderPass using the current @ref msaaSampleCount.
+         * Creates render passes using the current @ref msaaSampleCount.
          *
          * @warning Expects @ref pLogicalDevice to be valid.
          *
          * @return Error if something went wrong.
          */
-        [[nodiscard]] std::optional<Error> createRenderPass();
+        [[nodiscard]] std::optional<Error> createRenderPasses();
+
+        /**
+         * Creates @ref pMainRenderPass using the current @ref msaaSampleCount.
+         *
+         * @warning Expects @ref pLogicalDevice to be valid.
+         *
+         * @return Error if something went wrong.
+         */
+        [[nodiscard]] std::optional<Error> createMainRenderPass();
+
+        /**
+         * Creates @ref pDepthOnlyRenderPass (z-prepass) using the current @ref msaaSampleCount.
+         *
+         * @warning Expects @ref pLogicalDevice to be valid.
+         *
+         * @return Error if something went wrong.
+         */
+        [[nodiscard]] std::optional<Error> createDepthOnlyRenderPass();
 
         /**
          * Destroys swap chain, framebuffers, graphics pipeline, render pass, image views,
@@ -614,10 +641,7 @@ namespace ne {
         [[nodiscard]] std::optional<Error> recreateSwapChainAndDependentResources();
 
         /**
-         * Creates @ref vSwapChainFramebuffers.
-         *
-         * @remark Expects that @ref vSwapChainImageViews, @ref pRenderPass, @ref pDepthImage and
-         * @ref pMsaaImage are valid.
+         * Creates swap chain framebuffers.
          *
          * @return Error if something went wrong.
          */
@@ -625,34 +649,59 @@ namespace ne {
 
         /**
          * Setups everything for render commands to be recorded (updates frame constants, shader resources,
-         * resets command buffers, starts render pass and etc.).
+         * resets command buffers and etc.).
          *
          * @warning Expects that render resources mutex is locked.
          *
          * @param pCameraProperties     Camera properties to use.
          * @param iAcquiredImageIndex   Index of the acquired swap chain image to use this frame.
-         * @param pQueuedComputeShaders Queued shaders to dispatch.
          *
          * @return Error if something went wrong.
          */
-        [[nodiscard]] std::optional<Error> prepareForDrawingNextFrame(
-            CameraProperties* pCameraProperties,
-            uint32_t& iAcquiredImageIndex,
-            QueuedForExecutionComputeShaders* pQueuedComputeShaders);
+        [[nodiscard]] std::optional<Error>
+        prepareForDrawingNextFrame(CameraProperties* pCameraProperties, uint32_t& iAcquiredImageIndex);
 
         /**
-         * Adds draw commands to command buffer to draw all mesh nodes that use the specified material
+         * Adds render pass start commands to the specified command buffer.
          *
-         * @param pActiveCameraProperties    Camera properties of the active camera.
-         * @param pMaterial                  Material that mesh nodes use.
-         * @param pPipeline                  Pipeline that the material uses.
-         * @param pCommandBuffer             Command buffer to add commands to.
+         * @param pCommandBuffer     Command buffer to modify.
+         * @param pTargetFramebuffer Framebuffer to use in the render pass.
+         * @param pRenderPass        Render pass to start.
+         */
+        void startRenderPass(
+            VkCommandBuffer pCommandBuffer, VkFramebuffer pTargetFramebuffer, VkRenderPass pRenderPass);
+
+        /**
+         * Submits commands to draw meshes and the specified depth only (vertex shader only) pipelines.
+         *
+         * @param depthOnlyPipelines         Pipelines that only have vertex shader and their meshes in
+         * frustum.
+         * @param pCommandBuffer             Command buffer to use.
          * @param iCurrentFrameResourceIndex Index of the current frame resource.
          */
-        void drawMeshNodes(
-            CameraProperties* pActiveCameraProperties,
-            Material* pMaterial,
-            VulkanPipeline* pPipeline,
+        void drawMeshesDepthPrepass(
+            const std::unordered_map<
+                Pipeline*,
+                std::unordered_map<
+                    Material*,
+                    std::unordered_map<MeshNode*, std::vector<MeshIndexBufferInfo>>>>& depthOnlyPipelines,
+            VkCommandBuffer pCommandBuffer,
+            size_t iCurrentFrameResourceIndex);
+
+        /**
+         * Submits commands to draw meshes and pipelines of specific types (only opaque or transparent).
+         *
+         * @param pipelinesOfSpecificType    Pipelines to use.
+         * @param pCommandBuffer             Command buffer to use.
+         * @param iCurrentFrameResourceIndex Index of the current frame resource.
+         */
+        void drawMeshesMainPass(
+            const std::unordered_map<
+                Pipeline*,
+                std::unordered_map<
+                    Material*,
+                    std::unordered_map<MeshNode*, std::vector<MeshIndexBufferInfo>>>>&
+                pipelinesOfSpecificType,
             VkCommandBuffer pCommandBuffer,
             size_t iCurrentFrameResourceIndex);
 
@@ -725,8 +774,11 @@ namespace ne {
         /** Image with multiple samples per pixel for MSAA. */
         std::unique_ptr<VulkanResource> pMsaaImage = nullptr;
 
-        /** Render pass. */
-        VkRenderPass pRenderPass = nullptr;
+        /** Render pass for z-prepass. */
+        VkRenderPass pDepthOnlyRenderPass = nullptr;
+
+        /** Render pass for main pass. */
+        VkRenderPass pMainRenderPass = nullptr;
 
         /** Used to create command buffers. */
         VkCommandPool pCommandPool = nullptr;
@@ -757,11 +809,18 @@ namespace ne {
         std::vector<VkImageView> vSwapChainImageViews;
 
         /**
-         * Framebuffers that point to @ref vSwapChainImageViews.
+         * Framebuffers that point to @ref vSwapChainImageViews and reference main render pass.
          *
          * @remark Size of this array is equal to @ref iSwapChainImageCount.
          */
-        std::vector<VkFramebuffer> vSwapChainFramebuffers;
+        std::vector<VkFramebuffer> vSwapChainFramebuffersMainRenderPass;
+
+        /**
+         * Framebuffers that point to @ref vSwapChainImageViews and reference depth only render pass.
+         *
+         * @remark Size of this array is equal to @ref iSwapChainImageCount.
+         */
+        std::vector<VkFramebuffer> vSwapChainFramebuffersDepthOnlyRenderPass;
 
         /**
          * Stores pairs of "references to fences of a frame resources" - "frame resource index".
@@ -828,13 +887,13 @@ namespace ne {
         /** Marked as `true` when entered destructor. */
         bool bIsBeingDestroyed = false;
 
-        /** Index of the color attachment in @ref pRenderPass. */
+        /** Index of the color attachment in render pass. */
         static constexpr size_t iRenderPassColorAttachmentIndex = 0;
 
-        /** Index of the depth attachment in @ref pRenderPass. */
+        /** Index of the depth attachment in render pass. */
         static constexpr size_t iRenderPassDepthAttachmentIndex = 1;
 
-        /** Index of the color resolve target attachment in @ref pRenderPass. */
+        /** Index of the color resolve target attachment in render pass. */
         static constexpr size_t iRenderPassColorResolveTargetAttachmentIndex = 2;
 
         /** Format of @ref vSwapChainImages. */

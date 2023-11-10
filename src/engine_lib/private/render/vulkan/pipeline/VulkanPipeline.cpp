@@ -608,8 +608,9 @@ namespace ne {
         depthStencilStateInfo.front = {}; // for stencil
         depthStencilStateInfo.back = {};  // for stencil
 
-        if (!bUsePixelBlending && pFragmentShader != nullptr) {
-            // Disable depth writes because depth buffer will be filled during depth prepass.
+        if (pFragmentShader != nullptr) {
+            // Disable depth writes because depth buffer will be filled during depth prepass
+            // and depth buffer will be in read-only state during the main pass.
             depthStencilStateInfo.depthWriteEnable = VK_FALSE;
 
             // Keep depth-testing enabled but add `equal` to depth comparison because some depths will be
@@ -703,15 +704,13 @@ namespace ne {
         // Specify pipeline layout.
         pipelineInfo.layout = pPipelineLayout;
 
-        // Get render pass.
-        const auto pRenderPass = pVulkanRenderer->getRenderPass();
-        if (pRenderPass == nullptr) [[unlikely]] {
-            return Error("expected render pass to be valid");
-        }
-
         // Specify render pass.
-        pipelineInfo.renderPass = pRenderPass;
         pipelineInfo.subpass = 0;
+        if (pFragmentShader != nullptr) {
+            pipelineInfo.renderPass = pVulkanRenderer->getMainRenderPass();
+        } else {
+            pipelineInfo.renderPass = pVulkanRenderer->getDepthOnlyRenderPass();
+        }
 
         // Specify parent pipeline.
         pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;

@@ -732,6 +732,12 @@ namespace ne {
     Renderer::getMeshesInFrustum(
         CameraProperties* pActiveCameraProperties,
         PipelineManager::GraphicsPipelineRegistry* pGraphicsPipelines) {
+        PROFILE_FUNC;
+
+        // Record start time.
+        using namespace std::chrono;
+        const auto startFrustumCullingTime = steady_clock::now();
+
         // Prepare output variable.
         std::array<
             std::unordered_map<
@@ -844,6 +850,10 @@ namespace ne {
                 }
             }
         }
+
+        // Increment total time spent in frustum culling.
+        accumulatedTimeSpentLastFrameOnFrustumCullingInMs +=
+            duration<float, milliseconds::period>(steady_clock::now() - startFrustumCullingTime).count();
 
         return vPipelineMeshesInFrustum;
     }

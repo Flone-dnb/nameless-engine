@@ -286,8 +286,9 @@ namespace ne {
 
         // Describe depth stencil state.
         psoDesc.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
-        if (!bUsePixelBlending && !bDepthOnlyPipeline) {
-            // Disable depth writes because depth buffer will be filled during depth prepass.
+        if (!bDepthOnlyPipeline) {
+            // Disable depth writes because depth buffer will be filled during depth prepass
+            // and depth buffer will be in read-only state during the main pass.
             psoDesc.DepthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ZERO;
 
             // Keep depth-testing enabled but add `equal` to depth comparison because some depths will be

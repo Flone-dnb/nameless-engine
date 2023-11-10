@@ -633,6 +633,8 @@ namespace ne {
             Pipeline*,
             std::unordered_map<Material*, std::unordered_map<MeshNode*, std::vector<MeshIndexBufferInfo>>>>&
             depthOnlyPipelines) {
+        PROFILE_FUNC;
+
         // Prepare draw call counter to be used later.
         const auto pDrawCallCounter = getDrawCallCounter();
 
@@ -657,6 +659,9 @@ namespace ne {
                     ->GetGPUVirtualAddress());
 
             for (const auto& [pMaterial, meshNodes] : materialMeshes) {
+                // No need to bind material's shader resources since they are not used in vertex shader
+                // (since we are in depth prepass).
+
                 for (const auto& [pMeshNode, vIndexBuffers] : meshNodes) {
                     // Get mesh data.
                     auto pMtxMeshGpuResources = pMeshNode->getMeshGpuResources();
@@ -735,6 +740,8 @@ namespace ne {
             Pipeline*,
             std::unordered_map<Material*, std::unordered_map<MeshNode*, std::vector<MeshIndexBufferInfo>>>>&
             pipelinesOfSpecificType) {
+        PROFILE_FUNC;
+
         // Prepare draw call counter to be used later.
         const auto pDrawCallCounter = getDrawCallCounter();
 
@@ -765,11 +772,11 @@ namespace ne {
             for (const auto& [pMaterial, meshNodes] : materialMeshes) {
                 // Get material's GPU resources.
                 const auto pMtxMaterialGpuResources = pMaterial->getMaterialGpuResources();
-                std::scoped_lock materialGpuResourcesGuard(pMtxMaterialGpuResources->first);
-                auto& materialResources = pMtxMaterialGpuResources->second.shaderResources;
 
                 // Note: if you will ever need it - don't lock material's internal resources mutex
                 // here as it might cause a deadlock (see Material::setDiffuseTexture for example).
+                std::scoped_lock materialGpuResourcesGuard(pMtxMaterialGpuResources->first);
+                auto& materialResources = pMtxMaterialGpuResources->second.shaderResources;
 
                 // Set material's CPU write shader resources (`cbuffer`s for example).
                 for (const auto& [sResourceName, pShaderCpuWriteResource] :

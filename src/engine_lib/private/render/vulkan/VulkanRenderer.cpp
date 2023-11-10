@@ -17,7 +17,6 @@
 #include "game/camera/CameraManager.h"
 #include "game/camera/CameraProperties.h"
 #include "render/vulkan/pipeline/VulkanPipeline.h"
-#include "material/Material.h"
 #include "game/nodes/MeshNode.h"
 #include "shader/glsl/resources/GlslShaderCpuWriteResource.h"
 #include "shader/glsl/resources/GlslShaderTextureResource.h"
@@ -217,7 +216,7 @@ namespace ne {
         }
 
         // Create render pass.
-        optionalError = createRenderPass();
+        optionalError = createRenderPasses();
         if (optionalError.has_value()) {
             optionalError->addCurrentLocationToErrorStack();
             return optionalError;
@@ -280,8 +279,6 @@ namespace ne {
             optionalError->addCurrentLocationToErrorStack();
             return optionalError;
         }
-
-        // ... TODO ...
 
         bIsVulkanInitialized = true;
 
@@ -1328,7 +1325,25 @@ namespace ne {
         return extent;
     }
 
-    std::optional<Error> VulkanRenderer::createRenderPass() {
+    std::optional<Error> VulkanRenderer::createRenderPasses() {
+        // Create depth only render pass.
+        auto optionalError = createDepthOnlyRenderPass();
+        if (optionalError.has_value()) [[unlikely]] {
+            optionalError->addCurrentLocationToErrorStack();
+            return optionalError;
+        }
+
+        // Create main render pass.
+        optionalError = createMainRenderPass();
+        if (optionalError.has_value()) [[unlikely]] {
+            optionalError->addCurrentLocationToErrorStack();
+            return optionalError;
+        }
+
+        return {};
+    }
+
+    std::optional<Error> VulkanRenderer::createMainRenderPass() {
         std::vector<VkAttachmentDescription> vAttachments{};
 
         static_assert(
@@ -1347,8 +1362,8 @@ namespace ne {
         colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
         colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
         colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        colorAttachment.finalLayout =
-            bEnableMsaa ? VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL : VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+        colorAttachment.finalLayout = bEnableMsaa ? VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+                                                  : VK_IMAGE_LAYOUT_PRESENT_SRC_KHR; // at end of the render
         vAttachments.push_back(colorAttachment);
         static_assert(iRenderPassColorAttachmentIndex == 0);
         if (vAttachments.size() != iRenderPassColorAttachmentIndex + 1) [[unlikely]] {
@@ -1359,11 +1374,11 @@ namespace ne {
         VkAttachmentDescription depthAttachment{};
         depthAttachment.format = depthImageFormat;
         depthAttachment.samples = msaaSampleCount;
-        depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+        depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD; // loading depth from depth render pass
         depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
         depthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
         depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-        depthAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        depthAttachment.initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
         depthAttachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
         vAttachments.push_back(depthAttachment);
         static_assert(iRenderPassDepthAttachmentIndex == 1);
@@ -1382,7 +1397,8 @@ namespace ne {
             colorResolveTargetAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
             colorResolveTargetAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
             colorResolveTargetAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-            colorResolveTargetAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+            colorResolveTargetAttachment.finalLayout =
+                VK_IMAGE_LAYOUT_PRESENT_SRC_KHR; // at end of the render
             vAttachments.push_back(colorResolveTargetAttachment);
             static_assert(iRenderPassColorResolveTargetAttachmentIndex == 2);
             if (vAttachments.size() != iRenderPassColorResolveTargetAttachmentIndex + 1) [[unlikely]] {
@@ -1393,12 +1409,12 @@ namespace ne {
         // Create color buffer reference for subpasses.
         VkAttachmentReference colorAttachmentRef{};
         colorAttachmentRef.attachment = iRenderPassColorAttachmentIndex;
-        colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+        colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL; // layout during subpass
 
-        // Create depth buffer reference for subpasses.
+        // Create depth buffer reference in read layout for main subpass.
         VkAttachmentReference depthAttachmentRef{};
         depthAttachmentRef.attachment = iRenderPassDepthAttachmentIndex;
-        depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+        depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL; // layout during subpass
 
         VkAttachmentReference colorAttachmentResolveRef{};
         if (bEnableMsaa) {
@@ -1407,38 +1423,86 @@ namespace ne {
             colorAttachmentResolveRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
         }
 
-        // Describe subpass.
-        VkSubpassDescription subpass{};
-        subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-        subpass.colorAttachmentCount = 1;
-        subpass.pColorAttachments = &colorAttachmentRef;
-        subpass.pDepthStencilAttachment = &depthAttachmentRef;
-
+        // Describe main subpass.
+        VkSubpassDescription mainSubpass = {};
+        mainSubpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+        mainSubpass.colorAttachmentCount = 1;
+        mainSubpass.pColorAttachments = &colorAttachmentRef;
+        mainSubpass.pDepthStencilAttachment = &depthAttachmentRef;
         if (bEnableMsaa) {
-            subpass.pResolveAttachments = &colorAttachmentResolveRef;
+            mainSubpass.pResolveAttachments = &colorAttachmentResolveRef;
         }
 
-        // Describe subpass dependency.
-        VkSubpassDependency dependency{};
-        dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
-        dependency.dstSubpass = 0;
-        dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-        dependency.srcAccessMask = 0;
-        dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-        dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+        // Describe main subpass dependency.
+        VkSubpassDependency mainSubpassDependency = {};
+        mainSubpassDependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+        mainSubpassDependency.dstSubpass = 0;
+        mainSubpassDependency.srcStageMask =
+            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT; // make commands in `src` subpass to reach
+                                                           // color attachment stage (swap chain
+                                                           // finished reading the image)
+        mainSubpassDependency.dstStageMask =
+            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT; // before commands in `dst` subpass reach color
+                                                           // attachment stage
+        mainSubpassDependency.srcAccessMask = 0;
+        mainSubpassDependency.dstAccessMask =
+            VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT; // because we will write to color attachment
 
-        // Describe render pass.
-        VkRenderPassCreateInfo renderPassInfo{};
-        renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-        renderPassInfo.attachmentCount = static_cast<uint32_t>(vAttachments.size());
-        renderPassInfo.pAttachments = vAttachments.data();
-        renderPassInfo.subpassCount = 1;
-        renderPassInfo.pSubpasses = &subpass;
-        renderPassInfo.dependencyCount = 1;
-        renderPassInfo.pDependencies = &dependency;
+        // Describe main render pass.
+        VkRenderPassCreateInfo mainRenderPassInfo{};
+        mainRenderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+        mainRenderPassInfo.attachmentCount = static_cast<uint32_t>(vAttachments.size());
+        mainRenderPassInfo.pAttachments = vAttachments.data();
+        mainRenderPassInfo.subpassCount = 1;
+        mainRenderPassInfo.pSubpasses = &mainSubpass;
+        mainRenderPassInfo.dependencyCount = 1;
+        mainRenderPassInfo.pDependencies = &mainSubpassDependency;
 
-        // Create render pass.
-        const auto result = vkCreateRenderPass(pLogicalDevice, &renderPassInfo, nullptr, &pRenderPass);
+        // Create main render pass.
+        const auto result =
+            vkCreateRenderPass(pLogicalDevice, &mainRenderPassInfo, nullptr, &pMainRenderPass);
+        if (result != VK_SUCCESS) [[unlikely]] {
+            return Error(std::format("failed to create render pass, error: {}", string_VkResult(result)));
+        }
+
+        return {};
+    }
+
+    std::optional<Error> VulkanRenderer::createDepthOnlyRenderPass() {
+        // Describe depth buffer.
+        VkAttachmentDescription depthAttachment{};
+        depthAttachment.format = depthImageFormat;
+        depthAttachment.samples = msaaSampleCount;
+        depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+        depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE; // save for main pass
+        depthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+        depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        depthAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        depthAttachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+        // Create depth buffer reference in write layout for depth subpass.
+        VkAttachmentReference depthAttachmentRef{};
+        depthAttachmentRef.attachment = 0; // this is the only attachment in depth subpass
+        depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL; // layout during subpass
+
+        // Describe depth only subpass.
+        VkSubpassDescription depthSubpass = {};
+        depthSubpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+        depthSubpass.colorAttachmentCount = 0;
+        depthSubpass.pDepthStencilAttachment = &depthAttachmentRef;
+
+        // Describe depth render pass.
+        VkRenderPassCreateInfo depthRenderPassInfo{};
+        depthRenderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+        depthRenderPassInfo.attachmentCount = 1;
+        depthRenderPassInfo.pAttachments = &depthAttachment;
+        depthRenderPassInfo.subpassCount = 1;
+        depthRenderPassInfo.pSubpasses = &depthSubpass;
+        depthRenderPassInfo.dependencyCount = 0;
+
+        // Create depth render pass.
+        const auto result =
+            vkCreateRenderPass(pLogicalDevice, &depthRenderPassInfo, nullptr, &pDepthOnlyRenderPass);
         if (result != VK_SUCCESS) [[unlikely]] {
             return Error(std::format("failed to create render pass, error: {}", string_VkResult(result)));
         }
@@ -1458,10 +1522,14 @@ namespace ne {
         pDepthImage = nullptr;
 
         // Destroy swap chain framebuffers.
-        for (size_t i = 0; i < vSwapChainFramebuffers.size(); i++) {
-            vkDestroyFramebuffer(pLogicalDevice, vSwapChainFramebuffers[i], nullptr);
+        for (size_t i = 0; i < vSwapChainFramebuffersMainRenderPass.size(); i++) {
+            vkDestroyFramebuffer(pLogicalDevice, vSwapChainFramebuffersMainRenderPass[i], nullptr);
         }
-        vSwapChainFramebuffers.clear();
+        vSwapChainFramebuffersMainRenderPass.clear();
+        for (size_t i = 0; i < vSwapChainFramebuffersDepthOnlyRenderPass.size(); i++) {
+            vkDestroyFramebuffer(pLogicalDevice, vSwapChainFramebuffersDepthOnlyRenderPass[i], nullptr);
+        }
+        vSwapChainFramebuffersDepthOnlyRenderPass.clear();
 
         if (bDestroyPipelineManager) {
             // Make sure all pipelines were destroyed because they reference render pass.
@@ -1470,8 +1538,10 @@ namespace ne {
 
         // Now when all pipelines were destroyed:
         // Destroy render pass.
-        vkDestroyRenderPass(pLogicalDevice, pRenderPass, nullptr);
-        pRenderPass = nullptr;
+        vkDestroyRenderPass(pLogicalDevice, pMainRenderPass, nullptr);
+        vkDestroyRenderPass(pLogicalDevice, pDepthOnlyRenderPass, nullptr);
+        pMainRenderPass = nullptr;
+        pDepthOnlyRenderPass = nullptr;
 
         // Destroy swap chain image views.
         for (size_t i = 0; i < vSwapChainImageViews.size(); i++) {
@@ -1708,7 +1778,7 @@ namespace ne {
                 return optionalError;
             }
 
-            optionalError = createRenderPass(); // it depends on the format of the swap chain images
+            optionalError = createRenderPasses(); // it depends on the format of the swap chain images
             if (optionalError.has_value()) [[unlikely]] {
                 optionalError->addCurrentLocationToErrorStack();
                 return optionalError;
@@ -1776,7 +1846,7 @@ namespace ne {
         }
 
         // Make sure the render pass is created.
-        if (pRenderPass == nullptr) [[unlikely]] {
+        if (pMainRenderPass == nullptr) [[unlikely]] {
             return Error("expected the render pass to be created at this point");
         }
 
@@ -1795,16 +1865,17 @@ namespace ne {
         }
 
         // Allocate framebuffers data.
-        vSwapChainFramebuffers.resize(iSwapChainImageCount);
+        vSwapChainFramebuffersMainRenderPass.resize(iSwapChainImageCount);
+        vSwapChainFramebuffersDepthOnlyRenderPass.resize(iSwapChainImageCount);
         vSwapChainImageFenceRefs.resize(iSwapChainImageCount);
 
         // Make sure framebuffer array size is equal to image views array size.
-        if (vSwapChainFramebuffers.size() != vSwapChainImageViews.size()) [[unlikely]] {
+        if (vSwapChainFramebuffersMainRenderPass.size() != vSwapChainImageViews.size()) [[unlikely]] {
             return Error(std::format(
                 "swapchain framebuffer array size ({}) is not equal to swapchain image view array size ({}), "
                 "swapchain framebuffers wrap swapchain images thus framebuffer count "
                 "should be equal to swapchain image count",
-                vSwapChainFramebuffers.size(),
+                vSwapChainFramebuffersMainRenderPass.size(),
                 vSwapChainImageViews.size()));
         }
 
@@ -1854,16 +1925,31 @@ namespace ne {
             // Describe framebuffer.
             VkFramebufferCreateInfo framebufferInfo{};
             framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-            framebufferInfo.renderPass = pRenderPass;
+            framebufferInfo.renderPass = pMainRenderPass;
             framebufferInfo.attachmentCount = static_cast<uint32_t>(vAttachments.size());
             framebufferInfo.pAttachments = vAttachments.data();
             framebufferInfo.width = swapChainExtent->width;
             framebufferInfo.height = swapChainExtent->height;
             framebufferInfo.layers = 1;
 
-            // Create framebuffer.
-            const auto result =
-                vkCreateFramebuffer(pLogicalDevice, &framebufferInfo, nullptr, &vSwapChainFramebuffers[i]);
+            // Create main render pass framebuffer.
+            auto result = vkCreateFramebuffer(
+                pLogicalDevice, &framebufferInfo, nullptr, &vSwapChainFramebuffersMainRenderPass[i]);
+            if (result != VK_SUCCESS) [[unlikely]] {
+                return Error(std::format(
+                    "failed to create a framebuffer for a swapchain image view, error: {}",
+                    string_VkResult(result)));
+            }
+
+            // Change render pass and attachments.
+            const auto pDepthImageView = pDepthImage->getInternalImageView();
+            framebufferInfo.renderPass = pDepthOnlyRenderPass;
+            framebufferInfo.attachmentCount = 1;
+            framebufferInfo.pAttachments = &pDepthImageView;
+
+            // Create depth only render pass framebuffer.
+            result = vkCreateFramebuffer(
+                pLogicalDevice, &framebufferInfo, nullptr, &vSwapChainFramebuffersDepthOnlyRenderPass[i]);
             if (result != VK_SUCCESS) [[unlikely]] {
                 return Error(std::format(
                     "failed to create a framebuffer for a swapchain image view, error: {}",
@@ -1875,9 +1961,7 @@ namespace ne {
     }
 
     std::optional<Error> VulkanRenderer::prepareForDrawingNextFrame(
-        CameraProperties* pCameraProperties,
-        uint32_t& iAcquiredImageIndex,
-        QueuedForExecutionComputeShaders* pQueuedComputeShaders) {
+        CameraProperties* pCameraProperties, uint32_t& iAcquiredImageIndex) {
         PROFILE_FUNC;
 
         // Make sure swap chain extent is set.
@@ -1969,55 +2053,49 @@ namespace ne {
                 string_VkResult(result)));
         }
 
-        PROFILE_SCOPE_START(DispatchPreFrameComputeShaders);
+        return {};
+    }
 
-        // Dispatch pre-frame compute shaders.
-        for (auto& group : pQueuedComputeShaders->graphicsQueuePreFrameShadersGroups) {
-            if (dispatchComputeShadersOnGraphicsQueue(
-                    pCurrentVulkanFrameResource,
-                    pMtxCurrentFrameResource->second.iCurrentFrameResourceIndex,
-                    group)) {
-                // Insert a synchronization barrier.
-                vkCmdPipelineBarrier(
-                    pCurrentVulkanFrameResource->pCommandBuffer,
-                    VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,   // run all compute commands before this barrier
-                    VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT |  // make all next compute/graphics commands to wait
-                        VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT, // for this barrier
-
-                    0,
-                    0,
-                    nullptr,
-                    0,
-                    nullptr,
-                    0,
-                    nullptr);
-            }
-        }
-
-        PROFILE_SCOPE_END;
+    void VulkanRenderer::startRenderPass(
+        VkCommandBuffer pCommandBuffer, VkFramebuffer pTargetFramebuffer, VkRenderPass pRenderPass) {
+        PROFILE_FUNC;
 
         // Prepare to begin render pass.
         VkRenderPassBeginInfo renderPassInfo{};
         renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
         renderPassInfo.renderPass = pRenderPass;
-        renderPassInfo.framebuffer = vSwapChainFramebuffers[iAcquiredImageIndex];
+        renderPassInfo.framebuffer = pTargetFramebuffer;
 
         // Specify render area.
         renderPassInfo.renderArea.offset = {0, 0};
         renderPassInfo.renderArea.extent = *swapChainExtent;
 
         // Specify clear color for attachments.
-        std::array<VkClearValue, 2> clearValues{};
-        clearValues[iRenderPassColorAttachmentIndex].color = {0.0F, 0.0F, 0.0F, 1.0F};
-        clearValues[iRenderPassDepthAttachmentIndex].depthStencil = {getMaxDepth(), 0};
-        renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
-        renderPassInfo.pClearValues = clearValues.data();
+        std::vector<VkClearValue> vClearValues;
+        if (pRenderPass == pMainRenderPass) {
+            // Main render pass.
+            static_assert(iRenderPassColorAttachmentIndex == 0);
+            vClearValues.push_back(VkClearValue{});
+            vClearValues[iRenderPassColorAttachmentIndex].color = {0.0F, 0.0F, 0.0F, 1.0F};
+
+            static_assert(iRenderPassDepthAttachmentIndex == 1);
+            vClearValues.push_back(VkClearValue{});
+            vClearValues[iRenderPassDepthAttachmentIndex].depthStencil = {getMaxDepth(), 0};
+        } else if (pRenderPass == pDepthOnlyRenderPass) {
+            // Depth only pass.
+            vClearValues.push_back(VkClearValue{});
+            vClearValues[0].depthStencil = {getMaxDepth(), 0};
+        } else [[unlikely]] {
+            Error error("unexpected render pass, clear color values are not specified");
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+        }
+
+        renderPassInfo.clearValueCount = static_cast<uint32_t>(vClearValues.size());
+        renderPassInfo.pClearValues = vClearValues.data();
 
         // Mark render pass start.
-        vkCmdBeginRenderPass(
-            pCurrentVulkanFrameResource->pCommandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
-
-        return {};
+        vkCmdBeginRenderPass(pCommandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
     }
 
     std::variant<std::unique_ptr<Renderer>, std::pair<Error, std::string>>
@@ -2118,7 +2196,9 @@ namespace ne {
 
     VkInstance VulkanRenderer::getInstance() const { return pInstance; }
 
-    VkRenderPass VulkanRenderer::getRenderPass() const { return pRenderPass; }
+    VkRenderPass VulkanRenderer::getMainRenderPass() const { return pMainRenderPass; }
+
+    VkRenderPass VulkanRenderer::getDepthOnlyRenderPass() const { return pDepthOnlyRenderPass; }
 
     VkCommandPool VulkanRenderer::getCommandPool() const { return pCommandPool; }
 
@@ -2281,8 +2361,7 @@ namespace ne {
 
         // Setup.
         uint32_t iAcquiredImageIndex = 0;
-        auto optionalError = prepareForDrawingNextFrame(
-            pActiveCameraProperties, iAcquiredImageIndex, mtxQueuedComputeShader.second);
+        auto optionalError = prepareForDrawingNextFrame(pActiveCameraProperties, iAcquiredImageIndex);
         if (optionalError.has_value()) [[unlikely]] {
             auto error = optionalError.value();
             error.addCurrentLocationToErrorStack();
@@ -2290,92 +2369,110 @@ namespace ne {
             throw std::runtime_error(error.getFullErrorMessage());
         }
 
+        // Start depth only render pass.
+        startRenderPass(
+            pVulkanCurrentFrameResource->pCommandBuffer,
+            vSwapChainFramebuffersDepthOnlyRenderPass[iAcquiredImageIndex],
+            pDepthOnlyRenderPass);
+
         // Get graphics pipelines.
         const auto pMtxGraphicsPipelines = pPipelineManager->getGraphicsPipelines();
         std::scoped_lock pipelinesGuard(pMtxGraphicsPipelines->first);
 
-        // Iterate over graphics pipelines of all types.
-        for (auto& pipelinesOfSpecificType : pMtxGraphicsPipelines->second.vPipelineTypes) {
+        // Do frustum culling.
+        const auto vMeshPipelinesInFrustum =
+            getMeshesInFrustum(pActiveCameraProperties, &pMtxGraphicsPipelines->second);
 
-            // Iterate over all active shader combinations.
-            for (const auto& [sShaderNames, pipelines] : pipelinesOfSpecificType) {
+        // Get pipelines for depth prepass.
+        const auto& depthOnlyPipelines =
+            vMeshPipelinesInFrustum[static_cast<size_t>(PipelineType::PT_DEPTH_ONLY)];
 
-                // Iterate over all active unique material macros combinations (for example:
-                // if we have 2 materials where one uses diffuse texture (defined DIFFUSE_TEXTURE
-                // macro for shaders) and the second one is not we will have 2 pipelines here).
-                for (const auto& [materialMacros, pPipeline] : pipelines.shaderPipelines) {
+        // Draw depth prepass.
+        drawMeshesDepthPrepass(
+            depthOnlyPipelines,
+            pVulkanCurrentFrameResource->pCommandBuffer,
+            pMtxCurrentFrameResource->second.iCurrentFrameResourceIndex);
 
-                    // Get internal resources of this pipeline.
-                    const auto pVulkanPipeline = reinterpret_cast<VulkanPipeline*>(pPipeline.get());
-                    auto pMtxPipelineResources = pVulkanPipeline->getInternalResources();
-                    std::scoped_lock guardPipelineResources(pMtxPipelineResources->first);
+        // Finish depth only render pass.
+        vkCmdEndRenderPass(pVulkanCurrentFrameResource->pCommandBuffer);
 
-                    // Bind pipeline.
-                    vkCmdBindPipeline(
+        PROFILE_SCOPE_START(DispatchPreFrameComputeShaders);
+
+        // Check if we have compute shaders to dispatch.
+        auto& computeShaderGroups = mtxQueuedComputeShader.second->graphicsQueuePreFrameShadersGroups;
+        bool bHaveComputeWorkToDispatch = false;
+        for (auto& group : computeShaderGroups) {
+            if (group.empty()) {
+                continue;
+            }
+
+            bHaveComputeWorkToDispatch = true;
+            break;
+        }
+
+        if (bHaveComputeWorkToDispatch) {
+            // Insert a synchronization barrier.
+            vkCmdPipelineBarrier(
+                pVulkanCurrentFrameResource->pCommandBuffer,
+                VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT,   // run all graphics commands before this barrier
+                VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, // make all next compute commands to wait for this
+                                                      // barrier
+                0,
+                0,
+                nullptr,
+                0,
+                nullptr,
+                0,
+                nullptr);
+
+            // Dispatch pre-frame compute shaders.
+            for (auto& group : computeShaderGroups) {
+                if (dispatchComputeShadersOnGraphicsQueue(
+                        pVulkanCurrentFrameResource,
+                        pMtxCurrentFrameResource->second.iCurrentFrameResourceIndex,
+                        group)) {
+                    // Insert a synchronization barrier.
+                    vkCmdPipelineBarrier(
                         pVulkanCurrentFrameResource->pCommandBuffer,
-                        VK_PIPELINE_BIND_POINT_GRAPHICS,
-                        pMtxPipelineResources->second.pPipeline);
-
-                    // Bind descriptor sets.
-                    vkCmdBindDescriptorSets(
-                        pVulkanCurrentFrameResource->pCommandBuffer,
-                        VK_PIPELINE_BIND_POINT_GRAPHICS,
-                        pMtxPipelineResources->second.pPipelineLayout,
+                        VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,  // run all compute commands before this barrier
+                        VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT | // make all next compute/graphics commands to
+                                                               // wait
+                            VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT, // for this barrier
                         0,
-                        1,
-                        &pMtxPipelineResources->second
-                             .vDescriptorSets[pMtxCurrentFrameResource->second.iCurrentFrameResourceIndex],
+                        0,
+                        nullptr,
+                        0,
+                        nullptr,
                         0,
                         nullptr);
-
-                    // Iterate over all materials that use this pipeline
-                    // (all these materials define the same set of shader macros but
-                    // each material can have different parameters such as different diffuse textures).
-                    const auto pMtxMaterials = pPipeline->getMaterialsThatUseThisPipeline();
-                    std::scoped_lock materialsGuard(pMtxMaterials->first);
-
-                    for (const auto& pMaterial : pMtxMaterials->second) {
-                        // Set material's GPU resources.
-                        const auto pMtxMaterialGpuResources = pMaterial->getMaterialGpuResources();
-                        std::scoped_lock materialGpuResourcesGuard(pMtxMaterialGpuResources->first);
-                        auto& materialShaderResources = pMtxMaterialGpuResources->second.shaderResources;
-
-                        // Note: if you will ever need it - don't lock material's internal resources mutex
-                        // here as it might cause a deadlock (see Material::setDiffuseTexture for example).
-
-                        // Save raw pointer to push constants manager to avoid re-typing this long line of
-                        // code below.
-                        const auto pPushConstantsManager =
-                            pMtxPipelineResources->second.pushConstantsData->pPushConstantsManager.get();
-
-                        // Set material's CPU write shader resources.
-                        for (const auto& [sResourceName, pShaderCpuWriteResource] :
-                             materialShaderResources.shaderCpuWriteResources) {
-                            reinterpret_cast<GlslShaderCpuWriteResource*>(
-                                pShaderCpuWriteResource.getResource())
-                                ->copyResourceIndexOfOnlyPipelineToPushConstants(
-                                    pPushConstantsManager,
-                                    pMtxCurrentFrameResource->second.iCurrentFrameResourceIndex);
-                        }
-
-                        // Set material's texture resources.
-                        for (const auto& [sResourceName, pShaderTextureResource] :
-                             materialShaderResources.shaderTextureResources) {
-                            reinterpret_cast<GlslShaderTextureResource*>(pShaderTextureResource.getResource())
-                                ->copyResourceIndexOfOnlyPipelineToPushConstants(pPushConstantsManager);
-                        }
-
-                        // Draw mesh nodes that use this material.
-                        drawMeshNodes(
-                            pActiveCameraProperties,
-                            pMaterial,
-                            pVulkanPipeline,
-                            pVulkanCurrentFrameResource->pCommandBuffer,
-                            pMtxCurrentFrameResource->second.iCurrentFrameResourceIndex);
-                    }
                 }
             }
         }
+
+        PROFILE_SCOPE_END;
+
+        // Start main render pass.
+        startRenderPass(
+            pVulkanCurrentFrameResource->pCommandBuffer,
+            vSwapChainFramebuffersMainRenderPass[iAcquiredImageIndex],
+            pMainRenderPass);
+
+        // Get pipelines for main pass.
+        const auto& opaquePipelines = vMeshPipelinesInFrustum[static_cast<size_t>(PipelineType::PT_OPAQUE)];
+        const auto& transparentPipelines =
+            vMeshPipelinesInFrustum[static_cast<size_t>(PipelineType::PT_TRANSPARENT)];
+
+        // Draw opaque meshes.
+        drawMeshesMainPass(
+            opaquePipelines,
+            pVulkanCurrentFrameResource->pCommandBuffer,
+            pMtxCurrentFrameResource->second.iCurrentFrameResourceIndex);
+
+        // Draw transparent meshes.
+        drawMeshesMainPass(
+            transparentPipelines,
+            pVulkanCurrentFrameResource->pCommandBuffer,
+            pMtxCurrentFrameResource->second.iCurrentFrameResourceIndex);
 
         // Do finish logic.
         optionalError = finishDrawingNextFrame(
@@ -2392,6 +2489,249 @@ namespace ne {
 
         // Switch to the next frame resource.
         getFrameResourcesManager()->switchToNextFrameResource();
+    }
+
+    void VulkanRenderer::drawMeshesDepthPrepass(
+        const std::unordered_map<
+            Pipeline*,
+            std::unordered_map<Material*, std::unordered_map<MeshNode*, std::vector<MeshIndexBufferInfo>>>>&
+            depthOnlyPipelines,
+        VkCommandBuffer pCommandBuffer,
+        size_t iCurrentFrameResourceIndex) {
+        PROFILE_FUNC;
+
+        // Prepare draw call counter to be used later.
+        const auto pDrawCallCounter = getDrawCallCounter();
+
+        // Prepare vertex buffer.
+        static constexpr size_t iVertexBufferCount = 1;
+        std::array<VkBuffer, iVertexBufferCount> vVertexBuffers{};
+        const std::array<VkDeviceSize, iVertexBufferCount> vOffsets = {0};
+
+        for (const auto& [pPipeline, materialMeshes] : depthOnlyPipelines) {
+            // Get internal resources of this pipeline.
+            const auto pVulkanPipeline = reinterpret_cast<VulkanPipeline*>(pPipeline);
+            auto pMtxPipelineResources = pVulkanPipeline->getInternalResources();
+            std::scoped_lock guardPipelineResources(pMtxPipelineResources->first);
+
+            // Save raw pointer to push constants manager to avoid re-typing this long line of code below.
+            const auto pPushConstantsManager =
+                pMtxPipelineResources->second.pushConstantsData->pPushConstantsManager.get();
+
+            // Bind pipeline.
+            vkCmdBindPipeline(
+                pCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pMtxPipelineResources->second.pPipeline);
+
+            // Bind descriptor sets.
+            vkCmdBindDescriptorSets(
+                pCommandBuffer,
+                VK_PIPELINE_BIND_POINT_GRAPHICS,
+                pMtxPipelineResources->second.pPipelineLayout,
+                0,
+                1,
+                &pMtxPipelineResources->second.vDescriptorSets[iCurrentFrameResourceIndex],
+                0,
+                nullptr);
+
+            for (const auto& [pMaterial, meshNodes] : materialMeshes) {
+                // No need to bind material's shader resources since they are not used in vertex shader
+                // (since we are in depth prepass).
+
+                for (const auto& [pMeshNode, vIndexBuffers] : meshNodes) {
+                    // Get mesh data.
+                    auto pMtxMeshGpuResources = pMeshNode->getMeshGpuResources();
+
+                    // Note: if you will ever need it - don't lock mesh node's spawning/despawning mutex here
+                    // as it might cause a deadlock (see MeshNode::setMaterial for example).
+                    std::scoped_lock geometryGuard(pMtxMeshGpuResources->first);
+
+                    // Find and bind mesh data resource since only it is used in vertex shader.
+                    const auto& meshDataIt =
+                        pMtxMeshGpuResources->second.shaderResources.shaderCpuWriteResources.find(
+                            MeshNode::getMeshShaderConstantBufferName());
+#if defined(DEBUG)
+                    if (meshDataIt ==
+                        pMtxMeshGpuResources->second.shaderResources.shaderCpuWriteResources.end())
+                        [[unlikely]] {
+                        Error error(std::format(
+                            "expected to find \"{}\" shader resource",
+                            MeshNode::getMeshShaderConstantBufferName()));
+                        error.showError();
+                        throw std::runtime_error(error.getFullErrorMessage());
+                    }
+#endif
+                    reinterpret_cast<GlslShaderCpuWriteResource*>(meshDataIt->second.getResource())
+                        ->copyResourceIndexOfPipelineToPushConstants(
+                            pPushConstantsManager, pVulkanPipeline, iCurrentFrameResourceIndex);
+
+                    // Bind vertex buffer.
+                    vVertexBuffers[0] = {reinterpret_cast<VulkanResource*>(
+                                             pMtxMeshGpuResources->second.mesh.pVertexBuffer.get())
+                                             ->getInternalBufferResource()};
+                    vkCmdBindVertexBuffers(
+                        pCommandBuffer,
+                        0,
+                        static_cast<uint32_t>(vVertexBuffers.size()),
+                        vVertexBuffers.data(),
+                        vOffsets.data());
+
+                    // Set push constants.
+                    vkCmdPushConstants(
+                        pCommandBuffer,
+                        pMtxPipelineResources->second.pPipelineLayout,
+                        VK_SHADER_STAGE_ALL_GRAPHICS,
+                        0,
+                        pPushConstantsManager->getTotalSizeInBytes(),
+                        pPushConstantsManager->getData());
+
+                    // Iterate over all index buffers of a specific mesh node that use this material.
+                    for (const auto& indexBufferInfo : vIndexBuffers) {
+                        // Bind index buffer.
+                        static_assert(
+                            sizeof(MeshData::meshindex_t) == sizeof(unsigned int),
+                            "change `indexTypeFormat`");
+                        vkCmdBindIndexBuffer(
+                            pCommandBuffer,
+                            reinterpret_cast<VulkanResource*>(indexBufferInfo.pIndexBuffer)
+                                ->getInternalBufferResource(),
+                            0,
+                            indexTypeFormat);
+
+                        // Add a draw command.
+                        vkCmdDrawIndexed(pCommandBuffer, indexBufferInfo.iIndexCount, 1, 0, 0, 0);
+
+                        // Increment draw call counter.
+                        *pDrawCallCounter += 1;
+                    }
+                }
+            }
+        }
+    }
+
+    void VulkanRenderer::drawMeshesMainPass(
+        const std::unordered_map<
+            Pipeline*,
+            std::unordered_map<Material*, std::unordered_map<MeshNode*, std::vector<MeshIndexBufferInfo>>>>&
+            pipelinesOfSpecificType,
+        VkCommandBuffer pCommandBuffer,
+        size_t iCurrentFrameResourceIndex) {
+        PROFILE_FUNC;
+
+        // Prepare draw call counter to be used later.
+        const auto pDrawCallCounter = getDrawCallCounter();
+
+        // Prepare vertex buffer.
+        static constexpr size_t iVertexBufferCount = 1;
+        std::array<VkBuffer, iVertexBufferCount> vVertexBuffers{};
+        const std::array<VkDeviceSize, iVertexBufferCount> vOffsets = {0};
+
+        for (const auto& [pPipeline, materialMeshes] : pipelinesOfSpecificType) {
+            // Get internal resources of this pipeline.
+            const auto pVulkanPipeline = reinterpret_cast<VulkanPipeline*>(pPipeline);
+            auto pMtxPipelineResources = pVulkanPipeline->getInternalResources();
+            std::scoped_lock guardPipelineResources(pMtxPipelineResources->first);
+
+            // Save raw pointer to push constants manager to avoid re-typing this long line of code below.
+            const auto pPushConstantsManager =
+                pMtxPipelineResources->second.pushConstantsData->pPushConstantsManager.get();
+
+            // Bind pipeline.
+            vkCmdBindPipeline(
+                pCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pMtxPipelineResources->second.pPipeline);
+
+            // Bind descriptor sets.
+            vkCmdBindDescriptorSets(
+                pCommandBuffer,
+                VK_PIPELINE_BIND_POINT_GRAPHICS,
+                pMtxPipelineResources->second.pPipelineLayout,
+                0,
+                1,
+                &pMtxPipelineResources->second.vDescriptorSets[iCurrentFrameResourceIndex],
+                0,
+                nullptr);
+
+            for (const auto& [pMaterial, meshNodes] : materialMeshes) {
+                // Set material's GPU resources.
+                const auto pMtxMaterialGpuResources = pMaterial->getMaterialGpuResources();
+
+                // Note: if you will ever need it - don't lock material's internal resources mutex
+                // here as it might cause a deadlock (see Material::setDiffuseTexture for example).
+                std::scoped_lock materialGpuResourcesGuard(pMtxMaterialGpuResources->first);
+                auto& materialShaderResources = pMtxMaterialGpuResources->second.shaderResources;
+
+                // Set material's CPU write shader resources.
+                for (const auto& [sResourceName, pShaderCpuWriteResource] :
+                     materialShaderResources.shaderCpuWriteResources) {
+                    reinterpret_cast<GlslShaderCpuWriteResource*>(pShaderCpuWriteResource.getResource())
+                        ->copyResourceIndexOfOnlyPipelineToPushConstants(
+                            pPushConstantsManager, iCurrentFrameResourceIndex);
+                }
+
+                // Set material's texture resources.
+                for (const auto& [sResourceName, pShaderTextureResource] :
+                     materialShaderResources.shaderTextureResources) {
+                    reinterpret_cast<GlslShaderTextureResource*>(pShaderTextureResource.getResource())
+                        ->copyResourceIndexOfOnlyPipelineToPushConstants(pPushConstantsManager);
+                }
+
+                for (const auto& [pMeshNode, vIndexBuffers] : meshNodes) {
+                    // Get mesh data.
+                    auto pMtxMeshGpuResources = pMeshNode->getMeshGpuResources();
+
+                    // Note: if you will ever need it - don't lock mesh node's spawning/despawning mutex here
+                    // as it might cause a deadlock (see MeshNode::setMaterial for example).
+                    std::scoped_lock geometryGuard(pMtxMeshGpuResources->first);
+
+                    // Set mesh's shader CPU write resources.
+                    for (const auto& [sResourceName, pShaderCpuWriteResource] :
+                         pMtxMeshGpuResources->second.shaderResources.shaderCpuWriteResources) {
+                        reinterpret_cast<GlslShaderCpuWriteResource*>(pShaderCpuWriteResource.getResource())
+                            ->copyResourceIndexOfPipelineToPushConstants(
+                                pPushConstantsManager, pVulkanPipeline, iCurrentFrameResourceIndex);
+                    }
+
+                    // Bind vertex buffer.
+                    vVertexBuffers[0] = {reinterpret_cast<VulkanResource*>(
+                                             pMtxMeshGpuResources->second.mesh.pVertexBuffer.get())
+                                             ->getInternalBufferResource()};
+                    vkCmdBindVertexBuffers(
+                        pCommandBuffer,
+                        0,
+                        static_cast<uint32_t>(vVertexBuffers.size()),
+                        vVertexBuffers.data(),
+                        vOffsets.data());
+
+                    // Set push constants.
+                    vkCmdPushConstants(
+                        pCommandBuffer,
+                        pMtxPipelineResources->second.pPipelineLayout,
+                        VK_SHADER_STAGE_ALL_GRAPHICS,
+                        0,
+                        pPushConstantsManager->getTotalSizeInBytes(),
+                        pPushConstantsManager->getData());
+
+                    // Iterate over all index buffers of a specific mesh node that use this material.
+                    for (const auto& indexBufferInfo : vIndexBuffers) {
+                        // Bind index buffer.
+                        static_assert(
+                            sizeof(MeshData::meshindex_t) == sizeof(unsigned int),
+                            "change `indexTypeFormat`");
+                        vkCmdBindIndexBuffer(
+                            pCommandBuffer,
+                            reinterpret_cast<VulkanResource*>(indexBufferInfo.pIndexBuffer)
+                                ->getInternalBufferResource(),
+                            0,
+                            indexTypeFormat);
+
+                        // Add a draw command.
+                        vkCmdDrawIndexed(pCommandBuffer, indexBufferInfo.iIndexCount, 1, 0, 0, 0);
+
+                        // Increment draw call counter.
+                        *pDrawCallCounter += 1;
+                    }
+                }
+            }
+        }
     }
 
     void VulkanRenderer::onFramebufferSizeChanged(int iWidth, int iHeight) {
@@ -2426,90 +2766,6 @@ namespace ne {
             optionalError->addCurrentLocationToErrorStack();
             optionalError->showError();
             throw std::runtime_error(optionalError->getFullErrorMessage());
-        }
-    }
-
-    void VulkanRenderer::drawMeshNodes(
-        CameraProperties* pActiveCameraProperties,
-        Material* pMaterial,
-        VulkanPipeline* pPipeline,
-        VkCommandBuffer pCommandBuffer,
-        size_t iCurrentFrameResourceIndex) {
-        PROFILE_FUNC;
-
-        // Prepare vertex buffer.
-        static constexpr size_t iVertexBufferCount = 1;
-        std::array<VkBuffer, iVertexBufferCount> vVertexBuffers{};
-        const std::array<VkDeviceSize, iVertexBufferCount> vOffsets = {0};
-
-        // Prepare some variables.
-        const auto pMtxInternalResources = pPipeline->getInternalResources();
-        const auto pMtxMeshNodes = pMaterial->getSpawnedMeshNodesThatUseThisMaterial();
-        const auto pDrawCallCounter = getDrawCallCounter();
-
-        // Lock material and pipeline resources.
-        std::scoped_lock meshNodesGuard(pMtxMeshNodes->first, pMtxInternalResources->first);
-
-        // Get push constants manager.
-        const auto pPushConstantsManager =
-            pMtxInternalResources->second.pushConstantsData->pPushConstantsManager.get();
-
-        // Iterate over all visible mesh nodes that use this material.
-        for (const auto& [pMeshNode, vIndexBuffers] : pMtxMeshNodes->second.visibleMeshNodes) {
-            // Get mesh data.
-            auto pMtxMeshGpuResources = pMeshNode->getMeshGpuResources();
-            auto mtxMeshData = pMeshNode->getMeshData();
-
-            // Note: if you will ever need it - don't lock mesh node's spawning/despawning mutex here
-            // as it might cause a deadlock (see MeshNode::setMaterial for example).
-            std::scoped_lock geometryGuard(pMtxMeshGpuResources->first, *mtxMeshData.first);
-
-            // Set mesh's shader CPU write resources.
-            for (const auto& [sResourceName, pShaderCpuWriteResource] :
-                 pMtxMeshGpuResources->second.shaderResources.shaderCpuWriteResources) {
-                reinterpret_cast<GlslShaderCpuWriteResource*>(pShaderCpuWriteResource.getResource())
-                    ->copyResourceIndexOfPipelineToPushConstants(
-                        pPushConstantsManager, pPipeline, iCurrentFrameResourceIndex);
-            }
-
-            // Bind vertex buffer.
-            vVertexBuffers[0] = {
-                reinterpret_cast<VulkanResource*>(pMtxMeshGpuResources->second.mesh.pVertexBuffer.get())
-                    ->getInternalBufferResource()};
-            vkCmdBindVertexBuffers(
-                pCommandBuffer,
-                0,
-                static_cast<uint32_t>(vVertexBuffers.size()),
-                vVertexBuffers.data(),
-                vOffsets.data());
-
-            // Set push constants.
-            vkCmdPushConstants(
-                pCommandBuffer,
-                pMtxInternalResources->second.pPipelineLayout,
-                VK_SHADER_STAGE_ALL_GRAPHICS,
-                0,
-                pPushConstantsManager->getTotalSizeInBytes(),
-                pPushConstantsManager->getData());
-
-            // Iterate over all index buffers of a specific mesh node that use this material.
-            for (const auto& indexBufferInfo : vIndexBuffers) {
-                // Bind index buffer.
-                static_assert(
-                    sizeof(MeshData::meshindex_t) == sizeof(unsigned int), "change `indexTypeFormat`");
-                vkCmdBindIndexBuffer(
-                    pCommandBuffer,
-                    reinterpret_cast<VulkanResource*>(indexBufferInfo.pIndexBuffer)
-                        ->getInternalBufferResource(),
-                    0,
-                    indexTypeFormat);
-
-                // Add a draw command.
-                vkCmdDrawIndexed(pCommandBuffer, indexBufferInfo.iIndexCount, 1, 0, 0, 0);
-
-                // Increment draw call counter.
-                *pDrawCallCounter += 1;
-            }
         }
     }
 

@@ -668,17 +668,10 @@ namespace ne {
          */
         inline bool isAabbOutsideCameraFrustum(
             CameraProperties* pActiveCameraProperties, const AABB& aabb, const glm::mat4x4& worldMatrix) {
-            using namespace std::chrono;
-
-            const auto startFrustumCullingTime = steady_clock::now();
 
             // (camera's frustum should be updated at this point)
             const auto bIsVisible =
                 pActiveCameraProperties->getCameraFrustum()->isAabbInFrustum(aabb, worldMatrix);
-
-            // Increment total time spent in frustum culling.
-            accumulatedTimeSpentLastFrameOnFrustumCullingInMs +=
-                duration<float, milliseconds::period>(steady_clock::now() - startFrustumCullingTime).count();
 
             // Increment culled object count.
             iLastFrameCulledObjectCount += static_cast<size_t>(!bIsVisible);

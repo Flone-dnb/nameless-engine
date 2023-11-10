@@ -41,6 +41,17 @@
 #endif
 
 namespace ne {
+#if defined(DEBUG)
+    void d3dInfoQueueMessageCallback(
+        D3D12_MESSAGE_CATEGORY Category,
+        D3D12_MESSAGE_SEVERITY Severity,
+        D3D12_MESSAGE_ID ID,
+        LPCSTR pDescription,
+        void* pContext) {
+        Logger::get().error(std::format("[debug layer] {}", pDescription));
+    }
+#endif
+
     DirectXRenderer::DirectXRenderer(GameManager* pGameManager) : Renderer(pGameManager) {
         static_assert(
             backBufferFormat == DXGI_FORMAT_R8G8B8A8_UNORM,
@@ -112,7 +123,6 @@ namespace ne {
 
     std::optional<Error> DirectXRenderer::enableDebugLayer() {
 #if defined(DEBUG)
-        ComPtr<ID3D12Debug> pDebugController;
         HRESULT hResult = D3D12GetDebugInterface(IID_PPV_ARGS(&pDebugController));
         if (FAILED(hResult)) {
             return Error(hResult);
@@ -1295,6 +1305,28 @@ namespace ne {
         if (FAILED(hResult)) {
             return Error(hResult);
         }
+
+#if defined(DEBUG)
+        // Create debug message queue for message callback.
+        // Apparently the ID3D12InfoQueue1 interface to register message callback is only
+        // available on Windows 11 so we should just log the error here using the `info` category.
+        hResult = pDevice->QueryInterface(IID_PPV_ARGS(&pInfoQueue));
+        if (FAILED(hResult)) {
+            const auto error = Error(hResult);
+            Logger::get().info(std::format(
+                "ID3D12InfoQueue1 does not seem to be available on this system, failed to query the "
+                "interface: {}",
+                error.getInitialMessage()));
+        } else {
+            // Register debug message callback.
+            DWORD* pUnregisterCookie = nullptr;
+            hResult = pInfoQueue->RegisterMessageCallback(
+                d3dInfoQueueMessageCallback, D3D12_MESSAGE_CALLBACK_FLAG_NONE, nullptr, pUnregisterCookie);
+            if (FAILED(hResult)) {
+                return Error(hResult);
+            }
+        }
+#endif
 
         // Update render settings.
         optionalError = clampSettingsToMaxSupported();

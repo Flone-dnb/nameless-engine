@@ -283,7 +283,7 @@ namespace ne {
          *
          * @return Returns an error if something went wrong.
          */
-        [[nodiscard]] static std::optional<Error> enableDebugLayer();
+        [[nodiscard]] std::optional<Error> enableDebugLayer();
 
         /**
          * (Re)creates the depth/stencil buffer with the "depth write" initial state
@@ -466,6 +466,14 @@ namespace ne {
 
         /** Fence object. */
         ComPtr<ID3D12Fence> pFence;
+
+#if defined(DEBUG)
+        /** Debug message queue. */
+        ComPtr<ID3D12InfoQueue1> pInfoQueue;
+
+        /** Debug layer. */
+        ComPtr<ID3D12Debug> pDebugController;
+#endif
 
         /** Fence counter. */
         std::pair<std::recursive_mutex, UINT64> mtxCurrentFenceValue;

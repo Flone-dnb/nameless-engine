@@ -79,8 +79,8 @@ namespace ne {
 
         // Show window title.
         pWindow->setTitle(std::format(
-            "{} FPS: {}, draw calls: {}, frustum culled: {} object(s) took {:.1F} ms (~{}% of frame "
-            "time), waiting GPU: {:.1F} ms",
+            "{} FPS: {} | draw calls: {} | frustum culled: {} took {:.1F} ms (~{}% of frame "
+            "time) | waiting GPU: {:.1F} ms",
             pEditorWindowTitle,
             pRenderer->getFramesPerSecond(),
             pRenderer->getLastFrameDrawCallCount(),

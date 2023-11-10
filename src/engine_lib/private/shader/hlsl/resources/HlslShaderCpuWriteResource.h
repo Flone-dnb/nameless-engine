@@ -80,6 +80,8 @@ namespace ne {
 
             // Find root parameter index of this pipeline.
             const auto it = mtxRootParameterIndices.second.find(pUsedPipeline);
+
+#if defined(DEBUG)
             if (it == mtxRootParameterIndices.second.end()) [[unlikely]] {
                 Error error(std::format(
                     "shader resource \"{}\" was requested to set its constant buffer view "
@@ -89,6 +91,7 @@ namespace ne {
                 error.showError();
                 throw std::runtime_error(error.getFullErrorMessage());
             }
+#endif
 
             // Set view.
             pCommandList->SetGraphicsRootConstantBufferView(

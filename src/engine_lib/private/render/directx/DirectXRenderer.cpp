@@ -165,13 +165,14 @@ namespace ne {
         allocationDesc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
 
         // Create resource.
-        auto result = dynamic_cast<DirectXResourceManager*>(getResourceManager())
-                          ->createResource(
-                              "renderer depth/stencil buffer",
-                              allocationDesc,
-                              depthStencilDesc,
-                              D3D12_RESOURCE_STATE_DEPTH_WRITE,
-                              depthClear);
+        auto result =
+            dynamic_cast<DirectXResourceManager*>(getResourceManager())
+                ->createResource(
+                    "renderer depth/stencil buffer",
+                    allocationDesc,
+                    depthStencilDesc,
+                    D3D12_RESOURCE_STATE_DEPTH_READ, // will transition to WRITE (see `draw` function)
+                    depthClear);
         if (std::holds_alternative<Error>(result)) {
             auto err = std::get<Error>(std::move(result));
             err.addCurrentLocationToErrorStack();
@@ -425,9 +426,7 @@ namespace ne {
     std::string DirectXRenderer::getCurrentlyUsedGpuName() const { return sUsedVideoAdapter; }
 
     std::optional<Error> DirectXRenderer::prepareForDrawingNextFrame(
-        CameraProperties* pCameraProperties,
-        DirectXFrameResource* pCurrentFrameResource,
-        QueuedForExecutionComputeShaders* pQueuedComputeShaders) {
+        CameraProperties* pCameraProperties, DirectXFrameResource* pCurrentFrameResource) {
         PROFILE_FUNC;
 
         // Waits for frame resource to be no longer used by the GPU.
@@ -446,21 +445,20 @@ namespace ne {
 
         PROFILE_SCOPE_END;
 
-        PROFILE_SCOPE_START(DispatchPreFrameComputeShaders);
+        return {};
+    }
 
-        // Dispatch pre-frame compute shaders.
-        for (auto& group : pQueuedComputeShaders->graphicsQueuePreFrameShadersGroups) {
-            dispatchComputeShadersOnGraphicsQueue(pCommandAllocator, group);
-        }
-
-        PROFILE_SCOPE_END;
+    void DirectXRenderer::resetCommandListForGraphics(DirectXFrameResource* pCurrentFrameResource) {
+        PROFILE_FUNC;
 
         PROFILE_SCOPE_START(ResetCommandList);
 
         // Open command list to record new commands.
-        hResult = pCommandList->Reset(pCommandAllocator, nullptr);
+        const auto hResult = pCommandList->Reset(pCurrentFrameResource->pCommandAllocator.Get(), nullptr);
         if (FAILED(hResult)) [[unlikely]] {
-            return Error(hResult);
+            Error error(hResult);
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
         }
 
         PROFILE_SCOPE_END;
@@ -474,45 +472,9 @@ namespace ne {
         pCommandList->RSSetViewports(1, &screenViewport);
         pCommandList->RSSetScissorRects(1, &scissorRect);
 
-        // Change render target buffer's state from "Present" to "render target".
-        const auto pCurrentBackBufferResource = getCurrentBackBufferResource();
-        CD3DX12_RESOURCE_BARRIER transition = CD3DX12_RESOURCE_BARRIER::Transition(
-            pCurrentBackBufferResource->getInternalResource(),
-            D3D12_RESOURCE_STATE_PRESENT,
-            D3D12_RESOURCE_STATE_RENDER_TARGET);
-        pCommandList->ResourceBarrier(1, &transition);
-
-        // Get render target resource descriptor handle.
-        auto optionalRenderTargetDescritorHandle =
-            pCurrentBackBufferResource->getBindedDescriptorHandle(DirectXDescriptorType::RTV);
-        if (!optionalRenderTargetDescritorHandle.has_value()) [[unlikely]] {
-            return Error(std::format(
-                "render target resource \"{}\" has no RTV binded to it",
-                pCurrentBackBufferResource->getResourceName()));
-        }
-        const auto renderTargetDescriptorHandle = optionalRenderTargetDescritorHandle.value();
-
-        // Get depth stencil resource descriptor handle.
-        auto optionalDepthStencilDescritorHandle =
-            pDepthStencilBuffer->getBindedDescriptorHandle(DirectXDescriptorType::DSV);
-        if (!optionalDepthStencilDescritorHandle.has_value()) [[unlikely]] {
-            return Error(std::format(
-                "depth stencil resource \"{}\" has no DSV binded to it",
-                pDepthStencilBuffer->getResourceName()));
-        }
-        const auto depthStencilDescriptorHandle = optionalDepthStencilDescritorHandle.value();
-
-        // Clear render target and depth stencil buffers using descriptor handles.
-        pCommandList->ClearRenderTargetView(renderTargetDescriptorHandle, backBufferFillColor, 0, nullptr);
-        pCommandList->ClearDepthStencilView(
-            depthStencilDescriptorHandle,
-            D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL,
-            getMaxDepth(),
-            0,
-            0,
-            nullptr);
-
-        return {};
+        // Set topology type.
+        // TODO: this will be moved in some other place later
+        pCommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
     }
 
     void DirectXRenderer::drawNextFrame() {
@@ -551,14 +513,16 @@ namespace ne {
         // don't unlock active camera mutex until finished submitting the next frame for drawing
 
         // Setup.
-        auto optionalError = prepareForDrawingNextFrame(
-            pActiveCameraProperties, pCurrentFrameResource, mtxQueuedComputeShader.second);
+        auto optionalError = prepareForDrawingNextFrame(pActiveCameraProperties, pCurrentFrameResource);
         if (optionalError.has_value()) [[unlikely]] {
             auto error = optionalError.value();
             error.addCurrentLocationToErrorStack();
             error.showError();
             throw std::runtime_error(error.getFullErrorMessage());
         }
+
+        // Prepare command list.
+        resetCommandListForGraphics(pCurrentFrameResource);
 
         // Get RTV/DSV handles to be used later.
         const auto pCurrentBackBufferResource = getCurrentBackBufferResource();
@@ -575,13 +539,25 @@ namespace ne {
         const auto vMeshPipelinesInFrustum =
             getMeshesInFrustum(pActiveCameraProperties, &pMtxGraphicsPipelines->second);
 
-        // Set topology type.
-        // TODO: this will be moved in some other place later
-        pCommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-
         // Get pipelines for depth prepass.
         const auto& depthOnlyPipelines =
             vMeshPipelinesInFrustum[static_cast<size_t>(PipelineType::PT_DEPTH_ONLY)];
+
+        // Transition depth buffer to write state.
+        CD3DX12_RESOURCE_BARRIER transition = CD3DX12_RESOURCE_BARRIER::Transition(
+            pDepthStencilBuffer->getInternalResource(),
+            D3D12_RESOURCE_STATE_DEPTH_READ,
+            D3D12_RESOURCE_STATE_DEPTH_WRITE);
+        pCommandList->ResourceBarrier(1, &transition);
+
+        // Clear depth stencil for depth pass.
+        pCommandList->ClearDepthStencilView(
+            depthStencilDescriptorHandle,
+            D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL,
+            getMaxDepth(),
+            0,
+            0,
+            nullptr);
 
         // Bind only DSV for depth prepass.
         pCommandList->OMSetRenderTargets(0, nullptr, FALSE, &depthStencilDescriptorHandle);
@@ -591,6 +567,38 @@ namespace ne {
             pCurrentFrameResource,
             pMtxCurrentFrameResource->second.iCurrentFrameResourceIndex,
             depthOnlyPipelines);
+
+        // Transition depth buffer to read only state.
+        transition = CD3DX12_RESOURCE_BARRIER::Transition(
+            pDepthStencilBuffer->getInternalResource(),
+            D3D12_RESOURCE_STATE_DEPTH_WRITE,
+            D3D12_RESOURCE_STATE_DEPTH_READ);
+        pCommandList->ResourceBarrier(1, &transition);
+
+        // Execute recorded commands.
+        executeGraphicsCommandList(pCommandList.Get());
+
+        PROFILE_SCOPE_START(DispatchPreFrameComputeShaders);
+
+        // Dispatch pre-frame compute shaders.
+        for (auto& group : mtxQueuedComputeShader.second->graphicsQueuePreFrameShadersGroups) {
+            dispatchComputeShadersOnGraphicsQueue(pCurrentFrameResource->pCommandAllocator.Get(), group);
+        }
+
+        PROFILE_SCOPE_END;
+
+        // Prepare command list for main pass.
+        resetCommandListForGraphics(pCurrentFrameResource);
+
+        // Transition render target resource from "present" to "render target".
+        transition = CD3DX12_RESOURCE_BARRIER::Transition(
+            pCurrentBackBufferResource->getInternalResource(),
+            D3D12_RESOURCE_STATE_PRESENT,
+            D3D12_RESOURCE_STATE_RENDER_TARGET);
+        pCommandList->ResourceBarrier(1, &transition);
+
+        // Clear render target for main pass.
+        pCommandList->ClearRenderTargetView(renderTargetDescriptorHandle, backBufferFillColor, 0, nullptr);
 
         // Bind both RTV and DSV for main pass.
         pCommandList->OMSetRenderTargets(
@@ -904,19 +912,8 @@ namespace ne {
             pCommandList->ResourceBarrier(1, &transition);
         }
 
-        // Close command list.
-        auto hResult = pCommandList->Close();
-        if (FAILED(hResult)) [[unlikely]] {
-            return Error(hResult);
-        }
-
-        PROFILE_SCOPE_START(ExecuteCommandLists);
-
-        // Add the command list to the command queue for execution.
-        const std::array<ID3D12CommandList*, 1> vCommandLists = {pCommandList.Get()};
-        pCommandQueue->ExecuteCommandLists(static_cast<UINT>(vCommandLists.size()), vCommandLists.data());
-
-        PROFILE_SCOPE_END;
+        // Execute recorded commands.
+        executeGraphicsCommandList(pCommandList.Get());
 
         PROFILE_SCOPE_START(DispatchPostFrameComputeShaders);
 
@@ -930,7 +927,7 @@ namespace ne {
         PROFILE_SCOPE_START(Present);
 
         // Flip swap chain buffers.
-        hResult = pSwapChain->Present(iPresentSyncInterval, iPresentFlags);
+        const auto hResult = pSwapChain->Present(iPresentSyncInterval, iPresentFlags);
         if (FAILED(hResult)) [[unlikely]] {
             return Error(hResult);
         }
@@ -1078,17 +1075,8 @@ namespace ne {
             }
         }
 
-        // Close command list.
-        hResult = pComputeCommandList->Close();
-        if (FAILED(hResult)) [[unlikely]] {
-            Error error(hResult);
-            error.showError();
-            throw std::runtime_error(error.getFullErrorMessage());
-        }
-
-        // Add the command list to the command queue for execution.
-        const std::array<ID3D12CommandList*, 1> vCommandLists = {pComputeCommandList.Get()};
-        pCommandQueue->ExecuteCommandLists(static_cast<UINT>(vCommandLists.size()), vCommandLists.data());
+        // Execute recorded commands.
+        executeGraphicsCommandList(pComputeCommandList.Get());
 
         // Clear map because we submitted all shaders.
         computePipelinesToSubmit.clear();
@@ -1662,6 +1650,22 @@ namespace ne {
     }
 
     bool DirectXRenderer::isInitialized() const { return bIsDirectXInitialized; }
+
+    void DirectXRenderer::executeGraphicsCommandList(ID3D12GraphicsCommandList* pCommandListToExecute) {
+        PROFILE_FUNC;
+
+        // Close command list.
+        const auto hResult = pCommandListToExecute->Close();
+        if (FAILED(hResult)) [[unlikely]] {
+            Error error(hResult);
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+        }
+
+        // Execute recorded commands.
+        const std::array<ID3D12CommandList*, 1> vCommandLists = {pCommandListToExecute};
+        pCommandQueue->ExecuteCommandLists(static_cast<UINT>(vCommandLists.size()), vCommandLists.data());
+    }
 
     void DirectXRenderer::waitForGpuToFinishWorkUpToThisPoint() {
         if (pCommandQueue == nullptr) {

@@ -366,14 +366,25 @@ namespace ne {
          *
          * @param pCameraProperties     Camera properties to use.
          * @param pCurrentFrameResource Current frame resource.
-         * @param pQueuedComputeShaders Queued shaders to dispatch.
          *
          * @return Error if something went wrong.
          */
         [[nodiscard]] std::optional<Error> prepareForDrawingNextFrame(
-            CameraProperties* pCameraProperties,
-            DirectXFrameResource* pCurrentFrameResource,
-            QueuedForExecutionComputeShaders* pQueuedComputeShaders);
+            CameraProperties* pCameraProperties, DirectXFrameResource* pCurrentFrameResource);
+
+        /**
+         * Resets @ref pCommandList and adds initial commands like set descriptor heaps for graphics commands.
+         *
+         * @param pCurrentFrameResource Frame resource for the current frame.
+         */
+        void resetCommandListForGraphics(DirectXFrameResource* pCurrentFrameResource);
+
+        /**
+         * Closes and executes the specified command list on @ref pCommandQueue.
+         *
+         * @param pCommandListToExecute Command list to execute.
+         */
+        void executeGraphicsCommandList(ID3D12GraphicsCommandList* pCommandListToExecute);
 
         /**
          * Does final logic in drawing next frame (closes lists, executes lists, etc.).

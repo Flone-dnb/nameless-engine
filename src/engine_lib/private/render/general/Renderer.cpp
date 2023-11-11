@@ -757,6 +757,14 @@ namespace ne {
         const auto& opaquePipelines =
             pGraphicsPipelines->vPipelineTypes.at(static_cast<size_t>(PipelineType::PT_OPAQUE));
 
+        // Prepare short reference to opaque pipelines.
+        auto& opaquePipelinesInFrustum =
+            vPipelineMeshesInFrustum[static_cast<size_t>(PipelineType::PT_OPAQUE)];
+
+        // Prepare short reference to depth pipelines.
+        auto& depthPipelinesInFrustum =
+            vPipelineMeshesInFrustum[static_cast<size_t>(PipelineType::PT_DEPTH_ONLY)];
+
         for (const auto& [sShaderNames, pipelines] : opaquePipelines) {
             for (const auto& [macros, pPipeline] : pipelines.shaderPipelines) {
                 // Get materials.
@@ -785,9 +793,7 @@ namespace ne {
                         // This mesh is inside frustum.
 
                         // Insert pipeline.
-                        auto& opaqueMaterialMeshes =
-                            vPipelineMeshesInFrustum[static_cast<size_t>(PipelineType::PT_OPAQUE)]
-                                                    [pPipeline.get()];
+                        auto& opaqueMaterialMeshes = opaquePipelinesInFrustum[pPipeline.get()];
 
                         // Insert material and mesh.
                         auto& opaqueMeshes = opaqueMaterialMeshes[pMaterial];
@@ -796,8 +802,7 @@ namespace ne {
                         // Also insert depth only pipeline (because this is opaque material and it is
                         // guaranteed to have a valid depth only pipeline).
                         auto& depthOnlyMaterialMeshes =
-                            vPipelineMeshesInFrustum[static_cast<size_t>(PipelineType::PT_DEPTH_ONLY)]
-                                                    [pMaterial->getDepthOnlyPipeline()];
+                            depthPipelinesInFrustum[pMaterial->getDepthOnlyPipeline()];
 
                         // Insert material and mesh.
                         auto& depthOnlyMeshes = depthOnlyMaterialMeshes[pMaterial];
@@ -810,6 +815,10 @@ namespace ne {
         // Now iterate over transparent pipelines.
         const auto& transparentPipelines =
             pGraphicsPipelines->vPipelineTypes.at(static_cast<size_t>(PipelineType::PT_TRANSPARENT));
+
+        // Prepare short reference to transparent pipelines.
+        auto& transparentPipelinesInFrustum =
+            vPipelineMeshesInFrustum[static_cast<size_t>(PipelineType::PT_TRANSPARENT)];
 
         for (const auto& [sShaderNames, pipelines] : transparentPipelines) {
             for (const auto& [macros, pPipeline] : pipelines.shaderPipelines) {
@@ -839,9 +848,7 @@ namespace ne {
                         // This mesh is inside frustum.
 
                         // Insert pipeline.
-                        auto& materialMeshes =
-                            vPipelineMeshesInFrustum[static_cast<size_t>(PipelineType::PT_TRANSPARENT)]
-                                                    [pPipeline.get()];
+                        auto& materialMeshes = transparentPipelinesInFrustum[pPipeline.get()];
 
                         // Insert material and mesh.
                         auto& meshes = materialMeshes[pMaterial];

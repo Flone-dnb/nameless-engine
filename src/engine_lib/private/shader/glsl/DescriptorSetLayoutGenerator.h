@@ -155,7 +155,7 @@ namespace ne {
          * @return Error if something went wrong, otherwise generated descriptor layout data.
          */
         static std::variant<Generated, Error>
-        generate(Renderer* pRenderer, GlslShader* pVertexShader, GlslShader* pFragmentShader);
+        generateGraphics(Renderer* pRenderer, GlslShader* pVertexShader, GlslShader* pFragmentShader);
 
         /**
          * Generates a new descriptor layout, pool and descriptor sets using the specified compute shader.
@@ -168,7 +168,7 @@ namespace ne {
          *
          * @return Error if something went wrong, otherwise generated descriptor layout data.
          */
-        static std::variant<Generated, Error> generate(Renderer* pRenderer, GlslShader* pComputeShader);
+        static std::variant<Generated, Error> generateCompute(Renderer* pRenderer, GlslShader* pComputeShader);
 
     private:
         /**

@@ -174,7 +174,7 @@ namespace ne {
          *
          * @return Error if something went wrong, otherwise generated root signature.
          */
-        static std::variant<Generated, Error> generate(
+        static std::variant<Generated, Error> generateGraphics(
             Renderer* pRenderer, ID3D12Device* pDevice, HlslShader* pVertexShader, HlslShader* pPixelShader);
 
         /**
@@ -190,7 +190,7 @@ namespace ne {
          * @return Error if something went wrong, otherwise generated root signature.
          */
         static std::variant<Generated, Error>
-        generate(Renderer* pRenderer, ID3D12Device* pDevice, HlslShader* pComputeShader);
+        generateCompute(Renderer* pRenderer, ID3D12Device* pDevice, HlslShader* pComputeShader);
 
         /**
          * Returns index of the root parameter that points to `cbuffer` with frame constants.

@@ -149,8 +149,8 @@ namespace ne {
         collectedInfo.rootParameterIndices = std::move(rootParameterIndices);
         return collectedInfo;
     }
-
-    std::variant<RootSignatureGenerator::Generated, Error> RootSignatureGenerator::generate(
+    
+    std::variant<RootSignatureGenerator::Generated, Error> RootSignatureGenerator::generateGraphics(
         Renderer* pRenderer, ID3D12Device* pDevice, HlslShader* pVertexShader, HlslShader* pPixelShader) {
         PROFILE_FUNC;
 
@@ -433,7 +433,7 @@ namespace ne {
     }
 
     std::variant<RootSignatureGenerator::Generated, Error>
-    RootSignatureGenerator::generate(Renderer* pRenderer, ID3D12Device* pDevice, HlslShader* pComputeShader) {
+    RootSignatureGenerator::generateCompute(Renderer* pRenderer, ID3D12Device* pDevice, HlslShader* pComputeShader) {
         PROFILE_FUNC;
 
         // Make sure that the compute shader is indeed a vertex shader.

@@ -145,7 +145,7 @@ TEST_CASE("2 resources with the same name but different bindings cause error") {
                     std::get<std::pair<std::recursive_mutex, std::vector<char>>*>(std::move(shaderBytecode));
 
                 // Generate one descriptor layout from both shaders.
-                auto layoutResult = DescriptorSetLayoutGenerator::generate(
+                auto layoutResult = DescriptorSetLayoutGenerator::generateGraphics(
                     dynamic_cast<VulkanRenderer*>(getWindow()->getRenderer()),
                     pVertexShader.get(),
                     pFragmentShader.get());
@@ -315,7 +315,7 @@ TEST_CASE("2 resources with the same name/bindings but different types cause err
                     std::get<std::pair<std::recursive_mutex, std::vector<char>>*>(std::move(shaderBytecode));
 
                 // Generate one descriptor layout from both shaders.
-                auto layoutResult = DescriptorSetLayoutGenerator::generate(
+                auto layoutResult = DescriptorSetLayoutGenerator::generateGraphics(
                     dynamic_cast<VulkanRenderer*>(getWindow()->getRenderer()),
                     pVertexShader.get(),
                     pFragmentShader.get());
@@ -485,7 +485,7 @@ TEST_CASE("2 resources with different names but same type/binding cause error") 
                     std::get<std::pair<std::recursive_mutex, std::vector<char>>*>(std::move(shaderBytecode));
 
                 // Generate one descriptor layout from both shaders.
-                auto layoutResult = DescriptorSetLayoutGenerator::generate(
+                auto layoutResult = DescriptorSetLayoutGenerator::generateGraphics(
                     dynamic_cast<VulkanRenderer*>(getWindow()->getRenderer()),
                     pVertexShader.get(),
                     pFragmentShader.get());

@@ -170,8 +170,8 @@ namespace ne {
 
         return collected;
     }
-
-    std::variant<DescriptorSetLayoutGenerator::Generated, Error> DescriptorSetLayoutGenerator::generate(
+    
+    std::variant<DescriptorSetLayoutGenerator::Generated, Error> DescriptorSetLayoutGenerator::generateGraphics(
         Renderer* pRenderer, GlslShader* pVertexShader, GlslShader* pFragmentShader) {
         PROFILE_FUNC;
 
@@ -574,7 +574,7 @@ namespace ne {
     }
 
     std::variant<DescriptorSetLayoutGenerator::Generated, Error>
-    DescriptorSetLayoutGenerator::generate(Renderer* pRenderer, GlslShader* pComputeShader) {
+    DescriptorSetLayoutGenerator::generateCompute(Renderer* pRenderer, GlslShader* pComputeShader) {
         PROFILE_FUNC;
 
         // Make sure we use Vulkan renderer.

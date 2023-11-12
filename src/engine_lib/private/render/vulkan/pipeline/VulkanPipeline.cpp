@@ -431,7 +431,7 @@ namespace ne {
 
         // Generate one descriptor layout from both shaders.
         auto layoutResult =
-            DescriptorSetLayoutGenerator::generate(pVulkanRenderer, pVertexShader, pFragmentShader);
+            DescriptorSetLayoutGenerator::generateGraphics(pVulkanRenderer, pVertexShader, pFragmentShader);
         if (std::holds_alternative<Error>(layoutResult)) [[unlikely]] {
             auto error = std::get<Error>(std::move(layoutResult));
             error.addCurrentLocationToErrorStack();
@@ -785,7 +785,7 @@ namespace ne {
             std::get<std::pair<std::recursive_mutex, std::vector<char>>*>(std::move(shaderBytecode));
 
         // Generate descriptor layout.
-        auto layoutResult = DescriptorSetLayoutGenerator::generate(pVulkanRenderer, pComputeShader);
+        auto layoutResult = DescriptorSetLayoutGenerator::generateCompute(pVulkanRenderer, pComputeShader);
         if (std::holds_alternative<Error>(layoutResult)) [[unlikely]] {
             auto error = std::get<Error>(std::move(layoutResult));
             error.addCurrentLocationToErrorStack();

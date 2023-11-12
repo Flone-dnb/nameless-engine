@@ -170,8 +170,9 @@ namespace ne {
 
         return collected;
     }
-    
-    std::variant<DescriptorSetLayoutGenerator::Generated, Error> DescriptorSetLayoutGenerator::generateGraphics(
+
+    std::variant<DescriptorSetLayoutGenerator::Generated, Error>
+    DescriptorSetLayoutGenerator::generateGraphics(
         Renderer* pRenderer, GlslShader* pVertexShader, GlslShader* pFragmentShader) {
         PROFILE_FUNC;
 

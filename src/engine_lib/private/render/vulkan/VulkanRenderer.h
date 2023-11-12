@@ -674,17 +674,12 @@ namespace ne {
         /**
          * Submits commands to draw meshes and the specified depth only (vertex shader only) pipelines.
          *
-         * @param depthOnlyPipelines         Pipelines that only have vertex shader and their meshes in
-         * frustum.
+         * @param opaquePipelines            Opaque pipelines (depth pipeline will be retrieved from them).
          * @param pCommandBuffer             Command buffer to use.
          * @param iCurrentFrameResourceIndex Index of the current frame resource.
          */
         void drawMeshesDepthPrepass(
-            const std::unordered_map<
-                Pipeline*,
-                std::unordered_map<
-                    Material*,
-                    std::unordered_map<MeshNode*, std::vector<MeshIndexBufferInfo>>>>& depthOnlyPipelines,
+            const std::vector<Renderer::MeshesInFrustum::PipelineInFrustumInfo>& opaquePipelines,
             VkCommandBuffer pCommandBuffer,
             size_t iCurrentFrameResourceIndex);
 
@@ -696,12 +691,7 @@ namespace ne {
          * @param iCurrentFrameResourceIndex Index of the current frame resource.
          */
         void drawMeshesMainPass(
-            const std::unordered_map<
-                Pipeline*,
-                std::unordered_map<
-                    Material*,
-                    std::unordered_map<MeshNode*, std::vector<MeshIndexBufferInfo>>>>&
-                pipelinesOfSpecificType,
+            const std::vector<Renderer::MeshesInFrustum::PipelineInFrustumInfo>& pipelinesOfSpecificType,
             VkCommandBuffer pCommandBuffer,
             size_t iCurrentFrameResourceIndex);
 

@@ -190,17 +190,12 @@ namespace ne {
          *
          * @param pCurrentFrameResource      Frame resource of the frame being submitted.
          * @param iCurrentFrameResourceIndex Index of the current frame resource.
-         * @param depthOnlyPipelines         Pipelines that only have vertex shader and their meshes in
-         * frustum.
+         * @param opaquePipelines            Opaque pipelines (depth pipeline will be retrieved from them).
          */
         void drawMeshesDepthPrepass(
             DirectXFrameResource* pCurrentFrameResource,
             size_t iCurrentFrameResourceIndex,
-            const std::unordered_map<
-                Pipeline*,
-                std::unordered_map<
-                    Material*,
-                    std::unordered_map<MeshNode*, std::vector<MeshIndexBufferInfo>>>>& depthOnlyPipelines);
+            const std::vector<Renderer::MeshesInFrustum::PipelineInFrustumInfo>& opaquePipelines);
 
         /**
          * Submits commands to draw meshes and pipelines of specific types (only opaque or transparent).
@@ -212,12 +207,7 @@ namespace ne {
         void drawMeshesMainPass(
             DirectXFrameResource* pCurrentFrameResource,
             size_t iCurrentFrameResourceIndex,
-            const std::unordered_map<
-                Pipeline*,
-                std::unordered_map<
-                    Material*,
-                    std::unordered_map<MeshNode*, std::vector<MeshIndexBufferInfo>>>>&
-                pipelinesOfSpecificType);
+            const std::vector<Renderer::MeshesInFrustum::PipelineInFrustumInfo>& pipelinesOfSpecificType);
 
         /**
          * Called after some render setting is changed to recreate internal resources to match the current

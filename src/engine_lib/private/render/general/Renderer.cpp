@@ -14,6 +14,7 @@
 #include "render/vulkan/VulkanRenderer.h"
 #include "misc/Profiler.hpp"
 #include "game/nodes/EnvironmentNode.h"
+#include "render/general/pipeline/PipelineManager.h"
 #include "game/nodes/MeshNode.h"
 #if defined(WIN32)
 #pragma comment(lib, "Winmm.lib")
@@ -724,12 +725,7 @@ namespace ne {
             pMtxCurrentFrameResource->second.iCurrentFrameResourceIndex);
     }
 
-    std::array<
-        std::unordered_map<
-            Pipeline*,
-            std::unordered_map<Material*, std::unordered_map<MeshNode*, std::vector<MeshIndexBufferInfo>>>>,
-        static_cast<size_t>(PipelineType::SIZE)>
-    Renderer::getMeshesInFrustum(
+    Renderer::MeshesInFrustum* Renderer::getMeshesInFrustum(
         CameraProperties* pActiveCameraProperties,
         PipelineManager::GraphicsPipelineRegistry* pGraphicsPipelines) {
         PROFILE_FUNC;
@@ -738,131 +734,99 @@ namespace ne {
         using namespace std::chrono;
         const auto startFrustumCullingTime = steady_clock::now();
 
-        // Prepare output variable.
-        std::array<
-            std::unordered_map<
-                Pipeline*,
-                std::unordered_map<
-                    Material*,
-                    std::unordered_map<MeshNode*, std::vector<MeshIndexBufferInfo>>>>,
-            static_cast<size_t>(PipelineType::SIZE)>
-            vPipelineMeshesInFrustum;
+        // Clear information from the last frame.
+        meshesInFrustumLastFrame.vOpaquePipelines.clear();
+        meshesInFrustumLastFrame.vTransparentPipelines.clear();
+#if defined(DEBUG)
+        static_assert(sizeof(MeshesInFrustum::PipelineInFrustumInfo) == 40, "clear new arrays");
+#endif
 
-        // Iterate only over opaque and transparent pipelines since some meshes and their materials
-        // will reference two pipelines and the same time (opaque pipeline and depth only pipeline)
-        // so don't iterate over depth only pipelines to avoid doing frustum culling twice on the same
-        // meshes.
+        // Prepare lambda to cull pipelines.
+        const auto frustumCullPipelines =
+            [this, pActiveCameraProperties](
+                const std::unordered_map<std::string, PipelineManager::ShaderPipelines>& pipelinesToScan,
+                std::vector<MeshesInFrustum::PipelineInFrustumInfo>& vPipelinesInFrustum) {
+                for (const auto& [sShaderNames, pipelines] : pipelinesToScan) {
+                    for (const auto& [macros, pPipeline] : pipelines.shaderPipelines) {
+                        // Get materials.
+                        const auto pMtxMaterials = pPipeline->getMaterialsThatUseThisPipeline();
+                        std::scoped_lock materialsGuard(pMtxMaterials->first);
 
-        // Iterate over opaque pipelines.
-        const auto& opaquePipelines =
-            pGraphicsPipelines->vPipelineTypes.at(static_cast<size_t>(PipelineType::PT_OPAQUE));
+                        // Prepare pipeline info to fill.
+                        MeshesInFrustum::PipelineInFrustumInfo pipelineInFrustumInfo;
+                        pipelineInFrustumInfo.pPipeline = pPipeline.get();
+                        pipelineInFrustumInfo.vMaterials.reserve(pMtxMaterials->second.size());
 
-        // Prepare short reference to opaque pipelines.
-        auto& opaquePipelinesInFrustum =
-            vPipelineMeshesInFrustum[static_cast<size_t>(PipelineType::PT_OPAQUE)];
+                        for (const auto& pMaterial : pMtxMaterials->second) {
+                            // Get meshes.
+                            const auto pMtxMeshNodes = pMaterial->getSpawnedMeshNodesThatUseThisMaterial();
 
-        // Prepare short reference to depth pipelines.
-        auto& depthPipelinesInFrustum =
-            vPipelineMeshesInFrustum[static_cast<size_t>(PipelineType::PT_DEPTH_ONLY)];
+                            // Prepare material info to fill.
+                            MeshesInFrustum::MaterialInFrustumInfo materialInFrustumInfo;
+                            materialInFrustumInfo.pMaterial = pMaterial;
+                            materialInFrustumInfo.vMeshes.reserve(
+                                pMtxMeshNodes->second.visibleMeshNodes.size());
 
-        for (const auto& [sShaderNames, pipelines] : opaquePipelines) {
-            for (const auto& [macros, pPipeline] : pipelines.shaderPipelines) {
-                // Get materials.
-                const auto pMtxMaterials = pPipeline->getMaterialsThatUseThisPipeline();
-                std::scoped_lock materialsGuard(pMtxMaterials->first);
+                            // Iterate over all visible mesh nodes that use this material.
+                            std::scoped_lock meshNodesGuard(pMtxMeshNodes->first);
+                            for (const auto& [pMeshNode, vIndexBuffers] :
+                                 pMtxMeshNodes->second.visibleMeshNodes) {
+                                // Do frustum culling.
+                                const auto pMtxMeshShaderConstants = pMeshNode->getMeshShaderConstants();
+                                std::scoped_lock meshConstantsGuard(pMtxMeshShaderConstants->first);
 
-                for (const auto& pMaterial : pMtxMaterials->second) {
-                    // Get meshes.
-                    const auto pMtxMeshNodes = pMaterial->getSpawnedMeshNodesThatUseThisMaterial();
+                                if (isAabbOutsideCameraFrustum(
+                                        pActiveCameraProperties,
+                                        *pMeshNode->getAABB(),
+                                        pMtxMeshShaderConstants->second.world)) {
+                                    // This mesh is outside of camera's frustum.
+                                    continue;
+                                }
 
-                    // Iterate over all visible mesh nodes that use this material.
-                    std::scoped_lock meshNodesGuard(pMtxMeshNodes->first);
-                    for (const auto& [pMeshNode, vIndexBuffers] : pMtxMeshNodes->second.visibleMeshNodes) {
-                        // Do frustum culling.
-                        const auto pMtxMeshShaderConstants = pMeshNode->getMeshShaderConstants();
-                        std::scoped_lock meshConstantsGuard(pMtxMeshShaderConstants->first);
+                                // This mesh is inside frustum.
+                                MeshesInFrustum::MeshInFrustumInfo meshInFrustumInfo;
+                                meshInFrustumInfo.pMeshNode = pMeshNode;
+                                meshInFrustumInfo.vIndexBuffers = vIndexBuffers;
 
-                        if (isAabbOutsideCameraFrustum(
-                                pActiveCameraProperties,
-                                *pMeshNode->getAABB(),
-                                pMtxMeshShaderConstants->second.world)) {
-                            // This mesh is outside of camera's frustum.
-                            continue;
+                                materialInFrustumInfo.vMeshes.push_back(std::move(meshInFrustumInfo));
+                            }
+
+                            // Add to pipelines if some meshes in frustum.
+                            if (!materialInFrustumInfo.vMeshes.empty()) {
+                                // Add material info.
+                                pipelineInFrustumInfo.vMaterials.push_back(std::move(materialInFrustumInfo));
+                            }
                         }
 
-                        // This mesh is inside frustum.
-
-                        // Insert pipeline.
-                        auto& opaqueMaterialMeshes = opaquePipelinesInFrustum[pPipeline.get()];
-
-                        // Insert material and mesh.
-                        auto& opaqueMeshes = opaqueMaterialMeshes[pMaterial];
-                        opaqueMeshes[pMeshNode] = vIndexBuffers;
-
-                        // Also insert depth only pipeline (because this is opaque material and it is
-                        // guaranteed to have a valid depth only pipeline).
-                        auto& depthOnlyMaterialMeshes =
-                            depthPipelinesInFrustum[pMaterial->getDepthOnlyPipeline()];
-
-                        // Insert material and mesh.
-                        auto& depthOnlyMeshes = depthOnlyMaterialMeshes[pMaterial];
-                        depthOnlyMeshes[pMeshNode] = vIndexBuffers;
+                        // Add to pipelines if some materials in frustum.
+                        if (!pipelineInFrustumInfo.vMaterials.empty()) {
+                            vPipelinesInFrustum.push_back(std::move(pipelineInFrustumInfo));
+                        }
                     }
                 }
-            }
-        }
+            };
 
-        // Now iterate over transparent pipelines.
+        // Get pipelines to iterate over.
+        const auto& opaquePipelines =
+            pGraphicsPipelines->vPipelineTypes.at(static_cast<size_t>(PipelineType::PT_OPAQUE));
         const auto& transparentPipelines =
             pGraphicsPipelines->vPipelineTypes.at(static_cast<size_t>(PipelineType::PT_TRANSPARENT));
 
-        // Prepare short reference to transparent pipelines.
-        auto& transparentPipelinesInFrustum =
-            vPipelineMeshesInFrustum[static_cast<size_t>(PipelineType::PT_TRANSPARENT)];
+        // Attempt to minimize allocations in the code below.
+        meshesInFrustumLastFrame.vOpaquePipelines.reserve(opaquePipelines.size());
+        meshesInFrustumLastFrame.vTransparentPipelines.reserve(transparentPipelines.size());
 
-        for (const auto& [sShaderNames, pipelines] : transparentPipelines) {
-            for (const auto& [macros, pPipeline] : pipelines.shaderPipelines) {
-                // Get materials.
-                const auto pMtxMaterials = pPipeline->getMaterialsThatUseThisPipeline();
-                std::scoped_lock materialsGuard(pMtxMaterials->first);
-
-                for (const auto& pMaterial : pMtxMaterials->second) {
-                    // Get meshes.
-                    const auto pMtxMeshNodes = pMaterial->getSpawnedMeshNodesThatUseThisMaterial();
-
-                    // Iterate over all visible mesh nodes that use this material.
-                    std::scoped_lock meshNodesGuard(pMtxMeshNodes->first);
-                    for (const auto& [pMeshNode, vIndexBuffers] : pMtxMeshNodes->second.visibleMeshNodes) {
-                        // Do frustum culling.
-                        const auto pMtxMeshShaderConstants = pMeshNode->getMeshShaderConstants();
-                        std::scoped_lock meshConstantsGuard(pMtxMeshShaderConstants->first);
-
-                        if (isAabbOutsideCameraFrustum(
-                                pActiveCameraProperties,
-                                *pMeshNode->getAABB(),
-                                pMtxMeshShaderConstants->second.world)) {
-                            // This mesh is outside of camera's frustum.
-                            continue;
-                        }
-
-                        // This mesh is inside frustum.
-
-                        // Insert pipeline.
-                        auto& materialMeshes = transparentPipelinesInFrustum[pPipeline.get()];
-
-                        // Insert material and mesh.
-                        auto& meshes = materialMeshes[pMaterial];
-                        meshes[pMeshNode] = vIndexBuffers;
-                    }
-                }
-            }
-        }
+        // Iterate only over opaque and transparent pipelines since opaque materials will reference two
+        // pipelines at the same time (opaque pipeline and depth only pipeline) so don't iterate over depth
+        // only pipelines to avoid doing frustum culling twice on the same meshes.
+        frustumCullPipelines(opaquePipelines, meshesInFrustumLastFrame.vOpaquePipelines);
+        frustumCullPipelines(transparentPipelines, meshesInFrustumLastFrame.vTransparentPipelines);
 
         // Increment total time spent in frustum culling.
         accumulatedTimeSpentLastFrameOnFrustumCullingInMs +=
             duration<float, milliseconds::period>(steady_clock::now() - startFrustumCullingTime).count();
 
-        return vPipelineMeshesInFrustum;
+        return &meshesInFrustumLastFrame;
     }
 
 } // namespace ne

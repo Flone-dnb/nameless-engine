@@ -16,7 +16,6 @@
 #include "render/general/resources/FrameResourcesManager.h"
 #include "render/RenderSettings.h"
 #include "game/camera/CameraProperties.h"
-#include "render/general/pipeline/PipelineManager.h"
 #include "misc/shapes/AABB.h"
 #include "shader/general/resources/LightingShaderResourceManager.h"
 #include "material/Material.h"
@@ -317,6 +316,42 @@ namespace ne {
         std::recursive_mutex* getRenderResourcesMutex();
 
     protected:
+        /** Groups information about meshes in active camera's frustum. */
+        struct MeshesInFrustum {
+            /** Groups information about index buffers of some mesh that use the same material. */
+            struct MeshInFrustumInfo {
+                /** Mesh node. */
+                MeshNode* pMeshNode = nullptr;
+
+                /** Index buffers of @ref pMeshNode that use the same material. */
+                std::vector<MeshIndexBufferInfo> vIndexBuffers;
+            };
+
+            /** Groups information about meshes that use the same material. */
+            struct MaterialInFrustumInfo {
+                /** Material. */
+                Material* pMaterial = nullptr;
+
+                /** Meshes that use @ref pMaterial. */
+                std::vector<MeshInFrustumInfo> vMeshes;
+            };
+
+            /** Stores information about materials that use a specific pipeline. */
+            struct PipelineInFrustumInfo {
+                /** Pipeline. */
+                Pipeline* pPipeline = nullptr;
+
+                /** Materials that use @ref pPipeline. */
+                std::vector<MaterialInFrustumInfo> vMaterials;
+            };
+
+            /** Meshes in frustum that use opaque pipeline. */
+            std::vector<PipelineInFrustumInfo> vOpaquePipelines;
+
+            /** Meshes in frustum that use pipeline with pixel blending. */
+            std::vector<PipelineInFrustumInfo> vTransparentPipelines;
+        };
+
         /**
          * Returns the number of swap chain buffers/images that we prefer to use.
          *
@@ -526,19 +561,16 @@ namespace ne {
          * Iterates over all meshes and returns only meshes inside of the camera's frustum
          * (and their pipelines).
          *
+         * @warning Do not delete (free) returned pointer.
+         *
+         * @remark This function is expected to be called only once per frame.
+         *
          * @param pActiveCameraProperties Properties of the currently active camera.
          * @param pGraphicsPipelines      Graphics pipelines.
          *
          * @return Pipelines, material and meshes inside camera's frustum.
          */
-        std::array<
-            std::unordered_map<
-                Pipeline*,
-                std::unordered_map<
-                    Material*,
-                    std::unordered_map<MeshNode*, std::vector<MeshIndexBufferInfo>>>>,
-            static_cast<size_t>(PipelineType::SIZE)>
-        getMeshesInFrustum(
+        MeshesInFrustum* getMeshesInFrustum(
             CameraProperties* pActiveCameraProperties,
             PipelineManager::GraphicsPipelineRegistry* pGraphicsPipelines);
 
@@ -739,6 +771,9 @@ namespace ne {
          * Must be used with mutex.
          */
         std::pair<std::recursive_mutex, std::shared_ptr<RenderSettings>> mtxRenderSettings;
+
+        /** Meshes that were in camera's frustum last frame. */
+        MeshesInFrustum meshesInFrustumLastFrame;
 
         /**
          * Time in milliseconds spent last frame on frustum culling.

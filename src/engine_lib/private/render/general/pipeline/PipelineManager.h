@@ -122,7 +122,7 @@ namespace ne {
          *
          * @return Raw pointer to the underlying pipeline.
          */
-        Pipeline* getPipeline() const { return pPipeline.get(); }
+        inline Pipeline* getPipeline() const { return pPipeline.get(); }
 
         /**
          * Access operator.

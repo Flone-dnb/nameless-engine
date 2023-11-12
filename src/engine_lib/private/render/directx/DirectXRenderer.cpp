@@ -546,12 +546,8 @@ namespace ne {
         std::scoped_lock pipelinesGuard(pMtxGraphicsPipelines->first);
 
         // Do frustum culling.
-        const auto vMeshPipelinesInFrustum =
+        const auto pMeshesInFrustum =
             getMeshesInFrustum(pActiveCameraProperties, &pMtxGraphicsPipelines->second);
-
-        // Get pipelines for depth prepass.
-        const auto& depthOnlyPipelines =
-            vMeshPipelinesInFrustum[static_cast<size_t>(PipelineType::PT_DEPTH_ONLY)];
 
         // Transition depth buffer to write state.
         CD3DX12_RESOURCE_BARRIER transition = CD3DX12_RESOURCE_BARRIER::Transition(
@@ -576,7 +572,7 @@ namespace ne {
         drawMeshesDepthPrepass(
             pCurrentFrameResource,
             pMtxCurrentFrameResource->second.iCurrentFrameResourceIndex,
-            depthOnlyPipelines);
+            pMeshesInFrustum->vOpaquePipelines);
 
         // Transition depth buffer to read only state.
         transition = CD3DX12_RESOURCE_BARRIER::Transition(
@@ -614,22 +610,17 @@ namespace ne {
         pCommandList->OMSetRenderTargets(
             1, &renderTargetDescriptorHandle, FALSE, &depthStencilDescriptorHandle);
 
-        // Get pipelines for main pass.
-        const auto& opaquePipelines = vMeshPipelinesInFrustum[static_cast<size_t>(PipelineType::PT_OPAQUE)];
-        const auto& transparentPipelines =
-            vMeshPipelinesInFrustum[static_cast<size_t>(PipelineType::PT_TRANSPARENT)];
-
         // Draw opaque meshes.
         drawMeshesMainPass(
             pCurrentFrameResource,
             pMtxCurrentFrameResource->second.iCurrentFrameResourceIndex,
-            opaquePipelines);
+            pMeshesInFrustum->vOpaquePipelines);
 
         // Draw transparent meshes.
         drawMeshesMainPass(
             pCurrentFrameResource,
             pMtxCurrentFrameResource->second.iCurrentFrameResourceIndex,
-            transparentPipelines);
+            pMeshesInFrustum->vTransparentPipelines);
 
         // Do frame end logic.
         optionalError = finishDrawingNextFrame(pCurrentFrameResource, mtxQueuedComputeShader.second);
@@ -647,18 +638,19 @@ namespace ne {
     void DirectXRenderer::drawMeshesDepthPrepass(
         DirectXFrameResource* pCurrentFrameResource,
         size_t iCurrentFrameResourceIndex,
-        const std::unordered_map<
-            Pipeline*,
-            std::unordered_map<Material*, std::unordered_map<MeshNode*, std::vector<MeshIndexBufferInfo>>>>&
-            depthOnlyPipelines) {
+        const std::vector<Renderer::MeshesInFrustum::PipelineInFrustumInfo>& opaquePipelines) {
         PROFILE_FUNC;
 
         // Prepare draw call counter to be used later.
         const auto pDrawCallCounter = getDrawCallCounter();
 
-        for (const auto& [pPipeline, materialMeshes] : depthOnlyPipelines) {
+        for (const auto& pipelineInfo : opaquePipelines) {
+            // Get depth only (vertex shader only) pipeline
+            // (all materials that use the same opaque pipeline will use the same depth only pipeline).
+            const auto pDepthOnlyPipeline = pipelineInfo.vMaterials[0].pMaterial->getDepthOnlyPipeline();
+
             // Get internal resources of this pipeline.
-            const auto pDirectXPso = reinterpret_cast<DirectXPso*>(pPipeline);
+            const auto pDirectXPso = reinterpret_cast<DirectXPso*>(pDepthOnlyPipeline);
             auto pMtxPsoResources = pDirectXPso->getInternalResources();
             std::scoped_lock guardPsoResources(pMtxPsoResources->first);
 
@@ -676,14 +668,14 @@ namespace ne {
                     ->getInternalResource()
                     ->GetGPUVirtualAddress());
 
-            for (const auto& [pMaterial, meshNodes] : materialMeshes) {
+            for (const auto& materialInfo : pipelineInfo.vMaterials) {
                 // No need to bind material's shader resources since they are not used in vertex shader
                 // (since we are in depth prepass).
 
-                for (const auto& [pMeshNode, vIndexBuffers] : meshNodes) {
+                for (const auto& meshInfo : materialInfo.vMeshes) {
                     // Get mesh data.
-                    auto pMtxMeshGpuResources = pMeshNode->getMeshGpuResources();
-                    auto mtxMeshData = pMeshNode->getMeshData();
+                    auto pMtxMeshGpuResources = meshInfo.pMeshNode->getMeshGpuResources();
+                    auto mtxMeshData = meshInfo.pMeshNode->getMeshData();
 
                     // Note: if you will ever need it - don't lock mesh node's spawning/despawning mutex
                     // here as it might cause a deadlock (see MeshNode::setMaterial for example).
@@ -724,7 +716,7 @@ namespace ne {
                     pCommandList->IASetVertexBuffers(0, 1, &vertexBufferView);
 
                     // Iterate over all index buffers of a specific mesh node that use this material.
-                    for (const auto& indexBufferInfo : vIndexBuffers) {
+                    for (const auto& indexBufferInfo : meshInfo.vIndexBuffers) {
                         // Prepare index buffer view.
                         static_assert(
                             sizeof(MeshData::meshindex_t) == sizeof(unsigned int), "change `Format`");
@@ -754,18 +746,15 @@ namespace ne {
     void DirectXRenderer::drawMeshesMainPass(
         DirectXFrameResource* pCurrentFrameResource,
         size_t iCurrentFrameResourceIndex,
-        const std::unordered_map<
-            Pipeline*,
-            std::unordered_map<Material*, std::unordered_map<MeshNode*, std::vector<MeshIndexBufferInfo>>>>&
-            pipelinesOfSpecificType) {
+        const std::vector<Renderer::MeshesInFrustum::PipelineInFrustumInfo>& pipelinesOfSpecificType) {
         PROFILE_FUNC;
 
         // Prepare draw call counter to be used later.
         const auto pDrawCallCounter = getDrawCallCounter();
 
-        for (const auto& [pPipeline, materialMeshes] : pipelinesOfSpecificType) {
+        for (const auto& pipelineInfo : pipelinesOfSpecificType) {
             // Get internal resources of this pipeline.
-            const auto pDirectXPso = reinterpret_cast<DirectXPso*>(pPipeline);
+            const auto pDirectXPso = reinterpret_cast<DirectXPso*>(pipelineInfo.pPipeline);
             auto pMtxPsoResources = pDirectXPso->getInternalResources();
             std::scoped_lock guardPsoResources(pMtxPsoResources->first);
 
@@ -787,9 +776,9 @@ namespace ne {
             getLightingShaderResourceManager()->setResourceViewToCommandList(
                 pDirectXPso, pCommandList, iCurrentFrameResourceIndex);
 
-            for (const auto& [pMaterial, meshNodes] : materialMeshes) {
+            for (const auto& materialInfo : pipelineInfo.vMaterials) {
                 // Get material's GPU resources.
-                const auto pMtxMaterialGpuResources = pMaterial->getMaterialGpuResources();
+                const auto pMtxMaterialGpuResources = materialInfo.pMaterial->getMaterialGpuResources();
 
                 // Note: if you will ever need it - don't lock material's internal resources mutex
                 // here as it might cause a deadlock (see Material::setDiffuseTexture for example).
@@ -810,10 +799,10 @@ namespace ne {
                         ->setGraphicsRootDescriptorTableOfOnlyPipeline(pCommandList);
                 }
 
-                for (const auto& [pMeshNode, vIndexBuffers] : meshNodes) {
+                for (const auto& meshInfo : materialInfo.vMeshes) {
                     // Get mesh data.
-                    auto pMtxMeshGpuResources = pMeshNode->getMeshGpuResources();
-                    auto mtxMeshData = pMeshNode->getMeshData();
+                    auto pMtxMeshGpuResources = meshInfo.pMeshNode->getMeshGpuResources();
+                    auto mtxMeshData = meshInfo.pMeshNode->getMeshData();
 
                     // Note: if you will ever need it - don't lock mesh node's spawning/despawning mutex here
                     // as it might cause a deadlock (see MeshNode::setMaterial for example).
@@ -842,7 +831,7 @@ namespace ne {
                     pCommandList->IASetVertexBuffers(0, 1, &vertexBufferView);
 
                     // Iterate over all index buffers of a specific mesh node that use this material.
-                    for (const auto& indexBufferInfo : vIndexBuffers) {
+                    for (const auto& indexBufferInfo : meshInfo.vIndexBuffers) {
                         // Prepare index buffer view.
                         static_assert(
                             sizeof(MeshData::meshindex_t) == sizeof(unsigned int), "change `Format`");

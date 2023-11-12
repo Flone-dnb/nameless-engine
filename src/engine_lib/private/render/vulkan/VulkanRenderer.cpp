@@ -2380,16 +2380,12 @@ namespace ne {
         std::scoped_lock pipelinesGuard(pMtxGraphicsPipelines->first);
 
         // Do frustum culling.
-        const auto vMeshPipelinesInFrustum =
+        const auto pMeshPipelinesInFrustum =
             getMeshesInFrustum(pActiveCameraProperties, &pMtxGraphicsPipelines->second);
-
-        // Get pipelines for depth prepass.
-        const auto& depthOnlyPipelines =
-            vMeshPipelinesInFrustum[static_cast<size_t>(PipelineType::PT_DEPTH_ONLY)];
 
         // Draw depth prepass.
         drawMeshesDepthPrepass(
-            depthOnlyPipelines,
+            pMeshPipelinesInFrustum->vOpaquePipelines,
             pVulkanCurrentFrameResource->pCommandBuffer,
             pMtxCurrentFrameResource->second.iCurrentFrameResourceIndex);
 
@@ -2457,20 +2453,15 @@ namespace ne {
             vSwapChainFramebuffersMainRenderPass[iAcquiredImageIndex],
             pMainRenderPass);
 
-        // Get pipelines for main pass.
-        const auto& opaquePipelines = vMeshPipelinesInFrustum[static_cast<size_t>(PipelineType::PT_OPAQUE)];
-        const auto& transparentPipelines =
-            vMeshPipelinesInFrustum[static_cast<size_t>(PipelineType::PT_TRANSPARENT)];
-
         // Draw opaque meshes.
         drawMeshesMainPass(
-            opaquePipelines,
+            pMeshPipelinesInFrustum->vOpaquePipelines,
             pVulkanCurrentFrameResource->pCommandBuffer,
             pMtxCurrentFrameResource->second.iCurrentFrameResourceIndex);
 
         // Draw transparent meshes.
         drawMeshesMainPass(
-            transparentPipelines,
+            pMeshPipelinesInFrustum->vTransparentPipelines,
             pVulkanCurrentFrameResource->pCommandBuffer,
             pMtxCurrentFrameResource->second.iCurrentFrameResourceIndex);
 
@@ -2492,10 +2483,7 @@ namespace ne {
     }
 
     void VulkanRenderer::drawMeshesDepthPrepass(
-        const std::unordered_map<
-            Pipeline*,
-            std::unordered_map<Material*, std::unordered_map<MeshNode*, std::vector<MeshIndexBufferInfo>>>>&
-            depthOnlyPipelines,
+        const std::vector<Renderer::MeshesInFrustum::PipelineInFrustumInfo>& opaquePipelines,
         VkCommandBuffer pCommandBuffer,
         size_t iCurrentFrameResourceIndex) {
         PROFILE_FUNC;
@@ -2508,9 +2496,13 @@ namespace ne {
         std::array<VkBuffer, iVertexBufferCount> vVertexBuffers{};
         const std::array<VkDeviceSize, iVertexBufferCount> vOffsets = {0};
 
-        for (const auto& [pPipeline, materialMeshes] : depthOnlyPipelines) {
+        for (const auto& pipelineInfo : opaquePipelines) {
+            // Get depth only (vertex shader only) pipeline
+            // (all materials that use the same opaque pipeline will use the same depth only pipeline).
+            const auto pDepthOnlyPipeline = pipelineInfo.vMaterials[0].pMaterial->getDepthOnlyPipeline();
+
             // Get internal resources of this pipeline.
-            const auto pVulkanPipeline = reinterpret_cast<VulkanPipeline*>(pPipeline);
+            const auto pVulkanPipeline = reinterpret_cast<VulkanPipeline*>(pDepthOnlyPipeline);
             auto pMtxPipelineResources = pVulkanPipeline->getInternalResources();
             std::scoped_lock guardPipelineResources(pMtxPipelineResources->first);
 
@@ -2533,13 +2525,13 @@ namespace ne {
                 0,
                 nullptr);
 
-            for (const auto& [pMaterial, meshNodes] : materialMeshes) {
+            for (const auto& materialInfo : pipelineInfo.vMaterials) {
                 // No need to bind material's shader resources since they are not used in vertex shader
                 // (since we are in depth prepass).
 
-                for (const auto& [pMeshNode, vIndexBuffers] : meshNodes) {
+                for (const auto& meshInfo : materialInfo.vMeshes) {
                     // Get mesh data.
-                    auto pMtxMeshGpuResources = pMeshNode->getMeshGpuResources();
+                    auto pMtxMeshGpuResources = meshInfo.pMeshNode->getMeshGpuResources();
 
                     // Note: if you will ever need it - don't lock mesh node's spawning/despawning mutex here
                     // as it might cause a deadlock (see MeshNode::setMaterial for example).
@@ -2585,7 +2577,7 @@ namespace ne {
                         pPushConstantsManager->getData());
 
                     // Iterate over all index buffers of a specific mesh node that use this material.
-                    for (const auto& indexBufferInfo : vIndexBuffers) {
+                    for (const auto& indexBufferInfo : meshInfo.vIndexBuffers) {
                         // Bind index buffer.
                         static_assert(
                             sizeof(MeshData::meshindex_t) == sizeof(unsigned int),
@@ -2609,10 +2601,7 @@ namespace ne {
     }
 
     void VulkanRenderer::drawMeshesMainPass(
-        const std::unordered_map<
-            Pipeline*,
-            std::unordered_map<Material*, std::unordered_map<MeshNode*, std::vector<MeshIndexBufferInfo>>>>&
-            pipelinesOfSpecificType,
+        const std::vector<Renderer::MeshesInFrustum::PipelineInFrustumInfo>& pipelinesOfSpecificType,
         VkCommandBuffer pCommandBuffer,
         size_t iCurrentFrameResourceIndex) {
         PROFILE_FUNC;
@@ -2625,9 +2614,9 @@ namespace ne {
         std::array<VkBuffer, iVertexBufferCount> vVertexBuffers{};
         const std::array<VkDeviceSize, iVertexBufferCount> vOffsets = {0};
 
-        for (const auto& [pPipeline, materialMeshes] : pipelinesOfSpecificType) {
+        for (const auto& pipelineInfo : pipelinesOfSpecificType) {
             // Get internal resources of this pipeline.
-            const auto pVulkanPipeline = reinterpret_cast<VulkanPipeline*>(pPipeline);
+            const auto pVulkanPipeline = reinterpret_cast<VulkanPipeline*>(pipelineInfo.pPipeline);
             auto pMtxPipelineResources = pVulkanPipeline->getInternalResources();
             std::scoped_lock guardPipelineResources(pMtxPipelineResources->first);
 
@@ -2650,9 +2639,9 @@ namespace ne {
                 0,
                 nullptr);
 
-            for (const auto& [pMaterial, meshNodes] : materialMeshes) {
+            for (const auto& materialInfo : pipelineInfo.vMaterials) {
                 // Set material's GPU resources.
-                const auto pMtxMaterialGpuResources = pMaterial->getMaterialGpuResources();
+                const auto pMtxMaterialGpuResources = materialInfo.pMaterial->getMaterialGpuResources();
 
                 // Note: if you will ever need it - don't lock material's internal resources mutex
                 // here as it might cause a deadlock (see Material::setDiffuseTexture for example).
@@ -2674,9 +2663,9 @@ namespace ne {
                         ->copyResourceIndexOfOnlyPipelineToPushConstants(pPushConstantsManager);
                 }
 
-                for (const auto& [pMeshNode, vIndexBuffers] : meshNodes) {
+                for (const auto& meshInfo : materialInfo.vMeshes) {
                     // Get mesh data.
-                    auto pMtxMeshGpuResources = pMeshNode->getMeshGpuResources();
+                    auto pMtxMeshGpuResources = meshInfo.pMeshNode->getMeshGpuResources();
 
                     // Note: if you will ever need it - don't lock mesh node's spawning/despawning mutex here
                     // as it might cause a deadlock (see MeshNode::setMaterial for example).
@@ -2711,7 +2700,7 @@ namespace ne {
                         pPushConstantsManager->getData());
 
                     // Iterate over all index buffers of a specific mesh node that use this material.
-                    for (const auto& indexBufferInfo : vIndexBuffers) {
+                    for (const auto& indexBufferInfo : meshInfo.vIndexBuffers) {
                         // Bind index buffer.
                         static_assert(
                             sizeof(MeshData::meshindex_t) == sizeof(unsigned int),

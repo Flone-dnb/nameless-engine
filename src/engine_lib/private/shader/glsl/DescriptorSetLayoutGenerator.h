@@ -168,7 +168,8 @@ namespace ne {
          *
          * @return Error if something went wrong, otherwise generated descriptor layout data.
          */
-        static std::variant<Generated, Error> generateCompute(Renderer* pRenderer, GlslShader* pComputeShader);
+        static std::variant<Generated, Error>
+        generateCompute(Renderer* pRenderer, GlslShader* pComputeShader);
 
     private:
         /**

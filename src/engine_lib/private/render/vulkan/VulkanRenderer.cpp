@@ -41,10 +41,6 @@ namespace ne {
             "also change format in DirectX renderer for (visual) consistency");
     }
 
-    float VulkanRenderer::getAdditionalTimeSpentLastFrameWaitingForGpu() const {
-        return timeSpentLastFrameWaitingForSemaphoresInMs + timeSpentLastFrameWaitingForImageToBeUnusedInMs;
-    }
-
     std::variant<MsaaState, Error> VulkanRenderer::getMaxSupportedAntialiasingQuality() const {
         // Make sure physical device is valid.
         if (pPhysicalDevice == nullptr) [[unlikely]] {
@@ -1978,9 +1974,6 @@ namespace ne {
         const auto pFenceFrameResource = reinterpret_cast<VulkanFrameResource*>(
             mtxAllFrameResources.second[vImageSemaphores[iCurrentImageSemaphore].iUsedFrameResourceIndex]);
 
-        // Mark start time.
-        const auto startTime = std::chrono::steady_clock::now();
-
         // Wait for fence to be signaled.
         auto result = vkWaitForFences(pLogicalDevice, 1, &pFenceFrameResource->pFence, VK_TRUE, UINT64_MAX);
         if (result != VK_SUCCESS) [[unlikely]] {
@@ -1988,11 +1981,6 @@ namespace ne {
             error.showError();
             throw std::runtime_error(error.getFullErrorMessage());
         }
-
-        // Measure the time it took to wait.
-        const auto endTime = std::chrono::steady_clock::now();
-        timeSpentLastFrameWaitingForSemaphoresInMs =
-            std::chrono::duration<float, std::chrono::milliseconds::period>(endTime - startTime).count();
 
         PROFILE_SCOPE_END;
 
@@ -2812,9 +2800,6 @@ namespace ne {
 
         PROFILE_SCOPE_START(WaitForAcquiredImageToBeUnused);
 
-        // Mark start time.
-        const auto startTime = std::chrono::steady_clock::now();
-
         // Since the next acquired image might be not in the order we expect (i.e. it may be used
         // by other frame resource - not the one we are using right now) make sure this image is not used
         // by the GPU.
@@ -2824,11 +2809,6 @@ namespace ne {
             return Error(
                 std::format("failed to wait for acquired image fence, error: {}", string_VkResult(result)));
         }
-
-        // Measure the time it took to wait.
-        const auto endTime = std::chrono::steady_clock::now();
-        timeSpentLastFrameWaitingForImageToBeUnusedInMs =
-            std::chrono::duration<float, std::chrono::milliseconds::period>(endTime - startTime).count();
 
         PROFILE_SCOPE_END;
 

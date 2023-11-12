@@ -455,8 +455,7 @@ namespace ne {
     size_t Renderer::getLastFrameDrawCallCount() const { return frameStats.iLastFrameDrawCallCount; }
 
     float Renderer::getTimeSpentLastFrameWaitingForGpu() const {
-        return frameStats.timeSpentLastFrameWaitingForGpuInMs +
-               getAdditionalTimeSpentLastFrameWaitingForGpu();
+        return frameStats.timeSpentLastFrameWaitingForGpuInMs;
     }
 
     float Renderer::getTimeSpentLastFrameOnFrustumCulling() const {

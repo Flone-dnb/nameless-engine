@@ -442,15 +442,6 @@ namespace ne {
         void resetLightingShaderResourceManager();
 
         /**
-         * Can be used by derived classes to tell about additional time (in milliseconds) that was spent
-         * waiting for the GPU (in addition to the time that the base Renderer class spent waiting for
-         * the next frame resource in @ref updateResourcesForNextFrame).
-         *
-         * @return Time in milliseconds.
-         */
-        virtual float getAdditionalTimeSpentLastFrameWaitingForGpu() const { return 0.0F; }
-
-        /**
          * Collects array of engine shaders that will be compiled/verified.
          *
          * @return Array of shader descriptions to compile.

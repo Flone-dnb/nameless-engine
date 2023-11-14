@@ -31,6 +31,7 @@ namespace ne {
     class ShaderLightArray;
     class Renderer;
     class Pipeline;
+    class ComputeShaderInterface;
 
     /**
      * RAII-like object that frees the slot (marks it as unused) in its destructor and stores all
@@ -551,6 +552,14 @@ namespace ne {
         LightingShaderResourceManager(Renderer* pRenderer);
 
         /**
+         * Called by renderer when render resolution changes to queue a compute shader
+         * that will recalculate grid of frustums used during light culling.
+         *
+         * @param renderResolution New render resolution in pixels.
+         */
+        void recalculateLightTileFrustums(const std::pair<unsigned int, unsigned int>& renderResolution);
+
+        /**
          * Sets light color intensity of ambient lighting.
          *
          * @remark New lighting settings will be copied to the GPU next time @ref updateResources is called.
@@ -633,6 +642,9 @@ namespace ne {
         /** Groups GPU related data. */
         std::pair<std::recursive_mutex, GpuData> mtxGpuData;
 
+        /** Calculates frustum grid for light culling. */
+        std::unique_ptr<ComputeShaderInterface> pFrustumGridComputeInterface;
+
         /** Used renderer. */
         Renderer* pRenderer = nullptr;
 
@@ -650,5 +662,11 @@ namespace ne {
 
         /** Type of the descriptor used to store data from @ref mtxGpuData. */
         static constexpr auto generalLightingDataDescriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+
+        /**
+         * Defines how much threads should be executed in the X and the Y dimensions for
+         * @ref pFrustumGridComputeInterface shader in a group.
+         */
+        static constexpr size_t iFrustumGridComputeShaderThreadsInGroupXy = 16; // NOLINT
     };
 }

@@ -1,5 +1,5 @@
-#include "../Base.glsl"
-#include "../MeshData.glsl"
+#include "../include/Base.glsl"
+#include "../include/MeshData.glsl"
 #include "MeshNodePushConstants.glsl"
 
 /** Input parameters. */

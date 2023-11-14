@@ -1,6 +1,6 @@
-#include "../Base.glsl"
-#include "../Lighting.glsl"
-#include "../MaterialData.glsl"
+#include "../include/Base.glsl"
+#include "../include/Lighting.glsl"
+#include "../include/MaterialData.glsl"
 
 #ifdef PS_USE_DIFFUSE_TEXTURE
    SamplerState textureSampler : register(s0, space5);

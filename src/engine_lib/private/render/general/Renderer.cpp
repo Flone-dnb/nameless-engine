@@ -249,6 +249,11 @@ namespace ne {
     std::optional<Error> Renderer::onRenderSettingsChanged() {
         updateFpsLimitSetting();
 
+        // Recalculate grid of frustums for light culling.
+        std::scoped_lock guard(mtxRenderSettings.first);
+        pLightingShaderResourceManager->recalculateLightTileFrustums(
+            mtxRenderSettings.second->getRenderResolution());
+
         return {};
     }
 

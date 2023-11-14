@@ -2420,8 +2420,7 @@ namespace ne {
                         pVulkanCurrentFrameResource->pCommandBuffer,
                         VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,  // run all compute commands before this barrier
                         VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT | // make all next compute/graphics commands to
-                                                               // wait
-                            VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT, // for this barrier
+                            VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT, // wait for this barrier
                         0,
                         0,
                         nullptr,

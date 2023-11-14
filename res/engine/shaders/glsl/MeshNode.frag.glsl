@@ -1,6 +1,6 @@
-#include "../Base.glsl"
-#include "../Lighting.glsl"
-#include "../MaterialData.glsl"
+#include "../include/Base.glsl"
+#include "../include/Lighting.glsl"
+#include "../include/MaterialData.glsl"
 #include "MeshNodePushConstants.glsl"
 
 /** Input parameters. */

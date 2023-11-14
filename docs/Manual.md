@@ -2704,7 +2704,7 @@ You should not remove the code to compile your shaders (`ShaderManager::compileS
 Please note:
 > If you got an idea of displaying a splash screen using a separate `GameInstance` (before starting your game's `GameInstance`) in order to compile your shaders inside of that splash screen game instance it would be a bad idea because `compileShaders` will be called twice (inside of your splash screen game instance and inside of your game's game instance) which means that even if no shader was changed the shader cache will be checked twice which might take some time if you have lots of shaders.
 
-As you might have noticed in the `res/engine/shaders` directory there are `.glsl` shaders outside of the `glsl`/`hlsl` directory. These shaders contain code that can be used in both HLSL and GLSL. Before passing shader code to a shader compiler we parse the code from disk using a special but simple parser (see https://github.com/Flone-dnb/combined-shader-language-parser). It allows mixing HLSL and GLSL code. You can also use such functionality and have just one shader file instead of separate HLSL and GLSL files if you want.
+As you might have noticed in the `res/engine/shaders/include` directory there are `.glsl` shaders outside of the `glsl`/`hlsl` directory. These shaders contain code that can be used in both HLSL and GLSL. Before passing shader code to a shader compiler we parse the code from disk using a special but simple parser (see https://github.com/Flone-dnb/combined-shader-language-parser). It allows mixing HLSL and GLSL code. You can also use such functionality and have just one shader file instead of separate HLSL and GLSL files if you want.
 
 ### Writing custom compute shaders
 

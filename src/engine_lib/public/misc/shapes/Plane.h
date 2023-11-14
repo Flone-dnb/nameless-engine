@@ -13,7 +13,7 @@ namespace ne {
          * Initializes the plane.
          *
          * @param normal   Plane's normal (expected to be of unit length).
-         * @param location Location where plane's normal starts.
+         * @param location Location of a point that lies on the plane.
          */
         Plane(const glm::vec3& normal, const glm::vec3& location);
 

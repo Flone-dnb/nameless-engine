@@ -7,6 +7,8 @@
 #include "render/vulkan/VulkanRenderer.h"
 #include "render/general/pipeline/PipelineManager.h"
 #include "render/vulkan/pipeline/VulkanPipeline.h"
+#include "shader/ComputeShaderInterface.h"
+#include "shader/general/EngineShaderNames.hpp"
 
 namespace ne {
 
@@ -1036,6 +1038,33 @@ namespace ne {
         static_assert(
             sizeof(LightingShaderResourceManager) == 144, "consider resetting new arrays here"); // NOLINT
 #endif
+
+        // Create compute interface for calculating grid of frustums for light culling.
+        auto computeCreationResult = ComputeShaderInterface::createUsingGraphicsQueue(
+            pRenderer,
+            EngineShaderNames::ForwardPlus::sCalculateFrustumGridComputeShaderName,
+            true,
+            ComputeExecutionGroup::FIRST);
+        if (std::holds_alternative<Error>(computeCreationResult)) [[unlikely]] {
+            auto error = std::get<Error>(std::move(computeCreationResult));
+            error.addCurrentLocationToErrorStack();
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+        }
+        pFrustumGridComputeInterface =
+            std::get<std::unique_ptr<ComputeShaderInterface>>(std::move(computeCreationResult));
+    }
+
+    void LightingShaderResourceManager::recalculateLightTileFrustums(
+        const std::pair<unsigned int, unsigned int>& renderResolution) {
+        // Update GPU resources.
+        TODO;
+
+        // Recalculate group count.
+        TODO;
+
+        // Queue frustum grid recalculation compute shader.
+        pFrustumGridComputeInterface->submitForExecution(TODO);
     }
 
     void LightingShaderResourceManager::setAmbientLight(const glm::vec3& ambientLight) {

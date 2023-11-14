@@ -15,17 +15,17 @@ namespace ne {
         const std::filesystem::path& pathToShaderFile,
         ShaderType shaderType,
         const std::string& sShaderEntryFunctionName,
-        const std::vector<std::string>& vDefinedShaderMacros) {
+        const std::unordered_map<std::string, std::string>& definedShaderMacros) {
         this->sShaderName = sShaderName;
         this->pathToShaderFile = pathToShaderFile;
         this->shaderType = shaderType;
         this->sShaderEntryFunctionName = sShaderEntryFunctionName;
-        this->vDefinedShaderMacros = vDefinedShaderMacros;
+        this->definedShaderMacros = definedShaderMacros;
     }
 
     void ShaderDescription::from_toml(const toml::value& data) { // NOLINT
-        vDefinedShaderMacros = toml::find_or<std::vector<std::string>>(
-            data, "defined_shader_macros", std::vector<std::string>{});
+        definedShaderMacros = toml::find_or<std::unordered_map<std::string, std::string>>(
+            data, "defined_shader_macros", std::unordered_map<std::string, std::string>{});
 
         sShaderEntryFunctionName = toml::find_or<std::string>(data, "shader_entry_function_name", "");
 
@@ -38,7 +38,7 @@ namespace ne {
 
     toml::value ShaderDescription::into_toml() const { // NOLINT
         toml::value outValue;
-        outValue["defined_shader_macros"] = vDefinedShaderMacros;
+        outValue["defined_shader_macros"] = definedShaderMacros;
         outValue["shader_entry_function_name"] = sShaderEntryFunctionName;
         outValue["shader_type"] = static_cast<int>(shaderType);
 
@@ -170,15 +170,17 @@ namespace ne {
         }
 
         // Compare shader macro defines.
-        if (vDefinedShaderMacros.size() != other.vDefinedShaderMacros.size()) {
+        if (definedShaderMacros.size() != other.definedShaderMacros.size()) {
             return ShaderCacheInvalidationReason::DEFINED_SHADER_MACROS_CHANGED;
         }
-        if (!vDefinedShaderMacros.empty()) {
-            for (const auto& macro : vDefinedShaderMacros) {
-                auto it = std::ranges::find(other.vDefinedShaderMacros, macro);
-                if (it == other.vDefinedShaderMacros.end()) {
-                    return ShaderCacheInvalidationReason::DEFINED_SHADER_MACROS_CHANGED;
-                }
+        for (const auto& [sMacro, sValue] : definedShaderMacros) {
+            const auto it = other.definedShaderMacros.find(sMacro);
+            if (it == other.definedShaderMacros.end()) {
+                return ShaderCacheInvalidationReason::DEFINED_SHADER_MACROS_CHANGED;
+            }
+
+            if (sValue != it->second) {
+                return ShaderCacheInvalidationReason::DEFINED_SHADER_MACROS_CHANGED;
             }
         }
 

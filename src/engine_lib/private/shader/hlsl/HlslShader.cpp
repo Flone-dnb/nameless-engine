@@ -226,9 +226,13 @@ namespace ne {
 #endif
 
         // Add macros.
-        for (const auto& macroDefine : shaderDescription.vDefinedShaderMacros) {
+        for (const auto& [sMacro, sValue] : shaderDescription.definedShaderMacros) {
             vArgs.push_back(L"-D");
-            vArgs.push_back(Globals::stringToWstring(macroDefine));
+            if (sValue.empty()) {
+                vArgs.push_back(Globals::stringToWstring(sMacro));
+            } else {
+                vArgs.push_back(Globals::stringToWstring(std::format("{}={}", sMacro, sValue)));
+            }
         }
 
         // Parse source code.

@@ -154,20 +154,21 @@ namespace ne {
 
     std::variant<std::shared_ptr<Shader>, Error> Shader::createFromCache(
         Renderer* pRenderer,
-        const std::filesystem::path& pathToCompiledShader,
+        const std::filesystem::path& pathToCompiledShaderBytecode,
         ShaderDescription& shaderDescription,
         const std::string& sShaderNameWithoutConfiguration,
         std::optional<ShaderCacheInvalidationReason>& cacheInvalidationReason) {
         cacheInvalidationReason = {};
         // Make sure the specified path to compiled shader exists.
-        if (!std::filesystem::exists(pathToCompiledShader)) {
+        if (!std::filesystem::exists(pathToCompiledShaderBytecode)) {
             return Error(std::format(
-                "the specified path to shader cache \"{}\" does not exist", pathToCompiledShader.string()));
+                "the specified path to compiled shader bytecode \"{}\" does not exist",
+                pathToCompiledShaderBytecode.string()));
         }
 
         // Prepare path to the file that stores metadata about this shader's cache.
         const auto shaderCacheConfigurationPath =
-            pathToCompiledShader.string() + ConfigManager::getConfigFormatExtension();
+            pathToCompiledShaderBytecode.string() + ConfigManager::getConfigFormatExtension();
 
         // Make sure the metadata file exists.
         if (!std::filesystem::exists(shaderCacheConfigurationPath)) [[unlikely]] {
@@ -205,11 +206,11 @@ namespace ne {
 
         // Calculate hash of existing shader bytecode file that was previously compiled.
         const auto sCompiledFileHash =
-            ShaderDescription::getFileHash(pathToCompiledShader, shaderDescription.sShaderName);
+            ShaderDescription::getFileHash(pathToCompiledShaderBytecode, shaderDescription.sShaderName);
         if (sCompiledFileHash.empty()) [[unlikely]] {
             return Error(std::format(
                 "failed to calculate hash of compiled shader bytecode at \"{}\"",
-                pathToCompiledShader.string()));
+                pathToCompiledShaderBytecode.string()));
         }
 
         // Read hash of the compiled bytecode from cache metadata file.
@@ -231,7 +232,7 @@ namespace ne {
         auto result = createRenderDependentShaderFromCache(
             pRenderer,
             shaderDescription.pathToShaderFile,
-            pathToCompiledShader,
+            pathToCompiledShaderBytecode,
             shaderDescription.sShaderName,
             shaderDescription.shaderType);
         if (std::holds_alternative<Error>(result)) [[unlikely]] {
@@ -265,7 +266,7 @@ namespace ne {
     std::variant<std::shared_ptr<Shader>, Error> Shader::createRenderDependentShaderFromCache(
         Renderer* pRenderer,
         const std::filesystem::path& pathToSourceShaderFile,
-        const std::filesystem::path& pathToCompiledShader,
+        const std::filesystem::path& pathToCompiledShaderBytecode,
         const std::string& sShaderName,
         ShaderType shaderType) {
 #if defined(WIN32)
@@ -280,11 +281,12 @@ namespace ne {
             }
 
             return std::make_shared<HlslShader>(
-                pRenderer, pathToCompiledShader, sShaderName, shaderType, sSourceFileHash);
+                pRenderer, pathToCompiledShaderBytecode, sShaderName, shaderType, sSourceFileHash);
         }
 #endif
         if (dynamic_cast<VulkanRenderer*>(pRenderer) != nullptr) {
-            return std::make_shared<GlslShader>(pRenderer, pathToCompiledShader, sShaderName, shaderType);
+            return std::make_shared<GlslShader>(
+                pRenderer, pathToCompiledShaderBytecode, sShaderName, shaderType);
         }
 
         return Error("unsupported renderer");

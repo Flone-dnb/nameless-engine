@@ -84,14 +84,15 @@ namespace ne {
          * For example: if the shader type is vertex shader, then this value should
          * contain name of the function used for vertex processing (from shader's file, "VS" for
          * example).
-         * @param vDefinedShaderMacros     Array of defined macros for shader.
+         * @param definedShaderMacros      Map of defined macros for shader, stores pairs of "macro name" -
+         * "value" (no value if empty).
          */
         ShaderDescription(
             const std::string& sShaderName,
             const std::filesystem::path& pathToShaderFile,
             ShaderType shaderType,
             const std::string& sShaderEntryFunctionName,
-            const std::vector<std::string>& vDefinedShaderMacros);
+            const std::unordered_map<std::string, std::string>& definedShaderMacros);
 
         /**
          * Copy constructor.
@@ -175,8 +176,8 @@ namespace ne {
         // add fields to @ref from_toml, @ref into_toml and @ref isSerializableDataEqual.
         // ----------------------------------------
 
-        /** Array of defined macros for shader. */
-        std::vector<std::string> vDefinedShaderMacros;
+        /** Map of defined macros for shader, stores pairs of "macro name" - "value" (no value if empty). */
+        std::unordered_map<std::string, std::string> definedShaderMacros;
 
         /** Globally unique shader name. */
         std::string sShaderName;

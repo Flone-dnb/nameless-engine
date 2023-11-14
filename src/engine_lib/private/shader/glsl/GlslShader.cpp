@@ -129,8 +129,12 @@ namespace ne {
         shaderc::CompileOptions compileOptions;
 
         // Specify defined macros.
-        for (const auto& sMacro : shaderDescription.vDefinedShaderMacros) {
-            compileOptions.AddMacroDefinition(sMacro);
+        for (const auto& [sMacro, sValue] : shaderDescription.definedShaderMacros) {
+            if (sValue.empty()) {
+                compileOptions.AddMacroDefinition(sMacro); // valueless macro
+            } else {
+                compileOptions.AddMacroDefinition(sMacro, sValue); // macro with value
+            }
         }
 
         // Make warnings as errors.

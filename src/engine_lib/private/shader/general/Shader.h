@@ -56,14 +56,14 @@ namespace ne {
         /**
          * Creates a new shader using shader cache.
          *
-         * @param pRenderer            Used renderer.
-         * @param pathToCompiledShader Path to compiled shader bytecode on disk (with configuration),
-         * for example: ".../shader_cache/engine.default.vs/shader16604691462768904089".
-         * @param shaderDescription    Description that describes the shader and how the shader should be
-         * compiled. Used for cache invalidation.
+         * @param pRenderer                       Used renderer.
+         * @param pathToCompiledShaderBytecode    Path to compiled shader bytecode on disk (with
+         * configuration), for example: ".../shader_cache/engine.default.vs/shader16604691462768904089".
+         * @param shaderDescription               Description that describes the shader and how the shader
+         * should be compiled. Used for cache invalidation.
          * @param sShaderNameWithoutConfiguration Initial shader name without configuration hash,
          * this name is used for logging.
-         * @param cacheInvalidationReason Will be not empty if cache was invalidated
+         * @param cacheInvalidationReason         Will be not empty if cache was invalidated
          * (i.e. cache can't be used).
          *
          * @return Error if the shader cache is corrupted/invalidated (cache invalidation reason
@@ -73,7 +73,7 @@ namespace ne {
          */
         static std::variant<std::shared_ptr<Shader>, Error> createFromCache(
             Renderer* pRenderer,
-            const std::filesystem::path& pathToCompiledShader,
+            const std::filesystem::path& pathToCompiledShaderBytecode,
             ShaderDescription& shaderDescription,
             const std::string& sShaderNameWithoutConfiguration,
             std::optional<ShaderCacheInvalidationReason>& cacheInvalidationReason);
@@ -198,18 +198,18 @@ namespace ne {
          * Creates a new HLSL/GLSL shader depending on the used renderer, expects that all
          * cached shader data is valid.
          *
-         * @param pRenderer              Used renderer.
-         * @param pathToSourceShaderFile Path to shader source code file.
-         * @param pathToCompiledShader   Path to compiled shader bytecode on disk.
-         * @param sShaderName            Unique name of this shader.
-         * @param shaderType             Type of this shader.
+         * @param pRenderer                    Used renderer.
+         * @param pathToSourceShaderFile       Path to shader source code file.
+         * @param pathToCompiledShaderBytecode Path to compiled shader bytecode on disk.
+         * @param sShaderName                  Unique name of this shader.
+         * @param shaderType                   Type of this shader.
          *
          * @return Error if something went wrong, otherwise created shader.
          */
         static std::variant<std::shared_ptr<Shader>, Error> createRenderDependentShaderFromCache(
             Renderer* pRenderer,
             const std::filesystem::path& pathToSourceShaderFile,
-            const std::filesystem::path& pathToCompiledShader,
+            const std::filesystem::path& pathToCompiledShaderBytecode,
             const std::string& sShaderName,
             ShaderType shaderType);
 

@@ -646,82 +646,8 @@ TEST_CASE("invalidate shader cache - DEFINED_SHADER_MACROS_CHANGED") {
     public:
         TestGameInstance(Window* pGameWindow, GameManager* pGame, InputManager* pInputManager)
             : GameInstance(pGameWindow, pGame, pInputManager) {
-#if defined(WIN32)
-            if (dynamic_cast<DirectXRenderer*>(pGameWindow->getRenderer()) != nullptr) {
-                auto shaderPath = shaderPathNoExtension;
-                shaderPath += ".hlsl";
-
-                // Create a simple shader file (initial file).
-                std::ofstream shaderFile(shaderPath);
-                REQUIRE(shaderFile.is_open());
-                shaderFile << "float4 ps(float4 vPos : SV_POSITION) : SV_Target\n"
-                              "{\n"
-                              "return float4(1.0f, 1.0f, 1.0f, 1.0f);\n"
-                              "}\n";
-                shaderFile.close();
-
-                ShaderDescription description{
-                    sSampleShaderName, shaderPath, ShaderType::PIXEL_SHADER, "ps", {}};
-
-                auto compileResult = ShaderPack::compileShaderPack(pGameWindow->getRenderer(), description);
-                if (!std::holds_alternative<std::shared_ptr<ShaderPack>>(compileResult)) {
-                    std::string sErrorMessage;
-                    if (std::holds_alternative<std::string>(compileResult)) {
-                        sErrorMessage = std::get<std::string>(compileResult);
-                    } else {
-                        sErrorMessage = std::get<Error>(compileResult).getFullErrorMessage();
-                    }
-                    INFO(sErrorMessage);
-                    REQUIRE(std::holds_alternative<std::shared_ptr<ShaderPack>>(compileResult));
-                }
-
-                // Add some defines.
-                description.vDefinedShaderMacros = {"test1", "test2"};
-
-                std::optional<ShaderCacheInvalidationReason> cacheInvalidationReason;
-
-                auto cacheResult = ShaderPack::createFromCache(
-                    pGameWindow->getRenderer(), description, cacheInvalidationReason);
-
-                REQUIRE(!std::holds_alternative<std::shared_ptr<ShaderPack>>(cacheResult));
-                REQUIRE(cacheInvalidationReason.has_value());
-                REQUIRE(
-                    cacheInvalidationReason.value() ==
-                    ShaderCacheInvalidationReason::DEFINED_SHADER_MACROS_CHANGED);
-
-                // Compile new version.
-                compileResult = ShaderPack::compileShaderPack(pGameWindow->getRenderer(), description);
-                if (!std::holds_alternative<std::shared_ptr<ShaderPack>>(compileResult)) {
-                    std::string sErrorMessage;
-                    if (std::holds_alternative<std::string>(compileResult)) {
-                        sErrorMessage = std::get<std::string>(compileResult);
-                    } else {
-                        sErrorMessage = std::get<Error>(compileResult).getFullErrorMessage();
-                    }
-                    INFO(sErrorMessage);
-                    REQUIRE(std::holds_alternative<std::shared_ptr<ShaderPack>>(compileResult));
-                }
-
-                // Reorder defines (should be OK to use cache).
-                description.vDefinedShaderMacros = {"test2", "test1"};
-                cacheResult = ShaderPack::createFromCache(
-                    pGameWindow->getRenderer(), description, cacheInvalidationReason);
-
-                if (!std::holds_alternative<std::shared_ptr<ShaderPack>>(cacheResult)) {
-                    std::string sErrorMessage = std::get<Error>(cacheResult).getFullErrorMessage();
-                    INFO(sErrorMessage);
-                    REQUIRE(std::holds_alternative<std::shared_ptr<ShaderPack>>(cacheResult));
-                }
-
-                REQUIRE(!cacheInvalidationReason.has_value());
-
-                // Cleanup.
-                std::filesystem::remove(shaderPath);
-
-                pGameWindow->close();
-                return;
-            }
-#endif
+            // Prepare shader description.
+            ShaderDescription description;
 
             if (dynamic_cast<VulkanRenderer*>(pGameWindow->getRenderer()) != nullptr) {
                 auto shaderPath = shaderPathNoExtension;
@@ -737,70 +663,121 @@ TEST_CASE("invalidate shader cache - DEFINED_SHADER_MACROS_CHANGED") {
                               "}\n";
                 shaderFile.close();
 
-                ShaderDescription description{
-                    sSampleShaderName, shaderPath, ShaderType::PIXEL_SHADER, "main", {}};
+                description =
+                    ShaderDescription(sSampleShaderName, shaderPath, ShaderType::PIXEL_SHADER, "main", {});
+            } else {
+#if defined(WIN32)
+                if (dynamic_cast<DirectXRenderer*>(pGameWindow->getRenderer()) != nullptr) {
+                    auto shaderPath = shaderPathNoExtension;
+                    shaderPath += ".hlsl";
 
-                auto compileResult = ShaderPack::compileShaderPack(pGameWindow->getRenderer(), description);
-                if (!std::holds_alternative<std::shared_ptr<ShaderPack>>(compileResult)) {
-                    std::string sErrorMessage;
-                    if (std::holds_alternative<std::string>(compileResult)) {
-                        sErrorMessage = std::get<std::string>(compileResult);
-                    } else {
-                        sErrorMessage = std::get<Error>(compileResult).getFullErrorMessage();
-                    }
-                    INFO(sErrorMessage);
-                    REQUIRE(std::holds_alternative<std::shared_ptr<ShaderPack>>(compileResult));
+                    // Create a simple shader file (initial file).
+                    std::ofstream shaderFile(shaderPath);
+                    REQUIRE(shaderFile.is_open());
+                    shaderFile << "float4 ps(float4 vPos : SV_POSITION) : SV_Target\n"
+                                  "{\n"
+                                  "return float4(1.0f, 1.0f, 1.0f, 1.0f);\n"
+                                  "}\n";
+                    shaderFile.close();
+
+                    description =
+                        ShaderDescription(sSampleShaderName, shaderPath, ShaderType::PIXEL_SHADER, "ps", {});
                 }
-
-                // Add some defines.
-                description.vDefinedShaderMacros = {"test1", "test2"};
-
-                std::optional<ShaderCacheInvalidationReason> cacheInvalidationReason;
-
-                auto cacheResult = ShaderPack::createFromCache(
-                    pGameWindow->getRenderer(), description, cacheInvalidationReason);
-
-                REQUIRE(!std::holds_alternative<std::shared_ptr<ShaderPack>>(cacheResult));
-                REQUIRE(cacheInvalidationReason.has_value());
-                REQUIRE(
-                    cacheInvalidationReason.value() ==
-                    ShaderCacheInvalidationReason::DEFINED_SHADER_MACROS_CHANGED);
-
-                // Compile new version.
-                compileResult = ShaderPack::compileShaderPack(pGameWindow->getRenderer(), description);
-                if (!std::holds_alternative<std::shared_ptr<ShaderPack>>(compileResult)) {
-                    std::string sErrorMessage;
-                    if (std::holds_alternative<std::string>(compileResult)) {
-                        sErrorMessage = std::get<std::string>(compileResult);
-                    } else {
-                        sErrorMessage = std::get<Error>(compileResult).getFullErrorMessage();
-                    }
-                    INFO(sErrorMessage);
-                    REQUIRE(std::holds_alternative<std::shared_ptr<ShaderPack>>(compileResult));
-                }
-
-                // Reorder defines (should be OK to use cache).
-                description.vDefinedShaderMacros = {"test2", "test1"};
-                cacheResult = ShaderPack::createFromCache(
-                    pGameWindow->getRenderer(), description, cacheInvalidationReason);
-
-                if (!std::holds_alternative<std::shared_ptr<ShaderPack>>(cacheResult)) {
-                    std::string sErrorMessage = std::get<Error>(cacheResult).getFullErrorMessage();
-                    INFO(sErrorMessage);
-                    REQUIRE(std::holds_alternative<std::shared_ptr<ShaderPack>>(cacheResult));
-                }
-
-                REQUIRE(!cacheInvalidationReason.has_value());
-
-                // Cleanup.
-                std::filesystem::remove(shaderPath);
-
-                pGameWindow->close();
-                return;
+#endif
             }
 
-            INFO("unsupported renderer");
-            REQUIRE(false);
+            auto compileResult = ShaderPack::compileShaderPack(pGameWindow->getRenderer(), description);
+            if (!std::holds_alternative<std::shared_ptr<ShaderPack>>(compileResult)) {
+                std::string sErrorMessage;
+                if (std::holds_alternative<std::string>(compileResult)) {
+                    sErrorMessage = std::get<std::string>(compileResult);
+                } else {
+                    sErrorMessage = std::get<Error>(compileResult).getFullErrorMessage();
+                }
+                INFO(sErrorMessage);
+                REQUIRE(false);
+            }
+
+            // Add some defines.
+            description.definedShaderMacros = {{"test1", "value1"}, {"test2", ""}};
+
+            std::optional<ShaderCacheInvalidationReason> cacheInvalidationReason;
+
+            auto cacheResult =
+                ShaderPack::createFromCache(pGameWindow->getRenderer(), description, cacheInvalidationReason);
+
+            // Clears shader cache due to invalidation.
+            REQUIRE(!std::holds_alternative<std::shared_ptr<ShaderPack>>(cacheResult));
+            REQUIRE(cacheInvalidationReason.has_value());
+            REQUIRE(
+                cacheInvalidationReason.value() ==
+                ShaderCacheInvalidationReason::DEFINED_SHADER_MACROS_CHANGED);
+
+            // Compile new version.
+            compileResult = ShaderPack::compileShaderPack(pGameWindow->getRenderer(), description);
+            if (!std::holds_alternative<std::shared_ptr<ShaderPack>>(compileResult)) {
+                std::string sErrorMessage;
+                if (std::holds_alternative<std::string>(compileResult)) {
+                    sErrorMessage = std::get<std::string>(compileResult);
+                } else {
+                    sErrorMessage = std::get<Error>(compileResult).getFullErrorMessage();
+                }
+                INFO(sErrorMessage);
+                REQUIRE(std::holds_alternative<std::shared_ptr<ShaderPack>>(compileResult));
+            }
+
+            // Reorder defines (should be OK to use cache).
+            description.definedShaderMacros = {{"test2", ""}, {"test1", "value1"}};
+            cacheResult =
+                ShaderPack::createFromCache(pGameWindow->getRenderer(), description, cacheInvalidationReason);
+
+            if (!std::holds_alternative<std::shared_ptr<ShaderPack>>(cacheResult)) {
+                std::string sErrorMessage = std::get<Error>(cacheResult).getFullErrorMessage();
+                INFO(sErrorMessage);
+                REQUIRE(std::holds_alternative<std::shared_ptr<ShaderPack>>(cacheResult));
+            }
+            REQUIRE(!cacheInvalidationReason.has_value());
+
+            // Change value (should invalidate cache).
+            description.definedShaderMacros = {{"test2", ""}, {"test1", "value2"}};
+            cacheResult =
+                ShaderPack::createFromCache(pGameWindow->getRenderer(), description, cacheInvalidationReason);
+
+            // Clears shader cache due to invalidation.
+            REQUIRE(!std::holds_alternative<std::shared_ptr<ShaderPack>>(cacheResult));
+            REQUIRE(cacheInvalidationReason.has_value());
+            REQUIRE(
+                cacheInvalidationReason.value() ==
+                ShaderCacheInvalidationReason::DEFINED_SHADER_MACROS_CHANGED);
+
+            // Compile new version.
+            compileResult = ShaderPack::compileShaderPack(pGameWindow->getRenderer(), description);
+            if (!std::holds_alternative<std::shared_ptr<ShaderPack>>(compileResult)) {
+                std::string sErrorMessage;
+                if (std::holds_alternative<std::string>(compileResult)) {
+                    sErrorMessage = std::get<std::string>(compileResult);
+                } else {
+                    sErrorMessage = std::get<Error>(compileResult).getFullErrorMessage();
+                }
+                INFO(sErrorMessage);
+                REQUIRE(std::holds_alternative<std::shared_ptr<ShaderPack>>(compileResult));
+            }
+
+            // Add value to existing macro (should invalidate cache).
+            description.definedShaderMacros = {{"test2", "new"}, {"test1", "value2"}};
+            cacheResult =
+                ShaderPack::createFromCache(pGameWindow->getRenderer(), description, cacheInvalidationReason);
+
+            REQUIRE(!std::holds_alternative<std::shared_ptr<ShaderPack>>(cacheResult));
+            REQUIRE(cacheInvalidationReason.has_value());
+            REQUIRE(
+                cacheInvalidationReason.value() ==
+                ShaderCacheInvalidationReason::DEFINED_SHADER_MACROS_CHANGED);
+
+            // Cleanup.
+            std::filesystem::remove(description.pathToShaderFile);
+
+            pGameWindow->close();
         }
         virtual ~TestGameInstance() override {}
     };

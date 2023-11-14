@@ -51,22 +51,22 @@ namespace ne {
             // Specify defined macros for this shader.
             auto vParameterNames = convertShaderMacrosToText(macros);
             for (const auto& sParameter : vParameterNames) {
-                currentShaderDescription.vDefinedShaderMacros.push_back(sParameter);
+                currentShaderDescription.definedShaderMacros[sParameter] = ""; // valueless macro
             }
 
             // Add hash of the configuration to the shader name for logging.
             const auto sConfigurationText = ShaderMacroConfigurations::convertConfigurationToText(macros);
             currentShaderDescription.sShaderName += sConfigurationText;
 
-            // Add hash of the configuration to the compiled shader file name
+            // Add hash of the configuration to the compiled bytecode file name
             // so that all shader variants will be stored in different files.
-            auto currentPathToCompiledShader = pathToCompiledShader;
-            currentPathToCompiledShader += sConfigurationText;
+            auto currentPathToCompiledShaderBytecode = pathToCompiledShader;
+            currentPathToCompiledShaderBytecode += sConfigurationText;
 
             // Try to load the shader from cache.
             auto result = Shader::createFromCache(
                 pRenderer,
-                currentPathToCompiledShader,
+                currentPathToCompiledShaderBytecode,
                 currentShaderDescription,
                 shaderDescription.sShaderName,
                 cacheInvalidationReason);
@@ -121,7 +121,7 @@ namespace ne {
             // Add configuration macros to description.
             auto vParameterNames = convertShaderMacrosToText(macros);
             for (const auto& sParameter : vParameterNames) {
-                currentShaderDescription.vDefinedShaderMacros.push_back(sParameter);
+                currentShaderDescription.definedShaderMacros[sParameter] = ""; // valueless macro
             }
 
             const auto sConfigurationText = ShaderMacroConfigurations::convertConfigurationToText(macros);

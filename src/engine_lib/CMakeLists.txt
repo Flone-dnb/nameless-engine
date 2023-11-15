@@ -143,6 +143,7 @@ set(PROJECT_SOURCES
     private/material/Material.cpp
     public/material/Material.h
     private/shader/general/EngineShaderNames.hpp
+    private/shader/general/EngineShaderConstantMacros.hpp
     private/shader/general/resources/ShaderResource.h
     private/shader/general/resources/ShaderResource.cpp
     private/shader/general/resources/ShaderBindlessArrayIndexManager.h

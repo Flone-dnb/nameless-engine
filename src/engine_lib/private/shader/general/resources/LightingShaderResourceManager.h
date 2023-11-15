@@ -560,6 +560,12 @@ namespace ne {
         void recalculateLightTileFrustums(const std::pair<unsigned int, unsigned int>& renderResolution);
 
         /**
+         * Called by renderer to notify that all engine shaders were compiled and we can create compute
+         * interfaces that we need.
+         */
+        void onEngineShadersCompiled();
+
+        /**
          * Sets light color intensity of ambient lighting.
          *
          * @remark New lighting settings will be copied to the GPU next time @ref updateResources is called.
@@ -662,11 +668,5 @@ namespace ne {
 
         /** Type of the descriptor used to store data from @ref mtxGpuData. */
         static constexpr auto generalLightingDataDescriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-
-        /**
-         * Defines how much threads should be executed in the X and the Y dimensions for
-         * @ref pFrustumGridComputeInterface shader in a group.
-         */
-        static constexpr size_t iFrustumGridComputeShaderThreadsInGroupXy = 16; // NOLINT
     };
 }

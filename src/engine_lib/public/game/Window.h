@@ -650,17 +650,19 @@ namespace ne {
             // Draw next frame.
             pRenderer->drawNextFrame();
 
-            // Notify finish.
+            // Notify game manager about tick finish.
             pGameManager->onTickFinished();
         }
 
-        // Notify game.
+        // Notify game manager about window closed.
         pGameManager->onWindowClose();
 
         // Unbind from callbacks before destroying the game manager/game instance.
         unbindFromWindowEvents();
 
+        // Destroy game manager.
         pGameManager->destroy(); // explicitly destroy here to run GC for the last time (before everything
-                                 // else is destroyed)
+        pGameManager = nullptr;  // else is destroyed)
+        Logger::get().info("game manager is destroyed");
     }
 } // namespace ne

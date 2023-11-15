@@ -3,6 +3,7 @@
 // Custom.
 #include "shader/ShaderDescription.h"
 #include "misc/ProjectPaths.h"
+#include "shader/general/EngineShaderConstantMacros.hpp"
 #include "shader/general/EngineShaderNames.hpp"
 
 namespace ne {
@@ -28,5 +29,17 @@ namespace ne {
             ShaderType::PIXEL_SHADER,
             "main",
             {});
+
+        /** Compute shader that calculate frustum for light tile that will be used in light culling. */
+        static inline const auto forwardPlusCalculateGridFrustumComputeShader = ShaderDescription(
+            EngineShaderNames::ForwardPlus::sCalculateFrustumGridComputeShaderName,
+            ProjectPaths::getPathToResDirectory(ResourceDirectory::ENGINE) /
+                "shaders/glsl/final/light_culling/CalculateGridFrustums.comp",
+            ShaderType::COMPUTE_SHADER,
+            "main",
+            {{
+                EngineShaderConstantMacros::ForwardPlus::FrustumGridThreadsInGroupXyMacro::sName,
+                EngineShaderConstantMacros::ForwardPlus::FrustumGridThreadsInGroupXyMacro::sValue,
+            }});
     };
 } // namespace ne

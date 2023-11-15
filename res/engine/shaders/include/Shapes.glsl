@@ -13,7 +13,7 @@ struct Plane{
 struct Frustum{
     /** Left, right, top and bottom faces of the frustum. */
     Plane planes[4];
-}
+};
 
 /**
  * Calculates a plane from 3 non-collinear points that form a triangle.

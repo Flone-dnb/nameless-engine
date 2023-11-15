@@ -7,12 +7,18 @@
 #include "io/ConfigManager.h"
 
 namespace ne {
-    /** Describes the type of a shader. */
+    /**
+     * Describes the type of a shader.
+     *
+     * @remark Shader type is stored as an integer in the shader cache, avoid reordering
+     * or changing integers for existing types.
+     */
     enum class ShaderType : int {
         VERTEX_SHADER = 0,  //< vertex shader
         PIXEL_SHADER = 1,   //< pixel/fragment shader
         COMPUTE_SHADER = 2, //< compute shader
-        // add test for new type...
+        // new types go here...
+        // add a test for new type...
     };
 
     /**

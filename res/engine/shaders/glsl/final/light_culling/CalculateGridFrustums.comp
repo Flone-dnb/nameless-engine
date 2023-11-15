@@ -1,29 +1,30 @@
-#include "../../include/light_culling/CalculateGridTileFrustum.glsl"
+#version 450
+
+#include "../../../include/light_culling/CalculateGridTileFrustum.glsl"
 
 /**
  * Defines how much threads should be executed in the X and the Y dimensions of a grid tile.
  * This macro also defines how much pixels there are in one grid tile.
  */
 #ifndef THREADS_IN_GROUP_XY
-_Static_assert(false, "thread count in group - macro not defined");
+FAIL;
 #endif
 
-/** 1 thread calculates 1 frustum (1 thread per grid tile, not per pixel). */
-[numthreads(THREADS_IN_GROUP_XY, THREADS_IN_GROUP_XY, 1 )]
-void csGridFrustum(uint3 dispatchThreadID : SV_DispatchThreadID){
+layout (local_size_x = THREADS_IN_GROUP_XY, local_size_y = THREADS_IN_GROUP_XY, local_size_z = 1) in;
+void main(){
     // Make sure we don't calculate frustums out of bounds
     // (this may happen if the screen size is not evenly divisible by the thread group size).
-    if (dispatchThreadID.x >= computeInfo.iThreadCountInUseX || dispatchThreadID.y >= computeInfo.iThreadCountInUseY){
+    if (gl_GlobalInvocationID.x >= computeInfo.iThreadCountInUseX || gl_GlobalInvocationID.y >= computeInfo.iThreadCountInUseY){
         return;
     }
 
     // Calculate index into the resulting buffer to write the calculated frustum.
-    const uint iFrustumIndex = (dispatchThreadID.y * computeInfo.iThreadCountInUseX) + dispatchThreadID.x;
+    const uint iFrustumIndex = (gl_GlobalInvocationID.y * computeInfo.iThreadCountInUseX) + gl_GlobalInvocationID.x;
 
     // Calculate tile frustum and write it to the resulting buffer.
-    calculatedFrustums[iFrustumIndex] = calculateFrustumInViewSpaceForGridTileInScreenSpace(
-        dispatchThreadID.x, // tile X
-        dispatchThreadID.y, // tile Y
+    calculatedFrustums.array[iFrustumIndex] = calculateFrustumInViewSpaceForGridTileInScreenSpace(
+        gl_GlobalInvocationID.x, // tile X
+        gl_GlobalInvocationID.y, // tile Y
         THREADS_IN_GROUP_XY,      // tile size in pixels
         computeInfo.maxDepth,     // far clip plane Z in screen space
         screenToViewData.iRenderResolutionWidth,

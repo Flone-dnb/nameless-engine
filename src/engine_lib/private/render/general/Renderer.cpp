@@ -449,6 +449,9 @@ namespace ne {
             return optionalError.value();
         }
 
+        // Notify lighting manager.
+        pCreatedRenderer->pLightingShaderResourceManager->onEngineShadersCompiled();
+
         // Setup frame statistics.
         pCreatedRenderer->setupFrameStats();
 

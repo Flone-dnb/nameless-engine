@@ -68,7 +68,10 @@ namespace ne {
     }
 
     std::vector<ShaderDescription> VulkanRenderer::getEngineShadersToCompile() const {
-        return {GlslEngineShaders::meshNodeVertexShader, GlslEngineShaders::meshNodeFragmentShader};
+        return {
+            GlslEngineShaders::meshNodeVertexShader,
+            GlslEngineShaders::meshNodeFragmentShader,
+            GlslEngineShaders::forwardPlusCalculateGridFrustumComputeShader};
     }
 
     VulkanRenderer::~VulkanRenderer() {
@@ -89,6 +92,11 @@ namespace ne {
             }
         }
 
+        // Reset lighting manager before pipeline manager and GPU resource manager
+        // because it uses compute shaders which reference compute pipelines.
+        resetLightingShaderResourceManager();
+
+        // Destroy pipeline manager and other draw resources.
         destroySwapChainAndDependentResources(true);
 
         if (pTextureSampler != nullptr) {
@@ -103,7 +111,6 @@ namespace ne {
             // Also delete frame resources before GPU resource manager because they use memory allocator
             // for destruction.
             resetFrameResourcesManager();
-            resetLightingShaderResourceManager(); // also stores some GPU resources
 
             // Explicitly delete memory allocator before all essential Vulkan objects.
             resetGpuResourceManager();

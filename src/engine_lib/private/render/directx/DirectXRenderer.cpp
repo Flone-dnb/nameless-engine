@@ -62,7 +62,10 @@ namespace ne {
     }
 
     std::vector<ShaderDescription> DirectXRenderer::getEngineShadersToCompile() const {
-        return {HlslEngineShaders::meshNodeVertexShader, HlslEngineShaders::meshNodePixelShader};
+        return {
+            HlslEngineShaders::meshNodeVertexShader,
+            HlslEngineShaders::meshNodePixelShader,
+            HlslEngineShaders::forwardPlusCalculateGridFrustumComputeShader};
     }
 
     std::optional<Error> DirectXRenderer::initialize(const std::vector<std::string>& vBlacklistedGpuNames) {

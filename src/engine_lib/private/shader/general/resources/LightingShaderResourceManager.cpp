@@ -8,6 +8,7 @@
 #include "render/general/pipeline/PipelineManager.h"
 #include "render/vulkan/pipeline/VulkanPipeline.h"
 #include "shader/ComputeShaderInterface.h"
+#include "shader/general/EngineShaderConstantMacros.hpp"
 #include "shader/general/EngineShaderNames.hpp"
 
 namespace ne {
@@ -1038,7 +1039,9 @@ namespace ne {
         static_assert(
             sizeof(LightingShaderResourceManager) == 144, "consider resetting new arrays here"); // NOLINT
 #endif
+    }
 
+    void LightingShaderResourceManager::onEngineShadersCompiled() {
         // Create compute interface for calculating grid of frustums for light culling.
         auto computeCreationResult = ComputeShaderInterface::createUsingGraphicsQueue(
             pRenderer,
@@ -1053,18 +1056,31 @@ namespace ne {
         }
         pFrustumGridComputeInterface =
             std::get<std::unique_ptr<ComputeShaderInterface>>(std::move(computeCreationResult));
+
+        // Get render settings.
+        const auto pMtxRenderSettings = pRenderer->getRenderSettings();
+        std::scoped_lock guard(pMtxRenderSettings->first);
+
+        // Recalculate grid frustums.
+        recalculateLightTileFrustums(pMtxRenderSettings->second->getRenderResolution());
     }
 
     void LightingShaderResourceManager::recalculateLightTileFrustums(
         const std::pair<unsigned int, unsigned int>& renderResolution) {
+        // Make sure engine shaders were compiled and we created compute interface.
+        if (pFrustumGridComputeInterface == nullptr) {
+            // Not compiled yet.
+            return;
+        }
+
         // Update GPU resources.
-        TODO;
+        // TODO;
 
         // Recalculate group count.
-        TODO;
+        // TODO;
 
         // Queue frustum grid recalculation compute shader.
-        pFrustumGridComputeInterface->submitForExecution(TODO);
+        // pFrustumGridComputeInterface->submitForExecution(TODO);
     }
 
     void LightingShaderResourceManager::setAmbientLight(const glm::vec3& ambientLight) {

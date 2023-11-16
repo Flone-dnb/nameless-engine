@@ -372,7 +372,7 @@ namespace ne {
          *
          * @return Shaders and pipelines.
          */
-        inline std::pair<std::mutex*, QueuedForExecutionComputeShaders*>
+        inline std::pair<std::recursive_mutex*, QueuedForExecutionComputeShaders*>
         getComputeShadersForGraphicsQueueExecution() {
             return computePipelines.getComputeShadersForGraphicsQueueExecution();
         }
@@ -502,7 +502,7 @@ namespace ne {
              *
              * @return Shaders and pipelines.
              */
-            inline std::pair<std::mutex*, QueuedForExecutionComputeShaders*>
+            inline std::pair<std::recursive_mutex*, QueuedForExecutionComputeShaders*>
             getComputeShadersForGraphicsQueueExecution() {
                 return std::make_pair(&mtxResources.first, &mtxResources.second.queuedComputeShaders);
             }
@@ -523,7 +523,7 @@ namespace ne {
                 ComputeShaderInterface* pComputeShaderInterface);
 
             /** Pipeline data. */
-            std::pair<std::mutex, Resources> mtxResources;
+            std::pair<std::recursive_mutex, Resources> mtxResources;
         };
 
         /**

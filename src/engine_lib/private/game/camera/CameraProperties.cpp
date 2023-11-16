@@ -9,10 +9,11 @@
 
 namespace ne {
 
-    void CameraProperties::setAspectRatio(unsigned int iRenderTargetWidth, unsigned int iRenderTargetHeight) {
+    void
+    CameraProperties::setRenderTargetSize(unsigned int iRenderTargetWidth, unsigned int iRenderTargetHeight) {
         std::scoped_lock guard(mtxData.first);
 
-        // Make sure this aspect ratio is different.
+        // Make sure this size is different.
         if (mtxData.second.projectionData.iRenderTargetWidth == iRenderTargetWidth &&
             mtxData.second.projectionData.iRenderTargetHeight == iRenderTargetHeight) {
             return;
@@ -92,18 +93,6 @@ namespace ne {
         std::scoped_lock guard(mtxData.first);
 
         return mtxData.second.projectionData.farClipPlaneDistance;
-    }
-
-    unsigned int CameraProperties::getRenderTargetWidth() {
-        std::scoped_lock guard(mtxData.first);
-
-        return mtxData.second.projectionData.iRenderTargetWidth;
-    }
-
-    unsigned int CameraProperties::getRenderTargetHeight() {
-        std::scoped_lock guard(mtxData.first);
-
-        return mtxData.second.projectionData.iRenderTargetHeight;
     }
 
     CameraMode CameraProperties::getCurrentCameraMode() {
@@ -199,6 +188,9 @@ namespace ne {
 
         // Mark projection data as updated.
         projectionData.bProjectionMatrixNeedsUpdate = false;
+
+        // Notify renderer.
+        projectionData.bLightGridFrustumsNeedUpdate = true;
     }
 
     void CameraProperties::recalculateFrustum() {

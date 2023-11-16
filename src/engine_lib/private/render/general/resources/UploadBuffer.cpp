@@ -18,7 +18,7 @@ namespace ne {
 
     UploadBuffer::UploadBuffer(
         std::unique_ptr<GpuResource> pGpuResourceToUse, size_t iElementSizeInBytes, size_t iElementCount) {
-        // Initialize self.
+        // Initialize.
         pGpuResource = std::move(pGpuResourceToUse);
         this->iElementSizeInBytes = iElementSizeInBytes;
         this->iElementCount = iElementCount;
@@ -28,7 +28,7 @@ namespace ne {
             // Map the resource.
             auto hResult = pDirectXResource->getInternalResource()->Map(
                 0, nullptr, reinterpret_cast<void**>(&pMappedResourceData));
-            if (FAILED(hResult)) {
+            if (FAILED(hResult)) [[unlikely]] {
                 Error error(hResult);
                 error.showError();
                 throw std::runtime_error(error.getFullErrorMessage());

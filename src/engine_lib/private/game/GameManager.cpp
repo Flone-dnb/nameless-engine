@@ -87,7 +87,7 @@ namespace ne {
         bIsInitialized = true;
 
         // Create camera manager.
-        pCameraManager = std::make_unique<CameraManager>();
+        pCameraManager = std::make_unique<CameraManager>(pRenderer.get());
 
         return {};
     }

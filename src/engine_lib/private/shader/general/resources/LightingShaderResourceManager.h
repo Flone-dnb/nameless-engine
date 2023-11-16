@@ -529,12 +529,146 @@ namespace ne {
 
 #if defined(DEBUG)
             static_assert(
-                sizeof(LightingShaderResourceManager) == 176, "consider adding new arrays here"); // NOLINT
+                sizeof(LightingShaderResourceManager) == 224, "consider adding new arrays here"); // NOLINT
 #endif
         }
 #endif
 
     private:
+        /** Groups shader data for compute shaders that operate on light-related data. */
+        struct ComputeShaderData {
+            /**
+             * Plane represented by a normal and a distance.
+             *
+             * @warning Exactly equal to the struct defined in shaders.
+             */
+            struct Plane {
+                /** Plane's normal. */
+                glm::vec3 normal;
+
+                /** Distance from the origin to the nearest point on the plane. */
+                float distanceFromOrigin;
+            };
+
+            /**
+             * Frustum in view space.
+             *
+             * @warning Exactly equal to the struct defined in shaders.
+             */
+            struct Frustum {
+                /** Left, right, top and bottom faces of the frustum. */
+                Plane planes[4];
+            };
+
+            /** Groups shader data for compute shader that recalculates light grid frustums. */
+            struct FrustumGridComputeShader {
+                /** Stores some additional information (some information not available as built-in semantics).
+                 */
+                struct ComputeInfo {
+                    /** Total number of thread groups dispatched in the X direction. */
+                    alignas(iVkScalarAlignment) unsigned int iThreadGroupCountX;
+
+                    /** Total number of thread groups dispatched in the Y direction. */
+                    alignas(iVkScalarAlignment) unsigned int iThreadGroupCountY;
+
+                    /** Total number of tiles in the X direction. */
+                    alignas(iVkScalarAlignment) unsigned int iTileCountX;
+
+                    /** Total number of tiles in the Y direction. */
+                    alignas(iVkScalarAlignment) unsigned int iTileCountY;
+
+                    /** Maximum depth value. */
+                    alignas(iVkScalarAlignment) float maxDepth;
+                };
+
+                /** Data that is used to convert coordinates from screen space to view space. */
+                struct ScreenToViewData {
+                    /** Inverse of the projection matrix. */
+                    alignas(iVkMat4Alignment) glm::mat4 inverseProjectionMatrix;
+
+                    /** Width of the viewport (might be smaller that the actual screen size). */
+                    alignas(iVkScalarAlignment) unsigned int iRenderResolutionWidth;
+
+                    /** Height of the viewport (might be smaller that the actual screen size). */
+                    alignas(iVkScalarAlignment) unsigned int iRenderResolutionHeight;
+                };
+
+                /** Groups buffers that we bind to a compute shader. */
+                struct ShaderResources {
+                    /**
+                     * Buffer that stores additional information that might not be available as built-in
+                     * semantics.
+                     */
+                    std::unique_ptr<UploadBuffer> pComputeInfo;
+
+                    /**
+                     * Buffer that stores data that is used to convert coordinates from screen space to
+                     * view space.
+                     */
+                    std::unique_ptr<UploadBuffer> pScreenToViewData;
+
+                    /** Buffer that stores calculated grid of frustums (results of a compute shader). */
+                    std::unique_ptr<GpuResource> pCalculatedFrustums;
+                };
+
+                /** Groups shader interface and its resources. */
+                struct ComputeShader {
+                    /**
+                     * Creates compute interface and resources and binds them to the interface.
+                     *
+                     * @param pRenderer Renderer.
+                     *
+                     * @return Error if something went wrong.
+                     */
+                    [[nodiscard]] std::optional<Error> initialize(Renderer* pRenderer);
+
+                    /**
+                     * Updates data used by shaders.
+                     *
+                     * @param pRenderer               Renderer.
+                     * @param renderResolution        Current render resolution.
+                     * @param inverseProjectionMatrix Inverse projection matrix of the active camera.
+                     * @param bQueueShaderExecution   `true` to queue compute shader execution, `false`
+                     * otherwise.
+                     *
+                     * @return Error if something went wrong.
+                     */
+                    [[nodiscard]] std::optional<Error> updateData(
+                        Renderer* pRenderer,
+                        const std::pair<unsigned int, unsigned int>& renderResolution,
+                        const glm::mat4& inverseProjectionMatrix,
+                        bool bQueueShaderExecution);
+
+                    /** Shader interface. */
+                    std::unique_ptr<ComputeShaderInterface> pComputeInterface;
+
+                    /** Shader resources. */
+                    ShaderResources resources;
+
+                    /** `true` if @ref initialize was called, `false` otherwise. */
+                    bool bIsInitialized = false;
+
+                    /**
+                     * Name of the shader resource (name from shader code) that stores
+                     * additional data for compute shader.
+                     */
+                    static inline const auto sComputeInfoShaderResourceName = "computeInfo";
+
+                    /**
+                     * Name of the shader resource (name from shader code) that stores
+                     * data to convert from screen space to view space.
+                     */
+                    static inline const auto sScreenToViewDataShaderResourceName = "screenToViewData";
+
+                    /**
+                     * Name of the shader resource (name from shader code) that stores
+                     * calculated frustums.
+                     */
+                    static inline const auto sCalculatedFrustumsShaderResourceName = "calculatedFrustums";
+                };
+            };
+        };
+
         /**
          * Creates a new manager.
          *
@@ -552,16 +686,23 @@ namespace ne {
         LightingShaderResourceManager(Renderer* pRenderer);
 
         /**
-         * Called by renderer when render resolution changes to queue a compute shader
+         * Called by renderer when render resolution or projection matrix changes to queue a compute shader
          * that will recalculate grid of frustums used during light culling.
          *
-         * @param renderResolution New render resolution in pixels.
+         * @param renderResolution        New render resolution in pixels.
+         * @param inverseProjectionMatrix Inverse projection matrix of the currently active camera.
+         *
+         * @return Error if something went wrong.
          */
-        void recalculateLightTileFrustums(const std::pair<unsigned int, unsigned int>& renderResolution);
+        [[nodiscard]] std::optional<Error> recalculateLightTileFrustums(
+            const std::pair<unsigned int, unsigned int>& renderResolution,
+            const glm::mat4& inverseProjectionMatrix);
 
         /**
-         * Called by renderer to notify that all engine shaders were compiled and we can create compute
-         * interfaces that we need.
+         * Called by renderer to notify that all engine shaders were compiled.
+         *
+         * @remark Just changes internal boolean and nothing else.
+         * Expects you to call @ref recalculateLightTileFrustums afterwards to do some actual calculations.
          */
         void onEngineShadersCompiled();
 
@@ -649,10 +790,13 @@ namespace ne {
         std::pair<std::recursive_mutex, GpuData> mtxGpuData;
 
         /** Calculates frustum grid for light culling. */
-        std::unique_ptr<ComputeShaderInterface> pFrustumGridComputeInterface;
+        ComputeShaderData::FrustumGridComputeShader::ComputeShader frustumGridComputeShaderData;
 
         /** Used renderer. */
         Renderer* pRenderer = nullptr;
+
+        /** `true` if the renderer has finished compiling engine shaders, `false` otherwise. */
+        bool bEngineShadersCompiled = false;
 
         /** Name of the resource that stores data from @ref mtxGpuData (name from shader code). */
         static inline const std::string sGeneralLightingDataShaderResourceName = "generalLightingData";

@@ -198,6 +198,44 @@ namespace ne {
             iElementCount);
     }
 
+    std::variant<std::unique_ptr<GpuResource>, Error> DirectXResourceManager::createResource(
+        const std::string& sResourceName,
+        size_t iElementSizeInBytes,
+        size_t iElementCount,
+        ResourceUsageType usage,
+        bool bIsShaderReadWriteResource) {
+        // Calculate resource size.
+        const auto iDataSizeInBytes = iElementSizeInBytes * iElementCount;
+
+        // Prepare resource description.
+        const auto resourceDescription = CD3DX12_RESOURCE_DESC::Buffer(
+            iDataSizeInBytes,
+            bIsShaderReadWriteResource ? D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS
+                                       : D3D12_RESOURCE_FLAG_NONE);
+
+        // Prepare allocation heap.
+        D3D12MA::ALLOCATION_DESC allocationDesc = {};
+        allocationDesc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
+
+        // Create resource.
+        auto result = DirectXResource::create(
+            this,
+            sResourceName,
+            pMemoryAllocator.Get(),
+            allocationDesc,
+            resourceDescription,
+            D3D12_RESOURCE_STATE_GENERIC_READ,
+            {},
+            iElementSizeInBytes,
+            iElementCount);
+        if (std::holds_alternative<Error>(result)) {
+            auto err = std::get<Error>(std::move(result));
+            err.addCurrentLocationToErrorStack();
+            return err;
+        }
+        return std::get<std::unique_ptr<DirectXResource>>(std::move(result));
+    }
+
     size_t DirectXResourceManager::getTotalVideoMemoryInMb() const {
         D3D12MA::Budget localBudget{};
         pMemoryAllocator->GetBudget(&localBudget, nullptr);

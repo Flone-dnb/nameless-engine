@@ -345,32 +345,21 @@ namespace ne {
         // Copy data to the allocated upload resource memory.
         pUploadResource->copyDataToElement(0, pBufferData, iDataSizeInBytes);
 
-        // Prepare resource usage flags.
-        const auto optionalResourceUsage = convertResourceUsageTypeToVkBufferUsageType(usage);
-        const auto resourceUsage = optionalResourceUsage.has_value()
-                                       ? VK_BUFFER_USAGE_TRANSFER_DST_BIT | optionalResourceUsage.value()
-                                       : VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-
-        // Make sure resource information will not hit type limit.
-        if (iElementSizeInBytes > std::numeric_limits<unsigned int>::max() ||
-            iElementCount > std::numeric_limits<unsigned int>::max()) [[unlikely]] {
-            return Error("resource size is too big");
-        }
-
-        // Create the final GPU resource to copy the data to.
-        auto finalResourceResult = createBuffer(
-            sResourceName,
-            iDataSizeInBytes,
-            resourceUsage,
-            false,
-            static_cast<unsigned int>(iElementSizeInBytes),
-            static_cast<unsigned int>(iElementCount));
+        // Create the final resource to copy the data to.
+        auto finalResourceResult = createResource(
+            sResourceName, iElementSizeInBytes, iElementCount, usage, bIsShaderReadWriteResource);
         if (std::holds_alternative<Error>(finalResourceResult)) {
             auto error = std::get<Error>(std::move(finalResourceResult));
             error.addCurrentLocationToErrorStack();
             return error;
         }
-        auto pFinalResource = std::get<std::unique_ptr<VulkanResource>>(std::move(finalResourceResult));
+        auto pFinalResource = std::get<std::unique_ptr<GpuResource>>(std::move(finalResourceResult));
+
+        // Convert resource type.
+        auto pFinalVulkanResource = dynamic_cast<VulkanResource*>(pFinalResource.get());
+        if (pFinalVulkanResource == nullptr) [[unlikely]] {
+            return Error("expected a vulkan resource");
+        }
 
         // Get renderer.
         const auto pRenderer = dynamic_cast<VulkanRenderer*>(getRenderer());
@@ -400,7 +389,7 @@ namespace ne {
         vkCmdCopyBuffer(
             pOneTimeSubmitCommandBuffer,
             pVkUploadResource->getInternalBufferResource(),
-            pFinalResource->getInternalBufferResource(),
+            pFinalVulkanResource->getInternalBufferResource(),
             1,
             &copyRegion);
 
@@ -413,6 +402,43 @@ namespace ne {
         }
 
         return pFinalResource;
+    }
+
+    std::variant<std::unique_ptr<GpuResource>, Error> VulkanResourceManager::createResource(
+        const std::string& sResourceName,
+        size_t iElementSizeInBytes,
+        size_t iElementCount,
+        ResourceUsageType usage,
+        bool bIsShaderReadWriteResource) {
+        // Calculate data size.
+        const auto iDataSizeInBytes = iElementSizeInBytes * iElementCount;
+
+        // Prepare resource usage flags.
+        const auto optionalResourceUsage = convertResourceUsageTypeToVkBufferUsageType(usage);
+        const auto resourceUsage = optionalResourceUsage.has_value()
+                                       ? VK_BUFFER_USAGE_TRANSFER_DST_BIT | optionalResourceUsage.value()
+                                       : VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+
+        // Make sure resource information will not hit type limit.
+        if (iElementSizeInBytes > std::numeric_limits<unsigned int>::max() ||
+            iElementCount > std::numeric_limits<unsigned int>::max()) [[unlikely]] {
+            return Error("resource size is too big");
+        }
+
+        // Create resource.
+        auto resourceResult = createBuffer(
+            sResourceName,
+            iDataSizeInBytes,
+            resourceUsage,
+            false,
+            static_cast<unsigned int>(iElementSizeInBytes),
+            static_cast<unsigned int>(iElementCount));
+        if (std::holds_alternative<Error>(resourceResult)) {
+            auto error = std::get<Error>(std::move(resourceResult));
+            error.addCurrentLocationToErrorStack();
+            return error;
+        }
+        return std::get<std::unique_ptr<VulkanResource>>(std::move(resourceResult));
     }
 
     std::variant<std::unique_ptr<VulkanResource>, Error> VulkanResourceManager::createImage(

@@ -13,12 +13,12 @@ _Static_assert(false, "thread count in group - macro not defined");
 void csGridFrustum(uint3 dispatchThreadID : SV_DispatchThreadID){
     // Make sure we don't calculate frustums out of bounds
     // (this may happen if the screen size is not evenly divisible by the thread group size).
-    if (dispatchThreadID.x >= computeInfo.iThreadCountInUseX || dispatchThreadID.y >= computeInfo.iThreadCountInUseY){
+    if (dispatchThreadID.x >= computeInfo.iTileCountX || dispatchThreadID.y >= computeInfo.iTileCountY){
         return;
     }
 
     // Calculate index into the resulting buffer to write the calculated frustum.
-    const uint iFrustumIndex = (dispatchThreadID.y * computeInfo.iThreadCountInUseX) + dispatchThreadID.x;
+    const uint iFrustumIndex = (dispatchThreadID.y * computeInfo.iTileCountX) + dispatchThreadID.x;
 
     // Calculate tile frustum and write it to the resulting buffer.
     calculatedFrustums[iFrustumIndex] = calculateFrustumInViewSpaceForGridTileInScreenSpace(

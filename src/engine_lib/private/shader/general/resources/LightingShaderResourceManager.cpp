@@ -585,7 +585,7 @@ namespace ne {
 
 #if defined(DEBUG) && defined(WIN32)
         static_assert(
-            sizeof(LightingShaderResourceManager) == 176, "consider notifying new arrays here"); // NOLINT
+            sizeof(LightingShaderResourceManager) == 224, "consider notifying new arrays here"); // NOLINT
 #elif defined(DEBUG)
         static_assert(
             sizeof(LightingShaderResourceManager) == 144, "consider notifying new arrays here"); // NOLINT
@@ -626,7 +626,7 @@ namespace ne {
 
 #if defined(DEBUG) && defined(WIN32)
         static_assert(
-            sizeof(LightingShaderResourceManager) == 176, "consider notifying new arrays here"); // NOLINT
+            sizeof(LightingShaderResourceManager) == 224, "consider notifying new arrays here"); // NOLINT
 #elif defined(DEBUG)
         static_assert(
             sizeof(LightingShaderResourceManager) == 144, "consider notifying new arrays here"); // NOLINT
@@ -655,7 +655,7 @@ namespace ne {
 
 #if defined(DEBUG) && defined(WIN32)
         static_assert(
-            sizeof(LightingShaderResourceManager) == 176, "consider notifying new arrays here"); // NOLINT
+            sizeof(LightingShaderResourceManager) == 224, "consider notifying new arrays here"); // NOLINT
 #elif defined(DEBUG)
         static_assert(
             sizeof(LightingShaderResourceManager) == 144, "consider notifying new arrays here"); // NOLINT
@@ -1034,14 +1034,107 @@ namespace ne {
 
 #if defined(DEBUG) && defined(WIN32)
         static_assert(
-            sizeof(LightingShaderResourceManager) == 176, "consider resetting new arrays here"); // NOLINT
+            sizeof(LightingShaderResourceManager) == 224, "consider creating new arrays here"); // NOLINT
 #elif defined(DEBUG)
         static_assert(
-            sizeof(LightingShaderResourceManager) == 144, "consider resetting new arrays here"); // NOLINT
+            sizeof(LightingShaderResourceManager) == 144, "consider creating new arrays here"); // NOLINT
 #endif
     }
 
-    void LightingShaderResourceManager::onEngineShadersCompiled() {
+    [[nodiscard]] std::optional<Error>
+    LightingShaderResourceManager::ComputeShaderData::FrustumGridComputeShader::ComputeShader::updateData(
+        Renderer* pRenderer,
+        const std::pair<unsigned int, unsigned int>& renderResolution,
+        const glm::mat4& inverseProjectionMatrix,
+        bool bQueueShaderExecution) {
+        // Make sure engine shaders were compiled and we created compute interface.
+        if (pComputeInterface == nullptr) [[unlikely]] {
+            return Error("expected compute interface to be created at this point");
+        }
+
+        // Make sure the GPU is not using resources that we will update.
+        std::scoped_lock renderGuard(*pRenderer->getRenderResourcesMutex());
+        pRenderer->waitForGpuToFinishWorkUpToThisPoint();
+
+        // Get tile size.
+        size_t iTileSizeInPixels = 0;
+        try {
+            iTileSizeInPixels = std::stoull(
+                EngineShaderConstantMacros::ForwardPlus::FrustumGridThreadsInGroupXyMacro::sValue);
+        } catch (const std::exception& exception) {
+            return Error(std::format(
+                "failed to convert frustum grid tile size to an integer, error: {}", exception.what()));
+        };
+
+        // Calculate tile count.
+        const auto iTileCountX = static_cast<unsigned int>(renderResolution.first / iTileSizeInPixels);
+        const auto iTileCountY = static_cast<unsigned int>(renderResolution.second / iTileSizeInPixels);
+
+        // Calculate frustum count.
+        const size_t iFrustumCount = iTileCountX * iTileCountY;
+
+        // Calculate thread group count.
+        const auto iThreadGroupCountX = static_cast<unsigned int>(
+            std::ceil(static_cast<float>(iTileCountX) / static_cast<float>(iTileSizeInPixels)));
+        const auto iThreadGroupCountY = static_cast<unsigned int>(
+            std::ceil(static_cast<float>(iTileCountY) / static_cast<float>(iTileSizeInPixels)));
+
+        // Update compute info resource.
+        ComputeInfo computeInfo;
+        computeInfo.iThreadGroupCountX = iThreadGroupCountX;
+        computeInfo.iThreadGroupCountY = iThreadGroupCountY;
+        computeInfo.iTileCountX = iTileCountX;
+        computeInfo.iTileCountY = iTileCountY;
+        computeInfo.maxDepth = Renderer::getMaxDepth();
+        resources.pComputeInfo->copyDataToElement(0, &computeInfo, sizeof(computeInfo));
+
+        // Update screen to view resource.
+        ScreenToViewData screenToViewData;
+        screenToViewData.iRenderResolutionWidth = renderResolution.first;
+        screenToViewData.iRenderResolutionHeight = renderResolution.second;
+        screenToViewData.inverseProjectionMatrix = inverseProjectionMatrix;
+        resources.pScreenToViewData->copyDataToElement(0, &screenToViewData, sizeof(screenToViewData));
+
+        // Recreate resource to store array of frustums with new size.
+        auto frustumsResourceResult = pRenderer->getResourceManager()->createResource(
+            "light grid of frustums",
+            sizeof(ComputeShaderData::Frustum),
+            iFrustumCount,
+            ResourceUsageType::ARRAY_BUFFER,
+            true);
+        if (std::holds_alternative<Error>(frustumsResourceResult)) [[unlikely]] {
+            auto error = std::get<Error>(std::move(frustumsResourceResult));
+            error.addCurrentLocationToErrorStack();
+            return error;
+        }
+        resources.pCalculatedFrustums =
+            std::get<std::unique_ptr<GpuResource>>(std::move(frustumsResourceResult));
+
+        // Rebind GPU resource for frustums because we recreated it.
+        auto optionalError = pComputeInterface->bindResource(
+            resources.pCalculatedFrustums.get(),
+            sCalculatedFrustumsShaderResourceName,
+            ComputeResourceUsage::READ_WRITE_ARRAY_BUFFER);
+        if (optionalError.has_value()) [[unlikely]] {
+            optionalError->addCurrentLocationToErrorStack();
+            return optionalError;
+        }
+
+        if (bQueueShaderExecution) {
+            // Queue frustum grid recalculation shader.
+            pComputeInterface->submitForExecution(iThreadGroupCountX, iThreadGroupCountY, 1);
+        }
+
+        return {};
+    }
+
+    std::optional<Error>
+    LightingShaderResourceManager::ComputeShaderData::FrustumGridComputeShader::ComputeShader::initialize(
+        Renderer* pRenderer) {
+        if (bIsInitialized) [[unlikely]] {
+            return Error("already initialized");
+        }
+
         // Create compute interface for calculating grid of frustums for light culling.
         auto computeCreationResult = ComputeShaderInterface::createUsingGraphicsQueue(
             pRenderer,
@@ -1051,37 +1144,96 @@ namespace ne {
         if (std::holds_alternative<Error>(computeCreationResult)) [[unlikely]] {
             auto error = std::get<Error>(std::move(computeCreationResult));
             error.addCurrentLocationToErrorStack();
-            error.showError();
-            throw std::runtime_error(error.getFullErrorMessage());
+            return error;
         }
-        pFrustumGridComputeInterface =
+        pComputeInterface =
             std::get<std::unique_ptr<ComputeShaderInterface>>(std::move(computeCreationResult));
 
-        // Get render settings.
-        const auto pMtxRenderSettings = pRenderer->getRenderSettings();
-        std::scoped_lock guard(pMtxRenderSettings->first);
+        // Create compute info resource for shader.
+        auto result = pRenderer->getResourceManager()->createResourceWithCpuWriteAccess(
+            "light grid of frustums - compute info",
+            sizeof(ComputeShaderData::FrustumGridComputeShader::ComputeInfo),
+            1,
+            false);
+        if (std::holds_alternative<Error>(result)) [[unlikely]] {
+            auto error = std::get<Error>(std::move(result));
+            error.addCurrentLocationToErrorStack();
+            return error;
+        }
+        resources.pComputeInfo = std::get<std::unique_ptr<UploadBuffer>>(std::move(result));
 
-        // Recalculate grid frustums.
-        recalculateLightTileFrustums(pMtxRenderSettings->second->getRenderResolution());
-    }
-
-    void LightingShaderResourceManager::recalculateLightTileFrustums(
-        const std::pair<unsigned int, unsigned int>& renderResolution) {
-        // Make sure engine shaders were compiled and we created compute interface.
-        if (pFrustumGridComputeInterface == nullptr) {
-            // Not compiled yet.
-            return;
+        // Bind the resource.
+        auto optionalError = pComputeInterface->bindResource(
+            resources.pComputeInfo->getInternalResource(),
+            sComputeInfoShaderResourceName,
+            ComputeResourceUsage::CONSTANT_BUFFER);
+        if (optionalError.has_value()) [[unlikely]] {
+            optionalError->addCurrentLocationToErrorStack();
+            return optionalError;
         }
 
-        // Update GPU resources.
-        // TODO;
+        // Create screen to view resource.
+        result = pRenderer->getResourceManager()->createResourceWithCpuWriteAccess(
+            "light grid of frustums - screen to view data",
+            sizeof(ComputeShaderData::FrustumGridComputeShader::ScreenToViewData),
+            1,
+            false);
+        if (std::holds_alternative<Error>(result)) [[unlikely]] {
+            auto error = std::get<Error>(std::move(result));
+            error.addCurrentLocationToErrorStack();
+            return error;
+        }
+        resources.pScreenToViewData = std::get<std::unique_ptr<UploadBuffer>>(std::move(result));
 
-        // Recalculate group count.
-        // TODO;
+        // Bind the resource.
+        optionalError = pComputeInterface->bindResource(
+            resources.pScreenToViewData->getInternalResource(),
+            sScreenToViewDataShaderResourceName,
+            ComputeResourceUsage::CONSTANT_BUFFER);
+        if (optionalError.has_value()) [[unlikely]] {
+            optionalError->addCurrentLocationToErrorStack();
+            return optionalError;
+        }
 
-        // Queue frustum grid recalculation compute shader.
-        // pFrustumGridComputeInterface->submitForExecution(TODO);
+        // Resource for calculated frustums will be created when we will update resources.
+
+        // Done.
+        bIsInitialized = true;
+
+        return {};
     }
+
+    std::optional<Error> LightingShaderResourceManager::recalculateLightTileFrustums(
+        const std::pair<unsigned int, unsigned int>& renderResolution,
+        const glm::mat4& inverseProjectionMatrix) {
+        // Make sure compute interface is created.
+        if (frustumGridComputeShaderData.pComputeInterface == nullptr) {
+            // Check if the renderer compiled our compute shader or not.
+            if (!bEngineShadersCompiled) {
+                // Waiting for engine shaders to be compiled.
+                return {};
+            }
+
+            // Initialize shader data.
+            auto optionalError = frustumGridComputeShaderData.initialize(pRenderer);
+            if (optionalError.has_value()) [[unlikely]] {
+                optionalError->addCurrentLocationToErrorStack();
+                return optionalError;
+            }
+        }
+
+        // Update shader data.
+        auto optionalError = frustumGridComputeShaderData.updateData(
+            pRenderer, renderResolution, inverseProjectionMatrix, true);
+        if (optionalError.has_value()) [[unlikely]] {
+            optionalError->addCurrentLocationToErrorStack();
+            return optionalError;
+        }
+
+        return {};
+    }
+
+    void LightingShaderResourceManager::onEngineShadersCompiled() { bEngineShadersCompiled = true; }
 
     void LightingShaderResourceManager::setAmbientLight(const glm::vec3& ambientLight) {
         std::scoped_lock guard(mtxGpuData.first);
@@ -1098,7 +1250,7 @@ namespace ne {
 
 #if defined(DEBUG) && defined(WIN32)
         static_assert(
-            sizeof(LightingShaderResourceManager) == 176, "consider resetting new arrays here"); // NOLINT
+            sizeof(LightingShaderResourceManager) == 224, "consider resetting new arrays here"); // NOLINT
 #elif defined(DEBUG)
         static_assert(
             sizeof(LightingShaderResourceManager) == 144, "consider resetting new arrays here"); // NOLINT

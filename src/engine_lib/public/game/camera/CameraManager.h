@@ -10,6 +10,7 @@
 namespace ne {
     class CameraNode;
     class TransientCamera;
+    class Renderer;
 
     /** Determines what camera is used to draw on the screen. */
     class CameraManager {
@@ -29,7 +30,14 @@ namespace ne {
             gc<CameraNode> pCameraNode;
         };
 
-        CameraManager() = default;
+        CameraManager() = delete;
+
+        /**
+         * Creates a new manager.
+         *
+         * @param pRenderer Used renderer.
+         */
+        CameraManager(Renderer* pRenderer);
 
         /**
          * Takes a transient camera an makes it the primary camera.
@@ -84,6 +92,9 @@ namespace ne {
 
         /** Marks the currently active camera in @ref mtxActiveCamera as inactive. */
         void markPreviousCameraAsInactive();
+
+        /** Used renderer. */
+        Renderer* pRenderer = nullptr;
 
         /** Stores active camera. */
         std::pair<std::recursive_mutex, ActiveCamera> mtxActiveCamera;

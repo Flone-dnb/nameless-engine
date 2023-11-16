@@ -46,6 +46,9 @@ namespace ne {
         // in the rendering (also removes itself when despawned).
         friend class EnvironmentNode;
 
+        // Notifies when active camera changes.
+        friend class CameraManager;
+
     public:
         Renderer() = delete;
         Renderer(const Renderer&) = delete;
@@ -474,7 +477,7 @@ namespace ne {
          * Called after some render setting is changed to recreate internal resources to match the current
          * settings.
          *
-         * @remark Derived classes must call parent's version first.
+         * @warning Derived classes must call parent's version first.
          *
          * @return Error if something went wrong.
          */
@@ -701,6 +704,17 @@ namespace ne {
 
             return !bIsVisible;
         }
+
+        /**
+         * Called to notify @ref pLightingShaderResourceManager to recalculate grid of frustums
+         * for light culling process.
+         *
+         * @return Error if something went wrong.
+         */
+        [[nodiscard]] std::optional<Error> recalculateLightTileFrustums();
+
+        /** Called by camera manager after active camera was changed. */
+        void onActiveCameraChanged();
 
         /** Looks for FPS limit setting in RenderSettings and update renderer's state. */
         void updateFpsLimitSetting();

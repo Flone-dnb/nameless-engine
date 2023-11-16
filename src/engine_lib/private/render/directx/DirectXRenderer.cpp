@@ -1304,11 +1304,8 @@ namespace ne {
         // available on Windows 11 so we should just log the error here using the `info` category.
         hResult = pDevice->QueryInterface(IID_PPV_ARGS(&pInfoQueue));
         if (FAILED(hResult)) {
-            const auto error = Error(hResult);
-            Logger::get().info(std::format(
-                "ID3D12InfoQueue1 does not seem to be available on this system, failed to query the "
-                "interface: {}",
-                error.getInitialMessage()));
+            Logger::get().info("ID3D12InfoQueue1 does not seem to be available on this system, failed to "
+                               "query the interface");
         } else {
             // Register debug message callback.
             DWORD* pUnregisterCookie = nullptr;

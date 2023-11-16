@@ -12,17 +12,11 @@
     /** Total number of thread groups dispatched in the Y direction. */
     uint iThreadGroupCountY;
 
-    /**
-     * Total number of threads dispatched in the X direction that will be used (may be less than actual number of threads
-     * dispatched if the screen size is not evenly divisible by the thread group size).
-     */
-    uint iThreadCountInUseX;
+    /** Total number of tiles in the X direction. */
+    uint iTileCountX;
 
-    /**
-     * Total number of threads dispatched in the Y direction that will be used (may be less than actual number of threads
-     * dispatched if the screen size is not evenly divisible by the thread group size).
-     */
-    uint iThreadCountInUseY;
+    /** Total number of tiles in the Y direction. */
+    uint iTileCountY;
 
     /** Maximum depth value. */
     float maxDepth;

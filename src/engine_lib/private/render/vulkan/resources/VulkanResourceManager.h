@@ -181,6 +181,28 @@ namespace ne {
             bool bIsShaderReadWriteResource) override;
 
         /**
+         * Creates a new GPU resource (buffer, not a texture) without any initial data.
+         *
+         * @remark This function can be useful if you plan to create a resource to be filled
+         * from a (compute) shader and then use this data in some other shader.
+         *
+         * @param sResourceName              Resource name, used for logging.
+         * @param iElementSizeInBytes        Size of one buffer element in bytes.
+         * @param iElementCount              Number of elements in the resulting buffer.
+         * @param usage                      Describes how you plan to use this resource.
+         * @param bIsShaderReadWriteResource Specify `true` if you plan to modify the resource
+         * from shaders, otherwise `false`.
+         *
+         * @return Error if something went wrong, otherwise created resource with filled data.
+         */
+        virtual std::variant<std::unique_ptr<GpuResource>, Error> createResource(
+            const std::string& sResourceName,
+            size_t iElementSizeInBytes,
+            size_t iElementCount,
+            ResourceUsageType usage,
+            bool bIsShaderReadWriteResource) override;
+
+        /**
          * Returns manager that controls storage buffers that act as arrays for
          * shader CPU read/write resources.
          *

@@ -16,6 +16,10 @@
 #include "game/nodes/EnvironmentNode.h"
 #include "render/general/pipeline/PipelineManager.h"
 #include "game/nodes/MeshNode.h"
+#include "game/camera/CameraManager.h"
+#include "game/camera/CameraProperties.h"
+#include "game/camera/TransientCamera.h"
+#include "game/nodes/CameraNode.h"
 #if defined(WIN32)
 #pragma comment(lib, "Winmm.lib")
 #include "render/directx/DirectXRenderer.h"
@@ -249,12 +253,65 @@ namespace ne {
     std::optional<Error> Renderer::onRenderSettingsChanged() {
         updateFpsLimitSetting();
 
-        // Recalculate grid of frustums for light culling.
-        std::scoped_lock guard(mtxRenderSettings.first);
-        pLightingShaderResourceManager->recalculateLightTileFrustums(
-            mtxRenderSettings.second->getRenderResolution());
+        // Notify lighting manager.
+        auto optionalError = recalculateLightTileFrustums();
+        if (optionalError.has_value()) [[unlikely]] {
+            optionalError->addCurrentLocationToErrorStack();
+            return optionalError;
+        }
 
         return {};
+    }
+
+    std::optional<Error> Renderer::recalculateLightTileFrustums() {
+        // Get camera manager.
+        const auto pCameraManager = getGameManager()->getCameraManager();
+        if (pCameraManager == nullptr) {
+            // No active camera, no need to notify lighting manager.
+            return {};
+        }
+
+        // Get render settings and active camera.
+        const auto pMtxActiveCamera = pCameraManager->getActiveCamera();
+
+        // Lock settings and camera.
+        std::scoped_lock guard(mtxRenderSettings.first, pMtxActiveCamera->first);
+
+        // Get active camera properties.
+        CameraProperties* pActiveCameraProperties = nullptr;
+        if (pMtxActiveCamera->second.pCameraNode != nullptr) {
+            pActiveCameraProperties = pMtxActiveCamera->second.pCameraNode->getCameraProperties();
+        } else if (pMtxActiveCamera->second.pTransientCamera != nullptr) {
+            pActiveCameraProperties = pMtxActiveCamera->second.pTransientCamera->getCameraProperties();
+        } else {
+            // No active camera, no need to notify lighting manager.
+            return {};
+        }
+
+        // Get inverse projection matrix.
+        const glm::mat4 inverseProjectionMatrix =
+            glm::inverse(pActiveCameraProperties->getProjectionMatrix());
+
+        // Recalculate grid of frustums for light culling.
+        auto optionalError = pLightingShaderResourceManager->recalculateLightTileFrustums(
+            mtxRenderSettings.second->getRenderResolution(), inverseProjectionMatrix);
+        if (optionalError.has_value()) [[unlikely]] {
+            optionalError->addCurrentLocationToErrorStack();
+            return optionalError;
+        }
+
+        return {};
+    }
+
+    void Renderer::onActiveCameraChanged() {
+        // Recalculate grid of frustums for light culling
+        // because projection matrix of the new camera might be different.
+        auto optionalError = recalculateLightTileFrustums();
+        if (optionalError.has_value()) [[unlikely]] {
+            optionalError->addCurrentLocationToErrorStack();
+            optionalError->showError();
+            throw std::runtime_error(optionalError->getFullErrorMessage());
+        }
     }
 
     std::unique_ptr<Renderer>
@@ -449,8 +506,13 @@ namespace ne {
             return optionalError.value();
         }
 
-        // Notify lighting manager.
+        // Notify lighting manager that we compiled compute shaders it needs.
         pCreatedRenderer->pLightingShaderResourceManager->onEngineShadersCompiled();
+        optionalError = pCreatedRenderer->recalculateLightTileFrustums();
+        if (optionalError.has_value()) [[unlikely]] {
+            optionalError->addCurrentLocationToErrorStack();
+            return optionalError.value();
+        }
 
         // Setup frame statistics.
         pCreatedRenderer->setupFrameStats();
@@ -686,9 +748,6 @@ namespace ne {
         // Don't allow new frames to be submitted.
         std::scoped_lock frameGuard(*getRenderResourcesMutex());
 
-        // Update camera's aspect ratio (if it was changed).
-        pCameraProperties->setAspectRatio(iRenderTargetWidth, iRenderTargetHeight);
-
         // Get current frame resource.
         auto pMtxCurrentFrameResource = getFrameResourcesManager()->getCurrentFrameResource();
         std::scoped_lock frameResource(pMtxCurrentFrameResource->first);
@@ -706,6 +765,27 @@ namespace ne {
             const auto endTime = std::chrono::steady_clock::now();
             frameStats.timeSpentLastFrameWaitingForGpuInMs =
                 std::chrono::duration<float, std::chrono::milliseconds::period>(endTime - startTime).count();
+        }
+
+        // Update camera's aspect ratio (if it was changed).
+        pCameraProperties->setRenderTargetSize(iRenderTargetWidth, iRenderTargetHeight);
+
+        {
+            // See if camera's projection matrix was changed.
+            std::scoped_lock cameraGuard(pCameraProperties->mtxData.first);
+
+            if (pCameraProperties->mtxData.second.projectionData.bLightGridFrustumsNeedUpdate) {
+                // Queue compute shader to recalculate frustums for light culling.
+                auto optionalError = recalculateLightTileFrustums();
+                if (optionalError.has_value()) [[unlikely]] {
+                    optionalError->addCurrentLocationToErrorStack();
+                    optionalError->showError();
+                    throw std::runtime_error(optionalError->getFullErrorMessage());
+                }
+
+                // Mark as updated.
+                pCameraProperties->mtxData.second.projectionData.bLightGridFrustumsNeedUpdate = false;
+            }
         }
 
         // Copy new (up to date) data to frame data GPU resource to be used by shaders.

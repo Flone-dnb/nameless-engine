@@ -24,6 +24,10 @@ namespace ne {
         friend class CameraNode;
         friend class TransientCamera;
 
+        // Renderer sets render target size and also looks if projection matrix was changed or
+        // not to recalculate grid of frustums for light culling.
+        friend class Renderer;
+
     public:
         CameraProperties() = default;
 
@@ -77,6 +81,15 @@ namespace ne {
 
                 /** Whether @ref projectionMatrix needs to be recalculated or not. */
                 bool bProjectionMatrixNeedsUpdate = true;
+
+                /**
+                 * Used by the renderer to track if @ref projectionMatrix was changed or not
+                 * to recalculate grid of frustums for light culling.
+                 *
+                 * @remark Camera only sets this value to `true` and only renderer is allowed
+                 * to set this value to `false`.
+                 */
+                bool bLightGridFrustumsNeedUpdate = true;
 
                 /** Distance from camera (view) space origin to camera's near clip plane. */
                 float nearClipPlaneDistance = 0.3F; // NOLINT: magic number
@@ -139,16 +152,6 @@ namespace ne {
         void setFov(unsigned int iVerticalFov);
 
         /**
-         * Sets camera's aspect ratio.
-         *
-         * @remark Does nothing if the specified aspect ratio is equal to the current aspect ratio.
-         *
-         * @param iRenderTargetWidth  Width of the buffer we are rendering the image to.
-         * @param iRenderTargetHeight Height of the buffer we are rendering the image to.
-         */
-        void setAspectRatio(unsigned int iRenderTargetWidth, unsigned int iRenderTargetHeight);
-
-        /**
          * Sets distance from camera (view) space origin to camera's near clip plane.
          *
          * @param nearClipPlaneDistance Near Z distance. Should be a positive value.
@@ -182,20 +185,6 @@ namespace ne {
          * @return Distance to far clip plane.
          */
         float getFarClipPlaneDistance();
-
-        /**
-         * Returns width (component of aspect ratio) of the target we are presenting the camera.
-         *
-         * @return Camera's aspect ratio's width.
-         */
-        unsigned int getRenderTargetWidth();
-
-        /**
-         * Returns height (component of aspect ratio) of the target we are presenting the camera.
-         *
-         * @return Camera's aspect ratio's height.
-         */
-        unsigned int getRenderTargetHeight();
 
         /**
          * Returns the current camera mode.
@@ -249,6 +238,18 @@ namespace ne {
         inline Frustum* getCameraFrustum() { return &mtxData.second.frustum; }
 
     private:
+        /**
+         * Sets size of the render target for projection matrix calculations.
+         *
+         * @remark Does nothing if the specified size is the same as the previous one.
+         *
+         * @remark Called by the renderer to set render target size.
+         *
+         * @param iRenderTargetWidth  Width of the buffer we are rendering the image to.
+         * @param iRenderTargetHeight Height of the buffer we are rendering the image to.
+         */
+        void setRenderTargetSize(unsigned int iRenderTargetWidth, unsigned int iRenderTargetHeight);
+
         /**
          * Recalculates camera's view matrix if it needs to be updated.
          *

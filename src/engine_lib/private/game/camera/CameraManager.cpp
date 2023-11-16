@@ -8,8 +8,11 @@
 #include "game/nodes/CameraNode.h"
 #include "game/camera/TransientCamera.h"
 #include "misc/Profiler.hpp"
+#include "render/Renderer.h"
 
 namespace ne {
+
+    CameraManager::CameraManager(Renderer* pRenderer) { this->pRenderer = pRenderer; }
 
     void CameraManager::setActiveCamera(std::shared_ptr<TransientCamera> pTransientCamera) {
         if (pTransientCamera == nullptr) [[unlikely]] {
@@ -57,6 +60,9 @@ namespace ne {
 
         mtxActiveCamera.second.pCameraNode = pCameraNode;
         mtxActiveCamera.second.pTransientCamera = nullptr;
+
+        // Notify renderer.
+        pRenderer->onActiveCameraChanged();
     }
 
     void CameraManager::clearActiveCamera() {
@@ -66,6 +72,9 @@ namespace ne {
 
         mtxActiveCamera.second.pCameraNode = nullptr;
         mtxActiveCamera.second.pTransientCamera = nullptr;
+
+        // Notify renderer.
+        pRenderer->onActiveCameraChanged();
     }
 
     std::pair<std::recursive_mutex, CameraManager::ActiveCamera>* CameraManager::getActiveCamera() {

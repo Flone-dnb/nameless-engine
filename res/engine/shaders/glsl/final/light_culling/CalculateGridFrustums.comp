@@ -14,12 +14,12 @@ layout (local_size_x = THREADS_IN_GROUP_XY, local_size_y = THREADS_IN_GROUP_XY, 
 void main(){
     // Make sure we don't calculate frustums out of bounds
     // (this may happen if the screen size is not evenly divisible by the thread group size).
-    if (gl_GlobalInvocationID.x >= computeInfo.iThreadCountInUseX || gl_GlobalInvocationID.y >= computeInfo.iThreadCountInUseY){
+    if (gl_GlobalInvocationID.x >= computeInfo.iTileCountX || gl_GlobalInvocationID.y >= computeInfo.iTileCountY){
         return;
     }
 
     // Calculate index into the resulting buffer to write the calculated frustum.
-    const uint iFrustumIndex = (gl_GlobalInvocationID.y * computeInfo.iThreadCountInUseX) + gl_GlobalInvocationID.x;
+    const uint iFrustumIndex = (gl_GlobalInvocationID.y * computeInfo.iTileCountX) + gl_GlobalInvocationID.x;
 
     // Calculate tile frustum and write it to the resulting buffer.
     calculatedFrustums.array[iFrustumIndex] = calculateFrustumInViewSpaceForGridTileInScreenSpace(

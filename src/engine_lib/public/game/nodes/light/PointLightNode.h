@@ -38,12 +38,11 @@ namespace ne RNAMESPACE() {
         void setLightIntensity(float intensity);
 
         /**
-         * Sets distance where the light intensity is half the maximum intensity (see @ref setLightIntensity).
+         * Sets lit distance (i.e. attenuation radius).
          *
-         * @param halfDistance Distance where intensity is half the maximum in range is [0.0; +inf]
-         * (will be clamped of outside of the range).
+         * @param distance Lit distance.
          */
-        void setLightHalfDistance(float halfDistance);
+        void setLightDistance(float distance);
 
         /**
          * Returns color of this light source.
@@ -60,11 +59,11 @@ namespace ne RNAMESPACE() {
         float getLightIntensity() const;
 
         /**
-         * Returns distance where the light intensity is half the maximum intensity.
+         * Returns lit distance.
          *
-         * @return Distance in range [0.0; +inf].
+         * @return Distance.
          */
-        float getLightHalfDistance() const;
+        float getLightDistance() const;
 
     protected:
         /**
@@ -124,8 +123,8 @@ namespace ne RNAMESPACE() {
             /** Light intensity. */
             alignas(iVkScalarAlignment) float intensity = 1.0F;
 
-            /** Distance where intensity is half the maximum. */
-            alignas(iVkScalarAlignment) float halfDistance = 5.0F; // NOLINT
+            /** Lit distance. */
+            alignas(iVkScalarAlignment) float distance = 1.0F;
         };
 
         /** Groups data related to shaders. */
@@ -170,15 +169,9 @@ namespace ne RNAMESPACE() {
         RPROPERTY(Serialize)
         float intensity = 1.0F;
 
-        /**
-         * Distance where the light intensity is half the maximal intensity,
-         * valid values range is [@ref minimumHalfDistance; +inf].
-         */
+        /** Lit distance. */
         RPROPERTY(Serialize)
-        float halfDistance = 5.0F; // NOLINT: seems like a pretty good default value
-
-        /** Minimum value for @ref halfDistance to avoid division by zero in shaders. */
-        static constexpr float minimumHalfDistance = 0.001F; // NOLINT
+        float distance = 10.0F; // NOLINT: seems like a pretty good default value
 
         ne_PointLightNode_GENERATED
     };

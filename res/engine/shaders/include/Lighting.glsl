@@ -28,11 +28,8 @@ struct PointLight{
     /** Light intensity, valid values range is [0.0F; 1.0F]. */
     float intensity;
 
-    /**
-     * Distance where the light intensity is half the maximal intensity,
-     * valid values range is [0.01F; +inf].
-     */
-    float halfDistance;
+    /** Lit distance. */
+    float distance;
 
 #hlsl float2 pad1; // to pack as in Vulkan
 };
@@ -81,11 +78,8 @@ struct Spotlight{
     /** Light intensity, valid values range is [0.0F; 1.0F]. */
     float intensity;
 
-    /**
-     * Distance where the light intensity is half the maximal intensity,
-     * valid values range is [0.001F; +inf].
-     */
-    float halfDistance;
+    /** Lit distance. */
+    float distance;
 
     /**
      * Cosine of the spotlight's inner cone angle (cutoff).
@@ -188,13 +182,16 @@ vec3 calculateColorFromLightSource(
  *
  * @param distanceToLightSource Distance between pixel/fragment and the light source.
  * @param lightIntensity        Light intensity, valid values range is [0.0F; 1.0F].
- * @param lightHalfDistance     Distance where the light intensity is half the maximal intensity, valid values range is [0.001F; +inf].
+ * @param lightDistance         Lit distance.
  *
  * @return Factor in range [0.0; 1.0] where 0.0 means "no light is received" and 1.0 means "full light is received".
  */
-float calculateLightAttenuation(float distanceToLightSource, float lightIntensity, float lightHalfDistance){
-    float distanceToLightDivHalfRadius = distanceToLightSource / lightHalfDistance;
-    return lightIntensity / (1.0F + distanceToLightDivHalfRadius * distanceToLightDivHalfRadius);
+float calculateLightAttenuation(float distanceToLightSource, float lightIntensity, float lightDistance){
+    // Use linear attenuation because it allows us to do sphere/cone intersection tests in light culling
+    // more "efficient" in terms of light radius/distance to lit area. For example with linear attenuation if we have lit
+    // distance 30 almost all this distance will be somewhat lit while with "inverse squared distance" function (and similar)
+    // almost half of this distance will have pretty much no light.
+    return clamp((lightDistance - distanceToLightSource) / lightDistance, 0.0F, 1.0F) * lightIntensity;
 }
 
 /**
@@ -221,7 +218,7 @@ vec3 calculateColorFromPointLight(
     // Calculate light attenuation.
     float fragmentDistanceToLight = length(lightSource.position.xyz - fragmentPosition);
     vec3 attenuatedLightColor = lightSource.color.rgb
-        * calculateLightAttenuation(fragmentDistanceToLight, lightSource.intensity, lightSource.halfDistance);
+        * calculateLightAttenuation(fragmentDistanceToLight, lightSource.intensity, lightSource.distance);
 
     return calculateColorFromLightSource(
         attenuatedLightColor,
@@ -293,7 +290,7 @@ vec3 calculateColorFromSpotlight(
     // Calculate light attenuation.
     float fragmentDistanceToLight = length(lightSource.position.xyz - fragmentPosition);
     vec3 attenuatedLightColor = lightSource.color.rgb
-        * calculateLightAttenuation(fragmentDistanceToLight, lightSource.intensity, lightSource.halfDistance);
+        * calculateLightAttenuation(fragmentDistanceToLight, lightSource.intensity, lightSource.distance);
 
     // Calculate angle between light direction and direction from fragment to light source
     // to see if this fragment is inside of the light cone or not.

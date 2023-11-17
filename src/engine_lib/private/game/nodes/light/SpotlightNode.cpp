@@ -23,7 +23,7 @@ namespace ne {
         mtxShaderData.second.shaderData.direction = glm::vec4(getWorldForwardDirection(), 0.0F);
         mtxShaderData.second.shaderData.color = glm::vec4(color, 1.0F);
         mtxShaderData.second.shaderData.intensity = intensity;
-        mtxShaderData.second.shaderData.halfDistance = halfDistance;
+        mtxShaderData.second.shaderData.distance = distance;
         mtxShaderData.second.shaderData.cosInnerConeAngle =
             glm::cos(glm::radians(innerConeAngle / 2.0F)); // NOLINT
         mtxShaderData.second.shaderData.cosOuterConeAngle =
@@ -89,14 +89,11 @@ namespace ne {
         markShaderDataToBeCopiedToGpu();
     }
 
-    void SpotlightNode::setLightHalfDistance(float halfDistance) {
+    void SpotlightNode::setLightDistance(float distance) {
         std::scoped_lock guard(mtxShaderData.first);
 
-        // Save new parameter.
-        this->halfDistance = std::max(halfDistance, minimumHalfDistance);
-
         // Update shader data.
-        mtxShaderData.second.shaderData.halfDistance = this->halfDistance;
+        mtxShaderData.second.shaderData.distance = distance;
 
         // Mark updated shader data to be later copied to the GPU resource.
         markShaderDataToBeCopiedToGpu();
@@ -143,9 +140,6 @@ namespace ne {
         // Make sure our intensity is in range [0.0; 1.0].
         intensity = std::clamp(intensity, 0.0F, 1.0F);
 
-        // Make sure our half distance is not zero or negative.
-        halfDistance = std::max(halfDistance, minimumHalfDistance);
-
         // Make sure our cutoff angle is in range [0.0; 180.0].
         innerConeAngle = std::clamp(innerConeAngle, 0.0F, 180.0F);           // NOLINT
         outerConeAngle = std::clamp(outerConeAngle, innerConeAngle, 180.0F); // NOLINT
@@ -179,7 +173,7 @@ namespace ne {
 
     float SpotlightNode::getLightIntensity() const { return intensity; }
 
-    float SpotlightNode::getLightHalfDistance() const { return halfDistance; }
+    float SpotlightNode::getLightDistance() const { return distance; }
 
     void SpotlightNode::onWorldLocationRotationScaleChanged() {
         SpatialNode::onWorldLocationRotationScaleChanged();

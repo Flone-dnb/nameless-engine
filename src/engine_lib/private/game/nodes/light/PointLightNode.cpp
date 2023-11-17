@@ -22,7 +22,7 @@ namespace ne {
         mtxShaderData.second.shaderData.position = glm::vec4(getWorldLocation(), 1.0F);
         mtxShaderData.second.shaderData.color = glm::vec4(color, 1.0F);
         mtxShaderData.second.shaderData.intensity = intensity;
-        mtxShaderData.second.shaderData.halfDistance = halfDistance;
+        mtxShaderData.second.shaderData.distance = distance;
 #if defined(DEBUG)
         static_assert(sizeof(PointLightShaderData) == 48, "consider copying new parameters here");
 #endif
@@ -84,14 +84,11 @@ namespace ne {
         markShaderDataToBeCopiedToGpu();
     }
 
-    void PointLightNode::setLightHalfDistance(float halfDistance) {
+    void PointLightNode::setLightDistance(float distance) {
         std::scoped_lock guard(mtxShaderData.first);
 
-        // Save new parameter.
-        this->halfDistance = std::max(halfDistance, minimumHalfDistance);
-
         // Update shader data.
-        mtxShaderData.second.shaderData.halfDistance = this->halfDistance;
+        mtxShaderData.second.shaderData.distance = distance;
 
         // Mark updated shader data to be later copied to the GPU resource.
         markShaderDataToBeCopiedToGpu();
@@ -102,9 +99,6 @@ namespace ne {
 
         // Make sure our intensity is in range [0.0; 1.0].
         intensity = std::clamp(intensity, 0.0F, 1.0F);
-
-        // Make sure our half distance is not zero or negative.
-        halfDistance = std::max(halfDistance, minimumHalfDistance);
 
 #if defined(DEBUG)
         static_assert(sizeof(PointLightShaderData) == 48, "consider clamping new parameters here");
@@ -135,7 +129,7 @@ namespace ne {
 
     float PointLightNode::getLightIntensity() const { return intensity; }
 
-    float PointLightNode::getLightHalfDistance() const { return halfDistance; }
+    float PointLightNode::getLightDistance() const { return distance; }
 
     void PointLightNode::onWorldLocationRotationScaleChanged() {
         SpatialNode::onWorldLocationRotationScaleChanged();

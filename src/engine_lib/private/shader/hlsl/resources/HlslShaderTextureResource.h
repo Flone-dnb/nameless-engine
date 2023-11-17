@@ -8,7 +8,7 @@
 
 // Custom.
 #include "shader/general/resources/ShaderResource.h"
-#include "render/directx/resources/DirectXResource.h"
+#include "render/directx/descriptors/DirectXDescriptorHeap.h"
 
 namespace ne {
     class Pipeline;
@@ -75,7 +75,8 @@ namespace ne {
             pCommandList->SetGraphicsRootDescriptorTable(
                 mtxRootParameterIndices.second.begin()->second,
                 D3D12_GPU_DESCRIPTOR_HANDLE{
-                    iSrvHeapStart + (*optionalDescriptorOffset) * iSrvDescriptorSize});
+                    pSrvHeap->getInternalHeap()->GetGPUDescriptorHandleForHeapStart().ptr +
+                    (*optionalDescriptorOffset) * iSrvDescriptorSize});
         }
 
         /**
@@ -120,7 +121,8 @@ namespace ne {
             pCommandList->SetGraphicsRootDescriptorTable(
                 it->second,
                 D3D12_GPU_DESCRIPTOR_HANDLE{
-                    iSrvHeapStart + (*optionalDescriptorOffset) * iSrvDescriptorSize});
+                    pSrvHeap->getInternalHeap()->GetGPUDescriptorHandleForHeapStart().ptr +
+                    (*optionalDescriptorOffset) * iSrvDescriptorSize});
         }
 
         /**
@@ -205,8 +207,8 @@ namespace ne {
         /** Descriptor binded to @ref mtxUsedTexture. */
         DirectXDescriptor* pTextureSrv = nullptr;
 
-        /** GPU descriptor handle for SRV heap start. */
-        UINT64 iSrvHeapStart = 0;
+        /** SRV heap. */
+        DirectXDescriptorHeap* pSrvHeap = nullptr;
 
         /** Size of one SRV descriptor. */
         UINT iSrvDescriptorSize = 0;

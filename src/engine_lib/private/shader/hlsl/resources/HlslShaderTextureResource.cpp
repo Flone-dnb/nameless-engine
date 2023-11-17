@@ -89,10 +89,7 @@ namespace ne {
         }
 
         // Get SRV heap.
-        const auto pSrvHeap = pResourceManager->getCbvSrvUavHeap();
-
-        // Save SRV heap start.
-        iSrvHeapStart = pSrvHeap->getInternalHeap()->GetGPUDescriptorHandleForHeapStart().ptr;
+        pSrvHeap = pResourceManager->getCbvSrvUavHeap();
 
         // Save SRV descriptor size.
         iSrvDescriptorSize = pSrvHeap->getDescriptorSize();

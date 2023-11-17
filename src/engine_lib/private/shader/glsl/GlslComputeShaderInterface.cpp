@@ -43,14 +43,50 @@ namespace ne {
             return Error("expected a Vulkan resource");
         }
 
-        // Make sure resource size information is available.
-        if (pVulkanResource->getElementSizeInBytes() == 0 || pVulkanResource->getElementCount() == 0)
-            [[unlikely]] {
-            return Error("resource size information is not available");
+        // Prepare descriptor type.
+        bool bIsBufferDescriptor = true;
+        VkDescriptorType descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        switch (usage) {
+        case (ComputeResourceUsage::CONSTANT_BUFFER): {
+            descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+            break;
+        }
+        case (ComputeResourceUsage::READ_ONLY_ARRAY_BUFFER): {
+            descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+            break;
+        }
+        case (ComputeResourceUsage::READ_WRITE_ARRAY_BUFFER): {
+            descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+            break;
+        }
+        case (ComputeResourceUsage::TEXTURE): {
+            descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+            bIsBufferDescriptor = false;
+            break;
+        }
+        default: {
+            return Error("unhandled case");
+            break;
+        }
         }
 
-        // Get resource's internal VkBuffer to be used later.
-        const auto pInternalVkBuffer = pVulkanResource->getInternalBufferResource();
+        if (bIsBufferDescriptor) {
+            // Make sure resource size information is available.
+            if (pVulkanResource->getElementSizeInBytes() == 0 || pVulkanResource->getElementCount() == 0)
+                [[unlikely]] {
+                return Error("resource size information is not available");
+            }
+
+            // Make sure buffer is valid.
+            if (pVulkanResource->getInternalBufferResource() == nullptr) [[unlikely]] {
+                return Error("expected resource's buffer to be valid");
+            }
+        } else {
+            // Make sure image view is valid.
+            if (pVulkanResource->getInternalImageView() == nullptr) [[unlikely]] {
+                return Error("expected resource's image view to be valid");
+            }
+        }
 
         // Get renderer.
         const auto pVulkanRenderer = dynamic_cast<VulkanRenderer*>(getRenderer());
@@ -64,18 +100,23 @@ namespace ne {
             return Error("logical device is `nullptr`");
         }
 
-        // Prepare descriptor type.
-        const auto descriptorType = usage == ComputeResourceUsage::CONSTANT_BUFFER
-                                        ? VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER
-                                        : VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-
         // Update one descriptor in set per frame resource.
         for (unsigned int i = 0; i < FrameResourcesManager::getFrameResourcesCount(); i++) {
-            // Prepare info to bind storage buffer slot to descriptor.
             VkDescriptorBufferInfo bufferInfo{};
-            bufferInfo.buffer = pInternalVkBuffer;
-            bufferInfo.offset = 0;
-            bufferInfo.range = pVulkanResource->getElementSizeInBytes() * pVulkanResource->getElementCount();
+            VkDescriptorImageInfo imageInfo{};
+
+            if (bIsBufferDescriptor) {
+                // Prepare info to bind storage buffer slot to descriptor.
+                bufferInfo.buffer = pVulkanResource->getInternalBufferResource();
+                bufferInfo.offset = 0;
+                bufferInfo.range =
+                    pVulkanResource->getElementSizeInBytes() * pVulkanResource->getElementCount();
+            } else {
+                // Prepare info to bind an image view to descriptor.
+                imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+                imageInfo.imageView = pVulkanResource->getInternalImageView();
+                imageInfo.sampler = pVulkanRenderer->getComputeTextureSampler();
+            }
 
             // Bind reserved space to descriptor.
             VkWriteDescriptorSet descriptorUpdateInfo{};
@@ -85,8 +126,13 @@ namespace ne {
             descriptorUpdateInfo.dstBinding = iBindingIndex;              // descriptor binding index
             descriptorUpdateInfo.dstArrayElement = 0; // first descriptor in array to update
             descriptorUpdateInfo.descriptorType = descriptorType;
-            descriptorUpdateInfo.descriptorCount = 1;       // how much descriptors in array to update
-            descriptorUpdateInfo.pBufferInfo = &bufferInfo; // descriptor refers to buffer data
+            descriptorUpdateInfo.descriptorCount = 1; // how much descriptors in array to update
+
+            if (bIsBufferDescriptor) {
+                descriptorUpdateInfo.pBufferInfo = &bufferInfo; // descriptor refers to buffer data
+            } else {
+                descriptorUpdateInfo.pImageInfo = &imageInfo; // descriptor refers to image data
+            }
 
             // Update descriptor.
             vkUpdateDescriptorSets(pLogicalDevice, 1, &descriptorUpdateInfo, 0, nullptr);

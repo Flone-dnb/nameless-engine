@@ -190,6 +190,17 @@ namespace ne {
         VkQueue getGraphicsQueue() const;
 
         /**
+         * Returns Vulkan texture sampler with nearest filtering and mipmapping.
+         *
+         * @remark Used for compute shaders that need to read textures.
+         *
+         * @remark Guaranteed to never be re-created (always valid).
+         *
+         * @return `nullptr` if not created yet, otherwise valid sampler.
+         */
+        VkSampler getComputeTextureSampler() const;
+
+        /**
          * Returns the size of images in the swap chain.
          *
          * @return Empty if the swap chain is not initialized, otherwise the size of images in
@@ -598,6 +609,17 @@ namespace ne {
         [[nodiscard]] std::optional<Error> createTextureSampler();
 
         /**
+         * Creates @ref pComputeTextureSampler.
+         *
+         * @warning Expects that @ref pLogicalDevice is valid.
+         *
+         * @warning Expected to be called only once so that this sampler will never be re-created.
+         *
+         * @return Error if something went wrong.
+         */
+        [[nodiscard]] std::optional<Error> createComputeTextureSampler();
+
+        /**
          * Tells if @ref depthImageFormat is supported by the hardware.
          *
          * @return `true` if supported, `false` otherwise.
@@ -766,6 +788,13 @@ namespace ne {
 
         /** Texture sampler. */
         VkSampler pTextureSampler = nullptr;
+
+        /**
+         * Texture sampler with nearest filtering and mipmapping for fetching texels in compute shader.
+         *
+         * @remark Always valid and not re-created when texture filtering is changed.
+         */
+        VkSampler pComputeTextureSampler = nullptr;
 
 #if defined(DEBUG)
         /**

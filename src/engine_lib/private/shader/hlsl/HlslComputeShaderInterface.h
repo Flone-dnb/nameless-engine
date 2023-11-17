@@ -6,6 +6,7 @@
 // Custom.
 #include "shader/ComputeShaderInterface.h"
 #include "render/directx/resources/DirectXResource.h"
+#include "render/directx/descriptors/DirectXDescriptorHeap.h"
 
 // External.
 #include "directx/d3dx12.h"
@@ -50,22 +51,44 @@ namespace ne {
          * @param pCommandList Graphics command list.
          */
         inline void dispatchOnGraphicsQueue(ID3D12GraphicsCommandList* pCommandList) {
-            // Bind CBV resources.
+            // Bind CBVs.
             for (const auto& [iRootParameterIndex, pResource] : cbvResources) {
                 pCommandList->SetComputeRootConstantBufferView(
                     iRootParameterIndex, pResource->getInternalResource()->GetGPUVirtualAddress());
             }
 
-            // Bind UAV resources.
+            // Bind UAVs.
             for (const auto& [iRootParameterIndex, pResource] : uavResources) {
                 pCommandList->SetComputeRootUnorderedAccessView(
                     iRootParameterIndex, pResource->getInternalResource()->GetGPUVirtualAddress());
             }
 
-            // Bind SRV resources.
+            // Bind SRVs.
             for (const auto& [iRootParameterIndex, pResource] : srvResources) {
                 pCommandList->SetComputeRootShaderResourceView(
                     iRootParameterIndex, pResource->getInternalResource()->GetGPUVirtualAddress());
+            }
+
+            // Bind table views.
+            for (const auto& [iRootParameterIndex, pDescriptor] : tableResources) {
+                // Get heap start offset.
+                const auto optionalDescriptorOffset = pDescriptor->getDescriptorOffsetInDescriptors();
+
+#if defined(DEBUG)
+                // Make sure descriptor offset is still valid.
+                if (!optionalDescriptorOffset.has_value()) [[unlikely]] {
+                    Error error("unable to get descriptor offset of SRV descriptor");
+                    error.showError();
+                    throw std::runtime_error(error.getFullErrorMessage());
+                }
+#endif
+
+                // Set table.
+                pCommandList->SetGraphicsRootDescriptorTable(
+                    iRootParameterIndex,
+                    D3D12_GPU_DESCRIPTOR_HANDLE{
+                        pSrvHeap->getInternalHeap()->GetGPUDescriptorHandleForHeapStart().ptr +
+                        (*optionalDescriptorOffset) * iSrvDescriptorSize});
             }
 
             // Add a dispatch command.
@@ -97,5 +120,14 @@ namespace ne {
 
         /** Stores pairs of "root parameter index" - "resource to bind as SRV". */
         std::unordered_map<UINT, DirectXResource*> srvResources;
+
+        /** Stores pairs of "root parameter index" - "resource SRV descriptor. */
+        std::unordered_map<UINT, DirectXDescriptor*> tableResources;
+
+        /** SRV heap. */
+        DirectXDescriptorHeap* pSrvHeap = nullptr;
+
+        /** Size of one SRV descriptor. */
+        UINT iSrvDescriptorSize = 0;
     };
 }

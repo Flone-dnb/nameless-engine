@@ -2,6 +2,7 @@
 
 // Custom.
 #include "render/Renderer.h"
+#include "render/directx/resources/DirectXResourceManager.h"
 
 namespace ne {
     HlslComputeShaderInterface::HlslComputeShaderInterface(
@@ -24,6 +25,21 @@ namespace ne {
         if (pPso == nullptr) [[unlikely]] {
             return Error("expected a DirectX PSO");
         }
+
+        // Get resource manager.
+        const auto pResourceManager =
+            dynamic_cast<DirectXResourceManager*>(pPso->getRenderer()->getResourceManager());
+        if (pResourceManager == nullptr) [[unlikely]] {
+            Error error("expected a DirectX resource manager");
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+        }
+
+        // Save SRV heap.
+        pSrvHeap = pResourceManager->getCbvSrvUavHeap();
+
+        // Save SRV descriptor size.
+        iSrvDescriptorSize = pSrvHeap->getDescriptorSize();
 
         // Find the specified resource name in the root signature.
         UINT iRootParameterIndex = 0;
@@ -82,6 +98,24 @@ namespace ne {
 
             // Add to CBV array.
             cbvResources[iRootParameterIndex] = pDirectXResource;
+            break;
+        }
+        case (ComputeResourceUsage::TEXTURE): {
+            // Bind SRV.
+            auto optionalError = pDirectXResource->bindDescriptor(DirectXDescriptorType::SRV);
+            if (optionalError.has_value()) [[unlikely]] {
+                optionalError->addCurrentLocationToErrorStack();
+                return optionalError;
+            }
+
+            // Get descriptor.
+            const auto pDescriptor = pDirectXResource->getDescriptor(DirectXDescriptorType::SRV);
+            if (pDescriptor == nullptr) [[unlikely]] {
+                return Error("expected descriptor to be valid");
+            }
+
+            // Add to SRV array.
+            tableResources[iRootParameterIndex] = pDescriptor;
             break;
         }
         default: {

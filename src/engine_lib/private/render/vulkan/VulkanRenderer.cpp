@@ -104,6 +104,11 @@ namespace ne {
             vkDestroySampler(pLogicalDevice, pTextureSampler, nullptr);
             pTextureSampler = nullptr;
         }
+        if (pComputeTextureSampler != nullptr) {
+            // Destroy sampler.
+            vkDestroySampler(pLogicalDevice, pComputeTextureSampler, nullptr);
+            pComputeTextureSampler = nullptr;
+        }
 
         if (pLogicalDevice != nullptr) {
             // Explicitly delete frame resources manager before command pool because command buffers
@@ -1652,6 +1657,57 @@ namespace ne {
         return {};
     }
 
+    std::optional<Error> VulkanRenderer::createComputeTextureSampler() {
+        // Make sure logical device is valid.
+        if (pLogicalDevice == nullptr) [[unlikely]] {
+            return Error("expected logical device to be valid");
+        }
+
+        // Make sure sampler is not valid.
+        if (pComputeTextureSampler != nullptr) [[unlikely]] {
+            return Error("unexpected compute texture sampler to be re-created");
+        }
+
+        // Describe sampler.
+        VkSamplerCreateInfo samplerInfo{};
+        samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+
+        // Specify how oversampling and undersampling is handed.
+        samplerInfo.magFilter = VK_FILTER_NEAREST;
+        samplerInfo.minFilter = VK_FILTER_NEAREST;
+
+        // Specify address mode.
+        samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+        samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+        samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+        samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK; // used when `clamp` address mode
+
+        // Disable anisotropic filtering.
+        samplerInfo.anisotropyEnable = VK_FALSE;
+        samplerInfo.maxAnisotropy = 1.0F;
+
+        // Specify whether to use [0; textureWidth] coordinates or not.
+        samplerInfo.unnormalizedCoordinates = VK_FALSE;
+
+        // Specify texel comparison for texture filtering.
+        samplerInfo.compareEnable = VK_FALSE; // can be used in percentage-closer filtering on shadow maps
+        samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
+
+        // Specify mipmapping options.
+        samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+        samplerInfo.mipLodBias = 0.0F;
+        samplerInfo.minLod = 0.0F;
+        samplerInfo.maxLod = VK_LOD_CLAMP_NONE;
+
+        // Create sampler.
+        const auto result = vkCreateSampler(pLogicalDevice, &samplerInfo, nullptr, &pComputeTextureSampler);
+        if (result != VK_SUCCESS) [[unlikely]] {
+            return Error(std::format("failed to create sampler, error: {}", string_VkResult(result)));
+        }
+
+        return {};
+    }
+
     bool VulkanRenderer::isUsedDepthImageFormatSupported() {
         // Get details of support of the depth image format.
         VkFormatProperties physicalDeviceFormatProperties;
@@ -2198,6 +2254,8 @@ namespace ne {
     VkCommandPool VulkanRenderer::getCommandPool() const { return pCommandPool; }
 
     VkQueue VulkanRenderer::getGraphicsQueue() const { return pGraphicsQueue; }
+
+    VkSampler VulkanRenderer::getComputeTextureSampler() const { return pComputeTextureSampler; }
 
     std::optional<VkExtent2D> VulkanRenderer::getSwapChainExtent() const { return swapChainExtent; }
 

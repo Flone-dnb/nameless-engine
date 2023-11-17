@@ -1308,9 +1308,9 @@ namespace ne {
                                "query the interface");
         } else {
             // Register debug message callback.
-            DWORD* pUnregisterCookie = nullptr;
+            DWORD unregisterCookie = 0;
             hResult = pInfoQueue->RegisterMessageCallback(
-                d3dInfoQueueMessageCallback, D3D12_MESSAGE_CALLBACK_FLAG_NONE, nullptr, pUnregisterCookie);
+                d3dInfoQueueMessageCallback, D3D12_MESSAGE_CALLBACK_FLAG_NONE, nullptr, &unregisterCookie);
             if (FAILED(hResult)) {
                 return Error(hResult);
             }

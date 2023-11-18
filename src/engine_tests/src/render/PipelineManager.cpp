@@ -107,7 +107,6 @@ TEST_CASE("manager correctly manages compute pipelines") {
 
                         // Get pipeline manager.
                         const auto pPipelineManager = getWindow()->getRenderer()->getPipelineManager();
-                        iInitialComputePipelineCount = pPipelineManager->getCurrentComputePipelineCount();
 
                         // Create compute interface.
                         auto result = ComputeShaderInterface::createUsingGraphicsQueue(
@@ -122,9 +121,7 @@ TEST_CASE("manager correctly manages compute pipelines") {
                             std::get<std::unique_ptr<ComputeShaderInterface>>(std::move(result));
 
                         // Make sure a new compute pipeline was created.
-                        REQUIRE(
-                            pPipelineManager->getCurrentComputePipelineCount() ==
-                            iInitialComputePipelineCount + 1);
+                        REQUIRE(pPipelineManager->getCurrentComputePipelineCount() == 1);
 
                         // Create a new compute interface using the same shader.
                         result = ComputeShaderInterface::createUsingGraphicsQueue(
@@ -137,10 +134,8 @@ TEST_CASE("manager correctly manages compute pipelines") {
                         }
                         pTestInterface = std::get<std::unique_ptr<ComputeShaderInterface>>(std::move(result));
 
-                        // Make sure no pipeline was created.
-                        REQUIRE(
-                            pPipelineManager->getCurrentComputePipelineCount() ==
-                            iInitialComputePipelineCount + 1);
+                        // Same pipeline.
+                        REQUIRE(pPipelineManager->getCurrentComputePipelineCount() == 1);
 
                         // Make sure no compute shaders are queued yet.
                         auto mtxQueued = pPipelineManager->getComputeShadersForGraphicsQueueExecution();
@@ -169,6 +164,23 @@ TEST_CASE("manager correctly manages compute pipelines") {
                         REQUIRE(mtxQueued.second->graphicsQueuePreFrameShadersGroups[1].empty());
                         REQUIRE(mtxQueued.second->graphicsQueuePostFrameShadersGroups[0].empty());
                         REQUIRE(mtxQueued.second->graphicsQueuePostFrameShadersGroups[1].size() == 1);
+
+                        // Destroy all compute interfaces.
+                        pComputeInterface = nullptr;
+                        pTestInterface = nullptr;
+
+                        // All new pipelines should be destroyed.
+                        REQUIRE(pPipelineManager->getCurrentComputePipelineCount() == 0);
+
+                        // Check queue.
+                        for (const auto& group : mtxQueued.second->graphicsQueuePreFrameShadersGroups) {
+                            REQUIRE(group.empty());
+                        }
+                        for (const auto& group : mtxQueued.second->graphicsQueuePostFrameShadersGroups) {
+                            REQUIRE(group.empty());
+                        }
+
+                        getWindow()->close();
                     });
                 });
             if (optionalError.has_value()) [[unlikely]] {
@@ -179,44 +191,9 @@ TEST_CASE("manager correctly manages compute pipelines") {
         }
         virtual ~TestGameInstance() override {}
 
-        virtual void onBeforeNewFrame(float delta) override {
-            totalTimeInSec += delta;
-            REQUIRE(totalTimeInSec < timeBeforeErrorInSec);
-
-            // Make sure something was drawn.
-            if (getWindow()->getRenderer()->getLastFrameDrawCallCount() == 0) {
-                return;
-            }
-
-            // Get pipeline manager.
-            const auto pPipelineManager = getWindow()->getRenderer()->getPipelineManager();
-
-            // Destroy all compute interfaces.
-            pComputeInterface = nullptr;
-            pTestInterface = nullptr;
-
-            // All new pipelines should be destroyed.
-            REQUIRE(pPipelineManager->getCurrentComputePipelineCount() == iInitialComputePipelineCount);
-
-            // Check queue.
-            auto mtxQueued = pPipelineManager->getComputeShadersForGraphicsQueueExecution();
-            for (const auto& group : mtxQueued.second->graphicsQueuePreFrameShadersGroups) {
-                REQUIRE(group.empty());
-            }
-            for (const auto& group : mtxQueued.second->graphicsQueuePostFrameShadersGroups) {
-                REQUIRE(group.empty());
-            }
-
-            getWindow()->close();
-        }
-
     private:
-        size_t iInitialComputePipelineCount = 0;
-        float totalTimeInSec = 0.0F;
         std::unique_ptr<ComputeShaderInterface> pComputeInterface;
         std::unique_ptr<ComputeShaderInterface> pTestInterface;
-
-        const float timeBeforeErrorInSec = 10.0F;
     };
 
     auto result = Window::getBuilder().withVisibility(false).build();

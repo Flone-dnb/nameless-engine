@@ -41,5 +41,17 @@ namespace ne {
                 EngineShaderConstantMacros::ForwardPlus::FrustumGridThreadsInGroupXyMacro::sName,
                 EngineShaderConstantMacros::ForwardPlus::FrustumGridThreadsInGroupXyMacro::sValue,
             }});
+
+        /** Compute shader that does light culling. */
+        static inline const auto forwardPlusLightCullingComputeShader = ShaderDescription(
+            EngineShaderNames::ForwardPlus::sLightCullingComputeShaderName,
+            ProjectPaths::getPathToResDirectory(ResourceDirectory::ENGINE) /
+                "shaders/hlsl/light_culling/LightCulling.comp.hlsl",
+            ShaderType::COMPUTE_SHADER,
+            "csLightCulling",
+            {{
+                EngineShaderConstantMacros::ForwardPlus::FrustumGridThreadsInGroupXyMacro::sName,
+                EngineShaderConstantMacros::ForwardPlus::FrustumGridThreadsInGroupXyMacro::sValue,
+            }});
     };
 } // namespace ne

@@ -100,7 +100,7 @@ namespace ne {
             cbvResources[iRootParameterIndex] = pDirectXResource;
             break;
         }
-        case (ComputeResourceUsage::TEXTURE): {
+        case (ComputeResourceUsage::READ_ONLY_TEXTURE): {
             // Bind SRV.
             auto optionalError = pDirectXResource->bindDescriptor(DirectXDescriptorType::SRV);
             if (optionalError.has_value()) [[unlikely]] {

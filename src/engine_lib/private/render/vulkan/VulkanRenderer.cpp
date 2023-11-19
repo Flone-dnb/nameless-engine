@@ -71,7 +71,8 @@ namespace ne {
         return {
             GlslEngineShaders::meshNodeVertexShader,
             GlslEngineShaders::meshNodeFragmentShader,
-            GlslEngineShaders::forwardPlusCalculateGridFrustumComputeShader};
+            GlslEngineShaders::forwardPlusCalculateGridFrustumComputeShader,
+            GlslEngineShaders::forwardPlusLightCullingComputeShader};
     }
 
     VulkanRenderer::~VulkanRenderer() {
@@ -535,17 +536,21 @@ namespace ne {
             return sMissingSwapChainDetailDescription;
         }
 
-        // Describe extended (extension) features that we will query.
+        // Prepare a linked list of features that will be filled in `vkGetPhysicalDeviceFeatures2` below
+        // so that we can check their support.
+        VkPhysicalDeviceDepthStencilResolveProperties depthStencilResolve{};
+        depthStencilResolve.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DEPTH_STENCIL_RESOLVE_PROPERTIES;
+        depthStencilResolve.pNext = nullptr;
+
         VkPhysicalDeviceDescriptorIndexingFeatures descriptorIndexingFeatures{};
         descriptorIndexingFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES;
-        descriptorIndexingFeatures.pNext = nullptr;
+        descriptorIndexingFeatures.pNext = &depthStencilResolve;
 
-        // Prepare to query device features.
         VkPhysicalDeviceFeatures2 deviceFeatures2{};
         deviceFeatures2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
         deviceFeatures2.pNext = &descriptorIndexingFeatures;
 
-        // Get supported device features.
+        // Get supported features.
         vkGetPhysicalDeviceFeatures2(pGpu, &deviceFeatures2);
 
         // Make sure anisotropic filtering is supported
@@ -572,6 +577,16 @@ namespace ne {
             descriptorIndexingFeatures.runtimeDescriptorArray == VK_FALSE) {
             return std::format(
                 "GPU \"{}\" does not support used indexing features", deviceProperties.deviceName);
+        }
+
+        // Make sure used depth resolve mode is supported.
+        if ((depthStencilResolve.supportedDepthResolveModes & depthResolveMode) != 0) {
+            return std::format(
+                "GPU \"{}\" does not support used depth resolve mode", deviceProperties.deviceName);
+        }
+        if ((depthStencilResolve.supportedStencilResolveModes & stencilResolveMode) != 0) {
+            return std::format(
+                "GPU \"{}\" does not support used stencil resolve mode", deviceProperties.deviceName);
         }
 
         return "";
@@ -1041,11 +1056,6 @@ namespace ne {
             vQueueCreateInfo.push_back(queueCreateInfo);
         }
 
-        // Specify features that we need.
-        VkPhysicalDeviceFeatures deviceFeatures{};
-        deviceFeatures.samplerAnisotropy = VK_TRUE;
-        // ... if adding new features add them to `isDeviceSuitable` function ...
-
         // Fill info to create a logical device.
         VkDeviceCreateInfo createInfo{};
         createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
@@ -1063,7 +1073,7 @@ namespace ne {
         createInfo.ppEnabledLayerNames = vUsedValidationLayerNames.data();
 #endif
 
-        // Describe extended (extension) features that we will use.
+        // Describe features that we will use.
         VkPhysicalDeviceDescriptorIndexingFeatures descriptorIndexingFeatures{};
         descriptorIndexingFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES;
         descriptorIndexingFeatures.pNext = nullptr;
@@ -1071,6 +1081,11 @@ namespace ne {
         descriptorIndexingFeatures.shaderSampledImageArrayNonUniformIndexing = VK_TRUE;
         descriptorIndexingFeatures.descriptorBindingPartiallyBound = VK_TRUE;
         descriptorIndexingFeatures.runtimeDescriptorArray = VK_TRUE;
+        // ... if adding new features add them to `isDeviceSuitable` function ...
+
+        // Describe device features that we will use.
+        VkPhysicalDeviceFeatures deviceFeatures{};
+        deviceFeatures.samplerAnisotropy = VK_TRUE;
         // ... if adding new features add them to `isDeviceSuitable` function ...
 
         // Prepare device features to enable
@@ -1477,40 +1492,90 @@ namespace ne {
     }
 
     std::optional<Error> VulkanRenderer::createDepthOnlyRenderPass() {
-        // Describe depth buffer.
-        VkAttachmentDescription depthAttachment{};
+        const auto bEnableMsaa = msaaSampleCount != VK_SAMPLE_COUNT_1_BIT;
+
+        // Describe depth image attachment.
+        std::vector<VkAttachmentDescription2> vAttachments;
+        VkAttachmentDescription2 depthAttachment{};
+        depthAttachment.sType = VK_STRUCTURE_TYPE_ATTACHMENT_DESCRIPTION_2;
         depthAttachment.format = depthImageFormat;
         depthAttachment.samples = msaaSampleCount;
         depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-        depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE; // save for main pass
+        depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE; // save depth for main pass
         depthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
         depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
         depthAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
         depthAttachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+        vAttachments.push_back(depthAttachment);
+        if (vAttachments.size() != iDepthOnlyRenderPassDepthImageAttachmentIndex + 1) [[unlikely]] {
+            return Error("unexpected attachment index");
+        }
 
-        // Create depth buffer reference in write layout for depth subpass.
-        VkAttachmentReference depthAttachmentRef{};
-        depthAttachmentRef.attachment = 0; // this is the only attachment in depth subpass
+        if (bEnableMsaa) {
+            // Describe depth image attachment without multisampling.
+            VkAttachmentDescription2 depthNoMultisamplingAttachment{};
+            depthNoMultisamplingAttachment.sType = VK_STRUCTURE_TYPE_ATTACHMENT_DESCRIPTION_2;
+            depthNoMultisamplingAttachment.format = depthImageFormat;
+            depthNoMultisamplingAttachment.samples = VK_SAMPLE_COUNT_1_BIT; // 1 sample
+            depthNoMultisamplingAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+            depthNoMultisamplingAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE; // save depth for main pass
+            depthNoMultisamplingAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+            depthNoMultisamplingAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+            depthNoMultisamplingAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+            depthNoMultisamplingAttachment.finalLayout =
+                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL; // it will be only used by shaders
+            vAttachments.push_back(depthNoMultisamplingAttachment);
+            if (vAttachments.size() != iDepthOnlyRenderPassDepthImageNoMultisamplingAttachmentIndex + 1)
+                [[unlikely]] {
+                return Error("unexpected attachment index");
+            }
+        }
+
+        // Create depth image reference in write layout for depth subpass.
+        VkAttachmentReference2 depthAttachmentRef{};
+        depthAttachmentRef.sType = VK_STRUCTURE_TYPE_ATTACHMENT_REFERENCE_2;
+        depthAttachmentRef.attachment = iDepthOnlyRenderPassDepthImageAttachmentIndex;
         depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL; // layout during subpass
 
+        // Create non-multisampled depth image reference.
+        VkAttachmentReference2 depthNoMultisamplingAttachmentRef{};
+        depthNoMultisamplingAttachmentRef.sType = VK_STRUCTURE_TYPE_ATTACHMENT_REFERENCE_2;
+        depthNoMultisamplingAttachmentRef.attachment =
+            iDepthOnlyRenderPassDepthImageNoMultisamplingAttachmentIndex;
+        depthNoMultisamplingAttachmentRef.layout = VK_IMAGE_LAYOUT_UNDEFINED; // layout during subpass
+
+        // Create a depth resolve description because we want to resolve multisampled depth image
+        // to a non-multisampled depth image to be used in (compute) shaders.
+        VkSubpassDescriptionDepthStencilResolve depthResolveDescription{};
+        if (bEnableMsaa) {
+            depthResolveDescription.sType = VK_STRUCTURE_TYPE_SUBPASS_DESCRIPTION_DEPTH_STENCIL_RESOLVE;
+            depthResolveDescription.depthResolveMode = depthResolveMode;
+            depthResolveDescription.stencilResolveMode = stencilResolveMode;
+            depthResolveDescription.pDepthStencilResolveAttachment = &depthNoMultisamplingAttachmentRef;
+        }
+
         // Describe depth only subpass.
-        VkSubpassDescription depthSubpass = {};
+        VkSubpassDescription2 depthSubpass{};
+        depthSubpass.sType = VK_STRUCTURE_TYPE_SUBPASS_DESCRIPTION_2;
         depthSubpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
         depthSubpass.colorAttachmentCount = 0;
         depthSubpass.pDepthStencilAttachment = &depthAttachmentRef;
+        if (bEnableMsaa) {
+            depthSubpass.pNext = &depthResolveDescription;
+        }
 
         // Describe depth render pass.
-        VkRenderPassCreateInfo depthRenderPassInfo{};
-        depthRenderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-        depthRenderPassInfo.attachmentCount = 1;
-        depthRenderPassInfo.pAttachments = &depthAttachment;
+        VkRenderPassCreateInfo2 depthRenderPassInfo{};
+        depthRenderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO_2;
+        depthRenderPassInfo.attachmentCount = static_cast<uint32_t>(vAttachments.size());
+        depthRenderPassInfo.pAttachments = vAttachments.data();
         depthRenderPassInfo.subpassCount = 1;
         depthRenderPassInfo.pSubpasses = &depthSubpass;
         depthRenderPassInfo.dependencyCount = 0;
 
         // Create depth render pass.
         const auto result =
-            vkCreateRenderPass(pLogicalDevice, &depthRenderPassInfo, nullptr, &pDepthOnlyRenderPass);
+            vkCreateRenderPass2(pLogicalDevice, &depthRenderPassInfo, nullptr, &pDepthOnlyRenderPass);
         if (result != VK_SUCCESS) [[unlikely]] {
             return Error(std::format("failed to create render pass, error: {}", string_VkResult(result)));
         }
@@ -1528,6 +1593,7 @@ namespace ne {
 
         // Explicitly destroy depth resource before resource manager is destroyed.
         pDepthImage = nullptr;
+        pDepthImageNoMultisampling = nullptr;
 
         // Destroy swap chain framebuffers.
         for (size_t i = 0; i < vSwapChainFramebuffersMainRenderPass.size(); i++) {
@@ -1750,7 +1816,7 @@ namespace ne {
             msaaSampleCount,
             depthImageFormat,
             depthImageTiling,
-            VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+            VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
             VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT);
         if (std::holds_alternative<Error>(result)) [[unlikely]] {
             auto error = std::get<Error>(std::move(result));
@@ -1758,6 +1824,25 @@ namespace ne {
             return error;
         }
         pDepthImage = std::get<std::unique_ptr<VulkanResource>>(std::move(result));
+
+        // Create depth image without multisampling.
+        result = pVulkanResourceManager->createImage(
+            "non-multisampled depth/stencil buffer",
+            swapChainExtent->width,
+            swapChainExtent->height,
+            1,
+            VK_SAMPLE_COUNT_1_BIT, // 1 sample
+            depthImageFormat,
+            depthImageTiling,
+            VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT |
+                VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+            VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT);
+        if (std::holds_alternative<Error>(result)) [[unlikely]] {
+            auto error = std::get<Error>(std::move(result));
+            error.addCurrentLocationToErrorStack();
+            return error;
+        }
+        pDepthImageNoMultisampling = std::get<std::unique_ptr<VulkanResource>>(std::move(result));
 
         return {};
     }
@@ -2001,10 +2086,16 @@ namespace ne {
             }
 
             // Change render pass and attachments.
-            const auto pDepthImageView = pDepthImage->getInternalImageView();
+            vAttachments.clear();
+            vAttachments.push_back(pDepthImage->getInternalImageView());
+            static_assert(iDepthOnlyRenderPassDepthImageAttachmentIndex == 0);
+            if (bEnableMsaa) {
+                vAttachments.push_back(pDepthImageNoMultisampling->getInternalImageView());
+                static_assert(iDepthOnlyRenderPassDepthImageNoMultisamplingAttachmentIndex == 1);
+            }
             framebufferInfo.renderPass = pDepthOnlyRenderPass;
-            framebufferInfo.attachmentCount = 1;
-            framebufferInfo.pAttachments = &pDepthImageView;
+            framebufferInfo.attachmentCount = static_cast<uint32_t>(vAttachments.size());
+            framebufferInfo.pAttachments = vAttachments.data();
 
             // Create depth only render pass framebuffer.
             result = vkCreateFramebuffer(
@@ -2125,17 +2216,21 @@ namespace ne {
         std::vector<VkClearValue> vClearValues;
         if (pRenderPass == pMainRenderPass) {
             // Main render pass.
+            vClearValues.resize(2);
             static_assert(iRenderPassColorAttachmentIndex == 0);
-            vClearValues.push_back(VkClearValue{});
-            vClearValues[iRenderPassColorAttachmentIndex].color = {0.0F, 0.0F, 0.0F, 1.0F};
-
             static_assert(iRenderPassDepthAttachmentIndex == 1);
-            vClearValues.push_back(VkClearValue{});
+
+            vClearValues[iRenderPassColorAttachmentIndex].color = {0.0F, 0.0F, 0.0F, 1.0F};
             vClearValues[iRenderPassDepthAttachmentIndex].depthStencil = {getMaxDepth(), 0};
         } else if (pRenderPass == pDepthOnlyRenderPass) {
             // Depth only pass.
-            vClearValues.push_back(VkClearValue{});
-            vClearValues[0].depthStencil = {getMaxDepth(), 0};
+            vClearValues.resize(2);
+            static_assert(iDepthOnlyRenderPassDepthImageAttachmentIndex == 0);
+            static_assert(iDepthOnlyRenderPassDepthImageNoMultisamplingAttachmentIndex == 1);
+
+            vClearValues[iDepthOnlyRenderPassDepthImageAttachmentIndex].depthStencil = {getMaxDepth(), 0};
+            vClearValues[iDepthOnlyRenderPassDepthImageNoMultisamplingAttachmentIndex].depthStencil = {
+                getMaxDepth(), 0};
         } else [[unlikely]] {
             Error error("unexpected render pass, clear color values are not specified");
             error.showError();
@@ -2260,6 +2355,19 @@ namespace ne {
     std::optional<VkExtent2D> VulkanRenderer::getSwapChainExtent() const { return swapChainExtent; }
 
     VkSampleCountFlagBits VulkanRenderer::getMsaaSampleCount() const { return msaaSampleCount; }
+
+    GpuResource* VulkanRenderer::getDepthTextureNoMultisampling() {
+        std::scoped_lock guard(
+            *getRenderResourcesMutex()); // `bIsUsingMsaaRenderTarget` is only changed under this mutex
+
+        if (bIsUsingMsaaRenderTarget) {
+            // Depth image uses multisampling so return a pointer to the resolved depth resource.
+            return pDepthImageNoMultisampling.get();
+        }
+
+        // Depth image does not use multisampling so just return it.
+        return pDepthImage.get();
+    }
 
     std::variant<VkCommandBuffer, Error> VulkanRenderer::createOneTimeSubmitCommandBuffer() {
         // Make sure command pool exists.
@@ -3002,9 +3110,11 @@ namespace ne {
         }
 
         // Save sample count.
+        bIsUsingMsaaRenderTarget = true;
         switch (sampleCount) {
         case (MsaaState::DISABLED): {
             msaaSampleCount = VK_SAMPLE_COUNT_1_BIT;
+            bIsUsingMsaaRenderTarget = false;
             break;
         }
         case (MsaaState::MEDIUM): {

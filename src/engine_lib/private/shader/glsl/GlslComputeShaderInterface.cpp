@@ -59,7 +59,7 @@ namespace ne {
             descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
             break;
         }
-        case (ComputeResourceUsage::TEXTURE): {
+        case (ComputeResourceUsage::READ_ONLY_TEXTURE): {
             descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
             bIsBufferDescriptor = false;
             break;

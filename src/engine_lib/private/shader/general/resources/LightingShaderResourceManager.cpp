@@ -585,7 +585,7 @@ namespace ne {
 
 #if defined(DEBUG) && defined(WIN32)
         static_assert(
-            sizeof(LightingShaderResourceManager) == 224, "consider notifying new arrays here"); // NOLINT
+            sizeof(LightingShaderResourceManager) == 240, "consider notifying new arrays here"); // NOLINT
 #elif defined(DEBUG)
         static_assert(
             sizeof(LightingShaderResourceManager) == 144, "consider notifying new arrays here"); // NOLINT
@@ -626,7 +626,7 @@ namespace ne {
 
 #if defined(DEBUG) && defined(WIN32)
         static_assert(
-            sizeof(LightingShaderResourceManager) == 224, "consider notifying new arrays here"); // NOLINT
+            sizeof(LightingShaderResourceManager) == 240, "consider notifying new arrays here"); // NOLINT
 #elif defined(DEBUG)
         static_assert(
             sizeof(LightingShaderResourceManager) == 144, "consider notifying new arrays here"); // NOLINT
@@ -655,7 +655,7 @@ namespace ne {
 
 #if defined(DEBUG) && defined(WIN32)
         static_assert(
-            sizeof(LightingShaderResourceManager) == 224, "consider notifying new arrays here"); // NOLINT
+            sizeof(LightingShaderResourceManager) == 240, "consider notifying new arrays here"); // NOLINT
 #elif defined(DEBUG)
         static_assert(
             sizeof(LightingShaderResourceManager) == 144, "consider notifying new arrays here"); // NOLINT
@@ -664,6 +664,15 @@ namespace ne {
         // Copy general lighting info (maybe changed, since that data is very small it should be OK to
         // update it every frame).
         copyDataToGpu(iCurrentFrameResourceIndex);
+
+        // Queue light culling shader (should be called every frame).
+        auto optionalError =
+            lightCullingComputeShaderData.queueExecutionForNextFrame(pRenderer, frustumGridComputeShaderData);
+        if (optionalError.has_value()) [[unlikely]] {
+            optionalError->addCurrentLocationToErrorStack();
+            optionalError->showError();
+            throw std::runtime_error(optionalError->getFullErrorMessage());
+        }
     }
 
     void LightingShaderResourceManager::onPointLightArraySizeChanged(size_t iNewSize) {
@@ -1034,7 +1043,7 @@ namespace ne {
 
 #if defined(DEBUG) && defined(WIN32)
         static_assert(
-            sizeof(LightingShaderResourceManager) == 224, "consider creating new arrays here"); // NOLINT
+            sizeof(LightingShaderResourceManager) == 240, "consider creating new arrays here"); // NOLINT
 #elif defined(DEBUG)
         static_assert(
             sizeof(LightingShaderResourceManager) == 144, "consider creating new arrays here"); // NOLINT
@@ -1046,6 +1055,7 @@ namespace ne {
         Renderer* pRenderer,
         const std::pair<unsigned int, unsigned int>& renderResolution,
         const glm::mat4& inverseProjectionMatrix,
+        ComputeShaderInterface* pLightCullingShaderInterface,
         bool bQueueShaderExecution) {
         // Make sure engine shaders were compiled and we created compute interface.
         if (pComputeInterface == nullptr) [[unlikely]] {
@@ -1120,6 +1130,16 @@ namespace ne {
             return optionalError;
         }
 
+        // Rebind re-created grid of frustums resource to light culling shader.
+        optionalError = pLightCullingShaderInterface->bindResource(
+            resources.pCalculatedFrustums.get(),
+            sCalculatedFrustumsShaderResourceName,
+            ComputeResourceUsage::READ_ONLY_ARRAY_BUFFER);
+        if (optionalError.has_value()) [[unlikely]] {
+            optionalError->addCurrentLocationToErrorStack();
+            return optionalError;
+        }
+
         if (bQueueShaderExecution) {
             // Queue frustum grid recalculation shader.
             pComputeInterface->submitForExecution(iThreadGroupCountX, iThreadGroupCountY, 1);
@@ -1131,6 +1151,7 @@ namespace ne {
     std::optional<Error>
     LightingShaderResourceManager::ComputeShaderData::FrustumGridComputeShader::ComputeShader::initialize(
         Renderer* pRenderer) {
+        // Make sure the struct is not initialized yet.
         if (bIsInitialized) [[unlikely]] {
             return Error("already initialized");
         }
@@ -1140,7 +1161,7 @@ namespace ne {
             pRenderer,
             EngineShaderNames::ForwardPlus::sCalculateFrustumGridComputeShaderName,
             true,
-            ComputeExecutionGroup::FIRST);
+            ComputeExecutionGroup::FIRST); // runs before light culling compute shader
         if (std::holds_alternative<Error>(computeCreationResult)) [[unlikely]] {
             auto error = std::get<Error>(std::move(computeCreationResult));
             error.addCurrentLocationToErrorStack();
@@ -1203,19 +1224,90 @@ namespace ne {
         return {};
     }
 
+    std::optional<Error>
+    LightingShaderResourceManager::ComputeShaderData::LightCullingComputeShader::ComputeShader::initialize(
+        Renderer* pRenderer) {
+        // Make sure the struct is not initialized yet.
+        if (bIsInitialized) [[unlikely]] {
+            return Error("already initialized");
+        }
+
+        // Create compute interface for light culling.
+        auto computeCreationResult = ComputeShaderInterface::createUsingGraphicsQueue(
+            pRenderer,
+            EngineShaderNames::ForwardPlus::sLightCullingComputeShaderName,
+            true,
+            ComputeExecutionGroup::SECOND); // runs after compute shader that calculates grid frustums
+        if (std::holds_alternative<Error>(computeCreationResult)) [[unlikely]] {
+            auto error = std::get<Error>(std::move(computeCreationResult));
+            error.addCurrentLocationToErrorStack();
+            return error;
+        }
+        pComputeInterface =
+            std::get<std::unique_ptr<ComputeShaderInterface>>(std::move(computeCreationResult));
+
+        // Done.
+        bIsInitialized = true;
+
+        return {};
+    }
+
+    std::optional<Error> LightingShaderResourceManager::ComputeShaderData::LightCullingComputeShader::
+        ComputeShader::queueExecutionForNextFrame(
+            Renderer* pRenderer, const FrustumGridComputeShader::ComputeShader& frustumGridShader) {
+        // Make sure frustum grid shader was initialized.
+        if (!frustumGridShader.bIsInitialized) [[unlikely]] {
+            return Error("expected frustum grid shader to be initialized");
+        }
+
+        // Get renderer's depth texture pointer (this pointer can change every frame).
+        const auto pDepthTexture = pRenderer->getDepthTextureNoMultisampling();
+
+        // Check if it is different from the one we binded the last time.
+        if (resources.pLastBindedDepthTexture != pDepthTexture) {
+            // Save new pointer.
+            resources.pLastBindedDepthTexture = pDepthTexture;
+
+            // (Re)bind renderer's depth image.
+            auto optionalError = pComputeInterface->bindResource(
+                resources.pLastBindedDepthTexture,
+                sDepthTextureShaderResourceName,
+                ComputeResourceUsage::READ_ONLY_TEXTURE);
+            if (optionalError.has_value()) [[unlikely]] {
+                optionalError->addCurrentLocationToErrorStack();
+                return optionalError;
+            }
+        }
+
+        // Resource that stores calculated grid of frustums is binded inside of the update function
+        // for shader that calculates that grid.
+
+        // Queue shader execution.
+        pComputeInterface->submitForExecution(16, 16, 1); // TODO
+
+        return {};
+    }
+
     std::optional<Error> LightingShaderResourceManager::recalculateLightTileFrustums(
         const std::pair<unsigned int, unsigned int>& renderResolution,
         const glm::mat4& inverseProjectionMatrix) {
         // Make sure compute interface is created.
-        if (frustumGridComputeShaderData.pComputeInterface == nullptr) {
+        if (!frustumGridComputeShaderData.bIsInitialized) {
             // Check if the renderer compiled our compute shader or not.
             if (!bEngineShadersCompiled) {
                 // Waiting for engine shaders to be compiled.
                 return {};
             }
 
-            // Initialize shader data.
+            // Initialize frustum grid shader.
             auto optionalError = frustumGridComputeShaderData.initialize(pRenderer);
+            if (optionalError.has_value()) [[unlikely]] {
+                optionalError->addCurrentLocationToErrorStack();
+                return optionalError;
+            }
+
+            // Initialize light culling shader.
+            optionalError = lightCullingComputeShaderData.initialize(pRenderer);
             if (optionalError.has_value()) [[unlikely]] {
                 optionalError->addCurrentLocationToErrorStack();
                 return optionalError;
@@ -1224,7 +1316,11 @@ namespace ne {
 
         // Update shader data.
         auto optionalError = frustumGridComputeShaderData.updateData(
-            pRenderer, renderResolution, inverseProjectionMatrix, true);
+            pRenderer,
+            renderResolution,
+            inverseProjectionMatrix,
+            lightCullingComputeShaderData.pComputeInterface.get(),
+            true);
         if (optionalError.has_value()) [[unlikely]] {
             optionalError->addCurrentLocationToErrorStack();
             return optionalError;
@@ -1250,11 +1346,15 @@ namespace ne {
 
 #if defined(DEBUG) && defined(WIN32)
         static_assert(
-            sizeof(LightingShaderResourceManager) == 224, "consider resetting new arrays here"); // NOLINT
+            sizeof(LightingShaderResourceManager) == 240, "consider resetting new arrays here"); // NOLINT
 #elif defined(DEBUG)
         static_assert(
             sizeof(LightingShaderResourceManager) == 144, "consider resetting new arrays here"); // NOLINT
 #endif
+
+        // Make sure light culling shader is destroyed first because it uses resources from compute
+        // shader that calculates grid of frustums.
+        lightCullingComputeShaderData.pComputeInterface = nullptr;
     }
 
     std::string LightingShaderResourceManager::getGeneralLightingDataShaderResourceName() {

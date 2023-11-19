@@ -23,6 +23,11 @@ namespace ne {
              * for light culling.
              */
             static inline const auto sCalculateFrustumGridComputeShaderName = "engine.fp.frustum_grid.comp";
+
+            /**
+             * Globally unique name of the compute shader used to do light culling.
+             */
+            static inline const auto sLightCullingComputeShaderName = "engine.fp.light_culling.comp";
         };
     };
 } // namespace ne

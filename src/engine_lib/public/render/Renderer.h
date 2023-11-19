@@ -318,6 +318,25 @@ namespace ne {
          */
         std::recursive_mutex* getRenderResourcesMutex();
 
+        /**
+         * Returns pointer to the texture resource that represents renderer's depth texture
+         * without multisampling (resolved resource).
+         *
+         * @warning If MSAA is enabled this function will return one resource (pointer to a separate
+         * depth resolved resource), if it's disabled it will return the other resource (pointer to depth
+         * texture). So it may be a good idea to query this pointer every time you need it instead of saving
+         * it and reusing it because every frame this pointer may change (due to other reasons such as
+         * render target resize and etc).
+         *
+         * @warning Please note that it's only safe to call this function inside of the `drawNextFrame`
+         * function (because returned pointer will not be changed during this function), if you need to use
+         * depth texture in your game code create an issue and I will add a GameInstance callback that will be
+         * called each frame inside of the `drawNextFrame` so you can use this function.
+         *
+         * @return Pointer to depth texture.
+         */
+        virtual GpuResource* getDepthTextureNoMultisampling() = 0;
+
     protected:
         /** Groups information about meshes in active camera's frustum. */
         struct MeshesInFrustum {

@@ -1,0 +1,17 @@
+#version 450
+
+#include "../../../include/light_culling/CalculateGridTileFrustum.glsl"
+
+#ifndef THREADS_IN_GROUP_XY
+FAIL;
+#endif
+
+layout (local_size_x = THREADS_IN_GROUP_XY, local_size_y = THREADS_IN_GROUP_XY, local_size_z = 1) in;
+void main(){
+    // Sources:
+    // - Presentation "DirectX 11 Rendering in Battlefield 3" (2011) by Johan Andersson, DICE.
+    // - "Forward+: A Step Toward Film-Style Shading in Real Time", Takahiro Harada (2012).
+    
+    // Get depth.
+    float depth = texelFetch(depthTexture, gl_GlobalInvocationID.xy, 0).r;
+}

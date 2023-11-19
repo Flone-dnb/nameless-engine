@@ -65,7 +65,8 @@ namespace ne {
         return {
             HlslEngineShaders::meshNodeVertexShader,
             HlslEngineShaders::meshNodePixelShader,
-            HlslEngineShaders::forwardPlusCalculateGridFrustumComputeShader};
+            HlslEngineShaders::forwardPlusCalculateGridFrustumComputeShader,
+            HlslEngineShaders::forwardPlusLightCullingComputeShader};
     }
 
     std::optional<Error> DirectXRenderer::initialize(const std::vector<std::string>& vBlacklistedGpuNames) {
@@ -156,7 +157,7 @@ namespace ne {
         const auto iMsaaSampleCount = static_cast<int>(pMtxRenderSettings->second->getAntialiasingState());
 
         // Prepare resource description.
-        const D3D12_RESOURCE_DESC depthStencilDesc = CD3DX12_RESOURCE_DESC(
+        D3D12_RESOURCE_DESC depthStencilDesc = CD3DX12_RESOURCE_DESC(
             D3D12_RESOURCE_DIMENSION_TEXTURE2D,
             0,
             renderResolution.first,
@@ -200,6 +201,35 @@ namespace ne {
             error.addCurrentLocationToErrorStack();
             return error;
         }
+
+        // Describe non-multisampled depth buffer.
+        depthStencilDesc = CD3DX12_RESOURCE_DESC(
+            D3D12_RESOURCE_DIMENSION_TEXTURE2D,
+            0,
+            renderResolution.first,
+            renderResolution.second,
+            1,
+            1,
+            depthBufferNoMultisamplingFormat,
+            1, // 1 sample
+            0,
+            D3D12_TEXTURE_LAYOUT_UNKNOWN,
+            D3D12_RESOURCE_FLAG_NONE);
+
+        // Create non-multisampled depth buffer.
+        result = dynamic_cast<DirectXResourceManager*>(getResourceManager())
+                     ->createResource(
+                         "non-multisampled depth/stencil buffer",
+                         allocationDesc,
+                         depthStencilDesc,
+                         D3D12_RESOURCE_STATE_GENERIC_READ,
+                         {});
+        if (std::holds_alternative<Error>(result)) {
+            auto err = std::get<Error>(std::move(result));
+            err.addCurrentLocationToErrorStack();
+            return err;
+        }
+        pDepthBufferNoMultisampling = std::get<std::unique_ptr<DirectXResource>>(std::move(result));
 
         return {};
     }
@@ -577,12 +607,60 @@ namespace ne {
             pMtxCurrentFrameResource->second.iCurrentFrameResourceIndex,
             pMeshesInFrustum->vOpaquePipelines);
 
-        // Transition depth buffer to read only state.
-        transition = CD3DX12_RESOURCE_BARRIER::Transition(
-            pDepthStencilBuffer->getInternalResource(),
-            D3D12_RESOURCE_STATE_DEPTH_WRITE,
-            D3D12_RESOURCE_STATE_DEPTH_READ);
-        pCommandList->ResourceBarrier(1, &transition);
+        // Prepare array of depth buffer transitions that we will do slightly later.
+        std::vector<CD3DX12_RESOURCE_BARRIER> vDepthTransitions;
+
+        if (bIsUsingMsaaRenderTarget) {
+            PROFILE_SCOPE(ResolveDepthStencilBufferForShaders);
+
+            // Resolve multisampled depth buffer to a non-multisampled depth buffer for shaders.
+            const std::array<CD3DX12_RESOURCE_BARRIER, 2> vBarriersToResolve = {
+                CD3DX12_RESOURCE_BARRIER::Transition(
+                    pDepthStencilBuffer->getInternalResource(),
+                    D3D12_RESOURCE_STATE_DEPTH_WRITE,
+                    D3D12_RESOURCE_STATE_RESOLVE_SOURCE),
+                CD3DX12_RESOURCE_BARRIER::Transition(
+                    pDepthBufferNoMultisampling->getInternalResource(),
+                    D3D12_RESOURCE_STATE_GENERIC_READ,
+                    D3D12_RESOURCE_STATE_RESOLVE_DEST)};
+
+            // Record barrier.
+            pCommandList->ResourceBarrier(
+                static_cast<UINT>(vBarriersToResolve.size()), vBarriersToResolve.data());
+
+            // Resolve.
+            pCommandList->ResolveSubresource(
+                pDepthBufferNoMultisampling->getInternalResource(),
+                0,
+                pDepthStencilBuffer->getInternalResource(),
+                0,
+                depthBufferNoMultisamplingFormat);
+
+            // Transition depth buffer to depth read.
+            vDepthTransitions.push_back(CD3DX12_RESOURCE_BARRIER::Transition(
+                pDepthStencilBuffer->getInternalResource(),
+                D3D12_RESOURCE_STATE_RESOLVE_SOURCE,
+                D3D12_RESOURCE_STATE_DEPTH_READ));
+
+            // Transition non-multisampled depth buffer to generic read.
+            vDepthTransitions.push_back(CD3DX12_RESOURCE_BARRIER::Transition(
+                pDepthBufferNoMultisampling->getInternalResource(),
+                D3D12_RESOURCE_STATE_RESOLVE_DEST,
+                D3D12_RESOURCE_STATE_GENERIC_READ));
+        } else {
+            // Copying depth buffer to non-multisampled depth buffer is not needed since the depth buffer
+            // does not use multisampling.
+            // We will just use default depth buffer in shaders.
+
+            // Transition depth buffer to depth read.
+            vDepthTransitions.push_back(CD3DX12_RESOURCE_BARRIER::Transition(
+                pDepthStencilBuffer->getInternalResource(),
+                D3D12_RESOURCE_STATE_DEPTH_WRITE,
+                D3D12_RESOURCE_STATE_DEPTH_READ));
+        }
+
+        // Record barriers.
+        pCommandList->ResourceBarrier(static_cast<UINT>(vDepthTransitions.size()), vDepthTransitions.data());
 
         // Execute recorded commands.
         executeGraphicsCommandList(pCommandList.Get());
@@ -872,7 +950,6 @@ namespace ne {
             // Resolve MSAA render buffer to swap chain buffer.
             const auto pCurrentSwapChainBuffer =
                 vSwapChainBuffers[pSwapChain->GetCurrentBackBufferIndex()].get();
-
             CD3DX12_RESOURCE_BARRIER barriersToResolve[] = {
                 CD3DX12_RESOURCE_BARRIER::Transition(
                     pMsaaRenderBuffer->getInternalResource(),
@@ -883,6 +960,18 @@ namespace ne {
                     D3D12_RESOURCE_STATE_PRESENT,
                     D3D12_RESOURCE_STATE_RESOLVE_DEST)};
 
+            // Record barriers.
+            pCommandList->ResourceBarrier(2, barriersToResolve);
+
+            // Resolve.
+            pCommandList->ResolveSubresource(
+                pCurrentSwapChainBuffer->getInternalResource(),
+                0,
+                pMsaaRenderBuffer->getInternalResource(),
+                0,
+                backBufferFormat);
+
+            // Transition to present.
             CD3DX12_RESOURCE_BARRIER barriersToPresent[] = {
                 CD3DX12_RESOURCE_BARRIER::Transition(
                     pMsaaRenderBuffer->getInternalResource(),
@@ -893,15 +982,7 @@ namespace ne {
                     D3D12_RESOURCE_STATE_RESOLVE_DEST,
                     D3D12_RESOURCE_STATE_PRESENT)};
 
-            pCommandList->ResourceBarrier(2, barriersToResolve);
-
-            pCommandList->ResolveSubresource(
-                pCurrentSwapChainBuffer->getInternalResource(),
-                0,
-                pMsaaRenderBuffer->getInternalResource(),
-                0,
-                backBufferFormat);
-
+            // Record barriers.
             pCommandList->ResourceBarrier(2, barriersToPresent);
         } else {
             PROFILE_SCOPE(TransitionToPresent);
@@ -911,6 +992,8 @@ namespace ne {
                 vSwapChainBuffers[pSwapChain->GetCurrentBackBufferIndex()]->getInternalResource(),
                 D3D12_RESOURCE_STATE_RENDER_TARGET,
                 D3D12_RESOURCE_STATE_PRESENT);
+
+            // Record barriers.
             pCommandList->ResourceBarrier(1, &transition);
         }
 
@@ -1474,6 +1557,19 @@ namespace ne {
     DXGI_FORMAT DirectXRenderer::getDepthStencilBufferFormat() { return depthStencilBufferFormat; }
 
     UINT DirectXRenderer::getMsaaQualityLevel() const { return iMsaaQualityLevelsCount; }
+
+    GpuResource* DirectXRenderer::getDepthTextureNoMultisampling() {
+        std::scoped_lock guard(
+            *getRenderResourcesMutex()); // `bIsUsingMsaaRenderTarget` is only changed under this mutex
+
+        if (bIsUsingMsaaRenderTarget) {
+            // Depth buffer uses multisampling so return a pointer to the resolved depth resource.
+            return pDepthBufferNoMultisampling.get();
+        }
+
+        // Depth buffer does not use multisampling so just return it.
+        return pDepthStencilBuffer.get();
+    }
 
     std::optional<Error> DirectXRenderer::onRenderSettingsChanged() {
         // Make sure no rendering is happening.

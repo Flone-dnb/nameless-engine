@@ -529,7 +529,7 @@ namespace ne {
 
 #if defined(DEBUG)
             static_assert(
-                sizeof(LightingShaderResourceManager) == 224, "consider adding new arrays here"); // NOLINT
+                sizeof(LightingShaderResourceManager) == 240, "consider adding new arrays here"); // NOLINT
 #endif
         }
 #endif
@@ -625,10 +625,12 @@ namespace ne {
                     /**
                      * Updates data used by shaders.
                      *
-                     * @param pRenderer               Renderer.
-                     * @param renderResolution        Current render resolution.
-                     * @param inverseProjectionMatrix Inverse projection matrix of the active camera.
-                     * @param bQueueShaderExecution   `true` to queue compute shader execution, `false`
+                     * @param pRenderer                    Renderer.
+                     * @param renderResolution             Current render resolution.
+                     * @param inverseProjectionMatrix      Inverse projection matrix of the active camera.
+                     * @param pLightCullingShaderInterface Light culling shader to update some of its
+                     * resource bindings that this shader owns.
+                     * @param bQueueShaderExecution        `true` to queue compute shader execution, `false`
                      * otherwise.
                      *
                      * @return Error if something went wrong.
@@ -637,6 +639,7 @@ namespace ne {
                         Renderer* pRenderer,
                         const std::pair<unsigned int, unsigned int>& renderResolution,
                         const glm::mat4& inverseProjectionMatrix,
+                        ComputeShaderInterface* pLightCullingShaderInterface,
                         bool bQueueShaderExecution);
 
                     /** Shader interface. */
@@ -665,6 +668,64 @@ namespace ne {
                      * calculated frustums.
                      */
                     static inline const auto sCalculatedFrustumsShaderResourceName = "calculatedFrustums";
+                };
+            };
+
+            /** Groups shader data for compute shader that does light culling. */
+            struct LightCullingComputeShader {
+                /** Groups buffers that we bind to a compute shader. */
+                struct ShaderResources {
+                    /**
+                     * Renderer's depth texture that we binded the last time.
+                     *
+                     * @remark Used to check if renderer's returned depth texture pointer is different
+                     * from the one we binded the last time to rebind changed pointer to the shader,
+                     * otherwise (if not changed) we will skip rebinding logic.
+                     */
+                    GpuResource* pLastBindedDepthTexture = nullptr;
+                };
+
+                /** Groups shader interface and its resources. */
+                struct ComputeShader {
+                    /**
+                     * Creates compute interface and resources and binds them to the interface.
+                     *
+                     * @param pRenderer Renderer.
+                     *
+                     * @return Error if something went wrong.
+                     */
+                    [[nodiscard]] std::optional<Error> initialize(Renderer* pRenderer);
+
+                    /**
+                     * Called to queue compute shader to be executed on the next frame.
+                     *
+                     * @warning Expected to be called somewhere inside of the `drawNextFrame` function
+                     * so that renderer's depth texture without multisampling pointer will not change.
+                     *
+                     * @param pRenderer          Renderer.
+                     * @param frustumGridShader  Compute shader that calculates grid of frustums for light
+                     * culling. Its resulting (calculated) resources will be used in light culling.
+                     *
+                     * @return Error if something went wrong.
+                     */
+                    [[nodiscard]] std::optional<Error> queueExecutionForNextFrame(
+                        Renderer* pRenderer,
+                        const FrustumGridComputeShader::ComputeShader& frustumGridShader);
+
+                    /** Shader interface. */
+                    std::unique_ptr<ComputeShaderInterface> pComputeInterface;
+
+                    /** Shader resources that this compute shader "owns". */
+                    ShaderResources resources;
+
+                    /** `true` if @ref initialize was called, `false` otherwise. */
+                    bool bIsInitialized = false;
+
+                    /**
+                     * Name of the shader resource (name from shader code) that stores
+                     * depth texture recorded on depth prepass.
+                     */
+                    static inline const auto sDepthTextureShaderResourceName = "depthTexture";
                 };
             };
         };
@@ -718,6 +779,9 @@ namespace ne {
         /**
          * Updates all light source resources marked as "needs update" and copies new (updated) data to the
          * GPU resource of the specified frame resource.
+         *
+         * @warning Expected to be called somewhere inside of the `drawNextFrame` function
+         * so that renderer's depth texture without multisampling pointer will not change.
          *
          * @remark Also copies data from @ref mtxGpuData.
          *
@@ -791,6 +855,9 @@ namespace ne {
 
         /** Calculates frustum grid for light culling. */
         ComputeShaderData::FrustumGridComputeShader::ComputeShader frustumGridComputeShaderData;
+
+        /** Does light culling. */
+        ComputeShaderData::LightCullingComputeShader::ComputeShader lightCullingComputeShaderData;
 
         /** Used renderer. */
         Renderer* pRenderer = nullptr;

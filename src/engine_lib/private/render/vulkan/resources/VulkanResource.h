@@ -55,10 +55,22 @@ namespace ne {
          *
          * @remark Returned pointer is only valid while this object is valid.
          *
-         * @return `nullptr` if this resource uses buffer as internal resource not a image,
+         * @return `nullptr` if this resource uses buffer as internal resource not an image,
          * otherwise internal image view.
          */
         inline VkImageView getInternalImageView() const { return pImageView; }
+
+        /**
+         * Returns internal image.
+         *
+         * @remark Do not delete (free) returned pointer.
+         *
+         * @remark Returned pointer is only valid while this object is valid.
+         *
+         * @return `nullptr` if this resource uses buffer as internal resource not an image,
+         * otherwise internal image.
+         */
+        inline VkImage getInternalImage() const { return pImageResource; }
 
         /**
          * Returns memory allocation of the internal resource.

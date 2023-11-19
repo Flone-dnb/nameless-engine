@@ -215,6 +215,20 @@ namespace ne {
          */
         VkSampleCountFlagBits getMsaaSampleCount() const;
 
+        /**
+         * Returns pointer to the texture resource that represents renderer's depth texture
+         * without multisampling (resolved resource).
+         *
+         * @warning If MSAA is enabled this function will return one resource (pointer to a separate
+         * depth resolved resource), if it's disabled it will return the other resource (pointer to depth
+         * texture). So it may be a good idea to query this pointer every time you need it instead of saving
+         * it and reusing it because every frame this pointer may change (due to other reasons such as
+         * render target resize and etc).
+         *
+         * @return Pointer to depth texture.
+         */
+        virtual GpuResource* getDepthTextureNoMultisampling() override;
+
     protected:
         /**
          * Creates an empty (uninitialized) renderer.
@@ -774,6 +788,16 @@ namespace ne {
         /** Depth buffer. */
         std::unique_ptr<VulkanResource> pDepthImage = nullptr;
 
+        /**
+         * Depth buffer without multisampling (for light culing compute shader).
+         *
+         * @warning When @ref pDepthImage does not use multisampling this buffer is not used
+         * and does not store contents of @ref pDepthImage.
+         *
+         * @remark Stores non-multisampled depth data from @ref pDepthImage for shaders.
+         */
+        std::unique_ptr<VulkanResource> pDepthImageNoMultisampling = nullptr;
+
         /** Image with multiple samples per pixel for MSAA. */
         std::unique_ptr<VulkanResource> pMsaaImage = nullptr;
 
@@ -879,6 +903,9 @@ namespace ne {
          */
         bool bNeedToRecreateSwapchain = false;
 
+        /** Tells if MSAA is enabled or not and whether we are using multisampled render target or not. */
+        bool bIsUsingMsaaRenderTarget = false;
+
         /** Whether the window that owns the renderer is minimized or not. */
         bool bIsWindowMinimized = false;
 
@@ -894,20 +921,32 @@ namespace ne {
         /** Index of the color resolve target attachment in render pass. */
         static constexpr size_t iRenderPassColorResolveTargetAttachmentIndex = 2;
 
+        /** Index of @ref pDepthImage in @ref pDepthOnlyRenderPass. */
+        static constexpr size_t iDepthOnlyRenderPassDepthImageAttachmentIndex = 0;
+
+        /** Index of @ref pDepthImageNoMultisampling in @ref pDepthOnlyRenderPass. */
+        static constexpr size_t iDepthOnlyRenderPassDepthImageNoMultisamplingAttachmentIndex = 1;
+
         /** Format of @ref vSwapChainImages. */
-        static constexpr VkFormat swapChainImageFormat = VK_FORMAT_B8G8R8A8_UNORM;
+        static constexpr auto swapChainImageFormat = VK_FORMAT_B8G8R8A8_UNORM;
 
         /** Color space of @ref vSwapChainImages. */
-        static constexpr VkColorSpaceKHR swapChainImageColorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
+        static constexpr auto swapChainImageColorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
 
         /** Format of @ref pDepthImage. */
-        static constexpr VkFormat depthImageFormat = VK_FORMAT_D24_UNORM_S8_UINT;
+        static constexpr auto depthImageFormat = VK_FORMAT_D24_UNORM_S8_UINT;
 
         /** Tiling option for @ref pDepthImage. */
-        static constexpr VkImageTiling depthImageTiling = VK_IMAGE_TILING_OPTIMAL;
+        static constexpr auto depthImageTiling = VK_IMAGE_TILING_OPTIMAL;
 
         /** Format of indices. */
-        static constexpr VkIndexType indexTypeFormat = VK_INDEX_TYPE_UINT32;
+        static constexpr auto indexTypeFormat = VK_INDEX_TYPE_UINT32;
+
+        /** Used mode for resolving multisampled depth image. */
+        static constexpr auto depthResolveMode = VK_RESOLVE_MODE_AVERAGE_BIT;
+
+        /** Used mode for resolving multisampled depth image. */
+        static constexpr auto stencilResolveMode = VK_RESOLVE_MODE_SAMPLE_ZERO_BIT;
 
         /** Version of the Vulkan API that the renderer uses. */
         static constexpr uint32_t iUsedVulkanVersion = VK_API_VERSION_1_2;

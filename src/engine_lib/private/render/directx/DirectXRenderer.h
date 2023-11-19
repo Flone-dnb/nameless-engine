@@ -162,6 +162,20 @@ namespace ne {
          */
         UINT getMsaaQualityLevel() const;
 
+        /**
+         * Returns pointer to the texture resource that represents renderer's depth texture
+         * without multisampling (resolved resource).
+         *
+         * @warning If MSAA is enabled this function will return one resource (pointer to a separate
+         * depth resolved resource), if it's disabled it will return the other resource (pointer to depth
+         * texture). So it may be a good idea to query this pointer every time you need it instead of saving
+         * it and reusing it because every frame this pointer may change (due to other reasons such as
+         * render target resize and etc).
+         *
+         * @return Pointer to depth texture.
+         */
+        virtual GpuResource* getDepthTextureNoMultisampling() override;
+
     protected:
         /**
          * Creates an empty (uninitialized) renderer.
@@ -474,6 +488,16 @@ namespace ne {
         /** Depth stencil buffer. */
         std::unique_ptr<DirectXResource> pDepthStencilBuffer;
 
+        /**
+         * Depth buffer without multisampling (for light culing compute shader).
+         *
+         * @warning When @ref pDepthStencilBuffer does not use multisampling this buffer is not used
+         * and does not store contents of @ref pDepthStencilBuffer.
+         *
+         * @remark Stores non-multisampled depth data from @ref pDepthStencilBuffer for shaders.
+         */
+        std::unique_ptr<DirectXResource> pDepthBufferNoMultisampling;
+
         /** Default back buffer fill color. */
         float backBufferFillColor[4] = {0.0F, 0.0F, 0.0F, 1.0F};
 
@@ -515,6 +539,13 @@ namespace ne {
 
         /** Depth/stencil buffer format. */
         static constexpr DXGI_FORMAT depthStencilBufferFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
+
+        /**
+         * Depth buffer format for @ref pDepthBufferNoMultisampling.
+         *
+         * @remark Resolve is only supported for non-integer and non-stencil types.
+         */
+        static constexpr DXGI_FORMAT depthBufferNoMultisamplingFormat = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
 
         /** Use only display modes that use this scaling. */
         static constexpr DXGI_MODE_SCALING usedScaling = DXGI_MODE_SCALING_UNSPECIFIED;

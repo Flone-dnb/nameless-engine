@@ -20,7 +20,7 @@ namespace ne {
         READ_ONLY_ARRAY_BUFFER,  //< `StructuredBuffer` in HLSL, `readonly buffer` in GLSL.
         READ_WRITE_ARRAY_BUFFER, //< `RWStructuredBuffer` in HLSL, `buffer` in GLSL.
         CONSTANT_BUFFER,         //< `cbuffer` in HLSL, `uniform` in GLSL.
-        TEXTURE,                 //< `Texture2D` in HLSL, `image2D` in GLSL.
+        READ_ONLY_TEXTURE,       //< `Texture2D` in HLSL, `sampler2D` in GLSL.
     };
 
     /**
@@ -47,6 +47,9 @@ namespace ne {
          * need to make sure that some rendering operation(s) are run strictly before or after the compute
          * shader (for example if you need to calculate some data that the rendering will use then
          * use the graphics queue).
+         *
+         * @remark Pre-frame compute shaders will run after depth pre-pass (after depth buffer was filled)
+         * but before color rendering is happening.
          *
          * @param pRenderer                  Used renderer.
          * @param sCompiledComputeShaderName Name of the compiled compute shader to later run.

@@ -625,12 +625,10 @@ namespace ne {
                     /**
                      * Updates data used by shaders.
                      *
-                     * @param pRenderer                    Renderer.
-                     * @param renderResolution             Current render resolution.
-                     * @param inverseProjectionMatrix      Inverse projection matrix of the active camera.
-                     * @param pLightCullingShaderInterface Light culling shader to update some of its
-                     * resource bindings that this shader owns.
-                     * @param bQueueShaderExecution        `true` to queue compute shader execution, `false`
+                     * @param pRenderer               Renderer.
+                     * @param renderResolution        Current render resolution.
+                     * @param inverseProjectionMatrix Inverse projection matrix of the active camera.
+                     * @param bQueueShaderExecution   `true` to queue compute shader execution, `false`
                      * otherwise.
                      *
                      * @return Error if something went wrong.
@@ -639,7 +637,6 @@ namespace ne {
                         Renderer* pRenderer,
                         const std::pair<unsigned int, unsigned int>& renderResolution,
                         const glm::mat4& inverseProjectionMatrix,
-                        ComputeShaderInterface* pLightCullingShaderInterface,
                         bool bQueueShaderExecution);
 
                     /** Shader interface. */

@@ -117,6 +117,27 @@ namespace ne {
         pMemoryAllocator = nullptr;
     }
 
+    VkFormat VulkanResourceManager::convertTextureResourceFormatToVkFormat(TextureResourceFormat format) {
+        switch (format) {
+        case (TextureResourceFormat::R32G32_UINT): {
+            return VK_FORMAT_R32G32_UINT;
+            break;
+        }
+        case (TextureResourceFormat::SIZE): {
+            Error error("invalid format");
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+            break;
+        }
+        }
+
+        static_assert(static_cast<size_t>(TextureResourceFormat::SIZE) == 1, "add new formats to convert");
+
+        Error error("unhandled case");
+        error.showError();
+        throw std::runtime_error(error.getFullErrorMessage());
+    }
+
     std::variant<std::unique_ptr<VulkanResourceManager>, Error>
     VulkanResourceManager::create(VulkanRenderer* pRenderer) {
         const auto pLogicalDevice = pRenderer->getLogicalDevice();
@@ -439,6 +460,55 @@ namespace ne {
             return error;
         }
         return std::get<std::unique_ptr<VulkanResource>>(std::move(resourceResult));
+    }
+
+    std::variant<std::unique_ptr<GpuResource>, Error> VulkanResourceManager::createTextureResource(
+        const std::string& sResourceName,
+        unsigned int iWidth,
+        unsigned int iHeight,
+        TextureResourceFormat format) {
+        // Prepare some variables.
+        const auto imageFormat = convertTextureResourceFormatToVkFormat(format);
+        const auto imageAspect = VK_IMAGE_ASPECT_COLOR_BIT;
+
+        // Create image.
+        auto resourceResult = createImage(
+            sResourceName,
+            iWidth,
+            iHeight,
+            1,
+            VK_SAMPLE_COUNT_1_BIT,
+            imageFormat,
+            VK_IMAGE_TILING_OPTIMAL,
+            VK_IMAGE_USAGE_STORAGE_BIT,
+            imageAspect);
+        if (std::holds_alternative<Error>(resourceResult)) {
+            auto error = std::get<Error>(std::move(resourceResult));
+            error.addCurrentLocationToErrorStack();
+            return error;
+        }
+        auto pTextureResource = std::get<std::unique_ptr<VulkanResource>>(std::move(resourceResult));
+
+        // Get renderer.
+        const auto pVulkanRenderer = dynamic_cast<VulkanRenderer*>(getRenderer());
+        if (pVulkanRenderer == nullptr) [[unlikely]] {
+            return Error("expected a Vulkan renderer");
+        }
+
+        // Transition layout to general.
+        auto optionalError = pVulkanRenderer->transitionImageLayout(
+            pTextureResource->getInternalImage(),
+            imageFormat,
+            imageAspect,
+            VK_IMAGE_LAYOUT_UNDEFINED,
+            VK_IMAGE_LAYOUT_GENERAL);
+        if (optionalError.has_value()) [[unlikely]] {
+            auto error = std::move(optionalError.value());
+            error.addCurrentLocationToErrorStack();
+            return error;
+        }
+
+        return pTextureResource;
     }
 
     std::variant<std::unique_ptr<VulkanResource>, Error> VulkanResourceManager::createImage(

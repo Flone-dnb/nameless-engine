@@ -34,6 +34,15 @@ namespace ne {
         virtual ~VulkanResourceManager() override;
 
         /**
+         * Converts texture resource format to Vulkan format.
+         *
+         * @param format Format to convert.
+         *
+         * @return Vulkan format.
+         */
+        static VkFormat convertTextureResourceFormatToVkFormat(TextureResourceFormat format);
+
+        /**
          * Creates a new resource manager.
          *
          * @param pRenderer Vulkan renderer.
@@ -201,6 +210,22 @@ namespace ne {
             size_t iElementCount,
             ResourceUsageType usage,
             bool bIsShaderReadWriteResource) override;
+
+        /**
+         * Creates a texture resource that is available as a read/write resource in shaders.
+         *
+         * @param sResourceName Resource name, used for logging.
+         * @param iWidth        Width of the texture in pixels.
+         * @param iHeight       Height of the texture in pixels.
+         * @param format        Format of the texture.
+         *
+         * @return Error if something went wrong, otherwise created texture resource.
+         */
+        virtual std::variant<std::unique_ptr<GpuResource>, Error> createTextureResource(
+            const std::string& sResourceName,
+            unsigned int iWidth,
+            unsigned int iHeight,
+            TextureResourceFormat format) override;
 
         /**
          * Returns manager that controls storage buffers that act as arrays for

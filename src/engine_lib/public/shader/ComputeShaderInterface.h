@@ -15,12 +15,13 @@
 namespace ne {
     class Renderer;
 
-    /** Describes usage of a resource. */
+    /** Describes usage of a resource in a compute shader. */
     enum class ComputeResourceUsage {
         READ_ONLY_ARRAY_BUFFER,  //< `StructuredBuffer` in HLSL, `readonly buffer` in GLSL.
         READ_WRITE_ARRAY_BUFFER, //< `RWStructuredBuffer` in HLSL, `buffer` in GLSL.
         CONSTANT_BUFFER,         //< `cbuffer` in HLSL, `uniform` in GLSL.
-        READ_ONLY_TEXTURE,       //< `Texture2D` in HLSL, `sampler2D` in GLSL.
+        READ_ONLY_TEXTURE,       //< `Texture2D` in HLSL, `uniform sampler2D` in GLSL.
+        READ_WRITE_TEXTURE,      //< `RWTexture2D` in HLSL, `uniform image2D` in GLSL.
     };
 
     /**

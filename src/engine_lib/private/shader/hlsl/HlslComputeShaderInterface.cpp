@@ -118,6 +118,18 @@ namespace ne {
             tableResources[iRootParameterIndex] = pDescriptor;
             break;
         }
+        case (ComputeResourceUsage::READ_WRITE_TEXTURE): {
+            // Bind UAV.
+            auto optionalError = pDirectXResource->bindDescriptor(DirectXDescriptorType::UAV);
+            if (optionalError.has_value()) [[unlikely]] {
+                optionalError->addCurrentLocationToErrorStack();
+                return optionalError;
+            }
+
+            // Add to UAV array.
+            uavResources[iRootParameterIndex] = pDirectXResource;
+            break;
+        }
         default: {
             return Error("unhandled case");
             break;

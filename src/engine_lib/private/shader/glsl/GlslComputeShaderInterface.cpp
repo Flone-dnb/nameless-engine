@@ -64,6 +64,11 @@ namespace ne {
             bIsBufferDescriptor = false;
             break;
         }
+        case (ComputeResourceUsage::READ_WRITE_TEXTURE): {
+            descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+            bIsBufferDescriptor = false;
+            break;
+        }
         default: {
             return Error("unhandled case");
             break;

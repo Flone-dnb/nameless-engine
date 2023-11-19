@@ -236,6 +236,45 @@ namespace ne {
         return std::get<std::unique_ptr<DirectXResource>>(std::move(result));
     }
 
+    std::variant<std::unique_ptr<GpuResource>, Error> DirectXResourceManager::createTextureResource(
+        const std::string& sResourceName,
+        unsigned int iWidth,
+        unsigned int iHeight,
+        TextureResourceFormat format) {
+        // Prepare resource description.
+        const auto resourceDescription = CD3DX12_RESOURCE_DESC::Tex2D(
+            convertTextureResourceFormatToDxFormat(format),
+            iWidth,
+            iHeight,
+            1, // array size
+            1, // mip levels
+            1, // sample count
+            0, // sample quality
+            D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
+
+        // Prepare allocation heap.
+        D3D12MA::ALLOCATION_DESC allocationDesc = {};
+        allocationDesc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
+
+        // Create resource.
+        auto result = DirectXResource::create(
+            this,
+            sResourceName,
+            pMemoryAllocator.Get(),
+            allocationDesc,
+            resourceDescription,
+            D3D12_RESOURCE_STATE_GENERIC_READ,
+            {},
+            0,
+            0);
+        if (std::holds_alternative<Error>(result)) {
+            auto err = std::get<Error>(std::move(result));
+            err.addCurrentLocationToErrorStack();
+            return err;
+        }
+        return std::get<std::unique_ptr<DirectXResource>>(std::move(result));
+    }
+
     size_t DirectXResourceManager::getTotalVideoMemoryInMb() const {
         D3D12MA::Budget localBudget{};
         pMemoryAllocator->GetBudget(&localBudget, nullptr);
@@ -314,6 +353,27 @@ namespace ne {
         this->pRtvHeap = std::move(pRtvHeap);
         this->pDsvHeap = std::move(pDsvHeap);
         this->pCbvSrvUavHeap = std::move(pCbvSrvUavHeap);
+    }
+
+    DXGI_FORMAT DirectXResourceManager::convertTextureResourceFormatToDxFormat(TextureResourceFormat format) {
+        switch (format) {
+        case (TextureResourceFormat::R32G32_UINT): {
+            return DXGI_FORMAT_R32G32_UINT;
+            break;
+        }
+        case (TextureResourceFormat::SIZE): {
+            Error error("invalid format");
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+            break;
+        }
+        }
+
+        static_assert(static_cast<size_t>(TextureResourceFormat::SIZE) == 1, "add new formats to convert");
+
+        Error error("unhandled case");
+        error.showError();
+        throw std::runtime_error(error.getFullErrorMessage());
     }
 
     std::variant<std::unique_ptr<GpuResource>, Error> DirectXResourceManager::createResourceWithData(

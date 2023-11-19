@@ -23,6 +23,19 @@ namespace ne {
         OTHER
     };
 
+    /** Format of a texture resource to be used in shaders as a read/write resource. */
+    enum class TextureResourceFormat {
+        R32G32_UINT,
+        // ONLY THE FOLLOWING FORMATS CAN BE ADDED HERE:
+        // 1. Formats that are supported as Vulkan storage images on most of the GPUs. Please, make sure you
+        // don't add new formats without checking Vulkan Hardware Database (take Intel(R) UHD
+        // Graphics 600 on Linux (!) for example, if it supports the format as storage image then it's
+        // OK to add it here).
+        // 2. Formats that have the same type in both Vulkan and DirectX.
+
+        SIZE, //< marks the size of this enum
+    };
+
     /** Allows creating GPU resources. */
     class GpuResourceManager {
         // Only renderer should be allowed to create resource manager.
@@ -146,6 +159,22 @@ namespace ne {
             size_t iElementCount,
             ResourceUsageType usage,
             bool bIsShaderReadWriteResource) = 0;
+
+        /**
+         * Creates a texture resource that is available as a read/write resource in shaders.
+         *
+         * @param sResourceName Resource name, used for logging.
+         * @param iWidth        Width of the texture in pixels.
+         * @param iHeight       Height of the texture in pixels.
+         * @param format        Format of the texture.
+         *
+         * @return Error if something went wrong, otherwise created texture resource.
+         */
+        virtual std::variant<std::unique_ptr<GpuResource>, Error> createTextureResource(
+            const std::string& sResourceName,
+            unsigned int iWidth,
+            unsigned int iHeight,
+            TextureResourceFormat format) = 0;
 
         /**
          * Returns renderer that owns this resource manager.

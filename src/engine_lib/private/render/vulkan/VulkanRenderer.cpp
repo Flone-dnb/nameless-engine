@@ -580,13 +580,34 @@ namespace ne {
         }
 
         // Make sure used depth resolve mode is supported.
-        if ((depthStencilResolve.supportedDepthResolveModes & depthResolveMode) != 0) {
+        if ((depthStencilResolve.supportedDepthResolveModes & depthResolveMode) == 0) {
             return std::format(
                 "GPU \"{}\" does not support used depth resolve mode", deviceProperties.deviceName);
         }
-        if ((depthStencilResolve.supportedStencilResolveModes & stencilResolveMode) != 0) {
+        if ((depthStencilResolve.supportedStencilResolveModes & stencilResolveMode) == 0) {
             return std::format(
                 "GPU \"{}\" does not support used stencil resolve mode", deviceProperties.deviceName);
+        }
+
+        // Make sure engine texture resource formats are supported as storage images.
+        std::array<TextureResourceFormat, static_cast<size_t>(TextureResourceFormat::SIZE)> vFormatsToCheck =
+            {TextureResourceFormat::R32G32_UINT};
+        static_assert(static_cast<size_t>(TextureResourceFormat::SIZE) == 1, "add new formats to check");
+        for (const auto& format : vFormatsToCheck) {
+            // Get format support details.
+            VkFormatProperties formatProperties;
+            vkGetPhysicalDeviceFormatProperties(
+                pPhysicalDevice,
+                VulkanResourceManager::convertTextureResourceFormatToVkFormat(format),
+                &formatProperties);
+
+            // Make sure this format can be used as a storage image.
+            if ((formatProperties.optimalTilingFeatures & VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT) == 0) {
+                return std::format(
+                    "GPU \"{}\" does not support one of the used texture resource formats to be used as "
+                    "a storage image",
+                    deviceProperties.deviceName);
+            }
         }
 
         return "";
@@ -2453,6 +2474,111 @@ namespace ne {
 
         // Free temporary command buffer.
         vkFreeCommandBuffers(pLogicalDevice, pCommandPool, 1, &pOneTimeSubmitCommandBuffer);
+
+        return {};
+    }
+
+    std::optional<Error> VulkanRenderer::transitionImageLayout(
+        VkImage pImage,
+        VkFormat imageFormat,
+        VkImageAspectFlags aspect,
+        VkImageLayout oldLayout,
+        VkImageLayout newLayout) {
+        // Create one-time submit command buffer.
+        auto commandBufferResult = createOneTimeSubmitCommandBuffer();
+        if (std::holds_alternative<Error>(commandBufferResult)) {
+            auto error = std::get<Error>(std::move(commandBufferResult));
+            error.addCurrentLocationToErrorStack();
+            return error;
+        }
+        const auto pOneTimeSubmitCommandBuffer = std::get<VkCommandBuffer>(commandBufferResult);
+
+        // Describe memory barrier.
+        VkImageMemoryBarrier barrier{};
+        barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+        barrier.oldLayout = oldLayout;
+        barrier.newLayout = newLayout;
+
+        // Specify whether or not we want to transfer queue family that owns this image.
+        barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+
+        // Specify which image and its parts will be affected.
+        barrier.image = pImage;
+        barrier.subresourceRange.aspectMask = aspect;
+        barrier.subresourceRange.baseMipLevel = 0;
+        barrier.subresourceRange.levelCount = 1;
+        barrier.subresourceRange.baseArrayLayer = 0;
+        barrier.subresourceRange.layerCount = 1;
+
+        VkPipelineStageFlags pipelineStagesBeforeBarrier;
+        VkPipelineStageFlags pipelineStagesToWaitOnBarrier;
+
+        if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
+            // Specify which image operations should occur before the barrier (src) and
+            // which need to wait on the barrier (dst).
+            barrier.srcAccessMask = 0;
+            barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+
+            // Specify which pipeline stages should occur before the barrier and which should wait.
+            pipelineStagesBeforeBarrier = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+            pipelineStagesToWaitOnBarrier = VK_PIPELINE_STAGE_TRANSFER_BIT;
+        } else if (
+            oldLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL &&
+            newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
+            // Specify which image operations should occur before the barrier (src) and
+            // which need to wait on the barrier (dst).
+            barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+            barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+            // Specify which pipeline stages should occur before the barrier and which should wait.
+            pipelineStagesBeforeBarrier = VK_PIPELINE_STAGE_TRANSFER_BIT;
+            pipelineStagesToWaitOnBarrier = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+        } else if (
+            oldLayout == VK_IMAGE_LAYOUT_UNDEFINED &&
+            newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL) {
+            // Specify which image operations should occur before the barrier (src) and
+            // which need to wait on the barrier (dst).
+            barrier.srcAccessMask = 0;
+            barrier.dstAccessMask =
+                VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+
+            // Specify which pipeline stages should occur before the barrier and which should wait.
+            pipelineStagesBeforeBarrier = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+            pipelineStagesToWaitOnBarrier = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+        } else if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VK_IMAGE_LAYOUT_GENERAL) {
+            // Specify which image operations should occur before the barrier (src) and
+            // which need to wait on the barrier (dst).
+            barrier.srcAccessMask = 0;
+            barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
+
+            // Specify which pipeline stages should occur before the barrier and which should wait.
+            pipelineStagesBeforeBarrier = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+            pipelineStagesToWaitOnBarrier =
+                VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+        } else {
+            return Error("unsupported image layout transition");
+        }
+
+        // Record pipeline barrier command.
+        vkCmdPipelineBarrier(
+            pOneTimeSubmitCommandBuffer,
+            pipelineStagesBeforeBarrier,
+            pipelineStagesToWaitOnBarrier,
+            0,
+            0,
+            nullptr,
+            0,
+            nullptr,
+            1,
+            &barrier);
+
+        // Submit and wait of the command buffer.
+        auto optionalError = submitWaitDestroyOneTimeSubmitCommandBuffer(pOneTimeSubmitCommandBuffer);
+        if (optionalError.has_value()) [[unlikely]] {
+            optionalError->addCurrentLocationToErrorStack();
+            return optionalError;
+        }
 
         return {};
     }

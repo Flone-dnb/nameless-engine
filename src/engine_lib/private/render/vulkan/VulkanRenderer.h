@@ -141,6 +141,24 @@ namespace ne {
         submitWaitDestroyOneTimeSubmitCommandBuffer(VkCommandBuffer pOneTimeSubmitCommandBuffer);
 
         /**
+         * Creates a one-time submit command buffer to change image layout.
+         *
+         * @param pImage      Image to use.
+         * @param imageFormat Image format.
+         * @param aspect      Aspect of the image that will be affected.
+         * @param oldLayout   Old (current) image layout.
+         * @param newLayout   New image layout.
+         *
+         * @return Error if something went wrong.
+         */
+        [[nodiscard]] std::optional<Error> transitionImageLayout(
+            VkImage pImage,
+            VkFormat imageFormat,
+            VkImageAspectFlags aspect,
+            VkImageLayout oldLayout,
+            VkImageLayout newLayout);
+
+        /**
          * Returns logical device used in the renderer.
          *
          * @return `nullptr` if logical device is not created yet, otherwise used logical device.

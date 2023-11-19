@@ -1055,7 +1055,6 @@ namespace ne {
         Renderer* pRenderer,
         const std::pair<unsigned int, unsigned int>& renderResolution,
         const glm::mat4& inverseProjectionMatrix,
-        ComputeShaderInterface* pLightCullingShaderInterface,
         bool bQueueShaderExecution) {
         // Make sure engine shaders were compiled and we created compute interface.
         if (pComputeInterface == nullptr) [[unlikely]] {
@@ -1125,16 +1124,6 @@ namespace ne {
             resources.pCalculatedFrustums.get(),
             sCalculatedFrustumsShaderResourceName,
             ComputeResourceUsage::READ_WRITE_ARRAY_BUFFER);
-        if (optionalError.has_value()) [[unlikely]] {
-            optionalError->addCurrentLocationToErrorStack();
-            return optionalError;
-        }
-
-        // Rebind re-created grid of frustums resource to light culling shader.
-        optionalError = pLightCullingShaderInterface->bindResource(
-            resources.pCalculatedFrustums.get(),
-            sCalculatedFrustumsShaderResourceName,
-            ComputeResourceUsage::READ_ONLY_ARRAY_BUFFER);
         if (optionalError.has_value()) [[unlikely]] {
             optionalError->addCurrentLocationToErrorStack();
             return optionalError;
@@ -1316,11 +1305,17 @@ namespace ne {
 
         // Update shader data.
         auto optionalError = frustumGridComputeShaderData.updateData(
-            pRenderer,
-            renderResolution,
-            inverseProjectionMatrix,
-            lightCullingComputeShaderData.pComputeInterface.get(),
-            true);
+            pRenderer, renderResolution, inverseProjectionMatrix, true);
+        if (optionalError.has_value()) [[unlikely]] {
+            optionalError->addCurrentLocationToErrorStack();
+            return optionalError;
+        }
+
+        // Rebind grid of frustums resource to light culling shader because it was re-created.
+        optionalError = lightCullingComputeShaderData.pComputeInterface->bindResource(
+            frustumGridComputeShaderData.resources.pCalculatedFrustums.get(),
+            ComputeShaderData::FrustumGridComputeShader::ComputeShader::sCalculatedFrustumsShaderResourceName,
+            ComputeResourceUsage::READ_ONLY_ARRAY_BUFFER);
         if (optionalError.has_value()) [[unlikely]] {
             optionalError->addCurrentLocationToErrorStack();
             return optionalError;

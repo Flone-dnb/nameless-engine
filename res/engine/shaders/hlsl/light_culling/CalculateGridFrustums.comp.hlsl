@@ -1,7 +1,7 @@
 #include "../../include/light_culling/CalculateGridTileFrustum.glsl"
 
 /**
- * Defines how much threads should be executed in the X and the Y dimensions of a grid tile.
+ * Defines how much threads should be executed in the X and the Y dimensions.
  * This macro also defines how much pixels there are in one grid tile.
  */
 #ifndef THREADS_IN_GROUP_XY

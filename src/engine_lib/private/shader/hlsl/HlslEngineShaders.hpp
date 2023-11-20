@@ -50,8 +50,12 @@ namespace ne {
             ShaderType::COMPUTE_SHADER,
             "csLightCulling",
             {{
-                EngineShaderConstantMacros::ForwardPlus::FrustumGridThreadsInGroupXyMacro::sName,
-                EngineShaderConstantMacros::ForwardPlus::FrustumGridThreadsInGroupXyMacro::sValue,
-            }});
+                 EngineShaderConstantMacros::ForwardPlus::FrustumGridThreadsInGroupXyMacro::sName,
+                 EngineShaderConstantMacros::ForwardPlus::FrustumGridThreadsInGroupXyMacro::sValue,
+             },
+             {
+                 EngineShaderConstantMacros::ForwardPlus::AverageNumLightsOfSpecificTypePerTileMacro::sName,
+                 EngineShaderConstantMacros::ForwardPlus::AverageNumLightsOfSpecificTypePerTileMacro::sValue,
+             }});
     };
 } // namespace ne

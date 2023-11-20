@@ -585,7 +585,7 @@ namespace ne {
 
 #if defined(DEBUG) && defined(WIN32)
         static_assert(
-            sizeof(LightingShaderResourceManager) == 240, "consider notifying new arrays here"); // NOLINT
+            sizeof(LightingShaderResourceManager) == 256, "consider notifying new arrays here"); // NOLINT
 #elif defined(DEBUG)
         static_assert(
             sizeof(LightingShaderResourceManager) == 144, "consider notifying new arrays here"); // NOLINT
@@ -626,7 +626,7 @@ namespace ne {
 
 #if defined(DEBUG) && defined(WIN32)
         static_assert(
-            sizeof(LightingShaderResourceManager) == 240, "consider notifying new arrays here"); // NOLINT
+            sizeof(LightingShaderResourceManager) == 256, "consider notifying new arrays here"); // NOLINT
 #elif defined(DEBUG)
         static_assert(
             sizeof(LightingShaderResourceManager) == 144, "consider notifying new arrays here"); // NOLINT
@@ -655,7 +655,7 @@ namespace ne {
 
 #if defined(DEBUG) && defined(WIN32)
         static_assert(
-            sizeof(LightingShaderResourceManager) == 240, "consider notifying new arrays here"); // NOLINT
+            sizeof(LightingShaderResourceManager) == 256, "consider notifying new arrays here"); // NOLINT
 #elif defined(DEBUG)
         static_assert(
             sizeof(LightingShaderResourceManager) == 144, "consider notifying new arrays here"); // NOLINT
@@ -1043,7 +1043,7 @@ namespace ne {
 
 #if defined(DEBUG) && defined(WIN32)
         static_assert(
-            sizeof(LightingShaderResourceManager) == 240, "consider creating new arrays here"); // NOLINT
+            sizeof(LightingShaderResourceManager) == 256, "consider creating new arrays here"); // NOLINT
 #elif defined(DEBUG)
         static_assert(
             sizeof(LightingShaderResourceManager) == 144, "consider creating new arrays here"); // NOLINT
@@ -1065,7 +1065,7 @@ namespace ne {
         std::scoped_lock renderGuard(*pRenderer->getRenderResourcesMutex());
         pRenderer->waitForGpuToFinishWorkUpToThisPoint();
 
-        // Get tile size.
+        // Get tile size (this value also describes threads in one thread group).
         size_t iTileSizeInPixels = 0;
         try {
             iTileSizeInPixels = std::stoull(
@@ -1075,14 +1075,14 @@ namespace ne {
                 "failed to convert frustum grid tile size to an integer, error: {}", exception.what()));
         };
 
-        // Calculate tile count.
+        // Calculate tile count (using INT/INT to "floor" if not divisible equally).
         const auto iTileCountX = static_cast<unsigned int>(renderResolution.first / iTileSizeInPixels);
         const auto iTileCountY = static_cast<unsigned int>(renderResolution.second / iTileSizeInPixels);
 
         // Calculate frustum count.
         const size_t iFrustumCount = iTileCountX * iTileCountY;
 
-        // Calculate thread group count.
+        // Calculate thread group count (we should dispatch 1 thread per tile).
         const auto iThreadGroupCountX = static_cast<unsigned int>(
             std::ceil(static_cast<float>(iTileCountX) / static_cast<float>(iTileSizeInPixels)));
         const auto iThreadGroupCountY = static_cast<unsigned int>(
@@ -1133,6 +1133,10 @@ namespace ne {
             // Queue frustum grid recalculation shader.
             pComputeInterface->submitForExecution(iThreadGroupCountX, iThreadGroupCountY, 1);
         }
+
+        // Save tile count to be used by light culling shader.
+        iLastUpdateTileCountX = iTileCountX;
+        iLastUpdateTileCountY = iTileCountY;
 
         return {};
     }
@@ -1271,8 +1275,9 @@ namespace ne {
         // Resource that stores calculated grid of frustums is binded inside of the update function
         // for shader that calculates that grid.
 
-        // Queue shader execution.
-        pComputeInterface->submitForExecution(16, 16, 1); // TODO
+        // Queue shader execution (we need to dispatch 1 thread group per tile).
+        pComputeInterface->submitForExecution(
+            frustumGridShader.iLastUpdateTileCountX, frustumGridShader.iLastUpdateTileCountY, 1);
 
         return {};
     }
@@ -1341,7 +1346,7 @@ namespace ne {
 
 #if defined(DEBUG) && defined(WIN32)
         static_assert(
-            sizeof(LightingShaderResourceManager) == 240, "consider resetting new arrays here"); // NOLINT
+            sizeof(LightingShaderResourceManager) == 256, "consider resetting new arrays here"); // NOLINT
 #elif defined(DEBUG)
         static_assert(
             sizeof(LightingShaderResourceManager) == 144, "consider resetting new arrays here"); // NOLINT

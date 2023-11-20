@@ -529,7 +529,7 @@ namespace ne {
 
 #if defined(DEBUG)
             static_assert(
-                sizeof(LightingShaderResourceManager) == 240, "consider adding new arrays here"); // NOLINT
+                sizeof(LightingShaderResourceManager) == 256, "consider adding new arrays here"); // NOLINT
 #endif
         }
 #endif
@@ -566,31 +566,31 @@ namespace ne {
                  */
                 struct ComputeInfo {
                     /** Total number of thread groups dispatched in the X direction. */
-                    alignas(iVkScalarAlignment) unsigned int iThreadGroupCountX;
+                    alignas(iVkScalarAlignment) unsigned int iThreadGroupCountX = 0;
 
                     /** Total number of thread groups dispatched in the Y direction. */
-                    alignas(iVkScalarAlignment) unsigned int iThreadGroupCountY;
+                    alignas(iVkScalarAlignment) unsigned int iThreadGroupCountY = 0;
 
                     /** Total number of tiles in the X direction. */
-                    alignas(iVkScalarAlignment) unsigned int iTileCountX;
+                    alignas(iVkScalarAlignment) unsigned int iTileCountX = 0;
 
                     /** Total number of tiles in the Y direction. */
-                    alignas(iVkScalarAlignment) unsigned int iTileCountY;
+                    alignas(iVkScalarAlignment) unsigned int iTileCountY = 0;
 
                     /** Maximum depth value. */
-                    alignas(iVkScalarAlignment) float maxDepth;
+                    alignas(iVkScalarAlignment) float maxDepth = 0.0F;
                 };
 
                 /** Data that is used to convert coordinates from screen space to view space. */
                 struct ScreenToViewData {
                     /** Inverse of the projection matrix. */
-                    alignas(iVkMat4Alignment) glm::mat4 inverseProjectionMatrix;
+                    alignas(iVkMat4Alignment) glm::mat4 inverseProjectionMatrix = glm::identity<glm::mat4>();
 
                     /** Width of the viewport (might be smaller that the actual screen size). */
-                    alignas(iVkScalarAlignment) unsigned int iRenderResolutionWidth;
+                    alignas(iVkScalarAlignment) unsigned int iRenderResolutionWidth = 0;
 
                     /** Height of the viewport (might be smaller that the actual screen size). */
-                    alignas(iVkScalarAlignment) unsigned int iRenderResolutionHeight;
+                    alignas(iVkScalarAlignment) unsigned int iRenderResolutionHeight = 0;
                 };
 
                 /** Groups buffers that we bind to a compute shader. */
@@ -644,6 +644,18 @@ namespace ne {
 
                     /** Shader resources. */
                     ShaderResources resources;
+
+                    /**
+                     * Total number of tiles in the X direction that was used when @ref updateData
+                     * was called the last time.
+                     */
+                    unsigned int iLastUpdateTileCountX = 0;
+
+                    /**
+                     * Total number of tiles in the X direction that was used when @ref updateData
+                     * was called the last time.
+                     */
+                    unsigned int iLastUpdateTileCountY = 0;
 
                     /** `true` if @ref initialize was called, `false` otherwise. */
                     bool bIsInitialized = false;

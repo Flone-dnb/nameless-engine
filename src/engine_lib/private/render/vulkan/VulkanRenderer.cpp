@@ -30,6 +30,7 @@
 
 namespace ne {
     VulkanRenderer::VulkanRenderer(GameManager* pGameManager) : Renderer(pGameManager) {
+        // Make sure we use the same formats as in DirectX.
         static_assert(
             swapChainImageFormat == VK_FORMAT_B8G8R8A8_UNORM,
             "also change format in DirectX renderer for (visual) consistency");
@@ -39,6 +40,12 @@ namespace ne {
         static_assert(
             depthImageFormat == VK_FORMAT_D24_UNORM_S8_UINT,
             "also change format in DirectX renderer for (visual) consistency");
+
+        // Self check for light culling compute shader:
+        static_assert(
+            depthImageFormat == VK_FORMAT_D24_UNORM_S8_UINT,
+            "light culling compute shader expects the depth values to be in range [0..1], please review the "
+            "light culling compute shader and make sure it works correctly");
     }
 
     std::variant<MsaaState, Error> VulkanRenderer::getMaxSupportedAntialiasingQuality() const {
@@ -484,14 +491,20 @@ namespace ne {
 
     std::variant<std::string, Error> VulkanRenderer::isDeviceSuitable(VkPhysicalDevice pGpu) {
         // Get device properties.
-        VkPhysicalDeviceProperties deviceProperties;
-        vkGetPhysicalDeviceProperties(pGpu, &deviceProperties);
+        VkPhysicalDeviceDepthStencilResolveProperties depthStencilResolve{};
+        depthStencilResolve.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DEPTH_STENCIL_RESOLVE_PROPERTIES;
+        depthStencilResolve.pNext = nullptr;
+
+        VkPhysicalDeviceProperties2 deviceProperties;
+        deviceProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
+        deviceProperties.pNext = &depthStencilResolve;
+        vkGetPhysicalDeviceProperties2(pGpu, &deviceProperties);
 
         // Make sure this GPU supports used Vulkan version.
-        if (deviceProperties.apiVersion < iUsedVulkanVersion) {
+        if (deviceProperties.properties.apiVersion < iUsedVulkanVersion) {
             return std::format(
                 "GPU \"{}\" does not support used Vulkan version {}",
-                deviceProperties.deviceName,
+                deviceProperties.properties.deviceName,
                 getUsedApiVersion());
         }
 
@@ -505,7 +518,8 @@ namespace ne {
         const auto queueFamiliesIndices = std::get<QueueFamilyIndices>(std::move(queueFamiliesResult));
         if (!queueFamiliesIndices.isComplete()) {
             return std::format(
-                "GPU \"{}\" does not support all required queue families", deviceProperties.deviceName);
+                "GPU \"{}\" does not support all required queue families",
+                deviceProperties.properties.deviceName);
         }
 
         // Make sure this GPU supports all used device extensions.
@@ -519,7 +533,7 @@ namespace ne {
         if (!sMissingDeviceExtension.empty()) {
             return std::format(
                 "GPU \"{}\" does not support required device extension \"{}\"",
-                deviceProperties.deviceName,
+                deviceProperties.properties.deviceName,
                 sMissingDeviceExtension);
         }
 
@@ -538,13 +552,9 @@ namespace ne {
 
         // Prepare a linked list of features that will be filled in `vkGetPhysicalDeviceFeatures2` below
         // so that we can check their support.
-        VkPhysicalDeviceDepthStencilResolveProperties depthStencilResolve{};
-        depthStencilResolve.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DEPTH_STENCIL_RESOLVE_PROPERTIES;
-        depthStencilResolve.pNext = nullptr;
-
         VkPhysicalDeviceDescriptorIndexingFeatures descriptorIndexingFeatures{};
         descriptorIndexingFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES;
-        descriptorIndexingFeatures.pNext = &depthStencilResolve;
+        descriptorIndexingFeatures.pNext = nullptr;
 
         VkPhysicalDeviceFeatures2 deviceFeatures2{};
         deviceFeatures2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
@@ -557,16 +567,16 @@ namespace ne {
         // (because RenderSettings don't check whether it's supported or not when deserialized/changed)
         if (deviceFeatures2.features.samplerAnisotropy == VK_FALSE) {
             return std::format(
-                "GPU \"{}\" does not support anisotropic filtering", deviceProperties.deviceName);
+                "GPU \"{}\" does not support anisotropic filtering", deviceProperties.properties.deviceName);
         }
 
         // Make sure that maximum push constants size that we use is supported.
         if (VulkanPushConstantsManager::getMaxPushConstantsSizeInBytes() >
-            deviceProperties.limits.maxPushConstantsSize) {
+            deviceProperties.properties.limits.maxPushConstantsSize) {
             return std::format(
                 "GPU \"{}\" max push constants size is only {} while we expect {}",
-                deviceProperties.deviceName,
-                deviceProperties.limits.maxPushConstantsSize,
+                deviceProperties.properties.deviceName,
+                deviceProperties.properties.limits.maxPushConstantsSize,
                 VulkanPushConstantsManager::getMaxPushConstantsSizeInBytes());
         }
 
@@ -576,17 +586,19 @@ namespace ne {
             descriptorIndexingFeatures.descriptorBindingPartiallyBound == VK_FALSE ||
             descriptorIndexingFeatures.runtimeDescriptorArray == VK_FALSE) {
             return std::format(
-                "GPU \"{}\" does not support used indexing features", deviceProperties.deviceName);
+                "GPU \"{}\" does not support used indexing features", deviceProperties.properties.deviceName);
         }
 
         // Make sure used depth resolve mode is supported.
         if ((depthStencilResolve.supportedDepthResolveModes & depthResolveMode) == 0) {
             return std::format(
-                "GPU \"{}\" does not support used depth resolve mode", deviceProperties.deviceName);
+                "GPU \"{}\" does not support used depth resolve mode",
+                deviceProperties.properties.deviceName);
         }
         if ((depthStencilResolve.supportedStencilResolveModes & stencilResolveMode) == 0) {
             return std::format(
-                "GPU \"{}\" does not support used stencil resolve mode", deviceProperties.deviceName);
+                "GPU \"{}\" does not support used stencil resolve mode",
+                deviceProperties.properties.deviceName);
         }
 
         // Make sure engine texture resource formats are supported as storage images.
@@ -597,7 +609,7 @@ namespace ne {
             // Get format support details.
             VkFormatProperties formatProperties;
             vkGetPhysicalDeviceFormatProperties(
-                pPhysicalDevice,
+                pGpu,
                 VulkanResourceManager::convertTextureResourceFormatToVkFormat(format),
                 &formatProperties);
 
@@ -606,7 +618,7 @@ namespace ne {
                 return std::format(
                     "GPU \"{}\" does not support one of the used texture resource formats to be used as "
                     "a storage image",
-                    deviceProperties.deviceName);
+                    deviceProperties.properties.deviceName);
             }
         }
 
@@ -1855,9 +1867,9 @@ namespace ne {
             VK_SAMPLE_COUNT_1_BIT, // 1 sample
             depthImageFormat,
             depthImageTiling,
-            VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT |
-                VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
-            VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT);
+            VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT |
+                VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+            VK_IMAGE_ASPECT_DEPTH_BIT); // specify only depth aspect because we only care about it
         if (std::holds_alternative<Error>(result)) [[unlikely]] {
             auto error = std::get<Error>(std::move(result));
             error.addCurrentLocationToErrorStack();

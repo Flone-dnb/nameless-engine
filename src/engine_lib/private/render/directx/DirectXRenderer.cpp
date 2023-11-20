@@ -53,12 +53,19 @@ namespace ne {
 #endif
 
     DirectXRenderer::DirectXRenderer(GameManager* pGameManager) : Renderer(pGameManager) {
+        // Make sure we use the same formats as in Vulkan.
         static_assert(
             backBufferFormat == DXGI_FORMAT_R8G8B8A8_UNORM,
             "also change format in Vulkan renderer for (visual) consistency");
         static_assert(
             depthStencilBufferFormat == DXGI_FORMAT_D24_UNORM_S8_UINT,
             "also change format in Vulkan renderer for (visual) consistency");
+
+        // Self check for light culling compute shader:
+        static_assert(
+            depthStencilBufferFormat == DXGI_FORMAT_D24_UNORM_S8_UINT,
+            "light culling compute shader expects the depth values to be in range [0..1], please review the "
+            "light culling compute shader and make sure it works correctly");
     }
 
     std::vector<ShaderDescription> DirectXRenderer::getEngineShadersToCompile() const {

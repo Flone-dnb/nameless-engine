@@ -88,6 +88,10 @@ namespace ne {
                 info.resourceType = GlslResourceType::STORAGE_BUFFER;
                 break;
             }
+            case (SPV_REFLECT_DESCRIPTOR_TYPE_STORAGE_IMAGE): {
+                info.resourceType = GlslResourceType::STORAGE_IMAGE;
+                break;
+            }
             default: {
                 return Error(
                     std::format("type the resource \"{}\" is not supported", descriptorBinding->name));
@@ -274,7 +278,7 @@ namespace ne {
                 }
 
                 // Generate layout binding.
-                auto layoutBindingResult = generateLayoutBinding(iBindingIndex, bindingInfo);
+                auto layoutBindingResult = generateLayoutBinding(iBindingIndex, bindingInfo, false);
                 if (std::holds_alternative<Error>(layoutBindingResult)) [[unlikely]] {
                     auto error = std::get<Error>(std::move(layoutBindingResult));
                     error.addCurrentLocationToErrorStack();
@@ -366,7 +370,7 @@ namespace ne {
             }
 
             // Generate layout binding.
-            auto layoutBindingResult = generateLayoutBinding(iBindingIndex, bindingInfo);
+            auto layoutBindingResult = generateLayoutBinding(iBindingIndex, bindingInfo, false);
             if (std::holds_alternative<Error>(layoutBindingResult)) [[unlikely]] {
                 auto error = std::get<Error>(std::move(layoutBindingResult));
                 error.addCurrentLocationToErrorStack();
@@ -638,7 +642,7 @@ namespace ne {
             }
 
             // Generate layout binding.
-            auto layoutBindingResult = generateLayoutBinding(iBindingIndex, bindingInfo);
+            auto layoutBindingResult = generateLayoutBinding(iBindingIndex, bindingInfo, true);
             if (std::holds_alternative<Error>(layoutBindingResult)) [[unlikely]] {
                 auto error = std::get<Error>(std::move(layoutBindingResult));
                 error.addCurrentLocationToErrorStack();
@@ -805,7 +809,9 @@ namespace ne {
 
     std::variant<std::pair<VkDescriptorSetLayoutBinding, VkDescriptorBindingFlags>, Error>
     DescriptorSetLayoutGenerator::generateLayoutBinding(
-        uint32_t iBindingIndex, const Collected::DescriptorSetLayoutBindingInfo& bindingInfo) {
+        uint32_t iBindingIndex,
+        const Collected::DescriptorSetLayoutBindingInfo& bindingInfo,
+        bool bIsComputeShader) {
         VkDescriptorSetLayoutBinding layoutBinding{};
         VkDescriptorBindingFlags bindingFlags{};
 
@@ -816,7 +822,8 @@ namespace ne {
         layoutBinding.descriptorCount = 1;
 
         // Set stage.
-        layoutBinding.stageFlags = VK_SHADER_STAGE_ALL;
+        layoutBinding.stageFlags =
+            bIsComputeShader ? VK_SHADER_STAGE_COMPUTE_BIT : VK_SHADER_STAGE_ALL_GRAPHICS;
 
         // Set descriptor type.
         switch (bindingInfo.resourceType) {
@@ -830,14 +837,20 @@ namespace ne {
         }
         case (GlslResourceType::COMBINED_SAMPLER): {
             layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-            layoutBinding.pImmutableSamplers = nullptr;
 
-            // Override descriptor count.
-            layoutBinding.descriptorCount = DescriptorConstants::iBindlessTextureArrayDescriptorCount;
+            if (!bIsComputeShader) {
+                // Override descriptor count.
+                layoutBinding.descriptorCount = DescriptorConstants::iBindlessTextureArrayDescriptorCount;
 
-            // Specify flags for bindless bindings.
-            bindingFlags =
-                VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT;
+                // Specify flags for bindless bindings.
+                bindingFlags =
+                    VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT;
+            }
+
+            break;
+        }
+        case (GlslResourceType::STORAGE_IMAGE): {
+            layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
             break;
         }
         default: {

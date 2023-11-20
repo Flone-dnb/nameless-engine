@@ -19,6 +19,18 @@ namespace ne {
                 /** Macro value. */
                 static inline const auto sValue = "16";
             };
+
+            /**
+             * Defines how much lights (of a specific type) are expected to be on average in a light grid
+             * tile for opaque or transparent geometry.
+             */
+            struct AverageNumLightsOfSpecificTypePerTileMacro {
+                /** Macro name. */
+                static inline const auto sName = "AVERAGE_NUM_LIGHTS_OF_SPECIFIC_TYPE_PER_TILE";
+
+                /** Macro value. */
+                static inline const auto sValue = "200";
+            };
         };
     };
 }

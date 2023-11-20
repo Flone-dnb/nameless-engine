@@ -24,6 +24,7 @@ namespace ne {
         UNIFORM_BUFFER,
         STORAGE_BUFFER,
         COMBINED_SAMPLER,
+        STORAGE_IMAGE,
         // ... add new resource types here ...
     };
 
@@ -175,14 +176,18 @@ namespace ne {
         /**
          * Generates Vulkan layout binding that could be used to create a descriptor set layout.
          *
-         * @param iBindingIndex Index of the binding that was specified in the GLSL code.
-         * @param bindingInfo   Information about the GLSL resource used in this binding.
+         * @param iBindingIndex    Index of the binding that was specified in the GLSL code.
+         * @param bindingInfo      Information about the GLSL resource used in this binding.
+         * @param bIsComputeShader `true` if this binding is being generated for a compute shader, otherwise
+         * `false`.
          *
          * @return Error if something went wrong, otherwise generated binding with flags.
          */
         static std::variant<std::pair<VkDescriptorSetLayoutBinding, VkDescriptorBindingFlags>, Error>
         generateLayoutBinding(
-            uint32_t iBindingIndex, const Collected::DescriptorSetLayoutBindingInfo& bindingInfo);
+            uint32_t iBindingIndex,
+            const Collected::DescriptorSetLayoutBindingInfo& bindingInfo,
+            bool bIsComputeShader);
 
         /** Name of the `uniform` buffer used to store frame data in GLSL shaders. */
         static constexpr auto pFrameUniformBufferName = "frameData";

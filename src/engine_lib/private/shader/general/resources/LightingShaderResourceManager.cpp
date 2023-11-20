@@ -1149,7 +1149,7 @@ namespace ne {
         auto computeCreationResult = ComputeShaderInterface::createUsingGraphicsQueue(
             pRenderer,
             EngineShaderNames::ForwardPlus::sCalculateFrustumGridComputeShaderName,
-            true,
+            ComputeExecutionStage::AFTER_DEPTH_PREPASS,
             ComputeExecutionGroup::FIRST); // runs before light culling compute shader
         if (std::holds_alternative<Error>(computeCreationResult)) [[unlikely]] {
             auto error = std::get<Error>(std::move(computeCreationResult));
@@ -1225,7 +1225,7 @@ namespace ne {
         auto computeCreationResult = ComputeShaderInterface::createUsingGraphicsQueue(
             pRenderer,
             EngineShaderNames::ForwardPlus::sLightCullingComputeShaderName,
-            true,
+            ComputeExecutionStage::AFTER_DEPTH_PREPASS,
             ComputeExecutionGroup::SECOND); // runs after compute shader that calculates grid frustums
         if (std::holds_alternative<Error>(computeCreationResult)) [[unlikely]] {
             auto error = std::get<Error>(std::move(computeCreationResult));

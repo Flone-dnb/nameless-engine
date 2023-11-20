@@ -89,6 +89,8 @@ set(PROJECT_SOURCES
     private/render/general/pipeline/PipelineManager.cpp
     private/render/general/pipeline/Pipeline.h
     private/render/general/pipeline/Pipeline.cpp
+    private/render/general/pipeline/PipelineSharedPtr.h
+    private/render/general/pipeline/PipelineSharedPtr.cpp
     private/render/vulkan/pipeline/VulkanPipeline.h
     private/render/vulkan/pipeline/VulkanPipeline.cpp
     private/render/vulkan/pipeline/VulkanPushConstantsManager.hpp

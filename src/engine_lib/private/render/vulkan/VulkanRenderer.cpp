@@ -2679,10 +2679,12 @@ namespace ne {
         // Finish depth only render pass.
         vkCmdEndRenderPass(pVulkanCurrentFrameResource->pCommandBuffer);
 
-        PROFILE_SCOPE_START(DispatchPreFrameComputeShaders);
+        PROFILE_SCOPE_START(DispatchComputeShadersAfterDepthPrepass);
 
         // Check if we have compute shaders to dispatch.
-        auto& computeShaderGroups = mtxQueuedComputeShader.second->graphicsQueuePreFrameShadersGroups;
+        auto& computeShaderGroups =
+            mtxQueuedComputeShader.second
+                ->vGraphicsQueueStagesGroups[static_cast<size_t>(ComputeExecutionStage::AFTER_DEPTH_PREPASS)];
         bool bHaveComputeWorkToDispatch = false;
         for (auto& group : computeShaderGroups) {
             if (group.empty()) {
@@ -3057,36 +3059,6 @@ namespace ne {
 
         // Mark render pass end.
         vkCmdEndRenderPass(pVulkanCurrentFrameResource->pCommandBuffer);
-
-        PROFILE_SCOPE_START(DispatchPostFrameComputeShaders);
-
-        // Dispatch post-frame compute shaders.
-        for (auto& group : pQueuedComputeShaders->graphicsQueuePostFrameShadersGroups) {
-            // See if we have compute shaders to dispatch.
-            if (!group.empty()) {
-                // Insert a synchronization barrier.
-                vkCmdPipelineBarrier(
-                    pVulkanCurrentFrameResource->pCommandBuffer,
-                    VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT |
-                        VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT, // run all already recorded compute/graphics
-                                                            // commands before this barrier
-                    VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,   // make all next compute commands to wait for this
-                                                            // barrier
-                    0,
-                    0,
-                    nullptr,
-                    0,
-                    nullptr,
-                    0,
-                    nullptr);
-
-                // Dispatch compute shaders.
-                dispatchComputeShadersOnGraphicsQueue(
-                    pVulkanCurrentFrameResource, iCurrentFrameResourceIndex, group);
-            }
-        }
-
-        PROFILE_SCOPE_END;
 
         // Mark end of command recording.
         auto result = vkEndCommandBuffer(pVulkanCurrentFrameResource->pCommandBuffer);

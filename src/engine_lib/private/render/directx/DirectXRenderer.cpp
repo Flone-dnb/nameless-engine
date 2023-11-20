@@ -665,10 +665,13 @@ namespace ne {
         // Execute recorded commands.
         executeGraphicsCommandList(pCommandList.Get());
 
-        PROFILE_SCOPE_START(DispatchPreFrameComputeShaders);
+        PROFILE_SCOPE_START(DispatchComputeShadersAfterDepthPrepass);
 
         // Dispatch pre-frame compute shaders.
-        for (auto& group : mtxQueuedComputeShader.second->graphicsQueuePreFrameShadersGroups) {
+        auto& computeShaderGroups =
+            mtxQueuedComputeShader.second
+                ->vGraphicsQueueStagesGroups[static_cast<size_t>(ComputeExecutionStage::AFTER_DEPTH_PREPASS)];
+        for (auto& group : computeShaderGroups) {
             dispatchComputeShadersOnGraphicsQueue(pCurrentFrameResource->pCommandAllocator.Get(), group);
         }
 
@@ -999,15 +1002,6 @@ namespace ne {
 
         // Execute recorded commands.
         executeGraphicsCommandList(pCommandList.Get());
-
-        PROFILE_SCOPE_START(DispatchPostFrameComputeShaders);
-
-        // Dispatch all post-frame compute shaders.
-        for (auto& group : pQueuedComputeShaders->graphicsQueuePostFrameShadersGroups) {
-            dispatchComputeShadersOnGraphicsQueue(pCurrentFrameResource->pCommandAllocator.Get(), group);
-        }
-
-        PROFILE_SCOPE_END;
 
         PROFILE_SCOPE_START(Present);
 

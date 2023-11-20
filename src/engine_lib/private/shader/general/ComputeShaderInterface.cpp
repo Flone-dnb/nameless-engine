@@ -7,15 +7,16 @@
 #endif
 #include "shader/glsl/GlslComputeShaderInterface.h"
 #include "render/vulkan/VulkanRenderer.h"
+#include "render/general/pipeline/PipelineManager.h"
 
 namespace ne {
 
     ComputeShaderInterface::ComputeShaderInterface(
         Renderer* pRenderer,
         const std::string& sComputeShaderName,
-        bool bRunBeforeFrameRendering,
+        ComputeExecutionStage executionStage,
         ComputeExecutionGroup executionGroup)
-        : executionGroup(executionGroup), bRunBeforeFrameRendering(bRunBeforeFrameRendering),
+        : executionStage(executionStage), executionGroup(executionGroup),
           sComputeShaderName(sComputeShaderName) {
         this->pRenderer = pRenderer;
     }
@@ -23,7 +24,7 @@ namespace ne {
     ComputeShaderInterface::~ComputeShaderInterface() {
 #if defined(DEBUG) && defined(WIN32)
         static_assert(
-            sizeof(ComputeShaderInterface) == 144,
+            sizeof(ComputeShaderInterface) == 152,
             "if added support for running using compute queue add a branch here and don't wait for graphics "
             "queue instead wait for compute queue");
 #elif defined(DEBUG)
@@ -48,10 +49,10 @@ namespace ne {
     ComputeShaderInterface::createUsingGraphicsQueue(
         Renderer* pRenderer,
         const std::string& sCompiledComputeShaderName,
-        bool bRunBeforeFrameRendering,
+        ComputeExecutionStage executionStage,
         ComputeExecutionGroup executionGroup) {
         return createRenderSpecificInterface(
-            pRenderer, sCompiledComputeShaderName, bRunBeforeFrameRendering, executionGroup);
+            pRenderer, sCompiledComputeShaderName, executionStage, executionGroup);
     }
 
     std::optional<Error> ComputeShaderInterface::bindResource(
@@ -75,18 +76,18 @@ namespace ne {
     ComputeShaderInterface::createPartiallyInitializedRenderSpecificInterface(
         Renderer* pRenderer,
         const std::string& sComputeShaderName,
-        bool bRunBeforeFrameRendering,
+        ComputeExecutionStage executionStage,
         ComputeExecutionGroup executionGroup) {
 #if defined(WIN32)
         if (dynamic_cast<DirectXRenderer*>(pRenderer) != nullptr) {
             return std::unique_ptr<HlslComputeShaderInterface>(new HlslComputeShaderInterface(
-                pRenderer, sComputeShaderName, bRunBeforeFrameRendering, executionGroup));
+                pRenderer, sComputeShaderName, executionStage, executionGroup));
         }
 #endif
 
         if (dynamic_cast<VulkanRenderer*>(pRenderer) != nullptr) {
             return std::unique_ptr<GlslComputeShaderInterface>(new GlslComputeShaderInterface(
-                pRenderer, sComputeShaderName, bRunBeforeFrameRendering, executionGroup));
+                pRenderer, sComputeShaderName, executionStage, executionGroup));
         }
 
         Error error("unsupported renderer");
@@ -98,11 +99,11 @@ namespace ne {
     ComputeShaderInterface::createRenderSpecificInterface(
         Renderer* pRenderer,
         const std::string& sComputeShaderName,
-        bool bRunBeforeFrameRendering,
+        ComputeExecutionStage executionStage,
         ComputeExecutionGroup executionGroup) {
         // Create a new partially initialized render-specific interface.
         auto pNewInterface = createPartiallyInitializedRenderSpecificInterface(
-            pRenderer, sComputeShaderName, bRunBeforeFrameRendering, executionGroup);
+            pRenderer, sComputeShaderName, executionStage, executionGroup);
 
         // Get pipeline manager.
         const auto pPipelineManager = pRenderer->getPipelineManager();
@@ -131,14 +132,7 @@ namespace ne {
         const auto pPipelineManager = pRenderer->getPipelineManager();
 
         // Queue shader.
-        std::optional<Error> optionalError;
-        if (bRunBeforeFrameRendering) {
-            optionalError =
-                pPipelineManager->computePipelines.queueShaderExecutionOnGraphicsQueuePreFrame(this);
-        } else {
-            optionalError =
-                pPipelineManager->computePipelines.queueShaderExecutionOnGraphicsQueuePostFrame(this);
-        }
+        auto optionalError = pPipelineManager->computePipelines.queueShaderExecutionOnGraphicsQueue(this);
         if (optionalError.has_value()) [[unlikely]] {
             optionalError->addCurrentLocationToErrorStack();
             optionalError->showError();
@@ -150,6 +144,8 @@ namespace ne {
     }
 
     ComputeExecutionGroup ComputeShaderInterface::getExecutionGroup() const { return executionGroup; }
+
+    ComputeExecutionStage ComputeShaderInterface::getExecutionStage() const { return executionStage; }
 
     std::string ComputeShaderInterface::getComputeShaderName() const { return sComputeShaderName; }
 

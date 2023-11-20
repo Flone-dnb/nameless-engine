@@ -2721,9 +2721,9 @@ void MyGameInstance::onGameStarted(){
 
     // Create shader interface.
     auto computeInterfaceResult = ComputeShaderInterface::createUsingGraphicsQueue(
-        getWindow()->getRenderer(),  // renderer
-        "my.compute.shader.name",    // shader name
-        true);                       // `true` to run it before we start drawing the world
+        getWindow()->getRenderer(),
+        "my.compute.shader.name", 
+        ComputeExecutionStage::AFTER_DEPTH_PREPASS);
     if (std::holds_alternative<Error>(computeInterfaceResult)) {
         // ... handle error ...
     }

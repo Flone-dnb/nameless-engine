@@ -9,7 +9,7 @@
 
 // Custom.
 #include "misc/Error.h"
-#include "render/general/pipeline/PipelineManager.h"
+#include "render/general/pipeline/PipelineSharedPtr.h"
 #include "render/general/resources/GpuResource.h"
 
 namespace ne {
@@ -24,11 +24,23 @@ namespace ne {
         READ_WRITE_TEXTURE,      //< `RWTexture2D` in HLSL, `uniform image2D` in GLSL.
     };
 
+    /** Describes when a compute shader should be executed. */
+    enum class ComputeExecutionStage : size_t {
+        AFTER_DEPTH_PREPASS = 0, //< After depth texture is fully written but before color rendering (main
+                                 // pass) is < started.
+
+        SIZE //< Marks the size of this enum.
+    };
+
     /**
      * Splits compute shaders into groups where shaders of the first group will be executed before shaders
      * from the second group and so on.
      */
-    enum class ComputeExecutionGroup { FIRST = 0, SECOND };
+    enum class ComputeExecutionGroup : size_t {
+        FIRST = 0,
+        SECOND,
+        SIZE //< Marks the size of this enum.
+    };
 
     /** Interface to configure and run a compute shader. */
     class ComputeShaderInterface {
@@ -49,16 +61,9 @@ namespace ne {
          * shader (for example if you need to calculate some data that the rendering will use then
          * use the graphics queue).
          *
-         * @remark Pre-frame compute shaders will run after depth pre-pass (after depth buffer was filled)
-         * but before color rendering is happening.
-         *
          * @param pRenderer                  Used renderer.
          * @param sCompiledComputeShaderName Name of the compiled compute shader to later run.
-         * @param bRunBeforeFrameRendering   Specify `true` if you want your compute shader to be run
-         * strictly before the frame is rendered on the GPU (this can be useful if your compute shader
-         * calculates some data that the frame rendering will use). Specify `false` if you want your
-         * compute shader to be run strictly after the frame is rendered (this can be useful if your
-         * compute shader does some post-processing for the rendered frame).
+         * @param executionStage             Determines when the shader will be executed.
          * @param executionGroup             Determines execution group of this shader where shaders of the
          * first group will be executed before shaders from the second group and so on.
          *
@@ -67,7 +72,7 @@ namespace ne {
         static std::variant<std::unique_ptr<ComputeShaderInterface>, Error> createUsingGraphicsQueue(
             Renderer* pRenderer,
             const std::string& sCompiledComputeShaderName,
-            bool bRunBeforeFrameRendering,
+            ComputeExecutionStage executionStage,
             ComputeExecutionGroup executionGroup = ComputeExecutionGroup::FIRST);
 
         /**
@@ -128,6 +133,13 @@ namespace ne {
         ComputeExecutionGroup getExecutionGroup() const;
 
         /**
+         * Returns execution stage of this shader.
+         *
+         * @return Execution stage.
+         */
+        ComputeExecutionStage getExecutionStage() const;
+
+        /**
          * Returns name of the compiled compute shader that this interface uses.
          *
          * @return Compute shader name.
@@ -147,8 +159,7 @@ namespace ne {
          *
          * @param pRenderer                Used renderer.
          * @param sComputeShaderName       Name of the compiled compute shader to use.
-         * @param bRunBeforeFrameRendering Determines whether this compute shader should run before frame
-         * rendering or after a frame is rendered on the GPU. Only valid when using graphics queue.
+         * @param executionStage           Determines when the shader will be executed.
          * @param executionGroup           Determines execution group of this shader where shaders of the
          * first group will be executed before shaders from the second group and so on.
          *
@@ -157,7 +168,7 @@ namespace ne {
         static std::variant<std::unique_ptr<ComputeShaderInterface>, Error> createRenderSpecificInterface(
             Renderer* pRenderer,
             const std::string& sComputeShaderName,
-            bool bRunBeforeFrameRendering,
+            ComputeExecutionStage executionStage,
             ComputeExecutionGroup executionGroup);
 
         /**
@@ -166,8 +177,7 @@ namespace ne {
          *
          * @param pRenderer                Used renderer.
          * @param sComputeShaderName       Name of the compiled compute shader to use.
-         * @param bRunBeforeFrameRendering Determines whether this compute shader should run before frame
-         * rendering or after a frame is rendered on the GPU. Only valid when using graphics queue.
+         * @param executionStage           Determines when the shader will be executed.
          * @param executionGroup           Determines execution group of this shader where shaders of the
          * first group will be executed before shaders from the second group and so on.
          *
@@ -176,7 +186,7 @@ namespace ne {
         static std::unique_ptr<ComputeShaderInterface> createPartiallyInitializedRenderSpecificInterface(
             Renderer* pRenderer,
             const std::string& sComputeShaderName,
-            bool bRunBeforeFrameRendering,
+            ComputeExecutionStage executionStage,
             ComputeExecutionGroup executionGroup);
 
         /**
@@ -185,14 +195,13 @@ namespace ne {
          *
          * @param pRenderer                Used renderer.
          * @param sComputeShaderName       Name of the compiled compute shader to use.
-         * @param bRunBeforeFrameRendering Determines whether this compute shader should run before frame
-         * rendering or after a frame is rendered on the GPU. Only valid when using graphics queue.
+         * @param executionStage           Determines when the shader will be executed.
          * @param executionGroup           Execution order.
          */
         ComputeShaderInterface(
             Renderer* pRenderer,
             const std::string& sComputeShaderName,
-            bool bRunBeforeFrameRendering,
+            ComputeExecutionStage executionStage,
             ComputeExecutionGroup executionGroup);
 
         /**
@@ -251,16 +260,11 @@ namespace ne {
         /** The number of thread groups dispatched in the Z direction. */
         unsigned int iThreadGroupCountZ = 0;
 
-        /** Order of execution. */
-        const ComputeExecutionGroup executionGroup = ComputeExecutionGroup::FIRST;
+        /** Describes when shader should be executed. */
+        const ComputeExecutionStage executionStage = ComputeExecutionStage::AFTER_DEPTH_PREPASS;
 
-        /**
-         * Determines whether this compute shader should run before frame rendering or after a frame is
-         * rendered on the GPU.
-         *
-         * @remark Only valid when using graphics queue.
-         */
-        const bool bRunBeforeFrameRendering = true;
+        /** Describes order of execution. */
+        const ComputeExecutionGroup executionGroup = ComputeExecutionGroup::FIRST;
 
         /** Name of the compiled compute shader to run. */
         const std::string sComputeShaderName;

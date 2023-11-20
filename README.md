@@ -282,7 +282,6 @@ Here is the list of base features that needs to be implemented in order for you 
             - [ ] Point light
             - [ ] Spot light
             - [ ] Directional light
-            - [ ] Rectangular light
         - [ ] Post-processing effects
         - [ ] HDR (High dynamic range)
         - [ ] Shadow mapping (for all light sources)

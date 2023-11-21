@@ -275,6 +275,13 @@ namespace ne {
             return optionalError;
         }
 
+        // Create sampler for compute shaders.
+        optionalError = createComputeTextureSampler();
+        if (optionalError.has_value()) {
+            optionalError->addCurrentLocationToErrorStack();
+            return optionalError;
+        }
+
         // Create texture sampler.
         optionalError = createTextureSampler();
         if (optionalError.has_value()) {

@@ -99,6 +99,12 @@ namespace ne {
             return Error("expected a Vulkan renderer");
         }
 
+        // Get compute sampler (make sure it's valid).
+        const auto pComputeSampler = pVulkanRenderer->getComputeTextureSampler();
+        if (pComputeSampler == nullptr) [[unlikely]] {
+            return Error("expected compute sampler to be valid");
+        }
+
         // Get logical device.
         const auto pLogicalDevice = pVulkanRenderer->getLogicalDevice();
         if (pLogicalDevice == nullptr) [[unlikely]] {
@@ -120,7 +126,7 @@ namespace ne {
                 // Prepare info to bind an image view to descriptor.
                 imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
                 imageInfo.imageView = pVulkanResource->getInternalImageView();
-                imageInfo.sampler = pVulkanRenderer->getComputeTextureSampler();
+                imageInfo.sampler = pComputeSampler;
             }
 
             // Bind reserved space to descriptor.

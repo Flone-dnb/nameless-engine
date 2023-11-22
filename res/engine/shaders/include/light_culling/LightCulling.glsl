@@ -50,80 +50,43 @@ layout(std140, binding = 6) readonly buffer CalculatedFrustumsBuffer{
 //                                                 counters
 // --------------------------------------------------------------------------------------------------------------------
 
-/** A single `uint` value stored at index 0 - global counter into the light list with point lights for opaque geometry. */
-#hlsl RWStructuredBuffer<uint> globalCounterIntoOpaquePointLightIndexList : register(u0, space5);
-#glsl{
-layout(std140, binding = 9) buffer GlobalCounterIntoOpaquePointLightIndexList{
-    uint iCounter;
-} globalCounterIntoOpaquePointLightIndexList;
-}
+/** Global counters into the light lists. */
+#hlsl struct GlobalCountersIntoLightIndexList{
+#glsl layout(std140, binding = 9) buffer GlobalCountersIntoLightIndexList{
+    uint iPointLightListOpaque;
+    uint iSpotlightListOpaque;
+    uint iDirectionalLightListOpaque;
 
-/** A single `uint` value stored at index 0 - global counter into the light list with spot lights for opaque geometry. */
-#hlsl RWStructuredBuffer<uint> globalCounterIntoOpaqueSpotLightIndexList : register(u1, space5);
-#glsl{
-layout(std140, binding = 10) buffer GlobalCounterIntoOpaqueSpotLightIndexList{
-    uint iCounter;
-} globalCounterIntoOpaqueSpotLightIndexList;
-}
-
-/** A single `uint` value stored at index 0 - global counter into the light list with directional lights for opaque geometry. */
-#hlsl RWStructuredBuffer<uint> globalCounterIntoOpaqueDirectionalLightIndexList : register(u2, space5);
-#glsl{
-layout(std140, binding = 11) buffer GlobalCounterIntoOpaqueDirectionalLightIndexList{
-    uint iCounter;
-} globalCounterIntoOpaqueDirectionalLightIndexList;
-}
-
-// --------------------------------------------------------------------------------------------------------------------                                      
-
-/** A single `uint` value stored at index 0 - global counter into the light list with point lights for transparent geometry. */
-#hlsl RWStructuredBuffer<uint> globalCounterIntoTransparentPointLightIndexList : register(u3, space5);
-#glsl{
-layout(std140, binding = 12) buffer GlobalCounterIntoTransparentPointLightIndexList{
-    uint iCounter;
-} globalCounterIntoTransparentPointLightIndexList;
-}
-
-/** A single `uint` value stored at index 0 - global counter into the light list with spot lights for transparent geometry. */
-#hlsl RWStructuredBuffer<uint> globalCounterIntoTransparentSpotLightIndexList : register(u4, space5);
-#glsl{
-layout(std140, binding = 13) buffer GlobalCounterIntoTransparentSpotLightIndexList{
-    uint iCounter;
-} globalCounterIntoTransparentSpotLightIndexList;
-}
-
-/** A single `uint` value stored at index 0 - global counter into the light list with directional lights for transparent geometry. */
-#hlsl RWStructuredBuffer<uint> globalCounterIntoTransparentDirectionalLightIndexList : register(u5, space5);
-#glsl{
-layout(std140, binding = 14) buffer GlobalCounterIntoTransparentDirectionalLightIndexList{
-    uint iCounter;
-} globalCounterIntoTransparentDirectionalLightIndexList;
-}
+    uint iPointLightListTransparent;
+    uint iSpotlightListTransparent;
+    uint iDirectionalLightListTransparent;
+#hlsl }; RWStructuredBuffer<GlobalCountersIntoLightIndexList> globalCountersIntoLightIndexList : register(u0, space5);
+#glsl } globalCountersIntoLightIndexList;
 
 // --------------------------------------------------------------------------------------------------------------------
 //                                                light index lists
 // --------------------------------------------------------------------------------------------------------------------
 
 /** Stores indices into array of point lights for opaque geometry. */
-#hlsl RWStructuredBuffer<uint> opaquePointLightIndexList : register(u6, space5);
+#hlsl RWStructuredBuffer<uint> opaquePointLightIndexList : register(u1, space5);
 #glsl{
-layout(std140, binding = 15) buffer OpaquePointLightIndexListBuffer{
+layout(std140, binding = 10) buffer OpaquePointLightIndexListBuffer{
     uint array[];
 } opaquePointLightIndexList;
 }
 
 /** Stores indices into array of spot lights for opaque geometry. */
-#hlsl RWStructuredBuffer<uint> opaqueSpotLightIndexList : register(u7, space5);
+#hlsl RWStructuredBuffer<uint> opaqueSpotLightIndexList : register(u2, space5);
 #glsl{
-layout(std140, binding = 16) buffer OpaqueSpotLightIndexListBuffer{
+layout(std140, binding = 11) buffer OpaqueSpotLightIndexListBuffer{
     uint array[];
 } opaqueSpotLightIndexList;
 }
 
 /** Stores indices into array of directional lights for opaque geometry. */
-#hlsl RWStructuredBuffer<uint> opaqueDirectionalLightIndexList : register(u8, space5);
+#hlsl RWStructuredBuffer<uint> opaqueDirectionalLightIndexList : register(u3, space5);
 #glsl{
-layout(std140, binding = 17) buffer OpaqueDirectionalLightIndexListBuffer{
+layout(std140, binding = 12) buffer OpaqueDirectionalLightIndexListBuffer{
     uint array[];
 } opaqueDirectionalLightIndexList;
 }
@@ -131,25 +94,25 @@ layout(std140, binding = 17) buffer OpaqueDirectionalLightIndexListBuffer{
 // --------------------------------------------------------------------------------------------------------------------    
 
 /** Stores indices into array of point lights for transparent geometry. */
-#hlsl RWStructuredBuffer<uint> transparentPointLightIndexList : register(u9, space5);
+#hlsl RWStructuredBuffer<uint> transparentPointLightIndexList : register(u4, space5);
 #glsl{
-layout(std140, binding = 18) buffer TransparentPointLightIndexListBuffer{
+layout(std140, binding = 13) buffer TransparentPointLightIndexListBuffer{
     uint array[];
 } transparentPointLightIndexList;
 }
 
 /** Stores indices into array of spot lights for transparent geometry. */
-#hlsl RWStructuredBuffer<uint> transparentSpotLightIndexList : register(u10, space5);
+#hlsl RWStructuredBuffer<uint> transparentSpotLightIndexList : register(u5, space5);
 #glsl{
-layout(std140, binding = 19) buffer TransparentSpotLightIndexListBuffer{
+layout(std140, binding = 14) buffer TransparentSpotLightIndexListBuffer{
     uint array[];
 } transparentSpotLightIndexList;
 }
 
 /** Stores indices into array of directional lights for transparent geometry. */
-#hlsl RWStructuredBuffer<uint> transparentDirectionalLightIndexList : register(u11, space5);
+#hlsl RWStructuredBuffer<uint> transparentDirectionalLightIndexList : register(u6, space5);
 #glsl{
-layout(std140, binding = 20) buffer TransparentDirectionalLightIndexListBuffer{
+layout(std140, binding = 15) buffer TransparentDirectionalLightIndexListBuffer{
     uint array[];
 } transparentDirectionalLightIndexList;
 }
@@ -159,30 +122,30 @@ layout(std140, binding = 20) buffer TransparentDirectionalLightIndexListBuffer{
 // --------------------------------------------------------------------------------------------------------------------
 
 /** Light grid where every pixel stores 2 values: offset into light index list and the number of elements to read from that offset. */
-#hlsl RWTexture2D<uint2> opaquePointLightGrid : register(u12, space5);
-#glsl layout (binding=21, rg32ui) uniform uimage2D opaquePointLightGrid;
+#hlsl RWTexture2D<uint2> opaquePointLightGrid : register(u7, space5);
+#glsl layout (binding=16, rg32ui) uniform uimage2D opaquePointLightGrid;
 
 /** Light grid where every pixel stores 2 values: offset into light index list and the number of elements to read from that offset. */
-#hlsl RWTexture2D<uint2> opaqueSpotLightGrid : register(u13, space5);
-#glsl layout (binding=22, rg32ui) uniform uimage2D opaqueSpotLightGrid;
+#hlsl RWTexture2D<uint2> opaqueSpotLightGrid : register(u8, space5);
+#glsl layout (binding=17, rg32ui) uniform uimage2D opaqueSpotLightGrid;
 
 /** Light grid where every pixel stores 2 values: offset into light index list and the number of elements to read from that offset. */
-#hlsl RWTexture2D<uint2> opaqueDirectionalLightGrid : register(u14, space5);
-#glsl layout (binding=23, rg32ui) uniform uimage2D opaqueDirectionalLightGrid;
+#hlsl RWTexture2D<uint2> opaqueDirectionalLightGrid : register(u9, space5);
+#glsl layout (binding=18, rg32ui) uniform uimage2D opaqueDirectionalLightGrid;
 
 // -------------------------------------------------------------------------------------------------------------------- 
 
 /** Light grid where every pixel stores 2 values: offset into light index list and the number of elements to read from that offset. */
-#hlsl RWTexture2D<uint2> transparentPointLightGrid : register(u15, space5);
-#glsl layout (binding=24, rg32ui) uniform uimage2D transparentPointLightGrid;
+#hlsl RWTexture2D<uint2> transparentPointLightGrid : register(u10, space5);
+#glsl layout (binding=19, rg32ui) uniform uimage2D transparentPointLightGrid;
 
 /** Light grid where every pixel stores 2 values: offset into light index list and the number of elements to read from that offset. */
-#hlsl RWTexture2D<uint2> transparentSpotLightGrid : register(u16, space5);
-#glsl layout (binding=25, rg32ui) uniform uimage2D transparentSpotLightGrid;
+#hlsl RWTexture2D<uint2> transparentSpotLightGrid : register(u11, space5);
+#glsl layout (binding=20, rg32ui) uniform uimage2D transparentSpotLightGrid;
 
 /** Light grid where every pixel stores 2 values: offset into light index list and the number of elements to read from that offset. */
-#hlsl RWTexture2D<uint2> transparentDirectionalLightGrid : register(u17, space5);
-#glsl layout (binding=26, rg32ui) uniform uimage2D transparentDirectionalLightGrid;
+#hlsl RWTexture2D<uint2> transparentDirectionalLightGrid : register(u12, space5);
+#glsl layout (binding=21, rg32ui) uniform uimage2D transparentDirectionalLightGrid;
 
 // --------------------------------------------------------------------------------------------------------------------
 //                                          general group shared (tile) variables
@@ -362,24 +325,24 @@ void reserveSpaceForNonCulledTileLightsInLightGridAndList(uint iThreadGroupXIdIn
     // Start with opaque geometry.
 
     // Get offset into the global light index list with point lights.
-#hlsl InterlockedAdd(globalCounterIntoOpaquePointLightIndexList[0], iOpaquePointLightCountIntersectingTileFrustum, iOpaquePointLightIndexListStartOffset);
-#glsl iOpaquePointLightIndexListStartOffset = atomicAdd(globalCounterIntoOpaquePointLightIndexList.iCounter, iOpaquePointLightCountIntersectingTileFrustum);
+#hlsl InterlockedAdd(globalCountersIntoLightIndexList[0].iPointLightListOpaque, iOpaquePointLightCountIntersectingTileFrustum, iOpaquePointLightIndexListStartOffset);
+#glsl iOpaquePointLightIndexListStartOffset = atomicAdd(globalCountersIntoLightIndexList.iPointLightListOpaque, iOpaquePointLightCountIntersectingTileFrustum);
 
     // Write lights into the light grid.
 #hlsl opaquePointLightGrid[lightGridIndex] = uint2(iOpaquePointLightIndexListStartOffset, iOpaquePointLightCountIntersectingTileFrustum);
 #glsl imageStore(opaquePointLightGrid, lightGridIndex, uvec4(iOpaquePointLightIndexListStartOffset, iOpaquePointLightCountIntersectingTileFrustum, 0.0F, 0.0F));
     
     // Get offset into the global light index list with spot lights.
-#hlsl InterlockedAdd(globalCounterIntoOpaqueSpotLightIndexList[0], iOpaqueSpotLightCountIntersectingTileFrustum, iOpaqueSpotLightIndexListStartOffset);
-#glsl iOpaqueSpotLightIndexListStartOffset = atomicAdd(globalCounterIntoOpaqueSpotLightIndexList.iCounter, iOpaqueSpotLightCountIntersectingTileFrustum);
+#hlsl InterlockedAdd(globalCountersIntoLightIndexList[0].iSpotlightListOpaque, iOpaqueSpotLightCountIntersectingTileFrustum, iOpaqueSpotLightIndexListStartOffset);
+#glsl iOpaqueSpotLightIndexListStartOffset = atomicAdd(globalCountersIntoLightIndexList.iSpotlightListOpaque, iOpaqueSpotLightCountIntersectingTileFrustum);
 
     // Write lights into the light grid.
 #hlsl opaqueSpotLightGrid[lightGridIndex] = uint2(iOpaqueSpotLightIndexListStartOffset, iOpaqueSpotLightCountIntersectingTileFrustum);
 #glsl imageStore(opaqueSpotLightGrid, lightGridIndex, uvec4(iOpaqueSpotLightIndexListStartOffset, iOpaqueSpotLightCountIntersectingTileFrustum, 0.0F, 0.0F));
 
     // Get offset into the global light index list with directional lights.
-#hlsl InterlockedAdd(globalCounterIntoOpaqueDirectionalLightIndexList[0], iOpaqueDirectionalLightCountIntersectingTileFrustum, iOpaqueDirectionalLightIndexListStartOffset);
-#glsl iOpaqueDirectionalLightIndexListStartOffset = atomicAdd(globalCounterIntoOpaqueDirectionalLightIndexList.iCounter, iOpaqueDirectionalLightCountIntersectingTileFrustum);
+#hlsl InterlockedAdd(globalCountersIntoLightIndexList[0].iDirectionalLightListOpaque, iOpaqueDirectionalLightCountIntersectingTileFrustum, iOpaqueDirectionalLightIndexListStartOffset);
+#glsl iOpaqueDirectionalLightIndexListStartOffset = atomicAdd(globalCountersIntoLightIndexList.iDirectionalLightListOpaque, iOpaqueDirectionalLightCountIntersectingTileFrustum);
 
     // Write lights into the light grid.
 #hlsl opaqueDirectionalLightGrid[lightGridIndex] = uint2(iOpaqueDirectionalLightIndexListStartOffset, iOpaqueDirectionalLightCountIntersectingTileFrustum);
@@ -388,24 +351,24 @@ void reserveSpaceForNonCulledTileLightsInLightGridAndList(uint iThreadGroupXIdIn
     // Now set lights for transparent geometry.
 
     // Get offset into the global light index list with point lights.
-#hlsl InterlockedAdd(globalCounterIntoTransparentPointLightIndexList[0], iTransparentPointLightCountIntersectingTileFrustum, iTransparentPointLightIndexListStartOffset);
-#glsl iTransparentPointLightIndexListStartOffset = atomicAdd(globalCounterIntoTransparentPointLightIndexList.iCounter, iTransparentPointLightCountIntersectingTileFrustum);
+#hlsl InterlockedAdd(globalCountersIntoLightIndexList[0].iPointLightListTransparent, iTransparentPointLightCountIntersectingTileFrustum, iTransparentPointLightIndexListStartOffset);
+#glsl iTransparentPointLightIndexListStartOffset = atomicAdd(globalCountersIntoLightIndexList.iPointLightListTransparent, iTransparentPointLightCountIntersectingTileFrustum);
 
     // Write lights into the light grid.
 #hlsl transparentPointLightGrid[lightGridIndex] = uint2(iTransparentPointLightIndexListStartOffset, iTransparentPointLightCountIntersectingTileFrustum);
 #glsl imageStore(transparentPointLightGrid, lightGridIndex, uvec4(iTransparentPointLightIndexListStartOffset, iTransparentPointLightCountIntersectingTileFrustum, 0.0F, 0.0F));
     
     // Get offset into the global light index list with spot lights.
-#hlsl InterlockedAdd(globalCounterIntoTransparentSpotLightIndexList[0], iTransparentSpotLightCountIntersectingTileFrustum, iTransparentSpotLightIndexListStartOffset);
-#glsl iTransparentSpotLightIndexListStartOffset = atomicAdd(globalCounterIntoTransparentSpotLightIndexList.iCounter, iTransparentSpotLightCountIntersectingTileFrustum);
+#hlsl InterlockedAdd(globalCountersIntoLightIndexList[0].iSpotlightListTransparent, iTransparentSpotLightCountIntersectingTileFrustum, iTransparentSpotLightIndexListStartOffset);
+#glsl iTransparentSpotLightIndexListStartOffset = atomicAdd(globalCountersIntoLightIndexList.iSpotlightListTransparent, iTransparentSpotLightCountIntersectingTileFrustum);
 
     // Write lights into the light grid.
 #hlsl transparentSpotLightGrid[lightGridIndex] = uint2(iTransparentSpotLightIndexListStartOffset, iTransparentSpotLightCountIntersectingTileFrustum);
 #glsl imageStore(transparentSpotLightGrid, lightGridIndex, uvec4(iTransparentSpotLightIndexListStartOffset, iTransparentSpotLightCountIntersectingTileFrustum, 0.0F, 0.0F));
 
     // Get offset into the global light index list with directional lights.
-#hlsl InterlockedAdd(globalCounterIntoTransparentDirectionalLightIndexList[0], iTransparentDirectionalLightCountIntersectingTileFrustum, iTransparentDirectionalLightIndexListStartOffset);
-#glsl iTransparentDirectionalLightIndexListStartOffset = atomicAdd(globalCounterIntoTransparentDirectionalLightIndexList.iCounter, iTransparentDirectionalLightCountIntersectingTileFrustum);
+#hlsl InterlockedAdd(globalCountersIntoLightIndexList[0].iDirectionalLightListTransparent, iTransparentDirectionalLightCountIntersectingTileFrustum, iTransparentDirectionalLightIndexListStartOffset);
+#glsl iTransparentDirectionalLightIndexListStartOffset = atomicAdd(globalCountersIntoLightIndexList.iDirectionalLightListTransparent, iTransparentDirectionalLightCountIntersectingTileFrustum);
 
     // Write lights into the light grid.
 #hlsl transparentDirectionalLightGrid[lightGridIndex] = uint2(iTransparentDirectionalLightIndexListStartOffset, iTransparentDirectionalLightCountIntersectingTileFrustum);

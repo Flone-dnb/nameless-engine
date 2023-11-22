@@ -50,7 +50,7 @@ namespace ne {
 
 #if defined(DEBUG) && defined(WIN32)
         static_assert(
-            sizeof(LightingShaderResourceManager) == 272, "consider notifying new arrays here"); // NOLINT
+            sizeof(LightingShaderResourceManager) == 288, "consider notifying new arrays here"); // NOLINT
 #elif defined(DEBUG)
         static_assert(
             sizeof(LightingShaderResourceManager) == 144, "consider notifying new arrays here"); // NOLINT
@@ -91,7 +91,7 @@ namespace ne {
 
 #if defined(DEBUG) && defined(WIN32)
         static_assert(
-            sizeof(LightingShaderResourceManager) == 272, "consider notifying new arrays here"); // NOLINT
+            sizeof(LightingShaderResourceManager) == 288, "consider notifying new arrays here"); // NOLINT
 #elif defined(DEBUG)
         static_assert(
             sizeof(LightingShaderResourceManager) == 144, "consider notifying new arrays here"); // NOLINT
@@ -123,7 +123,7 @@ namespace ne {
 
 #if defined(DEBUG) && defined(WIN32)
         static_assert(
-            sizeof(LightingShaderResourceManager) == 272, "consider notifying new arrays here"); // NOLINT
+            sizeof(LightingShaderResourceManager) == 288, "consider notifying new arrays here"); // NOLINT
 #elif defined(DEBUG)
         static_assert(
             sizeof(LightingShaderResourceManager) == 144, "consider notifying new arrays here"); // NOLINT
@@ -150,6 +150,7 @@ namespace ne {
         auto optionalError = lightCullingComputeShaderData.queueExecutionForNextFrame(
             pRenderer,
             pCurrentFrameResource,
+            iCurrentFrameResourceIndex,
             mtxGpuData.second.vGeneralDataGpuResources[iCurrentFrameResourceIndex]->getInternalResource(),
             pPointLightArrayResource,
             pSpotlightArrayResource,
@@ -530,7 +531,7 @@ namespace ne {
 
 #if defined(DEBUG) && defined(WIN32)
         static_assert(
-            sizeof(LightingShaderResourceManager) == 272, "consider creating new arrays here"); // NOLINT
+            sizeof(LightingShaderResourceManager) == 288, "consider creating new arrays here"); // NOLINT
 #elif defined(DEBUG)
         static_assert(
             sizeof(LightingShaderResourceManager) == 144, "consider creating new arrays here"); // NOLINT
@@ -749,6 +750,26 @@ namespace ne {
             return optionalError;
         }
 
+        // Create a resource to store global counters.
+        for (auto& pCountersResource : resources.vGlobalCountersIntoLightIndexList) {
+            // Create resource.
+            result = pRenderer->getResourceManager()->createResourceWithCpuWriteAccess(
+                "light culling - global counters",
+                sizeof(ComputeShaderData::LightCullingComputeShader::GlobalCountersIntoLightIndexList),
+                1,
+                true);
+            if (std::holds_alternative<Error>(result)) [[unlikely]] {
+                auto error = std::get<Error>(std::move(result));
+                error.addCurrentLocationToErrorStack();
+                return error;
+            }
+            pCountersResource = std::get<std::unique_ptr<UploadBuffer>>(std::move(result));
+
+            // Set initial (zero) value.
+            GlobalCountersIntoLightIndexList counters{};
+            pCountersResource->copyDataToElement(0, &counters, sizeof(GlobalCountersIntoLightIndexList));
+        }
+
         // Bind screen to view data.
         optionalError = pComputeInterface->bindResource(
             frustumGridShader.resources.pScreenToViewData->getInternalResource(),
@@ -769,6 +790,7 @@ namespace ne {
         ComputeShader::queueExecutionForNextFrame(
             Renderer* pRenderer,
             FrameResource* pCurrentFrameResource,
+            size_t iCurrentFrameResourceIndex,
             GpuResource* pGeneralLightingData,
             GpuResource* pPointLightArray,
             GpuResource* pSpotlightArray,
@@ -850,7 +872,20 @@ namespace ne {
             return optionalError;
         }
 
-        // TODO
+        // Reset global counters to zero.
+        GlobalCountersIntoLightIndexList counters{};
+        resources.vGlobalCountersIntoLightIndexList[iCurrentFrameResourceIndex]->copyDataToElement(
+            0, &counters, sizeof(GlobalCountersIntoLightIndexList));
+
+        // Bind global counters of the current frame resource.
+        optionalError = pComputeInterface->bindResource(
+            resources.vGlobalCountersIntoLightIndexList[iCurrentFrameResourceIndex]->getInternalResource(),
+            sGlobalCountersIntoLightIndexListShaderResourceName,
+            ComputeResourceUsage::READ_WRITE_ARRAY_BUFFER);
+        if (optionalError.has_value()) [[unlikely]] {
+            optionalError->addCurrentLocationToErrorStack();
+            return optionalError;
+        }
 
         // Queue shader execution (we need to dispatch 1 thread group per tile).
         pComputeInterface->submitForExecution(
@@ -933,7 +968,7 @@ namespace ne {
 
 #if defined(DEBUG) && defined(WIN32)
         static_assert(
-            sizeof(LightingShaderResourceManager) == 272, "consider resetting new arrays here"); // NOLINT
+            sizeof(LightingShaderResourceManager) == 288, "consider resetting new arrays here"); // NOLINT
 #elif defined(DEBUG)
         static_assert(
             sizeof(LightingShaderResourceManager) == 144, "consider resetting new arrays here"); // NOLINT

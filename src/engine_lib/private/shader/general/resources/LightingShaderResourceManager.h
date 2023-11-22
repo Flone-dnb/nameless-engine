@@ -285,7 +285,7 @@ namespace ne {
 
 #if defined(DEBUG)
             static_assert(
-                sizeof(LightingShaderResourceManager) == 272, "consider adding new arrays here"); // NOLINT
+                sizeof(LightingShaderResourceManager) == 288, "consider adding new arrays here"); // NOLINT
 #endif
         }
 #endif
@@ -438,6 +438,27 @@ namespace ne {
 
             /** Groups shader data for compute shader that does light culling. */
             struct LightCullingComputeShader {
+                /** Global counters (indices) into the light lists. */
+                struct GlobalCountersIntoLightIndexList {
+                    /** Index into point light index light for opaque geometry. */
+                    alignas(iVkScalarAlignment) unsigned int iPointLightListOpaque = 0;
+
+                    /** Index into spotlight index light for opaque geometry. */
+                    alignas(iVkScalarAlignment) unsigned int iSpotlightListOpaque = 0;
+
+                    /** Index into directional light index light for opaque geometry. */
+                    alignas(iVkScalarAlignment) unsigned int iDirectionalLightListOpaque = 0;
+
+                    /** Index into point light index light for transparent geometry. */
+                    alignas(iVkScalarAlignment) unsigned int iPointLightListTransparent = 0;
+
+                    /** Index into spotlight index light for transparent geometry. */
+                    alignas(iVkScalarAlignment) unsigned int iSpotlightListTransparent = 0;
+
+                    /** Index into directional light index light for transparent geometry. */
+                    alignas(iVkScalarAlignment) unsigned int iDirectionalLightListTransparent = 0;
+                };
+
                 /**
                  * Stores some additional information (some information not available as built-in semantics).
                  */
@@ -456,6 +477,15 @@ namespace ne {
                      * semantics.
                      */
                     std::unique_ptr<UploadBuffer> pThreadGroupCount;
+
+                    /**
+                     * Stores global counters into various light index lists.
+                     *
+                     * @remark One resource per frame resource because before each frame we will reset
+                     * global counters.
+                     */
+                    std::array<std::unique_ptr<UploadBuffer>, FrameResourcesManager::getFrameResourcesCount()>
+                        vGlobalCountersIntoLightIndexList;
 
                     /**
                      * Renderer's depth texture that we binded the last time.
@@ -488,20 +518,23 @@ namespace ne {
                      * @warning Expected to be called somewhere inside of the `drawNextFrame` function
                      * so that renderer's depth texture without multisampling pointer will not change.
                      *
-                     * @param pRenderer             Renderer.
-                     * @param pCurrentFrameResource Current frame resource that will be used to
+                     * @param pRenderer                  Renderer.
+                     * @param pCurrentFrameResource      Current frame resource that will be used to
                      * submit the next frame.
-                     * @param pGeneralLightingData  GPU resource that stores general lighting
+                     * @param iCurrentFrameResourceIndex Index of the frame resource that will be used
+                     * to submit the next frame.
+                     * @param pGeneralLightingData       GPU resource that stores general lighting
                      * information.
-                     * @param pPointLightArray       Array that stores all spawned point lights.
-                     * @param pSpotlightArray        Array that stores all spawned spotlights.
-                     * @param pDirectionalLightArray Array that stores all spawned directional lights.
+                     * @param pPointLightArray           Array that stores all spawned point lights.
+                     * @param pSpotlightArray            Array that stores all spawned spotlights.
+                     * @param pDirectionalLightArray     Array that stores all spawned directional lights.
                      *
                      * @return Error if something went wrong.
                      */
                     [[nodiscard]] std::optional<Error> queueExecutionForNextFrame(
                         Renderer* pRenderer,
                         FrameResource* pCurrentFrameResource,
+                        size_t iCurrentFrameResourceIndex,
                         GpuResource* pGeneralLightingData,
                         GpuResource* pPointLightArray,
                         GpuResource* pSpotlightArray,
@@ -530,6 +563,13 @@ namespace ne {
                      * that might not be available as built-in semantics.
                      */
                     static inline const auto sThreadGroupCountShaderResourceName = "threadGroupCount";
+
+                    /**
+                     * Name of the shader resource (name from shader code) that stores global counters
+                     * into various light index lists.
+                     */
+                    static inline const auto sGlobalCountersIntoLightIndexListShaderResourceName =
+                        "globalCountersIntoLightIndexList";
                 };
             };
         };

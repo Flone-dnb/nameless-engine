@@ -165,6 +165,8 @@ set(PROJECT_SOURCES
     private/shader/glsl/GlslComputeShaderInterface.h
     private/shader/general/resources/LightingShaderResourceManager.h
     private/shader/general/resources/LightingShaderResourceManager.cpp
+    private/shader/general/resources/ShaderLightArray.h
+    private/shader/general/resources/ShaderLightArray.cpp
     public/shader/ComputeShaderInterface.h
     private/shader/general/ComputeShaderInterface.cpp
     private/material/TextureManager.cpp

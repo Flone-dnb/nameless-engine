@@ -10,6 +10,7 @@
 #include "shader/ComputeShaderInterface.h"
 #include "shader/general/EngineShaderConstantMacros.hpp"
 #include "shader/general/EngineShaderNames.hpp"
+#include "misc/Profiler.hpp"
 
 namespace ne {
 
@@ -49,7 +50,7 @@ namespace ne {
 
 #if defined(DEBUG) && defined(WIN32)
         static_assert(
-            sizeof(LightingShaderResourceManager) == 256, "consider notifying new arrays here"); // NOLINT
+            sizeof(LightingShaderResourceManager) == 272, "consider notifying new arrays here"); // NOLINT
 #elif defined(DEBUG)
         static_assert(
             sizeof(LightingShaderResourceManager) == 144, "consider notifying new arrays here"); // NOLINT
@@ -90,7 +91,7 @@ namespace ne {
 
 #if defined(DEBUG) && defined(WIN32)
         static_assert(
-            sizeof(LightingShaderResourceManager) == 256, "consider notifying new arrays here"); // NOLINT
+            sizeof(LightingShaderResourceManager) == 272, "consider notifying new arrays here"); // NOLINT
 #elif defined(DEBUG)
         static_assert(
             sizeof(LightingShaderResourceManager) == 144, "consider notifying new arrays here"); // NOLINT
@@ -111,7 +112,10 @@ namespace ne {
         return &mtxGpuData;
     }
 
-    void LightingShaderResourceManager::updateResources(size_t iCurrentFrameResourceIndex) {
+    void LightingShaderResourceManager::updateResources(
+        FrameResource* pCurrentFrameResource, size_t iCurrentFrameResourceIndex) {
+        PROFILE_FUNC;
+
         // Notify light arrays.
         pPointLightDataArray->updateSlotsMarkedAsNeedsUpdate(iCurrentFrameResourceIndex);
         pDirectionalLightDataArray->updateSlotsMarkedAsNeedsUpdate(iCurrentFrameResourceIndex);
@@ -119,7 +123,7 @@ namespace ne {
 
 #if defined(DEBUG) && defined(WIN32)
         static_assert(
-            sizeof(LightingShaderResourceManager) == 256, "consider notifying new arrays here"); // NOLINT
+            sizeof(LightingShaderResourceManager) == 272, "consider notifying new arrays here"); // NOLINT
 #elif defined(DEBUG)
         static_assert(
             sizeof(LightingShaderResourceManager) == 144, "consider notifying new arrays here"); // NOLINT
@@ -129,9 +133,27 @@ namespace ne {
         // update it every frame).
         copyDataToGpu(iCurrentFrameResourceIndex);
 
+        // Get point light arrays (we don't really need to lock mutexes here since we are inside
+        // `drawNextFrame`).
+        const auto pPointLightArrayResource = pPointLightDataArray->getInternalResources()
+                                                  ->second.vGpuResources[iCurrentFrameResourceIndex]
+                                                  ->getInternalResource();
+        const auto pSpotlightArrayResource = pSpotlightDataArray->getInternalResources()
+                                                 ->second.vGpuResources[iCurrentFrameResourceIndex]
+                                                 ->getInternalResource();
+        const auto pDirectionalLightArrayResource = pDirectionalLightDataArray->getInternalResources()
+                                                        ->second.vGpuResources[iCurrentFrameResourceIndex]
+                                                        ->getInternalResource();
+
         // Queue light culling shader (should be called every frame).
+        std::scoped_lock dataGuard(mtxGpuData.first);
         auto optionalError = lightCullingComputeShaderData.queueExecutionForNextFrame(
-            pRenderer, iCurrentFrameResourceIndex, frustumGridComputeShaderData);
+            pRenderer,
+            pCurrentFrameResource,
+            mtxGpuData.second.vGeneralDataGpuResources[iCurrentFrameResourceIndex]->getInternalResource(),
+            pPointLightArrayResource,
+            pSpotlightArrayResource,
+            pDirectionalLightArrayResource);
         if (optionalError.has_value()) [[unlikely]] {
             optionalError->addCurrentLocationToErrorStack();
             optionalError->showError();
@@ -215,6 +237,7 @@ namespace ne {
     void LightingShaderResourceManager::copyDataToGpu(size_t iCurrentFrameResourceIndex) {
         std::scoped_lock guard(mtxGpuData.first);
 
+        // Copy.
         mtxGpuData.second.vGeneralDataGpuResources[iCurrentFrameResourceIndex]->copyDataToElement(
             0, &mtxGpuData.second.generalData, sizeof(GeneralLightingShaderData));
     }
@@ -507,7 +530,7 @@ namespace ne {
 
 #if defined(DEBUG) && defined(WIN32)
         static_assert(
-            sizeof(LightingShaderResourceManager) == 256, "consider creating new arrays here"); // NOLINT
+            sizeof(LightingShaderResourceManager) == 272, "consider creating new arrays here"); // NOLINT
 #elif defined(DEBUG)
         static_assert(
             sizeof(LightingShaderResourceManager) == 144, "consider creating new arrays here"); // NOLINT
@@ -683,7 +706,7 @@ namespace ne {
 
     std::optional<Error>
     LightingShaderResourceManager::ComputeShaderData::LightCullingComputeShader::ComputeShader::initialize(
-        Renderer* pRenderer) {
+        Renderer* pRenderer, const FrustumGridComputeShader::ComputeShader& frustumGridShader) {
         // Make sure the struct is not initialized yet.
         if (bIsInitialized) [[unlikely]] {
             return Error("already initialized");
@@ -703,6 +726,39 @@ namespace ne {
         pComputeInterface =
             std::get<std::unique_ptr<ComputeShaderInterface>>(std::move(computeCreationResult));
 
+        // Create thread group info resource for shader.
+        auto result = pRenderer->getResourceManager()->createResourceWithCpuWriteAccess(
+            "light culling - thread group count",
+            sizeof(ComputeShaderData::LightCullingComputeShader::ThreadGroupCount),
+            1,
+            false);
+        if (std::holds_alternative<Error>(result)) [[unlikely]] {
+            auto error = std::get<Error>(std::move(result));
+            error.addCurrentLocationToErrorStack();
+            return error;
+        }
+        resources.pThreadGroupCount = std::get<std::unique_ptr<UploadBuffer>>(std::move(result));
+
+        // Bind thread group count resource.
+        auto optionalError = pComputeInterface->bindResource(
+            resources.pThreadGroupCount->getInternalResource(),
+            sThreadGroupCountShaderResourceName,
+            ComputeResourceUsage::CONSTANT_BUFFER);
+        if (optionalError.has_value()) [[unlikely]] {
+            optionalError->addCurrentLocationToErrorStack();
+            return optionalError;
+        }
+
+        // Bind screen to view data.
+        optionalError = pComputeInterface->bindResource(
+            frustumGridShader.resources.pScreenToViewData->getInternalResource(),
+            FrustumGridComputeShader::ComputeShader::sScreenToViewDataShaderResourceName,
+            ComputeResourceUsage::CONSTANT_BUFFER);
+        if (optionalError.has_value()) [[unlikely]] {
+            optionalError->addCurrentLocationToErrorStack();
+            return optionalError;
+        }
+
         // Done.
         bIsInitialized = true;
 
@@ -712,12 +768,18 @@ namespace ne {
     std::optional<Error> LightingShaderResourceManager::ComputeShaderData::LightCullingComputeShader::
         ComputeShader::queueExecutionForNextFrame(
             Renderer* pRenderer,
-            size_t iCurrentFrameResourceIndex,
-            const FrustumGridComputeShader::ComputeShader& frustumGridShader) {
-        // Make sure frustum grid shader was initialized.
-        if (!frustumGridShader.bIsInitialized) [[unlikely]] {
-            return Error("expected frustum grid shader to be initialized");
-        }
+            FrameResource* pCurrentFrameResource,
+            GpuResource* pGeneralLightingData,
+            GpuResource* pPointLightArray,
+            GpuResource* pSpotlightArray,
+            GpuResource* pDirectionalLightArray) {
+        PROFILE_FUNC;
+
+        // Resource that stores calculated grid of frustums was binded by lighting shader resource manager.
+
+        // Resource that stores screen to view data was binded in our initialize function.
+
+        // Resource that stores thread group count was binded in our initialize function.
 
         // Get renderer's depth texture pointer (this pointer can change every frame).
         const auto pDepthTexture = pRenderer->getDepthTextureNoMultisampling();
@@ -738,25 +800,9 @@ namespace ne {
             }
         }
 
-        // Resource that stores calculated grid of frustums is binded inside of the update function
-        // for shader that calculates that grid.
-
-        // Get current frame resource.
-        const auto pCurrentFrameResource = pRenderer->getFrameResourcesManager()->getCurrentFrameResource();
-        std::scoped_lock frameResource(pCurrentFrameResource->first);
-
-        // Self check: make sure we are using the right frame resource.
-        if (pCurrentFrameResource->second.iCurrentFrameResourceIndex != iCurrentFrameResourceIndex)
-            [[unlikely]] {
-            return Error(std::format(
-                "current frame resource index {} does not match the specified one ({})",
-                pCurrentFrameResource->second.iCurrentFrameResourceIndex,
-                iCurrentFrameResourceIndex));
-        }
-
         // (Re)bind current frame resource (because the resource will change every frame).
         auto optionalError = pComputeInterface->bindResource(
-            pCurrentFrameResource->second.pResource->pFrameConstantBuffer->getInternalResource(),
+            pCurrentFrameResource->pFrameConstantBuffer->getInternalResource(),
             "frameData",
             ComputeResourceUsage::CONSTANT_BUFFER);
         if (optionalError.has_value()) [[unlikely]] {
@@ -764,9 +810,51 @@ namespace ne {
             return optionalError;
         }
 
+        // (Re)bind general light data (because the resource will change every frame).
+        optionalError = pComputeInterface->bindResource(
+            pGeneralLightingData,
+            LightingShaderResourceManager::getGeneralLightingDataShaderResourceName(),
+            ComputeResourceUsage::CONSTANT_BUFFER);
+        if (optionalError.has_value()) [[unlikely]] {
+            optionalError->addCurrentLocationToErrorStack();
+            return optionalError;
+        }
+
+        // (Re)bind point light array (because the resource will change every frame).
+        optionalError = pComputeInterface->bindResource(
+            pPointLightArray,
+            LightingShaderResourceManager::getPointLightsShaderResourceName(),
+            ComputeResourceUsage::READ_ONLY_ARRAY_BUFFER);
+        if (optionalError.has_value()) [[unlikely]] {
+            optionalError->addCurrentLocationToErrorStack();
+            return optionalError;
+        }
+
+        // (Re)bind spotlight array (because the resource will change every frame).
+        optionalError = pComputeInterface->bindResource(
+            pSpotlightArray,
+            LightingShaderResourceManager::getSpotlightsShaderResourceName(),
+            ComputeResourceUsage::READ_ONLY_ARRAY_BUFFER);
+        if (optionalError.has_value()) [[unlikely]] {
+            optionalError->addCurrentLocationToErrorStack();
+            return optionalError;
+        }
+
+        // (Re)bind directional light array (because the resource will change every frame).
+        optionalError = pComputeInterface->bindResource(
+            pDirectionalLightArray,
+            LightingShaderResourceManager::getDirectionalLightsShaderResourceName(),
+            ComputeResourceUsage::READ_ONLY_ARRAY_BUFFER);
+        if (optionalError.has_value()) [[unlikely]] {
+            optionalError->addCurrentLocationToErrorStack();
+            return optionalError;
+        }
+
+        // TODO
+
         // Queue shader execution (we need to dispatch 1 thread group per tile).
         pComputeInterface->submitForExecution(
-            frustumGridShader.iLastUpdateTileCountX, frustumGridShader.iLastUpdateTileCountY, 1);
+            threadGroupCount.iThreadGroupCountX, threadGroupCount.iThreadGroupCountY, 1);
 
         return {};
     }
@@ -790,7 +878,7 @@ namespace ne {
             }
 
             // Initialize light culling shader.
-            optionalError = lightCullingComputeShaderData.initialize(pRenderer);
+            optionalError = lightCullingComputeShaderData.initialize(pRenderer, frustumGridComputeShaderData);
             if (optionalError.has_value()) [[unlikely]] {
                 optionalError->addCurrentLocationToErrorStack();
                 return optionalError;
@@ -804,6 +892,16 @@ namespace ne {
             optionalError->addCurrentLocationToErrorStack();
             return optionalError;
         }
+
+        // Update the thread group count for light culling because it was updated.
+        lightCullingComputeShaderData.threadGroupCount.iThreadGroupCountX =
+            frustumGridComputeShaderData.iLastUpdateTileCountX;
+        lightCullingComputeShaderData.threadGroupCount.iThreadGroupCountY =
+            frustumGridComputeShaderData.iLastUpdateTileCountY;
+        lightCullingComputeShaderData.resources.pThreadGroupCount->copyDataToElement(
+            0,
+            &lightCullingComputeShaderData.threadGroupCount,
+            sizeof(ComputeShaderData::LightCullingComputeShader::ThreadGroupCount));
 
         // Rebind grid of frustums resource to light culling shader because it was re-created.
         optionalError = lightCullingComputeShaderData.pComputeInterface->bindResource(
@@ -835,7 +933,7 @@ namespace ne {
 
 #if defined(DEBUG) && defined(WIN32)
         static_assert(
-            sizeof(LightingShaderResourceManager) == 256, "consider resetting new arrays here"); // NOLINT
+            sizeof(LightingShaderResourceManager) == 272, "consider resetting new arrays here"); // NOLINT
 #elif defined(DEBUG)
         static_assert(
             sizeof(LightingShaderResourceManager) == 144, "consider resetting new arrays here"); // NOLINT

@@ -171,6 +171,13 @@ namespace ne {
          */
         std::pair<std::recursive_mutex, Resources>* getInternalResources();
 
+        /**
+         * Returns name of the resource (specified in shader code) that this array is binded to.
+         *
+         * @return Shader resource name.
+         */
+        std::string getShaderResourceName() const;
+
     private:
         /**
          * Creates a new array.

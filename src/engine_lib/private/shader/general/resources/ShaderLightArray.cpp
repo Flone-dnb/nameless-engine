@@ -140,6 +140,8 @@ namespace ne {
         return &mtxResources;
     }
 
+    std::string ShaderLightArray::getShaderResourceName() const { return sShaderLightResourceName; }
+
     void ShaderLightArray::freeSlot(ShaderLightArraySlot* pSlot) {
         // Pause the rendering and make sure our resources are not used by the GPU
         // (locking both mutexes to avoid a deadlock that might occur below).

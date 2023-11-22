@@ -285,7 +285,7 @@ namespace ne {
 
 #if defined(DEBUG)
             static_assert(
-                sizeof(LightingShaderResourceManager) == 256, "consider adding new arrays here"); // NOLINT
+                sizeof(LightingShaderResourceManager) == 272, "consider adding new arrays here"); // NOLINT
 #endif
         }
 #endif
@@ -438,8 +438,25 @@ namespace ne {
 
             /** Groups shader data for compute shader that does light culling. */
             struct LightCullingComputeShader {
+                /**
+                 * Stores some additional information (some information not available as built-in semantics).
+                 */
+                struct ThreadGroupCount {
+                    /** Total number of thread groups dispatched in the X direction. */
+                    alignas(iVkScalarAlignment) unsigned int iThreadGroupCountX = 0;
+
+                    /** Total number of thread groups dispatched in the Y direction. */
+                    alignas(iVkScalarAlignment) unsigned int iThreadGroupCountY = 0;
+                };
+
                 /** Groups buffers that we bind to a compute shader. */
                 struct ShaderResources {
+                    /**
+                     * Buffer that stores additional information that might not be available as built-in
+                     * semantics.
+                     */
+                    std::unique_ptr<UploadBuffer> pThreadGroupCount;
+
                     /**
                      * Renderer's depth texture that we binded the last time.
                      *
@@ -455,11 +472,15 @@ namespace ne {
                     /**
                      * Creates compute interface and resources and binds them to the interface.
                      *
-                     * @param pRenderer Renderer.
+                     * @param pRenderer         Renderer.
+                     * @param frustumGridShader Compute shader that calculates grid of frustums for
+                     * light culling. Its resources will be used in light culling.
                      *
                      * @return Error if something went wrong.
                      */
-                    [[nodiscard]] std::optional<Error> initialize(Renderer* pRenderer);
+                    [[nodiscard]] std::optional<Error> initialize(
+                        Renderer* pRenderer,
+                        const FrustumGridComputeShader::ComputeShader& frustumGridShader);
 
                     /**
                      * Called to queue compute shader to be executed on the next frame.
@@ -467,24 +488,33 @@ namespace ne {
                      * @warning Expected to be called somewhere inside of the `drawNextFrame` function
                      * so that renderer's depth texture without multisampling pointer will not change.
                      *
-                     * @param pRenderer                  Renderer.
-                     * @param iCurrentFrameResourceIndex Index of the frame resource that will be used to
+                     * @param pRenderer             Renderer.
+                     * @param pCurrentFrameResource Current frame resource that will be used to
                      * submit the next frame.
-                     * @param frustumGridShader          Compute shader that calculates grid of frustums for
-                     * light culling. Its resulting (calculated) resources will be used in light culling.
+                     * @param pGeneralLightingData  GPU resource that stores general lighting
+                     * information.
+                     * @param pPointLightArray       Array that stores all spawned point lights.
+                     * @param pSpotlightArray        Array that stores all spawned spotlights.
+                     * @param pDirectionalLightArray Array that stores all spawned directional lights.
                      *
                      * @return Error if something went wrong.
                      */
                     [[nodiscard]] std::optional<Error> queueExecutionForNextFrame(
                         Renderer* pRenderer,
-                        size_t iCurrentFrameResourceIndex,
-                        const FrustumGridComputeShader::ComputeShader& frustumGridShader);
+                        FrameResource* pCurrentFrameResource,
+                        GpuResource* pGeneralLightingData,
+                        GpuResource* pPointLightArray,
+                        GpuResource* pSpotlightArray,
+                        GpuResource* pDirectionalLightArray);
 
                     /** Shader interface. */
                     std::unique_ptr<ComputeShaderInterface> pComputeInterface;
 
                     /** Shader resources that this compute shader "owns". */
                     ShaderResources resources;
+
+                    /** Stores the number of thread groups that we need to dispatch. */
+                    ThreadGroupCount threadGroupCount;
 
                     /** `true` if @ref initialize was called, `false` otherwise. */
                     bool bIsInitialized = false;
@@ -494,6 +524,12 @@ namespace ne {
                      * depth texture recorded on depth prepass.
                      */
                     static inline const auto sDepthTextureShaderResourceName = "depthTexture";
+
+                    /**
+                     * Name of the shader resource (name from shader code) that stores additional information
+                     * that might not be available as built-in semantics.
+                     */
+                    static inline const auto sThreadGroupCountShaderResourceName = "threadGroupCount";
                 };
             };
         };
@@ -553,10 +589,12 @@ namespace ne {
          *
          * @remark Also copies data from @ref mtxGpuData.
          *
+         * @param pCurrentFrameResource      Current frame resource that will be used to submit the next
+         * frame.
          * @param iCurrentFrameResourceIndex Index of the frame resource that will be used to submit the
          * next frame.
          */
-        void updateResources(size_t iCurrentFrameResourceIndex);
+        void updateResources(FrameResource* pCurrentFrameResource, size_t iCurrentFrameResourceIndex);
 
         /**
          * Called after @ref pPointLightDataArray changed its size.

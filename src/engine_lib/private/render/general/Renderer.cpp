@@ -813,6 +813,7 @@ namespace ne {
 
         // Update lighting shader resources marked as "needs update".
         pLightingShaderResourceManager->updateResources(
+            pMtxCurrentFrameResource->second.pResource,
             pMtxCurrentFrameResource->second.iCurrentFrameResourceIndex);
     }
 

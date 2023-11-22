@@ -10,21 +10,12 @@
 FAIL;
 #endif
 
+/** 1 thread per pixel in a tile. 1 thread group per tile. */
 layout (local_size_x = THREADS_IN_GROUP_XY, local_size_y = THREADS_IN_GROUP_XY, local_size_z = 1) in;
 void main(){
-    // Sources:
-    // - Presentation "DirectX 11 Rendering in Battlefield 3" (2011) by Johan Andersson, DICE.
-    // - "Forward+: A Step Toward Film-Style Shading in Real Time", Takahiro Harada (2012).
-    
     // Get depth of this pixel.
     float depth = texelFetch(depthTexture, ivec2(gl_GlobalInvocationID.x, gl_GlobalInvocationID.y), 0).r;
 
-    if (gl_LocalInvocationIndex == 0){
-        // Only one thread in the group should initialize group shared variables.
-        initializeGroupSharedVariables(gl_WorkGroupID.x, gl_WorkGroupID.y);
-    }
-
-    // Make sure all group shared writes were finished and all threads from the group reached this line.
-    groupMemoryBarrier(); // wait for shared writes to finish
-    barrier(); // wait for threads of group to reach this line
+    // Cull lights.
+    cullLightsForTile(depth, gl_WorkGroupID.x, gl_WorkGroupID.y, gl_LocalInvocationIndex);
 }

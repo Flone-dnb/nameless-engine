@@ -130,10 +130,14 @@ namespace ne {
         // Lock frame constants and environment.
         std::scoped_lock guard(mtxFrameConstants.first, mtxSpawnedEnvironmentNode.first);
 
+        // Get camera's view matrix.
+        const auto cameraViewMatrix = pCameraProperties->getViewMatrix();
+
         // Set camera properties.
         mtxFrameConstants.second.cameraPosition = glm::vec4(pCameraProperties->getWorldLocation(), 1.0F);
+        mtxFrameConstants.second.viewMatrix = cameraViewMatrix;
         mtxFrameConstants.second.viewProjectionMatrix =
-            pCameraProperties->getProjectionMatrix() * pCameraProperties->getViewMatrix();
+            pCameraProperties->getProjectionMatrix() * cameraViewMatrix;
 
         // Set time parameters.
         mtxFrameConstants.second.timeSincePrevFrameInSec = getGameManager()->getTimeSincePrevFrameInSec();

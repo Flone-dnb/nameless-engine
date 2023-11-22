@@ -44,8 +44,9 @@ namespace ne {
         // Self check for light culling compute shader:
         static_assert(
             depthImageFormat == VK_FORMAT_D24_UNORM_S8_UINT,
-            "light culling compute shader expects the depth values to be in range [0..1], please review the "
-            "light culling compute shader and make sure it works correctly");
+            "light culling compute shader expects the depth values to be in range [0..1] for atomic "
+            "operations, please review the light culling compute shader and make sure atomics will work "
+            "correctly");
     }
 
     std::variant<MsaaState, Error> VulkanRenderer::getMaxSupportedAntialiasingQuality() const {

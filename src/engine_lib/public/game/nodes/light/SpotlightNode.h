@@ -176,6 +176,9 @@ namespace ne RNAMESPACE() {
              * (not both sides), i.e. this is a cosine of value [0-90] degrees.
              */
             alignas(iVkScalarAlignment) float cosOuterConeAngle = 0.0F;
+
+            /** Radius of cone's bottom part. */
+            alignas(iVkScalarAlignment) float coneBottomRadius = 0.0F;
         };
 
         /** Groups data related to shaders. */

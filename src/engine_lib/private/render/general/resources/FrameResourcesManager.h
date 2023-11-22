@@ -19,6 +19,9 @@ namespace ne {
 
     /** Stores frame-global constants. Used by shaders. */
     struct FrameConstants {
+        /** Camera's view matrix. */
+        alignas(iVkMat4Alignment) glm::mat4x4 viewMatrix = glm::identity<glm::mat4x4>();
+
         /** Camera's view matrix multiplied by camera's projection matrix. */
         alignas(iVkMat4Alignment) glm::mat4x4 viewProjectionMatrix = glm::identity<glm::mat4x4>();
 

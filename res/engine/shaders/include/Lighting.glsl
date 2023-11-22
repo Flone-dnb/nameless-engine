@@ -69,7 +69,7 @@ struct Spotlight{
     /** Light position in world space. 4th component is not used. */
     vec4 position;
 
-    /** Light forward unit vector (direction). 4th component is not used. */
+    /** Light forward unit vector (direction) in world space. 4th component is not used. */
     vec4 direction;
 
     /** Color of the light source. 4th component is not used. */
@@ -96,6 +96,9 @@ struct Spotlight{
      * (not both sides), i.e. this is a cosine of value [0-90] degrees.
      */
     float cosOuterConeAngle;
+
+    /** Radius of cone's bottom part. */
+    float coneBottomRadius;
 };
 
 /** All spawned spotlights. */

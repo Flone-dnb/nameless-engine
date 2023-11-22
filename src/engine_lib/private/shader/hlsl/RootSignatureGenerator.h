@@ -282,18 +282,20 @@ namespace ne {
             const D3D12_SHADER_INPUT_BIND_DESC& resourceDescription);
 
         /**
-         * Adds a `Texture2D` shader resource to root parameters.
+         * Adds a `(RW)Texture2D` shader resource to root parameters.
          *
          * @param vRootParameters      Parameters to add the new resource to.
          * @param rootParameterIndices Map to add new parameter to.
          * @param resourceDescription  Shader resource description.
+         * @param bIsReadWrite         `true` if buffer is read/write, `false` if only read.
          *
          * @return Error if something went wrong.
          */
         static std::optional<Error> addTexture2DRootParameter(
             std::vector<RootParameter>& vRootParameters,
             std::unordered_map<std::string, std::pair<UINT, RootParameter>>& rootParameterIndices,
-            const D3D12_SHADER_INPUT_BIND_DESC& resourceDescription);
+            const D3D12_SHADER_INPUT_BIND_DESC& resourceDescription,
+            bool bIsReadWrite);
 
         /**
          * Adds a `(RW)StructuredBuffer` shader resource to root parameters.

@@ -28,8 +28,9 @@ namespace ne {
             glm::cos(glm::radians(innerConeAngle / 2.0F)); // NOLINT
         mtxShaderData.second.shaderData.cosOuterConeAngle =
             glm::cos(glm::radians(outerConeAngle / 2.0F)); // NOLINT
+        mtxShaderData.second.shaderData.coneBottomRadius = glm::tan(glm::radians(outerConeAngle)) * distance;
 #if defined(DEBUG)
-        static_assert(sizeof(SpotlightShaderData) == 64, "consider copying new parameters here");
+        static_assert(sizeof(SpotlightShaderData) == 80, "consider copying new parameters here");
 #endif
 
         // Reserve a slot in the spotlight shader data array
@@ -92,8 +93,14 @@ namespace ne {
     void SpotlightNode::setLightDistance(float distance) {
         std::scoped_lock guard(mtxShaderData.first);
 
+        // Save new parameter.
+        this->distance = distance;
+
         // Update shader data.
-        mtxShaderData.second.shaderData.distance = distance;
+        mtxShaderData.second.shaderData.distance = this->distance;
+
+        mtxShaderData.second.shaderData.coneBottomRadius =
+            glm::tan(glm::radians(this->outerConeAngle)) * this->distance;
 
         // Mark updated shader data to be later copied to the GPU resource.
         markShaderDataToBeCopiedToGpu();
@@ -111,9 +118,15 @@ namespace ne {
 
         // Make sure outer cone is equal or bigger than inner cone.
         if (innerConeAngle > outerConeAngle) {
+            // Move outer angle to match the inner angle.
             outerConeAngle = innerConeAngle;
+
+            // Update shader data.
             mtxShaderData.second.shaderData.cosOuterConeAngle =
                 mtxShaderData.second.shaderData.cosInnerConeAngle;
+
+            mtxShaderData.second.shaderData.coneBottomRadius =
+                glm::tan(glm::radians(outerConeAngle)) * distance;
         }
 
         // Mark updated shader data to be later copied to the GPU resource.
@@ -130,6 +143,9 @@ namespace ne {
         mtxShaderData.second.shaderData.cosOuterConeAngle =
             glm::cos(glm::radians(this->outerConeAngle / 2.0F)); // NOLINT
 
+        mtxShaderData.second.shaderData.coneBottomRadius =
+            glm::tan(glm::radians(this->outerConeAngle)) * distance;
+
         // Mark updated shader data to be later copied to the GPU resource.
         markShaderDataToBeCopiedToGpu();
     }
@@ -145,7 +161,7 @@ namespace ne {
         outerConeAngle = std::clamp(outerConeAngle, innerConeAngle, 180.0F); // NOLINT
 
 #if defined(DEBUG)
-        static_assert(sizeof(SpotlightShaderData) == 64, "consider clamping new parameters here");
+        static_assert(sizeof(SpotlightShaderData) == 80, "consider clamping new parameters here");
 #endif
     }
 

@@ -29,7 +29,7 @@ struct Cone{
     vec3 direction;
 
     /** Radius of the bottom part of the cone. */
-    float radius;
+    float bottomRadius;
 };
 
 /** Frustum in view space. */
@@ -109,7 +109,7 @@ bool isConeBehindPlane(Cone cone, Plane plane){
 
     // Calculate the point Q that is on the base (bottom) of the cone that is farthest away from the plane
     // in the direction of plane's normal.
-    vec3 Q = cone.location + cone.direction * cone.height - m * cone.radius;
+    vec3 Q = cone.location + cone.direction * cone.height - m * cone.bottomRadius;
 
     // The cone is behind the plane if both cone's tip and Q are behind the plane.
     return isPointBehindPlane(cone.location, plane) && isPointBehindPlane(Q, plane);

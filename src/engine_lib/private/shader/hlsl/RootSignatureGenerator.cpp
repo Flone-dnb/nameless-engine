@@ -91,7 +91,7 @@ namespace ne {
                 staticSamplersToBind.insert(std::get<SamplerType>(result));
             } else if (resourceDesc.Type == D3D_SIT_TEXTURE) {
                 auto optionalError =
-                    addTexture2DRootParameter(vRootParameters, rootParameterIndices, resourceDesc);
+                    addTexture2DRootParameter(vRootParameters, rootParameterIndices, resourceDesc, false);
                 if (optionalError.has_value()) [[unlikely]] {
                     auto error = optionalError.value();
                     error.addCurrentLocationToErrorStack();
@@ -108,6 +108,14 @@ namespace ne {
             } else if (resourceDesc.Type == D3D_SIT_UAV_RWSTRUCTURED) {
                 auto optionalError = addStructuredBufferRootParameter(
                     vRootParameters, rootParameterIndices, resourceDesc, true);
+                if (optionalError.has_value()) [[unlikely]] {
+                    auto error = optionalError.value();
+                    error.addCurrentLocationToErrorStack();
+                    return error;
+                }
+            } else if (resourceDesc.Type == D3D_SIT_UAV_RWTYPED) {
+                auto optionalError =
+                    addTexture2DRootParameter(vRootParameters, rootParameterIndices, resourceDesc, true);
                 if (optionalError.has_value()) [[unlikely]] {
                     auto error = optionalError.value();
                     error.addCurrentLocationToErrorStack();
@@ -640,9 +648,14 @@ namespace ne {
     std::optional<Error> RootSignatureGenerator::addTexture2DRootParameter(
         std::vector<RootParameter>& vRootParameters,
         std::unordered_map<std::string, std::pair<UINT, RootParameter>>& rootParameterIndices,
-        const D3D12_SHADER_INPUT_BIND_DESC& resourceDescription) {
+        const D3D12_SHADER_INPUT_BIND_DESC& resourceDescription,
+        bool bIsReadWrite) {
+        // Prepare parameter description.
         auto newRootParameter = RootParameter(
-            resourceDescription.BindPoint, resourceDescription.Space, RootParameter::Type::SRV, true);
+            resourceDescription.BindPoint,
+            resourceDescription.Space,
+            bIsReadWrite ? RootParameter::Type::UAV : RootParameter::Type::SRV,
+            true);
 
         // Make sure this resource name is unique, save its root index.
         auto optionalError = addUniquePairResourceNameRootParameterIndex(

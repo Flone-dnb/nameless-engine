@@ -70,7 +70,7 @@ namespace ne {
         static inline const auto forwardPlusPrepareLightCullingComputeShader = ShaderDescription(
             EngineShaderNames::ForwardPlus::sPrepareLightCullingComputeShaderName,
             ProjectPaths::getPathToResDirectory(ResourceDirectory::ENGINE) /
-                "shaders/hlsl/light_culling/PrepareLightCulling.comp",
+                "shaders/glsl/final/light_culling/PrepareLightCulling.comp",
             ShaderType::COMPUTE_SHADER,
             "main",
             {});

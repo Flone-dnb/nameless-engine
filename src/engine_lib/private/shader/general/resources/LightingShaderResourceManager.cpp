@@ -50,7 +50,7 @@ namespace ne {
 
 #if defined(DEBUG) && defined(WIN32)
         static_assert(
-            sizeof(LightingShaderResourceManager) == 352, "consider notifying new arrays here"); // NOLINT
+            sizeof(LightingShaderResourceManager) == 400, "consider notifying new arrays here"); // NOLINT
 #elif defined(DEBUG)
         static_assert(
             sizeof(LightingShaderResourceManager) == 144, "consider notifying new arrays here"); // NOLINT
@@ -91,7 +91,7 @@ namespace ne {
 
 #if defined(DEBUG) && defined(WIN32)
         static_assert(
-            sizeof(LightingShaderResourceManager) == 352, "consider notifying new arrays here"); // NOLINT
+            sizeof(LightingShaderResourceManager) == 400, "consider notifying new arrays here"); // NOLINT
 #elif defined(DEBUG)
         static_assert(
             sizeof(LightingShaderResourceManager) == 144, "consider notifying new arrays here"); // NOLINT
@@ -123,7 +123,7 @@ namespace ne {
 
 #if defined(DEBUG) && defined(WIN32)
         static_assert(
-            sizeof(LightingShaderResourceManager) == 352, "consider notifying new arrays here"); // NOLINT
+            sizeof(LightingShaderResourceManager) == 400, "consider notifying new arrays here"); // NOLINT
 #elif defined(DEBUG)
         static_assert(
             sizeof(LightingShaderResourceManager) == 144, "consider notifying new arrays here"); // NOLINT
@@ -531,7 +531,7 @@ namespace ne {
 
 #if defined(DEBUG) && defined(WIN32)
         static_assert(
-            sizeof(LightingShaderResourceManager) == 352, "consider creating new arrays here"); // NOLINT
+            sizeof(LightingShaderResourceManager) == 400, "consider creating new arrays here"); // NOLINT
 #elif defined(DEBUG)
         static_assert(
             sizeof(LightingShaderResourceManager) == 144, "consider creating new arrays here"); // NOLINT
@@ -902,6 +902,60 @@ namespace ne {
             }
         }
 
+        // Prepare pointers to light grids to create.
+        struct LightGridCreationInfo {
+            LightGridCreationInfo(
+                std::unique_ptr<GpuResource>* pResource,
+                const std::string& sResourceDescription,
+                const std::string& sShaderResourceName) {
+                this->pResource = pResource;
+                this->sResourceDescription = sResourceDescription;
+                this->sShaderResourceName = sShaderResourceName;
+            }
+
+            std::unique_ptr<GpuResource>* pResource = nullptr;
+            std::string sResourceDescription;
+            std::string sShaderResourceName;
+        };
+        const std::array<LightGridCreationInfo, 6> vGridsToCreate = {
+            LightGridCreationInfo(&resources.pOpaquePointLightGrid, "opaque point", "opaquePointLightGrid"),
+            LightGridCreationInfo(&resources.pOpaqueSpotLightGrid, "opaque spot", "opaqueSpotLightGrid"),
+            LightGridCreationInfo(
+                &resources.pOpaqueDirectionalLightGrid, "opaque directional", "opaqueDirectionalLightGrid"),
+            LightGridCreationInfo(
+                &resources.pTransparentPointLightGrid, "transparent point", "transparentPointLightGrid"),
+            LightGridCreationInfo(
+                &resources.pTransparentSpotLightGrid, "transparent spot", "transparentSpotLightGrid"),
+            LightGridCreationInfo(
+                &resources.pTransparentDirectionalLightGrid,
+                "transparent directional",
+                "transparentDirectionalLightGrid")};
+
+        // Create light grids.
+        for (const auto& info : vGridsToCreate) {
+            // Create texture.
+            auto result = pResourceManager->createTextureResource(
+                std::format("light culling - {} light grid", info.sResourceDescription),
+                static_cast<unsigned int>(iTileCountX),
+                static_cast<unsigned int>(iTileCountY),
+                TextureResourceFormat::R32G32_UINT);
+            if (std::holds_alternative<Error>(result)) [[unlikely]] {
+                auto error = std::get<Error>(std::move(result));
+                error.addCurrentLocationToErrorStack();
+                return error;
+            }
+
+            (*info.pResource) = std::get<std::unique_ptr<GpuResource>>(std::move(result));
+
+            // Bind to shader.
+            auto optionalError = pComputeInterface->bindResource(
+                info.pResource->get(), info.sShaderResourceName, ComputeResourceUsage::READ_WRITE_TEXTURE);
+            if (optionalError.has_value()) [[unlikely]] {
+                optionalError->addCurrentLocationToErrorStack();
+                return optionalError;
+            }
+        }
+
         // Save new tile count.
         resources.iLightGridTileCountX = iTileCountX;
         resources.iLightGridTileCountY = iTileCountY;
@@ -990,15 +1044,8 @@ namespace ne {
             return optionalError;
         }
 
-        // (Re)bind directional light array (because the resource will change every frame).
-        optionalError = pComputeInterface->bindResource(
-            pDirectionalLightArray,
-            LightingShaderResourceManager::getDirectionalLightsShaderResourceName(),
-            ComputeResourceUsage::READ_ONLY_ARRAY_BUFFER);
-        if (optionalError.has_value()) [[unlikely]] {
-            optionalError->addCurrentLocationToErrorStack();
-            return optionalError;
-        }
+        // No need to bind directional lights array because it's not used (we just accept all directional
+        // lights since there does not seem to be a reliable way to cull them).
 
         // Reset global counters to zero.
         GlobalCountersIntoLightIndexList counters{};
@@ -1108,7 +1155,7 @@ namespace ne {
 
 #if defined(DEBUG) && defined(WIN32)
         static_assert(
-            sizeof(LightingShaderResourceManager) == 352, "consider resetting new arrays here"); // NOLINT
+            sizeof(LightingShaderResourceManager) == 400, "consider resetting new arrays here"); // NOLINT
 #elif defined(DEBUG)
         static_assert(
             sizeof(LightingShaderResourceManager) == 144, "consider resetting new arrays here"); // NOLINT

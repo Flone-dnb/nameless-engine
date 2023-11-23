@@ -285,7 +285,7 @@ namespace ne {
 
 #if defined(DEBUG)
             static_assert(
-                sizeof(LightingShaderResourceManager) == 352, "consider adding new arrays here"); // NOLINT
+                sizeof(LightingShaderResourceManager) == 400, "consider adding new arrays here"); // NOLINT
 #endif
         }
 #endif
@@ -504,6 +504,42 @@ namespace ne {
 
                     /** Stores indices into array of directional lights for transparent geometry. */
                     std::unique_ptr<GpuResource> pTransparentDirectionalLightIndexList;
+
+                    /**
+                     * 2D texture where every pixel stores 2 values: offset into light index list and the
+                     * number of elements to read from that offset.
+                     */
+                    std::unique_ptr<GpuResource> pOpaquePointLightGrid;
+
+                    /**
+                     * 2D texture where every pixel stores 2 values: offset into light index list and the
+                     * number of elements to read from that offset.
+                     */
+                    std::unique_ptr<GpuResource> pOpaqueSpotLightGrid;
+
+                    /**
+                     * 2D texture where every pixel stores 2 values: offset into light index list and the
+                     * number of elements to read from that offset.
+                     */
+                    std::unique_ptr<GpuResource> pOpaqueDirectionalLightGrid;
+
+                    /**
+                     * 2D texture where every pixel stores 2 values: offset into light index list and the
+                     * number of elements to read from that offset.
+                     */
+                    std::unique_ptr<GpuResource> pTransparentPointLightGrid;
+
+                    /**
+                     * 2D texture where every pixel stores 2 values: offset into light index list and the
+                     * number of elements to read from that offset.
+                     */
+                    std::unique_ptr<GpuResource> pTransparentSpotLightGrid;
+
+                    /**
+                     * 2D texture where every pixel stores 2 values: offset into light index list and the
+                     * number of elements to read from that offset.
+                     */
+                    std::unique_ptr<GpuResource> pTransparentDirectionalLightGrid;
 
                     /**
                      * Renderer's depth texture that we binded the last time.

@@ -10,7 +10,21 @@ namespace ne {
         const std::string& sComputeShaderName,
         ComputeExecutionStage executionStage,
         ComputeExecutionGroup executionGroup)
-        : ComputeShaderInterface(pRenderer, sComputeShaderName, executionStage, executionGroup) {}
+        : ComputeShaderInterface(pRenderer, sComputeShaderName, executionStage, executionGroup) {
+        // Get resource manager.
+        const auto pResourceManager = dynamic_cast<DirectXResourceManager*>(pRenderer->getResourceManager());
+        if (pResourceManager == nullptr) [[unlikely]] {
+            Error error("expected a DirectX resource manager to be valid");
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+        }
+
+        // Save heaps.
+        pCbvSrvUavHeap = pResourceManager->getCbvSrvUavHeap();
+
+        // Save SRV descriptor size.
+        iCbvSrvUavDescriptorSize = pCbvSrvUavHeap->getDescriptorSize();
+    }
 
     std::optional<Error> HlslComputeShaderInterface::bindResource(
         GpuResource* pResource, const std::string& sShaderResourceName, ComputeResourceUsage usage) {
@@ -25,21 +39,6 @@ namespace ne {
         if (pPso == nullptr) [[unlikely]] {
             return Error("expected a DirectX PSO");
         }
-
-        // Get resource manager.
-        const auto pResourceManager =
-            dynamic_cast<DirectXResourceManager*>(pPso->getRenderer()->getResourceManager());
-        if (pResourceManager == nullptr) [[unlikely]] {
-            Error error("expected a DirectX resource manager");
-            error.showError();
-            throw std::runtime_error(error.getFullErrorMessage());
-        }
-
-        // Save SRV heap.
-        pSrvHeap = pResourceManager->getCbvSrvUavHeap();
-
-        // Save SRV descriptor size.
-        iSrvDescriptorSize = pSrvHeap->getDescriptorSize();
 
         // Find the specified resource name in the root signature.
         UINT iRootParameterIndex = 0;
@@ -114,7 +113,7 @@ namespace ne {
                 return Error("expected descriptor to be valid");
             }
 
-            // Add to SRV array.
+            // Add to SRV table array.
             tableResources[iRootParameterIndex] = pDescriptor;
             break;
         }
@@ -126,8 +125,14 @@ namespace ne {
                 return optionalError;
             }
 
-            // Add to UAV array.
-            uavResources[iRootParameterIndex] = pDirectXResource;
+            // Get descriptor.
+            const auto pDescriptor = pDirectXResource->getDescriptor(DirectXDescriptorType::UAV);
+            if (pDescriptor == nullptr) [[unlikely]] {
+                return Error("expected descriptor to be valid");
+            }
+
+            // Add to table array.
+            tableResources[iRootParameterIndex] = pDescriptor;
             break;
         }
         default: {

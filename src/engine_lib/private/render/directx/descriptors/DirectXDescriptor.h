@@ -64,6 +64,13 @@ namespace ne {
          */
         DirectXDescriptorHeap* getDescriptorHeap() const;
 
+        /**
+         * Returns resource that owns this descriptor.
+         *
+         * @return Owner resource.
+         */
+        DirectXResource* getOwnerResource() const;
+
     protected:
         /**
          * Constructor.
@@ -79,13 +86,6 @@ namespace ne {
             DirectXDescriptorType descriptorType,
             DirectXResource* pResource,
             int iDescriptorOffsetInDescriptors);
-
-        /**
-         * Returns resource that owns this descriptor.
-         *
-         * @return Owner resource.
-         */
-        DirectXResource* getOwnerResource() const;
 
     private:
         /** Do not delete. Owner resource of this descriptor. */

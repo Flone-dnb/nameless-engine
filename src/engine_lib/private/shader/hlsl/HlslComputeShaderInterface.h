@@ -2,6 +2,7 @@
 
 // Standard.
 #include <unordered_map>
+#include <format>
 
 // Custom.
 #include "shader/ComputeShaderInterface.h"
@@ -77,18 +78,22 @@ namespace ne {
 #if defined(DEBUG)
                 // Make sure descriptor offset is still valid.
                 if (!optionalDescriptorOffset.has_value()) [[unlikely]] {
-                    Error error("unable to get descriptor offset of SRV descriptor");
+                    Error error(std::format(
+                        "unable to get descriptor offset of a CBV/SRV/UAV descriptor (resource: {}) to set "
+                        "to root signature index {}",
+                        pDescriptor->getOwnerResource()->getResourceName(),
+                        iRootParameterIndex));
                     error.showError();
                     throw std::runtime_error(error.getFullErrorMessage());
                 }
 #endif
 
                 // Set table.
-                pCommandList->SetGraphicsRootDescriptorTable(
+                pCommandList->SetComputeRootDescriptorTable(
                     iRootParameterIndex,
                     D3D12_GPU_DESCRIPTOR_HANDLE{
-                        pSrvHeap->getInternalHeap()->GetGPUDescriptorHandleForHeapStart().ptr +
-                        (*optionalDescriptorOffset) * iSrvDescriptorSize});
+                        pCbvSrvUavHeap->getInternalHeap()->GetGPUDescriptorHandleForHeapStart().ptr +
+                        (*optionalDescriptorOffset) * iCbvSrvUavDescriptorSize});
             }
 
             // Add a dispatch command.
@@ -120,13 +125,13 @@ namespace ne {
         /** Stores pairs of "root parameter index" - "resource to bind as SRV". */
         std::unordered_map<UINT, DirectXResource*> srvResources;
 
-        /** Stores pairs of "root parameter index" - "resource SRV descriptor. */
+        /** Stores pairs of "root parameter index" - "descriptor to bind as a table. */
         std::unordered_map<UINT, DirectXDescriptor*> tableResources;
 
-        /** SRV heap. */
-        DirectXDescriptorHeap* pSrvHeap = nullptr;
+        /** Descriptor heap for CBV/SRV/UAV descriptors. */
+        DirectXDescriptorHeap* pCbvSrvUavHeap = nullptr;
 
-        /** Size of one SRV descriptor. */
-        UINT iSrvDescriptorSize = 0;
+        /** Size of one CBV/SRV/UAV descriptor. */
+        UINT iCbvSrvUavDescriptorSize = 0;
     };
 }

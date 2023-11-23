@@ -74,6 +74,7 @@ namespace ne {
             HlslEngineShaders::meshNodeVertexShader,
             HlslEngineShaders::meshNodePixelShader,
             HlslEngineShaders::forwardPlusCalculateGridFrustumComputeShader,
+            HlslEngineShaders::forwardPlusPrepareLightCullingComputeShader,
             HlslEngineShaders::forwardPlusLightCullingComputeShader};
     }
 
@@ -675,7 +676,7 @@ namespace ne {
 
         PROFILE_SCOPE_START(DispatchComputeShadersAfterDepthPrepass);
 
-        // Dispatch pre-frame compute shaders.
+        // Dispatch compute shaders that need to run after depth prepass.
         auto& computeShaderGroups =
             mtxQueuedComputeShader.second
                 ->vGraphicsQueueStagesGroups[static_cast<size_t>(ComputeExecutionStage::AFTER_DEPTH_PREPASS)];

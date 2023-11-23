@@ -24,9 +24,11 @@ namespace ne {
              */
             static inline const auto sCalculateFrustumGridComputeShaderName = "engine.fp.frustum_grid.comp";
 
-            /**
-             * Globally unique name of the compute shader used to do light culling.
-             */
+            /** Globally unique name of the compute shader used to reset global counters for light culling. */
+            static inline const auto sPrepareLightCullingComputeShaderName =
+                "engine.fp.pre_light_culling.comp";
+
+            /** Globally unique name of the compute shader used to do light culling. */
             static inline const auto sLightCullingComputeShaderName = "engine.fp.light_culling.comp";
         };
     };

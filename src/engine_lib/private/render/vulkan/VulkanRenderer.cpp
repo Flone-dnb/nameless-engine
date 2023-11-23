@@ -80,6 +80,7 @@ namespace ne {
             GlslEngineShaders::meshNodeVertexShader,
             GlslEngineShaders::meshNodeFragmentShader,
             GlslEngineShaders::forwardPlusCalculateGridFrustumComputeShader,
+            GlslEngineShaders::forwardPlusPrepareLightCullingComputeShader,
             GlslEngineShaders::forwardPlusLightCullingComputeShader};
     }
 
@@ -2730,7 +2731,7 @@ namespace ne {
                 0,
                 nullptr);
 
-            // Dispatch pre-frame compute shaders.
+            // Dispatch compute shaders that need to run after depth prepass.
             for (auto& group : computeShaderGroups) {
                 if (dispatchComputeShadersOnGraphicsQueue(
                         pVulkanCurrentFrameResource,

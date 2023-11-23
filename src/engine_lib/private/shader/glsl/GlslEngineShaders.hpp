@@ -65,5 +65,14 @@ namespace ne {
                  EngineShaderConstantMacros::ForwardPlus::AverageDirectionalLightNumPerTileMacro::sName,
                  EngineShaderConstantMacros::ForwardPlus::AverageDirectionalLightNumPerTileMacro::sValue,
              }});
+
+        /** Compute shader that resets global counts for light culling shader. */
+        static inline const auto forwardPlusPrepareLightCullingComputeShader = ShaderDescription(
+            EngineShaderNames::ForwardPlus::sPrepareLightCullingComputeShaderName,
+            ProjectPaths::getPathToResDirectory(ResourceDirectory::ENGINE) /
+                "shaders/hlsl/light_culling/PrepareLightCulling.comp",
+            ShaderType::COMPUTE_SHADER,
+            "main",
+            {});
     };
 } // namespace ne

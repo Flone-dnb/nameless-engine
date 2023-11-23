@@ -50,18 +50,7 @@ layout(std140, binding = 6) readonly buffer CalculatedFrustumsBuffer{
 //                                                 counters
 // --------------------------------------------------------------------------------------------------------------------
 
-/** Global counters into the light lists. */
-#hlsl struct GlobalCountersIntoLightIndexList{
-#glsl layout(std140, binding = 9) buffer GlobalCountersIntoLightIndexList{
-    uint iPointLightListOpaque;
-    uint iSpotlightListOpaque;
-    uint iDirectionalLightListOpaque;
-
-    uint iPointLightListTransparent;
-    uint iSpotlightListTransparent;
-    uint iDirectionalLightListTransparent;
-#hlsl }; RWStructuredBuffer<GlobalCountersIntoLightIndexList> globalCountersIntoLightIndexList : register(u0, space5);
-#glsl } globalCountersIntoLightIndexList;
+#include "CountersData.glsl"
 
 // --------------------------------------------------------------------------------------------------------------------
 //                                                light index lists

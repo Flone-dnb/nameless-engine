@@ -145,6 +145,9 @@ namespace ne {
                                                         ->second.vGpuResources[iCurrentFrameResourceIndex]
                                                         ->getInternalResource();
 
+        // Queue shader that will reset global counters for light culling (should be called every frame).
+        pPrepareLightCullingComputeInterface->submitForExecution(1, 1, 1);
+
         // Queue light culling shader (should be called every frame).
         std::scoped_lock dataGuard(mtxGpuData.first);
         auto optionalError = lightCullingComputeShaderData.queueExecutionForNextFrame(
@@ -718,7 +721,8 @@ namespace ne {
             pRenderer,
             EngineShaderNames::ForwardPlus::sLightCullingComputeShaderName,
             ComputeExecutionStage::AFTER_DEPTH_PREPASS,
-            ComputeExecutionGroup::SECOND); // runs after compute shader that calculates grid frustums
+            ComputeExecutionGroup::SECOND); // runs after compute shader that calculates grid frustums and
+                                            // after shader that resets global counters
         if (std::holds_alternative<Error>(computeCreationResult)) [[unlikely]] {
             auto error = std::get<Error>(std::move(computeCreationResult));
             error.addCurrentLocationToErrorStack();
@@ -750,24 +754,29 @@ namespace ne {
             return optionalError;
         }
 
-        // Create a resource to store global counters.
-        for (auto& pCountersResource : resources.vGlobalCountersIntoLightIndexList) {
-            // Create resource.
-            result = pRenderer->getResourceManager()->createResourceWithCpuWriteAccess(
-                "light culling - global counters",
-                sizeof(ComputeShaderData::LightCullingComputeShader::GlobalCountersIntoLightIndexList),
-                1,
-                true);
-            if (std::holds_alternative<Error>(result)) [[unlikely]] {
-                auto error = std::get<Error>(std::move(result));
-                error.addCurrentLocationToErrorStack();
-                return error;
-            }
-            pCountersResource = std::get<std::unique_ptr<UploadBuffer>>(std::move(result));
+        // Create resource.
+        auto countersResourceResult = pRenderer->getResourceManager()->createResource(
+            "light culling - global counters",
+            sizeof(ComputeShaderData::LightCullingComputeShader::GlobalCountersIntoLightIndexList),
+            1,
+            ResourceUsageType::ARRAY_BUFFER,
+            true);
+        if (std::holds_alternative<Error>(countersResourceResult)) [[unlikely]] {
+            auto error = std::get<Error>(std::move(countersResourceResult));
+            error.addCurrentLocationToErrorStack();
+            return error;
+        }
+        resources.pGlobalCountersIntoLightIndexList =
+            std::get<std::unique_ptr<GpuResource>>(std::move(countersResourceResult));
 
-            // Set initial (zero) value.
-            GlobalCountersIntoLightIndexList counters{};
-            pCountersResource->copyDataToElement(0, &counters, sizeof(GlobalCountersIntoLightIndexList));
+        // Bind global counters.
+        optionalError = pComputeInterface->bindResource(
+            resources.pGlobalCountersIntoLightIndexList.get(),
+            sGlobalCountersIntoLightIndexListShaderResourceName,
+            ComputeResourceUsage::READ_WRITE_ARRAY_BUFFER);
+        if (optionalError.has_value()) [[unlikely]] {
+            optionalError->addCurrentLocationToErrorStack();
+            return optionalError;
         }
 
         // Bind screen to view data.
@@ -1047,21 +1056,6 @@ namespace ne {
         // No need to bind directional lights array because it's not used (we just accept all directional
         // lights since there does not seem to be a reliable way to cull them).
 
-        // Reset global counters to zero.
-        GlobalCountersIntoLightIndexList counters{};
-        resources.vGlobalCountersIntoLightIndexList[iCurrentFrameResourceIndex]->copyDataToElement(
-            0, &counters, sizeof(GlobalCountersIntoLightIndexList));
-
-        // Bind global counters of the current frame resource.
-        optionalError = pComputeInterface->bindResource(
-            resources.vGlobalCountersIntoLightIndexList[iCurrentFrameResourceIndex]->getInternalResource(),
-            sGlobalCountersIntoLightIndexListShaderResourceName,
-            ComputeResourceUsage::READ_WRITE_ARRAY_BUFFER);
-        if (optionalError.has_value()) [[unlikely]] {
-            optionalError->addCurrentLocationToErrorStack();
-            return optionalError;
-        }
-
         // Queue shader execution (we need to dispatch 1 thread group per tile).
         pComputeInterface->submitForExecution(
             threadGroupCount.iThreadGroupCountX, threadGroupCount.iThreadGroupCountY, 1);
@@ -1089,6 +1083,31 @@ namespace ne {
 
             // Initialize light culling shader.
             optionalError = lightCullingComputeShaderData.initialize(pRenderer, frustumGridComputeShaderData);
+            if (optionalError.has_value()) [[unlikely]] {
+                optionalError->addCurrentLocationToErrorStack();
+                return optionalError;
+            }
+
+            // Create compute interface for shader that resets global counters for light culling.
+            auto computeCreationResult = ComputeShaderInterface::createUsingGraphicsQueue(
+                pRenderer,
+                EngineShaderNames::ForwardPlus::sPrepareLightCullingComputeShaderName,
+                ComputeExecutionStage::AFTER_DEPTH_PREPASS,
+                ComputeExecutionGroup::FIRST); // we can use the same group as frustum grid calculation shader
+                                               // because that shader does not use global counters
+            if (std::holds_alternative<Error>(computeCreationResult)) [[unlikely]] {
+                auto error = std::get<Error>(std::move(computeCreationResult));
+                error.addCurrentLocationToErrorStack();
+                return error;
+            }
+            pPrepareLightCullingComputeInterface =
+                std::get<std::unique_ptr<ComputeShaderInterface>>(std::move(computeCreationResult));
+
+            // Bind global counters.
+            optionalError = pPrepareLightCullingComputeInterface->bindResource(
+                lightCullingComputeShaderData.resources.pGlobalCountersIntoLightIndexList.get(),
+                lightCullingComputeShaderData.sGlobalCountersIntoLightIndexListShaderResourceName,
+                ComputeResourceUsage::READ_WRITE_ARRAY_BUFFER);
             if (optionalError.has_value()) [[unlikely]] {
                 optionalError->addCurrentLocationToErrorStack();
                 return optionalError;
@@ -1163,6 +1182,7 @@ namespace ne {
 
         // Make sure light culling shader is destroyed first because it uses resources from compute
         // shader that calculates grid of frustums.
+        pPrepareLightCullingComputeInterface = nullptr;
         lightCullingComputeShaderData.pComputeInterface = nullptr;
     }
 

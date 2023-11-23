@@ -367,7 +367,7 @@ namespace ne {
                     std::unique_ptr<GpuResource> pCalculatedFrustums;
                 };
 
-                /** Groups shader interface and its resources. */
+                /** Groups compute interface and its resources. */
                 struct ComputeShader {
                     /**
                      * Creates compute interface and resources and binds them to the interface.
@@ -395,7 +395,7 @@ namespace ne {
                         const glm::mat4& inverseProjectionMatrix,
                         bool bQueueShaderExecution);
 
-                    /** Shader interface. */
+                    /** Shader Compute. */
                     std::unique_ptr<ComputeShaderInterface> pComputeInterface;
 
                     /** Shader resources. */
@@ -478,14 +478,8 @@ namespace ne {
                      */
                     std::unique_ptr<UploadBuffer> pThreadGroupCount;
 
-                    /**
-                     * Stores global counters into various light index lists.
-                     *
-                     * @remark One resource per frame resource because before each frame we will reset
-                     * global counters.
-                     */
-                    std::array<std::unique_ptr<UploadBuffer>, FrameResourcesManager::getFrameResourcesCount()>
-                        vGlobalCountersIntoLightIndexList;
+                    /** Stores global counters into various light index lists. */
+                    std::unique_ptr<GpuResource> pGlobalCountersIntoLightIndexList;
 
                     /** Stores indices into array of point lights for opaque geometry. */
                     std::unique_ptr<GpuResource> pOpaquePointLightIndexList;
@@ -563,7 +557,7 @@ namespace ne {
                     size_t iLightGridTileCountY = 0;
                 };
 
-                /** Groups shader interface and its resources. */
+                /** Groups compute interface and its resources. */
                 struct ComputeShader {
                     /**
                      * Creates compute interface and resources and binds them to the interface.
@@ -622,7 +616,7 @@ namespace ne {
                         GpuResource* pSpotlightArray,
                         GpuResource* pDirectionalLightArray);
 
-                    /** Shader interface. */
+                    /** Compute interface. */
                     std::unique_ptr<ComputeShaderInterface> pComputeInterface;
 
                     /** Shader resources that this compute shader "owns". */
@@ -786,6 +780,9 @@ namespace ne {
 
         /** Does light culling. */
         ComputeShaderData::LightCullingComputeShader::ComputeShader lightCullingComputeShaderData;
+
+        /** Compute interface that runs before light culling shader to reset global variables. */
+        std::unique_ptr<ComputeShaderInterface> pPrepareLightCullingComputeInterface;
 
         /** Used renderer. */
         Renderer* pRenderer = nullptr;

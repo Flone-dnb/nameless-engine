@@ -37,7 +37,10 @@ namespace ne {
 
         // Create resource.
         auto pCreatedResource = std::unique_ptr<DirectXResource>(new DirectXResource(
-            pResourceManager, static_cast<UINT>(iElementSizeInBytes), static_cast<UINT>(iElementCount)));
+            pResourceManager,
+            sResourceName,
+            static_cast<UINT>(iElementSizeInBytes),
+            static_cast<UINT>(iElementCount)));
 
         // Prepare clear value.
         const D3D12_CLEAR_VALUE* pClearValue = nullptr;
@@ -71,7 +74,8 @@ namespace ne {
         const DirectXResourceManager* pResourceManager,
         DirectXDescriptorHeap* pRtvHeap,
         const ComPtr<ID3D12Resource>& pSwapChainBuffer) {
-        auto pCreatedResource = std::unique_ptr<DirectXResource>(new DirectXResource(pResourceManager, 0, 0));
+        auto pCreatedResource = std::unique_ptr<DirectXResource>(
+            new DirectXResource(pResourceManager, "swap chain buffer resource", 0, 0));
 
         pCreatedResource->pSwapChainBuffer = pSwapChainBuffer;
 
@@ -130,17 +134,12 @@ namespace ne {
         return &pOptionalDescriptor->value();
     }
 
-    std::string DirectXResource::getResourceName() const {
-        if (pAllocatedResource != nullptr) {
-            return Globals::wstringToString(std::wstring(pAllocatedResource->GetName()));
-        }
-
-        return "swap chain buffer resource";
-    }
-
     DirectXResource::DirectXResource(
-        const DirectXResourceManager* pResourceManager, UINT iElementSizeInBytes, UINT iElementCount)
-        : GpuResource(iElementSizeInBytes, iElementCount) {
+        const DirectXResourceManager* pResourceManager,
+        const std::string& sResourceName,
+        UINT iElementSizeInBytes,
+        UINT iElementCount)
+        : GpuResource(sResourceName, iElementSizeInBytes, iElementCount) {
         this->pResourceManager = pResourceManager;
         mtxHeapDescriptors.second.resize(static_cast<int>(DirectXDescriptorType::END));
     }

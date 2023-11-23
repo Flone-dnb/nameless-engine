@@ -16,12 +16,14 @@ namespace ne {
         /**
          * Initializes resource.
          *
+         * @param sResourceName       Name of this resource.
          * @param iElementSizeInBytes Resource size information. Size of one array element (if array),
          * otherwise specify size of the whole resource.
          * @param iElementCount       Resource size information. Total number of elements in the array (if
          * array), otherwise specify 1.
          */
-        GpuResource(unsigned int iElementSizeInBytes, unsigned int iElementCount);
+        GpuResource(
+            const std::string& sResourceName, unsigned int iElementSizeInBytes, unsigned int iElementCount);
 
         virtual ~GpuResource() = default;
 
@@ -33,7 +35,7 @@ namespace ne {
          *
          * @return Resource name.
          */
-        virtual std::string getResourceName() const = 0;
+        std::string getResourceName() const;
 
         /**
          * Returns resource size information. Size of one array element (if array),
@@ -61,5 +63,8 @@ namespace ne {
 
         /** Resource size information (may be zero in some cases). */
         const unsigned int iElementCount = 0;
+
+        /** Name of this resource. */
+        const std::string sResourceName;
     };
 } // namespace ne

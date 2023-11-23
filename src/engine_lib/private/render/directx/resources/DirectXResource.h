@@ -87,25 +87,22 @@ namespace ne {
          */
         DirectXDescriptor* getDescriptor(DirectXDescriptorType descriptorType);
 
-        /**
-         * Returns resource name.
-         *
-         * @return Resource name.
-         */
-        virtual std::string getResourceName() const override;
-
     private:
         /**
          * Constructor. Creates an empty resource.
          *
          * @param pResourceManager     Owner resource manager.
+         * @param sResourceName        Name of this resource.
          * @param iElementSizeInBytes  Resource size information. Size of one array element (if array),
          * otherwise specify size of the whole resource.
          * @param iElementCount        Resource size information. Total number of elements in the array (if
          * array), otherwise specify 1.
          */
         DirectXResource(
-            const DirectXResourceManager* pResourceManager, UINT iElementSizeInBytes, UINT iElementCount);
+            const DirectXResourceManager* pResourceManager,
+            const std::string& sResourceName,
+            UINT iElementSizeInBytes,
+            UINT iElementCount);
 
         /**
          * Creates a new resource (without binding a descriptor to it).

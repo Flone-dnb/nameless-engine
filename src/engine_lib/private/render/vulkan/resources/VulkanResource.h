@@ -30,13 +30,6 @@ namespace ne {
         virtual ~VulkanResource() override;
 
         /**
-         * Returns resource name.
-         *
-         * @return Resource name.
-         */
-        virtual std::string getResourceName() const override;
-
-        /**
          * Returns internal buffer resource.
          *
          * @remark Do not delete (free) returned pointer.
@@ -90,7 +83,7 @@ namespace ne {
                     "(accessing VmaAllocation of such object is complicated, if you want "
                     "to access VkDeviceMemory it's a good time to implement such a getter "
                     "because VkDeviceMemory is available for KTX textures)",
-                    sResourceName));
+                    getResourceName()));
                 error.showError();
                 throw std::runtime_error(error.getFullErrorMessage());
             }
@@ -199,9 +192,6 @@ namespace ne {
             VulkanResourceManager* pResourceManager,
             const std::string& sResourceName,
             ktxVulkanTexture ktxTexture);
-
-        /** Name of the resource. */
-        std::string sResourceName;
 
         /** Not empty if the object was created as a wrapper around KTX texture. */
         std::optional<ktxVulkanTexture> optionalKtxTexture;

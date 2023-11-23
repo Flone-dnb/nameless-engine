@@ -22,10 +22,9 @@ namespace ne {
         VmaAllocation pResourceMemory,
         unsigned int iElementSizeInBytes,
         unsigned int iElementCount)
-        : GpuResource(iElementSizeInBytes, iElementCount) {
+        : GpuResource(sResourceName, iElementSizeInBytes, iElementCount) {
         // Initialize fields.
         this->pResourceManager = pResourceManager;
-        this->sResourceName = sResourceName;
         mtxResourceMemory.second = pResourceMemory;
 
         // Save resource.
@@ -43,10 +42,9 @@ namespace ne {
         VulkanResourceManager* pResourceManager,
         const std::string& sResourceName,
         ktxVulkanTexture ktxTexture)
-        : GpuResource(0, 0) {
+        : GpuResource(sResourceName, 0, 0) {
         // Initialize fields.
         this->pResourceManager = pResourceManager;
-        this->sResourceName = sResourceName;
         mtxResourceMemory.second = nullptr;
 
         // Save resource.
@@ -111,8 +109,6 @@ namespace ne {
             Logger::get().error("total alive Vulkan resource counter just went below zero");
         }
     }
-
-    std::string VulkanResource::getResourceName() const { return sResourceName; }
 
     VulkanResourceManager* VulkanResource::getResourceManager() const { return pResourceManager; }
 

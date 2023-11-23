@@ -14,7 +14,10 @@ namespace ne {
         : ComputeShaderInterface(pRenderer, sComputeShaderName, executionStage, executionGroup) {}
 
     std::optional<Error> GlslComputeShaderInterface::bindResource(
-        GpuResource* pResource, const std::string& sShaderResourceName, ComputeResourceUsage usage) {
+        GpuResource* pResource,
+        const std::string& sShaderResourceName,
+        ComputeResourceUsage usage,
+        bool bUpdateOnlyCurrentFrameResourceDescriptors) {
         // Get pipeline.
         const auto pVulkanPipeline = dynamic_cast<VulkanPipeline*>(getPipeline());
         if (pVulkanPipeline == nullptr) [[unlikely]] {
@@ -43,6 +46,9 @@ namespace ne {
             return Error("expected a Vulkan resource");
         }
 
+        // Prepare image layout for image descriptors.
+        auto imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
         // Prepare descriptor type.
         bool bIsBufferDescriptor = true;
         VkDescriptorType descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -66,6 +72,7 @@ namespace ne {
         }
         case (ComputeResourceUsage::READ_WRITE_TEXTURE): {
             descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+            imageLayout = VK_IMAGE_LAYOUT_GENERAL;
             bIsBufferDescriptor = false;
             break;
         }
@@ -111,8 +118,27 @@ namespace ne {
             return Error("logical device is `nullptr`");
         }
 
-        // Update one descriptor in set per frame resource.
-        for (unsigned int i = 0; i < FrameResourcesManager::getFrameResourcesCount(); i++) {
+        // Prepare indices of frame resources to update.
+        std::vector<unsigned int> vFrameResourcesToUpdate;
+        vFrameResourcesToUpdate.reserve(FrameResourcesManager::getFrameResourcesCount());
+
+        // Get current frame resource.
+        const auto pMtxCurrentFrameResource =
+            pVulkanRenderer->getFrameResourcesManager()->getCurrentFrameResource();
+        std::scoped_lock frameResourceGuard(pMtxCurrentFrameResource->first);
+
+        // Prepare frame resources to update.
+        if (bUpdateOnlyCurrentFrameResourceDescriptors) {
+            vFrameResourcesToUpdate.push_back(
+                static_cast<unsigned int>(pMtxCurrentFrameResource->second.iCurrentFrameResourceIndex));
+        } else {
+            for (unsigned int i = 0; i < FrameResourcesManager::getFrameResourcesCount(); i++) {
+                vFrameResourcesToUpdate.push_back(i);
+            }
+        }
+
+        // Update descriptors.
+        for (auto& iFrameResourceIndex : vFrameResourcesToUpdate) {
             VkDescriptorBufferInfo bufferInfo{};
             VkDescriptorImageInfo imageInfo{};
 
@@ -124,7 +150,7 @@ namespace ne {
                     pVulkanResource->getElementSizeInBytes() * pVulkanResource->getElementCount();
             } else {
                 // Prepare info to bind an image view to descriptor.
-                imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+                imageInfo.imageLayout = imageLayout;
                 imageInfo.imageView = pVulkanResource->getInternalImageView();
                 imageInfo.sampler = pComputeSampler;
             }
@@ -133,9 +159,10 @@ namespace ne {
             VkWriteDescriptorSet descriptorUpdateInfo{};
             descriptorUpdateInfo.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
             descriptorUpdateInfo.dstSet =
-                pMtxPipelineInternalResources->second.vDescriptorSets[i]; // descriptor set to update
-            descriptorUpdateInfo.dstBinding = iBindingIndex;              // descriptor binding index
-            descriptorUpdateInfo.dstArrayElement = 0; // first descriptor in array to update
+                pMtxPipelineInternalResources->second
+                    .vDescriptorSets[iFrameResourceIndex];   // descriptor set to update
+            descriptorUpdateInfo.dstBinding = iBindingIndex; // descriptor binding index
+            descriptorUpdateInfo.dstArrayElement = 0;        // first descriptor in array to update
             descriptorUpdateInfo.descriptorType = descriptorType;
             descriptorUpdateInfo.descriptorCount = 1; // how much descriptors in array to update
 

@@ -501,7 +501,7 @@ namespace ne {
             imageFormat,
             imageAspect,
             VK_IMAGE_LAYOUT_UNDEFINED,
-            VK_IMAGE_LAYOUT_GENERAL);
+            VK_IMAGE_LAYOUT_GENERAL); // store image can be read/written only in this layout
         if (optionalError.has_value()) [[unlikely]] {
             auto error = std::move(optionalError.value());
             error.addCurrentLocationToErrorStack();

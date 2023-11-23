@@ -58,9 +58,11 @@ namespace ne {
     std::optional<Error> ComputeShaderInterface::bindResource(
         std::unique_ptr<GpuResource> pResource,
         const std::string& sShaderResourceName,
-        ComputeResourceUsage usage) {
+        ComputeResourceUsage usage,
+        bool bUpdateOnlyCurrentFrameResourceDescriptors) {
         // Call derived logic.
-        auto optionalError = bindResource(pResource.get(), sShaderResourceName, usage);
+        auto optionalError = bindResource(
+            pResource.get(), sShaderResourceName, usage, bUpdateOnlyCurrentFrameResourceDescriptors);
         if (optionalError.has_value()) [[unlikely]] {
             optionalError->addCurrentLocationToErrorStack();
             return optionalError;

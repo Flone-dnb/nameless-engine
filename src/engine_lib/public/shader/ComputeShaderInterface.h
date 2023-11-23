@@ -78,16 +78,23 @@ namespace ne {
         /**
          * Takes ownership of the specified resource and binds it to be available in compute shader.
          *
-         * @param pResource           Resource to bind to compute shader.
-         * @param sShaderResourceName Resource name from shader.
-         * @param usage               Resource usage.
+         * @param pResource                  Resource to bind to compute shader.
+         * @param sShaderResourceName        Resource name from shader.
+         * @param usage                      Resource usage.
+         * @param bUpdateOnlyCurrentFrameResourceDescriptors Specify `true` if you guarantee that you will
+         * bind a different GPU resource on the next frame, specify `false` if you are not sure if you will
+         * rebind the resource on the next frame or not. When `true` is specified only descriptors of the
+         * current frame resource will be updated (because descriptors of other frame resources might be in
+         * use and it's invalid to update them), when `false` descriptors of all frame resources will be
+         * updated.
          *
          * @return Error if something went wrong.
          */
         [[nodiscard]] std::optional<Error> bindResource(
             std::unique_ptr<GpuResource> pResource,
             const std::string& sShaderResourceName,
-            ComputeResourceUsage usage);
+            ComputeResourceUsage usage,
+            bool bUpdateOnlyCurrentFrameResourceDescriptors = false);
 
         /**
          * Binds the specified resource to be available in compute shaders.
@@ -99,11 +106,20 @@ namespace ne {
          * @param pResource           Resource to bind to compute shader.
          * @param sShaderResourceName Resource name from shader.
          * @param usage               Resource usage.
+         * @param bUpdateOnlyCurrentFrameResourceDescriptors Specify `true` if you guarantee that you will
+         * bind a different GPU resource on the next frame, specify `false` if you are not sure if you will
+         * rebind the resource on the next frame or not. When `true` is specified only descriptors of the
+         * current frame resource will be updated (because descriptors of other frame resources might be in
+         * use and it's invalid to update them), when `false` descriptors of all frame resources will be
+         * updated.
          *
          * @return Error if something went wrong.
          */
         [[nodiscard]] virtual std::optional<Error> bindResource(
-            GpuResource* pResource, const std::string& sShaderResourceName, ComputeResourceUsage usage) = 0;
+            GpuResource* pResource,
+            const std::string& sShaderResourceName,
+            ComputeResourceUsage usage,
+            bool bUpdateOnlyCurrentFrameResourceDescriptors = false) = 0;
 
         /**
          * Adds this compute shader to the GPU queue to be executed.

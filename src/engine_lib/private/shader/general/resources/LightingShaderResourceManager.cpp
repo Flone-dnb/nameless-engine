@@ -994,7 +994,7 @@ namespace ne {
         // - thread group count
         // were binded in our initialize function.
 
-        // Get renderer's depth texture pointer (this pointer can change every frame).
+        // Get renderer's depth texture pointer (this pointer may change every frame).
         const auto pDepthTexture = pRenderer->getDepthTextureNoMultisampling();
 
         // Check if it is different from the one we binded the last time.
@@ -1017,7 +1017,8 @@ namespace ne {
         auto optionalError = pComputeInterface->bindResource(
             pCurrentFrameResource->pFrameConstantBuffer->getInternalResource(),
             "frameData",
-            ComputeResourceUsage::CONSTANT_BUFFER);
+            ComputeResourceUsage::CONSTANT_BUFFER,
+            true);
         if (optionalError.has_value()) [[unlikely]] {
             optionalError->addCurrentLocationToErrorStack();
             return optionalError;
@@ -1027,7 +1028,8 @@ namespace ne {
         optionalError = pComputeInterface->bindResource(
             pGeneralLightingData,
             LightingShaderResourceManager::getGeneralLightingDataShaderResourceName(),
-            ComputeResourceUsage::CONSTANT_BUFFER);
+            ComputeResourceUsage::CONSTANT_BUFFER,
+            true);
         if (optionalError.has_value()) [[unlikely]] {
             optionalError->addCurrentLocationToErrorStack();
             return optionalError;
@@ -1037,7 +1039,8 @@ namespace ne {
         optionalError = pComputeInterface->bindResource(
             pPointLightArray,
             LightingShaderResourceManager::getPointLightsShaderResourceName(),
-            ComputeResourceUsage::READ_ONLY_ARRAY_BUFFER);
+            ComputeResourceUsage::READ_ONLY_ARRAY_BUFFER,
+            true);
         if (optionalError.has_value()) [[unlikely]] {
             optionalError->addCurrentLocationToErrorStack();
             return optionalError;
@@ -1047,7 +1050,8 @@ namespace ne {
         optionalError = pComputeInterface->bindResource(
             pSpotlightArray,
             LightingShaderResourceManager::getSpotlightsShaderResourceName(),
-            ComputeResourceUsage::READ_ONLY_ARRAY_BUFFER);
+            ComputeResourceUsage::READ_ONLY_ARRAY_BUFFER,
+            true);
         if (optionalError.has_value()) [[unlikely]] {
             optionalError->addCurrentLocationToErrorStack();
             return optionalError;

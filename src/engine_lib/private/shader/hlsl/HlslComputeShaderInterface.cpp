@@ -27,7 +27,10 @@ namespace ne {
     }
 
     std::optional<Error> HlslComputeShaderInterface::bindResource(
-        GpuResource* pResource, const std::string& sShaderResourceName, ComputeResourceUsage usage) {
+        GpuResource* pResource,
+        const std::string& sShaderResourceName,
+        ComputeResourceUsage usage,
+        bool bUpdateOnlyCurrentFrameResourceDescriptors) {
         // Convert resource.
         const auto pDirectXResource = dynamic_cast<DirectXResource*>(pResource);
         if (pDirectXResource == nullptr) [[unlikely]] {

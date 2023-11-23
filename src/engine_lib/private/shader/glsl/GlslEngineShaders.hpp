@@ -54,8 +54,16 @@ namespace ne {
                  EngineShaderConstantMacros::ForwardPlus::FrustumGridThreadsInGroupXyMacro::sValue,
              },
              {
-                 EngineShaderConstantMacros::ForwardPlus::AverageNumLightsOfSpecificTypePerTileMacro::sName,
-                 EngineShaderConstantMacros::ForwardPlus::AverageNumLightsOfSpecificTypePerTileMacro::sValue,
+                 EngineShaderConstantMacros::ForwardPlus::AveragePointLightNumPerTileMacro::sName,
+                 EngineShaderConstantMacros::ForwardPlus::AveragePointLightNumPerTileMacro::sValue,
+             },
+             {
+                 EngineShaderConstantMacros::ForwardPlus::AverageSpotLightNumPerTileMacro::sName,
+                 EngineShaderConstantMacros::ForwardPlus::AverageSpotLightNumPerTileMacro::sValue,
+             },
+             {
+                 EngineShaderConstantMacros::ForwardPlus::AverageDirectionalLightNumPerTileMacro::sName,
+                 EngineShaderConstantMacros::ForwardPlus::AverageDirectionalLightNumPerTileMacro::sValue,
              }});
     };
 } // namespace ne

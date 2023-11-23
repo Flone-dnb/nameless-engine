@@ -50,7 +50,7 @@ namespace ne {
 
 #if defined(DEBUG) && defined(WIN32)
         static_assert(
-            sizeof(LightingShaderResourceManager) == 288, "consider notifying new arrays here"); // NOLINT
+            sizeof(LightingShaderResourceManager) == 352, "consider notifying new arrays here"); // NOLINT
 #elif defined(DEBUG)
         static_assert(
             sizeof(LightingShaderResourceManager) == 144, "consider notifying new arrays here"); // NOLINT
@@ -91,7 +91,7 @@ namespace ne {
 
 #if defined(DEBUG) && defined(WIN32)
         static_assert(
-            sizeof(LightingShaderResourceManager) == 288, "consider notifying new arrays here"); // NOLINT
+            sizeof(LightingShaderResourceManager) == 352, "consider notifying new arrays here"); // NOLINT
 #elif defined(DEBUG)
         static_assert(
             sizeof(LightingShaderResourceManager) == 144, "consider notifying new arrays here"); // NOLINT
@@ -123,7 +123,7 @@ namespace ne {
 
 #if defined(DEBUG) && defined(WIN32)
         static_assert(
-            sizeof(LightingShaderResourceManager) == 288, "consider notifying new arrays here"); // NOLINT
+            sizeof(LightingShaderResourceManager) == 352, "consider notifying new arrays here"); // NOLINT
 #elif defined(DEBUG)
         static_assert(
             sizeof(LightingShaderResourceManager) == 144, "consider notifying new arrays here"); // NOLINT
@@ -531,7 +531,7 @@ namespace ne {
 
 #if defined(DEBUG) && defined(WIN32)
         static_assert(
-            sizeof(LightingShaderResourceManager) == 288, "consider creating new arrays here"); // NOLINT
+            sizeof(LightingShaderResourceManager) == 352, "consider creating new arrays here"); // NOLINT
 #elif defined(DEBUG)
         static_assert(
             sizeof(LightingShaderResourceManager) == 144, "consider creating new arrays here"); // NOLINT
@@ -786,6 +786,129 @@ namespace ne {
         return {};
     }
 
+    std::optional<Error>
+    LightingShaderResourceManager::ComputeShaderData::LightCullingComputeShader::ComputeShader::
+        createLightIndexListsAndLightGrid(Renderer* pRenderer, size_t iTileCountX, size_t iTileCountY) {
+        // Make sure tile count was changed.
+        if (iTileCountX == resources.iLightGridTileCountX && iTileCountY == resources.iLightGridTileCountY) {
+            // Tile count was not changed - nothing to do.
+            return {};
+        }
+
+        // First convert all constants (shader macros) from strings to integers.
+        size_t iAveragePointLightNumPerTile = 0;
+        size_t iAverageSpotLightNumPerTile = 0;
+        size_t iAverageDirectionalLightNumPerTile = 0;
+        try {
+            // Point lights.
+            iAveragePointLightNumPerTile = std::stoull(
+                EngineShaderConstantMacros::ForwardPlus::AveragePointLightNumPerTileMacro::sValue);
+
+            // Spotlights.
+            iAverageSpotLightNumPerTile =
+                std::stoull(EngineShaderConstantMacros::ForwardPlus::AverageSpotLightNumPerTileMacro::sValue);
+
+            // Directional lights.
+            iAverageDirectionalLightNumPerTile = std::stoull(
+                EngineShaderConstantMacros::ForwardPlus::AverageDirectionalLightNumPerTileMacro::sValue);
+        } catch (const std::exception& exception) {
+            return Error(std::format("failed to convert string to integer, error: {}", exception.what()));
+        }
+
+        // Calculate light index list sizes.
+        const auto iLightGridSize = iTileCountX * iTileCountY;
+        const auto iPointLightIndexListSize = iLightGridSize * iAveragePointLightNumPerTile;
+        const auto iSpotLightIndexListSize = iLightGridSize * iAverageSpotLightNumPerTile;
+        const auto iDirectionalLightIndexListSize = iLightGridSize * iAverageDirectionalLightNumPerTile;
+
+        // Get resource manager.
+        const auto pResourceManager = pRenderer->getResourceManager();
+
+        // Prepare pointers to light index lists to create.
+        struct LightIndexListCreationInfo {
+            LightIndexListCreationInfo(
+                std::unique_ptr<GpuResource>* pResource,
+                const std::string& sResourceDescription,
+                const std::string& sShaderResourceName,
+                size_t iResourceElementCount) {
+                this->pResource = pResource;
+                this->sResourceDescription = sResourceDescription;
+                this->sShaderResourceName = sShaderResourceName;
+                this->iResourceElementCount = iResourceElementCount;
+            }
+
+            std::unique_ptr<GpuResource>* pResource = nullptr;
+            std::string sResourceDescription;
+            std::string sShaderResourceName;
+            size_t iResourceElementCount = 0;
+        };
+        const std::array<LightIndexListCreationInfo, 6> vResourcesToCreate = {
+            LightIndexListCreationInfo(
+                &resources.pOpaquePointLightIndexList,
+                "opaque point",
+                "opaquePointLightIndexList",
+                iPointLightIndexListSize),
+            LightIndexListCreationInfo(
+                &resources.pOpaqueSpotLightIndexList,
+                "opaque spot",
+                "opaqueSpotLightIndexList",
+                iSpotLightIndexListSize),
+            LightIndexListCreationInfo(
+                &resources.pOpaqueDirectionalLightIndexList,
+                "opaque directional",
+                "opaqueDirectionalLightIndexList",
+                iDirectionalLightIndexListSize),
+            LightIndexListCreationInfo(
+                &resources.pTransparentPointLightIndexList,
+                "transparent point",
+                "transparentPointLightIndexList",
+                iPointLightIndexListSize),
+            LightIndexListCreationInfo(
+                &resources.pTransparentSpotLightIndexList,
+                "transparent spot",
+                "transparentSpotLightIndexList",
+                iSpotLightIndexListSize),
+            LightIndexListCreationInfo(
+                &resources.pTransparentDirectionalLightIndexList,
+                "transparent directional",
+                "transparentDirectionalLightIndexList",
+                iDirectionalLightIndexListSize)};
+
+        // Create light index lists.
+        for (const auto& info : vResourcesToCreate) {
+            // Create resource.
+            auto result = pResourceManager->createResource(
+                std::format("light culling - {} light index list", info.sResourceDescription),
+                info.iResourceElementCount,
+                sizeof(unsigned int),
+                ResourceUsageType::ARRAY_BUFFER,
+                true);
+            if (std::holds_alternative<Error>(result)) [[unlikely]] {
+                auto error = std::get<Error>(std::move(result));
+                error.addCurrentLocationToErrorStack();
+                return error;
+            }
+
+            (*info.pResource) = std::get<std::unique_ptr<GpuResource>>(std::move(result));
+
+            // Bind to shader.
+            auto optionalError = pComputeInterface->bindResource(
+                info.pResource->get(),
+                info.sShaderResourceName,
+                ComputeResourceUsage::READ_WRITE_ARRAY_BUFFER);
+            if (optionalError.has_value()) [[unlikely]] {
+                optionalError->addCurrentLocationToErrorStack();
+                return optionalError;
+            }
+        }
+
+        // Save new tile count.
+        resources.iLightGridTileCountX = iTileCountX;
+        resources.iLightGridTileCountY = iTileCountY;
+
+        return {};
+    }
+
     std::optional<Error> LightingShaderResourceManager::ComputeShaderData::LightCullingComputeShader::
         ComputeShader::queueExecutionForNextFrame(
             Renderer* pRenderer,
@@ -797,11 +920,16 @@ namespace ne {
             GpuResource* pDirectionalLightArray) {
         PROFILE_FUNC;
 
-        // Resource that stores calculated grid of frustums was binded by lighting shader resource manager.
+        // Resources that store:
+        // - calculated grid of frustums
+        // - light grids
+        // - light index lists
+        // were binded by lighting shader resource manager (after frustum grid shader was updated).
 
-        // Resource that stores screen to view data was binded in our initialize function.
-
-        // Resource that stores thread group count was binded in our initialize function.
+        // Resources that store:
+        // - screen to view data
+        // - thread group count
+        // were binded in our initialize function.
 
         // Get renderer's depth texture pointer (this pointer can change every frame).
         const auto pDepthTexture = pRenderer->getDepthTextureNoMultisampling();
@@ -920,7 +1048,7 @@ namespace ne {
             }
         }
 
-        // Update shader data.
+        // Update frustum grid shader data.
         auto optionalError = frustumGridComputeShaderData.updateData(
             pRenderer, renderResolution, inverseProjectionMatrix, true);
         if (optionalError.has_value()) [[unlikely]] {
@@ -928,11 +1056,13 @@ namespace ne {
             return optionalError;
         }
 
-        // Update the thread group count for light culling because it was updated.
+        // Save new tile count for light culling shader.
         lightCullingComputeShaderData.threadGroupCount.iThreadGroupCountX =
             frustumGridComputeShaderData.iLastUpdateTileCountX;
         lightCullingComputeShaderData.threadGroupCount.iThreadGroupCountY =
             frustumGridComputeShaderData.iLastUpdateTileCountY;
+
+        // Update the thread group count for light culling because it was updated.
         lightCullingComputeShaderData.resources.pThreadGroupCount->copyDataToElement(
             0,
             &lightCullingComputeShaderData.threadGroupCount,
@@ -943,6 +1073,16 @@ namespace ne {
             frustumGridComputeShaderData.resources.pCalculatedFrustums.get(),
             ComputeShaderData::FrustumGridComputeShader::ComputeShader::sCalculatedFrustumsShaderResourceName,
             ComputeResourceUsage::READ_ONLY_ARRAY_BUFFER);
+        if (optionalError.has_value()) [[unlikely]] {
+            optionalError->addCurrentLocationToErrorStack();
+            return optionalError;
+        }
+
+        // (Re)create light index lists and light grid if the tile count was changed.
+        optionalError = lightCullingComputeShaderData.createLightIndexListsAndLightGrid(
+            pRenderer,
+            frustumGridComputeShaderData.iLastUpdateTileCountX,
+            frustumGridComputeShaderData.iLastUpdateTileCountY);
         if (optionalError.has_value()) [[unlikely]] {
             optionalError->addCurrentLocationToErrorStack();
             return optionalError;
@@ -968,7 +1108,7 @@ namespace ne {
 
 #if defined(DEBUG) && defined(WIN32)
         static_assert(
-            sizeof(LightingShaderResourceManager) == 288, "consider resetting new arrays here"); // NOLINT
+            sizeof(LightingShaderResourceManager) == 352, "consider resetting new arrays here"); // NOLINT
 #elif defined(DEBUG)
         static_assert(
             sizeof(LightingShaderResourceManager) == 144, "consider resetting new arrays here"); // NOLINT

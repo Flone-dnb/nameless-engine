@@ -285,7 +285,7 @@ namespace ne {
 
 #if defined(DEBUG)
             static_assert(
-                sizeof(LightingShaderResourceManager) == 288, "consider adding new arrays here"); // NOLINT
+                sizeof(LightingShaderResourceManager) == 352, "consider adding new arrays here"); // NOLINT
 #endif
         }
 #endif
@@ -487,6 +487,24 @@ namespace ne {
                     std::array<std::unique_ptr<UploadBuffer>, FrameResourcesManager::getFrameResourcesCount()>
                         vGlobalCountersIntoLightIndexList;
 
+                    /** Stores indices into array of point lights for opaque geometry. */
+                    std::unique_ptr<GpuResource> pOpaquePointLightIndexList;
+
+                    /** Stores indices into array of spotlights for opaque geometry. */
+                    std::unique_ptr<GpuResource> pOpaqueSpotLightIndexList;
+
+                    /** Stores indices into array of directional lights for opaque geometry. */
+                    std::unique_ptr<GpuResource> pOpaqueDirectionalLightIndexList;
+
+                    /** Stores indices into array of point lights for transparent geometry. */
+                    std::unique_ptr<GpuResource> pTransparentPointLightIndexList;
+
+                    /** Stores indices into array of spotlights for transparent geometry. */
+                    std::unique_ptr<GpuResource> pTransparentSpotLightIndexList;
+
+                    /** Stores indices into array of directional lights for transparent geometry. */
+                    std::unique_ptr<GpuResource> pTransparentDirectionalLightIndexList;
+
                     /**
                      * Renderer's depth texture that we binded the last time.
                      *
@@ -495,6 +513,18 @@ namespace ne {
                      * otherwise (if not changed) we will skip rebinding logic.
                      */
                     GpuResource* pLastBindedDepthTexture = nullptr;
+
+                    /**
+                     * The number of tiles in the X direction of the light grid that were set the last time we
+                     * (re)created light index lists or light grid resources.
+                     */
+                    size_t iLightGridTileCountX = 0;
+
+                    /**
+                     * The number of tiles in the Y direction of the light grid that were set the last time
+                     * we (re)created light index lists or light grid resources.
+                     */
+                    size_t iLightGridTileCountY = 0;
                 };
 
                 /** Groups shader interface and its resources. */
@@ -511,6 +541,22 @@ namespace ne {
                     [[nodiscard]] std::optional<Error> initialize(
                         Renderer* pRenderer,
                         const FrustumGridComputeShader::ComputeShader& frustumGridShader);
+
+                    /**
+                     * (Re)creates light index lists and light grid if tile count was changed
+                     * and binds them to the shader.
+                     *
+                     * @remark Does nothing if the tile count is the same as in the previous call to this
+                     * function.
+                     *
+                     * @param pRenderer   Renderer.
+                     * @param iTileCountX The current number of light grid tiles in the X direction.
+                     * @param iTileCountY The current number of light grid tiles in the Y direction.
+                     *
+                     * @return Error if something went wrong.
+                     */
+                    [[nodiscard]] std::optional<Error> createLightIndexListsAndLightGrid(
+                        Renderer* pRenderer, size_t iTileCountX, size_t iTileCountY);
 
                     /**
                      * Called to queue compute shader to be executed on the next frame.

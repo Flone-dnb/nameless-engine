@@ -75,7 +75,7 @@ layout(std140, binding = 10) buffer OpaquePointLightIndexListBuffer{
 } opaquePointLightIndexList;
 }
 
-/** Stores indices into array of spot lights for opaque geometry. */
+/** Stores indices into array of spotlights for opaque geometry. */
 #hlsl RWStructuredBuffer<uint> opaqueSpotLightIndexList : register(u2, space5);
 #glsl{
 layout(std140, binding = 11) buffer OpaqueSpotLightIndexListBuffer{
@@ -214,27 +214,29 @@ shared uint iTransparentDirectionalLightIndexListStartOffset;
 // --------------------------------------------------------------------------------------------------------------------
 
 // allowing N lights of a specific type to be in a tile, this limit should never be reached
-#define TILE_LIGHT_INDEX_LIST_SIZE AVERAGE_NUM_LIGHTS_OF_SPECIFIC_TYPE_PER_TILE * 5
+#define TILE_POINT_LIGHT_INDEX_LIST_SIZE        AVERAGE_POINT_LIGHT_NUM_PER_TILE       * 5
+#define TILE_SPOT_LIGHT_INDEX_LIST_SIZE         AVERAGE_SPOT_LIGHT_NUM_PER_TILE        * 5
+#define TILE_DIRECTIONAL_LIGHT_INDEX_LIST_SIZE  AVERAGE_DIRECTIONAL_LIGHT_NUM_PER_TILE * 5
 
 /** Local light index list that will be copied to the global list index list. */
-shared uint tileOpaquePointLightIndexList[TILE_LIGHT_INDEX_LIST_SIZE];
+shared uint tileOpaquePointLightIndexList[TILE_POINT_LIGHT_INDEX_LIST_SIZE];
 
 /** Local light index list that will be copied to the global list index list. */
-shared uint tileOpaqueSpotLightIndexList[TILE_LIGHT_INDEX_LIST_SIZE];
+shared uint tileOpaqueSpotLightIndexList[TILE_SPOT_LIGHT_INDEX_LIST_SIZE];
 
 /** Local light index list that will be copied to the global list index list. */
-shared uint tileOpaqueDirectionalLightIndexList[TILE_LIGHT_INDEX_LIST_SIZE];
+shared uint tileOpaqueDirectionalLightIndexList[TILE_DIRECTIONAL_LIGHT_INDEX_LIST_SIZE];
 
 // --------------------------------------------------------------------------------------------------------------------
 
 /** Local light index list that will be copied to the global list index list. */
-shared uint tileTransparentPointLightIndexList[TILE_LIGHT_INDEX_LIST_SIZE];
+shared uint tileTransparentPointLightIndexList[TILE_POINT_LIGHT_INDEX_LIST_SIZE];
 
 /** Local light index list that will be copied to the global list index list. */
-shared uint tileTransparentSpotLightIndexList[TILE_LIGHT_INDEX_LIST_SIZE];
+shared uint tileTransparentSpotLightIndexList[TILE_SPOT_LIGHT_INDEX_LIST_SIZE];
 
 /** Local light index list that will be copied to the global list index list. */
-shared uint tileTransparentDirectionalLightIndexList[TILE_LIGHT_INDEX_LIST_SIZE];
+shared uint tileTransparentDirectionalLightIndexList[TILE_DIRECTIONAL_LIGHT_INDEX_LIST_SIZE];
 
 // --------------------------------------------------------------------------------------------------------------------
 //                                             general functions
@@ -394,7 +396,7 @@ void addPointLightToTileOpaqueLightIndexList(uint iPointLightIndex){
 #glsl iIndexToPointLightList = atomicAdd(iOpaquePointLightCountIntersectingTileFrustum, 1);
 
     // Make sure we won't access out of bound.
-    if (iIndexToPointLightList < TILE_LIGHT_INDEX_LIST_SIZE){
+    if (iIndexToPointLightList < TILE_POINT_LIGHT_INDEX_LIST_SIZE){
         tileOpaquePointLightIndexList[iIndexToPointLightList] = iPointLightIndex;
     }
 }
@@ -414,7 +416,7 @@ void addSpotLightToTileOpaqueLightIndexList(uint iSpotLightIndex){
 #glsl iIndexToSpotLightList = atomicAdd(iOpaqueSpotLightCountIntersectingTileFrustum, 1);
 
     // Make sure we won't access out of bound.
-    if (iIndexToSpotLightList < TILE_LIGHT_INDEX_LIST_SIZE){
+    if (iIndexToSpotLightList < TILE_SPOT_LIGHT_INDEX_LIST_SIZE){
         tileOpaqueSpotLightIndexList[iIndexToSpotLightList] = iSpotLightIndex;
     }
 }
@@ -434,7 +436,7 @@ void addDirectionalLightToTileOpaqueLightIndexList(uint iDirectionalLightIndex){
 #glsl iIndexToDirectionalLightList = atomicAdd(iOpaqueDirectionalLightCountIntersectingTileFrustum, 1);
 
     // Make sure we won't access out of bound.
-    if (iIndexToDirectionalLightList < TILE_LIGHT_INDEX_LIST_SIZE){
+    if (iIndexToDirectionalLightList < TILE_DIRECTIONAL_LIGHT_INDEX_LIST_SIZE){
         tileOpaqueDirectionalLightIndexList[iIndexToDirectionalLightList] = iDirectionalLightIndex;
     }
 }
@@ -456,7 +458,7 @@ void addPointLightToTileTransparentLightIndexList(uint iPointLightIndex){
 #glsl iIndexToPointLightList = atomicAdd(iTransparentPointLightCountIntersectingTileFrustum, 1);
 
     // Make sure we won't access out of bound.
-    if (iIndexToPointLightList < TILE_LIGHT_INDEX_LIST_SIZE){
+    if (iIndexToPointLightList < TILE_POINT_LIGHT_INDEX_LIST_SIZE){
         tileTransparentPointLightIndexList[iIndexToPointLightList] = iPointLightIndex;
     }
 }
@@ -476,7 +478,7 @@ void addSpotLightToTileTransparentLightIndexList(uint iSpotLightIndex){
 #glsl iIndexToSpotLightList = atomicAdd(iTransparentSpotLightCountIntersectingTileFrustum, 1);
 
     // Make sure we won't access out of bound.
-    if (iIndexToSpotLightList < TILE_LIGHT_INDEX_LIST_SIZE){
+    if (iIndexToSpotLightList < TILE_SPOT_LIGHT_INDEX_LIST_SIZE){
         tileTransparentSpotLightIndexList[iIndexToSpotLightList] = iSpotLightIndex;
     }
 }
@@ -496,7 +498,7 @@ void addDirectionalLightToTileTransparentLightIndexList(uint iDirectionalLightIn
 #glsl iIndexToDirectionalLightList = atomicAdd(iTransparentDirectionalLightCountIntersectingTileFrustum, 1);
 
     // Make sure we won't access out of bound.
-    if (iIndexToDirectionalLightList < TILE_LIGHT_INDEX_LIST_SIZE){
+    if (iIndexToDirectionalLightList < TILE_DIRECTIONAL_LIGHT_INDEX_LIST_SIZE){
         tileTransparentDirectionalLightIndexList[iIndexToDirectionalLightList] = iDirectionalLightIndex;
     }
 }

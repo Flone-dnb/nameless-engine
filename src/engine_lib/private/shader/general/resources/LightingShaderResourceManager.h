@@ -261,7 +261,7 @@ namespace ne {
                 pPso,
                 pCommandList,
                 iCurrentFrameResourceIndex,
-                pPointLightDataArray,
+                lightArrays.pPointLightDataArray,
                 sPointLightsShaderResourceName,
                 RootSignatureGenerator::getPointLightsBufferRootParameterIndex());
 
@@ -270,7 +270,7 @@ namespace ne {
                 pPso,
                 pCommandList,
                 iCurrentFrameResourceIndex,
-                pDirectionalLightDataArray,
+                lightArrays.pDirectionalLightDataArray,
                 sDirectionalLightsShaderResourceName,
                 RootSignatureGenerator::getDirectionalLightsBufferRootParameterIndex());
 
@@ -279,18 +279,29 @@ namespace ne {
                 pPso,
                 pCommandList,
                 iCurrentFrameResourceIndex,
-                pSpotlightDataArray,
+                lightArrays.pSpotlightDataArray,
                 sSpotlightsShaderResourceName,
                 RootSignatureGenerator::getSpotlightsBufferRootParameterIndex());
 
 #if defined(DEBUG)
-            static_assert(
-                sizeof(LightingShaderResourceManager) == 400, "consider adding new arrays here"); // NOLINT
+            static_assert(sizeof(LightArrays) == 24, "consider adding new arrays here"); // NOLINT
 #endif
         }
 #endif
 
     private:
+        /** Groups GPU resources that store arrays of light sources. */
+        struct LightArrays {
+            /** Stores data of all spawned point lights. */
+            std::unique_ptr<ShaderLightArray> pPointLightDataArray;
+
+            /** Stores data of all spawned directional lights. */
+            std::unique_ptr<ShaderLightArray> pDirectionalLightDataArray;
+
+            /** Stores data of all spawned spotlights. */
+            std::unique_ptr<ShaderLightArray> pSpotlightDataArray;
+        };
+
         /** Groups shader data for compute shaders that operate on light-related data. */
         struct ComputeShaderData {
             /**
@@ -713,21 +724,21 @@ namespace ne {
         void updateResources(FrameResource* pCurrentFrameResource, size_t iCurrentFrameResourceIndex);
 
         /**
-         * Called after @ref pPointLightDataArray changed its size.
+         * Called after array of point light sources changed its size.
          *
          * @param iNewSize New size of the array that stores GPU data for spawned point lights.
          */
         void onPointLightArraySizeChanged(size_t iNewSize);
 
         /**
-         * Called after @ref pDirectionalLightDataArray changed its size.
+         * Called after array of directional light sources changed its size.
          *
          * @param iNewSize New size of the array that stores GPU data for spawned directional lights.
          */
         void onDirectionalLightArraySizeChanged(size_t iNewSize);
 
         /**
-         * Called after @ref pSpotlightDataArray changed its size.
+         * Called after array of spotlights changed its size.
          *
          * @param iNewSize New size of the array that stores GPU data for spawned spotlights.
          */
@@ -763,14 +774,8 @@ namespace ne {
          */
         [[nodiscard]] std::optional<Error> rebindGpuDataToPipeline(Pipeline* pPipeline);
 
-        /** Stores data of all spawned point lights. */
-        std::unique_ptr<ShaderLightArray> pPointLightDataArray;
-
-        /** Stores data of all spawned directional lights. */
-        std::unique_ptr<ShaderLightArray> pDirectionalLightDataArray;
-
-        /** Stores data of all spawned spotlights. */
-        std::unique_ptr<ShaderLightArray> pSpotlightDataArray;
+        /** Groups GPU resources that store arrays of light sources. */
+        LightArrays lightArrays;
 
         /** Groups GPU related data. */
         std::pair<std::recursive_mutex, GpuData> mtxGpuData;

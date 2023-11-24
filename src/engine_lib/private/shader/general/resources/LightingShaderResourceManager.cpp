@@ -15,45 +15,43 @@
 namespace ne {
 
     ShaderLightArray* LightingShaderResourceManager::getPointLightDataArray() {
-        return pPointLightDataArray.get();
+        return lightArrays.pPointLightDataArray.get();
     }
 
     ShaderLightArray* LightingShaderResourceManager::getDirectionalLightDataArray() {
-        return pDirectionalLightDataArray.get();
+        return lightArrays.pDirectionalLightDataArray.get();
     }
 
     ShaderLightArray* LightingShaderResourceManager::getSpotlightDataArray() {
-        return pSpotlightDataArray.get();
+        return lightArrays.pSpotlightDataArray.get();
     }
 
     std::optional<Error> LightingShaderResourceManager::bindDescriptorsToRecreatedPipelineResources() {
         // Notify point light array.
-        auto optionalError = pPointLightDataArray->updateBindingsInAllPipelines();
+        auto optionalError = lightArrays.pPointLightDataArray->updateBindingsInAllPipelines();
         if (optionalError.has_value()) [[unlikely]] {
             optionalError->addCurrentLocationToErrorStack();
             return optionalError;
         }
 
         // Notify directional light array.
-        optionalError = pDirectionalLightDataArray->updateBindingsInAllPipelines();
+        optionalError = lightArrays.pDirectionalLightDataArray->updateBindingsInAllPipelines();
         if (optionalError.has_value()) [[unlikely]] {
             optionalError->addCurrentLocationToErrorStack();
             return optionalError;
         }
 
         // Notify spotlight array.
-        optionalError = pSpotlightDataArray->updateBindingsInAllPipelines();
+        optionalError = lightArrays.pSpotlightDataArray->updateBindingsInAllPipelines();
         if (optionalError.has_value()) [[unlikely]] {
             optionalError->addCurrentLocationToErrorStack();
             return optionalError;
         }
 
 #if defined(DEBUG) && defined(WIN32)
-        static_assert(
-            sizeof(LightingShaderResourceManager) == 400, "consider notifying new arrays here"); // NOLINT
+        static_assert(sizeof(LightArrays) == 24, "consider notifying new arrays here"); // NOLINT
 #elif defined(DEBUG)
-        static_assert(
-            sizeof(LightingShaderResourceManager) == 144, "consider notifying new arrays here"); // NOLINT
+        static_assert(sizeof(LightArrays) == 24, "consider notifying new arrays here"); // NOLINT
 #endif
 
         // Rebind general lighting data.
@@ -69,32 +67,30 @@ namespace ne {
     std::optional<Error>
     LightingShaderResourceManager::updateDescriptorsForPipelineResource(Pipeline* pPipeline) {
         // Notify point light array.
-        auto optionalError = pPointLightDataArray->updatePipelineBinding(pPipeline);
+        auto optionalError = lightArrays.pPointLightDataArray->updatePipelineBinding(pPipeline);
         if (optionalError.has_value()) [[unlikely]] {
             optionalError->addCurrentLocationToErrorStack();
             return optionalError;
         }
 
         // Notify directional light array.
-        optionalError = pDirectionalLightDataArray->updatePipelineBinding(pPipeline);
+        optionalError = lightArrays.pDirectionalLightDataArray->updatePipelineBinding(pPipeline);
         if (optionalError.has_value()) [[unlikely]] {
             optionalError->addCurrentLocationToErrorStack();
             return optionalError;
         }
 
         // Notify spotlight array.
-        optionalError = pSpotlightDataArray->updatePipelineBinding(pPipeline);
+        optionalError = lightArrays.pSpotlightDataArray->updatePipelineBinding(pPipeline);
         if (optionalError.has_value()) [[unlikely]] {
             optionalError->addCurrentLocationToErrorStack();
             return optionalError;
         }
 
 #if defined(DEBUG) && defined(WIN32)
-        static_assert(
-            sizeof(LightingShaderResourceManager) == 400, "consider notifying new arrays here"); // NOLINT
+        static_assert(sizeof(LightArrays) == 24, "consider notifying new arrays here"); // NOLINT
 #elif defined(DEBUG)
-        static_assert(
-            sizeof(LightingShaderResourceManager) == 144, "consider notifying new arrays here"); // NOLINT
+        static_assert(sizeof(LightArrays) == 24, "consider notifying new arrays here"); // NOLINT
 #endif
 
         // Rebind general lighting data.
@@ -117,16 +113,14 @@ namespace ne {
         PROFILE_FUNC;
 
         // Notify light arrays.
-        pPointLightDataArray->updateSlotsMarkedAsNeedsUpdate(iCurrentFrameResourceIndex);
-        pDirectionalLightDataArray->updateSlotsMarkedAsNeedsUpdate(iCurrentFrameResourceIndex);
-        pSpotlightDataArray->updateSlotsMarkedAsNeedsUpdate(iCurrentFrameResourceIndex);
+        lightArrays.pPointLightDataArray->updateSlotsMarkedAsNeedsUpdate(iCurrentFrameResourceIndex);
+        lightArrays.pDirectionalLightDataArray->updateSlotsMarkedAsNeedsUpdate(iCurrentFrameResourceIndex);
+        lightArrays.pSpotlightDataArray->updateSlotsMarkedAsNeedsUpdate(iCurrentFrameResourceIndex);
 
 #if defined(DEBUG) && defined(WIN32)
-        static_assert(
-            sizeof(LightingShaderResourceManager) == 400, "consider notifying new arrays here"); // NOLINT
+        static_assert(sizeof(LightArrays) == 24, "consider notifying new arrays here"); // NOLINT
 #elif defined(DEBUG)
-        static_assert(
-            sizeof(LightingShaderResourceManager) == 144, "consider notifying new arrays here"); // NOLINT
+        static_assert(sizeof(LightArrays) == 24, "consider notifying new arrays here"); // NOLINT
 #endif
 
         // Copy general lighting info (maybe changed, since that data is very small it should be OK to
@@ -135,15 +129,16 @@ namespace ne {
 
         // Get point light arrays (we don't really need to lock mutexes here since we are inside
         // `drawNextFrame`).
-        const auto pPointLightArrayResource = pPointLightDataArray->getInternalResources()
+        const auto pPointLightArrayResource = lightArrays.pPointLightDataArray->getInternalResources()
                                                   ->second.vGpuResources[iCurrentFrameResourceIndex]
                                                   ->getInternalResource();
-        const auto pSpotlightArrayResource = pSpotlightDataArray->getInternalResources()
+        const auto pSpotlightArrayResource = lightArrays.pSpotlightDataArray->getInternalResources()
                                                  ->second.vGpuResources[iCurrentFrameResourceIndex]
                                                  ->getInternalResource();
-        const auto pDirectionalLightArrayResource = pDirectionalLightDataArray->getInternalResources()
-                                                        ->second.vGpuResources[iCurrentFrameResourceIndex]
-                                                        ->getInternalResource();
+        const auto pDirectionalLightArrayResource =
+            lightArrays.pDirectionalLightDataArray->getInternalResources()
+                ->second.vGpuResources[iCurrentFrameResourceIndex]
+                ->getInternalResource();
 
         // Queue shader that will reset global counters for light culling (should be called every frame).
         pPrepareLightCullingComputeInterface->submitForExecution(1, 1, 1);
@@ -515,29 +510,27 @@ namespace ne {
         }
 
         // Create point light array.
-        pPointLightDataArray =
+        lightArrays.pPointLightDataArray =
             ShaderLightArray::create(pRenderer, sPointLightsShaderResourceName, [this](size_t iNewSize) {
                 onPointLightArraySizeChanged(iNewSize);
             });
 
         // Create directional light array.
-        pDirectionalLightDataArray = ShaderLightArray::create(
+        lightArrays.pDirectionalLightDataArray = ShaderLightArray::create(
             pRenderer, sDirectionalLightsShaderResourceName, [this](size_t iNewSize) {
                 onDirectionalLightArraySizeChanged(iNewSize);
             });
 
         // Create spotlight array.
-        pSpotlightDataArray =
+        lightArrays.pSpotlightDataArray =
             ShaderLightArray::create(pRenderer, sSpotlightsShaderResourceName, [this](size_t iNewSize) {
                 onSpotlightArraySizeChanged(iNewSize);
             });
 
 #if defined(DEBUG) && defined(WIN32)
-        static_assert(
-            sizeof(LightingShaderResourceManager) == 400, "consider creating new arrays here"); // NOLINT
+        static_assert(sizeof(LightArrays) == 24, "consider creating new arrays here"); // NOLINT
 #elif defined(DEBUG)
-        static_assert(
-            sizeof(LightingShaderResourceManager) == 144, "consider creating new arrays here"); // NOLINT
+        static_assert(sizeof(LightArrays) == 24, "consider creating new arrays here");  // NOLINT
 #endif
     }
 
@@ -1172,16 +1165,14 @@ namespace ne {
     LightingShaderResourceManager::~LightingShaderResourceManager() {
         // Explicitly reset array pointers here to make double sure they will not trigger callback after
         // the manager is destroyed or is being destroyed.
-        pPointLightDataArray = nullptr;
-        pDirectionalLightDataArray = nullptr;
-        pSpotlightDataArray = nullptr;
+        lightArrays.pPointLightDataArray = nullptr;
+        lightArrays.pDirectionalLightDataArray = nullptr;
+        lightArrays.pSpotlightDataArray = nullptr;
 
 #if defined(DEBUG) && defined(WIN32)
-        static_assert(
-            sizeof(LightingShaderResourceManager) == 400, "consider resetting new arrays here"); // NOLINT
+        static_assert(sizeof(LightArrays) == 24, "consider resetting new arrays here"); // NOLINT
 #elif defined(DEBUG)
-        static_assert(
-            sizeof(LightingShaderResourceManager) == 144, "consider resetting new arrays here"); // NOLINT
+        static_assert(sizeof(LightArrays) == 24, "consider resetting new arrays here"); // NOLINT
 #endif
 
         // Make sure light culling shader is destroyed first because it uses resources from compute

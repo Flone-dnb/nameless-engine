@@ -59,7 +59,7 @@ layout(std140, binding = 6) readonly buffer CalculatedFrustumsBuffer{
 /** Stores indices into array of point lights for opaque geometry. */
 #hlsl RWStructuredBuffer<uint> opaquePointLightIndexList : register(u1, space5);
 #glsl{
-layout(std140, binding = 10) buffer OpaquePointLightIndexListBuffer{
+layout(std430, binding = 10) buffer OpaquePointLightIndexListBuffer{
     uint array[];
 } opaquePointLightIndexList;
 }
@@ -67,7 +67,7 @@ layout(std140, binding = 10) buffer OpaquePointLightIndexListBuffer{
 /** Stores indices into array of spotlights for opaque geometry. */
 #hlsl RWStructuredBuffer<uint> opaqueSpotLightIndexList : register(u2, space5);
 #glsl{
-layout(std140, binding = 11) buffer OpaqueSpotLightIndexListBuffer{
+layout(std430, binding = 11) buffer OpaqueSpotLightIndexListBuffer{
     uint array[];
 } opaqueSpotLightIndexList;
 }
@@ -75,7 +75,7 @@ layout(std140, binding = 11) buffer OpaqueSpotLightIndexListBuffer{
 /** Stores indices into array of directional lights for opaque geometry. */
 #hlsl RWStructuredBuffer<uint> opaqueDirectionalLightIndexList : register(u3, space5);
 #glsl{
-layout(std140, binding = 12) buffer OpaqueDirectionalLightIndexListBuffer{
+layout(std430, binding = 12) buffer OpaqueDirectionalLightIndexListBuffer{
     uint array[];
 } opaqueDirectionalLightIndexList;
 }
@@ -85,7 +85,7 @@ layout(std140, binding = 12) buffer OpaqueDirectionalLightIndexListBuffer{
 /** Stores indices into array of point lights for transparent geometry. */
 #hlsl RWStructuredBuffer<uint> transparentPointLightIndexList : register(u4, space5);
 #glsl{
-layout(std140, binding = 13) buffer TransparentPointLightIndexListBuffer{
+layout(std430, binding = 13) buffer TransparentPointLightIndexListBuffer{
     uint array[];
 } transparentPointLightIndexList;
 }
@@ -93,7 +93,7 @@ layout(std140, binding = 13) buffer TransparentPointLightIndexListBuffer{
 /** Stores indices into array of spot lights for transparent geometry. */
 #hlsl RWStructuredBuffer<uint> transparentSpotLightIndexList : register(u5, space5);
 #glsl{
-layout(std140, binding = 14) buffer TransparentSpotLightIndexListBuffer{
+layout(std430, binding = 14) buffer TransparentSpotLightIndexListBuffer{
     uint array[];
 } transparentSpotLightIndexList;
 }
@@ -101,7 +101,7 @@ layout(std140, binding = 14) buffer TransparentSpotLightIndexListBuffer{
 /** Stores indices into array of directional lights for transparent geometry. */
 #hlsl RWStructuredBuffer<uint> transparentDirectionalLightIndexList : register(u6, space5);
 #glsl{
-layout(std140, binding = 15) buffer TransparentDirectionalLightIndexListBuffer{
+layout(std430, binding = 15) buffer TransparentDirectionalLightIndexListBuffer{
     uint array[];
 } transparentDirectionalLightIndexList;
 }

@@ -1163,7 +1163,9 @@ namespace ne {
             }
         }
 
-        // Execute recorded commands.
+        // Execute recorded commands to make sure that compute shaders finish before other compute/rendering
+        // work is started because `ExecuteCommandLists` seems to insert an implicit barrier (if I understood
+        // the docs correctly).
         executeGraphicsCommandList(pComputeCommandList.Get());
 
         // Clear map because we submitted all shaders.

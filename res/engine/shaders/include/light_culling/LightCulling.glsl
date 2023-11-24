@@ -4,6 +4,9 @@
 #include "../CoordinateSystemConversion.glsl"
 #include "../FrameData.glsl"
 #include "../Lighting.glsl"
+#include "CountersData.glsl"
+#include "OpaqueLightGrid.glsl"
+#include "TransparentLightGrid.glsl"
 
 // --------------------------------------------------------------------------------------------------------------------
 //                                          general resources
@@ -45,96 +48,6 @@ layout(std140, binding = 6) readonly buffer CalculatedFrustumsBuffer{
     uint iRenderResolutionHeight;
 #glsl } screenToViewData;
 #hlsl }; ConstantBuffer<ScreenToViewData> screenToViewData : register(b3, space5);
-
-// --------------------------------------------------------------------------------------------------------------------
-//                                                 counters
-// --------------------------------------------------------------------------------------------------------------------
-
-#include "CountersData.glsl"
-
-// --------------------------------------------------------------------------------------------------------------------
-//                                                light index lists
-// --------------------------------------------------------------------------------------------------------------------
-
-/** Stores indices into array of point lights for opaque geometry. */
-#hlsl RWStructuredBuffer<uint> opaquePointLightIndexList : register(u1, space5);
-#glsl{
-layout(std430, binding = 10) buffer OpaquePointLightIndexListBuffer{
-    uint array[];
-} opaquePointLightIndexList;
-}
-
-/** Stores indices into array of spotlights for opaque geometry. */
-#hlsl RWStructuredBuffer<uint> opaqueSpotLightIndexList : register(u2, space5);
-#glsl{
-layout(std430, binding = 11) buffer OpaqueSpotLightIndexListBuffer{
-    uint array[];
-} opaqueSpotLightIndexList;
-}
-
-/** Stores indices into array of directional lights for opaque geometry. */
-#hlsl RWStructuredBuffer<uint> opaqueDirectionalLightIndexList : register(u3, space5);
-#glsl{
-layout(std430, binding = 12) buffer OpaqueDirectionalLightIndexListBuffer{
-    uint array[];
-} opaqueDirectionalLightIndexList;
-}
-
-// --------------------------------------------------------------------------------------------------------------------    
-
-/** Stores indices into array of point lights for transparent geometry. */
-#hlsl RWStructuredBuffer<uint> transparentPointLightIndexList : register(u4, space5);
-#glsl{
-layout(std430, binding = 13) buffer TransparentPointLightIndexListBuffer{
-    uint array[];
-} transparentPointLightIndexList;
-}
-
-/** Stores indices into array of spot lights for transparent geometry. */
-#hlsl RWStructuredBuffer<uint> transparentSpotLightIndexList : register(u5, space5);
-#glsl{
-layout(std430, binding = 14) buffer TransparentSpotLightIndexListBuffer{
-    uint array[];
-} transparentSpotLightIndexList;
-}
-
-/** Stores indices into array of directional lights for transparent geometry. */
-#hlsl RWStructuredBuffer<uint> transparentDirectionalLightIndexList : register(u6, space5);
-#glsl{
-layout(std430, binding = 15) buffer TransparentDirectionalLightIndexListBuffer{
-    uint array[];
-} transparentDirectionalLightIndexList;
-}
-
-// --------------------------------------------------------------------------------------------------------------------
-//                                                    light grids
-// --------------------------------------------------------------------------------------------------------------------
-
-/** Light grid where every pixel stores 2 values: offset into light index list and the number of elements to read from that offset. */
-#hlsl RWTexture2D<uint2> opaquePointLightGrid : register(u7, space5);
-#glsl layout (binding=16, rg32ui) uniform uimage2D opaquePointLightGrid;
-
-/** Light grid where every pixel stores 2 values: offset into light index list and the number of elements to read from that offset. */
-#hlsl RWTexture2D<uint2> opaqueSpotLightGrid : register(u8, space5);
-#glsl layout (binding=17, rg32ui) uniform uimage2D opaqueSpotLightGrid;
-
-/** Light grid where every pixel stores 2 values: offset into light index list and the number of elements to read from that offset. */
-#hlsl RWTexture2D<uint2> opaqueDirectionalLightGrid : register(u9, space5);
-#glsl layout (binding=18, rg32ui) uniform uimage2D opaqueDirectionalLightGrid;
-
-// -------------------------------------------------------------------------------------------------------------------- 
-
-/** Light grid where every pixel stores 2 values: offset into light index list and the number of elements to read from that offset. */
-#hlsl RWTexture2D<uint2> transparentPointLightGrid : register(u10, space5);
-#glsl layout (binding=19, rg32ui) uniform uimage2D transparentPointLightGrid;
-
-/** Light grid where every pixel stores 2 values: offset into light index list and the number of elements to read from that offset. */
-#hlsl RWTexture2D<uint2> transparentSpotLightGrid : register(u11, space5);
-#glsl layout (binding=20, rg32ui) uniform uimage2D transparentSpotLightGrid;
-
-/** Light grid where every pixel stores 2 values: offset into light index list and the number of elements to read from that offset. */
-#hlsl RWTexture2D<uint2> transparentDirectionalLightGrid : register(u12, space5);
-#glsl layout (binding=21, rg32ui) uniform uimage2D transparentDirectionalLightGrid;
 
 // --------------------------------------------------------------------------------------------------------------------
 //                                          general group shared (tile) variables

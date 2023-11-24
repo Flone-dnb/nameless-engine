@@ -76,27 +76,6 @@ namespace ne {
             ComputeExecutionGroup executionGroup = ComputeExecutionGroup::FIRST);
 
         /**
-         * Takes ownership of the specified resource and binds it to be available in compute shader.
-         *
-         * @param pResource                  Resource to bind to compute shader.
-         * @param sShaderResourceName        Resource name from shader.
-         * @param usage                      Resource usage.
-         * @param bUpdateOnlyCurrentFrameResourceDescriptors Specify `true` if you guarantee that you will
-         * bind a different GPU resource on the next frame, specify `false` if you are not sure if you will
-         * rebind the resource on the next frame or not. When `true` is specified only descriptors of the
-         * current frame resource will be updated (because descriptors of other frame resources might be in
-         * use and it's invalid to update them), when `false` descriptors of all frame resources will be
-         * updated.
-         *
-         * @return Error if something went wrong.
-         */
-        [[nodiscard]] std::optional<Error> bindResource(
-            std::unique_ptr<GpuResource> pResource,
-            const std::string& sShaderResourceName,
-            ComputeResourceUsage usage,
-            bool bUpdateOnlyCurrentFrameResourceDescriptors = false);
-
-        /**
          * Binds the specified resource to be available in compute shaders.
          *
          * @warning This overload is used in cases where you cannot transfer resource ownership to the
@@ -258,9 +237,6 @@ namespace ne {
         inline unsigned int getThreadGroupCountZ() const { return iThreadGroupCountZ; }
 
     private:
-        /** Resources that this compute interface took ownership of. */
-        std::vector<std::unique_ptr<GpuResource>> vOwnedResources;
-
         /** Do not delete (free) this pointer. A non-owning pointer to the renderer. */
         Renderer* pRenderer = nullptr;
 

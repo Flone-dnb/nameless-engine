@@ -79,11 +79,12 @@ namespace ne {
 
         // Show window title.
         pWindow->setTitle(std::format(
-            "{} FPS: {} | draw calls: {} | frustum culled: {} took {:.1F} ms (~{}% of frame "
-            "time) | waiting GPU: {:.1F} ms",
+            "{} FPS: {} | draw calls: {} | VRAM used: {} MB | frustum culled: {} took {:.1F} ms (~{}% of "
+            "frame time) | waiting GPU: {:.1F} ms",
             pEditorWindowTitle,
             pRenderer->getFramesPerSecond(),
             pRenderer->getLastFrameDrawCallCount(),
+            pRenderer->getResourceManager()->getUsedVideoMemoryInMb(),
             pRenderer->getLastFrameCulledObjectCount(),
             pRenderer->getTimeSpentLastFrameOnFrustumCulling(),
             static_cast<size_t>(

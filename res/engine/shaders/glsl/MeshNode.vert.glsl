@@ -8,10 +8,9 @@ layout(location = 1) in vec3 localNormal; // normal in local space
 layout(location = 2) in vec2 uv;
 
 /** Output parameters. */
-layout(location = 0) out vec4 fragmentClipSpacePosition;
-layout(location = 1) out vec4 fragmentWorldPosition;
-layout(location = 2) out vec3 fragmentWorldNormal;
-layout(location = 3) out vec2 fragmentUv;
+layout(location = 0) out vec4 fragmentWorldPosition;
+layout(location = 1) out vec3 fragmentWorldNormal;
+layout(location = 2) out vec2 fragmentUv;
 
 /** Vertex shader. */
 void vsMeshNode(){
@@ -24,7 +23,6 @@ void vsMeshNode(){
 
     // Transform position to homogeneous clip space.
     gl_Position = frameData.viewProjectionMatrix * fragmentWorldPosition;
-    fragmentClipSpacePosition = gl_Position;
     
     // Copy UV.
     fragmentUv = uv;

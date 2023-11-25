@@ -12,7 +12,7 @@ VertexOut vsMeshNode(VertexIn vertexIn)
     vertexOut.worldNormal = normalize(mul((float3x3)meshData.normalMatrix, vertexIn.localNormal));
 
     // Transform position to homogeneous clip space.
-    vertexOut.clipSpacePosition = mul(frameData.viewProjectionMatrix, vertexOut.worldPosition);
+    vertexOut.position = mul(frameData.viewProjectionMatrix, vertexOut.worldPosition);
 
     // Copy UV.
     vertexOut.uv = vertexIn.uv;

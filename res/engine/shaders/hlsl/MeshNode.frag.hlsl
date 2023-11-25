@@ -1,6 +1,8 @@
 #include "../include/Base.glsl"
-#include "../include/Lighting.glsl"
 #include "../include/MaterialData.glsl"
+
+#define INCLUDE_LIGHTING_FUNCTIONS
+#include "../include/Lighting.glsl"
 
 #ifdef PS_USE_DIFFUSE_TEXTURE
    SamplerState textureSampler : register(s0, space5);
@@ -11,6 +13,7 @@
 #endif
 
 /** Pixel shader. */
+[earlydepthstencil]
 float4 psMeshNode(VertexOut pin) : SV_Target
 {
     // Normals may be unnormalized after the rasterization (when they are interpolated).
@@ -34,8 +37,9 @@ float4 psMeshNode(VertexOut pin) : SV_Target
 
     // Calculate light.
     outputColor.rgb += calculateColorFromLights(
-        (float3)frameData.cameraPosition,
-        (float3)pin.worldPosition,
+        frameData.cameraPosition.xyz,
+        pin.worldPosition.xyz,
+        pin.position.xy,
         pixelNormalUnit,
         pixelDiffuseColor,
         pixelSpecularColor,

@@ -1,7 +1,7 @@
 // This file is expected to be included by most shaders.
 
 #glsl{
-#version 450
+#version 460
 #extension GL_ARB_separate_shader_objects : enable
 #extension GL_EXT_nonuniform_qualifier : enable
 }
@@ -20,9 +20,9 @@ struct VertexIn
 /** Describes pixel shader input data. */
 struct VertexOut
 {
-    float4 clipSpacePosition       : SV_POSITION; // position in homogeneous clip space
-    float4 worldPosition           : POSITION;    // position in world space
-    float3 worldNormal             : NORMAL;      // normal in world space
-    float2 uv                      : UV;
+    float4 position       : SV_POSITION; // in vertex shader it's in clip space and in pixel shader it's in screen space
+    float4 worldPosition  : POSITION;    // position in world space
+    float3 worldNormal    : NORMAL;      // normal in world space
+    float2 uv             : UV;
 };
 }

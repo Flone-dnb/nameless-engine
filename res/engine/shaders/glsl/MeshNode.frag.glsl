@@ -1,13 +1,14 @@
 #include "../include/Base.glsl"
-#include "../include/Lighting.glsl"
 #include "../include/MaterialData.glsl"
 #include "MeshNodePushConstants.glsl"
 
+#define INCLUDE_LIGHTING_FUNCTIONS
+#include "../include/Lighting.glsl"
+
 /** Input parameters. */
-layout(location = 0) in vec4 fragmentClipSpacePosition;
-layout(location = 1) in vec4 fragmentWorldPosition;
-layout(location = 2) in vec3 fragmentWorldNormal;
-layout(location = 3) in vec2 fragmentUv;
+layout(location = 0) in vec4 fragmentWorldPosition;
+layout(location = 1) in vec3 fragmentWorldNormal;
+layout(location = 2) in vec2 fragmentUv;
 
 /** Output parameters. */
 layout(location = 0) out vec4 outputColor;
@@ -17,6 +18,7 @@ layout(location = 0) out vec4 outputColor;
 #endif
 
 /** Fragment shader. */
+layout(early_fragment_tests) in;
 void fsMeshNode(){
     // Prepare a short macro to access material data.
 #define MATERIAL_DATA materialData.array[arrayIndices.materialData]
@@ -42,8 +44,9 @@ void fsMeshNode(){
 
     // Calculate light.
     outputColor.rgb += calculateColorFromLights(
-        vec3(frameData.cameraPosition),
-        vec3(fragmentWorldPosition),
+        frameData.cameraPosition.xyz,
+        fragmentWorldPosition.xyz,
+        gl_FragCoord.xy,
         fragmentWorldNormalUnit,
         fragmentDiffuseColor,
         fragmentSpecularColor,

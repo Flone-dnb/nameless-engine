@@ -28,7 +28,10 @@ namespace ne {
                 "shaders/hlsl/MeshNode.frag.hlsl",
             ShaderType::PIXEL_SHADER,
             "psMeshNode",
-            {});
+            {{
+                EngineShaderConstantMacros::MeshNode::LightGridTileSizeInPixels::sName,
+                EngineShaderConstantMacros::MeshNode::LightGridTileSizeInPixels::sValue,
+            }});
 
         /** Compute shader that calculate frustum for light tile that will be used in light culling. */
         static inline const auto forwardPlusCalculateGridFrustumComputeShader = ShaderDescription(

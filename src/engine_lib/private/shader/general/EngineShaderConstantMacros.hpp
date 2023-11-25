@@ -6,7 +6,7 @@ namespace ne {
     public:
         EngineShaderConstantMacros() = delete;
 
-        /** Groups info about shaders used in Forward+ light culling process. */
+        /** Groups macros used in Forward+ light culling process. */
         struct ForwardPlus {
             /**
              * Defines how much threads should be executed in the X and the Y dimensions for
@@ -62,6 +62,18 @@ namespace ne {
 
                 /** Macro value. */
                 static inline const auto sValue = "150";
+            };
+        };
+
+        /** Groups macros used in mesh node shaders. */
+        struct MeshNode {
+            /** Defines light grid (from light culling) tile size in pixels. */
+            struct LightGridTileSizeInPixels {
+                /** Macro name. */
+                static inline const auto sName = "LIGHT_GRID_TILE_SIZE_IN_PIXELS";
+
+                /** Macro value. */
+                static inline const auto sValue = ForwardPlus::FrustumGridThreadsInGroupXyMacro::sValue;
             };
         };
     };

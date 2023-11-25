@@ -93,30 +93,66 @@ namespace ne {
     }
 
     std::optional<D3D12_CPU_DESCRIPTOR_HANDLE>
-    DirectXResource::getBindedDescriptorHandle(DirectXDescriptorType descriptorType) {
+    DirectXResource::getBindedDescriptorCpuHandle(DirectXDescriptorType descriptorType) {
         std::scoped_lock guard(mtxHeapDescriptors.first);
 
         // Get descriptor.
-        const auto pOptionalDescriptor = &mtxHeapDescriptors.second[static_cast<size_t>(descriptorType)];
+        const auto& optionalDescriptor = mtxHeapDescriptors.second[static_cast<size_t>(descriptorType)];
 
         // Make sure it was binded previously.
-        if (!pOptionalDescriptor->has_value()) {
+        if (!optionalDescriptor.has_value()) [[unlikely]] {
+            Logger::get().error(
+                std::format("requested descriptor of resource \"{}\" was not set", getResourceName()));
             return {};
         }
 
         // Get descriptor offset.
-        auto optionalOffset = pOptionalDescriptor->value().getDescriptorOffsetInDescriptors();
-        if (!optionalOffset.has_value()) {
+        auto optionalOffset = optionalDescriptor->getDescriptorOffsetInDescriptors();
+        if (!optionalOffset.has_value()) [[unlikely]] {
+            Logger::get().error(
+                std::format("requested descriptor of resource \"{}\" is invalid", getResourceName()));
             return {};
         }
 
         // Get heap that this descriptor uses.
-        const auto pHeap = pOptionalDescriptor->value().getDescriptorHeap();
+        const auto pHeap = optionalDescriptor->getDescriptorHeap();
 
         // Construct descriptor handle.
         return CD3DX12_CPU_DESCRIPTOR_HANDLE(
             pHeap->getInternalHeap()->GetCPUDescriptorHandleForHeapStart(),
-            optionalOffset.value(),
+            *optionalOffset,
+            pHeap->getDescriptorSize());
+    }
+
+    std::optional<D3D12_GPU_DESCRIPTOR_HANDLE>
+    DirectXResource::getBindedDescriptorGpuHandle(DirectXDescriptorType descriptorType) {
+        std::scoped_lock guard(mtxHeapDescriptors.first);
+
+        // Get descriptor.
+        const auto& optionalDescriptor = mtxHeapDescriptors.second[static_cast<size_t>(descriptorType)];
+
+        // Make sure it was binded previously.
+        if (!optionalDescriptor.has_value()) [[unlikely]] {
+            Logger::get().error(
+                std::format("requested descriptor of resource \"{}\" was not set", getResourceName()));
+            return {};
+        }
+
+        // Get descriptor offset.
+        auto optionalOffset = optionalDescriptor->getDescriptorOffsetInDescriptors();
+        if (!optionalOffset.has_value()) [[unlikely]] {
+            Logger::get().error(
+                std::format("requested descriptor of resource \"{}\" is invalid", getResourceName()));
+            return {};
+        }
+
+        // Get heap that this descriptor uses.
+        const auto pHeap = optionalDescriptor->getDescriptorHeap();
+
+        // Construct descriptor handle.
+        return CD3DX12_GPU_DESCRIPTOR_HANDLE(
+            pHeap->getInternalHeap()->GetGPUDescriptorHandleForHeapStart(),
+            *optionalOffset,
             pHeap->getDescriptorSize());
     }
 
@@ -124,14 +160,16 @@ namespace ne {
         std::scoped_lock guard(mtxHeapDescriptors.first);
 
         // Get descriptor.
-        const auto pOptionalDescriptor = &mtxHeapDescriptors.second[static_cast<size_t>(descriptorType)];
+        auto& optionalDescriptor = mtxHeapDescriptors.second[static_cast<size_t>(descriptorType)];
 
         // Make sure it was binded previously.
-        if (!pOptionalDescriptor->has_value()) {
+        if (!optionalDescriptor.has_value()) [[unlikely]] {
+            Logger::get().error(
+                std::format("requested descriptor of resource \"{}\" was not set", getResourceName()));
             return nullptr;
         }
 
-        return &pOptionalDescriptor->value();
+        return &(*optionalDescriptor);
     }
 
     DirectXResource::DirectXResource(

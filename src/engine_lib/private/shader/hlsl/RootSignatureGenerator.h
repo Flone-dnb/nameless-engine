@@ -161,6 +161,24 @@ namespace ne {
 
             /** Index of the root parameter that points to a shader resource that stores spotlights. */
             static constexpr UINT iSpotlightsBufferRootParameterIndex = 4;
+
+            /** Index of the root parameter that points to a shader resource that stores light index list. */
+            static constexpr UINT iLightCullingPointLightIndexLightRootParameterIndex = 5;
+
+            /** Index of the root parameter that points to a shader resource that stores light index list. */
+            static constexpr UINT iLightCullingSpotlightIndexLightRootParameterIndex = 6;
+
+            /** Index of the root parameter that points to a shader resource that stores light index list. */
+            static constexpr UINT iLightCullingDirectionalLightIndexLightRootParameterIndex = 7;
+
+            /** Index of the root parameter that points to a shader resource that stores light grid. */
+            static constexpr UINT iLightCullingPointLightGridRootParameterIndex = 8;
+
+            /** Index of the root parameter that points to a shader resource that stores light grid. */
+            static constexpr UINT iLightCullingSpotlightGridRootParameterIndex = 9;
+
+            /** Index of the root parameter that points to a shader resource that stores light grid. */
+            static constexpr UINT iLightCullingDirectionalLightGridRootParameterIndex = 10;
         };
 
         /**
@@ -221,6 +239,26 @@ namespace ne {
          */
         static std::variant<SamplerType, Error>
         findStaticSamplerForSamplerResource(const D3D12_SHADER_INPUT_BIND_DESC& samplerResourceDescription);
+
+        /**
+         * Adds resources that only pixel shaders will use (if they are actually used).
+         *
+         * @param pixelShaderRootParameterIndices Used resources of pixel shader.
+         * @param vRootParameters                 Single root parameters of the root signature that will be
+         * generated.
+         * @param vTableRanges                    Range root parameters of the root signature that will be
+         * generated.
+         * @param addedRootParameterNames         Names of the root parameters that were added.
+         * @param rootParameterIndices            Pairs of "resource name" - "root parameter index" that were
+         * added.
+         */
+        static void addConstantPixelShaderResourcesIfUsed(
+            std::unordered_map<std::string, std::pair<UINT, RootSignatureGenerator::RootParameter>>&
+                pixelShaderRootParameterIndices,
+            std::vector<CD3DX12_ROOT_PARAMETER>& vRootParameters,
+            std::vector<CD3DX12_DESCRIPTOR_RANGE>& vTableRanges,
+            std::set<std::string>& addedRootParameterNames,
+            std::unordered_map<std::string, UINT>& rootParameterIndices);
 
         /**
          * Adds a new pair of `resource name` - `root parameter index` to the specified map,

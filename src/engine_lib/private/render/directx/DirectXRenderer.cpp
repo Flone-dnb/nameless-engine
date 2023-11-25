@@ -579,9 +579,9 @@ namespace ne {
         // Get RTV/DSV handles to be used later.
         const auto pCurrentBackBufferResource = getCurrentBackBufferResource();
         const auto renderTargetDescriptorHandle =
-            *pCurrentBackBufferResource->getBindedDescriptorHandle(DirectXDescriptorType::RTV);
+            *pCurrentBackBufferResource->getBindedDescriptorCpuHandle(DirectXDescriptorType::RTV);
         const auto depthStencilDescriptorHandle =
-            *pDepthStencilBuffer->getBindedDescriptorHandle(DirectXDescriptorType::DSV);
+            *pDepthStencilBuffer->getBindedDescriptorCpuHandle(DirectXDescriptorType::DSV);
 
         // Get graphics pipelines.
         const auto pMtxGraphicsPipelines = pPipelineManager->getGraphicsPipelines();
@@ -707,13 +707,15 @@ namespace ne {
         drawMeshesMainPass(
             pCurrentFrameResource,
             pMtxCurrentFrameResource->second.iCurrentFrameResourceIndex,
-            pMeshesInFrustum->vOpaquePipelines);
+            pMeshesInFrustum->vOpaquePipelines,
+            false);
 
         // Draw transparent meshes.
         drawMeshesMainPass(
             pCurrentFrameResource,
             pMtxCurrentFrameResource->second.iCurrentFrameResourceIndex,
-            pMeshesInFrustum->vTransparentPipelines);
+            pMeshesInFrustum->vTransparentPipelines,
+            true);
 
         // Do frame end logic.
         optionalError = finishDrawingNextFrame(pCurrentFrameResource, mtxQueuedComputeShader.second);
@@ -839,7 +841,8 @@ namespace ne {
     void DirectXRenderer::drawMeshesMainPass(
         DirectXFrameResource* pCurrentFrameResource,
         size_t iCurrentFrameResourceIndex,
-        const std::vector<Renderer::MeshesInFrustum::PipelineInFrustumInfo>& pipelinesOfSpecificType) {
+        const std::vector<Renderer::MeshesInFrustum::PipelineInFrustumInfo>& pipelinesOfSpecificType,
+        const bool bIsDrawingTransparentMeshes) {
         PROFILE_FUNC;
 
         // Prepare draw call counter to be used later.
@@ -868,6 +871,17 @@ namespace ne {
             // Bind lighting resources.
             getLightingShaderResourceManager()->setResourceViewToCommandList(
                 pDirectXPso, pCommandList, iCurrentFrameResourceIndex);
+
+            // Bind light grid.
+            if (bIsDrawingTransparentMeshes) { // this is a const argument which is known at compile
+                                               // time (see how we specify it) let's hope that the compiler
+                                               // will remove this branch (I will probably rework this later)
+                getLightingShaderResourceManager()->setTransparentLightGridResourcesViewToCommandList(
+                    pCommandList);
+            } else {
+                getLightingShaderResourceManager()->setOpaqueLightGridResourcesViewToCommandList(
+                    pCommandList);
+            }
 
             for (const auto& materialInfo : pipelineInfo.vMaterials) {
                 // Get material's GPU resources.

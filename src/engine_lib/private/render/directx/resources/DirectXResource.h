@@ -54,7 +54,7 @@ namespace ne {
         [[nodiscard]] std::optional<Error> bindDescriptor(DirectXDescriptorType descriptorType);
 
         /**
-         * Returns descriptor handle to the descriptor that was previously binded using `bind...` function(s).
+         * Returns descriptor handle to the descriptor that was previously binded using @ref bindDescriptor.
          *
          * @param descriptorType Type of descriptor to get.
          *
@@ -62,7 +62,18 @@ namespace ne {
          * descriptor handle.
          */
         std::optional<D3D12_CPU_DESCRIPTOR_HANDLE>
-        getBindedDescriptorHandle(DirectXDescriptorType descriptorType);
+        getBindedDescriptorCpuHandle(DirectXDescriptorType descriptorType);
+
+        /**
+         * Returns descriptor handle to the descriptor that was previously binded using @ref bindDescriptor.
+         *
+         * @param descriptorType Type of descriptor to get.
+         *
+         * @return Empty if descriptor if this type was not binded to this resource, otherwise
+         * descriptor handle.
+         */
+        std::optional<D3D12_GPU_DESCRIPTOR_HANDLE>
+        getBindedDescriptorGpuHandle(DirectXDescriptorType descriptorType);
 
         /**
          * Returns internal resource.

@@ -289,6 +289,141 @@ namespace ne {
             static_assert(sizeof(LightArrays) == 24, "consider adding new arrays here"); // NOLINT
 #endif
         }
+
+        /**
+         * Sets views (CBV/SRV) of light grids and light index lists for opaque geometry to the specified
+         * command list.
+         *
+         * @warning Expects that the specified pipeline's shaders indeed use lighting resources.
+         *
+         * @warning Expects that the specified pipeline's internal resources mutex is locked.
+         *
+         * @param pPso                       PSO to query for root signature index of the lighting resources.
+         * @param pCommandList               Command list to set views to.
+         * @param iCurrentFrameResourceIndex Index of the frame resource that is currently being used to
+         * submit a new frame.
+         */
+        inline void setOpaqueLightGridResourcesViewToCommandList(
+            const ComPtr<ID3D12GraphicsCommandList>& pCommandList) const {
+            // Bind point light index list.
+            pCommandList->SetGraphicsRootUnorderedAccessView(
+                RootSignatureGenerator::ConstantRootParameterIndices::
+                    iLightCullingPointLightIndexLightRootParameterIndex,
+                reinterpret_cast<DirectXResource*>(
+                    lightCullingComputeShaderData.resources.pOpaquePointLightIndexList.get())
+                    ->getInternalResource()
+                    ->GetGPUVirtualAddress());
+
+            // Bind spotlight index list.
+            pCommandList->SetGraphicsRootUnorderedAccessView(
+                RootSignatureGenerator::ConstantRootParameterIndices::
+                    iLightCullingSpotlightIndexLightRootParameterIndex,
+                reinterpret_cast<DirectXResource*>(
+                    lightCullingComputeShaderData.resources.pOpaqueSpotLightIndexList.get())
+                    ->getInternalResource()
+                    ->GetGPUVirtualAddress());
+
+            // Bind directional light index list.
+            pCommandList->SetGraphicsRootUnorderedAccessView(
+                RootSignatureGenerator::ConstantRootParameterIndices::
+                    iLightCullingDirectionalLightIndexLightRootParameterIndex,
+                reinterpret_cast<DirectXResource*>(
+                    lightCullingComputeShaderData.resources.pOpaqueDirectionalLightIndexList.get())
+                    ->getInternalResource()
+                    ->GetGPUVirtualAddress());
+
+            // Bind point light grid.
+            pCommandList->SetGraphicsRootDescriptorTable(
+                RootSignatureGenerator::ConstantRootParameterIndices::
+                    iLightCullingPointLightGridRootParameterIndex,
+                *reinterpret_cast<DirectXResource*>(
+                     lightCullingComputeShaderData.resources.pOpaquePointLightGrid.get())
+                     ->getBindedDescriptorGpuHandle(DirectXDescriptorType::UAV));
+
+            // Bind spotlight light grid.
+            pCommandList->SetGraphicsRootDescriptorTable(
+                RootSignatureGenerator::ConstantRootParameterIndices::
+                    iLightCullingSpotlightGridRootParameterIndex,
+                *reinterpret_cast<DirectXResource*>(
+                     lightCullingComputeShaderData.resources.pOpaqueSpotLightGrid.get())
+                     ->getBindedDescriptorGpuHandle(DirectXDescriptorType::UAV));
+
+            // Bind directional light grid.
+            pCommandList->SetGraphicsRootDescriptorTable(
+                RootSignatureGenerator::ConstantRootParameterIndices::
+                    iLightCullingDirectionalLightGridRootParameterIndex,
+                *reinterpret_cast<DirectXResource*>(
+                     lightCullingComputeShaderData.resources.pOpaqueDirectionalLightGrid.get())
+                     ->getBindedDescriptorGpuHandle(DirectXDescriptorType::UAV));
+        }
+
+        /**
+         * Sets views (CBV/SRV) of light grids and light index lists for transparent geometry to the specified
+         * command list.
+         *
+         * @warning Expects that the specified pipeline's shaders indeed use lighting resources.
+         *
+         * @warning Expects that the specified pipeline's internal resources mutex is locked.
+         *
+         * @param pPso                       PSO to query for root signature index of the lighting resources.
+         * @param pCommandList               Command list to set views to.
+         * @param iCurrentFrameResourceIndex Index of the frame resource that is currently being used to
+         * submit a new frame.
+         */
+        inline void setTransparentLightGridResourcesViewToCommandList(
+            const ComPtr<ID3D12GraphicsCommandList>& pCommandList) const {
+            // Bind point light index list.
+            pCommandList->SetGraphicsRootUnorderedAccessView(
+                RootSignatureGenerator::ConstantRootParameterIndices::
+                    iLightCullingPointLightIndexLightRootParameterIndex,
+                reinterpret_cast<DirectXResource*>(
+                    lightCullingComputeShaderData.resources.pTransparentPointLightIndexList.get())
+                    ->getInternalResource()
+                    ->GetGPUVirtualAddress());
+
+            // Bind spotlight index list.
+            pCommandList->SetGraphicsRootUnorderedAccessView(
+                RootSignatureGenerator::ConstantRootParameterIndices::
+                    iLightCullingSpotlightIndexLightRootParameterIndex,
+                reinterpret_cast<DirectXResource*>(
+                    lightCullingComputeShaderData.resources.pTransparentSpotLightIndexList.get())
+                    ->getInternalResource()
+                    ->GetGPUVirtualAddress());
+
+            // Bind directional light index list.
+            pCommandList->SetGraphicsRootUnorderedAccessView(
+                RootSignatureGenerator::ConstantRootParameterIndices::
+                    iLightCullingDirectionalLightIndexLightRootParameterIndex,
+                reinterpret_cast<DirectXResource*>(
+                    lightCullingComputeShaderData.resources.pTransparentDirectionalLightIndexList.get())
+                    ->getInternalResource()
+                    ->GetGPUVirtualAddress());
+
+            // Bind point light grid.
+            pCommandList->SetGraphicsRootDescriptorTable(
+                RootSignatureGenerator::ConstantRootParameterIndices::
+                    iLightCullingPointLightGridRootParameterIndex,
+                *reinterpret_cast<DirectXResource*>(
+                     lightCullingComputeShaderData.resources.pTransparentPointLightGrid.get())
+                     ->getBindedDescriptorGpuHandle(DirectXDescriptorType::UAV));
+
+            // Bind spotlight light grid.
+            pCommandList->SetGraphicsRootDescriptorTable(
+                RootSignatureGenerator::ConstantRootParameterIndices::
+                    iLightCullingSpotlightGridRootParameterIndex,
+                *reinterpret_cast<DirectXResource*>(
+                     lightCullingComputeShaderData.resources.pTransparentSpotLightGrid.get())
+                     ->getBindedDescriptorGpuHandle(DirectXDescriptorType::UAV));
+
+            // Bind directional light grid.
+            pCommandList->SetGraphicsRootDescriptorTable(
+                RootSignatureGenerator::ConstantRootParameterIndices::
+                    iLightCullingDirectionalLightGridRootParameterIndex,
+                *reinterpret_cast<DirectXResource*>(
+                     lightCullingComputeShaderData.resources.pTransparentDirectionalLightGrid.get())
+                     ->getBindedDescriptorGpuHandle(DirectXDescriptorType::UAV));
+        }
+
 #endif
 
     private:

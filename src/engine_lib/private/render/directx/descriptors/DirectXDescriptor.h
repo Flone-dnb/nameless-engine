@@ -55,14 +55,16 @@ namespace ne {
          *
          * @return Empty if this object was moved (i.e. invalid now), otherwise descriptor offset.
          */
-        std::optional<int> getDescriptorOffsetInDescriptors() const;
+        inline std::optional<int> getDescriptorOffsetInDescriptors() const {
+            return iDescriptorOffsetInDescriptors;
+        }
 
         /**
          * Returns heap that this descriptor uses.
          *
          * @return Descriptor heap.
          */
-        DirectXDescriptorHeap* getDescriptorHeap() const;
+        inline DirectXDescriptorHeap* getDescriptorHeap() const { return pHeap; }
 
         /**
          * Returns resource that owns this descriptor.

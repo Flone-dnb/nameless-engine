@@ -34,12 +34,6 @@ namespace ne {
         return *this;
     }
 
-    std::optional<int> DirectXDescriptor::getDescriptorOffsetInDescriptors() const {
-        return iDescriptorOffsetInDescriptors;
-    }
-
-    DirectXDescriptorHeap* DirectXDescriptor::getDescriptorHeap() const { return pHeap; }
-
     DirectXDescriptor::DirectXDescriptor(
         DirectXDescriptorHeap* pHeap,
         DirectXDescriptorType descriptorType,

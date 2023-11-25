@@ -6,11 +6,12 @@
  * Defines how much threads should be executed in the X and the Y dimensions.
  * This macro also defines how much pixels there are in one grid tile.
  */
-#ifndef THREADS_IN_GROUP_XY
+#ifndef LIGHT_GRID_TILE_SIZE_IN_PIXELS
 FAIL;
 #endif
 
-layout (local_size_x = THREADS_IN_GROUP_XY, local_size_y = THREADS_IN_GROUP_XY, local_size_z = 1) in;
+/** 1 thread calculates 1 frustum (1 thread per grid tile, not per pixel - see dispatch call). */
+layout (local_size_x = LIGHT_GRID_TILE_SIZE_IN_PIXELS, local_size_y = LIGHT_GRID_TILE_SIZE_IN_PIXELS, local_size_z = 1) in;
 void main(){
     // Make sure we don't calculate frustums out of bounds
     // (this may happen if the screen size is not evenly divisible by the thread group size).
@@ -25,7 +26,7 @@ void main(){
     calculatedFrustums.array[iFrustumIndex] = calculateFrustumInViewSpaceForGridTileInScreenSpace(
         gl_GlobalInvocationID.x, // tile X
         gl_GlobalInvocationID.y, // tile Y
-        THREADS_IN_GROUP_XY,      // tile size in pixels
+        LIGHT_GRID_TILE_SIZE_IN_PIXELS,
         computeInfo.maxDepth,     // far clip plane Z in screen space
         screenToViewData.iRenderResolutionWidth,
         screenToViewData.iRenderResolutionHeight,

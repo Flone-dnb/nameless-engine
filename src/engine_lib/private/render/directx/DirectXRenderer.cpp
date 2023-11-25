@@ -755,7 +755,7 @@ namespace ne {
 
             // Set CBV to frame constant buffer.
             pCommandList->SetGraphicsRootConstantBufferView(
-                RootSignatureGenerator::getFrameConstantBufferRootParameterIndex(),
+                RootSignatureGenerator::ConstantRootParameterIndices::iFrameConstantBufferRootParameterIndex,
                 reinterpret_cast<DirectXResource*>(
                     pCurrentFrameResource->pFrameConstantBuffer->getInternalResource())
                     ->getInternalResource()
@@ -859,7 +859,7 @@ namespace ne {
 
             // Set CBV to frame constant buffer.
             pCommandList->SetGraphicsRootConstantBufferView(
-                RootSignatureGenerator::getFrameConstantBufferRootParameterIndex(),
+                RootSignatureGenerator::ConstantRootParameterIndices::iFrameConstantBufferRootParameterIndex,
                 reinterpret_cast<DirectXResource*>(
                     pCurrentFrameResource->pFrameConstantBuffer->getInternalResource())
                     ->getInternalResource()

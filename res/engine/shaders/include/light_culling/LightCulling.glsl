@@ -451,12 +451,12 @@ void cullLightsForTile(float pixelDepth, uint iThreadGroupXIdInDispatch, uint iT
     minDepthPlaneViewSpace.normal = vec3(0.0F, 0.0F, 1.0F);
     minDepthPlaneViewSpace.distanceFromOrigin = tileMinDepthViewSpace;
 
-    // Each iteration will now process `THREADS_IN_GROUP_XY * THREADS_IN_GROUP_XY` lights in parallel for the tile:
-    // thread 0 processes lights: 0, THREADS_IN_GROUP_XY * THREADS_IN_GROUP_XY, (THREADS_IN_GROUP_XY * THREADS_IN_GROUP_XY) * 2, etc.
-    // thread 1 processes lights: 1, THREADS_IN_GROUP_XY * THREADS_IN_GROUP_XY + 1, etc.
+    // Each iteration will now process `LIGHT_GRID_TILE_SIZE_IN_PIXELS^2` lights in parallel for the tile:
+    // thread 0 processes lights: 0, LIGHT_GRID_TILE_SIZE_IN_PIXELS^2, (LIGHT_GRID_TILE_SIZE_IN_PIXELS^2) * 2, etc.
+    // thread 1 processes lights: 1, LIGHT_GRID_TILE_SIZE_IN_PIXELS^2 + 1, etc.
 
     // Cull point lights.
-    for (uint i = iThreadIdInGroup; i < generalLightingData.iPointLightCount; i += THREADS_IN_GROUP_XY * THREADS_IN_GROUP_XY){
+    for (uint i = iThreadIdInGroup; i < generalLightingData.iPointLightCount; i += LIGHT_GRID_TILE_SIZE_IN_PIXELS * LIGHT_GRID_TILE_SIZE_IN_PIXELS){
         // Get point light.
         PointLight pointLight =
 #hlsl         pointLights[i];
@@ -491,7 +491,7 @@ void cullLightsForTile(float pixelDepth, uint iThreadGroupXIdInDispatch, uint iT
     }
 
     // Cull spot lights.
-    for (uint i = iThreadIdInGroup; i < generalLightingData.iSpotlightCount; i += THREADS_IN_GROUP_XY * THREADS_IN_GROUP_XY){
+    for (uint i = iThreadIdInGroup; i < generalLightingData.iSpotlightCount; i += LIGHT_GRID_TILE_SIZE_IN_PIXELS * LIGHT_GRID_TILE_SIZE_IN_PIXELS){
         // Get spot light.
         Spotlight spotlight =
 #hlsl         spotlights[i];
@@ -533,7 +533,7 @@ void cullLightsForTile(float pixelDepth, uint iThreadGroupXIdInDispatch, uint iT
     }
 
     // Cull directional lights.
-    for (uint i = iThreadIdInGroup; i < generalLightingData.iDirectionalLightCount; i += THREADS_IN_GROUP_XY * THREADS_IN_GROUP_XY){
+    for (uint i = iThreadIdInGroup; i < generalLightingData.iDirectionalLightCount; i += LIGHT_GRID_TILE_SIZE_IN_PIXELS * LIGHT_GRID_TILE_SIZE_IN_PIXELS){
         // Since directional lights have infinite light distance just add them.
         
         // Append this light to transparent geometry.
@@ -560,21 +560,21 @@ void cullLightsForTile(float pixelDepth, uint iThreadGroupXIdInDispatch, uint iT
     // Start with opaque geometry.
 
     // Write point lights.
-    for (uint i = iThreadIdInGroup; i < iOpaquePointLightCountIntersectingTileFrustum; i += THREADS_IN_GROUP_XY * THREADS_IN_GROUP_XY){
+    for (uint i = iThreadIdInGroup; i < iOpaquePointLightCountIntersectingTileFrustum; i += LIGHT_GRID_TILE_SIZE_IN_PIXELS * LIGHT_GRID_TILE_SIZE_IN_PIXELS){
 #hlsl    opaquePointLightIndexList
 #glsl    opaquePointLightIndexList.array
             [iOpaquePointLightIndexListStartOffset + i] = tileOpaquePointLightIndexList[i];
     }
 
     // Write spot lights.
-    for (uint i = iThreadIdInGroup; i < iOpaqueSpotLightCountIntersectingTileFrustum; i += THREADS_IN_GROUP_XY * THREADS_IN_GROUP_XY){
+    for (uint i = iThreadIdInGroup; i < iOpaqueSpotLightCountIntersectingTileFrustum; i += LIGHT_GRID_TILE_SIZE_IN_PIXELS * LIGHT_GRID_TILE_SIZE_IN_PIXELS){
 #hlsl    opaqueSpotLightIndexList
 #glsl    opaqueSpotLightIndexList.array
             [iOpaqueSpotLightIndexListStartOffset + i] = tileOpaqueSpotLightIndexList[i];
     }
 
     // Write directional lights.
-    for (uint i = iThreadIdInGroup; i < iOpaqueDirectionalLightCountIntersectingTileFrustum; i += THREADS_IN_GROUP_XY * THREADS_IN_GROUP_XY){
+    for (uint i = iThreadIdInGroup; i < iOpaqueDirectionalLightCountIntersectingTileFrustum; i += LIGHT_GRID_TILE_SIZE_IN_PIXELS * LIGHT_GRID_TILE_SIZE_IN_PIXELS){
 #hlsl    opaqueDirectionalLightIndexList
 #glsl    opaqueDirectionalLightIndexList.array
             [iOpaqueDirectionalLightIndexListStartOffset + i] = tileOpaqueDirectionalLightIndexList[i];
@@ -583,21 +583,21 @@ void cullLightsForTile(float pixelDepth, uint iThreadGroupXIdInDispatch, uint iT
     // Now write lights for transparent geometry.
 
     // Write point lights.
-    for (uint i = iThreadIdInGroup; i < iTransparentPointLightCountIntersectingTileFrustum; i += THREADS_IN_GROUP_XY * THREADS_IN_GROUP_XY){
+    for (uint i = iThreadIdInGroup; i < iTransparentPointLightCountIntersectingTileFrustum; i += LIGHT_GRID_TILE_SIZE_IN_PIXELS * LIGHT_GRID_TILE_SIZE_IN_PIXELS){
 #hlsl    transparentPointLightIndexList
 #glsl    transparentPointLightIndexList.array
             [iTransparentPointLightIndexListStartOffset + i] = tileTransparentPointLightIndexList[i];
     }
 
     // Write spot lights.
-    for (uint i = iThreadIdInGroup; i < iTransparentSpotLightCountIntersectingTileFrustum; i += THREADS_IN_GROUP_XY * THREADS_IN_GROUP_XY){
+    for (uint i = iThreadIdInGroup; i < iTransparentSpotLightCountIntersectingTileFrustum; i += LIGHT_GRID_TILE_SIZE_IN_PIXELS * LIGHT_GRID_TILE_SIZE_IN_PIXELS){
 #hlsl    transparentSpotLightIndexList
 #glsl    transparentSpotLightIndexList.array
             [iTransparentSpotLightIndexListStartOffset + i] = tileTransparentSpotLightIndexList[i];
     }
 
     // Write directional lights.
-    for (uint i = iThreadIdInGroup; i < iTransparentDirectionalLightCountIntersectingTileFrustum; i += THREADS_IN_GROUP_XY * THREADS_IN_GROUP_XY){
+    for (uint i = iThreadIdInGroup; i < iTransparentDirectionalLightCountIntersectingTileFrustum; i += LIGHT_GRID_TILE_SIZE_IN_PIXELS * LIGHT_GRID_TILE_SIZE_IN_PIXELS){
 #hlsl    transparentDirectionalLightIndexList
 #glsl    transparentDirectionalLightIndexList.array
             [iTransparentDirectionalLightIndexListStartOffset + i] = tileTransparentDirectionalLightIndexList[i];

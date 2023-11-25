@@ -549,14 +549,14 @@ namespace ne {
         std::scoped_lock renderGuard(*pRenderer->getRenderResourcesMutex());
         pRenderer->waitForGpuToFinishWorkUpToThisPoint();
 
-        // Get tile size (this value also describes threads in one thread group).
+        // Get tile size (this value also describes the number of threads in one thread group).
         size_t iTileSizeInPixels = 0;
         try {
-            iTileSizeInPixels = std::stoull(
-                EngineShaderConstantMacros::ForwardPlus::FrustumGridThreadsInGroupXyMacro::sValue);
+            iTileSizeInPixels =
+                std::stoull(EngineShaderConstantMacros::ForwardPlus::LightGridTileSizeMacro::sValue);
         } catch (const std::exception& exception) {
             return Error(std::format(
-                "failed to convert frustum grid tile size to an integer, error: {}", exception.what()));
+                "failed to convert light grid tile size to an integer, error: {}", exception.what()));
         };
 
         // Calculate tile count (using INT/INT to "floor" if not divisible equally).

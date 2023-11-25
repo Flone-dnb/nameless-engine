@@ -235,10 +235,12 @@ namespace ne {
 
         // Add first root parameter (frame constants).
         static_assert(
-            iFrameConstantBufferRootParameterIndex == 0, "change order in which we add to `vRootParameters`");
+            ConstantRootParameterIndices::iFrameConstantBufferRootParameterIndex == 0,
+            "change order in which we add to `vRootParameters`");
         vRootParameters.push_back(vertexFrameBufferIt->second.second.generateSingleDescriptorDescription());
         addedRootParameterNames.insert(sFrameConstantBufferName);
-        rootParameterIndices[sFrameConstantBufferName] = iFrameConstantBufferRootParameterIndex;
+        rootParameterIndices[sFrameConstantBufferName] =
+            ConstantRootParameterIndices::iFrameConstantBufferRootParameterIndex;
 
         if (pPixelShaderRootSignatureInfo != nullptr) {
             // Prepare a lambda to add some fixed root parameter indices for light resources.
@@ -259,35 +261,35 @@ namespace ne {
 
             // Check if general lighting data is used and then assign it a fixed root parameter index.
             static_assert(
-                iGeneralLightingConstantBufferRootParameterIndex == 1,
+                ConstantRootParameterIndices::iGeneralLightingConstantBufferRootParameterIndex == 1,
                 "change order in which we add to `vRootParameters`");
             addLightingResourceRootParameter(
                 LightingShaderResourceManager::getGeneralLightingDataShaderResourceName(),
-                iGeneralLightingConstantBufferRootParameterIndex);
+                ConstantRootParameterIndices::iGeneralLightingConstantBufferRootParameterIndex);
 
             // Check if point lights are used and then assign it a fixed root parameter index.
             static_assert(
-                iPointLightsBufferRootParameterIndex == 2,
+                ConstantRootParameterIndices::iPointLightsBufferRootParameterIndex == 2,
                 "change order in which we add to `vRootParameters`");
             addLightingResourceRootParameter(
                 LightingShaderResourceManager::getPointLightsShaderResourceName(),
-                iPointLightsBufferRootParameterIndex);
+                ConstantRootParameterIndices::iPointLightsBufferRootParameterIndex);
 
             // Check if directional lights are used and then assign it a fixed root parameter index.
             static_assert(
-                iDirectionalLightsBufferRootParameterIndex == 3,
+                ConstantRootParameterIndices::iDirectionalLightsBufferRootParameterIndex == 3,
                 "change order in which we add to `vRootParameters`");
             addLightingResourceRootParameter(
                 LightingShaderResourceManager::getDirectionalLightsShaderResourceName(),
-                iDirectionalLightsBufferRootParameterIndex);
+                ConstantRootParameterIndices::iDirectionalLightsBufferRootParameterIndex);
 
             // Check if spotlights are used and then assign it a fixed root parameter index.
             static_assert(
-                iSpotlightsBufferRootParameterIndex == 4,
+                ConstantRootParameterIndices::iSpotlightsBufferRootParameterIndex == 4,
                 "change order in which we add to `vRootParameters`");
             addLightingResourceRootParameter(
                 LightingShaderResourceManager::getSpotlightsShaderResourceName(),
-                iSpotlightsBufferRootParameterIndex);
+                ConstantRootParameterIndices::iSpotlightsBufferRootParameterIndex);
         }
 
         // Do some basic checks to add parameters/samplers that don't exist in pixel shader.

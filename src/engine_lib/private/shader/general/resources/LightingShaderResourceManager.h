@@ -249,7 +249,8 @@ namespace ne {
 
             // Bind general lighting resources buffer.
             pCommandList->SetGraphicsRootConstantBufferView(
-                RootSignatureGenerator::getGeneralLightingConstantBufferRootParameterIndex(),
+                RootSignatureGenerator::ConstantRootParameterIndices::
+                    iGeneralLightingConstantBufferRootParameterIndex,
                 reinterpret_cast<DirectXResource*>(
                     mtxGpuData.second.vGeneralDataGpuResources[iCurrentFrameResourceIndex]
                         ->getInternalResource())
@@ -263,7 +264,7 @@ namespace ne {
                 iCurrentFrameResourceIndex,
                 lightArrays.pPointLightDataArray,
                 sPointLightsShaderResourceName,
-                RootSignatureGenerator::getPointLightsBufferRootParameterIndex());
+                RootSignatureGenerator::ConstantRootParameterIndices::iPointLightsBufferRootParameterIndex);
 
             // Bind directional lights array.
             setLightingArrayViewToCommandList(
@@ -272,7 +273,8 @@ namespace ne {
                 iCurrentFrameResourceIndex,
                 lightArrays.pDirectionalLightDataArray,
                 sDirectionalLightsShaderResourceName,
-                RootSignatureGenerator::getDirectionalLightsBufferRootParameterIndex());
+                RootSignatureGenerator::ConstantRootParameterIndices::
+                    iDirectionalLightsBufferRootParameterIndex);
 
             // Bind spotlights array.
             setLightingArrayViewToCommandList(
@@ -281,7 +283,7 @@ namespace ne {
                 iCurrentFrameResourceIndex,
                 lightArrays.pSpotlightDataArray,
                 sSpotlightsShaderResourceName,
-                RootSignatureGenerator::getSpotlightsBufferRootParameterIndex());
+                RootSignatureGenerator::ConstantRootParameterIndices::iSpotlightsBufferRootParameterIndex);
 
 #if defined(DEBUG)
             static_assert(sizeof(LightArrays) == 24, "consider adding new arrays here"); // NOLINT

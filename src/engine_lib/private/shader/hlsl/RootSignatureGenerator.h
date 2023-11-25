@@ -144,6 +144,25 @@ namespace ne {
             std::unordered_map<std::string, UINT> rootParameterIndices;
         };
 
+        /** Groups indices of root parameters that when used will always have a constant root index. */
+        struct ConstantRootParameterIndices {
+            /** Index of the root parameter that points to `cbuffer` with frame constants. */
+            static constexpr UINT iFrameConstantBufferRootParameterIndex = 0;
+
+            /** Index of the root parameter that points to `cbuffer` with general lighting constants. */
+            static constexpr UINT iGeneralLightingConstantBufferRootParameterIndex = 1;
+
+            /** Index of the root parameter that points to a shader resource that stores point lights. */
+            static constexpr UINT iPointLightsBufferRootParameterIndex = 2;
+
+            /** Index of the root parameter that points to a shader resource that stores directional lights.
+             */
+            static constexpr UINT iDirectionalLightsBufferRootParameterIndex = 3;
+
+            /** Index of the root parameter that points to a shader resource that stores spotlights. */
+            static constexpr UINT iSpotlightsBufferRootParameterIndex = 4;
+        };
+
         /**
          * Generates root signature based on HLSL code reflection.
          *
@@ -191,52 +210,6 @@ namespace ne {
          */
         static std::variant<Generated, Error>
         generateCompute(Renderer* pRenderer, ID3D12Device* pDevice, HlslShader* pComputeShader);
-
-        /**
-         * Returns index of the root parameter that points to `cbuffer` with frame constants.
-         *
-         * @return Root parameter index.
-         */
-        static constexpr UINT getFrameConstantBufferRootParameterIndex() {
-            return iFrameConstantBufferRootParameterIndex;
-        }
-
-        /**
-         * Returns index of the root parameter that points to `cbuffer` with general lighting constants.
-         *
-         * @return Root parameter index.
-         */
-        static constexpr UINT getGeneralLightingConstantBufferRootParameterIndex() {
-            return iGeneralLightingConstantBufferRootParameterIndex;
-        }
-
-        /**
-         * Returns index of the root parameter that points to a shader resource that stores point lights.
-         *
-         * @return Root parameter index.
-         */
-        static constexpr UINT getPointLightsBufferRootParameterIndex() {
-            return iPointLightsBufferRootParameterIndex;
-        }
-
-        /**
-         * Returns index of the root parameter that points to a shader resource that stores directional
-         * lights.
-         *
-         * @return Root parameter index.
-         */
-        static constexpr UINT getDirectionalLightsBufferRootParameterIndex() {
-            return iDirectionalLightsBufferRootParameterIndex;
-        }
-
-        /**
-         * Returns index of the root parameter that points to a shader resource that stores spotlights.
-         *
-         * @return Root parameter index.
-         */
-        static constexpr UINT getSpotlightsBufferRootParameterIndex() {
-            return iSpotlightsBufferRootParameterIndex;
-        }
 
     private:
         /**
@@ -315,20 +288,5 @@ namespace ne {
 
         /** Name of the `cbuffer` resource used to store frame data in HLSL shaders. */
         static inline const std::string sFrameConstantBufferName = "frameData";
-
-        /** Index of the root parameter that points to `cbuffer` with frame constants. */
-        static constexpr UINT iFrameConstantBufferRootParameterIndex = 0;
-
-        /** Index of the root parameter that points to `cbuffer` with general lighting constants. */
-        static constexpr UINT iGeneralLightingConstantBufferRootParameterIndex = 1;
-
-        /** Index of the root parameter that points to a shader resource that stores point lights. */
-        static constexpr UINT iPointLightsBufferRootParameterIndex = 2;
-
-        /** Index of the root parameter that points to a shader resource that stores directional lights. */
-        static constexpr UINT iDirectionalLightsBufferRootParameterIndex = 3;
-
-        /** Index of the root parameter that points to a shader resource that stores spotlights. */
-        static constexpr UINT iSpotlightsBufferRootParameterIndex = 4;
     };
 } // namespace ne

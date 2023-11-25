@@ -29,8 +29,8 @@ namespace ne {
             ShaderType::PIXEL_SHADER,
             "psMeshNode",
             {{
-                EngineShaderConstantMacros::MeshNode::LightGridTileSizeInPixels::sName,
-                EngineShaderConstantMacros::MeshNode::LightGridTileSizeInPixels::sValue,
+                EngineShaderConstantMacros::ForwardPlus::LightGridTileSizeMacro::sName,
+                EngineShaderConstantMacros::ForwardPlus::LightGridTileSizeMacro::sValue,
             }});
 
         /** Compute shader that calculate frustum for light tile that will be used in light culling. */
@@ -41,8 +41,8 @@ namespace ne {
             ShaderType::COMPUTE_SHADER,
             "csGridFrustum",
             {{
-                EngineShaderConstantMacros::ForwardPlus::FrustumGridThreadsInGroupXyMacro::sName,
-                EngineShaderConstantMacros::ForwardPlus::FrustumGridThreadsInGroupXyMacro::sValue,
+                EngineShaderConstantMacros::ForwardPlus::LightGridTileSizeMacro::sName,
+                EngineShaderConstantMacros::ForwardPlus::LightGridTileSizeMacro::sValue,
             }});
 
         /** Compute shader that does light culling. */
@@ -53,8 +53,8 @@ namespace ne {
             ShaderType::COMPUTE_SHADER,
             "csLightCulling",
             {{
-                 EngineShaderConstantMacros::ForwardPlus::FrustumGridThreadsInGroupXyMacro::sName,
-                 EngineShaderConstantMacros::ForwardPlus::FrustumGridThreadsInGroupXyMacro::sValue,
+                 EngineShaderConstantMacros::ForwardPlus::LightGridTileSizeMacro::sName,
+                 EngineShaderConstantMacros::ForwardPlus::LightGridTileSizeMacro::sValue,
              },
              {
                  EngineShaderConstantMacros::ForwardPlus::AveragePointLightNumPerTileMacro::sName,

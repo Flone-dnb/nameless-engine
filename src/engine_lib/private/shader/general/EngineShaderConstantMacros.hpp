@@ -14,9 +14,9 @@ namespace ne {
              *
              * @remark This macro also defines how much pixels there are in one grid tile.
              */
-            struct FrustumGridThreadsInGroupXyMacro {
+            struct LightGridTileSizeMacro {
                 /** Macro name. */
-                static inline const auto sName = "THREADS_IN_GROUP_XY";
+                static inline const auto sName = "LIGHT_GRID_TILE_SIZE_IN_PIXELS";
 
                 /** Macro value. */
                 static inline const auto sValue = "16";
@@ -62,18 +62,6 @@ namespace ne {
 
                 /** Macro value. */
                 static inline const auto sValue = "150";
-            };
-        };
-
-        /** Groups macros used in mesh node shaders. */
-        struct MeshNode {
-            /** Defines light grid (from light culling) tile size in pixels. */
-            struct LightGridTileSizeInPixels {
-                /** Macro name. */
-                static inline const auto sName = "LIGHT_GRID_TILE_SIZE_IN_PIXELS";
-
-                /** Macro value. */
-                static inline const auto sValue = ForwardPlus::FrustumGridThreadsInGroupXyMacro::sValue;
             };
         };
     };

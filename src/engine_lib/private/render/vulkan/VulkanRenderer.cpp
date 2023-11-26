@@ -1584,7 +1584,8 @@ namespace ne {
         depthNoMultisamplingAttachmentRef.sType = VK_STRUCTURE_TYPE_ATTACHMENT_REFERENCE_2;
         depthNoMultisamplingAttachmentRef.attachment =
             iDepthOnlyRenderPassDepthImageNoMultisamplingAttachmentIndex;
-        depthNoMultisamplingAttachmentRef.layout = VK_IMAGE_LAYOUT_UNDEFINED; // layout during subpass
+        depthNoMultisamplingAttachmentRef.layout =
+            VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL; // layout during subpass
 
         // Create a depth resolve description because we want to resolve multisampled depth image
         // to a non-multisampled depth image to be used in (compute) shaders.

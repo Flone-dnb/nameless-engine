@@ -1,3 +1,5 @@
+#include "LightGridMacros.glsl"
+
 // --------------------------------------------------------------------------------------------------------------------
 //                                                light index lists
 // --------------------------------------------------------------------------------------------------------------------
@@ -5,7 +7,7 @@
 /** Stores indices into array of point lights for transparent geometry. */
 #hlsl RWStructuredBuffer<uint> transparentPointLightIndexList : register(u4, space5);
 #glsl{
-layout(std430, binding = 13) buffer TransparentPointLightIndexListBuffer{
+layout(std430, binding = 13) LIGHT_GRID_QUALIFIER buffer TransparentPointLightIndexListBuffer{
     uint array[];
 } transparentPointLightIndexList;
 }
@@ -13,7 +15,7 @@ layout(std430, binding = 13) buffer TransparentPointLightIndexListBuffer{
 /** Stores indices into array of spot lights for transparent geometry. */
 #hlsl RWStructuredBuffer<uint> transparentSpotLightIndexList : register(u5, space5);
 #glsl{
-layout(std430, binding = 14) buffer TransparentSpotLightIndexListBuffer{
+layout(std430, binding = 14) LIGHT_GRID_QUALIFIER buffer TransparentSpotLightIndexListBuffer{
     uint array[];
 } transparentSpotLightIndexList;
 }
@@ -21,7 +23,7 @@ layout(std430, binding = 14) buffer TransparentSpotLightIndexListBuffer{
 /** Stores indices into array of directional lights for transparent geometry. */
 #hlsl RWStructuredBuffer<uint> transparentDirectionalLightIndexList : register(u6, space5);
 #glsl{
-layout(std430, binding = 15) buffer TransparentDirectionalLightIndexListBuffer{
+layout(std430, binding = 15) LIGHT_GRID_QUALIFIER buffer TransparentDirectionalLightIndexListBuffer{
     uint array[];
 } transparentDirectionalLightIndexList;
 }
@@ -32,12 +34,12 @@ layout(std430, binding = 15) buffer TransparentDirectionalLightIndexListBuffer{
 
 /** Light grid where every pixel stores 2 values: offset into light index list and the number of elements to read from that offset. */
 #hlsl RWTexture2D<uint2> transparentPointLightGrid : register(u10, space5);
-#glsl layout (binding=19, rg32ui) uniform uimage2D transparentPointLightGrid;
+#glsl layout (binding=19, rg32ui) uniform LIGHT_GRID_QUALIFIER uimage2D transparentPointLightGrid;
 
 /** Light grid where every pixel stores 2 values: offset into light index list and the number of elements to read from that offset. */
 #hlsl RWTexture2D<uint2> transparentSpotLightGrid : register(u11, space5);
-#glsl layout (binding=20, rg32ui) uniform uimage2D transparentSpotLightGrid;
+#glsl layout (binding=20, rg32ui) uniform LIGHT_GRID_QUALIFIER uimage2D transparentSpotLightGrid;
 
 /** Light grid where every pixel stores 2 values: offset into light index list and the number of elements to read from that offset. */
 #hlsl RWTexture2D<uint2> transparentDirectionalLightGrid : register(u12, space5);
-#glsl layout (binding=21, rg32ui) uniform uimage2D transparentDirectionalLightGrid;
+#glsl layout (binding=21, rg32ui) uniform LIGHT_GRID_QUALIFIER uimage2D transparentDirectionalLightGrid;

@@ -245,43 +245,13 @@ namespace ne {
         // Get renderer.
         const auto pVulkanRenderer = dynamic_cast<VulkanRenderer*>(pRenderer);
         if (pVulkanRenderer == nullptr) {
-            // Under DirectX we will bind CBV to a specific root signature index inside of the `draw`
+            // Under DirectX we will bind SRV to a specific root signature index inside of the `draw`
             // function.
             return {};
         }
 
-        // Lock resources.
-        std::scoped_lock guard(mtxGpuData.first);
-
-        // Self check: make sure GPU resources are valid.
-        for (const auto& pUploadBuffer : mtxGpuData.second.vGeneralDataGpuResources) {
-            if (pUploadBuffer == nullptr) [[unlikely]] {
-                return Error("lighting shader resource manager has not created its GPU resources yet");
-            }
-        }
-
-        // Get internal GPU resources.
-        std::array<VkBuffer, FrameResourcesManager::getFrameResourcesCount()> vInternalBuffers;
-        for (size_t i = 0; i < vInternalBuffers.size(); i++) {
-            // Convert to Vulkan resource.
-            const auto pVulkanResource = dynamic_cast<VulkanResource*>(
-                mtxGpuData.second.vGeneralDataGpuResources[i]->getInternalResource());
-            if (pVulkanResource == nullptr) [[unlikely]] {
-                return Error("expected a Vulkan resource");
-            }
-
-            // Save buffer resource.
-            vInternalBuffers[i] = pVulkanResource->getInternalBufferResource();
-        }
-
-        // Get logical device to be used later.
-        const auto pLogicalDevice = pVulkanRenderer->getLogicalDevice();
-        if (pLogicalDevice == nullptr) [[unlikely]] {
-            return Error("logical device is `nullptr`");
-        }
-
         // Get pipeline manager.
-        const auto pPipelineManager = pVulkanRenderer->getPipelineManager();
+        const auto pPipelineManager = pRenderer->getPipelineManager();
         if (pPipelineManager == nullptr) [[unlikely]] {
             return Error("pipeline manager is `nullptr`");
         }
@@ -296,49 +266,13 @@ namespace ne {
             // Iterate over all active shader combinations.
             for (const auto& [sShaderNames, pipelines] : pipelinesOfSpecificType) {
 
-                // Iterate over all active unique material macros combinations (for example:
-                // if we have 2 materials where one uses diffuse texture (defined DIFFUSE_TEXTURE
-                // macro for shaders) and the second one is not we will have 2 pipelines here).
+                // Iterate over all active unique material macros combinations.
                 for (const auto& [materialMacros, pPipeline] : pipelines.shaderPipelines) {
-
-                    // Convert to a Vulkan pipeline.
-                    const auto pVulkanPipeline = dynamic_cast<VulkanPipeline*>(pPipeline.get());
-                    if (pVulkanPipeline == nullptr) [[unlikely]] {
-                        return Error("expected a Vulkan pipeline");
-                    }
-
-                    // Get pipeline's internal resources.
-                    const auto pMtxPipelineInternalResources = pVulkanPipeline->getInternalResources();
-                    std::scoped_lock pipelineResourcesGuard(pMtxPipelineInternalResources->first);
-
-                    // See if this pipeline uses the resource we are handling.
-                    auto it = pMtxPipelineInternalResources->second.resourceBindings.find(
-                        sGeneralLightingDataShaderResourceName);
-                    if (it == pMtxPipelineInternalResources->second.resourceBindings.end()) {
-                        continue;
-                    }
-
-                    // Update one descriptor in set per frame resource.
-                    for (unsigned int i = 0; i < FrameResourcesManager::getFrameResourcesCount(); i++) {
-                        // Prepare info to bind storage buffer slot to descriptor.
-                        VkDescriptorBufferInfo bufferInfo{};
-                        bufferInfo.buffer = vInternalBuffers[i];
-                        bufferInfo.offset = 0;
-                        bufferInfo.range = sizeof(GeneralLightingShaderData);
-
-                        // Bind reserved space to descriptor.
-                        VkWriteDescriptorSet descriptorUpdateInfo{};
-                        descriptorUpdateInfo.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-                        descriptorUpdateInfo.dstSet = pMtxPipelineInternalResources->second
-                                                          .vDescriptorSets[i]; // descriptor set to update
-                        descriptorUpdateInfo.dstBinding = it->second;          // descriptor binding index
-                        descriptorUpdateInfo.dstArrayElement = 0; // first descriptor in array to update
-                        descriptorUpdateInfo.descriptorType = generalLightingDataDescriptorType;
-                        descriptorUpdateInfo.descriptorCount = 1; // how much descriptors in array to update
-                        descriptorUpdateInfo.pBufferInfo = &bufferInfo; // descriptor refers to buffer data
-
-                        // Update descriptor.
-                        vkUpdateDescriptorSets(pLogicalDevice, 1, &descriptorUpdateInfo, 0, nullptr);
+                    // Rebind resources to pipeline.
+                    auto optionalError = rebindGpuDataToPipeline(pPipeline.get());
+                    if (optionalError.has_value()) [[unlikely]] {
+                        optionalError->addCurrentLocationToErrorStack();
+                        return optionalError;
                     }
                 }
             }
@@ -356,30 +290,6 @@ namespace ne {
             return {};
         }
 
-        // Lock resources.
-        std::scoped_lock guard(mtxGpuData.first);
-
-        // Self check: make sure GPU resources are valid.
-        for (const auto& pUploadBuffer : mtxGpuData.second.vGeneralDataGpuResources) {
-            if (pUploadBuffer == nullptr) [[unlikely]] {
-                return Error("lighting shader resource manager has not created its GPU resources yet");
-            }
-        }
-
-        // Get internal GPU resources.
-        std::array<VkBuffer, FrameResourcesManager::getFrameResourcesCount()> vInternalBuffers;
-        for (size_t i = 0; i < vInternalBuffers.size(); i++) {
-            // Convert to Vulkan resource.
-            const auto pVulkanResource = dynamic_cast<VulkanResource*>(
-                mtxGpuData.second.vGeneralDataGpuResources[i]->getInternalResource());
-            if (pVulkanResource == nullptr) [[unlikely]] {
-                return Error("expected a Vulkan resource");
-            }
-
-            // Save buffer resource.
-            vInternalBuffers[i] = pVulkanResource->getInternalBufferResource();
-        }
-
         // Get logical device to be used later.
         const auto pLogicalDevice = pVulkanRenderer->getLogicalDevice();
         if (pLogicalDevice == nullptr) [[unlikely]] {
@@ -392,14 +302,228 @@ namespace ne {
             return Error("expected a Vulkan pipeline");
         }
 
+        // Lock resources.
+        std::scoped_lock guard(mtxGpuData.first);
+
+        // Self check: make sure GPU resources are valid.
+        for (const auto& pUploadBuffer : mtxGpuData.second.vGeneralDataGpuResources) {
+            if (pUploadBuffer == nullptr) [[unlikely]] {
+                return Error("expected the GPU resources to be created");
+            }
+        }
+
+        // Get internal GPU resources.
+        std::array<VkBuffer, FrameResourcesManager::getFrameResourcesCount()> vGeneralLightingDataBuffers;
+        for (size_t i = 0; i < vGeneralLightingDataBuffers.size(); i++) {
+            // Convert to Vulkan resource.
+            const auto pVulkanResource = dynamic_cast<VulkanResource*>(
+                mtxGpuData.second.vGeneralDataGpuResources[i]->getInternalResource());
+            if (pVulkanResource == nullptr) [[unlikely]] {
+                return Error("expected a Vulkan resource");
+            }
+
+            // Save buffer resource.
+            vGeneralLightingDataBuffers[i] = pVulkanResource->getInternalBufferResource();
+        }
+
+        // Rebind general lighting info resource.
+        auto optionalError = rebindBufferResourceToPipeline(
+            pVulkanPipeline,
+            pLogicalDevice,
+            sGeneralLightingDataShaderResourceName,
+            sizeof(GeneralLightingShaderData),
+            generalLightingDataDescriptorType,
+            vGeneralLightingDataBuffers);
+        if (optionalError.has_value()) [[unlikely]] {
+            optionalError->addCurrentLocationToErrorStack();
+            return optionalError;
+        }
+
+        // Self check: make sure at least one light index list is valid.
+        if (lightCullingComputeShaderData.resources.pOpaquePointLightIndexList == nullptr) {
+            // Not initialized yet.
+            return {};
+        }
+
+        // Prepare a lambda to bind resource.
+        const auto bindLightIndexListResource = [&](const std::string& sShaderResourceName,
+                                                    GpuResource* pResourceToBind) -> std::optional<Error> {
+            // Prepare array of VkBuffers for light index lists.
+            std::array<VkBuffer, FrameResourcesManager::getFrameResourcesCount()> vBuffersToBind;
+
+            // Convert to Vulkan resource.
+            const auto pVulkanResource = dynamic_cast<VulkanResource*>(pResourceToBind);
+            if (pVulkanResource == nullptr) [[unlikely]] {
+                return Error("expected a Vulkan resource");
+            }
+
+            // Fill array of buffers.
+            for (size_t i = 0; i < vBuffersToBind.size(); i++) {
+                vBuffersToBind[i] = pVulkanResource->getInternalBufferResource();
+            }
+
+            // Rebind to pipeline.
+            return rebindBufferResourceToPipeline(
+                pVulkanPipeline,
+                pLogicalDevice,
+                sShaderResourceName,
+                pResourceToBind->getElementCount() * pResourceToBind->getElementSizeInBytes(),
+                VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+                vBuffersToBind);
+        };
+
+        // Bind opaque point light index list.
+        optionalError = bindLightIndexListResource(
+            "opaquePointLightIndexList",
+            lightCullingComputeShaderData.resources.pOpaquePointLightIndexList.get());
+        if (optionalError.has_value()) [[unlikely]] {
+            optionalError->addCurrentLocationToErrorStack();
+            return optionalError;
+        }
+
+        // Bind opaque spot light index list.
+        optionalError = bindLightIndexListResource(
+            "opaqueSpotLightIndexList",
+            lightCullingComputeShaderData.resources.pOpaqueSpotLightIndexList.get());
+        if (optionalError.has_value()) [[unlikely]] {
+            optionalError->addCurrentLocationToErrorStack();
+            return optionalError;
+        }
+
+        // Bind opaque directional light index list.
+        optionalError = bindLightIndexListResource(
+            "opaqueDirectionalLightIndexList",
+            lightCullingComputeShaderData.resources.pOpaqueDirectionalLightIndexList.get());
+        if (optionalError.has_value()) [[unlikely]] {
+            optionalError->addCurrentLocationToErrorStack();
+            return optionalError;
+        }
+
+        // Bind transparent point light index list.
+        optionalError = bindLightIndexListResource(
+            "transparentPointLightIndexList",
+            lightCullingComputeShaderData.resources.pTransparentPointLightIndexList.get());
+        if (optionalError.has_value()) [[unlikely]] {
+            optionalError->addCurrentLocationToErrorStack();
+            return optionalError;
+        }
+
+        // Bind transparent spot light index list.
+        optionalError = bindLightIndexListResource(
+            "transparentSpotLightIndexList",
+            lightCullingComputeShaderData.resources.pTransparentSpotLightIndexList.get());
+        if (optionalError.has_value()) [[unlikely]] {
+            optionalError->addCurrentLocationToErrorStack();
+            return optionalError;
+        }
+
+        // Bind transparent directional light index list.
+        optionalError = bindLightIndexListResource(
+            "transparentDirectionalLightIndexList",
+            lightCullingComputeShaderData.resources.pTransparentDirectionalLightIndexList.get());
+        if (optionalError.has_value()) [[unlikely]] {
+            optionalError->addCurrentLocationToErrorStack();
+            return optionalError;
+        }
+
+        // Prepare a lambda to bind resource.
+        const auto bindLightGridResource = [&](const std::string& sShaderResourceName,
+                                               GpuResource* pResourceToBind) -> std::optional<Error> {
+            // Prepare array of VkBuffers for light index lists.
+            std::array<VkImageView, FrameResourcesManager::getFrameResourcesCount()> vImagesToBind;
+
+            // Convert to Vulkan resource.
+            const auto pVulkanResource = dynamic_cast<VulkanResource*>(pResourceToBind);
+            if (pVulkanResource == nullptr) [[unlikely]] {
+                return Error("expected a Vulkan resource");
+            }
+
+            // Fill array of images.
+            for (size_t i = 0; i < vImagesToBind.size(); i++) {
+                vImagesToBind[i] = pVulkanResource->getInternalImageView();
+            }
+
+            // Rebind to pipeline.
+            return rebindImageResourceToPipeline(
+                pVulkanPipeline,
+                pLogicalDevice,
+                sShaderResourceName,
+                VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+                VK_IMAGE_LAYOUT_GENERAL,
+                pVulkanRenderer->getComputeTextureSampler(),
+                vImagesToBind);
+        };
+
+        // Bind opaque directional light grid.
+        optionalError = bindLightGridResource(
+            "opaquePointLightGrid", lightCullingComputeShaderData.resources.pOpaquePointLightGrid.get());
+        if (optionalError.has_value()) [[unlikely]] {
+            optionalError->addCurrentLocationToErrorStack();
+            return optionalError;
+        }
+
+        // Bind opaque spot light grid.
+        optionalError = bindLightGridResource(
+            "opaqueSpotLightGrid", lightCullingComputeShaderData.resources.pOpaqueSpotLightGrid.get());
+        if (optionalError.has_value()) [[unlikely]] {
+            optionalError->addCurrentLocationToErrorStack();
+            return optionalError;
+        }
+
+        // Bind opaque directional light grid.
+        optionalError = bindLightGridResource(
+            "opaqueDirectionalLightGrid",
+            lightCullingComputeShaderData.resources.pOpaqueDirectionalLightGrid.get());
+        if (optionalError.has_value()) [[unlikely]] {
+            optionalError->addCurrentLocationToErrorStack();
+            return optionalError;
+        }
+
+        // Bind transparent point light grid.
+        optionalError = bindLightGridResource(
+            "transparentPointLightGrid",
+            lightCullingComputeShaderData.resources.pTransparentPointLightGrid.get());
+        if (optionalError.has_value()) [[unlikely]] {
+            optionalError->addCurrentLocationToErrorStack();
+            return optionalError;
+        }
+
+        // Bind transparent spot light grid.
+        optionalError = bindLightGridResource(
+            "transparentSpotLightGrid",
+            lightCullingComputeShaderData.resources.pTransparentSpotLightGrid.get());
+        if (optionalError.has_value()) [[unlikely]] {
+            optionalError->addCurrentLocationToErrorStack();
+            return optionalError;
+        }
+
+        // Bind transparent directional light grid.
+        optionalError = bindLightGridResource(
+            "transparentDirectionalLightGrid",
+            lightCullingComputeShaderData.resources.pTransparentDirectionalLightGrid.get());
+        if (optionalError.has_value()) [[unlikely]] {
+            optionalError->addCurrentLocationToErrorStack();
+            return optionalError;
+        }
+
+        return {};
+    }
+
+    std::optional<Error> LightingShaderResourceManager::rebindBufferResourceToPipeline(
+        VulkanPipeline* pVulkanPipeline,
+        VkDevice pLogicalDevice,
+        const std::string& sShaderResourceName,
+        VkDeviceSize iResourceSize,
+        VkDescriptorType descriptorType,
+        std::array<VkBuffer, FrameResourcesManager::getFrameResourcesCount()> vBuffersToBind) {
         // Get pipeline's internal resources.
         const auto pMtxPipelineInternalResources = pVulkanPipeline->getInternalResources();
         std::scoped_lock pipelineResourcesGuard(pMtxPipelineInternalResources->first);
 
         // See if this pipeline uses the resource we are handling.
-        auto it = pMtxPipelineInternalResources->second.resourceBindings.find(
-            sGeneralLightingDataShaderResourceName);
+        auto it = pMtxPipelineInternalResources->second.resourceBindings.find(sShaderResourceName);
         if (it == pMtxPipelineInternalResources->second.resourceBindings.end()) {
+            // This pipeline does not used the specified resource.
             return {};
         }
 
@@ -407,9 +531,9 @@ namespace ne {
         for (unsigned int i = 0; i < FrameResourcesManager::getFrameResourcesCount(); i++) {
             // Prepare info to bind storage buffer slot to descriptor.
             VkDescriptorBufferInfo bufferInfo{};
-            bufferInfo.buffer = vInternalBuffers[i];
+            bufferInfo.buffer = vBuffersToBind[i];
             bufferInfo.offset = 0;
-            bufferInfo.range = sizeof(GeneralLightingShaderData);
+            bufferInfo.range = iResourceSize;
 
             // Bind reserved space to descriptor.
             VkWriteDescriptorSet descriptorUpdateInfo{};
@@ -418,9 +542,54 @@ namespace ne {
                 pMtxPipelineInternalResources->second.vDescriptorSets[i]; // descriptor set to update
             descriptorUpdateInfo.dstBinding = it->second;                 // descriptor binding index
             descriptorUpdateInfo.dstArrayElement = 0; // first descriptor in array to update
-            descriptorUpdateInfo.descriptorType = generalLightingDataDescriptorType;
+            descriptorUpdateInfo.descriptorType = descriptorType;
             descriptorUpdateInfo.descriptorCount = 1;       // how much descriptors in array to update
             descriptorUpdateInfo.pBufferInfo = &bufferInfo; // descriptor refers to buffer data
+
+            // Update descriptor.
+            vkUpdateDescriptorSets(pLogicalDevice, 1, &descriptorUpdateInfo, 0, nullptr);
+        }
+
+        return {};
+    }
+
+    std::optional<Error> LightingShaderResourceManager::rebindImageResourceToPipeline(
+        VulkanPipeline* pVulkanPipeline,
+        VkDevice pLogicalDevice,
+        const std::string& sShaderResourceName,
+        VkDescriptorType descriptorType,
+        VkImageLayout imageLayout,
+        VkSampler pSampler,
+        std::array<VkImageView, FrameResourcesManager::getFrameResourcesCount()> vImagesToBind) {
+        // Get pipeline's internal resources.
+        const auto pMtxPipelineInternalResources = pVulkanPipeline->getInternalResources();
+        std::scoped_lock pipelineResourcesGuard(pMtxPipelineInternalResources->first);
+
+        // See if this pipeline uses the resource we are handling.
+        auto it = pMtxPipelineInternalResources->second.resourceBindings.find(sShaderResourceName);
+        if (it == pMtxPipelineInternalResources->second.resourceBindings.end()) {
+            // This pipeline does not used the specified resource.
+            return {};
+        }
+
+        // Update one descriptor in set per frame resource.
+        for (unsigned int i = 0; i < FrameResourcesManager::getFrameResourcesCount(); i++) {
+            // Prepare info to bind an image view to descriptor.
+            VkDescriptorImageInfo imageInfo{};
+            imageInfo.imageLayout = imageLayout;
+            imageInfo.imageView = vImagesToBind[i];
+            imageInfo.sampler = pSampler;
+
+            // Bind reserved space to descriptor.
+            VkWriteDescriptorSet descriptorUpdateInfo{};
+            descriptorUpdateInfo.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            descriptorUpdateInfo.dstSet =
+                pMtxPipelineInternalResources->second.vDescriptorSets[i]; // descriptor set to update
+            descriptorUpdateInfo.dstBinding = it->second;                 // descriptor binding index
+            descriptorUpdateInfo.dstArrayElement = 0; // first descriptor in array to update
+            descriptorUpdateInfo.descriptorType = descriptorType;
+            descriptorUpdateInfo.descriptorCount = 1;     // how much descriptors in array to update
+            descriptorUpdateInfo.pImageInfo = &imageInfo; // descriptor refers to image data
 
             // Update descriptor.
             vkUpdateDescriptorSets(pLogicalDevice, 1, &descriptorUpdateInfo, 0, nullptr);
@@ -788,13 +957,13 @@ namespace ne {
         return {};
     }
 
-    std::optional<Error>
+    std::variant<bool, Error>
     LightingShaderResourceManager::ComputeShaderData::LightCullingComputeShader::ComputeShader::
         createLightIndexListsAndLightGrid(Renderer* pRenderer, size_t iTileCountX, size_t iTileCountY) {
         // Make sure tile count was changed.
         if (iTileCountX == resources.iLightGridTileCountX && iTileCountY == resources.iLightGridTileCountY) {
             // Tile count was not changed - nothing to do.
-            return {};
+            return false;
         }
 
         // First convert all constants (shader macros) from strings to integers.
@@ -900,7 +1069,7 @@ namespace ne {
                 ComputeResourceUsage::READ_WRITE_ARRAY_BUFFER);
             if (optionalError.has_value()) [[unlikely]] {
                 optionalError->addCurrentLocationToErrorStack();
-                return optionalError;
+                return optionalError.value();
             }
         }
 
@@ -954,7 +1123,7 @@ namespace ne {
                 info.pResource->get(), info.sShaderResourceName, ComputeResourceUsage::READ_WRITE_TEXTURE);
             if (optionalError.has_value()) [[unlikely]] {
                 optionalError->addCurrentLocationToErrorStack();
-                return optionalError;
+                return optionalError.value();
             }
         }
 
@@ -962,7 +1131,7 @@ namespace ne {
         resources.iLightGridTileCountX = iTileCountX;
         resources.iLightGridTileCountY = iTileCountY;
 
-        return {};
+        return true;
     }
 
     std::optional<Error> LightingShaderResourceManager::ComputeShaderData::LightCullingComputeShader::
@@ -1142,13 +1311,23 @@ namespace ne {
         }
 
         // (Re)create light index lists and light grid if the tile count was changed.
-        optionalError = lightCullingComputeShaderData.createLightIndexListsAndLightGrid(
+        auto lightGridResult = lightCullingComputeShaderData.createLightIndexListsAndLightGrid(
             pRenderer,
             frustumGridComputeShaderData.iLastUpdateTileCountX,
             frustumGridComputeShaderData.iLastUpdateTileCountY);
-        if (optionalError.has_value()) [[unlikely]] {
-            optionalError->addCurrentLocationToErrorStack();
-            return optionalError;
+        if (std::holds_alternative<Error>(lightGridResult)) [[unlikely]] {
+            auto error = std::get<Error>(std::move(lightGridResult));
+            error.addCurrentLocationToErrorStack();
+            return error;
+        }
+        const auto bLightGridRecreated = std::get<bool>(lightGridResult);
+        if (bLightGridRecreated) {
+            // Rebind newly created resources to pipelines.
+            optionalError = rebindGpuDataToAllPipelines();
+            if (optionalError.has_value()) [[unlikely]] {
+                optionalError->addCurrentLocationToErrorStack();
+                return optionalError;
+            }
         }
 
         return {};

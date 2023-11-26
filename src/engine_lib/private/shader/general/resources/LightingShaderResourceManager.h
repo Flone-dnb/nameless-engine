@@ -32,6 +32,7 @@ namespace ne {
     class Renderer;
     class Pipeline;
     class ComputeShaderInterface;
+    class VulkanPipeline;
 
     /**
      * Manages GPU resources that store lighting related data (such as data of all spawned light sources
@@ -731,9 +732,10 @@ namespace ne {
                      * @param iTileCountX The current number of light grid tiles in the X direction.
                      * @param iTileCountY The current number of light grid tiles in the Y direction.
                      *
-                     * @return Error if something went wrong.
+                     * @return `true` if resources were re-created, `false` if not, otherwise error if
+                     * something went wrong.
                      */
-                    [[nodiscard]] std::optional<Error> createLightIndexListsAndLightGrid(
+                    [[nodiscard]] std::variant<bool, Error> createLightIndexListsAndLightGrid(
                         Renderer* pRenderer, size_t iTileCountX, size_t iTileCountY);
 
                     /**
@@ -806,6 +808,50 @@ namespace ne {
          * @return Created manager.
          */
         static std::unique_ptr<LightingShaderResourceManager> create(Renderer* pRenderer);
+
+        /**
+         * Looks if the pipeline uses the specified shader resource and binds the specified
+         * buffers to pipeline's descriptors.
+         *
+         * @param pVulkanPipeline     Pipeline which descriptors to update.
+         * @param pLogicalDevice      Renderer's logical device.
+         * @param sShaderResourceName Name of the shader resource to look in the pipeline.
+         * @param iResourceSize       Size of one (buffer) shader resource.
+         * @param descriptorType      Type of descriptor to bind.
+         * @param vBuffersToBind      Buffers to bind (one per frame resource).
+         *
+         * @return Error if something went wrong.
+         */
+        [[nodiscard]] static std::optional<Error> rebindBufferResourceToPipeline(
+            VulkanPipeline* pVulkanPipeline,
+            VkDevice pLogicalDevice,
+            const std::string& sShaderResourceName,
+            VkDeviceSize iResourceSize,
+            VkDescriptorType descriptorType,
+            std::array<VkBuffer, FrameResourcesManager::getFrameResourcesCount()> vBuffersToBind);
+
+        /**
+         * Looks if the pipeline uses the specified shader resource and binds the specified
+         * buffers to pipeline's descriptors.
+         *
+         * @param pVulkanPipeline     Pipeline which descriptors to update.
+         * @param pLogicalDevice      Renderer's logical device.
+         * @param sShaderResourceName Name of the shader resource to look in the pipeline.
+         * @param descriptorType      Type of descriptor to bind.
+         * @param imageLayout         Image layout.
+         * @param pSampler            Image sampler.
+         * @param vImagesToBind       Images to bind (one per frame resource).
+         *
+         * @return Error if something went wrong.
+         */
+        [[nodiscard]] static std::optional<Error> rebindImageResourceToPipeline(
+            VulkanPipeline* pVulkanPipeline,
+            VkDevice pLogicalDevice,
+            const std::string& sShaderResourceName,
+            VkDescriptorType descriptorType,
+            VkImageLayout imageLayout,
+            VkSampler pSampler,
+            std::array<VkImageView, FrameResourcesManager::getFrameResourcesCount()> vImagesToBind);
 
         /**
          * Initializes a new manager.

@@ -492,10 +492,10 @@ namespace ne {
                     alignas(iVkMat4Alignment) glm::mat4 inverseProjectionMatrix = glm::identity<glm::mat4>();
 
                     /** Width of the viewport (might be smaller that the actual screen size). */
-                    alignas(iVkScalarAlignment) unsigned int iRenderResolutionWidth = 0;
+                    alignas(iVkScalarAlignment) unsigned int iRenderTargetWidth = 0;
 
                     /** Height of the viewport (might be smaller that the actual screen size). */
-                    alignas(iVkScalarAlignment) unsigned int iRenderResolutionHeight = 0;
+                    alignas(iVkScalarAlignment) unsigned int iRenderTargetHeight = 0;
                 };
 
                 /** Groups buffers that we bind to a compute shader. */
@@ -531,7 +531,7 @@ namespace ne {
                      * Updates data used by shaders.
                      *
                      * @param pRenderer               Renderer.
-                     * @param renderResolution        Current render resolution.
+                     * @param renderTargetSize        Size of the underlying render image in pixels.
                      * @param inverseProjectionMatrix Inverse projection matrix of the active camera.
                      * @param bQueueShaderExecution   `true` to queue compute shader execution, `false`
                      * otherwise.
@@ -540,7 +540,7 @@ namespace ne {
                      */
                     [[nodiscard]] std::optional<Error> updateData(
                         Renderer* pRenderer,
-                        const std::pair<unsigned int, unsigned int>& renderResolution,
+                        const std::pair<unsigned int, unsigned int>& renderTargetSize,
                         const glm::mat4& inverseProjectionMatrix,
                         bool bQueueShaderExecution);
 
@@ -864,13 +864,13 @@ namespace ne {
          * Called by renderer when render resolution or projection matrix changes to queue a compute shader
          * that will recalculate grid of frustums used during light culling.
          *
-         * @param renderResolution        New render resolution in pixels.
+         * @param renderTargetSize        New render of the underlying render image in pixels.
          * @param inverseProjectionMatrix Inverse projection matrix of the currently active camera.
          *
          * @return Error if something went wrong.
          */
         [[nodiscard]] std::optional<Error> recalculateLightTileFrustums(
-            const std::pair<unsigned int, unsigned int>& renderResolution,
+            const std::pair<unsigned int, unsigned int>& renderTargetSize,
             const glm::mat4& inverseProjectionMatrix);
 
         /**

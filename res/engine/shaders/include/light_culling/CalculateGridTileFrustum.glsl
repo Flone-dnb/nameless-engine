@@ -29,11 +29,11 @@
     /** Inverse of the projection matrix. */
     mat4 inverseProjectionMatrix;
 
-    /** Width of the viewport (might be smaller that the actual screen size). */
-    uint iRenderResolutionWidth;
+    /** Width of the underlying render image (might be smaller that the actual screen size). */
+    uint iRenderTargetWidth;
 
-    /** Height of the viewport (might be smaller that the actual screen size). */
-    uint iRenderResolutionHeight;
+    /** Height of the underlying render image (might be smaller that the actual screen size). */
+    uint iRenderTargetHeight;
 #glsl } screenToViewData;
 #hlsl }; ConstantBuffer<ScreenToViewData> screenToViewData : register(b1, space5);
 
@@ -52,8 +52,8 @@ layout(std140, binding = 2) buffer CalculatedFrustumsBuffer{
  * @param iTileYPosition          Y position of the grid tile.
  * @param iTileSizeInPixels       Size of one grid tile in pixels.
  * @param tileZ                   Z coordinate for tile in NDC space (since there's really no Z in screen space).
- * @param iRenderResolutionWidth  Width of the viewport (might be smaller that the actual screen size).
- * @param iRenderResolutionHeight Height of the viewport (might be smaller that the actual screen size).
+ * @param iRenderTargetWidth      Width of the viewport (might be smaller that the actual screen size).
+ * @param iRenderTargetHeight     Height of the viewport (might be smaller that the actual screen size).
  * @param inverseProjectionMatrix Inverse of the projection matrix.
  *
  * @return Frustum in view space for the specified grid tile.
@@ -63,8 +63,8 @@ Frustum calculateFrustumInViewSpaceForGridTileInScreenSpace(
     uint iTileYPosition,
     uint iTileSizeInPixels,
     float tileZ,
-    uint iRenderResolutionWidth,
-    uint iRenderResolutionHeight,
+    uint iRenderTargetWidth,
+    uint iRenderTargetHeight,
     mat4 inverseProjectionMatrix){
     // Calculate 4 corner points of frustum's far clip plane.
     vec3 farClipPlaneCornersScreenSpace[4];
@@ -91,8 +91,8 @@ Frustum calculateFrustumInViewSpaceForGridTileInScreenSpace(
         // Convert screen space to view space.
         farClipPlaneCornersViewSpace[i] = convertScreenSpaceToViewSpace(
             farClipPlaneCornersScreenSpace[i],
-            iRenderResolutionWidth,
-            iRenderResolutionHeight,
+            iRenderTargetWidth,
+            iRenderTargetHeight,
             inverseProjectionMatrix).xyz;
     }
 
@@ -101,10 +101,10 @@ Frustum calculateFrustumInViewSpaceForGridTileInScreenSpace(
 
     // Now build frustum.
     Frustum frustum;
-    frustum.planes[0] = calculatePlaneFromTriangle(cameraLocationViewSpace, farClipPlaneCornersViewSpace[2], farClipPlaneCornersViewSpace[0]);
-    frustum.planes[1] = calculatePlaneFromTriangle(cameraLocationViewSpace, farClipPlaneCornersViewSpace[1], farClipPlaneCornersViewSpace[3]);
-    frustum.planes[2] = calculatePlaneFromTriangle(cameraLocationViewSpace, farClipPlaneCornersViewSpace[0], farClipPlaneCornersViewSpace[1]);
-    frustum.planes[3] = calculatePlaneFromTriangle(cameraLocationViewSpace, farClipPlaneCornersViewSpace[3], farClipPlaneCornersViewSpace[2]);
+    frustum.planes[0] = calculatePlaneFromTriangle(cameraLocationViewSpace, farClipPlaneCornersViewSpace[0], farClipPlaneCornersViewSpace[2]);
+    frustum.planes[1] = calculatePlaneFromTriangle(cameraLocationViewSpace, farClipPlaneCornersViewSpace[3], farClipPlaneCornersViewSpace[1]);
+    frustum.planes[2] = calculatePlaneFromTriangle(cameraLocationViewSpace, farClipPlaneCornersViewSpace[1], farClipPlaneCornersViewSpace[0]);
+    frustum.planes[3] = calculatePlaneFromTriangle(cameraLocationViewSpace, farClipPlaneCornersViewSpace[2], farClipPlaneCornersViewSpace[3]);
 
     return frustum;
 }

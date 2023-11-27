@@ -41,8 +41,6 @@ struct Frustum{
 /**
  * Calculates a plane from 3 non-collinear points that form a triangle.
  *
- * @remark Expects right-handed coordinate system.
- *
  * @param point0 1st point of a triangle.
  * @param point1 2nd point of a triangle. A vector from this point to the first one is the first argument in the cross product.
  * @param point2 3rd point of a triangle. A vector from this point to the first one is the second argument in the cross product.

@@ -159,6 +159,13 @@ namespace ne {
             VkImageLayout newLayout);
 
         /**
+         * Returns size of the render target (size of the underlying render image).
+         *
+         * @return Render image size in pixels (width and height).
+         */
+        virtual std::pair<unsigned int, unsigned int> getRenderTargetSize() const override;
+
+        /**
          * Returns logical device used in the renderer.
          *
          * @return `nullptr` if logical device is not created yet, otherwise used logical device.

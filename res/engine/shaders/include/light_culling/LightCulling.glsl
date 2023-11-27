@@ -42,10 +42,10 @@ layout(std140, binding = 6) readonly buffer CalculatedFrustumsBuffer{
     mat4 inverseProjectionMatrix;
 
     /** Width of the viewport (might be smaller that the actual screen size). */
-    uint iRenderResolutionWidth;
+    uint iRenderTargetWidth;
 
     /** Height of the viewport (might be smaller that the actual screen size). */
-    uint iRenderResolutionHeight;
+    uint iRenderTargetHeight;
 #glsl } screenToViewData;
 #hlsl }; ConstantBuffer<ScreenToViewData> screenToViewData : register(b3, space5);
 

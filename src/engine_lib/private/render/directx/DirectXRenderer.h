@@ -176,6 +176,13 @@ namespace ne {
          */
         virtual GpuResource* getDepthTextureNoMultisampling() override;
 
+        /**
+         * Returns size of the render target (size of the underlying render image).
+         *
+         * @return Render image size in pixels (width and height).
+         */
+        virtual std::pair<unsigned int, unsigned int> getRenderTargetSize() const override;
+
     protected:
         /**
          * Creates an empty (uninitialized) renderer.
@@ -508,6 +515,9 @@ namespace ne {
 
         /** List of supported GPUs, filled during @ref pickVideoAdapter. */
         std::vector<std::string> vSupportedGpuNames;
+
+        /** Last set size of the underlying swap chain buffer. */
+        std::pair<unsigned int, unsigned int> renderTargetSize = {0, 0};
 
         /** The number of supported quality levels for the current MSAA sample count. */
         UINT iMsaaQualityLevelsCount = 0;

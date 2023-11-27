@@ -1590,6 +1590,10 @@ namespace ne {
         return pDepthStencilBuffer.get();
     }
 
+    std::pair<unsigned int, unsigned int> DirectXRenderer::getRenderTargetSize() const {
+        return renderTargetSize;
+    }
+
     std::optional<Error> DirectXRenderer::onRenderSettingsChanged() {
         // Make sure no rendering is happening.
         std::scoped_lock guard(*getRenderResourcesMutex());
@@ -1652,6 +1656,9 @@ namespace ne {
         if (FAILED(hResult)) [[unlikely]] {
             return Error(hResult);
         }
+
+        // Save new render target size.
+        renderTargetSize = renderResolution;
 
         // Create RTV to swap chain buffers.
         auto swapChainResult =
@@ -1740,6 +1747,13 @@ namespace ne {
         {
             const auto psoGuard =
                 getPipelineManager()->clearGraphicsPipelinesInternalResourcesAndDelayRestoring();
+        }
+
+        // Update light culling resources.
+        optionalError = recalculateLightTileFrustums();
+        if (optionalError.has_value()) [[unlikely]] {
+            optionalError->addCurrentLocationToErrorStack();
+            return optionalError.value();
         }
 
         return {};

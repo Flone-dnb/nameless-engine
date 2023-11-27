@@ -257,13 +257,6 @@ namespace ne {
     std::optional<Error> Renderer::onRenderSettingsChanged() {
         updateFpsLimitSetting();
 
-        // Notify lighting manager.
-        auto optionalError = recalculateLightTileFrustums();
-        if (optionalError.has_value()) [[unlikely]] {
-            optionalError->addCurrentLocationToErrorStack();
-            return optionalError;
-        }
-
         return {};
     }
 
@@ -278,8 +271,8 @@ namespace ne {
         // Get render settings and active camera.
         const auto pMtxActiveCamera = pCameraManager->getActiveCamera();
 
-        // Lock settings and camera.
-        std::scoped_lock guard(mtxRenderSettings.first, pMtxActiveCamera->first);
+        // Lock camera.
+        std::scoped_lock guard(pMtxActiveCamera->first);
 
         // Get active camera properties.
         CameraProperties* pActiveCameraProperties = nullptr;
@@ -298,7 +291,7 @@ namespace ne {
 
         // Recalculate grid of frustums for light culling.
         auto optionalError = pLightingShaderResourceManager->recalculateLightTileFrustums(
-            mtxRenderSettings.second->getRenderResolution(), inverseProjectionMatrix);
+            getRenderTargetSize(), inverseProjectionMatrix);
         if (optionalError.has_value()) [[unlikely]] {
             optionalError->addCurrentLocationToErrorStack();
             return optionalError;

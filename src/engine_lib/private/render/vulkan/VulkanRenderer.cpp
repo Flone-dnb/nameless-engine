@@ -1335,6 +1335,13 @@ namespace ne {
             iFrameResourceIndex = (iFrameResourceIndex + 1) % FrameResourcesManager::getFrameResourcesCount();
         }
 
+        // Update light culling resources.
+        auto optionalError = recalculateLightTileFrustums();
+        if (optionalError.has_value()) [[unlikely]] {
+            optionalError->addCurrentLocationToErrorStack();
+            return optionalError.value();
+        }
+
         return {};
     }
 
@@ -2603,6 +2610,13 @@ namespace ne {
         }
 
         return {};
+    }
+
+    std::pair<unsigned int, unsigned int> VulkanRenderer::getRenderTargetSize() const {
+        if (!swapChainExtent.has_value()) {
+            return {0, 0};
+        }
+        return {swapChainExtent->width, swapChainExtent->height};
     }
 
     void VulkanRenderer::drawNextFrame() {

@@ -223,6 +223,13 @@ namespace ne {
         std::pair<std::recursive_mutex, std::unique_ptr<ShaderConfiguration>>* getShaderConfiguration();
 
         /**
+         * Returns size of the render target (size of the underlying render image).
+         *
+         * @return Render image size in pixels (width and height).
+         */
+        virtual std::pair<unsigned int, unsigned int> getRenderTargetSize() const = 0;
+
+        /**
          * Returns the window that we render to.
          *
          * @warning Do not delete (free) returned pointer.
@@ -571,6 +578,14 @@ namespace ne {
             CameraProperties* pCameraProperties);
 
         /**
+         * Notifies @ref pLightingShaderResourceManager to recalculate grid of frustums
+         * for light culling process.
+         *
+         * @return Error if something went wrong.
+         */
+        [[nodiscard]] std::optional<Error> recalculateLightTileFrustums();
+
+        /**
          * Iterates over all meshes and returns only meshes inside of the camera's frustum
          * (and their pipelines).
          *
@@ -723,14 +738,6 @@ namespace ne {
 
             return !bIsVisible;
         }
-
-        /**
-         * Called to notify @ref pLightingShaderResourceManager to recalculate grid of frustums
-         * for light culling process.
-         *
-         * @return Error if something went wrong.
-         */
-        [[nodiscard]] std::optional<Error> recalculateLightTileFrustums();
 
         /** Called by camera manager after active camera was changed. */
         void onActiveCameraChanged();

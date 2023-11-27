@@ -706,7 +706,7 @@ namespace ne {
     [[nodiscard]] std::optional<Error>
     LightingShaderResourceManager::ComputeShaderData::FrustumGridComputeShader::ComputeShader::updateData(
         Renderer* pRenderer,
-        const std::pair<unsigned int, unsigned int>& renderResolution,
+        const std::pair<unsigned int, unsigned int>& renderTargetSize,
         const glm::mat4& inverseProjectionMatrix,
         bool bQueueShaderExecution) {
         // Make sure engine shaders were compiled and we created compute interface.
@@ -729,8 +729,8 @@ namespace ne {
         };
 
         // Calculate tile count (using INT/INT to "floor" if not divisible equally).
-        const auto iTileCountX = static_cast<unsigned int>(renderResolution.first / iTileSizeInPixels);
-        const auto iTileCountY = static_cast<unsigned int>(renderResolution.second / iTileSizeInPixels);
+        const auto iTileCountX = static_cast<unsigned int>(renderTargetSize.first / iTileSizeInPixels);
+        const auto iTileCountY = static_cast<unsigned int>(renderTargetSize.second / iTileSizeInPixels);
 
         // Calculate frustum count.
         const size_t iFrustumCount = iTileCountX * iTileCountY;
@@ -752,8 +752,8 @@ namespace ne {
 
         // Update screen to view resource.
         ScreenToViewData screenToViewData;
-        screenToViewData.iRenderResolutionWidth = renderResolution.first;
-        screenToViewData.iRenderResolutionHeight = renderResolution.second;
+        screenToViewData.iRenderTargetWidth = renderTargetSize.first;
+        screenToViewData.iRenderTargetHeight = renderTargetSize.second;
         screenToViewData.inverseProjectionMatrix = inverseProjectionMatrix;
         resources.pScreenToViewData->copyDataToElement(0, &screenToViewData, sizeof(screenToViewData));
 
@@ -1230,8 +1230,16 @@ namespace ne {
     }
 
     std::optional<Error> LightingShaderResourceManager::recalculateLightTileFrustums(
-        const std::pair<unsigned int, unsigned int>& renderResolution,
+        const std::pair<unsigned int, unsigned int>& renderTargetSize,
         const glm::mat4& inverseProjectionMatrix) {
+        // Self check: make sure render target size is not zero.
+        if (renderTargetSize.first == 0 || renderTargetSize.second == 0) [[unlikely]] {
+            return Error(std::format(
+                "render target size cannot have zero size: {}x{}",
+                renderTargetSize.first,
+                renderTargetSize.second));
+        }
+
         // Make sure compute interface is created.
         if (!frustumGridComputeShaderData.bIsInitialized) {
             // Check if the renderer compiled our compute shader or not.
@@ -1282,7 +1290,7 @@ namespace ne {
 
         // Update frustum grid shader data.
         auto optionalError = frustumGridComputeShaderData.updateData(
-            pRenderer, renderResolution, inverseProjectionMatrix, true);
+            pRenderer, renderTargetSize, inverseProjectionMatrix, true);
         if (optionalError.has_value()) [[unlikely]] {
             optionalError->addCurrentLocationToErrorStack();
             return optionalError;

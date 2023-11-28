@@ -249,7 +249,7 @@ namespace ne RNAMESPACE() {
         float outerConeAngle = 45.0F;
 
         /** Maximum value for @ref innerConeAngle and @ref outerConeAngle. */
-        static constexpr float maxConeAngle = 89.0F; // NOLINT: max angle that won't cause any visual issues
+        static constexpr float maxConeAngle = 80.0F; // NOLINT: max angle that won't cause any visual issues
 
         ne_SpotlightNode_GENERATED
     };

@@ -138,7 +138,14 @@ namespace ne {
         mtxShaderData.second.shaderData.distance = distance;
         mtxShaderData.second.shaderData.cosInnerConeAngle = glm::cos(glm::radians(innerConeAngle));
         mtxShaderData.second.shaderData.cosOuterConeAngle = glm::cos(glm::radians(outerConeAngle));
-        mtxShaderData.second.shaderData.coneBottomRadius = glm::tan(glm::radians(outerConeAngle)) * distance;
+
+        static_assert(
+            maxConeAngle < 80.1F,
+            "tan 80+ degrees will increase very fast so keep it away from 90 degrees to avoid huge cone "
+            "radius");
+        mtxShaderData.second.shaderData.coneBottomRadius =
+            glm::tan(glm::radians(outerConeAngle)) * distance *
+            1.75F; // TODO: multiply to avoid light culling artifacts at some view angles
 
 #if defined(DEBUG)
         static_assert(sizeof(SpotlightShaderData) == 80, "consider copying new parameters here");

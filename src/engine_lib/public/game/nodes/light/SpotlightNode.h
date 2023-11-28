@@ -24,6 +24,13 @@ namespace ne RNAMESPACE() {
         virtual ~SpotlightNode() override = default;
 
         /**
+         * Returns the maximum angle for @ref getLightInnerConeAngle and @ref getLightOuterConeAngle.
+         *
+         * @return Maximum cone angle (in degrees).
+         */
+        static constexpr float getMaxLightConeAngle() { return maxConeAngle; }
+
+        /**
          * Sets light's color.
          *
          * @param color Color in RGB format in range [0.0; 1.0].
@@ -48,8 +55,8 @@ namespace ne RNAMESPACE() {
          * Sets angle of spotlight's inner cone (cone that will have hard light edges),
          * see @ref setLightOuterConeAngle for configuring soft light edges.
          *
-         * @param innerConeAngle Angle in degrees in range [0.0; 180.0] (will be clamped if outside of the
-         * range).
+         * @param innerConeAngle Angle in degrees in range [0.0; @ref getMaxLightConeAngle] (will be clamped
+         * if outside of the range).
          */
         void setLightInnerConeAngle(float innerConeAngle);
 
@@ -57,8 +64,8 @@ namespace ne RNAMESPACE() {
          * Sets angle of spotlight's inner cone (cone that will have hard light edges),
          * see @ref setLightOuterConeAngle for configuring soft light edges.
          *
-         * @param outerConeAngle Angle in degrees in range [@ref getLightInnerConeAngle; 180.0]
-         * (will be clamped if outside of the range).
+         * @param outerConeAngle Angle in degrees in range [@ref getLightInnerConeAngle; @ref
+         * getMaxLightConeAngle] (will be clamped if outside of the range).
          */
         void setLightOuterConeAngle(float outerConeAngle);
 
@@ -86,14 +93,14 @@ namespace ne RNAMESPACE() {
         /**
          * Returns light cutoff angle of the inner cone (hard light edge).
          *
-         * @return Angle in degrees in range [0.0; 180.0].
+         * @return Angle in degrees in range [0.0; @ref getMaxLightConeAngle].
          */
         float getLightInnerConeAngle() const;
 
         /**
          * Returns light cutoff angle of the outer cone (soft light edge).
          *
-         * @return Angle in degrees in range [@ref getLightInnerConeAngle; 180.0].
+         * @return Angle in degrees in range [@ref getLightInnerConeAngle; @ref getMaxLightConeAngle].
          */
         float getLightOuterConeAngle() const;
 
@@ -205,12 +212,12 @@ namespace ne RNAMESPACE() {
         void onFinishedUpdatingShaderData();
 
         /**
-         * Marks array slot at @ref mtxShaderData as "needs update" (if the slot is created)
-         * to later be copied to the GPU resource.
+         * Recalculates shader data according to the current spotlight data and marks array slot at @ref
+         * mtxShaderData as "needs update" (if the slot is created) to later be copied to the GPU resource.
          *
          * @remark Does nothing if the slot is `nullptr`.
          */
-        void markShaderDataToBeCopiedToGpu();
+        void recalculateAndMarkShaderDataToBeCopiedToGpu();
 
         /** Only valid while spawned. Up to date data that will be copied to the GPU. */
         std::pair<std::recursive_mutex, ShaderData> mtxShaderData;
@@ -229,17 +236,20 @@ namespace ne RNAMESPACE() {
 
         /**
          * Light cutoff angle (in degrees) of the inner cone (hard light edge).
-         * Valid values range is [0.0F, 180.0F].
+         * Valid values range is [0.0F, @ref maxConeAngle].
          */
         RPROPERTY(Serialize)
-        float innerConeAngle = 90.0F;
+        float innerConeAngle = 25.0F;
 
         /**
          * Light cutoff angle (in degrees) of the outer cone (soft light edge).
-         * Valid values range is [@ref innerConeAngle, 180.0F].
+         * Valid values range is [@ref innerConeAngle, @ref maxConeAngle].
          */
         RPROPERTY(Serialize)
-        float outerConeAngle = 120.0F;
+        float outerConeAngle = 45.0F;
+
+        /** Maximum value for @ref innerConeAngle and @ref outerConeAngle. */
+        static constexpr float maxConeAngle = 89.0F; // NOLINT: max angle that won't cause any visual issues
 
         ne_SpotlightNode_GENERATED
     };

@@ -728,9 +728,11 @@ namespace ne {
                 "failed to convert light grid tile size to an integer, error: {}", exception.what()));
         };
 
-        // Calculate tile count (using INT/INT to "floor" if not divisible equally).
-        const auto iTileCountX = static_cast<unsigned int>(renderTargetSize.first / iTileSizeInPixels);
-        const auto iTileCountY = static_cast<unsigned int>(renderTargetSize.second / iTileSizeInPixels);
+        // Calculate tile count.
+        const auto iTileCountX = static_cast<unsigned int>(
+            std::ceil(static_cast<float>(renderTargetSize.first) / static_cast<float>(iTileSizeInPixels)));
+        const auto iTileCountY = static_cast<unsigned int>(
+            std::ceil(static_cast<float>(renderTargetSize.second) / static_cast<float>(iTileSizeInPixels)));
 
         // Calculate frustum count.
         const size_t iFrustumCount = iTileCountX * iTileCountY;

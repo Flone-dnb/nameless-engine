@@ -504,8 +504,8 @@ void cullLightsForTile(float pixelDepth, uint iThreadGroupXIdInDispatch, uint iT
 
         // Calculate light view space direction.
         vec3 lightViewSpaceDirection = 
-#hlsl mul(frameData.viewMatrix, float4(spotlight.direction.xyz, 1.0F)).xyz;
-#glsl (frameData.viewMatrix * vec4(spotlight.direction.xyz, 1.0F)).xyz;
+#hlsl mul(frameData.viewMatrix, float4(spotlight.direction.xyz, 0.0F)).xyz;
+#glsl (frameData.viewMatrix * vec4(spotlight.direction.xyz, 0.0F)).xyz;
 
         // Construct a cone according to spotlight data for cone/frustum test.
         Cone spotlightConeViewSpace;

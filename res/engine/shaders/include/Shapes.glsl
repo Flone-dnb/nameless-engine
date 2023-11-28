@@ -65,6 +65,25 @@ Plane calculatePlaneFromTriangle(vec3 point0, vec3 point1, vec3 point2){
 }
 
 /**
+ * Constructs a plane.
+ *
+ * @param normal   Plane's normal (expected to be of unit length).
+ * @param location Location of a point that lies on the plane.
+ *
+ * @return Created plane.
+ */
+Plane createPlane(vec3 normal, vec3 location){
+    // Prepare output variable.
+    Plane plane;
+
+    // Calculate fields.
+    plane.normal = normal;
+    plane.distanceFromOrigin = dot(normal, location);
+
+    return plane;
+}
+
+/**
  * Tells if the sphere is fully behind (inside the negative halfspace of) a plane.
  *
  * @param sphere Sphere to test.
@@ -143,8 +162,6 @@ bool isSphereInsideFrustum(Sphere sphere, Frustum frustum, float frustumZNear, f
 /**
  * Tells if the specified cone is fully inside of the specified frustum or partially contained within the frustum.
  *
- * @remark Expects that far Z points in the positive Z direction, in other words: zNear < zFar.
- *
  * @param cone    Cone to test.
  * @param frustum Frustum to test.
  */
@@ -152,15 +169,9 @@ bool isConeInsideFrustum(Cone cone, Frustum frustum, float frustumZNear, float f
     // Prepare output variable.
     bool bIsInside = true;
 
-    // Construct frustum near plane.
-    Plane frustumNearPlane;
-    frustumNearPlane.normal = vec3(0.0F, 0.0F, 1.0F);
-    frustumNearPlane.distanceFromOrigin = frustumZNear;
-
-    // Construct frustum far plane.
-    Plane frustumFarPlane;
-    frustumFarPlane.normal = vec3(0.0F, 0.0F, -1.0F);
-    frustumFarPlane.distanceFromOrigin = frustumZFar;
+    // Construct frustum near/far planes.
+    Plane frustumNearPlane = createPlane(vec3(0.0F, 0.0F, 1.0F), vec3(0.0F, 0.0F, frustumZNear));
+    Plane frustumFarPlane = createPlane(vec3(0.0F, 0.0F, -1.0F), vec3(0.0F, 0.0F, frustumZFar));
 
     // Test cone against frustum near/far clip planes.
     if (isConeBehindPlane(cone, frustumNearPlane) || isConeBehindPlane(cone, frustumFarPlane)){

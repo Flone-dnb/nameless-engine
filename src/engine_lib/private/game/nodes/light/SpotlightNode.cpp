@@ -28,7 +28,8 @@ namespace ne {
             glm::cos(glm::radians(innerConeAngle / 2.0F)); // NOLINT
         mtxShaderData.second.shaderData.cosOuterConeAngle =
             glm::cos(glm::radians(outerConeAngle / 2.0F)); // NOLINT
-        mtxShaderData.second.shaderData.coneBottomRadius = glm::tan(glm::radians(outerConeAngle)) * distance;
+        mtxShaderData.second.shaderData.coneBottomRadius =
+            glm::tan(glm::radians(outerConeAngle / 2.0F)) * distance;
 #if defined(DEBUG)
         static_assert(sizeof(SpotlightShaderData) == 80, "consider copying new parameters here");
 #endif
@@ -100,7 +101,7 @@ namespace ne {
         mtxShaderData.second.shaderData.distance = this->distance;
 
         mtxShaderData.second.shaderData.coneBottomRadius =
-            glm::tan(glm::radians(this->outerConeAngle)) * this->distance;
+            glm::tan(glm::radians(this->outerConeAngle / 2.0F)) * this->distance;
 
         // Mark updated shader data to be later copied to the GPU resource.
         markShaderDataToBeCopiedToGpu();
@@ -126,7 +127,7 @@ namespace ne {
                 mtxShaderData.second.shaderData.cosInnerConeAngle;
 
             mtxShaderData.second.shaderData.coneBottomRadius =
-                glm::tan(glm::radians(outerConeAngle)) * distance;
+                glm::tan(glm::radians(outerConeAngle / 2.0F)) * distance;
         }
 
         // Mark updated shader data to be later copied to the GPU resource.
@@ -144,7 +145,7 @@ namespace ne {
             glm::cos(glm::radians(this->outerConeAngle / 2.0F)); // NOLINT
 
         mtxShaderData.second.shaderData.coneBottomRadius =
-            glm::tan(glm::radians(this->outerConeAngle)) * distance;
+            glm::tan(glm::radians(this->outerConeAngle / 2.0F)) * distance;
 
         // Mark updated shader data to be later copied to the GPU resource.
         markShaderDataToBeCopiedToGpu();

@@ -225,7 +225,7 @@ namespace ne RNAMESPACE() {
 
         /** Lit distance. */
         RPROPERTY(Serialize)
-        float distance = 10.0F; // NOLINT: seems like a pretty good default value
+        float distance = 15.0F; // NOLINT: seems like a pretty good default value
 
         /**
          * Light cutoff angle (in degrees) of the inner cone (hard light edge).

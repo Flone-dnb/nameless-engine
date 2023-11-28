@@ -275,16 +275,16 @@ Here is the list of base features that needs to be implemented in order for you 
         - [X] Custom compute shaders
         - [X] Frustum culling
         - [X] Z-prepass
-        - [ ] Tiled light culling
+        - [X] Tiled light culling
         - [ ] Transparent materials
         - [ ] AA (Anti-aliasing)
         - [ ] Light sources
             - [ ] Point light
             - [ ] Spot light
             - [ ] Directional light
+        - [ ] Shadow mapping (for all light sources)
         - [ ] Post-processing effects
         - [ ] HDR (High dynamic range)
-        - [ ] Shadow mapping (for all light sources)
         - [ ] Cascading shadow maps
         - [ ] Normal mapping
         - [ ] Cube mapping
@@ -296,6 +296,7 @@ Here is the list of base features that needs to be implemented in order for you 
         - [ ] Occlusion culling
         - [ ] Emissive materials
         - [ ] Space partitioning for frustum culling
+        - [ ] Light culling improvements
     - [ ] GUI
 - [ ] Skeletal animations
 - [ ] Rewrite garbage collector [tgc2](https://github.com/Flone-dnb/tgc2) (to fix some major issues)

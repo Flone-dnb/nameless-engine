@@ -27,7 +27,7 @@ bUseTransparency = false
 sDiffuseTexturePathRelativeRes = ""
 sVertexShaderName = "engine.meshnode.vs"
 sMaterialName = "Mesh Node's default material"
-sPixelShaderName = "engine.meshnode.ps"
+sPixelShaderName = "engine.meshnode.fs"
 
 ["0.d5407ca4-3c2e-4a5a-9ff3-1262b6a4d264".vMaterials."vMaterials[1]"]
 
@@ -36,6 +36,6 @@ bUseTransparency = false
 sDiffuseTexturePathRelativeRes = ""
 sVertexShaderName = "engine.meshnode.vs"
 sMaterialName = "Mesh Node's default material"
-sPixelShaderName = "engine.meshnode.ps"
+sPixelShaderName = "engine.meshnode.fs"
 
 

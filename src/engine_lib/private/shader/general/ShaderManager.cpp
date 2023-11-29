@@ -533,7 +533,7 @@ namespace ne {
                         pShaderConfiguration->second->currentVertexShaderConfiguration);
                     break;
                 }
-                case (ShaderType::PIXEL_SHADER): {
+                case (ShaderType::FRAGMENT_SHADER): {
                     pShaderPack->setRendererConfiguration(
                         pShaderConfiguration->second->currentPixelShaderConfiguration);
                     break;

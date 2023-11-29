@@ -105,7 +105,7 @@ createSamplePixelShader(ne::Renderer* pRenderer, ne::ShaderDescription& outDescr
         outDescription = ne::ShaderDescription{
             sSampleShaderName,
             shaderPathNoExtension.string() + ".hlsl",
-            ne::ShaderType::PIXEL_SHADER,
+            ne::ShaderType::FRAGMENT_SHADER,
             sSampleHlslPixelShaderEntryName,
             {}};
         return ne::ShaderPack::compileShaderPack(pRenderer, outDescription);
@@ -121,7 +121,7 @@ createSamplePixelShader(ne::Renderer* pRenderer, ne::ShaderDescription& outDescr
         outDescription = ne::ShaderDescription{
             sSampleShaderName,
             shaderPathNoExtension.string() + ".glsl",
-            ne::ShaderType::PIXEL_SHADER,
+            ne::ShaderType::FRAGMENT_SHADER,
             "main",
             {}};
         return ne::ShaderPack::compileShaderPack(pRenderer, outDescription);
@@ -378,7 +378,7 @@ TEST_CASE("invalidate shader cache - ENTRY_FUNCTION_NAME_CHANGED") {
                 shaderFile.close();
 
                 ShaderDescription description{
-                    sSampleShaderName, shaderPath, ShaderType::PIXEL_SHADER, "ps", {}};
+                                              sSampleShaderName, shaderPath, ShaderType::FRAGMENT_SHADER, "ps", {}};
                 auto compileResult = ShaderPack::compileShaderPack(pGameWindow->getRenderer(), description);
 
                 if (!std::holds_alternative<std::shared_ptr<ShaderPack>>(compileResult)) {
@@ -437,7 +437,7 @@ TEST_CASE("invalidate shader cache - ENTRY_FUNCTION_NAME_CHANGED") {
                 shaderFile.close();
 
                 ShaderDescription description{
-                    sSampleShaderName, shaderPath, ShaderType::PIXEL_SHADER, "main", {}};
+                                              sSampleShaderName, shaderPath, ShaderType::FRAGMENT_SHADER, "main", {}};
                 auto compileResult = ShaderPack::compileShaderPack(pGameWindow->getRenderer(), description);
 
                 if (!std::holds_alternative<std::shared_ptr<ShaderPack>>(compileResult)) {
@@ -521,7 +521,7 @@ TEST_CASE("invalidate shader cache - SHADER_TYPE_CHANGED") {
                 shaderFile.close();
 
                 ShaderDescription description{
-                    sSampleShaderName, shaderPath, ShaderType::PIXEL_SHADER, "ps", {}};
+                                              sSampleShaderName, shaderPath, ShaderType::FRAGMENT_SHADER, "ps", {}};
                 auto compileResult = ShaderPack::compileShaderPack(pGameWindow->getRenderer(), description);
 
                 if (!std::holds_alternative<std::shared_ptr<ShaderPack>>(compileResult)) {
@@ -579,7 +579,7 @@ TEST_CASE("invalidate shader cache - SHADER_TYPE_CHANGED") {
                 shaderFile.close();
 
                 ShaderDescription description{
-                    sSampleShaderName, shaderPath, ShaderType::PIXEL_SHADER, "main", {}};
+                                              sSampleShaderName, shaderPath, ShaderType::FRAGMENT_SHADER, "main", {}};
                 auto compileResult = ShaderPack::compileShaderPack(pGameWindow->getRenderer(), description);
 
                 if (!std::holds_alternative<std::shared_ptr<ShaderPack>>(compileResult)) {
@@ -664,7 +664,7 @@ TEST_CASE("invalidate shader cache - DEFINED_SHADER_MACROS_CHANGED") {
                 shaderFile.close();
 
                 description =
-                    ShaderDescription(sSampleShaderName, shaderPath, ShaderType::PIXEL_SHADER, "main", {});
+                    ShaderDescription(sSampleShaderName, shaderPath, ShaderType::FRAGMENT_SHADER, "main", {});
             } else {
 #if defined(WIN32)
                 if (dynamic_cast<DirectXRenderer*>(pGameWindow->getRenderer()) != nullptr) {
@@ -681,7 +681,7 @@ TEST_CASE("invalidate shader cache - DEFINED_SHADER_MACROS_CHANGED") {
                     shaderFile.close();
 
                     description =
-                        ShaderDescription(sSampleShaderName, shaderPath, ShaderType::PIXEL_SHADER, "ps", {});
+                        ShaderDescription(sSampleShaderName, shaderPath, ShaderType::FRAGMENT_SHADER, "ps", {});
                 }
 #endif
             }
@@ -816,7 +816,7 @@ TEST_CASE("invalidate shader cache - SHADER_SOURCE_FILE_CHANGED") {
                 shaderFile.close();
 
                 ShaderDescription description{
-                    sSampleShaderName, shaderPath, ShaderType::PIXEL_SHADER, "ps", {}};
+                                              sSampleShaderName, shaderPath, ShaderType::FRAGMENT_SHADER, "ps", {}};
 
                 auto compileResult = ShaderPack::compileShaderPack(pGameWindow->getRenderer(), description);
 
@@ -874,7 +874,7 @@ TEST_CASE("invalidate shader cache - SHADER_SOURCE_FILE_CHANGED") {
                 shaderFile.close();
 
                 ShaderDescription description{
-                    sSampleShaderName, shaderPath, ShaderType::PIXEL_SHADER, "main", {}};
+                                              sSampleShaderName, shaderPath, ShaderType::FRAGMENT_SHADER, "main", {}};
 
                 auto compileResult = ShaderPack::compileShaderPack(pGameWindow->getRenderer(), description);
 
@@ -989,8 +989,8 @@ TEST_CASE("invalidate HLSL shader cache - SHADER_INCLUDE_TREE_CONTENT_CHANGED") 
                 REQUIRE(shaderFile.is_open());
                 shaderFile << "void foo2(){};\n";
                 shaderFile.close();
-
-                ShaderDescription description{"test shader", shaderPath, ShaderType::PIXEL_SHADER, "ps", {}};
+                
+                ShaderDescription description{"test shader", shaderPath, ShaderType::FRAGMENT_SHADER, "ps", {}};
 
                 // Compile initial version.
                 auto compileResult = ShaderPack::compileShaderPack(pGameWindow->getRenderer(), description);
@@ -1151,7 +1151,7 @@ TEST_CASE("invalidate HLSL shader cache - SHADER_INCLUDE_TREE_CONTENT_CHANGED") 
                 shaderFile.close();
 
                 ShaderDescription description{
-                    sSampleShaderName, shaderPath, ShaderType::PIXEL_SHADER, "main", {}};
+                                              sSampleShaderName, shaderPath, ShaderType::FRAGMENT_SHADER, "main", {}};
 
                 // Compile initial version.
                 auto compileResult = ShaderPack::compileShaderPack(pGameWindow->getRenderer(), description);
@@ -1302,7 +1302,7 @@ TEST_CASE("invalidate shader cache - COMPILED_BINARY_CHANGED (bytecode)") {
                 shaderFile.close();
 
                 ShaderDescription description{
-                    sSampleShaderName, shaderPath, ShaderType::PIXEL_SHADER, "ps", {}};
+                                              sSampleShaderName, shaderPath, ShaderType::FRAGMENT_SHADER, "ps", {}};
 
                 // Compile.
                 auto compileResult = ShaderPack::compileShaderPack(pGameWindow->getRenderer(), description);
@@ -1376,7 +1376,7 @@ TEST_CASE("invalidate shader cache - COMPILED_BINARY_CHANGED (bytecode)") {
                 shaderFile.close();
 
                 ShaderDescription description{
-                    sSampleShaderName, shaderPath, ShaderType::PIXEL_SHADER, "main", {}};
+                                              sSampleShaderName, shaderPath, ShaderType::FRAGMENT_SHADER, "main", {}};
 
                 // Compile.
                 auto compileResult = ShaderPack::compileShaderPack(pGameWindow->getRenderer(), description);
@@ -1476,7 +1476,7 @@ TEST_CASE("invalidate HLSL shader cache - COMPILED_BINARY_CHANGED (reflection)")
                 const auto sShaderUniqueName = std::string("test shader");
 
                 ShaderDescription description{
-                    sShaderUniqueName, shaderPath, ShaderType::PIXEL_SHADER, "ps", {}};
+                                              sShaderUniqueName, shaderPath, ShaderType::FRAGMENT_SHADER, "ps", {}};
 
                 // Compile.
                 auto compileResult = ShaderPack::compileShaderPack(pGameWindow->getRenderer(), description);

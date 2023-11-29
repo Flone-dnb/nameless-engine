@@ -31,7 +31,6 @@ include(${RELATIVE_CMAKE_HELPERS_PATH}/utils.cmake)
 set(PROJECT_WIN32_SOURCES
     private/shader/hlsl/HlslShader.h
     private/shader/hlsl/HlslShader.cpp
-    private/shader/hlsl/HlslEngineShaders.hpp
     private/shader/hlsl/RootSignatureGenerator.h
     private/shader/hlsl/RootSignatureGenerator.cpp
     private/shader/hlsl/resources/HlslShaderCpuWriteResource.h
@@ -145,12 +144,12 @@ set(PROJECT_SOURCES
     private/material/Material.cpp
     public/material/Material.h
     private/shader/general/EngineShaderNames.hpp
+    private/shader/general/EngineShaders.hpp
     private/shader/general/EngineShaderConstantMacros.hpp
     private/shader/general/resources/ShaderResource.h
     private/shader/general/resources/ShaderResource.cpp
     private/shader/general/resources/ShaderBindlessArrayIndexManager.h
     private/shader/general/resources/ShaderBindlessArrayIndexManager.cpp
-    private/shader/glsl/GlslEngineShaders.hpp
     private/shader/glsl/GlslShader.h
     private/shader/glsl/GlslShader.cpp
     private/shader/glsl/resources/GlslShaderCpuWriteResource.h

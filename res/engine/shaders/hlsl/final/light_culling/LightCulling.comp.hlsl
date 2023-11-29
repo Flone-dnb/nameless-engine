@@ -1,4 +1,4 @@
-#include "../../include/light_culling/LightCulling.glsl"
+#include "../../../include/light_culling/LightCulling.glsl"
 
 /**
  * Defines how much threads should be executed in the X and the Y dimensions.
@@ -10,7 +10,7 @@ _Static_assert(false, "thread count in group - macro not defined");
 
 /** 1 thread per pixel in a tile. 1 thread group per tile. */
 [numthreads(LIGHT_GRID_TILE_SIZE_IN_PIXELS, LIGHT_GRID_TILE_SIZE_IN_PIXELS, 1 )]
-void csLightCulling(uint3 threadIdInDispatch : SV_DispatchThreadID, uint iThreadIdInGroup : SV_GroupIndex, uint3 groupIdInDispatch : SV_GroupID){
+void main(uint3 threadIdInDispatch : SV_DispatchThreadID, uint iThreadIdInGroup : SV_GroupIndex, uint3 groupIdInDispatch : SV_GroupID){
     // Prepare variable to store depth.
     float depth = 1.0F;
 

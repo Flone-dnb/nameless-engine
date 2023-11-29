@@ -214,7 +214,7 @@ namespace ne {
         std::set<ShaderMacro> fullPixelShaderConfiguration;
         if (!bDepthOnlyPipeline) {
             // Get assigned pixel shader.
-            const auto pPixelShaderPack = getShader(ShaderType::PIXEL_SHADER).value();
+            const auto pPixelShaderPack = getShader(ShaderType::FRAGMENT_SHADER).value();
             pPixelShader = std::dynamic_pointer_cast<HlslShader>(
                 pPixelShaderPack->getShader(additionalPixelShaderMacros, fullPixelShaderConfiguration));
 
@@ -323,7 +323,7 @@ namespace ne {
         mtxInternalResources.second.bIsReadyForUsage = true;
         saveUsedShaderConfiguration(ShaderType::VERTEX_SHADER, std::move(fullVertexShaderConfiguration));
         if (!bDepthOnlyPipeline) {
-            saveUsedShaderConfiguration(ShaderType::PIXEL_SHADER, std::move(fullPixelShaderConfiguration));
+            saveUsedShaderConfiguration(ShaderType::FRAGMENT_SHADER, std::move(fullPixelShaderConfiguration));
         }
 
         return {};

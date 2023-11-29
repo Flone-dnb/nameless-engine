@@ -1,5 +1,5 @@
-#include "../include/Base.glsl"
-#include "../include/MeshData.glsl"
+#include "../../include/Base.glsl"
+#include "../../include/MeshData.glsl"
 
 /** Vertex shader. */
 VertexOut vsMeshNode(VertexIn vertexIn)

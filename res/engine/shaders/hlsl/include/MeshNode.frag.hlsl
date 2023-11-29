@@ -1,8 +1,9 @@
-#include "../include/Base.glsl"
-#include "../include/MaterialData.glsl"
+#include "../../include/Base.glsl"
+#include "../../include/MaterialData.glsl"
 
 #define INCLUDE_LIGHTING_FUNCTIONS
-#include "../include/Lighting.glsl"
+#define READ_ONLY_LIGHT_GRID
+#include "../../include/Lighting.glsl"
 
 #ifdef PS_USE_DIFFUSE_TEXTURE
    SamplerState textureSampler : register(s0, space5);
@@ -14,7 +15,7 @@
 
 /** Pixel shader. */
 [earlydepthstencil]
-float4 psMeshNode(VertexOut pin) : SV_Target
+float4 psMeshNode(VertexOut pin)
 {
     // Normals may be unnormalized after the rasterization (when they are interpolated).
     float3 pixelNormalUnit = normalize(pin.worldNormal);

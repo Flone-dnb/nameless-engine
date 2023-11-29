@@ -1,4 +1,4 @@
-#include "../../include/light_culling/CalculateGridTileFrustum.glsl"
+#include "../../../include/light_culling/CalculateGridTileFrustum.glsl"
 
 /**
  * Defines how much threads should be executed in the X and the Y dimensions.
@@ -10,7 +10,7 @@ _Static_assert(false, "thread count in group - macro not defined");
 
 /** 1 thread calculates 1 frustum (1 thread per grid tile, not per pixel - see dispatch call). */
 [numthreads(LIGHT_GRID_TILE_SIZE_IN_PIXELS, LIGHT_GRID_TILE_SIZE_IN_PIXELS, 1 )]
-void csGridFrustum(uint3 dispatchThreadID : SV_DispatchThreadID){
+void main(uint3 dispatchThreadID : SV_DispatchThreadID){
     // Make sure we don't calculate frustums out of bounds
     // (this may happen if the screen size is not evenly divisible by the thread group size).
     if (dispatchThreadID.x >= computeInfo.iTileCountX || dispatchThreadID.y >= computeInfo.iTileCountY){

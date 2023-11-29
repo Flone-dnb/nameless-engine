@@ -193,16 +193,6 @@ namespace ne {
          */
         DirectXRenderer(GameManager* pGameManager);
 
-        /**
-         * Collects array of engine shaders that will be compiled/verified.
-         *
-         * @remark Automatically called by the base Renderer class at the end of the renderer's
-         * initialization.
-         *
-         * @return Array of shader descriptions to compile.
-         */
-        virtual std::vector<ShaderDescription> getEngineShadersToCompile() const override;
-
         /** Submits a new frame to the GPU. */
         virtual void drawNextFrame() override;
 

@@ -13,7 +13,6 @@
 #include "render/RenderSettings.h"
 #include "render/directx/pipeline/DirectXPso.h"
 #include "render/directx/resources/DirectXResourceManager.h"
-#include "shader/hlsl/HlslEngineShaders.hpp"
 #include "render/general/pipeline/PipelineManager.h"
 #include "render/directx/resources/DirectXResource.h"
 #include "material/Material.h"
@@ -67,15 +66,6 @@ namespace ne {
             "light culling compute shader expects the depth values to be in range [0..1] for atomic "
             "operations, please review the light culling compute shader and make sure atomics will work "
             "correctly");
-    }
-
-    std::vector<ShaderDescription> DirectXRenderer::getEngineShadersToCompile() const {
-        return {
-            HlslEngineShaders::meshNodeVertexShader,
-            HlslEngineShaders::meshNodePixelShader,
-            HlslEngineShaders::forwardPlusCalculateGridFrustumComputeShader,
-            HlslEngineShaders::forwardPlusPrepareLightCullingComputeShader,
-            HlslEngineShaders::forwardPlusLightCullingComputeShader};
     }
 
     std::optional<Error> DirectXRenderer::initialize(const std::vector<std::string>& vBlacklistedGpuNames) {

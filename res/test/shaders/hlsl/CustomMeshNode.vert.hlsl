@@ -1,4 +1,4 @@
-#include "../../../engine/shaders/hlsl/MeshNode.vert.hlsl"
+#include "../../../engine/shaders/hlsl/include/MeshNode.vert.hlsl"
 
 VertexOut vsCustomMeshNode(VertexIn vertexIn)
 {

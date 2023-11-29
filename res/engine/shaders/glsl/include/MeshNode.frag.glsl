@@ -1,10 +1,10 @@
-#include "../include/Base.glsl"
-#include "../include/MaterialData.glsl"
-#include "MeshNodePushConstants.glsl"
+#include "../../include/Base.glsl"
+#include "../../include/MaterialData.glsl"
+#include "../misc/MeshNodePushConstants.glsl"
 
 #define INCLUDE_LIGHTING_FUNCTIONS
 #define READ_ONLY_LIGHT_GRID
-#include "../include/Lighting.glsl"
+#include "../../include/Lighting.glsl"
 
 /** Input parameters. */
 layout(location = 0) in vec4 fragmentWorldPosition;

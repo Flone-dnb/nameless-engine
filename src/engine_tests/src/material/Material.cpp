@@ -9,6 +9,7 @@
 #include "misc/PrimitiveMeshGenerator.h"
 #include "game/camera/CameraManager.h"
 #include "shader/general/Shader.h"
+#include "shader/general/EngineShaders.hpp"
 #if defined(WIN32)
 #include "render/directx/DirectXRenderer.h"
 #endif
@@ -103,8 +104,8 @@ TEST_CASE("create engine default materials") {
 
                 // Create material.
                 auto resultOpaque = Material::create(
-                    EngineShaderNames::MeshNode::sVertexShaderName,
-                    EngineShaderNames::MeshNode::sPixelShaderName,
+                    EngineShaderNames::MeshNode::getVertexShaderName(),
+                    EngineShaderNames::MeshNode::getFragmentShaderName(),
                     false);
                 if (std::holds_alternative<Error>(resultOpaque)) {
                     Error error = std::get<Error>(std::move(resultOpaque));
@@ -113,8 +114,8 @@ TEST_CASE("create engine default materials") {
                     REQUIRE(false);
                 }
                 auto resultTransparent = Material::create(
-                    EngineShaderNames::MeshNode::sVertexShaderName,
-                    EngineShaderNames::MeshNode::sPixelShaderName,
+                    EngineShaderNames::MeshNode::getVertexShaderName(),
+                    EngineShaderNames::MeshNode::getFragmentShaderName(),
                     true);
                 if (std::holds_alternative<Error>(resultTransparent)) {
                     Error error = std::get<Error>(std::move(resultTransparent));
@@ -224,8 +225,8 @@ TEST_CASE("serialize and deserialize Material") {
                 {
                     // Create material.
                     auto result = Material::create(
-                        EngineShaderNames::MeshNode::sVertexShaderName,
-                        EngineShaderNames::MeshNode::sPixelShaderName,
+                        EngineShaderNames::MeshNode::getVertexShaderName(),
+                        EngineShaderNames::MeshNode::getFragmentShaderName(),
                         true,
                         "My Material");
                     if (std::holds_alternative<Error>(result)) {
@@ -326,14 +327,16 @@ TEST_CASE("unused materials unload shaders from memory") {
                         "test/shaders/hlsl/CustomMeshNode.vert.hlsl",
                     ShaderType::VERTEX_SHADER,
                     "vsCustomMeshNode",
-                    {}),
+                    EngineShaders::MeshNode::getVertexShader(false) // language does not matter because we
+                        .definedShaderMacros),                      // only want to "derive" macros
                 ShaderDescription(
                     "test.custom_mesh_node.ps",
                     ProjectPaths::getPathToResDirectory(ResourceDirectory::ROOT) /
                         "test/shaders/hlsl/CustomMeshNode.frag.hlsl",
-                    ShaderType::PIXEL_SHADER,
+                    ShaderType::FRAGMENT_SHADER,
                     "psCustomMeshNode",
-                    {})};
+                    EngineShaders::MeshNode::getFragmentShader(false) // language does not matter because we
+                        .definedShaderMacros)};                       // only want to "derive" macros
 
             const auto optionalError = getWindow()->getRenderer()->getShaderManager()->compileShaders(
                 std::move(vShadersToCompile),
@@ -586,8 +589,8 @@ TEST_CASE("make sure there are no transparency macros in opaque pipelines") {
 
                 // Create transparent material.
                 auto result = Material::create(
-                    EngineShaderNames::MeshNode::sVertexShaderName,
-                    EngineShaderNames::MeshNode::sPixelShaderName,
+                    EngineShaderNames::MeshNode::getVertexShaderName(),
+                    EngineShaderNames::MeshNode::getFragmentShaderName(),
                     true);
                 if (std::holds_alternative<Error>(result)) {
                     auto error = std::get<Error>(std::move(result));

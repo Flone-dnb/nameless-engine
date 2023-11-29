@@ -170,7 +170,7 @@ namespace ne {
 
         if (pPixelShader != nullptr) {
             // Make sure that the pixel shader is indeed a pixel shader.
-            if (pPixelShader->getShaderType() != ShaderType::PIXEL_SHADER) [[unlikely]] {
+            if (pPixelShader->getShaderType() != ShaderType::FRAGMENT_SHADER) [[unlikely]] {
                 return Error(std::format(
                     "the specified shader \"{}\" is not a pixel shader", pPixelShader->getShaderName()));
             }

@@ -9,7 +9,6 @@
 #include "window/GLFW.hpp"
 #include "game/GameManager.h"
 #include "game/Window.h"
-#include "shader/glsl/GlslEngineShaders.hpp"
 #include "render/vulkan/resources/VulkanResourceManager.h"
 #include "render/vulkan/resources/VulkanFrameResource.h"
 #include "render/general/resources/FrameResourcesManager.h"
@@ -73,15 +72,6 @@ namespace ne {
         }
 
         return MsaaState::DISABLED;
-    }
-
-    std::vector<ShaderDescription> VulkanRenderer::getEngineShadersToCompile() const {
-        return {
-            GlslEngineShaders::meshNodeVertexShader,
-            GlslEngineShaders::meshNodeFragmentShader,
-            GlslEngineShaders::forwardPlusCalculateGridFrustumComputeShader,
-            GlslEngineShaders::forwardPlusPrepareLightCullingComputeShader,
-            GlslEngineShaders::forwardPlusLightCullingComputeShader};
     }
 
     VulkanRenderer::~VulkanRenderer() {

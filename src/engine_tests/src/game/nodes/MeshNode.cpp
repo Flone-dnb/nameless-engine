@@ -44,8 +44,8 @@ TEST_CASE("serialize and deserialize MeshNode as part of a node tree") {
                 {
                     // Create material.
                     auto result = Material::create(
-                        EngineShaderNames::MeshNode::sVertexShaderName,
-                        EngineShaderNames::MeshNode::sPixelShaderName,
+                        EngineShaderNames::MeshNode::getVertexShaderName(),
+                        EngineShaderNames::MeshNode::getFragmentShaderName(),
                         true,
                         "My Material");
                     if (std::holds_alternative<Error>(result)) {
@@ -173,8 +173,8 @@ TEST_CASE("serialize and deserialize MeshNode as part of a node tree with origin
                 {
                     // Create material.
                     auto result = Material::create(
-                        EngineShaderNames::MeshNode::sVertexShaderName,
-                        EngineShaderNames::MeshNode::sPixelShaderName,
+                        EngineShaderNames::MeshNode::getVertexShaderName(),
+                        EngineShaderNames::MeshNode::getFragmentShaderName(),
                         true,
                         "My Material");
                     if (std::holds_alternative<Error>(result)) {
@@ -428,8 +428,8 @@ TEST_CASE("shader read/write resources exist only when MeshNode is spawned") {
 
                 // Create material.
                 auto result = Material::create(
-                    EngineShaderNames::MeshNode::sVertexShaderName,
-                    EngineShaderNames::MeshNode::sPixelShaderName,
+                    EngineShaderNames::MeshNode::getVertexShaderName(),
+                    EngineShaderNames::MeshNode::getFragmentShaderName(),
                     false,
                     "My Material");
                 if (std::holds_alternative<Error>(result)) {

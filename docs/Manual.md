@@ -2630,48 +2630,40 @@ At the time of writing this there is no compression/encryption of the game's res
 
 This section expects that you have knowledge in writing programs in HLSL and/or GLSL.
 
-You might have heard the term "shader" from other games or game engines but if you have very little understanding in what a shader is, here is a very small description:
-> A shader is a small program (a function or a bunch of functions) written in a special shader language (like programming languages) that are executed on the GPU (unlike our C++ programs that are executed on the CPU). There are various types of shaders that are used for different tasks. For example there is a pixel/fragment shader - a function (that might call other functions) that calculates a color of a pixel that will be displayed on your monitor, this shader uses a bunch of data like to whom this pixel belongs (which mesh and which material uses the mesh), lighting information and etc. A material is a high-level abstraction of a shader, material allows modifying some values like diffuse texture/color that material then passes to the pixel/fragment shader to consider.
-
 Note: currently we are looking for a solution that will make writing custom shaders easier but right now writing custom shaders is not that simple:
 > Right now if you want to go beyond what Material provides to you and achieve some special look of your meshes you would have to write shaders in both HLSL and GLSL if you want your game to support both DirectX and Vulkan renderers that we have because each graphics API (like DirectX or Vulkan) has its own shading language. If you know that you don't want Vulkan support and don't care about Linux and other non-Windows platforms then you might just write a shader in HLSL and ignore GLSL, this would mean that any attempt to run your game using Vulkan renderer will fail with an error.
 
 ### Writing custom vertex/pixel/fragment shaders
 
-Here are the steps to create a new custom shader:
+We will talk about creating a custom pixel/fragment shader but the same idea applies to creating custom vertex shaders. Here are the steps to create a new custom shader:
 
-1. Create a new shader file somewhere in the `res` directory, for example: `res/game/shaders/hlsl/Custom.frag.hlsl` (custom pixel shader).
-2. `#include` an engine shader file that you shader "derives" from. For example if you want to create a custom shader for `MeshNode` you need to include `MeshNode.frag.hlsl`. For example: `#include "../../../engine/shaders/hlsl/MeshNode.frag.hlsl"`.
-    2. 1. For GLSL you need to include shader files that end with `.glsl`, for example: `#include ".../glsl/MeshNode.frag.glsl"`.
-3. Define vertex or pixel shader function (depending on our custom shader type), you can copy-paste their signature from the included engine shader file, they may be named as `vsMeshNode`, `psMeshNode` or `fsMeshNode`.
-4. As the first line of your shader function call a function from the included engine shader for your shader stage (vertex/pixel/fragment), again it may be named as `vsMeshNode`, `psMeshNode` or `fsMeshNode`, and pass any input parameters if your function has them.
+1. Create a new shader file somewhere in the `res` directory, for example: `res/game/shaders/hlsl/CustomMeshNode.frag.hlsl` or in `glsl` directory with `.frag.glsl` extension if you want to create a GLSL shader.
+2. `#include` an engine shader file that your shader "derives" from. For example if you want to create a custom shader for `MeshNode` you need to include `MeshNode.frag.hlsl`. For example: `#include "../../../engine/shaders/hlsl/include/MeshNode.frag.hlsl"`.
+    2. 1. For GLSL you need to include `#include "../../../engine/shaders/glsl/include/MeshNode.frag.glsl"`.
+3. Define pixel shader function, you can copy-paste their signature from the included engine shader file, it may be named as `psMeshNode` or `fsMeshNode`.
+4. As the first line of your shader function, call a function from the included engine shader, again it may be named as `psMeshNode` or `fsMeshNode`, and pass any input parameters if your function has them.
 5. Modify resulting data as you want.
 
-In order to compile your shader you need to use the `ShaderManager` object, here is an example how to do it using HLSL shaders:
+In order to compile your shader you need to use the `ShaderManager` object, here is an example on how to do it using HLSL shaders:
 
 ```Cpp
 #include "shader/ShaderManager.h"
+#include "shader/general/EngineShaders.hpp"
 
 using namespace ne;
 
 void MyGameInstance::onGameStarted(){
-    const auto vertexShader = ShaderDescription(
-        "game.meshnode.vs",                         // global unique shader name
-        "res/game/shaders/hlsl/MeshNode.frag.hlsl", // path to shader file, using default vertex shader
-        ShaderType::VERTEX_SHADER,                  // shader type
-        "vsMeshNode",                               // shader entry function name
-        {});                                        // custom defined shader macros (don't define macros for engine shader 
-                                                    // files as they will be automatically defined when needed)
-
     const auto pixelShader = ShaderDescription(
-        "game.meshnode.ps",                       // global unique shader name
-        "res/game/shaders/hlsl/Custom.frag.hlsl", // path to shader file, using custom pixel shader
-        ShaderType::PIXEL_SHADER,                 // shader type
-        "psCustom",                               // shader entry function name
-        {});                                      // custom defined shader macros (don't define macros for engine shader 
-                                                  // files as they will be automatically defined when needed)
+        "game.meshnode.fs",                               // global unique shader name
+        "res/game/shaders/hlsl/CustomMeshNode.frag.hlsl", // path to shader file, using custom pixel shader
+        ShaderType::FRAGMENT_SHADER,                      // shader type
+        "fsCustomMeshNode",                               // shader entry function name
+        EngineShaders::MeshNode::getFragmentShader(false) // macros: since we are "deriving" from MeshNode shader we use
+            .definedShaderMacros);                        // engine shader's macros (but we can also add our macros)
+        // (you don't need to define all macros that engine shader files use (like PS_USE_DIFFUSE_TEXTURE) because they
+        // will be automatically defined by the engine when needed)
 
-    std::vector vShaders = {vertexShader, pixelShader};
+    std::vector vShaders = {pixelShader};
 
     auto onProgress = [](size_t iCompiledShaderCount, size_t iTotalShadersToCompile) {
         // show progress here
@@ -2687,7 +2679,7 @@ void MyGameInstance::onGameStarted(){
         // do final logic here
     };
 
-    // shader compilation is done asynchronously using multiple threads
+    // shader compilation is done asynchronously by using engine's thread pool
     getWindow()->getRenderer()->getShaderManager()->compileShaders(
         vShaders,
         onProgress,
@@ -2697,7 +2689,7 @@ void MyGameInstance::onGameStarted(){
 }
 ```
 
-For GLSL you would do the same thing (`ShaderType::PIXEL_SHADER` is considered as "fragment shader" when compiling GLSL shaders).
+For HLSL you would do the same thing (`ShaderType::FRAGMENT_SHADER` is considered as "pixel shader" when compiling HLSL shaders).
 
 You should not remove the code to compile your shaders (`ShaderManager::compileShaders`) from your game. This code not only compiles the shaders but also adds them to the global "shader registry". If some shader was previously compiled then this means that the results of that compilation were cached and the next time you will call `compileShaders` instead of compiling it again the results will be retrived from the cache. If you change your shader code or something else the cache might be automatically invalidated (inside `ShaderManager::compileShaders`) and your shader will be automatically recompiled so if you do any changes in the shader file (or in any files that your shader includes) you just need to restart the game to see your changes.
 
@@ -2750,16 +2742,39 @@ void MyGameInstance::onGameStarted(){
 
 Here our shader will be run only once before the first frame is rendered, if you want to regularly run your shader you just need to re`submitForExecution` it in your `onBeforeNewFrame` (for example). For more information, see function documentation.
 
+### Shader packs and shader variants
+
+If you looked in the engine shader files you might have noticed that some parts of the shader code are used only when a specific macro is defined (for example `#ifdef PS_USE_DIFFUSE_TEXTURE`). This is how engine shaders do branching (mostly), so instead of doing an actual runtime `if` the engine shader rely on predefined macros because runtime branching on GPUs can cause performance issues.
+
+When you or the engine submits a shader to be compiled the engine creates a special object `ShaderPack`. Then depending on the shader type (vertex/pixel/fragment/compute/etc) the engine retrieves a special collection of compatible macro combinations, for pixel/fragment shader these combinations may be:
+
+- [] (no macros),
+- [PS_USE_DIFFUSE_TEXTURE] (opaque material with diffuse texture set),
+- [PS_USE_DIFFUSE_TEXTURE, PS_USE_MATERIAL_TRANSPARENCY] (transparent material with diffuse texture set),
+- [PS_USE_MATERIAL_TRANSPARENCY] (transparent material without diffuse texture),
+- etc.
+
+For every combination of macros the engine compiles one shader variant with only specific macros defined and then stores all shader variants in the shader pack object. Shader pack is then saved on the disk (cached) to be used on the next startup (so that the engine will just read shader bytecode from disk instead of compiling the shaders again). You can see information about all compiled shaders and their variants if you look in the following directory:
+
+- [Windows] %localappdata%/nameless-engine/*targetname*/shader_cache
+- [Linux] ~/.config/nameless-engine/*targetname*/shader_cache
+
+In the shader cache directory you will find one directory per shader. Inside of the shader specific directory you will find multiple files but you should focus on the files with the `.toml` extension. Each TOML file describes one shader variant and if you open that TOML file in your text editor you might learn some information about a shader (like which macros were defined and etc).
+
+At runtime when, for example, some material is created it requests a pair of vertex and pixel/fragment shaders (it actually requests a graphics pipeline but we will omit this for simplicity). The engine then asks the renderer on which macros should be defined right now (depending on the current render settings) and plus the material also tells which macros it defines (for example `PS_USE_MATERIAL_TRANSPARENCY` when transparency is enabled), then `ShaderManager` looks for a shader pack for the specified shaders and returns a specific shader from the pack that corresponds with the requested macros. This is how a material receives its shader. If material changes its settings (like transparency) or something global (like render settings) is changed, if there is a shader macro that should be added/removed due to these changes, materials' shaders are being changed by getting another shader variant from the shader pack.
+
+This is why you should not define some shader macros that are used in the engine shader files as they will be "defined" automatically when needed.
+
 ### Debugging custom shaders
 
-You can use your usual shader debugging software (`PIX`, `RenderDoc`, etc.) to debug your custom shaders. Just make sure your game is built in `Debug` mode.
+You can use your usual shader debugging software (`PIX`, `RenderDoc`, `NVIDIA Nsight`, etc.) to debug your custom shaders. Just make sure your game is built in the `Debug` mode.
 
 ### Using custom shader resources
 
 Let's consider a simple example of passing a buffer from C++ into your custom shader which looks like this:
 
 ```HLSL
-#include "../../../engine/shaders/hlsl/MeshNode.frag.hlsl"
+#include "../../../engine/shaders/hlsl/include/MeshNode.frag.hlsl"
 
 cbuffer customData : register(b1) // register index/space can be different (as long as no other resource is using it)
 {
@@ -2770,22 +2785,23 @@ cbuffer customData : register(b1) // register index/space can be different (as l
 ```
 
 ```GLSL
-#include "../../../engine/shaders/glsl/MeshNode.frag.glsl"
+#include "../../../engine/shaders/glsl/include/MeshNode.frag.glsl"
 
 struct CustomData {
     mat4 someMatrix; 
 };
 layout(std140, binding = 9) readonly buffer CustomDataBuffer{ // binding index can be different (same as in HLSL)
-    CustomData array[];  // stores data for all objects that use this shader
+    CustomData array[];  // stores data for all objects (meshes) that use this shader
 } customData;
 
 #additional_push_constants
 {
-	uint customData; // named as your `readonly buffer`, case sensitive, used to access element specific to the current object
+	uint customData; // named as your `readonly buffer`, case sensitive,
+                     // used to access element specific to the current object (mesh)
 }
 
 void main() {
-    fsMeshNode();
+    fsMeshNode(); // call "parent" function
 
     // Define a short macro for simplicity.
     #define MY_DATA customData.array[arrayIndices.customData]
@@ -2807,13 +2823,13 @@ struct CustomMeshShaderConstants {
     alignas(iVkMat4Alignment) glm::mat4x4 someMatrix = glm::identity<glm::mat4x4>();
 };
 
-// using mutex for example purposes, you are not required to use mutex here
+// using mutex for example purposes, you are not required to use a mutex here
 std::pair<std::recursive_mutex, CustomMeshShaderConstants> mtxShaderData;
 ```
 
 As you can see we use `alignas` to satisfy Vulkan aligning requirements and at the same time keep track of HLSL packing rules. If you only want to stick with some specific shading language (only GLSL or only HLSL) then you just need to keep track of your language specific packing rules.
 
-Note that if you don't find `iVk...Alignment` variable matching your type's name this means that you should avoid using this type, this includes types such as `vec3` and `mat3`, instead use `vec4` and `mat4` so you will avoid a bunch of alignment/packing issues.
+Note that if you don't find a `iVk...Alignment` variable matching your type's name this means that you should avoid using this type, this includes types such as `vec3` and `mat3`, instead use `vec4` and `mat4` so you will avoid a bunch of alignment/packing issues.
 
 Generally if you specify `alignas` to all fields (of a type that will be directly copied to the GPU) you should be pretty safe in terms of both Vulkan alignment requirements and HLSL packing rules. The only thing that you might want to keep track of is the padding that `alignas` might introduce, for example:
 
@@ -2837,8 +2853,8 @@ void CustomMeshNode::onSpawning(){
     SpatialNode::onSpawning();
 
     setShaderCpuWriteResourceBindingData( // please call this function only in `onSpawning`, see function docs for more
-        "customData",                     // name of the resource written in your shader file (HLSL/GLSL)
-        sizeof(CustomMeshShaderConstants),
+        "customData",                       // name of the resource written in your shader file (HLSL/GLSL)
+        sizeof(CustomMeshShaderConstants),  // size of your buffer
         [this]() -> void* { return onStartedUpdatingShaderConstants(); },
         [this]() { onFinishedUpdatingShaderConstants(); }
     );

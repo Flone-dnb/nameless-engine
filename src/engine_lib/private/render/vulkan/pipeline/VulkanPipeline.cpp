@@ -294,7 +294,7 @@ namespace ne {
 
         std::shared_ptr<GlslShader> pFragmentShader;
         if (!bDepthOnlyPipeline) {
-            const auto pFragmentShaderPack = getShader(ShaderType::PIXEL_SHADER).value();
+            const auto pFragmentShaderPack = getShader(ShaderType::FRAGMENT_SHADER).value();
             pFragmentShader = std::dynamic_pointer_cast<GlslShader>(pFragmentShaderPack->getShader(
                 additionalFragmentShaderMacros, fullFragmentShaderConfiguration));
         }
@@ -317,7 +317,7 @@ namespace ne {
         // Done generating pipeline.
         saveUsedShaderConfiguration(ShaderType::VERTEX_SHADER, std::move(fullVertexShaderConfiguration));
         if (!bDepthOnlyPipeline) {
-            saveUsedShaderConfiguration(ShaderType::PIXEL_SHADER, std::move(fullFragmentShaderConfiguration));
+            saveUsedShaderConfiguration(ShaderType::FRAGMENT_SHADER, std::move(fullFragmentShaderConfiguration));
         }
 
         // Bind "frameData" descriptors to frame uniform buffer.

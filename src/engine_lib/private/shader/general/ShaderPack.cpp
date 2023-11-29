@@ -33,7 +33,7 @@ namespace ne {
         case (ShaderType::VERTEX_SHADER):
             pMacroConfigurations = &ShaderMacroConfigurations::validVertexShaderMacroConfigurations;
             break;
-        case (ShaderType::PIXEL_SHADER):
+        case (ShaderType::FRAGMENT_SHADER):
             pMacroConfigurations = &ShaderMacroConfigurations::validPixelShaderMacroConfigurations;
             break;
         case (ShaderType::COMPUTE_SHADER):
@@ -101,7 +101,7 @@ namespace ne {
         case (ShaderType::VERTEX_SHADER):
             pMacroConfigurations = &ShaderMacroConfigurations::validVertexShaderMacroConfigurations;
             break;
-        case (ShaderType::PIXEL_SHADER):
+        case (ShaderType::FRAGMENT_SHADER):
             pMacroConfigurations = &ShaderMacroConfigurations::validPixelShaderMacroConfigurations;
             break;
         case (ShaderType::COMPUTE_SHADER):

@@ -281,7 +281,7 @@ namespace ne {
             return shaderc_glsl_vertex_shader;
             break;
         }
-        case (ShaderType::PIXEL_SHADER): {
+        case (ShaderType::FRAGMENT_SHADER): {
             return shaderc_glsl_fragment_shader;
             break;
         }

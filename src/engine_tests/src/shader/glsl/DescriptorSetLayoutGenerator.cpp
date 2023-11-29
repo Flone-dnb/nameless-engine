@@ -89,7 +89,7 @@ TEST_CASE("2 resources with the same name but different bindings cause error") {
                                       "}\n";
                 fragmentShaderFile.close();
                 ShaderDescription fragmentDescription{
-                    pTestVertexShaderName, shaderPath, ShaderType::PIXEL_SHADER, "main", {}};
+                                                      pTestVertexShaderName, shaderPath, ShaderType::FRAGMENT_SHADER, "main", {}};
 
                 // Compile fragment shader.
                 compileResult =
@@ -259,7 +259,7 @@ TEST_CASE("2 resources with the same name/bindings but different types cause err
                                       "}\n";
                 fragmentShaderFile.close();
                 ShaderDescription fragmentDescription{
-                    pTestVertexShaderName, shaderPath, ShaderType::PIXEL_SHADER, "main", {}};
+                                                      pTestVertexShaderName, shaderPath, ShaderType::FRAGMENT_SHADER, "main", {}};
 
                 // Compile fragment shader.
                 compileResult =
@@ -429,7 +429,7 @@ TEST_CASE("2 resources with different names but same type/binding cause error") 
                                       "}\n";
                 fragmentShaderFile.close();
                 ShaderDescription fragmentDescription{
-                    pTestVertexShaderName, shaderPath, ShaderType::PIXEL_SHADER, "main", {}};
+                                                      pTestVertexShaderName, shaderPath, ShaderType::FRAGMENT_SHADER, "main", {}};
 
                 // Compile fragment shader.
                 compileResult =

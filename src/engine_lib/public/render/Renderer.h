@@ -471,13 +471,6 @@ namespace ne {
         void resetLightingShaderResourceManager();
 
         /**
-         * Collects array of engine shaders that will be compiled/verified.
-         *
-         * @return Array of shader descriptions to compile.
-         */
-        virtual std::vector<ShaderDescription> getEngineShadersToCompile() const = 0;
-
-        /**
          * Returns the maximum anti-aliasing quality that can be used on the picked
          * GPU (@ref getCurrentlyUsedGpuName).
          *

@@ -192,7 +192,7 @@ namespace ne {
         case ShaderType::VERTEX_SHADER:
             sShaderModel = Globals::stringToWstring(sVertexShaderModel);
             break;
-        case ShaderType::PIXEL_SHADER:
+        case ShaderType::FRAGMENT_SHADER:
             sShaderModel = Globals::stringToWstring(sPixelShaderModel);
             break;
         case ShaderType::COMPUTE_SHADER:

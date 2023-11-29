@@ -20,6 +20,7 @@
 #include "game/camera/CameraProperties.h"
 #include "game/camera/TransientCamera.h"
 #include "game/nodes/CameraNode.h"
+#include "shader/general/EngineShaders.hpp"
 #if defined(WIN32)
 #pragma comment(lib, "Winmm.lib")
 #include "render/directx/DirectXRenderer.h"
@@ -52,8 +53,20 @@ namespace ne {
     }
 
     std::optional<Error> Renderer::compileEngineShaders() const {
+        // Determine renderer type.
+        bool bIsHlsl = true;
+        if (dynamic_cast<const VulkanRenderer*>(this) != nullptr) {
+            bIsHlsl = false;
+        }
+
         // Prepare shaders to compile.
-        auto vEngineShaders = getEngineShadersToCompile();
+        auto vEngineShaders = {
+            EngineShaders::MeshNode::getVertexShader(bIsHlsl),
+            EngineShaders::MeshNode::getFragmentShader(bIsHlsl),
+            EngineShaders::ForwardPlus::getCalculateGridFrustumComputeShader(bIsHlsl),
+            EngineShaders::ForwardPlus::getPrepareLightCullingComputeShader(bIsHlsl),
+            EngineShaders::ForwardPlus::getLightCullingComputeShader(bIsHlsl),
+        };
 
         // Prepare a promise/future to synchronously wait for the compilation to finish.
         auto pPromiseFinish = std::make_shared<std::promise<bool>>();
@@ -585,7 +598,7 @@ namespace ne {
                     mtxShaderConfiguration.second->currentVertexShaderConfiguration,
                     ShaderType::VERTEX_SHADER);
                 pShaderManager->setRendererConfigurationForShaders(
-                    mtxShaderConfiguration.second->currentPixelShaderConfiguration, ShaderType::PIXEL_SHADER);
+                    mtxShaderConfiguration.second->currentPixelShaderConfiguration, ShaderType::FRAGMENT_SHADER);
             }
         } else {
             std::scoped_lock shaderParametersGuard(mtxShaderConfiguration.first);
@@ -594,7 +607,7 @@ namespace ne {
             pShaderManager->setRendererConfigurationForShaders(
                 mtxShaderConfiguration.second->currentVertexShaderConfiguration, ShaderType::VERTEX_SHADER);
             pShaderManager->setRendererConfigurationForShaders(
-                mtxShaderConfiguration.second->currentPixelShaderConfiguration, ShaderType::PIXEL_SHADER);
+                mtxShaderConfiguration.second->currentPixelShaderConfiguration, ShaderType::FRAGMENT_SHADER);
         }
     }
 

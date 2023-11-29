@@ -1,6 +1,6 @@
-#include "../include/Base.glsl"
-#include "../include/MeshData.glsl"
-#include "MeshNodePushConstants.glsl"
+#include "../../include/Base.glsl"
+#include "../../include/MeshData.glsl"
+#include "../misc/MeshNodePushConstants.glsl"
 
 /** Input parameters. */
 layout(location = 0) in vec3 localPosition; // position in local space

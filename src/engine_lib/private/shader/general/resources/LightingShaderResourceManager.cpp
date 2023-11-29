@@ -722,7 +722,7 @@ namespace ne {
         size_t iTileSizeInPixels = 0;
         try {
             iTileSizeInPixels =
-                std::stoull(EngineShaderConstantMacros::ForwardPlus::LightGridTileSizeMacro::sValue);
+                std::stoull(EngineShaderConstantMacros::ForwardPlus::getLightGridTileSizeMacro().second);
         } catch (const std::exception& exception) {
             return Error(std::format(
                 "failed to convert light grid tile size to an integer, error: {}", exception.what()));
@@ -806,7 +806,7 @@ namespace ne {
         // Create compute interface for calculating grid of frustums for light culling.
         auto computeCreationResult = ComputeShaderInterface::createUsingGraphicsQueue(
             pRenderer,
-            EngineShaderNames::ForwardPlus::sCalculateFrustumGridComputeShaderName,
+            EngineShaderNames::ForwardPlus::getCalculateFrustumGridComputeShaderName(),
             ComputeExecutionStage::AFTER_DEPTH_PREPASS,
             ComputeExecutionGroup::FIRST); // runs before light culling compute shader
         if (std::holds_alternative<Error>(computeCreationResult)) [[unlikely]] {
@@ -882,7 +882,7 @@ namespace ne {
         // Create compute interface for light culling.
         auto computeCreationResult = ComputeShaderInterface::createUsingGraphicsQueue(
             pRenderer,
-            EngineShaderNames::ForwardPlus::sLightCullingComputeShaderName,
+            EngineShaderNames::ForwardPlus::getLightCullingComputeShaderName(),
             ComputeExecutionStage::AFTER_DEPTH_PREPASS,
             ComputeExecutionGroup::SECOND); // runs after compute shader that calculates grid frustums and
                                             // after shader that resets global counters
@@ -974,15 +974,15 @@ namespace ne {
         try {
             // Point lights.
             iAveragePointLightNumPerTile = std::stoull(
-                EngineShaderConstantMacros::ForwardPlus::AveragePointLightNumPerTileMacro::sValue);
+                EngineShaderConstantMacros::ForwardPlus::getAveragePointLightNumPerTileMacro().second);
 
             // Spotlights.
-            iAverageSpotLightNumPerTile =
-                std::stoull(EngineShaderConstantMacros::ForwardPlus::AverageSpotLightNumPerTileMacro::sValue);
+            iAverageSpotLightNumPerTile = std::stoull(
+                EngineShaderConstantMacros::ForwardPlus::getAverageSpotLightNumPerTileMacro().second);
 
             // Directional lights.
             iAverageDirectionalLightNumPerTile = std::stoull(
-                EngineShaderConstantMacros::ForwardPlus::AverageDirectionalLightNumPerTileMacro::sValue);
+                EngineShaderConstantMacros::ForwardPlus::getAverageDirectionalLightNumPerTileMacro().second);
         } catch (const std::exception& exception) {
             return Error(std::format("failed to convert string to integer, error: {}", exception.what()));
         }
@@ -1266,7 +1266,7 @@ namespace ne {
             // Create compute interface for shader that resets global counters for light culling.
             auto computeCreationResult = ComputeShaderInterface::createUsingGraphicsQueue(
                 pRenderer,
-                EngineShaderNames::ForwardPlus::sPrepareLightCullingComputeShaderName,
+                EngineShaderNames::ForwardPlus::getPrepareLightCullingComputeShaderName(),
                 ComputeExecutionStage::AFTER_DEPTH_PREPASS,
                 ComputeExecutionGroup::FIRST); // we can use the same group as frustum grid calculation shader
                                                // because that shader does not use global counters

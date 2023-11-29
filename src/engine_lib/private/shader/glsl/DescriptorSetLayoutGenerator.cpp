@@ -194,7 +194,7 @@ namespace ne {
 
         if (pFragmentShader != nullptr) {
             // Make sure that the fragment shader is indeed a fragment shader.
-            if (pFragmentShader->getShaderType() != ShaderType::PIXEL_SHADER) [[unlikely]] {
+            if (pFragmentShader->getShaderType() != ShaderType::FRAGMENT_SHADER) [[unlikely]] {
                 return Error(std::format(
                     "the specified shader \"{}\" is not a fragment shader",
                     pFragmentShader->getShaderName()));

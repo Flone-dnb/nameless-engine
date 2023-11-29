@@ -49,7 +49,7 @@ TEST_CASE("make sure used vertex/pixel shader configuration of MeshNode is corre
 
                 // Check pixel shader configuration.
                 const auto optionalFullPixelShaderConfiguration =
-                    pPso->getCurrentShaderConfiguration(ShaderType::PIXEL_SHADER);
+                    pPso->getCurrentShaderConfiguration(ShaderType::FRAGMENT_SHADER);
                 REQUIRE(optionalFullPixelShaderConfiguration.has_value());
 
                 const auto fullPixelShaderConfiguration = optionalFullPixelShaderConfiguration.value();

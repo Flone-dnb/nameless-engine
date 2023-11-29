@@ -1,4 +1,4 @@
-#include "../../include/light_culling/CountersData.glsl"
+#include "../../../include/light_culling/CountersData.glsl"
 
 [numthreads(1, 1, 1)]
 void main(){

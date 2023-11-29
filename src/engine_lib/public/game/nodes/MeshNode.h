@@ -377,12 +377,12 @@ namespace ne RNAMESPACE() {
          * is called when the node is not spawned.
          *
          * @remark When data of a resource that you registered was updated on the CPU side you need
-         * to call @ref markShaderCpuWriteResourceAsNeedsUpdate so that update callbacks will be
+         * to call @ref markShaderCpuWriteResourceToBeCopiedToGpu so that update callbacks will be
          * called and updated data will be copied to the GPU to be used by shaders.
-         * Note that you don't need to call @ref markShaderCpuWriteResourceAsNeedsUpdate for
+         * Note that you don't need to call @ref markShaderCpuWriteResourceToBeCopiedToGpu for
          * resources you have not registered yourself. Also note that all registered resources
          * are marked as "need update" by default so you don't have to call
-         * @ref markShaderCpuWriteResourceAsNeedsUpdate right after calling this function.
+         * @ref markShaderCpuWriteResourceToBeCopiedToGpu right after calling this function.
          *
          * @param sShaderResourceName        Name of the resource we are referencing (should be exactly the
          * same as the resource name written in the shader file we are referencing).
@@ -420,7 +420,7 @@ namespace ne RNAMESPACE() {
          * @param sShaderResourceName Name of the shader CPU write resource (should be exactly the same
          * as the resource name written in the shader file we are referencing).
          */
-        void markShaderCpuWriteResourceAsNeedsUpdate(const std::string& sShaderResourceName);
+        void markShaderCpuWriteResourceToBeCopiedToGpu(const std::string& sShaderResourceName);
 
     private:
         /**

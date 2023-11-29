@@ -117,8 +117,8 @@ namespace ne {
         mtxShaderMeshDataConstants.second.normal =
             glm::transpose(glm::inverse(mtxShaderMeshDataConstants.second.world));
 
-        // Mark mesh constants as "needs update".
-        markShaderCpuWriteResourceAsNeedsUpdate(sMeshShaderConstantBufferName);
+        // Mark data to be copied to the GPU.
+        markShaderCpuWriteResourceToBeCopiedToGpu(sMeshShaderConstantBufferName);
     }
 
     MeshData::MeshData() {
@@ -624,7 +624,7 @@ namespace ne {
             std::get<ShaderCpuWriteResourceUniquePtr>(std::move(result));
     }
 
-    void MeshNode::markShaderCpuWriteResourceAsNeedsUpdate(const std::string& sShaderResourceName) {
+    void MeshNode::markShaderCpuWriteResourceToBeCopiedToGpu(const std::string& sShaderResourceName) {
         // In this function we silently exit if some condition is not met and don't log anything
         // intentionally because the user does not check for conditions to be met - it's simpler for the user
         // to write code this way. Moreover, unmet conditions are not errors in this function.

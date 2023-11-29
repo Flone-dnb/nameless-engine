@@ -2882,12 +2882,12 @@ void CustomMeshNode::onSomeEvent() {
     std::scoped_lock guard(mtxShaderData.first);
     mtxShaderData.second.somematrix = getSomeMatrix();
 
-    // Mark resource as "needs update".
-    markShaderCpuWriteResourceAsNeedsUpdate("customData");
+    // Mark data to be copied to the GPU.
+    markShaderCpuWriteResourceToBeCopiedToGpu("customData");
 }
 ```
 
-`markShaderCpuWriteResourceAsNeedsUpdate` will notify the engine if your node is spawned, otherwise it won't do anything so that your "update" functions will only be called while your node is spawned.
+`markShaderCpuWriteResourceToBeCopiedToGpu` will notify the engine if your node is spawned, otherwise it won't do anything so that your "update" functions will only be called while your node is spawned. After the engine was notified it will mark that resource as "needs update" and call your "update" functions before the next frame is submitted to be rendered (when the engine will be ready to update GPU resources).
 
 If you assigned your custom shaders to the material of your `CustomMeshNode` then we don't need to do anything else.
 

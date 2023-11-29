@@ -17,9 +17,6 @@
 
     /** Total number of tiles in the Y direction. */
     uint iTileCountY;
-
-    /** Maximum depth value. */
-    float maxDepth;
 #glsl } computeInfo;
 #hlsl }; ConstantBuffer<ComputeInfo> computeInfo : register(b0, space5);
 
@@ -51,7 +48,6 @@ layout(std140, binding = 2) buffer CalculatedFrustumsBuffer{
  * @param iTileXPosition          X position of the grid tile.
  * @param iTileYPosition          Y position of the grid tile.
  * @param iTileSizeInPixels       Size of one grid tile in pixels.
- * @param tileZ                   Z coordinate for tile in NDC space (since there's really no Z in screen space).
  * @param iRenderTargetWidth      Width of the viewport (might be smaller that the actual screen size).
  * @param iRenderTargetHeight     Height of the viewport (might be smaller that the actual screen size).
  * @param inverseProjectionMatrix Inverse of the projection matrix.
@@ -62,10 +58,12 @@ Frustum calculateFrustumInViewSpaceForGridTileInScreenSpace(
     uint iTileXPosition,
     uint iTileYPosition,
     uint iTileSizeInPixels,
-    float tileZ,
     uint iRenderTargetWidth,
     uint iRenderTargetHeight,
     mat4 inverseProjectionMatrix){
+    // Prepare constants.
+    const float tileZ = 1.0F; // Z coordinate for tile in NDC space (since there's really no Z in screen space).
+
     // Calculate 4 corner points of frustum's far clip plane.
     vec3 farClipPlaneCornersScreenSpace[4];
 

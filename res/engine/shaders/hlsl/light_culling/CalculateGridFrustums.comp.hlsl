@@ -25,7 +25,6 @@ void csGridFrustum(uint3 dispatchThreadID : SV_DispatchThreadID){
         dispatchThreadID.x, // tile X
         dispatchThreadID.y, // tile Y
         LIGHT_GRID_TILE_SIZE_IN_PIXELS,
-        computeInfo.maxDepth,     // far clip plane Z in screen space
         screenToViewData.iRenderTargetWidth,
         screenToViewData.iRenderTargetHeight,
         screenToViewData.inverseProjectionMatrix);

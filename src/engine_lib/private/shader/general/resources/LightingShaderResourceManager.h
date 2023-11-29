@@ -481,9 +481,6 @@ namespace ne {
 
                     /** Total number of tiles in the Y direction. */
                     alignas(iVkScalarAlignment) unsigned int iTileCountY = 0;
-
-                    /** Maximum depth value. */
-                    alignas(iVkScalarAlignment) float maxDepth = 0.0F;
                 };
 
                 /** Data that is used to convert coordinates from screen space to view space. */

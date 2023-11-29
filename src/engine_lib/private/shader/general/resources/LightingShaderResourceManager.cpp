@@ -749,7 +749,6 @@ namespace ne {
         computeInfo.iThreadGroupCountY = iThreadGroupCountY;
         computeInfo.iTileCountX = iTileCountX;
         computeInfo.iTileCountY = iTileCountY;
-        computeInfo.maxDepth = Renderer::getMaxDepth();
         resources.pComputeInfo->copyDataToElement(0, &computeInfo, sizeof(computeInfo));
 
         // Update screen to view resource.

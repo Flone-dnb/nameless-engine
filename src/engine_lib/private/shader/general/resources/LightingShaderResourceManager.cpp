@@ -703,12 +703,11 @@ namespace ne {
 #endif
     }
 
-    [[nodiscard]] std::optional<Error>
-    LightingShaderResourceManager::ComputeShaderData::FrustumGridComputeShader::ComputeShader::updateData(
-        Renderer* pRenderer,
-        const std::pair<unsigned int, unsigned int>& renderTargetSize,
-        const glm::mat4& inverseProjectionMatrix,
-        bool bQueueShaderExecution) {
+    std::optional<Error> LightingShaderResourceManager::ComputeShaderData::FrustumGridComputeShader::
+        ComputeShader::updateDataAndSubmitShader(
+            Renderer* pRenderer,
+            const std::pair<unsigned int, unsigned int>& renderTargetSize,
+            const glm::mat4& inverseProjectionMatrix) {
         // Make sure engine shaders were compiled and we created compute interface.
         if (pComputeInterface == nullptr) [[unlikely]] {
             return Error("expected compute interface to be created at this point");
@@ -783,10 +782,8 @@ namespace ne {
             return optionalError;
         }
 
-        if (bQueueShaderExecution) {
-            // Queue frustum grid recalculation shader.
-            pComputeInterface->submitForExecution(iThreadGroupCountX, iThreadGroupCountY, 1);
-        }
+        // Queue frustum grid recalculation shader.
+        pComputeInterface->submitForExecution(iThreadGroupCountX, iThreadGroupCountY, 1);
 
         // Save tile count to be used by light culling shader.
         iLastUpdateTileCountX = iTileCountX;
@@ -1290,8 +1287,8 @@ namespace ne {
         }
 
         // Update frustum grid shader data.
-        auto optionalError = frustumGridComputeShaderData.updateData(
-            pRenderer, renderTargetSize, inverseProjectionMatrix, true);
+        auto optionalError = frustumGridComputeShaderData.updateDataAndSubmitShader(
+            pRenderer, renderTargetSize, inverseProjectionMatrix);
         if (optionalError.has_value()) [[unlikely]] {
             optionalError->addCurrentLocationToErrorStack();
             return optionalError;

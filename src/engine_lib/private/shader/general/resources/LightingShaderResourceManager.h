@@ -530,16 +530,13 @@ namespace ne {
                      * @param pRenderer               Renderer.
                      * @param renderTargetSize        Size of the underlying render image in pixels.
                      * @param inverseProjectionMatrix Inverse projection matrix of the active camera.
-                     * @param bQueueShaderExecution   `true` to queue compute shader execution, `false`
-                     * otherwise.
                      *
                      * @return Error if something went wrong.
                      */
-                    [[nodiscard]] std::optional<Error> updateData(
+                    [[nodiscard]] std::optional<Error> updateDataAndSubmitShader(
                         Renderer* pRenderer,
                         const std::pair<unsigned int, unsigned int>& renderTargetSize,
-                        const glm::mat4& inverseProjectionMatrix,
-                        bool bQueueShaderExecution);
+                        const glm::mat4& inverseProjectionMatrix);
 
                     /** Shader Compute. */
                     std::unique_ptr<ComputeShaderInterface> pComputeInterface;
@@ -548,14 +545,14 @@ namespace ne {
                     ShaderResources resources;
 
                     /**
-                     * Total number of tiles in the X direction that was used when @ref updateData
-                     * was called the last time.
+                     * Total number of tiles in the X direction that was used when @ref
+                     * updateDataAndSubmitShader was called the last time.
                      */
                     unsigned int iLastUpdateTileCountX = 0;
 
                     /**
-                     * Total number of tiles in the X direction that was used when @ref updateData
-                     * was called the last time.
+                     * Total number of tiles in the X direction that was used when @ref
+                     * updateDataAndSubmitShader was called the last time.
                      */
                     unsigned int iLastUpdateTileCountY = 0;
 

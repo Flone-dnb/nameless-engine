@@ -317,7 +317,8 @@ namespace ne {
         // Done generating pipeline.
         saveUsedShaderConfiguration(ShaderType::VERTEX_SHADER, std::move(fullVertexShaderConfiguration));
         if (!bDepthOnlyPipeline) {
-            saveUsedShaderConfiguration(ShaderType::FRAGMENT_SHADER, std::move(fullFragmentShaderConfiguration));
+            saveUsedShaderConfiguration(
+                ShaderType::FRAGMENT_SHADER, std::move(fullFragmentShaderConfiguration));
         }
 
         // Bind "frameData" descriptors to frame uniform buffer.

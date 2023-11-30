@@ -177,6 +177,13 @@ namespace ne {
             TextureResourceFormat format) = 0;
 
         /**
+         * Dumps internal state of the resource manager in JSON format.
+         *
+         * @return JSON string.
+         */
+        virtual std::string getCurrentStateInfo() = 0;
+
+        /**
          * Returns renderer that owns this resource manager.
          *
          * @remark Do not delete (free) returned pointer.

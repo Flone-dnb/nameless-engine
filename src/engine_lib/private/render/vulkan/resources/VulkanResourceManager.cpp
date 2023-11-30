@@ -652,4 +652,18 @@ namespace ne {
         return pStorageResourceArrayManager.get();
     }
 
+    std::string VulkanResourceManager::getCurrentStateInfo() {
+        // Allocate stats.
+        char* pState = nullptr;
+        vmaBuildStatsString(pMemoryAllocator, &pState, VK_TRUE);
+
+        // Copy to string.
+        std::string sStatsJson(pState);
+
+        // Free stats.
+        vmaFreeStatsString(pMemoryAllocator, pState);
+
+        return sStatsJson;
+    }
+
 } // namespace ne

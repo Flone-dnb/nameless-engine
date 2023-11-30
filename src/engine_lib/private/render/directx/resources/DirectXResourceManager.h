@@ -235,6 +235,13 @@ namespace ne {
          */
         DirectXDescriptorHeap* getCbvSrvUavHeap() const;
 
+        /**
+         * Dumps internal state of the resource manager in JSON format.
+         *
+         * @return JSON string.
+         */
+        virtual std::string getCurrentStateInfo() override;
+
     private:
         /**
          * Constructor.

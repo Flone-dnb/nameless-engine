@@ -260,7 +260,7 @@ namespace ne {
             sizeof(MeshVertex),
             meshData.getVertices()->size(),
             ResourceUsageType::VERTEX_BUFFER,
-            true);
+            false);
         if (std::holds_alternative<Error>(result)) {
             auto error = std::get<Error>(std::move(result));
             error.addCurrentLocationToErrorStack();
@@ -278,7 +278,7 @@ namespace ne {
                 sizeof(MeshData::meshindex_t),
                 pIndices->at(i).size(),
                 ResourceUsageType::INDEX_BUFFER,
-                true);
+                false);
             if (std::holds_alternative<Error>(result)) {
                 auto error = std::get<Error>(std::move(result));
                 error.addCurrentLocationToErrorStack();

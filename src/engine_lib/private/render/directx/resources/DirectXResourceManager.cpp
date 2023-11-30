@@ -342,6 +342,27 @@ namespace ne {
 
     DirectXDescriptorHeap* DirectXResourceManager::getCbvSrvUavHeap() const { return pCbvSrvUavHeap.get(); }
 
+    std::string DirectXResourceManager::getCurrentStateInfo() {
+        // Allocate stats.
+        wchar_t* pStats = nullptr;
+        pMemoryAllocator->BuildStatsString(&pStats, 1);
+
+        // Construct wstring.
+        std::wstring sWStats(pStats);
+
+        // `wstringToString` does not work on this string for some reason
+        std::string sStats;
+        sStats.resize(sWStats.size());
+        for (size_t i = 0; i < sWStats.size(); i++) {
+            sStats[i] = static_cast<char>(sWStats[i]);
+        }
+
+        // Free stats.
+        pMemoryAllocator->FreeStatsString(pStats);
+
+        return sStats;
+    }
+
     DirectXResourceManager::DirectXResourceManager(
         DirectXRenderer* pRenderer,
         ComPtr<D3D12MA::Allocator>&& pMemoryAllocator,

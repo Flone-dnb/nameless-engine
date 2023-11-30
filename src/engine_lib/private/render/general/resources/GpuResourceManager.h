@@ -92,10 +92,10 @@ namespace ne {
          * @param iElementSizeInBytes            Size of one buffer element in bytes.
          * @param iElementCount                  Number of elements in the resulting buffer.
          * @param isUsedInShadersAsArrayResource Specify `empty` if this resource is not going to be
-         * used in shaders, `false` if this resource will be used in shaders as a single (non-array)
-         * resource (cbuffer, uniform, might cause padding to 256 bytes and size limitation up to 64 KB) and
-         * `true` if this resource will be used in shaders as an array resource (StructuredBuffer, storage
-         * buffer).
+         * used in shaders, `false` if this resource will be used in shaders as a single constant (cbuffer in
+         * HLSL, uniform in GLSL), might cause padding to 256 bytes and size limitation up to 64 KB, specify
+         * `true` if this resource will be used in shaders as an array resource (StructuredBuffer in HLSL,
+         * storage buffer in GLSL - not an array but it will be a storage buffer).
          *
          * @return Error if something went wrong, otherwise created resource.
          */

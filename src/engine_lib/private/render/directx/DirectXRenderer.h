@@ -284,6 +284,7 @@ namespace ne {
          */
         [[nodiscard]] std::optional<Error> initialize(const std::vector<std::string>& vBlacklistedGpuNames);
 
+#if defined(DEBUG)
         /**
          * Enables DX debug layer.
          *
@@ -294,6 +295,7 @@ namespace ne {
          * @return Returns an error if something went wrong.
          */
         [[nodiscard]] std::optional<Error> enableDebugLayer();
+#endif
 
         /**
          * (Re)creates the depth/stencil buffer with the "depth write" initial state

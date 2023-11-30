@@ -628,7 +628,7 @@ namespace ne {
 
         // Point light index list.
         static_assert(
-            ConstantRootParameterIndices::iLightCullingPointLightIndexLightRootParameterIndex == 5,
+            ConstantRootParameterIndices::iLightCullingPointLightIndexLightRootParameterIndex == 5, // NOLINT
             "change order in which we add to `vRootParameters`");
         addLightingResourceRootParameter(
             "opaquePointLightIndexList",
@@ -641,7 +641,7 @@ namespace ne {
 
         // Spotlight index list.
         static_assert(
-            ConstantRootParameterIndices::iLightCullingSpotlightIndexLightRootParameterIndex == 6,
+            ConstantRootParameterIndices::iLightCullingSpotlightIndexLightRootParameterIndex == 6, // NOLINT
             "change order in which we add to `vRootParameters`");
         addLightingResourceRootParameter(
             "opaqueSpotLightIndexList",
@@ -654,7 +654,8 @@ namespace ne {
 
         // Directional light index list.
         static_assert(
-            ConstantRootParameterIndices::iLightCullingDirectionalLightIndexLightRootParameterIndex == 7,
+            ConstantRootParameterIndices::iLightCullingDirectionalLightIndexLightRootParameterIndex ==
+                7, // NOLINT
             "change order in which we add to `vRootParameters`");
         addLightingResourceRootParameter(
             "opaqueDirectionalLightIndexList",
@@ -667,7 +668,7 @@ namespace ne {
 
         // Point light grid.
         static_assert(
-            ConstantRootParameterIndices::iLightCullingPointLightGridRootParameterIndex == 8,
+            ConstantRootParameterIndices::iLightCullingPointLightGridRootParameterIndex == 8, // NOLINT
             "change order in which we add to `vRootParameters`");
         addLightingResourceRootParameter(
             "opaquePointLightGrid",
@@ -680,7 +681,7 @@ namespace ne {
 
         // Spotlight grid.
         static_assert(
-            ConstantRootParameterIndices::iLightCullingSpotlightGridRootParameterIndex == 9,
+            ConstantRootParameterIndices::iLightCullingSpotlightGridRootParameterIndex == 9, // NOLINT
             "change order in which we add to `vRootParameters`");
         addLightingResourceRootParameter(
             "opaqueSpotLightGrid",
@@ -693,7 +694,7 @@ namespace ne {
 
         // Directional light grid.
         static_assert(
-            ConstantRootParameterIndices::iLightCullingDirectionalLightGridRootParameterIndex == 10,
+            ConstantRootParameterIndices::iLightCullingDirectionalLightGridRootParameterIndex == 10, // NOLINT
             "change order in which we add to `vRootParameters`");
         addLightingResourceRootParameter(
             "opaqueDirectionalLightGrid",

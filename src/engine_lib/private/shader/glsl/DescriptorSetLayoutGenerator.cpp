@@ -176,8 +176,10 @@ namespace ne {
     }
 
     std::variant<DescriptorSetLayoutGenerator::Generated, Error>
-    DescriptorSetLayoutGenerator::generateGraphics(
-        Renderer* pRenderer, GlslShader* pVertexShader, GlslShader* pFragmentShader) {
+    DescriptorSetLayoutGenerator::generateGraphics( // NOLINT: TODO: make it simpler
+        Renderer* pRenderer,
+        GlslShader* pVertexShader,
+        GlslShader* pFragmentShader) {
         PROFILE_FUNC;
 
         // Make sure we use Vulkan renderer.
@@ -546,12 +548,11 @@ namespace ne {
                 pushConstantUintFieldOffsets[sFieldName] = iOffsetInUints;
             }
         }
-        if (pFragmentShaderDescriptorLayoutInfo != nullptr) {
-            if (pFragmentShaderDescriptorLayoutInfo->pushConstantUintFieldOffsets.has_value()) {
-                for (const auto& [sFieldName, iOffsetInUints] :
-                     *pFragmentShaderDescriptorLayoutInfo->pushConstantUintFieldOffsets) {
-                    pushConstantUintFieldOffsets[sFieldName] = iOffsetInUints;
-                }
+        if (pFragmentShaderDescriptorLayoutInfo != nullptr &&
+            pFragmentShaderDescriptorLayoutInfo->pushConstantUintFieldOffsets.has_value()) {
+            for (const auto& [sFieldName, iOffsetInUints] :
+                 *pFragmentShaderDescriptorLayoutInfo->pushConstantUintFieldOffsets) {
+                pushConstantUintFieldOffsets[sFieldName] = iOffsetInUints;
             }
         }
 

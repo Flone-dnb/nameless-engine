@@ -124,8 +124,8 @@ namespace ne {
         return pRenderer;
     }
 
-    std::optional<Error> DirectXRenderer::enableDebugLayer() {
 #if defined(DEBUG)
+    std::optional<Error> DirectXRenderer::enableDebugLayer() {
         HRESULT hResult = D3D12GetDebugInterface(IID_PPV_ARGS(&pDebugController));
         if (FAILED(hResult)) {
             return Error(hResult);
@@ -144,9 +144,10 @@ namespace ne {
         pDxgiInfoQueue->SetBreakOnSeverity(DXGI_DEBUG_ALL, DXGI_INFO_QUEUE_MESSAGE_SEVERITY_WARNING, 1);
 
         Logger::get().info("D3D debug layer enabled");
-#endif
+
         return {};
     }
+#endif
 
     std::optional<Error> DirectXRenderer::createDepthStencilBuffer() {
         // Get render settings.

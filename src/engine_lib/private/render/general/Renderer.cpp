@@ -60,7 +60,7 @@ namespace ne {
         }
 
         // Prepare shaders to compile.
-        auto vEngineShaders = {
+        std::vector vEngineShaders = {
             EngineShaders::MeshNode::getVertexShader(bIsHlsl),
             EngineShaders::MeshNode::getFragmentShader(bIsHlsl),
             EngineShaders::ForwardPlus::getCalculateGridFrustumComputeShader(bIsHlsl),

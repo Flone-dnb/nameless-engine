@@ -14,15 +14,15 @@
 
 namespace ne {
 
-    ShaderLightArray* LightingShaderResourceManager::getPointLightDataArray() {
+    ShaderLightArray* LightingShaderResourceManager::getPointLightDataArray() const {
         return lightArrays.pPointLightDataArray.get();
     }
 
-    ShaderLightArray* LightingShaderResourceManager::getDirectionalLightDataArray() {
+    ShaderLightArray* LightingShaderResourceManager::getDirectionalLightDataArray() const {
         return lightArrays.pDirectionalLightDataArray.get();
     }
 
-    ShaderLightArray* LightingShaderResourceManager::getSpotlightDataArray() {
+    ShaderLightArray* LightingShaderResourceManager::getSpotlightDataArray() const {
         return lightArrays.pSpotlightDataArray.get();
     }
 
@@ -1278,7 +1278,8 @@ namespace ne {
             // Bind global counters.
             optionalError = pPrepareLightCullingComputeInterface->bindResource(
                 lightCullingComputeShaderData.resources.pGlobalCountersIntoLightIndexList.get(),
-                lightCullingComputeShaderData.sGlobalCountersIntoLightIndexListShaderResourceName,
+                ComputeShaderData::LightCullingComputeShader::ComputeShader::
+                    sGlobalCountersIntoLightIndexListShaderResourceName,
                 ComputeResourceUsage::READ_WRITE_ARRAY_BUFFER);
             if (optionalError.has_value()) [[unlikely]] {
                 optionalError->addCurrentLocationToErrorStack();

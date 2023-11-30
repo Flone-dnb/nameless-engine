@@ -162,7 +162,7 @@ namespace ne {
          *
          * @return Array that stores data of all spawned point lights.
          */
-        ShaderLightArray* getPointLightDataArray();
+        ShaderLightArray* getPointLightDataArray() const;
 
         /**
          * Returns a non-owning reference to an array that stores data of all spawned directional lights.
@@ -171,7 +171,7 @@ namespace ne {
          *
          * @return Array that stores data of all spawned directional lights.
          */
-        ShaderLightArray* getDirectionalLightDataArray();
+        ShaderLightArray* getDirectionalLightDataArray() const;
 
         /**
          * Returns a non-owning reference to an array that stores data of all spawned spotlights.
@@ -180,7 +180,7 @@ namespace ne {
          *
          * @return Array that stores data of all spawned spotlights.
          */
-        ShaderLightArray* getSpotlightDataArray();
+        ShaderLightArray* getSpotlightDataArray() const;
 
         /**
          * Updates descriptors in all graphics pipelines to make descriptors reference the underlying

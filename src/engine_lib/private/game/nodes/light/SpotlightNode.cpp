@@ -140,13 +140,13 @@ namespace ne {
         mtxShaderData.second.shaderData.cosOuterConeAngle = glm::cos(glm::radians(outerConeAngle));
 
         static_assert(
-            maxConeAngle < 80.1F,
+            maxConeAngle < 80.1F, // NOLINT
             "tan 80+ degrees will increase very fast so keep it away from 90 degrees to avoid huge cone "
             "radius");
         mtxShaderData.second.shaderData.coneBottomRadius =
             glm::tan(glm::radians(outerConeAngle)) * distance *
-            1.1F; // TODO: multiply to avoid a rare light culling issue when viewing exactly in the direction
-                  // of the spotlight (light outer cone bounds are slightly culled)
+            1.1F; // NOLINT: TODO: multiply to avoid a rare light culling issue when viewing exactly in the
+                  // direction of the spotlight (light outer cone bounds are slightly culled)
 
 #if defined(DEBUG)
         static_assert(sizeof(SpotlightShaderData) == 80, "consider copying new parameters here");

@@ -86,6 +86,9 @@ namespace ne {
             if (pImageView != nullptr) {
                 vkDestroyImageView(pLogicalDevice, pImageView, nullptr);
             }
+            if (pDepthAspectImageView != nullptr) {
+                vkDestroyImageView(pLogicalDevice, pDepthAspectImageView, nullptr);
+            }
 
             // Destroy image.
             if (optionalKtxTexture.has_value()) {
@@ -200,10 +203,24 @@ namespace ne {
             }
 
             // Create image view.
-            const auto result =
+            auto result =
                 vkCreateImageView(pLogicalDevice, &viewInfo, nullptr, &pCreatedImageResource->pImageView);
             if (result != VK_SUCCESS) [[unlikely]] {
                 return Error(std::format("failed to create image view, error: {}", string_VkResult(result)));
+            }
+
+            if ((viewDescription.value() & VK_IMAGE_ASPECT_DEPTH_BIT) != 0 &&
+                (viewDescription.value() & VK_IMAGE_ASPECT_STENCIL_BIT) != 0) {
+                // Create a depth only view.
+                viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+
+                // Create image view.
+                result = vkCreateImageView(
+                    pLogicalDevice, &viewInfo, nullptr, &pCreatedImageResource->pDepthAspectImageView);
+                if (result != VK_SUCCESS) [[unlikely]] {
+                    return Error(
+                        std::format("failed to create image view, error: {}", string_VkResult(result)));
+                }
             }
         }
 

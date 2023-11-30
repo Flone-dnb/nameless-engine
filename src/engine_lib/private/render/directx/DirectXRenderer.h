@@ -70,6 +70,13 @@ namespace ne {
         static DXGI_FORMAT getDepthStencilBufferFormat();
 
         /**
+         * Returns used depth buffer format for resolved depth buffer.
+         *
+         * @return Depth buffer format.
+         */
+        static DXGI_FORMAT getDepthBufferFormatNoMultisampling();
+
+        /**
          * Looks for video adapters (GPUs) that support this renderer.
          *
          * @remark Note that returned array might differ depending on the used renderer.

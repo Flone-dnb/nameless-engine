@@ -339,7 +339,12 @@ namespace ne {
                 srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
                 srvDesc.Texture2D.MostDetailedMip = 0;
                 srvDesc.Texture2D.MipLevels = resourceDesc.MipLevels;
-                srvDesc.Format = resourceDesc.Format;
+                if (resourceDesc.Format == DirectXRenderer::getDepthStencilBufferFormat()) {
+                    // SRV cannon be used with this format so use another format.
+                    srvDesc.Format = DirectXRenderer::getDepthBufferFormatNoMultisampling();
+                } else {
+                    srvDesc.Format = resourceDesc.Format;
+                }
                 break;
             }
             case (D3D12_RESOURCE_DIMENSION_BUFFER): {

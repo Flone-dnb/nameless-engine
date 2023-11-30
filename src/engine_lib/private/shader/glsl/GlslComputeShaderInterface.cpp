@@ -151,7 +151,12 @@ namespace ne {
             } else {
                 // Prepare info to bind an image view to descriptor.
                 imageInfo.imageLayout = imageLayout;
-                imageInfo.imageView = pVulkanResource->getInternalImageView();
+                if (pVulkanResource->getInternalImageViewDepthAspect() != nullptr) {
+                    // Don't use a view that references both depth and stencil aspects as this is an error.
+                    imageInfo.imageView = pVulkanResource->getInternalImageViewDepthAspect();
+                } else {
+                    imageInfo.imageView = pVulkanResource->getInternalImageView();
+                }
                 imageInfo.sampler = pComputeSampler;
             }
 

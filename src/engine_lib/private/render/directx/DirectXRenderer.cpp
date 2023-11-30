@@ -1565,6 +1565,10 @@ namespace ne {
 
     DXGI_FORMAT DirectXRenderer::getDepthStencilBufferFormat() { return depthStencilBufferFormat; }
 
+    DXGI_FORMAT DirectXRenderer::getDepthBufferFormatNoMultisampling() {
+        return depthBufferNoMultisamplingFormat;
+    }
+
     UINT DirectXRenderer::getMsaaQualityLevel() const { return iMsaaQualityLevelsCount; }
 
     GpuResource* DirectXRenderer::getDepthTextureNoMultisampling() {

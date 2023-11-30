@@ -54,6 +54,18 @@ namespace ne {
         inline VkImageView getInternalImageView() const { return pImageView; }
 
         /**
+         * Returns internal image view that only references depth aspect of the image.
+         *
+         * @remark Do not delete (free) returned pointer.
+         *
+         * @remark Returned pointer is only valid while this object is valid.
+         *
+         * @return Image view that only references depth aspect if the image was created with depth and
+         * stencil aspects, otherwise `nullptr`.
+         */
+        inline VkImageView getInternalImageViewDepthAspect() const { return pDepthAspectImageView; }
+
+        /**
          * Returns internal image.
          *
          * @remark Do not delete (free) returned pointer.
@@ -212,6 +224,13 @@ namespace ne {
 
         /** Optional view that references @ref pImageResource. */
         VkImageView pImageView = nullptr;
+
+        /**
+         * Optional view that references @ref pImageResource depth aspect.
+         *
+         * @remark Only used when @ref pImageResource specified both depth and stencil aspects.
+         */
+        VkImageView pDepthAspectImageView = nullptr;
 
         /**
          * Allocated memory for created resource.

@@ -264,39 +264,36 @@ Here is the list of base features that needs to be implemented in order for you 
 - [X] GLTF/GLB import
 - [ ] Rendering (features for both DirectX 12 and Vulkan renderers)
     - [X] Automatically test and pick the most suitable renderer/GPU based on the OS/hardware capabilities/user preferences at runtime
-    - [X] Forward rendering (temporary)
-        - [X] MSAA (Multisample anti-aliasing)
-        - [X] Transparent materials
-        - [X] Diffuse textures
-        - [X] Multiple materials per mesh
-        - [X] Frustum culling
-        - [X] Custom vertex/pixel/fragment shaders
-    - [ ] Forward+ (Tiled Forward) rendering
-        - [X] Custom compute shaders
-        - [X] Frustum culling
-        - [X] Z-prepass
-        - [X] Tiled light culling
-        - [ ] Transparent materials
-        - [ ] AA (Anti-aliasing)
-        - [ ] Light sources
-            - [ ] Point light
-            - [ ] Spot light
-            - [ ] Directional light
-        - [ ] Shadow mapping (for all light sources)
-        - [ ] Post-processing effects
-        - [ ] HDR (High dynamic range)
-        - [ ] Cascading shadow maps
-        - [ ] Normal mapping
-        - [ ] Cube mapping
-        - [ ] Instancing
-        - [ ] SSAO (Screen space ambient occlusion)
-        - [ ] PBR (Physically based rendering)
-        - [ ] Decals
-        - [ ] Order independent transparency
-        - [ ] Occlusion culling
-        - [ ] Emissive materials
-        - [ ] Space partitioning for frustum culling
-        - [ ] Light culling improvements
+    - [X] Basic forward rendering
+    - [X] MSAA (Multisample anti-aliasing)
+    - [X] Transparent materials
+    - [X] Diffuse textures
+    - [X] Multiple materials per mesh
+    - [X] Frustum culling
+    - [X] Custom vertex/pixel/fragment shaders
+    - [X] Custom compute shaders
+    - [X] Frustum culling
+    - [X] Z-prepass
+    - [X] Forward+ (Tiled Forward) rendering
+    - [X] Light sources
+        - [X] Point light
+        - [X] Spot light
+        - [X] Directional light
+    - [ ] Shadow mapping (for all light sources)
+    - [ ] Post-processing effects
+    - [ ] HDR (High dynamic range)
+    - [ ] Cascading shadow maps
+    - [ ] Normal mapping
+    - [ ] Cube mapping
+    - [ ] Instancing
+    - [ ] SSAO (Screen space ambient occlusion)
+    - [ ] PBR (Physically based rendering)
+    - [ ] Decals
+    - [ ] Order independent transparency
+    - [ ] Occlusion culling
+    - [ ] Emissive materials
+    - [ ] Space partitioning for frustum culling
+    - [ ] Light culling improvements
     - [ ] GUI
 - [ ] Skeletal animations
 - [ ] Rewrite garbage collector [tgc2](https://github.com/Flone-dnb/tgc2) (to fix some major issues)

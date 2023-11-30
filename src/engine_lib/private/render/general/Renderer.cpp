@@ -598,7 +598,8 @@ namespace ne {
                     mtxShaderConfiguration.second->currentVertexShaderConfiguration,
                     ShaderType::VERTEX_SHADER);
                 pShaderManager->setRendererConfigurationForShaders(
-                    mtxShaderConfiguration.second->currentPixelShaderConfiguration, ShaderType::FRAGMENT_SHADER);
+                    mtxShaderConfiguration.second->currentPixelShaderConfiguration,
+                    ShaderType::FRAGMENT_SHADER);
             }
         } else {
             std::scoped_lock shaderParametersGuard(mtxShaderConfiguration.first);

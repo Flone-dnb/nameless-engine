@@ -201,18 +201,18 @@ File_PlayerSaveData_GENERATED
   
 ```C++
 const auto vertexShader = ShaderDescription(
-    "engine.default.vs",               // shader name
-    "res/engine/shaders/default.hlsl", // path to shader file
+    "game.test.vs",                    // shader name
+    "res/game/shaders/test.hlsl",      // path to shader file
     ShaderType::VERTEX_SHADER,         // shader type
-    "vsDefault",                       // shader entry function name
+    "main",                            // shader entry function name
     {});                               // defined shader macros
 
 const auto pixelShader = ShaderDescription(
-    "engine.default.ps",               // shader name
-    "res/engine/shaders/default.hlsl", // path to shader file
-    ShaderType::PIXEL_SHADER,          // shader type
-    "psDefault",                       // shader entry function name
-    {});                               // defined shader macros
+    "game.test.fs",                    // shader name
+    "res/game/shaders/test.hlsl",      // path to shader file
+    ShaderType::FRAGMENT_SHADER,       // shader type (`FRAGMENT_SHADER` is pixel shader for HLSL)
+    "main",                            // shader entry function name
+    {{"FOO", "42"}});                  // defined shader macros
 
 std::vector vShaders = {vertexShader, pixelShader};
 

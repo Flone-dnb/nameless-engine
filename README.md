@@ -272,7 +272,6 @@ Here is the list of base features that needs to be implemented in order for you 
     - [X] Frustum culling
     - [X] Custom vertex/pixel/fragment shaders
     - [X] Custom compute shaders
-    - [X] Frustum culling
     - [X] Z-prepass
     - [X] Forward+ (Tiled Forward) rendering
     - [X] Light sources

@@ -836,8 +836,10 @@ namespace ne {
         // Clear information from the last frame.
         meshesInFrustumLastFrame.vOpaquePipelines.clear();
         meshesInFrustumLastFrame.vTransparentPipelines.clear();
-#if defined(DEBUG)
-        static_assert(sizeof(MeshesInFrustum::PipelineInFrustumInfo) == 40, "clear new arrays");
+#if defined(DEBUG) && defined(WIN32)
+        static_assert(sizeof(MeshesInFrustum::PipelineInFrustumInfo) == 40, "clear new arrays"); // NOLINT
+#elif defined(DEBUG)
+        static_assert(sizeof(MeshesInFrustum::PipelineInFrustumInfo) == 32, "clear new arrays"); // NOLINT
 #endif
 
         // Prepare lambda to cull pipelines.

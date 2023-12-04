@@ -51,7 +51,7 @@
 	url = https://github.com/microsoft/DirectXTex.git
 [submodule "ext/KTX-Software"]
 	path = ext/KTX-Software
-	url = https://github.com/Flone-dnb/KTX-Software.git
+	url = https://github.com/KhronosGroup/KTX-Software.git
 [submodule "ext/tinygltf"]
 	path = ext/tinygltf
 	url = https://github.com/syoyo/tinygltf.git

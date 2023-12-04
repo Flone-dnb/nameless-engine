@@ -264,7 +264,6 @@ Here is the list of base features that needs to be implemented in order for you 
 - [X] GLTF/GLB import
 - [ ] Rendering (features for both DirectX 12 and Vulkan renderers)
     - [X] Automatically test and pick the most suitable renderer/GPU based on the OS/hardware capabilities/user preferences at runtime
-    - [X] Basic forward rendering
     - [X] MSAA (Multisample anti-aliasing)
     - [X] Transparent materials
     - [X] Diffuse textures

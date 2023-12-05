@@ -709,8 +709,7 @@ namespace ne {
          * @param pCommandBuffer      Command buffer to modify.
          * @param iAcquiredImageIndex Index of the framebuffer to use.
          */
-        void startMainRenderPass(
-            VkCommandBuffer pCommandBuffer, size_t iAcquiredImageIndex);
+        void startMainRenderPass(VkCommandBuffer pCommandBuffer, size_t iAcquiredImageIndex);
 
         /**
          * Adds render pass start commands to the specified command buffer with @ref pDepthOnlyRenderPass.
@@ -718,8 +717,7 @@ namespace ne {
          * @param pCommandBuffer      Command buffer to modify.
          * @param iAcquiredImageIndex Index of the framebuffer to use.
          */
-        void startDepthOnlyRenderPass(
-            VkCommandBuffer pCommandBuffer, size_t iAcquiredImageIndex);
+        void startDepthOnlyRenderPass(VkCommandBuffer pCommandBuffer, size_t iAcquiredImageIndex);
 
         /**
          * Submits commands to draw meshes and the specified depth only (vertex shader only) pipelines.
@@ -935,20 +933,20 @@ namespace ne {
         /** Marked as `true` when entered destructor. */
         bool bIsBeingDestroyed = false;
 
-        /** Index of the color attachment in render pass. */
-        static constexpr size_t iRenderPassColorAttachmentIndex = 0;
+        /** Index of the color attachment in @ref pMainRenderPass. */
+        static constexpr size_t iMainRenderPassColorAttachmentIndex = 0;
 
-        /** Index of the depth attachment in render pass. */
-        static constexpr size_t iRenderPassDepthAttachmentIndex = 1;
+        /** Index of the depth attachment in @ref pMainRenderPass. */
+        static constexpr size_t iMainRenderPassDepthAttachmentIndex = 1;
 
-        /** Index of the color resolve target attachment in render pass. */
-        static constexpr size_t iRenderPassColorResolveTargetAttachmentIndex = 2;
+        /** Index of the color resolve target attachment in @ref pMainRenderPass. */
+        static constexpr size_t iMainRenderPassColorResolveTargetAttachmentIndex = 2;
 
         /** Index of @ref pDepthImage in @ref pDepthOnlyRenderPass. */
         static constexpr size_t iDepthOnlyRenderPassDepthImageAttachmentIndex = 0;
 
         /** Index of @ref pDepthImageNoMultisampling in @ref pDepthOnlyRenderPass. */
-        static constexpr size_t iDepthOnlyRenderPassDepthImageNoMultisamplingAttachmentIndex = 1;
+        static constexpr size_t iDepthOnlyRenderPassDepthResolveTargetAttachmentIndex = 1;
 
         /** Format of @ref vSwapChainImages. */
         static constexpr auto swapChainImageFormat = VK_FORMAT_B8G8R8A8_UNORM;

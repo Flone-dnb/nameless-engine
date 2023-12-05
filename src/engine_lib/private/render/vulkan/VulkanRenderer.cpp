@@ -1409,8 +1409,8 @@ namespace ne {
         std::vector<VkAttachmentDescription> vAttachments{};
 
         static_assert(
-            iRenderPassColorAttachmentIndex != iRenderPassDepthAttachmentIndex &&
-                iRenderPassColorAttachmentIndex != iRenderPassColorResolveTargetAttachmentIndex,
+            iMainRenderPassColorAttachmentIndex != iMainRenderPassDepthAttachmentIndex &&
+                iMainRenderPassColorAttachmentIndex != iMainRenderPassColorResolveTargetAttachmentIndex,
             "attachment indices should be unique");
 
         const auto bEnableMsaa = msaaSampleCount != VK_SAMPLE_COUNT_1_BIT;
@@ -1427,8 +1427,8 @@ namespace ne {
         colorAttachment.finalLayout = bEnableMsaa ? VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
                                                   : VK_IMAGE_LAYOUT_PRESENT_SRC_KHR; // at end of the render
         vAttachments.push_back(colorAttachment);
-        static_assert(iRenderPassColorAttachmentIndex == 0);
-        if (vAttachments.size() != iRenderPassColorAttachmentIndex + 1) [[unlikely]] {
+        static_assert(iMainRenderPassColorAttachmentIndex == 0);
+        if (vAttachments.size() != iMainRenderPassColorAttachmentIndex + 1) [[unlikely]] {
             return Error("unexpected attachment index");
         }
 
@@ -1445,8 +1445,8 @@ namespace ne {
                                             : VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL; // was used in shaders
         depthAttachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
         vAttachments.push_back(depthAttachment);
-        static_assert(iRenderPassDepthAttachmentIndex == 1);
-        if (vAttachments.size() != iRenderPassDepthAttachmentIndex + 1) [[unlikely]] {
+        static_assert(iMainRenderPassDepthAttachmentIndex == 1);
+        if (vAttachments.size() != iMainRenderPassDepthAttachmentIndex + 1) [[unlikely]] {
             return Error("unexpected attachment index");
         }
 
@@ -1464,26 +1464,26 @@ namespace ne {
             colorResolveTargetAttachment.finalLayout =
                 VK_IMAGE_LAYOUT_PRESENT_SRC_KHR; // at end of the render
             vAttachments.push_back(colorResolveTargetAttachment);
-            static_assert(iRenderPassColorResolveTargetAttachmentIndex == 2);
-            if (vAttachments.size() != iRenderPassColorResolveTargetAttachmentIndex + 1) [[unlikely]] {
+            static_assert(iMainRenderPassColorResolveTargetAttachmentIndex == 2);
+            if (vAttachments.size() != iMainRenderPassColorResolveTargetAttachmentIndex + 1) [[unlikely]] {
                 return Error("unexpected attachment index");
             }
         }
 
         // Create color buffer reference for subpasses.
         VkAttachmentReference colorAttachmentRef{};
-        colorAttachmentRef.attachment = iRenderPassColorAttachmentIndex;
+        colorAttachmentRef.attachment = iMainRenderPassColorAttachmentIndex;
         colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL; // layout during subpass
 
         // Create depth buffer reference in read layout for main subpass.
         VkAttachmentReference depthAttachmentRef{};
-        depthAttachmentRef.attachment = iRenderPassDepthAttachmentIndex;
+        depthAttachmentRef.attachment = iMainRenderPassDepthAttachmentIndex;
         depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL; // layout during subpass
 
         VkAttachmentReference colorAttachmentResolveRef{};
         if (bEnableMsaa) {
             // Create reference to resolve target for subpasses.
-            colorAttachmentResolveRef.attachment = iRenderPassColorResolveTargetAttachmentIndex;
+            colorAttachmentResolveRef.attachment = iMainRenderPassColorResolveTargetAttachmentIndex;
             colorAttachmentResolveRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
         }
 
@@ -1556,19 +1556,19 @@ namespace ne {
 
         if (bEnableMsaa) {
             // Describe depth image attachment without multisampling.
-            VkAttachmentDescription2 depthNoMultisamplingAttachment{};
-            depthNoMultisamplingAttachment.sType = VK_STRUCTURE_TYPE_ATTACHMENT_DESCRIPTION_2;
-            depthNoMultisamplingAttachment.format = depthImageFormat;
-            depthNoMultisamplingAttachment.samples = VK_SAMPLE_COUNT_1_BIT; // 1 sample
-            depthNoMultisamplingAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-            depthNoMultisamplingAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE; // save depth for main pass
-            depthNoMultisamplingAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-            depthNoMultisamplingAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-            depthNoMultisamplingAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-            depthNoMultisamplingAttachment.finalLayout =
+            VkAttachmentDescription2 depthResolveAttachment{};
+            depthResolveAttachment.sType = VK_STRUCTURE_TYPE_ATTACHMENT_DESCRIPTION_2;
+            depthResolveAttachment.format = depthImageFormat;
+            depthResolveAttachment.samples = VK_SAMPLE_COUNT_1_BIT; // 1 sample
+            depthResolveAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+            depthResolveAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE; // save depth for main pass
+            depthResolveAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+            depthResolveAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+            depthResolveAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+            depthResolveAttachment.finalLayout =
                 VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL; // it will be only used by shaders
-            vAttachments.push_back(depthNoMultisamplingAttachment);
-            if (vAttachments.size() != iDepthOnlyRenderPassDepthImageNoMultisamplingAttachmentIndex + 1)
+            vAttachments.push_back(depthResolveAttachment);
+            if (vAttachments.size() != iDepthOnlyRenderPassDepthResolveTargetAttachmentIndex + 1)
                 [[unlikely]] {
                 return Error("unexpected attachment index");
             }
@@ -1581,11 +1581,10 @@ namespace ne {
         depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL; // layout during subpass
 
         // Create non-multisampled depth image reference.
-        VkAttachmentReference2 depthNoMultisamplingAttachmentRef{};
-        depthNoMultisamplingAttachmentRef.sType = VK_STRUCTURE_TYPE_ATTACHMENT_REFERENCE_2;
-        depthNoMultisamplingAttachmentRef.attachment =
-            iDepthOnlyRenderPassDepthImageNoMultisamplingAttachmentIndex;
-        depthNoMultisamplingAttachmentRef.layout =
+        VkAttachmentReference2 depthResolveAttachmentRef{};
+        depthResolveAttachmentRef.sType = VK_STRUCTURE_TYPE_ATTACHMENT_REFERENCE_2;
+        depthResolveAttachmentRef.attachment = iDepthOnlyRenderPassDepthResolveTargetAttachmentIndex;
+        depthResolveAttachmentRef.layout =
             VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL; // layout during subpass
 
         // Create a depth resolve description because we want to resolve multisampled depth image
@@ -1595,7 +1594,7 @@ namespace ne {
             depthResolveDescription.sType = VK_STRUCTURE_TYPE_SUBPASS_DESCRIPTION_DEPTH_STENCIL_RESOLVE;
             depthResolveDescription.depthResolveMode = depthResolveMode;
             depthResolveDescription.stencilResolveMode = stencilResolveMode;
-            depthResolveDescription.pDepthStencilResolveAttachment = &depthNoMultisamplingAttachmentRef;
+            depthResolveDescription.pDepthStencilResolveAttachment = &depthResolveAttachmentRef;
         }
 
         // Describe depth only subpass.
@@ -2094,7 +2093,7 @@ namespace ne {
             std::vector<VkImageView> vAttachments;
 
             // Specify color attachment.
-            static_assert(iRenderPassColorAttachmentIndex == 0);
+            static_assert(iMainRenderPassColorAttachmentIndex == 0);
             if (bEnableMsaa) {
                 vAttachments.push_back(pMsaaImage->getInternalImageView());
             } else {
@@ -2102,11 +2101,11 @@ namespace ne {
             }
 
             // Specify depth attachment.
-            static_assert(iRenderPassDepthAttachmentIndex == 1);
+            static_assert(iMainRenderPassDepthAttachmentIndex == 1);
             vAttachments.push_back(pDepthImage->getInternalImageView());
 
             // Specify color resolve target attachment.
-            static_assert(iRenderPassColorResolveTargetAttachmentIndex == 2);
+            static_assert(iMainRenderPassColorResolveTargetAttachmentIndex == 2);
             if (bEnableMsaa) {
                 vAttachments.push_back(vSwapChainImageViews[i]);
             }
@@ -2132,12 +2131,15 @@ namespace ne {
 
             // Change render pass and attachments.
             vAttachments.clear();
-            vAttachments.push_back(pDepthImage->getInternalImageView());
+
             static_assert(iDepthOnlyRenderPassDepthImageAttachmentIndex == 0);
+            vAttachments.push_back(pDepthImage->getInternalImageView());
+
             if (bEnableMsaa) {
+                static_assert(iDepthOnlyRenderPassDepthResolveTargetAttachmentIndex == 1);
                 vAttachments.push_back(pDepthImageNoMultisampling->getInternalImageView());
-                static_assert(iDepthOnlyRenderPassDepthImageNoMultisamplingAttachmentIndex == 1);
             }
+
             framebufferInfo.renderPass = pDepthOnlyRenderPass;
             framebufferInfo.attachmentCount = static_cast<uint32_t>(vAttachments.size());
             framebufferInfo.pAttachments = vAttachments.data();
@@ -2259,11 +2261,11 @@ namespace ne {
         // Specify clear color for attachments.
         std::array<VkClearValue, 2> vClearValues;
 
-        static_assert(iRenderPassColorAttachmentIndex == 0);
-        vClearValues[iRenderPassColorAttachmentIndex].color = {0.0F, 0.0F, 0.0F, 1.0F};
+        static_assert(iMainRenderPassColorAttachmentIndex == 0);
+        vClearValues[iMainRenderPassColorAttachmentIndex].color = {0.0F, 0.0F, 0.0F, 1.0F};
 
-        static_assert(iRenderPassDepthAttachmentIndex == 1);
-        vClearValues[iRenderPassDepthAttachmentIndex].depthStencil = {getMaxDepth(), 0};
+        static_assert(iMainRenderPassDepthAttachmentIndex == 1);
+        vClearValues[iMainRenderPassDepthAttachmentIndex].depthStencil = {getMaxDepth(), 0};
 
         // no clear value for MSAA resolve target because it uses load don't care
 
@@ -2289,13 +2291,12 @@ namespace ne {
         renderPassInfo.renderArea.extent = *swapChainExtent;
 
         // Specify clear color for attachments.
-        std::array<VkClearValue, 2> vClearValues{};
-        static_assert(iDepthOnlyRenderPassDepthImageAttachmentIndex == 0);
-        static_assert(iDepthOnlyRenderPassDepthImageNoMultisamplingAttachmentIndex == 1);
+        std::array<VkClearValue, 1> vClearValues{};
 
+        static_assert(iDepthOnlyRenderPassDepthImageAttachmentIndex == 0);
         vClearValues[iDepthOnlyRenderPassDepthImageAttachmentIndex].depthStencil = {getMaxDepth(), 0};
-        vClearValues[iDepthOnlyRenderPassDepthImageNoMultisamplingAttachmentIndex].depthStencil = {
-            getMaxDepth(), 0};
+
+        // no clear value for MSAA depth resolve target because it uses load don't care
 
         renderPassInfo.clearValueCount = static_cast<uint32_t>(vClearValues.size());
         renderPassInfo.pClearValues = vClearValues.data();

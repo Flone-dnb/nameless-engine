@@ -4,5 +4,17 @@
         --primary-dark-color: #e29d5c;
         --primary-light-color: rgb(172, 122, 71);
         --page-background-color: #181818;
+
+        --fragment-background: rgb(30, 30, 30);
+        --fragment-foreground: #e4d782;
+        --fragment-keyword: #e3c91d;
+        --fragment-keywordtype: #518edd;
+        --fragment-keywordflow: #518edd;
+        --fragment-token: #d2a28f;
+        --fragment-comment: #3ba239;
+        --fragment-link: #db7c38;
+        --fragment-preprocessor: #bb65b8;
+        --fragment-linenumber-color: #4e6ca8;
+        --fragment-linenumber-background: #323232;
     }
 }

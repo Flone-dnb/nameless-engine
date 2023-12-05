@@ -704,14 +704,22 @@ namespace ne {
         prepareForDrawingNextFrame(CameraProperties* pCameraProperties, uint32_t& iAcquiredImageIndex);
 
         /**
-         * Adds render pass start commands to the specified command buffer.
+         * Adds render pass start commands to the specified command buffer with @ref pMainRenderPass.
          *
-         * @param pCommandBuffer     Command buffer to modify.
-         * @param pTargetFramebuffer Framebuffer to use in the render pass.
-         * @param pRenderPass        Render pass to start.
+         * @param pCommandBuffer      Command buffer to modify.
+         * @param iAcquiredImageIndex Index of the framebuffer to use.
          */
-        void startRenderPass(
-            VkCommandBuffer pCommandBuffer, VkFramebuffer pTargetFramebuffer, VkRenderPass pRenderPass);
+        void startMainRenderPass(
+            VkCommandBuffer pCommandBuffer, size_t iAcquiredImageIndex);
+
+        /**
+         * Adds render pass start commands to the specified command buffer with @ref pDepthOnlyRenderPass.
+         *
+         * @param pCommandBuffer      Command buffer to modify.
+         * @param iAcquiredImageIndex Index of the framebuffer to use.
+         */
+        void startDepthOnlyRenderPass(
+            VkCommandBuffer pCommandBuffer, size_t iAcquiredImageIndex);
 
         /**
          * Submits commands to draw meshes and the specified depth only (vertex shader only) pipelines.

@@ -2243,44 +2243,59 @@ namespace ne {
         return {};
     }
 
-    void VulkanRenderer::startRenderPass(
-        VkCommandBuffer pCommandBuffer, VkFramebuffer pTargetFramebuffer, VkRenderPass pRenderPass) {
+    void VulkanRenderer::startMainRenderPass(VkCommandBuffer pCommandBuffer, size_t iAcquiredImageIndex) {
         PROFILE_FUNC;
 
         // Prepare to begin render pass.
         VkRenderPassBeginInfo renderPassInfo{};
         renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-        renderPassInfo.renderPass = pRenderPass;
-        renderPassInfo.framebuffer = pTargetFramebuffer;
+        renderPassInfo.renderPass = pMainRenderPass;
+        renderPassInfo.framebuffer = vSwapChainFramebuffersMainRenderPass[iAcquiredImageIndex];
 
         // Specify render area.
         renderPassInfo.renderArea.offset = {0, 0};
         renderPassInfo.renderArea.extent = *swapChainExtent;
 
         // Specify clear color for attachments.
-        std::vector<VkClearValue> vClearValues;
-        if (pRenderPass == pMainRenderPass) {
-            // Main render pass.
-            vClearValues.resize(2);
-            static_assert(iRenderPassColorAttachmentIndex == 0);
-            static_assert(iRenderPassDepthAttachmentIndex == 1);
+        std::array<VkClearValue, 2> vClearValues;
 
-            vClearValues[iRenderPassColorAttachmentIndex].color = {0.0F, 0.0F, 0.0F, 1.0F};
-            vClearValues[iRenderPassDepthAttachmentIndex].depthStencil = {getMaxDepth(), 0};
-        } else if (pRenderPass == pDepthOnlyRenderPass) {
-            // Depth only pass.
-            vClearValues.resize(2);
-            static_assert(iDepthOnlyRenderPassDepthImageAttachmentIndex == 0);
-            static_assert(iDepthOnlyRenderPassDepthImageNoMultisamplingAttachmentIndex == 1);
+        static_assert(iRenderPassColorAttachmentIndex == 0);
+        vClearValues[iRenderPassColorAttachmentIndex].color = {0.0F, 0.0F, 0.0F, 1.0F};
 
-            vClearValues[iDepthOnlyRenderPassDepthImageAttachmentIndex].depthStencil = {getMaxDepth(), 0};
-            vClearValues[iDepthOnlyRenderPassDepthImageNoMultisamplingAttachmentIndex].depthStencil = {
-                getMaxDepth(), 0};
-        } else [[unlikely]] {
-            Error error("unexpected render pass, clear color values are not specified");
-            error.showError();
-            throw std::runtime_error(error.getFullErrorMessage());
-        }
+        static_assert(iRenderPassDepthAttachmentIndex == 1);
+        vClearValues[iRenderPassDepthAttachmentIndex].depthStencil = {getMaxDepth(), 0};
+
+        // no clear value for MSAA resolve target because it uses load don't care
+
+        renderPassInfo.clearValueCount = static_cast<uint32_t>(vClearValues.size());
+        renderPassInfo.pClearValues = vClearValues.data();
+
+        // Mark render pass start.
+        vkCmdBeginRenderPass(pCommandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+    }
+
+    void
+    VulkanRenderer::startDepthOnlyRenderPass(VkCommandBuffer pCommandBuffer, size_t iAcquiredImageIndex) {
+        PROFILE_FUNC;
+
+        // Prepare to begin render pass.
+        VkRenderPassBeginInfo renderPassInfo{};
+        renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+        renderPassInfo.renderPass = pDepthOnlyRenderPass;
+        renderPassInfo.framebuffer = vSwapChainFramebuffersDepthOnlyRenderPass[iAcquiredImageIndex];
+
+        // Specify render area.
+        renderPassInfo.renderArea.offset = {0, 0};
+        renderPassInfo.renderArea.extent = *swapChainExtent;
+
+        // Specify clear color for attachments.
+        std::array<VkClearValue, 2> vClearValues{};
+        static_assert(iDepthOnlyRenderPassDepthImageAttachmentIndex == 0);
+        static_assert(iDepthOnlyRenderPassDepthImageNoMultisamplingAttachmentIndex == 1);
+
+        vClearValues[iDepthOnlyRenderPassDepthImageAttachmentIndex].depthStencil = {getMaxDepth(), 0};
+        vClearValues[iDepthOnlyRenderPassDepthImageNoMultisamplingAttachmentIndex].depthStencil = {
+            getMaxDepth(), 0};
 
         renderPassInfo.clearValueCount = static_cast<uint32_t>(vClearValues.size());
         renderPassInfo.pClearValues = vClearValues.data();
@@ -2688,10 +2703,7 @@ namespace ne {
         }
 
         // Start depth only render pass.
-        startRenderPass(
-            pVulkanCurrentFrameResource->pCommandBuffer,
-            vSwapChainFramebuffersDepthOnlyRenderPass[iAcquiredImageIndex],
-            pDepthOnlyRenderPass);
+        startDepthOnlyRenderPass(pVulkanCurrentFrameResource->pCommandBuffer, iAcquiredImageIndex);
 
         // Get graphics pipelines.
         const auto pMtxGraphicsPipelines = pPipelineManager->getGraphicsPipelines();
@@ -2767,10 +2779,7 @@ namespace ne {
         PROFILE_SCOPE_END;
 
         // Start main render pass.
-        startRenderPass(
-            pVulkanCurrentFrameResource->pCommandBuffer,
-            vSwapChainFramebuffersMainRenderPass[iAcquiredImageIndex],
-            pMainRenderPass);
+        startMainRenderPass(pVulkanCurrentFrameResource->pCommandBuffer, iAcquiredImageIndex);
 
         // Draw opaque meshes.
         drawMeshesMainPass(

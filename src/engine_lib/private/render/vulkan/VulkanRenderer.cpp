@@ -2259,13 +2259,12 @@ namespace ne {
         renderPassInfo.renderArea.extent = *swapChainExtent;
 
         // Specify clear color for attachments.
-        std::array<VkClearValue, 2> vClearValues;
+        std::array<VkClearValue, 1> vClearValues;
 
         static_assert(iMainRenderPassColorAttachmentIndex == 0);
         vClearValues[iMainRenderPassColorAttachmentIndex].color = {0.0F, 0.0F, 0.0F, 1.0F};
 
-        static_assert(iMainRenderPassDepthAttachmentIndex == 1);
-        vClearValues[iMainRenderPassDepthAttachmentIndex].depthStencil = {getMaxDepth(), 0};
+        // no clear value for depth attachment because we load depth from depth prepass
 
         // no clear value for MSAA resolve target because it uses load don't care
 

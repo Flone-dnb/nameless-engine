@@ -13,7 +13,7 @@
 #include "render/general/resources/UploadBuffer.h"
 #include "render/vulkan/pipeline/VulkanPushConstantsManager.hpp"
 #include "render/vulkan/resources/VulkanStorageResourceArray.h"
-#include "render/general/resources/FrameResourcesManager.h"
+#include "render/general/resources/frame/FrameResourcesManager.h"
 
 namespace ne {
     class Pipeline;

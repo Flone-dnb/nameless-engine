@@ -11,7 +11,7 @@
 // Custom.
 #include "shader/general/resources/ShaderResource.h"
 #include "shader/general/resources/cpuwrite/ShaderCpuWriteResourceUniquePtr.h"
-#include "render/general/resources/FrameResourcesManager.h"
+#include "render/general/resources/frame/FrameResourcesManager.h"
 
 namespace ne {
     class Renderer;

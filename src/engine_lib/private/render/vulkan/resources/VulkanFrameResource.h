@@ -4,7 +4,7 @@
 #include <optional>
 
 // Custom.
-#include "render/general/resources/FrameResource.h"
+#include "render/general/resources/frame/FrameResource.h"
 #include "misc/Error.h"
 
 // External.

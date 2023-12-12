@@ -3,7 +3,7 @@
 // Custom.
 #include "render/directx/resources/DirectXResource.h"
 #include "render/directx/DirectXRenderer.h"
-#include "render/general/resources/FrameResourcesManager.h"
+#include "render/general/resources/frame/FrameResourcesManager.h"
 #include "render/general/resources/UploadBuffer.h"
 #include "render/directx/resources/DirectXFrameResource.h"
 

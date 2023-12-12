@@ -7,7 +7,7 @@
 #include "render/vulkan/resources/VulkanStorageResourceArrayManager.h"
 #include "game/nodes/MeshNode.h"
 #include "misc/PrimitiveMeshGenerator.h"
-#include "render/general/resources/FrameResourcesManager.h"
+#include "render/general/resources/frame/FrameResourcesManager.h"
 
 // External.
 #include "catch2/catch_test_macros.hpp"

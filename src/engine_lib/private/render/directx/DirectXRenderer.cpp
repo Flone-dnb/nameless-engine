@@ -18,7 +18,7 @@
 #include "material/Material.h"
 #include "game/nodes/MeshNode.h"
 #include "shader/hlsl/RootSignatureGenerator.h"
-#include "render/general/resources/FrameResourcesManager.h"
+#include "render/general/resources/frame/FrameResourcesManager.h"
 #include "game/camera/CameraProperties.h"
 #include "game/camera/CameraManager.h"
 #include "game/nodes/CameraNode.h"

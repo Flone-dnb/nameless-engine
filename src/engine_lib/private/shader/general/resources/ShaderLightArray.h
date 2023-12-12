@@ -12,7 +12,7 @@
 // Custom.
 #include "misc/Error.h"
 #include "render/general/resources/UploadBuffer.h"
-#include "render/general/resources/FrameResourcesManager.h"
+#include "render/general/resources/frame/FrameResourcesManager.h"
 
 namespace ne {
     class Renderer;

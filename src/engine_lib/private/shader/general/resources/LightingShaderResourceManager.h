@@ -9,7 +9,7 @@
 
 // Custom.
 #include "render/general/resources/UploadBuffer.h"
-#include "render/general/resources/FrameResourcesManager.h"
+#include "render/general/resources/frame/FrameResourcesManager.h"
 #if defined(WIN32)
 #include "render/directx/resources/DirectXResource.h"
 #include "shader/hlsl/RootSignatureGenerator.h"

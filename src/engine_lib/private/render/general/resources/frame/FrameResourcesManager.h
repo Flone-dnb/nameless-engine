@@ -11,7 +11,7 @@
 #include "misc/Error.h"
 #include "math/GLMath.hpp"
 #include "shader/VulkanAlignmentConstants.hpp"
-#include "render/general/resources/FrameResource.h"
+#include "render/general/resources/frame/FrameResource.h"
 
 namespace ne {
     class UploadBuffer;

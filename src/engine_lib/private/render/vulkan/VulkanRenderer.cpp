@@ -11,7 +11,7 @@
 #include "game/Window.h"
 #include "render/vulkan/resources/VulkanResourceManager.h"
 #include "render/vulkan/resources/VulkanFrameResource.h"
-#include "render/general/resources/FrameResourcesManager.h"
+#include "render/general/resources/frame/FrameResourcesManager.h"
 #include "render/vulkan/pipeline/VulkanPushConstantsManager.hpp"
 #include "game/camera/CameraManager.h"
 #include "game/camera/CameraProperties.h"

@@ -10,7 +10,7 @@
 // Custom.
 #include "misc/Error.h"
 #include "math/GLMath.hpp"
-#include "render/general/resources/FrameResource.h"
+#include "render/general/resources/frame/FrameResource.h"
 
 // External.
 #include "directx/d3dx12.h"

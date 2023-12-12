@@ -13,7 +13,7 @@
 #include "misc/Error.h"
 #include "shader/ShaderManager.h"
 #include "render/general/resources/GpuResourceManager.h"
-#include "render/general/resources/FrameResourcesManager.h"
+#include "render/general/resources/frame/FrameResourcesManager.h"
 #include "render/RenderSettings.h"
 #include "game/camera/CameraProperties.h"
 #include "misc/shapes/AABB.h"

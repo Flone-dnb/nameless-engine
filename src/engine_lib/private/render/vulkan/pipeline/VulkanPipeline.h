@@ -6,7 +6,7 @@
 
 // Custom.
 #include "render/general/pipeline/Pipeline.h"
-#include "render/general/resources/FrameResourcesManager.h"
+#include "render/general/resources/frame/FrameResourcesManager.h"
 #include "render/vulkan/pipeline/VulkanPushConstantsManager.hpp"
 #include "shader/general/resources/ShaderBindlessArrayIndexManager.h"
 

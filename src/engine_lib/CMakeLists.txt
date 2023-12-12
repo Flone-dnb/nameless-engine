@@ -95,10 +95,10 @@ set(PROJECT_SOURCES
     private/render/vulkan/pipeline/VulkanPushConstantsManager.hpp
     private/render/general/resources/GpuResource.h
     private/render/general/resources/GpuResource.cpp
-    private/render/general/resources/FrameResourcesManager.h
-    private/render/general/resources/FrameResourcesManager.cpp
-    private/render/general/resources/FrameResource.h
-    private/render/general/resources/FrameResource.cpp
+    private/render/general/resources/frame/FrameResourcesManager.h
+    private/render/general/resources/frame/FrameResourcesManager.cpp
+    private/render/general/resources/frame/FrameResource.h
+    private/render/general/resources/frame/FrameResource.cpp
     private/render/general/resources/GpuResourceManager.h
     private/render/general/resources/GpuResourceManager.cpp
     private/render/general/resources/UploadBuffer.h

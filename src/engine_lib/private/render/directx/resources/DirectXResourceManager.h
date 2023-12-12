@@ -39,7 +39,7 @@ namespace ne {
          *
          * @return DirectX format.
          */
-        static DXGI_FORMAT convertTextureResourceFormatToDxFormat(TextureResourceFormat format);
+        static DXGI_FORMAT convertTextureResourceFormatToDxFormat(ShaderReadWriteTextureResourceFormat format);
 
         /**
          * Creates a new resource manager.
@@ -164,11 +164,11 @@ namespace ne {
          *
          * @return Error if something went wrong, otherwise created texture resource.
          */
-        virtual std::variant<std::unique_ptr<GpuResource>, Error> createTextureResource(
+        virtual std::variant<std::unique_ptr<GpuResource>, Error> createShaderReadWriteTextureResource(
             const std::string& sResourceName,
             unsigned int iWidth,
             unsigned int iHeight,
-            TextureResourceFormat format) override;
+            ShaderReadWriteTextureResourceFormat format) override;
 
         /**
          * Returns total video memory size (VRAM) in megabytes.

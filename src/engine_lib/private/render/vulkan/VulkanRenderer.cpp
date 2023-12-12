@@ -600,10 +600,13 @@ namespace ne {
                 deviceProperties.properties.deviceName);
         }
 
-        // Make sure engine texture resource formats are supported as storage images.
-        std::array<TextureResourceFormat, static_cast<size_t>(TextureResourceFormat::SIZE)> vFormatsToCheck =
-            {TextureResourceFormat::R32G32_UINT};
-        static_assert(static_cast<size_t>(TextureResourceFormat::SIZE) == 1, "add new formats to check");
+        // Make sure engine shader read/write texture resource formats are supported as storage images.
+        std::array<
+            ShaderReadWriteTextureResourceFormat,
+            static_cast<size_t>(ShaderReadWriteTextureResourceFormat::SIZE)>
+            vFormatsToCheck = {ShaderReadWriteTextureResourceFormat::R32G32_UINT};
+        static_assert(
+            static_cast<size_t>(ShaderReadWriteTextureResourceFormat::SIZE) == 1, "add new formats to check");
         for (const auto& format : vFormatsToCheck) {
             // Get format support details.
             VkFormatProperties formatProperties;

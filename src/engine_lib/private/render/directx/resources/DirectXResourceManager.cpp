@@ -236,11 +236,11 @@ namespace ne {
         return std::get<std::unique_ptr<DirectXResource>>(std::move(result));
     }
 
-    std::variant<std::unique_ptr<GpuResource>, Error> DirectXResourceManager::createTextureResource(
+    std::variant<std::unique_ptr<GpuResource>, Error> DirectXResourceManager::createShaderReadWriteTextureResource(
         const std::string& sResourceName,
         unsigned int iWidth,
         unsigned int iHeight,
-        TextureResourceFormat format) {
+        ShaderReadWriteTextureResourceFormat format) {
         // Prepare resource description.
         const auto resourceDescription = CD3DX12_RESOURCE_DESC::Tex2D(
             convertTextureResourceFormatToDxFormat(format),
@@ -375,22 +375,22 @@ namespace ne {
         this->pDsvHeap = std::move(pDsvHeap);
         this->pCbvSrvUavHeap = std::move(pCbvSrvUavHeap);
     }
-
-    DXGI_FORMAT DirectXResourceManager::convertTextureResourceFormatToDxFormat(TextureResourceFormat format) {
+    
+    DXGI_FORMAT DirectXResourceManager::convertTextureResourceFormatToDxFormat(ShaderReadWriteTextureResourceFormat format) {
         switch (format) {
-        case (TextureResourceFormat::R32G32_UINT): {
+        case (ShaderReadWriteTextureResourceFormat::R32G32_UINT): {
             return DXGI_FORMAT_R32G32_UINT;
             break;
         }
-        case (TextureResourceFormat::SIZE): {
+        case (ShaderReadWriteTextureResourceFormat::SIZE): {
             Error error("invalid format");
             error.showError();
             throw std::runtime_error(error.getFullErrorMessage());
             break;
         }
         }
-
-        static_assert(static_cast<size_t>(TextureResourceFormat::SIZE) == 1, "add new formats to convert");
+        
+        static_assert(static_cast<size_t>(ShaderReadWriteTextureResourceFormat::SIZE) == 1, "add new formats to convert");
 
         Error error("unhandled case");
         error.showError();

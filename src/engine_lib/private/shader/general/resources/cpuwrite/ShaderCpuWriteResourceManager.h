@@ -22,6 +22,9 @@ namespace ne {
         // Only renderer should be allowed to create this manager.
         friend class Renderer;
 
+        // Unique pointers will notify the manager before destruction.
+        friend class ShaderCpuWriteResourceUniquePtr;
+
     public:
         /** Groups shader CPU write resources. */
         struct Resources {
@@ -93,13 +96,6 @@ namespace ne {
         void markResourceAsNeedsUpdate(ShaderCpuWriteResource* pResourceToDestroy);
 
         /**
-         * Destroys the specified resource because it will no longer be used.
-         *
-         * @param pResource Resource to destroy.
-         */
-        void destroyResource(ShaderCpuWriteResource* pResource);
-
-        /**
          * Returns internal resources.
          *
          * @return Internal resources.
@@ -123,6 +119,14 @@ namespace ne {
          */
         std::variant<ShaderCpuWriteResourceUniquePtr, Error>
         handleResourceCreation(std::variant<std::unique_ptr<ShaderCpuWriteResource>, Error> result);
+
+        /**
+         * Called by shader CPU write resource unique pointers to destroy the specified resource because it
+         * will no longer be used.
+         *
+         * @param pResourceToDestroy Resource to destroy.
+         */
+        void destroyResource(ShaderCpuWriteResource* pResourceToDestroy);
 
         /** Renderer that owns this manager. */
         Renderer* pRenderer = nullptr;

@@ -8,7 +8,6 @@
 #endif
 #include "render/vulkan/VulkanRenderer.h"
 #include "shader/glsl/resources/GlslShaderTextureResource.h"
-#include "misc/Profiler.hpp"
 
 namespace ne {
 
@@ -58,8 +57,6 @@ namespace ne {
     }
 
     void ShaderTextureResourceManager::destroyResource(ShaderTextureResource* pResourceToDestroy) {
-        PROFILE_FUNC;
-
         std::scoped_lock guard(mtxShaderTextureResources.first);
 
         // Find this resource.

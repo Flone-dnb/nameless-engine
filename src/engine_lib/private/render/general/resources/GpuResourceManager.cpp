@@ -13,6 +13,8 @@ namespace ne {
 
     TextureManager* GpuResourceManager::getTextureManager() const { return pTextureManager.get(); }
 
+    ShadowMapManager* GpuResourceManager::getShadowMapManager() const { return pShadowMapManager.get(); }
+
     std::variant<std::unique_ptr<GpuResourceManager>, Error> GpuResourceManager::create(Renderer* pRenderer) {
 #if defined(WIN32)
         if (auto pDirectXRenderer = dynamic_cast<DirectXRenderer*>(pRenderer)) {
@@ -49,8 +51,13 @@ namespace ne {
 
         // Create texture manager.
         pTextureManager = std::make_unique<TextureManager>(this);
+
+        // Create shadow map manager.
+        pShadowMapManager = std::make_unique<ShadowMapManager>(this);
     }
 
     void GpuResourceManager::resetTextureManager() { pTextureManager = nullptr; }
+
+    void GpuResourceManager::resetShadowMapManager() { pShadowMapManager = nullptr; }
 
 } // namespace ne

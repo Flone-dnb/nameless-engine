@@ -92,10 +92,13 @@ namespace ne {
         // Explicitly destroy storage array manager so that it will free its GPU resources.
         pStorageResourceArrayManager = nullptr;
 
+        // Explicitly destroy shadow map manager so that it will no longer reference any GPU resources.
+        resetShadowMapManager();
+
         // Explicitly destroy texture manager so that it will no longer reference any GPU resources.
         resetTextureManager();
 
-        // Make sure no resources exist
+        // Make sure no resource exist
         // (we do this check only in Vulkan because resources need memory allocator to be destroyed).
         const auto iTotalAliveResourceCount = iAliveResourceCount.load();
         const auto iKtxAllocationCount = KtxLoadingCallbackManager::getCurrentAllocationCount();
@@ -103,8 +106,8 @@ namespace ne {
             Error error(std::format(
                 "Vulkan resource manager is being destroyed but there are "
                 "still {} resource(s) and {} KTX allocations alive, most likely you forgot to explicitly "
-                "reset/delete some GPU resources that are used in the VulkanRenderer class (only "
-                "resources inside of the VulkanRenderer class should be explicitly deleted before "
+                "reset/delete some GPU resources that are used in the vulkan renderer class (only "
+                "resources inside of the vulkan renderer class should be explicitly deleted before "
                 "the resource manager is destroyed, everything else is expected to be automatically "
                 "deleted by world destruction)",
                 iTotalAliveResourceCount,
@@ -117,13 +120,13 @@ namespace ne {
         pMemoryAllocator = nullptr;
     }
 
-    VkFormat VulkanResourceManager::convertTextureResourceFormatToVkFormat(TextureResourceFormat format) {
+    VkFormat VulkanResourceManager::convertTextureResourceFormatToVkFormat(ShaderReadWriteTextureResourceFormat format) {
         switch (format) {
-        case (TextureResourceFormat::R32G32_UINT): {
+        case (ShaderReadWriteTextureResourceFormat::R32G32_UINT): {
             return VK_FORMAT_R32G32_UINT;
             break;
         }
-        case (TextureResourceFormat::SIZE): {
+        case (ShaderReadWriteTextureResourceFormat::SIZE): {
             Error error("invalid format");
             error.showError();
             throw std::runtime_error(error.getFullErrorMessage());
@@ -131,7 +134,7 @@ namespace ne {
         }
         }
 
-        static_assert(static_cast<size_t>(TextureResourceFormat::SIZE) == 1, "add new formats to convert");
+        static_assert(static_cast<size_t>(ShaderReadWriteTextureResourceFormat::SIZE) == 1, "add new formats to convert");
 
         Error error("unhandled case");
         error.showError();
@@ -462,11 +465,11 @@ namespace ne {
         return std::get<std::unique_ptr<VulkanResource>>(std::move(resourceResult));
     }
 
-    std::variant<std::unique_ptr<GpuResource>, Error> VulkanResourceManager::createTextureResource(
+    std::variant<std::unique_ptr<GpuResource>, Error> VulkanResourceManager::createShaderReadWriteTextureResource(
         const std::string& sResourceName,
         unsigned int iWidth,
         unsigned int iHeight,
-        TextureResourceFormat format) {
+        ShaderReadWriteTextureResourceFormat format) {
         // Prepare some variables.
         const auto imageFormat = convertTextureResourceFormatToVkFormat(format);
         const auto imageAspect = VK_IMAGE_ASPECT_COLOR_BIT;

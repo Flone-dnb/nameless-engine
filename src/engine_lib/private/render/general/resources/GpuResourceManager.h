@@ -10,6 +10,7 @@
 #include "misc/Error.h"
 #include "render/general/resources/UploadBuffer.h"
 #include "material/TextureManager.h"
+#include "render/general/resources/shadow/ShadowMapManager.h"
 
 namespace ne {
     class Renderer;
@@ -24,7 +25,7 @@ namespace ne {
     };
 
     /** Format of a texture resource to be used in shaders as a read/write resource. */
-    enum class TextureResourceFormat {
+    enum class ShaderReadWriteTextureResourceFormat {
         R32G32_UINT,
         // ONLY THE FOLLOWING FORMATS CAN BE ADDED HERE:
         // 1. Formats that are supported as Vulkan storage images on most of the GPUs. Please, make sure you
@@ -170,11 +171,11 @@ namespace ne {
          *
          * @return Error if something went wrong, otherwise created texture resource.
          */
-        virtual std::variant<std::unique_ptr<GpuResource>, Error> createTextureResource(
+        virtual std::variant<std::unique_ptr<GpuResource>, Error> createShaderReadWriteTextureResource(
             const std::string& sResourceName,
             unsigned int iWidth,
             unsigned int iHeight,
-            TextureResourceFormat format) = 0;
+            ShaderReadWriteTextureResourceFormat format) = 0;
 
         /**
          * Dumps internal state of the resource manager in JSON format.
@@ -201,6 +202,15 @@ namespace ne {
          */
         TextureManager* getTextureManager() const;
 
+        /**
+         * Returns shadow map manager.
+         *
+         * @remark Do not delete (free) returned pointer.
+         *
+         * @return Shadow map manager.
+         */
+        ShadowMapManager* getShadowMapManager() const;
+
     protected:
         /**
          * Creates a new platform-specific resource manager.
@@ -226,9 +236,20 @@ namespace ne {
          */
         void resetTextureManager();
 
+        /**
+         * Sets `nullptr` to shadow map manager's unique ptr to force destroy it (if exists).
+         *
+         * @warning Avoid using this function. Only use it if you need a special destruction order
+         * in your object.
+         */
+        void resetShadowMapManager();
+
     private:
-        /** Owns all texture GPU resources. */
+        /** Stores all texture GPU resources. */
         std::unique_ptr<TextureManager> pTextureManager;
+
+        /** Stores all shadow maps. */
+        std::unique_ptr<ShadowMapManager> pShadowMapManager;
 
         /** Do not delete (free) this pointer. Renderer that owns this manager. */
         Renderer* pRenderer = nullptr;

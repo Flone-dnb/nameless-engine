@@ -1103,11 +1103,11 @@ namespace ne {
         // Create light grids.
         for (const auto& info : vGridsToCreate) {
             // Create texture.
-            auto result = pResourceManager->createTextureResource(
+            auto result = pResourceManager->createShaderReadWriteTextureResource(
                 std::format("light culling - {} light grid", info.sResourceDescription),
                 static_cast<unsigned int>(iTileCountX),
                 static_cast<unsigned int>(iTileCountY),
-                TextureResourceFormat::R32G32_UINT);
+                ShaderReadWriteTextureResourceFormat::R32G32_UINT);
             if (std::holds_alternative<Error>(result)) [[unlikely]] {
                 auto error = std::get<Error>(std::move(result));
                 error.addCurrentLocationToErrorStack();

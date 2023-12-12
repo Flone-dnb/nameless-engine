@@ -28,6 +28,9 @@ namespace ne {
         // Only renderer should be allowed to create this manager.
         friend class Renderer;
 
+        // Unique pointers will notify the manager before destruction.
+        friend class ShaderTextureResourceUniquePtr;
+
     public:
         ShaderTextureResourceManager() = delete;
 
@@ -54,13 +57,6 @@ namespace ne {
             const std::string& sResourceAdditionalInfo,
             const std::unordered_set<Pipeline*>& pipelinesToUse,
             std::unique_ptr<TextureHandle> pTextureToUse);
-
-        /**
-         * Destroys the specified resource because it will no longer be used.
-         *
-         * @param pResource Resource to destroy.
-         */
-        void destroyResource(ShaderTextureResource* pResource);
 
         /**
          * Returns all shader resources that reference textures.
@@ -91,6 +87,14 @@ namespace ne {
          */
         std::variant<ShaderTextureResourceUniquePtr, Error>
         handleResourceCreation(std::variant<std::unique_ptr<ShaderTextureResource>, Error> result);
+
+        /**
+         * Called by shader texture resource unique pointers to destroy the specified resource because it will
+         * no longer be used.
+         *
+         * @param pResourceToDestroy Resource to destroy.
+         */
+        void destroyResource(ShaderTextureResource* pResourceToDestroy);
 
         /** Renderer that owns this manager. */
         Renderer* pRenderer = nullptr;

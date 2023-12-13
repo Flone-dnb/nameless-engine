@@ -149,7 +149,7 @@ namespace ne {
         const auto iCreatedGraphicsPipelineCount = getCurrentGraphicsPipelineCount();
         if (iCreatedGraphicsPipelineCount != 0) [[unlikely]] {
             // Log error.
-            Logger::get().error(fmt::format(
+            Logger::get().error(std::format(
                 "pipeline manager is being destroyed but {} graphics pipeline(s) exist:",
                 iCreatedGraphicsPipelineCount));
 
@@ -160,7 +160,7 @@ namespace ne {
 
                 // Iterate over all active shader combinations.
                 for (const auto& [sShaderNames, pipelines] : pipelinesOfSpecificType) {
-                    Logger::get().error(fmt::format(
+                    Logger::get().error(std::format(
                         "- \"{}\" ({} pipeline(s))", sShaderNames, pipelines.shaderPipelines.size()));
 
                     // Iterate over all pipelines that use these shaders.
@@ -177,7 +177,7 @@ namespace ne {
                         }
 
                         // Log macros.
-                        Logger::get().error(fmt::format(
+                        Logger::get().error(std::format(
                             "-- macros: {}, active references: {} (including this manager)",
                             sMacros,
                             pPipeline.use_count()));
@@ -190,7 +190,7 @@ namespace ne {
         const auto iActiveComputePipelines = getCurrentComputePipelineCount();
         if (iActiveComputePipelines != 0) [[unlikely]] {
             // Log error.
-            Logger::get().error(fmt::format(
+            Logger::get().error(std::format(
                 "pipeline manager is being destroyed but {} compute pipeline(s) still exist",
                 iActiveComputePipelines));
         }
@@ -407,7 +407,7 @@ namespace ne {
         // Self check: make sure we found something.
         if (!bFound) [[unlikely]] {
             Logger::get().error(
-                fmt::format("unable to find the specified pipeline \"{}\"", sPipelineIdentifier));
+                std::format("unable to find the specified pipeline \"{}\"", sPipelineIdentifier));
         }
     }
 

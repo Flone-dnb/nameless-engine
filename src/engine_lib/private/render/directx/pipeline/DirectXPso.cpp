@@ -32,7 +32,7 @@ namespace ne {
         }
 
         // Make sure the renderer is no longer using this PSO or its resources.
-        Logger::get().info(fmt::format(
+        Logger::get().info(std::format(
             "waiting for the GPU to finish work up to this point before destroying a PSO with id \"{}\"",
             getPipelineIdentifier()));
         getRenderer()->waitForGpuToFinishWorkUpToThisPoint();
@@ -94,7 +94,7 @@ namespace ne {
         // Release graphics PSO.
         auto iNewRefCount = mtxInternalResources.second.pPso.Reset();
         if (iNewRefCount != 0) {
-            return Error(fmt::format(
+            return Error(std::format(
                 "internal graphics PSO was requested to be released from the "
                 "memory but it's still being referenced (new ref count: {}) (PSO ID: {})",
                 iNewRefCount,
@@ -110,7 +110,7 @@ namespace ne {
         // whether it's safe to compare it to zero or not.
         //        iNewRefCount = mtxInternalResources.second.pRootSignature.Reset();
         //        if (iNewRefCount != 0) {
-        //            return Error(fmt::format(
+        //            return Error(std::format(
         //                "internal root signature was requested to be released from the "
         //                "memory but it's still being referenced (new ref count: {}) (PSO ID: {})",
         //                iNewRefCount,
@@ -183,13 +183,13 @@ namespace ne {
 
         // Assign vertex shader.
         if (addShader(sVertexShaderName)) [[unlikely]] {
-            return Error(fmt::format("unable to find a shader named \"{}\"", sVertexShaderName));
+            return Error(std::format("unable to find a shader named \"{}\"", sVertexShaderName));
         }
 
         // Assign pixel shader.
         if (!bDepthOnlyPipeline) {
             if (addShader(sPixelShaderName)) [[unlikely]] {
-                return Error(fmt::format("unable to find a shader named \"{}\"", sVertexShaderName));
+                return Error(std::format("unable to find a shader named \"{}\"", sVertexShaderName));
             }
         }
 
@@ -343,7 +343,7 @@ namespace ne {
 
         // Make sure that shader was found.
         if (bComputeShaderNotFound) [[unlikely]] {
-            return Error(fmt::format("shader \"{}\" was not found in Shader Manager", sComputeShaderName));
+            return Error(std::format("shader \"{}\" was not found in Shader Manager", sComputeShaderName));
         }
 
         // Get assigned shader pack.

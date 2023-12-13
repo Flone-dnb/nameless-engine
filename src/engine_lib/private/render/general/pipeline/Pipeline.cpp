@@ -184,7 +184,7 @@ namespace ne {
         // Self check: make sure this material was not added previously.
         const auto it = mtxMaterialsThatUseThisPipeline.second.find(pMaterial);
         if (it != mtxMaterialsThatUseThisPipeline.second.end()) [[unlikely]] {
-            Logger::get().error(fmt::format(
+            Logger::get().error(std::format(
                 "material \"{}\" notified the pipeline for shaders \"{}\" of being used but this "
                 "material already existed in the array of materials that use this pipeline",
                 pMaterial->getMaterialName(),
@@ -206,7 +206,7 @@ namespace ne {
             // Make sure this material was previously added to our array of materials.
             const auto it = mtxMaterialsThatUseThisPipeline.second.find(pMaterial);
             if (it == mtxMaterialsThatUseThisPipeline.second.end()) [[unlikely]] {
-                Logger::get().error(fmt::format(
+                Logger::get().error(std::format(
                     "material \"{}\" notified the pipeline for shaders \"{}\" of no longer being used but "
                     "this "
                     "material was not found in the array of materials that use this pipeline",
@@ -230,7 +230,7 @@ namespace ne {
         // Self check: make sure this compute shader interface was not added previously.
         const auto it = mtxComputeShadersThatUseThisPipeline.second.find(pComputeShaderInterface);
         if (it != mtxComputeShadersThatUseThisPipeline.second.end()) [[unlikely]] {
-            Logger::get().error(fmt::format(
+            Logger::get().error(std::format(
                 "a compute shader interface has started referencing the pipeline for shader \"{}\" but "
                 "this compute interface already existed in the array of interfaces that use this pipeline",
                 getPipelineIdentifier()));
@@ -251,7 +251,7 @@ namespace ne {
             // Make sure this compute shader interface was previously added to our array of materials.
             const auto it = mtxComputeShadersThatUseThisPipeline.second.find(pComputeShaderInterface);
             if (it == mtxComputeShadersThatUseThisPipeline.second.end()) [[unlikely]] {
-                Logger::get().error(fmt::format(
+                Logger::get().error(std::format(
                     "a compute shader interface stopped referencing the pipeline for shader \"{}\" but "
                     "this compute interface was not found in the array of interfaces that use this pipeline",
                     getPipelineIdentifier()));

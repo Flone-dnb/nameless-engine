@@ -29,7 +29,7 @@ namespace ne {
             vHandledDescriptorTypes, [&descriptorType](const auto& type) { return descriptorType == type; });
         if (descriptorIt == vHandledDescriptorTypes.end()) [[unlikely]] {
             // this descriptor type is not handled in this heap
-            return Error(fmt::format(
+            return Error(std::format(
                 "{} heap does not assign descriptors of the specified type (descriptor type {})",
                 convertHeapTypeToString(heapType),
                 static_cast<int>(descriptorType)));
@@ -40,7 +40,7 @@ namespace ne {
 
         // Check if the resource already has descriptor of this type.
         if (pResource->mtxHeapDescriptors.second[static_cast<int>(descriptorType)].has_value()) [[unlikely]] {
-            return Error(fmt::format(
+            return Error(std::format(
                 "resource already has this descriptor assigned (descriptor type {})",
                 static_cast<int>(descriptorType)));
         }
@@ -155,7 +155,7 @@ namespace ne {
         const auto it = mtxInternalResources.second.bindedResources.find(pResource);
         if (it == mtxInternalResources.second.bindedResources.end()) {
             Logger::get().error(
-                fmt::format("the specified resource \"{}\" is not found", pResource->getResourceName()));
+                std::format("the specified resource \"{}\" is not found", pResource->getResourceName()));
             return;
         }
 
@@ -200,7 +200,7 @@ namespace ne {
 
         // Make sure the array is fully filled and there's no free space.
         if (mtxInternalResources.second.iHeapSize != mtxInternalResources.second.iHeapCapacity) [[unlikely]] {
-            return Error(fmt::format(
+            return Error(std::format(
                 "a request to expand {} heap of capacity {} while the actual size is {} was "
                 "rejected, reason: expand condition is not met (this is a bug, report to developers)",
                 sHeapType,
@@ -210,7 +210,7 @@ namespace ne {
 
         // Make sure there are no unused descriptors.
         if (!mtxInternalResources.second.noLongerUsedDescriptorIndexes.empty()) [[unlikely]] {
-            return Error(fmt::format(
+            return Error(std::format(
                 "requested to expand {} heap of capacity {} while there are not used "
                 "descriptors exist ({}) (actual heap size is {}) (this is a bug, report to developers)",
                 sHeapType,
@@ -222,7 +222,7 @@ namespace ne {
         // Make sure our new capacity will not exceed type limit.
         constexpr auto iMaxHeapCapacity = std::numeric_limits<INT>::max();
         if (iMaxHeapCapacity - iHeapGrowSize < mtxInternalResources.second.iHeapCapacity) [[unlikely]] {
-            return Error(fmt::format(
+            return Error(std::format(
                 "a request to expand {} descriptor heap of capacity {} was rejected, reason: "
                 "heap will exceed the type limit of {}",
                 sHeapType,
@@ -252,7 +252,7 @@ namespace ne {
 
         // Make sure we can shrink (check that we are not on the minimum capacity).
         if (mtxInternalResources.second.iHeapCapacity < iHeapGrowSize * 2) [[unlikely]] {
-            return Error(fmt::format(
+            return Error(std::format(
                 "a request to shrink {} heap of capacity {} with the actual size of {} was rejected, reason: "
                 "need at least the size of {} to shrink (this is a bug, report to developers)",
                 sHeapType,
@@ -265,7 +265,7 @@ namespace ne {
         // free space (i.e. we will not be on the edge to expand).
         if (mtxInternalResources.second.iHeapSize >
             mtxInternalResources.second.iHeapCapacity - iHeapGrowSize - iHeapGrowSize / 2) [[unlikely]] {
-            return Error(fmt::format(
+            return Error(std::format(
                 "a request to shrink {} heap of capacity {} with the actual size of {} was rejected, reason: "
                 "shrink condition is not met (this is a bug, report to developers)",
                 sHeapType,
@@ -365,8 +365,8 @@ namespace ne {
                 break;
             }
             default: {
-                Error error(std::format(
-                    "unsupported resource dimension of resource \"{}\"", pResource->getResourceName()));
+                Error error(
+                    std::format("unsupported resource dimension \"{}\"", pResource->getResourceName()));
                 error.showError();
                 throw std::runtime_error(error.getFullErrorMessage());
                 break;
@@ -446,7 +446,7 @@ namespace ne {
     std::optional<Error> DirectXDescriptorHeap::createHeap(INT iCapacity) {
         std::scoped_lock guard(mtxInternalResources.first);
 
-        Logger::get().info(fmt::format(
+        Logger::get().info(std::format(
             "waiting for the GPU to finish work up to this point to (re)create {} descriptor heap from "
             "capacity {} to {} (current actual heap size: {})",
             sHeapType,

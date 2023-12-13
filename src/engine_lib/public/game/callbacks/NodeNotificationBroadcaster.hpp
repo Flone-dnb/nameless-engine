@@ -106,7 +106,7 @@ namespace ne {
                         // Make sure a binding with this ID exists.
                         auto it = mtxCallbacks.second.find(iBindingId);
                         if (it == mtxCallbacks.second.end()) [[unlikely]] {
-                            Logger::get().error(fmt::format(
+                            Logger::get().error(std::format(
                                 "a callback with binding ID {} was marked to be removed from a "
                                 "broadcaster but broadcaster does not have a callback with this ID",
                                 iBindingId));
@@ -155,7 +155,7 @@ namespace ne {
             // Generate new binding ID.
             const auto iNewBindingId = iAvailableBindingId.fetch_add(1);
             if (iNewBindingId + 1 == ULLONG_MAX) [[unlikely]] {
-                Logger::get().warn(fmt::format(
+                Logger::get().warn(std::format(
                     "\"next available broadcaster binding ID\" is at its maximum value: {}, another "
                     "subscribed callback will cause an overflow",
                     iNewBindingId + 1));
@@ -201,7 +201,7 @@ namespace ne {
             auto it = mtxCallbacks.second.find(iBindingId);
             if (it == mtxCallbacks.second.end()) [[unlikely]] {
                 Logger::get().error(
-                    fmt::format("callback with binding ID {} was not found in the broadcaster", iBindingId));
+                    std::format("callback with binding ID {} was not found in the broadcaster", iBindingId));
                 return;
             }
 
@@ -242,7 +242,7 @@ namespace ne {
 
             // Make extra sure everything is correct.
             if (iCurrentPlusPending < iPendingToBeRemoved) [[unlikely]] {
-                Logger::get().error(fmt::format(
+                Logger::get().error(std::format(
                     "there are more callbacks to be removed than all existing callbacks plus "
                     "pending to be added: currently registered: {}, pending to be added: {}, pending to "
                     "be removed: {}",

@@ -425,7 +425,7 @@ namespace ne RNAMESPACE() {
             if (mtxIsSpawned.second) {
                 // Get node ID.
                 if (!iNodeId.has_value()) [[unlikely]] {
-                    Error error(fmt::format(
+                    Error error(std::format(
                         "node \"{}\" created a new broadcaster while being spawned but node's ID is empty",
                         sNodeName));
                     error.showError();

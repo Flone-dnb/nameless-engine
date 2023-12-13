@@ -107,7 +107,7 @@ int main() {
         // Run tests on DirectX renderer.
         const auto iReturnCode = session.run();
         if (iReturnCode != 0) {
-            ne::Logger::get().error(fmt::format(
+            ne::Logger::get().error(std::format(
                 "some tests failed using supported DirectX renderer, error code: {}", iReturnCode));
             return iReturnCode;
         }
@@ -151,7 +151,7 @@ int main() {
         // Run tests on Vulkan renderer.
         const auto iReturnCode = session.run();
         if (iReturnCode != 0) {
-            ne::Logger::get().error(fmt::format(
+            ne::Logger::get().error(std::format(
                 "some tests failed using supported Vulkan renderer, error code: {}", iReturnCode));
             return iReturnCode;
         }

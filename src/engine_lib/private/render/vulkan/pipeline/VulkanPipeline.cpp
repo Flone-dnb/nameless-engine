@@ -274,12 +274,12 @@ namespace ne {
 
         // Assign vertex shader.
         if (addShader(sVertexShaderName)) {
-            return Error(fmt::format("unable to find a shader named \"{}\"", sVertexShaderName));
+            return Error(std::format("unable to find a shader named \"{}\"", sVertexShaderName));
         }
 
         if (!bDepthOnlyPipeline) {
             if (addShader(sFragmentShaderName)) {
-                return Error(fmt::format("unable to find a shader named \"{}\"", sVertexShaderName));
+                return Error(std::format("unable to find a shader named \"{}\"", sVertexShaderName));
             }
         }
 

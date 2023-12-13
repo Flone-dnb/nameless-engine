@@ -551,10 +551,10 @@ namespace ne RNAMESPACE() {
                 return Error("provided toml value does not contain entity ID");
             }
             if (iIdEndDotPos + 1 == sSectionName.size()) [[unlikely]] {
-                return Error(fmt::format("section name \"{}\" does not have a GUID", sSectionName));
+                return Error(std::format("section name \"{}\" does not have a GUID", sSectionName));
             }
             if (iIdEndDotPos == 0) [[unlikely]] {
-                return Error(fmt::format("section \"{}\" is not full", sSectionName));
+                return Error(std::format("section \"{}\" is not full", sSectionName));
             }
 
             // Get ID chain (either entity ID or something like "parentEntityId.childEntityId").
@@ -570,7 +570,7 @@ namespace ne RNAMESPACE() {
 
         // Check if anything was found.
         if (sTargetSection.empty()) {
-            return Error(fmt::format("could not find entity with ID \"{}\"", sEntityId));
+            return Error(std::format("could not find entity with ID \"{}\"", sEntityId));
         }
 
         // Get all keys (field names) from this section.
@@ -578,11 +578,11 @@ namespace ne RNAMESPACE() {
         try {
             section = toml::find(tomlData, sTargetSection);
         } catch (std::exception& ex) {
-            return Error(fmt::format("no section \"{}\" was found ({})", sTargetSection, ex.what()));
+            return Error(std::format("no section \"{}\" was found ({})", sTargetSection, ex.what()));
         }
 
         if (!section.is_table()) {
-            return Error(fmt::format("found \"{}\" section is not a section", sTargetSection));
+            return Error(std::format("found \"{}\" section is not a section", sTargetSection));
         }
 
         // Collect keys.
@@ -595,7 +595,7 @@ namespace ne RNAMESPACE() {
             } else if (key == sPathRelativeToResKey) {
                 // Make sure the value is string.
                 if (!value.is_string()) {
-                    Error error(fmt::format("found \"{}\" key's value is not string", sPathRelativeToResKey));
+                    Error error(std::format("found \"{}\" key's value is not string", sPathRelativeToResKey));
                     return error;
                 }
 
@@ -611,7 +611,7 @@ namespace ne RNAMESPACE() {
             } else if (key.starts_with("..")) {
                 // Custom attribute.
                 if (!value.is_string()) {
-                    return Error(fmt::format("found custom attribute \"{}\" is not a string", key));
+                    return Error(std::format("found custom attribute \"{}\" is not a string", key));
                 }
                 customAttributes[key.substr(2)] = value.as_string().str;
             } else if (key.contains('[')) {
@@ -622,12 +622,12 @@ namespace ne RNAMESPACE() {
                 const auto iFieldNameEndPosition = key.find('[');
                 auto iFieldNameStartPosition = key.rfind('"', iFieldNameEndPosition);
                 if (iFieldNameStartPosition == std::string::npos) [[unlikely]] {
-                    return Error(fmt::format("section name \"{}\" is corrupted", key));
+                    return Error(std::format("section name \"{}\" is corrupted", key));
                 }
                 iFieldNameStartPosition += 1;
 
                 if (iFieldNameStartPosition >= iFieldNameEndPosition) [[unlikely]] {
-                    return Error(fmt::format("section name \"{}\" is corrupted", key));
+                    return Error(std::format("section name \"{}\" is corrupted", key));
                 }
 
                 auto sFieldName =
@@ -642,19 +642,19 @@ namespace ne RNAMESPACE() {
         auto pType = getClassForGuid(sTypeGuid);
         if (!pType) {
             if (pOriginalEntity) {
-                return Error(fmt::format(
+                return Error(std::format(
                     "GUID \"{}\" was not found in the database, but "
                     "the original object at \"{}\" (ID \"{}\") was deserialized",
                     sTypeGuid,
                     pOriginalEntity->getPathDeserializedFromRelativeToRes().value().first,
                     pOriginalEntity->getPathDeserializedFromRelativeToRes().value().second));
             } else {
-                return Error(fmt::format("no type found for GUID \"{}\"", sTypeGuid));
+                return Error(std::format("no type found for GUID \"{}\"", sTypeGuid));
             }
         }
         if (!SerializableObjectFieldSerializer::isDerivedFromSerializable(pType)) {
             if (pOriginalEntity) {
-                return Error(fmt::format(
+                return Error(std::format(
                     "deserialized type for \"{}\" does not derive from {}, but "
                     "the original object at \"{}\" (ID \"{}\") was deserialized",
                     sTypeGuid,
@@ -662,7 +662,7 @@ namespace ne RNAMESPACE() {
                     pOriginalEntity->getPathDeserializedFromRelativeToRes().value().first,
                     pOriginalEntity->getPathDeserializedFromRelativeToRes().value().second));
             } else {
-                return Error(fmt::format(
+                return Error(std::format(
                     "deserialized type with GUID \"{}\" does not derive from {}",
                     sTypeGuid,
                     staticGetArchetype().getName()));
@@ -679,7 +679,7 @@ namespace ne RNAMESPACE() {
             if constexpr (std::is_same_v<SmartPointer<T>, std::shared_ptr<T>>) {
                 pSmartPointerInstance = pType->makeSharedInstance<T>();
                 if (pSmartPointerInstance == nullptr) {
-                    return Error(fmt::format(
+                    return Error(std::format(
                         "unable to make an object of type \"{}\" using type's default constructor "
                         "(does type \"{}\" has a default constructor?)",
                         pType->getName(),
@@ -690,7 +690,7 @@ namespace ne RNAMESPACE() {
                 // to `rfk::Struct`
                 std::unique_ptr<T> pInstance = pType->makeUniqueInstance<T>();
                 if (!pInstance) {
-                    return Error(fmt::format(
+                    return Error(std::format(
                         "unable to make an object of type \"{}\" using type's default constructor "
                         "(does type \"{}\" has a default constructor?)",
                         pType->getName(),
@@ -699,7 +699,7 @@ namespace ne RNAMESPACE() {
                 gc<rfk::Object> pParentGcInstance = pInstance->gc_new();
                 pSmartPointerInstance = gc_dynamic_pointer_cast<T>(pParentGcInstance);
                 if (!pSmartPointerInstance) {
-                    return Error(fmt::format(
+                    return Error(std::format(
                         "dynamic cast failed to cast the type \"{}\" to the specified template argument "
                         "(are you trying to deserialize into a wrong type?)",
                         pParentGcInstance->getArchetype().getName()));
@@ -726,7 +726,7 @@ namespace ne RNAMESPACE() {
             try {
                 value = toml::find(section, sFieldName);
             } catch (std::exception& exception) {
-                return Error(fmt::format(
+                return Error(std::format(
                     "field \"{}\" was not found in the specified toml value: {}",
                     sFieldName,
                     exception.what()));
@@ -736,7 +736,7 @@ namespace ne RNAMESPACE() {
             rfk::Field const* pField =
                 pType->getFieldByName(sFieldName.c_str(), rfk::EFieldFlags::Default, true);
             if (!pField) {
-                Logger::get().warn(fmt::format(
+                Logger::get().warn(std::format(
                     "field name \"{}\" exists in the specified toml value but does not exist in the "
                     "actual object (if you removed/renamed this reflected field from your "
                     "class/struct - ignore this warning)",
@@ -773,7 +773,7 @@ namespace ne RNAMESPACE() {
                 // Get entity ID chain.
                 auto iLastDotPos = sTargetSection.rfind('.');
                 if (iLastDotPos == std::string::npos) [[unlikely]] {
-                    return Error(fmt::format("section name \"{}\" is corrupted", sTargetSection));
+                    return Error(std::format("section name \"{}\" is corrupted", sTargetSection));
                 }
                 // Will be something like: "entityId.subEntityId",
                 // "entityId.subEntityId.subSubEntityId" or etc.
@@ -869,7 +869,7 @@ namespace ne RNAMESPACE() {
                         auto error = optionalError.value();
                         error.addCurrentLocationToErrorStack();
                         if (pOriginalEntity) {
-                            Logger::get().error(fmt::format(
+                            Logger::get().error(std::format(
                                 "an error occurred while deserializing "
                                 "changed field (this field was not deserialized), error: {}",
                                 error.getFullErrorMessage()));
@@ -882,7 +882,7 @@ namespace ne RNAMESPACE() {
 
             if (!bFoundSerializer) {
                 Logger::get().warn(
-                    fmt::format("unable to find a deserializer that supports field \"{}\"", sFieldName));
+                    std::format("unable to find a deserializer that supports field \"{}\"", sFieldName));
             }
         }
 
@@ -922,7 +922,7 @@ namespace ne RNAMESPACE() {
         try {
             tomlData = toml::parse(pathToFile);
         } catch (std::exception& exception) {
-            return Error(fmt::format(
+            return Error(std::format(
                 "failed to parse TOML file at \"{}\", error: {}", pathToFile.string(), exception.what()));
         }
 
@@ -951,7 +951,7 @@ namespace ne RNAMESPACE() {
             const auto pathToOriginalFile =
                 ProjectPaths::getPathToResDirectory(ResourceDirectory::ROOT) / sRelativePath;
             if (!std::filesystem::exists(pathToOriginalFile)) {
-                return Error(fmt::format(
+                return Error(std::format(
                     "failed to save the relative path to the `res` directory for the file at \"{}\", "
                     "reason: constructed path \"{}\" does not exist",
                     pathToFile.string(),
@@ -975,7 +975,7 @@ namespace ne RNAMESPACE() {
         for (const auto& sId : ids) {
             if (sId.contains('.')) [[unlikely]] {
                 return Error(
-                    fmt::format("the specified object ID \"{}\" is not allowed to have dots in it", sId));
+                    std::format("the specified object ID \"{}\" is not allowed to have dots in it", sId));
             }
         }
 

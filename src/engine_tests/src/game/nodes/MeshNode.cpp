@@ -487,7 +487,7 @@ TEST_CASE("shader read/write resources exist only when MeshNode is spawned") {
                 // Self check for spawned mesh size.
                 constexpr size_t iMaxMeshSizeForTestMb = 512;
                 if (iVramMbSpawned - iVramMbNotSpawned > iMaxMeshSizeForTestMb) {
-                    Error error(fmt::format(
+                    Error error(std::format(
                         "test mesh node takes {}+ MB of VRAM, that's too much for a test, decrease "
                         "mesh vertex count",
                         iMaxMeshSizeForTestMb));

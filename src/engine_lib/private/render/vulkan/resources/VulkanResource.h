@@ -179,6 +179,8 @@ namespace ne {
          * @param imageInfo        Image creation info.
          * @param allocationInfo   Allocation creation info.
          * @param viewDescription  If specified also creates an image view that references the image.
+         * @param bIsCubeMapView   `true` to create a view to a cubemap, `false` to create a 2D texture
+         * view. Ignored if view description is not specified.
          *
          * @return Error if something went wrong, otherwise created resource.
          */
@@ -188,7 +190,8 @@ namespace ne {
             VmaAllocator pMemoryAllocator,
             const VkImageCreateInfo& imageInfo,
             const VmaAllocationCreateInfo& allocationInfo,
-            std::optional<VkImageAspectFlags> viewDescription);
+            std::optional<VkImageAspectFlags> viewDescription,
+            bool bIsCubeMapView = false);
 
         /**
          * Creates a new image resource.

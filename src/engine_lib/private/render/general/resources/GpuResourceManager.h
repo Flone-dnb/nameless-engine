@@ -42,6 +42,9 @@ namespace ne {
         // Only renderer should be allowed to create resource manager.
         friend class Renderer;
 
+        // Creates shadow maps.
+        friend class ShadowMapManager;
+
     public:
         GpuResourceManager() = delete;
 
@@ -220,6 +223,20 @@ namespace ne {
          * @return Error if something went wrong, otherwise created resource manager.
          */
         static std::variant<std::unique_ptr<GpuResourceManager>, Error> create(Renderer* pRenderer);
+
+        /**
+         * Creates a GPU resource to be used as a shadow map.
+         *
+         * @param sResourceName  Resource name, used for logging.
+         * @param iTextureSize   Size of one dimension of the texture in pixels.
+         * Must be power of 2 (128, 256, 512, 1024, 2048, etc.).
+         * @param bIsCubeTexture `false` is you need a single 2D texture resource or `true` to have
+         * 6 2D textures arranged as a cube map.
+         *
+         * @return Error if something went wrong, otherwise created texture resource.
+         */
+        virtual std::variant<std::unique_ptr<GpuResource>, Error> createShadowMapTexture(
+            const std::string& sResourceName, unsigned int iTextureSize, bool bIsCubeTexture) = 0;
 
         /**
          * Creates uninitialized manager, used internally.

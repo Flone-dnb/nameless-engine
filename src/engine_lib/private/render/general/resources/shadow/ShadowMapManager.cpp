@@ -5,7 +5,7 @@
 
 // Custom.
 #include "io/Logger.h"
-#include "render/general/resources/shadow/ShadowMap.h"
+#include "render/general/resources/GpuResource.h"
 
 namespace ne {
 
@@ -13,7 +13,7 @@ namespace ne {
         this->pResourceManager = pResourceManager;
     }
 
-    void ShadowMapManager::destroyResource(ShadowMap* pResourceToDestroy) {
+    void ShadowMapManager::destroyResource(GpuResource* pResourceToDestroy) {
         std::scoped_lock guard(mtxShadowMaps.first);
 
         // Find this resource.
@@ -36,9 +36,9 @@ namespace ne {
             // Prepare their names and count.
             std::unordered_map<std::string, size_t> leftResources;
             for (const auto& [pRawResource, pResource] : mtxShadowMaps.second) {
-                const auto it = leftResources.find(pResource->getInternalResource()->getResourceName());
+                const auto it = leftResources.find(pResource->getResourceName());
                 if (it == leftResources.end()) {
-                    leftResources[pResource->getInternalResource()->getResourceName()] = 1;
+                    leftResources[pResource->getResourceName()] = 1;
                 } else {
                     it->second += 1;
                 }

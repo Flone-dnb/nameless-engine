@@ -236,7 +236,8 @@ namespace ne {
         return std::get<std::unique_ptr<DirectXResource>>(std::move(result));
     }
 
-    std::variant<std::unique_ptr<GpuResource>, Error> DirectXResourceManager::createShaderReadWriteTextureResource(
+    std::variant<std::unique_ptr<GpuResource>, Error>
+    DirectXResourceManager::createShaderReadWriteTextureResource(
         const std::string& sResourceName,
         unsigned int iWidth,
         unsigned int iHeight,
@@ -273,6 +274,73 @@ namespace ne {
             return err;
         }
         return std::get<std::unique_ptr<DirectXResource>>(std::move(result));
+    }
+
+    std::variant<std::unique_ptr<GpuResource>, Error> DirectXResourceManager::createShadowMapTexture(
+        const std::string& sResourceName, unsigned int iTextureSize, bool bIsCubeTexture) {
+        // Check that texture size is power of 2.
+        if (!std::has_single_bit(iTextureSize)) [[unlikely]] {
+            return Error(std::format(
+                "shadow map size {} should be power of 2 (128, 256, 512, 1024, 2048, etc.)", iTextureSize));
+        }
+
+        // Prepare resource description.
+        auto resourceDescription = CD3DX12_RESOURCE_DESC::Tex2D(
+            DirectXRenderer::getDepthBufferFormatNoMultisampling(),
+            iTextureSize,
+            iTextureSize,
+            1, // depth / array size
+            1, // mip levels
+            1, // sample count
+            0, // sample quality
+            D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL);
+        if (bIsCubeTexture) {
+            CD3DX12_RESOURCE_DESC::Tex3D(
+                DirectXRenderer::getDepthBufferFormatNoMultisampling(),
+                iTextureSize,
+                iTextureSize,
+                1, // depth / array size
+                1, // mip levels
+                D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL);
+        }
+
+        // Prepare allocation heap.
+        D3D12MA::ALLOCATION_DESC allocationDesc = {};
+        allocationDesc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
+
+        // Create resource.
+        auto result = DirectXResource::create(
+            this,
+            sResourceName,
+            pMemoryAllocator.Get(),
+            allocationDesc,
+            resourceDescription,
+            D3D12_RESOURCE_STATE_GENERIC_READ,
+            {},
+            0,
+            0);
+        if (std::holds_alternative<Error>(result)) {
+            auto err = std::get<Error>(std::move(result));
+            err.addCurrentLocationToErrorStack();
+            return err;
+        }
+        auto pShadowMapTexture = std::get<std::unique_ptr<DirectXResource>>(std::move(result));
+
+        // Bind DSV.
+        auto optionalError = pShadowMapTexture->bindDescriptor(DirectXDescriptorType::DSV);
+        if (optionalError.has_value()) [[unlikely]] {
+            optionalError->addCurrentLocationToErrorStack();
+            return optionalError.value();
+        }
+
+        // Bind SRV.
+        optionalError = pShadowMapTexture->bindDescriptor(DirectXDescriptorType::SRV);
+        if (optionalError.has_value()) [[unlikely]] {
+            optionalError->addCurrentLocationToErrorStack();
+            return optionalError.value();
+        }
+
+        return pShadowMapTexture;
     }
 
     size_t DirectXResourceManager::getTotalVideoMemoryInMb() const {
@@ -375,8 +443,9 @@ namespace ne {
         this->pDsvHeap = std::move(pDsvHeap);
         this->pCbvSrvUavHeap = std::move(pCbvSrvUavHeap);
     }
-    
-    DXGI_FORMAT DirectXResourceManager::convertTextureResourceFormatToDxFormat(ShaderReadWriteTextureResourceFormat format) {
+
+    DXGI_FORMAT DirectXResourceManager::convertTextureResourceFormatToDxFormat(
+        ShaderReadWriteTextureResourceFormat format) {
         switch (format) {
         case (ShaderReadWriteTextureResourceFormat::R32G32_UINT): {
             return DXGI_FORMAT_R32G32_UINT;
@@ -389,8 +458,10 @@ namespace ne {
             break;
         }
         }
-        
-        static_assert(static_cast<size_t>(ShaderReadWriteTextureResourceFormat::SIZE) == 1, "add new formats to convert");
+
+        static_assert(
+            static_cast<size_t>(ShaderReadWriteTextureResourceFormat::SIZE) == 1,
+            "add new formats to convert");
 
         Error error("unhandled case");
         error.showError();
@@ -439,7 +510,7 @@ namespace ne {
         const auto initialUploadResourceState = D3D12_RESOURCE_STATE_GENERIC_READ;
         result = DirectXResource::create(
             this,
-            fmt::format("upload resource for \"{}\"", sResourceName),
+            std::format("upload resource for \"{}\"", sResourceName),
             pMemoryAllocator.Get(),
             allocationDesc,
             uploadResourceDescription,

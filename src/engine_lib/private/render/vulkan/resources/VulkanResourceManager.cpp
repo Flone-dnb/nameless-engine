@@ -120,7 +120,8 @@ namespace ne {
         pMemoryAllocator = nullptr;
     }
 
-    VkFormat VulkanResourceManager::convertTextureResourceFormatToVkFormat(ShaderReadWriteTextureResourceFormat format) {
+    VkFormat VulkanResourceManager::convertTextureResourceFormatToVkFormat(
+        ShaderReadWriteTextureResourceFormat format) {
         switch (format) {
         case (ShaderReadWriteTextureResourceFormat::R32G32_UINT): {
             return VK_FORMAT_R32G32_UINT;
@@ -134,7 +135,9 @@ namespace ne {
         }
         }
 
-        static_assert(static_cast<size_t>(ShaderReadWriteTextureResourceFormat::SIZE) == 1, "add new formats to convert");
+        static_assert(
+            static_cast<size_t>(ShaderReadWriteTextureResourceFormat::SIZE) == 1,
+            "add new formats to convert");
 
         Error error("unhandled case");
         error.showError();
@@ -465,7 +468,8 @@ namespace ne {
         return std::get<std::unique_ptr<VulkanResource>>(std::move(resourceResult));
     }
 
-    std::variant<std::unique_ptr<GpuResource>, Error> VulkanResourceManager::createShaderReadWriteTextureResource(
+    std::variant<std::unique_ptr<GpuResource>, Error>
+    VulkanResourceManager::createShaderReadWriteTextureResource(
         const std::string& sResourceName,
         unsigned int iWidth,
         unsigned int iHeight,
@@ -514,6 +518,35 @@ namespace ne {
         return pTextureResource;
     }
 
+    std::variant<std::unique_ptr<GpuResource>, Error> VulkanResourceManager::createShadowMapTexture(
+        const std::string& sResourceName, unsigned int iTextureSize, bool bIsCubeTexture) {
+        // Check that texture size is power of 2.
+        if (!std::has_single_bit(iTextureSize)) [[unlikely]] {
+            return Error(std::format(
+                "shadow map size {} should be power of 2 (128, 256, 512, 1024, 2048, etc.)", iTextureSize));
+        }
+
+        // Create image.
+        auto resourceResult = createImage(
+            sResourceName,
+            iTextureSize,
+            iTextureSize,
+            1,
+            VK_SAMPLE_COUNT_1_BIT,
+            VulkanRenderer::getDepthImageFormat(),
+            VK_IMAGE_TILING_OPTIMAL,
+            VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+            VK_IMAGE_ASPECT_DEPTH_BIT,
+            bIsCubeTexture);
+        if (std::holds_alternative<Error>(resourceResult)) {
+            auto error = std::get<Error>(std::move(resourceResult));
+            error.addCurrentLocationToErrorStack();
+            return error;
+        }
+
+        return std::get<std::unique_ptr<VulkanResource>>(std::move(resourceResult));
+    }
+
     std::variant<std::unique_ptr<VulkanResource>, Error> VulkanResourceManager::createImage(
         const std::string& sResourceName,
         uint32_t iImageWidth,
@@ -523,7 +556,8 @@ namespace ne {
         VkFormat imageFormat,
         VkImageTiling imageTilingMode,
         VkImageUsageFlags imageUsage,
-        std::optional<VkImageAspectFlags> viewDescription) {
+        std::optional<VkImageAspectFlags> viewDescription,
+        bool bIsCubeMap) {
         // Describe an image object.
         VkImageCreateInfo imageInfo{};
         imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
@@ -532,14 +566,14 @@ namespace ne {
         imageInfo.extent.height = static_cast<uint32_t>(iImageHeight);
         imageInfo.extent.depth = 1;
         imageInfo.mipLevels = iTextureMipLevelCount;
-        imageInfo.arrayLayers = 1;
+        imageInfo.arrayLayers = bIsCubeMap ? 6 : 1;
         imageInfo.format = imageFormat;
         imageInfo.tiling = imageTilingMode;
         imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
         imageInfo.usage = imageUsage;
         imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
         imageInfo.samples = sampleCount;
-        imageInfo.flags = 0;
+        imageInfo.flags = bIsCubeMap ? VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT : 0;
 
         // Prepare allocation info for memory allocator.
         VmaAllocationCreateInfo allocationInfo = {};
@@ -548,7 +582,7 @@ namespace ne {
 
         // Create resource.
         auto result = VulkanResource::create(
-            this, sResourceName, pMemoryAllocator, imageInfo, allocationInfo, viewDescription);
+            this, sResourceName, pMemoryAllocator, imageInfo, allocationInfo, viewDescription, bIsCubeMap);
         if (std::holds_alternative<Error>(result)) {
             auto error = std::get<Error>(std::move(result));
             error.addCurrentLocationToErrorStack();

@@ -6,7 +6,7 @@
 #include <unordered_map>
 
 namespace ne {
-    class ShadowMap;
+    class GpuResource;
     class GpuResourceManager;
 
     /**
@@ -41,7 +41,7 @@ namespace ne {
          *
          * @param pResourceToDestroy Resource to destroy.
          */
-        void destroyResource(ShadowMap* pResourceToDestroy);
+        void destroyResource(GpuResource* pResourceToDestroy);
 
         /**
          * Allocated shadow maps.
@@ -52,7 +52,7 @@ namespace ne {
          * @remark Storing raw pointers here is safe because `ShadowMapUniquePtr` will notify us
          * before destroying the resource so we will remove the raw pointer.
          */
-        std::pair<std::recursive_mutex, std::unordered_map<ShadowMap*, std::unique_ptr<ShadowMap>>>
+        std::pair<std::recursive_mutex, std::unordered_map<GpuResource*, std::unique_ptr<GpuResource>>>
             mtxShadowMaps;
 
         /** Do not delete (free) this pointer. GPU resource manager that owns this object. */

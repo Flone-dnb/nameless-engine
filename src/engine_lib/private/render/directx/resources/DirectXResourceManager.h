@@ -39,7 +39,8 @@ namespace ne {
          *
          * @return DirectX format.
          */
-        static DXGI_FORMAT convertTextureResourceFormatToDxFormat(ShaderReadWriteTextureResourceFormat format);
+        static DXGI_FORMAT
+        convertTextureResourceFormatToDxFormat(ShaderReadWriteTextureResourceFormat format);
 
         /**
          * Creates a new resource manager.
@@ -285,6 +286,22 @@ namespace ne {
             // 512
             return (iNumber + 255) & ~255; // NOLINT
         }
+
+        /**
+         * Creates a GPU resource to be used as a shadow map.
+         *
+         * @remark Also binds DSV and SRV to the created resource.
+         *
+         * @param sResourceName  Resource name, used for logging.
+         * @param iTextureSize   Size of one dimension of the texture in pixels.
+         * Must be power of 2 (128, 256, 512, 1024, 2048, etc.).
+         * @param bIsCubeTexture `false` is you need a single 2D texture resource or `true` to have
+         * 6 2D textures arranged as a cube map.
+         *
+         * @return Error if something went wrong, otherwise created texture resource.
+         */
+        virtual std::variant<std::unique_ptr<GpuResource>, Error> createShadowMapTexture(
+            const std::string& sResourceName, unsigned int iTextureSize, bool bIsCubeTexture) override;
 
         /**
          * Creates a new GPU resource and fills it with the specified data.

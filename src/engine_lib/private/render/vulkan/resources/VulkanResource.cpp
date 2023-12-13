@@ -153,7 +153,8 @@ namespace ne {
         VmaAllocator pMemoryAllocator,
         const VkImageCreateInfo& imageInfo,
         const VmaAllocationCreateInfo& allocationInfo,
-        std::optional<VkImageAspectFlags> viewDescription) {
+        std::optional<VkImageAspectFlags> viewDescription,
+        bool bIsCubeMapView) {
         // Prepare variables for created data.
         VkImage pCreatedImage = nullptr;
         VmaAllocation pCreatedMemory = nullptr;
@@ -189,13 +190,13 @@ namespace ne {
             VkImageViewCreateInfo viewInfo{};
             viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
             viewInfo.image = pCreatedImageResource->pImageResource;
-            viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+            viewInfo.viewType = bIsCubeMapView ? VK_IMAGE_VIEW_TYPE_CUBE : VK_IMAGE_VIEW_TYPE_2D;
             viewInfo.format = imageInfo.format;
             viewInfo.subresourceRange.aspectMask = viewDescription.value();
             viewInfo.subresourceRange.baseMipLevel = 0;
             viewInfo.subresourceRange.levelCount = imageInfo.mipLevels;
             viewInfo.subresourceRange.baseArrayLayer = 0;
-            viewInfo.subresourceRange.layerCount = 1;
+            viewInfo.subresourceRange.layerCount = imageInfo.arrayLayers;
 
             if (imageInfo.imageType != VK_IMAGE_TYPE_2D && viewInfo.viewType == VK_IMAGE_VIEW_TYPE_2D)
                 [[unlikely]] {

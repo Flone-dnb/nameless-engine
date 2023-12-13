@@ -34,7 +34,7 @@ namespace ne {
         return *this;
     }
 
-    ShadowMapUniquePtr::ShadowMapUniquePtr(ShadowMapManager* pManager, ShadowMap* pResource) {
+    ShadowMapUniquePtr::ShadowMapUniquePtr(ShadowMapManager* pManager, GpuResource* pResource) {
         this->pManager = pManager;
         this->pResource = pResource;
     }

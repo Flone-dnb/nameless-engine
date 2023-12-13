@@ -2,7 +2,7 @@
 
 namespace ne {
     class ShadowMapManager;
-    class ShadowMap;
+    class GpuResource;
 
     /**
      * Small raw pointer wrapper that acts like `std::unique_ptr`
@@ -43,7 +43,7 @@ namespace ne {
          *
          * @return `nullptr` if moved or not initialized, otherwise valid pointer to resource.
          */
-        inline ShadowMap* getResource() const { return pResource; }
+        inline GpuResource* getResource() const { return pResource; }
 
     private:
         /**
@@ -52,12 +52,12 @@ namespace ne {
          * @param pManager  Manager that owns the resource.
          * @param pResource Resource to point to.
          */
-        ShadowMapUniquePtr(ShadowMapManager* pManager, ShadowMap* pResource);
+        ShadowMapUniquePtr(ShadowMapManager* pManager, GpuResource* pResource);
 
         /** Manager that owns the resource we are pointing to. */
         ShadowMapManager* pManager = nullptr;
 
         /** Resource we are pointing to. */
-        ShadowMap* pResource = nullptr;
+        GpuResource* pResource = nullptr;
     };
 }

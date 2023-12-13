@@ -101,8 +101,6 @@ set(PROJECT_SOURCES
     private/render/general/resources/frame/FrameResource.cpp
     private/render/general/resources/shadow/ShadowMapManager.cpp
     private/render/general/resources/shadow/ShadowMapManager.h
-    private/render/general/resources/shadow/ShadowMap.cpp
-    private/render/general/resources/shadow/ShadowMap.h
     private/render/general/resources/shadow/ShadowMapUniquePtr.cpp
     private/render/general/resources/shadow/ShadowMapUniquePtr.h
     private/render/general/resources/GpuResourceManager.h
@@ -329,6 +327,7 @@ set_target_properties(update_mappings PROPERTIES FOLDER ${EXTERNAL_FOLDER})
 # External: spdlog.
 message(STATUS "${PROJECT_NAME}: adding external dependency \"SPDLOG\"...")
 set(SPDLOG_FMT_EXTERNAL OFF CACHE BOOL "" FORCE)
+set(SPDLOG_USE_STD_FORMAT ON CACHE BOOL "" FORCE)
 add_subdirectory(${RELATIVE_EXT_PATH}/spdlog ${DEPENDENCY_BUILD_DIR_NAME}/spdlog SYSTEM)
 target_link_libraries(${PROJECT_NAME} PUBLIC spdlog::spdlog)
 set_target_properties(spdlog PROPERTIES FOLDER ${EXTERNAL_FOLDER})

@@ -39,6 +39,13 @@ namespace ne {
         static uint32_t getUsedVulkanVersion();
 
         /**
+         * Returns format used for depth image.
+         *
+         * @return Format.
+         */
+        static constexpr VkFormat getDepthImageFormat() { return depthImageFormat; }
+
+        /**
          * Creates a new DirectX renderer.
          *
          * @param pGameManager GameManager object that owns this renderer.

@@ -335,8 +335,11 @@ namespace ne {
 
             // Setup SRV depending on the dimension.
             switch (resourceDesc.Dimension) {
-            case (D3D12_RESOURCE_DIMENSION_TEXTURE2D): {
-                srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+            case (D3D12_RESOURCE_DIMENSION_TEXTURE2D):
+            case (D3D12_RESOURCE_DIMENSION_TEXTURE3D): {
+                srvDesc.ViewDimension = resourceDesc.Dimension == D3D12_RESOURCE_DIMENSION_TEXTURE3D
+                                            ? D3D12_SRV_DIMENSION_TEXTURE3D
+                                            : D3D12_SRV_DIMENSION_TEXTURE2D;
                 srvDesc.Texture2D.MostDetailedMip = 0;
                 srvDesc.Texture2D.MipLevels = resourceDesc.MipLevels;
                 if (resourceDesc.Format == DirectXRenderer::getDepthStencilBufferFormat()) {

@@ -97,6 +97,7 @@ namespace ne {
          * @param imageTilingMode   Image tiling mode.
          * @param imageUsage        Image usage.
          * @param viewDescription   If specified also creates an image view that references the image.
+         * @param bIsCubeMap        `true` if you need a cubemap, `false` if a single texture.
          *
          * @return Created image.
          */
@@ -109,7 +110,8 @@ namespace ne {
             VkFormat imageFormat,
             VkImageTiling imageTilingMode,
             VkImageUsageFlags imageUsage,
-            std::optional<VkImageAspectFlags> viewDescription);
+            std::optional<VkImageAspectFlags> viewDescription,
+            bool bIsCubeMap = false);
 
         /**
          * Loads a texture from a KTX file in the GPU memory.
@@ -262,6 +264,20 @@ namespace ne {
          */
         static std::optional<VkBufferUsageFlagBits>
         convertResourceUsageTypeToVkBufferUsageType(ResourceUsageType usage);
+
+        /**
+         * Creates a GPU resource to be used as a shadow map.
+         *
+         * @param sResourceName  Resource name, used for logging.
+         * @param iTextureSize   Size of one dimension of the texture in pixels.
+         * Must be power of 2 (128, 256, 512, 1024, 2048, etc.).
+         * @param bIsCubeTexture `false` is you need a single 2D texture resource or `true` to have
+         * 6 2D textures arranged as a cube map.
+         *
+         * @return Error if something went wrong, otherwise created texture resource.
+         */
+        virtual std::variant<std::unique_ptr<GpuResource>, Error> createShadowMapTexture(
+            const std::string& sResourceName, unsigned int iTextureSize, bool bIsCubeTexture) override;
 
         /**
          * Creates a new buffer and allocates a new memory for it.

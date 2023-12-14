@@ -5,6 +5,7 @@
 #include "math/GLMath.hpp"
 #include "shader/VulkanAlignmentConstants.hpp"
 #include "shader/general/resources/LightingShaderResourceManager.h"
+#include "render/general/resources/shadow/ShadowMapHandle.h"
 
 #include "DirectionalLightNode.generated.h"
 
@@ -143,6 +144,13 @@ namespace ne RNAMESPACE() {
 
         /** Only valid while spawned. Up to date data that will be copied to the GPU. */
         std::pair<std::recursive_mutex, ShaderData> mtxShaderData;
+
+        /**
+         * References shadow map of the light source.
+         *
+         * @remark Only valid while spawned.
+         */
+        std::unique_ptr<ShadowMapHandle> pShadowMapHandle;
 
         /** Color of the light source. */
         RPROPERTY(Serialize)

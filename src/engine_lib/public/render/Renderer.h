@@ -496,11 +496,19 @@ namespace ne {
          * Called after some render setting is changed to recreate internal resources to match the current
          * settings.
          *
-         * @warning Derived classes must call parent's version first.
+         * @param bShadowMapSizeChanged `true` if shadow map size was changed, `false` otherwise.
          *
          * @return Error if something went wrong.
          */
-        [[nodiscard]] virtual std::optional<Error> onRenderSettingsChanged();
+        [[nodiscard]] std::optional<Error> onRenderSettingsChanged(bool bShadowMapSizeChanged = false);
+
+        /**
+         * Called from @ref onRenderSettingsChanged after some render setting is changed to recreate internal
+         * resources to match the current settings.
+         *
+         * @return Error if something went wrong.
+         */
+        [[nodiscard]] virtual std::optional<Error> onRenderSettingsChangedDerived() = 0;
 
         /**
          * Blocks the current thread until the GPU is finished using the specified frame resource.

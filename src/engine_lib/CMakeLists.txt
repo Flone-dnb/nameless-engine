@@ -101,8 +101,9 @@ set(PROJECT_SOURCES
     private/render/general/resources/frame/FrameResource.cpp
     private/render/general/resources/shadow/ShadowMapManager.cpp
     private/render/general/resources/shadow/ShadowMapManager.h
-    private/render/general/resources/shadow/ShadowMapUniquePtr.cpp
-    private/render/general/resources/shadow/ShadowMapUniquePtr.h
+    private/render/general/resources/shadow/ShadowMapHandle.cpp
+    private/render/general/resources/shadow/ShadowMapHandle.h
+    private/render/general/resources/shadow/ShadowMapType.hpp
     private/render/general/resources/GpuResourceManager.h
     private/render/general/resources/GpuResourceManager.cpp
     private/render/general/resources/UploadBuffer.h

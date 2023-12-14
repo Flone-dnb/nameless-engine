@@ -19,8 +19,9 @@ namespace ne {
     }
 
     void RenderSettings::setFpsLimit(unsigned int iNewFpsLimit) {
+        // Make sure the new setting is different.
         if (iFpsLimit == iNewFpsLimit) {
-            return; // do nothing
+            return;
         }
 
         // Log change.
@@ -43,10 +44,39 @@ namespace ne {
         }
     }
 
+    void RenderSettings::setShadowQuality(ShadowQuality quality) {
+        // Make sure the new setting is different.
+        const auto iNewShadowMapSize = static_cast<unsigned int>(quality);
+        if (iShadowMapSize == iNewShadowMapSize) {
+            return;
+        }
+
+        // Log change.
+        Logger::get().info(std::format(
+            "shadow map size is being changed from \"{}\" to \"{}\"", iShadowMapSize, iNewShadowMapSize));
+
+        // Change.
+        iShadowMapSize = iNewShadowMapSize;
+
+        // Notify renderer.
+        notifyRendererAboutChangedSettings();
+
+        // Save.
+        auto optionalError = saveConfigurationToDisk();
+        if (optionalError.has_value()) {
+            auto error = optionalError.value();
+            error.addCurrentLocationToErrorStack();
+            Logger::get().error(std::format(
+                "failed to save new render setting configuration, error: \"{}\"",
+                error.getFullErrorMessage()));
+        }
+    }
+
     void RenderSettings::setAntialiasingState(MsaaState state) {
+        // Make sure the new setting is different.
         const auto iNewSampleCount = static_cast<int>(state);
         if (iAntialiasingSampleCount == iNewSampleCount) {
-            return; // do nothing
+            return;
         }
 
         // Make sure this quality is supported.
@@ -128,6 +158,10 @@ namespace ne {
         return static_cast<MsaaState>(iAntialiasingSampleCount);
     }
 
+    ShadowQuality RenderSettings::getShadowQuality() const {
+        return static_cast<ShadowQuality>(iShadowMapSize);
+    }
+
     std::optional<Error> RenderSettings::saveConfigurationToDisk() {
         if (!bAllowSavingConfigurationToDisk) {
             return {};
@@ -182,12 +216,30 @@ namespace ne {
             iTextureFilteringMode = iNewTextureFilteringMode;
         }
 
+        // Check shadow map resolution.
+        if (iShadowMapSize != static_cast<unsigned int>(ShadowQuality::LOW) &&
+            iShadowMapSize != static_cast<unsigned int>(ShadowQuality::MEDIUM) &&
+            iShadowMapSize != static_cast<unsigned int>(ShadowQuality::HIGH)) {
+            const auto iNewShadowMapSize = static_cast<unsigned int>(ShadowQuality::HIGH);
+
+            // Log change.
+            Logger::get().warn(std::format(
+                "deserialized shadow map size \"{}\" is not a valid parameter, changing to \"{}\"",
+                iShadowMapSize,
+                iNewShadowMapSize));
+
+            // Correct the value.
+            iShadowMapSize = iNewShadowMapSize;
+        }
+
 #if defined(DEBUG) && defined(WIN32)
         static_assert(
-            sizeof(RenderSettings) == 192, "consider adding new checks here"); // NOLINT: current class size
+            sizeof(RenderSettings) == 200,
+            "consider updating old / adding new checks here"); // NOLINT: current class size
 #elif defined(DEBUG)
         static_assert(
-            sizeof(RenderSettings) == 168, "consider adding new checks here"); // NOLINT: current class size
+            sizeof(RenderSettings) == 168,
+            "consider updating old / adding new checks here"); // NOLINT: current class size
 #endif
     }
 
@@ -400,7 +452,7 @@ namespace ne {
         }
     }
 
-    void RenderSettings::notifyRendererAboutChangedSettings() {
+    void RenderSettings::notifyRendererAboutChangedSettings(bool bShadowMapSizeChanged) {
         // Make sure the renderer is initialized.
         if (!pRenderer->isInitialized()) {
             // Nothing to do. The renderer will take values from the settings upon initialization.
@@ -408,7 +460,7 @@ namespace ne {
         }
 
         // Notify renderer.
-        auto optionalError = pRenderer->onRenderSettingsChanged();
+        auto optionalError = pRenderer->onRenderSettingsChanged(bShadowMapSizeChanged);
         if (optionalError.has_value()) {
             optionalError->addCurrentLocationToErrorStack();
             optionalError->showError();

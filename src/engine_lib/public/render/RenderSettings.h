@@ -21,6 +21,13 @@ namespace ne RNAMESPACE() {
         // ! add new entries to `RenderSettings::onAfterDeserialized` !
     };
 
+    /** Describes shadow map resolution in pixels (the actual shadow map resolution might be different). */
+    enum class ShadowQuality : unsigned int {
+        LOW = 256,
+        MEDIUM = 512,
+        HIGH = 1024,
+    };
+
     /** Describes texture filtering mode. */
     enum class TextureFilteringMode : int { POINT = 0, LINEAR = 1, ANISOTROPIC = 2 };
 
@@ -46,6 +53,13 @@ namespace ne RNAMESPACE() {
          * @param iNewFpsLimit Maximum allowed FPS, specify 0 to disable.
          */
         void setFpsLimit(unsigned int iNewFpsLimit);
+
+        /**
+         * Sets shadow quality.
+         *
+         * @param quality Quality to use.
+         */
+        void setShadowQuality(ShadowQuality quality);
 
         /**
          * Sets anti-aliasing (AA) state.
@@ -124,6 +138,13 @@ namespace ne RNAMESPACE() {
          * otherwise current AA quality.
          */
         MsaaState getAntialiasingState() const;
+
+        /**
+         * Returns current shadow quality.
+         *
+         * @return Shadow quality.
+         */
+        ShadowQuality getShadowQuality() const;
 
         /**
          * Returns the maximum anti-aliasing quality that can be used on the picked
@@ -226,8 +247,10 @@ namespace ne RNAMESPACE() {
          *
          * @remark Does nothing if the renderer is not initialized yet. The renderer
          * will take values from the settings upon initialization.
+         *
+         * @param bShadowMapSizeChanged `true` if shadow map size was changed, `false` otherwise.
          */
-        void notifyRendererAboutChangedSettings();
+        void notifyRendererAboutChangedSettings(bool bShadowMapSizeChanged = false);
 
         /** Width of the back buffer. */
         RPROPERTY(Serialize)
@@ -264,6 +287,10 @@ namespace ne RNAMESPACE() {
          */
         RPROPERTY(Serialize)
         unsigned int iRendererType = 0;
+
+        /** Shadow map resolution in pixels. */
+        RPROPERTY(Serialize)
+        unsigned int iShadowMapSize = static_cast<unsigned int>(ShadowQuality::HIGH);
 
         /** Sample count of AA. */
         RPROPERTY(Serialize)

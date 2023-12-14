@@ -235,7 +235,7 @@ namespace ne {
          *
          * @return Error if something went wrong.
          */
-        [[nodiscard]] virtual std::optional<Error> onRenderSettingsChanged() override;
+        [[nodiscard]] virtual std::optional<Error> onRenderSettingsChangedDerived() override;
 
         /**
          * Blocks the current thread until the GPU is finished using the specified frame resource.

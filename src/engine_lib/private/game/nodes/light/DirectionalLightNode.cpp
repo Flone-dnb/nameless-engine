@@ -3,6 +3,7 @@
 // Custom.
 #include "game/Window.h"
 #include "render/Renderer.h"
+#include "render/general/resources/shadow/ShadowMapManager.h"
 
 #include "DirectionalLightNode.generated_impl.h"
 
@@ -49,6 +50,9 @@ namespace ne {
         // Mark slot as unused.
         std::scoped_lock guard(mtxShaderData.first);
         mtxShaderData.second.pDirectionalLightArraySlot = nullptr;
+
+        // Free shadow map.
+        pShadowMapHandle = nullptr;
     }
 
     void DirectionalLightNode::onSpawning() {
@@ -56,6 +60,18 @@ namespace ne {
 
         // Prepare shader data.
         std::scoped_lock guard(mtxShaderData.first);
+
+        // Create a shadow map.
+        const auto pShadowMapManager =
+            getGameInstance()->getWindow()->getRenderer()->getResourceManager()->getShadowMapManager();
+        auto shadowMapResult = pShadowMapManager->createShadowMap(getNodeName(), ShadowMapType::DIRECTIONAL);
+        if (std::holds_alternative<Error>(shadowMapResult)) [[unlikely]] {
+            auto error = std::get<Error>(std::move(shadowMapResult));
+            error.addCurrentLocationToErrorStack();
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+        }
+        pShadowMapHandle = std::get<std::unique_ptr<ShadowMapHandle>>(std::move(shadowMapResult));
 
         // Copy up to date parameters.
         mtxShaderData.second.shaderData.direction = glm::vec4(getWorldForwardDirection(), 0.0F);

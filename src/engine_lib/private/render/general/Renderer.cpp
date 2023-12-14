@@ -267,8 +267,29 @@ namespace ne {
         pLightingShaderResourceManager = nullptr;
     }
 
-    std::optional<Error> Renderer::onRenderSettingsChanged() {
+    std::optional<Error> Renderer::onRenderSettingsChanged(bool bShadowMapSizeChanged) {
+        // Make sure no rendering is happening.
+        std::scoped_lock guard(*getRenderResourcesMutex());
+        waitForGpuToFinishWorkUpToThisPoint();
+
+        // Update FPS cap.
         updateFpsLimitSetting();
+
+        if (bShadowMapSizeChanged) {
+            // Notify shadow map manager.
+            auto optionalError = pResourceManager->getShadowMapManager()->recreateShadowMaps();
+            if (optionalError.has_value()) [[unlikely]] {
+                optionalError->addCurrentLocationToErrorStack();
+                return optionalError;
+            }
+        }
+
+        // Call derived logic.
+        auto optionalError = onRenderSettingsChangedDerived();
+        if (optionalError.has_value()) [[unlikely]] {
+            optionalError->addCurrentLocationToErrorStack();
+            return optionalError;
+        }
 
         return {};
     }

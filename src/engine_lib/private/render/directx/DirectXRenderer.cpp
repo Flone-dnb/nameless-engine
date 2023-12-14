@@ -1589,17 +1589,10 @@ namespace ne {
         return renderTargetSize;
     }
 
-    std::optional<Error> DirectXRenderer::onRenderSettingsChanged() {
+    std::optional<Error> DirectXRenderer::onRenderSettingsChangedDerived() {
         // Make sure no rendering is happening.
         std::scoped_lock guard(*getRenderResourcesMutex());
         waitForGpuToFinishWorkUpToThisPoint();
-
-        // Call parent's version.
-        auto optionalError = Renderer::onRenderSettingsChanged();
-        if (optionalError.has_value()) [[unlikely]] {
-            optionalError->addCurrentLocationToErrorStack();
-            return optionalError;
-        }
 
         // Get render settings.
         const auto pMtxRenderSettings = getRenderSettings();
@@ -1609,7 +1602,7 @@ namespace ne {
         const auto iMsaaSampleCount = static_cast<int>(pMtxRenderSettings->second->getAntialiasingState());
 
         // Update supported AA quality level count.
-        optionalError = updateMsaaQualityLevelCount();
+        auto optionalError = updateMsaaQualityLevelCount();
         if (optionalError.has_value()) [[unlikely]] {
             optionalError->addCurrentLocationToErrorStack();
             return optionalError;

@@ -3323,21 +3323,14 @@ namespace ne {
         return true;
     }
 
-    std::optional<Error> VulkanRenderer::onRenderSettingsChanged() {
+    std::optional<Error> VulkanRenderer::onRenderSettingsChangedDerived() {
         // Make sure no rendering is happening.
         std::scoped_lock guard(*getRenderResourcesMutex());
         waitForGpuToFinishWorkUpToThisPoint();
 
-        // Call parent's version.
-        auto optionalError = Renderer::onRenderSettingsChanged();
-        if (optionalError.has_value()) [[unlikely]] {
-            optionalError->addCurrentLocationToErrorStack();
-            return optionalError;
-        }
-
         // Update MSAA sample count using render settings.
-        optionalError = updateMsaaSampleCount();
-        if (optionalError.has_value()) {
+        auto optionalError = updateMsaaSampleCount();
+        if (optionalError.has_value()) [[unlikely]] {
             optionalError->addCurrentLocationToErrorStack();
             return optionalError;
         }
@@ -3350,7 +3343,7 @@ namespace ne {
 
         // Re-create texture sampler with the current texture filtering setting.
         optionalError = createTextureSampler();
-        if (optionalError.has_value()) {
+        if (optionalError.has_value()) [[unlikely]] {
             optionalError->addCurrentLocationToErrorStack();
             return optionalError;
         }

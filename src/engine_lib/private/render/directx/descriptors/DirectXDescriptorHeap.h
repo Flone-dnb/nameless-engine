@@ -11,6 +11,7 @@
 // Custom.
 #include "render/directx/descriptors/DirectXDescriptor.h"
 #include "render/general/resources/GpuResource.h"
+#include "DirectXDescriptorType.hpp"
 
 // External.
 #include "directx/d3dx12.h"
@@ -24,6 +25,7 @@ namespace ne {
 
     class DirectXRenderer;
     class DirectXResource;
+    class DirectXDescriptorHeap;
 
     /** Defines types of different descriptor heaps. */
     enum class DescriptorHeapType : int {
@@ -50,26 +52,26 @@ namespace ne {
             INT iHeapSize = 0;
 
             /**
-             * Index of the next free descriptor that can be used in @ref bindedResources.
-             * Each created descriptor will fetch this value (to be used) and increment it.
-             * Once this value is equal to @ref iHeapCapacity we will use @ref noLongerUsedDescriptorIndexes
-             * to see if any old descriptors were released and no longer being used.
+             * Index of the next free descriptor that can be used. Each created descriptor will fetch this
+             * value (to be used) and increment it.
+             *
+             * @remark Once this value is equal to @ref iHeapCapacity we will use @ref
+             * noLongerUsedDescriptorIndices to see if any old descriptors were released and no longer being
+             * used.
              */
             INT iNextFreeHeapIndex = 0;
 
-            /** Indexes of descriptors that were created but no longer being used. */
-            std::queue<INT> noLongerUsedDescriptorIndexes;
+            /** Indices of descriptors that were created but no longer being used. */
+            std::queue<INT> noLongerUsedDescriptorIndices;
 
             /**
-             * Set of resources that use created descriptors
-             * (size might not be equal to the actual heap size).
+             * Set of descriptors that use this heap.
              *
-             * Storing a raw pointer here because it's only used to update
-             * view if the heap was recreated (no resource ownership). Once resource
-             * is destroyed the descriptor will also be destroyed
-             * and thus it will be removed from this set.
+             * @remark Storing a raw pointer here because it's only used to update view if the heap was
+             * recreated (no resource ownership). Once resource is destroyed the descriptor will also be
+             * destroyed and thus it will be removed from this set.
              */
-            std::unordered_set<DirectXResource*> bindedResources;
+            std::unordered_set<DirectXDescriptor*> bindedDescriptors;
         };
 
         DirectXDescriptorHeap() = delete;
@@ -168,11 +170,11 @@ namespace ne {
          * Marks resource descriptor(s) as no longer being used
          * so they can be reused by some other resource.
          *
-         * Called from DirectXDescriptor destructor.
+         * @remark Called from DirectXDescriptor destructor.
          *
-         * @param pResource Resource that is using descriptors.
+         * @param pDescriptor Descriptor that is being destroyed.
          */
-        void markDescriptorAsNoLongerBeingUsed(DirectXResource* pResource);
+        void onDescriptorBeingDestroyed(DirectXDescriptor* pDescriptor);
 
         /**
          * Creates a new view using the specified descriptor handle that will point to
@@ -254,6 +256,6 @@ namespace ne {
         D3D12_DESCRIPTOR_HEAP_TYPE d3dHeapType;
 
         /** Number of descriptors to add to the heap when there is no more free space left. */
-        static constexpr INT iHeapGrowSize = 200; // NOLINT: don't recreate heap too often
+        static constexpr INT iHeapGrowSize = 300; // NOLINT: don't recreate heap too often
     };
 } // namespace ne

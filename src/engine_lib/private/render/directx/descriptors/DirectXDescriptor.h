@@ -3,20 +3,12 @@
 // Standard.
 #include <optional>
 
+// Custom.
+#include "DirectXDescriptorType.hpp"
+
 namespace ne {
     class DirectXDescriptorHeap;
     class DirectXResource;
-
-    /** Types of descriptors that point to resources and specify how a resource should be used. */
-    enum class DirectXDescriptorType : size_t {
-        RTV = 0,
-        DSV,
-        CBV,
-        SRV,
-        UAV,
-
-        END // marks the size of this enum
-    };
 
     /**
      * Represents a descriptor (to a resource) that is stored in a descriptor heap.
@@ -27,37 +19,24 @@ namespace ne {
         friend class DirectXDescriptorHeap;
 
     public:
-        /** Destructor. */
+        /** Notifies the heap. */
         ~DirectXDescriptor();
 
         DirectXDescriptor(const DirectXDescriptor& other) = delete;
         DirectXDescriptor& operator=(const DirectXDescriptor& other) = delete;
 
-        /**
-         * Move constructor.
-         *
-         * @param other other object.
-         */
-        DirectXDescriptor(DirectXDescriptor&& other) noexcept;
-
-        /**
-         * Move assignment.
-         *
-         * @param other other object.
-         *
-         * @return Result of move assignment.
-         */
-        DirectXDescriptor& operator=(DirectXDescriptor&& other) noexcept;
+        // Intentionally disable `move` because heap stores raw pointers to descriptors
+        // and wraps descriptors into unique ptr to provide move functionality.
+        DirectXDescriptor(DirectXDescriptor&& other) noexcept = delete;
+        DirectXDescriptor& operator=(DirectXDescriptor&& other) noexcept = delete;
 
         /**
          * Returns offset of this descriptor from the heap start
          * (offset is specified in descriptors, not an actual index).
          *
-         * @return Empty if this object was moved (i.e. invalid now), otherwise descriptor offset.
+         * @return Descriptor offset.
          */
-        inline std::optional<int> getDescriptorOffsetInDescriptors() const {
-            return iDescriptorOffsetInDescriptors;
-        }
+        inline int getDescriptorOffsetInDescriptors() const { return iDescriptorOffsetInDescriptors; }
 
         /**
          * Returns heap that this descriptor uses.
@@ -100,7 +79,7 @@ namespace ne {
          * Offset of this descriptor from the heap start (offset is specified in descriptors,
          * not an actual index).
          */
-        std::optional<int> iDescriptorOffsetInDescriptors;
+        int iDescriptorOffsetInDescriptors;
 
         /** Type of this descriptor. */
         DirectXDescriptorType descriptorType;

@@ -6,32 +6,14 @@
 
 namespace ne {
     DirectXDescriptor::~DirectXDescriptor() {
-        if (iDescriptorOffsetInDescriptors.has_value()) {
-            pHeap->markDescriptorAsNoLongerBeingUsed(pResource);
-        }
-    }
+        // Set `nullptr` to resource because most likely its destructor was already finished
+        // and now resource fields are being destructed.
+        // If the heap will try to use this resource pointer it will hit `nullptr` and we will instantly find
+        // the error.
+        pResource = nullptr;
 
-    DirectXDescriptor::DirectXDescriptor(DirectXDescriptor&& other) noexcept { *this = std::move(other); }
-
-    DirectXDescriptor& DirectXDescriptor::operator=(DirectXDescriptor&& other) noexcept {
-#if defined(DEBUG)
-        static_assert(
-            sizeof(DirectXDescriptor) == 32, // NOLINT: current size
-            "add new/edited fields to move operator");
-#endif
-
-        if (this != &other) {
-            if (other.iDescriptorOffsetInDescriptors.has_value()) {
-                iDescriptorOffsetInDescriptors = other.iDescriptorOffsetInDescriptors.value();
-                other.iDescriptorOffsetInDescriptors = {};
-            }
-
-            pResource = other.pResource;
-            pHeap = other.pHeap;
-            descriptorType = other.descriptorType;
-        }
-
-        return *this;
+        // Notify heap.
+        pHeap->onDescriptorBeingDestroyed(this);
     }
 
     DirectXDescriptor::DirectXDescriptor(

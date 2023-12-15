@@ -49,6 +49,7 @@ set(PROJECT_WIN32_SOURCES
     private/render/directx/descriptors/DirectXDescriptorHeap.cpp
     private/render/directx/descriptors/DirectXDescriptor.h
     private/render/directx/descriptors/DirectXDescriptor.cpp
+    private/render/directx/descriptors/DirectXDescriptorType.hpp
     private/render/directx/resources/DirectXResource.h
     private/render/directx/resources/DirectXResource.cpp
     private/render/directx/resources/DirectXResourceManager.h

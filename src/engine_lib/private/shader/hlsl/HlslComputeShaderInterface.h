@@ -79,28 +79,12 @@ namespace ne {
 
             // Bind table views.
             for (const auto& [iRootParameterIndex, pDescriptor] : tableResources) {
-                // Get heap start offset.
-                const auto optionalDescriptorOffset = pDescriptor->getDescriptorOffsetInDescriptors();
-
-#if defined(DEBUG)
-                // Make sure descriptor offset is still valid.
-                if (!optionalDescriptorOffset.has_value()) [[unlikely]] {
-                    Error error(std::format(
-                        "unable to get descriptor offset of a CBV/SRV/UAV descriptor (resource: {}) to set "
-                        "to root signature index {}",
-                        pDescriptor->getOwnerResource()->getResourceName(),
-                        iRootParameterIndex));
-                    error.showError();
-                    throw std::runtime_error(error.getFullErrorMessage());
-                }
-#endif
-
                 // Set table.
                 pCommandList->SetComputeRootDescriptorTable(
                     iRootParameterIndex,
                     D3D12_GPU_DESCRIPTOR_HANDLE{
                         pCbvSrvUavHeap->getInternalHeap()->GetGPUDescriptorHandleForHeapStart().ptr +
-                        (*optionalDescriptorOffset) * iCbvSrvUavDescriptorSize});
+                        pDescriptor->getDescriptorOffsetInDescriptors() * iCbvSrvUavDescriptorSize});
             }
 
             // Add a dispatch command.

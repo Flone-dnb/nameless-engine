@@ -46,18 +46,7 @@ namespace ne {
             // but before a heap is destroyed (to be re-created) all rendering is stopped so
             // that no new frames will be queued until all descriptor offsets are updated
 
-            const auto optionalDescriptorOffset = pTextureSrv->getDescriptorOffsetInDescriptors();
-
 #if defined(DEBUG)
-            // Make sure descriptor offset is still valid.
-            if (!optionalDescriptorOffset.has_value()) [[unlikely]] {
-                Error error(std::format(
-                    "unable to get descriptor offset of SRV descriptor in shader resource \"{}\"",
-                    getResourceName()));
-                error.showError();
-                throw std::runtime_error(error.getFullErrorMessage());
-            }
-
             // Self check: make sure there is indeed just 1 pipeline.
             if (mtxRootParameterIndices.second.size() != 1) [[unlikely]] {
                 Error error(std::format(
@@ -76,7 +65,7 @@ namespace ne {
                 mtxRootParameterIndices.second.begin()->second,
                 D3D12_GPU_DESCRIPTOR_HANDLE{
                     pSrvHeap->getInternalHeap()->GetGPUDescriptorHandleForHeapStart().ptr +
-                    (*optionalDescriptorOffset) * iSrvDescriptorSize});
+                    pTextureSrv->getDescriptorOffsetInDescriptors() * iSrvDescriptorSize});
         }
 
         /**
@@ -88,19 +77,6 @@ namespace ne {
         inline void setGraphicsRootDescriptorTableOfPipeline(
             const ComPtr<ID3D12GraphicsCommandList>& pCommandList, DirectXPso* pUsedPipeline) const {
             // same thing as above, we don't need to lock mutexes here
-
-            const auto optionalDescriptorOffset = pTextureSrv->getDescriptorOffsetInDescriptors();
-
-#if defined(DEBUG)
-            // Make sure descriptor offset is still valid.
-            if (!optionalDescriptorOffset.has_value()) [[unlikely]] {
-                Error error(std::format(
-                    "unable to get descriptor offset of SRV descriptor in shader resource \"{}\"",
-                    getResourceName()));
-                error.showError();
-                throw std::runtime_error(error.getFullErrorMessage());
-            }
-#endif
 
             // Find root parameter index of this pipeline.
             const auto it = mtxRootParameterIndices.second.find(pUsedPipeline);
@@ -122,7 +98,7 @@ namespace ne {
                 it->second,
                 D3D12_GPU_DESCRIPTOR_HANDLE{
                     pSrvHeap->getInternalHeap()->GetGPUDescriptorHandleForHeapStart().ptr +
-                    (*optionalDescriptorOffset) * iSrvDescriptorSize});
+                    pTextureSrv->getDescriptorOffsetInDescriptors() * iSrvDescriptorSize});
         }
 
         /**

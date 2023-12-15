@@ -3,6 +3,7 @@
 // Standard.
 #include <variant>
 #include <memory>
+#include <array>
 #include <optional>
 #include <mutex>
 
@@ -10,6 +11,7 @@
 #include "misc/Error.h"
 #include "render/general/resources/GpuResource.h"
 #include "render/directx/descriptors/DirectXDescriptor.h"
+#include "render/directx/descriptors/DirectXDescriptorType.hpp"
 
 // External.
 #include "directx/d3dx12.h"
@@ -163,10 +165,16 @@ namespace ne {
         const DirectXResourceManager* pResourceManager = nullptr;
 
         /**
-         * Will have size of DescriptorType enum elements.
-         * Access elements like this: "vHeapDescriptors[DescriptorType::SRV]".
+         * Array of descriptors used by this resource.
+         *
+         * @remark Access elements like this: "vHeapDescriptors[DirectXDescriptorType::SRV]".
+         *
+         * @remark Some descriptors are `nullptr`. `nullptr` descriptor means that it's not set (not used).
          */
-        std::pair<std::recursive_mutex, std::vector<std::optional<DirectXDescriptor>>> mtxHeapDescriptors;
+        std::pair<
+            std::recursive_mutex,
+            std::array<std::unique_ptr<DirectXDescriptor>, static_cast<size_t>(DirectXDescriptorType::END)>>
+            mtxHeapDescriptors;
 
         /** Created resource (can be empty if @ref pSwapChainBuffer is used). */
         ComPtr<D3D12MA::Allocation> pAllocatedResource;

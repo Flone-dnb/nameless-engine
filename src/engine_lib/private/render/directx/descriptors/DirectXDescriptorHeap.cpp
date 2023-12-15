@@ -39,7 +39,7 @@ namespace ne {
         std::scoped_lock guard(mtxInternalResources.first, pResource->mtxHeapDescriptors.first);
 
         // Check if the resource already has descriptor of this type.
-        if (pResource->mtxHeapDescriptors.second[static_cast<int>(descriptorType)].has_value()) [[unlikely]] {
+        if (pResource->mtxHeapDescriptors.second[static_cast<int>(descriptorType)] != nullptr) [[unlikely]] {
             return Error(std::format(
                 "resource already has this descriptor assigned (descriptor type {})",
                 static_cast<int>(descriptorType)));
@@ -63,8 +63,8 @@ namespace ne {
         // Get free index.
         INT iDescriptorIndex = 0;
         if (mtxInternalResources.second.iNextFreeHeapIndex == mtxInternalResources.second.iHeapCapacity) {
-            iDescriptorIndex = mtxInternalResources.second.noLongerUsedDescriptorIndexes.front();
-            mtxInternalResources.second.noLongerUsedDescriptorIndexes.pop();
+            iDescriptorIndex = mtxInternalResources.second.noLongerUsedDescriptorIndices.front();
+            mtxInternalResources.second.noLongerUsedDescriptorIndices.pop();
         } else {
             iDescriptorIndex = mtxInternalResources.second.iNextFreeHeapIndex;
             mtxInternalResources.second.iNextFreeHeapIndex += 1;
@@ -77,10 +77,13 @@ namespace ne {
         heapHandle.Offset(iDescriptorIndex, iDescriptorSize);
         createView(heapHandle, pResource, descriptorType);
 
+        // Create descriptor.
+        auto pDescriptor = std::unique_ptr<DirectXDescriptor>(
+            new DirectXDescriptor(this, descriptorType, pResource, iDescriptorIndex));
+
         // Save binding information.
-        mtxInternalResources.second.bindedResources.insert(pResource);
-        pResource->mtxHeapDescriptors.second[static_cast<int>(descriptorType)] =
-            DirectXDescriptor(this, descriptorType, pResource, iDescriptorIndex);
+        mtxInternalResources.second.bindedDescriptors.insert(pDescriptor.get());
+        pResource->mtxHeapDescriptors.second[static_cast<int>(descriptorType)] = std::move(pDescriptor);
 
         return {};
     }
@@ -97,7 +100,7 @@ namespace ne {
 
     size_t DirectXDescriptorHeap::getNoLongerUsedDescriptorCount() {
         std::scoped_lock guard(mtxInternalResources.first);
-        return mtxInternalResources.second.noLongerUsedDescriptorIndexes.size();
+        return mtxInternalResources.second.noLongerUsedDescriptorIndices.size();
     }
 
     std::string DirectXDescriptorHeap::convertHeapTypeToString(DescriptorHeapType heapType) {
@@ -148,40 +151,28 @@ namespace ne {
         sHeapType = convertHeapTypeToString(heapType);
     }
 
-    void DirectXDescriptorHeap::markDescriptorAsNoLongerBeingUsed(DirectXResource* pResource) {
-        std::scoped_lock guard(mtxInternalResources.first, pResource->mtxHeapDescriptors.first);
+    void DirectXDescriptorHeap::onDescriptorBeingDestroyed(DirectXDescriptor* pDescriptor) {
+        std::scoped_lock guard(mtxInternalResources.first);
 
-        // Make sure the specified resource actually exists in our "database".
-        const auto it = mtxInternalResources.second.bindedResources.find(pResource);
-        if (it == mtxInternalResources.second.bindedResources.end()) {
-            Logger::get().error(
-                std::format("the specified resource \"{}\" is not found", pResource->getResourceName()));
+        // Make sure the specified descriptor actually exists in our "database".
+        const auto it = mtxInternalResources.second.bindedDescriptors.find(pDescriptor);
+        if (it == mtxInternalResources.second.bindedDescriptors.end()) [[unlikely]] {
+            Logger::get().error(std::format(
+                "descriptor notified the heap about being destroyed but the heap is unable to find this "
+                "descriptor (with descriptor offset {}) in the heap \"database\" of active descriptors",
+                pDescriptor->iDescriptorOffsetInDescriptors));
             return;
         }
 
         // Remove this resource from our "database".
-        mtxInternalResources.second.bindedResources.erase(it);
+        mtxInternalResources.second.bindedDescriptors.erase(it);
 
-        // Save indexes of no longer used descriptors.
-        const auto vHandledDescriptorTypes = getDescriptorTypesHandledByThisHeap();
-        for (auto& descriptor : pResource->mtxHeapDescriptors.second) {
-            if (!descriptor.has_value()) {
-                continue;
-            }
+        // Save index of this descriptor to array of no longer used descriptors indices.
+        mtxInternalResources.second.noLongerUsedDescriptorIndices.push(
+            pDescriptor->iDescriptorOffsetInDescriptors);
 
-            const auto descriptorIt =
-                std::ranges::find_if(vHandledDescriptorTypes, [&descriptor](const auto& descriptorType) {
-                    return descriptor->descriptorType == descriptorType;
-                });
-            if (descriptorIt == vHandledDescriptorTypes.end()) {
-                continue; // this descriptor type is not handled in this heap
-            }
-
-            mtxInternalResources.second.noLongerUsedDescriptorIndexes.push(
-                descriptor->iDescriptorOffsetInDescriptors.value());
-            descriptor->iDescriptorOffsetInDescriptors = {}; // mark descriptor as cleared
-            mtxInternalResources.second.iHeapSize -= 1;
-        }
+        // Decrement heap size.
+        mtxInternalResources.second.iHeapSize -= 1;
 
         // Shrink the heap if needed.
         if (mtxInternalResources.second.iHeapCapacity >= iHeapGrowSize * 2 &&
@@ -209,13 +200,13 @@ namespace ne {
         }
 
         // Make sure there are no unused descriptors.
-        if (!mtxInternalResources.second.noLongerUsedDescriptorIndexes.empty()) [[unlikely]] {
+        if (!mtxInternalResources.second.noLongerUsedDescriptorIndices.empty()) [[unlikely]] {
             return Error(std::format(
                 "requested to expand {} heap of capacity {} while there are not used "
                 "descriptors exist ({}) (actual heap size is {}) (this is a bug, report to developers)",
                 sHeapType,
                 mtxInternalResources.second.iHeapCapacity,
-                mtxInternalResources.second.noLongerUsedDescriptorIndexes.size(),
+                mtxInternalResources.second.noLongerUsedDescriptorIndices.size(),
                 mtxInternalResources.second.iHeapSize));
         }
 
@@ -242,7 +233,7 @@ namespace ne {
 
         // Update internal values.
         mtxInternalResources.second.iNextFreeHeapIndex = iOldHeapCapacity;
-        mtxInternalResources.second.noLongerUsedDescriptorIndexes = {};
+        mtxInternalResources.second.noLongerUsedDescriptorIndices = {};
 
         return {};
     }
@@ -285,7 +276,7 @@ namespace ne {
 
         // Update internal values.
         mtxInternalResources.second.iNextFreeHeapIndex = iNewHeapCapacity - iHeapGrowSize / 2;
-        mtxInternalResources.second.noLongerUsedDescriptorIndexes = {};
+        mtxInternalResources.second.noLongerUsedDescriptorIndices = {};
 
         return {};
     }
@@ -507,31 +498,22 @@ namespace ne {
         auto heapHandle = CD3DX12_CPU_DESCRIPTOR_HANDLE(
             mtxInternalResources.second.pHeap->GetCPUDescriptorHandleForHeapStart());
         INT iCurrentHeapIndex = 0;
-        const auto vHandledDescriptorTypes = getDescriptorTypesHandledByThisHeap();
 
-        for (const auto& pResource : mtxInternalResources.second.bindedResources) {
-            std::scoped_lock resourceDescriptorsGuard(pResource->mtxHeapDescriptors.first);
+        // Iterate over all descriptors from this heap.
+        for (const auto& pDescriptor : mtxInternalResources.second.bindedDescriptors) {
+            // Lock resource descriptors.
+            std::scoped_lock resourceDescriptorsGuard(pDescriptor->pResource->mtxHeapDescriptors.first);
 
-            for (const auto& descriptor : pResource->mtxHeapDescriptors.second) {
-                if (!descriptor.has_value()) {
-                    continue;
-                }
+            // Re-create the view.
+            createView(heapHandle, pDescriptor->pResource, pDescriptor->descriptorType);
 
-                const auto descriptorIt =
-                    std::ranges::find_if(vHandledDescriptorTypes, [&descriptor](const auto& descriptorType) {
-                        return descriptor->descriptorType == descriptorType;
-                    });
-                if (descriptorIt == vHandledDescriptorTypes.end()) {
-                    break; // this descriptor type is not handled in this heap
-                }
+            // Update descriptor index.
+            pDescriptor->iDescriptorOffsetInDescriptors = iCurrentHeapIndex;
 
-                createView(heapHandle, pResource, descriptor->descriptorType);
-                pResource->mtxHeapDescriptors.second[static_cast<int>(descriptor->descriptorType)]
-                    ->iDescriptorOffsetInDescriptors = iCurrentHeapIndex;
-
-                heapHandle.Offset(1, iDescriptorSize);
-                iCurrentHeapIndex += 1;
-            }
+            // Increment next descriptor index.
+            heapHandle.Offset(1, iDescriptorSize);
+            iCurrentHeapIndex += 1;
         }
     }
+
 } // namespace ne

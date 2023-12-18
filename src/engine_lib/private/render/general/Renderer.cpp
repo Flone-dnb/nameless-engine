@@ -268,6 +268,9 @@ namespace ne {
     }
 
     std::optional<Error> Renderer::onRenderSettingsChanged(bool bShadowMapSizeChanged) {
+        Logger::get().info(
+            "waiting for GPU to finish work up to this point in order to apply changed render settings...");
+
         // Make sure no rendering is happening.
         std::scoped_lock guard(*getRenderResourcesMutex());
         waitForGpuToFinishWorkUpToThisPoint();
@@ -290,6 +293,8 @@ namespace ne {
             optionalError->addCurrentLocationToErrorStack();
             return optionalError;
         }
+
+        Logger::get().info("successfully finished applying changed render settings");
 
         return {};
     }

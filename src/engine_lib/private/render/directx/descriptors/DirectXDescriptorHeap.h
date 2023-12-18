@@ -7,6 +7,7 @@
 #include <mutex>
 #include <atomic>
 #include <queue>
+#include <functional>
 
 // Custom.
 #include "render/directx/descriptors/DirectXDescriptor.h"
@@ -34,21 +35,152 @@ namespace ne {
         CBV_SRV_UAV,
     };
 
+    /**
+     * Works as a mini descriptor heap that operates on descriptors in a continuous range
+     * (can be used for bindless bindings of descriptor arrays).
+     *
+     * @remark Size of this range automatically changes (expands/shrinks) depending on the usage.
+     */
+    class ContinuousDirectXDescriptorRange {
+        // This class is fully managed by the heap.
+        friend class DirectXDescriptorHeap;
+
+    public:
+        ContinuousDirectXDescriptorRange() = delete;
+
+        /* Notifies the heap. */
+        ~ContinuousDirectXDescriptorRange();
+
+        ContinuousDirectXDescriptorRange(const ContinuousDirectXDescriptorRange& other) = delete;
+        ContinuousDirectXDescriptorRange& operator=(const ContinuousDirectXDescriptorRange& other) = delete;
+
+        // Intentionally disable `move` because heap will store a raw pointer to the range
+        // and we don't want to accidentally `move` the range which will make the heap's raw pointer invalid.
+        ContinuousDirectXDescriptorRange(ContinuousDirectXDescriptorRange&& other) noexcept = delete;
+        ContinuousDirectXDescriptorRange&
+        operator=(ContinuousDirectXDescriptorRange&& other) noexcept = delete;
+
+    private:
+        /** Groups mutex guarded data. */
+        struct InternalData {
+            /**
+             * Descriptors allocated from this range.
+             *
+             * @remark Size of this set defines range size (actually used descriptor count).
+             *
+             * @remark It's safe to store raw pointers here because descriptor in its destructor will
+             * notify the range.
+             */
+            std::unordered_set<DirectXDescriptor*> allocatedDescriptors;
+
+            /** Indices (relative to heap start) of descriptors that were created but no longer being used. */
+            std::queue<INT> noLongerUsedDescriptorIndices;
+
+            /**
+             * Index of the first descriptor of this range in the heap.
+             *
+             * @remark `-1` means that no space was reserved (i.e. not initialized), this is used to determine
+             * if we should call the notification callback or not.
+             */
+            INT iRangeStartInHeap = -1;
+
+            /** Current range capacity. */
+            INT iRangeCapacity = 0;
+
+            /**
+             * Index of the next free descriptor (relative to the range start @ref iRangeStartInHeap) that can
+             * be used.
+             *
+             * @remark Once this value is equal to @ref iRangeCapacity we will use @ref
+             * noLongerUsedDescriptorIndices to see if any old descriptors were released and no longer being
+             * used.
+             */
+            INT iNextFreeIndexInRange = 0;
+        };
+
+        /**
+         * Creates a new range (with capacity @ref iRangeGrowSize but no descriptor is used) allocated in a
+         * descriptor heap.
+         *
+         * @param pHeap                 Heap that allocated the range.
+         * @param onRangeIndicesChanged Callback that will be called after the range was moved in the heap due
+         * to things like heap expand/shrink.
+         * @param sRangeName            Name of this range (used for logging).
+         */
+        ContinuousDirectXDescriptorRange(
+            DirectXDescriptorHeap* pHeap,
+            const std::function<void()>& onRangeIndicesChanged,
+            const std::string& sRangeName);
+
+        /**
+         * Removes the specified descriptor from the range and marks descriptor's index
+         * as unused.
+         *
+         * @remark Does not shrink the range.
+         *
+         * @param pDescriptor Descriptor to remove.
+         *
+         * @return Error if something went wrong.
+         */
+        [[nodiscard]] std::optional<Error> markDescriptorAsUnused(DirectXDescriptor* pDescriptor);
+
+        /**
+         * Looks if there is a free index in the range that can be used to create a new descriptor
+         * or if there is no space (expansion needed).
+         *
+         * @remark Marks returned index as "in-use" and expects a new descriptor to be assigned to the range
+         * after this function.
+         *
+         * @return Error if something went wrong, otherwise empty if no free space (expansion needed)
+         * or an index relative to heap start.
+         */
+        std::variant<std::optional<INT>, Error> tryReserveFreeHeapIndexToCreateDescriptor();
+
+        /** Internal data. */
+        std::pair<std::recursive_mutex, InternalData> mtxInternalData;
+
+        /** Called after the range was moved in the heap due to things like heap expand/shrink. */
+        const std::function<void()> onRangeIndicesChanged;
+
+        /** Name of this range (used for logging). */
+        const std::string sRangeName;
+
+        /** Heap that allocated the range. */
+        DirectXDescriptorHeap* const pHeap = nullptr;
+
+        /**
+         * Grow/shrink size for all ranges. Constant for all ranges because it causes the heap to be
+         * re-created and we want to avoid small ranges and big ranges (due to how heap expands/shrinks)
+         * which also depends on the heap grow size.
+         */
+        static constexpr INT iRangeGrowSize = 50; // NOLINT: see static asserts
+    };
+
     /** Represents a descriptor heap. */
     class DirectXDescriptorHeap {
         // Notifies the heap about descriptor being destroyed.
         friend class DirectXDescriptor;
 
+        // Notifies the heap about range being destroyed.
+        friend class ContinuousDirectXDescriptorRange;
+
     public:
-        /** Internal heap resources. */
-        struct InternalResources {
+        /** Groups mutex guarded data. */
+        struct InternalData {
             /** Descriptor heap. */
             ComPtr<ID3D12DescriptorHeap> pHeap;
+
+            /** Descriptor ranges that were allocated in this heap. */
+            std::unordered_set<ContinuousDirectXDescriptorRange*> continuousDescriptorRanges;
 
             /** Current heap capacity. */
             INT iHeapCapacity = 0;
 
-            /** Current heap size (actually used size). */
+            /**
+             * Current heap size (actually used size).
+             *
+             * @remark Includes capacity of ranges from @ref continuousDescriptorRanges.
+             */
             INT iHeapSize = 0;
 
             /**
@@ -56,22 +188,29 @@ namespace ne {
              * value (to be used) and increment it.
              *
              * @remark Once this value is equal to @ref iHeapCapacity we will use @ref
-             * noLongerUsedDescriptorIndices to see if any old descriptors were released and no longer being
-             * used.
+             * noLongerUsedSingleDescriptorIndices to see if any old descriptors were released and no longer
+             * being used.
              */
             INT iNextFreeHeapIndex = 0;
 
-            /** Indices of descriptors that were created but no longer being used. */
-            std::queue<INT> noLongerUsedDescriptorIndices;
+            /**
+             * Indices of descriptors that were created but no longer being used.
+             *
+             * @remark Does not include unused descriptor indices of ranges from @ref
+             * continuousDescriptorRanges.
+             */
+            std::queue<INT> noLongerUsedSingleDescriptorIndices;
 
             /**
-             * Set of descriptors that use this heap.
+             * Set of descriptors that use this heap (size of this set might not be equal to @ref iHeapSize
+             * due to @ref continuousDescriptorRanges, because this set stores single descriptors
+             * (that don't belong to a continuous range)).
              *
              * @remark Storing a raw pointer here because it's only used to update view if the heap was
              * recreated (no resource ownership). Once resource is destroyed the descriptor will also be
              * destroyed and thus it will be removed from this set.
              */
-            std::unordered_set<DirectXDescriptor*> bindedDescriptors;
+            std::unordered_set<DirectXDescriptor*> bindedSingleDescriptors;
         };
 
         DirectXDescriptorHeap() = delete;
@@ -90,20 +229,37 @@ namespace ne {
         create(DirectXRenderer* pRenderer, DescriptorHeapType heapType);
 
         /**
+         * Allocates a continuous range of descriptors that can be used for bindless bindings of descriptor
+         * arrays.
+         *
+         * @param sRangeName            Name of the range (used for logging).
+         * @param onRangeIndicesChanged Callback that will be called after the range was moved in the heap due
+         * to things like heap expand/shrink.
+         *
+         * @return Error if something went wrong, otherwise allocated descriptor range.
+         */
+        std::variant<std::unique_ptr<ContinuousDirectXDescriptorRange>, Error>
+        allocateContinuousDescriptorRange(
+            const std::string& sRangeName, const std::function<void()>& onRangeIndicesChanged);
+
+        /**
          * Creates a new descriptor that points to the given resource,
          * the descriptor is saved in the resource.
-         *
-         * @param pResource      Resource to point new descriptor to.
-         * @param descriptorType Type of the new descriptor.
          *
          * @remark You can use this function to assign a different descriptor to already created resource.
          * For example: create SRV resource using resource manager and use RTV heap to assign
          * a RTV descriptor to this resource so it will have 2 different descriptors.
          *
+         * @param pResource      Resource to point new descriptor to.
+         * @param descriptorType Type of the new descriptor.
+         * @param pRange         Specify in order to allocate a descriptor from this range.
+         *
          * @return Error if something went wrong.
          */
-        [[nodiscard]] std::optional<Error>
-        assignDescriptor(DirectXResource* pResource, DirectXDescriptorType descriptorType);
+        [[nodiscard]] std::optional<Error> assignDescriptor(
+            DirectXResource* pResource,
+            DirectXDescriptorType descriptorType,
+            ContinuousDirectXDescriptorRange* pRange = nullptr);
 
         /**
          * Returns current heap capacity (allocated heap size).
@@ -144,9 +300,7 @@ namespace ne {
          *
          * @return DirectX heap.
          */
-        inline ID3D12DescriptorHeap* getInternalHeap() const {
-            return mtxInternalResources.second.pHeap.Get();
-        }
+        inline ID3D12DescriptorHeap* getInternalHeap() const { return mtxInternalData.second.pHeap.Get(); }
 
     protected:
         /**
@@ -167,14 +321,26 @@ namespace ne {
         DirectXDescriptorHeap(DirectXRenderer* pRenderer, DescriptorHeapType heapType);
 
         /**
-         * Marks resource descriptor(s) as no longer being used
-         * so they can be reused by some other resource.
+         * Marks resource descriptor as no longer being used so the descriptor's index can be reused by some
+         * other descriptor.
          *
          * @remark Called from DirectXDescriptor destructor.
          *
          * @param pDescriptor Descriptor that is being destroyed.
+         * @param pRange      Range that allocated the descriptor (if the descriptor was allocated from a
+         * range).
          */
-        void onDescriptorBeingDestroyed(DirectXDescriptor* pDescriptor);
+        void onDescriptorBeingDestroyed(
+            DirectXDescriptor* pDescriptor, ContinuousDirectXDescriptorRange* pRange = nullptr);
+
+        /**
+         * Notifies the heap about some range being destroyed.
+         *
+         * @remark Called from range destructor.
+         *
+         * @param pRange Range that is being destroyed.
+         */
+        void onDescriptorRangeBeingDestroyed(ContinuousDirectXDescriptorRange* pRange);
 
         /**
          * Creates a new view using the specified descriptor handle that will point to
@@ -190,22 +356,32 @@ namespace ne {
             DirectXDescriptorType descriptorType) const;
 
         /**
-         * Recreates the heap to expand its capacity to support @ref iHeapGrowSize more descriptors.
+         * Re-creates the heap to expand its capacity to support @ref iHeapGrowSize more descriptors.
          *
          * @remark All internal values and old descriptors will be updated.
          *
+         * @param pChangedRange If this event was caused by changes in descriptor range, specify
+         * one for logging purposes.
+         *
          * @return Error if something went wrong.
          */
-        [[nodiscard]] std::optional<Error> expandHeap();
+        [[nodiscard]] std::optional<Error> expandHeap(ContinuousDirectXDescriptorRange* pChangedRange);
 
         /**
-         * Recreates the heap to shrink its capacity to support @ref iHeapGrowSize less descriptors.
+         * Checks if the heap can be shrinked (based on the current internal state @ref mtxInternalData) and
+         * if possible re-creates the heap to shrink its capacity to support @ref iHeapGrowSize less
+         * descriptors.
          *
          * @remark All internal values and old descriptors will be updated.
          *
-         * @return Error if something went wrong.
+         * @param pChangedRange If this event was caused by changes in descriptor range, specify
+         * one for logging purposes.
+         *
+         * @return Error if something went wrong, otherwise `true` if heap was shrinked, `false` if no
+         * shrinking is needed yet.
          */
-        [[nodiscard]] std::optional<Error> shrinkHeap();
+        [[nodiscard]] std::variant<bool, Error>
+        shrinkHeapIfPossible(ContinuousDirectXDescriptorRange* pChangedRange);
 
         /**
          * (Re)creates the heap with the specified capacity.
@@ -213,11 +389,14 @@ namespace ne {
          * @remark Only updates the heap resource, internal capacity and updates old descriptors
          * (if any), other internal values are not changed and should be corrected afterwards.
          *
-         * @param iCapacity Size of the heap (in descriptors).
+         * @param iCapacity     Size of the heap (in descriptors).
+         * @param pChangedRange If this event was caused by changes in descriptor range, specify
+         * one for logging purposes.
          *
          * @return Error if something went wrong.
          */
-        [[nodiscard]] std::optional<Error> createHeap(INT iCapacity);
+        [[nodiscard]] std::optional<Error>
+        createHeap(INT iCapacity, ContinuousDirectXDescriptorRange* pChangedRange);
 
         /**
          * Returns an array of descriptor types that this heap handles.
@@ -232,16 +411,38 @@ namespace ne {
          * Recreates views for previously created descriptors so that they will reference
          * the new re-created heap and reference the correct index inside of the heap.
          *
-         * @remark Generally called in @ref createHeap.
+         * @remark Also updates next free descriptor index and queue of unused indices.
+         *
+         * @return Error if something went wrong.
          */
-        void recreateOldViews();
+        [[nodiscard]] std::optional<Error> rebindViewsUpdateIndices();
 
     private:
+        /**
+         * Checks shrink condition: if capacity can be decremented by grow size with the current size.
+         *
+         * @param iSize     Current size.
+         * @param iCapacity Current capacity.
+         * @param iGrowSize Grow/shrink size. Expected to be even.
+         *
+         * @return `true` if capacity can be decremented by one grow size, `false` if not yet.
+         */
+        static bool isShrinkingPossible(INT iSize, INT iCapacity, INT iGrowSize);
+
+        /**
+         * Expands the specified descriptor range and expands or re-creates the heap to support updated range.
+         *
+         * @param pRange Range to expand.
+         *
+         * @return Error if something went wrong.
+         */
+        [[nodiscard]] std::optional<Error> expandRange(ContinuousDirectXDescriptorRange* pRange);
+
         /** Do not delete. Owner renderer. */
         DirectXRenderer* pRenderer;
 
         /** Descriptor heap internal resources. */
-        std::pair<std::recursive_mutex, InternalResources> mtxInternalResources;
+        std::pair<std::recursive_mutex, InternalData> mtxInternalData;
 
         /** Size of one descriptor. */
         UINT iDescriptorSize = 0;

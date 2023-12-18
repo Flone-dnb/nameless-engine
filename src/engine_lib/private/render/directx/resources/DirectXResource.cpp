@@ -178,7 +178,8 @@ namespace ne {
         pResourceManager->getRenderer()->waitForGpuToFinishWorkUpToThisPoint();
     }
 
-    std::optional<Error> DirectXResource::bindDescriptor(DirectXDescriptorType descriptorType) {
+    std::optional<Error> DirectXResource::bindDescriptor(
+        DirectXDescriptorType descriptorType, ContinuousDirectXDescriptorRange* pRange) {
         std::scoped_lock guard(mtxHeapDescriptors.first);
 
         // Check if we already have descriptor of this type binded.
@@ -217,7 +218,7 @@ namespace ne {
         }
 
         // Assign descriptor.
-        auto optionalError = pHeap->assignDescriptor(this, descriptorType);
+        auto optionalError = pHeap->assignDescriptor(this, descriptorType, pRange);
         if (optionalError.has_value()) {
             optionalError->addCurrentLocationToErrorStack();
             return optionalError;

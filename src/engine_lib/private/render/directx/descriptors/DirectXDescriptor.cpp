@@ -13,18 +13,18 @@ namespace ne {
         pResource = nullptr;
 
         // Notify heap.
-        pHeap->onDescriptorBeingDestroyed(this);
+        pHeap->onDescriptorBeingDestroyed(this, pRange);
     }
 
     DirectXDescriptor::DirectXDescriptor(
         DirectXDescriptorHeap* pHeap,
         DirectXDescriptorType descriptorType,
         DirectXResource* pResource,
-        int iDescriptorOffsetInDescriptors) {
+        int iDescriptorOffsetInDescriptors,
+        ContinuousDirectXDescriptorRange* pRange)
+        : pResource(pResource), pHeap(pHeap), pRange(pRange), descriptorType(descriptorType) {
+        // Save index.
         this->iDescriptorOffsetInDescriptors = iDescriptorOffsetInDescriptors;
-        this->pResource = pResource;
-        this->descriptorType = descriptorType;
-        this->pHeap = pHeap;
     }
 
     DirectXResource* DirectXDescriptor::getOwnerResource() const { return pResource; }

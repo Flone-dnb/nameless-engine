@@ -8,6 +8,7 @@
 
 namespace ne {
     class DirectXDescriptorHeap;
+    class ContinuousDirectXDescriptorRange;
     class DirectXResource;
 
     /**
@@ -19,6 +20,8 @@ namespace ne {
         friend class DirectXDescriptorHeap;
 
     public:
+        DirectXDescriptor() = delete;
+
         /** Notifies the heap. */
         ~DirectXDescriptor();
 
@@ -61,27 +64,36 @@ namespace ne {
          * @param pResource                      Owner resource of this descriptor.
          * @param iDescriptorOffsetInDescriptors Offset of this descriptor from the heap start
          * (offset is specified in descriptors, not an actual index).
+         * @param pRange                         Range that this descriptor was allocated from.
+         * `nullptr` if allocated as a single descriptor (not part of some range).
          */
         DirectXDescriptor(
             DirectXDescriptorHeap* pHeap,
             DirectXDescriptorType descriptorType,
             DirectXResource* pResource,
-            int iDescriptorOffsetInDescriptors);
+            int iDescriptorOffsetInDescriptors,
+            ContinuousDirectXDescriptorRange* pRange = nullptr);
 
     private:
-        /** Do not delete. Owner resource of this descriptor. */
-        DirectXResource* pResource = nullptr;
-
-        /** Do not delete. Heap of this descriptor. */
-        DirectXDescriptorHeap* pHeap = nullptr;
-
         /**
          * Offset of this descriptor from the heap start (offset is specified in descriptors,
          * not an actual index).
          */
         int iDescriptorOffsetInDescriptors;
 
+        /** Do not delete. Owner resource of this descriptor. */
+        DirectXResource* pResource = nullptr;
+
+        /** Do not delete. Heap of this descriptor. */
+        DirectXDescriptorHeap* const pHeap = nullptr;
+
+        /**
+         * Do not delete. Range that allocated this descriptor (`nullptr` if allocated as a single
+         * descriptor).
+         */
+        ContinuousDirectXDescriptorRange* const pRange = nullptr;
+
         /** Type of this descriptor. */
-        DirectXDescriptorType descriptorType;
+        const DirectXDescriptorType descriptorType;
     };
 } // namespace ne

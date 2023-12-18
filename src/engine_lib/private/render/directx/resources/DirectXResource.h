@@ -26,6 +26,7 @@ namespace ne {
     class DirectXRenderer;
     class DirectXDescriptorHeap;
     class DirectXResourceManager;
+    class ContinuousDirectXDescriptorRange;
 
     /** D3D resource wrapper with automatic descriptor binding. */
     class DirectXResource : public GpuResource {
@@ -50,10 +51,12 @@ namespace ne {
          * @remark Does nothing if a descriptor of this type is already binded.
          *
          * @param descriptorType Type of descriptor to bind.
+         * @param pRange         Specify in order to allocate a descriptor from this range.
          *
          * @return Error if something went wrong.
          */
-        [[nodiscard]] std::optional<Error> bindDescriptor(DirectXDescriptorType descriptorType);
+        [[nodiscard]] std::optional<Error> bindDescriptor(
+            DirectXDescriptorType descriptorType, ContinuousDirectXDescriptorRange* pRange = nullptr);
 
         /**
          * Returns descriptor handle to the descriptor that was previously binded using @ref bindDescriptor.

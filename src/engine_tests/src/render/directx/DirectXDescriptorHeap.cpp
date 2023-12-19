@@ -752,3 +752,541 @@ TEST_CASE("create DSV resource") {
     const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
     pMainWindow->processEvents<TestGameInstance>();
 }
+
+TEST_CASE("make descriptor range expand/shrink") {
+    using namespace ne;
+
+    class TestGameInstance : public GameInstance {
+    public:
+        TestGameInstance(Window* pGameWindow, GameManager* pGame, InputManager* pInputManager)
+            : GameInstance(pGameWindow, pGame, pInputManager) {
+            // Make sure we are using DirectX renderer.
+            if (dynamic_cast<DirectXRenderer*>(getWindow()->getRenderer()) == nullptr) {
+                // Don't run this test on non-DirectX renderer.
+                getWindow()->close();
+                SKIP();
+            }
+
+            // Get renderer.
+            const auto pRenderer = dynamic_cast<DirectXRenderer*>(pGameWindow->getRenderer());
+            REQUIRE(pRenderer != nullptr);
+
+            // Get resource manager.
+            const auto pResourceManager =
+                dynamic_cast<DirectXResourceManager*>(pRenderer->getResourceManager());
+            REQUIRE(pResourceManager != nullptr);
+
+            D3D12MA::ALLOCATION_DESC allocationDesc = {};
+            allocationDesc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
+            const CD3DX12_RESOURCE_DESC resourceDesc = CD3DX12_RESOURCE_DESC::Buffer(iResourceSizeInBytes);
+
+            // Create 2 resources.
+            auto result = pResourceManager->createResource(
+                "Test CBV resource 1", allocationDesc, resourceDesc, D3D12_RESOURCE_STATE_GENERIC_READ, {});
+            if (std::holds_alternative<Error>(result)) [[unlikely]] {
+                auto err = std::get<Error>(std::move(result));
+                err.addCurrentLocationToErrorStack();
+                INFO(err.getFullErrorMessage());
+                REQUIRE(false);
+            }
+            auto pResource1 = std::get<std::unique_ptr<DirectXResource>>(std::move(result));
+
+            result = pResourceManager->createResource(
+                "Test CBV resource 2", allocationDesc, resourceDesc, D3D12_RESOURCE_STATE_GENERIC_READ, {});
+            if (std::holds_alternative<Error>(result)) [[unlikely]] {
+                auto err = std::get<Error>(std::move(result));
+                err.addCurrentLocationToErrorStack();
+                INFO(err.getFullErrorMessage());
+                REQUIRE(false);
+            }
+            auto pResource2 = std::get<std::unique_ptr<DirectXResource>>(std::move(result));
+
+            // Get descriptor heap.
+            const auto pCbvHeap = pResourceManager->getCbvSrvUavHeap();
+            const auto iHeapSizeBeforeRange = pCbvHeap->getHeapSize();
+
+            // Allocate descriptor range.
+            auto rangeResult = pCbvHeap->allocateContinuousDescriptorRange(
+                "test CBV range", [this]() { onRangeIndicesChanged(); });
+            if (std::holds_alternative<Error>(rangeResult)) [[unlikely]] {
+                auto err = std::get<Error>(std::move(result));
+                err.addCurrentLocationToErrorStack();
+                INFO(err.getFullErrorMessage());
+                REQUIRE(false);
+            }
+            auto pRange = std::get<std::unique_ptr<ContinuousDirectXDescriptorRange>>(std::move(rangeResult));
+
+            // Check heap size.
+            REQUIRE(
+                iHeapSizeBeforeRange + ContinuousDirectXDescriptorRange::getRangeGrowSize() ==
+                pCbvHeap->getHeapSize());
+
+            // Check range size/capacity.
+            REQUIRE(pRange->getRangeCapacity() == ContinuousDirectXDescriptorRange::getRangeGrowSize());
+            REQUIRE(pRange->getRangeSize() == 0);
+
+            // Bind CBV from range to resource 1.
+            auto optionalError = pResource1->bindDescriptor(DirectXDescriptorType::CBV, pRange.get());
+            if (optionalError.has_value()) [[unlikely]] {
+                auto error = optionalError.value();
+                error.addCurrentLocationToErrorStack();
+                INFO(error.getFullErrorMessage());
+                REQUIRE(false);
+            }
+
+            // Check range size/capacity.
+            REQUIRE(pRange->getRangeCapacity() == ContinuousDirectXDescriptorRange::getRangeGrowSize());
+            REQUIRE(pRange->getRangeSize() == 1);
+
+            // Get descriptor.
+            const auto pCbvDescriptor1 = pResource1->getDescriptor(DirectXDescriptorType::CBV);
+            REQUIRE(pCbvDescriptor1 != nullptr);
+
+            // Make sure descriptor index actually uses range space.
+            REQUIRE(pCbvDescriptor1->getDescriptorOffsetInDescriptors() == pRange->getRangeStartInHeap());
+
+            // Bind CBV from range to resource 2.
+            optionalError = pResource2->bindDescriptor(DirectXDescriptorType::CBV, pRange.get());
+            if (optionalError.has_value()) [[unlikely]] {
+                auto error = optionalError.value();
+                error.addCurrentLocationToErrorStack();
+                INFO(error.getFullErrorMessage());
+                REQUIRE(false);
+            }
+
+            // Check range size/capacity.
+            REQUIRE(pRange->getRangeCapacity() == ContinuousDirectXDescriptorRange::getRangeGrowSize());
+            REQUIRE(pRange->getRangeSize() == 2);
+
+            // Get descriptor.
+            const auto pCbvDescriptor2 = pResource2->getDescriptor(DirectXDescriptorType::CBV);
+            REQUIRE(pCbvDescriptor2 != nullptr);
+
+            // Make sure descriptor index actually uses range space.
+            REQUIRE(pCbvDescriptor2->getDescriptorOffsetInDescriptors() == pRange->getRangeStartInHeap() + 1);
+
+            // Fill range so that there's no free space.
+            constexpr auto iAdditionalResourceCount =
+                ContinuousDirectXDescriptorRange::getRangeGrowSize() - 2;
+            std::array<std::unique_ptr<DirectXResource>, iAdditionalResourceCount> vResources;
+
+            for (size_t i = 0; i < iAdditionalResourceCount; i++) {
+                // Create resource.
+                result = pResourceManager->createResource(
+                    "Test CBV resource", allocationDesc, resourceDesc, D3D12_RESOURCE_STATE_GENERIC_READ, {});
+                if (std::holds_alternative<Error>(result)) [[unlikely]] {
+                    auto err = std::get<Error>(std::move(result));
+                    err.addCurrentLocationToErrorStack();
+                    INFO(err.getFullErrorMessage());
+                    REQUIRE(false);
+                }
+                vResources[i] = std::get<std::unique_ptr<DirectXResource>>(std::move(result));
+
+                // Bind CBV.
+                optionalError = vResources[i]->bindDescriptor(DirectXDescriptorType::CBV, pRange.get());
+                if (optionalError.has_value()) [[unlikely]] {
+                    auto error = optionalError.value();
+                    error.addCurrentLocationToErrorStack();
+                    INFO(error.getFullErrorMessage());
+                    REQUIRE(false);
+                }
+
+                // Check range size/capacity.
+                REQUIRE(pRange->getRangeCapacity() == ContinuousDirectXDescriptorRange::getRangeGrowSize());
+                REQUIRE(pRange->getRangeSize() == 2 + i + 1);
+
+                // Get descriptor.
+                const auto pCbvDescriptor = vResources[i]->getDescriptor(DirectXDescriptorType::CBV);
+                REQUIRE(pCbvDescriptor != nullptr);
+
+                // Make sure descriptor index actually uses range space.
+                REQUIRE(
+                    pCbvDescriptor->getDescriptorOffsetInDescriptors() ==
+                    pRange->getRangeStartInHeap() + 2 + i);
+            }
+
+            // Check range size/capacity.
+            REQUIRE(pRange->getRangeCapacity() == ContinuousDirectXDescriptorRange::getRangeGrowSize());
+            REQUIRE(pRange->getRangeSize() == ContinuousDirectXDescriptorRange::getRangeGrowSize());
+
+            // Create resource.
+            result = pResourceManager->createResource(
+                "Test CBV resource", allocationDesc, resourceDesc, D3D12_RESOURCE_STATE_GENERIC_READ, {});
+            if (std::holds_alternative<Error>(result)) [[unlikely]] {
+                auto err = std::get<Error>(std::move(result));
+                err.addCurrentLocationToErrorStack();
+                INFO(err.getFullErrorMessage());
+                REQUIRE(false);
+            }
+            const auto pSingleResource = std::get<std::unique_ptr<DirectXResource>>(std::move(result));
+
+            // Bind CBV in the heap (not in the range).
+            optionalError = pSingleResource->bindDescriptor(DirectXDescriptorType::CBV);
+            if (optionalError.has_value()) [[unlikely]] {
+                auto error = optionalError.value();
+                error.addCurrentLocationToErrorStack();
+                INFO(error.getFullErrorMessage());
+                REQUIRE(false);
+            }
+
+            // Check range size/capacity.
+            REQUIRE(pRange->getRangeCapacity() == ContinuousDirectXDescriptorRange::getRangeGrowSize());
+            REQUIRE(pRange->getRangeSize() == ContinuousDirectXDescriptorRange::getRangeGrowSize());
+
+            // Prepare to delete one resource and remember its descriptor index.
+            const auto iDeletedDescriptorIndexInHeap =
+                vResources[0]->getDescriptor(DirectXDescriptorType::CBV)->getDescriptorOffsetInDescriptors();
+
+            // Now delete one resource.
+            vResources[0] = nullptr;
+
+            // Check range size/capacity.
+            REQUIRE(pRange->getRangeCapacity() == ContinuousDirectXDescriptorRange::getRangeGrowSize());
+            REQUIRE(pRange->getRangeSize() == ContinuousDirectXDescriptorRange::getRangeGrowSize() - 1);
+
+            // Re-create deleted resource.
+            result = pResourceManager->createResource(
+                "Test CBV resource", allocationDesc, resourceDesc, D3D12_RESOURCE_STATE_GENERIC_READ, {});
+            if (std::holds_alternative<Error>(result)) [[unlikely]] {
+                auto err = std::get<Error>(std::move(result));
+                err.addCurrentLocationToErrorStack();
+                INFO(err.getFullErrorMessage());
+                REQUIRE(false);
+            }
+            vResources[0] = std::get<std::unique_ptr<DirectXResource>>(std::move(result));
+
+            // Bind CBV in the range.
+            optionalError = vResources[0]->bindDescriptor(DirectXDescriptorType::CBV, pRange.get());
+            if (optionalError.has_value()) [[unlikely]] {
+                auto error = optionalError.value();
+                error.addCurrentLocationToErrorStack();
+                INFO(error.getFullErrorMessage());
+                REQUIRE(false);
+            }
+
+            // Check range size/capacity.
+            REQUIRE(pRange->getRangeCapacity() == ContinuousDirectXDescriptorRange::getRangeGrowSize());
+            REQUIRE(pRange->getRangeSize() == ContinuousDirectXDescriptorRange::getRangeGrowSize());
+
+            // Descriptor index should have been reused.
+            REQUIRE(
+                vResources[0]
+                    ->getDescriptor(DirectXDescriptorType::CBV)
+                    ->getDescriptorOffsetInDescriptors() == iDeletedDescriptorIndexInHeap);
+
+            // Create resource.
+            result = pResourceManager->createResource(
+                "Test CBV resource", allocationDesc, resourceDesc, D3D12_RESOURCE_STATE_GENERIC_READ, {});
+            if (std::holds_alternative<Error>(result)) [[unlikely]] {
+                auto err = std::get<Error>(std::move(result));
+                err.addCurrentLocationToErrorStack();
+                INFO(err.getFullErrorMessage());
+                REQUIRE(false);
+            }
+            auto pExpansionResource = std::get<std::unique_ptr<DirectXResource>>(std::move(result));
+
+            REQUIRE(iRangeCallbackCallCount == 0);
+
+            // Prepare for range to expand.
+            bIsExpencingRangeIndicesToChange = true;
+
+            // Bind CBV in the range.
+            optionalError = pExpansionResource->bindDescriptor(DirectXDescriptorType::CBV, pRange.get());
+            if (optionalError.has_value()) [[unlikely]] {
+                auto error = optionalError.value();
+                error.addCurrentLocationToErrorStack();
+                INFO(error.getFullErrorMessage());
+                REQUIRE(false);
+            }
+
+            // Done expanding.
+            bIsExpencingRangeIndicesToChange = false;
+
+            REQUIRE(iRangeCallbackCallCount == 1);
+
+            // Check range size/capacity.
+            REQUIRE(pRange->getRangeCapacity() == ContinuousDirectXDescriptorRange::getRangeGrowSize() * 2);
+            REQUIRE(pRange->getRangeSize() == ContinuousDirectXDescriptorRange::getRangeGrowSize() + 1);
+
+            // Now delete 3 resources.
+            pResource1 = nullptr;
+            pResource2 = nullptr;
+            pExpansionResource = nullptr;
+
+            // Check range size/capacity.
+            REQUIRE(pRange->getRangeCapacity() == ContinuousDirectXDescriptorRange::getRangeGrowSize() * 2);
+            REQUIRE(pRange->getRangeSize() == ContinuousDirectXDescriptorRange::getRangeGrowSize() - 2);
+
+            // Now delete a bunch of resources (except for one).
+            bIsExpencingRangeIndicesToChange = true;
+            for (size_t i = 1; i < vResources.size(); i++) {
+                vResources[i] = nullptr;
+            }
+            bIsExpencingRangeIndicesToChange = false;
+
+            REQUIRE(iRangeCallbackCallCount == 2);
+
+            // Check range size/capacity.
+            REQUIRE(pRange->getRangeCapacity() == ContinuousDirectXDescriptorRange::getRangeGrowSize());
+            REQUIRE(pRange->getRangeSize() == 1);
+
+            // Now make the heap expand and check that range callback is called.
+            const auto iResourcesToCreate = pCbvHeap->getHeapCapacity() - pCbvHeap->getHeapSize();
+            std::vector<std::unique_ptr<DirectXResource>> vAdditionalHeapResources;
+            vAdditionalHeapResources.resize(iResourcesToCreate);
+
+            for (size_t i = 0; i < iResourcesToCreate; i++) {
+                // Create resource.
+                result = pResourceManager->createResource(
+                    "Test CBV resource", allocationDesc, resourceDesc, D3D12_RESOURCE_STATE_GENERIC_READ, {});
+                if (std::holds_alternative<Error>(result)) [[unlikely]] {
+                    auto err = std::get<Error>(std::move(result));
+                    err.addCurrentLocationToErrorStack();
+                    INFO(err.getFullErrorMessage());
+                    REQUIRE(false);
+                }
+                vAdditionalHeapResources[i] = std::get<std::unique_ptr<DirectXResource>>(std::move(result));
+
+                // Bind CBV.
+                optionalError = vAdditionalHeapResources[i]->bindDescriptor(DirectXDescriptorType::CBV);
+                if (optionalError.has_value()) [[unlikely]] {
+                    auto error = optionalError.value();
+                    error.addCurrentLocationToErrorStack();
+                    INFO(error.getFullErrorMessage());
+                    REQUIRE(false);
+                }
+            }
+
+            // Check range size/capacity.
+            REQUIRE(pRange->getRangeCapacity() == ContinuousDirectXDescriptorRange::getRangeGrowSize());
+            REQUIRE(pRange->getRangeSize() == 1);
+
+            // Check heap size.
+            REQUIRE(pCbvHeap->getHeapSize() == pCbvHeap->getHeapCapacity());
+
+            // Now create the last resource (that will cause heap expansion).
+            result = pResourceManager->createResource(
+                "Test CBV resource", allocationDesc, resourceDesc, D3D12_RESOURCE_STATE_GENERIC_READ, {});
+            if (std::holds_alternative<Error>(result)) [[unlikely]] {
+                auto err = std::get<Error>(std::move(result));
+                err.addCurrentLocationToErrorStack();
+                INFO(err.getFullErrorMessage());
+                REQUIRE(false);
+            }
+            auto pHeapExpansionResource = std::get<std::unique_ptr<DirectXResource>>(std::move(result));
+
+            bIsExpencingRangeIndicesToChange = true;
+
+            // Bind CBV.
+            optionalError = pHeapExpansionResource->bindDescriptor(DirectXDescriptorType::CBV);
+            if (optionalError.has_value()) [[unlikely]] {
+                auto error = optionalError.value();
+                error.addCurrentLocationToErrorStack();
+                INFO(error.getFullErrorMessage());
+                REQUIRE(false);
+            }
+
+            bIsExpencingRangeIndicesToChange = false;
+
+            REQUIRE(iRangeCallbackCallCount == 3);
+
+            // Check range size/capacity.
+            REQUIRE(pRange->getRangeCapacity() == ContinuousDirectXDescriptorRange::getRangeGrowSize());
+            REQUIRE(pRange->getRangeSize() == 1);
+
+            // Destroy last descriptor before destructing the range.
+            vResources[0] = nullptr;
+
+            pRange = nullptr;
+
+            pGameWindow->close();
+        }
+
+        void onRangeIndicesChanged() {
+            REQUIRE(bIsExpencingRangeIndicesToChange);
+
+            iRangeCallbackCallCount += 1;
+        }
+
+        virtual ~TestGameInstance() override = default;
+
+    private:
+        bool bIsExpencingRangeIndicesToChange = false;
+        size_t iRangeCallbackCallCount = 0;
+    };
+
+    auto result = Window::getBuilder().withVisibility(false).build();
+    if (std::holds_alternative<Error>(result)) {
+        Error error = std::get<Error>(std::move(result));
+        error.addCurrentLocationToErrorStack();
+        INFO(error.getFullErrorMessage());
+        REQUIRE(false);
+    }
+
+    const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
+    pMainWindow->processEvents<TestGameInstance>();
+}
+
+TEST_CASE("descriptor ranges have correct index offset") {
+    using namespace ne;
+
+    class TestGameInstance : public GameInstance {
+    public:
+        TestGameInstance(Window* pGameWindow, GameManager* pGame, InputManager* pInputManager)
+            : GameInstance(pGameWindow, pGame, pInputManager) {
+            // Make sure we are using DirectX renderer.
+            if (dynamic_cast<DirectXRenderer*>(getWindow()->getRenderer()) == nullptr) {
+                // Don't run this test on non-DirectX renderer.
+                getWindow()->close();
+                SKIP();
+            }
+
+            // Get renderer.
+            const auto pRenderer = dynamic_cast<DirectXRenderer*>(pGameWindow->getRenderer());
+            REQUIRE(pRenderer != nullptr);
+
+            // Get resource manager.
+            const auto pResourceManager =
+                dynamic_cast<DirectXResourceManager*>(pRenderer->getResourceManager());
+            REQUIRE(pResourceManager != nullptr);
+
+            D3D12MA::ALLOCATION_DESC allocationDesc = {};
+            allocationDesc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
+            const CD3DX12_RESOURCE_DESC resourceDesc = CD3DX12_RESOURCE_DESC::Buffer(iResourceSizeInBytes);
+
+            // Create 2 resources.
+            auto result = pResourceManager->createResource(
+                "Test CBV resource 1", allocationDesc, resourceDesc, D3D12_RESOURCE_STATE_GENERIC_READ, {});
+            if (std::holds_alternative<Error>(result)) [[unlikely]] {
+                auto err = std::get<Error>(std::move(result));
+                err.addCurrentLocationToErrorStack();
+                INFO(err.getFullErrorMessage());
+                REQUIRE(false);
+            }
+            auto pResource1 = std::get<std::unique_ptr<DirectXResource>>(std::move(result));
+
+            result = pResourceManager->createResource(
+                "Test CBV resource 2", allocationDesc, resourceDesc, D3D12_RESOURCE_STATE_GENERIC_READ, {});
+            if (std::holds_alternative<Error>(result)) [[unlikely]] {
+                auto err = std::get<Error>(std::move(result));
+                err.addCurrentLocationToErrorStack();
+                INFO(err.getFullErrorMessage());
+                REQUIRE(false);
+            }
+            auto pResource2 = std::get<std::unique_ptr<DirectXResource>>(std::move(result));
+
+            // Get descriptor heap.
+            const auto pCbvHeap = pResourceManager->getCbvSrvUavHeap();
+            const auto iHeapSizeBeforeRange = pCbvHeap->getHeapSize();
+
+            // Allocate descriptor range 1.
+            auto rangeResult = pCbvHeap->allocateContinuousDescriptorRange("test CBV range 1", []() {});
+            if (std::holds_alternative<Error>(rangeResult)) [[unlikely]] {
+                auto err = std::get<Error>(std::move(result));
+                err.addCurrentLocationToErrorStack();
+                INFO(err.getFullErrorMessage());
+                REQUIRE(false);
+            }
+            auto pRange1 =
+                std::get<std::unique_ptr<ContinuousDirectXDescriptorRange>>(std::move(rangeResult));
+
+            // Allocate descriptor range 2.
+            rangeResult = pCbvHeap->allocateContinuousDescriptorRange("test CBV range 2", []() {});
+            if (std::holds_alternative<Error>(rangeResult)) [[unlikely]] {
+                auto err = std::get<Error>(std::move(result));
+                err.addCurrentLocationToErrorStack();
+                INFO(err.getFullErrorMessage());
+                REQUIRE(false);
+            }
+            auto pRange2 =
+                std::get<std::unique_ptr<ContinuousDirectXDescriptorRange>>(std::move(rangeResult));
+
+            // Check heap size.
+            REQUIRE(
+                iHeapSizeBeforeRange + ContinuousDirectXDescriptorRange::getRangeGrowSize() * 2 ==
+                pCbvHeap->getHeapSize());
+
+            // Check range size/capacity.
+            REQUIRE(pRange1->getRangeCapacity() == ContinuousDirectXDescriptorRange::getRangeGrowSize());
+            REQUIRE(pRange1->getRangeSize() == 0);
+            REQUIRE(pRange2->getRangeCapacity() == ContinuousDirectXDescriptorRange::getRangeGrowSize());
+            REQUIRE(pRange2->getRangeSize() == 0);
+
+            // Bind CBV resource 1 - range 1.
+            auto optionalError = pResource1->bindDescriptor(DirectXDescriptorType::CBV, pRange1.get());
+            if (optionalError.has_value()) [[unlikely]] {
+                auto error = optionalError.value();
+                error.addCurrentLocationToErrorStack();
+                INFO(error.getFullErrorMessage());
+                REQUIRE(false);
+            }
+
+            // Check range size/capacity.
+            REQUIRE(pRange1->getRangeCapacity() == ContinuousDirectXDescriptorRange::getRangeGrowSize());
+            REQUIRE(pRange1->getRangeSize() == 1);
+
+            // Get descriptor.
+            const auto pCbvDescriptor1 = pResource1->getDescriptor(DirectXDescriptorType::CBV);
+            REQUIRE(pCbvDescriptor1 != nullptr);
+
+            // Make sure descriptor index actually uses range space.
+            REQUIRE(pCbvDescriptor1->getDescriptorOffsetInDescriptors() == pRange1->getRangeStartInHeap());
+
+            // Bind CBV resource 2 - range 2.
+            optionalError = pResource2->bindDescriptor(DirectXDescriptorType::CBV, pRange2.get());
+            if (optionalError.has_value()) [[unlikely]] {
+                auto error = optionalError.value();
+                error.addCurrentLocationToErrorStack();
+                INFO(error.getFullErrorMessage());
+                REQUIRE(false);
+            }
+
+            // Check range size/capacity.
+            REQUIRE(pRange2->getRangeCapacity() == ContinuousDirectXDescriptorRange::getRangeGrowSize());
+            REQUIRE(pRange2->getRangeSize() == 1);
+
+            // Get descriptor.
+            const auto pCbvDescriptor2 = pResource2->getDescriptor(DirectXDescriptorType::CBV);
+            REQUIRE(pCbvDescriptor2 != nullptr);
+
+            // Make sure descriptor index actually uses range space.
+            REQUIRE(pCbvDescriptor2->getDescriptorOffsetInDescriptors() == pRange2->getRangeStartInHeap());
+
+            // Make sure distance (offset) between range starts is correct.
+            INT iLowRangeStart = 0;
+            INT iHighRangeStart = 0;
+            if (pCbvDescriptor1->getDescriptorOffsetInDescriptors() <
+                pCbvDescriptor2->getDescriptorOffsetInDescriptors()) {
+                iLowRangeStart = pCbvDescriptor1->getDescriptorOffsetInDescriptors();
+                iHighRangeStart = pCbvDescriptor2->getDescriptorOffsetInDescriptors();
+            } else {
+                iLowRangeStart = pCbvDescriptor2->getDescriptorOffsetInDescriptors();
+                iHighRangeStart = pCbvDescriptor1->getDescriptorOffsetInDescriptors();
+            }
+            REQUIRE(iHighRangeStart - iLowRangeStart == ContinuousDirectXDescriptorRange::getRangeGrowSize());
+
+            // Destroy resources before ranges.
+            pResource1 = nullptr;
+            pResource2 = nullptr;
+
+            // Destroy ranges.
+            pRange1 = nullptr;
+            pRange2 = nullptr;
+
+            pGameWindow->close();
+        }
+
+        virtual ~TestGameInstance() override = default;
+    };
+
+    auto result = Window::getBuilder().withVisibility(false).build();
+    if (std::holds_alternative<Error>(result)) {
+        Error error = std::get<Error>(std::move(result));
+        error.addCurrentLocationToErrorStack();
+        INFO(error.getFullErrorMessage());
+        REQUIRE(false);
+    }
+
+    const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
+    pMainWindow->processEvents<TestGameInstance>();
+}

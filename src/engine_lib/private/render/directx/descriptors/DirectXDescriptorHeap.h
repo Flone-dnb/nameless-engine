@@ -60,6 +60,34 @@ namespace ne {
         ContinuousDirectXDescriptorRange&
         operator=(ContinuousDirectXDescriptorRange&& other) noexcept = delete;
 
+        /**
+         * Returns grow/shrink size for all continuous descriptor ranges.
+         *
+         * @return Grow/shrink size.
+         */
+        static constexpr INT getRangeGrowSize() { return iRangeGrowSize; }
+
+        /**
+         * Returns the number of active (currently in-use) descriptors that were allocated from this range.
+         *
+         * @return Active descriptors.
+         */
+        size_t getRangeSize();
+
+        /**
+         * Returns the total number of descriptors that this range can currently store.
+         *
+         * @return Total capacity.
+         */
+        size_t getRangeCapacity();
+
+        /**
+         * Returns index of the first descriptor of this range in the heap.
+         *
+         * @return Negative if not initialized yet, otherwise descriptor index in the heap.
+         */
+        INT getRangeStartInHeap();
+
     private:
         /** Groups mutex guarded data. */
         struct InternalData {
@@ -216,6 +244,9 @@ namespace ne {
         DirectXDescriptorHeap() = delete;
         DirectXDescriptorHeap(const DirectXDescriptorHeap&) = delete;
         DirectXDescriptorHeap& operator=(const DirectXDescriptorHeap&) = delete;
+
+        /** Makes sure no descriptor or range exists. */
+        ~DirectXDescriptorHeap();
 
         /**
          * Creates a new manager that controls a specific heap.

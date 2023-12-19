@@ -255,6 +255,40 @@ namespace ne {
         sHeapType = convertHeapTypeToString(heapType);
     }
 
+    DirectXDescriptorHeap::~DirectXDescriptorHeap() {
+        std::scoped_lock guard(mtxInternalData.first);
+
+        // Make sure no single descriptor exists.
+        if (!mtxInternalData.second.bindedSingleDescriptors.empty()) [[unlikely]] {
+            Error error(std::format(
+                "descriptor heap \"{}\" is being destroyed but there are still {} single descriptor(s) alive",
+                sHeapType,
+                mtxInternalData.second.bindedSingleDescriptors.size()));
+            error.showError();
+            return; // don't throw in destructor
+        }
+
+        // Make sure no range exists.
+        if (!mtxInternalData.second.continuousDescriptorRanges.empty()) [[unlikely]] {
+            Error error(std::format(
+                "descriptor heap \"{}\" is being destroyed but there are still {} descriptor range(s) alive",
+                sHeapType,
+                mtxInternalData.second.continuousDescriptorRanges.size()));
+            error.showError();
+            return; // don't throw in destructor
+        }
+
+        // Make sure our size is zero.
+        if (mtxInternalData.second.iHeapSize != 0) [[unlikely]] {
+            Error error(std::format(
+                "descriptor heap \"{}\" is being destroyed but its size is {}",
+                sHeapType,
+                mtxInternalData.second.iHeapSize));
+            error.showError();
+            return; // don't throw in destructor
+        }
+    }
+
     void DirectXDescriptorHeap::onDescriptorBeingDestroyed(
         DirectXDescriptor* pDescriptor, ContinuousDirectXDescriptorRange* pRange) {
         // Prepare range mutex if valid.
@@ -832,6 +866,20 @@ namespace ne {
                 pRange->onRangeIndicesChanged();
             } // else: the range is just being created/initialized and we should not notify the user because
               // the user still have not received the range pointer
+
+            // Jump to the end of the range.
+            const auto iSkipDescriptorCount =
+                rangeData.iRangeCapacity - static_cast<INT>(rangeData.allocatedDescriptors.size());
+            if (iSkipDescriptorCount < 0) [[unlikely]] {
+                return Error(std::format(
+                    "unexpected internal range descriptor counter to be negative ({}) for range \"{}\" "
+                    "(capacity: {}, size: {})",
+                    iSkipDescriptorCount,
+                    pRange->sRangeName,
+                    rangeData.iRangeCapacity,
+                    rangeData.allocatedDescriptors.size()));
+            }
+            iCurrentHeapIndex += iSkipDescriptorCount;
         }
 
         // Iterate over all descriptors from this heap.
@@ -857,6 +905,21 @@ namespace ne {
         const std::string& sRangeName)
         : onRangeIndicesChanged(onRangeIndicesChanged), sRangeName(sRangeName), pHeap(pHeap) {}
 
+    size_t ContinuousDirectXDescriptorRange::getRangeSize() {
+        std::scoped_lock guard(mtxInternalData.first);
+        return mtxInternalData.second.allocatedDescriptors.size();
+    }
+
+    size_t ContinuousDirectXDescriptorRange::getRangeCapacity() {
+        std::scoped_lock guard(mtxInternalData.first);
+        return static_cast<size_t>(mtxInternalData.second.iRangeCapacity);
+    }
+
+    INT ContinuousDirectXDescriptorRange::getRangeStartInHeap() {
+        std::scoped_lock guard(mtxInternalData.first);
+        return mtxInternalData.second.iRangeStartInHeap;
+    }
+
     ContinuousDirectXDescriptorRange::~ContinuousDirectXDescriptorRange() {
         std::scoped_lock guard(mtxInternalData.first);
 
@@ -865,8 +928,8 @@ namespace ne {
             Error error(std::format(
                 "range \"{}\" is being destroyed but there are still {} active descriptor(s) that reference "
                 "it",
-                mtxInternalData.second.allocatedDescriptors.size(),
-                sRangeName));
+                sRangeName,
+                mtxInternalData.second.allocatedDescriptors.size()));
             error.showError();
             return; // don't throw in destructor
         }
@@ -904,7 +967,7 @@ namespace ne {
         auto& rangeData = mtxInternalData.second;
 
         // Check if range is full.
-        if (static_cast<INT>(rangeData.allocatedDescriptors.size()) == rangeData.iRangeCapacity) {
+        if (rangeData.iNextFreeIndexInRange == rangeData.iRangeCapacity) {
             if (rangeData.noLongerUsedDescriptorIndices.empty()) {
                 // No space.
                 return std::optional<INT>{};

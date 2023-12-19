@@ -290,8 +290,6 @@ namespace ne {
         /**
          * Creates a GPU resource to be used as a shadow map.
          *
-         * @remark Also binds DSV and SRV to the created resource.
-         *
          * @param sResourceName  Resource name, used for logging.
          * @param iTextureSize   Size of one dimension of the texture in pixels.
          * Must be power of 2 (128, 256, 512, 1024, 2048, etc.).

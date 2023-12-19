@@ -324,23 +324,8 @@ namespace ne {
             err.addCurrentLocationToErrorStack();
             return err;
         }
-        auto pShadowMapTexture = std::get<std::unique_ptr<DirectXResource>>(std::move(result));
 
-        // Bind DSV.
-        auto optionalError = pShadowMapTexture->bindDescriptor(DirectXDescriptorType::DSV);
-        if (optionalError.has_value()) [[unlikely]] {
-            optionalError->addCurrentLocationToErrorStack();
-            return optionalError.value();
-        }
-
-        // Bind SRV.
-        optionalError = pShadowMapTexture->bindDescriptor(DirectXDescriptorType::SRV);
-        if (optionalError.has_value()) [[unlikely]] {
-            optionalError->addCurrentLocationToErrorStack();
-            return optionalError.value();
-        }
-
-        return pShadowMapTexture;
+        return std::get<std::unique_ptr<DirectXResource>>(std::move(result));
     }
 
     size_t DirectXResourceManager::getTotalVideoMemoryInMb() const {

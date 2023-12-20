@@ -20,6 +20,9 @@ namespace ne {
         // Only manager can create and update objects of this class.
         friend class ShadowMapManager;
 
+        // Index manager updates array index.
+        friend class ShadowMapArrayIndexManager;
+
     public:
         ShadowMapHandle() = delete;
 
@@ -52,17 +55,36 @@ namespace ne {
         /**
          * Constructs a new handle.
          *
-         * @param pManager  Manager that owns the resource.
-         * @param pResource Resource to point to.
-         * @param type      Type of the shadow map this handle references.
+         * @param pManager                    Manager that owns the resource.
+         * @param pResource                   Resource to point to.
+         * @param type                        Type of the shadow map this handle references.
+         * @param onArrayIndexChanged Called after the index of the shadow map into the
+         * descriptor array of shadow maps was initialized/changed.
          */
-        ShadowMapHandle(ShadowMapManager* pManager, GpuResource* pResource, ShadowMapType type);
+        ShadowMapHandle(
+            ShadowMapManager* pManager,
+            GpuResource* pResource,
+            ShadowMapType type,
+            const std::function<void(unsigned int)>& onArrayIndexChanged);
+
+        /**
+         * Called by array index manager to notify the shadow map user about array index changed.
+         *
+         * @param iNewArrayIndex New array index.
+         */
+        void changeArrayIndex(unsigned int iNewArrayIndex);
 
         /** Manager that owns the resource we are pointing to. */
         ShadowMapManager* pManager = nullptr;
 
         /** Resource we are pointing to. */
         GpuResource* pResource = nullptr;
+
+        /**
+         * Called after the index of the shadow map into the
+         * descriptor array of shadow maps was initialized/changed.
+         */
+        const std::function<void(unsigned int)> onArrayIndexChanged;
 
         /** Type of the shadow map that this handle references. */
         const ShadowMapType shadowMapType = ShadowMapType::DIRECTIONAL;

@@ -222,15 +222,24 @@ namespace ne {
         VkQueue getGraphicsQueue() const;
 
         /**
-         * Returns Vulkan texture sampler with nearest filtering and mipmapping.
+         * Returns Vulkan texture sampler for fetching texels in compute shaders.
          *
          * @remark Used for compute shaders that need to read textures.
          *
-         * @remark Guaranteed to never be re-created (always valid).
+         * @remark Guaranteed to never be re-created.
          *
          * @return `nullptr` if not created yet, otherwise valid sampler.
          */
         VkSampler getComputeTextureSampler() const;
+
+        /**
+         * Returns Vulkan texture sampler for sampling shadow textures.
+         *
+         * @remark Guaranteed to never be re-created.
+         *
+         * @return `nullptr` if not created yet, otherwise valid sampler.
+         */
+        VkSampler getShadowTextureSampler() const;
 
         /**
          * Returns the size of images in the swap chain.
@@ -656,6 +665,17 @@ namespace ne {
         [[nodiscard]] std::optional<Error> createComputeTextureSampler();
 
         /**
+         * Creates @ref pShadowTextureSampler.
+         *
+         * @warning Expects that @ref pLogicalDevice is valid.
+         *
+         * @warning Expected to be called only once so that this sampler will never be re-created.
+         *
+         * @return Error if something went wrong.
+         */
+        [[nodiscard]] std::optional<Error> createShadowTextureSampler();
+
+        /**
          * Tells if @ref depthImageFormat is supported by the hardware.
          *
          * @return `true` if supported, `false` otherwise.
@@ -844,9 +864,16 @@ namespace ne {
         /**
          * Texture sampler with nearest filtering and mipmapping for fetching texels in compute shader.
          *
-         * @remark Always valid and not re-created when texture filtering is changed.
+         * @remark Always valid and not re-created when texture filtering (render setting) is changed.
          */
         VkSampler pComputeTextureSampler = nullptr;
+
+        /**
+         * Texture sampler for shadow maps.
+         *
+         * @remark Always valid and not re-created when texture filtering (render setting) is changed.
+         */
+        VkSampler pShadowTextureSampler = nullptr;
 
 #if defined(DEBUG)
         /**

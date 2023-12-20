@@ -109,6 +109,9 @@ namespace ne RNAMESPACE() {
 
             /** Light intensity. */
             alignas(iVkScalarAlignment) float intensity = 1.0F;
+
+            /** Index in the directional shadow map array where shadow map of this light source is stored. */
+            alignas(iVkScalarAlignment) unsigned int iShadowMapIndex = 0;
         };
 
         /** Groups data related to shaders. */
@@ -141,6 +144,13 @@ namespace ne RNAMESPACE() {
          * @remark Does nothing if the slot is `nullptr`.
          */
         void markShaderDataToBeCopiedToGpu();
+
+        /**
+         * Called after the index into a descriptor array of @ref pShadowMapHandle was initialized/changed.
+         *
+         * @param iNewIndexIntoArray New index to use.
+         */
+        void onShadowMapArrayIndexChanged(unsigned int iNewIndexIntoArray);
 
         /** Only valid while spawned. Up to date data that will be copied to the GPU. */
         std::pair<std::recursive_mutex, ShaderData> mtxShaderData;

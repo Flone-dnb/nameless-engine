@@ -10,7 +10,7 @@ namespace ne {
          * will have.
          *
          * @remark With bindless arrays/tables we generally think that there's no limit but
-         * when creating bindless arrays/tables we need to provide some value so let's use this value.
+         * when creating them we need to provide some value as array size so let's use this value.
          */
         static constexpr unsigned int iBindlessTextureArrayDescriptorCount = 20000; // NOLINT: magic number
     };

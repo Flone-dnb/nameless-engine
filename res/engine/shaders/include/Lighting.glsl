@@ -61,6 +61,9 @@ struct DirectionalLight{
     /** Light intensity, valid values range is [0.0F; 1.0F]. */
     float intensity;
 
+    /** Index in the directional shadow map array where shadow map of this light source is stored. */
+    uint iShadowMapIndex;
+
 #hlsl float3 pad1; // to pack as in Vulkan
 };
 

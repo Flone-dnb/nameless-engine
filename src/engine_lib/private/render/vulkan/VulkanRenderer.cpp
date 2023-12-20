@@ -109,6 +109,11 @@ namespace ne {
             vkDestroySampler(pLogicalDevice, pComputeTextureSampler, nullptr);
             pComputeTextureSampler = nullptr;
         }
+        if (pShadowTextureSampler != nullptr) {
+            // Destroy sampler.
+            vkDestroySampler(pLogicalDevice, pShadowTextureSampler, nullptr);
+            pShadowTextureSampler = nullptr;
+        }
 
         if (pLogicalDevice != nullptr) {
             // Explicitly delete frame resources manager before command pool because command buffers
@@ -269,6 +274,13 @@ namespace ne {
 
         // Create sampler for compute shaders.
         optionalError = createComputeTextureSampler();
+        if (optionalError.has_value()) {
+            optionalError->addCurrentLocationToErrorStack();
+            return optionalError;
+        }
+
+        // Create sampler for shadow maps.
+        optionalError = createShadowTextureSampler();
         if (optionalError.has_value()) {
             optionalError->addCurrentLocationToErrorStack();
             return optionalError;
@@ -1751,7 +1763,7 @@ namespace ne {
         samplerInfo.unnormalizedCoordinates = VK_FALSE;
 
         // Specify texel comparison for texture filtering.
-        samplerInfo.compareEnable = VK_FALSE; // can be used in percentage-closer filtering on shadow maps
+        samplerInfo.compareEnable = VK_FALSE;
         samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
 
         // Specify mipmapping options.
@@ -1802,7 +1814,7 @@ namespace ne {
         samplerInfo.unnormalizedCoordinates = VK_FALSE;
 
         // Specify texel comparison for texture filtering.
-        samplerInfo.compareEnable = VK_FALSE; // can be used in percentage-closer filtering on shadow maps
+        samplerInfo.compareEnable = VK_FALSE;
         samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
 
         // Specify mipmapping options.
@@ -1813,6 +1825,58 @@ namespace ne {
 
         // Create sampler.
         const auto result = vkCreateSampler(pLogicalDevice, &samplerInfo, nullptr, &pComputeTextureSampler);
+        if (result != VK_SUCCESS) [[unlikely]] {
+            return Error(std::format("failed to create sampler, error: {}", string_VkResult(result)));
+        }
+
+        return {};
+    }
+
+    std::optional<Error> VulkanRenderer::createShadowTextureSampler() {
+        // Make sure logical device is valid.
+        if (pLogicalDevice == nullptr) [[unlikely]] {
+            return Error("expected logical device to be valid");
+        }
+
+        // Make sure sampler is not valid.
+        if (pShadowTextureSampler != nullptr) [[unlikely]] {
+            return Error("unexpected shadow texture sampler to be re-created");
+        }
+
+        // Describe sampler.
+        VkSamplerCreateInfo samplerInfo{};
+        samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+
+        // Specify how oversampling and undersampling is handed.
+        samplerInfo.magFilter = VK_FILTER_LINEAR;
+        samplerInfo.minFilter = VK_FILTER_LINEAR;
+
+        // Specify address mode (clamp to edge because in shadow mapping we can get UVs outside [0; 1] range).
+        samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+        samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+        samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+        samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK; // used when `clamp` address mode
+
+        // Disable anisotropic filtering.
+        samplerInfo.anisotropyEnable = VK_FALSE;
+        samplerInfo.maxAnisotropy = 1.0F;
+
+        // Specify whether to use [0; textureWidth] coordinates or not.
+        samplerInfo.unnormalizedCoordinates = VK_FALSE;
+
+        // Specify texel comparison for texture filtering.
+        samplerInfo.compareEnable = VK_TRUE; // for automatic PCF on shadow samplers
+        samplerInfo.compareOp =
+            VK_COMPARE_OP_LESS_OR_EQUAL; // same in DirectX, pixel depth <= shadow map value
+
+        // Specify mipmapping options.
+        samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+        samplerInfo.mipLodBias = 0.0F;
+        samplerInfo.minLod = 0.0F;
+        samplerInfo.maxLod = VK_LOD_CLAMP_NONE;
+
+        // Create sampler.
+        const auto result = vkCreateSampler(pLogicalDevice, &samplerInfo, nullptr, &pShadowTextureSampler);
         if (result != VK_SUCCESS) [[unlikely]] {
             return Error(std::format("failed to create sampler, error: {}", string_VkResult(result)));
         }
@@ -2414,6 +2478,8 @@ namespace ne {
     VkQueue VulkanRenderer::getGraphicsQueue() const { return pGraphicsQueue; }
 
     VkSampler VulkanRenderer::getComputeTextureSampler() const { return pComputeTextureSampler; }
+
+    VkSampler VulkanRenderer::getShadowTextureSampler() const { return pShadowTextureSampler; }
 
     std::optional<VkExtent2D> VulkanRenderer::getSwapChainExtent() const { return swapChainExtent; }
 

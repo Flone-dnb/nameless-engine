@@ -47,8 +47,9 @@ namespace ne {
     void DirectionalLightNode::onDespawning() {
         SpatialNode::onDespawning();
 
-        // Mark slot as unused.
         std::scoped_lock guard(mtxShaderData.first);
+
+        // Mark light slot as unused.
         mtxShaderData.second.pDirectionalLightArraySlot = nullptr;
 
         // Free shadow map.
@@ -64,7 +65,10 @@ namespace ne {
         // Create a shadow map.
         const auto pShadowMapManager =
             getGameInstance()->getWindow()->getRenderer()->getResourceManager()->getShadowMapManager();
-        auto shadowMapResult = pShadowMapManager->createShadowMap(getNodeName(), ShadowMapType::DIRECTIONAL);
+        auto shadowMapResult = pShadowMapManager->createShadowMap(
+            getNodeName(), ShadowMapType::DIRECTIONAL, [this](unsigned int iIndexToUse) {
+                onShadowMapArrayIndexChanged(iIndexToUse);
+            });
         if (std::holds_alternative<Error>(shadowMapResult)) [[unlikely]] {
             auto error = std::get<Error>(std::move(shadowMapResult));
             error.addCurrentLocationToErrorStack();
@@ -141,6 +145,25 @@ namespace ne {
 
         // Update shader data.
         mtxShaderData.second.shaderData.direction = glm::vec4(getWorldForwardDirection(), 0.0F);
+
+        // Mark updated shader data to be later copied to the GPU resource.
+        markShaderDataToBeCopiedToGpu();
+    }
+
+    void DirectionalLightNode::onShadowMapArrayIndexChanged(unsigned int iNewIndexIntoArray) {
+        std::scoped_lock guard(mtxShaderData.first);
+
+        // Self check: make sure shadow map handle is valid.
+        if (pShadowMapHandle == nullptr) [[unlikely]] {
+            Error error(std::format(
+                "node \"{}\" shadow map handle is cleared but shadow map index callback was triggered",
+                getNodeName()));
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+        }
+
+        // Update shader data.
+        mtxShaderData.second.shaderData.iShadowMapIndex = iNewIndexIntoArray;
 
         // Mark updated shader data to be later copied to the GPU resource.
         markShaderDataToBeCopiedToGpu();

@@ -56,6 +56,8 @@ set(PROJECT_WIN32_SOURCES
     private/render/directx/resources/DirectXResourceManager.cpp
     private/render/directx/resources/DirectXFrameResource.h
     private/render/directx/resources/DirectXFrameResource.cpp
+    private/render/directx/resources/shadow/DirectXShadowMapArrayIndexManager.h
+    private/render/directx/resources/shadow/DirectXShadowMapArrayIndexManager.cpp
     # add Windows specific sources here...
 )
 
@@ -105,6 +107,8 @@ set(PROJECT_SOURCES
     private/render/general/resources/shadow/ShadowMapHandle.cpp
     private/render/general/resources/shadow/ShadowMapHandle.h
     private/render/general/resources/shadow/ShadowMapType.hpp
+    private/render/general/resources/shadow/ShadowMapArrayIndexManager.h
+    private/render/general/resources/shadow/ShadowMapArrayIndexManager.cpp
     private/render/general/resources/GpuResourceManager.h
     private/render/general/resources/GpuResourceManager.cpp
     private/render/general/resources/UploadBuffer.h
@@ -123,6 +127,8 @@ set(PROJECT_SOURCES
     private/render/vulkan/VulkanRenderer.h
     private/render/vulkan/resources/VulkanFrameResource.h
     private/render/vulkan/resources/VulkanFrameResource.cpp
+    private/render/vulkan/resources/shadow/VulkanShadowMapArrayIndexManager.h
+    private/render/vulkan/resources/shadow/VulkanShadowMapArrayIndexManager.cpp
     private/window/GLFW.hpp
     public/input/KeyboardKey.hpp
     private/io/Logger.cpp

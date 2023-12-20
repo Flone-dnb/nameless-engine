@@ -105,7 +105,7 @@ namespace ne {
         }
 
         // Return new index.
-        return it->second->getNewIndex();
+        return it->second->reserveIndex();
     }
 
     std::optional<Error> GlslShaderTextureResource::bindTextureToBindlessDescriptorArray(

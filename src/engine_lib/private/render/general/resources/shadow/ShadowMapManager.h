@@ -49,16 +49,21 @@ namespace ne {
         /**
          * Creates a shadow map.
          *
-         * @param sResourceName Name of the GPU resource that will be created, used for logging.
-         * @param type          Type of a shadow map to create depending on the light source type.
+         * @param sResourceName               Name of the GPU resource that will be created, used for logging.
+         * @param type                        Type of a shadow map to create depending on the
+         * light source type.
+         * @param onArrayIndexChanged Called after the index of the returned shadow map into the
+         * descriptor array of shadow maps was initialized/changed.
          *
          * @return Error if something went wrong, otherwise created shadow map. Returning unique ptr
          * although shadow map handle already behaves like unique ptr in order for the manager to be
          * able to store raw pointers to handles without fearing that a raw pointer will point to invalid
          * handle due to `move`ing the handle.
          */
-        std::variant<std::unique_ptr<ShadowMapHandle>, Error>
-        createShadowMap(const std::string& sResourceName, ShadowMapType type);
+        std::variant<std::unique_ptr<ShadowMapHandle>, Error> createShadowMap(
+            const std::string& sResourceName,
+            ShadowMapType type,
+            const std::function<void(unsigned int)>& onArrayIndexChanged);
 
     private:
         /**

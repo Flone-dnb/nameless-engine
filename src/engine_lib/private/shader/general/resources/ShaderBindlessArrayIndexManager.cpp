@@ -27,7 +27,7 @@ namespace ne {
         }
     }
 
-    std::unique_ptr<BindlessArrayIndex> ShaderBindlessArrayIndexManager::getNewIndex() {
+    std::unique_ptr<BindlessArrayIndex> ShaderBindlessArrayIndexManager::reserveIndex() {
         std::scoped_lock guard(mtxData.first);
 
         // Determine what index to return.

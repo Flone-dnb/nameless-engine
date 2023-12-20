@@ -85,7 +85,7 @@ namespace ne {
          *
          * @return New index.
          */
-        std::unique_ptr<BindlessArrayIndex> getNewIndex();
+        std::unique_ptr<BindlessArrayIndex> reserveIndex();
 
     private:
         /**

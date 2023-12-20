@@ -523,7 +523,7 @@ namespace ne {
         // See if this pipeline uses the resource we are handling.
         auto it = pMtxPipelineInternalResources->second.resourceBindings.find(sShaderResourceName);
         if (it == pMtxPipelineInternalResources->second.resourceBindings.end()) {
-            // This pipeline does not used the specified resource.
+            // This pipeline does not use the specified resource.
             return {};
         }
 
@@ -568,7 +568,7 @@ namespace ne {
         // See if this pipeline uses the resource we are handling.
         auto it = pMtxPipelineInternalResources->second.resourceBindings.find(sShaderResourceName);
         if (it == pMtxPipelineInternalResources->second.resourceBindings.end()) {
-            // This pipeline does not used the specified resource.
+            // This pipeline does not use the specified resource.
             return {};
         }
 
@@ -699,7 +699,7 @@ namespace ne {
 #if defined(DEBUG) && defined(WIN32)
         static_assert(sizeof(LightArrays) == 24, "consider creating new arrays here"); // NOLINT
 #elif defined(DEBUG)
-        static_assert(sizeof(LightArrays) == 24, "consider creating new arrays here");  // NOLINT
+        static_assert(sizeof(LightArrays) == 24, "consider creating new arrays here"); // NOLINT
 #endif
     }
 

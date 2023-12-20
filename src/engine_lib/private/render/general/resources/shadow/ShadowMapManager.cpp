@@ -17,8 +17,10 @@ namespace ne {
         this->pResourceManager = pResourceManager;
     }
 
-    std::variant<std::unique_ptr<ShadowMapHandle>, Error>
-    ShadowMapManager::createShadowMap(const std::string& sResourceName, ShadowMapType type) {
+    std::variant<std::unique_ptr<ShadowMapHandle>, Error> ShadowMapManager::createShadowMap(
+        const std::string& sResourceName,
+        ShadowMapType type,
+        const std::function<void(unsigned int)>& onArrayIndexChanged) {
         // Get render settings.
         const auto pRenderer = pResourceManager->getRenderer();
         const auto pMtxRenderSettings = pRenderer->getRenderSettings();
@@ -44,8 +46,8 @@ namespace ne {
         auto pShadowMapResource = std::get<std::unique_ptr<GpuResource>>(std::move(result));
 
         // Create handle.
-        auto pShadowMapHandle =
-            std::unique_ptr<ShadowMapHandle>(new ShadowMapHandle(this, pShadowMapResource.get(), type));
+        auto pShadowMapHandle = std::unique_ptr<ShadowMapHandle>(
+            new ShadowMapHandle(this, pShadowMapResource.get(), type, onArrayIndexChanged));
 
         // Add to the map of allocated shadow maps.
         mtxShadowMaps.second[pShadowMapHandle.get()] = std::move(pShadowMapResource);

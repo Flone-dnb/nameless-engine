@@ -18,10 +18,18 @@ namespace ne {
         pResource = nullptr;
     }
 
-    ShadowMapHandle::ShadowMapHandle(ShadowMapManager* pManager, GpuResource* pResource, ShadowMapType type)
-        : shadowMapType(type) {
+    ShadowMapHandle::ShadowMapHandle(
+        ShadowMapManager* pManager,
+        GpuResource* pResource,
+        ShadowMapType type,
+        const std::function<void(unsigned int)>& onArrayIndexChanged)
+        : onArrayIndexChanged(onArrayIndexChanged), shadowMapType(type) {
         this->pManager = pManager;
         this->pResource = pResource;
+    }
+
+    void ShadowMapHandle::changeArrayIndex(unsigned int iNewArrayIndex) {
+        onArrayIndexChanged(iNewArrayIndex);
     }
 
 }

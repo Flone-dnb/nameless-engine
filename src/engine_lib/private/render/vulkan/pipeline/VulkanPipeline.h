@@ -94,6 +94,9 @@ namespace ne {
              * All descriptors for a bindless array are allocated per pipeline so shader resources
              * that reference a bindless array in some pipeline can have just one index manager per
              * bindless array.
+             *
+             * @remark Shadow map arrays (defined in shaders) are special and these resources don't
+             * use array index managers from pipelines.
              */
             std::unordered_map<std::string, std::unique_ptr<ShaderBindlessArrayIndexManager>>
                 bindlessArrayIndexManagers;

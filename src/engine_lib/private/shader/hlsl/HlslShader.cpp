@@ -105,9 +105,9 @@ namespace ne {
             D3D12_TEXTURE_ADDRESS_MODE_BORDER,
             D3D12_TEXTURE_ADDRESS_MODE_BORDER,
             0.0F,
-            16, // NOLINT: magic number, max anisotropy
-            D3D12_COMPARISON_FUNC_LESS_EQUAL,
-            D3D12_STATIC_BORDER_COLOR_OPAQUE_WHITE,
+            16,                               // NOLINT: magic number, max anisotropy
+            D3D12_COMPARISON_FUNC_LESS_EQUAL, // same as in Vulkan
+            D3D12_STATIC_BORDER_COLOR_OPAQUE_BLACK,
             0.0F,
             D3D12_FLOAT32_MAX,
             D3D12_SHADER_VISIBILITY_ALL,

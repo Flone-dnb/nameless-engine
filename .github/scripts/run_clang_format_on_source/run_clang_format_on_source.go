@@ -34,6 +34,13 @@ func main() {
 	session.PipeStdErrors = true
 	session.SetDir(path_to_src)
 
+	// Print clang-format version.
+	var err = session.Command("clang-format", "--version").Run()
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
 	// Run clang-format on each source file.
 	fmt.Println()
 	fmt.Println("Running clang-format...")

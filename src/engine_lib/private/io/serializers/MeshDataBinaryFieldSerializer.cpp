@@ -57,7 +57,7 @@ namespace ne {
 #if defined(DEBUG) && defined(WIN32)
         static_assert(sizeof(MeshData) == 160, "update serialization"); // NOLINT
 #elif defined(DEBUG)
-        static_assert(sizeof(MeshData) == 128, "update serialization");   // NOLINT
+        static_assert(sizeof(MeshData) == 128, "update serialization"); // NOLINT
 #endif
 
         // Create the resulting file.

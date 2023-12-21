@@ -24,10 +24,10 @@ namespace ne {
         /**
          * Initializes the manager.
          *
-         * @param pRenderer  Renderer.
-         * @param sArrayName Name of the array that this manager controls, used for logging.
+         * @param pRenderer                Renderer.
+         * @param sShaderArrayResourceName Name of the array (defined in shaders) that this manager controls.
          */
-        VulkanShadowMapArrayIndexManager(Renderer* pRenderer, const std::string& sArrayName);
+        VulkanShadowMapArrayIndexManager(Renderer* pRenderer, const std::string& sShaderArrayResourceName);
 
     protected:
         /**

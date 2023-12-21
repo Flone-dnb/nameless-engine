@@ -30,13 +30,13 @@ namespace ne {
         /**
          * Creates a new index manager.
          *
-         * @param pRenderer  Renderer.
-         * @param sArrayName Name of the array that this manager controls, used for logging.
+         * @param pRenderer                Renderer.
+         * @param sShaderArrayResourceName Name of the array (defined in shaders) that this manager controls.
          *
          * @return Error if something went wrong, otherwise created manager.
          */
         static std::variant<std::unique_ptr<DirectXShadowMapArrayIndexManager>, Error>
-        create(Renderer* pRenderer, const std::string& sArrayName);
+        create(Renderer* pRenderer, const std::string& sShaderArrayResourceName);
 
     protected:
         /**
@@ -45,10 +45,10 @@ namespace ne {
          *
          * @warning Only used internally, prefer to use @ref create.
          *
-         * @param pRenderer  Renderer.
-         * @param sArrayName Name of the array that this manager controls, used for logging.
+         * @param pRenderer                Renderer.
+         * @param sShaderArrayResourceName Name of the array (defined in shaders) that this manager controls.
          */
-        DirectXShadowMapArrayIndexManager(Renderer* pRenderer, const std::string& sArrayName);
+        DirectXShadowMapArrayIndexManager(Renderer* pRenderer, const std::string& sShaderArrayResourceName);
 
         /**
          * Binds DSV and SRV (SRV from continuous descriptor range) to the specified shadow map and reserves

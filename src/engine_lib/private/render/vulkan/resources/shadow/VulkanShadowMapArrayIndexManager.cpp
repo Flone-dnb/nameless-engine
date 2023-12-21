@@ -26,11 +26,11 @@ namespace ne {
     }
 
     VulkanShadowMapArrayIndexManager::VulkanShadowMapArrayIndexManager(
-        Renderer* pRenderer, const std::string& sArrayName)
-        : ShadowMapArrayIndexManager(pRenderer, sArrayName) {
+        Renderer* pRenderer, const std::string& sShaderArrayResourceName)
+        : ShadowMapArrayIndexManager(pRenderer, sShaderArrayResourceName) {
         // Create index manager.
         mtxInternalData.second.pIndexManager = std::make_unique<ShaderBindlessArrayIndexManager>(
-            sArrayName, DescriptorConstants::iBindlessTextureArrayDescriptorCount);
+            sShaderArrayResourceName, DescriptorConstants::iBindlessTextureArrayDescriptorCount);
     }
 
     std::optional<Error>

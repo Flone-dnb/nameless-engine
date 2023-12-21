@@ -10,6 +10,7 @@
 
 // Custom.
 #include "misc/Error.h"
+#include "render/general/resources/shadow/ShadowMapArrayIndexManager.h"
 #include "ShadowMapType.hpp"
 
 namespace ne {
@@ -66,6 +67,15 @@ namespace ne {
             const std::function<void(unsigned int)>& onArrayIndexChanged);
 
     private:
+        /** Groups mutex guarded data. */
+        struct InternalResources {
+            /** All allocated shadow maps. */
+            std::unordered_map<ShadowMapHandle*, std::unique_ptr<GpuResource>> shadowMaps;
+
+            /** Array index manager for shadows maps of directional lights. */
+            std::unique_ptr<ShadowMapArrayIndexManager> pDirectionalShadowMapArrayIndexManager;
+        };
+
         /**
          * Called by shadow map unique pointers to notify the manager that a resource is no longer used.
          *
@@ -102,8 +112,7 @@ namespace ne {
          * @remark Storing raw pointers here is safe because shadow map handle will notify us
          * before destroying the resource so we will remove the raw pointer and shadow map handle
          */
-        std::pair<std::recursive_mutex, std::unordered_map<ShadowMapHandle*, std::unique_ptr<GpuResource>>>
-            mtxShadowMaps;
+        std::pair<std::recursive_mutex, InternalResources> mtxInternalResources;
 
         /** Do not delete (free) this pointer. GPU resource manager that owns this object. */
         GpuResourceManager* pResourceManager = nullptr;

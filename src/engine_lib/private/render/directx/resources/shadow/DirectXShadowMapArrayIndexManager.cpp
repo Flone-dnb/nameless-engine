@@ -9,8 +9,8 @@
 namespace ne {
 
     DirectXShadowMapArrayIndexManager::DirectXShadowMapArrayIndexManager(
-        Renderer* pRenderer, const std::string& sArrayName)
-        : ShadowMapArrayIndexManager(pRenderer, sArrayName) {}
+        Renderer* pRenderer, const std::string& sShaderArrayResourceName)
+        : ShadowMapArrayIndexManager(pRenderer, sShaderArrayResourceName) {}
 
     DirectXShadowMapArrayIndexManager::~DirectXShadowMapArrayIndexManager() {
         std::scoped_lock guard(mtxInternalData.first);
@@ -28,7 +28,8 @@ namespace ne {
     }
 
     std::variant<std::unique_ptr<DirectXShadowMapArrayIndexManager>, Error>
-    DirectXShadowMapArrayIndexManager::create(Renderer* pRenderer, const std::string& sArrayName) {
+    DirectXShadowMapArrayIndexManager::create(
+        Renderer* pRenderer, const std::string& sShaderArrayResourceName) {
         // Get resource manager.
         const auto pDirectXResourceManager =
             dynamic_cast<DirectXResourceManager*>(pRenderer->getResourceManager());
@@ -38,7 +39,7 @@ namespace ne {
 
         // Create new index manager.
         auto pIndexManager = std::unique_ptr<DirectXShadowMapArrayIndexManager>(
-            new DirectXShadowMapArrayIndexManager(pRenderer, sArrayName));
+            new DirectXShadowMapArrayIndexManager(pRenderer, sShaderArrayResourceName));
         const auto pIndexManagerRaw = pIndexManager.get();
 
         // Get SRV heap.
@@ -46,7 +47,7 @@ namespace ne {
 
         // Allocate SRV range.
         auto rangeResult = pSrvHeap->allocateContinuousDescriptorRange(
-            sArrayName, [pIndexManagerRaw]() { pIndexManagerRaw->onSrvRangeIndicesChanged(); });
+            sShaderArrayResourceName, [pIndexManagerRaw]() { pIndexManagerRaw->onSrvRangeIndicesChanged(); });
         if (std::holds_alternative<Error>(rangeResult)) [[unlikely]] {
             auto error = std::get<Error>(std::move(rangeResult));
             error.addCurrentLocationToErrorStack();

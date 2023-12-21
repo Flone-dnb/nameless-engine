@@ -32,13 +32,13 @@ namespace ne {
         /**
          * Creates a new renderer-specific index manager.
          *
-         * @param pRenderer  Renderer.
-         * @param sArrayName Name of the array that this manager controls, used for logging.
+         * @param pRenderer                Renderer.
+         * @param sShaderArrayResourceName Name of the array (defined in shaders) that this manager controls.
          *
          * @return Error if something went wrong, otherwise created manager.
          */
         static std::variant<std::unique_ptr<ShadowMapArrayIndexManager>, Error>
-        create(Renderer* pRenderer, const std::string& sArrayName);
+        create(Renderer* pRenderer, const std::string& sShaderArrayResourceName);
 
     protected:
         /**
@@ -115,7 +115,7 @@ namespace ne {
         /** Do not delete (free). Renderer. */
         Renderer* const pRenderer = nullptr;
 
-        /** Name of the array that this manager controls, used for logging. */
+        /** Name of the array (defined in shaders) that this manager controls. */
         const std::string sShaderArrayResourceName;
     };
 }

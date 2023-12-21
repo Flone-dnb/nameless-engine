@@ -11,6 +11,10 @@ jobs:
         uses: actions/checkout@v3
       - name: Run clang-format
         run: |
+          choco install llvm
+          Import-Module $env:ChocolateyInstall\helpers\chocolateyProfile.psm1
+          refreshenv
+          echo "Installed clang-format of version $(clang-format --version)."
           cd .github/scripts/run_clang_format_on_source/
           go run . ../../../src
   build-tests-windows:

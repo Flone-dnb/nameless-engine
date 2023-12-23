@@ -2811,6 +2811,9 @@ void main() {
 }
 ```
 
+Note
+> If you want to use the same shader resource in both vertex and pixel/fragment shaders make sure that resource is using the same binding register/index in both shaders, when the engine finds a shader resource that was specified in both vertex and pixel/fragment shaders with the same name and the same binding register/index it will understand that it's the same resource and will avoid double-registration of the resource. It's recommended to move that resource's definition into a separate file and then include that file in your vertex and pixel/fragment shaders to guarantee that resource's binding register/index is the same. Engine shaders are using the same approach.
+
 Then in C++:
 
 ```Cpp

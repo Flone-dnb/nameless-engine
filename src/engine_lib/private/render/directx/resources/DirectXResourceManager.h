@@ -201,7 +201,7 @@ namespace ne {
             const D3D12MA::ALLOCATION_DESC& allocationDesc,
             const D3D12_RESOURCE_DESC& resourceDesc,
             const D3D12_RESOURCE_STATES& initialResourceState,
-            const std::optional<D3D12_CLEAR_VALUE>& resourceClearValue) const;
+            const std::optional<D3D12_CLEAR_VALUE>& resourceClearValue);
 
         /**
          * Creates new resources by wrapping swap chain buffers and binding

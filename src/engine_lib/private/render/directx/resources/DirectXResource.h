@@ -115,7 +115,7 @@ namespace ne {
          * array), otherwise specify 1.
          */
         DirectXResource(
-            const DirectXResourceManager* pResourceManager,
+            DirectXResourceManager* pResourceManager,
             const std::string& sResourceName,
             UINT iElementSizeInBytes,
             UINT iElementCount);
@@ -139,7 +139,7 @@ namespace ne {
          * @return Error if something went wrong, otherwise created resource.
          */
         static std::variant<std::unique_ptr<DirectXResource>, Error> create(
-            const DirectXResourceManager* pResourceManager,
+            DirectXResourceManager* pResourceManager,
             const std::string& sResourceName,
             D3D12MA::Allocator* pMemoryAllocator,
             const D3D12MA::ALLOCATION_DESC& allocationDesc,
@@ -160,12 +160,9 @@ namespace ne {
          * @return Error if something went wrong, otherwise created resource.
          */
         static std::variant<std::unique_ptr<DirectXResource>, Error> createResourceFromSwapChainBuffer(
-            const DirectXResourceManager* pResourceManager,
+            DirectXResourceManager* pResourceManager,
             DirectXDescriptorHeap* pRtvHeap,
             const ComPtr<ID3D12Resource>& pSwapChainBuffer);
-
-        /** Do not delete. Owner resource manager. */
-        const DirectXResourceManager* pResourceManager = nullptr;
 
         /**
          * Array of descriptors used by this resource.

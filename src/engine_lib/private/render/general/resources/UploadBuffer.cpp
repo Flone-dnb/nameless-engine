@@ -38,8 +38,17 @@ namespace ne {
 #endif
 
         if (auto pVulkanResource = dynamic_cast<VulkanResource*>(pGpuResource.get())) {
+            // Get resource manager.
+            const auto pResourceManager =
+                dynamic_cast<VulkanResourceManager*>(pVulkanResource->getResourceManager());
+            if (pResourceManager == nullptr) [[unlikely]] {
+                Error error("invalid resource manager");
+                error.showError();
+                throw std::runtime_error(error.getFullErrorMessage());
+            }
+
             // Get memory allocator.
-            const auto pMemoryAllocator = pVulkanResource->getResourceManager()->pMemoryAllocator;
+            const auto pMemoryAllocator = pResourceManager->pMemoryAllocator;
 
             // Lock resource memory.
             const auto pMtxResourceMemory = pVulkanResource->getInternalResourceMemory();
@@ -76,8 +85,18 @@ namespace ne {
 #endif
 
         if (auto pVulkanResource = dynamic_cast<VulkanResource*>(pGpuResource.get())) {
+            // Get resource manager.
+            const auto pResourceManager =
+                dynamic_cast<VulkanResourceManager*>(pVulkanResource->getResourceManager());
+            if (pResourceManager == nullptr) [[unlikely]] {
+                Error error("invalid resource manager");
+                error.showError();
+                return; // don't throw in destructor
+                // throw std::runtime_error(error.getFullErrorMessage());
+            }
+
             // Get memory allocator.
-            const auto pMemoryAllocator = pVulkanResource->getResourceManager()->pMemoryAllocator;
+            const auto pMemoryAllocator = pResourceManager->pMemoryAllocator;
 
             // Lock resource memory.
             const auto pMtxResourceMemory = pVulkanResource->getInternalResourceMemory();

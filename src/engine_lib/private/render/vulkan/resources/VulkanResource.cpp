@@ -22,9 +22,7 @@ namespace ne {
         VmaAllocation pResourceMemory,
         unsigned int iElementSizeInBytes,
         unsigned int iElementCount)
-        : GpuResource(sResourceName, iElementSizeInBytes, iElementCount) {
-        // Initialize fields.
-        this->pResourceManager = pResourceManager;
+        : GpuResource(pResourceManager, sResourceName, iElementSizeInBytes, iElementCount) {
         mtxResourceMemory.second = pResourceMemory;
 
         // Save resource.
@@ -33,18 +31,13 @@ namespace ne {
         } else {
             pImageResource = std::get<VkImage>(pInternalResource);
         }
-
-        // Increment counter of alive objects.
-        pResourceManager->iAliveResourceCount.fetch_add(1);
     }
 
     VulkanResource::VulkanResource(
         VulkanResourceManager* pResourceManager,
         const std::string& sResourceName,
         ktxVulkanTexture ktxTexture)
-        : GpuResource(sResourceName, 0, 0) {
-        // Initialize fields.
-        this->pResourceManager = pResourceManager;
+        : GpuResource(pResourceManager, sResourceName, 0, 0) {
         mtxResourceMemory.second = nullptr;
 
         // Save resource.
@@ -52,20 +45,25 @@ namespace ne {
 
         // Save KTX image data.
         optionalKtxTexture = ktxTexture;
-
-        // Increment counter of alive objects.
-        pResourceManager->iAliveResourceCount.fetch_add(1);
     }
 
     VulkanResource::~VulkanResource() {
         // Don't log here to avoid spamming.
+
+        // Get resource manager.
+        const auto pResourceManager = dynamic_cast<VulkanResourceManager*>(getResourceManager());
+        if (pResourceManager == nullptr) [[unlikely]] {
+            Error error("invalid resource manager");
+            error.showError();
+            return; // don't throw in destructor
+        }
 
         // Get renderer.
         const auto pVulkanRenderer = dynamic_cast<VulkanRenderer*>(pResourceManager->getRenderer());
         if (pVulkanRenderer == nullptr) [[unlikely]] {
             Error error("expected a Vulkan renderer");
             error.showError();
-            return; // don't throw in destructor, just quit
+            return; // don't throw in destructor
         }
 
         // Get logical device.
@@ -103,17 +101,7 @@ namespace ne {
             // Destroy the resource and its memory.
             vmaDestroyBuffer(pResourceManager->pMemoryAllocator, pBufferResource, mtxResourceMemory.second);
         }
-
-        // Decrement counter of alive objects.
-        const auto iPreviousTotalResourceCount = pResourceManager->iAliveResourceCount.fetch_sub(1);
-
-        // Self check: make sure the counter is not below zero.
-        if (iPreviousTotalResourceCount == 0) [[unlikely]] {
-            Logger::get().error("total alive Vulkan resource counter just went below zero");
-        }
     }
-
-    VulkanResourceManager* VulkanResource::getResourceManager() const { return pResourceManager; }
 
     std::variant<std::unique_ptr<VulkanResource>, Error> VulkanResource::create(
         VulkanResourceManager* pResourceManager,

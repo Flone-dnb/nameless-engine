@@ -72,7 +72,17 @@ namespace ne {
         // Just in case, wait for all work to be finished.
         waitForGpuToFinishWorkUpToThisPoint();
 
-        // TODO
+        // Explicitly destroy some GPU resources.
+        resetLightingShaderResourceManager();
+        resetFrameResourcesManager();
+
+        pMsaaRenderBuffer = nullptr;
+        pDepthBufferNoMultisampling = nullptr;
+        pDepthStencilBuffer = nullptr;
+        vSwapChainBuffers.clear();
+
+        // Explicitly destroy GPU resource manager to see if any GPU resources are still left alive.
+        resetGpuResourceManager();
     }
 
     std::optional<Error> DirectXRenderer::initialize(const std::vector<std::string>& vBlacklistedGpuNames) {

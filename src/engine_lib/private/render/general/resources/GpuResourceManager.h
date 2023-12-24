@@ -45,6 +45,9 @@ namespace ne {
         // Creates shadow maps.
         friend class ShadowMapManager;
 
+        // Modifies counter of alive GPU resources.
+        friend class GpuResource;
+
     public:
         GpuResourceManager() = delete;
 
@@ -214,6 +217,13 @@ namespace ne {
          */
         ShadowMapManager* getShadowMapManager() const;
 
+        /**
+         * Returns the total number of GPU resources currently alive.
+         *
+         * @return GPU resource count.
+         */
+        size_t getTotalAliveResourceCount();
+
     protected:
         /**
          * Creates a new platform-specific resource manager.
@@ -281,6 +291,9 @@ namespace ne {
 
         /** Stores all shadow maps. */
         std::unique_ptr<ShadowMapManager> pShadowMapManager;
+
+        /** Total number of created resources that were not destroyed yet. */
+        std::atomic<size_t> iAliveResourceCount{0};
 
         /** Do not delete (free) this pointer. Renderer that owns this manager. */
         Renderer* pRenderer = nullptr;

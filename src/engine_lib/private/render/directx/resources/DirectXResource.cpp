@@ -9,7 +9,7 @@
 namespace ne {
 
     std::variant<std::unique_ptr<DirectXResource>, Error> DirectXResource::create(
-        const DirectXResourceManager* pResourceManager,
+        DirectXResourceManager* pResourceManager,
         const std::string& sResourceName,
         D3D12MA::Allocator* pMemoryAllocator,
         const D3D12MA::ALLOCATION_DESC& allocationDesc,
@@ -71,7 +71,7 @@ namespace ne {
     }
 
     std::variant<std::unique_ptr<DirectXResource>, Error> DirectXResource::createResourceFromSwapChainBuffer(
-        const DirectXResourceManager* pResourceManager,
+        DirectXResourceManager* pResourceManager,
         DirectXDescriptorHeap* pRtvHeap,
         const ComPtr<ID3D12Resource>& pSwapChainBuffer) {
         auto pCreatedResource = std::unique_ptr<DirectXResource>(
@@ -157,14 +157,11 @@ namespace ne {
     }
 
     DirectXResource::DirectXResource(
-        const DirectXResourceManager* pResourceManager,
+        DirectXResourceManager* pResourceManager,
         const std::string& sResourceName,
         UINT iElementSizeInBytes,
         UINT iElementCount)
-        : GpuResource(sResourceName, iElementSizeInBytes, iElementCount) {
-        // Save resource manager.
-        this->pResourceManager = pResourceManager;
-
+        : GpuResource(pResourceManager, sResourceName, iElementSizeInBytes, iElementCount) {
         // Initialize descriptors.
         for (auto& pDescriptor : mtxHeapDescriptors.second) {
             pDescriptor = nullptr;
@@ -175,7 +172,7 @@ namespace ne {
         // Don't log here to avoid spamming.
 
         // Make sure the GPU is not using this resource.
-        pResourceManager->getRenderer()->waitForGpuToFinishWorkUpToThisPoint();
+        getResourceManager()->getRenderer()->waitForGpuToFinishWorkUpToThisPoint();
     }
 
     std::optional<Error> DirectXResource::bindDescriptor(
@@ -188,8 +185,14 @@ namespace ne {
             return {};
         }
 
-        DirectXDescriptorHeap* pHeap = nullptr;
+        // Get resource manager.
+        const auto pResourceManager = dynamic_cast<DirectXResourceManager*>(getResourceManager());
+        if (pResourceManager == nullptr) [[unlikely]] {
+            return Error("invalid resource manager");
+        }
 
+        // Pick the appropriate heap.
+        DirectXDescriptorHeap* pHeap = nullptr;
         switch (descriptorType) {
         case (DirectXDescriptorType::CBV): {
             pHeap = pResourceManager->getCbvSrvUavHeap();

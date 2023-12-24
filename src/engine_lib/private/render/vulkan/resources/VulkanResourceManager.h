@@ -303,9 +303,6 @@ namespace ne {
             unsigned int iElementSizeInBytes,
             unsigned int iElementCount);
 
-        /** Total number of created resources that were not destroyed yet. */
-        std::atomic<size_t> iAliveResourceCount{0};
-
         /** Controls storage buffers that act as arrays for shader CPU write resources. */
         std::unique_ptr<VulkanStorageResourceArrayManager> pStorageResourceArrayManager;
 

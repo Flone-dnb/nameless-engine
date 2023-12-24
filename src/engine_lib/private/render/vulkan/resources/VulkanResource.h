@@ -103,15 +103,6 @@ namespace ne {
             return &mtxResourceMemory;
         }
 
-        /**
-         * Returns resource manager that created the resource.
-         *
-         * @remark Do not delete (free) returned pointer.
-         *
-         * @return Resource manager.
-         */
-        VulkanResourceManager* getResourceManager() const;
-
     private:
         /**
          * Constructor. Creates an empty resource.
@@ -241,8 +232,5 @@ namespace ne {
          * @remark Using mutex because "access to a VmaAllocation object must be externally synchronized".
          */
         std::pair<std::recursive_mutex, VmaAllocation> mtxResourceMemory;
-
-        /** Do not delete. Owner resource manager. */
-        VulkanResourceManager* pResourceManager = nullptr;
     };
 } // namespace ne

@@ -15,6 +15,8 @@ namespace ne {
 
     ShadowMapManager* GpuResourceManager::getShadowMapManager() const { return pShadowMapManager.get(); }
 
+    size_t GpuResourceManager::getTotalAliveResourceCount() { return iAliveResourceCount.load(); }
+
     std::variant<std::unique_ptr<GpuResourceManager>, Error>
     GpuResourceManager::createRendererSpecificManager(Renderer* pRenderer) {
 #if defined(WIN32)

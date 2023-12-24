@@ -347,7 +347,7 @@ namespace ne {
         const D3D12MA::ALLOCATION_DESC& allocationDesc,
         const D3D12_RESOURCE_DESC& resourceDesc,
         const D3D12_RESOURCE_STATES& initialResourceState,
-        const std::optional<D3D12_CLEAR_VALUE>& resourceClearValue) const {
+        const std::optional<D3D12_CLEAR_VALUE>& resourceClearValue) {
         auto result = DirectXResource::create(
             this,
             sResourceName,
@@ -433,6 +433,26 @@ namespace ne {
         // Explicitly destroy shadow map manager before descriptor heaps
         // to destroy descriptor ranges that it has.
         resetShadowMapManager();
+
+        // Explicitly destroy texture manager so that it will no longer reference any GPU resources.
+        resetTextureManager();
+
+        // Make sure no resource exist
+        // (because on destruction resources generally free descriptors and notify descriptor heaps which
+        // are stored in this manager).
+        const auto iTotalAliveResourceCount = getTotalAliveResourceCount();
+        if (iTotalAliveResourceCount != 0) [[unlikely]] {
+            Error error(std::format(
+                "DirectX resource manager is being destroyed but there are "
+                "still {} resource(s) alive, most likely you forgot to explicitly "
+                "reset/delete some GPU resources that are used in the directx renderer class (only "
+                "resources inside of the directx renderer class should be explicitly deleted before "
+                "the resource manager is destroyed, everything else is expected to be automatically "
+                "deleted by world destruction)",
+                iTotalAliveResourceCount));
+            error.showError();
+            return; // don't throw in destructor, just quit
+        }
     }
 
     DXGI_FORMAT DirectXResourceManager::convertTextureResourceFormatToDxFormat(

@@ -99,8 +99,8 @@ namespace ne {
         resetTextureManager();
 
         // Make sure no resource exist
-        // (we do this check only in Vulkan because resources need memory allocator to be destroyed).
-        const auto iTotalAliveResourceCount = iAliveResourceCount.load();
+        // (because in Vulkan resources need memory allocator to be destroyed).
+        const auto iTotalAliveResourceCount = getTotalAliveResourceCount();
         const auto iKtxAllocationCount = KtxLoadingCallbackManager::getCurrentAllocationCount();
         if (iTotalAliveResourceCount != 0 || iKtxAllocationCount != 0) [[unlikely]] {
             Error error(std::format(

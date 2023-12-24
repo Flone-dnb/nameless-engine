@@ -8,6 +8,8 @@
 #include "misc/Error.h"
 
 namespace ne {
+    class GpuResourceManager;
+
     /** Resource stored in the GPU memory. */
     class GpuResource {
     public:
@@ -16,6 +18,7 @@ namespace ne {
         /**
          * Initializes resource.
          *
+         * @param pManager            Manager that created this resource.
          * @param sResourceName       Name of this resource.
          * @param iElementSizeInBytes Resource size information. Size of one array element (if array),
          * otherwise specify size of the whole resource.
@@ -23,9 +26,12 @@ namespace ne {
          * array), otherwise specify 1.
          */
         GpuResource(
-            const std::string& sResourceName, unsigned int iElementSizeInBytes, unsigned int iElementCount);
+            GpuResourceManager* pManager,
+            const std::string& sResourceName,
+            unsigned int iElementSizeInBytes,
+            unsigned int iElementCount);
 
-        virtual ~GpuResource() = default;
+        virtual ~GpuResource();
 
         GpuResource(GpuResource&) = delete;
         GpuResource& operator=(GpuResource&) = delete;
@@ -57,7 +63,17 @@ namespace ne {
          */
         unsigned int getElementCount() const;
 
+        /**
+         * Returns resource manager that created this resource.
+         *
+         * @return Resource manager.
+         */
+        GpuResourceManager* getResourceManager() const;
+
     private:
+        /** Manager that created this resource. */
+        GpuResourceManager* const pManager = nullptr;
+
         /** Resource size information (may be zero in some cases). */
         const unsigned int iElementSizeInBytes = 0;
 

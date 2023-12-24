@@ -218,11 +218,23 @@ namespace ne {
         /**
          * Creates a new platform-specific resource manager.
          *
-         * @param pRenderer Used renderer.
+         * @param pRenderer Renderer.
          *
-         * @return Error if something went wrong, otherwise created resource manager.
+         * @return Error if something went wrong, otherwise fully initialized resource manager.
          */
         static std::variant<std::unique_ptr<GpuResourceManager>, Error> create(Renderer* pRenderer);
+
+        /**
+         * Used internally to create initial (base) manager object.
+         *
+         * @remark Prefer to use @ref create.
+         *
+         * @param pRenderer Renderer
+         *
+         * @return Error if something went wrong, otherwise partially initialized manager.
+         */
+        static std::variant<std::unique_ptr<GpuResourceManager>, Error>
+        createRendererSpecificManager(Renderer* pRenderer);
 
         /**
          * Creates a GPU resource to be used as a shadow map.
@@ -239,7 +251,9 @@ namespace ne {
             const std::string& sResourceName, unsigned int iTextureSize, bool bIsCubeTexture) = 0;
 
         /**
-         * Creates uninitialized manager, used internally.
+         * Creates partially initialized manager, used internally.
+         *
+         * @remark Prefer to use @ref create.
          *
          * @param pRenderer Renderer that owns this manager.
          */

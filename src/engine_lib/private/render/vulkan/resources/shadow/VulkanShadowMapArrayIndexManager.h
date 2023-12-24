@@ -6,6 +6,10 @@
 // Custom.
 #include "render/general/resources/shadow/ShadowMapArrayIndexManager.h"
 #include "shader/general/resources/ShaderBindlessArrayIndexManager.h"
+#include "render/general/resources/frame/FrameResourcesManager.h"
+
+// External.
+#include "vulkan/vulkan.h"
 
 namespace ne {
     /** Manages indices of shadows maps into a descriptor array used by shaders. */
@@ -31,17 +35,18 @@ namespace ne {
 
     protected:
         /**
-         * Registers a shadow map and reserves an index into a descriptor array for it.
+         * Reserves an index into a descriptor array for the shadow map resource of the specified handle
+         * and bind internal GPU shadow map resource (if the handle) to that descriptor.
          *
-         * @remark Use @ref unregisterShadowMap to unregister it later (must be done before this manager is
-         * destroyed) when shadow map is being destroyed.
+         * @remark Use @ref unregisterShadowMapResource to unregister it later (must be done before this
+         * manager is destroyed) when shadow map is being destroyed.
          *
          * @param pShadowMapHandle Shadow map to register.
          *
          * @return Error if something went wrong.
          */
         [[nodiscard]] virtual std::optional<Error>
-        registerShadowMap(ShadowMapHandle* pShadowMapHandle) override;
+        registerShadowMapResource(ShadowMapHandle* pShadowMapHandle) override;
 
         /**
          * Unregisters a shadow map and frees its index into a descriptor array to be used by others.
@@ -51,7 +56,7 @@ namespace ne {
          * @return Error if something went wrong.
          */
         [[nodiscard]] virtual std::optional<Error>
-        unregisterShadowMap(ShadowMapHandle* pShadowMapHandle) override;
+        unregisterShadowMapResource(ShadowMapHandle* pShadowMapHandle) override;
 
         /**
          * Looks if the specified pipeline uses shadow maps and if uses binds shadow maps to the pipeline.
@@ -86,6 +91,55 @@ namespace ne {
             /** Pairs of "shadow map" - "index that this shadow map takes". */
             std::unordered_map<ShadowMapHandle*, std::unique_ptr<BindlessArrayIndex>> registeredShadowMaps;
         };
+
+        /**
+         * Goes through all graphics pipelines ad binds shadow map(s) to pipelines that use them.
+         *
+         * @param pOnlyBindThisShadowMap If `nullptr` then binds all shadow maps from @ref mtxInternalData,
+         * otherwise only binds the specified already registered (!) shadow map to all pipelines that
+         * reference it.
+         *
+         * @return Error if something went wrong.
+         */
+        [[nodiscard]] std::optional<Error>
+        bindShadowMapsToAllPipelines(ShadowMapHandle* pOnlyBindThisShadowMap);
+
+        /**
+         * Looks if the specified pipeline uses shadow map(s) and if uses binds shadow map(s) to the pipeline.
+         *
+         * @param pPipeline              Pipeline to bind shadow maps to.
+         * @param pOnlyBindThisShadowMap If `nullptr` then binds all shadow maps from @ref mtxInternalData,
+         * otherwise only binds the specified already registered (!) shadow map to the specified pipelines if
+         * it references it.
+         *
+         * @return Error if something went wrong.
+         */
+        [[nodiscard]] std::optional<Error>
+        bindShadowMapsToPipeline(Pipeline* pPipeline, ShadowMapHandle* pOnlyBindThisShadowMap);
+
+        /**
+         * Binds the specified shadow map to the specified pipeline.
+         *
+         * @param pShadowMapHandle        Handle to shadow map to bind.
+         * @param pArrayIndex             Index of the shadow map in the array of descriptors.
+         * @param pPipeline               Pipeline to bind the shadow map to.
+         * @param iBindingIndex           Binding index in the pipeline's descriptor set to bind the shadow
+         * map.
+         * @param pPipelineDescriptorSets Descriptor sets of the pipeline.
+         * @param pLogicalDevice          Renderer's logical device.
+         * @param pSampler                Texture sampler to use.
+         *
+         * @return Error if something went wrong.
+         */
+        [[nodiscard]] std::optional<Error> bindShadowMapToPipeline(
+            ShadowMapHandle* pShadowMapHandle,
+            BindlessArrayIndex* pArrayIndex,
+            Pipeline* pPipeline,
+            unsigned int iBindingIndex,
+            std::array<VkDescriptorSet, FrameResourcesManager::getFrameResourcesCount()>*
+                pPipelineDescriptorSets,
+            VkDevice pLogicalDevice,
+            VkSampler pSampler);
 
         /** Mutex guarded internal data. */
         std::pair<std::recursive_mutex, InternalData> mtxInternalData;

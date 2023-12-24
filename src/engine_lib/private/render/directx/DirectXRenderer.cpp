@@ -68,6 +68,13 @@ namespace ne {
             "correctly");
     }
 
+    DirectXRenderer::~DirectXRenderer() {
+        // Just in case, wait for all work to be finished.
+        waitForGpuToFinishWorkUpToThisPoint();
+
+        // TODO
+    }
+
     std::optional<Error> DirectXRenderer::initialize(const std::vector<std::string>& vBlacklistedGpuNames) {
         std::scoped_lock frameGuard(*getRenderResourcesMutex());
 

@@ -10,7 +10,7 @@
 #endif
 
 #ifdef PS_USE_DIFFUSE_TEXTURE
-    Texture2D diffuseTexture : register(t3, space5);
+    Texture2D diffuseTexture : register(t4, space5);
 #endif
 
 /** Pixel shader. */

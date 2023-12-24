@@ -13,19 +13,19 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 /** Depth buffer from depth prepass. */
-#hlsl Texture2D depthTexture : register(t3, space5);
-#glsl layout(binding = 5) uniform sampler2D depthTexture;
+#hlsl Texture2D depthTexture : register(t0, space6);
+#glsl layout(binding = 7) uniform sampler2D depthTexture;
 
 /** Calculated grid of frustums in view space. */
-#hlsl StructuredBuffer<Frustum> calculatedFrustums : register(t4, space5);
+#hlsl StructuredBuffer<Frustum> calculatedFrustums : register(t1, space6);
 #glsl{
-layout(std140, binding = 6) readonly buffer CalculatedFrustumsBuffer{
+layout(std140, binding = 8) readonly buffer CalculatedFrustumsBuffer{
     Frustum array[];
 } calculatedFrustums;
 }
 
 /** Stores some additional information (some information not available as built-in semantics). */
-#glsl layout(binding = 7) uniform ThreadGroupCount {
+#glsl layout(binding = 9) uniform ThreadGroupCount {
 #hlsl struct ThreadGroupCount{
     /** Total number of thread groups dispatched in the X direction. */
     uint iThreadGroupCountX;
@@ -33,10 +33,10 @@ layout(std140, binding = 6) readonly buffer CalculatedFrustumsBuffer{
     /** Total number of thread groups dispatched in the Y direction. */
     uint iThreadGroupCountY;
 #glsl } threadGroupCount;
-#hlsl }; ConstantBuffer<ThreadGroupCount> threadGroupCount : register(b2, space5);
+#hlsl }; ConstantBuffer<ThreadGroupCount> threadGroupCount : register(b0, space6);
 
 /** Data that we need to convert coordinates from screen space to view space. */
-#glsl layout(binding = 8) uniform ScreenToViewData {
+#glsl layout(binding = 10) uniform ScreenToViewData {
 #hlsl struct ScreenToViewData{
     /** Inverse of the projection matrix. */
     mat4 inverseProjectionMatrix;
@@ -47,7 +47,7 @@ layout(std140, binding = 6) readonly buffer CalculatedFrustumsBuffer{
     /** Height of the viewport (might be smaller that the actual screen size). */
     uint iRenderTargetHeight;
 #glsl } screenToViewData;
-#hlsl }; ConstantBuffer<ScreenToViewData> screenToViewData : register(b3, space5);
+#hlsl }; ConstantBuffer<ScreenToViewData> screenToViewData : register(b1, space6);
 
 // --------------------------------------------------------------------------------------------------------------------
 //                                          general group shared (tile) variables

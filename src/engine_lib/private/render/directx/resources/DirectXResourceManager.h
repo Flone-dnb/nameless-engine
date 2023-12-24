@@ -30,7 +30,7 @@ namespace ne {
         DirectXResourceManager(const DirectXResourceManager&) = delete;
         DirectXResourceManager& operator=(const DirectXResourceManager&) = delete;
 
-        virtual ~DirectXResourceManager() override = default;
+        virtual ~DirectXResourceManager() override;
 
         /**
          * Converts texture resource format to DirectX format.

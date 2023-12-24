@@ -429,6 +429,12 @@ namespace ne {
         this->pCbvSrvUavHeap = std::move(pCbvSrvUavHeap);
     }
 
+    DirectXResourceManager::~DirectXResourceManager() {
+        // Explicitly destroy shadow map manager before descriptor heaps
+        // to destroy descriptor ranges that it has.
+        resetShadowMapManager();
+    }
+
     DXGI_FORMAT DirectXResourceManager::convertTextureResourceFormatToDxFormat(
         ShaderReadWriteTextureResourceFormat format) {
         switch (format) {

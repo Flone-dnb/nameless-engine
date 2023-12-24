@@ -253,9 +253,16 @@ namespace ne {
             getRenderer()->getLightingShaderResourceManager()->updateDescriptorsForPipelineResource(
                 pPipeline.get());
         if (optionalError.has_value()) [[unlikely]] {
-            auto error = std::move(optionalError.value());
-            error.addCurrentLocationToErrorStack();
-            return error;
+            optionalError->addCurrentLocationToErrorStack();
+            return optionalError.value();
+        }
+
+        // Bind shadow maps (if this pipeline uses them).
+        optionalError = getRenderer()->getResourceManager()->getShadowMapManager()->bindShadowMapsToPipeline(
+            pPipeline.get());
+        if (optionalError.has_value()) [[unlikely]] {
+            optionalError->addCurrentLocationToErrorStack();
+            return optionalError.value();
         }
 
         return PipelineSharedPtr(pPipeline, pMaterial);
@@ -326,17 +333,12 @@ namespace ne {
         }
 
         // Log notification start.
-        Logger::get().info("notifying all shader resources about refreshed pipeline resources...");
-        Logger::get().flushToDisk(); // flush to disk to see if we crashed while notifying shader resources
+        Logger::get().info("notifying renderer's subsystems about refreshed pipeline resources...");
+        Logger::get().flushToDisk(); // flush to disk to see if we crashed while notifying
 
-        // Get all shader resources.
-        const auto pShaderCpuWriteResourceManager = getRenderer()->getShaderCpuWriteResourceManager();
-        const auto pShaderTextureResourceManager = getRenderer()->getShaderTextureResourceManager();
-        const auto pLightingShaderResourceManager = getRenderer()->getLightingShaderResourceManager();
-
-        // Update shader CPU write resources.
+        // Re-bind shader CPU write resources.
         {
-            const auto pMtxResources = pShaderCpuWriteResourceManager->getResources();
+            const auto pMtxResources = getRenderer()->getShaderCpuWriteResourceManager()->getResources();
             std::scoped_lock shaderResourceGuard(pMtxResources->first);
 
             for (const auto& [pRawResource, pResource] : pMtxResources->second.all) {
@@ -349,9 +351,9 @@ namespace ne {
             }
         }
 
-        // Update shader resources that reference textures.
+        // Re-bind shader texture resources.
         {
-            const auto pMtxResources = pShaderTextureResourceManager->getResources();
+            const auto pMtxResources = getRenderer()->getShaderTextureResourceManager()->getResources();
             std::scoped_lock shaderResourceGuard(pMtxResources->first);
 
             for (const auto& [pRawResource, pResource] : pMtxResources->second) {
@@ -364,15 +366,24 @@ namespace ne {
             }
         }
 
-        // Update lighting shader resources.
-        auto optionalError = pLightingShaderResourceManager->bindDescriptorsToRecreatedPipelineResources();
+        // Re-bind lighting shader resources.
+        auto optionalError =
+            getRenderer()->getLightingShaderResourceManager()->bindDescriptorsToRecreatedPipelineResources();
+        if (optionalError.has_value()) [[unlikely]] {
+            optionalError->addCurrentLocationToErrorStack();
+            return optionalError;
+        }
+
+        // Re-bind all shadow maps.
+        optionalError =
+            pRenderer->getResourceManager()->getShadowMapManager()->bindShadowMapsToAllPipelines();
         if (optionalError.has_value()) [[unlikely]] {
             optionalError->addCurrentLocationToErrorStack();
             return optionalError;
         }
 
         // Log notification end.
-        Logger::get().info("finished notifying all shader resources about refreshed pipeline resources");
+        Logger::get().info("finished notifying all renderer's subsystems about refreshed pipeline resources");
         Logger::get().flushToDisk();
 
         // Unlock the mutex because all pipeline resources were re-created.

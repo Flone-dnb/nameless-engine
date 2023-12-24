@@ -8,8 +8,11 @@
 #endif
 #endif
 
+/** Sampler for shadow maps. */
+#hlsl SamplerComparisonState shadowSampler : register(s1, space5);
+
 /** Stores general lighting related data. */
-#glsl layout(binding = 1) uniform GeneralLightingData{
+#glsl layout(binding = 50) uniform GeneralLightingData{
 #hlsl struct GeneralLightingData{
     /** Light color intensity of ambient lighting. 4th component is not used. */
     vec4 ambientLight;
@@ -44,7 +47,7 @@ struct PointLight{
 
 /** All spawned point lights. */
 #glsl{
-layout(std140, binding = 2) readonly buffer PointLightsBuffer{
+layout(std140, binding = 51) readonly buffer PointLightsBuffer{
     PointLight array[];
 } pointLights;
 }
@@ -69,11 +72,15 @@ struct DirectionalLight{
 
 /** All spawned directional lights. */
 #glsl{
-layout(std140, binding = 3) readonly buffer DirectionalLightsBuffer{
+layout(std140, binding = 52) readonly buffer DirectionalLightsBuffer{
     DirectionalLight array[];
 } directionalLights;
 }
 #hlsl StructuredBuffer<DirectionalLight> directionalLights : register(t1, space5);
+
+/** Array of shadow maps for all directional light sources. */
+#glsl layout(binding = 53) uniform sampler2DShadow directionalShadowMaps[];
+#hlsl Texture2D directionalShadowMaps[] : register(t2, space5);
 
 /** Spotlight parameters. */
 struct Spotlight{
@@ -114,11 +121,11 @@ struct Spotlight{
 
 /** All spawned spotlights. */
 #glsl{
-layout(std140, binding = 4) readonly buffer SpotlightsBuffer{
+layout(std140, binding = 54) readonly buffer SpotlightsBuffer{
     Spotlight array[];
 } spotlights;
 }
-#hlsl StructuredBuffer<Spotlight> spotlights : register(t2, space5);
+#hlsl StructuredBuffer<Spotlight> spotlights : register(t3, space5);
 
 #ifdef INCLUDE_LIGHTING_FUNCTIONS
 

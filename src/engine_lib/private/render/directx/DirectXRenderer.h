@@ -39,7 +39,7 @@ namespace ne {
         DirectXRenderer(const DirectXRenderer&) = delete;
         DirectXRenderer& operator=(const DirectXRenderer&) = delete;
 
-        virtual ~DirectXRenderer() override = default;
+        virtual ~DirectXRenderer() override;
 
         /**
          * Creates a new DirectX renderer.

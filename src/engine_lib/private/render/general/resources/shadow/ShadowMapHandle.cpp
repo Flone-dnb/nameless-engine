@@ -6,16 +6,17 @@
 namespace ne {
 
     ShadowMapHandle::~ShadowMapHandle() {
-        if (pResource == nullptr) {
-            // Our data was moved to some other object.
-            return;
+        std::scoped_lock guard(mtxResource.first);
+
+        if (mtxResource.second == nullptr) [[unlikely]] {
+            // Unexpected.
+            Error error("shadow map handle has `nullptr` resource pointer");
+            error.showError();
+            return; // don't throw in destructor
         }
 
         // Notify manager.
-        pManager->destroyResource(this);
-
-        // Clear resource pointer.
-        pResource = nullptr;
+        pManager->onShadowMapHandleBeingDestroyed(this);
     }
 
     ShadowMapHandle::ShadowMapHandle(
@@ -24,8 +25,19 @@ namespace ne {
         ShadowMapType type,
         const std::function<void(unsigned int)>& onArrayIndexChanged)
         : onArrayIndexChanged(onArrayIndexChanged), shadowMapType(type) {
+        // Save manager.
         this->pManager = pManager;
-        this->pResource = pResource;
+
+        // Just in case check for `nullptr`.
+        if (pResource == nullptr) [[unlikely]] {
+            // Unexpected.
+            Error error("unexpected `nullptr` resource pointer");
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+        }
+
+        // Save resource.
+        mtxResource.second = pResource;
     }
 
     void ShadowMapHandle::changeArrayIndex(unsigned int iNewArrayIndex) {

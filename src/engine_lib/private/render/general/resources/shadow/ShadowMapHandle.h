@@ -2,6 +2,7 @@
 
 // Standard.
 #include <functional>
+#include <mutex>
 
 // Custom.
 #include "ShadowMapType.hpp"
@@ -40,9 +41,13 @@ namespace ne {
         /**
          * Returns the underlying resource.
          *
-         * @return `nullptr` if moved or not initialized, otherwise valid pointer to resource.
+         * @warning Do not delete (free) returned pointer.
+         *
+         * @remark Use returned resource only when mutex is locked.
+         *
+         * @return Valid pointer to resource.
          */
-        inline GpuResource* getResource() const { return pResource; }
+        inline std::pair<std::recursive_mutex, GpuResource*>* getResource() { return &mtxResource; }
 
         /**
          * Returns type of a shadow map that this handle references.
@@ -77,8 +82,8 @@ namespace ne {
         /** Manager that owns the resource we are pointing to. */
         ShadowMapManager* pManager = nullptr;
 
-        /** Resource we are pointing to. */
-        GpuResource* pResource = nullptr;
+        /** Resource that this handle references. */
+        std::pair<std::recursive_mutex, GpuResource*> mtxResource;
 
         /**
          * Called after the index of the shadow map into the

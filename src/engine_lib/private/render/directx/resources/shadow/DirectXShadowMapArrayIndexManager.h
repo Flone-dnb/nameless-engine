@@ -31,12 +31,15 @@ namespace ne {
          * Creates a new index manager.
          *
          * @param pRenderer                Renderer.
+         * @param pResourceManager         Resource manager.
          * @param sShaderArrayResourceName Name of the array (defined in shaders) that this manager controls.
          *
          * @return Error if something went wrong, otherwise created manager.
          */
-        static std::variant<std::unique_ptr<DirectXShadowMapArrayIndexManager>, Error>
-        create(Renderer* pRenderer, const std::string& sShaderArrayResourceName);
+        static std::variant<std::unique_ptr<DirectXShadowMapArrayIndexManager>, Error> create(
+            Renderer* pRenderer,
+            GpuResourceManager* pResourceManager,
+            const std::string& sShaderArrayResourceName);
 
     protected:
         /**
@@ -51,18 +54,18 @@ namespace ne {
         DirectXShadowMapArrayIndexManager(Renderer* pRenderer, const std::string& sShaderArrayResourceName);
 
         /**
-         * Binds DSV and SRV (SRV from continuous descriptor range) to the specified shadow map and reserves
-         * an index into a descriptor array for it.
+         * Reserves an index into a descriptor array for the shadow map resource of the specified handle
+         * and bind internal GPU shadow map resource (if the handle) to that descriptor.
          *
-         * @remark Use @ref unregisterShadowMap to unregister it later (must be done before this manager is
-         * destroyed) when shadow map is being destroyed.
+         * @remark Use @ref unregisterShadowMapResource to unregister it later (must be done before this
+         * manager is destroyed) when shadow map is being destroyed.
          *
          * @param pShadowMapHandle Shadow map to register.
          *
          * @return Error if something went wrong.
          */
         [[nodiscard]] virtual std::optional<Error>
-        registerShadowMap(ShadowMapHandle* pShadowMapHandle) override;
+        registerShadowMapResource(ShadowMapHandle* pShadowMapHandle) override;
 
         /**
          * Unregisters a shadow map and frees its index into a descriptor array to be used by others.
@@ -72,7 +75,7 @@ namespace ne {
          * @return Error if something went wrong.
          */
         [[nodiscard]] virtual std::optional<Error>
-        unregisterShadowMap(ShadowMapHandle* pShadowMapHandle) override;
+        unregisterShadowMapResource(ShadowMapHandle* pShadowMapHandle) override;
 
         /**
          * Looks if the specified pipeline uses shadow maps and if uses binds shadow maps to the pipeline.

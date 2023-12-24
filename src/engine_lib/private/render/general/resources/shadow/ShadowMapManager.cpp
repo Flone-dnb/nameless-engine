@@ -13,11 +13,42 @@
 
 namespace ne {
 
-    ShadowMapManager::ShadowMapManager(GpuResourceManager* pResourceManager) {
+    ShadowMapManager::ShadowMapManager(
+        GpuResourceManager* pResourceManager,
+        std::array<std::unique_ptr<ShadowMapArrayIndexManager>, static_cast<size_t>(ShadowMapType::SIZE)>
+            vShadowMapArrayIndexManagers) {
         this->pResourceManager = pResourceManager;
+        mtxInternalResources.second.vShadowMapArrayIndexManagers = std::move(vShadowMapArrayIndexManagers);
+    }
 
-        // Create array index manager.
-        // TODO
+    std::optional<Error> ShadowMapManager::bindShadowMapsToPipeline(Pipeline* pPipeline) {
+        std::scoped_lock guard(mtxInternalResources.first);
+
+        // Notify managers.
+        for (auto& pManager : mtxInternalResources.second.vShadowMapArrayIndexManagers) {
+            auto optionalError = pManager->bindShadowMapsToPipeline(pPipeline);
+            if (optionalError.has_value()) [[unlikely]] {
+                optionalError->addCurrentLocationToErrorStack();
+                return optionalError;
+            }
+        }
+
+        return {};
+    }
+
+    std::optional<Error> ShadowMapManager::bindShadowMapsToAllPipelines() {
+        std::scoped_lock guard(mtxInternalResources.first);
+
+        // Notify managers.
+        for (auto& pManager : mtxInternalResources.second.vShadowMapArrayIndexManagers) {
+            auto optionalError = pManager->bindShadowMapsToAllPipelines();
+            if (optionalError.has_value()) [[unlikely]] {
+                optionalError->addCurrentLocationToErrorStack();
+                return optionalError;
+            }
+        }
+
+        return {};
     }
 
     std::variant<std::unique_ptr<ShadowMapHandle>, Error> ShadowMapManager::createShadowMap(
@@ -52,21 +83,70 @@ namespace ne {
         auto pShadowMapHandle = std::unique_ptr<ShadowMapHandle>(
             new ShadowMapHandle(this, pShadowMapResource.get(), type, onArrayIndexChanged));
 
+        // Get array index manager.
+        const auto pShadowMapArrayIndexManager = getArrayIndexManagerBasedOnShadowMapType(type);
+        if (pShadowMapArrayIndexManager == nullptr) [[unlikely]] {
+            return Error("unsupported shadow map type");
+        }
+
+        // Assign an index for this new resource.
+        auto optionalError = pShadowMapArrayIndexManager->registerShadowMapResource(pShadowMapHandle.get());
+        if (optionalError.has_value()) [[unlikely]] {
+            optionalError->addCurrentLocationToErrorStack();
+            return optionalError.value();
+        }
+
         // Add to the map of allocated shadow maps.
         mtxInternalResources.second.shadowMaps[pShadowMapHandle.get()] = std::move(pShadowMapResource);
 
         return pShadowMapHandle;
     }
 
-    void ShadowMapManager::destroyResource(ShadowMapHandle* pHandleToResourceDestroy) {
+    ShadowMapArrayIndexManager*
+    ShadowMapManager::getArrayIndexManagerBasedOnShadowMapType(ShadowMapType type) {
+        // Convert type to index.
+        const auto iIndex = static_cast<size_t>(type);
+
+        // Make sure we won't access out of bounds.
+        if (iIndex >= mtxInternalResources.second.vShadowMapArrayIndexManagers.size()) [[unlikely]] {
+            Error error("invalid type");
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+        }
+
+        return mtxInternalResources.second.vShadowMapArrayIndexManagers[iIndex].get();
+    }
+
+    void ShadowMapManager::onShadowMapHandleBeingDestroyed(ShadowMapHandle* pHandleToResourceDestroy) {
         std::scoped_lock guard(mtxInternalResources.first);
 
         // Find this resource.
         const auto it = mtxInternalResources.second.shadowMaps.find(pHandleToResourceDestroy);
         if (it == mtxInternalResources.second.shadowMaps.end()) [[unlikely]] {
             // Maybe the specified resource pointer is invalid.
-            Logger::get().error("failed to find the specified shadow map resource to be destroyed");
-            return;
+            Error error(std::format(
+                "failed to find the specified {} shadow map handle to destroy",
+                shadowMapTypeToString(pHandleToResourceDestroy->shadowMapType)));
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+        }
+
+        // Get array index manager.
+        const auto pShadowMapArrayIndexManager =
+            getArrayIndexManagerBasedOnShadowMapType(pHandleToResourceDestroy->shadowMapType);
+        if (pShadowMapArrayIndexManager == nullptr) [[unlikely]] {
+            Error error("unsupported shadow map type");
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+        }
+
+        // Unregister shadow map resource.
+        auto optionalError =
+            pShadowMapArrayIndexManager->unregisterShadowMapResource(pHandleToResourceDestroy);
+        if (optionalError.has_value()) [[unlikely]] {
+            optionalError->addCurrentLocationToErrorStack();
+            optionalError->showError();
+            throw std::runtime_error(optionalError->getFullErrorMessage());
         }
 
         // Destroy resource.
@@ -96,6 +176,22 @@ namespace ne {
             const auto iShadowMapSize = correctShadowMapResolutionForType(
                 iRenderSettingsShadowMapSize, pShadowMapHandle->shadowMapType);
 
+            // Get array index manager.
+            const auto pShadowMapArrayIndexManager =
+                getArrayIndexManagerBasedOnShadowMapType(pShadowMapHandle->shadowMapType);
+            if (pShadowMapArrayIndexManager == nullptr) [[unlikely]] {
+                return Error("unsupported shadow map type");
+            }
+
+            std::scoped_lock handleResourceGuard(pShadowMapHandle->mtxResource.first);
+
+            // Unregister this handle because the resource will now be deleted.
+            auto optionalError = pShadowMapArrayIndexManager->unregisterShadowMapResource(pShadowMapHandle);
+            if (optionalError.has_value()) [[unlikely]] {
+                optionalError->addCurrentLocationToErrorStack();
+                return optionalError;
+            }
+
             // Destroy old resource.
             pShadowMap = nullptr;
 
@@ -110,7 +206,14 @@ namespace ne {
             pShadowMap = std::get<std::unique_ptr<GpuResource>>(std::move(result));
 
             // Update raw pointer in the handle.
-            pShadowMapHandle->pResource = pShadowMap.get();
+            pShadowMapHandle->mtxResource.second = pShadowMap.get();
+
+            // Register newly created resource to bind the new GPU resource to descriptor.
+            optionalError = pShadowMapArrayIndexManager->registerShadowMapResource(pShadowMapHandle);
+            if (optionalError.has_value()) [[unlikely]] {
+                optionalError->addCurrentLocationToErrorStack();
+                return optionalError;
+            }
         }
 
         return {};
@@ -160,7 +263,8 @@ namespace ne {
 
             // Show error.
             Error error(std::format(
-                "shadow map manager is being destroyed but there are still {} shadow map(s) alive:\n{}",
+                "shadow map manager is being destroyed but there are still {} shadow map(s) "
+                "alive:\n{}",
                 mtxInternalResources.second.shadowMaps.size(),
                 sLeftResources));
             error.showError();
@@ -168,4 +272,48 @@ namespace ne {
         }
     }
 
+    std::variant<std::unique_ptr<ShadowMapManager>, Error>
+    ShadowMapManager::create(GpuResourceManager* pResourceManager) {
+        // Prepare final array of managers.
+        std::array<std::unique_ptr<ShadowMapArrayIndexManager>, static_cast<size_t>(ShadowMapType::SIZE)>
+            vShadowMapArrayIndexManagers;
+
+        const auto pRenderer = pResourceManager->getRenderer();
+
+        // Create directional manager.
+        auto result = ShadowMapArrayIndexManager::create(
+            pRenderer, pResourceManager, pDirectionalShadowMapsShaderResourceName);
+        if (std::holds_alternative<Error>(result)) [[unlikely]] {
+            auto error = std::get<Error>(std::move(result));
+            error.addCurrentLocationToErrorStack();
+            return error;
+        }
+        vShadowMapArrayIndexManagers[static_cast<size_t>(ShadowMapType::DIRECTIONAL)] =
+            std::get<std::unique_ptr<ShadowMapArrayIndexManager>>(std::move(result));
+
+        // Create spot manager.
+        result = ShadowMapArrayIndexManager::create(
+            pRenderer, pResourceManager, pSpotShadowMapsShaderResourceName);
+        if (std::holds_alternative<Error>(result)) [[unlikely]] {
+            auto error = std::get<Error>(std::move(result));
+            error.addCurrentLocationToErrorStack();
+            return error;
+        }
+        vShadowMapArrayIndexManagers[static_cast<size_t>(ShadowMapType::SPOT)] =
+            std::get<std::unique_ptr<ShadowMapArrayIndexManager>>(std::move(result));
+
+        // Create point manager.
+        result = ShadowMapArrayIndexManager::create(
+            pRenderer, pResourceManager, pPointShadowMapsShaderResourceName);
+        if (std::holds_alternative<Error>(result)) [[unlikely]] {
+            auto error = std::get<Error>(std::move(result));
+            error.addCurrentLocationToErrorStack();
+            return error;
+        }
+        vShadowMapArrayIndexManagers[static_cast<size_t>(ShadowMapType::POINT)] =
+            std::get<std::unique_ptr<ShadowMapArrayIndexManager>>(std::move(result));
+
+        return std::unique_ptr<ShadowMapManager>(
+            new ShadowMapManager(pResourceManager, std::move(vShadowMapArrayIndexManagers)));
+    }
 }

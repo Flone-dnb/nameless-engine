@@ -7,6 +7,7 @@
 #include <mutex>
 #include <functional>
 #include <unordered_map>
+#include <array>
 
 // Custom.
 #include "misc/Error.h"
@@ -32,6 +33,9 @@ namespace ne {
         // Renderer will notify us when shadow quality setting is changed.
         friend class Renderer;
 
+        // Pipeline manager notifies us about new pipelines or re-created pipelines to re-bind descriptors.
+        friend class PipelineManager;
+
     public:
         ShadowMapManager() = delete;
         ShadowMapManager(const ShadowMapManager&) = delete;
@@ -44,8 +48,11 @@ namespace ne {
          * Creates a new shadow map manager.
          *
          * @param pResourceManager Resource manager that owns this object.
+         *
+         * @return Error if something went wrong, otherwise created shadow map manager.
          */
-        ShadowMapManager(GpuResourceManager* pResourceManager);
+        static std::variant<std::unique_ptr<ShadowMapManager>, Error>
+        create(GpuResourceManager* pResourceManager);
 
         /**
          * Creates a shadow map.
@@ -72,16 +79,49 @@ namespace ne {
             /** All allocated shadow maps. */
             std::unordered_map<ShadowMapHandle*, std::unique_ptr<GpuResource>> shadowMaps;
 
-            /** Array index manager for shadows maps of directional lights. */
-            std::unique_ptr<ShadowMapArrayIndexManager> pDirectionalShadowMapArrayIndexManager;
+            /**
+             * Array index managers for various light source types.
+             *
+             * @remark Access using enum: `vManagers[ShadowMapType::DIRECTIONAL]`.
+             */
+            std::array<std::unique_ptr<ShadowMapArrayIndexManager>, static_cast<size_t>(ShadowMapType::SIZE)>
+                vShadowMapArrayIndexManagers;
         };
 
         /**
-         * Called by shadow map unique pointers to notify the manager that a resource is no longer used.
+         * Initializes the manager.
+         *
+         * @param pResourceManager             Resource manager that owns this object.
+         * @param vShadowMapArrayIndexManagers Array index managers for various light source types
+         */
+        ShadowMapManager(
+            GpuResourceManager* pResourceManager,
+            std::array<std::unique_ptr<ShadowMapArrayIndexManager>, static_cast<size_t>(ShadowMapType::SIZE)>
+                vShadowMapArrayIndexManagers);
+
+        /**
+         * Looks if the specified pipeline uses shadow maps and if uses binds shadow maps to the pipeline.
+         *
+         * @param pPipeline Pipeline to bind shadow maps to.
+         *
+         * @return Error if something went wrong.
+         */
+        [[nodiscard]] std::optional<Error> bindShadowMapsToPipeline(Pipeline* pPipeline);
+
+        /**
+         * Goes through all graphics pipelines ad binds shadow maps to pipelines that use them.
+         *
+         * @return Error if something went wrong.
+         */
+        [[nodiscard]] std::optional<Error> bindShadowMapsToAllPipelines();
+
+        /**
+         * Called by destructor of shadow map handle to notify the manager that a resource is no longer
+         * used.
          *
          * @param pHandleToResourceDestroy Handle to resource to destroy.
          */
-        void destroyResource(ShadowMapHandle* pHandleToResourceDestroy);
+        void onShadowMapHandleBeingDestroyed(ShadowMapHandle* pHandleToResourceDestroy);
 
         /**
          * Called by the renderer to notify the manager that shadow quality setting was changed and all
@@ -104,6 +144,20 @@ namespace ne {
         correctShadowMapResolutionForType(unsigned int iRenderSettingsShadowMapSize, ShadowMapType type);
 
         /**
+         * Returns pointer to one of the array index managers from @ref mtxInternalResources depending
+         * on the specified shadow map type.
+         *
+         * @warning Do not delete (free) returned pointer.
+         *
+         * @remark Expects that @ref mtxInternalResources is locked.
+         *
+         * @param type Type of the shadow map to determine the manager.
+         *
+         * @return `nullptr` if specified not supported shadow map type, otherwise valid pointer.
+         */
+        ShadowMapArrayIndexManager* getArrayIndexManagerBasedOnShadowMapType(ShadowMapType type);
+
+        /**
          * Allocated shadow maps.
          *
          * @remark Storing pairs of "raw pointer" - "unique pointer" to quickly find needed resources
@@ -116,5 +170,14 @@ namespace ne {
 
         /** Do not delete (free) this pointer. GPU resource manager that owns this object. */
         GpuResourceManager* pResourceManager = nullptr;
+
+        /** Name of the shader resource (from shader code) that stores all directional shadow maps. */
+        static constexpr auto pDirectionalShadowMapsShaderResourceName = "directionalShadowMaps";
+
+        /** Name of the shader resource (from shader code) that stores all spot shadow maps. */
+        static constexpr auto pSpotShadowMapsShaderResourceName = "spotShadowMaps";
+
+        /** Name of the shader resource (from shader code) that stores all point shadow maps. */
+        static constexpr auto pPointShadowMapsShaderResourceName = "pointShadowMaps";
     };
 }

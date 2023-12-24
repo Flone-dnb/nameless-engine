@@ -15,7 +15,8 @@ namespace ne {
 
     ShadowMapManager* GpuResourceManager::getShadowMapManager() const { return pShadowMapManager.get(); }
 
-    std::variant<std::unique_ptr<GpuResourceManager>, Error> GpuResourceManager::create(Renderer* pRenderer) {
+    std::variant<std::unique_ptr<GpuResourceManager>, Error>
+    GpuResourceManager::createRendererSpecificManager(Renderer* pRenderer) {
 #if defined(WIN32)
         if (auto pDirectXRenderer = dynamic_cast<DirectXRenderer*>(pRenderer)) {
             // Create DirectX resource manager.
@@ -45,15 +46,36 @@ namespace ne {
         return Error("unsupported renderer");
     }
 
+    std::variant<std::unique_ptr<GpuResourceManager>, Error> GpuResourceManager::create(Renderer* pRenderer) {
+        // Create render-specific object.
+        auto resourceManagerResult = createRendererSpecificManager(pRenderer);
+        if (std::holds_alternative<Error>(resourceManagerResult)) [[unlikely]] {
+            auto error = std::get<Error>(std::move(resourceManagerResult));
+            error.addCurrentLocationToErrorStack();
+            return error;
+        }
+        auto pResourceManager =
+            std::get<std::unique_ptr<GpuResourceManager>>(std::move(resourceManagerResult));
+
+        // Create texture manager.
+        pResourceManager->pTextureManager = std::make_unique<TextureManager>(pResourceManager.get());
+
+        // Create shadow map manager.
+        auto shadowMapManagerResult = ShadowMapManager::create(pResourceManager.get());
+        if (std::holds_alternative<Error>(shadowMapManagerResult)) [[unlikely]] {
+            auto error = std::get<Error>(std::move(shadowMapManagerResult));
+            error.addCurrentLocationToErrorStack();
+            return error;
+        }
+        pResourceManager->pShadowMapManager =
+            std::get<std::unique_ptr<ShadowMapManager>>(std::move(shadowMapManagerResult));
+
+        return pResourceManager;
+    }
+
     GpuResourceManager::GpuResourceManager(Renderer* pRenderer) {
         // Save renderer.
         this->pRenderer = pRenderer;
-
-        // Create texture manager.
-        pTextureManager = std::make_unique<TextureManager>(this);
-
-        // Create shadow map manager.
-        pShadowMapManager = std::make_unique<ShadowMapManager>(this);
     }
 
     void GpuResourceManager::resetTextureManager() { pTextureManager = nullptr; }

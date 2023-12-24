@@ -15,12 +15,12 @@ namespace ne {
         Renderer* pRenderer, const std::string& sShaderArrayResourceName)
         : pRenderer(pRenderer), sShaderArrayResourceName(sShaderArrayResourceName) {}
 
-    std::variant<std::unique_ptr<ShadowMapArrayIndexManager>, Error>
-    ShadowMapArrayIndexManager::create(Renderer* pRenderer, const std::string& sArrayName) {
+    std::variant<std::unique_ptr<ShadowMapArrayIndexManager>, Error> ShadowMapArrayIndexManager::create(
+        Renderer* pRenderer, GpuResourceManager* pResourceManager, const std::string& sArrayName) {
 #if defined(WIN32)
         if (dynamic_cast<DirectXRenderer*>(pRenderer) != nullptr) {
             // Create DirectX manager.
-            auto result = DirectXShadowMapArrayIndexManager::create(pRenderer, sArrayName);
+            auto result = DirectXShadowMapArrayIndexManager::create(pRenderer, pResourceManager, sArrayName);
             if (std::holds_alternative<Error>(result)) [[unlikely]] {
                 auto error = std::get<Error>(std::move(result));
                 error.addCurrentLocationToErrorStack();
@@ -39,7 +39,9 @@ namespace ne {
         return Error("unsupported renderer");
     }
 
-    std::string ShadowMapArrayIndexManager::getShaderArrayResourceName() { return sShaderArrayResourceName; }
+    std::string const* ShadowMapArrayIndexManager::getShaderArrayResourceName() {
+        return &sShaderArrayResourceName;
+    }
 
     Renderer* ShadowMapArrayIndexManager::getRenderer() const { return pRenderer; }
 

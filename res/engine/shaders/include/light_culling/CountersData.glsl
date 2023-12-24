@@ -1,6 +1,6 @@
 /** Global counters into the light index lists. */
 #hlsl struct GlobalCountersIntoLightIndexList{
-#glsl layout(std140, binding = 9) buffer GlobalCountersIntoLightIndexList{
+#glsl layout(std140, binding = 6) buffer GlobalCountersIntoLightIndexList{
     uint iPointLightListOpaque;
     uint iSpotlightListOpaque;
     uint iDirectionalLightListOpaque;
@@ -8,7 +8,7 @@
     uint iPointLightListTransparent;
     uint iSpotlightListTransparent;
     uint iDirectionalLightListTransparent;
-#hlsl }; RWStructuredBuffer<GlobalCountersIntoLightIndexList> globalCountersIntoLightIndexList : register(u0, space5);
+#hlsl }; RWStructuredBuffer<GlobalCountersIntoLightIndexList> globalCountersIntoLightIndexList : register(u0, space6);
 #glsl } globalCountersIntoLightIndexList;
 
 /** Resets (sets to zero) all global counters into light index lists. */

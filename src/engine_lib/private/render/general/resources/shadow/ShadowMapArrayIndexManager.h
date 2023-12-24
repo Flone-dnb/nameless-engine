@@ -12,6 +12,7 @@ namespace ne {
     class ShadowMapHandle;
     class Pipeline;
     class Renderer;
+    class GpuResourceManager;
 
     /** Manages indices of shadows maps into a descriptor array used by shaders. */
     class ShadowMapArrayIndexManager {
@@ -33,12 +34,15 @@ namespace ne {
          * Creates a new renderer-specific index manager.
          *
          * @param pRenderer                Renderer.
+         * @param pResourceManager         Resource manager.
          * @param sShaderArrayResourceName Name of the array (defined in shaders) that this manager controls.
          *
          * @return Error if something went wrong, otherwise created manager.
          */
-        static std::variant<std::unique_ptr<ShadowMapArrayIndexManager>, Error>
-        create(Renderer* pRenderer, const std::string& sShaderArrayResourceName);
+        static std::variant<std::unique_ptr<ShadowMapArrayIndexManager>, Error> create(
+            Renderer* pRenderer,
+            GpuResourceManager* pResourceManager,
+            const std::string& sShaderArrayResourceName);
 
     protected:
         /**
@@ -59,16 +63,22 @@ namespace ne {
         static void changeShadowMapArrayIndex(ShadowMapHandle* pShadowMapHandle, unsigned int iNewArrayIndex);
 
         /**
-         * Registers a shadow map and reserves an index into a descriptor array for it.
+         * Reserves an index into a descriptor array for the shadow map resource of the specified handle
+         * and bind internal GPU shadow map resource (if the handle) to that descriptor.
          *
-         * @remark Use @ref unregisterShadowMap to unregister it later (must be done before this manager is
-         * destroyed) when shadow map is being destroyed.
+         * @remark Use @ref unregisterShadowMapResource to unregister it later (must be done before this
+         * manager is destroyed) when shadow map is being destroyed.
+         *
+         * @remark If internal GPU shadow map resource of the handle changes you must unregister and then
+         * register the handle again (after the new GPU resource was set to the handle) to bind the new
+         * GPU resource to the descriptor.
          *
          * @param pShadowMapHandle Shadow map to register.
          *
          * @return Error if something went wrong.
          */
-        [[nodiscard]] virtual std::optional<Error> registerShadowMap(ShadowMapHandle* pShadowMapHandle) = 0;
+        [[nodiscard]] virtual std::optional<Error>
+        registerShadowMapResource(ShadowMapHandle* pShadowMapHandle) = 0;
 
         /**
          * Unregisters a shadow map and frees its index into a descriptor array to be used by others.
@@ -77,7 +87,8 @@ namespace ne {
          *
          * @return Error if something went wrong.
          */
-        [[nodiscard]] virtual std::optional<Error> unregisterShadowMap(ShadowMapHandle* pShadowMapHandle) = 0;
+        [[nodiscard]] virtual std::optional<Error>
+        unregisterShadowMapResource(ShadowMapHandle* pShadowMapHandle) = 0;
 
         /**
          * Looks if the specified pipeline uses shadow maps and if uses binds shadow maps to the pipeline.
@@ -98,9 +109,11 @@ namespace ne {
         /**
          * Returns name of the array (defined in shaders) that this manager controls.
          *
+         * @warning Do not delete (free) returned pointer.
+         *
          * @return Array name.
          */
-        std::string getShaderArrayResourceName();
+        std::string const* getShaderArrayResourceName();
 
         /**
          * Returns renderer.

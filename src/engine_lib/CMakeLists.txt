@@ -160,8 +160,8 @@ set(PROJECT_SOURCES
     private/shader/general/EngineShaderConstantMacros.hpp
     private/shader/general/resources/ShaderResource.h
     private/shader/general/resources/ShaderResource.cpp
-    private/shader/general/resources/ShaderBindlessArrayIndexManager.h
-    private/shader/general/resources/ShaderBindlessArrayIndexManager.cpp
+    private/shader/general/resources/ShaderArrayIndexManager.h
+    private/shader/general/resources/ShaderArrayIndexManager.cpp
     private/shader/glsl/GlslShader.h
     private/shader/glsl/GlslShader.cpp
     private/shader/glsl/resources/GlslShaderCpuWriteResource.h

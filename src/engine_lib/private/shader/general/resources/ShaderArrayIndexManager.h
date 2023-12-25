@@ -7,63 +7,63 @@
 #include <memory>
 
 namespace ne {
-    class ShaderBindlessArrayIndexManager;
+    class ShaderArrayIndexManager;
 
     /**
-     * RAII-style class that holds an index into a bindless array and marks it as unused in destructor
+     * RAII-style class that holds an index into a shader array and marks it as unused in destructor
      * so that other shader resources can use it later.
      */
-    class BindlessArrayIndex {
+    class ShaderArrayIndex {
         /** Only index manager can created indices. */
-        friend class ShaderBindlessArrayIndexManager;
+        friend class ShaderArrayIndexManager;
 
     public:
-        BindlessArrayIndex() = delete;
+        ShaderArrayIndex() = delete;
 
-        BindlessArrayIndex(const BindlessArrayIndex&) = delete;
-        BindlessArrayIndex& operator=(const BindlessArrayIndex&) = delete;
+        ShaderArrayIndex(const ShaderArrayIndex&) = delete;
+        ShaderArrayIndex& operator=(const ShaderArrayIndex&) = delete;
 
-        BindlessArrayIndex(BindlessArrayIndex&&) = delete;
-        BindlessArrayIndex& operator=(BindlessArrayIndex&&) = delete;
+        ShaderArrayIndex(ShaderArrayIndex&&) = delete;
+        ShaderArrayIndex& operator=(ShaderArrayIndex&&) = delete;
 
         /**
-         * Returns an actual index into the bindless array.
+         * Returns an actual index into the shader array.
          *
-         * @return Index into the bindless array.
+         * @return Index into the shader array.
          */
         unsigned int getActualIndex() const;
 
         /** Notifies the manager (that created this index) about index no longer being used. */
-        ~BindlessArrayIndex();
+        ~ShaderArrayIndex();
 
     private:
         /**
          * Constructs a new array index.
          *
-         * @param pManager                Manager that created this index.
-         * @param iIndexIntoBindlessArray Actual index into a bindless array.
+         * @param pManager              Manager that created this index.
+         * @param iIndexIntoShaderArray Actual index into a shader array.
          */
-        BindlessArrayIndex(ShaderBindlessArrayIndexManager* pManager, unsigned int iIndexIntoBindlessArray);
+        ShaderArrayIndex(ShaderArrayIndexManager* pManager, unsigned int iIndexIntoShaderArray);
 
         /** Manager that created this index. */
-        ShaderBindlessArrayIndexManager* pManager = nullptr;
+        ShaderArrayIndexManager* pManager = nullptr;
 
-        /** Actual index into a bindless array. */
-        unsigned int iIndexIntoBindlessArray;
+        /** Actual index into a shader array. */
+        unsigned int iIndexIntoShaderArray;
     };
 
     /**
-     * Controls and provides indices into bindless arrays (defined in shaders).
+     * Controls and provides indices into shader arrays (defined in shaders).
      *
-     * @remark If you need to bind something to a specific descriptor in a bindless array
+     * @remark If you need to bind something to a specific descriptor in a shader array
      * this manager can give you an index to a descriptor (in the array) that you can use.
      */
-    class ShaderBindlessArrayIndexManager {
+    class ShaderArrayIndexManager {
         // Indices notify the manager in their destructor about no longer being used.
-        friend class BindlessArrayIndex;
+        friend class ShaderArrayIndex;
 
     public:
-        ShaderBindlessArrayIndexManager() = delete;
+        ShaderArrayIndexManager() = delete;
 
         /**
          * Constructs a new index manager.
@@ -75,17 +75,17 @@ namespace ne {
          * maximum possible number of elements in the array, if reached a warning will be logged.
          * Specify zero to disable logging and these checks.
          */
-        ShaderBindlessArrayIndexManager(const std::string& sName, unsigned int iArraySize);
+        ShaderArrayIndexManager(const std::string& sName, unsigned int iArraySize);
 
         /** Makes sure there are no active indices in use. */
-        ~ShaderBindlessArrayIndexManager();
+        ~ShaderArrayIndexManager();
 
         /**
-         * Returns a new (unused) index into the bindless array that this manager is handling.
+         * Returns a new (unused) index into the shader array that this manager is handling.
          *
          * @return New index.
          */
-        std::unique_ptr<BindlessArrayIndex> reserveIndex();
+        std::unique_ptr<ShaderArrayIndex> reserveIndex();
 
     private:
         /**

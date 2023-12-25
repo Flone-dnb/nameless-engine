@@ -5,7 +5,7 @@
 
 // Custom.
 #include "render/general/resources/shadow/ShadowMapArrayIndexManager.h"
-#include "shader/general/resources/ShaderBindlessArrayIndexManager.h"
+#include "shader/general/resources/ShaderArrayIndexManager.h"
 #include "render/general/resources/frame/FrameResourcesManager.h"
 
 // External.
@@ -86,10 +86,10 @@ namespace ne {
              * index objects where N is the number of pipelines for just one shadow map) we just use one index
              * manager located here.
              */
-            std::unique_ptr<ShaderBindlessArrayIndexManager> pIndexManager;
+            std::unique_ptr<ShaderArrayIndexManager> pIndexManager;
 
             /** Pairs of "shadow map" - "index that this shadow map takes". */
-            std::unordered_map<ShadowMapHandle*, std::unique_ptr<BindlessArrayIndex>> registeredShadowMaps;
+            std::unordered_map<ShadowMapHandle*, std::unique_ptr<ShaderArrayIndex>> registeredShadowMaps;
         };
 
         /**
@@ -133,7 +133,7 @@ namespace ne {
          */
         [[nodiscard]] std::optional<Error> bindShadowMapToPipeline(
             ShadowMapHandle* pShadowMapHandle,
-            BindlessArrayIndex* pArrayIndex,
+            ShaderArrayIndex* pArrayIndex,
             Pipeline* pPipeline,
             unsigned int iBindingIndex,
             std::array<VkDescriptorSet, FrameResourcesManager::getFrameResourcesCount()>*

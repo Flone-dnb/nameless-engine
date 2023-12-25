@@ -29,7 +29,7 @@ namespace ne {
         Renderer* pRenderer, const std::string& sShaderArrayResourceName)
         : ShadowMapArrayIndexManager(pRenderer, sShaderArrayResourceName) {
         // Create index manager.
-        mtxInternalData.second.pIndexManager = std::make_unique<ShaderBindlessArrayIndexManager>(
+        mtxInternalData.second.pIndexManager = std::make_unique<ShaderArrayIndexManager>(
             sShaderArrayResourceName, DescriptorConstants::iBindlessTextureArrayDescriptorCount);
     }
 
@@ -227,7 +227,7 @@ namespace ne {
 
     std::optional<Error> VulkanShadowMapArrayIndexManager::bindShadowMapToPipeline(
         ShadowMapHandle* pShadowMapHandle,
-        BindlessArrayIndex* pArrayIndex,
+        ShaderArrayIndex* pArrayIndex,
         Pipeline* pPipeline,
         unsigned int iBindingIndex,
         std::array<VkDescriptorSet, FrameResourcesManager::getFrameResourcesCount()>* pPipelineDescriptorSets,

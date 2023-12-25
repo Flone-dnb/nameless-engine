@@ -8,7 +8,7 @@
 #include "render/general/pipeline/Pipeline.h"
 #include "render/general/resources/frame/FrameResourcesManager.h"
 #include "render/vulkan/pipeline/VulkanPushConstantsManager.hpp"
-#include "shader/general/resources/ShaderBindlessArrayIndexManager.h"
+#include "shader/general/resources/ShaderArrayIndexManager.h"
 
 // External.
 #include "vulkan/vulkan.h"
@@ -78,7 +78,7 @@ namespace ne {
             std::optional<PushConstantsData> pushConstantsData;
 
             /**
-             * Stores pairs of "shader resource name" - "bindless array index manager".
+             * Stores pairs of "shader resource name" - "shader array index manager".
              *
              * @warning Do not clear this map (and thus destroy index managers) when releasing
              * internal resources to restore them later because there might be shader
@@ -86,20 +86,20 @@ namespace ne {
              * will be destroyed it will show an error that there are some active (used) indices
              * that reference the index manager.
              *
-             * @remark Refers to bindless arrays from GLSL.
+             * @remark Refers to shader arrays from GLSL.
              *
-             * @remark Since pipeline does not care which resources are bindless arrays and
-             * which are not, shader resources that reference bindless arrays must create new
+             * @remark Since pipeline does not care which resources are shader arrays and
+             * which are not, shader resources that reference shader arrays must create new
              * entries in this map when no index manager for requested shader resource is found.
-             * All descriptors for a bindless array are allocated per pipeline so shader resources
-             * that reference a bindless array in some pipeline can have just one index manager per
-             * bindless array.
+             * All descriptors for a shader array are allocated per pipeline so shader resources
+             * that reference a shader array in some pipeline can have just one index manager per
+             * shader array.
              *
              * @remark Shadow map arrays (defined in shaders) are special and these resources don't
              * use array index managers from pipelines.
              */
-            std::unordered_map<std::string, std::unique_ptr<ShaderBindlessArrayIndexManager>>
-                bindlessArrayIndexManagers;
+            std::unordered_map<std::string, std::unique_ptr<ShaderArrayIndexManager>>
+                shaderArrayIndexManagers;
 
             /** Whether resources were created or not. */
             bool bIsReadyForUsage = false;

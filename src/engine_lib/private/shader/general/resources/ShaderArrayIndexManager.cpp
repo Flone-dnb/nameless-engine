@@ -1,4 +1,4 @@
-#include "ShaderBindlessArrayIndexManager.h"
+#include "ShaderArrayIndexManager.h"
 
 // Custom.
 #include "io/Logger.h"
@@ -6,11 +6,10 @@
 
 namespace ne {
 
-    ShaderBindlessArrayIndexManager::ShaderBindlessArrayIndexManager(
-        const std::string& sName, unsigned int iArraySize)
+    ShaderArrayIndexManager::ShaderArrayIndexManager(const std::string& sName, unsigned int iArraySize)
         : iArraySize(iArraySize), sName(sName) {}
 
-    ShaderBindlessArrayIndexManager::~ShaderBindlessArrayIndexManager() {
+    ShaderArrayIndexManager::~ShaderArrayIndexManager() {
         std::scoped_lock guard(mtxData.first);
 
         // Make sure there are no active (not destroyed) index objects that reference this manager.
@@ -27,7 +26,7 @@ namespace ne {
         }
     }
 
-    std::unique_ptr<BindlessArrayIndex> ShaderBindlessArrayIndexManager::reserveIndex() {
+    std::unique_ptr<ShaderArrayIndex> ShaderArrayIndexManager::reserveIndex() {
         std::scoped_lock guard(mtxData.first);
 
         // Determine what index to return.
@@ -65,10 +64,10 @@ namespace ne {
         mtxData.second.iActiveIndexCount += 1;
 
         // Return a new index.
-        return std::unique_ptr<BindlessArrayIndex>(new BindlessArrayIndex(this, iIndexToReturn));
+        return std::unique_ptr<ShaderArrayIndex>(new ShaderArrayIndex(this, iIndexToReturn));
     }
 
-    void ShaderBindlessArrayIndexManager::onIndexNoLongerUsed(unsigned int iIndex) {
+    void ShaderArrayIndexManager::onIndexNoLongerUsed(unsigned int iIndex) {
         std::scoped_lock guard(mtxData.first);
 
         // Make sure the number of active indices will not go below zero.
@@ -88,14 +87,14 @@ namespace ne {
         mtxData.second.noLongerUsedIndices.push(iIndex);
     }
 
-    BindlessArrayIndex::BindlessArrayIndex(
-        ShaderBindlessArrayIndexManager* pManager, unsigned int iIndexIntoBindlessArray) {
+    ShaderArrayIndex::ShaderArrayIndex(
+        ShaderArrayIndexManager* pManager, unsigned int iIndexIntoShaderArray) {
         this->pManager = pManager;
-        this->iIndexIntoBindlessArray = iIndexIntoBindlessArray;
+        this->iIndexIntoShaderArray = iIndexIntoShaderArray;
     }
 
-    unsigned int BindlessArrayIndex::getActualIndex() const { return iIndexIntoBindlessArray; }
+    unsigned int ShaderArrayIndex::getActualIndex() const { return iIndexIntoShaderArray; }
 
-    BindlessArrayIndex::~BindlessArrayIndex() { pManager->onIndexNoLongerUsed(iIndexIntoBindlessArray); }
+    ShaderArrayIndex::~ShaderArrayIndex() { pManager->onIndexNoLongerUsed(iIndexIntoShaderArray); }
 
 }

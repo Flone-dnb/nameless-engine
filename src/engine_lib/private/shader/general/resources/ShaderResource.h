@@ -84,7 +84,7 @@ namespace ne {
         std::string sResourceName;
     };
 
-    /** References some texture (maybe bindless array/table) from shader code. */
+    /** References some texture (maybe array/table) from shader code. */
     class ShaderTextureResource : public ShaderResourceBase {
     public:
         virtual ~ShaderTextureResource() override = default;

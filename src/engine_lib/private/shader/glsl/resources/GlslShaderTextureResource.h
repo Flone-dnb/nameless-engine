@@ -10,7 +10,7 @@
 #include "shader/general/resources/ShaderResource.h"
 #include "material/TextureManager.h"
 #include "render/vulkan/pipeline/VulkanPushConstantsManager.hpp"
-#include "shader/general/resources/ShaderBindlessArrayIndexManager.h"
+#include "shader/general/resources/ShaderArrayIndexManager.h"
 
 // External.
 #include "vulkan/vulkan.h"
@@ -32,13 +32,13 @@ namespace ne {
             /**
              * Initializes object.
              *
-             * @param iPushConstantIndex  Index of the push constant to copy @ref pBindlessArrayIndex.
-             * @param pBindlessArrayIndex Index into bindless array to copy to shaders.
+             * @param iPushConstantIndex Index of the push constant to copy @ref pShaderArrayIndex.
+             * @param pShaderArrayIndex  Index into shader array to copy to shaders.
              */
             PushConstantIndices(
-                size_t iPushConstantIndex, std::unique_ptr<BindlessArrayIndex> pBindlessArrayIndex) {
+                size_t iPushConstantIndex, std::unique_ptr<ShaderArrayIndex> pShaderArrayIndex) {
                 this->iPushConstantIndex = iPushConstantIndex;
-                this->pBindlessArrayIndex = std::move(pBindlessArrayIndex);
+                this->pShaderArrayIndex = std::move(pShaderArrayIndex);
             }
 
             /** Move constructor. */
@@ -51,11 +51,11 @@ namespace ne {
              */
             PushConstantIndices& operator=(PushConstantIndices&&) = default;
 
-            /** Index of the push constant to copy @ref pBindlessArrayIndex. */
+            /** Index of the push constant to copy @ref pShaderArrayIndex. */
             size_t iPushConstantIndex = 0;
 
-            /** Index into bindless array to copy to shaders. */
-            std::unique_ptr<BindlessArrayIndex> pBindlessArrayIndex;
+            /** Index into shader array to copy to shaders. */
+            std::unique_ptr<ShaderArrayIndex> pShaderArrayIndex;
         };
 
     public:
@@ -100,7 +100,7 @@ namespace ne {
 
             // Copy value to push constants.
             pPushConstantsManager->copyValueToPushConstant(
-                it->second.iPushConstantIndex, it->second.pBindlessArrayIndex->getActualIndex());
+                it->second.iPushConstantIndex, it->second.pShaderArrayIndex->getActualIndex());
         }
 
         /**
@@ -128,7 +128,7 @@ namespace ne {
 
             // Copy value to push constants.
             pPushConstantsManager->copyValueToPushConstant(
-                it->second.iPushConstantIndex, it->second.pBindlessArrayIndex->getActualIndex());
+                it->second.iPushConstantIndex, it->second.pShaderArrayIndex->getActualIndex());
         }
 
         /**
@@ -172,7 +172,7 @@ namespace ne {
          *
          * @param sResourceName        Name of the resource we are referencing (should be exactly
          * the same as the resource name written in the shader file we are referencing).
-         * @param pTextureToUse        Texture that should be binded to a descriptor in bindless
+         * @param pTextureToUse        Texture that should be binded to a descriptor in shader
          * array.
          * @param pushConstantIndices Indices of push constants (per-pipeline) to copy texture index to.
          */
@@ -194,12 +194,12 @@ namespace ne {
 
     private:
         /**
-         * Creates a GLSL shader resource for referencing texture in bindless array.
+         * Creates a GLSL shader resource for referencing texture in shader array.
          *
          * @param sShaderResourceName     Name of the resource we are referencing (should be exactly the
          * same as the resource name written in the shader file we are referencing).
          * @param pipelinesToUse          Pipelines that use shader/parameters we are referencing.
-         * @param pTextureToUse           Texture that should be binded to a descriptor in bindless array.
+         * @param pTextureToUse           Texture that should be binded to a descriptor in shader array.
          *
          * @return Error if something went wrong, otherwise created shader resource.
          */
@@ -209,15 +209,15 @@ namespace ne {
             std::unique_ptr<TextureHandle> pTextureToUse);
 
         /**
-         * Asks the index manager for an index into the requested bindless array resource.
+         * Asks the index manager for an index into the requested shader array resource.
          *
-         * @param sShaderResourceName Name of the bindless array resource defined in GLSL.
+         * @param sShaderResourceName Name of the shader array resource defined in GLSL.
          * @param pPipelineToLookIn   Pipeline to look for an index manager that will provide the index
-         * into bindless array.
+         * into shader array.
          *
-         * @return Error if something went wrong, otherwise received index into bindless array.
+         * @return Error if something went wrong, otherwise received index into shader array.
          */
-        static std::variant<std::unique_ptr<BindlessArrayIndex>, Error> getTextureIndexInBindlessArray(
+        static std::variant<std::unique_ptr<ShaderArrayIndex>, Error> getTextureIndexInShaderArray(
             const std::string& sShaderResourceName, VulkanPipeline* pPipelineToLookIn);
 
         /**
@@ -227,20 +227,20 @@ namespace ne {
          * @param sShaderResourceName      Name of the shader resource to get binding index in descriptor set.
          * @param pPipelineWithDescriptors Pipeline which descriptors to use.
          * @param pTextureView             Texture view to bind.
-         * @param iIndexIntoBindlessArray  Index to a descriptor (in the bindless texture array) to bind.
+         * @param iIndexIntoShaderArray    Index to a descriptor (in the shader texture array) to bind.
          *
          * @return Error if something went wrong.
          */
-        static std::optional<Error> bindTextureToBindlessDescriptorArray(
+        static std::optional<Error> bindTextureToShaderDescriptorArray(
             const std::string& sShaderResourceName,
             VulkanPipeline* pPipelineWithDescriptors,
             VkImageView pTextureView,
-            unsigned int iIndexIntoBindlessArray);
+            unsigned int iIndexIntoShaderArray);
 
         /** Texture that we bind to descriptor. */
         std::pair<std::mutex, std::unique_ptr<TextureHandle>> mtxUsedTexture;
 
-        /** Index of push constant (per-pipeline) to copy index into bindless array. */
+        /** Index of push constant (per-pipeline) to copy index into shader array. */
         std::pair<std::recursive_mutex, std::unordered_map<VulkanPipeline*, PushConstantIndices>>
             mtxPushConstantIndices;
     };

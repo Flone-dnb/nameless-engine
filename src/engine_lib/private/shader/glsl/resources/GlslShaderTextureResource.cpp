@@ -49,20 +49,19 @@ namespace ne {
             }
             const auto iPushConstantIndex = std::get<size_t>(pushConstantResult);
 
-            // Get an index into the bindless array.
-            auto bindlessArrayIndexResult =
-                getTextureIndexInBindlessArray(sShaderResourceName, pVulkanPipeline);
-            if (std::holds_alternative<Error>(bindlessArrayIndexResult)) [[unlikely]] {
-                auto error = std::get<Error>(std::move(bindlessArrayIndexResult));
+            // Get an index into the shader array.
+            auto shaderArrayIndexResult = getTextureIndexInShaderArray(sShaderResourceName, pVulkanPipeline);
+            if (std::holds_alternative<Error>(shaderArrayIndexResult)) [[unlikely]] {
+                auto error = std::get<Error>(std::move(shaderArrayIndexResult));
                 error.addCurrentLocationToErrorStack();
                 return error;
             }
-            auto pBindlessArrayIndex =
-                std::get<std::unique_ptr<BindlessArrayIndex>>(std::move(bindlessArrayIndexResult));
+            auto pShaderArrayIndex =
+                std::get<std::unique_ptr<ShaderArrayIndex>>(std::move(shaderArrayIndexResult));
 
             // Bind image to descriptor.
-            auto optionalError = bindTextureToBindlessDescriptorArray(
-                sShaderResourceName, pVulkanPipeline, pImageView, pBindlessArrayIndex->getActualIndex());
+            auto optionalError = bindTextureToShaderDescriptorArray(
+                sShaderResourceName, pVulkanPipeline, pImageView, pShaderArrayIndex->getActualIndex());
             if (optionalError.has_value()) [[unlikely]] {
                 auto error = std::move(optionalError.value());
                 error.addCurrentLocationToErrorStack();
@@ -71,31 +70,31 @@ namespace ne {
 
             // Save a pair of "pipeline" - "index of push constant & array index".
             pushConstantIndices[pVulkanPipeline] =
-                PushConstantIndices(iPushConstantIndex, std::move(pBindlessArrayIndex));
+                PushConstantIndices(iPushConstantIndex, std::move(pShaderArrayIndex));
         }
 
         return std::unique_ptr<GlslShaderTextureResource>(new GlslShaderTextureResource(
             sShaderResourceName, std::move(pTextureToUse), std::move(pushConstantIndices)));
     }
 
-    std::variant<std::unique_ptr<BindlessArrayIndex>, Error>
-    GlslShaderTextureResource::getTextureIndexInBindlessArray(
+    std::variant<std::unique_ptr<ShaderArrayIndex>, Error>
+    GlslShaderTextureResource::getTextureIndexInShaderArray(
         const std::string& sShaderResourceName, VulkanPipeline* pPipelineToLookIn) {
         // Get pipeline's internal resources.
         const auto pMtxPipelineResources = pPipelineToLookIn->getInternalResources();
         std::scoped_lock guard(pMtxPipelineResources->first);
 
         // Get index managers.
-        auto& indexManagers = pMtxPipelineResources->second.bindlessArrayIndexManagers;
+        auto& indexManagers = pMtxPipelineResources->second.shaderArrayIndexManagers;
 
         // See if an index manager responsible for the specified resource exists.
         auto it = indexManagers.find(sShaderResourceName);
         if (it == indexManagers.end()) {
             // Create a new index manager.
             auto [insertIt, bIsInserted] =
-                indexManagers.insert(std::pair<std::string, std::unique_ptr<ShaderBindlessArrayIndexManager>>{
+                indexManagers.insert(std::pair<std::string, std::unique_ptr<ShaderArrayIndexManager>>{
                     sShaderResourceName,
-                    std::make_unique<ShaderBindlessArrayIndexManager>(
+                    std::make_unique<ShaderArrayIndexManager>(
                         std::format(
                             "{} (pipeline \"{}\")",
                             sShaderResourceName,
@@ -108,11 +107,11 @@ namespace ne {
         return it->second->reserveIndex();
     }
 
-    std::optional<Error> GlslShaderTextureResource::bindTextureToBindlessDescriptorArray(
+    std::optional<Error> GlslShaderTextureResource::bindTextureToShaderDescriptorArray(
         const std::string& sShaderResourceName,
         VulkanPipeline* pPipelineWithDescriptors,
         VkImageView pTextureView,
-        unsigned int iIndexIntoBindlessArray) {
+        unsigned int iIndexIntoShaderArray) {
         // Get pipeline's internal resources.
         const auto pMtxPipelineResources = pPipelineWithDescriptors->getInternalResources();
         std::scoped_lock guard(pMtxPipelineResources->first);
@@ -162,7 +161,7 @@ namespace ne {
             descriptorUpdateInfo.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
             descriptorUpdateInfo.descriptorCount = 1; // how much descriptors in array to update
             descriptorUpdateInfo.dstArrayElement =
-                iIndexIntoBindlessArray;                  // first descriptor in array to update
+                iIndexIntoShaderArray;                    // first descriptor in array to update
             descriptorUpdateInfo.pImageInfo = &imageInfo; // descriptor refers to image data
 
             // Update descriptor.
@@ -204,11 +203,8 @@ namespace ne {
             indices.iPushConstantIndex = std::get<size_t>(pushConstantResult);
 
             // Bind image to descriptor.
-            auto optionalError = bindTextureToBindlessDescriptorArray(
-                getResourceName(),
-                pVulkanPipeline,
-                pImageView,
-                indices.pBindlessArrayIndex->getActualIndex());
+            auto optionalError = bindTextureToShaderDescriptorArray(
+                getResourceName(), pVulkanPipeline, pImageView, indices.pShaderArrayIndex->getActualIndex());
             if (optionalError.has_value()) [[unlikely]] {
                 auto error = std::move(optionalError.value());
                 error.addCurrentLocationToErrorStack();
@@ -244,11 +240,8 @@ namespace ne {
 
         // Re-bind descriptors because they were re-created.
         for (const auto& [pVulkanPipeline, indices] : mtxPushConstantIndices.second) {
-            auto optionalError = bindTextureToBindlessDescriptorArray(
-                getResourceName(),
-                pVulkanPipeline,
-                pImageView,
-                indices.pBindlessArrayIndex->getActualIndex());
+            auto optionalError = bindTextureToShaderDescriptorArray(
+                getResourceName(), pVulkanPipeline, pImageView, indices.pShaderArrayIndex->getActualIndex());
             if (optionalError.has_value()) [[unlikely]] {
                 optionalError->addCurrentLocationToErrorStack();
                 return optionalError;
@@ -297,20 +290,19 @@ namespace ne {
             }
             const auto iPushConstantIndex = std::get<size_t>(pushConstantResult);
 
-            // Get an index into the bindless array.
-            auto bindlessArrayIndexResult =
-                getTextureIndexInBindlessArray(getResourceName(), pVulkanPipeline);
-            if (std::holds_alternative<Error>(bindlessArrayIndexResult)) [[unlikely]] {
-                auto error = std::get<Error>(std::move(bindlessArrayIndexResult));
+            // Get an index into the shader array.
+            auto shaderArrayIndexResult = getTextureIndexInShaderArray(getResourceName(), pVulkanPipeline);
+            if (std::holds_alternative<Error>(shaderArrayIndexResult)) [[unlikely]] {
+                auto error = std::get<Error>(std::move(shaderArrayIndexResult));
                 error.addCurrentLocationToErrorStack();
                 return error;
             }
-            auto pBindlessArrayIndex =
-                std::get<std::unique_ptr<BindlessArrayIndex>>(std::move(bindlessArrayIndexResult));
+            auto pShaderArrayIndex =
+                std::get<std::unique_ptr<ShaderArrayIndex>>(std::move(shaderArrayIndexResult));
 
             // Bind image to descriptor.
-            auto optionalError = bindTextureToBindlessDescriptorArray(
-                getResourceName(), pVulkanPipeline, pImageView, pBindlessArrayIndex->getActualIndex());
+            auto optionalError = bindTextureToShaderDescriptorArray(
+                getResourceName(), pVulkanPipeline, pImageView, pShaderArrayIndex->getActualIndex());
             if (optionalError.has_value()) [[unlikely]] {
                 auto error = std::move(optionalError.value());
                 error.addCurrentLocationToErrorStack();
@@ -319,7 +311,7 @@ namespace ne {
 
             // Save a pair of "pipeline" - "index of push constant & array index".
             mtxPushConstantIndices.second[pVulkanPipeline] =
-                PushConstantIndices(iPushConstantIndex, std::move(pBindlessArrayIndex));
+                PushConstantIndices(iPushConstantIndex, std::move(pShaderArrayIndex));
         }
 
         return {};

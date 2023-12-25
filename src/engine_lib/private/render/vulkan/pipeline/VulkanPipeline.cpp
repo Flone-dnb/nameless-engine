@@ -748,10 +748,10 @@ namespace ne {
         mtxInternalResources.second.pPipeline = pPipeline;
 
         if (pFragmentShader != nullptr) {
-            // Make sure map of bindless array index managers references only existing resources
+            // Make sure map of shader array index managers references only existing resources
             // (without fragment shader it will probably reference non-existing resources).
             for (const auto& [sShaderResourceName, pIndexManager] :
-                 mtxInternalResources.second.bindlessArrayIndexManagers) {
+                 mtxInternalResources.second.shaderArrayIndexManagers) {
                 // Look if this shader resource name is used in this pipeline.
                 const auto it = mtxInternalResources.second.resourceBindings.find(sShaderResourceName);
                 if (it == mtxInternalResources.second.resourceBindings.end()) [[unlikely]] {

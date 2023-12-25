@@ -248,7 +248,7 @@ getWindow()->getRenderer()->getShaderManager()->compileShaders(
 ```
 </details>
 
-# Current Development Status
+# Roadmap
 
 Currently the engine is in a very early development state and right now it's still impossible to make games with this engine.
 
@@ -284,13 +284,13 @@ Here is the list of base features that needs to be implemented in order for you 
     - [ ] Normal mapping
     - [ ] Cube mapping
     - [ ] Instancing
+    - [ ] Space partitioning and multi-threading for frustum culling
     - [ ] SSAO (Screen space ambient occlusion)
     - [ ] PBR (Physically based rendering)
     - [ ] Decals
     - [ ] Order independent transparency
     - [ ] Occlusion culling
     - [ ] Emissive materials
-    - [ ] Space partitioning for frustum culling
     - [ ] Light culling improvements
     - [ ] GUI
 - [ ] Skeletal animations

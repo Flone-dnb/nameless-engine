@@ -249,6 +249,13 @@ namespace ne {
         ~DirectXDescriptorHeap();
 
         /**
+         * Returns grow/shrink size for the heap.
+         *
+         * @return Grow/shrink size.
+         */
+        static constexpr INT getHeapGrowSize() { return iHeapGrowSize; }
+
+        /**
          * Creates a new manager that controls a specific heap.
          *
          * @param pRenderer DirectX renderer that owns this manager.

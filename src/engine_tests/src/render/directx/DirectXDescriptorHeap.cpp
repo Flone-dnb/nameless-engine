@@ -131,25 +131,33 @@ TEST_CASE("make the CBV heap shrink") {
                 SKIP();
             }
 
+            // Get renderer.
             auto pRenderer = dynamic_cast<DirectXRenderer*>(pGameWindow->getRenderer());
             REQUIRE(pRenderer);
 
+            // Get heap.
             const auto pResourceManager =
                 dynamic_cast<DirectXResourceManager*>(pRenderer->getResourceManager());
             const auto pHeapManager = pResourceManager->getCbvSrvUavHeap();
 
+            // Save current heap capacity/size to compare later.
             const auto iInitialHeapCapacity = pHeapManager->getHeapCapacity();
-            const auto iResourcesTilExpand =
-                (pHeapManager->getHeapCapacity() - pHeapManager->getHeapSize()) + 1;
+            const auto iInitialHeapSize = pHeapManager->getHeapSize();
+
+            // Calculate how much descriptors we need to expand
+            const auto iResourcesToCreateCount =
+                (pHeapManager->getHeapCapacity() - pHeapManager->getHeapSize()) +
+                DirectXDescriptorHeap::getHeapGrowSize() + 1;
+            const auto iTargetCapacity = iInitialHeapCapacity + DirectXDescriptorHeap::getHeapGrowSize() * 2;
 
             // Prepare data for resource creation.
             D3D12MA::ALLOCATION_DESC allocationDesc = {};
             allocationDesc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
             const CD3DX12_RESOURCE_DESC resourceDesc = CD3DX12_RESOURCE_DESC::Buffer(iResourceSizeInBytes);
 
-            std::vector<std::unique_ptr<DirectXResource>> vCreatedResources(iResourcesTilExpand);
+            std::vector<std::unique_ptr<DirectXResource>> vCreatedResources(iResourcesToCreateCount);
 
-            for (int i = 0; i < iResourcesTilExpand; i++) {
+            for (int i = 0; i < iResourcesToCreateCount; i++) {
                 // Create resource.
                 auto result = pResourceManager->createResource(
                     "Test CBV resource", allocationDesc, resourceDesc, D3D12_RESOURCE_STATE_GENERIC_READ, {});
@@ -174,21 +182,21 @@ TEST_CASE("make the CBV heap shrink") {
                 vCreatedResources[i] = std::move(pResource);
             }
 
-            REQUIRE(pHeapManager->getHeapCapacity() > iInitialHeapCapacity);
-            REQUIRE(pHeapManager->getHeapSize() == iInitialHeapCapacity + 1);
+            // Check heap capacity/size.
+            REQUIRE(pHeapManager->getHeapCapacity() == iTargetCapacity);
+            REQUIRE(
+                pHeapManager->getHeapSize() ==
+                iInitialHeapCapacity + DirectXDescriptorHeap::getHeapGrowSize() + 1);
 
-            // Remove more than half of the resources to make the heap shrink.
-            const auto iRemoveResourceCount =
-                static_cast<size_t>(static_cast<float>(vCreatedResources.size()) * 0.6f);
-            std::random_device dev;
-            std::mt19937 rng(dev());
-            for (size_t i = 0; i < iRemoveResourceCount; i++) {
-                std::uniform_int_distribution<long long> dist(
-                    0, static_cast<long long>(vCreatedResources.size()) - 1);
-                vCreatedResources.erase(std::next(vCreatedResources.begin(), dist(rng)));
-            }
+            // Remove all resources.
+            vCreatedResources.clear();
 
-            REQUIRE(pHeapManager->getHeapCapacity() == iInitialHeapCapacity);
+            // Check heap capacity.
+            REQUIRE(
+                (pHeapManager->getHeapCapacity() == iInitialHeapCapacity ||
+                 pHeapManager->getHeapCapacity() ==
+                     iInitialHeapCapacity + DirectXDescriptorHeap::getHeapGrowSize()));
+            REQUIRE(pHeapManager->getHeapSize() == iInitialHeapSize);
 
             pGameWindow->close();
         }
